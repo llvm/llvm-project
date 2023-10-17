@@ -9,6 +9,7 @@
 from collections import OrderedDict
 import os
 import pickle
+import platform
 import subprocess
 import sys
 from tempfile import NamedTemporaryFile
@@ -18,7 +19,6 @@ from dex.dextIR import DextIR
 from dex.utils import get_root_directory, Timer
 from dex.utils.Environment import is_native_windows
 from dex.utils.Exceptions import ToolArgumentError
-from dex.utils.Warning import warn
 from dex.utils.Exceptions import DebuggerException
 
 from dex.debugger.DebuggerControllers.DefaultController import DefaultController
@@ -40,28 +40,31 @@ def _get_potential_debuggers():  # noqa
         LLDB.get_option_name(): LLDB,
         VisualStudio2015.get_option_name(): VisualStudio2015,
         VisualStudio2017.get_option_name(): VisualStudio2017,
-        VisualStudio2019.get_option_name(): VisualStudio2019
+        VisualStudio2019.get_option_name(): VisualStudio2019,
     }
 
 
 def _warn_meaningless_option(context, option):
-    if hasattr(context.options, 'list_debuggers'):
+    if hasattr(context.options, "list_debuggers"):
         return
 
-    warn(context,
-         'option <y>"{}"</> is meaningless with this debugger'.format(option),
-         '--debugger={}'.format(context.options.debugger))
+    context.logger.warning(
+        f'option "{option}" is meaningless with this debugger',
+        enable_prefix=True,
+        flag=f"--debugger={context.options.debugger}",
+    )
 
 
 def add_debugger_tool_base_arguments(parser, defaults):
-    defaults.lldb_executable = 'lldb.exe' if is_native_windows() else 'lldb'
+    defaults.lldb_executable = "lldb.exe" if is_native_windows() else "lldb"
     parser.add_argument(
-        '--lldb-executable',
+        "--lldb-executable",
         type=str,
-        metavar='<file>',
+        metavar="<file>",
         default=None,
         display_default=defaults.lldb_executable,
-        help='location of LLDB executable')
+        help="location of LLDB executable",
+    )
 
 
 def add_debugger_tool_arguments(parser, context, defaults):
@@ -71,49 +74,79 @@ def add_debugger_tool_arguments(parser, context, defaults):
     add_debugger_tool_base_arguments(parser, defaults)
 
     parser.add_argument(
-        '--debugger',
+        "--debugger",
         type=str,
         choices=potential_debuggers,
         required=True,
-        help='debugger to use')
+        help="debugger to use",
+    )
     parser.add_argument(
-        '--max-steps',
-        metavar='<int>',
+        "--max-steps",
+        metavar="<int>",
         type=int,
         default=1000,
-        help='maximum number of program steps allowed')
+        help="maximum number of program steps allowed",
+    )
     parser.add_argument(
-        '--pause-between-steps',
-        metavar='<seconds>',
+        "--pause-between-steps",
+        metavar="<seconds>",
         type=float,
         default=0.0,
-        help='number of seconds to pause between steps')
+        help="number of seconds to pause between steps",
+    )
     defaults.show_debugger = False
     parser.add_argument(
-        '--show-debugger',
-        action='store_true',
-        default=None,
-        help='show the debugger')
-    defaults.arch = 'x86_64'
+        "--show-debugger", action="store_true", default=None, help="show the debugger"
+    )
+    defaults.arch = platform.machine()
     parser.add_argument(
-        '--arch',
+        "--arch",
         type=str,
-        metavar='<architecture>',
+        metavar="<architecture>",
         default=None,
         display_default=defaults.arch,
-        help='target architecture')
-    defaults.source_root_dir = ''
+        help="target architecture",
+    )
+    defaults.source_root_dir = ""
     parser.add_argument(
-        '--source-root-dir',
+        "--source-root-dir",
         type=str,
-        metavar='<directory>',
+        metavar="<directory>",
         default=None,
-        help='source root directory')
+        help="source root directory",
+    )
     parser.add_argument(
-        '--debugger-use-relative-paths',
-        action='store_true',
+        "--debugger-use-relative-paths",
+        action="store_true",
         default=False,
-        help='pass the debugger paths relative to --source-root-dir')
+        help="pass the debugger paths relative to --source-root-dir",
+    )
+    parser.add_argument(
+        "--target-run-args",
+        type=str,
+        metavar="<flags>",
+        default="",
+        help="command line arguments for the test program, in addition to any "
+        "provided by DexCommandLine",
+    )
+    parser.add_argument(
+        "--timeout-total",
+        metavar="<seconds>",
+        type=float,
+        default=0.0,
+        help="if >0, debugger session will automatically exit after "
+        "running for <timeout-total> seconds",
+    )
+    parser.add_argument(
+        "--timeout-breakpoint",
+        metavar="<seconds>",
+        type=float,
+        default=0.0,
+        help="if >0, debugger session will automatically exit after "
+        "waiting <timeout-breakpoint> seconds without hitting a "
+        "breakpoint",
+    )
+
 
 def handle_debugger_tool_base_options(context, defaults):  # noqa
     options = context.options
@@ -121,13 +154,14 @@ def handle_debugger_tool_base_options(context, defaults):  # noqa
     if options.lldb_executable is None:
         options.lldb_executable = defaults.lldb_executable
     else:
-        if getattr(options, 'debugger', 'lldb') != 'lldb':
-            _warn_meaningless_option(context, '--lldb-executable')
+        if getattr(options, "debugger", "lldb") != "lldb":
+            _warn_meaningless_option(context, "--lldb-executable")
 
         options.lldb_executable = os.path.abspath(options.lldb_executable)
         if not os.path.isfile(options.lldb_executable):
-            raise ToolArgumentError('<d>could not find</> <r>"{}"</>'.format(
-                options.lldb_executable))
+            raise ToolArgumentError(
+                '<d>could not find</> <r>"{}"</>'.format(options.lldb_executable)
+            )
 
 
 def handle_debugger_tool_options(context, defaults):  # noqa
@@ -138,55 +172,60 @@ def handle_debugger_tool_options(context, defaults):  # noqa
     if options.arch is None:
         options.arch = defaults.arch
     else:
-        if options.debugger != 'lldb':
-            _warn_meaningless_option(context, '--arch')
+        if options.debugger != "lldb":
+            _warn_meaningless_option(context, "--arch")
 
     if options.show_debugger is None:
         options.show_debugger = defaults.show_debugger
     else:
-        if options.debugger == 'lldb':
-            _warn_meaningless_option(context, '--show-debugger')
+        if options.debugger == "lldb":
+            _warn_meaningless_option(context, "--show-debugger")
 
     if options.source_root_dir != None:
         if not os.path.isabs(options.source_root_dir):
-            raise ToolArgumentError(f'<d>--source-root-dir: expected absolute path, got</> <r>"{options.source_root_dir}"</>')
+            raise ToolArgumentError(
+                f'<d>--source-root-dir: expected absolute path, got</> <r>"{options.source_root_dir}"</>'
+            )
         if not os.path.isdir(options.source_root_dir):
-            raise ToolArgumentError(f'<d>--source-root-dir: could not find directory</> <r>"{options.source_root_dir}"</>')
+            raise ToolArgumentError(
+                f'<d>--source-root-dir: could not find directory</> <r>"{options.source_root_dir}"</>'
+            )
 
     if options.debugger_use_relative_paths:
         if not options.source_root_dir:
-            raise ToolArgumentError(f'<d>--debugger-relative-paths</> <r>requires --source-root-dir</>')
+            raise ToolArgumentError(
+                f"<d>--debugger-relative-paths</> <r>requires --source-root-dir</>"
+            )
+
 
 def run_debugger_subprocess(debugger_controller, working_dir_path):
-    with NamedTemporaryFile(
-            dir=working_dir_path, delete=False, mode='wb') as fp:
+    with NamedTemporaryFile(dir=working_dir_path, delete=False, mode="wb") as fp:
         pickle.dump(debugger_controller, fp, protocol=pickle.HIGHEST_PROTOCOL)
         controller_path = fp.name
 
     dexter_py = os.path.basename(sys.argv[0])
     if not os.path.isfile(dexter_py):
-        dexter_py = os.path.join(get_root_directory(), '..', dexter_py)
+        dexter_py = os.path.join(get_root_directory(), "..", dexter_py)
     assert os.path.isfile(dexter_py)
 
     with NamedTemporaryFile(dir=working_dir_path) as fp:
         args = [
             sys.executable,
             dexter_py,
-            'run-debugger-internal-',
+            "run-debugger-internal-",
             controller_path,
-            '--working-directory={}'.format(working_dir_path),
-            '--unittest=off',
-            '--indent-timer-level={}'.format(Timer.indent + 2)
+            "--working-directory={}".format(working_dir_path),
+            "--unittest=off",
+            "--indent-timer-level={}".format(Timer.indent + 2),
         ]
         try:
-            with Timer('running external debugger process'):
+            with Timer("running external debugger process"):
                 subprocess.check_call(args)
         except subprocess.CalledProcessError as e:
             raise DebuggerException(e)
 
-    with open(controller_path, 'rb') as fp:
+    with open(controller_path, "rb") as fp:
         debugger_controller = pickle.load(fp)
-
     return debugger_controller
 
 
@@ -203,7 +242,7 @@ class Debuggers(object):
         self.context = context
 
     def load(self, key):
-        with Timer('load {}'.format(key)):
+        with Timer("load {}".format(key)):
             return Debuggers.potential_debuggers()[key](self.context)
 
     def _populate_debugger_cache(self):
@@ -215,19 +254,19 @@ class Debuggers(object):
                 pass
 
             LoadedDebugger.option_name = key
-            LoadedDebugger.full_name = '[{}]'.format(debugger.name)
+            LoadedDebugger.full_name = "[{}]".format(debugger.name)
             LoadedDebugger.is_available = debugger.is_available
 
             if LoadedDebugger.is_available:
                 try:
                     LoadedDebugger.version = debugger.version.splitlines()
                 except AttributeError:
-                    LoadedDebugger.version = ['']
+                    LoadedDebugger.version = [""]
             else:
                 try:
                     LoadedDebugger.error = debugger.loading_error.splitlines()
                 except AttributeError:
-                    LoadedDebugger.error = ['']
+                    LoadedDebugger.error = [""]
 
                 try:
                     LoadedDebugger.error_trace = debugger.loading_error_trace
@@ -247,29 +286,27 @@ class Debuggers(object):
 
         for d in debuggers:
             # Option name, right padded with spaces for alignment
-            option_name = (
-                '{{name: <{}}}'.format(max_o_len).format(name=d.option_name))
+            option_name = "{{name: <{}}}".format(max_o_len).format(name=d.option_name)
 
             # Full name, right padded with spaces for alignment
-            full_name = ('{{name: <{}}}'.format(max_n_len)
-                         .format(name=d.full_name))
+            full_name = "{{name: <{}}}".format(max_n_len).format(name=d.full_name)
 
             if d.is_available:
-                name = '<b>{} {}</>'.format(option_name, full_name)
+                name = "<b>{} {}</>".format(option_name, full_name)
 
                 # If the debugger is available, show the first line of the
                 #  version info.
-                available = '<g>YES</>'
-                info = '<b>({})</>'.format(d.version[0])
+                available = "<g>YES</>"
+                info = "<b>({})</>".format(d.version[0])
             else:
-                name = '<y>{} {}</>'.format(option_name, full_name)
+                name = "<y>{} {}</>".format(option_name, full_name)
 
                 # If the debugger is not available, show the first line of the
                 # error reason.
-                available = '<r>NO</> '
-                info = '<y>({})</>'.format(d.error[0])
+                available = "<r>NO</> "
+                info = "<y>({})</>".format(d.error[0])
 
-            msg = '{} {} {}'.format(name, available, info)
+            msg = "{} {} {}".format(name, available, info)
 
             if self.context.options.verbose:
                 # If verbose mode and there was more version or error output
@@ -278,16 +315,18 @@ class Debuggers(object):
                 verbose_info = None
                 if d.is_available:
                     if d.version[1:]:
-                        verbose_info = d.version + ['\n']
+                        verbose_info = d.version + ["\n"]
                 else:
                     # Some of list elems may contain multiple lines, so make
                     # sure each elem is a line of its own.
                     verbose_info = d.error_trace
 
                 if verbose_info:
-                    verbose_info = '\n'.join('        {}'.format(l.rstrip())
-                                             for l in verbose_info) + '\n'
-                    msg = '{}\n\n{}'.format(msg, verbose_info)
+                    verbose_info = (
+                        "\n".join("        {}".format(l.rstrip()) for l in verbose_info)
+                        + "\n"
+                    )
+                    msg = "{}\n\n{}".format(msg, verbose_info)
 
             msgs.append(msg)
-        self.context.o.auto('\n{}\n\n'.format('\n'.join(msgs)))
+        self.context.o.auto("\n{}\n\n".format("\n".join(msgs)))

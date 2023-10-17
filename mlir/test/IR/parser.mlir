@@ -1,4 +1,7 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s | mlir-opt -allow-unregistered-dialect | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -mlir-print-op-generic %s | FileCheck %s -check-prefix GENERIC
+// RUN: mlir-opt -allow-unregistered-dialect %s | mlir-opt -allow-unregistered-dialect -mlir-print-op-generic | FileCheck %s -check-prefix GENERIC
 
 // CHECK-DAG: #map{{[0-9]*}} = affine_map<(d0, d1, d2, d3, d4)[s0] -> (d0, d1, d2, d4, d3)>
 #map = affine_map<(d0, d1, d2, d3, d4)[s0] -> (d0, d1, d2, d4, d3)>
@@ -457,7 +460,7 @@ func.func @verbose_terminators() -> (i1, i17) {
 
 ^bb1(%x : i1, %y : i17):
 // CHECK:  cf.cond_br %{{.*}}, ^bb2(%{{.*}} : i17), ^bb3(%{{.*}}, %{{.*}} : i1, i17)
-  "cf.cond_br"(%x, %y, %x, %y) [^bb2, ^bb3] {operand_segment_sizes = array<i32: 1, 1, 2>} : (i1, i17, i1, i17) -> ()
+  "cf.cond_br"(%x, %y, %x, %y) [^bb2, ^bb3] {operandSegmentSizes = array<i32: 1, 1, 2>} : (i1, i17, i1, i17) -> ()
 
 ^bb2(%a : i17):
   %true = arith.constant true
@@ -1128,10 +1131,10 @@ func.func @special_float_values_in_tensors() {
 // Test parsing of an op with multiple region arguments, and without a
 // delimiter.
 
-// CHECK-LABEL: func @op_with_region_args
+// GENERIC-LABEL: op_with_region_args
 func.func @op_with_region_args() {
-  // CHECK: "test.polyfor"() ({
-  // CHECK-NEXT: ^bb{{.*}}(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index):
+  // GENERIC: "test.polyfor"() ({
+  // GENERIC-NEXT: ^bb{{.*}}(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index):
   test.polyfor %i, %j, %k {
     "foo"() : () -> ()
   }
@@ -1185,9 +1188,9 @@ func.func @parse_wrapped_keyword_test() {
   return
 }
 
-// CHECK-LABEL: func @parse_base64_test
+// GENERIC-LABEL: parse_base64_test
 func.func @parse_base64_test() {
-  // CHECK: test.parse_b64 "hello world"
+  // GENERIC: "test.parse_b64"() <{b64 = "hello world"}>
   test.parse_b64 "aGVsbG8gd29ybGQ="
   return
 }
@@ -1355,7 +1358,7 @@ func.func @graph_region_kind() -> () {
 // CHECK: [[VAL2:%.*]]:3 = "bar"([[VAL3:%.*]]) : (i64) -> (i1, i1, i1)
 // CHECK: [[VAL3]] = "baz"([[VAL2]]#0) : (i1) -> i64
   test.graph_region {
-    // %1 OK here in in graph region.
+    // %1 OK here in graph region.
     %2:3 = "bar"(%1) : (i64) -> (i1,i1,i1)
     %1 = "baz"(%2#0) : (i1) -> (i64)
   }
@@ -1437,3 +1440,4 @@ test.dialect_custom_format_fallback custom_format_fallback
 // Check that an op with an optional result parses f80 as type.
 // CHECK: test.format_optional_result_d_op : f80
 test.format_optional_result_d_op : f80
+

@@ -53,24 +53,26 @@ define void @test(i32 signext %row, i32 signext %N.in) nounwind {
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    blez a1, .LBB0_3
 ; RV64-NEXT:  # %bb.1: # %cond_true.preheader
-; RV64-NEXT:    li a2, 0
+; RV64-NEXT:    negw a1, a1
 ; RV64-NEXT:    slli a0, a0, 6
-; RV64-NEXT:    lui a3, %hi(A)
-; RV64-NEXT:    addi a3, a3, %lo(A)
-; RV64-NEXT:    add a0, a0, a3
-; RV64-NEXT:    addi a3, a0, 4
+; RV64-NEXT:    lui a2, %hi(A)
+; RV64-NEXT:    addi a2, a2, %lo(A)
+; RV64-NEXT:    add a0, a0, a2
+; RV64-NEXT:    addi a2, a0, 4
+; RV64-NEXT:    li a3, 2
 ; RV64-NEXT:    li a4, 4
 ; RV64-NEXT:    li a5, 5
+; RV64-NEXT:    li a6, 2
 ; RV64-NEXT:  .LBB0_2: # %cond_true
 ; RV64-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64-NEXT:    sw a4, 0(a3)
-; RV64-NEXT:    addiw a6, a2, 2
-; RV64-NEXT:    slli a6, a6, 2
-; RV64-NEXT:    add a6, a0, a6
-; RV64-NEXT:    sw a5, 0(a6)
-; RV64-NEXT:    addiw a2, a2, 1
-; RV64-NEXT:    addi a3, a3, 4
-; RV64-NEXT:    bne a1, a2, .LBB0_2
+; RV64-NEXT:    sw a4, 0(a2)
+; RV64-NEXT:    slli a7, a6, 2
+; RV64-NEXT:    add a7, a0, a7
+; RV64-NEXT:    sw a5, 0(a7)
+; RV64-NEXT:    addiw a6, a6, 1
+; RV64-NEXT:    addw a7, a1, a6
+; RV64-NEXT:    addi a2, a2, 4
+; RV64-NEXT:    bne a7, a3, .LBB0_2
 ; RV64-NEXT:  .LBB0_3: # %return
 ; RV64-NEXT:    ret
 entry:

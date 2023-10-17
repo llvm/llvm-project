@@ -1141,22 +1141,28 @@ MallocChecker::performKernelMalloc(const CallEvent &Call, CheckerContext &C,
   llvm::Triple::OSType OS = Ctx.getTargetInfo().getTriple().getOS();
 
   if (!KernelZeroFlagVal) {
-    if (OS == llvm::Triple::FreeBSD)
+    switch (OS) {
+    case llvm::Triple::FreeBSD:
       KernelZeroFlagVal = 0x0100;
-    else if (OS == llvm::Triple::NetBSD)
+      break;
+    case llvm::Triple::NetBSD:
       KernelZeroFlagVal = 0x0002;
-    else if (OS == llvm::Triple::OpenBSD)
+      break;
+    case llvm::Triple::OpenBSD:
       KernelZeroFlagVal = 0x0008;
-    else if (OS == llvm::Triple::Linux)
+      break;
+    case llvm::Triple::Linux:
       // __GFP_ZERO
       KernelZeroFlagVal = 0x8000;
-    else
+      break;
+    default:
       // FIXME: We need a more general way of getting the M_ZERO value.
       // See also: O_CREAT in UnixAPIChecker.cpp.
 
       // Fall back to normal malloc behavior on platforms where we don't
       // know M_ZERO.
       return std::nullopt;
+    }
   }
 
   // We treat the last argument as the flags argument, and callers fall-back to
@@ -1688,9 +1694,9 @@ MallocChecker::MallocMemReturnsAttr(CheckerContext &C, const CallEvent &Call,
   if (Att->getModule()->getName() != "malloc")
     return nullptr;
 
-  OwnershipAttr::args_iterator I = Att->args_begin(), E = Att->args_end();
-  if (I != E) {
-    return MallocMemAux(C, Call, Call.getArgExpr(I->getASTIndex()),
+  if (!Att->args().empty()) {
+    return MallocMemAux(C, Call,
+                        Call.getArgExpr(Att->args_begin()->getASTIndex()),
                         UndefinedVal(), State, AF_Malloc);
   }
   return MallocMemAux(C, Call, UnknownVal(), UndefinedVal(), State, AF_Malloc);
@@ -1955,13 +1961,10 @@ ProgramStateRef MallocChecker::FreeMemAux(
   // Parameters, locals, statics, globals, and memory returned by
   // __builtin_alloca() shouldn't be freed.
   if (!isa<UnknownSpaceRegion, HeapSpaceRegion>(MS)) {
-    // FIXME: at the time this code was written, malloc() regions were
-    // represented by conjured symbols, which are all in UnknownSpaceRegion.
-    // This means that there isn't actually anything from HeapSpaceRegion
-    // that should be freed, even though we allow it here.
-    // Of course, free() can work on memory allocated outside the current
-    // function, so UnknownSpaceRegion is always a possibility.
-    // False negatives are better than false positives.
+    // Regions returned by malloc() are represented by SymbolicRegion objects
+    // within HeapSpaceRegion. Of course, free() can work on memory allocated
+    // outside the current function, so UnknownSpaceRegion is also a
+    // possibility here.
 
     if (isa<AllocaRegion>(R))
       HandleFreeAlloca(C, ArgVal, ArgExpr->getSourceRange());
@@ -2798,12 +2801,12 @@ void MallocChecker::checkDeadSymbols(SymbolReaper &SymReaper,
 
   RegionStateTy RS = OldRS;
   SmallVector<SymbolRef, 2> Errors;
-  for (RegionStateTy::iterator I = RS.begin(), E = RS.end(); I != E; ++I) {
-    if (SymReaper.isDead(I->first)) {
-      if (I->second.isAllocated() || I->second.isAllocatedOfSizeZero())
-        Errors.push_back(I->first);
+  for (auto [Sym, State] : RS) {
+    if (SymReaper.isDead(Sym)) {
+      if (State.isAllocated() || State.isAllocatedOfSizeZero())
+        Errors.push_back(Sym);
       // Remove the dead symbol from the map.
-      RS = F.remove(RS, I->first);
+      RS = F.remove(RS, Sym);
     }
   }
 
@@ -2818,19 +2821,17 @@ void MallocChecker::checkDeadSymbols(SymbolReaper &SymReaper,
 
   // Cleanup the Realloc Pairs Map.
   ReallocPairsTy RP = state->get<ReallocPairs>();
-  for (ReallocPairsTy::iterator I = RP.begin(), E = RP.end(); I != E; ++I) {
-    if (SymReaper.isDead(I->first) ||
-        SymReaper.isDead(I->second.ReallocatedSym)) {
-      state = state->remove<ReallocPairs>(I->first);
+  for (auto [Sym, ReallocPair] : RP) {
+    if (SymReaper.isDead(Sym) || SymReaper.isDead(ReallocPair.ReallocatedSym)) {
+      state = state->remove<ReallocPairs>(Sym);
     }
   }
 
   // Cleanup the FreeReturnValue Map.
   FreeReturnValueTy FR = state->get<FreeReturnValue>();
-  for (FreeReturnValueTy::iterator I = FR.begin(), E = FR.end(); I != E; ++I) {
-    if (SymReaper.isDead(I->first) ||
-        SymReaper.isDead(I->second)) {
-      state = state->remove<FreeReturnValue>(I->first);
+  for (auto [Sym, RetSym] : FR) {
+    if (SymReaper.isDead(Sym) || SymReaper.isDead(RetSym)) {
+      state = state->remove<FreeReturnValue>(Sym);
     }
   }
 
@@ -2840,9 +2841,8 @@ void MallocChecker::checkDeadSymbols(SymbolReaper &SymReaper,
     static CheckerProgramPointTag Tag("MallocChecker", "DeadSymbolsLeak");
     N = C.generateNonFatalErrorNode(C.getState(), &Tag);
     if (N) {
-      for (SmallVectorImpl<SymbolRef>::iterator
-           I = Errors.begin(), E = Errors.end(); I != E; ++I) {
-        HandleLeak(*I, N, C);
+      for (SymbolRef Sym : Errors) {
+        HandleLeak(Sym, N, C);
       }
     }
   }
@@ -2965,18 +2965,16 @@ void MallocChecker::checkPostStmt(const BlockExpr *BE,
   const BlockDataRegion *R =
     cast<BlockDataRegion>(C.getSVal(BE).getAsRegion());
 
-  BlockDataRegion::referenced_vars_iterator I = R->referenced_vars_begin(),
-                                            E = R->referenced_vars_end();
-
-  if (I == E)
+  auto ReferencedVars = R->referenced_vars();
+  if (ReferencedVars.empty())
     return;
 
   SmallVector<const MemRegion*, 10> Regions;
   const LocationContext *LC = C.getLocationContext();
   MemRegionManager &MemMgr = C.getSValBuilder().getRegionManager();
 
-  for ( ; I != E; ++I) {
-    const VarRegion *VR = I.getCapturedRegion();
+  for (const auto &Var : ReferencedVars) {
+    const VarRegion *VR = Var.getCapturedRegion();
     if (VR->getSuperRegion() == R) {
       VR = MemMgr.getVarRegion(VR->getDecl(), LC);
     }
@@ -3072,28 +3070,28 @@ ProgramStateRef MallocChecker::evalAssume(ProgramStateRef state,
                                               SVal Cond,
                                               bool Assumption) const {
   RegionStateTy RS = state->get<RegionState>();
-  for (RegionStateTy::iterator I = RS.begin(), E = RS.end(); I != E; ++I) {
+  for (SymbolRef Sym : llvm::make_first_range(RS)) {
     // If the symbol is assumed to be NULL, remove it from consideration.
     ConstraintManager &CMgr = state->getConstraintManager();
-    ConditionTruthVal AllocFailed = CMgr.isNull(state, I.getKey());
+    ConditionTruthVal AllocFailed = CMgr.isNull(state, Sym);
     if (AllocFailed.isConstrainedTrue())
-      state = state->remove<RegionState>(I.getKey());
+      state = state->remove<RegionState>(Sym);
   }
 
   // Realloc returns 0 when reallocation fails, which means that we should
   // restore the state of the pointer being reallocated.
   ReallocPairsTy RP = state->get<ReallocPairs>();
-  for (ReallocPairsTy::iterator I = RP.begin(), E = RP.end(); I != E; ++I) {
+  for (auto [Sym, ReallocPair] : RP) {
     // If the symbol is assumed to be NULL, remove it from consideration.
     ConstraintManager &CMgr = state->getConstraintManager();
-    ConditionTruthVal AllocFailed = CMgr.isNull(state, I.getKey());
+    ConditionTruthVal AllocFailed = CMgr.isNull(state, Sym);
     if (!AllocFailed.isConstrainedTrue())
       continue;
 
-    SymbolRef ReallocSym = I.getData().ReallocatedSym;
+    SymbolRef ReallocSym = ReallocPair.ReallocatedSym;
     if (const RefState *RS = state->get<RegionState>(ReallocSym)) {
       if (RS->isReleased()) {
-        switch (I.getData().Kind) {
+        switch (ReallocPair.Kind) {
         case OAR_ToBeFreedAfterFailure:
           state = state->set<RegionState>(ReallocSym,
               RefState::getAllocated(RS->getAllocationFamily(), RS->getStmt()));
@@ -3102,11 +3100,11 @@ ProgramStateRef MallocChecker::evalAssume(ProgramStateRef state,
           state = state->remove<RegionState>(ReallocSym);
           break;
         default:
-          assert(I.getData().Kind == OAR_FreeOnFailure);
+          assert(ReallocPair.Kind == OAR_FreeOnFailure);
         }
       }
     }
-    state = state->remove<ReallocPairs>(I.getKey());
+    state = state->remove<ReallocPairs>(Sym);
   }
 
   return state;
@@ -3259,6 +3257,11 @@ bool MallocChecker::mayFreeAnyEscapedMemoryOrIsModeledExplicitly(
     return true;
   }
 
+  if (FName == "singleShotImpl" &&
+      FD->getQualifiedNameAsString() == "QTimer::singleShotImpl") {
+    return true;
+  }
+
   // Handle cases where we know a buffer's /address/ can escape.
   // Note that the above checks handle some special cases where we know that
   // even though the address escapes, it's still our responsibility to free the
@@ -3307,11 +3310,7 @@ ProgramStateRef MallocChecker::checkPointerEscapeAux(
     return State;
   }
 
-  for (InvalidatedSymbols::const_iterator I = Escaped.begin(),
-       E = Escaped.end();
-       I != E; ++I) {
-    SymbolRef sym = *I;
-
+  for (SymbolRef sym : Escaped) {
     if (EscapingSymbol && EscapingSymbol != sym)
       continue;
 
@@ -3446,7 +3445,8 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
               OS << OpCallE->getDirectCallee()->getDeclName();
             } else if (const auto *CallE = dyn_cast<CallExpr>(S)) {
               auto &CEMgr = BRC.getStateManager().getCallEventManager();
-              CallEventRef<> Call = CEMgr.getSimpleCall(CallE, state, CurrentLC);
+              CallEventRef<> Call =
+                  CEMgr.getSimpleCall(CallE, state, CurrentLC, {nullptr, 0});
               if (const auto *D = dyn_cast_or_null<NamedDecl>(Call->getDecl()))
                 OS << D->getDeclName();
               else
@@ -3558,17 +3558,17 @@ void MallocChecker::printState(raw_ostream &Out, ProgramStateRef State,
 
   if (!RS.isEmpty()) {
     Out << Sep << "MallocChecker :" << NL;
-    for (RegionStateTy::iterator I = RS.begin(), E = RS.end(); I != E; ++I) {
-      const RefState *RefS = State->get<RegionState>(I.getKey());
+    for (auto [Sym, Data] : RS) {
+      const RefState *RefS = State->get<RegionState>(Sym);
       AllocationFamily Family = RefS->getAllocationFamily();
       std::optional<MallocChecker::CheckKind> CheckKind =
           getCheckIfTracked(Family);
       if (!CheckKind)
         CheckKind = getCheckIfTracked(Family, true);
 
-      I.getKey()->dumpToStream(Out);
+      Sym->dumpToStream(Out);
       Out << " : ";
-      I.getData().dump(Out);
+      Data.dump(Out);
       if (CheckKind)
         Out << " (" << CheckNames[*CheckKind].getName() << ")";
       Out << NL;

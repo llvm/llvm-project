@@ -70,8 +70,18 @@ bool X86MCSymbolizer::tryAddingSymbolicOperand(
 
     const MCSymbol *TargetSymbol;
     uint64_t TargetOffset;
-    std::tie(TargetSymbol, TargetOffset) =
-        BC.handleAddressRef(Value, Function, /*IsPCRel=*/true);
+
+    if (!CreateNewSymbols) {
+      if (BinaryData *BD = BC.getBinaryDataContainingAddress(Value)) {
+        TargetSymbol = BD->getSymbol();
+        TargetOffset = Value - BD->getAddress();
+      } else {
+        return false;
+      }
+    } else {
+      std::tie(TargetSymbol, TargetOffset) =
+          BC.handleAddressRef(Value, Function, /*IsPCRel=*/true);
+    }
 
     addOperand(TargetSymbol, TargetOffset);
 
@@ -98,10 +108,15 @@ bool X86MCSymbolizer::tryAddingSymbolicOperand(
 
     // The linker converted the PC-relative address to an absolute one.
     // Symbolize this address.
-    BC.handleAddressRef(Value, Function, /*IsPCRel=*/false);
+    if (CreateNewSymbols)
+      BC.handleAddressRef(Value, Function, /*IsPCRel=*/false);
+
     const BinaryData *Target = BC.getBinaryDataAtAddress(Value);
-    assert(Target &&
-           "BinaryData should exist at converted GOTPCRELX destination");
+    if (!Target) {
+      assert(!CreateNewSymbols &&
+             "BinaryData should exist at converted GOTPCRELX destination");
+      return false;
+    }
 
     addOperand(Target->getSymbol(), /*Addend=*/0);
 
@@ -115,12 +130,22 @@ bool X86MCSymbolizer::tryAddingSymbolicOperand(
   if (!Relocation)
     return processPCRelOperandNoRel();
 
+  // GOTPC64 is special because the X86 Assembler doesn't know how to emit
+  // a PC-relative 8-byte fixup, which is what we need to cover this. The
+  // only way to do this is to use the symbol name _GLOBAL_OFFSET_TABLE_.
+  if (Relocation::isX86GOTPC64(Relocation->Type)) {
+    auto [Sym, Addend] = handleGOTPC64(*Relocation, InstAddress);
+    addOperand(Sym, Addend);
+    return true;
+  }
+
   uint64_t SymbolValue = Relocation->Value - Relocation->Addend;
   if (Relocation->isPCRelative())
     SymbolValue += InstAddress + ImmOffset;
 
   // Process reference to the symbol.
-  BC.handleAddressRef(SymbolValue, Function, Relocation->isPCRelative());
+  if (CreateNewSymbols)
+    BC.handleAddressRef(SymbolValue, Function, Relocation->isPCRelative());
 
   uint64_t Addend = Relocation->Addend;
   // Real addend for pc-relative targets is adjusted with a delta from
@@ -131,6 +156,26 @@ bool X86MCSymbolizer::tryAddingSymbolicOperand(
   addOperand(Relocation->Symbol, Addend);
 
   return true;
+}
+
+std::pair<MCSymbol *, uint64_t>
+X86MCSymbolizer::handleGOTPC64(const Relocation &R, uint64_t InstrAddr) {
+  BinaryContext &BC = Function.getBinaryContext();
+  const BinaryData *GOTSymBD = BC.getGOTSymbol();
+  if (!GOTSymBD || !GOTSymBD->getAddress()) {
+    errs() << "BOLT-ERROR: R_X86_GOTPC64 relocation is present but we did "
+              "not detect a valid  _GLOBAL_OFFSET_TABLE_ in symbol table\n";
+    exit(1);
+  }
+  // R_X86_GOTPC64 are not relative to the Reloc nor end of instruction,
+  // but the start of the MOVABSQ instruction. So the Target Address is
+  // whatever is encoded in the original operand when we disassembled
+  // the binary (here, R.Value) plus MOVABSQ address (InstrAddr).
+  // Here we extract the intended Addend by subtracting the real
+  // GOT addr.
+  const int64_t Addend = R.Value + InstrAddr - GOTSymBD->getAddress();
+  return std::make_pair(BC.Ctx->getOrCreateSymbol("_GLOBAL_OFFSET_TABLE_"),
+                        Addend);
 }
 
 void X86MCSymbolizer::tryAddingPcLoadReferenceComment(raw_ostream &CStream,

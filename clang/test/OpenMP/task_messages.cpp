@@ -1,11 +1,11 @@
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-version=45 -fopenmp -ferror-limit 200 -std=c++11 -o - %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-version=50 -fopenmp -ferror-limit 200 -std=c++11 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp5 -fopenmp-version=50 -fopenmp -ferror-limit 200 -std=c++11 -o - %s -Wuninitialized
 
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-version=45 -fopenmp-simd -ferror-limit 200 -std=c++11 -o - %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-version=50 -fopenmp-simd -ferror-limit 200 -std=c++11 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp5 -fopenmp-version=50 -fopenmp-simd -ferror-limit 200 -std=c++11 -o - %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-version=51 -DOMP51 -fopenmp -ferror-limit 100 -std=c++11 -o - %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-version=51 -DOMP51 -fopenmp-simd -ferror-limit 100 -std=c++11 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp5 -DOMP51 -fopenmp -ferror-limit 100 -std=c++11 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp5 -DOMP51 -fopenmp-simd -ferror-limit 100 -std=c++11 -o - %s -Wuninitialized
 
 void xxx(int argc) {
   int x; // expected-note {{initialize the variable 'x' to silence this warning}}
@@ -14,7 +14,7 @@ void xxx(int argc) {
 }
 
 void foo() {
-#pragma omp task detach(0) // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}} omp50-error {{'omp_event_handle_t' type not found; include <omp.h>}}
+#pragma omp task detach(0) // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}} omp5-error {{'omp_event_handle_t' type not found; include <omp.h>}}
   ;
 }
 
@@ -60,11 +60,11 @@ int foo() {
 #pragma omp task default(shared)
   ++a; // expected-error 2 {{variable 'a' must have explicitly specified data sharing attributes}}
 #ifdef OMP51
-#pragma omp task default(firstprivate) // expected-note 4 {{explicit data sharing attribute requested here}}
+#pragma omp task default(firstprivate) // omp5-note 4 {{explicit data sharing attribute requested here}}
 #pragma omp task
   {
-    ++x; // expected-error 2 {{variable 'x' must have explicitly specified data sharing attributes}}
-    ++y; // expected-error 2 {{variable 'y' must have explicitly specified data sharing attributes}}
+    ++x; // omp5-error 2 {{variable 'x' must have explicitly specified data sharing attributes}}
+    ++y; // omp5-error 2 {{variable 'y' must have explicitly specified data sharing attributes}}
   }
 #endif
 
@@ -153,14 +153,14 @@ int foo() {
 #pragma omp task detach // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}} expected-error {{expected '(' after 'detach'}}
 #pragma omp task detach( // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}} expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp task detach() // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}} expected-error {{expected expression}}
-#pragma omp task detach(a) // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}} omp50-error {{expected variable of the 'omp_event_handle_t' type, not 'int'}} omp50-error {{expected variable of the 'omp_event_handle_t' type, not 'S'}}
+#pragma omp task detach(a) // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}} omp5-error {{expected variable of the 'omp_event_handle_t' type, not 'int'}} omp5-error {{expected variable of the 'omp_event_handle_t' type, not 'S'}}
   ;
 #pragma omp task detach(evt) detach(evt) // omp45-error 2 {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}} expected-error {{directive '#pragma omp task' cannot contain more than one 'detach' clause}}
-#pragma omp task detach(cevt) detach(revt) // omp45-error 2 {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}} expected-error {{directive '#pragma omp task' cannot contain more than one 'detach' clause}} omp50-error {{expected variable of the 'omp_event_handle_t' type, not 'const omp_event_handle_t' (aka 'const unsigned long')}} omp50-error {{expected variable of the 'omp_event_handle_t' type, not 'omp_event_handle_t &' (aka 'unsigned long &')}}
-#pragma omp task detach(evt) mergeable // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}} omp50-error {{'mergeable' and 'detach' clause are mutually exclusive and may not appear on the same directive}} omp50-note {{'detach' clause is specified here}}
+#pragma omp task detach(cevt) detach(revt) // omp45-error 2 {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}} expected-error {{directive '#pragma omp task' cannot contain more than one 'detach' clause}} omp5-error {{expected variable of the 'omp_event_handle_t' type, not 'const omp_event_handle_t' (aka 'const unsigned long')}} omp5-error {{expected variable of the 'omp_event_handle_t' type, not 'omp_event_handle_t &' (aka 'unsigned long &')}}
+#pragma omp task detach(evt) mergeable // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}} omp5-error {{'mergeable' and 'detach' clause are mutually exclusive and may not appear on the same directive}} omp5-note {{'detach' clause is specified here}}
   ;
-#pragma omp task mergeable detach(evt) // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}} omp50-error {{'detach' and 'mergeable' clause are mutually exclusive and may not appear on the same directive}} omp50-note {{'mergeable' clause is specified here}}
-#pragma omp task detach(-evt) // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}} omp50-error {{expected variable of the 'omp_event_handle_t' type}}
+#pragma omp task mergeable detach(evt) // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}} omp5-error {{'detach' and 'mergeable' clause are mutually exclusive and may not appear on the same directive}} omp5-note {{'mergeable' clause is specified here}}
+#pragma omp task detach(-evt) // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}} omp5-error {{expected variable of the 'omp_event_handle_t' type}}
   ;
 #pragma omp task detach(evt) shared(evt) // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}}
 #pragma omp task detach(evt) firstprivate(evt) // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}}
@@ -343,13 +343,13 @@ L2:
 #pragma omp task detach // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}} expected-error {{expected '(' after 'detach'}}
 #pragma omp task detach( // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}} expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp task detach() // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}} expected-error {{expected expression}}
-#pragma omp task detach(a) // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}} omp50-error {{expected variable of the 'omp_event_handle_t' type, not 'int'}}
+#pragma omp task detach(a) // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}} omp5-error {{expected variable of the 'omp_event_handle_t' type, not 'int'}}
 #pragma omp task detach(evt) detach(evt) // omp45-error 2 {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}} expected-error {{directive '#pragma omp task' cannot contain more than one 'detach' clause}}
-#pragma omp task detach(cevt) detach(revt) // omp45-error 2 {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}} expected-error {{directive '#pragma omp task' cannot contain more than one 'detach' clause}} omp50-error {{expected variable of the 'omp_event_handle_t' type, not 'const omp_event_handle_t' (aka 'const unsigned long')}} omp50-error {{expected variable of the 'omp_event_handle_t' type, not 'omp_event_handle_t &' (aka 'unsigned long &')}}
-#pragma omp task detach(evt) mergeable // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}} omp50-error {{'mergeable' and 'detach' clause are mutually exclusive and may not appear on the same directive}} omp50-note {{'detach' clause is specified here}}
+#pragma omp task detach(cevt) detach(revt) // omp45-error 2 {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}} expected-error {{directive '#pragma omp task' cannot contain more than one 'detach' clause}} omp5-error {{expected variable of the 'omp_event_handle_t' type, not 'const omp_event_handle_t' (aka 'const unsigned long')}} omp5-error {{expected variable of the 'omp_event_handle_t' type, not 'omp_event_handle_t &' (aka 'unsigned long &')}}
+#pragma omp task detach(evt) mergeable // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}} omp5-error {{'mergeable' and 'detach' clause are mutually exclusive and may not appear on the same directive}} omp5-note {{'detach' clause is specified here}}
   ;
-#pragma omp task mergeable detach(evt) // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}} omp50-error {{'detach' and 'mergeable' clause are mutually exclusive and may not appear on the same directive}} omp50-note {{'mergeable' clause is specified here}}
-#pragma omp task detach(-evt) // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}} omp50-error {{expected variable of the 'omp_event_handle_t' type}}
+#pragma omp task mergeable detach(evt) // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}} omp5-error {{'detach' and 'mergeable' clause are mutually exclusive and may not appear on the same directive}} omp5-note {{'mergeable' clause is specified here}}
+#pragma omp task detach(-evt) // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}} omp5-error {{expected variable of the 'omp_event_handle_t' type}}
   ;
 #pragma omp task detach(evt) shared(evt) // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}}
 #pragma omp task detach(evt) firstprivate(evt) // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}}

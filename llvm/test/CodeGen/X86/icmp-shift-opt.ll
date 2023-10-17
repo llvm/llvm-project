@@ -223,11 +223,11 @@ define i1 @opt_setcc_expanded_shl_correct_shifts(i64 %a, i64 %b) nounwind {
 ; X86-LABEL: opt_setcc_expanded_shl_correct_shifts:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    orl %eax, %ecx
-; X86-NEXT:    shldl $17, %eax, %ecx
+; X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shll $17, %ecx
+; X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 ;

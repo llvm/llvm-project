@@ -145,7 +145,6 @@ public:
 TargetInfo *createX86_64TargetInfo();
 TargetInfo *createARM64TargetInfo();
 TargetInfo *createARM64_32TargetInfo();
-TargetInfo *createARMTargetInfo(uint32_t cpuSubtype);
 
 struct LP64 {
   using mach_header = llvm::MachO::mach_header_64;

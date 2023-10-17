@@ -18,6 +18,7 @@
 #include "FuzzerSHA1.h"
 #include "FuzzerTracePC.h"
 #include <algorithm>
+#include <bitset>
 #include <chrono>
 #include <numeric>
 #include <random>
@@ -77,7 +78,7 @@ struct InputInfo {
     SumIncidence = 0.0;
 
     // Apply add-one smoothing to locally discovered features.
-    for (auto F : FeatureFreqs) {
+    for (const auto &F : FeatureFreqs) {
       double LocalIncidence = F.second + 1;
       Energy -= LocalIncidence * log(LocalIncidence);
       SumIncidence += LocalIncidence;
@@ -382,6 +383,7 @@ public:
       }
 
       // Remove most abundant rare feature.
+      IsRareFeature[Delete] = false;
       RareFeatures[Delete] = RareFeatures.back();
       RareFeatures.pop_back();
 
@@ -397,6 +399,7 @@ public:
 
     // Add rare feature, handle collisions, and update energy.
     RareFeatures.push_back(Idx);
+    IsRareFeature[Idx] = true;
     GlobalFeatureFreqs[Idx] = 0;
     for (auto II : Inputs) {
       II->DeleteFeatureFreq(Idx);
@@ -450,9 +453,7 @@ public:
     uint16_t Freq = GlobalFeatureFreqs[Idx32]++;
 
     // Skip if abundant.
-    if (Freq > FreqOfMostAbundantRareFeature ||
-        std::find(RareFeatures.begin(), RareFeatures.end(), Idx32) ==
-            RareFeatures.end())
+    if (Freq > FreqOfMostAbundantRareFeature || !IsRareFeature[Idx32])
       return;
 
     // Update global frequencies.
@@ -581,6 +582,7 @@ private:
   uint16_t FreqOfMostAbundantRareFeature = 0;
   uint16_t GlobalFeatureFreqs[kFeatureSetSize] = {};
   std::vector<uint32_t> RareFeatures;
+  std::bitset<kFeatureSetSize> IsRareFeature;
 
   std::string OutputCorpus;
 };

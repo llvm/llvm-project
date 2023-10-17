@@ -19,7 +19,7 @@ define void @multiple_access_no_preloop(
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_NEXT:%.*]], [[IN_BOUNDS_B:%.*]] ], [ 0, [[LOOP_PREHEADER2]] ]
-; CHECK-NEXT:    [[IDX_NEXT]] = add i32 [[IDX]], 1
+; CHECK-NEXT:    [[IDX_NEXT]] = add nsw i32 [[IDX]], 1
 ; CHECK-NEXT:    [[ABC_A:%.*]] = icmp slt i32 [[IDX]], [[LEN_A]]
 ; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS_A:%.*]], label [[OUT_OF_BOUNDS_LOOPEXIT3:%.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       in.bounds.a:
@@ -69,7 +69,7 @@ define void @multiple_access_no_preloop(
 ; CHECK-NEXT:    [[ADDR_B_POSTLOOP:%.*]] = getelementptr i32, ptr [[ARR_B]], i32 [[IDX_POSTLOOP]]
 ; CHECK-NEXT:    store i32 -1, ptr [[ADDR_B_POSTLOOP]], align 4
 ; CHECK-NEXT:    [[NEXT_POSTLOOP:%.*]] = icmp slt i32 [[IDX_NEXT_POSTLOOP]], [[N]]
-; CHECK-NEXT:    br i1 [[NEXT_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP2:![0-9]+]], !irce.loop.clone !7
+; CHECK-NEXT:    br i1 [[NEXT_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP2:![0-9]+]], !irce.loop.clone [[META7:![0-9]+]]
 ;
   ptr %arr_a, ptr %a_len_ptr, ptr %arr_b, ptr %b_len_ptr, i32 %n) {
 

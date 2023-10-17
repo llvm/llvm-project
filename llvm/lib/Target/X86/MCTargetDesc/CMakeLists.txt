@@ -3,7 +3,7 @@ add_llvm_component_library(LLVMX86Desc
   X86IntelInstPrinter.cpp
   X86InstComments.cpp
   X86InstPrinterCommon.cpp
-  X86InstrRelaxTables.cpp
+  X86EncodingOptimization.cpp
   X86ShuffleDecode.cpp
   X86AsmBackend.cpp
   X86MCTargetDesc.cpp
@@ -17,12 +17,13 @@ add_llvm_component_library(LLVMX86Desc
   X86WinCOFFTargetStreamer.cpp
 
   LINK_COMPONENTS
+  BinaryFormat
+  CodeGenTypes
   MC
   MCDisassembler
   Support
   TargetParser
   X86Info
-  BinaryFormat
 
   ADD_TO_COMPONENT
   X86

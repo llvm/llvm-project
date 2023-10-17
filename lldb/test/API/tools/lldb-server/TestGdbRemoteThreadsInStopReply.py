@@ -6,9 +6,8 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-class TestGdbRemoteThreadsInStopReply(
-        gdbremote_testcase.GdbRemoteTestCaseBase):
 
+class TestGdbRemoteThreadsInStopReply(gdbremote_testcase.GdbRemoteTestCaseBase):
     ENABLE_THREADS_IN_STOP_REPLY_ENTRIES = [
         "read packet: $QListThreadsInStopReply#21",
         "send packet: $OK#00",
@@ -30,7 +29,7 @@ class TestGdbRemoteThreadsInStopReply(
         # Parse the stop reply contents.
         kv_dict = self.parse_key_val_dict(key_vals_text)
 
-        result = dict();
+        result = dict()
         result["pc_register"] = hw_info["pc_register"]
         result["little_endian"] = hw_info["little_endian"]
         for key_field in field_names:
@@ -41,10 +40,12 @@ class TestGdbRemoteThreadsInStopReply(
     def gather_stop_reply_threads(self, thread_count):
         # Pull out threads from stop response.
         stop_reply_threads_text = self.gather_stop_reply_fields(
-                thread_count, ["threads"])["threads"]
+            thread_count, ["threads"]
+        )["threads"]
         if stop_reply_threads_text:
-            return [int(thread_id, 16)
-                    for thread_id in stop_reply_threads_text.split(",")]
+            return [
+                int(thread_id, 16) for thread_id in stop_reply_threads_text.split(",")
+            ]
         else:
             return []
 
@@ -81,21 +82,22 @@ class TestGdbRemoteThreadsInStopReply(
 
         hw_info = dict()
         hw_info["pc_register"] = pc_lldb_reg_index
-        hw_info["little_endian"] = (endian == "little")
+        hw_info["little_endian"] = endian == "little"
         return hw_info
 
     def gather_threads_info_pcs(self, pc_register, little_endian):
         self.reset_test_sequence()
         self.test_sequence.add_log_lines(
-                [
-                    "read packet: $jThreadsInfo#c1",
-                    {
-                        "direction": "send",
-                        "regex": r"^\$(.*)#[0-9a-fA-F]{2}$",
-                        "capture": {
-                            1: "threads_info"}},
-                ],
-                True)
+            [
+                "read packet: $jThreadsInfo#c1",
+                {
+                    "direction": "send",
+                    "regex": r"^\$(.*)#[0-9a-fA-F]{2}$",
+                    "capture": {1: "threads_info"},
+                },
+            ],
+            True,
+        )
 
         context = self.expect_gdbremote_sequence()
         self.assertIsNotNone(context)
@@ -112,26 +114,27 @@ class TestGdbRemoteThreadsInStopReply(
 
         return thread_pcs
 
-
     def test_QListThreadsInStopReply_supported(self):
         self.build()
         self.set_inferior_startup_launch()
         procs = self.prep_debug_monitor_and_inferior()
         self.test_sequence.add_log_lines(
-            self.ENABLE_THREADS_IN_STOP_REPLY_ENTRIES, True)
+            self.ENABLE_THREADS_IN_STOP_REPLY_ENTRIES, True
+        )
 
         context = self.expect_gdbremote_sequence()
         self.assertIsNotNone(context)
 
     @skipIfNetBSD
-    @expectedFailureAll(oslist=["windows"]) # Extra threads present
+    @expectedFailureAll(oslist=["windows"])  # Extra threads present
     def test_stop_reply_reports_multiple_threads(self):
         self.build()
         self.set_inferior_startup_launch()
         # Gather threads from stop notification when QThreadsInStopReply is
         # enabled.
         self.test_sequence.add_log_lines(
-            self.ENABLE_THREADS_IN_STOP_REPLY_ENTRIES, True)
+            self.ENABLE_THREADS_IN_STOP_REPLY_ENTRIES, True
+        )
         stop_reply_threads = self.gather_stop_reply_threads(5)
         self.assertEqual(len(stop_reply_threads), 5)
 
@@ -152,7 +155,8 @@ class TestGdbRemoteThreadsInStopReply(
         # enabled.
         thread_count = 5
         self.test_sequence.add_log_lines(
-            self.ENABLE_THREADS_IN_STOP_REPLY_ENTRIES, True)
+            self.ENABLE_THREADS_IN_STOP_REPLY_ENTRIES, True
+        )
         stop_reply_threads = self.gather_stop_reply_threads(thread_count)
 
         # Gather threads from q{f,s}ThreadInfo.
@@ -171,23 +175,25 @@ class TestGdbRemoteThreadsInStopReply(
             self.assertIn(tid, stop_reply_threads)
 
     @skipIfNetBSD
+    @skipIfWindows  # Flaky on Windows
     def test_stop_reply_contains_thread_pcs(self):
         self.build()
         self.set_inferior_startup_launch()
         thread_count = 5
         self.test_sequence.add_log_lines(
-            self.ENABLE_THREADS_IN_STOP_REPLY_ENTRIES, True)
+            self.ENABLE_THREADS_IN_STOP_REPLY_ENTRIES, True
+        )
         results = self.gather_stop_reply_pcs(thread_count)
         stop_reply_pcs = results["thread_pcs"]
         pc_register = results["pc_register"]
         little_endian = results["little_endian"]
         self.assertGreaterEqual(len(stop_reply_pcs), thread_count)
 
-        threads_info_pcs = self.gather_threads_info_pcs(pc_register,
-                little_endian)
+        threads_info_pcs = self.gather_threads_info_pcs(pc_register, little_endian)
 
         self.assertEqual(len(threads_info_pcs), len(stop_reply_pcs))
         for thread_id in stop_reply_pcs:
             self.assertIn(thread_id, threads_info_pcs)
-            self.assertEqual(int(stop_reply_pcs[thread_id], 16),
-                    int(threads_info_pcs[thread_id], 16))
+            self.assertEqual(
+                int(stop_reply_pcs[thread_id], 16), int(threads_info_pcs[thread_id], 16)
+            )

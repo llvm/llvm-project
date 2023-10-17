@@ -18,9 +18,9 @@ def RocketModel : SchedMachineModel {
   let MispredictPenalty = 3;
   let CompleteModel = false;
   let UnsupportedFeatures = [HasStdExtZbkb, HasStdExtZbkc, HasStdExtZbkx,
-                             HasStdExtZknd, HasStdExtZkne, HasStdExtZknh,
-                             HasStdExtZksed, HasStdExtZksh, HasStdExtZkr,
-                             HasVInstructions, HasVInstructionsI64];
+                             HasStdExtZcmt, HasStdExtZknd, HasStdExtZkne,
+                             HasStdExtZknh, HasStdExtZksed, HasStdExtZksh,
+                             HasStdExtZkr, HasVInstructions, HasVInstructionsI64];
 }
 
 //===----------------------------------------------------------------------===//
@@ -51,7 +51,6 @@ let SchedModel = RocketModel in {
 def : WriteRes<WriteJmp, [RocketUnitB]>;
 def : WriteRes<WriteJal, [RocketUnitB]>;
 def : WriteRes<WriteJalr, [RocketUnitB]>;
-def : WriteRes<WriteJmpReg, [RocketUnitB]>;
 
 // Integer arithmetic and logic
 def : WriteRes<WriteIALU32, [RocketUnitALU]>;
@@ -71,11 +70,11 @@ def : WriteRes<WriteIMul32, [RocketUnitIMul]>;
 // Worst case latency is used.
 def : WriteRes<WriteIDiv32, [RocketUnitIDiv]> {
   let Latency = 34;
-  let ResourceCycles = [34];
+  let ReleaseAtCycles = [34];
 }
 def : WriteRes<WriteIDiv, [RocketUnitIDiv]> {
   let Latency = 33;
-  let ResourceCycles = [33];
+  let ReleaseAtCycles = [33];
 }
 
 // Memory
@@ -158,16 +157,16 @@ def : WriteRes<WriteFMA64, [RocketUnitFPALU]>;
 
 // FP division
 // FP division unit on Rocket is not pipelined, so set resource cycles to latency.
-let Latency = 20, ResourceCycles = [20] in {
+let Latency = 20, ReleaseAtCycles = [20] in {
 def : WriteRes<WriteFDiv32, [RocketUnitFPDivSqrt]>;
 def : WriteRes<WriteFDiv64, [RocketUnitFPDivSqrt]>;
 }
 
 // FP square root unit on Rocket is not pipelined, so set resource cycles to latency.
 def : WriteRes<WriteFSqrt32, [RocketUnitFPDivSqrt]> { let Latency = 20;
-                                                      let ResourceCycles = [20]; }
+                                                      let ReleaseAtCycles = [20]; }
 def : WriteRes<WriteFSqrt64, [RocketUnitFPDivSqrt]> { let Latency = 25;
-                                                      let ResourceCycles = [25]; }
+                                                      let ReleaseAtCycles = [25]; }
 
 // Others
 def : WriteRes<WriteCSR, []>;
@@ -244,6 +243,7 @@ defm : UnsupportedSchedZbc;
 defm : UnsupportedSchedZbs;
 defm : UnsupportedSchedZbkb;
 defm : UnsupportedSchedZbkx;
+defm : UnsupportedSchedZfa;
 defm : UnsupportedSchedZfh;
 defm : UnsupportedSchedSFB;
 }

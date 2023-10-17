@@ -21,14 +21,8 @@
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <memory>
-#include <cassert>
 
-#include "test_macros.h"
-
-int main(int, char**)
-{
+void f() {
     std::allocator<int> a;
     a.allocate(3, nullptr); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-
-    return 0;
 }

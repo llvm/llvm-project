@@ -130,7 +130,7 @@ NativeRegisterContextFreeBSD_mips64::ReadRegister(const RegisterInfo *reg_info,
     return error;
   }
 
-  RegSetKind set = opt_set.getValue();
+  RegSetKind set = *opt_set;
   error = ReadRegisterSet(set);
   if (error.Fail())
     return error;
@@ -164,7 +164,7 @@ Status NativeRegisterContextFreeBSD_mips64::WriteRegister(
     return error;
   }
 
-  RegSetKind set = opt_set.getValue();
+  RegSetKind set = *opt_set;
   error = ReadRegisterSet(set);
   if (error.Fail())
     return error;

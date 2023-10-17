@@ -7,9 +7,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// Older Clangs do not support the C++20 feature to constrain destructors
-// XFAIL: clang-14, apple-clang-14
-
 // constexpr ~expected();
 //
 // Effects: If has_value() is true, destroys val, otherwise destroys unex.

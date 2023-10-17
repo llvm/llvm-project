@@ -96,7 +96,7 @@ define <6 x float> @strided_load_2x3_align16_stride2(ptr %in) {
 ; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr float, ptr %in, i64 4
 ; CHECK-NEXT:    [[COL_LOAD5:%.*]] = load <2 x float>, ptr [[VEC_GEP3]], align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x float> [[COL_LOAD]], <2 x float> [[COL_LOAD2]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[COL_LOAD5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[COL_LOAD5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP2]], <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
 ; CHECK-NEXT:    ret <6 x float> [[TMP3]]
 ;

@@ -58,10 +58,7 @@ static void write_unsigned_impl(raw_ostream &S, T N, size_t MinDigits,
   static_assert(std::is_unsigned_v<T>, "Value is not unsigned!");
 
   char NumberBuffer[128];
-  std::memset(NumberBuffer, '0', sizeof(NumberBuffer));
-
-  size_t Len = 0;
-  Len = format_to_buffer(N, NumberBuffer);
+  size_t Len = format_to_buffer(N, NumberBuffer);
 
   if (IsNegative)
     S << '-';

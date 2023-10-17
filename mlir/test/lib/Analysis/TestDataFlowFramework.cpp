@@ -96,6 +96,9 @@ LogicalResult FooAnalysis::initialize(Operation *top) {
   if (top->getNumRegions() != 1)
     return top->emitError("expected a single region top-level op");
 
+  if (top->getRegion(0).getBlocks().empty())
+    return top->emitError("expected at least one block in the region");
+
   // Initialize the top-level state.
   getOrCreate<FooState>(&top->getRegion(0).front())->join(0);
 
@@ -112,11 +115,11 @@ LogicalResult FooAnalysis::initialize(Operation *top) {
 }
 
 LogicalResult FooAnalysis::visit(ProgramPoint point) {
-  if (auto *op = point.dyn_cast<Operation *>()) {
+  if (auto *op = llvm::dyn_cast_if_present<Operation *>(point)) {
     visitOperation(op);
     return success();
   }
-  if (auto *block = point.dyn_cast<Block *>()) {
+  if (auto *block = llvm::dyn_cast_if_present<Block *>(point)) {
     visitBlock(block);
     return success();
   }

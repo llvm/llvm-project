@@ -31,7 +31,7 @@ define float @test1(ptr %pTmp1, ptr %peakWeight, i32 %bandEdgeIndex) nounwind {
 ; CHECK-NEXT:    [[T9]] = fadd float [[T8]], [[PEAKCOUNT_02]]
 ; CHECK-NEXT:    [[T10:%.*]] = fcmp olt float [[T4]], 2.500000e+00
 ; CHECK-NEXT:    [[T12:%.*]] = icmp sgt i64 [[TMP0]], [[INDVARS_IV_NEXT]]
-; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[T10]], i1 [[T12]], i1 false
+; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[T10]], [[T12]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[BB]], label [[BB1_BB3_CRIT_EDGE:%.*]]
 ; CHECK:       bb1.bb3_crit_edge:
 ; CHECK-NEXT:    [[T4_LCSSA:%.*]] = phi float [ [[T4]], [[BB]] ]
@@ -85,7 +85,7 @@ define float @merge_branches_profile_metadata(ptr %pTmp1, ptr %peakWeight, i32 %
 ; CHECK-NEXT:    [[T0:%.*]] = load float, ptr [[PEAKWEIGHT:%.*]], align 4
 ; CHECK-NEXT:    [[T11:%.*]] = add i32 [[BANDEDGEINDEX:%.*]], -1
 ; CHECK-NEXT:    [[T121:%.*]] = icmp sgt i32 [[T11]], 0
-; CHECK-NEXT:    br i1 [[T121]], label [[BB_LR_PH:%.*]], label [[BB3:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[T121]], label [[BB_LR_PH:%.*]], label [[BB3:%.*]], !prof [[PROF0:![0-9]+]]
 ; CHECK:       bb.lr.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[T11]] to i64
 ; CHECK-NEXT:    br label [[BB:%.*]]
@@ -102,8 +102,8 @@ define float @merge_branches_profile_metadata(ptr %pTmp1, ptr %peakWeight, i32 %
 ; CHECK-NEXT:    [[T9]] = fadd float [[T8]], [[PEAKCOUNT_02]]
 ; CHECK-NEXT:    [[T10:%.*]] = fcmp olt float [[T4]], 2.500000e+00
 ; CHECK-NEXT:    [[T12:%.*]] = icmp sgt i64 [[TMP0]], [[INDVARS_IV_NEXT]]
-; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[T10]], i1 [[T12]], i1 false
-; CHECK-NEXT:    br i1 [[OR_COND]], label [[BB]], label [[BB1_BB3_CRIT_EDGE:%.*]], !prof !0
+; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[T10]], [[T12]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[BB]], label [[BB1_BB3_CRIT_EDGE:%.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       bb1.bb3_crit_edge:
 ; CHECK-NEXT:    [[T4_LCSSA:%.*]] = phi float [ [[T4]], [[BB]] ]
 ; CHECK-NEXT:    [[T9_LCSSA:%.*]] = phi float [ [[T9]], [[BB]] ]

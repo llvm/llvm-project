@@ -8,20 +8,20 @@
 
 #include "src/__support/CPP/span.h"
 #include "src/string/memccpy.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 #include <stddef.h> // For size_t.
 
-class LlvmLibcMemccpyTest : public __llvm_libc::testing::Test {
+class LlvmLibcMemccpyTest : public LIBC_NAMESPACE::testing::Test {
 public:
-  void check_memccpy(__llvm_libc::cpp::span<char> dst,
-                     const __llvm_libc::cpp::span<const char> src, int end,
+  void check_memccpy(LIBC_NAMESPACE::cpp::span<char> dst,
+                     const LIBC_NAMESPACE::cpp::span<const char> src, int end,
                      size_t count,
-                     const __llvm_libc::cpp::span<const char> expected,
+                     const LIBC_NAMESPACE::cpp::span<const char> expected,
                      size_t expectedCopied, bool shouldReturnNull = false) {
     // Making sure we don't overflow buffer.
     ASSERT_GE(dst.size(), count);
     // Making sure memccpy returns dst.
-    void *result = __llvm_libc::memccpy(dst.data(), src.data(), end, count);
+    void *result = LIBC_NAMESPACE::memccpy(dst.data(), src.data(), end, count);
 
     if (shouldReturnNull) {
       ASSERT_EQ(result, static_cast<void *>(nullptr));

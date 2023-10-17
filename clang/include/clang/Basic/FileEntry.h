@@ -70,7 +70,7 @@ public:
   const FileEntry &getFileEntry() const {
     return *getBaseMapEntry().second->V.get<FileEntry *>();
   }
-  DirectoryEntryRef getDir() const { return *getBaseMapEntry().second->Dir; }
+  DirectoryEntryRef getDir() const { return ME->second->Dir; }
 
   inline off_t getSize() const;
   inline unsigned getUID() const;
@@ -118,17 +118,14 @@ public:
     /// VFSs that use external names. In that case, the \c FileEntryRef
     /// returned by the \c FileManager will have the external name, and not the
     /// name that was used to lookup the file.
-    ///
-    /// The second type is really a `const MapEntry *`, but that confuses
-    /// gcc5.3.  Once that's no longer supported, change this back.
-    llvm::PointerUnion<FileEntry *, const void *> V;
+    llvm::PointerUnion<FileEntry *, const MapEntry *> V;
 
-    /// Directory the file was found in. Set if and only if V is a FileEntry.
-    OptionalDirectoryEntryRef Dir;
+    /// Directory the file was found in.
+    DirectoryEntryRef Dir;
 
     MapValue() = delete;
     MapValue(FileEntry &FE, DirectoryEntryRef Dir) : V(&FE), Dir(Dir) {}
-    MapValue(MapEntry &ME) : V(&ME) {}
+    MapValue(MapEntry &ME, DirectoryEntryRef Dir) : V(&ME), Dir(Dir) {}
   };
 
   /// Check if RHS referenced the file in exactly the same way.
@@ -165,10 +162,10 @@ public:
 
   /// Retrieve the base MapEntry after redirects.
   const MapEntry &getBaseMapEntry() const {
-    const MapEntry *ME = this->ME;
-    while (const void *Next = ME->second->V.dyn_cast<const void *>())
-      ME = static_cast<const MapEntry *>(Next);
-    return *ME;
+    const MapEntry *Base = ME;
+    while (const auto *Next = Base->second->V.dyn_cast<const MapEntry *>())
+      Base = Next;
+    return *Base;
   }
 
 private:
@@ -237,6 +234,38 @@ static_assert(std::is_trivially_copyable<OptionalFileEntryRef>::value,
 } // namespace clang
 
 namespace llvm {
+
+template <> struct PointerLikeTypeTraits<clang::FileEntryRef> {
+  static inline void *getAsVoidPointer(clang::FileEntryRef File) {
+    return const_cast<clang::FileEntryRef::MapEntry *>(&File.getMapEntry());
+  }
+
+  static inline clang::FileEntryRef getFromVoidPointer(void *Ptr) {
+    return clang::FileEntryRef(
+        *reinterpret_cast<const clang::FileEntryRef::MapEntry *>(Ptr));
+  }
+
+  static constexpr int NumLowBitsAvailable = PointerLikeTypeTraits<
+      const clang::FileEntryRef::MapEntry *>::NumLowBitsAvailable;
+};
+
+template <> struct PointerLikeTypeTraits<clang::OptionalFileEntryRef> {
+  static inline void *getAsVoidPointer(clang::OptionalFileEntryRef File) {
+    if (!File)
+      return nullptr;
+    return PointerLikeTypeTraits<clang::FileEntryRef>::getAsVoidPointer(*File);
+  }
+
+  static inline clang::OptionalFileEntryRef getFromVoidPointer(void *Ptr) {
+    if (!Ptr)
+      return std::nullopt;
+    return PointerLikeTypeTraits<clang::FileEntryRef>::getFromVoidPointer(Ptr);
+  }
+
+  static constexpr int NumLowBitsAvailable =
+      PointerLikeTypeTraits<clang::FileEntryRef>::NumLowBitsAvailable;
+};
+
 /// Specialisation of DenseMapInfo for FileEntryRef.
 template <> struct DenseMapInfo<clang::FileEntryRef> {
   static inline clang::FileEntryRef getEmptyKey() {
@@ -263,6 +292,18 @@ template <> struct DenseMapInfo<clang::FileEntryRef> {
     // It's safe to use operator==.
     return LHS == RHS;
   }
+
+  /// Support for finding `const FileEntry *` in a `DenseMap<FileEntryRef, T>`.
+  /// @{
+  static unsigned getHashValue(const clang::FileEntry *Val) {
+    return llvm::hash_value(Val);
+  }
+  static bool isEqual(const clang::FileEntry *LHS, clang::FileEntryRef RHS) {
+    if (RHS.isSpecialDenseMapKey())
+      return false;
+    return LHS == RHS;
+  }
+  /// @}
 };
 
 } // end namespace llvm
@@ -385,7 +426,6 @@ class FileEntry {
 public:
   ~FileEntry();
   StringRef getName() const { return LastRef->getName(); }
-  FileEntryRef getLastRef() const { return *LastRef; }
 
   StringRef tryGetRealPathName() const { return RealPathName; }
   off_t getSize() const { return Size; }

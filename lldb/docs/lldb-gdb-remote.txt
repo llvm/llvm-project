@@ -806,7 +806,7 @@ generic     If the register is a generic register that most CPUs have, classify
                    ABI) would include a "generic=fp;" key value pair)
              ra  (a return address register. for example "name=lr;" (32 bit ARM)
                   would include a "generic=ra;" key value pair)
-             fp  (a CPU flags register. for example "name=eflags;" (i386),
+             flags  (a CPU flags register. for example "name=eflags;" (i386),
                   "name=rflags;" (x86_64), "name=cpsr;" (32 bit ARM)
                   would include a "generic=flags;" key value pair)
              arg1 - arg8 (specified for registers that contain function
@@ -978,6 +978,14 @@ addressing_bits: optional, specifies how many bits in addresses are
 		 v8.3 ABIs that use pointer authentication, so lldb
 		 knows which bits to clear/set to get the actual
 		 addresses.
+low_mem_addressing_bits: optional, specifies how many bits in 
+     addresses in low memory are significant for addressing, base 10.  
+     AArch64 can have different page table setups for low and high
+     memory, and therefore a different number of bits used for addressing.
+high_mem_addressing_bits: optional, specifies how many bits in 
+     addresses in high memory are significant for addressing, base 10.  
+     AArch64 can have different page table setups for low and high
+     memory, and therefore a different number of bits used for addressing.
 
 //----------------------------------------------------------------------
 // "qGDBServerVersion"
@@ -1559,17 +1567,57 @@ for this region.
 //                          "signal" stopped due to an actual unix signal, not
 //                              just the debugger using a unix signal to keep
 //                              the GDB remote client happy.
-//                          "watchpoint". Should be used in conjunction with
-//                              the "watch"/"rwatch"/"awatch" key value pairs.
+//                          "watchpoint". Can be used with of the 
+//                              "watch"/"rwatch"/"awatch" key value pairs.
+//                              Or can be used *instead* of those keys, 
+//                              with the specially formatted "description" field.
 //                          "exception" an exception stop reason. Use with
 //                              the "description" key/value pair to describe the
 //                              exceptional event the user should see as the stop
 //                              reason.
 //  "description" ascii-hex An ASCII hex string that contains a more descriptive
-//                          reason that the thread stopped. This is only needed
-//                          if none of the key/value pairs are enough to
-//                          describe why something stopped.
+//           reason that the thread stopped. This is only needed
+//           if none of the key/value pairs are enough to
+//           describe why something stopped.
 //
+//           For "reason:watchpoint", "description" is an ascii-hex
+//           encoded string with between one and three base10 numbers,
+//           space separated.  The three numbers are
+//             1. watchpoint address.  This address should always be within
+//                a memory region lldb has a watchpoint on.  
+//                On architectures where the actual reported hit address may
+//                be outside the watchpoint that was triggered, the remote
+//                stub should determine which watchpoint was triggered and
+//                report an address from within its range.
+//             2. watchpoint hardware register index number.
+//             3. actual watchpoint trap address, which may be outside
+//                the range of any watched region of memory. On MIPS, an addr
+//                outside a watched range means lldb should disable the wp, 
+//                step, re-enable the wp and continue silently.
+//
+//           On MIPS, the low 3 bits are masked so if a watchpoint is on 
+//           0x1004, a 2-byte write to 0x1000 will trigger the watchpoint 
+//           (a false positive hit), and lldb needs to disable the 
+//           watchpoint at 0x1004, inst-step, then re-enable the watchpoint
+//           and not make this a user visible event. The description here 
+//           would be "0x1004 0 0x1000". lldb needs a known watchpoint address
+//           in the first field, so it can disable it & step.
+//
+//           On AArch64 we have a related issue, where you watch 4 bytes at 
+//           0x1004, an instruction does an 8-byte write starting at 
+//           0x1000 (a true watchpoint hit) and the hardware may report the 
+//           trap address as 0x1000 - before the watched memory region - 
+//           with the write extending into the watched region.  This can 
+//           be reported as "0x1004 0 0x1000".  lldb will use 0x1004 to 
+//           identify which Watchpoint was triggered, and can report 0x1000 
+//           to the user.  The behavior of silently stepping over the 
+//           watchpoint, with an 3rd field addr outside the range, is 
+//           restricted to MIPS.
+//           There may be false-positive watchpoint hits on AArch64 as well,
+//           in the SVE Streaming Mode, but that is less common (see ESR 
+//           register flag "WPF", "Watchpoint might be False-Positive") and
+//           not currently handled by lldb.
+//           
 //  "threads"     comma-sep-base16  A list of thread ids for all threads (including
 //                                  the thread that we're reporting as stopped) that
 //                                  are live in the process right now.  lldb may
@@ -1595,6 +1643,36 @@ for this region.
 //
 //                                  Example:
 //                                  thread-pcs:dec14,2cf872b0,2cf8681c,2d02d68c,2cf716a8;
+//
+//  "addressing_bits" unsigned optional  Specifies how many bits in addresses 
+//                                       are significant for addressing, base 
+//                                       10.  If bits 38..0 in a 64-bit 
+//                                       pointer are significant for 
+//                                       addressing, then the value is 39.  
+//                                       This is needed on e.g. AArch64
+//                                       v8.3 ABIs that use pointer 
+//                                       authentication in the high bits.
+//                                       This value is normally sent in the
+//                                       qHostInfo packet response, and if the
+//                                       value cannot change during the process
+//                                       lifetime, it does not need to be 
+//                                       duplicated here in the stop packet.
+//                                       For a firmware environment with early
+//                                       start code that may be changing the
+//                                       page table setup, a dynamically set
+//                                       value may be needed.
+//  "low_mem_addressing_bits" unsigned optional, specifies how many bits in 
+//                                       addresses in low memory are significant 
+//                                       for addressing, base 10.  AArch64 can 
+//                                       have different page table setups for low 
+//                                       and high memory, and therefore a different 
+//                                       number of bits used for addressing.
+//  "high_mem_addressing_bits" unsigned optional, specifies how many bits in 
+//                                       addresses in high memory are significant 
+//                                       for addressing, base 10.  AArch64 can have 
+//                                       different page table setups for low and 
+//                                       high memory, and therefore a different 
+//                                       number of bits used for addressing.
 //
 // BEST PRACTICES:
 //  Since register values can be supplied with this packet, it is often useful
@@ -1943,19 +2021,16 @@ for this region.
 //  This packet asks the remote debug stub to send the details about libraries
 //  being added/removed from the process as a performance optimization.
 //
-//  There are three ways this packet can be used.  All three return a dictionary of
+//  There are two ways this packet can be used.  Both return a dictionary of
 //  binary images formatted the same way.
 //
-//  On OS X 10.11, iOS 9, tvOS 9, watchOS 2 and earlier, the packet is used like
-//       jGetLoadedDynamicLibrariesInfos:{"image_count":1,"image_list_address":140734800075128}
-//  where the image_list_address is an array of {void* load_addr, void* mod_date, void* pathname}
-//  in the inferior process memory (and image_count is the number of elements in this array).
-//  lldb is using information from the dyld_all_image_infos structure to make these requests to
-//  debugserver.  This use is not supported on macOS 10.12, iOS 10, tvOS 10, watchOS 3 or newer.
-//
-//  On macOS 10.12, iOS 10, tvOS 10, watchOS 3 and newer, there are two calls.  One requests information
-//  on all shared libraries:
+//  One requests information on all shared libraries:
 //       jGetLoadedDynamicLibrariesInfos:{"fetch_all_solibs":true}
+//  with an optional `"report_load_commands":false` which can be added, asking
+//  that only the dyld SPI information (load addresses, filenames) be returned.
+//  The default behavior is that debugserver scans the mach-o header and load 
+//  commands of each binary, and returns it in the JSON reply.
+//
 //  And the second requests information about a list of shared libraries, given their load addresses:
 //       jGetLoadedDynamicLibrariesInfos:{"solib_addresses":[8382824135,3258302053,830202858503]}
 //

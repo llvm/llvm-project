@@ -6,6 +6,11 @@
 ; DBG-LABEL: 'test_scalarize_call'
 ; DBG:      VPlan 'Initial VPlan for VF={1},UF>=1' {
 ; DBG-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
+; DBG-NEXT: vp<[[TC:%.+]]> = original trip-count
+; DBG-EMPTY:
+; DBG-NEXT: ph:
+; DBG-NEXT:  EMIT vp<[[TC]]> = EXPAND SCEV (1000 + (-1 * %start))
+; DBG-NEXT: No successors
 ; DBG-EMPTY:
 ; DBG-NEXT: vector.ph:
 ; DBG-NEXT: Successor(s): vector loop
@@ -16,10 +21,10 @@
 ; DBG-NEXT:     vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<%start> + vp<[[CAN_IV]]> * ir<1>
 ; DBG-NEXT:     vp<[[IV_STEPS:%.]]>    = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<1>
 ; DBG-NEXT:     CLONE ir<%min> = call @llvm.smin.i32(vp<[[IV_STEPS]]>, ir<65535>)
-; DBG-NEXT:     CLONE ir<%arrayidx> = getelementptr ir<%dst>, vp<[[IV_STEPS]]>
+; DBG-NEXT:     CLONE ir<%arrayidx> = getelementptr inbounds ir<%dst>, vp<[[IV_STEPS]]>
 ; DBG-NEXT:     CLONE store ir<%min>, ir<%arrayidx>
-; DBG-NEXT:     EMIT vp<[[INC:%.+]]> = VF * UF +(nuw)  vp<[[CAN_IV]]>
-; DBG-NEXT:     EMIT branch-on-count  vp<[[INC]]> vp<[[VEC_TC]]>
+; DBG-NEXT:     EMIT vp<[[INC:%.+]]> = VF * UF + nuw vp<[[CAN_IV]]>
+; DBG-NEXT:     EMIT branch-on-count vp<[[INC]]>, vp<[[VEC_TC]]>
 ; DBG-NEXT:   No successors
 ; DBG-NEXT: }
 ;
@@ -63,6 +68,7 @@ declare i32 @llvm.smin.i32(i32, i32)
 ; DBG-LABEL: 'test_scalarize_with_branch_cond'
 
 ; DBG:       Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
+; DBG-NEXT:  Live-in ir<1000> = original trip-count
 ; DBG-EMPTY:
 ; DBG-NEXT: vector.ph:
 ; DBG-NEXT: Successor(s): vector loop
@@ -81,9 +87,9 @@ declare i32 @llvm.smin.i32(i32, i32)
 ; DBG-EMPTY:
 ; DBG-NEXT:     pred.store.if:
 ; DBG-NEXT:       vp<[[STEPS2:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
-; DBG-NEXT:       CLONE ir<%gep.src> = getelementptr ir<%src>, vp<[[STEPS2]]>
+; DBG-NEXT:       CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<[[STEPS2]]>
 ; DBG-NEXT:       CLONE ir<%l> = load ir<%gep.src>
-; DBG-NEXT:       CLONE ir<%gep.dst> = getelementptr ir<%dst>, vp<[[STEPS2]]>
+; DBG-NEXT:       CLONE ir<%gep.dst> = getelementptr inbounds ir<%dst>, vp<[[STEPS2]]>
 ; DBG-NEXT:       CLONE store ir<%l>, ir<%gep.dst>
 ; DBG-NEXT:     Successor(s): pred.store.continue
 ; DBG-EMPTY:
@@ -94,8 +100,8 @@ declare i32 @llvm.smin.i32(i32, i32)
 ; DBG-NEXT:   Successor(s): cond.false.1
 ; DBG-EMPTY:
 ; DBG-NEXT:   cond.false.1:
-; DBG-NEXT:     EMIT vp<[[CAN_IV_INC:%.+]]> = VF * UF +(nuw)  vp<[[CAN_IV]]>
-; DBG-NEXT:     EMIT branch-on-count  vp<[[CAN_IV_INC]]> vp<[[VEC_TC]]>
+; DBG-NEXT:     EMIT vp<[[CAN_IV_INC:%.+]]> = VF * UF + nuw vp<[[CAN_IV]]>
+; DBG-NEXT:     EMIT branch-on-count vp<[[CAN_IV_INC]]>, vp<[[VEC_TC]]>
 ; DBG-NEXT:   No successors
 ; DBG-NEXT: }
 ; DBG-NEXT: Successor(s): middle.block
@@ -167,7 +173,12 @@ exit:
 
 ; DBG-LABEL: 'first_order_recurrence_using_induction'
 ; DBG:      VPlan 'Initial VPlan for VF={1},UF>=1' {
-; DBG-NEXT: Live-in vp<%1> = vector-trip-count
+; DBG-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
+; DBG-NEXT: vp<[[TC:%.+]]> = original trip-count
+; DBG-EMPTY:
+; DBG-NEXT: ph:
+; DBG-NEXT:  EMIT vp<[[TC]]> = EXPAND SCEV (zext i32 (1 smax %n) to i64)
+; DBG-NEXT: No successors
 ; DBG-EMPTY:
 ; DBG-NEXT: vector.ph:
 ; DBG-NEXT: Successor(s): vector loop
@@ -178,10 +189,10 @@ exit:
 ; DBG-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for> = phi ir<0>, vp<[[SCALAR_STEPS:.+]]>
 ; DBG-NEXT:     vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<0> + vp<[[CAN_IV]]> * ir<1> (truncated to i32)
 ; DBG-NEXT:     vp<[[SCALAR_STEPS]]> = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<1>
-; DBG-NEXT:     EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%for> vp<[[SCALAR_STEPS]]>
+; DBG-NEXT:     EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%for>, vp<[[SCALAR_STEPS]]>
 ; DBG-NEXT:     CLONE store vp<[[SPLICE]]>, ir<%dst>
-; DBG-NEXT:     EMIT vp<[[IV_INC:%.+]]> = VF * UF +(nuw)  vp<[[CAN_IV]]>
-; DBG-NEXT:     EMIT branch-on-count  vp<[[IV_INC]]> vp<%1>
+; DBG-NEXT:     EMIT vp<[[IV_INC:%.+]]> = VF * UF + nuw vp<[[CAN_IV]]>
+; DBG-NEXT:     EMIT branch-on-count vp<[[IV_INC]]>, vp<[[VTC]]>
 ; DBG-NEXT:   No successors
 ; DBG-NEXT: }
 ; DBG-NEXT: Successor(s): middle.block

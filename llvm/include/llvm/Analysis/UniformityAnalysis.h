@@ -1,4 +1,4 @@
-//===- ConvergenceUtils.h -----------------------*- C++ -*-----------------===//
+//===- UniformityAnalysis.h ---------------------*- C++ -*-----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,10 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief Convergence info and convergence-aware uniform info for LLVM IR
-///
-/// This differs from traditional divergence analysis by taking convergence
-/// intrinsics into account.
+/// \brief LLVM IR instance of the generic uniformity analysis
 //
 //===----------------------------------------------------------------------===//
 

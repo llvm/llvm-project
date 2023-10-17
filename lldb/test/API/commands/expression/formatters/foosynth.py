@@ -2,7 +2,6 @@ import lldb
 
 
 class FooSyntheticProvider:
-
     def __init__(self, valobj, dict):
         self.valobj = valobj
         self.update()
@@ -24,10 +23,10 @@ class FooSyntheticProvider:
         return None
 
     def adjust_for_architecture(self):
-        self.lp64 = (
-            self.valobj.GetTarget().GetProcess().GetAddressByteSize() == 8)
-        self.is_little = (self.valobj.GetTarget().GetProcess(
-        ).GetByteOrder() == lldb.eByteOrderLittle)
+        self.lp64 = self.valobj.GetTarget().GetProcess().GetAddressByteSize() == 8
+        self.is_little = (
+            self.valobj.GetTarget().GetProcess().GetByteOrder() == lldb.eByteOrderLittle
+        )
         self.pointer_size = self.valobj.GetTarget().GetProcess().GetAddressByteSize()
-        self.bar = self.valobj.GetChildMemberWithName('b')
-        self.i_ptr = self.bar.GetChildMemberWithName('i_ptr')
+        self.bar = self.valobj.GetChildMemberWithName("b")
+        self.i_ptr = self.bar.GetChildMemberWithName("i_ptr")

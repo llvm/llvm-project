@@ -15,7 +15,7 @@
 
 #include "OSTargets.h"
 #include "clang/Basic/TargetBuiltins.h"
-#include "llvm/Support/AArch64TargetParser.h"
+#include "llvm/TargetParser/AArch64TargetParser.h"
 #include <optional>
 
 namespace clang {
@@ -26,7 +26,11 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   static const TargetInfo::GCCRegAlias GCCRegAliases[];
   static const char *const GCCRegNames[];
 
-  enum FPUModeEnum { FPUMode, NeonMode = (1 << 0), SveMode = (1 << 1) };
+  enum FPUModeEnum {
+    FPUMode = (1 << 0),
+    NeonMode = (1 << 1),
+    SveMode = (1 << 2),
+  };
 
   unsigned FPU = FPUMode;
   bool HasCRC = false;
@@ -64,8 +68,8 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasCCDP = false;
   bool HasFRInt3264 = false;
   bool HasSME = false;
-  bool HasSMEF64 = false;
-  bool HasSMEI64 = false;
+  bool HasSMEF64F64 = false;
+  bool HasSMEI16I64 = false;
   bool HasSB = false;
   bool HasPredRes = false;
   bool HasSSBS = false;
@@ -73,9 +77,12 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasWFxT = false;
   bool HasJSCVT = false;
   bool HasFCMA = false;
+  bool HasNoFP = false;
   bool HasNoNeon = false;
   bool HasNoSVE = false;
   bool HasFMV = true;
+  bool HasGCS = false;
+  bool HasRCPC3 = false;
 
   const llvm::AArch64::ArchInfo *ArchInfo = &llvm::AArch64::ARMV8A;
 
@@ -143,9 +150,8 @@ public:
 
   std::optional<std::pair<unsigned, unsigned>>
   getVScaleRange(const LangOptions &LangOpts) const override;
-
-  bool getFeatureDepOptions(StringRef Feature,
-                            std::string &Options) const override;
+  bool doesFeatureAffectCodeGen(StringRef Name) const override;
+  StringRef getFeatureDependencies(StringRef Name) const override;
   bool validateCpuSupports(StringRef FeatureStr) const override;
   bool hasFeature(StringRef Feature) const override;
   void setFeatureEnabled(llvm::StringMap<bool> &Features, StringRef Name,
@@ -154,6 +160,8 @@ public:
                             DiagnosticsEngine &Diags) override;
   ParsedTargetAttr parseTargetAttr(StringRef Str) const override;
   bool supportsTargetAttributeTune() const override { return true; }
+
+  bool checkArithmeticFenceSupported() const override { return true; }
 
   bool hasBFloat16Type() const override;
 
@@ -166,26 +174,14 @@ public:
   ArrayRef<const char *> getGCCRegNames() const override;
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override;
 
-  std::string convertConstraint(const char *&Constraint) const override {
-    std::string R;
-    switch (*Constraint) {
-    case 'U': // Three-character constraint; add "@3" hint for later parsing.
-      R = std::string("@3") + std::string(Constraint, 3);
-      Constraint += 2;
-      break;
-    default:
-      R = TargetInfo::convertConstraint(Constraint);
-      break;
-    }
-    return R;
-  }
+  std::string convertConstraint(const char *&Constraint) const override;
 
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &Info) const override;
   bool
   validateConstraintModifier(StringRef Constraint, char Modifier, unsigned Size,
                              std::string &SuggestedModifier) const override;
-  const char *getClobbers() const override;
+  std::string_view getClobbers() const override;
 
   StringRef getConstraintRegister(StringRef Constraint,
                                   StringRef Expression) const override {

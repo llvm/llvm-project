@@ -1,5 +1,5 @@
-! RUN: bbc -emit-fir -o - %s | FileCheck %s
-! RUN: %flang_fc1 -emit-fir -o - %s | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -emit-fir -o - %s | FileCheck %s
+! RUN: %flang_fc1 -mllvm --use-desc-for-alloc=false -emit-fir -o - %s | FileCheck %s
 
 ! Simple tests for structured ordered loops with loop-control.
 ! Tests the structure of the loop, storage to index variable and return and 
@@ -245,6 +245,7 @@ subroutine loop_with_real_control(s,e,st)
   ! CHECK-DAG: %[[S:.*]] = fir.load %[[S_REF]] : !fir.ref<f32>
   ! CHECK-DAG: %[[E:.*]] = fir.load %[[E_REF]] : !fir.ref<f32>
   ! CHECK-DAG: %[[ST:.*]] = fir.load %[[ST_REF]] : !fir.ref<f32>
+  ! CHECK: fir.store %[[ST]] to %[[ST_VAR:.*]] : !fir.ref<f32>
   real :: x, s, e, st
 
   ! CHECK: %[[DIFF:.*]] = arith.subf %[[E]], %[[S]] {{.*}}: f32
@@ -267,7 +268,8 @@ subroutine loop_with_real_control(s,e,st)
     ! CHECK: %[[INC:.*]] = arith.subi %[[INDEX2]], %[[C1]] : index
     ! CHECK: fir.store %[[INC]] to %[[INDEX_REF]] : !fir.ref<index>
     ! CHECK: %[[X2:.*]] = fir.load %[[X_REF]] : !fir.ref<f32>
-    ! CHECK: %[[XINC:.*]] = arith.addf %[[X2]], %[[ST]] {{.*}}: f32
+    ! CHECK: %[[ST_VAL:.*]] = fir.load %[[ST_VAR]] : !fir.ref<f32>
+    ! CHECK: %[[XINC:.*]] = arith.addf %[[X2]], %[[ST_VAL]] {{.*}}: f32
     ! CHECK: fir.store %[[XINC]] to %[[X_REF]] : !fir.ref<f32>
     ! CHECK: br ^[[HDR]]
   end do

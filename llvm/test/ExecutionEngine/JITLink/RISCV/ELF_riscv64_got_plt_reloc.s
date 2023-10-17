@@ -6,6 +6,13 @@
 # RUN:     -abs external_func=0x1 -abs external_data=0x2 \
 # RUN:     -check %s %t/elf_riscv64_got_plt_reloc.o
 
+## Run the same tests with relaxation enabled.
+# RUN: llvm-mc -triple=riscv64 -position-independent -filetype=obj \
+# RUN:     -mattr=+relax -o %t/elf_riscv64_got_plt_reloc.o %s
+# RUN: llvm-jitlink -noexec \
+# RUN:     -slab-allocate 100Kb -slab-address 0xfff00000 -slab-page-size 4096 \
+# RUN:     -abs external_func=0x1 -abs external_data=0x2 \
+# RUN:     -check %s %t/elf_riscv64_got_plt_reloc.o
 
         .text
         .file   "testcase.c"

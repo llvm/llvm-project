@@ -6,20 +6,20 @@
 //
 //===---------------------------------------------------------------------===//
 
-#include "src/__support/FPUtil/FPBits.h"
+#include "exhaustive_test.h"
 #include "src/math/sqrtf.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include <math.h>
 
-using FPBits = __llvm_libc::fputil::FPBits<float>;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+using LlvmLibcSqrtfExhaustiveTest =
+    LlvmLibcUnaryOpExhaustiveMathTest<float, mpfr::Operation::Sqrt,
+                                      LIBC_NAMESPACE::sqrtf>;
 
-TEST(LlvmLibcSqrtfExhaustiveTest, AllValues) {
-  uint32_t bits = 0;
-  do {
-    FPBits xbits(bits);
-    float x = float(xbits);
-    ASSERT_MPFR_MATCH(mpfr::Operation::Sqrt, x, __llvm_libc::sqrtf(x), 0.5);
-  } while (bits++ < 0xffff'ffffU);
+// Range: [0, Inf];
+static constexpr uint32_t POS_START = 0x0000'0000U;
+static constexpr uint32_t POS_STOP = 0x7f80'0000U;
+
+TEST_F(LlvmLibcSqrtfExhaustiveTest, PostiveRange) {
+  test_full_range_all_roundings(POS_START, POS_STOP);
 }

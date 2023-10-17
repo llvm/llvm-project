@@ -16,7 +16,6 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/DebugInfo/CodeView/DebugStringTableSubsection.h"
 #include "llvm/DebugInfo/CodeView/StringsAndChecksums.h"
-#include "llvm/Object/COFF.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/BinaryStreamWriter.h"
@@ -48,11 +47,7 @@ struct COFFParser {
   }
 
   bool isPE() const { return Obj.OptionalHeader.has_value(); }
-  bool is64Bit() const {
-    return Obj.Header.Machine == COFF::IMAGE_FILE_MACHINE_AMD64 ||
-           Obj.Header.Machine == COFF::IMAGE_FILE_MACHINE_ARM64 ||
-           Obj.Header.Machine == COFF::IMAGE_FILE_MACHINE_ARM64EC;
-  }
+  bool is64Bit() const { return COFF::is64Bit(Obj.Header.Machine); }
 
   uint32_t getFileAlignment() const {
     return Obj.OptionalHeader->Header.FileAlignment;
@@ -187,7 +182,7 @@ toDebugS(ArrayRef<CodeViewYAML::YAMLDebugSubsection> Subsections,
   }
   uint8_t *Buffer = Allocator.Allocate<uint8_t>(Size);
   MutableArrayRef<uint8_t> Output(Buffer, Size);
-  BinaryStreamWriter Writer(Output, support::little);
+  BinaryStreamWriter Writer(Output, llvm::endianness::little);
 
   Err(Writer.writeInteger<uint32_t>(COFF::DEBUG_SECTION_MAGIC));
   for (const auto &B : Builders) {
@@ -243,10 +238,13 @@ static bool layoutCOFF(COFFParser &CP) {
         S.SectionData = CodeViewYAML::toDebugH(*S.DebugH, CP.Allocator);
     }
 
-    if (S.SectionData.binary_size() > 0) {
+    size_t DataSize = S.SectionData.binary_size();
+    for (auto E : S.StructuredData)
+      DataSize += E.size();
+    if (DataSize > 0) {
       CurrentSectionDataOffset = alignTo(CurrentSectionDataOffset,
                                          CP.isPE() ? CP.getFileAlignment() : 4);
-      S.Header.SizeOfRawData = S.SectionData.binary_size();
+      S.Header.SizeOfRawData = DataSize;
       if (CP.isPE())
         S.Header.SizeOfRawData =
             alignTo(S.Header.SizeOfRawData, CP.getFileAlignment());
@@ -316,8 +314,8 @@ template <typename value_type>
 raw_ostream &operator<<(raw_ostream &OS,
                         const binary_le_impl<value_type> &BLE) {
   char Buffer[sizeof(BLE.Value)];
-  support::endian::write<value_type, support::little, support::unaligned>(
-      Buffer, BLE.Value);
+  support::endian::write<value_type, llvm::endianness::little>(Buffer,
+                                                               BLE.Value);
   OS.write(Buffer, sizeof(BLE.Value));
   return OS;
 }
@@ -497,9 +495,12 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
       continue;
     assert(S.Header.PointerToRawData >= OS.tell());
     OS.write_zeros(S.Header.PointerToRawData - OS.tell());
+    for (auto E : S.StructuredData)
+      E.writeAsBinary(OS);
     S.SectionData.writeAsBinary(OS);
     assert(S.Header.SizeOfRawData >= S.SectionData.binary_size());
-    OS.write_zeros(S.Header.SizeOfRawData - S.SectionData.binary_size());
+    OS.write_zeros(S.Header.PointerToRawData + S.Header.SizeOfRawData -
+                   OS.tell());
     if (S.Header.Characteristics & COFF::IMAGE_SCN_LNK_NRELOC_OVFL)
       OS << binary_le<uint32_t>(/*VirtualAddress=*/ S.Relocations.size() + 1)
          << binary_le<uint32_t>(/*SymbolTableIndex=*/ 0)
@@ -587,6 +588,34 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
   if (CP.Obj.Header.PointerToSymbolTable)
     OS.write(&CP.StringTable[0], CP.StringTable.size());
   return true;
+}
+
+size_t COFFYAML::SectionDataEntry::size() const {
+  size_t Size = Binary.binary_size();
+  if (UInt32)
+    Size += sizeof(*UInt32);
+  if (LoadConfig32)
+    Size += LoadConfig32->Size;
+  if (LoadConfig64)
+    Size += LoadConfig64->Size;
+  return Size;
+}
+
+template <typename T> static void writeLoadConfig(T &S, raw_ostream &OS) {
+  OS.write(reinterpret_cast<const char *>(&S),
+           std::min(sizeof(S), static_cast<size_t>(S.Size)));
+  if (sizeof(S) < S.Size)
+    OS.write_zeros(S.Size - sizeof(S));
+}
+
+void COFFYAML::SectionDataEntry::writeAsBinary(raw_ostream &OS) const {
+  if (UInt32)
+    OS << binary_le(*UInt32);
+  Binary.writeAsBinary(OS);
+  if (LoadConfig32)
+    writeLoadConfig(*LoadConfig32, OS);
+  if (LoadConfig64)
+    writeLoadConfig(*LoadConfig64, OS);
 }
 
 namespace llvm {

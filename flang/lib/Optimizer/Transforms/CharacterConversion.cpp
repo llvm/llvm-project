@@ -9,8 +9,8 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "flang/Optimizer/Support/FIRContext.h"
-#include "flang/Optimizer/Support/KindMapping.h"
+#include "flang/Optimizer/Dialect/Support/FIRContext.h"
+#include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -110,7 +110,7 @@ public:
       mlir::RewritePatternSet patterns(context);
       patterns.insert<CharacterConvertConversion>(context);
       mlir::ConversionTarget target(*context);
-      target.addLegalDialect<mlir::AffineDialect, fir::FIROpsDialect,
+      target.addLegalDialect<mlir::affine::AffineDialect, fir::FIROpsDialect,
                              mlir::arith::ArithDialect,
                              mlir::func::FuncDialect>();
 

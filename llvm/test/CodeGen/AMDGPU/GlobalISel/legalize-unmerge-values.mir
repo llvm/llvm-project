@@ -27,11 +27,51 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
     ; CHECK-NEXT: $vgpr0 = COPY [[UV]](s32)
-    ; CHECK-NEXT: $vgpr21 = COPY [[UV1]](s32)
+    ; CHECK-NEXT: $vgpr1 = COPY [[UV1]](s32)
     %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %1:_(s32), %2:_(s32) = G_UNMERGE_VALUES %0
     $vgpr0 = COPY %1
-    $vgpr21= COPY %2
+    $vgpr1 = COPY %2
+...
+
+---
+name: test_unmerge_s32_v7s64
+body: |
+  bb.0:
+    liveins:
+    ; CHECK-LABEL: name: test_unmerge_s32_v7s64
+    ; CHECK: [[DEF:%[0-9]+]]:_(<7 x s64>) = IMPLICIT_DEF
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](<7 x s64>)
+    ; CHECK-NEXT: $vgpr0 = COPY [[UV]](s32)
+    ; CHECK-NEXT: $vgpr1 = COPY [[UV1]](s32)
+    ; CHECK-NEXT: $vgpr2 = COPY [[UV2]](s32)
+    ; CHECK-NEXT: $vgpr3 = COPY [[UV3]](s32)
+    ; CHECK-NEXT: $vgpr4 = COPY [[UV4]](s32)
+    ; CHECK-NEXT: $vgpr5 = COPY [[UV5]](s32)
+    ; CHECK-NEXT: $vgpr6 = COPY [[UV6]](s32)
+    ; CHECK-NEXT: $vgpr7 = COPY [[UV7]](s32)
+    ; CHECK-NEXT: $vgpr8 = COPY [[UV8]](s32)
+    ; CHECK-NEXT: $vgpr9 = COPY [[UV9]](s32)
+    ; CHECK-NEXT: $vgpr10 = COPY [[UV10]](s32)
+    ; CHECK-NEXT: $vgpr11 = COPY [[UV11]](s32)
+    ; CHECK-NEXT: $vgpr12 = COPY [[UV12]](s32)
+    ; CHECK-NEXT: $vgpr13 = COPY [[UV13]](s32)
+    %0:_(<7 x s64>) = IMPLICIT_DEF
+    %1:_(s32), %2:_(s32), %3:_(s32), %4:_(s32), %5:_(s32), %6:_(s32), %7:_(s32), %8:_(s32), %9:_(s32), %10:_(s32), %11:_(s32), %12:_(s32), %13:_(s32), %14:_(s32) = G_UNMERGE_VALUES %0
+    $vgpr0 = COPY %1
+    $vgpr1 = COPY %2
+    $vgpr2 = COPY %3
+    $vgpr3 = COPY %4
+    $vgpr4 = COPY %5
+    $vgpr5 = COPY %6
+    $vgpr6 = COPY %7
+    $vgpr7 = COPY %8
+    $vgpr8 = COPY %9
+    $vgpr9 = COPY %10
+    $vgpr10 = COPY %11
+    $vgpr11 = COPY %12
+    $vgpr12 = COPY %13
+    $vgpr13 = COPY %14
 ...
 
 ---

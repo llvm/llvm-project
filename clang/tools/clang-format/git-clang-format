@@ -98,6 +98,7 @@ def main():
       'ts',  # TypeScript
       'cs',  # C Sharp
       'json',  # Json
+      'sv', 'svh', 'v', 'vh', # Verilog
       ])
 
   p = argparse.ArgumentParser(
@@ -347,7 +348,7 @@ def extract_lines(patch_file):
     line = convert_string(line)
     match = re.search(r'^\+\+\+\ [^/]+/(.*)', line)
     if match:
-      filename = match.group(1).rstrip('\r\n')
+      filename = match.group(1).rstrip('\r\n\t')
     match = re.search(r'^@@ -[0-9,]+ \+(\d+)(,(\d+))?', line)
     if match:
       start_line = int(match.group(1))
@@ -605,7 +606,7 @@ def apply_changes(old_tree, new_tree, force=False, patch_mode=False):
     index_tree = old_tree
   else:
     with temporary_index_file(new_tree):
-      run('git', 'checkout-index', '-a', '-f')
+      run('git', 'checkout-index', '-f', '--', *changed_files)
   return changed_files
 
 

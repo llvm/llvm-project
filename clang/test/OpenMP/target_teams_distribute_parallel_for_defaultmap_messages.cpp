@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 %s -verify=expected,omp51 -Wuninitialized -DOMP51
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=51 %s -verify=expected,omp51 -Wuninitialized -DOMP51
+// RUN: %clang_cc1 -verify -fopenmp %s -verify=expected,omp51 -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -verify=expected,omp51 -Wuninitialized
 
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 %s -verify=expected,omp5 -Wuninitialized -DOMP5
 // RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 %s -verify=expected,omp5 -Wuninitialized -DOMP5

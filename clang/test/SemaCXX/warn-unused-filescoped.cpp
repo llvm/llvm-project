@@ -155,8 +155,7 @@ namespace test5 {
   int y = sizeof(d);
 
   namespace {
-  // FIXME: Should be "unused variable template 'var_t'" instead.
-  template <typename T> const double var_t = 0; // expected-warning {{unused variable 'var_t'}}
+  template <typename T> const double var_t = 0; // expected-warning {{unused variable template 'var_t'}}
   template <> const double var_t<int> = 0;      // expected-warning {{variable 'var_t<int>' is not needed and will not be emitted}}
   int z = sizeof(var_t<int>);                   // expected-warning {{unused variable 'z'}}
   }                                             // namespace

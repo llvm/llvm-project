@@ -53,7 +53,7 @@ public:
     FileSystem::Initialize();
     HostInfo::Initialize();
     ObjectFilePECOFF::Initialize();
-    SymbolFileDWARF::Initialize();
+    plugin::dwarf::SymbolFileDWARF::Initialize();
     TypeSystemClang::Initialize();
     SymbolFilePDB::Initialize();
 
@@ -64,7 +64,7 @@ public:
   void TearDown() override {
     SymbolFilePDB::Terminate();
     TypeSystemClang::Initialize();
-    SymbolFileDWARF::Terminate();
+    plugin::dwarf::SymbolFileDWARF::Terminate();
     ObjectFilePECOFF::Terminate();
     HostInfo::Terminate();
     FileSystem::Terminate();
@@ -456,7 +456,8 @@ TEST_F(SymbolFilePDBTests, TestClassInNamespace) {
   symfile->ParseDeclsForContext(CompilerDeclContext(
       clang_ast_ctx, static_cast<clang::DeclContext *>(tu)));
 
-  auto ns_namespace = symfile->FindNamespace(ConstString("NS"), CompilerDeclContext());
+  auto ns_namespace =
+      symfile->FindNamespace(ConstString("NS"), CompilerDeclContext(), true);
   EXPECT_TRUE(ns_namespace.IsValid());
 
   symfile->FindTypes(ConstString("NSClass"), ns_namespace, 0, searched_files,

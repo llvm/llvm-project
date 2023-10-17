@@ -259,9 +259,8 @@ define arm_aapcs_vfpcc float @t9(ptr nocapture, ptr nocapture) nounwind {
 ; PR7162
 define arm_aapcs_vfpcc i32 @t10(float %x) nounwind {
 ; CHECK-LABEL: t10:
-; CHECK:       vdup.32	[[Q0:q[0-9]+]], d0[0]
 ; CHECK:       vmov.i32	[[Q9:q[0-9]+]], #0x3f000000
-; CHECK:       vmul.f32	[[Q8:q[0-9]+]], [[Q0]], [[Q0]]
+; CHECK:       vmul.f32 [[Q8:q[0-9]+]], [[Q0:q[0-9]+]], [[Q0]]
 ; CHECK-NEXT:  vadd.f32	[[Q8]], [[Q8]], [[Q8]]
 ; CHECK-NEXT:  vadd.f32	[[Q1:q[0-9]+]], [[Q8]], [[Q8]]
 ; CHECK-NEXT:  vmul.f32	[[Q8]], [[Q9]], d1[0]

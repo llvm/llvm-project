@@ -8,6 +8,7 @@ add_public_tablegen_target(MLIRTestTransformDialectExtensionIncGen)
 add_mlir_library(MLIRTestTransformDialect
   TestTransformDialectExtension.cpp
   TestTransformDialectInterpreter.cpp
+  TestTransformStateExtension.cpp
 
   EXCLUDE_FROM_LIBMLIR
 
@@ -19,4 +20,6 @@ add_mlir_library(MLIRTestTransformDialect
   MLIRPass
   MLIRPDLDialect
   MLIRTransformDialect
+  MLIRTransformDialectTransforms
+  MLIRTransformPDLExtension
 )

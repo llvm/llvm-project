@@ -9,6 +9,7 @@
 #include "lldb/Host/MainLoop.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/common/TCPSocket.h"
 #include "llvm/Testing/Support/Error.h"
@@ -20,7 +21,7 @@ using namespace lldb_private;
 namespace {
 class MainLoopTest : public testing::Test {
 public:
-  SubsystemRAII<Socket> subsystems;
+  SubsystemRAII<FileSystem, Socket> subsystems;
 
   void SetUp() override {
     bool child_processes_inherit = false;

@@ -242,7 +242,7 @@ public:
   ///
   /// This is useful when you just want to print 'int %reg126', not the
   /// instruction that generated it. If you specify a Module for context, then
-  /// even constanst get pretty-printed; for example, the type of a null
+  /// even constants get pretty-printed; for example, the type of a null
   /// pointer is printed symbolically.
   /// @{
   void printAsOperand(raw_ostream &O, bool PrintType = true,
@@ -743,6 +743,11 @@ public:
     return const_cast<Value *>(
         static_cast<const Value *>(this)->stripInBoundsOffsets(Func));
   }
+
+  /// If this ptr is provably equal to \p Other plus a constant offset, return
+  /// that offset in bytes. Essentially `ptr this` subtract `ptr Other`.
+  std::optional<int64_t> getPointerOffsetFrom(const Value *Other,
+                                              const DataLayout &DL) const;
 
   /// Return true if the memory object referred to by V can by freed in the
   /// scope for which the SSA value defining the allocation is statically

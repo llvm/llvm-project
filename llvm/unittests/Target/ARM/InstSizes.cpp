@@ -77,13 +77,13 @@ TEST(InstSizes, PseudoInst) {
   const Target *T = TargetRegistry::lookupTarget(TT, Error);
   if (!T) {
     dbgs() << Error;
-    return;
+    GTEST_SKIP();
   }
 
   TargetOptions Options;
   auto TM = std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
       T->createTargetMachine(TT, "generic", "", Options, std::nullopt,
-                             std::nullopt, CodeGenOpt::Default)));
+                             std::nullopt, CodeGenOptLevel::Default)));
   ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                   std::string(TM->getTargetFeatureString()),
                   *static_cast<const ARMBaseTargetMachine *>(TM.get()), false);

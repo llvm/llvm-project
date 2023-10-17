@@ -26,6 +26,7 @@
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/IteratedDominanceFrontier.h"
+#include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -42,14 +43,11 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <cstddef>
@@ -111,6 +109,12 @@ struct BlockInfoType {
   unsigned PostOrder;
 
   bool terminatorIsLive() const { return TerminatorLiveInfo->Live; }
+};
+
+struct ADCEChanged {
+  bool ChangedAnything = false;
+  bool ChangedNonDebugInstr = false;
+  bool ChangedControlFlow = false;
 };
 
 class AggressiveDeadCodeElimination {
@@ -179,7 +183,7 @@ class AggressiveDeadCodeElimination {
 
   /// Remove instructions not marked live, return if any instruction was
   /// removed.
-  bool removeDeadInstructions();
+  ADCEChanged removeDeadInstructions();
 
   /// Identify connected sections of the control flow graph which have
   /// dead terminators and rewrite the control flow graph to remove them.
@@ -197,12 +201,12 @@ public:
                                 PostDominatorTree &PDT)
       : F(F), DT(DT), PDT(PDT) {}
 
-  bool performDeadCodeElimination();
+  ADCEChanged performDeadCodeElimination();
 };
 
 } // end anonymous namespace
 
-bool AggressiveDeadCodeElimination::performDeadCodeElimination() {
+ADCEChanged AggressiveDeadCodeElimination::performDeadCodeElimination() {
   initialize();
   markLiveInstructions();
   return removeDeadInstructions();
@@ -504,9 +508,10 @@ void AggressiveDeadCodeElimination::markLiveBranchesFromControlDependences() {
 //  Routines to update the CFG and SSA information before removing dead code.
 //
 //===----------------------------------------------------------------------===//
-bool AggressiveDeadCodeElimination::removeDeadInstructions() {
+ADCEChanged AggressiveDeadCodeElimination::removeDeadInstructions() {
+  ADCEChanged Changed;
   // Updates control and dataflow around dead blocks
-  bool RegionsUpdated = updateDeadRegions();
+  Changed.ChangedControlFlow = updateDeadRegions();
 
   LLVM_DEBUG({
     for (Instruction &I : instructions(F)) {
@@ -554,6 +559,8 @@ bool AggressiveDeadCodeElimination::removeDeadInstructions() {
         continue;
 
       // Fallthrough and drop the intrinsic.
+    } else {
+      Changed.ChangedNonDebugInstr = true;
     }
 
     // Prepare to delete.
@@ -569,7 +576,9 @@ bool AggressiveDeadCodeElimination::removeDeadInstructions() {
     I->eraseFromParent();
   }
 
-  return !Worklist.empty() || RegionsUpdated;
+  Changed.ChangedAnything = Changed.ChangedControlFlow || !Worklist.empty();
+
+  return Changed;
 }
 
 // A dead region is the set of dead blocks with a common live post-dominator.
@@ -699,62 +708,25 @@ PreservedAnalyses ADCEPass::run(Function &F, FunctionAnalysisManager &FAM) {
   // to update analysis if it is already available.
   auto *DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
   auto &PDT = FAM.getResult<PostDominatorTreeAnalysis>(F);
-  if (!AggressiveDeadCodeElimination(F, DT, PDT).performDeadCodeElimination())
+  ADCEChanged Changed =
+      AggressiveDeadCodeElimination(F, DT, PDT).performDeadCodeElimination();
+  if (!Changed.ChangedAnything)
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
-  // TODO: We could track if we have actually done CFG changes.
-  if (!RemoveControlFlowFlag)
+  if (!Changed.ChangedControlFlow) {
     PA.preserveSet<CFGAnalyses>();
-  else {
-    PA.preserve<DominatorTreeAnalysis>();
-    PA.preserve<PostDominatorTreeAnalysis>();
+    if (!Changed.ChangedNonDebugInstr) {
+      // Only removing debug instructions does not affect MemorySSA.
+      //
+      // Therefore we preserve MemorySSA when only removing debug instructions
+      // since otherwise later passes may behave differently which then makes
+      // the presence of debug info affect code generation.
+      PA.preserve<MemorySSAAnalysis>();
+    }
   }
+  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<PostDominatorTreeAnalysis>();
+
   return PA;
 }
-
-namespace {
-
-struct ADCELegacyPass : public FunctionPass {
-  static char ID; // Pass identification, replacement for typeid
-
-  ADCELegacyPass() : FunctionPass(ID) {
-    initializeADCELegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override {
-    if (skipFunction(F))
-      return false;
-
-    // ADCE does not need DominatorTree, but require DominatorTree here
-    // to update analysis if it is already available.
-    auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
-    auto *DT = DTWP ? &DTWP->getDomTree() : nullptr;
-    auto &PDT = getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
-    return AggressiveDeadCodeElimination(F, DT, PDT)
-        .performDeadCodeElimination();
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<PostDominatorTreeWrapperPass>();
-    if (!RemoveControlFlowFlag)
-      AU.setPreservesCFG();
-    else {
-      AU.addPreserved<DominatorTreeWrapperPass>();
-      AU.addPreserved<PostDominatorTreeWrapperPass>();
-    }
-    AU.addPreserved<GlobalsAAWrapperPass>();
-  }
-};
-
-} // end anonymous namespace
-
-char ADCELegacyPass::ID = 0;
-
-INITIALIZE_PASS_BEGIN(ADCELegacyPass, "adce",
-                      "Aggressive Dead Code Elimination", false, false)
-INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
-INITIALIZE_PASS_END(ADCELegacyPass, "adce", "Aggressive Dead Code Elimination",
-                    false, false)
-
-FunctionPass *llvm::createAggressiveDCEPass() { return new ADCELegacyPass(); }

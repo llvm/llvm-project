@@ -9,6 +9,8 @@ declare_args() {
 assert(!use_goma || goma_dir != "",
        "set `goma_dir` to the output of `goma_ctl goma_dir` in your args.gn")
 
+unix_copy_command = "ln -f {{source}} {{output}} 2>/dev/null || (rm -rf {{output}} && cp -af {{source}} {{output}})"
+
 template("unix_toolchain") {
   toolchain(target_name) {
     # https://groups.google.com/a/chromium.org/g/gn-dev/c/F_lv5T-tNDM
@@ -144,9 +146,8 @@ template("unix_toolchain") {
       default_output_dir = "{{root_out_dir}}/bin"
     }
 
-    copy_command = "ln -f {{source}} {{output}} 2>/dev/null || (rm -rf {{output}} && cp -af {{source}} {{output}})"
     tool("copy") {
-      command = copy_command
+      command = unix_copy_command
       description = "COPY {{source}} {{output}}"
     }
 
@@ -156,7 +157,7 @@ template("unix_toolchain") {
         _copydir = "cd {{source}} && " +
                    "find . | cpio -pdl \"\$OLDPWD\"/{{output}} 2>/dev/null"
         command = "rm -rf {{output}} && if [[ -d {{source}} ]]; then " +
-                  _copydir + "; else " + copy_command + "; fi"
+                  _copydir + "; else " + unix_copy_command + "; fi"
         description = "COPY_BUNDLE_DATA {{source}} {{output}}"
       }
       tool("compile_xcassets") {
@@ -218,10 +219,14 @@ stage2_unix_toolchain("stage2_unix") {
 }
 
 if (android_ndk_path != "") {
+  # Android compiler-rt libraries don't really work with per-target runtime
+  # directories yet so force it off.
+  # https://discourse.llvm.org/t/handling-version-numbers-in-per-target-runtime-directories/62717.
   stage2_unix_toolchain("stage2_android_aarch64") {
     toolchain_args = {
       current_os = "android"
       current_cpu = "arm64"
+      clang_enable_per_target_runtime_dir = false
     }
   }
 
@@ -229,6 +234,23 @@ if (android_ndk_path != "") {
     toolchain_args = {
       current_os = "android"
       current_cpu = "arm"
+      clang_enable_per_target_runtime_dir = false
+    }
+  }
+
+  stage2_unix_toolchain("stage2_android_x64") {
+    toolchain_args = {
+      current_os = "android"
+      current_cpu = "x64"
+      clang_enable_per_target_runtime_dir = false
+    }
+  }
+
+  stage2_unix_toolchain("stage2_android_x86") {
+    toolchain_args = {
+      current_os = "android"
+      current_cpu = "x86"
+      clang_enable_per_target_runtime_dir = false
     }
   }
 }
@@ -364,14 +386,23 @@ template("win_toolchain") {
     }
 
     tool("copy") {
-      # GN hands out slash-using paths, but cmd's copy needs backslashes.
-      # Use cmd's %foo:a=b% substitution feature to convert.
-      command = "cmd /c set source=\"{{source}}\" & set output=\"{{output}}\" & call copy /Y %source:/=\% %output:\=/% > nul"
+      if (host_os == "win") {
+        # GN hands out slash-using paths, but cmd's copy needs backslashes.
+        # Use cmd's %foo:a=b% substitution feature to convert.
+        command = "cmd /c set source=\"{{source}}\" & set output=\"{{output}}\" & call copy /Y %source:/=\% %output:\=/% > nul"
+      } else {
+        command = unix_copy_command
+      }
+
       description = "COPY {{source}} {{output}}"
     }
 
     tool("stamp") {
-      command = "cmd /c type nul > {{output}}"
+      if (host_os == "win") {
+        command = "cmd /c type nul > {{output}}"
+      } else {
+        command = "touch {{output}}"
+      }
       description = "STAMP {{output}}"
     }
   }
@@ -384,11 +415,14 @@ win_toolchain("win") {
   }
 }
 
-win_toolchain("stage2_win") {
+win_toolchain("stage2_win_x64") {
   toolchain_args = {
-    current_os = host_os
-    current_cpu = host_cpu
+    current_os = "win"
+    current_cpu = "x64"
 
+    if (host_os != "win") {
+      sysroot = win_sysroot
+    }
     clang_base_path = root_build_dir
     use_goma = false
   }
@@ -400,9 +434,12 @@ win_toolchain("stage2_win") {
 
 win_toolchain("stage2_win_x86") {
   toolchain_args = {
-    current_os = host_os
+    current_os = "win"
     current_cpu = "x86"
 
+    if (host_os != "win") {
+      sysroot = win_sysroot
+    }
     clang_base_path = root_build_dir
     use_goma = false
   }

@@ -58,7 +58,7 @@
 ; X86-NEXT: .long   4098
 ; X86-NEXT: .secrel32 _f
 ; X86-NEXT: .secidx _f
-; X86-NEXT: .byte   0
+; X86-NEXT: .byte   128
 ; X86-NEXT: .asciz "f"
 ; X86-NEXT: .p2align 2
 ; X86-NEXT: [[PROC_SEGMENT_END]]:
@@ -188,7 +188,7 @@
 ; X64-NEXT: .long   4098
 ; X64-NEXT: .secrel32 f
 ; X64-NEXT: .secidx f
-; X64-NEXT: .byte   0
+; X64-NEXT: .byte   128
 ; X64-NEXT: .asciz "f"
 ; X64-NEXT: .p2align 2
 ; X64-NEXT: [[PROC_SEGMENT_END]]:

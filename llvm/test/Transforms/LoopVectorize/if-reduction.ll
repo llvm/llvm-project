@@ -821,5 +821,142 @@ for.end:                                          ; preds = %for.body, %entry
   ret float %sum.0.lcssa
 }
 
+; CHECK-LABEL: @fcmp_0_add_select2(
+; CHECK: %[[V1:.*]] = fcmp ogt <4 x float> %[[V0:.*]], zeroinitializer
+; CHECK: %[[V3:.*]] = add <4 x i64> %[[V2:.*]], <i64 2, i64 2, i64 2, i64 2>
+; CHECK: select <4 x i1> %[[V1]], <4 x i64> %[[V3]], <4 x i64> %[[V2]]
+define i64 @fcmp_0_add_select2(ptr noalias %x, i64 %N) nounwind readonly {
+entry:
+  %cmp.1 = icmp sgt i64 %N, 0
+  br i1 %cmp.1, label %for.header, label %for.end
+
+for.header:                                       ; preds = %entry
+  br label %for.body
+
+for.body:                                         ; preds = %header, %for.body
+  %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
+  %sum.1 = phi i64 [ 0, %for.header ], [ %sum.2, %for.body ]
+  %arrayidx = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %cmp.2 = fcmp ogt float %0, 0.000000e+00
+  %add = add nsw i64 %sum.1, 2
+  %sum.2 = select i1 %cmp.2, i64 %add, i64 %sum.1
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, %N
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  %1 = phi i64 [ 0, %entry ], [ %sum.2, %for.body ]
+  ret i64 %1
+}
+
+; CHECK-LABEL: @fcmp_0_sub_select1(
+; CHECK: %[[V1:.*]] = fcmp ogt <4 x float> %[[V0:.*]], zeroinitializer
+; CHECK: %[[V3:.*]] = sub <4 x i32> %[[V2:.*]], <i32 2, i32 2, i32 2, i32 2>
+; CHECK: select <4 x i1> %[[V1]], <4 x i32> %[[V3]], <4 x i32> %[[V2]]
+define i32 @fcmp_0_sub_select1(ptr noalias %x, i32 %N) nounwind readonly {
+entry:
+  %cmp.1 = icmp sgt i32 %N, 0
+  br i1 %cmp.1, label %for.header, label %for.end
+
+for.header:                                       ; preds = %entry
+  %zext = zext i32 %N to i64
+  br label %for.body
+
+for.body:                                         ; preds = %header, %for.body
+  %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
+  %sum.1 = phi i32 [ 0, %for.header ], [ %sum.2, %for.body ]
+  %arrayidx = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %cmp.2 = fcmp ogt float %0, 0.000000e+00
+  %sub = sub nsw i32 %sum.1, 2
+  %sum.2 = select i1 %cmp.2, i32 %sub, i32 %sum.1
+  %indvars.iv.next = sub nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, %zext
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  %1 = phi i32 [ 0, %entry ], [ %sum.2, %for.body ]
+  ret i32 %1
+}
+
+; CHECK-LABEL: @fcmp_0_mult_select1(
+; CHECK: %[[V1:.*]] = fcmp ogt <4 x float> %[[V0:.*]], zeroinitializer
+; CHECK: %[[V3:.*]] = mul <4 x i32> %[[V2:.*]], <i32 2, i32 2, i32 2, i32 2>
+; CHECK: select <4 x i1> %[[V1]], <4 x i32> %[[V3]], <4 x i32> %[[V2]]
+define i32 @fcmp_0_mult_select1(ptr noalias %x, i32 %N) nounwind readonly {
+entry:
+  %cmp.1 = icmp sgt i32 %N, 0
+  br i1 %cmp.1, label %for.header, label %for.end
+
+for.header:                                       ; preds = %entry
+  %zext = zext i32 %N to i64
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %for.header
+  %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
+  %sum.1 = phi i32 [ 0, %for.header ], [ %sum.2, %for.body ]
+  %arrayidx = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %cmp.2 = fcmp ogt float %0, 0.000000e+00
+  %mult = mul nsw i32 %sum.1, 2
+  %sum.2 = select i1 %cmp.2, i32 %mult, i32 %sum.1
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, %zext
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  %1 = phi i32 [ 0, %entry ], [ %sum.2, %for.body ]
+  ret i32 %1
+}
+
+@table = constant [13 x i16] [i16 10, i16 35, i16 69, i16 147, i16 280, i16 472, i16 682, i16 1013, i16 1559, i16 2544, i16 4553, i16 6494, i16 10000], align 1 
+
+; CHECK-LABEL: @non_reduction_index(
+; CHECK-NOT:     <4 x i16>
+define i16 @non_reduction_index(i16 noundef %val) {
+entry:
+  br label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body
+  %spec.select.lcssa = phi i16 [ %spec.select, %for.body ]
+  ret i16 %spec.select.lcssa
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i16 [ 12, %entry ], [ %sub, %for.body ]
+  %k.04 = phi i16 [ 0, %entry ], [ %spec.select, %for.body ]
+  %arrayidx = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 %i.05
+  %0 = load i16, ptr %arrayidx, align 1
+  %cmp1 = icmp ugt i16 %0, %val
+  %sub = add nsw i16 %i.05, -1
+  %spec.select = select i1 %cmp1, i16 %sub, i16 %k.04
+  %cmp.not = icmp eq i16 %sub, 0
+  br i1 %cmp.not, label %for.cond.cleanup, label %for.body
+}
+
+@tablef = constant [13 x half] [half 10.0, half 35.0, half 69.0, half 147.0, half 280.0, half 472.0, half 682.0, half 1013.0, half 1559.0, half 2544.0, half 4556.0, half 6496.0, half 10000.0], align 1 
+
+; CHECK-LABEL: @non_reduction_index_half(
+; CHECK-NOT:     <4 x half>
+define i16 @non_reduction_index_half(half noundef %val) {
+entry:
+  br label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body
+  %spec.select.lcssa = phi i16 [ %spec.select, %for.body ]
+  ret i16 %spec.select.lcssa
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i16 [ 12, %entry ], [ %sub, %for.body ]
+  %k.04 = phi i16 [ 0, %entry ], [ %spec.select, %for.body ]
+  %arrayidx = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 %i.05
+  %0 = load half, ptr %arrayidx, align 1
+  %fcmp1 = fcmp ugt half %0, %val
+  %sub = add nsw i16 %i.05, -1
+  %spec.select = select i1 %fcmp1, i16 %sub, i16 %k.04
+  %cmp.not = icmp eq i16 %sub, 0
+  br i1 %cmp.not, label %for.cond.cleanup, label %for.body
+}
+
 ; Make sure any check-not directives are not triggered by function declarations.
 ; CHECK: declare

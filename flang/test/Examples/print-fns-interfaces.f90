@@ -1,6 +1,6 @@
 ! Check the Flang Print Function Names example plugin doesn't count/print Functions/Subroutines in interfaces
 ! (It should only count definitions, which will appear elsewhere for interfaced functions/subroutines)
-! This requires that the examples are built (FLANG_BUILD_EXAMPLES=ON) to access flangPrintFunctionNames.so
+! This requires that the examples are built (LLVM_BUILD_EXAMPLES=ON) to access flangPrintFunctionNames.so
 
 ! REQUIRES: plugins, examples, shell
 

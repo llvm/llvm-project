@@ -10,6 +10,7 @@ licenses(["notice"])
 
 cc_library(
     name = "mpfr_impl",
+    hdrs = ["mpfr_inc.h"],
     target_compatible_with = select({
         "//conditions:default": [],
         "//libc:mpfr_disable": ["@platforms//:incompatible"],
@@ -27,18 +28,27 @@ cc_library(
     name = "mpfr_wrapper",
     srcs = ["MPFRUtils.cpp"],
     hdrs = ["MPFRUtils.h"],
+    # Disable layering check when using mpfr_system.
+    features = select(
+        {
+            "//conditions:default": [],
+            "//libc:mpfr_system": ["-layering_check"],
+        },
+    ),
     deps = [
         "//libc:__support_common",
         "//libc:__support_cpp_bit",
         "//libc:__support_cpp_bitset",
+        "//libc:__support_cpp_string",
         "//libc:__support_cpp_string_view",
         "//libc:__support_cpp_type_traits",
+        "//libc:__support_fputil_float_properties",
         "//libc:__support_fputil_fp_bits",
+        "//libc:__support_fputil_fpbits_str",
         "//libc:__support_fputil_platform_defs",
         "//libc:libc_root",
+        "//libc/test/UnitTest:LibcUnitTest",
+        "//libc/test/UnitTest:fp_test_helpers",
         "//libc/utils/MPFRWrapper:mpfr_impl",
-        "//libc/utils/UnitTest:LibcUnitTest",
-        "//libc/utils/UnitTest:fp_test_helpers",
-        "//libc/utils/testutils:libc_test_utils",
     ],
 )

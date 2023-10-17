@@ -14,7 +14,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ELFObjectFile.h"
@@ -24,6 +23,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/YAMLTraits.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -60,6 +60,7 @@ loadObj(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
   // Find the section named "xray_instr_map".
   if ((!ObjFile.getBinary()->isELF() && !ObjFile.getBinary()->isMachO()) ||
       !(ObjFile.getBinary()->getArch() == Triple::x86_64 ||
+        ObjFile.getBinary()->getArch() == Triple::loongarch64 ||
         ObjFile.getBinary()->getArch() == Triple::ppc64le ||
         ObjFile.getBinary()->getArch() == Triple::arm ||
         ObjFile.getBinary()->getArch() == Triple::aarch64))

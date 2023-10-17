@@ -551,7 +551,7 @@ public:
 
   /// Finds the token that comes right after the given location.
   ///
-  /// Returns the next token, or none if the location is inside a macro.
+  /// Returns the next token, or std::nullopt if the location is inside a macro.
   static std::optional<Token> findNextToken(SourceLocation Loc,
                                             const SourceManager &SM,
                                             const LangOptions &LangOpts);
@@ -805,9 +805,10 @@ private:
   /// Try to consume an identifier character encoded in UTF-8.
   /// \param CurPtr Points to the start of the (potential) UTF-8 code unit
   ///        sequence. On success, updated to point past the end of it.
+  /// \param Result The token being formed.
   /// \return \c true if a UTF-8 sequence mapping to an acceptable identifier
   ///         character was lexed, \c false otherwise.
-  bool tryConsumeIdentifierUTF8Char(const char *&CurPtr);
+  bool tryConsumeIdentifierUTF8Char(const char *&CurPtr, Token &Result);
 };
 
 } // namespace clang

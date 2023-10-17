@@ -15,6 +15,7 @@
 #include "support/Logger.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Index/IndexSymbol.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -187,14 +188,45 @@ bool fromJSON(const llvm::json::Value &Params, TextDocumentItem &R,
 bool fromJSON(const llvm::json::Value &Params, TextEdit &R,
               llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
-  return O && O.map("range", R.range) && O.map("newText", R.newText);
+  return O && O.map("range", R.range) && O.map("newText", R.newText) &&
+         O.mapOptional("annotationId", R.annotationId);
 }
 
 llvm::json::Value toJSON(const TextEdit &P) {
-  return llvm::json::Object{
+  llvm::json::Object Result{
       {"range", P.range},
       {"newText", P.newText},
   };
+  if (!P.annotationId.empty())
+    Result["annotationId"] = P.annotationId;
+  return Result;
+}
+
+bool fromJSON(const llvm::json::Value &Params, ChangeAnnotation &R,
+              llvm::json::Path P) {
+  llvm::json::ObjectMapper O(Params, P);
+  return O && O.map("label", R.label) &&
+         O.map("needsConfirmation", R.needsConfirmation) &&
+         O.mapOptional("description", R.description);
+}
+llvm::json::Value toJSON(const ChangeAnnotation & CA) {
+  llvm::json::Object Result{{"label", CA.label}};
+  if (CA.needsConfirmation)
+    Result["needsConfirmation"] = *CA.needsConfirmation;
+  if (!CA.description.empty())
+    Result["description"] = CA.description;
+  return Result;
+}
+
+bool fromJSON(const llvm::json::Value &Params, TextDocumentEdit &R,
+              llvm::json::Path P) {
+  llvm::json::ObjectMapper O(Params, P);
+  return O && O.map("textDocument", R.textDocument) && O.map("edits", R.edits);
+}
+llvm::json::Value toJSON(const TextDocumentEdit &P) {
+  llvm::json::Object Result{{"textDocument", P.textDocument},
+                            {"edits", P.edits}};
+  return Result;
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const TextEdit &TE) {
@@ -338,6 +370,13 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R,
               SemanticHighlighting->getBoolean("semanticHighlighting"))
         R.TheiaSemanticHighlighting = *SemanticHighlightingSupport;
     }
+    if (auto *InactiveRegions =
+            TextDocument->getObject("inactiveRegionsCapabilities")) {
+      if (auto InactiveRegionsSupport =
+              InactiveRegions->getBoolean("inactiveRegions")) {
+        R.InactiveRegions = *InactiveRegionsSupport;
+      }
+    }
     if (TextDocument->getObject("semanticTokens"))
       R.SemanticTokens = true;
     if (auto *Diagnostics = TextDocument->getObject("publishDiagnostics")) {
@@ -355,6 +394,8 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R,
       if (auto *Item = Completion->getObject("completionItem")) {
         if (auto SnippetSupport = Item->getBoolean("snippetSupport"))
           R.CompletionSnippets = *SnippetSupport;
+        if (auto LabelDetailsSupport = Item->getBoolean("labelDetailsSupport"))
+          R.CompletionLabelDetail = *LabelDetailsSupport;
         if (const auto *DocumentationFormat =
                 Item->getArray("documentationFormat")) {
           for (const auto &Format : *DocumentationFormat) {
@@ -436,6 +477,13 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R,
     if (auto *SemanticTokens = Workspace->getObject("semanticTokens")) {
       if (auto RefreshSupport = SemanticTokens->getBoolean("refreshSupport"))
         R.SemanticTokenRefreshSupport = *RefreshSupport;
+    }
+    if (auto *WorkspaceEdit = Workspace->getObject("workspaceEdit")) {
+      if (auto DocumentChanges = WorkspaceEdit->getBoolean("documentChanges"))
+        R.DocumentChanges = *DocumentChanges;
+      if (WorkspaceEdit->getObject("changeAnnotationSupport")) {
+        R.ChangeAnnotation = true;
+      }
     }
   }
   if (auto *Window = O->getObject("window")) {
@@ -710,7 +758,9 @@ bool fromJSON(const llvm::json::Value &Params, CodeActionParams &R,
 bool fromJSON(const llvm::json::Value &Params, WorkspaceEdit &R,
               llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
-  return O && O.map("changes", R.changes);
+  return O && O.map("changes", R.changes) &&
+         O.map("documentChanges", R.documentChanges) &&
+         O.mapOptional("changeAnnotations", R.changeAnnotations);
 }
 
 bool fromJSON(const llvm::json::Value &Params, ExecuteCommandParams &R,
@@ -856,10 +906,22 @@ llvm::json::Value toJSON(const DocumentSymbol &S) {
 }
 
 llvm::json::Value toJSON(const WorkspaceEdit &WE) {
-  llvm::json::Object FileChanges;
-  for (auto &Change : WE.changes)
-    FileChanges[Change.first] = llvm::json::Array(Change.second);
-  return llvm::json::Object{{"changes", std::move(FileChanges)}};
+  llvm::json::Object Result;
+  if (WE.changes) {
+    llvm::json::Object FileChanges;
+    for (auto &Change : *WE.changes)
+      FileChanges[Change.first] = llvm::json::Array(Change.second);
+    Result["changes"] = std::move(FileChanges);
+  }
+  if (WE.documentChanges)
+    Result["documentChanges"] = *WE.documentChanges;
+  if (!WE.changeAnnotations.empty()) {
+    llvm::json::Object ChangeAnnotations;
+    for (auto &Annotation : WE.changeAnnotations)
+      ChangeAnnotations[Annotation.first] = Annotation.second;
+    Result["changeAnnotations"] = std::move(ChangeAnnotations);
+  }
+  return Result;
 }
 
 bool fromJSON(const llvm::json::Value &Params, TweakArgs &A,
@@ -1010,6 +1072,25 @@ bool fromJSON(const llvm::json::Value &E, CompletionItemKindBitset &Out,
   return false;
 }
 
+llvm::json::Value toJSON(const CompletionItemLabelDetails &CD) {
+  llvm::json::Object Result;
+  if (!CD.detail.empty())
+    Result["detail"] = CD.detail;
+  if (!CD.description.empty())
+    Result["description"] = CD.description;
+  return Result;
+}
+
+void removeCompletionLabelDetails(CompletionItem &C) {
+  if (!C.labelDetails)
+    return;
+  if (!C.labelDetails->detail.empty())
+    C.label += C.labelDetails->detail;
+  if (!C.labelDetails->description.empty())
+    C.label = C.labelDetails->description + C.label;
+  C.labelDetails.reset();
+}
+
 llvm::json::Value toJSON(const CompletionItem &CI) {
   assert(!CI.label.empty() && "completion item label is required");
   llvm::json::Object Result{{"label", CI.label}};
@@ -1017,6 +1098,8 @@ llvm::json::Value toJSON(const CompletionItem &CI) {
     Result["kind"] = static_cast<int>(CI.kind);
   if (!CI.detail.empty())
     Result["detail"] = CI.detail;
+  if (CI.labelDetails)
+    Result["labelDetails"] = *CI.labelDetails;
   if (CI.documentation)
     Result["documentation"] = CI.documentation;
   if (!CI.sortText.empty())
@@ -1172,6 +1255,12 @@ bool fromJSON(const llvm::json::Value &Params, SemanticTokensDeltaParams &R,
   llvm::json::ObjectMapper O(Params, P);
   return O && O.map("textDocument", R.textDocument) &&
          O.map("previousResultId", R.previousResultId);
+}
+
+llvm::json::Value toJSON(const InactiveRegionsParams &InactiveRegions) {
+  return llvm::json::Object{
+      {"textDocument", InactiveRegions.TextDocument},
+      {"regions", std::move(InactiveRegions.InactiveRegions)}};
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &O,
@@ -1369,7 +1458,9 @@ llvm::json::Value toJSON(const InlayHintKind &Kind) {
     return 1;
   case InlayHintKind::Parameter:
     return 2;
-  case InlayHintKind::Designator: // This is an extension, don't serialize.
+  case InlayHintKind::Designator:
+  case InlayHintKind::BlockEnd:
+    // This is an extension, don't serialize.
     return nullptr;
   }
   llvm_unreachable("Unknown clang.clangd.InlayHintKind");
@@ -1403,6 +1494,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, InlayHintKind Kind) {
       return "type";
     case InlayHintKind::Designator:
       return "designator";
+    case InlayHintKind::BlockEnd:
+      return "block-end";
     }
     llvm_unreachable("Unknown clang.clangd.InlayHintKind");
   };

@@ -23,24 +23,28 @@
 #include <algorithm>
 
 namespace mlir {
+namespace affine {
 #define GEN_PASS_DEF_AFFINESCALARREPLACEMENT
 #include "mlir/Dialect/Affine/Passes.h.inc"
+} // namespace affine
 } // namespace mlir
 
 #define DEBUG_TYPE "affine-scalrep"
 
 using namespace mlir;
+using namespace mlir::affine;
 
 namespace {
 struct AffineScalarReplacement
-    : public impl::AffineScalarReplacementBase<AffineScalarReplacement> {
+    : public affine::impl::AffineScalarReplacementBase<
+          AffineScalarReplacement> {
   void runOnOperation() override;
 };
 
 } // namespace
 
 std::unique_ptr<OperationPass<func::FuncOp>>
-mlir::createAffineScalarReplacementPass() {
+mlir::affine::createAffineScalarReplacementPass() {
   return std::make_unique<AffineScalarReplacement>();
 }
 

@@ -14,12 +14,18 @@
 #include <__algorithm/replace_copy.h>
 #include <__availability>
 #include <__config>
+#include <__functional/hash.h>
+#include <__functional/unary_function.h>
+#include <__fwd/hash.h>
 #include <__iterator/back_insert_iterator.h>
 #include <__iterator/iterator_traits.h>
+#include <__type_traits/decay.h>
+#include <__type_traits/is_pointer.h>
+#include <__type_traits/remove_const.h>
+#include <__type_traits/remove_pointer.h>
 #include <cstddef>
 #include <string>
 #include <string_view>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 # include <iomanip> // for quoted
@@ -34,7 +40,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
-_LIBCPP_AVAILABILITY_FILESYSTEM_PUSH
+_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_PUSH
 
 template <class _Tp>
 struct __can_convert_char {
@@ -70,9 +76,9 @@ struct __can_convert_char<char32_t> {
   using __char_type = char32_t;
 };
 
-template <class _ECharT>
+template <class _ECharT, __enable_if_t<__can_convert_char<_ECharT>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI
-typename enable_if<__can_convert_char<_ECharT>::value, bool>::type
+bool
 __is_separator(_ECharT __e) {
 #if defined(_LIBCPP_WIN32API)
   return __e == _ECharT('/') || __e == _ECharT('\\');
@@ -139,7 +145,7 @@ struct __is_pathable_string<
   }
 };
 
-template <class _Source, class _DS = typename decay<_Source>::type,
+template <class _Source, class _DS = __decay_t<_Source>,
           class _UnqualPtrType =
               __remove_const_t<__remove_pointer_t<_DS> >,
           bool _IsCharPtr = is_pointer<_DS>::value&&
@@ -168,7 +174,7 @@ struct __is_pathable_char_array<_Source, _ECharT*, _UPtr, true>
   static _ECharT __first_or_null(const _ECharT* __b) { return *__b; }
 };
 
-template <class _Iter, bool _IsIt = __is_cpp17_input_iterator<_Iter>::value,
+template <class _Iter, bool _IsIt = __has_input_iterator_category<_Iter>::value,
           class = void>
 struct __is_pathable_iter : false_type {};
 
@@ -217,10 +223,8 @@ typedef char __path_value;
 #endif
 
 #if defined(_LIBCPP_WIN32API)
-_LIBCPP_FUNC_VIS
-size_t __wide_to_char(const wstring&, char*, size_t);
-_LIBCPP_FUNC_VIS
-size_t __char_to_wide(const string&, wchar_t*, size_t);
+_LIBCPP_EXPORTED_FROM_ABI size_t __wide_to_char(const wstring&, char*, size_t);
+_LIBCPP_EXPORTED_FROM_ABI size_t __char_to_wide(const string&, wchar_t*, size_t);
 #endif
 
 template <class _ECharT>
@@ -301,17 +305,17 @@ struct _PathCVT {
 template <>
 struct _PathCVT<__path_value> {
 
-  template <class _Iter>
+  template <class _Iter, __enable_if_t<__has_exactly_input_iterator_category<_Iter>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI
-  static typename enable_if<__is_exactly_cpp17_input_iterator<_Iter>::value>::type
+  static void
   __append_range(__path_string& __dest, _Iter __b, _Iter __e) {
     for (; __b != __e; ++__b)
       __dest.push_back(*__b);
   }
 
-  template <class _Iter>
+  template <class _Iter, __enable_if_t<__has_forward_iterator_category<_Iter>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI
-  static typename enable_if<__is_cpp17_forward_iterator<_Iter>::value>::type
+  static void
   __append_range(__path_string& __dest, _Iter __b, _Iter __e) {
     __dest.append(__b, __e);
   }
@@ -346,17 +350,17 @@ struct _PathCVT<char> {
       __char_to_wide(__str, const_cast<__path_value*>(__dest.data()) + __pos, __size);
   }
 
-  template <class _Iter>
+  template <class _Iter, __enable_if_t<__has_exactly_input_iterator_category<_Iter>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI
-  static typename enable_if<__is_exactly_cpp17_input_iterator<_Iter>::value>::type
+  static void
   __append_range(__path_string& __dest, _Iter __b, _Iter __e) {
     basic_string<char> __tmp(__b, __e);
     __append_string(__dest, __tmp);
   }
 
-  template <class _Iter>
+  template <class _Iter, __enable_if_t<__has_forward_iterator_category<_Iter>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI
-  static typename enable_if<__is_cpp17_forward_iterator<_Iter>::value>::type
+  static void
   __append_range(__path_string& __dest, _Iter __b, _Iter __e) {
     basic_string<char> __tmp(__b, __e);
     __append_string(__dest, __tmp);
@@ -439,10 +443,9 @@ struct _PathExport<char8_t> {
 #endif /* !_LIBCPP_HAS_NO_CHAR8_T */
 #endif /* _LIBCPP_WIN32API */
 
-class _LIBCPP_TYPE_VIS path {
+class _LIBCPP_EXPORTED_FROM_ABI path {
   template <class _SourceOrIter, class _Tp = path&>
-  using _EnableIfPathable =
-      typename enable_if<__is_pathable<_SourceOrIter>::value, _Tp>::type;
+  using _EnableIfPathable = __enable_if_t<__is_pathable<_SourceOrIter>::value, _Tp>;
 
   template <class _Tp>
   using _SourceChar = typename __is_pathable<_Tp>::__char_type;
@@ -461,7 +464,7 @@ public:
   typedef basic_string<value_type> string_type;
   typedef basic_string_view<value_type> __string_view;
 
-  enum _LIBCPP_ENUM_VIS format : unsigned char {
+  enum format : unsigned char {
     auto_format,
     native_format,
     generic_format
@@ -674,9 +677,9 @@ public:
     return *this;
   }
 
-  template <class _ECharT>
+  template <class _ECharT, __enable_if_t<__can_convert_char<_ECharT>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI
-  typename enable_if<__can_convert_char<_ECharT>::value, path&>::type
+  path&
   operator+=(_ECharT __x) {
     _PathCVT<_ECharT>::__append_source(__pn_,
                                        basic_string_view<_ECharT>(&__x, 1));
@@ -1029,28 +1032,26 @@ public:
   }
 
   // iterators
-  class _LIBCPP_TYPE_VIS iterator;
+  class _LIBCPP_EXPORTED_FROM_ABI iterator;
   typedef iterator const_iterator;
 
   iterator begin() const;
   iterator end() const;
 
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
-  template <class _CharT, class _Traits>
+  template <class _CharT, class _Traits, __enable_if_t<is_same<_CharT, value_type>::value &&
+                                                       is_same<_Traits, char_traits<value_type> >::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI friend
-      typename enable_if<is_same<_CharT, value_type>::value &&
-                             is_same<_Traits, char_traits<value_type> >::value,
-                         basic_ostream<_CharT, _Traits>&>::type
+  basic_ostream<_CharT, _Traits>&
       operator<<(basic_ostream<_CharT, _Traits>& __os, const path& __p) {
     __os << _VSTD::__quoted(__p.native());
     return __os;
   }
 
-  template <class _CharT, class _Traits>
+  template <class _CharT, class _Traits, __enable_if_t<!is_same<_CharT, value_type>::value ||
+                                                       !is_same<_Traits, char_traits<value_type> >::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI friend
-      typename enable_if<!is_same<_CharT, value_type>::value ||
-                             !is_same<_Traits, char_traits<value_type> >::value,
-                         basic_ostream<_CharT, _Traits>&>::type
+  basic_ostream<_CharT, _Traits>&
       operator<<(basic_ostream<_CharT, _Traits>& __os, const path& __p) {
     __os << _VSTD::__quoted(__p.string<_CharT, _Traits>());
     return __os;
@@ -1067,8 +1068,7 @@ public:
 #endif // !_LIBCPP_HAS_NO_LOCALIZATION
 
 private:
-  inline _LIBCPP_HIDE_FROM_ABI path&
-  __assign_view(__string_view const& __s) noexcept {
+  inline _LIBCPP_HIDE_FROM_ABI path& __assign_view(__string_view const& __s) {
     __pn_ = string_type(__s);
     return *this;
   }
@@ -1079,12 +1079,22 @@ inline _LIBCPP_HIDE_FROM_ABI void swap(path& __lhs, path& __rhs) noexcept {
   __lhs.swap(__rhs);
 }
 
-_LIBCPP_FUNC_VIS
-size_t hash_value(const path& __p) noexcept;
+_LIBCPP_EXPORTED_FROM_ABI size_t hash_value(const path& __p) noexcept;
 
-_LIBCPP_AVAILABILITY_FILESYSTEM_POP
+_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_POP
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+template <>
+struct _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY hash<_VSTD_FS::path> : __unary_function<_VSTD_FS::path, size_t> {
+  _LIBCPP_HIDE_FROM_ABI size_t operator()(_VSTD_FS::path const& __p) const noexcept {
+    return _VSTD_FS::hash_value(__p);
+  }
+};
+
+_LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_CXX03_LANG
 

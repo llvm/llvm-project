@@ -77,6 +77,32 @@ SANITIZER_INTERFACE_ATTRIBUTE
 void __hwasan_load16_noabort(uptr);
 
 SANITIZER_INTERFACE_ATTRIBUTE
+void __hwasan_loadN_match_all(uptr, uptr, u8);
+SANITIZER_INTERFACE_ATTRIBUTE
+void __hwasan_load1_match_all(uptr, u8);
+SANITIZER_INTERFACE_ATTRIBUTE
+void __hwasan_load2_match_all(uptr, u8);
+SANITIZER_INTERFACE_ATTRIBUTE
+void __hwasan_load4_match_all(uptr, u8);
+SANITIZER_INTERFACE_ATTRIBUTE
+void __hwasan_load8_match_all(uptr, u8);
+SANITIZER_INTERFACE_ATTRIBUTE
+void __hwasan_load16_match_all(uptr, u8);
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __hwasan_loadN_match_all_noabort(uptr, uptr, u8);
+SANITIZER_INTERFACE_ATTRIBUTE
+void __hwasan_load1_match_all_noabort(uptr, u8);
+SANITIZER_INTERFACE_ATTRIBUTE
+void __hwasan_load2_match_all_noabort(uptr, u8);
+SANITIZER_INTERFACE_ATTRIBUTE
+void __hwasan_load4_match_all_noabort(uptr, u8);
+SANITIZER_INTERFACE_ATTRIBUTE
+void __hwasan_load8_match_all_noabort(uptr, u8);
+SANITIZER_INTERFACE_ATTRIBUTE
+void __hwasan_load16_match_all_noabort(uptr, u8);
+
+SANITIZER_INTERFACE_ATTRIBUTE
 void __hwasan_storeN(uptr, uptr);
 SANITIZER_INTERFACE_ATTRIBUTE
 void __hwasan_store1(uptr);
@@ -101,6 +127,32 @@ SANITIZER_INTERFACE_ATTRIBUTE
 void __hwasan_store8_noabort(uptr);
 SANITIZER_INTERFACE_ATTRIBUTE
 void __hwasan_store16_noabort(uptr);
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __hwasan_storeN_match_all(uptr, uptr, u8);
+SANITIZER_INTERFACE_ATTRIBUTE
+void __hwasan_store1_match_all(uptr, u8);
+SANITIZER_INTERFACE_ATTRIBUTE
+void __hwasan_store2_match_all(uptr, u8);
+SANITIZER_INTERFACE_ATTRIBUTE
+void __hwasan_store4_match_all(uptr, u8);
+SANITIZER_INTERFACE_ATTRIBUTE
+void __hwasan_store8_match_all(uptr, u8);
+SANITIZER_INTERFACE_ATTRIBUTE
+void __hwasan_store16_match_all(uptr, u8);
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __hwasan_storeN_match_all_noabort(uptr, uptr, u8);
+SANITIZER_INTERFACE_ATTRIBUTE
+void __hwasan_store1_match_all_noabort(uptr, u8);
+SANITIZER_INTERFACE_ATTRIBUTE
+void __hwasan_store2_match_all_noabort(uptr, u8);
+SANITIZER_INTERFACE_ATTRIBUTE
+void __hwasan_store4_match_all_noabort(uptr, u8);
+SANITIZER_INTERFACE_ATTRIBUTE
+void __hwasan_store8_match_all_noabort(uptr, u8);
+SANITIZER_INTERFACE_ATTRIBUTE
+void __hwasan_store16_match_all_noabort(uptr, u8);
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __hwasan_tag_memory(uptr p, u8 tag, uptr sz);
@@ -182,6 +234,13 @@ SANITIZER_INTERFACE_ATTRIBUTE
 void *__hwasan_memset(void *s, int c, uptr n);
 SANITIZER_INTERFACE_ATTRIBUTE
 void *__hwasan_memmove(void *dest, const void *src, uptr n);
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void *__hwasan_memcpy_match_all(void *dst, const void *src, uptr size, u8);
+SANITIZER_INTERFACE_ATTRIBUTE
+void *__hwasan_memset_match_all(void *s, int c, uptr n, u8);
+SANITIZER_INTERFACE_ATTRIBUTE
+void *__hwasan_memmove_match_all(void *dest, const void *src, uptr n, u8);
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __hwasan_set_error_report_callback(void (*callback)(const char *));

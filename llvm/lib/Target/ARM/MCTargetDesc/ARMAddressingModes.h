@@ -81,20 +81,6 @@ namespace ARM_AM {
     }
   }
 
-  /// rotr32 - Rotate a 32-bit unsigned value right by a specified # bits.
-  ///
-  inline unsigned rotr32(unsigned Val, unsigned Amt) {
-    assert(Amt < 32 && "Invalid rotate amount");
-    return (Val >> Amt) | (Val << ((32-Amt)&31));
-  }
-
-  /// rotl32 - Rotate a 32-bit unsigned value left by a specified # bits.
-  ///
-  inline unsigned rotl32(unsigned Val, unsigned Amt) {
-    assert(Amt < 32 && "Invalid rotate amount");
-    return (Val << Amt) | (Val >> ((32-Amt)&31));
-  }
-
   //===--------------------------------------------------------------------===//
   // Addressing Mode #1: shift_operand with registers
   //===--------------------------------------------------------------------===//
@@ -132,22 +118,22 @@ namespace ARM_AM {
     if ((Imm & ~255U) == 0) return 0;
 
     // Use CTZ to compute the rotate amount.
-    unsigned TZ = countTrailingZeros(Imm);
+    unsigned TZ = llvm::countr_zero(Imm);
 
     // Rotate amount must be even.  Something like 0x200 must be rotated 8 bits,
     // not 9.
     unsigned RotAmt = TZ & ~1;
 
     // If we can handle this spread, return it.
-    if ((rotr32(Imm, RotAmt) & ~255U) == 0)
+    if ((llvm::rotr<uint32_t>(Imm, RotAmt) & ~255U) == 0)
       return (32-RotAmt)&31;  // HW rotates right, not left.
 
     // For values like 0xF000000F, we should ignore the low 6 bits, then
     // retry the hunt.
     if (Imm & 63U) {
-      unsigned TZ2 = countTrailingZeros(Imm & ~63U);
+      unsigned TZ2 = llvm::countr_zero(Imm & ~63U);
       unsigned RotAmt2 = TZ2 & ~1;
-      if ((rotr32(Imm, RotAmt2) & ~255U) == 0)
+      if ((llvm::rotr<uint32_t>(Imm, RotAmt2) & ~255U) == 0)
         return (32-RotAmt2)&31;  // HW rotates right, not left.
     }
 
@@ -168,40 +154,40 @@ namespace ARM_AM {
     unsigned RotAmt = getSOImmValRotate(Arg);
 
     // If this cannot be handled with a single shifter_op, bail out.
-    if (rotr32(~255U, RotAmt) & Arg)
+    if (llvm::rotr<uint32_t>(~255U, RotAmt) & Arg)
       return -1;
 
     // Encode this correctly.
-    return rotl32(Arg, RotAmt) | ((RotAmt>>1) << 8);
+    return llvm::rotl<uint32_t>(Arg, RotAmt) | ((RotAmt >> 1) << 8);
   }
 
   /// isSOImmTwoPartVal - Return true if the specified value can be obtained by
   /// or'ing together two SOImmVal's.
   inline bool isSOImmTwoPartVal(unsigned V) {
     // If this can be handled with a single shifter_op, bail out.
-    V = rotr32(~255U, getSOImmValRotate(V)) & V;
+    V = llvm::rotr<uint32_t>(~255U, getSOImmValRotate(V)) & V;
     if (V == 0)
       return false;
 
     // If this can be handled with two shifter_op's, accept.
-    V = rotr32(~255U, getSOImmValRotate(V)) & V;
+    V = llvm::rotr<uint32_t>(~255U, getSOImmValRotate(V)) & V;
     return V == 0;
   }
 
   /// getSOImmTwoPartFirst - If V is a value that satisfies isSOImmTwoPartVal,
   /// return the first chunk of it.
   inline unsigned getSOImmTwoPartFirst(unsigned V) {
-    return rotr32(255U, getSOImmValRotate(V)) & V;
+    return llvm::rotr<uint32_t>(255U, getSOImmValRotate(V)) & V;
   }
 
   /// getSOImmTwoPartSecond - If V is a value that satisfies isSOImmTwoPartVal,
   /// return the second chunk of it.
   inline unsigned getSOImmTwoPartSecond(unsigned V) {
     // Mask out the first hunk.
-    V = rotr32(~255U, getSOImmValRotate(V)) & V;
+    V = llvm::rotr<uint32_t>(~255U, getSOImmValRotate(V)) & V;
 
     // Take what's left.
-    assert(V == (rotr32(255U, getSOImmValRotate(V)) & V));
+    assert(V == (llvm::rotr<uint32_t>(255U, getSOImmValRotate(V)) & V));
     return V;
   }
 
@@ -216,7 +202,7 @@ namespace ARM_AM {
     // Return false if ~(-First) is not a SoImmval.
     First = getSOImmTwoPartFirst(-V);
     First = ~(-First);
-    return !(rotr32(~255U, getSOImmValRotate(First)) & First);
+    return !(llvm::rotr<uint32_t>(~255U, getSOImmValRotate(First)) & First);
   }
 
   /// getThumbImmValShift - Try to handle Imm with a 8-bit immediate followed
@@ -227,7 +213,7 @@ namespace ARM_AM {
     if ((Imm & ~255U) == 0) return 0;
 
     // Use CTZ to compute the shift amount.
-    return countTrailingZeros(Imm);
+    return llvm::countr_zero(Imm);
   }
 
   /// isThumbImmShiftedVal - Return true if the specified value can be obtained
@@ -246,7 +232,7 @@ namespace ARM_AM {
     if ((Imm & ~65535U) == 0) return 0;
 
     // Use CTZ to compute the shift amount.
-    return countTrailingZeros(Imm);
+    return llvm::countr_zero(Imm);
   }
 
   /// isThumbImm16ShiftedVal - Return true if the specified value can be
@@ -302,13 +288,14 @@ namespace ARM_AM {
   /// encoding is possible.
   /// See ARM Reference Manual A6.3.2.
   inline int getT2SOImmValRotateVal(unsigned V) {
-    unsigned RotAmt = countLeadingZeros(V);
+    unsigned RotAmt = llvm::countl_zero(V);
     if (RotAmt >= 24)
       return -1;
 
     // If 'Arg' can be handled with a single shifter_op return the value.
-    if ((rotr32(0xff000000U, RotAmt) & V) == V)
-      return (rotr32(V, 24 - RotAmt) & 0x7f) | ((RotAmt + 8) << 7);
+    if ((llvm::rotr<uint32_t>(0xff000000U, RotAmt) & V) == V)
+      return (llvm::rotr<uint32_t>(V, 24 - RotAmt) & 0x7f) |
+             ((RotAmt + 8) << 7);
 
     return -1;
   }
@@ -334,7 +321,7 @@ namespace ARM_AM {
   inline unsigned getT2SOImmValRotate(unsigned V) {
     if ((V & ~255U) == 0) return 0;
     // Use CTZ to compute the rotate amount.
-    unsigned RotAmt = countTrailingZeros(V);
+    unsigned RotAmt = llvm::countr_zero(V);
     return (32 - RotAmt) & 31;
   }
 
@@ -345,7 +332,7 @@ namespace ARM_AM {
     // out. Those should be handled directly, not with a two-part val.
     if (getT2SOImmValSplatVal(V) != -1)
       return false;
-    V = rotr32 (~255U, getT2SOImmValRotate(V)) & V;
+    V = llvm::rotr<uint32_t>(~255U, getT2SOImmValRotate(V)) & V;
     if (V == 0)
       return false;
 
@@ -369,7 +356,7 @@ namespace ARM_AM {
     assert (isT2SOImmTwoPartVal(Imm) &&
             "Immedate cannot be encoded as two part immediate!");
     // Try a shifter operand as one part
-    unsigned V = rotr32 (~255, getT2SOImmValRotate(Imm)) & Imm;
+    unsigned V = llvm::rotr<uint32_t>(~255, getT2SOImmValRotate(Imm)) & Imm;
     // If the rest is encodable as an immediate, then return it.
     if (getT2SOImmVal(V) != -1) return V;
 
@@ -759,4 +746,3 @@ namespace ARM_AM {
 } // end namespace llvm
 
 #endif
-

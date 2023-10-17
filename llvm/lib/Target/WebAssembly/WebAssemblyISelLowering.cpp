@@ -14,10 +14,10 @@
 #include "WebAssemblyISelLowering.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "Utils/WebAssemblyTypeUtilities.h"
-#include "Utils/WebAssemblyUtilities.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyTargetMachine.h"
+#include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -32,6 +32,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
@@ -125,8 +126,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
       setOperationAction(Op, T, Expand);
     // Note supported floating-point library function operators that otherwise
     // default to expand.
-    for (auto Op :
-         {ISD::FCEIL, ISD::FFLOOR, ISD::FTRUNC, ISD::FNEARBYINT, ISD::FRINT})
+    for (auto Op : {ISD::FCEIL, ISD::FFLOOR, ISD::FTRUNC, ISD::FNEARBYINT,
+                    ISD::FRINT, ISD::FROUNDEVEN})
       setOperationAction(Op, T, Legal);
     // Support minimum and maximum, which otherwise default to expand.
     setOperationAction(ISD::FMINIMUM, T, Legal);
@@ -157,6 +158,12 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
   // SIMD-specific configuration
   if (Subtarget->hasSIMD128()) {
+    // Combine vector mask reductions into alltrue/anytrue
+    setTargetDAGCombine(ISD::SETCC);
+
+    // Convert vector to integer bitcasts to bitmask
+    setTargetDAGCombine(ISD::BITCAST);
+
     // Hoist bitcasts out of shuffles
     setTargetDAGCombine(ISD::VECTOR_SHUFFLE);
 
@@ -196,7 +203,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
     // Support splatting
     for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32, MVT::v2i64,
-		   MVT::v2f64})
+                   MVT::v2f64})
       setOperationAction(ISD::SPLAT_VECTOR, T, Legal);
 
     // Custom lowering since wasm shifts must have a scalar shift amount
@@ -241,7 +248,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
     // Expand float operations supported for scalars but not SIMD
     for (auto Op : {ISD::FCOPYSIGN, ISD::FLOG, ISD::FLOG2, ISD::FLOG10,
-                    ISD::FEXP, ISD::FEXP2, ISD::FRINT})
+                    ISD::FEXP, ISD::FEXP2})
       for (auto T : {MVT::v4f32, MVT::v2f64})
         setOperationAction(Op, T, Expand);
 
@@ -258,6 +265,12 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     // But saturating fp_to_int converstions are
     for (auto Op : {ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT})
       setOperationAction(Op, MVT::v4i32, Custom);
+
+    // Support vector extending
+    for (auto T : MVT::integer_fixedlen_vector_valuetypes()) {
+      setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, T, Custom);
+      setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, T, Custom);
+    }
   }
 
   // As a special case, these operators use the type to mean the type to
@@ -534,11 +547,12 @@ LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
   assert(CallResults.getOpcode() == WebAssembly::CALL_RESULTS ||
          CallResults.getOpcode() == WebAssembly::RET_CALL_RESULTS);
 
-  bool IsIndirect = CallParams.getOperand(0).isReg();
+  bool IsIndirect =
+      CallParams.getOperand(0).isReg() || CallParams.getOperand(0).isFI();
   bool IsRetCall = CallResults.getOpcode() == WebAssembly::RET_CALL_RESULTS;
 
   bool IsFuncrefCall = false;
-  if (IsIndirect) {
+  if (IsIndirect && CallParams.getOperand(0).isReg()) {
     Register Reg = CallParams.getOperand(0).getReg();
     const MachineFunction *MF = BB->getParent();
     const MachineRegisterInfo &MRI = MF->getRegInfo();
@@ -818,6 +832,30 @@ bool WebAssemblyTargetLowering::isOffsetFoldingLegal(
   // Wasm doesn't support function addresses with offsets
   const GlobalValue *GV = GA->getGlobal();
   return isa<Function>(GV) ? false : TargetLowering::isOffsetFoldingLegal(GA);
+}
+
+bool WebAssemblyTargetLowering::shouldSinkOperands(
+    Instruction *I, SmallVectorImpl<Use *> &Ops) const {
+  using namespace llvm::PatternMatch;
+
+  if (!I->getType()->isVectorTy() || !I->isShift())
+    return false;
+
+  Value *V = I->getOperand(1);
+  // We dont need to sink constant splat.
+  if (dyn_cast<Constant>(V))
+    return false;
+
+  if (match(V, m_Shuffle(m_InsertElt(m_Value(), m_Value(), m_ZeroInt()),
+                         m_Value(), m_ZeroMask()))) {
+    // Sink insert
+    Ops.push_back(&cast<Instruction>(V)->getOperandUse(0));
+    // Sink shuffle
+    Ops.push_back(&I->getOperandUse(1));
+    return true;
+  }
+
+  return false;
 }
 
 EVT WebAssemblyTargetLowering::getSetCCResultType(const DataLayout &DL,
@@ -1201,8 +1239,8 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Lastly, if this is a call to a funcref we need to add an instruction
   // table.set to the chain and transform the call.
-  if (CLI.CB &&
-      WebAssembly::isFuncrefType(CLI.CB->getCalledOperand()->getType())) {
+  if (CLI.CB && WebAssembly::isWebAssemblyFuncrefType(
+                    CLI.CB->getCalledOperand()->getType())) {
     // In the absence of function references proposal where a funcref call is
     // lowered to call_ref, using reference types we generate a table.set to set
     // the funcref to a special table used solely for this purpose, followed by
@@ -1373,6 +1411,11 @@ void WebAssemblyTargetLowering::ReplaceNodeResults(
     // SIGN_EXTEND_INREG, but for non-vector sign extends the result might be an
     // illegal type.
     break;
+  case ISD::SIGN_EXTEND_VECTOR_INREG:
+  case ISD::ZERO_EXTEND_VECTOR_INREG:
+    // Do not add any results, signifying that N should not be custom lowered.
+    // EXTEND_VECTOR_INREG is implemented for some vectors, but not all.
+    break;
   default:
     llvm_unreachable(
         "ReplaceNodeResults not implemented for this op for WebAssembly!");
@@ -1423,6 +1466,9 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
     return LowerIntrinsic(Op, DAG);
   case ISD::SIGN_EXTEND_INREG:
     return LowerSIGN_EXTEND_INREG(Op, DAG);
+  case ISD::ZERO_EXTEND_VECTOR_INREG:
+  case ISD::SIGN_EXTEND_VECTOR_INREG:
+    return LowerEXTEND_VECTOR_INREG(Op, DAG);
   case ISD::BUILD_VECTOR:
     return LowerBUILD_VECTOR(Op, DAG);
   case ISD::VECTOR_SHUFFLE:
@@ -1678,8 +1724,11 @@ SDValue WebAssemblyTargetLowering::LowerGlobalAddress(SDValue Op,
     fail(DL, DAG, "Invalid address space for WebAssembly target");
 
   unsigned OperandFlags = 0;
-  if (isPositionIndependent()) {
-    const GlobalValue *GV = GA->getGlobal();
+  const GlobalValue *GV = GA->getGlobal();
+  // Since WebAssembly tables cannot yet be shared accross modules, we don't
+  // need special treatment for tables in PIC mode.
+  if (isPositionIndependent() &&
+      !WebAssembly::isWebAssemblyTableType(GV->getValueType())) {
     if (getTargetMachine().shouldAssumeDSOLocal(*GV->getParent(), GV)) {
       MachineFunction &MF = DAG.getMachineFunction();
       MVT PtrVT = getPointerTy(MF.getDataLayout());
@@ -1822,7 +1871,8 @@ SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
       const SDValue &MaskIdx = Op.getOperand(OpIdx + 1);
       if (MaskIdx.isUndef() ||
           cast<ConstantSDNode>(MaskIdx.getNode())->getZExtValue() >= 32) {
-        Ops[OpIdx++] = DAG.getConstant(0, DL, MVT::i32);
+        bool isTarget = MaskIdx.getNode()->getOpcode() == ISD::TargetConstant;
+        Ops[OpIdx++] = DAG.getConstant(0, DL, MVT::i32, isTarget);
       } else {
         Ops[OpIdx++] = MaskIdx;
       }
@@ -1873,6 +1923,48 @@ WebAssemblyTargetLowering::LowerSIGN_EXTEND_INREG(SDValue Op,
       DAG.getBitcast(ExtractedVecT, Extract.getOperand(0)), NewIndex);
   return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, Op.getValueType(), NewExtract,
                      Op.getOperand(1));
+}
+
+SDValue
+WebAssemblyTargetLowering::LowerEXTEND_VECTOR_INREG(SDValue Op,
+                                                    SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  EVT VT = Op.getValueType();
+  SDValue Src = Op.getOperand(0);
+  EVT SrcVT = Src.getValueType();
+
+  if (SrcVT.getVectorElementType() == MVT::i1 ||
+      SrcVT.getVectorElementType() == MVT::i64)
+    return SDValue();
+
+  assert(VT.getScalarSizeInBits() % SrcVT.getScalarSizeInBits() == 0 &&
+         "Unexpected extension factor.");
+  unsigned Scale = VT.getScalarSizeInBits() / SrcVT.getScalarSizeInBits();
+
+  if (Scale != 2 && Scale != 4 && Scale != 8)
+    return SDValue();
+
+  unsigned Ext;
+  switch (Op.getOpcode()) {
+  case ISD::ZERO_EXTEND_VECTOR_INREG:
+    Ext = WebAssemblyISD::EXTEND_LOW_U;
+    break;
+  case ISD::SIGN_EXTEND_VECTOR_INREG:
+    Ext = WebAssemblyISD::EXTEND_LOW_S;
+    break;
+  }
+
+  SDValue Ret = Src;
+  while (Scale != 1) {
+    Ret = DAG.getNode(Ext, DL,
+                      Ret.getValueType()
+                          .widenIntegerVectorElementType(*DAG.getContext())
+                          .getHalfNumVectorElementsVT(*DAG.getContext()),
+                      Ret);
+    Scale /= 2;
+  }
+  assert(Ret.getValueType() == VT);
+  return Ret;
 }
 
 static SDValue LowerConvertLow(SDValue Op, SelectionDAG &DAG) {
@@ -2150,7 +2242,8 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
         assert((LaneBits == 64 || Val >= -(1ll << (LaneBits - 1))) &&
                "Unexpected out of bounds negative value");
         if (Const && LaneBits != 64 && Val > (1ll << (LaneBits - 1)) - 1) {
-          auto NewVal = ((uint64_t)Val % (1ll << LaneBits)) - (1ll << LaneBits);
+          uint64_t Mask = (1ll << LaneBits) - 1;
+          auto NewVal = (((uint64_t)Val & Mask) - (1ll << LaneBits)) & Mask;
           ConstLanes.push_back(DAG.getConstant(NewVal, SDLoc(Lane), LaneT));
         } else {
           ConstLanes.push_back(Lane);
@@ -2240,7 +2333,7 @@ WebAssemblyTargetLowering::LowerAccessVectorElement(SDValue Op,
                                                     SelectionDAG &DAG) const {
   // Allow constant lane indices, expand variable lane indices
   SDNode *IdxNode = Op.getOperand(Op.getNumOperands() - 1).getNode();
-  if (isa<ConstantSDNode>(IdxNode) || IdxNode->isUndef()) {
+  if (isa<ConstantSDNode>(IdxNode)) {
     // Ensure the index type is i32 to match the tablegen patterns
     uint64_t Idx = cast<ConstantSDNode>(IdxNode)->getZExtValue();
     SmallVector<SDValue, 3> Ops(Op.getNode()->ops());
@@ -2287,10 +2380,43 @@ SDValue WebAssemblyTargetLowering::LowerShift(SDValue Op,
   // Only manually lower vector shifts
   assert(Op.getSimpleValueType().isVector());
 
-  auto ShiftVal = DAG.getSplatValue(Op.getOperand(1));
+  uint64_t LaneBits = Op.getValueType().getScalarSizeInBits();
+  auto ShiftVal = Op.getOperand(1);
+
+  // Try to skip bitmask operation since it is implied inside shift instruction
+  auto SkipImpliedMask = [](SDValue MaskOp, uint64_t MaskBits) {
+    if (MaskOp.getOpcode() != ISD::AND)
+      return MaskOp;
+    SDValue LHS = MaskOp.getOperand(0);
+    SDValue RHS = MaskOp.getOperand(1);
+    if (MaskOp.getValueType().isVector()) {
+      APInt MaskVal;
+      if (!ISD::isConstantSplatVector(RHS.getNode(), MaskVal))
+        std::swap(LHS, RHS);
+
+      if (ISD::isConstantSplatVector(RHS.getNode(), MaskVal) &&
+          MaskVal == MaskBits)
+        MaskOp = LHS;
+    } else {
+      if (!isa<ConstantSDNode>(RHS.getNode()))
+        std::swap(LHS, RHS);
+
+      auto ConstantRHS = dyn_cast<ConstantSDNode>(RHS.getNode());
+      if (ConstantRHS && ConstantRHS->getAPIntValue() == MaskBits)
+        MaskOp = LHS;
+    }
+
+    return MaskOp;
+  };
+
+  // Skip vector and operation
+  ShiftVal = SkipImpliedMask(ShiftVal, LaneBits - 1);
+  ShiftVal = DAG.getSplatValue(ShiftVal);
   if (!ShiftVal)
     return unrollVectorShift(Op, DAG);
 
+  // Skip scalar and operation
+  ShiftVal = SkipImpliedMask(ShiftVal, LaneBits - 1);
   // Use anyext because none of the high bits can affect the shift
   ShiftVal = DAG.getAnyExtOrTrunc(ShiftVal, DL, MVT::i32);
 
@@ -2450,6 +2576,8 @@ performVectorTruncZeroCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     APInt SplatValue, SplatUndef;
     unsigned SplatBitSize;
     bool HasAnyUndefs;
+    // Endianness doesn't matter in this context because we are looking for
+    // an all-zero value.
     return Splat &&
            Splat->isConstantSplat(SplatValue, SplatUndef, SplatBitSize,
                                   HasAnyUndefs) &&
@@ -2656,12 +2784,92 @@ static SDValue performTruncateCombine(SDNode *N,
   return truncateVectorWithNARROW(OutVT, In, DL, DAG);
 }
 
+static SDValue performBitcastCombine(SDNode *N,
+                                     TargetLowering::DAGCombinerInfo &DCI) {
+  auto &DAG = DCI.DAG;
+  SDLoc DL(N);
+  SDValue Src = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+  EVT SrcVT = Src.getValueType();
+
+  // bitcast <N x i1> to iN
+  //   ==> bitmask
+  if (DCI.isBeforeLegalize() && VT.isScalarInteger() &&
+      SrcVT.isFixedLengthVector() && SrcVT.getScalarType() == MVT::i1) {
+    unsigned NumElts = SrcVT.getVectorNumElements();
+    if (NumElts != 2 && NumElts != 4 && NumElts != 8 && NumElts != 16)
+      return SDValue();
+    EVT Width = MVT::getIntegerVT(128 / NumElts);
+    return DAG.getZExtOrTrunc(
+        DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+                    {DAG.getConstant(Intrinsic::wasm_bitmask, DL, MVT::i32),
+                     DAG.getSExtOrTrunc(N->getOperand(0), DL,
+                                        SrcVT.changeVectorElementType(Width))}),
+        DL, VT);
+  }
+
+  return SDValue();
+}
+
+static SDValue performSETCCCombine(SDNode *N,
+                                   TargetLowering::DAGCombinerInfo &DCI) {
+  auto &DAG = DCI.DAG;
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+
+  // setcc (iN (bitcast (vNi1 X))), 0, ne
+  //   ==> any_true (vNi1 X)
+  // setcc (iN (bitcast (vNi1 X))), 0, eq
+  //   ==> xor (any_true (vNi1 X)), -1
+  // setcc (iN (bitcast (vNi1 X))), -1, eq
+  //   ==> all_true (vNi1 X)
+  // setcc (iN (bitcast (vNi1 X))), -1, ne
+  //   ==> xor (all_true (vNi1 X)), -1
+  if (DCI.isBeforeLegalize() && VT.isScalarInteger() &&
+      (Cond == ISD::SETEQ || Cond == ISD::SETNE) &&
+      (isNullConstant(RHS) || isAllOnesConstant(RHS)) &&
+      LHS->getOpcode() == ISD::BITCAST) {
+    EVT FromVT = LHS->getOperand(0).getValueType();
+    if (FromVT.isFixedLengthVector() &&
+        FromVT.getVectorElementType() == MVT::i1) {
+      int Intrin = isNullConstant(RHS) ? Intrinsic::wasm_anytrue
+                                       : Intrinsic::wasm_alltrue;
+      unsigned NumElts = FromVT.getVectorNumElements();
+      if (NumElts != 2 && NumElts != 4 && NumElts != 8 && NumElts != 16)
+        return SDValue();
+      EVT Width = MVT::getIntegerVT(128 / NumElts);
+      SDValue Ret = DAG.getZExtOrTrunc(
+          DAG.getNode(
+              ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+              {DAG.getConstant(Intrin, DL, MVT::i32),
+               DAG.getSExtOrTrunc(LHS->getOperand(0), DL,
+                                  FromVT.changeVectorElementType(Width))}),
+          DL, MVT::i1);
+      if ((isNullConstant(RHS) && (Cond == ISD::SETEQ)) ||
+          (isAllOnesConstant(RHS) && (Cond == ISD::SETNE))) {
+        Ret = DAG.getNOT(DL, Ret, MVT::i1);
+      }
+      return DAG.getZExtOrTrunc(Ret, DL, VT);
+    }
+  }
+
+  return SDValue();
+}
+
 SDValue
 WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
   switch (N->getOpcode()) {
   default:
     return SDValue();
+  case ISD::BITCAST:
+    return performBitcastCombine(N, DCI);
+  case ISD::SETCC:
+    return performSETCCCombine(N, DCI);
   case ISD::VECTOR_SHUFFLE:
     return performVECTOR_SHUFFLECombine(N, DCI);
   case ISD::SIGN_EXTEND:

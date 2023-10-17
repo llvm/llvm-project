@@ -16,9 +16,7 @@
 #include "clang/Tooling/Transformer/Transformer.h"
 #include <optional>
 
-namespace clang {
-namespace tidy {
-namespace utils {
+namespace clang::tidy::utils {
 
 /// A base class for defining a ClangTidy check based on a `RewriteRule`.
 //
@@ -83,8 +81,6 @@ private:
   IncludeInserter Inserter;
 };
 
-} // namespace utils
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::utils
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_TRANSFORMER_CLANG_TIDY_CHECK_H

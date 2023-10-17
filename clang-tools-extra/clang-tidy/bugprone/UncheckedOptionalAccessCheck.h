@@ -14,9 +14,7 @@
 #include "clang/Analysis/FlowSensitive/Models/UncheckedOptionalAccessModel.h"
 #include <optional>
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 /// Warns when the code is unwrapping a `std::optional<T>`, `absl::optional<T>`,
 /// or `base::std::optional<T>` object without assuring that it contains a
@@ -44,8 +42,6 @@ private:
   dataflow::UncheckedOptionalAccessModelOptions ModelOptions;
 };
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_UNCHECKEDOPTIONALACCESSCHECK_H

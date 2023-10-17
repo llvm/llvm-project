@@ -59,7 +59,7 @@ struct ConstantPropagationLattice {
       return Lhs.Var == Rhs.Var && Lhs.Value == Rhs.Value;
     }
   };
-  // `None` is "bottom".
+  // `std::nullopt` is "bottom".
   std::optional<VarValue> Data;
 
   static constexpr ConstantPropagationLattice bottom() {
@@ -124,9 +124,9 @@ public:
     return ConstantPropagationLattice::bottom();
   }
 
-  void transfer(const CFGElement *E, ConstantPropagationLattice &Element,
+  void transfer(const CFGElement &E, ConstantPropagationLattice &Element,
                 Environment &Env) {
-    auto CS = E->getAs<CFGStmt>();
+    auto CS = E.getAs<CFGStmt>();
     if (!CS)
       return;
     auto S = CS->getStmt();

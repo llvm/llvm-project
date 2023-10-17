@@ -15,3 +15,4 @@ might conflict with other real symbols in the same file.
 
 CHECK: objc_class_name_Foo
 CHECK-NOT: objAddr
+CHECK: }

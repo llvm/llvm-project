@@ -5,14 +5,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-FREEBSD-FIXME
-
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-localization
-// UNSUPPORTED: libcpp-has-no-incomplete-format
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
-// TODO FMT It seems GCC uses too much memory in the CI and fails.
-// UNSUPPORTED: gcc-12
+// TODO FMT This test should not require std::to_chars(floating-point)
+// XFAIL: availability-fp_to_chars-missing
 
 // REQUIRES: locale.fr_FR.UTF-8
 // REQUIRES: locale.ja_JP.UTF-8
@@ -120,59 +118,59 @@ template <class CharT>
 static void test_invalid_values() {
   // Test that %a, %b, %h, %a, and %B throw an exception.
   check_exception(
-      "formatting a weekday name needs a valid weekday",
+      "Formatting a weekday name needs a valid weekday",
       SV("{:%a}"),
       std::chrono::month_weekday{std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday{8}, 1}});
   check_exception(
-      "formatting a weekday name needs a valid weekday",
+      "Formatting a weekday name needs a valid weekday",
       SV("{:%a}"),
       std::chrono::month_weekday{std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday{255}, 1}});
 
   check_exception(
-      "formatting a month name from an invalid month number",
+      "Formatting a month name from an invalid month number",
       SV("{:%b}"),
       std::chrono::month_weekday{std::chrono::month{0}, std::chrono::weekday_indexed{std::chrono::weekday{0}, 1}});
   check_exception(
-      "formatting a month name from an invalid month number",
+      "Formatting a month name from an invalid month number",
       SV("{:%b}"),
       std::chrono::month_weekday{std::chrono::month{13}, std::chrono::weekday_indexed{std::chrono::weekday{0}, 1}});
   check_exception(
-      "formatting a month name from an invalid month number",
+      "Formatting a month name from an invalid month number",
       SV("{:%b}"),
       std::chrono::month_weekday{std::chrono::month{255}, std::chrono::weekday_indexed{std::chrono::weekday{0}, 1}});
 
   check_exception(
-      "formatting a month name from an invalid month number",
+      "Formatting a month name from an invalid month number",
       SV("{:%h}"),
       std::chrono::month_weekday{std::chrono::month{0}, std::chrono::weekday_indexed{std::chrono::weekday{0}, 1}});
   check_exception(
-      "formatting a month name from an invalid month number",
+      "Formatting a month name from an invalid month number",
       SV("{:%h}"),
       std::chrono::month_weekday{std::chrono::month{13}, std::chrono::weekday_indexed{std::chrono::weekday{0}, 1}});
   check_exception(
-      "formatting a month name from an invalid month number",
+      "Formatting a month name from an invalid month number",
       SV("{:%h}"),
       std::chrono::month_weekday{std::chrono::month{255}, std::chrono::weekday_indexed{std::chrono::weekday{0}, 1}});
 
   check_exception(
-      "formatting a weekday name needs a valid weekday",
+      "Formatting a weekday name needs a valid weekday",
       SV("{:%A}"),
       std::chrono::month_weekday{std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday{8}, 1}});
   check_exception(
-      "formatting a weekday name needs a valid weekday",
+      "Formatting a weekday name needs a valid weekday",
       SV("{:%A}"),
       std::chrono::month_weekday{std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday{255}, 1}});
 
   check_exception(
-      "formatting a month name from an invalid month number",
+      "Formatting a month name from an invalid month number",
       SV("{:%B}"),
       std::chrono::month_weekday{std::chrono::month{0}, std::chrono::weekday_indexed{std::chrono::weekday{0}, 1}});
   check_exception(
-      "formatting a month name from an invalid month number",
+      "Formatting a month name from an invalid month number",
       SV("{:%B}"),
       std::chrono::month_weekday{std::chrono::month{13}, std::chrono::weekday_indexed{std::chrono::weekday{0}, 1}});
   check_exception(
-      "formatting a month name from an invalid month number",
+      "Formatting a month name from an invalid month number",
       SV("{:%B}"),
       std::chrono::month_weekday{std::chrono::month{255}, std::chrono::weekday_indexed{std::chrono::weekday{0}, 1}});
 }
@@ -272,11 +270,11 @@ static void test_valid_month() {
         lfmt,
         std::chrono::month_weekday{std::chrono::March, std::chrono::weekday_indexed{std::chrono::weekday{0}, 1}});
   check(
-#  if defined(_WIN32) || defined(_AIX)
+#  if defined(_WIN32) || defined(_AIX) || defined(__FreeBSD__)
       SV("%b='avr.'\t%B='avril'\t%h='avr.'\t%m='04'\t%Om='04'\n"),
-#  else  // defined(_WIN32) || defined(_AIX)
+#  else  // defined(_WIN32) || defined(_AIX) || defined(__FreeBSD__)
       SV("%b='avril'\t%B='avril'\t%h='avril'\t%m='04'\t%Om='04'\n"),
-#  endif // defined(_WIN32) || defined(_AIX)
+#  endif // defined(_WIN32) || defined(_AIX) || defined(__FreeBSD__)
       lfmt,
       std::chrono::month_weekday{std::chrono::April, std::chrono::weekday_indexed{std::chrono::weekday{0}, 1}});
   check(SV("%b='mai'\t%B='mai'\t%h='mai'\t%m='05'\t%Om='05'\n"),
@@ -453,6 +451,55 @@ static void test_valid_month() {
         SV("%b='12月'\t%B='12月'\t%h='12月'\t%m='12'\t%Om='12'\n"),
         lfmt,
         std::chrono::month_weekday{std::chrono::December, std::chrono::weekday_indexed{std::chrono::weekday{0}, 1}});
+#elif defined(__FreeBSD__) // _WIN32
+  check(loc,
+        SV("%b=' 1月'\t%B='1月'\t%h=' 1月'\t%m='01'\t%Om='01'\n"),
+        lfmt,
+        std::chrono::month_weekday{std::chrono::January, std::chrono::weekday_indexed{std::chrono::weekday{0}, 1}});
+  check(loc,
+        SV("%b=' 2月'\t%B='2月'\t%h=' 2月'\t%m='02'\t%Om='02'\n"),
+        lfmt,
+        std::chrono::month_weekday{std::chrono::February, std::chrono::weekday_indexed{std::chrono::weekday{0}, 1}});
+  check(loc,
+        SV("%b=' 3月'\t%B='3月'\t%h=' 3月'\t%m='03'\t%Om='03'\n"),
+        lfmt,
+        std::chrono::month_weekday{std::chrono::March, std::chrono::weekday_indexed{std::chrono::weekday{0}, 1}});
+  check(loc,
+        SV("%b=' 4月'\t%B='4月'\t%h=' 4月'\t%m='04'\t%Om='04'\n"),
+        lfmt,
+        std::chrono::month_weekday{std::chrono::April, std::chrono::weekday_indexed{std::chrono::weekday{0}, 1}});
+  check(loc,
+        SV("%b=' 5月'\t%B='5月'\t%h=' 5月'\t%m='05'\t%Om='05'\n"),
+        lfmt,
+        std::chrono::month_weekday{std::chrono::May, std::chrono::weekday_indexed{std::chrono::weekday{0}, 1}});
+  check(loc,
+        SV("%b=' 6月'\t%B='6月'\t%h=' 6月'\t%m='06'\t%Om='06'\n"),
+        lfmt,
+        std::chrono::month_weekday{std::chrono::June, std::chrono::weekday_indexed{std::chrono::weekday{0}, 1}});
+  check(loc,
+        SV("%b=' 7月'\t%B='7月'\t%h=' 7月'\t%m='07'\t%Om='07'\n"),
+        lfmt,
+        std::chrono::month_weekday{std::chrono::July, std::chrono::weekday_indexed{std::chrono::weekday{0}, 1}});
+  check(loc,
+        SV("%b=' 8月'\t%B='8月'\t%h=' 8月'\t%m='08'\t%Om='08'\n"),
+        lfmt,
+        std::chrono::month_weekday{std::chrono::August, std::chrono::weekday_indexed{std::chrono::weekday{0}, 1}});
+  check(loc,
+        SV("%b=' 9月'\t%B='9月'\t%h=' 9月'\t%m='09'\t%Om='09'\n"),
+        lfmt,
+        std::chrono::month_weekday{std::chrono::September, std::chrono::weekday_indexed{std::chrono::weekday{0}, 1}});
+  check(loc,
+        SV("%b='10月'\t%B='10月'\t%h='10月'\t%m='10'\t%Om='10'\n"),
+        lfmt,
+        std::chrono::month_weekday{std::chrono::October, std::chrono::weekday_indexed{std::chrono::weekday{0}, 1}});
+  check(loc,
+        SV("%b='11月'\t%B='11月'\t%h='11月'\t%m='11'\t%Om='11'\n"),
+        lfmt,
+        std::chrono::month_weekday{std::chrono::November, std::chrono::weekday_indexed{std::chrono::weekday{0}, 1}});
+  check(loc,
+        SV("%b='12月'\t%B='12月'\t%h='12月'\t%m='12'\t%Om='12'\n"),
+        lfmt,
+        std::chrono::month_weekday{std::chrono::December, std::chrono::weekday_indexed{std::chrono::weekday{0}, 1}});
 #else                    // _WIN32
   check(loc,
         SV("%b=' 1月'\t%B='1月'\t%h=' 1月'\t%m='01'\t%Om='一'\n"),
@@ -598,7 +645,7 @@ static void test_valid_weekday() {
 
   // Use supplied locale (ja_JP).
   // This locale has a different alternate, but not on all platforms
-#if defined(_WIN32) || defined(__APPLE__) || defined(_AIX)
+#if defined(_WIN32) || defined(__APPLE__) || defined(_AIX) || defined(__FreeBSD__)
   check(loc,
         SV("%u='7'\t%Ou='7'\t%w='0'\t%Ow='0'\t%a='日'\t%A='日曜日'\n"),
         lfmt,
@@ -631,7 +678,7 @@ static void test_valid_weekday() {
         SV("%u='7'\t%Ou='7'\t%w='0'\t%Ow='0'\t%a='日'\t%A='日曜日'\n"),
         lfmt,
         std::chrono::month_weekday{std::chrono::January, std::chrono::weekday_indexed{std::chrono::weekday{7}, 1}});
-#else  // defined(_WIN32) || defined(__APPLE__) || defined(_AIX)
+#else  // defined(_WIN32) || defined(__APPLE__) || defined(_AIX) || defined(__FreeBSD__)
   check(loc,
         SV("%u='7'\t%Ou='七'\t%w='0'\t%Ow='〇'\t%a='日'\t%A='日曜日'\n"),
         lfmt,
@@ -664,7 +711,7 @@ static void test_valid_weekday() {
         SV("%u='7'\t%Ou='七'\t%w='0'\t%Ow='〇'\t%a='日'\t%A='日曜日'\n"),
         lfmt,
         std::chrono::month_weekday{std::chrono::January, std::chrono::weekday_indexed{std::chrono::weekday{7}, 1}});
-#endif // defined(_WIN32) || defined(__APPLE__) || defined(_AIX)
+#endif // defined(_WIN32) || defined(__APPLE__) || defined(_AIX) || defined(__FreeBSD__)
 
   std::locale::global(std::locale::classic());
 }
@@ -685,15 +732,15 @@ static void test() {
       std::chrono::month_weekday{std::chrono::January, std::chrono::weekday_indexed{std::chrono::weekday{0}, 1}});
 
   check_exception(
-      "Expected '%' or '}' in the chrono format-string",
+      "The format specifier expects a '%' or a '}'",
       SV("{:A"),
       std::chrono::month_weekday{std::chrono::January, std::chrono::weekday_indexed{std::chrono::weekday{0}, 1}});
   check_exception(
-      "The chrono-specs contains a '{'",
+      "The chrono specifiers contain a '{'",
       SV("{:%%{"),
       std::chrono::month_weekday{std::chrono::January, std::chrono::weekday_indexed{std::chrono::weekday{0}, 1}});
   check_exception(
-      "End of input while parsing the modifier chrono conversion-spec",
+      "End of input while parsing a conversion specifier",
       SV("{:%"),
       std::chrono::month_weekday{std::chrono::January, std::chrono::weekday_indexed{std::chrono::weekday{0}, 1}});
   check_exception(
@@ -707,7 +754,7 @@ static void test() {
 
   // Precision not allowed
   check_exception(
-      "Expected '%' or '}' in the chrono format-string",
+      "The format specifier expects a '%' or a '}'",
       SV("{:.3}"),
       std::chrono::month_weekday{std::chrono::January, std::chrono::weekday_indexed{std::chrono::weekday{0}, 1}});
 }

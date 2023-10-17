@@ -115,8 +115,6 @@ struct YAMLDebugSubsection {
   std::shared_ptr<detail::YAMLSubsectionBase> Subsection;
 };
 
-struct DebugSubsectionState {};
-
 Expected<std::vector<std::shared_ptr<codeview::DebugSubsection>>>
 toCodeViewSubsectionList(BumpPtrAllocator &Allocator,
                          ArrayRef<YAMLDebugSubsection> Subsections,

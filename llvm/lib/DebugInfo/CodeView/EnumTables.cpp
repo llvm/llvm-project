@@ -105,6 +105,7 @@ static const EnumEntry<codeview::SourceLanguage> SourceLanguages[] = {
     CV_ENUM_ENT(SourceLanguage, JScript), CV_ENUM_ENT(SourceLanguage, MSIL),
     CV_ENUM_ENT(SourceLanguage, HLSL),    CV_ENUM_ENT(SourceLanguage, D),
     CV_ENUM_ENT(SourceLanguage, Swift),   CV_ENUM_ENT(SourceLanguage, Rust),
+    CV_ENUM_ENT(SourceLanguage, ObjC),    CV_ENUM_ENT(SourceLanguage, ObjCpp),
 };
 
 static const EnumEntry<uint32_t> CompileSym2FlagNames[] = {
@@ -433,6 +434,20 @@ static const EnumEntry<uint16_t> LabelTypeEnum[] = {
     CV_ENUM_CLASS_ENT(LabelType, Far),
 };
 
+static const EnumEntry<uint16_t> JumpTableEntrySizeNames[] = {
+    CV_ENUM_CLASS_ENT(JumpTableEntrySize, Int8),
+    CV_ENUM_CLASS_ENT(JumpTableEntrySize, UInt8),
+    CV_ENUM_CLASS_ENT(JumpTableEntrySize, Int16),
+    CV_ENUM_CLASS_ENT(JumpTableEntrySize, UInt16),
+    CV_ENUM_CLASS_ENT(JumpTableEntrySize, Int32),
+    CV_ENUM_CLASS_ENT(JumpTableEntrySize, UInt32),
+    CV_ENUM_CLASS_ENT(JumpTableEntrySize, Pointer),
+    CV_ENUM_CLASS_ENT(JumpTableEntrySize, UInt8ShiftLeft),
+    CV_ENUM_CLASS_ENT(JumpTableEntrySize, UInt16ShiftLeft),
+    CV_ENUM_CLASS_ENT(JumpTableEntrySize, Int8ShiftLeft),
+    CV_ENUM_CLASS_ENT(JumpTableEntrySize, Int16ShiftLeft),
+};
+
 namespace llvm {
 namespace codeview {
 
@@ -556,6 +571,10 @@ ArrayRef<EnumEntry<uint8_t>> getFunctionOptionEnum() {
 
 ArrayRef<EnumEntry<uint16_t>> getLabelTypeEnum() {
   return ArrayRef(LabelTypeEnum);
+}
+
+ArrayRef<EnumEntry<uint16_t>> getJumpTableEntrySizeNames() {
+  return ArrayRef(JumpTableEntrySizeNames);
 }
 
 } // end namespace codeview

@@ -8,10 +8,10 @@
 
 #include "mlir/Dialect/Bufferization/Transforms/BufferViewFlowAnalysis.h"
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/SetOperations.h"
+#include "llvm/ADT/SetVector.h"
 
 using namespace mlir;
 
@@ -40,9 +40,21 @@ BufferViewFlowAnalysis::resolve(Value rootValue) const {
 }
 
 /// Removes the given values from all alias sets.
-void BufferViewFlowAnalysis::remove(const SmallPtrSetImpl<Value> &aliasValues) {
+void BufferViewFlowAnalysis::remove(const SetVector<Value> &aliasValues) {
   for (auto &entry : dependencies)
     llvm::set_subtract(entry.second, aliasValues);
+}
+
+void BufferViewFlowAnalysis::rename(Value from, Value to) {
+  dependencies[to] = dependencies[from];
+  dependencies.erase(from);
+
+  for (auto &[key, value] : dependencies) {
+    if (value.contains(from)) {
+      value.insert(to);
+      value.erase(from);
+    }
+  }
 }
 
 /// This function constructs a mapping from values to its immediate
@@ -57,74 +69,78 @@ void BufferViewFlowAnalysis::build(Operation *op) {
       this->dependencies[value].insert(dep);
   };
 
-  // Add additional dependencies created by view changes to the alias list.
-  op->walk([&](ViewLikeOpInterface viewInterface) {
-    dependencies[viewInterface.getViewSource()].insert(
-        viewInterface->getResult(0));
-  });
+  op->walk([&](Operation *op) {
+    // TODO: We should have an op interface instead of a hard-coded list of
+    // interfaces/ops.
 
-  // Query all branch interfaces to link block argument dependencies.
-  op->walk([&](BranchOpInterface branchInterface) {
-    Block *parentBlock = branchInterface->getBlock();
-    for (auto it = parentBlock->succ_begin(), e = parentBlock->succ_end();
-         it != e; ++it) {
-      // Query the branch op interface to get the successor operands.
-      auto successorOperands =
-          branchInterface.getSuccessorOperands(it.getIndex());
-      // Build the actual mapping of values to their immediate dependencies.
-      registerDependencies(successorOperands.getForwardedOperands(),
-                           (*it)->getArguments().drop_front(
-                               successorOperands.getProducedOperandCount()));
-    }
-  });
-
-  // Query the RegionBranchOpInterface to find potential successor regions.
-  op->walk([&](RegionBranchOpInterface regionInterface) {
-    // Extract all entry regions and wire all initial entry successor inputs.
-    SmallVector<RegionSuccessor, 2> entrySuccessors;
-    regionInterface.getSuccessorRegions(/*index=*/std::nullopt,
-                                        entrySuccessors);
-    for (RegionSuccessor &entrySuccessor : entrySuccessors) {
-      // Wire the entry region's successor arguments with the initial
-      // successor inputs.
-      assert(entrySuccessor.getSuccessor() &&
-             "Invalid entry region without an attached successor region");
-      registerDependencies(
-          regionInterface.getSuccessorEntryOperands(
-              entrySuccessor.getSuccessor()->getRegionNumber()),
-          entrySuccessor.getSuccessorInputs());
+    // Add additional dependencies created by view changes to the alias list.
+    if (auto viewInterface = dyn_cast<ViewLikeOpInterface>(op)) {
+      dependencies[viewInterface.getViewSource()].insert(
+          viewInterface->getResult(0));
+      return WalkResult::advance();
     }
 
-    // Wire flow between regions and from region exits.
-    for (Region &region : regionInterface->getRegions()) {
-      // Iterate over all successor region entries that are reachable from the
-      // current region.
-      SmallVector<RegionSuccessor, 2> successorRegions;
-      regionInterface.getSuccessorRegions(region.getRegionNumber(),
-                                          successorRegions);
-      for (RegionSuccessor &successorRegion : successorRegions) {
-        // Determine the current region index (if any).
-        std::optional<unsigned> regionIndex;
-        Region *regionSuccessor = successorRegion.getSuccessor();
-        if (regionSuccessor)
-          regionIndex = regionSuccessor->getRegionNumber();
-        // Iterate over all immediate terminator operations and wire the
-        // successor inputs with the successor operands of each terminator.
-        for (Block &block : region) {
-          auto successorOperands = getRegionBranchSuccessorOperands(
-              block.getTerminator(), regionIndex);
-          if (successorOperands) {
-            registerDependencies(*successorOperands,
-                                 successorRegion.getSuccessorInputs());
-          }
+    if (auto branchInterface = dyn_cast<BranchOpInterface>(op)) {
+      // Query all branch interfaces to link block argument dependencies.
+      Block *parentBlock = branchInterface->getBlock();
+      for (auto it = parentBlock->succ_begin(), e = parentBlock->succ_end();
+           it != e; ++it) {
+        // Query the branch op interface to get the successor operands.
+        auto successorOperands =
+            branchInterface.getSuccessorOperands(it.getIndex());
+        // Build the actual mapping of values to their immediate dependencies.
+        registerDependencies(successorOperands.getForwardedOperands(),
+                             (*it)->getArguments().drop_front(
+                                 successorOperands.getProducedOperandCount()));
+      }
+      return WalkResult::advance();
+    }
+
+    if (auto regionInterface = dyn_cast<RegionBranchOpInterface>(op)) {
+      // Query the RegionBranchOpInterface to find potential successor regions.
+      // Extract all entry regions and wire all initial entry successor inputs.
+      SmallVector<RegionSuccessor, 2> entrySuccessors;
+      regionInterface.getSuccessorRegions(/*point=*/RegionBranchPoint::parent(),
+                                          entrySuccessors);
+      for (RegionSuccessor &entrySuccessor : entrySuccessors) {
+        // Wire the entry region's successor arguments with the initial
+        // successor inputs.
+        registerDependencies(
+            regionInterface.getEntrySuccessorOperands(entrySuccessor),
+            entrySuccessor.getSuccessorInputs());
+      }
+
+      // Wire flow between regions and from region exits.
+      for (Region &region : regionInterface->getRegions()) {
+        // Iterate over all successor region entries that are reachable from the
+        // current region.
+        SmallVector<RegionSuccessor, 2> successorRegions;
+        regionInterface.getSuccessorRegions(region, successorRegions);
+        for (RegionSuccessor &successorRegion : successorRegions) {
+          // Iterate over all immediate terminator operations and wire the
+          // successor inputs with the successor operands of each terminator.
+          for (Block &block : region)
+            if (auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(
+                    block.getTerminator()))
+              registerDependencies(
+                  terminator.getSuccessorOperands(successorRegion),
+                  successorRegion.getSuccessorInputs());
         }
       }
-    }
-  });
 
-  // TODO: This should be an interface.
-  op->walk([&](arith::SelectOp selectOp) {
-    registerDependencies({selectOp.getOperand(1)}, {selectOp.getResult()});
-    registerDependencies({selectOp.getOperand(2)}, {selectOp.getResult()});
+      return WalkResult::advance();
+    }
+
+    // Unknown op: Assume that all operands alias with all results.
+    for (Value operand : op->getOperands()) {
+      if (!isa<BaseMemRefType>(operand.getType()))
+        continue;
+      for (Value result : op->getResults()) {
+        if (!isa<BaseMemRefType>(result.getType()))
+          continue;
+        registerDependencies({operand}, {result});
+      }
+    }
+    return WalkResult::advance();
   });
 }

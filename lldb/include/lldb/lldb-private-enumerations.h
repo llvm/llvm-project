@@ -269,4 +269,14 @@ template <> struct format_provider<lldb_private::Vote> {
 };
 }
 
+enum SelectMostRelevant : bool {
+  SelectMostRelevantFrame = true,
+  DoNoSelectMostRelevantFrame = false,
+};
+
+enum InterruptionControl : bool {
+  AllowInterruption = true,
+  DoNotAllowInterruption = false,
+};
+
 #endif // LLDB_LLDB_PRIVATE_ENUMERATIONS_H

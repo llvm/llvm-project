@@ -477,6 +477,7 @@ void DWARFDebugLine::Row::reset(bool DefaultIsStmt) {
   Isa = 0;
   Discriminator = 0;
   IsStmt = DefaultIsStmt;
+  OpIndex = 0;
   BasicBlock = false;
   EndSequence = false;
   PrologueEnd = false;
@@ -485,15 +486,16 @@ void DWARFDebugLine::Row::reset(bool DefaultIsStmt) {
 
 void DWARFDebugLine::Row::dumpTableHeader(raw_ostream &OS, unsigned Indent) {
   OS.indent(Indent)
-      << "Address            Line   Column File   ISA Discriminator Flags\n";
+      << "Address            Line   Column File   ISA Discriminator OpIndex "
+         "Flags\n";
   OS.indent(Indent)
-      << "------------------ ------ ------ ------ --- ------------- "
+      << "------------------ ------ ------ ------ --- ------------- ------- "
          "-------------\n";
 }
 
 void DWARFDebugLine::Row::dump(raw_ostream &OS) const {
   OS << format("0x%16.16" PRIx64 " %6u %6u", Address.Address, Line, Column)
-     << format(" %6u %3u %13u ", File, Isa, Discriminator)
+     << format(" %6u %3u %13u %7u ", File, Isa, Discriminator, OpIndex)
      << (IsStmt ? " is_stmt" : "") << (BasicBlock ? " basic_block" : "")
      << (PrologueEnd ? " prologue_end" : "")
      << (EpilogueBegin ? " epilogue_begin" : "")
@@ -608,21 +610,36 @@ static StringRef getOpcodeName(uint8_t Opcode, uint8_t OpcodeBase) {
   return "special";
 }
 
-uint64_t DWARFDebugLine::ParsingState::advanceAddr(uint64_t OperationAdvance,
-                                                   uint8_t Opcode,
-                                                   uint64_t OpcodeOffset) {
+DWARFDebugLine::ParsingState::AddrOpIndexDelta
+DWARFDebugLine::ParsingState::advanceAddrOpIndex(uint64_t OperationAdvance,
+                                                 uint8_t Opcode,
+                                                 uint64_t OpcodeOffset) {
   StringRef OpcodeName = getOpcodeName(Opcode, LineTable->Prologue.OpcodeBase);
   // For versions less than 4, the MaxOpsPerInst member is set to 0, as the
   // maximum_operations_per_instruction field wasn't introduced until DWARFv4.
   // Don't warn about bad values in this situation.
   if (ReportAdvanceAddrProblem && LineTable->Prologue.getVersion() >= 4 &&
-      LineTable->Prologue.MaxOpsPerInst != 1)
+      LineTable->Prologue.MaxOpsPerInst == 0)
+    ErrorHandler(createStringError(
+        errc::invalid_argument,
+        "line table program at offset 0x%8.8" PRIx64
+        " contains a %s opcode at offset 0x%8.8" PRIx64
+        ", but the prologue maximum_operations_per_instruction value is 0"
+        ", which is invalid. Assuming a value of 1 instead",
+        LineTableOffset, OpcodeName.data(), OpcodeOffset));
+  // Although we are able to correctly parse line number programs with
+  // MaxOpsPerInst > 1, the rest of DWARFDebugLine and its
+  // users have not been updated to handle line information for all operations
+  // in a multi-operation instruction, so warn about potentially incorrect
+  // results.
+  if (ReportAdvanceAddrProblem && LineTable->Prologue.MaxOpsPerInst > 1)
     ErrorHandler(createStringError(
         errc::not_supported,
         "line table program at offset 0x%8.8" PRIx64
         " contains a %s opcode at offset 0x%8.8" PRIx64
         ", but the prologue maximum_operations_per_instruction value is %" PRId8
-        ", which is unsupported. Assuming a value of 1 instead",
+        ", which is experimentally supported, so line number information "
+        "may be incorrect",
         LineTableOffset, OpcodeName.data(), OpcodeOffset,
         LineTable->Prologue.MaxOpsPerInst));
   if (ReportAdvanceAddrProblem && LineTable->Prologue.MinInstLength == 0)
@@ -634,14 +651,35 @@ uint64_t DWARFDebugLine::ParsingState::advanceAddr(uint64_t OperationAdvance,
                           "is 0, which prevents any address advancing",
                           LineTableOffset, OpcodeName.data(), OpcodeOffset));
   ReportAdvanceAddrProblem = false;
-  uint64_t AddrOffset = OperationAdvance * LineTable->Prologue.MinInstLength;
+
+  // Advances the address and op_index according to DWARFv5, section 6.2.5.1:
+  //
+  // new address = address +
+  //   minimum_instruction_length *
+  //   ((op_index + operation advance) / maximum_operations_per_instruction)
+  //
+  // new op_index =
+  //   (op_index + operation advance) % maximum_operations_per_instruction
+
+  // For versions less than 4, the MaxOpsPerInst member is set to 0, as the
+  // maximum_operations_per_instruction field wasn't introduced until DWARFv4.
+  uint8_t MaxOpsPerInst =
+      std::max(LineTable->Prologue.MaxOpsPerInst, uint8_t{1});
+
+  uint64_t AddrOffset = ((Row.OpIndex + OperationAdvance) / MaxOpsPerInst) *
+                        LineTable->Prologue.MinInstLength;
   Row.Address.Address += AddrOffset;
-  return AddrOffset;
+
+  uint8_t PrevOpIndex = Row.OpIndex;
+  Row.OpIndex = (Row.OpIndex + OperationAdvance) % MaxOpsPerInst;
+  int16_t OpIndexDelta = static_cast<int16_t>(Row.OpIndex) - PrevOpIndex;
+
+  return {AddrOffset, OpIndexDelta};
 }
 
-DWARFDebugLine::ParsingState::AddrAndAdjustedOpcode
-DWARFDebugLine::ParsingState::advanceAddrForOpcode(uint8_t Opcode,
-                                                   uint64_t OpcodeOffset) {
+DWARFDebugLine::ParsingState::OpcodeAdvanceResults
+DWARFDebugLine::ParsingState::advanceForOpcode(uint8_t Opcode,
+                                               uint64_t OpcodeOffset) {
   assert(Opcode == DW_LNS_const_add_pc ||
          Opcode >= LineTable->Prologue.OpcodeBase);
   if (ReportBadLineRange && LineTable->Prologue.LineRange == 0) {
@@ -665,11 +703,12 @@ DWARFDebugLine::ParsingState::advanceAddrForOpcode(uint8_t Opcode,
       LineTable->Prologue.LineRange != 0
           ? AdjustedOpcode / LineTable->Prologue.LineRange
           : 0;
-  uint64_t AddrOffset = advanceAddr(OperationAdvance, Opcode, OpcodeOffset);
-  return {AddrOffset, AdjustedOpcode};
+  AddrOpIndexDelta Advance =
+      advanceAddrOpIndex(OperationAdvance, Opcode, OpcodeOffset);
+  return {Advance.AddrOffset, Advance.OpIndexDelta, AdjustedOpcode};
 }
 
-DWARFDebugLine::ParsingState::AddrAndLineDelta
+DWARFDebugLine::ParsingState::SpecialOpcodeDelta
 DWARFDebugLine::ParsingState::handleSpecialOpcode(uint8_t Opcode,
                                                   uint64_t OpcodeOffset) {
   // A special opcode value is chosen based on the amount that needs
@@ -703,15 +742,16 @@ DWARFDebugLine::ParsingState::handleSpecialOpcode(uint8_t Opcode,
   //
   // line increment = line_base + (adjusted opcode % line_range)
 
-  DWARFDebugLine::ParsingState::AddrAndAdjustedOpcode AddrAdvanceResult =
-      advanceAddrForOpcode(Opcode, OpcodeOffset);
+  DWARFDebugLine::ParsingState::OpcodeAdvanceResults AddrAdvanceResult =
+      advanceForOpcode(Opcode, OpcodeOffset);
   int32_t LineOffset = 0;
   if (LineTable->Prologue.LineRange != 0)
     LineOffset =
         LineTable->Prologue.LineBase +
         (AddrAdvanceResult.AdjustedOpcode % LineTable->Prologue.LineRange);
   Row.Line += LineOffset;
-  return {AddrAdvanceResult.AddrDelta, LineOffset};
+  return {AddrAdvanceResult.AddrDelta, LineOffset,
+          AddrAdvanceResult.OpIndexDelta};
 }
 
 /// Parse a ULEB128 using the specified \p Cursor. \returns the parsed value on
@@ -858,9 +898,10 @@ Error DWARFDebugLine::LineTable::parse(
         // Takes a single relocatable address as an operand. The size of the
         // operand is the size appropriate to hold an address on the target
         // machine. Set the address register to the value given by the
-        // relocatable address. All of the other statement program opcodes
-        // that affect the address register add a delta to it. This instruction
-        // stores a relocatable value into it instead.
+        // relocatable address and set the op_index register to 0. All of the
+        // other statement program opcodes that affect the address register
+        // add a delta to it. This instruction stores a relocatable value into
+        // it instead.
         //
         // Make sure the extractor knows the address size.  If not, infer it
         // from the size of the operand.
@@ -891,6 +932,7 @@ Error DWARFDebugLine::LineTable::parse(
             TableData.setAddressSize(OpcodeAddressSize);
             State.Row.Address.Address = TableData.getRelocatedAddress(
                 Cursor, &State.Row.Address.SectionIndex);
+            State.Row.OpIndex = 0;
 
             uint64_t Tombstone =
                 dwarf::computeTombstoneAddress(OpcodeAddressSize);
@@ -1002,15 +1044,16 @@ Error DWARFDebugLine::LineTable::parse(
         break;
 
       case DW_LNS_advance_pc:
-        // Takes a single unsigned LEB128 operand, multiplies it by the
-        // min_inst_length field of the prologue, and adds the
-        // result to the address register of the state machine.
+        // Takes a single unsigned LEB128 operand as the operation advance
+        // and modifies the address and op_index registers of the state machine
+        // according to that.
         if (std::optional<uint64_t> Operand =
                 parseULEB128<uint64_t>(TableData, Cursor)) {
-          uint64_t AddrOffset =
-              State.advanceAddr(*Operand, Opcode, OpcodeOffset);
+          ParsingState::AddrOpIndexDelta Advance =
+              State.advanceAddrOpIndex(*Operand, Opcode, OpcodeOffset);
           if (Verbose)
-            *OS << " (" << AddrOffset << ")";
+            *OS << " (addr += " << Advance.AddrOffset
+                << ", op-index += " << Advance.OpIndexDelta << ")";
         }
         break;
 
@@ -1062,8 +1105,8 @@ Error DWARFDebugLine::LineTable::parse(
         break;
 
       case DW_LNS_const_add_pc:
-        // Takes no arguments. Add to the address register of the state
-        // machine the address increment value corresponding to special
+        // Takes no arguments. Advance the address and op_index registers of
+        // the state machine by the increments corresponding to special
         // opcode 255. The motivation for DW_LNS_const_add_pc is this:
         // when the statement program needs to advance the address by a
         // small amount, it can use a single special opcode, which occupies
@@ -1074,30 +1117,35 @@ Error DWARFDebugLine::LineTable::parse(
         // than twice that range will it need to use both DW_LNS_advance_pc
         // and a special opcode, requiring three or more bytes.
         {
-          uint64_t AddrOffset =
-              State.advanceAddrForOpcode(Opcode, OpcodeOffset).AddrDelta;
+          ParsingState::OpcodeAdvanceResults Advance =
+              State.advanceForOpcode(Opcode, OpcodeOffset);
           if (Verbose)
-            *OS << format(" (0x%16.16" PRIx64 ")", AddrOffset);
+            *OS << format(" (addr += 0x%16.16" PRIx64 ", op-index += %" PRIu8
+                          ")",
+                          Advance.AddrDelta, Advance.OpIndexDelta);
         }
         break;
 
       case DW_LNS_fixed_advance_pc:
         // Takes a single uhalf operand. Add to the address register of
-        // the state machine the value of the (unencoded) operand. This
-        // is the only extended opcode that takes an argument that is not
-        // a variable length number. The motivation for DW_LNS_fixed_advance_pc
-        // is this: existing assemblers cannot emit DW_LNS_advance_pc or
-        // special opcodes because they cannot encode LEB128 numbers or
-        // judge when the computation of a special opcode overflows and
-        // requires the use of DW_LNS_advance_pc. Such assemblers, however,
-        // can use DW_LNS_fixed_advance_pc instead, sacrificing compression.
+        // the state machine the value of the (unencoded) operand and set
+        // the op_index register to 0. This is the only extended opcode that
+        // takes an argument that is not a variable length number.
+        // The motivation for DW_LNS_fixed_advance_pc is this: existing
+        // assemblers cannot emit DW_LNS_advance_pc or special opcodes because
+        // they cannot encode LEB128 numbers or judge when the computation
+        // of a special opcode overflows and requires the use of
+        // DW_LNS_advance_pc. Such assemblers, however, can use
+        // DW_LNS_fixed_advance_pc instead, sacrificing compression.
         {
           uint16_t PCOffset =
               TableData.getRelocatedValue(Cursor, 2);
           if (Cursor) {
             State.Row.Address.Address += PCOffset;
+            State.Row.OpIndex = 0;
             if (Verbose)
-              *OS << format(" (0x%4.4" PRIx16 ")", PCOffset);
+              *OS << format(" (addr += 0x%4.4" PRIx16 ", op-index = 0)",
+                            PCOffset);
           }
         }
         break;
@@ -1161,11 +1209,12 @@ Error DWARFDebugLine::LineTable::parse(
       *OffsetPtr = Cursor.tell();
     } else {
       // Special Opcodes.
-      ParsingState::AddrAndLineDelta Delta =
+      ParsingState::SpecialOpcodeDelta Delta =
           State.handleSpecialOpcode(Opcode, OpcodeOffset);
 
       if (Verbose)
-        *OS << "address += " << Delta.Address << ",  line += " << Delta.Line;
+        *OS << "address += " << Delta.Address << ",  line += " << Delta.Line
+            << ",  op-index += " << Delta.OpIndex;
       EmitRow();
       *OffsetPtr = Cursor.tell();
     }
@@ -1226,6 +1275,9 @@ uint32_t DWARFDebugLine::LineTable::findRowInSeq(
   //
   // In general we want a non-empty range: the last row whose address is less
   // than or equal to Address. This can be computed as upper_bound - 1.
+  //
+  // TODO: This function, and its users, needs to be update to return multiple
+  // rows for bundles with multiple op-indexes.
   DWARFDebugLine::Row Row;
   Row.Address = Address;
   RowIter FirstRow = Rows.begin() + Seq.FirstRowIndex;
@@ -1505,6 +1557,21 @@ DWARFUnit *DWARFDebugLine::SectionParser::prepareToParse(uint64_t Offset) {
   return U;
 }
 
+bool DWARFDebugLine::SectionParser::hasValidVersion(uint64_t Offset) {
+  DataExtractor::Cursor Cursor(Offset);
+  auto [TotalLength, _] = DebugLineData.getInitialLength(Cursor);
+  DWARFDataExtractor HeaderData(DebugLineData, Cursor.tell() + TotalLength);
+  uint16_t Version = HeaderData.getU16(Cursor);
+  if (!Cursor) {
+    // Ignore any error here.
+    // If this is not the end of the section parseNext() will still be
+    // attempted, where this error will occur again (and can be handled).
+    consumeError(Cursor.takeError());
+    return false;
+  }
+  return versionIsSupported(Version);
+}
+
 void DWARFDebugLine::SectionParser::moveToNextTable(uint64_t OldOffset,
                                                     const Prologue &P) {
   // If the length field is not valid, we don't know where the next table is, so
@@ -1518,5 +1585,29 @@ void DWARFDebugLine::SectionParser::moveToNextTable(uint64_t OldOffset,
   Offset = OldOffset + P.TotalLength + P.sizeofTotalLength();
   if (!DebugLineData.isValidOffset(Offset)) {
     Done = true;
+    return;
+  }
+
+  // Heuristic: If the version is valid, then this is probably a line table.
+  // Otherwise, the offset might need alignment (to a 4 or 8 byte boundary).
+  if (hasValidVersion(Offset))
+    return;
+
+  // ARM C/C++ Compiler aligns each line table to word boundaries and pads out
+  // the .debug_line section to a word multiple. Note that in the specification
+  // this does not seem forbidden since each unit has a DW_AT_stmt_list.
+  for (unsigned Align : {4, 8}) {
+    uint64_t AlignedOffset = alignTo(Offset, Align);
+    if (!DebugLineData.isValidOffset(AlignedOffset)) {
+      // This is almost certainly not another line table but some alignment
+      // padding. This assumes the alignments tested are ordered, and are
+      // smaller than the header size (which is true for 4 and 8).
+      Done = true;
+      return;
+    }
+    if (hasValidVersion(AlignedOffset)) {
+      Offset = AlignedOffset;
+      break;
+    }
   }
 }

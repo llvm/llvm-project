@@ -14,9 +14,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include <vector>
 
-namespace clang {
-namespace tidy {
-namespace misc {
+namespace clang::tidy::misc {
 
 /// Finds unused using declarations.
 ///
@@ -34,7 +32,7 @@ private:
 
   struct UsingDeclContext {
     explicit UsingDeclContext(const UsingDecl *FoundUsingDecl)
-        : FoundUsingDecl(FoundUsingDecl), IsUsed(false) {}
+        : FoundUsingDecl(FoundUsingDecl) {}
     // A set saves all UsingShadowDecls introduced by a UsingDecl. A UsingDecl
     // can introduce multiple UsingShadowDecls in some cases (such as
     // overloaded functions).
@@ -44,17 +42,15 @@ private:
     // The source range of the UsingDecl.
     CharSourceRange UsingDeclRange;
     // Whether the UsingDecl is used.
-    bool IsUsed;
+    bool IsUsed = false;
   };
 
   std::vector<UsingDeclContext> Contexts;
 
-  const StringRef RawStringHeaderFileExtensions;
-  utils::FileExtensionsSet HeaderFileExtensions;
+  StringRef RawStringHeaderFileExtensions;
+  FileExtensionsSet HeaderFileExtensions;
 };
 
-} // namespace misc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::misc
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_UNUSED_USING_DECLS_H

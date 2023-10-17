@@ -9,7 +9,6 @@
 #include "ErrorCollector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/InterfaceStub/ELFObjHandler.h"
 #include "llvm/InterfaceStub/IFSHandler.h"
@@ -23,12 +22,14 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/TextAPI/InterfaceFile.h"
 #include "llvm/TextAPI/TextAPIReader.h"
 #include "llvm/TextAPI/TextAPIWriter.h"
@@ -53,9 +54,7 @@ enum class FileFormat { IFS, ELF, TBD };
 using namespace llvm::opt;
 enum ID {
   OPT_INVALID = 0, // This is not an option ID.
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  OPT_##ID,
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
 #include "Opts.inc"
 #undef OPTION
 };
@@ -68,13 +67,7 @@ enum ID {
 #undef PREFIX
 
 static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  {                                                                            \
-      PREFIX,      NAME,      HELPTEXT,                                        \
-      METAVAR,     OPT_##ID,  opt::Option::KIND##Class,                        \
-      PARAM,       FLAGS,     OPT_##GROUP,                                     \
-      OPT_##ALIAS, ALIASARGS, VALUES},
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
 #include "Opts.inc"
 #undef OPTION
 };
@@ -332,9 +325,13 @@ static DriverConfig parseArgs(int argc, char *const *argv) {
     if (!Config.OutputFormat)
       OptionNotFound("--output-format", A->getValue());
   }
-  if (const opt::Arg *A = Args.getLastArg(OPT_arch_EQ))
-    Config.OverrideArch = ELF::convertArchNameToEMachine(A->getValue());
-
+  if (const opt::Arg *A = Args.getLastArg(OPT_arch_EQ)) {
+    uint16_t eMachine = ELF::convertArchNameToEMachine(A->getValue());
+    if (eMachine == ELF::EM_NONE) {
+      fatalError(Twine("unknown arch '") + A->getValue() + "'");
+    }
+    Config.OverrideArch = eMachine;
+  }
   if (const opt::Arg *A = Args.getLastArg(OPT_bitwidth_EQ)) {
     size_t Width;
     llvm::StringRef S(A->getValue());
@@ -382,7 +379,7 @@ static DriverConfig parseArgs(int argc, char *const *argv) {
   return Config;
 }
 
-int llvm_ifs_main(int argc, char **argv) {
+int llvm_ifs_main(int argc, char **argv, const llvm::ToolContext &) {
   DriverConfig Config = parseArgs(argc, argv);
 
   if (Config.InputFilePaths.empty())

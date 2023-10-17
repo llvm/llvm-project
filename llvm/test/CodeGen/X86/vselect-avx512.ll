@@ -17,24 +17,21 @@ define void @PR46249(ptr noalias nocapture noundef %0) {
 ; CHECK-NEXT:    vpshufd {{.*#+}} zmm0 = zmm2[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
 ; CHECK-NEXT:    vpminsd %zmm2, %zmm0, %zmm1
 ; CHECK-NEXT:    vpmaxsd %zmm2, %zmm0, %zmm0
-; CHECK-NEXT:    movb $-86, %al
-; CHECK-NEXT:    kmovw %eax, %k2
-; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k2}
-; CHECK-NEXT:    vpshufd {{.*#+}} zmm0 = zmm1[1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14]
-; CHECK-NEXT:    vpminsd %zmm1, %zmm0, %zmm2
-; CHECK-NEXT:    vpmaxsd %zmm1, %zmm0, %zmm2 {%k1}
-; CHECK-NEXT:    vpshufd {{.*#+}} zmm0 = zmm2[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
+; CHECK-NEXT:    vshufps {{.*#+}} zmm2 = zmm1[0,1],zmm0[2,3],zmm1[4,5],zmm0[6,7],zmm1[8,9],zmm0[10,11],zmm1[12,13],zmm0[14,15]
+; CHECK-NEXT:    vshufps {{.*#+}} zmm0 = zmm1[1,0],zmm0[3,2],zmm1[5,4],zmm0[7,6],zmm1[9,8],zmm0[11,10],zmm1[13,12],zmm0[15,14]
+; CHECK-NEXT:    vpminsd %zmm2, %zmm0, %zmm1
+; CHECK-NEXT:    vpmaxsd %zmm2, %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vpshufd {{.*#+}} zmm0 = zmm1[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
 ; CHECK-NEXT:    vpermq {{.*#+}} zmm0 = zmm0[2,3,0,1,6,7,4,5]
+; CHECK-NEXT:    vpminsd %zmm1, %zmm0, %zmm2
+; CHECK-NEXT:    movw $-3856, %ax # imm = 0xF0F0
+; CHECK-NEXT:    kmovw %eax, %k2
+; CHECK-NEXT:    vpmaxsd %zmm1, %zmm0, %zmm2 {%k2}
+; CHECK-NEXT:    vpshufd {{.*#+}} zmm0 = zmm2[2,3,0,1,6,7,4,5,10,11,8,9,14,15,12,13]
 ; CHECK-NEXT:    vpminsd %zmm2, %zmm0, %zmm1
 ; CHECK-NEXT:    vpmaxsd %zmm2, %zmm0, %zmm0
-; CHECK-NEXT:    movb $-52, %al
-; CHECK-NEXT:    kmovw %eax, %k3
-; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k3}
-; CHECK-NEXT:    vpshufd {{.*#+}} zmm0 = zmm1[2,3,0,1,6,7,4,5,10,11,8,9,14,15,12,13]
-; CHECK-NEXT:    vpminsd %zmm1, %zmm0, %zmm2
-; CHECK-NEXT:    vpmaxsd %zmm1, %zmm0, %zmm0
-; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm2 {%k2}
-; CHECK-NEXT:    vpshufd {{.*#+}} zmm0 = zmm2[1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14]
+; CHECK-NEXT:    vshufps {{.*#+}} zmm2 = zmm1[0,1],zmm0[2,3],zmm1[4,5],zmm0[6,7],zmm1[8,9],zmm0[10,11],zmm1[12,13],zmm0[14,15]
+; CHECK-NEXT:    vshufps {{.*#+}} zmm0 = zmm1[1,0],zmm0[3,2],zmm1[5,4],zmm0[7,6],zmm1[9,8],zmm0[11,10],zmm1[13,12],zmm0[15,14]
 ; CHECK-NEXT:    vpminsd %zmm2, %zmm0, %zmm1
 ; CHECK-NEXT:    vpmaxsd %zmm2, %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vpshufd {{.*#+}} zmm0 = zmm1[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
@@ -44,16 +41,15 @@ define void @PR46249(ptr noalias nocapture noundef %0) {
 ; CHECK-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm2[2,3,0,1],zmm0[6,7,4,5]
 ; CHECK-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm2[0,1,2,3],zmm0[4,5,6,7]
 ; CHECK-NEXT:    vpminsd %zmm0, %zmm1, %zmm2
-; CHECK-NEXT:    vpmaxsd %zmm0, %zmm1, %zmm0
-; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm2 {%k3}
+; CHECK-NEXT:    vpmaxsd %zmm0, %zmm1, %zmm2 {%k2}
 ; CHECK-NEXT:    vpshufd {{.*#+}} zmm0 = zmm2[2,3,0,1,6,7,4,5,10,11,8,9,14,15,12,13]
 ; CHECK-NEXT:    vpminsd %zmm2, %zmm0, %zmm1
 ; CHECK-NEXT:    vpmaxsd %zmm2, %zmm0, %zmm0
-; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k2}
-; CHECK-NEXT:    vpshufd {{.*#+}} zmm0 = zmm1[1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14]
-; CHECK-NEXT:    vpminsd %zmm1, %zmm0, %zmm2
-; CHECK-NEXT:    vpmaxsd %zmm1, %zmm0, %zmm2 {%k1}
-; CHECK-NEXT:    vmovdqu64 %zmm2, (%rdi)
+; CHECK-NEXT:    vshufps {{.*#+}} zmm2 = zmm1[0,1],zmm0[2,3],zmm1[4,5],zmm0[6,7],zmm1[8,9],zmm0[10,11],zmm1[12,13],zmm0[14,15]
+; CHECK-NEXT:    vshufps {{.*#+}} zmm0 = zmm1[1,0],zmm0[3,2],zmm1[5,4],zmm0[7,6],zmm1[9,8],zmm0[11,10],zmm1[13,12],zmm0[15,14]
+; CHECK-NEXT:    vpminsd %zmm2, %zmm0, %zmm1
+; CHECK-NEXT:    vpmaxsd %zmm2, %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vmovdqu64 %zmm1, (%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %2 = load <16 x i32>, ptr %0, align 1

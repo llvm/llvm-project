@@ -8,10 +8,12 @@
 ; CHECK-NEXT:   DW_AT_decl_file (0x02)
 ; CHECK-NEXT:   DW_AT_decl_line (4)
 
-; Function Attrs: noinline nounwind optnone uwtable mustprogress
-define dso_local void @_Z2f1v() local_unnamed_addr #0 !dbg !12 {
+; Function Attrs: norecurse nounwind uwtable mustprogress
+define dso_local i32 @main() local_unnamed_addr #2 !dbg !26 {
 entry:
-  ret void, !dbg !15
+  tail call void @_Z2f1v() #3, !dbg !28
+  tail call void @_Z2f1v() #3, !dbg !30
+  ret i32 0, !dbg !32
 }
 
 ; Function Attrs: nounwind uwtable mustprogress
@@ -21,19 +23,17 @@ entry:
   ret void, !dbg !22
 }
 
+; Function Attrs: noinline nounwind optnone uwtable mustprogress
+define dso_local void @_Z2f1v() local_unnamed_addr #0 !dbg !12 {
+entry:
+  ret void, !dbg !15
+}
+
 ; Function Attrs: nounwind uwtable mustprogress
 define dso_local void @_Z2f2v() local_unnamed_addr #1 !dbg !23 {
 entry:
   tail call void @_Z2f1v(), !dbg !24
   ret void, !dbg !25
-}
-
-; Function Attrs: norecurse nounwind uwtable mustprogress
-define dso_local i32 @main() local_unnamed_addr #2 !dbg !26 {
-entry:
-  tail call void @_Z2f1v() #3, !dbg !28
-  tail call void @_Z2f1v() #3, !dbg !30
-  ret i32 0, !dbg !32
 }
 
 attributes #0 = { noinline nounwind optnone uwtable mustprogress "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }

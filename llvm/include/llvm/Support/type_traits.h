@@ -32,11 +32,11 @@ template <typename T> class is_integral_or_enum {
 
 public:
   static const bool value =
-      !std::is_class<UnderlyingT>::value && // Filter conversion operators.
-      !std::is_pointer<UnderlyingT>::value &&
-      !std::is_floating_point<UnderlyingT>::value &&
-      (std::is_enum<UnderlyingT>::value ||
-       std::is_convertible<UnderlyingT, unsigned long long>::value);
+      !std::is_class_v<UnderlyingT> && // Filter conversion operators.
+      !std::is_pointer_v<UnderlyingT> &&
+      !std::is_floating_point_v<UnderlyingT> &&
+      (std::is_enum_v<UnderlyingT> ||
+       std::is_convertible_v<UnderlyingT, unsigned long long>);
 };
 
 /// If T is a pointer, just return it. If it is not, return T&.
@@ -45,7 +45,7 @@ struct add_lvalue_reference_if_not_pointer { using type = T &; };
 
 template <typename T>
 struct add_lvalue_reference_if_not_pointer<
-    T, std::enable_if_t<std::is_pointer<T>::value>> {
+    T, std::enable_if_t<std::is_pointer_v<T>>> {
   using type = T;
 };
 
@@ -55,7 +55,7 @@ template<typename T, typename Enable = void>
 struct add_const_past_pointer { using type = const T; };
 
 template <typename T>
-struct add_const_past_pointer<T, std::enable_if_t<std::is_pointer<T>::value>> {
+struct add_const_past_pointer<T, std::enable_if_t<std::is_pointer_v<T>>> {
   using type = const std::remove_pointer_t<T> *;
 };
 
@@ -64,56 +64,17 @@ struct const_pointer_or_const_ref {
   using type = const T &;
 };
 template <typename T>
-struct const_pointer_or_const_ref<T,
-                                  std::enable_if_t<std::is_pointer<T>::value>> {
+struct const_pointer_or_const_ref<T, std::enable_if_t<std::is_pointer_v<T>>> {
   using type = typename add_const_past_pointer<T>::type;
 };
 
 namespace detail {
-/// Internal utility to detect trivial copy construction.
-template<typename T> union copy_construction_triviality_helper {
-    T t;
-    copy_construction_triviality_helper() = default;
-    copy_construction_triviality_helper(const copy_construction_triviality_helper&) = default;
-    ~copy_construction_triviality_helper() = default;
-};
-/// Internal utility to detect trivial move construction.
-template<typename T> union move_construction_triviality_helper {
-    T t;
-    move_construction_triviality_helper() = default;
-    move_construction_triviality_helper(move_construction_triviality_helper&&) = default;
-    ~move_construction_triviality_helper() = default;
-};
-
 template<class T>
 union trivial_helper {
     T t;
 };
 
 } // end namespace detail
-
-/// An implementation of `std::is_trivially_copy_constructible` since we have
-/// users with STLs that don't yet include it.
-template <typename T>
-struct is_trivially_copy_constructible
-    : std::is_copy_constructible<
-          ::llvm::detail::copy_construction_triviality_helper<T>> {};
-template <typename T>
-struct is_trivially_copy_constructible<T &> : std::true_type {};
-template <typename T>
-struct is_trivially_copy_constructible<T &&> : std::false_type {};
-
-/// An implementation of `std::is_trivially_move_constructible` since we have
-/// users with STLs that don't yet include it.
-template <typename T>
-struct is_trivially_move_constructible
-    : std::is_move_constructible<
-          ::llvm::detail::move_construction_triviality_helper<T>> {};
-template <typename T>
-struct is_trivially_move_constructible<T &> : std::true_type {};
-template <typename T>
-struct is_trivially_move_constructible<T &&> : std::true_type {};
-
 
 template <typename T>
 struct is_copy_assignable {

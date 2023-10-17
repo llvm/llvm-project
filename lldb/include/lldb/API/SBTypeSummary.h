@@ -12,6 +12,12 @@
 
 #include "lldb/API/SBDefines.h"
 
+namespace lldb_private {
+namespace python {
+class SWIGBridge;
+}
+} // namespace lldb_private
+
 namespace lldb {
 class LLDB_API SBTypeSummaryOptions {
 public:
@@ -19,7 +25,6 @@ public:
 
   SBTypeSummaryOptions(const lldb::SBTypeSummaryOptions &rhs);
 
-  SBTypeSummaryOptions(const lldb_private::TypeSummaryOptions &lldb_object);
 
   ~SBTypeSummaryOptions();
 
@@ -37,6 +42,11 @@ public:
 
 protected:
   friend class SBValue;
+  friend class SBTypeSummary;
+
+  friend class lldb_private::python::SWIGBridge;
+
+  SBTypeSummaryOptions(const lldb_private::TypeSummaryOptions &lldb_object);
 
   lldb_private::TypeSummaryOptions *operator->();
 
@@ -71,9 +81,11 @@ public:
   CreateWithScriptCode(const char *data,
                        uint32_t options = 0); // see lldb::eTypeOption values
 
+#ifndef SWIG
   static SBTypeSummary CreateWithCallback(FormatCallback cb,
                                           uint32_t options = 0,
                                           const char *description = nullptr);
+#endif
 
   SBTypeSummary(const lldb::SBTypeSummary &rhs);
 

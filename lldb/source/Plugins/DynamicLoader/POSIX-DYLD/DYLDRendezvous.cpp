@@ -25,6 +25,32 @@
 using namespace lldb;
 using namespace lldb_private;
 
+const char *DYLDRendezvous::StateToCStr(RendezvousState state) {
+  switch (state) {
+    case DYLDRendezvous::eConsistent:
+      return "eConsistent";
+    case DYLDRendezvous::eAdd:
+      return "eAdd";
+    case DYLDRendezvous::eDelete:
+      return "eDelete";
+  }
+  return "<invalid RendezvousState>";
+}
+
+const char *DYLDRendezvous::ActionToCStr(RendezvousAction action) {
+  switch (action) {
+  case DYLDRendezvous::RendezvousAction::eTakeSnapshot:
+    return "eTakeSnapshot";
+  case DYLDRendezvous::RendezvousAction::eAddModules:
+    return "eAddModules";
+  case DYLDRendezvous::RendezvousAction::eRemoveModules:
+    return "eRemoveModules";
+  case DYLDRendezvous::RendezvousAction::eNoAction:
+    return "eNoAction";
+  }
+  return "<invalid RendezvousAction>";
+}
+
 DYLDRendezvous::DYLDRendezvous(Process *process)
     : m_process(process), m_rendezvous_addr(LLDB_INVALID_ADDRESS),
       m_executable_interpreter(false), m_current(), m_previous(),
@@ -129,6 +155,13 @@ void DYLDRendezvous::UpdateExecutablePath() {
   }
 }
 
+void DYLDRendezvous::Rendezvous::DumpToLog(Log *log, const char *label) {
+  LLDB_LOGF(log, "%s Rendezvous: version = %" PRIu64 ", map_addr = 0x%16.16"
+            PRIx64 ", brk = 0x%16.16" PRIx64 ", state = %" PRIu64
+            " (%s), ldbase = 0x%16.16" PRIx64, label ? label : "", version,
+            map_addr, brk, state, StateToCStr((RendezvousState)state), ldbase);
+}
+
 bool DYLDRendezvous::Resolve() {
   Log *log = GetLog(LLDBLog::DynamicLoader);
 
@@ -176,6 +209,9 @@ bool DYLDRendezvous::Resolve() {
   m_previous = m_current;
   m_current = info;
 
+  m_previous.DumpToLog(log, "m_previous");
+  m_current.DumpToLog(log, "m_current ");
+
   if (m_current.map_addr == 0)
     return false;
 
@@ -217,6 +253,75 @@ DYLDRendezvous::RendezvousAction DYLDRendezvous::GetAction() const {
     break;
 
   case eAdd:
+    // If the main executable or a shared library defines a publicly visible
+    // symbol named "_r_debug", then it will cause problems once the executable
+    // that contains the symbol is loaded into the process. The correct
+    // "_r_debug" structure is currently found by LLDB by looking through
+    // the .dynamic section in the main executable and finding the DT_DEBUG tag
+    // entry.
+    //
+    // An issue comes up if someone defines another publicly visible "_r_debug"
+    // struct in their program. Sample code looks like:
+    //
+    //    #include <link.h>
+    //    r_debug _r_debug;
+    //
+    // If code like this is in an executable or shared library, this creates a
+    // new "_r_debug" structure and it causes problems once the executable is
+    // loaded due to the way symbol lookups happen in linux: the shared library
+    // list from _r_debug.r_map will be searched for a symbol named "_r_debug"
+    // and the first match will be the new version that is used. The dynamic
+    // loader is always last in this list. So at some point the dynamic loader
+    // will start updating the copy of "_r_debug" that gets found first. The
+    // issue is that LLDB will only look at the copy that is pointed to by the
+    // DT_DEBUG entry, or the initial version from the ld.so binary.
+    //
+    // Steps that show the problem are:
+    //
+    // - LLDB finds the "_r_debug" structure via the DT_DEBUG entry in the
+    //   .dynamic section and this points to the "_r_debug" in ld.so
+    // - ld.so uodates its copy of "_r_debug" with "state = eAdd" before it
+    //   loads the dependent shared libraries for the main executable and
+    //   any dependencies of all shared libraries from the executable's list
+    //   and ld.so code calls the debugger notification function
+    //   that LLDB has set a breakpoint on.
+    // - LLDB hits the breakpoint and the breakpoint has a callback function
+    //   where we read the _r_debug.state (eAdd) state and we do nothing as the
+    //   "eAdd" state indicates that the shared libraries are about to be added.
+    // - ld.so finishes loading the main executable and any dependent shared
+    //   libraries and it will update the "_r_debug.state" member with a
+    //   "eConsistent", but it now updates the "_r_debug" in the a.out program
+    //   and it calls the debugger notification function.
+    // - lldb hits the notification breakpoint and checks the ld.so copy of
+    //   "_r_debug.state" which still has a state of "eAdd", but LLDB needs to see a
+    //   "eConsistent" state to trigger the shared libraries to get loaded into
+    //   the debug session, but LLDB the ld.so _r_debug.state which still
+    //   contains "eAdd" and doesn't do anyhing and library load is missed.
+    //   The "_r_debug" in a.out has the state set correctly to "eConsistent"
+    //   but LLDB is still looking at the "_r_debug" from ld.so.
+    //
+    // So if we detect two "eAdd" states in a row, we assume this is the issue
+    // and we now load shared libraries correctly and will emit a log message
+    // in the "log enable lldb dyld" log channel which states there might be
+    // multiple "_r_debug" structs causing problems.
+    //
+    // The correct solution is that no one should be adding a duplicate
+    // publicly visible "_r_debug" symbols to their binaries, but we have
+    // programs that are doing this already and since it can be done, we should
+    // be able to work with this and keep debug sessions working as expected.
+    //
+    // If a user includes the <link.h> file, they can just use the existing
+    // "_r_debug" structure as it is defined in this header file as "extern
+    // struct r_debug _r_debug;" and no local copies need to be made.
+    if (m_previous.state == eAdd) {
+      Log *log = GetLog(LLDBLog::DynamicLoader);
+      LLDB_LOG(log, "DYLDRendezvous::GetAction() found two eAdd states in a "
+               "row, check process for multiple \"_r_debug\" symbols. "
+               "Returning eAddModules to ensure shared libraries get loaded "
+               "correctly");
+      return eAddModules;
+    }
+    return eNoAction;
   case eDelete:
     return eNoAction;
   }
@@ -225,7 +330,9 @@ DYLDRendezvous::RendezvousAction DYLDRendezvous::GetAction() const {
 }
 
 bool DYLDRendezvous::UpdateSOEntriesFromRemote() {
-  auto action = GetAction();
+  const auto action = GetAction();
+  Log *log = GetLog(LLDBLog::DynamicLoader);
+  LLDB_LOG(log, "{0} action = {1}", LLVM_PRETTY_FUNCTION, ActionToCStr(action));
 
   if (action == eNoAction)
     return false;
@@ -263,7 +370,10 @@ bool DYLDRendezvous::UpdateSOEntriesFromRemote() {
 bool DYLDRendezvous::UpdateSOEntries() {
   m_added_soentries.clear();
   m_removed_soentries.clear();
-  switch (GetAction()) {
+  const auto action = GetAction();
+  Log *log = GetLog(LLDBLog::DynamicLoader);
+  LLDB_LOG(log, "{0} action = {1}", LLVM_PRETTY_FUNCTION, ActionToCStr(action));
+  switch (action) {
   case eTakeSnapshot:
     m_soentries.clear();
     return TakeSnapshot(m_soentries);
@@ -372,7 +482,7 @@ bool DYLDRendezvous::RemoveSOEntriesFromRemote(
 
     // Only add shared libraries and not the executable.
     if (!SOEntryIsMainExecutable(entry)) {
-      auto pos = std::find(m_soentries.begin(), m_soentries.end(), entry);
+      auto pos = llvm::find(m_soentries, entry);
       if (pos == m_soentries.end())
         return false;
 
@@ -600,16 +710,19 @@ bool DYLDRendezvous::FindMetadata(const char *name, PThreadField field,
   target.GetImages().FindSymbolsWithNameAndType(ConstString(name),
                                                 eSymbolTypeAny, list);
   if (list.IsEmpty())
-  return false;
-
-  Address address = list[0].symbol->GetAddress();
-  addr_t addr = address.GetLoadAddress(&target);
-  if (addr == LLDB_INVALID_ADDRESS)
     return false;
 
+  Address address = list[0].symbol->GetAddress();
+  address.SetOffset(address.GetOffset() + field * sizeof(uint32_t));
+
+  // Read from target memory as this allows us to try process memory and
+  // fallback to reading from read only sections from the object files. Here we
+  // are reading read only data from libpthread.so to find data in the thread
+  // specific area for the data we want and this won't be saved into process
+  // memory due to it being read only.
   Status error;
-  value = (uint32_t)m_process->ReadUnsignedIntegerFromMemory(
-      addr + field * sizeof(uint32_t), sizeof(uint32_t), 0, error);
+  value =
+      target.ReadUnsignedIntegerFromMemory(address, sizeof(uint32_t), 0, error);
   if (error.Fail())
     return false;
 

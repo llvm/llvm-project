@@ -103,7 +103,7 @@ template <class OuterA1, class OuterA2, class... InnerAllocs>
 template <class OuterA1, class OuterA2, class... InnerAllocs>
     bool
     operator!=(const scoped_allocator_adaptor<OuterA1, InnerAllocs...>& a,
-               const scoped_allocator_adaptor<OuterA2, InnerAllocs...>& b) noexcept;
+               const scoped_allocator_adaptor<OuterA2, InnerAllocs...>& b) noexcept; // removed in C++20
 
 }  // std
 
@@ -129,6 +129,9 @@ template <class OuterA1, class OuterA2, class... InnerAllocs>
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -226,9 +229,7 @@ protected:
     __scoped_allocator_storage() _NOEXCEPT {}
 
     template <class _OuterA2,
-              class = typename enable_if<
-                        is_constructible<outer_allocator_type, _OuterA2>::value
-                      >::type>
+              __enable_if_t<is_constructible<outer_allocator_type, _OuterA2>::value, int> = 0>
         _LIBCPP_INLINE_VISIBILITY
         __scoped_allocator_storage(_OuterA2&& __outer_alloc,
                                    const _InnerAllocs& ...__inner_allocs) _NOEXCEPT
@@ -236,9 +237,7 @@ protected:
               __inner_(__inner_allocs...) {}
 
     template <class _OuterA2,
-              class = typename enable_if<
-                        is_constructible<outer_allocator_type, const _OuterA2&>::value
-                      >::type>
+              __enable_if_t<is_constructible<outer_allocator_type, const _OuterA2&>::value, int> = 0>
         _LIBCPP_INLINE_VISIBILITY
         __scoped_allocator_storage(
             const __scoped_allocator_storage<_OuterA2, _InnerAllocs...>& __other) _NOEXCEPT
@@ -246,9 +245,7 @@ protected:
               __inner_(__other.inner_allocator()) {}
 
     template <class _OuterA2,
-              class = typename enable_if<
-                        is_constructible<outer_allocator_type, _OuterA2>::value
-                      >::type>
+              __enable_if_t<is_constructible<outer_allocator_type, _OuterA2>::value, int> = 0>
         _LIBCPP_INLINE_VISIBILITY
         __scoped_allocator_storage(
             __scoped_allocator_storage<_OuterA2, _InnerAllocs...>&& __other) _NOEXCEPT
@@ -256,9 +253,7 @@ protected:
               __inner_(_VSTD::move(__other.inner_allocator())) {}
 
     template <class _OuterA2,
-              class = typename enable_if<
-                        is_constructible<outer_allocator_type, _OuterA2>::value
-                      >::type>
+              __enable_if_t<is_constructible<outer_allocator_type, _OuterA2>::value, int> = 0>
         _LIBCPP_INLINE_VISIBILITY
         __scoped_allocator_storage(_OuterA2&& __o,
                                    const inner_allocator_type& __i) _NOEXCEPT
@@ -307,26 +302,20 @@ protected:
     __scoped_allocator_storage() _NOEXCEPT {}
 
     template <class _OuterA2,
-              class = typename enable_if<
-                        is_constructible<outer_allocator_type, _OuterA2>::value
-                      >::type>
+              __enable_if_t<is_constructible<outer_allocator_type, _OuterA2>::value, int> = 0>
         _LIBCPP_INLINE_VISIBILITY
         __scoped_allocator_storage(_OuterA2&& __outer_alloc) _NOEXCEPT
             : outer_allocator_type(_VSTD::forward<_OuterA2>(__outer_alloc)) {}
 
     template <class _OuterA2,
-              class = typename enable_if<
-                        is_constructible<outer_allocator_type, const _OuterA2&>::value
-                      >::type>
+              __enable_if_t<is_constructible<outer_allocator_type, const _OuterA2&>::value, int> = 0>
         _LIBCPP_INLINE_VISIBILITY
         __scoped_allocator_storage(
             const __scoped_allocator_storage<_OuterA2>& __other) _NOEXCEPT
             : outer_allocator_type(__other.outer_allocator()) {}
 
     template <class _OuterA2,
-              class = typename enable_if<
-                        is_constructible<outer_allocator_type, _OuterA2>::value
-                      >::type>
+              __enable_if_t<is_constructible<outer_allocator_type, _OuterA2>::value, int> = 0>
         _LIBCPP_INLINE_VISIBILITY
         __scoped_allocator_storage(
             __scoped_allocator_storage<_OuterA2>&& __other) _NOEXCEPT
@@ -451,26 +440,20 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     scoped_allocator_adaptor() _NOEXCEPT {}
     template <class _OuterA2,
-              class = typename enable_if<
-                        is_constructible<outer_allocator_type, _OuterA2>::value
-                      >::type>
+              __enable_if_t<is_constructible<outer_allocator_type, _OuterA2>::value, int> = 0>
         _LIBCPP_INLINE_VISIBILITY
         scoped_allocator_adaptor(_OuterA2&& __outer_alloc,
                                  const _InnerAllocs& ...__inner_allocs) _NOEXCEPT
             : base(_VSTD::forward<_OuterA2>(__outer_alloc), __inner_allocs...) {}
     // scoped_allocator_adaptor(const scoped_allocator_adaptor& __other) = default;
     template <class _OuterA2,
-              class = typename enable_if<
-                        is_constructible<outer_allocator_type, const _OuterA2&>::value
-                      >::type>
+              __enable_if_t<is_constructible<outer_allocator_type, const _OuterA2&>::value, int> = 0>
         _LIBCPP_INLINE_VISIBILITY
         scoped_allocator_adaptor(
             const scoped_allocator_adaptor<_OuterA2, _InnerAllocs...>& __other) _NOEXCEPT
                 : base(__other) {}
     template <class _OuterA2,
-              class = typename enable_if<
-                        is_constructible<outer_allocator_type, _OuterA2>::value
-                      >::type>
+              __enable_if_t<is_constructible<outer_allocator_type, _OuterA2>::value, int> = 0>
         _LIBCPP_INLINE_VISIBILITY
         scoped_allocator_adaptor(
             scoped_allocator_adaptor<_OuterA2, _InnerAllocs...>&& __other) _NOEXCEPT
@@ -531,7 +514,7 @@ public:
                          __p, _VSTD::forward<_Args>(__args)...);}
 
     template <class _T1, class _T2, class... _Args1, class... _Args2>
-    void construct(pair<_T1, _T2>* __p, piecewise_construct_t,
+    _LIBCPP_HIDE_FROM_ABI void construct(pair<_T1, _T2>* __p, piecewise_construct_t,
                        tuple<_Args1...> __x, tuple<_Args2...> __y)
     {
         typedef __outermost<outer_allocator_type> _OM;
@@ -555,25 +538,25 @@ public:
     }
 
     template <class _T1, class _T2>
-    void construct(pair<_T1, _T2>* __p)
+    _LIBCPP_HIDE_FROM_ABI void construct(pair<_T1, _T2>* __p)
     { construct(__p, piecewise_construct, tuple<>{}, tuple<>{}); }
 
     template <class _T1, class _T2, class _Up, class _Vp>
-    void construct(pair<_T1, _T2>* __p, _Up&& __x, _Vp&& __y) {
+    _LIBCPP_HIDE_FROM_ABI void construct(pair<_T1, _T2>* __p, _Up&& __x, _Vp&& __y) {
         construct(__p, piecewise_construct,
                   _VSTD::forward_as_tuple(_VSTD::forward<_Up>(__x)),
                   _VSTD::forward_as_tuple(_VSTD::forward<_Vp>(__y)));
     }
 
     template <class _T1, class _T2, class _Up, class _Vp>
-    void construct(pair<_T1, _T2>* __p, const pair<_Up, _Vp>& __x) {
+    _LIBCPP_HIDE_FROM_ABI void construct(pair<_T1, _T2>* __p, const pair<_Up, _Vp>& __x) {
         construct(__p, piecewise_construct,
                   _VSTD::forward_as_tuple(__x.first),
                   _VSTD::forward_as_tuple(__x.second));
     }
 
     template <class _T1, class _T2, class _Up, class _Vp>
-    void construct(pair<_T1, _T2>* __p, pair<_Up, _Vp>&& __x) {
+    _LIBCPP_HIDE_FROM_ABI void construct(pair<_T1, _T2>* __p, pair<_Up, _Vp>&& __x) {
         construct(__p, piecewise_construct,
                   _VSTD::forward_as_tuple(_VSTD::forward<_Up>(__x.first)),
                   _VSTD::forward_as_tuple(_VSTD::forward<_Vp>(__x.second)));
@@ -597,9 +580,7 @@ private:
 
 
     template <class _OuterA2,
-              class = typename enable_if<
-                        is_constructible<outer_allocator_type, _OuterA2>::value
-                      >::type>
+              __enable_if_t<is_constructible<outer_allocator_type, _OuterA2>::value, int> = 0>
     _LIBCPP_INLINE_VISIBILITY
     scoped_allocator_adaptor(_OuterA2&& __o,
                              const inner_allocator_type& __i) _NOEXCEPT
@@ -678,7 +659,7 @@ private:
     template <class...> friend class __scoped_allocator_storage;
 };
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template<class _OuterAlloc, class... _InnerAllocs>
     scoped_allocator_adaptor(_OuterAlloc, _InnerAllocs...)
         -> scoped_allocator_adaptor<_OuterAlloc, _InnerAllocs...>;
@@ -703,6 +684,8 @@ operator==(const scoped_allocator_adaptor<_OuterA1, _InnerA0, _InnerAllocs...>& 
            __a.inner_allocator() == __b.inner_allocator();
 }
 
+#if _LIBCPP_STD_VER <= 17
+
 template <class _OuterA1, class _OuterA2, class... _InnerAllocs>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
@@ -712,9 +695,13 @@ operator!=(const scoped_allocator_adaptor<_OuterA1, _InnerAllocs...>& __a,
     return !(__a == __b);
 }
 
+#endif // _LIBCPP_STD_VER <= 17
+
 #endif // !defined(_LIBCPP_CXX03_LANG)
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <atomic>

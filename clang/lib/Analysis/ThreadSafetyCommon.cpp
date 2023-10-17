@@ -69,12 +69,7 @@ static bool isIncompletePhi(const til::SExpr *E) {
 
 using CallingContext = SExprBuilder::CallingContext;
 
-til::SExpr *SExprBuilder::lookupStmt(const Stmt *S) {
-  auto It = SMap.find(S);
-  if (It != SMap.end())
-    return It->second;
-  return nullptr;
-}
+til::SExpr *SExprBuilder::lookupStmt(const Stmt *S) { return SMap.lookup(S); }
 
 til::SCFG *SExprBuilder::buildCFG(CFGWalker &Walker) {
   Walker.walk(*this);
@@ -115,7 +110,8 @@ static StringRef ClassifyDiagnostic(QualType VDT) {
 /// \param D       The declaration to which the attribute is attached.
 /// \param DeclExp An expression involving the Decl to which the attribute
 ///                is attached.  E.g. the call to a function.
-/// \param Self    S-expression to substitute for a \ref CXXThisExpr.
+/// \param Self    S-expression to substitute for a \ref CXXThisExpr in a call,
+///                or argument to a cleanup function.
 CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
                                                const NamedDecl *D,
                                                const Expr *DeclExp,
@@ -149,12 +145,18 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
 
   if (Self) {
     assert(!Ctx.SelfArg && "Ambiguous self argument");
-    Ctx.SelfArg = Self;
+    assert(isa<FunctionDecl>(D) && "Self argument requires function");
+    if (isa<CXXMethodDecl>(D))
+      Ctx.SelfArg = Self;
+    else
+      Ctx.FunArgs = Self;
 
     // If the attribute has no arguments, then assume the argument is "this".
     if (!AttrExp)
       return CapabilityExpr(
-          Self, ClassifyDiagnostic(cast<CXXMethodDecl>(D)->getThisObjectType()),
+          Self,
+          ClassifyDiagnostic(
+              cast<CXXMethodDecl>(D)->getFunctionObjectParameterType()),
           false);
     else  // For most attributes.
       return translateAttrExpr(AttrExp, &Ctx);
@@ -317,8 +319,14 @@ til::SExpr *SExprBuilder::translateDeclRefExpr(const DeclRefExpr *DRE,
               ? (cast<FunctionDecl>(D)->getCanonicalDecl() == Canonical)
               : (cast<ObjCMethodDecl>(D)->getCanonicalDecl() == Canonical)) {
         // Substitute call arguments for references to function parameters
-        assert(I < Ctx->NumArgs);
-        return translate(Ctx->FunArgs[I], Ctx->Prev);
+        if (const Expr *const *FunArgs =
+                Ctx->FunArgs.dyn_cast<const Expr *const *>()) {
+          assert(I < Ctx->NumArgs);
+          return translate(FunArgs[I], Ctx->Prev);
+        }
+
+        assert(I == 0);
+        return Ctx->FunArgs.get<til::SExpr *>();
       }
     }
     // Map the param back to the param of the original function declaration

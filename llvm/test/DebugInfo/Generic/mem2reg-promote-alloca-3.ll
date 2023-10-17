@@ -1,4 +1,4 @@
-; RUN: opt -opaque-pointers=0 -passes=mem2reg %s -S -o - | FileCheck %s
+; RUN: opt -passes=mem2reg %s -S -o - | FileCheck %s
 
 ;; Check that mem2reg removes dbg.value(%local, DIExpression(DW_OP_deref...))
 ;; that instcombine LowerDbgDeclare inserted before the call to 'esc' when
@@ -7,7 +7,7 @@
 ;; throughout after inlining.
 ;;
 ;; $ clang reduce.c -O2 -g -emit-llvm -S -o tmp.ll -Xclang -disable-llvm-passes
-;; $ opt -opaque-pointers=0 tmp.ll -o - -instcombine -inline -S
+;; $ opt tmp.ll -o - -instcombine -inline -S
 ;; $ cat reduce.c
 ;; __attribute__((__always_inline__))
 ;; static void esc(unsigned char **c) {
@@ -20,30 +20,30 @@
 
 ; CHECK: define dso_local void @fun()
 ; CHECK-NEXT: entry:
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i8* null, metadata ![[LOCAL:[0-9]+]], metadata !DIExpression())
+; CHECK-NEXT: call void @llvm.dbg.value(metadata ptr null, metadata ![[LOCAL:[0-9]+]], metadata !DIExpression())
 ; CHECK-NOT: call void @llvm.dbg.value({{.*}}, metadata ![[LOCAL]]
 ; CHECK: ![[LOCAL]] = !DILocalVariable(name: "local",
 
 define dso_local void @fun() !dbg !7 {
 entry:
-  %local = alloca i8*, align 8
-  %0 = bitcast i8** %local to i8*, !dbg !14
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %0) #3, !dbg !14
-  call void @llvm.dbg.value(metadata i8* null, metadata !11, metadata !DIExpression()), !dbg !15
-  store i8* null, i8** %local, align 8, !dbg !16
-  call void @llvm.dbg.value(metadata i8** %local, metadata !11, metadata !DIExpression(DW_OP_deref)), !dbg !15
-  call void @llvm.dbg.value(metadata i8** %local, metadata !21, metadata !DIExpression()), !dbg !27
-  call void @llvm.dbg.value(metadata i8** %local, metadata !21, metadata !DIExpression()), !dbg !27
-  %1 = load i8*, i8** %local, align 8, !dbg !29
-  %add.ptr.i = getelementptr inbounds i8, i8* %1, i64 4, !dbg !29
-  store i8* %add.ptr.i, i8** %local, align 8, !dbg !29
-  %2 = bitcast i8** %local to i8*, !dbg !30
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %2) #3, !dbg !30
+  %local = alloca ptr, align 8
+  %0 = bitcast ptr %local to ptr, !dbg !14
+  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %0) #3, !dbg !14
+  call void @llvm.dbg.value(metadata ptr null, metadata !11, metadata !DIExpression()), !dbg !15
+  store ptr null, ptr %local, align 8, !dbg !16
+  call void @llvm.dbg.value(metadata ptr %local, metadata !11, metadata !DIExpression(DW_OP_deref)), !dbg !15
+  call void @llvm.dbg.value(metadata ptr %local, metadata !21, metadata !DIExpression()), !dbg !27
+  call void @llvm.dbg.value(metadata ptr %local, metadata !21, metadata !DIExpression()), !dbg !27
+  %1 = load ptr, ptr %local, align 8, !dbg !29
+  %add.ptr.i = getelementptr inbounds i8, ptr %1, i64 4, !dbg !29
+  store ptr %add.ptr.i, ptr %local, align 8, !dbg !29
+  %2 = bitcast ptr %local to ptr, !dbg !30
+  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %2) #3, !dbg !30
   ret void, !dbg !30
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}

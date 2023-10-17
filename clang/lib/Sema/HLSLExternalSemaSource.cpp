@@ -71,7 +71,6 @@ struct BuiltinTypeDeclBuilder {
 
     // Don't let anyone derive from built-in types.
     Record->addAttr(FinalAttr::CreateImplicit(AST, SourceRange(),
-                                              AttributeCommonInfo::AS_Keyword,
                                               FinalAttr::Keyword_final));
   }
 
@@ -175,10 +174,9 @@ struct BuiltinTypeDeclBuilder {
     Expr *Call = CallExpr::Create(AST, Fn, {RCExpr}, AST.VoidPtrTy, VK_PRValue,
                                   SourceLocation(), FPOptionsOverride());
 
-    CXXThisExpr *This = new (AST) CXXThisExpr(
-        SourceLocation(),
-        Constructor->getThisType().getTypePtr()->getPointeeType(), true);
-    This->setValueKind(ExprValueKind::VK_LValue);
+    CXXThisExpr *This = CXXThisExpr::Create(
+        AST, SourceLocation(), Constructor->getFunctionObjectParameterType(),
+        true);
     Expr *Handle = MemberExpr::CreateImplicit(AST, This, false, Fields["h"],
                                               Fields["h"]->getType(), VK_LValue,
                                               OK_Ordinary);
@@ -262,10 +260,9 @@ struct BuiltinTypeDeclBuilder {
     auto FnProtoLoc = TSInfo->getTypeLoc().getAs<FunctionProtoTypeLoc>();
     FnProtoLoc.setParam(0, IdxParam);
 
-    auto *This = new (AST) CXXThisExpr(
-        SourceLocation(),
-        MethodDecl->getThisType().getTypePtr()->getPointeeType(), true);
-    This->setValueKind(ExprValueKind::VK_LValue);
+    auto *This =
+        CXXThisExpr::Create(AST, SourceLocation(),
+                            MethodDecl->getFunctionObjectParameterType(), true);
     auto *HandleAccess = MemberExpr::CreateImplicit(
         AST, This, false, Handle, Handle->getType(), VK_LValue, OK_Ordinary);
 
@@ -286,8 +283,7 @@ struct BuiltinTypeDeclBuilder {
     MethodDecl->setLexicalDeclContext(Record);
     MethodDecl->setAccess(AccessSpecifier::AS_public);
     MethodDecl->addAttr(AlwaysInlineAttr::CreateImplicit(
-        AST, SourceRange(), AttributeCommonInfo::AS_Keyword,
-        AlwaysInlineAttr::CXX11_clang_always_inline));
+        AST, SourceRange(), AlwaysInlineAttr::CXX11_clang_always_inline));
     Record->addDecl(MethodDecl);
 
     return *this;

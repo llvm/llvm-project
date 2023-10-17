@@ -15,7 +15,8 @@ struct A {
 
   bool operator<(const A&) const;
   bool operator<=(const A&) const = default;
-  bool operator==(const A&) const volatile && = default; // surprisingly, OK
+  bool operator==(const A&) const && = default; // expected-error {{ref-qualifier '&&' is not allowed on a defaulted comparison operator}}
+  bool operator>=(const A&) const volatile = default; // expected-error {{defaulted comparison function must not be volatile}}
   bool operator<=>(const A&) = default; // expected-error {{defaulted member three-way comparison operator must be const-qualified}}
   bool operator>=(const B&) const = default; // expected-error-re {{invalid parameter type for defaulted relational comparison operator; found 'const B &', expected 'const A &'{{$}}}}
   static bool operator>(const B&) = default; // expected-error {{overloaded 'operator>' cannot be a static member function}}
@@ -25,6 +26,16 @@ struct A {
     friend bool operator==(const A&, const A&) = default; // expected-error {{comparison operator template cannot be defaulted}}
   template<typename T = void>
     bool operator==(const A&) const = default; // expected-error {{comparison operator template cannot be defaulted}}
+};
+
+template<class C> struct D {
+  C i;
+  friend bool operator==(const D&, D) = default; // expected-error {{must have the same type}}
+  friend bool operator>(D, const D&) = default; // expected-error {{must have the same type}}
+  friend bool operator<(const D&, const D&) = default;
+  friend bool operator<=(D, D) = default;
+
+  bool operator!=(D) const = default; // expected-error {{invalid parameter type for defaulted equality comparison operator}}
 };
 
 template<typename T> struct Dependent {
@@ -142,7 +153,7 @@ namespace P1946 {
     friend bool operator==(A &, A &); // expected-note {{would lose const qualifier}}
   };
   struct B {
-    A a; // expected-note {{no viable three-way comparison}}
+    A a; // expected-note {{no viable 'operator=='}}
     friend bool operator==(B, B) = default; // ok
     friend bool operator==(const B&, const B&) = default; // expected-warning {{deleted}} expected-note{{replace 'default'}}
   };
@@ -185,6 +196,11 @@ struct S6 {
     friend bool operator==(const S6&, const S6&) = default; // expected-error {{because it was already declared outside}}
 };
 
+struct S7 {
+  bool operator==(S7 const &) const &&;
+};
+bool S7::operator==(S7 const &) const && = default; // expected-error {{ref-qualifier '&&' is not allowed on a defaulted comparison operator}}
+
 enum e {};
 bool operator==(e, int) = default; // expected-error{{expected class or reference to a constant class}}
 
@@ -193,10 +209,10 @@ bool operator==(e *, int *) = default; // expected-error{{must have at least one
 
 namespace p2085_2 {
 template <class T> struct S6 {
-  // expected-error@+2{{found 'const int &'}}
-  // expected-error@+1{{found 'const float &'}}
   bool operator==(T const &) const;
 };
+// expected-error@+2{{found 'const int &'}}
+// expected-error@+1{{found 'const float &'}}
 template <class T> bool S6<T>::operator==(T const &) const = default;
 
 template struct S6<int>; // expected-note{{S6<int>::operator==' requested}}
@@ -226,3 +242,26 @@ void f2() {
   (void)(b == 0);
 }
 } // namespace p2085_2
+
+namespace GH61417 {
+struct A {
+  unsigned x : 1;
+  unsigned   : 0;
+  unsigned y : 1;
+
+  constexpr A() : x(0), y(0) {}
+  bool operator==(const A& rhs) const noexcept = default;
+};
+
+void f1() {
+  constexpr A a, b;
+  constexpr bool c = (a == b); // no diagnostic, we should not be comparing the
+                               // unnamed bit-field which is indeterminate
+}
+
+void f2() {
+    A a, b;
+    bool c = (a == b); // no diagnostic nor crash during codegen attempting to
+                       // access info for unnamed bit-field
+}
+}

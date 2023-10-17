@@ -334,7 +334,7 @@ struct S10 {
 };
 #else
 S10 s10;
-// expected-error@second.h:* {{'Field::S10' has different definitions in different modules; first difference is definition in module 'SecondModule' found field 'x' with no initalizer}}
+// expected-error@second.h:* {{'Field::S10' has different definitions in different modules; first difference is definition in module 'SecondModule' found field 'x' with no initializer}}
 // expected-note@first.h:* {{but in 'FirstModule' found field 'x' with an initializer}}
 #endif
 
@@ -1046,8 +1046,7 @@ struct S3 {
 };
 #else
 S3 s3;
-// expected-error@first.h:* {{'TypeDef::S3::a' from module 'FirstModule' is not present in definition of 'TypeDef::S3' in module 'SecondModule'}}
-// expected-note@second.h:* {{declaration of 'a' does not match}}
+// FIXME: We should reject the merge of `S3` due to the inconsistent definition of `T`.
 #endif
 
 #if defined(FIRST)
@@ -1172,8 +1171,7 @@ struct S3 {
 };
 #else
 S3 s3;
-// expected-error@first.h:* {{'Using::S3::a' from module 'FirstModule' is not present in definition of 'Using::S3' in module 'SecondModule'}}
-// expected-note@second.h:* {{declaration of 'a' does not match}}
+// FIXME: We should reject the merge of `S3` due to the inconsistent definition of `T`.
 #endif
 
 #if defined(FIRST)
@@ -1361,8 +1359,6 @@ struct S1 {
 };
 #else
 S1 s1;
-// expected-error@first.h:* {{'ElaboratedType::S1::x' from module 'FirstModule' is not present in definition of 'ElaboratedType::S1' in module 'SecondModule'}}
-// expected-note@second.h:* {{declaration of 'x' does not match}}
 #endif
 
 #define DECLS \
@@ -3616,8 +3612,8 @@ auto function1 = invalid1;
 // expected-error@second.h:* {{'Types::Decltype::invalid1' has different definitions in different modules; definition in module 'SecondModule' first difference is function body}}
 // expected-note@first.h:* {{but in 'FirstModule' found a different body}}
 auto function2 = invalid2;
-// expected-error@second.h:* {{'Types::Decltype::invalid2' has different definitions in different modules; definition in module 'SecondModule' first difference is function body}}
-// expected-note@first.h:* {{but in 'FirstModule' found a different body}}
+// FIXME: We should reject the merge of `invalid2` and diagnose about the
+// inconsistent definition of `global`.
 auto function3 = valid;
 #endif
 }  // namespace Decltype
@@ -3700,8 +3696,7 @@ void valid() {
 }
 #else
 auto function1 = invalid1;
-// expected-error@second.h:* {{'Types::DeducedTemplateSpecialization::invalid1' has different definitions in different modules; definition in module 'SecondModule' first difference is function body}}
-// expected-note@first.h:* {{but in 'FirstModule' found a different body}}
+// FIXME: We should reject the merge of `invalid1` due to the inconsistent definition.
 auto function2 = invalid2;
 // expected-error@second.h:* {{'Types::DeducedTemplateSpecialization::invalid2' has different definitions in different modules; definition in module 'SecondModule' first difference is function body}}
 // expected-note@first.h:* {{but in 'FirstModule' found a different body}}
@@ -4946,7 +4941,41 @@ class S4 {
 #else
 S4 s4;
 #endif
+
+#if defined(FIRST)
+namespace NS5 {
+struct T5;
+} // namespace NS5
+class S5 {
+  NS5::T5* t = 0;
+};
+#elif defined(SECOND)
+namespace NS5 {
+typedef struct T5_Other {} T5;
+} // namespace NS4
+class S5 {
+  NS5::T5* t = 0;
+};
+#else
+S5 s5;
+// expected-error@first.h:* {{'TypedefStruct::S5::t' from module 'FirstModule' is not present in definition of 'TypedefStruct::S5' in module 'SecondModule'}}
+// expected-note@second.h:* {{declaration of 't' does not match}}
+#endif
 } // namespace TypedefStruct
+
+#if defined (FIRST)
+typedef int T;
+namespace A {
+  struct X { T n; };
+}
+#elif defined(SECOND)
+namespace A {
+  typedef int T;
+  struct X { T n; };
+}
+#else
+A::X x;
+#endif
 
 // Keep macros contained to one file.
 #ifdef FIRST

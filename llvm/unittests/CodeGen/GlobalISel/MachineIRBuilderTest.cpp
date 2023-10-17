@@ -12,7 +12,7 @@
 TEST_F(AArch64GISelMITest, TestBuildConstantFConstant) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   B.buildConstant(LLT::scalar(32), 42);
   B.buildFConstant(LLT::scalar(32), 1.0);
@@ -43,7 +43,7 @@ TEST_F(AArch64GISelMITest, TestBuildConstantFConstant) {
 TEST_F(AArch64GISelMITest, TestBuildConstantFConstantDeath) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLVMContext &Ctx = MF->getFunction().getContext();
   APInt APV32(32, 12345);
@@ -75,7 +75,7 @@ TEST_F(AArch64GISelMITest, TestBuildConstantFConstantDeath) {
 TEST_F(AArch64GISelMITest, DstOpSrcOp) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   SmallVector<Register, 4> Copies;
   collectCopies(Copies, MF);
@@ -101,7 +101,7 @@ TEST_F(AArch64GISelMITest, DstOpSrcOp) {
 TEST_F(AArch64GISelMITest, BuildUnmerge) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   SmallVector<Register, 4> Copies;
   collectCopies(Copies, MF);
@@ -122,7 +122,7 @@ TEST_F(AArch64GISelMITest, BuildUnmerge) {
 TEST_F(AArch64GISelMITest, TestBuildFPInsts) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   SmallVector<Register, 4> Copies;
   collectCopies(Copies, MF);
@@ -158,21 +158,19 @@ TEST_F(AArch64GISelMITest, TestBuildFPInsts) {
 TEST_F(AArch64GISelMITest, BuildIntrinsic) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT S64 = LLT::scalar(64);
   SmallVector<Register, 4> Copies;
   collectCopies(Copies, MF);
 
   // Make sure DstOp version works. sqrt is just a placeholder intrinsic.
-  B.buildIntrinsic(Intrinsic::sqrt, {S64}, false)
-    .addUse(Copies[0]);
+  B.buildIntrinsic(Intrinsic::sqrt, {S64}).addUse(Copies[0]);
 
   // Make sure register version works
   SmallVector<Register, 1> Results;
   Results.push_back(MRI->createGenericVirtualRegister(S64));
-  B.buildIntrinsic(Intrinsic::sqrt, Results, false)
-    .addUse(Copies[1]);
+  B.buildIntrinsic(Intrinsic::sqrt, Results).addUse(Copies[1]);
 
   auto CheckStr = R"(
   ; CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY $x0
@@ -187,7 +185,7 @@ TEST_F(AArch64GISelMITest, BuildIntrinsic) {
 TEST_F(AArch64GISelMITest, BuildXor) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT S64 = LLT::scalar(64);
   LLT S128 = LLT::scalar(128);
@@ -216,7 +214,7 @@ TEST_F(AArch64GISelMITest, BuildXor) {
 TEST_F(AArch64GISelMITest, BuildBitCounts) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT S32 = LLT::scalar(32);
   SmallVector<Register, 4> Copies;
@@ -244,7 +242,7 @@ TEST_F(AArch64GISelMITest, BuildBitCounts) {
 TEST_F(AArch64GISelMITest, BuildCasts) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT S32 = LLT::scalar(32);
   SmallVector<Register, 4> Copies;
@@ -269,7 +267,7 @@ TEST_F(AArch64GISelMITest, BuildCasts) {
 TEST_F(AArch64GISelMITest, BuildMinMaxAbs) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT S64 = LLT::scalar(64);
   SmallVector<Register, 4> Copies;
@@ -297,7 +295,7 @@ TEST_F(AArch64GISelMITest, BuildMinMaxAbs) {
 TEST_F(AArch64GISelMITest, BuildAtomicRMW) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT S64 = LLT::scalar(64);
   LLT P0 = LLT::pointer(0, 64);
@@ -327,7 +325,7 @@ TEST_F(AArch64GISelMITest, BuildAtomicRMW) {
 TEST_F(AArch64GISelMITest, BuildMergeLikeInstr) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT S32 = LLT::scalar(32);
   Register RegC0 = B.buildConstant(S32, 0).getReg(0);
@@ -366,7 +364,7 @@ using MachineIRBuilderDeathTest = AArch64GISelMITest;
 TEST_F(MachineIRBuilderDeathTest, BuildMergeValues) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT S32 = LLT::scalar(32);
   Register RegC0 = B.buildConstant(S32, 0).getReg(0);
@@ -397,7 +395,7 @@ TEST_F(MachineIRBuilderDeathTest, BuildMergeValues) {
 TEST_F(AArch64GISelMITest, BuildAddoSubo) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT S1 = LLT::scalar(1);
   LLT S64 = LLT::scalar(64);
@@ -433,7 +431,7 @@ TEST_F(AArch64GISelMITest, BuildAddoSubo) {
 TEST_F(AArch64GISelMITest, BuildBitfieldExtract) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
   LLT S64 = LLT::scalar(64);
   SmallVector<Register, 4> Copies;
   collectCopies(Copies, MF);

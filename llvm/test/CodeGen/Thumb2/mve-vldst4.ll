@@ -47,8 +47,8 @@ define void @vldst4(ptr nocapture readonly %pIn, ptr nocapture %pOut, i32 %numRo
 ; CHECK-NEXT:    vmovx.f16 s8, s13
 ; CHECK-NEXT:    vins.f16 s20, s22
 ; CHECK-NEXT:    vins.f16 s16, s18
-; CHECK-NEXT:    vins.f16 s25, s6
 ; CHECK-NEXT:    vmov.f32 s2, s5
+; CHECK-NEXT:    vins.f16 s25, s6
 ; CHECK-NEXT:    vmov.f32 s3, s17
 ; CHECK-NEXT:    vins.f16 s0, s15
 ; CHECK-NEXT:    vmovx.f16 s9, s21

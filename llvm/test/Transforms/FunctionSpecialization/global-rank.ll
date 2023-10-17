@@ -1,4 +1,4 @@
-; RUN: opt -S --passes="ipsccp<func-spec>" -func-specialization-max-clones=1 < %s | FileCheck %s
+; RUN: opt -S --passes="ipsccp<func-spec>" -funcspec-max-clones=1 < %s | FileCheck %s
 define internal i32 @f(i32 noundef %x, ptr nocapture noundef readonly %p, ptr nocapture noundef readonly %q) noinline {
 entry:
   %call = tail call i32 %p(i32 noundef %x)
@@ -47,5 +47,5 @@ declare i32 @qq(i32 noundef)
 ; `f` to be chosen, whereas the old algorithm would choose
 ; one specialsation of `f` and one of `g`.
 
-; CHECK-DAG: define internal i32 @f.1
-; CHECK-DAG: define internal i32 @f.2
+; CHECK-DAG: define internal i32 @f.specialized.1
+; CHECK-DAG: define internal i32 @f.specialized.2

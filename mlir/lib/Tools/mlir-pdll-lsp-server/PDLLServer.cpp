@@ -8,9 +8,6 @@
 
 #include "PDLLServer.h"
 
-#include "../lsp-server-support/CompilationDatabase.h"
-#include "../lsp-server-support/Logging.h"
-#include "../lsp-server-support/SourceMgrUtils.h"
 #include "Protocol.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Tools/PDLL/AST/Context.h"
@@ -24,6 +21,9 @@
 #include "mlir/Tools/PDLL/ODS/Operation.h"
 #include "mlir/Tools/PDLL/Parser/CodeComplete.h"
 #include "mlir/Tools/PDLL/Parser/Parser.h"
+#include "mlir/Tools/lsp-server-support/CompilationDatabase.h"
+#include "mlir/Tools/lsp-server-support/Logging.h"
+#include "mlir/Tools/lsp-server-support/SourceMgrUtils.h"
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
@@ -136,7 +136,7 @@ struct PDLIndexSymbol {
 
   /// Return the location of the definition of this symbol.
   SMRange getDefLoc() const {
-    if (const ast::Decl *decl = definition.dyn_cast<const ast::Decl *>()) {
+    if (const ast::Decl *decl = llvm::dyn_cast_if_present<const ast::Decl *>(definition)) {
       const ast::Name *declName = decl->getName();
       return declName ? declName->getLoc() : decl->getLoc();
     }
@@ -465,7 +465,7 @@ PDLDocument::findHover(const lsp::URIForFile &uri,
     return std::nullopt;
 
   // Add hover for operation names.
-  if (const auto *op = symbol->definition.dyn_cast<const ods::Operation *>())
+  if (const auto *op = llvm::dyn_cast_if_present<const ods::Operation *>(symbol->definition))
     return buildHoverForOpName(op, hoverRange);
   const auto *decl = symbol->definition.get<const ast::Decl *>();
   return findHover(decl, hoverRange);

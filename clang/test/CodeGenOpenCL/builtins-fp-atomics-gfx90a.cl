@@ -115,3 +115,9 @@ void test_ds_addf_local_f32(__local float *addr, float x){
   float *rtn;
   *rtn = __builtin_amdgcn_ds_atomic_fadd_f32(addr, x);
 }
+
+// CHECK-LABEL: @test_global_add_f32
+// CHECK: call float @llvm.amdgcn.global.atomic.fadd.f32.p1.f32(ptr addrspace(1) %{{.*}}, float %{{.*}})
+void test_global_add_f32(float *rtn, global float *addr, float x) {
+  *rtn = __builtin_amdgcn_global_atomic_fadd_f32(addr, x);
+}

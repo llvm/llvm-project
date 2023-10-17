@@ -28,7 +28,7 @@ using namespace mlir;
 
 static constexpr unsigned maxFreeID = 1 << 20;
 
-/// Returns an unsed symbol in `module` for `oldSymbolName` by trying numeric
+/// Returns an unused symbol in `module` for `oldSymbolName` by trying numeric
 /// suffix in `lastUsedID`.
 static StringAttr renameSymbol(StringRef oldSymName, unsigned &lastUsedID,
                                spirv::ModuleOp module) {

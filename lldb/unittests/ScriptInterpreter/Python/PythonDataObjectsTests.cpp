@@ -19,6 +19,8 @@
 
 #include "PythonTestSuite.h"
 
+#include <variant>
+
 using namespace lldb_private;
 using namespace lldb_private::python;
 using llvm::Error;
@@ -266,10 +268,23 @@ TEST_F(PythonDataObjectsTest, TestPythonStringToStr) {
 
 TEST_F(PythonDataObjectsTest, TestPythonIntegerToStr) {}
 
-TEST_F(PythonDataObjectsTest, TestPythonIntegerToStructuredInteger) {
+TEST_F(PythonDataObjectsTest, TestPythonIntegerToStructuredUnsignedInteger) {
   PythonInteger integer(7);
   auto int_sp = integer.CreateStructuredInteger();
-  EXPECT_EQ(7U, int_sp->GetValue());
+  EXPECT_TRUE(
+      std::holds_alternative<StructuredData::UnsignedIntegerSP>(int_sp));
+  StructuredData::UnsignedIntegerSP uint_sp =
+      std::get<StructuredData::UnsignedIntegerSP>(int_sp);
+  EXPECT_EQ(7U, uint_sp->GetValue());
+}
+
+TEST_F(PythonDataObjectsTest, TestPythonIntegerToStructuredSignedInteger) {
+  PythonInteger integer(-42);
+  auto int_sp = integer.CreateStructuredInteger();
+  EXPECT_TRUE(std::holds_alternative<StructuredData::SignedIntegerSP>(int_sp));
+  StructuredData::SignedIntegerSP sint_sp =
+      std::get<StructuredData::SignedIntegerSP>(int_sp);
+  EXPECT_EQ(-42, sint_sp->GetValue());
 }
 
 TEST_F(PythonDataObjectsTest, TestPythonStringToStructuredString) {
@@ -358,7 +373,7 @@ TEST_F(PythonDataObjectsTest, TestPythonListToStructuredList) {
   EXPECT_EQ(lldb::eStructuredDataTypeString,
             array_sp->GetItemAtIndex(1)->GetType());
 
-  auto int_sp = array_sp->GetItemAtIndex(0)->GetAsInteger();
+  auto int_sp = array_sp->GetItemAtIndex(0)->GetAsUnsignedInteger();
   auto string_sp = array_sp->GetItemAtIndex(1)->GetAsString();
 
   EXPECT_EQ(long_value0, long(int_sp->GetValue()));
@@ -522,7 +537,7 @@ TEST_F(PythonDataObjectsTest, TestPythonDictionaryToStructuredDictionary) {
   EXPECT_TRUE(dict_sp->HasKey(string_key1));
 
   auto string_sp = dict_sp->GetValueForKey(string_key0)->GetAsString();
-  auto int_sp = dict_sp->GetValueForKey(string_key1)->GetAsInteger();
+  auto int_sp = dict_sp->GetValueForKey(string_key1)->GetAsUnsignedInteger();
 
   EXPECT_EQ(string_value0, string_sp->GetValue());
   EXPECT_EQ(int_value1, long(int_sp->GetValue()));
@@ -592,7 +607,7 @@ TEST_F(PythonDataObjectsTest, TestExtractingUInt64ThroughStructuredData) {
           structured_dict_ptr->GetValueForKey(key_name);
       EXPECT_TRUE((bool)structured_addr_value_sp);
       const uint64_t extracted_value =
-          structured_addr_value_sp->GetIntegerValue(123);
+          structured_addr_value_sp->GetUnsignedIntegerValue(123);
       EXPECT_TRUE(extracted_value == value);
     }
   }
@@ -802,10 +817,13 @@ def main():
 
   PythonScript lol(script2);
 
-  EXPECT_THAT_EXPECTED(lol(),
-                       llvm::Failed<PythonException>(testing::Property(
-                           &PythonException::ReadBacktrace,
-                           testing::ContainsRegex("unprintable MyError"))));
+  EXPECT_THAT_EXPECTED(
+      lol(),
+      llvm::Failed<PythonException>(testing::Property(
+          &PythonException::ReadBacktrace,
+          testing::AnyOf(
+              testing::ContainsRegex("MyError: <exception str\\(\\) failed>"),
+              testing::ContainsRegex("unprintable MyError")))));
 
 #endif
 }

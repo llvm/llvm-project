@@ -22,9 +22,9 @@ define i64 @test2(i64 %a) nounwind {
 ; Check that we hoist immediates with large values.
 define i64 @test3(i64 %a) nounwind {
 ; CHECK-LABEL: test3
-; CHECK: %const = bitcast i64 32767 to i64
-  %1 = mul i64 %a, 32767
-  %2 = add i64 %1, 32767
+; CHECK: %const = bitcast i64 32766 to i64
+  %1 = mul i64 %a, 32766
+  %2 = add i64 %1, 32766
   ret i64 %2
 }
 
@@ -122,3 +122,31 @@ define i64 @test13(i64 %a) nounwind "target-features"="+zbs" {
   %2 = and i64 %1, -281474976710657 ; ~(1 << 48)
   ret i64 %2
 }
+
+; Check that we don't hoist mul by a power of 2.
+define i64 @test14(i64 %a) nounwind {
+; CHECK-LABEL: test14
+; CHECK: mul i64 %a, 2048
+  %1 = mul i64 %a, 2048
+  %2 = mul i64 %1, 2048
+  ret i64 %2
+}
+
+; Check that we don't hoist mul by one less than a power of 2.
+define i64 @test15(i64 %a) nounwind {
+; CHECK-LABEL: test15
+; CHECK: mul i64 %a, 65535
+  %1 = mul i64 %a, 65535
+  %2 = mul i64 %1, 65535
+  ret i64 %2
+}
+
+; Check that we don't hoist mul by one more than a power of 2.
+define i64 @test16(i64 %a) nounwind {
+; CHECK-LABEL: test16
+; CHECK: mul i64 %a, 65537
+  %1 = mul i64 %a, 65537
+  %2 = mul i64 %1, 65537
+  ret i64 %2
+}
+

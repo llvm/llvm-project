@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_20 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_20 | %ptxas-verify %}
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 declare i1 @llvm.nvvm.isspacep.const(ptr) readnone noinline
 declare i1 @llvm.nvvm.isspacep.global(ptr) readnone noinline

@@ -21,9 +21,9 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/Support/CSKYAttributes.h"
-#include "llvm/Support/CSKYTargetParser.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/TargetParser/CSKYTargetParser.h"
 
 using namespace llvm;
 

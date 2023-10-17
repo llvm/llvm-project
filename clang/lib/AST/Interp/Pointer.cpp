@@ -7,9 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "Pointer.h"
+#include "Boolean.h"
+#include "Context.h"
+#include "Floating.h"
 #include "Function.h"
+#include "Integral.h"
 #include "InterpBlock.h"
 #include "PrimType.h"
+#include "Record.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -24,7 +29,7 @@ Pointer::Pointer(const Pointer &P) : Pointer(P.Pointee, P.Base, P.Offset) {}
 Pointer::Pointer(Pointer &&P)
     : Pointee(P.Pointee), Base(P.Base), Offset(P.Offset) {
   if (Pointee)
-    Pointee->movePointer(&P, this);
+    Pointee->replacePointer(&P, this);
 }
 
 Pointer::Pointer(Block *Pointee, unsigned Base, unsigned Offset)
@@ -69,7 +74,7 @@ void Pointer::operator=(Pointer &&P) {
 
   Pointee = P.Pointee;
   if (Pointee)
-    Pointee->movePointer(&P, this);
+    Pointee->replacePointer(&P, this);
 
   if (Old)
     Old->cleanup();
@@ -103,6 +108,10 @@ APValue Pointer::toAPValue() const {
     if (isUnknownSizeArray()) {
       IsOnePastEnd = false;
       Offset = CharUnits::Zero();
+    } else if (Desc->asExpr()) {
+      // Pointer pointing to a an expression.
+      IsOnePastEnd = false;
+      Offset = CharUnits::Zero();
     } else {
       // TODO: compute the offset into the object.
       Offset = CharUnits::Zero();
@@ -118,8 +127,8 @@ APValue Pointer::toAPValue() const {
           bool IsVirtual = false;
 
           // Create a path entry for the field.
-          Descriptor *Desc = Ptr.getFieldDesc();
-          if (auto *BaseOrMember = Desc->asDecl()) {
+          const Descriptor *Desc = Ptr.getFieldDesc();
+          if (const auto *BaseOrMember = Desc->asDecl()) {
             Path.push_back(APValue::LValuePathEntry({BaseOrMember, IsVirtual}));
             Ptr = Ptr.getBase();
             continue;
@@ -141,9 +150,16 @@ APValue Pointer::toAPValue() const {
   return APValue(Base, Offset, Path, IsOnePastEnd, IsNullPtr);
 }
 
+std::string Pointer::toDiagnosticString(const ASTContext &Ctx) const {
+  if (!Pointee)
+    return "nullptr";
+
+  return toAPValue().getAsString(Ctx, getType());
+}
+
 bool Pointer::isInitialized() const {
   assert(Pointee && "Cannot check if null pointer was initialized");
-  Descriptor *Desc = getFieldDesc();
+  const Descriptor *Desc = getFieldDesc();
   assert(Desc);
   if (Desc->isPrimitiveArray()) {
     if (isStatic() && Base == 0)
@@ -155,39 +171,38 @@ bool Pointer::isInitialized() const {
     if (Map == (InitMap *)-1)
       return true;
     return Map->isInitialized(getIndex());
-  } else {
-    // Field has its bit in an inline descriptor.
-    return Base == 0 || getInlineDesc()->IsInitialized;
   }
+
+  // Field has its bit in an inline descriptor.
+  return Base == 0 || getInlineDesc()->IsInitialized;
 }
 
 void Pointer::initialize() const {
   assert(Pointee && "Cannot initialize null pointer");
-  Descriptor *Desc = getFieldDesc();
+  const Descriptor *Desc = getFieldDesc();
 
   assert(Desc);
-  if (Desc->isArray()) {
-    if (Desc->isPrimitiveArray()) {
-      // Primitive global arrays don't have an initmap.
-      if (isStatic() && Base == 0)
-        return;
+  if (Desc->isPrimitiveArray()) {
+    // Primitive global arrays don't have an initmap.
+    if (isStatic() && Base == 0)
+      return;
 
-      // Primitive array initializer.
-      InitMap *&Map = getInitMap();
-      if (Map == (InitMap *)-1)
-        return;
-      if (Map == nullptr)
-        Map = InitMap::allocate(Desc->getNumElems());
-      if (Map->initialize(getIndex())) {
-        free(Map);
-        Map = (InitMap *)-1;
-      }
+    // Primitive array initializer.
+    InitMap *&Map = getInitMap();
+    if (Map == (InitMap *)-1)
+      return;
+    if (Map == nullptr)
+      Map = InitMap::allocate(Desc->getNumElems());
+    if (Map->initialize(getIndex())) {
+      free(Map);
+      Map = (InitMap *)-1;
     }
-  } else {
-    // Field has its bit in an inline descriptor.
-    assert(Base != 0 && "Only composite fields can be initialised");
-    getInlineDesc()->IsInitialized = true;
+    return;
   }
+
+  // Field has its bit in an inline descriptor.
+  assert(Base != 0 && "Only composite fields can be initialised");
+  getInlineDesc()->IsInitialized = true;
 }
 
 void Pointer::activate() const {
@@ -206,4 +221,35 @@ bool Pointer::hasSameBase(const Pointer &A, const Pointer &B) {
 
 bool Pointer::hasSameArray(const Pointer &A, const Pointer &B) {
   return hasSameBase(A, B) && A.Base == B.Base && A.getFieldDesc()->IsArray;
+}
+
+APValue Pointer::toRValue(const Context &Ctx) const {
+  // Primitives.
+  if (getFieldDesc()->isPrimitive()) {
+    PrimType PT = *Ctx.classify(getType());
+    TYPE_SWITCH(PT, return deref<T>().toAPValue());
+    llvm_unreachable("Unhandled PrimType?");
+  }
+
+  APValue Result;
+  // Records.
+  if (getFieldDesc()->isRecord()) {
+    const Record *R = getRecord();
+    Result =
+        APValue(APValue::UninitStruct(), R->getNumBases(), R->getNumFields());
+
+    for (unsigned I = 0; I != R->getNumFields(); ++I) {
+      const Pointer &FieldPtr = this->atField(R->getField(I)->Offset);
+      Result.getStructField(I) = FieldPtr.toRValue(Ctx);
+    }
+
+    for (unsigned I = 0; I != R->getNumBases(); ++I) {
+      const Pointer &BasePtr = this->atField(R->getBase(I)->Offset);
+      Result.getStructBase(I) = BasePtr.toRValue(Ctx);
+    }
+  }
+
+  // TODO: Arrays
+
+  return Result;
 }

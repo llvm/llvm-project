@@ -1713,8 +1713,8 @@ public:
 /// A helper class for performing the null-initialization of a return
 /// value.
 struct NullReturnState {
-  llvm::BasicBlock *NullBB;
-  NullReturnState() : NullBB(nullptr) {}
+  llvm::BasicBlock *NullBB = nullptr;
+  NullReturnState() = default;
 
   /// Perform a null-check of the given receiver.
   void init(CodeGenFunction &CGF, llvm::Value *receiver) {
@@ -1958,9 +1958,8 @@ llvm::Constant *CGObjCMac::getNSConstantStringClassRef() {
 
   llvm::Type *PTy = llvm::ArrayType::get(CGM.IntTy, 0);
   auto GV = CGM.CreateRuntimeVariable(PTy, str);
-  auto V = llvm::ConstantExpr::getBitCast(GV, CGM.IntTy->getPointerTo());
-  ConstantStringClassRef = V;
-  return V;
+  ConstantStringClassRef = GV;
+  return GV;
 }
 
 llvm::Constant *CGObjCNonFragileABIMac::getNSConstantStringClassRef() {
@@ -1972,12 +1971,8 @@ llvm::Constant *CGObjCNonFragileABIMac::getNSConstantStringClassRef() {
     StringClass.empty() ? "OBJC_CLASS_$_NSConstantString"
                         : "OBJC_CLASS_$_" + StringClass;
   llvm::Constant *GV = GetClassGlobal(str, NotForDefinition);
-
-  // Make sure the result is of the correct type.
-  auto V = llvm::ConstantExpr::getBitCast(GV, CGM.IntTy->getPointerTo());
-
-  ConstantStringClassRef = V;
-  return V;
+  ConstantStringClassRef = GV;
+  return GV;
 }
 
 ConstantAddress
@@ -1996,11 +1991,8 @@ CGObjCCommonMac::GenerateConstantNSString(const StringLiteral *Literal) {
   // If we don't already have it, construct the type for a constant NSString.
   if (!NSConstantStringType) {
     NSConstantStringType =
-      llvm::StructType::create({
-        CGM.Int32Ty->getPointerTo(),
-        CGM.Int8PtrTy,
-        CGM.IntTy
-      }, "struct.__builtin_NSString");
+        llvm::StructType::create({CGM.UnqualPtrTy, CGM.Int8PtrTy, CGM.IntTy},
+                                 "struct.__builtin_NSString");
   }
 
   ConstantInitBuilder Builder(CGM);
@@ -3329,7 +3321,7 @@ CGObjCCommonMac::EmitProtocolMethodTypes(Twine Name,
   struct _objc_method_list *instance_methods;
   struct _objc_method_list *class_methods;
   struct _objc_protocol_list *protocols;
-  uint32_t size; // <rdar://4585769>
+  uint32_t size; // sizeof(struct _objc_category)
   struct _objc_property_list *instance_properties;
   struct _objc_property_list *class_properties;
   };
@@ -3809,15 +3801,9 @@ llvm::Constant *CGObjCMac::EmitIvarList(const ObjCImplementationDecl *ID,
   ivarList.fillPlaceholderWithInt(countSlot, ObjCTypes.IntTy, count);
 
   llvm::GlobalVariable *GV;
-  if (ForClass)
-    GV =
-        CreateMetadataVar("OBJC_CLASS_VARIABLES_" + ID->getName(), ivarList,
-                          "__OBJC,__class_vars,regular,no_dead_strip",
-                          CGM.getPointerAlign(), true);
-  else
-    GV = CreateMetadataVar("OBJC_INSTANCE_VARIABLES_" + ID->getName(), ivarList,
-                           "__OBJC,__instance_vars,regular,no_dead_strip",
-                           CGM.getPointerAlign(), true);
+  GV = CreateMetadataVar("OBJC_INSTANCE_VARIABLES_" + ID->getName(), ivarList,
+                         "__OBJC,__instance_vars,regular,no_dead_strip",
+                         CGM.getPointerAlign(), true);
   return llvm::ConstantExpr::getBitCast(GV, ObjCTypes.IvarListPtrTy);
 }
 
@@ -4492,14 +4478,10 @@ llvm::FunctionType *FragileHazards::GetAsmFnType() {
   want to implement correct ObjC/C++ exception interactions for the
   fragile ABI.
 
-  Note that for this use of setjmp/longjmp to be correct, we may need
-  to mark some local variables volatile: if a non-volatile local
-  variable is modified between the setjmp and the longjmp, it has
-  indeterminate value.  For the purposes of LLVM IR, it may be
-  sufficient to make loads and stores within the @try (to variables
-  declared outside the @try) volatile.  This is necessary for
-  optimized correctness, but is not currently being done; this is
-  being tracked as rdar://problem/8160285
+  Note that for this use of setjmp/longjmp to be correct in the presence of
+  optimization, we use inline assembly on the set of local variables to force
+  flushing locals to memory immediately before any protected calls and to
+  inhibit optimizing locals across the setjmp->catch edge.
 
   The basic framework for a @try-catch-finally is as follows:
   {
@@ -5023,11 +5005,8 @@ void CGObjCMac::EmitObjCStrongCastAssign(CodeGen::CodeGenFunction &CGF,
 }
 
 void CGObjCMac::EmitGCMemmoveCollectable(CodeGen::CodeGenFunction &CGF,
-                                         Address DestPtr,
-                                         Address SrcPtr,
+                                         Address DestPtr, Address SrcPtr,
                                          llvm::Value *size) {
-  SrcPtr = CGF.Builder.CreateElementBitCast(SrcPtr, CGF.Int8Ty);
-  DestPtr = CGF.Builder.CreateElementBitCast(DestPtr, CGF.Int8Ty);
   llvm::Value *args[] = { DestPtr.getPointer(), SrcPtr.getPointer(), size };
   CGF.EmitNounwindRuntimeCall(ObjCTypes.GcMemmoveCollectableFn(), args);
 }
@@ -5101,7 +5080,8 @@ enum ImageInfoFlags {
   eImageInfo_OptimizedByDyld     = (1 << 3), // This flag is set by the dyld shared cache.
 
   // A flag indicating that the module has no instances of a @synthesize of a
-  // superclass variable. <rdar://problem/6803242>
+  // superclass variable. This flag used to be consumed by the runtime to work
+  // around miscompile by gcc.
   eImageInfo_CorrectedSynthesize = (1 << 4), // This flag is no longer set by clang.
   eImageInfo_ImageIsSimulated    = (1 << 5),
   eImageInfo_ClassProperties     = (1 << 6)
@@ -5293,12 +5273,7 @@ llvm::Constant *CGObjCCommonMac::GetClassName(StringRef RuntimeName) {
 }
 
 llvm::Function *CGObjCCommonMac::GetMethodDefinition(const ObjCMethodDecl *MD) {
-  llvm::DenseMap<const ObjCMethodDecl*, llvm::Function*>::iterator
-      I = MethodDefinitions.find(MD);
-  if (I != MethodDefinitions.end())
-    return I->second;
-
-  return nullptr;
+  return MethodDefinitions.lookup(MD);
 }
 
 /// GetIvarLayoutName - Returns a unique constant for the given
@@ -7229,7 +7204,7 @@ CGObjCNonFragileABIMac::EmitIvarOffset(CodeGen::CodeGenFunction &CGF,
                                       CGF.getSizeAlign(), "ivar");
     if (IsIvarOffsetKnownIdempotent(CGF, Ivar))
       cast<llvm::LoadInst>(IvarOffsetValue)
-          ->setMetadata(CGM.getModule().getMDKindID("invariant.load"),
+          ->setMetadata(llvm::LLVMContext::MD_invariant_load,
                         llvm::MDNode::get(VMContext, std::nullopt));
   }
 
@@ -7431,7 +7406,7 @@ CGObjCNonFragileABIMac::GetClassGlobal(StringRef Name,
       GV->eraseFromParent();
     }
     GV = NewGV;
-    CGM.getModule().getGlobalList().push_back(GV);
+    CGM.getModule().insertGlobalVariable(GV);
   }
 
   assert(GV->getLinkage() == L);
@@ -7629,7 +7604,7 @@ llvm::Value *CGObjCNonFragileABIMac::EmitSelector(CodeGenFunction &CGF,
   Address Addr = EmitSelectorAddr(Sel);
 
   llvm::LoadInst* LI = CGF.Builder.CreateLoad(Addr);
-  LI->setMetadata(CGM.getModule().getMDKindID("invariant.load"),
+  LI->setMetadata(llvm::LLVMContext::MD_invariant_load,
                   llvm::MDNode::get(VMContext, std::nullopt));
   return LI;
 }
@@ -7701,12 +7676,8 @@ void CGObjCNonFragileABIMac::EmitObjCStrongCastAssign(
 }
 
 void CGObjCNonFragileABIMac::EmitGCMemmoveCollectable(
-  CodeGen::CodeGenFunction &CGF,
-  Address DestPtr,
-  Address SrcPtr,
-  llvm::Value *Size) {
-  SrcPtr = CGF.Builder.CreateElementBitCast(SrcPtr, CGF.Int8Ty);
-  DestPtr = CGF.Builder.CreateElementBitCast(DestPtr, CGF.Int8Ty);
+    CodeGen::CodeGenFunction &CGF, Address DestPtr, Address SrcPtr,
+    llvm::Value *Size) {
   llvm::Value *args[] = { DestPtr.getPointer(), SrcPtr.getPointer(), Size };
   CGF.EmitNounwindRuntimeCall(ObjCTypes.GcMemmoveCollectableFn(), args);
 }

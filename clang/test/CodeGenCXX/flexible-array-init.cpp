@@ -23,3 +23,14 @@ void g() {
 struct B { int x; char y; char z[]; };
 B e = {f(), f(), f(), f()}; // expected-error {{cannot compile this flexible array initializer yet}}
 #endif
+
+namespace zero_initializer {
+A a0{0, 0}, a1{0, {0, 0}};
+// CHECK: @_ZN16zero_initializer2a0E = global { i32, [1 x i32] } zeroinitializer,
+// CHECK: @_ZN16zero_initializer2a1E = global { i32, [2 x i32] } zeroinitializer,
+
+struct S { int x[]; };
+
+S s{0};
+// CHECK: @_ZN16zero_initializer1sE = global { [1 x i32] } zeroinitializer,
+}

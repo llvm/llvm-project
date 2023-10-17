@@ -12,6 +12,7 @@
 #include "InputElement.h"
 #include "OutputSegment.h"
 #include "SymbolTable.h"
+#include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Reproduce.h"
 #include "llvm/Object/Binary.h"
@@ -192,6 +193,7 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone,
   case R_WASM_TYPE_INDEX_LEB:
     return typeMap[reloc.Index];
   case R_WASM_FUNCTION_INDEX_LEB:
+  case R_WASM_FUNCTION_INDEX_I32:
     return getFunctionSymbol(reloc.Index)->getFunctionIndex();
   case R_WASM_GLOBAL_INDEX_LEB:
   case R_WASM_GLOBAL_INDEX_I32:
@@ -441,7 +443,7 @@ void ObjFile::parse(bool ignoreComdats) {
   // called directly (i.e. only address taken) don't have to match the defined
   // function's signature.  We cannot do this for directly called functions
   // because those signatures are checked at validation times.
-  // See https://bugs.llvm.org/show_bug.cgi?id=40412
+  // See https://github.com/llvm/llvm-project/issues/39758
   std::vector<bool> isCalledDirectly(wasmObj->getNumberOfSymbols(), false);
   for (const SectionRef &sec : wasmObj->sections()) {
     const WasmSection &section = wasmObj->getWasmSection(sec);
@@ -486,7 +488,7 @@ void ObjFile::parse(bool ignoreComdats) {
     // relied on the naming convention.  To maintain compat with such objects
     // we still imply the TLS flag based on the name of the segment.
     if (!seg->isTLS() &&
-        (seg->name.startswith(".tdata") || seg->name.startswith(".tbss")))
+        (seg->name.starts_with(".tdata") || seg->name.starts_with(".tbss")))
       seg->flags |= WASM_SEG_FLAG_TLS;
     segments.emplace_back(seg);
   }
@@ -678,6 +680,52 @@ Symbol *ObjFile::createUndefined(const WasmSymbol &sym, bool isCalledDirectly) {
   llvm_unreachable("unknown symbol kind");
 }
 
+
+StringRef strip(StringRef s) {
+  while (s.starts_with(" ")) {
+    s = s.drop_front();
+  }
+  while (s.ends_with(" ")) {
+    s = s.drop_back();
+  }
+  return s;
+}
+
+void StubFile::parse() {
+  bool first = true;
+
+  SmallVector<StringRef> lines;
+  mb.getBuffer().split(lines, '\n');
+  for (StringRef line : lines) {
+    line = line.trim();
+
+    // File must begin with #STUB
+    if (first) {
+      assert(line == "#STUB");
+      first = false;
+    }
+
+    // Lines starting with # are considered comments
+    if (line.starts_with("#"))
+      continue;
+
+    StringRef sym;
+    StringRef rest;
+    std::tie(sym, rest) = line.split(':');
+    sym = strip(sym);
+    rest = strip(rest);
+
+    symbolDependencies[sym] = {};
+
+    while (rest.size()) {
+      StringRef dep;
+      std::tie(dep, rest) = rest.split(',');
+      dep = strip(dep);
+      symbolDependencies[sym].push_back(dep);
+    }
+  }
+}
+
 void ArchiveFile::parse() {
   // Parse a MemoryBufferRef as an archive file.
   LLVM_DEBUG(dbgs() << "Parsing library: " << toString(this) << "\n");
@@ -712,7 +760,7 @@ void ArchiveFile::addMember(const Archive::Symbol *sym) {
                 sym->getName());
 
   InputFile *obj = createObjectFile(mb, getName(), c.getChildOffset());
-  symtab->addFile(obj);
+  symtab->addFile(obj, sym->getName());
 }
 
 static uint8_t mapVisibility(GlobalValue::VisibilityTypes gvVisibility) {
@@ -778,9 +826,9 @@ BitcodeFile::BitcodeFile(MemoryBufferRef m, StringRef archiveName,
 
 bool BitcodeFile::doneLTO = false;
 
-void BitcodeFile::parse() {
+void BitcodeFile::parse(StringRef symName) {
   if (doneLTO) {
-    error(toString(this) + ": attempt to add bitcode file after LTO.");
+    error(toString(this) + ": attempt to add bitcode file after LTO (" + symName + ")");
     return;
   }
 
@@ -791,7 +839,8 @@ void BitcodeFile::parse() {
   }
   checkArch(t.getArch());
   std::vector<bool> keptComdats;
-  // TODO Support nodeduplicate https://bugs.llvm.org/show_bug.cgi?id=50531
+  // TODO Support nodeduplicate
+  // https://github.com/llvm/llvm-project/issues/49875
   for (std::pair<StringRef, Comdat::SelectionKind> s : obj->getComdatTable())
     keptComdats.push_back(symtab->addComdat(s.first));
 

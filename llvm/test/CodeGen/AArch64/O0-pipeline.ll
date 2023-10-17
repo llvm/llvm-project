@@ -26,9 +26,12 @@
 ; CHECK-NEXT:       Expand vector predication intrinsics
 ; CHECK-NEXT:       Scalarize Masked Memory Intrinsics
 ; CHECK-NEXT:       Expand reduction intrinsics
+; CHECK-NEXT:     AArch64 Globals Tagging
+; CHECK-NEXT:     FunctionPass Manager
 ; CHECK-NEXT:       AArch64 Stack Tagging
 ; CHECK-NEXT:       SME ABI Pass
 ; CHECK-NEXT:       Exception handling preparation
+; CHECK-NEXT:       Prepare callbr
 ; CHECK-NEXT:       Safe Stack instrumentation pass
 ; CHECK-NEXT:       Insert stack protectors
 ; CHECK-NEXT:       Module Verifier
@@ -36,11 +39,12 @@
 ; CHECK-NEXT:       IRTranslator
 ; CHECK-NEXT:       Analysis for ComputingKnownBits
 ; CHECK-NEXT:       AArch64O0PreLegalizerCombiner
+; CHECK-NEXT:       Localizer
 ; CHECK-NEXT:       Analysis containing CSE Info
+; CHECK-NEXT:       Analysis for ComputingKnownBits
 ; CHECK-NEXT:       Legalizer
 ; CHECK-NEXT:       AArch64PostLegalizerLowering
 ; CHECK-NEXT:       RegBankSelect
-; CHECK-NEXT:       Localizer
 ; CHECK-NEXT:       Analysis for ComputingKnownBits
 ; CHECK-NEXT:       InstructionSelect
 ; CHECK-NEXT:       ResetMachineFunction
@@ -67,12 +71,13 @@
 ; CHECK-NEXT:       Insert XRay ops
 ; CHECK-NEXT:       Implement the 'patchable-function' attribute
 ; CHECK-NEXT:       Workaround A53 erratum 835769 pass
-; CHECK-NEXT:       AArch64 Branch Targets
-; CHECK-NEXT:       Branch relaxation pass
 ; CHECK-NEXT:       Contiguously Lay Out Funclets
 ; CHECK-NEXT:       StackMap Liveness Analysis
 ; CHECK-NEXT:       Live DEBUG_VALUE analysis
 ; CHECK-NEXT:       Machine Sanitizer Binary Metadata
+; CHECK-NEXT:       AArch64 Pointer Authentication
+; CHECK-NEXT:       AArch64 Branch Targets
+; CHECK-NEXT:       Branch relaxation pass
 ; CHECK-NEXT:       Insert CFI remember/restore state instructions
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine Optimization Remark Emitter

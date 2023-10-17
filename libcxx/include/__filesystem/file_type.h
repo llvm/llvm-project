@@ -23,7 +23,7 @@ _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
 // On Windows, the library never identifies files as block, character, fifo
 // or socket.
-enum class _LIBCPP_ENUM_VIS file_type : signed char {
+enum class file_type : signed char {
   none = 0,
   not_found = -1,
   regular = 1,

@@ -94,8 +94,30 @@ struct CoroMachinery {
   Value coroHandle; // coroutine handle (!async.coro.getHandle value)
   Block *entry;     // coroutine entry block
   std::optional<Block *> setError; // set returned values to error state
-  Block *cleanup;   // coroutine cleanup block
-  Block *suspend;   // coroutine suspension block
+  Block *cleanup;                  // coroutine cleanup block
+
+  // Coroutine cleanup block for destroy after the coroutine is resumed,
+  //   e.g. async.coro.suspend state, [suspend], [resume], [destroy]
+  //
+  // This cleanup block is a duplicate of the cleanup block followed by the
+  // resume block. The purpose of having a duplicate cleanup block for destroy
+  // is to make the CFG clear so that the control flow analysis won't confuse.
+  //
+  // The overall structure of the lowered CFG can be the following,
+  //
+  //     Entry (calling async.coro.suspend)
+  //       |                \
+  //     Resume           Destroy (duplicate of Cleanup)
+  //       |                 |
+  //     Cleanup             |
+  //       |                 /
+  //      End (ends the corontine)
+  //
+  // If there is resume-specific cleanup logic, it can go into the Cleanup
+  // block but not the destroy block. Otherwise, it can fail block dominance
+  // check.
+  Block *cleanupForDestroy;
+  Block *suspend; // coroutine suspension block
 };
 } // namespace
 
@@ -161,16 +183,15 @@ static CoroMachinery setupCoroMachinery(func::FuncOp func) {
 
   // We treat TokenType as state update marker to represent side-effects of
   // async computations
-  bool isStateful = func.getCallableResults().front().isa<TokenType>();
+  bool isStateful = isa<TokenType>(func.getResultTypes().front());
 
   std::optional<Value> retToken;
   if (isStateful)
     retToken.emplace(builder.create<RuntimeCreateOp>(TokenType::get(ctx)));
 
   llvm::SmallVector<Value, 4> retValues;
-  ArrayRef<Type> resValueTypes = isStateful
-                                     ? func.getCallableResults().drop_front()
-                                     : func.getCallableResults();
+  ArrayRef<Type> resValueTypes =
+      isStateful ? func.getResultTypes().drop_front() : func.getResultTypes();
   for (auto resType : resValueTypes)
     retValues.emplace_back(
         builder.create<RuntimeCreateOp>(resType).getResult());
@@ -184,16 +205,21 @@ static CoroMachinery setupCoroMachinery(func::FuncOp func) {
   builder.create<cf::BranchOp>(originalEntryBlock);
 
   Block *cleanupBlock = func.addBlock();
+  Block *cleanupBlockForDestroy = func.addBlock();
   Block *suspendBlock = func.addBlock();
 
   // ------------------------------------------------------------------------ //
-  // Coroutine cleanup block: deallocate coroutine frame, free the memory.
+  // Coroutine cleanup blocks: deallocate coroutine frame, free the memory.
   // ------------------------------------------------------------------------ //
-  builder.setInsertionPointToStart(cleanupBlock);
-  builder.create<CoroFreeOp>(coroIdOp.getId(), coroHdlOp.getHandle());
+  auto buildCleanupBlock = [&](Block *cb) {
+    builder.setInsertionPointToStart(cb);
+    builder.create<CoroFreeOp>(coroIdOp.getId(), coroHdlOp.getHandle());
 
-  // Branch into the suspend block.
-  builder.create<cf::BranchOp>(suspendBlock);
+    // Branch into the suspend block.
+    builder.create<cf::BranchOp>(suspendBlock);
+  };
+  buildCleanupBlock(cleanupBlock);
+  buildCleanupBlock(cleanupBlockForDestroy);
 
   // ------------------------------------------------------------------------ //
   // Coroutine suspend block: mark the end of a coroutine and return allocated
@@ -228,6 +254,7 @@ static CoroMachinery setupCoroMachinery(func::FuncOp func) {
   machinery.entry = entryBlock;
   machinery.setError = std::nullopt; // created lazily only if needed
   machinery.cleanup = cleanupBlock;
+  machinery.cleanupForDestroy = cleanupBlockForDestroy;
   machinery.suspend = suspendBlock;
   return machinery;
 }
@@ -349,7 +376,7 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
 
     // Add async.coro.suspend as a suspended block terminator.
     builder.create<CoroSuspendOp>(coroSaveOp.getState(), coro.suspend,
-                                  branch.getDest(), coro.cleanup);
+                                  branch.getDest(), coro.cleanupForDestroy);
 
     branch.erase();
   }
@@ -535,7 +562,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     // We can only await on one the `AwaitableType` (for `await` it can be
     // a `token` or a `value`, for `await_all` it must be a `group`).
-    if (!op.getOperand().getType().template isa<AwaitableType>())
+    if (!isa<AwaitableType>(op.getOperand().getType()))
       return rewriter.notifyMatchFailure(op, "unsupported awaitable type");
 
     // Check if await operation is inside the coroutine function.
@@ -555,7 +582,7 @@ public:
     // Inside regular functions we use the blocking wait operation to wait for
     // the async object (token, value or group) to become available.
     if (!isInCoroutine) {
-      ImplicitLocOpBuilder builder(loc, op, rewriter.getListener());
+      ImplicitLocOpBuilder builder(loc, op, &rewriter);
       builder.create<RuntimeAwaitOp>(loc, operand);
 
       // Assert that the awaited operands is not in the error state.
@@ -574,7 +601,7 @@ public:
       CoroMachinery &coro = funcCoro->getSecond();
       Block *suspended = op->getBlock();
 
-      ImplicitLocOpBuilder builder(loc, op, rewriter.getListener());
+      ImplicitLocOpBuilder builder(loc, op, &rewriter);
       MLIRContext *ctx = op->getContext();
 
       // Save the coroutine state and resume on a runtime managed thread when
@@ -589,7 +616,7 @@ public:
       // Add async.coro.suspend as a suspended block terminator.
       builder.setInsertionPointToEnd(suspended);
       builder.create<CoroSuspendOp>(coroSaveOp.getState(), coro.suspend, resume,
-                                    coro.cleanup);
+                                    coro.cleanupForDestroy);
 
       // Split the resume block into error checking and continuation.
       Block *continuation = rewriter.splitBlock(resume, Block::iterator(op));
@@ -646,7 +673,7 @@ public:
   getReplacementValue(AwaitOp op, Value operand,
                       ConversionPatternRewriter &rewriter) const override {
     // Load from the async value storage.
-    auto valueType = operand.getType().cast<ValueType>().getValueType();
+    auto valueType = cast<ValueType>(operand.getType()).getValueType();
     return rewriter.create<RuntimeLoadOp>(op->getLoc(), valueType, operand);
   }
 };
@@ -812,7 +839,7 @@ void AsyncToAsyncRuntimePass::runOnOperation() {
   runtimeTarget.addDynamicallyLegalOp<cf::AssertOp>(
       [&](cf::AssertOp op) -> bool {
         auto func = op->getParentOfType<func::FuncOp>();
-        return coros->find(func) == coros->end();
+        return !coros->contains(func);
       });
 
   if (failed(applyPartialConversion(module, runtimeTarget,
@@ -842,7 +869,7 @@ void mlir::populateAsyncFuncToAsyncRuntimeConversionPatterns(
       [coros](Operation *op) {
         auto exec = op->getParentOfType<ExecuteOp>();
         auto func = op->getParentOfType<func::FuncOp>();
-        return exec || coros->find(func) == coros->end();
+        return exec || !coros->contains(func);
       });
 }
 

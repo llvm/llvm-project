@@ -10,7 +10,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class TestTypeGetModule(TestBase):
-
     def find_module(self, target, name):
         num_modules = target.GetNumModules()
         index = 0
@@ -61,16 +60,16 @@ class TestTypeGetModule(TestBase):
 
     def test(self):
         self.build()
-        target  = lldbutil.run_to_breakpoint_make_target(self)
-        exe_module = self.find_module(target, 'a.out')
+        target = lldbutil.run_to_breakpoint_make_target(self)
+        exe_module = self.find_module(target, "a.out")
 
         num_comp_units = exe_module.GetNumCompileUnits()
         self.assertGreaterEqual(num_comp_units, 3)
 
-        comp_unit = self.find_comp_unit(exe_module, 'compile_unit1.c')
-        cu_type = self.find_type(comp_unit.GetTypes(), 'compile_unit1_type')
+        comp_unit = self.find_comp_unit(exe_module, "compile_unit1.c")
+        cu_type = self.find_type(comp_unit.GetTypes(), "compile_unit1_type")
         self.assertEqual(exe_module, cu_type.GetModule())
-        
-        comp_unit = self.find_comp_unit(exe_module, 'compile_unit2.c')
-        cu_type = self.find_type(comp_unit.GetTypes(), 'compile_unit2_type')
+
+        comp_unit = self.find_comp_unit(exe_module, "compile_unit2.c")
+        cu_type = self.find_type(comp_unit.GetTypes(), "compile_unit2_type")
         self.assertEqual(exe_module, cu_type.GetModule())

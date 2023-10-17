@@ -2,7 +2,7 @@
 ! operations.
 
 ! RUN: bbc -fopenacc -emit-fir --mlir-print-debuginfo --mlir-print-local-scope %s -o - | FileCheck %s
-
+! RUN: bbc -fopenacc -emit-hlfir --mlir-print-debuginfo --mlir-print-local-scope %s -o - | FileCheck %s
 module acc_locations
   implicit none
 
@@ -16,16 +16,22 @@ module acc_locations
     !CHECK-SAME:  loc("{{.*}}locations.f90":14:11)
 
     !$acc update device(arr)
-    !CHECK-LABEL: acc.update device
+    !CHECK-LABEL: acc.update_device varPtr
+    !CHECK-SAME:  loc("{{.*}}locations.f90":18:25)
+    !CHECK-LABEL: acc.update dataOperands
     !CHECK-SAME:  loc("{{.*}}locations.f90":18:11)
 
     !$acc update host(arr)
-    !CHECK-LABEL: acc.update host
-    !CHECK-SAME:  loc("{{.*}}locations.f90":22:11)
+    !CHECK-LABEL: acc.getdeviceptr varPtr
+    !CHECK-SAME:  loc("{{.*}}locations.f90":24:23)
+    !CHECK-LABEL: acc.update dataOperands
+    !CHECK-SAME:  loc("{{.*}}locations.f90":24:11)
+    !CHECK-LABEL: acc.update_host
+    !CHECK-SAME:  loc("{{.*}}locations.f90":24:23)
 
     !$acc exit data delete(arr)
     !CHECK-LABEL: acc.exit_data
-    !CHECK-SAME:  loc("{{.*}}locations.f90":26:11)
+    !CHECK-SAME:  loc("{{.*}}locations.f90":32:11)
 
   end subroutine
 
@@ -46,14 +52,14 @@ module acc_locations
     !CHECK: acc.parallel
     !CHECK: acc.loop
 
-    !CHECK:        acc.yield loc("{{.*}}locations.f90":38:11)
-    !CHECK-NEXT: } loc("{{.*}}locations.f90":38:11)
+    !CHECK:        acc.yield loc("{{.*}}locations.f90":44:11)
+    !CHECK-NEXT: } loc("{{.*}}locations.f90":44:11)
 
-    !CHECK:        acc.yield loc("{{.*}}locations.f90":37:11)
-    !CHECK-NEXT: } loc("{{.*}}locations.f90":37:11)
+    !CHECK:        acc.yield loc("{{.*}}locations.f90":43:11)
+    !CHECK-NEXT: } loc("{{.*}}locations.f90":43:11)
 
-    !CHECK-NEXT:   acc.terminator loc("{{.*}}locations.f90":36:11)
-    !CHECK-NEXT: } loc("{{.*}}locations.f90":36:11)
+    !CHECK-NEXT:   acc.terminator loc("{{.*}}locations.f90":42:11)
+    !CHECK-NEXT: } loc("{{.*}}locations.f90":42:11)
 
   end subroutine
 
@@ -61,11 +67,11 @@ module acc_locations
 
     !$acc init
     !CHECK-LABEL: acc.init
-    !CHECK-SAME:  loc("{{.*}}locations.f90":62:11)
+    !CHECK-SAME:  loc("{{.*}}locations.f90":68:11)
 
     !$acc shutdown
     !CHECK-LABEL: acc.shutdown
-    !CHECK-SAME:  loc("{{.*}}locations.f90":66:11)
+    !CHECK-SAME:  loc("{{.*}}locations.f90":72:11)
 
   end subroutine
 
@@ -80,10 +86,10 @@ module acc_locations
 
     !CHECK: acc.parallel
     !CHECK: acc.loop
-    !CHECK:      acc.yield loc("{{.*}}locations.f90":76:11)
-    !CHECK-NEXT: } loc("{{.*}}locations.f90":76:11)
-    !CHECK:      acc.yield loc("{{.*}}locations.f90":76:11)
-    !CHECK-NEXT: } loc("{{.*}}locations.f90":76:11)
+    !CHECK:      acc.yield loc("{{.*}}locations.f90":82:11)
+    !CHECK-NEXT: } loc("{{.*}}locations.f90":82:11)
+    !CHECK:      acc.yield loc("{{.*}}locations.f90":82:11)
+    !CHECK-NEXT: } loc("{{.*}}locations.f90":82:11)
   end subroutine
 
   subroutine if_clause_expr_location(arr)
@@ -95,14 +101,14 @@ module acc_locations
       arr(i) = arr(i) * arr(i)
     end do
 
-    !CHECK: %{{.*}} = arith.constant true loc("{{.*}}locations.f90":93:25)
+    !CHECK: %{{.*}} = arith.constant true loc("{{.*}}locations.f90":99:25)
 
     !CHECK: acc.parallel
     !CHECK: acc.loop
-    !CHECK:      acc.yield loc("{{.*}}locations.f90":93:11)
-    !CHECK-NEXT: } loc("{{.*}}locations.f90":93:11)
-    !CHECK:      acc.yield loc("{{.*}}locations.f90":93:11)
-    !CHECK-NEXT: } loc("{{.*}}locations.f90":93:11)
+    !CHECK:      acc.yield loc("{{.*}}locations.f90":99:11)
+    !CHECK-NEXT: } loc("{{.*}}locations.f90":99:11)
+    !CHECK:      acc.yield loc("{{.*}}locations.f90":99:11)
+    !CHECK-NEXT: } loc("{{.*}}locations.f90":99:11)
   end subroutine
 
 end module

@@ -7,8 +7,8 @@ define void @fma_dup_f16(ptr noalias nocapture noundef readonly %A, half noundef
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-NEXT:    cbz w2, .LBB0_8
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
-; CHECK-NEXT:    mov w8, w2
 ; CHECK-NEXT:    cmp w2, #15
+; CHECK-NEXT:    mov w8, w2
 ; CHECK-NEXT:    b.hi .LBB0_3
 ; CHECK-NEXT:  // %bb.2:
 ; CHECK-NEXT:    mov x9, xzr
@@ -20,13 +20,13 @@ define void @fma_dup_f16(ptr noalias nocapture noundef readonly %A, half noundef
 ; CHECK-NEXT:    mov x12, x9
 ; CHECK-NEXT:  .LBB0_4: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldp q1, q2, [x11, #-16]
+; CHECK-NEXT:    ldp q1, q3, [x11, #-16]
 ; CHECK-NEXT:    subs x12, x12, #16
+; CHECK-NEXT:    ldp q2, q4, [x10, #-16]
 ; CHECK-NEXT:    add x11, x11, #32
-; CHECK-NEXT:    ldp q3, q4, [x10, #-16]
-; CHECK-NEXT:    fmla v3.8h, v1.8h, v0.h[0]
-; CHECK-NEXT:    fmla v4.8h, v2.8h, v0.h[0]
-; CHECK-NEXT:    stp q3, q4, [x10, #-16]
+; CHECK-NEXT:    fmla v2.8h, v1.8h, v0.h[0]
+; CHECK-NEXT:    fmla v4.8h, v3.8h, v0.h[0]
+; CHECK-NEXT:    stp q2, q4, [x10, #-16]
 ; CHECK-NEXT:    add x10, x10, #32
 ; CHECK-NEXT:    b.ne .LBB0_4
 ; CHECK-NEXT:  // %bb.5: // %middle.block

@@ -7,47 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "exhaustive_test.h"
-#include "src/__support/FPUtil/FPBits.h"
 #include "src/math/log2f.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include "utils/UnitTest/FPMatcher.h"
 
-using FPBits = __llvm_libc::fputil::FPBits<float>;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+using LlvmLibcLog2fExhaustiveTest =
+    LlvmLibcUnaryOpExhaustiveMathTest<float, mpfr::Operation::Log2,
+                                      LIBC_NAMESPACE::log2f>;
 
-struct LlvmLibcLog2fExhaustiveTest : public LlvmLibcExhaustiveTest<uint32_t> {
-  bool check(uint32_t start, uint32_t stop,
-             mpfr::RoundingMode rounding) override {
-    mpfr::ForceRoundingMode r(rounding);
-    uint32_t bits = start;
-    bool result = true;
-    do {
-      FPBits xbits(bits);
-      float x = float(xbits);
-      result &= EXPECT_MPFR_MATCH(mpfr::Operation::Log2, x,
-                                  __llvm_libc::log2f(x), 0.5, rounding);
-    } while (bits++ < stop);
-    return result;
-  }
-};
+// Range: [0, Inf];
+static constexpr uint32_t POS_START = 0x0000'0000U;
+static constexpr uint32_t POS_STOP = 0x7f80'0000U;
 
-TEST_F(LlvmLibcLog2fExhaustiveTest, RoundNearestTieToEven) {
-  test_full_range(/*start=*/0U, /*stop=*/0x7f80'0000U,
-                  mpfr::RoundingMode::Nearest);
-}
-
-TEST_F(LlvmLibcLog2fExhaustiveTest, RoundUp) {
-  test_full_range(/*start=*/0U, /*stop=*/0x7f80'0000U,
-                  mpfr::RoundingMode::Upward);
-}
-
-TEST_F(LlvmLibcLog2fExhaustiveTest, RoundDown) {
-  test_full_range(/*start=*/0U, /*stop=*/0x7f80'0000U,
-                  mpfr::RoundingMode::Downward);
-}
-
-TEST_F(LlvmLibcLog2fExhaustiveTest, RoundTowardZero) {
-  test_full_range(/*start=*/0U, /*stop=*/0x7f80'0000U,
-                  mpfr::RoundingMode::TowardZero);
+TEST_F(LlvmLibcLog2fExhaustiveTest, PostiveRange) {
+  test_full_range_all_roundings(POS_START, POS_STOP);
 }

@@ -1,37 +1,35 @@
-; RUN: llc -opaque-pointers=0 -O2 -mtriple powerpc64-ibm-aix-xcoff -stop-after=machine-cp -verify-machineinstrs < %s | \
+; RUN: llc -O2 -mtriple powerpc64-ibm-aix-xcoff -stop-after=machine-cp -verify-machineinstrs < %s | \
 ; RUN: FileCheck --check-prefix=64BIT %s
 
-; RUN: llc -opaque-pointers=0 -O2 -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec \
+; RUN: llc -O2 -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec \
 ; RUN: -mtriple powerpc64-ibm-aix-xcoff < %s | \
 ; RUN: FileCheck --check-prefix=ASM64 %s
 
   define i32 @int_va_arg(i32 %a, ...) local_unnamed_addr  {
   entry:
-    %arg1 = alloca i8*, align 8
-    %arg2 = alloca i8*, align 8
-    %0 = bitcast i8** %arg1 to i8*
-    call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %0)
-    %1 = bitcast i8** %arg2 to i8*
-    call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %1)
-    call void @llvm.va_start(i8* nonnull %0)
-    call void @llvm.va_copy(i8* nonnull %1, i8* nonnull %0)
-    %2 = va_arg i8** %arg1, i32
-    %add = add nsw i32 %2, %a
-    %3 = va_arg i8** %arg2, i32
-    %mul = shl i32 %3, 1
+    %arg1 = alloca ptr, align 8
+    %arg2 = alloca ptr, align 8
+    call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %arg1)
+    call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %arg2)
+    call void @llvm.va_start(ptr nonnull %arg1)
+    call void @llvm.va_copy(ptr nonnull %arg2, ptr nonnull %arg1)
+    %0 = va_arg ptr %arg1, i32
+    %add = add nsw i32 %0, %a
+    %1 = va_arg ptr %arg2, i32
+    %mul = shl i32 %1, 1
     %add3 = add nsw i32 %add, %mul
-    call void @llvm.va_end(i8* nonnull %0)
-    call void @llvm.va_end(i8* nonnull %1)
-    call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %1)
-    call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %0)
+    call void @llvm.va_end(ptr nonnull %arg1)
+    call void @llvm.va_end(ptr nonnull %arg2)
+    call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %arg2)
+    call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %arg1)
     ret i32 %add3
   }
 
-  declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
-  declare void @llvm.va_start(i8*)
-  declare void @llvm.va_copy(i8*, i8*)
-  declare void @llvm.va_end(i8*)
-  declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+  declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+  declare void @llvm.va_start(ptr)
+  declare void @llvm.va_copy(ptr, ptr)
+  declare void @llvm.va_end(ptr)
+  declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
 ; 64BIT-LABEL:   name:            int_va_arg
 ; 64BIT-LABEL:   liveins:
@@ -62,12 +60,12 @@
 ; 64BIT-DAG:     STD killed renamable $x9, 40, %fixed-stack.0 :: (store (s64))
 ; 64BIT-DAG:     STD killed renamable $x10, 48, %fixed-stack.0 :: (store (s64))
 ; 64BIT-DAG:     renamable $x11 = ADDI8 %fixed-stack.0, 0
-; 64BIT-DAG:     STD renamable $x11, 0, %stack.1.arg2 :: (store (s64) into %ir.1)
+; 64BIT-DAG:     STD renamable $x11, 0, %stack.1.arg2 :: (store (s64) into %ir.arg2)
 ; 64BIT-DAG:     renamable $x6 = LD 0, %stack.1.arg2 :: (load (s64) from %ir.arg2)
 ; 64BIT-DAG:     renamable $x9 = ADDI8 renamable $x6, 4
 ; 64BIT-DAG:     renamable $x7 = ADDI8 %fixed-stack.0, 4
 ; 64BIT-DAG:     renamable $r8 = LWZ 0, %fixed-stack.0 :: (load (s32) from %fixed-stack.0, align 8)
-; 64BIT-DAG:     STD killed renamable $x11, 0, %stack.0.arg1 :: (store (s64) into %ir.0)
+; 64BIT-DAG:     STD killed renamable $x11, 0, %stack.0.arg1 :: (store (s64) into %ir.arg1)
 ; 64BIT-DAG:     STD killed renamable $x7, 0, %stack.0.arg1 :: (store (s64) into %ir.arg1)
 ; 64BIT-DAG:     STD killed renamable $x9, 0, %stack.1.arg2 :: (store (s64) into %ir.arg2)
 ; 64BIT-DAG:     renamable $r4 = LWZ 0, killed renamable $x6 :: (load (s32))
@@ -101,14 +99,12 @@
 
   define i32 @int_stack_va_arg(i32 %one, i32 %two, i32 %three, i32 %four, i32 %five, i32 %six, i32 %seven, i32 %eight, ...) local_unnamed_addr {
   entry:
-    %arg1 = alloca i8*, align 8
-    %arg2 = alloca i8*, align 8
-    %0 = bitcast i8** %arg1 to i8*
-    call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %0)
-    %1 = bitcast i8** %arg2 to i8*
-    call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %1)
-    call void @llvm.va_start(i8* nonnull %0)
-    call void @llvm.va_copy(i8* nonnull %1, i8* nonnull %0)
+    %arg1 = alloca ptr, align 8
+    %arg2 = alloca ptr, align 8
+    call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %arg1)
+    call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %arg2)
+    call void @llvm.va_start(ptr nonnull %arg1)
+    call void @llvm.va_copy(ptr nonnull %arg2, ptr nonnull %arg1)
     %add = add nsw i32 %two, %one
     %add2 = add nsw i32 %add, %three
     %add3 = add nsw i32 %add2, %four
@@ -116,15 +112,15 @@
     %add5 = add nsw i32 %add4, %six
     %add6 = add nsw i32 %add5, %seven
     %add7 = add nsw i32 %add6, %eight
-    %2 = va_arg i8** %arg1, i32
-    %add8 = add nsw i32 %add7, %2
-    %3 = va_arg i8** %arg2, i32
-    %mul = shl i32 %3, 1
+    %0 = va_arg ptr %arg1, i32
+    %add8 = add nsw i32 %add7, %0
+    %1 = va_arg ptr %arg2, i32
+    %mul = shl i32 %1, 1
     %add10 = add nsw i32 %add8, %mul
-    call void @llvm.va_end(i8* nonnull %0)
-    call void @llvm.va_end(i8* nonnull %1)
-    call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %1)
-    call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %0)
+    call void @llvm.va_end(ptr nonnull %arg1)
+    call void @llvm.va_end(ptr nonnull %arg2)
+    call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %arg2)
+    call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %arg1)
     ret i32 %add10
   }
 
@@ -176,23 +172,21 @@
 
   define double @double_va_arg(double %a, ...) local_unnamed_addr  {
   entry:
-    %arg1 = alloca i8*, align 8
-    %arg2 = alloca i8*, align 8
-    %0 = bitcast i8** %arg1 to i8*
-    call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %0)
-    %1 = bitcast i8** %arg2 to i8*
-    call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %1)
-    call void @llvm.va_start(i8* nonnull %0)
-    call void @llvm.va_copy(i8* nonnull %1, i8* nonnull %0)
-    %2 = va_arg i8** %arg1, double
-    %add = fadd double %2, %a
-    %3 = va_arg i8** %arg2, double
-    %mul = fmul double %3, 2.000000e+00
+    %arg1 = alloca ptr, align 8
+    %arg2 = alloca ptr, align 8
+    call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %arg1)
+    call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %arg2)
+    call void @llvm.va_start(ptr nonnull %arg1)
+    call void @llvm.va_copy(ptr nonnull %arg2, ptr nonnull %arg1)
+    %0 = va_arg ptr %arg1, double
+    %add = fadd double %0, %a
+    %1 = va_arg ptr %arg2, double
+    %mul = fmul double %1, 2.000000e+00
     %add3 = fadd double %add, %mul
-    call void @llvm.va_end(i8* nonnull %0)
-    call void @llvm.va_end(i8* nonnull %1)
-    call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %1)
-    call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %0)
+    call void @llvm.va_end(ptr nonnull %arg1)
+    call void @llvm.va_end(ptr nonnull %arg2)
+    call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %arg2)
+    call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %arg1)
     ret double %add3
   }
 
@@ -224,10 +218,10 @@
 ; 64BIT-DAG:     STD killed renamable $x8, 32, %fixed-stack.0 :: (store (s64))
 ; 64BIT-DAG:     STD killed renamable $x9, 40, %fixed-stack.0 :: (store (s64))
 ; 64BIT-DAG:     STD killed renamable $x10, 48, %fixed-stack.0 :: (store (s64))
-; 64BIT-DAG:     STD renamable $x3, 0, %stack.1.arg2 :: (store (s64) into %ir.1)
+; 64BIT-DAG:     STD renamable $x3, 0, %stack.1.arg2 :: (store (s64) into %ir.arg2)
 ; 64BIT-DAG:     renamable $x6 = LD 0, %stack.1.arg2 :: (load (s64) from %ir.arg2)
 ; 64BIT-DAG:     renamable $x7 = ADDI8 %fixed-stack.0, 8
-; 64BIT-DAG:     STD killed renamable $x3, 0, %stack.0.arg1 :: (store (s64) into %ir.0)
+; 64BIT-DAG:     STD killed renamable $x3, 0, %stack.0.arg1 :: (store (s64) into %ir.arg1)
 ; 64BIT-DAG:     STD killed renamable $x7, 0, %stack.0.arg1 :: (store (s64) into %ir.arg1)
 ; 64BIT-DAG:     renamable $f0 = LFD 0, %fixed-stack.0 :: (load (s64))
 ; 64BIT-DAG:     renamable $x3 = ADDI8 renamable $x6, 8
@@ -263,14 +257,12 @@
 
   define double @double_stack_va_arg(double %one, double %two, double %three, double %four, double %five, double %six, double %seven, double %eight, double %nine, double %ten, double %eleven, double %twelve, double %thirteen, ...) local_unnamed_addr  {
   entry:
-    %arg1 = alloca i8*, align 8
-    %arg2 = alloca i8*, align 8
-    %0 = bitcast i8** %arg1 to i8*
-    call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %0)
-    %1 = bitcast i8** %arg2 to i8*
-    call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %1)
-    call void @llvm.va_start(i8* nonnull %0)
-    call void @llvm.va_copy(i8* nonnull %1, i8* nonnull %0)
+    %arg1 = alloca ptr, align 8
+    %arg2 = alloca ptr, align 8
+    call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %arg1)
+    call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %arg2)
+    call void @llvm.va_start(ptr nonnull %arg1)
+    call void @llvm.va_copy(ptr nonnull %arg2, ptr nonnull %arg1)
     %add = fadd double %one, %two
     %add2 = fadd double %add, %three
     %add3 = fadd double %add2, %four
@@ -283,13 +275,13 @@
     %add10 = fadd double %add9, %eleven
     %add11 = fadd double %add10, %twelve
     %add12 = fadd double %add11, %thirteen
-    %2 = va_arg i8** %arg1, double
-    %add13 = fadd double %add12, %2
-    %3 = va_arg i8** %arg2, double
-    %mul = fmul double %3, 2.000000e+00
+    %0 = va_arg ptr %arg1, double
+    %add13 = fadd double %add12, %0
+    %1 = va_arg ptr %arg2, double
+    %mul = fmul double %1, 2.000000e+00
     %add15 = fadd double %add13, %mul
-    call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %1)
-    call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %0)
+    call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %arg2)
+    call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %arg1)
     ret double %add15
   }
 

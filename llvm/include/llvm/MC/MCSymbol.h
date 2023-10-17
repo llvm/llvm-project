@@ -76,11 +76,11 @@ protected:
   ///
   /// If this is a fragment, then it gives the fragment this symbol's value is
   /// relative to, if any.
-  ///
-  /// For the 'HasName' integer, this is true if this symbol is named.
-  /// A named symbol will have a pointer to the name allocated in the bytes
-  /// immediately prior to the MCSymbol.
-  mutable PointerIntPair<MCFragment *, 1> FragmentAndHasName;
+  mutable MCFragment *Fragment = nullptr;
+
+  /// True if this symbol is named.  A named symbol will have a pointer to the
+  /// name allocated in the bytes immediately prior to the MCSymbol.
+  unsigned HasName : 1;
 
   /// IsTemporary - True if this is an assembler temporary label, which
   /// typically does not survive in the .o file's symbol table.  Usually
@@ -101,6 +101,9 @@ protected:
 
   /// This symbol is private extern.
   mutable unsigned IsPrivateExtern : 1;
+
+  /// This symbol is weak external.
+  mutable unsigned IsWeakExternal : 1;
 
   /// LLVM RTTI discriminator. This is actually a SymbolKind enumerator, but is
   /// unsigned to avoid sign extension and achieve better bitpacking with MSVC.
@@ -161,10 +164,10 @@ protected:
   MCSymbol(SymbolKind Kind, const StringMapEntry<bool> *Name, bool isTemporary)
       : IsTemporary(isTemporary), IsRedefinable(false), IsUsed(false),
         IsRegistered(false), IsExternal(false), IsPrivateExtern(false),
-        Kind(Kind), IsUsedInReloc(false), SymbolContents(SymContentsUnset),
-        CommonAlignLog2(0), Flags(0) {
+        IsWeakExternal(false), Kind(Kind), IsUsedInReloc(false),
+        SymbolContents(SymContentsUnset), CommonAlignLog2(0), Flags(0) {
     Offset = 0;
-    FragmentAndHasName.setInt(!!Name);
+    HasName = !!Name;
     if (Name)
       getNameEntryPtr() = Name;
   }
@@ -187,7 +190,7 @@ private:
 
   /// Get a reference to the name field.  Requires that we have a name
   const StringMapEntry<bool> *&getNameEntryPtr() {
-    assert(FragmentAndHasName.getInt() && "Name is required");
+    assert(HasName && "Name is required");
     NameEntryStorageTy *Name = reinterpret_cast<NameEntryStorageTy *>(this);
     return (*(Name - 1)).NameEntry;
   }
@@ -201,7 +204,7 @@ public:
 
   /// getName - Get the symbol name.
   StringRef getName() const {
-    if (!FragmentAndHasName.getInt())
+    if (!HasName)
       return StringRef();
 
     return getNameEntryPtr()->first();
@@ -272,11 +275,11 @@ public:
   /// Mark the symbol as defined in the fragment \p F.
   void setFragment(MCFragment *F) const {
     assert(!isVariable() && "Cannot set fragment of variable");
-    FragmentAndHasName.setPointer(F);
+    Fragment = F;
   }
 
   /// Mark the symbol as undefined.
-  void setUndefined() { FragmentAndHasName.setPointer(nullptr); }
+  void setUndefined() { Fragment = nullptr; }
 
   bool isELF() const { return Kind == SymbolKindELF; }
 
@@ -393,11 +396,11 @@ public:
   }
 
   MCFragment *getFragment(bool SetUsed = true) const {
-    MCFragment *Fragment = FragmentAndHasName.getPointer();
-    if (Fragment || !isVariable())
+    if (Fragment || !isVariable() || isWeakExternal())
       return Fragment;
+    // If the symbol is a non-weak alias, get information about
+    // the aliasee. (Don't try to resolve weak aliases.)
     Fragment = getVariableValue(SetUsed)->findAssociatedFragment();
-    FragmentAndHasName.setPointer(Fragment);
     return Fragment;
   }
 
@@ -406,6 +409,8 @@ public:
 
   bool isPrivateExtern() const { return IsPrivateExtern; }
   void setPrivateExtern(bool Value) { IsPrivateExtern = Value; }
+
+  bool isWeakExternal() const { return IsWeakExternal; }
 
   /// print - Print the value to the stream \p OS.
   void print(raw_ostream &OS, const MCAsmInfo *MAI) const;

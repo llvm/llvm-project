@@ -64,14 +64,16 @@ public:
 
   const Address &GetAddress() const { return m_address; }
 
-  const char *GetMnemonic(const ExecutionContext *exe_ctx) {
+  const char *GetMnemonic(const ExecutionContext *exe_ctx,
+                          bool markup = false) {
     CalculateMnemonicOperandsAndCommentIfNeeded(exe_ctx);
-    return m_opcode_name.c_str();
+    return markup ? m_markup_opcode_name.c_str() : m_opcode_name.c_str();
   }
 
-  const char *GetOperands(const ExecutionContext *exe_ctx) {
+  const char *GetOperands(const ExecutionContext *exe_ctx,
+                          bool markup = false) {
     CalculateMnemonicOperandsAndCommentIfNeeded(exe_ctx);
-    return m_mnemonics.c_str();
+    return markup ? m_markup_mnemonics.c_str() : m_mnemonics.c_str();
   }
 
   const char *GetComment(const ExecutionContext *exe_ctx) {
@@ -176,14 +178,14 @@ public:
   virtual void SetDescription(llvm::StringRef) {
   } // May be overridden in sub-classes that have descriptions.
 
-  lldb::OptionValueSP ReadArray(FILE *in_file, Stream *out_stream,
+  lldb::OptionValueSP ReadArray(FILE *in_file, Stream &out_stream,
                                 OptionValue::Type data_type);
 
-  lldb::OptionValueSP ReadDictionary(FILE *in_file, Stream *out_stream);
+  lldb::OptionValueSP ReadDictionary(FILE *in_file, Stream &out_stream);
 
   bool DumpEmulation(const ArchSpec &arch);
 
-  virtual bool TestEmulation(Stream *stream, const char *test_file_name);
+  virtual bool TestEmulation(Stream &stream, const char *test_file_name);
 
   bool Emulate(const ArchSpec &arch, uint32_t evaluate_options, void *baton,
                EmulateInstruction::ReadMemoryCallback read_mem_callback,
@@ -244,7 +246,9 @@ private:
 protected:
   Opcode m_opcode; // The opcode for this instruction
   std::string m_opcode_name;
+  std::string m_markup_opcode_name;
   std::string m_mnemonics;
+  std::string m_markup_mnemonics;
   std::string m_comment;
   bool m_calculated_strings;
 

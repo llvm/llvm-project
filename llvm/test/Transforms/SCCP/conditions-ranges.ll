@@ -7,7 +7,7 @@ define void @f1(i32 %a, i32 %b) {
 ; CHECK-LABEL: @f1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_255:%.*]] = and i32 [[A:%.*]], 255
-; CHECK-NEXT:    [[A_2:%.*]] = add i32 [[A_255]], 20
+; CHECK-NEXT:    [[A_2:%.*]] = add nuw nsw i32 [[A_255]], 20
 ; CHECK-NEXT:    [[BC:%.*]] = icmp ugt i32 [[B:%.*]], [[A_2]]
 ; CHECK-NEXT:    br i1 [[BC]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
@@ -260,7 +260,7 @@ define void @f8_nested_conds(i32 %a, i32 %b) {
 ; CHECK-LABEL: @f8_nested_conds(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_255:%.*]] = and i32 [[A:%.*]], 255
-; CHECK-NEXT:    [[A_2:%.*]] = add i32 [[A_255]], 20
+; CHECK-NEXT:    [[A_2:%.*]] = add nuw nsw i32 [[A_255]], 20
 ; CHECK-NEXT:    [[BC_1:%.*]] = icmp ugt i32 [[B:%.*]], [[A_2]]
 ; CHECK-NEXT:    br i1 [[BC_1]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
@@ -718,7 +718,7 @@ define void @loop() {
 ; CHECK-NEXT:    [[INC27]] = add nsw i32 [[I_0]], 1
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       for.body14:
-; CHECK-NEXT:    [[INC]] = add nsw i32 [[J_0]], 1
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[J_0]], 1
 ; CHECK-NEXT:    br label [[FOR_COND11]]
 ;
 entry:

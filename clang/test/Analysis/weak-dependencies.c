@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 %s -verify \
-// RUN:   -analyzer-checker=alpha.unix.StdCLibraryFunctionArgs \
+// RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
 // RUN:   -analyzer-checker=core
 
 typedef __typeof(sizeof(int)) size_t;

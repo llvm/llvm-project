@@ -117,6 +117,7 @@ void *MmapAlignedOrDieOnFatalError(uptr size, uptr alignment,
 // unaccessible memory.
 bool MprotectNoAccess(uptr addr, uptr size);
 bool MprotectReadOnly(uptr addr, uptr size);
+bool MprotectReadWrite(uptr addr, uptr size);
 
 void MprotectMallocZones(void *addr, int prot);
 
@@ -207,10 +208,16 @@ void ParseUnixMemoryProfile(fill_profile_f cb, uptr *stats, char *smaps,
 // Simple low-level (mmap-based) allocator for internal use. Doesn't have
 // constructor, so all instances of LowLevelAllocator should be
 // linker initialized.
+//
+// NOTE: Users should instead use the singleton provided via
+// `GetGlobalLowLevelAllocator()` rather than create a new one. This way, the
+// number of mmap fragments can be reduced and use the same contiguous mmap
+// provided by this singleton.
 class LowLevelAllocator {
  public:
   // Requires an external lock.
   void *Allocate(uptr size);
+
  private:
   char *allocated_end_;
   char *allocated_current_;
@@ -221,6 +228,8 @@ typedef void (*LowLevelAllocateCallback)(uptr ptr, uptr size);
 // Allows to register tool-specific callbacks for LowLevelAllocator.
 // Passing NULL removes the callback.
 void SetLowLevelAllocateCallback(LowLevelAllocateCallback callback);
+
+LowLevelAllocator &GetGlobalLowLevelAllocator();
 
 // IO
 void CatastrophicErrorWrite(const char *buffer, uptr length);
@@ -315,6 +324,8 @@ CheckFailed(const char *file, int line, const char *cond, u64 v1, u64 v2);
 void NORETURN ReportMmapFailureAndDie(uptr size, const char *mem_type,
                                       const char *mmap_type, error_t err,
                                       bool raw_report = false);
+void NORETURN ReportMunmapFailureAndDie(void *ptr, uptr size, error_t err,
+                                        bool raw_report = false);
 
 // Returns true if the platform-specific error reported is an OOM error.
 bool ErrorIsOOM(error_t err);
@@ -516,8 +527,8 @@ class InternalMmapVectorNoCtor {
     return data_[i];
   }
   void push_back(const T &element) {
-    CHECK_LE(size_, capacity());
-    if (size_ == capacity()) {
+    if (UNLIKELY(size_ >= capacity())) {
+      CHECK_EQ(size_, capacity());
       uptr new_capacity = RoundUpToPowerOfTwo(size_ + 1);
       Realloc(new_capacity);
     }
@@ -577,7 +588,7 @@ class InternalMmapVectorNoCtor {
   }
 
  private:
-  void Realloc(uptr new_capacity) {
+  NOINLINE void Realloc(uptr new_capacity) {
     CHECK_GT(new_capacity, 0);
     CHECK_LE(size_, new_capacity);
     uptr new_capacity_bytes =
@@ -632,7 +643,8 @@ class InternalScopedString {
     buffer_.resize(1);
     buffer_[0] = '\0';
   }
-  void append(const char *format, ...) FORMAT(2, 3);
+  void Append(const char *str);
+  void AppendF(const char *format, ...) FORMAT(2, 3);
   const char *data() const { return buffer_.data(); }
   char *data() { return buffer_.data(); }
 
@@ -793,7 +805,11 @@ inline const char *ModuleArchToString(ModuleArch arch) {
   return "";
 }
 
+#if SANITIZER_APPLE
+const uptr kModuleUUIDSize = 16;
+#else
 const uptr kModuleUUIDSize = 32;
+#endif
 const uptr kMaxSegName = 16;
 
 // Represents a binary loaded into virtual memory (e.g. this can be an
@@ -1075,20 +1091,6 @@ inline u32 GetNumberOfCPUsCached() {
     NumberOfCPUsCached = GetNumberOfCPUs();
   return NumberOfCPUsCached;
 }
-
-template <typename T>
-class ArrayRef {
- public:
-  ArrayRef() {}
-  ArrayRef(T *begin, T *end) : begin_(begin), end_(end) {}
-
-  T *begin() { return begin_; }
-  T *end() { return end_; }
-
- private:
-  T *begin_ = nullptr;
-  T *end_ = nullptr;
-};
 
 }  // namespace __sanitizer
 

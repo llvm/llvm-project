@@ -2,7 +2,42 @@
 // RUN: %clang_cc1 -std=c++11 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -std=c++2a %s -verify -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -std=c++20 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -std=c++23 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
+
+#if __cplusplus >= 201103L
+namespace dr2303 { // dr2303: 12
+template <typename... T>
+struct A;
+template <>
+struct A<> {};
+template <typename T, typename... Ts>
+struct A<T, Ts...> : A<Ts...> {};
+struct B : A<int, int> {};
+struct C : A<int, int>, A<int> {}; // expected-warning {{direct base 'A<int>' is inaccessible}}
+struct D : A<int>, A<int, int> {}; // expected-warning {{direct base 'A<int>' is inaccessible}}
+struct E : A<int, int> {};
+struct F : B, E {};
+
+template <typename... T>
+void f(const A<T...> &) {
+  static_assert(sizeof...(T) == 2, "Should only match A<int,int>");
+}
+template <typename... T>
+void f2(const A<T...> *);
+
+void g() {
+  f(B{}); // This is no longer ambiguous.
+  B b;
+  f2(&b);
+  f(C{});
+  f(D{});
+  f(F{}); // expected-error {{ambiguous conversion from derived class}}
+}
+} //namespace dr2303
+#endif
+
+// dr2331: na
 
 #if __cplusplus >= 201103L
 namespace dr2338 { // dr2338: 12
@@ -99,6 +134,20 @@ namespace dr2358 { // dr2358: 16
 }
 #endif
 
+namespace dr2370 { // dr2370: no
+namespace N {
+typedef int type;
+void g(type);
+void h(type);
+} // namespace N
+class C {
+  typedef N::type N_type;
+  // FIXME: `type` should be searched for in N
+  // friend void N::g(type);
+  friend void N::h(N_type);
+};
+} // namespace dr2370
+
 #if __cplusplus >= 201707L
 // Otherwise, if the qualified-id std::tuple_size<E> names a complete class
 // type **with a member value**, the expression std::tuple_size<E>::value shall
@@ -120,6 +169,8 @@ void wrong_value() { auto [x, y] = Bad2(); } // expected-error {{decomposes into
 } // namespace dr2386
 #endif
 
+// dr2385: na
+
 namespace dr2387 { // dr2387: 9
 #if __cplusplus >= 201402L
   template<int> int a = 0;
@@ -137,38 +188,6 @@ namespace dr2387 { // dr2387: 9
 #endif
 }
 
-#if __cplusplus >= 201103L
-namespace dr2303 { // dr2303: 12
-template <typename... T>
-struct A;
-template <>
-struct A<> {};
-template <typename T, typename... Ts>
-struct A<T, Ts...> : A<Ts...> {};
-struct B : A<int, int> {};
-struct C : A<int, int>, A<int> {}; // expected-warning {{direct base 'A<int>' is inaccessible}}
-struct D : A<int>, A<int, int> {}; // expected-warning {{direct base 'A<int>' is inaccessible}}
-struct E : A<int, int> {};
-struct F : B, E {};
-
-template <typename... T>
-void f(const A<T...> &) {
-  static_assert(sizeof...(T) == 2, "Should only match A<int,int>");
-}
-template <typename... T>
-void f2(const A<T...> *);
-
-void g() {
-  f(B{}); // This is no longer ambiguous.
-  B b;
-  f2(&b);
-  f(C{});
-  f(D{});
-  f(F{}); // expected-error {{ambiguous conversion from derived class}}
-}
-} //namespace dr2303
-#endif
-
 namespace dr2394 { // dr2394: 15
 
 struct A {};
@@ -179,3 +198,30 @@ struct B { const A a; };
 B b;
 
 }
+
+namespace dr2396 { // dr2396: no
+  struct A {
+    struct B;
+    operator B B::*();
+  };
+  struct B;
+
+  // FIXME: per P1787 "Calling a conversion function" example, all of the
+  // examples below are well-formed, with B resolving to A::B, but currently
+  // it's been resolved to dr2396::B. 
+
+  // void f(A a) { a.operator B B::*(); }            
+  // void g(A a) { a.operator decltype(B()) B::*(); }
+  // void g2(A a) { a.operator B decltype(B())::*(); }
+}
+
+#if __cplusplus >= 201103L
+namespace dr2397 { // dr2397: 17
+  void foo() {
+    int a[5];
+
+    auto (&b)[5] = a;
+    auto (*c)[5] = &a;
+  }
+} // namespace dr2397
+#endif

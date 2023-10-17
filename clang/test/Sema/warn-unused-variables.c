@@ -30,3 +30,8 @@ int f3(void) {
   (void)(^() { int X = 4; }); // expected-warning{{unused}}
   (void)(^() { int X = 4; return Y + X; }); // expected-error {{use of undeclared identifier 'Y'}}
 }
+
+void c1(int *);
+void f4(void) {
+  int __attribute__((cleanup(c1))) X1 = 4;
+}

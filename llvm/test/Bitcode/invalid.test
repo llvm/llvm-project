@@ -1,3 +1,4 @@
+RUN: export LSAN_OPTIONS=detect_leaks=0
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-empty.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-EMPTY %s
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-pr20485.bc 2>&1 | \
@@ -280,7 +281,7 @@ RUN:   FileCheck --check-prefix=INVALID-DIIMPORTEDENTITY-RECORD %s
 
 INVALID-DIIMPORTEDENTITY-RECORD: Invalid DIImportedEntity record
 
-RUN: not llvm-dis -disable-output -opaque-pointers %p/Inputs/invalid-forward-declare.bc 2>&1 | \
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-forward-declare.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-FORWARD-DECLARE %s
 
 INVALID-FORWARD-DECLARE: Assigned value does not match type of forward declaration

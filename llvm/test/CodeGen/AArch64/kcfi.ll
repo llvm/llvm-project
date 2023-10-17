@@ -7,8 +7,8 @@
 ; RUN: llc -mtriple=aarch64-- -verify-machineinstrs -mattr=harden-sls-blr -stop-after=finalize-isel < %s | FileCheck %s --check-prefixes=MIR,ISEL-SLS
 ; RUN: llc -mtriple=aarch64-- -verify-machineinstrs -mattr=harden-sls-blr -stop-after=finalize-isel -global-isel < %s | FileCheck %s --check-prefixes=MIR,ISEL-SLS
 
-; RUN: llc -mtriple=aarch64-- -verify-machineinstrs -stop-after=aarch64-kcfi < %s | FileCheck %s --check-prefixes=MIR,KCFI
-; RUN: llc -mtriple=aarch64-- -verify-machineinstrs -mattr=harden-sls-blr -stop-after=aarch64-kcfi < %s | FileCheck %s --check-prefixes=MIR,KCFI-SLS
+; RUN: llc -mtriple=aarch64-- -verify-machineinstrs -stop-after=kcfi < %s | FileCheck %s --check-prefixes=MIR,KCFI
+; RUN: llc -mtriple=aarch64-- -verify-machineinstrs -mattr=harden-sls-blr -stop-after=kcfi < %s | FileCheck %s --check-prefixes=MIR,KCFI-SLS
 
 ; ASM:       .word 12345678
 define void @f1(ptr noundef %x) !kcfi_type !1 {

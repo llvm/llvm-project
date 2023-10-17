@@ -531,9 +531,7 @@ void MachObjectWriter::bindIndirectSymbols(MCAssembler &Asm) {
     // Set the symbol type to undefined lazy, but only on construction.
     //
     // FIXME: Do not hardcode.
-    bool Created;
-    Asm.registerSymbol(*it->Symbol, &Created);
-    if (Created)
+    if (Asm.registerSymbol(*it->Symbol))
       cast<MCSymbolMachO>(it->Symbol)->setReferenceTypeUndefinedLazy(true);
   }
 }
@@ -632,7 +630,7 @@ void MachObjectWriter::computeSymbolTable(
       // Set the Index and the IsExtern bit.
       unsigned Index = Rel.Sym->getIndex();
       assert(isInt<24>(Index));
-      if (W.Endian == support::little)
+      if (W.Endian == llvm::endianness::little)
         Rel.MRE.r_word1 = (Rel.MRE.r_word1 & (~0U << 24)) | Index | (1 << 27);
       else
         Rel.MRE.r_word1 = (Rel.MRE.r_word1 & 0xff) | Index << 8 | (1 << 4);
@@ -710,16 +708,6 @@ bool MachObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
           (!SA.isTemporary() && FB.getAtom() != SA.getFragment()->getAtom() &&
            Asm.getSubsectionsViaSymbols()))
         return false;
-      return true;
-    }
-    // For Darwin x86_64, there is one special case when the reference IsPCRel.
-    // If the fragment with the reference does not have a base symbol but meets
-    // the simple way of dealing with this, in that it is a temporary symbol in
-    // the same atom then it is assumed to be fully resolved.  This is needed so
-    // a relocation entry is not created and so the static linker does not
-    // mess up the reference later.
-    else if(!FB.getAtom() &&
-            SA.isTemporary() && SA.isInSection() && &SecA == &SecB){
       return true;
     }
   }

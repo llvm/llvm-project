@@ -1,7 +1,7 @@
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -verify-machineinstrs | FileCheck -check-prefix=SM20 %s
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_35 -verify-machineinstrs | FileCheck -check-prefix=SM35 %s
 ; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_35 | %ptxas-verify -arch=sm_35 %}
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_35 | %ptxas-verify %}
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64"
 target triple = "nvptx64-unknown-unknown"
@@ -80,9 +80,9 @@ define void @foo7(ptr noalias readonly %from, ptr %to) {
 }
 
 ; SM20-LABEL: .visible .entry foo8(
-; SM20: ld.global.v2.u16
+; SM20: ld.global.u32
 ; SM35-LABEL: .visible .entry foo8(
-; SM35: ld.global.nc.v2.u16
+; SM35: ld.global.nc.u32
 define void @foo8(ptr noalias readonly %from, ptr %to) {
   %1 = load <2 x i16>, ptr %from
   store <2 x i16> %1, ptr %to
@@ -130,9 +130,9 @@ define void @foo12(ptr noalias readonly %from, ptr %to) {
 }
 
 ; SM20-LABEL: .visible .entry foo13(
-; SM20: ld.global.v4.u8
+; SM20: ld.global.u32
 ; SM35-LABEL: .visible .entry foo13(
-; SM35: ld.global.nc.v4.u8
+; SM35: ld.global.nc.u32
 define void @foo13(ptr noalias readonly %from, ptr %to) {
   %1 = load <4 x i8>, ptr %from
   store <4 x i8> %1, ptr %to

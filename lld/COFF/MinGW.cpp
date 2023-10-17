@@ -16,6 +16,7 @@
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -49,6 +50,9 @@ AutoExporter::AutoExporter(
       "libclang_rt.profile-x86_64",
       "libc++",
       "libc++abi",
+      "libFortran_main",
+      "libFortranRuntime",
+      "libFortranDecimal",
       "libunwind",
       "libmsvcrt",
       "libucrtbase",
@@ -141,10 +145,10 @@ bool AutoExporter::shouldExport(Defined *sym) const {
     return false;
 
   for (StringRef prefix : excludeSymbolPrefixes.keys())
-    if (sym->getName().startswith(prefix))
+    if (sym->getName().starts_with(prefix))
       return false;
   for (StringRef suffix : excludeSymbolSuffixes.keys())
-    if (sym->getName().endswith(suffix))
+    if (sym->getName().ends_with(suffix))
       return false;
 
   // If a corresponding __imp_ symbol exists and is defined, don't export it.
@@ -169,6 +173,7 @@ bool AutoExporter::shouldExport(Defined *sym) const {
 
 void lld::coff::writeDefFile(StringRef name,
                              const std::vector<Export> &exports) {
+  llvm::TimeTraceScope timeScope("Write .def file");
   std::error_code ec;
   raw_fd_ostream os(name, ec, sys::fs::OF_None);
   if (ec)
@@ -267,8 +272,8 @@ void lld::coff::wrapSymbols(COFFLinkerContext &ctx,
   // Update pointers in input files.
   parallelForEach(ctx.objFileInstances, [&](ObjFile *file) {
     MutableArrayRef<Symbol *> syms = file->getMutableSymbols();
-    for (size_t i = 0, e = syms.size(); i != e; ++i)
-      if (Symbol *s = map.lookup(syms[i]))
-        syms[i] = s;
+    for (auto &sym : syms)
+      if (Symbol *s = map.lookup(sym))
+        sym = s;
   });
 }

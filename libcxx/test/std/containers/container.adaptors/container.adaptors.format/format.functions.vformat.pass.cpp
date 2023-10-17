@@ -6,14 +6,10 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: libcpp-has-no-incomplete-format
 
-// TODO FMT Fix this test using GCC, it currently times out.
-// UNSUPPORTED: gcc-12
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
-// This test requires the dylib support introduced in D92214.
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{.+}}
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx11.{{.+}}
+// XFAIL: availability-fp_to_chars-missing
 
 // [container.adaptors.format]
 // For each of queue, priority_queue, and stack, the library provides the
@@ -32,13 +28,14 @@
 #include "format.functions.tests.h"
 #include "test_macros.h"
 #include "assert_macros.h"
+#include "concat_macros.h"
 
 auto test = []<class CharT, class... Args>(
                 std::basic_string_view<CharT> expected, std::basic_string_view<CharT> fmt, Args&&... args) {
   std::basic_string<CharT> out = std::vformat(fmt, std::make_format_args<context_t<CharT>>(args...));
-  TEST_REQUIRE(
-      out == expected,
-      test_concat_message("\nFormat string   ", fmt, "\nExpected output ", expected, "\nActual output   ", out, '\n'));
+  TEST_REQUIRE(out == expected,
+               TEST_WRITE_CONCATENATED(
+                   "\nFormat string   ", fmt, "\nExpected output ", expected, "\nActual output   ", out, '\n'));
 };
 
 auto test_exception =
@@ -46,20 +43,15 @@ auto test_exception =
         [[maybe_unused]] std::string_view what,
         [[maybe_unused]] std::basic_string_view<CharT> fmt,
         [[maybe_unused]] Args&&... args) {
-#ifndef TEST_HAS_NO_EXCEPTIONS
-      try {
-        TEST_IGNORE_NODISCARD std::vformat(fmt, std::make_format_args<context_t<CharT>>(args...));
-        TEST_FAIL(test_concat_message("\nFormat string   ", fmt, "\nDidn't throw an exception.\n"));
-      } catch (const std::format_error& e) {
-        TEST_LIBCPP_REQUIRE(
-            e.what() == what,
-            test_concat_message(
-                "\nFormat string   ", fmt, "\nExpected exception ", what, "\nActual exception   ", e.what(), '\n'));
-
-        return;
-      }
-      assert(false);
-#endif
+      TEST_VALIDATE_EXCEPTION(
+          std::format_error,
+          [&]([[maybe_unused]] const std::format_error& e) {
+            TEST_LIBCPP_REQUIRE(
+                e.what() == what,
+                TEST_WRITE_CONCATENATED(
+                    "\nFormat string   ", fmt, "\nExpected exception ", what, "\nActual exception   ", e.what(), '\n'));
+          },
+          TEST_IGNORE_NODISCARD std::vformat(fmt, std::make_format_args<context_t<CharT>>(args...)));
     };
 
 int main(int, char**) {

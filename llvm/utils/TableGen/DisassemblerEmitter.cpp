@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenTarget.h"
+#include "TableGenBackends.h"
 #include "WebAssemblyDisassemblerEmitter.h"
 #include "X86DisassemblerTables.h"
 #include "X86RecognizableInstr.h"
@@ -93,12 +94,7 @@ using namespace llvm::X86Disassembler;
 /// X86RecognizableInstr.cpp contains the implementation for a single
 ///   instruction.
 
-namespace llvm {
-
-extern void EmitDecoder(RecordKeeper &RK, raw_ostream &OS,
-                        const std::string &PredicateNamespace);
-
-void EmitDisassembler(RecordKeeper &Records, raw_ostream &OS) {
+static void EmitDisassembler(RecordKeeper &Records, raw_ostream &OS) {
   CodeGenTarget Target(Records);
   emitSourceFileHeader(" * " + Target.getName().str() + " Disassembler", OS);
 
@@ -135,4 +131,5 @@ void EmitDisassembler(RecordKeeper &Records, raw_ostream &OS) {
   EmitDecoder(Records, OS, PredicateNamespace);
 }
 
-} // end namespace llvm
+static TableGen::Emitter::Opt X("gen-disassembler", EmitDisassembler,
+                                "Generate disassembler");

@@ -104,7 +104,7 @@ public:
         Visit(Comment, Comment);
 
       // Decls within functions are visited by the body.
-      if (!isa<FunctionDecl>(*D) && !isa<ObjCMethodDecl>(*D)) {
+      if (!isa<FunctionDecl, ObjCMethodDecl, BlockDecl>(*D)) {
         if (Traversal != TK_AsIs) {
           if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
             auto SK = CTSD->getSpecializationKind();
@@ -252,6 +252,10 @@ public:
     });
   }
 
+  void Visit(const ConceptReference *R) {
+    getNodeDelegate().AddChild([=] { getNodeDelegate().Visit(R); });
+  }
+
   void Visit(const APValue &Value, QualType Ty) {
     getNodeDelegate().AddChild([=] { getNodeDelegate().Visit(Value, Ty); });
   }
@@ -288,6 +292,8 @@ public:
       Visit(C);
     else if (const auto *T = N.get<TemplateArgument>())
       Visit(*T);
+    else if (const auto *CR = N.get<ConceptReference>())
+      Visit(CR);
   }
 
   void dumpDeclContext(const DeclContext *DC) {
@@ -384,7 +390,8 @@ public:
   }
   void VisitAttributedType(const AttributedType *T) {
     // FIXME: AttrKind
-    Visit(T->getModifiedType());
+    if (T->getModifiedType() != T->getEquivalentType())
+      Visit(T->getModifiedType());
   }
   void VisitBTFTagAttributedType(const BTFTagAttributedType *T) {
     Visit(T->getWrappedType());
@@ -419,8 +426,12 @@ public:
   }
 
   void VisitFunctionDecl(const FunctionDecl *D) {
-    if (const auto *FTSI = D->getTemplateSpecializationInfo())
+    if (FunctionTemplateSpecializationInfo *FTSI =
+            D->getTemplateSpecializationInfo())
       dumpTemplateArgumentList(*FTSI->TemplateArguments);
+    else if (DependentFunctionTemplateSpecializationInfo *DFTSI =
+                 D->getDependentSpecializationInfo())
+      dumpASTTemplateArgumentListInfo(DFTSI->TemplateArgumentsAsWritten);
 
     if (D->param_begin())
       for (const auto *Parameter : D->parameters())
@@ -571,11 +582,6 @@ public:
     dumpTemplateParameters(D->getTemplateParameters());
   }
 
-  void VisitClassScopeFunctionSpecializationDecl(
-      const ClassScopeFunctionSpecializationDecl *D) {
-    Visit(D->getSpecialization());
-    dumpASTTemplateArgumentListInfo(D->getTemplateArgsAsWritten());
-  }
   void VisitVarTemplateDecl(const VarTemplateDecl *D) { dumpTemplateDecl(D); }
 
   void VisitBuiltinTemplateDecl(const BuiltinTemplateDecl *D) {
@@ -731,8 +737,11 @@ public:
   }
 
   void VisitGenericSelectionExpr(const GenericSelectionExpr *E) {
-    Visit(E->getControllingExpr());
-    Visit(E->getControllingExpr()->getType()); // FIXME: remove
+    if (E->isExprPredicate()) {
+      Visit(E->getControllingExpr());
+      Visit(E->getControllingExpr()->getType()); // FIXME: remove
+    } else
+      Visit(E->getControllingType()->getType());
 
     for (const auto Assoc : E->associations()) {
       Visit(Assoc);

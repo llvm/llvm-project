@@ -34,12 +34,12 @@ struct traits {
   static constexpr bool eq(char_type&, const char_type&) noexcept;
   static constexpr bool lt(char_type&, const char_type&) noexcept;
 
-  static constexpr int compare(const char_type*, const char_type*, size_t) { return 0; }
-  static constexpr size_t length(const char_type*);
-  static constexpr const char_type* find(const char_type*, size_t, const char_type&);
-  static constexpr char_type* move(char_type*, const char_type*, size_t);
-  static constexpr char_type* copy(char_type*, const char_type*, size_t);
-  static constexpr char_type* assign(char_type*, size_t, char_type);
+  static constexpr int compare(const char_type*, const char_type*, std::size_t) { return 0; }
+  static constexpr std::size_t length(const char_type*);
+  static constexpr const char_type* find(const char_type*, std::size_t, const char_type&);
+  static constexpr char_type* move(char_type*, const char_type*, std::size_t);
+  static constexpr char_type* copy(char_type*, const char_type*, std::size_t);
+  static constexpr char_type* assign(char_type*, std::size_t, char_type);
 
   static constexpr int_type not_eof(int_type) noexcept;
 
@@ -62,13 +62,13 @@ void test() {
   // These diagnostics are issued for
   // - Every invalid ordering
   // - Every type
-  // expected-error-re@string_view:* 15 {{{{(static_assert|static assertion)}} failed{{.*}}return type is not a comparison category type}}
+  // expected-error-re@string_view:* 15 {{static assertion failed{{.*}}return type is not a comparison category type}}
 
   // This diagnostic is not issued for Ordering == void.
   // expected-error@string_view:* 10 {{no matching conversion for static_cast from}}
 #else
   // One less test run when wchar_t is unavailable.
-  // expected-error-re@string_view:* 12 {{{{(static_assert|static assertion)}} failed{{.*}}return type is not a comparison category type}}
+  // expected-error-re@string_view:* 12 {{static assertion failed{{.*}}return type is not a comparison category type}}
   // expected-error@string_view:* 8 {{no matching conversion for static_cast from}}
 #endif
     type{} <=> type{};

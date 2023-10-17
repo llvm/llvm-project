@@ -8,58 +8,33 @@
 
 #include "benchmark/benchmark.h"
 
+#include <cassert>
 #include <new>
 #include <vector>
-#include <cassert>
 
 struct PointerList {
   PointerList* Next = nullptr;
 };
 
 struct MallocWrapper {
-  __attribute__((always_inline))
-  static void* Allocate(size_t N) {
-    return std::malloc(N);
-  }
-  __attribute__((always_inline))
-  static void Deallocate(void* P, size_t) {
-    std::free(P);
-  }
+  __attribute__((always_inline)) static void* Allocate(size_t N) { return std::malloc(N); }
+  __attribute__((always_inline)) static void Deallocate(void* P, size_t) { std::free(P); }
 };
 
 struct NewWrapper {
-  __attribute__((always_inline))
-  static void* Allocate(size_t N) {
-    return ::operator new(N);
-  }
-  __attribute__((always_inline))
-  static void Deallocate(void* P, size_t) {
-    ::operator delete(P);
-  }
+  __attribute__((always_inline)) static void* Allocate(size_t N) { return ::operator new(N); }
+  __attribute__((always_inline)) static void Deallocate(void* P, size_t) { ::operator delete(P); }
 };
 
 struct BuiltinNewWrapper {
-  __attribute__((always_inline))
-  static void* Allocate(size_t N) {
-    return __builtin_operator_new(N);
-  }
-  __attribute__((always_inline))
-  static void Deallocate(void* P, size_t) {
-    __builtin_operator_delete(P);
-  }
+  __attribute__((always_inline)) static void* Allocate(size_t N) { return __builtin_operator_new(N); }
+  __attribute__((always_inline)) static void Deallocate(void* P, size_t) { __builtin_operator_delete(P); }
 };
 
 struct BuiltinSizedNewWrapper {
-  __attribute__((always_inline))
-  static void* Allocate(size_t N) {
-    return __builtin_operator_new(N);
-  }
-  __attribute__((always_inline))
-  static void Deallocate(void* P, size_t N) {
-    __builtin_operator_delete(P, N);
-  }
+  __attribute__((always_inline)) static void* Allocate(size_t N) { return __builtin_operator_new(N); }
+  __attribute__((always_inline)) static void Deallocate(void* P, size_t N) { __builtin_operator_delete(P, N); }
 };
-
 
 template <class AllocWrapper>
 static void BM_AllocateAndDeallocate(benchmark::State& st) {
@@ -71,23 +46,22 @@ static void BM_AllocateAndDeallocate(benchmark::State& st) {
   }
 }
 
-
 template <class AllocWrapper>
 static void BM_AllocateOnly(benchmark::State& st) {
   const size_t alloc_size = st.range(0);
-  PointerList *Start = nullptr;
+  PointerList* Start      = nullptr;
 
   while (st.KeepRunning()) {
     PointerList* p = (PointerList*)AllocWrapper::Allocate(alloc_size);
     benchmark::DoNotOptimize(p);
     p->Next = Start;
-    Start = p;
+    Start   = p;
   }
 
-  PointerList *Next = Start;
+  PointerList* Next = Start;
   while (Next) {
-    PointerList *Tmp = Next;
-    Next = Tmp->Next;
+    PointerList* Tmp = Next;
+    Next             = Tmp->Next;
     AllocWrapper::Deallocate(Tmp, alloc_size);
   }
 }
@@ -95,15 +69,15 @@ static void BM_AllocateOnly(benchmark::State& st) {
 template <class AllocWrapper>
 static void BM_DeallocateOnly(benchmark::State& st) {
   const size_t alloc_size = st.range(0);
-  const auto NumAllocs = st.max_iterations;
+  const auto NumAllocs    = st.max_iterations;
 
   std::vector<void*> Pointers(NumAllocs);
   for (auto& p : Pointers) {
     p = AllocWrapper::Allocate(alloc_size);
   }
 
-  void** Data = Pointers.data();
-  void** const End = Pointers.data() + Pointers.size();
+  void** Data                       = Pointers.data();
+  [[maybe_unused]] void** const End = Pointers.data() + Pointers.size();
   while (st.KeepRunning()) {
     AllocWrapper::Deallocate(*Data, alloc_size);
     Data += 1;
@@ -112,7 +86,7 @@ static void BM_DeallocateOnly(benchmark::State& st) {
 }
 
 static int RegisterAllocBenchmarks() {
-  using FnType = void(*)(benchmark::State&);
+  using FnType = void (*)(benchmark::State&);
   struct {
     const char* name;
     FnType func;

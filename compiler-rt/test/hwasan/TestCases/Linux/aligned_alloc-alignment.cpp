@@ -4,8 +4,6 @@
 
 // UNSUPPORTED: android
 
-// REQUIRES: stable-runtime
-
 #include <stdio.h>
 #include <stdlib.h>
 

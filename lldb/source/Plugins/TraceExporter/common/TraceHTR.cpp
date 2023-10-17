@@ -69,7 +69,7 @@ size_t IHTRLayer::GetLayerId() const { return m_layer_id; }
 
 void HTRBlockLayer::AppendNewBlock(size_t block_id, HTRBlock &&block) {
   m_block_id_trace.emplace_back(block_id);
-  m_block_defs.emplace(block_id, block);
+  m_block_defs.emplace(block_id, std::move(block));
 }
 
 void HTRBlockLayer::AppendRepeatedBlock(size_t block_id) {

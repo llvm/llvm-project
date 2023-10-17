@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -std=c++20 -verify %s
-// RUN: %clang_cc1 -std=c++2b -verify %s
+// RUN: %clang_cc1 -std=c++23 -verify %s
 
 namespace PR52905 {
 template <class> concept C = true;

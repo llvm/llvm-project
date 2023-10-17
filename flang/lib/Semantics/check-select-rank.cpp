@@ -86,8 +86,8 @@ void SelectRankConstructChecker::Leave(
                     .Attach(prevLocStar, "Previous use"_en_US);
               }
               if (saveSelSymbol &&
-                  IsAllocatableOrPointer(*saveSelSymbol)) { // C1155
-                context_.Say(parser::FindSourceLocation(selectRankStmtSel),
+                  IsAllocatableOrPointer(*saveSelSymbol)) { // F'2023 C1160
+                context_.Say(rankCaseStmt.source,
                     "RANK (*) cannot be used when selector is "
                     "POINTER or ALLOCATABLE"_err_en_US);
               }

@@ -16,19 +16,15 @@
 
 extern unsigned long long ull;
 
-unsigned long long test_builtin_pextd() {
-  // CHECK-LABEL:    @test_builtin_pextd(
-  // CHECK:          %2 = call i64 @llvm.ppc.pextd(i64 %0, i64 %1)
+void test_xlcompat() {
+  // CHECK-LABEL: @test_xlcompat(
+  // CHECK: %2 = call i64 @llvm.ppc.pextd(i64 %0, i64 %1)
   // CHECK-32-ERROR: error: this builtin is only available on 64-bit targets
-  // CHECK-NONPWR10-ERR:  error: this builtin is only valid on POWER10 or later CPUs
-  return __builtin_pextd(ull, ull);
-}
+  // CHECK-NONPWR10-ERR: error: '__builtin_pextd' needs target feature isa-v31-instructions
+  ull = __builtin_pextd(ull, ull);
 
-unsigned long long test_builtin_pdepd() {
-  // CHECK-LABEL:    @test_builtin_pdepd(
-  // CHECK:          %2 = call i64 @llvm.ppc.pdepd(i64 %0, i64 %1)
+  // CHECK: %5 = call i64 @llvm.ppc.pdepd(i64 %3, i64 %4)
   // CHECK-32-ERROR: error: this builtin is only available on 64-bit targets
-  // CHECK-NONPWR10-ERR:  error: this builtin is only valid on POWER10 or later CPUs
-  return __builtin_pdepd(ull, ull);
+  // CHECK-NONPWR10-ERR: error: '__builtin_pdepd' needs target feature isa-v31-instructions
+  ull = __builtin_pdepd(ull, ull);
 }
-

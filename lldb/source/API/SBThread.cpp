@@ -22,7 +22,6 @@
 #include "lldb/API/SBValue.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -394,35 +393,33 @@ uint32_t SBThread::GetIndexID() const {
 const char *SBThread::GetName() const {
   LLDB_INSTRUMENT_VA(this);
 
-  const char *name = nullptr;
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
 
-  if (exe_ctx.HasThreadScope()) {
-    Process::StopLocker stop_locker;
-    if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock())) {
-      name = exe_ctx.GetThreadPtr()->GetName();
-    }
-  }
+  if (!exe_ctx.HasThreadScope())
+    return nullptr;
 
-  return name;
+  Process::StopLocker stop_locker;
+  if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock()))
+    return ConstString(exe_ctx.GetThreadPtr()->GetName()).GetCString();
+
+  return nullptr;
 }
 
 const char *SBThread::GetQueueName() const {
   LLDB_INSTRUMENT_VA(this);
 
-  const char *name = nullptr;
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
 
-  if (exe_ctx.HasThreadScope()) {
-    Process::StopLocker stop_locker;
-    if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock())) {
-      name = exe_ctx.GetThreadPtr()->GetQueueName();
-    }
-  }
+  if (!exe_ctx.HasThreadScope())
+    return nullptr;
 
-  return name;
+  Process::StopLocker stop_locker;
+  if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock()))
+    return ConstString(exe_ctx.GetThreadPtr()->GetQueueName()).GetCString();
+
+  return nullptr;
 }
 
 lldb::queue_id_t SBThread::GetQueueID() const {
@@ -459,11 +456,11 @@ bool SBThread::GetInfoItemByPathAsString(const char *path, SBStream &strm) {
             info_root_sp->GetObjectForDotSeparatedPath(path);
         if (node) {
           if (node->GetType() == eStructuredDataTypeString) {
-            strm.Printf("%s", node->GetAsString()->GetValue().str().c_str());
+            strm.ref() << node->GetAsString()->GetValue();
             success = true;
           }
           if (node->GetType() == eStructuredDataTypeInteger) {
-            strm.Printf("0x%" PRIx64, node->GetAsInteger()->GetValue());
+            strm.Printf("0x%" PRIx64, node->GetUnsignedIntegerValue());
             success = true;
           }
           if (node->GetType() == eStructuredDataTypeFloat) {
@@ -789,7 +786,11 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
     }
 
     if (!frame_sp) {
-      frame_sp = thread->GetSelectedFrame();
+      // We don't want to run SelectMostRelevantFrame here, for instance if
+      // you called a sequence of StepOverUntil's you wouldn't want the
+      // frame changed out from under you because you stepped into a
+      // recognized frame.
+      frame_sp = thread->GetSelectedFrame(DoNoSelectMostRelevantFrame);
       if (!frame_sp)
         frame_sp = thread->GetStackFrameAtIndex(0);
     }
@@ -843,20 +844,14 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
     SymbolContextList sc_list;
     frame_sc.comp_unit->ResolveSymbolContext(location_spec,
                                              eSymbolContextLineEntry, sc_list);
-    const uint32_t num_matches = sc_list.GetSize();
-    if (num_matches > 0) {
-      SymbolContext sc;
-      for (uint32_t i = 0; i < num_matches; ++i) {
-        if (sc_list.GetContextAtIndex(i, sc)) {
-          addr_t step_addr =
-              sc.line_entry.range.GetBaseAddress().GetLoadAddress(target);
-          if (step_addr != LLDB_INVALID_ADDRESS) {
-            if (fun_range.ContainsLoadAddress(step_addr, target))
-              step_over_until_addrs.push_back(step_addr);
-            else
-              all_in_function = false;
-          }
-        }
+    for (const SymbolContext &sc : sc_list) {
+      addr_t step_addr =
+          sc.line_entry.range.GetBaseAddress().GetLoadAddress(target);
+      if (step_addr != LLDB_INVALID_ADDRESS) {
+        if (fun_range.ContainsLoadAddress(step_addr, target))
+          step_over_until_addrs.push_back(step_addr);
+        else
+          all_in_function = false;
       }
     }
 
@@ -1133,7 +1128,8 @@ lldb::SBFrame SBThread::GetSelectedFrame() {
   if (exe_ctx.HasThreadScope()) {
     Process::StopLocker stop_locker;
     if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock())) {
-      frame_sp = exe_ctx.GetThreadPtr()->GetSelectedFrame();
+      frame_sp =
+          exe_ctx.GetThreadPtr()->GetSelectedFrame(SelectMostRelevantFrame);
       sb_frame.SetFrameSP(frame_sp);
     }
   }

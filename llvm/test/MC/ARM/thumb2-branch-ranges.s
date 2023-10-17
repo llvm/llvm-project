@@ -25,7 +25,7 @@ end3:   bx lr
         .thumb
 
 // branch to thumb function is resolved at assembly time
-// CHECK-NOT: error
+// CHECK-NOT: error:
 // CHECK: [[@LINE+2]]:{{[0-9]}}: error: Relocation out of range
 // CHECK-LABEL: b.w end4
         b.w end4
@@ -46,7 +46,7 @@ end6:   bx lr
         .thumb
 
 // conditional branch to thumb function resolved at assembly time
-// CHECK-NOT: error
+// CHECK-NOT: error:
 // CHECK: [[@LINE+2]]:{{[0-9]}}: error: Relocation out of range
 // CHECK-LABEL: beq.w end7
         beq.w end7
@@ -69,7 +69,7 @@ start2:
 start3:
         .space 0x1000000
 // branch to thumb function resolved at assembly time
-// CHECK-NOT: error
+// CHECK-NOT: error:
 // CHECK: [[@LINE+2]]:{{[0-9]}}: error: Relocation out of range
 // CHECK-LABEL: b.w start3
         b.w start3
@@ -90,7 +90,7 @@ start5:
 start6:
         .space 0x100000
 // branch to thumb function resolved at assembly time
-// CHECK-NOT: error
+// CHECK-NOT: error:
 // CHECK: [[@LINE+2]]:{{[0-9]}}: error: Relocation out of range
 // CHECK-LABEL: beq.w start6
         beq.w start6

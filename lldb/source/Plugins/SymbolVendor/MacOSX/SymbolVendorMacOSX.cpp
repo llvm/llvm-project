@@ -54,11 +54,11 @@ static bool UUIDsMatch(Module *module, ObjectFile *ofile,
     if (feedback_strm) {
       feedback_strm->PutCString(
           "warning: UUID mismatch detected between modules:\n    ");
-      module->GetUUID().Dump(feedback_strm);
+      module->GetUUID().Dump(*feedback_strm);
       feedback_strm->PutChar(' ');
       module->GetFileSpec().Dump(feedback_strm->AsRawOstream());
       feedback_strm->PutCString("\n    ");
-      dsym_uuid.Dump(feedback_strm);
+      dsym_uuid.Dump(*feedback_strm);
       feedback_strm->PutChar(' ');
       ofile->GetFileSpec().Dump(feedback_strm->AsRawOstream());
       feedback_strm->EOL();
@@ -224,7 +224,7 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                           [&module_sp, new_style_source_remapping_dictionary,
                            original_DBGSourcePath_value,
                            do_truncate_remapping_names](
-                              ConstString key,
+                              llvm::StringRef key,
                               StructuredData::Object *object) -> bool {
                             if (object && object->GetAsString()) {
 
@@ -237,7 +237,7 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                                 DBGSourcePath = original_DBGSourcePath_value;
                               }
                               module_sp->GetSourceMappingList().Append(
-                                  key.GetStringRef(), DBGSourcePath, true);
+                                  key, DBGSourcePath, true);
                               // With version 2 of DBGSourcePathRemapping, we
                               // can chop off the last two filename parts
                               // from the source remapping and get a more
@@ -245,7 +245,7 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                               // Add this as another option in addition to
                               // the full source path remap.
                               if (do_truncate_remapping_names) {
-                                FileSpec build_path(key.AsCString());
+                                FileSpec build_path(key);
                                 FileSpec source_path(DBGSourcePath.c_str());
                                 build_path.RemoveLastPathComponent();
                                 build_path.RemoveLastPathComponent();

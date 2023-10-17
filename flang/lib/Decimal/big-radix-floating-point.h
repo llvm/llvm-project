@@ -9,8 +9,8 @@
 #ifndef FORTRAN_DECIMAL_BIG_RADIX_FLOATING_POINT_H_
 #define FORTRAN_DECIMAL_BIG_RADIX_FLOATING_POINT_H_
 
-// This is a helper class for use in floating-point conversions
-// between binary decimal representations.  It holds a multiple-precision
+// This is a helper class for use in floating-point conversions between
+// binary and decimal representations.  It holds a multiple-precision
 // integer value using digits of a radix that is a large even power of ten
 // (10,000,000,000,000,000 by default, 10**16).  These digits are accompanied
 // by a signed exponent that denotes multiplication by a power of ten.
@@ -335,7 +335,7 @@ private:
 
   // Adds another number and then divides by two.
   // Assumes same exponent and sign.
-  // Returns true when the the result has effectively been rounded down.
+  // Returns true when the result has effectively been rounded down.
   bool Mean(const BigRadixFloatingPointNumber &);
 
   // Parses a floating-point number; leaves the pointer reference
@@ -348,11 +348,26 @@ private:
   using Raw = typename Real::RawType;
   constexpr Raw SignBit() const { return Raw{isNegative_} << (Real::bits - 1); }
   constexpr Raw Infinity() const {
-    return (Raw{Real::maxExponent} << Real::significandBits) | SignBit();
+    Raw result{static_cast<Raw>(Real::maxExponent)};
+    result <<= Real::significandBits;
+    result |= SignBit();
+    if constexpr (Real::bits == 80) { // x87
+      result |= Raw{1} << 63;
+    }
+    return result;
   }
-  static constexpr Raw NaN() {
-    return (Raw{Real::maxExponent} << Real::significandBits) |
-        (Raw{1} << (Real::significandBits - 2));
+  constexpr Raw NaN(bool isQuiet = true) {
+    Raw result{Real::maxExponent};
+    result <<= Real::significandBits;
+    result |= SignBit();
+    if constexpr (Real::bits == 80) { // x87
+      result |= Raw{isQuiet ? 3u : 2u} << 62;
+    } else {
+      Raw quiet{isQuiet ? Raw{2} : Raw{1}};
+      quiet <<= Real::significandBits - 2;
+      result |= quiet;
+    }
+    return result;
   }
 
   Digit digit_[maxDigits]; // in little-endian order: digit_[0] is LSD

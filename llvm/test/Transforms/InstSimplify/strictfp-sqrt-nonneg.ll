@@ -81,15 +81,14 @@ define float @nonneg_s_ebstrict(i32 %a) #0 {
   ret float %sub
 }
 
-; Test all the rounding modes. Exception handling shouldn't matter.
+; Test all the rounding modes. Rounding mode and exception handling
+; shouldn't matter.
 
-; Negative test: should not fire due to rounding mode metadata.
 define float @nonneg_u_downward(i32 %a) #0 {
 ; CHECK-LABEL: @nonneg_u_downward(
 ; CHECK-NEXT:    [[FPA:%.*]] = call float @llvm.experimental.constrained.uitofp.f32.i32(i32 [[A:%.*]], metadata !"round.downward", metadata !"fpexcept.ignore") #[[ATTR0]]
 ; CHECK-NEXT:    [[SQRA:%.*]] = call float @llvm.experimental.constrained.sqrt.f32(float [[FPA]], metadata !"round.downward", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[SUB:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[SQRA]], float -0.000000e+00, metadata !"round.downward", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    ret float [[SUB]]
+; CHECK-NEXT:    ret float [[SQRA]]
 ;
   %fpa = call float @llvm.experimental.constrained.uitofp.f32.i32(i32 %a, metadata !"round.downward", metadata !"fpexcept.ignore") #0
   %sqra = call float @llvm.experimental.constrained.sqrt.f32(float %fpa, metadata !"round.downward", metadata !"fpexcept.ignore") #0
@@ -97,13 +96,11 @@ define float @nonneg_u_downward(i32 %a) #0 {
   ret float %sub
 }
 
-; Negative test: should not fire due to rounding mode metadata.
 define float @nonneg_s_downward(i32 %a) #0 {
 ; CHECK-LABEL: @nonneg_s_downward(
 ; CHECK-NEXT:    [[FPA:%.*]] = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 [[A:%.*]], metadata !"round.downward", metadata !"fpexcept.ignore") #[[ATTR0]]
 ; CHECK-NEXT:    [[SQRA:%.*]] = call float @llvm.experimental.constrained.sqrt.f32(float [[FPA]], metadata !"round.downward", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[SUB:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[SQRA]], float -0.000000e+00, metadata !"round.downward", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    ret float [[SUB]]
+; CHECK-NEXT:    ret float [[SQRA]]
 ;
   %fpa = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %a, metadata !"round.downward", metadata !"fpexcept.ignore") #0
   %sqra = call float @llvm.experimental.constrained.sqrt.f32(float %fpa, metadata !"round.downward", metadata !"fpexcept.ignore") #0
@@ -111,13 +108,11 @@ define float @nonneg_s_downward(i32 %a) #0 {
   ret float %sub
 }
 
-; Negative test: should not fire due to rounding mode metadata.
 define float @nonneg_u_upward(i32 %a) #0 {
 ; CHECK-LABEL: @nonneg_u_upward(
 ; CHECK-NEXT:    [[FPA:%.*]] = call float @llvm.experimental.constrained.uitofp.f32.i32(i32 [[A:%.*]], metadata !"round.upward", metadata !"fpexcept.ignore") #[[ATTR0]]
 ; CHECK-NEXT:    [[SQRA:%.*]] = call float @llvm.experimental.constrained.sqrt.f32(float [[FPA]], metadata !"round.upward", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[SUB:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[SQRA]], float -0.000000e+00, metadata !"round.upward", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    ret float [[SUB]]
+; CHECK-NEXT:    ret float [[SQRA]]
 ;
   %fpa = call float @llvm.experimental.constrained.uitofp.f32.i32(i32 %a, metadata !"round.upward", metadata !"fpexcept.ignore") #0
   %sqra = call float @llvm.experimental.constrained.sqrt.f32(float %fpa, metadata !"round.upward", metadata !"fpexcept.ignore") #0
@@ -125,13 +120,11 @@ define float @nonneg_u_upward(i32 %a) #0 {
   ret float %sub
 }
 
-; Negative test: should not fire due to rounding mode metadata.
 define float @nonneg_s_upward(i32 %a) #0 {
 ; CHECK-LABEL: @nonneg_s_upward(
 ; CHECK-NEXT:    [[FPA:%.*]] = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 [[A:%.*]], metadata !"round.upward", metadata !"fpexcept.ignore") #[[ATTR0]]
 ; CHECK-NEXT:    [[SQRA:%.*]] = call float @llvm.experimental.constrained.sqrt.f32(float [[FPA]], metadata !"round.upward", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[SUB:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[SQRA]], float -0.000000e+00, metadata !"round.upward", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    ret float [[SUB]]
+; CHECK-NEXT:    ret float [[SQRA]]
 ;
   %fpa = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %a, metadata !"round.upward", metadata !"fpexcept.ignore") #0
   %sqra = call float @llvm.experimental.constrained.sqrt.f32(float %fpa, metadata !"round.upward", metadata !"fpexcept.ignore") #0
@@ -139,13 +132,11 @@ define float @nonneg_s_upward(i32 %a) #0 {
   ret float %sub
 }
 
-; Negative test: should not fire due to rounding mode metadata.
 define float @nonneg_u_towardzero(i32 %a) #0 {
 ; CHECK-LABEL: @nonneg_u_towardzero(
 ; CHECK-NEXT:    [[FPA:%.*]] = call float @llvm.experimental.constrained.uitofp.f32.i32(i32 [[A:%.*]], metadata !"round.towardzero", metadata !"fpexcept.ignore") #[[ATTR0]]
 ; CHECK-NEXT:    [[SQRA:%.*]] = call float @llvm.experimental.constrained.sqrt.f32(float [[FPA]], metadata !"round.towardzero", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[SUB:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[SQRA]], float -0.000000e+00, metadata !"round.towardzero", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    ret float [[SUB]]
+; CHECK-NEXT:    ret float [[SQRA]]
 ;
   %fpa = call float @llvm.experimental.constrained.uitofp.f32.i32(i32 %a, metadata !"round.towardzero", metadata !"fpexcept.ignore") #0
   %sqra = call float @llvm.experimental.constrained.sqrt.f32(float %fpa, metadata !"round.towardzero", metadata !"fpexcept.ignore") #0
@@ -153,13 +144,11 @@ define float @nonneg_u_towardzero(i32 %a) #0 {
   ret float %sub
 }
 
-; Negative test: should not fire due to rounding mode metadata.
 define float @nonneg_s_towardzero(i32 %a) #0 {
 ; CHECK-LABEL: @nonneg_s_towardzero(
 ; CHECK-NEXT:    [[FPA:%.*]] = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 [[A:%.*]], metadata !"round.towardzero", metadata !"fpexcept.ignore") #[[ATTR0]]
 ; CHECK-NEXT:    [[SQRA:%.*]] = call float @llvm.experimental.constrained.sqrt.f32(float [[FPA]], metadata !"round.towardzero", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[SUB:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[SQRA]], float -0.000000e+00, metadata !"round.towardzero", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    ret float [[SUB]]
+; CHECK-NEXT:    ret float [[SQRA]]
 ;
   %fpa = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %a, metadata !"round.towardzero", metadata !"fpexcept.ignore") #0
   %sqra = call float @llvm.experimental.constrained.sqrt.f32(float %fpa, metadata !"round.towardzero", metadata !"fpexcept.ignore") #0
@@ -167,13 +156,11 @@ define float @nonneg_s_towardzero(i32 %a) #0 {
   ret float %sub
 }
 
-; Negative test: should not fire due to rounding mode metadata.
 define float @nonneg_u_tonearestaway(i32 %a) #0 {
 ; CHECK-LABEL: @nonneg_u_tonearestaway(
 ; CHECK-NEXT:    [[FPA:%.*]] = call float @llvm.experimental.constrained.uitofp.f32.i32(i32 [[A:%.*]], metadata !"round.tonearestaway", metadata !"fpexcept.ignore") #[[ATTR0]]
 ; CHECK-NEXT:    [[SQRA:%.*]] = call float @llvm.experimental.constrained.sqrt.f32(float [[FPA]], metadata !"round.tonearestaway", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[SUB:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[SQRA]], float -0.000000e+00, metadata !"round.tonearestaway", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    ret float [[SUB]]
+; CHECK-NEXT:    ret float [[SQRA]]
 ;
   %fpa = call float @llvm.experimental.constrained.uitofp.f32.i32(i32 %a, metadata !"round.tonearestaway", metadata !"fpexcept.ignore") #0
   %sqra = call float @llvm.experimental.constrained.sqrt.f32(float %fpa, metadata !"round.tonearestaway", metadata !"fpexcept.ignore") #0
@@ -181,13 +168,11 @@ define float @nonneg_u_tonearestaway(i32 %a) #0 {
   ret float %sub
 }
 
-; Negative test: should not fire due to rounding mode metadata.
 define float @nonneg_s_tonearestaway(i32 %a) #0 {
 ; CHECK-LABEL: @nonneg_s_tonearestaway(
 ; CHECK-NEXT:    [[FPA:%.*]] = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 [[A:%.*]], metadata !"round.tonearestaway", metadata !"fpexcept.ignore") #[[ATTR0]]
 ; CHECK-NEXT:    [[SQRA:%.*]] = call float @llvm.experimental.constrained.sqrt.f32(float [[FPA]], metadata !"round.tonearestaway", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[SUB:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[SQRA]], float -0.000000e+00, metadata !"round.tonearestaway", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    ret float [[SUB]]
+; CHECK-NEXT:    ret float [[SQRA]]
 ;
   %fpa = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %a, metadata !"round.tonearestaway", metadata !"fpexcept.ignore") #0
   %sqra = call float @llvm.experimental.constrained.sqrt.f32(float %fpa, metadata !"round.tonearestaway", metadata !"fpexcept.ignore") #0
@@ -195,13 +180,11 @@ define float @nonneg_s_tonearestaway(i32 %a) #0 {
   ret float %sub
 }
 
-; Negative test: should not fire due to rounding mode metadata.
 define float @nonneg_u_dynamic(i32 %a) #0 {
 ; CHECK-LABEL: @nonneg_u_dynamic(
 ; CHECK-NEXT:    [[FPA:%.*]] = call float @llvm.experimental.constrained.uitofp.f32.i32(i32 [[A:%.*]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
 ; CHECK-NEXT:    [[SQRA:%.*]] = call float @llvm.experimental.constrained.sqrt.f32(float [[FPA]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[SUB:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[SQRA]], float -0.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    ret float [[SUB]]
+; CHECK-NEXT:    ret float [[SQRA]]
 ;
   %fpa = call float @llvm.experimental.constrained.uitofp.f32.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
   %sqra = call float @llvm.experimental.constrained.sqrt.f32(float %fpa, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
@@ -209,13 +192,11 @@ define float @nonneg_u_dynamic(i32 %a) #0 {
   ret float %sub
 }
 
-; Negative test: should not fire due to rounding mode metadata.
 define float @nonneg_s_dynamic(i32 %a) #0 {
 ; CHECK-LABEL: @nonneg_s_dynamic(
 ; CHECK-NEXT:    [[FPA:%.*]] = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 [[A:%.*]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
 ; CHECK-NEXT:    [[SQRA:%.*]] = call float @llvm.experimental.constrained.sqrt.f32(float [[FPA]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[SUB:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[SQRA]], float -0.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    ret float [[SUB]]
+; CHECK-NEXT:    ret float [[SQRA]]
 ;
   %fpa = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
   %sqra = call float @llvm.experimental.constrained.sqrt.f32(float %fpa, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0

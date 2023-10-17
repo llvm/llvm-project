@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/abs.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
-TEST(LlvmLibcAbsTest, Zero) { EXPECT_EQ(__llvm_libc::abs(0), 0); }
+TEST(LlvmLibcAbsTest, Zero) { EXPECT_EQ(LIBC_NAMESPACE::abs(0), 0); }
 
-TEST(LlvmLibcAbsTest, Positive) { EXPECT_EQ(__llvm_libc::abs(1), 1); }
+TEST(LlvmLibcAbsTest, Positive) { EXPECT_EQ(LIBC_NAMESPACE::abs(1), 1); }
 
-TEST(LlvmLibcAbsTest, Negative) { EXPECT_EQ(__llvm_libc::abs(-1), 1); }
+TEST(LlvmLibcAbsTest, Negative) { EXPECT_EQ(LIBC_NAMESPACE::abs(-1), 1); }

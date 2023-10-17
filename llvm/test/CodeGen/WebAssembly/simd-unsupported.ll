@@ -433,14 +433,6 @@ define <4 x float> @exp2_v4f32(<4 x float> %x) {
   ret <4 x float> %v
 }
 
-; CHECK-LABEL: rint_v4f32:
-; CHECK: f32.nearest
-declare <4 x float> @llvm.rint.v4f32(<4 x float>)
-define <4 x float> @rint_v4f32(<4 x float> %x) {
-  %v = call <4 x float> @llvm.rint.v4f32(<4 x float> %x)
-  ret <4 x float> %v
-}
-
 ; CHECK-LABEL: round_v4f32:
 ; CHECK: call $push[[L:[0-9]+]]=, roundf
 declare <4 x float> @llvm.round.v4f32(<4 x float>)
@@ -530,14 +522,6 @@ define <2 x double> @exp_v2f64(<2 x double> %x) {
 declare <2 x double> @llvm.exp2.v2f64(<2 x double>)
 define <2 x double> @exp2_v2f64(<2 x double> %x) {
   %v = call <2 x double> @llvm.exp2.v2f64(<2 x double> %x)
-  ret <2 x double> %v
-}
-
-; CHECK-LABEL: rint_v2f64:
-; CHECK: f64.nearest
-declare <2 x double> @llvm.rint.v2f64(<2 x double>)
-define <2 x double> @rint_v2f64(<2 x double> %x) {
-  %v = call <2 x double> @llvm.rint.v2f64(<2 x double> %x)
   ret <2 x double> %v
 }
 

@@ -76,8 +76,8 @@ static_assert(!HasPartitionPointRange<ForwardRangeNotIncrementable, UnaryPred>);
 static_assert(!HasPartitionPointRange<R<int*>, IndirectUnaryPredicateNotPredicate>);
 static_assert(!HasPartitionPointRange<R<int*>, IndirectUnaryPredicateNotCopyConstructible>);
 
-template <class Iter, class Sent, size_t N, class Pred>
-constexpr void test_one(std::array<int, N> input, Pred pred, size_t partition_point) {
+template <class Iter, class Sent, std::size_t N, class Pred>
+constexpr void test_one(std::array<int, N> input, Pred pred, std::size_t partition_point) {
   assert(std::ranges::is_partitioned(input, pred));
 
   auto begin = Iter(input.data());

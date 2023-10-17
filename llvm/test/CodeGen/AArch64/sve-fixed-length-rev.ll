@@ -12,8 +12,8 @@ target triple = "aarch64-unknown-linux-gnu"
 define <8 x i8> @bitreverse_v8i8(<8 x i8> %op) vscale_range(2,0) #0 {
 ; CHECK-LABEL: bitreverse_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    rbit z0.b, p0/m, z0.b
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -24,8 +24,8 @@ define <8 x i8> @bitreverse_v8i8(<8 x i8> %op) vscale_range(2,0) #0 {
 define <16 x i8> @bitreverse_v16i8(<16 x i8> %op) vscale_range(2,0) #0 {
 ; CHECK-LABEL: bitreverse_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    rbit z0.b, p0/m, z0.b
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -50,8 +50,8 @@ define void @bitreverse_v32i8(ptr %a) vscale_range(2,0) #0 {
 define void @bitreverse_v64i8(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: bitreverse_v64i8:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov w8, #32
 ; VBITS_GE_256-NEXT:    ptrue p0.b, vl32
+; VBITS_GE_256-NEXT:    mov w8, #32 // =0x20
 ; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x0, x8]
 ; VBITS_GE_256-NEXT:    ld1b { z1.b }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    rbit z0.b, p0/m, z0.b
@@ -104,8 +104,8 @@ define void @bitreverse_v256i8(ptr %a) vscale_range(16,0) #0 {
 define <4 x i16> @bitreverse_v4i16(<4 x i16> %op) vscale_range(2,0) #0 {
 ; CHECK-LABEL: bitreverse_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    rbit z0.h, p0/m, z0.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -116,8 +116,8 @@ define <4 x i16> @bitreverse_v4i16(<4 x i16> %op) vscale_range(2,0) #0 {
 define <8 x i16> @bitreverse_v8i16(<8 x i16> %op) vscale_range(2,0) #0 {
 ; CHECK-LABEL: bitreverse_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    rbit z0.h, p0/m, z0.h
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -142,8 +142,8 @@ define void @bitreverse_v16i16(ptr %a) vscale_range(2,0) #0 {
 define void @bitreverse_v32i16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: bitreverse_v32i16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    rbit z0.h, p0/m, z0.h
@@ -196,8 +196,8 @@ define void @bitreverse_v128i16(ptr %a) vscale_range(16,0) #0 {
 define <2 x i32> @bitreverse_v2i32(<2 x i32> %op) vscale_range(2,0) #0 {
 ; CHECK-LABEL: bitreverse_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    rbit z0.s, p0/m, z0.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -208,8 +208,8 @@ define <2 x i32> @bitreverse_v2i32(<2 x i32> %op) vscale_range(2,0) #0 {
 define <4 x i32> @bitreverse_v4i32(<4 x i32> %op) vscale_range(2,0) #0 {
 ; CHECK-LABEL: bitreverse_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    rbit z0.s, p0/m, z0.s
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -234,8 +234,8 @@ define void @bitreverse_v8i32(ptr %a) vscale_range(2,0) #0 {
 define void @bitreverse_v16i32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: bitreverse_v16i32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    rbit z0.s, p0/m, z0.s
@@ -288,8 +288,8 @@ define void @bitreverse_v64i32(ptr %a) vscale_range(16,0) #0 {
 define <1 x i64> @bitreverse_v1i64(<1 x i64> %op) vscale_range(2,0) #0 {
 ; CHECK-LABEL: bitreverse_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    rbit z0.d, p0/m, z0.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -300,8 +300,8 @@ define <1 x i64> @bitreverse_v1i64(<1 x i64> %op) vscale_range(2,0) #0 {
 define <2 x i64> @bitreverse_v2i64(<2 x i64> %op) vscale_range(2,0) #0 {
 ; CHECK-LABEL: bitreverse_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    rbit z0.d, p0/m, z0.d
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -326,8 +326,8 @@ define void @bitreverse_v4i64(ptr %a) vscale_range(2,0) #0 {
 define void @bitreverse_v8i64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: bitreverse_v8i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    rbit z0.d, p0/m, z0.d
@@ -418,8 +418,8 @@ define void @bswap_v16i16(ptr %a) vscale_range(2,0) #0 {
 define void @bswap_v32i16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: bswap_v32i16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    revb z0.h, p0/m, z0.h
@@ -506,8 +506,8 @@ define void @bswap_v8i32(ptr %a) vscale_range(2,0) #0 {
 define void @bswap_v16i32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: bswap_v16i32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    revb z0.s, p0/m, z0.s
@@ -594,8 +594,8 @@ define void @bswap_v4i64(ptr %a) vscale_range(2,0) #0 {
 define void @bswap_v8i64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: bswap_v8i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    revb z0.d, p0/m, z0.d

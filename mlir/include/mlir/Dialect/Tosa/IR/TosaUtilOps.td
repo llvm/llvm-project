@@ -19,12 +19,16 @@ include "mlir/IR/OpBase.td"
 
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
+include "mlir/Interfaces/VectorInterfaces.td"
 include "mlir/Dialect/Tosa/IR/TosaInterfaces.td"
 
 include "mlir/Dialect/Tosa/IR/TosaTypesBase.td"
 include "mlir/Dialect/Tosa/IR/TosaOpBase.td"
 
-def Tosa_ApplyScaleOp: Tosa_Op<"apply_scale", [Pure] # ElementwiseMappable.traits> {
+def Tosa_ApplyScaleOp :
+  Tosa_Op<"apply_scale",
+          [Pure, DeclareOpInterfaceMethods<VectorUnrollOpInterface>] #
+          ElementwiseMappable.traits> {
   let summary = "Rescale scalar operator for Tosa tensor operators";
 
   let description = [{
@@ -46,6 +50,12 @@ def Tosa_ApplyScaleOp: Tosa_Op<"apply_scale", [Pure] # ElementwiseMappable.trait
   let results = (outs
     Tosa_IntLike:$output
   );
+
+  let extraClassDeclaration = [{
+    std::optional<SmallVector<int64_t, 4>> getShapeForUnroll();
+  }];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -65,6 +75,8 @@ def Tosa_YieldOp : Tosa_Op<"yield", [
   let arguments = (ins
     Variadic<Tosa_Tensor>:$inputs
   );
+
+  let assemblyFormat = "$inputs attr-dict `:` type($inputs)";
 }
 
 #endif // TOSA_UTIL_OPS

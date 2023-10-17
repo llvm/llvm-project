@@ -46,6 +46,7 @@ class DirectoryEntry {
   StringRef Name; // Name of the directory.
 
 public:
+  LLVM_DEPRECATED("Use DirectoryEntryRef::getName() instead.", "")
   StringRef getName() const { return Name; }
 };
 
@@ -71,7 +72,7 @@ public:
   bool isSameRef(DirectoryEntryRef RHS) const { return ME == RHS.ME; }
 
   DirectoryEntryRef() = delete;
-  DirectoryEntryRef(const MapEntry &ME) : ME(&ME) {}
+  explicit DirectoryEntryRef(const MapEntry &ME) : ME(&ME) {}
 
   /// Allow DirectoryEntryRef to degrade into 'const DirectoryEntry*' to
   /// facilitate incremental adoption.
@@ -196,6 +197,21 @@ static_assert(std::is_trivially_copyable<OptionalDirectoryEntryRef>::value,
 } // namespace clang
 
 namespace llvm {
+
+template <> struct PointerLikeTypeTraits<clang::DirectoryEntryRef> {
+  static inline void *getAsVoidPointer(clang::DirectoryEntryRef Dir) {
+    return const_cast<clang::DirectoryEntryRef::MapEntry *>(&Dir.getMapEntry());
+  }
+
+  static inline clang::DirectoryEntryRef getFromVoidPointer(void *Ptr) {
+    return clang::DirectoryEntryRef(
+        *reinterpret_cast<const clang::DirectoryEntryRef::MapEntry *>(Ptr));
+  }
+
+  static constexpr int NumLowBitsAvailable = PointerLikeTypeTraits<
+      const clang::DirectoryEntryRef::MapEntry *>::NumLowBitsAvailable;
+};
+
 /// Specialisation of DenseMapInfo for DirectoryEntryRef.
 template <> struct DenseMapInfo<clang::DirectoryEntryRef> {
   static inline clang::DirectoryEntryRef getEmptyKey() {

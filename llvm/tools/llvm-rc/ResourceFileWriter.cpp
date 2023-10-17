@@ -99,7 +99,7 @@ static bool stripQuotes(StringRef &Str, bool &IsLongString) {
     return false;
 
   // Just take the contents of the string, checking if it's been marked long.
-  IsLongString = Str.startswith_insensitive("L");
+  IsLongString = Str.starts_with_insensitive("L");
   if (IsLongString)
     Str = Str.drop_front();
 
@@ -469,6 +469,10 @@ Error ResourceFileWriter::visitHTMLResource(const RCResource *Res) {
 
 Error ResourceFileWriter::visitMenuResource(const RCResource *Res) {
   return writeResource(Res, &ResourceFileWriter::writeMenuBody);
+}
+
+Error ResourceFileWriter::visitMenuExResource(const RCResource *Res) {
+  return writeResource(Res, &ResourceFileWriter::writeMenuExBody);
 }
 
 Error ResourceFileWriter::visitStringTableResource(const RCResource *Base) {
@@ -887,7 +891,7 @@ Error ResourceFileWriter::visitIconOrCursorResource(const RCResource *Base) {
   if (!File)
     return File.takeError();
 
-  BinaryStreamReader Reader((*File)->getBuffer(), support::little);
+  BinaryStreamReader Reader((*File)->getBuffer(), llvm::endianness::little);
 
   // Read the file headers.
   //   - At the beginning, ICONDIR/NEWHEADER header.
@@ -1176,6 +1180,7 @@ Error ResourceFileWriter::writeHTMLBody(const RCResource *Base) {
 
 Error ResourceFileWriter::writeMenuDefinition(
     const std::unique_ptr<MenuDefinition> &Def, uint16_t Flags) {
+  // https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-menuitemtemplate
   assert(Def);
   const MenuDefinition *DefPtr = Def.get();
 
@@ -1202,6 +1207,34 @@ Error ResourceFileWriter::writeMenuDefinition(
   return writeMenuDefinitionList(PopupPtr->SubItems);
 }
 
+Error ResourceFileWriter::writeMenuExDefinition(
+    const std::unique_ptr<MenuDefinition> &Def, uint16_t Flags) {
+  // https://learn.microsoft.com/en-us/windows/win32/menurc/menuex-template-item
+  assert(Def);
+  const MenuDefinition *DefPtr = Def.get();
+
+  padStream(sizeof(uint32_t));
+  if (auto *MenuItemPtr = dyn_cast<MenuExItem>(DefPtr)) {
+    writeInt<uint32_t>(MenuItemPtr->Type);
+    writeInt<uint32_t>(MenuItemPtr->State);
+    writeInt<uint32_t>(MenuItemPtr->Id);
+    writeInt<uint16_t>(Flags);
+    padStream(sizeof(uint16_t));
+    RETURN_IF_ERROR(writeCString(MenuItemPtr->Name));
+    return Error::success();
+  }
+
+  auto *PopupPtr = cast<PopupExItem>(DefPtr);
+  writeInt<uint32_t>(PopupPtr->Type);
+  writeInt<uint32_t>(PopupPtr->State);
+  writeInt<uint32_t>(PopupPtr->Id);
+  writeInt<uint16_t>(Flags);
+  padStream(sizeof(uint16_t));
+  RETURN_IF_ERROR(writeCString(PopupPtr->Name));
+  writeInt<uint32_t>(PopupPtr->HelpId);
+  return writeMenuExDefinitionList(PopupPtr->SubItems);
+}
+
 Error ResourceFileWriter::writeMenuDefinitionList(
     const MenuDefinitionList &List) {
   for (auto &Def : List.Definitions) {
@@ -1216,12 +1249,37 @@ Error ResourceFileWriter::writeMenuDefinitionList(
   return Error::success();
 }
 
+Error ResourceFileWriter::writeMenuExDefinitionList(
+    const MenuDefinitionList &List) {
+  for (auto &Def : List.Definitions) {
+    uint16_t Flags = Def->getResFlags();
+    // Last element receives an additional 0x80 flag.
+    const uint16_t LastElementFlag = 0x0080;
+    if (&Def == &List.Definitions.back())
+      Flags |= LastElementFlag;
+
+    RETURN_IF_ERROR(writeMenuExDefinition(Def, Flags));
+  }
+  return Error::success();
+}
+
 Error ResourceFileWriter::writeMenuBody(const RCResource *Base) {
   // At first, MENUHEADER structure. In fact, these are two WORDs equal to 0.
   // Ref: msdn.microsoft.com/en-us/library/windows/desktop/ms648018.aspx
   writeInt<uint32_t>(0);
 
   return writeMenuDefinitionList(cast<MenuResource>(Base)->Elements);
+}
+
+Error ResourceFileWriter::writeMenuExBody(const RCResource *Base) {
+  // At first, MENUEX_TEMPLATE_HEADER structure.
+  // Ref:
+  // https://learn.microsoft.com/en-us/windows/win32/menurc/menuex-template-header
+  writeInt<uint16_t>(1);
+  writeInt<uint16_t>(4);
+  writeInt<uint32_t>(0);
+
+  return writeMenuExDefinitionList(cast<MenuExResource>(Base)->Elements);
 }
 
 // --- StringTableResource helpers. --- //

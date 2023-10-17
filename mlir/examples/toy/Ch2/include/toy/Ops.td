@@ -14,7 +14,7 @@
 #define TOY_OPS
 
 include "mlir/IR/OpBase.td"
-include "mlir/IR/FunctionInterfaces.td"
+include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
@@ -23,7 +23,6 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 def Toy_Dialect : Dialect {
   let name = "toy";
   let cppNamespace = "::mlir::toy";
-  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 // Base class for toy dialect operations. This operation inherits from the base
@@ -145,6 +144,7 @@ def FuncOp : Toy_Op<"func", [
     "StringRef":$name, "FunctionType":$type,
     CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)
   >];
+
   let extraClassDeclaration = [{
     //===------------------------------------------------------------------===//
     // FunctionOpInterface Methods
@@ -155,7 +155,10 @@ def FuncOp : Toy_Op<"func", [
 
     /// Returns the result types of this function.
     ArrayRef<Type> getResultTypes() { return getFunctionType().getResults(); }
+
+    Region *getCallableRegion() { return &getBody(); }
   }];
+
   let hasCustomAssemblyFormat = 1;
   let skipDefaultBuilders = 1;
 }

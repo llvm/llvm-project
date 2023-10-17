@@ -41,10 +41,15 @@ def TransformOpInterface : OpInterface<"TransformOpInterface"> {
         transformation represented by the current op is targeted. Returns a
         special status object indicating whether the transformation succeeded
         or failed, and, if it failed, whether the failure is recoverable or not.
+
+        IR must be created, modified and deleted with the provided rewriter.
+        implementations are responsible for setting the insertion point of the
+        rewriter to the desired location.
       }],
       /*returnType=*/"::mlir::DiagnosedSilenceableFailure",
       /*name=*/"apply",
       /*arguments=*/(ins
+          "::mlir::transform::TransformRewriter &":$rewriter,
           "::mlir::transform::TransformResults &":$transformResults,
           "::mlir::transform::TransformState &":$state
     )>,
@@ -100,6 +105,11 @@ def TransformOpInterface : OpInterface<"TransformOpInterface"> {
       diag.attachNote(target->getLoc()) << "when applied to this op";
       return diag;
     }
+
+    /// Returns all operands that are handles and being consumed by this op.
+    ::llvm::SmallVector<OpOperand *> getConsumedHandleOpOperands() {
+      return ::mlir::transform::detail::getConsumedHandleOpOperands($_op);
+    }
   }];
 
   let verify = [{
@@ -137,10 +147,10 @@ def TransformHandleTypeInterface
     : TransformTypeInterfaceBase<"TransformHandleTypeInterface",
                                  "::mlir::Operation *"> {
   let description = [{
-    Types that can be used for the Transform dialect handle values. Such types
-    define the properties of Payload IR operations associated with the handle.
-    A user of such a handle can assume that these properties have been verified
-    for any Payload IR operation associated with it.
+    Types that can be used for the Transform dialect operation handle values.
+    Such types define the properties of Payload IR operations associated with
+    the handle. A user of such a handle can assume that these properties have
+    been verified for any Payload IR operation associated with it.
   }];
 }
 
@@ -155,9 +165,21 @@ def TransformParamTypeInterface
   }];
 }
 
+def TransformValueHandleTypeInterface
+    : TransformTypeInterfaceBase<"TransformValueHandleTypeInterface",
+                                 "::mlir::Value"> {
+  let description = [{
+    Types that can be used for the Transform dialect handle values pointing to
+    Payload IR values. Such types define the properties of Payload IR values
+    associated with the handle. Users of such a handle can assume that these
+    properties have been verified for any Payload IR value associated with it.
+  }];
+}
+
 def Transform_AnyHandleOrParamType
   : Type<Or<[TransformParamTypeInterface.predicate,
-             TransformHandleTypeInterface.predicate]>,
+             TransformHandleTypeInterface.predicate,
+             TransformValueHandleTypeInterface.predicate]>,
          "any transform handle or parameter">;
 
 def FunctionalStyleTransformOpTrait
@@ -175,6 +197,183 @@ def NavigationTransformOpTrait : NativeOpTrait<"NavigationTransformOpTrait"> {
 
 def ParamProducerTransformOpTrait : NativeOpTrait<"ParamProducerTransformOpTrait"> {
   let cppNamespace = "::mlir::transform";
+}
+
+def ReportTrackingListenerFailuresOpTrait : NativeOpTrait<"ReportTrackingListenerFailuresOpTrait"> {
+  let cppNamespace = "::mlir::transform";
+}
+
+def FindPayloadReplacementOpInterface
+    : OpInterface<"FindPayloadReplacementOpInterface"> {
+  let description = [{
+    This interface is queried by the `TrackingListener` and can be implemented
+    by payload ops to indicate that the lookup should be continue with its
+    operands when looking for payload op replacements.
+
+    Example: Consider the case where a tracked "test.foo" payload op is replaced
+    with a new "test.foo" op, but wrapped in a "tensor.reshape" op. In that
+    case, the mapping of the original "test.foo" op should be updated with the
+    new "test.foo" op. A "tensor.reshape" is a metadata-only op that should be
+    skipped when inspecting the replacement values of the original "test.foo"
+    op. More details can be found at `TrackingListener` documentation.
+
+    Note: Ops that implement `CastOpInterface` do not need to implement this
+    interface. Such ops are skipped by default. This interface should be
+    implemented by cast-like/metadata-only ops that cannot implement
+    `CastOpInterface`.
+  }];
+
+  let cppNamespace = "::mlir::transform";
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/[{
+        Return the operands at which the lookup for replacement payload ops
+        should continue.
+      }],
+      /*returnType=*/"::llvm::SmallVector<::mlir::Value>",
+      /*name=*/"getNextOperands",
+      /*arguments=*/(ins)
+    >,
+  ];
+}
+
+def PatternDescriptorOpInterface : OpInterface<"PatternDescriptorOpInterface"> {
+  let description = [{
+    This interface should be implemented by ops that select rewrite patterns of
+    a `transform.apply_patterns` op. It provides a method to populate a rewrite
+    pattern set with patterns.
+
+    Note: Conversion patterns are rewrite patterns in MLIR, but they should not
+    be populated with `PatternDescriptorOpInterface` because they cannot be
+    used in a greedy pattern rewrite.
+  }];
+
+  let cppNamespace = "::mlir::transform";
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/[{
+        Populate rewrite patterns into the given pattern set.
+      }],
+      /*returnType=*/"void",
+      /*name=*/"populatePatterns",
+      /*arguments=*/(ins "::mlir::RewritePatternSet &":$patterns)
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Populate rewrite patterns into the given pattern set taking into account
+        the transform state.
+      }],
+      /*returnType=*/"void",
+      /*name=*/"populatePatternsWithState",
+      /*arguments=*/(ins "::mlir::RewritePatternSet &":$patterns,
+                         "::mlir::transform::TransformState &":$state),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{ $_op.populatePatterns(patterns); }]
+    >
+  ];
+}
+
+def TypeConverterBuilderOpInterface
+    : OpInterface<"TypeConverterBuilderOpInterface"> {
+  let description = [{
+    This interface should be implemented by ops that specify a type converter
+    for a dialect conversion. Such ops can be used with
+    "apply_conversion_patterns".
+  }];
+
+  let cppNamespace = "::mlir::transform";
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/[{
+        Return the type converter to be used with a dialect conversion.
+      }],
+      /*returnType=*/"std::unique_ptr<::mlir::TypeConverter>",
+      /*name=*/"getTypeConverter",
+      /*arguments=*/(ins)
+    >,
+    StaticInterfaceMethod<
+      /*desc=*/[{
+        Return the type of type converter that this `getTypeConverter` returns.
+        This function is used for op verification.
+      }],
+      /*returnType=*/"StringRef",
+      /*name=*/"getTypeConverterType",
+      /*arguments=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{ return "TypeConverter"; }]
+    >,
+  ];
+}
+
+def ConversionPatternDescriptorOpInterface
+    : OpInterface<"ConversionPatternDescriptorOpInterface"> {
+  let description = [{
+    This interface should be implemented by ops that select conversion patterns
+    of a `transform.apply_patterns` op. It provides a method to populate a
+    rewrite pattern set with conversion patterns.
+
+    Note: Non-conversion rewrite patterns should not be populated with
+    `ConversionPatternDescriptorOpInterface` because it is not generally safe
+    to use non-conversion rewrite patterns as part of a dialect conversion.
+  }];
+
+  let cppNamespace = "::mlir::transform";
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/[{
+        Populate conversion patterns into the given pattern set with the
+        given type converter.
+      }],
+      /*returnType=*/"void",
+      /*name=*/"populatePatterns",
+      /*arguments=*/(ins "::mlir::TypeConverter &":$typeConverter,
+                         "::mlir::RewritePatternSet &":$patterns)
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Populate the ConversionTarget using the final TypeConverter. The default
+        implementation is to do nothing. Overriding this method can be useful
+        in order to setup the ConversionTarget for structural type conversions.
+        In such a situation, an op's legality depends on using the TypeConverter
+        to determine whether the op's operand and result types are legal
+        (defined as converting to themselves).
+
+      }],
+      /*returnType=*/"void",
+      /*name=*/"populateConversionTargetRules",
+      /*arguments=*/(ins "const ::mlir::TypeConverter &":$typeConverter,
+                         "::mlir::ConversionTarget &":$conversionTarget),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/"return;"
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Return the type converter to be used with this pattern set. If no
+        type converter is specified, the default type converter of the enclosing
+        "apply_conversion_patterns" op is used.
+      }],
+      /*returnType=*/"std::unique_ptr<::mlir::TypeConverter>",
+      /*name=*/"getTypeConverter",
+      /*arguments=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/"return nullptr;"
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Verify the default type converter that is provided by the enclosing
+        "apply_conversion_patterns" op.
+      }],
+      /*returnType=*/"::mlir::LogicalResult",
+      /*name=*/"verifyTypeConverter",
+      /*arguments=*/(ins "TypeConverterBuilderOpInterface":$builder),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/"return success();"
+    >,
+  ];
 }
 
 #endif // MLIR_DIALECT_TRANSFORM_IR_TRANSFORM_INTERFACES_TD

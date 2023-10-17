@@ -174,7 +174,20 @@ Where:
       ============= ==============================================================
 
 **target-triple**
-    The target triple of the code object.
+    The target triple of the code object. See `Target Triple
+    <https://clang.llvm.org/docs/CrossCompilation.html#target-triple>`_.
+
+    The bundler accepts target triples with or without the optional environment
+    field:
+
+    ``<arch><sub>-<vendor>-<sys>``, or
+    ``<arch><sub>-<vendor>-<sys>-<env>``
+
+    However, in order to standardize outputs for tools that consume bitcode
+    bundles, bundles written by the bundler internally use only the 4-field
+    target triple:
+
+    ``<arch><sub>-<vendor>-<sys>-<env>``
 
 **target-id**
   The canonical target ID of the code object. Present only if the target
@@ -296,3 +309,30 @@ target by comparing bundle ID's. Two bundle ID's are considered compatible if:
   * Their offload kind are the same
   * Their target triple are the same
   * Their GPUArch are the same
+
+Compression and Decompression
+=============================
+
+``clang-offload-bundler`` provides features to compress and decompress the full
+bundle, leveraging inherent redundancies within the bundle entries. Use the
+`-compress` command-line option to enable this compression capability.
+
+The compressed offload bundle begins with a header followed by the compressed binary data:
+
+- **Magic Number (4 bytes)**:
+    This is a unique identifier to distinguish compressed offload bundles. The value is the string 'CCOB' (Compressed Clang Offload Bundle).
+
+- **Version Number (16-bit unsigned int)**:
+    This denotes the version of the compressed offload bundle format. The current version is `1`.
+
+- **Compression Method (16-bit unsigned int)**:
+    This field indicates the compression method used. The value corresponds to either `zlib` or `zstd`, represented as a 16-bit unsigned integer cast from the LLVM compression enumeration.
+
+- **Uncompressed Binary Size (32-bit unsigned int)**:
+    This is the size (in bytes) of the binary data before it was compressed.
+
+- **Hash (64-bit unsigned int)**:
+    This is a 64-bit truncated MD5 hash of the uncompressed binary data. It serves for verification and caching purposes.
+
+- **Compressed Data**:
+    The actual compressed binary data follows the header. Its size can be inferred from the total size of the file minus the header size.

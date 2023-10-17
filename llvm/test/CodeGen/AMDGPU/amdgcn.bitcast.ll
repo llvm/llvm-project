@@ -1,10 +1,11 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s
 
 ; This test just checks that the compiler doesn't crash.
 
-; FUNC-LABEL: {{^}}v32i8_to_v8i32:
+; CHECK-LABEL: {{^}}v32i8_to_v8i32:
 define amdgpu_ps float @v32i8_to_v8i32(ptr addrspace(4) inreg) #0 {
 entry:
   %1 = load <32 x i8>, ptr addrspace(4) %0
@@ -15,8 +16,8 @@ entry:
   ret float %5
 }
 
-; FUNC-LABEL: {{^}}i8ptr_v16i8ptr:
-; SI: s_endpgm
+; CHECK-LABEL: {{^}}i8ptr_v16i8ptr:
+; CHECK: s_endpgm
 define amdgpu_kernel void @i8ptr_v16i8ptr(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 entry:
   %0 = load <16 x i8>, ptr addrspace(1) %in
@@ -74,8 +75,8 @@ define amdgpu_kernel void @i32_to_v4i8(ptr addrspace(1) %out, ptr addrspace(1) %
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_v2i32_to_f64:
-; SI: s_endpgm
+; CHECK-LABEL: {{^}}bitcast_v2i32_to_f64:
+; CHECK: s_endpgm
 define amdgpu_kernel void @bitcast_v2i32_to_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) {
   %val = load <2 x i32>, ptr addrspace(1) %in, align 8
   %add = add <2 x i32> %val, <i32 4, i32 9>
@@ -85,8 +86,8 @@ define amdgpu_kernel void @bitcast_v2i32_to_f64(ptr addrspace(1) %out, ptr addrs
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_f64_to_v2i32:
-; SI: s_endpgm
+; CHECK-LABEL: {{^}}bitcast_f64_to_v2i32:
+; CHECK: s_endpgm
 define amdgpu_kernel void @bitcast_f64_to_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
   %val = load double, ptr addrspace(1) %in, align 8
   %add = fadd double %val, 4.0
@@ -95,7 +96,7 @@ define amdgpu_kernel void @bitcast_f64_to_v2i32(ptr addrspace(1) %out, ptr addrs
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_v2i64_to_v2f64:
+; CHECK-LABEL: {{^}}bitcast_v2i64_to_v2f64:
 define amdgpu_kernel void @bitcast_v2i64_to_v2f64(i32 %cond, ptr addrspace(1) %out, <2 x i64> %value) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
@@ -111,7 +112,7 @@ end:
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_v2f64_to_v2i64:
+; CHECK-LABEL: {{^}}bitcast_v2f64_to_v2i64:
 define amdgpu_kernel void @bitcast_v2f64_to_v2i64(i32 %cond, ptr addrspace(1) %out, <2 x double> %value) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
@@ -127,7 +128,7 @@ end:
   ret void
 }
 
-; FUNC-LABEL: {{^}}v4i16_to_f64:
+; CHECK-LABEL: {{^}}v4i16_to_f64:
 define amdgpu_kernel void @v4i16_to_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
   %load = load <4 x i16>, ptr addrspace(1) %in, align 4
   %add.v4i16 = add <4 x i16> %load, <i16 4, i16 4, i16 4, i16 4>
@@ -137,7 +138,7 @@ define amdgpu_kernel void @v4i16_to_f64(ptr addrspace(1) %out, ptr addrspace(1) 
   ret void
 }
 
-; FUNC-LABEL: {{^}}v4f16_to_f64:
+; CHECK-LABEL: {{^}}v4f16_to_f64:
 define amdgpu_kernel void @v4f16_to_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
   %load = load <4 x half>, ptr addrspace(1) %in, align 4
   %add.v4half = fadd <4 x half> %load, <half 4.0, half 4.0, half 4.0, half 4.0>
@@ -147,7 +148,7 @@ define amdgpu_kernel void @v4f16_to_f64(ptr addrspace(1) %out, ptr addrspace(1) 
   ret void
 }
 
-; FUNC-LABEL: {{^}}f64_to_v4f16:
+; CHECK-LABEL: {{^}}f64_to_v4f16:
 define amdgpu_kernel void @f64_to_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
   %load = load double, ptr addrspace(1) %in, align 4
   %fadd32 = fadd double %load, 1.0
@@ -157,7 +158,7 @@ define amdgpu_kernel void @f64_to_v4f16(ptr addrspace(1) %out, ptr addrspace(1) 
   ret void
 }
 
-; FUNC-LABEL: {{^}}f64_to_v4i16:
+; CHECK-LABEL: {{^}}f64_to_v4i16:
 define amdgpu_kernel void @f64_to_v4i16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
   %load = load double, ptr addrspace(1) %in, align 4
   %fadd32 = fadd double %load, 1.0
@@ -167,7 +168,7 @@ define amdgpu_kernel void @f64_to_v4i16(ptr addrspace(1) %out, ptr addrspace(1) 
   ret void
 }
 
-; FUNC-LABEL: {{^}}v4i16_to_i64:
+; CHECK-LABEL: {{^}}v4i16_to_i64:
 define amdgpu_kernel void @v4i16_to_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
   %load = load <4 x i16>, ptr addrspace(1) %in, align 4
   %add.v4i16 = add <4 x i16> %load, <i16 4, i16 4, i16 4, i16 4>
@@ -177,7 +178,7 @@ define amdgpu_kernel void @v4i16_to_i64(ptr addrspace(1) %out, ptr addrspace(1) 
   ret void
 }
 
-; FUNC-LABEL: {{^}}v4f16_to_i64:
+; CHECK-LABEL: {{^}}v4f16_to_i64:
 define amdgpu_kernel void @v4f16_to_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
   %load = load <4 x half>, ptr addrspace(1) %in, align 4
   %add.v4half = fadd <4 x half> %load, <half 4.0, half 4.0, half 4.0, half 4.0>
@@ -187,7 +188,7 @@ define amdgpu_kernel void @v4f16_to_i64(ptr addrspace(1) %out, ptr addrspace(1) 
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_i64_to_v4i16:
+; CHECK-LABEL: {{^}}bitcast_i64_to_v4i16:
 define amdgpu_kernel void @bitcast_i64_to_v4i16(ptr addrspace(1) %out, ptr addrspace(1) %in) {
   %val = load i64, ptr addrspace(1) %in, align 8
   %add = add i64 %val, 4
@@ -197,7 +198,7 @@ define amdgpu_kernel void @bitcast_i64_to_v4i16(ptr addrspace(1) %out, ptr addrs
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_i64_to_v4f16:
+; CHECK-LABEL: {{^}}bitcast_i64_to_v4f16:
 define amdgpu_kernel void @bitcast_i64_to_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %in) {
   %val = load i64, ptr addrspace(1) %in, align 8
   %add = add i64 %val, 4
@@ -207,7 +208,7 @@ define amdgpu_kernel void @bitcast_i64_to_v4f16(ptr addrspace(1) %out, ptr addrs
   ret void
 }
 
-; FUNC-LABEL: {{^}}v4i16_to_v2f32:
+; CHECK-LABEL: {{^}}v4i16_to_v2f32:
 define amdgpu_kernel void @v4i16_to_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
   %load = load <4 x i16>, ptr addrspace(1) %in, align 4
   %add.v4i16 = add <4 x i16> %load, <i16 4, i16 4, i16 4, i16 4>
@@ -217,7 +218,7 @@ define amdgpu_kernel void @v4i16_to_v2f32(ptr addrspace(1) %out, ptr addrspace(1
   ret void
 }
 
-; FUNC-LABEL: {{^}}v4f16_to_v2f32:
+; CHECK-LABEL: {{^}}v4f16_to_v2f32:
 define amdgpu_kernel void @v4f16_to_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
   %load = load <4 x half>, ptr addrspace(1) %in, align 4
   %add.v4half = fadd <4 x half> %load, <half 4.0, half 4.0, half 4.0, half 4.0>
@@ -227,7 +228,7 @@ define amdgpu_kernel void @v4f16_to_v2f32(ptr addrspace(1) %out, ptr addrspace(1
   ret void
 }
 
-; FUNC-LABEL: {{^}}v2f32_to_v4i16:
+; CHECK-LABEL: {{^}}v2f32_to_v4i16:
 define amdgpu_kernel void @v2f32_to_v4i16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
   %load = load <2 x float>, ptr addrspace(1) %in, align 4
   %add.v2f32 = fadd <2 x float> %load, <float 2.0, float 4.0>
@@ -237,7 +238,7 @@ define amdgpu_kernel void @v2f32_to_v4i16(ptr addrspace(1) %out, ptr addrspace(1
   ret void
 }
 
-; FUNC-LABEL: {{^}}v2f32_to_v4f16:
+; CHECK-LABEL: {{^}}v2f32_to_v4f16:
 define amdgpu_kernel void @v2f32_to_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
   %load = load <2 x float>, ptr addrspace(1) %in, align 4
   %add.v2f32 = fadd <2 x float> %load, <float 2.0, float 4.0>
@@ -247,7 +248,7 @@ define amdgpu_kernel void @v2f32_to_v4f16(ptr addrspace(1) %out, ptr addrspace(1
   ret void
 }
 
-; FUNC-LABEL: {{^}}v4i16_to_v2i32:
+; CHECK-LABEL: {{^}}v4i16_to_v2i32:
 define amdgpu_kernel void @v4i16_to_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
   %load = load <4 x i16>, ptr addrspace(1) %in, align 4
   %add.v4i16 = add <4 x i16> %load, <i16 4, i16 4, i16 4, i16 4>
@@ -257,7 +258,7 @@ define amdgpu_kernel void @v4i16_to_v2i32(ptr addrspace(1) %out, ptr addrspace(1
   ret void
 }
 
-; FUNC-LABEL: {{^}}v4f16_to_v2i32:
+; CHECK-LABEL: {{^}}v4f16_to_v2i32:
 define amdgpu_kernel void @v4f16_to_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
   %load = load <4 x half>, ptr addrspace(1) %in, align 4
   %add.v4half = fadd <4 x half> %load, <half 4.0, half 4.0, half 4.0, half 4.0>
@@ -267,7 +268,7 @@ define amdgpu_kernel void @v4f16_to_v2i32(ptr addrspace(1) %out, ptr addrspace(1
   ret void
 }
 
-; FUNC-LABEL: {{^}}v2i32_to_v4i16:
+; CHECK-LABEL: {{^}}v2i32_to_v4i16:
 define amdgpu_kernel void @v2i32_to_v4i16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
   %load = load <2 x i32>, ptr addrspace(1) %in, align 4
   %add.v2i32 = add <2 x i32> %load, <i32 2, i32 4>
@@ -277,7 +278,7 @@ define amdgpu_kernel void @v2i32_to_v4i16(ptr addrspace(1) %out, ptr addrspace(1
   ret void
 }
 
-; FUNC-LABEL: {{^}}v2i32_to_v4f16:
+; CHECK-LABEL: {{^}}v2i32_to_v4f16:
 define amdgpu_kernel void @v2i32_to_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
   %load = load <2 x i32>, ptr addrspace(1) %in, align 4
   %add.v2i32 = add <2 x i32> %load, <i32 2, i32 4>
@@ -289,8 +290,8 @@ define amdgpu_kernel void @v2i32_to_v4f16(ptr addrspace(1) %out, ptr addrspace(1
 
 declare <4 x float> @llvm.amdgcn.s.buffer.load.v4f32(<4 x i32>, i32, i32 immarg)
 
-; FUNC-LABEL: {{^}}bitcast_v4f32_to_v2i64:
-; GCN: s_buffer_load_dwordx4
+; CHECK-LABEL: {{^}}bitcast_v4f32_to_v2i64:
+; CHECK: s_buffer_load_{{dwordx4|b128}}
 define <2 x i64> @bitcast_v4f32_to_v2i64(<2 x i64> %arg) {
   %val = call <4 x float> @llvm.amdgcn.s.buffer.load.v4f32(<4 x i32> undef, i32 0, i32 0)
   %cast = bitcast <4 x float> %val to <2 x i64>
@@ -300,7 +301,7 @@ define <2 x i64> @bitcast_v4f32_to_v2i64(<2 x i64> %arg) {
 
 declare half @llvm.canonicalize.f16(half)
 
-; FUNC-LABEL: {{^}}bitcast_f32_to_v1i32:
+; CHECK-LABEL: {{^}}bitcast_f32_to_v1i32:
 define amdgpu_kernel void @bitcast_f32_to_v1i32(ptr addrspace(1) %out) {
   %f16 = call arcp afn half @llvm.canonicalize.f16(half 0xH03F0)
   %f32 = fpext half %f16 to float
@@ -310,7 +311,7 @@ define amdgpu_kernel void @bitcast_f32_to_v1i32(ptr addrspace(1) %out) {
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_v4i64_to_v16i16:
+; CHECK-LABEL: {{^}}bitcast_v4i64_to_v16i16:
 define amdgpu_kernel void @bitcast_v4i64_to_v16i16(i32 %cond, ptr addrspace(1) %out, <4 x i64> %value) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
@@ -328,7 +329,7 @@ end:
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_v4f64_to_v16f16:
+; CHECK-LABEL: {{^}}bitcast_v4f64_to_v16f16:
 define amdgpu_kernel void @bitcast_v4f64_to_v16f16(i32 %cond, ptr addrspace(1) %out, <4 x double> %value) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
@@ -346,7 +347,7 @@ end:
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_v16i16_to_v4i64:
+; CHECK-LABEL: {{^}}bitcast_v16i16_to_v4i64:
 define amdgpu_kernel void @bitcast_v16i16_to_v4i64(i32 %cond, ptr addrspace(1) %out, <16 x i16> %value) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
@@ -364,7 +365,7 @@ end:
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_v16f16_to_v4f64:
+; CHECK-LABEL: {{^}}bitcast_v16f16_to_v4f64:
 define amdgpu_kernel void @bitcast_v16f16_to_v4f64(i32 %cond, ptr addrspace(1) %out, <16 x half> %value) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
@@ -382,8 +383,8 @@ end:
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_v20f16_to_v5f64:
-; SI: ScratchSize: 0
+; CHECK-LABEL: {{^}}bitcast_v20f16_to_v5f64:
+; CHECK: ScratchSize: 0
 define amdgpu_kernel void @bitcast_v20f16_to_v5f64(i32 %cond, ptr addrspace(1) %out, <20 x half> %value) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
@@ -401,8 +402,8 @@ end:
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_v10f32_to_v5f64:
-; SI: ScratchSize: 0
+; CHECK-LABEL: {{^}}bitcast_v10f32_to_v5f64:
+; CHECK: ScratchSize: 0
 define amdgpu_kernel void @bitcast_v10f32_to_v5f64(i32 %cond, ptr addrspace(1) %out, <10 x float> %value) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
@@ -420,8 +421,8 @@ end:
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_v10i32_to_v5f64:
-; SI: ScratchSize: 0
+; CHECK-LABEL: {{^}}bitcast_v10i32_to_v5f64:
+; CHECK: ScratchSize: 0
 define amdgpu_kernel void @bitcast_v10i32_to_v5f64(i32 %cond, ptr addrspace(1) %out, <10 x i32> %value) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
@@ -439,8 +440,8 @@ end:
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_v10f32_to_v5i64:
-; SI: ScratchSize: 0
+; CHECK-LABEL: {{^}}bitcast_v10f32_to_v5i64:
+; CHECK: ScratchSize: 0
 define amdgpu_kernel void @bitcast_v10f32_to_v5i64(i32 %cond, ptr addrspace(1) %out, <10 x float> %value) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
@@ -458,8 +459,8 @@ end:
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_v10i32_to_v5i64:
-; SI: ScratchSize: 0
+; CHECK-LABEL: {{^}}bitcast_v10i32_to_v5i64:
+; CHECK: ScratchSize: 0
 define amdgpu_kernel void @bitcast_v10i32_to_v5i64(i32 %cond, ptr addrspace(1) %out, <10 x i32> %value) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
@@ -477,8 +478,8 @@ end:
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_v40i8_to_v5f64:
-; SI: ScratchSize: 0
+; CHECK-LABEL: {{^}}bitcast_v40i8_to_v5f64:
+; CHECK: ScratchSize: 0
 define amdgpu_kernel void @bitcast_v40i8_to_v5f64(i32 %cond, ptr addrspace(1) %out, <40 x i8> %value) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
@@ -496,8 +497,8 @@ end:
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_v40i8_to_v5i64:
-; SI: ScratchSize: 0
+; CHECK-LABEL: {{^}}bitcast_v40i8_to_v5i64:
+; CHECK: ScratchSize: 0
 define amdgpu_kernel void @bitcast_v40i8_to_v5i64(i32 %cond, ptr addrspace(1) %out, <40 x i8> %value) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
@@ -515,8 +516,8 @@ end:
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_v5f64_to_v10f32:
-; SI: ScratchSize: 0
+; CHECK-LABEL: {{^}}bitcast_v5f64_to_v10f32:
+; CHECK: ScratchSize: 0
 define amdgpu_kernel void @bitcast_v5f64_to_v10f32(i32 %cond, ptr addrspace(1) %out, <5 x double> %value) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
@@ -534,8 +535,8 @@ end:
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_v5f64_to_v10i32:
-; SI: ScratchSize: 0
+; CHECK-LABEL: {{^}}bitcast_v5f64_to_v10i32:
+; CHECK: ScratchSize: 0
 define amdgpu_kernel void @bitcast_v5f64_to_v10i32(i32 %cond, ptr addrspace(1) %out, <5 x double> %value) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
@@ -553,8 +554,8 @@ end:
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_v5i64_to_v10f32:
-; SI: ScratchSize: 0
+; CHECK-LABEL: {{^}}bitcast_v5i64_to_v10f32:
+; CHECK: ScratchSize: 0
 define amdgpu_kernel void @bitcast_v5i64_to_v10f32(i32 %cond, ptr addrspace(1) %out, <5 x i64> %value) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
@@ -572,8 +573,8 @@ end:
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_v5i64_to_v10i32:
-; SI: ScratchSize: 0
+; CHECK-LABEL: {{^}}bitcast_v5i64_to_v10i32:
+; CHECK: ScratchSize: 0
 define amdgpu_kernel void @bitcast_v5i64_to_v10i32(i32 %cond, ptr addrspace(1) %out, <5 x i64> %value) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
@@ -591,8 +592,8 @@ end:
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_v6f64_to_v12i32:
-; SI: ScratchSize: 0
+; CHECK-LABEL: {{^}}bitcast_v6f64_to_v12i32:
+; CHECK: ScratchSize: 0
 define amdgpu_kernel void @bitcast_v6f64_to_v12i32(i32 %cond, ptr addrspace(1) %out, <6 x double> %value) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
@@ -610,8 +611,8 @@ end:
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_v6f64_to_v12f32:
-; SI: ScratchSize: 0
+; CHECK-LABEL: {{^}}bitcast_v6f64_to_v12f32:
+; CHECK: ScratchSize: 0
 define amdgpu_kernel void @bitcast_v6f64_to_v12f32(i32 %cond, ptr addrspace(1) %out, <6 x double> %value) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
@@ -629,8 +630,8 @@ end:
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_v12i32_to_v6i64:
-; SI: ScratchSize: 0
+; CHECK-LABEL: {{^}}bitcast_v12i32_to_v6i64:
+; CHECK: ScratchSize: 0
 define amdgpu_kernel void @bitcast_v12i32_to_v6i64(i32 %cond, ptr addrspace(1) %out, <12 x i32> %value) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
@@ -648,8 +649,8 @@ end:
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_v12i32_to_v6f64:
-; SI: ScratchSize: 0
+; CHECK-LABEL: {{^}}bitcast_v12i32_to_v6f64:
+; CHECK: ScratchSize: 0
 define amdgpu_kernel void @bitcast_v12i32_to_v6f64(i32 %cond, ptr addrspace(1) %out, <12 x i32> %value) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
@@ -667,8 +668,8 @@ end:
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_v6i64_to_v12i32:
-; SI: ScratchSize: 0
+; CHECK-LABEL: {{^}}bitcast_v6i64_to_v12i32:
+; CHECK: ScratchSize: 0
 define amdgpu_kernel void @bitcast_v6i64_to_v12i32(i32 %cond, ptr addrspace(1) %out, <6 x i64> %value) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
@@ -686,8 +687,8 @@ end:
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_v7i64_to_v14i32:
-; SI: ScratchSize: 0
+; CHECK-LABEL: {{^}}bitcast_v7i64_to_v14i32:
+; CHECK: ScratchSize: 0
 define amdgpu_kernel void @bitcast_v7i64_to_v14i32(i32 %cond, ptr addrspace(1) %out, <7 x i64> %value) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
@@ -705,8 +706,8 @@ end:
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_v7f64_to_v14i32:
-; SI: ScratchSize: 0
+; CHECK-LABEL: {{^}}bitcast_v7f64_to_v14i32:
+; CHECK: ScratchSize: 0
 define amdgpu_kernel void @bitcast_v7f64_to_v14i32(i32 %cond, ptr addrspace(1) %out, <7 x double> %value) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
@@ -724,8 +725,8 @@ end:
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_v9i64_to_v18i32:
-; SI: ScratchSize: 0
+; CHECK-LABEL: {{^}}bitcast_v9i64_to_v18i32:
+; CHECK: ScratchSize: 0
 define amdgpu_kernel void @bitcast_v9i64_to_v18i32(i32 %cond, ptr addrspace(1) %out, <9 x i64> %value) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
@@ -743,8 +744,8 @@ end:
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_v10i64_to_v20i32:
-; SI: ScratchSize: 0
+; CHECK-LABEL: {{^}}bitcast_v10i64_to_v20i32:
+; CHECK: ScratchSize: 0
 define amdgpu_kernel void @bitcast_v10i64_to_v20i32(i32 %cond, ptr addrspace(1) %out, <10 x i64> %value) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
@@ -762,8 +763,8 @@ end:
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_v11i64_to_v20i32:
-; SI: ScratchSize: 0
+; CHECK-LABEL: {{^}}bitcast_v11i64_to_v20i32:
+; CHECK: ScratchSize: 0
 define amdgpu_kernel void @bitcast_v11i64_to_v20i32(i32 %cond, ptr addrspace(1) %out, <11 x i64> %value) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
@@ -781,8 +782,8 @@ end:
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_v12i64_to_v22i32:
-; SI: ScratchSize: 0
+; CHECK-LABEL: {{^}}bitcast_v12i64_to_v22i32:
+; CHECK: ScratchSize: 0
 define amdgpu_kernel void @bitcast_v12i64_to_v22i32(i32 %cond, ptr addrspace(1) %out, <12 x i64> %value) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
@@ -800,8 +801,8 @@ end:
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_v13i64_to_v24i32:
-; SI: ScratchSize: 0
+; CHECK-LABEL: {{^}}bitcast_v13i64_to_v24i32:
+; CHECK: ScratchSize: 0
 define amdgpu_kernel void @bitcast_v13i64_to_v24i32(i32 %cond, ptr addrspace(1) %out, <13 x i64> %value) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
@@ -819,8 +820,8 @@ end:
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_v14i64_to_v26i32:
-; SI: ScratchSize: 0
+; CHECK-LABEL: {{^}}bitcast_v14i64_to_v26i32:
+; CHECK: ScratchSize: 0
 define amdgpu_kernel void @bitcast_v14i64_to_v26i32(i32 %cond, ptr addrspace(1) %out, <14 x i64> %value) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
@@ -838,8 +839,8 @@ end:
   ret void
 }
 
-; FUNC-LABEL: {{^}}bitcast_v15i64_to_v26i32:
-; SI: ScratchSize: 0
+; CHECK-LABEL: {{^}}bitcast_v15i64_to_v26i32:
+; CHECK: ScratchSize: 0
 define amdgpu_kernel void @bitcast_v15i64_to_v26i32(i32 %cond, ptr addrspace(1) %out, <15 x i64> %value) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0

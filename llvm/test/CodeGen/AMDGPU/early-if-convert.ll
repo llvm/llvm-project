@@ -1,5 +1,8 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=verde -amdgpu-early-ifcvt=1 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=verde -amdgpu-early-ifcvt=1 -amdgpu-codegenprepare-break-large-phis=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 ; XUN: llc -march=amdgcn -mcpu=tonga -amdgpu-early-ifcvt=1 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+
+; Note: breaking up large PHIs is disabled to prevent some testcases from becoming
+;  branchless.
 
 ; FIXME: This leaves behind a now unnecessary and with exec
 
@@ -30,7 +33,7 @@ endif:
 ; GCN: v_cmp_neq_f32_e32 vcc, 1.0, [[VAL]]
 ; GCN-DAG: v_add_f32_e32 [[ADD:v[0-9]+]], [[VAL]], [[VAL]]
 ; GCN-DAG: v_mul_f32_e32 [[MUL:v[0-9]+]], [[VAL]], [[VAL]]
-; GCN: buffer_store_dword [[RESULT]]
+; GCN: buffer_store_dword [[MUL]]
 define amdgpu_kernel void @test_vccnz_ifcvt_diamond(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 entry:
   %v = load float, ptr addrspace(1) %in

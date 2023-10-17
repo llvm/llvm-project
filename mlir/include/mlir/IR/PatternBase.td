@@ -90,6 +90,7 @@ def addBenefit;
 // * `FiveResultOp`#3: `TwoResultOp2`#1
 // * `FiveResultOp`#4: `TwoResultOp2`#1
 class Pattern<dag source, list<dag> results, list<dag> preds = [],
+  list<dag> supplemental_results = [],
   dag benefitAdded = (addBenefit 0)> {
   dag sourcePattern = source;
   // Result patterns. Each result pattern is expected to replace one result
@@ -103,6 +104,11 @@ class Pattern<dag source, list<dag> results, list<dag> preds = [],
   // matched in source pattern and places further constraints on them as a
   // whole.
   list<dag> constraints = preds;
+  // Optional patterns that are executed after the result patterns. Similar to
+  // auxiliary patterns, they are not used for replacement. These patterns can
+  // be used to invoke additional code after the result patterns, e.g. copy
+  // the attributes from the source op to the result ops.
+  list<dag> supplementalPatterns = supplemental_results;
   // The delta value added to the default benefit value. The default value is
   // the number of ops in the source pattern. The rule with the highest final
   // benefit value will be applied first if there are multiple rules matches.
@@ -112,8 +118,9 @@ class Pattern<dag source, list<dag> results, list<dag> preds = [],
 
 // Form of a pattern which produces a single result.
 class Pat<dag pattern, dag result, list<dag> preds = [],
+  list<dag> supplemental_results = [],
   dag benefitAdded = (addBenefit 0)> :
-  Pattern<pattern, [result], preds, benefitAdded>;
+  Pattern<pattern, [result], preds, supplemental_results, benefitAdded>;
 
 // Native code call wrapper. This allows invoking an arbitrary C++ expression
 // to create an op operand/attribute or replace an op result.
@@ -210,6 +217,22 @@ def returnType;
 // `Commutative` trait doesn't imply that it'll have the same behavior than
 // `either` while pattern matching.
 def either;
+
+// Directive used to match variadic operands. This directive only matches if
+// the variadic operand has the same length as the specified formal
+// sub-dags.
+//
+// ```
+// (VariadicOp (variadic:$input1 $input1a, $input1b),
+//             (variadic:$input2 $input2a, $input2b, $input2c),
+//             $attr1, $attr2)
+// ```
+//
+// The pattern above only matches if the `$input1` operand is of length 2,
+// `$input2` is of length 3, and all sub-dags match respectively. The `$input1`
+// symbol denotes the full variadic operand range. The `$input1a` symbol
+// denotes the first operand in the variadic sub-operands.
+def variadic;
 
 //===----------------------------------------------------------------------===//
 // Common value constraints

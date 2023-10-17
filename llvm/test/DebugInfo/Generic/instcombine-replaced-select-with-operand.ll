@@ -1,4 +1,4 @@
-; RUN: opt -opaque-pointers=0 -passes=instcombine -S %s | FileCheck %s
+; RUN: opt -passes=instcombine -S %s | FileCheck %s
 
 ;; Ensure that debug uses of a select are replaced when the select is replaced
 ;; with one of its operands in InstCombine's replacedSelectWithOperand.
@@ -22,41 +22,41 @@
 ;; }
 
 ;; Look at the instruction:
-;;     %retval.0.i = select i1 %tobool.not.i, %struct.Thing* %2, %struct.Thing* null
+;;     %retval.0.i = select i1 %tobool.not.i, ptr %2, ptr null
 ;; Note that %2 is a bitcast of %0.
 ;; InstCombine replaces the use of %retval.0.i in if.then with %0 because
 ;; if.then is only branched to when retval.0.is not null. Ensure that debug use
 ;; of %retval.0.i is also replaced with %0.
 
 ; CHECK: if.then:
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i8* %0, metadata ![[THIS:[0-9]+]], metadata !DIExpression())
+; CHECK-NEXT: call void @llvm.dbg.value(metadata ptr %0, metadata ![[THIS:[0-9]+]], metadata !DIExpression())
 ; CHECK: ![[THIS]] = !DILocalVariable(name: "this",
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-%struct.Thing = type { i8* }
+%struct.Thing = type { ptr }
 
-@glob = external dso_local local_unnamed_addr global i8*, align 8
+@glob = external dso_local local_unnamed_addr global ptr, align 8
 
 define dso_local void @_Z3onev() local_unnamed_addr !dbg !29 {
 entry:
-  %0 = load i8*, i8** @glob, align 8, !dbg !35
-  call void @llvm.dbg.value(metadata i8* %0, metadata !22, metadata !DIExpression()), !dbg !40
-  %1 = ptrtoint i8* %0 to i64, !dbg !42
+  %0 = load ptr, ptr @glob, align 8, !dbg !35
+  call void @llvm.dbg.value(metadata ptr %0, metadata !22, metadata !DIExpression()), !dbg !40
+  %1 = ptrtoint ptr %0 to i64, !dbg !42
   %and.i = and i64 %1, 1, !dbg !43
   %tobool.not.i = icmp eq i64 %and.i, 0, !dbg !42
-  %2 = bitcast i8* %0 to %struct.Thing*, !dbg !44
-  %retval.0.i = select i1 %tobool.not.i, %struct.Thing* %2, %struct.Thing* null, !dbg !44
-  call void @llvm.dbg.value(metadata %struct.Thing* %retval.0.i, metadata !33, metadata !DIExpression()), !dbg !45
-  %tobool.not = icmp eq %struct.Thing* %retval.0.i, null, !dbg !46
+  %2 = bitcast ptr %0 to ptr, !dbg !44
+  %retval.0.i = select i1 %tobool.not.i, ptr %2, ptr null, !dbg !44
+  call void @llvm.dbg.value(metadata ptr %retval.0.i, metadata !33, metadata !DIExpression()), !dbg !45
+  %tobool.not = icmp eq ptr %retval.0.i, null, !dbg !46
   br i1 %tobool.not, label %if.end, label %if.then, !dbg !47
 
 if.then:                                          ; preds = %entry
-  call void @llvm.dbg.value(metadata %struct.Thing* %retval.0.i, metadata !48, metadata !DIExpression()), !dbg !51
-  %ptr.i = getelementptr inbounds %struct.Thing, %struct.Thing* %retval.0.i, i64 0, i32 0, !dbg !53
-  %3 = load i8*, i8** %ptr.i, align 8, !dbg !53
-  store i8* %3, i8** @glob, align 8, !dbg !56
+  call void @llvm.dbg.value(metadata ptr %retval.0.i, metadata !48, metadata !DIExpression()), !dbg !51
+  %ptr.i = getelementptr inbounds %struct.Thing, ptr %retval.0.i, i64 0, i32 0, !dbg !53
+  %3 = load ptr, ptr %ptr.i, align 8, !dbg !53
+  store ptr %3, ptr @glob, align 8, !dbg !56
   br label %if.end, !dbg !57
 
 if.end:                                           ; preds = %if.then, %entry

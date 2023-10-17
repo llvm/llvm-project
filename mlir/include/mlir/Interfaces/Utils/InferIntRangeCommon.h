@@ -16,6 +16,7 @@
 
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "llvm/ADT/ArrayRef.h"
+#include <optional>
 
 namespace mlir {
 namespace intrange {
@@ -117,8 +118,9 @@ enum class CmpPredicate : uint64_t {
 /// Returns a boolean value if `pred` is statically true or false for
 /// anypossible inputs falling within `lhs` and `rhs`, and std::nullopt if the
 /// value of the predicate cannot be determined.
-Optional<bool> evaluatePred(CmpPredicate pred, const ConstantIntRanges &lhs,
-                            const ConstantIntRanges &rhs);
+std::optional<bool> evaluatePred(CmpPredicate pred,
+                                 const ConstantIntRanges &lhs,
+                                 const ConstantIntRanges &rhs);
 
 } // namespace intrange
 } // namespace mlir

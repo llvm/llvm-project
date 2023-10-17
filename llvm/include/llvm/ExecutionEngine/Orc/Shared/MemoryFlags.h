@@ -65,26 +65,43 @@ inline MemProt fromSysMemoryProtectionFlags(sys::Memory::ProtectionFlags PF) {
   return MP;
 }
 
-/// Describes a memory deallocation policy for memory to be allocated by a
+/// Describes a memory lifetime policy for memory to be allocated by a
 /// JITLinkMemoryManager.
 ///
 /// All memory allocated by a call to JITLinkMemoryManager::allocate should be
 /// deallocated if a call is made to
 /// JITLinkMemoryManager::InFlightAllocation::abandon. The policies below apply
 /// to finalized allocations.
-enum class MemDeallocPolicy {
-  /// Standard memory should be deallocated when the deallocate method is called
-  /// for the finalized allocation.
+enum class MemLifetime {
+  /// Standard memory should be allocated by the allocator and then deallocated
+  /// when the deallocate method is called for the finalized allocation.
   Standard,
 
-  /// Finalize memory should be overwritten and then deallocated after all
-  /// finalization functions have been run.
-  Finalize
+  /// Finalize memory should be allocated by the allocator, and then be
+  /// overwritten and deallocated after all finalization functions have been
+  /// run.
+  Finalize,
+
+  /// NoAlloc memory should not be allocated by the JITLinkMemoryManager at
+  /// all. It is used for sections that don't need to be transferred to the
+  /// executor process, typically metadata sections.
+  NoAlloc
 };
 
 /// Print a MemDeallocPolicy.
-inline raw_ostream &operator<<(raw_ostream &OS, MemDeallocPolicy MDP) {
-  return OS << (MDP == MemDeallocPolicy::Standard ? "standard" : "finalize");
+inline raw_ostream &operator<<(raw_ostream &OS, MemLifetime MLP) {
+  switch (MLP) {
+  case MemLifetime::Standard:
+    OS << "standard";
+    break;
+  case MemLifetime::Finalize:
+    OS << "finalize";
+    break;
+  case MemLifetime::NoAlloc:
+    OS << "noalloc";
+    break;
+  }
+  return OS;
 }
 
 /// A pair of memory protections and allocation policies.
@@ -95,34 +112,34 @@ class AllocGroup {
 
   using underlying_type = uint8_t;
   static constexpr unsigned BitsForProt = 3;
-  static constexpr unsigned BitsForDeallocPolicy = 1;
+  static constexpr unsigned BitsForLifetimePolicy = 2;
   static constexpr unsigned MaxIdentifiers =
-      1U << (BitsForProt + BitsForDeallocPolicy);
+      1U << (BitsForProt + BitsForLifetimePolicy);
 
 public:
   static constexpr unsigned NumGroups = MaxIdentifiers;
 
   /// Create a default AllocGroup. No memory protections, standard
-  /// deallocation policy.
+  /// lifetime policy.
   AllocGroup() = default;
 
   /// Create an AllocGroup from a MemProt only -- uses
-  /// MemoryDeallocationPolicy::Standard.
+  /// MemLifetime::Standard.
   AllocGroup(MemProt MP) : Id(static_cast<underlying_type>(MP)) {}
 
-  /// Create an AllocGroup from a MemProt and a MemoryDeallocationPolicy.
-  AllocGroup(MemProt MP, MemDeallocPolicy MDP)
+  /// Create an AllocGroup from a MemProt and a MemLifetime.
+  AllocGroup(MemProt MP, MemLifetime MLP)
       : Id(static_cast<underlying_type>(MP) |
-           (static_cast<underlying_type>(MDP) << BitsForProt)) {}
+           (static_cast<underlying_type>(MLP) << BitsForProt)) {}
 
   /// Returns the MemProt for this group.
   MemProt getMemProt() const {
     return static_cast<MemProt>(Id & ((1U << BitsForProt) - 1));
   }
 
-  /// Returns the MemoryDeallocationPolicy for this group.
-  MemDeallocPolicy getMemDeallocPolicy() const {
-    return static_cast<MemDeallocPolicy>(Id >> BitsForProt);
+  /// Returns the MemLifetime for this group.
+  MemLifetime getMemLifetime() const {
+    return static_cast<MemLifetime>(Id >> BitsForProt);
   }
 
   friend bool operator==(const AllocGroup &LHS, const AllocGroup &RHS) {
@@ -186,8 +203,7 @@ private:
 
 /// Print an AllocGroup.
 inline raw_ostream &operator<<(raw_ostream &OS, AllocGroup AG) {
-  return OS << '(' << AG.getMemProt() << ", " << AG.getMemDeallocPolicy()
-            << ')';
+  return OS << '(' << AG.getMemProt() << ", " << AG.getMemLifetime() << ')';
 }
 
 } // end namespace orc

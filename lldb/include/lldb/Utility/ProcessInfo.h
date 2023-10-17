@@ -14,6 +14,7 @@
 #include "lldb/Utility/Environment.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/NameMatches.h"
+#include "lldb/Utility/StructuredData.h"
 #include <vector>
 
 namespace lldb_private {
@@ -86,6 +87,35 @@ public:
   Environment &GetEnvironment() { return m_environment; }
   const Environment &GetEnvironment() const { return m_environment; }
 
+  bool IsScriptedProcess() const;
+
+  lldb::ScriptedMetadataSP GetScriptedMetadata() const {
+    return m_scripted_metadata_sp;
+  }
+
+  void SetScriptedMetadata(lldb::ScriptedMetadataSP metadata_sp) {
+    m_scripted_metadata_sp = metadata_sp;
+  }
+
+  // Get and set the actual listener that will be used for the process events
+  lldb::ListenerSP GetListener() const { return m_listener_sp; }
+
+  void SetListener(const lldb::ListenerSP &listener_sp) {
+    m_listener_sp = listener_sp;
+  }
+
+  lldb::ListenerSP GetHijackListener() const { return m_hijack_listener_sp; }
+
+  void SetHijackListener(const lldb::ListenerSP &listener_sp) {
+    m_hijack_listener_sp = listener_sp;
+  }
+
+  lldb::ListenerSP GetShadowListener() const { return m_shadow_listener_sp; }
+
+  void SetShadowListener(const lldb::ListenerSP &listener_sp) {
+    m_shadow_listener_sp = listener_sp;
+  }
+
 protected:
   FileSpec m_executable;
   std::string m_arg0; // argv[0] if supported. If empty, then use m_executable.
@@ -97,6 +127,10 @@ protected:
   uint32_t m_gid = UINT32_MAX;
   ArchSpec m_arch;
   lldb::pid_t m_pid = LLDB_INVALID_PROCESS_ID;
+  lldb::ScriptedMetadataSP m_scripted_metadata_sp = nullptr;
+  lldb::ListenerSP m_listener_sp = nullptr;
+  lldb::ListenerSP m_hijack_listener_sp = nullptr;
+  lldb::ListenerSP m_shadow_listener_sp = nullptr;
 };
 
 // ProcessInstanceInfo
@@ -152,6 +186,26 @@ protected:
 };
 
 typedef std::vector<ProcessInstanceInfo> ProcessInstanceInfoList;
+
+class ProcessInfoList {
+public:
+  ProcessInfoList(const ProcessInstanceInfoList &list) : m_list(list) {}
+
+  uint32_t GetSize() const { return m_list.size(); }
+
+  bool GetProcessInfoAtIndex(uint32_t idx, ProcessInstanceInfo &info) {
+    if (idx < m_list.size()) {
+      info = m_list[idx];
+      return true;
+    }
+    return false;
+  }
+
+  void Clear() { return m_list.clear(); }
+
+private:
+  ProcessInstanceInfoList m_list;
+};
 
 // ProcessInstanceInfoMatch
 //

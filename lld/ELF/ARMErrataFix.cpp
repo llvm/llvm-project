@@ -317,13 +317,13 @@ void ARMErr657417Patcher::init() {
   // [Symbol Value, End of section). The type, code or data, is determined by
   // the mapping symbol name, $a for Arm code, $t for Thumb code, $d for data.
   auto isArmMapSymbol = [](const Symbol *s) {
-    return s->getName() == "$a" || s->getName().startswith("$a.");
+    return s->getName() == "$a" || s->getName().starts_with("$a.");
   };
   auto isThumbMapSymbol = [](const Symbol *s) {
-    return s->getName() == "$t" || s->getName().startswith("$t.");
+    return s->getName() == "$t" || s->getName().starts_with("$t.");
   };
   auto isDataMapSymbol = [](const Symbol *s) {
-    return s->getName() == "$d" || s->getName().startswith("$d.");
+    return s->getName() == "$d" || s->getName().starts_with("$d.");
   };
 
   // Collect mapping symbols for every executable InputSection.

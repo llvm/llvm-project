@@ -51,13 +51,13 @@ static_assert(!HasAdjacentFindR<ForwardRangeNotSentinelSemiregular>);
 static_assert(!HasAdjacentFindR<ForwardRangeNotSentinelEqualityComparableWith>);
 static_assert(!HasAdjacentFindR<UncheckedRange<NotComparable>>);
 
-template <size_t N>
+template <std::size_t N>
 struct Data {
   std::array<int, N> input;
   int expected;
 };
 
-template <class Iter, class Sent, size_t N>
+template <class Iter, class Sent, std::size_t N>
 constexpr void test(Data<N> d) {
   {
     std::same_as<Iter> decltype(auto) ret =

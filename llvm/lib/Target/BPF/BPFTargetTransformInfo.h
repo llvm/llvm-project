@@ -77,6 +77,10 @@ public:
     return Options;
   }
 
+  unsigned getMaxNumArgs() const {
+    return 5;
+  }
+
 };
 
 } // end namespace llvm

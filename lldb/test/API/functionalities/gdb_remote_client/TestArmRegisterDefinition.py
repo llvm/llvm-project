@@ -4,8 +4,8 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.gdbclientutils import *
 from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
-class TestArmRegisterDefinition(GDBRemoteTestBase):
 
+class TestArmRegisterDefinition(GDBRemoteTestBase):
     @skipIfXmlSupportMissing
     @skipIfRemote
     def test(self):
@@ -13,11 +13,12 @@ class TestArmRegisterDefinition(GDBRemoteTestBase):
         Test lldb's parsing of the <architecture> tag in the target.xml register
         description packet.
         """
-        class MyResponder(MockGDBServerResponder):
 
+        class MyResponder(MockGDBServerResponder):
             def qXferRead(self, obj, annex, offset, length):
                 if annex == "target.xml":
-                    return """<?xml version="1.0"?>
+                    return (
+                        """<?xml version="1.0"?>
                         <!DOCTYPE feature SYSTEM "gdb-target.dtd">
                         <target>
                         <architecture>arm</architecture>
@@ -83,7 +84,9 @@ class TestArmRegisterDefinition(GDBRemoteTestBase):
                         <reg name="s30" bitsize="32" type="float" group="float"/>
                         <reg name="s31" bitsize="32" type="float" group="float"/>
                         </feature>
-                        </target>""", False
+                        </target>""",
+                        False,
+                    )
                 else:
                     return None, False
 
@@ -98,7 +101,7 @@ class TestArmRegisterDefinition(GDBRemoteTestBase):
 
             def qfThreadInfo(self):
                 return "mdead"
-            
+
             def qC(self):
                 return ""
 
@@ -114,8 +117,7 @@ class TestArmRegisterDefinition(GDBRemoteTestBase):
         self.server.responder = MyResponder()
         if self.TraceOn():
             self.runCmd("log enable gdb-remote packets")
-            self.addTearDownHook(
-                    lambda: self.runCmd("log disable gdb-remote packets"))
+            self.addTearDownHook(lambda: self.runCmd("log disable gdb-remote packets"))
 
         self.dbg.SetDefaultArchitecture("armv7em")
         target = self.dbg.CreateTargetWithFileAndArch(None, None)
@@ -132,16 +134,16 @@ class TestArmRegisterDefinition(GDBRemoteTestBase):
         self.assertEqual(r0_valobj.GetValueAsUnsigned(), 0x20)
 
         pc_valobj = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("pc")
-        self.assertEqual(pc_valobj.GetValueAsUnsigned(), 0x0800d22e)
+        self.assertEqual(pc_valobj.GetValueAsUnsigned(), 0x0800D22E)
 
         sys_valobj = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("SYS0")
-        self.assertEqual(sys_valobj.GetValueAsUnsigned(), 0xdead)
+        self.assertEqual(sys_valobj.GetValueAsUnsigned(), 0xDEAD)
 
         sys_valobj = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("SYS1")
-        self.assertEqual(sys_valobj.GetValueAsUnsigned(), 0xbe)
+        self.assertEqual(sys_valobj.GetValueAsUnsigned(), 0xBE)
 
         sys_valobj = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("SYS2")
-        self.assertEqual(sys_valobj.GetValueAsUnsigned(), 0xaf)
+        self.assertEqual(sys_valobj.GetValueAsUnsigned(), 0xAF)
 
         sys_valobj = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("SYS3")
-        self.assertEqual(sys_valobj.GetValueAsUnsigned(), 0xbc)
+        self.assertEqual(sys_valobj.GetValueAsUnsigned(), 0xBC)

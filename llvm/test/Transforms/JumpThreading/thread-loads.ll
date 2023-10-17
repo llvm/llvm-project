@@ -322,12 +322,12 @@ bb3:
 define void @test8(ptr, ptr, ptr) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:  ret2:
-; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[TMP0:%.*]], align 4, !range [[RNG4:![0-9]+]]
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[TMP0:%.*]], align 4, !range [[RNG4:![0-9]+]], !noundef !5
 ; CHECK-NEXT:    store i32 [[A]], ptr [[TMP1:%.*]], align 4
 ; CHECK-NEXT:    [[XXX:%.*]] = tail call i32 (...) @f1() #[[ATTR0]]
 ; CHECK-NEXT:    ret void
 ;
-  %a = load i32, ptr %0, !tbaa !0, !range !4, !alias.scope !9, !noalias !10
+  %a = load i32, ptr %0, !tbaa !0, !range !4, !alias.scope !9, !noalias !10, !noundef !11
   %b = load i32, ptr %0, !range !5
   store i32 %a, ptr %1
   %c = icmp eq i32 %b, 8
@@ -693,3 +693,4 @@ right_x:
 !8 = !{!8, !6}
 !9 = !{!7}
 !10 = !{!8}
+!11 = !{}

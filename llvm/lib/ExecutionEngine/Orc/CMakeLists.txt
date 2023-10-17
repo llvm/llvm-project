@@ -1,3 +1,7 @@
+if (NOT HAVE_CXX_ATOMICS64_WITHOUT_LIB)
+  set (atomic_lib atomic)
+endif()
+
 if( CMAKE_HOST_UNIX AND HAVE_LIBRT )
   set(rt_lib rt)
 endif()
@@ -9,7 +13,6 @@ add_llvm_component_library(LLVMOrcJIT
   CompileUtils.cpp
   Core.cpp
   DebugObjectManagerPlugin.cpp
-  DebuggerSupportPlugin.cpp
   DebugUtils.cpp
   EPCDynamicLibrarySearchGenerator.cpp
   EPCDebugObjectRegistrar.cpp
@@ -53,6 +56,7 @@ add_llvm_component_library(LLVMOrcJIT
   LINK_LIBS
   ${LLVM_PTHREAD_LIB}
   ${rt_lib}
+  ${atomic_lib}
 
   LINK_COMPONENTS
   Core
@@ -63,7 +67,6 @@ add_llvm_component_library(LLVMOrcJIT
   OrcTargetProcess
   WindowsDriver
   MC
-  MCDisassembler
   Passes
   RuntimeDyld
   Support
@@ -72,6 +75,7 @@ add_llvm_component_library(LLVMOrcJIT
   TransformUtils
   )
 
+add_subdirectory(Debugging)
 add_subdirectory(Shared)
 add_subdirectory(TargetProcess)
 

@@ -70,7 +70,7 @@ private:
   std::chrono::steady_clock::time_point Time;
 };
 
-/// Makes a deadline from a timeout in seconds. None means wait forever.
+/// Makes a deadline from a timeout in seconds. std::nullopt means wait forever.
 Deadline timeoutSeconds(std::optional<double> Seconds);
 /// Wait once on CV for the specified duration.
 void wait(std::unique_lock<std::mutex> &Lock, std::condition_variable &CV,

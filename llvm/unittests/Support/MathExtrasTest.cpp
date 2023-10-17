@@ -13,58 +13,6 @@ using namespace llvm;
 
 namespace {
 
-TEST(MathExtras, countTrailingZeros) {
-  uint8_t Z8 = 0;
-  uint16_t Z16 = 0;
-  uint32_t Z32 = 0;
-  uint64_t Z64 = 0;
-  EXPECT_EQ(8u, countTrailingZeros(Z8));
-  EXPECT_EQ(16u, countTrailingZeros(Z16));
-  EXPECT_EQ(32u, countTrailingZeros(Z32));
-  EXPECT_EQ(64u, countTrailingZeros(Z64));
-
-  uint8_t NZ8 = 42;
-  uint16_t NZ16 = 42;
-  uint32_t NZ32 = 42;
-  uint64_t NZ64 = 42;
-  EXPECT_EQ(1u, countTrailingZeros(NZ8));
-  EXPECT_EQ(1u, countTrailingZeros(NZ16));
-  EXPECT_EQ(1u, countTrailingZeros(NZ32));
-  EXPECT_EQ(1u, countTrailingZeros(NZ64));
-}
-
-TEST(MathExtras, countLeadingZeros) {
-  uint8_t Z8 = 0;
-  uint16_t Z16 = 0;
-  uint32_t Z32 = 0;
-  uint64_t Z64 = 0;
-  EXPECT_EQ(8u, countLeadingZeros(Z8));
-  EXPECT_EQ(16u, countLeadingZeros(Z16));
-  EXPECT_EQ(32u, countLeadingZeros(Z32));
-  EXPECT_EQ(64u, countLeadingZeros(Z64));
-
-  uint8_t NZ8 = 42;
-  uint16_t NZ16 = 42;
-  uint32_t NZ32 = 42;
-  uint64_t NZ64 = 42;
-  EXPECT_EQ(2u, countLeadingZeros(NZ8));
-  EXPECT_EQ(10u, countLeadingZeros(NZ16));
-  EXPECT_EQ(26u, countLeadingZeros(NZ32));
-  EXPECT_EQ(58u, countLeadingZeros(NZ64));
-
-  EXPECT_EQ(8u, countLeadingZeros(0x00F000FFu));
-  EXPECT_EQ(8u, countLeadingZeros(0x00F12345u));
-  for (unsigned i = 0; i <= 30; ++i) {
-    EXPECT_EQ(31 - i, countLeadingZeros(1u << i));
-  }
-
-  EXPECT_EQ(8u, countLeadingZeros(0x00F1234500F12345ULL));
-  EXPECT_EQ(1u, countLeadingZeros(1ULL << 62));
-  for (unsigned i = 0; i <= 62; ++i) {
-    EXPECT_EQ(63 - i, countLeadingZeros(1ULL << i));
-  }
-}
-
 TEST(MathExtras, onesMask) {
   EXPECT_EQ(0U, maskLeadingOnes<uint8_t>(0));
   EXPECT_EQ(0U, maskTrailingOnes<uint8_t>(0));
@@ -88,46 +36,6 @@ TEST(MathExtras, onesMask) {
 
   EXPECT_EQ(0x0000FFFFFFFFFFFFULL, maskTrailingOnes<uint64_t>(48U));
   EXPECT_EQ(0xFFFFFFFFFFFF0000ULL, maskLeadingOnes<uint64_t>(48U));
-}
-
-TEST(MathExtras, findFirstSet) {
-  uint8_t Z8 = 0;
-  uint16_t Z16 = 0;
-  uint32_t Z32 = 0;
-  uint64_t Z64 = 0;
-  EXPECT_EQ(0xFFULL, findFirstSet(Z8));
-  EXPECT_EQ(0xFFFFULL, findFirstSet(Z16));
-  EXPECT_EQ(0xFFFFFFFFULL, findFirstSet(Z32));
-  EXPECT_EQ(0xFFFFFFFFFFFFFFFFULL, findFirstSet(Z64));
-
-  uint8_t NZ8 = 42;
-  uint16_t NZ16 = 42;
-  uint32_t NZ32 = 42;
-  uint64_t NZ64 = 42;
-  EXPECT_EQ(1u, findFirstSet(NZ8));
-  EXPECT_EQ(1u, findFirstSet(NZ16));
-  EXPECT_EQ(1u, findFirstSet(NZ32));
-  EXPECT_EQ(1u, findFirstSet(NZ64));
-}
-
-TEST(MathExtras, findLastSet) {
-  uint8_t Z8 = 0;
-  uint16_t Z16 = 0;
-  uint32_t Z32 = 0;
-  uint64_t Z64 = 0;
-  EXPECT_EQ(0xFFULL, findLastSet(Z8));
-  EXPECT_EQ(0xFFFFULL, findLastSet(Z16));
-  EXPECT_EQ(0xFFFFFFFFULL, findLastSet(Z32));
-  EXPECT_EQ(0xFFFFFFFFFFFFFFFFULL, findLastSet(Z64));
-
-  uint8_t NZ8 = 42;
-  uint16_t NZ16 = 42;
-  uint32_t NZ32 = 42;
-  uint64_t NZ64 = 42;
-  EXPECT_EQ(5u, findLastSet(NZ8));
-  EXPECT_EQ(5u, findLastSet(NZ16));
-  EXPECT_EQ(5u, findLastSet(NZ32));
-  EXPECT_EQ(5u, findLastSet(NZ64));
 }
 
 TEST(MathExtras, isIntN) {
@@ -235,12 +143,6 @@ TEST(MathExtras, PowerOf2Ceil) {
   EXPECT_EQ(8U, PowerOf2Ceil(7U));
 }
 
-TEST(MathExtras, PowerOf2Floor) {
-  EXPECT_EQ(0U, PowerOf2Floor(0U));
-  EXPECT_EQ(8U, PowerOf2Floor(8U));
-  EXPECT_EQ(4U, PowerOf2Floor(7U));
-}
-
 TEST(MathExtras, CTLog2) {
   EXPECT_EQ(CTLog2<1ULL << 0>(), 0U);
   EXPECT_EQ(CTLog2<1ULL << 1>(), 1U);
@@ -258,31 +160,6 @@ TEST(MathExtras, CTLog2) {
   EXPECT_EQ(CTLog2<1ULL << 13>(), 13U);
   EXPECT_EQ(CTLog2<1ULL << 14>(), 14U);
   EXPECT_EQ(CTLog2<1ULL << 15>(), 15U);
-}
-
-TEST(MathExtras, countLeadingOnes) {
-  for (int i = 30; i >= 0; --i) {
-    // Start with all ones and unset some bit.
-    EXPECT_EQ(31u - i, countLeadingOnes(0xFFFFFFFF ^ (1 << i)));
-  }
-  for (int i = 62; i >= 0; --i) {
-    // Start with all ones and unset some bit.
-    EXPECT_EQ(63u - i, countLeadingOnes(0xFFFFFFFFFFFFFFFFULL ^ (1LL << i)));
-  }
-  for (int i = 30; i >= 0; --i) {
-    // Start with all ones and unset some bit.
-    EXPECT_EQ(31u - i, countLeadingOnes(0xFFFFFFFF ^ (1 << i)));
-  }
-}
-
-TEST(MathExtras, FloatBits) {
-  static const float kValue = 5632.34f;
-  EXPECT_FLOAT_EQ(kValue, BitsToFloat(FloatToBits(kValue)));
-}
-
-TEST(MathExtras, DoubleBits) {
-  static const double kValue = 87987234.983498;
-  EXPECT_DOUBLE_EQ(kValue, BitsToDouble(DoubleToBits(kValue)));
 }
 
 TEST(MathExtras, MinAlign) {

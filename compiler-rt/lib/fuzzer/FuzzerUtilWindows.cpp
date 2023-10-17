@@ -224,6 +224,20 @@ void DiscardOutput(int Fd) {
   fclose(Temp);
 }
 
+size_t PageSize() {
+  static size_t PageSizeCached = []() -> size_t {
+    SYSTEM_INFO si;
+    GetSystemInfo(&si);
+    return si.dwPageSize;
+  }();
+  return PageSizeCached;
+}
+
+void SetThreadName(std::thread &thread, const std::string &name) {
+  // TODO ?
+  // to UTF-8 then SetThreadDescription ?
+}
+
 } // namespace fuzzer
 
 #endif // LIBFUZZER_WINDOWS

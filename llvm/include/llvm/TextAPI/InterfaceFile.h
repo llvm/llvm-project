@@ -24,6 +24,7 @@
 #include "llvm/TextAPI/PackedVersion.h"
 #include "llvm/TextAPI/Platform.h"
 #include "llvm/TextAPI/Symbol.h"
+#include "llvm/TextAPI/SymbolSet.h"
 #include "llvm/TextAPI/Target.h"
 
 namespace llvm {
@@ -54,19 +55,31 @@ enum FileType : unsigned {
   /// Invalid file type.
   Invalid = 0U,
 
+  /// \brief MachO Dynamic Library file.
+  MachO_DynamicLibrary      = 1U <<  0,
+
+  /// \brief MachO Dynamic Library Stub file.
+  MachO_DynamicLibrary_Stub = 1U <<  1,
+
+  /// \brief MachO Bundle file.
+  MachO_Bundle              = 1U <<  2,
+
   /// Text-based stub file (.tbd) version 1.0
-  TBD_V1  = 1U <<  0,
+  TBD_V1                    = 1U <<  3,
 
   /// Text-based stub file (.tbd) version 2.0
-  TBD_V2  = 1U <<  1,
+  TBD_V2                    = 1U <<  4,
 
   /// Text-based stub file (.tbd) version 3.0
-  TBD_V3  = 1U <<  2,
+  TBD_V3                    = 1U <<  5,
 
   /// Text-based stub file (.tbd) version 4.0
-  TBD_V4  = 1U <<  3,
+  TBD_V4                    = 1U <<  6,
 
-  All     = ~0U,
+  /// Text-based stub file (.tbd) version 5.0
+  TBD_V5                    = 1U <<  7,
+
+  All                       = ~0U,
 
   LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/All),
 };
@@ -89,6 +102,10 @@ public:
   template <typename RangeT> void addTargets(RangeT &&Targets) {
     for (const auto &Target : Targets)
       addTarget(Target(Target));
+  }
+
+  bool hasTarget(Target &Targ) const {
+    return llvm::is_contained(Targets, Targ);
   }
 
   using const_target_iterator = TargetList::const_iterator;
@@ -120,37 +137,15 @@ private:
 
 } // end namespace MachO.
 
-struct SymbolsMapKey {
-  MachO::SymbolKind Kind;
-  StringRef Name;
-
-  SymbolsMapKey(MachO::SymbolKind Kind, StringRef Name)
-      : Kind(Kind), Name(Name) {}
-};
-template <> struct DenseMapInfo<SymbolsMapKey> {
-  static inline SymbolsMapKey getEmptyKey() {
-    return SymbolsMapKey(MachO::SymbolKind::GlobalSymbol, StringRef{});
-  }
-
-  static inline SymbolsMapKey getTombstoneKey() {
-    return SymbolsMapKey(MachO::SymbolKind::ObjectiveCInstanceVariable,
-                         StringRef{});
-  }
-
-  static unsigned getHashValue(const SymbolsMapKey &Key) {
-    return hash_combine(hash_value(Key.Kind), hash_value(Key.Name));
-  }
-
-  static bool isEqual(const SymbolsMapKey &LHS, const SymbolsMapKey &RHS) {
-    return std::tie(LHS.Kind, LHS.Name) == std::tie(RHS.Kind, RHS.Name);
-  }
-};
-
 namespace MachO {
 
 /// Defines the interface file.
 class InterfaceFile {
 public:
+  InterfaceFile(std::unique_ptr<SymbolSet> &&InputSymbols)
+      : SymbolsSet(std::move(InputSymbols)) {}
+
+  InterfaceFile() : SymbolsSet(std::make_unique<SymbolSet>()){};
   /// Set the path from which this file was generated (if applicable).
   ///
   /// \param Path_ The path to the source file.
@@ -190,6 +185,13 @@ public:
   ///
   /// \param Target the target to add into.
   void addTarget(const Target &Target);
+
+  /// Determine if target triple slice exists in file.
+  ///
+  /// \param Targ the value to find.
+  bool hasTarget(const Target &Targ) const {
+    return llvm::is_contained(Targets, Targ);
+  }
 
   /// Set and add targets.
   ///
@@ -252,6 +254,12 @@ public:
   /// Check if the library is application extension safe.
   bool isApplicationExtensionSafe() const { return IsAppExtensionSafe; }
 
+  /// Check if the library has simulator support.
+  bool hasSimulatorSupport() const { return HasSimSupport; }
+
+  /// Specify if the library has simulator support.
+  void setSimulatorSupport(bool V = true) { HasSimSupport = V; }
+
   /// Set the Objective-C constraint.
   void setObjCConstraint(ObjCConstraintType Constraint) {
     ObjcConstraint = Constraint;
@@ -259,12 +267,6 @@ public:
 
   /// Get the Objective-C constraint.
   ObjCConstraintType getObjCConstraint() const { return ObjcConstraint; }
-
-  /// Specify if this file was generated during InstallAPI (or not).
-  void setInstallAPI(bool V = true) { IsInstallAPI = V; }
-
-  /// Check if this file was generated during InstallAPI.
-  bool isInstallAPI() const { return IsInstallAPI; }
 
   /// Set the parent umbrella frameworks.
   /// \param Target_ The target applicable to Parent
@@ -311,25 +313,6 @@ public:
     return ReexportedLibraries;
   }
 
-  /// Add an Target/UUID pair.
-  ///
-  /// \param Target The target triple for which this applies.
-  /// \param UUID The UUID of the library for the specified architecture.
-  void addUUID(const Target &Target, StringRef UUID);
-
-  /// Add an Target/UUID pair.
-  ///
-  /// \param Target The target triple for which this applies.
-  /// \param UUID The UUID of the library for the specified architecture.
-  void addUUID(const Target &Target, uint8_t UUID[16]);
-
-  /// Get the list of Target/UUID pairs.
-  ///
-  /// \return Returns a list of Target/UUID pairs.
-  const std::vector<std::pair<Target, std::string>> &uuids() const {
-    return UUIDs;
-  }
-
   /// Add a library for inlining to top level library.
   ///
   ///\param Document The library to inline with top level library.
@@ -345,60 +328,109 @@ public:
     return Documents;
   }
 
+  /// Set the runpath search paths.
+  /// \param InputTarget The target applicable to runpath search path.
+  /// \param RPath The name of runpath.
+  void addRPath(const Target &InputTarget, StringRef RPath);
+
+  /// Get the list of runpath search paths.
+  ///
+  /// \return Returns a list of the rpaths per target.
+  const std::vector<std::pair<Target, std::string>> &rpaths() const {
+    return RPaths;
+  }
+
+  /// Get symbol if exists in file.
+  ///
+  /// \param Kind The kind of global symbol to record.
+  /// \param Name The name of the symbol.
+  std::optional<const Symbol *> getSymbol(SymbolKind Kind,
+                                          StringRef Name) const {
+    if (auto *Sym = SymbolsSet->findSymbol(Kind, Name))
+      return Sym;
+    return std::nullopt;
+  }
+
   /// Add a symbol to the symbols list or extend an existing one.
-  void addSymbol(SymbolKind Kind, StringRef Name, const TargetList &Targets,
-                 SymbolFlags Flags = SymbolFlags::None);
+  template <typename RangeT,
+            typename ElT = typename std::remove_reference<
+                decltype(*std::begin(std::declval<RangeT>()))>::type>
+  void addSymbol(SymbolKind Kind, StringRef Name, RangeT &&Targets,
+                 SymbolFlags Flags = SymbolFlags::None) {
+    SymbolsSet->addGlobal(Kind, Name, Flags, Targets);
+  }
 
-  using SymbolMapType = DenseMap<SymbolsMapKey, Symbol *>;
-  struct const_symbol_iterator
-      : public iterator_adaptor_base<
-            const_symbol_iterator, SymbolMapType::const_iterator,
-            std::forward_iterator_tag, const Symbol *, ptrdiff_t,
-            const Symbol *, const Symbol *> {
-    const_symbol_iterator() = default;
+  /// Add Symbol with multiple targets.
+  ///
+  /// \param Kind The kind of global symbol to record.
+  /// \param Name The name of the symbol.
+  /// \param Targets The list of targets the symbol is defined in.
+  /// \param Flags The properties the symbol holds.
+  void addSymbol(SymbolKind Kind, StringRef Name, TargetList &&Targets,
+                 SymbolFlags Flags = SymbolFlags::None) {
+    SymbolsSet->addGlobal(Kind, Name, Flags, Targets);
+  }
 
-    template <typename U>
-    const_symbol_iterator(U &&u)
-        : iterator_adaptor_base(std::forward<U &&>(u)) {}
+  /// Add Symbol with single target.
+  ///
+  /// \param Kind The kind of global symbol to record.
+  /// \param Name The name of the symbol.
+  /// \param Target The target the symbol is defined in.
+  /// \param Flags The properties the symbol holds.
+  void addSymbol(SymbolKind Kind, StringRef Name, Target &Target,
+                 SymbolFlags Flags = SymbolFlags::None) {
+    SymbolsSet->addGlobal(Kind, Name, Flags, Target);
+  }
 
-    reference operator*() const { return I->second; }
-    pointer operator->() const { return I->second; }
+  /// Get size of symbol set.
+  /// \return The number of symbols the file holds.
+  size_t symbolsCount() const { return SymbolsSet->size(); }
+
+  using const_symbol_range = SymbolSet::const_symbol_range;
+  using const_filtered_symbol_range = SymbolSet::const_filtered_symbol_range;
+
+  const_symbol_range symbols() const { return SymbolsSet->symbols(); };
+  const_filtered_symbol_range exports() const { return SymbolsSet->exports(); };
+  const_filtered_symbol_range reexports() const {
+    return SymbolsSet->reexports();
+  };
+  const_filtered_symbol_range undefineds() const {
+    return SymbolsSet->undefineds();
   };
 
-  using const_symbol_range = iterator_range<const_symbol_iterator>;
+  /// Extract architecture slice from Interface.
+  ///
+  /// \param Arch architecture to extract from.
+  /// \return New InterfaceFile with extracted architecture slice.
+  llvm::Expected<std::unique_ptr<InterfaceFile>>
+  extract(Architecture Arch) const;
 
-  using const_filtered_symbol_iterator =
-      filter_iterator<const_symbol_iterator,
-                      std::function<bool(const Symbol *)>>;
-  using const_filtered_symbol_range =
-      iterator_range<const_filtered_symbol_iterator>;
+  /// Remove architecture slice from Interface.
+  ///
+  /// \param Arch architecture to remove.
+  /// \return New Interface File with removed architecture slice.
+  llvm::Expected<std::unique_ptr<InterfaceFile>>
+  remove(Architecture Arch) const;
 
-  const_symbol_range symbols() const {
-    return {Symbols.begin(), Symbols.end()};
-  }
+  /// Merge Interfaces for the same library. The following library attributes
+  /// must match.
+  /// * Install name, Current & Compatibility version,
+  /// * Two-level namespace enablement, and App extension enablement.
+  ///
+  /// \param O The Interface to merge.
+  /// \return New Interface File that was merged.
+  llvm::Expected<std::unique_ptr<InterfaceFile>>
+  merge(const InterfaceFile *O) const;
 
-  size_t symbolsCount() const { return Symbols.size(); }
-
-  const_filtered_symbol_range exports() const {
-    std::function<bool(const Symbol *)> fn = [](const Symbol *Symbol) {
-      return !Symbol->isUndefined();
-    };
-    return make_filter_range(
-        make_range<const_symbol_iterator>({Symbols.begin()}, {Symbols.end()}),
-        fn);
-  }
-
-  const_filtered_symbol_range undefineds() const {
-    std::function<bool(const Symbol *)> fn = [](const Symbol *Symbol) {
-      return Symbol->isUndefined();
-    };
-    return make_filter_range(
-        make_range<const_symbol_iterator>({Symbols.begin()}, {Symbols.end()}),
-        fn);
-  }
+  /// Inline reexported library into Interface.
+  ///
+  /// \param Library Interface of reexported library.
+  /// \param Overwrite Whether to overwrite preexisting inlined library.
+  void inlineLibrary(std::shared_ptr<InterfaceFile> Library,
+                     bool Overwrite = false);
 
   /// The equality is determined by attributes that impact linking
-  /// compatibilities. UUIDs, Path, & FileKind are irrelevant since these by
+  /// compatibilities. Path, & FileKind are irrelevant since these by
   /// itself should not impact linking.
   /// This is an expensive operation.
   bool operator==(const InterfaceFile &O) const;
@@ -418,37 +450,34 @@ private:
 
   TargetList Targets;
   std::string Path;
-  FileType FileKind;
+  FileType FileKind{FileType::Invalid};
   std::string InstallName;
   PackedVersion CurrentVersion;
   PackedVersion CompatibilityVersion;
   uint8_t SwiftABIVersion{0};
   bool IsTwoLevelNamespace{false};
   bool IsAppExtensionSafe{false};
-  bool IsInstallAPI{false};
+  bool HasSimSupport{false};
   ObjCConstraintType ObjcConstraint = ObjCConstraintType::None;
   std::vector<std::pair<Target, std::string>> ParentUmbrellas;
   std::vector<InterfaceFileRef> AllowableClients;
   std::vector<InterfaceFileRef> ReexportedLibraries;
   std::vector<std::shared_ptr<InterfaceFile>> Documents;
-  std::vector<std::pair<Target, std::string>> UUIDs;
-  SymbolMapType Symbols;
+  std::vector<std::pair<Target, std::string>> RPaths;
+  std::unique_ptr<SymbolSet> SymbolsSet;
   InterfaceFile *Parent = nullptr;
 };
 
-template <typename DerivedT, typename KeyInfoT, typename BucketT>
-bool operator==(const DenseMapBase<DerivedT, SymbolsMapKey, MachO::Symbol *,
-                                   KeyInfoT, BucketT> &LHS,
-                const DenseMapBase<DerivedT, SymbolsMapKey, MachO::Symbol *,
-                                   KeyInfoT, BucketT> &RHS) {
-  if (LHS.size() != RHS.size())
-    return false;
-  for (const auto &KV : LHS) {
-    auto I = RHS.find(KV.first);
-    if (I == RHS.end() || *I->second != *KV.second)
-      return false;
-  }
-  return true;
+// Keep containers that hold InterfaceFileRefs in sorted order and uniqued.
+template <typename C>
+typename C::iterator addEntry(C &Container, StringRef InstallName) {
+  auto I = partition_point(Container, [=](const InterfaceFileRef &O) {
+    return O.getInstallName() < InstallName;
+  });
+  if (I != Container.end() && I->getInstallName() == InstallName)
+    return I;
+
+  return Container.emplace(I, InstallName);
 }
 
 } // end namespace MachO.

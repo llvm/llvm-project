@@ -16,11 +16,7 @@
 #include "ByteCodeEmitter.h"
 #include "ByteCodeExprGen.h"
 #include "EvalEmitter.h"
-#include "Pointer.h"
 #include "PrimType.h"
-#include "Record.h"
-#include "clang/AST/Decl.h"
-#include "clang/AST/Expr.h"
 #include "clang/AST/StmtVisitor.h"
 
 namespace clang {
@@ -54,14 +50,23 @@ private:
   // Statement visitors.
   bool visitStmt(const Stmt *S);
   bool visitCompoundStmt(const CompoundStmt *S);
+  bool visitLoopBody(const Stmt *S);
   bool visitDeclStmt(const DeclStmt *DS);
   bool visitReturnStmt(const ReturnStmt *RS);
   bool visitIfStmt(const IfStmt *IS);
   bool visitWhileStmt(const WhileStmt *S);
   bool visitDoStmt(const DoStmt *S);
   bool visitForStmt(const ForStmt *S);
+  bool visitCXXForRangeStmt(const CXXForRangeStmt *S);
   bool visitBreakStmt(const BreakStmt *S);
   bool visitContinueStmt(const ContinueStmt *S);
+  bool visitSwitchStmt(const SwitchStmt *S);
+  bool visitCaseStmt(const CaseStmt *S);
+  bool visitDefaultStmt(const DefaultStmt *S);
+  bool visitAsmStmt(const AsmStmt *S);
+  bool visitAttributedStmt(const AttributedStmt *S);
+
+  bool emitLambdaStaticInvokerBody(const CXXMethodDecl *MD);
 
   /// Type of the expression returned by the function.
   std::optional<PrimType> ReturnType;

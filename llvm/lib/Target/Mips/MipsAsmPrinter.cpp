@@ -26,7 +26,6 @@
 #include "TargetInfo/MipsTargetInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -58,6 +57,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cassert>
 #include <cstdint>
 #include <map>
@@ -569,8 +569,8 @@ bool MipsAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
       const MachineOperand &FlagsOP = MI->getOperand(OpNum - 1);
       if (!FlagsOP.isImm())
         return true;
-      unsigned Flags = FlagsOP.getImm();
-      unsigned NumVals = InlineAsm::getNumOperandRegisters(Flags);
+      const InlineAsm::Flag Flags(FlagsOP.getImm());
+      const unsigned NumVals = Flags.getNumOperandRegisters();
       // Number of registers represented by this operand. We are looking
       // for 2 for 32 bit mode and 1 for 64 bit mode.
       if (NumVals != 2) {
@@ -777,14 +777,18 @@ void MipsAsmPrinter::emitStartOfAsmFile(Module &M) {
   // around it by re-initializing the PIC state here.
   TS.setPic(OutContext.getObjectFileInfo()->isPositionIndependent());
 
+  // Try to get target-features from the first function.
+  StringRef FS = TM.getTargetFeatureString();
+  Module::iterator F = M.begin();
+  if (FS.empty() && M.size() && F->hasFnAttribute("target-features"))
+    FS = F->getFnAttribute("target-features").getValueAsString();
+
   // Compute MIPS architecture attributes based on the default subtarget
-  // that we'd have constructed. Module level directives aren't LTO
-  // clean anyhow.
+  // that we'd have constructed.
   // FIXME: For ifunc related functions we could iterate over and look
   // for a feature string that doesn't match the default one.
   const Triple &TT = TM.getTargetTriple();
   StringRef CPU = MIPS_MC::selectMipsCPU(TT, TM.getTargetCPU());
-  StringRef FS = TM.getTargetFeatureString();
   const MipsTargetMachine &MTM = static_cast<const MipsTargetMachine &>(TM);
   const MipsSubtarget STI(TT, CPU, FS, MTM.isLittleEndian(), MTM, std::nullopt);
 

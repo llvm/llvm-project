@@ -6,26 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/sys/wait/wait4.h"
-
-#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/__support/libc_assert.h"
 
-#include <errno.h>
-#include <sys/syscall.h> // For syscall numbers.
-#include <sys/wait.h>
+#include "src/sys/wait/wait4.h"
+#include "src/sys/wait/wait4Impl.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(pid_t, wait4,
                    (pid_t pid, int *wait_status, int options,
                     struct rusage *usage)) {
-  pid = __llvm_libc::syscall_impl(SYS_wait4, pid, wait_status, options, usage);
-  if (pid < 0) {
-    errno = -pid;
+  auto result = internal::wait4impl(pid, wait_status, options, usage);
+  if (!result.has_value()) {
+    libc_errno = result.error();
     return -1;
   }
-  return pid;
+  return result.value();
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

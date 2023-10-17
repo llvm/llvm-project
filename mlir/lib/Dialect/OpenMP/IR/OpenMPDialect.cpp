@@ -11,18 +11,23 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
+#include "mlir/Interfaces/FoldInterfaces.h"
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include <cstddef>
+#include <optional>
 
 #include "mlir/Dialect/OpenMP/OpenMPOpsDialect.cpp.inc"
 #include "mlir/Dialect/OpenMP/OpenMPOpsEnums.cpp.inc"
@@ -38,7 +43,16 @@ template <typename T>
 struct PointerLikeModel
     : public PointerLikeType::ExternalModel<PointerLikeModel<T>, T> {
   Type getElementType(Type pointer) const {
-    return pointer.cast<T>().getElementType();
+    return llvm::cast<T>(pointer).getElementType();
+  }
+};
+
+struct OpenMPDialectFoldInterface : public DialectFoldInterface {
+  using DialectFoldInterface::DialectFoldInterface;
+
+  bool shouldMaterializeInto(Region *region) const final {
+    // Avoid folding constants across target regions
+    return isa<TargetOp>(region->getParentOp());
   }
 };
 } // namespace
@@ -52,10 +66,41 @@ void OpenMPDialect::initialize() {
 #define GET_ATTRDEF_LIST
 #include "mlir/Dialect/OpenMP/OpenMPOpsAttributes.cpp.inc"
       >();
+  addTypes<
+#define GET_TYPEDEF_LIST
+#include "mlir/Dialect/OpenMP/OpenMPOpsTypes.cpp.inc"
+      >();
 
+  addInterface<OpenMPDialectFoldInterface>();
   LLVM::LLVMPointerType::attachInterface<
       PointerLikeModel<LLVM::LLVMPointerType>>(*getContext());
   MemRefType::attachInterface<PointerLikeModel<MemRefType>>(*getContext());
+  LLVM::LLVMPointerType::attachInterface<
+      PointerLikeModel<LLVM::LLVMPointerType>>(*getContext());
+
+  // Attach default offload module interface to module op to access
+  // offload functionality through
+  mlir::ModuleOp::attachInterface<mlir::omp::OffloadModuleDefaultModel>(
+      *getContext());
+
+  // Attach default declare target interfaces to operations which can be marked
+  // as declare target (Global Operations and Functions/Subroutines in dialects
+  // that Fortran (or other languages that lower to MLIR) translates too
+  mlir::LLVM::GlobalOp::attachInterface<
+      mlir::omp::DeclareTargetDefaultModel<mlir::LLVM::GlobalOp>>(
+      *getContext());
+  mlir::LLVM::LLVMFuncOp::attachInterface<
+      mlir::omp::DeclareTargetDefaultModel<mlir::LLVM::LLVMFuncOp>>(
+      *getContext());
+  mlir::func::FuncOp::attachInterface<
+      mlir::omp::DeclareTargetDefaultModel<mlir::func::FuncOp>>(*getContext());
+
+  // Attach default early outlining interface to func ops.
+  mlir::func::FuncOp::attachInterface<
+      mlir::omp::EarlyOutliningDefaultModel<mlir::func::FuncOp>>(*getContext());
+  mlir::LLVM::LLVMFuncOp::attachInterface<
+      mlir::omp::EarlyOutliningDefaultModel<mlir::LLVM::LLVMFuncOp>>(
+      *getContext());
 }
 
 //===----------------------------------------------------------------------===//
@@ -214,7 +259,7 @@ verifyAlignedClause(Operation *op, std::optional<ArrayAttr> alignmentValues,
 
   // Check if all alignment values are positive - OpenMP 4.5 -> 2.8.1 section
   for (unsigned i = 0; i < (*alignmentValues).size(); ++i) {
-    if (auto intAttr = (*alignmentValues)[i].dyn_cast<IntegerAttr>()) {
+    if (auto intAttr = llvm::dyn_cast<IntegerAttr>((*alignmentValues)[i])) {
       if (intAttr.getValue().sle(0))
         return op->emitOpError() << "alignment should be greater than 0";
     } else {
@@ -445,8 +490,8 @@ static LogicalResult verifyReductionVarList(Operation *op,
     if (!accumulators.insert(accum).second)
       return op->emitOpError() << "accumulator variable used more than once";
 
-    Type varType = accum.getType().cast<PointerLikeType>();
-    auto symbolRef = std::get<1>(args).cast<SymbolRefAttr>();
+    Type varType = accum.getType();
+    auto symbolRef = llvm::cast<SymbolRefAttr>(std::get<1>(args));
     auto decl =
         SymbolTable::lookupNearestSymbolFrom<ReductionDeclareOp>(op, symbolRef);
     if (!decl)
@@ -458,6 +503,70 @@ static LogicalResult verifyReductionVarList(Operation *op,
              << "expected accumulator (" << varType
              << ") to be the same type as reduction declaration ("
              << decl.getAccumulatorType() << ")";
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Parser, printer and verifier for DependVarList
+//===----------------------------------------------------------------------===//
+
+/// depend-entry-list ::= depend-entry
+///                     | depend-entry-list `,` depend-entry
+/// depend-entry ::= depend-kind `->` ssa-id `:` type
+static ParseResult
+parseDependVarList(OpAsmParser &parser,
+                   SmallVectorImpl<OpAsmParser::UnresolvedOperand> &operands,
+                   SmallVectorImpl<Type> &types, ArrayAttr &dependsArray) {
+  SmallVector<ClauseTaskDependAttr> dependVec;
+  if (failed(parser.parseCommaSeparatedList([&]() {
+        StringRef keyword;
+        if (parser.parseKeyword(&keyword) || parser.parseArrow() ||
+            parser.parseOperand(operands.emplace_back()) ||
+            parser.parseColonType(types.emplace_back()))
+          return failure();
+        if (std::optional<ClauseTaskDepend> keywordDepend =
+                (symbolizeClauseTaskDepend(keyword)))
+          dependVec.emplace_back(
+              ClauseTaskDependAttr::get(parser.getContext(), *keywordDepend));
+        else
+          return failure();
+        return success();
+      })))
+    return failure();
+  SmallVector<Attribute> depends(dependVec.begin(), dependVec.end());
+  dependsArray = ArrayAttr::get(parser.getContext(), depends);
+  return success();
+}
+
+/// Print Depend clause
+static void printDependVarList(OpAsmPrinter &p, Operation *op,
+                               OperandRange dependVars, TypeRange dependTypes,
+                               std::optional<ArrayAttr> depends) {
+
+  for (unsigned i = 0, e = depends->size(); i < e; ++i) {
+    if (i != 0)
+      p << ", ";
+    p << stringifyClauseTaskDepend(
+             llvm::cast<mlir::omp::ClauseTaskDependAttr>((*depends)[i])
+                 .getValue())
+      << " -> " << dependVars[i] << " : " << dependTypes[i];
+  }
+}
+
+/// Verifies Depend clause
+static LogicalResult verifyDependVarList(Operation *op,
+                                         std::optional<ArrayAttr> depends,
+                                         OperandRange dependVars) {
+  if (!dependVars.empty()) {
+    if (!depends || depends->size() != dependVars.size())
+      return op->emitOpError() << "expected as many depend values"
+                                  " as depend variables";
+  } else {
+    if (depends)
+      return op->emitOpError() << "unexpected depend values";
+    return success();
   }
 
   return success();
@@ -553,6 +662,225 @@ static LogicalResult verifySynchronizationHint(Operation *op, uint64_t hint) {
 }
 
 //===----------------------------------------------------------------------===//
+// Parser, printer and verifier for Target
+//===----------------------------------------------------------------------===//
+
+// Helper function to get bitwise AND of `value` and 'flag'
+uint64_t mapTypeToBitFlag(uint64_t value,
+                          llvm::omp::OpenMPOffloadMappingFlags flag) {
+  return value &
+         static_cast<
+             std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
+             flag);
+}
+
+/// Parses a map_entries map type from a string format back into its numeric
+/// value.
+///
+/// map-clause = `map_clauses (  ( `(` `always, `? `close, `? `present, `? (
+/// `to` | `from` | `delete` `)` )+ `)` )
+static ParseResult parseMapClause(OpAsmParser &parser, IntegerAttr &mapType) {
+  llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
+      llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
+
+  // This simply verifies the correct keyword is read in, the
+  // keyword itself is stored inside of the operation
+  auto parseTypeAndMod = [&]() -> ParseResult {
+    StringRef mapTypeMod;
+    if (parser.parseKeyword(&mapTypeMod))
+      return failure();
+
+    if (mapTypeMod == "always")
+      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
+
+    if (mapTypeMod == "close")
+      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE;
+
+    if (mapTypeMod == "present")
+      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PRESENT;
+
+    if (mapTypeMod == "to")
+      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
+
+    if (mapTypeMod == "from")
+      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+
+    if (mapTypeMod == "tofrom")
+      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
+                     llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+
+    if (mapTypeMod == "delete")
+      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE;
+
+    return success();
+  };
+
+  if (parser.parseCommaSeparatedList(parseTypeAndMod))
+    return failure();
+
+  mapType = parser.getBuilder().getIntegerAttr(
+      parser.getBuilder().getIntegerType(64, /*isSigned=*/false),
+      static_cast<std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
+          mapTypeBits));
+
+  return success();
+}
+
+/// Prints a map_entries map type from its numeric value out into its string
+/// format.
+static void printMapClause(OpAsmPrinter &p, Operation *op,
+                           IntegerAttr mapType) {
+  uint64_t mapTypeBits = mapType.getUInt();
+
+  bool emitAllocRelease = true;
+  llvm::SmallVector<std::string, 4> mapTypeStrs;
+
+  // handling of always, close, present placed at the beginning of the string
+  // to aid readability
+  if (mapTypeToBitFlag(mapTypeBits,
+                       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS))
+    mapTypeStrs.push_back("always");
+  if (mapTypeToBitFlag(mapTypeBits,
+                       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE))
+    mapTypeStrs.push_back("close");
+  if (mapTypeToBitFlag(mapTypeBits,
+                       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PRESENT))
+    mapTypeStrs.push_back("present");
+
+  // special handling of to/from/tofrom/delete and release/alloc, release +
+  // alloc are the abscense of one of the other flags, whereas tofrom requires
+  // both the to and from flag to be set.
+  bool to = mapTypeToBitFlag(mapTypeBits,
+                             llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO);
+  bool from = mapTypeToBitFlag(
+      mapTypeBits, llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM);
+  if (to && from) {
+    emitAllocRelease = false;
+    mapTypeStrs.push_back("tofrom");
+  } else if (from) {
+    emitAllocRelease = false;
+    mapTypeStrs.push_back("from");
+  } else if (to) {
+    emitAllocRelease = false;
+    mapTypeStrs.push_back("to");
+  }
+  if (mapTypeToBitFlag(mapTypeBits,
+                       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE)) {
+    emitAllocRelease = false;
+    mapTypeStrs.push_back("delete");
+  }
+  if (emitAllocRelease)
+    mapTypeStrs.push_back("exit_release_or_enter_alloc");
+
+  for (unsigned int i = 0; i < mapTypeStrs.size(); ++i) {
+    p << mapTypeStrs[i];
+    if (i + 1 < mapTypeStrs.size()) {
+      p << ", ";
+    }
+  }
+}
+
+static void printCaptureType(OpAsmPrinter &p, Operation *op,
+                             VariableCaptureKindAttr mapCaptureType) {
+  std::string typeCapStr;
+  llvm::raw_string_ostream typeCap(typeCapStr);
+  if (mapCaptureType.getValue() == mlir::omp::VariableCaptureKind::ByRef)
+    typeCap << "ByRef";
+  if (mapCaptureType.getValue() == mlir::omp::VariableCaptureKind::ByCopy)
+    typeCap << "ByCopy";
+  if (mapCaptureType.getValue() == mlir::omp::VariableCaptureKind::VLAType)
+    typeCap << "VLAType";
+  if (mapCaptureType.getValue() == mlir::omp::VariableCaptureKind::This)
+    typeCap << "This";
+  p << typeCap.str();
+}
+
+static ParseResult parseCaptureType(OpAsmParser &parser,
+                                    VariableCaptureKindAttr &mapCapture) {
+  StringRef mapCaptureKey;
+  if (parser.parseKeyword(&mapCaptureKey))
+    return failure();
+
+  if (mapCaptureKey == "This")
+    mapCapture = mlir::omp::VariableCaptureKindAttr::get(
+        parser.getContext(), mlir::omp::VariableCaptureKind::This);
+  if (mapCaptureKey == "ByRef")
+    mapCapture = mlir::omp::VariableCaptureKindAttr::get(
+        parser.getContext(), mlir::omp::VariableCaptureKind::ByRef);
+  if (mapCaptureKey == "ByCopy")
+    mapCapture = mlir::omp::VariableCaptureKindAttr::get(
+        parser.getContext(), mlir::omp::VariableCaptureKind::ByCopy);
+  if (mapCaptureKey == "VLAType")
+    mapCapture = mlir::omp::VariableCaptureKindAttr::get(
+        parser.getContext(), mlir::omp::VariableCaptureKind::VLAType);
+
+  return success();
+}
+
+static LogicalResult verifyMapClause(Operation *op, OperandRange mapOperands) {
+
+  for (auto mapOp : mapOperands) {
+    if (!mapOp.getDefiningOp())
+      emitError(op->getLoc(), "missing map operation");
+
+    if (auto MapInfoOp =
+            mlir::dyn_cast<mlir::omp::MapInfoOp>(mapOp.getDefiningOp())) {
+
+      if (!MapInfoOp.getMapType().has_value())
+        emitError(op->getLoc(), "missing map type for map operand");
+
+      if (!MapInfoOp.getMapCaptureType().has_value())
+        emitError(op->getLoc(), "missing map capture type for map operand");
+
+      uint64_t mapTypeBits = MapInfoOp.getMapType().value();
+
+      bool to = mapTypeToBitFlag(
+          mapTypeBits, llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO);
+      bool from = mapTypeToBitFlag(
+          mapTypeBits, llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM);
+      bool del = mapTypeToBitFlag(
+          mapTypeBits, llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE);
+
+      if ((isa<DataOp>(op) || isa<TargetOp>(op)) && del)
+        return emitError(op->getLoc(),
+                         "to, from, tofrom and alloc map types are permitted");
+
+      if (isa<EnterDataOp>(op) && (from || del))
+        return emitError(op->getLoc(), "to and alloc map types are permitted");
+
+      if (isa<ExitDataOp>(op) && to)
+        return emitError(op->getLoc(),
+                         "from, release and delete map types are permitted");
+    } else {
+      emitError(op->getLoc(), "map argument is not a map entry operation");
+    }
+  }
+
+  return success();
+}
+
+LogicalResult DataOp::verify() {
+  if (getMapOperands().empty() && getUseDevicePtr().empty() &&
+      getUseDeviceAddr().empty()) {
+    return ::emitError(this->getLoc(), "At least one of map, useDevicePtr, or "
+                                       "useDeviceAddr operand must be present");
+  }
+  return verifyMapClause(*this, getMapOperands());
+}
+
+LogicalResult EnterDataOp::verify() {
+  return verifyMapClause(*this, getMapOperands());
+}
+
+LogicalResult ExitDataOp::verify() {
+  return verifyMapClause(*this, getMapOperands());
+}
+
+LogicalResult TargetOp::verify() {
+  return verifyMapClause(*this, getMapOperands());
+}
+
+//===----------------------------------------------------------------------===//
 // ParallelOp
 //===----------------------------------------------------------------------===//
 
@@ -570,6 +898,48 @@ LogicalResult ParallelOp::verify() {
   if (getAllocateVars().size() != getAllocatorsVars().size())
     return emitError(
         "expected equal sizes for allocate and allocator variables");
+  return verifyReductionVarList(*this, getReductions(), getReductionVars());
+}
+
+//===----------------------------------------------------------------------===//
+// TeamsOp
+//===----------------------------------------------------------------------===//
+
+static bool opInGlobalImplicitParallelRegion(Operation *op) {
+  while ((op = op->getParentOp()))
+    if (isa<OpenMPDialect>(op->getDialect()))
+      return false;
+  return true;
+}
+
+LogicalResult TeamsOp::verify() {
+  // Check parent region
+  // TODO If nested inside of a target region, also check that it does not
+  // contain any statements, declarations or directives other than this
+  // omp.teams construct. The issue is how to support the initialization of
+  // this operation's own arguments (allow SSA values across omp.target?).
+  Operation *op = getOperation();
+  if (!isa<TargetOp>(op->getParentOp()) &&
+      !opInGlobalImplicitParallelRegion(op))
+    return emitError("expected to be nested inside of omp.target or not nested "
+                     "in any OpenMP dialect operations");
+
+  // Check for num_teams clause restrictions
+  if (auto numTeamsLowerBound = getNumTeamsLower()) {
+    auto numTeamsUpperBound = getNumTeamsUpper();
+    if (!numTeamsUpperBound)
+      return emitError("expected num_teams upper bound to be defined if the "
+                       "lower bound is defined");
+    if (numTeamsLowerBound.getType() != numTeamsUpperBound.getType())
+      return emitError(
+          "expected num_teams upper bound and lower bound to be the same type");
+  }
+
+  // Check for allocate clause restrictions
+  if (getAllocateVars().size() != getAllocatorsVars().size())
+    return emitError(
+        "expected equal sizes for allocate and allocator variables");
+
   return verifyReductionVarList(*this, getReductions(), getReductionVars());
 }
 
@@ -744,9 +1114,10 @@ LogicalResult ReductionDeclareOp::verifyRegions() {
           atomicReductionEntryBlock.getArgumentTypes()[1])
     return emitOpError() << "expects atomic reduction region with two "
                             "arguments of the same type";
-  auto ptrType = atomicReductionEntryBlock.getArgumentTypes()[0]
-                     .dyn_cast<PointerLikeType>();
-  if (!ptrType || ptrType.getElementType() != getType())
+  auto ptrType = llvm::dyn_cast<PointerLikeType>(
+      atomicReductionEntryBlock.getArgumentTypes()[0]);
+  if (!ptrType ||
+      (ptrType.getElementType() && ptrType.getElementType() != getType()))
     return emitOpError() << "expects atomic reduction region arguments to "
                             "be accumulators containing the reduction type";
   return success();
@@ -771,7 +1142,12 @@ LogicalResult ReductionOp::verify() {
 // TaskOp
 //===----------------------------------------------------------------------===//
 LogicalResult TaskOp::verify() {
-  return verifyReductionVarList(*this, getInReductions(), getInReductionVars());
+  LogicalResult verifyDependVars =
+      verifyDependVarList(*this, getDepends(), getDependVars());
+  return failed(verifyDependVars)
+             ? verifyDependVars
+             : verifyReductionVarList(*this, getInReductions(),
+                                      getInReductionVars());
 }
 
 //===----------------------------------------------------------------------===//
@@ -904,6 +1280,9 @@ LogicalResult OrderedRegionOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult AtomicReadOp::verify() {
+  if (verifyCommon().failed())
+    return mlir::failure();
+
   if (auto mo = getMemoryOrderVal()) {
     if (*mo == ClauseMemoryOrderKind::Acq_rel ||
         *mo == ClauseMemoryOrderKind::Release) {
@@ -911,9 +1290,6 @@ LogicalResult AtomicReadOp::verify() {
           "memory-order must not be acq_rel or release for atomic reads");
     }
   }
-  if (getX() == getV())
-    return emitError(
-        "read and write must not be to the same location for atomic reads");
   return verifySynchronizationHint(*this, getHintVal());
 }
 
@@ -922,6 +1298,9 @@ LogicalResult AtomicReadOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult AtomicWriteOp::verify() {
+  if (verifyCommon().failed())
+    return mlir::failure();
+
   if (auto mo = getMemoryOrderVal()) {
     if (*mo == ClauseMemoryOrderKind::Acq_rel ||
         *mo == ClauseMemoryOrderKind::Acquire) {
@@ -929,29 +1308,12 @@ LogicalResult AtomicWriteOp::verify() {
           "memory-order must not be acq_rel or acquire for atomic writes");
     }
   }
-  if (getAddress().getType().cast<PointerLikeType>().getElementType() !=
-      getValue().getType())
-    return emitError("address must dereference to value type");
   return verifySynchronizationHint(*this, getHintVal());
 }
 
 //===----------------------------------------------------------------------===//
 // Verifier for AtomicUpdateOp
 //===----------------------------------------------------------------------===//
-
-bool AtomicUpdateOp::isNoOp() {
-  YieldOp yieldOp = dyn_cast<omp::YieldOp>(getFirstOp());
-  return (yieldOp &&
-          yieldOp.getResults().front() == getRegion().front().getArgument(0));
-}
-
-Value AtomicUpdateOp::getWriteOpVal() {
-  YieldOp yieldOp = dyn_cast<omp::YieldOp>(getFirstOp());
-  if (yieldOp &&
-      yieldOp.getResults().front() != getRegion().front().getArgument(0))
-    return yieldOp.getResults().front();
-  return nullptr;
-}
 
 LogicalResult AtomicUpdateOp::canonicalize(AtomicUpdateOp op,
                                            PatternRewriter &rewriter) {
@@ -969,6 +1331,9 @@ LogicalResult AtomicUpdateOp::canonicalize(AtomicUpdateOp op,
 }
 
 LogicalResult AtomicUpdateOp::verify() {
+  if (verifyCommon().failed())
+    return mlir::failure();
+
   if (auto mo = getMemoryOrderVal()) {
     if (*mo == ClauseMemoryOrderKind::Acq_rel ||
         *mo == ClauseMemoryOrderKind::Acquire) {
@@ -977,42 +1342,16 @@ LogicalResult AtomicUpdateOp::verify() {
     }
   }
 
-  if (getRegion().getNumArguments() != 1)
-    return emitError("the region must accept exactly one argument");
-
-  if (getX().getType().cast<PointerLikeType>().getElementType() !=
-      getRegion().getArgument(0).getType()) {
-    return emitError("the type of the operand must be a pointer type whose "
-                     "element type is the same as that of the region argument");
-  }
-
   return verifySynchronizationHint(*this, getHintVal());
 }
 
 LogicalResult AtomicUpdateOp::verifyRegions() {
-
-  YieldOp yieldOp = *getRegion().getOps<YieldOp>().begin();
-
-  if (yieldOp.getResults().size() != 1)
-    return emitError("only updated value must be returned");
-  if (yieldOp.getResults().front().getType() !=
-      getRegion().getArgument(0).getType())
-    return emitError("input and yielded value must have the same type");
-  return success();
+  return verifyRegionsCommon();
 }
 
 //===----------------------------------------------------------------------===//
 // Verifier for AtomicCaptureOp
 //===----------------------------------------------------------------------===//
-
-Operation *AtomicCaptureOp::getFirstOp() {
-  return &getRegion().front().getOperations().front();
-}
-
-Operation *AtomicCaptureOp::getSecondOp() {
-  auto &ops = getRegion().front().getOperations();
-  return ops.getNextNode(ops.front());
-}
 
 AtomicReadOp AtomicCaptureOp::getAtomicReadOp() {
   if (auto op = dyn_cast<AtomicReadOp>(getFirstOp()))
@@ -1037,39 +1376,8 @@ LogicalResult AtomicCaptureOp::verify() {
 }
 
 LogicalResult AtomicCaptureOp::verifyRegions() {
-  Block::OpListType &ops = getRegion().front().getOperations();
-  if (ops.size() != 3)
-    return emitError()
-           << "expected three operations in omp.atomic.capture region (one "
-              "terminator, and two atomic ops)";
-  auto &firstOp = ops.front();
-  auto &secondOp = *ops.getNextNode(firstOp);
-  auto firstReadStmt = dyn_cast<AtomicReadOp>(firstOp);
-  auto firstUpdateStmt = dyn_cast<AtomicUpdateOp>(firstOp);
-  auto secondReadStmt = dyn_cast<AtomicReadOp>(secondOp);
-  auto secondUpdateStmt = dyn_cast<AtomicUpdateOp>(secondOp);
-  auto secondWriteStmt = dyn_cast<AtomicWriteOp>(secondOp);
-
-  if (!((firstUpdateStmt && secondReadStmt) ||
-        (firstReadStmt && secondUpdateStmt) ||
-        (firstReadStmt && secondWriteStmt)))
-    return ops.front().emitError()
-           << "invalid sequence of operations in the capture region";
-  if (firstUpdateStmt && secondReadStmt &&
-      firstUpdateStmt.getX() != secondReadStmt.getX())
-    return firstUpdateStmt.emitError()
-           << "updated variable in omp.atomic.update must be captured in "
-              "second operation";
-  if (firstReadStmt && secondUpdateStmt &&
-      firstReadStmt.getX() != secondUpdateStmt.getX())
-    return firstReadStmt.emitError()
-           << "captured variable in omp.atomic.read must be updated in second "
-              "operation";
-  if (firstReadStmt && secondWriteStmt &&
-      firstReadStmt.getX() != secondWriteStmt.getAddress())
-    return firstReadStmt.emitError()
-           << "captured variable in omp.atomic.read must be updated in "
-              "second operation";
+  if (verifyRegionsCommon().failed())
+    return mlir::failure();
 
   if (getFirstOp()->getAttr("hint_val") || getSecondOp()->getAttr("hint_val"))
     return emitOpError(
@@ -1160,8 +1468,23 @@ LogicalResult CancellationPointOp::verify() {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// DataBoundsOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult DataBoundsOp::verify() {
+  auto extent = getExtent();
+  auto upperbound = getUpperBound();
+  if (!extent && !upperbound)
+    return emitError("expected extent or upperbound.");
+  return success();
+}
+
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/OpenMP/OpenMPOpsAttributes.cpp.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/OpenMP/OpenMPOps.cpp.inc"
+
+#define GET_TYPEDEF_CLASSES
+#include "mlir/Dialect/OpenMP/OpenMPOpsTypes.cpp.inc"

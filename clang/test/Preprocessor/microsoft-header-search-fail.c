@@ -7,7 +7,7 @@
 #include "x/header.h"
 #include "z/header.h"
 
-// expected-warning-re@include/y/header.h:1 {{#include resolved using non-portable Microsoft search rules as: {{.*}}x/culprit.h}}
+// expected-warning-re@include/y/header.h:1 {{#include resolved using non-portable Microsoft search rules as: {{.*}}x{{/|\\\\?}}culprit.h}}
 // expected-error@include/z/header.h:1 {{'culprit.h' file not found}}
 
 //--- include/x/header.h

@@ -24,7 +24,7 @@ class raw_ostream;
 class MCParsedAsmOperand {
   /// MCOperandNum - The corresponding MCInst operand number.  Only valid when
   /// parsing MS-style inline assembly.
-  unsigned MCOperandNum;
+  unsigned MCOperandNum = ~0u;
 
   /// Constraint - The constraint on this operand.  Only valid when parsing
   /// MS-style inline assembly.

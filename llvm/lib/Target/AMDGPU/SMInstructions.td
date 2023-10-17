@@ -6,22 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-def smrd_offset_8 : NamedOperandU32<"SMRDOffset8",
-                                  NamedMatchClass<"SMRDOffset8">> {
-  let OperandType = "OPERAND_IMMEDIATE";
-}
+def smrd_offset_8 : ImmOperand<i32, "SMRDOffset8", 1>;
 
-class SMEMOffset : NamedOperandU32<"SMEMOffset",
-                                   NamedMatchClass<"SMEMOffset">> {
-  let OperandType = "OPERAND_IMMEDIATE";
-  let EncoderMethod = "getSMEMOffsetEncoding";
-  let DecoderMethod = "decodeSMEMOffset";
-}
-
-def smem_offset : SMEMOffset;
-
-def smem_offset_mod : SMEMOffset {
-  let PrintMethod = "printSMEMOffsetMod";
+let EncoderMethod = "getSMEMOffsetEncoding",
+    DecoderMethod = "decodeSMEMOffset" in {
+def smem_offset : ImmOperand<i32, "SMEMOffset", 1>;
+def smem_offset_mod : NamedIntOperand<i32, "offset", "SMEMOffsetMod">;
 }
 
 //===----------------------------------------------------------------------===//
@@ -124,6 +114,7 @@ class SM_Load_Pseudo <string opName, RegisterClass baseClass,
               " $sdst, $sbase, " # offsets.Asm # "$cpol", []> {
   RegisterClass BaseClass = baseClass;
   let mayLoad = 1;
+  let isReMaterializable = 1;
   let mayStore = 0;
   let has_glc = 1;
   let has_dlc = 1;
@@ -138,7 +129,6 @@ class SM_Store_Pseudo <string opName, RegisterClass baseClass,
                                    offsets.Ins, (ins CPol:$cpol)),
               " $sdata, $sbase, " # offsets.Asm # "$cpol"> {
   RegisterClass BaseClass = baseClass;
-  RegisterClass SrcClass = srcClass;
   let mayLoad = 0;
   let mayStore = 1;
   let has_glc = 1;
@@ -163,23 +153,24 @@ class SM_Discard_Pseudo <string opName, OffsetMode offsets>
   let PseudoInstr = opName # offsets.Variant;
 }
 
-multiclass SM_Pseudo_Loads<string opName,
-                           RegisterClass baseClass,
+multiclass SM_Pseudo_Loads<RegisterClass baseClass,
                            RegisterClass dstClass> {
+  defvar opName = !tolower(NAME);
   def _IMM : SM_Load_Pseudo <opName, baseClass, dstClass, IMM_Offset>;
   def _SGPR : SM_Load_Pseudo <opName, baseClass, dstClass, SGPR_Offset>;
   def _SGPR_IMM : SM_Load_Pseudo <opName, baseClass, dstClass, SGPR_IMM_Offset>;
 }
 
-multiclass SM_Pseudo_Stores<string opName,
-                           RegisterClass baseClass,
-                           RegisterClass srcClass> {
+multiclass SM_Pseudo_Stores<RegisterClass baseClass,
+                            RegisterClass srcClass> {
+  defvar opName = !tolower(NAME);
   def _IMM : SM_Store_Pseudo <opName, baseClass, srcClass, IMM_Offset>;
   def _SGPR : SM_Store_Pseudo <opName, baseClass, srcClass, SGPR_Offset>;
   def _SGPR_IMM : SM_Store_Pseudo <opName, baseClass, srcClass, SGPR_IMM_Offset>;
 }
 
-multiclass SM_Pseudo_Discards<string opName> {
+multiclass SM_Pseudo_Discards {
+  defvar opName = !tolower(NAME);
   def _IMM : SM_Discard_Pseudo <opName, IMM_Offset>;
   def _SGPR : SM_Discard_Pseudo <opName, SGPR_Offset>;
   def _SGPR_IMM : SM_Discard_Pseudo <opName, SGPR_IMM_Offset>;
@@ -204,7 +195,8 @@ class SM_Inval_Pseudo <string opName, SDPatternOperator node = null_frag> : SM_P
   let has_sbase = 0;
 }
 
-multiclass SM_Pseudo_Probe<string opName, RegisterClass baseClass> {
+multiclass SM_Pseudo_Probe<RegisterClass baseClass> {
+  defvar opName = !tolower(NAME);
   def _IMM  : SM_Probe_Pseudo <opName, baseClass, IMM_Offset>;
   def _SGPR : SM_Probe_Pseudo <opName, baseClass, SGPR_Offset>;
   def _SGPR_IMM : SM_Probe_Pseudo <opName, baseClass, SGPR_IMM_Offset>;
@@ -270,9 +262,9 @@ class SM_Pseudo_Atomic<string opName,
   let DisableEncoding = !if(isRet, "$sdata", "");
 }
 
-multiclass SM_Pseudo_Atomics<string opName,
-                             RegisterClass baseClass,
+multiclass SM_Pseudo_Atomics<RegisterClass baseClass,
                              RegisterClass dataClass> {
+  defvar opName = !tolower(NAME);
   def _IMM      : SM_Pseudo_Atomic <opName, baseClass, dataClass, IMM_Offset, 0>;
   def _SGPR     : SM_Pseudo_Atomic <opName, baseClass, dataClass, SGPR_Offset, 0>;
   def _SGPR_IMM : SM_Pseudo_Atomic <opName, baseClass, dataClass, SGPR_IMM_Offset, 0>;
@@ -291,53 +283,31 @@ multiclass SM_Pseudo_Atomics<string opName,
 
 // XXX - SMEM instructions do not allow exec for data operand, but
 // does sdst for SMRD on SI/CI?
-defm S_LOAD_DWORD    : SM_Pseudo_Loads <"s_load_dword", SReg_64, SReg_32_XM0_XEXEC>;
-defm S_LOAD_DWORDX2  : SM_Pseudo_Loads <"s_load_dwordx2", SReg_64, SReg_64_XEXEC>;
-defm S_LOAD_DWORDX4  : SM_Pseudo_Loads <"s_load_dwordx4", SReg_64, SReg_128>;
-defm S_LOAD_DWORDX8  : SM_Pseudo_Loads <"s_load_dwordx8", SReg_64, SReg_256>;
-defm S_LOAD_DWORDX16 : SM_Pseudo_Loads <"s_load_dwordx16", SReg_64, SReg_512>;
+defm S_LOAD_DWORD    : SM_Pseudo_Loads <SReg_64, SReg_32_XM0_XEXEC>;
+defm S_LOAD_DWORDX2  : SM_Pseudo_Loads <SReg_64, SReg_64_XEXEC>;
+defm S_LOAD_DWORDX4  : SM_Pseudo_Loads <SReg_64, SReg_128>;
+defm S_LOAD_DWORDX8  : SM_Pseudo_Loads <SReg_64, SReg_256>;
+defm S_LOAD_DWORDX16 : SM_Pseudo_Loads <SReg_64, SReg_512>;
 
 let is_buffer = 1 in {
-defm S_BUFFER_LOAD_DWORD : SM_Pseudo_Loads <
-  "s_buffer_load_dword", SReg_128, SReg_32_XM0_XEXEC
->;
-
+defm S_BUFFER_LOAD_DWORD : SM_Pseudo_Loads <SReg_128, SReg_32_XM0_XEXEC>;
 // FIXME: exec_lo/exec_hi appear to be allowed for SMRD loads on
 // SI/CI, bit disallowed for SMEM on VI.
-defm S_BUFFER_LOAD_DWORDX2 : SM_Pseudo_Loads <
-  "s_buffer_load_dwordx2", SReg_128, SReg_64_XEXEC
->;
-
-defm S_BUFFER_LOAD_DWORDX4 : SM_Pseudo_Loads <
-  "s_buffer_load_dwordx4", SReg_128, SReg_128
->;
-
-defm S_BUFFER_LOAD_DWORDX8 : SM_Pseudo_Loads <
-  "s_buffer_load_dwordx8", SReg_128, SReg_256
->;
-
-defm S_BUFFER_LOAD_DWORDX16 : SM_Pseudo_Loads <
-  "s_buffer_load_dwordx16", SReg_128, SReg_512
->;
+defm S_BUFFER_LOAD_DWORDX2 : SM_Pseudo_Loads <SReg_128, SReg_64_XEXEC>;
+defm S_BUFFER_LOAD_DWORDX4 : SM_Pseudo_Loads <SReg_128, SReg_128>;
+defm S_BUFFER_LOAD_DWORDX8 : SM_Pseudo_Loads <SReg_128, SReg_256>;
+defm S_BUFFER_LOAD_DWORDX16 : SM_Pseudo_Loads <SReg_128, SReg_512>;
 }
 
 let SubtargetPredicate = HasScalarStores in {
-defm S_STORE_DWORD : SM_Pseudo_Stores <"s_store_dword", SReg_64, SReg_32_XM0_XEXEC>;
-defm S_STORE_DWORDX2 : SM_Pseudo_Stores <"s_store_dwordx2", SReg_64, SReg_64_XEXEC>;
-defm S_STORE_DWORDX4 : SM_Pseudo_Stores <"s_store_dwordx4", SReg_64, SReg_128>;
+defm S_STORE_DWORD : SM_Pseudo_Stores <SReg_64, SReg_32_XM0_XEXEC>;
+defm S_STORE_DWORDX2 : SM_Pseudo_Stores <SReg_64, SReg_64_XEXEC>;
+defm S_STORE_DWORDX4 : SM_Pseudo_Stores <SReg_64, SReg_128>;
 
 let is_buffer = 1 in {
-defm S_BUFFER_STORE_DWORD : SM_Pseudo_Stores <
-  "s_buffer_store_dword", SReg_128, SReg_32_XM0_XEXEC
->;
-
-defm S_BUFFER_STORE_DWORDX2 : SM_Pseudo_Stores <
-  "s_buffer_store_dwordx2", SReg_128, SReg_64_XEXEC
->;
-
-defm S_BUFFER_STORE_DWORDX4 : SM_Pseudo_Stores <
-  "s_buffer_store_dwordx4", SReg_128, SReg_128
->;
+defm S_BUFFER_STORE_DWORD : SM_Pseudo_Stores <SReg_128, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_STORE_DWORDX2 : SM_Pseudo_Stores <SReg_128, SReg_64_XEXEC>;
+defm S_BUFFER_STORE_DWORDX4 : SM_Pseudo_Stores <SReg_128, SReg_128>;
 }
 } // End SubtargetPredicate = HasScalarStores
 
@@ -355,9 +325,9 @@ def S_DCACHE_WB     : SM_Inval_Pseudo <"s_dcache_wb", int_amdgcn_s_dcache_wb>;
 def S_DCACHE_WB_VOL : SM_Inval_Pseudo <"s_dcache_wb_vol", int_amdgcn_s_dcache_wb_vol>;
 } // End OtherPredicates = [HasScalarStores]
 
-defm S_ATC_PROBE        : SM_Pseudo_Probe <"s_atc_probe", SReg_64>;
+defm S_ATC_PROBE        : SM_Pseudo_Probe <SReg_64>;
 let is_buffer = 1 in {
-defm S_ATC_PROBE_BUFFER : SM_Pseudo_Probe <"s_atc_probe_buffer", SReg_128>;
+defm S_ATC_PROBE_BUFFER : SM_Pseudo_Probe <SReg_128>;
 }
 } // SubtargetPredicate = isGFX8Plus
 
@@ -371,80 +341,80 @@ def S_GET_WAVEID_IN_WORKGROUP : SM_WaveId_Pseudo <"s_get_waveid_in_workgroup", i
 
 
 let SubtargetPredicate = HasScalarFlatScratchInsts, Uses = [FLAT_SCR] in {
-defm S_SCRATCH_LOAD_DWORD    : SM_Pseudo_Loads <"s_scratch_load_dword",   SReg_64, SReg_32_XM0_XEXEC>;
-defm S_SCRATCH_LOAD_DWORDX2  : SM_Pseudo_Loads <"s_scratch_load_dwordx2", SReg_64, SReg_64_XEXEC>;
-defm S_SCRATCH_LOAD_DWORDX4  : SM_Pseudo_Loads <"s_scratch_load_dwordx4", SReg_64, SReg_128>;
+defm S_SCRATCH_LOAD_DWORD    : SM_Pseudo_Loads <SReg_64, SReg_32_XM0_XEXEC>;
+defm S_SCRATCH_LOAD_DWORDX2  : SM_Pseudo_Loads <SReg_64, SReg_64_XEXEC>;
+defm S_SCRATCH_LOAD_DWORDX4  : SM_Pseudo_Loads <SReg_64, SReg_128>;
 
-defm S_SCRATCH_STORE_DWORD   : SM_Pseudo_Stores <"s_scratch_store_dword",   SReg_64, SReg_32_XM0_XEXEC>;
-defm S_SCRATCH_STORE_DWORDX2 : SM_Pseudo_Stores <"s_scratch_store_dwordx2", SReg_64, SReg_64_XEXEC>;
-defm S_SCRATCH_STORE_DWORDX4 : SM_Pseudo_Stores <"s_scratch_store_dwordx4", SReg_64, SReg_128>;
+defm S_SCRATCH_STORE_DWORD   : SM_Pseudo_Stores <SReg_64, SReg_32_XM0_XEXEC>;
+defm S_SCRATCH_STORE_DWORDX2 : SM_Pseudo_Stores <SReg_64, SReg_64_XEXEC>;
+defm S_SCRATCH_STORE_DWORDX4 : SM_Pseudo_Stores <SReg_64, SReg_128>;
 } // SubtargetPredicate = HasScalarFlatScratchInsts
 
 let SubtargetPredicate = HasScalarAtomics in {
 
 let is_buffer = 1 in {
-defm S_BUFFER_ATOMIC_SWAP         : SM_Pseudo_Atomics <"s_buffer_atomic_swap", SReg_128, SReg_32_XM0_XEXEC>;
-defm S_BUFFER_ATOMIC_CMPSWAP      : SM_Pseudo_Atomics <"s_buffer_atomic_cmpswap", SReg_128, SReg_64_XEXEC>;
-defm S_BUFFER_ATOMIC_ADD          : SM_Pseudo_Atomics <"s_buffer_atomic_add", SReg_128, SReg_32_XM0_XEXEC>;
-defm S_BUFFER_ATOMIC_SUB          : SM_Pseudo_Atomics <"s_buffer_atomic_sub", SReg_128, SReg_32_XM0_XEXEC>;
-defm S_BUFFER_ATOMIC_SMIN         : SM_Pseudo_Atomics <"s_buffer_atomic_smin", SReg_128, SReg_32_XM0_XEXEC>;
-defm S_BUFFER_ATOMIC_UMIN         : SM_Pseudo_Atomics <"s_buffer_atomic_umin", SReg_128, SReg_32_XM0_XEXEC>;
-defm S_BUFFER_ATOMIC_SMAX         : SM_Pseudo_Atomics <"s_buffer_atomic_smax", SReg_128, SReg_32_XM0_XEXEC>;
-defm S_BUFFER_ATOMIC_UMAX         : SM_Pseudo_Atomics <"s_buffer_atomic_umax", SReg_128, SReg_32_XM0_XEXEC>;
-defm S_BUFFER_ATOMIC_AND          : SM_Pseudo_Atomics <"s_buffer_atomic_and", SReg_128, SReg_32_XM0_XEXEC>;
-defm S_BUFFER_ATOMIC_OR           : SM_Pseudo_Atomics <"s_buffer_atomic_or", SReg_128, SReg_32_XM0_XEXEC>;
-defm S_BUFFER_ATOMIC_XOR          : SM_Pseudo_Atomics <"s_buffer_atomic_xor", SReg_128, SReg_32_XM0_XEXEC>;
-defm S_BUFFER_ATOMIC_INC          : SM_Pseudo_Atomics <"s_buffer_atomic_inc", SReg_128, SReg_32_XM0_XEXEC>;
-defm S_BUFFER_ATOMIC_DEC          : SM_Pseudo_Atomics <"s_buffer_atomic_dec", SReg_128, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_ATOMIC_SWAP         : SM_Pseudo_Atomics <SReg_128, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_ATOMIC_CMPSWAP      : SM_Pseudo_Atomics <SReg_128, SReg_64_XEXEC>;
+defm S_BUFFER_ATOMIC_ADD          : SM_Pseudo_Atomics <SReg_128, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_ATOMIC_SUB          : SM_Pseudo_Atomics <SReg_128, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_ATOMIC_SMIN         : SM_Pseudo_Atomics <SReg_128, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_ATOMIC_UMIN         : SM_Pseudo_Atomics <SReg_128, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_ATOMIC_SMAX         : SM_Pseudo_Atomics <SReg_128, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_ATOMIC_UMAX         : SM_Pseudo_Atomics <SReg_128, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_ATOMIC_AND          : SM_Pseudo_Atomics <SReg_128, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_ATOMIC_OR           : SM_Pseudo_Atomics <SReg_128, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_ATOMIC_XOR          : SM_Pseudo_Atomics <SReg_128, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_ATOMIC_INC          : SM_Pseudo_Atomics <SReg_128, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_ATOMIC_DEC          : SM_Pseudo_Atomics <SReg_128, SReg_32_XM0_XEXEC>;
 
-defm S_BUFFER_ATOMIC_SWAP_X2      : SM_Pseudo_Atomics <"s_buffer_atomic_swap_x2", SReg_128, SReg_64_XEXEC>;
-defm S_BUFFER_ATOMIC_CMPSWAP_X2   : SM_Pseudo_Atomics <"s_buffer_atomic_cmpswap_x2", SReg_128, SReg_128>;
-defm S_BUFFER_ATOMIC_ADD_X2       : SM_Pseudo_Atomics <"s_buffer_atomic_add_x2", SReg_128, SReg_64_XEXEC>;
-defm S_BUFFER_ATOMIC_SUB_X2       : SM_Pseudo_Atomics <"s_buffer_atomic_sub_x2", SReg_128, SReg_64_XEXEC>;
-defm S_BUFFER_ATOMIC_SMIN_X2      : SM_Pseudo_Atomics <"s_buffer_atomic_smin_x2", SReg_128, SReg_64_XEXEC>;
-defm S_BUFFER_ATOMIC_UMIN_X2      : SM_Pseudo_Atomics <"s_buffer_atomic_umin_x2", SReg_128, SReg_64_XEXEC>;
-defm S_BUFFER_ATOMIC_SMAX_X2      : SM_Pseudo_Atomics <"s_buffer_atomic_smax_x2", SReg_128, SReg_64_XEXEC>;
-defm S_BUFFER_ATOMIC_UMAX_X2      : SM_Pseudo_Atomics <"s_buffer_atomic_umax_x2", SReg_128, SReg_64_XEXEC>;
-defm S_BUFFER_ATOMIC_AND_X2       : SM_Pseudo_Atomics <"s_buffer_atomic_and_x2", SReg_128, SReg_64_XEXEC>;
-defm S_BUFFER_ATOMIC_OR_X2        : SM_Pseudo_Atomics <"s_buffer_atomic_or_x2", SReg_128, SReg_64_XEXEC>;
-defm S_BUFFER_ATOMIC_XOR_X2       : SM_Pseudo_Atomics <"s_buffer_atomic_xor_x2", SReg_128, SReg_64_XEXEC>;
-defm S_BUFFER_ATOMIC_INC_X2       : SM_Pseudo_Atomics <"s_buffer_atomic_inc_x2", SReg_128, SReg_64_XEXEC>;
-defm S_BUFFER_ATOMIC_DEC_X2       : SM_Pseudo_Atomics <"s_buffer_atomic_dec_x2", SReg_128, SReg_64_XEXEC>;
+defm S_BUFFER_ATOMIC_SWAP_X2      : SM_Pseudo_Atomics <SReg_128, SReg_64_XEXEC>;
+defm S_BUFFER_ATOMIC_CMPSWAP_X2   : SM_Pseudo_Atomics <SReg_128, SReg_128>;
+defm S_BUFFER_ATOMIC_ADD_X2       : SM_Pseudo_Atomics <SReg_128, SReg_64_XEXEC>;
+defm S_BUFFER_ATOMIC_SUB_X2       : SM_Pseudo_Atomics <SReg_128, SReg_64_XEXEC>;
+defm S_BUFFER_ATOMIC_SMIN_X2      : SM_Pseudo_Atomics <SReg_128, SReg_64_XEXEC>;
+defm S_BUFFER_ATOMIC_UMIN_X2      : SM_Pseudo_Atomics <SReg_128, SReg_64_XEXEC>;
+defm S_BUFFER_ATOMIC_SMAX_X2      : SM_Pseudo_Atomics <SReg_128, SReg_64_XEXEC>;
+defm S_BUFFER_ATOMIC_UMAX_X2      : SM_Pseudo_Atomics <SReg_128, SReg_64_XEXEC>;
+defm S_BUFFER_ATOMIC_AND_X2       : SM_Pseudo_Atomics <SReg_128, SReg_64_XEXEC>;
+defm S_BUFFER_ATOMIC_OR_X2        : SM_Pseudo_Atomics <SReg_128, SReg_64_XEXEC>;
+defm S_BUFFER_ATOMIC_XOR_X2       : SM_Pseudo_Atomics <SReg_128, SReg_64_XEXEC>;
+defm S_BUFFER_ATOMIC_INC_X2       : SM_Pseudo_Atomics <SReg_128, SReg_64_XEXEC>;
+defm S_BUFFER_ATOMIC_DEC_X2       : SM_Pseudo_Atomics <SReg_128, SReg_64_XEXEC>;
 }
 
-defm S_ATOMIC_SWAP                : SM_Pseudo_Atomics <"s_atomic_swap", SReg_64, SReg_32_XM0_XEXEC>;
-defm S_ATOMIC_CMPSWAP             : SM_Pseudo_Atomics <"s_atomic_cmpswap", SReg_64, SReg_64_XEXEC>;
-defm S_ATOMIC_ADD                 : SM_Pseudo_Atomics <"s_atomic_add", SReg_64, SReg_32_XM0_XEXEC>;
-defm S_ATOMIC_SUB                 : SM_Pseudo_Atomics <"s_atomic_sub", SReg_64, SReg_32_XM0_XEXEC>;
-defm S_ATOMIC_SMIN                : SM_Pseudo_Atomics <"s_atomic_smin", SReg_64, SReg_32_XM0_XEXEC>;
-defm S_ATOMIC_UMIN                : SM_Pseudo_Atomics <"s_atomic_umin", SReg_64, SReg_32_XM0_XEXEC>;
-defm S_ATOMIC_SMAX                : SM_Pseudo_Atomics <"s_atomic_smax", SReg_64, SReg_32_XM0_XEXEC>;
-defm S_ATOMIC_UMAX                : SM_Pseudo_Atomics <"s_atomic_umax", SReg_64, SReg_32_XM0_XEXEC>;
-defm S_ATOMIC_AND                 : SM_Pseudo_Atomics <"s_atomic_and", SReg_64, SReg_32_XM0_XEXEC>;
-defm S_ATOMIC_OR                  : SM_Pseudo_Atomics <"s_atomic_or", SReg_64, SReg_32_XM0_XEXEC>;
-defm S_ATOMIC_XOR                 : SM_Pseudo_Atomics <"s_atomic_xor", SReg_64, SReg_32_XM0_XEXEC>;
-defm S_ATOMIC_INC                 : SM_Pseudo_Atomics <"s_atomic_inc", SReg_64, SReg_32_XM0_XEXEC>;
-defm S_ATOMIC_DEC                 : SM_Pseudo_Atomics <"s_atomic_dec", SReg_64, SReg_32_XM0_XEXEC>;
+defm S_ATOMIC_SWAP                : SM_Pseudo_Atomics <SReg_64, SReg_32_XM0_XEXEC>;
+defm S_ATOMIC_CMPSWAP             : SM_Pseudo_Atomics <SReg_64, SReg_64_XEXEC>;
+defm S_ATOMIC_ADD                 : SM_Pseudo_Atomics <SReg_64, SReg_32_XM0_XEXEC>;
+defm S_ATOMIC_SUB                 : SM_Pseudo_Atomics <SReg_64, SReg_32_XM0_XEXEC>;
+defm S_ATOMIC_SMIN                : SM_Pseudo_Atomics <SReg_64, SReg_32_XM0_XEXEC>;
+defm S_ATOMIC_UMIN                : SM_Pseudo_Atomics <SReg_64, SReg_32_XM0_XEXEC>;
+defm S_ATOMIC_SMAX                : SM_Pseudo_Atomics <SReg_64, SReg_32_XM0_XEXEC>;
+defm S_ATOMIC_UMAX                : SM_Pseudo_Atomics <SReg_64, SReg_32_XM0_XEXEC>;
+defm S_ATOMIC_AND                 : SM_Pseudo_Atomics <SReg_64, SReg_32_XM0_XEXEC>;
+defm S_ATOMIC_OR                  : SM_Pseudo_Atomics <SReg_64, SReg_32_XM0_XEXEC>;
+defm S_ATOMIC_XOR                 : SM_Pseudo_Atomics <SReg_64, SReg_32_XM0_XEXEC>;
+defm S_ATOMIC_INC                 : SM_Pseudo_Atomics <SReg_64, SReg_32_XM0_XEXEC>;
+defm S_ATOMIC_DEC                 : SM_Pseudo_Atomics <SReg_64, SReg_32_XM0_XEXEC>;
 
-defm S_ATOMIC_SWAP_X2             : SM_Pseudo_Atomics <"s_atomic_swap_x2", SReg_64, SReg_64_XEXEC>;
-defm S_ATOMIC_CMPSWAP_X2          : SM_Pseudo_Atomics <"s_atomic_cmpswap_x2", SReg_64, SReg_128>;
-defm S_ATOMIC_ADD_X2              : SM_Pseudo_Atomics <"s_atomic_add_x2", SReg_64, SReg_64_XEXEC>;
-defm S_ATOMIC_SUB_X2              : SM_Pseudo_Atomics <"s_atomic_sub_x2", SReg_64, SReg_64_XEXEC>;
-defm S_ATOMIC_SMIN_X2             : SM_Pseudo_Atomics <"s_atomic_smin_x2", SReg_64, SReg_64_XEXEC>;
-defm S_ATOMIC_UMIN_X2             : SM_Pseudo_Atomics <"s_atomic_umin_x2", SReg_64, SReg_64_XEXEC>;
-defm S_ATOMIC_SMAX_X2             : SM_Pseudo_Atomics <"s_atomic_smax_x2", SReg_64, SReg_64_XEXEC>;
-defm S_ATOMIC_UMAX_X2             : SM_Pseudo_Atomics <"s_atomic_umax_x2", SReg_64, SReg_64_XEXEC>;
-defm S_ATOMIC_AND_X2              : SM_Pseudo_Atomics <"s_atomic_and_x2", SReg_64, SReg_64_XEXEC>;
-defm S_ATOMIC_OR_X2               : SM_Pseudo_Atomics <"s_atomic_or_x2", SReg_64, SReg_64_XEXEC>;
-defm S_ATOMIC_XOR_X2              : SM_Pseudo_Atomics <"s_atomic_xor_x2", SReg_64, SReg_64_XEXEC>;
-defm S_ATOMIC_INC_X2              : SM_Pseudo_Atomics <"s_atomic_inc_x2", SReg_64, SReg_64_XEXEC>;
-defm S_ATOMIC_DEC_X2              : SM_Pseudo_Atomics <"s_atomic_dec_x2", SReg_64, SReg_64_XEXEC>;
+defm S_ATOMIC_SWAP_X2             : SM_Pseudo_Atomics <SReg_64, SReg_64_XEXEC>;
+defm S_ATOMIC_CMPSWAP_X2          : SM_Pseudo_Atomics <SReg_64, SReg_128>;
+defm S_ATOMIC_ADD_X2              : SM_Pseudo_Atomics <SReg_64, SReg_64_XEXEC>;
+defm S_ATOMIC_SUB_X2              : SM_Pseudo_Atomics <SReg_64, SReg_64_XEXEC>;
+defm S_ATOMIC_SMIN_X2             : SM_Pseudo_Atomics <SReg_64, SReg_64_XEXEC>;
+defm S_ATOMIC_UMIN_X2             : SM_Pseudo_Atomics <SReg_64, SReg_64_XEXEC>;
+defm S_ATOMIC_SMAX_X2             : SM_Pseudo_Atomics <SReg_64, SReg_64_XEXEC>;
+defm S_ATOMIC_UMAX_X2             : SM_Pseudo_Atomics <SReg_64, SReg_64_XEXEC>;
+defm S_ATOMIC_AND_X2              : SM_Pseudo_Atomics <SReg_64, SReg_64_XEXEC>;
+defm S_ATOMIC_OR_X2               : SM_Pseudo_Atomics <SReg_64, SReg_64_XEXEC>;
+defm S_ATOMIC_XOR_X2              : SM_Pseudo_Atomics <SReg_64, SReg_64_XEXEC>;
+defm S_ATOMIC_INC_X2              : SM_Pseudo_Atomics <SReg_64, SReg_64_XEXEC>;
+defm S_ATOMIC_DEC_X2              : SM_Pseudo_Atomics <SReg_64, SReg_64_XEXEC>;
 
 } // let SubtargetPredicate = HasScalarAtomics
 
 let SubtargetPredicate = HasScalarAtomics in {
-defm S_DCACHE_DISCARD    : SM_Pseudo_Discards <"s_dcache_discard">;
-defm S_DCACHE_DISCARD_X2 : SM_Pseudo_Discards <"s_dcache_discard_x2">;
+defm S_DCACHE_DISCARD    : SM_Pseudo_Discards;
+defm S_DCACHE_DISCARD_X2 : SM_Pseudo_Discards;
 }
 
 //===----------------------------------------------------------------------===//
@@ -471,30 +441,27 @@ class SMRD_Real_si <bits<5> op, SM_Pseudo ps>
   let Inst{31-27} = 0x18; //encoding
 }
 
-multiclass SM_Real_Loads_si<bits<5> op, string ps,
-                            SM_Load_Pseudo immPs = !cast<SM_Load_Pseudo>(ps#_IMM),
-                            SM_Load_Pseudo sgprPs = !cast<SM_Load_Pseudo>(ps#_SGPR)> {
-
+multiclass SM_Real_Loads_si<bits<5> op> {
+  defvar ps = NAME;
+  defvar immPs = !cast<SM_Load_Pseudo>(ps#_IMM);
   def _IMM_si : SMRD_Real_si <op, immPs> {
     let InOperandList = (ins immPs.BaseClass:$sbase, smrd_offset_8:$offset, CPol:$cpol);
   }
 
-  def _SGPR_si : SMRD_Real_si <op, sgprPs> {
-    let InOperandList = (ins sgprPs.BaseClass:$sbase, SReg_32:$soffset, CPol:$cpol);
-  }
-
+  defvar sgprPs = !cast<SM_Load_Pseudo>(ps#_SGPR);
+  def _SGPR_si : SMRD_Real_si <op, sgprPs>;
 }
 
-defm S_LOAD_DWORD           : SM_Real_Loads_si <0x00, "S_LOAD_DWORD">;
-defm S_LOAD_DWORDX2         : SM_Real_Loads_si <0x01, "S_LOAD_DWORDX2">;
-defm S_LOAD_DWORDX4         : SM_Real_Loads_si <0x02, "S_LOAD_DWORDX4">;
-defm S_LOAD_DWORDX8         : SM_Real_Loads_si <0x03, "S_LOAD_DWORDX8">;
-defm S_LOAD_DWORDX16        : SM_Real_Loads_si <0x04, "S_LOAD_DWORDX16">;
-defm S_BUFFER_LOAD_DWORD    : SM_Real_Loads_si <0x08, "S_BUFFER_LOAD_DWORD">;
-defm S_BUFFER_LOAD_DWORDX2  : SM_Real_Loads_si <0x09, "S_BUFFER_LOAD_DWORDX2">;
-defm S_BUFFER_LOAD_DWORDX4  : SM_Real_Loads_si <0x0a, "S_BUFFER_LOAD_DWORDX4">;
-defm S_BUFFER_LOAD_DWORDX8  : SM_Real_Loads_si <0x0b, "S_BUFFER_LOAD_DWORDX8">;
-defm S_BUFFER_LOAD_DWORDX16 : SM_Real_Loads_si <0x0c, "S_BUFFER_LOAD_DWORDX16">;
+defm S_LOAD_DWORD           : SM_Real_Loads_si <0x00>;
+defm S_LOAD_DWORDX2         : SM_Real_Loads_si <0x01>;
+defm S_LOAD_DWORDX4         : SM_Real_Loads_si <0x02>;
+defm S_LOAD_DWORDX8         : SM_Real_Loads_si <0x03>;
+defm S_LOAD_DWORDX16        : SM_Real_Loads_si <0x04>;
+defm S_BUFFER_LOAD_DWORD    : SM_Real_Loads_si <0x08>;
+defm S_BUFFER_LOAD_DWORDX2  : SM_Real_Loads_si <0x09>;
+defm S_BUFFER_LOAD_DWORDX4  : SM_Real_Loads_si <0x0a>;
+defm S_BUFFER_LOAD_DWORDX8  : SM_Real_Loads_si <0x0b>;
+defm S_BUFFER_LOAD_DWORDX16 : SM_Real_Loads_si <0x0c>;
 
 def S_MEMTIME_si    : SMRD_Real_si <0x1e, S_MEMTIME>;
 def S_DCACHE_INV_si : SMRD_Real_si <0x1f, S_DCACHE_INV>;
@@ -548,11 +515,8 @@ class SMEM_Real_vi <bits<8> op, SM_Pseudo ps>
                         soffset{6-0}, ?);
 }
 
-class SMEM_Real_Load_vi<bits<8> op, string ps, OffsetMode offsets>
-    : SMEM_Real_vi<op, !cast<SM_Pseudo>(ps # offsets.Variant)> {
-  RegisterClass BaseClass = !cast<SM_Load_Pseudo>(ps # offsets.Variant).BaseClass;
-  let InOperandList = !con((ins BaseClass:$sbase), offsets.Ins, (ins CPol:$cpol));
-}
+class SMEM_Real_Load_vi<bits<8> op, string ps>
+    : SMEM_Real_vi<op, !cast<SM_Pseudo>(ps)>;
 
 // The alternative GFX9 SGPR encoding using soffset to encode the
 // offset register. Not available in assembler and goes to the GFX9
@@ -565,13 +529,14 @@ class SMEM_Real_SGPR_alt_gfx9 {
   string AsmVariantName = "NonParsable";
 }
 
-multiclass SM_Real_Loads_vi<bits<8> op, string ps> {
-  def _IMM_vi : SMEM_Real_Load_vi <op, ps, IMM_Offset>;
-  def _SGPR_vi : SMEM_Real_Load_vi <op, ps, SGPR_Offset>;
-  def _SGPR_alt_gfx9 : SMEM_Real_Load_vi <op, ps, SGPR_Offset>,
+multiclass SM_Real_Loads_vi<bits<8> op> {
+  defvar ps = NAME;
+  def _IMM_vi : SMEM_Real_Load_vi <op, ps#"_IMM">;
+  def _SGPR_vi : SMEM_Real_Load_vi <op, ps#"_SGPR">;
+  def _SGPR_alt_gfx9 : SMEM_Real_Load_vi <op, ps#"_SGPR">,
                        SMEM_Real_SGPR_alt_gfx9;
   let IsGFX9SpecificEncoding = true in
-  def _SGPR_IMM_gfx9 : SMEM_Real_Load_vi <op, ps, SGPR_IMM_Offset>;
+  def _SGPR_IMM_gfx9 : SMEM_Real_Load_vi <op, ps#"_SGPR_IMM">;
 }
 
 class SMEM_Real_Store_Base_vi <bits<8> op, SM_Pseudo ps> : SMEM_Real_vi <op, ps> {
@@ -582,24 +547,21 @@ class SMEM_Real_Store_Base_vi <bits<8> op, SM_Pseudo ps> : SMEM_Real_vi <op, ps>
   let Inst{12-6}  = !if(ps.has_sdst, sdata{6-0}, ?);
 }
 
-class SMEM_Real_Store_vi <bits<8> op, string ps, OffsetMode offsets>
-    : SMEM_Real_Store_Base_vi <op, !cast<SM_Pseudo>(ps # offsets.Variant)> {
-  RegisterClass SrcClass = !cast<SM_Store_Pseudo>(ps # offsets.Variant).SrcClass;
-  RegisterClass BaseClass = !cast<SM_Store_Pseudo>(ps # offsets.Variant).BaseClass;
-  let InOperandList = !con((ins SrcClass:$sdata, BaseClass:$sbase),
-                           offsets.Ins, (ins CPol:$cpol));
-}
+class SMEM_Real_Store_vi <bits<8> op, string ps>
+    : SMEM_Real_Store_Base_vi <op, !cast<SM_Pseudo>(ps)>;
 
-multiclass SM_Real_Stores_vi<bits<8> op, string ps> {
-  def _IMM_vi : SMEM_Real_Store_vi <op, ps, IMM_Offset>;
-  def _SGPR_vi : SMEM_Real_Store_vi <op, ps, SGPR_Offset>;
-  def _SGPR_alt_gfx9 : SMEM_Real_Store_vi <op, ps, SGPR_Offset>,
+multiclass SM_Real_Stores_vi<bits<8> op> {
+  defvar ps = NAME;
+  def _IMM_vi : SMEM_Real_Store_vi <op, ps#"_IMM">;
+  def _SGPR_vi : SMEM_Real_Store_vi <op, ps#"_SGPR">;
+  def _SGPR_alt_gfx9 : SMEM_Real_Store_vi <op, ps#"_SGPR">,
                        SMEM_Real_SGPR_alt_gfx9;
   let IsGFX9SpecificEncoding = true in
-  def _SGPR_IMM_gfx9 : SMEM_Real_Store_vi <op, ps, SGPR_IMM_Offset>;
+  def _SGPR_IMM_gfx9 : SMEM_Real_Store_vi <op, ps#"_SGPR_IMM">;
 }
 
-multiclass SM_Real_Probe_vi<bits<8> op, string ps> {
+multiclass SM_Real_Probe_vi<bits<8> op> {
+  defvar ps = NAME;
   def _IMM_vi  : SMEM_Real_Store_Base_vi <op, !cast<SM_Probe_Pseudo>(ps#_IMM)>;
   def _SGPR_vi : SMEM_Real_Store_Base_vi <op, !cast<SM_Probe_Pseudo>(ps#_SGPR)>;
   def _SGPR_alt_gfx9
@@ -610,24 +572,24 @@ multiclass SM_Real_Probe_vi<bits<8> op, string ps> {
     : SMEM_Real_Store_Base_vi <op, !cast<SM_Probe_Pseudo>(ps#_SGPR_IMM)>;
 }
 
-defm S_LOAD_DWORD           : SM_Real_Loads_vi <0x00, "S_LOAD_DWORD">;
-defm S_LOAD_DWORDX2         : SM_Real_Loads_vi <0x01, "S_LOAD_DWORDX2">;
-defm S_LOAD_DWORDX4         : SM_Real_Loads_vi <0x02, "S_LOAD_DWORDX4">;
-defm S_LOAD_DWORDX8         : SM_Real_Loads_vi <0x03, "S_LOAD_DWORDX8">;
-defm S_LOAD_DWORDX16        : SM_Real_Loads_vi <0x04, "S_LOAD_DWORDX16">;
-defm S_BUFFER_LOAD_DWORD    : SM_Real_Loads_vi <0x08, "S_BUFFER_LOAD_DWORD">;
-defm S_BUFFER_LOAD_DWORDX2  : SM_Real_Loads_vi <0x09, "S_BUFFER_LOAD_DWORDX2">;
-defm S_BUFFER_LOAD_DWORDX4  : SM_Real_Loads_vi <0x0a, "S_BUFFER_LOAD_DWORDX4">;
-defm S_BUFFER_LOAD_DWORDX8  : SM_Real_Loads_vi <0x0b, "S_BUFFER_LOAD_DWORDX8">;
-defm S_BUFFER_LOAD_DWORDX16 : SM_Real_Loads_vi <0x0c, "S_BUFFER_LOAD_DWORDX16">;
+defm S_LOAD_DWORD           : SM_Real_Loads_vi <0x00>;
+defm S_LOAD_DWORDX2         : SM_Real_Loads_vi <0x01>;
+defm S_LOAD_DWORDX4         : SM_Real_Loads_vi <0x02>;
+defm S_LOAD_DWORDX8         : SM_Real_Loads_vi <0x03>;
+defm S_LOAD_DWORDX16        : SM_Real_Loads_vi <0x04>;
+defm S_BUFFER_LOAD_DWORD    : SM_Real_Loads_vi <0x08>;
+defm S_BUFFER_LOAD_DWORDX2  : SM_Real_Loads_vi <0x09>;
+defm S_BUFFER_LOAD_DWORDX4  : SM_Real_Loads_vi <0x0a>;
+defm S_BUFFER_LOAD_DWORDX8  : SM_Real_Loads_vi <0x0b>;
+defm S_BUFFER_LOAD_DWORDX16 : SM_Real_Loads_vi <0x0c>;
 
-defm S_STORE_DWORD : SM_Real_Stores_vi <0x10, "S_STORE_DWORD">;
-defm S_STORE_DWORDX2 : SM_Real_Stores_vi <0x11, "S_STORE_DWORDX2">;
-defm S_STORE_DWORDX4 : SM_Real_Stores_vi <0x12, "S_STORE_DWORDX4">;
+defm S_STORE_DWORD : SM_Real_Stores_vi <0x10>;
+defm S_STORE_DWORDX2 : SM_Real_Stores_vi <0x11>;
+defm S_STORE_DWORDX4 : SM_Real_Stores_vi <0x12>;
 
-defm S_BUFFER_STORE_DWORD    : SM_Real_Stores_vi <0x18, "S_BUFFER_STORE_DWORD">;
-defm S_BUFFER_STORE_DWORDX2  : SM_Real_Stores_vi <0x19, "S_BUFFER_STORE_DWORDX2">;
-defm S_BUFFER_STORE_DWORDX4  : SM_Real_Stores_vi <0x1a, "S_BUFFER_STORE_DWORDX4">;
+defm S_BUFFER_STORE_DWORD    : SM_Real_Stores_vi <0x18>;
+defm S_BUFFER_STORE_DWORDX2  : SM_Real_Stores_vi <0x19>;
+defm S_BUFFER_STORE_DWORDX4  : SM_Real_Stores_vi <0x1a>;
 
 // These instructions use same encoding
 def S_DCACHE_INV_vi         : SMEM_Real_vi <0x20, S_DCACHE_INV>;
@@ -637,16 +599,16 @@ def S_DCACHE_WB_VOL_vi      : SMEM_Real_vi <0x23, S_DCACHE_WB_VOL>;
 def S_MEMTIME_vi            : SMEM_Real_vi <0x24, S_MEMTIME>;
 def S_MEMREALTIME_vi        : SMEM_Real_vi <0x25, S_MEMREALTIME>;
 
-defm S_SCRATCH_LOAD_DWORD    : SM_Real_Loads_vi <0x05, "S_SCRATCH_LOAD_DWORD">;
-defm S_SCRATCH_LOAD_DWORDX2  : SM_Real_Loads_vi <0x06, "S_SCRATCH_LOAD_DWORDX2">;
-defm S_SCRATCH_LOAD_DWORDX4  : SM_Real_Loads_vi <0x07, "S_SCRATCH_LOAD_DWORDX4">;
+defm S_SCRATCH_LOAD_DWORD    : SM_Real_Loads_vi <0x05>;
+defm S_SCRATCH_LOAD_DWORDX2  : SM_Real_Loads_vi <0x06>;
+defm S_SCRATCH_LOAD_DWORDX4  : SM_Real_Loads_vi <0x07>;
 
-defm S_SCRATCH_STORE_DWORD   : SM_Real_Stores_vi <0x15, "S_SCRATCH_STORE_DWORD">;
-defm S_SCRATCH_STORE_DWORDX2 : SM_Real_Stores_vi <0x16, "S_SCRATCH_STORE_DWORDX2">;
-defm S_SCRATCH_STORE_DWORDX4 : SM_Real_Stores_vi <0x17, "S_SCRATCH_STORE_DWORDX4">;
+defm S_SCRATCH_STORE_DWORD   : SM_Real_Stores_vi <0x15>;
+defm S_SCRATCH_STORE_DWORDX2 : SM_Real_Stores_vi <0x16>;
+defm S_SCRATCH_STORE_DWORDX4 : SM_Real_Stores_vi <0x17>;
 
-defm S_ATC_PROBE        : SM_Real_Probe_vi <0x26, "S_ATC_PROBE">;
-defm S_ATC_PROBE_BUFFER : SM_Real_Probe_vi <0x27, "S_ATC_PROBE_BUFFER">;
+defm S_ATC_PROBE        : SM_Real_Probe_vi <0x26>;
+defm S_ATC_PROBE_BUFFER : SM_Real_Probe_vi <0x27>;
 
 //===----------------------------------------------------------------------===//
 // GFX9
@@ -665,7 +627,8 @@ class SMEM_Atomic_Real_vi <bits<8> op, SM_Atomic_Pseudo ps>
   let Inst{12-6} = !if(ps.glc, sdst{6-0}, sdata{6-0});
 }
 
-multiclass SM_Real_Atomics_vi<bits<8> op, string ps> {
+multiclass SM_Real_Atomics_vi<bits<8> op> {
+  defvar ps = NAME;
   def _IMM_vi       : SMEM_Atomic_Real_vi <op, !cast<SM_Atomic_Pseudo>(ps#_IMM)>;
   def _SGPR_vi      : SMEM_Atomic_Real_vi <op, !cast<SM_Atomic_Pseudo>(ps#_SGPR)>;
   def _SGPR_alt_gfx9
@@ -684,63 +647,64 @@ multiclass SM_Real_Atomics_vi<bits<8> op, string ps> {
     : SMEM_Atomic_Real_vi <op, !cast<SM_Atomic_Pseudo>(ps#_SGPR_IMM_RTN)>;
 }
 
-defm S_BUFFER_ATOMIC_SWAP         : SM_Real_Atomics_vi <0x40, "S_BUFFER_ATOMIC_SWAP">;
-defm S_BUFFER_ATOMIC_CMPSWAP      : SM_Real_Atomics_vi <0x41, "S_BUFFER_ATOMIC_CMPSWAP">;
-defm S_BUFFER_ATOMIC_ADD          : SM_Real_Atomics_vi <0x42, "S_BUFFER_ATOMIC_ADD">;
-defm S_BUFFER_ATOMIC_SUB          : SM_Real_Atomics_vi <0x43, "S_BUFFER_ATOMIC_SUB">;
-defm S_BUFFER_ATOMIC_SMIN         : SM_Real_Atomics_vi <0x44, "S_BUFFER_ATOMIC_SMIN">;
-defm S_BUFFER_ATOMIC_UMIN         : SM_Real_Atomics_vi <0x45, "S_BUFFER_ATOMIC_UMIN">;
-defm S_BUFFER_ATOMIC_SMAX         : SM_Real_Atomics_vi <0x46, "S_BUFFER_ATOMIC_SMAX">;
-defm S_BUFFER_ATOMIC_UMAX         : SM_Real_Atomics_vi <0x47, "S_BUFFER_ATOMIC_UMAX">;
-defm S_BUFFER_ATOMIC_AND          : SM_Real_Atomics_vi <0x48, "S_BUFFER_ATOMIC_AND">;
-defm S_BUFFER_ATOMIC_OR           : SM_Real_Atomics_vi <0x49, "S_BUFFER_ATOMIC_OR">;
-defm S_BUFFER_ATOMIC_XOR          : SM_Real_Atomics_vi <0x4a, "S_BUFFER_ATOMIC_XOR">;
-defm S_BUFFER_ATOMIC_INC          : SM_Real_Atomics_vi <0x4b, "S_BUFFER_ATOMIC_INC">;
-defm S_BUFFER_ATOMIC_DEC          : SM_Real_Atomics_vi <0x4c, "S_BUFFER_ATOMIC_DEC">;
+defm S_BUFFER_ATOMIC_SWAP         : SM_Real_Atomics_vi <0x40>;
+defm S_BUFFER_ATOMIC_CMPSWAP      : SM_Real_Atomics_vi <0x41>;
+defm S_BUFFER_ATOMIC_ADD          : SM_Real_Atomics_vi <0x42>;
+defm S_BUFFER_ATOMIC_SUB          : SM_Real_Atomics_vi <0x43>;
+defm S_BUFFER_ATOMIC_SMIN         : SM_Real_Atomics_vi <0x44>;
+defm S_BUFFER_ATOMIC_UMIN         : SM_Real_Atomics_vi <0x45>;
+defm S_BUFFER_ATOMIC_SMAX         : SM_Real_Atomics_vi <0x46>;
+defm S_BUFFER_ATOMIC_UMAX         : SM_Real_Atomics_vi <0x47>;
+defm S_BUFFER_ATOMIC_AND          : SM_Real_Atomics_vi <0x48>;
+defm S_BUFFER_ATOMIC_OR           : SM_Real_Atomics_vi <0x49>;
+defm S_BUFFER_ATOMIC_XOR          : SM_Real_Atomics_vi <0x4a>;
+defm S_BUFFER_ATOMIC_INC          : SM_Real_Atomics_vi <0x4b>;
+defm S_BUFFER_ATOMIC_DEC          : SM_Real_Atomics_vi <0x4c>;
 
-defm S_BUFFER_ATOMIC_SWAP_X2      : SM_Real_Atomics_vi <0x60, "S_BUFFER_ATOMIC_SWAP_X2">;
-defm S_BUFFER_ATOMIC_CMPSWAP_X2   : SM_Real_Atomics_vi <0x61, "S_BUFFER_ATOMIC_CMPSWAP_X2">;
-defm S_BUFFER_ATOMIC_ADD_X2       : SM_Real_Atomics_vi <0x62, "S_BUFFER_ATOMIC_ADD_X2">;
-defm S_BUFFER_ATOMIC_SUB_X2       : SM_Real_Atomics_vi <0x63, "S_BUFFER_ATOMIC_SUB_X2">;
-defm S_BUFFER_ATOMIC_SMIN_X2      : SM_Real_Atomics_vi <0x64, "S_BUFFER_ATOMIC_SMIN_X2">;
-defm S_BUFFER_ATOMIC_UMIN_X2      : SM_Real_Atomics_vi <0x65, "S_BUFFER_ATOMIC_UMIN_X2">;
-defm S_BUFFER_ATOMIC_SMAX_X2      : SM_Real_Atomics_vi <0x66, "S_BUFFER_ATOMIC_SMAX_X2">;
-defm S_BUFFER_ATOMIC_UMAX_X2      : SM_Real_Atomics_vi <0x67, "S_BUFFER_ATOMIC_UMAX_X2">;
-defm S_BUFFER_ATOMIC_AND_X2       : SM_Real_Atomics_vi <0x68, "S_BUFFER_ATOMIC_AND_X2">;
-defm S_BUFFER_ATOMIC_OR_X2        : SM_Real_Atomics_vi <0x69, "S_BUFFER_ATOMIC_OR_X2">;
-defm S_BUFFER_ATOMIC_XOR_X2       : SM_Real_Atomics_vi <0x6a, "S_BUFFER_ATOMIC_XOR_X2">;
-defm S_BUFFER_ATOMIC_INC_X2       : SM_Real_Atomics_vi <0x6b, "S_BUFFER_ATOMIC_INC_X2">;
-defm S_BUFFER_ATOMIC_DEC_X2       : SM_Real_Atomics_vi <0x6c, "S_BUFFER_ATOMIC_DEC_X2">;
+defm S_BUFFER_ATOMIC_SWAP_X2      : SM_Real_Atomics_vi <0x60>;
+defm S_BUFFER_ATOMIC_CMPSWAP_X2   : SM_Real_Atomics_vi <0x61>;
+defm S_BUFFER_ATOMIC_ADD_X2       : SM_Real_Atomics_vi <0x62>;
+defm S_BUFFER_ATOMIC_SUB_X2       : SM_Real_Atomics_vi <0x63>;
+defm S_BUFFER_ATOMIC_SMIN_X2      : SM_Real_Atomics_vi <0x64>;
+defm S_BUFFER_ATOMIC_UMIN_X2      : SM_Real_Atomics_vi <0x65>;
+defm S_BUFFER_ATOMIC_SMAX_X2      : SM_Real_Atomics_vi <0x66>;
+defm S_BUFFER_ATOMIC_UMAX_X2      : SM_Real_Atomics_vi <0x67>;
+defm S_BUFFER_ATOMIC_AND_X2       : SM_Real_Atomics_vi <0x68>;
+defm S_BUFFER_ATOMIC_OR_X2        : SM_Real_Atomics_vi <0x69>;
+defm S_BUFFER_ATOMIC_XOR_X2       : SM_Real_Atomics_vi <0x6a>;
+defm S_BUFFER_ATOMIC_INC_X2       : SM_Real_Atomics_vi <0x6b>;
+defm S_BUFFER_ATOMIC_DEC_X2       : SM_Real_Atomics_vi <0x6c>;
 
-defm S_ATOMIC_SWAP                : SM_Real_Atomics_vi <0x80, "S_ATOMIC_SWAP">;
-defm S_ATOMIC_CMPSWAP             : SM_Real_Atomics_vi <0x81, "S_ATOMIC_CMPSWAP">;
-defm S_ATOMIC_ADD                 : SM_Real_Atomics_vi <0x82, "S_ATOMIC_ADD">;
-defm S_ATOMIC_SUB                 : SM_Real_Atomics_vi <0x83, "S_ATOMIC_SUB">;
-defm S_ATOMIC_SMIN                : SM_Real_Atomics_vi <0x84, "S_ATOMIC_SMIN">;
-defm S_ATOMIC_UMIN                : SM_Real_Atomics_vi <0x85, "S_ATOMIC_UMIN">;
-defm S_ATOMIC_SMAX                : SM_Real_Atomics_vi <0x86, "S_ATOMIC_SMAX">;
-defm S_ATOMIC_UMAX                : SM_Real_Atomics_vi <0x87, "S_ATOMIC_UMAX">;
-defm S_ATOMIC_AND                 : SM_Real_Atomics_vi <0x88, "S_ATOMIC_AND">;
-defm S_ATOMIC_OR                  : SM_Real_Atomics_vi <0x89, "S_ATOMIC_OR">;
-defm S_ATOMIC_XOR                 : SM_Real_Atomics_vi <0x8a, "S_ATOMIC_XOR">;
-defm S_ATOMIC_INC                 : SM_Real_Atomics_vi <0x8b, "S_ATOMIC_INC">;
-defm S_ATOMIC_DEC                 : SM_Real_Atomics_vi <0x8c, "S_ATOMIC_DEC">;
+defm S_ATOMIC_SWAP                : SM_Real_Atomics_vi <0x80>;
+defm S_ATOMIC_CMPSWAP             : SM_Real_Atomics_vi <0x81>;
+defm S_ATOMIC_ADD                 : SM_Real_Atomics_vi <0x82>;
+defm S_ATOMIC_SUB                 : SM_Real_Atomics_vi <0x83>;
+defm S_ATOMIC_SMIN                : SM_Real_Atomics_vi <0x84>;
+defm S_ATOMIC_UMIN                : SM_Real_Atomics_vi <0x85>;
+defm S_ATOMIC_SMAX                : SM_Real_Atomics_vi <0x86>;
+defm S_ATOMIC_UMAX                : SM_Real_Atomics_vi <0x87>;
+defm S_ATOMIC_AND                 : SM_Real_Atomics_vi <0x88>;
+defm S_ATOMIC_OR                  : SM_Real_Atomics_vi <0x89>;
+defm S_ATOMIC_XOR                 : SM_Real_Atomics_vi <0x8a>;
+defm S_ATOMIC_INC                 : SM_Real_Atomics_vi <0x8b>;
+defm S_ATOMIC_DEC                 : SM_Real_Atomics_vi <0x8c>;
 
-defm S_ATOMIC_SWAP_X2             : SM_Real_Atomics_vi <0xa0, "S_ATOMIC_SWAP_X2">;
-defm S_ATOMIC_CMPSWAP_X2          : SM_Real_Atomics_vi <0xa1, "S_ATOMIC_CMPSWAP_X2">;
-defm S_ATOMIC_ADD_X2              : SM_Real_Atomics_vi <0xa2, "S_ATOMIC_ADD_X2">;
-defm S_ATOMIC_SUB_X2              : SM_Real_Atomics_vi <0xa3, "S_ATOMIC_SUB_X2">;
-defm S_ATOMIC_SMIN_X2             : SM_Real_Atomics_vi <0xa4, "S_ATOMIC_SMIN_X2">;
-defm S_ATOMIC_UMIN_X2             : SM_Real_Atomics_vi <0xa5, "S_ATOMIC_UMIN_X2">;
-defm S_ATOMIC_SMAX_X2             : SM_Real_Atomics_vi <0xa6, "S_ATOMIC_SMAX_X2">;
-defm S_ATOMIC_UMAX_X2             : SM_Real_Atomics_vi <0xa7, "S_ATOMIC_UMAX_X2">;
-defm S_ATOMIC_AND_X2              : SM_Real_Atomics_vi <0xa8, "S_ATOMIC_AND_X2">;
-defm S_ATOMIC_OR_X2               : SM_Real_Atomics_vi <0xa9, "S_ATOMIC_OR_X2">;
-defm S_ATOMIC_XOR_X2              : SM_Real_Atomics_vi <0xaa, "S_ATOMIC_XOR_X2">;
-defm S_ATOMIC_INC_X2              : SM_Real_Atomics_vi <0xab, "S_ATOMIC_INC_X2">;
-defm S_ATOMIC_DEC_X2              : SM_Real_Atomics_vi <0xac, "S_ATOMIC_DEC_X2">;
+defm S_ATOMIC_SWAP_X2             : SM_Real_Atomics_vi <0xa0>;
+defm S_ATOMIC_CMPSWAP_X2          : SM_Real_Atomics_vi <0xa1>;
+defm S_ATOMIC_ADD_X2              : SM_Real_Atomics_vi <0xa2>;
+defm S_ATOMIC_SUB_X2              : SM_Real_Atomics_vi <0xa3>;
+defm S_ATOMIC_SMIN_X2             : SM_Real_Atomics_vi <0xa4>;
+defm S_ATOMIC_UMIN_X2             : SM_Real_Atomics_vi <0xa5>;
+defm S_ATOMIC_SMAX_X2             : SM_Real_Atomics_vi <0xa6>;
+defm S_ATOMIC_UMAX_X2             : SM_Real_Atomics_vi <0xa7>;
+defm S_ATOMIC_AND_X2              : SM_Real_Atomics_vi <0xa8>;
+defm S_ATOMIC_OR_X2               : SM_Real_Atomics_vi <0xa9>;
+defm S_ATOMIC_XOR_X2              : SM_Real_Atomics_vi <0xaa>;
+defm S_ATOMIC_INC_X2              : SM_Real_Atomics_vi <0xab>;
+defm S_ATOMIC_DEC_X2              : SM_Real_Atomics_vi <0xac>;
 
-multiclass SM_Real_Discard_vi<bits<8> op, string ps> {
+multiclass SM_Real_Discard_vi<bits<8> op> {
+  defvar ps = NAME;
   def _IMM_vi  : SMEM_Real_vi <op, !cast<SM_Discard_Pseudo>(ps#_IMM)>;
   def _SGPR_vi : SMEM_Real_vi <op, !cast<SM_Discard_Pseudo>(ps#_SGPR)>;
   def _SGPR_alt_gfx9 : SMEM_Real_vi <op, !cast<SM_Discard_Pseudo>(ps#_SGPR)>,
@@ -749,17 +713,14 @@ multiclass SM_Real_Discard_vi<bits<8> op, string ps> {
   def _SGPR_IMM_gfx9 : SMEM_Real_vi <op, !cast<SM_Discard_Pseudo>(ps#_SGPR_IMM)>;
 }
 
-defm S_DCACHE_DISCARD    : SM_Real_Discard_vi <0x28, "S_DCACHE_DISCARD">;
-defm S_DCACHE_DISCARD_X2 : SM_Real_Discard_vi <0x29, "S_DCACHE_DISCARD_X2">;
+defm S_DCACHE_DISCARD    : SM_Real_Discard_vi <0x28>;
+defm S_DCACHE_DISCARD_X2 : SM_Real_Discard_vi <0x29>;
 
 //===----------------------------------------------------------------------===//
 // CI
 //===----------------------------------------------------------------------===//
 
-def smrd_literal_offset : NamedOperandU32<"SMRDLiteralOffset",
-                                          NamedMatchClass<"SMRDLiteralOffset">> {
-  let OperandType = "OPERAND_IMMEDIATE";
-}
+def smrd_literal_offset : ImmOperand<i32, "SMRDLiteralOffset">;
 
 class SMRD_Real_Load_IMM_ci <bits<5> op, SM_Load_Pseudo ps> :
   SM_Real<ps>,
@@ -854,8 +815,14 @@ multiclass SMRD_Pattern <string Instr, ValueType vt> {
   // 3. SGPR offset
   def : GCNPat <
     (smrd_load (SMRDSgpr i64:$sbase, i32:$soffset)),
-    (vt (!cast<SM_Pseudo>(Instr#"_SGPR") $sbase, $soffset, 0))
-  >;
+    (vt (!cast<SM_Pseudo>(Instr#"_SGPR") $sbase, $soffset, 0))> {
+    let OtherPredicates = [isNotGFX9Plus];
+  }
+  def : GCNPat <
+    (smrd_load (SMRDSgpr i64:$sbase, i32:$soffset)),
+    (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, 0, 0))> {
+    let OtherPredicates = [isGFX9Plus];
+  }
 
   // 4. SGPR+IMM offset
   def : GCNPat <
@@ -891,8 +858,14 @@ multiclass SMLoad_Pattern <string Instr, ValueType vt> {
   // 3. Offset loaded in an 32bit SGPR
   def : GCNPat <
     (SIsbuffer_load v4i32:$sbase, i32:$soffset, timm:$cachepolicy),
-    (vt (!cast<SM_Pseudo>(Instr#"_SGPR") SReg_128:$sbase, SReg_32:$soffset, (extract_cpol $cachepolicy)))
-  >;
+    (vt (!cast<SM_Pseudo>(Instr#"_SGPR") SReg_128:$sbase, SReg_32:$soffset, (extract_cpol $cachepolicy)))> {
+    let OtherPredicates = [isNotGFX9Plus];
+  }
+  def : GCNPat <
+    (SIsbuffer_load v4i32:$sbase, i32:$soffset, timm:$cachepolicy),
+    (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") SReg_128:$sbase, SReg_32:$soffset, 0, (extract_cpol $cachepolicy)))> {
+    let OtherPredicates = [isGFX9Plus];
+  }
 
   // 4. Offset as an 32-bit SGPR + immediate
   def : GCNPat <
@@ -929,6 +902,8 @@ foreach vt = SReg_512.RegTypes in {
 defm : SMRD_Pattern <"S_LOAD_DWORDX16", vt>;
 }
 
+} // End let AddedComplexity = 100
+
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORD",     i32>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX2",   v2i32>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX4",   v4i32>;
@@ -940,7 +915,6 @@ defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX2",   v2f32>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX4",   v4f32>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX8",   v8f32>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX16",  v16f32>;
-} // End let AddedComplexity = 100
 
 let OtherPredicates = [HasSMemTimeInst] in {
 def : GCNPat <
@@ -987,16 +961,14 @@ class SMEM_Real_gfx10<bits<8> op, SM_Pseudo ps>
   let Inst{16}    = !if(ps.has_glc, cpol{CPolBit.GLC}, ?);
 }
 
-class SMEM_Real_Load_gfx10<bits<8> op, string ps, OffsetMode offsets>
-    : SMEM_Real_gfx10<op, !cast<SM_Pseudo>(ps # offsets.Variant)> {
-  RegisterClass BaseClass = !cast<SM_Load_Pseudo>(ps # offsets.Variant).BaseClass;
-  let InOperandList = !con((ins BaseClass:$sbase), offsets.Ins, (ins CPol:$cpol));
-}
+class SMEM_Real_Load_gfx10<bits<8> op, string ps>
+    : SMEM_Real_gfx10<op, !cast<SM_Pseudo>(ps)>;
 
-multiclass SM_Real_Loads_gfx10<bits<8> op, string ps> {
-  def _IMM_gfx10 : SMEM_Real_Load_gfx10<op, ps, IMM_Offset>;
-  def _SGPR_gfx10 : SMEM_Real_Load_gfx10<op, ps, SGPR_Offset>;
-  def _SGPR_IMM_gfx10 : SMEM_Real_Load_gfx10<op, ps, SGPR_IMM_Offset>;
+multiclass SM_Real_Loads_gfx10<bits<8> op> {
+  defvar ps = NAME;
+  def _IMM_gfx10 : SMEM_Real_Load_gfx10<op, ps#"_IMM">;
+  def _SGPR_gfx10 : SMEM_Real_Load_gfx10<op, ps#"_SGPR">;
+  def _SGPR_IMM_gfx10 : SMEM_Real_Load_gfx10<op, ps#"_SGPR_IMM">;
 }
 
 class SMEM_Real_Store_gfx10<bits<8> op, SM_Pseudo ps> : SMEM_Real_gfx10<op, ps> {
@@ -1006,53 +978,48 @@ class SMEM_Real_Store_gfx10<bits<8> op, SM_Pseudo ps> : SMEM_Real_gfx10<op, ps> 
   let Inst{12-6} = !if(ps.has_sdst, sdata{6-0}, ?);
 }
 
-multiclass SM_Real_Stores_gfx10<bits<8> op, string ps,
-                                SM_Store_Pseudo immPs = !cast<SM_Store_Pseudo>(ps#_IMM),
-                                SM_Store_Pseudo sgprPs = !cast<SM_Store_Pseudo>(ps#_SGPR)> {
-  def _IMM_gfx10 : SMEM_Real_Store_gfx10 <op, immPs> {
-    let InOperandList = (ins immPs.SrcClass:$sdata, immPs.BaseClass:$sbase, smem_offset:$offset, CPol:$cpol);
-  }
+multiclass SM_Real_Stores_gfx10<bits<8> op> {
+  defvar ps = NAME;
+  defvar immPs = !cast<SM_Store_Pseudo>(ps#_IMM);
+  def _IMM_gfx10 : SMEM_Real_Store_gfx10 <op, immPs>;
 
-  def _SGPR_gfx10 : SMEM_Real_Store_gfx10 <op, sgprPs> {
-    let InOperandList = (ins sgprPs.SrcClass:$sdata, sgprPs.BaseClass:$sbase, SReg_32:$soffset, CPol:$cpol);
-  }
+  defvar sgprPs = !cast<SM_Store_Pseudo>(ps#_SGPR);
+  def _SGPR_gfx10 : SMEM_Real_Store_gfx10 <op, sgprPs>;
 
-  def _SGPR_IMM_gfx10 : SMEM_Real_Store_gfx10 <op, !cast<SM_Store_Pseudo>(ps#_SGPR_IMM)> {
-    let InOperandList = (ins sgprPs.SrcClass:$sdata, sgprPs.BaseClass:$sbase,
-                             SReg_32:$soffset, smem_offset_mod:$offset, CPol:$cpol);
-  }
+  defvar sgprImmPs = !cast<SM_Store_Pseudo>(ps#_SGPR_IMM);
+  def _SGPR_IMM_gfx10 : SMEM_Real_Store_gfx10 <op, sgprImmPs>;
 }
 
-defm S_LOAD_DWORD            : SM_Real_Loads_gfx10<0x000, "S_LOAD_DWORD">;
-defm S_LOAD_DWORDX2          : SM_Real_Loads_gfx10<0x001, "S_LOAD_DWORDX2">;
-defm S_LOAD_DWORDX4          : SM_Real_Loads_gfx10<0x002, "S_LOAD_DWORDX4">;
-defm S_LOAD_DWORDX8          : SM_Real_Loads_gfx10<0x003, "S_LOAD_DWORDX8">;
-defm S_LOAD_DWORDX16         : SM_Real_Loads_gfx10<0x004, "S_LOAD_DWORDX16">;
+defm S_LOAD_DWORD            : SM_Real_Loads_gfx10<0x000>;
+defm S_LOAD_DWORDX2          : SM_Real_Loads_gfx10<0x001>;
+defm S_LOAD_DWORDX4          : SM_Real_Loads_gfx10<0x002>;
+defm S_LOAD_DWORDX8          : SM_Real_Loads_gfx10<0x003>;
+defm S_LOAD_DWORDX16         : SM_Real_Loads_gfx10<0x004>;
 
 let SubtargetPredicate = HasScalarFlatScratchInsts in {
-defm S_SCRATCH_LOAD_DWORD    : SM_Real_Loads_gfx10<0x005, "S_SCRATCH_LOAD_DWORD">;
-defm S_SCRATCH_LOAD_DWORDX2  : SM_Real_Loads_gfx10<0x006, "S_SCRATCH_LOAD_DWORDX2">;
-defm S_SCRATCH_LOAD_DWORDX4  : SM_Real_Loads_gfx10<0x007, "S_SCRATCH_LOAD_DWORDX4">;
+defm S_SCRATCH_LOAD_DWORD    : SM_Real_Loads_gfx10<0x005>;
+defm S_SCRATCH_LOAD_DWORDX2  : SM_Real_Loads_gfx10<0x006>;
+defm S_SCRATCH_LOAD_DWORDX4  : SM_Real_Loads_gfx10<0x007>;
 } // End SubtargetPredicate = HasScalarFlatScratchInsts
 
-defm S_BUFFER_LOAD_DWORD     : SM_Real_Loads_gfx10<0x008, "S_BUFFER_LOAD_DWORD">;
-defm S_BUFFER_LOAD_DWORDX2   : SM_Real_Loads_gfx10<0x009, "S_BUFFER_LOAD_DWORDX2">;
-defm S_BUFFER_LOAD_DWORDX4   : SM_Real_Loads_gfx10<0x00a, "S_BUFFER_LOAD_DWORDX4">;
-defm S_BUFFER_LOAD_DWORDX8   : SM_Real_Loads_gfx10<0x00b, "S_BUFFER_LOAD_DWORDX8">;
-defm S_BUFFER_LOAD_DWORDX16  : SM_Real_Loads_gfx10<0x00c, "S_BUFFER_LOAD_DWORDX16">;
+defm S_BUFFER_LOAD_DWORD     : SM_Real_Loads_gfx10<0x008>;
+defm S_BUFFER_LOAD_DWORDX2   : SM_Real_Loads_gfx10<0x009>;
+defm S_BUFFER_LOAD_DWORDX4   : SM_Real_Loads_gfx10<0x00a>;
+defm S_BUFFER_LOAD_DWORDX8   : SM_Real_Loads_gfx10<0x00b>;
+defm S_BUFFER_LOAD_DWORDX16  : SM_Real_Loads_gfx10<0x00c>;
 
 let SubtargetPredicate = HasScalarStores in {
-defm S_STORE_DWORD           : SM_Real_Stores_gfx10<0x010, "S_STORE_DWORD">;
-defm S_STORE_DWORDX2         : SM_Real_Stores_gfx10<0x011, "S_STORE_DWORDX2">;
-defm S_STORE_DWORDX4         : SM_Real_Stores_gfx10<0x012, "S_STORE_DWORDX4">;
+defm S_STORE_DWORD           : SM_Real_Stores_gfx10<0x010>;
+defm S_STORE_DWORDX2         : SM_Real_Stores_gfx10<0x011>;
+defm S_STORE_DWORDX4         : SM_Real_Stores_gfx10<0x012>;
 let OtherPredicates = [HasScalarFlatScratchInsts] in {
-defm S_SCRATCH_STORE_DWORD   : SM_Real_Stores_gfx10<0x015, "S_SCRATCH_STORE_DWORD">;
-defm S_SCRATCH_STORE_DWORDX2 : SM_Real_Stores_gfx10<0x016, "S_SCRATCH_STORE_DWORDX2">;
-defm S_SCRATCH_STORE_DWORDX4 : SM_Real_Stores_gfx10<0x017, "S_SCRATCH_STORE_DWORDX4">;
+defm S_SCRATCH_STORE_DWORD   : SM_Real_Stores_gfx10<0x015>;
+defm S_SCRATCH_STORE_DWORDX2 : SM_Real_Stores_gfx10<0x016>;
+defm S_SCRATCH_STORE_DWORDX4 : SM_Real_Stores_gfx10<0x017>;
 } // End OtherPredicates = [HasScalarFlatScratchInsts]
-defm S_BUFFER_STORE_DWORD    : SM_Real_Stores_gfx10<0x018, "S_BUFFER_STORE_DWORD">;
-defm S_BUFFER_STORE_DWORDX2  : SM_Real_Stores_gfx10<0x019, "S_BUFFER_STORE_DWORDX2">;
-defm S_BUFFER_STORE_DWORDX4  : SM_Real_Stores_gfx10<0x01a, "S_BUFFER_STORE_DWORDX4">;
+defm S_BUFFER_STORE_DWORD    : SM_Real_Stores_gfx10<0x018>;
+defm S_BUFFER_STORE_DWORDX2  : SM_Real_Stores_gfx10<0x019>;
+defm S_BUFFER_STORE_DWORDX4  : SM_Real_Stores_gfx10<0x01a>;
 } // End SubtargetPredicate = HasScalarStores
 
 def S_MEMREALTIME_gfx10              : SMEM_Real_gfx10<0x025, S_MEMREALTIME>;
@@ -1065,15 +1032,16 @@ let SubtargetPredicate = HasScalarStores in {
 def S_DCACHE_WB_gfx10                : SMEM_Real_gfx10<0x021, S_DCACHE_WB>;
 } // End SubtargetPredicate = HasScalarStores
 
-multiclass SM_Real_Probe_gfx10<bits<8> op, string ps> {
+multiclass SM_Real_Probe_gfx10<bits<8> op> {
+  defvar ps = NAME;
   def _IMM_gfx10  : SMEM_Real_Store_gfx10 <op, !cast<SM_Pseudo>(ps#_IMM)>;
   def _SGPR_gfx10 : SMEM_Real_Store_gfx10 <op, !cast<SM_Pseudo>(ps#_SGPR)>;
   def _SGPR_IMM_gfx10
     : SMEM_Real_Store_gfx10 <op, !cast<SM_Pseudo>(ps#_SGPR_IMM)>;
 }
 
-defm S_ATC_PROBE        : SM_Real_Probe_gfx10 <0x26, "S_ATC_PROBE">;
-defm S_ATC_PROBE_BUFFER : SM_Real_Probe_gfx10 <0x27, "S_ATC_PROBE_BUFFER">;
+defm S_ATC_PROBE        : SM_Real_Probe_gfx10 <0x26>;
+defm S_ATC_PROBE_BUFFER : SM_Real_Probe_gfx10 <0x27>;
 
 class SMEM_Atomic_Real_gfx10 <bits<8> op, SM_Atomic_Pseudo ps>
   : SMEM_Real_gfx10 <op, ps>,
@@ -1090,7 +1058,8 @@ class SMEM_Atomic_Real_gfx10 <bits<8> op, SM_Atomic_Pseudo ps>
   let Inst{12-6} = !if(ps.glc, sdst{6-0}, sdata{6-0});
 }
 
-multiclass SM_Real_Atomics_gfx10<bits<8> op, string ps> {
+multiclass SM_Real_Atomics_gfx10<bits<8> op> {
+  defvar ps = NAME;
   def _IMM_gfx10       : SMEM_Atomic_Real_gfx10 <op, !cast<SM_Atomic_Pseudo>(ps#_IMM)>;
   def _SGPR_gfx10      : SMEM_Atomic_Real_gfx10 <op, !cast<SM_Atomic_Pseudo>(ps#_SGPR)>;
   def _SGPR_IMM_gfx10  : SMEM_Atomic_Real_gfx10 <op, !cast<SM_Atomic_Pseudo>(ps#_SGPR_IMM)>;
@@ -1101,70 +1070,71 @@ multiclass SM_Real_Atomics_gfx10<bits<8> op, string ps> {
 
 let SubtargetPredicate = HasScalarAtomics in {
 
-defm S_BUFFER_ATOMIC_SWAP         : SM_Real_Atomics_gfx10 <0x40, "S_BUFFER_ATOMIC_SWAP">;
-defm S_BUFFER_ATOMIC_CMPSWAP      : SM_Real_Atomics_gfx10 <0x41, "S_BUFFER_ATOMIC_CMPSWAP">;
-defm S_BUFFER_ATOMIC_ADD          : SM_Real_Atomics_gfx10 <0x42, "S_BUFFER_ATOMIC_ADD">;
-defm S_BUFFER_ATOMIC_SUB          : SM_Real_Atomics_gfx10 <0x43, "S_BUFFER_ATOMIC_SUB">;
-defm S_BUFFER_ATOMIC_SMIN         : SM_Real_Atomics_gfx10 <0x44, "S_BUFFER_ATOMIC_SMIN">;
-defm S_BUFFER_ATOMIC_UMIN         : SM_Real_Atomics_gfx10 <0x45, "S_BUFFER_ATOMIC_UMIN">;
-defm S_BUFFER_ATOMIC_SMAX         : SM_Real_Atomics_gfx10 <0x46, "S_BUFFER_ATOMIC_SMAX">;
-defm S_BUFFER_ATOMIC_UMAX         : SM_Real_Atomics_gfx10 <0x47, "S_BUFFER_ATOMIC_UMAX">;
-defm S_BUFFER_ATOMIC_AND          : SM_Real_Atomics_gfx10 <0x48, "S_BUFFER_ATOMIC_AND">;
-defm S_BUFFER_ATOMIC_OR           : SM_Real_Atomics_gfx10 <0x49, "S_BUFFER_ATOMIC_OR">;
-defm S_BUFFER_ATOMIC_XOR          : SM_Real_Atomics_gfx10 <0x4a, "S_BUFFER_ATOMIC_XOR">;
-defm S_BUFFER_ATOMIC_INC          : SM_Real_Atomics_gfx10 <0x4b, "S_BUFFER_ATOMIC_INC">;
-defm S_BUFFER_ATOMIC_DEC          : SM_Real_Atomics_gfx10 <0x4c, "S_BUFFER_ATOMIC_DEC">;
+defm S_BUFFER_ATOMIC_SWAP         : SM_Real_Atomics_gfx10 <0x40>;
+defm S_BUFFER_ATOMIC_CMPSWAP      : SM_Real_Atomics_gfx10 <0x41>;
+defm S_BUFFER_ATOMIC_ADD          : SM_Real_Atomics_gfx10 <0x42>;
+defm S_BUFFER_ATOMIC_SUB          : SM_Real_Atomics_gfx10 <0x43>;
+defm S_BUFFER_ATOMIC_SMIN         : SM_Real_Atomics_gfx10 <0x44>;
+defm S_BUFFER_ATOMIC_UMIN         : SM_Real_Atomics_gfx10 <0x45>;
+defm S_BUFFER_ATOMIC_SMAX         : SM_Real_Atomics_gfx10 <0x46>;
+defm S_BUFFER_ATOMIC_UMAX         : SM_Real_Atomics_gfx10 <0x47>;
+defm S_BUFFER_ATOMIC_AND          : SM_Real_Atomics_gfx10 <0x48>;
+defm S_BUFFER_ATOMIC_OR           : SM_Real_Atomics_gfx10 <0x49>;
+defm S_BUFFER_ATOMIC_XOR          : SM_Real_Atomics_gfx10 <0x4a>;
+defm S_BUFFER_ATOMIC_INC          : SM_Real_Atomics_gfx10 <0x4b>;
+defm S_BUFFER_ATOMIC_DEC          : SM_Real_Atomics_gfx10 <0x4c>;
 
-defm S_BUFFER_ATOMIC_SWAP_X2      : SM_Real_Atomics_gfx10 <0x60, "S_BUFFER_ATOMIC_SWAP_X2">;
-defm S_BUFFER_ATOMIC_CMPSWAP_X2   : SM_Real_Atomics_gfx10 <0x61, "S_BUFFER_ATOMIC_CMPSWAP_X2">;
-defm S_BUFFER_ATOMIC_ADD_X2       : SM_Real_Atomics_gfx10 <0x62, "S_BUFFER_ATOMIC_ADD_X2">;
-defm S_BUFFER_ATOMIC_SUB_X2       : SM_Real_Atomics_gfx10 <0x63, "S_BUFFER_ATOMIC_SUB_X2">;
-defm S_BUFFER_ATOMIC_SMIN_X2      : SM_Real_Atomics_gfx10 <0x64, "S_BUFFER_ATOMIC_SMIN_X2">;
-defm S_BUFFER_ATOMIC_UMIN_X2      : SM_Real_Atomics_gfx10 <0x65, "S_BUFFER_ATOMIC_UMIN_X2">;
-defm S_BUFFER_ATOMIC_SMAX_X2      : SM_Real_Atomics_gfx10 <0x66, "S_BUFFER_ATOMIC_SMAX_X2">;
-defm S_BUFFER_ATOMIC_UMAX_X2      : SM_Real_Atomics_gfx10 <0x67, "S_BUFFER_ATOMIC_UMAX_X2">;
-defm S_BUFFER_ATOMIC_AND_X2       : SM_Real_Atomics_gfx10 <0x68, "S_BUFFER_ATOMIC_AND_X2">;
-defm S_BUFFER_ATOMIC_OR_X2        : SM_Real_Atomics_gfx10 <0x69, "S_BUFFER_ATOMIC_OR_X2">;
-defm S_BUFFER_ATOMIC_XOR_X2       : SM_Real_Atomics_gfx10 <0x6a, "S_BUFFER_ATOMIC_XOR_X2">;
-defm S_BUFFER_ATOMIC_INC_X2       : SM_Real_Atomics_gfx10 <0x6b, "S_BUFFER_ATOMIC_INC_X2">;
-defm S_BUFFER_ATOMIC_DEC_X2       : SM_Real_Atomics_gfx10 <0x6c, "S_BUFFER_ATOMIC_DEC_X2">;
+defm S_BUFFER_ATOMIC_SWAP_X2      : SM_Real_Atomics_gfx10 <0x60>;
+defm S_BUFFER_ATOMIC_CMPSWAP_X2   : SM_Real_Atomics_gfx10 <0x61>;
+defm S_BUFFER_ATOMIC_ADD_X2       : SM_Real_Atomics_gfx10 <0x62>;
+defm S_BUFFER_ATOMIC_SUB_X2       : SM_Real_Atomics_gfx10 <0x63>;
+defm S_BUFFER_ATOMIC_SMIN_X2      : SM_Real_Atomics_gfx10 <0x64>;
+defm S_BUFFER_ATOMIC_UMIN_X2      : SM_Real_Atomics_gfx10 <0x65>;
+defm S_BUFFER_ATOMIC_SMAX_X2      : SM_Real_Atomics_gfx10 <0x66>;
+defm S_BUFFER_ATOMIC_UMAX_X2      : SM_Real_Atomics_gfx10 <0x67>;
+defm S_BUFFER_ATOMIC_AND_X2       : SM_Real_Atomics_gfx10 <0x68>;
+defm S_BUFFER_ATOMIC_OR_X2        : SM_Real_Atomics_gfx10 <0x69>;
+defm S_BUFFER_ATOMIC_XOR_X2       : SM_Real_Atomics_gfx10 <0x6a>;
+defm S_BUFFER_ATOMIC_INC_X2       : SM_Real_Atomics_gfx10 <0x6b>;
+defm S_BUFFER_ATOMIC_DEC_X2       : SM_Real_Atomics_gfx10 <0x6c>;
 
-defm S_ATOMIC_SWAP                : SM_Real_Atomics_gfx10 <0x80, "S_ATOMIC_SWAP">;
-defm S_ATOMIC_CMPSWAP             : SM_Real_Atomics_gfx10 <0x81, "S_ATOMIC_CMPSWAP">;
-defm S_ATOMIC_ADD                 : SM_Real_Atomics_gfx10 <0x82, "S_ATOMIC_ADD">;
-defm S_ATOMIC_SUB                 : SM_Real_Atomics_gfx10 <0x83, "S_ATOMIC_SUB">;
-defm S_ATOMIC_SMIN                : SM_Real_Atomics_gfx10 <0x84, "S_ATOMIC_SMIN">;
-defm S_ATOMIC_UMIN                : SM_Real_Atomics_gfx10 <0x85, "S_ATOMIC_UMIN">;
-defm S_ATOMIC_SMAX                : SM_Real_Atomics_gfx10 <0x86, "S_ATOMIC_SMAX">;
-defm S_ATOMIC_UMAX                : SM_Real_Atomics_gfx10 <0x87, "S_ATOMIC_UMAX">;
-defm S_ATOMIC_AND                 : SM_Real_Atomics_gfx10 <0x88, "S_ATOMIC_AND">;
-defm S_ATOMIC_OR                  : SM_Real_Atomics_gfx10 <0x89, "S_ATOMIC_OR">;
-defm S_ATOMIC_XOR                 : SM_Real_Atomics_gfx10 <0x8a, "S_ATOMIC_XOR">;
-defm S_ATOMIC_INC                 : SM_Real_Atomics_gfx10 <0x8b, "S_ATOMIC_INC">;
-defm S_ATOMIC_DEC                 : SM_Real_Atomics_gfx10 <0x8c, "S_ATOMIC_DEC">;
+defm S_ATOMIC_SWAP                : SM_Real_Atomics_gfx10 <0x80>;
+defm S_ATOMIC_CMPSWAP             : SM_Real_Atomics_gfx10 <0x81>;
+defm S_ATOMIC_ADD                 : SM_Real_Atomics_gfx10 <0x82>;
+defm S_ATOMIC_SUB                 : SM_Real_Atomics_gfx10 <0x83>;
+defm S_ATOMIC_SMIN                : SM_Real_Atomics_gfx10 <0x84>;
+defm S_ATOMIC_UMIN                : SM_Real_Atomics_gfx10 <0x85>;
+defm S_ATOMIC_SMAX                : SM_Real_Atomics_gfx10 <0x86>;
+defm S_ATOMIC_UMAX                : SM_Real_Atomics_gfx10 <0x87>;
+defm S_ATOMIC_AND                 : SM_Real_Atomics_gfx10 <0x88>;
+defm S_ATOMIC_OR                  : SM_Real_Atomics_gfx10 <0x89>;
+defm S_ATOMIC_XOR                 : SM_Real_Atomics_gfx10 <0x8a>;
+defm S_ATOMIC_INC                 : SM_Real_Atomics_gfx10 <0x8b>;
+defm S_ATOMIC_DEC                 : SM_Real_Atomics_gfx10 <0x8c>;
 
-defm S_ATOMIC_SWAP_X2             : SM_Real_Atomics_gfx10 <0xa0, "S_ATOMIC_SWAP_X2">;
-defm S_ATOMIC_CMPSWAP_X2          : SM_Real_Atomics_gfx10 <0xa1, "S_ATOMIC_CMPSWAP_X2">;
-defm S_ATOMIC_ADD_X2              : SM_Real_Atomics_gfx10 <0xa2, "S_ATOMIC_ADD_X2">;
-defm S_ATOMIC_SUB_X2              : SM_Real_Atomics_gfx10 <0xa3, "S_ATOMIC_SUB_X2">;
-defm S_ATOMIC_SMIN_X2             : SM_Real_Atomics_gfx10 <0xa4, "S_ATOMIC_SMIN_X2">;
-defm S_ATOMIC_UMIN_X2             : SM_Real_Atomics_gfx10 <0xa5, "S_ATOMIC_UMIN_X2">;
-defm S_ATOMIC_SMAX_X2             : SM_Real_Atomics_gfx10 <0xa6, "S_ATOMIC_SMAX_X2">;
-defm S_ATOMIC_UMAX_X2             : SM_Real_Atomics_gfx10 <0xa7, "S_ATOMIC_UMAX_X2">;
-defm S_ATOMIC_AND_X2              : SM_Real_Atomics_gfx10 <0xa8, "S_ATOMIC_AND_X2">;
-defm S_ATOMIC_OR_X2               : SM_Real_Atomics_gfx10 <0xa9, "S_ATOMIC_OR_X2">;
-defm S_ATOMIC_XOR_X2              : SM_Real_Atomics_gfx10 <0xaa, "S_ATOMIC_XOR_X2">;
-defm S_ATOMIC_INC_X2              : SM_Real_Atomics_gfx10 <0xab, "S_ATOMIC_INC_X2">;
-defm S_ATOMIC_DEC_X2              : SM_Real_Atomics_gfx10 <0xac, "S_ATOMIC_DEC_X2">;
+defm S_ATOMIC_SWAP_X2             : SM_Real_Atomics_gfx10 <0xa0>;
+defm S_ATOMIC_CMPSWAP_X2          : SM_Real_Atomics_gfx10 <0xa1>;
+defm S_ATOMIC_ADD_X2              : SM_Real_Atomics_gfx10 <0xa2>;
+defm S_ATOMIC_SUB_X2              : SM_Real_Atomics_gfx10 <0xa3>;
+defm S_ATOMIC_SMIN_X2             : SM_Real_Atomics_gfx10 <0xa4>;
+defm S_ATOMIC_UMIN_X2             : SM_Real_Atomics_gfx10 <0xa5>;
+defm S_ATOMIC_SMAX_X2             : SM_Real_Atomics_gfx10 <0xa6>;
+defm S_ATOMIC_UMAX_X2             : SM_Real_Atomics_gfx10 <0xa7>;
+defm S_ATOMIC_AND_X2              : SM_Real_Atomics_gfx10 <0xa8>;
+defm S_ATOMIC_OR_X2               : SM_Real_Atomics_gfx10 <0xa9>;
+defm S_ATOMIC_XOR_X2              : SM_Real_Atomics_gfx10 <0xaa>;
+defm S_ATOMIC_INC_X2              : SM_Real_Atomics_gfx10 <0xab>;
+defm S_ATOMIC_DEC_X2              : SM_Real_Atomics_gfx10 <0xac>;
 
-multiclass SM_Real_Discard_gfx10<bits<8> op, string ps> {
+multiclass SM_Real_Discard_gfx10<bits<8> op> {
+  defvar ps = NAME;
   def _IMM_gfx10  : SMEM_Real_gfx10 <op, !cast<SM_Pseudo>(ps#_IMM)>;
   def _SGPR_gfx10 : SMEM_Real_gfx10 <op, !cast<SM_Pseudo>(ps#_SGPR)>;
   def _SGPR_IMM_gfx10 : SMEM_Real_gfx10 <op, !cast<SM_Pseudo>(ps#_SGPR_IMM)>;
 }
 
-defm S_DCACHE_DISCARD    : SM_Real_Discard_gfx10 <0x28, "S_DCACHE_DISCARD">;
-defm S_DCACHE_DISCARD_X2 : SM_Real_Discard_gfx10 <0x29, "S_DCACHE_DISCARD_X2">;
+defm S_DCACHE_DISCARD    : SM_Real_Discard_gfx10 <0x28>;
+defm S_DCACHE_DISCARD_X2 : SM_Real_Discard_gfx10 <0x29>;
 
 } // End SubtargetPredicate = HasScalarAtomics
 
@@ -1190,31 +1160,29 @@ class SMEM_Real_gfx11<bits<8> op, SM_Pseudo ps, string opName = ps.Mnemonic> :
   let Inst{14}    = !if(ps.has_glc, cpol{CPolBit.GLC}, 0);
 }
 
-class SMEM_Real_Load_gfx11<bits<8> op, string ps, string opName, OffsetMode offsets> :
-    SMEM_Real_gfx11<op, !cast<SM_Pseudo>(ps # offsets.Variant), opName> {
-  RegisterClass BaseClass = !cast<SM_Load_Pseudo>(ps # offsets.Variant).BaseClass;
-  let InOperandList = !con((ins BaseClass:$sbase), offsets.Ins, (ins CPol:$cpol));
-}
+class SMEM_Real_Load_gfx11<bits<8> op, string ps, string opName> :
+    SMEM_Real_gfx11<op, !cast<SM_Pseudo>(ps), opName>;
 
-multiclass SM_Real_Loads_gfx11<bits<8> op, string ps, string opName> {
-  def _IMM_gfx11 : SMEM_Real_Load_gfx11<op, ps, opName, IMM_Offset>;
-  def _SGPR_gfx11 : SMEM_Real_Load_gfx11<op, ps, opName, SGPR_Offset>;
-  def _SGPR_IMM_gfx11 : SMEM_Real_Load_gfx11<op, ps, opName, SGPR_IMM_Offset>;
+multiclass SM_Real_Loads_gfx11<bits<8> op, string ps> {
+  defvar opName = !tolower(NAME);
+  def _IMM_gfx11 : SMEM_Real_Load_gfx11<op, ps#"_IMM", opName>;
+  def _SGPR_gfx11 : SMEM_Real_Load_gfx11<op, ps#"_SGPR", opName>;
+  def _SGPR_IMM_gfx11 : SMEM_Real_Load_gfx11<op, ps#"_SGPR_IMM", opName>;
   def : MnemonicAlias<!cast<SM_Pseudo>(ps#"_IMM").Mnemonic, opName>,
                       Requires<[isGFX11Plus]>;
 }
 
-defm S_LOAD_B32  : SM_Real_Loads_gfx11<0x000, "S_LOAD_DWORD", "s_load_b32">;
-defm S_LOAD_B64  : SM_Real_Loads_gfx11<0x001, "S_LOAD_DWORDX2", "s_load_b64">;
-defm S_LOAD_B128 : SM_Real_Loads_gfx11<0x002, "S_LOAD_DWORDX4", "s_load_b128">;
-defm S_LOAD_B256 : SM_Real_Loads_gfx11<0x003, "S_LOAD_DWORDX8", "s_load_b256">;
-defm S_LOAD_B512 : SM_Real_Loads_gfx11<0x004, "S_LOAD_DWORDX16", "s_load_b512">;
+defm S_LOAD_B32  : SM_Real_Loads_gfx11<0x000, "S_LOAD_DWORD">;
+defm S_LOAD_B64  : SM_Real_Loads_gfx11<0x001, "S_LOAD_DWORDX2">;
+defm S_LOAD_B128 : SM_Real_Loads_gfx11<0x002, "S_LOAD_DWORDX4">;
+defm S_LOAD_B256 : SM_Real_Loads_gfx11<0x003, "S_LOAD_DWORDX8">;
+defm S_LOAD_B512 : SM_Real_Loads_gfx11<0x004, "S_LOAD_DWORDX16">;
 
-defm S_BUFFER_LOAD_B32  : SM_Real_Loads_gfx11<0x008, "S_BUFFER_LOAD_DWORD", "s_buffer_load_b32">;
-defm S_BUFFER_LOAD_B64  : SM_Real_Loads_gfx11<0x009, "S_BUFFER_LOAD_DWORDX2", "s_buffer_load_b64">;
-defm S_BUFFER_LOAD_B128 : SM_Real_Loads_gfx11<0x00a, "S_BUFFER_LOAD_DWORDX4", "s_buffer_load_b128">;
-defm S_BUFFER_LOAD_B256 : SM_Real_Loads_gfx11<0x00b, "S_BUFFER_LOAD_DWORDX8", "s_buffer_load_b256">;
-defm S_BUFFER_LOAD_B512 : SM_Real_Loads_gfx11<0x00c, "S_BUFFER_LOAD_DWORDX16", "s_buffer_load_b512">;
+defm S_BUFFER_LOAD_B32  : SM_Real_Loads_gfx11<0x008, "S_BUFFER_LOAD_DWORD">;
+defm S_BUFFER_LOAD_B64  : SM_Real_Loads_gfx11<0x009, "S_BUFFER_LOAD_DWORDX2">;
+defm S_BUFFER_LOAD_B128 : SM_Real_Loads_gfx11<0x00a, "S_BUFFER_LOAD_DWORDX4">;
+defm S_BUFFER_LOAD_B256 : SM_Real_Loads_gfx11<0x00b, "S_BUFFER_LOAD_DWORDX8">;
+defm S_BUFFER_LOAD_B512 : SM_Real_Loads_gfx11<0x00c, "S_BUFFER_LOAD_DWORDX16">;
 
 def S_GL1_INV_gfx11    : SMEM_Real_gfx11<0x020, S_GL1_INV>;
 def S_DCACHE_INV_gfx11 : SMEM_Real_gfx11<0x021, S_DCACHE_INV>;
@@ -1227,12 +1195,13 @@ class SMEM_Real_Store_gfx11 <bits<8> op, SM_Pseudo ps> : SMEM_Real_gfx11<op, ps>
   let Inst{12-6}  = !if(ps.has_sdst, sdata{6-0}, ?);
 }
 
-multiclass SM_Real_Probe_gfx11<bits<8> op, string ps> {
+multiclass SM_Real_Probe_gfx11<bits<8> op> {
+  defvar ps = NAME;
   def _IMM_gfx11  : SMEM_Real_Store_gfx11 <op, !cast<SM_Probe_Pseudo>(ps#_IMM)>;
   def _SGPR_gfx11 : SMEM_Real_Store_gfx11 <op, !cast<SM_Probe_Pseudo>(ps#_SGPR)>;
   def _SGPR_IMM_gfx11
     : SMEM_Real_Store_gfx11 <op, !cast<SM_Probe_Pseudo>(ps#_SGPR_IMM)>;
 }
 
-defm S_ATC_PROBE        : SM_Real_Probe_gfx11 <0x22, "S_ATC_PROBE">;
-defm S_ATC_PROBE_BUFFER : SM_Real_Probe_gfx11 <0x23, "S_ATC_PROBE_BUFFER">;
+defm S_ATC_PROBE        : SM_Real_Probe_gfx11 <0x22>;
+defm S_ATC_PROBE_BUFFER : SM_Real_Probe_gfx11 <0x23>;

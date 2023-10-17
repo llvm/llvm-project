@@ -20,7 +20,6 @@
 #include "lldb/Core/Declaration.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectConstResult.h"
@@ -114,6 +113,10 @@ public:
     lldb::ValueObjectSP value_sp = m_valobj_sp;
 
     Target *target = value_sp->GetTargetSP().get();
+    // If this ValueObject holds an error, then it is valuable for that.
+    if (value_sp->GetError().Fail()) 
+      return value_sp;
+
     if (!target)
       return ValueObjectSP();
 
@@ -287,39 +290,34 @@ user_id_t SBValue::GetID() {
 const char *SBValue::GetName() {
   LLDB_INSTRUMENT_VA(this);
 
-  const char *name = nullptr;
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
-  if (value_sp)
-    name = value_sp->GetName().GetCString();
+  if (!value_sp)
+    return nullptr;
 
-  return name;
+  return value_sp->GetName().GetCString();
 }
 
 const char *SBValue::GetTypeName() {
   LLDB_INSTRUMENT_VA(this);
 
-  const char *name = nullptr;
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
-  if (value_sp) {
-    name = value_sp->GetQualifiedTypeName().GetCString();
-  }
+  if (!value_sp)
+    return nullptr;
 
-  return name;
+  return value_sp->GetQualifiedTypeName().GetCString();
 }
 
 const char *SBValue::GetDisplayTypeName() {
   LLDB_INSTRUMENT_VA(this);
 
-  const char *name = nullptr;
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
-  if (value_sp) {
-    name = value_sp->GetDisplayTypeName().GetCString();
-  }
+  if (!value_sp)
+    return nullptr;
 
-  return name;
+  return value_sp->GetDisplayTypeName().GetCString();
 }
 
 size_t SBValue::GetByteSize() {
@@ -353,14 +351,11 @@ bool SBValue::IsInScope() {
 const char *SBValue::GetValue() {
   LLDB_INSTRUMENT_VA(this);
 
-  const char *cstr = nullptr;
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
-  if (value_sp) {
-    cstr = value_sp->GetValueAsCString();
-  }
-
-  return cstr;
+  if (!value_sp)
+    return nullptr;
+  return ConstString(value_sp->GetValueAsCString()).GetCString();
 }
 
 ValueType SBValue::GetValueType() {
@@ -378,14 +373,12 @@ ValueType SBValue::GetValueType() {
 const char *SBValue::GetObjectDescription() {
   LLDB_INSTRUMENT_VA(this);
 
-  const char *cstr = nullptr;
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
-  if (value_sp) {
-    cstr = value_sp->GetObjectDescription();
-  }
+  if (!value_sp)
+    return nullptr;
 
-  return cstr;
+  return ConstString(value_sp->GetObjectDescription()).GetCString();
 }
 
 SBType SBValue::GetType() {
@@ -420,14 +413,12 @@ bool SBValue::GetValueDidChange() {
 const char *SBValue::GetSummary() {
   LLDB_INSTRUMENT_VA(this);
 
-  const char *cstr = nullptr;
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
-  if (value_sp) {
-    cstr = value_sp->GetSummaryAsCString();
-  }
+  if (!value_sp)
+    return nullptr;
 
-  return cstr;
+  return ConstString(value_sp->GetSummaryAsCString()).GetCString();
 }
 
 const char *SBValue::GetSummary(lldb::SBStream &stream,
@@ -441,20 +432,18 @@ const char *SBValue::GetSummary(lldb::SBStream &stream,
     if (value_sp->GetSummaryAsCString(buffer, options.ref()) && !buffer.empty())
       stream.Printf("%s", buffer.c_str());
   }
-  const char *cstr = stream.GetData();
-  return cstr;
+  return ConstString(stream.GetData()).GetCString();
 }
 
 const char *SBValue::GetLocation() {
   LLDB_INSTRUMENT_VA(this);
 
-  const char *cstr = nullptr;
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
-  if (value_sp) {
-    cstr = value_sp->GetLocationAsCString();
-  }
-  return cstr;
+  if (!value_sp)
+    return nullptr;
+
+  return ConstString(value_sp->GetLocationAsCString()).GetCString();
 }
 
 // Deprecated - use the one that takes an lldb::SBError
@@ -678,7 +667,7 @@ SBValue SBValue::GetChildAtIndex(uint32_t idx,
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (value_sp) {
     const bool can_create = true;
-    child_sp = value_sp->GetChildAtIndex(idx, can_create);
+    child_sp = value_sp->GetChildAtIndex(idx);
     if (can_create_synthetic && !child_sp) {
       child_sp = value_sp->GetSyntheticArrayMember(idx, can_create);
     }
@@ -697,7 +686,7 @@ uint32_t SBValue::GetIndexOfChildWithName(const char *name) {
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (value_sp) {
-    idx = value_sp->GetIndexOfChildWithName(ConstString(name));
+    idx = value_sp->GetIndexOfChildWithName(name);
   }
   return idx;
 }
@@ -721,12 +710,11 @@ SBValue::GetChildMemberWithName(const char *name,
   LLDB_INSTRUMENT_VA(this, name, use_dynamic_value);
 
   lldb::ValueObjectSP child_sp;
-  const ConstString str_name(name);
 
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (value_sp) {
-    child_sp = value_sp->GetChildMemberWithName(str_name, true);
+    child_sp = value_sp->GetChildMemberWithName(name);
   }
 
   SBValue sb_value;
@@ -1047,7 +1035,12 @@ lldb::SBFrame SBValue::GetFrame() {
 }
 
 lldb::ValueObjectSP SBValue::GetSP(ValueLocker &locker) const {
-  if (!m_opaque_sp || !m_opaque_sp->IsValid()) {
+  // IsValid means that the SBValue has a value in it.  But that's not the
+  // only time that ValueObjects are useful.  We also want to return the value
+  // if there's an error state in it.
+  if (!m_opaque_sp || (!m_opaque_sp->IsValid() 
+      && (m_opaque_sp->GetRootSP() 
+          && !m_opaque_sp->GetRootSP()->GetError().Fail()))) {
     locker.GetError().SetErrorString("No value");
     return ValueObjectSP();
   }
@@ -1440,10 +1433,17 @@ lldb::SBWatchpoint SBValue::Watch(bool resolve_location, bool read, bool write,
       return sb_watchpoint;
 
     uint32_t watch_type = 0;
-    if (read)
+    if (read) {
       watch_type |= LLDB_WATCH_TYPE_READ;
-    if (write)
-      watch_type |= LLDB_WATCH_TYPE_WRITE;
+      // read + write, the most likely intention
+      // is to catch all writes to this, not just
+      // value modifications.
+      if (write)
+        watch_type |= LLDB_WATCH_TYPE_WRITE;
+    } else {
+      if (write)
+        watch_type |= LLDB_WATCH_TYPE_MODIFY;
+    }
 
     Status rc;
     CompilerType type(value_sp->GetCompilerType());

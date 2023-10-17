@@ -46,6 +46,7 @@ using namespace mlir::detail;
 ///                      `:` (tensor-type | vector-type)
 ///                    | `strided` `<` `[` comma-separated-int-or-question `]`
 ///                      (`,` `offset` `:` integer-literal)? `>`
+///                    | distinct-attribute
 ///                    | extended-attribute
 ///
 Attribute Parser::parseAttribute(Type type) {
@@ -154,6 +155,10 @@ Attribute Parser::parseAttribute(Type type) {
   // Parse a strided layout attribute.
   case Token::kw_strided:
     return parseStridedLayoutAttr();
+
+  // Parse a distinct attribute.
+  case Token::kw_distinct:
+    return parseDistinctAttr(type);
 
   // Parse a string attribute.
   case Token::string: {
@@ -304,7 +309,7 @@ ParseResult Parser::parseAttributeDict(NamedAttrList &attributes) {
     else
       return emitWrongTokenError("expected attribute name");
 
-    if (nameId->size() == 0)
+    if (nameId->empty())
       return emitError("expected valid attribute name");
 
     if (!seenKeys.insert(*nameId).second)
@@ -348,7 +353,7 @@ Attribute Parser::parseFloatAttr(Type type, bool isNegative) {
     else if (!(type = parseType()))
       return nullptr;
   }
-  if (!type.isa<FloatType>())
+  if (!isa<FloatType>(type))
     return (emitError("floating point value not valid for specified type"),
             nullptr);
   return FloatAttr::get(type, isNegative ? -*val : *val);
@@ -373,7 +378,7 @@ static std::optional<APInt> buildAttributeAPInt(Type type, bool isNegative,
   } else if (width < result.getBitWidth()) {
     // The parser can return an unnecessarily wide result with leading zeros.
     // This isn't a problem, but truncating off bits is bad.
-    if (result.countLeadingZeros() < result.getBitWidth() - width)
+    if (result.countl_zero() < result.getBitWidth() - width)
       return std::nullopt;
 
     result = result.trunc(width);
@@ -416,7 +421,7 @@ Attribute Parser::parseDecOrHexAttr(Type type, bool isNegative) {
       return nullptr;
   }
 
-  if (auto floatType = type.dyn_cast<FloatType>()) {
+  if (auto floatType = dyn_cast<FloatType>(type)) {
     std::optional<APFloat> result;
     if (failed(parseFloatFromIntegerLiteral(result, tok, isNegative,
                                             floatType.getFloatSemantics(),
@@ -425,7 +430,7 @@ Attribute Parser::parseDecOrHexAttr(Type type, bool isNegative) {
     return FloatAttr::get(floatType, *result);
   }
 
-  if (!type.isa<IntegerType, IndexType>())
+  if (!isa<IntegerType, IndexType>(type))
     return emitError(loc, "integer literal not valid for specified type"),
            nullptr;
 
@@ -543,7 +548,7 @@ DenseElementsAttr TensorLiteralParser::getAttr(SMLoc loc, ShapedType type) {
 
   // Check to see if we parse the literal from a hex string.
   if (hexStorage &&
-      (eltType.isIntOrIndexOrFloat() || eltType.isa<ComplexType>()))
+      (eltType.isIntOrIndexOrFloat() || isa<ComplexType>(eltType)))
     return getHexAttr(loc, type);
 
   // Check that the parsed storage size has the same number of elements to the
@@ -563,7 +568,7 @@ DenseElementsAttr TensorLiteralParser::getAttr(SMLoc loc, ShapedType type) {
 
   // Handle complex types in the specific element type cases below.
   bool isComplex = false;
-  if (ComplexType complexTy = eltType.dyn_cast<ComplexType>()) {
+  if (ComplexType complexTy = dyn_cast<ComplexType>(eltType)) {
     eltType = complexTy.getElementType();
     isComplex = true;
   }
@@ -583,7 +588,7 @@ DenseElementsAttr TensorLiteralParser::getAttr(SMLoc loc, ShapedType type) {
     return DenseElementsAttr::get(type, intValues);
   }
   // Handle floating point types.
-  if (FloatType floatTy = eltType.dyn_cast<FloatType>()) {
+  if (FloatType floatTy = dyn_cast<FloatType>(eltType)) {
     std::vector<APFloat> floatValues;
     if (failed(getFloatAttrElements(loc, floatTy, floatValues)))
       return nullptr;
@@ -711,7 +716,7 @@ DenseElementsAttr TensorLiteralParser::getStringAttr(SMLoc loc, ShapedType type,
 /// Build a Dense attribute with hex data for the given type.
 DenseElementsAttr TensorLiteralParser::getHexAttr(SMLoc loc, ShapedType type) {
   Type elementType = type.getElementType();
-  if (!elementType.isIntOrIndexOrFloat() && !elementType.isa<ComplexType>()) {
+  if (!elementType.isIntOrIndexOrFloat() && !isa<ComplexType>(elementType)) {
     p.emitError(loc)
         << "expected floating-point, integer, or complex element type, got "
         << elementType;
@@ -730,8 +735,7 @@ DenseElementsAttr TensorLiteralParser::getHexAttr(SMLoc loc, ShapedType type) {
     return nullptr;
   }
 
-  if (llvm::support::endian::system_endianness() ==
-      llvm::support::endianness::big) {
+  if (llvm::endianness::native == llvm::endianness::big) {
     // Convert endianess in big-endian(BE) machines. `rawData` is
     // little-endian(LE) because HEX in raw data of dense element attribute
     // is always LE format. It is converted into BE here to be used in BE
@@ -904,7 +908,7 @@ ParseResult DenseArrayElementParser::parseFloatElement(Parser &p) {
 
   Token token = p.getToken();
   std::optional<APFloat> result;
-  auto floatType = type.cast<FloatType>();
+  auto floatType = cast<FloatType>(type);
   if (p.consumeIf(Token::integer)) {
     // Parse an integer literal as a float.
     if (p.parseFloatFromIntegerLiteral(result, token, isNegative,
@@ -1025,7 +1029,7 @@ Attribute Parser::parseDenseResourceElementsAttr(Type attrType) {
       return nullptr;
   }
 
-  ShapedType shapedType = attrType.dyn_cast<ShapedType>();
+  ShapedType shapedType = dyn_cast<ShapedType>(attrType);
   if (!shapedType) {
     emitError(typeLoc, "`dense_resource` expected a shaped type");
     return nullptr;
@@ -1048,7 +1052,7 @@ ShapedType Parser::parseElementsLiteralType(Type type) {
       return nullptr;
   }
 
-  auto sType = type.dyn_cast<ShapedType>();
+  auto sType = dyn_cast<ShapedType>(type);
   if (!sType) {
     emitError("elements literal must be a shaped type");
     return nullptr;
@@ -1213,4 +1217,63 @@ Attribute Parser::parseStridedLayoutAttr() {
     return nullptr;
   return StridedLayoutAttr::get(getContext(), *offset, strides);
   // return getChecked<StridedLayoutAttr>(loc,getContext(), *offset, strides);
+}
+
+/// Parse a distinct attribute.
+///
+///  distinct-attribute ::= `distinct`
+///                         `[` integer-literal `]<` attribute-value `>`
+///
+Attribute Parser::parseDistinctAttr(Type type) {
+  SMLoc loc = getToken().getLoc();
+  consumeToken(Token::kw_distinct);
+  if (parseToken(Token::l_square, "expected '[' after 'distinct'"))
+    return {};
+
+  // Parse the distinct integer identifier.
+  Token token = getToken();
+  if (parseToken(Token::integer, "expected distinct ID"))
+    return {};
+  std::optional<uint64_t> value = token.getUInt64IntegerValue();
+  if (!value) {
+    emitError("expected an unsigned 64-bit integer");
+    return {};
+  }
+
+  // Parse the referenced attribute.
+  if (parseToken(Token::r_square, "expected ']' to close distinct ID") ||
+      parseToken(Token::less, "expected '<' after distinct ID"))
+    return {};
+
+  Attribute referencedAttr;
+  if (getToken().is(Token::greater)) {
+    consumeToken();
+    referencedAttr = builder.getUnitAttr();
+  } else {
+    referencedAttr = parseAttribute(type);
+    if (!referencedAttr) {
+      emitError("expected attribute");
+      return {};
+    }
+
+    if (parseToken(Token::greater, "expected '>' to close distinct attribute"))
+      return {};
+  }
+
+  // Add the distinct attribute to the parser state, if it has not been parsed
+  // before. Otherwise, check if the parsed reference attribute matches the one
+  // found in the parser state.
+  DenseMap<uint64_t, DistinctAttr> &distinctAttrs =
+      state.symbols.distinctAttributes;
+  auto it = distinctAttrs.find(*value);
+  if (it == distinctAttrs.end()) {
+    DistinctAttr distinctAttr = DistinctAttr::create(referencedAttr);
+    it = distinctAttrs.try_emplace(*value, distinctAttr).first;
+  } else if (it->getSecond().getReferencedAttr() != referencedAttr) {
+    emitError(loc, "referenced attribute does not match previous definition: ")
+        << it->getSecond().getReferencedAttr();
+    return {};
+  }
+
+  return it->getSecond();
 }

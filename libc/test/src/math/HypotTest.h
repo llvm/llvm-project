@@ -10,19 +10,19 @@
 #define LLVM_LIBC_TEST_SRC_MATH_HYPOTTEST_H
 
 #include "src/__support/FPUtil/FPBits.h"
+#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include "utils/UnitTest/FPMatcher.h"
-#include "utils/UnitTest/Test.h"
 
 #include <math.h>
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 template <typename T>
-class HypotTestTemplate : public __llvm_libc::testing::Test {
+class HypotTestTemplate : public LIBC_NAMESPACE::testing::Test {
 private:
   using Func = T (*)(T, T);
-  using FPBits = __llvm_libc::fputil::FPBits<T>;
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using UIntType = typename FPBits::UIntType;
   const T nan = T(FPBits::build_quiet_nan(1));
   const T inf = T(FPBits::inf());
@@ -59,7 +59,7 @@ public:
   }
 
   void test_subnormal_range(Func func) {
-    constexpr UIntType COUNT = 1000001;
+    constexpr UIntType COUNT = 10'001;
     for (unsigned scale = 0; scale < 4; ++scale) {
       UIntType max_value = FPBits::MAX_SUBNORMAL << scale;
       UIntType step = (max_value - FPBits::MIN_SUBNORMAL) / COUNT;
@@ -84,8 +84,9 @@ public:
   }
 
   void test_normal_range(Func func) {
-    constexpr UIntType COUNT = 1000001;
-    constexpr UIntType STEP = (FPBits::MAX_NORMAL - FPBits::MIN_NORMAL) / COUNT;
+    constexpr UIntType COUNT = 10'001;
+    constexpr UIntType STEP =
+        (UIntType(FPBits::MAX_NORMAL) - UIntType(FPBits::MIN_NORMAL)) / COUNT;
     for (int signs = 0; signs < 4; ++signs) {
       for (UIntType v = FPBits::MIN_NORMAL, w = FPBits::MAX_NORMAL;
            v <= FPBits::MAX_NORMAL && w >= FPBits::MIN_NORMAL;

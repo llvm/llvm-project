@@ -21,18 +21,18 @@ target triple = "msp430-generic-generic"
 define msp430_intrcc void @ISR() #0 {
 entry:
 ; CHECK-LABEL: ISR:
-; CHECK: push	r15
-; CHECK: push	r14
-; CHECK: push	r13
-; CHECK: push	r12
-; CHECK: push	r11
-; CHECK: push	r10
-; CHECK: push	r9
-; CHECK: push	r8
-; CHECK: push	r7
-; CHECK: push	r6
-; CHECK: push	r5
-; CHECK: push	r4
+; CHECK: push r4
+; CHECK: push r5
+; CHECK: push r6
+; CHECK: push r7
+; CHECK: push r8
+; CHECK: push r9
+; CHECK: push r10
+; CHECK: push r11
+; CHECK: push r12
+; CHECK: push r13
+; CHECK: push r14
+; CHECK: push r15
   %t1 = load volatile float, float* @g
   %t2 = load volatile float, float* @g
   %t3 = load volatile float, float* @g

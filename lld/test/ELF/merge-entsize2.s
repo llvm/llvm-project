@@ -18,8 +18,8 @@
 # SEC:   .cst  PROGBITS {{.*}} 000020 00  AM  0   0  8
 
 # HEX:      Hex dump of section '.cst':
-# HEX-NEXT: 0x{{[0-9a-f]+}} 01000000 00000000 02000000 00000000
-# HEX-NEXT: 0x{{[0-9a-f]+}} 01000000 00000000 03000000 00000000
+# HEX-NEXT: [[#%x,]] 00000000 02000000 01000000 00000000
+# HEX-NEXT: [[#%x,]] 01000000 00000000 03000000 00000000
 
 .section .cst,"aM",@progbits,4,unique,0
 .align 2

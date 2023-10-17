@@ -11,10 +11,10 @@
 #ifndef FORTRAN_RUNTIME_REDUCTION_H_
 #define FORTRAN_RUNTIME_REDUCTION_H_
 
+#include "flang/Common/float128.h"
 #include "flang/Common/uint128.h"
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/entry-names.h"
-#include "flang/Runtime/float128.h"
 #include <cfloat>
 #include <cinttypes>
 #include <complex>

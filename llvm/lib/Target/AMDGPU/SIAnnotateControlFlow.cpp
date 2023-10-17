@@ -13,8 +13,8 @@
 
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
@@ -36,7 +36,7 @@ using StackEntry = std::pair<BasicBlock *, Value *>;
 using StackVector = SmallVector<StackEntry, 16>;
 
 class SIAnnotateControlFlow : public FunctionPass {
-  LegacyDivergenceAnalysis *DA;
+  UniformityInfo *UA;
 
   Type *Boolean;
   Type *Void;
@@ -99,7 +99,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<LegacyDivergenceAnalysis>();
+    AU.addRequired<UniformityInfoWrapperPass>();
     AU.addPreserved<LoopInfoWrapperPass>();
     AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addRequired<TargetPassConfig>();
@@ -112,7 +112,7 @@ public:
 INITIALIZE_PASS_BEGIN(SIAnnotateControlFlow, DEBUG_TYPE,
                       "Annotate SI Control Flow", false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LegacyDivergenceAnalysis)
+INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_END(SIAnnotateControlFlow, DEBUG_TYPE,
                     "Annotate SI Control Flow", false, false)
@@ -146,7 +146,7 @@ void SIAnnotateControlFlow::initialize(Module &M, const GCNSubtarget &ST) {
 /// Is the branch condition uniform or did the StructurizeCFG pass
 /// consider it as such?
 bool SIAnnotateControlFlow::isUniform(BranchInst *T) {
-  return DA->isUniform(T) ||
+  return UA->isUniform(T) ||
          T->getMetadata("structurizecfg.uniform") != nullptr;
 }
 
@@ -268,7 +268,8 @@ bool SIAnnotateControlFlow::handleLoop(BranchInst *Term) {
     return false;
 
   BasicBlock *Target = Term->getSuccessor(1);
-  PHINode *Broken = PHINode::Create(IntMask, 0, "phi.broken", &Target->front());
+  PHINode *Broken = PHINode::Create(IntMask, 0, "phi.broken");
+  Broken->insertBefore(Target->begin());
 
   Value *Cond = Term->getCondition();
   Term->setCondition(BoolTrue);
@@ -336,7 +337,7 @@ bool SIAnnotateControlFlow::closeControlFlow(BasicBlock *BB) {
 bool SIAnnotateControlFlow::runOnFunction(Function &F) {
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  DA = &getAnalysis<LegacyDivergenceAnalysis>();
+  UA = &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
   TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
   const TargetMachine &TM = TPC.getTM<TargetMachine>();
 

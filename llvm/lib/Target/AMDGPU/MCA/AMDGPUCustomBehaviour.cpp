@@ -13,7 +13,7 @@
 
 #include "AMDGPUCustomBehaviour.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "SIInstrInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "TargetInfo/AMDGPUTargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/WithColor.h"
@@ -317,13 +317,15 @@ bool AMDGPUCustomBehaviour::hasModifiersSet(
   return true;
 }
 
+// taken from SIInstrInfo::isGWS()
+bool AMDGPUCustomBehaviour::isGWS(uint16_t Opcode) const {
+  const MCInstrDesc &MCID = MCII.get(Opcode);
+  return MCID.TSFlags & SIInstrFlags::GWS;
+}
+
 // taken from SIInstrInfo::isAlwaysGDS()
 bool AMDGPUCustomBehaviour::isAlwaysGDS(uint16_t Opcode) const {
-  return Opcode == AMDGPU::DS_ORDERED_COUNT || Opcode == AMDGPU::DS_GWS_INIT ||
-         Opcode == AMDGPU::DS_GWS_SEMA_V || Opcode == AMDGPU::DS_GWS_SEMA_BR ||
-         Opcode == AMDGPU::DS_GWS_SEMA_P ||
-         Opcode == AMDGPU::DS_GWS_SEMA_RELEASE_ALL ||
-         Opcode == AMDGPU::DS_GWS_BARRIER;
+  return Opcode == AMDGPU::DS_ORDERED_COUNT || isGWS(Opcode);
 }
 
 } // namespace mca
@@ -348,9 +350,9 @@ createAMDGPUInstrPostProcess(const MCSubtargetInfo &STI,
 /// Extern function to initialize the targets for the AMDGPU backend
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTargetMCA() {
-  TargetRegistry::RegisterCustomBehaviour(getTheAMDGPUTarget(),
+  TargetRegistry::RegisterCustomBehaviour(getTheR600Target(),
                                           createAMDGPUCustomBehaviour);
-  TargetRegistry::RegisterInstrPostProcess(getTheAMDGPUTarget(),
+  TargetRegistry::RegisterInstrPostProcess(getTheR600Target(),
                                            createAMDGPUInstrPostProcess);
 
   TargetRegistry::RegisterCustomBehaviour(getTheGCNTarget(),

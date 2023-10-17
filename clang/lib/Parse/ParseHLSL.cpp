@@ -196,5 +196,5 @@ void Parser::ParseHLSLSemantics(ParsedAttributes &Attrs,
   }
 
   Attrs.addNew(II, Loc, nullptr, SourceLocation(), ArgExprs.data(),
-               ArgExprs.size(), ParsedAttr::AS_HLSLSemantic);
+               ArgExprs.size(), ParsedAttr::Form::HLSLSemantic());
 }

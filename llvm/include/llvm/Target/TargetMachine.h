@@ -14,7 +14,6 @@
 #define LLVM_TARGET_TARGETMACHINE_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Allocator.h"
@@ -23,6 +22,7 @@
 #include "llvm/Support/PGOOptions.h"
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/Triple.h"
 #include <optional>
 #include <string>
 #include <utility>
@@ -100,7 +100,8 @@ protected: // Can only create subclasses.
 
   Reloc::Model RM = Reloc::Static;
   CodeModel::Model CMModel = CodeModel::Small;
-  CodeGenOpt::Level OptLevel = CodeGenOpt::Default;
+  uint64_t LargeDataThreshold = 0;
+  CodeGenOptLevel OptLevel = CodeGenOptLevel::Default;
 
   /// Contains target specific asm information.
   std::unique_ptr<const MCAsmInfo> AsmInfo;
@@ -115,7 +116,6 @@ protected: // Can only create subclasses.
   std::optional<PGOOptions> PGOOption;
 
 public:
-  const TargetOptions DefaultOptions;
   mutable TargetOptions Options;
 
   TargetMachine(const TargetMachine &) = delete;
@@ -232,8 +232,14 @@ public:
   /// target default.
   CodeModel::Model getCodeModel() const { return CMModel; }
 
+  /// Returns the maximum code size possible under the code model.
+  uint64_t getMaxCodeSize() const;
+
   /// Set the code model.
   void setCodeModel(CodeModel::Model CM) { CMModel = CM; }
+
+  void setLargeDataThreshold(uint64_t LDT) { LargeDataThreshold = LDT; }
+  bool isLargeData(const GlobalVariable *GV) const;
 
   bool isPositionIndependent() const;
 
@@ -246,10 +252,10 @@ public:
   TLSModel::Model getTLSModel(const GlobalValue *GV) const;
 
   /// Returns the optimization level: None, Less, Default, or Aggressive.
-  CodeGenOpt::Level getOptLevel() const;
+  CodeGenOptLevel getOptLevel() const;
 
   /// Overrides the optimization level.
-  void setOptLevel(CodeGenOpt::Level Level);
+  void setOptLevel(CodeGenOptLevel Level);
 
   void setFastISel(bool Enable) { Options.EnableFastISel = Enable; }
   bool getO0WantsFastISel() { return O0WantsFastISel; }
@@ -419,7 +425,7 @@ protected: // Can only create subclasses.
   LLVMTargetMachine(const Target &T, StringRef DataLayoutString,
                     const Triple &TT, StringRef CPU, StringRef FS,
                     const TargetOptions &Options, Reloc::Model RM,
-                    CodeModel::Model CM, CodeGenOpt::Level OL);
+                    CodeModel::Model CM, CodeGenOptLevel OL);
 
   void initAsmInfo();
 
@@ -500,6 +506,9 @@ public:
   /// The default variant to use in unqualified `asm` instructions.
   /// If this returns 0, `asm "$(foo$|bar$)"` will evaluate to `asm "foo"`.
   virtual int unqualifiedInlineAsmVariant() const { return 0; }
+
+  // MachineRegisterInfo callback function
+  virtual void registerMachineRegisterInfoCallback(MachineFunction &MF) const {}
 };
 
 /// Helper method for getting the code model, returning Default if

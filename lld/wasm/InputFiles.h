@@ -13,11 +13,11 @@
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Wasm.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/TargetParser/Triple.h"
 #include <optional>
 #include <vector>
 
@@ -47,6 +47,7 @@ public:
     SharedKind,
     ArchiveKind,
     BitcodeKind,
+    StubKind,
   };
 
   virtual ~InputFile() {}
@@ -175,12 +176,24 @@ public:
               uint64_t offsetInArchive);
   static bool classof(const InputFile *f) { return f->kind() == BitcodeKind; }
 
-  void parse();
+  void parse(StringRef symName);
   std::unique_ptr<llvm::lto::InputFile> obj;
 
   // Set to true once LTO is complete in order prevent further bitcode objects
   // being added.
   static bool doneLTO;
+};
+
+// Stub library (See docs/WebAssembly.rst)
+class StubFile : public InputFile {
+public:
+  explicit StubFile(MemoryBufferRef m) : InputFile(StubKind, m) {}
+
+  static bool classof(const InputFile *f) { return f->kind() == StubKind; }
+
+  void parse();
+
+  llvm::DenseMap<StringRef, std::vector<StringRef>> symbolDependencies;
 };
 
 inline bool isBitcode(MemoryBufferRef mb) {

@@ -8,6 +8,11 @@
 
 // <algorithm>
 
+// https://buildkite.com/llvm-project/libcxx-ci/builds/15823#0184fc0b-d56b-4774-9e1d-35fe24e09e37
+// It seems like the CI gcc version is buggy. I can't reproduce the failure on my system or on
+// godbolt (https://godbolt.org/z/rsPv8e8fn).
+// UNSUPPORTED: gcc-13
+
 #include <algorithm>
 #include <cstddef>
 #include <functional>
@@ -108,7 +113,10 @@ TEST_CONSTEXPR_CXX20 bool all_the_algorithms()
     // RELIES ON ADL SWAP (void)std::iter_swap(first, mid);
     (void)std::lexicographical_compare(first, last, first2, last2);
     (void)std::lexicographical_compare(first, last, first2, last2, std::less<void*>());
-    // TODO: lexicographical_compare_three_way
+#if TEST_STD_VER > 17
+    (void)std::lexicographical_compare_three_way(first, last, first2, last2);
+    (void)std::lexicographical_compare_three_way(first, last, first2, last2, std::compare_three_way());
+#endif
     (void)std::lower_bound(first, last, value);
     (void)std::lower_bound(first, last, value, std::less<void*>());
     (void)std::make_heap(first, last);

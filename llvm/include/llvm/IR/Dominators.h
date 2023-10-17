@@ -191,7 +191,7 @@ class DominatorTree : public DominatorTreeBase<BasicBlock, false> {
   ///  * Non-instruction Defs dominate everything.
   ///  * Def does not dominate a use in Def itself (outside of degenerate cases
   ///    like unreachable code or trivial phi cycles).
-  ///  * Invoke/callbr Defs only dominate uses in their default destination.
+  ///  * Invoke Defs only dominate uses in their default destination.
   bool dominates(const Value *Def, const Use &U) const;
   /// Return true if value Def dominates all possible uses inside instruction
   /// User. Same comments as for the Use-based API apply.

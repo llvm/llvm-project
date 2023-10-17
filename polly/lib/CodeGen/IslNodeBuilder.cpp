@@ -77,7 +77,6 @@ STATISTIC(VersionedScops, "Number of SCoPs that required versioning.");
 
 STATISTIC(SequentialLoops, "Number of generated sequential for-loops");
 STATISTIC(ParallelLoops, "Number of generated parallel for-loops");
-STATISTIC(VectorLoops, "Number of generated vector for-loops");
 STATISTIC(IfConditions, "Number of generated if-conditions");
 
 /// OpenMP backend options
@@ -390,30 +389,6 @@ Value *IslNodeBuilder::getLatestValue(Value *Original) const {
   return It->second;
 }
 
-void IslNodeBuilder::createUserVector(__isl_take isl_ast_node *User,
-                                      std::vector<Value *> &IVS,
-                                      __isl_take isl_id *IteratorID,
-                                      __isl_take isl_union_map *Schedule) {
-  isl_ast_expr *Expr = isl_ast_node_user_get_expr(User);
-  isl_ast_expr *StmtExpr = isl_ast_expr_get_op_arg(Expr, 0);
-  isl_id *Id = isl_ast_expr_get_id(StmtExpr);
-  isl_ast_expr_free(StmtExpr);
-  ScopStmt *Stmt = (ScopStmt *)isl_id_get_user(Id);
-  std::vector<LoopToScevMapT> VLTS(IVS.size());
-
-  isl_union_set *Domain = isl_union_set_from_set(Stmt->getDomain().release());
-  Schedule = isl_union_map_intersect_domain(Schedule, Domain);
-  isl_map *S = isl_map_from_union_map(Schedule);
-
-  auto *NewAccesses = createNewAccesses(Stmt, User);
-  createSubstitutionsVector(Expr, Stmt, VLTS, IVS, IteratorID);
-  VectorBlockGenerator::generate(BlockGen, *Stmt, VLTS, S, NewAccesses);
-  isl_id_to_ast_expr_free(NewAccesses);
-  isl_map_free(S);
-  isl_id_free(Id);
-  isl_ast_node_free(User);
-}
-
 void IslNodeBuilder::createMark(__isl_take isl_ast_node *Node) {
   auto *Id = isl_ast_node_mark_get_id(Node);
   auto Child = isl_ast_node_mark_get_node(Node);
@@ -422,13 +397,7 @@ void IslNodeBuilder::createMark(__isl_take isl_ast_node *Node) {
   // it will be optimized away and we should skip it.
   if (strcmp(isl_id_get_name(Id), "SIMD") == 0 &&
       isl_ast_node_get_type(Child) == isl_ast_node_for) {
-    bool Vector = PollyVectorizerChoice == VECTORIZER_POLLY;
-    int VectorWidth =
-        getNumberOfIterations(isl::manage_copy(Child).as<isl::ast_node_for>());
-    if (Vector && 1 < VectorWidth && VectorWidth <= 16)
-      createForVector(Child, VectorWidth);
-    else
-      createForSequential(isl::manage(Child).as<isl::ast_node_for>(), true);
+    createForSequential(isl::manage(Child).as<isl::ast_node_for>(), true);
     isl_id_free(Id);
     return;
   }
@@ -454,67 +423,6 @@ void IslNodeBuilder::createMark(__isl_take isl_ast_node *Node) {
   }
 
   isl_id_free(Id);
-}
-
-void IslNodeBuilder::createForVector(__isl_take isl_ast_node *For,
-                                     int VectorWidth) {
-  isl_ast_node *Body = isl_ast_node_for_get_body(For);
-  isl_ast_expr *Init = isl_ast_node_for_get_init(For);
-  isl_ast_expr *Inc = isl_ast_node_for_get_inc(For);
-  isl_ast_expr *Iterator = isl_ast_node_for_get_iterator(For);
-  isl_id *IteratorID = isl_ast_expr_get_id(Iterator);
-
-  Value *ValueLB = ExprBuilder.create(Init);
-  Value *ValueInc = ExprBuilder.create(Inc);
-
-  Type *MaxType = ExprBuilder.getType(Iterator);
-  MaxType = ExprBuilder.getWidestType(MaxType, ValueLB->getType());
-  MaxType = ExprBuilder.getWidestType(MaxType, ValueInc->getType());
-
-  if (MaxType != ValueLB->getType())
-    ValueLB = Builder.CreateSExt(ValueLB, MaxType);
-  if (MaxType != ValueInc->getType())
-    ValueInc = Builder.CreateSExt(ValueInc, MaxType);
-
-  std::vector<Value *> IVS(VectorWidth);
-  IVS[0] = ValueLB;
-
-  for (int i = 1; i < VectorWidth; i++)
-    IVS[i] = Builder.CreateAdd(IVS[i - 1], ValueInc, "p_vector_iv");
-
-  isl::union_map Schedule = getScheduleForAstNode(isl::manage_copy(For));
-  assert(!Schedule.is_null() &&
-         "For statement annotation does not contain its schedule");
-
-  IDToValue[IteratorID] = ValueLB;
-
-  switch (isl_ast_node_get_type(Body)) {
-  case isl_ast_node_user:
-    createUserVector(Body, IVS, isl_id_copy(IteratorID), Schedule.copy());
-    break;
-  case isl_ast_node_block: {
-    isl_ast_node_list *List = isl_ast_node_block_get_children(Body);
-
-    for (int i = 0; i < isl_ast_node_list_n_ast_node(List); ++i)
-      createUserVector(isl_ast_node_list_get_ast_node(List, i), IVS,
-                       isl_id_copy(IteratorID), Schedule.copy());
-
-    isl_ast_node_free(Body);
-    isl_ast_node_list_free(List);
-    break;
-  }
-  default:
-    isl_ast_node_dump(Body);
-    llvm_unreachable("Unhandled isl_ast_node in vectorizer");
-  }
-
-  IDToValue.erase(IDToValue.find(IteratorID));
-  isl_id_free(IteratorID);
-
-  isl_ast_node_free(For);
-  isl_ast_expr_free(Iterator);
-
-  VectorLoops++;
 }
 
 /// Restore the initial ordering of dimensions of the band node
@@ -761,46 +669,7 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   ParallelLoops++;
 }
 
-/// Return whether any of @p Node's statements contain partial accesses.
-///
-/// Partial accesses are not supported by Polly's vector code generator.
-static bool hasPartialAccesses(__isl_take isl_ast_node *Node) {
-  return isl_ast_node_foreach_descendant_top_down(
-             Node,
-             [](isl_ast_node *Node, void *User) -> isl_bool {
-               if (isl_ast_node_get_type(Node) != isl_ast_node_user)
-                 return isl_bool_true;
-
-               isl::ast_expr Expr =
-                   isl::manage(isl_ast_node_user_get_expr(Node));
-               isl::ast_expr StmtExpr = Expr.get_op_arg(0);
-               isl::id Id = StmtExpr.get_id();
-
-               ScopStmt *Stmt =
-                   static_cast<ScopStmt *>(isl_id_get_user(Id.get()));
-               isl::set StmtDom = Stmt->getDomain();
-               for (auto *MA : *Stmt) {
-                 if (MA->isLatestPartialAccess())
-                   return isl_bool_error;
-               }
-               return isl_bool_true;
-             },
-             nullptr) == isl_stat_error;
-}
-
 void IslNodeBuilder::createFor(__isl_take isl_ast_node *For) {
-  bool Vector = PollyVectorizerChoice == VECTORIZER_POLLY;
-
-  if (Vector && IslAstInfo::isInnermostParallel(isl::manage_copy(For)) &&
-      !IslAstInfo::isReductionParallel(isl::manage_copy(For))) {
-    int VectorWidth =
-        getNumberOfIterations(isl::manage_copy(For).as<isl::ast_node_for>());
-    if (1 < VectorWidth && VectorWidth <= 16 && !hasPartialAccesses(For)) {
-      createForVector(For, VectorWidth);
-      return;
-    }
-  }
-
   if (IslAstInfo::isExecutedInParallel(isl::manage_copy(For))) {
     createForParallel(For);
     return;
@@ -981,7 +850,7 @@ void IslNodeBuilder::generateCopyStmt(
 }
 
 Value *IslNodeBuilder::materializeNonScopLoopInductionVariable(const Loop *L) {
-  assert(OutsideLoopIterations.find(L) == OutsideLoopIterations.end() &&
+  assert(!OutsideLoopIterations.contains(L) &&
          "trying to materialize loop induction variable twice");
   const SCEV *OuterLIV = SE.getAddRecExpr(SE.getUnknown(Builder.getInt64(0)),
                                           SE.getUnknown(Builder.getInt64(1)), L,
@@ -1423,9 +1292,9 @@ void IslNodeBuilder::allocateNewArrays(BBPair StartExitBlocks) {
       unsigned Size = SAI->getElemSizeInBytes();
 
       // Insert the malloc call at polly.start
-      auto InstIt = std::get<0>(StartExitBlocks)->getTerminator();
-      auto *CreatedArray = CallInst::CreateMalloc(
-          &*InstIt, IntPtrTy, SAI->getElementType(),
+      Builder.SetInsertPoint(std::get<0>(StartExitBlocks)->getTerminator());
+      auto *CreatedArray = Builder.CreateMalloc(
+          IntPtrTy, SAI->getElementType(),
           ConstantInt::get(Type::getInt64Ty(Ctx), Size),
           ConstantInt::get(Type::getInt64Ty(Ctx), ArraySizeInt), nullptr,
           SAI->getName());
@@ -1433,8 +1302,8 @@ void IslNodeBuilder::allocateNewArrays(BBPair StartExitBlocks) {
       SAI->setBasePtr(CreatedArray);
 
       // Insert the free call at polly.exiting
-      CallInst::CreateFree(CreatedArray,
-                           std::get<1>(StartExitBlocks)->getTerminator());
+      Builder.SetInsertPoint(std::get<1>(StartExitBlocks)->getTerminator());
+      Builder.CreateFree(CreatedArray);
     } else {
       auto InstIt = Builder.GetInsertBlock()
                         ->getParent()

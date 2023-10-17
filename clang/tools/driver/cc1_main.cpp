@@ -28,6 +28,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/LinkAllPasses.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
@@ -38,12 +39,15 @@
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/AArch64TargetParser.h"
+#include "llvm/TargetParser/ARMTargetParser.h"
 #include <cstdio>
 
 #ifdef CLANG_HAVE_RLIMITS
@@ -182,6 +186,43 @@ static int PrintSupportedCPUs(std::string TargetStr) {
   return 0;
 }
 
+static int PrintSupportedExtensions(std::string TargetStr) {
+  std::string Error;
+  const llvm::Target *TheTarget =
+      llvm::TargetRegistry::lookupTarget(TargetStr, Error);
+  if (!TheTarget) {
+    llvm::errs() << Error;
+    return 1;
+  }
+
+  llvm::TargetOptions Options;
+  std::unique_ptr<llvm::TargetMachine> TheTargetMachine(
+      TheTarget->createTargetMachine(TargetStr, "", "", Options, std::nullopt));
+  const llvm::Triple &MachineTriple = TheTargetMachine->getTargetTriple();
+  const llvm::MCSubtargetInfo *MCInfo = TheTargetMachine->getMCSubtargetInfo();
+  const llvm::ArrayRef<llvm::SubtargetFeatureKV> Features =
+    MCInfo->getAllProcessorFeatures();
+
+  llvm::StringMap<llvm::StringRef> DescMap;
+  for (const llvm::SubtargetFeatureKV &feature : Features)
+    DescMap.insert({feature.Key, feature.Desc});
+
+  if (MachineTriple.isRISCV())
+    llvm::riscvExtensionsHelp(DescMap);
+  else if (MachineTriple.isAArch64())
+    llvm::AArch64::PrintSupportedExtensions(DescMap);
+  else if (MachineTriple.isARM())
+    llvm::ARM::PrintSupportedExtensions(DescMap);
+  else {
+    // The option was already checked in Driver::HandleImmediateArgs,
+    // so we do not expect to get here if we are not a supported architecture.
+    assert(0 && "Unhandled triple for --print-supported-extensions option.");
+    return 1;
+  }
+
+  return 0;
+}
+
 int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   ensureSufficientStack();
 
@@ -213,15 +254,17 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   bool Success = CompilerInvocation::CreateFromArgs(Clang->getInvocation(),
                                                     Argv, Diags, Argv0);
 
-  if (Clang->getFrontendOpts().TimeTrace ||
-      !Clang->getFrontendOpts().TimeTracePath.empty()) {
-    Clang->getFrontendOpts().TimeTrace = 1;
+  if (!Clang->getFrontendOpts().TimeTracePath.empty()) {
     llvm::timeTraceProfilerInitialize(
         Clang->getFrontendOpts().TimeTraceGranularity, Argv0);
   }
   // --print-supported-cpus takes priority over the actual compilation.
   if (Clang->getFrontendOpts().PrintSupportedCPUs)
     return PrintSupportedCPUs(Clang->getTargetOpts().Triple);
+
+  // --print-supported-extensions takes priority over the actual compilation.
+  if (Clang->getFrontendOpts().PrintSupportedExtensions)
+    return PrintSupportedExtensions(Clang->getTargetOpts().Triple);
 
   // Infer the builtin include path if unspecified.
   if (Clang->getHeaderSearchOpts().UseBuiltinIncludes &&
@@ -257,17 +300,21 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   llvm::TimerGroup::clearAll();
 
   if (llvm::timeTraceProfilerEnabled()) {
-    SmallString<128> Path(Clang->getFrontendOpts().OutputFile);
-    llvm::sys::path::replace_extension(Path, "json");
-    if (!Clang->getFrontendOpts().TimeTracePath.empty()) {
-      // replace the suffix to '.json' directly
-      SmallString<128> TracePath(Clang->getFrontendOpts().TimeTracePath);
-      if (llvm::sys::fs::is_directory(TracePath))
-        llvm::sys::path::append(TracePath, llvm::sys::path::filename(Path));
-      Path.assign(TracePath);
-    }
+    // It is possible that the compiler instance doesn't own a file manager here
+    // if we're compiling a module unit. Since the file manager are owned by AST
+    // when we're compiling a module unit. So the file manager may be invalid
+    // here.
+    //
+    // It should be fine to create file manager here since the file system
+    // options are stored in the compiler invocation and we can recreate the VFS
+    // from the compiler invocation.
+    if (!Clang->hasFileManager())
+      Clang->createFileManager(createVFSFromCompilerInvocation(
+          Clang->getInvocation(), Clang->getDiagnostics()));
+
     if (auto profilerOutput = Clang->createOutputFile(
-            Path.str(), /*Binary=*/false, /*RemoveFileOnSignal=*/false,
+            Clang->getFrontendOpts().TimeTracePath, /*Binary=*/false,
+            /*RemoveFileOnSignal=*/false,
             /*useTemporary=*/false)) {
       llvm::timeTraceProfilerWrite(*profilerOutput);
       profilerOutput.reset();

@@ -70,7 +70,7 @@ entry:
     i64 4, label %sw.bb4
   ]
 sw.bb0:
-  call void asm sideeffect "", ""()
+  call void asm sideeffect "nop", ""()
   ret void
 sw.bb1:
   call void asm sideeffect "", ""()
@@ -85,3 +85,22 @@ sw.bb4:
   call void asm sideeffect "", ""()
   ret void
 }
+
+;; Test the interaction with -fsanitize=function.
+; CHECK:      .type sanitize_function,@function
+; CHECK-NEXT: .Ltmp{{.*}}:
+; CHECK-NEXT:   nop
+; CHECK-NEXT:   .word   3238382334  // 0xc105cafe
+; CHECK-NEXT:   .word   42
+; CHECK-NEXT: sanitize_function:
+; CHECK-NEXT: .Lfunc_begin{{.*}}:
+; CHECK-NEXT:   .cfi_startproc
+; CHECK-NEXT:   // %bb.0:
+; CHECK-NEXT:   hint #34
+; CHECK-NEXT:   nop
+; CHECK-NEXT:   ret
+define void @sanitize_function(ptr noundef %x) "patchable-function-prefix"="1" "patchable-function-entry"="1" "branch-target-enforcement"="true" !func_sanitize !0 {
+  ret void
+}
+
+!0 = !{i32 3238382334, i32 42}

@@ -156,15 +156,14 @@ protected:
 
   /// Given an instruction \p I return its associated ordinal number.
   size_t getOrdinal(Instruction &I) {
-    assert(InstOrdinalMap.find(&I) != InstOrdinalMap.end() &&
+    assert(InstOrdinalMap.contains(&I) &&
            "No ordinal computed for this instruction.");
     return InstOrdinalMap[&I];
   }
 
   /// Given a node \p N return its associated ordinal number.
   size_t getOrdinal(NodeType &N) {
-    assert(NodeOrdinalMap.find(&N) != NodeOrdinalMap.end() &&
-           "No ordinal computed for this node.");
+    assert(NodeOrdinalMap.contains(&N) && "No ordinal computed for this node.");
     return NodeOrdinalMap[&N];
   }
 

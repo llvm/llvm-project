@@ -13,9 +13,7 @@
 #include "../utils/IncludeInserter.h"
 #include <optional>
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 /// Diagnoses instances of an implicit widening of multiplication result.
 ///
@@ -46,8 +44,6 @@ private:
   utils::IncludeInserter IncludeInserter;
 };
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_IMPLICITWIDENINGOFMULTIPLICATIONRESULTCHECK_H

@@ -166,6 +166,7 @@ HexagonTargetLowering::initializeHVXLowering() {
       setOperationAction(ISD::FMUL,           P, Custom);
       setOperationAction(ISD::FMINNUM,        P, Custom);
       setOperationAction(ISD::FMAXNUM,        P, Custom);
+      setOperationAction(ISD::SETCC,          P, Custom);
       setOperationAction(ISD::VSELECT,        P, Custom);
 
       // Custom-lower BUILD_VECTOR. The standard (target-independent)
@@ -828,8 +829,7 @@ HexagonTargetLowering::buildHvxVectorReg(ArrayRef<SDValue> Values,
     return DAG.getUNDEF(VecTy);
   if (IsSplat) {
     assert(SplatV.getNode());
-    auto *IdxN = dyn_cast<ConstantSDNode>(SplatV.getNode());
-    if (IdxN && IdxN->isZero())
+    if (isNullConstant(SplatV))
       return getZero(dl, VecTy, DAG);
     MVT WordTy = MVT::getVectorVT(MVT::i32, HwLen/4);
     SDValue S = DAG.getNode(ISD::SPLAT_VECTOR, dl, WordTy, SplatV);
@@ -1414,9 +1414,9 @@ HexagonTargetLowering::insertHvxSubvectorReg(SDValue VecV, SDValue SubV,
   // would be by HwLen-Idx, but if two words are inserted, it will need to be
   // by (HwLen-4)-Idx.
   unsigned RolBase = HwLen;
-  if (VecTy.getSizeInBits() == 32) {
+  if (SubTy.getSizeInBits() == 32) {
     SDValue V = DAG.getBitcast(MVT::i32, SubV);
-    SingleV = DAG.getNode(HexagonISD::VINSERTW0, dl, SingleTy, V);
+    SingleV = DAG.getNode(HexagonISD::VINSERTW0, dl, SingleTy, SingleV, V);
   } else {
     SDValue V = DAG.getBitcast(MVT::i64, SubV);
     SDValue R0 = LoHalf(V, DAG);
@@ -3625,7 +3625,7 @@ HexagonTargetLowering::PerformHvxDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
       break;
     case HexagonISD::VINSERTW0:
       if (isUndef(Ops[1]))
-        return Ops[0];;
+        return Ops[0];
       break;
     case HexagonISD::VROR: {
       if (Ops[0].getOpcode() == HexagonISD::VROR) {

@@ -9,6 +9,7 @@ include "mlir/IR/OpBase.td"
 def Test_Dialect : Dialect {
   let name = "test";
   let cppNamespace = "foobar";
+  let usePropertiesForAttributes = 0;
 }
 class NS_Op<string mnemonic, list<Trait> traits> :
     Op<Test_Dialect, mnemonic, traits>;
@@ -68,7 +69,7 @@ def AOp : NS_Op<"a_op", []> {
 
 // DEF:      ::mlir::LogicalResult AOpAdaptor::verify
 // DEF:      ::mlir::Attribute tblgen_aAttr;
-// DEF-NEXT: while (true) {
+// DEF: while (true) {
 // DEF-NEXT:   if (namedAttrIt == namedAttrRange.end())
 // DEF-NEXT:     return emitError(loc, "'test.a_op' op ""requires attribute 'aAttr'");
 // DEF-NEXT:   if (namedAttrIt->getName() == AOp::getAAttrAttrName(*odsOpName)) {
@@ -97,25 +98,25 @@ def AOp : NS_Op<"a_op", []> {
 // ---
 
 // DEF:      some-attr-kind AOp::getAAttrAttr()
-// DEF-NEXT:   ::mlir::impl::getAttrFromSortedRange((*this)->getAttrs().begin() + 0, (*this)->getAttrs().end() - 0, getAAttrAttrName()).cast<some-attr-kind>()
+// DEF-NEXT:   ::llvm::cast<some-attr-kind>(::mlir::impl::getAttrFromSortedRange((*this)->getAttrs().begin() + 0, (*this)->getAttrs().end() - 0, getAAttrAttrName()))
 // DEF:      some-return-type AOp::getAAttr() {
 // DEF-NEXT:   auto attr = getAAttrAttr()
 // DEF-NEXT:   return attr.some-convert-from-storage();
 
 // DEF:      some-attr-kind AOp::getBAttrAttr()
-// DEF-NEXT:   ::mlir::impl::getAttrFromSortedRange((*this)->getAttrs().begin() + 1, (*this)->getAttrs().end() - 0, getBAttrAttrName()).dyn_cast_or_null<some-attr-kind>()
+// DEF-NEXT:   ::llvm::dyn_cast_or_null<some-attr-kind>(::mlir::impl::getAttrFromSortedRange((*this)->getAttrs().begin() + 1, (*this)->getAttrs().end() - 0, getBAttrAttrName()))
 // DEF:      some-return-type AOp::getBAttr() {
 // DEF-NEXT:   auto attr = getBAttrAttr();
 // DEF-NEXT:   return attr.some-convert-from-storage();
 
 // DEF:      some-attr-kind AOp::getCAttrAttr()
-// DEF-NEXT:   ::mlir::impl::getAttrFromSortedRange((*this)->getAttrs().begin() + 1, (*this)->getAttrs().end() - 0, getCAttrAttrName()).dyn_cast_or_null<some-attr-kind>()
+// DEF-NEXT:   ::llvm::dyn_cast_or_null<some-attr-kind>(::mlir::impl::getAttrFromSortedRange((*this)->getAttrs().begin() + 1, (*this)->getAttrs().end() - 0, getCAttrAttrName()))
 // DEF:      ::std::optional<some-return-type> AOp::getCAttr() {
 // DEF-NEXT:   auto attr = getCAttrAttr()
 // DEF-NEXT:   return attr ? ::std::optional<some-return-type>(attr.some-convert-from-storage()) : (::std::nullopt);
 
 // DEF:      some-attr-kind AOp::getDAttrAttr()
-// DEF-NEXT:   ::mlir::impl::getAttrFromSortedRange((*this)->getAttrs().begin() + 1, (*this)->getAttrs().end() - 0, getDAttrAttrName()).dyn_cast_or_null<some-attr-kind>()
+// DEF-NEXT:   ::llvm::dyn_cast_or_null<some-attr-kind>(::mlir::impl::getAttrFromSortedRange((*this)->getAttrs().begin() + 1, (*this)->getAttrs().end() - 0, getDAttrAttrName()))
 // DEF:      some-return-type AOp::getDAttr() {
 // DEF-NEXT:   auto attr = getDAttrAttr();
 // DEF-NEXT:   if (!attr)
@@ -176,6 +177,7 @@ def AOp : NS_Op<"a_op", []> {
 def Test2_Dialect : Dialect {
   let name = "test2";
   let cppNamespace = "foobar2";
+  let usePropertiesForAttributes = 0;
 }
 def AgetOp : Op<Test2_Dialect, "a_get_op", []> {
   let arguments = (ins
@@ -217,10 +219,10 @@ def AgetOp : Op<Test2_Dialect, "a_get_op", []> {
 
 // DEF:      ::mlir::LogicalResult AgetOpAdaptor::verify
 // DEF:      ::mlir::Attribute tblgen_aAttr;
-// DEF-NEXT: while (true)
+// DEF: while (true)
 // DEF:      ::mlir::Attribute tblgen_bAttr;
 // DEF-NEXT: ::mlir::Attribute tblgen_cAttr;
-// DEF-NEXT: while (true)
+// DEF: while (true)
 // DEF:      if (tblgen_aAttr && !((some-condition)))
 // DEF-NEXT:   return emitError(loc, "'test2.a_get_op' op ""attribute 'aAttr' failed to satisfy constraint: some attribute kind");
 // DEF:      if (tblgen_bAttr && !((some-condition)))
@@ -232,13 +234,13 @@ def AgetOp : Op<Test2_Dialect, "a_get_op", []> {
 // ---
 
 // DEF:      some-attr-kind AgetOp::getAAttrAttr()
-// DEF-NEXT:   ::mlir::impl::getAttrFromSortedRange({{.*}}).cast<some-attr-kind>()
+// DEF-NEXT:   ::llvm::cast<some-attr-kind>(::mlir::impl::getAttrFromSortedRange({{.*}}))
 // DEF:      some-return-type AgetOp::getAAttr() {
 // DEF-NEXT:   auto attr = getAAttrAttr()
 // DEF-NEXT:   return attr.some-convert-from-storage();
 
 // DEF:      some-attr-kind AgetOp::getBAttrAttr()
-// DEF-NEXT:   return ::mlir::impl::getAttrFromSortedRange({{.*}}).dyn_cast_or_null<some-attr-kind>()
+// DEF-NEXT:   return ::llvm::dyn_cast_or_null<some-attr-kind>(::mlir::impl::getAttrFromSortedRange({{.*}}))
 // DEF:      some-return-type AgetOp::getBAttr() {
 // DEF-NEXT:   auto attr = getBAttrAttr();
 // DEF-NEXT:   if (!attr)
@@ -246,7 +248,7 @@ def AgetOp : Op<Test2_Dialect, "a_get_op", []> {
 // DEF-NEXT:   return attr.some-convert-from-storage();
 
 // DEF:      some-attr-kind AgetOp::getCAttrAttr()
-// DEF-NEXT:   return ::mlir::impl::getAttrFromSortedRange({{.*}}).dyn_cast_or_null<some-attr-kind>()
+// DEF-NEXT:   return ::llvm::dyn_cast_or_null<some-attr-kind>(::mlir::impl::getAttrFromSortedRange({{.*}}))
 // DEF:      ::std::optional<some-return-type> AgetOp::getCAttr() {
 // DEF-NEXT:   auto attr = getCAttrAttr()
 // DEF-NEXT:   return attr ? ::std::optional<some-return-type>(attr.some-convert-from-storage()) : (::std::nullopt);
@@ -310,18 +312,18 @@ def BOp : NS_Op<"b_op", []> {
 
 // DEF-LABEL: BOpAdaptor::verify
 // DEF: if (tblgen_any_attr && !((true)))
-// DEF: if (tblgen_bool_attr && !((tblgen_bool_attr.isa<::mlir::BoolAttr>())))
-// DEF: if (tblgen_i32_attr && !(((tblgen_i32_attr.isa<::mlir::IntegerAttr>())) && ((tblgen_i32_attr.cast<::mlir::IntegerAttr>().getType().isSignlessInteger(32)))))
-// DEF: if (tblgen_i64_attr && !(((tblgen_i64_attr.isa<::mlir::IntegerAttr>())) && ((tblgen_i64_attr.cast<::mlir::IntegerAttr>().getType().isSignlessInteger(64)))))
-// DEF: if (tblgen_f32_attr && !(((tblgen_f32_attr.isa<::mlir::FloatAttr>())) && ((tblgen_f32_attr.cast<::mlir::FloatAttr>().getType().isF32()))))
-// DEF: if (tblgen_f64_attr && !(((tblgen_f64_attr.isa<::mlir::FloatAttr>())) && ((tblgen_f64_attr.cast<::mlir::FloatAttr>().getType().isF64()))))
-// DEF: if (tblgen_str_attr && !((tblgen_str_attr.isa<::mlir::StringAttr>())))
-// DEF: if (tblgen_elements_attr && !((tblgen_elements_attr.isa<::mlir::ElementsAttr>())))
-// DEF: if (tblgen_function_attr && !((tblgen_function_attr.isa<::mlir::FlatSymbolRefAttr>())))
-// DEF: if (tblgen_some_type_attr && !(((tblgen_some_type_attr.isa<::mlir::TypeAttr>())) && ((tblgen_some_type_attr.cast<::mlir::TypeAttr>().getValue().isa<SomeType>()))))
-// DEF: if (tblgen_array_attr && !((tblgen_array_attr.isa<::mlir::ArrayAttr>())))
-// DEF: if (tblgen_some_attr_array && !(((tblgen_some_attr_array.isa<::mlir::ArrayAttr>())) && (::llvm::all_of(tblgen_some_attr_array.cast<::mlir::ArrayAttr>(), [&](::mlir::Attribute attr) { return attr && ((some-condition)); }))))
-// DEF: if (tblgen_type_attr && !(((tblgen_type_attr.isa<::mlir::TypeAttr>())) && ((tblgen_type_attr.cast<::mlir::TypeAttr>().getValue().isa<::mlir::Type>()))))
+// DEF: if (tblgen_bool_attr && !((::llvm::isa<::mlir::BoolAttr>(tblgen_bool_attr))))
+// DEF: if (tblgen_i32_attr && !(((::llvm::isa<::mlir::IntegerAttr>(tblgen_i32_attr))) && ((::llvm::cast<::mlir::IntegerAttr>(tblgen_i32_attr).getType().isSignlessInteger(32)))))
+// DEF: if (tblgen_i64_attr && !(((::llvm::isa<::mlir::IntegerAttr>(tblgen_i64_attr))) && ((::llvm::cast<::mlir::IntegerAttr>(tblgen_i64_attr).getType().isSignlessInteger(64)))))
+// DEF: if (tblgen_f32_attr && !(((::llvm::isa<::mlir::FloatAttr>(tblgen_f32_attr))) && ((::llvm::cast<::mlir::FloatAttr>(tblgen_f32_attr).getType().isF32()))))
+// DEF: if (tblgen_f64_attr && !(((::llvm::isa<::mlir::FloatAttr>(tblgen_f64_attr))) && ((::llvm::cast<::mlir::FloatAttr>(tblgen_f64_attr).getType().isF64()))))
+// DEF: if (tblgen_str_attr && !((::llvm::isa<::mlir::StringAttr>(tblgen_str_attr))))
+// DEF: if (tblgen_elements_attr && !((::llvm::isa<::mlir::ElementsAttr>(tblgen_elements_attr))))
+// DEF: if (tblgen_function_attr && !((::llvm::isa<::mlir::FlatSymbolRefAttr>(tblgen_function_attr))))
+// DEF: if (tblgen_some_type_attr && !(((::llvm::isa<::mlir::TypeAttr>(tblgen_some_type_attr))) && ((::llvm::isa<SomeType>(::llvm::cast<::mlir::TypeAttr>(tblgen_some_type_attr).getValue()))) && ((true))))
+// DEF: if (tblgen_array_attr && !((::llvm::isa<::mlir::ArrayAttr>(tblgen_array_attr))))
+// DEF: if (tblgen_some_attr_array && !(((::llvm::isa<::mlir::ArrayAttr>(tblgen_some_attr_array))) && (::llvm::all_of(::llvm::cast<::mlir::ArrayAttr>(tblgen_some_attr_array), [&](::mlir::Attribute attr) { return attr && ((some-condition)); }))))
+// DEF: if (tblgen_type_attr && !(((::llvm::isa<::mlir::TypeAttr>(tblgen_type_attr))) && ((::llvm::isa<::mlir::Type>(::llvm::cast<::mlir::TypeAttr>(tblgen_type_attr).getValue()))) && ((true))))
 
 // Test common attribute kind getters' return types
 // ---

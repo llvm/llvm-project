@@ -14,5 +14,6 @@ the following that is possible: a ``const_cast``, a ``static_cast``, a
 ``reinterpret_cast`` followed by a ``const_cast``. This rule bans
 ``(T)expression`` only when used to perform an unsafe cast.
 
-This rule is part of the "Type safety" profile of the C++ Core Guidelines, see
-https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Pro-type-cstylecast.
+This rule is part of the `Type safety (Type.4)
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Pro-type-cstylecast>`_
+profile from the C++ Core Guidelines.

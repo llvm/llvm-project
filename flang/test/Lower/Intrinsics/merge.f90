@@ -8,11 +8,13 @@ character :: o1, o2, merge_test
 logical :: mask
 merge_test = merge(o1, o2, mask)
 ! CHECK:  %[[a0:.*]]:2 = fir.unboxchar %[[arg2]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK-DAG:  %[[a1:.*]]:2 = fir.unboxchar %[[arg3]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index) 
+! CHECK: %[[a0_cast:.*]] = fir.convert %[[a0]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1>>
+! CHECK:  %[[a1:.*]]:2 = fir.unboxchar %[[arg3]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index) 
+! CHECK: %[[a1_cast:.*]] = fir.convert %[[a1]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1>>
 ! CHECK: %[[a2:.*]] = fir.load %[[arg4]] : !fir.ref<!fir.logical<4>>
 ! CHECK: %[[a3:.*]] = fir.convert %[[a2]] : (!fir.logical<4>) -> i1
-! CHECK: %[[a4:.*]] = arith.select %[[a3]], %[[a0]]#0, %[[a1]]#0 : !fir.ref<!fir.char<1,?>>
-! CHECK-DAG:  %{{.*}} = fir.convert %[[a4]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
+! CHECK: %[[a4:.*]] = arith.select %[[a3]], %[[a0_cast]], %[[a1_cast]] : !fir.ref<!fir.char<1>>
+! CHECK:  %{{.*}} = fir.load %[[a4]] : !fir.ref<!fir.char<1>>
 end
 
 ! CHECK-LABEL: func @_QPmerge_test2(

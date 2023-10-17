@@ -51,7 +51,7 @@ protected:
     }
 
     Status error;
-    addr_t start_addr = OptionArgParser::ToAddress(
+    addr_t start_addr = OptionArgParser::ToRawAddress(
         &m_exe_ctx, command[0].ref(), LLDB_INVALID_ADDRESS, &error);
     if (start_addr == LLDB_INVALID_ADDRESS) {
       result.AppendErrorWithFormatv("Invalid address expression, {0}",
@@ -63,8 +63,8 @@ protected:
     addr_t end_addr = start_addr + 1;
 
     if (command.GetArgumentCount() > 1) {
-      end_addr = OptionArgParser::ToAddress(&m_exe_ctx, command[1].ref(),
-                                            LLDB_INVALID_ADDRESS, &error);
+      end_addr = OptionArgParser::ToRawAddress(&m_exe_ctx, command[1].ref(),
+                                               LLDB_INVALID_ADDRESS, &error);
       if (end_addr == LLDB_INVALID_ADDRESS) {
         result.AppendErrorWithFormatv("Invalid end address expression, {0}",
                                       error.AsCString());
@@ -155,8 +155,8 @@ public:
 
       switch (short_option) {
       case 'e':
-        m_end_addr = OptionArgParser::ToAddress(execution_context, option_value,
-                                                LLDB_INVALID_ADDRESS, &status);
+        m_end_addr = OptionArgParser::ToRawAddress(
+            execution_context, option_value, LLDB_INVALID_ADDRESS, &status);
         break;
       default:
         llvm_unreachable("Unimplemented option");
@@ -203,7 +203,7 @@ protected:
     }
 
     Status error;
-    addr_t start_addr = OptionArgParser::ToAddress(
+    addr_t start_addr = OptionArgParser::ToRawAddress(
         &m_exe_ctx, command[0].ref(), LLDB_INVALID_ADDRESS, &error);
     if (start_addr == LLDB_INVALID_ADDRESS) {
       result.AppendErrorWithFormatv("Invalid address expression, {0}",

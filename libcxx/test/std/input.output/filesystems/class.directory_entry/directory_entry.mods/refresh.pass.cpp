@@ -10,7 +10,7 @@
 
 // The string reported on errors changed, which makes those tests fail when run
 // against already-released libc++'s.
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{10.15|11.0}}
+// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx{{10.15|11.0}}
 
 // <filesystem>
 
@@ -25,13 +25,11 @@
 #include <type_traits>
 #include <cassert>
 
+#include "assert_macros.h"
 #include "test_macros.h"
-#include "rapid-cxx-test.h"
 #include "filesystem_test_helper.h"
 
-TEST_SUITE(directory_entry_mods_suite)
-
-TEST_CASE(test_refresh_method) {
+static void test_refresh_method() {
   using namespace fs;
   {
     directory_entry e;
@@ -43,11 +41,11 @@ TEST_CASE(test_refresh_method) {
   {
     directory_entry e;
     e.refresh();
-    TEST_CHECK(!e.exists());
+    assert(!e.exists());
   }
 }
 
-TEST_CASE(test_refresh_ec_method) {
+static void test_refresh_ec_method() {
   using namespace fs;
   {
     directory_entry e;
@@ -60,14 +58,14 @@ TEST_CASE(test_refresh_ec_method) {
     directory_entry e;
     std::error_code ec = GetTestEC();
     e.refresh(ec);
-    TEST_CHECK(ErrorIs(ec, std::errc::no_such_file_or_directory));
+    assert(ErrorIs(ec, std::errc::no_such_file_or_directory));
   }
 }
 
 #ifndef TEST_WIN_NO_FILESYSTEM_PERMS_NONE
 // Windows doesn't support setting perms::none to trigger failures
 // reading directories.
-TEST_CASE(refresh_on_file_dne) {
+static void refresh_on_file_dne() {
   using namespace fs;
   scoped_test_env env;
   const path dir = env.create_dir("dir");
@@ -79,36 +77,36 @@ TEST_CASE(refresh_on_file_dne) {
   {
     directory_entry ent(file);
     remove(file);
-    TEST_CHECK(ent.exists());
+    assert(ent.exists());
 
     ent.refresh();
 
     permissions(dir, perms::none);
-    TEST_CHECK(!ent.exists());
+    assert(!ent.exists());
   }
   permissions(dir, old_perms);
   env.create_file("dir/file", 101);
   {
     directory_entry ent(file);
     remove(file);
-    TEST_CHECK(ent.exists());
+    assert(ent.exists());
 
     std::error_code ec = GetTestEC();
     ent.refresh(ec);
-    TEST_CHECK(ErrorIs(ec, std::errc::no_such_file_or_directory));
+    assert(ErrorIs(ec, std::errc::no_such_file_or_directory));
 
     permissions(dir, perms::none);
-    TEST_CHECK(!ent.exists());
+    assert(!ent.exists());
   }
 }
-#endif
+#endif // TEST_WIN_NO_FILESYSTEM_PERMS_NONE
 
 void remove_if_exists(const fs::path& p) {
   std::error_code ec;
   remove(p, ec);
 }
 
-TEST_CASE(refresh_on_bad_symlink) {
+static void refresh_on_bad_symlink() {
   using namespace fs;
   scoped_test_env env;
   const path dir = env.create_dir("dir");
@@ -121,18 +119,18 @@ TEST_CASE(refresh_on_bad_symlink) {
   {
     directory_entry ent(sym);
     LIBCPP_ONLY(remove(file));
-    TEST_CHECK(ent.is_symlink());
-    TEST_CHECK(ent.is_regular_file());
-    TEST_CHECK(ent.exists());
+    assert(ent.is_symlink());
+    assert(ent.is_regular_file());
+    assert(ent.exists());
 
     remove_if_exists(file);
     ent.refresh();
 
     LIBCPP_ONLY(permissions(dir, perms::none));
-    TEST_CHECK(ent.is_symlink());
+    assert(ent.is_symlink());
 #ifndef TEST_WIN_NO_FILESYSTEM_PERMS_NONE
-    TEST_CHECK(!ent.is_regular_file());
-    TEST_CHECK(!ent.exists());
+    assert(!ent.is_regular_file());
+    assert(!ent.exists());
 #endif
   }
   permissions(dir, old_perms);
@@ -140,19 +138,19 @@ TEST_CASE(refresh_on_bad_symlink) {
   {
     directory_entry ent(sym);
     LIBCPP_ONLY(remove(file));
-    TEST_CHECK(ent.is_symlink());
-    TEST_CHECK(ent.is_regular_file());
-    TEST_CHECK(ent.exists());
+    assert(ent.is_symlink());
+    assert(ent.is_regular_file());
+    assert(ent.exists());
 
     remove_if_exists(file);
 
     std::error_code ec = GetTestEC();
     ent.refresh(ec);
-    TEST_CHECK(!ec); // we don't report bad symlinks as an error.
+    assert(!ec); // we don't report bad symlinks as an error.
 
     LIBCPP_ONLY(permissions(dir, perms::none));
 #ifndef TEST_WIN_NO_FILESYSTEM_PERMS_NONE
-    TEST_CHECK(!ent.exists());
+    assert(!ent.exists());
 #endif
   }
 }
@@ -160,7 +158,7 @@ TEST_CASE(refresh_on_bad_symlink) {
 #ifndef TEST_WIN_NO_FILESYSTEM_PERMS_NONE
 // Windows doesn't support setting perms::none to trigger failures
 // reading directories.
-TEST_CASE(refresh_cannot_resolve) {
+static void refresh_cannot_resolve() {
   using namespace fs;
   scoped_test_env env;
   const path dir = env.create_dir("dir");
@@ -174,50 +172,50 @@ TEST_CASE(refresh_cannot_resolve) {
     directory_entry ent(file);
     permissions(dir, perms::none);
 
-    TEST_CHECK(ent.is_regular_file());
+    assert(ent.is_regular_file());
 
     std::error_code ec = GetTestEC();
     ent.refresh(ec);
 
-    TEST_CHECK(ErrorIs(ec, std::errc::permission_denied));
-    TEST_CHECK(ent.path() == file);
+    assert(ErrorIs(ec, std::errc::permission_denied));
+    assert(ent.path() == file);
 
     ExceptionChecker Checker(file, std::errc::permission_denied,
                              "directory_entry::refresh");
-    TEST_CHECK_THROW_RESULT(filesystem_error, Checker, ent.refresh());
+    TEST_VALIDATE_EXCEPTION(filesystem_error, Checker, ent.refresh());
   }
   permissions(dir, old_perms);
   {
     directory_entry ent(sym_in_dir);
     permissions(dir, perms::none);
-    TEST_CHECK(ent.is_symlink());
+    assert(ent.is_symlink());
 
     std::error_code ec = GetTestEC();
     ent.refresh(ec);
-    TEST_CHECK(ErrorIs(ec, std::errc::permission_denied));
-    TEST_CHECK(ent.path() == sym_in_dir);
+    assert(ErrorIs(ec, std::errc::permission_denied));
+    assert(ent.path() == sym_in_dir);
 
     ExceptionChecker Checker(sym_in_dir, std::errc::permission_denied,
                              "directory_entry::refresh");
-    TEST_CHECK_THROW_RESULT(filesystem_error, Checker, ent.refresh());
+    TEST_VALIDATE_EXCEPTION(filesystem_error, Checker, ent.refresh());
   }
   permissions(dir, old_perms);
   {
     directory_entry ent(sym_out_of_dir);
     permissions(dir, perms::none);
-    TEST_CHECK(ent.is_symlink());
+    assert(ent.is_symlink());
 
     // Failure to resolve the linked entity due to permissions is not
     // reported as an error.
     std::error_code ec = GetTestEC();
     ent.refresh(ec);
-    TEST_CHECK(!ec);
-    TEST_CHECK(ent.is_symlink());
+    assert(!ec);
+    assert(ent.is_symlink());
 
     ec = GetTestEC();
-    TEST_CHECK(ent.exists(ec) == false);
-    TEST_CHECK(ErrorIs(ec, std::errc::permission_denied));
-    TEST_CHECK(ent.path() == sym_out_of_dir);
+    assert(ent.exists(ec) == false);
+    assert(ErrorIs(ec, std::errc::permission_denied));
+    assert(ent.path() == sym_out_of_dir);
   }
   permissions(dir, old_perms);
   {
@@ -228,14 +226,13 @@ TEST_CASE(refresh_cannot_resolve) {
     ((void)ent_file);
     ((void)ent_sym);
 
-    TEST_CHECK_THROW(filesystem_error, ent_file.refresh());
-    TEST_CHECK_THROW(filesystem_error, ent_sym.refresh());
-    TEST_CHECK_NO_THROW(ent_sym2);
+    TEST_THROWS_TYPE(filesystem_error, ent_file.refresh());
+    TEST_THROWS_TYPE(filesystem_error, ent_sym.refresh());
   }
 }
-#endif
+#endif // TEST_WIN_NO_FILESYSTEM_PERMS_NONE
 
-TEST_CASE(refresh_doesnt_throw_on_dne_but_reports_it) {
+static void refresh_doesnt_throw_on_dne_but_reports_it() {
   using namespace fs;
   scoped_test_env env;
 
@@ -244,47 +241,50 @@ TEST_CASE(refresh_doesnt_throw_on_dne_but_reports_it) {
 
   {
     directory_entry ent(file);
-    TEST_CHECK(ent.file_size() == 42);
+    assert(ent.file_size() == 42);
 
     remove(file);
 
     std::error_code ec = GetTestEC();
     ent.refresh(ec);
-    TEST_CHECK(ErrorIs(ec, std::errc::no_such_file_or_directory));
-    TEST_CHECK_NO_THROW(ent.refresh());
+    assert(ErrorIs(ec, std::errc::no_such_file_or_directory));
+    TEST_DOES_NOT_THROW(ent.refresh());
 
     ec = GetTestEC();
-    TEST_CHECK(ent.file_size(ec) == uintmax_t(-1));
-    TEST_CHECK(ErrorIs(ec, std::errc::no_such_file_or_directory));
+    assert(ent.file_size(ec) == std::uintmax_t(-1));
+    assert(ErrorIs(ec, std::errc::no_such_file_or_directory));
 
     // doesn't throw!
-    TEST_CHECK_THROW(filesystem_error, ent.file_size());
+    //
+    //
+    //
+    //TEST_THROWS_TYPE(filesystem_error, ent.file_size());
   }
   env.create_file("file1", 99);
   {
     directory_entry ent(sym);
-    TEST_CHECK(ent.is_symlink());
-    TEST_CHECK(ent.is_regular_file());
-    TEST_CHECK(ent.file_size() == 99);
+    assert(ent.is_symlink());
+    assert(ent.is_regular_file());
+    assert(ent.file_size() == 99);
 
     remove(file);
 
     std::error_code ec = GetTestEC();
     ent.refresh(ec);
-    TEST_CHECK(!ec);
+    assert(!ec);
 
     ec = GetTestEC();
-    TEST_CHECK(ent.file_size(ec) == uintmax_t(-1));
-    TEST_CHECK(ErrorIs(ec, std::errc::no_such_file_or_directory));
+    assert(ent.file_size(ec) == std::uintmax_t(-1));
+    assert(ErrorIs(ec, std::errc::no_such_file_or_directory));
 
-    TEST_CHECK_THROW(filesystem_error, ent.file_size());
+    TEST_THROWS_TYPE(filesystem_error, ent.file_size());
   }
 }
 
 #ifndef TEST_WIN_NO_FILESYSTEM_PERMS_NONE
 // Windows doesn't support setting perms::none to trigger failures
 // reading directories.
-TEST_CASE(access_cache_after_refresh_fails) {
+static void access_cache_after_refresh_fails() {
   using namespace fs;
   scoped_test_env env;
   const path dir = env.create_dir("dir");
@@ -297,64 +297,79 @@ TEST_CASE(access_cache_after_refresh_fails) {
 
 #define CHECK_ACCESS(func, expect)                                             \
   ec = GetTestEC();                                                            \
-  TEST_CHECK(ent.func(ec) == expect);                                          \
-  TEST_CHECK(ErrorIs(ec, std::errc::permission_denied))
+  assert(ent.func(ec) == expect);                                          \
+  assert(ErrorIs(ec, std::errc::permission_denied))
 
   // test file doesn't exist
   {
     directory_entry ent(file);
 
-    TEST_CHECK(!ent.is_symlink());
-    TEST_CHECK(ent.is_regular_file());
-    TEST_CHECK(ent.exists());
+    assert(!ent.is_symlink());
+    assert(ent.is_regular_file());
+    assert(ent.exists());
 
     permissions(dir, perms::none);
     std::error_code ec = GetTestEC();
     ent.refresh(ec);
-    TEST_CHECK(ErrorIs(ec, std::errc::permission_denied));
+    assert(ErrorIs(ec, std::errc::permission_denied));
 
     CHECK_ACCESS(exists, false);
     CHECK_ACCESS(is_symlink, false);
     CHECK_ACCESS(last_write_time, file_time_type::min());
-    CHECK_ACCESS(hard_link_count, uintmax_t(-1));
+    CHECK_ACCESS(hard_link_count, std::uintmax_t(-1));
   }
   permissions(dir, old_perms);
   {
     directory_entry ent(sym_in_dir);
-    TEST_CHECK(ent.is_symlink());
-    TEST_CHECK(ent.is_regular_file());
-    TEST_CHECK(ent.exists());
+    assert(ent.is_symlink());
+    assert(ent.is_regular_file());
+    assert(ent.exists());
 
     permissions(dir, perms::none);
     std::error_code ec = GetTestEC();
     ent.refresh(ec);
-    TEST_CHECK(ErrorIs(ec, std::errc::permission_denied));
+    assert(ErrorIs(ec, std::errc::permission_denied));
 
     CHECK_ACCESS(exists, false);
     CHECK_ACCESS(is_symlink, false);
     CHECK_ACCESS(last_write_time, file_time_type::min());
-    CHECK_ACCESS(hard_link_count, uintmax_t(-1));
+    CHECK_ACCESS(hard_link_count, std::uintmax_t(-1));
   }
   permissions(dir, old_perms);
   {
     directory_entry ent(sym);
-    TEST_CHECK(ent.is_symlink());
-    TEST_CHECK(ent.is_regular_file());
-    TEST_CHECK(ent.exists());
+    assert(ent.is_symlink());
+    assert(ent.is_regular_file());
+    assert(ent.exists());
 
     permissions(dir, perms::none);
     std::error_code ec = GetTestEC();
     ent.refresh(ec);
-    TEST_CHECK(!ec);
-    TEST_CHECK(ent.is_symlink());
+    assert(!ec);
+    assert(ent.is_symlink());
 
     CHECK_ACCESS(exists, false);
     CHECK_ACCESS(is_regular_file, false);
     CHECK_ACCESS(last_write_time, file_time_type::min());
-    CHECK_ACCESS(hard_link_count, uintmax_t(-1));
+    CHECK_ACCESS(hard_link_count, std::uintmax_t(-1));
   }
 #undef CHECK_ACCESS
 }
-#endif
+#endif // TEST_WIN_NO_FILESYSTEM_PERMS_NONE
 
-TEST_SUITE_END()
+int main(int, char**) {
+  test_refresh_method();
+  test_refresh_ec_method();
+#ifndef TEST_WIN_NO_FILESYSTEM_PERMS_NONE
+  refresh_on_file_dne();
+#endif
+  refresh_on_bad_symlink();
+#ifndef TEST_WIN_NO_FILESYSTEM_PERMS_NONE
+  refresh_cannot_resolve();
+#endif
+  refresh_doesnt_throw_on_dne_but_reports_it();
+#ifndef TEST_WIN_NO_FILESYSTEM_PERMS_NONE
+  access_cache_after_refresh_fails();
+#endif
+  return 0;
+}

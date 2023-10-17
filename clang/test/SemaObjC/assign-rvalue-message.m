@@ -1,7 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -Wno-objc-root-class %s
 // RUN: %clang_cc1 -std=c++98 -x objective-c++ -triple x86_64-apple-darwin10 -fsyntax-only -verify -Wno-objc-root-class %s
 // RUN: %clang_cc1 -std=c++11 -x objective-c++ -triple x86_64-apple-darwin10 -fsyntax-only -verify -Wno-objc-root-class %s
-// rdar://9005189
 
 @interface Foo 
 @end

@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -std=c++2b -fsyntax-only -verify=expected,cxx20_2b,cxx2b    %s
-// RUN: %clang_cc1 -std=c++2b -fsyntax-only -verify=expected,cxx20_2b,cxx2b    %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,cxx20_23,cxx23    %s
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,cxx20_23,cxx23    %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
 
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx14_20,cxx20_2b %s
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx14_20,cxx20_2b %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx14_20,cxx20_23 %s
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx14_20,cxx20_23 %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
 
 // RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,cxx14_20,cxx14    %s
 // RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,cxx14_20,cxx14    %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
@@ -129,14 +129,14 @@ namespace Templates {
     return T() + 1;
   }
   template<typename T> auto &f2(T &&v) { return v; }
-  // cxx2b-error@-1 {{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'int'}}
-  // cxx2b-error@-2 {{non-const lvalue reference to type 'double' cannot bind to a temporary of type 'double'}}
-  // cxx2b-note@-3  {{candidate template ignored: substitution failure [with T = double]}}
+  // cxx23-error@-1 {{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'int'}}
+  // cxx23-error@-2 {{non-const lvalue reference to type 'double' cannot bind to a temporary of type 'double'}}
+  // cxx23-note@-3  {{candidate template ignored: substitution failure [with T = double]}}
   int a = f1<int>();
-  const int &b = f2(0); // cxx2b-note {{in instantiation of function template specialization 'Templates::f2<int>' requested here}}
+  const int &b = f2(0); // cxx23-note {{in instantiation of function template specialization 'Templates::f2<int>' requested here}}
   double d;
   float &c = f2(0.0); // expected-error {{non-const lvalue reference to type 'float' cannot bind to a value of unrelated type 'double'}}
-  // cxx2b-note@-1 {{in instantiation of function template specialization 'Templates::f2<double>' requested here}}
+  // cxx23-note@-1 {{in instantiation of function template specialization 'Templates::f2<double>' requested here}}
 
   template<typename T> auto fwd_decl(); // expected-note {{declared here}}
   int e = fwd_decl<int>(); // expected-error {{cannot be used before it is defined}}
@@ -150,7 +150,7 @@ namespace Templates {
   auto (*q)() = f1<int>; // ok
 
   typedef decltype(f2(1.2)) dbl; // cxx14_20-note {{previous}}
-  // cxx2b-error@-1 {{no matching function for call to 'f2'}}
+  // cxx23-error@-1 {{no matching function for call to 'f2'}}
   typedef float dbl; // cxx14_20-error {{typedef redefinition with different types ('float' vs 'decltype(f2(1.2))' (aka 'double &'))}}
 
   extern template auto fwd_decl<double>();
@@ -296,10 +296,10 @@ namespace Constexpr {
   void f() {
     X<int>().f();
     Y<void>().f();
-    constexpr int q = Y<int>().f(); // expected-error {{must be initialized by a constant expression}} expected-note {{in call to '&Y<int>()->f()'}}
+    constexpr int q = Y<int>().f(); // expected-error {{must be initialized by a constant expression}} expected-note {{in call to 'Y<int>().f()'}}
   }
   struct NonLiteral { ~NonLiteral(); } nl; // cxx14-note {{user-provided destructor}}
-  // cxx20_2b-note@-1 {{'NonLiteral' is not literal because its destructor is not constexpr}}
+  // cxx20_23-note@-1 {{'NonLiteral' is not literal because its destructor is not constexpr}}
   constexpr auto f2(int n) { return nl; } // expected-error {{return type 'struct NonLiteral' is not a literal type}}
 }
 

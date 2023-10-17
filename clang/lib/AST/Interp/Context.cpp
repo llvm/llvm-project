@@ -9,6 +9,7 @@
 #include "Context.h"
 #include "ByteCodeEmitter.h"
 #include "ByteCodeExprGen.h"
+#include "ByteCodeGenError.h"
 #include "ByteCodeStmtGen.h"
 #include "EvalEmitter.h"
 #include "Interp.h"
@@ -42,6 +43,11 @@ bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
     }
   }
 
+  APValue DummyResult;
+  if (!Run(Parent, Func, DummyResult)) {
+    return false;
+  }
+
   return Func->isConstexpr();
 }
 
@@ -50,6 +56,11 @@ bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
   ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk, Result);
   if (Check(Parent, C.interpretExpr(E))) {
     assert(Stk.empty());
+#ifndef NDEBUG
+    // Make sure we don't rely on some value being still alive in
+    // InterpStack memory.
+    Stk.clear();
+#endif
     return true;
   }
 
@@ -63,6 +74,11 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
   ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk, Result);
   if (Check(Parent, C.interpretDecl(VD))) {
     assert(Stk.empty());
+#ifndef NDEBUG
+    // Make sure we don't rely on some value being still alive in
+    // InterpStack memory.
+    Stk.clear();
+#endif
     return true;
   }
 
@@ -73,10 +89,6 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
 const LangOptions &Context::getLangOpts() const { return Ctx.getLangOpts(); }
 
 std::optional<PrimType> Context::classify(QualType T) const {
-  if (T->isReferenceType() || T->isPointerType()) {
-    return PT_Ptr;
-  }
-
   if (T->isBooleanType())
     return PT_Bool;
 
@@ -91,7 +103,7 @@ std::optional<PrimType> Context::classify(QualType T) const {
     case 8:
       return PT_Sint8;
     default:
-      return {};
+      return PT_IntAPS;
     }
   }
 
@@ -106,24 +118,46 @@ std::optional<PrimType> Context::classify(QualType T) const {
     case 8:
       return PT_Uint8;
     default:
-      return {};
+      return PT_IntAP;
     }
   }
 
   if (T->isNullPtrType())
     return PT_Ptr;
 
-  if (auto *AT = dyn_cast<AtomicType>(T))
+  if (T->isFloatingType())
+    return PT_Float;
+
+  if (T->isFunctionPointerType() || T->isFunctionReferenceType() ||
+      T->isFunctionType() || T->isSpecificBuiltinType(BuiltinType::BoundMember))
+    return PT_FnPtr;
+
+  if (T->isReferenceType() || T->isPointerType())
+    return PT_Ptr;
+
+  if (const auto *AT = dyn_cast<AtomicType>(T))
     return classify(AT->getValueType());
 
-  return {};
+  if (const auto *DT = dyn_cast<DecltypeType>(T))
+    return classify(DT->getUnderlyingType());
+
+  if (const auto *DT = dyn_cast<MemberPointerType>(T))
+    return classify(DT->getPointeeType());
+
+  return std::nullopt;
 }
 
 unsigned Context::getCharBit() const {
   return Ctx.getTargetInfo().getCharWidth();
 }
 
-bool Context::Run(State &Parent, Function *Func, APValue &Result) {
+/// Simple wrapper around getFloatTypeSemantics() to make code a
+/// little shorter.
+const llvm::fltSemantics &Context::getFloatSemantics(QualType T) const {
+  return Ctx.getFloatTypeSemantics(T);
+}
+
+bool Context::Run(State &Parent, const Function *Func, APValue &Result) {
   InterpState State(Parent, *P, Stk, *this);
   State.Current = new InterpFrame(State, Func, /*Caller=*/nullptr, {});
   if (Interpret(State, Result))
@@ -141,4 +175,60 @@ bool Context::Check(State &Parent, llvm::Expected<bool> &&Flag) {
         << Err.getRange();
   });
   return false;
+}
+
+// TODO: Virtual bases?
+const CXXMethodDecl *
+Context::getOverridingFunction(const CXXRecordDecl *DynamicDecl,
+                               const CXXRecordDecl *StaticDecl,
+                               const CXXMethodDecl *InitialFunction) const {
+
+  const CXXRecordDecl *CurRecord = DynamicDecl;
+  const CXXMethodDecl *FoundFunction = InitialFunction;
+  for (;;) {
+    const CXXMethodDecl *Overrider =
+        FoundFunction->getCorrespondingMethodDeclaredInClass(CurRecord, false);
+    if (Overrider)
+      return Overrider;
+
+    // Common case of only one base class.
+    if (CurRecord->getNumBases() == 1) {
+      CurRecord = CurRecord->bases_begin()->getType()->getAsCXXRecordDecl();
+      continue;
+    }
+
+    // Otherwise, go to the base class that will lead to the StaticDecl.
+    for (const CXXBaseSpecifier &Spec : CurRecord->bases()) {
+      const CXXRecordDecl *Base = Spec.getType()->getAsCXXRecordDecl();
+      if (Base == StaticDecl || Base->isDerivedFrom(StaticDecl)) {
+        CurRecord = Base;
+        break;
+      }
+    }
+  }
+
+  llvm_unreachable(
+      "Couldn't find an overriding function in the class hierarchy?");
+  return nullptr;
+}
+
+const Function *Context::getOrCreateFunction(const FunctionDecl *FD) {
+  assert(FD);
+  const Function *Func = P->getFunction(FD);
+  bool IsBeingCompiled = Func && Func->isDefined() && !Func->isFullyCompiled();
+  bool WasNotDefined = Func && !Func->isConstexpr() && !Func->isDefined();
+
+  if (IsBeingCompiled)
+    return Func;
+
+  if (!Func || WasNotDefined) {
+    if (auto R = ByteCodeStmtGen<ByteCodeEmitter>(*this, *P).compileFunc(FD))
+      Func = *R;
+    else {
+      llvm::consumeError(R.takeError());
+      return nullptr;
+    }
+  }
+
+  return Func;
 }

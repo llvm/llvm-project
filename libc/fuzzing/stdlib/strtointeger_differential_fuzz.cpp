@@ -50,7 +50,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   size_t i;
 
   for (i = 0; i < size; ++i) {
-#ifdef LLVM_LIBC_FUZZ_ATOI_CLEANER_INPUT
+#ifdef LIBC_COPT_FUZZ_ATOI_CLEANER_INPUT
     container[i] = VALID_CHARS[data[i] % sizeof(VALID_CHARS)];
 #else
     container[i] = data[i];
@@ -61,19 +61,19 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   // random even when the input is cleaned.
   container[0] = data[0];
 
-  StringParserOutputDiff<int>(&__llvm_libc::atoi, &::atoi, container, size);
-  StringParserOutputDiff<long>(&__llvm_libc::atol, &::atol, container, size);
-  StringParserOutputDiff<long long>(&__llvm_libc::atoll, &::atoll, container,
+  StringParserOutputDiff<int>(&LIBC_NAMESPACE::atoi, &::atoi, container, size);
+  StringParserOutputDiff<long>(&LIBC_NAMESPACE::atol, &::atol, container, size);
+  StringParserOutputDiff<long long>(&LIBC_NAMESPACE::atoll, &::atoll, container,
                                     size);
 
-  StringToNumberOutputDiff<long>(&__llvm_libc::strtol, &::strtol, container,
+  StringToNumberOutputDiff<long>(&LIBC_NAMESPACE::strtol, &::strtol, container,
                                  size);
-  StringToNumberOutputDiff<long long>(&__llvm_libc::strtoll, &::strtoll,
+  StringToNumberOutputDiff<long long>(&LIBC_NAMESPACE::strtoll, &::strtoll,
                                       container, size);
 
-  StringToNumberOutputDiff<unsigned long>(&__llvm_libc::strtoul, &::strtoul,
+  StringToNumberOutputDiff<unsigned long>(&LIBC_NAMESPACE::strtoul, &::strtoul,
                                           container, size);
-  StringToNumberOutputDiff<unsigned long long>(&__llvm_libc::strtoull,
+  StringToNumberOutputDiff<unsigned long long>(&LIBC_NAMESPACE::strtoull,
                                                &::strtoull, container, size);
 
   delete[] container;

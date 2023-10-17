@@ -27,7 +27,7 @@ public:
   void notifyObjectCompiled(const Module *M, MemoryBufferRef Obj) override {
     // If we've seen this module before, note that.
     const std::string ModuleID = M->getModuleIdentifier();
-    if (ObjMap.find(ModuleID) != ObjMap.end())
+    if (ObjMap.contains(ModuleID))
       DuplicateInserted = true;
     // Store a copy of the buffer in our map.
     ObjMap[ModuleID] = copyBuffer(Obj);
@@ -47,8 +47,7 @@ public:
   bool wereDuplicatesInserted() { return DuplicateInserted; }
 
   bool wasModuleLookedUp(const Module *M) {
-    return ModulesLookedUp.find(M->getModuleIdentifier())
-                                      != ModulesLookedUp.end();
+    return ModulesLookedUp.contains(M->getModuleIdentifier());
   }
 
   const MemoryBuffer* getObjectInternal(const Module* M) {

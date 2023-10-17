@@ -28,7 +28,7 @@ define <4 x float> @twoInserts(<4 x float> %x) {
 
 define <4 x i32> @shuffleRetain(<4 x i32> %base) {
 ; CHECK-LABEL: @shuffleRetain(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[BASE:%.*]], <4 x i32> <i32 poison, i32 poison, i32 poison, i32 1>, <4 x i32> <i32 1, i32 2, i32 undef, i32 7>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[BASE:%.*]], <4 x i32> <i32 poison, i32 poison, i32 poison, i32 1>, <4 x i32> <i32 1, i32 2, i32 poison, i32 7>
 ; CHECK-NEXT:    ret <4 x i32> [[SHUF]]
 ;
   %shuf = shufflevector <4 x i32> %base, <4 x i32> <i32 4, i32 3, i32 2, i32 1>, <4 x i32> <i32 1, i32 2, i32 poison, i32 7>
@@ -39,7 +39,7 @@ define <4 x i32> @shuffleRetain(<4 x i32> %base) {
 
 define <4 x float> @disguisedSelect(<4 x float> %x) {
 ; CHECK-LABEL: @disguisedSelect(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> <float poison, float 1.000000e+00, float 2.000000e+00, float poison>, <4 x i32> <i32 undef, i32 6, i32 5, i32 3>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> <float poison, float 1.000000e+00, float 2.000000e+00, float poison>, <4 x i32> <i32 poison, i32 6, i32 5, i32 3>
 ; CHECK-NEXT:    [[INS:%.*]] = insertelement <4 x float> [[SHUF]], float 4.000000e+00, i64 0
 ; CHECK-NEXT:    ret <4 x float> [[INS]]
 ;
@@ -52,7 +52,7 @@ define <4 x float> @disguisedSelect(<4 x float> %x) {
 
 define <4 x float> @notSelectButNoMaskDifference(<4 x float> %x) {
 ; CHECK-LABEL: @notSelectButNoMaskDifference(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> <float poison, float 1.000000e+00, float 2.000000e+00, float poison>, <4 x i32> <i32 1, i32 5, i32 6, i32 undef>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> <float poison, float 1.000000e+00, float 2.000000e+00, float poison>, <4 x i32> <i32 1, i32 5, i32 6, i32 poison>
 ; CHECK-NEXT:    [[INS:%.*]] = insertelement <4 x float> [[SHUF]], float 4.000000e+00, i64 3
 ; CHECK-NEXT:    ret <4 x float> [[INS]]
 ;
@@ -65,7 +65,7 @@ define <4 x float> @notSelectButNoMaskDifference(<4 x float> %x) {
 
 define <4 x float> @tooRisky(<4 x float> %x) {
 ; CHECK-LABEL: @tooRisky(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> <float 1.000000e+00, float poison, float poison, float poison>, <4 x i32> <i32 1, i32 4, i32 4, i32 undef>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> <float 1.000000e+00, float poison, float poison, float poison>, <4 x i32> <i32 1, i32 4, i32 4, i32 poison>
 ; CHECK-NEXT:    [[INS:%.*]] = insertelement <4 x float> [[SHUF]], float 4.000000e+00, i64 3
 ; CHECK-NEXT:    ret <4 x float> [[INS]]
 ;
@@ -94,7 +94,7 @@ define <3 x float> @twoShufUses(<3 x float> %x) {
 
 define <5 x i8> @longerMask(<3 x i8> %x) {
 ; CHECK-LABEL: @longerMask(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <3 x i8> [[X:%.*]], <3 x i8> <i8 poison, i8 1, i8 poison>, <5 x i32> <i32 2, i32 1, i32 4, i32 undef, i32 undef>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <3 x i8> [[X:%.*]], <3 x i8> <i8 poison, i8 1, i8 poison>, <5 x i32> <i32 2, i32 1, i32 4, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[INS:%.*]] = insertelement <5 x i8> [[SHUF]], i8 42, i64 4
 ; CHECK-NEXT:    ret <5 x i8> [[INS]]
 ;
@@ -107,7 +107,7 @@ define <5 x i8> @longerMask(<3 x i8> %x) {
 
 define <3 x i8> @shorterMask(<5 x i8> %x) {
 ; CHECK-LABEL: @shorterMask(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <5 x i8> [[X:%.*]], <5 x i8> poison, <3 x i32> <i32 undef, i32 1, i32 4>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <5 x i8> [[X:%.*]], <5 x i8> poison, <3 x i32> <i32 poison, i32 1, i32 4>
 ; CHECK-NEXT:    [[INS:%.*]] = insertelement <3 x i8> [[SHUF]], i8 42, i64 0
 ; CHECK-NEXT:    ret <3 x i8> [[INS]]
 ;

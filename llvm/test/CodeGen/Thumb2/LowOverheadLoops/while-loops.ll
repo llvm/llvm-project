@@ -53,10 +53,12 @@ if.end:                                           ; preds = %do.body, %entry
 define void @nested(ptr nocapture readonly %x, ptr nocapture readnone %y, ptr nocapture %z, i32 %m, i32 %n) {
 ; CHECK-LABEL: nested:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    cmp r3, #0
+; CHECK-NEXT:    it eq
+; CHECK-NEXT:    bxeq lr
+; CHECK-NEXT:  .LBB1_1: @ %for.body.preheader
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, lr}
 ; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
-; CHECK-NEXT:    cbz r3, .LBB1_8
-; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
 ; CHECK-NEXT:    ldr.w r12, [sp, #24]
 ; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    b .LBB1_4
@@ -91,8 +93,9 @@ define void @nested(ptr nocapture readonly %x, ptr nocapture readnone %y, ptr no
 ; CHECK-NEXT:    sub.w r12, r12, r5
 ; CHECK-NEXT:    mov r0, r8
 ; CHECK-NEXT:    b .LBB1_3
-; CHECK-NEXT:  .LBB1_8: @ %for.cond.cleanup
-; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
+; CHECK-NEXT:  .LBB1_8:
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    bx lr
 entry:
   %cmp20.not = icmp eq i32 %m, 0
   br i1 %cmp20.not, label %for.cond.cleanup, label %for.body
@@ -162,74 +165,74 @@ define dso_local i32 @b(ptr %c, i32 %d, i32 %e, ptr %n) "frame-pointer"="all" {
 ; CHECK-NEXT:    sub sp, #16
 ; CHECK-NEXT:    wls lr, r1, .LBB2_3
 ; CHECK-NEXT:  @ %bb.1: @ %while.body.preheader
-; CHECK-NEXT:    mov r12, r0
-; CHECK-NEXT:    add.w r10, r3, #4
-; CHECK-NEXT:    adds r0, #4
-; CHECK-NEXT:    mvn r9, #1
-; CHECK-NEXT:    @ implicit-def: $r8
+; CHECK-NEXT:    adds r6, r3, #4
+; CHECK-NEXT:    adds r1, r0, #4
+; CHECK-NEXT:    mvn r8, #1
+; CHECK-NEXT:    @ implicit-def: $r9
 ; CHECK-NEXT:    @ implicit-def: $r4
 ; CHECK-NEXT:    str r2, [sp] @ 4-byte Spill
 ; CHECK-NEXT:  .LBB2_2: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr r2, [r0]
-; CHECK-NEXT:    asrs r5, r4, #31
-; CHECK-NEXT:    str r0, [sp, #12] @ 4-byte Spill
-; CHECK-NEXT:    muls r2, r3, r2
-; CHECK-NEXT:    adds r4, r4, r2
-; CHECK-NEXT:    adc.w r2, r5, r2, asr #31
-; CHECK-NEXT:    ldr.w r5, [r9, #4]
-; CHECK-NEXT:    adds.w r4, r4, #-2147483648
-; CHECK-NEXT:    adc r1, r2, #0
-; CHECK-NEXT:    str r1, [sp, #8] @ 4-byte Spill
-; CHECK-NEXT:    smull r5, r6, r5, r8
-; CHECK-NEXT:    ldr.w r2, [r9]
-; CHECK-NEXT:    asrs r4, r1, #31
+; CHECK-NEXT:    str r1, [sp, #12] @ 4-byte Spill
+; CHECK-NEXT:    asrs r2, r4, #31
+; CHECK-NEXT:    ldr r1, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    ldr r1, [r1]
+; CHECK-NEXT:    muls r1, r3, r1
+; CHECK-NEXT:    adds r4, r4, r1
+; CHECK-NEXT:    adc.w r1, r2, r1, asr #31
+; CHECK-NEXT:    adds.w r2, r4, #-2147483648
+; CHECK-NEXT:    ldrd r2, r4, [r8]
+; CHECK-NEXT:    adc r5, r1, #0
 ; CHECK-NEXT:    str r2, [sp, #4] @ 4-byte Spill
-; CHECK-NEXT:    subs r5, r1, r5
-; CHECK-NEXT:    sbcs r4, r6
-; CHECK-NEXT:    adds.w r6, r5, #-2147483648
-; CHECK-NEXT:    adc r5, r4, #0
-; CHECK-NEXT:    ldr r4, [r0, #-4]
+; CHECK-NEXT:    smull r4, r2, r4, r9
+; CHECK-NEXT:    asrs r1, r5, #31
+; CHECK-NEXT:    str r5, [sp, #8] @ 4-byte Spill
+; CHECK-NEXT:    subs r4, r5, r4
+; CHECK-NEXT:    sbcs r1, r2
+; CHECK-NEXT:    ldr r2, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    adds.w r10, r4, #-2147483648
+; CHECK-NEXT:    adc r1, r1, #0
+; CHECK-NEXT:    ldr r4, [r2, #-4]
 ; CHECK-NEXT:    muls r4, r3, r4
 ; CHECK-NEXT:    adds r3, #4
-; CHECK-NEXT:    adds.w r0, r4, #-2147483648
-; CHECK-NEXT:    asr.w r1, r4, #31
-; CHECK-NEXT:    ldr.w r4, [r10]
-; CHECK-NEXT:    adc r1, r1, #0
-; CHECK-NEXT:    mul r2, r4, r12
-; CHECK-NEXT:    add.w r12, r12, #4
+; CHECK-NEXT:    adds.w r12, r4, #-2147483648
+; CHECK-NEXT:    asr.w r5, r4, #31
+; CHECK-NEXT:    ldr r4, [r6]
+; CHECK-NEXT:    adc r5, r5, #0
+; CHECK-NEXT:    mul r2, r4, r0
+; CHECK-NEXT:    adds r0, #4
 ; CHECK-NEXT:    add.w r2, r2, #-2147483648
-; CHECK-NEXT:    asrl r0, r1, r2
+; CHECK-NEXT:    asrl r12, r5, r2
+; CHECK-NEXT:    smull r2, r5, r4, r12
+; CHECK-NEXT:    lsll r2, r5, #30
+; CHECK-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    asr.w r11, r5, #31
+; CHECK-NEXT:    mov r12, r5
+; CHECK-NEXT:    lsll r12, r11, r4
+; CHECK-NEXT:    mul r2, r2, r9
+; CHECK-NEXT:    lsrl r12, r11, #2
+; CHECK-NEXT:    adds r2, #2
+; CHECK-NEXT:    lsll r12, r11, r2
 ; CHECK-NEXT:    ldr r2, [sp] @ 4-byte Reload
-; CHECK-NEXT:    smull r0, r1, r4, r0
-; CHECK-NEXT:    lsll r0, r1, #30
-; CHECK-NEXT:    asr.w r11, r1, #31
-; CHECK-NEXT:    mov r0, r1
-; CHECK-NEXT:    ldr r1, [sp, #4] @ 4-byte Reload
-; CHECK-NEXT:    lsll r0, r11, r4
-; CHECK-NEXT:    lsrl r0, r11, #2
-; CHECK-NEXT:    mul r1, r1, r8
-; CHECK-NEXT:    adds r1, #2
-; CHECK-NEXT:    lsll r0, r11, r1
-; CHECK-NEXT:    ldr r1, [sp, #8] @ 4-byte Reload
-; CHECK-NEXT:    add.w r0, r0, #-2147483648
-; CHECK-NEXT:    asrl r6, r5, r0
-; CHECK-NEXT:    movs r0, #2
-; CHECK-NEXT:    lsrl r6, r5, #2
-; CHECK-NEXT:    str r6, [r0]
-; CHECK-NEXT:    mov r8, r6
-; CHECK-NEXT:    ldr r0, [r9], #-4
-; CHECK-NEXT:    mls r0, r0, r4, r1
-; CHECK-NEXT:    adds.w r4, r0, #-2147483648
-; CHECK-NEXT:    asr.w r1, r0, #31
+; CHECK-NEXT:    add.w r5, r12, #-2147483648
+; CHECK-NEXT:    asrl r10, r1, r5
+; CHECK-NEXT:    ldr r5, [sp, #8] @ 4-byte Reload
+; CHECK-NEXT:    lsrl r10, r1, #2
+; CHECK-NEXT:    movs r1, #2
+; CHECK-NEXT:    mov r9, r10
+; CHECK-NEXT:    str.w r10, [r1]
+; CHECK-NEXT:    ldr r1, [r8], #-4
+; CHECK-NEXT:    mls r5, r1, r4, r5
+; CHECK-NEXT:    adds.w r4, r5, #-2147483648
+; CHECK-NEXT:    asr.w r1, r5, #31
 ; CHECK-NEXT:    adc r1, r1, #0
 ; CHECK-NEXT:    lsrl r4, r1, #2
-; CHECK-NEXT:    rsbs r0, r4, #0
-; CHECK-NEXT:    str r0, [r2]
-; CHECK-NEXT:    str r0, [r10, #-4]
-; CHECK-NEXT:    add.w r10, r10, #4
-; CHECK-NEXT:    ldr r0, [sp, #12] @ 4-byte Reload
-; CHECK-NEXT:    adds r0, #4
+; CHECK-NEXT:    rsbs r1, r4, #0
+; CHECK-NEXT:    str r1, [r2]
+; CHECK-NEXT:    str r1, [r6, #-4]
+; CHECK-NEXT:    adds r6, #4
+; CHECK-NEXT:    ldr r1, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    adds r1, #4
 ; CHECK-NEXT:    le lr, .LBB2_2
 ; CHECK-NEXT:  .LBB2_3: @ %while.end
 ; CHECK-NEXT:    add sp, #16

@@ -173,6 +173,65 @@ define <vscale x 2 x i64> @umin_select_i64(<vscale x 2 x i1> %pg, <vscale x 2 x 
 }
 
 
+define <vscale x 2 x i64> @umin_select_i64_multiuse(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b, ptr %p) {
+; CHECK-LABEL: umin_select_i64_multiuse:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    umin z1.d, p1/m, z1.d, z0.d
+; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    st1d { z1.d }, p1, [x0]
+; CHECK-NEXT:    ret
+  %sel = call <vscale x 2 x i64> @llvm.umin.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
+  store <vscale x 2 x i64> %sel, ptr %p
+  %out = select <vscale x 2 x i1> %pg, <vscale x 2 x i64> %sel, <vscale x 2 x i64> %a
+  ret <vscale x 2 x i64> %out
+}
+
+define <vscale x 2 x i64> @smin_select_i64_c(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: smin_select_i64_c:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    smin z1.d, p0/m, z1.d, z0.d
+; CHECK-NEXT:    mov z0.d, z1.d
+; CHECK-NEXT:    ret
+  %sel = call <vscale x 2 x i64> @llvm.smin.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
+  %out = select <vscale x 2 x i1> %pg, <vscale x 2 x i64> %sel, <vscale x 2 x i64> %b
+  ret <vscale x 2 x i64> %out
+}
+
+define <vscale x 2 x i64> @smax_select_i64_c(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: smax_select_i64_c:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    smax z1.d, p0/m, z1.d, z0.d
+; CHECK-NEXT:    mov z0.d, z1.d
+; CHECK-NEXT:    ret
+  %sel = call <vscale x 2 x i64> @llvm.smax.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
+  %out = select <vscale x 2 x i1> %pg, <vscale x 2 x i64> %sel, <vscale x 2 x i64> %b
+  ret <vscale x 2 x i64> %out
+}
+
+define <vscale x 2 x i64> @umin_select_i64_c(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: umin_select_i64_c:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umin z1.d, p0/m, z1.d, z0.d
+; CHECK-NEXT:    mov z0.d, z1.d
+; CHECK-NEXT:    ret
+  %sel = call <vscale x 2 x i64> @llvm.umin.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
+  %out = select <vscale x 2 x i1> %pg, <vscale x 2 x i64> %sel, <vscale x 2 x i64> %b
+  ret <vscale x 2 x i64> %out
+}
+
+define <vscale x 2 x i64> @umax_select_i64_c(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: umax_select_i64_c:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umax z1.d, p0/m, z1.d, z0.d
+; CHECK-NEXT:    mov z0.d, z1.d
+; CHECK-NEXT:    ret
+  %sel = call <vscale x 2 x i64> @llvm.umax.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
+  %out = select <vscale x 2 x i1> %pg, <vscale x 2 x i64> %sel, <vscale x 2 x i64> %b
+  ret <vscale x 2 x i64> %out
+}
+
+
 declare <vscale x  16 x i8> @llvm.smax.nxv16i8(<vscale x  16 x i8>, <vscale x  16 x i8>)
 declare <vscale x  8 x i16> @llvm.smax.nxv8i16(<vscale x  8 x i16>, <vscale x  8 x i16>)
 declare <vscale x  4 x i32> @llvm.smax.nxv4i32(<vscale x  4 x i32>, <vscale x  4 x i32>)

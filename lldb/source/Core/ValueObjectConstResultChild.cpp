@@ -69,6 +69,6 @@ size_t ValueObjectConstResultChild::GetPointeeData(DataExtractor &data,
 }
 
 lldb::ValueObjectSP
-ValueObjectConstResultChild::Cast(const CompilerType &compiler_type) {
+ValueObjectConstResultChild::DoCast(const CompilerType &compiler_type) {
   return m_impl.Cast(compiler_type);
 }

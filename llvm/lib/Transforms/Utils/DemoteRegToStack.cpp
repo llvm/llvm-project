@@ -74,6 +74,7 @@ AllocaInst *llvm::DemoteRegToStack(Instruction &I, bool VolatileLoads,
             V = new LoadInst(I.getType(), Slot, I.getName() + ".reload",
                              VolatileLoads,
                              PN->getIncomingBlock(i)->getTerminator());
+            Loads[PN->getIncomingBlock(i)] = V;
           }
           PN->setIncomingValue(i, V);
         }

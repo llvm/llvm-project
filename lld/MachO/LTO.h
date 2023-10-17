@@ -39,6 +39,7 @@ private:
   std::vector<std::unique_ptr<llvm::MemoryBuffer>> files;
   std::unique_ptr<llvm::raw_fd_ostream> indexFile;
   llvm::DenseSet<StringRef> thinIndices;
+  bool hasFiles = false;
 };
 
 } // namespace lld::macho

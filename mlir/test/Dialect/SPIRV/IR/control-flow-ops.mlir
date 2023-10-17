@@ -117,7 +117,7 @@ func.func @wrong_condition_type() -> () {
 func.func @wrong_accessor_count() -> () {
   %true = spirv.Constant true
   // expected-error @+1 {{requires 2 successors but found 1}}
-  "spirv.BranchConditional"(%true)[^one] {operand_segment_sizes = array<i32: 1, 0, 0>} : (i1) -> ()
+  "spirv.BranchConditional"(%true)[^one] {operandSegmentSizes = array<i32: 1, 0, 0>} : (i1) -> ()
 ^one:
   spirv.Return
 ^two:
@@ -130,7 +130,7 @@ func.func @wrong_number_of_weights() -> () {
   %true = spirv.Constant true
   // expected-error @+1 {{must have exactly two branch weights}}
   "spirv.BranchConditional"(%true)[^one, ^two] {branch_weights = [1 : i32, 2 : i32, 3 : i32],
-                                              operand_segment_sizes = array<i32: 1, 0, 0>} : (i1) -> ()
+                                              operandSegmentSizes = array<i32: 1, 0, 0>} : (i1) -> ()
 ^one:
   spirv.Return
 ^two:

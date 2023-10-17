@@ -14,9 +14,9 @@
 #ifndef MLIR_DIALECT_LLVMIR_LLVMTYPES_H_
 #define MLIR_DIALECT_LLVMIR_LLVMTYPES_H_
 
-#include "mlir/IR/SubElementInterfaces.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include <optional>
 
 namespace llvm {
@@ -104,7 +104,7 @@ DEFINE_TRIVIAL_LLVM_TYPE(LLVMMetadataType);
 class LLVMStructType
     : public Type::TypeBase<LLVMStructType, Type, detail::LLVMStructTypeStorage,
                             DataLayoutTypeInterface::Trait,
-                            SubElementTypeInterface::Trait,
+                            DestructurableTypeInterface::Trait,
                             TypeTrait::IsMutable> {
 public:
   /// Inherit base constructors.
@@ -182,6 +182,7 @@ public:
                               StringRef, bool);
   static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
                               ArrayRef<Type> types, bool);
+  using Base::verify;
 
   /// Hooks for DataLayoutTypeInterface. Should not be called directly. Obtain a
   /// DataLayout instance and query it instead.
@@ -200,10 +201,11 @@ public:
   LogicalResult verifyEntries(DataLayoutEntryListRef entries,
                               Location loc) const;
 
-  void walkImmediateSubElements(function_ref<void(Attribute)> walkAttrsFn,
-                                function_ref<void(Type)> walkTypesFn) const;
-  Type replaceImmediateSubElements(ArrayRef<Attribute> replAttrs,
-                                   ArrayRef<Type> replTypes) const;
+  /// Destructs the struct into its indexed field types.
+  std::optional<DenseMap<Attribute, Type>> getSubelementIndexMap();
+
+  /// Returns which type is stored at a given integer index within the struct.
+  Type getTypeAtIndex(Attribute index);
 };
 
 //===----------------------------------------------------------------------===//

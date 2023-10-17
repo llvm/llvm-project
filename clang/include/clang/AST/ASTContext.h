@@ -21,18 +21,12 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/ExternalASTSource.h"
-#include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RawCommentList.h"
 #include "clang/AST/TemplateName.h"
-#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/LangOptions.h"
-#include "clang/Basic/NoSanitizeList.h"
 #include "clang/Basic/PartialDiagnostic.h"
-#include "clang/Basic/ProfileList.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/XRayLists.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
@@ -63,6 +57,7 @@ class ASTMutationListener;
 class ASTRecordLayout;
 class AtomicExpr;
 class BlockExpr;
+struct BlockVarCopyInit;
 class BuiltinTemplateDecl;
 class CharUnits;
 class ConceptDecl;
@@ -71,16 +66,19 @@ class CXXConstructorDecl;
 class CXXMethodDecl;
 class CXXRecordDecl;
 class DiagnosticsEngine;
-class ParentMapContext;
 class DynTypedNodeList;
 class Expr;
 enum class FloatModeKind;
 class GlobalDecl;
+class IdentifierTable;
+class LangOptions;
 class MangleContext;
 class MangleNumberingContext;
 class MemberSpecializationInfo;
 class Module;
 struct MSGuidDeclParts;
+class NestedNameSpecifier;
+class NoSanitizeList;
 class ObjCCategoryDecl;
 class ObjCCategoryImplDecl;
 class ObjCContainerDecl;
@@ -94,8 +92,10 @@ class ObjCPropertyImplDecl;
 class ObjCProtocolDecl;
 class ObjCTypeParamDecl;
 class OMPTraitInfo;
+class ParentMapContext;
 struct ParsedTargetAttr;
 class Preprocessor;
+class ProfileList;
 class StoredDeclsMap;
 class TargetAttr;
 class TargetInfo;
@@ -108,7 +108,7 @@ class UnresolvedSetIterator;
 class UsingShadowDecl;
 class VarTemplateDecl;
 class VTableContextBase;
-struct BlockVarCopyInit;
+class XRayFunctionFilter;
 
 namespace Builtin {
 
@@ -195,20 +195,25 @@ class ASTContext : public RefCountedBase<ASTContext> {
       ConstantArrayTypes;
   mutable llvm::FoldingSet<IncompleteArrayType> IncompleteArrayTypes;
   mutable std::vector<VariableArrayType*> VariableArrayTypes;
-  mutable llvm::FoldingSet<DependentSizedArrayType> DependentSizedArrayTypes;
-  mutable llvm::FoldingSet<DependentSizedExtVectorType>
-    DependentSizedExtVectorTypes;
-  mutable llvm::FoldingSet<DependentAddressSpaceType>
+  mutable llvm::ContextualFoldingSet<DependentSizedArrayType, ASTContext &>
+      DependentSizedArrayTypes;
+  mutable llvm::ContextualFoldingSet<DependentSizedExtVectorType, ASTContext &>
+      DependentSizedExtVectorTypes;
+  mutable llvm::ContextualFoldingSet<DependentAddressSpaceType, ASTContext &>
       DependentAddressSpaceTypes;
   mutable llvm::FoldingSet<VectorType> VectorTypes;
-  mutable llvm::FoldingSet<DependentVectorType> DependentVectorTypes;
+  mutable llvm::ContextualFoldingSet<DependentVectorType, ASTContext &>
+      DependentVectorTypes;
   mutable llvm::FoldingSet<ConstantMatrixType> MatrixTypes;
-  mutable llvm::FoldingSet<DependentSizedMatrixType> DependentSizedMatrixTypes;
+  mutable llvm::ContextualFoldingSet<DependentSizedMatrixType, ASTContext &>
+      DependentSizedMatrixTypes;
   mutable llvm::FoldingSet<FunctionNoProtoType> FunctionNoProtoTypes;
   mutable llvm::ContextualFoldingSet<FunctionProtoType, ASTContext&>
     FunctionProtoTypes;
-  mutable llvm::FoldingSet<DependentTypeOfExprType> DependentTypeOfExprTypes;
-  mutable llvm::FoldingSet<DependentDecltypeType> DependentDecltypeTypes;
+  mutable llvm::ContextualFoldingSet<DependentTypeOfExprType, ASTContext &>
+      DependentTypeOfExprTypes;
+  mutable llvm::ContextualFoldingSet<DependentDecltypeType, ASTContext &>
+      DependentDecltypeTypes;
   mutable llvm::FoldingSet<TemplateTypeParmType> TemplateTypeParmTypes;
   mutable llvm::FoldingSet<ObjCTypeParamType> ObjCTypeParamTypes;
   mutable llvm::FoldingSet<SubstTemplateTypeParmType>
@@ -238,7 +243,8 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::FoldingSet<AttributedType> AttributedTypes;
   mutable llvm::FoldingSet<PipeType> PipeTypes;
   mutable llvm::FoldingSet<BitIntType> BitIntTypes;
-  mutable llvm::FoldingSet<DependentBitIntType> DependentBitIntTypes;
+  mutable llvm::ContextualFoldingSet<DependentBitIntType, ASTContext &>
+      DependentBitIntTypes;
   llvm::FoldingSet<BTFTagAttributedType> BTFTagAttributedTypes;
 
   mutable llvm::FoldingSet<QualifiedTemplateName> QualifiedTemplateNames;
@@ -447,8 +453,8 @@ class ASTContext : public RefCountedBase<ASTContext> {
   };
   llvm::DenseMap<Module*, PerModuleInitializers*> ModuleInitializers;
 
-  /// For module code-gen cases, this is the top-level module we are building.
-  Module *TopLevelModule = nullptr;
+  /// This is the top-level (C++20) Named module we are building.
+  Module *CurrentCXXNamedModule = nullptr;
 
   static constexpr unsigned ConstantArrayTypesLog2InitSize = 8;
   static constexpr unsigned GeneralTypesLog2InitSize = 9;
@@ -1051,10 +1057,10 @@ public:
   ArrayRef<Decl*> getModuleInitializers(Module *M);
 
   /// Set the (C++20) module we are building.
-  void setModuleForCodeGen(Module *M) { TopLevelModule = M; }
+  void setCurrentNamedModule(Module *M);
 
   /// Get module under construction, nullptr if this is not a C++20 module.
-  Module *getModuleForCodeGen() const { return TopLevelModule; }
+  Module *getCurrentNamedModule() const { return CurrentCXXNamedModule; }
 
   TranslationUnitDecl *getTranslationUnitDecl() const {
     return TUDecl->getMostRecentDecl();
@@ -1126,6 +1132,8 @@ public:
 #define RVV_TYPE(Name, Id, SingletonId) \
   CanQualType SingletonId;
 #include "clang/Basic/RISCVVTypes.def"
+#define WASM_TYPE(Name, Id, SingletonId) CanQualType SingletonId;
+#include "clang/Basic/WebAssemblyReferenceTypes.def"
 
   // Types for deductions in C++0x [stmt.ranged]'s desugaring. Built on demand.
   mutable QualType AutoDeductTy;     // Deduction against 'auto'.
@@ -1139,6 +1147,9 @@ public:
   mutable TagDecl *MSGuidTagDecl = nullptr;
 
   /// Keep track of CUDA/HIP device-side variables ODR-used by host code.
+  /// This does not include extern shared variables used by device host
+  /// functions as addresses of shared variables are per warp, therefore
+  /// cannot be accessed by host code.
   llvm::DenseSet<const VarDecl *> CUDADeviceVarODRUsedByHost;
 
   /// Keep track of CUDA/HIP external kernels or device variables ODR-used by
@@ -1470,9 +1481,15 @@ public:
 
   /// Return the unique reference to a scalable vector type of the specified
   /// element type and scalable number of elements.
+  /// For RISC-V, number of fields is also provided when it fetching for
+  /// tuple type.
   ///
   /// \pre \p EltTy must be a built-in type.
-  QualType getScalableVectorType(QualType EltTy, unsigned NumElts) const;
+  QualType getScalableVectorType(QualType EltTy, unsigned NumElts,
+                                 unsigned NumFields = 1) const;
+
+  /// Return a WebAssembly externref type.
+  QualType getWebAssemblyExternrefType() const;
 
   /// Return the unique reference to a vector type of the specified
   /// element type and size.
@@ -1685,7 +1702,7 @@ public:
   /// Return a ObjCObjectPointerType type for the given ObjCObjectType.
   QualType getObjCObjectPointerType(QualType OIT) const;
 
-  /// C2x feature and GCC extension.
+  /// C23 feature and GCC extension.
   QualType getTypeOfExprType(Expr *E, TypeOfKind Kind) const;
   QualType getTypeOfType(QualType QT, TypeOfKind Kind) const;
 
@@ -1709,6 +1726,10 @@ public:
 
   /// C++11 deduction pattern for 'auto &&' type.
   QualType getAutoRRefDeductType() const;
+
+  /// Remove any type constraints from a template parameter type, for
+  /// equivalence comparison of template parameters.
+  QualType getUnconstrainedType(QualType T) const;
 
   /// C++17 deduced class template specialization type.
   QualType getDeducedTemplateSpecializationType(TemplateName Template,
@@ -2243,6 +2264,17 @@ public:
   /// false otherwise.
   bool areLaxCompatibleSveTypes(QualType FirstType, QualType SecondType);
 
+  /// Return true if the given types are an RISC-V vector builtin type and a
+  /// VectorType that is a fixed-length representation of the RISC-V vector
+  /// builtin type for a specific vector-length.
+  bool areCompatibleRVVTypes(QualType FirstType, QualType SecondType);
+
+  /// Return true if the given vector types are lax-compatible RISC-V vector
+  /// types as defined by -flax-vector-conversions=, which permits implicit
+  /// conversions between vectors with different number of elements and/or
+  /// incompatible element types, false otherwise.
+  bool areLaxCompatibleRVVTypes(QualType FirstType, QualType SecondType);
+
   /// Return true if the type has been explicitly qualified with ObjC ownership.
   /// A type may be implicitly qualified with ownership under ObjC ARC, and in
   /// some cases the compiler treats these differently.
@@ -2482,7 +2514,9 @@ public:
 
   /// Return true if the specified type has unique object representations
   /// according to (C++17 [meta.unary.prop]p9)
-  bool hasUniqueObjectRepresentations(QualType Ty) const;
+  bool
+  hasUniqueObjectRepresentations(QualType Ty,
+                                 bool CheckIfTriviallyCopyable = true) const;
 
   //===--------------------------------------------------------------------===//
   //                            Type Operators
@@ -2646,11 +2680,6 @@ public:
   /// Determine whether the given template names refer to the same
   /// template.
   bool hasSameTemplateName(const TemplateName &X, const TemplateName &Y) const;
-
-  /// Determine whether two Friend functions are different because constraints
-  /// that refer to an enclosing template, according to [temp.friend] p9.
-  bool FriendsDifferByConstraints(const FunctionDecl *X,
-                                  const FunctionDecl *Y) const;
 
   /// Determine whether the two declarations refer to the same entity.
   bool isSameEntity(const NamedDecl *X, const NamedDecl *Y) const;
@@ -3042,7 +3071,7 @@ public:
   }
 
   GVALinkage GetGVALinkageForFunction(const FunctionDecl *FD) const;
-  GVALinkage GetGVALinkageForVariable(const VarDecl *VD);
+  GVALinkage GetGVALinkageForVariable(const VarDecl *VD) const;
 
   /// Determines if the decl can be CodeGen'ed or deserialized from PCH
   /// lazily, only when used; this is only relevant for function or file scoped
@@ -3193,7 +3222,6 @@ private:
 
   public:
     ObjCEncOptions() : Bits(0) {}
-    ObjCEncOptions(const ObjCEncOptions &RHS) : Bits(RHS.Bits) {}
 
 #define OPT_LIST(V)                                                            \
   V(ExpandPointedToStructures, 0)                                              \

@@ -1,11 +1,11 @@
-# RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 -amdgpu-disable-unclustred-high-rp-reschedule -verify-machineinstrs -start-before=machine-scheduler -stop-after=virtregrewriter,1 -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 -amdgpu-disable-unclustered-high-rp-reschedule -verify-machineinstrs -start-before=machine-scheduler -stop-after=virtregrewriter,1 -o - %s | FileCheck -check-prefix=GCN %s
 
 # Check that %3 was not rematerialized before the last store since its operand %1
 # is killed by that store.
 
 # GCN-LABEL: name: global_sextload_v32i32_to_v32i64
-# GCN: renamable $vgpr0 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
-# GCN: GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr20, killed renamable $vgpr24_vgpr25_vgpr26_vgpr27, killed renamable $sgpr0_sgpr1, 16, 0, implicit $exec, implicit killed renamable $vgpr0
+# GCN: renamable $vgpr33_vgpr34_vgpr35_vgpr36 = SI_SPILL_V128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
+# GCN: GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr47, killed renamable $vgpr29_vgpr30_vgpr31_vgpr32, killed renamable $sgpr0_sgpr1, 16, 0, implicit $exec, implicit killed renamable $vgpr46
 
 ---
 name:            global_sextload_v32i32_to_v32i64

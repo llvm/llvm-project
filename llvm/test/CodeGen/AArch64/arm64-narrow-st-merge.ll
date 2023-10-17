@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple aarch64--none-eabi -verify-machineinstrs | FileCheck %s
-; RUN: llc < %s -mtriple aarch64--none-eabi -mattr=+strict-align -verify-machineinstrs | FileCheck %s -check-prefix=CHECK-STRICT
+; RUN: llc < %s -mtriple aarch64 -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple aarch64 -mattr=+strict-align -verify-machineinstrs | FileCheck %s -check-prefix=CHECK-STRICT
 
 ; CHECK-LABEL: Strh_zero
 ; CHECK: str wzr

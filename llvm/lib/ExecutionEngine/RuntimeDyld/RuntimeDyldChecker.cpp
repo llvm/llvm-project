@@ -10,9 +10,16 @@
 #include "RuntimeDyldCheckerImpl.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCTargetOptions.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -24,6 +31,19 @@
 #define DEBUG_TYPE "rtdyld"
 
 using namespace llvm;
+
+namespace {
+struct TargetInfo {
+  const Target *TheTarget;
+  std::unique_ptr<MCSubtargetInfo> STI;
+  std::unique_ptr<MCRegisterInfo> MRI;
+  std::unique_ptr<MCAsmInfo> MAI;
+  std::unique_ptr<MCContext> Ctx;
+  std::unique_ptr<MCDisassembler> Disassembler;
+  std::unique_ptr<MCInstrInfo> MII;
+  std::unique_ptr<MCInstPrinter> InstPrinter;
+};
+} // anonymous namespace
 
 namespace llvm {
 
@@ -276,6 +296,20 @@ private:
           "");
 
     unsigned OpIdx = OpIdxExpr.getValue();
+
+    auto printInst = [this](StringRef Symbol, MCInst Inst,
+                            raw_string_ostream &ErrMsgStream) {
+      auto TT = Checker.getTripleForSymbol(Checker.getTargetFlag(Symbol));
+      auto TI = getTargetInfo(TT, Checker.getCPU(), Checker.getFeatures());
+      if (auto E = TI.takeError()) {
+        errs() << "Error obtaining instruction printer: "
+               << toString(std::move(E)) << "\n";
+        return std::make_pair(EvalResult(ErrMsgStream.str()), "");
+      }
+      Inst.dump_pretty(ErrMsgStream, TI->InstPrinter.get());
+      return std::make_pair(EvalResult(ErrMsgStream.str()), "");
+    };
+
     if (OpIdx >= Inst.getNumOperands()) {
       std::string ErrMsg;
       raw_string_ostream ErrMsgStream(ErrMsg);
@@ -284,8 +318,8 @@ private:
                    << "'. Instruction has only "
                    << format("%i", Inst.getNumOperands())
                    << " operands.\nInstruction is:\n  ";
-      Inst.dump_pretty(ErrMsgStream, Checker.InstPrinter);
-      return std::make_pair(EvalResult(ErrMsgStream.str()), "");
+
+      return printInst(Symbol, Inst, ErrMsgStream);
     }
 
     const MCOperand &Op = Inst.getOperand(OpIdx);
@@ -294,9 +328,8 @@ private:
       raw_string_ostream ErrMsgStream(ErrMsg);
       ErrMsgStream << "Operand '" << format("%i", OpIdx) << "' of instruction '"
                    << Symbol << "' is not an immediate.\nInstruction is:\n  ";
-      Inst.dump_pretty(ErrMsgStream, Checker.InstPrinter);
 
-      return std::make_pair(EvalResult(ErrMsgStream.str()), "");
+      return printInst(Symbol, Inst, ErrMsgStream);
     }
 
     return std::make_pair(EvalResult(Op.getImm()), RemainingExpr);
@@ -422,7 +455,7 @@ private:
     return std::make_pair(EvalResult(StubAddr), RemainingExpr);
   }
 
-  // Evaluate an identiefer expr, which may be a symbol, or a call to
+  // Evaluate an identifier expr, which may be a symbol, or a call to
   // one of the builtin functions: get_insn_opcode or get_insn_length.
   // Return the result, plus the expression remaining to be parsed.
   std::pair<EvalResult, StringRef> evalIdentifierExpr(StringRef Expr,
@@ -662,7 +695,7 @@ private:
     if (LHSResult.hasError() || RemainingExpr == "")
       return std::make_pair(LHSResult, RemainingExpr);
 
-    // Otherwise check if this is a binary expressioan.
+    // Otherwise check if this is a binary expression.
     BinOpToken BinOp;
     std::tie(BinOp, RemainingExpr) = parseBinOpToken(RemainingExpr);
 
@@ -687,15 +720,85 @@ private:
 
   bool decodeInst(StringRef Symbol, MCInst &Inst, uint64_t &Size,
                   int64_t Offset) const {
-    MCDisassembler *Dis = Checker.Disassembler;
+    auto TT = Checker.getTripleForSymbol(Checker.getTargetFlag(Symbol));
+    auto TI = getTargetInfo(TT, Checker.getCPU(), Checker.getFeatures());
+
+    if (auto E = TI.takeError()) {
+      errs() << "Error obtaining disassembler: " << toString(std::move(E))
+             << "\n";
+      return false;
+    }
+
     StringRef SymbolMem = Checker.getSymbolContent(Symbol);
     ArrayRef<uint8_t> SymbolBytes(SymbolMem.bytes_begin() + Offset,
                                   SymbolMem.size() - Offset);
 
     MCDisassembler::DecodeStatus S =
-        Dis->getInstruction(Inst, Size, SymbolBytes, 0, nulls());
+        TI->Disassembler->getInstruction(Inst, Size, SymbolBytes, 0, nulls());
 
     return (S == MCDisassembler::Success);
+  }
+
+  Expected<TargetInfo> getTargetInfo(const Triple &TT, const StringRef &CPU,
+                                     const SubtargetFeatures &TF) const {
+
+    auto TripleName = TT.str();
+    std::string ErrorStr;
+    const Target *TheTarget =
+        TargetRegistry::lookupTarget(TripleName, ErrorStr);
+    if (!TheTarget)
+      return make_error<StringError>("Error accessing target '" + TripleName +
+                                         "': " + ErrorStr,
+                                     inconvertibleErrorCode());
+
+    std::unique_ptr<MCSubtargetInfo> STI(
+        TheTarget->createMCSubtargetInfo(TripleName, CPU, TF.getString()));
+    if (!STI)
+      return make_error<StringError>("Unable to create subtarget for " +
+                                         TripleName,
+                                     inconvertibleErrorCode());
+
+    std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TripleName));
+    if (!MRI)
+      return make_error<StringError>("Unable to create target register info "
+                                     "for " +
+                                         TripleName,
+                                     inconvertibleErrorCode());
+
+    MCTargetOptions MCOptions;
+    std::unique_ptr<MCAsmInfo> MAI(
+        TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
+    if (!MAI)
+      return make_error<StringError>("Unable to create target asm info " +
+                                         TripleName,
+                                     inconvertibleErrorCode());
+
+    auto Ctx = std::make_unique<MCContext>(Triple(TripleName), MAI.get(),
+                                           MRI.get(), STI.get());
+
+    std::unique_ptr<MCDisassembler> Disassembler(
+        TheTarget->createMCDisassembler(*STI, *Ctx));
+    if (!Disassembler)
+      return make_error<StringError>("Unable to create disassembler for " +
+                                         TripleName,
+                                     inconvertibleErrorCode());
+
+    std::unique_ptr<MCInstrInfo> MII(TheTarget->createMCInstrInfo());
+    if (!MII)
+      return make_error<StringError>("Unable to create instruction info for" +
+                                         TripleName,
+                                     inconvertibleErrorCode());
+
+    std::unique_ptr<MCInstPrinter> InstPrinter(TheTarget->createMCInstPrinter(
+        Triple(TripleName), 0, *MAI, *MII, *MRI));
+    if (!InstPrinter)
+      return make_error<StringError>(
+          "Unable to create instruction printer for" + TripleName,
+          inconvertibleErrorCode());
+
+    return TargetInfo({TheTarget, std::move(STI), std::move(MRI),
+                       std::move(MAI), std::move(Ctx), std::move(Disassembler),
+                       std::move(MII), std::move(InstPrinter)});
   }
 };
 } // namespace llvm
@@ -703,15 +806,14 @@ private:
 RuntimeDyldCheckerImpl::RuntimeDyldCheckerImpl(
     IsSymbolValidFunction IsSymbolValid, GetSymbolInfoFunction GetSymbolInfo,
     GetSectionInfoFunction GetSectionInfo, GetStubInfoFunction GetStubInfo,
-    GetGOTInfoFunction GetGOTInfo, support::endianness Endianness,
-    MCDisassembler *Disassembler, MCInstPrinter *InstPrinter,
-    raw_ostream &ErrStream)
+    GetGOTInfoFunction GetGOTInfo, llvm::endianness Endianness, Triple TT,
+    StringRef CPU, SubtargetFeatures TF, raw_ostream &ErrStream)
     : IsSymbolValid(std::move(IsSymbolValid)),
       GetSymbolInfo(std::move(GetSymbolInfo)),
       GetSectionInfo(std::move(GetSectionInfo)),
       GetStubInfo(std::move(GetStubInfo)), GetGOTInfo(std::move(GetGOTInfo)),
-      Endianness(Endianness), Disassembler(Disassembler),
-      InstPrinter(InstPrinter), ErrStream(ErrStream) {}
+      Endianness(Endianness), TT(std::move(TT)), CPU(std::move(CPU)),
+      TF(std::move(TF)), ErrStream(ErrStream) {}
 
 bool RuntimeDyldCheckerImpl::check(StringRef CheckExpr) const {
   CheckExpr = CheckExpr.trim();
@@ -822,6 +924,36 @@ StringRef RuntimeDyldCheckerImpl::getSymbolContent(StringRef Symbol) const {
   return {SymInfo->getContent().data(), SymInfo->getContent().size()};
 }
 
+TargetFlagsType RuntimeDyldCheckerImpl::getTargetFlag(StringRef Symbol) const {
+  auto SymInfo = GetSymbolInfo(Symbol);
+  if (!SymInfo) {
+    logAllUnhandledErrors(SymInfo.takeError(), errs(), "RTDyldChecker: ");
+    return TargetFlagsType{};
+  }
+  return SymInfo->getTargetFlags();
+}
+
+Triple
+RuntimeDyldCheckerImpl::getTripleForSymbol(TargetFlagsType Flag) const {
+  Triple TheTriple = TT;
+
+  switch (TT.getArch()) {
+  case Triple::ArchType::arm:
+    if (~Flag & 0x1)
+      return TT;
+    TheTriple.setArchName((Twine("thumb") + TT.getArchName().substr(3)).str());
+    return TheTriple;
+  case Triple::ArchType::thumb:
+    if (Flag & 0x1)
+      return TT;
+    TheTriple.setArchName((Twine("arm") + TT.getArchName().substr(5)).str());
+    return TheTriple;
+
+  default:
+    return TT;
+  }
+}
+
 std::pair<uint64_t, std::string> RuntimeDyldCheckerImpl::getSectionAddr(
     StringRef FileName, StringRef SectionName, bool IsInsideLoad) const {
 
@@ -884,14 +1016,13 @@ std::pair<uint64_t, std::string> RuntimeDyldCheckerImpl::getStubOrGOTAddrFor(
 RuntimeDyldChecker::RuntimeDyldChecker(
     IsSymbolValidFunction IsSymbolValid, GetSymbolInfoFunction GetSymbolInfo,
     GetSectionInfoFunction GetSectionInfo, GetStubInfoFunction GetStubInfo,
-    GetGOTInfoFunction GetGOTInfo, support::endianness Endianness,
-    MCDisassembler *Disassembler, MCInstPrinter *InstPrinter,
-    raw_ostream &ErrStream)
+    GetGOTInfoFunction GetGOTInfo, llvm::endianness Endianness, Triple TT,
+    StringRef CPU, SubtargetFeatures TF, raw_ostream &ErrStream)
     : Impl(::std::make_unique<RuntimeDyldCheckerImpl>(
           std::move(IsSymbolValid), std::move(GetSymbolInfo),
           std::move(GetSectionInfo), std::move(GetStubInfo),
-          std::move(GetGOTInfo), Endianness, Disassembler, InstPrinter,
-          ErrStream)) {}
+          std::move(GetGOTInfo), Endianness, std::move(TT), std::move(CPU),
+          std::move(TF), ErrStream)) {}
 
 RuntimeDyldChecker::~RuntimeDyldChecker() = default;
 

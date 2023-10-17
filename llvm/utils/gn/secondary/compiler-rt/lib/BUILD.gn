@@ -1,6 +1,7 @@
 group("lib") {
   deps = [
     "//compiler-rt/lib/asan:ignorelist($host_toolchain)",
+    "//compiler-rt/lib/builtins",
     "//compiler-rt/lib/cfi:ignorelist($host_toolchain)",
   ]
   if (current_os == "linux") {
@@ -17,9 +18,6 @@ group("lib") {
     if (current_cpu == "x64" || current_cpu == "arm64") {
       deps += [ "//compiler-rt/lib/tsan/rtl" ]
     }
-  }
-  if (current_os != "win") {
-    deps += [ "//compiler-rt/lib/builtins" ]
   }
   if (current_os != "baremetal") {
     deps += [ "//compiler-rt/lib/profile" ]

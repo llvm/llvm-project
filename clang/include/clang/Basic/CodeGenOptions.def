@@ -36,7 +36,9 @@ CODEGENOPT(Dwarf64           , 1, 0) ///< -gdwarf64.
 CODEGENOPT(Dwarf32           , 1, 1) ///< -gdwarf32.
 CODEGENOPT(PreserveAsmComments, 1, 1) ///< -dA, -fno-preserve-as-comments.
 CODEGENOPT(AssumeSaneOperatorNew , 1, 1) ///< implicit __attribute__((malloc)) operator new
+CODEGENOPT(AssumeUniqueVTables , 1, 1) ///< Assume a class has only one vtable.
 CODEGENOPT(Autolink          , 1, 1) ///< -fno-autolink
+CODEGENOPT(AutoImport        , 1, 1) ///< -fno-auto-import
 CODEGENOPT(ObjCAutoRefCountExceptions , 1, 0) ///< Whether ARC should be EH-safe.
 CODEGENOPT(Backchain         , 1, 0) ///< -mbackchain
 CODEGENOPT(ControlFlowGuardNoChecks  , 1, 0) ///< -cfguard-no-checks
@@ -52,6 +54,7 @@ CODEGENOPT(UniqueBasicBlockSectionNames, 1, 1) ///< Set for -funique-basic-block
                                                ///< Produce unique section names with
                                                ///< basic block sections.
 CODEGENOPT(EnableAIXExtendedAltivecABI, 1, 0) ///< Set for -mabi=vec-extabi. Enables the extended Altivec ABI on AIX.
+CODEGENOPT(XCOFFReadOnlyPointers, 1, 0) ///< Set for -mxcoff-roptr.
 ENUM_CODEGENOPT(FramePointer, FramePointerKind, 2, FramePointerKind::None) /// frame-pointer: all,non-leaf,none
 
 CODEGENOPT(ClearASTBeforeBackend , 1, 0) ///< Free the AST before running backend code generation. Only works with -disable-free.
@@ -84,8 +87,6 @@ CODEGENOPT(EmitDeclMetadata  , 1, 0) ///< Emit special metadata indicating what
                                      ///< Only useful when running CodeGen as a
                                      ///< subroutine.
 CODEGENOPT(EmitVersionIdentMetadata , 1, 1) ///< Emit compiler version metadata.
-CODEGENOPT(EmitGcovArcs      , 1, 0) ///< Emit coverage data files, aka. GCDA.
-CODEGENOPT(EmitGcovNotes     , 1, 0) ///< Emit coverage "notes" files, aka GCNO.
 CODEGENOPT(EmitOpenCLArgMetadata , 1, 0) ///< Emit OpenCL kernel arg metadata.
 CODEGENOPT(EmulatedTLS       , 1, 0) ///< Set by default or -f[no-]emulated-tls.
 /// Embed Bitcode mode (off/all/bitcode/marker).
@@ -115,6 +116,9 @@ CODEGENOPT(StackSizeSection  , 1, 0) ///< Set when -fstack-size-section is enabl
 CODEGENOPT(ForceDwarfFrameSection , 1, 0) ///< Set when -fforce-dwarf-frame is
                                           ///< enabled.
 
+///< Set when -femit-compact-unwind-non-canonical is enabled.
+CODEGENOPT(EmitCompactUnwindNonCanonical, 1, 0)
+
 ///< Set when -femit-dwarf-unwind is passed.
 ENUM_CODEGENOPT(EmitDwarfUnwind, llvm::EmitDwarfUnwindType, 2,
                 llvm::EmitDwarfUnwindType::Default)
@@ -128,8 +132,8 @@ CODEGENOPT(XRayAlwaysEmitTypedEvents , 1, 0)
 ///< Set when -fxray-ignore-loops is enabled.
 CODEGENOPT(XRayIgnoreLoops , 1, 0)
 
-///< Set with -fno-xray-function-index to omit the index section.
-CODEGENOPT(XRayOmitFunctionIndex , 1, 0)
+///< Emit the XRay function index section.
+CODEGENOPT(XRayFunctionIndex , 1, 1)
 
 
 ///< Set the minimum number of instructions in a function to determine selective
@@ -162,10 +166,12 @@ CODEGENOPT(PrepareForThinLTO , 1, 0) ///< Set when -flto=thin is enabled on the
                                      ///< compile step.
 CODEGENOPT(LTOUnit, 1, 0) ///< Emit IR to support LTO unit features (CFI, whole
                           ///< program vtable opt).
+CODEGENOPT(FatLTO, 1, 0) ///< Set when -ffat-lto-objects is enabled.
 CODEGENOPT(EnableSplitLTOUnit, 1, 0) ///< Enable LTO unit splitting to support
 				     /// CFI and traditional whole program
 				     /// devirtualization that require whole
 				     /// program IR support.
+CODEGENOPT(UnifiedLTO, 1, 0) ///< Use the unified LTO pipeline.
 CODEGENOPT(IncrementalLinkerCompatible, 1, 0) ///< Emit an object file which can
                                               ///< be used with an incremental
                                               ///< linker.
@@ -197,7 +203,6 @@ CODEGENOPT(SplitMachineFunctions, 1, 0) ///< Split machine functions using profi
 /// float-to-int conversion instructions.
 CODEGENOPT(StrictFloatCastOverflow, 1, 1)
 
-CODEGENOPT(UniformWGSize     , 1, 0) ///< -cl-uniform-work-group-size
 CODEGENOPT(NoZeroInitializedInBSS , 1, 0) ///< -fno-zero-initialized-in-bss.
 /// Method of Objective-C dispatch to use.
 ENUM_CODEGENOPT(ObjCDispatchMethod, ObjCDispatchMethodKind, 2, Legacy)
@@ -257,6 +262,8 @@ CODEGENOPT(SanitizeMinimalRuntime, 1, 0) ///< Use "_minimal" sanitizer runtime f
                                          ///< diagnostics.
 CODEGENOPT(SanitizeCfiICallGeneralizePointers, 1, 0) ///< Generalize pointer types in
                                                      ///< CFI icall function signatures
+CODEGENOPT(SanitizeCfiICallNormalizeIntegers, 1, 0) ///< Normalize integer types in
+                                                    ///< CFI icall function signatures
 CODEGENOPT(SanitizeCfiCanonicalJumpTables, 1, 0) ///< Make jump table symbols canonical
                                                  ///< instead of creating a local jump table.
 CODEGENOPT(SanitizeCoverageType, 2, 0) ///< Type of sanitizer coverage
@@ -318,6 +325,8 @@ CODEGENOPT(UseRegisterSizedBitfieldAccess , 1, 0)
 
 CODEGENOPT(VerifyModule      , 1, 1) ///< Control whether the module should be run
                                      ///< through the LLVM Verifier.
+CODEGENOPT(VerifyEach        , 1, 1) ///< Control whether the LLVM verifier
+                                     ///< should run after every pass.
 
 CODEGENOPT(StackRealignment  , 1, 0) ///< Control whether to force stack
                                      ///< realignment.
@@ -333,8 +342,8 @@ VALUE_CODEGENOPT(WarnStackSize     , 32, UINT_MAX) ///< Set via -fwarn-stack-siz
 CODEGENOPT(NoStackArgProbe, 1, 0) ///< Set when -mno-stack-arg-probe is used
 CODEGENOPT(DebugStrictDwarf, 1, 1) ///< Whether or not to use strict DWARF info.
 
-CODEGENOPT(EnableAssignmentTracking, 1,0) ///< Enable the Assignment Tracking
-                                          ///< debug info feature.
+/// Control the Assignment Tracking debug info feature.
+ENUM_CODEGENOPT(AssignmentTrackingMode, AssignmentTrackingOpts, 2, AssignmentTrackingOpts::Disabled)
 
 CODEGENOPT(DebugColumnInfo, 1, 0) ///< Whether or not to use column information
                                   ///< in debug info.
@@ -358,7 +367,7 @@ CODEGENOPT(DebugFwdTemplateParams, 1, 0) ///< Whether to emit complete
                                          ///< template parameter descriptions in
                                          ///< forward declarations (versus just
                                          ///< including them in the name).
-ENUM_CODEGENOPT(DebugSimpleTemplateNames, codegenoptions::DebugTemplateNamesKind, 2, codegenoptions::DebugTemplateNamesKind::Full) ///< Whether to emit template parameters
+ENUM_CODEGENOPT(DebugSimpleTemplateNames, llvm::codegenoptions::DebugTemplateNamesKind, 2, llvm::codegenoptions::DebugTemplateNamesKind::Full) ///< Whether to emit template parameters
                                            ///< in the textual names of template
 					   ///< specializations.
 					   ///< Implies DebugFwdTemplateNames to
@@ -388,7 +397,7 @@ VALUE_CODEGENOPT(SmallDataLimit, 32, 0)
 VALUE_CODEGENOPT(SSPBufferSize, 32, 0)
 
 /// The kind of generated debug info.
-ENUM_CODEGENOPT(DebugInfo, codegenoptions::DebugInfoKind, 4, codegenoptions::NoDebugInfo)
+ENUM_CODEGENOPT(DebugInfo, llvm::codegenoptions::DebugInfoKind, 4, llvm::codegenoptions::NoDebugInfo)
 
 /// Whether to generate macro debug info.
 CODEGENOPT(MacroDebugInfo, 1, 0)
@@ -472,6 +481,10 @@ CODEGENOPT(Addrsig, 1, 0)
 /// Whether to emit unused static constants.
 CODEGENOPT(KeepStaticConsts, 1, 0)
 
+/// Whether to emit all variables that have a persistent storage duration,
+/// including global, static and thread local variables.
+CODEGENOPT(KeepPersistentStorageVariables, 1, 0)
+
 /// Whether to follow the AAPCS enforcing at least one read before storing to a volatile bitfield
 CODEGENOPT(ForceAAPCSBitfieldLoad, 1, 0)
 
@@ -498,9 +511,6 @@ CODEGENOPT(SkipRaxSetup, 1, 0)
 /// Whether to zero out caller-used registers before returning.
 ENUM_CODEGENOPT(ZeroCallUsedRegs, llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind,
                 5, llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::Skip)
-
-/// Whether to use opaque pointers.
-CODEGENOPT(OpaquePointers, 1, 0)
 
 /// Modify C++ ABI to returning `this` pointer from constructors and
 /// non-deleting destructors. (No effect on Microsoft ABI.)

@@ -10,6 +10,7 @@
 #include "llvm/MC/MCDXContainerWriter.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixupKindInfo.h"
+#include "llvm/MC/MCGOFFObjectWriter.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSPIRVObjectWriter.h"
@@ -22,7 +23,8 @@
 
 using namespace llvm;
 
-MCAsmBackend::MCAsmBackend(support::endianness Endian) : Endian(Endian) {}
+MCAsmBackend::MCAsmBackend(llvm::endianness Endian, unsigned RelaxFixupKind)
+    : Endian(Endian), RelaxFixupKind(RelaxFixupKind) {}
 
 MCAsmBackend::~MCAsmBackend() = default;
 
@@ -31,11 +33,11 @@ MCAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
   auto TW = createObjectTargetWriter();
   switch (TW->getFormat()) {
   case Triple::ELF:
-    return createELFObjectWriter(cast<MCELFObjectTargetWriter>(std::move(TW)), OS,
-                                 Endian == support::little);
+    return createELFObjectWriter(cast<MCELFObjectTargetWriter>(std::move(TW)),
+                                 OS, Endian == llvm::endianness::little);
   case Triple::MachO:
     return createMachObjectWriter(cast<MCMachObjectTargetWriter>(std::move(TW)),
-                                  OS, Endian == support::little);
+                                  OS, Endian == llvm::endianness::little);
   case Triple::COFF:
     return createWinCOFFObjectWriter(
         cast<MCWinCOFFObjectTargetWriter>(std::move(TW)), OS);
@@ -44,6 +46,9 @@ MCAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
         cast<MCSPIRVObjectTargetWriter>(std::move(TW)), OS);
   case Triple::Wasm:
     return createWasmObjectWriter(cast<MCWasmObjectTargetWriter>(std::move(TW)),
+                                  OS);
+  case Triple::GOFF:
+    return createGOFFObjectWriter(cast<MCGOFFObjectTargetWriter>(std::move(TW)),
                                   OS);
   case Triple::XCOFF:
     return createXCOFFObjectWriter(
@@ -61,15 +66,18 @@ MCAsmBackend::createDwoObjectWriter(raw_pwrite_stream &OS,
                                     raw_pwrite_stream &DwoOS) const {
   auto TW = createObjectTargetWriter();
   switch (TW->getFormat()) {
+  case Triple::COFF:
+    return createWinCOFFDwoObjectWriter(
+        cast<MCWinCOFFObjectTargetWriter>(std::move(TW)), OS, DwoOS);
   case Triple::ELF:
     return createELFDwoObjectWriter(
         cast<MCELFObjectTargetWriter>(std::move(TW)), OS, DwoOS,
-        Endian == support::little);
+        Endian == llvm::endianness::little);
   case Triple::Wasm:
     return createWasmDwoObjectWriter(
         cast<MCWasmObjectTargetWriter>(std::move(TW)), OS, DwoOS);
   default:
-    report_fatal_error("dwo only supported with ELF and Wasm");
+    report_fatal_error("dwo only supported with COFF, ELF, and Wasm");
   }
 }
 
@@ -84,7 +92,6 @@ const MCFixupKindInfo &MCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"FK_Data_2", 0, 16, 0},
       {"FK_Data_4", 0, 32, 0},
       {"FK_Data_8", 0, 64, 0},
-      {"FK_Data_6b", 0, 6, 0},
       {"FK_PCRel_1", 0, 8, MCFixupKindInfo::FKF_IsPCRel},
       {"FK_PCRel_2", 0, 16, MCFixupKindInfo::FKF_IsPCRel},
       {"FK_PCRel_4", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
@@ -114,4 +121,20 @@ bool MCAsmBackend::fixupNeedsRelaxationAdvanced(
   if (!Resolved)
     return true;
   return fixupNeedsRelaxation(Fixup, Value, DF, Layout);
+}
+
+bool MCAsmBackend::isDarwinCanonicalPersonality(const MCSymbol *Sym) const {
+  // Consider a NULL personality (ie., no personality encoding) to be canonical
+  // because it's always at 0.
+  if (!Sym)
+    return true;
+
+  if (!Sym->isMachO())
+    llvm_unreachable("Expected MachO symbols only");
+
+  StringRef name = Sym->getName();
+  // XXX: We intentionally leave out "___gcc_personality_v0" because, despite
+  // being system-defined like these two, it is not very commonly-used.
+  // Reserving an empty slot for it seems silly.
+  return name == "___gxx_personality_v0" || name == "___objc_personality_v0";
 }

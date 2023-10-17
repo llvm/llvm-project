@@ -14,10 +14,10 @@ func.func @simplify_min_max() -> (index, index) {
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["affine.min", "affine.max"]} in %arg1
-  %1 = transform.structured.match ops{["test.some_op"]} in %arg1
-  transform.affine.simplify_bounded_affine_ops %0 with [%1] within [0] and [20]
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["affine.min", "affine.max"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %1 = transform.structured.match ops{["test.some_op"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  transform.affine.simplify_bounded_affine_ops %0 with [%1 : !transform.any_op] within [0] and [20] : !transform.any_op
 }
 
 // -----
@@ -34,27 +34,27 @@ func.func @simplify_min_sequence() -> index {
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["affine.min"]} in %arg1
-  %1 = transform.structured.match ops{["test.workgroup_id"]} in %arg1
-  %2 = transform.structured.match ops{["test.thread_id"]} in %arg1
-  transform.affine.simplify_bounded_affine_ops %0 with [%1, %2] within [0, 0] and [31, 31]
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["affine.min"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %1 = transform.structured.match ops{["test.workgroup_id"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %2 = transform.structured.match ops{["test.thread_id"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  transform.affine.simplify_bounded_affine_ops %0 with [%1, %2 : !transform.any_op, !transform.any_op] within [0, 0] and [31, 31] : !transform.any_op
 }
 
 // -----
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["affine.min"]} in %arg1
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["affine.min"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   // expected-error@+1 {{incorrect number of lower bounds, expected 0 but found 1}}
-  transform.affine.simplify_bounded_affine_ops %0 with [] within [0] and []
+  transform.affine.simplify_bounded_affine_ops %0 with [] within [0] and [] : !transform.any_op
 }
 
 // -----
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["affine.min"]} in %arg1
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["affine.min"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   // expected-error@+1 {{incorrect number of upper bounds, expected 0 but found 1}}
-  transform.affine.simplify_bounded_affine_ops %0 with [] within [] and [5]
+  transform.affine.simplify_bounded_affine_ops %0 with [] within [] and [5] : !transform.any_op
 }

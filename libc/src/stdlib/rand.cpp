@@ -10,13 +10,15 @@
 #include "src/__support/common.h"
 #include "src/stdlib/rand_util.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
-// This rand function is the example implementation from the C standard. It is
-// not cryptographically secure.
-LLVM_LIBC_FUNCTION(int, rand, (void)) { // RAND_MAX is assumed to be 32767
-  rand_next = rand_next * 1103515245 + 12345;
-  return static_cast<unsigned int>((rand_next / 65536) % 32768);
+// An implementation of the xorshift64star pseudo random number generator. This
+// is a good general purpose generator for most non-cryptographics applications.
+LLVM_LIBC_FUNCTION(int, rand, (void)) {
+  rand_next ^= rand_next >> 12;
+  rand_next ^= rand_next << 25;
+  rand_next ^= rand_next >> 27;
+  return static_cast<int>((rand_next * 0x2545F4914F6CDD1Dul) >> 32) & RAND_MAX;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

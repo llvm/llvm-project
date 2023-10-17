@@ -30,8 +30,8 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/TargetParser/Host.h"
 
 #include <memory>
 #include <string>
@@ -178,29 +178,29 @@ std::unique_ptr<CompilerInstance> BuildCompilerInstance() {
     ID Id = lookupTypeForTypeSpecifier(Input.c_str());
     assert(Id != TY_INVALID);
     if (isCXX(Id)) {
-      Inv->getLangOpts()->CPlusPlus = true;
-      Inv->getLangOpts()->CPlusPlus11 = true;
+      Inv->getLangOpts().CPlusPlus = true;
+      Inv->getLangOpts().CPlusPlus11 = true;
       Inv->getHeaderSearchOpts().UseLibcxx = true;
     }
     if (isObjC(Id)) {
-      Inv->getLangOpts()->ObjC = 1;
+      Inv->getLangOpts().ObjC = 1;
     }
   }
-  Inv->getLangOpts()->ObjCAutoRefCount = ObjCARC;
+  Inv->getLangOpts().ObjCAutoRefCount = ObjCARC;
 
-  Inv->getLangOpts()->Bool = true;
-  Inv->getLangOpts()->WChar = true;
-  Inv->getLangOpts()->Blocks = true;
-  Inv->getLangOpts()->DebuggerSupport = true;
-  Inv->getLangOpts()->SpellChecking = false;
-  Inv->getLangOpts()->ThreadsafeStatics = false;
-  Inv->getLangOpts()->AccessControl = false;
-  Inv->getLangOpts()->DollarIdents = true;
-  Inv->getLangOpts()->Exceptions = true;
-  Inv->getLangOpts()->CXXExceptions = true;
+  Inv->getLangOpts().Bool = true;
+  Inv->getLangOpts().WChar = true;
+  Inv->getLangOpts().Blocks = true;
+  Inv->getLangOpts().DebuggerSupport = true;
+  Inv->getLangOpts().SpellChecking = false;
+  Inv->getLangOpts().ThreadsafeStatics = false;
+  Inv->getLangOpts().AccessControl = false;
+  Inv->getLangOpts().DollarIdents = true;
+  Inv->getLangOpts().Exceptions = true;
+  Inv->getLangOpts().CXXExceptions = true;
   // Needed for testing dynamic_cast.
-  Inv->getLangOpts()->RTTI = true;
-  Inv->getCodeGenOpts().setDebugInfo(codegenoptions::FullDebugInfo);
+  Inv->getLangOpts().RTTI = true;
+  Inv->getCodeGenOpts().setDebugInfo(llvm::codegenoptions::FullDebugInfo);
   Inv->getTargetOpts().Triple = llvm::sys::getDefaultTargetTriple();
 
   Ins->setInvocation(std::move(Inv));

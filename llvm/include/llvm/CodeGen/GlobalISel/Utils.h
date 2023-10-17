@@ -17,11 +17,11 @@
 #include "GISelWorkList.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/LowLevelTypeImpl.h"
 #include <cstdint>
 
 namespace llvm {
@@ -57,6 +57,8 @@ class APFloat;
   case TargetOpcode::G_VECREDUCE_FMUL:                                         \
   case TargetOpcode::G_VECREDUCE_FMAX:                                         \
   case TargetOpcode::G_VECREDUCE_FMIN:                                         \
+  case TargetOpcode::G_VECREDUCE_FMAXIMUM:                                     \
+  case TargetOpcode::G_VECREDUCE_FMINIMUM:                                     \
   case TargetOpcode::G_VECREDUCE_ADD:                                          \
   case TargetOpcode::G_VECREDUCE_MUL:                                          \
   case TargetOpcode::G_VECREDUCE_AND:                                          \
@@ -72,6 +74,8 @@ class APFloat;
   case TargetOpcode::G_VECREDUCE_FMUL:                                         \
   case TargetOpcode::G_VECREDUCE_FMAX:                                         \
   case TargetOpcode::G_VECREDUCE_FMIN:                                         \
+  case TargetOpcode::G_VECREDUCE_FMAXIMUM:                                     \
+  case TargetOpcode::G_VECREDUCE_FMINIMUM:                                     \
   case TargetOpcode::G_VECREDUCE_ADD:                                          \
   case TargetOpcode::G_VECREDUCE_MUL:                                          \
   case TargetOpcode::G_VECREDUCE_AND:                                          \
@@ -272,6 +276,10 @@ std::optional<APFloat> ConstantFoldFPBinOp(unsigned Opcode, const Register Op1,
 SmallVector<APInt> ConstantFoldVectorBinop(unsigned Opcode, const Register Op1,
                                            const Register Op2,
                                            const MachineRegisterInfo &MRI);
+
+std::optional<APInt> ConstantFoldCastOp(unsigned Opcode, LLT DstTy,
+                                        const Register Op0,
+                                        const MachineRegisterInfo &MRI);
 
 std::optional<APInt> ConstantFoldExtOp(unsigned Opcode, const Register Op1,
                                        uint64_t Imm,

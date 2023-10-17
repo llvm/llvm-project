@@ -200,7 +200,7 @@ static std::string escapeString(StringRef Label) {
 // example caused by tail call elimination and if the option is enabled then
 // then tries to recover from this.
 //
-// This funciton will also error if the records are out of order, as the trace
+// This function will also error if the records are out of order, as the trace
 // is expected to be sorted.
 //
 // The graph generated has an immaginary root for functions called by no-one at

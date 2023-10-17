@@ -8,15 +8,18 @@
 
 #include "mlir/Dialect/Vector/TransformOps/VectorTransformOps.h"
 
+#include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
-#include "mlir/Dialect/PDL/IR/PDL.h"
-#include "mlir/Dialect/PDL/IR/PDLTypes.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/IR/TransformOps.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
+#include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Dialect/X86Vector/Transforms.h"
-#include "mlir/Parser/Parser.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
@@ -24,104 +27,157 @@ using namespace mlir::vector;
 using namespace mlir::transform;
 
 //===----------------------------------------------------------------------===//
-// LowerVectorsOp
+// Apply...ConversionPatternsOp
 //===----------------------------------------------------------------------===//
 
-void transform::LowerVectorsOp::getEffects(
-    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  consumesHandle(getTarget(), effects);
-  producesHandle(getResults(), effects);
-  modifiesPayload(effects);
+void transform::ApplyVectorToLLVMConversionPatternsOp::populatePatterns(
+    TypeConverter &typeConverter, RewritePatternSet &patterns) {
+  populateVectorToLLVMConversionPatterns(
+      static_cast<LLVMTypeConverter &>(typeConverter), patterns,
+      getReassociateFpReductions(), getForce_32bitVectorIndices());
 }
 
-DiagnosedSilenceableFailure transform::LowerVectorsOp::apply(
-    mlir::transform::TransformResults &transformResults,
-    mlir::transform::TransformState &state) {
+LogicalResult
+transform::ApplyVectorToLLVMConversionPatternsOp::verifyTypeConverter(
+    transform::TypeConverterBuilderOpInterface builder) {
+  if (builder.getTypeConverterType() != "LLVMTypeConverter")
+    return emitOpError("expected LLVMTypeConverter");
+  return success();
+}
 
-  SmallVector<Operation *> results;
-  ArrayRef<Operation *> payloadOps = state.getPayloadOps(getTarget());
-  for (Operation *target : payloadOps) {
-    // This check can't be part of the verifier because payload IR is
-    // independent from transform IR and may not even exist.
-    if (!target->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
-      return mlir::emitDefiniteFailure(target,
-                                       "applies only to isolated-from-above "
-                                       "targets because it needs to apply "
-                                       "patterns greedily");
-    }
+//===----------------------------------------------------------------------===//
+// Apply...PatternsOp
+//===----------------------------------------------------------------------===//
 
-    MLIRContext *ctx = getContext();
-    RewritePatternSet patterns(ctx);
-    vector::VectorTransposeLowering vectorTransposeLowering =
-        getTransposeLowering();
-    vector::VectorMultiReductionLowering vectorMultiReductionLowering =
-        getMultireductionLowering();
-    vector::VectorContractLowering vectorContractLowering =
-        getContractionLowering();
-    vector::VectorTransferSplit vectorTransferSplit = getSplitTransfers();
+void transform::ApplyCastAwayVectorLeadingOneDimPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateCastAwayVectorLeadingOneDimPatterns(patterns);
+}
 
-    vector::VectorTransformsOptions vectorTransformOptions;
-    vectorTransformOptions.setVectorTransformsOptions(vectorContractLowering)
-        .setVectorMultiReductionLowering(vectorMultiReductionLowering)
-        .setVectorTransposeLowering(vectorTransposeLowering)
-        .setVectorTransferSplit(vectorTransferSplit);
+void transform::ApplyFoldArithExtensionPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateFoldArithExtensionPatterns(patterns);
+}
 
-    VectorTransferToSCFOptions vectorTransferToSCFOptions =
-        VectorTransferToSCFOptions().enableFullUnroll(
-            getUnrollVectorTransfers());
+void transform::ApplyVectorReductionToContractPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorReductionToContractPatterns(patterns);
+}
 
-    int maxTransferRank = 1;
+void transform::ApplyLowerCreateMaskPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorMaskOpLoweringPatterns(patterns);
+}
 
+void transform::ApplyRankReducingSubviewPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorTransferDropUnitDimsPatterns(patterns);
+}
+
+void transform::ApplyTransferPermutationPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorTransferPermutationMapLoweringPatterns(patterns);
+}
+
+void transform::ApplyLowerBroadcastPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  populateVectorBroadcastLoweringPatterns(patterns);
+}
+
+void transform::ApplyLowerContractionPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::VectorTransformsOptions vectorTransformOptions;
+  vectorTransformOptions.setVectorTransformsOptions(getLoweringStrategy());
+  populateVectorContractLoweringPatterns(patterns, vectorTransformOptions,
+                                         /*benefit=*/1,
+                                         /*disableOuterProductLowering=*/true);
+}
+
+void transform::ApplyLowerMasksPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  populateVectorMaskOpLoweringPatterns(patterns);
+}
+
+void transform::ApplyLowerMaskedTransfersPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  populateVectorMaskLoweringPatternsForSideEffectingOps(patterns);
+}
+
+void transform::ApplyMaterializeMasksPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  populateVectorMaskMaterializationPatterns(patterns,
+                                            /*force32BitVectorIndices=*/false);
+}
+
+void transform::ApplyLowerMultiReductionPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::VectorTransformsOptions vectorTransformOptions;
+  vectorTransformOptions.setVectorMultiReductionLowering(getLoweringStrategy());
+  vector::populateVectorMultiReductionLoweringPatterns(
+      patterns, vectorTransformOptions.vectorMultiReductionLowering);
+}
+
+void transform::ApplyLowerOuterProductPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  populateVectorOuterProductLoweringPatterns(patterns);
+}
+
+void transform::ApplyLowerGatherPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorGatherLoweringPatterns(patterns);
+}
+
+void transform::ApplyLowerScanPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorScanLoweringPatterns(patterns);
+}
+
+void transform::ApplyLowerShapeCastPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorShapeCastLoweringPatterns(patterns);
+}
+
+void transform::ApplyLowerTransferPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorTransferLoweringPatterns(patterns,
+                                                 getMaxTransferRank());
+}
+
+void transform::ApplyLowerTransposePatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorTransposeLoweringPatterns(
+      patterns, vector::VectorTransformsOptions().setVectorTransposeLowering(
+                    getLoweringStrategy()));
+  if (getAvx2LoweringStrategy()) {
     auto avx2LoweringOptions =
         x86vector::avx2::LoweringOptions().setTransposeOptions(
             x86vector::avx2::TransposeLoweringOptions()
-                .lower4x8xf32(getTransposeAvx2Lowering())
-                .lower8x8xf32(getTransposeAvx2Lowering()));
-
-    vector::populateVectorToVectorCanonicalizationPatterns(patterns);
-
-    // In the future we may want to more finely select particular stages.
-    // Stage 1: contraction lowerings.
-    patterns.add<mlir::vector::ContractionOpToOuterProductOpLowering,
-                 mlir::vector::ContractionOpToMatmulOpLowering,
-                 mlir::vector::ContractionOpLowering>(vectorTransformOptions,
-                                                      ctx);
-    vector::populateVectorTransferPermutationMapLoweringPatterns(patterns);
-
-    // Stage 2: multi-reduction lowerings.
-    vector::populateVectorMultiReductionLoweringPatterns(
-        patterns, vectorTransformOptions.vectorMultiReductionLowering);
-
-    // Stage 3: Rewrite vector.transfer into full and partial parts.
-    patterns.add<vector::VectorTransferFullPartialRewriter>(
-        ctx, vectorTransformOptions);
-
-    // Stage 4: Lower vector transfers.
-    vector::populateVectorTransferLoweringPatterns(patterns, maxTransferRank);
-
-    // Stage 5: Vector to scf patterns.
-    populateVectorToSCFConversionPatterns(
-        patterns, vectorTransferToSCFOptions.setTargetRank(maxTransferRank));
-
-    // Stage 6: Lower vector.shape_cast.
-    vector::populateVectorShapeCastLoweringPatterns(patterns);
-
-    // Stage 7: Lower vector.transpose.
-    vector::populateVectorTransposeLoweringPatterns(patterns,
-                                                    vectorTransformOptions);
-    if (getTransposeAvx2Lowering())
-      x86vector::avx2::populateSpecializedTransposeLoweringPatterns(
-          patterns, avx2LoweringOptions, /*benefit=*/10);
-
-    // Apply everything.
-    if (failed(applyPatternsAndFoldGreedily(target, std::move(patterns))))
-      return DiagnosedSilenceableFailure::definiteFailure();
-
-    results.push_back(target);
+                .lower4x8xf32(true)
+                .lower8x8xf32(true));
+    x86vector::avx2::populateSpecializedTransposeLoweringPatterns(
+        patterns, avx2LoweringOptions, /*benefit=*/10);
   }
+}
 
-  transformResults.set(getResults().cast<OpResult>(), results);
-  return DiagnosedSilenceableFailure::success();
+void transform::ApplyRewriteNarrowTypePatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  populateVectorNarrowTypeRewritePatterns(patterns);
+}
+
+void transform::ApplySplitTransferFullPartialPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::VectorTransformsOptions vectorTransformOptions;
+  vectorTransformOptions.setVectorTransferSplit(getSplitTransferStrategy());
+  populateVectorTransferFullPartialPatterns(patterns, vectorTransformOptions);
+}
+
+void transform::ApplyTransferToScfPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  VectorTransferToSCFOptions vectorTransferToSCFOptions =
+      VectorTransferToSCFOptions()
+          .enableFullUnroll(getFullUnroll())
+          .setTargetRank(getMaxTransferRank());
+  populateVectorToSCFConversionPatterns(patterns, vectorTransferToSCFOptions);
 }
 
 //===----------------------------------------------------------------------===//
@@ -136,8 +192,8 @@ class VectorTransformDialectExtension
           VectorTransformDialectExtension> {
 public:
   VectorTransformDialectExtension() {
-    declareDependentDialect<pdl::PDLDialect>();
-    declareDependentDialect<vector::VectorDialect>();
+    declareGeneratedDialect<vector::VectorDialect>();
+    declareGeneratedDialect<LLVM::LLVMDialect>();
     registerTransformOps<
 #define GET_OP_LIST
 #include "mlir/Dialect/Vector/TransformOps/VectorTransformOps.cpp.inc"

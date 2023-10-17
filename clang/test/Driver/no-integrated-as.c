@@ -14,8 +14,8 @@
 // DEFAULT-NOT: -no-integrated-as
 
 /// -c omitted on purpose, this used to crash.
-// RUN: %clang -target x86_64-sie-ps5 -### -no-integrated-as %s 2>&1 \
+// RUN: not %clang --target=x86_64-sie-ps5 -### -no-integrated-as %s 2>&1 \
 // RUN:     | FileCheck %s -check-prefix PS5
-// RUN: %clang -target x86_64-sie-ps5 -### -no-integrated-as -x assembler %s 2>&1 \
+// RUN: not %clang --target=x86_64-sie-ps5 -### -no-integrated-as -x assembler %s 2>&1 \
 // RUN:     | FileCheck %s -check-prefix PS5
 // PS5: there is no external assembler that can be used on this platform

@@ -19,15 +19,15 @@
 ## LDTOLE - Local Dynamic relaxed to Local Exec
 
 # LD-RELOC: Relocation section '.rela.dyn' at offset 0x10080 contains 1 entries:
-# LD-RELOC: 0000000001004168  0000000000000044 R_PPC64_DTPMOD64                  0
+# LD-RELOC: 0000000001004178  0000000000000044 R_PPC64_DTPMOD64                  0
 
 # LD-SYM:      Symbol table '.symtab' contains 11 entries:
 # LD-SYM:      0000000000000000     0 TLS     LOCAL  DEFAULT    13 x
 # LD-SYM:      0000000000000004     0 TLS     LOCAL  DEFAULT    13 y
 
 # LD-GOT:      section '.got':
-# LD-GOT-NEXT: 0x01004160 60c10001 00000000 00000000 00000000
-# LD-GOT-NEXT: 0x01004170 00000000 00000000
+# LD-GOT-NEXT: 0x01004170 70c10001 00000000 00000000 00000000
+# LD-GOT-NEXT: 0x01004180 00000000 00000000
 
 # LDTOLE-RELOC: There are no relocations in this file.
 
@@ -48,7 +48,7 @@ SECTIONS {
 
 //--- asm
 # LD-LABEL: <LDAddr>:
-# LD:         paddi 3, 0, 12644, 1
+# LD:         paddi 3, 0, 12660, 1
 # LD-NEXT:    bl 0x1001020
 # LD-NEXT:    paddi 3, 3, -32768, 0
 # LD-NEXT:    blr
@@ -69,7 +69,7 @@ LDAddr:
   blr
 
 # LD-LABEL: <LDVal>:
-# LD:         paddi 3, 0, 8552, 1
+# LD:         paddi 3, 0, 8568, 1
 # LD-NEXT:    bl 0x1001020
 # LD-NEXT:    paddi 3, 3, -32768, 0
 # LD-NEXT:    lwz 3, 0(3)
@@ -89,7 +89,7 @@ LDVal:
   blr
 
 # LD-LABEL: <LDTwoVal>:
-# LD:         paddi 3, 0, 4456, 1
+# LD:         paddi 3, 0, 4472, 1
 # LD-NEXT:    bl 0x1001020
 # LD-NEXT:    paddi 3, 3, -32768, 0
 # LD-NEXT:    lwz 2, 0(3)
@@ -115,7 +115,7 @@ LDTwoVal:
   blr
 
 # LD-LABEL: <LDIncrementVal>:
-# LD:         paddi 3, 0, 360, 1
+# LD:         paddi 3, 0, 376, 1
 # LD-NEXT:    bl 0x1001020
 # LD-NEXT:    paddi 9, 3, -32764, 0
 # LD-NEXT:    lwz 4, 0(9)

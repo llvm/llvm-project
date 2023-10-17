@@ -1,9 +1,9 @@
-; RUN: llc < %s -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -mcpu=kaveri | FileCheck --check-prefix=HSA %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -mcpu=kaveri | FileCheck --check-prefix=HSA-CI %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -mcpu=carrizo  | FileCheck --check-prefix=HSA %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -mcpu=carrizo | FileCheck --check-prefix=HSA-VI %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -mcpu=kaveri -filetype=obj | llvm-readobj --symbols -S --sd - | FileCheck --check-prefix=ELF %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -mcpu=kaveri | llvm-mc -filetype=obj -triple amdgcn--amdhsa --amdhsa-code-object-version=2 -mcpu=kaveri | llvm-readobj --symbols -S --sd - | FileCheck %s --check-prefix=ELF
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri | FileCheck --check-prefix=HSA %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri | FileCheck --check-prefix=HSA-CI %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=carrizo  | FileCheck --check-prefix=HSA %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=carrizo | FileCheck --check-prefix=HSA-VI %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri -filetype=obj | llvm-readobj --symbols -S --sd - | FileCheck --check-prefix=ELF %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri | llvm-mc -filetype=obj -triple amdgcn--amdhsa --amdhsa-code-object-version=4 -mcpu=kaveri | llvm-readobj --symbols -S --sd - | FileCheck %s --check-prefix=ELF
 
 ; The SHT_NOTE section contains the output from the .hsa_code_object_*
 ; directives.
@@ -18,12 +18,13 @@
 ; ELF: }
 
 ; ELF: SHT_NOTE
-; ELF: 0000: 04000000 08000000 01000000 414D4400
-; ELF: 0010: 02000000 01000000 04000000 1B000000
-
-; ELF: 0020: 03000000 414D4400 04000700 07000000
-; ELF: 0030: 00000000 00000000 414D4400 414D4447
-; ELF: 0040: 50550000
+; ELF: 0000: 07000000 4F000000 20000000 414D4447
+; ELF: 0010: 50550000 83AE616D 64687361 2E6B6572
+; ELF: 0020: 6E656C73 90AD616D 64687361 2E746172
+; ELF: 0030: 676574BD 616D6467 636E2D75 6E6B6E6F
+; ELF: 0040: 776E2D61 6D646873 612D2D67 66783730
+; ELF: 0050: 30AE616D 64687361 2E766572 73696F6E
+; ELF: 0060: 92010100
 
 ; ELF: Symbol {
 ; ELF: Name: simple
@@ -32,9 +33,8 @@
 ; ELF: }
 
 ; HSA: .text
-; HSA: .hsa_code_object_version 2,1
-; HSA-CI: .hsa_code_object_isa 7,0,0,"AMD","AMDGPU"
-; HSA-VI: .hsa_code_object_isa 8,0,1,"AMD","AMDGPU"
+; HSA-CI: .amdgcn_target "amdgcn-unknown-amdhsa--gfx700" 
+; HSA-VI: .amdgcn_target "amdgcn-unknown-amdhsa--gfx801" 
 
 ; HSA-NOT: .amdgpu_hsa_kernel simple
 ; HSA: .globl simple
@@ -67,3 +67,6 @@ entry:
   store i32 0, ptr addrspace(1) %out
   ret void
 }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}

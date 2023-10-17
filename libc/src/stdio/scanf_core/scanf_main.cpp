@@ -16,12 +16,12 @@
 
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace scanf_core {
 
 int scanf_main(Reader *reader, const char *__restrict str,
                internal::ArgList &args) {
-  Parser parser(str, args);
+  Parser<internal::ArgList> parser(str, args);
   int ret_val = READ_OK;
   int conversions = 0;
   for (FormatSection cur_section = parser.get_next_section();
@@ -29,19 +29,17 @@ int scanf_main(Reader *reader, const char *__restrict str,
        cur_section = parser.get_next_section()) {
     if (cur_section.has_conv) {
       ret_val = convert(reader, cur_section);
-      conversions += ret_val == READ_OK ? 1 : 0;
+      // The %n (current position) conversion doesn't increment the number of
+      // assignments.
+      if (cur_section.conv_name != 'n')
+        conversions += ret_val == READ_OK ? 1 : 0;
     } else {
       ret_val = raw_match(reader, cur_section.raw_string);
     }
   }
 
-  if (conversions == 0 && reader->has_error()) {
-    // This is intended to be converted to EOF in the client call to avoid
-    // including stdio.h in this internal file.
-    return -1;
-  }
   return conversions;
 }
 
 } // namespace scanf_core
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

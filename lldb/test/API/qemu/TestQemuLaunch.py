@@ -17,16 +17,17 @@ class TestQemuLaunch(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     def set_emulator_setting(self, name, value):
-        self.runCmd("settings set -- platform.plugin.qemu-user.%s %s" %
-                (name, value))
+        self.runCmd("settings set -- platform.plugin.qemu-user.%s %s" % (name, value))
 
     def setUp(self):
         super().setUp()
         emulator = self.getBuildArtifact("qemu.py")
-        with os.fdopen(os.open(emulator, os.O_WRONLY|os.O_CREAT, stat.S_IRWXU),
-                "w") as e:
-
-            e.write(dedent("""\
+        with os.fdopen(
+            os.open(emulator, os.O_WRONLY | os.O_CREAT, stat.S_IRWXU), "w"
+        ) as e:
+            e.write(
+                dedent(
+                    """\
                     #! {exec!s}
 
                     import runpy
@@ -34,8 +35,13 @@ class TestQemuLaunch(TestBase):
 
                     sys.path = {path!r}
                     runpy.run_path({source!r}, run_name='__main__')
-                    """).format(exec=sys.executable, path=sys.path,
-                        source=self.getSourcePath("qemu.py")))
+                    """
+                ).format(
+                    exec=sys.executable,
+                    path=sys.path,
+                    source=self.getSourcePath("qemu.py"),
+                )
+            )
 
         self.set_emulator_setting("architecture", self.getArchitecture())
         self.set_emulator_setting("emulator-path", emulator)
@@ -46,7 +52,7 @@ class TestQemuLaunch(TestBase):
 
         # Create a target using our platform
         error = lldb.SBError()
-        target = self.dbg.CreateTarget(exe, '', 'qemu-user', False, error)
+        target = self.dbg.CreateTarget(exe, "", "qemu-user", False, error)
         self.assertSuccess(error)
         self.assertEqual(target.GetPlatform().GetName(), "qemu-user")
         return target
@@ -76,19 +82,21 @@ class TestQemuLaunch(TestBase):
         state = self._run_and_get_state()
 
         self.assertEqual(state["program"], self.getBuildArtifact())
-        self.assertEqual(state["args"],
-                ["dump:" + self.getBuildArtifact("state.log")])
+        self.assertEqual(state["args"], ["dump:" + self.getBuildArtifact("state.log")])
 
     def test_stdio_pty(self):
         target = self._create_target()
 
         info = target.GetLaunchInfo()
-        info.SetArguments([
-            "stdin:stdin",
-            "stdout:STDOUT CONTENT\n",
-            "stderr:STDERR CONTENT\n",
-            "dump:" + self.getBuildArtifact("state.log"),
-            ], False)
+        info.SetArguments(
+            [
+                "stdin:stdin",
+                "stdout:STDOUT CONTENT\n",
+                "stderr:STDERR CONTENT\n",
+                "dump:" + self.getBuildArtifact("state.log"),
+            ],
+            False,
+        )
 
         listener = lldb.SBListener("test_stdio")
         info.SetListener(listener)
@@ -97,18 +105,18 @@ class TestQemuLaunch(TestBase):
         error = lldb.SBError()
         process = target.Launch(info, error)
         self.assertSuccess(error)
-        lldbutil.expect_state_changes(self, listener, process,
-                [lldb.eStateRunning])
+        lldbutil.expect_state_changes(self, listener, process, [lldb.eStateRunning])
 
         process.PutSTDIN("STDIN CONTENT\n")
 
-        lldbutil.expect_state_changes(self, listener, process,
-                [lldb.eStateExited])
+        lldbutil.expect_state_changes(self, listener, process, [lldb.eStateExited])
 
         # Echoed stdin, stdout and stderr. With a pty we cannot split standard
         # output and error.
-        self.assertEqual(process.GetSTDOUT(1000),
-                "STDIN CONTENT\r\nSTDOUT CONTENT\r\nSTDERR CONTENT\r\n")
+        self.assertEqual(
+            process.GetSTDOUT(1000),
+            "STDIN CONTENT\r\nSTDOUT CONTENT\r\nSTDERR CONTENT\r\n",
+        )
         with open(self.getBuildArtifact("state.log")) as s:
             state = json.load(s)
         self.assertEqual(state["stdin"], "STDIN CONTENT\n")
@@ -119,22 +127,21 @@ class TestQemuLaunch(TestBase):
 
         # Create a target using our platform
         error = lldb.SBError()
-        target = self.dbg.CreateTarget(exe, '', 'qemu-user', False, error)
+        target = self.dbg.CreateTarget(exe, "", "qemu-user", False, error)
         self.assertSuccess(error)
 
-        info = lldb.SBLaunchInfo([
-            "stdin:stdin",
-            "stdout:STDOUT CONTENT",
-            "stderr:STDERR CONTENT",
-            "dump:" + self.getBuildArtifact("state.log"),
-            ])
+        info = lldb.SBLaunchInfo(
+            [
+                "stdin:stdin",
+                "stdout:STDOUT CONTENT",
+                "stderr:STDERR CONTENT",
+                "dump:" + self.getBuildArtifact("state.log"),
+            ]
+        )
 
-        info.AddOpenFileAction(0, self.getBuildArtifact("stdin.txt"),
-                True, False)
-        info.AddOpenFileAction(1, self.getBuildArtifact("stdout.txt"),
-                False, True)
-        info.AddOpenFileAction(2, self.getBuildArtifact("stderr.txt"),
-                False, True)
+        info.AddOpenFileAction(0, self.getBuildArtifact("stdin.txt"), True, False)
+        info.AddOpenFileAction(1, self.getBuildArtifact("stdout.txt"), False, True)
+        info.AddOpenFileAction(2, self.getBuildArtifact("stderr.txt"), False, True)
 
         with open(self.getBuildArtifact("stdin.txt"), "w") as f:
             f.write("STDIN CONTENT")
@@ -157,8 +164,12 @@ class TestQemuLaunch(TestBase):
         self.set_emulator_setting("emulator-path", "''")
 
         original_path = os.environ["PATH"]
-        os.environ["PATH"] = (self.getBuildDir() +
-            self.platformContext.shlib_path_separator + original_path)
+        os.environ["PATH"] = (
+            self.getBuildDir()
+            + self.platformContext.shlib_path_separator
+            + original_path
+        )
+
         def cleanup():
             os.environ["PATH"] = original_path
 
@@ -166,12 +177,12 @@ class TestQemuLaunch(TestBase):
         state = self._run_and_get_state()
 
         self.assertEqual(state["program"], self.getBuildArtifact())
-        self.assertEqual(state["args"],
-                ["dump:" + self.getBuildArtifact("state.log")])
+        self.assertEqual(state["args"], ["dump:" + self.getBuildArtifact("state.log")])
 
     def test_bad_emulator_path(self):
-        self.set_emulator_setting("emulator-path",
-                self.getBuildArtifact("nonexistent.file"))
+        self.set_emulator_setting(
+            "emulator-path", self.getBuildArtifact("nonexistent.file")
+        )
 
         target = self._create_target()
         info = lldb.SBLaunchInfo([])
@@ -196,19 +207,22 @@ class TestQemuLaunch(TestBase):
 
         # Set some variables in the host environment.
         for i in range(4):
-            os.environ[var(i)]="from host"
+            os.environ[var(i)] = "from host"
+
         def cleanup():
             for i in range(4):
                 del os.environ[var(i)]
+
         self.addTearDownHook(cleanup)
 
         # Set some emulator-only variables.
-        self.set_emulator_setting("emulator-env-vars",
-                "%s='emulator only'"%var(4))
+        self.set_emulator_setting("emulator-env-vars", "%s='emulator only'" % var(4))
 
         # And through the platform setting.
-        self.set_emulator_setting("target-env-vars",
-                "%s='from platform' %s='from platform'" % (var(1), var(2)))
+        self.set_emulator_setting(
+            "target-env-vars",
+            "%s='from platform' %s='from platform'" % (var(1), var(2)),
+        )
 
         target = self._create_target()
         info = target.GetLaunchInfo()
@@ -234,10 +248,14 @@ class TestQemuLaunch(TestBase):
         for i in range(4):
             self.assertEqual(state["environ"][var(i)], "from host")
         self.assertEqual(state["environ"][var(4)], "emulator only")
-        self.assertEqual(state["environ"]["QEMU_SET_ENV"],
-                "%s=from platform,%s=from target" % (var(1), var(2)))
-        self.assertEqual(state["environ"]["QEMU_UNSET_ENV"],
-                "%s,%s,QEMU_SET_ENV,QEMU_UNSET_ENV" % (var(3), var(4)))
+        self.assertEqual(
+            state["environ"]["QEMU_SET_ENV"],
+            "%s=from platform,%s=from target" % (var(1), var(2)),
+        )
+        self.assertEqual(
+            state["environ"]["QEMU_UNSET_ENV"],
+            "%s,%s,QEMU_SET_ENV,QEMU_UNSET_ENV" % (var(3), var(4)),
+        )
 
     def test_arg0(self):
         target = self._create_target()
@@ -252,5 +270,4 @@ class TestQemuLaunch(TestBase):
         self.runCmd("platform select qemu-user --sysroot %s" % sysroot)
         state = self._run_and_get_state()
         self.assertEqual(state["environ"]["QEMU_LD_PREFIX"], sysroot)
-        self.assertIn("QEMU_LD_PREFIX",
-                state["environ"]["QEMU_UNSET_ENV"].split(","))
+        self.assertIn("QEMU_LD_PREFIX", state["environ"]["QEMU_UNSET_ENV"].split(","))

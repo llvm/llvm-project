@@ -21,9 +21,16 @@ subroutine global5(x)
   integer, intent(in) :: x
 end subroutine
 
+! Regression check: don't emit bogus "Implicit declaration of function 'global7' has a different result type than in previous declaration"
+recursive function global6()
+  integer global6, z, n
+entry global7(n) result(z)
+  if (n > 0) z = global7(n-1)
+end function
+
 program test
   interface
-    !WARNING: The global subprogram 'global1' is not compatible with its local procedure declaration (incompatible dummy argument #1: incompatible dummy data object types: REAL(4) vs INTEGER(4))
+    !WARNING: The global subprogram 'global1' is not compatible with its local procedure declaration (incompatible dummy argument #1: incompatible dummy data object types: INTEGER(4) vs REAL(4))
     subroutine global1(x)
       real, intent(in) :: x
     end subroutine
@@ -40,6 +47,11 @@ program test
     pure subroutine global5(x)
       integer, intent(in) :: x
     end subroutine
+    function global6()
+      integer global6
+    end function
+    function global7(n) result(z)
+      integer n, z
+    end function
   end interface
 end
-

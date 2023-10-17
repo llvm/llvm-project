@@ -13,9 +13,7 @@
 #include "llvm/ADT/StringSet.h"
 #include <optional>
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 /// Finds function calls where the arguments passed are provided out of order,
 /// based on the difference between the argument name and the parameter names
@@ -94,8 +92,6 @@ private:
                        BoundKind BK) const;
 };
 
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_SUSPICIOUSCALLARGUMENTCHECK_H

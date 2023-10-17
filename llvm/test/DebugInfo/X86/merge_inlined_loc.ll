@@ -6,8 +6,8 @@
 ; locations with the same source line but different scopes should be merged to
 ; a line zero location at the nearest common scope and inlining. The location
 ; of the single call to "common" (the two calls are collapsed together by
-; BranchFolding) should be attributed to line zero inside the wrapper2 inlined
-; scope within f1.
+; BranchFolding) should be attributed to line 2 inside the wrapper inlined
+; scope within wrapper2 at line 0 inlined within f1 at line 13.
 
 ; void common();
 ; inline void wrapper() { common(); }
@@ -22,10 +22,14 @@
 ; }
 ; void f1() { wrapper2(); }
 
-; Ensure there is only one inlined_subroutine (for wrapper2, none for wrapper)
-; & that its address range includes the call to 'common'.
+; Ensure there are two inlined_subroutine (for wrapper and wrapper2).
 
-; CHECK: jmp _Z6commonv
+; CHECK: .loc 1 2 25 epilogue_begin
+; CHECK-NEXT: popq %rax
+; CHECK-NEXT: .Ltmp{{.*}}:
+; CHECK-NEXT: .cfi_def_cfa_offset 8
+; CHECK-NEXT: .loc 1 2 25 is_stmt 0
+; CHECK-NEXT: jmp _Z6commonv
 ; CHECK-NEXT: [[LABEL:.*]]:
 
 ; CHECK: .section .debug_info
@@ -35,6 +39,9 @@
 ; CHECK:   DW_TAG_inlined_subroutine
 ; CHECK-NOT: {{DW_TAG\|End Of Children}}
 ; CHECK:     [[LABEL]]-{{.*}} DW_AT_high_pc
+; CHECK:     .byte 13 # DW_AT_call_line
+; CHECK:   DW_TAG_inlined_subroutine
+; CHECK:     .byte 0 # DW_AT_call_line
 ; CHECK-NOT: DW_TAG
 
 

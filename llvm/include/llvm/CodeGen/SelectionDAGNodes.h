@@ -30,6 +30,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/Constants.h"
@@ -42,7 +43,6 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/TypeSize.h"
 #include <algorithm>
 #include <cassert>
@@ -392,9 +392,11 @@ private:
   // We assume instructions do not raise floating-point exceptions by default,
   // and only those marked explicitly may do so.  We could choose to represent
   // this via a positive "FPExcept" flags like on the MI level, but having a
-  // negative "NoFPExcept" flag here (that defaults to true) makes the flag
-  // intersection logic more straightforward.
+  // negative "NoFPExcept" flag here makes the flag intersection logic more
+  // straightforward.
   bool NoFPExcept : 1;
+  // Instructions with attached 'unpredictable' metadata on IR level.
+  bool Unpredictable : 1;
 
 public:
   /// Default constructor turns off all optimization flags.
@@ -402,7 +404,7 @@ public:
       : NoUnsignedWrap(false), NoSignedWrap(false), Exact(false), NoNaNs(false),
         NoInfs(false), NoSignedZeros(false), AllowReciprocal(false),
         AllowContract(false), ApproximateFuncs(false),
-        AllowReassociation(false), NoFPExcept(false) {}
+        AllowReassociation(false), NoFPExcept(false), Unpredictable(false) {}
 
   /// Propagate the fast-math-flags from an IR FPMathOperator.
   void copyFMF(const FPMathOperator &FPMO) {
@@ -427,6 +429,7 @@ public:
   void setApproximateFuncs(bool b) { ApproximateFuncs = b; }
   void setAllowReassociation(bool b) { AllowReassociation = b; }
   void setNoFPExcept(bool b) { NoFPExcept = b; }
+  void setUnpredictable(bool b) { Unpredictable = b; }
 
   // These are accessors for each flag.
   bool hasNoUnsignedWrap() const { return NoUnsignedWrap; }
@@ -440,6 +443,7 @@ public:
   bool hasApproximateFuncs() const { return ApproximateFuncs; }
   bool hasAllowReassociation() const { return AllowReassociation; }
   bool hasNoFPExcept() const { return NoFPExcept; }
+  bool hasUnpredictable() const { return Unpredictable; }
 
   /// Clear any flags in this flag set that aren't also set in Flags. All
   /// flags will be cleared if Flags are undefined.
@@ -455,6 +459,7 @@ public:
     ApproximateFuncs &= Flags.ApproximateFuncs;
     AllowReassociation &= Flags.AllowReassociation;
     NoFPExcept &= Flags.NoFPExcept;
+    Unpredictable &= Flags.Unpredictable;
   }
 };
 
@@ -470,7 +475,7 @@ public:
   /// We do not place that under `#if LLVM_ENABLE_ABI_BREAKING_CHECKS`
   /// intentionally because it adds unneeded complexity without noticeable
   /// benefits (see discussion with @thakis in D120714).
-  uint16_t PersistentId;
+  uint16_t PersistentId = 0xffff;
 
 protected:
   // We define a set of mini-helper classes to help us interpret the bits in our
@@ -1380,6 +1385,7 @@ public:
   const SDValue &getBasePtr() const {
     switch (getOpcode()) {
     case ISD::STORE:
+    case ISD::ATOMIC_STORE:
     case ISD::VP_STORE:
     case ISD::MSTORE:
     case ISD::VP_SCATTER:
@@ -1419,6 +1425,8 @@ public:
     case ISD::ATOMIC_LOAD_FSUB:
     case ISD::ATOMIC_LOAD_FMAX:
     case ISD::ATOMIC_LOAD_FMIN:
+    case ISD::ATOMIC_LOAD_UINC_WRAP:
+    case ISD::ATOMIC_LOAD_UDEC_WRAP:
     case ISD::ATOMIC_LOAD:
     case ISD::ATOMIC_STORE:
     case ISD::MLOAD:
@@ -1431,6 +1439,8 @@ public:
     case ISD::VP_SCATTER:
     case ISD::EXPERIMENTAL_VP_STRIDED_LOAD:
     case ISD::EXPERIMENTAL_VP_STRIDED_STORE:
+    case ISD::GET_FPENV_MEM:
+    case ISD::SET_FPENV_MEM:
       return true;
     default:
       return N->isMemIntrinsic() || N->isTargetMemoryOpcode();
@@ -1448,8 +1458,12 @@ public:
             MMO->isAtomic()) && "then why are we using an AtomicSDNode?");
   }
 
-  const SDValue &getBasePtr() const { return getOperand(1); }
-  const SDValue &getVal() const { return getOperand(2); }
+  const SDValue &getBasePtr() const {
+    return getOpcode() == ISD::ATOMIC_STORE ? getOperand(2) : getOperand(1);
+  }
+  const SDValue &getVal() const {
+    return getOpcode() == ISD::ATOMIC_STORE ? getOperand(1) : getOperand(2);
+  }
 
   /// Returns true if this SDNode represents cmpxchg atomic operation, false
   /// otherwise.
@@ -1486,6 +1500,8 @@ public:
            N->getOpcode() == ISD::ATOMIC_LOAD_FSUB    ||
            N->getOpcode() == ISD::ATOMIC_LOAD_FMAX    ||
            N->getOpcode() == ISD::ATOMIC_LOAD_FMIN    ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_UINC_WRAP ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_UDEC_WRAP ||
            N->getOpcode() == ISD::ATOMIC_LOAD         ||
            N->getOpcode() == ISD::ATOMIC_STORE;
   }
@@ -1604,11 +1620,7 @@ public:
 
   bool isOne() const { return Value->isOne(); }
   bool isZero() const { return Value->isZero(); }
-  // NOTE: This is soft-deprecated.  Please use `isZero()` instead.
-  bool isNullValue() const { return isZero(); }
   bool isAllOnes() const { return Value->isMinusOne(); }
-  // NOTE: This is soft-deprecated.  Please use `isAllOnes()` instead.
-  bool isAllOnesValue() const { return isAllOnes(); }
   bool isMaxSignedValue() const { return Value->isMaxValue(true); }
   bool isMinSignedValue() const { return Value->isMinValue(true); }
 
@@ -1707,6 +1719,10 @@ SDValue peekThroughOneUseBitcasts(SDValue V);
 /// Return the non-extracted vector source operand of \p V if it exists.
 /// If \p V is not an extracted subvector, it is returned as-is.
 SDValue peekThroughExtractSubvectors(SDValue V);
+
+/// Return the non-truncated source operand of \p V if it exists.
+/// If \p V is not a truncation, it is returned as-is.
+SDValue peekThroughTruncates(SDValue V);
 
 /// Returns true if \p V is a bitwise not operation. Assumes that an all ones
 /// constant is canonicalized to be operand 1.
@@ -2887,6 +2903,23 @@ public:
   }
 };
 
+class FPStateAccessSDNode : public MemSDNode {
+public:
+  friend class SelectionDAG;
+
+  FPStateAccessSDNode(unsigned NodeTy, unsigned Order, const DebugLoc &dl,
+                      SDVTList VTs, EVT MemVT, MachineMemOperand *MMO)
+      : MemSDNode(NodeTy, Order, dl, VTs, MemVT, MMO) {
+    assert((NodeTy == ISD::GET_FPENV_MEM || NodeTy == ISD::SET_FPENV_MEM) &&
+           "Expected FP state access node");
+  }
+
+  static bool classof(const SDNode *N) {
+    return N->getOpcode() == ISD::GET_FPENV_MEM ||
+           N->getOpcode() == ISD::SET_FPENV_MEM;
+  }
+};
+
 /// An SDNode that represents everything that will be needed
 /// to construct a MachineInstr. These nodes are created during the
 /// instruction selection proper phase.
@@ -2934,7 +2967,7 @@ public:
       return ArrayRef(MemRefs.getAddrOfPtr1(), 1);
 
     // Otherwise we have an actual array.
-    return ArrayRef(MemRefs.get<MachineMemOperand **>(), NumMemRefs);
+    return ArrayRef(cast<MachineMemOperand **>(MemRefs), NumMemRefs);
   }
   mmo_iterator memoperands_begin() const { return memoperands().begin(); }
   mmo_iterator memoperands_end() const { return memoperands().end(); }
@@ -3095,9 +3128,25 @@ namespace ISD {
   /// Attempt to match a unary predicate against a scalar/splat constant or
   /// every element of a constant BUILD_VECTOR.
   /// If AllowUndef is true, then UNDEF elements will pass nullptr to Match.
-  bool matchUnaryPredicate(SDValue Op,
-                           std::function<bool(ConstantSDNode *)> Match,
-                           bool AllowUndefs = false);
+  template <typename ConstNodeType>
+  bool matchUnaryPredicateImpl(SDValue Op,
+                               std::function<bool(ConstNodeType *)> Match,
+                               bool AllowUndefs = false);
+
+  /// Hook for matching ConstantSDNode predicate
+  inline bool matchUnaryPredicate(SDValue Op,
+                                  std::function<bool(ConstantSDNode *)> Match,
+                                  bool AllowUndefs = false) {
+    return matchUnaryPredicateImpl<ConstantSDNode>(Op, Match, AllowUndefs);
+  }
+
+  /// Hook for matching ConstantFPSDNode predicate
+  inline bool
+  matchUnaryFpPredicate(SDValue Op,
+                        std::function<bool(ConstantFPSDNode *)> Match,
+                        bool AllowUndefs = false) {
+    return matchUnaryPredicateImpl<ConstantFPSDNode>(Op, Match, AllowUndefs);
+  }
 
   /// Attempt to match a binary predicate against a pair of scalar/splat
   /// constants or every element of a pair of constant BUILD_VECTORs.

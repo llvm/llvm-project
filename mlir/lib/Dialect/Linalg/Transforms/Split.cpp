@@ -41,26 +41,26 @@ createSplitPart(RewriterBase &b, Location loc, TilingInterface op,
   offsetsCopy[dimension] = offset;
 
   // Create the part as it it were a single tile.
-  SmallVector<Operation *> tiled =
+  FailureOr<TilingResult> tilingResult =
       op.getTiledImplementation(b, offsetsCopy, sizesCopy);
-  assert(tiled.size() == 1 && "expected a single result from tiling");
-  auto part = cast<TilingInterface>(tiled.front());
 
   // Insert the results back and populate the `results` list.
-  for (auto i : llvm::seq<unsigned>(0, part->getNumResults())) {
+  for (auto [index, result] : llvm::enumerate(tilingResult->tiledValues)) {
     SmallVector<OpFoldResult> resultOffsets, resultSizes;
-    if (failed(op.getResultTilePosition(b, i, offsetsCopy, sizesCopy,
+    if (failed(op.getResultTilePosition(b, index, offsetsCopy, sizesCopy,
                                         resultOffsets, resultSizes)))
       return nullptr;
     SmallVector<OpFoldResult> resultStrides(resultOffsets.size(),
                                             b.getIndexAttr(1));
     Value inserted = b.create<tensor::InsertSliceOp>(
-        loc, part->getResult(i), resultOperands[i], resultOffsets, resultSizes,
+        loc, result, resultOperands[index], resultOffsets, resultSizes,
         resultStrides);
     results.push_back(inserted);
   }
-
-  return part;
+  // TODO: this part can be generalized maybe to not expect a single op.
+  assert(tilingResult->tiledOps.size() == 1 &&
+         "expected split part to return a single tiled operation");
+  return cast<TilingInterface>(tilingResult->tiledOps[0]);
 }
 
 std::pair<TilingInterface, TilingInterface>
@@ -81,19 +81,19 @@ linalg::splitOp(RewriterBase &rewriter, TilingInterface op, unsigned dimension,
   // Adjust the split point so that it doesn't overflow the size.
   AffineExpr d0, d1, d2;
   bindDims(rewriter.getContext(), d0, d1, d2);
-  OpFoldResult minSplitPoint = makeComposedFoldedAffineMin(
+  OpFoldResult minSplitPoint = affine::makeComposedFoldedAffineMin(
       rewriter, op.getLoc(),
       AffineMap::inferFromExprList(ArrayRef<AffineExpr>{d0, d1 + d2}).front(),
       {splitPoint, offsets[dimension], sizes[dimension]});
 
   // Compute the size of the second part. Return early if the second part would
   // have an empty iteration space.
-  OpFoldResult remainingSize = makeComposedFoldedAffineApply(
+  OpFoldResult remainingSize = affine::makeComposedFoldedAffineApply(
       rewriter, op.getLoc(), d0 + d1 - d2,
       {iterationSpace[dimension].offset, iterationSpace[dimension].size,
        minSplitPoint});
-  if (auto attr = remainingSize.dyn_cast<Attribute>()) {
-    if (attr.cast<IntegerAttr>().getValue().isZero())
+  if (auto attr = llvm::dyn_cast_if_present<Attribute>(remainingSize)) {
+    if (cast<IntegerAttr>(attr).getValue().isZero())
       return {op, TilingInterface()};
   }
 
@@ -121,7 +121,7 @@ linalg::splitOp(RewriterBase &rewriter, TilingInterface op, unsigned dimension,
   });
 
   // Create the second part.
-  OpFoldResult totalOffset = makeComposedFoldedAffineApply(
+  OpFoldResult totalOffset = affine::makeComposedFoldedAffineApply(
       rewriter, op.getLoc(), d0 + d1, {offsets[dimension], minSplitPoint});
   SmallVector<Value> secondResults;
   TilingInterface secondPart =

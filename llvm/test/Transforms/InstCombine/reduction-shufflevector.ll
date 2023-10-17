@@ -159,7 +159,7 @@ define i32 @reduce_and_failed(<4 x i32> %x) {
 
 define i32 @reduce_xor_failed(<4 x i32> %x) {
 ; CHECK-LABEL: @reduce_xor_failed(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 undef>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 poison>
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.vector.reduce.xor.v4i32(<4 x i32> [[SHUF]])
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -181,7 +181,7 @@ define i32 @reduce_umax_failed(<2 x i32> %x, <2 x i32> %y) {
 
 define i32 @reduce_umin_failed(<2 x i32> %x) {
 ; CHECK-LABEL: @reduce_umin_failed(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x i32> [[X:%.*]], <2 x i32> poison, <4 x i32> <i32 undef, i32 undef, i32 0, i32 1>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x i32> [[X:%.*]], <2 x i32> poison, <4 x i32> <i32 poison, i32 poison, i32 0, i32 1>
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[SHUF]])
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -225,7 +225,7 @@ define float @reduce_fmax_failed(<4 x float> %x) {
 
 define float @reduce_fmin_failed(<4 x float> %x) {
 ; CHECK-LABEL: @reduce_fmin_failed(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> poison, <4 x i32> <i32 undef, i32 3, i32 1, i32 2>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> poison, <4 x i32> <i32 poison, i32 3, i32 1, i32 2>
 ; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> [[SHUF]])
 ; CHECK-NEXT:    ret float [[RES]]
 ;
@@ -247,7 +247,7 @@ define float @reduce_fadd_failed(float %a, <4 x float> %x) {
 
 define float @reduce_fmul_failed(float %a, <2 x float> %x) {
 ; CHECK-LABEL: @reduce_fmul_failed(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x float> [[X:%.*]], <2 x float> poison, <4 x i32> <i32 0, i32 undef, i32 1, i32 undef>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x float> [[X:%.*]], <2 x float> poison, <4 x i32> <i32 0, i32 poison, i32 1, i32 poison>
 ; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.vector.reduce.fmul.v4f32(float [[A:%.*]], <4 x float> [[SHUF]])
 ; CHECK-NEXT:    ret float [[RES]]
 ;

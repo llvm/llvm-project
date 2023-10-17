@@ -525,35 +525,64 @@ TEST(ExternalIOTests, TestNonAvancingInput) {
   struct TestItems {
     std::string item;
     int expectedIoStat;
-    std::string expectedItemValue;
+    std::string expectedItemValue[2];
   };
   // Actual non advancing input IO test
   TestItems inputItems[]{
-      {std::string(4, '+'), IostatOk, "ABCD"},
-      {std::string(4, '+'), IostatOk, "EFGH"},
-      {std::string(4, '+'), IostatEor, "    "},
-      {std::string(2, '+'), IostatOk, "IJ"},
-      {std::string(8, '+'), IostatEor, "KLMNOP  "},
-      {std::string(10, '+'), IostatEor, "QRSTUVWX  "},
+      {std::string(4, '+'), IostatOk, {"ABCD", "ABCD"}},
+      {std::string(4, '+'), IostatOk, {"EFGH", "EFGH"}},
+      {std::string(4, '+'), IostatEor, {"++++", "    "}},
+      {std::string(2, '+'), IostatOk, {"IJ", "IJ"}},
+      {std::string(8, '+'), IostatEor, {"++++++++", "KLMNOP  "}},
+      {std::string(10, '+'), IostatEor, {"++++++++++", "QRSTUVWX  "}},
   };
 
+  // Test with PAD='NO'
   int j{0};
   for (auto &inputItem : inputItems) {
-    // READ(UNIT=unit, FMT=fmt, ADVANCE='NO', IOSTAT=iostat) inputItem
+    // READ(UNIT=unit, FMT=fmt, ADVANCE='NO', PAD='NO', IOSTAT=iostat) inputItem
     io = IONAME(BeginExternalFormattedInput)(
         fmt.data(), fmt.length(), nullptr, unit, __FILE__, __LINE__);
     IONAME(EnableHandlers)(io, true, false, false, false, false);
     ASSERT_TRUE(IONAME(SetAdvance)(io, "NO", 2)) << "SetAdvance(NO)" << j;
+    ASSERT_TRUE(IONAME(SetPad)(io, "NO", 2)) << "SetPad(NO)" << j;
     bool result{
         IONAME(InputAscii)(io, inputItem.item.data(), inputItem.item.length())};
     ASSERT_EQ(result, inputItem.expectedIoStat == IostatOk)
         << "InputAscii() " << j;
     ASSERT_EQ(IONAME(EndIoStatement)(io), inputItem.expectedIoStat)
         << "EndIoStatement() for Read " << j;
-    ASSERT_EQ(inputItem.item, inputItem.expectedItemValue)
+    ASSERT_EQ(inputItem.item, inputItem.expectedItemValue[0])
         << "Input-item value after non advancing read " << j;
     j++;
   }
+
+  // REWIND(UNIT=unit)
+  io = IONAME(BeginRewind)(unit, __FILE__, __LINE__);
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Rewind";
+
+  // Test again with PAD='YES'
+  j = 0;
+  for (auto &inputItem : inputItems) {
+    // READ(UNIT=unit, FMT=fmt, ADVANCE='NO', PAD='YES', IOSTAT=iostat)
+    // inputItem
+    io = IONAME(BeginExternalFormattedInput)(
+        fmt.data(), fmt.length(), nullptr, unit, __FILE__, __LINE__);
+    IONAME(EnableHandlers)(io, true, false, false, false, false);
+    ASSERT_TRUE(IONAME(SetAdvance)(io, "NO", 2)) << "SetAdvance(NO)" << j;
+    ASSERT_TRUE(IONAME(SetPad)(io, "YES", 3)) << "SetPad(YES)" << j;
+    bool result{
+        IONAME(InputAscii)(io, inputItem.item.data(), inputItem.item.length())};
+    ASSERT_EQ(result, inputItem.expectedIoStat == IostatOk)
+        << "InputAscii() " << j;
+    ASSERT_EQ(IONAME(EndIoStatement)(io), inputItem.expectedIoStat)
+        << "EndIoStatement() for Read " << j;
+    ASSERT_EQ(inputItem.item, inputItem.expectedItemValue[1])
+        << "Input-item value after non advancing read " << j;
+    j++;
+  }
+
   // CLOSE(UNIT=unit)
   io = IONAME(BeginClose)(unit, __FILE__, __LINE__);
   ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)

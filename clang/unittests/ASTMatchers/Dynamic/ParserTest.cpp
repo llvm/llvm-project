@@ -364,7 +364,8 @@ TEST(ParserTest, Errors) {
             "to build matcher: mapAnyOf.",
             ParseWithError("mapAnyOf(\"foo\")"));
   EXPECT_EQ("Input value has unresolved overloaded type: "
-            "Matcher<DoStmt|ForStmt|WhileStmt|CXXForRangeStmt|FunctionDecl>",
+            "Matcher<DoStmt|ForStmt|WhileStmt|CXXForRangeStmt|FunctionDecl|"
+            "CoroutineBodyStmt>",
             ParseMatcherWithError("hasBody(stmt())"));
   EXPECT_EQ(
       "1:1: Error parsing argument 1 for matcher decl.\n"

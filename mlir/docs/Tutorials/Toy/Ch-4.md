@@ -165,16 +165,18 @@ GenericCallOp. This means that we just need to provide a definition:
 /// Returns the region on the function operation that is callable.
 Region *FuncOp::getCallableRegion() { return &getBody(); }
 
-/// Returns the results types that the callable region produces when
-/// executed.
-ArrayRef<Type> FuncOp::getCallableResults() { return getType().getResults(); }
-
 // ....
 
 /// Return the callee of the generic call operation, this is required by the
 /// call interface.
 CallInterfaceCallable GenericCallOp::getCallableForCallee() {
   return getAttrOfType<SymbolRefAttr>("callee");
+}
+
+/// Set the callee for the generic call operation, this is required by the call
+/// interface.
+void GenericCallOp::setCalleeFromCallable(CallInterfaceCallable callee) {
+  (*this)->setAttr("callee", callee.get<SymbolRefAttr>());
 }
 
 /// Get the argument operands to the called function, this is required by the
@@ -222,7 +224,7 @@ casts between two different shapes.
 ```tablegen
 def CastOp : Toy_Op<"cast", [
     DeclareOpInterfaceMethods<CastOpInterface>,
-    NoMemoryEffect,
+    Pure,
     SameOperandsAndResultShape]
   > {
   let summary = "shape cast operation";
@@ -375,7 +377,7 @@ inferred as the shape of the inputs.
 ```c++
 /// Infer the output shape of the MulOp, this is required by the shape inference
 /// interface.
-void MulOp::inferShapes() { getResult().setType(getOperand(0).getType()); }
+void MulOp::inferShapes() { getResult().setType(getLhs().getType()); }
 ```
 
 At this point, each of the necessary Toy operations provide a mechanism by which

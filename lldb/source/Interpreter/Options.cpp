@@ -714,8 +714,8 @@ void Options::HandleOptionArgumentCompletion(
     }
   }
 
-  if (completion_mask & CommandCompletions::eSourceFileCompletion ||
-      completion_mask & CommandCompletions::eSymbolCompletion) {
+  if (completion_mask & lldb::eSourceFileCompletion ||
+      completion_mask & lldb::eSymbolCompletion) {
     for (size_t i = 0; i < opt_element_vector.size(); i++) {
       int cur_defs_index = opt_element_vector[i].opt_defs_index;
 
@@ -748,7 +748,7 @@ void Options::HandleOptionArgumentCompletion(
     }
   }
 
-  CommandCompletions::InvokeCommonCompletionCallbacks(
+  lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
       interpreter, completion_mask, request, filter_up.get());
 }
 
@@ -778,6 +778,19 @@ void OptionGroupOptions::Append(OptionGroup *group, uint32_t src_mask,
       m_option_defs.push_back(group_option_defs[i]);
       m_option_defs.back().usage_mask = dst_mask;
     }
+  }
+}
+
+void OptionGroupOptions::Append(
+    OptionGroup *group, llvm::ArrayRef<llvm::StringRef> exclude_long_options) {
+  auto group_option_defs = group->GetDefinitions();
+  for (uint32_t i = 0; i < group_option_defs.size(); ++i) {
+    const auto &definition = group_option_defs[i];
+    if (llvm::is_contained(exclude_long_options, definition.long_option))
+      continue;
+
+    m_option_infos.push_back(OptionInfo(group, i));
+    m_option_defs.push_back(definition);
   }
 }
 

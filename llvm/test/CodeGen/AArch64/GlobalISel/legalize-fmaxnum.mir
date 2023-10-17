@@ -93,8 +93,8 @@ body:             |
     ; FP16: $q0 = COPY %a(s128)
     ; FP16: $q1 = COPY %b(s128)
     ; FP16: BL &fmaxl, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $q0, implicit $q1, implicit-def $q0
-    ; FP16: %maxnum:_(s128) = COPY $q0
     ; FP16: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+    ; FP16: %maxnum:_(s128) = COPY $q0
     ; FP16: $q0 = COPY %maxnum(s128)
     ; FP16: RET_ReallyLR implicit $q0
     ; NO-FP16-LABEL: name: s128_libcall
@@ -104,8 +104,8 @@ body:             |
     ; NO-FP16: $q0 = COPY %a(s128)
     ; NO-FP16: $q1 = COPY %b(s128)
     ; NO-FP16: BL &fmaxl, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $q0, implicit $q1, implicit-def $q0
-    ; NO-FP16: %maxnum:_(s128) = COPY $q0
     ; NO-FP16: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+    ; NO-FP16: %maxnum:_(s128) = COPY $q0
     ; NO-FP16: $q0 = COPY %maxnum(s128)
     ; NO-FP16: RET_ReallyLR implicit $q0
     %a:_(s128) = COPY $q0

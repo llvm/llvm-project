@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
 
 void xxx(int argc) {
   int fp, fp1; // expected-note {{initialize the variable 'fp' to silence this warning}} expected-note {{initialize the variable 'fp1' to silence this warning}}

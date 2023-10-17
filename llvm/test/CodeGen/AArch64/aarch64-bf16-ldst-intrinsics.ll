@@ -1,4 +1,4 @@
-; RUN: llc -mtriple aarch64-arm-none-eabi -asm-verbose=1 -mattr=+bf16 %s -o - | FileCheck %s
+; RUN: llc -mtriple aarch64 -asm-verbose=1 -mattr=+bf16 %s -o - | FileCheck %s
 
 %struct.bfloat16x4x2_t = type { [2 x <4 x bfloat>] }
 %struct.bfloat16x8x2_t = type { [2 x <8 x bfloat>] }

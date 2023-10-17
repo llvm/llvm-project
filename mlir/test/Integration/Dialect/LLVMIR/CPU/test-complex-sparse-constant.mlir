@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --convert-memref-to-llvm | \
+// RUN: mlir-opt %s --finalize-memref-to-llvm | \
 // RUN:   mlir-cpu-runner -e entry -entry-point-result=void
 
 //

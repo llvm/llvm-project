@@ -42,13 +42,15 @@ The CMake options you need to add are:
 
  * ``-DCMAKE_SYSTEM_NAME=<target-system>``
  * ``-DCMAKE_INSTALL_PREFIX=<install-dir>``
- * ``-DLLVM_TABLEGEN=<path-to-host-bin>/llvm-tblgen``
- * ``-DCLANG_TABLEGEN=<path-to-host-bin>/clang-tblgen``
- * ``-DLLVM_DEFAULT_TARGET_TRIPLE=arm-linux-gnueabihf``
- * ``-DLLVM_TARGET_ARCH=ARM``
+ * ``-DLLVM_HOST_TRIPLE=arm-linux-gnueabihf``
  * ``-DLLVM_TARGETS_TO_BUILD=ARM``
 
 Note: ``CMAKE_CROSSCOMPILING`` is always set automatically when ``CMAKE_SYSTEM_NAME`` is set. Don't put ``-DCMAKE_CROSSCOMPILING=TRUE`` in your options.
+
+Also note that ``LLVM_HOST_TRIPLE`` specifies the triple of the system
+that the cross built LLVM is going to run on - the flag is named based
+on the autoconf build/host/target nomenclature. (This flag implicitly sets
+other defaults, such as ``LLVM_DEFAULT_TARGET_TRIPLE``.)
 
 If you're compiling with GCC, you can use architecture options for your target,
 and the compiler driver will detect everything that it needs:
@@ -66,9 +68,15 @@ In addition to the ones above, you'll also need:
  * Appropriate use of ``-I`` and ``-L``, depending on how the cross GCC is installed,
    and where are the libraries and headers.
 
-The TableGen options are required to compile it with the host compiler,
-so you'll need to compile LLVM (or at least ``llvm-tblgen``) to your host
-platform before you start. The CXX flags define the target, cpu (which in this case
+You may also want to set the ``LLVM_NATIVE_TOOL_DIR`` option - pointing
+at a directory with prebuilt LLVM tools (``llvm-tblgen``, ``clang-tblgen``
+etc) for the build host, allowing you to them reuse them if available.
+E.g. ``-DLLVM_NATIVE_TOOL_DIR=<path-to-native-llvm-build>/bin``.
+If the option isn't set (or the directory doesn't contain all needed tools),
+the LLVM cross build will automatically launch a nested build to build the
+tools that are required.
+
+The CXX flags define the target, cpu (which in this case
 defaults to ``fpu=VFP3`` with NEON), and forcing the hard-float ABI. If you're
 using Clang as a cross-compiler, you will *also* have to set ``--sysroot``
 to make sure it picks the correct linker.

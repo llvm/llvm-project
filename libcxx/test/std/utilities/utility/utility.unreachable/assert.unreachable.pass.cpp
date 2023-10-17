@@ -6,11 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-
 // REQUIRES: has-unix-headers
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0}}
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_ASSERTIONS=1
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+// REQUIRES: libcpp-hardening-mode={{safe|debug}}
+// XFAIL: availability-verbose_abort-missing
 
 // Make sure that reaching std::unreachable() with assertions enabled triggers an assertion.
 

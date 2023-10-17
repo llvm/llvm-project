@@ -44,7 +44,7 @@ bool lldb_private::formatters::CFAbsoluteTimeSummaryProvider(
 
 bool lldb_private::formatters::CFBagSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  static ConstString g_TypeHint("CFBag");
+  static constexpr llvm::StringLiteral g_TypeHint("CFBag");
 
   ProcessSP process_sp = valobj.GetProcessSP();
   if (!process_sp)
@@ -92,17 +92,13 @@ bool lldb_private::formatters::CFBagSummaryProvider(
   } else
     return false;
 
-  std::string prefix, suffix;
-  if (Language *language = Language::FindPlugin(options.GetLanguage())) {
-    if (!language->GetFormatterPrefixSuffix(valobj, g_TypeHint, prefix,
-                                            suffix)) {
-      prefix.clear();
-      suffix.clear();
-    }
-  }
+  llvm::StringRef prefix, suffix;
+  if (Language *language = Language::FindPlugin(options.GetLanguage()))
+    std::tie(prefix, suffix) = language->GetFormatterPrefixSuffix(g_TypeHint);
 
-  stream.Printf("%s\"%u value%s\"%s", prefix.c_str(), count,
-                (count == 1 ? "" : "s"), suffix.c_str());
+  stream << prefix;
+  stream.Printf("\"%u value%s\"", count, (count == 1 ? "" : "s"));
+  stream << suffix;
   return true;
 }
 
@@ -226,7 +222,7 @@ bool lldb_private::formatters::CFBitVectorSummaryProvider(
 
 bool lldb_private::formatters::CFBinaryHeapSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  static ConstString g_TypeHint("CFBinaryHeap");
+  static constexpr llvm::StringLiteral g_TypeHint("CFBinaryHeap");
 
   ProcessSP process_sp = valobj.GetProcessSP();
   if (!process_sp)
@@ -279,16 +275,12 @@ bool lldb_private::formatters::CFBinaryHeapSummaryProvider(
   } else
     return false;
 
-  std::string prefix, suffix;
-  if (Language *language = Language::FindPlugin(options.GetLanguage())) {
-    if (!language->GetFormatterPrefixSuffix(valobj, g_TypeHint, prefix,
-                                            suffix)) {
-      prefix.clear();
-      suffix.clear();
-    }
-  }
+  llvm::StringRef prefix, suffix;
+  if (Language *language = Language::FindPlugin(options.GetLanguage()))
+    std::tie(prefix, suffix) = language->GetFormatterPrefixSuffix(g_TypeHint);
 
-  stream.Printf("%s\"%u item%s\"%s", prefix.c_str(), count,
-                (count == 1 ? "" : "s"), suffix.c_str());
+  stream << prefix;
+  stream.Printf("\"%u item%s\"", count, (count == 1 ? "" : "s"));
+  stream << suffix;
   return true;
 }

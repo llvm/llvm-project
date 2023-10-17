@@ -14,7 +14,6 @@
 #ifndef POLLY_LINKALLPASSES_H
 #define POLLY_LINKALLPASSES_H
 
-#include "polly/CodeGen/PPCGCodeGeneration.h"
 #include "polly/Config/config.h"
 #include "polly/Support/DumpFunctionPass.h"
 #include "polly/Support/DumpModulePass.h"
@@ -54,14 +53,6 @@ llvm::Pass *createScopInfoPrinterLegacyFunctionPass(llvm::raw_ostream &OS);
 llvm::Pass *createIslAstInfoWrapperPassPass();
 llvm::Pass *createIslAstInfoPrinterLegacyPass(llvm::raw_ostream &OS);
 llvm::Pass *createCodeGenerationPass();
-#ifdef GPU_CODEGEN
-llvm::Pass *createPPCGCodeGenerationPass(GPUArch Arch = GPUArch::NVPTX64,
-                                         GPURuntime Runtime = GPURuntime::CUDA);
-
-llvm::Pass *
-createManagedMemoryRewritePassPass(GPUArch Arch = GPUArch::NVPTX64,
-                                   GPURuntime Runtime = GPURuntime::CUDA);
-#endif
 llvm::Pass *createIslScheduleOptimizerWrapperPass();
 llvm::Pass *createIslScheduleOptimizerPrinterLegacyPass(llvm::raw_ostream &OS);
 llvm::Pass *createFlattenSchedulePass();
@@ -113,10 +104,6 @@ struct PollyForcePassLinking {
     polly::createIslAstInfoWrapperPassPass();
     polly::createIslAstInfoPrinterLegacyPass(llvm::outs());
     polly::createCodeGenerationPass();
-#ifdef GPU_CODEGEN
-    polly::createPPCGCodeGenerationPass();
-    polly::createManagedMemoryRewritePassPass();
-#endif
     polly::createIslScheduleOptimizerWrapperPass();
     polly::createIslScheduleOptimizerPrinterLegacyPass(llvm::outs());
     polly::createMaximalStaticExpansionPass();
@@ -156,10 +143,6 @@ void initializeDependenceInfoPrinterLegacyFunctionPassPass(
 void initializeIslAstInfoWrapperPassPass(llvm::PassRegistry &);
 void initializeIslAstInfoPrinterLegacyPassPass(llvm::PassRegistry &);
 void initializeCodeGenerationPass(llvm::PassRegistry &);
-#ifdef GPU_CODEGEN
-void initializePPCGCodeGenerationPass(llvm::PassRegistry &);
-void initializeManagedMemoryRewritePassPass(llvm::PassRegistry &);
-#endif
 void initializeIslScheduleOptimizerWrapperPassPass(llvm::PassRegistry &);
 void initializeIslScheduleOptimizerPrinterLegacyPassPass(llvm::PassRegistry &);
 void initializeMaximalStaticExpanderWrapperPassPass(llvm::PassRegistry &);

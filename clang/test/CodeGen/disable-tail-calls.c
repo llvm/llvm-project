@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9.0 -opaque-pointers -emit-llvm -O2 -fno-optimize-sibling-calls -o - < %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9.0 -emit-llvm -O2 -fno-optimize-sibling-calls -o - < %s | FileCheck %s
 
 typedef struct List {
   struct List *next;

@@ -31,6 +31,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/RegionKindInterface.h"
 #include "mlir/IR/Threading.h"
+#include "llvm/ADT/DenseMapInfoVariant.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -53,11 +54,17 @@ public:
   LogicalResult verifyOpAndDominance(Operation &op);
 
 private:
-  /// Any ops that have regions and are marked as "isolated from above" will be
-  /// returned in the opsWithIsolatedRegions vector.
-  LogicalResult
-  verifyBlock(Block &block,
-              SmallVectorImpl<Operation *> &opsWithIsolatedRegions);
+  using WorkItem = llvm::PointerUnion<Operation *, Block *>;
+
+  /// This verifier uses a DFS of the tree of operations/blocks. The method
+  /// verifyOnEntrance is invoked when we visit a node for the first time, i.e.
+  /// before visiting its children. The method verifyOnExit is invoked
+  /// upon exit from the subtree, i.e. when we visit a node for the second time.
+  LogicalResult verifyOnEntrance(Block &block);
+  LogicalResult verifyOnEntrance(Operation &op);
+
+  LogicalResult verifyOnExit(Block &block);
+  LogicalResult verifyOnExit(Operation &op);
 
   /// Verify the properties and dominance relationships of this operation.
   LogicalResult verifyOperation(Operation &op);
@@ -106,9 +113,7 @@ static bool mayBeValidWithoutTerminator(Block *block) {
   return !op || op->mightHaveTrait<OpTrait::NoTerminator>();
 }
 
-LogicalResult OperationVerifier::verifyBlock(
-    Block &block, SmallVectorImpl<Operation *> &opsWithIsolatedRegions) {
-
+LogicalResult OperationVerifier::verifyOnEntrance(Block &block) {
   for (auto arg : block.getArguments())
     if (arg.getOwner() != &block)
       return emitError(arg.getLoc(), "block argument not owned by block");
@@ -128,23 +133,12 @@ LogicalResult OperationVerifier::verifyBlock(
     if (op.getNumSuccessors() != 0 && &op != &block.back())
       return op.emitError(
           "operation with block successors must terminate its parent block");
-
-    // If we aren't verifying recursievly, there is nothing left to check.
-    if (!verifyRecursively)
-      continue;
-
-    // If this operation has regions and is IsolatedFromAbove, we defer
-    // checking.  This allows us to parallelize verification better.
-    if (op.getNumRegions() != 0 &&
-        op.hasTrait<OpTrait::IsIsolatedFromAbove>()) {
-      opsWithIsolatedRegions.push_back(&op);
-
-      // Otherwise, check the operation inline.
-    } else if (failed(verifyOperation(op))) {
-      return failure();
-    }
   }
 
+  return success();
+}
+
+LogicalResult OperationVerifier::verifyOnExit(Block &block) {
   // Verify that this block is not branching to a block of a different
   // region.
   for (Block *successor : block.getSuccessors())
@@ -164,17 +158,14 @@ LogicalResult OperationVerifier::verifyBlock(
   return success();
 }
 
-/// Verify the properties and dominance relationships of this operation,
-/// stopping region recursion at any "isolated from above operations".  Any such
-/// ops are returned in the opsWithIsolatedRegions vector.
-LogicalResult OperationVerifier::verifyOperation(Operation &op) {
+LogicalResult OperationVerifier::verifyOnEntrance(Operation &op) {
   // Check that operands are non-nil and structurally ok.
   for (auto operand : op.getOperands())
     if (!operand)
       return op.emitError("null operand found");
 
   /// Verify that all of the attributes are okay.
-  for (auto attr : op.getAttrs()) {
+  for (auto attr : op.getDiscardableAttrDictionary()) {
     // Check for any optional dialect specific attributes.
     if (auto *dialect = attr.getNameDialect())
       if (failed(dialect->verifyOperationAttribute(&op, attr)))
@@ -188,54 +179,58 @@ LogicalResult OperationVerifier::verifyOperation(Operation &op) {
   if (registeredInfo && failed(registeredInfo->verifyInvariants(&op)))
     return failure();
 
+  unsigned numRegions = op.getNumRegions();
+  if (!numRegions)
+    return success();
+  auto kindInterface = dyn_cast<RegionKindInterface>(&op);
   SmallVector<Operation *> opsWithIsolatedRegions;
-
-  if (unsigned numRegions = op.getNumRegions()) {
-    auto kindInterface = dyn_cast<RegionKindInterface>(op);
-
-    // Verify that all child regions are ok.
-    MutableArrayRef<Region> regions = op.getRegions();
-    for (unsigned i = 0; i < numRegions; ++i) {
-      Region &region = regions[i];
-      RegionKind kind =
-          kindInterface ? kindInterface.getRegionKind(i) : RegionKind::SSACFG;
-      // Check that Graph Regions only have a single basic block. This is
-      // similar to the code in SingleBlockImplicitTerminator, but doesn't
-      // require the trait to be specified. This arbitrary limitation is
-      // designed to limit the number of cases that have to be handled by
-      // transforms and conversions.
-      if (op.isRegistered() && kind == RegionKind::Graph) {
-        // Non-empty regions must contain a single basic block.
-        if (!region.empty() && !region.hasOneBlock())
-          return op.emitOpError("expects graph region #")
-                 << i << " to have 0 or 1 blocks";
-      }
-
-      if (region.empty())
-        continue;
-
-      // Verify the first block has no predecessors.
-      Block *firstBB = &region.front();
-      if (!firstBB->hasNoPredecessors())
-        return emitError(op.getLoc(),
-                         "entry block of region may not have predecessors");
-
-      // Verify each of the blocks within the region if we are verifying
-      // recursively.
-      if (verifyRecursively) {
-        for (Block &block : region)
-          if (failed(verifyBlock(block, opsWithIsolatedRegions)))
-            return failure();
-      }
+  // Verify that all child regions are ok.
+  MutableArrayRef<Region> regions = op.getRegions();
+  for (unsigned i = 0; i < numRegions; ++i) {
+    Region &region = regions[i];
+    RegionKind kind =
+        kindInterface ? kindInterface.getRegionKind(i) : RegionKind::SSACFG;
+    // Check that Graph Regions only have a single basic block. This is
+    // similar to the code in SingleBlockImplicitTerminator, but doesn't
+    // require the trait to be specified. This arbitrary limitation is
+    // designed to limit the number of cases that have to be handled by
+    // transforms and conversions.
+    if (op.isRegistered() && kind == RegionKind::Graph) {
+      // Non-empty regions must contain a single basic block.
+      if (!region.empty() && !region.hasOneBlock())
+        return op.emitOpError("expects graph region #")
+               << i << " to have 0 or 1 blocks";
     }
-  }
 
-  // Verify the nested ops that are able to be verified in parallel.
+    if (region.empty())
+      continue;
+
+    // Verify the first block has no predecessors.
+    Block *firstBB = &region.front();
+    if (!firstBB->hasNoPredecessors())
+      return emitError(op.getLoc(),
+                       "entry block of region may not have predecessors");
+  }
+  return success();
+}
+
+LogicalResult OperationVerifier::verifyOnExit(Operation &op) {
+  SmallVector<Operation *> opsWithIsolatedRegions;
+  if (verifyRecursively) {
+    for (Region &region : op.getRegions())
+      for (Block &block : region)
+        for (Operation &o : block)
+          if (o.getNumRegions() != 0 &&
+              o.hasTrait<OpTrait::IsIsolatedFromAbove>())
+            opsWithIsolatedRegions.push_back(&o);
+  }
   if (failed(failableParallelForEach(
           op.getContext(), opsWithIsolatedRegions,
-          [&](Operation *op) { return verifyOpAndDominance(*op); })))
+          [&](Operation *o) { return verifyOpAndDominance(*o); })))
     return failure();
-
+  OperationName opName = op.getName();
+  std::optional<RegisteredOperationName> registeredInfo =
+      opName.getRegisteredInfo();
   // After the region ops are verified, run the verifiers that have additional
   // region invariants need to veirfy.
   if (registeredInfo && failed(registeredInfo->verifyRegionInvariants(&op)))
@@ -264,6 +259,58 @@ LogicalResult OperationVerifier::verifyOperation(Operation &op) {
            << "') that does not allow unknown operations";
   }
 
+  return success();
+}
+
+/// Verify the properties and dominance relationships of this operation,
+/// stopping region "recursion" at any "isolated from above operations".
+/// Such ops are collected separately and verified inside
+/// verifyBlockPostChildren.
+LogicalResult OperationVerifier::verifyOperation(Operation &op) {
+  SmallVector<WorkItem> worklist{{&op}};
+  DenseSet<WorkItem> seen;
+  while (!worklist.empty()) {
+    WorkItem top = worklist.back();
+
+    auto visit = [](auto &&visitor, WorkItem w) {
+      if (w.is<Operation *>())
+        return visitor(w.get<Operation *>());
+      return visitor(w.get<Block *>());
+    };
+
+    const bool isExit = !seen.insert(top).second;
+    // 2nd visit of this work item ("exit").
+    if (isExit) {
+      worklist.pop_back();
+      if (failed(visit(
+              [this](auto *workItem) { return verifyOnExit(*workItem); }, top)))
+        return failure();
+      continue;
+    }
+
+    // 1st visit of this work item ("entrance").
+    if (failed(visit(
+            [this](auto *workItem) { return verifyOnEntrance(*workItem); },
+            top)))
+      return failure();
+
+    if (top.is<Block *>()) {
+      Block &currentBlock = *top.get<Block *>();
+      // Skip "isolated from above operations".
+      for (Operation &o : llvm::reverse(currentBlock)) {
+        if (o.getNumRegions() == 0 ||
+            !o.hasTrait<OpTrait::IsIsolatedFromAbove>())
+          worklist.emplace_back(&o);
+      }
+      continue;
+    }
+
+    Operation &currentOp = *top.get<Operation *>();
+    if (verifyRecursively)
+      for (Region &region : llvm::reverse(currentOp.getRegions()))
+        for (Block &block : llvm::reverse(region))
+          worklist.emplace_back(&block);
+  }
   return success();
 }
 
@@ -302,7 +349,7 @@ static void diagnoseInvalidOperandDominance(Operation &op, unsigned operandNo) {
   }
   // Block argument case.
   Block *block1 = op.getBlock();
-  Block *block2 = operand.cast<BlockArgument>().getOwner();
+  Block *block2 = llvm::cast<BlockArgument>(operand).getOwner();
   Region *region1 = block1->getParent();
   Region *region2 = block2->getParent();
   Location loc = UnknownLoc::get(op.getContext());

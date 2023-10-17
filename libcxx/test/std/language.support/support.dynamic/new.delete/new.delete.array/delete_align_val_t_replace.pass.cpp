@@ -10,7 +10,7 @@
 
 // UNSUPPORTED: sanitizer-new-delete, c++03, c++11, c++14
 
-// Libcxx when built for z/OS doesn't contain the aligned allocation functions,
+// Libc++ when built for z/OS doesn't contain the aligned allocation functions,
 // nor does the dynamic library shipped with z/OS.
 // UNSUPPORTED: target={{.+}}-zos{{.*}}
 

@@ -56,8 +56,8 @@ namespace __tsan {
 
 #if !SANITIZER_GO
 struct MapUnmapCallback;
-#if defined(__mips64) || defined(__aarch64__) || defined(__loongarch__) || \
-    defined(__powerpc__)
+#  if defined(__mips64) || defined(__aarch64__) || defined(__loongarch__) || \
+      defined(__powerpc__) || SANITIZER_RISCV64
 
 struct AP32 {
   static const uptr kSpaceBeg = 0;
@@ -680,8 +680,9 @@ ALWAYS_INLINE
 void LazyInitialize(ThreadState *thr) {
   // If we can use .preinit_array, assume that __tsan_init
   // called from .preinit_array initializes runtime before
-  // any instrumented code except ANDROID.
-#if (!SANITIZER_CAN_USE_PREINIT_ARRAY || defined(__ANDROID__))
+  // any instrumented code except when tsan is used as a 
+  // shared library.
+#if (!SANITIZER_CAN_USE_PREINIT_ARRAY || defined(SANITIZER_SHARED))
   if (UNLIKELY(!is_initialized))
     Initialize(thr);
 #endif

@@ -1,5 +1,5 @@
-; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=2 < %s | FileCheck -check-prefix=ALL -check-prefix=HSA %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=2 < %s | FileCheck -check-prefix=ALL -check-prefix=HSA %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa < %s | FileCheck -check-prefix=ALL -check-prefix=HSA %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa < %s | FileCheck -check-prefix=ALL -check-prefix=HSA %s
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=ALL -check-prefix=EG %s
 
 ; This test makes sure we do not double count global values when they are
@@ -12,8 +12,8 @@
 ; EG-NEXT: .long 1
 ; ALL: {{^}}test:
 
-; HSA: granulated_lds_size = 0
-; HSA: workgroup_group_segment_byte_size = 4
+; HSA-NOT: COMPUTE_PGM_RSRC2.LDS_SIZE
+; HSA: .amdhsa_group_segment_fixed_size 4
 
 ; GCN: ; LDSByteSize: 4 bytes/workgroup (compile time only)
 @lds = internal unnamed_addr addrspace(3) global i32 undef, align 4
@@ -34,3 +34,6 @@ else:
 endif:
   ret void
 }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}

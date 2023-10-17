@@ -15,7 +15,6 @@
 #define LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVELEMENT_H
 
 #include "llvm/DebugInfo/LogicalView/Core/LVObject.h"
-#include "llvm/DebugInfo/LogicalView/Core/LVStringPool.h"
 #include "llvm/Support/Casting.h"
 #include <map>
 #include <set>
@@ -206,6 +205,9 @@ public:
   size_t getNameIndex() const { return NameIndex; }
   size_t getQualifiedNameIndex() const { return QualifiedNameIndex; }
 
+  void setInnerComponent() { setInnerComponent(getName()); }
+  void setInnerComponent(StringRef Name);
+
   // Element type name.
   StringRef getTypeName() const;
 
@@ -254,7 +256,7 @@ public:
   virtual void setDiscriminator(uint32_t Value) {}
 
   // Process the values for a DW_TAG_enumerator.
-  virtual std::string getValue() const { return {}; }
+  virtual StringRef getValue() const { return {}; }
   virtual void setValue(StringRef Value) {}
   virtual size_t getValueIndex() const { return 0; }
 
@@ -263,6 +265,13 @@ public:
   void setAccessibilityCode(uint32_t Access) { AccessibilityCode = Access; }
   StringRef
   accessibilityString(uint32_t Access = dwarf::DW_ACCESS_private) const;
+
+  // CodeView Accessibility Codes.
+  std::optional<uint32_t> getAccessibilityCode(codeview::MemberAccess Access);
+  void setAccessibilityCode(codeview::MemberAccess Access) {
+    if (std::optional<uint32_t> Code = getAccessibilityCode(Access))
+      AccessibilityCode = Code.value();
+  }
 
   // DWARF Inline Codes.
   uint32_t getInlineCode() const { return InlineCode; }
@@ -274,6 +283,13 @@ public:
   void setVirtualityCode(uint32_t Virtuality) { VirtualityCode = Virtuality; }
   StringRef
   virtualityString(uint32_t Virtuality = dwarf::DW_VIRTUALITY_none) const;
+
+  // CodeView Virtuality Codes.
+  std::optional<uint32_t> getVirtualityCode(codeview::MethodKind Virtuality);
+  void setVirtualityCode(codeview::MethodKind Virtuality) {
+    if (std::optional<uint32_t> Code = getVirtualityCode(Virtuality))
+      VirtualityCode = Code.value();
+  }
 
   // DWARF Extern Codes.
   StringRef externalString() const;

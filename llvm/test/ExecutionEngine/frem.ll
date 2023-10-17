@@ -1,3 +1,6 @@
+; LoongArch does not support mcjit.
+; UNSUPPORTED: target=loongarch{{.*}}
+
 ; LLI.exe used to crash on Windows\X86 when certain single precession
 ; floating point intrinsics (defined as macros) are used.
 ; This unit test guards against the failure.

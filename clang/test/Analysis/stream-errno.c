@@ -1,5 +1,5 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream,alpha.unix.Errno,apiModeling.StdCLibraryFunctions,debug.ExprInspection \
-// RUN:   -analyzer-config apiModeling.StdCLibraryFunctions:ModelPOSIX=true -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream,alpha.unix.Errno,unix.StdCLibraryFunctions,debug.ExprInspection \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true -verify %s
 
 #include "Inputs/system-header-simulator.h"
 #include "Inputs/errno_func.h"

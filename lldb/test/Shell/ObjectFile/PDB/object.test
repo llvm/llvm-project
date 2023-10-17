@@ -3,7 +3,7 @@
 
 # CHECK: Plugin name: pdb
 # CHECK: Architecture: x86_64-pc-windows-msvc
-# CHECK: UUID: 61AF583F-29A8-7A6C-4C4C-44205044422E-00000001
+# CHECK: UUID: 61AF583F-29A8-7A6C-4C4C-44205044422E-00000003
 # CHECK: Executable: false
 # CHECK: Stripped: false
 # CHECK: Type: debug info
@@ -52,7 +52,7 @@ PdbStream:
   Version:         VC70
 DbiStream:
   VerHeader:       V70
-  Age:             1
+  Age:             3
   BuildNumber:     36363
   PdbDllVersion:   0
   PdbDllRbld:      0

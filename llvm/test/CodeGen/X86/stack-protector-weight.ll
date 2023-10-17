@@ -10,7 +10,7 @@
 ; DARWIN-SELDAG: bb.[[SUCCESS]]{{[0-9a-zA-Z_.]+}}:
 
 ; DARWIN-IR: # Machine code for function test_branch_weights:
-; DARWIN-IR: successors: %bb.[[SUCCESS:[0-9]+]](0x7fffffff), %bb.[[FAILURE:[0-9]+]]
+; DARWIN-IR: successors: %bb.[[SUCCESS:[0-9]+]](0x7ffff800), %bb.[[FAILURE:[0-9]+]]
 ; DARWIN-IR: bb.[[SUCCESS]]{{[0-9a-zA-Z_.]+}}:
 ; DARWIN-IR: bb.[[FAILURE]]{{[0-9a-zA-Z_.]+}}:
 ; DARWIN-IR: CALL64pcrel32 @__stack_chk_fail

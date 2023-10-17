@@ -121,17 +121,17 @@ if_false:
 
 define <4 x i32> @test_32bit(<4 x i32> %lhs, <4 x i32> %tmp, i1 %tst) {
 ; CHECK-SSE2-LABEL: @test_32bit(
-; CHECK-SSE2-NEXT:    [[MASK:%.*]] = shufflevector <4 x i32> [[TMP:%.*]], <4 x i32> undef, <4 x i32> <i32 0, i32 undef, i32 0, i32 0>
+; CHECK-SSE2-NEXT:    [[MASK:%.*]] = shufflevector <4 x i32> [[TMP:%.*]], <4 x i32> undef, <4 x i32> <i32 0, i32 poison, i32 0, i32 0>
 ; CHECK-SSE2-NEXT:    br i1 [[TST:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK-SSE2:       if_true:
 ; CHECK-SSE2-NEXT:    ret <4 x i32> [[MASK]]
 ; CHECK-SSE2:       if_false:
-; CHECK-SSE2-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP]], <4 x i32> undef, <4 x i32> <i32 0, i32 undef, i32 0, i32 0>
+; CHECK-SSE2-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP]], <4 x i32> undef, <4 x i32> <i32 0, i32 poison, i32 0, i32 0>
 ; CHECK-SSE2-NEXT:    [[RES:%.*]] = ashr <4 x i32> [[LHS:%.*]], [[TMP1]]
 ; CHECK-SSE2-NEXT:    ret <4 x i32> [[RES]]
 ;
 ; CHECK-XOP-LABEL: @test_32bit(
-; CHECK-XOP-NEXT:    [[MASK:%.*]] = shufflevector <4 x i32> [[TMP:%.*]], <4 x i32> undef, <4 x i32> <i32 0, i32 undef, i32 0, i32 0>
+; CHECK-XOP-NEXT:    [[MASK:%.*]] = shufflevector <4 x i32> [[TMP:%.*]], <4 x i32> undef, <4 x i32> <i32 0, i32 poison, i32 0, i32 0>
 ; CHECK-XOP-NEXT:    br i1 [[TST:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK-XOP:       if_true:
 ; CHECK-XOP-NEXT:    ret <4 x i32> [[MASK]]
@@ -140,7 +140,7 @@ define <4 x i32> @test_32bit(<4 x i32> %lhs, <4 x i32> %tmp, i1 %tst) {
 ; CHECK-XOP-NEXT:    ret <4 x i32> [[RES]]
 ;
 ; CHECK-AVX-LABEL: @test_32bit(
-; CHECK-AVX-NEXT:    [[MASK:%.*]] = shufflevector <4 x i32> [[TMP:%.*]], <4 x i32> undef, <4 x i32> <i32 0, i32 undef, i32 0, i32 0>
+; CHECK-AVX-NEXT:    [[MASK:%.*]] = shufflevector <4 x i32> [[TMP:%.*]], <4 x i32> undef, <4 x i32> <i32 0, i32 poison, i32 0, i32 0>
 ; CHECK-AVX-NEXT:    br i1 [[TST:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK-AVX:       if_true:
 ; CHECK-AVX-NEXT:    ret <4 x i32> [[MASK]]

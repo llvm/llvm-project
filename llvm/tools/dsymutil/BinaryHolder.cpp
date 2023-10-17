@@ -182,7 +182,7 @@ BinaryHolder::ArchiveEntry::getObjectEntry(StringRef Filename,
 
   for (const auto &Archive : Archives) {
     Error Err = Error::success();
-    for (auto Child : Archive->children(Err)) {
+    for (const auto &Child : Archive->children(Err)) {
       if (auto NameOrErr = Child.getName()) {
         if (*NameOrErr == ObjectFilename) {
           auto ModTimeOrErr = Child.getLastModified();
@@ -238,6 +238,7 @@ BinaryHolder::getObjectEntry(StringRef Filename, TimestampTy Timestamp) {
   if (isArchive(Filename)) {
     StringRef ArchiveFilename = getArchiveAndObjectName(Filename).first;
     std::lock_guard<std::mutex> Lock(ArchiveCacheMutex);
+    ArchiveRefCounter[ArchiveFilename]++;
     if (ArchiveCache.count(ArchiveFilename)) {
       return ArchiveCache[ArchiveFilename]->getObjectEntry(Filename, Timestamp,
                                                            Verbose);
@@ -258,6 +259,7 @@ BinaryHolder::getObjectEntry(StringRef Filename, TimestampTy Timestamp) {
   // If this is an object, we might have it cached. If not we'll have to load
   // it from the file system and cache it now.
   std::lock_guard<std::mutex> Lock(ObjectCacheMutex);
+  ObjectRefCounter[Filename]++;
   if (!ObjectCache.count(Filename)) {
     auto OE = std::make_unique<ObjectEntry>();
     auto Err = OE->load(VFS, Filename, Timestamp, Verbose);
@@ -274,6 +276,25 @@ void BinaryHolder::clear() {
   std::lock_guard<std::mutex> ObjectLock(ObjectCacheMutex);
   ArchiveCache.clear();
   ObjectCache.clear();
+}
+
+void BinaryHolder::eraseObjectEntry(StringRef Filename) {
+  if (Verbose)
+    WithColor::note() << "erasing '" << Filename << "' from cache\n";
+
+  if (isArchive(Filename)) {
+    StringRef ArchiveFilename = getArchiveAndObjectName(Filename).first;
+    std::lock_guard<std::mutex> Lock(ArchiveCacheMutex);
+    ArchiveRefCounter[ArchiveFilename]--;
+    if (ArchiveRefCounter[ArchiveFilename] == 0)
+      ArchiveCache.erase(ArchiveFilename);
+    return;
+  }
+
+  std::lock_guard<std::mutex> Lock(ObjectCacheMutex);
+  ObjectRefCounter[Filename]--;
+  if (ObjectRefCounter[Filename] == 0)
+    ObjectCache.erase(Filename);
 }
 
 } // namespace dsymutil

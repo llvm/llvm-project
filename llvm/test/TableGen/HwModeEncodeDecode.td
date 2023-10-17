@@ -13,8 +13,11 @@ def  Myi32  : Operand<i32> {
   let DecoderMethod = "DecodeMyi32";
 }
 
-def ModeA : HwMode<"+a">;
-def ModeB : HwMode<"+b">;
+def HasA : Predicate<"Subtarget->hasA()">;
+def HasB : Predicate<"Subtarget->hasB()">;
+
+def ModeA : HwMode<"+a", [HasA]>;
+def ModeB : HwMode<"+b", [HasB]>;
 
 
 def fooTypeEncA : InstructionEncoding {

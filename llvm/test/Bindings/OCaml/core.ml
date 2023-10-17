@@ -34,18 +34,24 @@ let fp128_type = Llvm.fp128_type context
 let filename = Sys.argv.(1)
 let m = create_module context filename
 
+(*===-- Modules  ----------------------------------------------------------===*)
+
+let test_modules () =
+  insist (module_context m = context)
+
 (*===-- Contained types  --------------------------------------------------===*)
 
 let test_contained_types () =
   let ar = struct_type context [| i32_type; i8_type |] in
   insist (i32_type = (Array.get (subtypes ar)) 0);
-  insist (i8_type = (Array.get (subtypes ar)) 1)
+  insist (i8_type = (Array.get (subtypes ar)) 1);
+  insist ([| i32_type; i8_type |] = struct_element_types ar)
 
 (*===-- Pointer types  ----------------------------------------------------===*)
 let test_pointer_types () =
-  insist (address_space (pointer_type context) = 0);
-  insist (address_space (qualified_pointer_type context 0) = 0);
-  insist (address_space (qualified_pointer_type context 1) = 1)
+  insist (0 = address_space (pointer_type context));
+  insist (0 = address_space (qualified_pointer_type context 0));
+  insist (1 = address_space (qualified_pointer_type context 1))
 
 (*===-- Conversion --------------------------------------------------------===*)
 
@@ -65,11 +71,11 @@ let test_target () =
   end;
 
   begin group "layout";
-    let layout = "e" in
+    let layout = "e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-i128:128-f64:32:64-f80:128-n8:16:32-S128" in
     set_data_layout layout m;
     insist (layout = data_layout m)
   end
-  (* CHECK: target datalayout = "e"
+  (* CHECK: target datalayout = "e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-i128:128-f64:32:64-f80:128-n8:16:32-S128"
    * CHECK: target triple = "i686-apple-darwin8"
    *)
 
@@ -185,6 +191,7 @@ let test_constants () =
   let c = const_array i32_type [| three; four |] in
   ignore (define_global "const_array" c m);
   insist ((array_type i32_type 2) = (type_of c));
+  insist (element_type (type_of c) = i32_type);
   insist (Some three = (aggregate_element c 0));
   insist (Some four = (aggregate_element c 1));
   insist (None = (aggregate_element c 2));
@@ -196,6 +203,7 @@ let test_constants () =
                           one; two; one; two |] in
   ignore (define_global "const_vector" c m);
   insist ((vector_type i16_type 8) = (type_of c));
+  insist (element_type (type_of c) = i16_type);
 
   (* CHECK: const_structure{{.*.}}i16 1, i16 2, i32 3, i32 4
    *)
@@ -255,8 +263,6 @@ let test_constants () =
    * CHECK: @const_mul = global i64 mul
    * CHECK: @const_nsw_mul = global i64 mul nsw
    * CHECK: @const_nuw_mul = global i64 mul nuw
-   * CHECK: @const_and = global i64 and
-   * CHECK: @const_or = global i64 or
    * CHECK: @const_xor = global i64 xor
    * CHECK: @const_icmp = global i1 icmp sle
    * CHECK: @const_fcmp = global i1 fcmp ole
@@ -280,8 +286,6 @@ let test_constants () =
   ignore (define_global "const_mul" (const_mul foldbomb five) m);
   ignore (define_global "const_nsw_mul" (const_nsw_mul foldbomb five) m);
   ignore (define_global "const_nuw_mul" (const_nuw_mul foldbomb five) m);
-  ignore (define_global "const_and" (const_and foldbomb five) m);
-  ignore (define_global "const_or" (const_or foldbomb five) m);
   ignore (define_global "const_xor" (const_xor foldbomb five) m);
   ignore (define_global "const_icmp" (const_icmp Icmp.Sle foldbomb five) m);
   ignore (define_global "const_fcmp" (const_fcmp Fcmp.Ole ffoldbomb ffive) m);
@@ -325,7 +329,6 @@ let test_constants () =
   group "misc constants";
   (* CHECK: const_size_of{{.*}}getelementptr{{.*}}null
    * CHECK: const_gep{{.*}}getelementptr
-   * CHECK: const_select{{.*}}select
    * CHECK: const_extractelement{{.*}}extractelement
    * CHECK: const_insertelement{{.*}}insertelement
    * CHECK: const_shufflevector = global <4 x i32> <i32 0, i32 1, i32 1, i32 0>
@@ -333,10 +336,6 @@ let test_constants () =
   ignore (define_global "const_size_of" (size_of (pointer_type context)) m);
   ignore (define_global "const_gep" (const_gep i8_type foldbomb_gv [| five |])
           m);
-  ignore (define_global "const_select" (const_select
-    (const_icmp Icmp.Sle foldbomb five)
-    (const_int i8_type (-1))
-    (const_int i8_type 0)) m);
   let zero = const_int i32_type 0 in
   let one  = const_int i32_type 1 in
   ignore (define_global "const_extractelement" (const_extractelement
@@ -1458,29 +1457,6 @@ let test_builder () =
  * CHECK: !1 = !{i32 1, !"metadata test"}
  *)
 
-(*===-- Pass Managers -----------------------------------------------------===*)
-
-let test_pass_manager () =
-  let (++) x f = ignore (f x); x in
-
-  begin group "module pass manager";
-    ignore (PassManager.create ()
-             ++ PassManager.run_module m
-             ++ PassManager.dispose)
-  end;
-
-  begin group "function pass manager";
-    let fty = function_type void_type [| |] in
-    let fn = define_function "FunctionPassManager" fty m in
-    ignore (build_ret_void (builder_at_end context (entry_block fn)));
-
-    ignore (PassManager.create_function m
-             ++ PassManager.initialize
-             ++ PassManager.run_function fn
-             ++ PassManager.finalize
-             ++ PassManager.dispose)
-  end
-
 
 (*===-- Memory Buffer -----------------------------------------------------===*)
 
@@ -1507,6 +1483,7 @@ let test_writer () =
 (*===-- Driver ------------------------------------------------------------===*)
 
 let _ =
+  suite "modules"          test_modules;
   suite "contained types"  test_contained_types;
   suite "pointer types"    test_pointer_types;
   suite "conversion"       test_conversion;
@@ -1523,7 +1500,6 @@ let _ =
   suite "basic blocks"     test_basic_blocks;
   suite "instructions"     test_instructions;
   suite "builder"          test_builder;
-  suite "pass manager"     test_pass_manager;
   suite "memory buffer"    test_memory_buffer;
   suite "writer"           test_writer; (* Keep this last; it disposes m. *)
   exit !exit_status

@@ -586,6 +586,14 @@ lldb::TemplateArgumentKind SBType::GetTemplateArgumentKind(uint32_t idx) {
   return eTemplateArgumentKindNull;
 }
 
+SBType SBType::FindDirectNestedType(const char *name) {
+  LLDB_INSTRUMENT_VA(this, name);
+
+  if (!IsValid())
+    return SBType();
+  return SBType(m_opaque_sp->FindDirectNestedType(name));
+}
+
 SBTypeList::SBTypeList() : m_opaque_up(new TypeListImpl()) {
   LLDB_INSTRUMENT_VA(this);
 }
@@ -809,14 +817,15 @@ const char *SBTypeMemberFunction::GetName() {
 const char *SBTypeMemberFunction::GetDemangledName() {
   LLDB_INSTRUMENT_VA(this);
 
-  if (m_opaque_sp) {
-    ConstString mangled_str = m_opaque_sp->GetMangledName();
-    if (mangled_str) {
-      Mangled mangled(mangled_str);
-      return mangled.GetDemangledName().GetCString();
-    }
-  }
-  return nullptr;
+  if (!m_opaque_sp)
+    return nullptr;
+
+  ConstString mangled_str = m_opaque_sp->GetMangledName();
+  if (!mangled_str)
+    return nullptr;
+
+  Mangled mangled(mangled_str);
+  return mangled.GetDemangledName().GetCString();
 }
 
 const char *SBTypeMemberFunction::GetMangledName() {

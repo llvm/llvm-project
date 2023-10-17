@@ -67,7 +67,7 @@ final.cleanup:                                          ; preds = %if.then, %for
   br label %for.end
 
 ; CHECK: for.end:
-; CHECK-NEXT: ; MemoryUse([[NO12]])
+; CHECK-NEXT: ; MemoryUse([[NO20]])
 ; CHECK-NEXT:  %3 = load i8, ptr %sum, align 1
 for.end:                                          ; preds = %final.cleanup
   %8 = load i8, ptr %sum, align 1

@@ -41,8 +41,8 @@ Error MachineFunctionPassManager::run(Module &M,
     // current pipeline is the top-level pipeline. Callbacks are not used after
     // current pipeline.
     PI.pushBeforeNonSkippedPassCallback([&MFAM](StringRef PassID, Any IR) {
-      assert(any_cast<const MachineFunction *>(&IR));
-      const MachineFunction *MF = any_cast<const MachineFunction *>(IR);
+      assert(llvm::any_cast<const MachineFunction *>(&IR));
+      const MachineFunction *MF = llvm::any_cast<const MachineFunction *>(IR);
       assert(MF && "Machine function should be valid for printing");
       std::string Banner = std::string("After ") + std::string(PassID);
       verifyMachineFunction(&MFAM, Banner, *MF);
@@ -91,8 +91,8 @@ Error MachineFunctionPassManager::run(Module &M,
 
         // TODO: EmitSizeRemarks
         PreservedAnalyses PassPA = P->run(MF, MFAM);
-        PI.runAfterPass(*P, MF, PassPA);
         MFAM.invalidate(MF, PassPA);
+        PI.runAfterPass(*P, MF, PassPA);
       }
     }
   } while (true);

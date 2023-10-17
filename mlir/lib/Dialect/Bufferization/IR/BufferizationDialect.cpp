@@ -11,7 +11,7 @@
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/IR/FunctionInterfaces.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Transforms/InliningUtils.h"
 
 using namespace mlir;
@@ -27,9 +27,6 @@ constexpr const ::llvm::StringLiteral BufferizationDialect::kWritableAttrName;
 /// during One-Shot Module Bufferize.
 constexpr const ::llvm::StringLiteral
     BufferizationDialect::kBufferLayoutAttrName;
-
-/// Attribute name used to mark escaping behavior of buffer allocations.
-constexpr const ::llvm::StringLiteral BufferizationDialect::kEscapeAttrName;
 
 //===----------------------------------------------------------------------===//
 // Bufferization Dialect Interfaces
@@ -62,7 +59,7 @@ LogicalResult BufferizationDialect::verifyRegionArgAttribute(
     Operation *op, unsigned /*regionIndex*/, unsigned argIndex,
     NamedAttribute attr) {
   if (attr.getName() == kWritableAttrName) {
-    if (!attr.getValue().isa<BoolAttr>()) {
+    if (!llvm::isa<BoolAttr>(attr.getValue())) {
       return op->emitError() << "'" << kWritableAttrName
                              << "' is expected to be a boolean attribute";
     }
@@ -75,11 +72,11 @@ LogicalResult BufferizationDialect::verifyRegionArgAttribute(
     return success();
   }
   if (attr.getName() == kBufferAccessAttrName) {
-    if (!attr.getValue().isa<StringAttr>()) {
+    if (!llvm::isa<StringAttr>(attr.getValue())) {
       return op->emitError() << "'" << kBufferAccessAttrName
                              << "' is expected to be a string attribute";
     }
-    StringRef str = attr.getValue().cast<StringAttr>().getValue();
+    StringRef str = llvm::cast<StringAttr>(attr.getValue()).getValue();
     if (str != "none" && str != "read" && str != "write" && str != "read-write")
       return op->emitError()
              << "invalid value for '" << kBufferAccessAttrName << "'";
@@ -89,7 +86,7 @@ LogicalResult BufferizationDialect::verifyRegionArgAttribute(
     return success();
   }
   if (attr.getName() == kBufferLayoutAttrName) {
-    if (!attr.getValue().isa<AffineMapAttr>()) {
+    if (!llvm::isa<AffineMapAttr>(attr.getValue())) {
       return op->emitError() << "'" << kBufferLayoutAttrName
                              << "' is expected to be a affine map attribute";
     }
@@ -107,38 +104,6 @@ LogicalResult
 BufferizationDialect::verifyOperationAttribute(Operation *op,
                                                NamedAttribute attr) {
   using bufferization::BufferizableOpInterface;
-
-  if (attr.getName() == kEscapeAttrName) {
-    auto arrayAttr = attr.getValue().dyn_cast<ArrayAttr>();
-    if (!arrayAttr)
-      return op->emitError() << "'" << kEscapeAttrName
-                             << "' is expected to be a bool array attribute";
-    if (arrayAttr.size() != op->getNumResults())
-      return op->emitError()
-             << "'" << kEscapeAttrName
-             << "' has wrong number of elements, expected "
-             << op->getNumResults() << ", got " << arrayAttr.size();
-    auto bufferizableOp = dyn_cast<BufferizableOpInterface>(op);
-    if (!bufferizableOp)
-      return op->emitError()
-             << "'" << kEscapeAttrName << "' only valid on bufferizable ops";
-    for (const auto &it : llvm::enumerate(arrayAttr)) {
-      auto attr = it.value();
-      auto boolAttr = attr.dyn_cast<BoolAttr>();
-      if (!boolAttr)
-        return op->emitError() << "'" << kEscapeAttrName
-                               << "' is expected to be a bool array attribute";
-      if (!boolAttr.getValue())
-        continue;
-      if (!op->getResult(it.index()).getType().isa<TensorType>())
-        return op->emitError()
-               << "'" << kEscapeAttrName << "' only valid for tensor results";
-      if (!bufferizableOp.bufferizesToAllocation(op->getOpResult(it.index())))
-        return op->emitError() << "'" << kEscapeAttrName
-                               << "' only valid for allocation results";
-    }
-    return success();
-  }
 
   return op->emitError()
          << "attribute '" << attr.getName()

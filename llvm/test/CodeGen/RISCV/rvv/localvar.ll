@@ -162,7 +162,7 @@ define void @local_var_m2_mix_local_scalar() {
 ; RV64IV-NEXT:    slli a0, a0, 2
 ; RV64IV-NEXT:    sub sp, sp, a0
 ; RV64IV-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 4 * vlenb
-; RV64IV-NEXT:    lw a0, 12(sp)
+; RV64IV-NEXT:    lw zero, 12(sp)
 ; RV64IV-NEXT:    csrr a0, vlenb
 ; RV64IV-NEXT:    slli a0, a0, 1
 ; RV64IV-NEXT:    add a0, sp, a0
@@ -170,7 +170,7 @@ define void @local_var_m2_mix_local_scalar() {
 ; RV64IV-NEXT:    vl2r.v v8, (a0)
 ; RV64IV-NEXT:    addi a0, sp, 16
 ; RV64IV-NEXT:    vl2r.v v8, (a0)
-; RV64IV-NEXT:    lw a0, 8(sp)
+; RV64IV-NEXT:    lw zero, 8(sp)
 ; RV64IV-NEXT:    csrr a0, vlenb
 ; RV64IV-NEXT:    slli a0, a0, 2
 ; RV64IV-NEXT:    add sp, sp, a0
@@ -271,11 +271,11 @@ define void @local_var_m2_with_bp(i64 %n) {
 ; RV64IV-NEXT:    add s2, s1, s2
 ; RV64IV-NEXT:    addi s2, s2, 224
 ; RV64IV-NEXT:    call notdead2@plt
-; RV64IV-NEXT:    lw a0, 124(s1)
+; RV64IV-NEXT:    lw zero, 124(s1)
 ; RV64IV-NEXT:    vl2r.v v8, (s2)
 ; RV64IV-NEXT:    addi a0, s1, 224
 ; RV64IV-NEXT:    vl2r.v v8, (a0)
-; RV64IV-NEXT:    lw a0, 120(s1)
+; RV64IV-NEXT:    lw zero, 120(s1)
 ; RV64IV-NEXT:    addi sp, s0, -256
 ; RV64IV-NEXT:    ld ra, 248(sp) # 8-byte Folded Reload
 ; RV64IV-NEXT:    ld s0, 240(sp) # 8-byte Folded Reload

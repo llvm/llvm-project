@@ -1,4 +1,4 @@
-//===--- RISCV.cpp - RISCV Helpers for Tools --------------------*- C++ -*-===//
+//===--- RISCV.cpp - RISC-V Helpers for Tools -------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,9 +15,9 @@
 #include "clang/Driver/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 
 using namespace clang::driver;
@@ -49,12 +49,20 @@ static bool getArchFeatures(const Driver &D, StringRef Arch,
 }
 
 // Get features except standard extension feature
-static bool getRISCFeaturesFromMcpu(const llvm::Triple &Triple, StringRef Mcpu,
+static void getRISCFeaturesFromMcpu(const Driver &D, const Arg *A,
+                                    const llvm::Triple &Triple,
+                                    StringRef Mcpu,
                                     std::vector<StringRef> &Features) {
   bool Is64Bit = Triple.isRISCV64();
-  llvm::RISCV::CPUKind CPUKind = llvm::RISCV::parseCPUKind(Mcpu);
-  return llvm::RISCV::checkCPUKind(CPUKind, Is64Bit) &&
-         llvm::RISCV::getCPUFeaturesExceptStdExt(CPUKind, Features);
+  if (!llvm::RISCV::parseCPU(Mcpu, Is64Bit)) {
+    // Try inverting Is64Bit in case the CPU is valid, but for the wrong target.
+    if (llvm::RISCV::parseCPU(Mcpu, !Is64Bit))
+      D.Diag(clang::diag::err_drv_invalid_riscv_cpu_name_for_target)
+          << Mcpu << Is64Bit;
+    else
+      D.Diag(clang::diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << Mcpu;
+  }
 }
 
 void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
@@ -71,9 +79,8 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     StringRef CPU = A->getValue();
     if (CPU == "native")
       CPU = llvm::sys::getHostCPUName();
-    if (!getRISCFeaturesFromMcpu(Triple, CPU, Features))
-      D.Diag(clang::diag::err_drv_unsupported_option_argument)
-          << A->getSpelling() << CPU;
+
+    getRISCFeaturesFromMcpu(D, A, Triple, CPU, Features);
   }
 
   // Handle features corresponding to "-ffixed-X" options
@@ -160,9 +167,25 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   else
     Features.push_back("-save-restore");
 
+  // -mno-unaligned-access is default, unless -munaligned-access is specified.
+  bool HasV = llvm::is_contained(Features, "+zve32x");
+  if (const Arg *A = Args.getLastArg(options::OPT_munaligned_access,
+                                     options::OPT_mno_unaligned_access)) {
+    if (A->getOption().matches(options::OPT_munaligned_access)) {
+      Features.push_back("+unaligned-scalar-mem");
+      if (HasV)
+        Features.push_back("+unaligned-vector-mem");
+    } else {
+      Features.push_back("-unaligned-scalar-mem");
+      if (HasV)
+        Features.push_back("-unaligned-vector-mem");
+    }
+  }
+
   // Now add any that the user explicitly requested on the command line,
   // which may override the defaults.
-  handleTargetFeaturesGroup(Args, Features, options::OPT_m_riscv_Features_Group);
+  handleTargetFeaturesGroup(D, Triple, Args, Features,
+                            options::OPT_m_riscv_Features_Group);
 }
 
 StringRef riscv::getRISCVABI(const ArgList &Args, const llvm::Triple &Triple) {
@@ -282,10 +305,14 @@ StringRef riscv::getRISCVArch(const llvm::opt::ArgList &Args,
 
     if (MABI.equals_insensitive("ilp32e"))
       return "rv32e";
-    else if (MABI.startswith_insensitive("ilp32"))
+    else if (MABI.starts_with_insensitive("ilp32"))
       return "rv32imafdc";
-    else if (MABI.startswith_insensitive("lp64"))
+    else if (MABI.starts_with_insensitive("lp64")) {
+      if (Triple.isAndroid())
+        return "rv64imafdc_zba_zbb_zbs";
+
       return "rv64imafdc";
+    }
   }
 
   // 4. Choose a default based on the triple
@@ -301,6 +328,8 @@ StringRef riscv::getRISCVArch(const llvm::opt::ArgList &Args,
   } else {
     if (Triple.getOS() == llvm::Triple::UnknownOS)
       return "rv64imac";
+    else if (Triple.isAndroid())
+      return "rv64imafdc_zba_zbb_zbs";
     else
       return "rv64imafdc";
   }

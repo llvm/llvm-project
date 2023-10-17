@@ -18,7 +18,7 @@
 // User C code is welcome to depend on that ISO_Fortran_binding.h file,
 // but should never reference this internal header.
 
-#include "flang/ISO_Fortran_binding.h"
+#include "flang/ISO_Fortran_binding_wrapper.h"
 #include "flang/Runtime/memory.h"
 #include "flang/Runtime/type-code.h"
 #include <algorithm>
@@ -36,20 +36,26 @@ class DerivedType;
 namespace Fortran::runtime {
 
 using SubscriptValue = ISO::CFI_index_t;
+class Terminator;
 
-static constexpr int maxRank{CFI_MAX_RANK};
+RT_VAR_GROUP_BEGIN
+static constexpr RT_CONST_VAR_ATTRS int maxRank{CFI_MAX_RANK};
+RT_VAR_GROUP_END
 
 // A C++ view of the sole interoperable standard descriptor (ISO::CFI_cdesc_t)
 // and its type and per-dimension information.
 
 class Dimension {
 public:
-  SubscriptValue LowerBound() const { return raw_.lower_bound; }
-  SubscriptValue Extent() const { return raw_.extent; }
-  SubscriptValue UpperBound() const { return LowerBound() + Extent() - 1; }
-  SubscriptValue ByteStride() const { return raw_.sm; }
+  RT_API_ATTRS SubscriptValue LowerBound() const { return raw_.lower_bound; }
+  RT_API_ATTRS SubscriptValue Extent() const { return raw_.extent; }
+  RT_API_ATTRS SubscriptValue UpperBound() const {
+    return LowerBound() + Extent() - 1;
+  }
+  RT_API_ATTRS SubscriptValue ByteStride() const { return raw_.sm; }
 
-  Dimension &SetBounds(SubscriptValue lower, SubscriptValue upper) {
+  RT_API_ATTRS Dimension &SetBounds(
+      SubscriptValue lower, SubscriptValue upper) {
     if (upper >= lower) {
       raw_.lower_bound = lower;
       raw_.extent = upper - lower + 1;
@@ -74,7 +80,7 @@ public:
     raw_.extent = extent;
     return *this;
   }
-  Dimension &SetByteStride(SubscriptValue bytes) {
+  RT_API_ATTRS Dimension &SetByteStride(SubscriptValue bytes) {
     raw_.sm = bytes;
     return *this;
   }
@@ -91,29 +97,34 @@ private:
 // array is determined by derivedType_->LenParameters().
 class DescriptorAddendum {
 public:
-  explicit DescriptorAddendum(const typeInfo::DerivedType *dt = nullptr)
+  explicit RT_API_ATTRS DescriptorAddendum(
+      const typeInfo::DerivedType *dt = nullptr)
       : derivedType_{dt} {}
-  DescriptorAddendum &operator=(const DescriptorAddendum &);
+  RT_API_ATTRS DescriptorAddendum &operator=(const DescriptorAddendum &);
 
-  const typeInfo::DerivedType *derivedType() const { return derivedType_; }
-  DescriptorAddendum &set_derivedType(const typeInfo::DerivedType *dt) {
+  const RT_API_ATTRS typeInfo::DerivedType *derivedType() const {
+    return derivedType_;
+  }
+  RT_API_ATTRS DescriptorAddendum &set_derivedType(
+      const typeInfo::DerivedType *dt) {
     derivedType_ = dt;
     return *this;
   }
 
-  std::size_t LenParameters() const;
+  RT_API_ATTRS std::size_t LenParameters() const;
 
-  typeInfo::TypeParameterValue LenParameterValue(int which) const {
+  RT_API_ATTRS typeInfo::TypeParameterValue LenParameterValue(int which) const {
     return len_[which];
   }
-  static constexpr std::size_t SizeInBytes(int lenParameters) {
+  static constexpr RT_API_ATTRS std::size_t SizeInBytes(int lenParameters) {
     // TODO: Don't waste that last word if lenParameters == 0
     return sizeof(DescriptorAddendum) +
         std::max(lenParameters - 1, 0) * sizeof(typeInfo::TypeParameterValue);
   }
-  std::size_t SizeInBytes() const;
+  RT_API_ATTRS std::size_t SizeInBytes() const;
 
-  void SetLenParameterValue(int which, typeInfo::TypeParameterValue x) {
+  RT_API_ATTRS void SetLenParameterValue(
+      int which, typeInfo::TypeParameterValue x) {
     len_[which] = x;
   }
 
@@ -142,78 +153,90 @@ public:
   // Create() static member functions otherwise to dynamically allocate a
   // descriptor.
 
-  Descriptor(const Descriptor &);
-  Descriptor &operator=(const Descriptor &);
+  RT_API_ATTRS Descriptor(const Descriptor &);
+  RT_API_ATTRS Descriptor &operator=(const Descriptor &);
 
   // Returns the number of bytes occupied by an element of the given
   // category and kind including any alignment padding required
   // between adjacent elements.
-  static std::size_t BytesFor(TypeCategory category, int kind);
+  static RT_API_ATTRS std::size_t BytesFor(TypeCategory category, int kind);
 
-  void Establish(TypeCode t, std::size_t elementBytes, void *p = nullptr,
-      int rank = maxRank, const SubscriptValue *extent = nullptr,
-      ISO::CFI_attribute_t attribute = CFI_attribute_other,
-      bool addendum = false);
-  void Establish(TypeCategory, int kind, void *p = nullptr, int rank = maxRank,
-      const SubscriptValue *extent = nullptr,
-      ISO::CFI_attribute_t attribute = CFI_attribute_other,
-      bool addendum = false);
-  void Establish(int characterKind, std::size_t characters, void *p = nullptr,
-      int rank = maxRank, const SubscriptValue *extent = nullptr,
-      ISO::CFI_attribute_t attribute = CFI_attribute_other,
-      bool addendum = false);
-  void Establish(const typeInfo::DerivedType &dt, void *p = nullptr,
-      int rank = maxRank, const SubscriptValue *extent = nullptr,
-      ISO::CFI_attribute_t attribute = CFI_attribute_other);
-
-  static OwningPtr<Descriptor> Create(TypeCode t, std::size_t elementBytes,
+  RT_API_ATTRS void Establish(TypeCode t, std::size_t elementBytes,
       void *p = nullptr, int rank = maxRank,
       const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other,
-      int derivedTypeLenParameters = 0);
-  static OwningPtr<Descriptor> Create(TypeCategory, int kind, void *p = nullptr,
+      bool addendum = false);
+  RT_API_ATTRS void Establish(TypeCategory, int kind, void *p = nullptr,
       int rank = maxRank, const SubscriptValue *extent = nullptr,
+      ISO::CFI_attribute_t attribute = CFI_attribute_other,
+      bool addendum = false);
+  RT_API_ATTRS void Establish(int characterKind, std::size_t characters,
+      void *p = nullptr, int rank = maxRank,
+      const SubscriptValue *extent = nullptr,
+      ISO::CFI_attribute_t attribute = CFI_attribute_other,
+      bool addendum = false);
+  RT_API_ATTRS void Establish(const typeInfo::DerivedType &dt,
+      void *p = nullptr, int rank = maxRank,
+      const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other);
-  static OwningPtr<Descriptor> Create(int characterKind,
+
+  // To create a descriptor for a derived type the caller
+  // must provide non-null dt argument.
+  // The addendum argument is only used for testing purposes,
+  // and it may force a descriptor with an addendum while
+  // dt may be null.
+  static RT_API_ATTRS OwningPtr<Descriptor> Create(TypeCode t,
+      std::size_t elementBytes, void *p = nullptr, int rank = maxRank,
+      const SubscriptValue *extent = nullptr,
+      ISO::CFI_attribute_t attribute = CFI_attribute_other,
+      bool addendum = false, const typeInfo::DerivedType *dt = nullptr);
+  static RT_API_ATTRS OwningPtr<Descriptor> Create(TypeCategory, int kind,
+      void *p = nullptr, int rank = maxRank,
+      const SubscriptValue *extent = nullptr,
+      ISO::CFI_attribute_t attribute = CFI_attribute_other);
+  static RT_API_ATTRS OwningPtr<Descriptor> Create(int characterKind,
       SubscriptValue characters, void *p = nullptr, int rank = maxRank,
       const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other);
-  static OwningPtr<Descriptor> Create(const typeInfo::DerivedType &dt,
-      void *p = nullptr, int rank = maxRank,
+  static RT_API_ATTRS OwningPtr<Descriptor> Create(
+      const typeInfo::DerivedType &dt, void *p = nullptr, int rank = maxRank,
       const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other);
 
-  ISO::CFI_cdesc_t &raw() { return raw_; }
-  const ISO::CFI_cdesc_t &raw() const { return raw_; }
-  std::size_t ElementBytes() const { return raw_.elem_len; }
-  int rank() const { return raw_.rank; }
-  TypeCode type() const { return TypeCode{raw_.type}; }
+  RT_API_ATTRS ISO::CFI_cdesc_t &raw() { return raw_; }
+  const RT_API_ATTRS ISO::CFI_cdesc_t &raw() const { return raw_; }
+  RT_API_ATTRS std::size_t ElementBytes() const { return raw_.elem_len; }
+  RT_API_ATTRS int rank() const { return raw_.rank; }
+  RT_API_ATTRS TypeCode type() const { return TypeCode{raw_.type}; }
 
-  Descriptor &set_base_addr(void *p) {
+  RT_API_ATTRS Descriptor &set_base_addr(void *p) {
     raw_.base_addr = p;
     return *this;
   }
 
-  bool IsPointer() const { return raw_.attribute == CFI_attribute_pointer; }
-  bool IsAllocatable() const {
+  RT_API_ATTRS bool IsPointer() const {
+    return raw_.attribute == CFI_attribute_pointer;
+  }
+  RT_API_ATTRS bool IsAllocatable() const {
     return raw_.attribute == CFI_attribute_allocatable;
   }
-  bool IsAllocated() const { return raw_.base_addr != nullptr; }
+  RT_API_ATTRS bool IsAllocated() const { return raw_.base_addr != nullptr; }
 
-  Dimension &GetDimension(int dim) {
+  RT_API_ATTRS Dimension &GetDimension(int dim) {
     return *reinterpret_cast<Dimension *>(&raw_.dim[dim]);
   }
-  const Dimension &GetDimension(int dim) const {
+  const RT_API_ATTRS Dimension &GetDimension(int dim) const {
     return *reinterpret_cast<const Dimension *>(&raw_.dim[dim]);
   }
 
-  std::size_t SubscriptByteOffset(
+  RT_API_ATTRS std::size_t SubscriptByteOffset(
       int dim, SubscriptValue subscriptValue) const {
     const Dimension &dimension{GetDimension(dim)};
     return (subscriptValue - dimension.LowerBound()) * dimension.ByteStride();
   }
 
-  std::size_t SubscriptsToByteOffset(const SubscriptValue subscript[]) const {
+  RT_API_ATTRS std::size_t SubscriptsToByteOffset(
+      const SubscriptValue subscript[]) const {
     std::size_t offset{0};
     for (int j{0}; j < raw_.rank; ++j) {
       offset += SubscriptByteOffset(j, subscript[j]);
@@ -221,16 +244,26 @@ public:
     return offset;
   }
 
-  template <typename A = char> A *OffsetElement(std::size_t offset = 0) const {
+  template <typename A = char>
+  RT_API_ATTRS A *OffsetElement(std::size_t offset = 0) const {
     return reinterpret_cast<A *>(
         reinterpret_cast<char *>(raw_.base_addr) + offset);
   }
 
-  template <typename A> A *Element(const SubscriptValue subscript[]) const {
+  template <typename A>
+  RT_API_ATTRS A *Element(const SubscriptValue subscript[]) const {
     return OffsetElement<A>(SubscriptsToByteOffset(subscript));
   }
 
-  template <typename A> A *ZeroBasedIndexedElement(std::size_t n) const {
+  template <typename A>
+  RT_API_ATTRS A *ElementComponent(
+      const SubscriptValue subscript[], std::size_t componentOffset) const {
+    return OffsetElement<A>(
+        SubscriptsToByteOffset(subscript) + componentOffset);
+  }
+
+  template <typename A>
+  RT_API_ATTRS A *ZeroBasedIndexedElement(std::size_t n) const {
     SubscriptValue at[maxRank];
     if (SubscriptsForZeroBasedElementNumber(at, n)) {
       return Element<A>(at);
@@ -238,14 +271,14 @@ public:
     return nullptr;
   }
 
-  int GetLowerBounds(SubscriptValue subscript[]) const {
+  RT_API_ATTRS int GetLowerBounds(SubscriptValue subscript[]) const {
     for (int j{0}; j < raw_.rank; ++j) {
       subscript[j] = GetDimension(j).LowerBound();
     }
     return raw_.rank;
   }
 
-  int GetShape(SubscriptValue subscript[]) const {
+  RT_API_ATTRS int GetShape(SubscriptValue subscript[]) const {
     for (int j{0}; j < raw_.rank; ++j) {
       subscript[j] = GetDimension(j).Extent();
     }
@@ -255,7 +288,7 @@ public:
   // When the passed subscript vector contains the last (or first)
   // subscripts of the array, these wrap the subscripts around to
   // their first (or last) values and return false.
-  bool IncrementSubscripts(
+  RT_API_ATTRS bool IncrementSubscripts(
       SubscriptValue subscript[], const int *permutation = nullptr) const {
     for (int j{0}; j < raw_.rank; ++j) {
       int k{permutation ? permutation[j] : j};
@@ -268,12 +301,13 @@ public:
     return false;
   }
 
-  bool DecrementSubscripts(
+  RT_API_ATTRS bool DecrementSubscripts(
       SubscriptValue[], const int *permutation = nullptr) const;
 
   // False when out of range.
-  bool SubscriptsForZeroBasedElementNumber(SubscriptValue subscript[],
-      std::size_t elementNumber, const int *permutation = nullptr) const {
+  RT_API_ATTRS bool SubscriptsForZeroBasedElementNumber(
+      SubscriptValue subscript[], std::size_t elementNumber,
+      const int *permutation = nullptr) const {
     if (raw_.rank == 0) {
       return elementNumber == 0;
     }
@@ -301,17 +335,17 @@ public:
     return true;
   }
 
-  std::size_t ZeroBasedElementNumber(
+  RT_API_ATTRS std::size_t ZeroBasedElementNumber(
       const SubscriptValue *, const int *permutation = nullptr) const;
 
-  DescriptorAddendum *Addendum() {
+  RT_API_ATTRS DescriptorAddendum *Addendum() {
     if (raw_.f18Addendum != 0) {
       return reinterpret_cast<DescriptorAddendum *>(&GetDimension(rank()));
     } else {
       return nullptr;
     }
   }
-  const DescriptorAddendum *Addendum() const {
+  const RT_API_ATTRS DescriptorAddendum *Addendum() const {
     if (raw_.f18Addendum != 0) {
       return reinterpret_cast<const DescriptorAddendum *>(
           &GetDimension(rank()));
@@ -321,7 +355,7 @@ public:
   }
 
   // Returns size in bytes of the descriptor (not the data)
-  static constexpr std::size_t SizeInBytes(
+  static constexpr RT_API_ATTRS std::size_t SizeInBytes(
       int rank, bool addendum = false, int lengthTypeParameters = 0) {
     std::size_t bytes{sizeof(Descriptor) - sizeof(Dimension)};
     bytes += rank * sizeof(Dimension);
@@ -331,47 +365,50 @@ public:
     return bytes;
   }
 
-  std::size_t SizeInBytes() const;
+  RT_API_ATTRS std::size_t SizeInBytes() const;
 
-  std::size_t Elements() const;
+  RT_API_ATTRS std::size_t Elements() const;
 
   // Allocate() assumes Elements() and ElementBytes() work;
   // define the extents of the dimensions and the element length
   // before calling.  It (re)computes the byte strides after
   // allocation.  Does not allocate automatic components or
   // perform default component initialization.
-  int Allocate();
+  RT_API_ATTRS int Allocate();
 
   // Deallocates storage; does not call FINAL subroutines or
   // deallocate allocatable/automatic components.
-  int Deallocate();
+  RT_API_ATTRS int Deallocate();
 
   // Deallocates storage, including allocatable and automatic
   // components.  Optionally invokes FINAL subroutines.
-  int Destroy(bool finalize = false, bool destroyPointers = false);
+  RT_API_ATTRS int Destroy(bool finalize = false, bool destroyPointers = false,
+      Terminator * = nullptr);
 
-  bool IsContiguous(int leadingDimensions = maxRank) const {
+  RT_API_ATTRS bool IsContiguous(int leadingDimensions = maxRank) const {
     auto bytes{static_cast<SubscriptValue>(ElementBytes())};
     if (leadingDimensions > raw_.rank) {
       leadingDimensions = raw_.rank;
     }
+    bool stridesAreContiguous{true};
     for (int j{0}; j < leadingDimensions; ++j) {
       const Dimension &dim{GetDimension(j)};
-      if (bytes != dim.ByteStride()) {
-        return false;
-      }
+      stridesAreContiguous &= bytes == dim.ByteStride();
       bytes *= dim.Extent();
     }
-    return true;
+    // One and zero element arrays are contiguous even if the descriptor
+    // byte strides are not perfect multiples.
+    return stridesAreContiguous || bytes == 0 ||
+        bytes == static_cast<SubscriptValue>(ElementBytes());
   }
 
   // Establishes a pointer to a section or element.
-  bool EstablishPointerSection(const Descriptor &source,
+  RT_API_ATTRS bool EstablishPointerSection(const Descriptor &source,
       const SubscriptValue *lower = nullptr,
       const SubscriptValue *upper = nullptr,
       const SubscriptValue *stride = nullptr);
 
-  void Check() const;
+  RT_API_ATTRS void Check() const;
 
   void Dump(FILE * = stdout) const;
 
@@ -392,18 +429,22 @@ static_assert(sizeof(Descriptor) == sizeof(ISO::CFI_cdesc_t));
 template <int MAX_RANK = maxRank, bool ADDENDUM = false, int MAX_LEN_PARMS = 0>
 class alignas(Descriptor) StaticDescriptor {
 public:
+  RT_OFFLOAD_VAR_GROUP_BEGIN
   static constexpr int maxRank{MAX_RANK};
   static constexpr int maxLengthTypeParameters{MAX_LEN_PARMS};
   static constexpr bool hasAddendum{ADDENDUM || MAX_LEN_PARMS > 0};
   static constexpr std::size_t byteSize{
       Descriptor::SizeInBytes(maxRank, hasAddendum, maxLengthTypeParameters)};
+  RT_OFFLOAD_VAR_GROUP_END
 
-  Descriptor &descriptor() { return *reinterpret_cast<Descriptor *>(storage_); }
-  const Descriptor &descriptor() const {
+  RT_API_ATTRS Descriptor &descriptor() {
+    return *reinterpret_cast<Descriptor *>(storage_);
+  }
+  const RT_API_ATTRS Descriptor &descriptor() const {
     return *reinterpret_cast<const Descriptor *>(storage_);
   }
 
-  void Check() {
+  RT_API_ATTRS void Check() {
     assert(descriptor().rank() <= maxRank);
     assert(descriptor().SizeInBytes() <= byteSize);
     if (DescriptorAddendum * addendum{descriptor().Addendum()}) {

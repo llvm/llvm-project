@@ -2,9 +2,6 @@
 Base class for gdb-remote test cases.
 """
 
-from __future__ import division, print_function
-
-
 import errno
 import os
 import os.path
@@ -28,7 +25,6 @@ class _ConnectionRefused(IOError):
 
 
 class GdbRemoteTestCaseFactory(type):
-
     def __new__(cls, name, bases, attrs):
         newattrs = {}
         for attrname, attrvalue in attrs.items():
@@ -40,12 +36,12 @@ class GdbRemoteTestCaseFactory(type):
             # that list to be authoritative. If none were specified, try
             # all of them.
             all_categories = set(["debugserver", "llgs"])
-            categories = set(
-                getattr(attrvalue, "categories", [])) & all_categories
+            categories = set(getattr(attrvalue, "categories", [])) & all_categories
             if not categories:
                 categories = all_categories
 
             for cat in categories:
+
                 @decorators.add_test_categories([cat])
                 @wraps(attrvalue)
                 def test_method(self, attrvalue=attrvalue):
@@ -56,15 +52,14 @@ class GdbRemoteTestCaseFactory(type):
                 test_method.debug_server = cat
                 newattrs[method_name] = test_method
 
-        return super(GdbRemoteTestCaseFactory, cls).__new__(
-                cls, name, bases, newattrs)
+        return super(GdbRemoteTestCaseFactory, cls).__new__(cls, name, bases, newattrs)
+
 
 class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
-
     # Default time out in seconds. The timeout is increased tenfold under Asan.
-    DEFAULT_TIMEOUT =  20 * (10 if ('ASAN_OPTIONS' in os.environ) else 1)
+    DEFAULT_TIMEOUT = 20 * (10 if ("ASAN_OPTIONS" in os.environ) else 1)
     # Default sleep time in seconds. The sleep time is doubled under Asan.
-    DEFAULT_SLEEP   =  5  * (2  if ('ASAN_OPTIONS' in os.environ) else 1)
+    DEFAULT_SLEEP = 5 * (2 if ("ASAN_OPTIONS" in os.environ) else 1)
 
     _GDBREMOTE_KILL_PACKET = b"$k#6b"
 
@@ -88,8 +83,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
     TARGET_EXC_BREAKPOINT = 0x96
 
     _verbose_log_handler = None
-    _log_formatter = logging.Formatter(
-        fmt='%(asctime)-15s %(levelname)-8s %(message)s')
+    _log_formatter = logging.Formatter(fmt="%(asctime)-15s %(levelname)-8s %(message)s")
 
     def setUpBaseLogging(self):
         self.logger = logging.getLogger(__name__)
@@ -109,8 +103,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
     def isVerboseLoggingRequested(self):
         # We will report our detailed logs if the user requested that the "gdb-remote" channel is
         # logged.
-        return any(("gdb-remote" in channel)
-                   for channel in lldbtest_config.channels)
+        return any(("gdb-remote" in channel) for channel in lldbtest_config.channels)
 
     def getDebugServer(self):
         method = getattr(self, self.testMethodName)
@@ -125,7 +118,8 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         if self.isVerboseLoggingRequested():
             # If requested, full logs go to a log file
             self._verbose_log_handler = logging.FileHandler(
-                self.getLogBasenameForCurrentTest() + "-host.log")
+                self.getLogBasenameForCurrentTest() + "-host.log"
+            )
             self._verbose_log_handler.setFormatter(self._log_formatter)
             self._verbose_log_handler.setLevel(logging.DEBUG)
             self.logger.addHandler(self._verbose_log_handler)
@@ -135,15 +129,19 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         self.port = self.get_next_port()
         self.stub_sends_two_stop_notifications_on_kill = False
         if configuration.lldb_platform_url:
-            if configuration.lldb_platform_url.startswith('unix-'):
-                url_pattern = '(.+)://\[?(.+?)\]?/.*'
+            if configuration.lldb_platform_url.startswith("unix-"):
+                url_pattern = "(.+)://\[?(.+?)\]?/.*"
             else:
-                url_pattern = '(.+)://(.+):\d+'
+                url_pattern = "(.+)://(.+):\d+"
             scheme, host = re.match(
-                url_pattern, configuration.lldb_platform_url).groups()
-            if configuration.lldb_platform_name == 'remote-android' and host != 'localhost':
+                url_pattern, configuration.lldb_platform_url
+            ).groups()
+            if (
+                configuration.lldb_platform_name == "remote-android"
+                and host != "localhost"
+            ):
                 self.stub_device = host
-                self.stub_hostname = 'localhost'
+                self.stub_hostname = "localhost"
             else:
                 self.stub_device = None
                 self.stub_hostname = host
@@ -170,24 +168,27 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
 
         if lldb.remote_platform:
             log_file = lldbutil.join_remote_paths(
-                lldb.remote_platform.GetWorkingDirectory(), "server.log")
+                lldb.remote_platform.GetWorkingDirectory(), "server.log"
+            )
         else:
             log_file = self.getLocalServerLogFile()
 
         if is_llgs:
             self.debug_monitor_extra_args.append("--log-file=" + log_file)
             self.debug_monitor_extra_args.append(
-                "--log-channels={}".format(":".join(lldbtest_config.channels)))
+                "--log-channels={}".format(":".join(lldbtest_config.channels))
+            )
         else:
             self.debug_monitor_extra_args = [
-                "--log-file=" + log_file, "--log-flags=0x800000"]
+                "--log-file=" + log_file,
+                "--log-flags=0x800000",
+            ]
 
     def get_next_port(self):
         return 12000 + random.randint(0, 3999)
 
     def reset_test_sequence(self):
         self.test_sequence = GdbRemoteTestSequence(self.logger)
-
 
     def _init_llgs_test(self):
         reverse_connect = True
@@ -198,29 +199,28 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
             # FIXME: This is extremely linux-oriented
 
             # Grab the ppid from /proc/[shell pid]/stat
-            err, retcode, shell_stat = self.run_platform_command(
-                "cat /proc/$$/stat")
+            err, retcode, shell_stat = self.run_platform_command("cat /proc/$$/stat")
             self.assertTrue(
                 err.Success() and retcode == 0,
-                "Failed to read file /proc/$$/stat: %s, retcode: %d" %
-                (err.GetCString(),
-                 retcode))
+                "Failed to read file /proc/$$/stat: %s, retcode: %d"
+                % (err.GetCString(), retcode),
+            )
 
             # [pid] ([executable]) [state] [*ppid*]
             pid = re.match(r"^\d+ \(.+\) . (\d+)", shell_stat).group(1)
             err, retcode, ls_output = self.run_platform_command(
-                "ls -l /proc/%s/exe" % pid)
+                "ls -l /proc/%s/exe" % pid
+            )
             self.assertTrue(
                 err.Success() and retcode == 0,
-                "Failed to read file /proc/%s/exe: %s, retcode: %d" %
-                (pid,
-                 err.GetCString(),
-                 retcode))
+                "Failed to read file /proc/%s/exe: %s, retcode: %d"
+                % (pid, err.GetCString(), retcode),
+            )
             exe = ls_output.split()[-1]
 
             # If the binary has been deleted, the link name has " (deleted)" appended.
             # Remove if it's there.
-            self.debug_monitor_exe = re.sub(r' \(deleted\)$', '', exe)
+            self.debug_monitor_exe = re.sub(r" \(deleted\)$", "", exe)
         else:
             self.debug_monitor_exe = get_lldb_server_exe()
 
@@ -239,7 +239,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         self.stub_sends_two_stop_notifications_on_kill = True
 
     def forward_adb_port(self, source, target, direction, device):
-        adb = ['adb'] + (['-s', device] if device else []) + [direction]
+        adb = ["adb"] + (["-s", device] if device else []) + [direction]
 
         def remove_port_forward():
             subprocess.call(adb + ["--remove", "tcp:%d" % source])
@@ -275,16 +275,11 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
 
         triple = self.dbg.GetSelectedPlatform().GetTriple()
         if re.match(".*-.*-.*-android", triple):
-            self.forward_adb_port(
-                self.port,
-                self.port,
-                "forward",
-                self.stub_device)
+            self.forward_adb_port(self.port, self.port, "forward", self.stub_device)
 
         logger.info(
-            "Connecting to debug monitor on %s:%d",
-            self.stub_hostname,
-            self.port)
+            "Connecting to debug monitor on %s:%d", self.stub_hostname, self.port
+        )
         connect_info = (self.stub_hostname, self.port)
         try:
             sock.connect(connect_info)
@@ -301,14 +296,18 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
                 except:
                     logger.warning(
                         "failed to send kill packet to debug monitor: {}; ignoring".format(
-                            sys.exc_info()[0]))
+                            sys.exc_info()[0]
+                        )
+                    )
 
                 try:
                     sock.close()
                 except:
                     logger.warning(
                         "failed to close socket to debug monitor: {}; ignoring".format(
-                            sys.exc_info()[0]))
+                            sys.exc_info()[0]
+                        )
+                    )
 
         self.addTearDownHook(shutdown_socket)
 
@@ -346,7 +345,9 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
 
     def launch_debug_monitor(self, attach_pid=None, logfile=None):
         if self.reverse_connect:
-            family, type, proto, _, addr = socket.getaddrinfo("localhost", 0, proto=socket.IPPROTO_TCP)[0]
+            family, type, proto, _, addr = socket.getaddrinfo(
+                "localhost", 0, proto=socket.IPPROTO_TCP
+            )[0]
             sock = socket.socket(family, type, proto)
             sock.settimeout(self.DEFAULT_TIMEOUT)
 
@@ -355,16 +356,15 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
             addr = sock.getsockname()
             self.connect_address = "[{}]:{}".format(*addr)
 
-
         # Create the command line.
         commandline_args = self.get_debug_monitor_command_line_args(
-            attach_pid=attach_pid)
+            attach_pid=attach_pid
+        )
 
         # Start the server.
         server = self.spawnSubprocess(
-            self.debug_monitor_exe,
-            commandline_args,
-            install_remote=False)
+            self.debug_monitor_exe, commandline_args, install_remote=False
+        )
         self.assertIsNotNone(server)
 
         if self.reverse_connect:
@@ -417,8 +417,9 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
 
             # Increment attempts.
             print(
-                "connect to debug monitor on port %d failed, attempt #%d of %d" %
-                (self.port, attempts + 1, MAX_ATTEMPTS))
+                "connect to debug monitor on port %d failed, attempt #%d of %d"
+                % (self.port, attempts + 1, MAX_ATTEMPTS)
+            )
             attempts += 1
 
             # And wait a random length of time before next attempt, to avoid
@@ -429,14 +430,13 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
             self.port = self.get_next_port()
 
         raise Exception(
-            "failed to create a socket to the launched debug monitor after %d tries" %
-            attempts)
+            "failed to create a socket to the launched debug monitor after %d tries"
+            % attempts
+        )
 
     def launch_process_for_attach(
-            self,
-            inferior_args=None,
-            sleep_seconds=3,
-            exe_path=None):
+        self, inferior_args=None, sleep_seconds=3, exe_path=None
+    ):
         # We're going to start a child process that the debug monitor stub can later attach to.
         # This process needs to be started so that it just hangs around for a while.  We'll
         # have it sleep.
@@ -452,11 +452,12 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         return self.spawnSubprocess(exe_path, args)
 
     def prep_debug_monitor_and_inferior(
-            self,
-            inferior_args=None,
-            inferior_sleep_seconds=3,
-            inferior_exe_path=None,
-            inferior_env=None):
+        self,
+        inferior_args=None,
+        inferior_sleep_seconds=3,
+        inferior_exe_path=None,
+        inferior_env=None,
+    ):
         """Prep the debug monitor, the inferior, and the expected packet stream.
 
         Handle the separate cases of using the debug monitor in attach-to-inferior mode
@@ -479,12 +480,16 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         inferior = None
         attach_pid = None
 
-        if self._inferior_startup == self._STARTUP_ATTACH or self._inferior_startup == self._STARTUP_ATTACH_MANUALLY:
+        if (
+            self._inferior_startup == self._STARTUP_ATTACH
+            or self._inferior_startup == self._STARTUP_ATTACH_MANUALLY
+        ):
             # Launch the process that we'll use as the inferior.
             inferior = self.launch_process_for_attach(
                 inferior_args=inferior_args,
                 sleep_seconds=inferior_sleep_seconds,
-                exe_path=inferior_exe_path)
+                exe_path=inferior_exe_path,
+            )
             self.assertIsNotNone(inferior)
             self.assertTrue(inferior.pid > 0)
             if self._inferior_startup == self._STARTUP_ATTACH:
@@ -498,15 +503,18 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
                 inferior_exe_path = self.getBuildArtifact("a.out")
 
             if lldb.remote_platform:
-                remote_path = lldbutil.append_to_process_working_directory(self,
-                    os.path.basename(inferior_exe_path))
+                remote_path = lldbutil.append_to_process_working_directory(
+                    self, os.path.basename(inferior_exe_path)
+                )
                 remote_file_spec = lldb.SBFileSpec(remote_path, False)
-                err = lldb.remote_platform.Install(lldb.SBFileSpec(
-                    inferior_exe_path, True), remote_file_spec)
+                err = lldb.remote_platform.Install(
+                    lldb.SBFileSpec(inferior_exe_path, True), remote_file_spec
+                )
                 if err.Fail():
                     raise Exception(
-                        "remote_platform.Install('%s', '%s') failed: %s" %
-                        (inferior_exe_path, remote_path, err))
+                        "remote_platform.Install('%s', '%s') failed: %s"
+                        % (inferior_exe_path, remote_path, err)
+                    )
                 inferior_exe_path = remote_path
 
             launch_args = [inferior_exe_path]
@@ -538,29 +546,45 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
 
     def add_verified_launch_packets(self, launch_args):
         self.test_sequence.add_log_lines(
-            ["read packet: %s" % build_gdbremote_A_packet(launch_args),
-             "send packet: $OK#00",
-             "read packet: $qLaunchSuccess#a5",
-             "send packet: $OK#00"],
-            True)
+            [
+                "read packet: %s" % build_gdbremote_A_packet(launch_args),
+                "send packet: $OK#00",
+                "read packet: $qLaunchSuccess#a5",
+                "send packet: $OK#00",
+            ],
+            True,
+        )
 
     def add_thread_suffix_request_packets(self):
         self.test_sequence.add_log_lines(
-            ["read packet: $QThreadSuffixSupported#e4",
-             "send packet: $OK#00",
-             ], True)
+            [
+                "read packet: $QThreadSuffixSupported#e4",
+                "send packet: $OK#00",
+            ],
+            True,
+        )
 
     def add_process_info_collection_packets(self):
         self.test_sequence.add_log_lines(
-            ["read packet: $qProcessInfo#dc",
-             {"direction": "send", "regex": r"^\$(.+)#[0-9a-fA-F]{2}$", "capture": {1: "process_info_raw"}}],
-            True)
+            [
+                "read packet: $qProcessInfo#dc",
+                {
+                    "direction": "send",
+                    "regex": r"^\$(.+)#[0-9a-fA-F]{2}$",
+                    "capture": {1: "process_info_raw"},
+                },
+            ],
+            True,
+        )
 
     def add_set_environment_packets(self, name, value):
         self.test_sequence.add_log_lines(
-            ["read packet: $QEnvironment:" + name + "=" + value + "#00",
-             "send packet: $OK#00",
-             ], True)
+            [
+                "read packet: $QEnvironment:" + name + "=" + value + "#00",
+                "send packet: $OK#00",
+            ],
+            True,
+        )
 
     _KNOWN_PROCESS_INFO_KEYS = [
         "pid",
@@ -576,7 +600,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         "vendor",
         "endian",
         "elf_abi",
-        "ptrsize"
+        "ptrsize",
     ]
 
     def parse_process_info_response(self, context):
@@ -587,11 +611,12 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
 
         # Pull out key:value; pairs.
         process_info_dict = {
-            match.group(1): match.group(2) for match in re.finditer(
-                r"([^:]+):([^;]+);", process_info_raw)}
+            match.group(1): match.group(2)
+            for match in re.finditer(r"([^:]+):([^;]+);", process_info_raw)
+        }
 
         # Validate keys are known.
-        for (key, val) in list(process_info_dict.items()):
+        for key, val in list(process_info_dict.items()):
             self.assertTrue(key in self._KNOWN_PROCESS_INFO_KEYS)
             self.assertIsNotNone(val)
 
@@ -599,10 +624,17 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
 
     def add_register_info_collection_packets(self):
         self.test_sequence.add_log_lines(
-            [{"type": "multi_response", "query": "qRegisterInfo", "append_iteration_suffix": True,
-                "end_regex": re.compile(r"^\$(E\d+)?#[0-9a-fA-F]{2}$"),
-                "save_key": "reg_info_responses"}],
-            True)
+            [
+                {
+                    "type": "multi_response",
+                    "query": "qRegisterInfo",
+                    "append_iteration_suffix": True,
+                    "end_regex": re.compile(r"^\$(E\d+)?#[0-9a-fA-F]{2}$"),
+                    "save_key": "reg_info_responses",
+                }
+            ],
+            True,
+        )
 
     def parse_register_info_packets(self, context):
         """Return an array of register info dictionaries, one per register info."""
@@ -610,8 +642,10 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         self.assertIsNotNone(reg_info_responses)
 
         # Parse register infos.
-        return [parse_reg_info_response(reg_info_response)
-                for reg_info_response in reg_info_responses]
+        return [
+            parse_reg_info_response(reg_info_response)
+            for reg_info_response in reg_info_responses
+        ]
 
     def expect_gdbremote_sequence(self):
         return expect_lldb_gdbserver_replay(
@@ -619,7 +653,8 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
             self._server,
             self.test_sequence,
             self.DEFAULT_TIMEOUT * len(self.test_sequence),
-            self.logger)
+            self.logger,
+        )
 
     _KNOWN_REGINFO_KEYS = [
         "name",
@@ -636,7 +671,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         "container-regs",
         "invalidate-regs",
         "dynamic_size_dwarf_expr_bytes",
-        "dynamic_size_dwarf_len"
+        "dynamic_size_dwarf_len",
     ]
 
     def assert_valid_reg_info(self, reg_info):
@@ -648,7 +683,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         self.assertTrue("name" in reg_info)
         self.assertTrue("bitsize" in reg_info)
 
-        if not self.getArchitecture() == 'aarch64':
+        if not self.getArchitecture() == "aarch64":
             self.assertTrue("offset" in reg_info)
 
         self.assertTrue("encoding" in reg_info)
@@ -678,9 +713,16 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
 
     def add_query_memory_region_packets(self, address):
         self.test_sequence.add_log_lines(
-            ["read packet: $qMemoryRegionInfo:{0:x}#00".format(address),
-             {"direction": "send", "regex": r"^\$(.+)#[0-9a-fA-F]{2}$", "capture": {1: "memory_region_response"}}],
-            True)
+            [
+                "read packet: $qMemoryRegionInfo:{0:x}#00".format(address),
+                {
+                    "direction": "send",
+                    "regex": r"^\$(.+)#[0-9a-fA-F]{2}$",
+                    "capture": {1: "memory_region_response"},
+                },
+            ],
+            True,
+        )
 
     def parse_key_val_dict(self, key_val_text, allow_dupes=True):
         self.assertIsNotNone(key_val_text)
@@ -698,7 +740,9 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
                 else:
                     self.fail(
                         "key '{}' already present when attempting to add value '{}' (text='{}', dict={})".format(
-                            key, val, key_val_text, kv_dict))
+                            key, val, key_val_text, kv_dict
+                        )
+                    )
             else:
                 kv_dict[key] = val
         return kv_dict
@@ -708,28 +752,30 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         self.assertIsNotNone(context.get("memory_region_response"))
 
         # Pull out key:value; pairs.
-        mem_region_dict = self.parse_key_val_dict(
-            context.get("memory_region_response"))
+        mem_region_dict = self.parse_key_val_dict(context.get("memory_region_response"))
 
         # Validate keys are known.
-        for (key, val) in list(mem_region_dict.items()):
-            self.assertIn(key,
-                ["start",
-                 "size",
-                 "permissions",
-                 "flags",
-                 "name",
-                 "error",
-                 "dirty-pages",
-                 "type"])
+        for key, val in list(mem_region_dict.items()):
+            self.assertIn(
+                key,
+                [
+                    "start",
+                    "size",
+                    "permissions",
+                    "flags",
+                    "name",
+                    "error",
+                    "dirty-pages",
+                    "type",
+                ],
+            )
             self.assertIsNotNone(val)
 
         mem_region_dict["name"] = seven.unhexlify(mem_region_dict.get("name", ""))
         # Return the dictionary of key-value pairs for the memory region.
         return mem_region_dict
 
-    def assert_address_within_memory_region(
-            self, test_address, mem_region_dict):
+    def assert_address_within_memory_region(self, test_address, mem_region_dict):
         self.assertIsNotNone(mem_region_dict)
         self.assertTrue("start" in mem_region_dict)
         self.assertTrue("size" in mem_region_dict)
@@ -741,24 +787,30 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         if test_address < range_start:
             self.fail(
                 "address 0x{0:x} comes before range 0x{1:x} - 0x{2:x} (size 0x{3:x})".format(
-                    test_address,
-                    range_start,
-                    range_end,
-                    range_size))
+                    test_address, range_start, range_end, range_size
+                )
+            )
         elif test_address >= range_end:
             self.fail(
                 "address 0x{0:x} comes after range 0x{1:x} - 0x{2:x} (size 0x{3:x})".format(
-                    test_address,
-                    range_start,
-                    range_end,
-                    range_size))
+                    test_address, range_start, range_end, range_size
+                )
+            )
 
     def add_threadinfo_collection_packets(self):
         self.test_sequence.add_log_lines(
-            [{"type": "multi_response", "first_query": "qfThreadInfo", "next_query": "qsThreadInfo",
-                "append_iteration_suffix": False, "end_regex": re.compile(r"^\$(l)?#[0-9a-fA-F]{2}$"),
-                "save_key": "threadinfo_responses"}],
-            True)
+            [
+                {
+                    "type": "multi_response",
+                    "first_query": "qfThreadInfo",
+                    "next_query": "qsThreadInfo",
+                    "append_iteration_suffix": False,
+                    "end_regex": re.compile(r"^\$(l)?#[0-9a-fA-F]{2}$"),
+                    "save_key": "threadinfo_responses",
+                }
+            ],
+            True,
+        )
 
     def parse_threadinfo_packets(self, context):
         """Return an array of thread ids (decimal ints), one per thread."""
@@ -773,13 +825,20 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
 
     def launch_with_threads(self, thread_count):
         procs = self.prep_debug_monitor_and_inferior(
-                inferior_args=["thread:new"]*(thread_count-1) + ["trap"])
+            inferior_args=["thread:new"] * (thread_count - 1) + ["trap"]
+        )
 
-        self.test_sequence.add_log_lines([
+        self.test_sequence.add_log_lines(
+            [
                 "read packet: $c#00",
-                {"direction": "send",
+                {
+                    "direction": "send",
                     "regex": r"^\$T([0-9a-fA-F]{2})([^#]*)#..$",
-                    "capture": {1: "stop_signo", 2: "stop_reply_kv"}}], True)
+                    "capture": {1: "stop_signo", 2: "stop_reply_kv"},
+                },
+            ],
+            True,
+        )
         self.add_threadinfo_collection_packets()
         context = self.expect_gdbremote_sequence()
         threads = self.parse_threadinfo_packets(context)
@@ -787,49 +846,60 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         return context, threads
 
     def add_set_breakpoint_packets(
-            self,
-            address,
-            z_packet_type=0,
-            do_continue=True,
-            breakpoint_kind=1):
+        self, address, z_packet_type=0, do_continue=True, breakpoint_kind=1
+    ):
         self.test_sequence.add_log_lines(
             [  # Set the breakpoint.
                 "read packet: $Z{2},{0:x},{1}#00".format(
-                    address, breakpoint_kind, z_packet_type),
+                    address, breakpoint_kind, z_packet_type
+                ),
                 # Verify the stub could set it.
                 "send packet: $OK#00",
-            ], True)
+            ],
+            True,
+        )
 
-        if (do_continue):
+        if do_continue:
             self.test_sequence.add_log_lines(
                 [  # Continue the inferior.
                     "read packet: $c#63",
                     # Expect a breakpoint stop report.
-                    {"direction": "send",
-                     "regex": r"^\$T([0-9a-fA-F]{2})thread:([0-9a-fA-F]+);",
-                     "capture": {1: "stop_signo",
-                                 2: "stop_thread_id"}},
-                ], True)
+                    {
+                        "direction": "send",
+                        "regex": r"^\$T([0-9a-fA-F]{2})thread:([0-9a-fA-F]+);",
+                        "capture": {1: "stop_signo", 2: "stop_thread_id"},
+                    },
+                ],
+                True,
+            )
 
     def add_remove_breakpoint_packets(
-            self,
-            address,
-            z_packet_type=0,
-            breakpoint_kind=1):
+        self, address, z_packet_type=0, breakpoint_kind=1
+    ):
         self.test_sequence.add_log_lines(
             [  # Remove the breakpoint.
                 "read packet: $z{2},{0:x},{1}#00".format(
-                    address, breakpoint_kind, z_packet_type),
+                    address, breakpoint_kind, z_packet_type
+                ),
                 # Verify the stub could unset it.
                 "send packet: $OK#00",
-            ], True)
+            ],
+            True,
+        )
 
     def add_qSupported_packets(self, client_features=[]):
-        features = ''.join(';' + x for x in client_features)
+        features = "".join(";" + x for x in client_features)
         self.test_sequence.add_log_lines(
-            ["read packet: $qSupported{}#00".format(features),
-             {"direction": "send", "regex": r"^\$(.*)#[0-9a-fA-F]{2}", "capture": {1: "qSupported_response"}},
-             ], True)
+            [
+                "read packet: $qSupported{}#00".format(features),
+                {
+                    "direction": "send",
+                    "regex": r"^\$(.*)#[0-9a-fA-F]{2}",
+                    "capture": {1: "qSupported_response"},
+                },
+            ],
+            True,
+        )
 
     _KNOWN_QSUPPORTED_STUB_FEATURES = [
         "augmented-libraries-svr4-read",
@@ -872,18 +942,20 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
             else:
                 if len(key) < 2:
                     raise Exception(
-                        "singular stub feature is too short: must be stub_feature{+,-,?}")
+                        "singular stub feature is too short: must be stub_feature{+,-,?}"
+                    )
                 supported_type = key[-1]
                 key = key[:-1]
                 if not supported_type in ["+", "-", "?"]:
                     raise Exception(
-                        "malformed stub feature: final character {} not in expected set (+,-,?)".format(supported_type))
+                        "malformed stub feature: final character {} not in expected set (+,-,?)".format(
+                            supported_type
+                        )
+                    )
                 supported_dict[key] = supported_type
             # Ensure we know the supported element
             if key not in self._KNOWN_QSUPPORTED_STUB_FEATURES:
-                raise Exception(
-                    "unknown qSupported stub feature reported: %s" %
-                    key)
+                raise Exception("unknown qSupported stub feature reported: %s" % key)
 
         return supported_dict
 
@@ -905,7 +977,11 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
 
     def select_modifiable_register(self, reg_infos):
         """Find a register that can be read/written freely."""
-        PREFERRED_REGISTER_NAMES = set(["rax", ])
+        PREFERRED_REGISTER_NAMES = set(
+            [
+                "rax",
+            ]
+        )
 
         # First check for the first register from the preferred register name
         # set.
@@ -913,12 +989,12 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
 
         self.assertIsNotNone(reg_infos)
         for reg_info in reg_infos:
-            if ("name" in reg_info) and (
-                    reg_info["name"] in PREFERRED_REGISTER_NAMES):
+            if ("name" in reg_info) and (reg_info["name"] in PREFERRED_REGISTER_NAMES):
                 # We found a preferred register.  Use it.
                 return reg_info["lldb_register_index"]
-            if ("generic" in reg_info) and (reg_info["generic"] == "fp" or
-                    reg_info["generic"] == "arg1"):
+            if ("generic" in reg_info) and (
+                reg_info["generic"] == "fp" or reg_info["generic"] == "arg1"
+            ):
                 # A frame pointer or first arg register will do as a
                 # register to modify temporarily.
                 alternative_register_index = reg_info["lldb_register_index"]
@@ -932,7 +1008,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         kv_dict = self.parse_key_val_dict(stop_key_vals_text)
 
         registers = {}
-        for (key, val) in list(kv_dict.items()):
+        for key, val in list(kv_dict.items()):
             if re.match(r"^[0-9a-fA-F]+$", key):
                 registers[int(key, 16)] = val
         return registers
@@ -953,8 +1029,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
     def find_generic_register_with_name(self, reg_infos, generic_name):
         self.assertIsNotNone(reg_infos)
         for reg_info in reg_infos:
-            if ("generic" in reg_info) and (
-                    reg_info["generic"] == generic_name):
+            if ("generic" in reg_info) and (reg_info["generic"] == generic_name):
                 return reg_info
         return None
 
@@ -999,7 +1074,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         # break this test check for repeated keys.
         #
         # AT_IGNOREPPC = 22
-        ignored_keys_for_arch = { 'powerpc64le' : [22] }
+        ignored_keys_for_arch = {"powerpc64le": [22]}
         arch = self.getArchitecture()
         ignore_keys = None
         if arch in ignored_keys_for_arch:
@@ -1031,7 +1106,8 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
             auxv_dict[key] = value
 
         self.fail(
-            "should not reach here - implies required double zero entry not found")
+            "should not reach here - implies required double zero entry not found"
+        )
         return auxv_dict
 
     def read_binary_data_in_chunks(self, command_prefix, chunk_length):
@@ -1046,18 +1122,18 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
             self.test_sequence.add_log_lines(
                 [
                     "read packet: ${}{:x},{:x}:#00".format(
-                        command_prefix,
-                        offset,
-                        chunk_length),
+                        command_prefix, offset, chunk_length
+                    ),
                     {
                         "direction": "send",
                         "regex": re.compile(
-                            r"^\$([^E])(.*)#[0-9a-fA-F]{2}$",
-                            re.MULTILINE | re.DOTALL),
-                        "capture": {
-                            1: "response_type",
-                            2: "content_raw"}}],
-                True)
+                            r"^\$([^E])(.*)#[0-9a-fA-F]{2}$", re.MULTILINE | re.DOTALL
+                        ),
+                        "capture": {1: "response_type", 2: "content_raw"},
+                    },
+                ],
+                True,
+            )
 
             context = self.expect_gdbremote_sequence()
             self.assertIsNotNone(context)
@@ -1080,36 +1156,48 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         return decoded_data
 
     def add_interrupt_packets(self):
-        self.test_sequence.add_log_lines([
-            # Send the intterupt.
-            "read packet: {}".format(chr(3)),
-            # And wait for the stop notification.
-            {"direction": "send",
-             "regex": r"^\$T([0-9a-fA-F]{2})(.*)#[0-9a-fA-F]{2}$",
-             "capture": {1: "stop_signo",
-                         2: "stop_key_val_text"}},
-        ], True)
+        self.test_sequence.add_log_lines(
+            [
+                # Send the intterupt.
+                "read packet: {}".format(chr(3)),
+                # And wait for the stop notification.
+                {
+                    "direction": "send",
+                    "regex": r"^\$T([0-9a-fA-F]{2})(.*)#[0-9a-fA-F]{2}$",
+                    "capture": {1: "stop_signo", 2: "stop_key_val_text"},
+                },
+            ],
+            True,
+        )
 
     def parse_interrupt_packets(self, context):
         self.assertIsNotNone(context.get("stop_signo"))
         self.assertIsNotNone(context.get("stop_key_val_text"))
-        return (int(context["stop_signo"], 16), self.parse_key_val_dict(
-            context["stop_key_val_text"]))
+        return (
+            int(context["stop_signo"], 16),
+            self.parse_key_val_dict(context["stop_key_val_text"]),
+        )
 
     def add_QSaveRegisterState_packets(self, thread_id):
         if thread_id:
             # Use the thread suffix form.
             request = "read packet: $QSaveRegisterState;thread:{:x}#00".format(
-                thread_id)
+                thread_id
+            )
         else:
             request = "read packet: $QSaveRegisterState#00"
 
-        self.test_sequence.add_log_lines([request,
-                                          {"direction": "send",
-                                           "regex": r"^\$(E?.*)#[0-9a-fA-F]{2}$",
-                                           "capture": {1: "save_response"}},
-                                          ],
-                                         True)
+        self.test_sequence.add_log_lines(
+            [
+                request,
+                {
+                    "direction": "send",
+                    "regex": r"^\$(E?.*)#[0-9a-fA-F]{2}$",
+                    "capture": {1: "save_response"},
+                },
+            ],
+            True,
+        )
 
     def parse_QSaveRegisterState_response(self, context):
         self.assertIsNotNone(context)
@@ -1127,18 +1215,14 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         if thread_id:
             # Use the thread suffix form.
             request = "read packet: $QRestoreRegisterState:{};thread:{:x}#00".format(
-                save_id, thread_id)
+                save_id, thread_id
+            )
         else:
-            request = "read packet: $QRestoreRegisterState:{}#00".format(
-                save_id)
+            request = "read packet: $QRestoreRegisterState:{}#00".format(save_id)
 
-        self.test_sequence.add_log_lines([
-            request,
-            "send packet: $OK#00"
-        ], True)
+        self.test_sequence.add_log_lines([request, "send packet: $OK#00"], True)
 
-    def flip_all_bits_in_each_register_value(
-            self, reg_infos, endian, thread_id=None):
+    def flip_all_bits_in_each_register_value(self, reg_infos, endian, thread_id=None):
         self.assertIsNotNone(reg_infos)
 
         successful_writes = 0
@@ -1157,24 +1241,31 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
             # Handle thread suffix.
             if thread_id:
                 p_request = "read packet: $p{:x};thread:{:x}#00".format(
-                    reg_index, thread_id)
+                    reg_index, thread_id
+                )
             else:
                 p_request = "read packet: $p{:x}#00".format(reg_index)
 
             # Read the existing value.
             self.reset_test_sequence()
-            self.test_sequence.add_log_lines([
-                p_request,
-                {"direction": "send", "regex": r"^\$([0-9a-fA-F]+)#", "capture": {1: "p_response"}},
-            ], True)
+            self.test_sequence.add_log_lines(
+                [
+                    p_request,
+                    {
+                        "direction": "send",
+                        "regex": r"^\$([0-9a-fA-F]+)#",
+                        "capture": {1: "p_response"},
+                    },
+                ],
+                True,
+            )
             context = self.expect_gdbremote_sequence()
             self.assertIsNotNone(context)
 
             # Verify the response length.
             p_response = context.get("p_response")
             self.assertIsNotNone(p_response)
-            initial_reg_value = unpack_register_hex_unsigned(
-                endian, p_response)
+            initial_reg_value = unpack_register_hex_unsigned(endian, p_response)
 
             # Flip the value by xoring with all 1s
             all_one_bits_raw = "ff" * (int(reg_info["bitsize"]) // 8)
@@ -1184,21 +1275,33 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
             # Handle thread suffix for P.
             if thread_id:
                 P_request = "read packet: $P{:x}={};thread:{:x}#00".format(
-                    reg_index, pack_register_hex(
-                        endian, flipped_bits_int, byte_size=reg_byte_size), thread_id)
+                    reg_index,
+                    pack_register_hex(
+                        endian, flipped_bits_int, byte_size=reg_byte_size
+                    ),
+                    thread_id,
+                )
             else:
                 P_request = "read packet: $P{:x}={}#00".format(
-                    reg_index, pack_register_hex(
-                        endian, flipped_bits_int, byte_size=reg_byte_size))
+                    reg_index,
+                    pack_register_hex(
+                        endian, flipped_bits_int, byte_size=reg_byte_size
+                    ),
+                )
 
             # Write the flipped value to the register.
             self.reset_test_sequence()
-            self.test_sequence.add_log_lines([P_request,
-                                              {"direction": "send",
-                                               "regex": r"^\$(OK|E[0-9a-fA-F]+)#[0-9a-fA-F]{2}",
-                                               "capture": {1: "P_response"}},
-                                              ],
-                                             True)
+            self.test_sequence.add_log_lines(
+                [
+                    P_request,
+                    {
+                        "direction": "send",
+                        "regex": r"^\$(OK|E[0-9a-fA-F]+)#[0-9a-fA-F]{2}",
+                        "capture": {1: "P_response"},
+                    },
+                ],
+                True,
+            )
             context = self.expect_gdbremote_sequence()
             self.assertIsNotNone(context)
 
@@ -1217,17 +1320,25 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
             # value.
             if P_response == "OK":
                 self.reset_test_sequence()
-                self.test_sequence.add_log_lines([
-                    p_request,
-                    {"direction": "send", "regex": r"^\$([0-9a-fA-F]+)#", "capture": {1: "p_response"}},
-                ], True)
+                self.test_sequence.add_log_lines(
+                    [
+                        p_request,
+                        {
+                            "direction": "send",
+                            "regex": r"^\$([0-9a-fA-F]+)#",
+                            "capture": {1: "p_response"},
+                        },
+                    ],
+                    True,
+                )
                 context = self.expect_gdbremote_sequence()
                 self.assertIsNotNone(context)
 
                 verify_p_response_raw = context.get("p_response")
                 self.assertIsNotNone(verify_p_response_raw)
                 verify_bits = unpack_register_hex_unsigned(
-                    endian, verify_p_response_raw)
+                    endian, verify_p_response_raw
+                )
 
                 if verify_bits != flipped_bits_int:
                     # Some registers, like mxcsrmask and others, will permute what's written.  Adjust succeed/fail counts.
@@ -1244,8 +1355,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
             return False
         if reg_info["set"] != "General Purpose Registers":
             return False
-        if ("container-regs" in reg_info) and (
-                len(reg_info["container-regs"]) > 0):
+        if ("container-regs" in reg_info) and (len(reg_info["container-regs"]) > 0):
             # Don't try to bit flip registers contained in another register.
             return False
         if re.match("^.s$", reg_info["name"]):
@@ -1271,16 +1381,24 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
             # Handle thread suffix.
             if thread_id:
                 p_request = "read packet: $p{:x};thread:{:x}#00".format(
-                    reg_index, thread_id)
+                    reg_index, thread_id
+                )
             else:
                 p_request = "read packet: $p{:x}#00".format(reg_index)
 
             # Read it with p.
             self.reset_test_sequence()
-            self.test_sequence.add_log_lines([
-                p_request,
-                {"direction": "send", "regex": r"^\$([0-9a-fA-F]+)#", "capture": {1: "p_response"}},
-            ], True)
+            self.test_sequence.add_log_lines(
+                [
+                    p_request,
+                    {
+                        "direction": "send",
+                        "regex": r"^\$([0-9a-fA-F]+)#",
+                        "capture": {1: "p_response"},
+                    },
+                ],
+                True,
+            )
             context = self.expect_gdbremote_sequence()
             self.assertIsNotNone(context)
 
@@ -1290,18 +1408,22 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
             self.assertTrue(len(p_response) > 0)
             self.assertFalse(p_response[0] == "E")
 
-            values[reg_index] = unpack_register_hex_unsigned(
-                endian, p_response)
+            values[reg_index] = unpack_register_hex_unsigned(endian, p_response)
 
         return values
 
     def add_vCont_query_packets(self):
-        self.test_sequence.add_log_lines(["read packet: $vCont?#49",
-                                          {"direction": "send",
-                                           "regex": r"^\$(vCont)?(.*)#[0-9a-fA-F]{2}$",
-                                           "capture": {2: "vCont_query_response"}},
-                                          ],
-                                         True)
+        self.test_sequence.add_log_lines(
+            [
+                "read packet: $vCont?#49",
+                {
+                    "direction": "send",
+                    "regex": r"^\$(vCont)?(.*)#[0-9a-fA-F]{2}$",
+                    "capture": {2: "vCont_query_response"},
+                },
+            ],
+            True,
+        )
 
     def parse_vCont_query_response(self, context):
         self.assertIsNotNone(context)
@@ -1312,17 +1434,19 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         if not vCont_query_response or len(vCont_query_response) == 0:
             return {}
 
-        return {key: 1 for key in vCont_query_response.split(
-            ";") if key and len(key) > 0}
+        return {
+            key: 1 for key in vCont_query_response.split(";") if key and len(key) > 0
+        }
 
     def count_single_steps_until_true(
-            self,
-            thread_id,
-            predicate,
-            args,
-            max_step_count=100,
-            use_Hc_packet=True,
-            step_instruction="s"):
+        self,
+        thread_id,
+        predicate,
+        args,
+        max_step_count=100,
+        use_Hc_packet=True,
+        step_instruction="s",
+    ):
         """Used by single step test that appears in a few different contexts."""
         single_step_count = 0
 
@@ -1332,7 +1456,8 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
             # Build the packet for the single step instruction.  We replace
             # {thread}, if present, with the thread_id.
             step_packet = "read packet: ${}#00".format(
-                re.sub(r"{thread}", "{:x}".format(thread_id), step_instruction))
+                re.sub(r"{thread}", "{:x}".format(thread_id), step_instruction)
+            )
             # print("\nstep_packet created: {}\n".format(step_packet))
 
             # Single step.
@@ -1342,22 +1467,30 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
                     [  # Set the continue thread.
                         "read packet: $Hc{0:x}#00".format(thread_id),
                         "send packet: $OK#00",
-                    ], True)
-            self.test_sequence.add_log_lines([
-                # Single step.
-                step_packet,
-                # "read packet: $vCont;s:{0:x}#00".format(thread_id),
-                # Expect a breakpoint stop report.
-                {"direction": "send",
-                 "regex": r"^\$T([0-9a-fA-F]{2})thread:([0-9a-fA-F]+);",
-                 "capture": {1: "stop_signo",
-                             2: "stop_thread_id"}},
-            ], True)
+                    ],
+                    True,
+                )
+            self.test_sequence.add_log_lines(
+                [
+                    # Single step.
+                    step_packet,
+                    # "read packet: $vCont;s:{0:x}#00".format(thread_id),
+                    # Expect a breakpoint stop report.
+                    {
+                        "direction": "send",
+                        "regex": r"^\$T([0-9a-fA-F]{2})thread:([0-9a-fA-F]+);",
+                        "capture": {1: "stop_signo", 2: "stop_thread_id"},
+                    },
+                ],
+                True,
+            )
             context = self.expect_gdbremote_sequence()
             self.assertIsNotNone(context)
             self.assertIsNotNone(context.get("stop_signo"))
-            self.assertEqual(int(context.get("stop_signo"), 16),
-                             lldbutil.get_signal_number('SIGTRAP'))
+            self.assertEqual(
+                int(context.get("stop_signo"), 16),
+                lldbutil.get_signal_number("SIGTRAP"),
+            )
 
             single_step_count += 1
 
@@ -1378,11 +1511,22 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         # Read g_c1 and g_c2 contents.
         self.reset_test_sequence()
         self.test_sequence.add_log_lines(
-            ["read packet: $m{0:x},{1:x}#00".format(g_c1_address, 1),
-             {"direction": "send", "regex": r"^\$(.+)#[0-9a-fA-F]{2}$", "capture": {1: "g_c1_contents"}},
-             "read packet: $m{0:x},{1:x}#00".format(g_c2_address, 1),
-             {"direction": "send", "regex": r"^\$(.+)#[0-9a-fA-F]{2}$", "capture": {1: "g_c2_contents"}}],
-            True)
+            [
+                "read packet: $m{0:x},{1:x}#00".format(g_c1_address, 1),
+                {
+                    "direction": "send",
+                    "regex": r"^\$(.+)#[0-9a-fA-F]{2}$",
+                    "capture": {1: "g_c1_contents"},
+                },
+                "read packet: $m{0:x},{1:x}#00".format(g_c2_address, 1),
+                {
+                    "direction": "send",
+                    "regex": r"^\$(.+)#[0-9a-fA-F]{2}$",
+                    "capture": {1: "g_c2_contents"},
+                },
+            ],
+            True,
+        )
 
         # Run the packet stream.
         context = self.expect_gdbremote_sequence()
@@ -1393,10 +1537,12 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         self.assertIsNotNone(context.get("g_c2_contents"))
 
         return (seven.unhexlify(context.get("g_c1_contents")) == expected_g_c1) and (
-            seven.unhexlify(context.get("g_c2_contents")) == expected_g_c2)
+            seven.unhexlify(context.get("g_c2_contents")) == expected_g_c2
+        )
 
     def single_step_only_steps_one_instruction(
-            self, use_Hc_packet=True, step_instruction="s"):
+        self, use_Hc_packet=True, step_instruction="s"
+    ):
         """Used by single step test that appears in a few different contexts."""
         # Start up the inferior.
         procs = self.prep_debug_monitor_and_inferior(
@@ -1406,7 +1552,9 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
                 "get-data-address-hex:g_c2",
                 "sleep:1",
                 "call-function:swap_chars",
-                "sleep:5"])
+                "sleep:5",
+            ]
+        )
 
         # Run the process
         self.test_sequence.add_log_lines(
@@ -1414,13 +1562,26 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
                 "read packet: $c#63",
                 # Match output line that prints the memory address of the function call entry point.
                 # Note we require launch-only testing so we can get inferior otuput.
-                {"type": "output_match", "regex": r"^code address: 0x([0-9a-fA-F]+)\r\ndata address: 0x([0-9a-fA-F]+)\r\ndata address: 0x([0-9a-fA-F]+)\r\n$",
-                 "capture": {1: "function_address", 2: "g_c1_address", 3: "g_c2_address"}},
+                {
+                    "type": "output_match",
+                    "regex": r"^code address: 0x([0-9a-fA-F]+)\r\ndata address: 0x([0-9a-fA-F]+)\r\ndata address: 0x([0-9a-fA-F]+)\r\n$",
+                    "capture": {
+                        1: "function_address",
+                        2: "g_c1_address",
+                        3: "g_c2_address",
+                    },
+                },
                 # Now stop the inferior.
                 "read packet: {}".format(chr(3)),
                 # And wait for the stop notification.
-                {"direction": "send", "regex": r"^\$T([0-9a-fA-F]{2})thread:([0-9a-fA-F]+);", "capture": {1: "stop_signo", 2: "stop_thread_id"}}],
-            True)
+                {
+                    "direction": "send",
+                    "regex": r"^\$T([0-9a-fA-F]{2})thread:([0-9a-fA-F]+);",
+                    "capture": {1: "stop_signo", 2: "stop_thread_id"},
+                },
+            ],
+            True,
+        )
 
         # Run the packet stream.
         context = self.expect_gdbremote_sequence()
@@ -1449,16 +1610,16 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
             BREAKPOINT_KIND = 1
         self.reset_test_sequence()
         self.add_set_breakpoint_packets(
-            function_address,
-            do_continue=True,
-            breakpoint_kind=BREAKPOINT_KIND)
+            function_address, do_continue=True, breakpoint_kind=BREAKPOINT_KIND
+        )
         context = self.expect_gdbremote_sequence()
         self.assertIsNotNone(context)
 
         # Remove the breakpoint.
         self.reset_test_sequence()
         self.add_remove_breakpoint_packets(
-            function_address, breakpoint_kind=BREAKPOINT_KIND)
+            function_address, breakpoint_kind=BREAKPOINT_KIND
+        )
         context = self.expect_gdbremote_sequence()
         self.assertIsNotNone(context)
 
@@ -1475,25 +1636,27 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         # Might need to work through function entry prologue code.
         args["expected_g_c1"] = "1"
         args["expected_g_c2"] = "1"
-        (state_reached,
-         step_count) = self.count_single_steps_until_true(main_thread_id,
-                                                          self.g_c1_c2_contents_are,
-                                                          args,
-                                                          max_step_count=25,
-                                                          use_Hc_packet=use_Hc_packet,
-                                                          step_instruction=step_instruction)
+        (state_reached, step_count) = self.count_single_steps_until_true(
+            main_thread_id,
+            self.g_c1_c2_contents_are,
+            args,
+            max_step_count=25,
+            use_Hc_packet=use_Hc_packet,
+            step_instruction=step_instruction,
+        )
         self.assertTrue(state_reached)
 
         # Verify we hit the next state.
         args["expected_g_c1"] = "1"
         args["expected_g_c2"] = "0"
-        (state_reached,
-         step_count) = self.count_single_steps_until_true(main_thread_id,
-                                                          self.g_c1_c2_contents_are,
-                                                          args,
-                                                          max_step_count=5,
-                                                          use_Hc_packet=use_Hc_packet,
-                                                          step_instruction=step_instruction)
+        (state_reached, step_count) = self.count_single_steps_until_true(
+            main_thread_id,
+            self.g_c1_c2_contents_are,
+            args,
+            max_step_count=5,
+            use_Hc_packet=use_Hc_packet,
+            step_instruction=step_instruction,
+        )
         self.assertTrue(state_reached)
         expected_step_count = 1
         arch = self.getArchitecture()
@@ -1513,8 +1676,10 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         if re.match("arm64", arch):
             before_materialization_step_count = 4
             after_matrialization_step_count = 1
-            self.assertIn(step_count, [before_materialization_step_count,
-                                       after_matrialization_step_count])
+            self.assertIn(
+                step_count,
+                [before_materialization_step_count, after_matrialization_step_count],
+            )
             expected_step_count = after_matrialization_step_count
         else:
             self.assertEqual(step_count, expected_step_count)
@@ -1522,43 +1687,52 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         # Verify we hit the next state.
         args["expected_g_c1"] = "0"
         args["expected_g_c2"] = "0"
-        (state_reached,
-         step_count) = self.count_single_steps_until_true(main_thread_id,
-                                                          self.g_c1_c2_contents_are,
-                                                          args,
-                                                          max_step_count=5,
-                                                          use_Hc_packet=use_Hc_packet,
-                                                          step_instruction=step_instruction)
+        (state_reached, step_count) = self.count_single_steps_until_true(
+            main_thread_id,
+            self.g_c1_c2_contents_are,
+            args,
+            max_step_count=5,
+            use_Hc_packet=use_Hc_packet,
+            step_instruction=step_instruction,
+        )
         self.assertTrue(state_reached)
         self.assertEqual(step_count, expected_step_count)
 
         # Verify we hit the next state.
         args["expected_g_c1"] = "0"
         args["expected_g_c2"] = "1"
-        (state_reached,
-         step_count) = self.count_single_steps_until_true(main_thread_id,
-                                                          self.g_c1_c2_contents_are,
-                                                          args,
-                                                          max_step_count=5,
-                                                          use_Hc_packet=use_Hc_packet,
-                                                          step_instruction=step_instruction)
+        (state_reached, step_count) = self.count_single_steps_until_true(
+            main_thread_id,
+            self.g_c1_c2_contents_are,
+            args,
+            max_step_count=5,
+            use_Hc_packet=use_Hc_packet,
+            step_instruction=step_instruction,
+        )
         self.assertTrue(state_reached)
         self.assertEqual(step_count, expected_step_count)
 
     def maybe_strict_output_regex(self, regex):
-        return '.*' + regex + \
-            '.*' if lldbplatformutil.hasChattyStderr(self) else '^' + regex + '$'
+        return (
+            ".*" + regex + ".*"
+            if lldbplatformutil.hasChattyStderr(self)
+            else "^" + regex + "$"
+        )
 
     def install_and_create_launch_args(self):
         exe_path = self.getBuildArtifact("a.out")
         if not lldb.remote_platform:
             return [exe_path]
-        remote_path = lldbutil.append_to_process_working_directory(self,
-            os.path.basename(exe_path))
+        remote_path = lldbutil.append_to_process_working_directory(
+            self, os.path.basename(exe_path)
+        )
         remote_file_spec = lldb.SBFileSpec(remote_path, False)
-        err = lldb.remote_platform.Install(lldb.SBFileSpec(exe_path, True),
-                                           remote_file_spec)
+        err = lldb.remote_platform.Install(
+            lldb.SBFileSpec(exe_path, True), remote_file_spec
+        )
         if err.Fail():
-            raise Exception("remote_platform.Install('%s', '%s') failed: %s" %
-                            (exe_path, remote_path, err))
+            raise Exception(
+                "remote_platform.Install('%s', '%s') failed: %s"
+                % (exe_path, remote_path, err)
+            )
         return [remote_path]

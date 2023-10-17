@@ -42,6 +42,18 @@ union NU {
   NE Field;
 };
 
+// Skip unions with out-of-line constructor/destructor.
+union NUO {
+  NUO();
+  ~NUO();
+  NE Field;
+};
+
+NUO::NUO() {}
+// CHECK-FIXES: NUO::NUO() {}
+NUO::~NUO() {}
+// CHECK-FIXES: NUO::~NUO() {}
+
 // Skip structs/classes containing anonymous unions.
 struct SU {
   SU() {}
@@ -266,3 +278,21 @@ OTC::~OTC() try {} catch(...) {}
   };
 
 STRUCT_WITH_DEFAULT(unsigned char, InMacro)
+
+#define ZERO_VALUE 0
+struct PreprocesorDependentTest
+{
+  void something();
+
+  PreprocesorDependentTest() {
+#if ZERO_VALUE
+    something();
+#endif
+  }
+
+  ~PreprocesorDependentTest() {
+#if ZERO_VALUE
+    something();
+#endif
+  }
+};

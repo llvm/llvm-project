@@ -269,7 +269,7 @@ void FoldingSetBase::reserve(unsigned EltCount, const FoldingSetInfo &Info) {
   // range of 1.0 - 2.0.
   if(EltCount < capacity())
     return;
-  GrowBucketCount(PowerOf2Floor(EltCount), Info);
+  GrowBucketCount(llvm::bit_floor(EltCount), Info);
 }
 
 /// FindNodeOrInsertPos - Look up the node specified by ID.  If it exists,

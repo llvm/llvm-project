@@ -112,6 +112,9 @@ class Compilation {
   /// only be removed if we crash.
   ArgStringMap FailureResultFiles;
 
+  /// -ftime-trace result files.
+  ArgStringMap TimeTraceFiles;
+
   /// Optional redirection for stdin, stdout, stderr.
   std::vector<std::optional<StringRef>> Redirects;
 
@@ -267,6 +270,14 @@ public:
   const char *addFailureResultFile(const char *Name, const JobAction *JA) {
     FailureResultFiles[JA] = Name;
     return Name;
+  }
+
+  const char *getTimeTraceFile(const JobAction *JA) const {
+    return TimeTraceFiles.lookup(JA);
+  }
+  void addTimeTraceFile(const char *Name, const JobAction *JA) {
+    assert(!TimeTraceFiles.contains(JA));
+    TimeTraceFiles[JA] = Name;
   }
 
   /// CleanupFile - Delete a given file.

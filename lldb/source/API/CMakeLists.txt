@@ -6,6 +6,11 @@ if(LLDB_BUILD_FRAMEWORK)
 endif()
 
 if(LLDB_ENABLE_PYTHON)
+  if (APPLE AND LLVM_ENABLE_LOCAL_SUBMODULE_VISIBILITY)
+    # Work around an issue with the Python headers, which have a modular include
+    # inside an extern "C" block.
+    remove_module_flags()
+  endif()
   get_target_property(python_bindings_dir swig_wrapper_python BINARY_DIR)
   set(lldb_python_wrapper ${python_bindings_dir}/LLDBWrapPython.cpp)
 endif()
@@ -56,9 +61,11 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBPlatform.cpp
   SBProcess.cpp
   SBProcessInfo.cpp
+  SBProcessInfoList.cpp
   SBQueue.cpp
   SBQueueItem.cpp
   SBReproducer.cpp
+  SBScriptObject.cpp
   SBSection.cpp
   SBSourceManager.cpp
   SBStream.cpp
@@ -85,6 +92,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBValueList.cpp
   SBVariablesOptions.cpp
   SBWatchpoint.cpp
+  SBWatchpointOptions.cpp
   SBUnixSignals.cpp
   SystemInitializerFull.cpp
   ${lldb_python_wrapper}
@@ -170,12 +178,56 @@ if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
     # from working on some systems but limits the liblldb size.
     MESSAGE("-- Symbols (liblldb): exporting all symbols from the lldb namespace")
     add_llvm_symbol_exports(liblldb ${CMAKE_CURRENT_SOURCE_DIR}/liblldb.exports)
-  else()
-    # Don't use an explicit export.  Instead, tell the linker to
-    # export all symbols.
+  elseif (NOT LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE)
+    # Don't use an explicit export. Instead, tell the linker to export all symbols.
     MESSAGE("-- Symbols (liblldb): exporting all symbols from the lldb and lldb_private namespaces")
+    MESSAGE(WARNING "Private LLDB symbols frequently change and no API stability is guaranteed. "
+                    "Only the SB API is guaranteed to be stable.")
     add_llvm_symbol_exports(liblldb ${CMAKE_CURRENT_SOURCE_DIR}/liblldb-private.exports)
+  else ()
+    MESSAGE("-- Symbols (liblldb): exporting all symbols specified in the exports "
+            " file '${LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE}'")
+    MESSAGE(WARNING "Private LLDB symbols frequently change and no API stability is guaranteed. "
+                    "Only the SB API is guaranteed to be stable.")
+    add_llvm_symbol_exports(liblldb "${LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE}")
   endif()
+  set_target_properties(liblldb_exports PROPERTIES FOLDER "lldb misc")
+elseif (LLDB_EXPORT_ALL_SYMBOLS)
+  MESSAGE("-- Symbols (liblldb): exporting all symbols from the lldb and lldb_private namespaces")
+
+  # Pull out the various lldb libraries linked into liblldb, these will be used
+  # when looking for symbols to extract. We ignore plugin libraries here,
+  # because these symbols aren't publicly exposed.
+  get_target_property(all_liblldb_libs liblldb LINK_LIBRARIES)
+  set(lldb_libs "")
+  foreach(lib ${all_liblldb_libs})
+    if(TARGET ${lib} AND ${lib} MATCHES "^lldb" AND
+       NOT ${lib} MATCHES "^lldbPlugin")
+      get_target_property(lib_type ${lib} TYPE)
+      if("${lib_type}" STREQUAL "STATIC_LIBRARY")
+        list(APPEND lldb_libs ${lib})
+      endif()
+    endif()
+  endforeach(lib)
+  list(REMOVE_DUPLICATES lldb_libs)
+
+  # Extract all of the private symbols and produce a single file we can use for
+  # the exports.
+  set(exported_symbol_file ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/liblldb_private.symbols)
+  get_host_tool_path(llvm-nm LLVM_NM llvm_nm_exe llvm_nm_target)
+  add_custom_command(
+    OUTPUT ${exported_symbol_file}
+    COMMAND "${Python3_EXECUTABLE}"
+      ${LLDB_SOURCE_DIR}/scripts/msvc_extract_private_symbols.py
+      ${lldb_libs} -o ${exported_symbol_file} --nm=${llvm_nm_exe}
+    WORKING_DIRECTORY ${LLVM_LIBRARY_OUTPUT_INTDIR}
+    DEPENDS ${LLDB_SOURCE_DIR}/scripts/msvc_extract_private_symbols.py
+      ${lldb_libs} ${llvm_nm_target}
+    VERBATIM
+    COMMENT "Generating liblldb private export list"
+  )
+
+  add_llvm_symbol_exports(liblldb ${exported_symbol_file})
   set_target_properties(liblldb_exports PROPERTIES FOLDER "lldb misc")
 endif()
 
@@ -198,13 +250,11 @@ else()
   # When building the LLDB framework, this isn't necessary as there we copy everything we need into
   # the framework (including the Clang resourece directory).
   if(NOT LLDB_BUILD_FRAMEWORK)
-    set(LLDB_CLANG_RESOURCE_DIR_PARENT "$<TARGET_FILE_DIR:liblldb>/clang")
-    file(MAKE_DIRECTORY "${LLDB_CLANG_RESOURCE_DIR_PARENT}")
+    set(LLDB_CLANG_RESOURCE_DIR "$<TARGET_FILE_DIR:liblldb>/clang")
     add_custom_command(TARGET liblldb POST_BUILD
-      COMMENT "Linking Clang resource dir into LLDB build directory: ${LLDB_CLANG_RESOURCE_DIR_PARENT}"
-      COMMAND ${CMAKE_COMMAND} -E make_directory "${LLDB_CLANG_RESOURCE_DIR_PARENT}"
-      COMMAND ${CMAKE_COMMAND} -E create_symlink "${LLDB_EXTERNAL_CLANG_RESOURCE_DIR}"
-              "${LLDB_CLANG_RESOURCE_DIR_PARENT}/${LLDB_CLANG_RESOURCE_DIR_NAME}"
+      COMMENT "Linking Clang resource dir into LLDB build directory: ${LLDB_CLANG_RESOURCE_DIR}"
+      COMMAND ${CMAKE_COMMAND} -E create_symlink
+      "${LLDB_EXTERNAL_CLANG_RESOURCE_DIR}" "${LLDB_CLANG_RESOURCE_DIR}"
     )
   endif()
 endif()

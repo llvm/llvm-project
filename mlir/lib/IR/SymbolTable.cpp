@@ -218,6 +218,80 @@ StringAttr SymbolTable::insert(Operation *symbol, Block::iterator insertPt) {
   return getSymbolName(symbol);
 }
 
+LogicalResult SymbolTable::rename(StringAttr from, StringAttr to) {
+  Operation *op = lookup(from);
+  return rename(op, to);
+}
+
+LogicalResult SymbolTable::rename(Operation *op, StringAttr to) {
+  StringAttr from = getNameIfSymbol(op);
+  (void)from;
+
+  assert(from && "expected valid 'name' attribute");
+  assert(op->getParentOp() == symbolTableOp &&
+         "expected this operation to be inside of the operation with this "
+         "SymbolTable");
+  assert(lookup(from) == op && "current name does not resolve to op");
+  assert(lookup(to) == nullptr && "new name already exists");
+
+  if (failed(SymbolTable::replaceAllSymbolUses(op, to, getOp())))
+    return failure();
+
+  // Remove op with old name, change name, add with new name. The order is
+  // important here due to how `remove` and `insert` rely on the op name.
+  remove(op);
+  setSymbolName(op, to);
+  insert(op);
+
+  assert(lookup(to) == op && "new name does not resolve to renamed op");
+  assert(lookup(from) == nullptr && "old name still exists");
+
+  return success();
+}
+
+LogicalResult SymbolTable::rename(StringAttr from, StringRef to) {
+  auto toAttr = StringAttr::get(getOp()->getContext(), to);
+  return rename(from, toAttr);
+}
+
+LogicalResult SymbolTable::rename(Operation *op, StringRef to) {
+  auto toAttr = StringAttr::get(getOp()->getContext(), to);
+  return rename(op, toAttr);
+}
+
+FailureOr<StringAttr>
+SymbolTable::renameToUnique(StringAttr oldName,
+                            ArrayRef<SymbolTable *> others) {
+
+  // Determine new name that is unique in all symbol tables.
+  StringAttr newName;
+  {
+    MLIRContext *context = oldName.getContext();
+    SmallString<64> prefix = oldName.getValue();
+    int uniqueId = 0;
+    prefix.push_back('_');
+    while (true) {
+      newName = StringAttr::get(context, prefix + Twine(uniqueId++));
+      auto lookupNewName = [&](SymbolTable *st) { return st->lookup(newName); };
+      if (!lookupNewName(this) && llvm::none_of(others, lookupNewName)) {
+        break;
+      }
+    }
+  }
+
+  // Apply renaming.
+  if (failed(rename(oldName, newName)))
+    return failure();
+  return newName;
+}
+
+FailureOr<StringAttr>
+SymbolTable::renameToUnique(Operation *op, ArrayRef<SymbolTable *> others) {
+  StringAttr from = getNameIfSymbol(op);
+  assert(from && "expected valid 'name' attribute");
+  return renameToUnique(from, others);
+}
+
 /// Returns the name of the given symbol operation.
 StringAttr SymbolTable::getSymbolName(Operation *symbol) {
   StringAttr name = getNameIfSymbol(symbol);
@@ -459,7 +533,7 @@ LogicalResult detail::verifySymbol(Operation *op) {
 
   // Verify the visibility attribute.
   if (Attribute vis = op->getAttr(mlir::SymbolTable::getVisibilityAttrName())) {
-    StringAttr visStrAttr = vis.dyn_cast<StringAttr>();
+    StringAttr visStrAttr = llvm::dyn_cast<StringAttr>(vis);
     if (!visStrAttr)
       return op->emitOpError() << "requires visibility attribute '"
                                << mlir::SymbolTable::getVisibilityAttrName()
@@ -485,66 +559,14 @@ LogicalResult detail::verifySymbol(Operation *op) {
 static WalkResult
 walkSymbolRefs(Operation *op,
                function_ref<WalkResult(SymbolTable::SymbolUse)> callback) {
-  // Check to see if the operation has any attributes.
-  DictionaryAttr attrDict = op->getAttrDictionary();
-  if (attrDict.empty())
-    return WalkResult::advance();
-
-  // A worklist of a container attribute and the current index into the held
-  // attribute list.
-  struct WorklistItem {
-    SubElementAttrInterface container;
-    SmallVector<Attribute> immediateSubElements;
-
-    explicit WorklistItem(SubElementAttrInterface container) {
-      SmallVector<Attribute> subElements;
-      container.walkImmediateSubElements(
-          [&](Attribute attr) { subElements.push_back(attr); }, [](Type) {});
-      immediateSubElements = std::move(subElements);
-    }
-  };
-
-  SmallVector<WorklistItem, 1> attrWorklist(1, WorklistItem(attrDict));
-  SmallVector<int, 1> curAccessChain(1, /*Value=*/-1);
-
-  // Process the symbol references within the given nested attribute range.
-  auto processAttrs = [&](int &index,
-                          WorklistItem &worklistItem) -> WalkResult {
-    for (Attribute attr :
-         llvm::drop_begin(worklistItem.immediateSubElements, index)) {
-      // Invoke the provided callback if we find a symbol use and check for a
-      // requested interrupt.
-      if (auto symbolRef = attr.dyn_cast<SymbolRefAttr>()) {
+  return op->getAttrDictionary().walk<WalkOrder::PreOrder>(
+      [&](SymbolRefAttr symbolRef) {
         if (callback({op, symbolRef}).wasInterrupted())
           return WalkResult::interrupt();
 
-        /// Check for a nested container attribute, these will also need to be
-        /// walked.
-      } else if (auto interface = attr.dyn_cast<SubElementAttrInterface>()) {
-        attrWorklist.emplace_back(interface);
-        curAccessChain.push_back(-1);
-        return WalkResult::advance();
-      }
-      // Make sure to keep the index counter in sync.
-      ++index;
-    }
-
-    // Pop this container attribute from the worklist.
-    attrWorklist.pop_back();
-    curAccessChain.pop_back();
-    return WalkResult::advance();
-  };
-
-  WalkResult result = WalkResult::advance();
-  do {
-    WorklistItem &item = attrWorklist.back();
-    int &index = curAccessChain.back();
-    ++index;
-
-    // Process the given attribute, which is guaranteed to be a container.
-    result = processAttrs(index, item);
-  } while (!attrWorklist.empty() && !result.wasInterrupted());
-  return result;
+        // Don't walk nested references.
+        return WalkResult::skip();
+      });
 }
 
 /// Walk all of the uses, for any symbol, that are nested within the given
@@ -603,7 +625,7 @@ struct SymbolScope {
                 typename llvm::function_traits<CallbackT>::result_t,
                 void>::value> * = nullptr>
   std::optional<WalkResult> walk(CallbackT cback) {
-    if (Region *region = limit.dyn_cast<Region *>())
+    if (Region *region = llvm::dyn_cast_if_present<Region *>(limit))
       return walkSymbolUses(*region, cback);
     return walkSymbolUses(limit.get<Operation *>(), cback);
   }
@@ -623,7 +645,7 @@ struct SymbolScope {
   /// traversing into any nested symbol tables.
   template <typename CallbackT>
   std::optional<WalkResult> walkSymbolTable(CallbackT &&cback) {
-    if (Region *region = limit.dyn_cast<Region *>())
+    if (Region *region = llvm::dyn_cast_if_present<Region *>(limit))
       return ::walkSymbolTable(*region, cback);
     return ::walkSymbolTable(limit.get<Operation *>(), cback);
   }
@@ -707,10 +729,18 @@ static SmallVector<SymbolScope, 2> collectSymbolScopes(Operation *symbol,
     scopes.back().limit = limit;
   return scopes;
 }
-template <typename IRUnit>
 static SmallVector<SymbolScope, 1> collectSymbolScopes(StringAttr symbol,
-                                                       IRUnit *limit) {
+                                                       Region *limit) {
   return {{SymbolRefAttr::get(symbol), limit}};
+}
+
+static SmallVector<SymbolScope, 1> collectSymbolScopes(StringAttr symbol,
+                                                       Operation *limit) {
+  SmallVector<SymbolScope, 1> scopes;
+  auto symbolRef = SymbolRefAttr::get(symbol);
+  for (auto &region : limit->getRegions())
+    scopes.push_back({symbolRef, &region});
+  return scopes;
 }
 
 /// Returns true if the given reference 'SubRef' is a sub reference of the
@@ -721,7 +751,7 @@ static bool isReferencePrefixOf(SymbolRefAttr subRef, SymbolRefAttr ref) {
 
   // If the references are not pointer equal, check to see if `subRef` is a
   // prefix of `ref`.
-  if (ref.isa<FlatSymbolRefAttr>() ||
+  if (llvm::isa<FlatSymbolRefAttr>(ref) ||
       ref.getRootReference() != subRef.getRootReference())
     return false;
 
@@ -841,7 +871,7 @@ bool SymbolTable::symbolKnownUseEmpty(Operation *symbol, Region *from) {
 /// Generates a new symbol reference attribute with a new leaf reference.
 static SymbolRefAttr generateNewRefAttr(SymbolRefAttr oldAttr,
                                         FlatSymbolRefAttr newLeafAttr) {
-  if (oldAttr.isa<FlatSymbolRefAttr>())
+  if (llvm::isa<FlatSymbolRefAttr>(oldAttr))
     return newLeafAttr;
   auto nestedRefs = llvm::to_vector<2>(oldAttr.getNestedReferences());
   nestedRefs.back() = newLeafAttr;
@@ -966,6 +996,58 @@ SymbolTable &SymbolTableCollection::getSymbolTable(Operation *op) {
   if (it.second)
     it.first->second = std::make_unique<SymbolTable>(op);
   return *it.first->second;
+}
+
+//===----------------------------------------------------------------------===//
+// LockedSymbolTableCollection
+//===----------------------------------------------------------------------===//
+
+Operation *LockedSymbolTableCollection::lookupSymbolIn(Operation *symbolTableOp,
+                                                       StringAttr symbol) {
+  return getSymbolTable(symbolTableOp).lookup(symbol);
+}
+
+Operation *
+LockedSymbolTableCollection::lookupSymbolIn(Operation *symbolTableOp,
+                                            FlatSymbolRefAttr symbol) {
+  return lookupSymbolIn(symbolTableOp, symbol.getAttr());
+}
+
+Operation *LockedSymbolTableCollection::lookupSymbolIn(Operation *symbolTableOp,
+                                                       SymbolRefAttr name) {
+  SmallVector<Operation *> symbols;
+  if (failed(lookupSymbolIn(symbolTableOp, name, symbols)))
+    return nullptr;
+  return symbols.back();
+}
+
+LogicalResult LockedSymbolTableCollection::lookupSymbolIn(
+    Operation *symbolTableOp, SymbolRefAttr name,
+    SmallVectorImpl<Operation *> &symbols) {
+  auto lookupFn = [this](Operation *symbolTableOp, StringAttr symbol) {
+    return lookupSymbolIn(symbolTableOp, symbol);
+  };
+  return lookupSymbolInImpl(symbolTableOp, name, symbols, lookupFn);
+}
+
+SymbolTable &
+LockedSymbolTableCollection::getSymbolTable(Operation *symbolTableOp) {
+  assert(symbolTableOp->hasTrait<OpTrait::SymbolTable>());
+  // Try to find an existing symbol table.
+  {
+    llvm::sys::SmartScopedReader<true> lock(mutex);
+    auto it = collection.symbolTables.find(symbolTableOp);
+    if (it != collection.symbolTables.end())
+      return *it->second;
+  }
+  // Create a symbol table for the operation. Perform construction outside of
+  // the critical section.
+  auto symbolTable = std::make_unique<SymbolTable>(symbolTableOp);
+  // Insert the constructed symbol table.
+  llvm::sys::SmartScopedWriter<true> lock(mutex);
+  return *collection.symbolTables
+              .insert({symbolTableOp, std::move(symbolTable)})
+              .first->second;
 }
 
 //===----------------------------------------------------------------------===//

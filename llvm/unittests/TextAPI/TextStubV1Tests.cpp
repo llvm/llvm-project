@@ -86,7 +86,6 @@ TEST(TBDv1, ReadFile) {
   EXPECT_EQ(ObjCConstraintType::None, File->getObjCConstraint());
   EXPECT_TRUE(File->isTwoLevelNamespace());
   EXPECT_TRUE(File->isApplicationExtensionSafe());
-  EXPECT_FALSE(File->isInstallAPI());
   InterfaceFileRef client("clientA", Targets);
   InterfaceFileRef reexport("/usr/lib/libfoo.dylib", Targets);
   EXPECT_EQ(1U, File->allowableClients().size());
@@ -140,7 +139,6 @@ TEST(TBDv1, ReadFile2) {
   EXPECT_EQ(ObjCConstraintType::None, File->getObjCConstraint());
   EXPECT_TRUE(File->isTwoLevelNamespace());
   EXPECT_TRUE(File->isApplicationExtensionSafe());
-  EXPECT_FALSE(File->isInstallAPI());
   EXPECT_EQ(0U, File->allowableClients().size());
   EXPECT_EQ(0U, File->reexportedLibraries().size());
 }

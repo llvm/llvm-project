@@ -18,7 +18,7 @@ define <4 x float> @__inff4() nounwind readnone {
 
 define <4 x i1> @shuffle_undef_fixed() {
 ; CHECK-LABEL: @shuffle_undef_fixed(
-; CHECK-NEXT:    ret <4 x i1> undef
+; CHECK-NEXT:    ret <4 x i1> poison
 ;
   %S = shufflevector <4 x i1> zeroinitializer, <4 x i1> zeroinitializer, <4 x i32> undef
   ret <4 x i1> %S
@@ -26,7 +26,7 @@ define <4 x i1> @shuffle_undef_fixed() {
 
 define <vscale x 4 x i1> @suffle_undef_scalable() {
 ; CHECK-LABEL: @suffle_undef_scalable(
-; CHECK-NEXT:    ret <vscale x 4 x i1> undef
+; CHECK-NEXT:    ret <vscale x 4 x i1> poison
 ;
   %S = shufflevector <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> undef
   ret <vscale x 4 x i1> %S

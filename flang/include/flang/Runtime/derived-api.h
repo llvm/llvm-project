@@ -37,6 +37,15 @@ void RTNAME(Initialize)(
 // storage.
 void RTNAME(Destroy)(const Descriptor &);
 
+// Finalizes the object and its components.
+void RTNAME(Finalize)(
+    const Descriptor &, const char *sourceFile = nullptr, int sourceLine = 0);
+
+/// Deallocates any allocatable/automatic components.
+/// Does not deallocate the descriptor's storage.
+/// Does not perform any finalization.
+void RTNAME(DestroyWithoutFinalization)(const Descriptor &);
+
 // Intrinsic or defined assignment, with scalar expansion but not type
 // conversion.
 void RTNAME(Assign)(const Descriptor &, const Descriptor &,

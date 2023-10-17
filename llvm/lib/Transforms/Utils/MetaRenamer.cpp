@@ -26,14 +26,12 @@
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/TypeFinder.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Transforms/Utils.h"
 
 using namespace llvm;
 
@@ -61,6 +59,11 @@ static cl::opt<std::string> RenameExcludeStructPrefixes(
     cl::desc("Prefixes for structs that don't need to be renamed, separated "
              "by a comma"),
     cl::Hidden);
+
+static cl::opt<bool>
+    RenameOnlyInst("rename-only-inst", cl::init(false),
+                   cl::desc("only rename the instructions in the function"),
+                   cl::Hidden);
 
 static const char *const metaNames[] = {
   // See http://en.wikipedia.org/wiki/Metasyntactic_variable
@@ -105,6 +108,12 @@ parseExcludedPrefixes(StringRef PrefixesStr,
   }
 }
 
+void MetaRenameOnlyInstructions(Function &F) {
+  for (auto &I : instructions(F))
+    if (!I.getType()->isVoidTy() && I.getName().empty())
+      I.setName(I.getOpcodeName());
+}
+
 void MetaRename(Function &F) {
   for (Argument &Arg : F.args())
     if (!Arg.getType()->isVoidTy())
@@ -115,7 +124,7 @@ void MetaRename(Function &F) {
 
     for (auto &I : BB)
       if (!I.getType()->isVoidTy())
-        I.setName("tmp");
+        I.setName(I.getOpcodeName());
   }
 }
 
@@ -144,6 +153,26 @@ void MetaRename(Module &M,
     return any_of(ExcludedPrefixes,
                   [&Name](auto &Prefix) { return Name.startswith(Prefix); });
   };
+
+  // Leave library functions alone because their presence or absence could
+  // affect the behavior of other passes.
+  auto ExcludeLibFuncs = [&](Function &F) {
+    LibFunc Tmp;
+    StringRef Name = F.getName();
+    return Name.startswith("llvm.") || (!Name.empty() && Name[0] == 1) ||
+           GetTLI(F).getLibFunc(F, Tmp) ||
+           IsNameExcluded(Name, ExcludedFuncPrefixes);
+  };
+
+  if (RenameOnlyInst) {
+    // Rename all functions
+    for (auto &F : M) {
+      if (ExcludeLibFuncs(F))
+        continue;
+      MetaRenameOnlyInstructions(F);
+    }
+    return;
+  }
 
   // Rename all aliases
   for (GlobalAlias &GA : M.aliases()) {
@@ -181,63 +210,19 @@ void MetaRename(Module &M,
 
   // Rename all functions
   for (auto &F : M) {
-    StringRef Name = F.getName();
-    LibFunc Tmp;
-    // Leave library functions alone because their presence or absence could
-    // affect the behavior of other passes.
-    if (Name.startswith("llvm.") || (!Name.empty() && Name[0] == 1) ||
-        GetTLI(F).getLibFunc(F, Tmp) ||
-        IsNameExcluded(Name, ExcludedFuncPrefixes))
+    if (ExcludeLibFuncs(F))
       continue;
 
     // Leave @main alone. The output of -metarenamer might be passed to
     // lli for execution and the latter needs a main entry point.
-    if (Name != "main")
+    if (F.getName() != "main")
       F.setName(renamer.newName());
 
     MetaRename(F);
   }
 }
 
-struct MetaRenamer : public ModulePass {
-  // Pass identification, replacement for typeid
-  static char ID;
-
-  MetaRenamer() : ModulePass(ID) {
-    initializeMetaRenamerPass(*PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-    AU.setPreservesAll();
-  }
-
-  bool runOnModule(Module &M) override {
-    auto GetTLI = [this](Function &F) -> TargetLibraryInfo & {
-      return this->getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-    };
-    MetaRename(M, GetTLI);
-    return true;
-  }
-};
-
 } // end anonymous namespace
-
-char MetaRenamer::ID = 0;
-
-INITIALIZE_PASS_BEGIN(MetaRenamer, "metarenamer",
-                      "Assign new names to everything", false, false)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_END(MetaRenamer, "metarenamer",
-                    "Assign new names to everything", false, false)
-
-//===----------------------------------------------------------------------===//
-//
-// MetaRenamer - Rename everything with metasyntactic names.
-//
-ModulePass *llvm::createMetaRenamerPass() {
-  return new MetaRenamer();
-}
 
 PreservedAnalyses MetaRenamerPass::run(Module &M, ModuleAnalysisManager &AM) {
   FunctionAnalysisManager &FAM =

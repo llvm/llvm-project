@@ -946,3 +946,19 @@ func.func @invalid_selector(%arg : !fir.box<!fir.ref<i32>>) -> i32 {
   %zero = arith.constant 0 : i32
   return %zero : i32
 }
+
+// -----
+
+func.func @logical_to_fp(%arg0: !fir.logical<4>) -> f32 {
+  // expected-error@+1{{'fir.convert' op invalid type conversion}}
+  %0 = fir.convert %arg0 : (!fir.logical<4>) -> f32
+  return %0 : f32
+}
+
+// -----
+
+func.func @fp_to_logical(%arg0: f32) -> !fir.logical<4> {
+  // expected-error@+1{{'fir.convert' op invalid type conversion}}
+  %0 = fir.convert %arg0 : (f32) -> !fir.logical<4>
+  return %0 : !fir.logical<4>
+}

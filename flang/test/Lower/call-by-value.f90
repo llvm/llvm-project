@@ -2,21 +2,23 @@
 ! RUN: bbc -emit-fir %s -o - | FileCheck %s
 
 !CHECK-LABEL: func @_QQmain()
-!CHECK: %[[LOGICAL:.*]] = fir.alloca !fir.logical<4>
+!CHECK: %[[LOGICAL:.*]] = fir.alloca !fir.logical<1>
 !CHECK: %false = arith.constant false
-!CHECK: %[[VALUE:.*]] = fir.convert %false : (i1) -> !fir.logical<4>
+!CHECK: %[[VALUE:.*]] = fir.convert %false : (i1) -> !fir.logical<1>
 !CHECK: fir.store %[[VALUE]] to %[[LOGICAL]]
 !CHECK: %[[LOAD:.*]] = fir.load %[[LOGICAL]]
 !CHECK: fir.call @omp_set_nested(%[[LOAD]]) {{.*}}: {{.*}}
 
 program call_by_value
+  use iso_c_binding, only: c_bool
   interface
      subroutine omp_set_nested(enable) bind(c)
-       logical, value :: enable
+       import c_bool
+       logical(c_bool), value :: enable
      end subroutine omp_set_nested
   end interface
 
-  logical do_nested
+  logical(c_bool) do_nested
   do_nested = .FALSE.
   call omp_set_nested(do_nested)
 end program call_by_value
@@ -60,14 +62,15 @@ subroutine test_complex_value(x) bind(c)
   call internal_call3(x)
 end
 
-! CHECK-LABEL: func.func @test_char_value(
-! CHECK-SAME:                             %[[VAL_0:.*]]: !fir.boxchar<1> {fir.bindc_name = "x"}) attributes {fir.bindc_name = "test_char_value"} {
-! CHECK:         %[[VAL_1:.*]]:2 = fir.unboxchar %[[VAL_0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK:         %[[VAL_2:.*]] = arith.constant 1 : index
-! CHECK:         %[[VAL_3:.*]] = fir.emboxchar %[[VAL_1]]#0, %[[VAL_2]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-! CHECK:         fir.call @_QPinternal_call4(%[[VAL_3]]) {{.*}}: (!fir.boxchar<1>) -> ()
-! CHECK:         return
-! CHECK:       }
+! CHECK-LABEL:   func.func @test_char_value(
+! CHECK-SAME:                               %[[VAL_0:.*]]: !fir.boxchar<1> {fir.bindc_name = "x"}) attributes {fir.bindc_name = "test_char_value"} {
+! CHECK:           %[[VAL_1:.*]]:2 = fir.unboxchar %[[VAL_0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+! CHECK:           %[[VAL_3:.*]] = fir.convert %[[VAL_1]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1>>
+! CHECK:           %[[VAL_2:.*]] = arith.constant 1 : index
+! CHECK:           %[[VAL_5:.*]] = fir.emboxchar %[[VAL_3]], %[[VAL_2]] : (!fir.ref<!fir.char<1>>, index) -> !fir.boxchar<1>
+! CHECK:           fir.call @_QPinternal_call4(%[[VAL_5]]) fastmath<contract> : (!fir.boxchar<1>) -> ()
+! CHECK:           return
+! CHECK:         }
 
 subroutine test_char_value(x) bind(c)
   character(1), value :: x

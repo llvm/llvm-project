@@ -287,6 +287,7 @@ ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
 
 ProgramPoint CallEvent::getProgramPoint(bool IsPreVisit,
                                         const ProgramPointTag *Tag) const {
+
   if (const Expr *E = getOriginExpr()) {
     if (IsPreVisit)
       return PreStmt(E, getLocationContext(), Tag);
@@ -295,11 +296,13 @@ ProgramPoint CallEvent::getProgramPoint(bool IsPreVisit,
 
   const Decl *D = getDecl();
   assert(D && "Cannot get a program point without a statement or decl");
+  assert(ElemRef.getParent() &&
+         "Cannot get a program point without a CFGElementRef");
 
   SourceLocation Loc = getSourceRange().getBegin();
   if (IsPreVisit)
-    return PreImplicitCall(D, Loc, getLocationContext(), Tag);
-  return PostImplicitCall(D, Loc, getLocationContext(), Tag);
+    return PreImplicitCall(D, Loc, getLocationContext(), ElemRef, Tag);
+  return PostImplicitCall(D, Loc, getLocationContext(), ElemRef, Tag);
 }
 
 SVal CallEvent::getArgSVal(unsigned Index) const {
@@ -762,8 +765,9 @@ RuntimeDefinition CXXInstanceCall::getRuntimeDefinition() const {
     // the static type. However, because we currently don't update
     // DynamicTypeInfo when an object is cast, we can't actually be sure the
     // DynamicTypeInfo is up to date. This assert should be re-enabled once
-    // this is fixed. <rdar://problem/12287087>
-    //assert(!MD->getParent()->isDerivedFrom(RD) && "Bad DynamicTypeInfo");
+    // this is fixed.
+    //
+    // assert(!MD->getParent()->isDerivedFrom(RD) && "Bad DynamicTypeInfo");
 
     return {};
   }
@@ -1373,23 +1377,24 @@ void ObjCMethodCall::getInitialStackFrameContents(
 
 CallEventRef<>
 CallEventManager::getSimpleCall(const CallExpr *CE, ProgramStateRef State,
-                                const LocationContext *LCtx) {
+                                const LocationContext *LCtx,
+                                CFGBlock::ConstCFGElementRef ElemRef) {
   if (const auto *MCE = dyn_cast<CXXMemberCallExpr>(CE))
-    return create<CXXMemberCall>(MCE, State, LCtx);
+    return create<CXXMemberCall>(MCE, State, LCtx, ElemRef);
 
   if (const auto *OpCE = dyn_cast<CXXOperatorCallExpr>(CE)) {
     const FunctionDecl *DirectCallee = OpCE->getDirectCallee();
     if (const auto *MD = dyn_cast<CXXMethodDecl>(DirectCallee))
       if (MD->isInstance())
-        return create<CXXMemberOperatorCall>(OpCE, State, LCtx);
+        return create<CXXMemberOperatorCall>(OpCE, State, LCtx, ElemRef);
 
   } else if (CE->getCallee()->getType()->isBlockPointerType()) {
-    return create<BlockCall>(CE, State, LCtx);
+    return create<BlockCall>(CE, State, LCtx, ElemRef);
   }
 
   // Otherwise, it's a normal function call, static member function call, or
   // something we can't reason about.
-  return create<SimpleFunctionCall>(CE, State, LCtx);
+  return create<SimpleFunctionCall>(CE, State, LCtx, ElemRef);
 }
 
 CallEventRef<>
@@ -1397,12 +1402,14 @@ CallEventManager::getCaller(const StackFrameContext *CalleeCtx,
                             ProgramStateRef State) {
   const LocationContext *ParentCtx = CalleeCtx->getParent();
   const LocationContext *CallerCtx = ParentCtx->getStackFrame();
+  CFGBlock::ConstCFGElementRef ElemRef = {CalleeCtx->getCallSiteBlock(),
+                                          CalleeCtx->getIndex()};
   assert(CallerCtx && "This should not be used for top-level stack frames");
 
   const Stmt *CallSite = CalleeCtx->getCallSite();
 
   if (CallSite) {
-    if (CallEventRef<> Out = getCall(CallSite, State, CallerCtx))
+    if (CallEventRef<> Out = getCall(CallSite, State, CallerCtx, ElemRef))
       return Out;
 
     SValBuilder &SVB = State->getStateManager().getSValBuilder();
@@ -1411,10 +1418,11 @@ CallEventManager::getCaller(const StackFrameContext *CalleeCtx,
     SVal ThisVal = State->getSVal(ThisPtr);
 
     if (const auto *CE = dyn_cast<CXXConstructExpr>(CallSite))
-      return getCXXConstructorCall(CE, ThisVal.getAsRegion(), State, CallerCtx);
+      return getCXXConstructorCall(CE, ThisVal.getAsRegion(), State, CallerCtx,
+                                   ElemRef);
     else if (const auto *CIE = dyn_cast<CXXInheritedCtorInitExpr>(CallSite))
       return getCXXInheritedConstructorCall(CIE, ThisVal.getAsRegion(), State,
-                                            CallerCtx);
+                                            CallerCtx, ElemRef);
     else {
       // All other cases are handled by getCall.
       llvm_unreachable("This is not an inlineable statement");
@@ -1444,19 +1452,20 @@ CallEventManager::getCaller(const StackFrameContext *CalleeCtx,
 
   return getCXXDestructorCall(Dtor, Trigger, ThisVal.getAsRegion(),
                               E.getAs<CFGBaseDtor>().has_value(), State,
-                              CallerCtx);
+                              CallerCtx, ElemRef);
 }
 
 CallEventRef<> CallEventManager::getCall(const Stmt *S, ProgramStateRef State,
-                                         const LocationContext *LC) {
+                                         const LocationContext *LC,
+                                         CFGBlock::ConstCFGElementRef ElemRef) {
   if (const auto *CE = dyn_cast<CallExpr>(S)) {
-    return getSimpleCall(CE, State, LC);
+    return getSimpleCall(CE, State, LC, ElemRef);
   } else if (const auto *NE = dyn_cast<CXXNewExpr>(S)) {
-    return getCXXAllocatorCall(NE, State, LC);
+    return getCXXAllocatorCall(NE, State, LC, ElemRef);
   } else if (const auto *DE = dyn_cast<CXXDeleteExpr>(S)) {
-    return getCXXDeallocatorCall(DE, State, LC);
+    return getCXXDeallocatorCall(DE, State, LC, ElemRef);
   } else if (const auto *ME = dyn_cast<ObjCMessageExpr>(S)) {
-    return getObjCMethodCall(ME, State, LC);
+    return getObjCMethodCall(ME, State, LC, ElemRef);
   } else {
     return nullptr;
   }

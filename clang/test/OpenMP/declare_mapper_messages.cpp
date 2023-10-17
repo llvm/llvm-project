@@ -1,5 +1,8 @@
-// RUN: %clang_cc1 -verify=expected,cxx17 -fopenmp -ferror-limit 100 %std_cxx17- %s
-// RUN: %clang_cc1 -verify=expected,precxx17 -fopenmp-simd -ferror-limit 100 %std_cxx98-14 %s
+// RUN: %clang_cc1 -verify=omp50,expected,cxx17 -fopenmp -fopenmp-version=50 -ferror-limit 100 %std_cxx17- %s
+// RUN: %clang_cc1 -verify=omp50,expected,precxx17 -fopenmp-simd -fopenmp-version=50 -ferror-limit 100 %std_cxx98-14 %s
+
+// RUN: %clang_cc1 -verify=omp51,expected,cxx17 -fopenmp -ferror-limit 100 %std_cxx17- %s
+// RUN: %clang_cc1 -verify=omp51,expected,precxx17 -fopenmp-simd -ferror-limit 100 %std_cxx98-14 %s
 
 int temp; // expected-note {{'temp' declared here}}
 
@@ -96,7 +99,7 @@ int fun(int arg) {
 #pragma omp target update to(mapper(N1::aa) :vv)                        // expected-error {{cannot find a valid user-defined mapper for type 'vec' with name 'aa'}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 #pragma omp target update to(mapper(ab):vv)                             // expected-error {{cannot find a valid user-defined mapper for type 'vec' with name 'ab'}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 #pragma omp target update to(mapper(ab):arr[0:2])                       // expected-error {{cannot find a valid user-defined mapper for type 'vec' with name 'ab'}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update to(mapper(aa) a:vv)                           // expected-warning {{missing ':' after ) - ignoring}}
+#pragma omp target update to(mapper(aa) a:vv)                           // omp51-warning {{missing ':' after motion modifier - ignoring}} omp50-warning {{missing ':' after ) - ignoring}}
 #pragma omp target update to(mapper(aa):vv) to(mapper(aa):arr[0])
 #pragma omp target update to(mapper(N1::stack<int>::id) :vv)
 
@@ -110,7 +113,7 @@ int fun(int arg) {
 #pragma omp target update from(mapper(N1::aa) :vv)                      // expected-error {{cannot find a valid user-defined mapper for type 'vec' with name 'aa'}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 #pragma omp target update from(mapper(ab):vv)                           // expected-error {{cannot find a valid user-defined mapper for type 'vec' with name 'ab'}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 #pragma omp target update from(mapper(ab):arr[0:2])                     // expected-error {{cannot find a valid user-defined mapper for type 'vec' with name 'ab'}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from(mapper(aa) a:vv)                         // expected-warning {{missing ':' after ) - ignoring}}
+#pragma omp target update from(mapper(aa) a:vv)                         // omp51-warning {{missing ':' after motion modifier - ignoring}} omp50-warning {{missing ':' after ) - ignoring}}
 #pragma omp target update from(mapper(aa):vv) from(mapper(aa):arr[0])
 #pragma omp target update from(mapper(N1::stack<int>::id) :vv)
     }

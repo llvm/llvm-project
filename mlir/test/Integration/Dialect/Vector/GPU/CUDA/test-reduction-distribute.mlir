@@ -1,13 +1,11 @@
 // RUN: mlir-opt %s -test-vector-warp-distribute="hoist-uniform distribute-transfer-write propagate-distribution" -canonicalize |\
 // RUN: mlir-opt -test-vector-warp-distribute=rewrite-warp-ops-to-scf-if |\
-// RUN: mlir-opt  -lower-affine -convert-scf-to-cf -convert-vector-to-llvm \
-// RUN:  -convert-arith-to-llvm -gpu-kernel-outlining |\
-// RUN: mlir-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm,reconcile-unrealized-casts,gpu-to-cubin))' |\
-// RUN: mlir-opt -gpu-to-llvm -reconcile-unrealized-casts |\
+// RUN: mlir-opt -lower-affine -convert-vector-to-scf -convert-scf-to-cf -convert-vector-to-llvm \
+// RUN:  -convert-arith-to-llvm -test-lower-to-nvvm | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
-// RUN:   -shared-libs=%mlir_lib_dir/libmlir_cuda_runtime%shlibext \
-// RUN:   -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext \
-// RUN:   -shared-libs=%mlir_lib_dir/libmlir_runner_utils%shlibext | \
+// RUN:   -shared-libs=%mlir_cuda_runtime \
+// RUN:   -shared-libs=%mlir_c_runner_utils \
+// RUN:   -shared-libs=%mlir_runner_utils | \
 // RUN: FileCheck %s
 
 // Run a tiled reduction fused with an elementwise op.

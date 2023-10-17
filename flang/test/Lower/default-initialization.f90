@@ -1,5 +1,5 @@
 ! Test default initialization of local and dummy variables (dynamic initialization)
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -polymorphic-type %s -o - | FileCheck %s
 
 module test_dinit
   type t
@@ -159,7 +159,18 @@ contains
     ! CHECK: return
   end subroutine 
 
+
+  subroutine test_pointer_intentout(a, b)
+    type(t), pointer, intent(out) :: a
+    class(t), pointer, intent(out) :: b
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMtest_dinitPtest_pointer_intentout(
+! CHECK-NOT: fir.call @_FortranAInitialize
+
 end module
+
+! CHECK-LABEL: func.func @_QQmain
 
 ! End-to-end test for debug pruposes.
   use test_dinit

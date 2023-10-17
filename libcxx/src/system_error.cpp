@@ -6,12 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <__config>
-#ifdef _LIBCPP_DEPRECATED_ABI_LEGACY_LIBRARY_DEFINITIONS_FOR_INLINE_FUNCTIONS
-#   define _LIBCPP_ERROR_CATEGORY_DEFINE_LEGACY_INLINE_FUNCTIONS
-#endif
-
 #include <__assert>
+#include <__config>
+#include <__verbose_abort>
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>
@@ -28,38 +25,8 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-// class error_category
-
-#if defined(_LIBCPP_ERROR_CATEGORY_DEFINE_LEGACY_INLINE_FUNCTIONS)
-error_category::error_category() noexcept
-{
-}
-#endif
-
-error_category::~error_category() noexcept
-{
-}
-
-error_condition
-error_category::default_error_condition(int ev) const noexcept
-{
-    return error_condition(ev, *this);
-}
-
-bool
-error_category::equivalent(int code, const error_condition& condition) const noexcept
-{
-    return default_error_condition(code) == condition;
-}
-
-bool
-error_category::equivalent(const error_code& code, int condition) const noexcept
-{
-    return *this == code.category() && code.value() == condition;
-}
-
-#if !defined(_LIBCPP_HAS_NO_THREADS)
 namespace {
+#if !defined(_LIBCPP_HAS_NO_THREADS)
 
 //  GLIBC also uses 1024 as the maximum buffer size internally.
 constexpr size_t strerror_buff_size = 1024;
@@ -103,7 +70,7 @@ handle_strerror_r_return(int strerror_return, char *buffer) {
   if (new_errno == EINVAL)
     return "";
 
-  _LIBCPP_ASSERT(new_errno == ERANGE, "unexpected error from ::strerror_r");
+  _LIBCPP_ASSERT_UNCATEGORIZED(new_errno == ERANGE, "unexpected error from ::strerror_r");
   // FIXME maybe? 'strerror_buff_size' is likely to exceed the
   // maximum error size so ERANGE shouldn't be returned.
   std::abort();
@@ -127,8 +94,26 @@ string do_strerror_r(int ev) {
     return string(error_message);
 }
 #endif
+
+#endif // !defined(_LIBCPP_HAS_NO_THREADS)
+
+string make_error_str(const error_code& ec, string what_arg) {
+    if (ec) {
+        if (!what_arg.empty()) {
+            what_arg += ": ";
+        }
+        what_arg += ec.message();
+    }
+    return what_arg;
+}
+
+string make_error_str(const error_code& ec) {
+    if (ec) {
+        return ec.message();
+    }
+    return string();
+}
 } // end namespace
-#endif
 
 string
 __do_message::message(int ev) const
@@ -167,8 +152,13 @@ __generic_error_category::message(int ev) const
 const error_category&
 generic_category() noexcept
 {
-    static __generic_error_category s;
-    return s;
+    union AvoidDestroyingGenericCategory {
+        __generic_error_category generic_error_category;
+        constexpr explicit AvoidDestroyingGenericCategory() : generic_error_category() {}
+        ~AvoidDestroyingGenericCategory() {}
+    };
+    constinit static AvoidDestroyingGenericCategory helper;
+    return helper.generic_error_category;
 }
 
 class _LIBCPP_HIDDEN __system_error_category
@@ -209,8 +199,13 @@ __system_error_category::default_error_condition(int ev) const noexcept
 const error_category&
 system_category() noexcept
 {
-    static __system_error_category s;
-    return s;
+    union AvoidDestroyingSystemCategory {
+        __system_error_category system_error_category;
+        constexpr explicit AvoidDestroyingSystemCategory() : system_error_category() {}
+        ~AvoidDestroyingSystemCategory() {}
+    };
+    constinit static AvoidDestroyingSystemCategory helper;
+    return helper.system_error_category;
 }
 
 // error_condition
@@ -231,50 +226,38 @@ error_code::message() const
 
 // system_error
 
-string
-system_error::__init(const error_code& ec, string what_arg)
-{
-    if (ec)
-    {
-        if (!what_arg.empty())
-            what_arg += ": ";
-        what_arg += ec.message();
-    }
-    return what_arg;
-}
-
 system_error::system_error(error_code ec, const string& what_arg)
-    : runtime_error(__init(ec, what_arg)),
+    : runtime_error(make_error_str(ec, what_arg)),
       __ec_(ec)
 {
 }
 
 system_error::system_error(error_code ec, const char* what_arg)
-    : runtime_error(__init(ec, what_arg)),
+    : runtime_error(make_error_str(ec, what_arg)),
       __ec_(ec)
 {
 }
 
 system_error::system_error(error_code ec)
-    : runtime_error(__init(ec, "")),
+    : runtime_error(make_error_str(ec)),
       __ec_(ec)
 {
 }
 
 system_error::system_error(int ev, const error_category& ecat, const string& what_arg)
-    : runtime_error(__init(error_code(ev, ecat), what_arg)),
+    : runtime_error(make_error_str(error_code(ev, ecat), what_arg)),
       __ec_(error_code(ev, ecat))
 {
 }
 
 system_error::system_error(int ev, const error_category& ecat, const char* what_arg)
-    : runtime_error(__init(error_code(ev, ecat), what_arg)),
+    : runtime_error(make_error_str(error_code(ev, ecat), what_arg)),
       __ec_(error_code(ev, ecat))
 {
 }
 
 system_error::system_error(int ev, const error_category& ecat)
-    : runtime_error(__init(error_code(ev, ecat), "")),
+    : runtime_error(make_error_str(error_code(ev, ecat))),
       __ec_(error_code(ev, ecat))
 {
 }
@@ -286,12 +269,11 @@ system_error::~system_error() noexcept
 void
 __throw_system_error(int ev, const char* what_arg)
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
-    throw system_error(error_code(ev, system_category()), what_arg);
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+    std::__throw_system_error(error_code(ev, system_category()), what_arg);
 #else
-    (void)ev;
-    (void)what_arg;
-    _VSTD::abort();
+    // The above could also handle the no-exception case, but for size, avoid referencing system_category() unnecessarily.
+    _LIBCPP_VERBOSE_ABORT("system_error was thrown in -fno-exceptions mode with error %i and message \"%s\"", ev, what_arg);
 #endif
 }
 

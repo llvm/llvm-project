@@ -21,24 +21,12 @@ class FunctionPass;
 class Pass;
 
 //===----------------------------------------------------------------------===//
-// createMetaRenamerPass - Rename everything with metasyntatic names.
-//
-ModulePass *createMetaRenamerPass();
-
-//===----------------------------------------------------------------------===//
 //
 // LowerInvoke - This pass removes invoke instructions, converting them to call
 // instructions.
 //
 FunctionPass *createLowerInvokePass();
 extern char &LowerInvokePassID;
-
-//===----------------------------------------------------------------------===//
-//
-// InstructionNamer - Give any unnamed non-void instructions "tmp" names.
-//
-FunctionPass *createInstructionNamerPass();
-extern char &InstructionNamerID;
 
 //===----------------------------------------------------------------------===//
 //
@@ -72,11 +60,6 @@ extern char &LCSSAID;
 
 //===----------------------------------------------------------------------===//
 //
-// AddDiscriminators - Add DWARF path discriminators to the IR.
-FunctionPass *createAddDiscriminatorsPass();
-
-//===----------------------------------------------------------------------===//
-//
 // PromoteMemoryToRegister - This pass is used to promote memory references to
 // be register references. A simple example of the transformation performed by
 // this pass is:
@@ -87,7 +70,7 @@ FunctionPass *createAddDiscriminatorsPass();
 //   %Y = load i32* %X
 //   ret i32 %Y
 //
-FunctionPass *createPromoteMemoryToRegisterPass();
+FunctionPass *createPromoteMemoryToRegisterPass(bool IsForced = false);
 
 //===----------------------------------------------------------------------===//
 //
@@ -99,17 +82,6 @@ FunctionPass *createPromoteMemoryToRegisterPass();
 //
 Pass *createLoopSimplifyPass();
 extern char &LoopSimplifyID;
-
-/// This function returns a new pass that downgrades the debug info in the
-/// module to line tables only.
-ModulePass *createStripNonLineTableDebugLegacyPass();
-
-//===----------------------------------------------------------------------===//
-//
-// InjectTLIMappingsLegacy - populates the VFABI attribute with the
-// scalar-to-vector mappings from the TargetLibraryInfo.
-//
-FunctionPass *createInjectTLIMappingsLegacyPass();
 
 //===----------------------------------------------------------------------===//
 //
@@ -125,13 +97,6 @@ FunctionPass *createUnifyLoopExitsPass();
 // into a natural loop.
 //
 FunctionPass *createFixIrreduciblePass();
-
-//===----------------------------------------------------------------------===//
-//
-// AssumeSimplify - remove redundant assumes and merge assumes in the same
-// BasicBlock when possible.
-//
-FunctionPass *createAssumeSimplifyPass();
 
 //===----------------------------------------------------------------------===//
 //

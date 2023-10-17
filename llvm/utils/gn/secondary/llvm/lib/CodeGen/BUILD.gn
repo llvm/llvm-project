@@ -1,3 +1,18 @@
+static_library("CodeGenTypes") {
+  output_name = "LLVMCodeGenType"
+  public_deps = [
+    # Must be a public_dep because CodeGen's headers include llvm-config.h.
+    "//llvm/include/llvm/Config:llvm-config",
+  ]
+  deps = [
+    "//llvm/include/llvm/CodeGen:GenVT",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "LowLevelType.cpp"
+  ]
+}
+
 static_library("CodeGen") {
   output_name = "LLVMCodeGen"
   public_deps = [
@@ -5,6 +20,7 @@ static_library("CodeGen") {
     "//llvm/include/llvm/Config:llvm-config",
   ]
   deps = [
+    "//llvm/include/llvm/CodeGen:GenVT",
     "//llvm/lib/Analysis",
     "//llvm/lib/Bitcode/Reader",
     "//llvm/lib/Bitcode/Writer",
@@ -33,7 +49,9 @@ static_library("CodeGen") {
     "CFGuardLongjmp.cpp",
     "CFIFixup.cpp",
     "CFIInstrInserter.cpp",
+    "GCEmptyBasicBlocks.cpp",
     "CalcSpillWeights.cpp",
+    "CallBrPrepare.cpp",
     "CallingConvLower.cpp",
     "CodeGen.cpp",
     "CodeGenCommonISel.cpp",
@@ -75,6 +93,7 @@ static_library("CodeGen") {
     "InterleavedLoadCombinePass.cpp",
     "IntrinsicLowering.cpp",
     "JMCInstrumenter.cpp",
+    "KCFI.cpp",
     "LLVMTargetMachine.cpp",
     "LatencyPriorityQueue.cpp",
     "LazyMachineBlockFrequencyInfo.cpp",
@@ -98,6 +117,7 @@ static_library("CodeGen") {
     "LocalStackSlotAllocation.cpp",
     "LoopTraversal.cpp",
     "LowLevelType.cpp",
+    "LowLevelTypeUtils.cpp",
     "LowerEmuTLS.cpp",
     "MBFIWrapper.cpp",
     "MIRCanonicalizerPass.cpp",
@@ -108,8 +128,8 @@ static_library("CodeGen") {
     "MIRSampleProfile.cpp",
     "MIRVRegNamerUtils.cpp",
     "MIRYamlMapping.cpp",
-    "MLRegallocEvictAdvisor.cpp",
-    "MLRegallocPriorityAdvisor.cpp",
+    "MLRegAllocEvictAdvisor.cpp",
+    "MLRegAllocPriorityAdvisor.cpp",
     "MachineBasicBlock.cpp",
     "MachineBlockFrequencyInfo.cpp",
     "MachineBlockPlacement.cpp",

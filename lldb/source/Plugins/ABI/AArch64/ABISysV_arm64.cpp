@@ -12,7 +12,7 @@
 #include <vector>
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
@@ -276,26 +276,17 @@ Status ABISysV_arm64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
 
           if (v0_info) {
             if (byte_size <= 16) {
-              if (byte_size <= RegisterValue::GetMaxByteSize()) {
-                RegisterValue reg_value;
-                error = reg_value.SetValueFromData(*v0_info, data, 0, true);
-                if (error.Success()) {
-                  if (!reg_ctx->WriteRegister(v0_info, reg_value))
-                    error.SetErrorString("failed to write register v0");
-                }
-              } else {
-                error.SetErrorStringWithFormat(
-                    "returning float values with a byte size of %" PRIu64
-                    " are not supported",
-                    byte_size);
-              }
+              RegisterValue reg_value;
+              error = reg_value.SetValueFromData(*v0_info, data, 0, true);
+              if (error.Success())
+                if (!reg_ctx->WriteRegister(v0_info, reg_value))
+                  error.SetErrorString("failed to write register v0");
             } else {
               error.SetErrorString("returning float values longer than 128 "
                                    "bits are not supported");
             }
-          } else {
+          } else
             error.SetErrorString("v0 register is not available on this target");
-          }
         }
       }
     } else if (type_flags & eTypeIsVector) {

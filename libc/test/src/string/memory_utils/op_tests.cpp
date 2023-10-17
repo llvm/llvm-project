@@ -9,17 +9,24 @@
 #include "memory_check_utils.h"
 #include "src/string/memory_utils/op_aarch64.h"
 #include "src/string/memory_utils/op_builtin.h"
-#include "src/string/memory_utils/op_generic.h"
+#include "src/string/memory_utils/op_generic.h" // LLVM_LIBC_HAS_UINT64
+#include "src/string/memory_utils/op_riscv.h"
 #include "src/string/memory_utils/op_x86.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
-#include <assert.h>
+namespace LIBC_NAMESPACE {
 
-#if defined(LLVM_LIBC_ARCH_X86_64) || defined(LLVM_LIBC_ARCH_AARCH64)
-#define LLVM_LIBC_HAS_UINT64
-#endif
+template <typename T> struct has_head_tail {
+  template <typename C> static char sfinae(decltype(&C::head_tail));
+  template <typename C> static uint16_t sfinae(...);
+  static constexpr bool value = sizeof(sfinae<T>(0)) == sizeof(char);
+};
 
-namespace __llvm_libc {
+template <typename T> struct has_loop_and_tail {
+  template <typename C> static char sfinae(decltype(&C::loop_and_tail));
+  template <typename C> static uint16_t sfinae(...);
+  static constexpr bool value = sizeof(sfinae<T>(0)) == sizeof(char);
+};
 
 // Allocates two Buffer and extracts two spans out of them, one
 // aligned and one misaligned. Tests are run on both spans.
@@ -63,7 +70,6 @@ void CopyAdaptor(cpp::span<char> dst, cpp::span<char> src, size_t size) {
 }
 template <size_t Size, auto FnImpl>
 void CopyBlockAdaptor(cpp::span<char> dst, cpp::span<char> src, size_t size) {
-  assert(size == Size);
   FnImpl(as_byte(dst), as_byte(src));
 }
 
@@ -119,24 +125,23 @@ using MemsetImplementations = testing::TypeList<
     builtin::Memset<64>,
 #endif
 #ifdef LLVM_LIBC_HAS_UINT64
-    generic::Memset<8, 8>,  //
-    generic::Memset<16, 8>, //
-    generic::Memset<32, 8>, //
-    generic::Memset<64, 8>, //
+    generic::Memset<uint64_t>, generic::Memset<cpp::array<uint64_t, 2>>,
 #endif
 #ifdef __AVX512F__
-    generic::Memset<64, 64>, // prevents warning about avx512f
+    generic::Memset<generic_v512>, generic::Memset<cpp::array<generic_v512, 2>>,
 #endif
-    generic::Memset<1, 1>,   //
-    generic::Memset<2, 1>,   //
-    generic::Memset<2, 2>,   //
-    generic::Memset<4, 2>,   //
-    generic::Memset<4, 4>,   //
-    generic::Memset<16, 16>, //
-    generic::Memset<32, 16>, //
-    generic::Memset<64, 16>, //
-    generic::Memset<32, 32>, //
-    generic::Memset<64, 32>  //
+#ifdef __AVX__
+    generic::Memset<generic_v256>, generic::Memset<cpp::array<generic_v256, 2>>,
+#endif
+#ifdef __SSE2__
+    generic::Memset<generic_v128>, generic::Memset<cpp::array<generic_v128, 2>>,
+#endif
+    generic::Memset<uint32_t>, generic::Memset<cpp::array<uint32_t, 2>>, //
+    generic::Memset<uint16_t>, generic::Memset<cpp::array<uint16_t, 2>>, //
+    generic::Memset<uint8_t>, generic::Memset<cpp::array<uint8_t, 2>>,   //
+    generic::MemsetSequence<uint8_t, uint8_t>,                           //
+    generic::MemsetSequence<uint16_t, uint8_t>,                          //
+    generic::MemsetSequence<uint32_t, uint16_t, uint8_t>                 //
     >;
 
 // Adapt CheckMemset signature to op implementation signatures.
@@ -146,7 +151,6 @@ void SetAdaptor(cpp::span<char> dst, uint8_t value, size_t size) {
 }
 template <size_t Size, auto FnImpl>
 void SetBlockAdaptor(cpp::span<char> dst, uint8_t value, size_t size) {
-  assert(size == Size);
   FnImpl(as_byte(dst), value);
 }
 
@@ -162,7 +166,8 @@ TYPED_TEST(LlvmLibcOpTest, Memset, MemsetImplementations) {
       }
     }
   }
-  { // Test head tail operations from kSize to 2 * kSize.
+  if constexpr (has_head_tail<Impl>::value) {
+    // Test head tail operations from kSize to 2 * kSize.
     static constexpr auto HeadTailImpl = SetAdaptor<Impl::head_tail>;
     Buffer DstBuffer(2 * kSize);
     for (size_t size = kSize; size < 2 * kSize; ++size) {
@@ -171,7 +176,8 @@ TYPED_TEST(LlvmLibcOpTest, Memset, MemsetImplementations) {
       ASSERT_TRUE(CheckMemset<HeadTailImpl>(dst, value, size));
     }
   }
-  { // Test loop operations from kSize to 3 * kSize.
+  if constexpr (has_loop_and_tail<Impl>::value) {
+    // Test loop operations from kSize to 3 * kSize.
     if constexpr (kSize > 1) {
       static constexpr auto LoopImpl = SetAdaptor<Impl::loop_and_tail>;
       Buffer DstBuffer(3 * kSize);
@@ -185,35 +191,36 @@ TYPED_TEST(LlvmLibcOpTest, Memset, MemsetImplementations) {
 }
 
 using BcmpImplementations = testing::TypeList<
-#ifdef __SSE2__
-    x86::sse2::Bcmp<16>,  //
-    x86::sse2::Bcmp<32>,  //
-    x86::sse2::Bcmp<64>,  //
-    x86::sse2::Bcmp<128>, //
-#endif
+#ifdef LIBC_TARGET_ARCH_IS_X86_64
+#ifdef __SSE4_1__
+    generic::Bcmp<__m128i>,
+#endif // __SSE4_1__
 #ifdef __AVX2__
-    x86::avx2::Bcmp<32>,  //
-    x86::avx2::Bcmp<64>,  //
-    x86::avx2::Bcmp<128>, //
-#endif
+    generic::Bcmp<__m256i>,
+#endif // __AVX2__
 #ifdef __AVX512BW__
-    x86::avx512bw::Bcmp<64>,  //
-    x86::avx512bw::Bcmp<128>, //
-#endif
-#ifdef LLVM_LIBC_ARCH_AARCH64
+    generic::Bcmp<__m512i>,
+#endif // __AVX512BW__
+
+#endif // LIBC_TARGET_ARCH_IS_X86_64
+#ifdef LIBC_TARGET_ARCH_IS_AARCH64
     aarch64::Bcmp<16>, //
-    aarch64::Bcmp<32>, //
+    aarch64::Bcmp<32>,
 #endif
+#ifndef LIBC_TARGET_ARCH_IS_ARM // Removing non uint8_t types for ARM
+    generic::Bcmp<uint16_t>,
+    generic::Bcmp<uint32_t>, //
 #ifdef LLVM_LIBC_HAS_UINT64
-    generic::Bcmp<8>, //
-#endif
-    generic::Bcmp<1>,  //
-    generic::Bcmp<2>,  //
-    generic::Bcmp<4>,  //
-    generic::Bcmp<16>, //
-    generic::Bcmp<32>, //
-    generic::Bcmp<64>  //
-    >;
+    generic::Bcmp<uint64_t>,
+#endif // LLVM_LIBC_HAS_UINT64
+    generic::BcmpSequence<uint16_t, uint8_t>,
+    generic::BcmpSequence<uint32_t, uint8_t>,  //
+    generic::BcmpSequence<uint32_t, uint16_t>, //
+    generic::BcmpSequence<uint32_t, uint16_t, uint8_t>,
+#endif // LIBC_TARGET_ARCH_IS_ARM
+    generic::BcmpSequence<uint8_t, uint8_t>,
+    generic::BcmpSequence<uint8_t, uint8_t, uint8_t>, //
+    generic::Bcmp<uint8_t>>;
 
 // Adapt CheckBcmp signature to op implementation signatures.
 template <auto FnImpl>
@@ -222,7 +229,6 @@ int CmpAdaptor(cpp::span<char> p1, cpp::span<char> p2, size_t size) {
 }
 template <size_t Size, auto FnImpl>
 int CmpBlockAdaptor(cpp::span<char> p1, cpp::span<char> p2, size_t size) {
-  assert(size == Size);
   return (int)FnImpl(as_byte(p1), as_byte(p2));
 }
 
@@ -239,7 +245,8 @@ TYPED_TEST(LlvmLibcOpTest, Bcmp, BcmpImplementations) {
         ASSERT_TRUE((CheckBcmp<BlockImpl>(span1, span2, kSize)));
     }
   }
-  { // Test head tail operations from kSize to 2 * kSize.
+  if constexpr (has_head_tail<Impl>::value) {
+    // Test head tail operations from kSize to 2 * kSize.
     static constexpr auto HeadTailImpl = CmpAdaptor<Impl::head_tail>;
     Buffer Buffer1(2 * kSize);
     Buffer Buffer2(2 * kSize);
@@ -250,7 +257,8 @@ TYPED_TEST(LlvmLibcOpTest, Bcmp, BcmpImplementations) {
       ASSERT_TRUE((CheckBcmp<HeadTailImpl>(span1, span2, size)));
     }
   }
-  { // Test loop operations from kSize to 3 * kSize.
+  if constexpr (has_loop_and_tail<Impl>::value) {
+    // Test loop operations from kSize to 3 * kSize.
     if constexpr (kSize > 1) {
       static constexpr auto LoopImpl = CmpAdaptor<Impl::loop_and_tail>;
       Buffer Buffer1(3 * kSize);
@@ -266,32 +274,33 @@ TYPED_TEST(LlvmLibcOpTest, Bcmp, BcmpImplementations) {
 }
 
 using MemcmpImplementations = testing::TypeList<
+#ifdef LIBC_TARGET_ARCH_IS_X86_64
 #ifdef __SSE2__
-    x86::sse2::Memcmp<16>,  //
-    x86::sse2::Memcmp<32>,  //
-    x86::sse2::Memcmp<64>,  //
-    x86::sse2::Memcmp<128>, //
+    generic::Memcmp<__m128i>, //
 #endif
 #ifdef __AVX2__
-    x86::avx2::Memcmp<32>,  //
-    x86::avx2::Memcmp<64>,  //
-    x86::avx2::Memcmp<128>, //
+    generic::Memcmp<__m256i>, //
 #endif
 #ifdef __AVX512BW__
-    x86::avx512bw::Memcmp<64>,  //
-    x86::avx512bw::Memcmp<128>, //
+    generic::Memcmp<__m512i>, //
 #endif
+#endif // LIBC_TARGET_ARCH_IS_X86_64
+#ifdef LIBC_TARGET_ARCH_IS_AARCH64
+    generic::Memcmp<uint8x16_t>, //
+    generic::Memcmp<uint8x16x2_t>,
+#endif
+#ifndef LIBC_TARGET_ARCH_IS_ARM // Removing non uint8_t types for ARM
+    generic::Memcmp<uint16_t>,
+    generic::Memcmp<uint32_t>, //
 #ifdef LLVM_LIBC_HAS_UINT64
-    generic::Memcmp<8>, //
-#endif
-    generic::Memcmp<1>,  //
-    generic::Memcmp<2>,  //
-    generic::Memcmp<3>,  //
-    generic::Memcmp<4>,  //
-    generic::Memcmp<16>, //
-    generic::Memcmp<32>, //
-    generic::Memcmp<64>  //
-    >;
+    generic::Memcmp<uint64_t>,
+#endif // LLVM_LIBC_HAS_UINT64
+    generic::MemcmpSequence<uint16_t, uint8_t>,
+    generic::MemcmpSequence<uint32_t, uint16_t, uint8_t>, //
+#endif // LIBC_TARGET_ARCH_IS_ARM
+    generic::MemcmpSequence<uint8_t, uint8_t>,
+    generic::MemcmpSequence<uint8_t, uint8_t, uint8_t>,
+    generic::Memcmp<uint8_t>>;
 
 TYPED_TEST(LlvmLibcOpTest, Memcmp, MemcmpImplementations) {
   using Impl = ParamType;
@@ -306,7 +315,8 @@ TYPED_TEST(LlvmLibcOpTest, Memcmp, MemcmpImplementations) {
         ASSERT_TRUE((CheckMemcmp<BlockImpl>(span1, span2, kSize)));
     }
   }
-  { // Test head tail operations from kSize to 2 * kSize.
+  if constexpr (has_head_tail<Impl>::value) {
+    // Test head tail operations from kSize to 2 * kSize.
     static constexpr auto HeadTailImpl = CmpAdaptor<Impl::head_tail>;
     Buffer Buffer1(2 * kSize);
     Buffer Buffer2(2 * kSize);
@@ -317,7 +327,8 @@ TYPED_TEST(LlvmLibcOpTest, Memcmp, MemcmpImplementations) {
       ASSERT_TRUE((CheckMemcmp<HeadTailImpl>(span1, span2, size)));
     }
   }
-  { // Test loop operations from kSize to 3 * kSize.
+  if constexpr (has_loop_and_tail<Impl>::value) {
+    // Test loop operations from kSize to 3 * kSize.
     if constexpr (kSize > 1) {
       static constexpr auto LoopImpl = CmpAdaptor<Impl::loop_and_tail>;
       Buffer Buffer1(3 * kSize);
@@ -332,4 +343,4 @@ TYPED_TEST(LlvmLibcOpTest, Memcmp, MemcmpImplementations) {
   }
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

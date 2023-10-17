@@ -89,6 +89,10 @@ void f() {
   Y3<int, 1, 1, A{}, S, int> c;
 }
 
+// Per [temp.func.order]p6.2.2, specifically "if the function parameters that
+// positionally correspond between the two templates are not of the same type",
+// this partial specialization does not work.
+// See https://github.com/llvm/llvm-project/issues/58896
 template<C T, C V> struct Y4; // expected-note {{template is declared here}}
 template<D T, C V> struct Y4<V, T>; // expected-error {{class template partial specialization is not more specialized than the primary template}}
 
@@ -152,4 +156,25 @@ int h() {
   S s(4); // expected-error-re {{call to constructor of {{.*}} is ambiguous}}
 }
 
+}
+
+namespace NestedConstraintsDiffer {
+  template<typename T> concept A = true;
+  template<typename T> concept B = A<T> && true;
+
+  // This is valid: we can compare the constraints of the two overloads of `f`
+  // because the template-parameters are equivalent, despite having different
+  // constraints.
+  template<typename T> struct Z {};
+  template<template<typename T> typename> struct X {};
+  template<A U, template<A T> typename TT> void f(U, X<TT>) {}
+  template<B U, template<B T> typename TT> void f(U, X<TT>) {}
+  void g(X<Z> x) { f(0, x); }
+
+  // Same thing with a constrained non-type parameter.
+  template<auto N> struct W {};
+  template<template<auto> typename> struct Y {};
+  template<A U, template<A auto> typename TT> void h(U, Y<TT>) {}
+  template<B U, template<B auto> typename TT> void h(U, Y<TT>) {}
+  void i(Y<W> x) { h(0, x); }
 }

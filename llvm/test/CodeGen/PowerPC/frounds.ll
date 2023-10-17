@@ -43,10 +43,10 @@ define i32 @foo() {
 ; PPC64LE-NEXT:    mffs 0
 ; PPC64LE-NEXT:    stfd 0, -16(1)
 ; PPC64LE-NEXT:    lwz 3, -16(1)
-; PPC64LE-NEXT:    not 4, 3
-; PPC64LE-NEXT:    clrlwi 3, 3, 30
-; PPC64LE-NEXT:    rlwinm 4, 4, 31, 31, 31
-; PPC64LE-NEXT:    xor 3, 3, 4
+; PPC64LE-NEXT:    clrlwi 4, 3, 30
+; PPC64LE-NEXT:    not 3, 3
+; PPC64LE-NEXT:    rlwinm 3, 3, 31, 31, 31
+; PPC64LE-NEXT:    xor 3, 4, 3
 ; PPC64LE-NEXT:    stw 3, -8(1)
 ; PPC64LE-NEXT:    stw 3, -4(1)
 ; PPC64LE-NEXT:    blr
@@ -55,10 +55,10 @@ define i32 @foo() {
 ; DM:       # %bb.0: # %entry
 ; DM-NEXT:    mffs 0
 ; DM-NEXT:    mffprd 3, 0
-; DM-NEXT:    not 4, 3
-; DM-NEXT:    clrlwi 3, 3, 30
-; DM-NEXT:    rlwinm 4, 4, 31, 31, 31
-; DM-NEXT:    xor 3, 3, 4
+; DM-NEXT:    clrlwi 4, 3, 30
+; DM-NEXT:    not 3, 3
+; DM-NEXT:    rlwinm 3, 3, 31, 31, 31
+; DM-NEXT:    xor 3, 4, 3
 ; DM-NEXT:    stw 3, -8(1)
 ; DM-NEXT:    stw 3, -4(1)
 ; DM-NEXT:    blr

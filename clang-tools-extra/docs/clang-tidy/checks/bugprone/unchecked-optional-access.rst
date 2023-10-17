@@ -8,16 +8,15 @@ results. Therefore, it may be more resource intensive (RAM, CPU) than the
 average clang-tidy check.
 
 This check identifies unsafe accesses to values contained in
-``std::optional<T>``, ``absl::optional<T>``, or ``base::std::optional<T>``
-objects. Below we will refer to all these types collectively as
-``optional<T>``.
+``std::optional<T>``, ``absl::optional<T>``, ``base::Optional<T>``, or
+``folly::Optional<T>`` objects. Below we will refer to all these types
+collectively as ``optional<T>``.
 
-An access to the value of an ``optional<T>`` occurs when one of its
-``value``, ``operator*``, or ``operator->`` member functions is invoked.
-To align with common misconceptions, the check considers these member
-functions as equivalent, even though there are subtle differences
-related to exceptions versus undefined behavior. See
-go/optional-style-recommendations for more information on that topic.
+An access to the value of an ``optional<T>`` occurs when one of its ``value``,
+``operator*``, or ``operator->`` member functions is invoked.  To align with
+common misconceptions, the check considers these member functions as equivalent,
+even though there are subtle differences related to exceptions versus undefined
+behavior. See *Additional notes*, below, for more information on this topic.
 
 An access to the value of an ``optional<T>`` is considered safe if and only if
 code in the local scope (for example, a function body) ensures that the
@@ -148,9 +147,8 @@ have a value. For example:
 Ensure that a value exists using common macros
 ----------------------------------------------
 
-The check is aware of common macros like ``CHECK``, ``DCHECK``, and
-``ASSERT_THAT``. Those can be used to ensure that an optional object has
-a value. For example:
+The check is aware of common macros like ``CHECK`` and ``DCHECK``. Those can be
+used to ensure that an optional object has a value. For example:
 
 .. code-block:: c++
 
@@ -273,3 +271,27 @@ The check does not currently report unsafe optional accesses in lambdas.
 A future version will expand the scope to lambdas, following the rules
 outlined above. It is best to follow the same principles when using
 optionals in lambdas.
+
+Access with ``operator*()`` vs. ``value()``
+-------------------------------------------
+
+Given that ``value()`` has well-defined behavior (either throwing an exception
+or terminating the program), why treat it the same as ``operator*()`` which
+causes undefined behavior (UB)? That is, why is it considered unsafe to access
+an optional with ``value()``, if it's not provably populated with a value?  For
+that matter, why is ``CHECK()`` followed by ``operator*()`` any better than
+``value()``, given that they are semantically equivalent (on configurations that
+disable exceptions)?
+
+The answer is that we assume most users do not realize the difference between
+``value()`` and ``operator*()``. Shifting to ``operator*()`` and some form of
+explicit value-presence check or explicit program termination has two
+advantages:
+
+  * Readability. The check, and any potential side effects like program
+    shutdown, are very clear in the code. Separating access from checks can
+    actually make the checks more obvious.
+
+  * Performance. A single check can cover many or even all accesses within
+    scope. This gives the user the best of both worlds -- the safety of a
+    dynamic check, but without incurring redundant costs.

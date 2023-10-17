@@ -9,6 +9,7 @@
 #include "RenamerClangTidyCheck.h"
 #include "ASTUtils.h"
 #include "clang/AST/CXXInheritance.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -30,22 +31,21 @@ struct DenseMapInfo<clang::tidy::RenamerClangTidyCheck::NamingCheckId> {
   using NamingCheckId = clang::tidy::RenamerClangTidyCheck::NamingCheckId;
 
   static inline NamingCheckId getEmptyKey() {
-    return NamingCheckId(DenseMapInfo<clang::SourceLocation>::getEmptyKey(),
-                         "EMPTY");
+    return {DenseMapInfo<clang::SourceLocation>::getEmptyKey(),
+                         "EMPTY"};
   }
 
   static inline NamingCheckId getTombstoneKey() {
-    return NamingCheckId(DenseMapInfo<clang::SourceLocation>::getTombstoneKey(),
-                         "TOMBSTONE");
+    return {DenseMapInfo<clang::SourceLocation>::getTombstoneKey(),
+                         "TOMBSTONE"};
   }
 
   static unsigned getHashValue(NamingCheckId Val) {
     assert(Val != getEmptyKey() && "Cannot hash the empty key!");
     assert(Val != getTombstoneKey() && "Cannot hash the tombstone key!");
 
-    std::hash<NamingCheckId::second_type> SecondHash;
     return DenseMapInfo<clang::SourceLocation>::getHashValue(Val.first) +
-           SecondHash(Val.second);
+           DenseMapInfo<StringRef>::getHashValue(Val.second);
   }
 
   static bool isEqual(const NamingCheckId &LHS, const NamingCheckId &RHS) {
@@ -60,153 +60,6 @@ struct DenseMapInfo<clang::tidy::RenamerClangTidyCheck::NamingCheckId> {
 } // namespace llvm
 
 namespace clang::tidy {
-
-namespace {
-
-/// Callback supplies macros to RenamerClangTidyCheck::checkMacro
-class RenamerClangTidyCheckPPCallbacks : public PPCallbacks {
-public:
-  RenamerClangTidyCheckPPCallbacks(Preprocessor *PP,
-                                   RenamerClangTidyCheck *Check)
-      : PP(PP), Check(Check) {}
-
-  /// MacroDefined calls checkMacro for macros in the main file
-  void MacroDefined(const Token &MacroNameTok,
-                    const MacroDirective *MD) override {
-    if (MD->getMacroInfo()->isBuiltinMacro())
-      return;
-    if (PP->getSourceManager().isWrittenInBuiltinFile(
-            MacroNameTok.getLocation()))
-      return;
-    if (PP->getSourceManager().isWrittenInCommandLineFile(
-            MacroNameTok.getLocation()))
-      return;
-    Check->checkMacro(PP->getSourceManager(), MacroNameTok, MD->getMacroInfo());
-  }
-
-  /// MacroExpands calls expandMacro for macros in the main file
-  void MacroExpands(const Token &MacroNameTok, const MacroDefinition &MD,
-                    SourceRange /*Range*/,
-                    const MacroArgs * /*Args*/) override {
-    Check->expandMacro(MacroNameTok, MD.getMacroInfo());
-  }
-
-private:
-  Preprocessor *PP;
-  RenamerClangTidyCheck *Check;
-};
-
-} // namespace
-
-RenamerClangTidyCheck::RenamerClangTidyCheck(StringRef CheckName,
-                                             ClangTidyContext *Context)
-    : ClangTidyCheck(CheckName, Context),
-      AggressiveDependentMemberLookup(
-          Options.getLocalOrGlobal("AggressiveDependentMemberLookup", false)) {}
-RenamerClangTidyCheck::~RenamerClangTidyCheck() = default;
-
-void RenamerClangTidyCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "AggressiveDependentMemberLookup",
-                AggressiveDependentMemberLookup);
-}
-
-void RenamerClangTidyCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(namedDecl().bind("decl"), this);
-  Finder->addMatcher(usingDecl().bind("using"), this);
-  Finder->addMatcher(declRefExpr().bind("declRef"), this);
-  Finder->addMatcher(cxxConstructorDecl(unless(isImplicit())).bind("classRef"),
-                     this);
-  Finder->addMatcher(cxxDestructorDecl(unless(isImplicit())).bind("classRef"),
-                     this);
-  Finder->addMatcher(typeLoc().bind("typeLoc"), this);
-  Finder->addMatcher(nestedNameSpecifierLoc().bind("nestedNameLoc"), this);
-  auto MemberRestrictions =
-      unless(forFunction(anyOf(isDefaulted(), isImplicit())));
-  Finder->addMatcher(memberExpr(MemberRestrictions).bind("memberExpr"), this);
-  Finder->addMatcher(
-      cxxDependentScopeMemberExpr(MemberRestrictions).bind("depMemberExpr"),
-      this);
-}
-
-void RenamerClangTidyCheck::registerPPCallbacks(
-    const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
-  ModuleExpanderPP->addPPCallbacks(
-      std::make_unique<RenamerClangTidyCheckPPCallbacks>(ModuleExpanderPP,
-                                                         this));
-}
-
-/// Returns the function that \p Method is overridding. If There are none or
-/// multiple overrides it returns nullptr. If the overridden function itself is
-/// overridding then it will recurse up to find the first decl of the function.
-static const CXXMethodDecl *getOverrideMethod(const CXXMethodDecl *Method) {
-  if (Method->size_overridden_methods() != 1)
-    return nullptr;
-  while (true) {
-    Method = *Method->begin_overridden_methods();
-    assert(Method && "Overridden method shouldn't be null");
-    unsigned NumOverrides = Method->size_overridden_methods();
-    if (NumOverrides == 0)
-      return Method;
-    if (NumOverrides > 1)
-      return nullptr;
-  }
-}
-
-void RenamerClangTidyCheck::addUsage(
-    const RenamerClangTidyCheck::NamingCheckId &Decl, SourceRange Range,
-    SourceManager *SourceMgr) {
-  // Do nothing if the provided range is invalid.
-  if (Range.isInvalid())
-    return;
-
-  // If we have a source manager, use it to convert to the spelling location for
-  // performing the fix. This is necessary because macros can map the same
-  // spelling location to different source locations, and we only want to fix
-  // the token once, before it is expanded by the macro.
-  SourceLocation FixLocation = Range.getBegin();
-  if (SourceMgr)
-    FixLocation = SourceMgr->getSpellingLoc(FixLocation);
-  if (FixLocation.isInvalid())
-    return;
-
-  // Try to insert the identifier location in the Usages map, and bail out if it
-  // is already in there
-  RenamerClangTidyCheck::NamingCheckFailure &Failure =
-      NamingCheckFailures[Decl];
-  if (!Failure.RawUsageLocs.insert(FixLocation).second)
-    return;
-
-  if (!Failure.shouldFix())
-    return;
-
-  if (SourceMgr && SourceMgr->isWrittenInScratchSpace(FixLocation))
-    Failure.FixStatus = RenamerClangTidyCheck::ShouldFixStatus::InsideMacro;
-
-  if (!utils::rangeCanBeFixed(Range, SourceMgr))
-    Failure.FixStatus = RenamerClangTidyCheck::ShouldFixStatus::InsideMacro;
-}
-
-void RenamerClangTidyCheck::addUsage(const NamedDecl *Decl, SourceRange Range,
-                                     SourceManager *SourceMgr) {
-  if (const auto *Method = dyn_cast<CXXMethodDecl>(Decl)) {
-    if (const CXXMethodDecl *Overridden = getOverrideMethod(Method))
-      Decl = Overridden;
-  }
-  Decl = cast<NamedDecl>(Decl->getCanonicalDecl());
-  return addUsage(RenamerClangTidyCheck::NamingCheckId(Decl->getLocation(),
-                                                       Decl->getNameAsString()),
-                  Range, SourceMgr);
-}
-
-const NamedDecl *findDecl(const RecordDecl &RecDecl, StringRef DeclName) {
-  for (const Decl *D : RecDecl.decls()) {
-    if (const auto *ND = dyn_cast<NamedDecl>(D)) {
-      if (ND->getDeclName().isIdentifier() && ND->getName().equals(DeclName))
-        return ND;
-    }
-  }
-  return nullptr;
-}
 
 namespace {
 class NameLookup {
@@ -228,13 +81,25 @@ public:
 };
 } // namespace
 
+static const NamedDecl *findDecl(const RecordDecl &RecDecl,
+                                 StringRef DeclName) {
+  for (const Decl *D : RecDecl.decls()) {
+    if (const auto *ND = dyn_cast<NamedDecl>(D)) {
+      if (ND->getDeclName().isIdentifier() && ND->getName().equals(DeclName))
+        return ND;
+    }
+  }
+  return nullptr;
+}
+
 /// Returns a decl matching the \p DeclName in \p Parent or one of its base
 /// classes. If \p AggressiveTemplateLookup is `true` then it will check
 /// template dependent base classes as well.
 /// If a matching decl is found in multiple base classes then it will return a
 /// flag indicating the multiple resolutions.
-NameLookup findDeclInBases(const CXXRecordDecl &Parent, StringRef DeclName,
-                           bool AggressiveTemplateLookup) {
+static NameLookup findDeclInBases(const CXXRecordDecl &Parent,
+                                  StringRef DeclName,
+                                  bool AggressiveTemplateLookup) {
   if (!Parent.hasDefinition())
     return NameLookup(nullptr);
   if (const NamedDecl *InClassRef = findDecl(Parent, DeclName))
@@ -268,212 +133,356 @@ NameLookup findDeclInBases(const CXXRecordDecl &Parent, StringRef DeclName,
   return NameLookup(Found); // If nullptr, decl wasn't found.
 }
 
-void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {
-  if (const auto *Decl =
-          Result.Nodes.getNodeAs<CXXConstructorDecl>("classRef")) {
+/// Returns the function that \p Method is overridding. If There are none or
+/// multiple overrides it returns nullptr. If the overridden function itself is
+/// overridding then it will recurse up to find the first decl of the function.
+static const CXXMethodDecl *getOverrideMethod(const CXXMethodDecl *Method) {
+  if (Method->size_overridden_methods() != 1)
+    return nullptr;
 
-    addUsage(Decl->getParent(), Decl->getNameInfo().getSourceRange(),
-             Result.SourceManager);
+  while (true) {
+    Method = *Method->begin_overridden_methods();
+    assert(Method && "Overridden method shouldn't be null");
+    unsigned NumOverrides = Method->size_overridden_methods();
+    if (NumOverrides == 0)
+      return Method;
+    if (NumOverrides > 1)
+      return nullptr;
+  }
+}
+
+namespace {
+
+/// Callback supplies macros to RenamerClangTidyCheck::checkMacro
+class RenamerClangTidyCheckPPCallbacks : public PPCallbacks {
+public:
+  RenamerClangTidyCheckPPCallbacks(const SourceManager &SM,
+                                   RenamerClangTidyCheck *Check)
+      : SM(SM), Check(Check) {}
+
+  /// MacroDefined calls checkMacro for macros in the main file
+  void MacroDefined(const Token &MacroNameTok,
+                    const MacroDirective *MD) override {
+    const MacroInfo *Info = MD->getMacroInfo();
+    if (Info->isBuiltinMacro())
+      return;
+    if (SM.isWrittenInBuiltinFile(MacroNameTok.getLocation()))
+      return;
+    if (SM.isWrittenInCommandLineFile(MacroNameTok.getLocation()))
+      return;
+    Check->checkMacro(SM, MacroNameTok, Info);
+  }
+
+  /// MacroExpands calls expandMacro for macros in the main file
+  void MacroExpands(const Token &MacroNameTok, const MacroDefinition &MD,
+                    SourceRange /*Range*/,
+                    const MacroArgs * /*Args*/) override {
+    Check->expandMacro(MacroNameTok, MD.getMacroInfo());
+  }
+
+private:
+  const SourceManager &SM;
+  RenamerClangTidyCheck *Check;
+};
+
+class RenamerClangTidyVisitor
+    : public RecursiveASTVisitor<RenamerClangTidyVisitor> {
+public:
+  RenamerClangTidyVisitor(RenamerClangTidyCheck *Check, const SourceManager *SM,
+                          bool AggressiveDependentMemberLookup)
+      : Check(Check), SM(SM),
+        AggressiveDependentMemberLookup(AggressiveDependentMemberLookup) {}
+
+  static bool hasNoName(const NamedDecl *Decl) {
+    return !Decl->getIdentifier() || Decl->getName().empty();
+  }
+
+  bool shouldVisitTemplateInstantiations() const { return true; }
+
+  bool shouldVisitImplicitCode() const { return false; }
+
+  bool VisitCXXConstructorDecl(CXXConstructorDecl *Decl) {
+    if (Decl->isImplicit())
+      return true;
+    Check->addUsage(Decl->getParent(), Decl->getNameInfo().getSourceRange(),
+                    SM);
 
     for (const auto *Init : Decl->inits()) {
       if (!Init->isWritten() || Init->isInClassMemberInitializer())
         continue;
       if (const FieldDecl *FD = Init->getAnyMember())
-        addUsage(FD, SourceRange(Init->getMemberLocation()),
-                 Result.SourceManager);
+        Check->addUsage(FD, SourceRange(Init->getMemberLocation()), SM);
       // Note: delegating constructors and base class initializers are handled
       // via the "typeLoc" matcher.
     }
-    return;
+
+    return true;
   }
 
-  if (const auto *Decl =
-          Result.Nodes.getNodeAs<CXXDestructorDecl>("classRef")) {
-
+  bool VisitCXXDestructorDecl(CXXDestructorDecl *Decl) {
+    if (Decl->isImplicit())
+      return true;
     SourceRange Range = Decl->getNameInfo().getSourceRange();
     if (Range.getBegin().isInvalid())
-      return;
+      return true;
+
     // The first token that will be found is the ~ (or the equivalent trigraph),
     // we want instead to replace the next token, that will be the identifier.
     Range.setBegin(CharSourceRange::getTokenRange(Range).getEnd());
-
-    addUsage(Decl->getParent(), Range, Result.SourceManager);
-    return;
+    Check->addUsage(Decl->getParent(), Range, SM);
+    return true;
   }
 
-  if (const auto *Loc = Result.Nodes.getNodeAs<TypeLoc>("typeLoc")) {
-    UnqualTypeLoc Unqual = Loc->getUnqualifiedLoc();
-    NamedDecl *Decl = nullptr;
-    if (const auto &Ref = Unqual.getAs<TagTypeLoc>())
-      Decl = Ref.getDecl();
-    else if (const auto &Ref = Unqual.getAs<InjectedClassNameTypeLoc>())
-      Decl = Ref.getDecl();
-    else if (const auto &Ref = Unqual.getAs<UnresolvedUsingTypeLoc>())
-      Decl = Ref.getDecl();
-    else if (const auto &Ref = Unqual.getAs<TemplateTypeParmTypeLoc>())
-      Decl = Ref.getDecl();
-    // further TypeLocs handled below
-
-    if (Decl) {
-      addUsage(Decl, Loc->getSourceRange(), Result.SourceManager);
-      return;
-    }
-
-    if (const auto &Ref = Loc->getAs<TemplateSpecializationTypeLoc>()) {
-      const TemplateDecl *Decl =
-          Ref.getTypePtr()->getTemplateName().getAsTemplateDecl();
-
-      SourceRange Range(Ref.getTemplateNameLoc(), Ref.getTemplateNameLoc());
-      if (const auto *ClassDecl = dyn_cast<TemplateDecl>(Decl)) {
-        if (const NamedDecl *TemplDecl = ClassDecl->getTemplatedDecl())
-          addUsage(TemplDecl, Range, Result.SourceManager);
-        return;
-      }
-    }
-
-    if (const auto &Ref =
-            Loc->getAs<DependentTemplateSpecializationTypeLoc>()) {
-      if (const TagDecl *Decl = Ref.getTypePtr()->getAsTagDecl())
-        addUsage(Decl, Loc->getSourceRange(), Result.SourceManager);
-      return;
-    }
-  }
-
-  if (const auto *Loc =
-          Result.Nodes.getNodeAs<NestedNameSpecifierLoc>("nestedNameLoc")) {
-    if (const NestedNameSpecifier *Spec = Loc->getNestedNameSpecifier()) {
-      if (const NamespaceDecl *Decl = Spec->getAsNamespace()) {
-        addUsage(Decl, Loc->getLocalSourceRange(), Result.SourceManager);
-        return;
-      }
-    }
-  }
-
-  if (const auto *Decl = Result.Nodes.getNodeAs<UsingDecl>("using")) {
+  bool VisitUsingDecl(UsingDecl *Decl) {
     for (const auto *Shadow : Decl->shadows())
-      addUsage(Shadow->getTargetDecl(), Decl->getNameInfo().getSourceRange(),
-               Result.SourceManager);
-    return;
+      Check->addUsage(Shadow->getTargetDecl(),
+                      Decl->getNameInfo().getSourceRange(), SM);
+    return true;
   }
 
-  if (const auto *DeclRef = Result.Nodes.getNodeAs<DeclRefExpr>("declRef")) {
-    SourceRange Range = DeclRef->getNameInfo().getSourceRange();
-    addUsage(DeclRef->getDecl(), Range, Result.SourceManager);
-    return;
+  bool VisitUsingDirectiveDecl(UsingDirectiveDecl *Decl) {
+    Check->addUsage(Decl->getNominatedNamespaceAsWritten(),
+                    Decl->getIdentLocation(), SM);
+    return true;
   }
 
-  if (const auto *MemberRef =
-          Result.Nodes.getNodeAs<MemberExpr>("memberExpr")) {
-    SourceRange Range = MemberRef->getMemberNameInfo().getSourceRange();
-    addUsage(MemberRef->getMemberDecl(), Range, Result.SourceManager);
-    return;
-  }
-
-  if (const auto *DepMemberRef =
-          Result.Nodes.getNodeAs<CXXDependentScopeMemberExpr>(
-              "depMemberExpr")) {
-    QualType BaseType = DepMemberRef->isArrow()
-                            ? DepMemberRef->getBaseType()->getPointeeType()
-                            : DepMemberRef->getBaseType();
-    if (BaseType.isNull())
-      return;
-    const CXXRecordDecl *Base = BaseType.getTypePtr()->getAsCXXRecordDecl();
-    if (!Base)
-      return;
-    DeclarationName DeclName = DepMemberRef->getMemberNameInfo().getName();
-    if (!DeclName.isIdentifier())
-      return;
-    StringRef DependentName = DeclName.getAsIdentifierInfo()->getName();
-
-    if (NameLookup Resolved = findDeclInBases(
-            *Base, DependentName, AggressiveDependentMemberLookup)) {
-      if (*Resolved)
-        addUsage(*Resolved, DepMemberRef->getMemberNameInfo().getSourceRange(),
-                 Result.SourceManager);
-    }
-    return;
-  }
-
-  if (const auto *Decl = Result.Nodes.getNodeAs<NamedDecl>("decl")) {
-    // Fix using namespace declarations.
-    if (const auto *UsingNS = dyn_cast<UsingDirectiveDecl>(Decl))
-      addUsage(UsingNS->getNominatedNamespaceAsWritten(),
-               UsingNS->getIdentLocation(), Result.SourceManager);
-
-    if (!Decl->getIdentifier() || Decl->getName().empty() || Decl->isImplicit())
-      return;
+  bool VisitNamedDecl(NamedDecl *Decl) {
+    if (hasNoName(Decl))
+      return true;
 
     const auto *Canonical = cast<NamedDecl>(Decl->getCanonicalDecl());
     if (Canonical != Decl) {
-      addUsage(Canonical, Decl->getLocation(), Result.SourceManager);
-      return;
-    }
-
-    // Fix type aliases in value declarations.
-    if (const auto *Value = Result.Nodes.getNodeAs<ValueDecl>("decl")) {
-      if (const Type *TypePtr = Value->getType().getTypePtrOrNull()) {
-        if (const auto *Typedef = TypePtr->getAs<TypedefType>())
-          addUsage(Typedef->getDecl(), Value->getSourceRange(),
-                   Result.SourceManager);
-      }
-    }
-
-    // Fix type aliases in function declarations.
-    if (const auto *Value = Result.Nodes.getNodeAs<FunctionDecl>("decl")) {
-      if (const auto *Typedef =
-              Value->getReturnType().getTypePtr()->getAs<TypedefType>())
-        addUsage(Typedef->getDecl(), Value->getSourceRange(),
-                 Result.SourceManager);
-      for (const ParmVarDecl *Param : Value->parameters()) {
-        if (const TypedefType *Typedef =
-                Param->getType().getTypePtr()->getAs<TypedefType>())
-          addUsage(Typedef->getDecl(), Value->getSourceRange(),
-                   Result.SourceManager);
-      }
+      Check->addUsage(Canonical, Decl->getLocation(), SM);
+      return true;
     }
 
     // Fix overridden methods
-    if (const auto *Method = Result.Nodes.getNodeAs<CXXMethodDecl>("decl")) {
+    if (const auto *Method = dyn_cast<CXXMethodDecl>(Decl)) {
       if (const CXXMethodDecl *Overridden = getOverrideMethod(Method)) {
-        addUsage(Overridden, Method->getLocation());
-        return; // Don't try to add the actual decl as a Failure.
+        Check->addUsage(Overridden, Method->getLocation());
+        return true; // Don't try to add the actual decl as a Failure.
       }
     }
 
     // Ignore ClassTemplateSpecializationDecl which are creating duplicate
     // replacements with CXXRecordDecl.
     if (isa<ClassTemplateSpecializationDecl>(Decl))
-      return;
+      return true;
 
-    std::optional<FailureInfo> MaybeFailure =
-        getDeclFailureInfo(Decl, *Result.SourceManager);
-    if (!MaybeFailure)
-      return;
-    FailureInfo &Info = *MaybeFailure;
-    NamingCheckFailure &Failure = NamingCheckFailures[NamingCheckId(
-        Decl->getLocation(), Decl->getNameAsString())];
-    SourceRange Range =
-        DeclarationNameInfo(Decl->getDeclName(), Decl->getLocation())
-            .getSourceRange();
+    Check->checkNamedDecl(Decl, *SM);
+    return true;
+  }
 
-    const IdentifierTable &Idents = Decl->getASTContext().Idents;
-    auto CheckNewIdentifier = Idents.find(Info.Fixup);
-    if (CheckNewIdentifier != Idents.end()) {
-      const IdentifierInfo *Ident = CheckNewIdentifier->second;
-      if (Ident->isKeyword(getLangOpts()))
-        Failure.FixStatus = ShouldFixStatus::ConflictsWithKeyword;
-      else if (Ident->hasMacroDefinition())
-        Failure.FixStatus = ShouldFixStatus::ConflictsWithMacroDefinition;
-    } else if (!isValidAsciiIdentifier(Info.Fixup)) {
-      Failure.FixStatus = ShouldFixStatus::FixInvalidIdentifier;
+  bool VisitDeclRefExpr(DeclRefExpr *DeclRef) {
+    SourceRange Range = DeclRef->getNameInfo().getSourceRange();
+    Check->addUsage(DeclRef->getDecl(), Range, SM);
+    return true;
+  }
+
+  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc Loc) {
+    if (const NestedNameSpecifier *Spec = Loc.getNestedNameSpecifier()) {
+      if (const NamespaceDecl *Decl = Spec->getAsNamespace())
+        Check->addUsage(Decl, Loc.getLocalSourceRange(), SM);
     }
 
-    Failure.Info = std::move(Info);
-    addUsage(Decl, Range);
+    using Base = RecursiveASTVisitor<RenamerClangTidyVisitor>;
+    return Base::TraverseNestedNameSpecifierLoc(Loc);
   }
+
+  bool VisitMemberExpr(MemberExpr *MemberRef) {
+    SourceRange Range = MemberRef->getMemberNameInfo().getSourceRange();
+    Check->addUsage(MemberRef->getMemberDecl(), Range, SM);
+    return true;
+  }
+
+  bool
+  VisitCXXDependentScopeMemberExpr(CXXDependentScopeMemberExpr *DepMemberRef) {
+    QualType BaseType = DepMemberRef->isArrow()
+                            ? DepMemberRef->getBaseType()->getPointeeType()
+                            : DepMemberRef->getBaseType();
+    if (BaseType.isNull())
+      return true;
+    const CXXRecordDecl *Base = BaseType.getTypePtr()->getAsCXXRecordDecl();
+    if (!Base)
+      return true;
+    DeclarationName DeclName = DepMemberRef->getMemberNameInfo().getName();
+    if (!DeclName.isIdentifier())
+      return true;
+    StringRef DependentName = DeclName.getAsIdentifierInfo()->getName();
+
+    if (NameLookup Resolved = findDeclInBases(
+            *Base, DependentName, AggressiveDependentMemberLookup)) {
+      if (*Resolved)
+        Check->addUsage(*Resolved,
+                        DepMemberRef->getMemberNameInfo().getSourceRange(), SM);
+    }
+
+    return true;
+  }
+
+  bool VisitTypedefTypeLoc(const TypedefTypeLoc &Loc) {
+    Check->addUsage(Loc.getTypedefNameDecl(), Loc.getSourceRange(), SM);
+    return true;
+  }
+
+  bool VisitTagTypeLoc(const TagTypeLoc &Loc) {
+    Check->addUsage(Loc.getDecl(), Loc.getSourceRange(), SM);
+    return true;
+  }
+
+  bool VisitInjectedClassNameTypeLoc(const InjectedClassNameTypeLoc &Loc) {
+    Check->addUsage(Loc.getDecl(), Loc.getSourceRange(), SM);
+    return true;
+  }
+
+  bool VisitUnresolvedUsingTypeLoc(const UnresolvedUsingTypeLoc &Loc) {
+    Check->addUsage(Loc.getDecl(), Loc.getSourceRange(), SM);
+    return true;
+  }
+
+  bool VisitTemplateTypeParmTypeLoc(const TemplateTypeParmTypeLoc &Loc) {
+    Check->addUsage(Loc.getDecl(), Loc.getSourceRange(), SM);
+    return true;
+  }
+
+  bool
+  VisitTemplateSpecializationTypeLoc(const TemplateSpecializationTypeLoc &Loc) {
+    const TemplateDecl *Decl =
+        Loc.getTypePtr()->getTemplateName().getAsTemplateDecl();
+
+    SourceRange Range(Loc.getTemplateNameLoc(), Loc.getTemplateNameLoc());
+    if (const auto *ClassDecl = dyn_cast<TemplateDecl>(Decl)) {
+      if (const NamedDecl *TemplDecl = ClassDecl->getTemplatedDecl())
+        Check->addUsage(TemplDecl, Range, SM);
+    }
+
+    return true;
+  }
+
+  bool VisitDependentTemplateSpecializationTypeLoc(
+      const DependentTemplateSpecializationTypeLoc &Loc) {
+    if (const TagDecl *Decl = Loc.getTypePtr()->getAsTagDecl())
+      Check->addUsage(Decl, Loc.getSourceRange(), SM);
+
+    return true;
+  }
+
+private:
+  RenamerClangTidyCheck *Check;
+  const SourceManager *SM;
+  const bool AggressiveDependentMemberLookup;
+};
+
+} // namespace
+
+RenamerClangTidyCheck::RenamerClangTidyCheck(StringRef CheckName,
+                                             ClangTidyContext *Context)
+    : ClangTidyCheck(CheckName, Context),
+      AggressiveDependentMemberLookup(
+          Options.getLocalOrGlobal("AggressiveDependentMemberLookup", false)) {}
+RenamerClangTidyCheck::~RenamerClangTidyCheck() = default;
+
+void RenamerClangTidyCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "AggressiveDependentMemberLookup",
+                AggressiveDependentMemberLookup);
 }
 
-void RenamerClangTidyCheck::checkMacro(SourceManager &SourceMgr,
+void RenamerClangTidyCheck::registerMatchers(MatchFinder *Finder) {
+  Finder->addMatcher(translationUnitDecl(), this);
+}
+
+void RenamerClangTidyCheck::registerPPCallbacks(
+    const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
+  ModuleExpanderPP->addPPCallbacks(
+      std::make_unique<RenamerClangTidyCheckPPCallbacks>(SM, this));
+}
+
+void RenamerClangTidyCheck::addUsage(
+    const RenamerClangTidyCheck::NamingCheckId &Decl, SourceRange Range,
+    const SourceManager *SourceMgr) {
+  // Do nothing if the provided range is invalid.
+  if (Range.isInvalid())
+    return;
+
+  // If we have a source manager, use it to convert to the spelling location for
+  // performing the fix. This is necessary because macros can map the same
+  // spelling location to different source locations, and we only want to fix
+  // the token once, before it is expanded by the macro.
+  SourceLocation FixLocation = Range.getBegin();
+  if (SourceMgr)
+    FixLocation = SourceMgr->getSpellingLoc(FixLocation);
+  if (FixLocation.isInvalid())
+    return;
+
+  // Try to insert the identifier location in the Usages map, and bail out if it
+  // is already in there
+  RenamerClangTidyCheck::NamingCheckFailure &Failure =
+      NamingCheckFailures[Decl];
+  if (!Failure.RawUsageLocs.insert(FixLocation).second)
+    return;
+
+  if (!Failure.shouldFix())
+    return;
+
+  if (SourceMgr && SourceMgr->isWrittenInScratchSpace(FixLocation))
+    Failure.FixStatus = RenamerClangTidyCheck::ShouldFixStatus::InsideMacro;
+
+  if (!utils::rangeCanBeFixed(Range, SourceMgr))
+    Failure.FixStatus = RenamerClangTidyCheck::ShouldFixStatus::InsideMacro;
+}
+
+void RenamerClangTidyCheck::addUsage(const NamedDecl *Decl, SourceRange Range,
+                                     const SourceManager *SourceMgr) {
+  // Don't keep track for non-identifier names.
+  auto *II = Decl->getIdentifier();
+  if (!II)
+    return;
+  if (const auto *Method = dyn_cast<CXXMethodDecl>(Decl)) {
+    if (const CXXMethodDecl *Overridden = getOverrideMethod(Method))
+      Decl = Overridden;
+  }
+  Decl = cast<NamedDecl>(Decl->getCanonicalDecl());
+  return addUsage(
+      RenamerClangTidyCheck::NamingCheckId(Decl->getLocation(), II->getName()),
+      Range, SourceMgr);
+}
+
+void RenamerClangTidyCheck::checkNamedDecl(const NamedDecl *Decl,
+                                           const SourceManager &SourceMgr) {
+  std::optional<FailureInfo> MaybeFailure = getDeclFailureInfo(Decl, SourceMgr);
+  if (!MaybeFailure)
+    return;
+
+  FailureInfo &Info = *MaybeFailure;
+  NamingCheckFailure &Failure =
+      NamingCheckFailures[NamingCheckId(Decl->getLocation(), Decl->getName())];
+  SourceRange Range =
+      DeclarationNameInfo(Decl->getDeclName(), Decl->getLocation())
+          .getSourceRange();
+
+  const IdentifierTable &Idents = Decl->getASTContext().Idents;
+  auto CheckNewIdentifier = Idents.find(Info.Fixup);
+  if (CheckNewIdentifier != Idents.end()) {
+    const IdentifierInfo *Ident = CheckNewIdentifier->second;
+    if (Ident->isKeyword(getLangOpts()))
+      Failure.FixStatus = ShouldFixStatus::ConflictsWithKeyword;
+    else if (Ident->hasMacroDefinition())
+      Failure.FixStatus = ShouldFixStatus::ConflictsWithMacroDefinition;
+  } else if (!isValidAsciiIdentifier(Info.Fixup)) {
+    Failure.FixStatus = ShouldFixStatus::FixInvalidIdentifier;
+  }
+
+  Failure.Info = std::move(Info);
+  addUsage(Decl, Range);
+}
+
+void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {
+  RenamerClangTidyVisitor Visitor(this, Result.SourceManager,
+                                  AggressiveDependentMemberLookup);
+  Visitor.TraverseAST(*Result.Context);
+}
+
+void RenamerClangTidyCheck::checkMacro(const SourceManager &SourceMgr,
                                        const Token &MacroNameTok,
                                        const MacroInfo *MI) {
   std::optional<FailureInfo> MaybeFailure =
@@ -482,7 +491,7 @@ void RenamerClangTidyCheck::checkMacro(SourceManager &SourceMgr,
     return;
   FailureInfo &Info = *MaybeFailure;
   StringRef Name = MacroNameTok.getIdentifierInfo()->getName();
-  NamingCheckId ID(MI->getDefinitionLoc(), std::string(Name));
+  NamingCheckId ID(MI->getDefinitionLoc(), Name);
   NamingCheckFailure &Failure = NamingCheckFailures[ID];
   SourceRange Range(MacroNameTok.getLocation(), MacroNameTok.getEndLoc());
 
@@ -496,7 +505,7 @@ void RenamerClangTidyCheck::checkMacro(SourceManager &SourceMgr,
 void RenamerClangTidyCheck::expandMacro(const Token &MacroNameTok,
                                         const MacroInfo *MI) {
   StringRef Name = MacroNameTok.getIdentifierInfo()->getName();
-  NamingCheckId ID(MI->getDefinitionLoc(), std::string(Name));
+  NamingCheckId ID(MI->getDefinitionLoc(), Name);
 
   auto Failure = NamingCheckFailures.find(ID);
   if (Failure == NamingCheckFailures.end())

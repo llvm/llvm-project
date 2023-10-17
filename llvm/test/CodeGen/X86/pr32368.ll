@@ -114,12 +114,12 @@ define <16 x float> @PR32368_512(<16 x float>) {
 ;
 ; AVX1-LABEL: PR32368_512:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovaps {{.*#+}} ymm2 = [4294967004,4294967004,4294967004,4294967004,4294967004,4294967004,4294967004,4294967004]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} ymm2 = [4294967004,4294967004,4294967004,4294967004,4294967004,4294967004,4294967004,4294967004]
 ; AVX1-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vandps %ymm2, %ymm1, %ymm1
 ; AVX1-NEXT:    vaddps %ymm1, %ymm1, %ymm1
 ; AVX1-NEXT:    vaddps %ymm0, %ymm0, %ymm0
-; AVX1-NEXT:    vmovaps {{.*#+}} ymm2 = [291,291,291,291,291,291,291,291]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} ymm2 = [291,291,291,291,291,291,291,291]
 ; AVX1-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vandps %ymm2, %ymm1, %ymm1
 ; AVX1-NEXT:    retq

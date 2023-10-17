@@ -1,5 +1,5 @@
 // -fopenmp, -fno-openmp-extensions
-// RUN: %clang_cc1 -verify=expected,ge50,lt51,omp,lt51-omp -fopenmp -fno-openmp-extensions -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50,lt51,omp,lt51-omp -fopenmp -fno-openmp-extensions -fopenmp-version=50 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,lt50,lt51,omp,lt51-omp -fopenmp -fno-openmp-extensions -fopenmp-version=40 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,lt50,lt51,omp,lt51-omp -fopenmp -fno-openmp-extensions -fopenmp-version=45 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,ge50,lt51,omp,lt51-omp -fopenmp -fno-openmp-extensions -fopenmp-version=50 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
@@ -8,27 +8,27 @@
 // RUN: %clang_cc1 -DCCODE -verify -fopenmp -fno-openmp-extensions -ferror-limit 300 -x c %s -Wno-openmp -Wuninitialized
 
 // -fopenmp-simd, -fno-openmp-extensions
-// RUN: %clang_cc1 -verify=expected,ge50,lt51,omp,lt51-omp -fopenmp-simd -fno-openmp-extensions -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50,lt51,omp,lt51-omp -fopenmp-simd -fno-openmp-extensions -fopenmp-version=50 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,lt50,lt51,omp,lt51-omp -fopenmp-simd -fno-openmp-extensions -fopenmp-version=40 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,lt50,lt51,omp,lt51-omp -fopenmp-simd -fno-openmp-extensions -fopenmp-version=45 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,ge50,lt51,omp,lt51-omp -fopenmp-simd -fno-openmp-extensions -fopenmp-version=50 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,ge50,ge51,omp,ge51-omp -fopenmp-simd -fno-openmp-extensions -fopenmp-version=51 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50,ge51,omp,ge51-omp -fopenmp-simd -fno-openmp-extensions -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
 // RUN: %clang_cc1 -DCCODE -verify -fopenmp-simd -fno-openmp-extensions -ferror-limit 300 -x c %s -Wno-openmp-mapping -Wuninitialized
 
 // -fopenmp -fopenmp-extensions
-// RUN: %clang_cc1 -verify=expected,ge50,lt51,ompx,lt51-ompx -fopenmp -fopenmp-extensions -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50,lt51,ompx,lt51-ompx -fopenmp -fopenmp-extensions -fopenmp-version=50 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,lt50,lt51,ompx,lt51-ompx -fopenmp -fopenmp-extensions -fopenmp-version=40 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,lt50,lt51,ompx,lt51-ompx -fopenmp -fopenmp-extensions -fopenmp-version=45 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,ge50,lt51,ompx,lt51-ompx -fopenmp -fopenmp-extensions -fopenmp-version=50 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,ge50,ge51,ompx,ge51-ompx -fopenmp -fopenmp-extensions -fopenmp-version=51 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50,ge51,ompx,ge51-ompx -fopenmp -fopenmp-extensions -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
 // RUN: %clang_cc1 -DCCODE -verify -fopenmp -fopenmp-extensions -ferror-limit 300 -x c %s -Wno-openmp -Wuninitialized
 
 // -fopenmp-simd -fopenmp-extensions
-// RUN: %clang_cc1 -verify=expected,ge50,lt51,ompx,lt51-ompx -fopenmp-simd -fopenmp-extensions -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50,lt51,ompx,lt51-ompx -fopenmp-simd -fopenmp-extensions -fopenmp-version=50 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,lt50,lt51,ompx,lt51-ompx -fopenmp-simd -fopenmp-extensions -fopenmp-version=40 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,lt50,lt51,ompx,lt51-ompx -fopenmp-simd -fopenmp-extensions -fopenmp-version=45 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,ge50,lt51,ompx,lt51-ompx -fopenmp-simd -fopenmp-extensions -fopenmp-version=50 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,ge50,ge51,ompx,ge51-ompx -fopenmp-simd -fopenmp-extensions -fopenmp-version=51 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50,ge51,ompx,ge51-ompx -fopenmp-simd -fopenmp-extensions -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
 // RUN: %clang_cc1 -DCCODE -verify -fopenmp-simd -fopenmp-extensions -ferror-limit 300 -x c %s -Wno-openmp-mapping -Wuninitialized
 
 // Check

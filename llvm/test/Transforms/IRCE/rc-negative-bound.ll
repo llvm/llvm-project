@@ -18,7 +18,7 @@ define void @test_01(ptr %arr, i32 %n) {
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_NEXT:%.*]], [[IN_BOUNDS:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[IDX_NEXT]] = add i32 [[IDX]], 1
 ; CHECK-NEXT:    [[ABC:%.*]] = icmp slt i32 [[IDX]], -9
-; CHECK-NEXT:    br i1 [[ABC]], label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[ABC]], label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS:%.*]], !prof [[PROF0:![0-9]+]]
 ; CHECK:       in.bounds:
 ; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[ARR:%.*]], i32 [[IDX]]
 ; CHECK-NEXT:    store i32 0, ptr [[ADDR]], align 4
@@ -67,7 +67,7 @@ define void @test_02(ptr %arr, i32 %n) {
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_NEXT:%.*]], [[IN_BOUNDS:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[IDX_NEXT]] = add i32 [[IDX]], 1
 ; CHECK-NEXT:    [[ABC:%.*]] = icmp slt i32 [[IDX]], -9
-; CHECK-NEXT:    br i1 [[ABC]], label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[ABC]], label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS:%.*]], !prof [[PROF0]]
 ; CHECK:       in.bounds:
 ; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[ARR:%.*]], i32 [[IDX]]
 ; CHECK-NEXT:    store i32 0, ptr [[ADDR]], align 4
@@ -127,9 +127,9 @@ define void @test_03(ptr %arr, i32 %n, i32 %bound) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_NEXT:%.*]], [[IN_BOUNDS:%.*]] ], [ 0, [[LOOP_PREHEADER4]] ]
-; CHECK-NEXT:    [[IDX_NEXT]] = add i32 [[IDX]], 1
+; CHECK-NEXT:    [[IDX_NEXT]] = add nsw i32 [[IDX]], 1
 ; CHECK-NEXT:    [[ABC:%.*]] = icmp slt i32 [[IDX]], [[BOUND]]
-; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT5:%.*]], !prof !0
+; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT5:%.*]], !prof [[PROF0]]
 ; CHECK:       in.bounds:
 ; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[ARR:%.*]], i32 [[IDX]]
 ; CHECK-NEXT:    store i32 0, ptr [[ADDR]], align 4
@@ -162,12 +162,12 @@ define void @test_03(ptr %arr, i32 %n, i32 %bound) {
 ; CHECK-NEXT:    [[IDX_POSTLOOP:%.*]] = phi i32 [ [[IDX_NEXT_POSTLOOP:%.*]], [[IN_BOUNDS_POSTLOOP:%.*]] ], [ [[IDX_COPY]], [[POSTLOOP]] ]
 ; CHECK-NEXT:    [[IDX_NEXT_POSTLOOP]] = add i32 [[IDX_POSTLOOP]], 1
 ; CHECK-NEXT:    [[ABC_POSTLOOP:%.*]] = icmp slt i32 [[IDX_POSTLOOP]], [[BOUND]]
-; CHECK-NEXT:    br i1 [[ABC_POSTLOOP]], label [[IN_BOUNDS_POSTLOOP]], label [[OUT_OF_BOUNDS_LOOPEXIT:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[ABC_POSTLOOP]], label [[IN_BOUNDS_POSTLOOP]], label [[OUT_OF_BOUNDS_LOOPEXIT:%.*]], !prof [[PROF0]]
 ; CHECK:       in.bounds.postloop:
 ; CHECK-NEXT:    [[ADDR_POSTLOOP:%.*]] = getelementptr i32, ptr [[ARR]], i32 [[IDX_POSTLOOP]]
 ; CHECK-NEXT:    store i32 0, ptr [[ADDR_POSTLOOP]], align 4
 ; CHECK-NEXT:    [[NEXT_POSTLOOP:%.*]] = icmp slt i32 [[IDX_NEXT_POSTLOOP]], [[N]]
-; CHECK-NEXT:    br i1 [[NEXT_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT:%.*]], [[LOOP1:!llvm.loop !.*]], !irce.loop.clone !6
+; CHECK-NEXT:    br i1 [[NEXT_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP1:![0-9]+]], !irce.loop.clone [[META6:![0-9]+]]
 ;
 
   entry:
@@ -215,7 +215,7 @@ define void @test_04(ptr %arr, i32 %n, i32 %bound) {
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_NEXT:%.*]], [[IN_BOUNDS:%.*]] ], [ 0, [[LOOP_PREHEADER1]] ]
 ; CHECK-NEXT:    [[IDX_NEXT]] = add i32 [[IDX]], 1
 ; CHECK-NEXT:    [[ABC:%.*]] = icmp slt i32 [[IDX]], [[BOUND]]
-; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT2:%.*]], !prof !0
+; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT2:%.*]], !prof [[PROF0]]
 ; CHECK:       in.bounds:
 ; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[ARR:%.*]], i32 [[IDX]]
 ; CHECK-NEXT:    store i32 0, ptr [[ADDR]], align 4
@@ -248,12 +248,12 @@ define void @test_04(ptr %arr, i32 %n, i32 %bound) {
 ; CHECK-NEXT:    [[IDX_POSTLOOP:%.*]] = phi i32 [ [[IDX_NEXT_POSTLOOP:%.*]], [[IN_BOUNDS_POSTLOOP:%.*]] ], [ [[IDX_COPY]], [[POSTLOOP]] ]
 ; CHECK-NEXT:    [[IDX_NEXT_POSTLOOP]] = add i32 [[IDX_POSTLOOP]], 1
 ; CHECK-NEXT:    [[ABC_POSTLOOP:%.*]] = icmp slt i32 [[IDX_POSTLOOP]], [[BOUND]]
-; CHECK-NEXT:    br i1 [[ABC_POSTLOOP]], label [[IN_BOUNDS_POSTLOOP]], label [[OUT_OF_BOUNDS_LOOPEXIT:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[ABC_POSTLOOP]], label [[IN_BOUNDS_POSTLOOP]], label [[OUT_OF_BOUNDS_LOOPEXIT:%.*]], !prof [[PROF0]]
 ; CHECK:       in.bounds.postloop:
 ; CHECK-NEXT:    [[ADDR_POSTLOOP:%.*]] = getelementptr i32, ptr [[ARR]], i32 [[IDX_POSTLOOP]]
 ; CHECK-NEXT:    store i32 0, ptr [[ADDR_POSTLOOP]], align 4
 ; CHECK-NEXT:    [[NEXT_POSTLOOP:%.*]] = icmp ult i32 [[IDX_NEXT_POSTLOOP]], [[N]]
-; CHECK-NEXT:    br i1 [[NEXT_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT:%.*]], [[LOOP7:!llvm.loop !.*]], !irce.loop.clone !6
+; CHECK-NEXT:    br i1 [[NEXT_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP7:![0-9]+]], !irce.loop.clone [[META6]]
 ;
 
   entry:
@@ -294,7 +294,7 @@ define void @test_05(ptr %arr, i32 %n) {
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_NEXT:%.*]], [[IN_BOUNDS:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[IDX_NEXT]] = add i32 [[IDX]], 1
 ; CHECK-NEXT:    [[ABC:%.*]] = icmp ult i32 [[IDX]], -9
-; CHECK-NEXT:    br i1 [[ABC]], label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[ABC]], label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS:%.*]], !prof [[PROF0]]
 ; CHECK:       in.bounds:
 ; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[ARR:%.*]], i32 [[IDX]]
 ; CHECK-NEXT:    store i32 0, ptr [[ADDR]], align 4
@@ -345,7 +345,7 @@ define void @test_06(ptr %arr, i32 %n) {
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_NEXT:%.*]], [[IN_BOUNDS:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[IDX_NEXT]] = add i32 [[IDX]], 1
 ; CHECK-NEXT:    [[ABC:%.*]] = icmp ult i32 [[IDX]], -9
-; CHECK-NEXT:    br i1 [[ABC]], label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[ABC]], label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS:%.*]], !prof [[PROF0]]
 ; CHECK:       in.bounds:
 ; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[ARR:%.*]], i32 [[IDX]]
 ; CHECK-NEXT:    store i32 0, ptr [[ADDR]], align 4
@@ -407,9 +407,9 @@ define void @test_07(ptr %arr, i32 %n, i32 %bound) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_NEXT:%.*]], [[IN_BOUNDS:%.*]] ], [ 0, [[LOOP_PREHEADER4]] ]
-; CHECK-NEXT:    [[IDX_NEXT]] = add i32 [[IDX]], 1
+; CHECK-NEXT:    [[IDX_NEXT]] = add nsw i32 [[IDX]], 1
 ; CHECK-NEXT:    [[ABC:%.*]] = icmp ult i32 [[IDX]], [[BOUND]]
-; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT5:%.*]], !prof !0
+; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT5:%.*]], !prof [[PROF0]]
 ; CHECK:       in.bounds:
 ; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[ARR:%.*]], i32 [[IDX]]
 ; CHECK-NEXT:    store i32 0, ptr [[ADDR]], align 4
@@ -442,12 +442,12 @@ define void @test_07(ptr %arr, i32 %n, i32 %bound) {
 ; CHECK-NEXT:    [[IDX_POSTLOOP:%.*]] = phi i32 [ [[IDX_NEXT_POSTLOOP:%.*]], [[IN_BOUNDS_POSTLOOP:%.*]] ], [ [[IDX_COPY]], [[POSTLOOP]] ]
 ; CHECK-NEXT:    [[IDX_NEXT_POSTLOOP]] = add i32 [[IDX_POSTLOOP]], 1
 ; CHECK-NEXT:    [[ABC_POSTLOOP:%.*]] = icmp ult i32 [[IDX_POSTLOOP]], [[BOUND]]
-; CHECK-NEXT:    br i1 [[ABC_POSTLOOP]], label [[IN_BOUNDS_POSTLOOP]], label [[OUT_OF_BOUNDS_LOOPEXIT:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[ABC_POSTLOOP]], label [[IN_BOUNDS_POSTLOOP]], label [[OUT_OF_BOUNDS_LOOPEXIT:%.*]], !prof [[PROF0]]
 ; CHECK:       in.bounds.postloop:
 ; CHECK-NEXT:    [[ADDR_POSTLOOP:%.*]] = getelementptr i32, ptr [[ARR]], i32 [[IDX_POSTLOOP]]
 ; CHECK-NEXT:    store i32 0, ptr [[ADDR_POSTLOOP]], align 4
 ; CHECK-NEXT:    [[NEXT_POSTLOOP:%.*]] = icmp slt i32 [[IDX_NEXT_POSTLOOP]], [[N]]
-; CHECK-NEXT:    br i1 [[NEXT_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT:%.*]], [[LOOP8:!llvm.loop !.*]], !irce.loop.clone !6
+; CHECK-NEXT:    br i1 [[NEXT_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP8:![0-9]+]], !irce.loop.clone [[META6]]
 ;
   entry:
   %first.itr.check = icmp sgt i32 %n, 0
@@ -497,7 +497,7 @@ define void @test_08(ptr %arr, i32 %n, i32 %bound) {
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_NEXT:%.*]], [[IN_BOUNDS:%.*]] ], [ 0, [[LOOP_PREHEADER1]] ]
 ; CHECK-NEXT:    [[IDX_NEXT]] = add i32 [[IDX]], 1
 ; CHECK-NEXT:    [[ABC:%.*]] = icmp ult i32 [[IDX]], [[BOUND]]
-; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT2:%.*]], !prof !0
+; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT2:%.*]], !prof [[PROF0]]
 ; CHECK:       in.bounds:
 ; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[ARR:%.*]], i32 [[IDX]]
 ; CHECK-NEXT:    store i32 0, ptr [[ADDR]], align 4
@@ -530,12 +530,12 @@ define void @test_08(ptr %arr, i32 %n, i32 %bound) {
 ; CHECK-NEXT:    [[IDX_POSTLOOP:%.*]] = phi i32 [ [[IDX_NEXT_POSTLOOP:%.*]], [[IN_BOUNDS_POSTLOOP:%.*]] ], [ [[IDX_COPY]], [[POSTLOOP]] ]
 ; CHECK-NEXT:    [[IDX_NEXT_POSTLOOP]] = add i32 [[IDX_POSTLOOP]], 1
 ; CHECK-NEXT:    [[ABC_POSTLOOP:%.*]] = icmp ult i32 [[IDX_POSTLOOP]], [[BOUND]]
-; CHECK-NEXT:    br i1 [[ABC_POSTLOOP]], label [[IN_BOUNDS_POSTLOOP]], label [[OUT_OF_BOUNDS_LOOPEXIT:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[ABC_POSTLOOP]], label [[IN_BOUNDS_POSTLOOP]], label [[OUT_OF_BOUNDS_LOOPEXIT:%.*]], !prof [[PROF0]]
 ; CHECK:       in.bounds.postloop:
 ; CHECK-NEXT:    [[ADDR_POSTLOOP:%.*]] = getelementptr i32, ptr [[ARR]], i32 [[IDX_POSTLOOP]]
 ; CHECK-NEXT:    store i32 0, ptr [[ADDR_POSTLOOP]], align 4
 ; CHECK-NEXT:    [[NEXT_POSTLOOP:%.*]] = icmp ult i32 [[IDX_NEXT_POSTLOOP]], [[N]]
-; CHECK-NEXT:    br i1 [[NEXT_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT:%.*]], [[LOOP9:!llvm.loop !.*]], !irce.loop.clone !6
+; CHECK-NEXT:    br i1 [[NEXT_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP9:![0-9]+]], !irce.loop.clone [[META6]]
 ;
   entry:
   %first.itr.check = icmp sgt i32 %n, 0

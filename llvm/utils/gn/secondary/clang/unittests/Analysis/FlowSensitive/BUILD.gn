@@ -18,14 +18,18 @@ unittest("ClangAnalysisFlowSensitiveTests") {
     "//llvm/lib/Testing/Support",
   ]
   sources = [
+    "ArenaTest.cpp",
     "CFGMatchSwitchTest.cpp",
     "ChromiumCheckModelTest.cpp",
     "DataflowAnalysisContextTest.cpp",
     "DataflowEnvironmentTest.cpp",
     "DebugSupportTest.cpp",
+    "DeterminismTest.cpp",
+    "LoggerTest.cpp",
     "MapLatticeTest.cpp",
     "MatchSwitchTest.cpp",
     "MultiVarConstantPropagationTest.cpp",
+    "RecordOpsTest.cpp",
     "SignAnalysisTest.cpp",
     "SingleVarConstantPropagationTest.cpp",
     "SolverTest.cpp",

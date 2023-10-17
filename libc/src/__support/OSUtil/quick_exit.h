@@ -6,11 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_OSUTIL_QUICK_EXIT_H
-#define LLVM_LIBC_SRC_SUPPORT_OSUTIL_QUICK_EXIT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_QUICK_EXIT_H
+#define LLVM_LIBC_SRC___SUPPORT_OSUTIL_QUICK_EXIT_H
 
-#ifdef __unix__
+#include "src/__support/macros/properties/architectures.h"
+
+#if defined(LIBC_TARGET_ARCH_IS_GPU)
+#include "gpu/quick_exit.h"
+#elif defined(__APPLE__)
+#include "darwin/quick_exit.h"
+#elif defined(__linux__)
 #include "linux/quick_exit.h"
 #endif
 
-#endif // LLVM_LIBC_SRC_SUPPORT_OSUTIL_QUICK_EXIT_H
+#endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_QUICK_EXIT_H

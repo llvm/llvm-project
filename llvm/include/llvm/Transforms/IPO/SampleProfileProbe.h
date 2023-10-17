@@ -22,7 +22,6 @@
 #include <unordered_map>
 
 namespace llvm {
-class Any;
 class BasicBlock;
 class Function;
 class Instruction;
@@ -41,16 +40,6 @@ using ProbeFactorMap = std::unordered_map<std::pair<uint64_t, uint64_t>, float,
                                           pair_hash<uint64_t, uint64_t>>;
 using FuncProbeFactorMap = StringMap<ProbeFactorMap>;
 
-class PseudoProbeDescriptor {
-  uint64_t FunctionGUID;
-  uint64_t FunctionHash;
-
-public:
-  PseudoProbeDescriptor(uint64_t GUID, uint64_t Hash)
-      : FunctionGUID(GUID), FunctionHash(Hash) {}
-  uint64_t getFunctionGUID() const { return FunctionGUID; }
-  uint64_t getFunctionHash() const { return FunctionHash; }
-};
 
 // A pseudo probe verifier that can be run after each IR passes to detect the
 // violation of updating probe factors. In principle, the sum of distribution
@@ -77,20 +66,6 @@ private:
   bool shouldVerifyFunction(const Function *F);
   void verifyProbeFactors(const Function *F,
                           const ProbeFactorMap &ProbeFactors);
-};
-
-// This class serves sample counts correlation for SampleProfileLoader by
-// analyzing pseudo probes and their function descriptors injected by
-// SampleProfileProber.
-class PseudoProbeManager {
-  DenseMap<uint64_t, PseudoProbeDescriptor> GUIDToProbeDescMap;
-
-  const PseudoProbeDescriptor *getDesc(const Function &F) const;
-
-public:
-  PseudoProbeManager(const Module &M);
-  bool moduleIsProbed(const Module &M) const;
-  bool profileIsValid(const Function &F, const FunctionSamples &Samples) const;
 };
 
 /// Sample profile pseudo prober.

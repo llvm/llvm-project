@@ -16,8 +16,8 @@
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
-#include "llvm/Support/ARMTargetParser.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/TargetParser/ARMTargetParser.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -153,6 +153,10 @@ static const CoreDefinition g_core_definitions[] = {
      ArchSpec::eCore_mips64r5el, "mips64r5el"},
     {eByteOrderLittle, 8, 2, 4, llvm::Triple::mips64el,
      ArchSpec::eCore_mips64r6el, "mips64r6el"},
+
+    // MSP430
+    {eByteOrderLittle, 2, 2, 4, llvm::Triple::msp430, ArchSpec::eCore_msp430,
+     "msp430"},
 
     {eByteOrderBig, 4, 4, 4, llvm::Triple::ppc, ArchSpec::eCore_ppc_generic,
      "powerpc"},
@@ -402,6 +406,8 @@ static const ArchDefinitionEntry g_elf_arch_entries[] = {
      ArchSpec::eMIPSSubType_mips64r2el, 0xFFFFFFFFu, 0xFFFFFFFFu}, // mips64r2el
     {ArchSpec::eCore_mips64r6el, llvm::ELF::EM_MIPS,
      ArchSpec::eMIPSSubType_mips64r6el, 0xFFFFFFFFu, 0xFFFFFFFFu}, // mips64r6el
+    {ArchSpec::eCore_msp430, llvm::ELF::EM_MSP430, LLDB_INVALID_CPUTYPE,
+     0xFFFFFFFFu, 0xFFFFFFFFu}, // MSP430
     {ArchSpec::eCore_hexagon_generic, llvm::ELF::EM_HEXAGON,
      LLDB_INVALID_CPUTYPE, 0xFFFFFFFFu, 0xFFFFFFFFu}, // HEXAGON
     {ArchSpec::eCore_arc, llvm::ELF::EM_ARC_COMPACT2, LLDB_INVALID_CPUTYPE,
@@ -537,7 +543,6 @@ void ArchSpec::Clear() {
   m_triple = llvm::Triple();
   m_core = kCore_invalid;
   m_byte_order = eByteOrderInvalid;
-  m_distribution_id.Clear();
   m_flags = 0;
 }
 
@@ -681,14 +686,6 @@ llvm::Triple::ArchType ArchSpec::GetMachine() const {
     return core_def->machine;
 
   return llvm::Triple::UnknownArch;
-}
-
-ConstString ArchSpec::GetDistributionId() const {
-  return m_distribution_id;
-}
-
-void ArchSpec::SetDistributionId(const char *distribution_id) {
-  m_distribution_id.SetCString(distribution_id);
 }
 
 uint32_t ArchSpec::GetAddressByteSize() const {
@@ -899,6 +896,9 @@ bool ArchSpec::SetArchitecture(ArchitectureType arch_type, uint32_t cpu,
           case llvm::ELF::ELFOSABI_SOLARIS:
             m_triple.setOS(llvm::Triple::OSType::Solaris);
             break;
+          case llvm::ELF::ELFOSABI_STANDALONE:
+            m_triple.setOS(llvm::Triple::OSType::UnknownOS);
+            break;
           }
         } else if (arch_type == eArchTypeCOFF && os == llvm::Triple::Win32) {
           m_triple.setVendor(llvm::Triple::PC);
@@ -970,8 +970,6 @@ static bool IsCompatibleEnvironment(llvm::Triple::EnvironmentType lhs,
 }
 
 bool ArchSpec::IsMatch(const ArchSpec &rhs, MatchType match) const {
-  // explicitly ignoring m_distribution_id in this method.
-
   if (GetByteOrder() != rhs.GetByteOrder() ||
       !cores_match(GetCore(), rhs.GetCore(), true, match == ExactMatch))
     return false;

@@ -1586,3 +1586,23 @@ return:                                           ; preds = %entry, %if.then
   %retval.0 = phi i64 [ %1, %if.then ], [ 123, %entry ]
   ret i64 %retval.0
 }
+
+define i64 @atomic_and_with_not_arg(ptr %v, i64 %c) nounwind {
+; CHECK-LABEL: atomic_and_with_not_arg:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movq $-1, %rcx
+; CHECK-NEXT:    movq (%rdi), %rax
+; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:  .LBB54_1: # %atomicrmw.start
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    movq %rax, %rdx
+; CHECK-NEXT:    orq %rcx, %rdx
+; CHECK-NEXT:    lock cmpxchgq %rdx, (%rdi)
+; CHECK-NEXT:    jne .LBB54_1
+; CHECK-NEXT:  # %bb.2: # %atomicrmw.end
+; CHECK-NEXT:    retq
+  entry:
+  %0 = xor i64 0, -1
+  %1 = atomicrmw or ptr %v, i64 %0 monotonic, align 8
+  ret i64 %1
+}

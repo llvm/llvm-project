@@ -17,12 +17,6 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
     "`CMakeFiles'. Please delete them.")
 endif()
 
-set(LLDB_LINKER_SUPPORTS_GROUPS OFF)
-if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
-  # The Darwin linker doesn't understand --start-group/--end-group.
-  set(LLDB_LINKER_SUPPORTS_GROUPS ON)
-endif()
-
 macro(add_optional_dependency variable description package found)
   cmake_parse_arguments(ARG
     "QUIET"
@@ -56,7 +50,7 @@ macro(add_optional_dependency variable description package found)
   message(STATUS "${description}: ${${variable}}")
 endmacro()
 
-add_optional_dependency(LLDB_ENABLE_SWIG "Enable SWIG to generate LLDB bindings" SWIG SWIG_FOUND VERSION 3)
+add_optional_dependency(LLDB_ENABLE_SWIG "Enable SWIG to generate LLDB bindings" SWIG SWIG_FOUND VERSION 4)
 add_optional_dependency(LLDB_ENABLE_LIBEDIT "Enable editline support in LLDB" LibEdit LibEdit_FOUND)
 add_optional_dependency(LLDB_ENABLE_CURSES "Enable curses support in LLDB" CursesAndPanel CURSESANDPANEL_FOUND)
 add_optional_dependency(LLDB_ENABLE_LZMA "Enable LZMA compression support in LLDB" LibLZMA LIBLZMA_FOUND)
@@ -65,13 +59,14 @@ add_optional_dependency(LLDB_ENABLE_PYTHON "Enable Python scripting support in L
 add_optional_dependency(LLDB_ENABLE_LIBXML2 "Enable Libxml 2 support in LLDB" LibXml2 LIBXML2_FOUND VERSION 2.8)
 add_optional_dependency(LLDB_ENABLE_FBSDVMCORE "Enable libfbsdvmcore support in LLDB" FBSDVMCore FBSDVMCore_FOUND QUIET)
 
-option(LLDB_USE_SYSTEM_SIX "Use six.py shipped with system and do not install a copy of it" OFF)
 option(LLDB_USE_ENTITLEMENTS "When codesigning, use entitlements if available" ON)
 option(LLDB_BUILD_FRAMEWORK "Build LLDB.framework (Darwin only)" OFF)
 option(LLDB_NO_INSTALL_DEFAULT_RPATH "Disable default RPATH settings in binaries" OFF)
 option(LLDB_USE_SYSTEM_DEBUGSERVER "Use the system's debugserver for testing (Darwin only)." OFF)
 option(LLDB_SKIP_STRIP "Whether to skip stripping of binaries when installing lldb." OFF)
 option(LLDB_SKIP_DSYM "Whether to skip generating a dSYM when installing lldb." OFF)
+option(LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS
+  "Fail to configure if certain requirements are not met for testing." OFF)
 
 set(LLDB_GLOBAL_INIT_DIRECTORY "" CACHE STRING
   "Path to the global lldbinit directory. Relative paths are resolved relative to the
@@ -127,14 +122,11 @@ if(APPLE AND CMAKE_GENERATOR STREQUAL Xcode)
   endif()
 endif()
 
-if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
-  set(LLDB_EXPORT_ALL_SYMBOLS 0 CACHE BOOL
-    "Causes lldb to export all symbols when building liblldb.")
-else()
-  # Windows doesn't support toggling this, so don't bother making it a
-  # cache variable.
-  set(LLDB_EXPORT_ALL_SYMBOLS 0)
-endif()
+set(LLDB_EXPORT_ALL_SYMBOLS 0 CACHE BOOL
+  "Causes lldb to export some private symbols when building liblldb. See lldb/source/API/liblldb-private.exports for the full list of symbols that get exported.")
+
+set(LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE "" CACHE PATH
+  "When `LLDB_EXPORT_ALL_SYMBOLS` is enabled, this specifies the exports file to use when building liblldb.")
 
 if ((NOT MSVC) OR MSVC12)
   add_definitions( -DHAVE_ROUND )
@@ -278,30 +270,6 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   if (NOT CMAKE_CONFIGURATION_TYPES)
     add_llvm_install_targets(install-lldb-headers
                              COMPONENT lldb-headers)
-  endif()
-endif()
-
-
-# If LLDB is building against a prebuilt Clang, then the Clang resource
-# directory that LLDB is using for its embedded Clang instance needs to point
-# to the resource directory of the used Clang installation.
-if (NOT TARGET clang-resource-headers)
-  set(LLDB_CLANG_RESOURCE_DIR_NAME "${LLVM_VERSION_MAJOR}")
-  # Iterate over the possible places where the external resource directory
-  # could be and pick the first that exists.
-  foreach(CANDIDATE "${Clang_DIR}/../.." "${LLVM_DIR}" "${LLVM_LIBRARY_DIRS}"
-                    "${LLVM_BUILD_LIBRARY_DIR}"
-                    "${LLVM_LIBRARY_DIR}")
-    # Build the resource directory path by appending 'clang/<version number>'.
-    set(CANDIDATE_RESOURCE_DIR "${CANDIDATE}/clang/${LLDB_CLANG_RESOURCE_DIR_NAME}")
-    if (IS_DIRECTORY "${CANDIDATE_RESOURCE_DIR}")
-      set(LLDB_EXTERNAL_CLANG_RESOURCE_DIR "${CANDIDATE_RESOURCE_DIR}")
-      break()
-    endif()
-  endforeach()
-
-  if (NOT LLDB_EXTERNAL_CLANG_RESOURCE_DIR)
-    message(FATAL_ERROR "Expected directory for clang-resource headers not found: ${LLDB_EXTERNAL_CLANG_RESOURCE_DIR}")
   endif()
 endif()
 

@@ -860,6 +860,14 @@ void BranchFolder::mergeCommonTails(unsigned commonTailIndex) {
       for (Register Reg : NewLiveIns) {
         if (!LiveRegs.available(*MRI, Reg))
           continue;
+
+        // Skip the register if we are about to add one of its super registers.
+        // TODO: Common this up with the same logic in addLineIns().
+        if (any_of(TRI->superregs(Reg), [&](MCPhysReg SReg) {
+              return NewLiveIns.contains(SReg) && !MRI->isReserved(SReg);
+            }))
+          continue;
+
         DebugLoc DL;
         BuildMI(*Pred, InsertBefore, DL, TII->get(TargetOpcode::IMPLICIT_DEF),
                 Reg);
@@ -1207,7 +1215,7 @@ bool BranchFolder::OptimizeBranches(MachineFunction &MF) {
     MadeChange |= OptimizeBlock(&MBB);
 
     // If it is dead, remove it.
-    if (MBB.pred_empty()) {
+    if (MBB.pred_empty() && !MBB.isMachineBlockAddressTaken()) {
       RemoveDeadBlock(&MBB);
       MadeChange = true;
       ++NumDeadBlocks;
@@ -1507,42 +1515,43 @@ ReoptimizeBlock:
     }
   }
 
-  bool OptForSize =
-      MF.getFunction().hasOptSize() ||
-      llvm::shouldOptimizeForSize(MBB, PSI, &MBBFreqInfo);
-  if (!IsEmptyBlock(MBB) && MBB->pred_size() == 1 && OptForSize) {
-    // Changing "Jcc foo; foo: jmp bar;" into "Jcc bar;" might change the branch
-    // direction, thereby defeating careful block placement and regressing
-    // performance. Therefore, only consider this for optsize functions.
+  if (!IsEmptyBlock(MBB)) {
     MachineInstr &TailCall = *MBB->getFirstNonDebugInstr();
     if (TII->isUnconditionalTailCall(TailCall)) {
-      MachineBasicBlock *Pred = *MBB->pred_begin();
-      MachineBasicBlock *PredTBB = nullptr, *PredFBB = nullptr;
-      SmallVector<MachineOperand, 4> PredCond;
-      bool PredAnalyzable =
-          !TII->analyzeBranch(*Pred, PredTBB, PredFBB, PredCond, true);
+      SmallVector<MachineBasicBlock *> PredsChanged;
+      for (auto &Pred : MBB->predecessors()) {
+        MachineBasicBlock *PredTBB = nullptr, *PredFBB = nullptr;
+        SmallVector<MachineOperand, 4> PredCond;
+        bool PredAnalyzable =
+            !TII->analyzeBranch(*Pred, PredTBB, PredFBB, PredCond, true);
 
-      if (PredAnalyzable && !PredCond.empty() && PredTBB == MBB &&
-          PredTBB != PredFBB) {
-        // The predecessor has a conditional branch to this block which consists
-        // of only a tail call. Try to fold the tail call into the conditional
-        // branch.
-        if (TII->canMakeTailCallConditional(PredCond, TailCall)) {
-          // TODO: It would be nice if analyzeBranch() could provide a pointer
-          // to the branch instruction so replaceBranchWithTailCall() doesn't
-          // have to search for it.
-          TII->replaceBranchWithTailCall(*Pred, PredCond, TailCall);
-          ++NumTailCalls;
-          Pred->removeSuccessor(MBB);
-          MadeChange = true;
-          return MadeChange;
+        // Only eliminate if MBB == TBB (Taken Basic Block)
+        if (PredAnalyzable && !PredCond.empty() && PredTBB == MBB &&
+            PredTBB != PredFBB) {
+          // The predecessor has a conditional branch to this block which
+          // consists of only a tail call. Try to fold the tail call into the
+          // conditional branch.
+          if (TII->canMakeTailCallConditional(PredCond, TailCall)) {
+            // TODO: It would be nice if analyzeBranch() could provide a pointer
+            // to the branch instruction so replaceBranchWithTailCall() doesn't
+            // have to search for it.
+            TII->replaceBranchWithTailCall(*Pred, PredCond, TailCall);
+            PredsChanged.push_back(Pred);
+          }
         }
+        // If the predecessor is falling through to this block, we could reverse
+        // the branch condition and fold the tail call into that. However, after
+        // that we might have to re-arrange the CFG to fall through to the other
+        // block and there is a high risk of regressing code size rather than
+        // improving it.
       }
-      // If the predecessor is falling through to this block, we could reverse
-      // the branch condition and fold the tail call into that. However, after
-      // that we might have to re-arrange the CFG to fall through to the other
-      // block and there is a high risk of regressing code size rather than
-      // improving it.
+      if (!PredsChanged.empty()) {
+        NumTailCalls += PredsChanged.size();
+        for (auto &Pred : PredsChanged)
+          Pred->removeSuccessor(MBB);
+
+        return true;
+      }
     }
   }
 
@@ -1876,8 +1885,8 @@ MachineBasicBlock::iterator findHoistingInsertPosAndDeps(MachineBasicBlock *MBB,
     } else {
       if (Uses.erase(Reg)) {
         if (Reg.isPhysical()) {
-          for (MCSubRegIterator SubRegs(Reg, TRI); SubRegs.isValid(); ++SubRegs)
-            Uses.erase(*SubRegs); // Use sub-registers to be conservative
+          for (MCPhysReg SubReg : TRI->subregs(Reg))
+            Uses.erase(SubReg); // Use sub-registers to be conservative
         }
       }
       addRegAndItsAliases(Reg, TRI, Defs);
@@ -1988,8 +1997,8 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
       break;
 
     // Remove kills from ActiveDefsSet, these registers had short live ranges.
-    for (const MachineOperand &MO : TIB->operands()) {
-      if (!MO.isReg() || !MO.isUse() || !MO.isKill())
+    for (const MachineOperand &MO : TIB->all_uses()) {
+      if (!MO.isKill())
         continue;
       Register Reg = MO.getReg();
       if (!Reg)
@@ -2006,8 +2015,8 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
     }
 
     // Track local defs so we can update liveins.
-    for (const MachineOperand &MO : TIB->operands()) {
-      if (!MO.isReg() || !MO.isDef() || MO.isDead())
+    for (const MachineOperand &MO : TIB->all_defs()) {
+      if (MO.isDead())
         continue;
       Register Reg = MO.getReg();
       if (!Reg || Reg.isVirtual())

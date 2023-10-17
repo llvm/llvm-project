@@ -35,6 +35,17 @@ static void registerAllUpstreamDialects(MlirContext ctx) {
   mlirDialectRegistryDestroy(registry);
 }
 
+struct ResourceDeleteUserData {
+  const char *name;
+};
+static struct ResourceDeleteUserData resourceI64BlobUserData = {
+    "resource_i64_blob"};
+static void reportResourceDelete(void *userData, const void *data, size_t size,
+                                 size_t align) {
+  fprintf(stderr, "reportResourceDelete: %s\n",
+          ((struct ResourceDeleteUserData *)userData)->name);
+}
+
 void populateLoopBody(MlirContext ctx, MlirBlock loopBody,
                       MlirLocation location, MlirBlock funcBody) {
   MlirValue iv = mlirBlockGetArgument(loopBody, 0);
@@ -396,24 +407,23 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   fprintf(stderr, "\n");
   // CHECK: Terminator: func.return
 
-  // Get the attribute by index.
-  MlirNamedAttribute namedAttr0 = mlirOperationGetAttribute(operation, 0);
-  fprintf(stderr, "Get attr 0: ");
-  mlirAttributePrint(namedAttr0.attribute, printToStderr, NULL);
-  fprintf(stderr, "\n");
-  // CHECK: Get attr 0: 0 : index
+  // Get the attribute by name.
+  bool hasValueAttr = mlirOperationHasInherentAttributeByName(
+      operation, mlirStringRefCreateFromCString("value"));
+  if (hasValueAttr)
+    // CHECK: Has attr "value"
+    fprintf(stderr, "Has attr \"value\"");
 
-  // Now re-get the attribute by name.
-  MlirAttribute attr0ByName = mlirOperationGetAttributeByName(
-      operation, mlirIdentifierStr(namedAttr0.name));
-  fprintf(stderr, "Get attr 0 by name: ");
-  mlirAttributePrint(attr0ByName, printToStderr, NULL);
+  MlirAttribute valueAttr0 = mlirOperationGetInherentAttributeByName(
+      operation, mlirStringRefCreateFromCString("value"));
+  fprintf(stderr, "Get attr \"value\": ");
+  mlirAttributePrint(valueAttr0, printToStderr, NULL);
   fprintf(stderr, "\n");
-  // CHECK: Get attr 0 by name: 0 : index
+  // CHECK: Get attr "value": 0 : index
 
   // Get a non-existing attribute and assert that it is null (sanity).
   fprintf(stderr, "does_not_exist is null: %d\n",
-          mlirAttributeIsNull(mlirOperationGetAttributeByName(
+          mlirAttributeIsNull(mlirOperationGetDiscardableAttributeByName(
               operation, mlirStringRefCreateFromCString("does_not_exist"))));
   // CHECK: does_not_exist is null: 1
 
@@ -432,10 +442,10 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   fprintf(stderr, "\n");
   // CHECK: Result 0 type: index
 
-  // Set a custom attribute.
-  mlirOperationSetAttributeByName(operation,
-                                  mlirStringRefCreateFromCString("custom_attr"),
-                                  mlirBoolAttrGet(ctx, 1));
+  // Set a discardable attribute.
+  mlirOperationSetDiscardableAttributeByName(
+      operation, mlirStringRefCreateFromCString("custom_attr"),
+      mlirBoolAttrGet(ctx, 1));
   fprintf(stderr, "Op with set attr: ");
   mlirOperationPrint(operation, printToStderr, NULL);
   fprintf(stderr, "\n");
@@ -443,13 +453,13 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
 
   // Remove the attribute.
   fprintf(stderr, "Remove attr: %d\n",
-          mlirOperationRemoveAttributeByName(
+          mlirOperationRemoveDiscardableAttributeByName(
               operation, mlirStringRefCreateFromCString("custom_attr")));
   fprintf(stderr, "Remove attr again: %d\n",
-          mlirOperationRemoveAttributeByName(
+          mlirOperationRemoveDiscardableAttributeByName(
               operation, mlirStringRefCreateFromCString("custom_attr")));
   fprintf(stderr, "Removed attr is null: %d\n",
-          mlirAttributeIsNull(mlirOperationGetAttributeByName(
+          mlirAttributeIsNull(mlirOperationGetDiscardableAttributeByName(
               operation, mlirStringRefCreateFromCString("custom_attr"))));
   // CHECK: Remove attr: 1
   // CHECK: Remove attr again: 0
@@ -458,7 +468,7 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   // Add a large attribute to verify printing flags.
   int64_t eltsShape[] = {4};
   int32_t eltsData[] = {1, 2, 3, 4};
-  mlirOperationSetAttributeByName(
+  mlirOperationSetDiscardableAttributeByName(
       operation, mlirStringRefCreateFromCString("elts"),
       mlirDenseElementsAttrInt32Get(
           mlirRankedTensorTypeGet(1, eltsShape, mlirIntegerTypeGet(ctx, 32),
@@ -473,8 +483,15 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   mlirOperationPrintWithFlags(operation, flags, printToStderr, NULL);
   fprintf(stderr, "\n");
   // clang-format off
-  // CHECK: Op print with all flags: %{{.*}} = "arith.constant"() {elts = dense_resource<__elided__> : tensor<4xi32>, value = 0 : index} : () -> index loc(unknown)
+  // CHECK: Op print with all flags: %{{.*}} = "arith.constant"() <{value = 0 : index}> {elts = dense_resource<__elided__> : tensor<4xi32>} : () -> index loc(unknown)
   // clang-format on
+
+  MlirAsmState state = mlirAsmStateCreateForOperation(parentOperation, flags);
+  fprintf(stderr, "With state: |");
+  mlirValuePrintAsOperand(value, state, printToStderr, NULL);
+  // CHECK: With state: |%0|
+  fprintf(stderr, "|\n");
+  mlirAsmStateDestroy(state);
 
   mlirOpPrintingFlagsDestroy(flags);
 }
@@ -1116,24 +1133,26 @@ int printBuiltinAttributes(MlirContext ctx) {
       fabs(mlirDenseElementsAttrGetDoubleSplatValue(splatDouble) - 1.0) > 1E-6)
     return 17;
 
-  uint8_t *uint8RawData =
-      (uint8_t *)mlirDenseElementsAttrGetRawData(uint8Elements);
-  int8_t *int8RawData = (int8_t *)mlirDenseElementsAttrGetRawData(int8Elements);
-  uint32_t *uint32RawData =
-      (uint32_t *)mlirDenseElementsAttrGetRawData(uint32Elements);
-  int32_t *int32RawData =
-      (int32_t *)mlirDenseElementsAttrGetRawData(int32Elements);
-  uint64_t *uint64RawData =
-      (uint64_t *)mlirDenseElementsAttrGetRawData(uint64Elements);
-  int64_t *int64RawData =
-      (int64_t *)mlirDenseElementsAttrGetRawData(int64Elements);
-  float *floatRawData = (float *)mlirDenseElementsAttrGetRawData(floatElements);
-  double *doubleRawData =
-      (double *)mlirDenseElementsAttrGetRawData(doubleElements);
-  uint16_t *bf16RawData =
-      (uint16_t *)mlirDenseElementsAttrGetRawData(bf16Elements);
-  uint16_t *f16RawData =
-      (uint16_t *)mlirDenseElementsAttrGetRawData(f16Elements);
+  const uint8_t *uint8RawData =
+      (const uint8_t *)mlirDenseElementsAttrGetRawData(uint8Elements);
+  const int8_t *int8RawData =
+      (const int8_t *)mlirDenseElementsAttrGetRawData(int8Elements);
+  const uint32_t *uint32RawData =
+      (const uint32_t *)mlirDenseElementsAttrGetRawData(uint32Elements);
+  const int32_t *int32RawData =
+      (const int32_t *)mlirDenseElementsAttrGetRawData(int32Elements);
+  const uint64_t *uint64RawData =
+      (const uint64_t *)mlirDenseElementsAttrGetRawData(uint64Elements);
+  const int64_t *int64RawData =
+      (const int64_t *)mlirDenseElementsAttrGetRawData(int64Elements);
+  const float *floatRawData =
+      (const float *)mlirDenseElementsAttrGetRawData(floatElements);
+  const double *doubleRawData =
+      (const double *)mlirDenseElementsAttrGetRawData(doubleElements);
+  const uint16_t *bf16RawData =
+      (const uint16_t *)mlirDenseElementsAttrGetRawData(bf16Elements);
+  const uint16_t *f16RawData =
+      (const uint16_t *)mlirDenseElementsAttrGetRawData(f16Elements);
   if (uint8RawData[0] != 0u || uint8RawData[1] != 1u || int8RawData[0] != 0 ||
       int8RawData[1] != 1 || uint32RawData[0] != 0u || uint32RawData[1] != 1u ||
       int32RawData[0] != 0 || int32RawData[1] != 1 || uint64RawData[0] != 0u ||
@@ -1268,6 +1287,14 @@ int printBuiltinAttributes(MlirContext ctx) {
   MlirAttribute doublesBlob = mlirUnmanagedDenseDoubleResourceElementsAttrGet(
       mlirRankedTensorTypeGet(2, shape, mlirF64TypeGet(ctx), encoding),
       mlirStringRefCreateFromCString("resource_f64"), 2, doubles);
+  MlirAttribute blobBlob = mlirUnmanagedDenseResourceElementsAttrGet(
+      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeGet(ctx, 64), encoding),
+      mlirStringRefCreateFromCString("resource_i64_blob"), /*data=*/uints64,
+      /*dataLength=*/sizeof(uints64),
+      /*dataAlignment=*/_Alignof(uint64_t),
+      /*dataIsMutable=*/false,
+      /*deleter=*/reportResourceDelete,
+      /*userData=*/(void *)&resourceI64BlobUserData);
 
   mlirAttributeDump(uint8Blob);
   mlirAttributeDump(uint16Blob);
@@ -1279,6 +1306,7 @@ int printBuiltinAttributes(MlirContext ctx) {
   mlirAttributeDump(int64Blob);
   mlirAttributeDump(floatsBlob);
   mlirAttributeDump(doublesBlob);
+  mlirAttributeDump(blobBlob);
   // CHECK: dense_resource<resource_ui8> : tensor<1x2xui8>
   // CHECK: dense_resource<resource_ui16> : tensor<1x2xui16>
   // CHECK: dense_resource<resource_ui32> : tensor<1x2xui32>
@@ -1289,6 +1317,7 @@ int printBuiltinAttributes(MlirContext ctx) {
   // CHECK: dense_resource<resource_i64> : tensor<1x2xi64>
   // CHECK: dense_resource<resource_f32> : tensor<1x2xf32>
   // CHECK: dense_resource<resource_f64> : tensor<1x2xf64>
+  // CHECK: dense_resource<resource_i64_blob> : tensor<1x2xi64>
 
   if (mlirDenseUInt8ResourceElementsAttrGetValue(uint8Blob, 1) != 1 ||
       mlirDenseUInt16ResourceElementsAttrGetValue(uint16Blob, 1) != 1 ||
@@ -1302,8 +1331,14 @@ int printBuiltinAttributes(MlirContext ctx) {
       fabsf(mlirDenseFloatResourceElementsAttrGetValue(floatsBlob, 1) - 1.0f) >
           1e-6 ||
       fabs(mlirDenseDoubleResourceElementsAttrGetValue(doublesBlob, 1) - 1.0f) >
-          1e-6)
+          1e-6 ||
+      mlirDenseUInt64ResourceElementsAttrGetValue(blobBlob, 1) != 1)
     return 23;
+
+  MlirLocation loc = mlirLocationUnknownGet(ctx);
+  MlirAttribute locAttr = mlirLocationGetAttribute(loc);
+  if (!mlirAttributeIsALocation(locAttr))
+    return 24;
 
   return 0;
 }
@@ -1720,10 +1755,10 @@ int registerOnlyStd(void) {
   fprintf(stderr, "@registration\n");
   // CHECK-LABEL: @registration
 
-  // CHECK: cf.cond_br is_registered: 1
-  fprintf(stderr, "cf.cond_br is_registered: %d\n",
+  // CHECK: func.call is_registered: 1
+  fprintf(stderr, "func.call is_registered: %d\n",
           mlirContextIsRegisteredOperation(
-              ctx, mlirStringRefCreateFromCString("cf.cond_br")));
+              ctx, mlirStringRefCreateFromCString("func.call")));
 
   // CHECK: func.not_existing_op is_registered: 0
   fprintf(stderr, "func.not_existing_op is_registered: %d\n",
@@ -1868,9 +1903,61 @@ int testOperands(void) {
     return 3;
   }
 
+  MlirOperationState op2State =
+      mlirOperationStateGet(mlirStringRefCreateFromCString("dummy.op2"), loc);
+  MlirValue initialOperands2[] = {constOneValue};
+  mlirOperationStateAddOperands(&op2State, 1, initialOperands2);
+  MlirOperation op2 = mlirOperationCreate(&op2State);
+
+  MlirOpOperand use3 = mlirValueGetFirstUse(constOneValue);
+  fprintf(stderr, "First use owner: ");
+  mlirOperationPrint(mlirOpOperandGetOwner(use3), printToStderr, NULL);
+  fprintf(stderr, "\n");
+  // CHECK: First use owner: "dummy.op2"
+
+  use3 = mlirOpOperandGetNextUse(mlirValueGetFirstUse(constOneValue));
+  fprintf(stderr, "Second use owner: ");
+  mlirOperationPrint(mlirOpOperandGetOwner(use3), printToStderr, NULL);
+  fprintf(stderr, "\n");
+  // CHECK: Second use owner: "dummy.op"
+
+  MlirAttribute indexTwoLiteral =
+      mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("2 : index"));
+  MlirNamedAttribute indexTwoValueAttr = mlirNamedAttributeGet(
+      mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("value")),
+      indexTwoLiteral);
+  MlirOperationState constTwoState = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("arith.constant"), loc);
+  mlirOperationStateAddResults(&constTwoState, 1, &indexType);
+  mlirOperationStateAddAttributes(&constTwoState, 1, &indexTwoValueAttr);
+  MlirOperation constTwo = mlirOperationCreate(&constTwoState);
+  MlirValue constTwoValue = mlirOperationGetResult(constTwo, 0);
+
+  mlirValueReplaceAllUsesOfWith(constOneValue, constTwoValue);
+
+  use3 = mlirValueGetFirstUse(constOneValue);
+  if (!mlirOpOperandIsNull(use3)) {
+    fprintf(stderr, "ERROR: Use should be null\n");
+    return 4;
+  }
+
+  MlirOpOperand use4 = mlirValueGetFirstUse(constTwoValue);
+  fprintf(stderr, "First replacement use owner: ");
+  mlirOperationPrint(mlirOpOperandGetOwner(use4), printToStderr, NULL);
+  fprintf(stderr, "\n");
+  // CHECK: First replacement use owner: "dummy.op"
+
+  use4 = mlirOpOperandGetNextUse(mlirValueGetFirstUse(constTwoValue));
+  fprintf(stderr, "Second replacement use owner: ");
+  mlirOperationPrint(mlirOpOperandGetOwner(use4), printToStderr, NULL);
+  fprintf(stderr, "\n");
+  // CHECK: Second replacement use owner: "dummy.op2"
+
   mlirOperationDestroy(op);
+  mlirOperationDestroy(op2);
   mlirOperationDestroy(constZero);
   mlirOperationDestroy(constOne);
+  mlirOperationDestroy(constTwo);
   mlirContextDestroy(ctx);
 
   return 0;
@@ -1885,6 +1972,7 @@ int testClone(void) {
   registerAllUpstreamDialects(ctx);
 
   mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("func"));
+  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("arith"));
   MlirLocation loc = mlirLocationUnknownGet(ctx);
   MlirType indexType = mlirIndexTypeGet(ctx);
   MlirStringRef valueStringRef = mlirStringRefCreateFromCString("value");
@@ -2152,6 +2240,18 @@ int testDialectRegistry(void) {
   return 0;
 }
 
+void testExplicitThreadPools(void) {
+  MlirLlvmThreadPool threadPool = mlirLlvmThreadPoolCreate();
+  MlirDialectRegistry registry = mlirDialectRegistryCreate();
+  mlirRegisterAllDialects(registry);
+  MlirContext context =
+      mlirContextCreateWithRegistry(registry, /*threadingEnabled=*/false);
+  mlirContextSetThreadPool(context, threadPool);
+  mlirContextDestroy(context);
+  mlirDialectRegistryDestroy(registry);
+  mlirLlvmThreadPoolDestroy(threadPool);
+}
+
 void testDiagnostics(void) {
   MlirContext ctx = mlirContextCreate();
   MlirDiagnosticHandlerID id = mlirContextAttachDiagnosticHandler(
@@ -2159,6 +2259,9 @@ void testDiagnostics(void) {
   fprintf(stderr, "@test_diagnostics\n");
   MlirLocation unknownLoc = mlirLocationUnknownGet(ctx);
   mlirEmitError(unknownLoc, "test diagnostics");
+  MlirAttribute unknownAttr = mlirLocationGetAttribute(unknownLoc);
+  MlirLocation unknownClone = mlirLocationFromAttribute(unknownAttr);
+  mlirEmitError(unknownClone, "test clone");
   MlirLocation fileLineColLoc = mlirLocationFileLineColGet(
       ctx, mlirStringRefCreateFromCString("file.c"), 1, 2);
   mlirEmitError(fileLineColLoc, "test diagnostics");
@@ -2180,6 +2283,9 @@ void testDiagnostics(void) {
   // CHECK-LABEL: @test_diagnostics
   // CHECK: processing diagnostic (userData: 42) <<
   // CHECK:   test diagnostics
+  // CHECK:   loc(unknown)
+  // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   test clone
   // CHECK:   loc(unknown)
   // CHECK: >> end of diagnostic (userData: 42)
   // CHECK: processing diagnostic (userData: 42) <<
@@ -2244,8 +2350,13 @@ int main(void) {
   if (testDialectRegistry())
     return 15;
 
+  testExplicitThreadPools();
+  testDiagnostics();
+
+  // CHECK: DESTROY MAIN CONTEXT
+  // CHECK: reportResourceDelete: resource_i64_blob
+  fprintf(stderr, "DESTROY MAIN CONTEXT\n");
   mlirContextDestroy(ctx);
 
-  testDiagnostics();
   return 0;
 }

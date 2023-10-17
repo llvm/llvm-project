@@ -14,8 +14,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
-#include "Utils/WebAssemblyTypeUtilities.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -25,6 +25,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/LEB128.h"
 
@@ -108,8 +109,8 @@ template <typename T>
 bool parseImmediate(MCInst &MI, uint64_t &Size, ArrayRef<uint8_t> Bytes) {
   if (Size + sizeof(T) > Bytes.size())
     return false;
-  T Val = support::endian::read<T, support::endianness::little, 1>(
-      Bytes.data() + Size);
+  T Val =
+      support::endian::read<T, llvm::endianness::little>(Bytes.data() + Size);
   Size += sizeof(T);
   if (std::is_floating_point<T>::value) {
     MI.addOperand(

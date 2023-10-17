@@ -8,6 +8,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @b = external global [512 x [4 x i32]], align 1
 @c = external global [2 x [4 x i32]], align 1
+@d = external global [1024 x [512 x [4 x i32]]], align 1
 
 define void @test1() {
 ; CHECK-LABEL: @test1(
@@ -166,3 +167,97 @@ for.cond75.preheader:                             ; preds = %for.inc68
   unreachable
 }
 
+; Same as test1, but with a third index on the GEP
+define void @test3() {
+; CHECK-LABEL: @test3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_COND37_PREHEADER_PREHEADER:%.*]]
+; CHECK:       for.cond33.preheader.preheader:
+; CHECK-NEXT:    br label [[FOR_COND33_PREHEADER:%.*]]
+; CHECK:       for.cond33.preheader:
+; CHECK-NEXT:    [[I_011:%.*]] = phi i16 [ [[INC69:%.*]], [[FOR_END67:%.*]] ], [ 0, [[FOR_COND33_PREHEADER_PREHEADER:%.*]] ]
+; CHECK-NEXT:    br label [[FOR_BODY42_SPLIT1:%.*]]
+; CHECK:       for.body42.preheader:
+; CHECK-NEXT:    br label [[FOR_BODY42:%.*]]
+; CHECK:       for.cond38.preheader.preheader:
+; CHECK-NEXT:    br label [[FOR_COND38_PREHEADER:%.*]]
+; CHECK:       for.cond37.preheader.preheader:
+; CHECK-NEXT:    br label [[FOR_COND37_PREHEADER:%.*]]
+; CHECK:       for.cond37.preheader:
+; CHECK-NEXT:    [[J_010:%.*]] = phi i16 [ [[INC66:%.*]], [[FOR_END64:%.*]] ], [ 0, [[FOR_COND37_PREHEADER_PREHEADER]] ]
+; CHECK-NEXT:    br label [[FOR_COND38_PREHEADER_PREHEADER:%.*]]
+; CHECK:       for.cond38.preheader:
+; CHECK-NEXT:    [[K_010:%.*]] = phi i16 [ [[INC67:%.*]], [[FOR_END65:%.*]] ], [ 0, [[FOR_COND38_PREHEADER_PREHEADER]] ]
+; CHECK-NEXT:    br label [[FOR_BODY42_PREHEADER:%.*]]
+; CHECK:       for.body42:
+; CHECK-NEXT:    [[K_09:%.*]] = phi i16 [ [[TMP1:%.*]], [[FOR_BODY42_SPLIT:%.*]] ], [ -512, [[FOR_BODY42_PREHEADER]] ]
+; CHECK-NEXT:    br label [[FOR_COND33_PREHEADER_PREHEADER]]
+; CHECK:       for.body42.split1:
+; CHECK-NEXT:    [[SUB51:%.*]] = add nsw i16 [[K_09]], 512
+; CHECK-NEXT:    [[ARRAYIDX55:%.*]] = getelementptr inbounds [1024 x [512 x [4 x i32]]], ptr @d, i16 0, i16 [[SUB51]], i16 [[J_010]], i16 [[K_010]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX55]], align 1
+; CHECK-NEXT:    [[ADD61:%.*]] = add i32 undef, undef
+; CHECK-NEXT:    [[INC63:%.*]] = add nsw i16 [[K_09]], 1
+; CHECK-NEXT:    br label [[FOR_END67]]
+; CHECK:       for.body42.split:
+; CHECK-NEXT:    [[ADD61_LCSSA:%.*]] = phi i32 [ [[ADD61]], [[FOR_END67]] ]
+; CHECK-NEXT:    [[TMP1]] = add nsw i16 [[K_09]], 1
+; CHECK-NEXT:    br i1 true, label [[FOR_END65]], label [[FOR_BODY42]]
+; CHECK:       for.end65:
+; CHECK-NEXT:    [[ADD61_LCSSA_LCSSA:%.*]] = phi i32 [ [[ADD61_LCSSA]], [[FOR_BODY42_SPLIT]] ]
+; CHECK-NEXT:    store i32 [[ADD61_LCSSA_LCSSA]], ptr undef, align 1
+; CHECK-NEXT:    [[INC67]] = add nuw nsw i16 [[K_010]], 1
+; CHECK-NEXT:    br i1 true, label [[FOR_END64]], label [[FOR_COND38_PREHEADER]]
+; CHECK:       for.end64:
+; CHECK-NEXT:    [[INC66]] = add nuw nsw i16 [[J_010]], 1
+; CHECK-NEXT:    br i1 true, label [[FOR_COND75_PREHEADER:%.*]], label [[FOR_COND37_PREHEADER]]
+; CHECK:       for.end67:
+; CHECK-NEXT:    [[INC69]] = add nuw nsw i16 [[I_011]], 1
+; CHECK-NEXT:    [[EXITCOND13_NOT:%.*]] = icmp eq i16 [[INC69]], 2
+; CHECK-NEXT:    br i1 [[EXITCOND13_NOT]], label [[FOR_BODY42_SPLIT]], label [[FOR_COND33_PREHEADER]]
+; CHECK:       for.cond75.preheader:
+; CHECK-NEXT:    br label [[FOR_COND75:%.*]]
+; CHECK:       for.cond75:
+; CHECK-NEXT:    br label [[FOR_COND75]]
+;
+entry:
+  br label %for.cond33.preheader
+
+for.cond33.preheader:                             ; preds = %for.end67, %entry
+  %i.011 = phi i16 [ 0, %entry ], [ %inc69, %for.end67 ]
+  br label %for.cond37.preheader
+
+for.cond37.preheader:                             ; preds = %for.end64, %for.cond33.preheader
+  %j.010 = phi i16 [ 0, %for.cond33.preheader ], [ %inc66, %for.end64 ]
+  br label %for.cond38.preheader
+
+for.cond38.preheader:                             ; preds = %for.end65, %for.cond37.preheader
+  %k.010 = phi i16 [ 0, %for.cond37.preheader ], [ %inc67, %for.end65 ]
+  br label %for.body42
+
+for.body42:                                       ; preds = %for.body42, %for.cond38.preheader
+  %k.09 = phi i16 [ -512, %for.cond38.preheader ], [ %inc63, %for.body42 ]
+  %sub51 = add nsw i16 %k.09, 512
+  %arrayidx55 = getelementptr inbounds [1024 x [512 x [4 x i32]]], ptr @d, i16 0, i16 %sub51, i16 %j.010, i16 %k.010
+  %0 = load i32, ptr %arrayidx55, align 1
+  %add61 = add i32 undef, undef
+  %inc63 = add nsw i16 %k.09, 1
+  br i1 true, label %for.end65, label %for.body42
+
+for.end65:                                        ; preds = %for.body42
+  store i32 %add61, ptr undef, align 1
+  %inc67 = add nuw nsw i16 %k.010, 1
+  br i1 true, label %for.end64, label %for.cond38.preheader
+
+for.end64:                                        ; preds = %for.end65
+  %inc66 = add nuw nsw i16 %j.010, 1
+  br i1 true, label %for.end67, label %for.cond37.preheader
+
+for.end67:                                        ; preds = %for.end64
+  %inc69 = add nuw nsw i16 %i.011, 1
+  %exitcond13.not = icmp eq i16 %inc69, 2
+  br i1 %exitcond13.not, label %for.cond75, label %for.cond33.preheader
+
+for.cond75:                                       ; preds = %for.cond75, %for.end67
+  br label %for.cond75
+}

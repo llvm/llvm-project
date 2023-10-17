@@ -10,7 +10,7 @@
 ; RUN: llvm-profdata merge --sample --extbinary --use-md5 %S/Inputs/profile-context-tracker.prof -o %t.md5
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.md5 -sample-profile-inline-size -sample-profile-prioritized-inline=0 -profile-sample-accurate -S -pass-remarks=inline -o /dev/null 2>&1 | FileCheck %s --check-prefix=INLINE-BASE
 
-; RUN: llvm-profdata merge --sample --text --gen-cs-nested-profile %S/Inputs/profile-context-tracker.prof -o %t.prof
+; RUN: llvm-profdata merge --sample --text --convert-sample-profile-layout=nest  %S/Inputs/profile-context-tracker.prof -o %t.prof
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.prof -sample-profile-inline-size -sample-profile-prioritized-inline=0 -profile-sample-accurate -S -pass-remarks=inline -o /dev/null 2>&1 | FileCheck %s --check-prefix=INLINE-BASE
 
 ; With new FDO early inliner, callee entry count is used to drive inlining instead of callee total samples, so we get less inlining for given profile

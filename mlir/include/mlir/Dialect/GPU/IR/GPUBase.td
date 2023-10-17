@@ -57,7 +57,6 @@ def GPU_Dialect : Dialect {
   let dependentDialects = ["arith::ArithDialect"];
   let useDefaultAttributePrinterParser = 1;
   let useDefaultTypePrinterParser = 1;
-  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 //===----------------------------------------------------------------------===//
@@ -92,22 +91,34 @@ def GPU_AddressSpaceAttr :
 //===----------------------------------------------------------------------===//
 
 def GPU_AsyncToken : DialectType<
-  GPU_Dialect, CPred<"$_self.isa<::mlir::gpu::AsyncTokenType>()">, "async token type">,
+  GPU_Dialect, CPred<"::llvm::isa<::mlir::gpu::AsyncTokenType>($_self)">, "async token type">,
              BuildableType<"mlir::gpu::AsyncTokenType::get($_builder.getContext())">;
 
 // Predicat to check if type is gpu::MMAMatrixType.
-def IsMMAMatrixTypePred : CPred<"$_self.isa<::mlir::gpu::MMAMatrixType>()">;
+def IsMMAMatrixTypePred : CPred<"::llvm::isa<::mlir::gpu::MMAMatrixType>($_self)">;
 
 def GPU_MMAMatrix : DialectType<
   GPU_Dialect, IsMMAMatrixTypePred, "MMAMatrix type">;
 
 // Memref type acceptable to gpu.subgroup_mma_{load|store}_matrix ops.
-def GPU_MMAMemRef : MemRefOf<[F16, F32, VectorOfRankAndType<[1], [F16, F32]>]>;
+def GPU_MMAMemRef : MemRefOf<[I8, I32, F16, F32, VectorOfRankAndType<[1], [I8, I32, F16, F32]>]>;
 
 class MMAMatrixOf<list<Type> allowedTypes> :
   ContainerType<AnyTypeOf<allowedTypes>, IsMMAMatrixTypePred,
-  "$_self.cast<::mlir::gpu::MMAMatrixType>().getElementType()",
+  "::llvm::cast<::mlir::gpu::MMAMatrixType>($_self).getElementType()",
   "gpu.mma_matrix", "::mlir::gpu::MMAMatrixType">;
+
+// Types for all sparse handles.
+class GPU_SparseHandle<string typeStr, string description> :
+    DialectType<GPU_Dialect,
+    CPred<"llvm::isa<::mlir::gpu::"#typeStr#">($_self)">,
+    description#" handle type">,
+  BuildableType<"mlir::gpu::"#typeStr#"::get($_builder.getContext())">;
+
+def GPU_SparseDnTensorHandle : GPU_SparseHandle<"SparseDnTensorHandleType", "dense tensor">;
+def GPU_SparseSpGEMMOpHandle : GPU_SparseHandle<"SparseSpGEMMOpHandleType", "SpGEMM operation">;
+def GPU_SparseSpMatHandle : GPU_SparseHandle<"SparseSpMatHandleType", "sparse matrix">;
+
 
 //===----------------------------------------------------------------------===//
 // GPU Interfaces.

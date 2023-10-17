@@ -47,7 +47,9 @@ namespace llvm {
 
 using llvm::object::BuildIDRef;
 
-static std::string uniqueKey(llvm::StringRef S) { return utostr(xxHash64(S)); }
+static std::string uniqueKey(llvm::StringRef S) {
+  return utostr(xxh3_64bits(S));
+}
 
 // Returns a binary BuildID as a normalized hex string.
 // Uses lowercase for compatibility with common debuginfod servers.
@@ -55,7 +57,11 @@ static std::string buildIDToString(BuildIDRef ID) {
   return llvm::toHex(ID, /*LowerCase=*/true);
 }
 
-Expected<SmallVector<StringRef>> getDefaultDebuginfodUrls() {
+bool canUseDebuginfod() {
+  return HTTPClient::isAvailable() && !getDefaultDebuginfodUrls().empty();
+}
+
+SmallVector<StringRef> getDefaultDebuginfodUrls() {
   const char *DebuginfodUrlsEnv = std::getenv("DEBUGINFOD_URLS");
   if (DebuginfodUrlsEnv == nullptr)
     return SmallVector<StringRef>();
@@ -126,13 +132,8 @@ Expected<std::string> getCachedOrDownloadArtifact(StringRef UniqueKey,
     return CacheDirOrErr.takeError();
   CacheDir = *CacheDirOrErr;
 
-  Expected<SmallVector<StringRef>> DebuginfodUrlsOrErr =
-      getDefaultDebuginfodUrls();
-  if (!DebuginfodUrlsOrErr)
-    return DebuginfodUrlsOrErr.takeError();
-  SmallVector<StringRef> &DebuginfodUrls = *DebuginfodUrlsOrErr;
   return getCachedOrDownloadArtifact(UniqueKey, UrlPath, CacheDir,
-                                     DebuginfodUrls,
+                                     getDefaultDebuginfodUrls(),
                                      getDefaultDebuginfodTimeout());
 }
 
@@ -159,7 +160,8 @@ public:
 
 Error StreamedHTTPResponseHandler::handleBodyChunk(StringRef BodyChunk) {
   if (!FileStream) {
-    if (Client.responseCode() != 200)
+    unsigned Code = Client.responseCode();
+    if (Code && Code != 200)
       return Error::success();
     Expected<std::unique_ptr<CachedFileStream>> FileStreamOrError =
         CreateStream();
@@ -251,16 +253,25 @@ Expected<std::string> getCachedOrDownloadArtifact(
 
     // Perform the HTTP request and if successful, write the response body to
     // the cache.
-    StreamedHTTPResponseHandler Handler(
-        [&]() { return CacheAddStream(Task, ""); }, Client);
-    HTTPRequest Request(ArtifactUrl);
-    Request.Headers = getHeaders();
-    Error Err = Client.perform(Request, Handler);
-    if (Err)
-      return std::move(Err);
+    {
+      StreamedHTTPResponseHandler Handler(
+          [&]() { return CacheAddStream(Task, ""); }, Client);
+      HTTPRequest Request(ArtifactUrl);
+      Request.Headers = getHeaders();
+      Error Err = Client.perform(Request, Handler);
+      if (Err)
+        return std::move(Err);
 
-    if (Client.responseCode() != 200)
-      continue;
+      unsigned Code = Client.responseCode();
+      if (Code && Code != 200)
+        continue;
+    }
+
+    Expected<CachePruningPolicy> PruningPolicyOrErr =
+        parseCachePruningPolicy(std::getenv("DEBUGINFOD_CACHE_POLICY"));
+    if (!PruningPolicyOrErr)
+      return PruningPolicyOrErr.takeError();
+    pruneCache(CacheDirectoryPath, *PruningPolicyOrErr);
 
     // Return the path to the artifact on disk.
     return std::string(AbsCachedArtifactPath);
@@ -403,11 +414,11 @@ Error DebuginfodCollection::findBinaries(StringRef Path) {
         if (!Object)
           continue;
 
-        std::optional<BuildIDRef> ID = getBuildID(Object);
-        if (!ID)
+        BuildIDRef ID = getBuildID(Object);
+        if (ID.empty())
           continue;
 
-        std::string IDString = buildIDToString(*ID);
+        std::string IDString = buildIDToString(ID);
         if (Object->hasDebugInfo()) {
           std::lock_guard<sys::RWMutex> DebugBinariesGuard(DebugBinariesMutex);
           (void)DebugBinaries.try_emplace(IDString, std::move(FilePath));

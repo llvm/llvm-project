@@ -22,7 +22,7 @@ entry:
   %3 = load i8, ptr %2, align 1, !dbg !20
   %conv = sext i8 %3 to i32, !dbg !20
 
-  ; CHECK: X86ISD::RET_FLAG {{.*}}, TargetConstant:i32<0>, Register:i32 $eax, {{.*}}, <stdin>:2:3
+  ; CHECK: X86ISD::RET_GLUE {{.*}}, TargetConstant:i32<0>, Register:i32 $eax, {{.*}}, <stdin>:2:3
   ret i32 %conv, !dbg !22
 }
 

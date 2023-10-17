@@ -9,19 +9,19 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 
 define void @shuffle_operands1(ptr noalias %from, ptr noalias %to, double %v1, double %v2) {
 ; CHECK-LABEL: @shuffle_operands1(
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[FROM:%.*]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[V1:%.*]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[V2:%.*]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    store <2 x double> [[TMP5]], ptr [[TO:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[FROM:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[V1:%.*]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[V2:%.*]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[TO:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 ; SSE2-LABEL: @shuffle_operands1(
-; SSE2-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[FROM:%.*]], align 4
-; SSE2-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[V1:%.*]], i64 0
-; SSE2-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[V2:%.*]], i64 1
-; SSE2-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[TMP2]], [[TMP4]]
-; SSE2-NEXT:    store <2 x double> [[TMP5]], ptr [[TO:%.*]], align 4
+; SSE2-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[FROM:%.*]], align 4
+; SSE2-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[V1:%.*]], i64 0
+; SSE2-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[V2:%.*]], i64 1
+; SSE2-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP1]], [[TMP3]]
+; SSE2-NEXT:    store <2 x double> [[TMP4]], ptr [[TO:%.*]], align 4
 ; SSE2-NEXT:    ret void
 ;
   %from_1 = getelementptr double, ptr %from, i64 1
@@ -35,18 +35,18 @@ define void @shuffle_operands1(ptr noalias %from, ptr noalias %to, double %v1, d
   ret void
 }
 
-define void @vecload_vs_broadcast(ptr noalias %from, ptr noalias %to, double %v1, double %v2) {
+define void @vecload_vs_broadcast(ptr noalias %from, ptr noalias %to, double %v1, double %v2, i1 %c) {
 ; CHECK-LABEL: @vecload_vs_broadcast(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LP:%.*]]
 ; CHECK:       lp:
 ; CHECK-NEXT:    [[P:%.*]] = phi double [ 1.000000e+00, [[LP]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[FROM:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[P]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP1]], <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[TO:%.*]], align 4
-; CHECK-NEXT:    br i1 undef, label [[LP]], label [[EXT:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[FROM:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> <i32 poison, i32 0>
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[P]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP0]], [[TMP2]]
+; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[TO:%.*]], align 4
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LP]], label [[EXT:%.*]]
 ; CHECK:       ext:
 ; CHECK-NEXT:    ret void
 ;
@@ -55,12 +55,12 @@ define void @vecload_vs_broadcast(ptr noalias %from, ptr noalias %to, double %v1
 ; SSE2-NEXT:    br label [[LP:%.*]]
 ; SSE2:       lp:
 ; SSE2-NEXT:    [[P:%.*]] = phi double [ 1.000000e+00, [[LP]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
-; SSE2-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[FROM:%.*]], align 4
-; SSE2-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[P]], i64 0
-; SSE2-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP1]], <2 x i32> <i32 0, i32 2>
-; SSE2-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP1]], [[TMP3]]
-; SSE2-NEXT:    store <2 x double> [[TMP4]], ptr [[TO:%.*]], align 4
-; SSE2-NEXT:    br i1 undef, label [[LP]], label [[EXT:%.*]]
+; SSE2-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[FROM:%.*]], align 4
+; SSE2-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> <i32 poison, i32 0>
+; SSE2-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[P]], i64 0
+; SSE2-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP0]], [[TMP2]]
+; SSE2-NEXT:    store <2 x double> [[TMP3]], ptr [[TO:%.*]], align 4
+; SSE2-NEXT:    br i1 [[C:%.*]], label [[LP]], label [[EXT:%.*]]
 ; SSE2:       ext:
 ; SSE2-NEXT:    ret void
 ;
@@ -77,24 +77,24 @@ lp:
   %to_2 = getelementptr double, ptr %to, i64 1
   store double %v1_1, ptr %to
   store double %v1_2, ptr %to_2
-br i1 undef, label %lp, label %ext
+  br i1 %c, label %lp, label %ext
 
 ext:
   ret void
 }
 
-define void @vecload_vs_broadcast2(ptr noalias %from, ptr noalias %to, double %v1, double %v2) {
+define void @vecload_vs_broadcast2(ptr noalias %from, ptr noalias %to, double %v1, double %v2, i1 %c) {
 ; CHECK-LABEL: @vecload_vs_broadcast2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LP:%.*]]
 ; CHECK:       lp:
 ; CHECK-NEXT:    [[P:%.*]] = phi double [ 1.000000e+00, [[LP]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[FROM:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[P]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP1]], <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP3]], [[TMP1]]
-; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[TO:%.*]], align 4
-; CHECK-NEXT:    br i1 undef, label [[LP]], label [[EXT:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[FROM:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> <i32 poison, i32 0>
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[P]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[TO:%.*]], align 4
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LP]], label [[EXT:%.*]]
 ; CHECK:       ext:
 ; CHECK-NEXT:    ret void
 ;
@@ -103,12 +103,12 @@ define void @vecload_vs_broadcast2(ptr noalias %from, ptr noalias %to, double %v
 ; SSE2-NEXT:    br label [[LP:%.*]]
 ; SSE2:       lp:
 ; SSE2-NEXT:    [[P:%.*]] = phi double [ 1.000000e+00, [[LP]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
-; SSE2-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[FROM:%.*]], align 4
-; SSE2-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[P]], i64 0
-; SSE2-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP1]], <2 x i32> <i32 0, i32 2>
-; SSE2-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP3]], [[TMP1]]
-; SSE2-NEXT:    store <2 x double> [[TMP4]], ptr [[TO:%.*]], align 4
-; SSE2-NEXT:    br i1 undef, label [[LP]], label [[EXT:%.*]]
+; SSE2-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[FROM:%.*]], align 4
+; SSE2-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> <i32 poison, i32 0>
+; SSE2-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[P]], i64 0
+; SSE2-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], [[TMP0]]
+; SSE2-NEXT:    store <2 x double> [[TMP3]], ptr [[TO:%.*]], align 4
+; SSE2-NEXT:    br i1 [[C:%.*]], label [[LP]], label [[EXT:%.*]]
 ; SSE2:       ext:
 ; SSE2-NEXT:    ret void
 ;
@@ -125,24 +125,24 @@ lp:
   %to_2 = getelementptr double, ptr %to, i64 1
   store double %v1_1, ptr %to
   store double %v1_2, ptr %to_2
-br i1 undef, label %lp, label %ext
+  br i1 %c, label %lp, label %ext
 
 ext:
   ret void
 }
 
-define void @vecload_vs_broadcast3(ptr noalias %from, ptr noalias %to, double %v1, double %v2) {
+define void @vecload_vs_broadcast3(ptr noalias %from, ptr noalias %to, double %v1, double %v2, i1 %c) {
 ; CHECK-LABEL: @vecload_vs_broadcast3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LP:%.*]]
 ; CHECK:       lp:
 ; CHECK-NEXT:    [[P:%.*]] = phi double [ 1.000000e+00, [[LP]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[FROM:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[P]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP1]], <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP3]], [[TMP1]]
-; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[TO:%.*]], align 4
-; CHECK-NEXT:    br i1 undef, label [[LP]], label [[EXT:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[FROM:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> <i32 poison, i32 0>
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[P]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[TO:%.*]], align 4
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LP]], label [[EXT:%.*]]
 ; CHECK:       ext:
 ; CHECK-NEXT:    ret void
 ;
@@ -151,12 +151,12 @@ define void @vecload_vs_broadcast3(ptr noalias %from, ptr noalias %to, double %v
 ; SSE2-NEXT:    br label [[LP:%.*]]
 ; SSE2:       lp:
 ; SSE2-NEXT:    [[P:%.*]] = phi double [ 1.000000e+00, [[LP]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
-; SSE2-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[FROM:%.*]], align 4
-; SSE2-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[P]], i64 0
-; SSE2-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP1]], <2 x i32> <i32 0, i32 2>
-; SSE2-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP3]], [[TMP1]]
-; SSE2-NEXT:    store <2 x double> [[TMP4]], ptr [[TO:%.*]], align 4
-; SSE2-NEXT:    br i1 undef, label [[LP]], label [[EXT:%.*]]
+; SSE2-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[FROM:%.*]], align 4
+; SSE2-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> <i32 poison, i32 0>
+; SSE2-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[P]], i64 0
+; SSE2-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], [[TMP0]]
+; SSE2-NEXT:    store <2 x double> [[TMP3]], ptr [[TO:%.*]], align 4
+; SSE2-NEXT:    br i1 [[C:%.*]], label [[LP]], label [[EXT:%.*]]
 ; SSE2:       ext:
 ; SSE2-NEXT:    ret void
 ;
@@ -173,24 +173,24 @@ lp:
   %to_2 = getelementptr double, ptr %to, i64 1
   store double %v1_1, ptr %to
   store double %v1_2, ptr %to_2
-br i1 undef, label %lp, label %ext
+  br i1 %c, label %lp, label %ext
 
 ext:
   ret void
 }
 
-define void @shuffle_nodes_match1(ptr noalias %from, ptr noalias %to, double %v1, double %v2) {
+define void @shuffle_nodes_match1(ptr noalias %from, ptr noalias %to, double %v1, double %v2, i1 %c) {
 ; CHECK-LABEL: @shuffle_nodes_match1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LP:%.*]]
 ; CHECK:       lp:
 ; CHECK-NEXT:    [[P:%.*]] = phi double [ 1.000000e+00, [[LP]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[FROM:%.*]], align 4
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[P]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[FROM:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP0]], double [[P]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[TO:%.*]], align 4
-; CHECK-NEXT:    br i1 undef, label [[LP]], label [[EXT:%.*]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LP]], label [[EXT:%.*]]
 ; CHECK:       ext:
 ; CHECK-NEXT:    ret void
 ;
@@ -199,12 +199,12 @@ define void @shuffle_nodes_match1(ptr noalias %from, ptr noalias %to, double %v1
 ; SSE2-NEXT:    br label [[LP:%.*]]
 ; SSE2:       lp:
 ; SSE2-NEXT:    [[P:%.*]] = phi double [ 1.000000e+00, [[LP]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
-; SSE2-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[FROM:%.*]], align 4
-; SSE2-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
-; SSE2-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[P]], i64 1
-; SSE2-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], [[SHUFFLE]]
+; SSE2-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[FROM:%.*]], align 4
+; SSE2-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
+; SSE2-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP0]], double [[P]], i64 1
+; SSE2-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], [[TMP1]]
 ; SSE2-NEXT:    store <2 x double> [[TMP3]], ptr [[TO:%.*]], align 4
-; SSE2-NEXT:    br i1 undef, label [[LP]], label [[EXT:%.*]]
+; SSE2-NEXT:    br i1 [[C:%.*]], label [[LP]], label [[EXT:%.*]]
 ; SSE2:       ext:
 ; SSE2-NEXT:    ret void
 ;
@@ -221,13 +221,13 @@ lp:
   %to_2 = getelementptr double, ptr %to, i64 1
   store double %v1_1, ptr %to
   store double %v1_2, ptr %to_2
-br i1 undef, label %lp, label %ext
+  br i1 %c, label %lp, label %ext
 
 ext:
   ret void
 }
 
-define void @vecload_vs_broadcast4(ptr noalias %from, ptr noalias %to, double %v1, double %v2) {
+define void @vecload_vs_broadcast4(ptr noalias %from, ptr noalias %to, double %v1, double %v2, i1 %c) {
 ; CHECK-LABEL: @vecload_vs_broadcast4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LP:%.*]]
@@ -242,7 +242,7 @@ define void @vecload_vs_broadcast4(ptr noalias %from, ptr noalias %to, double %v
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[TO:%.*]], align 4
-; CHECK-NEXT:    br i1 undef, label [[LP]], label [[EXT:%.*]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LP]], label [[EXT:%.*]]
 ; CHECK:       ext:
 ; CHECK-NEXT:    ret void
 ;
@@ -251,12 +251,12 @@ define void @vecload_vs_broadcast4(ptr noalias %from, ptr noalias %to, double %v
 ; SSE2-NEXT:    br label [[LP:%.*]]
 ; SSE2:       lp:
 ; SSE2-NEXT:    [[P:%.*]] = phi double [ 1.000000e+00, [[LP]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
-; SSE2-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[FROM:%.*]], align 4
-; SSE2-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
-; SSE2-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[P]], i64 1
-; SSE2-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], [[SHUFFLE]]
+; SSE2-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[FROM:%.*]], align 4
+; SSE2-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
+; SSE2-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP0]], double [[P]], i64 1
+; SSE2-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], [[TMP1]]
 ; SSE2-NEXT:    store <2 x double> [[TMP3]], ptr [[TO:%.*]], align 4
-; SSE2-NEXT:    br i1 undef, label [[LP]], label [[EXT:%.*]]
+; SSE2-NEXT:    br i1 [[C:%.*]], label [[LP]], label [[EXT:%.*]]
 ; SSE2:       ext:
 ; SSE2-NEXT:    ret void
 ;
@@ -273,14 +273,14 @@ lp:
   %to_2 = getelementptr double, ptr %to, i64 1
   store double %v1_1, ptr %to
   store double %v1_2, ptr %to_2
-br i1 undef, label %lp, label %ext
+  br i1 %c, label %lp, label %ext
 
 ext:
   ret void
 }
 
 
-define void @shuffle_nodes_match2(ptr noalias %from, ptr noalias %to, double %v1, double %v2) {
+define void @shuffle_nodes_match2(ptr noalias %from, ptr noalias %to, double %v1, double %v2, i1 %c) {
 ; CHECK-LABEL: @shuffle_nodes_match2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LP:%.*]]
@@ -295,7 +295,7 @@ define void @shuffle_nodes_match2(ptr noalias %from, ptr noalias %to, double %v1
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[P]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[TO:%.*]], align 4
-; CHECK-NEXT:    br i1 undef, label [[LP]], label [[EXT:%.*]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LP]], label [[EXT:%.*]]
 ; CHECK:       ext:
 ; CHECK-NEXT:    ret void
 ;
@@ -304,12 +304,12 @@ define void @shuffle_nodes_match2(ptr noalias %from, ptr noalias %to, double %v1
 ; SSE2-NEXT:    br label [[LP:%.*]]
 ; SSE2:       lp:
 ; SSE2-NEXT:    [[P:%.*]] = phi double [ 1.000000e+00, [[LP]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
-; SSE2-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[FROM:%.*]], align 4
-; SSE2-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
-; SSE2-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[P]], i64 1
-; SSE2-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[SHUFFLE]], [[TMP2]]
+; SSE2-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[FROM:%.*]], align 4
+; SSE2-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
+; SSE2-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP0]], double [[P]], i64 1
+; SSE2-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP1]], [[TMP2]]
 ; SSE2-NEXT:    store <2 x double> [[TMP3]], ptr [[TO:%.*]], align 4
-; SSE2-NEXT:    br i1 undef, label [[LP]], label [[EXT:%.*]]
+; SSE2-NEXT:    br i1 [[C:%.*]], label [[LP]], label [[EXT:%.*]]
 ; SSE2:       ext:
 ; SSE2-NEXT:    ret void
 ;
@@ -326,7 +326,7 @@ lp:
   %to_2 = getelementptr double, ptr %to, i64 1
   store double %v1_1, ptr %to
   store double %v1_2, ptr %to_2
-br i1 undef, label %lp, label %ext
+  br i1 %c, label %lp, label %ext
 
 ext:
   ret void
@@ -345,7 +345,7 @@ define void @good_load_order() {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr @a, align 16
 ; CHECK-NEXT:    br label [[FOR_BODY3:%.*]]
 ; CHECK:       for.body3:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi float [ [[TMP0]], [[FOR_COND1_PREHEADER]] ], [ [[TMP14:%.*]], [[FOR_BODY3]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi float [ [[TMP0]], [[FOR_COND1_PREHEADER]] ], [ [[TMP12:%.*]], [[FOR_BODY3]] ]
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_COND1_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY3]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[INDVARS_IV]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP2]], 1
@@ -355,20 +355,20 @@ define void @good_load_order() {
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[INDVARS_IV]] to i32
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[TMP5]], 4
 ; CHECK-NEXT:    [[ARRAYIDX31:%.*]] = getelementptr inbounds [32000 x float], ptr @a, i32 0, i32 [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = load <4 x float>, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i64 0
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x float> [[TMP9]], <4 x float> [[TMP8]], <4 x i32> <i32 0, i32 4, i32 5, i32 6>
-; CHECK-NEXT:    [[TMP11:%.*]] = fmul <4 x float> [[TMP8]], [[TMP10]]
-; CHECK-NEXT:    store <4 x float> [[TMP11]], ptr [[ARRAYIDX5]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load <4 x float>, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x float> [[TMP7]], <4 x float> poison, <4 x i32> <i32 poison, i32 0, i32 1, i32 2>
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> [[TMP8]], float [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = fmul <4 x float> [[TMP7]], [[TMP9]]
+; CHECK-NEXT:    store <4 x float> [[TMP10]], ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 5
-; CHECK-NEXT:    [[TMP13:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[ARRAYIDX41:%.*]] = getelementptr inbounds [32000 x float], ptr @a, i32 0, i32 [[TMP13]]
-; CHECK-NEXT:    [[TMP14]] = load float, ptr [[ARRAYIDX41]], align 4
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x float> [[TMP8]], i64 3
-; CHECK-NEXT:    [[MUL45:%.*]] = fmul float [[TMP14]], [[TMP15]]
+; CHECK-NEXT:    [[TMP11:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
+; CHECK-NEXT:    [[ARRAYIDX41:%.*]] = getelementptr inbounds [32000 x float], ptr @a, i32 0, i32 [[TMP11]]
+; CHECK-NEXT:    [[TMP12]] = load float, ptr [[ARRAYIDX41]], align 4
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x float> [[TMP7]], i64 3
+; CHECK-NEXT:    [[MUL45:%.*]] = fmul float [[TMP12]], [[TMP13]]
 ; CHECK-NEXT:    store float [[MUL45]], ptr [[ARRAYIDX31]], align 4
-; CHECK-NEXT:    [[TMP16:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[TMP16]], 31995
+; CHECK-NEXT:    [[TMP14:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[TMP14]], 31995
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_BODY3]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -380,7 +380,7 @@ define void @good_load_order() {
 ; SSE2-NEXT:    [[TMP0:%.*]] = load float, ptr @a, align 16
 ; SSE2-NEXT:    br label [[FOR_BODY3:%.*]]
 ; SSE2:       for.body3:
-; SSE2-NEXT:    [[TMP1:%.*]] = phi float [ [[TMP0]], [[FOR_COND1_PREHEADER]] ], [ [[TMP14:%.*]], [[FOR_BODY3]] ]
+; SSE2-NEXT:    [[TMP1:%.*]] = phi float [ [[TMP0]], [[FOR_COND1_PREHEADER]] ], [ [[TMP12:%.*]], [[FOR_BODY3]] ]
 ; SSE2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_COND1_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY3]] ]
 ; SSE2-NEXT:    [[TMP2:%.*]] = trunc i64 [[INDVARS_IV]] to i32
 ; SSE2-NEXT:    [[TMP3:%.*]] = add i32 [[TMP2]], 1
@@ -390,20 +390,20 @@ define void @good_load_order() {
 ; SSE2-NEXT:    [[TMP5:%.*]] = trunc i64 [[INDVARS_IV]] to i32
 ; SSE2-NEXT:    [[TMP6:%.*]] = add i32 [[TMP5]], 4
 ; SSE2-NEXT:    [[ARRAYIDX31:%.*]] = getelementptr inbounds [32000 x float], ptr @a, i32 0, i32 [[TMP6]]
-; SSE2-NEXT:    [[TMP8:%.*]] = load <4 x float>, ptr [[ARRAYIDX]], align 4
-; SSE2-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i64 0
-; SSE2-NEXT:    [[TMP10:%.*]] = shufflevector <4 x float> [[TMP9]], <4 x float> [[TMP8]], <4 x i32> <i32 0, i32 4, i32 5, i32 6>
-; SSE2-NEXT:    [[TMP11:%.*]] = fmul <4 x float> [[TMP8]], [[TMP10]]
-; SSE2-NEXT:    store <4 x float> [[TMP11]], ptr [[ARRAYIDX5]], align 4
+; SSE2-NEXT:    [[TMP7:%.*]] = load <4 x float>, ptr [[ARRAYIDX]], align 4
+; SSE2-NEXT:    [[TMP8:%.*]] = shufflevector <4 x float> [[TMP7]], <4 x float> poison, <4 x i32> <i32 poison, i32 0, i32 1, i32 2>
+; SSE2-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> [[TMP8]], float [[TMP1]], i64 0
+; SSE2-NEXT:    [[TMP10:%.*]] = fmul <4 x float> [[TMP7]], [[TMP9]]
+; SSE2-NEXT:    store <4 x float> [[TMP10]], ptr [[ARRAYIDX5]], align 4
 ; SSE2-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 5
-; SSE2-NEXT:    [[TMP13:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; SSE2-NEXT:    [[ARRAYIDX41:%.*]] = getelementptr inbounds [32000 x float], ptr @a, i32 0, i32 [[TMP13]]
-; SSE2-NEXT:    [[TMP14]] = load float, ptr [[ARRAYIDX41]], align 4
-; SSE2-NEXT:    [[TMP15:%.*]] = extractelement <4 x float> [[TMP8]], i64 3
-; SSE2-NEXT:    [[MUL45:%.*]] = fmul float [[TMP14]], [[TMP15]]
+; SSE2-NEXT:    [[TMP11:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
+; SSE2-NEXT:    [[ARRAYIDX41:%.*]] = getelementptr inbounds [32000 x float], ptr @a, i32 0, i32 [[TMP11]]
+; SSE2-NEXT:    [[TMP12]] = load float, ptr [[ARRAYIDX41]], align 4
+; SSE2-NEXT:    [[TMP13:%.*]] = extractelement <4 x float> [[TMP7]], i64 3
+; SSE2-NEXT:    [[MUL45:%.*]] = fmul float [[TMP12]], [[TMP13]]
 ; SSE2-NEXT:    store float [[MUL45]], ptr [[ARRAYIDX31]], align 4
-; SSE2-NEXT:    [[TMP16:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; SSE2-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[TMP16]], 31995
+; SSE2-NEXT:    [[TMP14:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
+; SSE2-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[TMP14]], 31995
 ; SSE2-NEXT:    br i1 [[CMP2]], label [[FOR_BODY3]], label [[FOR_END:%.*]]
 ; SSE2:       for.end:
 ; SSE2-NEXT:    ret void
@@ -458,17 +458,17 @@ for.end:
 
 define void @load_reorder_double(ptr nocapture %c, ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b){
 ; CHECK-LABEL: @load_reorder_double(
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[B:%.*]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x double>, ptr [[A:%.*]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    store <2 x double> [[TMP5]], ptr [[C:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[C:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 ; SSE2-LABEL: @load_reorder_double(
-; SSE2-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[B:%.*]], align 4
-; SSE2-NEXT:    [[TMP4:%.*]] = load <2 x double>, ptr [[A:%.*]], align 4
-; SSE2-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[TMP2]], [[TMP4]]
-; SSE2-NEXT:    store <2 x double> [[TMP5]], ptr [[C:%.*]], align 4
+; SSE2-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B:%.*]], align 4
+; SSE2-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[A:%.*]], align 4
+; SSE2-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP1]], [[TMP2]]
+; SSE2-NEXT:    store <2 x double> [[TMP3]], ptr [[C:%.*]], align 4
 ; SSE2-NEXT:    ret void
 ;
   %1 = load double, ptr %a
@@ -493,17 +493,17 @@ define void @load_reorder_double(ptr nocapture %c, ptr noalias nocapture readonl
 
 define void @load_reorder_float(ptr nocapture %c, ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b){
 ; CHECK-LABEL: @load_reorder_float(
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[A:%.*]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x float>, ptr [[B:%.*]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x float> [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    store <4 x float> [[TMP5]], ptr [[C:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[B:%.*]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <4 x float> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[C:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 ; SSE2-LABEL: @load_reorder_float(
-; SSE2-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[A:%.*]], align 4
-; SSE2-NEXT:    [[TMP4:%.*]] = load <4 x float>, ptr [[B:%.*]], align 4
-; SSE2-NEXT:    [[TMP5:%.*]] = fadd <4 x float> [[TMP2]], [[TMP4]]
-; SSE2-NEXT:    store <4 x float> [[TMP5]], ptr [[C:%.*]], align 4
+; SSE2-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[A:%.*]], align 4
+; SSE2-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[B:%.*]], align 4
+; SSE2-NEXT:    [[TMP3:%.*]] = fadd <4 x float> [[TMP1]], [[TMP2]]
+; SSE2-NEXT:    store <4 x float> [[TMP3]], ptr [[C:%.*]], align 4
 ; SSE2-NEXT:    ret void
 ;
   %1 = load float, ptr %a
@@ -542,21 +542,21 @@ define void @load_reorder_float(ptr nocapture %c, ptr noalias nocapture readonly
 
 define void @opcode_reorder(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, ptr noalias nocapture readonly %c,ptr noalias nocapture readonly %d) {
 ; CHECK-LABEL: @opcode_reorder(
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[B:%.*]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x float>, ptr [[C:%.*]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x float> [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = load <4 x float>, ptr [[D:%.*]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = fadd <4 x float> [[TMP7]], [[TMP5]]
-; CHECK-NEXT:    store <4 x float> [[TMP8]], ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[C:%.*]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <4 x float> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x float>, ptr [[D:%.*]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x float> [[TMP4]], [[TMP3]]
+; CHECK-NEXT:    store <4 x float> [[TMP5]], ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 ; SSE2-LABEL: @opcode_reorder(
-; SSE2-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[B:%.*]], align 4
-; SSE2-NEXT:    [[TMP4:%.*]] = load <4 x float>, ptr [[C:%.*]], align 4
-; SSE2-NEXT:    [[TMP5:%.*]] = fadd <4 x float> [[TMP2]], [[TMP4]]
-; SSE2-NEXT:    [[TMP7:%.*]] = load <4 x float>, ptr [[D:%.*]], align 4
-; SSE2-NEXT:    [[TMP8:%.*]] = fadd <4 x float> [[TMP7]], [[TMP5]]
-; SSE2-NEXT:    store <4 x float> [[TMP8]], ptr [[A:%.*]], align 4
+; SSE2-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B:%.*]], align 4
+; SSE2-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[C:%.*]], align 4
+; SSE2-NEXT:    [[TMP3:%.*]] = fadd <4 x float> [[TMP1]], [[TMP2]]
+; SSE2-NEXT:    [[TMP4:%.*]] = load <4 x float>, ptr [[D:%.*]], align 4
+; SSE2-NEXT:    [[TMP5:%.*]] = fadd <4 x float> [[TMP4]], [[TMP3]]
+; SSE2-NEXT:    store <4 x float> [[TMP5]], ptr [[A:%.*]], align 4
 ; SSE2-NEXT:    ret void
 ;
   %1 = load float, ptr %b

@@ -1,4 +1,4 @@
-add_libc_testsuite(libc_sys_sendfile_unittests)
+add_custom_target(libc_sys_sendfile_unittests)
 
 add_subdirectory(testdata)
 

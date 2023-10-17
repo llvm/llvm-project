@@ -197,7 +197,7 @@ bool isDwoSection(const MCSection &Sec) {
 }
 
 class WasmObjectWriter : public MCObjectWriter {
-  support::endian::Writer *W;
+  support::endian::Writer *W = nullptr;
 
   /// The target specific Wasm writer instance.
   std::unique_ptr<MCWasmObjectTargetWriter> TargetObjectWriter;
@@ -550,7 +550,7 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
       TargetObjectWriter->getRelocType(Target, Fixup, FixupSection, IsLocRel);
 
   // Absolute offset within a section or a function.
-  // Currently only supported for for metadata sections.
+  // Currently only supported for metadata sections.
   // See: test/MC/WebAssembly/blockaddress.ll
   if ((Type == wasm::R_WASM_FUNCTION_OFFSET_I32 ||
        Type == wasm::R_WASM_FUNCTION_OFFSET_I64 ||
@@ -671,6 +671,7 @@ WasmObjectWriter::getProvisionalValue(const WasmRelocationEntry &RelEntry,
     // Provisional value is same as the index
     return getRelocationIndexValue(RelEntry);
   case wasm::R_WASM_FUNCTION_INDEX_LEB:
+  case wasm::R_WASM_FUNCTION_INDEX_I32:
   case wasm::R_WASM_GLOBAL_INDEX_LEB:
   case wasm::R_WASM_GLOBAL_INDEX_I32:
   case wasm::R_WASM_TAG_INDEX_LEB:
@@ -791,6 +792,7 @@ void WasmObjectWriter::applyRelocations(
     case wasm::R_WASM_TABLE_INDEX_I32:
     case wasm::R_WASM_MEMORY_ADDR_I32:
     case wasm::R_WASM_FUNCTION_OFFSET_I32:
+    case wasm::R_WASM_FUNCTION_INDEX_I32:
     case wasm::R_WASM_SECTION_OFFSET_I32:
     case wasm::R_WASM_GLOBAL_INDEX_I32:
     case wasm::R_WASM_MEMORY_ADDR_LOCREL_I32:
@@ -1436,12 +1438,12 @@ void WasmObjectWriter::prepareImports(
 
 uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
                                        const MCAsmLayout &Layout) {
-  support::endian::Writer MainWriter(*OS, support::little);
+  support::endian::Writer MainWriter(*OS, llvm::endianness::little);
   W = &MainWriter;
   if (IsSplitDwarf) {
     uint64_t TotalSize = writeOneObject(Asm, Layout, DwoMode::NonDwoOnly);
     assert(DwoOS);
-    support::endian::Writer DwoWriter(*DwoOS, support::little);
+    support::endian::Writer DwoWriter(*DwoOS, llvm::endianness::little);
     W = &DwoWriter;
     return TotalSize + writeOneObject(Asm, Layout, DwoMode::DwoOnly);
   } else {

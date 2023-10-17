@@ -69,6 +69,12 @@ IntegerLiteralSeparatorFixer::process(const Environment &Env,
   if (SkipBinary && SkipDecimal && SkipHex)
     return {};
 
+  const auto BinaryMinDigits =
+      std::max((int)Option.BinaryMinDigits, Binary + 1);
+  const auto DecimalMinDigits =
+      std::max((int)Option.DecimalMinDigits, Decimal + 1);
+  const auto HexMinDigits = std::max((int)Option.HexMinDigits, Hex + 1);
+
   const auto &SourceMgr = Env.getSourceManager();
   AffectedRangeManager AffectedRangeMgr(SourceMgr, Env.getCharRanges());
 
@@ -87,9 +93,9 @@ IntegerLiteralSeparatorFixer::process(const Environment &Env,
     auto Location = Tok.getLocation();
     auto Text = StringRef(SourceMgr.getCharacterData(Location), Length);
     if (Tok.is(tok::comment)) {
-      if (Text == "// clang-format off" || Text == "/* clang-format off */")
+      if (isClangFormatOff(Text))
         Skip = true;
-      else if (Text == "// clang-format on" || Text == "/* clang-format on */")
+      else if (isClangFormatOn(Text))
         Skip = false;
       continue;
     }
@@ -106,17 +112,22 @@ IntegerLiteralSeparatorFixer::process(const Environment &Env,
         (IsBase16 && SkipHex) || B == Base::Other) {
       continue;
     }
+    if (Style.isCpp()) {
+      // Hex alpha digits a-f/A-F must be at the end of the string literal.
+      StringRef Suffixes = "_himnsuyd";
+      if (const auto Pos =
+              Text.find_first_of(IsBase16 ? Suffixes.drop_back() : Suffixes);
+          Pos != StringRef::npos) {
+        Text = Text.substr(0, Pos);
+        Length = Pos;
+      }
+    }
     if ((IsBase10 && Text.find_last_of(".eEfFdDmM") != StringRef::npos) ||
         (IsBase16 && Text.find_last_of(".pP") != StringRef::npos)) {
       continue;
     }
-    if (((IsBase2 && Binary < 0) || (IsBase10 && Decimal < 0) ||
-         (IsBase16 && Hex < 0)) &&
-        Text.find(Separator) == StringRef::npos) {
-      continue;
-    }
     const auto Start = Text[0] == '0' ? 2 : 0;
-    auto End = Text.find_first_of("uUlLzZn");
+    auto End = Text.find_first_of("uUlLzZn", Start);
     if (End == StringRef::npos)
       End = Length;
     if (Start > 0 || End < Length) {
@@ -124,16 +135,30 @@ IntegerLiteralSeparatorFixer::process(const Environment &Env,
       Text = Text.substr(Start, Length);
     }
     auto DigitsPerGroup = Decimal;
-    if (IsBase2)
+    auto MinDigits = DecimalMinDigits;
+    if (IsBase2) {
       DigitsPerGroup = Binary;
-    else if (IsBase16)
+      MinDigits = BinaryMinDigits;
+    } else if (IsBase16) {
       DigitsPerGroup = Hex;
-    if (DigitsPerGroup > 0 && checkSeparator(Text, DigitsPerGroup))
+      MinDigits = HexMinDigits;
+    }
+    const auto SeparatorCount = Text.count(Separator);
+    const int DigitCount = Length - SeparatorCount;
+    const bool RemoveSeparator = DigitsPerGroup < 0 || DigitCount < MinDigits;
+    if (RemoveSeparator && SeparatorCount == 0)
       continue;
+    if (!RemoveSeparator && SeparatorCount > 0 &&
+        checkSeparator(Text, DigitsPerGroup)) {
+      continue;
+    }
+    const auto &Formatted =
+        format(Text, DigitsPerGroup, DigitCount, RemoveSeparator);
+    assert(Formatted != Text);
     if (Start > 0)
       Location = Location.getLocWithOffset(Start);
-    cantFail(Result.add(tooling::Replacement(SourceMgr, Location, Length,
-                                             format(Text, DigitsPerGroup))));
+    cantFail(Result.add(
+        tooling::Replacement(SourceMgr, Location, Length, Formatted)));
   }
 
   return {Result, 0};
@@ -150,9 +175,9 @@ bool IntegerLiteralSeparatorFixer::checkSeparator(
         return false;
       I = 0;
     } else {
-      ++I;
       if (I == DigitsPerGroup)
         return false;
+      ++I;
     }
   }
 
@@ -160,22 +185,19 @@ bool IntegerLiteralSeparatorFixer::checkSeparator(
 }
 
 std::string IntegerLiteralSeparatorFixer::format(const StringRef IntegerLiteral,
-                                                 int DigitsPerGroup) const {
+                                                 int DigitsPerGroup,
+                                                 int DigitCount,
+                                                 bool RemoveSeparator) const {
   assert(DigitsPerGroup != 0);
 
   std::string Formatted;
 
-  if (DigitsPerGroup < 0) {
+  if (RemoveSeparator) {
     for (auto C : IntegerLiteral)
       if (C != Separator)
         Formatted.push_back(C);
     return Formatted;
   }
-
-  int DigitCount = 0;
-  for (auto C : IntegerLiteral)
-    if (C != Separator)
-      ++DigitCount;
 
   int Remainder = DigitCount % DigitsPerGroup;
 

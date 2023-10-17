@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 \
-// RUN:   -analyzer-checker=core,apiModeling.StdCLibraryFunctions \
-// RUN:   -analyzer-config apiModeling.StdCLibraryFunctions:ModelPOSIX=true \
+// RUN:   -analyzer-checker=core,unix.StdCLibraryFunctions \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true \
 // RUN:   -verify %s
 //
 // expected-no-diagnostics

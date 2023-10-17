@@ -114,6 +114,7 @@ public:
   void setOutputSymbolIndex(uint32_t index);
 
   WasmSymbolType getWasmType() const;
+  bool isImported() const;
   bool isExported() const;
   bool isExportedExplicit() const;
 
@@ -135,7 +136,8 @@ protected:
   Symbol(StringRef name, Kind k, uint32_t flags, InputFile *f)
       : name(name), file(f), symbolKind(k), referenced(!config->gcSections),
         requiresGOT(false), isUsedInRegularObj(false), forceExport(false),
-        canInline(false), traced(false), isStub(false), flags(flags) {}
+        forceImport(false), canInline(false), traced(false), isStub(false),
+        flags(flags) {}
 
   StringRef name;
   InputFile *file;
@@ -159,6 +161,8 @@ public:
   // True if this symbol is explicitly marked for export (i.e. via the
   // -e/--export command line flag)
   bool forceExport : 1;
+
+  bool forceImport : 1;
 
   // False if LTO shouldn't inline whatever this symbol points to. If a symbol
   // is overwritten after LTO, LTO shouldn't inline the symbol because it
@@ -578,6 +582,11 @@ struct WasmSym {
   // Unlike __wasm_apply_data_relocs this needs to run on every thread.
   static DefinedFunction *applyGlobalRelocs;
 
+  // __wasm_apply_tls_relocs
+  // Like applyDataRelocs but for TLS section.  These must be delayed until
+  // __wasm_init_tls.
+  static DefinedFunction *applyTLSRelocs;
+
   // __wasm_apply_global_tls_relocs
   // Like applyGlobalRelocs but for globals that hold TLS addresses.  These
   // must be delayed until __wasm_init_tls.
@@ -656,6 +665,7 @@ T *replaceSymbol(Symbol *s, ArgT &&... arg) {
   T *s2 = new (s) T(std::forward<ArgT>(arg)...);
   s2->isUsedInRegularObj = symCopy.isUsedInRegularObj;
   s2->forceExport = symCopy.forceExport;
+  s2->forceImport = symCopy.forceImport;
   s2->canInline = symCopy.canInline;
   s2->traced = symCopy.traced;
   s2->referenced = symCopy.referenced;

@@ -45,8 +45,8 @@ define [1 x <4 x float>] @test2() {
 ; CHECK-NEXT: Lloh3:
 ; CHECK-NEXT:     ldr q1, [x8, lCPI1_0@PAGEOFF]
 ; CHECK-NEXT:     mov s2, v1[1]
-; CHECK-NEXT:     mov s3, v1[2]
 ; CHECK-NEXT:     fneg    s0, s1
+; CHECK-NEXT:     mov s3, v1[2]
 ; CHECK-NEXT:     mov s1, v1[3]
 ; CHECK-NEXT:     fneg    s2, s2
 ; CHECK-NEXT:     fneg    s3, s3

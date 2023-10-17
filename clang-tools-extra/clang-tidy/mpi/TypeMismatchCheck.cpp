@@ -75,7 +75,7 @@ static bool isStandardMPIDatatype(StringRef MPIDatatype) {
                                        "MPI_CXX_DOUBLE_COMPLEX",
                                        "MPI_CXX_LONG_DOUBLE_COMPLEX"};
 
-  return AllTypes.find(MPIDatatype) != AllTypes.end();
+  return AllTypes.contains(MPIDatatype);
 }
 
 /// Check if a BuiltinType matches the MPI datatype.

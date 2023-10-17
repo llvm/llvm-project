@@ -1,18 +1,18 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -emit-llvm -std=c++98 -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -emit-llvm -std=c++11 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -std=c++98 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -std=c++11 -o - %s | FileCheck %s
 
 // CHECK: @a = global i32 10
 int a = 10;
-// CHECK: @ar = constant i32* @a
+// CHECK: @ar = constant ptr @a
 int &ar = a;
 
 void f();
-// CHECK: @fr = constant void ()* @_Z1fv
+// CHECK: @fr = constant ptr @_Z1fv
 void (&fr)() = f;
 
 struct S { int& a; };
-// CHECK: @s = global %struct.S { i32* @a }
+// CHECK: @s = global %struct.S { ptr @a }
 S s = { a };
 
 // PR5581
@@ -41,7 +41,7 @@ namespace test2 {
 
   // CHECK: @_ZN5test22t0E = global double {{1\.0+e\+0+}}, align 8
   // CHECK: @_ZN5test22t1E = global [2 x double] [double {{1\.0+e\+0+}}, double {{5\.0+e-0*}}1], align 16
-  // CHECK: @_ZN5test22t2E = global double* @_ZN5test21A1d
+  // CHECK: @_ZN5test22t2E = global ptr @_ZN5test21A1d
   // CHECK: @_ZN5test22t3E = global {{.*}} @_ZN5test21A1g
   double t0 = A::d;
   double t1[] = { A::d, A::f };
@@ -74,21 +74,21 @@ __int128_t PR11705 = (__int128_t)&PR11705;
 void UnfoldableAddrLabelDiff() { static __int128_t x = (long)&&a-(long)&&b; a:b:return;}
 
 // But make sure we do fold this.
-// CHECK: @_ZZ21FoldableAddrLabelDiffvE1x = internal global i64 sub (i64 ptrtoint (i8* blockaddress(@_Z21FoldableAddrLabelDiffv
+// CHECK: @_ZZ21FoldableAddrLabelDiffvE1x = internal global i64 sub (i64 ptrtoint (ptr blockaddress(@_Z21FoldableAddrLabelDiffv
 void FoldableAddrLabelDiff() { static long x = (long)&&a-(long)&&b; a:b:return;}
 
-// CHECK: @i = constant i32* bitcast (float* @PR9558 to i32*)
+// CHECK: @i = constant ptr @PR9558
 int &i = reinterpret_cast<int&>(PR9558);
 
 int arr[2];
-// CHECK: @pastEnd = constant i32* bitcast (i8* getelementptr (i8, i8* bitcast ([2 x i32]* @arr to i8*), i64 8) to i32*)
+// CHECK: @pastEnd = constant ptr getelementptr (i8, ptr @arr, i64 8)
 int &pastEnd = arr[2];
 
 // CHECK: @[[WCHAR_STR:.*]] = internal global [2 x i32] [i32 112, i32 0],
-// CHECK: @PR51105_a = global i32* {{.*}} @[[WCHAR_STR]],
+// CHECK: @PR51105_a = global ptr @[[WCHAR_STR]],
 wchar_t *PR51105_a = (wchar_t[2]){ (L"p") };
 // CHECK: @[[CHAR_STR:.*]] = internal global [5 x i8] c"p\00\00\00\00",
-// CHECK: @PR51105_b = global i8* {{.*}} @[[CHAR_STR]],
+// CHECK: @PR51105_b = global ptr @[[CHAR_STR]],
 char *PR51105_b = (char [5]){ ("p") };
 
 struct X {
@@ -96,4 +96,4 @@ struct X {
 };
 long k;
 X x = {(long)&k};
-// CHECK: store i8 ptrtoint (i64* @k to i8), i8* getelementptr inbounds (%struct.X, %struct.X* @x, i32 0, i32 0)
+// CHECK: store i8 ptrtoint (ptr @k to i8), ptr @x

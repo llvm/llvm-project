@@ -12,9 +12,8 @@
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Option/ArgList.h"
-#include "llvm/Support/AArch64TargetParser.h"
-#include "llvm/Support/TargetParser.h"
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/AArch64TargetParser.h"
+#include "llvm/TargetParser/Host.h"
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
@@ -83,6 +82,25 @@ static bool DecodeAArch64Features(const Driver &D, StringRef text,
     else
       return false;
 
+    // +sme implies +bf16.
+    // +sme-f64f64 and +sme-i16i64 both imply +sme.
+    if (Feature == "sme") {
+      Features.push_back("+bf16");
+    } else if (Feature == "nosme") {
+      Features.push_back("-sme-f64f64");
+      Features.push_back("-sme-i16i64");
+    } else if (Feature == "sme-f64f64") {
+      Features.push_back("+sme");
+      Features.push_back("+bf16");
+    } else if (Feature == "sme-i16i64") {
+      Features.push_back("+sme");
+      Features.push_back("+bf16");
+    } else if (Feature == "nobf16") {
+      Features.push_back("-sme");
+      Features.push_back("-sme-f64f64");
+      Features.push_back("-sme-i16i64");
+    }
+
     if (Feature == "sve2")
       Features.push_back("+sve");
     else if (Feature == "sve2-bitperm" || Feature == "sve2-sha3" ||
@@ -123,8 +141,8 @@ static bool DecodeAArch64Features(const Driver &D, StringRef text,
 static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
                               std::vector<StringRef> &Features) {
   std::pair<StringRef, StringRef> Split = Mcpu.split("+");
+  CPU = Split.first;
   const llvm::AArch64::ArchInfo *ArchInfo = &llvm::AArch64::ARMV8A;
-  CPU = llvm::AArch64::resolveCPUAlias(Split.first);
 
   if (CPU == "native")
     CPU = llvm::sys::getHostCPUName();
@@ -132,12 +150,15 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
   if (CPU == "generic") {
     Features.push_back("+neon");
   } else {
-    ArchInfo = &llvm::AArch64::parseCpu(CPU).Arch;
-    if (*ArchInfo == llvm::AArch64::INVALID)
+    const std::optional<llvm::AArch64::CpuInfo> CpuInfo =
+        llvm::AArch64::parseCpu(CPU);
+    if (!CpuInfo)
       return false;
+    ArchInfo = &CpuInfo->Arch;
+
     Features.push_back(ArchInfo->ArchFeature);
 
-    uint64_t Extension = llvm::AArch64::getDefaultExtensions(CPU, *ArchInfo);
+    auto Extension = CpuInfo->getImpliedExtensions();
     if (!llvm::AArch64::getExtensionFeatures(Extension, Features))
       return false;
   }
@@ -156,11 +177,11 @@ getAArch64ArchFeaturesFromMarch(const Driver &D, StringRef March,
   std::string MarchLowerCase = March.lower();
   std::pair<StringRef, StringRef> Split = StringRef(MarchLowerCase).split("+");
 
-  const llvm::AArch64::ArchInfo *ArchInfo =
-      &llvm::AArch64::parseArch(Split.first);
+  std::optional <llvm::AArch64::ArchInfo> ArchInfo =
+      llvm::AArch64::parseArch(Split.first);
   if (Split.first == "native")
-    ArchInfo = &llvm::AArch64::getArchForCpu(llvm::sys::getHostCPUName().str());
-  if (*ArchInfo == llvm::AArch64::INVALID)
+    ArchInfo = llvm::AArch64::getArchForCpu(llvm::sys::getHostCPUName().str());
+  if (!ArchInfo)
     return false;
   Features.push_back(ArchInfo->ArchFeature);
 
@@ -289,13 +310,15 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
 
   if (Arg *A = Args.getLastArg(options::OPT_mtp_mode_EQ)) {
     StringRef Mtp = A->getValue();
-    if (Mtp == "el3")
+    if (Mtp == "el3" || Mtp == "tpidr_el3")
       Features.push_back("+tpidr-el3");
-    else if (Mtp == "el2")
+    else if (Mtp == "el2" || Mtp == "tpidr_el2")
       Features.push_back("+tpidr-el2");
-    else if (Mtp == "el1")
+    else if (Mtp == "el1" || Mtp == "tpidr_el1")
       Features.push_back("+tpidr-el1");
-    else if (Mtp != "el0")
+    else if (Mtp == "tpidrro_el0")
+      Features.push_back("+tpidrro-el0");
+    else if (Mtp != "el0" && Mtp != "tpidr_el0")
       D.Diag(diag::err_drv_invalid_mtp) << A->getAsString(Args);
   }
 
@@ -404,9 +427,10 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
     else if (*I == "+crypto") {
       HasCrypto = true;
       HasNoCrypto = false;
-    } else if (*I == "-crypto") {
+    } else if (*I == "-crypto" || *I == "-neon") {
       HasCrypto = false;
       HasNoCrypto = true;
+      HasSM4 = HasSHA2 = HasSHA3 = HasAES = false;
     }
     // Register the iterator position if this is an architecture feature
     if (ArchFeatPos == -1 && (V8Version != -1 || V9Version != -1))
@@ -603,7 +627,7 @@ fp16_fml_fallthrough:
       Features.push_back("+fix-cortex-a53-835769");
     else
       Features.push_back("-fix-cortex-a53-835769");
-  } else if (Triple.isAndroid()) {
+  } else if (Triple.isAndroid() || Triple.isOHOSFamily()) {
     // Enabled A53 errata (835769) workaround by default on android
     Features.push_back("+fix-cortex-a53-835769");
   } else if (Triple.isOSFuchsia()) {

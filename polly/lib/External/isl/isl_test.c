@@ -3,6 +3,7 @@
  * Copyright 2010      INRIA Saclay
  * Copyright 2012-2013 Ecole Normale Superieure
  * Copyright 2014      INRIA Rocquencourt
+ * Copyright 2022      Cerebras Systems
  *
  * Use of this software is governed by the MIT license
  *
@@ -13,6 +14,7 @@
  * and Ecole Normale Superieure, 45 rue d’Ulm, 75230 Paris, France
  * and Inria Paris - Rocquencourt, Domaine de Voluceau - Rocquencourt,
  * B.P. 105 - 78153 Le Chesnay, France
+ * and Cerebras Systems, 1237 E Arques Ave, Sunnyvale, CA, USA
  */
 
 #include <assert.h>
@@ -165,6 +167,7 @@ static const char *reparse_pw_multi_aff_tests[] = {
 	"{ [x, x] -> [x % 4] }",
 	"{ [x, x + 1] -> [x % 4] : x mod 3 = 1 }",
 	"{ [x, x mod 2] -> [x % 4] }",
+	"{ [a] -> [a//2] : exists (e0: 8*floor((-a + e0)/8) <= -8 - a + 8e0) }",
 };
 
 #undef BASE
@@ -441,6 +444,34 @@ struct {
 	  "{ [x, floor(x/4)] }" },
 	{ "{ [10//4] }",
 	  "{ [2] }" },
+	{ "{ [-1//4] }",
+	  "{ [-1] }" },
+	{ "{ [0-1//4] }",
+	  "{ [0] }" },
+	{ "{ [- 1//4] }",
+	  "{ [-1] }" },
+	{ "{ [0 - 1//4] }",
+	  "{ [0] }" },
+	{ "{ [0--1//4] }",
+	  "{ [1] }" },
+	{ "{ [0 - -1//4] }",
+	  "{ [1] }" },
+	{ "{ [-2^2:2^2-1] }",
+	  "{ [-4:3] }" },
+	{ "{ [2*-2] }",
+	  "{ [-4] }" },
+	{ "{ [i,i*-2] }",
+	  "{ [i,-2i] }" },
+	{ "[a, b, c, d] -> { [max(a,b,c,d)] }",
+	  "[a, b, c, d] -> { [a] : b < a and c < a and d < a; "
+		"[b] : b >= a and c < b and d < b; "
+		"[c] : c >= a and c >= b and d < c; "
+		"[d] : d >= a and d >= b and d >= c }" },
+	{ "[a, b, c, d] -> { [min(a,b,c,d)] }",
+	  "[a, b, c, d] -> { [a] : b >= a and c >= a and d >= a; "
+		"[b] : b < a and c >= b and d >= b; "
+		"[c] : c < b and c < a and d >= c; "
+		"[d] : d < c and d < b and d < a }" },
 };
 
 int test_parse(struct isl_ctx *ctx)
@@ -2377,6 +2408,7 @@ struct {
 	{ 0, "{ [0:1, 0:1]; [0, 2:3] }" },
 	{ 1, "{ [a] : (a = 0 or ((1 + a) mod 2 = 0 and 0 < a <= 15) or "
 		"((a) mod 2 = 0 and 0 < a <= 15)) }" },
+	{ 1, "{ rat: [0:2]; rat: [1:3] }" },
 };
 
 /* A specialized coalescing test case that would result
@@ -2419,7 +2451,7 @@ static int test_coalesce_special(struct isl_ctx *ctx)
 }
 
 /* Check that the union of the basic sets described by "str1" and "str2"
- * can be coalesced.
+ * can be coalesced and that the result is equal to the union.
  * The explicit call to isl_basic_set_union prevents the implicit
  * equality constraints in the basic maps from being detected prior
  * to the call to isl_set_coalesce, at least at the point
@@ -2429,13 +2461,28 @@ static isl_stat test_coalesce_union(isl_ctx *ctx, const char *str1,
 	const char *str2)
 {
 	isl_basic_set *bset1, *bset2;
-	isl_set *set;
+	isl_set *set, *set2;
+	isl_bool equal;
 
 	bset1 = isl_basic_set_read_from_str(ctx, str1);
 	bset2 = isl_basic_set_read_from_str(ctx, str2);
 	set = isl_basic_set_union(bset1, bset2);
 	set = isl_set_coalesce(set);
+
+	bset1 = isl_basic_set_read_from_str(ctx, str1);
+	bset2 = isl_basic_set_read_from_str(ctx, str2);
+	set2 = isl_basic_set_union(bset1, bset2);
+
+	equal = isl_set_is_equal(set, set2);
 	isl_set_free(set);
+	isl_set_free(set2);
+
+	if (equal < 0)
+		return isl_stat_error;
+	if (!equal)
+		isl_die(ctx, isl_error_unknown,
+			"coalesced set not equal to input",
+			return isl_stat_error);
 
 	return isl_stat_non_null(set);
 }
@@ -2585,6 +2632,25 @@ static isl_stat test_coalesce_special7(isl_ctx *ctx)
 	return test_coalesce_union(ctx, str1, str2);
 }
 
+/* A specialized coalescing test case that would result in a disjunct
+ * getting dropped in an earlier version of isl.  Use test_coalesce_union with
+ * an explicit call to isl_basic_set_union to prevent the implicit
+ * equality constraints in the basic maps from being detected prior
+ * to the call to isl_set_coalesce, at least at the point
+ * where this test case was introduced.
+ */
+static isl_stat test_coalesce_special8(isl_ctx *ctx)
+{
+	const char *str1;
+	const char *str2;
+
+	str1 = "{ [a, b, c] : 2c <= -a and b >= -a and b <= 5 and "
+			"6c > -7a and 11c >= -5a - b and a <= 3 }";
+	str2 = "{ [a, b, c] : 6c > -7a and b >= -a and b <= 5 and "
+			"11c >= -5a - b and a >= 4 and 2b <= a and 2c <= -a }";
+	return test_coalesce_union(ctx, str1, str2);
+}
+
 /* Test the functionality of isl_set_coalesce.
  * That is, check that the output is always equal to the input
  * and in some cases that the result consists of a single disjunct.
@@ -2616,7 +2682,8 @@ static int test_coalesce(struct isl_ctx *ctx)
 		return -1;
 	if (test_coalesce_special7(ctx) < 0)
 		return -1;
-
+	if (test_coalesce_special8(ctx) < 0)
+		return -1;
 
 	return 0;
 }
@@ -3725,6 +3792,8 @@ struct {
 	{ "{ [i] -> ([(i)/2]) }", "{ [k] : exists a : k = 2a+1 }",
 	  "{ [i] -> -1/2 + 1/2 * i }" },
 	{ "{ [i] -> i^2 : i != 0 }", "{ [i] : i != 0 }", "{ [i] -> i^2 }" },
+	{ "{ [i] -> i^2 : i > 0; [i] -> i^2 : i < 0 }", "{ [i] : i != 0 }",
+	  "{ [i] -> i^2 }" },
 };
 
 /* Perform some basic isl_pw_qpolynomial_gist tests.
@@ -8178,12 +8247,38 @@ static int test_union_map(isl_ctx *ctx)
 	return 0;
 }
 
+#undef BASE
+#define BASE	union_pw_qpolynomial
+#include "isl_test_plain_equal_templ.c"
+
+/* Check that the result of applying "fn" to "a" and "b"
+ * in (obviously) equal to "res".
+ */
+static isl_stat test_union_pw_op(isl_ctx *ctx, const char *a, const char *b,
+	__isl_give isl_union_pw_qpolynomial *(*fn)(
+		__isl_take isl_union_pw_qpolynomial *upwqp1,
+		__isl_take isl_union_pw_qpolynomial *upwqp2),
+	const char *res)
+{
+	isl_stat r;
+	isl_union_pw_qpolynomial *upwqp1, *upwqp2;
+
+	upwqp1 = isl_union_pw_qpolynomial_read_from_str(ctx, a);
+	upwqp2 = isl_union_pw_qpolynomial_read_from_str(ctx, b);
+	upwqp1 = fn(upwqp1, upwqp2);
+	r = union_pw_qpolynomial_check_plain_equal(upwqp1, res);
+	isl_union_pw_qpolynomial_free(upwqp1);
+
+	return r;
+}
+
 int test_union_pw(isl_ctx *ctx)
 {
 	int equal;
 	const char *str;
 	isl_union_set *uset;
 	isl_union_pw_qpolynomial *upwqp1, *upwqp2;
+	const char *a, *b;
 
 	str = "{ [x] -> x^2 }";
 	upwqp1 = isl_union_pw_qpolynomial_read_from_str(ctx, str);
@@ -8198,6 +8293,25 @@ int test_union_pw(isl_ctx *ctx)
 		return -1;
 	if (!equal)
 		isl_die(ctx, isl_error_unknown, "unexpected result", return -1);
+
+	a = "{ A[x] -> x^2 : x >= 0; B[x] -> x }";
+	b = "{ A[x] -> x }";
+	str = "{ A[x] -> x^2 + x : x >= 0; A[x] -> x : x < 0; B[x] -> x }";
+	if (test_union_pw_op(ctx, a, b, &isl_union_pw_qpolynomial_add, str) < 0)
+		return -1;
+	str = "{ A[x] -> x^2 - x : x >= 0; A[x] -> -x : x < 0; B[x] -> x }";
+	if (test_union_pw_op(ctx, a, b, &isl_union_pw_qpolynomial_sub, str) < 0)
+		return -1;
+
+	str = "{ A[x] -> 0 }";
+	a = "{ A[x] -> 1 }";
+	b = "{ A[x] -> -1 }";
+	if (test_union_pw_op(ctx, a, b, &isl_union_pw_qpolynomial_add, str) < 0)
+		return -1;
+	a = "{ A[x] -> 1 }";
+	b = "{ A[x] -> 1 }";
+	if (test_union_pw_op(ctx, a, b, &isl_union_pw_qpolynomial_sub, str) < 0)
+		return -1;
 
 	return 0;
 }
@@ -8552,6 +8666,7 @@ struct {
 	{ "{ [i] -> [i] : i mod 2 = 0 }", "{ [4] }", "4" },
 	{ "{ [i] -> [i] : i mod 2 = 0 }", "{ [3] }", "NaN" },
 	{ "{ [i] -> [i] : i mod 2 = 0 }", "{ [x] : false }", "NaN" },
+	{ "[m, n] -> { [2m + 3n] }", "[n=1, m=10] -> { : }", "23" },
 };
 
 /* Perform basic isl_pw_aff_eval tests.
@@ -8802,25 +8917,6 @@ static int test_empty_projection(isl_ctx *ctx)
 	isl_basic_set_free(bset);
 
 	if (empty < 0)
-		return -1;
-
-	return 0;
-}
-
-int test_fixed_power(isl_ctx *ctx)
-{
-	const char *str;
-	isl_map *map;
-	isl_val *exp;
-	int equal;
-
-	str = "{ [i] -> [i + 1] }";
-	map = isl_map_read_from_str(ctx, str);
-	exp = isl_val_int_from_si(ctx, 23);
-	map = isl_map_fixed_power_val(map, exp);
-	equal = map_check_equal(map, "{ [i] -> [i + 23] }");
-	isl_map_free(map);
-	if (equal < 0)
 		return -1;
 
 	return 0;
@@ -9592,14 +9688,58 @@ static __isl_give isl_ast_node *after_for(__isl_take isl_ast_node *node,
 	return node;
 }
 
+/* This function is called after node in the AST generated
+ * from test_ast_gen1.
+ *
+ * Increment the count in "user" if this is a for node and
+ * return true to indicate that descendant should also be visited.
+ */
+static isl_bool count_for(__isl_keep isl_ast_node *node, void *user)
+{
+	int *count = user;
+
+	if (isl_ast_node_get_type(node) == isl_ast_node_for)
+		++*count;
+
+	return isl_bool_true;
+}
+
+/* If "node" is a block node, then replace it by its first child.
+ */
+static __isl_give isl_ast_node *select_first(__isl_take isl_ast_node *node,
+	void *user)
+{
+	isl_ast_node_list *children;
+	isl_ast_node *child;
+
+	if (isl_ast_node_get_type(node) != isl_ast_node_block)
+		return node;
+
+	children = isl_ast_node_block_get_children(node);
+	child = isl_ast_node_list_get_at(children, 0);
+	isl_ast_node_list_free(children);
+	isl_ast_node_free(node);
+
+	return child;
+}
+
 /* Check that the before_each_for and after_each_for callbacks
  * are called for each for loop in the generated code,
  * that they are called in the right order and that the isl_id
  * returned from the before_each_for callback is attached to
  * the isl_ast_node passed to the corresponding after_each_for call.
+ *
+ * Additionally, check the basic functionality of
+ * isl_ast_node_foreach_descendant_top_down by counting the number
+ * of for loops in the resulting AST,
+ * as well as that of isl_ast_node_map_descendant_bottom_up
+ * by replacing the block node by its first child and
+ * counting the number of for loops again.
  */
-static int test_ast_gen1(isl_ctx *ctx)
+static isl_stat test_ast_gen1(isl_ctx *ctx)
 {
+	int count = 0;
+	int modified_count = 0;
 	const char *str;
 	isl_set *set;
 	isl_union_map *schedule;
@@ -9623,16 +9763,33 @@ static int test_ast_gen1(isl_ctx *ctx)
 			&after_for, &data);
 	tree = isl_ast_build_node_from_schedule_map(build, schedule);
 	isl_ast_build_free(build);
+
+	if (isl_ast_node_foreach_descendant_top_down(tree,
+							&count_for, &count) < 0)
+		tree = isl_ast_node_free(tree);
+
+	tree = isl_ast_node_map_descendant_bottom_up(tree, &select_first, NULL);
+
+	if (isl_ast_node_foreach_descendant_top_down(tree, &count_for,
+							&modified_count) < 0)
+		tree = isl_ast_node_free(tree);
+
 	if (!tree)
-		return -1;
+		return isl_stat_error;
 
 	isl_ast_node_free(tree);
 
-	if (data.before != 3 || data.after != 3)
+	if (data.before != 3 || data.after != 3 || count != 3)
 		isl_die(ctx, isl_error_unknown,
-			"unexpected number of for nodes", return -1);
+			"unexpected number of for nodes",
+			return isl_stat_error);
 
-	return 0;
+	if (modified_count != 2)
+		isl_die(ctx, isl_error_unknown,
+			"unexpected number of for nodes after changes",
+			return isl_stat_error);
+
+	return isl_stat_ok;
 }
 
 /* Check that the AST generator handles domains that are integrally disjoint
@@ -10270,8 +10427,7 @@ static int test_schedule_tree_prefix(isl_ctx *ctx)
 	filters = isl_union_set_list_add(filters, uset);
 	node = isl_schedule_node_insert_sequence(node, filters);
 
-	node = isl_schedule_node_child(node, 0);
-	node = isl_schedule_node_child(node, 0);
+	node = isl_schedule_node_grandchild(node, 0, 0);
 	mupa = isl_schedule_node_get_prefix_schedule_multi_union_pw_aff(node);
 	str = "([] : { S1[i,j] : i > j })";
 	mupa2 = isl_multi_union_pw_aff_read_from_str(ctx, str);
@@ -10386,8 +10542,7 @@ static int test_schedule_tree_group_2(isl_ctx *ctx)
 	uset = isl_union_set_read_from_str(ctx, str);
 	filters = isl_union_set_list_add(filters, uset);
 	node = isl_schedule_node_insert_sequence(node, filters);
-	node = isl_schedule_node_child(node, 1);
-	node = isl_schedule_node_child(node, 0);
+	node = isl_schedule_node_grandchild(node, 1, 0);
 	str = "{ S2[i,j] }";
 	uset = isl_union_set_read_from_str(ctx, str);
 	filters = isl_union_set_list_from_union_set(uset);
@@ -10402,12 +10557,10 @@ static int test_schedule_tree_group_2(isl_ctx *ctx)
 	umap1 = isl_union_map_intersect_domain(umap1, uset);
 	isl_schedule_free(schedule);
 
-	node = isl_schedule_node_parent(node);
-	node = isl_schedule_node_parent(node);
+	node = isl_schedule_node_grandparent(node);
 	id = isl_id_alloc(ctx, "group1", NULL);
 	node = isl_schedule_node_group(node, id);
-	node = isl_schedule_node_child(node, 1);
-	node = isl_schedule_node_child(node, 0);
+	node = isl_schedule_node_grandchild(node, 1, 0);
 	id = isl_id_alloc(ctx, "group2", NULL);
 	node = isl_schedule_node_group(node, id);
 
@@ -10809,7 +10962,6 @@ struct {
 	{ "residue class", &test_residue_class },
 	{ "div", &test_div },
 	{ "slice", &test_slice },
-	{ "fixed power", &test_fixed_power },
 	{ "sample", &test_sample },
 	{ "empty projection", &test_empty_projection },
 	{ "output", &test_output },

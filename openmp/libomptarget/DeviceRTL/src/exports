@@ -1,10 +1,14 @@
 omp_*
+ompx_*
 *llvm_*
 __kmpc_*
 
+__omp_rtl_debug_kind
+__omp_rtl_assume_no_thread_state
+__omp_rtl_assume_no_nested_parallelism
+
 _ZN4ompx*
 
-__keep_alive
 IsSPMDMode
 
 memcmp

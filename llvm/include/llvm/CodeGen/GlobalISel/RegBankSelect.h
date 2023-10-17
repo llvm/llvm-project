@@ -190,7 +190,7 @@ public:
     /// Frequency of the insertion point.
     /// \p P is used to access the various analysis that will help to
     /// get that information, like MachineBlockFrequencyInfo.  If \p P
-    /// does not contain enough enough to return the actual frequency,
+    /// does not contain enough to return the actual frequency,
     /// this returns 1.
     virtual uint64_t frequency(const Pass &P) const { return 1; }
 
@@ -440,7 +440,7 @@ protected:
   public:
     /// Create a MappingCost assuming that most of the instructions
     /// will occur in a basic block with \p LocalFreq frequency.
-    MappingCost(const BlockFrequency &LocalFreq);
+    MappingCost(BlockFrequency LocalFreq);
 
     /// Add \p Cost to the local cost.
     /// \return true if this cost is saturated, false otherwise.
@@ -617,7 +617,7 @@ protected:
 
 public:
   /// Create a RegBankSelect pass with the specified \p RunningMode.
-  RegBankSelect(Mode RunningMode = Fast);
+  RegBankSelect(char &PassID = ID, Mode RunningMode = Fast);
 
   StringRef getPassName() const override { return "RegBankSelect"; }
 

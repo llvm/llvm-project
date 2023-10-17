@@ -14,11 +14,13 @@
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
+#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 #include <errno.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, expf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
@@ -28,12 +30,12 @@ LLVM_LIBC_FUNCTION(float, expf, (float x)) {
   uint32_t x_abs = x_u & 0x7fff'ffffU;
 
   // Exceptional values
-  if (unlikely(x_u == 0xc236'bd8cU)) { // x = -0x1.6d7b18p+5f
+  if (LIBC_UNLIKELY(x_u == 0xc236'bd8cU)) { // x = -0x1.6d7b18p+5f
     return 0x1.108a58p-66f - x * 0x1.0p-95f;
   }
 
   // When |x| >= 89, |x| < 2^-25, or x is nan
-  if (unlikely(x_abs >= 0x42b2'0000U || x_abs <= 0x3280'0000U)) {
+  if (LIBC_UNLIKELY(x_abs >= 0x42b2'0000U || x_abs <= 0x3280'0000U)) {
     // |x| < 2^-25
     if (xbits.get_unbiased_exponent() <= 101) {
       return 1.0f + x;
@@ -47,20 +49,22 @@ LLVM_LIBC_FUNCTION(float, expf, (float x)) {
       // exp(nan) = nan
       if (xbits.is_nan())
         return x;
-      if (fputil::get_round() == FE_UPWARD)
+      if (fputil::fenv_is_round_up())
         return static_cast<float>(FPBits(FPBits::MIN_SUBNORMAL));
-      errno = ERANGE;
+      fputil::set_errno_if_required(ERANGE);
+      fputil::raise_except_if_required(FE_UNDERFLOW);
       return 0.0f;
     }
     // x >= 89 or nan
     if (!xbits.get_sign() && (xbits.uintval() >= 0x42b2'0000)) {
       // x is finite
       if (xbits.uintval() < 0x7f80'0000U) {
-        int rounding = fputil::get_round();
+        int rounding = fputil::quick_get_round();
         if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
           return static_cast<float>(FPBits(FPBits::MAX_NORMAL));
 
-        errno = ERANGE;
+        fputil::set_errno_if_required(ERANGE);
+        fputil::raise_except_if_required(FE_OVERFLOW);
       }
       // x is +inf or nan
       return x + static_cast<float>(FPBits::inf());
@@ -101,4 +105,4 @@ LLVM_LIBC_FUNCTION(float, expf, (float x)) {
   return static_cast<float>(exp_hi * exp_mid * exp_lo);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

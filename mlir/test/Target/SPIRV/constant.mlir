@@ -264,4 +264,17 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     %0 = spirv.Constant dense<1> : tensor<2x2x3xi32> : !spirv.array<2 x !spirv.array<2 x !spirv.array<3 x i32, stride=4>, stride=12>, stride=24>
     spirv.ReturnValue %0 : !spirv.array<2 x !spirv.array<2 x !spirv.array<3 x i32, stride=4>, stride=12>, stride=24>
   }
+
+  // CHECK-LABEL: @signless_int_const_bit_extension
+  spirv.func @signless_int_const_bit_extension() -> (i16) "None" {
+    // CHECK: spirv.Constant -1 : i16
+    %signless_minus_one = spirv.Constant -1 : i16
+    spirv.ReturnValue %signless_minus_one : i16
+  }
+  // CHECK-LABEL: @signed_int_const_bit_extension
+  spirv.func @signed_int_const_bit_extension() -> (si16) "None" {
+    // CHECK: spirv.Constant -1 : si16
+    %signed_minus_one = spirv.Constant -1 : si16
+    spirv.ReturnValue %signed_minus_one : si16
+  }
 }

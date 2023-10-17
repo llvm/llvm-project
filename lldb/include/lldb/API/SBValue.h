@@ -16,6 +16,12 @@
 class ValueImpl;
 class ValueLocker;
 
+namespace lldb_private {
+namespace python {
+class SWIGBridge;
+}
+} // namespace lldb_private
+
 namespace lldb {
 
 class LLDB_API SBValue {
@@ -99,7 +105,8 @@ public:
 
   const char *GetLocation();
 
-  // Deprecated - use the one that takes SBError&
+  LLDB_DEPRECATED_FIXME("Use the variant that takes an SBError &",
+                        "SetValueFromCString(const char *, SBError &)")
   bool SetValueFromCString(const char *value_str);
 
   bool SetValueFromCString(const char *value_str, lldb::SBError &error);
@@ -117,7 +124,7 @@ public:
   lldb::SBValue CreateChildAtOffset(const char *name, uint32_t offset,
                                     lldb::SBType type);
 
-  // Deprecated - use the expression evaluator to perform type casting
+  LLDB_DEPRECATED("Use the expression evaluator to perform type casting")
   lldb::SBValue Cast(lldb::SBType type);
 
   lldb::SBValue CreateValueFromExpression(const char *name,
@@ -276,6 +283,7 @@ public:
 
   uint32_t GetNumChildren(uint32_t max);
 
+  LLDB_DEPRECATED("SBValue::GetOpaqueType() is deprecated.")
   void *GetOpaqueType();
 
   lldb::SBTarget GetTarget();
@@ -288,7 +296,7 @@ public:
 
   lldb::SBValue Dereference();
 
-  // Deprecated - please use GetType().IsPointerType() instead.
+  LLDB_DEPRECATED("Use GetType().IsPointerType() instead")
   bool TypeIsPointerType();
 
   lldb::SBType GetType();
@@ -308,8 +316,6 @@ public:
   lldb::SBValue EvaluateExpression(const char *expr,
                                    const SBExpressionOptions &options,
                                    const char *name) const;
-
-  SBValue(const lldb::ValueObjectSP &value_sp);
 
   /// Watch this value if it resides in memory.
   ///
@@ -368,6 +374,19 @@ public:
   lldb::SBWatchpoint WatchPointee(bool resolve_location, bool read, bool write,
                                   SBError &error);
 
+protected:
+  friend class SBBlock;
+  friend class SBFrame;
+  friend class SBModule;
+  friend class SBTarget;
+  friend class SBThread;
+  friend class SBTypeSummary;
+  friend class SBValueList;
+
+  friend class lldb_private::python::SWIGBridge;
+
+  SBValue(const lldb::ValueObjectSP &value_sp);
+
   /// Same as the protected version of GetSP that takes a locker, except that we
   /// make the
   /// locker locally in the function.  Since the Target API mutex is recursive,
@@ -380,13 +399,6 @@ public:
   ///     A ValueObjectSP of the best kind (static, dynamic or synthetic) we
   ///     can cons up, in accordance with the SBValue's settings.
   lldb::ValueObjectSP GetSP() const;
-
-protected:
-  friend class SBBlock;
-  friend class SBFrame;
-  friend class SBTarget;
-  friend class SBThread;
-  friend class SBValueList;
 
   /// Get the appropriate ValueObjectSP from this SBValue, consulting the
   /// use_dynamic and use_synthetic options passed in to SetSP when the

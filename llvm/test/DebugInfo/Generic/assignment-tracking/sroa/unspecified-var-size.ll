@@ -7,7 +7,7 @@
 ;; Check that migrateDebugInfo doesn't crash when encountering an alloca for a
 ;; variable with a type of unspecified size (e.g. DW_TAG_unspecified_type).
 
-; CHECK: @llvm.dbg.assign(metadata ptr %0,{{.+}}, metadata !DIExpression(),{{.+}}, metadata ptr undef, {{.+}})
+; CHECK: @llvm.dbg.value(metadata ptr %0,{{.+}}, metadata !DIExpression())
 ;; There should be no new fragment and the value component should remain as %0.
 
 define dso_local void @_Z3funDn(ptr %0) #0 !dbg !14 {

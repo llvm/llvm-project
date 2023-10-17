@@ -19,7 +19,6 @@
 
 #include "clang/Analysis/FlowSensitive/Solver.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {
@@ -28,59 +27,8 @@ namespace dataflow {
 /// Returns a string representation of a value kind.
 llvm::StringRef debugString(Value::Kind Kind);
 
-/// Returns a string representation of a boolean assignment to true or false.
-llvm::StringRef debugString(Solver::Result::Assignment Assignment);
-
 /// Returns a string representation of the result status of a SAT check.
 llvm::StringRef debugString(Solver::Result::Status Status);
-
-/// Returns a string representation for the boolean value `B`.
-///
-/// Atomic booleans appearing in the boolean value `B` are assigned to labels
-/// either specified in `AtomNames` or created by default rules as B0, B1, ...
-///
-/// Requirements:
-///
-///   Names assigned to atoms should not be repeated in `AtomNames`.
-std::string debugString(
-    const BoolValue &B,
-    llvm::DenseMap<const AtomicBoolValue *, std::string> AtomNames = {{}});
-
-/// Returns a string representation for `Constraints` - a collection of boolean
-/// formulas.
-///
-/// Atomic booleans appearing in the boolean value `Constraints` are assigned to
-/// labels either specified in `AtomNames` or created by default rules as B0,
-/// B1, ...
-///
-/// Requirements:
-///
-///   Names assigned to atoms should not be repeated in `AtomNames`.
-std::string debugString(
-    const llvm::DenseSet<BoolValue *> &Constraints,
-    llvm::DenseMap<const AtomicBoolValue *, std::string> AtomNames = {{}});
-
-/// Returns a string representation for `Constraints` - a collection of boolean
-/// formulas and the `Result` of satisfiability checking.
-///
-/// Atomic booleans appearing in `Constraints` and `Result` are assigned to
-/// labels either specified in `AtomNames` or created by default rules as B0,
-/// B1, ...
-///
-/// Requirements:
-///
-///   Names assigned to atoms should not be repeated in `AtomNames`.
-std::string debugString(
-    ArrayRef<BoolValue *> Constraints, const Solver::Result &Result,
-    llvm::DenseMap<const AtomicBoolValue *, std::string> AtomNames = {{}});
-inline std::string debugString(
-    const llvm::DenseSet<BoolValue *> &Constraints,
-    const Solver::Result &Result,
-    llvm::DenseMap<const AtomicBoolValue *, std::string> AtomNames = {{}}) {
-  std::vector<BoolValue *> ConstraintsVec(Constraints.begin(),
-                                          Constraints.end());
-  return debugString(ConstraintsVec, Result, std::move(AtomNames));
-}
 
 } // namespace dataflow
 } // namespace clang

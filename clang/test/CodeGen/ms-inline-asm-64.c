@@ -68,7 +68,14 @@ void t5(void) {
   }
   // CHECK: t5
   // CHECK: call void asm sideeffect inteldialect
-  // CHECK-SAME: call qword ptr ${0:P}
-  // CHECK-SAME: jmp qword ptr ${1:P}
+  // CHECK-SAME: call ${0:P}
+  // CHECK-SAME: jmp ${1:P}
   // CHECK-SAME: "*m,*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(void (...)) @bar, ptr elementtype(void (...)) @bar)
+}
+
+void t47(void) {
+  // CHECK-LABEL: define{{.*}} void @t47
+  int arr[1000];
+  __asm movdir64b rax, zmmword ptr [arr]
+  // CHECK: call void asm sideeffect inteldialect "movdir64b rax, zmmword ptr $0", "*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype([1000 x i32]) %arr)
 }

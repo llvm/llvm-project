@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++20 -fmodules-ts %s -triple %itanium_abi_triple -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++20 %s -triple %itanium_abi_triple -emit-llvm -o - | FileCheck %s
 module;
 # 4 __FILE__ 1
 namespace Outer::Inner {

@@ -287,7 +287,7 @@ define <4 x i32> @test_urem_odd_undef1(<4 x i32> %X) nounwind {
 ; CHECK-AVX1-LABEL: test_urem_odd_undef1:
 ; CHECK-AVX1:       # %bb.0:
 ; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; CHECK-AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [1374389535,1374389535,1374389535,1374389535]
+; CHECK-AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1374389535,1374389535,1374389535,1374389535]
 ; CHECK-AVX1-NEXT:    vpmuludq %xmm2, %xmm1, %xmm1
 ; CHECK-AVX1-NEXT:    vpmuludq %xmm2, %xmm0, %xmm2
 ; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
@@ -382,7 +382,7 @@ define <4 x i32> @test_urem_even_undef1(<4 x i32> %X) nounwind {
 ; CHECK-AVX1-LABEL: test_urem_even_undef1:
 ; CHECK-AVX1:       # %bb.0:
 ; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; CHECK-AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [1374389535,1374389535,1374389535,1374389535]
+; CHECK-AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1374389535,1374389535,1374389535,1374389535]
 ; CHECK-AVX1-NEXT:    vpmuludq %xmm2, %xmm1, %xmm1
 ; CHECK-AVX1-NEXT:    vpmuludq %xmm2, %xmm0, %xmm2
 ; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
@@ -443,20 +443,10 @@ define <4 x i32> @test_urem_one_eq(<4 x i32> %X) nounwind {
 ; CHECK-SSE-NEXT:    movaps {{.*#+}} xmm0 = [1,1,1,1]
 ; CHECK-SSE-NEXT:    retq
 ;
-; CHECK-AVX1-LABEL: test_urem_one_eq:
-; CHECK-AVX1:       # %bb.0:
-; CHECK-AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [1,1,1,1]
-; CHECK-AVX1-NEXT:    retq
-;
-; CHECK-AVX2-LABEL: test_urem_one_eq:
-; CHECK-AVX2:       # %bb.0:
-; CHECK-AVX2-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1,1,1,1]
-; CHECK-AVX2-NEXT:    retq
-;
-; CHECK-AVX512VL-LABEL: test_urem_one_eq:
-; CHECK-AVX512VL:       # %bb.0:
-; CHECK-AVX512VL-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1,1,1,1]
-; CHECK-AVX512VL-NEXT:    retq
+; CHECK-AVX-LABEL: test_urem_one_eq:
+; CHECK-AVX:       # %bb.0:
+; CHECK-AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1,1,1,1]
+; CHECK-AVX-NEXT:    retq
   %urem = urem <4 x i32> %X, <i32 1, i32 1, i32 1, i32 1>
   %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
   %ret = zext <4 x i1> %cmp to <4 x i32>

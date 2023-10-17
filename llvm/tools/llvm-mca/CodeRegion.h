@@ -91,6 +91,8 @@ public:
   CodeRegion(llvm::StringRef Desc, llvm::SMLoc Start)
       : Description(Desc), RangeStart(Start) {}
 
+  virtual ~CodeRegion() = default;
+
   void addInstruction(const llvm::MCInst &Instruction) {
     Instructions.emplace_back(Instruction);
   }
@@ -115,14 +117,14 @@ using AnalysisRegion = CodeRegion;
 /// in analysis of the region.
 class InstrumentRegion : public CodeRegion {
   /// Instrument for this region.
-  SharedInstrument Instrument;
+  UniqueInstrument I;
 
 public:
-  InstrumentRegion(llvm::StringRef Desc, llvm::SMLoc Start, SharedInstrument I)
-      : CodeRegion(Desc, Start), Instrument(I) {}
+  InstrumentRegion(llvm::StringRef Desc, llvm::SMLoc Start, UniqueInstrument I)
+      : CodeRegion(Desc, Start), I(std::move(I)) {}
 
 public:
-  SharedInstrument getInstrument() const { return Instrument; }
+  Instrument *getInstrument() const { return I.get(); }
 };
 
 class CodeRegionParseError final : public Error {};
@@ -142,6 +144,7 @@ protected:
 
 public:
   CodeRegions(llvm::SourceMgr &S) : SM(S), FoundErrors(false) {}
+  virtual ~CodeRegions() = default;
 
   typedef std::vector<UniqueCodeRegion>::iterator iterator;
   typedef std::vector<UniqueCodeRegion>::const_iterator const_iterator;
@@ -167,26 +170,34 @@ public:
   bool isValid() const { return !FoundErrors; }
 
   bool isRegionActive(llvm::StringRef Description) const {
-    return ActiveRegions.find(Description) != ActiveRegions.end();
+    return ActiveRegions.contains(Description);
   }
+
+  virtual void beginRegion(llvm::StringRef Description, llvm::SMLoc Loc) = 0;
+  virtual void beginRegion(llvm::StringRef Description, llvm::SMLoc Loc,
+                           UniqueInstrument Instrument) = 0;
+  virtual void endRegion(llvm::StringRef Description, llvm::SMLoc Loc) = 0;
 };
 
 struct AnalysisRegions : public CodeRegions {
   AnalysisRegions(llvm::SourceMgr &S);
 
-  void beginRegion(llvm::StringRef Description, llvm::SMLoc Loc);
-  void endRegion(llvm::StringRef Description, llvm::SMLoc Loc);
+  void beginRegion(llvm::StringRef Description, llvm::SMLoc Loc) override;
+  void beginRegion(llvm::StringRef Description, llvm::SMLoc Loc,
+                   UniqueInstrument Instrument) override {}
+  void endRegion(llvm::StringRef Description, llvm::SMLoc Loc) override;
 };
 
 struct InstrumentRegions : public CodeRegions {
+
   InstrumentRegions(llvm::SourceMgr &S);
 
+  void beginRegion(llvm::StringRef Description, llvm::SMLoc Loc) override{};
   void beginRegion(llvm::StringRef Description, llvm::SMLoc Loc,
-                   SharedInstrument Instrument);
-  void endRegion(llvm::StringRef Description, llvm::SMLoc Loc);
+                   UniqueInstrument Instrument) override;
+  void endRegion(llvm::StringRef Description, llvm::SMLoc Loc) override;
 
-  const SmallVector<SharedInstrument>
-  getActiveInstruments(llvm::SMLoc Loc) const;
+  const SmallVector<Instrument *> getActiveInstruments(llvm::SMLoc Loc) const;
 };
 
 } // namespace mca

@@ -17,6 +17,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -30,7 +31,7 @@ using namespace llvm;
 
 static const char *BTFKindStr[] = {
 #define HANDLE_BTF_KIND(ID, NAME) "BTF_KIND_" #NAME,
-#include "BTF.def"
+#include "llvm/DebugInfo/BTF/BTF.def"
 };
 
 /// Emit a BTF common type.
@@ -782,6 +783,17 @@ void BTFDebug::visitCompositeType(const DICompositeType *CTy,
     visitEnumType(CTy, TypeId);
 }
 
+bool BTFDebug::IsForwardDeclCandidate(const DIType *Base) {
+  if (const auto *CTy = dyn_cast<DICompositeType>(Base)) {
+    auto CTag = CTy->getTag();
+    if ((CTag == dwarf::DW_TAG_structure_type ||
+         CTag == dwarf::DW_TAG_union_type) &&
+        !CTy->getName().empty() && !CTy->isForwardDecl())
+      return true;
+  }
+  return false;
+}
+
 /// Handle pointer, typedef, const, volatile, restrict and member types.
 void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
                                 bool CheckPointer, bool SeenPointer) {
@@ -796,20 +808,15 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
   if (CheckPointer && SeenPointer) {
     const DIType *Base = DTy->getBaseType();
     if (Base) {
-      if (const auto *CTy = dyn_cast<DICompositeType>(Base)) {
-        auto CTag = CTy->getTag();
-        if ((CTag == dwarf::DW_TAG_structure_type ||
-             CTag == dwarf::DW_TAG_union_type) &&
-            !CTy->getName().empty() && !CTy->isForwardDecl()) {
-          /// Find a candidate, generate a fixup. Later on the struct/union
-          /// pointee type will be replaced with either a real type or
-          /// a forward declaration.
-          auto TypeEntry = std::make_unique<BTFTypeDerived>(DTy, Tag, true);
-          auto &Fixup = FixupDerivedTypes[CTy];
-          Fixup.push_back(std::make_pair(DTy, TypeEntry.get()));
-          TypeId = addType(std::move(TypeEntry), DTy);
-          return;
-        }
+      if (IsForwardDeclCandidate(Base)) {
+        /// Find a candidate, generate a fixup. Later on the struct/union
+        /// pointee type will be replaced with either a real type or
+        /// a forward declaration.
+        auto TypeEntry = std::make_unique<BTFTypeDerived>(DTy, Tag, true);
+        auto &Fixup = FixupDerivedTypes[cast<DICompositeType>(Base)];
+        Fixup.push_back(std::make_pair(DTy, TypeEntry.get()));
+        TypeId = addType(std::move(TypeEntry), DTy);
+        return;
       }
     }
   }
@@ -844,6 +851,13 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
     visitTypeEntry(DTy->getBaseType(), TempTypeId, CheckPointer, SeenPointer);
 }
 
+/// Visit a type entry. CheckPointer is true if the type has
+/// one of its predecessors as one struct/union member. SeenPointer
+/// is true if CheckPointer is true and one of its predecessors
+/// is a pointer. The goal of CheckPointer and SeenPointer is to
+/// do pruning for struct/union types so some of these types
+/// will not be emitted in BTF and rather forward declarations
+/// will be generated.
 void BTFDebug::visitTypeEntry(const DIType *Ty, uint32_t &TypeId,
                               bool CheckPointer, bool SeenPointer) {
   if (!Ty || DIToIdMap.find(Ty) != DIToIdMap.end()) {
@@ -888,6 +902,11 @@ void BTFDebug::visitTypeEntry(const DIType *Ty, uint32_t &TypeId,
           if (DIToIdMap.find(BaseTy) != DIToIdMap.end()) {
             DTy = dyn_cast<DIDerivedType>(BaseTy);
           } else {
+            if (CheckPointer && DTy->getTag() == dwarf::DW_TAG_pointer_type) {
+              SeenPointer = true;
+              if (IsForwardDeclCandidate(BaseTy))
+                break;
+            }
             uint32_t TmpTypeId;
             visitTypeEntry(BaseTy, TmpTypeId, CheckPointer, SeenPointer);
             break;
@@ -964,7 +983,7 @@ std::string BTFDebug::populateFileContent(const DISubprogram *SP) {
     FileName = std::string(File->getFilename());
 
   // No need to populate the contends if it has been populated!
-  if (FileContent.find(FileName) != FileContent.end())
+  if (FileContent.contains(FileName))
     return FileName;
 
   std::vector<std::string> Content;
@@ -1300,14 +1319,18 @@ void BTFDebug::beginInstruction(const MachineInstr *MI) {
   if (MI->isInlineAsm()) {
     // Count the number of register definitions to find the asm string.
     unsigned NumDefs = 0;
-    for (; MI->getOperand(NumDefs).isReg() && MI->getOperand(NumDefs).isDef();
-         ++NumDefs)
-      ;
-
-    // Skip this inline asm instruction if the asmstr is empty.
-    const char *AsmStr = MI->getOperand(NumDefs).getSymbolName();
-    if (AsmStr[0] == 0)
-      return;
+    while (true) {
+      const MachineOperand &MO = MI->getOperand(NumDefs);
+      if (MO.isReg() && MO.isDef()) {
+        ++NumDefs;
+        continue;
+      }
+      // Skip this inline asm instruction if the asmstr is empty.
+      const char *AsmStr = MO.getSymbolName();
+      if (AsmStr[0] == 0)
+        return;
+      break;
+    }
   }
 
   if (MI->getOpcode() == BPF::LD_imm64) {
@@ -1326,8 +1349,9 @@ void BTFDebug::beginInstruction(const MachineInstr *MI) {
     // If the insn is "r2 = LD_imm64 @<an TypeIdAttr global>",
     // The LD_imm64 result will be replaced with a btf type id.
     processGlobalValue(MI->getOperand(1));
-  } else if (MI->getOpcode() == BPF::CORE_MEM ||
-             MI->getOpcode() == BPF::CORE_ALU32_MEM ||
+  } else if (MI->getOpcode() == BPF::CORE_LD64 ||
+             MI->getOpcode() == BPF::CORE_LD32 ||
+             MI->getOpcode() == BPF::CORE_ST ||
              MI->getOpcode() == BPF::CORE_SHIFT) {
     // relocation insn is a load, store or shift insn.
     processGlobalValue(MI->getOperand(3));
@@ -1350,6 +1374,8 @@ void BTFDebug::beginInstruction(const MachineInstr *MI) {
     // been generated, construct one based on function signature.
     if (LineInfoGenerated == false) {
       auto *S = MI->getMF()->getFunction().getSubprogram();
+      if (!S)
+        return;
       MCSymbol *FuncLabel = Asm->getFunctionBegin();
       constructLineInfo(S, FuncLabel, S->getLine(), 0);
       LineInfoGenerated = true;
@@ -1492,10 +1518,8 @@ bool BTFDebug::InstLower(const MachineInstr *MI, MCInst &OutMI) {
           return false;
         }
 
-        if (Reloc == BPFCoreSharedInfo::ENUM_VALUE_EXISTENCE ||
-            Reloc == BPFCoreSharedInfo::ENUM_VALUE ||
-            Reloc == BPFCoreSharedInfo::BTF_TYPE_ID_LOCAL ||
-            Reloc == BPFCoreSharedInfo::BTF_TYPE_ID_REMOTE)
+        if (Reloc == BTF::ENUM_VALUE_EXISTENCE || Reloc == BTF::ENUM_VALUE ||
+            Reloc == BTF::BTF_TYPE_ID_LOCAL || Reloc == BTF::BTF_TYPE_ID_REMOTE)
           OutMI.setOpcode(BPF::LD_imm64);
         else
           OutMI.setOpcode(BPF::MOV_ri);
@@ -1504,8 +1528,9 @@ bool BTFDebug::InstLower(const MachineInstr *MI, MCInst &OutMI) {
         return true;
       }
     }
-  } else if (MI->getOpcode() == BPF::CORE_MEM ||
-             MI->getOpcode() == BPF::CORE_ALU32_MEM ||
+  } else if (MI->getOpcode() == BPF::CORE_LD64 ||
+             MI->getOpcode() == BPF::CORE_LD32 ||
+             MI->getOpcode() == BPF::CORE_ST ||
              MI->getOpcode() == BPF::CORE_SHIFT) {
     const MachineOperand &MO = MI->getOperand(3);
     if (MO.isGlobal()) {

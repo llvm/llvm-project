@@ -59,6 +59,18 @@ The size of each entry depends on the code model. With large and medium sized
 code models, the entry size matches pointer size. For any smaller code model
 the entry size is just 32 bits.
 
+Encoding Options
+----------------
+
+Optional encoding options can be passed in the first ``MDString`` operator:
+``<section>!<options>``. The following options are available:
+
+    * ``C`` -- Compress constant integers of size 2-8 bytes as ULEB128; this
+      includes the function size (but excludes the PC entry).
+
+For example, ``foo!C`` will emit into section ``foo`` with all constants
+encoded as ULEB128.
+
 Guarantees on Code Generation
 =============================
 

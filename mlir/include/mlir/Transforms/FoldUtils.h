@@ -17,6 +17,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectInterface.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
 
 namespace mlir {
@@ -31,19 +32,14 @@ class Value;
 /// generated along the way.
 class OperationFolder {
 public:
-  OperationFolder(MLIRContext *ctx) : interfaces(ctx) {}
+  OperationFolder(MLIRContext *ctx, OpBuilder::Listener *listener = nullptr)
+      : interfaces(ctx), rewriter(ctx, listener) {}
 
   /// Tries to perform folding on the given `op`, including unifying
   /// deduplicated constants. If successful, replaces `op`'s uses with
-  /// folded results, and returns success. `preReplaceAction` is invoked on `op`
-  /// before it is replaced. 'processGeneratedConstants' is invoked for any new
-  /// operations generated when folding. If the op was completely folded it is
+  /// folded results, and returns success. If the op was completely folded it is
   /// erased. If it is just updated in place, `inPlaceUpdate` is set to true.
-  LogicalResult
-  tryToFold(Operation *op,
-            function_ref<void(Operation *)> processGeneratedConstants = nullptr,
-            function_ref<void(Operation *)> preReplaceAction = nullptr,
-            bool *inPlaceUpdate = nullptr);
+  LogicalResult tryToFold(Operation *op, bool *inPlaceUpdate = nullptr);
 
   /// Tries to fold a pre-existing constant operation. `constValue` represents
   /// the value of the constant, and can be optionally passed if the value is
@@ -62,57 +58,14 @@ public:
   /// externally to this OperationFolder. `op` must be a constant op.
   void notifyRemoval(Operation *op);
 
-  /// Create an operation of specific op type with the given builder,
-  /// and immediately try to fold it. This function populates 'results' with
-  /// the results after folding the operation.
-  template <typename OpTy, typename... Args>
-  void create(OpBuilder &builder, SmallVectorImpl<Value> &results,
-              Location location, Args &&...args) {
-    // The op needs to be inserted only if the fold (below) fails, or the number
-    // of results produced by the successful folding is zero (which is treated
-    // as an in-place fold). Using create methods of the builder will insert the
-    // op, so not using it here.
-    OperationState state(location, OpTy::getOperationName());
-    OpTy::build(builder, state, std::forward<Args>(args)...);
-    Operation *op = Operation::create(state);
-
-    if (failed(tryToFold(builder, op, results)) || results.empty()) {
-      builder.insert(op);
-      results.assign(op->result_begin(), op->result_end());
-      return;
-    }
-    op->destroy();
-  }
-
-  /// Overload to create or fold a single result operation.
-  template <typename OpTy, typename... Args>
-  std::enable_if_t<OpTy::template hasTrait<OpTrait::OneResult>(), Value>
-  create(OpBuilder &builder, Location location, Args &&...args) {
-    SmallVector<Value, 1> results;
-    create<OpTy>(builder, results, location, std::forward<Args>(args)...);
-    return results.front();
-  }
-
-  /// Overload to create or fold a zero result operation.
-  template <typename OpTy, typename... Args>
-  std::enable_if_t<OpTy::template hasTrait<OpTrait::ZeroResults>(), OpTy>
-  create(OpBuilder &builder, Location location, Args &&...args) {
-    auto op = builder.create<OpTy>(location, std::forward<Args>(args)...);
-    SmallVector<Value, 0> unused;
-    (void)tryToFold(op.getOperation(), unused);
-
-    // Folding cannot remove a zero-result operation, so for convenience we
-    // continue to return it.
-    return op;
-  }
-
   /// Clear out any constants cached inside of the folder.
   void clear();
 
-  /// Get or create a constant using the given builder. On success this returns
-  /// the constant operation, nullptr otherwise.
-  Value getOrCreateConstant(OpBuilder &builder, Dialect *dialect,
-                            Attribute value, Type type, Location loc);
+  /// Get or create a constant for use in the specified block. The constant may
+  /// be created in a parent block. On success this returns the constant
+  /// operation, nullptr otherwise.
+  Value getOrCreateConstant(Block *block, Dialect *dialect, Attribute value,
+                            Type type, Location loc);
 
 private:
   /// This map keeps track of uniqued constants by dialect, attribute, and type.
@@ -128,23 +81,19 @@ private:
 
   /// Tries to perform folding on the given `op`. If successful, populates
   /// `results` with the results of the folding.
-  LogicalResult tryToFold(
-      OpBuilder &builder, Operation *op, SmallVectorImpl<Value> &results,
-      function_ref<void(Operation *)> processGeneratedConstants = nullptr);
+  LogicalResult tryToFold(Operation *op, SmallVectorImpl<Value> &results);
 
-  /// Try to process a set of fold results, generating constants as necessary.
-  /// Populates `results` on success, otherwise leaves it unchanged.
-  LogicalResult
-  processFoldResults(OpBuilder &builder, Operation *op,
-                     SmallVectorImpl<Value> &results,
-                     ArrayRef<OpFoldResult> foldResults,
-                     function_ref<void(Operation *)> processGeneratedConstants);
+  /// Try to process a set of fold results. Populates `results` on success,
+  /// otherwise leaves it unchanged.
+  LogicalResult processFoldResults(Operation *op,
+                                   SmallVectorImpl<Value> &results,
+                                   ArrayRef<OpFoldResult> foldResults);
 
   /// Try to get or create a new constant entry. On success this returns the
   /// constant operation, nullptr otherwise.
   Operation *tryGetOrCreateConstant(ConstantMap &uniquedConstants,
-                                    Dialect *dialect, OpBuilder &builder,
-                                    Attribute value, Type type, Location loc);
+                                    Dialect *dialect, Attribute value,
+                                    Type type, Location loc);
 
   /// A mapping between an insertion region and the constants that have been
   /// created within it.
@@ -156,6 +105,9 @@ private:
 
   /// A collection of dialect folder interfaces.
   DialectInterfaceCollection<DialectFoldInterface> interfaces;
+
+  /// A rewriter that performs all IR modifications.
+  IRRewriter rewriter;
 };
 
 } // namespace mlir

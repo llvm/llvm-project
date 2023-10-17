@@ -24,7 +24,7 @@ namespace adl {
 template <bool IsNoexcept = false>
 struct MaybeNoexceptIterator {
   using value_type = int;
-  using difference_type = ptrdiff_t;
+  using difference_type = std::ptrdiff_t;
 
   value_type* ptr_ = nullptr;
   int* iter_swap_invocations_ = nullptr;

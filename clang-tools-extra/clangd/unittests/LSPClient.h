@@ -9,12 +9,14 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_LSPCLIENT_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_LSPCLIENT_H
 
+#include "llvm/ADT/StringRef.h"
+#include <condition_variable>
 #include <llvm/Support/Error.h>
 #include <llvm/Support/JSON.h>
-#include <condition_variable>
-#include <deque>
+#include <memory>
 #include <mutex>
 #include <optional>
+#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -32,7 +34,7 @@ public:
   class CallResult {
   public:
     ~CallResult();
-    // Blocks up to 10 seconds for the result to be ready.
+    // Blocks up to 60 seconds for the result to be ready.
     // Records a test failure if there was no reply.
     llvm::Expected<llvm::json::Value> take();
     // Like take(), but records a test failure if the result was an error.

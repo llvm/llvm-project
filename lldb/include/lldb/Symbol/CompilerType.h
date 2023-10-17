@@ -146,8 +146,6 @@ public:
 
   bool IsConst() const;
 
-  bool IsCStringType(uint32_t &length) const;
-
   bool IsDefined() const;
 
   bool IsFloatingPointType(uint32_t &count, bool &is_complex) const;
@@ -163,6 +161,8 @@ public:
   bool IsVariadicFunctionType() const;
 
   bool IsFunctionPointerType() const;
+
+  bool IsMemberFunctionPointerType() const;
 
   bool
   IsBlockPointerType(CompilerType *function_pointer_type_ptr = nullptr) const;
@@ -342,8 +342,6 @@ public:
 
   lldb::BasicType GetBasicTypeEnumeration() const;
 
-  static lldb::BasicType GetBasicTypeEnumeration(ConstString name);
-
   /// If this type is an enumeration, iterate through all of its enumerators
   /// using a callback. If the callback returns true, keep iterating, else abort
   /// the iteration.
@@ -385,7 +383,7 @@ public:
 
   /// Lookup a child given a name. This function will match base class names and
   /// member member names in "clang_type" only, not descendants.
-  uint32_t GetIndexOfChildWithName(const char *name,
+  uint32_t GetIndexOfChildWithName(llvm::StringRef name,
                                    bool omit_empty_base_classes) const;
 
   /// Lookup a child member given a name. This function will match member names
@@ -395,7 +393,8 @@ public:
   /// vector<vector<uint32_t>>
   /// so we catch all names that match a given child name, not just the first.
   size_t
-  GetIndexOfChildMemberWithName(const char *name, bool omit_empty_base_classes,
+  GetIndexOfChildMemberWithName(llvm::StringRef name,
+                                bool omit_empty_base_classes,
                                 std::vector<uint32_t> &child_indexes) const;
 
   /// Return the number of template arguments the type has.
@@ -436,20 +435,10 @@ public:
   LLVM_DUMP_METHOD void dump() const;
 #endif
 
-  void DumpValue(ExecutionContext *exe_ctx, Stream *s, lldb::Format format,
-                 const DataExtractor &data, lldb::offset_t data_offset,
-                 size_t data_byte_size, uint32_t bitfield_bit_size,
-                 uint32_t bitfield_bit_offset, bool show_types,
-                 bool show_summary, bool verbose, uint32_t depth);
-
   bool DumpTypeValue(Stream *s, lldb::Format format, const DataExtractor &data,
                      lldb::offset_t data_offset, size_t data_byte_size,
                      uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset,
                      ExecutionContextScope *exe_scope);
-
-  void DumpSummary(ExecutionContext *exe_ctx, Stream *s,
-                   const DataExtractor &data, lldb::offset_t data_offset,
-                   size_t data_byte_size);
 
   /// Dump to stdout.
   void DumpTypeDescription(lldb::DescriptionLevel level =

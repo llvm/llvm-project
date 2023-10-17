@@ -16,7 +16,6 @@
 #include "PPCFrameLowering.h"
 #include "PPCISelLowering.h"
 #include "PPCInstrInfo.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/RegisterBankInfo.h"
@@ -24,6 +23,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/MC/MCInstrItineraries.h"
+#include "llvm/TargetParser/Triple.h"
 #include <string>
 
 #define GET_SUBTARGETINFO_HEADER
@@ -240,6 +240,8 @@ public:
 
   bool enableSubRegLiveness() const override;
 
+  bool enableSpillageCopyElimination() const override { return true; }
+
   /// True if the GV will be accessed via an indirect symbol.
   bool isGVIndirectSymbol(const GlobalValue *GV) const;
 
@@ -272,6 +274,12 @@ public:
     assert((is64BitELFABI() || isAIXABI()) &&
            "Should only be called when the target is a TOC based ABI.");
     return IsPPC64 ? PPC::X2 : PPC::R2;
+  }
+
+  MCRegister getThreadPointerRegister() const {
+    assert((is64BitELFABI() || isAIXABI()) &&
+           "Should only be called for targets with a thread pointer register.");
+    return IsPPC64 ? PPC::X13 : PPC::R13;
   }
 
   MCRegister getStackPointerRegister() const {

@@ -12,12 +12,13 @@ body:             |
 
     ; CHECK-LABEL: name: concat_to_build_vector
     ; CHECK: liveins: $x0, $x1, $x2, $x3
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[COPY1]](s64), [[COPY2]](s64), [[COPY3]](s64)
-    ; CHECK: RET_ReallyLR implicit [[BUILD_VECTOR]](<4 x s64>)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[COPY1]](s64), [[COPY2]](s64), [[COPY3]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit [[BUILD_VECTOR]](<4 x s64>)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
     %2:_(s64) = COPY $x2
@@ -37,12 +38,13 @@ body:             |
 
     ; CHECK-LABEL: name: concat_to_build_vector_ptr
     ; CHECK: liveins: $x0, $x1, $x2, $x3
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(p0) = COPY $x2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(p0) = COPY $x3
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x p0>) = G_BUILD_VECTOR [[COPY]](p0), [[COPY1]](p0), [[COPY2]](p0), [[COPY3]](p0)
-    ; CHECK: RET_ReallyLR implicit [[BUILD_VECTOR]](<4 x p0>)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(p0) = COPY $x2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(p0) = COPY $x3
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x p0>) = G_BUILD_VECTOR [[COPY]](p0), [[COPY1]](p0), [[COPY2]](p0), [[COPY3]](p0)
+    ; CHECK-NEXT: RET_ReallyLR implicit [[BUILD_VECTOR]](<4 x p0>)
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
     %2:_(p0) = COPY $x2
@@ -60,7 +62,7 @@ body:             |
   bb.1:
     ; CHECK-LABEL: name: concat_to_undef
     ; CHECK: [[DEF:%[0-9]+]]:_(<4 x s64>) = G_IMPLICIT_DEF
-    ; CHECK: RET_ReallyLR implicit [[DEF]](<4 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit [[DEF]](<4 x s64>)
     %4:_(<2 x s64>) = G_IMPLICIT_DEF
     %5:_(<2 x s64>) = G_IMPLICIT_DEF
     %6:_(<4 x s64>) = G_CONCAT_VECTORS %4(<2 x s64>), %5
@@ -78,11 +80,12 @@ body:             |
 
     ; CHECK-LABEL: name: concat_to_build_vector_with_undef
     ; CHECK: liveins: $x0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[COPY1]](s64), [[DEF]](s64), [[DEF]](s64)
-    ; CHECK: RET_ReallyLR implicit [[BUILD_VECTOR]](<4 x s64>)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[COPY1]](s64), [[DEF]](s64), [[DEF]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit [[BUILD_VECTOR]](<4 x s64>)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
     %4:_(<2 x s64>) = G_BUILD_VECTOR %0(s64), %1
@@ -100,11 +103,12 @@ body:             |
 
     ; CHECK-LABEL: name: concat_to_build_vector_with_undef_ptr
     ; CHECK: liveins: $x0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x p0>) = G_BUILD_VECTOR [[COPY]](p0), [[COPY1]](p0), [[DEF]](p0), [[DEF]](p0)
-    ; CHECK: RET_ReallyLR implicit [[BUILD_VECTOR]](<4 x p0>)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x p0>) = G_BUILD_VECTOR [[COPY]](p0), [[COPY1]](p0), [[DEF]](p0), [[DEF]](p0)
+    ; CHECK-NEXT: RET_ReallyLR implicit [[BUILD_VECTOR]](<4 x p0>)
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
     %4:_(<2 x p0>) = G_BUILD_VECTOR %0(p0), %1
@@ -123,10 +127,11 @@ body:             |
 
     ; CHECK-LABEL: name: concat_to_build_vector_negative_test
     ; CHECK: liveins: $q0
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-    ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
-    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s64>) = G_CONCAT_VECTORS [[COPY]](<2 x s64>), [[DEF]](<2 x s64>)
-    ; CHECK: RET_ReallyLR implicit [[CONCAT_VECTORS]](<4 x s64>)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s64>) = G_CONCAT_VECTORS [[COPY]](<2 x s64>), [[DEF]](<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit [[CONCAT_VECTORS]](<4 x s64>)
     %4:_(<2 x s64>) = COPY $q0
     %5:_(<2 x s64>) = G_IMPLICIT_DEF
     %6:_(<4 x s64>) = G_CONCAT_VECTORS %4(<2 x s64>), %5

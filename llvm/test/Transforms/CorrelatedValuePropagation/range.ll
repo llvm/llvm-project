@@ -934,8 +934,8 @@ entry:
   ret i1 %res
 }
 
-define i1 @intrinsic_range(i16 %x) {
-; CHECK-LABEL: @intrinsic_range(
+define i1 @ctlz_with_range_metadata(i16 %x) {
+; CHECK-LABEL: @ctlz_with_range_metadata(
 ; CHECK-NEXT:    [[CTLZ:%.*]] = call i16 @llvm.ctlz.i16(i16 [[X:%.*]], i1 false), !range [[RNG5:![0-9]+]]
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i16 [[CTLZ]] to i8
 ; CHECK-NEXT:    ret i1 true
@@ -946,5 +946,187 @@ define i1 @intrinsic_range(i16 %x) {
   ret i1 %res
 }
 
+define i1 @abs_with_range_metadata(i16 %x) {
+; CHECK-LABEL: @abs_with_range_metadata(
+; CHECK-NEXT:    [[ABS:%.*]] = call i16 @llvm.abs.i16(i16 [[X:%.*]], i1 false), !range [[RNG5]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i16 [[ABS]] to i8
+; CHECK-NEXT:    ret i1 true
+;
+  %abs = call i16 @llvm.abs.i16(i16 %x, i1 false), !range !{i16 0, i16 8}
+  %trunc = trunc i16 %abs to i8
+  %res = icmp ult i8 %trunc, 8
+  ret i1 %res
+}
+
+define i1 @ctlz_fold(i16 %x) {
+; CHECK-LABEL: @ctlz_fold(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[X:%.*]], 256
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[CTLZ:%.*]] = call i16 @llvm.ctlz.i16(i16 [[X]], i1 false)
+; CHECK-NEXT:    ret i1 true
+; CHECK:       else:
+; CHECK-NEXT:    [[CTLZ2:%.*]] = call i16 @llvm.ctlz.i16(i16 [[X]], i1 false)
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = icmp ult i16 %x, 256
+  br i1 %cmp, label %if, label %else
+
+if:
+  %ctlz = call i16 @llvm.ctlz.i16(i16 %x, i1 false)
+  %res = icmp uge i16 %ctlz, 8
+  ret i1 %res
+
+else:
+  %ctlz2 = call i16 @llvm.ctlz.i16(i16 %x, i1 false)
+  %res2 = icmp ult i16 %ctlz2, 8
+  ret i1 %res2
+}
+
+define i1 @ctlz_nofold(i16 %x) {
+; CHECK-LABEL: @ctlz_nofold(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[X:%.*]], 256
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[CTLZ:%.*]] = call i16 @llvm.ctlz.i16(i16 [[X]], i1 false)
+; CHECK-NEXT:    [[RES:%.*]] = icmp uge i16 [[CTLZ]], 9
+; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK:       else:
+; CHECK-NEXT:    [[CTLZ2:%.*]] = call i16 @llvm.ctlz.i16(i16 [[X]], i1 false)
+; CHECK-NEXT:    [[RES2:%.*]] = icmp ult i16 [[CTLZ2]], 7
+; CHECK-NEXT:    ret i1 [[RES2]]
+;
+  %cmp = icmp ult i16 %x, 256
+  br i1 %cmp, label %if, label %else
+
+if:
+  %ctlz = call i16 @llvm.ctlz.i16(i16 %x, i1 false)
+  %res = icmp uge i16 %ctlz, 9
+  ret i1 %res
+
+else:
+  %ctlz2 = call i16 @llvm.ctlz.i16(i16 %x, i1 false)
+  %res2 = icmp ult i16 %ctlz2, 7
+  ret i1 %res2
+}
+
+define i1 @cttz_fold(i16 %x) {
+; CHECK-LABEL: @cttz_fold(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[X:%.*]], 256
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[CTTZ:%.*]] = call i16 @llvm.cttz.i16(i16 [[X]], i1 true)
+; CHECK-NEXT:    [[RES:%.*]] = icmp uge i16 [[CTTZ]], 8
+; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = icmp ult i16 %x, 256
+  br i1 %cmp, label %if, label %else
+
+if:
+  %cttz = call i16 @llvm.cttz.i16(i16 %x, i1 true)
+  %res = icmp uge i16 %cttz, 8
+  ret i1 %res
+
+else:
+  ret i1 false
+}
+
+define i1 @cttz_nofold1(i16 %x) {
+; CHECK-LABEL: @cttz_nofold1(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[X:%.*]], 256
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[CTTZ:%.*]] = call i16 @llvm.cttz.i16(i16 [[X]], i1 true)
+; CHECK-NEXT:    [[RES:%.*]] = icmp uge i16 [[CTTZ]], 7
+; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = icmp ult i16 %x, 256
+  br i1 %cmp, label %if, label %else
+
+if:
+  %cttz = call i16 @llvm.cttz.i16(i16 %x, i1 true)
+  %res = icmp uge i16 %cttz, 7
+  ret i1 %res
+
+else:
+  ret i1 false
+}
+
+define i1 @cttz_nofold2(i16 %x) {
+; CHECK-LABEL: @cttz_nofold2(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[X:%.*]], 256
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[CTTZ:%.*]] = call i16 @llvm.cttz.i16(i16 [[X]], i1 false)
+; CHECK-NEXT:    [[RES:%.*]] = icmp uge i16 [[CTTZ]], 8
+; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = icmp ult i16 %x, 256
+  br i1 %cmp, label %if, label %else
+
+if:
+  %cttz = call i16 @llvm.cttz.i16(i16 %x, i1 false)
+  %res = icmp uge i16 %cttz, 8
+  ret i1 %res
+
+else:
+  ret i1 false
+}
+
+define i1 @ctpop_fold(i16 %x) {
+; CHECK-LABEL: @ctpop_fold(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[X:%.*]], 256
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[CTPOP:%.*]] = call i16 @llvm.ctpop.i16(i16 [[X]])
+; CHECK-NEXT:    [[RES:%.*]] = icmp ule i16 [[CTPOP]], 8
+; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = icmp ult i16 %x, 256
+  br i1 %cmp, label %if, label %else
+
+if:
+  %ctpop = call i16 @llvm.ctpop.i16(i16 %x)
+  %res = icmp ule i16 %ctpop, 8
+  ret i1 %res
+
+else:
+  ret i1 true
+}
+
+define i1 @ctpop_nofold(i16 %x) {
+; CHECK-LABEL: @ctpop_nofold(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[X:%.*]], 256
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[CTPOP:%.*]] = call i16 @llvm.ctpop.i16(i16 [[X]])
+; CHECK-NEXT:    [[RES:%.*]] = icmp ule i16 [[CTPOP]], 7
+; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = icmp ult i16 %x, 256
+  br i1 %cmp, label %if, label %else
+
+if:
+  %ctpop = call i16 @llvm.ctpop.i16(i16 %x)
+  %res = icmp ule i16 %ctpop, 7
+  ret i1 %res
+
+else:
+  ret i1 true
+}
+
 declare i16 @llvm.ctlz.i16(i16, i1)
+declare i16 @llvm.cttz.i16(i16, i1)
+declare i16 @llvm.ctpop.i16(i16)
+declare i16 @llvm.abs.i16(i16, i1)
 declare void @llvm.assume(i1)

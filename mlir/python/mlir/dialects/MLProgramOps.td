@@ -9,7 +9,6 @@
 #ifndef PYTHON_BINDINGS_MLPROGRAM_OPS
 #define PYTHON_BINDINGS_MLPROGRAM_OPS
 
-include "mlir/Bindings/Python/Attributes.td"
 include "mlir/Dialect/MLProgram/IR/MLProgramOps.td"
 
 #endif

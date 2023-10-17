@@ -47,18 +47,18 @@
 #define MKSTR_LEN(CharT, Str) MKSTR(Str).length((const CharT*)0)
 
 struct MultiStringType {
-  MKSTR_WCHAR_ONLY(const wchar_t* w_; size_t wn_; )
-  MKSTR_CHAR8_ONLY(const char8_t* u8_; size_t u8n_; )
-  MKSTR_CXX11_ONLY(const char16_t* u16_; size_t u16n_; )
-  MKSTR_CXX11_ONLY(const char32_t* u32_; size_t u32n_; )
-  const char* s_; size_t sn_;
+  MKSTR_WCHAR_ONLY(const wchar_t* w_; std::size_t wn_; )
+  MKSTR_CHAR8_ONLY(const char8_t* u8_; std::size_t u8n_; )
+  MKSTR_CXX11_ONLY(const char16_t* u16_; std::size_t u16n_; )
+  MKSTR_CXX11_ONLY(const char32_t* u32_; std::size_t u32n_; )
+  const char* s_; std::size_t sn_;
 
   TEST_CONSTEXPR MultiStringType(
-      MKSTR_WCHAR_ONLY(const wchar_t *w, size_t wn,)
-      MKSTR_CHAR8_ONLY(const char8_t *u8, size_t u8n,)
-      MKSTR_CXX11_ONLY(const char16_t *u16, size_t u16n,)
-      MKSTR_CXX11_ONLY(const char32_t *u32, size_t u32n,)
-      const char *s, size_t sn)
+      MKSTR_WCHAR_ONLY(const wchar_t *w, std::size_t wn,)
+      MKSTR_CHAR8_ONLY(const char8_t *u8, std::size_t u8n,)
+      MKSTR_CXX11_ONLY(const char16_t *u16, std::size_t u16n,)
+      MKSTR_CXX11_ONLY(const char32_t *u32, std::size_t u32n,)
+      const char *s, std::size_t sn)
     : MKSTR_WCHAR_ONLY(w_(w), wn_(wn),)
       MKSTR_CHAR8_ONLY(u8_(u8), u8n_(u8n),)
       MKSTR_CXX11_ONLY(u16_(u16), u16n_(u16n),)
@@ -71,11 +71,11 @@ struct MultiStringType {
   MKSTR_CXX11_ONLY(constexpr const char16_t *as_ptr(const char16_t*) const { return u16_; })
   MKSTR_CXX11_ONLY(constexpr const char32_t *as_ptr(const char32_t*) const { return u32_; })
 
-  TEST_CONSTEXPR size_t length(const char*) const { return sn_; }
-  MKSTR_WCHAR_ONLY(TEST_CONSTEXPR size_t length(const wchar_t*) const { return wn_; })
-  MKSTR_CHAR8_ONLY(constexpr size_t length(const char8_t*) const { return u8n_; })
-  MKSTR_CXX11_ONLY(constexpr size_t length(const char16_t*) const { return u16n_; })
-  MKSTR_CXX11_ONLY(constexpr size_t length(const char32_t*) const { return u32n_; })
+  TEST_CONSTEXPR std::size_t length(const char*) const { return sn_; }
+  MKSTR_WCHAR_ONLY(TEST_CONSTEXPR std::size_t length(const wchar_t*) const { return wn_; })
+  MKSTR_CHAR8_ONLY(constexpr std::size_t length(const char8_t*) const { return u8n_; })
+  MKSTR_CXX11_ONLY(constexpr std::size_t length(const char16_t*) const { return u16n_; })
+  MKSTR_CXX11_ONLY(constexpr std::size_t length(const char32_t*) const { return u32n_; })
 
   // These implicit conversions are used by some tests. TODO: maybe eliminate them?
   TEST_CONSTEXPR operator const char*() const { return s_; }

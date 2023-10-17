@@ -9,14 +9,13 @@
 #include <format>
 #include <random>
 
-#include "benchmark/benchmark.h"
 #include "CartesianBenchmarks.h"
+#include "benchmark/benchmark.h"
 
 // Tests the full range of the value.
 template <class T>
-static std::array<T, 1000>
-generate(std::uniform_int_distribution<T> distribution = std::uniform_int_distribution<T>{
-             std::numeric_limits<T>::min(), std::numeric_limits<T>::max()}) {
+static std::array<T, 1000> generate(std::uniform_int_distribution<T> distribution = std::uniform_int_distribution<T>{
+                                        std::numeric_limits<T>::min(), std::numeric_limits<T>::max()}) {
   std::mt19937 generator;
   std::array<T, 1000> result;
   std::generate_n(result.begin(), result.size(), [&] { return distribution(generator); });

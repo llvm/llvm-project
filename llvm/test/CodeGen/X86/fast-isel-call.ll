@@ -1,5 +1,6 @@
 ; RUN: llc < %s -O0 -fast-isel-abort=1 -mtriple=i686-apple-darwin8 2>/dev/null | FileCheck %s
 ; RUN: llc < %s -O0 -fast-isel-abort=1 -mtriple=i686-apple-darwin8 2>&1 >/dev/null | FileCheck -check-prefix=STDERR -allow-empty %s
+; RUN: llc < %s -O0 -fast-isel-abort=1 -mtriple=i686 2>/dev/null | FileCheck %s --check-prefix=ELF
 
 %struct.s = type {i32, i32, i32}
 
@@ -41,6 +42,9 @@ define void @test3(ptr %a) {
 ; CHECK:   movl	$0, 4(%esp)
 ; CHECK:   movl	$100, 8(%esp)
 ; CHECK:   calll {{.*}}memset
+
+; ELF-LABEL: test3:
+; ELF:         calll memset{{$}}
 }
 
 declare void @llvm.memcpy.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1) nounwind
@@ -53,13 +57,16 @@ define void @test4(ptr %a, ptr %b) {
 ; CHECK:   movl	{{.*}}, 4(%esp)
 ; CHECK:   movl	$100, 8(%esp)
 ; CHECK:   calll {{.*}}memcpy
+
+; ELF-LABEL: test4:
+; ELF:         calll memcpy{{$}}
 }
 
 ; STDERR-NOT: FastISel missed call:   call x86_thiscallcc void @thiscallfun
 %struct.S = type { i8 }
 define void @test5() {
 entry:
-  %s = alloca %struct.S, align 1
+  %s = alloca %struct.S, align 8
 ; CHECK-LABEL: test5:
 ; CHECK: subl $12, %esp
 ; CHECK: leal 8(%esp), %ecx

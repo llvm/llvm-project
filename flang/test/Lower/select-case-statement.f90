@@ -176,9 +176,6 @@
       ! CHECK:   %[[V_20:[0-9]+]] = fir.box_addr %[[V_18]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> !fir.heap<!fir.char<1,?>>
       ! CHECK:   %[[V_42:[0-9]+]] = fir.call @_FortranACharacterCompareScalar1
       ! CHECK:   %[[V_43:[0-9]+]] = arith.cmpi eq, %[[V_42]], %c0{{.*}} : i32
-      ! CHECK:   fir.if %[[V_43]] {
-      ! CHECK:     fir.freemem %[[V_20]] : !fir.heap<!fir.char<1,?>>
-      ! CHECK:   }
       ! CHECK:   cond_br %[[V_43]], ^bb3, ^bb2
       ! CHECK: ^bb2:  // pred: ^bb1
       select case(trim(s))
@@ -190,9 +187,6 @@
 
       ! CHECK:   %[[V_48:[0-9]+]] = fir.call @_FortranACharacterCompareScalar1
       ! CHECK:   %[[V_49:[0-9]+]] = arith.cmpi eq, %[[V_48]], %c0{{.*}} : i32
-      ! CHECK:   fir.if %[[V_49]] {
-      ! CHECK:     fir.freemem %[[V_20]] : !fir.heap<!fir.char<1,?>>
-      ! CHECK:   }
       ! CHECK:   cond_br %[[V_49]], ^bb6, ^bb5
       ! CHECK: ^bb3:  // pred: ^bb1
       ! CHECK:   fir.store %c1{{.*}} to %[[V_1]] : !fir.ref<i32>
@@ -203,9 +197,6 @@
 
       ! CHECK:   %[[V_54:[0-9]+]] = fir.call @_FortranACharacterCompareScalar1
       ! CHECK:   %[[V_55:[0-9]+]] = arith.cmpi eq, %[[V_54]], %c0{{.*}} : i32
-      ! CHECK:   fir.if %[[V_55]] {
-      ! CHECK:     fir.freemem %[[V_20]] : !fir.heap<!fir.char<1,?>>
-      ! CHECK:   }
       ! CHECK:   cond_br %[[V_55]], ^bb8, ^bb7
       ! CHECK: ^bb6:  // pred: ^bb2
       ! CHECK:   fir.store %c2{{.*}} to %[[V_1]] : !fir.ref<i32>
@@ -223,9 +214,6 @@
       ! CHECK: ^bb9:  // pred: ^bb7
       ! CHECK:   %[[V_66:[0-9]+]] = fir.call @_FortranACharacterCompareScalar1
       ! CHECK:   %[[V_67:[0-9]+]] = arith.cmpi sle, %[[V_66]], %c0{{.*}} : i32
-      ! CHECK:   fir.if %[[V_67]] {
-      ! CHECK:     fir.freemem %[[V_20]] : !fir.heap<!fir.char<1,?>>
-      ! CHECK:   }
       ! CHECK:   cond_br %[[V_67]], ^bb14, ^bb10
       ! CHECK: ^bb10:  // 2 preds: ^bb7, ^bb9
       ! CHECK:   %[[V_72:[0-9]+]] = fir.call @_FortranACharacterCompareScalar1
@@ -234,18 +222,15 @@
       ! CHECK: ^bb11:  // pred: ^bb10
       ! CHECK:   %[[V_78:[0-9]+]] = fir.call @_FortranACharacterCompareScalar1
       ! CHECK:   %[[V_79:[0-9]+]] = arith.cmpi sle, %[[V_78]], %c0{{.*}} : i32
-      ! CHECK:   fir.if %[[V_79]] {
-      ! CHECK:     fir.freemem %[[V_20]] : !fir.heap<!fir.char<1,?>>
-      ! CHECK:   }
       ! CHECK: ^bb12:  // 2 preds: ^bb10, ^bb11
       ! CHECK:   %[[V_84:[0-9]+]] = fir.call @_FortranACharacterCompareScalar1
       ! CHECK:   %[[V_85:[0-9]+]] = arith.cmpi sge, %[[V_84]], %c0{{.*}} : i32
-      ! CHECK:   fir.freemem %[[V_20]] : !fir.heap<!fir.char<1,?>>
       ! CHECK:   cond_br %[[V_85]], ^bb14, ^bb13
       ! CHECK: ^bb13:  // pred: ^bb12
       ! CHECK: ^bb14:  // 3 preds: ^bb9, ^bb11, ^bb12
       ! CHECK:   fir.store %c4{{.*}} to %[[V_1]] : !fir.ref<i32>
       ! CHECK: ^bb15:  // 5 preds: ^bb3, ^bb4, ^bb6, ^bb8, ^bb14
+      ! CHECK:   fir.freemem %[[V_20]] : !fir.heap<!fir.char<1,?>>
       end select
     end if
     ! CHECK:     %[[V_89:[0-9]+]] = fir.load %[[V_1]] : !fir.ref<i32>
@@ -257,28 +242,28 @@
     ! CHECK-DAG: %[[V_0:[0-9]+]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>>
     ! CHECK:   %[[V_1:[0-9]+]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>>
     character(len=3) :: s
-    n = 0
 
+    n = -10
     ! CHECK:   %[[V_12:[0-9]+]] = fir.load %[[V_1]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
     ! CHECK:   %[[V_13:[0-9]+]] = fir.box_addr %[[V_12]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> !fir.heap<!fir.char<1,?>>
-    ! CHECK:   fir.freemem %[[V_13]] : !fir.heap<!fir.char<1,?>>
     ! CHECK:   br ^bb1
     ! CHECK: ^bb1:  // pred: ^bb0
+    ! CHECK:   fir.store %c9{{.*}}
     ! CHECK:   br ^bb2
-    n = -10
+    ! CHECK: ^bb2:  // pred: ^bb1
+    ! CHECK:   fir.freemem %[[V_13]] : !fir.heap<!fir.char<1,?>>
     select case(trim(s))
     case default
       n = 9
     end select
     print*, n
 
-    ! CHECK: ^bb2:  // pred: ^bb1
+    n = -2
     ! CHECK:   %[[V_28:[0-9]+]] = fir.load %[[V_0]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
     ! CHECK:   %[[V_29:[0-9]+]] = fir.box_addr %[[V_28]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> !fir.heap<!fir.char<1,?>>
-    ! CHECK:   fir.freemem %[[V_29]] : !fir.heap<!fir.char<1,?>>
     ! CHECK:   br ^bb3
     ! CHECK: ^bb3:  // pred: ^bb2
-    n = -2
+    ! CHECK:   fir.freemem %[[V_29]] : !fir.heap<!fir.char<1,?>>
     select case(trim(s))
     end select
     print*, n
@@ -427,6 +412,27 @@
     ! CHECK: ^bb3:  // 2 preds: ^bb1, ^bb2
     print*, array(1)
   end subroutine sforall
+
+  ! CHECK-LABEL: func @_QPsnested
+  subroutine snested(str)
+    character(*), optional :: str
+    integer :: num
+
+    if (present(str)) then
+      select case (trim(str))
+        case ('a')
+          num = 10
+        case default
+          num = 20
+      end select
+      ! CHECK: ^bb5:  // 2 preds: ^bb3, ^bb4
+      ! CHECK: fir.freemem %{{[0-9]+}} : !fir.heap<!fir.char<1,?>>
+      ! CHECK: cf.br ^bb7
+    else
+      num = 30
+    end if
+    ! CHECK: ^bb7:  // 2 preds: ^bb5, ^bb6
+  end subroutine snested
 
   ! CHECK-LABEL: main
   program p

@@ -50,7 +50,7 @@ WindowsResource::WindowsResource(MemoryBufferRef Source)
     : Binary(Binary::ID_WinRes, Source) {
   size_t LeadingSize = WIN_RES_MAGIC_SIZE + WIN_RES_NULL_ENTRY_SIZE;
   BBS = BinaryByteStream(Data.getBuffer().drop_front(LeadingSize),
-                         support::little);
+                         llvm::endianness::little);
 }
 
 // static
@@ -990,6 +990,7 @@ void WindowsResourceCOFFWriter::writeFirstSectionRelocations() {
       break;
     case COFF::IMAGE_FILE_MACHINE_ARM64:
     case COFF::IMAGE_FILE_MACHINE_ARM64EC:
+    case COFF::IMAGE_FILE_MACHINE_ARM64X:
       Reloc->Type = COFF::IMAGE_REL_ARM64_ADDR32NB;
       break;
     default:

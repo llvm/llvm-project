@@ -19,16 +19,17 @@
 #include "M68kMachineFunction.h"
 #include "M68kSubtarget.h"
 
-#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h" // For IDs of passes that are preserved.
+#include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/GlobalValue.h"
 
 using namespace llvm;
 
-#define DEBUG_TYPE "M68k-expand-pseudos"
+#define DEBUG_TYPE "m68k-expand-pseudo"
+#define PASS_NAME "M68k pseudo instruction expansion pass"
 
 namespace {
 class M68kExpandPseudo : public MachineFunctionPass {
@@ -56,16 +57,14 @@ public:
         MachineFunctionProperties::Property::NoVRegs);
   }
 
-  StringRef getPassName() const override {
-    return "M68k pseudo instruction expansion pass";
-  }
-
 private:
   bool ExpandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
   bool ExpandMBB(MachineBasicBlock &MBB);
 };
 char M68kExpandPseudo::ID = 0;
 } // End anonymous namespace.
+
+INITIALIZE_PASS(M68kExpandPseudo, DEBUG_TYPE, PASS_NAME, false, false)
 
 /// If \p MBBI is a pseudo instruction, this method expands
 /// it to the corresponding (sequence of) actual instruction(s).
@@ -162,6 +161,16 @@ bool M68kExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     return TII->ExpandMOVSZX_RM(MIB, false, TII->get(M68k::MOV16rf), MVT::i32,
                                 MVT::i16);
 
+  case M68k::MOVZXd16q8:
+    return TII->ExpandMOVSZX_RM(MIB, false, TII->get(M68k::MOV8dq), MVT::i16,
+                                MVT::i8);
+  case M68k::MOVZXd32q8:
+    return TII->ExpandMOVSZX_RM(MIB, false, TII->get(M68k::MOV8dq), MVT::i32,
+                                MVT::i8);
+  case M68k::MOVZXd32q16:
+    return TII->ExpandMOVSZX_RM(MIB, false, TII->get(M68k::MOV16dq), MVT::i32,
+                                MVT::i16);
+
   case M68k::MOV8cd:
     return TII->ExpandCCR(MIB, /*IsToCCR=*/true);
   case M68k::MOV8dc:
@@ -249,32 +258,22 @@ bool M68kExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
     if (StackAdj == 0) {
       MIB = BuildMI(MBB, MBBI, DL, TII->get(M68k::RTS));
-    } else if (isUInt<16>(StackAdj)) {
-
-      if (STI->atLeastM68020()) {
-        llvm_unreachable("RTD is not implemented");
-      } else {
-        // Copy PC from stack to a free address(A0 or A1) register
-        // TODO check if pseudo expand uses free address register
-        BuildMI(MBB, MBBI, DL, TII->get(M68k::MOV32aj), M68k::A1)
-            .addReg(M68k::SP);
-
-        // Adjust SP
-        FL->emitSPUpdate(MBB, MBBI, StackAdj, /*InEpilogue=*/true);
-
-        // Put the return address on stack
-        BuildMI(MBB, MBBI, DL, TII->get(M68k::MOV32ja))
-            .addReg(M68k::SP)
-            .addReg(M68k::A1);
-
-        // RTS
-        BuildMI(MBB, MBBI, DL, TII->get(M68k::RTS));
-      }
     } else {
-      // TODO: RTD can only handle immediates as big as 2**16-1.
-      // If we need to pop off bytes before the return address, we
-      // must do it manually.
-      llvm_unreachable("Stack adjustment size not supported");
+      // Copy return address from stack to a free address(A0 or A1) register
+      // TODO check if pseudo expand uses free address register
+      BuildMI(MBB, MBBI, DL, TII->get(M68k::MOV32aj), M68k::A1)
+          .addReg(M68k::SP);
+
+      // Adjust SP
+      FL->emitSPUpdate(MBB, MBBI, StackAdj, /*InEpilogue=*/true);
+
+      // Put the return address on stack
+      BuildMI(MBB, MBBI, DL, TII->get(M68k::MOV32ja))
+          .addReg(M68k::SP)
+          .addReg(M68k::A1);
+
+      // RTS
+      BuildMI(MBB, MBBI, DL, TII->get(M68k::RTS));
     }
 
     // FIXME: Can rest of the operands be ignored, if there is any?

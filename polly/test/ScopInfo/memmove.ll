@@ -1,5 +1,5 @@
-; RUN: opt -opaque-pointers=0 %loadPolly -basic-aa -polly-allow-differing-element-types -polly-print-scops -disable-output < %s | FileCheck %s
-; RUN: opt -opaque-pointers=0 %loadPolly -S -basic-aa -polly-allow-differing-element-types -polly-codegen < %s | FileCheck --check-prefix=IR %s
+; RUN: opt %loadPolly -basic-aa -polly-allow-differing-element-types -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -S -basic-aa -polly-allow-differing-element-types -polly-codegen < %s | FileCheck --check-prefix=IR %s
 ;
 ; CHECK:         Arrays {
 ; CHECK-NEXT:        i8 MemRef_A[*]; // Element size 1
@@ -17,13 +17,11 @@
 ; CHECK-NEXT:                { Stmt_for_body3[i0, i1] -> MemRef_B[o0] : 64 <= o0 <= 95 };
 ;
 ; IR: polly.loop_preheader:
-; IR:   %[[r1:[a-zA-Z0-9]*]] = getelementptr i32, i32* %A, i64 -4
-; IR:   %[[r2:[a-zA-Z0-9]*]] = bitcast i32* %scevgep to i8*
-; IR:   %[[r3:[a-zA-Z0-9]*]] = getelementptr i64, i64* %B, i64 8
-; IR:   %[[r4:[a-zA-Z0-9]*]] = bitcast i64* %scevgep8 to i8*
+; IR:   %[[r1:[a-zA-Z0-9]*]] = getelementptr i8, ptr %A, i64 -16
+; IR:   %[[r3:[a-zA-Z0-9]*]] = getelementptr i8, ptr %B, i64 64
 ;
 ; IR: polly.stmt.for.body3:
-; IR:   call void @llvm.memmove.p0i8.p0i8.i64(i8* align 4 %[[r2]], i8* align 4 %[[r4]], i64 32, i1 false)
+; IR:   call void @llvm.memmove.p0.p0.i64(ptr align 4 %[[r1]], ptr align 4 %[[r3]], i64 32, i1 false)
 ;
 ;    #include <string.h>
 ;
@@ -35,7 +33,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @jd(i32* noalias %A, i64* noalias %B) {
+define void @jd(ptr noalias %A, ptr noalias %B) {
 entry:
   br label %for.cond
 
@@ -53,11 +51,9 @@ for.cond1:                                        ; preds = %for.inc, %for.body
   br i1 %exitcond, label %for.body3, label %for.end
 
 for.body3:                                        ; preds = %for.cond1
-  %add.ptr = getelementptr inbounds i32, i32* %A, i64 -4
-  %tmp = bitcast i32* %add.ptr to i8*
-  %add.ptr4 = getelementptr inbounds i64, i64* %B, i64 8
-  %tmp2 = bitcast i64* %add.ptr4 to i8*
-  call void @llvm.memmove.p0i8.p0i8.i64(i8* %tmp, i8* %tmp2, i64 32, i32 4, i1 false)
+  %add.ptr = getelementptr inbounds i32, ptr %A, i64 -4
+  %add.ptr4 = getelementptr inbounds i64, ptr %B, i64 8
+  call void @llvm.memmove.p0.p0.i64(ptr %add.ptr, ptr %add.ptr4, i64 32, i32 4, i1 false)
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body3
@@ -75,5 +71,5 @@ for.end7:                                         ; preds = %for.cond
   ret void
 }
 
-declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1) #1
+declare void @llvm.memmove.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i32, i1) #1
 

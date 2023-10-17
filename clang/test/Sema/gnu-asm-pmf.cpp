@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -std=c++2b -fsyntax-only %s -verify
-// RUN: %clang_cc1 -triple x86_64-unknown-windows-itanium -std=c++2b -fsyntax-only %s -verify
+// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -std=c++23 -fsyntax-only %s -verify
+// RUN: %clang_cc1 -triple x86_64-unknown-windows-itanium -std=c++23 -fsyntax-only %s -verify
 
 struct S {
   void operator()();

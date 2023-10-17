@@ -4,8 +4,8 @@
 define void @test_simple_2xs8(ptr %ptr) {
 ; CHECK-LABEL: test_simple_2xs8:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov w8, #4
-; CHECK-NEXT:    mov w9, #5
+; CHECK-NEXT:    mov w8, #4 ; =0x4
+; CHECK-NEXT:    mov w9, #5 ; =0x5
 ; CHECK-NEXT:    strb w8, [x0]
 ; CHECK-NEXT:    strb w9, [x0, #1]
 ; CHECK-NEXT:    ret
@@ -18,7 +18,7 @@ define void @test_simple_2xs8(ptr %ptr) {
 define void @test_simple_2xs16(ptr %ptr) {
 ; CHECK-LABEL: test_simple_2xs16:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov w8, #4
+; CHECK-NEXT:    mov w8, #4 ; =0x4
 ; CHECK-NEXT:    movk w8, #5, lsl #16
 ; CHECK-NEXT:    str w8, [x0]
 ; CHECK-NEXT:    ret
@@ -31,7 +31,7 @@ define void @test_simple_2xs16(ptr %ptr) {
 define void @test_simple_4xs16(ptr %ptr) {
 ; CHECK-LABEL: test_simple_4xs16:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov x8, #4
+; CHECK-NEXT:    mov x8, #4 ; =0x4
 ; CHECK-NEXT:    movk x8, #5, lsl #16
 ; CHECK-NEXT:    movk x8, #9, lsl #32
 ; CHECK-NEXT:    movk x8, #14, lsl #48
@@ -50,7 +50,7 @@ define void @test_simple_4xs16(ptr %ptr) {
 define void @test_simple_2xs32(ptr %ptr) {
 ; CHECK-LABEL: test_simple_2xs32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov x8, #4
+; CHECK-NEXT:    mov x8, #4 ; =0x4
 ; CHECK-NEXT:    movk x8, #5, lsl #32
 ; CHECK-NEXT:    str x8, [x0]
 ; CHECK-NEXT:    ret
@@ -63,8 +63,8 @@ define void @test_simple_2xs32(ptr %ptr) {
 define void @test_simple_2xs64_illegal(ptr %ptr) {
 ; CHECK-LABEL: test_simple_2xs64_illegal:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov w8, #4
-; CHECK-NEXT:    mov w9, #5
+; CHECK-NEXT:    mov w8, #4 ; =0x4
+; CHECK-NEXT:    mov w9, #5 ; =0x5
 ; CHECK-NEXT:    stp x8, x9, [x0]
 ; CHECK-NEXT:    ret
   store i64 4, ptr %ptr
@@ -77,14 +77,14 @@ define void @test_simple_2xs64_illegal(ptr %ptr) {
 define void @test_simple_vector(ptr %ptr) {
 ; CHECK-LABEL: test_simple_vector:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov w8, #4
-; CHECK-NEXT:    mov w9, #7
-; CHECK-NEXT:    mov w10, #5
-; CHECK-NEXT:    mov w11, #8
+; CHECK-NEXT:    mov w8, #4 ; =0x4
+; CHECK-NEXT:    mov w9, #7 ; =0x7
 ; CHECK-NEXT:    strh w8, [x0]
+; CHECK-NEXT:    mov w8, #5 ; =0x5
 ; CHECK-NEXT:    strh w9, [x0, #2]
-; CHECK-NEXT:    strh w10, [x0, #4]
-; CHECK-NEXT:    strh w11, [x0, #6]
+; CHECK-NEXT:    mov w9, #8 ; =0x8
+; CHECK-NEXT:    strh w8, [x0, #4]
+; CHECK-NEXT:    strh w9, [x0, #6]
 ; CHECK-NEXT:    ret
   store <2 x i16> <i16 4, i16 7>, ptr %ptr
   %addr2 = getelementptr <2 x i16>, ptr %ptr, i64 1
@@ -95,10 +95,10 @@ define void @test_simple_vector(ptr %ptr) {
 define i32 @test_unknown_alias(ptr %ptr, ptr %aliasptr) {
 ; CHECK-LABEL: test_unknown_alias:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov w9, #4
+; CHECK-NEXT:    mov w9, #4 ; =0x4
 ; CHECK-NEXT:    mov x8, x0
 ; CHECK-NEXT:    str w9, [x0]
-; CHECK-NEXT:    mov w9, #5
+; CHECK-NEXT:    mov w9, #5 ; =0x5
 ; CHECK-NEXT:    ldr w0, [x1]
 ; CHECK-NEXT:    str w9, [x8, #4]
 ; CHECK-NEXT:    ret
@@ -112,12 +112,12 @@ define i32 @test_unknown_alias(ptr %ptr, ptr %aliasptr) {
 define void @test_2x_2xs32(ptr %ptr, ptr %ptr2) {
 ; CHECK-LABEL: test_2x_2xs32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov x10, #9
-; CHECK-NEXT:    mov w8, #4
-; CHECK-NEXT:    mov w9, #5
-; CHECK-NEXT:    movk x10, #17, lsl #32
+; CHECK-NEXT:    mov w8, #4 ; =0x4
+; CHECK-NEXT:    mov w9, #5 ; =0x5
 ; CHECK-NEXT:    stp w8, w9, [x0]
-; CHECK-NEXT:    str x10, [x1]
+; CHECK-NEXT:    mov x8, #9 ; =0x9
+; CHECK-NEXT:    movk x8, #17, lsl #32
+; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    ret
   store i32 4, ptr %ptr
   %addr2 = getelementptr i32, ptr %ptr, i64 1
@@ -170,14 +170,14 @@ define void @test_simple_var_2xs32(ptr %ptr, i32 %v1, i32 %v2) {
 define void @test_alias_4xs16(ptr %ptr, ptr %ptr2) {
 ; CHECK-LABEL: test_alias_4xs16:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov w8, #4
-; CHECK-NEXT:    mov w9, #9
+; CHECK-NEXT:    mov w8, #4 ; =0x4
+; CHECK-NEXT:    mov w9, #9 ; =0x9
 ; CHECK-NEXT:    movk w8, #5, lsl #16
-; CHECK-NEXT:    mov w10, #14
 ; CHECK-NEXT:    strh w9, [x0, #4]
 ; CHECK-NEXT:    str w8, [x0]
+; CHECK-NEXT:    mov w8, #14 ; =0xe
 ; CHECK-NEXT:    strh wzr, [x1]
-; CHECK-NEXT:    strh w10, [x0, #6]
+; CHECK-NEXT:    strh w8, [x0, #6]
 ; CHECK-NEXT:    ret
   store i16 4, ptr %ptr
   %addr2 = getelementptr i16, ptr %ptr, i64 1
@@ -194,13 +194,13 @@ define void @test_alias_4xs16(ptr %ptr, ptr %ptr2) {
 define void @test_alias2_4xs16(ptr %ptr, ptr %ptr2, ptr %ptr3) {
 ; CHECK-LABEL: test_alias2_4xs16:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov w8, #4
-; CHECK-NEXT:    mov w9, #5
-; CHECK-NEXT:    movk w9, #9, lsl #16
+; CHECK-NEXT:    mov w8, #4 ; =0x4
 ; CHECK-NEXT:    strh w8, [x0]
-; CHECK-NEXT:    mov w8, #14
+; CHECK-NEXT:    mov w8, #5 ; =0x5
+; CHECK-NEXT:    movk w8, #9, lsl #16
 ; CHECK-NEXT:    strh wzr, [x2]
-; CHECK-NEXT:    stur w9, [x0, #2]
+; CHECK-NEXT:    stur w8, [x0, #2]
+; CHECK-NEXT:    mov w8, #14 ; =0xe
 ; CHECK-NEXT:    strh wzr, [x1]
 ; CHECK-NEXT:    strh w8, [x0, #6]
 ; CHECK-NEXT:    ret
@@ -220,17 +220,17 @@ define void @test_alias2_4xs16(ptr %ptr, ptr %ptr2, ptr %ptr3) {
 define void @test_alias3_4xs16(ptr %ptr, ptr %ptr2, ptr %ptr3, ptr %ptr4) {
 ; CHECK-LABEL: test_alias3_4xs16:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov w8, #4
-; CHECK-NEXT:    mov w9, #5
+; CHECK-NEXT:    mov w8, #4 ; =0x4
 ; CHECK-NEXT:    strh w8, [x0]
-; CHECK-NEXT:    mov w8, #9
+; CHECK-NEXT:    mov w8, #5 ; =0x5
 ; CHECK-NEXT:    strh wzr, [x2]
-; CHECK-NEXT:    strh w9, [x0, #2]
-; CHECK-NEXT:    mov w9, #14
+; CHECK-NEXT:    strh w8, [x0, #2]
+; CHECK-NEXT:    mov w8, #9 ; =0x9
 ; CHECK-NEXT:    strh wzr, [x3]
 ; CHECK-NEXT:    strh w8, [x0, #4]
+; CHECK-NEXT:    mov w8, #14 ; =0xe
 ; CHECK-NEXT:    strh wzr, [x1]
-; CHECK-NEXT:    strh w9, [x0, #6]
+; CHECK-NEXT:    strh w8, [x0, #6]
 ; CHECK-NEXT:    ret
   store i16 4, ptr %ptr
   %addr2 = getelementptr i16, ptr %ptr, i64 1
@@ -251,7 +251,7 @@ define i32 @test_alias_allocas_2xs32(ptr %ptr) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    mov x8, #4
+; CHECK-NEXT:    mov x8, #4 ; =0x4
 ; CHECK-NEXT:    ldr w0, [sp, #4]
 ; CHECK-NEXT:    movk x8, #5, lsl #32
 ; CHECK-NEXT:    str x8, [sp, #8]
@@ -285,9 +285,9 @@ define void @test_atomic(ptr %ptr) {
 ; CHECK-LABEL: test_atomic:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    ldr x8, [x0]
-; CHECK-NEXT:    add x9, x8, #4
 ; CHECK-NEXT:    stlr wzr, [x8]
-; CHECK-NEXT:    stlr wzr, [x9]
+; CHECK-NEXT:    add x8, x8, #4
+; CHECK-NEXT:    stlr wzr, [x8]
 ; CHECK-NEXT:    ret
 entry:
   %0 = load ptr, ptr %ptr, align 8
@@ -295,4 +295,31 @@ entry:
   %add.ptr.i.i38 = getelementptr inbounds i32, ptr %0, i64 1
   store atomic i32 0, ptr %add.ptr.i.i38 release, align 4
   ret void
+}
+
+; Here store of 9 and 15 can be merged, but the store of 0 prevents the store
+; of 5 from being considered. This checks a corner case where we would skip
+; doing an alias check because of a >= vs > bug, due to the presence of a
+; non-aliasing instruction, in this case the load %safeld.
+define i32 @test_alias_3xs16(ptr %ptr, ptr %ptr2, ptr %ptr3, ptr noalias %safe_ptr) {
+; CHECK-LABEL: test_alias_3xs16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    mov w9, #5 ; =0x5
+; CHECK-NEXT:    ldr w0, [x3]
+; CHECK-NEXT:    str w9, [x8, #4]
+; CHECK-NEXT:    mov x9, #9 ; =0x9
+; CHECK-NEXT:    movk x9, #14, lsl #32
+; CHECK-NEXT:    strh wzr, [x8, #4]
+; CHECK-NEXT:    str x9, [x8, #8]
+; CHECK-NEXT:    ret
+  %safeld = load i32, ptr %safe_ptr
+  %addr2 = getelementptr i32, ptr %ptr, i64 1
+  store i32 5, ptr %addr2
+  store i16 0, ptr %addr2 ; aliases directly with store above.
+  %addr3 = getelementptr i32, ptr %ptr, i64 2
+  store i32 9, ptr %addr3
+  %addr4 = getelementptr i32, ptr %ptr, i64 3
+  store i32 14, ptr %addr4
+  ret i32 %safeld
 }

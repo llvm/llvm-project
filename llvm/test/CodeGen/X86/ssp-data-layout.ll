@@ -93,14 +93,14 @@ entry:
   %y = alloca i32, align 4
   %z = alloca i32, align 4
   %ptr = alloca i32, align 4
-  %small2 = alloca [2 x i16], align 2
+  %small2 = alloca [2 x i16], align 4
   %large2 = alloca [8 x i32], align 16
-  %small = alloca [2 x i8], align 1
-  %large = alloca [8 x i8], align 1
-  %a = alloca %struct.struct_large_char, align 1
-  %b = alloca %struct.struct_small_char, align 1
+  %small = alloca [2 x i8], align 2
+  %large = alloca [8 x i8], align 8
+  %a = alloca %struct.struct_large_char, align 8
+  %b = alloca %struct.struct_small_char, align 8
   %c = alloca %struct.struct_large_nonchar, align 8
-  %d = alloca %struct.struct_small_nonchar, align 2
+  %d = alloca %struct.struct_small_nonchar, align 8
   %call = call i32 @get_scalar1()
   store i32 %call, ptr %x, align 4
   call void @end_scalar1()
@@ -217,12 +217,12 @@ entry:
   %ptr = alloca i32, align 4
   %small2 = alloca [2 x i16], align 2
   %large2 = alloca [8 x i32], align 16
-  %small = alloca [2 x i8], align 1
-  %large = alloca [8 x i8], align 1
-  %a = alloca %struct.struct_large_char, align 1
-  %b = alloca %struct.struct_small_char, align 1
+  %small = alloca [2 x i8], align 2
+  %large = alloca [8 x i8], align 8
+  %a = alloca %struct.struct_large_char, align 8
+  %b = alloca %struct.struct_small_char, align 8
   %c = alloca %struct.struct_large_nonchar, align 8
-  %d = alloca %struct.struct_small_nonchar, align 2
+  %d = alloca %struct.struct_small_nonchar, align 8
   %call = call i32 @get_scalar1()
   store i32 %call, ptr %x, align 4
   call void @end_scalar1()
@@ -325,14 +325,14 @@ entry:
   %y = alloca i32, align 4
   %z = alloca i32, align 4
   %ptr = alloca i32, align 4
-  %small2 = alloca [2 x i16], align 2
+  %small2 = alloca [2 x i16], align 4
   %large2 = alloca [8 x i32], align 16
-  %small = alloca [2 x i8], align 1
-  %large = alloca [8 x i8], align 1
-  %a = alloca %struct.struct_large_char, align 1
-  %b = alloca %struct.struct_small_char, align 1
+  %small = alloca [2 x i8], align 2
+  %large = alloca [8 x i8], align 8
+  %a = alloca %struct.struct_large_char, align 8
+  %b = alloca %struct.struct_small_char, align 8
   %c = alloca %struct.struct_large_nonchar, align 8
-  %d = alloca %struct.struct_small_nonchar, align 2
+  %d = alloca %struct.struct_small_nonchar, align 8
   %call = call i32 @get_scalar1()
   store i32 %call, ptr %x, align 4
   call void @end_scalar1()

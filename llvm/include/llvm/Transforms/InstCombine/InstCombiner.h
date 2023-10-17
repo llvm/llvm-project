@@ -34,6 +34,7 @@ namespace llvm {
 
 class AAResults;
 class AssumptionCache;
+class OptimizationRemarkEmitter;
 class ProfileSummaryInfo;
 class TargetLibraryInfo;
 class TargetTransformInfo;
@@ -81,6 +82,12 @@ protected:
   LoopInfo *LI;
 
   bool MadeIRChange = false;
+
+  /// Edges that are known to never be taken.
+  SmallDenseSet<std::pair<BasicBlock *, BasicBlock *>, 8> DeadEdges;
+
+  /// Order of predecessors to canonicalize phi nodes towards.
+  SmallDenseMap<BasicBlock *, SmallVector<BasicBlock *>, 8> PredOrder;
 
 public:
   InstCombiner(InstructionWorklist &Worklist, BuilderTy &Builder,
@@ -394,18 +401,17 @@ public:
   ///
   /// Also adds the new instruction to the worklist and returns \p New so that
   /// it is suitable for use as the return from the visitation patterns.
-  Instruction *InsertNewInstBefore(Instruction *New, Instruction &Old) {
+  Instruction *InsertNewInstBefore(Instruction *New, BasicBlock::iterator Old) {
     assert(New && !New->getParent() &&
            "New instruction already inserted into a basic block!");
-    BasicBlock *BB = Old.getParent();
-    New->insertInto(BB, Old.getIterator()); // Insert inst
+    New->insertBefore(Old); // Insert inst
     Worklist.add(New);
     return New;
   }
 
   /// Same as InsertNewInstBefore, but also sets the debug loc.
-  Instruction *InsertNewInstWith(Instruction *New, Instruction &Old) {
-    New->setDebugLoc(Old.getDebugLoc());
+  Instruction *InsertNewInstWith(Instruction *New, BasicBlock::iterator Old) {
+    New->setDebugLoc(Old->getDebugLoc());
     return InsertNewInstBefore(New, Old);
   }
 
@@ -440,15 +446,17 @@ public:
 
   /// Replace operand of instruction and add old operand to the worklist.
   Instruction *replaceOperand(Instruction &I, unsigned OpNum, Value *V) {
-    Worklist.addValue(I.getOperand(OpNum));
+    Value *OldOp = I.getOperand(OpNum);
     I.setOperand(OpNum, V);
+    Worklist.handleUseCountDecrement(OldOp);
     return &I;
   }
 
   /// Replace use and add the previously used value to the worklist.
   void replaceUse(Use &U, Value *NewValue) {
-    Worklist.addValue(U);
+    Value *OldOp = U;
     U = NewValue;
+    Worklist.handleUseCountDecrement(OldOp);
   }
 
   /// Combiner aware instruction erasure.
@@ -492,34 +500,40 @@ public:
   OverflowResult computeOverflowForUnsignedMul(const Value *LHS,
                                                const Value *RHS,
                                                const Instruction *CxtI) const {
-    return llvm::computeOverflowForUnsignedMul(LHS, RHS, DL, &AC, CxtI, &DT);
+    return llvm::computeOverflowForUnsignedMul(LHS, RHS,
+                                               SQ.getWithInstruction(CxtI));
   }
 
   OverflowResult computeOverflowForSignedMul(const Value *LHS, const Value *RHS,
                                              const Instruction *CxtI) const {
-    return llvm::computeOverflowForSignedMul(LHS, RHS, DL, &AC, CxtI, &DT);
+    return llvm::computeOverflowForSignedMul(LHS, RHS,
+                                             SQ.getWithInstruction(CxtI));
   }
 
   OverflowResult computeOverflowForUnsignedAdd(const Value *LHS,
                                                const Value *RHS,
                                                const Instruction *CxtI) const {
-    return llvm::computeOverflowForUnsignedAdd(LHS, RHS, DL, &AC, CxtI, &DT);
+    return llvm::computeOverflowForUnsignedAdd(LHS, RHS,
+                                               SQ.getWithInstruction(CxtI));
   }
 
   OverflowResult computeOverflowForSignedAdd(const Value *LHS, const Value *RHS,
                                              const Instruction *CxtI) const {
-    return llvm::computeOverflowForSignedAdd(LHS, RHS, DL, &AC, CxtI, &DT);
+    return llvm::computeOverflowForSignedAdd(LHS, RHS,
+                                             SQ.getWithInstruction(CxtI));
   }
 
   OverflowResult computeOverflowForUnsignedSub(const Value *LHS,
                                                const Value *RHS,
                                                const Instruction *CxtI) const {
-    return llvm::computeOverflowForUnsignedSub(LHS, RHS, DL, &AC, CxtI, &DT);
+    return llvm::computeOverflowForUnsignedSub(LHS, RHS,
+                                               SQ.getWithInstruction(CxtI));
   }
 
   OverflowResult computeOverflowForSignedSub(const Value *LHS, const Value *RHS,
                                              const Instruction *CxtI) const {
-    return llvm::computeOverflowForSignedSub(LHS, RHS, DL, &AC, CxtI, &DT);
+    return llvm::computeOverflowForSignedSub(LHS, RHS,
+                                             SQ.getWithInstruction(CxtI));
   }
 
   virtual bool SimplifyDemandedBits(Instruction *I, unsigned OpNo,
@@ -529,6 +543,8 @@ public:
   SimplifyDemandedVectorElts(Value *V, APInt DemandedElts, APInt &UndefElts,
                              unsigned Depth = 0,
                              bool AllowMultipleUsers = false) = 0;
+
+  bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const;
 };
 
 } // namespace llvm

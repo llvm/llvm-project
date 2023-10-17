@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple x86_64-linux-gnu | FileCheck %s
+// RUN: %clang_cc1 %s -emit-llvm -o - -triple x86_64-linux-gnu | FileCheck %s
 
 struct A {
   A(const char *);
@@ -18,9 +18,9 @@ struct S {
   { 2, "goodbye" }
 };
 
-// CHECK: store i32 0, i32* getelementptr inbounds ([3 x %struct.S], [3 x %struct.S]* @arr, i64 0, i64 0, i32 0)
-// CHECK: call void @_ZN1AC1EPKc(%struct.A* {{[^,]*}} getelementptr inbounds ([3 x %struct.S], [3 x %struct.S]* @arr, i64 0, i64 0, i32 1), i8* noundef getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i64 0, i64 0))
-// CHECK: store i32 1, i32* getelementptr inbounds ([3 x %struct.S], [3 x %struct.S]* @arr, i64 0, i64 1, i32 0)
-// CHECK: call void @_ZN1AC1EPKc(%struct.A* {{[^,]*}} getelementptr inbounds ([3 x %struct.S], [3 x %struct.S]* @arr, i64 0, i64 1, i32 1), i8* noundef getelementptr inbounds ([6 x i8], [6 x i8]* @.str.1, i64 0, i64 0))
-// CHECK: store i32 2, i32* getelementptr inbounds ([3 x %struct.S], [3 x %struct.S]* @arr, i64 0, i64 2, i32 0)
-// CHECK: call void @_ZN1AC1EPKc(%struct.A* {{[^,]*}} getelementptr inbounds ([3 x %struct.S], [3 x %struct.S]* @arr, i64 0, i64 2, i32 1), i8* noundef getelementptr inbounds ([8 x i8], [8 x i8]* @.str.2, i64 0, i64 0))
+// CHECK: store i32 0, ptr @arr
+// CHECK: call void @_ZN1AC1EPKc(ptr {{[^,]*}} getelementptr inbounds (%struct.S, ptr @arr, i32 0, i32 1), ptr noundef @.str)
+// CHECK: store i32 1, ptr getelementptr inbounds (%struct.S, ptr @arr, i64 1)
+// CHECK: call void @_ZN1AC1EPKc(ptr {{[^,]*}} getelementptr inbounds (%struct.S, ptr @arr, i64 1, i32 1), ptr noundef @.str.1)
+// CHECK: store i32 2, ptr getelementptr inbounds (%struct.S, ptr @arr, i64 2)
+// CHECK: call void @_ZN1AC1EPKc(ptr {{[^,]*}} getelementptr inbounds (%struct.S, ptr @arr, i64 2, i32 1), ptr noundef @.str.2)

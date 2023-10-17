@@ -1745,7 +1745,7 @@ bool HCE::replaceInstrExpr(const ExtDesc &ED, const ExtenderInit &ExtI,
       // "alignment" as Diff.
       uint32_t UD = Diff;
       OffsetRange R = getOffsetRange(MI.getOperand(0));
-      uint32_t A = std::min<uint32_t>(R.Align, 1u << countTrailingZeros(UD));
+      uint32_t A = std::min<uint32_t>(R.Align, 1u << llvm::countr_zero(UD));
       D &= ~(A-1);
     }
     BuildMI(MBB, At, dl, HII->get(IdxOpc))

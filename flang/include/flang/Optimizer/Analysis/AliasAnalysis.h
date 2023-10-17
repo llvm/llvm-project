@@ -20,7 +20,7 @@ namespace fir {
 //===----------------------------------------------------------------------===//
 // AliasAnalysis
 //===----------------------------------------------------------------------===//
-class AliasAnalysis {
+struct AliasAnalysis {
   // Structures to describe the memory source of a value.
 
   /// Kind of the memory source referenced by a value.
@@ -33,11 +33,18 @@ class AliasAnalysis {
              /// Memory allocated outside of a function and passed
              /// to the function as a by-ref argument.
              Argument,
+             /// Represents memory allocated outside of a function
+             /// and passed to the function via host association tuple.
+             HostAssoc,
+             /// Represents direct memory access whose source cannot be further
+             /// determined
+             Direct,
              /// Represents memory allocated by unknown means and
              /// with the memory address defined by a memory reading
              /// operation (e.g. fir::LoadOp).
              Indirect,
-             /// Represents memory allocated by unknown means.
+             /// Starting point to the analysis whereby nothing is known about
+             /// the source
              Unknown);
 
   /// Attributes of the memory source object.
@@ -55,6 +62,9 @@ class AliasAnalysis {
     mlir::Type valueType;
     /// Attributes of the memory source object, e.g. Target.
     Attributes attributes;
+    /// Have we lost precision following the source such that
+    /// even an exact match cannot be MustAlias?
+    bool approximateSource;
 
     /// Print information about the memory source to `os`.
     void print(llvm::raw_ostream &os) const;
@@ -75,7 +85,6 @@ class AliasAnalysis {
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
                                        const AliasAnalysis::Source &op);
 
-public:
   /// Given two values, return their aliasing behavior.
   mlir::AliasResult alias(mlir::Value lhs, mlir::Value rhs);
 

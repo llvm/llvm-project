@@ -409,12 +409,12 @@ namespace Union {
     b.a.x = 2;
     return b;
   }
-  constexpr B uninit = return_uninit(); // expected-error {{constant expression}} expected-note {{subobject of type 'int' is not initialized}}
+  constexpr B uninit = return_uninit(); // expected-error {{constant expression}} expected-note {{subobject 'y' is not initialized}}
   static_assert(return_uninit().a.x == 2);
   constexpr A return_uninit_struct() {
     B b = {.b = 1};
     b.a.x = 2;
-    return b.a; // expected-note {{in call to 'A(b.a)'}} expected-note {{subobject of type 'int' is not initialized}}
+    return b.a; // expected-note {{in call to 'A(b.a)'}} expected-note {{subobject 'y' is not initialized}}
   }
   // Note that this is rejected even though return_uninit() is accepted, and
   // return_uninit() copies the same stuff wrapped in a union.
@@ -558,7 +558,7 @@ namespace Uninit {
     }
   };
   constinit X x1(true);
-  constinit X x2(false); // expected-error {{constant initializer}} expected-note {{constinit}} expected-note {{subobject of type 'int' is not initialized}}
+  constinit X x2(false); // expected-error {{constant initializer}} expected-note {{constinit}} expected-note {{subobject 'n' is not initialized}}
 
   struct Y {
     struct Z { int n; }; // expected-note {{here}}
@@ -577,7 +577,7 @@ namespace Uninit {
   };
   // FIXME: This is working around clang not implementing DR2026. With that
   // fixed, we should be able to test this without the injected copy.
-  constexpr Y copy(Y y) { return y; } // expected-note {{in call to 'Y(y)'}} expected-note {{subobject of type 'int' is not initialized}}
+  constexpr Y copy(Y y) { return y; } // expected-note {{in call to 'Y(y)'}} expected-note {{subobject 'n' is not initialized}}
   constexpr Y y1 = copy(Y());
   static_assert(y1.z1.n == 1 && y1.z2.n == 2 && y1.z3.n == 3);
 

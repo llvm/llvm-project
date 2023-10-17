@@ -13,8 +13,8 @@ func.func @inconsistent_memory_space_arith_select(%c: i1) -> tensor<10xf32> {
 
 // -----
 
-func.func @constant_memory_space(%idx: index, %v: i32) -> tensor<3xi32> {
-  // expected-error @+2 {{memory space not implemented yet}}
+func.func @unknown_memory_space(%idx: index, %v: i32) -> tensor<3xi32> {
+  // expected-error @+2 {{could not infer memory space}}
   // expected-error @+1 {{failed to bufferize op}}
   %cst = arith.constant dense<[5, 1000, 20]> : tensor<3xi32>
   %0 = tensor.insert %v into %cst[%idx] : tensor<3xi32>

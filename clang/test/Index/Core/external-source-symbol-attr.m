@@ -1,8 +1,11 @@
+// XFAIL: target={{.*}}-aix{{.*}}
 // RUN: c-index-test core -print-source-symbols -- %s -target x86_64-apple-macosx10.7 | FileCheck %s
 
 #define EXT_DECL(mod_name) __attribute__((external_source_symbol(language="Swift", defined_in=mod_name)))
 #define GEN_DECL(mod_name) __attribute__((external_source_symbol(language="Swift", defined_in=mod_name, generated_declaration)))
 #define PUSH_GEN_DECL(mod_name) push(GEN_DECL(mod_name), apply_to=any(enum, objc_interface, objc_category, objc_protocol))
+
+#define GEN_DECL_USR(mod_name, usr) __attribute__((external_source_symbol(language="Swift", defined_in=mod_name, USR=usr, generated_declaration)))
 
 // Forward declarations should not affect module namespacing below
 @class I1;
@@ -109,4 +112,11 @@ void test2(I3 *i3, id<ExtProt2> prot2, SomeEnum some) {
 void test3(I3 *i3) {
   [i3 meth_other_mod];
   // CHECK: [[@LINE-1]]:7 | instance-method/Swift | meth_other_mod | c:@CM@other_mod_for_cat@modname@objc(cs)I3(im)meth_other_mod |
+}
+
+void function() GEN_DECL_USR("SwiftMod", "s:8SwiftMod8functionyyF");
+
+void test4() {
+  function();
+  // CHECK: [[@LINE-1]]:3 | function/Swift | function | s:8SwiftMod8functionyyF
 }

@@ -1,15 +1,15 @@
 // Check no warnings/errors
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fsyntax-only -verify %s
 // expected-no-diagnostics
 
 // Check AST and unparsing
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 -ast-dump  %s | FileCheck %s --check-prefix=DUMP
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 -ast-print %s | FileCheck %s --check-prefix=PRINT --match-full-lines
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -ast-dump  %s | FileCheck %s --check-prefix=DUMP
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -ast-print %s | FileCheck %s --check-prefix=PRINT --match-full-lines
 
 // Check same results after serialization round-trip
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 -emit-pch -o %t %s
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 -include-pch %t -ast-dump-all %s | FileCheck %s --check-prefix=DUMP
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 -include-pch %t -ast-print    %s | FileCheck %s --check-prefix=PRINT --match-full-lines
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -emit-pch -o %t %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -include-pch %t -ast-dump-all %s | FileCheck %s --check-prefix=DUMP
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -include-pch %t -ast-print    %s | FileCheck %s --check-prefix=PRINT --match-full-lines
 
 #ifndef HEADER
 #define HEADER

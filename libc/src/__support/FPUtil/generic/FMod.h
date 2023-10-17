@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_FMOD_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_FMOD_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_FMOD_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_FMOD_H
 
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/builtin_wrappers.h"
-#include "src/__support/common.h"
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/math/generic/math_utils.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 namespace generic {
 
@@ -122,25 +122,27 @@ template <typename T> struct FModExceptionalInputHandler {
   static_assert(cpp::is_floating_point_v<T>,
                 "FModCStandardWrapper instantiated with invalid type.");
 
-  LIBC_INLINE static bool PreCheck(T x, T y, T &out) {
+  LIBC_INLINE static bool pre_check(T x, T y, T &out) {
     using FPB = fputil::FPBits<T>;
-    const T quiet_NaN = FPB::build_quiet_nan(0);
+    const T quiet_nan = FPB::build_quiet_nan(0);
     FPB sx(x), sy(y);
-    if (likely(!sy.is_zero() && !sy.is_inf_or_nan() && !sx.is_inf_or_nan())) {
+    if (LIBC_LIKELY(!sy.is_zero() && !sy.is_inf_or_nan() &&
+                    !sx.is_inf_or_nan())) {
       return false;
     }
 
     if (sx.is_nan() || sy.is_nan()) {
       if ((sx.is_nan() && !sx.is_quiet_nan()) ||
           (sy.is_nan() && !sy.is_quiet_nan()))
-        fputil::set_except(FE_INVALID);
-      out = quiet_NaN;
+        fputil::raise_except_if_required(FE_INVALID);
+      out = quiet_nan;
       return true;
     }
 
     if (sx.is_inf() || sy.is_zero()) {
-      fputil::set_except(FE_INVALID);
-      out = with_errno(quiet_NaN, EDOM);
+      fputil::raise_except_if_required(FE_INVALID);
+      fputil::set_errno_if_required(EDOM);
+      out = quiet_nan;
       return true;
     }
 
@@ -160,7 +162,7 @@ template <typename T> struct FModFastMathWrapper {
   static_assert(cpp::is_floating_point_v<T>,
                 "FModFastMathWrapper instantiated with invalid type.");
 
-  static bool PreCheck(T, T, T &) { return false; }
+  static bool pre_check(T, T, T &) { return false; }
 };
 
 template <typename T> class FModDivisionSimpleHelper {
@@ -197,13 +199,13 @@ public:
             (m_x * inv_hy) >> (FPB::FloatProp::BIT_WIDTH - sides_zeroes_count);
         m_x <<= sides_zeroes_count;
         m_x -= hd * m_y;
-        while (unlikely(m_x > m_y))
+        while (LIBC_UNLIKELY(m_x > m_y))
           m_x -= m_y;
       }
       intU_t hd = (m_x * inv_hy) >> (FPB::FloatProp::BIT_WIDTH - exp_diff);
       m_x <<= exp_diff;
       m_x -= hd * m_y;
-      while (unlikely(m_x > m_y))
+      while (LIBC_UNLIKELY(m_x > m_y))
         m_x -= m_y;
     } else {
       m_x <<= exp_diff;
@@ -225,7 +227,7 @@ private:
 
   LIBC_INLINE static constexpr FPB eval_internal(FPB sx, FPB sy) {
 
-    if (likely(sx.uintval() <= sy.uintval())) {
+    if (LIBC_LIKELY(sx.uintval() <= sy.uintval())) {
       if (sx.uintval() < sy.uintval())
         return sx;        // |x|<|y| return x
       return FPB::zero(); // |x|=|y| return 0.0
@@ -235,8 +237,8 @@ private:
     int e_y = sy.get_unbiased_exponent();
 
     // Most common case where |y| is "very normal" and |x/y| < 2^EXPONENT_WIDTH
-    if (likely(e_y > int(FPB::FloatProp::MANTISSA_WIDTH) &&
-               e_x - e_y <= int(FPB::FloatProp::EXPONENT_WIDTH))) {
+    if (LIBC_LIKELY(e_y > int(FPB::FloatProp::MANTISSA_WIDTH) &&
+                    e_x - e_y <= int(FPB::FloatProp::EXPONENT_WIDTH))) {
       intU_t m_x = sx.get_explicit_mantissa();
       intU_t m_y = sy.get_explicit_mantissa();
       intU_t d = (e_x == e_y) ? (m_x - m_y) : (m_x << (e_x - e_y)) % m_y;
@@ -246,7 +248,7 @@ private:
       return FPB::make_value(d, e_y - 1);
     }
     /* Both subnormal special case. */
-    if (unlikely(e_x == 0 && e_y == 0)) {
+    if (LIBC_UNLIKELY(e_x == 0 && e_y == 0)) {
       FPB d;
       d.set_mantissa(sx.uintval() % sy.uintval());
       return d;
@@ -258,7 +260,7 @@ private:
 
     intU_t m_y = sy.get_explicit_mantissa();
     int lead_zeros_m_y = FPB::FloatProp::EXPONENT_WIDTH;
-    if (likely(e_y > 0)) {
+    if (LIBC_LIKELY(e_y > 0)) {
       e_y--;
     } else {
       m_y = sy.get_mantissa();
@@ -288,7 +290,7 @@ private:
     }
 
     m_x %= m_y;
-    if (unlikely(m_x == 0))
+    if (LIBC_UNLIKELY(m_x == 0))
       return FPB::zero();
 
     if (exp_diff == 0)
@@ -301,7 +303,7 @@ private:
 
 public:
   LIBC_INLINE static T eval(T x, T y) {
-    if (T out; Wrapper::PreCheck(x, y, out))
+    if (T out; Wrapper::pre_check(x, y, out))
       return out;
     FPB sx(x), sy(y);
     bool sign = sx.get_sign();
@@ -315,6 +317,6 @@ public:
 
 } // namespace generic
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_FMOD_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_FMOD_H

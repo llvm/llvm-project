@@ -1,15 +1,15 @@
 // RUN: mlir-opt %s -sparsification= | FileCheck %s
 
 #SparseVector64 = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed" ],
-  pointerBitWidth = 64,
-  indexBitWidth = 64
+  map = (d0) -> (d0 : compressed),
+  posWidth = 64,
+  crdWidth = 64
 }>
 
 #SparseVector32 = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed" ],
-  pointerBitWidth = 32,
-  indexBitWidth = 32
+  map = (d0) -> (d0 : compressed),
+  posWidth = 32,
+  crdWidth = 32
 }>
 
 #trait_mul = {

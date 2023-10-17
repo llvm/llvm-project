@@ -113,3 +113,33 @@ namespace GH50891 {
 
 } // namespace GH50891
 
+
+namespace GH60323 {
+  // This should not diagnose, as it does not depend on itself.
+  struct End {
+        template<class T>
+              void go(T t) { }
+
+            template<class T>
+                  auto endparens(T t)
+                          requires requires { go(t); }
+                { return go(t); }
+  };
+
+  struct Size {
+        template<class T>
+              auto go(T t)
+                  { return End().endparens(t); }
+
+            template<class T>
+                  auto sizeparens(T t)
+                          requires requires { go(t); }
+                { return go(t); }
+  };
+
+  int f()
+  {
+        int i = 42;
+            Size().sizeparens(i);
+  }
+}

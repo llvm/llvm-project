@@ -11,9 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/Distro.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
 #include "gtest/gtest.h"
 
 using namespace clang;

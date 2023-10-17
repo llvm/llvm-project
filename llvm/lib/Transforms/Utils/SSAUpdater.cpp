@@ -19,6 +19,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -155,8 +156,9 @@ Value *SSAUpdater::GetValueInMiddleOfBlock(BasicBlock *BB) {
   }
 
   // Ok, we have no way out, insert a new one now.
-  PHINode *InsertedPHI = PHINode::Create(ProtoType, PredValues.size(),
-                                         ProtoName, &BB->front());
+  PHINode *InsertedPHI =
+      PHINode::Create(ProtoType, PredValues.size(), ProtoName);
+  InsertedPHI->insertBefore(BB->begin());
 
   // Fill in all the predecessors of the PHI.
   for (const auto &PredValue : PredValues)
@@ -193,6 +195,33 @@ void SSAUpdater::RewriteUse(Use &U) {
     V = GetValueInMiddleOfBlock(User->getParent());
 
   U.set(V);
+}
+
+void SSAUpdater::UpdateDebugValues(Instruction *I) {
+  SmallVector<DbgValueInst *, 4> DbgValues;
+  llvm::findDbgValues(DbgValues, I);
+  for (auto &DbgValue : DbgValues) {
+    if (DbgValue->getParent() == I->getParent())
+      continue;
+    UpdateDebugValue(I, DbgValue);
+  }
+}
+
+void SSAUpdater::UpdateDebugValues(Instruction *I,
+                                   SmallVectorImpl<DbgValueInst *> &DbgValues) {
+  for (auto &DbgValue : DbgValues) {
+    UpdateDebugValue(I, DbgValue);
+  }
+}
+
+void SSAUpdater::UpdateDebugValue(Instruction *I, DbgValueInst *DbgValue) {
+  BasicBlock *UserBB = DbgValue->getParent();
+  if (HasValueForBlock(UserBB)) {
+    Value *NewVal = GetValueAtEndOfBlock(UserBB);
+    DbgValue->replaceVariableLocationOp(I, NewVal);
+  }
+  else
+    DbgValue->setKillLocation();
 }
 
 void SSAUpdater::RewriteUseAfterInsertions(Use &U) {
@@ -267,8 +296,9 @@ public:
   /// Reserve space for the operands but do not fill them in yet.
   static Value *CreateEmptyPHI(BasicBlock *BB, unsigned NumPreds,
                                SSAUpdater *Updater) {
-    PHINode *PHI = PHINode::Create(Updater->ProtoType, NumPreds,
-                                   Updater->ProtoName, &BB->front());
+    PHINode *PHI =
+        PHINode::Create(Updater->ProtoType, NumPreds, Updater->ProtoName);
+    PHI->insertBefore(BB->begin());
     return PHI;
   }
 

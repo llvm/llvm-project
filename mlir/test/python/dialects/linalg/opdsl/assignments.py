@@ -35,8 +35,9 @@ def matmul(
     B=TensorDef(T, S.K, S.N),
     C=TensorDef(U, S.M, S.N, output=True),
     mul=BinaryFnAttrDef(default=BinaryFn.mul),
-    cast=TypeFnAttrDef(default=TypeFn.cast_signed)):
-  C[D.m, D.n] += mul(cast(U, A[D.m, D.k]), cast(U, B[D.k, D.n]))
+    cast=TypeFnAttrDef(default=TypeFn.cast_signed),
+):
+    C[D.m, D.n] += mul(cast(U, A[D.m, D.k]), cast(U, B[D.k, D.n]))
 
 
 # CHECK: ---
@@ -79,12 +80,12 @@ def matmul(
 # CHECK:                  scalar_const: '1.{{[0]*}}e+03 : f64'
 @linalg_structured_op
 def constants(
-    O=TensorDef(T, S.M, S.K, output=True),
-    exp=UnaryFnAttrDef(default=UnaryFn.exp)):
-  pi = TypeFn.cast_signed(T, const(3.1415926535897931))
-  cst42 = TypeFn.cast_signed(T, const(42))
-  cst1000 = TypeFn.cast_signed(T, exp(const(1e+3)))
-  O[D.m, D.n] = UnaryFn.exp(pi) + cst42 - cst1000
+    O=TensorDef(T, S.M, S.K, output=True), exp=UnaryFnAttrDef(default=UnaryFn.exp)
+):
+    pi = TypeFn.cast_signed(T, const(3.1415926535897931))
+    cst42 = TypeFn.cast_signed(T, const(42))
+    cst1000 = TypeFn.cast_signed(T, exp(const(1e3)))
+    O[D.m, D.n] = UnaryFn.exp(pi) + cst42 - cst1000
 
 
 # CHECK: ---
@@ -100,7 +101,7 @@ def constants(
 # CHECK:          scalar_index: 0
 @linalg_structured_op
 def indices(O=TensorDef(T, S.M, S.K, output=True)):
-  O[D.m, D.n] = index(D.n) + index(D.m)
+    O[D.m, D.n] = index(D.n) + index(D.m)
 
 
 # CHECK: ---
@@ -111,4 +112,4 @@ def indices(O=TensorDef(T, S.M, S.K, output=True)):
 # CHECK:      scalar_arg: value
 @linalg_structured_op
 def fill(value=ScalarDef(T), O=TensorDef(T, S.M, S.K, output=True)):
-  O[D.m, D.n] = value
+    O[D.m, D.n] = value

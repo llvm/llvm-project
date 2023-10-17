@@ -1,5 +1,5 @@
 action("HTMLForestResources") {
-  script = "bundle_resources.py"
+  script = "//clang/utils/bundle_resources.py"
   inputs = [
     "HTMLForest.css",
     "HTMLForest.js",

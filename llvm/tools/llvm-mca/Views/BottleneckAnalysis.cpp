@@ -52,7 +52,7 @@ void PressureTracker::getResourceUsers(uint64_t ResourceMask,
   const MCProcResourceDesc &PRDesc = *SM.getProcResource(ProcResID);
   for (unsigned I = 0, E = PRDesc.NumUnits; I < E; ++I) {
     const User U = getResourceUser(ProcResID, I);
-    if (U.second && IPI.find(U.first) != IPI.end())
+    if (U.second && IPI.contains(U.first))
       Users.emplace_back(U);
   }
 }
@@ -69,7 +69,7 @@ void PressureTracker::handleInstructionIssuedEvent(
   for (const ResourceUse &Use : Event.UsedResources) {
     const ResourceRef &RR = Use.first;
     unsigned Index = ProcResID2ResourceUsersIndex[RR.first];
-    Index += countTrailingZeros(RR.second);
+    Index += llvm::countr_zero(RR.second);
     ResourceUsers[Index] = std::make_pair(IID, Use.second.getNumerator());
   }
 }
@@ -611,9 +611,9 @@ void BottleneckAnalysis::printBottleneckHints(raw_ostream &OS) const {
     ArrayRef<unsigned> Distribution = Tracker.getResourcePressureDistribution();
     const MCSchedModel &SM = getSubTargetInfo().getSchedModel();
     for (unsigned I = 0, E = Distribution.size(); I < E; ++I) {
-      unsigned ResourceCycles = Distribution[I];
-      if (ResourceCycles) {
-        double Frequency = (double)ResourceCycles * 100 / TotalCycles;
+      unsigned ReleaseAtCycles = Distribution[I];
+      if (ReleaseAtCycles) {
+        double Frequency = (double)ReleaseAtCycles * 100 / TotalCycles;
         const MCProcResourceDesc &PRDesc = *SM.getProcResource(I);
         OS << "\n  - " << PRDesc.Name << "  [ "
            << format("%.2f", floor((Frequency * 100) + 0.5) / 100) << "% ]";

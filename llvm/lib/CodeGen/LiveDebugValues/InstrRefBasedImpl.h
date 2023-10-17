@@ -602,8 +602,8 @@ public:
 /// Slot Num (%stack.0)   /
 /// FrameIdx => SpillNum /
 ///              \      /
-///           SpillID (int)              Register number (int)
-///                      \                  /
+///           SpillID (int)   Register number (int)
+///                      \       /
 ///                      LocationID => LocIdx
 ///                                |
 ///                       LocIdx => ValueIDNum
@@ -656,7 +656,7 @@ public:
 
   // If we discover a new machine location, assign it an mphi with this
   // block number.
-  unsigned CurBB;
+  unsigned CurBB = -1;
 
   /// Cached local copy of the number of registers the target has.
   unsigned NumRegs;
@@ -740,7 +740,7 @@ public:
   unsigned getLocID(SpillLocationNo Spill, StackSlotPos Idx) {
     unsigned SlotNo = Spill.id() - 1;
     SlotNo *= NumSlotIdxes;
-    assert(StackSlotIdxes.find(Idx) != StackSlotIdxes.end());
+    assert(StackSlotIdxes.contains(Idx));
     SlotNo += StackSlotIdxes[Idx];
     SlotNo += NumRegs;
     return SlotNo;
@@ -1094,7 +1094,7 @@ private:
   MLocTracker *MTracker = nullptr;
 
   /// Number of the current block LiveDebugValues is stepping through.
-  unsigned CurBB;
+  unsigned CurBB = -1;
 
   /// Number of the current instruction LiveDebugValues is evaluating.
   unsigned CurInst;
@@ -1197,7 +1197,7 @@ private:
 
   /// For an instruction reference given by \p InstNo and \p OpNo in instruction
   /// \p MI returns the Value pointed to by that instruction reference if any
-  /// exists, otherwise returns None.
+  /// exists, otherwise returns std::nullopt.
   std::optional<ValueIDNum> getValueForInstrRef(unsigned InstNo, unsigned OpNo,
                                                 MachineInstr &MI,
                                                 const ValueTable *MLiveOuts,

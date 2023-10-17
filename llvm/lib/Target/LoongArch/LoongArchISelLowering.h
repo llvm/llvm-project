@@ -80,7 +80,22 @@ enum NodeType : unsigned {
   CRCC_W_D_W,
 
   CSRRD,
+
+  // Write new value to CSR and return old value.
+  // Operand 0: A chain pointer.
+  // Operand 1: The new value to write.
+  // Operand 2: The address of the required CSR.
+  // Result 0: The old value of the CSR.
+  // Result 1: The new chain pointer.
   CSRWR,
+
+  // Similar to CSRWR but with a write mask.
+  // Operand 0: A chain pointer.
+  // Operand 1: The new value to write.
+  // Operand 2: The write mask.
+  // Operand 3: The address of the required CSR.
+  // Result 0: The old value of the CSR.
+  // Result 1: The new chain pointer.
   CSRXCHG,
 
   // IOCSR access operations
@@ -95,6 +110,20 @@ enum NodeType : unsigned {
 
   // Read CPU configuration information operation
   CPUCFG,
+
+  // Vector Shuffle
+  VREPLVE,
+
+  // Extended vector element extraction
+  VPICK_SEXT_ELT,
+  VPICK_ZEXT_ELT,
+
+  // Vector comparisons
+  VALL_ZERO,
+  VANY_ZERO,
+  VALL_NONZERO,
+  VANY_NONZERO,
+
   // Intrinsic operations end =============================================
 };
 } // end namespace LoongArchISD
@@ -181,6 +210,26 @@ public:
   bool decomposeMulByConstant(LLVMContext &Context, EVT VT,
                               SDValue C) const override;
 
+  bool isUsedByReturnOnly(SDNode *N, SDValue &Chain) const override;
+
+  bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,
+                             unsigned AS,
+                             Instruction *I = nullptr) const override;
+
+  bool isLegalICmpImmediate(int64_t Imm) const override;
+  bool isLegalAddImmediate(int64_t Imm) const override;
+  bool isZExtFree(SDValue Val, EVT VT2) const override;
+  bool isSExtCheaperThanZExt(EVT SrcVT, EVT DstVT) const override;
+
+  bool hasAndNotCompare(SDValue Y) const override;
+
+  bool convertSelectOfConstantsToMath(EVT VT) const override { return true; }
+
+  bool allowsMisalignedMemoryAccesses(
+      EVT VT, unsigned AddrSpace = 0, Align Alignment = Align(1),
+      MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
+      unsigned *Fast = nullptr) const override;
+
 private:
   /// Target-specific function used to lower LoongArch calling conventions.
   typedef bool LoongArchCCAssignFn(const DataLayout &DL, LoongArchABI::ABI ABI,
@@ -200,9 +249,9 @@ private:
   template <class NodeTy>
   SDValue getAddr(NodeTy *N, SelectionDAG &DAG, bool IsLocal = true) const;
   SDValue getStaticTLSAddr(GlobalAddressSDNode *N, SelectionDAG &DAG,
-                           unsigned Opc) const;
+                           unsigned Opc, bool Large = false) const;
   SDValue getDynamicTLSAddr(GlobalAddressSDNode *N, SelectionDAG &DAG,
-                            unsigned Opc) const;
+                            unsigned Opc, bool Large = false) const;
   SDValue lowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
@@ -213,6 +262,7 @@ private:
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *BB) const override;
+  SDValue lowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerEH_DWARF_CFA(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFP_TO_SINT(SDValue Op, SelectionDAG &DAG) const;
@@ -234,13 +284,14 @@ private:
 
   ConstraintType getConstraintType(StringRef Constraint) const override;
 
-  unsigned getInlineAsmMemConstraint(StringRef ConstraintCode) const override;
+  InlineAsm::ConstraintCode
+  getInlineAsmMemConstraint(StringRef ConstraintCode) const override;
 
   std::pair<unsigned, const TargetRegisterClass *>
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                StringRef Constraint, MVT VT) const override;
 
-  void LowerAsmOperandForConstraint(SDValue Op, std::string &Constraint,
+  void LowerAsmOperandForConstraint(SDValue Op, StringRef Constraint,
                                     std::vector<SDValue> &Ops,
                                     SelectionDAG &DAG) const override;
 

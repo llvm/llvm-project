@@ -1,54 +1,7 @@
-// RUN: clang-tidy %s --config-file=%S/Inputs/identifier-naming/hungarian-notation1/.clang-tidy 2>&1 \
-// RUN:   | FileCheck -check-prefixes=CHECK-MESSAGES %s
+// RUN: %check_clang_tidy %s readability-identifier-naming %t -- \
+// RUN:   --config-file=%S/Inputs/identifier-naming/hungarian-notation2/.clang-tidy -- -I %S
 
-// clang-format off
-typedef signed char         int8_t;     // NOLINT
-typedef short               int16_t;    // NOLINT
-typedef long                int32_t;    // NOLINT
-typedef long long           int64_t;    // NOLINT
-typedef unsigned char       uint8_t;    // NOLINT
-typedef unsigned short      uint16_t;   // NOLINT
-typedef unsigned long       uint32_t;   // NOLINT
-typedef unsigned long long  uint64_t;   // NOLINT
-#ifndef _WIN32
-typedef unsigned long long  size_t;     // NOLINT
-#endif
-typedef long                intptr_t;   // NOLINT
-typedef unsigned long       uintptr_t;  // NOLINT
-typedef long int            ptrdiff_t;  // NOLINT
-typedef unsigned char       BYTE;       // NOLINT
-typedef unsigned short      WORD;       // NOLINT
-typedef unsigned long       DWORD;      // NOLINT
-typedef int                 BOOL;       // NOLINT
-typedef int                 BOOLEAN;    // NOLINT
-typedef float               FLOAT;      // NOLINT
-typedef int                 INT;        // NOLINT
-typedef unsigned int        UINT;       // NOLINT
-typedef unsigned long       ULONG;      // NOLINT
-typedef short               SHORT;      // NOLINT
-typedef unsigned short      USHORT;     // NOLINT
-typedef char                CHAR;       // NOLINT
-typedef unsigned char       UCHAR;      // NOLINT
-typedef signed char         INT8;       // NOLINT
-typedef signed short        INT16;      // NOLINT
-typedef signed int          INT32;      // NOLINT
-typedef signed long long    INT64;      // NOLINT
-typedef unsigned char       UINT8;      // NOLINT
-typedef unsigned short      UINT16;     // NOLINT
-typedef unsigned int        UINT32;     // NOLINT
-typedef unsigned long long  UINT64;     // NOLINT
-typedef long                LONG;       // NOLINT
-typedef signed int          LONG32;     // NOLINT
-typedef unsigned int        ULONG32;    // NOLINT
-typedef uint64_t            ULONG64;    // NOLINT
-typedef unsigned int        DWORD32;    // NOLINT
-typedef uint64_t            DWORD64;    // NOLINT
-typedef uint64_t            ULONGLONG;  // NOLINT
-typedef void*               PVOID;      // NOLINT
-typedef void*               HANDLE;     // NOLINT
-typedef void*               FILE;       // NOLINT
-#define NULL                (0)         // NOLINT
-// clang-format on
+#include "identifier-naming-standard-types.h"
 
 // clang-format off
 //===----------------------------------------------------------------------===//
@@ -58,159 +11,159 @@ class CMyClass1 {
 public:
   static int ClassMemberCase;
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: invalid case style for class member 'ClassMemberCase' [readability-identifier-naming]
-  // CHECK-FIXES: {{^}}  static int iClassMemberCase;
+  // CHECK-FIXES: {{^}}  static int myiClassMemberCase;
 
   char const ConstantMemberCase = 0;
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: invalid case style for constant member 'ConstantMemberCase' [readability-identifier-naming]
-  // CHECK-FIXES: {{^}}  char const cConstantMemberCase = 0;
+  // CHECK-FIXES: {{^}}  char const mycConstantMemberCase = 0;
 
   void MyFunc1(const int ConstantParameterCase);
   // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: invalid case style for constant parameter 'ConstantParameterCase' [readability-identifier-naming]
-  // CHECK-FIXES: {{^}}  void MyFunc1(const int iConstantParameterCase);
+  // CHECK-FIXES: {{^}}  void MyFunc1(const int myiConstantParameterCase);
 
   void MyFunc2(const int* ConstantPointerParameterCase);
   // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: invalid case style for pointer parameter 'ConstantPointerParameterCase' [readability-identifier-naming]
-  // CHECK-FIXES: {{^}}  void MyFunc2(const int* piConstantPointerParameterCase);
+  // CHECK-FIXES: {{^}}  void MyFunc2(const int* mypmyiConstantPointerParameterCase);
 
   static constexpr int ConstexprVariableCase = 123;
   // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: invalid case style for constexpr variable 'ConstexprVariableCase' [readability-identifier-naming]
-  // CHECK-FIXES: {{^}}  static constexpr int iConstexprVariableCase = 123;
+  // CHECK-FIXES: {{^}}  static constexpr int myiConstexprVariableCase = 123;
 };
 
 const int GlobalConstantCase = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: invalid case style for global constant 'GlobalConstantCase' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}const int iGlobalConstantCase = 0;
+// CHECK-FIXES: {{^}}const int myiGlobalConstantCase = 0;
 
 const int* GlobalConstantPointerCase = nullptr;
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: invalid case style for global pointer 'GlobalConstantPointerCase' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}const int* piGlobalConstantPointerCase = nullptr;
+// CHECK-FIXES: {{^}}const int* mypmyiGlobalConstantPointerCase = nullptr;
 
 int* GlobalPointerCase = nullptr;
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: invalid case style for global pointer 'GlobalPointerCase' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}int* piGlobalPointerCase = nullptr;
+// CHECK-FIXES: {{^}}int* mypmyiGlobalPointerCase = nullptr;
 
 int GlobalVariableCase = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for global variable 'GlobalVariableCase' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}int iGlobalVariableCase = 0;
+// CHECK-FIXES: {{^}}int myiGlobalVariableCase = 0;
 
 void Func1(){
   int const LocalConstantCase = 3;
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: invalid case style for local constant 'LocalConstantCase' [readability-identifier-naming]
-  // CHECK-FIXES: {{^}}  int const iLocalConstantCase = 3;
+  // CHECK-FIXES: {{^}}  int const myiLocalConstantCase = 3;
 
   unsigned const ConstantCase = 1;
   // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: invalid case style for local constant 'ConstantCase' [readability-identifier-naming]
-  // CHECK-FIXES: {{^}}  unsigned const uConstantCase = 1;
+  // CHECK-FIXES: {{^}}  unsigned const myuConstantCase = 1;
 
   int* const LocalConstantPointerCase = nullptr;
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: invalid case style for local constant pointer 'LocalConstantPointerCase' [readability-identifier-naming]
-  // CHECK-FIXES: {{^}}  int* const piLocalConstantPointerCase = nullptr;
+  // CHECK-FIXES: {{^}}  int* const mypmyiLocalConstantPointerCase = nullptr;
 
   int *LocalPointerCase = nullptr;
   // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for local pointer 'LocalPointerCase' [readability-identifier-naming]
-  // CHECK-FIXES: {{^}}  int *piLocalPointerCase = nullptr;
+  // CHECK-FIXES: {{^}}  int *mypmyiLocalPointerCase = nullptr;
 
   int LocalVariableCase = 0;
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for local variable 'LocalVariableCase' [readability-identifier-naming]
-  // CHECK-FIXES: {{^}}  int iLocalVariableCase = 0;
+  // CHECK-FIXES: {{^}}  int myiLocalVariableCase = 0;
 }
 
 class CMyClass2 {
   char MemberCase;
   // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for private member 'MemberCase' [readability-identifier-naming]
-  // CHECK-FIXES: {{^}}  char cMemberCase;
+  // CHECK-FIXES: {{^}}  char mycMemberCase;
 
   void Func1(int ParameterCase);
   // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: invalid case style for parameter 'ParameterCase' [readability-identifier-naming]
-  // CHECK-FIXES: {{^}}  void Func1(int iParameterCase);
+  // CHECK-FIXES: {{^}}  void Func1(int myiParameterCase);
 
   void Func2(const int ParameterCase);
   // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: invalid case style for constant parameter 'ParameterCase' [readability-identifier-naming]
-  // CHECK-FIXES: {{^}}  void Func2(const int iParameterCase);
+  // CHECK-FIXES: {{^}}  void Func2(const int myiParameterCase);
 
   void Func3(const int *PointerParameterCase);
   // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: invalid case style for pointer parameter 'PointerParameterCase' [readability-identifier-naming]
-  // CHECK-FIXES: {{^}}  void Func3(const int *piPointerParameterCase);
+  // CHECK-FIXES: {{^}}  void Func3(const int *mypmyiPointerParameterCase);
 };
 
 class CMyClass3 {
 private:
   char PrivateMemberCase;
   // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for private member 'PrivateMemberCase' [readability-identifier-naming]
-  // CHECK-FIXES: {{^}}  char cPrivateMemberCase;
+  // CHECK-FIXES: {{^}}  char mycPrivateMemberCase;
 
 protected:
   char ProtectedMemberCase;
   // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for protected member 'ProtectedMemberCase' [readability-identifier-naming]
-  // CHECK-FIXES: {{^}}  char cProtectedMemberCase;
+  // CHECK-FIXES: {{^}}  char mycProtectedMemberCase;
 
 public:
   char PublicMemberCase;
   // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for public member 'PublicMemberCase' [readability-identifier-naming]
-  // CHECK-FIXES: {{^}}  char cPublicMemberCase;
+  // CHECK-FIXES: {{^}}  char mycPublicMemberCase;
 };
 
 static const int StaticConstantCase = 3;
 // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: invalid case style for global constant 'StaticConstantCase' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}static const int iStaticConstantCase = 3;
+// CHECK-FIXES: {{^}}static const int myiStaticConstantCase = 3;
 
 static int StaticVariableCase = 3;
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: invalid case style for global variable 'StaticVariableCase' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}static int iStaticVariableCase = 3;
+// CHECK-FIXES: {{^}}static int myiStaticVariableCase = 3;
 
-struct MyStruct { int StructCase; };
-// CHECK-MESSAGES: :[[@LINE-1]]:23: warning: invalid case style for public member 'StructCase' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}struct MyStruct { int iStructCase; };
+struct CMyStruct { int StructCase; };
+// CHECK-MESSAGES: :[[@LINE-1]]:24: warning: invalid case style for public member 'StructCase' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}struct CMyStruct { int myiStructCase; };
 
-union MyUnion { int UnionCase; long lUnionCase; };
+union MyUnion { int UnionCase; long mylUnionCase; };
 // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: invalid case style for public member 'UnionCase' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}union MyUnion { int iUnionCase; long lUnionCase; };
+// CHECK-FIXES: {{^}}union MyUnion { int myiUnionCase; long mylUnionCase; };
 
 //===----------------------------------------------------------------------===//
 // C string
 //===----------------------------------------------------------------------===//
 const char *NamePtr = "Name";
 // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: invalid case style for global pointer 'NamePtr' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}const char *szNamePtr = "Name";
+// CHECK-FIXES: {{^}}const char *myszNamePtr = "Name";
 
 const char NameArray[] = "Name";
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: invalid case style for global constant 'NameArray' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}const char szNameArray[] = "Name";
+// CHECK-FIXES: {{^}}const char myszNameArray[] = "Name";
 
 const char *NamePtrArray[] = {"AA", "BB"};
 // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: invalid case style for global variable 'NamePtrArray' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}const char *pszNamePtrArray[] = {"AA", "BB"};
+// CHECK-FIXES: {{^}}const char *mypmyszNamePtrArray[] = {"AA", "BB"};
 
 const wchar_t *WideNamePtr = L"Name";
 // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: invalid case style for global pointer 'WideNamePtr' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}const wchar_t *wszWideNamePtr = L"Name";
+// CHECK-FIXES: {{^}}const wchar_t *mywszWideNamePtr = L"Name";
 
 const wchar_t WideNameArray[] = L"Name";
 // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: invalid case style for global constant 'WideNameArray' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}const wchar_t wszWideNameArray[] = L"Name";
+// CHECK-FIXES: {{^}}const wchar_t mywszWideNameArray[] = L"Name";
 
 const wchar_t *WideNamePtrArray[] = {L"AA", L"BB"};
 // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: invalid case style for global variable 'WideNamePtrArray' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}const wchar_t *pwszWideNamePtrArray[] = {L"AA", L"BB"};
+// CHECK-FIXES: {{^}}const wchar_t *mypmywszWideNamePtrArray[] = {L"AA", L"BB"};
 
 class CMyClass4 {
 private:
   char *Name = "Text";
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: invalid case style for private member 'Name' [readability-identifier-naming]
-  // CHECK-FIXES: {{^}}  char *szName = "Text";
+  // CHECK-FIXES: {{^}}  char *myszName = "Text";
 
   const char *ConstName = "Text";
   // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: invalid case style for private member 'ConstName' [readability-identifier-naming]
-  // CHECK-FIXES: {{^}}  const char *szConstName = "Text";
+  // CHECK-FIXES: {{^}}  const char *myszConstName = "Text";
 
 public:
-  const char* DuplicateString(const char* Input, size_t nRequiredSize);
+  const char* DuplicateString(const char* Input, size_t mynRequiredSize);
   // CHECK-MESSAGES: :[[@LINE-1]]:43: warning: invalid case style for pointer parameter 'Input' [readability-identifier-naming]
-  // CHECK-FIXES: {{^}}  const char* DuplicateString(const char* szInput, size_t nRequiredSize);
+  // CHECK-FIXES: {{^}}  const char* DuplicateString(const char* myszInput, size_t mynRequiredSize);
 
-  size_t UpdateText(const char* Buffer, size_t nBufferSize);
+  size_t UpdateText(const char* Buffer, size_t mynBufferSize);
   // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: invalid case style for pointer parameter 'Buffer' [readability-identifier-naming]
-  // CHECK-FIXES: {{^}}  size_t UpdateText(const char* szBuffer, size_t nBufferSize);
+  // CHECK-FIXES: {{^}}  size_t UpdateText(const char* myszBuffer, size_t mynBufferSize);
 };
 
 
@@ -219,123 +172,123 @@ public:
 //===----------------------------------------------------------------------===//
 DWORD MsDword = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for global variable 'MsDword' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}DWORD dwMsDword = 0;
+// CHECK-FIXES: {{^}}DWORD mydwMsDword = 0;
 
 BYTE MsByte = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: invalid case style for global variable 'MsByte' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}BYTE byMsByte = 0;
+// CHECK-FIXES: {{^}}BYTE mybyMsByte = 0;
 
 WORD MsWord = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: invalid case style for global variable 'MsWord' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}WORD wMsWord = 0;
+// CHECK-FIXES: {{^}}WORD mywMsWord = 0;
 
 BOOL MsBool = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: invalid case style for global variable 'MsBool' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}BOOL bMsBool = 0;
+// CHECK-FIXES: {{^}}BOOL mybMsBool = 0;
 
 BOOLEAN MsBoolean = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: invalid case style for global variable 'MsBoolean' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}BOOLEAN bMsBoolean = 0;
+// CHECK-FIXES: {{^}}BOOLEAN mybMsBoolean = 0;
 
 CHAR MsValueChar = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: invalid case style for global variable 'MsValueChar' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}CHAR cMsValueChar = 0;
+// CHECK-FIXES: {{^}}CHAR mycMsValueChar = 0;
 
 UCHAR MsValueUchar = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for global variable 'MsValueUchar' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}UCHAR ucMsValueUchar = 0;
+// CHECK-FIXES: {{^}}UCHAR myucMsValueUchar = 0;
 
 SHORT MsValueShort = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for global variable 'MsValueShort' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}SHORT sMsValueShort = 0;
+// CHECK-FIXES: {{^}}SHORT mysMsValueShort = 0;
 
 USHORT MsValueUshort = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for global variable 'MsValueUshort' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}USHORT usMsValueUshort = 0;
+// CHECK-FIXES: {{^}}USHORT myusMsValueUshort = 0;
 
 WORD MsValueWord = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: invalid case style for global variable 'MsValueWord' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}WORD wMsValueWord = 0;
+// CHECK-FIXES: {{^}}WORD mywMsValueWord = 0;
 
 DWORD MsValueDword = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for global variable 'MsValueDword' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}DWORD dwMsValueDword = 0;
+// CHECK-FIXES: {{^}}DWORD mydwMsValueDword = 0;
 
 DWORD32 MsValueDword32 = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: invalid case style for global variable 'MsValueDword32' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}DWORD32 dw32MsValueDword32 = 0;
+// CHECK-FIXES: {{^}}DWORD32 mydw32MsValueDword32 = 0;
 
 DWORD64 MsValueDword64 = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: invalid case style for global variable 'MsValueDword64' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}DWORD64 dw64MsValueDword64 = 0;
+// CHECK-FIXES: {{^}}DWORD64 mydw64MsValueDword64 = 0;
 
 LONG MsValueLong = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: invalid case style for global variable 'MsValueLong' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}LONG lMsValueLong = 0;
+// CHECK-FIXES: {{^}}LONG mylMsValueLong = 0;
 
 ULONG MsValueUlong = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for global variable 'MsValueUlong' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}ULONG ulMsValueUlong = 0;
+// CHECK-FIXES: {{^}}ULONG myulMsValueUlong = 0;
 
 ULONG32 MsValueUlong32 = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: invalid case style for global variable 'MsValueUlong32' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}ULONG32 ul32MsValueUlong32 = 0;
+// CHECK-FIXES: {{^}}ULONG32 myul32MsValueUlong32 = 0;
 
 ULONG64 MsValueUlong64 = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: invalid case style for global variable 'MsValueUlong64' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}ULONG64 ul64MsValueUlong64 = 0;
+// CHECK-FIXES: {{^}}ULONG64 myul64MsValueUlong64 = 0;
 
 ULONGLONG MsValueUlongLong = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: invalid case style for global variable 'MsValueUlongLong' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}ULONGLONG ullMsValueUlongLong = 0;
+// CHECK-FIXES: {{^}}ULONGLONG myullMsValueUlongLong = 0;
 
 HANDLE MsValueHandle = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for global pointer 'MsValueHandle' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}HANDLE hMsValueHandle = 0;
+// CHECK-FIXES: {{^}}HANDLE myhMsValueHandle = 0;
 
 INT MsValueInt = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for global variable 'MsValueInt' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}INT iMsValueInt = 0;
+// CHECK-FIXES: {{^}}INT myiMsValueInt = 0;
 
 INT8 MsValueInt8 = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: invalid case style for global variable 'MsValueInt8' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}INT8 i8MsValueInt8 = 0;
+// CHECK-FIXES: {{^}}INT8 myi8MsValueInt8 = 0;
 
 INT16 MsValueInt16 = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for global variable 'MsValueInt16' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}INT16 i16MsValueInt16 = 0;
+// CHECK-FIXES: {{^}}INT16 myi16MsValueInt16 = 0;
 
 INT32 MsValueInt32 = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for global variable 'MsValueInt32' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}INT32 i32MsValueInt32 = 0;
+// CHECK-FIXES: {{^}}INT32 myi32MsValueInt32 = 0;
 
 INT64 MsValueINt64 = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for global variable 'MsValueINt64' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}INT64 i64MsValueINt64 = 0;
+// CHECK-FIXES: {{^}}INT64 myi64MsValueINt64 = 0;
 
 UINT MsValueUint = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: invalid case style for global variable 'MsValueUint' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}UINT uiMsValueUint = 0;
+// CHECK-FIXES: {{^}}UINT myuiMsValueUint = 0;
 
 UINT8 MsValueUint8 = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for global variable 'MsValueUint8' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}UINT8 u8MsValueUint8 = 0;
+// CHECK-FIXES: {{^}}UINT8 myu8MsValueUint8 = 0;
 
 UINT16 MsValueUint16 = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for global variable 'MsValueUint16' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}UINT16 u16MsValueUint16 = 0;
+// CHECK-FIXES: {{^}}UINT16 myu16MsValueUint16 = 0;
 
 UINT32 MsValueUint32 = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for global variable 'MsValueUint32' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}UINT32 u32MsValueUint32 = 0;
+// CHECK-FIXES: {{^}}UINT32 myu32MsValueUint32 = 0;
 
 UINT64 MsValueUint64 = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for global variable 'MsValueUint64' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}UINT64 u64MsValueUint64 = 0;
+// CHECK-FIXES: {{^}}UINT64 myu64MsValueUint64 = 0;
 
 PVOID MsValuePvoid = NULL;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for global pointer 'MsValuePvoid' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}PVOID pMsValuePvoid = NULL;
+// CHECK-FIXES: {{^}}PVOID mypMsValuePvoid = NULL;
 
 
 //===----------------------------------------------------------------------===//
@@ -343,19 +296,19 @@ PVOID MsValuePvoid = NULL;
 //===----------------------------------------------------------------------===//
 unsigned GlobalUnsignedArray[] = {1, 2, 3};
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: invalid case style for global variable 'GlobalUnsignedArray' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}unsigned aryGlobalUnsignedArray[] = {1, 2, 3};
+// CHECK-FIXES: {{^}}unsigned myaGlobalUnsignedArray[] = {1, 2, 3};
 
 int GlobalIntArray[] = {1, 2, 3};
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for global variable 'GlobalIntArray' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}int aryGlobalIntArray[] = {1, 2, 3};
+// CHECK-FIXES: {{^}}int myaGlobalIntArray[] = {1, 2, 3};
 
 int DataInt[1] = {0};
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for global variable 'DataInt' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}int aryDataInt[1] = {0};
+// CHECK-FIXES: {{^}}int myaDataInt[1] = {0};
 
 int DataArray[2] = {0};
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for global variable 'DataArray' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}int aryDataArray[2] = {0};
+// CHECK-FIXES: {{^}}int myaDataArray[2] = {0};
 
 
 //===----------------------------------------------------------------------===//
@@ -363,66 +316,74 @@ int DataArray[2] = {0};
 //===----------------------------------------------------------------------===//
 int *DataIntPtr[1] = {0};
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: invalid case style for global variable 'DataIntPtr' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}int *paryDataIntPtr[1] = {0};
+// CHECK-FIXES: {{^}}int *mypmyaDataIntPtr[1] = {0};
 
 void *BufferPtr1;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for global pointer 'BufferPtr1' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}void *pBufferPtr1;
+// CHECK-FIXES: {{^}}void *mypmyvBufferPtr1;
 
 void **BufferPtr2;
 // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for global pointer 'BufferPtr2' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}void **ppBufferPtr2;
+// CHECK-FIXES: {{^}}void **mypmypmyvBufferPtr2;
 
-void **pBufferPtr3;
-// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for global pointer 'pBufferPtr3' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}void **ppBufferPtr3;
+void **mypBufferPtr3;
+// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for global pointer 'mypBufferPtr3' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}void **mypmypmyvBufferPtr3;
 
-int *pBufferPtr4;
-// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: invalid case style for global pointer 'pBufferPtr4' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}int *piBufferPtr4;
+int *mypBufferPtr4;
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: invalid case style for global pointer 'mypBufferPtr4' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}int *mypmyiBufferPtr4;
 
 typedef void (*FUNC_PTR_HELLO)();
 FUNC_PTR_HELLO Hello = NULL;
 // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: invalid case style for global pointer 'Hello' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}FUNC_PTR_HELLO fnHello = NULL;
+// CHECK-FIXES: {{^}}FUNC_PTR_HELLO myfnHello = NULL;
 
 void *ValueVoidPtr = NULL;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for global pointer 'ValueVoidPtr' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}void *pValueVoidPtr = NULL;
+// CHECK-FIXES: {{^}}void *mypmyvValueVoidPtr = NULL;
 
 ptrdiff_t PtrDiff = NULL;
 // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: invalid case style for global variable 'PtrDiff' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}ptrdiff_t pPtrDiff = NULL;
+// CHECK-FIXES: {{^}}ptrdiff_t mypPtrDiff = NULL;
 
 int8_t *ValueI8Ptr;
 // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: invalid case style for global pointer 'ValueI8Ptr' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}int8_t *pi8ValueI8Ptr;
+// CHECK-FIXES: {{^}}int8_t *mypmyi8ValueI8Ptr;
 
 uint8_t *ValueU8Ptr;
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: invalid case style for global pointer 'ValueU8Ptr' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}uint8_t *pu8ValueU8Ptr;
+// CHECK-FIXES: {{^}}uint8_t *mypmyu8ValueU8Ptr;
+
+unsigned char *ValueUcPtr;
+// CHECK-MESSAGES: :[[@LINE-1]]:16: warning: invalid case style for global pointer 'ValueUcPtr' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}unsigned char *mypmyucValueUcPtr;
+
+unsigned char **ValueUcPtr2;
+// CHECK-MESSAGES: :[[@LINE-1]]:17: warning: invalid case style for global pointer 'ValueUcPtr2' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}unsigned char **mypmypmyucValueUcPtr2;
 
 void MyFunc2(void* Val){}
 // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: invalid case style for pointer parameter 'Val' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}void MyFunc2(void* pVal){}
+// CHECK-FIXES: {{^}}void MyFunc2(void* mypmyvVal){}
 
 
 //===----------------------------------------------------------------------===//
 // Reference
 //===----------------------------------------------------------------------===//
-int iValueIndex = 1;
-int &RefValueIndex = iValueIndex;
+int myiValueIndex = 1;
+int &RefValueIndex = myiValueIndex;
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: invalid case style for global variable 'RefValueIndex' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}int &iRefValueIndex = iValueIndex;
+// CHECK-FIXES: {{^}}int &myiRefValueIndex = myiValueIndex;
 
-const int &ConstRefValue = iValueIndex;
+const int &ConstRefValue = myiValueIndex;
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: invalid case style for global variable 'ConstRefValue' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}const int &iConstRefValue = iValueIndex;
+// CHECK-FIXES: {{^}}const int &myiConstRefValue = myiValueIndex;
 
-long long llValueLongLong = 2;
-long long &RefValueLongLong = llValueLongLong;
+long long myllValueLongLong = 2;
+long long &RefValueLongLong = myllValueLongLong;
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: invalid case style for global variable 'RefValueLongLong' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}long long &llRefValueLongLong = llValueLongLong;
+// CHECK-FIXES: {{^}}long long &myllRefValueLongLong = myllValueLongLong;
 
 
 //===----------------------------------------------------------------------===//
@@ -430,147 +391,151 @@ long long &RefValueLongLong = llValueLongLong;
 //===----------------------------------------------------------------------===//
 int8_t ValueI8;
 // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for global variable 'ValueI8' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}int8_t i8ValueI8;
+// CHECK-FIXES: {{^}}int8_t myi8ValueI8;
 
 int16_t ValueI16 = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: invalid case style for global variable 'ValueI16' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}int16_t i16ValueI16 = 0;
+// CHECK-FIXES: {{^}}int16_t myi16ValueI16 = 0;
 
 int32_t ValueI32 = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: invalid case style for global variable 'ValueI32' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}int32_t i32ValueI32 = 0;
+// CHECK-FIXES: {{^}}int32_t myi32ValueI32 = 0;
 
 int64_t ValueI64 = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: invalid case style for global variable 'ValueI64' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}int64_t i64ValueI64 = 0;
+// CHECK-FIXES: {{^}}int64_t myi64ValueI64 = 0;
 
 uint8_t ValueU8 = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: invalid case style for global variable 'ValueU8' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}uint8_t u8ValueU8 = 0;
+// CHECK-FIXES: {{^}}uint8_t myu8ValueU8 = 0;
 
 uint16_t ValueU16 = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: invalid case style for global variable 'ValueU16' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}uint16_t u16ValueU16 = 0;
+// CHECK-FIXES: {{^}}uint16_t myu16ValueU16 = 0;
 
 uint32_t ValueU32 = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: invalid case style for global variable 'ValueU32' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}uint32_t u32ValueU32 = 0;
+// CHECK-FIXES: {{^}}uint32_t myu32ValueU32 = 0;
 
 uint64_t ValueU64 = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: invalid case style for global variable 'ValueU64' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}uint64_t u64ValueU64 = 0;
+// CHECK-FIXES: {{^}}uint64_t myu64ValueU64 = 0;
 
 float ValueFloat = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for global variable 'ValueFloat' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}float fValueFloat = 0;
+// CHECK-FIXES: {{^}}float myfValueFloat = 0;
 
 double ValueDouble = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for global variable 'ValueDouble' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}double dValueDouble = 0;
+// CHECK-FIXES: {{^}}double mydValueDouble = 0;
 
 char ValueChar = 'c';
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: invalid case style for global variable 'ValueChar' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}char cValueChar = 'c';
+// CHECK-FIXES: {{^}}char mycValueChar = 'c';
 
 bool ValueBool = true;
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: invalid case style for global variable 'ValueBool' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}bool bValueBool = true;
+// CHECK-FIXES: {{^}}bool mybValueBool = true;
 
 int ValueInt = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for global variable 'ValueInt' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}int iValueInt = 0;
+// CHECK-FIXES: {{^}}int myiValueInt = 0;
 
 size_t ValueSize = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for global variable 'ValueSize' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}size_t nValueSize = 0;
+// CHECK-FIXES: {{^}}size_t mynValueSize = 0;
 
 wchar_t ValueWchar = 'w';
 // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: invalid case style for global variable 'ValueWchar' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}wchar_t wcValueWchar = 'w';
+// CHECK-FIXES: {{^}}wchar_t mywcValueWchar = 'w';
 
 short ValueShort = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for global variable 'ValueShort' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}short sValueShort = 0;
+// CHECK-FIXES: {{^}}short mysValueShort = 0;
 
 unsigned ValueUnsigned = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: invalid case style for global variable 'ValueUnsigned' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}unsigned uValueUnsigned = 0;
+// CHECK-FIXES: {{^}}unsigned myuValueUnsigned = 0;
 
 signed ValueSigned = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for global variable 'ValueSigned' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}signed sValueSigned = 0;
+// CHECK-FIXES: {{^}}signed mysValueSigned = 0;
 
 long ValueLong = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: invalid case style for global variable 'ValueLong' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}long lValueLong = 0;
+// CHECK-FIXES: {{^}}long mylValueLong = 0;
 
 long long ValueLongLong = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: invalid case style for global variable 'ValueLongLong' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}long long llValueLongLong = 0;
+// CHECK-FIXES: {{^}}long long myllValueLongLong = 0;
 
 long long int ValueLongLongInt = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: invalid case style for global variable 'ValueLongLongInt' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}long long int lliValueLongLongInt = 0;
+// CHECK-FIXES: {{^}}long long int mylliValueLongLongInt = 0;
 
 long double ValueLongDouble = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: invalid case style for global variable 'ValueLongDouble' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}long double ldValueLongDouble = 0;
+// CHECK-FIXES: {{^}}long double myldValueLongDouble = 0;
 
 signed int ValueSignedInt = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: invalid case style for global variable 'ValueSignedInt' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}signed int siValueSignedInt = 0;
+// CHECK-FIXES: {{^}}signed int mysiValueSignedInt = 0;
 
 signed short ValueSignedShort = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: invalid case style for global variable 'ValueSignedShort' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}signed short ssValueSignedShort = 0;
+// CHECK-FIXES: {{^}}signed short myssValueSignedShort = 0;
 
 signed short int ValueSignedShortInt = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: invalid case style for global variable 'ValueSignedShortInt' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}signed short int ssiValueSignedShortInt = 0;
+// CHECK-FIXES: {{^}}signed short int myssiValueSignedShortInt = 0;
 
 signed long long ValueSignedLongLong = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: invalid case style for global variable 'ValueSignedLongLong' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}signed long long sllValueSignedLongLong = 0;
+// CHECK-FIXES: {{^}}signed long long mysllValueSignedLongLong = 0;
 
 signed long int ValueSignedLongInt = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: invalid case style for global variable 'ValueSignedLongInt' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}signed long int sliValueSignedLongInt = 0;
+// CHECK-FIXES: {{^}}signed long int mysliValueSignedLongInt = 0;
 
 signed long ValueSignedLong = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: invalid case style for global variable 'ValueSignedLong' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}signed long slValueSignedLong = 0;
+// CHECK-FIXES: {{^}}signed long myslValueSignedLong = 0;
 
 unsigned long long int ValueUnsignedLongLongInt = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: invalid case style for global variable 'ValueUnsignedLongLongInt' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}unsigned long long int ulliValueUnsignedLongLongInt = 0;
+// CHECK-FIXES: {{^}}unsigned long long int myulliValueUnsignedLongLongInt = 0;
 
 unsigned long long ValueUnsignedLongLong = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: invalid case style for global variable 'ValueUnsignedLongLong' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}unsigned long long ullValueUnsignedLongLong = 0;
+// CHECK-FIXES: {{^}}unsigned long long myullValueUnsignedLongLong = 0;
 
 unsigned long int ValueUnsignedLongInt = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: invalid case style for global variable 'ValueUnsignedLongInt' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}unsigned long int uliValueUnsignedLongInt = 0;
+// CHECK-FIXES: {{^}}unsigned long int myuliValueUnsignedLongInt = 0;
 
 unsigned long ValueUnsignedLong = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: invalid case style for global variable 'ValueUnsignedLong' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}unsigned long ulValueUnsignedLong = 0;
+// CHECK-FIXES: {{^}}unsigned long myulValueUnsignedLong = 0;
 
 unsigned short int ValueUnsignedShortInt = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: invalid case style for global variable 'ValueUnsignedShortInt' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}unsigned short int usiValueUnsignedShortInt = 0;
+// CHECK-FIXES: {{^}}unsigned short int myusiValueUnsignedShortInt = 0;
 
 unsigned short ValueUnsignedShort = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: invalid case style for global variable 'ValueUnsignedShort' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}unsigned short usValueUnsignedShort = 0;
+// CHECK-FIXES: {{^}}unsigned short myusValueUnsignedShort = 0;
 
 unsigned int ValueUnsignedInt = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: invalid case style for global variable 'ValueUnsignedInt' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}unsigned int uiValueUnsignedInt = 0;
+// CHECK-FIXES: {{^}}unsigned int myuiValueUnsignedInt = 0;
+
+unsigned char ValueUnsignedChar = 0;
+// CHECK-MESSAGES: :[[@LINE-1]]:15: warning: invalid case style for global variable 'ValueUnsignedChar' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}unsigned char myucValueUnsignedChar = 0;
 
 long int ValueLongInt = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: invalid case style for global variable 'ValueLongInt' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}long int liValueLongInt = 0;
+// CHECK-FIXES: {{^}}long int myliValueLongInt = 0;
 
 
 //===----------------------------------------------------------------------===//
@@ -578,38 +543,38 @@ long int ValueLongInt = 0;
 //===----------------------------------------------------------------------===//
 volatile int VolatileInt = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: invalid case style for global variable 'VolatileInt' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}volatile int iVolatileInt = 0;
+// CHECK-FIXES: {{^}}volatile int myiVolatileInt = 0;
 
 thread_local int ThreadLocalValueInt = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: invalid case style for global variable 'ThreadLocalValueInt' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}thread_local int iThreadLocalValueInt = 0;
+// CHECK-FIXES: {{^}}thread_local int myiThreadLocalValueInt = 0;
 
 extern int ExternValueInt;
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: invalid case style for global variable 'ExternValueInt' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}extern int iExternValueInt;
+// CHECK-FIXES: {{^}}extern int myiExternValueInt;
 
-struct DataBuffer {
+struct CDataBuffer {
     mutable size_t Size;
 };
 // CHECK-MESSAGES: :[[@LINE-2]]:20: warning: invalid case style for public member 'Size' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}    mutable size_t nSize;
+// CHECK-FIXES: {{^}}    mutable size_t mynSize;
 
 static constexpr int const &ConstExprInt = 42;
 // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: invalid case style for constexpr variable 'ConstExprInt' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}static constexpr int const &iConstExprInt = 42;
+// CHECK-FIXES: {{^}}static constexpr int const &myiConstExprInt = 42;
 
 
 //===----------------------------------------------------------------------===//
 // Redefined types
 //===----------------------------------------------------------------------===//
 typedef int INDEX;
-INDEX iIndex = 0;
-// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for global variable 'iIndex' [readability-identifier-naming]
+INDEX myiIndex = 0;
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for global variable 'myiIndex' [readability-identifier-naming]
 // CHECK-FIXES: {{^}}INDEX Index = 0;
 
 
 //===----------------------------------------------------------------------===//
-// Class
+// Class and struct
 //===----------------------------------------------------------------------===//
 class ClassCase { int Func(); };
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for class 'ClassCase' [readability-identifier-naming]
@@ -623,72 +588,76 @@ class AbstractClassCase1 { virtual int Func1() = 0; int Func2(); };
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for abstract class 'AbstractClassCase1' [readability-identifier-naming]
 // CHECK-FIXES: {{^}}class IAbstractClassCase1 { virtual int Func1() = 0; int Func2(); };
 
-class ClassConstantCase { public: static const int iConstantCase; };
+class ClassConstantCase { public: static const int myiConstantCase; };
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for class 'ClassConstantCase' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}class CClassConstantCase { public: static const int iConstantCase; };
+// CHECK-FIXES: {{^}}class CClassConstantCase { public: static const int myiConstantCase; };
+
+struct StructCase { int Func(); };
+// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for class 'StructCase' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}struct CStructCase { int Func(); };
 
 //===----------------------------------------------------------------------===//
 // Other Cases
 //===----------------------------------------------------------------------===//
 int lower_case = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for global variable 'lower_case' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}int iLowerCase = 0;
+// CHECK-FIXES: {{^}}int myiLowerCase = 0;
 
 int lower_case1 = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for global variable 'lower_case1' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}int iLowerCase1 = 0;
+// CHECK-FIXES: {{^}}int myiLowerCase1 = 0;
 
 int lower_case_2 = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for global variable 'lower_case_2' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}int iLowerCase2 = 0;
+// CHECK-FIXES: {{^}}int myiLowerCase2 = 0;
 
 int UPPER_CASE = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for global variable 'UPPER_CASE' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}int iUpperCase = 0;
+// CHECK-FIXES: {{^}}int myiUpperCase = 0;
 
 int UPPER_CASE_1 = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for global variable 'UPPER_CASE_1' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}int iUpperCase1 = 0;
+// CHECK-FIXES: {{^}}int myiUpperCase1 = 0;
 
 int camelBack = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for global variable 'camelBack' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}int iCamelBack = 0;
+// CHECK-FIXES: {{^}}int myiCamelBack = 0;
 
 int camelBack_1 = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for global variable 'camelBack_1' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}int iCamelBack1 = 0;
+// CHECK-FIXES: {{^}}int myiCamelBack1 = 0;
 
 int camelBack2 = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for global variable 'camelBack2' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}int iCamelBack2 = 0;
+// CHECK-FIXES: {{^}}int myiCamelBack2 = 0;
 
 int CamelCase = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for global variable 'CamelCase' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}int iCamelCase = 0;
+// CHECK-FIXES: {{^}}int myiCamelCase = 0;
 
 int CamelCase_1 = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for global variable 'CamelCase_1' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}int iCamelCase1 = 0;
+// CHECK-FIXES: {{^}}int myiCamelCase1 = 0;
 
 int CamelCase2 = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for global variable 'CamelCase2' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}int iCamelCase2 = 0;
+// CHECK-FIXES: {{^}}int myiCamelCase2 = 0;
 
 int camel_Snake_Back = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for global variable 'camel_Snake_Back' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}int iCamelSnakeBack = 0;
+// CHECK-FIXES: {{^}}int myiCamelSnakeBack = 0;
 
 int camel_Snake_Back_1 = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for global variable 'camel_Snake_Back_1' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}int iCamelSnakeBack1 = 0;
+// CHECK-FIXES: {{^}}int myiCamelSnakeBack1 = 0;
 
 int Camel_Snake_Case = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for global variable 'Camel_Snake_Case' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}int iCamelSnakeCase = 0;
+// CHECK-FIXES: {{^}}int myiCamelSnakeCase = 0;
 
 int Camel_Snake_Case_1 = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for global variable 'Camel_Snake_Case_1' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}int iCamelSnakeCase1 = 0;
+// CHECK-FIXES: {{^}}int myiCamelSnakeCase1 = 0;
 
 //===----------------------------------------------------------------------===//
 // Enum

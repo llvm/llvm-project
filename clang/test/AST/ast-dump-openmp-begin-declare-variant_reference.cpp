@@ -184,7 +184,7 @@ int test(float &&f, short &&s) {
 // CHECK-NEXT: | |   `-ReturnStmt [[ADDR_39:0x[a-z0-9]*]] <line:13:3, col:33>
 // CHECK-NEXT: | |     `-CXXStaticCastExpr [[ADDR_40:0x[a-z0-9]*]] <col:10, col:33> '_Up':'typename remove_reference<_Tp>::type' xvalue static_cast<_Up &&> <Dependent>
 // CHECK-NEXT: | |       `-DeclRefExpr [[ADDR_41:0x[a-z0-9]*]] <col:30> '_Tp' {{.*}}ParmVar [[ADDR_34]] '__t' '_Tp &&'
-// CHECK-NEXT: | |-FunctionDecl [[ADDR_42:0x[a-z0-9]*]] <line:10:1, line:14:1> line:11:1 used move 'typename remove_reference<float &>::type &&(float &)' inline
+// CHECK-NEXT: | |-FunctionDecl [[ADDR_42:0x[a-z0-9]*]] <line:10:1, line:14:1> line:11:1 used move 'typename remove_reference<float &>::type &&(float &)' implicit_instantiation inline
 // CHECK-NEXT: | | |-TemplateArgument type 'float &'
 // CHECK-NEXT: | | | `-LValueReferenceType [[ADDR_7]] 'float &'
 // CHECK-NEXT: | | |   `-BuiltinType [[ADDR_8]] 'float'
@@ -201,7 +201,7 @@ int test(float &&f, short &&s) {
 // CHECK-NEXT: | |   `-ReturnStmt [[ADDR_49:0x[a-z0-9]*]] <line:13:3, col:33>
 // CHECK-NEXT: | |     `-CXXStaticCastExpr [[ADDR_50:0x[a-z0-9]*]] <col:10, col:33> '_Up':'float' xvalue static_cast<_Up &&> <NoOp>
 // CHECK-NEXT: | |       `-DeclRefExpr [[ADDR_51:0x[a-z0-9]*]] <col:30> 'float' {{.*}}ParmVar [[ADDR_43]] '__t' 'float &'
-// CHECK-NEXT: | `-FunctionDecl [[ADDR_52:0x[a-z0-9]*]] <line:10:1, line:14:1> line:11:1 used move 'typename remove_reference<short &>::type &&(short &)' inline
+// CHECK-NEXT: | `-FunctionDecl [[ADDR_52:0x[a-z0-9]*]] <line:10:1, line:14:1> line:11:1 used move 'typename remove_reference<short &>::type &&(short &)' implicit_instantiation inline
 // CHECK-NEXT: |   |-TemplateArgument type 'short &'
 // CHECK-NEXT: |   | `-LValueReferenceType [[ADDR_15]] 'short &'
 // CHECK-NEXT: |   |   `-BuiltinType [[ADDR_16]] 'short'

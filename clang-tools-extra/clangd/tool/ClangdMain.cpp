@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ClangdMain.h"
 #include "ClangdLSPServer.h"
 #include "CodeComplete.h"
 #include "Compiler.h"
@@ -28,6 +29,7 @@
 #include "support/ThreadCrashReporter.h"
 #include "support/ThreadsafeFS.h"
 #include "support/Trace.h"
+#include "clang/Basic/Stack.h"
 #include "clang/Format/Format.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -272,15 +274,6 @@ opt<bool> ImportInsertions{
     init(CodeCompleteOptions().ImportInsertions),
 };
 
-opt<bool> IncludeCleanerStdlib{
-    "include-cleaner-stdlib",
-    cat(Features),
-    desc("Apply include-cleaner analysis to standard library headers "
-         "(immature!)"),
-    init(false),
-    Hidden,
-};
-
 opt<bool> HeaderInsertionDecorators{
     "header-insertion-decorators",
     cat(Features),
@@ -316,7 +309,7 @@ RetiredFlag<bool> CrossFileRename("cross-file-rename");
 RetiredFlag<std::string> ClangTidyChecks("clang-tidy-checks");
 RetiredFlag<bool> InlayHints("inlay-hints");
 RetiredFlag<bool> FoldingRanges("folding-ranges");
-
+RetiredFlag<bool> IncludeCleanerStdlib("include-cleaner-stdlib");
 
 opt<int> LimitResults{
     "limit-results",
@@ -710,8 +703,6 @@ public:
   }
 };
 } // namespace
-} // namespace clangd
-} // namespace clang
 
 enum class ErrorResultCode : int {
   NoShutdownRequest = 1,
@@ -719,10 +710,10 @@ enum class ErrorResultCode : int {
   CheckFailed = 3
 };
 
-int main(int argc, char *argv[]) {
-  using namespace clang;
-  using namespace clang::clangd;
-
+int clangdMain(int argc, char *argv[]) {
+  // Clang could run on the main thread. e.g., when the flag '-check' or '-sync'
+  // is enabled.
+  clang::noteBottomOfStack();
   llvm::InitializeAllTargetInfos();
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   llvm::sys::AddSignalHandler(
@@ -883,7 +874,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     Opts.ResourceDir = ResourceDir;
   Opts.BuildDynamicSymbolIndex = true;
   std::vector<std::unique_ptr<SymbolIndex>> IdxStack;
-  std::unique_ptr<SymbolIndex> StaticIdx;
 #if CLANGD_ENABLE_REMOTE
   if (RemoteIndexAddress.empty() != ProjectRoot.empty()) {
     llvm::errs() << "remote-index-address and project-path have to be "
@@ -904,14 +894,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   Opts.ReferencesLimit = ReferencesLimit;
   Opts.Rename.LimitFiles = RenameFileLimit;
   auto PAI = createProjectAwareIndex(loadExternalIndex, Sync);
-  if (StaticIdx) {
-    IdxStack.emplace_back(std::move(StaticIdx));
-    IdxStack.emplace_back(
-        std::make_unique<MergedIndex>(PAI.get(), IdxStack.back().get()));
-    Opts.StaticIndex = IdxStack.back().get();
-  } else {
-    Opts.StaticIndex = PAI.get();
-  }
+  Opts.StaticIndex = PAI.get();
   Opts.AsyncThreadsCount = WorkerThreadsCount;
   Opts.MemoryCleanup = getMemoryCleanupFunction();
 
@@ -980,7 +963,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   };
   if (ForceOffsetEncoding != OffsetEncoding::UnsupportedEncoding)
     Opts.Encoding = ForceOffsetEncoding;
-  setIncludeCleanerAnalyzesStdlib(IncludeCleanerStdlib);
 
   if (CheckFile.getNumOccurrences()) {
     llvm::SmallString<256> Path;
@@ -1041,3 +1023,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
 
   return ExitCode;
 }
+
+} // namespace clangd
+} // namespace clang

@@ -12,10 +12,11 @@ from dex.utils.Environment import is_native_windows, has_pywin32
 from dex.utils.PrettyOutputBase import PreserveAutoColors
 from dex.utils.RootDirectory import get_root_directory
 from dex.utils.Timer import Timer
-from dex.utils.Warning import warn
 from dex.utils.WorkingDirectory import WorkingDirectory
 
 if is_native_windows():
     from dex.utils.windows.PrettyOutput import PrettyOutput
 else:
     from dex.utils.posix.PrettyOutput import PrettyOutput
+
+from dex.utils.Logging import Logger

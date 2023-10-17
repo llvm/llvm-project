@@ -52,11 +52,6 @@ using namespace __memprof;
 DECLARE_REAL_AND_INTERCEPTOR(void *, malloc, uptr)
 DECLARE_REAL_AND_INTERCEPTOR(void, free, void *)
 
-#define MEMPROF_INTERCEPTOR_ENTER(ctx, func)                                   \
-  ctx = 0;                                                                     \
-  (void)ctx;
-
-#define COMMON_INTERCEPT_FUNCTION(name) MEMPROF_INTERCEPT_FUNC(name)
 #define COMMON_INTERCEPT_FUNCTION_VER(name, ver)                               \
   MEMPROF_INTERCEPT_FUNC_VER(name, ver)
 #define COMMON_INTERCEPT_FUNCTION_VER_UNVERSIONED_FALLBACK(name, ver)          \
@@ -104,24 +99,6 @@ DECLARE_REAL_AND_INTERCEPTOR(void, free, void *)
   } else {                                                                     \
     *begin = *end = 0;                                                         \
   }
-
-#define COMMON_INTERCEPTOR_MEMMOVE_IMPL(ctx, to, from, size)                   \
-  do {                                                                         \
-    MEMPROF_INTERCEPTOR_ENTER(ctx, memmove);                                   \
-    MEMPROF_MEMMOVE_IMPL(to, from, size);                                      \
-  } while (false)
-
-#define COMMON_INTERCEPTOR_MEMCPY_IMPL(ctx, to, from, size)                    \
-  do {                                                                         \
-    MEMPROF_INTERCEPTOR_ENTER(ctx, memcpy);                                    \
-    MEMPROF_MEMCPY_IMPL(to, from, size);                                       \
-  } while (false)
-
-#define COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, block, c, size)                    \
-  do {                                                                         \
-    MEMPROF_INTERCEPTOR_ENTER(ctx, memset);                                    \
-    MEMPROF_MEMSET_IMPL(block, c, size);                                       \
-  } while (false)
 
 #include "sanitizer_common/sanitizer_common_interceptors.inc"
 
@@ -192,7 +169,7 @@ INTERCEPTOR(int, pthread_join, void *t, void **arg) {
 DEFINE_REAL_PTHREAD_FUNCTIONS
 
 INTERCEPTOR(char *, index, const char *string, int c)
-ALIAS(WRAPPER_NAME(strchr));
+ALIAS(WRAP(strchr));
 
 // For both strcat() and strncat() we need to check the validity of |to|
 // argument irrespective of the |from| length.

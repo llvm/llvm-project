@@ -6,7 +6,7 @@
 ;     b[i] =  a[i] + a[i - 1]
 ; }
 ;
-define void @recurrence_1(ptr nocapture readonly %a, ptr nocapture %b, i32 %n) {
+define i32 @recurrence_1(ptr nocapture readonly %a, ptr nocapture %b, i32 %n) {
 ; CHECK-VF4UF1-LABEL: @recurrence_1
 ; CHECK-VF4UF1: for.preheader
 ; CHECK-VF4UF1: %[[SUB_1:.*]] = add i32 %n, -1
@@ -27,9 +27,7 @@ define void @recurrence_1(ptr nocapture readonly %a, ptr nocapture %b, i32 %n) {
 ; CHECK-VF4UF1: %[[MUL2:.*]] = mul i32 %[[VSCALE2]], 4
 ; CHECK-VF4UF1: %[[SUB2:.*]] = sub i32 %[[MUL2]], 1
 ; CHECK-VF4UF1: %[[VEC_RECUR_EXT:.*]] = extractelement <vscale x 4 x i32> %[[LOAD]], i32 %[[SUB2]]
-; CHECK-VF4UF1: %[[VSCALE3:.*]] = call i32 @llvm.vscale.i32()
-; CHECK-VF4UF1: %[[MUL3:.*]] = mul i32 %[[VSCALE3]], 4
-; CHECK-VF4UF1: %[[SUB3:.*]] = sub i32 %[[MUL3]], 2
+; CHECK-VF4UF1: %[[SUB3:.*]] = sub i32 %[[MUL2]], 2
 ; CHECK-VF4UF1: %[[VEC_RECUR_FOR_PHI:.*]] =  extractelement <vscale x 4 x i32> %[[LOAD]], i32 %[[SUB3]]
 entry:
   br label %for.preheader
@@ -52,7 +50,7 @@ scalar.body:
   br i1 %exitcond, label %for.exit, label %scalar.body, !llvm.loop !0
 
 for.exit:
-  ret void
+  ret i32 %0
 }
 
 ; int recurrence_2(int *a, int n) {
@@ -167,7 +165,7 @@ for.end:
   ret void
 }
 
-define void @constant_folded_previous_value() {
+define i64 @constant_folded_previous_value() {
 ; CHECK-VF4UF2-LABEL: @constant_folded_previous_value
 ; CHECK-VF4UF2: vector.body
 ; CHECK-VF4UF2: %[[VECTOR_RECUR:.*]] = phi <vscale x 4 x i64> [ %vector.recur.init, %vector.ph ], [ shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer), %vector.body ]
@@ -186,7 +184,7 @@ scalar.body:
   br i1 %cond, label %for.end, label %scalar.body, !llvm.loop !0
 
 for.end:
-  ret void
+  ret i64 %tmp2
 }
 
 ; We vectorize this first order recurrence, by generating two
@@ -205,20 +203,16 @@ define i32 @extract_second_last_iteration(ptr %cval, i32 %x)  {
 ; CHECK-VF4UF2: %[[VEC_RECUR_INIT:.*]] = insertelement <vscale x 4 x i32> poison, i32 0, i32 %[[SUB1]]
 ; CHECK-VF4UF2: %[[SPLAT_INS1:.*]] = insertelement <vscale x 4 x i32> poison, i32 %x, i64 0
 ; CHECK-VF4UF2: %[[SPLAT1:.*]] = shufflevector <vscale x 4 x i32> %[[SPLAT_INS1]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-VF4UF2: %[[SPLAT_INS2:.*]] = insertelement <vscale x 4 x i32> poison, i32 %x, i64 0
-; CHECK-VF4UF2: %[[SPLAT2:.*]] = shufflevector <vscale x 4 x i32> %[[SPLAT_INS2]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; ; CHECK-VF4UF2: vector.body
 ; CHECK-VF4UF2: %[[VEC_RECUR:.*]] = phi <vscale x 4 x i32> [ %[[VEC_RECUR_INIT]], %vector.ph ], [ %[[ADD2:.*]], %vector.body ]
 ; CHECK-VF4UF2: %[[ADD1:.*]] = add <vscale x 4 x i32> %{{.*}}, %[[SPLAT1]]
-; CHECK-VF4UF2: %[[ADD2]] = add <vscale x 4 x i32> %{{.*}}, %[[SPLAT2]]
+; CHECK-VF4UF2: %[[ADD2]] = add <vscale x 4 x i32> %{{.*}}, %[[SPLAT1]]
 ; CHECK-VF4UF2: middle.block
 ; CHECK-VF4UF2: %[[VSCALE2:.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-VF4UF2: %[[MUL2:.*]] = mul i32 %[[VSCALE2]], 4
 ; CHECK-VF4UF2: %[[SUB2:.*]] = sub i32 %[[MUL2]], 1
 ; CHECK-VF4UF2: %vector.recur.extract = extractelement <vscale x 4 x i32> %[[ADD2]], i32 %[[SUB2]]
-; CHECK-VF4UF2: %[[VSCALE3:.*]] = call i32 @llvm.vscale.i32()
-; CHECK-VF4UF2: %[[MUL3:.*]] = mul i32 %[[VSCALE3]], 4
-; CHECK-VF4UF2: %[[SUB3:.*]] = sub i32 %[[MUL3]], 2
+; CHECK-VF4UF2: %[[SUB3:.*]] = sub i32 %[[MUL2]], 2
 ; CHECK-VF4UF2: %vector.recur.extract.for.phi = extractelement <vscale x 4 x i32> %[[ADD2]], i32 %[[SUB3]]
 entry:
   br label %for.body

@@ -8,7 +8,6 @@ void f2(void) __attribute__((availability(ios,introduced=2.1,deprecated=2.1)));
 
 void f3(void) __attribute__((availability(otheros,introduced=2.2))); // expected-warning{{unknown platform 'otheros' in availability macro}}
 
-// rdar://10095131
 extern void
 ATSFontGetName(const char *oName) __attribute__((availability(macosx,introduced=8.0,deprecated=9.0, message="use CTFontCopyFullName"))); // expected-note {{'ATSFontGetName' has been explicitly marked deprecated here}}
 
@@ -54,7 +53,6 @@ void with_redeclaration(void) {
   enum PartialEnum p = kPartialEnumConstant;
 }
 
-// rdar://10711037
 __attribute__((availability(macos, unavailable))) // expected-warning {{attribute 'availability' is ignored}}
 enum {
     NSDataWritingFileProtectionWriteOnly = 0x30000000,
@@ -74,8 +72,6 @@ void f7(int) __attribute__((availability(ios,introduced=2.0)));
 void f7(int) __attribute__((availability(ios,deprecated=3.0))); // expected-note {{previous attribute is here}}
 void f7(int) __attribute__((availability(ios,deprecated=4.0))); // expected-warning {{availability does not match previous declaration}}
 
-
-// <rdar://problem/11886458>
 #if !__has_feature(attribute_availability_with_message)
 # error "Missing __has_feature"
 #endif

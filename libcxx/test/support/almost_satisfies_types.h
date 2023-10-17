@@ -25,17 +25,22 @@ public:
 static_assert(std::ranges::contiguous_range<UncheckedRange<int*, int*>>);
 
 // almost an input_iterator
-class InputIteratorNotDerivedFrom {
+template <class T>
+class InputIteratorNotDerivedFromGeneric {
 public:
   using difference_type = long;
-  using value_type = int;
+  using value_type = T;
   using iterator_category = void;
 
-  InputIteratorNotDerivedFrom& operator++();
+  InputIteratorNotDerivedFromGeneric& operator++();
   void operator++(int);
-  const int& operator*() const;
+  const T& operator*() const;
 };
 
+using InputIteratorNotDerivedFrom = InputIteratorNotDerivedFromGeneric<int>;
+
+template <class T>
+using InputRangeNotDerivedFromGeneric = UncheckedRange<InputIteratorNotDerivedFromGeneric<T>>;
 using InputRangeNotDerivedFrom = UncheckedRange<InputIteratorNotDerivedFrom>;
 
 static_assert(std::input_or_output_iterator<InputIteratorNotDerivedFrom>);
@@ -58,7 +63,7 @@ using InputRangeNotIndirectlyReadable = UncheckedRange<InputIteratorNotIndirectl
 static_assert(std::input_or_output_iterator<InputIteratorNotIndirectlyReadable>);
 static_assert(!std::indirectly_readable<InputIteratorNotIndirectlyReadable>);
 static_assert(!std::input_iterator<InputIteratorNotIndirectlyReadable>);
-static_assert(!std::ranges::input_range<InputIteratorNotIndirectlyReadable>);
+static_assert(!std::ranges::input_range<InputRangeNotIndirectlyReadable>);
 
 class InputIteratorNotInputOrOutputIterator {
 public:
@@ -287,7 +292,7 @@ using OutputRangeNotInputOrOutputIterator = UncheckedRange<InputIteratorNotInput
 static_assert(!std::input_or_output_iterator<OutputIteratorNotInputOrOutputIterator>);
 static_assert(std::indirectly_writable<OutputIteratorNotInputOrOutputIterator, int>);
 static_assert(!std::output_iterator<OutputIteratorNotInputOrOutputIterator, int>);
-static_assert(!std::ranges::input_range<OutputRangeNotInputOrOutputIterator>);
+static_assert(!std::ranges::output_range<OutputRangeNotInputOrOutputIterator, int>);
 
 class OutputIteratorNotIndirectlyWritable {
 public:
@@ -388,6 +393,39 @@ static_assert(std::bidirectional_iterator<RandomAccessIteratorBadIndex>);
 static_assert(!std::random_access_iterator<RandomAccessIteratorBadIndex>);
 
 using RandomAccessRangeBadIndex = UncheckedRange<RandomAccessIteratorBadIndex>;
+
+class RandomAccessIteratorBadDifferenceType {
+  using Self = RandomAccessIteratorBadDifferenceType;
+
+public:
+  using value_type = int;
+  // Deliberately use a non-integer `difference_type`
+  using difference_type   = double;
+  using pointer           = double*;
+  using reference         = double&;
+  using iterator_category = std::random_access_iterator_tag;
+
+  reference operator*() const;
+  reference operator[](difference_type) const;
+
+  Self& operator++();
+  Self& operator--();
+  Self operator++(int);
+  Self operator--(int);
+
+  Self& operator+=(difference_type);
+  Self& operator-=(difference_type);
+  friend Self operator+(Self, difference_type);
+  friend Self operator+(difference_type, Self);
+  friend Self operator-(Self, difference_type);
+  friend difference_type operator-(Self, Self);
+
+  auto operator<=>(const Self&) const = default;
+};
+
+static_assert(std::regular<RandomAccessIteratorBadDifferenceType>);
+static_assert(!std::weakly_incrementable<RandomAccessIteratorBadDifferenceType>);
+static_assert(!std::random_access_iterator<RandomAccessIteratorBadDifferenceType>);
 
 template <class Iter>
 class ComparatorNotCopyable {

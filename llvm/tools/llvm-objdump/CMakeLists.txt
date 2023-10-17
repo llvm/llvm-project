@@ -3,8 +3,8 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsDisassemblers
   AllTargetsInfos
   BinaryFormat
+  DebugInfoBTF
   DebugInfoDWARF
-  DebugInfoPDB
   Demangle
   MC
   MCDisassembler
@@ -35,12 +35,11 @@ add_llvm_tool(llvm-objdump
   DEPENDS
   ObjdumpOptsTableGen
   OtoolOptsTableGen
+  GENERATE_DRIVER
   )
 
-target_link_libraries(llvm-objdump PRIVATE LLVMDebuginfod)
-
-if(LLVM_HAVE_LIBXAR)
-  target_link_libraries(llvm-objdump PRIVATE ${XAR_LIB})
+if(NOT LLVM_TOOL_LLVM_DRIVER_BUILD)
+  target_link_libraries(llvm-objdump PRIVATE LLVMDebuginfod)
 endif()
 
 add_llvm_tool_symlink(llvm-otool llvm-objdump)

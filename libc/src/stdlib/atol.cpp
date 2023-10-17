@@ -9,15 +9,16 @@
 #include "src/stdlib/atol.h"
 #include "src/__support/common.h"
 #include "src/__support/str_to_integer.h"
+#include "src/errno/libc_errno.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(long, atol, (const char *str)) {
   auto result = internal::strtointeger<long>(str, 10);
   if (result.has_error())
-    errno = result.error;
+    libc_errno = result.error;
 
   return result;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

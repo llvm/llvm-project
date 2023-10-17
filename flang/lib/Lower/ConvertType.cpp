@@ -23,6 +23,8 @@
 
 #define DEBUG_TYPE "flang-lower-type"
 
+using Fortran::common::VectorElementCategory;
+
 //===--------------------------------------------------------------------===//
 // Intrinsic type translation helpers
 //===--------------------------------------------------------------------===//
@@ -53,20 +55,25 @@ int getIntegerBits() {
   return Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer,
                                  KIND>::Scalar::bits;
 }
-static mlir::Type genIntegerType(mlir::MLIRContext *context, int kind) {
+static mlir::Type genIntegerType(mlir::MLIRContext *context, int kind,
+                                 bool isUnsigned = false) {
   if (Fortran::evaluate::IsValidKindOfIntrinsicType(
           Fortran::common::TypeCategory::Integer, kind)) {
+    mlir::IntegerType::SignednessSemantics signedness =
+        (isUnsigned ? mlir::IntegerType::SignednessSemantics::Unsigned
+                    : mlir::IntegerType::SignednessSemantics::Signless);
+
     switch (kind) {
     case 1:
-      return mlir::IntegerType::get(context, getIntegerBits<1>());
+      return mlir::IntegerType::get(context, getIntegerBits<1>(), signedness);
     case 2:
-      return mlir::IntegerType::get(context, getIntegerBits<2>());
+      return mlir::IntegerType::get(context, getIntegerBits<2>(), signedness);
     case 4:
-      return mlir::IntegerType::get(context, getIntegerBits<4>());
+      return mlir::IntegerType::get(context, getIntegerBits<4>(), signedness);
     case 8:
-      return mlir::IntegerType::get(context, getIntegerBits<8>());
+      return mlir::IntegerType::get(context, getIntegerBits<8>(), signedness);
     case 16:
-      return mlir::IntegerType::get(context, getIntegerBits<16>());
+      return mlir::IntegerType::get(context, getIntegerBits<16>(), signedness);
     }
   }
   llvm_unreachable("INTEGER kind not translated");
@@ -143,6 +150,9 @@ struct TypeBuilderImpl {
     Fortran::common::TypeCategory category = dynamicType->category();
 
     mlir::Type baseType;
+    bool isPolymorphic = (dynamicType->IsPolymorphic() ||
+                          dynamicType->IsUnlimitedPolymorphic()) &&
+                         !dynamicType->IsAssumedType();
     if (dynamicType->IsUnlimitedPolymorphic()) {
       baseType = mlir::NoneType::get(context);
     } else if (category == Fortran::common::TypeCategory::Derived) {
@@ -167,8 +177,14 @@ struct TypeBuilderImpl {
       for (int dim = 0; dim < rank; ++dim)
         shape.emplace_back(fir::SequenceType::getUnknownExtent());
     }
-    if (!shape.empty())
+
+    if (!shape.empty()) {
+      if (isPolymorphic)
+        return fir::ClassType::get(fir::SequenceType::get(shape, baseType));
       return fir::SequenceType::get(shape, baseType);
+    }
+    if (isPolymorphic)
+      return fir::ClassType::get(baseType);
     return baseType;
   }
 
@@ -256,9 +272,12 @@ struct TypeBuilderImpl {
     } else {
       fir::emitFatalError(loc, "symbol must have a type");
     }
+    bool isPolymorphic = (Fortran::semantics::IsPolymorphic(symbol) ||
+                          Fortran::semantics::IsUnlimitedPolymorphic(symbol)) &&
+                         !Fortran::semantics::IsAssumedType(symbol);
     if (ultimate.IsObjectArray()) {
-      auto shapeExpr = Fortran::evaluate::GetShapeHelper{
-          converter.getFoldingContext()}(ultimate);
+      auto shapeExpr =
+          Fortran::evaluate::GetShape(converter.getFoldingContext(), ultimate);
       if (!shapeExpr)
         TODO(loc, "assumed rank symbol type");
       fir::SequenceType::Shape shape;
@@ -266,11 +285,10 @@ struct TypeBuilderImpl {
       ty = fir::SequenceType::get(shape, ty);
     }
     if (Fortran::semantics::IsPointer(symbol))
-      return fir::wrapInClassOrBoxType(
-          fir::PointerType::get(ty), Fortran::semantics::IsPolymorphic(symbol));
+      return fir::wrapInClassOrBoxType(fir::PointerType::get(ty),
+                                       isPolymorphic);
     if (Fortran::semantics::IsAllocatable(symbol))
-      return fir::wrapInClassOrBoxType(
-          fir::HeapType::get(ty), Fortran::semantics::IsPolymorphic(symbol));
+      return fir::wrapInClassOrBoxType(fir::HeapType::get(ty), isPolymorphic);
     // isPtr and isAlloc are variable that were promoted to be on the
     // heap or to be pointers, but they do not have Fortran allocatable
     // or pointer semantics, so do not use box for them.
@@ -278,6 +296,8 @@ struct TypeBuilderImpl {
       return fir::PointerType::get(ty);
     if (isAlloc)
       return fir::HeapType::get(ty);
+    if (isPolymorphic)
+      return fir::ClassType::get(ty);
     return ty;
   }
 
@@ -295,6 +315,56 @@ struct TypeBuilderImpl {
     return false;
   }
 
+  mlir::Type genVectorType(const Fortran::semantics::DerivedTypeSpec &tySpec) {
+    assert(tySpec.scope() && "Missing scope for Vector type");
+    auto vectorSize{tySpec.scope()->size()};
+    switch (tySpec.category()) {
+      SWITCH_COVERS_ALL_CASES
+    case (Fortran::semantics::DerivedTypeSpec::Category::IntrinsicVector): {
+      int64_t vecElemKind;
+      int64_t vecElemCategory;
+
+      for (const auto &pair : tySpec.parameters()) {
+        if (pair.first == "element_category") {
+          vecElemCategory =
+              Fortran::evaluate::ToInt64(pair.second.GetExplicit())
+                  .value_or(-1);
+        } else if (pair.first == "element_kind") {
+          vecElemKind =
+              Fortran::evaluate::ToInt64(pair.second.GetExplicit()).value_or(0);
+        }
+      }
+
+      assert((vecElemCategory >= 0 &&
+              static_cast<size_t>(vecElemCategory) <
+                  Fortran::common::VectorElementCategory_enumSize) &&
+             "Vector element type is not specified");
+      assert(vecElemKind && "Vector element kind is not specified");
+
+      int64_t numOfElements = vectorSize / vecElemKind;
+      switch (static_cast<VectorElementCategory>(vecElemCategory)) {
+        SWITCH_COVERS_ALL_CASES
+      case VectorElementCategory::Integer:
+        return fir::VectorType::get(numOfElements,
+                                    genIntegerType(context, vecElemKind));
+      case VectorElementCategory::Unsigned:
+        return fir::VectorType::get(numOfElements,
+                                    genIntegerType(context, vecElemKind, true));
+      case VectorElementCategory::Real:
+        return fir::VectorType::get(numOfElements,
+                                    genRealType(context, vecElemKind));
+      }
+      break;
+    }
+    case (Fortran::semantics::DerivedTypeSpec::Category::PairVector):
+    case (Fortran::semantics::DerivedTypeSpec::Category::QuadVector):
+      return fir::VectorType::get(vectorSize * 8,
+                                  mlir::IntegerType::get(context, 1));
+    case (Fortran::semantics::DerivedTypeSpec::Category::DerivedType):
+      Fortran::common::die("Vector element type not implemented");
+    }
+  }
+
   mlir::Type genDerivedType(const Fortran::semantics::DerivedTypeSpec &tySpec) {
     std::vector<std::pair<std::string, mlir::Type>> ps;
     std::vector<std::pair<std::string, mlir::Type>> cs;
@@ -302,61 +372,66 @@ struct TypeBuilderImpl {
     if (mlir::Type ty = getTypeIfDerivedAlreadyInConstruction(typeSymbol))
       return ty;
 
-    if (Fortran::semantics::IsFinalizable(tySpec))
-      TODO(converter.genLocation(tySpec.name()), "derived type finalization");
+    if (tySpec.IsVectorType()) {
+      return genVectorType(tySpec);
+    }
 
-    auto rec = fir::RecordType::get(context,
-                                    Fortran::lower::mangle::mangleName(tySpec));
+    auto rec = fir::RecordType::get(context, converter.mangleName(tySpec));
     // Maintain the stack of types for recursive references.
     derivedTypeInConstruction.emplace_back(typeSymbol, rec);
 
     // Gather the record type fields.
     // (1) The data components.
-    for (const auto &field :
+    for (const auto &component :
          Fortran::semantics::OrderedComponentIterator(tySpec)) {
       // Lowering is assuming non deferred component lower bounds are always 1.
       // Catch any situations where this is not true for now.
       if (!converter.getLoweringOptions().getLowerToHighLevelFIR() &&
-          componentHasNonDefaultLowerBounds(field))
-        TODO(converter.genLocation(field.name()),
+          componentHasNonDefaultLowerBounds(component))
+        TODO(converter.genLocation(component.name()),
              "derived type components with non default lower bounds");
-      if (IsProcedure(field))
-        TODO(converter.genLocation(field.name()), "procedure components");
-      mlir::Type ty = genSymbolType(field);
+      if (IsProcedure(component))
+        TODO(converter.genLocation(component.name()), "procedure components");
+      mlir::Type ty = genSymbolType(component);
       // Do not add the parent component (component of the parents are
       // added and should be sufficient, the parent component would
-      // duplicate the fields).
-      if (field.test(Fortran::semantics::Symbol::Flag::ParentComp))
+      // duplicate the fields). Note that genSymbolType must be called above on
+      // it so that the dispatch table for the parent type still gets emitted
+      // as needed.
+      if (component.test(Fortran::semantics::Symbol::Flag::ParentComp))
         continue;
-      cs.emplace_back(field.name().ToString(), ty);
+      cs.emplace_back(converter.getRecordTypeFieldName(component), ty);
     }
 
+    mlir::Location loc = converter.genLocation(typeSymbol.name());
     // (2) The LEN type parameters.
     for (const auto &param :
          Fortran::semantics::OrderParameterDeclarations(typeSymbol))
       if (param->get<Fortran::semantics::TypeParamDetails>().attr() ==
-          Fortran::common::TypeParamAttr::Len)
+          Fortran::common::TypeParamAttr::Len) {
+        TODO(loc, "parameterized derived types");
+        // TODO: emplace in ps. Beware that param is the symbol in the type
+        // declaration, not instantiation: its kind may not be a constant.
+        // The instantiated symbol in tySpec.scope should be used instead.
         ps.emplace_back(param->name().ToString(), genSymbolType(*param));
+      }
 
     rec.finalize(ps, cs);
     popDerivedTypeInConstruction();
 
-    mlir::Location loc = converter.genLocation(typeSymbol.name());
     if (!ps.empty()) {
-      // This type is a PDT (parametric derived type). Create the functions to
-      // use for allocation, dereferencing, and address arithmetic here.
-      TODO(loc, "parameterized derived types");
+      // TODO: this type is a PDT (parametric derived type) with length
+      // parameter. Create the functions to use for allocation, dereferencing,
+      // and address arithmetic here.
     }
     LLVM_DEBUG(llvm::dbgs() << "derived type: " << rec << '\n');
-
-    converter.registerDispatchTableInfo(loc, &tySpec);
 
     // Generate the type descriptor object if any
     if (const Fortran::semantics::Scope *derivedScope =
             tySpec.scope() ? tySpec.scope() : tySpec.typeSymbol().scope())
       if (const Fortran::semantics::Symbol *typeInfoSym =
               derivedScope->runtimeDerivedTypeDescription())
-        converter.registerRuntimeTypeInfo(loc, *typeInfoSym);
+        converter.registerTypeInfo(loc, *typeInfoSym, tySpec, rec);
     return rec;
   }
 
@@ -423,11 +498,22 @@ struct TypeBuilderImpl {
     // Do not use dynamic type length here. We would miss constant
     // lengths opportunities because dynamic type only has the length
     // if it comes from a declaration.
-    auto charExpr =
-        std::get<Fortran::evaluate::Expr<Fortran::evaluate::SomeCharacter>>(
-            expr.u);
-    if (auto constantLen = toInt64(charExpr.LEN()))
-      return *constantLen;
+    if (const auto *charExpr = std::get_if<
+            Fortran::evaluate::Expr<Fortran::evaluate::SomeCharacter>>(
+            &expr.u)) {
+      if (auto constantLen = toInt64(charExpr->LEN()))
+        return *constantLen;
+    } else if (auto dynamicType = expr.GetType()) {
+      // When generating derived type type descriptor as structure constructor,
+      // semantics wraps designators to data component initialization into
+      // CLASS(*), regardless of their actual type.
+      // GetType() will recover the actual symbol type as the dynamic type, so
+      // getCharacterLength may be reached even if expr is packaged as an
+      // Expr<SomeDerived> instead of an Expr<SomeChar>.
+      // Just use the dynamic type here again to retrieve the length.
+      if (auto constantLen = toInt64(dynamicType->GetCharLength()))
+        return *constantLen;
+    }
     return fir::SequenceType::getUnknownExtent();
   }
 

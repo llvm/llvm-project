@@ -188,11 +188,11 @@ define ptr @test3(i64 %j, ptr readonly %P, ptr readnone %Q) {
 ; CHECK-NEXT:    [[P1:%.*]] = phi ptr [ [[ARRAYIDX0]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       loopexit1:
-; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i64 [ [[ADD]], [[IF_END]] ]
+; CHECK-NEXT:    [[TRUNC_LCSSA1:%.*]] = phi i32 [ [[TRUNC]], [[IF_END]] ]
 ; CHECK-NEXT:    [[P_ADDR_LCSSA:%.*]] = phi ptr [ [[P_ADDR]], [[IF_END]] ]
-; CHECK-NEXT:    [[TRUNC_LE:%.*]] = trunc i64 [[ADD_LCSSA]] to i32
-; CHECK-NEXT:    [[ARRAYIDX1_LE:%.*]] = getelementptr inbounds ptr, ptr [[P_ADDR_LCSSA]], i32 [[TRUNC_LE]]
-; CHECK-NEXT:    call void @dummy(i32 [[TRUNC_LE]])
+; CHECK-NEXT:    [[TRUNC_LCSSA:%.*]] = phi i32 [ [[TRUNC]], [[IF_END]] ]
+; CHECK-NEXT:    [[ARRAYIDX1_LE:%.*]] = getelementptr inbounds ptr, ptr [[P_ADDR_LCSSA]], i32 [[TRUNC_LCSSA1]]
+; CHECK-NEXT:    call void @dummy(i32 [[TRUNC_LCSSA]])
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
 ; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi ptr [ [[P1]], [[LOOPEXIT0]] ], [ [[ARRAYIDX1_LE]], [[LOOPEXIT1]] ], [ null, [[ENTRY:%.*]] ]

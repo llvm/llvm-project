@@ -10,6 +10,9 @@
 #include "PPC.h"
 #include "PPCRegisterInfo.h"
 
+#define GET_AVAILABLE_OPCODE_CHECKER
+#include "PPCGenInstrInfo.inc"
+
 namespace llvm {
 namespace exegesis {
 
@@ -26,7 +29,8 @@ static void setMemOp(InstructionTemplate &IT, int OpIdx,
 namespace {
 class ExegesisPowerPCTarget : public ExegesisTarget {
 public:
-  ExegesisPowerPCTarget() : ExegesisTarget(PPCCpuPfmCounters) {}
+  ExegesisPowerPCTarget()
+      : ExegesisTarget(PPCCpuPfmCounters, PPC_MC::isOpcodeAvailable) {}
 
 private:
   std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, unsigned Reg,

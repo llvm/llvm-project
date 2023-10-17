@@ -58,20 +58,24 @@ public:
     const Scope &scope{context_.FindScope(source_)};
     bool isFirstSymbol{isFirstSymbol_};
     isFirstSymbol_ = false;
-    if (const char *whyNot{IsAutomatic(symbol) ? "Automatic variable"
-                : IsDummy(symbol)              ? "Dummy argument"
-                : IsFunctionResult(symbol)     ? "Function result"
-                : IsAllocatable(symbol)        ? "Allocatable"
+    // Ordered so that most egregious errors are first
+    if (const char *whyNot{IsProcedure(symbol) && !IsPointer(symbol)
+                ? "Procedure"
+                : isFirstSymbol && IsHostAssociated(symbol, scope)
+                ? "Host-associated object"
+                : isFirstSymbol && IsUseAssociated(symbol, scope)
+                ? "USE-associated object"
+                : IsDummy(symbol)          ? "Dummy argument"
+                : IsFunctionResult(symbol) ? "Function result"
+                : IsAutomatic(symbol)      ? "Automatic variable"
+                : IsAllocatable(symbol)    ? "Allocatable"
                 : IsInitialized(symbol, true /*ignore DATA*/,
-                      true /*ignore allocatable components*/)
+                      true /*ignore allocatable components*/,
+                      true /*ignore uninitialized pointer components*/)
                 ? "Default-initialized"
-                : IsProcedure(symbol) && !IsPointer(symbol) ? "Procedure"
-                // remaining checks don't apply to components
-                : !isFirstSymbol                   ? nullptr
-                : IsHostAssociated(symbol, scope)  ? "Host-associated object"
-                : IsUseAssociated(symbol, scope)   ? "USE-associated object"
                 : symbol.has<AssocEntityDetails>() ? "Construct association"
-                : IsPointer(symbol) && (hasComponent_ || hasSubscript_)
+                : isFirstSymbol && IsPointer(symbol) &&
+                    (hasComponent_ || hasSubscript_)
                 ? "Target of pointer"
                 : nullptr}) {
       context_.Say(source_,
@@ -101,16 +105,16 @@ public:
             lastSymbol.name().ToString());
         return false;
       }
-      RestrictPointer();
+      auto restorer{common::ScopedSet(isPointerAllowed_, false)};
+      return (*this)(component.base()) && (*this)(lastSymbol);
+    } else if (IsPointer(lastSymbol)) { // C877
+      context_.Say(source_,
+          "Data object must not contain pointer '%s' as a non-rightmost part"_err_en_US,
+          lastSymbol.name().ToString());
+      return false;
     } else {
-      if (IsPointer(lastSymbol)) { // C877
-        context_.Say(source_,
-            "Data object must not contain pointer '%s' as a non-rightmost part"_err_en_US,
-            lastSymbol.name().ToString());
-        return false;
-      }
+      return (*this)(component.base()) && (*this)(lastSymbol);
     }
-    return (*this)(component.base()) && (*this)(lastSymbol);
   }
   bool operator()(const evaluate::ArrayRef &arrayRef) {
     hasSubscript_ = true;
@@ -127,29 +131,32 @@ public:
     return false;
   }
   bool operator()(const evaluate::Subscript &subs) {
-    DataVarChecker subscriptChecker{context_, source_};
-    subscriptChecker.RestrictPointer();
+    auto restorer1{common::ScopedSet(isPointerAllowed_, false)};
+    auto restorer2{common::ScopedSet(isFunctionAllowed_, true)};
     return common::visit(
-               common::visitors{
-                   [&](const evaluate::IndirectSubscriptIntegerExpr &expr) {
-                     return CheckSubscriptExpr(expr);
-                   },
-                   [&](const evaluate::Triplet &triplet) {
-                     return CheckSubscriptExpr(triplet.lower()) &&
-                         CheckSubscriptExpr(triplet.upper()) &&
-                         CheckSubscriptExpr(triplet.stride());
-                   },
-               },
-               subs.u) &&
-        subscriptChecker(subs.u);
+        common::visitors{
+            [&](const evaluate::IndirectSubscriptIntegerExpr &expr) {
+              return CheckSubscriptExpr(expr);
+            },
+            [&](const evaluate::Triplet &triplet) {
+              return CheckSubscriptExpr(triplet.lower()) &&
+                  CheckSubscriptExpr(triplet.upper()) &&
+                  CheckSubscriptExpr(triplet.stride());
+            },
+        },
+        subs.u);
   }
   template <typename T>
   bool operator()(const evaluate::FunctionRef<T> &) const { // C875
-    context_.Say(source_,
-        "Data object variable must not be a function reference"_err_en_US);
-    return false;
+    if (isFunctionAllowed_) {
+      // Must have been validated as a constant expression
+      return true;
+    } else {
+      context_.Say(source_,
+          "Data object variable must not be a function reference"_err_en_US);
+      return false;
+    }
   }
-  void RestrictPointer() { isPointerAllowed_ = false; }
 
 private:
   bool CheckSubscriptExpr(
@@ -177,7 +184,13 @@ private:
   bool hasSubscript_{false};
   bool isPointerAllowed_{true};
   bool isFirstSymbol_{true};
+  bool isFunctionAllowed_{false};
 };
+
+static bool IsValidDataObject(const SomeExpr &expr) { // C878, C879
+  return !evaluate::IsConstantExpr(expr) &&
+      (evaluate::IsVariable(expr) || evaluate::IsProcedurePointer(expr));
+}
 
 void DataChecker::Leave(const parser::DataIDoObject &object) {
   if (const auto *designator{
@@ -185,18 +198,16 @@ void DataChecker::Leave(const parser::DataIDoObject &object) {
               &object.u)}) {
     if (MaybeExpr expr{exprAnalyzer_.Analyze(*designator)}) {
       auto source{designator->thing.value().source};
-      if (evaluate::IsConstantExpr(*expr)) { // C878,C879
-        exprAnalyzer_.context().Say(
-            source, "Data implied do object must be a variable"_err_en_US);
-      } else {
-        DataVarChecker checker{exprAnalyzer_.context(), source};
-        if (checker(*expr)) {
-          if (checker.HasComponentWithoutSubscripts()) { // C880
-            exprAnalyzer_.context().Say(source,
-                "Data implied do structure component must be subscripted"_err_en_US);
-          } else {
-            return;
-          }
+      DataVarChecker checker{exprAnalyzer_.context(), source};
+      if (checker(*expr)) {
+        if (checker.HasComponentWithoutSubscripts()) { // C880
+          exprAnalyzer_.context().Say(source,
+              "Data implied do structure component must be subscripted"_err_en_US);
+        } else if (!IsValidDataObject(*expr)) {
+          exprAnalyzer_.context().Say(
+              source, "Data implied do object must be a variable"_err_en_US);
+        } else {
+          return;
         }
       }
     }
@@ -211,9 +222,13 @@ void DataChecker::Leave(const parser::DataStmtObject &dataObject) {
           },
           [&](const auto &var) {
             auto expr{exprAnalyzer_.Analyze(var)};
+            auto source{parser::FindSourceLocation(dataObject)};
             if (!expr ||
-                !DataVarChecker{exprAnalyzer_.context(),
-                    parser::FindSourceLocation(dataObject)}(*expr)) {
+                !DataVarChecker{exprAnalyzer_.context(), source}(*expr)) {
+              currentSetHasFatalErrors_ = true;
+            } else if (!IsValidDataObject(*expr)) {
+              exprAnalyzer_.context().Say(
+                  source, "Data statement object must be a variable"_err_en_US);
               currentSetHasFatalErrors_ = true;
             }
           },

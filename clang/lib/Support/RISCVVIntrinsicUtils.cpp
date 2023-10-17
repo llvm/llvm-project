@@ -10,9 +10,9 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <numeric>
 #include <optional>
@@ -111,6 +111,10 @@ bool RVVType::verifyType() const {
   if (!Scale)
     return false;
   if (isFloat() && ElementBitwidth == 8)
+    return false;
+  if (IsTuple && (NF == 1 || NF > 8))
+    return false;
+  if (IsTuple && (1 << std::max(0, LMUL.Log2LMUL)) * NF > 8)
     return false;
   unsigned V = *Scale;
   switch (ElementBitwidth) {
@@ -213,6 +217,9 @@ void RVVType::initBuiltinStr() {
   // vector values.
   if (IsPointer)
     BuiltinStr += "*";
+
+  if (IsTuple)
+    BuiltinStr = "T" + utostr(NF) + BuiltinStr;
 }
 
 void RVVType::initClangBuiltinStr() {
@@ -236,7 +243,8 @@ void RVVType::initClangBuiltinStr() {
   default:
     llvm_unreachable("ScalarTypeKind is invalid");
   }
-  ClangBuiltinStr += utostr(ElementBitwidth) + LMUL.str() + "_t";
+  ClangBuiltinStr += utostr(ElementBitwidth) + LMUL.str() +
+                     (IsTuple ? "x" + utostr(NF) : "") + "_t";
 }
 
 void RVVType::initTypeStr() {
@@ -248,7 +256,8 @@ void RVVType::initTypeStr() {
   auto getTypeString = [&](StringRef TypeStr) {
     if (isScalar())
       return Twine(TypeStr + Twine(ElementBitwidth) + "_t").str();
-    return Twine("v" + TypeStr + Twine(ElementBitwidth) + LMUL.str() + "_t")
+    return Twine("v" + TypeStr + Twine(ElementBitwidth) + LMUL.str() +
+                 (IsTuple ? "x" + utostr(NF) : "") + "_t")
         .str();
   };
 
@@ -324,6 +333,14 @@ void RVVType::initShortStr() {
   }
   if (isVector())
     ShortStr += LMUL.str();
+  if (isTuple())
+    ShortStr += "x" + utostr(NF);
+}
+
+static VectorTypeModifier getTupleVTM(unsigned NF) {
+  assert(2 <= NF && NF <= 8 && "2 <= NF <= 8");
+  return static_cast<VectorTypeModifier>(
+      static_cast<uint8_t>(VectorTypeModifier::Tuple2) + (NF - 2));
 }
 
 void RVVType::applyBasicType() {
@@ -541,6 +558,45 @@ PrototypeDescriptor::parsePrototypeDescriptor(
         return std::nullopt;
       }
 
+    } else if (ComplexTT.first == "SEFixedLog2LMUL") {
+      int32_t Log2LMUL;
+      if (ComplexTT.second.getAsInteger(10, Log2LMUL)) {
+        llvm_unreachable("Invalid SEFixedLog2LMUL value!");
+        return std::nullopt;
+      }
+      switch (Log2LMUL) {
+      case -3:
+        VTM = VectorTypeModifier::SEFixedLog2LMULN3;
+        break;
+      case -2:
+        VTM = VectorTypeModifier::SEFixedLog2LMULN2;
+        break;
+      case -1:
+        VTM = VectorTypeModifier::SEFixedLog2LMULN1;
+        break;
+      case 0:
+        VTM = VectorTypeModifier::SEFixedLog2LMUL0;
+        break;
+      case 1:
+        VTM = VectorTypeModifier::SEFixedLog2LMUL1;
+        break;
+      case 2:
+        VTM = VectorTypeModifier::SEFixedLog2LMUL2;
+        break;
+      case 3:
+        VTM = VectorTypeModifier::SEFixedLog2LMUL3;
+        break;
+      default:
+        llvm_unreachable("Invalid LFixedLog2LMUL value, should be [-3, 3]");
+        return std::nullopt;
+      }
+    } else if (ComplexTT.first == "Tuple") {
+      unsigned NF = 0;
+      if (ComplexTT.second.getAsInteger(10, NF)) {
+        llvm_unreachable("Invalid NF value!");
+        return std::nullopt;
+      }
+      VTM = getTupleVTM(NF);
     } else {
       llvm_unreachable("Illegal complex type transformers!");
     }
@@ -701,9 +757,46 @@ void RVVType::applyModifier(const PrototypeDescriptor &Transformer) {
   case VectorTypeModifier::SFixedLog2LMUL3:
     applyFixedLog2LMUL(3, FixedLMULType::SmallerThan);
     break;
+  case VectorTypeModifier::SEFixedLog2LMULN3:
+    applyFixedLog2LMUL(-3, FixedLMULType::SmallerOrEqual);
+    break;
+  case VectorTypeModifier::SEFixedLog2LMULN2:
+    applyFixedLog2LMUL(-2, FixedLMULType::SmallerOrEqual);
+    break;
+  case VectorTypeModifier::SEFixedLog2LMULN1:
+    applyFixedLog2LMUL(-1, FixedLMULType::SmallerOrEqual);
+    break;
+  case VectorTypeModifier::SEFixedLog2LMUL0:
+    applyFixedLog2LMUL(0, FixedLMULType::SmallerOrEqual);
+    break;
+  case VectorTypeModifier::SEFixedLog2LMUL1:
+    applyFixedLog2LMUL(1, FixedLMULType::SmallerOrEqual);
+    break;
+  case VectorTypeModifier::SEFixedLog2LMUL2:
+    applyFixedLog2LMUL(2, FixedLMULType::SmallerOrEqual);
+    break;
+  case VectorTypeModifier::SEFixedLog2LMUL3:
+    applyFixedLog2LMUL(3, FixedLMULType::SmallerOrEqual);
+    break;
+  case VectorTypeModifier::Tuple2:
+  case VectorTypeModifier::Tuple3:
+  case VectorTypeModifier::Tuple4:
+  case VectorTypeModifier::Tuple5:
+  case VectorTypeModifier::Tuple6:
+  case VectorTypeModifier::Tuple7:
+  case VectorTypeModifier::Tuple8: {
+    IsTuple = true;
+    NF = 2 + static_cast<uint8_t>(Transformer.VTM) -
+         static_cast<uint8_t>(VectorTypeModifier::Tuple2);
+    break;
+  }
   case VectorTypeModifier::NoModifier:
     break;
   }
+
+  // Early return if the current type modifier is already invalid.
+  if (ScalarType == Invalid)
+    return;
 
   for (unsigned TypeModifierMaskShift = 0;
        TypeModifierMaskShift <= static_cast<unsigned>(TypeModifier::MaxOffset);
@@ -766,12 +859,18 @@ void RVVType::applyFixedSEW(unsigned NewSEW) {
 void RVVType::applyFixedLog2LMUL(int Log2LMUL, enum FixedLMULType Type) {
   switch (Type) {
   case FixedLMULType::LargerThan:
-    if (Log2LMUL < LMUL.Log2LMUL) {
+    if (Log2LMUL <= LMUL.Log2LMUL) {
       ScalarType = ScalarTypeKind::Invalid;
       return;
     }
     break;
   case FixedLMULType::SmallerThan:
+    if (Log2LMUL >= LMUL.Log2LMUL) {
+      ScalarType = ScalarTypeKind::Invalid;
+      return;
+    }
+    break;
+  case FixedLMULType::SmallerOrEqual:
     if (Log2LMUL > LMUL.Log2LMUL) {
       ScalarType = ScalarTypeKind::Invalid;
       return;
@@ -787,10 +886,6 @@ void RVVType::applyFixedLog2LMUL(int Log2LMUL, enum FixedLMULType Type) {
 std::optional<RVVTypes>
 RVVTypeCache::computeTypes(BasicType BT, int Log2LMUL, unsigned NF,
                            ArrayRef<PrototypeDescriptor> Prototype) {
-  // LMUL x NF must be less than or equal to 8.
-  if ((Log2LMUL >= 1) && (1 << Log2LMUL) * NF > 8)
-    return std::nullopt;
-
   RVVTypes Types;
   for (const PrototypeDescriptor &Proto : Prototype) {
     auto T = computeType(BT, Log2LMUL, Proto);
@@ -849,7 +944,7 @@ RVVIntrinsic::RVVIntrinsic(
     bool SupportOverloading, bool HasBuiltinAlias, StringRef ManualCodegen,
     const RVVTypes &OutInTypes, const std::vector<int64_t> &NewIntrinsicTypes,
     const std::vector<StringRef> &RequiredFeatures, unsigned NF,
-    Policy NewPolicyAttrs, bool IsPrototypeDefaultTU)
+    Policy NewPolicyAttrs, bool HasFRMRoundModeOp)
     : IRName(IRName), IsMasked(IsMasked),
       HasMaskedOffOperand(HasMaskedOffOperand), HasVL(HasVL), Scheme(Scheme),
       SupportOverloading(SupportOverloading), HasBuiltinAlias(HasBuiltinAlias),
@@ -867,8 +962,8 @@ RVVIntrinsic::RVVIntrinsic(
   if (!OverloadedSuffix.empty())
     OverloadedName += "_" + OverloadedSuffix.str();
 
-  updateNamesAndPolicy(IsMasked, hasPolicy(), IsPrototypeDefaultTU, Name,
-                       BuiltinName, OverloadedName, PolicyAttrs);
+  updateNamesAndPolicy(IsMasked, hasPolicy(), Name, BuiltinName, OverloadedName,
+                       PolicyAttrs, HasFRMRoundModeOp);
 
   // Init OutputType and InputTypes
   OutputType = OutInTypes[0];
@@ -878,7 +973,7 @@ RVVIntrinsic::RVVIntrinsic(
   // if there is merge operand (It is always in first operand).
   IntrinsicTypes = NewIntrinsicTypes;
   if ((IsMasked && hasMaskedOffOperand()) ||
-      (!IsMasked && hasPassthruOperand() && !IsPrototypeDefaultTU)) {
+      (!IsMasked && hasPassthruOperand())) {
     for (auto &I : IntrinsicTypes) {
       if (I >= 0)
         I += NF;
@@ -909,21 +1004,9 @@ std::string RVVIntrinsic::getSuffixStr(
 llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
     llvm::ArrayRef<PrototypeDescriptor> Prototype, bool IsMasked,
     bool HasMaskedOffOperand, bool HasVL, unsigned NF,
-    bool IsPrototypeDefaultTU, PolicyScheme DefaultScheme, Policy PolicyAttrs) {
+    PolicyScheme DefaultScheme, Policy PolicyAttrs, bool IsTuple) {
   SmallVector<PrototypeDescriptor> NewPrototype(Prototype.begin(),
                                                 Prototype.end());
-  // Update PolicyAttrs if need (TA or TAMA) for compute builtin types.
-  if (PolicyAttrs.isMAPolicy())
-    PolicyAttrs.TailPolicy = Policy::PolicyType::Agnostic; // TAMA
-  if (PolicyAttrs.isPolicyNonePolicy()) {
-    if (!IsMasked) {
-      PolicyAttrs.PolicyNone = false;
-      if (IsPrototypeDefaultTU)
-        PolicyAttrs.TailPolicy = Policy::PolicyType::Undisturbed; // TU
-      else
-        PolicyAttrs.TailPolicy = Policy::PolicyType::Agnostic; // TA
-    }
-  }
   bool HasPassthruOp = DefaultScheme == PolicyScheme::HasPassthruOperand;
   if (IsMasked) {
     // If HasMaskedOffOperand, insert result type as first input operand if
@@ -932,54 +1015,74 @@ llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
       if (NF == 1) {
         NewPrototype.insert(NewPrototype.begin() + 1, NewPrototype[0]);
       } else if (NF > 1) {
-        // Convert
-        // (void, op0 address, op1 address, ...)
-        // to
-        // (void, op0 address, op1 address, ..., maskedoff0, maskedoff1, ...)
-        PrototypeDescriptor MaskoffType = NewPrototype[1];
-        MaskoffType.TM &= ~static_cast<uint8_t>(TypeModifier::Pointer);
-        NewPrototype.insert(NewPrototype.begin() + NF + 1, NF, MaskoffType);
+        if (IsTuple) {
+          PrototypeDescriptor BasePtrOperand = Prototype[1];
+          PrototypeDescriptor MaskoffType = PrototypeDescriptor(
+              static_cast<uint8_t>(BaseTypeModifier::Vector),
+              static_cast<uint8_t>(getTupleVTM(NF)),
+              BasePtrOperand.TM & ~static_cast<uint8_t>(TypeModifier::Pointer));
+          NewPrototype.insert(NewPrototype.begin() + 1, MaskoffType);
+        } else {
+          // Convert
+          // (void, op0 address, op1 address, ...)
+          // to
+          // (void, op0 address, op1 address, ..., maskedoff0, maskedoff1, ...)
+          PrototypeDescriptor MaskoffType = NewPrototype[1];
+          MaskoffType.TM &= ~static_cast<uint8_t>(TypeModifier::Pointer);
+          NewPrototype.insert(NewPrototype.begin() + NF + 1, NF, MaskoffType);
+        }
       }
     }
-    // Erase passthru operand for TAM
-    if (NF == 1 && IsPrototypeDefaultTU && PolicyAttrs.isTAMAPolicy() &&
-        HasPassthruOp && !HasMaskedOffOperand)
-      NewPrototype.erase(NewPrototype.begin() + 1);
     if (HasMaskedOffOperand && NF > 1) {
       // Convert
       // (void, op0 address, op1 address, ..., maskedoff0, maskedoff1, ...)
       // to
       // (void, op0 address, op1 address, ..., mask, maskedoff0, maskedoff1,
       // ...)
-      NewPrototype.insert(NewPrototype.begin() + NF + 1,
-                          PrototypeDescriptor::Mask);
+      if (IsTuple)
+        NewPrototype.insert(NewPrototype.begin() + 1,
+                            PrototypeDescriptor::Mask);
+      else
+        NewPrototype.insert(NewPrototype.begin() + NF + 1,
+                            PrototypeDescriptor::Mask);
     } else {
       // If IsMasked, insert PrototypeDescriptor:Mask as first input operand.
       NewPrototype.insert(NewPrototype.begin() + 1, PrototypeDescriptor::Mask);
     }
   } else {
     if (NF == 1) {
-      if (PolicyAttrs.isTUPolicy() && HasPassthruOp && !IsPrototypeDefaultTU)
+      if (PolicyAttrs.isTUPolicy() && HasPassthruOp)
         NewPrototype.insert(NewPrototype.begin(), NewPrototype[0]);
-      else if (PolicyAttrs.isTAPolicy() && HasPassthruOp &&
-               IsPrototypeDefaultTU)
-        NewPrototype.erase(NewPrototype.begin() + 1);
     } else if (PolicyAttrs.isTUPolicy() && HasPassthruOp) {
-      // NF > 1 cases for segment load operations.
-      // Convert
-      // (void, op0 address, op1 address, ...)
-      // to
-      // (void, op0 address, op1 address, maskedoff0, maskedoff1, ...)
-      PrototypeDescriptor MaskoffType = Prototype[1];
-      MaskoffType.TM &= ~static_cast<uint8_t>(TypeModifier::Pointer);
-      NewPrototype.insert(NewPrototype.begin() + NF + 1, NF, MaskoffType);
+      if (IsTuple) {
+        PrototypeDescriptor BasePtrOperand = Prototype[0];
+        PrototypeDescriptor MaskoffType = PrototypeDescriptor(
+            static_cast<uint8_t>(BaseTypeModifier::Vector),
+            static_cast<uint8_t>(getTupleVTM(NF)),
+            BasePtrOperand.TM & ~static_cast<uint8_t>(TypeModifier::Pointer));
+        NewPrototype.insert(NewPrototype.begin(), MaskoffType);
+      } else {
+        // NF > 1 cases for segment load operations.
+        // Convert
+        // (void, op0 address, op1 address, ...)
+        // to
+        // (void, op0 address, op1 address, maskedoff0, maskedoff1, ...)
+        PrototypeDescriptor MaskoffType = Prototype[1];
+        MaskoffType.TM &= ~static_cast<uint8_t>(TypeModifier::Pointer);
+        NewPrototype.insert(NewPrototype.begin() + NF + 1, NF, MaskoffType);
+      }
     }
  }
 
   // If HasVL, append PrototypeDescriptor:VL to last operand
   if (HasVL)
     NewPrototype.push_back(PrototypeDescriptor::VL);
+
   return NewPrototype;
+}
+
+llvm::SmallVector<Policy> RVVIntrinsic::getSupportedUnMaskedPolicies() {
+  return {Policy(Policy::PolicyType::Undisturbed)}; // TU
 }
 
 llvm::SmallVector<Policy>
@@ -987,31 +1090,24 @@ RVVIntrinsic::getSupportedMaskedPolicies(bool HasTailPolicy,
                                          bool HasMaskPolicy) {
   if (HasTailPolicy && HasMaskPolicy)
     return {Policy(Policy::PolicyType::Undisturbed,
-                   Policy::PolicyType::Agnostic), // TUMA
-            Policy(Policy::PolicyType::Agnostic,
-                   Policy::PolicyType::Agnostic), // TAMA
+                   Policy::PolicyType::Agnostic), // TUM
             Policy(Policy::PolicyType::Undisturbed,
                    Policy::PolicyType::Undisturbed), // TUMU
             Policy(Policy::PolicyType::Agnostic,
-                   Policy::PolicyType::Undisturbed)}; // TAMU
-
-  if (HasTailPolicy)
+                   Policy::PolicyType::Undisturbed)}; // MU
+  if (HasTailPolicy && !HasMaskPolicy)
     return {Policy(Policy::PolicyType::Undisturbed,
-                   Policy::PolicyType::Agnostic, true), // TUM
-            Policy(Policy::PolicyType::Agnostic, Policy::PolicyType::Agnostic,
-                   true)}; // TAM
-
-  return {
-      Policy(Policy::PolicyType::Omit, Policy::PolicyType::Agnostic),     // MA
-      Policy(Policy::PolicyType::Omit, Policy::PolicyType::Undisturbed)}; // MU
+                   Policy::PolicyType::Agnostic)}; // TU
+  if (!HasTailPolicy && HasMaskPolicy)
+    return {Policy(Policy::PolicyType::Agnostic,
+                   Policy::PolicyType::Undisturbed)}; // MU
+  llvm_unreachable("An RVV instruction should not be without both tail policy "
+                   "and mask policy");
 }
 
-void RVVIntrinsic::updateNamesAndPolicy(bool IsMasked, bool HasPolicy,
-                                        bool IsPrototypeDefaultTU,
-                                        std::string &Name,
-                                        std::string &BuiltinName,
-                                        std::string &OverloadedName,
-                                        Policy &PolicyAttrs) {
+void RVVIntrinsic::updateNamesAndPolicy(
+    bool IsMasked, bool HasPolicy, std::string &Name, std::string &BuiltinName,
+    std::string &OverloadedName, Policy &PolicyAttrs, bool HasFRMRoundModeOp) {
 
   auto appendPolicySuffix = [&](const std::string &suffix) {
     Name += suffix;
@@ -1019,51 +1115,35 @@ void RVVIntrinsic::updateNamesAndPolicy(bool IsMasked, bool HasPolicy,
     OverloadedName += suffix;
   };
 
-  if (PolicyAttrs.isPolicyNonePolicy()) {
-    PolicyAttrs.PolicyNone = false;
-    if (IsMasked) {
-      Name += "_m";
-      // FIXME: Currently _m default policy implementation is different with
-      // RVV intrinsic spec (TUMA)
-      PolicyAttrs.TailPolicy = Policy::PolicyType::Undisturbed;
-      PolicyAttrs.MaskPolicy = Policy::PolicyType::Undisturbed;
-      if (HasPolicy)
-        BuiltinName += "_tumu";
-      else
-        BuiltinName += "_m";
-    } else if (IsPrototypeDefaultTU) {
-      PolicyAttrs.TailPolicy = Policy::PolicyType::Undisturbed;
-      if (HasPolicy)
-        BuiltinName += "_tu";
-    } else {
-      PolicyAttrs.TailPolicy = Policy::PolicyType::Agnostic;
-      if (HasPolicy)
-        BuiltinName += "_ta";
-    }
-  } else {
-    if (PolicyAttrs.isTUMPolicy())
-      appendPolicySuffix("_tum");
-    else if (PolicyAttrs.isTAMPolicy())
-      appendPolicySuffix("_tam");
-    else if (PolicyAttrs.isTUMUPolicy())
+  // This follows the naming guideline under riscv-c-api-doc to add the
+  // `__riscv_` suffix for all RVV intrinsics.
+  Name = "__riscv_" + Name;
+  OverloadedName = "__riscv_" + OverloadedName;
+
+  if (HasFRMRoundModeOp) {
+    Name += "_rm";
+    BuiltinName += "_rm";
+  }
+
+  if (IsMasked) {
+    if (PolicyAttrs.isTUMUPolicy())
       appendPolicySuffix("_tumu");
-    else if (PolicyAttrs.isTAMUPolicy())
-      appendPolicySuffix("_tamu");
     else if (PolicyAttrs.isTUMAPolicy())
-      appendPolicySuffix("_tuma");
-    else if (PolicyAttrs.isTAMAPolicy())
-      appendPolicySuffix("_tama");
-    else if (PolicyAttrs.isTUPolicy())
-      appendPolicySuffix("_tu");
-    else if (PolicyAttrs.isTAPolicy())
-      appendPolicySuffix("_ta");
-    else if (PolicyAttrs.isMUPolicy()) {
+      appendPolicySuffix("_tum");
+    else if (PolicyAttrs.isTAMUPolicy())
       appendPolicySuffix("_mu");
-      PolicyAttrs.TailPolicy = Policy::PolicyType::Agnostic;
-    } else if (PolicyAttrs.isMAPolicy()) {
-      appendPolicySuffix("_ma");
-      PolicyAttrs.TailPolicy = Policy::PolicyType::Agnostic;
-    }
+    else if (PolicyAttrs.isTAMAPolicy()) {
+      Name += "_m";
+      BuiltinName += "_m";
+    } else
+      llvm_unreachable("Unhandled policy condition");
+  } else {
+    if (PolicyAttrs.isTUPolicy())
+      appendPolicySuffix("_tu");
+    else if (PolicyAttrs.isTAPolicy()) // no suffix needed
+      return;
+    else
+      llvm_unreachable("Unhandled policy condition");
   }
 }
 
@@ -1109,9 +1189,10 @@ raw_ostream &operator<<(raw_ostream &OS, const RVVIntrinsicRecord &Record) {
   OS << (int)Record.HasMasked << ",";
   OS << (int)Record.HasVL << ",";
   OS << (int)Record.HasMaskedOffOperand << ",";
-  OS << (int)Record.IsPrototypeDefaultTU << ",";
   OS << (int)Record.HasTailPolicy << ",";
   OS << (int)Record.HasMaskPolicy << ",";
+  OS << (int)Record.HasFRMRoundModeOp << ",";
+  OS << (int)Record.IsTuple << ",";
   OS << (int)Record.UnMaskedPolicyScheme << ",";
   OS << (int)Record.MaskedPolicyScheme << ",";
   OS << "},\n";

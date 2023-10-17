@@ -79,7 +79,9 @@ namespace llvm {
 
     /// Construct an ArrayRef from a range.
     constexpr ArrayRef(const T *begin, const T *end)
-        : Data(begin), Length(end - begin) {}
+        : Data(begin), Length(end - begin) {
+      assert(begin <= end);
+    }
 
     /// Construct an ArrayRef from a SmallVector. This is templated in order to
     /// avoid instantiating SmallVectorTemplateCommon<T> whenever we

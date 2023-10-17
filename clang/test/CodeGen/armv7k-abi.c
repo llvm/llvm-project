@@ -85,10 +85,11 @@ typedef struct {
 OddlySizedStruct return_oddly_sized_struct() {}
 
 // CHECK: define{{.*}} <4 x float> @test_va_arg_vec(ptr noundef %l)
-// CHECK:   [[ALIGN_TMP:%.*]] = add i32 {{%.*}}, 15
-// CHECK:   [[ALIGNED:%.*]] = and i32 [[ALIGN_TMP]], -16
-// CHECK:   [[ALIGNED_I8:%.*]] = inttoptr i32 [[ALIGNED]] to ptr
-// CHECK:   load <4 x float>, ptr [[ALIGNED_I8]], align 16
+
+
+// CHECK: [[GEP_ALIGN:%.+]] = getelementptr inbounds i8, ptr {{%.*}}, i32 15
+// CHECK: [[ALIGNED:%.*]] = call ptr @llvm.ptrmask.p0.i32(ptr [[GEP_ALIGN]], i32 -16)
+// CHECK:   load <4 x float>, ptr [[ALIGNED]], align 16
 float32x4_t test_va_arg_vec(__builtin_va_list l) {
   return __builtin_va_arg(l, float32x4_t);
 }

@@ -8,6 +8,7 @@
 
 import abc
 
+
 class DebuggerControllerBase(object, metaclass=abc.ABCMeta):
     def __init__(self, context, step_collection):
         self.context = context
@@ -21,15 +22,14 @@ class DebuggerControllerBase(object, metaclass=abc.ABCMeta):
         pass
 
     def run_debugger(self, debugger):
-        """Responsible for correctly launching and tearing down the debugger.
-        """
+        """Responsible for correctly launching and tearing down the debugger."""
         self.debugger = debugger
 
         # Fetch command line options, if any.
         the_cmdline = []
         commands = self.step_collection.commands
-        if 'DexCommandLine' in commands:
-            cmd_line_objs = commands['DexCommandLine']
+        if "DexCommandLine" in commands:
+            cmd_line_objs = commands["DexCommandLine"]
             assert len(cmd_line_objs) == 1
             cmd_line_obj = cmd_line_objs[0]
             the_cmdline = cmd_line_obj.the_cmdline

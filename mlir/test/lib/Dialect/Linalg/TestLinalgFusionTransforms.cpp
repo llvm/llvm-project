@@ -12,9 +12,8 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
-#include "mlir/Dialect/SCF/Transforms/Transforms.h"
+#include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -39,22 +38,9 @@ static LogicalResult fuseLinalgOpsGreedily(func::FuncOp f) {
   bool changed = false;
   for (LinalgOp linalgOp : llvm::reverse(linalgOps)) {
     for (OpOperand &opOperand : linalgOp->getOpOperands()) {
-      if (opOperand.get().getType().isa<MemRefType>()) {
-        // TODO: LinalgDependenceGraph should be able to update itself.
-        // The current naive and expensive reconstruction of the graph should be
-        // removed.
-        linalg::Aliases aliases;
-        linalg::LinalgDependenceGraph graph(aliases, linalgOps);
-        auto info = fuseProducerOfBuffer(b, opOperand, graph);
-        if (failed(info))
-          continue;
-        auto *originalOp = info->originalProducer.getOperation();
-        eraseSet.insert(originalOp);
-        auto *originalOpInLinalgOpsVector =
-            std::find(linalgOps.begin(), linalgOps.end(), originalOp);
-        *originalOpInLinalgOpsVector = info->fusedProducer.getOperation();
-        changed = true;
-      } else if (opOperand.get().getType().isa<RankedTensorType>()) {
+      if (isa<MemRefType>(opOperand.get().getType()))
+        continue;
+      if (isa<RankedTensorType>(opOperand.get().getType())) {
         // Tile and Fuse tensor input.
         if (opOperand.getOperandNumber() >= linalgOp.getNumDpsInputs())
           continue;
@@ -64,7 +50,7 @@ static LogicalResult fuseLinalgOpsGreedily(func::FuncOp f) {
         auto *originalOp = info->originalProducer.getOperation();
         auto *originalOpInLinalgOpsVector =
             std::find(linalgOps.begin(), linalgOps.end(), originalOp);
-        *originalOpInLinalgOpsVector = info->fusedProducer.getOperation();
+        *originalOpInLinalgOpsVector = info->fusedProducer;
         // Don't mark for erasure in the tensor case, let DCE handle this.
         changed = true;
       }
@@ -87,8 +73,8 @@ struct TestLinalgGreedyFusion
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestLinalgGreedyFusion)
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, linalg::LinalgDialect, memref::MemRefDialect,
-                    scf::SCFDialect>();
+    registry.insert<affine::AffineDialect, linalg::LinalgDialect,
+                    memref::MemRefDialect, scf::SCFDialect>();
   }
   StringRef getArgument() const final { return "test-linalg-greedy-fusion"; }
   StringRef getDescription() const final {

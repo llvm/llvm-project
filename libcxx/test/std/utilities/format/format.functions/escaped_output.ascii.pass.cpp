@@ -6,7 +6,10 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: libcpp-has-no-incomplete-format
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
+
+// TODO FMT This test should not require std::to_chars(floating-point)
+// XFAIL: availability-fp_to_chars-missing
 
 // Force unicode to be disabled.
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_HAS_NO_UNICODE
@@ -18,6 +21,7 @@
 
 #include <cassert>
 #include <concepts>
+#include <iterator>
 #include <list>
 #include <vector>
 
@@ -25,6 +29,7 @@
 #include "make_string.h"
 #include "test_format_string.h"
 #include "assert_macros.h"
+#include "concat_macros.h"
 
 #ifndef TEST_HAS_NO_LOCALIZATION
 #  include <iostream>
@@ -37,7 +42,7 @@ auto test_format = []<class CharT, class... Args>(
   {
     std::basic_string<CharT> out = std::format(fmt, std::forward<Args>(args)...);
     TEST_REQUIRE(out == expected,
-                 test_concat_message(
+                 TEST_WRITE_CONCATENATED(
                      "\nFormat string   ", fmt.get(), "\nExpected output ", expected, "\nActual output   ", out, '\n'));
   }
 #ifndef TEST_HAS_NO_LOCALIZATION
@@ -89,12 +94,12 @@ auto test_formatted_size =
     []<class CharT, class... Args>(
         std::basic_string_view<CharT> expected, test_format_string<CharT, Args...> fmt, Args&&... args) {
       {
-        size_t size = std::formatted_size(fmt, std::forward<Args>(args)...);
+        std::size_t size = std::formatted_size(fmt, std::forward<Args>(args)...);
         assert(size == expected.size());
       }
 #ifndef TEST_HAS_NO_LOCALIZATION
       {
-        size_t size = std::formatted_size(std::locale(), fmt, std::forward<Args>(args)...);
+        std::size_t size = std::formatted_size(std::locale(), fmt, std::forward<Args>(args)...);
         assert(size == expected.size());
       }
 #endif // TEST_HAS_NO_LOCALIZATION
@@ -104,37 +109,37 @@ auto test_format_to_n =
     []<class CharT, class... Args>(
         std::basic_string_view<CharT> expected, test_format_string<CharT, Args...> fmt, Args&&... args) {
       {
-        size_t n = expected.size();
+        std::size_t n = expected.size();
         std::basic_string<CharT> out(n, CharT(' '));
         std::format_to_n_result result = std::format_to_n(out.begin(), n, fmt, std::forward<Args>(args)...);
-        assert(result.size == static_cast<ptrdiff_t>(expected.size()));
+        assert(result.size == static_cast<std::ptrdiff_t>(expected.size()));
         assert(result.out == out.end());
         assert(out == expected);
       }
 #ifndef TEST_HAS_NO_LOCALIZATION
       {
-        size_t n = expected.size();
+        std::size_t n = expected.size();
         std::basic_string<CharT> out(n, CharT(' '));
         std::format_to_n_result result =
             std::format_to_n(out.begin(), n, std::locale(), fmt, std::forward<Args>(args)...);
-        assert(result.size == static_cast<ptrdiff_t>(expected.size()));
+        assert(result.size == static_cast<std::ptrdiff_t>(expected.size()));
         assert(result.out == out.end());
         assert(out == expected);
       }
 #endif // TEST_HAS_NO_LOCALIZATION
       {
-        ptrdiff_t n = 0;
+        std::ptrdiff_t n = 0;
         std::basic_string<CharT> out;
         std::format_to_n_result result = std::format_to_n(out.begin(), n, fmt, std::forward<Args>(args)...);
-        assert(result.size == static_cast<ptrdiff_t>(expected.size()));
+        assert(result.size == static_cast<std::ptrdiff_t>(expected.size()));
         assert(result.out == out.end());
         assert(out.empty());
       }
       {
-        ptrdiff_t n = expected.size() / 2;
+        std::ptrdiff_t n = expected.size() / 2;
         std::basic_string<CharT> out(n, CharT(' '));
         std::format_to_n_result result = std::format_to_n(out.begin(), n, fmt, std::forward<Args>(args)...);
-        assert(result.size == static_cast<ptrdiff_t>(expected.size()));
+        assert(result.size == static_cast<std::ptrdiff_t>(expected.size()));
         assert(result.out == out.end());
         assert(out == expected.substr(0, n));
       }
@@ -222,7 +227,7 @@ void test_char() {
     // Unicode fitting in a 32-bit wchar_t
 
     constexpr wchar_t x  = 0x1ffff;
-    constexpr uint32_t y = 0x1ffff;
+    constexpr std::uint32_t y = 0x1ffff;
     static_assert(x == y);
 
     using V = std::basic_string_view<CharT>;

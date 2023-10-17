@@ -31,4 +31,4 @@ b2:                                               ; preds = %b1
   ret void
 }
 
-attributes #0 = { "target-features"="+hvxv66,+hvx-length128b" }
+attributes #0 = { "target-features"="+hvxv66,+hvx-length128b,-packets" }

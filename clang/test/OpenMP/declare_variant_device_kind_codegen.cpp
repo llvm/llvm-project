@@ -19,24 +19,24 @@
 // RUN: %clang_cc1 -fopenmp -x c++ -triple ppc64le-unknown-linux -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=45 -DCPU | FileCheck %s
 
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple x86_64-unknown-linux -fopenmp-targets=x86_64-unknown-linux -emit-llvm-bc %s -o %t-host.bc -DCPU
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple x86_64-unknown-linux -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-host.bc -o - -DCPU | FileCheck %s
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple x86_64-unknown-linux -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-host.bc -emit-pch -o %t -DCPU
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple x86_64-unknown-linux -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-host.bc -include-pch %t -o - -DCPU | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple x86_64-unknown-linux -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-host.bc -o - -DCPU | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple x86_64-unknown-linux -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-host.bc -emit-pch -o %t -DCPU
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple x86_64-unknown-linux -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-host.bc -include-pch %t -o - -DCPU | FileCheck %s
 
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple ppc64le-unknown-linux -fopenmp-targets=ppc64le-unknown-linux -emit-llvm-bc %s -o %t-host.bc -DCPU
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple ppc64le-unknown-linux -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-host.bc -o - -DCPU | FileCheck %s
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple ppc64le-unknown-linux -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-host.bc -emit-pch -o %t -DCPU
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple ppc64le-unknown-linux -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-host.bc -include-pch %t -o - -DCPU | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple ppc64le-unknown-linux -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-host.bc -o - -DCPU | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple ppc64le-unknown-linux -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-host.bc -emit-pch -o %t -DCPU
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple ppc64le-unknown-linux -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-host.bc -include-pch %t -o - -DCPU | FileCheck %s
 
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple x86_64-unknown-linux -fopenmp-targets=x86_64-unknown-linux -emit-llvm-bc %s -o %t-host.bc -DNOHOST
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple x86_64-unknown-linux -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-host.bc -o - -DNOHOST | FileCheck %s
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple x86_64-unknown-linux -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-host.bc -emit-pch -o %t -DNOHOST
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple x86_64-unknown-linux -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-host.bc -include-pch %t -o - -DNOHOST | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple x86_64-unknown-linux -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-host.bc -o - -DNOHOST | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple x86_64-unknown-linux -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-host.bc -emit-pch -o %t -DNOHOST
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple x86_64-unknown-linux -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-host.bc -include-pch %t -o - -DNOHOST | FileCheck %s
 
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple ppc64le-unknown-linux -fopenmp-targets=ppc64le-unknown-linux -emit-llvm-bc %s -o %t-host.bc -DNOHOST
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple ppc64le-unknown-linux -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-host.bc -o - -DNOHOST | FileCheck %s
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple ppc64le-unknown-linux -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-host.bc -emit-pch -o %t -DNOHOST
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple ppc64le-unknown-linux -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-host.bc -include-pch %t -o - -DNOHOST | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple ppc64le-unknown-linux -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-host.bc -o - -DNOHOST | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple ppc64le-unknown-linux -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-host.bc -emit-pch -o %t -DNOHOST
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple ppc64le-unknown-linux -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-host.bc -include-pch %t -o - -DNOHOST | FileCheck %s
 
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-linux -emit-llvm %s -fexceptions -fcxx-exceptions -o - -fsanitize-address-use-after-scope -DHOST | FileCheck %s
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-linux -fexceptions -fcxx-exceptions -emit-pch -o %t %s -DHOST
@@ -59,24 +59,24 @@
 // RUN: %clang_cc1 -fopenmp -x c++ -triple ppc64le-unknown-linux -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - -DCPU | FileCheck %s
 
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-linux -fopenmp-targets=x86_64-unknown-linux -emit-llvm-bc %s -o %t-host.bc -DCPU
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-linux -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-host.bc -o - -DCPU | FileCheck %s
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-linux -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-host.bc -emit-pch -o %t -DCPU
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-linux -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-host.bc -include-pch %t -o - -DCPU | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-linux -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-host.bc -o - -DCPU | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-linux -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-host.bc -emit-pch -o %t -DCPU
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-linux -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-host.bc -include-pch %t -o - -DCPU | FileCheck %s
 
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple ppc64le-unknown-linux -fopenmp-targets=ppc64le-unknown-linux -emit-llvm-bc %s -o %t-host.bc -DCPU
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple ppc64le-unknown-linux -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-host.bc -o - -DCPU | FileCheck %s
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple ppc64le-unknown-linux -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-host.bc -emit-pch -o %t -DCPU
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple ppc64le-unknown-linux -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-host.bc -include-pch %t -o - -DCPU | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple ppc64le-unknown-linux -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-host.bc -o - -DCPU | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple ppc64le-unknown-linux -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-host.bc -emit-pch -o %t -DCPU
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple ppc64le-unknown-linux -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-host.bc -include-pch %t -o - -DCPU | FileCheck %s
 
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-linux -fopenmp-targets=x86_64-unknown-linux -emit-llvm-bc %s -o %t-host.bc -DNOHOST
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-linux -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-host.bc -o - -DNOHOST | FileCheck %s
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-linux -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-host.bc -emit-pch -o %t -DNOHOST
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-linux -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-host.bc -include-pch %t -o - -DNOHOST | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-linux -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-host.bc -o - -DNOHOST | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-linux -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-host.bc -emit-pch -o %t -DNOHOST
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-linux -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-host.bc -include-pch %t -o - -DNOHOST | FileCheck %s
 
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple ppc64le-unknown-linux -fopenmp-targets=ppc64le-unknown-linux -emit-llvm-bc %s -o %t-host.bc -DNOHOST
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple ppc64le-unknown-linux -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-host.bc -o - -DNOHOST | FileCheck %s
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple ppc64le-unknown-linux -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-host.bc -emit-pch -o %t -DNOHOST
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple ppc64le-unknown-linux -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-host.bc -include-pch %t -o - -DNOHOST | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple ppc64le-unknown-linux -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-host.bc -o - -DNOHOST | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple ppc64le-unknown-linux -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-host.bc -emit-pch -o %t -DNOHOST
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple ppc64le-unknown-linux -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-host.bc -include-pch %t -o - -DNOHOST | FileCheck %s
 
 // expected-no-diagnostics
 

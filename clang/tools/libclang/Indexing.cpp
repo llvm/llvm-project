@@ -171,9 +171,7 @@ public:
   ///
   /// Can provide false-negative in case the location was parsed after this
   /// instance had been constructed.
-  bool hasAlredyBeenParsed(SourceLocation Loc, FileID FID,
-                           const FileEntry *FE) {
-    assert(FE);
+  bool hasAlredyBeenParsed(SourceLocation Loc, FileID FID, FileEntryRef FE) {
     PPRegion region = getRegion(Loc, FID, FE);
     if (region.isInvalid())
       return false;
@@ -199,12 +197,11 @@ public:
   }
 
 private:
-  PPRegion getRegion(SourceLocation Loc, FileID FID, const FileEntry *FE) {
-    assert(FE);
+  PPRegion getRegion(SourceLocation Loc, FileID FID, FileEntryRef FE) {
     auto Bail = [this, FE]() {
       if (isParsedOnceInclude(FE)) {
-        const llvm::sys::fs::UniqueID &ID = FE->getUniqueID();
-        return PPRegion(ID, 0, FE->getModificationTime());
+        const llvm::sys::fs::UniqueID &ID = FE.getUniqueID();
+        return PPRegion(ID, 0, FE.getModificationTime());
       }
       return PPRegion();
     };
@@ -222,11 +219,11 @@ private:
     if (RegionFID != FID)
       return Bail();
 
-    const llvm::sys::fs::UniqueID &ID = FE->getUniqueID();
-    return PPRegion(ID, RegionOffset, FE->getModificationTime());
+    const llvm::sys::fs::UniqueID &ID = FE.getUniqueID();
+    return PPRegion(ID, RegionOffset, FE.getModificationTime());
   }
 
-  bool isParsedOnceInclude(const FileEntry *FE) {
+  bool isParsedOnceInclude(FileEntryRef FE) {
     return PP.getHeaderSearchInfo().isFileMultipleIncludeGuarded(FE) ||
            PP.getHeaderSearchInfo().hasFileBeenImported(FE);
   }
@@ -255,7 +252,8 @@ public:
 
     if (Loc == MainFileLoc && Reason == PPCallbacks::EnterFile) {
       IsMainFileEntered = true;
-      DataConsumer.enteredMainFile(SM.getFileEntryForID(SM.getMainFileID()));
+      DataConsumer.enteredMainFile(
+          *SM.getFileEntryRefForID(SM.getMainFileID()));
     }
   }
 
@@ -350,8 +348,8 @@ public:
     PreprocessorOptions &PPOpts = CI.getPreprocessorOpts();
 
     if (!PPOpts.ImplicitPCHInclude.empty()) {
-      auto File = CI.getFileManager().getFile(PPOpts.ImplicitPCHInclude);
-      if (File)
+      if (auto File =
+              CI.getFileManager().getOptionalFileRef(PPOpts.ImplicitPCHInclude))
         DataConsumer->importedPCH(*File);
     }
 
@@ -395,11 +393,11 @@ public:
     // Don't skip bodies from main files; this may be revisited.
     if (SM.getMainFileID() == FID)
       return false;
-    const FileEntry *FE = SM.getFileEntryForID(FID);
+    OptionalFileEntryRef FE = SM.getFileEntryRefForID(FID);
     if (!FE)
       return false;
 
-    return ParsedLocsTracker->hasAlredyBeenParsed(Loc, FID, FE);
+    return ParsedLocsTracker->hasAlredyBeenParsed(Loc, FID, *FE);
   }
 
   TranslationUnitKind getTranslationUnitKind() override {
@@ -545,14 +543,14 @@ static CXErrorCode clang_indexSourceFile_Impl(
   // (often very broken) source code, where spell-checking can have a
   // significant negative impact on performance (particularly when 
   // precompiled headers are involved), we disable it.
-  CInvok->getLangOpts()->SpellChecking = false;
+  CInvok->getLangOpts().SpellChecking = false;
 
   if (index_options & CXIndexOpt_SuppressWarnings)
     CInvok->getDiagnosticOpts().IgnoreWarnings = true;
 
   // Make sure to use the raw module format.
   CInvok->getHeaderSearchOpts().ModuleFormat = std::string(
-      CXXIdx->getPCHContainerOperations()->getRawReader().getFormat());
+      CXXIdx->getPCHContainerOperations()->getRawReader().getFormats().front());
 
   auto Unit = ASTUnit::create(CInvok, Diags, CaptureDiagnostics,
                               /*UserFilesAreVolatile=*/true);
@@ -570,7 +568,7 @@ static CXErrorCode clang_indexSourceFile_Impl(
   // Enable the skip-parsed-bodies optimization only for C++; this may be
   // revisited.
   bool SkipBodies = (index_options & CXIndexOpt_SkipParsedBodiesInSession) &&
-      CInvok->getLangOpts()->CPlusPlus;
+      CInvok->getLangOpts().CPlusPlus;
   if (SkipBodies)
     CInvok->getFrontendOpts().SkipFunctionBodies = true;
 
@@ -607,7 +605,7 @@ static CXErrorCode clang_indexSourceFile_Impl(
     PPOpts.DetailedRecord = true;
   }
 
-  if (!requestedToGetTU && !CInvok->getLangOpts()->Modules)
+  if (!requestedToGetTU && !CInvok->getLangOpts().Modules)
     PPOpts.DetailedRecord = false;
 
   // Unless the user specified that they want the preamble on the first parse
@@ -694,17 +692,18 @@ static CXErrorCode clang_indexTranslationUnit_Impl(
 
   ASTUnit::ConcurrencyCheck Check(*Unit);
 
-  if (const FileEntry *PCHFile = Unit->getPCHFile())
-    DataConsumer.importedPCH(PCHFile);
+  if (OptionalFileEntryRef PCHFile = Unit->getPCHFile())
+    DataConsumer.importedPCH(*PCHFile);
 
   FileManager &FileMgr = Unit->getFileManager();
 
   if (Unit->getOriginalSourceFileName().empty())
-    DataConsumer.enteredMainFile(nullptr);
-  else if (auto MainFile = FileMgr.getFile(Unit->getOriginalSourceFileName()))
+    DataConsumer.enteredMainFile(std::nullopt);
+  else if (auto MainFile =
+               FileMgr.getFileRef(Unit->getOriginalSourceFileName()))
     DataConsumer.enteredMainFile(*MainFile);
   else
-    DataConsumer.enteredMainFile(nullptr);
+    DataConsumer.enteredMainFile(std::nullopt);
 
   DataConsumer.setASTContext(Unit->getASTContext());
   DataConsumer.startedTranslationUnit();

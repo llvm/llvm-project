@@ -371,13 +371,21 @@ public:
   /// \param Source the external AST source.
   ///
   /// \returns a pointer to the AST node.
-  T* get(ExternalASTSource *Source) const {
+  T *get(ExternalASTSource *Source) const {
     if (isOffset()) {
       assert(Source &&
              "Cannot deserialize a lazy pointer without an AST source");
       Ptr = reinterpret_cast<uint64_t>((Source->*Get)(Ptr >> 1));
     }
     return reinterpret_cast<T*>(Ptr);
+  }
+
+  /// Retrieve the address of the AST node pointer. Deserializes the pointee if
+  /// necessary.
+  T **getAddressOfPointer(ExternalASTSource *Source) const {
+    // Ensure the integer is in pointer form.
+    (void)get(Source);
+    return reinterpret_cast<T**>(&Ptr);
   }
 };
 

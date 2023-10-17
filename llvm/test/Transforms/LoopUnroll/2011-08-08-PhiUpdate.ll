@@ -83,7 +83,7 @@ define i32 @test2(ptr nocapture %p, i32 %n) nounwind readonly {
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw i32 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    br label [[BB1_1:%.*]]
 ; CHECK:       bb1.1:
-; CHECK-NEXT:    [[INDVAR_NEXT_1:%.*]] = add nuw nsw i64 [[INDVAR_NEXT]], 1
+; CHECK-NEXT:    [[INDVAR_NEXT_1:%.*]] = add nuw nsw i64 [[INDVAR]], 2
 ; CHECK-NEXT:    [[EXITCOND_1:%.*]] = icmp ne i64 [[INDVAR_NEXT_1]], [[TMP]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_1]], label [[BB_2:%.*]], label [[BB1_BB2_CRIT_EDGE]]
 ; CHECK:       bb.2:
@@ -92,7 +92,7 @@ define i32 @test2(ptr nocapture %p, i32 %n) nounwind readonly {
 ; CHECK-NEXT:    [[TMP6:%.*]] = add nsw i32 [[TMP5]], [[TMP4]]
 ; CHECK-NEXT:    br label [[BB1_2:%.*]]
 ; CHECK:       bb1.2:
-; CHECK-NEXT:    [[INDVAR_NEXT_2:%.*]] = add nuw nsw i64 [[INDVAR_NEXT_1]], 1
+; CHECK-NEXT:    [[INDVAR_NEXT_2:%.*]] = add nuw nsw i64 [[INDVAR]], 3
 ; CHECK-NEXT:    [[EXITCOND_2:%.*]] = icmp ne i64 [[INDVAR_NEXT_2]], [[TMP]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_2]], label [[BB_3:%.*]], label [[BB1_BB2_CRIT_EDGE]]
 ; CHECK:       bb.3:
@@ -101,7 +101,7 @@ define i32 @test2(ptr nocapture %p, i32 %n) nounwind readonly {
 ; CHECK-NEXT:    [[TMP8]] = add nsw i32 [[TMP7]], [[TMP6]]
 ; CHECK-NEXT:    br label [[BB1_3]]
 ; CHECK:       bb1.3:
-; CHECK-NEXT:    [[INDVAR_NEXT_3]] = add i64 [[INDVAR_NEXT_2]], 1
+; CHECK-NEXT:    [[INDVAR_NEXT_3]] = add i64 [[INDVAR]], 4
 ; CHECK-NEXT:    [[EXITCOND_3:%.*]] = icmp ne i64 [[INDVAR_NEXT_3]], [[TMP]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_3]], label [[BB]], label [[BB1_BB2_CRIT_EDGE]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       bb1.bb2_crit_edge:

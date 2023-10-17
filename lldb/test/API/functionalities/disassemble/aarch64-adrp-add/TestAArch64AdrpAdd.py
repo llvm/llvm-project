@@ -6,8 +6,8 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-class TestAArch64AdrpAdd(TestBase):
 
+class TestAArch64AdrpAdd(TestBase):
     @no_debug_info_test
     @skipIfLLVMTargetMissing("AArch64")
     def test_arm64(self):
@@ -47,10 +47,10 @@ class TestAArch64AdrpAdd(TestBase):
         found_hi_string = False
         found_foo = False
 
-        # The binary has an ADRP + ADD instruction pair which load 
+        # The binary has an ADRP + ADD instruction pair which load
         # the pc-relative address of a c-string, and loads the address
-        # of a function into a function pointer.  lldb should show 
-        # that c-string and the name of that function in the disassembly 
+        # of a function into a function pointer.  lldb should show
+        # that c-string and the name of that function in the disassembly
         # comment field.
         for i in insns:
             if "HI" in i.GetComment(target):
@@ -58,11 +58,14 @@ class TestAArch64AdrpAdd(TestBase):
             if "foo" in i.GetComment(target):
                 found_foo = True
         if found_hi_string == False or found_foo == False:
-            print('Did not find "HI" string or "foo" in disassembly symbolication in %s' % binaryname)
+            print(
+                'Did not find "HI" string or "foo" in disassembly symbolication in %s'
+                % binaryname
+            )
             if self.TraceOn():
-              strm = lldb.SBStream()
-              insns.GetDescription(strm)
-              print('Disassembly of main(), looking for "HI" and "foo" in comments:')
-              print(strm.GetData())
+                strm = lldb.SBStream()
+                insns.GetDescription(strm)
+                print('Disassembly of main(), looking for "HI" and "foo" in comments:')
+                print(strm.GetData())
         self.assertTrue(found_hi_string)
         self.assertTrue(found_foo)

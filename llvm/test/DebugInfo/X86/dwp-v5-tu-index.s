@@ -2,8 +2,8 @@
 ## compliant to the DWARFv5 standard.
 
 # RUN: llvm-mc -triple x86_64-unknown-linux %s -filetype=obj -o - | \
-# RUN:   llvm-dwarfdump -debug-tu-index - | \
-# RUN:   FileCheck %s
+# RUN:   llvm-dwarfdump -debug-tu-index - 2>&1 | \
+# RUN:   FileCheck %s --implicit-check-not "could not find unit with signature"
 
 # CHECK:      .debug_tu_index contents:
 # CHECK-NEXT: version = 5, units = 1, slots = 2

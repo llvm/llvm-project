@@ -1,7 +1,11 @@
 // RUN: %clang_cc1 -std=c++98 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++11 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++1z %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+
+// dr1200: na
 
 namespace dr1213 { // dr1213: 7
 #if __cplusplus >= 201103L
@@ -26,6 +30,55 @@ namespace dr1213 { // dr1213: 7
   using U = decltype(EV4Int()[0]);
 #endif
 }
+
+#if __cplusplus >= 201103L
+namespace dr1223 { // dr1223: 17 drafting
+struct M;
+template <typename T>
+struct V;
+struct S {
+  S* operator()();
+  int N;
+  int M;
+#if __cplusplus > 202002L
+  template <typename T>
+  static constexpr auto V = 0;
+  void f(char);
+  void f(int);
+  void mem(S s) {
+    auto(s)()->M; //expected-warning {{expression result unused}}
+    auto(s)()->V<int>; //expected-warning {{expression result unused}}
+    auto(s)()->f(0);
+  }
+#endif
+};
+void f(S s) {
+  {
+#if __cplusplus > 202002L
+    auto(s)()->N; //expected-warning {{expression result unused}}
+#endif
+    auto(s)()->M;
+  }
+  {
+    S(s)()->N; //expected-warning {{expression result unused}}
+    S(s)()->M; //expected-warning {{expression result unused}}
+  }
+}
+
+struct A {
+    A(int*);
+    A *operator()();
+};
+typedef struct BB { int C[2]; } *B, C;
+void g() {
+    A a(B ()->C);
+    A b(auto ()->C);
+    static_assert(sizeof(B ()->C[1] == sizeof(int)), "");
+    sizeof(auto () -> C[1]); // expected-error{{function cannot return array type 'C[1]'}}
+}
+
+}
+#endif
 
 #if __cplusplus >= 201103L
 namespace dr1227 { // dr1227: yes
@@ -67,6 +120,8 @@ namespace dr1265 { // dr1265: 5
   auto k(), l(); // expected-error {{function with deduced return type must be the only declaration in its group}}
 #endif
 }
+
+// dr1291: na
 
 namespace dr1295 { // dr1295: 4
   struct X {

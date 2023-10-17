@@ -13,17 +13,20 @@
 
 namespace mlir {
 
+class DialectRegistry;
 class LLVMTypeConverter;
 class RewritePatternSet;
 class Pass;
 
-#define GEN_PASS_DECL_CONVERTMATHTOLLVM
+#define GEN_PASS_DECL_CONVERTMATHTOLLVMPASS
 #include "mlir/Conversion/Passes.h.inc"
 
 void populateMathToLLVMConversionPatterns(LLVMTypeConverter &converter,
-                                          RewritePatternSet &patterns);
+                                          RewritePatternSet &patterns,
+                                          bool approximateLog1p = true);
 
-std::unique_ptr<Pass> createConvertMathToLLVMPass();
+void registerConvertMathToLLVMInterface(DialectRegistry &registry);
+
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_MATHTOLLVM_MATHTOLLVM_H

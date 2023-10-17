@@ -14,4 +14,17 @@ module m
   logical, parameter :: test_05b = len(ca(:)(2:4)) == 3
   logical, parameter :: test_06a = ca(1)(1:2)//ca(2)(2:3)//ca(3)(3:4) == "abfgkl"
   logical, parameter :: test_06b = len(ca(1)(1:2)//ca(2)(2:3)//ca(3)(3:4)) == 6
+  logical, parameter :: test_07a = ca(1)(:2) == "ab"
+  logical, parameter :: test_07b = ca(1)(3:) == "cd"
+  logical, parameter :: test_07c = ca(1)(:-1) == ""
+  logical, parameter :: test_07d = ca(1)(5:) == ""
+  logical, parameter :: test_07e = ca(1)(:) == "abcd"
 end module
+
+subroutine foo(x)
+  character(4) :: x(:, :)
+  logical, parameter :: test_01 = len(transpose(x(:, :)(:))) == 4
+  logical, parameter :: test_02 = len(transpose(x(:, :)(1:2))) == 2
+  logical, parameter :: test_03 = len(maxval(x(:, :)(:))) == 4
+  logical, parameter :: test_04 = len(maxval(x(:, :)(1:2))) == 2
+end subroutine

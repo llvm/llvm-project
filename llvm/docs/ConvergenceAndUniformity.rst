@@ -1,3 +1,5 @@
+.. _convergence-and-uniformity:
+
 ==========================
 Convergence And Uniformity
 ==========================
@@ -51,7 +53,7 @@ subgroups):
 This document presents a definition of convergence that is reasonable
 for real targets and is compatible with the currently implicit
 semantics of convergent operations in LLVM IR. This is accompanied by
-a *uniformity analysis* that extends the existing divergence analysis
+a *uniformity analysis* that extends previous work on divergence analysis
 [DivergenceSPMD]_ to cover irreducible control-flow.
 
 .. [DivergenceSPMD] Julian Rosemann, Simon Moll, and Sebastian
@@ -81,6 +83,8 @@ Diverged path
    A diverged path is a path that starts from a divergent branch and
    either reaches a join node of the branch or reaches the end of the
    function without passing through any join node of the branch.
+
+.. _convergence-dynamic-instances:
 
 Threads and Dynamic Instances
 =============================
@@ -135,7 +139,7 @@ instance*. Informally, two threads that produce converged dynamic
 instances are said to be *converged*, and they are said to execute
 that static instance *convergently*, at that point in the execution.
 
-*Convergence order* is a strict partial order over dynamic instances
+*Convergence-before* is a strict partial order over dynamic instances
 that is defined as the transitive closure of:
 
 1. If dynamic instance ``P`` is executed strictly before ``Q`` in the
@@ -171,39 +175,25 @@ The fact that *convergence-before* is a strict partial order is a
 constraint on the *converged-with* relation. It is trivially satisfied
 if different dynamic instances are never converged. It is also
 trivially satisfied for all known implementations for which
-convergence plays some role. Aside from the strict partial convergence
-order, there are currently no additional constraints on the
-*converged-with* relation imposed in LLVM IR.
+convergence plays some role.
 
 .. _convergence-note-convergence:
 
 .. note::
 
-   1. The ``convergent`` attribute on convergent operations does
-      constrain changes to ``converged-with``, but it is expressed in
-      terms of control flow and does not explicitly deal with thread
-      convergence.
-
-   2. The convergence-before relation is not
+   1. The convergence-before relation is not
       directly observable. Program transforms are in general free to
       change the order of instructions, even though that obviously
       changes the convergence-before relation.
 
-   3. Converged dynamic instances need not be executed at the same
+   2. Converged dynamic instances need not be executed at the same
       time or even on the same resource. Converged dynamic instances
       of a convergent operation may appear to do so but that is an
-      implementation detail. The fact that ``P`` is convergence-before
+      implementation detail.
+
+   3. The fact that ``P`` is convergence-before
       ``Q`` does not automatically imply that ``P`` happens-before
       ``Q`` in a memory model sense.
-
-   4. **Future work:** Providing convergence-related guarantees to
-      compiler frontends enables some powerful optimization techniques
-      that can be used by programmers or by high-level program
-      transforms. Constraints on the ``converged-with`` relation may
-      be added eventually as part of the definition of LLVM
-      IR, so that guarantees can be made that frontends can rely on.
-      For a proposal on how this might work, see `D85603
-      <https://reviews.llvm.org/D85603>`_.
 
 .. _convergence-maximal:
 
@@ -217,8 +207,11 @@ relation is reasonable for real targets and is compatible with
 convergent operations.
 
 The maximal converged-with relation is defined in terms of cycle
-headers, which are not unique to a given CFG. Each cycle hierarchy for
-the same CFG results in a different maximal converged-with relation.
+headers, with the assumption that threads converge at the header on every
+"iteration" of the cycle. Informally, two threads execute the same iteration of
+a cycle if they both previously executed the cycle header the same number of
+times after they entered that cycle. In general, this needs to account for the
+iterations of parent cycles as well.
 
    **Maximal converged-with:**
 
@@ -234,6 +227,10 @@ the same CFG results in a different maximal converged-with relation.
    - without assuming that ``X1`` is converged with ``X2``.
 
 .. note::
+
+   Cycle headers may not be unique to a given CFG if it is irreducible. Each
+   cycle hierarchy for the same CFG results in a different maximal
+   converged-with relation.
 
    For brevity, the rest of the document restricts the term
    *converged* to mean "related under the maximal converged-with
@@ -269,7 +266,7 @@ Maximal convergence can now be demonstrated in the earlier example as follows:
 Dependence on Cycles Headers
 ----------------------------
 
-Contradictions in convergence order are possible only between two
+Contradictions in *convergence-before* are possible only between two
 nodes that are inside some cycle. The dynamic instances of such nodes
 may be interleaved in the same thread, and this interleaving may be
 different for different threads.
@@ -393,15 +390,19 @@ instance is determined as follows:
 
 1. The semantics of the instruction may specify the output to be
    uniform.
-2. Otherwise, if it is a PHI node, its output is uniform if and only
-   if for every pair of converged dynamic instances produced by all
-   threads in ``S``:
+2. Otherwise, the output is divergent if the static instance is not
+   :ref:`m-converged <convergence-m-converged>`.
+3. Otherwise, if the static instance is m-converged:
 
-   a. Both instances choose the same output from converged
-      dynamic instances, and,
-   b. That output is uniform for all threads in ``S``.
-3. Otherwise, the output is uniform if and only if the input
-   operands are uniform for all threads in ``S``.
+   1. If it is a PHI node, its output is uniform if and only
+      if for every pair of converged dynamic instances produced by all
+      threads in ``S``:
+
+      a. Both instances choose the same output from converged
+         dynamic instances, and,
+      b. That output is uniform for all threads in ``S``.
+   2. Otherwise, the output is uniform if and only if the input
+      operands are uniform for all threads in ``S``.
 
 Divergent Cycle Exits
 ---------------------
@@ -423,6 +424,8 @@ any use ``U`` outside the cycle receives a value from non-converged
 dynamic instances of ``N``. An output of ``U`` may be divergent,
 depending on the semantics of the instruction.
 
+.. _uniformity-analysis:
+
 Static Uniformity Analysis
 ==========================
 
@@ -432,6 +435,8 @@ result, a static analysis cannot always determine the convergence of
 nodes in irreducible cycles, and any uniformity analysis is limited to
 those static instances whose convergence is independent of the cycle
 hierarchy:
+
+.. _convergence-m-converged:
 
   **m-converged static instances:**
 
@@ -452,20 +457,14 @@ hierarchy:
 
 
 Each node ``X`` in a given CFG is reported to be m-converged if and
-only if:
+only if every cycle that contains ``X`` satisfies the following necessary
+conditions:
 
-1. ``X`` is a :ref:`top-level<cycle-toplevel-block>` node, in which
-   case, there are no cycle headers to influence the convergence of
-   ``X``.
-
-2. Otherwise, if ``X`` is inside a cycle, then every cycle that
-   contains ``X`` satisfies the following necessary conditions:
-
-   a. Every divergent branch inside the cycle satisfies the
-      :ref:`diverged entry criterion<convergence-diverged-entry>`, and,
-   b. There are no :ref:`diverged paths reaching the
-      cycle<convergence-diverged-outside>` from a divergent branch
-      outside it.
+  1. Every divergent branch inside the cycle satisfies the
+     :ref:`diverged entry criterion<convergence-diverged-entry>`, and,
+  2. There are no :ref:`diverged paths reaching the
+     cycle<convergence-diverged-outside>` from a divergent branch
+     outside it.
 
 .. note::
 
@@ -474,9 +473,8 @@ only if:
    if the whole CFG is reducible, then all nodes in the CFG are
    m-converged.
 
-If a static instance is not m-converged, then every output is assumed
-to be divergent. Otherwise, for an m-converged static instance, the
-uniformity of each output is determined using the criteria
+The uniformity of each output of a static instance
+is determined using the criteria
 :ref:`described earlier <convergence-uniformity>`. The discovery of
 divergent outputs may cause their uses (including branches) to also
 become divergent. The analysis propagates this divergence until a
@@ -695,3 +693,15 @@ Clearly, this can be determined only in a cycle hierarchy ``T`` where
 in a different cycle hierarchy ``T'`` where ``C`` is part of a larger
 cycle ``C'`` with the same header, but this does not contradict the
 conclusion in ``T``.
+
+Controlled Convergence
+======================
+
+:ref:`Convergence control tokens <dynamic_instances_and_convergence_tokens>`
+provide an explicit semantics for determining which threads are converged at a
+given point in the program. The impact of this is incorporated in a
+:ref:`controlled maximal converged-with <controlled_maximal_converged_with>`
+relation over dynamic instances and a :ref:`controlled m-converged
+<controlled_m_converged>` property of static instances. The :ref:`uniformity
+analysis <uniformity-analysis>` implemented in LLVM includes this for targets
+that support convergence control tokens.

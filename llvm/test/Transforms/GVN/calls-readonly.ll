@@ -6,7 +6,7 @@ target triple = "i386-apple-darwin7"
 
 define ptr @test(ptr %P, ptr %Q, i32 %x, i32 %y) nounwind readonly {
 entry:
-  %0 = tail call i32 @strlen(ptr %P)              ; <i32> [#uses=2]
+  %0 = tail call i32 @strlen(ptr %P), !prof !0    ; <i32> [#uses=2]
   %1 = icmp eq i32 %0, 0                          ; <i1> [#uses=1]
   br i1 %1, label %bb, label %bb1
 
@@ -17,7 +17,7 @@ bb:                                               ; preds = %entry
 bb1:                                              ; preds = %bb, %entry
   %x_addr.0 = phi i32 [ %2, %bb ], [ %x, %entry ] ; <i32> [#uses=1]
   %3 = tail call ptr @strchr(ptr %Q, i32 97)      ; <ptr> [#uses=1]
-  %4 = tail call i32 @strlen(ptr %P)              ; <i32> [#uses=1]
+  %4 = tail call i32 @strlen(ptr %P) , !prof !1   ; <i32> [#uses=1]
   %5 = add i32 %x_addr.0, %0                      ; <i32> [#uses=1]
   %.sum = sub i32 %5, %4                          ; <i32> [#uses=1]
   %6 = getelementptr i8, ptr %3, i32 %.sum            ; <ptr> [#uses=1]
@@ -26,7 +26,7 @@ bb1:                                              ; preds = %bb, %entry
 
 ; CHECK: define ptr @test(ptr %P, ptr %Q, i32 %x, i32 %y) #0 {
 ; CHECK: entry:
-; CHECK-NEXT:   %0 = tail call i32 @strlen(ptr %P)
+; CHECK-NEXT:   %0 = tail call i32 @strlen(ptr %P), !prof !0
 ; CHECK-NEXT:   %1 = icmp eq i32 %0, 0
 ; CHECK-NEXT:   br i1 %1, label %bb, label %bb1
 ; CHECK: bb:
@@ -43,3 +43,6 @@ bb1:                                              ; preds = %bb, %entry
 declare i32 @strlen(ptr) nounwind readonly
 
 declare ptr @strchr(ptr, i32) nounwind readonly
+
+!0 = !{!"branch_weights", i32 95}
+!1 = !{!"branch_weights", i32 95}

@@ -63,10 +63,10 @@ zero:
 ; CHECK:        JMP_1 %bb.4
 ; CHECK:      bb.4
 ; CHECK:      bb.5
-; CHECK:        %4:gr64 = LEA64r %10, 1, $noreg, 8, $noreg
-; CHECK-LV:     %3:gr64 = COPY killed %10
-; CHECK-LIS:    %3:gr64 = COPY %10
-; CHECK-LV:     TEST64rr killed %1, %1, implicit-def $eflags
+; CHECK:        %3:gr64 = COPY %10
+; CHECK:        %4:gr64 = COPY killed %10
+; CHECK:        %4:gr64 = nuw ADD64ri32 %4, 8, implicit-def dead $eflags
+; CHECK:        TEST64rr killed %1, %1, implicit-def $eflags
 ; CHECK:        JCC_1 %bb.1, 5, implicit killed $eflags
 ; CHECK:        JMP_1 %bb.6
 define void @test2(i8 addrspace(1)* %this, i32 %0, i32 addrspace(1)* %p0, i8 addrspace(1)* %p1) gc "statepoint-example" personality i32* ()* @fake_personality_function {

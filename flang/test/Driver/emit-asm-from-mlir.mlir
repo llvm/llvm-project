@@ -1,4 +1,4 @@
-// REQUIRES: aarch64-registered-target || x86-registered-target || arm-registered-target
+// REQUIRES: target=aarch64{{.*}} || target=x86{{.*}} || target=arm{{.*}}
 // Above restricts the test to those architectures that match "ret" to return
 // from a function.
 // Verify that the driver can consume MLIR/FIR files.

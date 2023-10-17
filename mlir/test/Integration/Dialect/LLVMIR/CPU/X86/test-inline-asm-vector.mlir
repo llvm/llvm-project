@@ -1,9 +1,9 @@
-// RUN: mlir-opt %s -convert-vector-to-llvm |  \
+// RUN: mlir-opt %s -convert-vector-to-scf -convert-scf-to-cf -convert-vector-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts |  \
 // RUN: mlir-cpu-runner -e entry_point_with_all_constants -entry-point-result=void \
-// RUN:   -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext
+// RUN:   -shared-libs=%mlir_c_runner_utils
 
 module {
-  llvm.func @function_to_run(%a: vector<8xf32>, %b: vector<8xf32>)  {
+  func.func @function_to_run(%a: vector<8xf32>, %b: vector<8xf32>)  {
     // CHECK: ( 8, 10, 12, 14, 16, 18, 20, 22 )
     %r0 = llvm.inline_asm asm_dialect = intel
         "vaddps $0, $1, $2", "=x,x,x" %a, %b:
@@ -36,21 +36,21 @@ module {
       : vector<8xf32>, vector<8xf32>
     vector.print %r4: vector<8xf32>
 
-    llvm.return
+    return
   }
 
   // Solely exists to prevent inlining and get the expected assembly.
-  llvm.func @entry_point(%a: vector<8xf32>, %b: vector<8xf32>)  {
-    llvm.call @function_to_run(%a, %b) : (vector<8xf32>, vector<8xf32>) -> ()
-    llvm.return
+  func.func @entry_point(%a: vector<8xf32>, %b: vector<8xf32>)  {
+    func.call @function_to_run(%a, %b) : (vector<8xf32>, vector<8xf32>) -> ()
+    return
   }
 
-  llvm.func @entry_point_with_all_constants()  {
+  func.func @entry_point_with_all_constants()  {
     %a = llvm.mlir.constant(dense<[0.0, 1.0,  2.0,  3.0,  4.0,  5.0,  6.0,  7.0]>
       : vector<8xf32>) : vector<8xf32>
     %b = llvm.mlir.constant(dense<[8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0]>
       : vector<8xf32>) : vector<8xf32>
-    llvm.call @function_to_run(%a, %b) : (vector<8xf32>, vector<8xf32>) -> ()
-    llvm.return
+    func.call @function_to_run(%a, %b) : (vector<8xf32>, vector<8xf32>) -> ()
+    return
   }
 }

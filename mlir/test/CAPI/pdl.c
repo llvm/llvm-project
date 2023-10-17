@@ -333,5 +333,6 @@ int main(void) {
   testRangeType(ctx);
   testTypeType(ctx);
   testValueType(ctx);
+  mlirContextDestroy(ctx);
   return EXIT_SUCCESS;
 }

@@ -11,6 +11,12 @@ define <vscale x 1 x i32> @spill_zvlsseg_nxv1i32(ptr %base, i64 %vl) nounwind {
 ; SPILL-O0-NEXT:    csrr a2, vlenb
 ; SPILL-O0-NEXT:    slli a2, a2, 1
 ; SPILL-O0-NEXT:    sub sp, sp, a2
+; SPILL-O0-NEXT:    # implicit-def: $v8
+; SPILL-O0-NEXT:    # implicit-def: $v9
+; SPILL-O0-NEXT:    # implicit-def: $v10
+; SPILL-O0-NEXT:    # implicit-def: $v9
+; SPILL-O0-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
+; SPILL-O0-NEXT:    vmv1r.v v9, v10
 ; SPILL-O0-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; SPILL-O0-NEXT:    vlseg2e32.v v8, (a0)
 ; SPILL-O0-NEXT:    vmv1r.v v8, v9
@@ -45,7 +51,6 @@ define <vscale x 1 x i32> @spill_zvlsseg_nxv1i32(ptr %base, i64 %vl) nounwind {
 ; SPILL-O2-NEXT:    vl1r.v v7, (a0) # Unknown-size Folded Reload
 ; SPILL-O2-NEXT:    add a0, a0, a1
 ; SPILL-O2-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
-; SPILL-O2-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; SPILL-O2-NEXT:    csrr a0, vlenb
 ; SPILL-O2-NEXT:    slli a0, a0, 1
 ; SPILL-O2-NEXT:    add sp, sp, a0
@@ -66,6 +71,12 @@ define <vscale x 2 x i32> @spill_zvlsseg_nxv2i32(ptr %base, i64 %vl) nounwind {
 ; SPILL-O0-NEXT:    csrr a2, vlenb
 ; SPILL-O0-NEXT:    slli a2, a2, 1
 ; SPILL-O0-NEXT:    sub sp, sp, a2
+; SPILL-O0-NEXT:    # implicit-def: $v8
+; SPILL-O0-NEXT:    # implicit-def: $v9
+; SPILL-O0-NEXT:    # implicit-def: $v10
+; SPILL-O0-NEXT:    # implicit-def: $v9
+; SPILL-O0-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
+; SPILL-O0-NEXT:    vmv1r.v v9, v10
 ; SPILL-O0-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; SPILL-O0-NEXT:    vlseg2e32.v v8, (a0)
 ; SPILL-O0-NEXT:    vmv1r.v v8, v9
@@ -100,7 +111,6 @@ define <vscale x 2 x i32> @spill_zvlsseg_nxv2i32(ptr %base, i64 %vl) nounwind {
 ; SPILL-O2-NEXT:    vl1r.v v7, (a0) # Unknown-size Folded Reload
 ; SPILL-O2-NEXT:    add a0, a0, a1
 ; SPILL-O2-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
-; SPILL-O2-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; SPILL-O2-NEXT:    csrr a0, vlenb
 ; SPILL-O2-NEXT:    slli a0, a0, 1
 ; SPILL-O2-NEXT:    add sp, sp, a0
@@ -121,6 +131,12 @@ define <vscale x 4 x i32> @spill_zvlsseg_nxv4i32(ptr %base, i64 %vl) nounwind {
 ; SPILL-O0-NEXT:    csrr a2, vlenb
 ; SPILL-O0-NEXT:    slli a2, a2, 1
 ; SPILL-O0-NEXT:    sub sp, sp, a2
+; SPILL-O0-NEXT:    # implicit-def: $v8m2
+; SPILL-O0-NEXT:    # implicit-def: $v10m2
+; SPILL-O0-NEXT:    # implicit-def: $v12m2
+; SPILL-O0-NEXT:    # implicit-def: $v10m2
+; SPILL-O0-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2
+; SPILL-O0-NEXT:    vmv2r.v v10, v12
 ; SPILL-O0-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; SPILL-O0-NEXT:    vlseg2e32.v v8, (a0)
 ; SPILL-O0-NEXT:    vmv2r.v v8, v10
@@ -158,7 +174,6 @@ define <vscale x 4 x i32> @spill_zvlsseg_nxv4i32(ptr %base, i64 %vl) nounwind {
 ; SPILL-O2-NEXT:    vl2r.v v6, (a0) # Unknown-size Folded Reload
 ; SPILL-O2-NEXT:    add a0, a0, a1
 ; SPILL-O2-NEXT:    vl2r.v v8, (a0) # Unknown-size Folded Reload
-; SPILL-O2-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; SPILL-O2-NEXT:    csrr a0, vlenb
 ; SPILL-O2-NEXT:    slli a0, a0, 2
 ; SPILL-O2-NEXT:    add sp, sp, a0
@@ -179,6 +194,12 @@ define <vscale x 8 x i32> @spill_zvlsseg_nxv8i32(ptr %base, i64 %vl) nounwind {
 ; SPILL-O0-NEXT:    csrr a2, vlenb
 ; SPILL-O0-NEXT:    slli a2, a2, 2
 ; SPILL-O0-NEXT:    sub sp, sp, a2
+; SPILL-O0-NEXT:    # implicit-def: $v8m4
+; SPILL-O0-NEXT:    # implicit-def: $v12m4
+; SPILL-O0-NEXT:    # implicit-def: $v16m4
+; SPILL-O0-NEXT:    # implicit-def: $v12m4
+; SPILL-O0-NEXT:    # kill: def $v8m4 killed $v8m4 def $v8m4_v12m4
+; SPILL-O0-NEXT:    vmv4r.v v12, v16
 ; SPILL-O0-NEXT:    vsetvli zero, a1, e32, m4, ta, ma
 ; SPILL-O0-NEXT:    vlseg2e32.v v8, (a0)
 ; SPILL-O0-NEXT:    vmv4r.v v8, v12
@@ -216,7 +237,6 @@ define <vscale x 8 x i32> @spill_zvlsseg_nxv8i32(ptr %base, i64 %vl) nounwind {
 ; SPILL-O2-NEXT:    vl4r.v v4, (a0) # Unknown-size Folded Reload
 ; SPILL-O2-NEXT:    add a0, a0, a1
 ; SPILL-O2-NEXT:    vl4r.v v8, (a0) # Unknown-size Folded Reload
-; SPILL-O2-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; SPILL-O2-NEXT:    csrr a0, vlenb
 ; SPILL-O2-NEXT:    slli a0, a0, 3
 ; SPILL-O2-NEXT:    add sp, sp, a0
@@ -237,6 +257,15 @@ define <vscale x 4 x i32> @spill_zvlsseg3_nxv4i32(ptr %base, i64 %vl) nounwind {
 ; SPILL-O0-NEXT:    csrr a2, vlenb
 ; SPILL-O0-NEXT:    slli a2, a2, 1
 ; SPILL-O0-NEXT:    sub sp, sp, a2
+; SPILL-O0-NEXT:    # implicit-def: $v8m2
+; SPILL-O0-NEXT:    # implicit-def: $v10m2
+; SPILL-O0-NEXT:    # implicit-def: $v16m2
+; SPILL-O0-NEXT:    # implicit-def: $v10m2
+; SPILL-O0-NEXT:    # implicit-def: $v14m2
+; SPILL-O0-NEXT:    # implicit-def: $v10m2
+; SPILL-O0-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2
+; SPILL-O0-NEXT:    vmv2r.v v10, v16
+; SPILL-O0-NEXT:    vmv2r.v v12, v14
 ; SPILL-O0-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; SPILL-O0-NEXT:    vlseg3e32.v v8, (a0)
 ; SPILL-O0-NEXT:    vmv2r.v v8, v10
@@ -279,7 +308,6 @@ define <vscale x 4 x i32> @spill_zvlsseg3_nxv4i32(ptr %base, i64 %vl) nounwind {
 ; SPILL-O2-NEXT:    vl2r.v v8, (a0) # Unknown-size Folded Reload
 ; SPILL-O2-NEXT:    add a0, a0, a1
 ; SPILL-O2-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
-; SPILL-O2-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2
 ; SPILL-O2-NEXT:    csrr a0, vlenb
 ; SPILL-O2-NEXT:    li a1, 6
 ; SPILL-O2-NEXT:    mul a0, a0, a1

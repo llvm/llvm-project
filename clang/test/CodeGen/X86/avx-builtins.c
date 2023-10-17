@@ -99,7 +99,7 @@ __m256 test_mm256_broadcast_ps(__m128* A) {
 
 __m256d test_mm256_broadcast_sd(double* A) {
   // CHECK-LABEL: test_mm256_broadcast_sd
-  // CHECK: load double, ptr %{{.*}}
+  // CHECK: load double, ptr %{{.*}}, align 1{{$}}
   // CHECK: insertelement <4 x double> undef, double %{{.*}}, i32 0
   // CHECK: insertelement <4 x double> %{{.*}}, double %{{.*}}, i32 1
   // CHECK: insertelement <4 x double> %{{.*}}, double %{{.*}}, i32 2
@@ -109,7 +109,7 @@ __m256d test_mm256_broadcast_sd(double* A) {
 
 __m128 test_mm_broadcast_ss(float* A) {
   // CHECK-LABEL: test_mm_broadcast_ss
-  // CHECK: load float, ptr %{{.*}}
+  // CHECK: load float, ptr %{{.*}}, align 1{{$}}
   // CHECK: insertelement <4 x float> undef, float %{{.*}}, i32 0
   // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 1
   // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 2
@@ -119,7 +119,7 @@ __m128 test_mm_broadcast_ss(float* A) {
 
 __m256 test_mm256_broadcast_ss(float* A) {
   // CHECK-LABEL: test_mm256_broadcast_ss
-  // CHECK: load float, ptr %{{.*}}
+  // CHECK: load float, ptr %{{.*}}, align 1{{$}}
   // CHECK: insertelement <8 x float> undef, float %{{.*}}, i32 0
   // CHECK: insertelement <8 x float> %{{.*}}, float %{{.*}}, i32 1
   // CHECK: insertelement <8 x float> %{{.*}}, float %{{.*}}, i32 2
@@ -143,7 +143,8 @@ __m256i test_mm256_castpd_si256(__m256d A) {
 
 __m256d test_mm256_castpd128_pd256(__m128d A) {
   // CHECK-LABEL: test_mm256_castpd128_pd256
-  // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  // CHECK: [[A:%.*]] = freeze <2 x double> poison
+  // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> [[A]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   return _mm256_castpd128_pd256(A);
 }
 
@@ -165,7 +166,8 @@ __m256i test_mm256_castps_si256(__m256 A) {
 
 __m256 test_mm256_castps128_ps256(__m128 A) {
   // CHECK-LABEL: test_mm256_castps128_ps256
-  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+  // CHECK: [[A:%.*]] = freeze <4 x float> poison
+  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> [[A]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   return _mm256_castps128_ps256(A);
 }
 
@@ -177,7 +179,8 @@ __m128 test_mm256_castps256_ps128(__m256 A) {
 
 __m256i test_mm256_castsi128_si256(__m128i A) {
   // CHECK-LABEL: test_mm256_castsi128_si256
-  // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  // CHECK: [[A:%.*]] = freeze <2 x i64> poison
+  // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> [[A]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   return _mm256_castsi128_si256(A);
 }
 
@@ -1937,14 +1940,32 @@ void test_mm256_stream_pd(double* A, __m256d B) {
   _mm256_stream_pd(A, B);
 }
 
+void test_mm256_stream_pd_void(void *A, __m256d B) {
+  // CHECK-LABEL: test_mm256_stream_pd_void
+  // CHECK: store <4 x double> %{{.*}}, ptr %{{.*}}, align 32, !nontemporal
+  _mm256_stream_pd(A, B);
+}
+
 void test_mm256_stream_ps(float* A, __m256 B) {
   // CHECK-LABEL: test_mm256_stream_ps
   // CHECK: store <8 x float> %{{.*}}, ptr %{{.*}}, align 32, !nontemporal
   _mm256_stream_ps(A, B);
 }
 
+void test_mm256_stream_ps_void(void *A, __m256 B) {
+  // CHECK-LABEL: test_mm256_stream_ps_void
+  // CHECK: store <8 x float> %{{.*}}, ptr %{{.*}}, align 32, !nontemporal
+  _mm256_stream_ps(A, B);
+}
+
 void test_mm256_stream_si256(__m256i* A, __m256i B) {
   // CHECK-LABEL: test_mm256_stream_si256
+  // CHECK: store <4 x i64> %{{.*}}, ptr %{{.*}}, align 32, !nontemporal
+  _mm256_stream_si256(A, B);
+}
+
+void test_mm256_stream_si256_void(void *A, __m256i B) {
+  // CHECK-LABEL: test_mm256_stream_si256_void
   // CHECK: store <4 x i64> %{{.*}}, ptr %{{.*}}, align 32, !nontemporal
   _mm256_stream_si256(A, B);
 }

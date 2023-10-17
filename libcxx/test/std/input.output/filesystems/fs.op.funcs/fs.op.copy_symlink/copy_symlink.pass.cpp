@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
+// UNSUPPORTED: no-filesystem
+// UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
 
@@ -19,14 +21,11 @@
 #include <cassert>
 
 #include "test_macros.h"
-#include "rapid-cxx-test.h"
 #include "filesystem_test_helper.h"
 
 using namespace fs;
 
-TEST_SUITE(filesystem_copy_symlink_test_suite)
-
-TEST_CASE(test_signatures)
+static void test_signatures()
 {
     const path p; ((void)p);
     std::error_code ec; ((void)ec);
@@ -35,7 +34,7 @@ TEST_CASE(test_signatures)
 }
 
 
-TEST_CASE(test_error_reporting)
+static void test_error_reporting()
 {
     auto checkThrow = [](path const& f, path const& t, const std::error_code& ec)
     {
@@ -62,23 +61,23 @@ TEST_CASE(test_error_reporting)
     { // from is a file, not a symlink
         std::error_code ec;
         fs::copy_symlink(file, dne, ec);
-        TEST_REQUIRE(ec);
-        TEST_CHECK(checkThrow(file, dne, ec));
+        assert(ec);
+        assert(checkThrow(file, dne, ec));
     }
     { // from is a file, not a symlink
         std::error_code ec;
         fs::copy_symlink(dir, dne, ec);
-        TEST_REQUIRE(ec);
-        TEST_CHECK(checkThrow(dir, dne, ec));
+        assert(ec);
+        assert(checkThrow(dir, dne, ec));
     }
     { // destination exists
         std::error_code ec;
         fs::copy_symlink(sym, file2, ec);
-        TEST_REQUIRE(ec);
+        assert(ec);
     }
 }
 
-TEST_CASE(copy_symlink_basic)
+static void copy_symlink_basic()
 {
     scoped_test_env env;
     const path dir = env.create_dir("dir");
@@ -89,19 +88,24 @@ TEST_CASE(copy_symlink_basic)
         const path dest = env.make_env_path("dest1");
         std::error_code ec;
         fs::copy_symlink(dir_sym, dest, ec);
-        TEST_REQUIRE(!ec);
-        TEST_CHECK(is_symlink(dest));
-        TEST_CHECK(equivalent(dest, dir));
+        assert(!ec);
+        assert(is_symlink(dest));
+        assert(equivalent(dest, dir));
     }
     { // test for file symlinks
         const path dest = env.make_env_path("dest2");
         std::error_code ec;
         fs::copy_symlink(file_sym, dest, ec);
-        TEST_REQUIRE(!ec);
-        TEST_CHECK(is_symlink(dest));
-        TEST_CHECK(equivalent(dest, file));
+        assert(!ec);
+        assert(is_symlink(dest));
+        assert(equivalent(dest, file));
     }
 }
 
+int main(int, char**) {
+    test_signatures();
+    test_error_reporting();
+    copy_symlink_basic();
 
-TEST_SUITE_END()
+    return 0;
+}

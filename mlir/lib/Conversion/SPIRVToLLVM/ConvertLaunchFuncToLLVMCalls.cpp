@@ -33,7 +33,7 @@
 #include "llvm/Support/FormatVariadic.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_LOWERHOSTCODETOLLVM
+#define GEN_PASS_DEF_LOWERHOSTCODETOLLVMPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -70,11 +70,7 @@ static unsigned calculateGlobalIndex(spirv::GlobalVariableOp op) {
 /// Copies the given number of bytes from src to dst pointers.
 static void copy(Location loc, Value dst, Value src, Value size,
                  OpBuilder &builder) {
-  MLIRContext *context = builder.getContext();
-  auto llvmI1Type = IntegerType::get(context, 1);
-  Value isVolatile = builder.create<LLVM::ConstantOp>(
-      loc, llvmI1Type, builder.getBoolAttr(false));
-  builder.create<LLVM::MemcpyOp>(loc, dst, src, size, isVolatile);
+  builder.create<LLVM::MemcpyOp>(loc, dst, src, size, /*isVolatile=*/false);
 }
 
 /// Encodes the binding and descriptor set numbers into a new symbolic name.
@@ -220,9 +216,8 @@ class GPULaunchLowering : public ConvertOpToLLVMPattern<gpu::LaunchFuncOp> {
     auto kernelOperands = adaptor.getOperands().take_back(numKernelOperands);
     for (const auto &operand : llvm::enumerate(kernelOperands)) {
       // Check if the kernel's operand is a ranked memref.
-      auto memRefType = launchOp.getKernelOperand(operand.index())
-                            .getType()
-                            .dyn_cast<MemRefType>();
+      auto memRefType = dyn_cast<MemRefType>(
+          launchOp.getKernelOperand(operand.index()).getType());
       if (!memRefType)
         return failure();
 
@@ -241,7 +236,7 @@ class GPULaunchLowering : public ConvertOpToLLVMPattern<gpu::LaunchFuncOp> {
       // LLVM dialect global variable.
       spirv::GlobalVariableOp spirvGlobal = globalVariableMap[operand.index()];
       auto pointeeType =
-          spirvGlobal.getType().cast<spirv::PointerType>().getPointeeType();
+          cast<spirv::PointerType>(spirvGlobal.getType()).getPointeeType();
       auto dstGlobalType = typeConverter->convertType(pointeeType);
       if (!dstGlobalType)
         return failure();
@@ -262,7 +257,9 @@ class GPULaunchLowering : public ConvertOpToLLVMPattern<gpu::LaunchFuncOp> {
       // Copy the data from src operand pointer to dst global variable. Save
       // src, dst and size so that we can copy data back after emulating the
       // kernel call.
-      Value dst = rewriter.create<LLVM::AddressOfOp>(loc, dstGlobal);
+      Value dst = rewriter.create<LLVM::AddressOfOp>(
+          loc, typeConverter->convertType(spirvGlobal.getType()),
+          dstGlobal.getSymName());
       copy(loc, dst, src, sizeBytes, rewriter);
 
       CopyInfo info;
@@ -281,8 +278,10 @@ class GPULaunchLowering : public ConvertOpToLLVMPattern<gpu::LaunchFuncOp> {
 };
 
 class LowerHostCodeToLLVM
-    : public impl::LowerHostCodeToLLVMBase<LowerHostCodeToLLVM> {
+    : public impl::LowerHostCodeToLLVMPassBase<LowerHostCodeToLLVM> {
 public:
+  using Base::Base;
+
   void runOnOperation() override {
     ModuleOp module = getOperation();
 
@@ -299,11 +298,13 @@ public:
 
     // Specify options to lower to LLVM and pull in the conversion patterns.
     LowerToLLVMOptions options(module.getContext());
+    options.useOpaquePointers = useOpaquePointers;
+
     auto *context = module.getContext();
     RewritePatternSet patterns(context);
     LLVMTypeConverter typeConverter(context, options);
     mlir::arith::populateArithToLLVMConversionPatterns(typeConverter, patterns);
-    populateMemRefToLLVMConversionPatterns(typeConverter, patterns);
+    populateFinalizeMemRefToLLVMConversionPatterns(typeConverter, patterns);
     populateFuncToLLVMConversionPatterns(typeConverter, patterns);
     patterns.add<GPULaunchLowering>(typeConverter);
 
@@ -327,8 +328,3 @@ public:
   }
 };
 } // namespace
-
-std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
-mlir::createLowerHostCodeToLLVMPass() {
-  return std::make_unique<LowerHostCodeToLLVM>();
-}

@@ -241,9 +241,8 @@ works.
 
    $ ninja clang
    $ bin/clang -Wall ~/test.cc
-
-   **/path/test.cc:1:124:** **warning****: in order to understand recursion, you must
-   first understand recursion [-Winfinite-recursion]**
+   /path/test.cc:1:124: warning: in order to understand recursion, you must
+   first understand recursion [-Winfinite-recursion]
 
 We should also run the tests to make sure we didn't break something.
 
@@ -317,7 +316,7 @@ the change was made.
    $ git commit -am "[Diagnostic] Clarify -Winfinite-recursion message"
 
 Now we're ready to send this change out into the world! By the way,
-There is a unwritten convention of using tag for your commit. Tags
+There is an unwritten convention of using tag for your commit. Tags
 usually represent modules that you intend to modify. If you don't know
 the tags for your modules, you can look at the commit history :
 https://github.com/llvm/llvm-project/commits/main.
@@ -345,6 +344,12 @@ all the \*-commits mailing lists).
 
 Uploading a change for review
 -----------------------------
+
+.. warning::
+
+  Phabricator is deprecated and will be switched to read-only mode in October
+  2023. For new code contributions use :ref:`GitHub Pull Requests <github-reviews>`.
+  This section contains old information that needs to be updated.
 
 LLVM code reviews happen at https://reviews.llvm.org. The web interface
 is called Phabricator, and the code review part is Differential. You

@@ -115,7 +115,7 @@ Memory reclaiming
 Primary and Secondary allocators have different behaviors with regard to
 reclaiming. While Secondary mapped allocations can be unmapped on deallocation,
 it isn't the case for the Primary, which could lead to a steady growth of the
-RSS of a process. To counteracty this, if the underlying OS allows it, pages
+RSS of a process. To counteract this, if the underlying OS allows it, pages
 that are covered by contiguous free memory blocks in the Primary can be
 released: this generally means they won't count towards the RSS of a process and
 be zero filled on subsequent accesses). This is done in the deallocation path,
@@ -265,7 +265,16 @@ The following "mallopt" options are available (options are defined in
 |                           | the interval to the minimum and maximum value as      |
 |                           | specified at compile time).                           |
 +---------------------------+-------------------------------------------------------+
-| M_PURGE                   | Forces immediate memory reclaiming (value is unused). |
+| M_PURGE                   | Forces immediate memory reclaiming but does not       |
+|                           | reclaim everything. For smaller size classes, there   |
+|                           | is still some memory that is not reclaimed due to the |
+|                           | extra time it takes and the small amount of memory    |
+|                           | that can be reclaimed.                                |
+|                           | The value is ignored.                                 |
++---------------------------+-------------------------------------------------------+
+| M_PURGE_ALL               | Same as M_PURGE but will force release all possible   |
+|                           | memory regardless of how long it takes.               |
+|                           | The value is ignored.                                 |
 +---------------------------+-------------------------------------------------------+
 | M_MEMTAG_TUNING           | Tunes the allocator's choice of memory tags to make   |
 |                           | it more likely that a certain class of memory errors  |

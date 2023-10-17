@@ -63,11 +63,8 @@ define i32 @foo(ptr noalias nocapture %A, ptr noalias nocapture %B, float %T) {
 ; PR41892
 define void @test_v4f32_v2f32_store(<4 x float> %f, ptr %p){
 ; CHECK-LABEL: @test_v4f32_v2f32_store(
-; CHECK-NEXT:    [[X0:%.*]] = extractelement <4 x float> [[F:%.*]], i64 0
-; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x float> [[F]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[X0]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[X1]], i32 1
-; CHECK-NEXT:    store <2 x float> [[TMP2]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[F:%.*]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    store <2 x float> [[TMP1]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %x0 = extractelement <4 x float> %f, i64 0
@@ -95,13 +92,10 @@ define void @test_v4f32_v2f32_splat_store(<4 x float> %f, ptr %p){
 
 define void @test_v4f32_v3f32_store(<4 x float> %f, ptr %p){
 ; CHECK-LABEL: @test_v4f32_v3f32_store(
-; CHECK-NEXT:    [[X0:%.*]] = extractelement <4 x float> [[F:%.*]], i64 0
-; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x float> [[F]], i64 1
-; CHECK-NEXT:    [[X2:%.*]] = extractelement <4 x float> [[F]], i64 2
+; CHECK-NEXT:    [[X2:%.*]] = extractelement <4 x float> [[F:%.*]], i64 2
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds float, ptr [[P:%.*]], i64 2
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[X0]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[X1]], i32 1
-; CHECK-NEXT:    store <2 x float> [[TMP2]], ptr [[P]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[F]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    store <2 x float> [[TMP1]], ptr [[P]], align 4
 ; CHECK-NEXT:    store float [[X2]], ptr [[P2]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -156,10 +150,8 @@ define void @test_v4f32_v4f32_store(<4 x float> %f, ptr %p){
 
 define void @test_v4f32_v4f32_splat_store(<4 x float> %f, ptr %p){
 ; CHECK-LABEL: @test_v4f32_v4f32_splat_store(
-; CHECK-NEXT:    [[X0:%.*]] = extractelement <4 x float> [[F:%.*]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[X0]], i32 0
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    store <4 x float> [[SHUFFLE]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[F:%.*]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %x0 = extractelement <4 x float> %f, i64 0

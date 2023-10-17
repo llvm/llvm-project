@@ -1,10 +1,10 @@
 // RUN: mlir-opt %s -convert-elementwise-to-linalg \
-// RUN: -arith-bufferize -linalg-bufferize -tensor-bufferize \
-// RUN: -func-bufferize -buffer-deallocation -convert-linalg-to-loops \
-// RUN: -convert-linalg-to-llvm --convert-memref-to-llvm -convert-func-to-llvm \
-// RUN: -reconcile-unrealized-casts | \
+// RUN: -arith-bufferize -linalg-bufferize -tensor-bufferize -func-bufferize \
+// RUN: -canonicalize -buffer-deallocation-pipeline -convert-bufferization-to-memref -convert-linalg-to-loops \
+// RUN: -convert-scf-to-cf -convert-arith-to-llvm -convert-cf-to-llvm --finalize-memref-to-llvm \
+// RUN: -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
-// RUN:   -shared-libs=%mlir_lib_dir/libmlir_runner_utils%shlibext \
+// RUN:   -shared-libs=%mlir_runner_utils \
 // RUN: | FileCheck %s
 
 func.func @main() {

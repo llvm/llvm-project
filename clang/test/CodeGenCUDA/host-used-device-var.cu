@@ -73,9 +73,8 @@ constexpr int constexpr_var1a = 1;
 inline constexpr int constexpr_var1b = 1;
 
 // Check constant constexpr variables ODR-used by host code only.
-// Non-inline constexpr variable has internal linkage, therefore it is not accessible by host and not kept.
-// Inline constexpr variable has linkonce_ord linkage, therefore it can be accessed by host and kept.
-// DEV-NEG-NOT: constexpr_var2a
+// Device-side constexpr variables accessed by host code should be externalized and kept.
+// DEV-DAG: @_ZL15constexpr_var2a = addrspace(4) externally_initialized constant i32 2
 // DEV-DAG: @constexpr_var2b = linkonce_odr addrspace(4) externally_initialized constant i32 2
 __constant__ constexpr int constexpr_var2a = 2;
 inline __constant__ constexpr int constexpr_var2b = 2;
@@ -184,6 +183,7 @@ public:
 
 // Check the exact list of variables to ensure @_ZL2u4 is not among them.
 // DEV: @llvm.compiler.used = {{[^@]*}} @_Z10p_add_funcIiE
+// DEV-SAME: {{^[^@]*}} @_ZL15constexpr_var2a
 // DEV-SAME: {{^[^@]*}} @_ZL2u3
 // DEV-SAME: {{^[^@]*}} @_ZZ4fun1vE11static_var1
 // DEV-SAME: {{^[^@]*}} @_ZZZN21TestStaticVarInLambda3funEvENKUlPcE_clES0_E4var2

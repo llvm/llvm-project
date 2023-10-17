@@ -148,7 +148,7 @@ void GetThreadStackTopAndBottom(bool at_initialization, uptr *stack_top,
   pthread_attr_t attr;
   pthread_attr_init(&attr);
   CHECK_EQ(pthread_getattr_np(pthread_self(), &attr), 0);
-  my_pthread_attr_getstack(&attr, &stackaddr, &stacksize);
+  internal_pthread_attr_getstack(&attr, &stackaddr, &stacksize);
   pthread_attr_destroy(&attr);
 #endif  // SANITIZER_SOLARIS
 
@@ -583,6 +583,7 @@ static void GetTls(uptr *addr, uptr *size) {
       *addr = (uptr)tcb->tcb_dtv[1];
     }
   }
+#else
 #error "Unknown OS"
 #endif
 }
@@ -697,11 +698,8 @@ static int dl_iterate_phdr_cb(dl_phdr_info *info, size_t size, void *arg) {
     return AddModuleSegments(module_name.data(), info, data->modules);
   }
 
-  if (info->dlpi_name) {
-    InternalScopedString module_name;
-    module_name.append("%s", info->dlpi_name);
-    return AddModuleSegments(module_name.data(), info, data->modules);
-  }
+  if (info->dlpi_name)
+    return AddModuleSegments(info->dlpi_name, info, data->modules);
 
   return 0;
 }

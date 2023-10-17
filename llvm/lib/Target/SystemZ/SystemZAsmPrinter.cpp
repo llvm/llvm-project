@@ -13,9 +13,11 @@
 
 #include "SystemZAsmPrinter.h"
 #include "MCTargetDesc/SystemZInstPrinter.h"
+#include "MCTargetDesc/SystemZMCExpr.h"
 #include "SystemZConstantPoolValue.h"
 #include "SystemZMCInstLower.h"
 #include "TargetInfo/SystemZTargetInfo.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
@@ -25,6 +27,7 @@
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/ConvertEBCDIC.h"
 
 using namespace llvm;
 
@@ -140,6 +143,50 @@ void SystemZAsmPrinter::emitCallInformation(CallType CT) {
                  MCInstBuilder(SystemZ::BCRAsm)
                      .addImm(0)
                      .addReg(SystemZMC::GR64Regs[static_cast<unsigned>(CT)]));
+}
+
+uint32_t SystemZAsmPrinter::AssociatedDataAreaTable::insert(const MCSymbol *Sym,
+                                                            unsigned SlotKind) {
+  auto Key = std::make_pair(Sym, SlotKind);
+  auto It = Displacements.find(Key);
+
+  if (It != Displacements.end())
+    return (*It).second;
+
+  // Determine length of descriptor.
+  uint32_t Length;
+  switch (SlotKind) {
+  case SystemZII::MO_ADA_DIRECT_FUNC_DESC:
+    Length = 2 * PointerSize;
+    break;
+  default:
+    Length = PointerSize;
+    break;
+  }
+
+  uint32_t Displacement = NextDisplacement;
+  Displacements[std::make_pair(Sym, SlotKind)] = NextDisplacement;
+  NextDisplacement += Length;
+
+  return Displacement;
+}
+
+uint32_t
+SystemZAsmPrinter::AssociatedDataAreaTable::insert(const MachineOperand MO) {
+  MCSymbol *Sym;
+  if (MO.getType() == MachineOperand::MO_GlobalAddress) {
+    const GlobalValue *GV = MO.getGlobal();
+    Sym = MO.getParent()->getMF()->getTarget().getSymbol(GV);
+    assert(Sym && "No symbol");
+  } else if (MO.getType() == MachineOperand::MO_ExternalSymbol) {
+    const char *SymName = MO.getSymbolName();
+    Sym = MO.getParent()->getMF()->getContext().getOrCreateSymbol(SymName);
+    assert(Sym && "No symbol");
+  } else
+    llvm_unreachable("Unexpected operand type");
+
+  unsigned ADAslotType = MO.getTargetFlags();
+  return insert(Sym, ADAslotType);
 }
 
 void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
@@ -272,6 +319,43 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
     emitCallInformation(CallType::BASR33);
     return;
 
+  case SystemZ::ADA_ENTRY_VALUE:
+  case SystemZ::ADA_ENTRY: {
+    const SystemZSubtarget &Subtarget = MF->getSubtarget<SystemZSubtarget>();
+    const SystemZInstrInfo *TII = Subtarget.getInstrInfo();
+    uint32_t Disp = ADATable.insert(MI->getOperand(1));
+    Register TargetReg = MI->getOperand(0).getReg();
+
+    Register ADAReg = MI->getOperand(2).getReg();
+    Disp += MI->getOperand(3).getImm();
+    bool LoadAddr = MI->getOpcode() == SystemZ::ADA_ENTRY;
+
+    unsigned Op0 = LoadAddr ? SystemZ::LA : SystemZ::LG;
+    unsigned Op = TII->getOpcodeForOffset(Op0, Disp);
+
+    Register IndexReg = 0;
+    if (!Op) {
+      if (TargetReg != ADAReg) {
+        IndexReg = TargetReg;
+        // Use TargetReg to store displacement.
+        EmitToStreamer(
+            *OutStreamer,
+            MCInstBuilder(SystemZ::LLILF).addReg(TargetReg).addImm(Disp));
+      } else
+        EmitToStreamer(
+            *OutStreamer,
+            MCInstBuilder(SystemZ::ALGFI).addReg(TargetReg).addImm(Disp));
+      Disp = 0;
+      Op = Op0;
+    }
+    EmitToStreamer(*OutStreamer, MCInstBuilder(Op)
+                                     .addReg(TargetReg)
+                                     .addReg(IndexReg)
+                                     .addImm(Disp)
+                                     .addReg(ADAReg));
+
+    return;
+  }
   case SystemZ::CallBRASL:
     LoweredMI = MCInstBuilder(SystemZ::BRASL)
       .addReg(SystemZ::R14D)
@@ -760,7 +844,7 @@ void SystemZAsmPrinter::LowerPATCHPOINT(const MachineInstr &MI,
 void SystemZAsmPrinter::emitAttributes(Module &M) {
   if (M.getModuleFlag("s390x-visible-vector-ABI")) {
     bool HasVectorFeature =
-      TM.getMCSubtargetInfo()->getFeatureBits()[SystemZ::FeatureVector];
+      TM.getMCSubtargetInfo()->hasFeature(SystemZ::FeatureVector);
     OutStreamer->emitGNUAttribute(8, HasVectorFeature ? 2 : 1);
   }
 }
@@ -866,7 +950,80 @@ bool SystemZAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 }
 
 void SystemZAsmPrinter::emitEndOfAsmFile(Module &M) {
+  auto TT = OutContext.getTargetTriple();
+  if (TT.isOSzOS()) {
+    emitADASection();
+  }
   emitAttributes(M);
+}
+
+void SystemZAsmPrinter::emitADASection() {
+  OutStreamer->pushSection();
+
+  const unsigned PointerSize = getDataLayout().getPointerSize();
+  OutStreamer->switchSection(getObjFileLowering().getADASection());
+
+  unsigned EmittedBytes = 0;
+  for (auto &Entry : ADATable.getTable()) {
+    const MCSymbol *Sym;
+    unsigned SlotKind;
+    std::tie(Sym, SlotKind) = Entry.first;
+    unsigned Offset = Entry.second;
+    assert(Offset == EmittedBytes && "Offset not as expected");
+    (void)EmittedBytes;
+#define EMIT_COMMENT(Str)                                                      \
+  OutStreamer->AddComment(Twine("Offset ")                                     \
+                              .concat(utostr(Offset))                          \
+                              .concat(" " Str " ")                             \
+                              .concat(Sym->getName()));
+    switch (SlotKind) {
+    case SystemZII::MO_ADA_DIRECT_FUNC_DESC:
+      // Language Environment DLL logic requires function descriptors, for
+      // imported functions, that are placed in the ADA to be 8 byte aligned.
+      EMIT_COMMENT("function descriptor of");
+      OutStreamer->emitValue(
+          SystemZMCExpr::create(SystemZMCExpr::VK_SystemZ_RCon,
+                                MCSymbolRefExpr::create(Sym, OutContext),
+                                OutContext),
+          PointerSize);
+      OutStreamer->emitValue(
+          SystemZMCExpr::create(SystemZMCExpr::VK_SystemZ_VCon,
+                                MCSymbolRefExpr::create(Sym, OutContext),
+                                OutContext),
+          PointerSize);
+      EmittedBytes += PointerSize * 2;
+      break;
+    case SystemZII::MO_ADA_DATA_SYMBOL_ADDR:
+      EMIT_COMMENT("pointer to data symbol");
+      OutStreamer->emitValue(
+          SystemZMCExpr::create(SystemZMCExpr::VK_SystemZ_None,
+                                MCSymbolRefExpr::create(Sym, OutContext),
+                                OutContext),
+          PointerSize);
+      EmittedBytes += PointerSize;
+      break;
+    case SystemZII::MO_ADA_INDIRECT_FUNC_DESC: {
+      MCSymbol *Alias = OutContext.createTempSymbol(
+          Twine(Sym->getName()).concat("@indirect"));
+      OutStreamer->emitAssignment(Alias,
+                                  MCSymbolRefExpr::create(Sym, OutContext));
+      OutStreamer->emitSymbolAttribute(Alias, MCSA_IndirectSymbol);
+
+      EMIT_COMMENT("pointer to function descriptor");
+      OutStreamer->emitValue(
+          SystemZMCExpr::create(SystemZMCExpr::VK_SystemZ_VCon,
+                                MCSymbolRefExpr::create(Alias, OutContext),
+                                OutContext),
+          PointerSize);
+      EmittedBytes += PointerSize;
+      break;
+    }
+    default:
+      llvm_unreachable("Unexpected slot kind");
+    }
+#undef EMIT_COMMENT
+  }
+  OutStreamer->popSection();
 }
 
 void SystemZAsmPrinter::emitFunctionBodyEnd() {
@@ -887,7 +1044,8 @@ void SystemZAsmPrinter::emitFunctionBodyEnd() {
 }
 
 static void emitPPA1Flags(std::unique_ptr<MCStreamer> &OutStreamer, bool VarArg,
-                          bool StackProtector, bool FPRMask, bool VRMask) {
+                          bool StackProtector, bool FPRMask, bool VRMask,
+                          bool HasName) {
   enum class PPA1Flag1 : uint8_t {
     DSA64Bit = (0x80 >> 0),
     VarArg = (0x80 >> 7),
@@ -913,7 +1071,7 @@ static void emitPPA1Flags(std::unique_ptr<MCStreamer> &OutStreamer, bool VarArg,
   auto Flags1 = PPA1Flag1(0);
   auto Flags2 = PPA1Flag2::ExternalProcedure;
   auto Flags3 = PPA1Flag3(0);
-  auto Flags4 = PPA1Flag4::EPMOffsetPresent | PPA1Flag4::ProcedureNamePresent;
+  auto Flags4 = PPA1Flag4::EPMOffsetPresent;
 
   Flags1 |= PPA1Flag1::DSA64Bit;
 
@@ -929,6 +1087,9 @@ static void emitPPA1Flags(std::unique_ptr<MCStreamer> &OutStreamer, bool VarArg,
 
   if (VRMask)
     Flags4 |= PPA1Flag4::VRMask; // Add emit VR mask flag.
+
+  if (HasName)
+    Flags4 |= PPA1Flag4::ProcedureNamePresent; // Add optional name block.
 
   OutStreamer->AddComment("PPA1 Flags 1");
   if ((Flags1 & PPA1Flag1::DSA64Bit) == PPA1Flag1::DSA64Bit)
@@ -957,8 +1118,35 @@ static void emitPPA1Flags(std::unique_ptr<MCStreamer> &OutStreamer, bool VarArg,
   OutStreamer->AddComment("PPA1 Flags 4");
   if ((Flags4 & PPA1Flag4::VRMask) == PPA1Flag4::VRMask)
     OutStreamer->AddComment("  Bit 2: 1 = Vector Reg Mask is in optional area");
+  if ((Flags4 & PPA1Flag4::ProcedureNamePresent) ==
+      PPA1Flag4::ProcedureNamePresent)
+    OutStreamer->AddComment("  Bit 7: 1 = Name Length and Name");
   OutStreamer->emitInt8(static_cast<uint8_t>(
       Flags4)); // Flags 4 (optional sections, always emit these).
+}
+
+static void emitPPA1Name(std::unique_ptr<MCStreamer> &OutStreamer,
+                         StringRef OutName) {
+  size_t NameSize = OutName.size();
+  uint16_t OutSize;
+  if (NameSize < UINT16_MAX) {
+    OutSize = static_cast<uint16_t>(NameSize);
+  } else {
+    OutName = OutName.substr(0, UINT16_MAX);
+    OutSize = UINT16_MAX;
+  }
+  // Emit padding to ensure that the next optional field word-aligned.
+  uint8_t ExtraZeros = 4 - ((2 + OutSize) % 4);
+
+  SmallString<512> OutnameConv;
+  ConverterEBCDIC::convertToEBCDIC(OutName, OutnameConv);
+  OutName = OutnameConv.str();
+
+  OutStreamer->AddComment("Length of Name");
+  OutStreamer->emitInt16(OutSize);
+  OutStreamer->AddComment("Name of Function");
+  OutStreamer->emitBytes(OutName);
+  OutStreamer->emitZeros(ExtraZeros);
 }
 
 void SystemZAsmPrinter::emitPPA1(MCSymbol *FnEndSym) {
@@ -1052,13 +1240,16 @@ void SystemZAsmPrinter::emitPPA1(MCSymbol *FnEndSym) {
   OutStreamer->AddComment("Saved GPR Mask");
   OutStreamer->emitInt16(SavedGPRMask);
 
+  bool HasName =
+      MF->getFunction().hasName() && MF->getFunction().getName().size() > 0;
+
   emitPPA1Flags(OutStreamer, MF->getFunction().isVarArg(),
                 MFFrame.hasStackProtectorIndex(), SavedFPRMask != 0,
-                TargetHasVector && SavedVRMask != 0);
+                TargetHasVector && SavedVRMask != 0, HasName);
 
   OutStreamer->AddComment("Length/4 of Parms");
   OutStreamer->emitInt16(
-      static_cast<uint16_t>(MFFrame.getMaxCallFrameSize() / 4)); // Parms/4.
+      static_cast<uint16_t>(ZFI->getSizeOfFnParams() / 4)); // Parms/4.
   OutStreamer->AddComment("Length of Code");
   OutStreamer->emitAbsoluteSymbolDiff(FnEndSym, CurrentFnEPMarkerSym, 4);
 
@@ -1096,6 +1287,10 @@ void SystemZAsmPrinter::emitPPA1(MCSymbol *FnEndSym) {
     OutStreamer->emitInt32(FrameAndVROffset);
   }
 
+  // Emit name length and name optional section (0x01 of flags 4)
+  if (HasName)
+    emitPPA1Name(OutStreamer, MF->getFunction().getName());
+
   // Emit offset to entry point optional section (0x80 of flags 4).
   OutStreamer->emitAbsoluteSymbolDiff(CurrentFnEPMarkerSym, CurrentFnPPA1Sym,
                                       4);
@@ -1120,13 +1315,15 @@ void SystemZAsmPrinter::emitFunctionEntryLabel() {
     // EntryPoint Marker
     const MachineFrameInfo &MFFrame = MF->getFrameInfo();
     bool IsUsingAlloca = MFFrame.hasVarSizedObjects();
+    uint32_t DSASize = MFFrame.getStackSize();
+    bool IsLeaf = DSASize == 0 && MFFrame.getCalleeSavedInfo().empty();
 
     // Set Flags
     uint8_t Flags = 0;
+    if (IsLeaf)
+      Flags |= 0x08;
     if (IsUsingAlloca)
       Flags |= 0x04;
-
-    uint32_t DSASize = MFFrame.getStackSize();
 
     // Combine into top 27 bits of DSASize and bottom 5 bits of Flags.
     uint32_t DSAAndFlags = DSASize & 0xFFFFFFE0; // (x/32) << 5
@@ -1145,6 +1342,10 @@ void SystemZAsmPrinter::emitFunctionEntryLabel() {
     if (OutStreamer->isVerboseAsm()) {
       OutStreamer->AddComment("DSA Size 0x" + Twine::utohexstr(DSASize));
       OutStreamer->AddComment("Entry Flags");
+      if (Flags & 0x08)
+        OutStreamer->AddComment("  Bit 1: 1 = Leaf function");
+      else
+        OutStreamer->AddComment("  Bit 1: 0 = Non-leaf function");
       if (Flags & 0x04)
         OutStreamer->AddComment("  Bit 2: 1 = Uses alloca");
       else

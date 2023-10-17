@@ -362,19 +362,19 @@ define <16 x float> @combine_vpermt2var_16f32_vmovddup_mask(<16 x float> %x0, <1
 ; X86-LABEL: combine_vpermt2var_16f32_vmovddup_mask:
 ; X86:       # %bb.0:
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    vpermilps {{.*#+}} zmm0 {%k1} {z} = zmm0[0,1,0,1,4,5,4,5,8,9,8,9,12,13,12,13]
+; X86-NEXT:    vshufps {{.*#+}} zmm0 {%k1} {z} = zmm0[0,1,0,1,4,5,4,5,8,9,8,9,12,13,12,13]
 ; X86-NEXT:    retl
 ;
 ; X64-AVX512F-LABEL: combine_vpermt2var_16f32_vmovddup_mask:
 ; X64-AVX512F:       # %bb.0:
 ; X64-AVX512F-NEXT:    kmovw %edi, %k1
-; X64-AVX512F-NEXT:    vpermilps {{.*#+}} zmm0 {%k1} {z} = zmm0[0,1,0,1,4,5,4,5,8,9,8,9,12,13,12,13]
+; X64-AVX512F-NEXT:    vshufps {{.*#+}} zmm0 {%k1} {z} = zmm0[0,1,0,1,4,5,4,5,8,9,8,9,12,13,12,13]
 ; X64-AVX512F-NEXT:    retq
 ;
 ; X64-AVX512BW-LABEL: combine_vpermt2var_16f32_vmovddup_mask:
 ; X64-AVX512BW:       # %bb.0:
 ; X64-AVX512BW-NEXT:    kmovd %edi, %k1
-; X64-AVX512BW-NEXT:    vpermilps {{.*#+}} zmm0 {%k1} {z} = zmm0[0,1,0,1,4,5,4,5,8,9,8,9,12,13,12,13]
+; X64-AVX512BW-NEXT:    vshufps {{.*#+}} zmm0 {%k1} {z} = zmm0[0,1,0,1,4,5,4,5,8,9,8,9,12,13,12,13]
 ; X64-AVX512BW-NEXT:    retq
   %res0 = call <16 x float> @llvm.x86.avx512.maskz.vpermt2var.ps.512(<16 x i32> <i32 0, i32 1, i32 0, i32 1, i32 4, i32 5, i32 4, i32 5, i32 8, i32 9, i32 8, i32 9, i32 12, i32 13, i32 12, i32 13>, <16 x float> %x0, <16 x float> %x1, i16 %m)
   ret <16 x float> %res0
@@ -519,7 +519,7 @@ define <16 x float> @combine_vpermt2var_16f32_vmovsldup_mask_load(ptr%p0, <16 x 
 define <16 x float> @combine_vpermt2var_16f32_vpermilps(<16 x float> %x0, <16 x float> %x1) {
 ; CHECK-LABEL: combine_vpermt2var_16f32_vpermilps:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilps {{.*#+}} zmm0 = zmm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
+; CHECK-NEXT:    vshufps {{.*#+}} zmm0 = zmm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %res0 = call <16 x float> @llvm.x86.avx512.maskz.vpermt2var.ps.512(<16 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12>, <16 x float> %x0, <16 x float> %x1, i16 -1)
   ret <16 x float> %res0
@@ -543,19 +543,19 @@ define <16 x float> @combine_vpermt2var_16f32_vpermilps_mask(<16 x float> %x0, <
 ; X86-LABEL: combine_vpermt2var_16f32_vpermilps_mask:
 ; X86:       # %bb.0:
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    vpermilps {{.*#+}} zmm0 {%k1} {z} = zmm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
+; X86-NEXT:    vshufps {{.*#+}} zmm0 {%k1} {z} = zmm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
 ; X86-NEXT:    retl
 ;
 ; X64-AVX512F-LABEL: combine_vpermt2var_16f32_vpermilps_mask:
 ; X64-AVX512F:       # %bb.0:
 ; X64-AVX512F-NEXT:    kmovw %edi, %k1
-; X64-AVX512F-NEXT:    vpermilps {{.*#+}} zmm0 {%k1} {z} = zmm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
+; X64-AVX512F-NEXT:    vshufps {{.*#+}} zmm0 {%k1} {z} = zmm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
 ; X64-AVX512F-NEXT:    retq
 ;
 ; X64-AVX512BW-LABEL: combine_vpermt2var_16f32_vpermilps_mask:
 ; X64-AVX512BW:       # %bb.0:
 ; X64-AVX512BW-NEXT:    kmovd %edi, %k1
-; X64-AVX512BW-NEXT:    vpermilps {{.*#+}} zmm0 {%k1} {z} = zmm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
+; X64-AVX512BW-NEXT:    vshufps {{.*#+}} zmm0 {%k1} {z} = zmm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
 ; X64-AVX512BW-NEXT:    retq
   %res0 = call <16 x float> @llvm.x86.avx512.maskz.vpermt2var.ps.512(<16 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12>, <16 x float> %x0, <16 x float> %x1, i16 %m)
   ret <16 x float> %res0

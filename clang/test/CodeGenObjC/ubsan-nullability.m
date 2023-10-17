@@ -1,6 +1,6 @@
 // REQUIRES: asserts
-// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -x objective-c -emit-llvm -triple x86_64-apple-macosx10.10.0 -fblocks -fobjc-arc -fsanitize=nullability-arg,nullability-assign,nullability-return -w %s -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -x objective-c++ -emit-llvm -triple x86_64-apple-macosx10.10.0 -fblocks -fobjc-arc -fsanitize=nullability-arg,nullability-assign,nullability-return -w %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -x objective-c -emit-llvm -triple x86_64-apple-macosx10.10.0 -fblocks -fobjc-arc -fsanitize=nullability-arg,nullability-assign,nullability-return -w %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -x objective-c++ -emit-llvm -triple x86_64-apple-macosx10.10.0 -fblocks -fobjc-arc -fsanitize=nullability-arg,nullability-assign,nullability-return -w %s -o - | FileCheck %s
 
 // CHECK: [[NONNULL_RV_LOC1:@.*]] = private unnamed_addr global {{.*}} i32 100, i32 6
 // CHECK: [[NONNULL_ARG_LOC:@.*]] = private unnamed_addr global {{.*}} i32 204, i32 15 {{.*}} i32 190, i32 23
@@ -16,14 +16,15 @@
 #define INULL ((int *)NULL)
 #define INNULL ((int *_Nonnull)NULL)
 
-// CHECK-LABEL: define{{.*}} i32* @{{.*}}nonnull_retval1
+// CHECK-LABEL: define{{.*}} ptr @{{.*}}nonnull_retval1
 #line 100
 int *_Nonnull nonnull_retval1(int *p) {
-  // CHECK: [[ICMP:%.*]] = icmp ne i32* {{.*}}, null, !nosanitize
+  // CHECK: nullcheck:
+  // CHECK: [[ICMP:%.*]] = icmp ne ptr {{.*}}, null, !nosanitize
   // CHECK: br i1 [[ICMP]], {{.*}}, !nosanitize
   // CHECK: call void @__ubsan_handle_nullability_return{{.*}}[[NONNULL_RV_LOC1]]
   return p;
-  // CHECK: ret i32*
+  // CHECK: ret ptr
 }
 
 #line 190
@@ -32,7 +33,7 @@ void nonnull_arg(int *_Nonnull p) {}
 // CHECK-LABEL: define{{.*}} void @{{.*}}call_func_with_nonnull_arg
 #line 200
 void call_func_with_nonnull_arg(int *_Nonnull p) {
-  // CHECK: [[ICMP:%.*]] = icmp ne i32* {{.*}}, null, !nosanitize
+  // CHECK: [[ICMP:%.*]] = icmp ne ptr {{.*}}, null, !nosanitize
   // CHECK-NEXT: br i1 [[ICMP]], {{.*}}, !nosanitize
   // CHECK: call void @__ubsan_handle_nullability_arg{{.*}}[[NONNULL_ARG_LOC]]
   nonnull_arg(p);
@@ -41,7 +42,7 @@ void call_func_with_nonnull_arg(int *_Nonnull p) {
 // CHECK-LABEL: define{{.*}} void @{{.*}}nonnull_assign1
 #line 300
 void nonnull_assign1(int *p) {
-  // CHECK: [[ICMP:%.*]] = icmp ne i32* {{.*}}, null, !nosanitize
+  // CHECK: [[ICMP:%.*]] = icmp ne ptr {{.*}}, null, !nosanitize
   // CHECK-NEXT: br i1 [[ICMP]], {{.*}}, !nosanitize
   // CHECK: call void @__ubsan_handle_type_mismatch{{.*}}[[NONNULL_ASSIGN1_LOC]]
   int *_Nonnull local;
@@ -51,7 +52,7 @@ void nonnull_assign1(int *p) {
 // CHECK-LABEL: define{{.*}} void @{{.*}}nonnull_assign2
 #line 400
 void nonnull_assign2(int *p) {
-  // CHECK: [[ICMP:%.*]] = icmp ne i32* %{{.*}}, null, !nosanitize
+  // CHECK: [[ICMP:%.*]] = icmp ne ptr %{{.*}}, null, !nosanitize
   // CHECK-NEXT: br i1 [[ICMP]], {{.*}}, !nosanitize
   // CHECK: call void @__ubsan_handle_type_mismatch{{.*}}[[NONNULL_ASSIGN2_LOC]]
   int *_Nonnull arr[1];
@@ -65,7 +66,7 @@ struct S1 {
 // CHECK-LABEL: define{{.*}} void @{{.*}}nonnull_assign3
 #line 500
 void nonnull_assign3(int *p) {
-  // CHECK: [[ICMP:%.*]] = icmp ne i32* %{{.*}}, null, !nosanitize
+  // CHECK: [[ICMP:%.*]] = icmp ne ptr %{{.*}}, null, !nosanitize
   // CHECK-NEXT: br i1 [[ICMP]], {{.*}}, !nosanitize
   // CHECK: call void @__ubsan_handle_type_mismatch{{.*}}[[NONNULL_ASSIGN3_LOC]]
   // CHECK-NOT: call void @__ubsan_handle_type_mismatch
@@ -76,7 +77,7 @@ void nonnull_assign3(int *p) {
 // CHECK-LABEL: define{{.*}} void @{{.*}}nonnull_init1
 #line 600
 void nonnull_init1(int *p) {
-  // CHECK: [[ICMP:%.*]] = icmp ne i32* %{{.*}}, null, !nosanitize
+  // CHECK: [[ICMP:%.*]] = icmp ne ptr %{{.*}}, null, !nosanitize
   // CHECK-NEXT: br i1 [[ICMP]], {{.*}}, !nosanitize
   // CHECK: call void @__ubsan_handle_type_mismatch{{.*}}[[NONNULL_INIT1_LOC]]
   int *_Nonnull local = p;
@@ -85,37 +86,37 @@ void nonnull_init1(int *p) {
 // CHECK-LABEL: define{{.*}} void @{{.*}}nonnull_init2
 #line 700
 void nonnull_init2(int *p) {
-  // CHECK: [[ICMP:%.*]] = icmp ne i32* %{{.*}}, null, !nosanitize
+  // CHECK: [[ICMP:%.*]] = icmp ne ptr %{{.*}}, null, !nosanitize
   // CHECK-NEXT: br i1 [[ICMP]], {{.*}}, !nosanitize
   // CHECK: call void @__ubsan_handle_type_mismatch{{.*}}[[NONNULL_INIT2_LOC1]]
-  // CHECK: [[ICMP:%.*]] = icmp ne i32* %{{.*}}, null, !nosanitize
+  // CHECK: [[ICMP:%.*]] = icmp ne ptr %{{.*}}, null, !nosanitize
   // CHECK-NEXT: br i1 [[ICMP]], {{.*}}, !nosanitize
   // CHECK: call void @__ubsan_handle_type_mismatch{{.*}}[[NONNULL_INIT2_LOC2]]
   int *_Nonnull arr[] = {p, p};
 }
 
-// CHECK-LABEL: define{{.*}} i32* @{{.*}}nonnull_retval2
+// CHECK-LABEL: define{{.*}} ptr @{{.*}}nonnull_retval2
 #line 800
 int *_Nonnull nonnull_retval2(int *_Nonnull arg1,  //< Test this.
                               int *_Nonnull arg2,  //< Test this.
                               int *_Nullable arg3, //< Don't test the rest.
                               int *arg4,
                               int arg5, ...) {
-  // CHECK: [[ARG1CMP:%.*]] = icmp ne i32* %arg1, null, !nosanitize
+  // CHECK: [[ARG1CMP:%.*]] = icmp ne ptr %arg1, null, !nosanitize
   // CHECK-NEXT: [[DO_RV_CHECK_1:%.*]] = and i1 true, [[ARG1CMP]], !nosanitize
-  // CHECK: [[ARG2CMP:%.*]] = icmp ne i32* %arg2, null, !nosanitize
+  // CHECK: [[ARG2CMP:%.*]] = icmp ne ptr %arg2, null, !nosanitize
   // CHECK-NEXT: [[DO_RV_CHECK_2:%.*]] = and i1 [[DO_RV_CHECK_1]], [[ARG2CMP]]
-  // CHECK: [[SLOC_PTR:%.*]] = load i8*, i8** %return.sloc.ptr
-  // CHECK-NEXT: [[SLOC_NONNULL:%.*]] = icmp ne i8* [[SLOC_PTR]], null
+  // CHECK: [[SLOC_PTR:%.*]] = load ptr, ptr %return.sloc.ptr
+  // CHECK-NEXT: [[SLOC_NONNULL:%.*]] = icmp ne ptr [[SLOC_PTR]], null
   // CHECK-NEXT: [[DO_RV_CHECK_3:%.*]] = and i1 [[SLOC_NONNULL]], [[DO_RV_CHECK_2]]
   // CHECK: br i1 [[DO_RV_CHECK_3]], label %[[NULL:.*]], label %[[NONULL:.*]], !nosanitize
   // CHECK: [[NULL]]:
-  // CHECK-NEXT: [[ICMP:%.*]] = icmp ne i32* {{.*}}, null, !nosanitize
+  // CHECK-NEXT: [[ICMP:%.*]] = icmp ne ptr {{.*}}, null, !nosanitize
   // CHECK: br i1 [[ICMP]], {{.*}}, !nosanitize
   // CHECK: call void @__ubsan_handle_nullability_return{{.*}}[[NONNULL_RV_LOC2]]
   return arg1;
   // CHECK: [[NONULL]]:
-  // CHECK-NEXT: ret i32*
+  // CHECK-NEXT: ret ptr
 }
 
 @interface A
@@ -125,53 +126,53 @@ int *_Nonnull nonnull_retval2(int *_Nonnull arg1,  //< Test this.
 
 @implementation A
 
-// CHECK-LABEL: define internal i32* @"\01+[A objc_clsmethod:]"
+// CHECK-LABEL: define internal ptr @"\01+[A objc_clsmethod:]"
 +(int *_Nonnull) objc_clsmethod: (int *_Nonnull) arg1 {
-  // CHECK: [[ARG1CMP:%.*]] = icmp ne i32* %arg1, null, !nosanitize
+  // CHECK: [[ARG1CMP:%.*]] = icmp ne ptr %arg1, null, !nosanitize
   // CHECK-NEXT: [[DO_RV_CHECK:%.*]] = and i1 true, [[ARG1CMP]]
-  // CHECK: [[SLOC_PTR:%.*]] = load i8*, i8** %return.sloc.ptr
-  // CHECK-NEXT: [[SLOC_NONNULL:%.*]] = icmp ne i8* [[SLOC_PTR]], null
+  // CHECK: [[SLOC_PTR:%.*]] = load ptr, ptr %return.sloc.ptr
+  // CHECK-NEXT: [[SLOC_NONNULL:%.*]] = icmp ne ptr [[SLOC_PTR]], null
   // CHECK-NEXT: [[DO_RV_CHECK_2:%.*]] = and i1 [[SLOC_NONNULL]], [[DO_RV_CHECK]]
   // CHECK: br i1 [[DO_RV_CHECK_2]], label %[[NULL:.*]], label %[[NONULL:.*]], !nosanitize
   // CHECK: [[NULL]]:
-  // CHECK-NEXT: [[ICMP:%.*]] = icmp ne i32* {{.*}}, null, !nosanitize
+  // CHECK-NEXT: [[ICMP:%.*]] = icmp ne ptr {{.*}}, null, !nosanitize
   // CHECK: br i1 [[ICMP]], {{.*}}, !nosanitize
   // CHECK: call void @__ubsan_handle_nullability_return{{.*}}
   return arg1;
   // CHECK: [[NONULL]]:
-  // CHECK-NEXT: ret i32*
+  // CHECK-NEXT: ret ptr
 }
 
-// CHECK-LABEL: define internal i32* @"\01-[A objc_method:]"
+// CHECK-LABEL: define internal ptr @"\01-[A objc_method:]"
 -(int *_Nonnull) objc_method: (int *_Nonnull) arg1 {
-  // CHECK: [[ARG1CMP:%.*]] = icmp ne i32* %arg1, null, !nosanitize
+  // CHECK: [[ARG1CMP:%.*]] = icmp ne ptr %arg1, null, !nosanitize
   // CHECK-NEXT: [[DO_RV_CHECK:%.*]] = and i1 true, [[ARG1CMP]]
-  // CHECK: [[SLOC_PTR:%.*]] = load i8*, i8** %return.sloc.ptr
-  // CHECK-NEXT: [[SLOC_NONNULL:%.*]] = icmp ne i8* [[SLOC_PTR]], null
+  // CHECK: [[SLOC_PTR:%.*]] = load ptr, ptr %return.sloc.ptr
+  // CHECK-NEXT: [[SLOC_NONNULL:%.*]] = icmp ne ptr [[SLOC_PTR]], null
   // CHECK-NEXT: [[DO_RV_CHECK_2:%.*]] = and i1 [[SLOC_NONNULL]], [[DO_RV_CHECK]]
   // CHECK: br i1 [[DO_RV_CHECK_2]], label %[[NULL:.*]], label %[[NONULL:.*]], !nosanitize
   // CHECK: [[NULL]]:
-  // CHECK-NEXT: [[ICMP:%.*]] = icmp ne i32* {{.*}}, null, !nosanitize
+  // CHECK-NEXT: [[ICMP:%.*]] = icmp ne ptr {{.*}}, null, !nosanitize
   // CHECK: br i1 [[ICMP]], {{.*}}, !nosanitize
   // CHECK: call void @__ubsan_handle_nullability_return{{.*}}
   return arg1;
   // CHECK: [[NONULL]]:
-  // CHECK-NEXT: ret i32*
+  // CHECK-NEXT: ret ptr
 }
 @end
 
 // CHECK-LABEL: define{{.*}} void @{{.*}}call_A
 void call_A(A *a, int *p) {
-  // CHECK: [[ICMP:%.*]] = icmp ne i32* [[P1:%.*]], null, !nosanitize
+  // CHECK: [[ICMP:%.*]] = icmp ne ptr [[P1:%.*]], null, !nosanitize
   // CHECK-NEXT: br i1 [[ICMP]], {{.*}}, !nosanitize
   // CHECK: call void @__ubsan_handle_nullability_arg{{.*}} !nosanitize
-  // CHECK: call i32* {{.*}} @objc_msgSend to i32* {{.*}}({{.*}}, i32* [[P1]])
+  // CHECK: call ptr @objc_msgSend({{.*}}, ptr [[P1]])
   [a objc_method: p];
 
-  // CHECK: [[ICMP:%.*]] = icmp ne i32* [[P2:%.*]], null, !nosanitize
+  // CHECK: [[ICMP:%.*]] = icmp ne ptr [[P2:%.*]], null, !nosanitize
   // CHECK-NEXT: br i1 [[ICMP]], {{.*}}, !nosanitize
   // CHECK: call void @__ubsan_handle_nullability_arg{{.*}} !nosanitize
-  // CHECK: call i32* {{.*}} @objc_msgSend to i32* {{.*}}({{.*}}, i32* [[P2]])
+  // CHECK: call ptr @objc_msgSend({{.*}}, ptr [[P2]])
   [A objc_clsmethod: p];
 }
 

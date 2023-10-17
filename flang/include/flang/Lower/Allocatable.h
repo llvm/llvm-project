@@ -57,6 +57,11 @@ void genDeallocateBox(AbstractConverter &converter,
                       const fir::MutableBoxValue &box, mlir::Location loc,
                       mlir::Value declaredTypeDesc = {});
 
+/// Deallocate an allocatable if it is allocated at the end of its lifetime.
+void genDeallocateIfAllocated(AbstractConverter &converter,
+                              const fir::MutableBoxValue &box,
+                              mlir::Location loc);
+
 /// Create a MutableBoxValue for an allocatable or pointer entity.
 /// If the variables is a local variable that is not a dummy, it will be
 /// initialized to unallocated/diassociated status.
@@ -88,7 +93,7 @@ mlir::Value getAssumedCharAllocatableOrPointerLen(
 
 /// Retrieve the address of a type descriptor from its derived type spec.
 mlir::Value
-getTypeDescAddr(fir::FirOpBuilder &builder, mlir::Location loc,
+getTypeDescAddr(AbstractConverter &converter, mlir::Location loc,
                 const Fortran::semantics::DerivedTypeSpec &typeSpec);
 
 } // namespace lower

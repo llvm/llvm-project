@@ -1,87 +1,87 @@
 // Remove UNSUPPORTED for powerpc64le when the problem introduced by
 // r288563 is resolved.
 // UNSUPPORTED: target=powerpc64le{{.*}}
-// RUN: %check_clang_tidy %s readability-identifier-naming %t -- \
-// RUN:   -config='{CheckOptions: [ \
-// RUN:     {key: readability-identifier-naming.AbstractClassCase, value: CamelCase}, \
-// RUN:     {key: readability-identifier-naming.AbstractClassPrefix, value: 'A'}, \
-// RUN:     {key: readability-identifier-naming.ClassCase, value: CamelCase}, \
-// RUN:     {key: readability-identifier-naming.ClassPrefix, value: 'C'}, \
-// RUN:     {key: readability-identifier-naming.ClassConstantCase, value: CamelCase}, \
-// RUN:     {key: readability-identifier-naming.ClassConstantPrefix, value: 'k'}, \
-// RUN:     {key: readability-identifier-naming.ClassMemberCase, value: CamelCase}, \
-// RUN:     {key: readability-identifier-naming.ClassMethodCase, value: camelBack}, \
-// RUN:     {key: readability-identifier-naming.ConstantCase, value: UPPER_CASE}, \
-// RUN:     {key: readability-identifier-naming.ConstantSuffix, value: '_CST'}, \
-// RUN:     {key: readability-identifier-naming.ConstexprFunctionCase, value: lower_case}, \
-// RUN:     {key: readability-identifier-naming.ConstexprMethodCase, value: lower_case}, \
-// RUN:     {key: readability-identifier-naming.ConstexprVariableCase, value: lower_case}, \
-// RUN:     {key: readability-identifier-naming.EnumCase, value: CamelCase}, \
-// RUN:     {key: readability-identifier-naming.EnumPrefix, value: 'E'}, \
-// RUN:     {key: readability-identifier-naming.ScopedEnumConstantCase, value: CamelCase}, \
-// RUN:     {key: readability-identifier-naming.EnumConstantCase, value: UPPER_CASE}, \
-// RUN:     {key: readability-identifier-naming.FunctionCase, value: camelBack}, \
-// RUN:     {key: readability-identifier-naming.GlobalConstantCase, value: UPPER_CASE}, \
-// RUN:     {key: readability-identifier-naming.GlobalFunctionCase, value: CamelCase}, \
-// RUN:     {key: readability-identifier-naming.GlobalVariableCase, value: lower_case}, \
-// RUN:     {key: readability-identifier-naming.GlobalVariablePrefix, value: 'g_'}, \
-// RUN:     {key: readability-identifier-naming.InlineNamespaceCase, value: lower_case}, \
-// RUN:     {key: readability-identifier-naming.LocalConstantCase, value: CamelCase}, \
-// RUN:     {key: readability-identifier-naming.LocalConstantPrefix, value: 'k'}, \
-// RUN:     {key: readability-identifier-naming.LocalVariableCase, value: lower_case}, \
-// RUN:     {key: readability-identifier-naming.MemberCase, value: CamelCase}, \
-// RUN:     {key: readability-identifier-naming.MemberPrefix, value: 'm_'}, \
-// RUN:     {key: readability-identifier-naming.ConstantMemberCase, value: lower_case}, \
-// RUN:     {key: readability-identifier-naming.PrivateMemberPrefix, value: '__'}, \
-// RUN:     {key: readability-identifier-naming.ProtectedMemberPrefix, value: '_'}, \
-// RUN:     {key: readability-identifier-naming.PublicMemberCase, value: lower_case}, \
-// RUN:     {key: readability-identifier-naming.MethodCase, value: camelBack}, \
-// RUN:     {key: readability-identifier-naming.PrivateMethodPrefix, value: '__'}, \
-// RUN:     {key: readability-identifier-naming.ProtectedMethodPrefix, value: '_'}, \
-// RUN:     {key: readability-identifier-naming.NamespaceCase, value: lower_case}, \
-// RUN:     {key: readability-identifier-naming.ParameterCase, value: camelBack}, \
-// RUN:     {key: readability-identifier-naming.ParameterPrefix, value: 'a_'}, \
-// RUN:     {key: readability-identifier-naming.ConstantParameterCase, value: camelBack}, \
-// RUN:     {key: readability-identifier-naming.ConstantParameterPrefix, value: 'i_'}, \
-// RUN:     {key: readability-identifier-naming.ParameterPackCase, value: camelBack}, \
-// RUN:     {key: readability-identifier-naming.PureFunctionCase, value: lower_case}, \
-// RUN:     {key: readability-identifier-naming.PureMethodCase, value: camelBack}, \
-// RUN:     {key: readability-identifier-naming.StaticConstantCase, value: UPPER_CASE}, \
-// RUN:     {key: readability-identifier-naming.StaticVariableCase, value: camelBack}, \
-// RUN:     {key: readability-identifier-naming.StaticVariablePrefix, value: 's_'}, \
-// RUN:     {key: readability-identifier-naming.StructCase, value: lower_case}, \
-// RUN:     {key: readability-identifier-naming.TemplateParameterCase, value: UPPER_CASE}, \
-// RUN:     {key: readability-identifier-naming.TemplateTemplateParameterCase, value: CamelCase}, \
-// RUN:     {key: readability-identifier-naming.TemplateUsingCase, value: lower_case}, \
-// RUN:     {key: readability-identifier-naming.TemplateUsingPrefix, value: 'u_'}, \
-// RUN:     {key: readability-identifier-naming.TypeTemplateParameterCase, value: camelBack}, \
-// RUN:     {key: readability-identifier-naming.TypeTemplateParameterSuffix, value: '_t'}, \
-// RUN:     {key: readability-identifier-naming.TypedefCase, value: lower_case}, \
-// RUN:     {key: readability-identifier-naming.TypedefSuffix, value: '_t'}, \
-// RUN:     {key: readability-identifier-naming.UnionCase, value: CamelCase}, \
-// RUN:     {key: readability-identifier-naming.UnionPrefix, value: 'U'}, \
-// RUN:     {key: readability-identifier-naming.UsingCase, value: lower_case}, \
-// RUN:     {key: readability-identifier-naming.ValueTemplateParameterCase, value: camelBack}, \
-// RUN:     {key: readability-identifier-naming.VariableCase, value: lower_case}, \
-// RUN:     {key: readability-identifier-naming.VirtualMethodCase, value: Camel_Snake_Case}, \
-// RUN:     {key: readability-identifier-naming.VirtualMethodPrefix, value: 'v_'}, \
-// RUN:     {key: readability-identifier-naming.MacroDefinitionCase, value: UPPER_CASE}, \
-// RUN:     {key: readability-identifier-naming.TypeAliasCase, value: camel_Snake_Back}, \
-// RUN:     {key: readability-identifier-naming.TypeAliasSuffix, value: '_t'}, \
-// RUN:     {key: readability-identifier-naming.IgnoreFailedSplit, value: false}, \
-// RUN:     {key: readability-identifier-naming.GlobalPointerCase, value: CamelCase}, \
-// RUN:     {key: readability-identifier-naming.GlobalPointerSuffix, value: '_Ptr'}, \
-// RUN:     {key: readability-identifier-naming.GlobalConstantPointerCase, value: UPPER_CASE}, \
-// RUN:     {key: readability-identifier-naming.GlobalConstantPointerSuffix, value: '_Ptr'}, \
-// RUN:     {key: readability-identifier-naming.PointerParameterCase, value: lower_case}, \
-// RUN:     {key: readability-identifier-naming.PointerParameterPrefix, value: 'p_'}, \
-// RUN:     {key: readability-identifier-naming.ConstantPointerParameterCase, value: CamelCase}, \
-// RUN:     {key: readability-identifier-naming.ConstantPointerParameterPrefix, value: 'cp_'}, \
-// RUN:     {key: readability-identifier-naming.LocalPointerCase, value: CamelCase}, \
-// RUN:     {key: readability-identifier-naming.LocalPointerPrefix, value: 'l_'}, \
-// RUN:     {key: readability-identifier-naming.LocalConstantPointerCase, value: CamelCase}, \
-// RUN:     {key: readability-identifier-naming.LocalConstantPointerPrefix, value: 'lc_'}, \
-// RUN:   ]}' -- -fno-delayed-template-parsing -Dbad_macro -std=c++17 -fcoroutines-ts \
+// RUN: %check_clang_tidy -std=c++20 %s readability-identifier-naming %t -- \
+// RUN:   -config='{CheckOptions: { \
+// RUN:     readability-identifier-naming.AbstractClassCase: CamelCase, \
+// RUN:     readability-identifier-naming.AbstractClassPrefix: 'A', \
+// RUN:     readability-identifier-naming.ClassCase: CamelCase, \
+// RUN:     readability-identifier-naming.ClassPrefix: 'C', \
+// RUN:     readability-identifier-naming.ClassConstantCase: CamelCase, \
+// RUN:     readability-identifier-naming.ClassConstantPrefix: 'k', \
+// RUN:     readability-identifier-naming.ClassMemberCase: CamelCase, \
+// RUN:     readability-identifier-naming.ClassMethodCase: camelBack, \
+// RUN:     readability-identifier-naming.ConstantCase: UPPER_CASE, \
+// RUN:     readability-identifier-naming.ConstantSuffix: '_CST', \
+// RUN:     readability-identifier-naming.ConstexprFunctionCase: lower_case, \
+// RUN:     readability-identifier-naming.ConstexprMethodCase: lower_case, \
+// RUN:     readability-identifier-naming.ConstexprVariableCase: lower_case, \
+// RUN:     readability-identifier-naming.EnumCase: CamelCase, \
+// RUN:     readability-identifier-naming.EnumPrefix: 'E', \
+// RUN:     readability-identifier-naming.ScopedEnumConstantCase: CamelCase, \
+// RUN:     readability-identifier-naming.EnumConstantCase: UPPER_CASE, \
+// RUN:     readability-identifier-naming.FunctionCase: camelBack, \
+// RUN:     readability-identifier-naming.GlobalConstantCase: UPPER_CASE, \
+// RUN:     readability-identifier-naming.GlobalFunctionCase: CamelCase, \
+// RUN:     readability-identifier-naming.GlobalVariableCase: lower_case, \
+// RUN:     readability-identifier-naming.GlobalVariablePrefix: 'g_', \
+// RUN:     readability-identifier-naming.InlineNamespaceCase: lower_case, \
+// RUN:     readability-identifier-naming.LocalConstantCase: CamelCase, \
+// RUN:     readability-identifier-naming.LocalConstantPrefix: 'k', \
+// RUN:     readability-identifier-naming.LocalVariableCase: lower_case, \
+// RUN:     readability-identifier-naming.MemberCase: CamelCase, \
+// RUN:     readability-identifier-naming.MemberPrefix: 'm_', \
+// RUN:     readability-identifier-naming.ConstantMemberCase: lower_case, \
+// RUN:     readability-identifier-naming.PrivateMemberPrefix: '__', \
+// RUN:     readability-identifier-naming.ProtectedMemberPrefix: '_', \
+// RUN:     readability-identifier-naming.PublicMemberCase: lower_case, \
+// RUN:     readability-identifier-naming.MethodCase: camelBack, \
+// RUN:     readability-identifier-naming.PrivateMethodPrefix: '__', \
+// RUN:     readability-identifier-naming.ProtectedMethodPrefix: '_', \
+// RUN:     readability-identifier-naming.NamespaceCase: lower_case, \
+// RUN:     readability-identifier-naming.ParameterCase: camelBack, \
+// RUN:     readability-identifier-naming.ParameterPrefix: 'a_', \
+// RUN:     readability-identifier-naming.ConstantParameterCase: camelBack, \
+// RUN:     readability-identifier-naming.ConstantParameterPrefix: 'i_', \
+// RUN:     readability-identifier-naming.ParameterPackCase: camelBack, \
+// RUN:     readability-identifier-naming.PureFunctionCase: lower_case, \
+// RUN:     readability-identifier-naming.PureMethodCase: camelBack, \
+// RUN:     readability-identifier-naming.StaticConstantCase: UPPER_CASE, \
+// RUN:     readability-identifier-naming.StaticVariableCase: camelBack, \
+// RUN:     readability-identifier-naming.StaticVariablePrefix: 's_', \
+// RUN:     readability-identifier-naming.StructCase: Leading_upper_snake_case, \
+// RUN:     readability-identifier-naming.TemplateParameterCase: UPPER_CASE, \
+// RUN:     readability-identifier-naming.TemplateTemplateParameterCase: CamelCase, \
+// RUN:     readability-identifier-naming.TemplateUsingCase: lower_case, \
+// RUN:     readability-identifier-naming.TemplateUsingPrefix: 'u_', \
+// RUN:     readability-identifier-naming.TypeTemplateParameterCase: camelBack, \
+// RUN:     readability-identifier-naming.TypeTemplateParameterSuffix: '_t', \
+// RUN:     readability-identifier-naming.TypedefCase: lower_case, \
+// RUN:     readability-identifier-naming.TypedefSuffix: '_t', \
+// RUN:     readability-identifier-naming.UnionCase: CamelCase, \
+// RUN:     readability-identifier-naming.UnionPrefix: 'U', \
+// RUN:     readability-identifier-naming.UsingCase: lower_case, \
+// RUN:     readability-identifier-naming.ValueTemplateParameterCase: camelBack, \
+// RUN:     readability-identifier-naming.VariableCase: lower_case, \
+// RUN:     readability-identifier-naming.VirtualMethodCase: Camel_Snake_Case, \
+// RUN:     readability-identifier-naming.VirtualMethodPrefix: 'v_', \
+// RUN:     readability-identifier-naming.MacroDefinitionCase: UPPER_CASE, \
+// RUN:     readability-identifier-naming.TypeAliasCase: camel_Snake_Back, \
+// RUN:     readability-identifier-naming.TypeAliasSuffix: '_t', \
+// RUN:     readability-identifier-naming.IgnoreFailedSplit: false, \
+// RUN:     readability-identifier-naming.GlobalPointerCase: CamelCase, \
+// RUN:     readability-identifier-naming.GlobalPointerSuffix: '_Ptr', \
+// RUN:     readability-identifier-naming.GlobalConstantPointerCase: UPPER_CASE, \
+// RUN:     readability-identifier-naming.GlobalConstantPointerSuffix: '_Ptr', \
+// RUN:     readability-identifier-naming.PointerParameterCase: lower_case, \
+// RUN:     readability-identifier-naming.PointerParameterPrefix: 'p_', \
+// RUN:     readability-identifier-naming.ConstantPointerParameterCase: CamelCase, \
+// RUN:     readability-identifier-naming.ConstantPointerParameterPrefix: 'cp_', \
+// RUN:     readability-identifier-naming.LocalPointerCase: CamelCase, \
+// RUN:     readability-identifier-naming.LocalPointerPrefix: 'l_', \
+// RUN:     readability-identifier-naming.LocalConstantPointerCase: CamelCase, \
+// RUN:     readability-identifier-naming.LocalConstantPointerPrefix: 'lc_', \
+// RUN:   }}' -- -fno-delayed-template-parsing -Dbad_macro \
 // RUN:   -I%S/Inputs/identifier-naming \
 // RUN:   -isystem %S/Inputs/identifier-naming/system
 
@@ -513,9 +513,9 @@ constexpr int CE_function() { return 3; }
 
 struct THIS___Structure {
 // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for struct 'THIS___Structure'
-// CHECK-FIXES: {{^}}struct this_structure {{{$}}
+// CHECK-FIXES: {{^}}struct This_structure {{{$}}
     THIS___Structure();
-// CHECK-FIXES: {{^}}    this_structure();{{$}}
+// CHECK-FIXES: {{^}}    This_structure();{{$}}
 
   union __MyUnion_is_wonderful__ {};
 // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: invalid case style for union '__MyUnion_is_wonderful__'
@@ -524,7 +524,7 @@ struct THIS___Structure {
 
 typedef THIS___Structure struct_type;
 // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: invalid case style for typedef 'struct_type'
-// CHECK-FIXES: {{^}}typedef this_structure struct_type_t;{{$}}
+// CHECK-FIXES: {{^}}typedef This_structure struct_type_t;{{$}}
 
 struct_type GlobalTypedefTestFunction(struct_type a_argument1) {
 // CHECK-FIXES: {{^}}struct_type_t GlobalTypedefTestFunction(struct_type_t a_argument1) {
@@ -534,7 +534,7 @@ struct_type GlobalTypedefTestFunction(struct_type a_argument1) {
 
 using my_struct_type = THIS___Structure;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for type alias 'my_struct_type'
-// CHECK-FIXES: {{^}}using my_Struct_Type_t = this_structure;{{$}}
+// CHECK-FIXES: {{^}}using my_Struct_Type_t = This_structure;{{$}}
 
 template<typename t_t>
 using SomeOtherTemplate = my_other_templated_class  <:: FOO_NS  ::my_class>;
@@ -596,6 +596,8 @@ void MY_TEST_Macro(function) {}
 }
 
 template <typename t_t> struct a {
+// CHECK-MESSAGES: :[[@LINE-1]]:32: warning: invalid case style for struct 'a'
+// CHECK-FIXES: {{^}}template <typename t_t> struct A {{{$}}
   typename t_t::template b<> c;
 
   char const MY_ConstMember_string[4] = "123";
@@ -609,9 +611,11 @@ template <typename t_t> struct a {
 
 template<typename t_t>
 char const a<t_t>::MyConstClass_string[] = "123";
-// CHECK-FIXES: {{^}}char const a<t_t>::kMyConstClassString[] = "123";{{$}}
+// CHECK-FIXES: {{^}}char const A<t_t>::kMyConstClassString[] = "123";{{$}}
 
 template <template <typename> class A> struct b { A<int> c; };
+// CHECK-MESSAGES: :[[@LINE-1]]:47: warning: invalid case style for struct 'b'
+// CHECK-FIXES:template <template <typename> class A> struct B { A<int> c; };{{$}}
 
 unsigned MY_GLOBAL_array[] = {1,2,3};
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: invalid case style for global variable 'MY_GLOBAL_array'
@@ -645,17 +649,17 @@ using namespace FOO_NS::InlineNamespace;
 // CHECK-FIXES: {{^}}using namespace foo_ns::inline_namespace;
 
 void QualifiedTypeLocTest(THIS___Structure);
-// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(this_structure);{{$}}
+// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(This_structure);{{$}}
 void QualifiedTypeLocTest(THIS___Structure &);
-// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(this_structure &);{{$}}
+// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(This_structure &);{{$}}
 void QualifiedTypeLocTest(THIS___Structure &&);
-// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(this_structure &&);{{$}}
+// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(This_structure &&);{{$}}
 void QualifiedTypeLocTest(const THIS___Structure);
-// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(const this_structure);{{$}}
+// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(const This_structure);{{$}}
 void QualifiedTypeLocTest(const THIS___Structure &);
-// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(const this_structure &);{{$}}
+// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(const This_structure &);{{$}}
 void QualifiedTypeLocTest(volatile THIS___Structure &);
-// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(volatile this_structure &);{{$}}
+// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(volatile This_structure &);{{$}}
 
 namespace redecls {
 // We only want the warning to show up once here for the first decl.
@@ -700,10 +704,54 @@ auto GetRes(type_t& Param) -> decltype(Param.res());
 // Check implicit declarations in coroutines
 
 struct async_obj {
+// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for struct 'async_obj'
+// CHECK-FIXES: {{^}}struct Async_obj {{{$}}
 public:
   never_suspend operator co_await() const noexcept;
 };
 
 task ImplicitDeclTest(async_obj &a_object) {
   co_await a_object;  // CHECK-MESSAGES-NOT: warning: invalid case style for local variable
+}
+
+// Test scenario when canonical declaration will be a forward declaration
+struct ForwardDeclStruct;
+// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for struct 'ForwardDeclStruct' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}struct Forward_decl_struct;
+// CHECK-FIXES: {{^}}struct Forward_decl_struct {
+struct ForwardDeclStruct {
+};
+
+struct forward_declared_as_struct;
+// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for class 'forward_declared_as_struct' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}struct CForwardDeclaredAsStruct;
+// CHECK-FIXES: {{^}}class CForwardDeclaredAsStruct {
+class forward_declared_as_struct {
+};
+
+namespace pr55156 {
+
+template<typename> struct Wrap;
+
+typedef enum {
+  VALUE0,
+  VALUE1,
+} ValueType;
+// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: invalid case style for typedef 'ValueType' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}} value_type_t;
+
+typedef ValueType (*MyFunPtr)(const ValueType&, Wrap<ValueType>*);
+// CHECK-MESSAGES: :[[@LINE-1]]:21: warning: invalid case style for typedef 'MyFunPtr' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}typedef value_type_t (*my_fun_ptr_t)(const value_type_t&, Wrap<value_type_t>*);
+
+#define STATIC_MACRO static
+STATIC_MACRO void someFunc(ValueType a_v1, const ValueType& a_v2) {}
+// CHECK-FIXES: {{^}}STATIC_MACRO void someFunc(value_type_t a_v1, const value_type_t& a_v2) {}
+STATIC_MACRO void someFunc(const ValueType** p_a_v1, ValueType (*p_a_v2)()) {}
+// CHECK-FIXES: {{^}}STATIC_MACRO void someFunc(const value_type_t** p_a_v1, value_type_t (*p_a_v2)()) {}
+STATIC_MACRO ValueType someFunc() {}
+// CHECK-FIXES: {{^}}STATIC_MACRO value_type_t someFunc() {}
+STATIC_MACRO void someFunc(MyFunPtr, const MyFunPtr****) {}
+// CHECK-FIXES: {{^}}STATIC_MACRO void someFunc(my_fun_ptr_t, const my_fun_ptr_t****) {}
+#undef STATIC_MACRO
 }

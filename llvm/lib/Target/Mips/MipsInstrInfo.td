@@ -3357,11 +3357,11 @@ let AdditionalPredicates = [NotInMicroMips] in {
   def : MipsPat<(atomic_load_32 addr:$a), (LW addr:$a)>, ISA_MIPS1;
 
   // Atomic store patterns.
-  def : MipsPat<(atomic_store_8 addr:$a, GPR32:$v), (SB GPR32:$v, addr:$a)>,
+  def : MipsPat<(atomic_store_8 GPR32:$v, addr:$a), (SB GPR32:$v, addr:$a)>,
         ISA_MIPS1;
-  def : MipsPat<(atomic_store_16 addr:$a, GPR32:$v), (SH GPR32:$v, addr:$a)>,
+  def : MipsPat<(atomic_store_16 GPR32:$v, addr:$a), (SH GPR32:$v, addr:$a)>,
         ISA_MIPS1;
-  def : MipsPat<(atomic_store_32 addr:$a, GPR32:$v), (SW GPR32:$v, addr:$a)>,
+  def : MipsPat<(atomic_store_32 GPR32:$v, addr:$a), (SW GPR32:$v, addr:$a)>,
         ISA_MIPS1;
 }
 

@@ -72,7 +72,7 @@ public:
   /// Joins two type-erased lattice elements by computing their least upper
   /// bound. Places the join result in the left element and returns an effect
   /// indicating whether any changes were made to it.
-  virtual LatticeJoinEffect joinTypeErased(TypeErasedLattice &,
+  virtual TypeErasedLattice joinTypeErased(const TypeErasedLattice &,
                                            const TypeErasedLattice &) = 0;
 
   /// Chooses a lattice element that approximates the current element at a
@@ -96,7 +96,7 @@ public:
 
   /// Applies the analysis transfer function for a given control flow graph
   /// element and type-erased lattice element.
-  virtual void transferTypeErased(const CFGElement *, TypeErasedLattice &,
+  virtual void transferTypeErased(const CFGElement &, TypeErasedLattice &,
                                   Environment &) = 0;
 
   /// Applies the analysis transfer function for a given edge from a CFG block
@@ -104,6 +104,7 @@ public:
   /// @param Stmt The condition which is responsible for the split in the CFG.
   /// @param Branch True if the edge goes to the basic block where the
   /// condition is true.
+  // FIXME: Change `Stmt` argument to a reference.
   virtual void transferBranchTypeErased(bool Branch, const Stmt *,
                                         TypeErasedLattice &, Environment &) = 0;
 
@@ -125,26 +126,11 @@ struct TypeErasedDataflowAnalysisState {
 
   TypeErasedDataflowAnalysisState(TypeErasedLattice Lattice, Environment Env)
       : Lattice(std::move(Lattice)), Env(std::move(Env)) {}
-};
 
-/// Transfers the state of a basic block by evaluating each of its elements in
-/// the context of `Analysis` and the states of its predecessors that are
-/// available in `BlockStates`. `PostVisitCFG` (if provided) will be applied to
-/// each element in the block, after it is evaluated.
-///
-/// Requirements:
-///
-///   All predecessors of `Block` except those with loop back edges must have
-///   already been transferred. States in `BlockStates` that are set to
-///   `std::nullopt` represent basic blocks that are not evaluated yet.
-TypeErasedDataflowAnalysisState transferBlock(
-    const ControlFlowContext &CFCtx,
-    llvm::ArrayRef<std::optional<TypeErasedDataflowAnalysisState>> BlockStates,
-    const CFGBlock &Block, const Environment &InitEnv,
-    TypeErasedDataflowAnalysis &Analysis,
-    std::function<void(const CFGElement &,
-                       const TypeErasedDataflowAnalysisState &)>
-        PostVisitCFG = nullptr);
+  TypeErasedDataflowAnalysisState fork() const {
+    return TypeErasedDataflowAnalysisState(Lattice, Env.fork());
+  }
+};
 
 /// Performs dataflow analysis and returns a mapping from basic block IDs to
 /// dataflow analysis states that model the respective basic blocks. Indices of

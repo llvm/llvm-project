@@ -140,7 +140,7 @@ For example:
 For instrumented functions, the ABI list supports a ``force_zero_labels``
 category, which will make all stores and return values set zero labels.
 Functions should never be labelled with both ``force_zero_labels``
-and ``uninstrumented`` or any of the unistrumented wrapper kinds.
+and ``uninstrumented`` or any of the uninstrumented wrapper kinds.
 
 For example:
 

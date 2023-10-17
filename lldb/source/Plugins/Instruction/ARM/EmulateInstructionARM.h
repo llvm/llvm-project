@@ -11,7 +11,6 @@
 
 #include "Plugins/Process/Utility/ARMDefines.h"
 #include "lldb/Core/EmulateInstruction.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
 #include <optional>
 
@@ -133,7 +132,7 @@ public:
 
   InstructionCondition GetInstructionCondition() override;
 
-  bool TestEmulation(Stream *out_stream, ArchSpec &arch,
+  bool TestEmulation(Stream &out_stream, ArchSpec &arch,
                      OptionValueDictionary *test_data) override;
 
   std::optional<RegisterInfo> GetRegisterInfo(lldb::RegisterKind reg_kind,

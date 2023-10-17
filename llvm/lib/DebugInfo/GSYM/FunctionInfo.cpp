@@ -96,57 +96,83 @@ llvm::Expected<FunctionInfo> FunctionInfo::decode(DataExtractor &Data,
   return std::move(FI);
 }
 
-llvm::Expected<uint64_t> FunctionInfo::encode(FileWriter &O) const {
+uint64_t FunctionInfo::cacheEncoding() {
+  EncodingCache.clear();
+  if (!isValid())
+    return 0;
+  raw_svector_ostream OutStrm(EncodingCache);
+  FileWriter FW(OutStrm, llvm::endianness::native);
+  llvm::Expected<uint64_t> Result = encode(FW);
+  if (!Result) {
+    EncodingCache.clear();
+    consumeError(Result.takeError());
+    return 0;
+  }
+  return EncodingCache.size();
+}
+
+llvm::Expected<uint64_t> FunctionInfo::encode(FileWriter &Out) const {
   if (!isValid())
     return createStringError(std::errc::invalid_argument,
         "attempted to encode invalid FunctionInfo object");
   // Align FunctionInfo data to a 4 byte alignment.
-  O.alignTo(4);
-  const uint64_t FuncInfoOffset = O.tell();
+  Out.alignTo(4);
+  const uint64_t FuncInfoOffset = Out.tell();
+  // Check if we have already encoded this function info into EncodingCache.
+  // This will be non empty when creating segmented GSYM files as we need to
+  // precompute exactly how big FunctionInfo objects encode into so we can
+  // accurately make segments of a specific size.
+  if (!EncodingCache.empty() &&
+      llvm::endianness::native == Out.getByteOrder()) {
+    // We already encoded this object, just write out the bytes.
+    Out.writeData(llvm::ArrayRef<uint8_t>((const uint8_t *)EncodingCache.data(),
+                                          EncodingCache.size()));
+    return FuncInfoOffset;
+  }
   // Write the size in bytes of this function as a uint32_t. This can be zero
   // if we just have a symbol from a symbol table and that symbol has no size.
-  O.writeU32(size());
+  Out.writeU32(size());
   // Write the name of this function as a uint32_t string table offset.
-  O.writeU32(Name);
+  Out.writeU32(Name);
 
   if (OptLineTable) {
-    O.writeU32(InfoType::LineTableInfo);
+    Out.writeU32(InfoType::LineTableInfo);
     // Write a uint32_t length as zero for now, we will fix this up after
     // writing the LineTable out with the number of bytes that were written.
-    O.writeU32(0);
-    const auto StartOffset = O.tell();
-    llvm::Error err = OptLineTable->encode(O, Range.start());
+    Out.writeU32(0);
+    const auto StartOffset = Out.tell();
+    llvm::Error err = OptLineTable->encode(Out, Range.start());
     if (err)
       return std::move(err);
-    const auto Length = O.tell() - StartOffset;
+    const auto Length = Out.tell() - StartOffset;
     if (Length > UINT32_MAX)
         return createStringError(std::errc::invalid_argument,
             "LineTable length is greater than UINT32_MAX");
     // Fixup the size of the LineTable data with the correct size.
-    O.fixup32(static_cast<uint32_t>(Length), StartOffset - 4);
+    Out.fixup32(static_cast<uint32_t>(Length), StartOffset - 4);
   }
 
   // Write out the inline function info if we have any and if it is valid.
   if (Inline) {
-    O.writeU32(InfoType::InlineInfo);
+    Out.writeU32(InfoType::InlineInfo);
     // Write a uint32_t length as zero for now, we will fix this up after
     // writing the LineTable out with the number of bytes that were written.
-    O.writeU32(0);
-    const auto StartOffset = O.tell();
-    llvm::Error err = Inline->encode(O, Range.start());
+    Out.writeU32(0);
+    const auto StartOffset = Out.tell();
+    llvm::Error err = Inline->encode(Out, Range.start());
     if (err)
       return std::move(err);
-    const auto Length = O.tell() - StartOffset;
+    const auto Length = Out.tell() - StartOffset;
     if (Length > UINT32_MAX)
         return createStringError(std::errc::invalid_argument,
             "InlineInfo length is greater than UINT32_MAX");
     // Fixup the size of the InlineInfo data with the correct size.
-    O.fixup32(static_cast<uint32_t>(Length), StartOffset - 4);
+    Out.fixup32(static_cast<uint32_t>(Length), StartOffset - 4);
   }
 
   // Terminate the data chunks with and end of list with zero size
-  O.writeU32(InfoType::EndOfList);
-  O.writeU32(0);
+  Out.writeU32(InfoType::EndOfList);
+  Out.writeU32(0);
   return FuncInfoOffset;
 }
 

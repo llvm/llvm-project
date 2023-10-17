@@ -18,7 +18,7 @@
 ; RUN:   -r=%t2.o,_ZTV1B,px \
 ; RUN:   -r=%t2.o,_ZTV1C,px \
 ; RUN:   -r=%t2.o,_ZTV1D,px 2>&1 | FileCheck %s --check-prefix=REMARK
-; RUN: llvm-dis %t3.1.0.preopt.bc -o - | FileCheck %s --check-prefix=CHECK-TT
+; RUN: llvm-dis %t3.1.3.import.bc -o - | FileCheck %s --check-prefix=CHECK-TT
 ; RUN: llvm-dis %t3.1.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
 
 ; Hybrid WPD
@@ -43,7 +43,7 @@
 ; RUN:   -r=%t.o,_ZTV1B,px \
 ; RUN:   -r=%t.o,_ZTV1C,px \
 ; RUN:   -r=%t.o,_ZTV1D,px 2>&1 | FileCheck %s --check-prefix=REMARK --dump-input=fail
-; RUN: llvm-dis %t3.1.0.preopt.bc -o - | FileCheck %s --check-prefix=CHECK-TT
+; RUN: llvm-dis %t3.1.3.import.bc -o - | FileCheck %s --check-prefix=CHECK-TT
 ; RUN: llvm-dis %t3.1.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
 
 ; Regular LTO WPD
@@ -83,7 +83,7 @@
 ; RUN:   -r=%t2.o,_ZTV1B,px \
 ; RUN:   -r=%t2.o,_ZTV1C,px \
 ; RUN:   -r=%t2.o,_ZTV1D,px 2>&1 | FileCheck %s --implicit-check-not single-impl --allow-empty
-; RUN: llvm-dis %t3.1.0.preopt.bc -o - | FileCheck %s --check-prefix=CHECK-TT
+; RUN: llvm-dis %t3.1.3.import.bc -o - | FileCheck %s --check-prefix=CHECK-TT
 ; RUN: llvm-dis %t3.1.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-NODEVIRT-IR
 
 ; Hybrid WPD
@@ -105,7 +105,7 @@
 ; RUN:   -r=%t.o,_ZTV1B,px \
 ; RUN:   -r=%t.o,_ZTV1C,px \
 ; RUN:   -r=%t.o,_ZTV1D,px 2>&1 | FileCheck %s --implicit-check-not single-impl --allow-empty
-; RUN: llvm-dis %t3.1.0.preopt.bc -o - | FileCheck %s --check-prefix=CHECK-TT
+; RUN: llvm-dis %t3.1.3.import.bc -o - | FileCheck %s --check-prefix=CHECK-TT
 ; RUN: llvm-dis %t3.1.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-NODEVIRT-IR
 
 ; Regular LTO WPD
@@ -139,7 +139,7 @@
 ; RUN:   -r=%t2.o,_ZTV1B,px \
 ; RUN:   -r=%t2.o,_ZTV1C,px \
 ; RUN:   -r=%t2.o,_ZTV1D,px 2>&1 | FileCheck %s --implicit-check-not single-impl --allow-empty
-; RUN: llvm-dis %t3.1.0.preopt.bc -o - | FileCheck %s --check-prefix=CHECK-TT
+; RUN: llvm-dis %t3.1.3.import.bc -o - | FileCheck %s --check-prefix=CHECK-TT
 ; RUN: llvm-dis %t3.1.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-NODEVIRT-IR
 
 ; CHECK-TT-NOT: call {{.*}}@llvm.public.type.test

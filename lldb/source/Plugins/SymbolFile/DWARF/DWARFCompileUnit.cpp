@@ -16,6 +16,7 @@
 
 using namespace lldb;
 using namespace lldb_private;
+using namespace lldb_private::plugin::dwarf;
 
 void DWARFCompileUnit::Dump(Stream *s) const {
   s->Format(
@@ -40,18 +41,14 @@ void DWARFCompileUnit::BuildAddressRangeTable(
 
   const dw_offset_t cu_offset = GetOffset();
   if (die) {
-    DWARFRangeList ranges;
-    const size_t num_ranges =
-        die->GetAttributeAddressRanges(this, ranges, /*check_hi_lo_pc=*/true);
-    if (num_ranges > 0) {
-      for (size_t i = 0; i < num_ranges; ++i) {
-        const DWARFRangeList::Entry &range = ranges.GetEntryRef(i);
-        debug_aranges->AppendRange(cu_offset, range.GetRangeBase(),
-                                   range.GetRangeEnd());
-      }
+    DWARFRangeList ranges =
+        die->GetAttributeAddressRanges(this, /*check_hi_lo_pc=*/true);
+    for (const DWARFRangeList::Entry &range : ranges)
+      debug_aranges->AppendRange(cu_offset, range.GetRangeBase(),
+                                 range.GetRangeEnd());
 
+    if (!ranges.IsEmpty())
       return;
-    }
   }
 
   if (debug_aranges->GetNumRanges() == num_debug_aranges) {

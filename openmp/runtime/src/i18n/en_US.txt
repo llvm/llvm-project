@@ -479,6 +479,9 @@ AffHWSubsetAttrInvalid       "KMP_HW_SUBSET ignored: %1$s: attribute value %2$s 
 AffHWSubsetAllFiltered       "KMP_HW_SUBSET ignored: all hardware resources would be filtered, please reduce the filter."
 AffHWSubsetAttrsNonHybrid    "KMP_HW_SUBSET ignored: Too many attributes specified. This machine is not a hybrid architecutre."
 AffHWSubsetIgnoringAttr      "KMP_HW_SUBSET: ignoring %1$s attribute. This machine is not a hybrid architecutre."
+TargetMemNotAvailable        "Target memory not available, will use default allocator."
+AffIgnoringNonHybrid         "%1$s ignored: This machine is not a hybrid architecutre. Using \"%2$s\" instead."
+AffIgnoringNotAvailable      "%1$s ignored: %2$s is not available. Using \"%3$s\" instead."
 
 # --------------------------------------------------------------------------------------------------
 -*- HINTS -*-
@@ -492,7 +495,7 @@ SubmitBugReport              "Please submit a bug report with this message, comp
                              "compiler and operating system versions. Faster response will be "
                              "obtained by including all program sources. For information on "
                              "submitting this issue, please see "
-                             "https://bugs.llvm.org/."
+                             "https://github.com/llvm/llvm-project/issues/."
 OBSOLETE                     "Check NLSPATH environment variable, its value is \"%1$s\"."
 ChangeStackLimit             "Please try changing the shell stack limit or adjusting the "
                              "OMP_STACKSIZE environment variable."

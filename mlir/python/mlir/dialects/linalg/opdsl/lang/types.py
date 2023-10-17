@@ -21,13 +21,11 @@ from typing import Dict
 __all__ = [
     "TypeVar",
     "TV",
-
     # Predefined types.
     "I32",
     "I64",
     "F32",
     "F64",
-
     # TypeVar aliases.
     "T",
     "U",
@@ -36,34 +34,34 @@ __all__ = [
 
 
 class TypeVar:
-  """A replaceable type variable.
+    """A replaceable type variable.
 
-  Type variables are uniqued by name.
-  """
-  ALL_TYPEVARS = dict()  # type: Dict[str, "TypeVar"]
+    Type variables are uniqued by name.
+    """
 
-  def __new__(cls, name: str):
-    existing = cls.ALL_TYPEVARS.get(name)
-    if existing is not None:
-      return existing
-    new = super().__new__(cls)
-    new.name = name
-    cls.ALL_TYPEVARS[name] = new
-    return new
+    ALL_TYPEVARS = dict()  # type: Dict[str, "TypeVar"]
 
-  def __repr__(self):
-    return f"TypeVar({self.name})"
+    def __new__(cls, name: str):
+        existing = cls.ALL_TYPEVARS.get(name)
+        if existing is not None:
+            return existing
+        new = super().__new__(cls)
+        new.name = name
+        cls.ALL_TYPEVARS[name] = new
+        return new
 
-  @classmethod
-  def create_expando(cls):
-    """Create an expando class that creates unique type vars on attr access."""
+    def __repr__(self):
+        return f"TypeVar({self.name})"
 
-    class ExpandoTypeVars:
+    @classmethod
+    def create_expando(cls):
+        """Create an expando class that creates unique type vars on attr access."""
 
-      def __getattr__(self, n):
-        return cls(n)
+        class ExpandoTypeVars:
+            def __getattr__(self, n):
+                return cls(n)
 
-    return ExpandoTypeVars()
+        return ExpandoTypeVars()
 
 
 # Expando access via TV.foo

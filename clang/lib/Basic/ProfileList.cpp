@@ -36,8 +36,8 @@ public:
   bool isEmpty() const { return Sections.empty(); }
 
   bool hasPrefix(StringRef Prefix) const {
-    for (auto &SectionIter : Sections)
-      if (SectionIter.Entries.count(Prefix) > 0)
+    for (const auto &It : Sections)
+      if (It.second.Entries.count(Prefix) > 0)
         return true;
     return false;
   }

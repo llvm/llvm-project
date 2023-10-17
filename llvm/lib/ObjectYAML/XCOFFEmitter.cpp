@@ -33,7 +33,7 @@ constexpr uint32_t MaxRawDataSize = UINT32_MAX;
 class XCOFFWriter {
 public:
   XCOFFWriter(XCOFFYAML::Object &Obj, raw_ostream &OS, yaml::ErrorHandler EH)
-      : Obj(Obj), W(OS, support::big), ErrHandler(EH),
+      : Obj(Obj), W(OS, llvm::endianness::big), ErrHandler(EH),
         StrTblBuilder(StringTableBuilder::XCOFF) {
     Is64Bit = Obj.Header.Magic == (llvm::yaml::Hex16)XCOFF::XCOFF64;
   }
@@ -70,7 +70,7 @@ private:
   support::endian::Writer W;
   yaml::ErrorHandler ErrHandler;
   StringTableBuilder StrTblBuilder;
-  uint64_t StartOffset;
+  uint64_t StartOffset = 0u;
   // Map the section name to its corrresponding section index.
   DenseMap<StringRef, int16_t> SectionIndexMap = {
       {StringRef("N_DEBUG"), XCOFF::N_DEBUG},

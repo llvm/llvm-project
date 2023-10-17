@@ -18,6 +18,7 @@
 
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
+using namespace lldb_private::plugin::dwarf;
 
 namespace {
 
@@ -168,10 +169,9 @@ DWARFDIE::LookupDeepestBlock(lldb::addr_t address) const {
   }
 
   if (match_addr_range) {
-    DWARFRangeList ranges;
-    if (m_die->GetAttributeAddressRanges(m_cu, ranges,
-                                         /*check_hi_lo_pc=*/true) &&
-        ranges.FindEntryThatContains(address)) {
+    DWARFRangeList ranges =
+        m_die->GetAttributeAddressRanges(m_cu, /*check_hi_lo_pc=*/true);
+    if (ranges.FindEntryThatContains(address)) {
       check_children = true;
       switch (Tag()) {
       default:
@@ -439,8 +439,9 @@ bool DWARFDIE::IsMethod() const {
 
 bool DWARFDIE::GetDIENamesAndRanges(
     const char *&name, const char *&mangled, DWARFRangeList &ranges,
-    int &decl_file, int &decl_line, int &decl_column, int &call_file,
-    int &call_line, int &call_column,
+    std::optional<int> &decl_file, std::optional<int> &decl_line,
+    std::optional<int> &decl_column, std::optional<int> &call_file,
+    std::optional<int> &call_line, std::optional<int> &call_column,
     lldb_private::DWARFExpressionList *frame_base) const {
   if (IsValid()) {
     return m_die->GetDIENamesAndRanges(

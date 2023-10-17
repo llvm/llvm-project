@@ -83,11 +83,11 @@ struct InlineAsmIdentifierInfo {
     Var.Type = type;
     Var.Length = size / type;
   }
-  InlineAsmIdentifierInfo() : Kind(IK_Invalid) {}
+  InlineAsmIdentifierInfo() = default;
 
 private:
   // Discriminate using the current kind.
-  IdKind Kind;
+  IdKind Kind = IK_Invalid;
 };
 
 // Generic type information for an assembly object.
@@ -236,7 +236,7 @@ public:
 
   bool printPendingErrors() {
     bool rv = !PendingErrors.empty();
-    for (auto Err : PendingErrors) {
+    for (auto &Err : PendingErrors) {
       printError(Err.Loc, Twine(Err.Msg), Err.Range);
     }
     PendingErrors.clear();

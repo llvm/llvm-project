@@ -14,10 +14,8 @@
 
 define float @multi_uses(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @multi_uses(
-; CHECK-NEXT:    [[Y1:%.*]] = extractelement <2 x float> [[Y:%.*]], i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[Y1]], i32 0
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x float> [[X:%.*]], [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x float> [[Y:%.*]], <2 x float> poison, <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x float> [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP2]], i32 1
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP3]], [[TMP4]]

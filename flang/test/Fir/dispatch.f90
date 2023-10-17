@@ -1,4 +1,4 @@
-! RUN: bbc -polymorphic-type -emit-fir %s -o - | tco | FileCheck %s
+! RUN: bbc -polymorphic-type -emit-fir %s -o - | fir-opt --fir-polymorphic-op | FileCheck %s
 ! RUN: bbc -polymorphic-type -emit-fir %s -o - | FileCheck %s --check-prefix=BT
 
 ! Tests codegen of fir.dispatch operation. This test is intentionally run from
@@ -182,105 +182,123 @@ program test_type_to_class
 end
 
 
-! CHECK-LABEL: define void @_QMdispatch1Pdisplay_class(
-! CHECK-SAME: ptr %[[CLASS:.*]])
+! CHECK-LABEL: func.func @_QMdispatch1Pdisplay_class(
+! CHECK-SAME: %[[ARG:.*]]: [[CLASS:!fir.class<.*>>]]
 
-! CHECK-DAG: %[[INT32:.*]] = alloca i32, i64 1
-! CHECK-DAG: %[[REAL:.*]] = alloca float, i64 1
-! CHECK-DAG: %[[I:.*]] = alloca i32, i64 1
+! CHECK-DAG: %[[INT32:.*]] = fir.alloca i32
+! CHECK-DAG: %[[REAL:.*]] = fir.alloca f32
+! CHECK-DAG: %[[I:.*]] = fir.alloca i32
 
 ! Check dynamic dispatch equal to `call p%display2()` with binding index = 2.
-! CHECK: %[[LOADED_CLASS:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[CLASS]]
-! CHECK: %[[TYPEDESCPTR:.*]] = extractvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[LOADED_CLASS]], 7
-! CHECK: %[[LOADED_TYPEDESC:.*]] = load %_QM__fortran_type_infoTderivedtype, ptr %[[TYPEDESCPTR]]
-! CHECK: %[[DT:.*]] = extractvalue %_QM__fortran_type_infoTderivedtype %[[LOADED_TYPEDESC]], 0
-! CHECK: %[[BINDING_BASE_ADDR:.*]] = extractvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] } %[[DT]], 0
-! CHECK: %[[BINDING_PTR:.*]] = getelementptr %_QM__fortran_type_infoTbinding, ptr %[[BINDING_BASE_ADDR]], i32 2
-! CHECK: %[[LOADED_BINDING:.*]] = load %_QM__fortran_type_infoTbinding, ptr %[[BINDING_PTR]]
-! CHECK: %[[BUILTIN_FUNC_PTR:.*]] = extractvalue %_QM__fortran_type_infoTbinding %[[LOADED_BINDING]], 0
-! CHECK: %[[FUNC_ADDR:.*]] = extractvalue %_QM__fortran_builtinsT__builtin_c_funptr %[[BUILTIN_FUNC_PTR]], 0
-! CHECK: %[[FUNC_PTR:.*]] = inttoptr i64 %[[FUNC_ADDR]] to ptr
-! CHECK: call void %[[FUNC_PTR]](ptr %[[CLASS]])
+! CHECK: %[[BOXDESC:.*]] = fir.box_tdesc %[[ARG]] : ([[CLASS]]) -> !fir.tdesc<none>
+! CHECK: %[[TYPEDESCPTR:.*]] = fir.convert %[[BOXDESC]] : (!fir.tdesc<none>) -> !fir.ref<[[TYPEINFO:!fir.type<_QM__fortran_type_infoTderivedtype{.*}>]]>
+! CHECK: %[[BINDING_FIELD:.*]] = fir.field_index binding, [[TYPEINFO]]
+! CHECK: %[[BINDING_BOX_ADDR:.*]] =  fir.coordinate_of %[[TYPEDESCPTR]], %[[BINDING_FIELD]] : (!fir.ref<[[TYPEINFO]]>, !fir.field) -> !fir.ref<[[BINDING_BOX_TYPE:.*]]>
+! CHECK: %[[BINDING_BOX:.*]] = fir.load %[[BINDING_BOX_ADDR]] : !fir.ref<[[BINDING_BOX_TYPE]]>
+! CHECK: %[[BINDING_BASE_ADDR:.*]] = fir.box_addr %[[BINDING_BOX]] : ([[BINDING_BOX_TYPE]]) -> !fir.ptr<[[BINDINGSINFO:.*]]>
+! CHECK: %[[BINDING_PTR:.*]] = fir.coordinate_of %[[BINDING_BASE_ADDR]], %c2 : (!fir.ptr<[[BINDINGSINFO]]>, index) -> !fir.ref<[[BINDINGINFO:.*]]>
+! CHECK: %[[PROC_FIELD:.*]] = fir.field_index proc, [[BINDINGINFO]]
+! CHECK: %[[BUILTIN_FUNC_PTR:.*]] = fir.coordinate_of %[[BINDING_PTR]], %[[PROC_FIELD]] : ({{.*}}) -> !fir.ref<[[BUILTIN_FUNC_TYPE:.*]]>
+! CHECK: %[[ADDRESS_FIELD:.*]] = fir.field_index __address, [[BUILTIN_FUNC_TYPE]]
+! CHECK: %[[FUNC_ADDR_PTR:.*]] = fir.coordinate_of %[[BUILTIN_FUNC_PTR]], %[[ADDRESS_FIELD]]
+! CHECK: %[[FUNC_ADDR:.*]] = fir.load %[[FUNC_ADDR_PTR]] : !fir.ref<i64>
+! CHECK: %[[FUNC_PTR:.*]] = fir.convert %[[FUNC_ADDR]] : (i64) -> (([[CLASS]]) -> ())
+! CHECK: fir.call %[[FUNC_PTR]](%[[ARG]]) : ([[CLASS]]) -> ()
 
 ! Check dynamic dispatch equal to `call p%display1()` with binding index = 1.
-! CHECK: %[[LOADED_CLASS:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[CLASS]]
-! CHECK: %[[TYPEDESCPTR:.*]] = extractvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[LOADED_CLASS]], 7
-! CHECK: %[[LOADED_TYPEDESC:.*]] = load %_QM__fortran_type_infoTderivedtype, ptr %[[TYPEDESCPTR]]
-! CHECK: %[[DT:.*]] = extractvalue %_QM__fortran_type_infoTderivedtype %[[LOADED_TYPEDESC]], 0
-! CHECK: %[[BINDING_BASE_ADDR:.*]] = extractvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] } %[[DT]], 0
-! CHECK: %[[BINDING_PTR:.*]] = getelementptr %_QM__fortran_type_infoTbinding, ptr %[[BINDING_BASE_ADDR]], i32 1
-! CHECK: %[[LOADED_BINDING:.*]] = load %_QM__fortran_type_infoTbinding, ptr %[[BINDING_PTR]]
-! CHECK: %[[BUILTIN_FUNC_PTR:.*]] = extractvalue %_QM__fortran_type_infoTbinding %[[LOADED_BINDING]], 0
-! CHECK: %[[FUNC_ADDR:.*]] = extractvalue %_QM__fortran_builtinsT__builtin_c_funptr %[[BUILTIN_FUNC_PTR]], 0
-! CHECK: %[[FUNC_PTR:.*]] = inttoptr i64 %[[FUNC_ADDR]] to ptr
-! CHECK: call void %[[FUNC_PTR]](ptr %[[CLASS]])
+! CHECK: %[[BOXDESC:.*]] = fir.box_tdesc %[[ARG]] : ([[CLASS]]) -> !fir.tdesc<none>
+! CHECK: %[[TYPEDESCPTR:.*]] = fir.convert %[[BOXDESC]] : (!fir.tdesc<none>) -> !fir.ref<[[TYPEINFO:!fir.type<_QM__fortran_type_infoTderivedtype{.*}>]]>
+! CHECK: %[[BINDING_FIELD:.*]] = fir.field_index binding, [[TYPEINFO]]
+! CHECK: %[[BINDING_BOX_ADDR:.*]] =  fir.coordinate_of %[[TYPEDESCPTR]], %[[BINDING_FIELD]] : (!fir.ref<[[TYPEINFO]]>, !fir.field) -> !fir.ref<[[BINDING_BOX_TYPE:.*]]>
+! CHECK: %[[BINDING_BOX:.*]] = fir.load %[[BINDING_BOX_ADDR]] : !fir.ref<[[BINDING_BOX_TYPE]]>
+! CHECK: %[[BINDING_BASE_ADDR:.*]] = fir.box_addr %[[BINDING_BOX]] : ([[BINDING_BOX_TYPE]]) -> !fir.ptr<[[BINDINGSINFO:.*]]>
+! CHECK: %[[BINDING_PTR:.*]] = fir.coordinate_of %[[BINDING_BASE_ADDR]], %c1 : (!fir.ptr<[[BINDINGSINFO]]>, index) -> !fir.ref<[[BINDINGINFO:.*]]>
+! CHECK: %[[PROC_FIELD:.*]] = fir.field_index proc, [[BINDINGINFO]]
+! CHECK: %[[BUILTIN_FUNC_PTR:.*]] = fir.coordinate_of %[[BINDING_PTR]], %[[PROC_FIELD]] : ({{.*}}) -> !fir.ref<[[BUILTIN_FUNC_TYPE:.*]]>
+! CHECK: %[[ADDRESS_FIELD:.*]] = fir.field_index __address, [[BUILTIN_FUNC_TYPE]]
+! CHECK: %[[FUNC_ADDR_PTR:.*]] = fir.coordinate_of %[[BUILTIN_FUNC_PTR]], %[[ADDRESS_FIELD]]
+! CHECK: %[[FUNC_ADDR:.*]] = fir.load %[[FUNC_ADDR_PTR]] : !fir.ref<i64>
+! CHECK: %[[FUNC_PTR:.*]] = fir.convert %[[FUNC_ADDR]] : (i64) -> (([[CLASS]]) -> ())
+! CHECK: fir.call %[[FUNC_PTR]](%[[ARG]]) : ([[CLASS]]) -> ()
 
 ! Check dynamic dispatch equal to `call p%aproc()` with binding index = 0.
-! CHECK: %[[LOADED_CLASS:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[CLASS]]
-! CHECK: %[[TYPEDESCPTR:.*]] = extractvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[LOADED_CLASS]], 7
-! CHECK: %[[LOADED_TYPEDESC:.*]] = load %_QM__fortran_type_infoTderivedtype, ptr %[[TYPEDESCPTR]]
-! CHECK: %[[DT:.*]] = extractvalue %_QM__fortran_type_infoTderivedtype %[[LOADED_TYPEDESC]], 0
-! CHECK: %[[BINDING_BASE_ADDR:.*]] = extractvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] } %[[DT]], 0
-! CHECK: %[[BINDING_PTR:.*]] = getelementptr %_QM__fortran_type_infoTbinding, ptr %[[BINDING_BASE_ADDR]], i32 0
-! CHECK: %[[LOADED_BINDING:.*]] = load %_QM__fortran_type_infoTbinding, ptr %[[BINDING_PTR]]
-! CHECK: %[[BUILTIN_FUNC_PTR:.*]] = extractvalue %_QM__fortran_type_infoTbinding %[[LOADED_BINDING]], 0
-! CHECK: %[[FUNC_ADDR:.*]] = extractvalue %_QM__fortran_builtinsT__builtin_c_funptr %[[BUILTIN_FUNC_PTR]], 0
-! CHECK: %[[FUNC_PTR:.*]] = inttoptr i64 %[[FUNC_ADDR]] to ptr
-! CHECK: call void %[[FUNC_PTR]](ptr %[[CLASS]])
+! CHECK: %[[BOXDESC:.*]] = fir.box_tdesc %[[ARG]] : ([[CLASS]]) -> !fir.tdesc<none>
+! CHECK: %[[TYPEDESCPTR:.*]] = fir.convert %[[BOXDESC]] : (!fir.tdesc<none>) -> !fir.ref<[[TYPEINFO:!fir.type<_QM__fortran_type_infoTderivedtype{.*}>]]>
+! CHECK: %[[BINDING_FIELD:.*]] = fir.field_index binding, [[TYPEINFO]]
+! CHECK: %[[BINDING_BOX_ADDR:.*]] =  fir.coordinate_of %[[TYPEDESCPTR]], %[[BINDING_FIELD]] : (!fir.ref<[[TYPEINFO]]>, !fir.field) -> !fir.ref<[[BINDING_BOX_TYPE:.*]]>
+! CHECK: %[[BINDING_BOX:.*]] = fir.load %[[BINDING_BOX_ADDR]] : !fir.ref<[[BINDING_BOX_TYPE]]>
+! CHECK: %[[BINDING_BASE_ADDR:.*]] = fir.box_addr %[[BINDING_BOX]] : ([[BINDING_BOX_TYPE]]) -> !fir.ptr<[[BINDINGSINFO:.*]]>
+! CHECK: %[[BINDING_PTR:.*]] = fir.coordinate_of %[[BINDING_BASE_ADDR]], %c0 : (!fir.ptr<[[BINDINGSINFO]]>, index) -> !fir.ref<[[BINDINGINFO:.*]]>
+! CHECK: %[[PROC_FIELD:.*]] = fir.field_index proc, [[BINDINGINFO]]
+! CHECK: %[[BUILTIN_FUNC_PTR:.*]] = fir.coordinate_of %[[BINDING_PTR]], %[[PROC_FIELD]] : ({{.*}}) -> !fir.ref<[[BUILTIN_FUNC_TYPE:.*]]>
+! CHECK: %[[ADDRESS_FIELD:.*]] = fir.field_index __address, [[BUILTIN_FUNC_TYPE]]
+! CHECK: %[[FUNC_ADDR_PTR:.*]] = fir.coordinate_of %[[BUILTIN_FUNC_PTR]], %[[ADDRESS_FIELD]]
+! CHECK: %[[FUNC_ADDR:.*]] = fir.load %[[FUNC_ADDR_PTR]] : !fir.ref<i64>
+! CHECK: %[[FUNC_PTR:.*]] = fir.convert %[[FUNC_ADDR]] : (i64) -> (([[CLASS]]) -> ())
+! CHECK: fir.call %[[FUNC_PTR]](%[[ARG]]) : ([[CLASS]]) -> ()
 
 ! Check dynamic dispatch of a function with result.
-! CHECK: %[[LOADED_CLASS:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[CLASS]]
-! CHECK: %[[TYPEDESCPTR:.*]] = extractvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[LOADED_CLASS]], 7
-! CHECK: %[[LOADED_TYPEDESC:.*]] = load %_QM__fortran_type_infoTderivedtype, ptr %[[TYPEDESCPTR]]
-! CHECK: %[[DT:.*]] = extractvalue %_QM__fortran_type_infoTderivedtype %[[LOADED_TYPEDESC]], 0
-! CHECK: %[[BINDING_BASE_ADDR:.*]] = extractvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] } %[[DT]], 0
-! CHECK: %[[BINDING_PTR:.*]] = getelementptr %_QM__fortran_type_infoTbinding, ptr %[[BINDING_BASE_ADDR]], i32 3
-! CHECK: %[[LOADED_BINDING:.*]] = load %_QM__fortran_type_infoTbinding, ptr %[[BINDING_PTR]]
-! CHECK: %[[BUILTIN_FUNC_PTR:.*]] = extractvalue %_QM__fortran_type_infoTbinding %[[LOADED_BINDING]], 0
-! CHECK: %[[FUNC_ADDR:.*]] = extractvalue %_QM__fortran_builtinsT__builtin_c_funptr %[[BUILTIN_FUNC_PTR]], 0
-! CHECK: %[[FUNC_PTR:.*]] = inttoptr i64 %[[FUNC_ADDR]] to ptr
-! CHECK: %[[RET:.*]] = call i32 %[[FUNC_PTR]](ptr %[[CLASS]])
-! CHECK: store i32 %[[RET]], ptr %[[I]]
+! CHECK: %[[BOXDESC:.*]] = fir.box_tdesc %[[ARG]] : ([[CLASS]]) -> !fir.tdesc<none>
+! CHECK: %[[TYPEDESCPTR:.*]] = fir.convert %[[BOXDESC]] : (!fir.tdesc<none>) -> !fir.ref<[[TYPEINFO:!fir.type<_QM__fortran_type_infoTderivedtype{.*}>]]>
+! CHECK: %[[BINDING_FIELD:.*]] = fir.field_index binding, [[TYPEINFO]]
+! CHECK: %[[BINDING_BOX_ADDR:.*]] =  fir.coordinate_of %[[TYPEDESCPTR]], %[[BINDING_FIELD]] : (!fir.ref<[[TYPEINFO]]>, !fir.field) -> !fir.ref<[[BINDING_BOX_TYPE:.*]]>
+! CHECK: %[[BINDING_BOX:.*]] = fir.load %[[BINDING_BOX_ADDR]] : !fir.ref<[[BINDING_BOX_TYPE]]>
+! CHECK: %[[BINDING_BASE_ADDR:.*]] = fir.box_addr %[[BINDING_BOX]] : ([[BINDING_BOX_TYPE]]) -> !fir.ptr<[[BINDINGSINFO:.*]]>
+! CHECK: %[[BINDING_PTR:.*]] = fir.coordinate_of %[[BINDING_BASE_ADDR]], %c3 : (!fir.ptr<[[BINDINGSINFO]]>, index) -> !fir.ref<[[BINDINGINFO:.*]]>
+! CHECK: %[[PROC_FIELD:.*]] = fir.field_index proc, [[BINDINGINFO]]
+! CHECK: %[[BUILTIN_FUNC_PTR:.*]] = fir.coordinate_of %[[BINDING_PTR]], %[[PROC_FIELD]] : ({{.*}}) -> !fir.ref<[[BUILTIN_FUNC_TYPE:.*]]>
+! CHECK: %[[ADDRESS_FIELD:.*]] = fir.field_index __address, [[BUILTIN_FUNC_TYPE]]
+! CHECK: %[[FUNC_ADDR_PTR:.*]] = fir.coordinate_of %[[BUILTIN_FUNC_PTR]], %[[ADDRESS_FIELD]]
+! CHECK: %[[FUNC_ADDR:.*]] = fir.load %[[FUNC_ADDR_PTR]] : !fir.ref<i64>
+! CHECK: %[[FUNC_PTR:.*]] = fir.convert %[[FUNC_ADDR]] : (i64) -> (([[CLASS]]) -> i32)
+! CHECK: %[[RES:.*]] = fir.call %[[FUNC_PTR]](%[[ARG]]) : ([[CLASS]]) -> i32
 
 ! Check dynamic dispatch of call with passed-object and additional argument
-! CHECK: store float 2.500000e+00, ptr %[[REAL]]
-! CHECK: %[[LOADED_CLASS:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[CLASS]]
-! CHECK: %[[TYPEDESCPTR:.*]] = extractvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[LOADED_CLASS]], 7
-! CHECK: %[[LOADED_TYPEDESC:.*]] = load %_QM__fortran_type_infoTderivedtype, ptr %[[TYPEDESCPTR]]
-! CHECK: %[[DT:.*]] = extractvalue %_QM__fortran_type_infoTderivedtype %[[LOADED_TYPEDESC]], 0
-! CHECK: %[[BINDING_BASE_ADDR:.*]] = extractvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] } %[[DT]], 0
-! CHECK: %[[BINDING_PTR:.*]] = getelementptr %_QM__fortran_type_infoTbinding, ptr %[[BINDING_BASE_ADDR]], i32 6
-! CHECK: %[[LOADED_BINDING:.*]] = load %_QM__fortran_type_infoTbinding, ptr %[[BINDING_PTR]]
-! CHECK: %[[BUILTIN_FUNC_PTR:.*]] = extractvalue %_QM__fortran_type_infoTbinding %[[LOADED_BINDING]], 0
-! CHECK: %[[FUNC_ADDR:.*]] = extractvalue %_QM__fortran_builtinsT__builtin_c_funptr %[[BUILTIN_FUNC_PTR]], 0
-! CHECK: %[[FUNC_PTR:.*]] = inttoptr i64 %[[FUNC_ADDR]] to ptr
-! CHECK: call void %[[FUNC_PTR]](ptr %[[CLASS]], ptr %[[REAL]])
+! CHECK: %[[BOXDESC:.*]] = fir.box_tdesc %[[ARG]] : ([[CLASS]]) -> !fir.tdesc<none>
+! CHECK: %[[TYPEDESCPTR:.*]] = fir.convert %[[BOXDESC]] : (!fir.tdesc<none>) -> !fir.ref<[[TYPEINFO:!fir.type<_QM__fortran_type_infoTderivedtype{.*}>]]>
+! CHECK: %[[BINDING_FIELD:.*]] = fir.field_index binding, [[TYPEINFO]]
+! CHECK: %[[BINDING_BOX_ADDR:.*]] =  fir.coordinate_of %[[TYPEDESCPTR]], %[[BINDING_FIELD]] : (!fir.ref<[[TYPEINFO]]>, !fir.field) -> !fir.ref<[[BINDING_BOX_TYPE:.*]]>
+! CHECK: %[[BINDING_BOX:.*]] = fir.load %[[BINDING_BOX_ADDR]] : !fir.ref<[[BINDING_BOX_TYPE]]>
+! CHECK: %[[BINDING_BASE_ADDR:.*]] = fir.box_addr %[[BINDING_BOX]] : ([[BINDING_BOX_TYPE]]) -> !fir.ptr<[[BINDINGSINFO:.*]]>
+! CHECK: %[[BINDING_PTR:.*]] = fir.coordinate_of %[[BINDING_BASE_ADDR]], %c6 : (!fir.ptr<[[BINDINGSINFO]]>, index) -> !fir.ref<[[BINDINGINFO:.*]]>
+! CHECK: %[[PROC_FIELD:.*]] = fir.field_index proc, [[BINDINGINFO]]
+! CHECK: %[[BUILTIN_FUNC_PTR:.*]] = fir.coordinate_of %[[BINDING_PTR]], %[[PROC_FIELD]] : ({{.*}}) -> !fir.ref<[[BUILTIN_FUNC_TYPE:.*]]>
+! CHECK: %[[ADDRESS_FIELD:.*]] = fir.field_index __address, [[BUILTIN_FUNC_TYPE]]
+! CHECK: %[[FUNC_ADDR_PTR:.*]] = fir.coordinate_of %[[BUILTIN_FUNC_PTR]], %[[ADDRESS_FIELD]]
+! CHECK: %[[FUNC_ADDR:.*]] = fir.load %[[FUNC_ADDR_PTR]] : !fir.ref<i64>
+! CHECK: %[[FUNC_PTR:.*]] = fir.convert %[[FUNC_ADDR]] : (i64) -> (([[CLASS]], !fir.ref<f32>) -> ())
+! CHECK: fir.call %[[FUNC_PTR]](%[[ARG]], %[[REAL]]) : ([[CLASS]], !fir.ref<f32>) -> ()
 
 ! Check dynamic dispatch of a call with NOPASS
-! CHECK: %[[LOADED_CLASS:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[CLASS]]
-! CHECK: %[[TYPEDESCPTR:.*]] = extractvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[LOADED_CLASS]], 7
-! CHECK: %[[LOADED_TYPEDESC:.*]] = load %_QM__fortran_type_infoTderivedtype, ptr %[[TYPEDESCPTR]]
-! CHECK: %[[DT:.*]] = extractvalue %_QM__fortran_type_infoTderivedtype %[[LOADED_TYPEDESC]], 0
-! CHECK: %[[BINDING_BASE_ADDR:.*]] = extractvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] } %[[DT]], 0
-! CHECK: %[[BINDING_PTR:.*]] = getelementptr %_QM__fortran_type_infoTbinding, ptr %[[BINDING_BASE_ADDR]], i32 4
-! CHECK: %[[LOADED_BINDING:.*]] = load %_QM__fortran_type_infoTbinding, ptr %[[BINDING_PTR]]
-! CHECK: %[[BUILTIN_FUNC_PTR:.*]] = extractvalue %_QM__fortran_type_infoTbinding %[[LOADED_BINDING]], 0
-! CHECK: %[[FUNC_ADDR:.*]] = extractvalue %_QM__fortran_builtinsT__builtin_c_funptr %[[BUILTIN_FUNC_PTR]], 0
-! CHECK: %[[FUNC_PTR:.*]] = inttoptr i64 %[[FUNC_ADDR]] to ptr
-! CHECK: call void %[[FUNC_PTR]]()
+! CHECK: %[[BOXDESC:.*]] = fir.box_tdesc %[[ARG]] : ([[CLASS]]) -> !fir.tdesc<none>
+! CHECK: %[[TYPEDESCPTR:.*]] = fir.convert %[[BOXDESC]] : (!fir.tdesc<none>) -> !fir.ref<[[TYPEINFO:!fir.type<_QM__fortran_type_infoTderivedtype{.*}>]]>
+! CHECK: %[[BINDING_FIELD:.*]] = fir.field_index binding, [[TYPEINFO]]
+! CHECK: %[[BINDING_BOX_ADDR:.*]] =  fir.coordinate_of %[[TYPEDESCPTR]], %[[BINDING_FIELD]] : (!fir.ref<[[TYPEINFO]]>, !fir.field) -> !fir.ref<[[BINDING_BOX_TYPE:.*]]>
+! CHECK: %[[BINDING_BOX:.*]] = fir.load %[[BINDING_BOX_ADDR]] : !fir.ref<[[BINDING_BOX_TYPE]]>
+! CHECK: %[[BINDING_BASE_ADDR:.*]] = fir.box_addr %[[BINDING_BOX]] : ([[BINDING_BOX_TYPE]]) -> !fir.ptr<[[BINDINGSINFO:.*]]>
+! CHECK: %[[BINDING_PTR:.*]] = fir.coordinate_of %[[BINDING_BASE_ADDR]], %c4 : (!fir.ptr<[[BINDINGSINFO]]>, index) -> !fir.ref<[[BINDINGINFO:.*]]>
+! CHECK: %[[PROC_FIELD:.*]] = fir.field_index proc, [[BINDINGINFO]]
+! CHECK: %[[BUILTIN_FUNC_PTR:.*]] = fir.coordinate_of %[[BINDING_PTR]], %[[PROC_FIELD]] : ({{.*}}) -> !fir.ref<[[BUILTIN_FUNC_TYPE:.*]]>
+! CHECK: %[[ADDRESS_FIELD:.*]] = fir.field_index __address, [[BUILTIN_FUNC_TYPE]]
+! CHECK: %[[FUNC_ADDR_PTR:.*]] = fir.coordinate_of %[[BUILTIN_FUNC_PTR]], %[[ADDRESS_FIELD]]
+! CHECK: %[[FUNC_ADDR:.*]] = fir.load %[[FUNC_ADDR_PTR]] : !fir.ref<i64>
+! CHECK: %[[FUNC_PTR:.*]] = fir.convert %[[FUNC_ADDR]] : (i64) -> (() -> ())
+! CHECK: fir.call %[[FUNC_PTR]]() : () -> ()
 
-! CHECK: store i32 1, ptr %[[INT32]]
-! CHECK: %[[LOADED_CLASS:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[CLASS]]
-! CHECK: %[[TYPEDESCPTR:.*]] = extractvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[LOADED_CLASS]], 7
-! CHECK: %[[LOADED_TYPEDESC:.*]] = load %_QM__fortran_type_infoTderivedtype, ptr %[[TYPEDESCPTR]]
-! CHECK: %[[DT:.*]] = extractvalue %_QM__fortran_type_infoTderivedtype %[[LOADED_TYPEDESC]], 0
-! CHECK: %[[BINDING_BASE_ADDR:.*]] = extractvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] } %[[DT]], 0
-! CHECK: %[[BINDING_PTR:.*]] = getelementptr %_QM__fortran_type_infoTbinding, ptr %[[BINDING_BASE_ADDR]], i32 5
-! CHECK: %[[LOADED_BINDING:.*]] = load %_QM__fortran_type_infoTbinding, ptr %[[BINDING_PTR]]
-! CHECK: %[[BUILTIN_FUNC_PTR:.*]] = extractvalue %_QM__fortran_type_infoTbinding %[[LOADED_BINDING]], 0
-! CHECK: %[[FUNC_ADDR:.*]] = extractvalue %_QM__fortran_builtinsT__builtin_c_funptr %[[BUILTIN_FUNC_PTR]], 0
-! CHECK: %[[FUNC_PTR:.*]] = inttoptr i64 %[[FUNC_ADDR]] to ptr
-! CHECK: call void %[[FUNC_PTR]](ptr %[[INT32]], ptr %[[CLASS]])
+! CHECK: %[[BOXDESC:.*]] = fir.box_tdesc %[[ARG]] : ([[CLASS]]) -> !fir.tdesc<none>
+! CHECK: %[[TYPEDESCPTR:.*]] = fir.convert %[[BOXDESC]] : (!fir.tdesc<none>) -> !fir.ref<[[TYPEINFO:!fir.type<_QM__fortran_type_infoTderivedtype{.*}>]]>
+! CHECK: %[[BINDING_FIELD:.*]] = fir.field_index binding, [[TYPEINFO]]
+! CHECK: %[[BINDING_BOX_ADDR:.*]] =  fir.coordinate_of %[[TYPEDESCPTR]], %[[BINDING_FIELD]] : (!fir.ref<[[TYPEINFO]]>, !fir.field) -> !fir.ref<[[BINDING_BOX_TYPE:.*]]>
+! CHECK: %[[BINDING_BOX:.*]] = fir.load %[[BINDING_BOX_ADDR]] : !fir.ref<[[BINDING_BOX_TYPE]]>
+! CHECK: %[[BINDING_BASE_ADDR:.*]] = fir.box_addr %[[BINDING_BOX]] : ([[BINDING_BOX_TYPE]]) -> !fir.ptr<[[BINDINGSINFO:.*]]>
+! CHECK: %[[BINDING_PTR:.*]] = fir.coordinate_of %[[BINDING_BASE_ADDR]], %c5 : (!fir.ptr<[[BINDINGSINFO]]>, index) -> !fir.ref<[[BINDINGINFO:.*]]>
+! CHECK: %[[PROC_FIELD:.*]] = fir.field_index proc, [[BINDINGINFO]]
+! CHECK: %[[BUILTIN_FUNC_PTR:.*]] = fir.coordinate_of %[[BINDING_PTR]], %[[PROC_FIELD]] : ({{.*}}) -> !fir.ref<[[BUILTIN_FUNC_TYPE:.*]]>
+! CHECK: %[[ADDRESS_FIELD:.*]] = fir.field_index __address, [[BUILTIN_FUNC_TYPE]]
+! CHECK: %[[FUNC_ADDR_PTR:.*]] = fir.coordinate_of %[[BUILTIN_FUNC_PTR]], %[[ADDRESS_FIELD]]
+! CHECK: %[[FUNC_ADDR:.*]] = fir.load %[[FUNC_ADDR_PTR]] : !fir.ref<i64>
+! CHECK: %[[FUNC_PTR:.*]] = fir.convert %[[FUNC_ADDR]] : (i64) -> ((!fir.ref<i32>, [[CLASS]]) -> ())
+! CHECK: fir.call %[[FUNC_PTR]](%[[INT32]], %[[ARG]]) : (!fir.ref<i32>, [[CLASS]]) -> ()
 
 ! CHECK-LABEL: _QMdispatch1Pno_pass_array
 ! CHECK-LABEL: _QMdispatch1Pno_pass_array_allocatable
@@ -290,10 +308,10 @@ end
 ! Check the layout of the binding table. This is easier to do in FIR than in 
 ! LLVM IR.
 
-! BT-LABEL: fir.dispatch_table @_QMdispatch1Tty_kindK10K20
-! BT-LABEL: fir.dispatch_table @_QMdispatch1Tty_kind_exK10K20 extends("_QMdispatch1Tty_kindK10K20")
+! BT-LABEL: fir.type_info @_QMdispatch1Tty_kindK10K20
+! BT-LABEL: fir.type_info @_QMdispatch1Tty_kind_exK10K20 {{.*}}extends !fir.type<_QMdispatch1Tty_kindK10K20{{.*}}>
 
-! BT-LABEL: fir.dispatch_table @_QMdispatch1Tp1 {
+! BT-LABEL: fir.type_info @_QMdispatch1Tp1
 ! BT: fir.dt_entry "aproc", @_QMdispatch1Paproc
 ! BT: fir.dt_entry "display1", @_QMdispatch1Pdisplay1_p1
 ! BT: fir.dt_entry "display2", @_QMdispatch1Pdisplay2_p1
@@ -303,15 +321,15 @@ end
 ! BT: fir.dt_entry "proc_with_values", @_QMdispatch1Pproc_p1
 ! BT: }
 
-! BT-LABEL: fir.dispatch_table @_QMdispatch1Ta1 {
+! BT-LABEL: fir.type_info @_QMdispatch1Ta1
 ! BT: fir.dt_entry "a1_proc", @_QMdispatch1Pa1_proc
 ! BT: }
 
-! BT-LABEL: fir.dispatch_table @_QMdispatch1Ta2 extends("_QMdispatch1Ta1") {
+! BT-LABEL: fir.type_info @_QMdispatch1Ta2 {{.*}}extends !fir.type<_QMdispatch1Ta1{{.*}}>
 ! BT:  fir.dt_entry "a1_proc", @_QMdispatch1Pa2_proc
 ! BT: }
 
-! BT-LABEL: fir.dispatch_table @_QMdispatch1Tp2 extends("_QMdispatch1Tp1") {
+! BT-LABEL: fir.type_info @_QMdispatch1Tp2 {{.*}}extends !fir.type<_QMdispatch1Tp1{{.*}}>
 ! BT:  fir.dt_entry "aproc", @_QMdispatch1Paproc
 ! BT:  fir.dt_entry "display1", @_QMdispatch1Pdisplay1_p2
 ! BT:  fir.dt_entry "display2", @_QMdispatch1Pdisplay2_p2

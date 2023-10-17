@@ -8,10 +8,10 @@
 
 ; CHECK: entry:
 ; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %a, metadata ![[B:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 %a, metadata ![[A:[0-9]+]], {{.*}}, metadata ptr undef
+; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %a, metadata ![[A:[0-9]+]]
 ; CHECK-NEXT: %add =
 ; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %add, metadata ![[B]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 %add, metadata ![[A]], {{.*}}, metadata ptr undef
+; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %add, metadata ![[A]]
 
 ; CHECK-DAG: ![[A]] = !DILocalVariable(name: "a",
 ; CHECK-DAG: ![[B]] = !DILocalVariable(name: "b",

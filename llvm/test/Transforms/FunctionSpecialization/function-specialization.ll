@@ -1,5 +1,5 @@
-; RUN: opt -passes="ipsccp<func-spec>" -func-specialization-size-threshold=3 -S < %s | FileCheck %s
-; RUN: opt -passes="ipsccp<no-func-spec>" -func-specialization-size-threshold=3 -S < %s | FileCheck %s --check-prefix=NOFSPEC
+; RUN: opt -passes="ipsccp<func-spec>" -funcspec-min-function-size=3 -S < %s | FileCheck %s
+; RUN: opt -passes="ipsccp<no-func-spec>" -funcspec-min-function-size=3 -S < %s | FileCheck %s --check-prefix=NOFSPEC
 
 define i64 @main(i64 %x, i1 %flag) {
 ;
@@ -7,10 +7,10 @@ define i64 @main(i64 %x, i1 %flag) {
 ; CHECK:      entry:
 ; CHECK-NEXT:   br i1 %flag, label %plus, label %minus
 ; CHECK:      plus:
-; CHECK-NEXT:   [[TMP0:%.+]] = call i64 @compute.1(i64 %x, ptr @plus)
+; CHECK-NEXT:   [[TMP0:%.+]] = call i64 @compute.specialized.1(i64 %x, ptr @plus)
 ; CHECK-NEXT:   br label %merge
 ; CHECK:      minus:
-; CHECK-NEXT:   [[TMP1:%.+]] = call i64 @compute.2(i64 %x, ptr @minus)
+; CHECK-NEXT:   [[TMP1:%.+]] = call i64 @compute.specialized.2(i64 %x, ptr @minus)
 ; CHECK-NEXT:   br label %merge
 ; CHECK:      merge:
 ; CHECK-NEXT:   [[TMP2:%.+]] = phi i64 [ [[TMP0]], %plus ], [ [[TMP1]], %minus ]
@@ -18,7 +18,7 @@ define i64 @main(i64 %x, i1 %flag) {
 ; CHECK-NEXT: }
 ;
 ; NOFSPEC-LABEL: @main(i64 %x, i1 %flag) {
-; NOFSPEC-NOT: call i64 @compute.{{[0-9]+}}(
+; NOFSPEC-NOT: call i64 @compute.specialized.{{[0-9]+}}(
 ; NOFSPEC: call i64 @compute(
 ;
 entry:
@@ -39,20 +39,20 @@ merge:
 
 ; CHECK-NOT: define internal i64 @compute(
 ;
-; CHECK-LABEL: define internal i64 @compute.1(i64 %x, ptr %binop) {
+; CHECK-LABEL: define internal i64 @compute.specialized.1(i64 %x, ptr %binop) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.+]] = call i64 @plus(i64 %x)
 ; CHECK-NEXT:    ret i64 [[TMP0]]
 ; CHECK-NEXT:  }
 ;
-; CHECK-LABEL: define internal i64 @compute.2(i64 %x, ptr %binop) {
+; CHECK-LABEL: define internal i64 @compute.specialized.2(i64 %x, ptr %binop) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.+]] = call i64 @minus(i64 %x)
 ; CHECK-NEXT:    ret i64 [[TMP0]]
 ; CHECK-NEXT:  }
 ;
 ; NOFSPEC: define internal i64 @compute(
-; NOFSPEC-NOT: define internal i64 @compute.{{[0-9]+}}(
+; NOFSPEC-NOT: define internal i64 @compute.specialized.{{[0-9]+}}(
 ;
 define internal i64 @compute(i64 %x, ptr %binop) {
 entry:

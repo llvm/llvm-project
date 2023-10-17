@@ -356,10 +356,10 @@ declare <2 x double> @llvm.aarch64.neon.fmulx.v2f64(<2 x double>, <2 x double>) 
 define <4 x i32> @smlal4s(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: smlal4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr d2, [x0]
+; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    ldr d2, [x1]
 ; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    smlal.4s v0, v2, v1
+; CHECK-NEXT:    smlal.4s v0, v1, v2
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x i16>, ptr %A
   %tmp2 = load <4 x i16>, ptr %B
@@ -372,10 +372,10 @@ define <4 x i32> @smlal4s(ptr %A, ptr %B, ptr %C) nounwind {
 define <2 x i64> @smlal2d(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: smlal2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr d2, [x0]
+; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    ldr d2, [x1]
 ; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    smlal.2d v0, v2, v1
+; CHECK-NEXT:    smlal.2d v0, v1, v2
 ; CHECK-NEXT:    ret
   %tmp1 = load <2 x i32>, ptr %A
   %tmp2 = load <2 x i32>, ptr %B
@@ -406,7 +406,7 @@ define void @smlal8h_chain_with_constant(ptr %dst, <8 x i8> %v1, <8 x i8> %v2, <
 define void @smlal2d_chain_with_constant(ptr %dst, <2 x i32> %v1, <2 x i32> %v2, <2 x i32> %v3) {
 ; CHECK-LABEL: smlal2d_chain_with_constant:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #257
+; CHECK-NEXT:    mov w8, #257 // =0x101
 ; CHECK-NEXT:    dup.2d v3, x8
 ; CHECK-NEXT:    smlal.2d v3, v0, v2
 ; CHECK-NEXT:    mvn.8b v0, v2
@@ -425,10 +425,10 @@ define void @smlal2d_chain_with_constant(ptr %dst, <2 x i32> %v1, <2 x i32> %v2,
 define <4 x i32> @smlsl4s(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: smlsl4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr d2, [x0]
+; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    ldr d2, [x1]
 ; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    smlsl.4s v0, v2, v1
+; CHECK-NEXT:    smlsl.4s v0, v1, v2
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x i16>, ptr %A
   %tmp2 = load <4 x i16>, ptr %B
@@ -441,10 +441,10 @@ define <4 x i32> @smlsl4s(ptr %A, ptr %B, ptr %C) nounwind {
 define <2 x i64> @smlsl2d(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: smlsl2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr d2, [x0]
+; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    ldr d2, [x1]
 ; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    smlsl.2d v0, v2, v1
+; CHECK-NEXT:    smlsl.2d v0, v1, v2
 ; CHECK-NEXT:    ret
   %tmp1 = load <2 x i32>, ptr %A
   %tmp2 = load <2 x i32>, ptr %B
@@ -457,12 +457,11 @@ define <2 x i64> @smlsl2d(ptr %A, ptr %B, ptr %C) nounwind {
 define void @smlsl8h_chain_with_constant(ptr %dst, <8 x i8> %v1, <8 x i8> %v2, <8 x i8> %v3) {
 ; CHECK-LABEL: smlsl8h_chain_with_constant:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smull.8h v0, v0, v2
-; CHECK-NEXT:    mvn.8b v2, v2
 ; CHECK-NEXT:    movi.16b v3, #1
-; CHECK-NEXT:    smlal.8h v0, v1, v2
-; CHECK-NEXT:    sub.8h v0, v3, v0
-; CHECK-NEXT:    str q0, [x0]
+; CHECK-NEXT:    smlsl.8h v3, v0, v2
+; CHECK-NEXT:    mvn.8b v0, v2
+; CHECK-NEXT:    smlsl.8h v3, v1, v0
+; CHECK-NEXT:    str q3, [x0]
 ; CHECK-NEXT:    ret
   %xor = xor <8 x i8> %v3, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
   %smull.1 = tail call <8 x i16> @llvm.aarch64.neon.smull.v8i16(<8 x i8> %v1, <8 x i8> %v3)
@@ -476,13 +475,12 @@ define void @smlsl8h_chain_with_constant(ptr %dst, <8 x i8> %v1, <8 x i8> %v2, <
 define void @smlsl2d_chain_with_constant(ptr %dst, <2 x i32> %v1, <2 x i32> %v2, <2 x i32> %v3) {
 ; CHECK-LABEL: smlsl2d_chain_with_constant:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smull.2d v0, v0, v2
-; CHECK-NEXT:    mov w8, #257
-; CHECK-NEXT:    mvn.8b v2, v2
-; CHECK-NEXT:    smlal.2d v0, v1, v2
-; CHECK-NEXT:    dup.2d v1, x8
-; CHECK-NEXT:    sub.2d v0, v1, v0
-; CHECK-NEXT:    str q0, [x0]
+; CHECK-NEXT:    mov w8, #257 // =0x101
+; CHECK-NEXT:    dup.2d v3, x8
+; CHECK-NEXT:    smlsl.2d v3, v0, v2
+; CHECK-NEXT:    mvn.8b v0, v2
+; CHECK-NEXT:    smlsl.2d v3, v1, v0
+; CHECK-NEXT:    str q3, [x0]
 ; CHECK-NEXT:    ret
   %xor = xor <2 x i32> %v3, <i32 -1, i32 -1>
   %smull.1 = tail call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> %v1, <2 x i32> %v3)
@@ -501,10 +499,10 @@ declare <2 x i64> @llvm.aarch64.neon.sqsub.v2i64(<2 x i64>, <2 x i64>)
 define <4 x i32> @sqdmlal4s(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: sqdmlal4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr d2, [x0]
+; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    ldr d2, [x1]
 ; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    sqdmlal.4s v0, v2, v1
+; CHECK-NEXT:    sqdmlal.4s v0, v1, v2
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x i16>, ptr %A
   %tmp2 = load <4 x i16>, ptr %B
@@ -517,10 +515,10 @@ define <4 x i32> @sqdmlal4s(ptr %A, ptr %B, ptr %C) nounwind {
 define <2 x i64> @sqdmlal2d(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: sqdmlal2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr d2, [x0]
+; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    ldr d2, [x1]
 ; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    sqdmlal.2d v0, v2, v1
+; CHECK-NEXT:    sqdmlal.2d v0, v1, v2
 ; CHECK-NEXT:    ret
   %tmp1 = load <2 x i32>, ptr %A
   %tmp2 = load <2 x i32>, ptr %B
@@ -569,10 +567,10 @@ define <2 x i64> @sqdmlal2_2d(ptr %A, ptr %B, ptr %C) nounwind {
 define <4 x i32> @sqdmlsl4s(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: sqdmlsl4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr d2, [x0]
+; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    ldr d2, [x1]
 ; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    sqdmlsl.4s v0, v2, v1
+; CHECK-NEXT:    sqdmlsl.4s v0, v1, v2
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x i16>, ptr %A
   %tmp2 = load <4 x i16>, ptr %B
@@ -585,10 +583,10 @@ define <4 x i32> @sqdmlsl4s(ptr %A, ptr %B, ptr %C) nounwind {
 define <2 x i64> @sqdmlsl2d(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: sqdmlsl2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr d2, [x0]
+; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    ldr d2, [x1]
 ; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    sqdmlsl.2d v0, v2, v1
+; CHECK-NEXT:    sqdmlsl.2d v0, v1, v2
 ; CHECK-NEXT:    ret
   %tmp1 = load <2 x i32>, ptr %A
   %tmp2 = load <2 x i32>, ptr %B
@@ -637,10 +635,10 @@ define <2 x i64> @sqdmlsl2_2d(ptr %A, ptr %B, ptr %C) nounwind {
 define <4 x i32> @umlal4s(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: umlal4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr d2, [x0]
+; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    ldr d2, [x1]
 ; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    umlal.4s v0, v2, v1
+; CHECK-NEXT:    umlal.4s v0, v1, v2
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x i16>, ptr %A
   %tmp2 = load <4 x i16>, ptr %B
@@ -653,10 +651,10 @@ define <4 x i32> @umlal4s(ptr %A, ptr %B, ptr %C) nounwind {
 define <2 x i64> @umlal2d(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: umlal2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr d2, [x0]
+; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    ldr d2, [x1]
 ; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    umlal.2d v0, v2, v1
+; CHECK-NEXT:    umlal.2d v0, v1, v2
 ; CHECK-NEXT:    ret
   %tmp1 = load <2 x i32>, ptr %A
   %tmp2 = load <2 x i32>, ptr %B
@@ -687,7 +685,7 @@ define void @umlal8h_chain_with_constant(ptr %dst, <8 x i8> %v1, <8 x i8> %v2, <
 define void @umlal2d_chain_with_constant(ptr %dst, <2 x i32> %v1, <2 x i32> %v2, <2 x i32> %v3) {
 ; CHECK-LABEL: umlal2d_chain_with_constant:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #257
+; CHECK-NEXT:    mov w8, #257 // =0x101
 ; CHECK-NEXT:    dup.2d v3, x8
 ; CHECK-NEXT:    umlal.2d v3, v0, v2
 ; CHECK-NEXT:    mvn.8b v0, v2
@@ -706,10 +704,10 @@ define void @umlal2d_chain_with_constant(ptr %dst, <2 x i32> %v1, <2 x i32> %v2,
 define <4 x i32> @umlsl4s(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: umlsl4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr d2, [x0]
+; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    ldr d2, [x1]
 ; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    umlsl.4s v0, v2, v1
+; CHECK-NEXT:    umlsl.4s v0, v1, v2
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x i16>, ptr %A
   %tmp2 = load <4 x i16>, ptr %B
@@ -722,10 +720,10 @@ define <4 x i32> @umlsl4s(ptr %A, ptr %B, ptr %C) nounwind {
 define <2 x i64> @umlsl2d(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: umlsl2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr d2, [x0]
+; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    ldr d2, [x1]
 ; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    umlsl.2d v0, v2, v1
+; CHECK-NEXT:    umlsl.2d v0, v1, v2
 ; CHECK-NEXT:    ret
   %tmp1 = load <2 x i32>, ptr %A
   %tmp2 = load <2 x i32>, ptr %B
@@ -738,12 +736,11 @@ define <2 x i64> @umlsl2d(ptr %A, ptr %B, ptr %C) nounwind {
 define void @umlsl8h_chain_with_constant(ptr %dst, <8 x i8> %v1, <8 x i8> %v2, <8 x i8> %v3) {
 ; CHECK-LABEL: umlsl8h_chain_with_constant:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umull.8h v0, v0, v2
-; CHECK-NEXT:    mvn.8b v2, v2
 ; CHECK-NEXT:    movi.16b v3, #1
-; CHECK-NEXT:    umlal.8h v0, v1, v2
-; CHECK-NEXT:    sub.8h v0, v3, v0
-; CHECK-NEXT:    str q0, [x0]
+; CHECK-NEXT:    umlsl.8h v3, v0, v2
+; CHECK-NEXT:    mvn.8b v0, v2
+; CHECK-NEXT:    umlsl.8h v3, v1, v0
+; CHECK-NEXT:    str q3, [x0]
 ; CHECK-NEXT:    ret
   %xor = xor <8 x i8> %v3, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
   %umull.1 = tail call <8 x i16> @llvm.aarch64.neon.umull.v8i16(<8 x i8> %v1, <8 x i8> %v3)
@@ -757,13 +754,12 @@ define void @umlsl8h_chain_with_constant(ptr %dst, <8 x i8> %v1, <8 x i8> %v2, <
 define void @umlsl2d_chain_with_constant(ptr %dst, <2 x i32> %v1, <2 x i32> %v2, <2 x i32> %v3) {
 ; CHECK-LABEL: umlsl2d_chain_with_constant:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umull.2d v0, v0, v2
-; CHECK-NEXT:    mov w8, #257
-; CHECK-NEXT:    mvn.8b v2, v2
-; CHECK-NEXT:    umlal.2d v0, v1, v2
-; CHECK-NEXT:    dup.2d v1, x8
-; CHECK-NEXT:    sub.2d v0, v1, v0
-; CHECK-NEXT:    str q0, [x0]
+; CHECK-NEXT:    mov w8, #257 // =0x101
+; CHECK-NEXT:    dup.2d v3, x8
+; CHECK-NEXT:    umlsl.2d v3, v0, v2
+; CHECK-NEXT:    mvn.8b v0, v2
+; CHECK-NEXT:    umlsl.2d v3, v1, v0
+; CHECK-NEXT:    str q3, [x0]
 ; CHECK-NEXT:    ret
   %xor = xor <2 x i32> %v3, <i32 -1, i32 -1>
   %umull.1 = tail call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> %v1, <2 x i32> %v3)
@@ -777,10 +773,10 @@ define void @umlsl2d_chain_with_constant(ptr %dst, <2 x i32> %v1, <2 x i32> %v2,
 define <2 x float> @fmla_2s(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: fmla_2s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr d2, [x0]
+; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    ldr d2, [x1]
 ; CHECK-NEXT:    ldr d0, [x2]
-; CHECK-NEXT:    fmla.2s v0, v1, v2
+; CHECK-NEXT:    fmla.2s v0, v2, v1
 ; CHECK-NEXT:    ret
   %tmp1 = load <2 x float>, ptr %A
   %tmp2 = load <2 x float>, ptr %B
@@ -792,10 +788,10 @@ define <2 x float> @fmla_2s(ptr %A, ptr %B, ptr %C) nounwind {
 define <4 x float> @fmla_4s(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: fmla_4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q1, [x1]
-; CHECK-NEXT:    ldr q2, [x0]
+; CHECK-NEXT:    ldr q1, [x0]
+; CHECK-NEXT:    ldr q2, [x1]
 ; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    fmla.4s v0, v1, v2
+; CHECK-NEXT:    fmla.4s v0, v2, v1
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x float>, ptr %A
   %tmp2 = load <4 x float>, ptr %B
@@ -807,10 +803,10 @@ define <4 x float> @fmla_4s(ptr %A, ptr %B, ptr %C) nounwind {
 define <2 x double> @fmla_2d(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: fmla_2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q1, [x1]
-; CHECK-NEXT:    ldr q2, [x0]
+; CHECK-NEXT:    ldr q1, [x0]
+; CHECK-NEXT:    ldr q2, [x1]
 ; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    fmla.2d v0, v1, v2
+; CHECK-NEXT:    fmla.2d v0, v2, v1
 ; CHECK-NEXT:    ret
   %tmp1 = load <2 x double>, ptr %A
   %tmp2 = load <2 x double>, ptr %B
@@ -826,10 +822,10 @@ declare <2 x double> @llvm.fma.v2f64(<2 x double>, <2 x double>, <2 x double>) n
 define <2 x float> @fmls_2s(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: fmls_2s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr d2, [x0]
+; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    ldr d2, [x1]
 ; CHECK-NEXT:    ldr d0, [x2]
-; CHECK-NEXT:    fmls.2s v0, v2, v1
+; CHECK-NEXT:    fmls.2s v0, v1, v2
 ; CHECK-NEXT:    ret
   %tmp1 = load <2 x float>, ptr %A
   %tmp2 = load <2 x float>, ptr %B
@@ -842,10 +838,10 @@ define <2 x float> @fmls_2s(ptr %A, ptr %B, ptr %C) nounwind {
 define <4 x float> @fmls_4s(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: fmls_4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q1, [x1]
-; CHECK-NEXT:    ldr q2, [x0]
+; CHECK-NEXT:    ldr q1, [x0]
+; CHECK-NEXT:    ldr q2, [x1]
 ; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    fmls.4s v0, v2, v1
+; CHECK-NEXT:    fmls.4s v0, v1, v2
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x float>, ptr %A
   %tmp2 = load <4 x float>, ptr %B
@@ -858,10 +854,10 @@ define <4 x float> @fmls_4s(ptr %A, ptr %B, ptr %C) nounwind {
 define <2 x double> @fmls_2d(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: fmls_2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q1, [x1]
-; CHECK-NEXT:    ldr q2, [x0]
+; CHECK-NEXT:    ldr q1, [x0]
+; CHECK-NEXT:    ldr q2, [x1]
 ; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    fmls.2d v0, v2, v1
+; CHECK-NEXT:    fmls.2d v0, v1, v2
 ; CHECK-NEXT:    ret
   %tmp1 = load <2 x double>, ptr %A
   %tmp2 = load <2 x double>, ptr %B
@@ -874,10 +870,10 @@ define <2 x double> @fmls_2d(ptr %A, ptr %B, ptr %C) nounwind {
 define <2 x float> @fmls_commuted_neg_2s(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: fmls_commuted_neg_2s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr d2, [x0]
+; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    ldr d2, [x1]
 ; CHECK-NEXT:    ldr d0, [x2]
-; CHECK-NEXT:    fmls.2s v0, v2, v1
+; CHECK-NEXT:    fmls.2s v0, v1, v2
 ; CHECK-NEXT:    ret
   %tmp1 = load <2 x float>, ptr %A
   %tmp2 = load <2 x float>, ptr %B
@@ -890,10 +886,10 @@ define <2 x float> @fmls_commuted_neg_2s(ptr %A, ptr %B, ptr %C) nounwind {
 define <4 x float> @fmls_commuted_neg_4s(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: fmls_commuted_neg_4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q1, [x1]
-; CHECK-NEXT:    ldr q2, [x0]
+; CHECK-NEXT:    ldr q1, [x0]
+; CHECK-NEXT:    ldr q2, [x1]
 ; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    fmls.4s v0, v2, v1
+; CHECK-NEXT:    fmls.4s v0, v1, v2
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x float>, ptr %A
   %tmp2 = load <4 x float>, ptr %B
@@ -906,10 +902,10 @@ define <4 x float> @fmls_commuted_neg_4s(ptr %A, ptr %B, ptr %C) nounwind {
 define <2 x double> @fmls_commuted_neg_2d(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: fmls_commuted_neg_2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q1, [x1]
-; CHECK-NEXT:    ldr q2, [x0]
+; CHECK-NEXT:    ldr q1, [x0]
+; CHECK-NEXT:    ldr q2, [x1]
 ; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    fmls.2d v0, v2, v1
+; CHECK-NEXT:    fmls.2d v0, v1, v2
 ; CHECK-NEXT:    ret
   %tmp1 = load <2 x double>, ptr %A
   %tmp2 = load <2 x double>, ptr %B
@@ -997,7 +993,7 @@ entry:
   ret <2 x double> %fmla1
 }
 
-define <2 x float> @fmls_indexed_2s_strict(<2 x float> %a, <2 x float> %b, <2 x float> %c) nounwind readnone ssp {
+define <2 x float> @fmls_indexed_2s_strict(<2 x float> %a, <2 x float> %b, <2 x float> %c) nounwind readnone ssp strictfp {
 ; CHECK-LABEL: fmls_indexed_2s_strict:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
@@ -1010,7 +1006,7 @@ entry:
   ret <2 x float> %fmls1
 }
 
-define <4 x float> @fmls_indexed_4s_strict(<4 x float> %a, <4 x float> %b, <4 x float> %c) nounwind readnone ssp {
+define <4 x float> @fmls_indexed_4s_strict(<4 x float> %a, <4 x float> %b, <4 x float> %c) nounwind readnone ssp strictfp {
 ; CHECK-LABEL: fmls_indexed_4s_strict:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fmls.4s v0, v2, v1[0]
@@ -1022,7 +1018,7 @@ entry:
   ret <4 x float> %fmls1
 }
 
-define <2 x double> @fmls_indexed_2d_strict(<2 x double> %a, <2 x double> %b, <2 x double> %c) nounwind readnone ssp {
+define <2 x double> @fmls_indexed_2d_strict(<2 x double> %a, <2 x double> %b, <2 x double> %c) nounwind readnone ssp strictfp {
 ; CHECK-LABEL: fmls_indexed_2d_strict:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fmls.2d v0, v2, v1[0]
@@ -1034,7 +1030,7 @@ entry:
   ret <2 x double> %fmls1
 }
 
-define <2 x float> @fmla_indexed_scalar_2s_strict(<2 x float> %a, <2 x float> %b, float %c) nounwind readnone ssp {
+define <2 x float> @fmla_indexed_scalar_2s_strict(<2 x float> %a, <2 x float> %b, float %c) nounwind readnone ssp strictfp {
 ; CHECK-LABEL: fmla_indexed_scalar_2s_strict:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $s2 killed $s2 def $q2
@@ -1047,7 +1043,7 @@ entry:
   ret <2 x float> %fmla1
 }
 
-define <4 x float> @fmla_indexed_scalar_4s_strict(<4 x float> %a, <4 x float> %b, float %c) nounwind readnone ssp {
+define <4 x float> @fmla_indexed_scalar_4s_strict(<4 x float> %a, <4 x float> %b, float %c) nounwind readnone ssp strictfp {
 ; CHECK-LABEL: fmla_indexed_scalar_4s_strict:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $s2 killed $s2 def $q2
@@ -1062,7 +1058,7 @@ entry:
   ret <4 x float> %fmla1
 }
 
-define <2 x double> @fmla_indexed_scalar_2d_strict(<2 x double> %a, <2 x double> %b, double %c) nounwind readnone ssp {
+define <2 x double> @fmla_indexed_scalar_2d_strict(<2 x double> %a, <2 x double> %b, double %c) nounwind readnone ssp strictfp {
 ; CHECK-LABEL: fmla_indexed_scalar_2d_strict:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
@@ -1126,13 +1122,13 @@ define <4 x i32> @mul_4s(<4 x i32> %A, <4 x i32> %B) nounwind {
 define <2 x i64> @mul_2d(<2 x i64> %A, <2 x i64> %B) nounwind {
 ; CHECK-LABEL: mul_2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov x9, d1
-; CHECK-NEXT:    fmov x10, d0
+; CHECK-NEXT:    fmov x10, d1
+; CHECK-NEXT:    fmov x11, d0
 ; CHECK-NEXT:    mov.d x8, v1[1]
-; CHECK-NEXT:    mov.d x11, v0[1]
-; CHECK-NEXT:    mul x9, x10, x9
-; CHECK-NEXT:    mul x8, x11, x8
-; CHECK-NEXT:    fmov d0, x9
+; CHECK-NEXT:    mov.d x9, v0[1]
+; CHECK-NEXT:    mul x10, x11, x10
+; CHECK-NEXT:    mul x8, x9, x8
+; CHECK-NEXT:    fmov d0, x10
 ; CHECK-NEXT:    mov.d v0[1], x8
 ; CHECK-NEXT:    ret
   %tmp1 = mul <2 x i64> %A, %B
@@ -1537,10 +1533,10 @@ define i32 @sqadd_lane1_sqdmull4s(i32 %A, <4 x i16> %B, <4 x i16> %C) nounwind {
 ; CHECK-LABEL: sqadd_lane1_sqdmull4s:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sqdmull.4s v0, v0, v1
-; CHECK-NEXT:    fmov s1, w0
 ; CHECK-NEXT:    mov.s w8, v0[1]
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    sqadd s0, s1, s0
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    fmov s1, w8
+; CHECK-NEXT:    sqadd s0, s0, s1
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %prod.vec = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %B, <4 x i16> %C)
@@ -1553,10 +1549,10 @@ define i32 @sqsub_lane1_sqdmull4s(i32 %A, <4 x i16> %B, <4 x i16> %C) nounwind {
 ; CHECK-LABEL: sqsub_lane1_sqdmull4s:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sqdmull.4s v0, v0, v1
-; CHECK-NEXT:    fmov s1, w0
 ; CHECK-NEXT:    mov.s w8, v0[1]
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    sqsub s0, s1, s0
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    fmov s1, w8
+; CHECK-NEXT:    sqsub s0, s0, s1
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %prod.vec = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %B, <4 x i16> %C)
@@ -1568,11 +1564,11 @@ define i32 @sqsub_lane1_sqdmull4s(i32 %A, <4 x i16> %B, <4 x i16> %C) nounwind {
 define i64 @sqdmlal_lane_1d(i64 %A, i32 %B, <2 x i32> %C) nounwind {
 ; CHECK-LABEL: sqdmlal_lane_1d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s1, w1
-; CHECK-NEXT:    fmov d2, x0
+; CHECK-NEXT:    fmov d1, x0
+; CHECK-NEXT:    fmov s2, w1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    sqdmlal.s d2, s1, v0[1]
-; CHECK-NEXT:    fmov x0, d2
+; CHECK-NEXT:    sqdmlal.s d1, s2, v0[1]
+; CHECK-NEXT:    fmov x0, d1
 ; CHECK-NEXT:    ret
   %rhs = extractelement <2 x i32> %C, i32 1
   %prod = call i64 @llvm.aarch64.neon.sqdmulls.scalar(i32 %B, i32 %rhs)
@@ -1585,11 +1581,11 @@ declare i64 @llvm.aarch64.neon.sqadd.i64(i64, i64)
 define i64 @sqdmlsl_lane_1d(i64 %A, i32 %B, <2 x i32> %C) nounwind {
 ; CHECK-LABEL: sqdmlsl_lane_1d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s1, w1
-; CHECK-NEXT:    fmov d2, x0
+; CHECK-NEXT:    fmov d1, x0
+; CHECK-NEXT:    fmov s2, w1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    sqdmlsl.s d2, s1, v0[1]
-; CHECK-NEXT:    fmov x0, d2
+; CHECK-NEXT:    sqdmlsl.s d1, s2, v0[1]
+; CHECK-NEXT:    fmov x0, d1
 ; CHECK-NEXT:    ret
   %rhs = extractelement <2 x i32> %C, i32 1
   %prod = call i64 @llvm.aarch64.neon.sqdmulls.scalar(i32 %B, i32 %rhs)
@@ -2771,10 +2767,10 @@ define <1 x double> @test_fdiv_v1f64(<1 x double> %L, <1 x double> %R) nounwind 
 define i32 @sqdmlal_s(i16 %A, i16 %B, i32 %C) nounwind {
 ; CHECK-LABEL: sqdmlal_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s0, w1
-; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    fmov s1, w1
 ; CHECK-NEXT:    fmov s2, w2
-; CHECK-NEXT:    sqdmlal.h s2, h1, v0[0]
+; CHECK-NEXT:    sqdmlal.h s2, h0, v1[0]
 ; CHECK-NEXT:    fmov w0, s2
 ; CHECK-NEXT:    ret
   %tmp1 = insertelement <4 x i16> undef, i16 %A, i64 0
@@ -2802,10 +2798,10 @@ define i64 @sqdmlal_d(i32 %A, i32 %B, i64 %C) nounwind {
 define i32 @sqdmlsl_s(i16 %A, i16 %B, i32 %C) nounwind {
 ; CHECK-LABEL: sqdmlsl_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s0, w1
-; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    fmov s1, w1
 ; CHECK-NEXT:    fmov s2, w2
-; CHECK-NEXT:    sqdmlsl.h s2, h1, v0[0]
+; CHECK-NEXT:    sqdmlsl.h s2, h0, v1[0]
 ; CHECK-NEXT:    fmov w0, s2
 ; CHECK-NEXT:    ret
   %tmp1 = insertelement <4 x i16> undef, i16 %A, i64 0

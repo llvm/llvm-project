@@ -1,0 +1,59 @@
+! RUN: %python %S/test_errors.py %s %flang_fc1
+! Exercise CUDA data attribute checks
+module m
+  real, constant :: mc ! ok
+  real, constant :: mci = 1. ! ok
+  !ERROR: Object 'mcl' with ATTRIBUTES(CONSTANT) may not be allocatable, pointer, or target
+  real, constant, allocatable :: mcl
+  !ERROR: Object 'mcp' with ATTRIBUTES(CONSTANT) may not be allocatable, pointer, or target
+  real, constant, pointer :: mcp
+  !ERROR: Object 'mct' with ATTRIBUTES(CONSTANT) may not be allocatable, pointer, or target
+  real, constant, target :: mct
+  real, device :: md ! ok
+  real, device :: mdi = 1.
+  real, device, allocatable :: mdl ! ok
+  real, device, pointer :: mdp ! ok at module level
+  real, device, target :: mdt ! ok
+  !ERROR: Object 'ms' with ATTRIBUTES(SHARED) must be declared in a device subprogram
+  real, shared :: ms
+  !ERROR: Object 'msi' with ATTRIBUTES(SHARED) must be declared in a device subprogram
+  real, shared :: msi = 1.
+  !ERROR: Object 'msl' with ATTRIBUTES(SHARED) may not be allocatable, pointer, or target
+  real, shared, allocatable :: msl
+  !ERROR: Object 'msp' with ATTRIBUTES(SHARED) may not be allocatable, pointer, or target
+  real, shared, pointer :: msp
+  !ERROR: Object 'mst' with ATTRIBUTES(SHARED) may not be allocatable, pointer, or target
+  real, shared, target :: mst
+  !ERROR: Object 'msa' with ATTRIBUTES(SHARED) must be declared in a device subprogram
+  real, shared :: msa(*)
+  !ERROR: Object 'mm' with ATTRIBUTES(MANAGED) must also be allocatable, automatic, or a dummy argument
+  real, managed :: mm
+  !ERROR: Object 'mmi' with ATTRIBUTES(MANAGED) must also be allocatable, automatic, or a dummy argument
+  real, managed :: mmi = 1.
+  real, managed, allocatable :: mml ! ok
+  !ERROR: Object 'mmp' with ATTRIBUTES(MANAGED) must also be allocatable, automatic, or a dummy argument
+  real, managed, pointer :: mmp ! ok
+  !ERROR: Object 'mmt' with ATTRIBUTES(MANAGED) must also be allocatable, automatic, or a dummy argument
+  real, managed, target :: mmt
+  !WARNING: Object 'mp' with ATTRIBUTES(PINNED) should also be allocatable
+  real, pinned :: mp
+  !WARNING: Object 'mpi' with ATTRIBUTES(PINNED) should also be allocatable
+  real, pinned :: mpi = 1.
+  real, pinned, allocatable :: mpl ! ok
+  !ERROR: Object 'mpp' with ATTRIBUTES(PINNED) may not be a pointer
+  real, pinned, pointer :: mpp
+  !WARNING: Object 'mpt' with ATTRIBUTES(PINNED) should also be allocatable
+  real, pinned, target :: mpt ! ok
+  !ERROR: ATTRIBUTES(TEXTURE) is obsolete and no longer supported
+  real, texture, pointer :: mt
+  !ERROR: 'bigint' has intrinsic type 'INTEGER(16)' that is not available on the device
+  integer(16), device :: bigint
+ contains
+  attributes(device) subroutine devsubr(n,da)
+    integer, intent(in) :: n
+    real, device :: da(*) ! ok
+    real, managed :: ma(n) ! ok
+    !WARNING: Pointer 'dp' may not be associated in a device subprogram
+    real, device, pointer :: dp
+  end subroutine
+end module

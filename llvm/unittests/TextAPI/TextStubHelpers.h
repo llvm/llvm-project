@@ -6,6 +6,7 @@
 //
 //===-----------------------------------------------------------------------===/
 
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/TextAPI/InterfaceFile.h"
 #include <algorithm>
@@ -16,14 +17,16 @@
 
 namespace llvm {
 struct ExportedSymbol {
-  llvm::MachO::SymbolKind Kind;
-  std::string Name;
-  bool WeakDefined;
-  bool ThreadLocalValue;
+  MachO::SymbolKind Kind = MachO::SymbolKind::GlobalSymbol;
+  std::string Name = {};
+  bool Weak = false;
+  bool ThreadLocalValue = false;
+  bool isData = false;
+  MachO::TargetList Targets = {};
 };
 
 using ExportedSymbolSeq = std::vector<ExportedSymbol>;
-using UUIDs = std::vector<std::pair<llvm::MachO::Target, std::string>>;
+using TargetToAttr = std::vector<std::pair<llvm::MachO::Target, std::string>>;
 using TBDFile = std::unique_ptr<MachO::InterfaceFile>;
 using TBDReexportFile = std::shared_ptr<MachO::InterfaceFile>;
 
@@ -32,8 +35,8 @@ inline bool operator<(const ExportedSymbol &LHS, const ExportedSymbol &RHS) {
 }
 
 inline bool operator==(const ExportedSymbol &LHS, const ExportedSymbol &RHS) {
-  return std::tie(LHS.Kind, LHS.Name, LHS.WeakDefined, LHS.ThreadLocalValue) ==
-         std::tie(RHS.Kind, RHS.Name, RHS.WeakDefined, RHS.ThreadLocalValue);
+  return std::tie(LHS.Kind, LHS.Name, LHS.Weak, LHS.ThreadLocalValue) ==
+         std::tie(RHS.Kind, RHS.Name, RHS.Weak, RHS.ThreadLocalValue);
 }
 
 inline std::string stripWhitespace(std::string S) {

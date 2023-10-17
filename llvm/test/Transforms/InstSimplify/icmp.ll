@@ -258,3 +258,23 @@ define i1 @sub_even(i8 %x) {
   %cmp = icmp ne i8 %sub, %x
   ret i1 %cmp
 }
+
+define i1 @load_ptr(ptr %p) {
+; CHECK-LABEL: @load_ptr(
+; CHECK-NEXT:    ret i1 true
+;
+  %load_p = load ptr, ptr %p, !dereferenceable !{i64 8}
+  %r = icmp ne ptr %load_p, null
+  ret i1 %r
+}
+
+define i1 @load_ptr_null_valid(ptr %p) null_pointer_is_valid {
+; CHECK-LABEL: @load_ptr_null_valid(
+; CHECK-NEXT:    [[LOAD_P:%.*]] = load ptr, ptr [[P:%.*]], align 8, !dereferenceable !0
+; CHECK-NEXT:    [[R:%.*]] = icmp ne ptr [[LOAD_P]], null
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %load_p = load ptr, ptr %p, !dereferenceable !{i64 8}
+  %r = icmp ne ptr %load_p, null
+  ret i1 %r
+}

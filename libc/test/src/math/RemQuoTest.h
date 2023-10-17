@@ -11,23 +11,23 @@
 
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include "utils/UnitTest/FPMatcher.h"
-#include "utils/UnitTest/Test.h"
 #include <math.h>
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 template <typename T>
-class RemQuoTestTemplate : public __llvm_libc::testing::Test {
-  using FPBits = __llvm_libc::fputil::FPBits<T>;
+class RemQuoTestTemplate : public LIBC_NAMESPACE::testing::Test {
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using UIntType = typename FPBits::UIntType;
 
-  const T zero = T(__llvm_libc::fputil::FPBits<T>::zero());
-  const T neg_zero = T(__llvm_libc::fputil::FPBits<T>::neg_zero());
-  const T inf = T(__llvm_libc::fputil::FPBits<T>::inf());
-  const T neg_inf = T(__llvm_libc::fputil::FPBits<T>::neg_inf());
-  const T nan = T(__llvm_libc::fputil::FPBits<T>::build_quiet_nan(1));
+  const T zero = T(LIBC_NAMESPACE::fputil::FPBits<T>::zero());
+  const T neg_zero = T(LIBC_NAMESPACE::fputil::FPBits<T>::neg_zero());
+  const T inf = T(LIBC_NAMESPACE::fputil::FPBits<T>::inf());
+  const T neg_inf = T(LIBC_NAMESPACE::fputil::FPBits<T>::neg_inf());
+  const T nan = T(LIBC_NAMESPACE::fputil::FPBits<T>::build_quiet_nan(1));
 
 public:
   typedef T (*RemQuoFunc)(T, T, int *);
@@ -95,9 +95,10 @@ public:
   }
 
   void testSubnormalRange(RemQuoFunc func) {
-    constexpr UIntType COUNT = 1000001;
+    constexpr UIntType COUNT = 100'001;
     constexpr UIntType STEP =
-        (FPBits::MAX_SUBNORMAL - FPBits::MIN_SUBNORMAL) / COUNT;
+        (UIntType(FPBits::MAX_SUBNORMAL) - UIntType(FPBits::MIN_SUBNORMAL)) /
+        COUNT;
     for (UIntType v = FPBits::MIN_SUBNORMAL, w = FPBits::MAX_SUBNORMAL;
          v <= FPBits::MAX_SUBNORMAL && w >= FPBits::MIN_SUBNORMAL;
          v += STEP, w -= STEP) {
@@ -110,8 +111,9 @@ public:
   }
 
   void testNormalRange(RemQuoFunc func) {
-    constexpr UIntType COUNT = 1000001;
-    constexpr UIntType STEP = (FPBits::MAX_NORMAL - FPBits::MIN_NORMAL) / COUNT;
+    constexpr UIntType COUNT = 1'001;
+    constexpr UIntType STEP =
+        (UIntType(FPBits::MAX_NORMAL) - UIntType(FPBits::MIN_NORMAL)) / COUNT;
     for (UIntType v = FPBits::MIN_NORMAL, w = FPBits::MAX_NORMAL;
          v <= FPBits::MAX_NORMAL && w >= FPBits::MIN_NORMAL;
          v += STEP, w -= STEP) {

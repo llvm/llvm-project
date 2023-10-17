@@ -13,13 +13,28 @@ func.func @matmul_tensors(
 }
 
 transform.sequence failures(propagate) {
-^bb1(%module_op: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %module_op
-  %1, %loops:3 = transform.structured.tile %0 [2, 2, 2] : (!pdl.operation) -> (!pdl.operation, !pdl.operation, !pdl.operation, !pdl.operation)
-  %2 = get_closest_isolated_parent %1 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %2
-  transform.bufferization.one_shot_bufferize layout{IdentityLayoutMap} %module_op
-    {bufferize_function_boundaries = true}
-  %func = transform.structured.match ops{["func.func"]} in %module_op
-  transform.vector.lower_vectors %func multireduction_lowering = "innerreduction"
+^bb1(%module_op: !transform.any_op):
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %module_op : (!transform.any_op) -> !transform.any_op
+  %1, %loops:3 = transform.structured.tile_using_for %0 [2, 2, 2] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+  %2 = get_parent_op %1 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+  transform.structured.vectorize_children_and_apply_patterns %2 : (!transform.any_op) -> !transform.any_op
+  %b = transform.bufferization.one_shot_bufferize layout{IdentityLayoutMap}
+      %module_op {bufferize_function_boundaries = true}
+      : (!transform.any_op) -> !transform.any_op
+
+  %f = transform.structured.match ops{["func.func"]} in %b
+    : (!transform.any_op) -> !transform.any_op
+
+  // TODO: group these lower-level controls into various properly named vector
+  // lowering TD macros.
+  transform.apply_patterns to %f {
+    transform.apply_patterns.vector.lower_contraction lowering_strategy = "outerproduct"
+    transform.apply_patterns.vector.transfer_permutation_patterns
+    transform.apply_patterns.vector.lower_multi_reduction lowering_strategy = "innerparallel"
+    transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "linalg-copy"
+    transform.apply_patterns.vector.transfer_to_scf max_transfer_rank = 1 full_unroll = true
+    transform.apply_patterns.vector.lower_transfer max_transfer_rank = 1
+    transform.apply_patterns.vector.lower_shape_cast
+    transform.apply_patterns.vector.lower_transpose lowering_strategy = "shuffle_1d"
+  } : !transform.any_op
 }

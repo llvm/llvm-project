@@ -167,13 +167,34 @@ namespace dr1959 { // dr1959: 3.9
 #endif
 }
 
+namespace dr1960 { // dr1960: no
+struct A {
+void f() {}
+protected:
+void g() {}
+};
+
+struct B: A {
+private:
+using A::f;
+using A::g;
+};
+
+struct C : B {
+// FIXME: both declarations are ill-formed, because A::f and A::g
+// are not accessible.
+using A::f;
+using A::g;
+};
+}
+
 namespace dr1966 { // dr1966: 11
 #if __cplusplus >= 201103L
   struct A {
     enum E : int {1}; // expected-error {{expected identifier}} (not bit-field)
   };
   auto *p1 = new enum E : int; // expected-error {{only permitted as a standalone declaration}}
-  auto *p2 = new enum F : int {}; // expected-error {{cannot be defined in a type specifier}}
+  auto *p2 = new enum F : int {}; // expected-error {{only permitted as a standalone declaration}}
   auto *p3 = true ? new enum G : int {}; // expected-error {{forward reference}} expected-error {{incomplete}} expected-note {{declaration}}
   auto h() -> enum E : int {}; // expected-error {{only permitted as a standalone declaration}}
 

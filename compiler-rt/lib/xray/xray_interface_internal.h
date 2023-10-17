@@ -59,7 +59,13 @@ struct XRaySledEntry {
 
 struct XRayFunctionSledIndex {
   const XRaySledEntry *Begin;
-  const XRaySledEntry *End;
+  size_t Size;
+  // For an entry in the xray_fn_idx section, the address is relative to the
+  // location of the Begin variable.
+  const XRaySledEntry *fromPCRelative() const {
+    return reinterpret_cast<const XRaySledEntry *>(uintptr_t(&Begin) +
+                                                   uintptr_t(Begin));
+  }
 };
 }
 

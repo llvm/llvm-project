@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.13.4)
+cmake_minimum_required(VERSION 3.20.0)
 
 set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 
@@ -11,14 +11,7 @@ list(INSERT CMAKE_MODULE_PATH 0
 # llvm/runtimes/ will set OPENMP_STANDALONE_BUILD.
 if (OPENMP_STANDALONE_BUILD OR "${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
   set(OPENMP_STANDALONE_BUILD TRUE)
-  project(openmp C CXX)
-  if ("${CMAKE_VERSION}" VERSION_LESS "3.20.0")
-    message(WARNING
-      "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 17.0.0, the "
-      "minimum version of CMake required to build LLVM will become 3.20.0, and "
-      "using an older CMake will become an error. Please upgrade your CMake to "
-      "at least 3.20.0 now to avoid issues in the future!")
-  endif()
+  project(openmp C CXX ASM)
 endif()
 
 # Must go below project(..)
@@ -43,7 +36,13 @@ if (OPENMP_STANDALONE_BUILD)
     "C compiler to use for testing OpenMP runtime libraries.")
   set(OPENMP_TEST_CXX_COMPILER ${CMAKE_CXX_COMPILER} CACHE STRING
     "C++ compiler to use for testing OpenMP runtime libraries.")
+  set(OPENMP_TEST_Fortran_COMPILER ${CMAKE_Fortran_COMPILER} CACHE STRING
+    "FORTRAN compiler to use for testing OpenMP runtime libraries.")
   set(OPENMP_LLVM_TOOLS_DIR "" CACHE PATH "Path to LLVM tools for testing.")
+
+  set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
+  set(CMAKE_CXX_STANDARD_REQUIRED NO)
+  set(CMAKE_CXX_EXTENSIONS NO)
 else()
   set(OPENMP_ENABLE_WERROR ${LLVM_ENABLE_WERROR})
   # If building in tree, we honor the same install suffix LLVM uses.
@@ -56,6 +55,26 @@ else()
     set(OPENMP_TEST_C_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang.exe)
     set(OPENMP_TEST_CXX_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang++.exe)
   endif()
+
+  # Check for flang
+  if (NOT MSVC)
+    set(OPENMP_TEST_Fortran_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/flang-new)
+  else()
+    set(OPENMP_TEST_Fortran_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/flang-new.exe)
+  endif()
+
+  # Set fortran test compiler if flang is found
+  if (EXISTS "${OPENMP_TEST_Fortran_COMPILER}")
+    message("Using local flang build at ${OPENMP_TEST_Fortran_COMPILER}")
+  else()
+    unset(OPENMP_TEST_Fortran_COMPILER)
+  endif()
+
+  # If not standalone, set CMAKE_CXX_STANDARD but don't set the global cache value,
+  # only set it locally for OpenMP.
+  set(CMAKE_CXX_STANDARD 17)
+  set(CMAKE_CXX_STANDARD_REQUIRED NO)
+  set(CMAKE_CXX_EXTENSIONS NO)
 endif()
 
 # Check and set up common compiler flags.
@@ -75,7 +94,7 @@ set(ENABLE_LIBOMPTARGET ON)
 # Since the device plugins are only supported on Linux anyway,
 # there is no point in trying to compile libomptarget on other OSes.
 # 32-bit systems are not supported either.
-if (APPLE OR WIN32 OR NOT OPENMP_HAVE_STD_CPP17_FLAG OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+if (APPLE OR WIN32 OR NOT "cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
   set(ENABLE_LIBOMPTARGET OFF)
 endif()
 
@@ -87,8 +106,8 @@ option(OPENMP_ENABLE_LIBOMP_PROFILING "Enable time profiling for libomp." OFF)
 if(${OPENMP_STANDALONE_BUILD})
   set(LIBOMP_HEADERS_INSTALL_PATH "${CMAKE_INSTALL_INCLUDEDIR}")
 else()
-  string(REGEX MATCH "[0-9]+" CLANG_VERSION ${PACKAGE_VERSION})
-  set(LIBOMP_HEADERS_INSTALL_PATH "${OPENMP_INSTALL_LIBDIR}/clang/${CLANG_VERSION}/include")
+  include(GetClangResourceDir)
+  get_clang_resource_dir(LIBOMP_HEADERS_INSTALL_PATH SUBDIR include)
 endif()
 
 # Build host runtime library, after LIBOMPTARGET variables are set since they are needed
@@ -99,7 +118,7 @@ if (OPENMP_ENABLE_LIBOMPTARGET)
   # Check that the library can actually be built.
   if (APPLE OR WIN32)
     message(FATAL_ERROR "libomptarget cannot be built on Windows and MacOS X!")
-  elseif (NOT OPENMP_HAVE_STD_CPP17_FLAG)
+  elseif (NOT "cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
     message(FATAL_ERROR "Host compiler must support C++17 to build libomptarget!")
   elseif (NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
     message(FATAL_ERROR "libomptarget on 32-bit systems are not supported!")

@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin11 -fobjc-runtime-has-weak -fsyntax-only -fobjc-arc -verify -Wno-objc-root-class %s
-// rdar://9340606
 
 @interface Foo {
 @public
@@ -67,7 +66,6 @@
 @property(copy) __autoreleasing id z; // expected-error {{strong property 'z' may not also be declared __autoreleasing}}
 @end
 
-// rdar://9341593
 @interface Gorf  {
    id __unsafe_unretained x;
    id y; // expected-error {{existing instance variable 'y' for property 'y' with assign attribute must be __unsafe_unretained}}
@@ -98,7 +96,6 @@
 @synthesize z;
 @end
 
-// rdar://9355230
 @interface I {
   char _isAutosaving;
 }
@@ -110,7 +107,6 @@
 @synthesize isAutosaving = _isAutosaving;
 @end
 
-// rdar://10239594
 // Test for 'Class' properties being unretained.
 @interface MyClass {
 @private
@@ -126,7 +122,6 @@
 @synthesize controllerId = _controllerId;
 @end
 
-// rdar://10630891
 @interface UIView @end
 @class UIColor;
 
@@ -149,7 +144,6 @@
 }
 @end
 
-// rdar://10694932
 @interface Baz 
 @property  id prop;
 @property  __strong id strong_prop;
@@ -169,7 +163,6 @@ void foo(Baz *f) {
         f.implicit = [[Baz alloc] init];
 }
 
-// rdar://11253688
 @interface Boom 
 {
   const void * innerPointerIvar __attribute__((objc_returns_inner_pointer)); // expected-error {{'objc_returns_inner_pointer' attribute only applies to Objective-C methods and Objective-C properties}}
@@ -188,7 +181,6 @@ void foo(Baz *f) {
 @implementation Foo2
 @end
 
-// rdar://13885083
 @interface NSObject 
 -(id)init;
 @end

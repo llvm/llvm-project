@@ -33,7 +33,7 @@ public:
   void printAuxiliaryHeader() override;
   void printSectionHeaders() override;
   void printRelocations() override;
-  void printSymbols() override;
+  void printSymbols(bool ExtraSymInfo) override;
   void printDynamicSymbols() override;
   void printUnwindInfo() override;
   void printStackMap() const override;
@@ -98,10 +98,11 @@ void XCOFFDumper::printFileHeaders() {
     // tests will let us know.
     time_t TimeDate = TimeStamp;
 
-    char FormattedTime[21] = {};
-    size_t BytesWritten =
-        strftime(FormattedTime, 21, "%Y-%m-%dT%H:%M:%SZ", gmtime(&TimeDate));
-    if (BytesWritten)
+    char FormattedTime[80] = {};
+
+    size_t BytesFormatted =
+      strftime(FormattedTime, sizeof(FormattedTime), "%F %T", gmtime(&TimeDate));
+    if (BytesFormatted)
       W.printHex("TimeStamp", FormattedTime, TimeStamp);
     else
       W.printHex("Timestamp", TimeStamp);
@@ -709,7 +710,7 @@ static StringRef GetSymbolValueName(XCOFF::StorageClass SC) {
 const EnumEntry<XCOFF::CFileLangId> CFileLangIdClass[] = {
 #define ECase(X)                                                               \
   { #X, XCOFF::X }
-    ECase(TB_C), ECase(TB_CPLUSPLUS)
+    ECase(TB_C), ECase(TB_Fortran), ECase(TB_CPLUSPLUS)
 #undef ECase
 };
 
@@ -902,7 +903,7 @@ void XCOFFDumper::printSymbol(const SymbolRef &S) {
   }
 }
 
-void XCOFFDumper::printSymbols() {
+void XCOFFDumper::printSymbols(bool /*ExtraSymInfo*/) {
   ListScope Group(W, "Symbols");
   for (const SymbolRef &S : Obj.symbols())
     printSymbol(S);

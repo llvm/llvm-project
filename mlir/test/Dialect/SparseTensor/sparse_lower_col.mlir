@@ -9,8 +9,7 @@
 // RUN: FileCheck %s --check-prefix=CHECK-LIR
 
 #CSC = #sparse_tensor.encoding<{
-  dimLevelType = [ "dense", "compressed" ],
-  dimOrdering = affine_map<(i,j) -> (j,i)>
+  map = (d0, d1) -> (d1 : dense, d0 : compressed)
 }>
 
 #trait_matvec = {
@@ -24,15 +23,15 @@
 }
 
 // CHECK-HIR-LABEL:   func @matvec(
-// CHECK-HIR-SAME:                 %[[VAL_0:.*]]: tensor<32x64xf64, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], dimOrdering = affine_map<(d0, d1) -> (d1, d0)> }>>,
+// CHECK-HIR-SAME:                 %[[VAL_0:.*]]: tensor<32x64xf64, #sparse_tensor.encoding<{{{.*}}}>>,
 // CHECK-HIR-SAME:                 %[[VAL_1:.*]]: tensor<64xf64>,
 // CHECK-HIR-SAME:                 %[[VAL_2:.*]]: tensor<32xf64>) -> tensor<32xf64> {
 // CHECK-HIR-DAG:       %[[VAL_3:.*]] = arith.constant 64 : index
 // CHECK-HIR-DAG:       %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK-HIR-DAG:       %[[VAL_5:.*]] = arith.constant 1 : index
-// CHECK-HIR-DAG:       %[[VAL_6:.*]] = sparse_tensor.pointers %[[VAL_0]] {dimension = 1 : index} : tensor<32x64xf64, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], dimOrdering = affine_map<(d0, d1) -> (d1, d0)> }>> to memref<?xindex>
-// CHECK-HIR-DAG:       %[[VAL_7:.*]] = sparse_tensor.indices %[[VAL_0]] {dimension = 1 : index} : tensor<32x64xf64, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], dimOrdering = affine_map<(d0, d1) -> (d1, d0)> }>> to memref<?xindex>
-// CHECK-HIR-DAG:       %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32x64xf64, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], dimOrdering = affine_map<(d0, d1) -> (d1, d0)> }>> to memref<?xf64>
+// CHECK-HIR-DAG:       %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 1 : index} : tensor<32x64xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
+// CHECK-HIR-DAG:       %[[VAL_7:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 1 : index} : tensor<32x64xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
+// CHECK-HIR-DAG:       %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32x64xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xf64>
 // CHECK-HIR-DAG:       %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : memref<64xf64>
 // CHECK-HIR-DAG:       %[[VAL_11:.*]] = bufferization.to_memref %[[VAL_2]] : memref<32xf64>
 // CHECK-HIR:           scf.for %[[VAL_12:.*]] = %[[VAL_4]] to %[[VAL_3]] step %[[VAL_5]] {
@@ -60,8 +59,8 @@
 // CHECK-MIR-DAG:       %[[VAL_3:.*]] = arith.constant 64 : index
 // CHECK-MIR-DAG:       %[[VAL_5:.*]] = arith.constant 0 : index
 // CHECK-MIR-DAG:       %[[VAL_6:.*]] = arith.constant 1 : index
-// CHECK-MIR-DAG:       %[[VAL_7:.*]] = call @sparsePointers0(%[[VAL_0]], %[[VAL_6]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
-// CHECK-MIR-DAG:       %[[VAL_8:.*]] = call @sparseIndices0(%[[VAL_0]], %[[VAL_6]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
+// CHECK-MIR-DAG:       %[[VAL_7:.*]] = call @sparsePositions0(%[[VAL_0]], %[[VAL_6]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
+// CHECK-MIR-DAG:       %[[VAL_8:.*]] = call @sparseCoordinates0(%[[VAL_0]], %[[VAL_6]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
 // CHECK-MIR-DAG:       %[[VAL_9:.*]] = call @sparseValuesF64(%[[VAL_0]]) : (!llvm.ptr<i8>) -> memref<?xf64>
 // CHECK-MIR-DAG:       %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_1]] : memref<64xf64>
 // CHECK-MIR-DAG:       %[[VAL_12:.*]] = bufferization.to_memref %[[VAL_2]] : memref<32xf64>
@@ -90,8 +89,8 @@
 // CHECK-LIR-DAG:       %[[VAL_3:.*]] = arith.constant 64 : index
 // CHECK-LIR-DAG:       %[[VAL_5:.*]] = arith.constant 0 : index
 // CHECK-LIR-DAG:       %[[VAL_6:.*]] = arith.constant 1 : index
-// CHECK-LIR-DAG:       %[[VAL_7:.*]] = call @sparsePointers0(%[[VAL_0]], %[[VAL_6]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
-// CHECK-LIR-DAG:       %[[VAL_8:.*]] = call @sparseIndices0(%[[VAL_0]], %[[VAL_6]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
+// CHECK-LIR-DAG:       %[[VAL_7:.*]] = call @sparsePositions0(%[[VAL_0]], %[[VAL_6]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
+// CHECK-LIR-DAG:       %[[VAL_8:.*]] = call @sparseCoordinates0(%[[VAL_0]], %[[VAL_6]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
 // CHECK-LIR-DAG:       %[[VAL_9:.*]] = call @sparseValuesF64(%[[VAL_0]]) : (!llvm.ptr<i8>) -> memref<?xf64>
 // CHECK-LIR:           scf.for %[[VAL_13:.*]] = %[[VAL_5]] to %[[VAL_3]] step %[[VAL_6]] {
 // CHECK-LIR:             %[[VAL_14:.*]] = memref.load %[[VAL_1]]{{\[}}%[[VAL_13]]] : memref<64xf64>

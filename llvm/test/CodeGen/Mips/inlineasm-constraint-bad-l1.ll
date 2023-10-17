@@ -1,7 +1,7 @@
 ; Negative test. The constraint 'l' represents the register 'lo'.
 ; Check error message in case of invalid usage.
 ;
-; RUN: not llc -march=mips -filetype=obj < %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=mips -filetype=obj < %s 2>&1 | FileCheck %s
 
 define void @constraint_l() nounwind {
 entry:

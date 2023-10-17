@@ -11,7 +11,7 @@
 // void splice(const_iterator position, list<T,Allocator>& x, iterator i);
 
 // REQUIRES: has-unix-headers
-// UNSUPPORTED: !libcpp-has-debug-mode, c++03
+// UNSUPPORTED: !libcpp-has-legacy-debug-mode, c++03
 
 #include <list>
 

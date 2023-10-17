@@ -217,7 +217,7 @@ public:
 
   /// \return
   ///     The error message the cursor is pointing at.
-  virtual const char *GetError() const = 0;
+  virtual llvm::StringRef GetError() const = 0;
 
   /// \return
   ///     Whether the cursor points to an event or not.

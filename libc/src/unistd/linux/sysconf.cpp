@@ -10,11 +10,11 @@
 
 #include "src/__support/common.h"
 
-#include <errno.h>
+#include "src/errno/libc_errno.h"
 #include <linux/param.h> // For EXEC_PAGESIZE.
 #include <unistd.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(long, sysconf, (int name)) {
   long ret = 0;
@@ -24,10 +24,10 @@ LLVM_LIBC_FUNCTION(long, sysconf, (int name)) {
   }
   // TODO: Complete the rest of the sysconf options.
   if (ret < 0) {
-    errno = EINVAL;
+    libc_errno = EINVAL;
     return -1;
   }
   return ret;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

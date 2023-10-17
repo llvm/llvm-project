@@ -1,15 +1,18 @@
 /*
  * Copyright 2012-2013 Ecole Normale Superieure
+ * Copyright 2022      Cerebras Systems
  *
  * Use of this software is governed by the MIT license
  *
  * Written by Sven Verdoolaege,
  * Ecole Normale Superieure, 45 rue d’Ulm, 75230 Paris, France
+ * and Cerebras Systems, 1237 E Arques Ave, Sunnyvale, CA, USA
  */
 
 #include <string.h>
 
 #include <isl/id.h>
+#include <isl/stream.h>
 #include <isl/val.h>
 #include <isl_ast_private.h>
 
@@ -146,6 +149,49 @@ __isl_give isl_ast_print_options *isl_ast_print_options_set_print_for(
 	return options;
 }
 
+/* Create a new operation expression of operation type "op",
+ * with arguments "args".
+ */
+static __isl_give isl_ast_expr *alloc_op(enum isl_ast_expr_op_type op,
+	__isl_take isl_ast_expr_list *args)
+{
+	isl_ctx *ctx;
+	isl_ast_expr *expr;
+
+	if (!args)
+		return NULL;
+
+	ctx = isl_ast_expr_list_get_ctx(args);
+	expr = isl_calloc_type(ctx, isl_ast_expr);
+	if (!expr)
+		goto error;
+
+	expr->ctx = ctx;
+	isl_ctx_ref(ctx);
+	expr->ref = 1;
+	expr->type = isl_ast_expr_op;
+	expr->u.op.op = op;
+	expr->u.op.args = args;
+
+	return expr;
+error:
+	isl_ast_expr_list_free(args);
+	return NULL;
+}
+
+/* Create a new operation expression of operation type "op",
+ * which will end up having "n_arg" arguments.
+ * The caller still needs to add those arguments.
+ */
+__isl_give isl_ast_expr *isl_ast_expr_alloc_op(isl_ctx *ctx,
+	enum isl_ast_expr_op_type op, int n_arg)
+{
+	isl_ast_expr_list *args;
+
+	args = isl_ast_expr_list_alloc(ctx, n_arg);
+	return alloc_op(op, args);
+}
+
 __isl_give isl_ast_expr *isl_ast_expr_copy(__isl_keep isl_ast_expr *expr)
 {
 	if (!expr)
@@ -157,14 +203,11 @@ __isl_give isl_ast_expr *isl_ast_expr_copy(__isl_keep isl_ast_expr *expr)
 
 __isl_give isl_ast_expr *isl_ast_expr_dup(__isl_keep isl_ast_expr *expr)
 {
-	int i;
-	isl_ctx *ctx;
 	isl_ast_expr *dup;
 
 	if (!expr)
 		return NULL;
 
-	ctx = isl_ast_expr_get_ctx(expr);
 	switch (expr->type) {
 	case isl_ast_expr_int:
 		dup = isl_ast_expr_from_val(isl_val_copy(expr->u.v));
@@ -173,13 +216,8 @@ __isl_give isl_ast_expr *isl_ast_expr_dup(__isl_keep isl_ast_expr *expr)
 		dup = isl_ast_expr_from_id(isl_id_copy(expr->u.id));
 		break;
 	case isl_ast_expr_op:
-		dup = isl_ast_expr_alloc_op(ctx,
-					    expr->u.op.op, expr->u.op.n_arg);
-		if (!dup)
-			return NULL;
-		for (i = 0; i < expr->u.op.n_arg; ++i)
-			dup->u.op.args[i] =
-				isl_ast_expr_copy(expr->u.op.args[i]);
+		dup = alloc_op(expr->u.op.op,
+				isl_ast_expr_list_copy(expr->u.op.args));
 		break;
 	case isl_ast_expr_error:
 		dup = NULL;
@@ -204,8 +242,6 @@ __isl_give isl_ast_expr *isl_ast_expr_cow(__isl_take isl_ast_expr *expr)
 
 __isl_null isl_ast_expr *isl_ast_expr_free(__isl_take isl_ast_expr *expr)
 {
-	int i;
-
 	if (!expr)
 		return NULL;
 
@@ -222,10 +258,7 @@ __isl_null isl_ast_expr *isl_ast_expr_free(__isl_take isl_ast_expr *expr)
 		isl_id_free(expr->u.id);
 		break;
 	case isl_ast_expr_op:
-		if (expr->u.op.args)
-			for (i = 0; i < expr->u.op.n_arg; ++i)
-				isl_ast_expr_free(expr->u.op.args[i]);
-		free(expr->u.op.args);
+		isl_ast_expr_list_free(expr->u.op.args);
 		break;
 	case isl_ast_expr_error:
 		break;
@@ -282,17 +315,25 @@ __isl_give isl_id *isl_ast_expr_get_id(__isl_keep isl_ast_expr *expr)
 	return isl_ast_expr_id_get_id(expr);
 }
 
+/* Check that "expr" is of type isl_ast_expr_op.
+ */
+static isl_stat isl_ast_expr_check_op(__isl_keep isl_ast_expr *expr)
+{
+	if (!expr)
+		return isl_stat_error;
+	if (expr->type != isl_ast_expr_op)
+		isl_die(isl_ast_expr_get_ctx(expr), isl_error_invalid,
+			"expression not an operation", return isl_stat_error);
+	return isl_stat_ok;
+}
+
 /* Return the type of operation represented by "expr".
  */
 enum isl_ast_expr_op_type isl_ast_expr_op_get_type(
 	__isl_keep isl_ast_expr *expr)
 {
-	if (!expr)
+	if (isl_ast_expr_check_op(expr) < 0)
 		return isl_ast_expr_op_error;
-	if (expr->type != isl_ast_expr_op)
-		isl_die(isl_ast_expr_get_ctx(expr), isl_error_invalid,
-			"expression not an operation",
-			return isl_ast_expr_op_error);
 	return expr->u.op.op;
 }
 
@@ -308,12 +349,9 @@ enum isl_ast_expr_op_type isl_ast_expr_get_op_type(
  */
 isl_size isl_ast_expr_op_get_n_arg(__isl_keep isl_ast_expr *expr)
 {
-	if (!expr)
+	if (isl_ast_expr_check_op(expr) < 0)
 		return isl_size_error;
-	if (expr->type != isl_ast_expr_op)
-		isl_die(isl_ast_expr_get_ctx(expr), isl_error_invalid,
-			"expression not an operation", return isl_size_error);
-	return expr->u.op.n_arg;
+	return isl_ast_expr_list_size(expr->u.op.args);
 }
 
 /* This is an alternative name for the function above.
@@ -328,16 +366,10 @@ isl_size isl_ast_expr_get_op_n_arg(__isl_keep isl_ast_expr *expr)
 __isl_give isl_ast_expr *isl_ast_expr_op_get_arg(__isl_keep isl_ast_expr *expr,
 	int pos)
 {
-	if (!expr)
+	if (isl_ast_expr_check_op(expr) < 0)
 		return NULL;
-	if (expr->type != isl_ast_expr_op)
-		isl_die(isl_ast_expr_get_ctx(expr), isl_error_invalid,
-			"expression not an operation", return NULL);
-	if (pos < 0 || pos >= expr->u.op.n_arg)
-		isl_die(isl_ast_expr_get_ctx(expr), isl_error_invalid,
-			"index out of bounds", return NULL);
 
-	return isl_ast_expr_copy(expr->u.op.args[pos]);
+	return isl_ast_expr_list_get_at(expr->u.op.args, pos);
 }
 
 /* This is an alternative name for the function above.
@@ -348,28 +380,130 @@ __isl_give isl_ast_expr *isl_ast_expr_get_op_arg(__isl_keep isl_ast_expr *expr,
 	return isl_ast_expr_op_get_arg(expr, pos);
 }
 
+/* Return a copy of the arguments of the operation represented by "expr".
+ */
+static __isl_give isl_ast_expr_list *isl_ast_expr_op_get_args(
+	__isl_keep isl_ast_expr *expr)
+{
+	if (isl_ast_expr_check_op(expr) < 0)
+		return NULL;
+	return isl_ast_expr_list_copy(expr->u.op.args);
+}
+
+/* Return the arguments of the operation expression "expr".
+ * This may be either a copy or the arguments themselves
+ * if there is only one reference to "expr".
+ * This allows the arguments to be modified inplace
+ * if both "expr" and its arguments have only a single reference.
+ * The caller is not allowed to modify "expr" between this call and
+ * the subsequent call to isl_ast_expr_op_restore_args.
+ * The only exception is that isl_ast_expr_free can be called instead.
+ */
+static __isl_give isl_ast_expr_list *isl_ast_expr_op_take_args(
+	__isl_keep isl_ast_expr *expr)
+{
+	isl_ast_expr_list *args;
+
+	if (isl_ast_expr_check_op(expr) < 0)
+		return NULL;
+	if (expr->ref != 1)
+		return isl_ast_expr_op_get_args(expr);
+	args = expr->u.op.args;
+	expr->u.op.args = NULL;
+	return args;
+}
+
+/* Set the arguments of the operation expression "expr" to "args",
+ * where the arguments of "args" may be missing
+ * due to a preceding call to isl_ast_expr_op_take_args.
+ * However, in this case, "expr" only has a single reference and
+ * then the call to isl_ast_expr_cow has no effect.
+ */
+static __isl_give isl_ast_expr *isl_ast_expr_op_restore_args(
+	__isl_take isl_ast_expr *expr, __isl_take isl_ast_expr_list *args)
+{
+	if (isl_ast_expr_check_op(expr) < 0 || !args)
+		goto error;
+	if (expr->u.op.args == args) {
+		isl_ast_expr_list_free(args);
+		return expr;
+	}
+
+	expr = isl_ast_expr_cow(expr);
+	if (!expr)
+		goto error;
+
+	isl_ast_expr_list_free(expr->u.op.args);
+	expr->u.op.args = args;
+
+	return expr;
+error:
+	isl_ast_expr_free(expr);
+	isl_ast_expr_list_free(args);
+	return NULL;
+}
+
+/* Add "arg" to the arguments of the operation expression "expr".
+ */
+__isl_give isl_ast_expr *isl_ast_expr_op_add_arg(__isl_take isl_ast_expr *expr,
+	__isl_take isl_ast_expr *arg)
+{
+	isl_ast_expr_list *args;
+
+	args = isl_ast_expr_op_take_args(expr);
+	args = isl_ast_expr_list_add(args, arg);
+	expr = isl_ast_expr_op_restore_args(expr, args);
+
+	return expr;
+}
+
 /* Replace the argument at position "pos" of "expr" by "arg".
  */
 __isl_give isl_ast_expr *isl_ast_expr_set_op_arg(__isl_take isl_ast_expr *expr,
 	int pos, __isl_take isl_ast_expr *arg)
 {
-	expr = isl_ast_expr_cow(expr);
-	if (!expr || !arg)
-		goto error;
-	if (expr->type != isl_ast_expr_op)
-		isl_die(isl_ast_expr_get_ctx(expr), isl_error_invalid,
-			"expression not an operation", goto error);
-	if (pos < 0 || pos >= expr->u.op.n_arg)
-		isl_die(isl_ast_expr_get_ctx(expr), isl_error_invalid,
-			"index out of bounds", goto error);
+	isl_ast_expr_list *args;
 
-	isl_ast_expr_free(expr->u.op.args[pos]);
-	expr->u.op.args[pos] = arg;
+	args = isl_ast_expr_op_take_args(expr);
+	args = isl_ast_expr_list_set_at(args, pos, arg);
+	expr = isl_ast_expr_op_restore_args(expr, args);
 
 	return expr;
-error:
-	isl_ast_expr_free(arg);
-	return isl_ast_expr_free(expr);
+}
+
+/* Are the lists of AST expressions "list1" and "list2" the same?
+ */
+static isl_bool isl_ast_expr_list_is_equal(__isl_keep isl_ast_expr_list *list1,
+	__isl_keep isl_ast_expr_list *list2)
+{
+	int i;
+	isl_size n1, n2;
+
+	if (!list1 || !list2)
+		return isl_bool_error;
+	if (list1 == list2)
+		return isl_bool_true;
+
+	n1 = isl_ast_expr_list_size(list1);
+	n2 = isl_ast_expr_list_size(list2);
+	if (n1 < 0 || n2 < 0)
+		return isl_bool_error;
+	if (n1 != n2)
+		return isl_bool_false;
+	for (i = 0; i < n1; ++i) {
+		isl_ast_expr *expr1, *expr2;
+		isl_bool equal;
+
+		expr1 = isl_ast_expr_list_get_at(list1, i);
+		expr2 = isl_ast_expr_list_get_at(list2, i);
+		equal = isl_ast_expr_is_equal(expr1, expr2);
+		isl_ast_expr_free(expr1);
+		isl_ast_expr_free(expr2);
+		if (equal < 0 || !equal)
+			return equal;
+	}
+
+	return isl_bool_true;
 }
 
 /* Is "expr1" equal to "expr2"?
@@ -377,8 +511,6 @@ error:
 isl_bool isl_ast_expr_is_equal(__isl_keep isl_ast_expr *expr1,
 	__isl_keep isl_ast_expr *expr2)
 {
-	int i;
-
 	if (!expr1 || !expr2)
 		return isl_bool_error;
 
@@ -394,48 +526,14 @@ isl_bool isl_ast_expr_is_equal(__isl_keep isl_ast_expr *expr1,
 	case isl_ast_expr_op:
 		if (expr1->u.op.op != expr2->u.op.op)
 			return isl_bool_false;
-		if (expr1->u.op.n_arg != expr2->u.op.n_arg)
-			return isl_bool_false;
-		for (i = 0; i < expr1->u.op.n_arg; ++i) {
-			isl_bool equal;
-			equal = isl_ast_expr_is_equal(expr1->u.op.args[i],
-							expr2->u.op.args[i]);
-			if (equal < 0 || !equal)
-				return equal;
-		}
-		return isl_bool_true;
+		return isl_ast_expr_list_is_equal(expr1->u.op.args,
+						expr2->u.op.args);
 	case isl_ast_expr_error:
 		return isl_bool_error;
 	}
 
 	isl_die(isl_ast_expr_get_ctx(expr1), isl_error_internal,
 		"unhandled case", return isl_bool_error);
-}
-
-/* Create a new operation expression of operation type "op",
- * with "n_arg" as yet unspecified arguments.
- */
-__isl_give isl_ast_expr *isl_ast_expr_alloc_op(isl_ctx *ctx,
-	enum isl_ast_expr_op_type op, int n_arg)
-{
-	isl_ast_expr *expr;
-
-	expr = isl_calloc_type(ctx, isl_ast_expr);
-	if (!expr)
-		return NULL;
-
-	expr->ctx = ctx;
-	isl_ctx_ref(ctx);
-	expr->ref = 1;
-	expr->type = isl_ast_expr_op;
-	expr->u.op.op = op;
-	expr->u.op.n_arg = n_arg;
-	expr->u.op.args = isl_calloc_array(ctx, isl_ast_expr *, n_arg);
-
-	if (n_arg && !expr->u.op.args)
-		return isl_ast_expr_free(expr);
-
-	return expr;
 }
 
 /* Create a new id expression representing "id".
@@ -524,21 +622,19 @@ __isl_give isl_ast_expr *isl_ast_expr_alloc_unary(
 {
 	isl_ctx *ctx;
 	isl_ast_expr *expr = NULL;
+	isl_ast_expr_list *args;
 
 	if (!arg)
 		return NULL;
 
 	ctx = isl_ast_expr_get_ctx(arg);
 	expr = isl_ast_expr_alloc_op(ctx, type, 1);
-	if (!expr)
-		goto error;
 
-	expr->u.op.args[0] = arg;
+	args = isl_ast_expr_op_take_args(expr);
+	args = isl_ast_expr_list_add(args, arg);
+	expr = isl_ast_expr_op_restore_args(expr, args);
 
 	return expr;
-error:
-	isl_ast_expr_free(arg);
-	return NULL;
 }
 
 /* Create an expression representing the negation of "arg".
@@ -573,17 +669,18 @@ __isl_give isl_ast_expr *isl_ast_expr_alloc_binary(
 {
 	isl_ctx *ctx;
 	isl_ast_expr *expr = NULL;
+	isl_ast_expr_list *args;
 
 	if (!expr1 || !expr2)
 		goto error;
 
 	ctx = isl_ast_expr_get_ctx(expr1);
 	expr = isl_ast_expr_alloc_op(ctx, type, 2);
-	if (!expr)
-		goto error;
 
-	expr->u.op.args[0] = expr1;
-	expr->u.op.args[1] = expr2;
+	args = isl_ast_expr_op_take_args(expr);
+	args = isl_ast_expr_list_add(args, expr1);
+	args = isl_ast_expr_list_add(args, expr2);
+	expr = isl_ast_expr_op_restore_args(expr, args);
 
 	return expr;
 error:
@@ -725,37 +822,8 @@ static __isl_give isl_ast_expr *ast_expr_with_arguments(
 	enum isl_ast_expr_op_type type, __isl_take isl_ast_expr *arg0,
 	__isl_take isl_ast_expr_list *arguments)
 {
-	int i;
-	isl_size n;
-	isl_ctx *ctx;
-	isl_ast_expr *res = NULL;
-
-	if (!arg0 || !arguments)
-		goto error;
-
-	ctx = isl_ast_expr_get_ctx(arg0);
-	n = isl_ast_expr_list_n_ast_expr(arguments);
-	if (n < 0)
-		goto error;
-	res = isl_ast_expr_alloc_op(ctx, type, 1 + n);
-	if (!res)
-		goto error;
-	for (i = 0; i < n; ++i) {
-		isl_ast_expr *arg;
-		arg = isl_ast_expr_list_get_ast_expr(arguments, i);
-		res->u.op.args[1 + i] = arg;
-		if (!arg)
-			goto error;
-	}
-	res->u.op.args[0] = arg0;
-
-	isl_ast_expr_list_free(arguments);
-	return res;
-error:
-	isl_ast_expr_free(arg0);
-	isl_ast_expr_list_free(arguments);
-	isl_ast_expr_free(res);
-	return NULL;
+	arguments = isl_ast_expr_list_insert(arguments, 0, arg0);
+	return alloc_op(type, arguments);
 }
 
 /* Create an expression representing an access to "array" with index
@@ -776,6 +844,18 @@ __isl_give isl_ast_expr *isl_ast_expr_call(__isl_take isl_ast_expr *function,
 	return ast_expr_with_arguments(isl_ast_expr_op_call, function, arguments);
 }
 
+/* Wrapper around isl_ast_expr_substitute_ids for use
+ * as an isl_ast_expr_list_map callback.
+ */
+static __isl_give isl_ast_expr *substitute_ids(__isl_take isl_ast_expr *expr,
+	void *user)
+{
+	isl_id_to_ast_expr *id2expr = user;
+
+	return isl_ast_expr_substitute_ids(expr,
+					    isl_id_to_ast_expr_copy(id2expr));
+}
+
 /* For each subexpression of "expr" of type isl_ast_expr_id,
  * if it appears in "id2expr", then replace it by the corresponding
  * expression.
@@ -783,8 +863,8 @@ __isl_give isl_ast_expr *isl_ast_expr_call(__isl_take isl_ast_expr *function,
 __isl_give isl_ast_expr *isl_ast_expr_substitute_ids(
 	__isl_take isl_ast_expr *expr, __isl_take isl_id_to_ast_expr *id2expr)
 {
-	int i;
 	isl_maybe_isl_ast_expr m;
+	isl_ast_expr_list *args;
 
 	if (!expr || !id2expr)
 		goto error;
@@ -802,25 +882,9 @@ __isl_give isl_ast_expr *isl_ast_expr_substitute_ids(
 		expr = m.value;
 		break;
 	case isl_ast_expr_op:
-		for (i = 0; i < expr->u.op.n_arg; ++i) {
-			isl_ast_expr *arg;
-			arg = isl_ast_expr_copy(expr->u.op.args[i]);
-			arg = isl_ast_expr_substitute_ids(arg,
-					    isl_id_to_ast_expr_copy(id2expr));
-			if (arg == expr->u.op.args[i]) {
-				isl_ast_expr_free(arg);
-				continue;
-			}
-			if (!arg)
-				expr = isl_ast_expr_free(expr);
-			expr = isl_ast_expr_cow(expr);
-			if (!expr) {
-				isl_ast_expr_free(arg);
-				break;
-			}
-			isl_ast_expr_free(expr->u.op.args[i]);
-			expr->u.op.args[i] = arg;
-		}
+		args = isl_ast_expr_op_take_args(expr);
+		args = isl_ast_expr_list_map(args, &substitute_ids, id2expr);
+		expr = isl_ast_expr_op_restore_args(expr, args);
 		break;
 	case isl_ast_expr_error:
 		expr = isl_ast_expr_free(expr);
@@ -939,7 +1003,8 @@ error:
 
 /* Create a user node evaluating "expr".
  */
-__isl_give isl_ast_node *isl_ast_node_alloc_user(__isl_take isl_ast_expr *expr)
+__isl_give isl_ast_node *isl_ast_node_user_from_expr(
+	__isl_take isl_ast_expr *expr)
 {
 	isl_ctx *ctx;
 	isl_ast_node *node;
@@ -960,9 +1025,16 @@ error:
 	return NULL;
 }
 
+/* This is an alternative name for the function above.
+ */
+__isl_give isl_ast_node *isl_ast_node_alloc_user(__isl_take isl_ast_expr *expr)
+{
+	return isl_ast_node_user_from_expr(expr);
+}
+
 /* Create a block node with the given children.
  */
-__isl_give isl_ast_node *isl_ast_node_alloc_block(
+__isl_give isl_ast_node *isl_ast_node_block_from_children(
 	__isl_take isl_ast_node_list *list)
 {
 	isl_ast_node *node;
@@ -982,6 +1054,14 @@ __isl_give isl_ast_node *isl_ast_node_alloc_block(
 error:
 	isl_ast_node_list_free(list);
 	return NULL;
+}
+
+/* This is an alternative name for the function above.
+ */
+__isl_give isl_ast_node *isl_ast_node_alloc_block(
+	__isl_take isl_ast_node_list *list)
+{
+	return isl_ast_node_block_from_children(list);
 }
 
 /* Represent the given list of nodes as a single node, either by
@@ -1018,6 +1098,11 @@ __isl_give isl_ast_node *isl_ast_node_copy(__isl_keep isl_ast_node *node)
 	return node;
 }
 
+/* Return a fresh copy of "node".
+ *
+ * In the case of a degenerate for node, take into account
+ * that "cond" and "inc" are NULL.
+ */
 __isl_give isl_ast_node *isl_ast_node_dup(__isl_keep isl_ast_node *node)
 {
 	isl_ast_node *dup;
@@ -1039,13 +1124,17 @@ __isl_give isl_ast_node *isl_ast_node_dup(__isl_keep isl_ast_node *node)
 			return isl_ast_node_free(dup);
 		break;
 	case isl_ast_node_for:
+		dup->u.f.degenerate = node->u.f.degenerate;
 		dup->u.f.iterator = isl_ast_expr_copy(node->u.f.iterator);
 		dup->u.f.init = isl_ast_expr_copy(node->u.f.init);
+		dup->u.f.body = isl_ast_node_copy(node->u.f.body);
+		if (!dup->u.f.iterator || !dup->u.f.init || !dup->u.f.body)
+			return isl_ast_node_free(dup);
+		if (node->u.f.degenerate)
+			break;
 		dup->u.f.cond = isl_ast_expr_copy(node->u.f.cond);
 		dup->u.f.inc = isl_ast_expr_copy(node->u.f.inc);
-		dup->u.f.body = isl_ast_node_copy(node->u.f.body);
-		if (!dup->u.f.iterator || !dup->u.f.init || !dup->u.f.cond ||
-		    !dup->u.f.inc || !dup->u.f.body)
+		if (!dup->u.f.cond || !dup->u.f.inc)
 			return isl_ast_node_free(dup);
 		break;
 	case isl_ast_node_block:
@@ -1067,6 +1156,12 @@ __isl_give isl_ast_node *isl_ast_node_dup(__isl_keep isl_ast_node *node)
 	case isl_ast_node_error:
 		break;
 	}
+
+	if (!node->annotation)
+		return dup;
+	dup->annotation = isl_id_copy(node->annotation);
+	if (!dup->annotation)
+		return isl_ast_node_free(dup);
 
 	return dup;
 }
@@ -1124,36 +1219,137 @@ __isl_null isl_ast_node *isl_ast_node_free(__isl_take isl_ast_node *node)
 	return NULL;
 }
 
-/* Replace the body of the for node "node" by "body".
+/* Check that "node" is of type "type", printing "msg" if not.
  */
-__isl_give isl_ast_node *isl_ast_node_for_set_body(
+static isl_stat isl_ast_node_check_type(__isl_keep isl_ast_node *node,
+	enum isl_ast_node_type type, const char *msg)
+{
+	if (!node)
+		return isl_stat_error;
+	if (node->type != type)
+		isl_die(isl_ast_node_get_ctx(node), isl_error_invalid, msg,
+			return isl_stat_error);
+	return isl_stat_ok;
+}
+
+/* Check that "node" is of type isl_ast_node_block.
+ */
+static isl_stat isl_ast_node_check_block(__isl_keep isl_ast_node *node)
+{
+	return isl_ast_node_check_type(node, isl_ast_node_block,
+					"not a block node");
+}
+
+/* Check that "node" is of type isl_ast_node_if.
+ */
+static isl_stat isl_ast_node_check_if(__isl_keep isl_ast_node *node)
+{
+	return isl_ast_node_check_type(node, isl_ast_node_if, "not an if node");
+}
+
+/* Check that "node" is of type isl_ast_node_for.
+ */
+static isl_stat isl_ast_node_check_for(__isl_keep isl_ast_node *node)
+{
+	return isl_ast_node_check_type(node, isl_ast_node_for,
+					"not a for node");
+}
+
+/* Check that "node" is of type isl_ast_node_mark.
+ */
+static isl_stat isl_ast_node_check_mark(__isl_keep isl_ast_node *node)
+{
+	return isl_ast_node_check_type(node, isl_ast_node_mark,
+					"not a mark node");
+}
+
+/* Check that "node" is of type isl_ast_node_user.
+ */
+static isl_stat isl_ast_node_check_user(__isl_keep isl_ast_node *node)
+{
+	return isl_ast_node_check_type(node, isl_ast_node_user,
+					"not a user node");
+}
+
+#undef NODE_TYPE
+#define NODE_TYPE	for
+#undef FIELD_NAME
+#define FIELD_NAME	init
+#undef FIELD_TYPE
+#define FIELD_TYPE	isl_ast_expr
+#undef FIELD
+#define FIELD		u.f.init
+#include "isl_ast_node_set_field_templ.c"
+
+#undef NODE_TYPE
+#define NODE_TYPE	for
+#undef FIELD_NAME
+#define FIELD_NAME	cond
+#undef FIELD_TYPE
+#define FIELD_TYPE	isl_ast_expr
+#undef FIELD
+#define FIELD		u.f.cond
+#include "isl_ast_node_set_field_templ.c"
+
+#undef NODE_TYPE
+#define NODE_TYPE	for
+#undef FIELD_NAME
+#define FIELD_NAME	inc
+#undef FIELD_TYPE
+#define FIELD_TYPE	isl_ast_expr
+#undef FIELD
+#define FIELD		u.f.inc
+#include "isl_ast_node_set_field_templ.c"
+
+#undef NODE_TYPE
+#define NODE_TYPE	for
+#undef FIELD_NAME
+#define FIELD_NAME	body
+#undef FIELD_TYPE
+#define FIELD_TYPE	isl_ast_node
+#undef FIELD
+#define FIELD		u.f.body
+#include "isl_ast_node_set_field_templ.c"
+
+/* Return the body of the for-node "node",
+ * This may be either a copy or the body itself
+ * if there is only one reference to "node".
+ * This allows the body to be modified inplace
+ * if both "node" and its body have only a single reference.
+ * The caller is not allowed to modify "node" between this call and
+ * the subsequent call to isl_ast_node_for_restore_body.
+ * The only exception is that isl_ast_node_free can be called instead.
+ */
+static __isl_give isl_ast_node *isl_ast_node_for_take_body(
+	__isl_keep isl_ast_node *node)
+{
+	isl_ast_node *body;
+
+	if (isl_ast_node_check_for(node) < 0)
+		return NULL;
+	if (node->ref != 1)
+		return isl_ast_node_for_get_body(node);
+	body = node->u.f.body;
+	node->u.f.body = NULL;
+	return body;
+}
+
+/* Set the body of the for-node "node" to "body",
+ * where the body of "node" may be missing
+ * due to a preceding call to isl_ast_node_for_take_body.
+ * However, in this case, "node" only has a single reference.
+ */
+static __isl_give isl_ast_node *isl_ast_node_for_restore_body(
 	__isl_take isl_ast_node *node, __isl_take isl_ast_node *body)
 {
-	node = isl_ast_node_cow(node);
-	if (!node || !body)
-		goto error;
-	if (node->type != isl_ast_node_for)
-		isl_die(isl_ast_node_get_ctx(node), isl_error_invalid,
-			"not a for node", goto error);
-
-	isl_ast_node_free(node->u.f.body);
-	node->u.f.body = body;
-
-	return node;
-error:
-	isl_ast_node_free(node);
-	isl_ast_node_free(body);
-	return NULL;
+	return isl_ast_node_for_set_body(node, body);
 }
 
 __isl_give isl_ast_node *isl_ast_node_for_get_body(
 	__isl_keep isl_ast_node *node)
 {
-	if (!node)
+	if (isl_ast_node_check_for(node) < 0)
 		return NULL;
-	if (node->type != isl_ast_node_for)
-		isl_die(isl_ast_node_get_ctx(node), isl_error_invalid,
-			"not a for node", return NULL);
 	return isl_ast_node_copy(node->u.f.body);
 }
 
@@ -1171,33 +1367,24 @@ __isl_give isl_ast_node *isl_ast_node_for_mark_degenerate(
 
 isl_bool isl_ast_node_for_is_degenerate(__isl_keep isl_ast_node *node)
 {
-	if (!node)
+	if (isl_ast_node_check_for(node) < 0)
 		return isl_bool_error;
-	if (node->type != isl_ast_node_for)
-		isl_die(isl_ast_node_get_ctx(node), isl_error_invalid,
-			"not a for node", return isl_bool_error);
 	return isl_bool_ok(node->u.f.degenerate);
 }
 
 __isl_give isl_ast_expr *isl_ast_node_for_get_iterator(
 	__isl_keep isl_ast_node *node)
 {
-	if (!node)
+	if (isl_ast_node_check_for(node) < 0)
 		return NULL;
-	if (node->type != isl_ast_node_for)
-		isl_die(isl_ast_node_get_ctx(node), isl_error_invalid,
-			"not a for node", return NULL);
 	return isl_ast_expr_copy(node->u.f.iterator);
 }
 
 __isl_give isl_ast_expr *isl_ast_node_for_get_init(
 	__isl_keep isl_ast_node *node)
 {
-	if (!node)
+	if (isl_ast_node_check_for(node) < 0)
 		return NULL;
-	if (node->type != isl_ast_node_for)
-		isl_die(isl_ast_node_get_ctx(node), isl_error_invalid,
-			"not a for node", return NULL);
 	return isl_ast_expr_copy(node->u.f.init);
 }
 
@@ -1211,11 +1398,8 @@ __isl_give isl_ast_expr *isl_ast_node_for_get_init(
 __isl_give isl_ast_expr *isl_ast_node_for_get_cond(
 	__isl_keep isl_ast_node *node)
 {
-	if (!node)
+	if (isl_ast_node_check_for(node) < 0)
 		return NULL;
-	if (node->type != isl_ast_node_for)
-		isl_die(isl_ast_node_get_ctx(node), isl_error_invalid,
-			"not a for node", return NULL);
 	if (!node->u.f.degenerate)
 		return isl_ast_expr_copy(node->u.f.cond);
 
@@ -1232,36 +1416,55 @@ __isl_give isl_ast_expr *isl_ast_node_for_get_cond(
 __isl_give isl_ast_expr *isl_ast_node_for_get_inc(
 	__isl_keep isl_ast_node *node)
 {
-	if (!node)
+	if (isl_ast_node_check_for(node) < 0)
 		return NULL;
-	if (node->type != isl_ast_node_for)
-		isl_die(isl_ast_node_get_ctx(node), isl_error_invalid,
-			"not a for node", return NULL);
 	if (!node->u.f.degenerate)
 		return isl_ast_expr_copy(node->u.f.inc);
 	return isl_ast_expr_alloc_int_si(isl_ast_node_get_ctx(node), 1);
 }
 
-/* Replace the then branch of the if node "node" by "child".
+#undef NODE_TYPE
+#define NODE_TYPE	if
+#undef FIELD_NAME
+#define FIELD_NAME	then
+#undef FIELD_TYPE
+#define FIELD_TYPE	isl_ast_node
+#undef FIELD
+#define FIELD		u.i.then
+#include "isl_ast_node_set_field_templ.c"
+
+/* Return the then-branch of the if-node "node",
+ * This may be either a copy or the branch itself
+ * if there is only one reference to "node".
+ * This allows the branch to be modified inplace
+ * if both "node" and its then-branch have only a single reference.
+ * The caller is not allowed to modify "node" between this call and
+ * the subsequent call to isl_ast_node_if_restore_then_node.
+ * The only exception is that isl_ast_node_free can be called instead.
  */
-__isl_give isl_ast_node *isl_ast_node_if_set_then(
+static __isl_give isl_ast_node *isl_ast_node_if_take_then_node(
+	__isl_keep isl_ast_node *node)
+{
+	isl_ast_node *then_node;
+
+	if (isl_ast_node_check_if(node) < 0)
+		return NULL;
+	if (node->ref != 1)
+		return isl_ast_node_if_get_then_node(node);
+	then_node = node->u.i.then;
+	node->u.i.then = NULL;
+	return then_node;
+}
+
+/* Set the then-branch of the if-node "node" to "child",
+ * where the then-branch of "node" may be missing
+ * due to a preceding call to isl_ast_node_if_take_then_node.
+ * However, in this case, "node" only has a single reference.
+ */
+static __isl_give isl_ast_node *isl_ast_node_if_restore_then_node(
 	__isl_take isl_ast_node *node, __isl_take isl_ast_node *child)
 {
-	node = isl_ast_node_cow(node);
-	if (!node || !child)
-		goto error;
-	if (node->type != isl_ast_node_if)
-		isl_die(isl_ast_node_get_ctx(node), isl_error_invalid,
-			"not an if node", goto error);
-
-	isl_ast_node_free(node->u.i.then);
-	node->u.i.then = child;
-
-	return node;
-error:
-	isl_ast_node_free(node);
-	isl_ast_node_free(child);
-	return NULL;
+	return isl_ast_node_if_set_then(node, child);
 }
 
 /* Return the then-node of the given if-node.
@@ -1269,11 +1472,8 @@ error:
 __isl_give isl_ast_node *isl_ast_node_if_get_then_node(
 	__isl_keep isl_ast_node *node)
 {
-	if (!node)
+	if (isl_ast_node_check_if(node) < 0)
 		return NULL;
-	if (node->type != isl_ast_node_if)
-		isl_die(isl_ast_node_get_ctx(node), isl_error_invalid,
-			"not an if node", return NULL);
 	return isl_ast_node_copy(node->u.i.then);
 }
 
@@ -1289,11 +1489,8 @@ __isl_give isl_ast_node *isl_ast_node_if_get_then(
  */
 isl_bool isl_ast_node_if_has_else_node(__isl_keep isl_ast_node *node)
 {
-	if (!node)
+	if (isl_ast_node_check_if(node) < 0)
 		return isl_bool_error;
-	if (node->type != isl_ast_node_if)
-		isl_die(isl_ast_node_get_ctx(node), isl_error_invalid,
-			"not an if node", return isl_bool_error);
 	return isl_bool_ok(node->u.i.else_node != NULL);
 }
 
@@ -1310,11 +1507,8 @@ isl_bool isl_ast_node_if_has_else(__isl_keep isl_ast_node *node)
 __isl_give isl_ast_node *isl_ast_node_if_get_else_node(
 	__isl_keep isl_ast_node *node)
 {
-	if (!node)
+	if (isl_ast_node_check_if(node) < 0)
 		return NULL;
-	if (node->type != isl_ast_node_if)
-		isl_die(isl_ast_node_get_ctx(node), isl_error_invalid,
-			"not an if node", return NULL);
 	return isl_ast_node_copy(node->u.i.else_node);
 }
 
@@ -1326,36 +1520,117 @@ __isl_give isl_ast_node *isl_ast_node_if_get_else(
 	return isl_ast_node_if_get_else_node(node);
 }
 
+#undef NODE_TYPE
+#define NODE_TYPE	if
+#undef FIELD_NAME
+#define FIELD_NAME	else_node
+#undef FIELD_TYPE
+#define FIELD_TYPE	isl_ast_node
+#undef FIELD
+#define FIELD		u.i.else_node
+static
+#include "isl_ast_node_set_field_templ.c"
+
+/* Return the else-branch of the if-node "node",
+ * This may be either a copy or the branch itself
+ * if there is only one reference to "node".
+ * This allows the branch to be modified inplace
+ * if both "node" and its else-branch have only a single reference.
+ * The caller is not allowed to modify "node" between this call and
+ * the subsequent call to isl_ast_node_if_restore_else_node.
+ * The only exception is that isl_ast_node_free can be called instead.
+ */
+static __isl_give isl_ast_node *isl_ast_node_if_take_else_node(
+	__isl_keep isl_ast_node *node)
+{
+	isl_ast_node *else_node;
+
+	if (isl_ast_node_check_if(node) < 0)
+		return NULL;
+	if (node->ref != 1)
+		return isl_ast_node_if_get_else_node(node);
+	else_node = node->u.i.else_node;
+	node->u.i.else_node = NULL;
+	return else_node;
+}
+
+/* Set the else-branch of the if-node "node" to "child",
+ * where the else-branch of "node" may be missing
+ * due to a preceding call to isl_ast_node_if_take_else_node.
+ * However, in this case, "node" only has a single reference.
+ */
+static __isl_give isl_ast_node *isl_ast_node_if_restore_else_node(
+	__isl_take isl_ast_node *node, __isl_take isl_ast_node *child)
+{
+	return isl_ast_node_if_set_else_node(node, child);
+}
+
 __isl_give isl_ast_expr *isl_ast_node_if_get_cond(
 	__isl_keep isl_ast_node *node)
 {
-	if (!node)
+	if (isl_ast_node_check_if(node) < 0)
 		return NULL;
-	if (node->type != isl_ast_node_if)
-		isl_die(isl_ast_node_get_ctx(node), isl_error_invalid,
-			"not a guard node", return NULL);
 	return isl_ast_expr_copy(node->u.i.guard);
 }
 
 __isl_give isl_ast_node_list *isl_ast_node_block_get_children(
 	__isl_keep isl_ast_node *node)
 {
-	if (!node)
+	if (isl_ast_node_check_block(node) < 0)
 		return NULL;
-	if (node->type != isl_ast_node_block)
-		isl_die(isl_ast_node_get_ctx(node), isl_error_invalid,
-			"not a block node", return NULL);
 	return isl_ast_node_list_copy(node->u.b.children);
+}
+
+#undef NODE_TYPE
+#define NODE_TYPE	block
+#undef FIELD_NAME
+#define FIELD_NAME	children
+#undef FIELD_TYPE
+#define FIELD_TYPE	isl_ast_node_list
+#undef FIELD
+#define FIELD		u.b.children
+static
+#include "isl_ast_node_set_field_templ.c"
+
+/* Return the children of the block-node "node",
+ * This may be either a copy or the children themselves
+ * if there is only one reference to "node".
+ * This allows the children to be modified inplace
+ * if both "node" and its children have only a single reference.
+ * The caller is not allowed to modify "node" between this call and
+ * the subsequent call to isl_ast_node_block_restore_children.
+ * The only exception is that isl_ast_node_free can be called instead.
+ */
+static __isl_give isl_ast_node_list *isl_ast_node_block_take_children(
+	__isl_keep isl_ast_node *node)
+{
+	isl_ast_node_list *children;
+
+	if (isl_ast_node_check_block(node) < 0)
+		return NULL;
+	if (node->ref != 1)
+		return isl_ast_node_block_get_children(node);
+	children = node->u.b.children;
+	node->u.b.children = NULL;
+	return children;
+}
+
+/* Set the children of the block-node "node" to "children",
+ * where the children of "node" may be missing
+ * due to a preceding call to isl_ast_node_block_take_children.
+ * However, in this case, "node" only has a single reference.
+ */
+static __isl_give isl_ast_node *isl_ast_node_block_restore_children(
+	__isl_take isl_ast_node *node, __isl_take isl_ast_node_list *children)
+{
+	return isl_ast_node_block_set_children(node, children);
 }
 
 __isl_give isl_ast_expr *isl_ast_node_user_get_expr(
 	__isl_keep isl_ast_node *node)
 {
-	if (!node)
+	if (isl_ast_node_check_user(node) < 0)
 		return NULL;
-	if (node->type != isl_ast_node_user)
-		isl_die(isl_ast_node_get_ctx(node), isl_error_invalid,
-			"not a user node", return NULL);
 
 	return isl_ast_expr_copy(node->u.e.expr);
 }
@@ -1364,11 +1639,8 @@ __isl_give isl_ast_expr *isl_ast_node_user_get_expr(
  */
 __isl_give isl_id *isl_ast_node_mark_get_id(__isl_keep isl_ast_node *node)
 {
-	if (!node)
+	if (isl_ast_node_check_mark(node) < 0)
 		return NULL;
-	if (node->type != isl_ast_node_mark)
-		isl_die(isl_ast_node_get_ctx(node), isl_error_invalid,
-			"not a mark node", return NULL);
 
 	return isl_id_copy(node->u.m.mark);
 }
@@ -1378,13 +1650,55 @@ __isl_give isl_id *isl_ast_node_mark_get_id(__isl_keep isl_ast_node *node)
 __isl_give isl_ast_node *isl_ast_node_mark_get_node(
 	__isl_keep isl_ast_node *node)
 {
-	if (!node)
+	if (isl_ast_node_check_mark(node) < 0)
 		return NULL;
-	if (node->type != isl_ast_node_mark)
-		isl_die(isl_ast_node_get_ctx(node), isl_error_invalid,
-			"not a mark node", return NULL);
 
 	return isl_ast_node_copy(node->u.m.node);
+}
+
+#undef NODE_TYPE
+#define NODE_TYPE	mark
+#undef FIELD_NAME
+#define FIELD_NAME	node
+#undef FIELD_TYPE
+#define FIELD_TYPE	isl_ast_node
+#undef FIELD
+#define FIELD		u.m.node
+static
+#include "isl_ast_node_set_field_templ.c"
+
+/* Return the child of the mark-node "node",
+ * This may be either a copy or the child itself
+ * if there is only one reference to "node".
+ * This allows the child to be modified inplace
+ * if both "node" and its child have only a single reference.
+ * The caller is not allowed to modify "node" between this call and
+ * the subsequent call to isl_ast_node_mark_restore_node.
+ * The only exception is that isl_ast_node_free can be called instead.
+ */
+static __isl_give isl_ast_node *isl_ast_node_mark_take_node(
+	__isl_keep isl_ast_node *node)
+{
+	isl_ast_node *child;
+
+	if (isl_ast_node_check_mark(node) < 0)
+		return NULL;
+	if (node->ref != 1)
+		return isl_ast_node_mark_get_node(node);
+	child = node->u.m.node;
+	node->u.m.node = NULL;
+	return child;
+}
+
+/* Set the child of the mark-node "node" to "child",
+ * where the child of "node" may be missing
+ * due to a preceding call to isl_ast_node_mark_take_node.
+ * However, in this case, "node" only has a single reference.
+ */
+static __isl_give isl_ast_node *isl_ast_node_mark_restore_node(
+	__isl_take isl_ast_node *node, __isl_take isl_ast_node *child)
+{
+	return isl_ast_node_mark_set_node(node, child);
 }
 
 __isl_give isl_id *isl_ast_node_get_annotation(__isl_keep isl_ast_node *node)
@@ -1392,47 +1706,173 @@ __isl_give isl_id *isl_ast_node_get_annotation(__isl_keep isl_ast_node *node)
 	return node ? isl_id_copy(node->annotation) : NULL;
 }
 
+/* Check that "node" is of any type.
+ * That is, simply check that it is a valid node.
+ */
+static isl_stat isl_ast_node_check_any(__isl_keep isl_ast_node *node)
+{
+	return isl_stat_non_null(node);
+}
+
+#undef NODE_TYPE
+#define NODE_TYPE	any
+#undef FIELD_NAME
+#define FIELD_NAME	annotation
+#undef FIELD_TYPE
+#define FIELD_TYPE	isl_id
+#undef FIELD
+#define FIELD		annotation
+static
+#include "isl_ast_node_set_field_templ.c"
+
 /* Replace node->annotation by "annotation".
  */
 __isl_give isl_ast_node *isl_ast_node_set_annotation(
 	__isl_take isl_ast_node *node, __isl_take isl_id *annotation)
 {
-	node = isl_ast_node_cow(node);
-	if (!node || !annotation)
-		goto error;
-
-	isl_id_free(node->annotation);
-	node->annotation = annotation;
-
-	return node;
-error:
-	isl_id_free(annotation);
-	return isl_ast_node_free(node);
+	return isl_ast_node_any_set_annotation(node, annotation);
 }
 
+static __isl_give isl_ast_node *traverse(__isl_take isl_ast_node *node,
+	__isl_give isl_ast_node *(*enter)(__isl_take isl_ast_node *node,
+		int *more, void *user),
+	__isl_give isl_ast_node *(*leave)(__isl_take isl_ast_node *node,
+		void *user),
+	void *user);
+
 /* Traverse the elements of "list" and all their descendants
- * in depth first preorder.
+ * in depth first preorder.  Call "enter" whenever a node is entered and "leave"
+ * whenever a node is left.
  *
- * Return isl_stat_ok on success and isl_stat_error on failure.
+ * Return the updated node.
  */
-static isl_stat nodelist_foreach(__isl_keep isl_ast_node_list *list,
-	isl_bool (*fn)(__isl_keep isl_ast_node *node, void *user), void *user)
+static __isl_give isl_ast_node_list *traverse_list(
+	__isl_take isl_ast_node_list *list,
+	__isl_give isl_ast_node *(*enter)(__isl_take isl_ast_node *node,
+		int *more, void *user),
+	__isl_give isl_ast_node *(*leave)(__isl_take isl_ast_node *node,
+		void *user),
+	void *user)
 {
 	int i;
+	isl_size n;
 
-	if (!list)
-		return isl_stat_error;
+	n = isl_ast_node_list_size(list);
+	if (n < 0)
+		return isl_ast_node_list_free(list);
 
-	for (i = 0; i < list->n; ++i) {
-		isl_stat ok;
-		isl_ast_node *node = list->p[i];
+	for (i = 0; i < n; ++i) {
+		isl_ast_node *node;
 
-		ok = isl_ast_node_foreach_descendant_top_down(node, fn, user);
-		if (ok < 0)
-			return isl_stat_error;
+		node = isl_ast_node_list_get_at(list, i);
+		node = traverse(node, enter, leave, user);
+		list = isl_ast_node_list_set_at(list, i, node);
 	}
 
-	return isl_stat_ok;
+	return list;
+}
+
+/* Traverse the descendants of "node" (including the node itself)
+ * in depth first preorder.  Call "enter" whenever a node is entered and "leave"
+ * whenever a node is left.
+ *
+ * If "enter" sets the "more" argument to zero, then the subtree rooted
+ * at the given node is skipped.
+ *
+ * Return the updated node.
+ */
+static __isl_give isl_ast_node *traverse(__isl_take isl_ast_node *node,
+	__isl_give isl_ast_node *(*enter)(__isl_take isl_ast_node *node,
+		int *more, void *user),
+	__isl_give isl_ast_node *(*leave)(__isl_take isl_ast_node *node,
+		void *user),
+	void *user)
+{
+	int more;
+	isl_bool has_else;
+	isl_ast_node *child;
+	isl_ast_node_list *children;
+
+	node = enter(node, &more, user);
+	if (!node)
+		return NULL;
+	if (!more)
+		return node;
+
+	switch (node->type) {
+	case isl_ast_node_for:
+		child = isl_ast_node_for_take_body(node);
+		child = traverse(child, enter, leave, user);
+		node = isl_ast_node_for_restore_body(node, child);
+		return leave(node, user);
+	case isl_ast_node_if:
+		child = isl_ast_node_if_take_then_node(node);
+		child = traverse(child, enter, leave, user);
+		node = isl_ast_node_if_restore_then_node(node, child);
+		has_else = isl_ast_node_if_has_else_node(node);
+		if (has_else < 0)
+			return isl_ast_node_free(node);
+		if (!has_else)
+			return leave(node, user);
+		child = isl_ast_node_if_take_else_node(node);
+		child = traverse(child, enter, leave, user);
+		node = isl_ast_node_if_restore_else_node(node, child);
+		return leave(node, user);
+	case isl_ast_node_block:
+		children = isl_ast_node_block_take_children(node);
+		children = traverse_list(children, enter, leave, user);
+		node = isl_ast_node_block_restore_children(node, children);
+		return leave(node, user);
+	case isl_ast_node_mark:
+		child = isl_ast_node_mark_take_node(node);
+		child = traverse(child, enter, leave, user);
+		node = isl_ast_node_mark_restore_node(node, child);
+		return leave(node, user);
+	case isl_ast_node_user:
+		return leave(node, user);
+	case isl_ast_node_error:
+		return isl_ast_node_free(node);
+	}
+
+	return node;
+}
+
+/* Internal data structure storing the arguments of
+ * isl_ast_node_foreach_descendant_top_down.
+ */
+struct isl_ast_node_preorder_data {
+	isl_bool (*fn)(__isl_keep isl_ast_node *node, void *user);
+	void *user;
+};
+
+/* Enter "node" and set *more to continue traversing its descendants.
+ *
+ * In the case of a depth first preorder traversal, call data->fn and
+ * let it decide whether to continue.
+ */
+static __isl_give isl_ast_node *preorder_enter(__isl_take isl_ast_node *node,
+	int *more, void *user)
+{
+	struct isl_ast_node_preorder_data *data = user;
+	isl_bool m;
+
+	if (!node)
+		return NULL;
+	m = data->fn(node, data->user);
+	if (m < 0)
+		return isl_ast_node_free(node);
+	*more = m;
+	return node;
+}
+
+/* Leave "node".
+ *
+ * In the case of a depth first preorder traversal, nothing needs to be done.
+ */
+static __isl_give isl_ast_node *preorder_leave(__isl_take isl_ast_node *node,
+	void *user)
+{
+	return node;
 }
 
 /* Traverse the descendants of "node" (including the node itself)
@@ -1449,43 +1889,66 @@ isl_stat isl_ast_node_foreach_descendant_top_down(
 	__isl_keep isl_ast_node *node,
 	isl_bool (*fn)(__isl_keep isl_ast_node *node, void *user), void *user)
 {
-	isl_bool more;
-	isl_stat ok;
+	struct isl_ast_node_preorder_data data = { fn, user };
+
+	node = isl_ast_node_copy(node);
+	node = traverse(node, &preorder_enter, &preorder_leave, &data);
+	isl_ast_node_free(node);
+
+	return isl_stat_non_null(node);
+}
+
+/* Internal data structure storing the arguments of
+ * isl_ast_node_map_descendant_bottom_up.
+ */
+struct isl_ast_node_postorder_data {
+	__isl_give isl_ast_node *(*fn)(__isl_take isl_ast_node *node,
+		void *user);
+	void *user;
+};
+
+/* Enter "node" and set *more to continue traversing its descendants.
+ *
+ * In the case of a depth-first post-order traversal,
+ * nothing needs to be done and traversal always continues.
+ */
+static __isl_give isl_ast_node *postorder_enter(__isl_take isl_ast_node *node,
+	int *more, void *user)
+{
+	*more = 1;
+	return node;
+}
+
+/* Leave "node".
+ *
+ * In the case of a depth-first post-order traversal, call data->fn.
+ */
+static __isl_give isl_ast_node *postorder_leave(__isl_take isl_ast_node *node,
+	void *user)
+{
+	struct isl_ast_node_postorder_data *data = user;
 
 	if (!node)
-		return isl_stat_error;
+		return NULL;
 
-	more = fn(node, user);
-	if (more < 0)
-		return isl_stat_error;
-	if (!more)
-		return isl_stat_ok;
+	node = data->fn(node, data->user);
+	return node;
+}
 
-	switch (node->type) {
-	case isl_ast_node_for:
-		node = node->u.f.body;
-		return isl_ast_node_foreach_descendant_top_down(node, fn, user);
-	case isl_ast_node_if:
-		ok = isl_ast_node_foreach_descendant_top_down(node->u.i.then,
-								fn, user);
-		if (ok < 0)
-			return isl_stat_error;
-		if (!node->u.i.else_node)
-			return isl_stat_ok;
-		node = node->u.i.else_node;
-		return isl_ast_node_foreach_descendant_top_down(node, fn, user);
-	case isl_ast_node_block:
-		return nodelist_foreach(node->u.b.children, fn, user);
-	case isl_ast_node_mark:
-		node = node->u.m.node;
-		return isl_ast_node_foreach_descendant_top_down(node, fn, user);
-	case isl_ast_node_user:
-		break;
-	case isl_ast_node_error:
-		return isl_stat_error;
-	}
+/* Traverse the descendants of "node" (including the node itself)
+ * in depth-first post-order, where the user callback is allowed to modify the
+ * visited node.
+ *
+ * Return the updated node.
+ */
+__isl_give isl_ast_node *isl_ast_node_map_descendant_bottom_up(
+	__isl_take isl_ast_node *node,
+	__isl_give isl_ast_node *(*fn)(__isl_take isl_ast_node *node,
+		void *user), void *user)
+{
+	struct isl_ast_node_postorder_data data = { fn, user };
 
-	return isl_stat_ok;
+	return traverse(node, &postorder_enter, &postorder_leave, &data);
 }
 
 /* Textual C representation of the various operators.
@@ -1644,21 +2107,30 @@ static int sub_expr_need_parens(enum isl_ast_expr_op_type op,
 	return 0;
 }
 
-/* Print "expr" as a subexpression of an "op" operation in C format.
+/* Print the subexpression at position "pos" of operation expression "expr"
+ * in C format.
  * If "left" is set, then "expr" is the left-most operand.
  */
 static __isl_give isl_printer *print_sub_expr_c(__isl_take isl_printer *p,
-	enum isl_ast_expr_op_type op, __isl_keep isl_ast_expr *expr, int left)
+	__isl_keep isl_ast_expr *expr, int pos, int left)
 {
 	int need_parens;
+	isl_ast_expr *arg;
 
-	need_parens = sub_expr_need_parens(op, expr, left);
+	if (!expr)
+		return isl_printer_free(p);
+
+	arg = isl_ast_expr_list_get_at(expr->u.op.args, pos);
+	need_parens = sub_expr_need_parens(expr->u.op.op, arg, left);
 
 	if (need_parens)
 		p = isl_printer_print_str(p, "(");
-	p = print_ast_expr_c(p, expr);
+	p = print_ast_expr_c(p, arg);
 	if (need_parens)
 		p = isl_printer_print_str(p, ")");
+
+	isl_ast_expr_free(arg);
+
 	return p;
 }
 
@@ -1822,21 +2294,40 @@ static const char *get_op_str_c(__isl_keep isl_printer *p,
 	return op_str_c[type];
 }
 
+/* Print the expression at position "pos" in "list" in C format.
+ */
+static __isl_give isl_printer *print_at_c(__isl_take isl_printer *p,
+	__isl_keep isl_ast_expr_list *list, int pos)
+{
+	isl_ast_expr *expr;
+
+	expr = isl_ast_expr_list_get_at(list, pos);
+	p = print_ast_expr_c(p, expr);
+	isl_ast_expr_free(expr);
+
+	return p;
+}
+
 /* Print a min or max reduction "expr" in C format.
  */
 static __isl_give isl_printer *print_min_max_c(__isl_take isl_printer *p,
 	__isl_keep isl_ast_expr *expr)
 {
 	int i = 0;
+	isl_size n;
 
-	for (i = 1; i < expr->u.op.n_arg; ++i) {
+	n = isl_ast_expr_list_size(expr->u.op.args);
+	if (n < 0)
+		return isl_printer_free(p);
+
+	for (i = 1; i < n; ++i) {
 		p = isl_printer_print_str(p, get_op_str_c(p, expr->u.op.op));
 		p = isl_printer_print_str(p, "(");
 	}
-	p = isl_printer_print_ast_expr(p, expr->u.op.args[0]);
-	for (i = 1; i < expr->u.op.n_arg; ++i) {
+	p = print_at_c(p, expr->u.op.args, 0);
+	for (i = 1; i < n; ++i) {
 		p = isl_printer_print_str(p, ", ");
-		p = print_ast_expr_c(p, expr->u.op.args[i]);
+		p = print_at_c(p, expr->u.op.args, i);
 		p = isl_printer_print_str(p, ")");
 	}
 
@@ -1851,13 +2342,18 @@ static __isl_give isl_printer *print_call_c(__isl_take isl_printer *p,
 	__isl_keep isl_ast_expr *expr)
 {
 	int i = 0;
+	isl_size n;
 
-	p = print_ast_expr_c(p, expr->u.op.args[0]);
+	n = isl_ast_expr_list_size(expr->u.op.args);
+	if (n < 0)
+		return isl_printer_free(p);
+
+	p = print_at_c(p, expr->u.op.args, 0);
 	p = isl_printer_print_str(p, "(");
-	for (i = 1; i < expr->u.op.n_arg; ++i) {
+	for (i = 1; i < n; ++i) {
 		if (i != 1)
 			p = isl_printer_print_str(p, ", ");
-		p = print_ast_expr_c(p, expr->u.op.args[i]);
+		p = print_at_c(p, expr->u.op.args, i);
 	}
 	p = isl_printer_print_str(p, ")");
 
@@ -1872,11 +2368,16 @@ static __isl_give isl_printer *print_access_c(__isl_take isl_printer *p,
 	__isl_keep isl_ast_expr *expr)
 {
 	int i = 0;
+	isl_size n;
 
-	p = print_ast_expr_c(p, expr->u.op.args[0]);
-	for (i = 1; i < expr->u.op.n_arg; ++i) {
+	n = isl_ast_expr_list_size(expr->u.op.args);
+	if (n < 0)
+		return isl_printer_free(p);
+
+	p = print_at_c(p, expr->u.op.args, 0);
+	for (i = 1; i < n; ++i) {
 		p = isl_printer_print_str(p, "[");
-		p = print_ast_expr_c(p, expr->u.op.args[i]);
+		p = print_at_c(p, expr->u.op.args, i);
 		p = isl_printer_print_str(p, "]");
 	}
 
@@ -1888,6 +2389,8 @@ static __isl_give isl_printer *print_access_c(__isl_take isl_printer *p,
 static __isl_give isl_printer *print_ast_expr_c(__isl_take isl_printer *p,
 	__isl_keep isl_ast_expr *expr)
 {
+	isl_size n;
+
 	if (!p)
 		return NULL;
 	if (!expr)
@@ -1903,11 +2406,13 @@ static __isl_give isl_printer *print_ast_expr_c(__isl_take isl_printer *p,
 			p = print_access_c(p, expr);
 			break;
 		}
-		if (expr->u.op.n_arg == 1) {
+		n = isl_ast_expr_list_size(expr->u.op.args);
+		if (n < 0)
+			return isl_printer_free(p);
+		if (n == 1) {
 			p = isl_printer_print_str(p,
 						get_op_str_c(p, expr->u.op.op));
-			p = print_sub_expr_c(p, expr->u.op.op,
-						expr->u.op.args[0], 0);
+			p = print_sub_expr_c(p, expr, 0, 0);
 			break;
 		}
 		if (expr->u.op.op == isl_ast_expr_op_fdiv_q) {
@@ -1916,9 +2421,9 @@ static __isl_give isl_printer *print_ast_expr_c(__isl_take isl_printer *p,
 			name = get_op_str_c(p, isl_ast_expr_op_fdiv_q);
 			p = isl_printer_print_str(p, name);
 			p = isl_printer_print_str(p, "(");
-			p = print_ast_expr_c(p, expr->u.op.args[0]);
+			p = print_at_c(p, expr->u.op.args, 0);
 			p = isl_printer_print_str(p, ", ");
-			p = print_ast_expr_c(p, expr->u.op.args[1]);
+			p = print_at_c(p, expr->u.op.args, 1);
 			p = isl_printer_print_str(p, ")");
 			break;
 		}
@@ -1929,24 +2434,24 @@ static __isl_give isl_printer *print_ast_expr_c(__isl_take isl_printer *p,
 		}
 		if (expr->u.op.op == isl_ast_expr_op_cond ||
 		    expr->u.op.op == isl_ast_expr_op_select) {
-			p = print_ast_expr_c(p, expr->u.op.args[0]);
+			p = print_at_c(p, expr->u.op.args, 0);
 			p = isl_printer_print_str(p, " ? ");
-			p = print_ast_expr_c(p, expr->u.op.args[1]);
+			p = print_at_c(p, expr->u.op.args, 1);
 			p = isl_printer_print_str(p, " : ");
-			p = print_ast_expr_c(p, expr->u.op.args[2]);
+			p = print_at_c(p, expr->u.op.args, 2);
 			break;
 		}
-		if (expr->u.op.n_arg != 2)
+		if (n != 2)
 			isl_die(isl_printer_get_ctx(p), isl_error_internal,
 				"operation should have two arguments",
 				return isl_printer_free(p));
-		p = print_sub_expr_c(p, expr->u.op.op, expr->u.op.args[0], 1);
+		p = print_sub_expr_c(p, expr, 0, 1);
 		if (expr->u.op.op != isl_ast_expr_op_member)
 			p = isl_printer_print_str(p, " ");
 		p = isl_printer_print_str(p, get_op_str_c(p, expr->u.op.op));
 		if (expr->u.op.op != isl_ast_expr_op_member)
 			p = isl_printer_print_str(p, " ");
-		p = print_sub_expr_c(p, expr->u.op.op, expr->u.op.args[1], 0);
+		p = print_sub_expr_c(p, expr, 1, 0);
 		break;
 	case isl_ast_expr_id:
 		p = isl_printer_print_str(p, isl_id_get_name(expr->u.id));
@@ -2030,6 +2535,14 @@ static __isl_give isl_printer *print_arguments(__isl_take isl_printer *p,
 	return p;
 }
 
+/* Textual representations of the YAML keys for an isl_ast_expr object.
+ */
+static char *expr_str[] = {
+	[isl_ast_expr_op] = "op",
+	[isl_ast_expr_id] = "id",
+	[isl_ast_expr_int] = "val",
+};
+
 /* Print "expr" to "p" in isl format.
  *
  * In particular, print the isl_ast_expr as a YAML document.
@@ -2054,21 +2567,21 @@ static __isl_give isl_printer *print_ast_expr_isl(__isl_take isl_printer *p,
 		op = isl_ast_expr_get_op_type(expr);
 		if (op == isl_ast_expr_op_error)
 			return isl_printer_free(p);
-		p = isl_printer_print_str(p, "op");
+		p = isl_printer_print_str(p, expr_str[type]);
 		p = isl_printer_yaml_next(p);
 		p = isl_printer_print_str(p, op_str[op]);
 		p = isl_printer_yaml_next(p);
 		p = print_arguments(p, expr);
 		break;
 	case isl_ast_expr_id:
-		p = isl_printer_print_str(p, "id");
+		p = isl_printer_print_str(p, expr_str[type]);
 		p = isl_printer_yaml_next(p);
 		id = isl_ast_expr_get_id(expr);
 		p = isl_printer_print_id(p, id);
 		isl_id_free(id);
 		break;
 	case isl_ast_expr_int:
-		p = isl_printer_print_str(p, "val");
+		p = isl_printer_print_str(p, expr_str[type]);
 		p = isl_printer_yaml_next(p);
 		v = isl_ast_expr_get_val(expr);
 		p = isl_printer_print_val(p, v);
@@ -2107,6 +2620,176 @@ __isl_give isl_printer *isl_printer_print_ast_expr(__isl_take isl_printer *p,
 	}
 
 	return p;
+}
+
+#undef KEY
+#define KEY		enum isl_ast_expr_op_type
+#undef KEY_ERROR
+#define KEY_ERROR	isl_ast_expr_op_error
+#undef KEY_END
+#define KEY_END		(isl_ast_expr_op_address_of + 1)
+#undef KEY_STR
+#define KEY_STR		op_str
+#undef KEY_EXTRACT
+#define KEY_EXTRACT	extract_op_type
+#undef KEY_GET
+#define KEY_GET		get_op_type
+#include "extract_key.c"
+
+/* Return the next token, which is assumed to be a key in a YAML mapping,
+ * from "s" as a string.
+ */
+static __isl_give char *next_key(__isl_keep isl_stream *s)
+{
+	struct isl_token *tok;
+	char *str;
+	isl_ctx *ctx;
+
+	if (!s)
+		return NULL;
+	tok = isl_stream_next_token(s);
+	if (!tok) {
+		isl_stream_error(s, NULL, "unexpected EOF");
+		return NULL;
+	}
+	ctx = isl_stream_get_ctx(s);
+	str = isl_token_get_str(ctx, tok);
+	isl_token_free(tok);
+	return str;
+}
+
+/* Remove the next token, which is assumed to be the key "expected"
+ * in a YAML mapping, from "s" and move to the corresponding value.
+ */
+static isl_stat eat_key(__isl_keep isl_stream *s, const char *expected)
+{
+	char *str;
+	int ok;
+
+	str = next_key(s);
+	if (!str)
+		return isl_stat_error;
+	ok = !strcmp(str, expected);
+	free(str);
+
+	if (!ok) {
+		isl_stream_error(s, NULL, "expecting different key");
+		return isl_stat_error;
+	}
+
+	if (isl_stream_yaml_next(s) < 0)
+		return isl_stat_error;
+
+	return isl_stat_ok;
+}
+
+#undef EL_BASE
+#define EL_BASE ast_expr
+
+#include <isl_list_read_yaml_templ.c>
+
+/* Read an isl_ast_expr object of type isl_ast_expr_op from "s",
+ * where the "op" key has already been read by the caller.
+ *
+ * Read the operation type and the arguments and
+ * return the corresponding isl_ast_expr object.
+ */
+static __isl_give isl_ast_expr *read_op(__isl_keep isl_stream *s)
+{
+	enum isl_ast_expr_op_type op;
+	isl_ast_expr_list *list;
+
+	op = get_op_type(s);
+	if (op < 0)
+		return NULL;
+	if (isl_stream_yaml_next(s) < 0)
+		return NULL;
+	if (eat_key(s, "args") < 0)
+		return NULL;
+
+	list = isl_stream_yaml_read_ast_expr_list(s);
+
+	return alloc_op(op, list);
+}
+
+/* Read an isl_ast_expr object of type isl_ast_expr_id from "s",
+ * where the "id" key has already been read by the caller.
+ */
+static __isl_give isl_ast_expr *read_id(__isl_keep isl_stream *s)
+{
+	return isl_ast_expr_from_id(isl_stream_read_id(s));
+}
+
+/* Read an isl_ast_expr object of type isl_ast_expr_int from "s",
+ * where the "val" key has already been read by the caller.
+ */
+static __isl_give isl_ast_expr *read_int(__isl_keep isl_stream *s)
+{
+	return isl_ast_expr_from_val(isl_stream_read_val(s));
+}
+
+#undef KEY
+#define KEY		enum isl_ast_expr_type
+#undef KEY_ERROR
+#define KEY_ERROR	isl_ast_expr_error
+#undef KEY_END
+#define KEY_END		(isl_ast_expr_int + 1)
+#undef KEY_STR
+#define KEY_STR		expr_str
+#undef KEY_EXTRACT
+#define KEY_EXTRACT	extract_expr_type
+#undef KEY_GET
+#define KEY_GET		get_expr_type
+#include "extract_key.c"
+
+/* Read an isl_ast_expr object from "s".
+ *
+ * The keys in the YAML mapping are assumed to appear
+ * in the same order as the one in which they are printed
+ * by print_ast_expr_isl.
+ * In particular, the isl_ast_expr_op type, which is the only one
+ * with more than one element, is identified by the "op" key and
+ * not by the "args" key.
+ */
+__isl_give isl_ast_expr *isl_stream_read_ast_expr(__isl_keep isl_stream *s)
+{
+	enum isl_ast_expr_type type;
+	isl_bool more;
+	isl_ast_expr *expr;
+
+	if (isl_stream_yaml_read_start_mapping(s))
+		return NULL;
+	more = isl_stream_yaml_next(s);
+	if (more < 0)
+		return NULL;
+	if (!more) {
+		isl_stream_error(s, NULL, "missing key");
+		return NULL;
+	}
+
+	type = get_expr_type(s);
+	if (type < 0)
+		return NULL;
+	if (isl_stream_yaml_next(s) < 0)
+		return NULL;
+	switch (type) {
+	case isl_ast_expr_op:
+		expr = read_op(s);
+		break;
+	case isl_ast_expr_id:
+		expr = read_id(s);
+		break;
+	case isl_ast_expr_int:
+		expr = read_int(s);
+		break;
+	case isl_ast_expr_error:
+		return NULL;
+	}
+
+	if (isl_stream_yaml_read_end_mapping(s) < 0)
+		return isl_ast_expr_free(expr);
+
+	return expr;
 }
 
 static __isl_give isl_printer *print_ast_node_isl(__isl_take isl_printer *p,
@@ -2493,11 +3176,8 @@ static __isl_give isl_printer *print_ast_node_c(__isl_take isl_printer *p,
 __isl_give isl_printer *isl_ast_node_for_print(__isl_keep isl_ast_node *node,
 	__isl_take isl_printer *p, __isl_take isl_ast_print_options *options)
 {
-	if (!node || !options)
+	if (isl_ast_node_check_for(node) < 0 || !options)
 		goto error;
-	if (node->type != isl_ast_node_for)
-		isl_die(isl_ast_node_get_ctx(node), isl_error_invalid,
-			"not a for node", goto error);
 	p = print_for_c(p, node, options, 0, 0);
 	isl_ast_print_options_free(options);
 	return p;
@@ -2512,11 +3192,8 @@ error:
 __isl_give isl_printer *isl_ast_node_if_print(__isl_keep isl_ast_node *node,
 	__isl_take isl_printer *p, __isl_take isl_ast_print_options *options)
 {
-	if (!node || !options)
+	if (isl_ast_node_check_if(node) < 0 || !options)
 		goto error;
-	if (node->type != isl_ast_node_if)
-		isl_die(isl_ast_node_get_ctx(node), isl_error_invalid,
-			"not an if node", goto error);
 	p = print_if_c(p, node, options, 1, 0);
 	isl_ast_print_options_free(options);
 	return p;
@@ -2603,6 +3280,284 @@ __isl_give isl_printer *isl_ast_node_list_print(
 	return p;
 }
 
+/* Is the next token on "s" the start of a YAML sequence
+ * (rather than a YAML mapping)?
+ *
+ * A YAML sequence starts with either a '[' or a '-', depending on the format.
+ */
+static isl_bool next_is_sequence(__isl_keep isl_stream *s)
+{
+	struct isl_token *tok;
+	int type;
+	int seq;
+
+	tok = isl_stream_next_token(s);
+	if (!tok)
+		return isl_bool_error;
+	type = isl_token_get_type(tok);
+	seq = type == '[' || type == '-';
+	isl_stream_push_token(s, tok);
+
+	return isl_bool_ok(seq);
+}
+
+#undef EL_BASE
+#define EL_BASE ast_node
+
+#include <isl_list_read_yaml_templ.c>
+
+/* Read an isl_ast_node object of type isl_ast_node_block from "s".
+ */
+static __isl_give isl_ast_node *read_block(__isl_keep isl_stream *s)
+{
+	isl_ast_node_list *children;
+
+	children = isl_stream_yaml_read_ast_node_list(s);
+	return isl_ast_node_block_from_children(children);
+}
+
+/* Textual representation of the first YAML key used
+ * while printing an isl_ast_node of a given type.
+ *
+ * An isl_ast_node of type isl_ast_node_block is not printed
+ * as a YAML mapping and is therefore assigned a dummy key.
+ */
+static char *node_first_str[] = {
+	[isl_ast_node_for] = "iterator",
+	[isl_ast_node_mark] = "mark",
+	[isl_ast_node_user] = "user",
+	[isl_ast_node_if] = "guard",
+	[isl_ast_node_block] = "",
+};
+
+#undef KEY
+#define KEY		enum isl_ast_node_type
+#undef KEY_ERROR
+#define KEY_ERROR	isl_ast_node_error
+#undef KEY_END
+#define KEY_END		(isl_ast_node_user + 1)
+#undef KEY_STR
+#define KEY_STR		node_first_str
+#undef KEY_EXTRACT
+#define KEY_EXTRACT	extract_node_type
+#undef KEY_GET
+#define KEY_GET		get_node_type
+#include "extract_key.c"
+
+static __isl_give isl_ast_node *read_body(__isl_keep isl_stream *s,
+	__isl_take isl_ast_node *node)
+{
+	if (eat_key(s, "body") < 0)
+		return isl_ast_node_free(node);
+	node = isl_ast_node_for_set_body(node, isl_stream_read_ast_node(s));
+	if (isl_stream_yaml_next(s) < 0)
+		return isl_ast_node_free(node);
+	return node;
+}
+
+/* Read an isl_ast_node object of type isl_ast_node_for from "s",
+ * where the initial "iterator" key has already been read by the caller.
+ *
+ * If the initial value is printed as the value of the key "value",
+ * then the for-loop is degenerate and can at most have
+ * a further "body" element.
+ * Otherwise, the for-loop also has "cond" and "inc" elements.
+ */
+static __isl_give isl_ast_node *read_for(__isl_keep isl_stream *s)
+{
+	isl_id *id;
+	isl_ast_expr *expr;
+	isl_ast_node *node;
+	char *key;
+	isl_bool more;
+	int is_value, is_init;
+
+	expr = isl_stream_read_ast_expr(s);
+	id = isl_ast_expr_id_get_id(expr);
+	isl_ast_expr_free(expr);
+	if (!id)
+		return NULL;
+	if (isl_stream_yaml_next(s) < 0)
+		id = isl_id_free(id);
+
+	node = isl_ast_node_alloc_for(id);
+
+	key = next_key(s);
+	if (!key)
+		return isl_ast_node_free(node);
+	is_value = !strcmp(key, "value");
+	is_init = !strcmp(key, "init");
+	free(key);
+	if (!is_value && !is_init)
+		isl_die(isl_stream_get_ctx(s), isl_error_invalid,
+			"unexpected key", return isl_ast_node_free(node));
+	if (isl_stream_yaml_next(s) < 0)
+		return isl_ast_node_free(node);
+	node = isl_ast_node_for_set_init(node, isl_stream_read_ast_expr(s));
+	if ((more = isl_stream_yaml_next(s)) < 0)
+		return isl_ast_node_free(node);
+	if (is_value) {
+		node = isl_ast_node_for_mark_degenerate(node);
+		if (more)
+			node = read_body(s, node);
+		return node;
+	}
+
+	if (eat_key(s, "cond") < 0)
+		return isl_ast_node_free(node);
+	node = isl_ast_node_for_set_cond(node, isl_stream_read_ast_expr(s));
+	if (isl_stream_yaml_next(s) < 0)
+		return isl_ast_node_free(node);
+	if (eat_key(s, "inc") < 0)
+		return isl_ast_node_free(node);
+	node = isl_ast_node_for_set_inc(node, isl_stream_read_ast_expr(s));
+	if ((more = isl_stream_yaml_next(s)) < 0)
+		return isl_ast_node_free(node);
+
+	if (more)
+		node = read_body(s, node);
+
+	return node;
+}
+
+/* Read an isl_ast_node object of type isl_ast_node_mark from "s",
+ * where the initial "mark" key has already been read by the caller.
+ */
+static __isl_give isl_ast_node *read_mark(__isl_keep isl_stream *s)
+{
+	isl_id *id;
+	isl_ast_node *node;
+
+	id = isl_stream_read_id(s);
+	if (!id)
+		return NULL;
+	if (isl_stream_yaml_next(s) < 0)
+		goto error;
+	if (eat_key(s, "node") < 0)
+		goto error;
+	node = isl_stream_read_ast_node(s);
+	node = isl_ast_node_alloc_mark(id, node);
+	if (isl_stream_yaml_next(s) < 0)
+		return isl_ast_node_free(node);
+	return node;
+error:
+	isl_id_free(id);
+	return NULL;
+}
+
+/* Read an isl_ast_node object of type isl_ast_node_user from "s",
+ * where the "user" key has already been read by the caller.
+ */
+static __isl_give isl_ast_node *read_user(__isl_keep isl_stream *s)
+{
+	isl_ast_node *node;
+
+	node = isl_ast_node_alloc_user(isl_stream_read_ast_expr(s));
+	if (isl_stream_yaml_next(s) < 0)
+		return isl_ast_node_free(node);
+	return node;
+}
+
+/* Read an isl_ast_node object of type isl_ast_node_if from "s",
+ * where the initial "guard" key has already been read by the caller.
+ */
+static __isl_give isl_ast_node *read_if(__isl_keep isl_stream *s)
+{
+	isl_bool more;
+	isl_ast_node *node;
+
+	node = isl_ast_node_alloc_if(isl_stream_read_ast_expr(s));
+	if ((more = isl_stream_yaml_next(s)) < 0)
+		return isl_ast_node_free(node);
+	if (!more)
+		return node;
+
+	if (eat_key(s, "then") < 0)
+		return isl_ast_node_free(node);
+	node = isl_ast_node_if_set_then(node, isl_stream_read_ast_node(s));
+	if ((more = isl_stream_yaml_next(s)) < 0)
+		return isl_ast_node_free(node);
+	if (!more)
+		return node;
+
+	if (eat_key(s, "else") < 0)
+		return isl_ast_node_free(node);
+	node = isl_ast_node_if_set_else_node(node, isl_stream_read_ast_node(s));
+	if (isl_stream_yaml_next(s) < 0)
+		return isl_ast_node_free(node);
+
+	return node;
+}
+
+/* Read an isl_ast_node object from "s".
+ *
+ * A block node is printed as a YAML sequence by print_ast_node_isl.
+ * Every other node type is printed as a YAML mapping.
+ *
+ * First check if the next element is a sequence and if so,
+ * read a block node.
+ * Otherwise, read a node based on the first mapping key
+ * that is used to print a node type.
+ * Note that the keys in the YAML mapping are assumed to appear
+ * in the same order as the one in which they are printed
+ * by print_ast_node_isl.
+ */
+__isl_give isl_ast_node *isl_stream_read_ast_node(__isl_keep isl_stream *s)
+{
+	enum isl_ast_node_type type;
+	isl_bool more;
+	isl_bool seq;
+	isl_ast_node *node;
+
+	seq = next_is_sequence(s);
+	if (seq < 0)
+		return NULL;
+	if (seq)
+		return read_block(s);
+
+	if (isl_stream_yaml_read_start_mapping(s))
+		return NULL;
+	more = isl_stream_yaml_next(s);
+	if (more < 0)
+		return NULL;
+	if (!more) {
+		isl_stream_error(s, NULL, "missing key");
+		return NULL;
+	}
+
+	type = get_node_type(s);
+	if (type < 0)
+		return NULL;
+	if (isl_stream_yaml_next(s) < 0)
+		return NULL;
+
+	switch (type) {
+	case isl_ast_node_block:
+		isl_die(isl_stream_get_ctx(s), isl_error_internal,
+			"block cannot be detected as mapping",
+			return NULL);
+	case isl_ast_node_for:
+		node = read_for(s);
+		break;
+	case isl_ast_node_mark:
+		node = read_mark(s);
+		break;
+	case isl_ast_node_user:
+		node = read_user(s);
+		break;
+	case isl_ast_node_if:
+		node = read_if(s);
+		break;
+	case isl_ast_node_error:
+		return NULL;
+	}
+
+	if (isl_stream_yaml_read_end_mapping(s) < 0)
+		return isl_ast_node_free(node);
+
+	return node;
+}
+
 #define ISL_AST_MACRO_FDIV_Q	(1 << 0)
 #define ISL_AST_MACRO_MIN	(1 << 1)
 #define ISL_AST_MACRO_MAX	(1 << 2)
@@ -2610,13 +3565,26 @@ __isl_give isl_printer *isl_ast_node_list_print(
 				 ISL_AST_MACRO_MIN | \
 				 ISL_AST_MACRO_MAX)
 
+static int ast_expr_required_macros(__isl_keep isl_ast_expr *expr, int macros);
+
+/* Wrapper around ast_expr_required_macros for use
+ * as an isl_ast_expr_list_foreach callback.
+ */
+static isl_stat entry_required_macros(__isl_take isl_ast_expr *expr, void *user)
+{
+	int *macros = user;
+
+	*macros = ast_expr_required_macros(expr, *macros);
+	isl_ast_expr_free(expr);
+
+	return isl_stat_ok;
+}
+
 /* If "expr" contains an isl_ast_expr_op_min, isl_ast_expr_op_max or
  * isl_ast_expr_op_fdiv_q then set the corresponding bit in "macros".
  */
 static int ast_expr_required_macros(__isl_keep isl_ast_expr *expr, int macros)
 {
-	int i;
-
 	if (macros == ISL_AST_MACRO_ALL)
 		return macros;
 
@@ -2630,8 +3598,8 @@ static int ast_expr_required_macros(__isl_keep isl_ast_expr *expr, int macros)
 	if (expr->u.op.op == isl_ast_expr_op_fdiv_q)
 		macros |= ISL_AST_MACRO_FDIV_Q;
 
-	for (i = 0; i < expr->u.op.n_arg; ++i)
-		macros = ast_expr_required_macros(expr->u.op.args[i], macros);
+	isl_ast_expr_list_foreach(expr->u.op.args,
+				&entry_required_macros, &macros);
 
 	return macros;
 }

@@ -1,8 +1,10 @@
-; RUN: opt -passes=loop-vectorize -force-vector-width=4 -S %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -S %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=2 -S %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -force-vector-width=1 -force-vector-interleave=2 -S %s | FileCheck %s
 
 ; Test cases for selecting the index with the minimum value.
 
-define i64 @test_vectorize_select_umin_idx(ptr %src) {
+define i64 @test_vectorize_select_umin_idx(ptr %src, i64 %n) {
 ; CHECK-LABEL: @test_vectorize_select_umin_idx(
 ; CHECK-NOT:   vector.body:
 ;
@@ -19,7 +21,7 @@ loop:
   %min.val.next = tail call i64 @llvm.umin.i64(i64 %min.val, i64 %l)
   %min.idx.next = select i1 %cmp, i64 %iv, i64 %min.idx
   %iv.next = add nuw nsw i64 %iv, 1
-  %exitcond.not = icmp eq i64 %iv.next, 0
+  %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %exit, label %loop
 
 exit:
@@ -27,7 +29,34 @@ exit:
   ret i64 %res
 }
 
-define i64 @test_vectorize_select_umin_idx_min_ops_switched(ptr %src) {
+define i64 @test_vectorize_select_umin_idx_all_exit_inst(ptr %src, ptr %umin, i64 %n) {
+; CHECK-LABEL: @test_vectorize_select_umin_idx_all_exit_inst(
+; CHECK-NOT:   vector.body:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %min.idx = phi i64 [ 0, %entry ], [ %min.idx.next, %loop ]
+  %min.val = phi i64 [ 0, %entry ], [ %min.val.next, %loop ]
+  %gep = getelementptr i64, ptr %src, i64 %iv
+  %l = load i64, ptr %gep
+  %cmp = icmp ugt i64 %min.val, %l
+  %min.val.next = tail call i64 @llvm.umin.i64(i64 %min.val, i64 %l)
+  %min.idx.next = select i1 %cmp, i64 %iv, i64 %min.idx
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  %res = phi i64 [ %min.idx.next, %loop ]
+  %res.umin = phi i64 [ %min.val.next, %loop ]
+  store i64 %res.umin, ptr %umin
+  ret i64 %res
+}
+
+define i64 @test_vectorize_select_umin_idx_min_ops_switched(ptr %src, i64 %n) {
 ; CHECK-LABEL: @test_vectorize_select_umin_idx_min_ops_switched(
 ; CHECK-NOT:   vector.body:
 ;
@@ -44,7 +73,7 @@ loop:
   %min.val.next = tail call i64 @llvm.umin.i64(i64 %l, i64 %min.val)
   %min.idx.next = select i1 %cmp, i64 %iv, i64 %min.idx
   %iv.next = add nuw nsw i64 %iv, 1
-  %exitcond.not = icmp eq i64 %iv.next, 0
+  %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %exit, label %loop
 
 exit:
@@ -52,7 +81,7 @@ exit:
   ret i64 %res
 }
 
-define i64 @test_not_vectorize_select_no_min_reduction(ptr %src) {
+define i64 @test_not_vectorize_select_no_min_reduction(ptr %src, i64 %n) {
 ; CHECK-LABEL: @test_not_vectorize_select_no_min_reduction(
 ; CHECK-NOT:   vector.body:
 ;
@@ -70,7 +99,7 @@ loop:
   %foo = call i64 @llvm.umin.i64(i64 %min.val, i64 %l)
   %min.idx.next = select i1 %cmp, i64 %iv, i64 %min.idx
   %iv.next = add nuw nsw i64 %iv, 1
-  %exitcond.not = icmp eq i64 %iv.next, 0
+  %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %exit, label %loop
 
 exit:
@@ -79,7 +108,7 @@ exit:
 }
 
 
-define i64 @test_not_vectorize_cmp_value(i64 %x) {
+define i64 @test_not_vectorize_cmp_value(i64 %x, i64 %n) {
 ; CHECK-LABEL: @test_not_vectorize_cmp_value(
 ; CHECK-NOT:   vector.body:
 ;
@@ -94,7 +123,7 @@ loop:
   %min.val.next = tail call i64 @llvm.umin.i64(i64 %min.val, i64 0)
   %min.idx.next = select i1 %cmp, i64 %iv, i64 %min.idx
   %iv.next = add nuw nsw i64 %iv, 1
-  %exitcond.not = icmp eq i64 %iv.next, 0
+  %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %exit, label %loop
 
 exit:
@@ -102,7 +131,7 @@ exit:
   ret i64 %res
 }
 
-define i32 @test_vectorize_select_umin_idx_with_trunc() {
+define i32 @test_vectorize_select_umin_idx_with_trunc(i64 %n) {
 ; CHECK-LABEL: @test_vectorize_select_umin_idx_with_trunc(
 ; CHECK-NOT:   vector.body:
 ;
@@ -118,7 +147,7 @@ loop:
   %trunc = trunc i64 %iv to i32
   %min.idx.next = select i1 %cmp, i32 %trunc, i32 %min.idx
   %iv.next = add nuw nsw i64 %iv, 1
-  %exitcond.not = icmp eq i64 %iv.next, 0
+  %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %exit, label %loop
 
 exit:

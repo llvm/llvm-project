@@ -13,7 +13,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-#include <cassert>
 #include <cstddef>
 #include <memory>
 
@@ -27,15 +26,13 @@ constexpr bool test()
     A a;
     TEST_IGNORE_NODISCARD a.allocate(AT::max_size(a) + 1);           // just barely too large
     TEST_IGNORE_NODISCARD a.allocate(AT::max_size(a) * 2);           // significantly too large
-    TEST_IGNORE_NODISCARD a.allocate(((size_t) -1) / sizeof(T) + 1); // multiply will overflow
-    TEST_IGNORE_NODISCARD a.allocate((size_t) -1);                   // way too large
+    TEST_IGNORE_NODISCARD a.allocate(((std::size_t) -1) / sizeof(T) + 1); // multiply will overflow
+    TEST_IGNORE_NODISCARD a.allocate((std::size_t) -1);                   // way too large
 
     return true;
 }
 
-int main(int, char**)
-{
-    static_assert(test<double>()); // expected-error-re {{{{(static_assert|static assertion)}} expression is not an integral constant expression}}
-    LIBCPP_STATIC_ASSERT(test<const double>()); // expected-error-re {{{{(static_assert|static assertion)}} expression is not an integral constant expression}}
-    return 0;
+void f() {
+    static_assert(test<double>()); // expected-error {{static assertion expression is not an integral constant expression}}
+    LIBCPP_STATIC_ASSERT(test<const double>()); // expected-error {{static assertion expression is not an integral constant expression}}
 }

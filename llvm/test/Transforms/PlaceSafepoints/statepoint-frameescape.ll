@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -place-safepoints -enable-new-pm=0 | FileCheck %s
+; RUN: opt < %s -S -passes=place-safepoints | FileCheck %s
 
 declare void @llvm.localescape(...)
 

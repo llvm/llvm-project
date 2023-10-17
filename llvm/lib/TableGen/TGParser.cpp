@@ -35,20 +35,20 @@ namespace llvm {
 
 struct SubClassReference {
   SMRange RefRange;
-  Record *Rec;
-  SmallVector<Init*, 4> TemplateArgs;
+  Record *Rec = nullptr;
+  SmallVector<ArgumentInit *, 4> TemplateArgs;
 
-  SubClassReference() : Rec(nullptr) {}
+  SubClassReference() = default;
 
   bool isInvalid() const { return Rec == nullptr; }
 };
 
 struct SubMultiClassReference {
   SMRange RefRange;
-  MultiClass *MC;
-  SmallVector<Init*, 4> TemplateArgs;
+  MultiClass *MC = nullptr;
+  SmallVector<ArgumentInit *, 4> TemplateArgs;
 
-  SubMultiClassReference() : MC(nullptr) {}
+  SubMultiClassReference() = default;
 
   bool isInvalid() const { return MC == nullptr; }
   void dump() const;
@@ -117,11 +117,6 @@ static Init *QualifyName(Record &CurRec, MultiClass *CurMultiClass, Init *Name,
   Init *NewName = BinOpInit::getStrConcat(CurRec.getNameInit(),
                                           StringInit::get(RK, Scoper));
   NewName = BinOpInit::getStrConcat(NewName, Name);
-  if (CurMultiClass && Scoper != "::") {
-    Init *Prefix = BinOpInit::getStrConcat(CurMultiClass->Rec.getNameInit(),
-                                           StringInit::get(RK, "::"));
-    NewName = BinOpInit::getStrConcat(Prefix, NewName);
-  }
 
   if (BinOpInit *BinOp = dyn_cast<BinOpInit>(NewName))
     NewName = BinOp->Fold(&CurRec);
@@ -137,6 +132,79 @@ static Init *QualifiedNameOfImplicitName(Record &Rec,
 
 static Init *QualifiedNameOfImplicitName(MultiClass *MC) {
   return QualifiedNameOfImplicitName(MC->Rec, MC);
+}
+
+Init *TGVarScope::getVar(RecordKeeper &Records, MultiClass* ParsingMultiClass,
+                         StringInit *Name, SMRange NameLoc,
+                         bool TrackReferenceLocs) const {
+  // First, we search in local variables.
+  auto It = Vars.find(Name->getValue());
+  if (It != Vars.end())
+    return It->second;
+
+  std::function<Init *(Record *, StringInit *, StringRef)> FindValueInArgs =
+      [&](Record *Rec, StringInit *Name, StringRef Scoper) -> Init * {
+    if (!Rec)
+      return nullptr;
+    Init *ArgName = QualifyName(*Rec, ParsingMultiClass, Name, Scoper);
+    if (Rec->isTemplateArg(ArgName)) {
+      RecordVal *RV = Rec->getValue(ArgName);
+      assert(RV && "Template arg doesn't exist??");
+      RV->setUsed(true);
+      if (TrackReferenceLocs)
+        RV->addReferenceLoc(NameLoc);
+      return VarInit::get(ArgName, RV->getType());
+    }
+    return Name->getValue() == "NAME"
+               ? VarInit::get(ArgName, StringRecTy::get(Records))
+               : nullptr;
+  };
+
+  // If not found, we try to find the variable in additional variables like
+  // arguments, loop iterator, etc.
+  switch (Kind) {
+  case SK_Local:
+    break; /* do nothing. */
+  case SK_Record: {
+    if (CurRec) {
+      // The variable is a record field?
+      if (RecordVal *RV = CurRec->getValue(Name)) {
+        if (TrackReferenceLocs)
+          RV->addReferenceLoc(NameLoc);
+        return VarInit::get(Name, RV->getType());
+      }
+
+      // The variable is a class template argument?
+      if (CurRec->isClass())
+        if (auto *V = FindValueInArgs(CurRec, Name, ":"))
+          return V;
+    }
+    break;
+  }
+  case SK_ForeachLoop: {
+    // The variable is a loop iterator?
+    if (CurLoop->IterVar) {
+      VarInit *IterVar = dyn_cast<VarInit>(CurLoop->IterVar);
+      if (IterVar && IterVar->getNameInit() == Name)
+        return IterVar;
+    }
+    break;
+  }
+  case SK_MultiClass: {
+    // The variable is a multiclass template argument?
+    if (CurMultiClass)
+      if (auto *V = FindValueInArgs(&CurMultiClass->Rec, Name, "::"))
+        return V;
+    break;
+  }
+  }
+
+  // Then, we try to find the name in parent scope.
+  if (Parent)
+    return Parent->getVar(Records, ParsingMultiClass, Name, NameLoc,
+                          TrackReferenceLocs);
+
+  return nullptr;
 }
 
 bool TGParser::AddValue(Record *CurRec, SMLoc Loc, const RecordVal &RV) {
@@ -231,32 +299,16 @@ bool TGParser::AddSubClass(Record *CurRec, SubClassReference &SubClass) {
   Record *SC = SubClass.Rec;
   MapResolver R(CurRec);
 
-  // Loop over all the subclass record's fields. Add template arguments
-  // to the resolver map. Add regular fields to the new record.
-  for (const RecordVal &Field : SC->getValues()) {
-    if (Field.isTemplateArg()) {
-      R.set(Field.getNameInit(), Field.getValue());
-    } else {
+  // Loop over all the subclass record's fields. Add regular fields to the new
+  // record.
+  for (const RecordVal &Field : SC->getValues())
+    if (!Field.isTemplateArg())
       if (AddValue(CurRec, SubClass.RefRange.Start, Field))
         return true;
-    }
-  }
 
-  ArrayRef<Init *> TArgs = SC->getTemplateArgs();
-  assert(SubClass.TemplateArgs.size() <= TArgs.size() &&
-         "Too many template arguments allowed");
-
-  // Loop over the template argument names. If a value was specified,
-  // reset the map value. If not and there was no default, complain.
-  for (unsigned I = 0, E = TArgs.size(); I != E; ++I) {
-    if (I < SubClass.TemplateArgs.size())
-      R.set(TArgs[I], SubClass.TemplateArgs[I]);
-    else if (!R.isComplete(TArgs[I]))
-      return Error(SubClass.RefRange.Start,
-                   "Value not specified for template argument '" +
-                       TArgs[I]->getAsUnquotedString() + "' (#" + Twine(I) +
-                       ") of parent class '" + SC->getNameInitAsString() + "'");
-  }
+  if (resolveArgumentsOfClass(R, SC, SubClass.TemplateArgs,
+                              SubClass.RefRange.Start))
+    return true;
 
   // Copy the subclass record's assertions to the new record.
   CurRec->appendAssertions(SC);
@@ -310,36 +362,16 @@ bool TGParser::AddSubMultiClass(MultiClass *CurMC,
                                 SubMultiClassReference &SubMultiClass) {
   MultiClass *SMC = SubMultiClass.MC;
 
-  ArrayRef<Init *> SMCTArgs = SMC->Rec.getTemplateArgs();
-  if (SMCTArgs.size() < SubMultiClass.TemplateArgs.size())
-    return Error(SubMultiClass.RefRange.Start,
-                 "More template args specified than expected");
-
-  // Prepare the mapping of template argument name to value, filling in default
-  // values if necessary.
-  SubstStack TemplateArgs;
-  for (unsigned i = 0, e = SMCTArgs.size(); i != e; ++i) {
-    if (i < SubMultiClass.TemplateArgs.size()) {
-      TemplateArgs.emplace_back(SMCTArgs[i], SubMultiClass.TemplateArgs[i]);
-    } else {
-      Init *Default = SMC->Rec.getValue(SMCTArgs[i])->getValue();
-      if (!Default->isComplete()) {
-        return Error(SubMultiClass.RefRange.Start,
-                     "value not specified for template argument #" + Twine(i) +
-                         " (" + SMCTArgs[i]->getAsUnquotedString() +
-                         ") of multiclass '" + SMC->Rec.getNameInitAsString() +
-                         "'");
-      }
-      TemplateArgs.emplace_back(SMCTArgs[i], Default);
-    }
-  }
-
-  TemplateArgs.emplace_back(QualifiedNameOfImplicitName(SMC),
-                            VarInit::get(QualifiedNameOfImplicitName(CurMC),
-                                         StringRecTy::get(Records)));
+  SubstStack Substs;
+  if (resolveArgumentsOfMultiClass(
+          Substs, SMC, SubMultiClass.TemplateArgs,
+          VarInit::get(QualifiedNameOfImplicitName(CurMC),
+                       StringRecTy::get(Records)),
+          SubMultiClass.RefRange.Start))
+    return true;
 
   // Add all of the defs in the subclass into the current multiclass.
-  return resolve(SMC->Entries, TemplateArgs, false, &CurMC->Entries);
+  return resolve(SMC->Entries, Substs, false, &CurMC->Entries);
 }
 
 /// Add a record, foreach loop, or assertion to the current context.
@@ -384,10 +416,35 @@ bool TGParser::addEntry(RecordsEntry E) {
 bool TGParser::resolve(const ForeachLoop &Loop, SubstStack &Substs,
                        bool Final, std::vector<RecordsEntry> *Dest,
                        SMLoc *Loc) {
+
   MapResolver R;
   for (const auto &S : Substs)
     R.set(S.first, S.second);
   Init *List = Loop.ListValue->resolveReferences(R);
+
+  // For if-then-else blocks, we lower to a foreach loop whose list is a
+  // ternary selection between lists of different length.  Since we don't
+  // have a means to track variable length record lists, we *must* resolve
+  // the condition here.  We want to defer final resolution of the arms
+  // until the resulting records are finalized.
+  // e.g. !if(!exists<SchedWrite>("__does_not_exist__"), [1], [])
+  if (auto *TI = dyn_cast<TernOpInit>(List);
+      TI && TI->getOpcode() == TernOpInit::IF && Final) {
+    Init *OldLHS = TI->getLHS();
+    R.setFinal(true);
+    Init *LHS = OldLHS->resolveReferences(R);
+    if (LHS == OldLHS) {
+      PrintError(Loop.Loc,
+                 Twine("unable to resolve if condition '") +
+                 LHS->getAsString() + "' at end of containing scope");
+      return true;
+    }
+    Init *MHS = TI->getMHS();
+    Init *RHS = TI->getRHS();
+    List = TernOpInit::get(TernOpInit::IF, LHS, MHS, RHS, TI->getType())
+      ->Fold(nullptr);
+  }
+
   auto LI = dyn_cast<ListInit>(List);
   if (!LI) {
     if (!Final) {
@@ -507,17 +564,71 @@ bool TGParser::addDefOne(std::unique_ptr<Record> Rec) {
   return false;
 }
 
+bool TGParser::resolveArguments(Record *Rec, ArrayRef<ArgumentInit *> ArgValues,
+                                SMLoc Loc, ArgValueHandler ArgValueHandler) {
+  ArrayRef<Init *> ArgNames = Rec->getTemplateArgs();
+  assert(ArgValues.size() <= ArgNames.size() &&
+         "Too many template arguments allowed");
+
+  // Loop over the template arguments and handle the (name, value) pair.
+  SmallVector<Init *, 2> UnsolvedArgNames(ArgNames);
+  for (auto *Arg : ArgValues) {
+    Init *ArgName = nullptr;
+    Init *ArgValue = Arg->getValue();
+    if (Arg->isPositional())
+      ArgName = ArgNames[Arg->getIndex()];
+    if (Arg->isNamed())
+      ArgName = Arg->getName();
+
+    // We can only specify the template argument once.
+    if (!is_contained(UnsolvedArgNames, ArgName))
+      return Error(Loc, "We can only specify the template argument '" +
+                            ArgName->getAsUnquotedString() + "' once");
+
+    ArgValueHandler(ArgName, ArgValue);
+    llvm::erase_value(UnsolvedArgNames, ArgName);
+  }
+
+  // For unsolved arguments, if there is no default value, complain.
+  for (auto *UnsolvedArgName : UnsolvedArgNames) {
+    Init *Default = Rec->getValue(UnsolvedArgName)->getValue();
+    if (!Default->isComplete()) {
+      std::string Name = UnsolvedArgName->getAsUnquotedString();
+      Error(Loc, "value not specified for template argument '" + Name + "'");
+      PrintNote(Rec->getFieldLoc(Name),
+                "declared in '" + Rec->getNameInitAsString() + "'");
+      return true;
+    }
+    ArgValueHandler(UnsolvedArgName, Default);
+  }
+
+  return false;
+}
+
+/// Resolve the arguments of class and set them to MapResolver.
+/// Returns true if failed.
+bool TGParser::resolveArgumentsOfClass(MapResolver &R, Record *Rec,
+                                       ArrayRef<ArgumentInit *> ArgValues,
+                                       SMLoc Loc) {
+  return resolveArguments(Rec, ArgValues, Loc,
+                          [&](Init *Name, Init *Value) { R.set(Name, Value); });
+}
+
+/// Resolve the arguments of multiclass and store them into SubstStack.
+/// Returns true if failed.
+bool TGParser::resolveArgumentsOfMultiClass(SubstStack &Substs, MultiClass *MC,
+                                            ArrayRef<ArgumentInit *> ArgValues,
+                                            Init *DefmName, SMLoc Loc) {
+  // Add an implicit argument NAME.
+  Substs.emplace_back(QualifiedNameOfImplicitName(MC), DefmName);
+  return resolveArguments(
+      &MC->Rec, ArgValues, Loc,
+      [&](Init *Name, Init *Value) { Substs.emplace_back(Name, Value); });
+}
+
 //===----------------------------------------------------------------------===//
 // Parser Code
 //===----------------------------------------------------------------------===//
-
-/// isObjectStart - Return true if this is a valid first token for a statement.
-static bool isObjectStart(tgtok::TokKind K) {
-  return K == tgtok::Assert || K == tgtok::Class || K == tgtok::Def ||
-         K == tgtok::Defm || K == tgtok::Defset || K == tgtok::Defvar ||
-         K == tgtok::Foreach || K == tgtok::If || K == tgtok::Let ||
-         K == tgtok::MultiClass;
-}
 
 bool TGParser::consume(tgtok::TokKind K) {
   if (Lex.getCode() == K) {
@@ -616,7 +727,7 @@ MultiClass *TGParser::ParseMultiClassID() {
 /// multiclass. This returns a SubClassRefTy with a null Record* on error.
 ///
 ///  SubClassRef ::= ClassID
-///  SubClassRef ::= ClassID '<' ValueList '>'
+///  SubClassRef ::= ClassID '<' ArgValueList '>'
 ///
 SubClassReference TGParser::
 ParseSubClassReference(Record *CurRec, bool isDefm) {
@@ -637,7 +748,8 @@ ParseSubClassReference(Record *CurRec, bool isDefm) {
     return Result;
   }
 
-  if (ParseTemplateArgValueList(Result.TemplateArgs, CurRec, Result.Rec)) {
+  if (ParseTemplateArgValueList(Result.TemplateArgs, CurRec, Result.Rec,
+                                isDefm)) {
     Result.Rec = nullptr; // Error parsing value list.
     return Result;
   }
@@ -657,7 +769,7 @@ ParseSubClassReference(Record *CurRec, bool isDefm) {
 /// Record* on error.
 ///
 ///  SubMultiClassRef ::= MultiClassID
-///  SubMultiClassRef ::= MultiClassID '<' ValueList '>'
+///  SubMultiClassRef ::= MultiClassID '<' ArgValueList '>'
 ///
 SubMultiClassReference TGParser::
 ParseSubMultiClassReference(MultiClass *CurMC) {
@@ -674,12 +786,154 @@ ParseSubMultiClassReference(MultiClass *CurMC) {
   }
 
   if (ParseTemplateArgValueList(Result.TemplateArgs, &CurMC->Rec,
-                                &Result.MC->Rec)) {
+                                &Result.MC->Rec, true)) {
     Result.MC = nullptr; // Error parsing value list.
     return Result;
   }
 
   Result.RefRange.End = Lex.getLoc();
+
+  return Result;
+}
+
+/// ParseSliceElement - Parse subscript or range
+///
+///  SliceElement  ::= Value<list<int>>
+///  SliceElement  ::= Value<int>
+///  SliceElement  ::= Value<int> '...' Value<int>
+///  SliceElement  ::= Value<int> '-' Value<int> (deprecated)
+///  SliceElement  ::= Value<int> INTVAL(Negative; deprecated)
+///
+/// SliceElement is either IntRecTy, ListRecTy, or nullptr
+///
+TypedInit *TGParser::ParseSliceElement(Record *CurRec) {
+  auto LHSLoc = Lex.getLoc();
+  auto *CurVal = ParseValue(CurRec);
+  if (!CurVal)
+    return nullptr;
+  auto *LHS = cast<TypedInit>(CurVal);
+
+  TypedInit *RHS = nullptr;
+  switch (Lex.getCode()) {
+  case tgtok::dotdotdot:
+  case tgtok::minus: { // Deprecated
+    Lex.Lex();         // eat
+    auto RHSLoc = Lex.getLoc();
+    CurVal = ParseValue(CurRec);
+    if (!CurVal)
+      return nullptr;
+    RHS = cast<TypedInit>(CurVal);
+    if (!isa<IntRecTy>(RHS->getType())) {
+      Error(RHSLoc,
+            "expected int...int, got " + Twine(RHS->getType()->getAsString()));
+      return nullptr;
+    }
+    break;
+  }
+  case tgtok::IntVal: { // Deprecated "-num"
+    auto i = -Lex.getCurIntVal();
+    if (i < 0) {
+      TokError("invalid range, cannot be negative");
+      return nullptr;
+    }
+    RHS = IntInit::get(Records, i);
+    Lex.Lex(); // eat IntVal
+    break;
+  }
+  default: // Single value (IntRecTy or ListRecTy)
+    return LHS;
+  }
+
+  assert(RHS);
+  assert(isa<IntRecTy>(RHS->getType()));
+
+  // Closed-interval range <LHS:IntRecTy>...<RHS:IntRecTy>
+  if (!isa<IntRecTy>(LHS->getType())) {
+    Error(LHSLoc,
+          "expected int...int, got " + Twine(LHS->getType()->getAsString()));
+    return nullptr;
+  }
+
+  return cast<TypedInit>(BinOpInit::get(BinOpInit::RANGEC, LHS, RHS,
+                                        IntRecTy::get(Records)->getListTy())
+                             ->Fold(CurRec));
+}
+
+/// ParseSliceElements - Parse subscripts in square brackets.
+///
+///  SliceElements ::= ( SliceElement ',' )* SliceElement ','?
+///
+/// SliceElement is either IntRecTy, ListRecTy, or nullptr
+///
+/// Returns ListRecTy by defaut.
+/// Returns IntRecTy if;
+///  - Single=true
+///  - SliceElements is Value<int> w/o trailing comma
+///
+TypedInit *TGParser::ParseSliceElements(Record *CurRec, bool Single) {
+  TypedInit *CurVal;
+  SmallVector<Init *, 2> Elems;       // int
+  SmallVector<TypedInit *, 2> Slices; // list<int>
+
+  auto FlushElems = [&] {
+    if (!Elems.empty()) {
+      Slices.push_back(ListInit::get(Elems, IntRecTy::get(Records)));
+      Elems.clear();
+    }
+  };
+
+  do {
+    auto LHSLoc = Lex.getLoc();
+    CurVal = ParseSliceElement(CurRec);
+    if (!CurVal)
+      return nullptr;
+    auto *CurValTy = CurVal->getType();
+
+    if (auto *ListValTy = dyn_cast<ListRecTy>(CurValTy)) {
+      if (!isa<IntRecTy>(ListValTy->getElementType())) {
+        Error(LHSLoc,
+              "expected list<int>, got " + Twine(ListValTy->getAsString()));
+        return nullptr;
+      }
+
+      FlushElems();
+      Slices.push_back(CurVal);
+      Single = false;
+      CurVal = nullptr;
+    } else if (!isa<IntRecTy>(CurValTy)) {
+      Error(LHSLoc,
+            "unhandled type " + Twine(CurValTy->getAsString()) + " in range");
+      return nullptr;
+    }
+
+    if (Lex.getCode() != tgtok::comma)
+      break;
+
+    Lex.Lex(); // eat comma
+
+    // `[i,]` is not LISTELEM but LISTSLICE
+    Single = false;
+    if (CurVal)
+      Elems.push_back(CurVal);
+    CurVal = nullptr;
+  } while (Lex.getCode() != tgtok::r_square);
+
+  if (CurVal) {
+    // LISTELEM
+    if (Single)
+      return CurVal;
+
+    Elems.push_back(CurVal);
+  }
+
+  FlushElems();
+
+  // Concatenate lists in Slices
+  TypedInit *Result = nullptr;
+  for (auto *Slice : Slices) {
+    Result = (Result ? cast<TypedInit>(BinOpInit::getListConcat(Result, Slice))
+                     : Slice);
+  }
 
   return Result;
 }
@@ -870,47 +1124,9 @@ RecTy *TGParser::ParseType() {
 /// ParseIDValue
 Init *TGParser::ParseIDValue(Record *CurRec, StringInit *Name, SMRange NameLoc,
                              IDParseMode Mode) {
-  if (CurRec) {
-    if (RecordVal *RV = CurRec->getValue(Name)) {
-      if (TrackReferenceLocs)
-        RV->addReferenceLoc(NameLoc);
-      return VarInit::get(Name, RV->getType());
-    }
-  }
-
-  if ((CurRec && CurRec->isClass()) || CurMultiClass) {
-    Init *TemplateArgName;
-    if (CurMultiClass) {
-      TemplateArgName =
-          QualifyName(CurMultiClass->Rec, CurMultiClass, Name, "::");
-    } else
-      TemplateArgName = QualifyName(*CurRec, CurMultiClass, Name, ":");
-
-    Record *TemplateRec = CurMultiClass ? &CurMultiClass->Rec : CurRec;
-    if (TemplateRec->isTemplateArg(TemplateArgName)) {
-      RecordVal *RV = TemplateRec->getValue(TemplateArgName);
-      assert(RV && "Template arg doesn't exist??");
-      RV->setUsed(true);
-      if (TrackReferenceLocs)
-        RV->addReferenceLoc(NameLoc);
-      return VarInit::get(TemplateArgName, RV->getType());
-    } else if (Name->getValue() == "NAME") {
-      return VarInit::get(TemplateArgName, StringRecTy::get(Records));
-    }
-  }
-
-  if (CurLocalScope)
-    if (Init *I = CurLocalScope->getVar(Name->getValue()))
-      return I;
-
-  // If this is in a foreach loop, make sure it's not a loop iterator
-  for (const auto &L : Loops) {
-    if (L->IterVar) {
-      VarInit *IterVar = dyn_cast<VarInit>(L->IterVar);
-      if (IterVar && IterVar->getNameInit() == Name)
-        return IterVar;
-    }
-  }
+  if (Init *I = CurScope->getVar(Records, CurMultiClass, Name, NameLoc,
+                                 TrackReferenceLocs))
+    return I;
 
   if (Mode == ParseNameMode)
     return Name;
@@ -944,12 +1160,15 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     TokError("unknown bang operator");
     return nullptr;
   case tgtok::XNOT:
+  case tgtok::XToLower:
+  case tgtok::XToUpper:
   case tgtok::XLOG2:
   case tgtok::XHead:
   case tgtok::XTail:
   case tgtok::XSize:
   case tgtok::XEmpty:
   case tgtok::XCast:
+  case tgtok::XRepr:
   case tgtok::XGetDagOp: { // Value ::= !unop '(' Value ')'
     UnOpInit::UnaryOp Code;
     RecTy *Type = nullptr;
@@ -967,6 +1186,21 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
         return nullptr;
       }
 
+      break;
+    case tgtok::XRepr:
+      Lex.Lex(); // eat the operation
+      Code = UnOpInit::REPR;
+      Type = StringRecTy::get(Records);
+      break;
+    case tgtok::XToLower:
+      Lex.Lex(); // eat the operation
+      Code = UnOpInit::TOLOWER;
+      Type = StringRecTy::get(Records);
+      break;
+    case tgtok::XToUpper:
+      Lex.Lex(); // eat the operation
+      Code = UnOpInit::TOUPPER;
+      Type = StringRecTy::get(Records);
       break;
     case tgtok::XNOT:
       Lex.Lex();  // eat the operation
@@ -1182,6 +1416,8 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
   case tgtok::XListRemove:
   case tgtok::XStrConcat:
   case tgtok::XInterleave:
+  case tgtok::XGetDagArg:
+  case tgtok::XGetDagName:
   case tgtok::XSetDagOp: { // Value ::= !binop '(' Value ',' Value ')'
     tgtok::TokKind OpTok = Lex.getCode();
     SMLoc OpLoc = Lex.getLoc();
@@ -1209,10 +1445,18 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     case tgtok::XGt:     Code = BinOpInit::GT; break;
     case tgtok::XListConcat: Code = BinOpInit::LISTCONCAT; break;
     case tgtok::XListSplat:  Code = BinOpInit::LISTSPLAT; break;
-    case tgtok::XListRemove: Code = BinOpInit::LISTREMOVE; break;
+    case tgtok::XListRemove:
+      Code = BinOpInit::LISTREMOVE;
+      break;
     case tgtok::XStrConcat:  Code = BinOpInit::STRCONCAT; break;
     case tgtok::XInterleave: Code = BinOpInit::INTERLEAVE; break;
     case tgtok::XSetDagOp:   Code = BinOpInit::SETDAGOP; break;
+    case tgtok::XGetDagArg:
+      Code = BinOpInit::GETDAGARG;
+      break;
+    case tgtok::XGetDagName:
+      Code = BinOpInit::GETDAGNAME;
+      break;
     }
 
     RecTy *Type = nullptr;
@@ -1223,6 +1467,18 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     case tgtok::XConcat:
     case tgtok::XSetDagOp:
       Type = DagRecTy::get(Records);
+      ArgType = DagRecTy::get(Records);
+      break;
+    case tgtok::XGetDagArg:
+      Type = ParseOperatorType();
+      if (!Type) {
+        TokError("did not get type for !getdagarg operator");
+        return nullptr;
+      }
+      ArgType = DagRecTy::get(Records);
+      break;
+    case tgtok::XGetDagName:
+      Type = StringRecTy::get(Records);
       ArgType = DagRecTy::get(Records);
       break;
     case tgtok::XAND:
@@ -1353,6 +1609,8 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
             return nullptr;
           }
           break;
+        case BinOpInit::GETDAGARG: // The 2nd argument of !getdagarg could be
+                                   // index or name.
         case BinOpInit::LE:
         case BinOpInit::LT:
         case BinOpInit::GE:
@@ -1417,6 +1675,15 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
           // a record, with no restriction on its superclasses.
           ArgType = RecordRecTy::get(Records, {});
           break;
+        case BinOpInit::GETDAGARG:
+          // After parsing the first dag argument, expect an index integer or a
+          // name string.
+          ArgType = nullptr;
+          break;
+        case BinOpInit::GETDAGNAME:
+          // After parsing the first dag argument, expect an index integer.
+          ArgType = IntRecTy::get(Records);
+          break;
         default:
           break;
       }
@@ -1466,6 +1733,107 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     return ParseOperationForEachFilter(CurRec, ItemType);
   }
 
+  case tgtok::XRange: {
+    SMLoc OpLoc = Lex.getLoc();
+    Lex.Lex(); // eat the operation
+
+    if (!consume(tgtok::l_paren)) {
+      TokError("expected '(' after !range operator");
+      return nullptr;
+    }
+
+    SmallVector<Init *, 2> Args;
+    bool FirstArgIsList = false;
+    for (;;) {
+      if (Args.size() >= 3) {
+        TokError("expected at most three values of integer");
+        return nullptr;
+      }
+
+      SMLoc InitLoc = Lex.getLoc();
+      Args.push_back(ParseValue(CurRec));
+      if (!Args.back())
+        return nullptr;
+
+      TypedInit *ArgBack = dyn_cast<TypedInit>(Args.back());
+      if (!ArgBack) {
+        Error(OpLoc, Twine("expected value to be a typed value, got '" +
+                           Args.back()->getAsString() + "'"));
+        return nullptr;
+      }
+
+      RecTy *ArgBackType = ArgBack->getType();
+      if (!FirstArgIsList || Args.size() == 1) {
+        if (Args.size() == 1 && isa<ListRecTy>(ArgBackType)) {
+          FirstArgIsList = true; // Detect error if 2nd arg were present.
+        } else if (isa<IntRecTy>(ArgBackType)) {
+          // Assume 2nd arg should be IntRecTy
+        } else {
+          if (Args.size() != 1)
+            Error(InitLoc, Twine("expected value of type 'int', got '" +
+                                 ArgBackType->getAsString() + "'"));
+          else
+            Error(InitLoc, Twine("expected list or int, got value of type '") +
+                               ArgBackType->getAsString() + "'");
+          return nullptr;
+        }
+      } else {
+        // Don't come here unless 1st arg is ListRecTy.
+        assert(isa<ListRecTy>(cast<TypedInit>(Args[0])->getType()));
+        Error(InitLoc, Twine("expected one list, got extra value of type '") +
+                           ArgBackType->getAsString() + "'");
+        return nullptr;
+      }
+      if (!consume(tgtok::comma))
+        break;
+    }
+
+    if (!consume(tgtok::r_paren)) {
+      TokError("expected ')' in operator");
+      return nullptr;
+    }
+
+    Init *LHS, *MHS, *RHS;
+    auto ArgCount = Args.size();
+    assert(ArgCount >= 1);
+    auto *Arg0 = cast<TypedInit>(Args[0]);
+    auto *Arg0Ty = Arg0->getType();
+    if (ArgCount == 1) {
+      if (isa<ListRecTy>(Arg0Ty)) {
+        // (0, !size(arg), 1)
+        LHS = IntInit::get(Records, 0);
+        MHS = UnOpInit::get(UnOpInit::SIZE, Arg0, IntRecTy::get(Records))
+                  ->Fold(CurRec);
+        RHS = IntInit::get(Records, 1);
+      } else {
+        assert(isa<IntRecTy>(Arg0Ty));
+        // (0, arg, 1)
+        LHS = IntInit::get(Records, 0);
+        MHS = Arg0;
+        RHS = IntInit::get(Records, 1);
+      }
+    } else {
+      assert(isa<IntRecTy>(Arg0Ty));
+      auto *Arg1 = cast<TypedInit>(Args[1]);
+      assert(isa<IntRecTy>(Arg1->getType()));
+      LHS = Arg0;
+      MHS = Arg1;
+      if (ArgCount == 3) {
+        // (start, end, step)
+        auto *Arg2 = cast<TypedInit>(Args[2]);
+        assert(isa<IntRecTy>(Arg2->getType()));
+        RHS = Arg2;
+      } else
+        // (start, end, 1)
+        RHS = IntInit::get(Records, 1);
+    }
+    return TernOpInit::get(TernOpInit::RANGE, LHS, MHS, RHS,
+                           IntRecTy::get(Records)->getListTy())
+        ->Fold(CurRec);
+  }
+
+  case tgtok::XSetDagArg:
+  case tgtok::XSetDagName:
   case tgtok::XDag:
   case tgtok::XIf:
   case tgtok::XSubst: { // Value ::= !ternop '(' Value ',' Value ',' Value ')'
@@ -1486,6 +1854,16 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
       break;
     case tgtok::XSubst:
       Code = TernOpInit::SUBST;
+      break;
+    case tgtok::XSetDagArg:
+      Code = TernOpInit::SETDAGARG;
+      Type = DagRecTy::get(Records);
+      ItemType = nullptr;
+      break;
+    case tgtok::XSetDagName:
+      Code = TernOpInit::SETDAGNAME;
+      Type = DagRecTy::get(Records);
+      ItemType = nullptr;
       break;
     }
     if (!consume(tgtok::l_paren)) {
@@ -1599,6 +1977,35 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
       Type = RHSt->getType();
       break;
     }
+    case tgtok::XSetDagArg: {
+      TypedInit *MHSt = dyn_cast<TypedInit>(MHS);
+      if (!MHSt || !isa<IntRecTy, StringRecTy>(MHSt->getType())) {
+        Error(MHSLoc, Twine("expected integer index or string name, got ") +
+                          (MHSt ? ("type '" + MHSt->getType()->getAsString())
+                                : ("'" + MHS->getAsString())) +
+                          "'");
+        return nullptr;
+      }
+      break;
+    }
+    case tgtok::XSetDagName: {
+      TypedInit *MHSt = dyn_cast<TypedInit>(MHS);
+      if (!MHSt || !isa<IntRecTy, StringRecTy>(MHSt->getType())) {
+        Error(MHSLoc, Twine("expected integer index or string name, got ") +
+                          (MHSt ? ("type '" + MHSt->getType()->getAsString())
+                                : ("'" + MHS->getAsString())) +
+                          "'");
+        return nullptr;
+      }
+      TypedInit *RHSt = dyn_cast<TypedInit>(RHS);
+      // The name could be a string or unset.
+      if (RHSt && !isa<StringRecTy>(RHSt->getType())) {
+        Error(RHSLoc, Twine("expected string or unset name, got type '") +
+                          RHSt->getType()->getAsString() + "'");
+        return nullptr;
+      }
+      break;
+    }
     }
     return (TernOpInit::get(Code, LHS, MHS, RHS, Type))->Fold(CurRec);
   }
@@ -1705,12 +2112,14 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
       ParseRec = ParseRecTmp.get();
     }
 
+    TGVarScope *FoldScope = PushScope(ParseRec);
     ParseRec->addValue(RecordVal(A, Start->getType(), RecordVal::FK_Normal));
-    ParseRec->addValue(RecordVal(B, ListType->getElementType(),
-                                 RecordVal::FK_Normal));
+    ParseRec->addValue(
+        RecordVal(B, ListType->getElementType(), RecordVal::FK_Normal));
     Init *ExprUntyped = ParseValue(ParseRec);
     ParseRec->removeValue(A);
     ParseRec->removeValue(B);
+    PopScope(FoldScope);
     if (!ExprUntyped)
       return nullptr;
 
@@ -2042,10 +2451,11 @@ Init *TGParser::ParseOperationForEachFilter(Record *CurRec, RecTy *ItemType) {
         std::make_unique<Record>(".parse", ArrayRef<SMLoc>{}, Records);
     ParseRec = ParseRecTmp.get();
   }
-
+  TGVarScope *TempScope = PushScope(ParseRec);
   ParseRec->addValue(RecordVal(LHS, InEltType, RecordVal::FK_Normal));
   Init *RHS = ParseValue(ParseRec, ExprEltType);
   ParseRec->removeValue(LHS);
+  PopScope(TempScope);
   if (!RHS)
     return nullptr;
 
@@ -2171,13 +2581,22 @@ Init *TGParser::ParseOperationCond(Record *CurRec, RecTy *ItemType) {
 ///   SimpleValue ::= LISTCONCATTOK '(' Value ',' Value ')'
 ///   SimpleValue ::= LISTSPLATTOK '(' Value ',' Value ')'
 ///   SimpleValue ::= LISTREMOVETOK '(' Value ',' Value ')'
+///   SimpleValue ::= RANGE '(' Value ')'
+///   SimpleValue ::= RANGE '(' Value ',' Value ')'
+///   SimpleValue ::= RANGE '(' Value ',' Value ',' Value ')'
 ///   SimpleValue ::= STRCONCATTOK '(' Value ',' Value ')'
 ///   SimpleValue ::= COND '(' [Value ':' Value,]+ ')'
 ///
 Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
                                  IDParseMode Mode) {
   Init *R = nullptr;
-  switch (Lex.getCode()) {
+  tgtok::TokKind Code = Lex.getCode();
+
+  // Parse bang operators.
+  if (tgtok::isBangOperator(Code))
+    return ParseOperation(CurRec, ItemType);
+
+  switch (Code) {
   default: TokError("Unknown or reserved token when parsing a value"); break;
 
   case tgtok::TrueVal:
@@ -2225,10 +2644,13 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
   case tgtok::Id: {
     SMRange NameLoc = Lex.getLocRange();
     StringInit *Name = StringInit::get(Records, Lex.getCurStrVal());
-    if (Lex.Lex() != tgtok::less)  // consume the Id.
-      return ParseIDValue(CurRec, Name, NameLoc, Mode);    // Value ::= IDValue
+    tgtok::TokKind Next = Lex.Lex();
+    if (Next == tgtok::equal) // Named argument.
+      return Name;
+    if (Next != tgtok::less)                            // consume the Id.
+      return ParseIDValue(CurRec, Name, NameLoc, Mode); // Value ::= IDValue
 
-    // Value ::= CLASSID '<' ValueListNE '>' (CLASSID has been consumed)
+    // Value ::= CLASSID '<' ArgValueList '>' (CLASSID has been consumed)
     // This is supposed to synthesize a new anonymous definition, deriving
     // from the class with the template arguments, but no body.
     Record *Class = Records.getClass(Name->getValue());
@@ -2238,7 +2660,7 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
       return nullptr;
     }
 
-    SmallVector<Init *, 8> Args;
+    SmallVector<ArgumentInit *, 8> Args;
     Lex.Lex(); // consume the <
     if (ParseTemplateArgValueList(Args, CurRec, Class))
       return nullptr; // Error parsing value list.
@@ -2246,18 +2668,8 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
     if (CheckTemplateArgValues(Args, NameLoc.Start, Class))
       return nullptr; // Error checking template argument values.
 
-    // Loop through the arguments that were not specified and make sure
-    // they have a complete value.
-    ArrayRef<Init *> TArgs = Class->getTemplateArgs();
-    for (unsigned I = Args.size(), E = TArgs.size(); I < E; ++I) {
-      RecordVal *Arg = Class->getValue(TArgs[I]);
-      if (!Arg->getValue()->isComplete()) {
-        Error(NameLoc.Start, "Value not specified for template argument '" +
-                                 TArgs[I]->getAsUnquotedString() + "' (#" +
-                                 Twine(I) + ") of parent class '" +
-                                 Class->getNameInitAsString() + "'");
-      }
-    }
+    if (resolveArguments(Class, Args, NameLoc.Start))
+      return nullptr;
 
     if (TrackReferenceLocs)
       Class->appendReferenceLoc(NameLoc);
@@ -2439,51 +2851,6 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
 
     return DagInit::get(Operator, OperatorName, DagArgs);
   }
-
-  case tgtok::XHead:
-  case tgtok::XTail:
-  case tgtok::XSize:
-  case tgtok::XEmpty:
-  case tgtok::XCast:
-  case tgtok::XGetDagOp: // Value ::= !unop '(' Value ')'
-  case tgtok::XExists:
-  case tgtok::XIsA:
-  case tgtok::XConcat:
-  case tgtok::XDag:
-  case tgtok::XADD:
-  case tgtok::XSUB:
-  case tgtok::XMUL:
-  case tgtok::XDIV:
-  case tgtok::XNOT:
-  case tgtok::XLOG2:
-  case tgtok::XAND:
-  case tgtok::XOR:
-  case tgtok::XXOR:
-  case tgtok::XSRA:
-  case tgtok::XSRL:
-  case tgtok::XSHL:
-  case tgtok::XEq:
-  case tgtok::XNe:
-  case tgtok::XLe:
-  case tgtok::XLt:
-  case tgtok::XGe:
-  case tgtok::XGt:
-  case tgtok::XListConcat:
-  case tgtok::XListSplat:
-  case tgtok::XListRemove:
-  case tgtok::XStrConcat:
-  case tgtok::XInterleave:
-  case tgtok::XSetDagOp: // Value ::= !binop '(' Value ',' Value ')'
-  case tgtok::XIf:
-  case tgtok::XCond:
-  case tgtok::XFoldl:
-  case tgtok::XForEach:
-  case tgtok::XFilter:
-  case tgtok::XSubst:
-  case tgtok::XSubstr:
-  case tgtok::XFind: { // Value ::= !ternop '(' Value ',' Value ',' Value ')'
-    return ParseOperation(CurRec, ItemType);
-  }
   }
 
   return R;
@@ -2493,10 +2860,11 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
 ///
 ///   Value       ::= SimpleValue ValueSuffix*
 ///   ValueSuffix ::= '{' BitList '}'
-///   ValueSuffix ::= '[' BitList ']'
+///   ValueSuffix ::= '[' SliceElements ']'
 ///   ValueSuffix ::= '.' ID
 ///
 Init *TGParser::ParseValue(Record *CurRec, RecTy *ItemType, IDParseMode Mode) {
+  SMLoc LHSLoc = Lex.getLoc();
   Init *Result = ParseSimpleValue(CurRec, ItemType, Mode);
   if (!Result) return nullptr;
 
@@ -2531,17 +2899,34 @@ Init *TGParser::ParseValue(Record *CurRec, RecTy *ItemType, IDParseMode Mode) {
       break;
     }
     case tgtok::l_square: {
-      SMLoc SquareLoc = Lex.getLoc();
-      Lex.Lex(); // eat the '['
-      SmallVector<unsigned, 16> Ranges;
-      ParseRangeList(Ranges);
-      if (Ranges.empty()) return nullptr;
-
-      Result = Result->convertInitListSlice(Ranges);
-      if (!Result) {
-        Error(SquareLoc, "Invalid range for list slice");
+      auto *LHS = dyn_cast<TypedInit>(Result);
+      if (!LHS) {
+        Error(LHSLoc, "Invalid value, list expected");
         return nullptr;
       }
+
+      auto *LHSTy = dyn_cast<ListRecTy>(LHS->getType());
+      if (!LHSTy) {
+        Error(LHSLoc, "Type '" + Twine(LHS->getType()->getAsString()) +
+                          "' is invalid, list expected");
+        return nullptr;
+      }
+
+      Lex.Lex(); // eat the '['
+      TypedInit *RHS = ParseSliceElements(CurRec, /*Single=*/true);
+      if (!RHS)
+        return nullptr;
+
+      if (isa<ListRecTy>(RHS->getType())) {
+        Result =
+            BinOpInit::get(BinOpInit::LISTSLICE, LHS, RHS, LHSTy)->Fold(CurRec);
+      } else {
+        Result = BinOpInit::get(BinOpInit::LISTELEM, LHS, RHS,
+                                LHSTy->getElementType())
+                     ->Fold(CurRec);
+      }
+
+      assert(Result);
 
       // Eat the ']'.
       if (!consume(tgtok::r_square)) {
@@ -2744,34 +3129,72 @@ void TGParser::ParseValueList(SmallVectorImpl<Init *> &Result, Record *CurRec,
 
 // ParseTemplateArgValueList - Parse a template argument list with the syntax
 // shown, filling in the Result vector. The open angle has been consumed.
-// An empty argument list is allowed. Return false if okay, true if an 
+// An empty argument list is allowed. Return false if okay, true if an
 // error was detected.
 //
-//   TemplateArgList ::= '<' [Value {',' Value}*] '>'
-bool TGParser::ParseTemplateArgValueList(SmallVectorImpl<Init *> &Result,
-                                         Record *CurRec, Record *ArgsRec) {
-
+//   ArgValueList ::= '<' PostionalArgValueList [','] NamedArgValueList '>'
+//   PostionalArgValueList ::= [Value {',' Value}*]
+//   NamedArgValueList ::= [NameValue '=' Value {',' NameValue '=' Value}*]
+bool TGParser::ParseTemplateArgValueList(
+    SmallVectorImpl<ArgumentInit *> &Result, Record *CurRec, Record *ArgsRec,
+    bool IsDefm) {
   assert(Result.empty() && "Result vector is not empty");
   ArrayRef<Init *> TArgs = ArgsRec->getTemplateArgs();
-  unsigned ArgIndex = 0;
-  RecTy *ItemType;
 
   if (consume(tgtok::greater)) // empty value list
     return false;
 
+  bool HasNamedArg = false;
+  unsigned ArgIndex = 0;
   while (true) {
     if (ArgIndex >= TArgs.size()) {
       TokError("Too many template arguments: " + utostr(ArgIndex + 1));
       return true;
     }
-    const RecordVal *Arg = ArgsRec->getValue(TArgs[ArgIndex]);
-    assert(Arg && "Template argument record not found");
 
-    ItemType = Arg->getType();
-    Init *Value = ParseValue(CurRec, ItemType);
+    SMLoc ValueLoc = Lex.getLoc();
+    // If we are parsing named argument, we don't need to know the argument name
+    // and argument type will be resolved after we know the name.
+    Init *Value = ParseValue(
+        CurRec,
+        HasNamedArg ? nullptr : ArgsRec->getValue(TArgs[ArgIndex])->getType());
     if (!Value)
       return true;
-    Result.push_back(Value);
+
+    // If we meet '=', then we are parsing named arguments.
+    if (Lex.getCode() == tgtok::equal) {
+      if (!isa<StringInit>(Value))
+        return Error(ValueLoc,
+                     "The name of named argument should be a valid identifier");
+
+      auto *Name = cast<StringInit>(Value);
+      Init *QualifiedName =
+          QualifyName(*ArgsRec, CurMultiClass, Name, IsDefm ? "::" : ":");
+      auto *NamedArg = ArgsRec->getValue(QualifiedName);
+      if (!NamedArg)
+        return Error(ValueLoc,
+                     "Argument " + Name->getAsString() + " doesn't exist");
+
+      Lex.Lex(); // eat the '='.
+      ValueLoc = Lex.getLoc();
+      Value = ParseValue(CurRec, NamedArg->getType());
+      // Named value can't be uninitialized.
+      if (isa<UnsetInit>(Value))
+        return Error(ValueLoc,
+                     "The value of named argument should be initialized, "
+                     "but we got '" +
+                         Value->getAsString() + "'");
+
+      Result.push_back(ArgumentInit::get(Value, QualifiedName));
+      HasNamedArg = true;
+    } else {
+      // Positional arguments should be put before named arguments.
+      if (HasNamedArg)
+        return Error(ValueLoc,
+                     "Positional argument should be put before named argument");
+
+      Result.push_back(ArgumentInit::get(Value, ArgIndex));
+    }
 
     if (consume(tgtok::greater)) // end of argument list?
       return false;
@@ -2807,6 +3230,11 @@ Init *TGParser::ParseDeclaration(Record *CurRec,
   std::string Str = Lex.getCurStrVal();
   if (Str == "NAME") {
     TokError("'" + Str + "' is a reserved variable name");
+    return nullptr;
+  }
+
+  if (!ParsingTemplateArgs && CurScope->varAlreadyDefined(Str)) {
+    TokError("local variable of this name already exists");
     return nullptr;
   }
 
@@ -2984,7 +3412,7 @@ bool TGParser::ParseBodyItem(Record *CurRec) {
     return ParseAssert(nullptr, CurRec);
 
   if (Lex.getCode() == tgtok::Defvar)
-    return ParseDefvar();
+    return ParseDefvar(CurRec);
 
   if (Lex.getCode() != tgtok::Let) {
     if (!ParseDeclaration(CurRec, false))
@@ -3046,14 +3474,9 @@ bool TGParser::ParseBody(Record *CurRec) {
   if (!consume(tgtok::l_brace))
     return TokError("Expected '{' to start body or ';' for declaration only");
 
-  // An object body introduces a new scope for local variables.
-  TGLocalVarScope *BodyScope = PushLocalScope();
-
   while (Lex.getCode() != tgtok::r_brace)
     if (ParseBodyItem(CurRec))
       return true;
-
-  PopLocalScope(BodyScope);
 
   // Eat the '}'.
   Lex.Lex();
@@ -3105,6 +3528,8 @@ bool TGParser::ApplyLetStack(RecordsEntry &Entry) {
 ///   BaseClassListNE ::= SubClassRef (',' SubClassRef)*
 ///
 bool TGParser::ParseObjectBody(Record *CurRec) {
+  // An object body introduces a new scope for local variables.
+  TGVarScope *ObjectScope = PushScope(CurRec);
   // If there is a baseclass list, read it.
   if (consume(tgtok::colon)) {
 
@@ -3127,7 +3552,9 @@ bool TGParser::ParseObjectBody(Record *CurRec) {
   if (ApplyLetStack(CurRec))
     return true;
 
-  return ParseBody(CurRec);
+  bool Result = ParseBody(CurRec);
+  PopScope(ObjectScope);
+  return Result;
 }
 
 /// ParseDef - Parse and return a top level or multiclass record definition.
@@ -3215,34 +3642,41 @@ bool TGParser::ParseDefset() {
 ///
 ///   Defvar ::= DEFVAR Id '=' Value ';'
 ///
-bool TGParser::ParseDefvar() {
+bool TGParser::ParseDefvar(Record *CurRec) {
   assert(Lex.getCode() == tgtok::Defvar);
   Lex.Lex(); // Eat the 'defvar' token
 
   if (Lex.getCode() != tgtok::Id)
     return TokError("expected identifier");
   StringInit *DeclName = StringInit::get(Records, Lex.getCurStrVal());
-  if (CurLocalScope) {
-    if (CurLocalScope->varAlreadyDefined(DeclName->getValue()))
-      return TokError("local variable of this name already exists");
-  } else {
-    if (Records.getGlobal(DeclName->getValue()))
-      return TokError("def or global variable of this name already exists");
+  if (CurScope->varAlreadyDefined(DeclName->getValue()))
+    return TokError("local variable of this name already exists");
+
+  // The name should not be conflicted with existed field names.
+  if (CurRec) {
+    auto *V = CurRec->getValue(DeclName->getValue());
+    if (V && !V->isTemplateArg())
+      return TokError("field of this name already exists");
   }
+
+  // If this defvar is in the top level, the name should not be conflicted
+  // with existed global names.
+  if (CurScope->isOutermost() && Records.getGlobal(DeclName->getValue()))
+    return TokError("def or global variable of this name already exists");
 
   Lex.Lex();
   if (!consume(tgtok::equal))
     return TokError("expected '='");
 
-  Init *Value = ParseValue(nullptr);
+  Init *Value = ParseValue(CurRec);
   if (!Value)
     return true;
 
   if (!consume(tgtok::semi))
     return TokError("expected ';'");
 
-  if (CurLocalScope)
-    CurLocalScope->addVar(DeclName->getValue(), Value);
+  if (!CurScope->isOutermost())
+    CurScope->addVar(DeclName->getValue(), Value);
   else
     Records.addExtraGlobal(DeclName->getValue(), Value);
 
@@ -3271,10 +3705,10 @@ bool TGParser::ParseForeach(MultiClass *CurMultiClass) {
     return TokError("Unknown tok");
 
   // Create a loop object and remember it.
-  Loops.push_back(std::make_unique<ForeachLoop>(Loc, IterName, ListValue));
-
+  auto TheLoop = std::make_unique<ForeachLoop>(Loc, IterName, ListValue);
   // A foreach loop introduces a new scope for local variables.
-  TGLocalVarScope *ForeachScope = PushLocalScope();
+  TGVarScope *ForeachScope = PushScope(TheLoop.get());
+  Loops.push_back(std::move(TheLoop));
 
   if (Lex.getCode() != tgtok::l_brace) {
     // FOREACH Declaration IN Object
@@ -3295,7 +3729,7 @@ bool TGParser::ParseForeach(MultiClass *CurMultiClass) {
     }
   }
 
-  PopLocalScope(ForeachScope);
+  PopScope(ForeachScope);
 
   // Resolve the loop or store it for later resolution.
   std::unique_ptr<ForeachLoop> Loop = std::move(Loops.back());
@@ -3384,7 +3818,8 @@ bool TGParser::ParseIf(MultiClass *CurMultiClass) {
 ///   IfBody ::= '{' ObjectList '}'
 ///
 bool TGParser::ParseIfBody(MultiClass *CurMultiClass, StringRef Kind) {
-  TGLocalVarScope *BodyScope = PushLocalScope();
+  // An if-statement introduces a new scope for local variables.
+  TGVarScope *BodyScope = PushScope();
 
   if (Lex.getCode() != tgtok::l_brace) {
     // A single object.
@@ -3405,7 +3840,7 @@ bool TGParser::ParseIfBody(MultiClass *CurMultiClass, StringRef Kind) {
     }
   }
 
-  PopLocalScope(BodyScope);
+  PopScope(BodyScope);
   return false;
 }
 
@@ -3472,6 +3907,8 @@ bool TGParser::ParseClass() {
   }
   Lex.Lex(); // eat the name.
 
+  // A class definition introduces a new scope.
+  TGVarScope *ClassScope = PushScope(CurRec);
   // If there are template args, parse them.
   if (Lex.getCode() == tgtok::less)
     if (ParseTemplateArgList(CurRec))
@@ -3482,6 +3919,8 @@ bool TGParser::ParseClass() {
 
   if (!NoWarnOnUnusedTemplateArgs)
     CurRec->checkUnusedTemplateArgs();
+
+  PopScope(ClassScope);
   return false;
 }
 
@@ -3547,8 +3986,6 @@ bool TGParser::ParseTopLevelLet(MultiClass *CurMultiClass) {
   if (!consume(tgtok::In))
     return TokError("expected 'in' at end of top-level 'let'");
 
-  TGLocalVarScope *LetScope = PushLocalScope();
-
   // If this is a scalar let, just handle it now
   if (Lex.getCode() != tgtok::l_brace) {
     // LET LetList IN Object
@@ -3559,6 +3996,9 @@ bool TGParser::ParseTopLevelLet(MultiClass *CurMultiClass) {
     // Otherwise, this is a group let.
     Lex.Lex();  // eat the '{'.
 
+    // A group let introduces a new scope for local variables.
+    TGVarScope *LetScope = PushScope();
+
     // Parse the object list.
     if (ParseObjectList(CurMultiClass))
       return true;
@@ -3567,9 +4007,9 @@ bool TGParser::ParseTopLevelLet(MultiClass *CurMultiClass) {
       TokError("expected '}' at end of top level let command");
       return Error(BraceLoc, "to match this '{'");
     }
-  }
 
-  PopLocalScope(LetScope);
+    PopScope(LetScope);
+  }
 
   // Outside this let scope, this let block is not active.
   LetStack.pop_back();
@@ -3606,6 +4046,9 @@ bool TGParser::ParseMultiClass() {
 
   CurMultiClass = Result.first->second.get();
   Lex.Lex();  // Eat the identifier.
+
+  // A multiclass body introduces a new scope for local variables.
+  TGVarScope *MulticlassScope = PushScope(CurMultiClass);
 
   // If there are template args, parse them.
   if (Lex.getCode() == tgtok::less)
@@ -3644,9 +4087,6 @@ bool TGParser::ParseMultiClass() {
     if (Lex.Lex() == tgtok::r_brace)  // eat the '{'.
       return TokError("multiclass must contain at least one def");
 
-    // A multiclass body introduces a new scope for local variables.
-    TGLocalVarScope *MulticlassScope = PushLocalScope();
-
     while (Lex.getCode() != tgtok::r_brace) {
       switch (Lex.getCode()) {
       default:
@@ -3673,13 +4113,12 @@ bool TGParser::ParseMultiClass() {
       PrintError(SemiLoc, "A multiclass body should not end with a semicolon");
       PrintNote("Semicolon ignored; remove to eliminate this error");    
     }
-
-    PopLocalScope(MulticlassScope);
   }
 
   if (!NoWarnOnUnusedTemplateArgs)
     CurMultiClass->Rec.checkUnusedTemplateArgs();
 
+  PopScope(MulticlassScope);
   CurMultiClass = nullptr;
   return false;
 }
@@ -3729,26 +4168,10 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
     MultiClass *MC = MultiClasses[std::string(Ref.Rec->getName())].get();
     assert(MC && "Didn't lookup multiclass correctly?");
 
-    ArrayRef<Init *> TemplateVals = Ref.TemplateArgs;
-    ArrayRef<Init *> TArgs = MC->Rec.getTemplateArgs();
     SubstStack Substs;
-
-    for (unsigned i = 0, e = TArgs.size(); i != e; ++i) {
-      if (i < TemplateVals.size()) {
-        Substs.emplace_back(TArgs[i], TemplateVals[i]);
-      } else {
-        Init *Default = MC->Rec.getValue(TArgs[i])->getValue();
-        if (!Default->isComplete())
-          return Error(SubClassLoc,
-                       "value not specified for template argument '" +
-                           TArgs[i]->getAsUnquotedString() + "' (#" +
-                           Twine(i) + ") of multiclass '" +
-                           MC->Rec.getNameInitAsString() + "'");
-        Substs.emplace_back(TArgs[i], Default);
-      }
-    }
-
-    Substs.emplace_back(QualifiedNameOfImplicitName(MC), DefmName);
+    if (resolveArgumentsOfMultiClass(Substs, MC, Ref.TemplateArgs, DefmName,
+                                     SubClassLoc))
+      return true;
 
     if (resolve(MC->Entries, Substs, !CurMultiClass && Loops.empty(),
                 &NewEntries, &SubClassLoc))
@@ -3849,7 +4272,7 @@ bool TGParser::ParseObject(MultiClass *MC) {
 /// ParseObjectList
 ///   ObjectList :== Object*
 bool TGParser::ParseObjectList(MultiClass *MC) {
-  while (isObjectStart(Lex.getCode())) {
+  while (tgtok::isObjectStart(Lex.getCode())) {
     if (ParseObject(MC))
       return true;
   }
@@ -3858,7 +4281,10 @@ bool TGParser::ParseObjectList(MultiClass *MC) {
 
 bool TGParser::ParseFile() {
   Lex.Lex(); // Prime the lexer.
-  if (ParseObjectList()) return true;
+  TGVarScope *GlobalScope = PushScope();
+  if (ParseObjectList())
+    return true;
+  PopScope(GlobalScope);
 
   // If we have unread input at the end of the file, report it.
   if (Lex.getCode() == tgtok::Eof)
@@ -3871,30 +4297,34 @@ bool TGParser::ParseFile() {
 // inheritance, multiclass invocation, or anonymous class invocation.
 // If necessary, replace an argument with a cast to the required type.
 // The argument count has already been checked.
-bool TGParser::CheckTemplateArgValues(SmallVectorImpl<llvm::Init *> &Values,
-                                      SMLoc Loc, Record *ArgsRec) {
-
+bool TGParser::CheckTemplateArgValues(
+    SmallVectorImpl<llvm::ArgumentInit *> &Values, SMLoc Loc, Record *ArgsRec) {
   ArrayRef<Init *> TArgs = ArgsRec->getTemplateArgs();
 
   for (unsigned I = 0, E = Values.size(); I < E; ++I) {
-    RecordVal *Arg = ArgsRec->getValue(TArgs[I]);
-    RecTy *ArgType = Arg->getType();
     auto *Value = Values[I];
+    Init *ArgName = nullptr;
+    if (Value->isPositional())
+      ArgName = TArgs[Value->getIndex()];
+    if (Value->isNamed())
+      ArgName = Value->getName();
 
-    if (TypedInit *ArgValue = dyn_cast<TypedInit>(Value)) { 
+    RecordVal *Arg = ArgsRec->getValue(ArgName);
+    RecTy *ArgType = Arg->getType();
+
+    if (TypedInit *ArgValue = dyn_cast<TypedInit>(Value->getValue())) {
       auto *CastValue = ArgValue->getCastTo(ArgType);
       if (CastValue) {
         assert((!isa<TypedInit>(CastValue) ||
                 cast<TypedInit>(CastValue)->getType()->typeIsA(ArgType)) &&
                "result of template arg value cast has wrong type");
-        Values[I] = CastValue;
+        Values[I] = Value->cloneWithValue(CastValue);
       } else {
-        PrintFatalError(Loc,
-                        "Value specified for template argument '" +
-                            Arg->getNameInitAsString() + "' (#" + Twine(I) +
-                            ") is of type " + ArgValue->getType()->getAsString() +
-                            "; expected type " + ArgType->getAsString() + ": " +
-                            ArgValue->getAsString());
+        PrintFatalError(Loc, "Value specified for template argument '" +
+                                 Arg->getNameInitAsString() + "' is of type " +
+                                 ArgValue->getType()->getAsString() +
+                                 "; expected type " + ArgType->getAsString() +
+                                 ": " + ArgValue->getAsString());
       }
     }
   }

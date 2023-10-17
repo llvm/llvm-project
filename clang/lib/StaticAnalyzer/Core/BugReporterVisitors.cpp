@@ -132,6 +132,16 @@ const Expr *bugreporter::getDerefExpr(const Stmt *S) {
     }
     // Pattern match for a few useful cases: a[0], p->f, *p etc.
     else if (const auto *ME = dyn_cast<MemberExpr>(E)) {
+      // This handles the case when the dereferencing of a member reference
+      // happens. This is needed, because the AST for dereferencing a
+      // member reference looks like the following:
+      // |-MemberExpr
+      //  `-DeclRefExpr
+      // Without this special case the notes would refer to the whole object
+      // (struct, class or union variable) instead of just the relevant member.
+
+      if (ME->getMemberDecl()->getType()->isReferenceType())
+        break;
       E = ME->getBase();
     } else if (const auto *IvarRef = dyn_cast<ObjCIvarRefExpr>(E)) {
       E = IvarRef->getBase();
@@ -157,26 +167,42 @@ const Expr *bugreporter::getDerefExpr(const Stmt *S) {
   return E;
 }
 
+static const VarDecl *getVarDeclForExpression(const Expr *E) {
+  if (const auto *DR = dyn_cast<DeclRefExpr>(E))
+    return dyn_cast<VarDecl>(DR->getDecl());
+  return nullptr;
+}
+
 static const MemRegion *
 getLocationRegionIfReference(const Expr *E, const ExplodedNode *N,
                              bool LookingForReference = true) {
-  if (const auto *DR = dyn_cast<DeclRefExpr>(E)) {
-    if (const auto *VD = dyn_cast<VarDecl>(DR->getDecl())) {
-      if (LookingForReference && !VD->getType()->isReferenceType())
-        return nullptr;
-      return N->getState()
-          ->getLValue(VD, N->getLocationContext())
-          .getAsRegion();
+  if (const auto *ME = dyn_cast<MemberExpr>(E)) {
+    // This handles null references from FieldRegions, for example:
+    //   struct Wrapper { int &ref; };
+    //   Wrapper w = { *(int *)0 };
+    //   w.ref = 1;
+    const Expr *Base = ME->getBase();
+    const VarDecl *VD = getVarDeclForExpression(Base);
+    if (!VD)
+      return nullptr;
+
+    const auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl());
+    if (!FD)
+      return nullptr;
+
+    if (FD->getType()->isReferenceType()) {
+      SVal StructSVal = N->getState()->getLValue(VD, N->getLocationContext());
+      return N->getState()->getLValue(FD, StructSVal).getAsRegion();
     }
+    return nullptr;
   }
 
-  // FIXME: This does not handle other kinds of null references,
-  // for example, references from FieldRegions:
-  //   struct Wrapper { int &ref; };
-  //   Wrapper w = { *(int *)0 };
-  //   w.ref = 1;
-
-  return nullptr;
+  const VarDecl *VD = getVarDeclForExpression(E);
+  if (!VD)
+    return nullptr;
+  if (LookingForReference && !VD->getType()->isReferenceType())
+    return nullptr;
+  return N->getState()->getLValue(VD, N->getLocationContext()).getAsRegion();
 }
 
 /// Comparing internal representations of symbolic values (via
@@ -1786,6 +1812,7 @@ PathDiagnosticPieceRef StoreSiteFinder::VisitNode(const ExplodedNode *Succ,
 void TrackConstraintBRVisitor::Profile(llvm::FoldingSetNodeID &ID) const {
   static int tag = 0;
   ID.AddPointer(&tag);
+  ID.AddString(Message);
   ID.AddBoolean(Assumption);
   ID.Add(Constraint);
 }
@@ -1796,8 +1823,12 @@ const char *TrackConstraintBRVisitor::getTag() {
   return "TrackConstraintBRVisitor";
 }
 
+bool TrackConstraintBRVisitor::isZeroCheck() const {
+  return !Assumption && Constraint.getAs<Loc>();
+}
+
 bool TrackConstraintBRVisitor::isUnderconstrained(const ExplodedNode *N) const {
-  if (IsZeroCheck)
+  if (isZeroCheck())
     return N->getState()->isNull(Constraint).isUnderconstrained();
   return (bool)N->getState()->assume(Constraint, !Assumption);
 }
@@ -1827,19 +1858,6 @@ PathDiagnosticPieceRef TrackConstraintBRVisitor::VisitNode(
     // the transition point.
     assert(!isUnderconstrained(N));
 
-    // We found the transition point for the constraint.  We now need to
-    // pretty-print the constraint. (work-in-progress)
-    SmallString<64> sbuf;
-    llvm::raw_svector_ostream os(sbuf);
-
-    if (isa<Loc>(Constraint)) {
-      os << "Assuming pointer value is ";
-      os << (Assumption ? "non-null" : "null");
-    }
-
-    if (os.str().empty())
-      return nullptr;
-
     // Construct a new PathDiagnosticPiece.
     ProgramPoint P = N->getLocation();
 
@@ -1854,7 +1872,7 @@ PathDiagnosticPieceRef TrackConstraintBRVisitor::VisitNode(
     if (!L.isValid())
       return nullptr;
 
-    auto X = std::make_shared<PathDiagnosticEventPiece>(L, os.str());
+    auto X = std::make_shared<PathDiagnosticEventPiece>(L, Message);
     X->setTag(getTag());
     return std::move(X);
   }
@@ -2366,8 +2384,9 @@ public:
         // null.
         if (V.getAsLocSymbol(/*IncludeBaseRegions=*/true))
           if (LVState->isNull(V).isConstrainedTrue())
-            Report.addVisitor<TrackConstraintBRVisitor>(V.castAs<DefinedSVal>(),
-                                                        false);
+            Report.addVisitor<TrackConstraintBRVisitor>(
+                V.castAs<DefinedSVal>(),
+                /*Assumption=*/false, "Assuming pointer value is null");
 
         // Add visitor, which will suppress inline defensive checks.
         if (auto DV = V.getAs<DefinedSVal>())
@@ -2531,7 +2550,7 @@ public:
         Report.markInteresting(RegionRVal, Opts.Kind);
         Report.addVisitor<TrackConstraintBRVisitor>(
             loc::MemRegionVal(RegionRVal),
-            /*assumption=*/false);
+            /*Assumption=*/false, "Assuming pointer value is null");
         Result.FoundSomethingToTrack = true;
       }
     }

@@ -10,17 +10,19 @@
 #include "clang/AST/AST.h"
 #include "clang/Basic/SourceManager.h"
 #include <optional>
+#include <utility>
 
 namespace clang::tidy::utils::lexer {
 
-Token getPreviousToken(SourceLocation Location, const SourceManager &SM,
-                       const LangOptions &LangOpts, bool SkipComments) {
+std::pair<Token, SourceLocation>
+getPreviousTokenAndStart(SourceLocation Location, const SourceManager &SM,
+                         const LangOptions &LangOpts, bool SkipComments) {
   Token Token;
   Token.setKind(tok::unknown);
 
   Location = Location.getLocWithOffset(-1);
   if (Location.isInvalid())
-      return Token;
+    return {Token, Location};
 
   auto StartOfFile = SM.getLocForStartOfFile(SM.getFileID(Location));
   while (Location != StartOfFile) {
@@ -31,6 +33,13 @@ Token getPreviousToken(SourceLocation Location, const SourceManager &SM,
     }
     Location = Location.getLocWithOffset(-1);
   }
+  return {Token, Location};
+}
+
+Token getPreviousToken(SourceLocation Location, const SourceManager &SM,
+                       const LangOptions &LangOpts, bool SkipComments) {
+  auto [Token, Start] =
+      getPreviousTokenAndStart(Location, SM, LangOpts, SkipComments);
   return Token;
 }
 
@@ -38,11 +47,11 @@ SourceLocation findPreviousTokenStart(SourceLocation Start,
                                       const SourceManager &SM,
                                       const LangOptions &LangOpts) {
   if (Start.isInvalid() || Start.isMacroID())
-    return SourceLocation();
+    return {};
 
   SourceLocation BeforeStart = Start.getLocWithOffset(-1);
   if (BeforeStart.isInvalid() || BeforeStart.isMacroID())
-    return SourceLocation();
+    return {};
 
   return Lexer::GetBeginningOfToken(BeforeStart, SM, LangOpts);
 }
@@ -52,16 +61,16 @@ SourceLocation findPreviousTokenKind(SourceLocation Start,
                                      const LangOptions &LangOpts,
                                      tok::TokenKind TK) {
   if (Start.isInvalid() || Start.isMacroID())
-    return SourceLocation();
+    return {};
 
   while (true) {
     SourceLocation L = findPreviousTokenStart(Start, SM, LangOpts);
     if (L.isInvalid() || L.isMacroID())
-      return SourceLocation();
+      return {};
 
     Token T;
     if (Lexer::getRawToken(L, T, SM, LangOpts, /*IgnoreWhiteSpace=*/true))
-      return SourceLocation();
+      return {};
 
     if (T.is(TK))
       return T.getLocation();
@@ -76,13 +85,41 @@ SourceLocation findNextTerminator(SourceLocation Start, const SourceManager &SM,
 }
 
 std::optional<Token>
+findNextTokenIncludingComments(SourceLocation Start, const SourceManager &SM,
+                               const LangOptions &LangOpts) {
+  // `Lexer::findNextToken` will ignore comment
+  if (Start.isMacroID())
+    return std::nullopt;
+  Start = Lexer::getLocForEndOfToken(Start, 0, SM, LangOpts);
+  // Break down the source location.
+  std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(Start);
+  bool InvalidTemp = false;
+  StringRef File = SM.getBufferData(LocInfo.first, &InvalidTemp);
+  if (InvalidTemp)
+    return std::nullopt;
+  // Lex from the start of the given location.
+  Lexer L(SM.getLocForStartOfFile(LocInfo.first), LangOpts, File.begin(),
+          File.data() + LocInfo.second, File.end());
+  L.SetCommentRetentionState(true);
+  // Find the token.
+  Token Tok;
+  L.LexFromRawLexer(Tok);
+  return Tok;
+}
+
+std::optional<Token>
 findNextTokenSkippingComments(SourceLocation Start, const SourceManager &SM,
                               const LangOptions &LangOpts) {
-  std::optional<Token> CurrentToken;
-  do {
-    CurrentToken = Lexer::findNextToken(Start, SM, LangOpts);
-  } while (CurrentToken && CurrentToken->is(tok::comment));
-  return CurrentToken;
+  while (Start.isValid()) {
+    std::optional<Token> CurrentToken =
+        Lexer::findNextToken(Start, SM, LangOpts);
+    if (!CurrentToken || !CurrentToken->is(tok::comment))
+      return CurrentToken;
+
+    Start = CurrentToken->getLocation();
+  }
+
+  return std::nullopt;
 }
 
 bool rangeContainsExpansionsOrDirectives(SourceRange Range,
@@ -91,7 +128,7 @@ bool rangeContainsExpansionsOrDirectives(SourceRange Range,
   assert(Range.isValid() && "Invalid Range for relexing provided");
   SourceLocation Loc = Range.getBegin();
 
-  while (Loc < Range.getEnd()) {
+  while (Loc <= Range.getEnd()) {
     if (Loc.isMacroID())
       return true;
 
@@ -103,7 +140,7 @@ bool rangeContainsExpansionsOrDirectives(SourceRange Range,
     if (Tok->is(tok::hash))
       return true;
 
-    Loc = Lexer::getLocForEndOfToken(Loc, 0, SM, LangOpts).getLocWithOffset(1);
+    Loc = Tok->getLocation();
   }
 
   return false;
@@ -153,7 +190,8 @@ static bool breakAndReturnEnd(const Stmt &S) {
 }
 
 static bool breakAndReturnEndPlus1Token(const Stmt &S) {
-  return isa<Expr, DoStmt, ReturnStmt, BreakStmt, ContinueStmt, GotoStmt, SEHLeaveStmt>(S);
+  return isa<Expr, DoStmt, ReturnStmt, BreakStmt, ContinueStmt, GotoStmt,
+             SEHLeaveStmt>(S);
 }
 
 // Given a Stmt which does not include it's semicolon this method returns the
@@ -192,7 +230,7 @@ static SourceLocation getSemicolonAfterStmtEndLoc(const SourceLocation &EndLoc,
   if (NextTok && NextTok->is(tok::TokenKind::semi))
     return NextTok->getLocation();
 
-  return SourceLocation();
+  return {};
 }
 
 SourceLocation getUnifiedEndLoc(const Stmt &S, const SourceManager &SM,
@@ -205,11 +243,46 @@ SourceLocation getUnifiedEndLoc(const Stmt &S, const SourceManager &SM,
       LastChild = Child;
   }
 
-  if (!breakAndReturnEnd(*LastChild) &&
-      breakAndReturnEndPlus1Token(*LastChild))
+  if (!breakAndReturnEnd(*LastChild) && breakAndReturnEndPlus1Token(*LastChild))
     return getSemicolonAfterStmtEndLoc(S.getEndLoc(), SM, LangOpts);
 
   return S.getEndLoc();
+}
+
+SourceLocation getLocationForNoexceptSpecifier(const FunctionDecl *FuncDecl,
+                                               const SourceManager &SM) {
+  if (!FuncDecl)
+    return {};
+
+  const LangOptions &LangOpts = FuncDecl->getLangOpts();
+
+  if (FuncDecl->getNumParams() == 0) {
+    // Start at the beginning of the function declaration, and find the closing
+    // parenthesis after which we would place the noexcept specifier.
+    Token CurrentToken;
+    SourceLocation CurrentLocation = FuncDecl->getBeginLoc();
+    while (!Lexer::getRawToken(CurrentLocation, CurrentToken, SM, LangOpts,
+                               true)) {
+      if (CurrentToken.is(tok::r_paren))
+        return CurrentLocation.getLocWithOffset(1);
+
+      CurrentLocation = CurrentToken.getEndLoc();
+    }
+
+    // Failed to find the closing parenthesis, so just return an invalid
+    // SourceLocation.
+    return {};
+  }
+
+  // FunctionDecl with parameters
+  const SourceLocation NoexceptLoc =
+      FuncDecl->getParamDecl(FuncDecl->getNumParams() - 1)->getEndLoc();
+  if (NoexceptLoc.isValid())
+    return Lexer::findLocationAfterToken(
+        NoexceptLoc, tok::r_paren, SM, LangOpts,
+        /*SkipTrailingWhitespaceAndNewLine=*/true);
+
+  return {};
 }
 
 } // namespace clang::tidy::utils::lexer

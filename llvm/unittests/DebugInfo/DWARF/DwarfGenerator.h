@@ -13,6 +13,7 @@
 #ifndef LLVM_UNITTESTS_DEBUG_INFO_DWARF_DWARFGENERATOR_H
 #define LLVM_UNITTESTS_DEBUG_INFO_DWARF_DWARFGENERATOR_H
 
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
@@ -132,6 +133,9 @@ public:
 
   /// Add a DW_AT_str_offsets_base attribute to this DIE.
   void addStrOffsetsBaseAttribute();
+
+  /// Add a DW_AT_addr_base attribute to this DIE.
+  void addAddrBaseAttribute();
 
   /// Add a new child to this DIE object.
   ///
@@ -258,7 +262,17 @@ class Generator {
   std::vector<std::unique_ptr<LineTable>> LineTables;
   DIEAbbrevSet Abbreviations;
 
+  // Mimics llvm::AddressPool, but allows for constant addresses for testing.
+  struct DummyAddressPool {
+    unsigned getIndex(uint64_t Address);
+
+    void emit(AsmPrinter &Asm, MCSection *AddrSection, MCSymbol *StartSym);
+
+    std::vector<uint64_t> AddressValues;
+  } AddressPool;
+
   MCSymbol *StringOffsetsStartSym;
+  MCSymbol *AddrTableStartSym;
 
   SmallString<4096> FileBytes;
   /// The stream we use to generate the DWARF into as an ELF file.
@@ -312,6 +326,8 @@ public:
   DIEAbbrevSet &getAbbrevSet() { return Abbreviations; }
   DwarfStringPool &getStringPool() { return *StringPool; }
   MCSymbol *getStringOffsetsStartSym() const { return StringOffsetsStartSym; }
+  DummyAddressPool &getAddressPool() { return AddressPool; }
+  MCSymbol *getAddrTableStartSym() const { return AddrTableStartSym; }
 
   /// Save the generated DWARF file to disk.
   ///

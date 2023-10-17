@@ -17,6 +17,7 @@
 #include "AArch64RegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/Support/TypeSize.h"
+#include <optional>
 
 #define GET_INSTRINFO_HEADER
 #include "AArch64GenInstrInfo.inc"
@@ -107,20 +108,29 @@ public:
   /// Returns the base register operator of a load/store.
   static const MachineOperand &getLdStBaseOp(const MachineInstr &MI);
 
-  /// Returns the the immediate offset operator of a load/store.
+  /// Returns the immediate offset operator of a load/store.
   static const MachineOperand &getLdStOffsetOp(const MachineInstr &MI);
 
   /// Returns whether the instruction is FP or NEON.
   static bool isFpOrNEON(const MachineInstr &MI);
 
+  /// Returns whether the instruction is in H form (16 bit operands)
+  static bool isHForm(const MachineInstr &MI);
+
   /// Returns whether the instruction is in Q form (128 bit operands)
   static bool isQForm(const MachineInstr &MI);
+
+  /// Returns whether the instruction can be compatible with non-zero BTYPE.
+  static bool hasBTISemantics(const MachineInstr &MI);
 
   /// Returns the index for the immediate for a given instruction.
   static unsigned getLoadStoreImmIdx(unsigned Opc);
 
   /// Return true if pairing the given load or store may be paired with another.
   static bool isPairableLdStInst(const MachineInstr &MI);
+
+  /// Returns true if MI is one of the TCRETURN* instructions.
+  static bool isTailCallReturnInst(const MachineInstr &MI);
 
   /// Return the opcode that set flags when possible.  The caller is
   /// responsible for ensuring the opc has a flag setting equivalent.
@@ -135,6 +145,13 @@ public:
   std::optional<ExtAddrMode>
   getAddrModeFromMemoryOp(const MachineInstr &MemI,
                           const TargetRegisterInfo *TRI) const override;
+
+  bool canFoldIntoAddrMode(const MachineInstr &MemI, Register Reg,
+                           const MachineInstr &AddrI,
+                           ExtAddrMode &AM) const override;
+
+  MachineInstr *emitLdStWithAddr(MachineInstr &MemI,
+                                 const ExtAddrMode &AM) const override;
 
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &MI, SmallVectorImpl<const MachineOperand *> &BaseOps,
@@ -209,6 +226,11 @@ public:
 
   MachineBasicBlock *getBranchDestBlock(const MachineInstr &MI) const override;
 
+  void insertIndirectBranch(MachineBasicBlock &MBB,
+                            MachineBasicBlock &NewDestBB,
+                            MachineBasicBlock &RestoreBB, const DebugLoc &DL,
+                            int64_t BrOffset, RegScavenger *RS) const override;
+
   bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                      MachineBasicBlock *&FBB,
                      SmallVectorImpl<MachineOperand> &Cond,
@@ -231,6 +253,10 @@ public:
                     const DebugLoc &DL, Register DstReg,
                     ArrayRef<MachineOperand> Cond, Register TrueReg,
                     Register FalseReg) const override;
+
+  void insertNoop(MachineBasicBlock &MBB,
+                  MachineBasicBlock::iterator MI) const override;
+
   MCInst getNop() const override;
 
   bool isSchedulingBoundary(const MachineInstr &MI,
@@ -289,12 +315,15 @@ public:
 
   bool isFunctionSafeToOutlineFrom(MachineFunction &MF,
                                    bool OutlineFromLinkOnceODRs) const override;
-  outliner::OutlinedFunction getOutliningCandidateInfo(
+  std::optional<outliner::OutlinedFunction> getOutliningCandidateInfo(
       std::vector<outliner::Candidate> &RepeatedSequenceLocs) const override;
+  void mergeOutliningCandidateAttributes(
+      Function &F, std::vector<outliner::Candidate> &Candidates) const override;
   outliner::InstrType
-  getOutliningType(MachineBasicBlock::iterator &MIT, unsigned Flags) const override;
-  bool isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
-                              unsigned &Flags) const override;
+  getOutliningTypeImpl(MachineBasicBlock::iterator &MIT, unsigned Flags) const override;
+  SmallVector<
+      std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator>>
+  getOutlinableRanges(MachineBasicBlock &MBB, unsigned &Flags) const override;
   void buildOutlinedFrame(MachineBasicBlock &MBB, MachineFunction &MF,
                           const outliner::OutlinedFunction &OF) const override;
   MachineBasicBlock::iterator
@@ -302,6 +331,11 @@ public:
                      MachineBasicBlock::iterator &It, MachineFunction &MF,
                      outliner::Candidate &C) const override;
   bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const override;
+
+  void buildClearRegister(Register Reg, MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator Iter,
+                          DebugLoc &DL) const override;
+
   /// Returns the vector element size (B, H, S or D) of an SVE opcode.
   uint64_t getElementSizeForOpcode(unsigned Opc) const;
   /// Returns true if the opcode is for an SVE instruction that sets the
@@ -320,10 +354,14 @@ public:
   std::optional<RegImmPair> isAddImmediate(const MachineInstr &MI,
                                            Register Reg) const override;
 
+  bool isFunctionSafeToSplit(const MachineFunction &MF) const override;
+
+  bool isMBBSafeToSplitToCold(const MachineBasicBlock &MBB) const override;
+
   std::optional<ParamLoadedValue>
   describeLoadedValue(const MachineInstr &MI, Register Reg) const override;
 
-  unsigned int getTailDuplicateSize(CodeGenOpt::Level OptLevel) const override;
+  unsigned int getTailDuplicateSize(CodeGenOptLevel OptLevel) const override;
 
   bool isExtendLikelyToBeFolded(MachineInstr &ExtMI,
                                 MachineRegisterInfo &MRI) const override;
@@ -335,6 +373,15 @@ public:
   static void decomposeStackOffsetForDwarfOffsets(const StackOffset &Offset,
                                                   int64_t &ByteSized,
                                                   int64_t &VGSized);
+
+  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
+
+  // Return true if address of the form BaseReg + Scale * ScaledReg + Offset can
+  // be used for a load/store of NumBytes. BaseReg is always present and
+  // implicit.
+  bool isLegalAddressingMode(unsigned NumBytes, int64_t Offset,
+                             unsigned Scale) const;
+
 #define GET_INSTRINFO_HELPER_DECLS
 #include "AArch64GenInstrInfo.inc"
 

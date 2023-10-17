@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_ERROR_TO_STRING_H
+#define LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_ERROR_TO_STRING_H
+
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string_view.h"
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_ERROR_TO_STRING
-#define LLVM_LIBC_SRC_SUPPORT_ERROR_TO_STRING
-
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 cpp::string_view get_error_string(int err_num);
 
 cpp::string_view get_error_string(int err_num, cpp::span<char> buffer);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_ERROR_TO_STRING
+#endif // LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_ERROR_TO_STRING_H

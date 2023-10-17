@@ -62,8 +62,12 @@ public:
   // Types.
   FloatType getFloat8E5M2Type();
   FloatType getFloat8E4M3FNType();
+  FloatType getFloat8E5M2FNUZType();
+  FloatType getFloat8E4M3FNUZType();
+  FloatType getFloat8E4M3B11FNUZType();
   FloatType getBF16Type();
   FloatType getF16Type();
+  FloatType getTF32Type();
   FloatType getF32Type();
   FloatType getF64Type();
   FloatType getF80Type();
@@ -113,7 +117,7 @@ public:
   // Returns a 0-valued attribute of the given `type`. This function only
   // supports boolean, integer, and 16-/32-/64-bit float types, and vector or
   // ranked tensor of them. Returns null attribute otherwise.
-  Attribute getZeroAttr(Type type);
+  TypedAttr getZeroAttr(Type type);
 
   // Convenience methods for fixed types.
   FloatAttr getF16FloatAttr(float value);
@@ -135,6 +139,9 @@ public:
   DenseIntElementsAttr getI32VectorAttr(ArrayRef<int32_t> values);
   DenseIntElementsAttr getI64VectorAttr(ArrayRef<int64_t> values);
   DenseIntElementsAttr getIndexVectorAttr(ArrayRef<int64_t> values);
+
+  DenseFPElementsAttr getF32VectorAttr(ArrayRef<float> values);
+  DenseFPElementsAttr getF64VectorAttr(ArrayRef<double> values);
 
   /// Tensor-typed DenseIntElementsAttr getters. `values` can be empty.
   /// These are generally preferable for representing general lists of integers
@@ -251,10 +258,32 @@ public:
   // Listeners
   //===--------------------------------------------------------------------===//
 
+  /// Base class for listeners.
+  struct ListenerBase {
+    /// The kind of listener.
+    enum class Kind {
+      /// OpBuilder::Listener or user-derived class.
+      OpBuilderListener = 0,
+
+      /// RewriterBase::Listener or user-derived class.
+      RewriterBaseListener = 1
+    };
+
+    Kind getKind() const { return kind; }
+
+  protected:
+    ListenerBase(Kind kind) : kind(kind) {}
+
+  private:
+    const Kind kind;
+  };
+
   /// This class represents a listener that may be used to hook into various
   /// actions within an OpBuilder.
-  struct Listener {
-    virtual ~Listener();
+  struct Listener : public ListenerBase {
+    Listener() : ListenerBase(ListenerBase::Kind::OpBuilderListener) {}
+
+    virtual ~Listener() = default;
 
     /// Notification handler for when an operation is inserted into the builder.
     /// `op` is the operation that was inserted.
@@ -263,6 +292,9 @@ public:
     /// Notification handler for when a block is created using the builder.
     /// `block` is the block that was created.
     virtual void notifyBlockCreated(Block *block) {}
+
+  protected:
+    Listener(Kind kind) : ListenerBase(kind) {}
   };
 
   /// Sets the listener of this builder to the one provided.
@@ -375,7 +407,7 @@ public:
     if (Operation *op = val.getDefiningOp()) {
       setInsertionPointAfter(op);
     } else {
-      auto blockArg = val.cast<BlockArgument>();
+      auto blockArg = llvm::cast<BlockArgument>(val);
       setInsertionPointToStart(blockArg.getOwner());
     }
   }
@@ -445,8 +477,8 @@ private:
     if (LLVM_UNLIKELY(!opName)) {
       llvm::report_fatal_error(
           "Building op `" + OpT::getOperationName() +
-          "` but it isn't registered in this MLIRContext: the dialect may not "
-          "be loaded or this operation isn't registered by the dialect. See "
+          "` but it isn't known in this MLIRContext: the dialect may not "
+          "be loaded or this operation hasn't been added by the dialect. See "
           "also https://mlir.llvm.org/getting_started/Faq/"
           "#registered-loaded-dependent-whats-up-with-dialects-management");
     }
@@ -535,14 +567,16 @@ public:
     return cast<OpT>(cloneWithoutRegions(*op.getOperation()));
   }
 
+protected:
+  /// The optional listener for events of this builder.
+  Listener *listener;
+
 private:
   /// The current block this builder is inserting into.
   Block *block = nullptr;
   /// The insertion point within the block that this builder is inserting
   /// before.
   Block::iterator insertPoint;
-  /// The optional listener for events of this builder.
-  Listener *listener;
 };
 
 } // namespace mlir

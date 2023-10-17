@@ -128,8 +128,9 @@ DynamicRegisterInfo *OperatingSystemPython::GetDynamicRegisterInfo() {
     if (!dictionary)
       return nullptr;
 
-    m_register_info_up = std::make_unique<DynamicRegisterInfo>(
+    m_register_info_up = DynamicRegisterInfo::Create(
         *dictionary, m_process->GetTarget().GetArchitecture());
+    assert(m_register_info_up);
     assert(m_register_info_up->GetNumRegisters() > 0);
     assert(m_register_info_up->GetNumRegisterSets() > 0);
   }

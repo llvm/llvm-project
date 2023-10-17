@@ -6,5 +6,5 @@ bugprone-narrowing-conversions
 ==============================
 
 The bugprone-narrowing-conversions check is an alias, please see
-`cppcoreguidelines-narrowing-conversions <../cppcoreguidelines/narrowing-conversions.html>`_
+:doc:`cppcoreguidelines-narrowing-conversions <../cppcoreguidelines/narrowing-conversions>`
 for more information.

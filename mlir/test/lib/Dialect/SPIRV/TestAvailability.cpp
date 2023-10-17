@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/Pass/Pass.h"
@@ -210,9 +211,8 @@ void ConvertToTargetEnv::runOnOperation() {
   MLIRContext *context = &getContext();
   func::FuncOp fn = getOperation();
 
-  auto targetEnv = fn.getOperation()
-                       ->getAttr(spirv::getTargetEnvAttrName())
-                       .cast<spirv::TargetEnvAttr>();
+  auto targetEnv = dyn_cast_or_null<spirv::TargetEnvAttr>(
+      fn.getOperation()->getDiscardableAttr(spirv::getTargetEnvAttrName()));
   if (!targetEnv) {
     fn.emitError("missing 'spirv.target_env' attribute");
     return signalPassFailure();

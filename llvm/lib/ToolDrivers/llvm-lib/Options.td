@@ -22,6 +22,7 @@ def libpath: P<"libpath", "Object file search path">;
 // Can't be called "list" since that's a keyword.
 def lst    : F<"list">, HelpText<"List contents of .lib file on stdout">;
 def out    : P<"out", "Path to file to write output">;
+def deffile : P<"def", "def file to use to generate import library">;
 
 def llvmlibthin : F<"llvmlibthin">,
     HelpText<"Make .lib point to .obj files instead of copying their contents">;

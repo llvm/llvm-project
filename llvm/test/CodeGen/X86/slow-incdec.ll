@@ -82,20 +82,16 @@ define void @cond_ae_to_cond_ne(ptr %p) nounwind {
 ; INCDEC:       # %bb.0: # %entry
 ; INCDEC-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; INCDEC-NEXT:    incl (%eax)
-; INCDEC-NEXT:    jne .LBB6_1
-; INCDEC-NEXT:  # %bb.2: # %if.end4
-; INCDEC-NEXT:    jmp other@PLT # TAILCALL
-; INCDEC-NEXT:  .LBB6_1: # %return
+; INCDEC-NEXT:    je other@PLT # TAILCALL
+; INCDEC-NEXT:  # %bb.1: # %return
 ; INCDEC-NEXT:    retl
 ;
 ; ADD-LABEL: cond_ae_to_cond_ne:
 ; ADD:       # %bb.0: # %entry
 ; ADD-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; ADD-NEXT:    addl $1, (%eax)
-; ADD-NEXT:    jne .LBB6_1
-; ADD-NEXT:  # %bb.2: # %if.end4
-; ADD-NEXT:    jmp other@PLT # TAILCALL
-; ADD-NEXT:  .LBB6_1: # %return
+; ADD-NEXT:    je other@PLT # TAILCALL
+; ADD-NEXT:  # %bb.1: # %return
 ; ADD-NEXT:    retl
 entry:
   %t0 = load i32, ptr %p, align 8
@@ -129,11 +125,9 @@ define void @test_tail_call(ptr %ptr) nounwind {
 ; INCDEC-NEXT:    incb a
 ; INCDEC-NEXT:    sete d
 ; INCDEC-NEXT:    testb %al, %al
-; INCDEC-NEXT:    jne .LBB7_2
+; INCDEC-NEXT:    jne external_b@PLT # TAILCALL
 ; INCDEC-NEXT:  # %bb.1: # %then
 ; INCDEC-NEXT:    jmp external_a@PLT # TAILCALL
-; INCDEC-NEXT:  .LBB7_2: # %else
-; INCDEC-NEXT:    jmp external_b@PLT # TAILCALL
 ;
 ; ADD-LABEL: test_tail_call:
 ; ADD:       # %bb.0: # %entry
@@ -143,11 +137,9 @@ define void @test_tail_call(ptr %ptr) nounwind {
 ; ADD-NEXT:    addb $1, a
 ; ADD-NEXT:    sete d
 ; ADD-NEXT:    testb %al, %al
-; ADD-NEXT:    jne .LBB7_2
+; ADD-NEXT:    jne external_b@PLT # TAILCALL
 ; ADD-NEXT:  # %bb.1: # %then
 ; ADD-NEXT:    jmp external_a@PLT # TAILCALL
-; ADD-NEXT:  .LBB7_2: # %else
-; ADD-NEXT:    jmp external_b@PLT # TAILCALL
 entry:
   %val = load i32, ptr %ptr
   %add_ov = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %val, i32 1)

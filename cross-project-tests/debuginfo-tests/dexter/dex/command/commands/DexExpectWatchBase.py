@@ -20,6 +20,7 @@ from dex.command.CommandBase import CommandBase, StepExpectInfo
 from dex.command.StepValueInfo import StepValueInfo
 from dex.utils.Exceptions import NonFloatValueInCommand
 
+
 class AddressExpression(object):
     def __init__(self, name, offset=0):
         self.name = name
@@ -36,37 +37,47 @@ class AddressExpression(object):
         # Technically we should fill(8) if we're debugging on a 32bit architecture?
         return format_address(resolutions[self.name] + self.offset)
 
+
 def format_address(value, address_width=64):
-    return "0x" + hex(value)[2:].zfill(math.ceil(address_width/4))
+    return "0x" + hex(value)[2:].zfill(math.ceil(address_width / 4))
+
 
 def resolved_value(value, resolutions):
-    return value.resolved_value(resolutions) if isinstance(value, AddressExpression) else value
+    return (
+        value.resolved_value(resolutions)
+        if isinstance(value, AddressExpression)
+        else value
+    )
+
 
 class DexExpectWatchBase(CommandBase):
     def __init__(self, *args, **kwargs):
         if len(args) < 2:
-            raise TypeError('expected at least two args')
+            raise TypeError("expected at least two args")
 
         self.expression = args[0]
-        self.values = [arg if isinstance(arg, AddressExpression) else str(arg) for arg in args[1:]]
+        self.values = [
+            arg if isinstance(arg, AddressExpression) else str(arg) for arg in args[1:]
+        ]
         try:
-            on_line = kwargs.pop('on_line')
+            on_line = kwargs.pop("on_line")
             self._from_line = on_line
             self._to_line = on_line
         except KeyError:
-            self._from_line = kwargs.pop('from_line', 1)
-            self._to_line = kwargs.pop('to_line', 999999)
-        self._require_in_order = kwargs.pop('require_in_order', True)
-        self.float_range = kwargs.pop('float_range', None)
+            self._from_line = kwargs.pop("from_line", 1)
+            self._to_line = kwargs.pop("to_line", 999999)
+        self._require_in_order = kwargs.pop("require_in_order", True)
+        self.float_range = kwargs.pop("float_range", None)
         if self.float_range is not None:
             for value in self.values:
                 try:
                     float(value)
                 except ValueError:
-                    raise NonFloatValueInCommand(f'Non-float value \'{value}\' when float_range arg provided')
+                    raise NonFloatValueInCommand(
+                        f"Non-float value '{value}' when float_range arg provided"
+                    )
         if kwargs:
-            raise TypeError('unexpected named args: {}'.format(
-                ', '.join(kwargs)))
+            raise TypeError("unexpected named args: {}".format(", ".join(kwargs)))
 
         # Number of times that this watch has been encountered.
         self.times_encountered = 0
@@ -108,7 +119,11 @@ class DexExpectWatchBase(CommandBase):
         super(DexExpectWatchBase, self).__init__()
 
     def resolve_value(self, value):
-        return value.resolved_value(self.address_resolutions) if isinstance(value, AddressExpression) else value
+        return (
+            value.resolved_value(self.address_resolutions)
+            if isinstance(value, AddressExpression)
+            else value
+        )
 
     def describe_value(self, value):
         if isinstance(value, AddressExpression):
@@ -117,14 +132,18 @@ class DexExpectWatchBase(CommandBase):
                 offset = f"+{value.offset}"
             elif value.offset < 0:
                 offset = str(value.offset)
-            desc =  f"address '{value.name}'{offset}"
+            desc = f"address '{value.name}'{offset}"
             if self.resolve_value(value) is not None:
                 desc += f" ({self.resolve_value(value)})"
             return desc
         return value
 
     def get_watches(self):
-        return [StepExpectInfo(self.expression, self.path, 0, range(self._from_line, self._to_line + 1))]
+        return [
+            StepExpectInfo(
+                self.expression, self.path, 0, range(self._from_line, self._to_line + 1)
+            )
+        ]
 
     @property
     def line_range(self):
@@ -136,12 +155,18 @@ class DexExpectWatchBase(CommandBase):
 
     @property
     def encountered_values(self):
-        return sorted(list(set(self.describe_value(v) for v in set(self.values) - self._missing_values)))
+        return sorted(
+            list(
+                set(
+                    self.describe_value(v)
+                    for v in set(self.values) - self._missing_values
+                )
+            )
+        )
 
     @abc.abstractmethod
     def _get_expected_field(self, watch):
-        """Return a field from watch that this ExpectWatch command is checking.
-        """
+        """Return a field from watch that this ExpectWatch command is checking."""
 
     def _match_expected_floating_point(self, value):
         """Checks to see whether value is a float that falls within the
@@ -155,13 +180,13 @@ class DexExpectWatchBase(CommandBase):
 
         possible_values = self.values
         for expected in possible_values:
-          try:
-              expected_as_float = float(expected)
-              difference = abs(value_as_float - expected_as_float)
-              if difference <= self.float_range:
-                  return expected
-          except ValueError:
-              pass
+            try:
+                expected_as_float = float(expected)
+                difference = abs(value_as_float - expected_as_float)
+                if difference <= self.float_range:
+                    return expected
+            except ValueError:
+                pass
         return value
 
     def _maybe_fix_float(self, value):
@@ -190,9 +215,11 @@ class DexExpectWatchBase(CommandBase):
         # Check to see if this value matches with a resolved address.
         matching_address = None
         for v in self.values:
-            if (isinstance(v, AddressExpression) and
-                    v.name in self.address_resolutions and
-                    self.resolve_value(v) == expected_value):
+            if (
+                isinstance(v, AddressExpression)
+                and v.name in self.address_resolutions
+                and self.resolve_value(v) == expected_value
+            ):
                 matching_address = v
                 break
 
@@ -203,7 +230,9 @@ class DexExpectWatchBase(CommandBase):
             return
 
         self.expected_watches.append(step_info)
-        value_to_remove = matching_address if matching_address is not None else expected_value
+        value_to_remove = (
+            matching_address if matching_address is not None else expected_value
+        )
         try:
             self._missing_values.remove(value_to_remove)
         except KeyError:
@@ -214,20 +243,23 @@ class DexExpectWatchBase(CommandBase):
         or not.
         """
         differences = []
-        actual_values = [self._maybe_fix_float(w.expected_value) for w in actual_watches]
-        value_differences = list(difflib.Differ().compare(actual_values,
-                                                          expected_values))
+        actual_values = [
+            self._maybe_fix_float(w.expected_value) for w in actual_watches
+        ]
+        value_differences = list(
+            difflib.Differ().compare(actual_values, expected_values)
+        )
 
         missing_value = False
         index = 0
         for vd in value_differences:
             kind = vd[0]
-            if kind == '+':
+            if kind == "+":
                 # A value that is encountered in the expected list but not in the
                 # actual list.  We'll keep a note that something is wrong and flag
                 # the next value that matches as misordered.
                 missing_value = True
-            elif kind == ' ':
+            elif kind == " ":
                 # This value is as expected.  It might still be wrong if we've
                 # previously encountered a value that is in the expected list but
                 #  not the actual list.
@@ -235,13 +267,13 @@ class DexExpectWatchBase(CommandBase):
                     missing_value = False
                     differences.append(actual_watches[index])
                 index += 1
-            elif kind == '-':
+            elif kind == "-":
                 # A value that is encountered in the actual list but not the
                 #  expected list.
                 differences.append(actual_watches[index])
                 index += 1
             else:
-                assert False, 'unexpected diff:{}'.format(vd)
+                assert False, "unexpected diff:{}".format(vd)
 
         return differences
 
@@ -249,17 +281,19 @@ class DexExpectWatchBase(CommandBase):
         for step in step_collection.steps:
             loc = step.current_location
 
-            if (loc.path and self.path and
-                PurePath(loc.path) == PurePath(self.path) and
-                loc.lineno in self.line_range):
+            if (
+                loc.path
+                and self.path
+                and PurePath(loc.path) == PurePath(self.path)
+                and loc.lineno in self.line_range
+            ):
                 try:
                     watch = step.program_state.frames[0].watches[self.expression]
                 except KeyError:
                     pass
                 else:
                     expected_field = self._get_expected_field(watch)
-                    step_info = StepValueInfo(step.step_index, watch, 
-                                              expected_field)
+                    step_info = StepValueInfo(step.step_index, watch, expected_field)
                     self._handle_watch(step_info)
 
         if self._require_in_order:
@@ -276,6 +310,6 @@ class DexExpectWatchBase(CommandBase):
 
             resolved_values = [self.resolve_value(v) for v in self.values]
             self.misordered_watches = self._check_watch_order(
-                value_change_watches, [
-                    v for v in resolved_values if v in all_expected_values
-                ])
+                value_change_watches,
+                [v for v in resolved_values if v in all_expected_values],
+            )

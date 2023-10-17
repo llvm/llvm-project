@@ -8,6 +8,7 @@
 
 #include "CXIndexDataConsumer.h"
 #include "CIndexDiagnostic.h"
+#include "CXFile.h"
 #include "CXTranslationUnit.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
@@ -434,7 +435,6 @@ bool CXIndexDataConsumer::isFunctionLocalDecl(const Decl *D) {
     case InternalLinkage:
       return true;
     case VisibleNoLinkage:
-    case ModuleInternalLinkage:
     case UniqueExternalLinkage:
       llvm_unreachable("Not a sema linkage");
     case ModuleLinkage:
@@ -452,13 +452,11 @@ bool CXIndexDataConsumer::shouldAbort() {
   return CB.abortQuery(ClientData, nullptr);
 }
 
-void CXIndexDataConsumer::enteredMainFile(const FileEntry *File) {
+void CXIndexDataConsumer::enteredMainFile(OptionalFileEntryRef File) {
   if (File && CB.enteredMainFile) {
     CXIdxClientFile idxFile =
-      CB.enteredMainFile(ClientData,
-                         static_cast<CXFile>(const_cast<FileEntry *>(File)),
-                         nullptr);
-    FileMap[File] = idxFile;
+        CB.enteredMainFile(ClientData, cxfile::makeCXFile(*File), nullptr);
+    FileMap[*File] = idxFile;
   }
 }
 
@@ -475,8 +473,7 @@ void CXIndexDataConsumer::ppIncludedFile(SourceLocation hashLoc,
   ScratchAlloc SA(*this);
   CXIdxIncludedFileInfo Info = { getIndexLoc(hashLoc),
                                  SA.toCStr(filename),
-                                 static_cast<CXFile>(
-                                   const_cast<FileEntry *>(FE)),
+                                 cxfile::makeCXFile(File),
                                  isImport, isAngled, isModuleImport };
   CXIdxClientFile idxFile = CB.ppIncludedFile(ClientData, &Info);
   FileMap[FE] = idxFile;
@@ -498,23 +495,20 @@ void CXIndexDataConsumer::importedModule(const ImportDecl *ImportD) {
     if (SrcMod->getTopLevelModule() == Mod->getTopLevelModule())
       return;
 
-  FileEntry *FE = nullptr;
-  if (auto File = Mod->getASTFile())
-    FE = const_cast<FileEntry *>(&File->getFileEntry());
-  CXIdxImportedASTFileInfo Info = {static_cast<CXFile>(FE), Mod,
+  OptionalFileEntryRef FE = Mod->getASTFile();
+  CXIdxImportedASTFileInfo Info = {cxfile::makeCXFile(FE), Mod,
                                    getIndexLoc(ImportD->getLocation()),
                                    ImportD->isImplicit()};
   CXIdxClientASTFile astFile = CB.importedASTFile(ClientData, &Info);
   (void)astFile;
 }
 
-void CXIndexDataConsumer::importedPCH(const FileEntry *File) {
+void CXIndexDataConsumer::importedPCH(FileEntryRef File) {
   if (!CB.importedASTFile)
     return;
 
   CXIdxImportedASTFileInfo Info = {
-                                    static_cast<CXFile>(
-                                      const_cast<FileEntry *>(File)),
+                                    cxfile::makeCXFile(File),
                                     /*module=*/nullptr,
                                     getIndexLoc(SourceLocation()),
                                     /*isImplicit=*/false
@@ -971,12 +965,7 @@ void CXIndexDataConsumer::addContainerInMap(const DeclContext *DC,
 }
 
 CXIdxClientEntity CXIndexDataConsumer::getClientEntity(const Decl *D) const {
-  if (!D)
-    return nullptr;
-  EntityMapTy::const_iterator I = EntityMap.find(D);
-  if (I == EntityMap.end())
-    return nullptr;
-  return I->second;
+  return D ? EntityMap.lookup(D) : nullptr;
 }
 
 void CXIndexDataConsumer::setClientEntity(const Decl *D, CXIdxClientEntity client) {
@@ -1080,25 +1069,11 @@ CXIndexDataConsumer::getEntityContainer(const Decl *D) const {
 
 CXIdxClientContainer
 CXIndexDataConsumer::getClientContainerForDC(const DeclContext *DC) const {
-  if (!DC)
-    return nullptr;
-
-  ContainerMapTy::const_iterator I = ContainerMap.find(DC);
-  if (I == ContainerMap.end())
-    return nullptr;
-
-  return I->second;
+  return DC ? ContainerMap.lookup(DC) : nullptr;
 }
 
 CXIdxClientFile CXIndexDataConsumer::getIndexFile(const FileEntry *File) {
-  if (!File)
-    return nullptr;
-
-  FileMapTy::iterator FI = FileMap.find(File);
-  if (FI != FileMap.end())
-    return FI->second;
-
-  return nullptr;
+  return File ? FileMap.lookup(File) : nullptr;
 }
 
 CXIdxLoc CXIndexDataConsumer::getIndexLoc(SourceLocation Loc) const {
@@ -1128,11 +1103,11 @@ void CXIndexDataConsumer::translateLoc(SourceLocation Loc,
   if (FID.isInvalid())
     return;
   
-  const FileEntry *FE = SM.getFileEntryForID(FID);
+  OptionalFileEntryRefDegradesToFileEntryPtr FE = SM.getFileEntryRefForID(FID);
   if (indexFile)
     *indexFile = getIndexFile(FE);
   if (file)
-    *file = const_cast<FileEntry *>(FE);
+    *file = cxfile::makeCXFile(FE);
   if (line)
     *line = SM.getLineNumber(FID, FileOffset);
   if (column)

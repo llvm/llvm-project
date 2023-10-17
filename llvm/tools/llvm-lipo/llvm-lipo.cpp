@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -28,8 +27,10 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/TextAPI/Architecture.h"
 #include <optional>
 
@@ -66,9 +67,7 @@ static const StringRef ToolName = "llvm-lipo";
 namespace {
 enum LipoID {
   LIPO_INVALID = 0, // This is not an option ID.
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  LIPO_##ID,
+#define OPTION(...) LLVM_MAKE_OPT_ID_WITH_ID_PREFIX(LIPO_, __VA_ARGS__),
 #include "LipoOpts.inc"
 #undef OPTION
 };
@@ -81,13 +80,9 @@ namespace lipo {
 #include "LipoOpts.inc"
 #undef PREFIX
 
+using namespace llvm::opt;
 static constexpr opt::OptTable::Info LipoInfoTable[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  {PREFIX,       NAME,      HELPTEXT,                                          \
-   METAVAR,      LIPO_##ID, opt::Option::KIND##Class,                          \
-   PARAM,        FLAGS,     LIPO_##GROUP,                                      \
-   LIPO_##ALIAS, ALIASARGS, VALUES},
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(LIPO_, __VA_ARGS__),
 #include "LipoOpts.inc"
 #undef OPTION
 };
@@ -121,6 +116,7 @@ struct Config {
   std::string ArchType;
   std::string OutputFile;
   LipoAction ActionToPerform;
+  bool UseFat64;
 };
 
 static Slice createSliceFromArchive(LLVMContext &LLVMCtx, const Archive &A) {
@@ -227,6 +223,8 @@ static Config parseLipoOptions(ArrayRef<const char *> ArgsArr) {
                   Twine(1 << Entry.first->second) + ", " +
                   Twine(AlignmentValue));
   }
+
+  C.UseFat64 = InputArgs.hasArg(LIPO_fat64);
 
   SmallVector<opt::Arg *, 1> ActionArgs(InputArgs.filtered(LIPO_action_group));
   if (ActionArgs.empty())
@@ -601,9 +599,11 @@ buildSlices(LLVMContext &LLVMCtx, ArrayRef<OwningBinary<Binary>> InputBinaries,
   return Slices;
 }
 
-[[noreturn]] static void createUniversalBinary(
-    LLVMContext &LLVMCtx, ArrayRef<OwningBinary<Binary>> InputBinaries,
-    const StringMap<const uint32_t> &Alignments, StringRef OutputFileName) {
+[[noreturn]] static void
+createUniversalBinary(LLVMContext &LLVMCtx,
+                      ArrayRef<OwningBinary<Binary>> InputBinaries,
+                      const StringMap<const uint32_t> &Alignments,
+                      StringRef OutputFileName, FatHeaderType HeaderType) {
   assert(InputBinaries.size() >= 1 && "Incorrect number of input binaries");
   assert(!OutputFileName.empty() && "Create expects a single output file");
 
@@ -614,7 +614,7 @@ buildSlices(LLVMContext &LLVMCtx, ArrayRef<OwningBinary<Binary>> InputBinaries,
   checkUnusedAlignments(Slices, Alignments);
 
   llvm::stable_sort(Slices);
-  if (Error E = writeUniversalBinary(Slices, OutputFileName))
+  if (Error E = writeUniversalBinary(Slices, OutputFileName, HeaderType))
     reportError(std::move(E));
 
   exit(EXIT_SUCCESS);
@@ -723,7 +723,7 @@ replaceSlices(LLVMContext &LLVMCtx,
   exit(EXIT_SUCCESS);
 }
 
-int llvm_lipo_main(int argc, char **argv) {
+int llvm_lipo_main(int argc, char **argv, const llvm::ToolContext &) {
   InitLLVM X(argc, argv);
   llvm::InitializeAllTargetInfos();
   llvm::InitializeAllTargetMCs();
@@ -752,8 +752,9 @@ int llvm_lipo_main(int argc, char **argv) {
                  C.OutputFile);
     break;
   case LipoAction::CreateUniversal:
-    createUniversalBinary(LLVMCtx, InputBinaries, C.SegmentAlignments,
-                          C.OutputFile);
+    createUniversalBinary(
+        LLVMCtx, InputBinaries, C.SegmentAlignments, C.OutputFile,
+        C.UseFat64 ? FatHeaderType::Fat64Header : FatHeaderType::FatHeader);
     break;
   case LipoAction::ReplaceArch:
     replaceSlices(LLVMCtx, InputBinaries, C.SegmentAlignments, C.OutputFile,

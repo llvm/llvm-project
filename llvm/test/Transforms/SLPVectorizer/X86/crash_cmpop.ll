@@ -32,7 +32,7 @@ define void @testfunc(ptr nocapture %dest, ptr nocapture readonly %src) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x float> [[TMP10]], i32 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x float> [[TMP10]], i32 1
 ; CHECK-NEXT:    [[ADD13]] = fadd float [[TMP11]], [[TMP12]]
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x float> [[TMP10]], <2 x float> poison, <2 x i32> <i32 1, i32 undef>
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x float> [[TMP10]], <2 x float> poison, <2 x i32> <i32 1, i32 poison>
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x float> [[TMP13]], float [[ADD13]], i32 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = fcmp olt <2 x float> [[TMP14]], <float 1.000000e+00, float 1.000000e+00>
 ; CHECK-NEXT:    [[TMP16:%.*]] = select <2 x i1> [[TMP15]], <2 x float> [[TMP14]], <2 x float> <float 1.000000e+00, float 1.000000e+00>

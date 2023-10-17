@@ -1,0 +1,10 @@
+add_entrypoint_object(
+  rpc_host_call
+  SRCS
+    rpc_host_call.cpp
+  HDRS
+    rpc_host_call.h
+  DEPENDS
+    libc.src.__support.RPC.rpc_client
+    libc.src.__support.GPU.utils
+)

@@ -7,6 +7,7 @@ static_library("Utility") {
     "//llvm/lib/TargetParser",
   ]
   sources = [
+    "AddressableBits.cpp",
     "ArchSpec.cpp",
     "Args.cpp",
     "Baton.cpp",
@@ -22,6 +23,7 @@ static_library("Utility") {
     "Environment.cpp",
     "Event.cpp",
     "FileSpec.cpp",
+    "FileSpecList.cpp",
     "GDBRemote.cpp",
     "IOObject.cpp",
     "Instrumentation.cpp",
@@ -56,6 +58,7 @@ static_library("Utility") {
     "VASprintf.cpp",
     "VMRange.cpp",
     "XcodeSDK.cpp",
+    "ZipFile.cpp",
   ]
 
   if (current_os == "win") {

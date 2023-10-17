@@ -11,16 +11,18 @@
 // MemorySanitizer allocator.
 //===----------------------------------------------------------------------===//
 
+#include "msan_allocator.h"
+
+#include "msan.h"
+#include "msan_interface_internal.h"
+#include "msan_origin.h"
+#include "msan_poisoning.h"
+#include "msan_thread.h"
 #include "sanitizer_common/sanitizer_allocator.h"
 #include "sanitizer_common/sanitizer_allocator_checks.h"
 #include "sanitizer_common/sanitizer_allocator_interface.h"
 #include "sanitizer_common/sanitizer_allocator_report.h"
 #include "sanitizer_common/sanitizer_errno.h"
-#include "msan.h"
-#include "msan_allocator.h"
-#include "msan_origin.h"
-#include "msan_thread.h"
-#include "msan_poisoning.h"
 
 namespace __msan {
 
@@ -30,6 +32,8 @@ struct Metadata {
 
 struct MsanMapUnmapCallback {
   void OnMap(uptr p, uptr size) const {}
+  void OnMapSecondary(uptr p, uptr size, uptr user_begin,
+                      uptr user_size) const {}
   void OnUnmap(uptr p, uptr size) const {
     __msan_unpoison((void *)p, size);
 
@@ -65,6 +69,22 @@ static const uptr kAllocatorSpace = 0x700000000000ULL;
 static const uptr kAllocatorSpace = 0x600000000000ULL;
 #endif
 static const uptr kMaxAllowedMallocSize = 8UL << 30;
+
+struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
+  static const uptr kSpaceBeg = kAllocatorSpace;
+  static const uptr kSpaceSize = 0x40000000000;  // 4T.
+  static const uptr kMetadataSize = sizeof(Metadata);
+  typedef DefaultSizeClassMap SizeClassMap;
+  typedef MsanMapUnmapCallback MapUnmapCallback;
+  static const uptr kFlags = 0;
+  using AddressSpaceView = LocalAddressSpaceView;
+};
+
+typedef SizeClassAllocator64<AP64> PrimaryAllocator;
+
+#elif defined(__loongarch_lp64)
+const uptr kAllocatorSpace = 0x700000000000ULL;
+const uptr kMaxAllowedMallocSize = 8UL << 30;
 
 struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
   static const uptr kSpaceBeg = kAllocatorSpace;
@@ -145,8 +165,13 @@ AllocatorCache *GetAllocatorCache(MsanThreadLocalMallocStorage *ms) {
   return reinterpret_cast<AllocatorCache *>(ms->allocator_cache);
 }
 
+void MsanThreadLocalMallocStorage::Init() {
+  allocator.InitCache(GetAllocatorCache(this));
+}
+
 void MsanThreadLocalMallocStorage::CommitBack() {
   allocator.SwallowCache(GetAllocatorCache(this));
+  allocator.DestroyCache(GetAllocatorCache(this));
 }
 
 static void *MsanAllocate(StackTrace *stack, uptr size, uptr alignment,
@@ -183,7 +208,10 @@ static void *MsanAllocate(StackTrace *stack, uptr size, uptr alignment,
       reinterpret_cast<Metadata *>(allocator.GetMetaData(allocated));
   meta->requested_size = size;
   if (zeroise) {
-    __msan_clear_and_unpoison(allocated, size);
+    if (allocator.FromPrimary(allocated))
+      __msan_clear_and_unpoison(allocated, size);
+    else
+      __msan_unpoison(allocated, size);  // Mem is already zeroed.
   } else if (flags()->poison_in_malloc) {
     __msan_poison(allocated, size);
     if (__msan_get_track_origins()) {
@@ -206,8 +234,9 @@ void MsanDeallocate(StackTrace *stack, void *p) {
   uptr size = meta->requested_size;
   meta->requested_size = 0;
   // This memory will not be reused by anyone else, so we are free to keep it
-  // poisoned.
-  if (flags()->poison_in_free) {
+  // poisoned. The secondary allocator will unmap and unpoison by
+  // MsanMapUnmapCallback, no need to poison it here.
+  if (flags()->poison_in_free && allocator.FromPrimary(p)) {
     __msan_poison(p, size);
     if (__msan_get_track_origins()) {
       stack->tag = StackTrace::TAG_DEALLOC;
@@ -260,12 +289,31 @@ static void *MsanCalloc(StackTrace *stack, uptr nmemb, uptr size) {
   return MsanAllocate(stack, nmemb * size, sizeof(u64), true);
 }
 
+static const void *AllocationBegin(const void *p) {
+  if (!p)
+    return nullptr;
+  void *beg = allocator.GetBlockBegin(p);
+  if (!beg)
+    return nullptr;
+  Metadata *b = (Metadata *)allocator.GetMetaData(beg);
+  if (!b)
+    return nullptr;
+  if (b->requested_size == 0)
+    return nullptr;
+
+  return (const void *)beg;
+}
+
 static uptr AllocationSize(const void *p) {
   if (!p) return 0;
   const void *beg = allocator.GetBlockBegin(p);
   if (beg != p) return 0;
   Metadata *b = (Metadata *)allocator.GetMetaData(p);
   return b->requested_size;
+}
+
+static uptr AllocationSizeFast(const void *p) {
+  return reinterpret_cast<Metadata *>(allocator.GetMetaData(p))->requested_size;
 }
 
 void *msan_malloc(uptr size, StackTrace *stack) {
@@ -373,4 +421,17 @@ uptr __sanitizer_get_estimated_allocated_size(uptr size) { return size; }
 
 int __sanitizer_get_ownership(const void *p) { return AllocationSize(p) != 0; }
 
+const void *__sanitizer_get_allocated_begin(const void *p) {
+  return AllocationBegin(p);
+}
+
 uptr __sanitizer_get_allocated_size(const void *p) { return AllocationSize(p); }
+
+uptr __sanitizer_get_allocated_size_fast(const void *p) {
+  DCHECK_EQ(p, __sanitizer_get_allocated_begin(p));
+  uptr ret = AllocationSizeFast(p);
+  DCHECK_EQ(ret, __sanitizer_get_allocated_size(p));
+  return ret;
+}
+
+void __sanitizer_purge_allocator() { allocator.ForceReleaseToOS(); }

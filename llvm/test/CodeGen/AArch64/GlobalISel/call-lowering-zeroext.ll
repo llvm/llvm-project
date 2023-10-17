@@ -141,8 +141,8 @@ define i32 @caller_zeroext_i1() {
   ; CHECK-NEXT:   [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[ZEXT]](s8)
   ; CHECK-NEXT:   $w0 = COPY [[ZEXT1]](s32)
   ; CHECK-NEXT:   BL @callee_zeroext_i1, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit-def $w0
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
   ; CHECK-NEXT:   $w0 = COPY [[COPY]](s32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   %r = call i32 @callee_zeroext_i1(i1 zeroext true)

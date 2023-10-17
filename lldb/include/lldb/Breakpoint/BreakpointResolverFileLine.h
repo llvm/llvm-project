@@ -59,7 +59,7 @@ public:
 
 protected:
   void FilterContexts(SymbolContextList &sc_list);
-  void DeduceSourceMapping(SymbolContextList &sc_list);
+  void DeduceSourceMapping(const SymbolContextList &sc_list);
 
   friend class Breakpoint;
   SourceLocationSpec m_location_spec;

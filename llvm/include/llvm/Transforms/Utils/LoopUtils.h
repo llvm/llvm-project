@@ -76,10 +76,14 @@ bool formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
 /// This function may introduce unused PHI nodes. If \p PHIsToRemove is not
 /// nullptr, those are added to it (before removing, the caller has to check if
 /// they still do not have any uses). Otherwise the PHIs are directly removed.
+///
+/// If \p InsertedPHIs is not nullptr, inserted phis will be added to this
+/// vector.
 bool formLCSSAForInstructions(
     SmallVectorImpl<Instruction *> &Worklist, const DominatorTree &DT,
-    const LoopInfo &LI, ScalarEvolution *SE, IRBuilderBase &Builder,
-    SmallVectorImpl<PHINode *> *PHIsToRemove = nullptr);
+    const LoopInfo &LI, ScalarEvolution *SE,
+    SmallVectorImpl<PHINode *> *PHIsToRemove = nullptr,
+    SmallVectorImpl<PHINode *> *InsertedPHIs = nullptr);
 
 /// Put loop into LCSSA form.
 ///
@@ -116,10 +120,9 @@ public:
   // Explicitly set limits.
   SinkAndHoistLICMFlags(unsigned LicmMssaOptCap,
                         unsigned LicmMssaNoAccForPromotionCap, bool IsSink,
-                        Loop *L = nullptr, MemorySSA *MSSA = nullptr);
+                        Loop &L, MemorySSA &MSSA);
   // Use default limits.
-  SinkAndHoistLICMFlags(bool IsSink, Loop *L = nullptr,
-                        MemorySSA *MSSA = nullptr);
+  SinkAndHoistLICMFlags(bool IsSink, Loop &L, MemorySSA &MSSA);
 
   void setIsSink(bool B) { IsSink = B; }
   bool getIsSink() { return IsSink; }
@@ -174,6 +177,11 @@ bool hoistRegion(DomTreeNode *, AAResults *, LoopInfo *, DominatorTree *,
                  MemorySSAUpdater &, ScalarEvolution *, ICFLoopSafetyInfo *,
                  SinkAndHoistLICMFlags &, OptimizationRemarkEmitter *, bool,
                  bool AllowSpeculation);
+
+/// Return true if the induction variable \p IV in a Loop whose latch is
+/// \p LatchBlock would become dead if the exit test \p Cond were removed.
+/// Conservatively returns false if analysis is insufficient.
+bool isAlmostDeadIV(PHINode *IV, BasicBlock *LatchBlock, Value *Cond);
 
 /// This function deletes dead loops. The caller of this function needs to
 /// guarantee that the loop is infact dead.
@@ -349,17 +357,20 @@ bool canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                         SinkAndHoistLICMFlags &LICMFlags,
                         OptimizationRemarkEmitter *ORE = nullptr);
 
+/// Returns the min/max intrinsic used when expanding a min/max reduction.
+Intrinsic::ID getMinMaxReductionIntrinsicOp(RecurKind RK);
+
 /// Returns the comparison predicate used when expanding a min/max reduction.
 CmpInst::Predicate getMinMaxReductionPredicate(RecurKind RK);
 
-/// See RecurrenceDescriptor::isSelectCmpPattern for a description of the
-/// pattern we are trying to match. In this pattern we are only ever selecting
-/// between two values: 1) an initial PHI start value, and 2) a loop invariant
-/// value. This function uses \p LoopExitInst to determine 2), which we then use
-/// to select between \p Left and \p Right. Any lane value in \p Left that
-/// matches 2) will be merged into \p Right.
-Value *createSelectCmpOp(IRBuilderBase &Builder, Value *StartVal, RecurKind RK,
-                         Value *Left, Value *Right);
+/// See RecurrenceDescriptor::isAnyOfPattern for a description of the pattern we
+/// are trying to match. In this pattern, we are only ever selecting between two
+/// values: 1) an initial start value \p StartVal of the reduction PHI, and 2) a
+/// loop invariant value. If any of lane value in \p Left, \p Right is not equal
+/// to \p StartVal, select the loop invariant value. This is done by selecting
+/// \p Right iff \p Left is equal to \p StartVal.
+Value *createAnyOfOp(IRBuilderBase &Builder, Value *StartVal, RecurKind RK,
+                     Value *Left, Value *Right);
 
 /// Returns a Min/Max operation corresponding to MinMaxRecurrenceKind.
 /// The Builder's fast-math-flags must be set to propagate the expected values.
@@ -381,26 +392,22 @@ Value *getShuffleReduction(IRBuilderBase &Builder, Value *Src, unsigned Op,
 /// The target is queried to determine if intrinsics or shuffle sequences are
 /// required to implement the reduction.
 /// Fast-math-flags are propagated using the IRBuilder's setting.
-Value *createSimpleTargetReduction(IRBuilderBase &B,
-                                   const TargetTransformInfo *TTI, Value *Src,
+Value *createSimpleTargetReduction(IRBuilderBase &B, Value *Src,
                                    RecurKind RdxKind);
 
 /// Create a target reduction of the given vector \p Src for a reduction of the
-/// kind RecurKind::SelectICmp or RecurKind::SelectFCmp. The reduction operation
-/// is described by \p Desc.
-Value *createSelectCmpTargetReduction(IRBuilderBase &B,
-                                      const TargetTransformInfo *TTI,
-                                      Value *Src,
-                                      const RecurrenceDescriptor &Desc,
-                                      PHINode *OrigPhi);
+/// kind RecurKind::IAnyOf or RecurKind::FAnyOf. The reduction operation is
+/// described by \p Desc.
+Value *createAnyOfTargetReduction(IRBuilderBase &B, Value *Src,
+                                  const RecurrenceDescriptor &Desc,
+                                  PHINode *OrigPhi);
 
 /// Create a generic target reduction using a recurrence descriptor \p Desc
 /// The target is queried to determine if intrinsics or shuffle sequences are
 /// required to implement the reduction.
 /// Fast-math-flags are propagated using the RecurrenceDescriptor.
-Value *createTargetReduction(IRBuilderBase &B, const TargetTransformInfo *TTI,
-                             const RecurrenceDescriptor &Desc, Value *Src,
-                             PHINode *OrigPhi = nullptr);
+Value *createTargetReduction(IRBuilderBase &B, const RecurrenceDescriptor &Desc,
+                             Value *Src, PHINode *OrigPhi = nullptr);
 
 /// Create an ordered reduction intrinsic using the given recurrence
 /// descriptor \p Desc.
@@ -424,6 +431,14 @@ bool isKnownNegativeInLoop(const SCEV *S, const Loop *L, ScalarEvolution &SE);
 /// Returns true if we can prove that \p S is defined and always non-negative in
 /// loop \p L.
 bool isKnownNonNegativeInLoop(const SCEV *S, const Loop *L,
+                              ScalarEvolution &SE);
+/// Returns true if we can prove that \p S is defined and always positive in
+/// loop \p L.
+bool isKnownPositiveInLoop(const SCEV *S, const Loop *L, ScalarEvolution &SE);
+
+/// Returns true if we can prove that \p S is defined and always non-positive in
+/// loop \p L.
+bool isKnownNonPositiveInLoop(const SCEV *S, const Loop *L,
                               ScalarEvolution &SE);
 
 /// Returns true if \p S is defined and never is equal to signed/unsigned max.
@@ -505,7 +520,7 @@ Loop *cloneLoop(Loop *L, Loop *PL, ValueToValueMapTy &VM,
 Value *
 addRuntimeChecks(Instruction *Loc, Loop *TheLoop,
                  const SmallVectorImpl<RuntimePointerCheck> &PointerChecks,
-                 SCEVExpander &Expander);
+                 SCEVExpander &Expander, bool HoistRuntimeChecks = false);
 
 Value *addDiffRuntimeChecks(
     Instruction *Loc, ArrayRef<PointerDiffInfo> Checks, SCEVExpander &Expander,

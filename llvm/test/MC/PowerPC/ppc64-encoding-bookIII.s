@@ -170,6 +170,26 @@
 # CHECK-LE: tlbie 4                         # encoding: [0x64,0x22,0x00,0x7c]
             tlbie %r4
 
+# CHECK-BE: tlbilx 1, 4, 5                  # encoding: [0x7c,0x24,0x28,0x24]
+# CHECK-LE: tlbilx 1, 4, 5                  # encoding: [0x24,0x28,0x24,0x7c]
+            tlbilx 1, %r4, %r5
+
+# CHECK-BE: tlbilxlpid                      # encoding: [0x7c,0x00,0x00,0x24]
+# CHECK-LE: tlbilxlpid                      # encoding: [0x24,0x00,0x00,0x7c]
+            tlbilxlpid
+
+# CHECK-BE: tlbilxpid                       # encoding: [0x7c,0x20,0x00,0x24]
+# CHECK-LE: tlbilxpid                       # encoding: [0x24,0x00,0x20,0x7c]
+            tlbilxpid
+
+# CHECK-BE: tlbilxva 4, 5                   # encoding: [0x7c,0x64,0x28,0x24]
+# CHECK-LE: tlbilxva 4, 5                   # encoding: [0x24,0x28,0x64,0x7c]
+            tlbilxva %r4, %r5
+
+# CHECK-BE: tlbilxva 0, 5                   # encoding: [0x7c,0x60,0x28,0x24]
+# CHECK-LE: tlbilxva 0, 5                   # encoding: [0x24,0x28,0x60,0x7c]
+            tlbilxva %r5
+
 # CHECK-BE: rfi                             # encoding: [0x4c,0x00,0x00,0x64]
 # CHECK-LE: rfi                             # encoding: [0x64,0x00,0x00,0x4c]
             rfi

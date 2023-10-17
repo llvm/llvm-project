@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=hexagon -filetype=obj -o - %s | llvm-objdump -d -
+# RUN: llvm-mc -triple=hexagon -filetype=obj -o - %s | llvm-objdump -d -
 # r0 = r6 and jump ##undefined should compound to J4_jumpsetr
 
 # CHECK: { immext(#0)

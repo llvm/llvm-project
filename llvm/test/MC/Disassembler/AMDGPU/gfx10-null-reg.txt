@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1010 -show-encoding --disassemble < %s | FileCheck -check-prefix=GFX10 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1010 -show-encoding --disassemble < %s | FileCheck -check-prefix=GFX10 %s
 
 0x7d,0x04,0x00,0x10
 # GFX10: v_mul_f32_e32 v0, null, v2 ; encoding: [0x7d,0x04,0x00,0x10]

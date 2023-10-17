@@ -13,20 +13,20 @@
 #ifndef LLVM_EXECUTIONENGINE_JITLINK_COFFDIRECTIVEPARSER_H
 #define LLVM_EXECUTIONENGINE_JITLINK_COFFDIRECTIVEPARSER_H
 
-#include "llvm/ADT/Triple.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 namespace jitlink {
 
 enum {
   COFF_OPT_INVALID = 0,
-#define OPTION(_1, _2, ID, _4, _5, _6, _7, _8, _9, _10, _11, _12) COFF_OPT_##ID,
+#define OPTION(...) LLVM_MAKE_OPT_ID_WITH_ID_PREFIX(COFF_OPT_, __VA_ARGS__),
 #include "COFFOptions.inc"
 #undef OPTION
 };

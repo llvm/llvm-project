@@ -36,13 +36,9 @@ public:
   }
 };
 
-/// Represents any type of generic load or store.
-/// G_LOAD, G_STORE, G_ZEXTLOAD, G_SEXTLOAD.
-class GLoadStore : public GenericMachineInstr {
+/// Provides common memory operand functionality.
+class GMemOperation : public GenericMachineInstr {
 public:
-  /// Get the source register of the pointer value.
-  Register getPointerReg() const { return getOperand(1).getReg(); }
-
   /// Get the MachineMemOperand on this instruction.
   MachineMemOperand &getMMO() const { return **memoperands_begin(); }
 
@@ -63,6 +59,18 @@ public:
   uint64_t getMemSizeInBits() const { return getMMO().getSizeInBits(); }
 
   static bool classof(const MachineInstr *MI) {
+    return GenericMachineInstr::classof(MI) && MI->hasOneMemOperand();
+  }
+};
+
+/// Represents any type of generic load or store.
+/// G_LOAD, G_STORE, G_ZEXTLOAD, G_SEXTLOAD.
+class GLoadStore : public GMemOperation {
+public:
+  /// Get the source register of the pointer value.
+  Register getPointerReg() const { return getOperand(1).getReg(); }
+
+  static bool classof(const MachineInstr *MI) {
     switch (MI->getOpcode()) {
     case TargetOpcode::G_LOAD:
     case TargetOpcode::G_STORE:
@@ -72,6 +80,73 @@ public:
     default:
       return false;
     }
+  }
+};
+
+/// Represents indexed loads. These are different enough from regular loads
+/// that they get their own class. Including them in GAnyLoad would probably
+/// make a footgun for someone.
+class GIndexedLoad : public GMemOperation {
+public:
+  /// Get the definition register of the loaded value.
+  Register getDstReg() const { return getOperand(0).getReg(); }
+  /// Get the def register of the writeback value.
+  Register getWritebackReg() const { return getOperand(1).getReg(); }
+  /// Get the base register of the pointer value.
+  Register getBaseReg() const { return getOperand(2).getReg(); }
+  /// Get the offset register of the pointer value.
+  Register getOffsetReg() const { return getOperand(3).getReg(); }
+
+  bool isPre() const { return getOperand(5).getImm() == 1; }
+  bool isPost() const { return !isPre(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_INDEXED_LOAD;
+  }
+};
+
+/// Represents a G_INDEX_ZEXTLOAD/G_INDEXED_SEXTLOAD.
+class GIndexedExtLoad : public GIndexedLoad {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_INDEXED_SEXTLOAD ||
+           MI->getOpcode() == TargetOpcode::G_INDEXED_ZEXTLOAD;
+  }
+};
+
+/// Represents a G_ZEXTLOAD.
+class GIndexedZExtLoad : GIndexedExtLoad {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_INDEXED_ZEXTLOAD;
+  }
+};
+
+/// Represents a G_SEXTLOAD.
+class GIndexedSExtLoad : GIndexedExtLoad {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_INDEXED_SEXTLOAD;
+  }
+};
+
+/// Represents indexed stores.
+class GIndexedStore : public GMemOperation {
+public:
+  /// Get the def register of the writeback value.
+  Register getWritebackReg() const { return getOperand(0).getReg(); }
+  /// Get the stored value register.
+  Register getValueReg() const { return getOperand(1).getReg(); }
+  /// Get the base register of the pointer value.
+  Register getBaseReg() const { return getOperand(2).getReg(); }
+  /// Get the offset register of the pointer value.
+  Register getOffsetReg() const { return getOperand(3).getReg(); }
+
+  bool isPre() const { return getOperand(4).getImm() == 1; }
+  bool isPost() const { return !isPre(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_INDEXED_STORE;
   }
 };
 
@@ -257,6 +332,232 @@ public:
     return MI->getOpcode() == TargetOpcode::G_FCMP;
   }
 };
+
+/// Represents overflowing binary operations.
+/// Only carry-out:
+/// G_UADDO, G_SADDO, G_USUBO, G_SSUBO, G_UMULO, G_SMULO
+/// Carry-in and carry-out:
+/// G_UADDE, G_SADDE, G_USUBE, G_SSUBE
+class GBinOpCarryOut : public GenericMachineInstr {
+public:
+  Register getDstReg() const { return getReg(0); }
+  Register getCarryOutReg() const { return getReg(1); }
+  MachineOperand &getLHS() { return getOperand(2); }
+  MachineOperand &getRHS() { return getOperand(3); }
+
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_UADDO:
+    case TargetOpcode::G_SADDO:
+    case TargetOpcode::G_USUBO:
+    case TargetOpcode::G_SSUBO:
+    case TargetOpcode::G_UADDE:
+    case TargetOpcode::G_SADDE:
+    case TargetOpcode::G_USUBE:
+    case TargetOpcode::G_SSUBE:
+    case TargetOpcode::G_UMULO:
+    case TargetOpcode::G_SMULO:
+      return true;
+    default:
+      return false;
+    }
+  }
+};
+
+/// Represents overflowing add/sub operations.
+/// Only carry-out:
+/// G_UADDO, G_SADDO, G_USUBO, G_SSUBO
+/// Carry-in and carry-out:
+/// G_UADDE, G_SADDE, G_USUBE, G_SSUBE
+class GAddSubCarryOut : public GBinOpCarryOut {
+public:
+  bool isAdd() const {
+    switch (getOpcode()) {
+    case TargetOpcode::G_UADDO:
+    case TargetOpcode::G_SADDO:
+    case TargetOpcode::G_UADDE:
+    case TargetOpcode::G_SADDE:
+      return true;
+    default:
+      return false;
+    }
+  }
+  bool isSub() const { return !isAdd(); }
+
+  bool isSigned() const {
+    switch (getOpcode()) {
+    case TargetOpcode::G_SADDO:
+    case TargetOpcode::G_SSUBO:
+    case TargetOpcode::G_SADDE:
+    case TargetOpcode::G_SSUBE:
+      return true;
+    default:
+      return false;
+    }
+  }
+  bool isUnsigned() const { return !isSigned(); }
+
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_UADDO:
+    case TargetOpcode::G_SADDO:
+    case TargetOpcode::G_USUBO:
+    case TargetOpcode::G_SSUBO:
+    case TargetOpcode::G_UADDE:
+    case TargetOpcode::G_SADDE:
+    case TargetOpcode::G_USUBE:
+    case TargetOpcode::G_SSUBE:
+      return true;
+    default:
+      return false;
+    }
+  }
+};
+
+/// Represents overflowing add/sub operations that also consume a carry-in.
+/// G_UADDE, G_SADDE, G_USUBE, G_SSUBE
+class GAddSubCarryInOut : public GAddSubCarryOut {
+public:
+  Register getCarryInReg() const { return getReg(4); }
+
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_UADDE:
+    case TargetOpcode::G_SADDE:
+    case TargetOpcode::G_USUBE:
+    case TargetOpcode::G_SSUBE:
+      return true;
+    default:
+      return false;
+    }
+  }
+};
+
+/// Represents a call to an intrinsic.
+class GIntrinsic final : public GenericMachineInstr {
+public:
+  Intrinsic::ID getIntrinsicID() const {
+    return getOperand(getNumExplicitDefs()).getIntrinsicID();
+  }
+
+  bool is(Intrinsic::ID ID) const { return getIntrinsicID() == ID; }
+
+  bool hasSideEffects() const {
+    switch (getOpcode()) {
+    case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
+    case TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  bool isConvergent() const {
+    switch (getOpcode()) {
+    case TargetOpcode::G_INTRINSIC_CONVERGENT:
+    case TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_INTRINSIC:
+    case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
+    case TargetOpcode::G_INTRINSIC_CONVERGENT:
+    case TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS:
+      return true;
+    default:
+      return false;
+    }
+  }
+};
+
+// Represents a (non-sequential) vector reduction operation.
+class GVecReduce : public GenericMachineInstr {
+public:
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_VECREDUCE_FADD:
+    case TargetOpcode::G_VECREDUCE_FMUL:
+    case TargetOpcode::G_VECREDUCE_FMAX:
+    case TargetOpcode::G_VECREDUCE_FMIN:
+    case TargetOpcode::G_VECREDUCE_FMAXIMUM:
+    case TargetOpcode::G_VECREDUCE_FMINIMUM:
+    case TargetOpcode::G_VECREDUCE_ADD:
+    case TargetOpcode::G_VECREDUCE_MUL:
+    case TargetOpcode::G_VECREDUCE_AND:
+    case TargetOpcode::G_VECREDUCE_OR:
+    case TargetOpcode::G_VECREDUCE_XOR:
+    case TargetOpcode::G_VECREDUCE_SMAX:
+    case TargetOpcode::G_VECREDUCE_SMIN:
+    case TargetOpcode::G_VECREDUCE_UMAX:
+    case TargetOpcode::G_VECREDUCE_UMIN:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  /// Get the opcode for the equivalent scalar operation for this reduction.
+  /// E.g. for G_VECREDUCE_FADD, this returns G_FADD.
+  unsigned getScalarOpcForReduction() {
+    unsigned ScalarOpc;
+    switch (getOpcode()) {
+    case TargetOpcode::G_VECREDUCE_FADD:
+      ScalarOpc = TargetOpcode::G_FADD;
+      break;
+    case TargetOpcode::G_VECREDUCE_FMUL:
+      ScalarOpc = TargetOpcode::G_FMUL;
+      break;
+    case TargetOpcode::G_VECREDUCE_FMAX:
+      ScalarOpc = TargetOpcode::G_FMAXNUM;
+      break;
+    case TargetOpcode::G_VECREDUCE_FMIN:
+      ScalarOpc = TargetOpcode::G_FMINNUM;
+      break;
+    case TargetOpcode::G_VECREDUCE_FMAXIMUM:
+      ScalarOpc = TargetOpcode::G_FMAXIMUM;
+      break;
+    case TargetOpcode::G_VECREDUCE_FMINIMUM:
+      ScalarOpc = TargetOpcode::G_FMINIMUM;
+      break;
+    case TargetOpcode::G_VECREDUCE_ADD:
+      ScalarOpc = TargetOpcode::G_ADD;
+      break;
+    case TargetOpcode::G_VECREDUCE_MUL:
+      ScalarOpc = TargetOpcode::G_MUL;
+      break;
+    case TargetOpcode::G_VECREDUCE_AND:
+      ScalarOpc = TargetOpcode::G_AND;
+      break;
+    case TargetOpcode::G_VECREDUCE_OR:
+      ScalarOpc = TargetOpcode::G_OR;
+      break;
+    case TargetOpcode::G_VECREDUCE_XOR:
+      ScalarOpc = TargetOpcode::G_XOR;
+      break;
+    case TargetOpcode::G_VECREDUCE_SMAX:
+      ScalarOpc = TargetOpcode::G_SMAX;
+      break;
+    case TargetOpcode::G_VECREDUCE_SMIN:
+      ScalarOpc = TargetOpcode::G_SMIN;
+      break;
+    case TargetOpcode::G_VECREDUCE_UMAX:
+      ScalarOpc = TargetOpcode::G_UMAX;
+      break;
+    case TargetOpcode::G_VECREDUCE_UMIN:
+      ScalarOpc = TargetOpcode::G_UMIN;
+      break;
+    default:
+      llvm_unreachable("Unhandled reduction");
+    }
+    return ScalarOpc;
+  }
+};
+
 
 } // namespace llvm
 

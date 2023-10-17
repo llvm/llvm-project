@@ -318,7 +318,7 @@ public:
 
     // See Proof(2): Trailing zero bits indicate a left shift. This removes
     // leading bits from the result even if they are undefined.
-    decErrorMSBs(C.countTrailingZeros());
+    decErrorMSBs(C.countr_zero());
 
     A *= C;
     pushBOperation(Mul, C);
@@ -475,7 +475,7 @@ public:
     //
     // If this can be proven add shiftAmt to the error counter
     // `ErrorMSBs`. Otherwise set all bits as undefined.
-    if (A.countTrailingZeros() < shiftAmt)
+    if (A.countr_zero() < shiftAmt)
       ErrorMSBs = A.getBitWidth();
     else
       incErrorMSBs(shiftAmt);
@@ -628,7 +628,7 @@ static raw_ostream &operator<<(raw_ostream &OS, const Polynomial &S) {
 /// VectorInfo stores abstract the following information for each vector
 /// element:
 ///
-/// 1) The the memory address loaded into the element as Polynomial
+/// 1) The memory address loaded into the element as Polynomial
 /// 2) a set of load instruction necessary to construct the vector,
 /// 3) a set of all other instructions that are necessary to create the vector and
 /// 4) a pointer value that can be used as relative base for all elements.
@@ -677,6 +677,8 @@ public:
   VectorInfo(FixedVectorType *VTy) : VTy(VTy) {
     EI = new ElementInfo[VTy->getNumElements()];
   }
+
+  VectorInfo &operator=(const VectorInfo &other) = delete;
 
   virtual ~VectorInfo() { delete[] EI; }
 

@@ -14,7 +14,6 @@ define i32 @v_udot4(i32 %a, i32 %b, i32 %c) {
 ; GFX10PLUS-LABEL: v_udot4:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_dot4_u32_u8 v0, v0, v1, v2
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %r = call i32 @llvm.amdgcn.udot4(i32 %a, i32 %b, i32 %c, i1 false)
@@ -31,7 +30,6 @@ define i32 @v_udot4_clamp(i32 %a, i32 %b, i32 %c) {
 ; GFX10PLUS-LABEL: v_udot4_clamp:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_dot4_u32_u8 v0, v0, v1, v2 clamp
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %r = call i32 @llvm.amdgcn.udot4(i32 %a, i32 %b, i32 %c, i1 true)
@@ -65,7 +63,6 @@ define i32 @v_udot4_cast_v4i8(<4 x i8> %a, <4 x i8> %b, i32 %c) {
 ; GFX10-LABEL: v_udot4_cast_v4i8:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s4, 8
 ; GFX10-NEXT:    v_lshlrev_b32_sdwa v1, s4, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; GFX10-NEXT:    v_and_or_b32 v0, v0, 0xff, v1
@@ -87,7 +84,6 @@ define i32 @v_udot4_cast_v4i8(<4 x i8> %a, <4 x i8> %b, i32 %c) {
 ; GFX11-LABEL: v_udot4_cast_v4i8:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v1, 0xff, v1
 ; GFX11-NEXT:    v_and_b32_e32 v5, 0xff, v5
 ; GFX11-NEXT:    v_and_b32_e32 v2, 0xff, v2
@@ -123,7 +119,6 @@ define i32 @v_udot4_fnegf32_a(float %a, i32 %b, i32 %c) {
 ; GFX10PLUS-LABEL: v_udot4_fnegf32_a:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
 ; GFX10PLUS-NEXT:    v_dot4_u32_u8 v0, v0, v1, v2
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
@@ -144,7 +139,6 @@ define i32 @v_udot4_fnegv2f16_a(<2 x half> %a, i32 %b, i32 %c) {
 ; GFX10PLUS-LABEL: v_udot4_fnegv2f16_a:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
 ; GFX10PLUS-NEXT:    v_dot4_u32_u8 v0, v0, v1, v2
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]

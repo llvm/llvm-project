@@ -2,13 +2,6 @@
 
 # Finds and configures python packages needed to build MLIR Python bindings.
 macro(mlir_configure_python_dev_packages)
-  if(CMAKE_VERSION VERSION_LESS "3.19.0")
-  message(SEND_ERROR
-      "Building MLIR Python bindings is known to rely on CMake features "
-      "that require at least version 3.19. Recommend upgrading to 3.19+ "
-      "for full support. Detected current version: ${CMAKE_VERSION}")
-  endif()
-
   if(MLIR_DETECT_PYTHON_ENV_PRIME_SEARCH)
     # Prime the search for python to see if there is a full development
     # package. This seems to work around cmake bugs searching only for
@@ -32,7 +25,7 @@ macro(mlir_configure_python_dev_packages)
   message(STATUS "Found python libraries: ${Python3_LIBRARIES}")
   message(STATUS "Found numpy v${Python3_NumPy_VERSION}: ${Python3_NumPy_INCLUDE_DIRS}")
   mlir_detect_pybind11_install()
-  find_package(pybind11 2.8 CONFIG REQUIRED)
+  find_package(pybind11 2.9 CONFIG REQUIRED)
   message(STATUS "Found pybind11 v${pybind11_VERSION}: ${pybind11_INCLUDE_DIR}")
   message(STATUS "Python prefix = '${PYTHON_MODULE_PREFIX}', "
                  "suffix = '${PYTHON_MODULE_SUFFIX}', "

@@ -26,7 +26,6 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 #include <memory>
-#include "test_macros.h"
 
 template <typename T>
 void check()
@@ -38,10 +37,8 @@ void check()
     typedef typename std::allocator<T>::template rebind<int>::other ARO; // expected-error 3 {{no member named 'rebind'}}
 }
 
-int main(int, char**)
-{
+void f() {
     check<char>();
     check<char const>();
     check<void>();
-    return 0;
 }

@@ -52,7 +52,7 @@ protected:
   FileSpec m_file_spec;
   uint32_t m_line_number = LLDB_INVALID_LINE_NUMBER;
   uint32_t m_column_number = LLDB_INVALID_COLUMN_NUMBER;
-  uint32_t m_completion_mask = CommandCompletions::eSourceFileCompletion;
+  uint32_t m_completion_mask = lldb::eSourceFileCompletion;
 };
 
 } // namespace lldb_private

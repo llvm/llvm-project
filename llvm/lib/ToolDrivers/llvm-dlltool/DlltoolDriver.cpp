@@ -17,9 +17,10 @@
 #include "llvm/Object/COFFModuleDefinition.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/Path.h"
+#include "llvm/TargetParser/Host.h"
 
 #include <optional>
 #include <vector>
@@ -32,7 +33,7 @@ namespace {
 
 enum {
   OPT_INVALID = 0,
-#define OPTION(_1, _2, ID, _4, _5, _6, _7, _8, _9, _10, _11, _12) OPT_##ID,
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
 #include "Options.inc"
 #undef OPTION
 };
@@ -44,10 +45,9 @@ enum {
 #include "Options.inc"
 #undef PREFIX
 
+using namespace llvm::opt;
 static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(X1, X2, ID, KIND, GROUP, ALIAS, X7, X8, X9, X10, X11, X12)      \
-  {X1, X2, X10,         X11,         OPT_##ID, llvm::opt::Option::KIND##Class, \
-   X9, X8, OPT_##GROUP, OPT_##ALIAS, X7,       X12},
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
 #include "Options.inc"
 #undef OPTION
 };
@@ -165,8 +165,9 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
     return 1;
   }
 
-  Expected<COFFModuleDefinition> Def =
-      parseCOFFModuleDefinition(*MB, Machine, true);
+  bool AddUnderscores = !Args.hasArg(OPT_no_leading_underscore);
+  Expected<COFFModuleDefinition> Def = parseCOFFModuleDefinition(
+      *MB, Machine, /*MingwDef=*/true, AddUnderscores);
 
   if (!Def) {
     llvm::errs() << "error parsing definition\n"
@@ -197,7 +198,7 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
     }
   }
 
-  if (Machine == IMAGE_FILE_MACHINE_I386 && Args.getLastArg(OPT_k)) {
+  if (Machine == IMAGE_FILE_MACHINE_I386 && Args.hasArg(OPT_k)) {
     for (COFFShortExport& E : Def->Exports) {
       if (!E.AliasTarget.empty() || (!E.Name.empty() && E.Name[0] == '?'))
         continue;
@@ -214,8 +215,8 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
     }
   }
 
-  if (!Path.empty() &&
-      writeImportLibrary(Def->OutputFile, Path, Def->Exports, Machine, true))
+  if (!Path.empty() && writeImportLibrary(Def->OutputFile, Path, Def->Exports,
+                                          Machine, /*MinGW=*/true))
     return 1;
   return 0;
 }

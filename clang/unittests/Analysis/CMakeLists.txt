@@ -8,14 +8,16 @@ add_clang_unittest(ClangAnalysisTests
   CFGTest.cpp
   CloneDetectionTest.cpp
   ExprMutationAnalyzerTest.cpp
+  IntervalPartitionTest.cpp
   MacroExpansionContextTest.cpp
+  UnsafeBufferUsageTest.cpp
   )
 
 clang_target_link_libraries(ClangAnalysisTests
   PRIVATE
-  clangAnalysis
   clangAST
   clangASTMatchers
+  clangAnalysis
   clangBasic
   clangFrontend
   clangLex

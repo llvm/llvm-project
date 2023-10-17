@@ -273,7 +273,7 @@ public:
     SmallVector<const FieldDecl *, 20> OptimalFieldsOrder;
     while (!Fields.empty()) {
       unsigned TrailingZeros =
-          llvm::countTrailingZeros((unsigned long long)NewOffset.getQuantity());
+          llvm::countr_zero((unsigned long long)NewOffset.getQuantity());
       // If NewOffset is zero, then countTrailingZeros will be 64. Shifting
       // 64 will overflow our unsigned long long. Shifting 63 will turn
       // our long long (and CharUnits internal type) negative. So shift 62.

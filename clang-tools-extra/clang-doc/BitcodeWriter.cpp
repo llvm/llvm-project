@@ -264,13 +264,13 @@ constexpr unsigned char BitCodeConstants::Signature[];
 void ClangDocBitcodeWriter::AbbreviationMap::add(RecordId RID,
                                                  unsigned AbbrevID) {
   assert(RecordIdNameMap[RID] && "Unknown RecordId.");
-  assert(Abbrevs.find(RID) == Abbrevs.end() && "Abbreviation already added.");
+  assert(!Abbrevs.contains(RID) && "Abbreviation already added.");
   Abbrevs[RID] = AbbrevID;
 }
 
 unsigned ClangDocBitcodeWriter::AbbreviationMap::get(RecordId RID) const {
   assert(RecordIdNameMap[RID] && "Unknown RecordId.");
-  assert(Abbrevs.find(RID) != Abbrevs.end() && "Unknown abbreviation.");
+  assert(Abbrevs.contains(RID) && "Unknown abbreviation.");
   return Abbrevs.lookup(RID);
 }
 

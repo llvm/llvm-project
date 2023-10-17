@@ -58,12 +58,7 @@ define i1 @alloca_argument_compare_escaped_alloca(ptr %arg) {
 declare void @check_compares(i1, i1)
 define void @alloca_argument_compare_two_compares(ptr %p) {
 ; CHECK-LABEL: @alloca_argument_compare_two_compares(
-; CHECK-NEXT:    [[Q1:%.*]] = alloca [8 x i64], align 8
-; CHECK-NEXT:    [[R:%.*]] = getelementptr i64, ptr [[P:%.*]], i32 1
-; CHECK-NEXT:    [[S:%.*]] = getelementptr inbounds i64, ptr [[Q1]], i32 2
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[Q1]], [[P]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq ptr [[R]], [[S]]
-; CHECK-NEXT:    call void @check_compares(i1 [[CMP1]], i1 [[CMP2]])
+; CHECK-NEXT:    call void @check_compares(i1 false, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %q = alloca i64, i64 8
@@ -154,13 +149,10 @@ define i1 @offset_single_cmp() {
 
 declare void @witness(i1, i1)
 
-define void @neg_consistent_fold1() {
-; CHECK-LABEL: @neg_consistent_fold1(
-; CHECK-NEXT:    [[M1:%.*]] = alloca [4 x i8], align 1
+define void @consistent_fold1() {
+; CHECK-LABEL: @consistent_fold1(
 ; CHECK-NEXT:    [[RHS2:%.*]] = call ptr @hidden_inttoptr()
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[M1]], inttoptr (i64 2048 to ptr)
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq ptr [[M1]], [[RHS2]]
-; CHECK-NEXT:    call void @witness(i1 [[CMP1]], i1 [[CMP2]])
+; CHECK-NEXT:    call void @witness(i1 false, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %m = alloca i8, i32 4
@@ -172,15 +164,11 @@ define void @neg_consistent_fold1() {
   ret void
 }
 
-define void @neg_consistent_fold2() {
-; CHECK-LABEL: @neg_consistent_fold2(
-; CHECK-NEXT:    [[M1:%.*]] = alloca [4 x i8], align 1
+define void @consistent_fold2() {
+; CHECK-LABEL: @consistent_fold2(
 ; CHECK-NEXT:    [[N2:%.*]] = alloca [4 x i8], align 1
-; CHECK-NEXT:    [[RHS:%.*]] = getelementptr inbounds i8, ptr [[N2]], i32 4
 ; CHECK-NEXT:    [[RHS2:%.*]] = call ptr @hidden_offset(ptr nonnull [[N2]])
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[M1]], [[RHS]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq ptr [[M1]], [[RHS2]]
-; CHECK-NEXT:    call void @witness(i1 [[CMP1]], i1 [[CMP2]])
+; CHECK-NEXT:    call void @witness(i1 false, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %m = alloca i8, i32 4
@@ -193,14 +181,10 @@ define void @neg_consistent_fold2() {
   ret void
 }
 
-define void @neg_consistent_fold3() {
-; CHECK-LABEL: @neg_consistent_fold3(
-; CHECK-NEXT:    [[M1:%.*]] = alloca [4 x i8], align 1
-; CHECK-NEXT:    [[LGP:%.*]] = load ptr, ptr @gp, align 8
+define void @consistent_fold3() {
+; CHECK-LABEL: @consistent_fold3(
 ; CHECK-NEXT:    [[RHS2:%.*]] = call ptr @hidden_inttoptr()
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[M1]], [[LGP]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq ptr [[M1]], [[RHS2]]
-; CHECK-NEXT:    call void @witness(i1 [[CMP1]], i1 [[CMP2]])
+; CHECK-NEXT:    call void @witness(i1 false, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %m = alloca i8, i32 4
@@ -231,13 +215,11 @@ define void @neg_consistent_fold4() {
 
 declare void @unknown(ptr)
 
-; TODO: Missing optimization
 define i1 @consistent_nocapture_inttoptr() {
 ; CHECK-LABEL: @consistent_nocapture_inttoptr(
 ; CHECK-NEXT:    [[M1:%.*]] = alloca [4 x i8], align 1
 ; CHECK-NEXT:    call void @unknown(ptr nocapture nonnull [[M1]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[M1]], inttoptr (i64 2048 to ptr)
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %m = alloca i8, i32 4
   call void @unknown(ptr nocapture %m)
@@ -261,18 +243,47 @@ define i1 @consistent_nocapture_offset() {
 }
 
 @gp = global ptr null, align 8
-; TODO: Missing optimization
+
 define i1 @consistent_nocapture_through_global() {
 ; CHECK-LABEL: @consistent_nocapture_through_global(
 ; CHECK-NEXT:    [[M1:%.*]] = alloca [4 x i8], align 1
 ; CHECK-NEXT:    call void @unknown(ptr nocapture nonnull [[M1]])
-; CHECK-NEXT:    [[LGP:%.*]] = load ptr, ptr @gp, align 8, !nonnull !0
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[M1]], [[LGP]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %m = alloca i8, i32 4
   call void @unknown(ptr nocapture %m)
   %lgp = load ptr, ptr @gp, align 8, !nonnull !{}
   %cmp = icmp eq ptr %m, %lgp
   ret i1 %cmp
+}
+
+define void @select_alloca_unrelated_ptr(i1 %c, ptr %p, ptr %p2) {
+; CHECK-LABEL: @select_alloca_unrelated_ptr(
+; CHECK-NEXT:    [[M:%.*]] = alloca i8, align 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[M]], [[P:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], ptr [[M]], ptr [[P2:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq ptr [[S]], [[P]]
+; CHECK-NEXT:    call void @witness(i1 [[CMP1]], i1 [[CMP2]])
+; CHECK-NEXT:    ret void
+;
+  %m = alloca i8
+  %cmp1 = icmp eq ptr %m, %p
+  %s = select i1 %c, ptr %m, ptr %p2
+  %cmp2 = icmp eq ptr %s, %p
+  call void @witness(i1 %cmp1, i1 %cmp2)
+  ret void
+}
+
+define void @alloca_offset_icmp(ptr %p, i32 %offset) {
+; CHECK-LABEL: @alloca_offset_icmp(
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[OFFSET:%.*]], 0
+; CHECK-NEXT:    call void @witness(i1 false, i1 [[CMP2]])
+; CHECK-NEXT:    ret void
+;
+  %m = alloca [4 x i8]
+  %g = getelementptr i8, ptr %m, i32 %offset
+  %cmp1 = icmp eq ptr %m, %p
+  %cmp2 = icmp eq ptr %m, %g
+  call void @witness(i1 %cmp1, i1 %cmp2)
+  ret void
 }

@@ -1,10 +1,8 @@
 // RUN: mlir-opt %s \
-// RUN: | mlir-opt -gpu-kernel-outlining \
-// RUN: | mlir-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm,gpu-to-cubin{chip=sm_70}))' \
-// RUN: | mlir-opt --convert-scf-to-cf -gpu-to-llvm \
+// RUN: | mlir-opt -test-lower-to-nvvm="cubin-chip=sm_70 cubin-format=%gpu_compilation_format" \
 // RUN: | mlir-cpu-runner \
-// RUN:   --shared-libs=%mlir_lib_dir/libmlir_cuda_runtime%shlibext \
-// RUN:   --shared-libs=%mlir_lib_dir/libmlir_runner_utils%shlibext \
+// RUN:   --shared-libs=%mlir_cuda_runtime \
+// RUN:   --shared-libs=%mlir_runner_utils \
 // RUN:   --entry-point-result=void \
 // RUN: | FileCheck %s
 

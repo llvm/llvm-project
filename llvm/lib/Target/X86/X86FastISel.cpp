@@ -1376,7 +1376,6 @@ static unsigned X86ChooseCmpOpcode(EVT VT, const X86Subtarget *Subtarget) {
 /// If we have a comparison with RHS as the RHS  of the comparison, return an
 /// opcode that works for the compare (e.g. CMP32ri) otherwise return 0.
 static unsigned X86ChooseCmpImmediateOpcode(EVT VT, const ConstantInt *RHSC) {
-  int64_t Val = RHSC->getSExtValue();
   switch (VT.getSimpleVT().SimpleTy) {
   // Otherwise, we can't fold the immediate into this comparison.
   default:
@@ -1384,21 +1383,13 @@ static unsigned X86ChooseCmpImmediateOpcode(EVT VT, const ConstantInt *RHSC) {
   case MVT::i8:
     return X86::CMP8ri;
   case MVT::i16:
-    if (isInt<8>(Val))
-      return X86::CMP16ri8;
     return X86::CMP16ri;
   case MVT::i32:
-    if (isInt<8>(Val))
-      return X86::CMP32ri8;
     return X86::CMP32ri;
   case MVT::i64:
-    if (isInt<8>(Val))
-      return X86::CMP64ri8;
     // 64-bit comparisons are only valid if the immediate fits in a 32-bit sext
     // field.
-    if (isInt<32>(Val))
-      return X86::CMP64ri32;
-    return 0;
+    return isInt<32>(RHSC->getSExtValue()) ? X86::CMP64ri32 : 0;
   }
 }
 
@@ -2400,7 +2391,7 @@ bool X86FastISel::X86SelectIntToFP(const Instruction *I, bool IsSigned) {
     return false;
 
   // TODO: We could sign extend narrower types.
-  MVT SrcVT = TLI.getSimpleValueType(DL, I->getOperand(0)->getType());
+  EVT SrcVT = TLI.getValueType(DL, I->getOperand(0)->getType());
   if (SrcVT != MVT::i32 && SrcVT != MVT::i64)
     return false;
 
@@ -3045,6 +3036,58 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     updateValueMap(II, ResultReg);
     return true;
   }
+  case Intrinsic::x86_sse42_crc32_32_8:
+  case Intrinsic::x86_sse42_crc32_32_16:
+  case Intrinsic::x86_sse42_crc32_32_32:
+  case Intrinsic::x86_sse42_crc32_64_64: {
+    if (!Subtarget->hasCRC32())
+      return false;
+
+    Type *RetTy = II->getCalledFunction()->getReturnType();
+
+    MVT VT;
+    if (!isTypeLegal(RetTy, VT))
+      return false;
+
+    unsigned Opc;
+    const TargetRegisterClass *RC = nullptr;
+
+    switch (II->getIntrinsicID()) {
+    default:
+      llvm_unreachable("Unexpected intrinsic.");
+    case Intrinsic::x86_sse42_crc32_32_8:
+      Opc = X86::CRC32r32r8;
+      RC = &X86::GR32RegClass;
+      break;
+    case Intrinsic::x86_sse42_crc32_32_16:
+      Opc = X86::CRC32r32r16;
+      RC = &X86::GR32RegClass;
+      break;
+    case Intrinsic::x86_sse42_crc32_32_32:
+      Opc = X86::CRC32r32r32;
+      RC = &X86::GR32RegClass;
+      break;
+    case Intrinsic::x86_sse42_crc32_64_64:
+      Opc = X86::CRC32r64r64;
+      RC = &X86::GR64RegClass;
+      break;
+    }
+
+    const Value *LHS = II->getArgOperand(0);
+    const Value *RHS = II->getArgOperand(1);
+
+    Register LHSReg = getRegForValue(LHS);
+    Register RHSReg = getRegForValue(RHS);
+    if (!LHSReg || !RHSReg)
+      return false;
+
+    Register ResultReg = fastEmitInst_rr(Opc, RC, LHSReg, RHSReg);
+    if (!ResultReg)
+      return false;
+
+    updateValueMap(II, ResultReg);
+    return true;
+  }
   }
 }
 
@@ -3256,9 +3299,9 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
     if (auto *CI = dyn_cast<ConstantInt>(Val)) {
       if (CI->getBitWidth() < 32) {
         if (Flags.isSExt())
-          Val = ConstantExpr::getSExt(CI, Type::getInt32Ty(CI->getContext()));
+          Val = ConstantInt::get(CI->getContext(), CI->getValue().sext(32));
         else
-          Val = ConstantExpr::getZExt(CI, Type::getInt32Ty(CI->getContext()));
+          Val = ConstantInt::get(CI->getContext(), CI->getValue().zext(32));
       }
     }
 
@@ -3491,6 +3534,10 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
     assert(GV && "Not a direct call");
     // See if we need any target-specific flags on the GV operand.
     unsigned char OpFlags = Subtarget->classifyGlobalFunctionReference(GV);
+    if (OpFlags == X86II::MO_PLT && !Is64Bit &&
+        TM.getRelocationModel() == Reloc::Static && isa<Function>(GV) &&
+        cast<Function>(GV)->isIntrinsic())
+      OpFlags = X86II::MO_NO_FLAG;
 
     // This will be a direct call, or an indirect call through memory for
     // NonLazyBind calls or dllimport calls.
@@ -4016,7 +4063,7 @@ unsigned X86FastISel::fastEmitInst_rrrr(unsigned MachineInstOpcode,
         .addReg(Op3);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
             ResultReg)
-        .addReg(II.getImplicitDefs()[0]);
+        .addReg(II.implicit_defs()[0]);
   }
   return ResultReg;
 }

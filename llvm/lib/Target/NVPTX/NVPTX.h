@@ -36,16 +36,19 @@ enum CondCodes {
 }
 
 FunctionPass *createNVPTXISelDag(NVPTXTargetMachine &TM,
-                                 llvm::CodeGenOpt::Level OptLevel);
+                                 llvm::CodeGenOptLevel OptLevel);
 ModulePass *createNVPTXAssignValidGlobalNamesPass();
-ModulePass *createGenericToNVVMPass();
+ModulePass *createGenericToNVVMLegacyPass();
+ModulePass *createNVPTXCtorDtorLoweringLegacyPass();
 FunctionPass *createNVVMIntrRangePass(unsigned int SmVersion);
 FunctionPass *createNVVMReflectPass(unsigned int SmVersion);
 MachineFunctionPass *createNVPTXPrologEpilogPass();
 MachineFunctionPass *createNVPTXReplaceImageHandlesPass();
 FunctionPass *createNVPTXImageOptimizerPass();
-FunctionPass *createNVPTXLowerArgsPass(const NVPTXTargetMachine *TM);
+FunctionPass *createNVPTXLowerArgsPass();
 FunctionPass *createNVPTXLowerAllocaPass();
+FunctionPass *createNVPTXLowerUnreachablePass(bool TrapUnreachable,
+                                              bool NoTrapAfterNoreturn);
 MachineFunctionPass *createNVPTXPeephole();
 MachineFunctionPass *createNVPTXProxyRegErasurePass();
 
@@ -65,6 +68,10 @@ struct NVVMReflectPass : PassInfoMixin<NVVMReflectPass> {
 
 private:
   unsigned SmVersion;
+};
+
+struct GenericToNVVMPass : PassInfoMixin<GenericToNVVMPass> {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 namespace NVPTX {
@@ -172,6 +179,18 @@ enum CmpMode {
 
   BASE_MASK = 0xFF,
   FTZ_FLAG = 0x100
+};
+}
+
+namespace PTXPrmtMode {
+enum PrmtMode {
+  NONE,
+  F4E,
+  B4E,
+  RC8,
+  ECL,
+  ECR,
+  RC16,
 };
 }
 }

@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s -convert-vector-to-scf -convert-scf-to-cf -convert-vector-to-llvm -convert-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
+// RUN: mlir-opt %s -convert-vector-to-scf -convert-scf-to-cf -convert-vector-to-llvm -finalize-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
-// RUN:   -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
+// RUN:   -shared-libs=%mlir_c_runner_utils | \
 // RUN: FileCheck %s
 
 func.func @transfer_write16_inbounds_1d(%A : memref<?xf32>, %base: index) {
@@ -135,6 +135,8 @@ func.func @entry() {
   %r = vector.transfer_read %A1[%c0, %c0, %c0], %f
     : memref<4x4x4xf32>, vector<4x4x4xf32>
   vector.print %r : vector<4x4x4xf32>
+
+  memref.dealloc %A1 : memref<4x4x4xf32>
 
   return
 }

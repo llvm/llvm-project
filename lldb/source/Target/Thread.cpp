@@ -76,11 +76,11 @@ enum {
 class ThreadOptionValueProperties
     : public Cloneable<ThreadOptionValueProperties, OptionValueProperties> {
 public:
-  ThreadOptionValueProperties(ConstString name) : Cloneable(name) {}
+  ThreadOptionValueProperties(llvm::StringRef name) : Cloneable(name) {}
 
-  const Property *GetPropertyAtIndex(const ExecutionContext *exe_ctx,
-                                     bool will_modify,
-                                     uint32_t idx) const override {
+  const Property *
+  GetPropertyAtIndex(size_t idx,
+                     const ExecutionContext *exe_ctx) const override {
     // When getting the value for a key from the thread options, we will always
     // try and grab the setting from the current thread if there is one. Else
     // we just use the one from this instance.
@@ -100,8 +100,7 @@ public:
 
 ThreadProperties::ThreadProperties(bool is_global) : Properties() {
   if (is_global) {
-    m_collection_sp =
-        std::make_shared<ThreadOptionValueProperties>(ConstString("thread"));
+    m_collection_sp = std::make_shared<ThreadOptionValueProperties>("thread");
     m_collection_sp->Initialize(g_thread_properties);
   } else
     m_collection_sp =
@@ -112,47 +111,42 @@ ThreadProperties::~ThreadProperties() = default;
 
 const RegularExpression *ThreadProperties::GetSymbolsToAvoidRegexp() {
   const uint32_t idx = ePropertyStepAvoidRegex;
-  return m_collection_sp->GetPropertyAtIndexAsOptionValueRegex(nullptr, idx);
+  return GetPropertyAtIndexAs<const RegularExpression *>(idx);
 }
 
 FileSpecList ThreadProperties::GetLibrariesToAvoid() const {
   const uint32_t idx = ePropertyStepAvoidLibraries;
-  const OptionValueFileSpecList *option_value =
-      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(nullptr,
-                                                                   false, idx);
-  assert(option_value);
-  return option_value->GetCurrentValue();
+  return GetPropertyAtIndexAs<FileSpecList>(idx, {});
 }
 
 bool ThreadProperties::GetTraceEnabledState() const {
   const uint32_t idx = ePropertyEnableThreadTrace;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_thread_properties[idx].default_uint_value != 0);
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_thread_properties[idx].default_uint_value != 0);
 }
 
 bool ThreadProperties::GetStepInAvoidsNoDebug() const {
   const uint32_t idx = ePropertyStepInAvoidsNoDebug;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_thread_properties[idx].default_uint_value != 0);
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_thread_properties[idx].default_uint_value != 0);
 }
 
 bool ThreadProperties::GetStepOutAvoidsNoDebug() const {
   const uint32_t idx = ePropertyStepOutAvoidsNoDebug;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_thread_properties[idx].default_uint_value != 0);
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_thread_properties[idx].default_uint_value != 0);
 }
 
 uint64_t ThreadProperties::GetMaxBacktraceDepth() const {
   const uint32_t idx = ePropertyMaxBacktraceDepth;
-  return m_collection_sp->GetPropertyAtIndexAsUInt64(
-      nullptr, idx, g_thread_properties[idx].default_uint_value != 0);
+  return GetPropertyAtIndexAs<uint64_t>(
+      idx, g_thread_properties[idx].default_uint_value);
 }
 
 // Thread Event Data
 
-ConstString Thread::ThreadEventData::GetFlavorString() {
-  static ConstString g_flavor("Thread::ThreadEventData");
-  return g_flavor;
+llvm::StringRef Thread::ThreadEventData::GetFlavorString() {
+  return "Thread::ThreadEventData";
 }
 
 Thread::ThreadEventData::ThreadEventData(const lldb::ThreadSP thread_sp)
@@ -264,10 +258,11 @@ void Thread::BroadcastSelectedFrameChange(StackID &new_frame_id) {
                    new ThreadEventData(this->shared_from_this(), new_frame_id));
 }
 
-lldb::StackFrameSP Thread::GetSelectedFrame() {
+lldb::StackFrameSP
+Thread::GetSelectedFrame(SelectMostRelevant select_most_relevant) {
   StackFrameListSP stack_frame_list_sp(GetStackFrameList());
   StackFrameSP frame_sp = stack_frame_list_sp->GetFrameAtIndex(
-      stack_frame_list_sp->GetSelectedFrameIndex());
+      stack_frame_list_sp->GetSelectedFrameIndex(select_most_relevant));
   FrameSelectedCallback(frame_sp.get());
   return frame_sp;
 }
@@ -298,15 +293,22 @@ bool Thread::SetSelectedFrameByIndexNoisily(uint32_t frame_idx,
   const bool broadcast = true;
   bool success = SetSelectedFrameByIndex(frame_idx, broadcast);
   if (success) {
-    StackFrameSP frame_sp = GetSelectedFrame();
+    StackFrameSP frame_sp = GetSelectedFrame(DoNoSelectMostRelevantFrame);
     if (frame_sp) {
       bool already_shown = false;
       SymbolContext frame_sc(
           frame_sp->GetSymbolContext(eSymbolContextLineEntry));
-      if (GetProcess()->GetTarget().GetDebugger().GetUseExternalEditor() &&
-          frame_sc.line_entry.file && frame_sc.line_entry.line != 0) {
-        already_shown = Host::OpenFileInExternalEditor(
-            frame_sc.line_entry.file, frame_sc.line_entry.line);
+      const Debugger &debugger = GetProcess()->GetTarget().GetDebugger();
+      if (debugger.GetUseExternalEditor() && frame_sc.line_entry.file &&
+          frame_sc.line_entry.line != 0) {
+        if (llvm::Error e = Host::OpenFileInExternalEditor(
+                debugger.GetExternalEditor(), frame_sc.line_entry.file,
+                frame_sc.line_entry.line)) {
+          LLDB_LOG_ERROR(GetLog(LLDBLog::Host), std::move(e),
+                         "OpenFileInExternalEditor failed: {0}");
+        } else {
+          already_shown = true;
+        }
       }
 
       bool show_frame_info = true;
@@ -588,35 +590,8 @@ std::string Thread::GetStopDescriptionRaw() {
   return raw_stop_description;
 }
 
-void Thread::SelectMostRelevantFrame() {
-  Log *log = GetLog(LLDBLog::Thread);
-
-  auto frames_list_sp = GetStackFrameList();
-
-  // Only the top frame should be recognized.
-  auto frame_sp = frames_list_sp->GetFrameAtIndex(0);
-
-  auto recognized_frame_sp = frame_sp->GetRecognizedFrame();
-
-  if (!recognized_frame_sp) {
-    LLDB_LOG(log, "Frame #0 not recognized");
-    return;
-  }
-
-  if (StackFrameSP most_relevant_frame_sp =
-          recognized_frame_sp->GetMostRelevantFrame()) {
-    LLDB_LOG(log, "Found most relevant frame at index {0}",
-             most_relevant_frame_sp->GetFrameIndex());
-    SetSelectedFrame(most_relevant_frame_sp.get());
-  } else {
-    LLDB_LOG(log, "No relevant frame!");
-  }
-}
-
 void Thread::WillStop() {
   ThreadPlan *current_plan = GetCurrentPlan();
-
-  SelectMostRelevantFrame();
 
   // FIXME: I may decide to disallow threads with no plans.  In which
   // case this should go to an assert.
@@ -734,7 +709,7 @@ bool Thread::ShouldResume(StateType resume_state) {
   return need_to_resume;
 }
 
-void Thread::DidResume() { 
+void Thread::DidResume() {
   SetResumeSignal(LLDB_INVALID_SIGNAL_NUMBER);
   // This will get recomputed each time when we stop.
   SetShouldRunBeforePublicStop(false);
@@ -778,7 +753,7 @@ bool Thread::ShouldStop(Event *event_ptr) {
                                    : LLDB_INVALID_ADDRESS);
     return false;
   }
-  
+
   // Clear the "must run me before stop" if it was set:
   SetShouldRunBeforePublicStop(false);
 
@@ -1008,7 +983,7 @@ Vote Thread::ShouldReportStop(Event *event_ptr) {
   }
 
   if (GetPlans().AnyCompletedPlans()) {
-    // Pass skip_private = false to GetCompletedPlan, since we want to ask 
+    // Pass skip_private = false to GetCompletedPlan, since we want to ask
     // the last plan, regardless of whether it is private or not.
     LLDB_LOGF(log,
               "Thread::ShouldReportStop() tid = 0x%4.4" PRIx64
@@ -1046,7 +1021,7 @@ Vote Thread::ShouldReportRun(Event *event_ptr) {
 
   Log *log = GetLog(LLDBLog::Step);
   if (GetPlans().AnyCompletedPlans()) {
-    // Pass skip_private = false to GetCompletedPlan, since we want to ask 
+    // Pass skip_private = false to GetCompletedPlan, since we want to ask
     // the last plan, regardless of whether it is private or not.
     LLDB_LOGF(log,
               "Current Plan for thread %d(%p) (0x%4.4" PRIx64
@@ -1099,7 +1074,7 @@ void Thread::PushPlan(ThreadPlanSP thread_plan_sp) {
               static_cast<void *>(this), s.GetData(),
               thread_plan_sp->GetThread().GetID());
   }
-  
+
   GetPlans().PushPlan(std::move(thread_plan_sp));
 }
 
@@ -1117,7 +1092,7 @@ void Thread::DiscardPlan() {
   ThreadPlanSP discarded_plan_sp = GetPlans().DiscardPlan();
 
   LLDB_LOGF(log, "Discarding plan: \"%s\", tid = 0x%4.4" PRIx64 ".",
-            discarded_plan_sp->GetName(), 
+            discarded_plan_sp->GetName(),
             discarded_plan_sp->GetThread().GetID());
 }
 
@@ -1246,7 +1221,7 @@ Status Thread::UnwindInnermostExpression() {
   if (!innermost_expr_plan) {
     error.SetErrorString("No expressions currently active on this thread");
     return error;
-  }  
+  }
   DiscardThreadPlansUpToPlan(innermost_expr_plan);
   return error;
 }
@@ -1390,8 +1365,8 @@ ThreadPlanSP Thread::QueueThreadPlanForStepUntil(
 }
 
 lldb::ThreadPlanSP Thread::QueueThreadPlanForStepScripted(
-    bool abort_other_plans, const char *class_name, 
-    StructuredData::ObjectSP extra_args_sp,  bool stop_other_threads,
+    bool abort_other_plans, const char *class_name,
+    StructuredData::ObjectSP extra_args_sp, bool stop_other_threads,
     Status &status) {
 
   ThreadPlanSP thread_plan_sp(new ThreadPlanPython(
@@ -1647,7 +1622,11 @@ void Thread::SettingsInitialize() {}
 
 void Thread::SettingsTerminate() {}
 
-lldb::addr_t Thread::GetThreadPointer() { return LLDB_INVALID_ADDRESS; }
+lldb::addr_t Thread::GetThreadPointer() {
+  if (m_reg_context_sp)
+    return m_reg_context_sp->GetThreadPointer();
+  return LLDB_INVALID_ADDRESS;
+}
 
 addr_t Thread::GetThreadLocalData(const ModuleSP module,
                                   lldb::addr_t tls_file_addr) {
@@ -1752,8 +1731,12 @@ size_t Thread::GetStatus(Stream &strm, uint32_t start_frame,
         SymbolContext frame_sc(
             frame_sp->GetSymbolContext(eSymbolContextLineEntry));
         if (frame_sc.line_entry.line != 0 && frame_sc.line_entry.file) {
-          Host::OpenFileInExternalEditor(frame_sc.line_entry.file,
-                                         frame_sc.line_entry.line);
+          if (llvm::Error e = Host::OpenFileInExternalEditor(
+                  target->GetDebugger().GetExternalEditor(),
+                  frame_sc.line_entry.file, frame_sc.line_entry.line)) {
+            LLDB_LOG_ERROR(GetLog(LLDBLog::Host), std::move(e),
+                           "OpenFileInExternalEditor failed: {0}");
+          }
         }
       }
     }
@@ -1826,7 +1809,7 @@ bool Thread::GetDescription(Stream &strm, lldb::DescriptionLevel level,
           id->GetType() == eStructuredDataTypeInteger) {
         strm.Format("  Activity '{0}', {1:x}\n",
                     name->GetAsString()->GetValue(),
-                    id->GetAsInteger()->GetValue());
+                    id->GetUnsignedIntegerValue());
       }
       printed_activity = true;
     }

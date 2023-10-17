@@ -85,7 +85,7 @@ bool LowerEmuTLS::runOnModule(Module &M) {
 
 bool LowerEmuTLS::addEmuTlsVar(Module &M, const GlobalVariable *GV) {
   LLVMContext &C = M.getContext();
-  PointerType *VoidPtrType = Type::getInt8PtrTy(C);
+  PointerType *VoidPtrType = PointerType::getUnqual(C);
 
   std::string EmuTlsVarName = ("__emutls_v." + GV->getName()).str();
   GlobalVariable *EmuTlsVar = M.getNamedGlobal(EmuTlsVarName);
@@ -114,8 +114,7 @@ bool LowerEmuTLS::addEmuTlsVar(Module &M, const GlobalVariable *GV) {
   //     void *templ; // 0 or point to __emutls_t.*
   // sizeof(word) should be the same as sizeof(void*) on target.
   IntegerType *WordType = DL.getIntPtrType(C);
-  PointerType *InitPtrType = InitValue ?
-      PointerType::getUnqual(InitValue->getType()) : VoidPtrType;
+  PointerType *InitPtrType = PointerType::getUnqual(C);
   Type *ElementTypes[4] = {WordType, WordType, VoidPtrType, InitPtrType};
   ArrayRef<Type*> ElementTypeArray(ElementTypes, 4);
   StructType *EmuTlsVarType = StructType::create(ElementTypeArray);

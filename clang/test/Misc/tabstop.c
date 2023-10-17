@@ -1,6 +1,7 @@
-// RUN: %clang_cc1 -ftabstop 3 -fsyntax-only -Wno-error=int-conversion %s 2>&1 | FileCheck -check-prefix=CHECK-3 -strict-whitespace %s
-// RUN: %clang_cc1 -ftabstop 4 -fsyntax-only -Wno-error=int-conversion %s 2>&1 | FileCheck -check-prefix=CHECK-4 -strict-whitespace %s
-// RUN: %clang_cc1 -ftabstop 5 -fsyntax-only -Wno-error=int-conversion %s 2>&1 | FileCheck -check-prefix=CHECK-5 -strict-whitespace %s
+// RUN: %clang_cc1 -ftabstop 3 -fsyntax-only -Wno-error=int-conversion -fno-diagnostics-show-line-numbers %s 2>&1 | FileCheck -check-prefix=CHECK-3 -strict-whitespace %s
+// RUN: %clang_cc1 -ftabstop 4 -fsyntax-only -Wno-error=int-conversion -fno-diagnostics-show-line-numbers %s 2>&1 | FileCheck -check-prefix=CHECK-4 -strict-whitespace %s
+// RUN: %clang_cc1 -ftabstop 5 -fsyntax-only -Wno-error=int-conversion -fno-diagnostics-show-line-numbers %s 2>&1 | FileCheck -check-prefix=CHECK-5 -strict-whitespace %s
+// RUN: %clang_cc1 -ftabstop 101 -fsyntax-only -Wno-error=int-conversion -fno-diagnostics-show-line-numbers %s 2>&1 | FileCheck -check-prefix=CHECK-101 -strict-whitespace %s
 
 // tab
 	void* a = 1;
@@ -54,3 +55,5 @@ void f(void)
 // CHECK-5: {{^     }}            (      )
 // CHECK-5: {{^     }}if (1 == 0     & 1)
 // CHECK-5: {{^     }}    (     )
+
+// CHECK-101: warning: ignoring invalid -ftabstop value '101', using default value 8

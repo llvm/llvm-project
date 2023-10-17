@@ -8,6 +8,7 @@
 
 #include "UnwindInfoSection.h"
 #include "InputSection.h"
+#include "Layout.h"
 #include "OutputSection.h"
 #include "OutputSegment.h"
 #include "SymbolTable.h"
@@ -50,6 +51,13 @@ using namespace lld::macho;
 #define COMPRESSED_ENTRY_FUNC_OFFSET_MASK                                      \
   UNWIND_INFO_COMPRESSED_ENTRY_FUNC_OFFSET(~0)
 
+static_assert(static_cast<uint32_t>(UNWIND_X86_64_DWARF_SECTION_OFFSET) ==
+                  static_cast<uint32_t>(UNWIND_ARM64_DWARF_SECTION_OFFSET) &&
+              static_cast<uint32_t>(UNWIND_X86_64_DWARF_SECTION_OFFSET) ==
+                  static_cast<uint32_t>(UNWIND_X86_DWARF_SECTION_OFFSET));
+
+constexpr uint64_t DWARF_SECTION_OFFSET = UNWIND_X86_64_DWARF_SECTION_OFFSET;
+
 // Compact Unwind format is a Mach-O evolution of DWARF Unwind that
 // optimizes space and exception-time lookup.  Most DWARF unwind
 // entries can be replaced with Compact Unwind entries, but the ones
@@ -88,41 +96,18 @@ using namespace lld::macho;
 
 // TODO(gkm): how do we align the 2nd-level pages?
 
-// The offsets of various fields in the on-disk representation of each compact
-// unwind entry.
-struct CompactUnwindOffsets {
-  uint32_t functionAddress;
-  uint32_t functionLength;
-  uint32_t encoding;
-  uint32_t personality;
-  uint32_t lsda;
+// The various fields in the on-disk representation of each compact unwind
+// entry.
+#define FOR_EACH_CU_FIELD(DO)                                                  \
+  DO(Ptr, functionAddress)                                                     \
+  DO(uint32_t, functionLength)                                                 \
+  DO(compact_unwind_encoding_t, encoding)                                      \
+  DO(Ptr, personality)                                                         \
+  DO(Ptr, lsda)
 
-  CompactUnwindOffsets(size_t wordSize) {
-    if (wordSize == 8)
-      init<uint64_t>();
-    else {
-      assert(wordSize == 4);
-      init<uint32_t>();
-    }
-  }
+CREATE_LAYOUT_CLASS(CompactUnwind, FOR_EACH_CU_FIELD);
 
-private:
-  template <class Ptr> void init() {
-    functionAddress = offsetof(Layout<Ptr>, functionAddress);
-    functionLength = offsetof(Layout<Ptr>, functionLength);
-    encoding = offsetof(Layout<Ptr>, encoding);
-    personality = offsetof(Layout<Ptr>, personality);
-    lsda = offsetof(Layout<Ptr>, lsda);
-  }
-
-  template <class Ptr> struct Layout {
-    Ptr functionAddress;
-    uint32_t functionLength;
-    compact_unwind_encoding_t encoding;
-    Ptr personality;
-    Ptr lsda;
-  };
-};
+#undef FOR_EACH_CU_FIELD
 
 // LLD's internal representation of a compact unwind entry.
 struct CompactUnwindEntry {
@@ -148,7 +133,7 @@ struct SecondLevelPage {
 // lengthy definition of UnwindInfoSection.
 class UnwindInfoSectionImpl final : public UnwindInfoSection {
 public:
-  UnwindInfoSectionImpl() : cuOffsets(target->wordSize) {}
+  UnwindInfoSectionImpl() : cuLayout(target->wordSize) {}
   uint64_t getSize() const override { return unwindInfoSize; }
   void prepare() override;
   void finalize() override;
@@ -161,8 +146,8 @@ private:
   Symbol *canonicalizePersonality(Symbol *);
 
   uint64_t unwindInfoSize = 0;
-  std::vector<decltype(symbols)::value_type> symbolsVec;
-  CompactUnwindOffsets cuOffsets;
+  SmallVector<decltype(symbols)::value_type, 0> symbolsVec;
+  CompactUnwindLayout cuLayout;
   std::vector<std::pair<compact_unwind_encoding_t, size_t>> commonEncodings;
   EncodingMap commonEncodingIndexes;
   // The entries here will be in the same order as their originating symbols
@@ -261,7 +246,7 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
     // compact unwind entries that references them, and thus appear as section
     // relocs. There is no need to prepare them. We only prepare relocs for
     // personality functions.
-    if (r.offset != cuOffsets.personality)
+    if (r.offset != cuLayout.personalityOffset)
       continue;
 
     if (auto *s = r.referent.dyn_cast<Symbol *>()) {
@@ -322,7 +307,7 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
                           r.addend, /*size=*/0, /*isWeakDef=*/false,
                           /*isExternal=*/false, /*isPrivateExtern=*/false,
                           /*includeInSymtab=*/true,
-                          /*isThumb=*/false, /*isReferencedDynamically=*/false,
+                          /*isReferencedDynamically=*/false,
                           /*noDeadStrip=*/false);
         s->used = true;
         in.got->addEntry(s);
@@ -358,12 +343,27 @@ void UnwindInfoSectionImpl::relocateCompactUnwind(
     if (!d->unwindEntry)
       return;
 
-    // If we have DWARF unwind info, create a CU entry that points to it.
+    // If we have DWARF unwind info, create a slimmed-down CU entry that points
+    // to it.
     if (d->unwindEntry->getName() == section_names::ehFrame) {
-      cu.encoding = target->modeDwarfEncoding | d->unwindEntry->outSecOff;
+      // The unwinder will look for the DWARF entry starting at the hint,
+      // assuming the hint points to a valid CFI record start. If it
+      // fails to find the record, it proceeds in a linear search through the
+      // contiguous CFI records from the hint until the end of the section.
+      // Ideally, in the case where the offset is too large to be encoded, we
+      // would instead encode the largest possible offset to a valid CFI record,
+      // but since we don't keep track of that, just encode zero -- the start of
+      // the section is always the start of a CFI record.
+      uint64_t dwarfOffsetHint =
+          d->unwindEntry->outSecOff <= DWARF_SECTION_OFFSET
+              ? d->unwindEntry->outSecOff
+              : 0;
+      cu.encoding = target->modeDwarfEncoding | dwarfOffsetHint;
       const FDE &fde = cast<ObjFile>(d->getFile())->fdes[d->unwindEntry];
       cu.functionLength = fde.funcLength;
-      cu.personality = fde.personality;
+      // Omit the DWARF personality from compact-unwind entry so that we
+      // don't need to encode it.
+      cu.personality = nullptr;
       cu.lsda = fde.lsda;
       return;
     }
@@ -373,17 +373,13 @@ void UnwindInfoSectionImpl::relocateCompactUnwind(
     auto buf = reinterpret_cast<const uint8_t *>(d->unwindEntry->data.data()) -
                target->wordSize;
     cu.functionLength =
-        support::endian::read32le(buf + cuOffsets.functionLength);
-    cu.encoding = support::endian::read32le(buf + cuOffsets.encoding);
+        support::endian::read32le(buf + cuLayout.functionLengthOffset);
+    cu.encoding = support::endian::read32le(buf + cuLayout.encodingOffset);
     for (const Reloc &r : d->unwindEntry->relocs) {
-      if (r.offset == cuOffsets.personality) {
+      if (r.offset == cuLayout.personalityOffset)
         cu.personality = r.referent.get<Symbol *>();
-      } else if (r.offset == cuOffsets.lsda) {
-        if (auto *referentSym = r.referent.dyn_cast<Symbol *>())
-          cu.lsda = cast<Defined>(referentSym)->isec;
-        else
-          cu.lsda = r.referent.get<InputSection *>();
-      }
+      else if (r.offset == cuLayout.lsdaOffset)
+        cu.lsda = r.getReferentInputSection();
     }
   });
 }
@@ -405,7 +401,7 @@ void UnwindInfoSectionImpl::encodePersonalities() {
       personalityIndex = personalities.size();
     }
     cu.encoding |=
-        personalityIndex << countTrailingZeros(
+        personalityIndex << llvm::countr_zero(
             static_cast<compact_unwind_encoding_t>(UNWIND_PERSONALITY_MASK));
   }
   if (personalities.size() > 3)
@@ -566,10 +562,10 @@ void UnwindInfoSectionImpl::finalize() {
     while (wordsRemaining >= 1 && i < cuIndices.size()) {
       idx = cuIndices[i];
       const CompactUnwindEntry *cuPtr = &cuEntries[idx];
-      if (cuPtr->functionAddress >= functionAddressMax) {
+      if (cuPtr->functionAddress >= functionAddressMax)
         break;
-      } else if (commonEncodingIndexes.count(cuPtr->encoding) ||
-                 page.localEncodingIndexes.count(cuPtr->encoding)) {
+      if (commonEncodingIndexes.count(cuPtr->encoding) ||
+          page.localEncodingIndexes.count(cuPtr->encoding)) {
         i++;
         wordsRemaining--;
       } else if (wordsRemaining >= 2 && n < COMPACT_ENCODINGS_MAX) {

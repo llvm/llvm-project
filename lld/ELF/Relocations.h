@@ -102,6 +102,15 @@ enum RelExpr {
   R_PPC64_RELAX_GOT_PC,
   R_RISCV_ADD,
   R_RISCV_PC_INDIRECT,
+  // Same as R_PC but with page-aligned semantics.
+  R_LOONGARCH_PAGE_PC,
+  // Same as R_PLT_PC but with page-aligned semantics.
+  R_LOONGARCH_PLT_PAGE_PC,
+  // In addition to having page-aligned semantics, LoongArch GOT relocs are
+  // also reused for TLS, making the semantics differ from other architectures.
+  R_LOONGARCH_GOT,
+  R_LOONGARCH_GOT_PAGE_PC,
+  R_LOONGARCH_TLSGD_PAGE_PC,
 };
 
 // Architecture-neutral representation of relocation.
@@ -128,6 +137,7 @@ struct JumpInstrMod {
 template <class ELFT> void scanRelocations();
 void reportUndefinedSymbols();
 void postScanRelocations();
+void addGotEntry(Symbol &sym);
 
 void hexagonTLSSymbolUpdate(ArrayRef<OutputSection *> outputSections);
 bool hexagonNeedsTLSSymbol(ArrayRef<OutputSection *> outputSections);
@@ -211,6 +221,11 @@ ArrayRef<RelTy> sortRels(ArrayRef<RelTy> rels, SmallVector<RelTy, 0> &storage) {
   }
   return rels;
 }
+
+// Returns true if Expr refers a GOT entry. Note that this function returns
+// false for TLS variables even though they need GOT, because TLS variables uses
+// GOT differently than the regular variables.
+bool needsGot(RelExpr expr);
 } // namespace lld::elf
 
 #endif

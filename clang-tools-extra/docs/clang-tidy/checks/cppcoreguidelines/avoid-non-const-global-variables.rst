@@ -3,8 +3,13 @@
 cppcoreguidelines-avoid-non-const-global-variables
 ==================================================
 
-Finds non-const global variables as described in `I.2 of C++ Core Guidelines <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Ri-global>`_ .
-As `R.6 of C++ Core Guidelines <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Rr-global>`_ is a duplicate of rule I.2 it also covers that rule.
+Finds non-const global variables as described in `I.2
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#i2-avoid-non-const-global-variables>`_
+of C++ Core Guidelines.
+As `R.6 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rr-global>`_
+of C++ Core Guidelines is a duplicate of rule `I.2
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#i2-avoid-non-const-global-variables>`_
+it also covers that rule.
 
 .. code-block:: c++
 
@@ -32,7 +37,7 @@ As `R.6 of C++ Core Guidelines <https://github.com/isocpp/CppCoreGuidelines/blob
         char h = 0;
     };
 
-Variables: ``a``, ``c``, ``c_ptr1``, ``c_ptr2``, ``c_const_ptr`` and
-``c_reference``, will all generate warnings since they are either:
-a globally accessible variable and non-const, a pointer or reference providing
-global access to non-const data or both.
+The variables ``a``, ``c``, ``c_ptr1``, ``c_const_ptr`` and ``c_reference``
+will all generate warnings since they are either a non-const globally accessible
+variable, a pointer or a reference providing global access to non-const data
+or both.

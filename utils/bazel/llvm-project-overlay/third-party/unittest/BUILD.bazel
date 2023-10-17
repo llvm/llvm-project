@@ -51,14 +51,18 @@ cc_library(
         ],
     ) + [
     ],
-    hdrs = ["googletest/include/gtest/gtest.h"],
+    hdrs = [
+        "googletest/include/gtest/internal/gtest-port.h",
+        "googletest/include/gtest/gtest.h",
+        "googletest/include/gtest/gtest-spi.h",
+    ],
     copts = llvm_copts,
     defines = [
         "GTEST_HAS_RTTI=0",
         "__STDC_LIMIT_MACROS",
         "__STDC_CONSTANT_MACROS",
     ] + select({
-        "@bazel_tools//src/conditions:windows": ["GTEST_USE_OWN_TR1_TUPLE=0"],
+        "@platforms//os:windows": ["GTEST_USE_OWN_TR1_TUPLE=0"],
         "//conditions:default": ["GTEST_USE_OWN_TR1_TUPLE=1"],
     }),
     includes = [

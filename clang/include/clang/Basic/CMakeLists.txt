@@ -30,10 +30,26 @@ clang_tablegen(AttrList.inc -gen-clang-attr-list
   SOURCE Attr.td
   TARGET ClangAttrList)
 
+clang_tablegen(AttrLeftSideCanPrintList.inc -gen-clang-attr-can-print-left-list
+  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
+  SOURCE Attr.td
+  TARGET ClangAttrCanPrintLeftList)
+
+clang_tablegen(AttrLeftSideMustPrintList.inc -gen-clang-attr-must-print-left-list
+  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
+  SOURCE Attr.td
+  TARGET ClangAttrMustPrintLeftList)
+
 clang_tablegen(AttrSubMatchRulesList.inc -gen-clang-attr-subject-match-rule-list
   -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE Attr.td
   TARGET ClangAttrSubjectMatchRuleList)
+
+clang_tablegen(AttrTokenKinds.inc -gen-clang-attr-token-kinds
+  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
+  SOURCE Attr.td
+  TARGET ClangAttrTokenKinds
+  )
 
 clang_tablegen(AttrHasAttributeImpl.inc -gen-clang-attr-has-attribute-impl
   -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
@@ -72,6 +88,15 @@ clang_tablegen(arm_sve_typeflags.inc -gen-arm-sve-typeflags
 clang_tablegen(arm_sve_sema_rangechecks.inc -gen-arm-sve-sema-rangechecks
   SOURCE arm_sve.td
   TARGET ClangARMSveSemaRangeChecks)
+clang_tablegen(arm_sme_builtins.inc -gen-arm-sme-builtins
+  SOURCE arm_sme.td
+  TARGET ClangARMSmeBuiltins)
+clang_tablegen(arm_sme_builtin_cg.inc -gen-arm-sme-builtin-codegen
+  SOURCE arm_sme.td
+  TARGET ClangARMSmeBuiltinCG)
+clang_tablegen(arm_sme_sema_rangechecks.inc -gen-arm-sme-sema-rangechecks
+  SOURCE arm_sme.td
+  TARGET ClangARMSmeSemaRangeChecks)
 clang_tablegen(arm_cde_builtins.inc -gen-arm-cde-builtin-def
   SOURCE arm_cde.td
   TARGET ClangARMCdeBuiltinsDef)
@@ -93,3 +118,12 @@ clang_tablegen(riscv_vector_builtin_cg.inc -gen-riscv-vector-builtin-codegen
 clang_tablegen(riscv_vector_builtin_sema.inc -gen-riscv-vector-builtin-sema
   SOURCE riscv_vector.td
   TARGET ClangRISCVVectorBuiltinSema)
+clang_tablegen(riscv_sifive_vector_builtins.inc -gen-riscv-sifive-vector-builtins
+  SOURCE riscv_sifive_vector.td
+  TARGET ClangRISCVSiFiveVectorBuiltins)
+clang_tablegen(riscv_sifive_vector_builtin_cg.inc -gen-riscv-sifive-vector-builtin-codegen
+  SOURCE riscv_sifive_vector.td
+  TARGET ClangRISCVSiFiveVectorBuiltinCG)
+clang_tablegen(riscv_sifive_vector_builtin_sema.inc -gen-riscv-sifive-vector-builtin-sema
+  SOURCE riscv_sifive_vector.td
+  TARGET ClangRISCVSiFiveVectorBuiltinSema)

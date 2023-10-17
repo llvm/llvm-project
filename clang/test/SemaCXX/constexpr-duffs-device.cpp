@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++1y -verify %s
+// RUN: %clang_cc1 -std=c++1y -verify -fexperimental-new-constant-interpreter %s
 
 // expected-no-diagnostics
 constexpr void copy(const char *from, unsigned long count, char *to) {

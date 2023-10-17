@@ -3,19 +3,6 @@
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++1z -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 
-namespace dr2229 { // dr2229: 7
-struct AnonBitfieldQualifiers {
-  const unsigned : 1; // expected-error {{anonymous bit-field cannot have qualifiers}}
-  volatile unsigned : 1; // expected-error {{anonymous bit-field cannot have qualifiers}}
-  const volatile unsigned : 1; // expected-error {{anonymous bit-field cannot have qualifiers}}
-
-  unsigned : 1;
-  const unsigned i1 : 1;
-  volatile unsigned i2 : 1;
-  const volatile unsigned i3 : 1;
-};
-}
-
 #if __cplusplus >= 201103L
 namespace dr2211 { // dr2211: 8
 void f() {
@@ -27,13 +14,25 @@ void f() {
 }
 #endif
 
-namespace dr2292 { // dr2292: 9
-#if __cplusplus >= 201103L
-  template<typename T> using id = T;
-  void test(int *p) {
-    p->template id<int>::~id<int>();
-  }
-#endif
+namespace dr2213 { // dr2213: yes
+template <typename T, typename U>
+struct A;
+
+template <typename U>
+struct A<int, U>;
+} // namespace dr2213
+
+namespace dr2229 { // dr2229: 7
+struct AnonBitfieldQualifiers {
+  const unsigned : 1; // expected-error {{anonymous bit-field cannot have qualifiers}}
+  volatile unsigned : 1; // expected-error {{anonymous bit-field cannot have qualifiers}}
+  const volatile unsigned : 1; // expected-error {{anonymous bit-field cannot have qualifiers}}
+
+  unsigned : 1;
+  const unsigned i1 : 1;
+  volatile unsigned i2 : 1;
+  const volatile unsigned i3 : 1;
+};
 }
 
 namespace dr2233 { // dr2233: 11
@@ -123,3 +122,34 @@ namespace CheckAfterMerging2 {
 }
 #endif
 } // namespace dr2233
+
+namespace dr2267 { // dr2267: no
+#if __cplusplus >= 201103L
+struct A {} a;
+struct B { explicit B(const A&); }; // #dr2267-struct-B
+
+struct D { D(); };
+struct C { explicit operator D(); } c;
+
+B b1(a);
+const B &b2{a}; // FIXME ill-formed
+const B &b3(a);
+// expected-error@-1 {{no viable conversion from 'struct A' to 'const B'}}
+// expected-note@#dr2267-struct-B {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'struct A' to 'const B &' for 1st argument}}
+// expected-note@#dr2267-struct-B {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'struct A' to 'B &&' for 1st argument}}
+// expected-note@#dr2267-struct-B {{explicit constructor is not a candidate}}
+
+D d1(c);
+const D &d2{c}; // FIXME ill-formed
+const D &d3(c); // FIXME ill-formed
+#endif
+}
+
+namespace dr2292 { // dr2292: 9
+#if __cplusplus >= 201103L
+  template<typename T> using id = T;
+  void test(int *p) {
+    p->template id<int>::~id<int>();
+  }
+#endif
+}

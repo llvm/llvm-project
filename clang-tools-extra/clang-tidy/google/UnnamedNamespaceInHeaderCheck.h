@@ -12,10 +12,7 @@
 #include "../ClangTidyCheck.h"
 #include "../utils/FileExtensionsUtils.h"
 
-namespace clang {
-namespace tidy {
-namespace google {
-namespace build {
+namespace clang::tidy::google::build {
 
 /// Finds anonymous namespaces in headers.
 ///
@@ -44,13 +41,10 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  const StringRef RawStringHeaderFileExtensions;
-  utils::FileExtensionsSet HeaderFileExtensions;
+  StringRef RawStringHeaderFileExtensions;
+  FileExtensionsSet HeaderFileExtensions;
 };
 
-} // namespace build
-} // namespace google
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::google::build
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_GOOGLE_UNNAMEDNAMESPACEINHEADERCHECK_H

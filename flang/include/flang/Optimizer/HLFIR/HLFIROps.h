@@ -10,12 +10,18 @@
 #define FORTRAN_OPTIMIZER_HLFIR_HLFIROPS_H
 
 #include "flang/Optimizer/Dialect/FIRAttr.h"
+#include "flang/Optimizer/Dialect/FIRDialect.h"
+#include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include <variant>
 
+#include "flang/Optimizer/HLFIR/HLFIROpInterfaces.h.inc"
 #define GET_OP_CLASSES
 #include "flang/Optimizer/HLFIR/HLFIROps.h.inc"
 

@@ -1,5 +1,4 @@
 // RUN: %clang_cc1  -fsyntax-only -verify -Wno-objc-root-class %s
-// rdar://16655340
 @protocol X, Y, Z;
 @class Foo;
 
@@ -25,7 +24,6 @@ int main(void)
     typeof(@encode(typeof(i))) e = @encode(typeof(Intf)); // expected-warning {{initializer-string for char array is too long}}
 }
 
-// rdar://9255564
 typedef short short8 __attribute__((ext_vector_type(8)));
 
 struct foo {

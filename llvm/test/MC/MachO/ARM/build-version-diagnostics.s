@@ -53,4 +53,4 @@
 // CHECK: build-version-diagnostics.s:[[@LINE-1]]:25: error: invalid OS update version number
 
 .build_version ios,10,0,0,
-// CHECK: build-version-diagnostics.s:[[@LINE-1]]:26: error: unexpected token in '.build_version' directive
+// CHECK: build-version-diagnostics.s:[[#@LINE-1]]:26: error: expected newline in '.build_version' directive

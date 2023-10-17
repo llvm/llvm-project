@@ -10,7 +10,6 @@
 #include "ErrorHandling.h"
 #include "MissingFrameInferrer.h"
 #include "ProfileGenerator.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -19,6 +18,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/TargetParser/Triple.h"
 #include <optional>
 
 #define DEBUG_TYPE "load-binary"
@@ -163,12 +163,13 @@ void BinarySizeContextTracker::trackInlineesOptimizedAway(
 }
 
 ProfiledBinary::ProfiledBinary(const StringRef ExeBinPath,
-                             const StringRef DebugBinPath)
-    : Path(ExeBinPath), DebugBinaryPath(DebugBinPath), ProEpilogTracker(this),
+                               const StringRef DebugBinPath)
+    : Path(ExeBinPath), DebugBinaryPath(DebugBinPath),
+      SymbolizerOpts(getSymbolizerOpts()), ProEpilogTracker(this),
+      Symbolizer(std::make_unique<symbolize::LLVMSymbolizer>(SymbolizerOpts)),
       TrackFuncContextSize(EnableCSPreInliner && UseContextCostForPreInliner) {
   // Point to executable binary if debug info binary is not specified.
   SymbolizerPath = DebugBinPath.empty() ? ExeBinPath : DebugBinPath;
-  setupSymbolizer();
   if (InferMissingFrames)
     MissingContextInferrer = std::make_unique<MissingFrameInferrer>(this);
   load();
@@ -214,9 +215,7 @@ void ProfiledBinary::load() {
     exitWithError("not a valid Elf image", Path);
 
   TheTriple = Obj->makeTriple();
-  // Current only support X86
-  if (!TheTriple.isX86())
-    exitWithError("unsupported target", TheTriple.getTriple());
+
   LLVM_DEBUG(dbgs() << "Loading " << Path << "\n");
 
   // Find the preferred load address for text sections.
@@ -811,24 +810,31 @@ void ProfiledBinary::loadSymbolsFromDWARF(ObjectFile &Obj) {
     loadSymbolsFromDWARFUnit(*CompilationUnit.get());
 
   // Handles DWO sections that can either be in .o, .dwo or .dwp files.
+  uint32_t NumOfDWOMissing = 0;
   for (const auto &CompilationUnit : DebugContext->compile_units()) {
     DWARFUnit *const DwarfUnit = CompilationUnit.get();
-    if (std::optional<uint64_t> DWOId = DwarfUnit->getDWOId()) {
+    if (DwarfUnit->getDWOId()) {
       DWARFUnit *DWOCU = DwarfUnit->getNonSkeletonUnitDIE(false).getDwarfUnit();
       if (!DWOCU->isDWOUnit()) {
-        std::string DWOName = dwarf::toString(
-            DwarfUnit->getUnitDIE().find(
-                {dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}),
-            "");
-        WithColor::warning()
-            << "DWO debug information for " << DWOName
-            << " was not loaded. Please check the .o, .dwo or .dwp path.\n";
+        NumOfDWOMissing++;
+        if (ShowDetailedWarning) {
+          std::string DWOName = dwarf::toString(
+              DwarfUnit->getUnitDIE().find(
+                  {dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}),
+              "");
+          WithColor::warning() << "DWO debug information for " << DWOName
+                               << " was not loaded.\n";
+        }
         continue;
       }
       loadSymbolsFromDWARFUnit(*DWOCU);
     }
   }
 
+  if (NumOfDWOMissing)
+    WithColor::warning()
+        << " DWO debug information was not loaded for " << NumOfDWOMissing
+        << " modules. Please check the .o, .dwo or .dwp path.\n";
   if (BinaryFunctions.empty())
     WithColor::warning() << "Loading of DWARF info completed, but no binary "
                             "functions have been retrieved.\n";
@@ -840,7 +846,7 @@ void ProfiledBinary::populateSymbolListFromDWARF(
     SymbolList.add(I.second.getFuncName());
 }
 
-void ProfiledBinary::setupSymbolizer() {
+symbolize::LLVMSymbolizer::Options ProfiledBinary::getSymbolizerOpts() const {
   symbolize::LLVMSymbolizer::Options SymbolizerOpts;
   SymbolizerOpts.PrintFunctions =
       DILineInfoSpecifier::FunctionNameKind::LinkageName;
@@ -849,7 +855,7 @@ void ProfiledBinary::setupSymbolizer() {
   SymbolizerOpts.UseSymbolTable = false;
   SymbolizerOpts.RelativeAddresses = false;
   SymbolizerOpts.DWPName = DWPPath;
-  Symbolizer = std::make_unique<symbolize::LLVMSymbolizer>(SymbolizerOpts);
+  return SymbolizerOpts;
 }
 
 SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
@@ -866,7 +872,7 @@ SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
   SampleContextFrameVector CallStack;
   for (int32_t I = InlineStack.getNumberOfFrames() - 1; I >= 0; I--) {
     const auto &CallerFrame = InlineStack.getFrame(I);
-    if (CallerFrame.FunctionName == "<invalid>")
+    if (CallerFrame.FunctionName.empty() || (CallerFrame.FunctionName == "<invalid>"))
       break;
 
     StringRef FunctionName(CallerFrame.FunctionName);

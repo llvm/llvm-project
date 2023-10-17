@@ -2,7 +2,8 @@
 ; RUN:   -riscv-v-vector-bits-min=128 -riscv-v-vector-bits-max=128 \
 ; RUN:   -pass-remarks=loop-vectorize -pass-remarks-analysis=loop-vectorize \
 ; RUN:   -pass-remarks-missed=loop-vectorize -mtriple riscv64-linux-gnu \
-; RUN:   -mattr=+v,+f -S 2>%t | FileCheck %s -check-prefix=CHECK
+; RUN:   -force-target-max-vector-interleave=2 -mattr=+v,+f -S 2>%t \
+; RUN:   | FileCheck %s -check-prefix=CHECK
 ; RUN: cat %t | FileCheck %s -check-prefix=CHECK-REMARK
 
 ; Reduction can be vectorized
@@ -140,9 +141,8 @@ define i32 @smin(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 ; CHECK: %[[SEL1:.*]] = select <vscale x 8 x i1> %[[ICMP1]], <vscale x 8 x i32> %[[LOAD1]]
 ; CHECK: %[[SEL2:.*]] = select <vscale x 8 x i1> %[[ICMP2]], <vscale x 8 x i32> %[[LOAD2]]
 ; CHECK: middle.block:
-; CHECK: %[[ICMP:.*]] = icmp slt <vscale x 8 x i32> %[[SEL1]], %[[SEL2]]
-; CHECK-NEXT: %[[SEL:.*]] = select <vscale x 8 x i1> %[[ICMP]], <vscale x 8 x i32> %[[SEL1]], <vscale x 8 x i32> %[[SEL2]]
-; CHECK-NEXT: call i32 @llvm.vector.reduce.smin.nxv8i32(<vscale x 8 x i32>  %[[SEL]])
+; CHECK: %[[RDX:.*]] = call <vscale x 8 x i32> @llvm.smin.nxv8i32(<vscale x 8 x i32> %[[SEL1]], <vscale x 8 x i32> %[[SEL2]])
+; CHECK-NEXT: call i32 @llvm.vector.reduce.smin.nxv8i32(<vscale x 8 x i32>  %[[RDX]])
 entry:
   br label %for.body
 
@@ -174,9 +174,8 @@ define i32 @umax(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 ; CHECK: %[[SEL1:.*]] = select <vscale x 8 x i1> %[[ICMP1]], <vscale x 8 x i32> %[[LOAD1]]
 ; CHECK: %[[SEL2:.*]] = select <vscale x 8 x i1> %[[ICMP2]], <vscale x 8 x i32> %[[LOAD2]]
 ; CHECK: middle.block:
-; CHECK: %[[ICMP:.*]] = icmp ugt <vscale x 8 x i32> %[[SEL1]], %[[SEL2]]
-; CHECK-NEXT: %[[SEL:.*]] = select <vscale x 8 x i1> %[[ICMP]], <vscale x 8 x i32> %[[SEL1]], <vscale x 8 x i32> %[[SEL2]]
-; CHECK-NEXT: call i32 @llvm.vector.reduce.umax.nxv8i32(<vscale x 8 x i32>  %[[SEL]])
+; CHECK: %[[RDX:.*]] = call <vscale x 8 x i32> @llvm.umax.nxv8i32(<vscale x 8 x i32> %[[SEL1]], <vscale x 8 x i32> %[[SEL2]])
+; CHECK-NEXT: call i32 @llvm.vector.reduce.umax.nxv8i32(<vscale x 8 x i32>  %[[RDX]])
 entry:
   br label %for.body
 
@@ -226,17 +225,17 @@ for.end:
 }
 
 ; CHECK-REMARK: Scalable vectorization not supported for the reduction operations found in this loop.
-; CHECK-REMARK: vectorized loop (vectorization width: 8, interleaved count: 2)
+; CHECK-REMARK: vectorized loop (vectorization width: 16, interleaved count: 2)
 define bfloat @fadd_fast_bfloat(ptr noalias nocapture readonly %a, i64 %n) {
 ; CHECK-LABEL: @fadd_fast_bfloat
 ; CHECK: vector.body:
-; CHECK: %[[LOAD1:.*]] = load <8 x bfloat>
-; CHECK: %[[LOAD2:.*]] = load <8 x bfloat>
-; CHECK: %[[FADD1:.*]] = fadd fast <8 x bfloat> %[[LOAD1]]
-; CHECK: %[[FADD2:.*]] = fadd fast <8 x bfloat> %[[LOAD2]]
+; CHECK: %[[LOAD1:.*]] = load <16 x bfloat>
+; CHECK: %[[LOAD2:.*]] = load <16 x bfloat>
+; CHECK: %[[FADD1:.*]] = fadd fast <16 x bfloat> %[[LOAD1]]
+; CHECK: %[[FADD2:.*]] = fadd fast <16 x bfloat> %[[LOAD2]]
 ; CHECK: middle.block:
-; CHECK: %[[RDX:.*]] = fadd fast <8 x bfloat> %[[FADD2]], %[[FADD1]]
-; CHECK: call fast bfloat @llvm.vector.reduce.fadd.v8bf16(bfloat 0xR8000, <8 x bfloat> %[[RDX]])
+; CHECK: %[[RDX:.*]] = fadd fast <16 x bfloat> %[[FADD2]], %[[FADD1]]
+; CHECK: call fast bfloat @llvm.vector.reduce.fadd.v16bf16(bfloat 0xR8000, <16 x bfloat> %[[RDX]])
 entry:
   br label %for.body
 
@@ -327,17 +326,17 @@ for.end:
 ; MUL
 
 ; CHECK-REMARK: Scalable vectorization not supported for the reduction operations found in this loop.
-; CHECK-REMARK: vectorized loop (vectorization width: 4, interleaved count: 2)
+; CHECK-REMARK: vectorized loop (vectorization width: 8, interleaved count: 2)
 define i32 @mul(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 ; CHECK-LABEL: @mul
 ; CHECK: vector.body:
-; CHECK: %[[LOAD1:.*]] = load <4 x i32>
-; CHECK: %[[LOAD2:.*]] = load <4 x i32>
-; CHECK: %[[MUL1:.*]] = mul <4 x i32> %[[LOAD1]]
-; CHECK: %[[MUL2:.*]] = mul <4 x i32> %[[LOAD2]]
+; CHECK: %[[LOAD1:.*]] = load <8 x i32>
+; CHECK: %[[LOAD2:.*]] = load <8 x i32>
+; CHECK: %[[MUL1:.*]] = mul <8 x i32> %[[LOAD1]]
+; CHECK: %[[MUL2:.*]] = mul <8 x i32> %[[LOAD2]]
 ; CHECK: middle.block:
-; CHECK: %[[RDX:.*]] = mul <4 x i32> %[[MUL2]], %[[MUL1]]
-; CHECK: call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> %[[RDX]])
+; CHECK: %[[RDX:.*]] = mul <8 x i32> %[[MUL2]], %[[MUL1]]
+; CHECK: call i32 @llvm.vector.reduce.mul.v8i32(<8 x i32> %[[RDX]])
 entry:
   br label %for.body
 
@@ -357,21 +356,21 @@ for.end:                                 ; preds = %for.body, %entry
 
 ; Note: This test was added to ensure we always check the legality of reductions (and emit a warning if necessary) before checking for memory dependencies
 ; CHECK-REMARK: Scalable vectorization not supported for the reduction operations found in this loop.
-; CHECK-REMARK: vectorized loop (vectorization width: 4, interleaved count: 2)
+; CHECK-REMARK: vectorized loop (vectorization width: 8, interleaved count: 2)
 define i32 @memory_dependence(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, i64 %n) {
 ; CHECK-LABEL: @memory_dependence
 ; CHECK: vector.body:
-; CHECK: %[[LOAD1:.*]] = load <4 x i32>
-; CHECK: %[[LOAD2:.*]] = load <4 x i32>
-; CHECK: %[[LOAD3:.*]] = load <4 x i32>
-; CHECK: %[[LOAD4:.*]] = load <4 x i32>
-; CHECK: %[[ADD1:.*]] = add nsw <4 x i32> %[[LOAD3]], %[[LOAD1]]
-; CHECK: %[[ADD2:.*]] = add nsw <4 x i32> %[[LOAD4]], %[[LOAD2]]
-; CHECK: %[[MUL1:.*]] = mul <4 x i32> %[[LOAD3]]
-; CHECK: %[[MUL2:.*]] = mul <4 x i32> %[[LOAD4]]
+; CHECK: %[[LOAD1:.*]] = load <8 x i32>
+; CHECK: %[[LOAD2:.*]] = load <8 x i32>
+; CHECK: %[[LOAD3:.*]] = load <8 x i32>
+; CHECK: %[[LOAD4:.*]] = load <8 x i32>
+; CHECK: %[[ADD1:.*]] = add nsw <8 x i32> %[[LOAD3]], %[[LOAD1]]
+; CHECK: %[[ADD2:.*]] = add nsw <8 x i32> %[[LOAD4]], %[[LOAD2]]
+; CHECK: %[[MUL1:.*]] = mul <8 x i32> %[[LOAD3]]
+; CHECK: %[[MUL2:.*]] = mul <8 x i32> %[[LOAD4]]
 ; CHECK: middle.block:
-; CHECK: %[[RDX:.*]] = mul <4 x i32> %[[MUL2]], %[[MUL1]]
-; CHECK: call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> %[[RDX]])
+; CHECK: %[[RDX:.*]] = mul <8 x i32> %[[MUL2]], %[[MUL1]]
+; CHECK: call i32 @llvm.vector.reduce.mul.v8i32(<8 x i32> %[[RDX]])
 entry:
   br label %for.body
 
@@ -395,19 +394,19 @@ for.end:
   ret i32 %mul
 }
 
-; CHECK-REMARK: vectorized loop (vectorization width: vscale x 2, interleaved count: 2)
+; CHECK-REMARK: vectorized loop (vectorization width: vscale x 4, interleaved count: 2)
 define float @fmuladd(ptr %a, ptr %b, i64 %n) {
 ; CHECK-LABEL: @fmuladd(
 ; CHECK: vector.body:
-; CHECK: [[WIDE_LOAD:%.*]] = load <vscale x 2 x float>
-; CHECK: [[WIDE_LOAD2:%.*]] = load <vscale x 2 x float>
-; CHECK: [[WIDE_LOAD3:%.*]] = load <vscale x 2 x float>
-; CHECK: [[WIDE_LOAD4:%.*]] = load <vscale x 2 x float>
-; CHECK: [[MULADD1:%.*]] = call reassoc <vscale x 2 x float> @llvm.fmuladd.nxv2f32(<vscale x 2 x float> [[WIDE_LOAD]], <vscale x 2 x float> [[WIDE_LOAD3]],
-; CHECK: [[MULADD2:%.*]] = call reassoc <vscale x 2 x float> @llvm.fmuladd.nxv2f32(<vscale x 2 x float> [[WIDE_LOAD2]], <vscale x 2 x float> [[WIDE_LOAD4]],
+; CHECK: [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>
+; CHECK: [[WIDE_LOAD2:%.*]] = load <vscale x 4 x float>
+; CHECK: [[WIDE_LOAD3:%.*]] = load <vscale x 4 x float>
+; CHECK: [[WIDE_LOAD4:%.*]] = load <vscale x 4 x float>
+; CHECK: [[MULADD1:%.*]] = call reassoc <vscale x 4 x float> @llvm.fmuladd.nxv4f32(<vscale x 4 x float> [[WIDE_LOAD]], <vscale x 4 x float> [[WIDE_LOAD3]],
+; CHECK: [[MULADD2:%.*]] = call reassoc <vscale x 4 x float> @llvm.fmuladd.nxv4f32(<vscale x 4 x float> [[WIDE_LOAD2]], <vscale x 4 x float> [[WIDE_LOAD4]],
 ; CHECK: middle.block:
-; CHECK: [[BIN_RDX:%.*]] = fadd reassoc <vscale x 2 x float> [[MULADD2]], [[MULADD1]]
-; CHECK: call reassoc float @llvm.vector.reduce.fadd.nxv2f32(float -0.000000e+00, <vscale x 2 x float> [[BIN_RDX]])
+; CHECK: [[BIN_RDX:%.*]] = fadd reassoc <vscale x 4 x float> [[MULADD2]], [[MULADD1]]
+; CHECK: call reassoc float @llvm.vector.reduce.fadd.nxv4f32(float -0.000000e+00, <vscale x 4 x float> [[BIN_RDX]])
 ;
 entry:
   br label %for.body

@@ -11,7 +11,7 @@
 ##===----------------------------------------------------------------------===##
 
 if(CMAKE_SYSTEM_NAME MATCHES "Linux")
-  build_generic_elf64_nextgen("aarch64" "aarch64" "aarch64" "aarch64-unknown-linux-gnu" "183")
+  build_generic_elf64("aarch64" "aarch64" "aarch64" "aarch64-unknown-linux-gnu" "183")
 else()
  libomptarget_say("Not building aarch64 NextGen offloading plugin: machine not found in the system.")
 endif()

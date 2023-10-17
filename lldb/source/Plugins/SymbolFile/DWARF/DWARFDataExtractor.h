@@ -30,8 +30,9 @@ public:
   size_t GetDWARFSizeofInitialLength() const { return 4; }
   size_t GetDWARFSizeOfOffset() const { return 4; }
 
-  llvm::DWARFDataExtractor GetAsLLVM() const;
+  llvm::DWARFDataExtractor GetAsLLVMDWARF() const;
+  llvm::DataExtractor GetAsLLVM() const;
 };
-}
+} // namespace lldb_private
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDATAEXTRACTOR_H

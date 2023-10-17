@@ -1,12 +1,12 @@
 // Test without serialization:
-// RUN: %clang_cc1 -fdouble-square-bracket-attributes -triple x86_64-apple-macosx10.10.0 \
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.10.0 \
 // RUN: -ast-dump -ast-dump-filter Test %s \
 // RUN: | FileCheck --strict-whitespace %s
 //
 // Test with serialization:
-// RUN: %clang_cc1 -fdouble-square-bracket-attributes -triple x86_64-apple-macosx10.10.0 \
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.10.0 \
 // RUN: -emit-pch -o %t %s
-// RUN: %clang_cc1 -x objective-c -fdouble-square-bracket-attributes -triple x86_64-apple-macosx10.10.0 \
+// RUN: %clang_cc1 -x objective-c -triple x86_64-apple-macosx10.10.0 \
 // RUN: -include-pch %t -ast-dump-all -ast-dump-filter Test /dev/null \
 // RUN: | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//" \
 // RUN: | FileCheck --strict-whitespace %s

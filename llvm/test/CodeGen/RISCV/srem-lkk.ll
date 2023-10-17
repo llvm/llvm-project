@@ -51,7 +51,7 @@ define i32 @fold_srem_positive_odd(i32 %x) nounwind {
 ; RV64IM-NEXT:    sraiw a1, a1, 6
 ; RV64IM-NEXT:    add a1, a1, a2
 ; RV64IM-NEXT:    li a2, 95
-; RV64IM-NEXT:    mulw a1, a1, a2
+; RV64IM-NEXT:    mul a1, a1, a2
 ; RV64IM-NEXT:    subw a0, a0, a1
 ; RV64IM-NEXT:    ret
   %1 = srem i32 %x, 95
@@ -99,7 +99,7 @@ define i32 @fold_srem_positive_even(i32 %x) nounwind {
 ; RV64IM-NEXT:    srai a1, a1, 40
 ; RV64IM-NEXT:    add a1, a1, a2
 ; RV64IM-NEXT:    li a2, 1060
-; RV64IM-NEXT:    mulw a1, a1, a2
+; RV64IM-NEXT:    mul a1, a1, a2
 ; RV64IM-NEXT:    subw a0, a0, a1
 ; RV64IM-NEXT:    ret
   %1 = srem i32 %x, 1060
@@ -147,7 +147,7 @@ define i32 @fold_srem_negative_odd(i32 %x) nounwind {
 ; RV64IM-NEXT:    srai a1, a1, 40
 ; RV64IM-NEXT:    add a1, a1, a2
 ; RV64IM-NEXT:    li a2, -723
-; RV64IM-NEXT:    mulw a1, a1, a2
+; RV64IM-NEXT:    mul a1, a1, a2
 ; RV64IM-NEXT:    subw a0, a0, a1
 ; RV64IM-NEXT:    ret
   %1 = srem i32 %x, -723
@@ -198,8 +198,8 @@ define i32 @fold_srem_negative_even(i32 %x) nounwind {
 ; RV64IM-NEXT:    srai a1, a1, 40
 ; RV64IM-NEXT:    add a1, a1, a2
 ; RV64IM-NEXT:    lui a2, 1048570
-; RV64IM-NEXT:    addiw a2, a2, 1595
-; RV64IM-NEXT:    mulw a1, a1, a2
+; RV64IM-NEXT:    addi a2, a2, 1595
+; RV64IM-NEXT:    mul a1, a1, a2
 ; RV64IM-NEXT:    subw a0, a0, a1
 ; RV64IM-NEXT:    ret
   %1 = srem i32 %x, -22981
@@ -277,7 +277,7 @@ define i32 @combine_srem_sdiv(i32 %x) nounwind {
 ; RV64IM-NEXT:    sraiw a1, a1, 6
 ; RV64IM-NEXT:    add a1, a1, a2
 ; RV64IM-NEXT:    li a2, 95
-; RV64IM-NEXT:    mulw a2, a1, a2
+; RV64IM-NEXT:    mul a2, a1, a2
 ; RV64IM-NEXT:    add a0, a0, a1
 ; RV64IM-NEXT:    subw a0, a0, a2
 ; RV64IM-NEXT:    ret

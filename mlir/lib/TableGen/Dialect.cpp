@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/Dialect.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 
@@ -103,19 +102,8 @@ bool Dialect::isExtensible() const {
   return def->getValueAsBit("isExtensible");
 }
 
-Dialect::FolderAPI Dialect::getFolderAPI() const {
-  llvm::Record *value = def->getValueAsDef("useFoldAPI");
-  auto converted =
-      llvm::StringSwitch<std::optional<Dialect::FolderAPI>>(value->getName())
-          .Case("kEmitRawAttributesFolder", FolderAPI::RawAttributes)
-          .Case("kEmitFoldAdaptorFolder", FolderAPI::FolderAdaptor)
-          .Default(std::nullopt);
-
-  if (!converted)
-    llvm::PrintFatalError(def->getLoc(),
-                          "Invalid value for dialect field `useFoldAPI`");
-
-  return *converted;
+bool Dialect::usePropertiesForAttributes() const {
+  return def->getValueAsBit("usePropertiesForAttributes");
 }
 
 bool Dialect::operator==(const Dialect &other) const {

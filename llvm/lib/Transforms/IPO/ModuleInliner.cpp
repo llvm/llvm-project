@@ -138,17 +138,12 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
   //
   // TODO: Here is a huge amount duplicate code between the module inliner and
   // the SCC inliner, which need some refactoring.
-  auto Calls = getInlineOrder(FAM, Params);
+  auto Calls = getInlineOrder(FAM, Params, MAM, M);
   assert(Calls != nullptr && "Expected an initialized InlineOrder");
 
   // Populate the initial list of calls in this module.
   for (Function &F : M) {
     auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-    // We want to generally process call sites top-down in order for
-    // simplifications stemming from replacing the call with the returned value
-    // after inlining to be visible to subsequent inlining decisions.
-    // FIXME: Using instructions sequence is a really bad way to do this.
-    // Instead we should do an actual RPO walk of the function body.
     for (Instruction &I : instructions(F))
       if (auto *CB = dyn_cast<CallBase>(&I))
         if (Function *Callee = CB->getCalledFunction()) {
@@ -213,7 +208,7 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
     // Setup the data structure used to plumb customization into the
     // `InlineFunction` routine.
     InlineFunctionInfo IFI(
-        /*cg=*/nullptr, GetAssumptionCache, PSI,
+        GetAssumptionCache, PSI,
         &FAM.getResult<BlockFrequencyAnalysis>(*(CB->getCaller())),
         &FAM.getResult<BlockFrequencyAnalysis>(Callee));
 

@@ -242,10 +242,15 @@ EXTENSION(c_alignas, true)
 EXTENSION(c_alignof, true)
 EXTENSION(c_atomic, true)
 EXTENSION(c_generic_selections, true)
+EXTENSION(c_generic_selection_with_controlling_type, true)
 EXTENSION(c_static_assert, true)
 EXTENSION(c_thread_local, PP.getTargetInfo().isTLSSupported())
+// C23 features supported by other languages as extensions
+EXTENSION(c_attributes, true)
 // C++11 features supported by other languages as extensions.
 EXTENSION(cxx_atomic, LangOpts.CPlusPlus)
+EXTENSION(cxx_default_function_template_args, LangOpts.CPlusPlus)
+EXTENSION(cxx_defaulted_functions, LangOpts.CPlusPlus)
 EXTENSION(cxx_deleted_functions, LangOpts.CPlusPlus)
 EXTENSION(cxx_explicit_conversions, LangOpts.CPlusPlus)
 EXTENSION(cxx_inline_namespaces, LangOpts.CPlusPlus)
@@ -268,10 +273,12 @@ EXTENSION(pragma_clang_attribute_external_declaration, true)
 EXTENSION(statement_attributes_with_gnu_syntax, true)
 EXTENSION(gnu_asm, LangOpts.GNUAsm)
 EXTENSION(gnu_asm_goto_with_outputs, LangOpts.GNUAsm)
+EXTENSION(gnu_asm_goto_with_outputs_full, LangOpts.GNUAsm)
 EXTENSION(matrix_types, LangOpts.MatrixTypes)
 EXTENSION(matrix_types_scalar_division, true)
 EXTENSION(cxx_attributes_on_using_declarations, LangOpts.CPlusPlus11)
 
+FEATURE(builtin_headers_in_system_modules, LangOpts.BuiltinHeadersInSystemModules)
 FEATURE(cxx_abi_relative_vtable, LangOpts.CPlusPlus && LangOpts.RelativeCXXABIVTables)
 
 // CUDA/HIP Features

@@ -11,29 +11,47 @@
 
 #include <stddef.h> // For size_t.
 
-#include "include/errno.h"
-
-#include "src/errno/llvmlibc_errno.h"
+#include "src/__support/common.h"
+#include "src/errno/libc_errno.h"
 #include "src/time/mktime.h"
 
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace time_utils {
+
+enum Month : int {
+  JANUARY,
+  FEBRUARY,
+  MARCH,
+  APRIL,
+  MAY,
+  JUNE,
+  JULY,
+  AUGUST,
+  SEPTEMBER,
+  OCTOBER,
+  NOVEMBER,
+  DECEMBER
+};
 
 struct TimeConstants {
   static constexpr int SECONDS_PER_MIN = 60;
-  static constexpr int SECONDS_PER_HOUR = 3600;
-  static constexpr int SECONDS_PER_DAY = 86400;
+  static constexpr int MINUTES_PER_HOUR = 60;
+  static constexpr int HOURS_PER_DAY = 24;
   static constexpr int DAYS_PER_WEEK = 7;
   static constexpr int MONTHS_PER_YEAR = 12;
   static constexpr int DAYS_PER_NON_LEAP_YEAR = 365;
   static constexpr int DAYS_PER_LEAP_YEAR = 366;
+
+  static constexpr int SECONDS_PER_HOUR = SECONDS_PER_MIN * MINUTES_PER_HOUR;
+  static constexpr int SECONDS_PER_DAY = SECONDS_PER_HOUR * HOURS_PER_DAY;
+  static constexpr int NUMBER_OF_SECONDS_IN_LEAP_YEAR =
+      DAYS_PER_LEAP_YEAR * SECONDS_PER_DAY;
+
   static constexpr int TIME_YEAR_BASE = 1900;
   static constexpr int EPOCH_YEAR = 1970;
   static constexpr int EPOCH_WEEK_DAY = 4;
-  static constexpr int NUMBER_OF_SECONDS_IN_LEAP_YEAR =
-      (DAYS_PER_NON_LEAP_YEAR + 1) * SECONDS_PER_DAY;
 
   // For asctime the behavior is undefined if struct tm's tm_wday or tm_mon are
   // not within the normal ranges as defined in <time.h>, or if struct tm's
@@ -49,10 +67,10 @@ struct TimeConstants {
   static constexpr int WEEK_DAY_OF2000_MARCH_FIRST = 3;
 
   static constexpr int DAYS_PER400_YEARS =
-      (DAYS_PER_NON_LEAP_YEAR * 400 + (400 / 4) - 3);
+      (DAYS_PER_NON_LEAP_YEAR * 400) + (400 / 4) - 3;
   static constexpr int DAYS_PER100_YEARS =
-      (DAYS_PER_NON_LEAP_YEAR * 100 + (100 / 4) - 1);
-  static constexpr int DAYS_PER4_YEARS = (DAYS_PER_NON_LEAP_YEAR * 4 + 1);
+      (DAYS_PER_NON_LEAP_YEAR * 100) + (100 / 4) - 1;
+  static constexpr int DAYS_PER4_YEARS = (DAYS_PER_NON_LEAP_YEAR * 4) + 1;
 
   // The latest time that can be represented in this form is 03:14:07 UTC on
   // Tuesday, 19 January 2038 (corresponding to 2,147,483,647 seconds since the
@@ -67,16 +85,20 @@ struct TimeConstants {
 // "total_seconds" is the number of seconds since January 1st, 1970.
 extern int64_t update_from_seconds(int64_t total_seconds, struct tm *tm);
 
+// TODO(michaelrj): move these functions to use ErrorOr instead of setting
+// errno. They always accompany a specific return value so we only need the one
+// variable.
+
 // POSIX.1-2017 requires this.
-static inline time_t out_of_range() {
-  llvmlibc_errno = EOVERFLOW;
-  return static_cast<time_t>(-1);
+LIBC_INLINE time_t out_of_range() {
+  libc_errno = EOVERFLOW;
+  return TimeConstants::OUT_OF_RANGE_RETURN_VALUE;
 }
 
-static inline void invalid_value() { llvmlibc_errno = EINVAL; }
+LIBC_INLINE void invalid_value() { libc_errno = EINVAL; }
 
-static inline char *asctime(const struct tm *timeptr, char *buffer,
-                            size_t bufferLength) {
+LIBC_INLINE char *asctime(const struct tm *timeptr, char *buffer,
+                          size_t bufferLength) {
   if (timeptr == nullptr || buffer == nullptr) {
     invalid_value();
     return nullptr;
@@ -99,6 +121,10 @@ static inline char *asctime(const struct tm *timeptr, char *buffer,
   static const char *months_name[TimeConstants::MONTHS_PER_YEAR] = {
       "Jan", "Feb", "Mar", "Apr", "May", "Jun",
       "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+
+  // TODO(michaelr): look into removing this call to __builtin_snprintf that may
+  // be emitted as a call to snprintf. Alternatively, look into using our
+  // internal printf machinery.
   int written_size = __builtin_snprintf(
       buffer, bufferLength, "%.3s %.3s%3d %.2d:%.2d:%.2d %d\n",
       week_days_name[timeptr->tm_wday], months_name[timeptr->tm_mon],
@@ -113,8 +139,7 @@ static inline char *asctime(const struct tm *timeptr, char *buffer,
   return buffer;
 }
 
-static inline struct tm *gmtime_internal(const time_t *timer,
-                                         struct tm *result) {
+LIBC_INLINE struct tm *gmtime_internal(const time_t *timer, struct tm *result) {
   int64_t seconds = *timer;
   // Update the tm structure's year, month, day, etc. from seconds.
   if (update_from_seconds(seconds, result) < 0) {
@@ -126,6 +151,6 @@ static inline struct tm *gmtime_internal(const time_t *timer,
 }
 
 } // namespace time_utils
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_TIME_TIME_UTILS_H

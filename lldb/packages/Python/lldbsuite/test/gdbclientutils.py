@@ -6,6 +6,7 @@ import socket
 import traceback
 from lldbsuite.support import seven
 
+
 def checksum(message):
     """
     Calculate the GDB server protocol checksum of the message.
@@ -40,8 +41,8 @@ def escape_binary(message):
     out = ""
     for c in message:
         d = ord(c)
-        if d in (0x23, 0x24, 0x7d):
-            out += chr(0x7d)
+        if d in (0x23, 0x24, 0x7D):
+            out += chr(0x7D)
             out += chr(d ^ 0x20)
         else:
             out += c
@@ -68,7 +69,7 @@ def hex_decode_bytes(hex_bytes):
     hex_len = len(hex_bytes)
     i = 0
     while i < hex_len - 1:
-        out += chr(int(hex_bytes[i:i + 2], 16))
+        out += chr(int(hex_bytes[i : i + 2], 16))
         i += 2
     return out
 
@@ -87,7 +88,9 @@ class MockGDBServerResponder:
 
     registerCount = 40
     packetLog = None
-    class RESPONSE_DISCONNECT: pass
+
+    class RESPONSE_DISCONNECT:
+        pass
 
     def __init__(self):
         self.packetLog = []
@@ -113,19 +116,19 @@ class MockGDBServerResponder:
         if packet[0] == "G":
             # Gxxxxxxxxxxx
             # Gxxxxxxxxxxx;thread:1234;
-            return self.writeRegisters(packet[1:].split(';')[0])
+            return self.writeRegisters(packet[1:].split(";")[0])
         if packet[0] == "p":
-            regnum = packet[1:].split(';')[0]
+            regnum = packet[1:].split(";")[0]
             return self.readRegister(int(regnum, 16))
         if packet[0] == "P":
             register, value = packet[1:].split("=")
             return self.writeRegister(int(register, 16), value)
         if packet[0] == "m":
-            addr, length = [int(x, 16) for x in packet[1:].split(',')]
+            addr, length = [int(x, 16) for x in packet[1:].split(",")]
             return self.readMemory(addr, length)
         if packet[0] == "M":
             location, encoded_data = packet[1:].split(":")
-            addr, length = [int(x, 16) for x in location.split(',')]
+            addr, length = [int(x, 16) for x in location.split(",")]
             return self.writeMemory(addr, encoded_data)
         if packet[0:7] == "qSymbol":
             return self.qSymbol(packet[8:])
@@ -152,25 +155,25 @@ class MockGDBServerResponder:
             return self.selectThread(packet[1], int(tid, 16))
         if packet[0:6] == "qXfer:":
             obj, read, annex, location = packet[6:].split(":")
-            offset, length = [int(x, 16) for x in location.split(',')]
+            offset, length = [int(x, 16) for x in location.split(",")]
             data, has_more = self.qXferRead(obj, annex, offset, length)
             if data is not None:
                 return self._qXferResponse(data, has_more)
             return ""
         if packet.startswith("vAttach;"):
-            pid = packet.partition(';')[2]
+            pid = packet.partition(";")[2]
             return self.vAttach(int(pid, 16))
         if packet[0] == "Z":
             return self.setBreakpoint(packet)
         if packet.startswith("qThreadStopInfo"):
-            threadnum = int (packet[15:], 16)
+            threadnum = int(packet[15:], 16)
             return self.threadStopInfo(threadnum)
         if packet == "QThreadSuffixSupported":
             return self.QThreadSuffixSupported()
         if packet == "QListThreadsInStopReply":
             return self.QListThreadsInStopReply()
         if packet.startswith("qMemoryRegionInfo:"):
-            return self.qMemoryRegionInfo(int(packet.split(':')[1], 16))
+            return self.qMemoryRegionInfo(int(packet.split(":")[1], 16))
         if packet == "qQueryGDBServer":
             return self.qQueryGDBServer()
         if packet == "qHostInfo":
@@ -178,7 +181,7 @@ class MockGDBServerResponder:
         if packet == "qGetWorkingDir":
             return self.qGetWorkingDir()
         if packet == "qOffsets":
-            return self.qOffsets();
+            return self.qOffsets()
         if packet == "qProcessInfo":
             return self.qProcessInfo()
         if packet == "qsProcessInfo":
@@ -193,6 +196,9 @@ class MockGDBServerResponder:
             return self.vFile(packet)
         if packet.startswith("vRun;"):
             return self.vRun(packet)
+        if packet.startswith("qLaunchGDBServer;"):
+            _, host = packet.partition(";")[2].split(":")
+            return self.qLaunchGDBServer(host)
         if packet.startswith("qLaunchSuccess"):
             return self.qLaunchSuccess()
         if packet.startswith("QEnvironment:"):
@@ -200,7 +206,7 @@ class MockGDBServerResponder:
         if packet.startswith("QEnvironmentHexEncoded:"):
             return self.QEnvironmentHexEncoded(packet)
         if packet.startswith("qRegisterInfo"):
-            regnum = int(packet[len("qRegisterInfo"):], 16)
+            regnum = int(packet[len("qRegisterInfo") :], 16)
             return self.qRegisterInfo(regnum)
         if packet == "k":
             return self.k()
@@ -326,6 +332,9 @@ class MockGDBServerResponder:
     def vRun(self, packet):
         return ""
 
+    def qLaunchGDBServer(self, host):
+        raise self.UnexpectedPacketException()
+
     def qLaunchSuccess(self):
         return ""
 
@@ -346,6 +355,7 @@ class MockGDBServerResponder:
     Override the responder class to implement behavior suitable for the test at
     hand.
     """
+
     class UnexpectedPacketException(Exception):
         pass
 
@@ -416,7 +426,8 @@ class ServerSocket(ServerChannel):
 class TCPServerSocket(ServerSocket):
     def __init__(self):
         family, type, proto, _, addr = socket.getaddrinfo(
-                "localhost", 0, proto=socket.IPPROTO_TCP)[0]
+            "localhost", 0, proto=socket.IPPROTO_TCP
+        )[0]
         super().__init__(family, type, proto, addr)
 
     def get_connect_address(self):
@@ -441,10 +452,11 @@ class PtyServerSocket(ServerChannel):
     def __init__(self):
         import pty
         import tty
+
         primary, secondary = pty.openpty()
         tty.setraw(primary)
-        self._primary = io.FileIO(primary, 'r+b')
-        self._secondary = io.FileIO(secondary, 'r+b')
+        self._primary = io.FileIO(primary, "r+b")
+        self._secondary = io.FileIO(secondary, "r+b")
 
     def get_connect_address(self):
         libc = ctypes.CDLL(None)
@@ -465,7 +477,7 @@ class PtyServerSocket(ServerChannel):
         except OSError as e:
             # closing the pty results in EIO on Linux, convert it to EOF
             if e.errno == errno.EIO:
-                return b''
+                return b""
             raise
 
     def sendall(self, data):
@@ -528,7 +540,9 @@ class MockGDBServer:
         except self.TerminateConnectionException:
             pass
         except Exception as e:
-            print("An exception happened when receiving the response from the gdb server. Closing the client...")
+            print(
+                "An exception happened when receiving the response from the gdb server. Closing the client..."
+            )
             traceback.print_exc()
         finally:
             self._socket.close_connection()
@@ -567,22 +581,23 @@ class MockGDBServer:
             # If we're looking at the start of the received data, that means
             # we're looking for the start of a new packet, denoted by a $.
             # It's also possible we'll see an ACK here, denoted by a +
-            if data[0] == '+':
+            if data[0] == "+":
                 self._receivedData = data[1:]
                 return self.PACKET_ACK
             if ord(data[0]) == 3:
                 self._receivedData = data[1:]
                 return self.PACKET_INTERRUPT
-            if data[0] == '$':
+            if data[0] == "$":
                 i += 1
             else:
                 raise self.InvalidPacketException(
-                        "Unexpected leading byte: %s" % data[0])
+                    "Unexpected leading byte: %s" % data[0]
+                )
 
         # If we're looking beyond the start of the received data, then we're
         # looking for the end of the packet content, denoted by a #.
         # Note that we pick up searching from where we left off last time
-        while i < data_len and data[i] != '#':
+        while i < data_len and data[i] != "#":
             i += 1
 
         # If there isn't enough data left for a checksum, just remember where
@@ -596,14 +611,14 @@ class MockGDBServer:
         packet = data[1:i]
         i += 1
         try:
-            check = int(data[i:i + 2], 16)
+            check = int(data[i : i + 2], 16)
         except ValueError:
             raise self.InvalidPacketException("Checksum is not valid hex")
         i += 2
         if check != checksum(packet):
             raise self.InvalidPacketException(
-                    "Checksum %02x does not match content %02x" %
-                    (check, checksum(packet)))
+                "Checksum %02x does not match content %02x" % (check, checksum(packet))
+            )
         # remove parsed bytes from _receivedData and reset offset so parsing
         # can start on the next packet the next time around
         self._receivedData = data[i:]
@@ -623,7 +638,7 @@ class MockGDBServer:
         # We'll handle the ack stuff here since it's not something any of the
         # tests will be concerned about, and it'll get turned off quickly anyway.
         if self._shouldSendAck:
-            self._socket.sendall(seven.bitcast_to_bytes('+'))
+            self._socket.sendall(seven.bitcast_to_bytes("+"))
         if packet == "QStartNoAckMode":
             self._shouldSendAck = False
             response = "OK"

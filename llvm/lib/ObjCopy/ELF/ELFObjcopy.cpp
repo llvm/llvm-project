@@ -68,7 +68,8 @@ static bool onlyKeepDWOPred(const Object &Obj, const SectionBase &Sec) {
   return !isDWOSection(Sec);
 }
 
-static uint64_t getNewShfFlags(SectionFlag AllFlags) {
+static Expected<uint64_t> getNewShfFlags(SectionFlag AllFlags,
+                                         uint16_t EMachine) {
   uint64_t NewFlags = 0;
   if (AllFlags & SectionFlag::SecAlloc)
     NewFlags |= ELF::SHF_ALLOC;
@@ -82,23 +83,44 @@ static uint64_t getNewShfFlags(SectionFlag AllFlags) {
     NewFlags |= ELF::SHF_STRINGS;
   if (AllFlags & SectionFlag::SecExclude)
     NewFlags |= ELF::SHF_EXCLUDE;
+  if (AllFlags & SectionFlag::SecLarge) {
+    if (EMachine != EM_X86_64)
+      return createStringError(errc::invalid_argument,
+                               "section flag SHF_X86_64_LARGE can only be used "
+                               "with x86_64 architecture");
+    NewFlags |= ELF::SHF_X86_64_LARGE;
+  }
   return NewFlags;
 }
 
 static uint64_t getSectionFlagsPreserveMask(uint64_t OldFlags,
-                                            uint64_t NewFlags) {
+                                            uint64_t NewFlags,
+                                            uint16_t EMachine) {
   // Preserve some flags which should not be dropped when setting flags.
   // Also, preserve anything OS/processor dependant.
   const uint64_t PreserveMask =
       (ELF::SHF_COMPRESSED | ELF::SHF_GROUP | ELF::SHF_LINK_ORDER |
        ELF::SHF_MASKOS | ELF::SHF_MASKPROC | ELF::SHF_TLS |
        ELF::SHF_INFO_LINK) &
-      ~ELF::SHF_EXCLUDE;
+      ~ELF::SHF_EXCLUDE &
+      ~(EMachine == EM_X86_64 ? (uint64_t)ELF::SHF_X86_64_LARGE : 0UL);
   return (OldFlags & PreserveMask) | (NewFlags & ~PreserveMask);
 }
 
-static void setSectionFlagsAndType(SectionBase &Sec, SectionFlag Flags) {
-  Sec.Flags = getSectionFlagsPreserveMask(Sec.Flags, getNewShfFlags(Flags));
+static void setSectionType(SectionBase &Sec, uint64_t Type) {
+  // If Sec's type is changed from SHT_NOBITS due to --set-section-flags,
+  // Offset may not be aligned. Align it to max(Align, 1).
+  if (Sec.Type == ELF::SHT_NOBITS && Type != ELF::SHT_NOBITS)
+    Sec.Offset = alignTo(Sec.Offset, std::max(Sec.Align, uint64_t(1)));
+  Sec.Type = Type;
+}
+
+static Error setSectionFlagsAndType(SectionBase &Sec, SectionFlag Flags,
+                                    uint16_t EMachine) {
+  Expected<uint64_t> NewFlags = getNewShfFlags(Flags, EMachine);
+  if (!NewFlags)
+    return NewFlags.takeError();
+  Sec.Flags = getSectionFlagsPreserveMask(Sec.Flags, *NewFlags, EMachine);
 
   // In GNU objcopy, certain flags promote SHT_NOBITS to SHT_PROGBITS. This rule
   // may promote more non-ALLOC sections than GNU objcopy, but it is fine as
@@ -106,7 +128,9 @@ static void setSectionFlagsAndType(SectionBase &Sec, SectionFlag Flags) {
   if (Sec.Type == SHT_NOBITS &&
       (!(Sec.Flags & ELF::SHF_ALLOC) ||
        Flags & (SectionFlag::SecContents | SectionFlag::SecLoad)))
-    Sec.Type = SHT_PROGBITS;
+    setSectionType(Sec, ELF::SHT_PROGBITS);
+
+  return Error::success();
 }
 
 static ElfType getOutputElfType(const Binary &Bin) {
@@ -162,13 +186,6 @@ static std::unique_ptr<Writer> createWriter(const CommonConfig &Config,
   default:
     return createELFWriter(Config, Obj, Out, OutputElfType);
   }
-}
-
-template <class... Ts>
-static Error makeStringError(std::error_code EC, const Twine &Msg,
-                             Ts &&...Args) {
-  std::string FullMsg = (EC.message() + ": " + Msg).str();
-  return createStringError(EC, FullMsg.c_str(), std::forward<Ts>(Args)...);
 }
 
 static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
@@ -680,11 +697,12 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
       const auto Iter = Config.SetSectionFlags.find(Sec.Name);
       if (Iter != Config.SetSectionFlags.end()) {
         const SectionFlagsUpdate &SFU = Iter->second;
-        setSectionFlagsAndType(Sec, SFU.NewFlags);
+        if (Error E = setSectionFlagsAndType(Sec, SFU.NewFlags, Obj.Machine))
+          return E;
       }
       auto It2 = Config.SetSectionType.find(Sec.Name);
       if (It2 != Config.SetSectionType.end())
-        Sec.Type = It2->second;
+        setSectionType(Sec, It2->second);
     }
   }
 
@@ -697,8 +715,10 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
       if (Iter != Config.SectionsToRename.end()) {
         const SectionRename &SR = Iter->second;
         Sec.Name = std::string(SR.NewName);
-        if (SR.NewFlags)
-          setSectionFlagsAndType(Sec, *SR.NewFlags);
+        if (SR.NewFlags) {
+          if (Error E = setSectionFlagsAndType(Sec, *SR.NewFlags, Obj.Machine))
+            return E;
+        }
         RenamedSections.insert(&Sec);
       } else if (RelocSec && !(Sec.Flags & SHF_ALLOC))
         // Postpone processing relocation sections which are not specified in

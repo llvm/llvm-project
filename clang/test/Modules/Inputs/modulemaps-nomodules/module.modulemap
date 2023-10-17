@@ -1,0 +1,3 @@
+module M {
+  private header "header.h"
+}

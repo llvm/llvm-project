@@ -10,7 +10,7 @@ define float @test1(i32 %hash, float %x, float %y, float %z, float %w) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP3]], 124
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[TMP5]] to i64
 ; CHECK-NEXT:    [[TMP753:%.*]] = getelementptr [128 x float], ptr @C.0.1248, i64 0, i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP9:%.*]] = load float, ptr [[TMP753]], align 16
+; CHECK-NEXT:    [[TMP9:%.*]] = load float, ptr [[TMP753]], align 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = fmul float [[TMP9]], [[X:%.*]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = fadd float [[TMP11]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP17_SUM52:%.*]] = or i32 [[TMP5]], 1
@@ -22,7 +22,7 @@ define float @test1(i32 %hash, float %x, float %y, float %z, float %w) {
 ; CHECK-NEXT:    [[TMP27_SUM50:%.*]] = or i32 [[TMP5]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP27_SUM50]] to i64
 ; CHECK-NEXT:    [[TMP2849:%.*]] = getelementptr [128 x float], ptr @C.0.1248, i64 0, i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP29:%.*]] = load float, ptr [[TMP2849]], align 8
+; CHECK-NEXT:    [[TMP29:%.*]] = load float, ptr [[TMP2849]], align 4
 ; CHECK-NEXT:    [[TMP31:%.*]] = fmul float [[TMP29]], [[Z:%.*]]
 ; CHECK-NEXT:    [[TMP33:%.*]] = fadd float [[TMP31]], [[TMP23]]
 ; CHECK-NEXT:    [[TMP37_SUM48:%.*]] = or i32 [[TMP5]], 3
@@ -303,9 +303,7 @@ entry:
 define float @test11(i64 %i) {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[G:%.*]] = getelementptr [4 x float], ptr addrspace(1) @I, i64 0, i64 [[I:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = load float, ptr addrspace(1) [[G]], align 4
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0.000000e+00
 ;
 
 entry:

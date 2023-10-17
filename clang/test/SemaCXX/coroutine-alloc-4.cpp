@@ -1,4 +1,4 @@
-// Tests that we'll find aligned allocation funciton properly.
+// Tests that we'll find aligned allocation function properly.
 // RUN: %clang_cc1 %s -std=c++20 %s -fsyntax-only -verify -fcoro-aligned-allocation
 
 #include "Inputs/std-coroutine.h"

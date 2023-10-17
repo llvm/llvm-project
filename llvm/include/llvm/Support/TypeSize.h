@@ -133,7 +133,7 @@ protected:
   }
 
   template <typename U = ScalarTy>
-  friend constexpr std::enable_if_t<std::is_signed<U>::value, LeafTy>
+  friend constexpr std::enable_if_t<std::is_signed_v<U>, LeafTy>
   operator-(const LeafTy &LHS) {
     LeafTy Copy = LHS;
     return Copy *= -1;
@@ -180,7 +180,7 @@ public:
   // Use in places where a scalable count doesn't make sense (e.g. non-vector
   // types, or vectors in backends which don't support scalable vectors).
   constexpr ScalarTy getFixedValue() const {
-    assert(!isScalable() &&
+    assert((!isScalable() || isZero()) &&
            "Request for a fixed element count on a scalable object");
     return getKnownMinValue();
   }
@@ -322,8 +322,8 @@ public:
   static constexpr TypeSize getFixed(ScalarTy ExactSize) {
     return TypeSize(ExactSize, false);
   }
-  static constexpr TypeSize getScalable(ScalarTy MinimunSize) {
-    return TypeSize(MinimunSize, true);
+  static constexpr TypeSize getScalable(ScalarTy MinimumSize) {
+    return TypeSize(MinimumSize, true);
   }
   static constexpr TypeSize get(ScalarTy Quantity, bool Scalable) {
     return TypeSize(Quantity, Scalable);

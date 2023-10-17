@@ -10,7 +10,6 @@
 #define MLIR_IR_BUILTINATTRIBUTES_H
 
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
-#include "mlir/IR/SubElementInterfaces.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Sequence.h"
 #include <complex>
@@ -31,6 +30,12 @@ class IntegerType;
 class Location;
 class Operation;
 class RankedTensorType;
+
+namespace detail {
+struct DenseIntOrFPElementsAttrStorage;
+struct DenseStringElementsAttrStorage;
+struct StringAttrStorage;
+} // namespace detail
 
 //===----------------------------------------------------------------------===//
 // Elements Attributes
@@ -79,9 +84,9 @@ public:
   using Attribute::Attribute;
 
   /// Allow implicit conversion to ElementsAttr.
-  operator ElementsAttr() const {
-    return *this ? cast<ElementsAttr>() : nullptr;
-  }
+  operator ElementsAttr() const { return cast_if_present<ElementsAttr>(*this); }
+  /// Allow implicit conversion to TypedAttr.
+  operator TypedAttr() const { return ElementsAttr(*this); }
 
   /// Type trait used to check if the given type T is a potentially valid C++
   /// floating point type that can be used to access the underlying element
@@ -390,7 +395,7 @@ public:
                        !std::is_same<Attribute, T>::value,
                    T>
   getSplatValue() const {
-    return getSplatValue<Attribute>().template cast<T>();
+    return llvm::cast<T>(getSplatValue<Attribute>());
   }
 
   /// Try to get an iterator of the given type to the start of the held element
@@ -511,7 +516,7 @@ public:
                                      T>::mapped_iterator_base;
 
     /// Map the element to the iterator result type.
-    T mapElement(Attribute attr) const { return attr.cast<T>(); }
+    T mapElement(Attribute attr) const { return llvm::cast<T>(attr); }
   };
   template <typename T, typename = DerivedAttrValueTemplateCheckT<T>>
   FailureOr<iterator_range_impl<DerivedAttributeElementIterator<T>>>
@@ -685,7 +690,7 @@ public:
 
   /// Method for support type inquiry through isa, cast and dyn_cast.
   static bool classof(Attribute attr) {
-    auto denseAttr = attr.dyn_cast<DenseElementsAttr>();
+    auto denseAttr = llvm::dyn_cast<DenseElementsAttr>(attr);
     return denseAttr && denseAttr.isSplat();
   }
 };
@@ -843,9 +848,10 @@ public:
 
   static BoolAttr get(MLIRContext *context, bool value);
 
-  /// Enable conversion to IntegerAttr. This uses conversion vs. inheritance to
-  /// avoid bringing in all of IntegerAttrs methods.
+  /// Enable conversion to IntegerAttr and its interfaces. This uses conversion
+  /// vs. inheritance to avoid bringing in all of IntegerAttrs methods.
   operator IntegerAttr() const { return IntegerAttr(impl); }
+  operator TypedAttr() const { return IntegerAttr(impl); }
 
   /// Return the boolean value of this attribute.
   bool getValue() const;
@@ -887,7 +893,7 @@ public:
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
   static bool classof(Attribute attr) {
-    SymbolRefAttr refAttr = attr.dyn_cast<SymbolRefAttr>();
+    SymbolRefAttr refAttr = llvm::dyn_cast<SymbolRefAttr>(attr);
     return refAttr && refAttr.getNestedReferences().empty();
   }
 
@@ -912,14 +918,13 @@ public:
   /// simply wraps the DenseElementsAttr::get calls.
   template <typename Arg>
   static DenseFPElementsAttr get(const ShapedType &type, Arg &&arg) {
-    return DenseElementsAttr::get(type, llvm::ArrayRef(arg))
-        .template cast<DenseFPElementsAttr>();
+    return llvm::cast<DenseFPElementsAttr>(
+        DenseElementsAttr::get(type, llvm::ArrayRef(arg)));
   }
   template <typename T>
   static DenseFPElementsAttr get(const ShapedType &type,
                                  const std::initializer_list<T> &list) {
-    return DenseElementsAttr::get(type, list)
-        .template cast<DenseFPElementsAttr>();
+    return llvm::cast<DenseFPElementsAttr>(DenseElementsAttr::get(type, list));
   }
 
   /// Generates a new DenseElementsAttr by mapping each value attribute, and
@@ -954,14 +959,13 @@ public:
   /// simply wraps the DenseElementsAttr::get calls.
   template <typename Arg>
   static DenseIntElementsAttr get(const ShapedType &type, Arg &&arg) {
-    return DenseElementsAttr::get(type, llvm::ArrayRef(arg))
-        .template cast<DenseIntElementsAttr>();
+    return llvm::cast<DenseIntElementsAttr>(
+        DenseElementsAttr::get(type, llvm::ArrayRef(arg)));
   }
   template <typename T>
   static DenseIntElementsAttr get(const ShapedType &type,
                                   const std::initializer_list<T> &list) {
-    return DenseElementsAttr::get(type, list)
-        .template cast<DenseIntElementsAttr>();
+    return llvm::cast<DenseIntElementsAttr>(DenseElementsAttr::get(type, list));
   }
 
   /// Generates a new DenseElementsAttr by mapping each value attribute, and
@@ -1001,6 +1005,46 @@ auto SparseElementsAttr::try_value_begin_impl(OverloadToken<T>) const
       };
   return iterator<T>(llvm::seq<ptrdiff_t>(0, getNumElements()).begin(), mapFn);
 }
+
+//===----------------------------------------------------------------------===//
+// DistinctAttr
+//===----------------------------------------------------------------------===//
+
+namespace detail {
+struct DistinctAttrStorage;
+class DistinctAttributeUniquer;
+} // namespace detail
+
+/// An attribute that associates a referenced attribute with a unique
+/// identifier. Every call to the create function allocates a new distinct
+/// attribute instance. The address of the attribute instance serves as a
+/// temporary identifier. Similar to the names of SSA values, the final
+/// identifiers are generated during pretty printing. This delayed numbering
+/// ensures the printed identifiers are deterministic even if multiple distinct
+/// attribute instances are created in-parallel.
+///
+/// Examples:
+///
+/// #distinct = distinct[0]<42.0 : f32>
+/// #distinct1 = distinct[1]<42.0 : f32>
+/// #distinct2 = distinct[2]<array<i32: 10, 42>>
+///
+/// NOTE: The distinct attribute cannot be defined using ODS since it uses a
+/// custom distinct attribute uniquer that cannot be set from ODS.
+class DistinctAttr
+    : public detail::StorageUserBase<DistinctAttr, Attribute,
+                                     detail::DistinctAttrStorage,
+                                     detail::DistinctAttributeUniquer> {
+public:
+  using Base::Base;
+
+  /// Returns the referenced attribute.
+  Attribute getReferencedAttr() const;
+
+  /// Creates a distinct attribute that associates a referenced attribute with a
+  /// unique identifier.
+  static DistinctAttr create(Attribute referencedAttr);
+};
 
 //===----------------------------------------------------------------------===//
 // StringAttr

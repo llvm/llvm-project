@@ -1,12 +1,10 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -fobjc-exceptions -Wno-objc-root-class %s
 
-// rdar://6124613
 void test1(void) {
   void *xyzzy = 0;
   void *p = @xyzzy; // expected-error {{unexpected '@' in program}}
 }
 
-// <rdar://problem/7495713>
 // This previously triggered a crash because the class has not been defined.
 @implementation RDar7495713 (rdar_7495713_cat)  // expected-error{{cannot find interface declaration for 'RDar7495713'}}
 - (id) rdar_7495713 {
@@ -14,13 +12,11 @@ void test1(void) {
 }
 @end
 
-// <rdar://problem/7881045>
 // This previously triggered a crash because a ';' was expected after the @throw statement.
 void foo(void) {
   @throw (id)0 // expected-error{{expected ';' after @throw}}
 }
 
-// <rdar://problem/10415026>
 @class NSView;
 @implementation IBFillView(IBFillViewIntegration) // expected-error {{cannot find interface declaration for 'IBFillView'}}
 - (NSView *)ibDesignableContentView {

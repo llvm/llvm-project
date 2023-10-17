@@ -28,3 +28,6 @@ define void @_ZN2v88internal4wasm16LiftoffAssembler13emit_i32_addiENS0_8Register
 }
 
 attributes #0 = { ssp }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 7, !"PIC Level", i32 2}

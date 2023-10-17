@@ -73,16 +73,16 @@ M68kTargetLowering::M68kTargetLowering(const M68kTargetMachine &TM,
   setTruncStoreAction(MVT::i32, MVT::i8, Expand);
   setTruncStoreAction(MVT::i16, MVT::i8, Expand);
 
-  setOperationAction(ISD::MUL, MVT::i8, Promote);
-  setOperationAction(ISD::MUL, MVT::i16, Legal);
+  setOperationAction({ISD::MUL, ISD::SDIV, ISD::UDIV}, MVT::i8, Promote);
+  setOperationAction({ISD::MUL, ISD::SDIV, ISD::UDIV}, MVT::i16, Legal);
   if (Subtarget.atLeastM68020())
-    setOperationAction(ISD::MUL, MVT::i32, Legal);
+    setOperationAction({ISD::MUL, ISD::SDIV, ISD::UDIV}, MVT::i32, Legal);
   else
-    setOperationAction(ISD::MUL, MVT::i32, LibCall);
+    setOperationAction({ISD::MUL, ISD::SDIV, ISD::UDIV}, MVT::i32, LibCall);
   setOperationAction(ISD::MUL, MVT::i64, LibCall);
 
   for (auto OP :
-       {ISD::SDIV, ISD::UDIV, ISD::SREM, ISD::UREM, ISD::UDIVREM, ISD::SDIVREM,
+       {ISD::SREM, ISD::UREM, ISD::UDIVREM, ISD::SDIVREM,
         ISD::MULHS, ISD::MULHU, ISD::UMUL_LOHI, ISD::SMUL_LOHI}) {
     setOperationAction(OP, MVT::i8, Promote);
     setOperationAction(OP, MVT::i16, Legal);
@@ -163,6 +163,8 @@ M68kTargetLowering::M68kTargetLowering(const M68kTargetMachine &TM,
   setOperationAction(ISD::ATOMIC_CMP_SWAP, {MVT::i8, MVT::i16, MVT::i32},
                      Subtarget.atLeastM68020() ? Legal : LibCall);
 
+  setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Custom);
+
   // M68k does not have native read-modify-write support, so expand all of them
   // to `__sync_fetch_*` for target < M68020, otherwise expand to CmpxChg.
   // See `shouldExpandAtomicRMWInIR` below.
@@ -178,12 +180,11 @@ M68kTargetLowering::M68kTargetLowering(const M68kTargetMachine &TM,
           ISD::ATOMIC_LOAD_MAX,
           ISD::ATOMIC_LOAD_UMIN,
           ISD::ATOMIC_LOAD_UMAX,
+          ISD::ATOMIC_SWAP,
       },
       {MVT::i8, MVT::i16, MVT::i32}, LibCall);
 
-  // 2^2 bytes
-  // FIXME can it be just 2^1?
-  setMinFunctionAlignment(Align::Constant<2>());
+  setMinFunctionAlignment(Align(2));
 }
 
 TargetLoweringBase::AtomicExpansionKind
@@ -191,6 +192,25 @@ M68kTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   return Subtarget.atLeastM68020()
              ? TargetLoweringBase::AtomicExpansionKind::CmpXChg
              : TargetLoweringBase::AtomicExpansionKind::None;
+}
+
+Register
+M68kTargetLowering::getExceptionPointerRegister(const Constant *) const {
+  return M68k::D0;
+}
+
+Register
+M68kTargetLowering::getExceptionSelectorRegister(const Constant *) const {
+  return M68k::D1;
+}
+
+InlineAsm::ConstraintCode
+M68kTargetLowering::getInlineAsmMemConstraint(StringRef ConstraintCode) const {
+  return StringSwitch<InlineAsm::ConstraintCode>(ConstraintCode)
+      .Case("Q", InlineAsm::ConstraintCode::Q)
+      // We borrow ConstraintCode::Um for 'U'.
+      .Case("U", InlineAsm::ConstraintCode::Um)
+      .Default(TargetLowering::getInlineAsmMemConstraint(ConstraintCode));
 }
 
 EVT M68kTargetLowering::getSetCCResultType(const DataLayout &DL,
@@ -748,11 +768,11 @@ SDValue M68kTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Build a sequence of copy-to-reg nodes chained together with token chain
   // and flag operands which copy the outgoing args into registers.
-  SDValue InFlag;
+  SDValue InGlue;
   for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i) {
     Chain = DAG.getCopyToReg(Chain, DL, RegsToPass[i].first,
-                             RegsToPass[i].second, InFlag);
-    InFlag = Chain.getValue(1);
+                             RegsToPass[i].second, InGlue);
+    InGlue = Chain.getValue(1);
   }
 
   if (Callee->getOpcode() == ISD::GlobalAddress) {
@@ -796,8 +816,8 @@ SDValue M68kTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   SmallVector<SDValue, 8> Ops;
 
   if (!IsSibcall && IsTailCall) {
-    Chain = DAG.getCALLSEQ_END(Chain, NumBytesToPop, 0, InFlag, DL);
-    InFlag = Chain.getValue(1);
+    Chain = DAG.getCALLSEQ_END(Chain, NumBytesToPop, 0, InGlue, DL);
+    InGlue = Chain.getValue(1);
   }
 
   Ops.push_back(Chain);
@@ -818,8 +838,8 @@ SDValue M68kTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   Ops.push_back(DAG.getRegisterMask(Mask));
 
-  if (InFlag.getNode())
-    Ops.push_back(InFlag);
+  if (InGlue.getNode())
+    Ops.push_back(InGlue);
 
   if (IsTailCall) {
     MF.getFrameInfo().setHasTailCall();
@@ -827,7 +847,7 @@ SDValue M68kTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
 
   Chain = DAG.getNode(M68kISD::CALL, DL, NodeTys, Ops);
-  InFlag = Chain.getValue(1);
+  InGlue = Chain.getValue(1);
 
   // Create the CALLSEQ_END node.
   unsigned NumBytesForCalleeToPop;
@@ -851,18 +871,18 @@ SDValue M68kTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // Returns a flag for retval copy to use.
   if (!IsSibcall) {
     Chain = DAG.getCALLSEQ_END(Chain, NumBytesToPop, NumBytesForCalleeToPop,
-                               InFlag, DL);
-    InFlag = Chain.getValue(1);
+                               InGlue, DL);
+    InGlue = Chain.getValue(1);
   }
 
   // Handle result values, copying them out of physregs into vregs that we
   // return.
-  return LowerCallResult(Chain, InFlag, CallConv, IsVarArg, Ins, DL, DAG,
+  return LowerCallResult(Chain, InGlue, CallConv, IsVarArg, Ins, DL, DAG,
                          InVals);
 }
 
 SDValue M68kTargetLowering::LowerCallResult(
-    SDValue Chain, SDValue InFlag, CallingConv::ID CallConv, bool IsVarArg,
+    SDValue Chain, SDValue InGlue, CallingConv::ID CallConv, bool IsVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
 
@@ -878,14 +898,14 @@ SDValue M68kTargetLowering::LowerCallResult(
     EVT CopyVT = VA.getLocVT();
 
     /// ??? is this correct?
-    Chain = DAG.getCopyFromReg(Chain, DL, VA.getLocReg(), CopyVT, InFlag)
+    Chain = DAG.getCopyFromReg(Chain, DL, VA.getLocReg(), CopyVT, InGlue)
                 .getValue(1);
     SDValue Val = Chain.getValue(0);
 
     if (VA.isExtInLoc() && VA.getValVT().getScalarType() == MVT::i1)
       Val = DAG.getNode(ISD::TRUNCATE, DL, VA.getValVT(), Val);
 
-    InFlag = Chain.getValue(2);
+    InGlue = Chain.getValue(2);
     InVals.push_back(Val);
   }
 
@@ -986,7 +1006,7 @@ SDValue M68kTargetLowering::LowerFormalArguments(
     }
   }
 
-  unsigned StackSize = CCInfo.getNextStackOffset();
+  unsigned StackSize = CCInfo.getStackSize();
   // Align stack specially for tail calls.
   if (shouldGuaranteeTCO(CCID, MF.getTarget().Options.GuaranteedTailCallOpt))
     StackSize = GetAlignedArgumentStackSize(StackSize, DAG);
@@ -1039,6 +1059,14 @@ SDValue M68kTargetLowering::LowerFormalArguments(
 //              Return Value Calling Convention Implementation
 //===----------------------------------------------------------------------===//
 
+bool M68kTargetLowering::CanLowerReturn(
+    CallingConv::ID CCID, MachineFunction &MF, bool IsVarArg,
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
+  SmallVector<CCValAssign, 16> RVLocs;
+  CCState CCInfo(CCID, IsVarArg, MF, RVLocs, Context);
+  return CCInfo.CheckReturn(Outs, RetCC_M68k);
+}
+
 SDValue
 M68kTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CCID,
                                 bool IsVarArg,
@@ -1052,7 +1080,7 @@ M68kTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CCID,
   CCState CCInfo(CCID, IsVarArg, MF, RVLocs, *DAG.getContext());
   CCInfo.AnalyzeReturn(Outs, RetCC_M68k);
 
-  SDValue Flag;
+  SDValue Glue;
   SmallVector<SDValue, 6> RetOps;
   // Operand #0 = Chain (updated below)
   RetOps.push_back(Chain);
@@ -1080,8 +1108,8 @@ M68kTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CCID,
     } else if (VA.getLocInfo() == CCValAssign::BCvt)
       ValToCopy = DAG.getBitcast(VA.getLocVT(), ValToCopy);
 
-    Chain = DAG.getCopyToReg(Chain, DL, VA.getLocReg(), ValToCopy, Flag);
-    Flag = Chain.getValue(1);
+    Chain = DAG.getCopyToReg(Chain, DL, VA.getLocReg(), ValToCopy, Glue);
+    Glue = Chain.getValue(1);
     RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
   }
 
@@ -1123,8 +1151,8 @@ M68kTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CCID,
     // ??? How will this work if CC does not use registers for args passing?
     // ??? What if I return multiple structs?
     unsigned RetValReg = M68k::D0;
-    Chain = DAG.getCopyToReg(Chain, DL, RetValReg, Val, Flag);
-    Flag = Chain.getValue(1);
+    Chain = DAG.getCopyToReg(Chain, DL, RetValReg, Val, Glue);
+    Glue = Chain.getValue(1);
 
     RetOps.push_back(
         DAG.getRegister(RetValReg, getPointerTy(DAG.getDataLayout())));
@@ -1132,9 +1160,9 @@ M68kTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CCID,
 
   RetOps[0] = Chain; // Update chain.
 
-  // Add the flag if we have it.
-  if (Flag.getNode())
-    RetOps.push_back(Flag);
+  // Add the glue if we have it.
+  if (Glue.getNode())
+    RetOps.push_back(Glue);
 
   return DAG.getNode(M68kISD::RET, DL, MVT::Other, RetOps);
 }
@@ -1267,9 +1295,9 @@ bool M68kTargetLowering::IsEligibleForTailCallOptimization(
     CCState CCInfo(CalleeCC, IsVarArg, MF, ArgLocs, C);
 
     CCInfo.AnalyzeCallOperands(Outs, CC_M68k);
-    StackArgsSize = CCInfo.getNextStackOffset();
+    StackArgsSize = CCInfo.getStackSize();
 
-    if (CCInfo.getNextStackOffset()) {
+    if (StackArgsSize) {
       // Check if the arguments are already laid out in the right way as
       // the caller's fixed stack objects.
       MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -1391,7 +1419,108 @@ SDValue M68kTargetLowering::LowerOperation(SDValue Op,
     return LowerShiftRightParts(Op, DAG, true);
   case ISD::SRL_PARTS:
     return LowerShiftRightParts(Op, DAG, false);
+  case ISD::ATOMIC_FENCE:
+    return LowerATOMICFENCE(Op, DAG);
+  case ISD::GlobalTLSAddress:
+    return LowerGlobalTLSAddress(Op, DAG);
   }
+}
+
+SDValue M68kTargetLowering::LowerExternalSymbolCall(SelectionDAG &DAG,
+                                                    SDLoc Loc,
+                                                    llvm::StringRef SymbolName,
+                                                    ArgListTy &&ArgList) const {
+  PointerType *PtrTy = PointerType::get(*DAG.getContext(), 0);
+  CallLoweringInfo CLI(DAG);
+  CLI.setDebugLoc(Loc)
+      .setChain(DAG.getEntryNode())
+      .setLibCallee(CallingConv::C, PtrTy,
+                    DAG.getExternalSymbol(SymbolName.data(),
+                                          getPointerMemTy(DAG.getDataLayout())),
+                    std::move(ArgList));
+  return LowerCallTo(CLI).first;
+}
+
+SDValue M68kTargetLowering::getTLSGetAddr(GlobalAddressSDNode *GA,
+                                          SelectionDAG &DAG,
+                                          unsigned TargetFlags) const {
+  SDValue GOT = DAG.getGLOBAL_OFFSET_TABLE(MVT::i32);
+  SDValue TGA = DAG.getTargetGlobalAddress(
+      GA->getGlobal(), GA, GA->getValueType(0), GA->getOffset(), TargetFlags);
+  SDValue Arg = DAG.getNode(ISD::ADD, SDLoc(GA), MVT::i32, GOT, TGA);
+
+  PointerType *PtrTy = PointerType::get(*DAG.getContext(), 0);
+
+  ArgListTy Args;
+  ArgListEntry Entry;
+  Entry.Node = Arg;
+  Entry.Ty = PtrTy;
+  Args.push_back(Entry);
+  return LowerExternalSymbolCall(DAG, SDLoc(GA), "__tls_get_addr",
+                                 std::move(Args));
+}
+
+SDValue M68kTargetLowering::getM68kReadTp(SDLoc Loc, SelectionDAG &DAG) const {
+  return LowerExternalSymbolCall(DAG, Loc, "__m68k_read_tp", ArgListTy());
+}
+
+SDValue M68kTargetLowering::LowerTLSGeneralDynamic(GlobalAddressSDNode *GA,
+                                                   SelectionDAG &DAG) const {
+  return getTLSGetAddr(GA, DAG, M68kII::MO_TLSGD);
+}
+
+SDValue M68kTargetLowering::LowerTLSLocalDynamic(GlobalAddressSDNode *GA,
+                                                 SelectionDAG &DAG) const {
+  SDValue Addr = getTLSGetAddr(GA, DAG, M68kII::MO_TLSLDM);
+  SDValue TGA =
+      DAG.getTargetGlobalAddress(GA->getGlobal(), GA, GA->getValueType(0),
+                                 GA->getOffset(), M68kII::MO_TLSLD);
+  return DAG.getNode(ISD::ADD, SDLoc(GA), MVT::i32, TGA, Addr);
+}
+
+SDValue M68kTargetLowering::LowerTLSInitialExec(GlobalAddressSDNode *GA,
+                                                SelectionDAG &DAG) const {
+  SDValue GOT = DAG.getGLOBAL_OFFSET_TABLE(MVT::i32);
+  SDValue Tp = getM68kReadTp(SDLoc(GA), DAG);
+  SDValue TGA =
+      DAG.getTargetGlobalAddress(GA->getGlobal(), GA, GA->getValueType(0),
+                                 GA->getOffset(), M68kII::MO_TLSIE);
+  SDValue Addr = DAG.getNode(ISD::ADD, SDLoc(GA), MVT::i32, TGA, GOT);
+  SDValue Offset =
+      DAG.getLoad(MVT::i32, SDLoc(GA), DAG.getEntryNode(), Addr,
+                  MachinePointerInfo::getGOT(DAG.getMachineFunction()));
+
+  return DAG.getNode(ISD::ADD, SDLoc(GA), MVT::i32, Offset, Tp);
+}
+
+SDValue M68kTargetLowering::LowerTLSLocalExec(GlobalAddressSDNode *GA,
+                                              SelectionDAG &DAG) const {
+  SDValue Tp = getM68kReadTp(SDLoc(GA), DAG);
+  SDValue TGA =
+      DAG.getTargetGlobalAddress(GA->getGlobal(), GA, GA->getValueType(0),
+                                 GA->getOffset(), M68kII::MO_TLSLE);
+  return DAG.getNode(ISD::ADD, SDLoc(GA), MVT::i32, TGA, Tp);
+}
+
+SDValue M68kTargetLowering::LowerGlobalTLSAddress(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  assert(Subtarget.isTargetELF());
+
+  auto *GA = cast<GlobalAddressSDNode>(Op);
+  TLSModel::Model AccessModel = DAG.getTarget().getTLSModel(GA->getGlobal());
+
+  switch (AccessModel) {
+  case TLSModel::GeneralDynamic:
+    return LowerTLSGeneralDynamic(GA, DAG);
+  case TLSModel::LocalDynamic:
+    return LowerTLSLocalDynamic(GA, DAG);
+  case TLSModel::InitialExec:
+    return LowerTLSInitialExec(GA, DAG);
+  case TLSModel::LocalExec:
+    return LowerTLSLocalExec(GA, DAG);
+  }
+
+  llvm_unreachable("Unexpected TLS access model type");
 }
 
 bool M68kTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
@@ -1553,12 +1682,12 @@ static unsigned TranslateM68kCC(ISD::CondCode SetCCOpcode, const SDLoc &DL,
                                 SelectionDAG &DAG) {
   if (!IsFP) {
     if (ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS)) {
-      if (SetCCOpcode == ISD::SETGT && RHSC->isAllOnesValue()) {
+      if (SetCCOpcode == ISD::SETGT && RHSC->isAllOnes()) {
         // X > -1   -> X == 0, jump !sign.
         RHS = DAG.getConstant(0, DL, RHS.getValueType());
         return M68k::COND_PL;
       }
-      if (SetCCOpcode == ISD::SETLT && RHSC->isNullValue()) {
+      if (SetCCOpcode == ISD::SETLT && RHSC->isZero()) {
         // X < 0   -> X == 0, jump on sign.
         return M68k::COND_MI;
       }
@@ -2756,6 +2885,9 @@ M68kTargetLowering::getConstraintType(StringRef Constraint) const {
           break;
         }
       break;
+    case 'Q':
+    case 'U':
+      return C_Memory;
     default:
       break;
     }
@@ -2765,7 +2897,7 @@ M68kTargetLowering::getConstraintType(StringRef Constraint) const {
 }
 
 void M68kTargetLowering::LowerAsmOperandForConstraint(SDValue Op,
-                                                      std::string &Constraint,
+                                                      StringRef Constraint,
                                                       std::vector<SDValue> &Ops,
                                                       SelectionDAG &DAG) const {
   SDValue Result;
@@ -2918,9 +3050,8 @@ M68kTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
 
 /// Determines whether the callee is required to pop its own arguments.
 /// Callee pop is necessary to support tail calls.
-bool M68k::isCalleePop(CallingConv::ID CallingConv, bool IsVarArg,
-                       bool GuaranteeTCO) {
-  return false;
+bool M68k::isCalleePop(CallingConv::ID CC, bool IsVarArg, bool GuaranteeTCO) {
+  return CC == CallingConv::M68k_RTD && !IsVarArg;
 }
 
 // Return true if it is OK for this CMOV pseudo-opcode to be cascaded
@@ -3073,6 +3204,11 @@ M68kTargetLowering::EmitLoweredSelect(MachineInstr &MI,
   F->insert(It, Copy0MBB);
   F->insert(It, SinkMBB);
 
+  // Set the call frame size on entry to the new basic blocks.
+  unsigned CallFrameSize = TII->getCallFrameSizeAt(MI);
+  Copy0MBB->setCallFrameSize(CallFrameSize);
+  SinkMBB->setCallFrameSize(CallFrameSize);
+
   // If the CCR register isn't dead in the terminator, then claim that it's
   // live into the sink and copy blocks.
   const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
@@ -3218,6 +3354,28 @@ SDValue M68kTargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
   SDValue FR = DAG.getFrameIndex(FuncInfo->getVarArgsFrameIndex(), PtrVT);
   return DAG.getStore(Op.getOperand(0), DL, FR, Op.getOperand(1),
                       MachinePointerInfo(SV));
+}
+
+SDValue M68kTargetLowering::LowerATOMICFENCE(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  // Lower to a memory barrier created from inline asm.
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  LLVMContext &Ctx = *DAG.getContext();
+
+  const unsigned Flags = InlineAsm::Extra_MayLoad | InlineAsm::Extra_MayStore |
+                         InlineAsm::Extra_HasSideEffects;
+  const SDValue AsmOperands[4] = {
+      Op.getOperand(0), // Input chain
+      DAG.getTargetExternalSymbol(
+          "", TLI.getProgramPointerTy(
+                  DAG.getDataLayout())),   // Empty inline asm string
+      DAG.getMDNode(MDNode::get(Ctx, {})), // (empty) srcloc
+      DAG.getTargetConstant(Flags, SDLoc(Op),
+                            TLI.getPointerTy(DAG.getDataLayout())), // Flags
+  };
+
+  return DAG.getNode(ISD::INLINEASM, SDLoc(Op),
+                     DAG.getVTList(MVT::Other, MVT::Glue), AsmOperands);
 }
 
 // Lower dynamic stack allocation to _alloca call for Cygwin/Mingw targets.

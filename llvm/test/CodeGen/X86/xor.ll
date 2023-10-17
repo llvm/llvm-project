@@ -409,8 +409,8 @@ define i32 @PR17487(i1 %tobool) {
 ;
 ; X64-WIN-LABEL: PR17487:
 ; X64-WIN:       # %bb.0:
+; X64-WIN-NEXT:    andb $1, %cl
 ; X64-WIN-NEXT:    movzbl %cl, %eax
-; X64-WIN-NEXT:    andl $1, %eax
 ; X64-WIN-NEXT:    retq
   %tmp = insertelement <2 x i1> undef, i1 %tobool, i32 1
   %tmp1 = zext <2 x i1> %tmp to <2 x i64>

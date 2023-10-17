@@ -1,0 +1,55 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = ["layering_check"],
+)
+
+licenses(["notice"])
+
+cc_test(
+    name = "clang_tidy_test",
+    size = "small",
+    srcs = glob(
+        [
+            "clang-tidy/*.cpp",
+            "clang-tidy/*.h",
+        ],
+        allow_empty = False,
+    ),
+    includes = ["clang-tidy/include"],
+    deps = [
+        "//clang:ast",
+        "//clang:ast_matchers",
+        "//clang:basic",
+        "//clang:frontend",
+        "//clang:lex",
+        "//clang:serialization",
+        "//clang:testing",
+        "//clang:tooling",
+        "//clang:tooling_core",
+        "//clang:transformer",
+        "//clang-tools-extra/clang-tidy:android",
+        "//clang-tools-extra/clang-tidy:google",
+        "//clang-tools-extra/clang-tidy:lib",
+        "//clang-tools-extra/clang-tidy:llvm",
+        "//clang-tools-extra/clang-tidy:misc",
+        "//clang-tools-extra/clang-tidy:modernize",
+        "//clang-tools-extra/clang-tidy:objc",
+        "//clang-tools-extra/clang-tidy:performance",
+        "//clang-tools-extra/clang-tidy:readability",
+        "//clang-tools-extra/clang-tidy:tool",
+        "//clang-tools-extra/clang-tidy:utils",
+        "//llvm:FrontendOpenMP",
+        "//llvm:Support",
+        "//llvm:TestingAnnotations",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)

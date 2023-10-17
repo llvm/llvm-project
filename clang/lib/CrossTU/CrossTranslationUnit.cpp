@@ -20,13 +20,13 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Index/USRGeneration.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <fstream>
 #include <optional>
@@ -392,11 +392,11 @@ void CrossTranslationUnitContext::emitCrossTUDiagnostics(const IndexError &IE) {
 
 CrossTranslationUnitContext::ASTUnitStorage::ASTUnitStorage(
     CompilerInstance &CI)
-    : Loader(CI, CI.getAnalyzerOpts()->CTUDir,
-             CI.getAnalyzerOpts()->CTUInvocationList),
+    : Loader(CI, CI.getAnalyzerOpts().CTUDir,
+             CI.getAnalyzerOpts().CTUInvocationList),
       LoadGuard(CI.getASTContext().getLangOpts().CPlusPlus
-                    ? CI.getAnalyzerOpts()->CTUImportCppThreshold
-                    : CI.getAnalyzerOpts()->CTUImportThreshold) {}
+                    ? CI.getAnalyzerOpts().CTUImportCppThreshold
+                    : CI.getAnalyzerOpts().CTUImportThreshold) {}
 
 llvm::Expected<ASTUnit *>
 CrossTranslationUnitContext::ASTUnitStorage::getASTUnitForFile(
@@ -568,7 +568,7 @@ CrossTranslationUnitContext::ASTLoader::loadFromDump(StringRef ASTDumpPath) {
   return ASTUnit::LoadFromASTFile(
       std::string(ASTDumpPath.str()),
       CI.getPCHContainerOperations()->getRawReader(), ASTUnit::LoadEverything,
-      Diags, CI.getFileSystemOpts());
+      Diags, CI.getFileSystemOpts(), CI.getHeaderSearchOptsPtr());
 }
 
 /// Load the AST from a source-file, which is supposed to be located inside the
@@ -609,10 +609,10 @@ CrossTranslationUnitContext::ASTLoader::loadFromSource(
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
       new DiagnosticsEngine{DiagID, &*DiagOpts, DiagClient});
 
-  return std::unique_ptr<ASTUnit>(ASTUnit::LoadFromCommandLine(
-      CommandLineArgs.begin(), (CommandLineArgs.end()),
-      CI.getPCHContainerOperations(), Diags,
-      CI.getHeaderSearchOpts().ResourceDir));
+  return ASTUnit::LoadFromCommandLine(CommandLineArgs.begin(),
+                                      (CommandLineArgs.end()),
+                                      CI.getPCHContainerOperations(), Diags,
+                                      CI.getHeaderSearchOpts().ResourceDir);
 }
 
 llvm::Expected<InvocationListTy>
@@ -660,7 +660,7 @@ parseInvocationList(StringRef FileContent, llvm::sys::path::Style PathStyle) {
 
     StringRef InvocationKey = NativeSourcePath;
 
-    if (InvocationList.find(InvocationKey) != InvocationList.end())
+    if (InvocationList.contains(InvocationKey))
       return llvm::make_error<IndexError>(
           index_error_code::invocation_list_ambiguous);
 

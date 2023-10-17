@@ -12,11 +12,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/CodeGen/CodeGen.h"
-#include "flang/Optimizer/Support/FIRContext.h"
+#include "flang/Optimizer/Dialect/Support/FIRContext.h"
+#include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Support/InitFIR.h"
 #include "flang/Optimizer/Support/InternalNames.h"
-#include "flang/Optimizer/Support/KindMapping.h"
 #include "flang/Optimizer/Transforms/Passes.h"
+#include "flang/Tools/CrossToolHelpers.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
@@ -103,9 +104,10 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
   fir::KindMapping kindMap{&context};
   fir::setTargetTriple(*owningRef, targetTriple);
   fir::setKindMapping(*owningRef, kindMap);
-  mlir::PassManager pm(&context, mlir::OpPassManager::Nesting::Implicit);
+  mlir::PassManager pm((*owningRef)->getName(),
+                       mlir::OpPassManager::Nesting::Implicit);
   pm.enableVerifier(/*verifyPasses=*/true);
-  mlir::applyPassManagerCLOptions(pm);
+  (void)mlir::applyPassManagerCLOptions(pm);
   if (emitFir) {
     // parse the input and pretty-print it back out
     // -emit-fir intentionally disables all the passes
@@ -117,12 +119,13 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
     if (mlir::failed(passPipeline.addToPipeline(pm, errorHandler)))
       return mlir::failure();
   } else {
+    MLIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
     if (codeGenLLVM) {
       // Run only CodeGen passes.
-      fir::createDefaultFIRCodeGenPassPipeline(pm);
+      fir::createDefaultFIRCodeGenPassPipeline(pm, config);
     } else {
       // Run tco with O2 by default.
-      fir::createMLIRToLLVMPassPipeline(pm, llvm::OptimizationLevel::O2);
+      fir::createMLIRToLLVMPassPipeline(pm, config);
     }
     fir::addLLVMDialectToLLVMPass(pm, out.os());
   }

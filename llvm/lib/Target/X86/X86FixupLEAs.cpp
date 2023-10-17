@@ -186,13 +186,9 @@ FixupLEAPass::postRAConvertToLEA(MachineBasicBlock &MBB,
     // Only convert instructions that we've verified are safe.
     return nullptr;
   case X86::ADD64ri32:
-  case X86::ADD64ri8:
   case X86::ADD64ri32_DB:
-  case X86::ADD64ri8_DB:
   case X86::ADD32ri:
-  case X86::ADD32ri8:
   case X86::ADD32ri_DB:
-  case X86::ADD32ri8_DB:
     if (!MI.getOperand(2).isImm()) {
       // convertToThreeAddress will call getImm()
       // which requires isImm() to be true
@@ -374,15 +370,14 @@ static inline unsigned getSUBrrFromLEA(unsigned LEAOpcode) {
 
 static inline unsigned getADDriFromLEA(unsigned LEAOpcode,
                                        const MachineOperand &Offset) {
-  bool IsInt8 = Offset.isImm() && isInt<8>(Offset.getImm());
   switch (LEAOpcode) {
   default:
     llvm_unreachable("Unexpected LEA instruction");
   case X86::LEA32r:
   case X86::LEA64_32r:
-    return IsInt8 ? X86::ADD32ri8 : X86::ADD32ri;
+    return X86::ADD32ri;
   case X86::LEA64r:
-    return IsInt8 ? X86::ADD64ri8 : X86::ADD64ri32;
+    return X86::ADD64ri32;
   }
 }
 
@@ -463,10 +458,8 @@ void FixupLEAPass::checkRegUsage(MachineBasicBlock::iterator &LeaI,
   Register IndexReg = LeaI->getOperand(1 + X86::AddrIndexReg).getReg();
   Register AluDestReg = AluI->getOperand(0).getReg();
 
-  MachineBasicBlock::iterator CurInst = std::next(LeaI);
-  while (CurInst != AluI) {
-    for (unsigned I = 0, E = CurInst->getNumOperands(); I != E; ++I) {
-      MachineOperand &Opnd = CurInst->getOperand(I);
+  for (MachineInstr &CurInst : llvm::make_range(std::next(LeaI), AluI)) {
+    for (MachineOperand &Opnd : CurInst.operands()) {
       if (!Opnd.isReg())
         continue;
       Register Reg = Opnd.getReg();
@@ -485,7 +478,6 @@ void FixupLEAPass::checkRegUsage(MachineBasicBlock::iterator &LeaI,
           *KilledIndex = &Opnd;
       }
     }
-    ++CurInst;
   }
 }
 
@@ -786,12 +778,34 @@ void FixupLEAPass::processInstrForSlow3OpLEA(MachineBasicBlock::iterator &I,
   LLVM_DEBUG(dbgs() << "FixLEA: Replaced by: ";);
 
   MachineInstr *NewMI = nullptr;
+  bool BaseOrIndexIsDst = DestReg == BaseReg || DestReg == IndexReg;
+  // First try and remove the base while sticking with LEA iff base == index and
+  // scale == 1. We can handle:
+  //    1. lea D(%base,%index,1)   -> lea D(,%index,2)
+  //    2. lea D(%r13/%rbp,%index) -> lea D(,%index,2)
+  // Only do this if the LEA would otherwise be split into 2-instruction
+  // (either it has a an Offset or neither base nor index are dst)
+  if (IsScale1 && BaseReg == IndexReg &&
+      (hasLEAOffset(Offset) || (IsInefficientBase && !BaseOrIndexIsDst))) {
+    NewMI = BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(LEAOpcode))
+                .add(Dest)
+                .addReg(0)
+                .addImm(2)
+                .add(Index)
+                .add(Offset)
+                .add(Segment);
+    LLVM_DEBUG(NewMI->dump(););
 
-  // First try to replace LEA with one or two (for the 3-op LEA case)
-  // add instructions:
-  // 1.lea (%base,%index,1), %base => add %index,%base
-  // 2.lea (%base,%index,1), %index => add %base,%index
-  if (IsScale1 && (DestReg == BaseReg || DestReg == IndexReg)) {
+    MBB.getParent()->substituteDebugValuesForInst(*I, *NewMI, 1);
+    MBB.erase(I);
+    I = NewMI;
+    return;
+  } else if (IsScale1 && BaseOrIndexIsDst) {
+    // Try to replace LEA with one or two (for the 3-op LEA case)
+    // add instructions:
+    // 1.lea (%base,%index,1), %base => add %index,%base
+    // 2.lea (%base,%index,1), %index => add %base,%index
+
     unsigned NewOpc = getADDrrFromLEA(MI.getOpcode());
     if (DestReg != BaseReg)
       std::swap(BaseReg, IndexReg);

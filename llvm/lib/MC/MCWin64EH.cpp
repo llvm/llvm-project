@@ -1089,7 +1089,7 @@ static void ARM64ProcessEpilogs(WinEH::FrameInfo *info,
       FindMatchingEpilog(EpilogInstrs, AddedEpilogs, info);
     int PrologOffset;
     if (MatchingEpilog) {
-      assert(EpilogInfo.find(MatchingEpilog) != EpilogInfo.end() &&
+      assert(EpilogInfo.contains(MatchingEpilog) &&
              "Duplicate epilog not found");
       EpilogInfo[EpilogStart] = EpilogInfo.lookup(MatchingEpilog);
       // Clear the unwind codes in the EpilogMap, so that they don't get output
@@ -1402,6 +1402,9 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info,
     // here, but we'd have to emit the pdata, the xdata header, and the
     // epilogue scopes later, since they depend on whether the we need to
     // split the unwind data.
+    //
+    // If this is fixed, remove code in AArch64ISelLowering.cpp that
+    // disables loop alignment on Windows.
     RawFuncLength = GetAbsDifference(streamer, info->FuncletOrFuncEnd,
                                      info->Begin);
   }
@@ -2369,7 +2372,7 @@ static void ARMEmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info,
         FindMatchingEpilog(EpilogInstrs, AddedEpilogs, info);
     int PrologOffset;
     if (MatchingEpilog) {
-      assert(EpilogInfo.find(MatchingEpilog) != EpilogInfo.end() &&
+      assert(EpilogInfo.contains(MatchingEpilog) &&
              "Duplicate epilog not found");
       EpilogInfo[EpilogStart] = EpilogInfo.lookup(MatchingEpilog);
       // Clear the unwind codes in the EpilogMap, so that they don't get output
@@ -2449,7 +2452,7 @@ static void ARMEmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info,
       else
         OffsetExpr = GetSubDivExpr(streamer, EpilogStart, info->Begin, 2);
 
-      assert(info->EpilogMap.find(EpilogStart) != info->EpilogMap.end());
+      assert(info->EpilogMap.contains(EpilogStart));
       unsigned Condition = info->EpilogMap[EpilogStart].Condition;
       assert(Condition <= 0xf);
 

@@ -150,7 +150,7 @@ body:             |
   
     %1:gr32 = PHI %27, %bb.3, %24, %bb.4, debug-location !9
     %25:gr32 = nsw ADD32rr %1, %0, implicit-def dead $eflags, debug-location !9
-    CMP32ri8 killed %25, 6, implicit-def $eflags, debug-location !9
+    CMP32ri killed %25, 6, implicit-def $eflags, debug-location !9
     JCC_1 %bb.3, 7, implicit killed $eflags, debug-location !9
     JMP_1 %bb.6, debug-location !9
   
@@ -180,7 +180,7 @@ body:             |
   bb.9:
     successors: %bb.10(0x80000000), %bb.12(0x00000000)
   
-    CMP32ri8 undef %32:gr32, 16, implicit-def $eflags, debug-location !9
+    CMP32ri undef %32:gr32, 16, implicit-def $eflags, debug-location !9
     JCC_1 %bb.12, 15, implicit killed $eflags, debug-location !9
     JMP_1 %bb.10, debug-location !9
   
@@ -273,8 +273,8 @@ body:             |
     CALL64r undef %55:gr64, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit killed $esi, implicit killed $edx, implicit killed $ecx, implicit killed $r8, implicit-def $rsp, implicit-def $ssp, debug-location !9
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !9
     %13:gr64 = nuw nsw INC64r killed %3, implicit-def dead $eflags, debug-location !9
-    %14:gr32 = ADD32ri8 killed %2, -8, implicit-def dead $eflags, debug-location !9
-    CMP32ri8 %14, 8, implicit-def $eflags, debug-location !9
+    %14:gr32 = ADD32ri killed %2, -8, implicit-def dead $eflags, debug-location !9
+    CMP32ri %14, 8, implicit-def $eflags, debug-location !9
     JCC_1 %bb.13, 15, implicit killed $eflags, debug-location !9
     JMP_1 %bb.3, debug-location !9
 

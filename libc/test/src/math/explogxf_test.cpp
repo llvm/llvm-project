@@ -9,12 +9,12 @@
 #include "in_float_range_test_helper.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/math/generic/explogxf.h"
+#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include "utils/UnitTest/FPMatcher.h"
-#include "utils/UnitTest/Test.h"
 #include <math.h>
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 DECLARE_SPECIAL_CONSTANTS(float)
 
@@ -27,8 +27,8 @@ auto f_normal = [](float x) -> bool {
 
 TEST(LlvmLibcExpxfTest, InFloatRange) {
   auto fx = [](float x) -> float {
-    auto result = __llvm_libc::exp_b_range_reduc<__llvm_libc::ExpBase>(x);
-    double r = __llvm_libc::ExpBase::powb_lo(result.lo);
+    auto result = LIBC_NAMESPACE::exp_b_range_reduc<LIBC_NAMESPACE::ExpBase>(x);
+    double r = LIBC_NAMESPACE::ExpBase::powb_lo(result.lo);
     return static_cast<float>(result.mh * r);
   };
   auto f_check = [](float x) -> bool {
@@ -40,11 +40,11 @@ TEST(LlvmLibcExpxfTest, InFloatRange) {
 }
 
 TEST(LlvmLibcLog2xfTest, InFloatRange) {
-  CHECK_DATA(0.0f, inf, mpfr::Operation::Log2, __llvm_libc::log2_eval, f_normal,
-             def_count, def_prec);
+  CHECK_DATA(0.0f, inf, mpfr::Operation::Log2, LIBC_NAMESPACE::log2_eval,
+             f_normal, def_count, def_prec);
 }
 
 TEST(LlvmLibcLogxfTest, InFloatRange) {
-  CHECK_DATA(0.0f, inf, mpfr::Operation::Log, __llvm_libc::log_eval, f_normal,
-             def_count, def_prec);
+  CHECK_DATA(0.0f, inf, mpfr::Operation::Log, LIBC_NAMESPACE::log_eval,
+             f_normal, def_count, def_prec);
 }

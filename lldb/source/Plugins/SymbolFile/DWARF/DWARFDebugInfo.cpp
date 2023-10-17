@@ -27,10 +27,10 @@
 
 using namespace lldb;
 using namespace lldb_private;
+using namespace lldb_private::plugin::dwarf;
 
 // Constructor
-DWARFDebugInfo::DWARFDebugInfo(SymbolFileDWARF &dwarf,
-                               lldb_private::DWARFContext &context)
+DWARFDebugInfo::DWARFDebugInfo(SymbolFileDWARF &dwarf, DWARFContext &context)
     : m_dwarf(dwarf), m_context(context), m_units(), m_cu_aranges_up() {}
 
 const DWARFDebugAranges &DWARFDebugInfo::GetCompileUnitAranges() {
@@ -136,7 +136,7 @@ uint32_t DWARFDebugInfo::FindUnitIndex(DIERef::Section section,
       });
   uint32_t idx = std::distance(m_units.begin(), pos);
   if (idx == 0)
-    return DW_INVALID_OFFSET;
+    return DW_INVALID_INDEX;
   return idx - 1;
 }
 

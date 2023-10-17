@@ -183,6 +183,11 @@ std::string SearchRegexCmd(const std::string &Regex) {
   return "grep '" + Regex + "'";
 }
 
+size_t PageSize() {
+  static size_t PageSizeCached = sysconf(_SC_PAGESIZE);
+  return PageSizeCached;
+}
+
 }  // namespace fuzzer
 
 #endif // LIBFUZZER_POSIX

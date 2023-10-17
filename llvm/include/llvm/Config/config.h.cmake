@@ -128,9 +128,6 @@
 /* Define to 1 if you have the <link.h> header file. */
 #cmakedefine HAVE_LINK_H ${HAVE_LINK_H}
 
-/* Define to 1 if you have the `lseek64' function. */
-#cmakedefine HAVE_LSEEK64 ${HAVE_LSEEK64}
-
 /* Define to 1 if you have the <mach/mach.h> header file. */
 #cmakedefine HAVE_MACH_MACH_H ${HAVE_MACH_MACH_H}
 
@@ -178,9 +175,6 @@
 
 /* Define to 1 if you have the <signal.h> header file. */
 #cmakedefine HAVE_SIGNAL_H ${HAVE_SIGNAL_H}
-
-/* Define to 1 if you have the `strerror' function. */
-#cmakedefine HAVE_STRERROR ${HAVE_STRERROR}
 
 /* Define to 1 if you have the `strerror_r' function. */
 #cmakedefine HAVE_STRERROR_R ${HAVE_STRERROR_R}
@@ -336,5 +330,7 @@
 #cmakedefine01 LLVM_SUPPORT_XCODE_SIGNPOSTS
 
 #cmakedefine HAVE_PROC_PID_RUSAGE 1
+
+#cmakedefine HAVE_BUILTIN_THREAD_POINTER ${HAVE_BUILTIN_THREAD_POINTER}
 
 #endif

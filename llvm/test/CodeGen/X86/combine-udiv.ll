@@ -135,19 +135,14 @@ define <4 x i32> @combine_vec_udiv_dupe(<4 x i32> %x) {
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [1,1,1,1]
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: combine_vec_udiv_dupe:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [1,1,1,1]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: combine_vec_udiv_dupe:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1,1,1,1]
-; AVX2-NEXT:    retq
+; AVX-LABEL: combine_vec_udiv_dupe:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1,1,1,1]
+; AVX-NEXT:    retq
 ;
 ; XOP-LABEL: combine_vec_udiv_dupe:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vmovaps {{.*#+}} xmm0 = [1,1,1,1]
+; XOP-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1,1,1,1]
 ; XOP-NEXT:    retq
   %1 = udiv <4 x i32> %x, %x
   ret <4 x i32> %1
@@ -364,7 +359,7 @@ define <4 x i32> @combine_vec_udiv_by_shl_pow2a(<4 x i32> %x, <4 x i32> %y) {
 ;
 ; XOP-LABEL: combine_vec_udiv_by_shl_pow2a:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vmovdqa {{.*#+}} xmm2 = [4294967294,4294967294,4294967294,4294967294]
+; XOP-NEXT:    vbroadcastss {{.*#+}} xmm2 = [4294967294,4294967294,4294967294,4294967294]
 ; XOP-NEXT:    vpsubd %xmm1, %xmm2, %xmm1
 ; XOP-NEXT:    vpshld %xmm1, %xmm0, %xmm0
 ; XOP-NEXT:    retq

@@ -91,7 +91,8 @@ protected:
                              const MCSubtargetInfo &STI, raw_ostream &O);
   void printArithExtend(const MCInst *MI, unsigned OpNum,
                         const MCSubtargetInfo &STI, raw_ostream &O);
-
+  void printMemExtendImpl(bool SignExtend, bool DoShift, unsigned Width,
+                          char SrcRegKind, raw_ostream &O);
   void printMemExtend(const MCInst *MI, unsigned OpNum, raw_ostream &O,
                       char SrcRegKind, unsigned Width);
   template <char SrcRegKind, unsigned Width>
@@ -172,10 +173,11 @@ protected:
   template <unsigned Scale = 1>
   void printVectorIndex(const MCInst *MI, unsigned OpNum,
                         const MCSubtargetInfo &STI, raw_ostream &O);
+  template <unsigned Scale = 1>
   void printMatrixIndex(const MCInst *MI, unsigned OpNum,
                         const MCSubtargetInfo &STI, raw_ostream &O);
-  void printAdrpLabel(const MCInst *MI, uint64_t Address, unsigned OpNum,
-                      const MCSubtargetInfo &STI, raw_ostream &O);
+  void printAdrAdrpLabel(const MCInst *MI, uint64_t Address, unsigned OpNum,
+                         const MCSubtargetInfo &STI, raw_ostream &O);
   void printBarrierOption(const MCInst *MI, unsigned OpNum,
                           const MCSubtargetInfo &STI, raw_ostream &O);
   void printBarriernXSOption(const MCInst *MI, unsigned OpNum,
@@ -191,7 +193,6 @@ protected:
   template <int EltSize>
   void printPredicateAsCounter(const MCInst *MI, unsigned OpNum,
                                const MCSubtargetInfo &STI, raw_ostream &O);
-
   template<int64_t Angle, int64_t Remainder>
   void printComplexRotationOp(const MCInst *MI, unsigned OpNo,
                             const MCSubtargetInfo &STI, raw_ostream &O);

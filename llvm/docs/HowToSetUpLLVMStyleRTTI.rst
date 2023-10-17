@@ -544,7 +544,7 @@ This would enable us to cast from a ``char *`` to a SomeValue, if we wanted to.
 Optional value casting
 ----------------------
 When your types are not constructible from ``nullptr`` or there isn't a simple
-way to tell when an object is invalid, you may want to use ``llvm::Optional``.
+way to tell when an object is invalid, you may want to use ``std::optional``.
 In those cases, you probably want something like this:
 
 .. code-block:: c++
@@ -558,14 +558,14 @@ but it enables casting like so:
 .. code-block:: c++
 
   SomeValue someVal = ...;
-  Optional<AnotherValue> valOr = dyn_cast<AnotherValue>(someVal);
+  std::optional<AnotherValue> valOr = dyn_cast<AnotherValue>(someVal);
 
 With the ``_if_present`` variants, you can even do optional chaining like this:
 
 .. code-block:: c++
 
-  Optional<SomeValue> someVal = ...;
-  Optional<AnotherValue> valOr = dyn_cast_if_present<AnotherValue>(someVal);
+  std::optional<SomeValue> someVal = ...;
+  std::optional<AnotherValue> valOr = dyn_cast_if_present<AnotherValue>(someVal);
 
-and ``valOr`` will be ``None`` if either ``someVal`` cannot be converted *or*
-if ``someVal`` was also ``None``.
+and ``valOr`` will be ``std::nullopt`` if either ``someVal`` cannot be converted *or*
+if ``someVal`` was also ``std::nullopt``.

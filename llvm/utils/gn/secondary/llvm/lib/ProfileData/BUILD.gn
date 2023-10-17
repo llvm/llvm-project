@@ -14,11 +14,13 @@ static_library("ProfileData") {
     "InstrProfCorrelator.cpp",
     "InstrProfReader.cpp",
     "InstrProfWriter.cpp",
+    "ItaniumManglingCanonicalizer.cpp",
     "MemProf.cpp",
     "ProfileSummaryBuilder.cpp",
     "RawMemProfReader.cpp",
     "SampleProf.cpp",
     "SampleProfReader.cpp",
     "SampleProfWriter.cpp",
+    "SymbolRemappingReader.cpp",
   ]
 }

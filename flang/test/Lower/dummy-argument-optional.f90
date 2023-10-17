@@ -1,4 +1,5 @@
 ! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: flang-new -fc1 -fdefault-integer-8 -emit-fir %s -o - | FileCheck %s
 
 ! Test OPTIONAL lowering on caller/callee and PRESENT intrinsic.
 module opt
@@ -51,21 +52,68 @@ end subroutine
 ! CHECK-SAME: %[[arg0:.*]]: !fir.boxchar<1> {fir.bindc_name = "x", fir.optional}) {
 subroutine character_scalar(x)
   ! CHECK: %[[unboxed:.*]]:2 = fir.unboxchar %[[arg0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+  ! CHECK: %[[ref:.*]] = fir.convert %[[unboxed]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,10>>
   character(10), optional :: x
-  ! CHECK: fir.is_present %[[unboxed]]#0 : (!fir.ref<!fir.char<1,?>>) -> i1
+  ! CHECK: fir.is_present %[[ref]] : (!fir.ref<!fir.char<1,10>>) -> i1
   print *, present(x)
 end subroutine
 ! CHECK-LABEL: func @_QMoptPcall_character_scalar()
 subroutine call_character_scalar()
   ! CHECK: %[[addr:.*]] = fir.alloca !fir.char<1,10>
   character(10) :: x
-  ! CHECK: %[[addrCast:.*]] = fir.convert %[[addr]]
-  ! CHECK: %[[x:.*]] = fir.emboxchar %[[addrCast]], {{.*}}
+  ! CHECK: %[[x:.*]] = fir.emboxchar %[[addr]], {{.*}}
   ! CHECK: fir.call @_QMoptPcharacter_scalar(%[[x]]) {{.*}}: (!fir.boxchar<1>) -> ()
   call character_scalar(x)
   ! CHECK: %[[absent:.*]] = fir.absent !fir.boxchar<1>
   ! CHECK: fir.call @_QMoptPcharacter_scalar(%[[absent]]) {{.*}}: (!fir.boxchar<1>) -> ()
   call character_scalar()
+end subroutine
+
+! Test optional character function
+! CHECK-LABEL: func @_QMoptPchar_proc(
+! CHECK-SAME: %[[arg0:.*]]: !fir.ref<!fir.char<1,3>>,
+character(len=3) function char_proc(i)
+  integer :: i
+  char_proc = "XYZ"
+end function
+! CHECK-LABEL: func @_QMoptPuse_char_proc(
+! CHECK-SAME: %[[arg0:.*]]: tuple<!fir.boxproc<() -> ()>, i64> {fir.char_proc},
+subroutine use_char_proc(f, c)
+  optional :: f
+  interface
+    character(len=3) function f(i)
+      integer :: i
+    end function
+  end interface
+  character(len=3) :: c
+! CHECK: %[[boxProc:.*]] = fir.extract_value %[[arg0]], [0 : index] : (tuple<!fir.boxproc<() -> ()>, i64>) -> !fir.boxproc<() -> ()>
+! CHECK: %[[procAddr:.*]] = fir.box_addr %[[boxProc]] : (!fir.boxproc<() -> ()>) -> (() -> ())
+! CHECK: %{{.*}} = fir.is_present %[[procAddr]] : (() -> ()) -> i1
+  if (present(f)) then
+    c = f(0)
+  else
+    c = "ABC"
+  end if
+end subroutine
+! CHECK-LABEL: func @_QMoptPcall_use_char_proc(
+subroutine call_use_char_proc()
+  character(len=3) :: c
+! CHECK: %[[boxProc:.*]] = fir.absent !fir.boxproc<() -> ()>
+! CHECK: %[[undef:.*]] = fir.undefined index
+! CHECK: %[[charLen:.*]] = fir.convert %[[undef]] : (index) -> i64
+! CHECK: %[[tuple:.*]] = fir.undefined tuple<!fir.boxproc<() -> ()>, i64>
+! CHECK: %[[tuple2:.*]] = fir.insert_value %[[tuple]], %[[boxProc]], [0 : index] : (tuple<!fir.boxproc<() -> ()>, i64>, !fir.boxproc<() -> ()>) -> tuple<!fir.boxproc<() -> ()>, i64>
+! CHECK: %[[tuple3:.*]] = fir.insert_value %[[tuple2]], %[[charLen]], [1 : index] : (tuple<!fir.boxproc<() -> ()>, i64>, i64) -> tuple<!fir.boxproc<() -> ()>, i64>
+! CHECK: fir.call @_QMoptPuse_char_proc(%[[tuple3]], %{{.*}}){{.*}} : (tuple<!fir.boxproc<() -> ()>, i64>, !fir.boxchar<1>) -> ()
+  call use_char_proc(c=c)
+! CHECK: %[[funcAddr:.*]] = fir.address_of(@_QMoptPchar_proc) : (!fir.ref<!fir.char<1,3>>, index, {{.*}}) -> !fir.boxchar<1>
+! CHECK: %[[c3:.*]] = arith.constant 3 : i64
+! CHECK: %[[boxProc2:.*]] = fir.emboxproc %[[funcAddr]] : ((!fir.ref<!fir.char<1,3>>, index, {{.*}}) -> !fir.boxchar<1>) -> !fir.boxproc<() -> ()>
+! CHECK: %[[tuple4:.*]] = fir.undefined tuple<!fir.boxproc<() -> ()>, i64>
+! CHECK: %[[tuple5:.*]] = fir.insert_value %[[tuple4]], %[[boxProc2]], [0 : index] : (tuple<!fir.boxproc<() -> ()>, i64>, !fir.boxproc<() -> ()>) -> tuple<!fir.boxproc<() -> ()>, i64>
+! CHECK: %[[tuple6:.*]] = fir.insert_value %[[tuple5]], %[[c3]], [1 : index] : (tuple<!fir.boxproc<() -> ()>, i64>, i64) -> tuple<!fir.boxproc<() -> ()>, i64>
+! CHECK: fir.call @_QMoptPuse_char_proc(%[[tuple6]], {{.*}}){{.*}} : (tuple<!fir.boxproc<() -> ()>, i64>, !fir.boxchar<1>) -> ()
+  call use_char_proc(char_proc, c)
 end subroutine
 
 ! Test optional assumed shape
@@ -147,9 +195,10 @@ end subroutine
 
 ! CHECK-LABEL: func @_QMoptPnull_as_optional() {
 subroutine null_as_optional
-  ! CHECK: %[[temp:.*]] = fir.alloca !fir.llvm_ptr<none>
-  ! CHECK: %[[null:.*]] = fir.zero_bits !fir.ref<none>
-  ! CHECK: fir.store %{{.*}} to %[[temp]] : !fir.ref<!fir.llvm_ptr<none>>
+  ! CHECK: %[[null_ptr:.*]] = fir.alloca !fir.box<!fir.ptr<none>>
+  ! CHECK: %[[null:.*]] = fir.zero_bits !fir.ptr<none>
+  ! CHECK: %[[null_box:.*]] = fir.embox %[[null]] : (!fir.ptr<none>) -> !fir.box<!fir.ptr<none>>
+  ! CHECK: fir.store %[[null_box]] to %[[null_ptr]] : !fir.ref<!fir.box<!fir.ptr<none>>>
   ! CHECK: fir.call @_QMoptPassumed_shape(%{{.*}}) {{.*}}: (!fir.box<!fir.array<?xf32>>) -> ()
  call assumed_shape(null())
 end subroutine null_as_optional

@@ -8,6 +8,7 @@
 
 // UNSUPPORTED: c++03
 // UNSUPPORTED: no-localization
+// UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
 
@@ -28,10 +29,10 @@
 #include <cassert>
 #include <iostream>
 
-#include "test_macros.h"
-#include "test_iterators.h"
 #include "count_new.h"
-#include "filesystem_test_helper.h"
+#include "make_string.h"
+#include "test_iterators.h"
+#include "test_macros.h"
 
 MultiStringType InStr =  MKSTR("abcdefg/\"hijklmnop\"/qrstuvwxyz/123456789");
 MultiStringType OutStr = MKSTR("\"abcdefg/\\\"hijklmnop\\\"/qrstuvwxyz/123456789\"");

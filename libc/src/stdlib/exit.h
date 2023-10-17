@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <stdlib.h>
-
 #ifndef LLVM_LIBC_SRC_STDLIB_EXIT_H
 #define LLVM_LIBC_SRC_STDLIB_EXIT_H
 
-namespace __llvm_libc {
+#include <stdlib.h>
 
-void exit(int status);
+namespace LIBC_NAMESPACE {
 
-} // namespace __llvm_libc
+[[noreturn]] void exit(int status);
+
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDLIB_EXIT_H

@@ -69,13 +69,11 @@ ValueObjectSP LibStdcppUniquePtrSyntheticFrontEnd::GetTuple() {
   if (!valobj_sp)
     return nullptr;
 
-  ValueObjectSP obj_child_sp =
-      valobj_sp->GetChildMemberWithName(ConstString("_M_t"), true);
+  ValueObjectSP obj_child_sp = valobj_sp->GetChildMemberWithName("_M_t");
   if (!obj_child_sp)
       return nullptr;
 
-  ValueObjectSP obj_subchild_sp =
-      obj_child_sp->GetChildMemberWithName(ConstString("_M_t"), true);
+  ValueObjectSP obj_subchild_sp = obj_child_sp->GetChildMemberWithName("_M_t");
 
   // if there is a _M_t subchild, the tuple is found in the obj_subchild_sp
   // (for libstdc++ 6.0.23).
@@ -110,14 +108,7 @@ bool LibStdcppUniquePtrSyntheticFrontEnd::Update() {
     if (del_obj)
       m_del_obj = del_obj->Clone(ConstString("deleter")).get();
   }
-
-  if (m_ptr_obj) {
-    Status error;
-    ValueObjectSP obj_obj = m_ptr_obj->Dereference(error);
-    if (error.Success()) {
-      m_obj_obj = obj_obj->Clone(ConstString("object")).get();
-    }
-  }
+  m_obj_obj = nullptr;
 
   return false;
 }
@@ -130,8 +121,17 @@ LibStdcppUniquePtrSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
     return m_ptr_obj->GetSP();
   if (idx == 1 && m_del_obj)
     return m_del_obj->GetSP();
-  if (idx == 2 && m_obj_obj)
-    return m_obj_obj->GetSP();
+  if (idx == 2) {
+    if (m_ptr_obj && !m_obj_obj) {
+      Status error;
+      ValueObjectSP obj_obj = m_ptr_obj->Dereference(error);
+      if (error.Success()) {
+        m_obj_obj = obj_obj->Clone(ConstString("object")).get();
+      }
+    }
+    if (m_obj_obj)
+      return m_obj_obj->GetSP();
+  }
   return lldb::ValueObjectSP();
 }
 

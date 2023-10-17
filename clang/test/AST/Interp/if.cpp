@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++2b -fsyntax-only -fexperimental-new-constant-interpreter %s -verify
-// RUN: %clang_cc1 -std=c++2b -fsyntax-only %s -verify=ref
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -fexperimental-new-constant-interpreter %s -verify
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only %s -verify=ref
 
 // expected-no-diagnostics
 // ref-no-diagnostics
@@ -43,4 +43,11 @@ namespace InitDecl {
     return false;
   }
   static_assert(!f2(), "");
+
+
+  constexpr int attrs() {
+    if (1) [[likely]] {}
+    return 1;
+  }
+  static_assert(attrs() == 1, "");
 };

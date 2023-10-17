@@ -38,10 +38,10 @@ define void @ld_st_nxv8i16(ptr %in, ptr %out) {
 ;
 ; ASM-LABEL: ld_st_nxv8i16:
 ; ASM:       // %bb.0: // %entry
-; ASM-NEXT:    mov x8, xzr
-; ASM-NEXT:    mov z0.h, #3 // =0x3
-; ASM-NEXT:    cnth x9
 ; ASM-NEXT:    ptrue p0.h
+; ASM-NEXT:    mov z0.h, #3 // =0x3
+; ASM-NEXT:    mov x8, xzr
+; ASM-NEXT:    cnth x9
 ; ASM-NEXT:  .LBB0_1: // %loop
 ; ASM-NEXT:    // =>This Inner Loop Header: Depth=1
 ; ASM-NEXT:    ld1h { z1.h }, p0/z, [x0, x8, lsl #1]
@@ -111,9 +111,9 @@ define void @masked_ld_st_nxv8i16(ptr %in, ptr %out, i64 %n) {
 ;
 ; ASM-LABEL: masked_ld_st_nxv8i16:
 ; ASM:       // %bb.0: // %entry
-; ASM-NEXT:    mov x8, xzr
-; ASM-NEXT:    mov z0.h, #3 // =0x3
 ; ASM-NEXT:    ptrue p0.h
+; ASM-NEXT:    mov z0.h, #3 // =0x3
+; ASM-NEXT:    mov x8, xzr
 ; ASM-NEXT:    cnth x9
 ; ASM-NEXT:  .LBB1_1: // %loop
 ; ASM-NEXT:    // =>This Inner Loop Header: Depth=1

@@ -9,8 +9,6 @@
 // RUN: not %run %t 31 2>&1 | FileCheck %s --check-prefix=CHECK31
 // RUN: not %run %t 30 20 2>&1 | FileCheck %s --check-prefix=CHECK20
 
-// REQUIRES: stable-runtime
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <sanitizer/hwasan_interface.h>

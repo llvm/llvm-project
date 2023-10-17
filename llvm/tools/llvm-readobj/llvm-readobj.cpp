@@ -43,6 +43,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/WithColor.h"
@@ -54,9 +55,7 @@ namespace {
 using namespace llvm::opt; // for HelpHidden in Opts.inc
 enum ID {
   OPT_INVALID = 0, // This is not an option ID.
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  OPT_##ID,
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
 #include "Opts.inc"
 #undef OPTION
 };
@@ -69,13 +68,7 @@ enum ID {
 #undef PREFIX
 
 static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  {                                                                            \
-      PREFIX,      NAME,      HELPTEXT,                                        \
-      METAVAR,     OPT_##ID,  opt::Option::KIND##Class,                        \
-      PARAM,       FLAGS,     OPT_##GROUP,                                     \
-      OPT_##ALIAS, ALIASARGS, VALUES},
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
 #include "Opts.inc"
 #undef OPTION
 };
@@ -109,6 +102,7 @@ bool Demangle;
 static bool DependentLibraries;
 static bool DynRelocs;
 static bool DynamicSymbols;
+static bool ExtraSymInfo;
 static bool FileHeaders;
 static bool Headers;
 static std::vector<std::string> HexDump;
@@ -135,6 +129,7 @@ static bool GnuHashTable;
 static bool HashSymbols;
 static bool HashTable;
 static bool HashHistogram;
+static bool Memtag;
 static bool NeededLibraries;
 static bool Notes;
 static bool ProgramHeaders;
@@ -223,6 +218,7 @@ static void parseOptions(const opt::InputArgList &Args) {
   opts::DynRelocs = Args.hasArg(OPT_dyn_relocations);
   opts::DynamicSymbols = Args.hasArg(OPT_dyn_syms);
   opts::ExpandRelocs = Args.hasArg(OPT_expand_relocs);
+  opts::ExtraSymInfo = Args.hasArg(OPT_extra_sym_info);
   opts::FileHeaders = Args.hasArg(OPT_file_header);
   opts::Headers = Args.hasArg(OPT_headers);
   opts::HexDump = Args.getAllArgValues(OPT_hex_dump_EQ);
@@ -265,6 +261,7 @@ static void parseOptions(const opt::InputArgList &Args) {
   opts::HashSymbols = Args.hasArg(OPT_hash_symbols);
   opts::HashTable = Args.hasArg(OPT_hash_table);
   opts::HashHistogram = Args.hasArg(OPT_histogram);
+  opts::Memtag = Args.hasArg(OPT_memtag);
   opts::NeededLibraries = Args.hasArg(OPT_needed_libs);
   opts::Notes = Args.hasArg(OPT_notes);
   opts::PrettyPrint = Args.hasArg(OPT_pretty_print);
@@ -440,7 +437,8 @@ static void dumpObject(ObjectFile &Obj, ScopedPrinter &Writer,
   if (opts::UnwindInfo)
     Dumper->printUnwindInfo();
   if (opts::Symbols || opts::DynamicSymbols)
-    Dumper->printSymbols(opts::Symbols, opts::DynamicSymbols, SymComp);
+    Dumper->printSymbols(opts::Symbols, opts::DynamicSymbols,
+                         opts::ExtraSymInfo, SymComp);
   if (!opts::StringDump.empty())
     Dumper->printSectionsAsString(Obj, opts::StringDump);
   if (!opts::HexDump.empty())
@@ -472,6 +470,8 @@ static void dumpObject(ObjectFile &Obj, ScopedPrinter &Writer,
       Dumper->printAddrsig();
     if (opts::Notes)
       Dumper->printNotes();
+    if (opts::Memtag)
+      Dumper->printMemtag();
   }
   if (Obj.isCOFF()) {
     if (opts::COFFImports)
@@ -632,7 +632,7 @@ std::unique_ptr<ScopedPrinter> createWriter() {
   return std::make_unique<ScopedPrinter>(fouts());
 }
 
-int llvm_readobj_main(int argc, char **argv) {
+int llvm_readobj_main(int argc, char **argv, const llvm::ToolContext &) {
   InitLLVM X(argc, argv);
   BumpPtrAllocator A;
   StringSaver Saver(A);
@@ -683,6 +683,7 @@ int llvm_readobj_main(int argc, char **argv) {
       opts::Addrsig = true;
       opts::PrintStackSizes = true;
     }
+    opts::Memtag = true;
   }
 
   if (opts::Headers) {

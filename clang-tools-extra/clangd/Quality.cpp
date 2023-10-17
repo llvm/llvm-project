@@ -538,7 +538,7 @@ static uint32_t encodeFloat(float F) {
   constexpr uint32_t TopBit = ~(~uint32_t{0} >> 1);
 
   // Get the bits of the float. Endianness is the same as for integers.
-  uint32_t U = llvm::FloatToBits(F);
+  uint32_t U = llvm::bit_cast<uint32_t>(F);
   // IEEE 754 floats compare like sign-magnitude integers.
   if (U & TopBit)    // Negative float.
     return 0 - U;    // Map onto the low half of integers, order reversed.

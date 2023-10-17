@@ -30,7 +30,6 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ProfDataUtils.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -1594,8 +1593,8 @@ static void insertTrivialPHIs(CHRScope *Scope,
         // Insert a trivial phi for I (phi [&I, P0], [&I, P1], ...) at
         // ExitBlock. Replace I with the new phi in UI unless UI is another
         // phi at ExitBlock.
-        PHINode *PN = PHINode::Create(I.getType(), pred_size(ExitBlock), "",
-                                      &ExitBlock->front());
+        PHINode *PN = PHINode::Create(I.getType(), pred_size(ExitBlock), "");
+        PN->insertBefore(ExitBlock->begin());
         for (BasicBlock *Pred : predecessors(ExitBlock)) {
           PN->addIncoming(&I, Pred);
         }
@@ -1778,6 +1777,13 @@ void CHR::cloneScopeBlocks(CHRScope *Scope,
       BasicBlock *NewBB = CloneBasicBlock(BB, VMap, ".nonchr", &F);
       NewBlocks.push_back(NewBB);
       VMap[BB] = NewBB;
+
+      // Unreachable predecessors will not be cloned and will not have an edge
+      // to the cloned block. As such, also remove them from any phi nodes.
+      for (PHINode &PN : make_early_inc_range(NewBB->phis()))
+        PN.removeIncomingValueIf([&](unsigned Idx) {
+          return !DT.isReachableFromEntry(PN.getIncomingBlock(Idx));
+        });
     }
 
   // Place the cloned blocks right after the original blocks (right before the
@@ -1888,8 +1894,7 @@ void CHR::fixupBranch(Region *R, CHRScope *Scope,
   assert((IsTrueBiased || Scope->FalseBiasedRegions.count(R)) &&
          "Must be truthy or falsy");
   auto *BI = cast<BranchInst>(R->getEntry()->getTerminator());
-  assert(BranchBiasMap.find(R) != BranchBiasMap.end() &&
-         "Must be in the bias map");
+  assert(BranchBiasMap.contains(R) && "Must be in the bias map");
   BranchProbability Bias = BranchBiasMap[R];
   assert(Bias >= getCHRBiasThreshold() && "Must be highly biased");
   // Take the min.
@@ -1931,8 +1936,7 @@ void CHR::fixupSelect(SelectInst *SI, CHRScope *Scope,
   bool IsTrueBiased = Scope->TrueBiasedSelects.count(SI);
   assert((IsTrueBiased ||
           Scope->FalseBiasedSelects.count(SI)) && "Must be biased");
-  assert(SelectBiasMap.find(SI) != SelectBiasMap.end() &&
-         "Must be in the bias map");
+  assert(SelectBiasMap.contains(SI) && "Must be in the bias map");
   BranchProbability Bias = SelectBiasMap[SI];
   assert(Bias >= getCHRBiasThreshold() && "Must be highly biased");
   // Take the min.
@@ -1962,11 +1966,8 @@ void CHR::addToMergedCondition(bool IsTrueBiased, Value *Cond,
       Cond = IRB.CreateXor(ConstantInt::getTrue(F.getContext()), Cond);
   }
 
-  // Select conditions can be poison, while branching on poison is immediate
-  // undefined behavior. As such, we need to freeze potentially poisonous
-  // conditions derived from selects.
-  if (isa<SelectInst>(BranchOrSelect) &&
-      !isGuaranteedNotToBeUndefOrPoison(Cond))
+  // Freeze potentially poisonous conditions.
+  if (!isGuaranteedNotToBeUndefOrPoison(Cond))
     Cond = IRB.CreateFreeze(Cond);
 
   // Use logical and to avoid propagating poison from later conditions.
@@ -2080,10 +2081,14 @@ ControlHeightReductionPass::ControlHeightReductionPass() {
 PreservedAnalyses ControlHeightReductionPass::run(
     Function &F,
     FunctionAnalysisManager &FAM) {
+  auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+  auto PPSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+  // If there is no profile summary, we should not do CHR.
+  if (!PPSI || !PPSI->hasProfileSummary())
+    return PreservedAnalyses::all();
+  auto &PSI = *PPSI;
   auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
   auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
-  auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
-  auto &PSI = *MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
   auto &RI = FAM.getResult<RegionInfoAnalysis>(F);
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   bool Changed = CHR(F, BFI, DT, PSI, RI, ORE).run();

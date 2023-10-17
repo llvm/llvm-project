@@ -33,11 +33,6 @@ for ARCH in $ARCHS; do
       EXTRA="-fexceptions gcc_personality_test_helper.cxx -lstdc++ /usr/lib/libgcc_s.1.dylib"
       # the libgcc_s.1.dylib use at the end is a hack until libSystem contains _Unwind_Resume
     fi
-    if test $FILE = trampoline_setup_test.c
-    then
-      # this test requires an extra compiler option
-      EXTRA="-fnested-functions"
-    fi
     if test "$REMOTE" = "1"
     then 
       if gcc $CFLAGS $FILE ../../darwin_fat/Release/libcompiler_rt.a $LIBS $EXTRA -o ./remote/$FILE.exe

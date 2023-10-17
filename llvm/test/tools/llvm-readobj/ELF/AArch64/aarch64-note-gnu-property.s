@@ -24,7 +24,6 @@
 // LLVM-NEXT: ]
 
 .section ".note.gnu.property", "a"
-.align 4
   .long 4           /* Name length is always 4 ("GNU") */
   .long end - begin /* Data length */
   .long 5           /* Type: NT_GNU_PROPERTY_TYPE_0 */

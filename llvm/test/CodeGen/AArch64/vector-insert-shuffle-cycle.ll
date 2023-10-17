@@ -13,9 +13,7 @@ define void @test(i1 %c, ptr %ptr) {
 ; CHECK-NEXT:  ; %bb.1: ; %bb1
 ; CHECK-NEXT:    ldr d0, [x1]
 ; CHECK-NEXT:  LBB0_2: ; %bb2
-; CHECK-NEXT:    ldr q1, [x8]
-; CHECK-NEXT:    mov.d v1[0], v0[0]
-; CHECK-NEXT:    str q1, [x8]
+; CHECK-NEXT:    str d0, [x8]
 ; CHECK-NEXT:    ret
 entry:
   br i1 %c, label %bb1, label %bb2

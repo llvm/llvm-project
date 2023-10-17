@@ -42,16 +42,16 @@ define amdgpu_kernel void @stack_object_in_kernel_no_calls() {
 ; FLAT_SCR_OPT-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
 ; FLAT_SCR_OPT-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
 ; FLAT_SCR_OPT-NEXT:    v_mov_b32_e32 v0, 0
-; FLAT_SCR_OPT-NEXT:    s_mov_b32 vcc_lo, 0
-; FLAT_SCR_OPT-NEXT:    scratch_store_dword off, v0, vcc_lo offset:4
+; FLAT_SCR_OPT-NEXT:    s_mov_b32 s0, 0
+; FLAT_SCR_OPT-NEXT:    scratch_store_dword off, v0, s0 offset:4
 ; FLAT_SCR_OPT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; FLAT_SCR_OPT-NEXT:    s_endpgm
 ;
 ; FLAT_SCR_ARCH-LABEL: stack_object_in_kernel_no_calls:
 ; FLAT_SCR_ARCH:       ; %bb.0:
 ; FLAT_SCR_ARCH-NEXT:    v_mov_b32_e32 v0, 0
-; FLAT_SCR_ARCH-NEXT:    s_mov_b32 vcc_lo, 0
-; FLAT_SCR_ARCH-NEXT:    scratch_store_dword off, v0, vcc_lo offset:4
+; FLAT_SCR_ARCH-NEXT:    s_mov_b32 s0, 0
+; FLAT_SCR_ARCH-NEXT:    scratch_store_dword off, v0, s0 offset:4
 ; FLAT_SCR_ARCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; FLAT_SCR_ARCH-NEXT:    s_endpgm
   %alloca = alloca i32, addrspace(5)
@@ -117,21 +117,15 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, i32 %in) {
 ; FLAT_SCR_OPT-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s2
 ; FLAT_SCR_OPT-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s3
 ; FLAT_SCR_OPT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; FLAT_SCR_OPT-NEXT:    s_mov_b32 s104, exec_lo
-; FLAT_SCR_OPT-NEXT:    s_mov_b32 exec_lo, 3
-; FLAT_SCR_OPT-NEXT:    s_mov_b32 s4, 0
-; FLAT_SCR_OPT-NEXT:    scratch_store_dword off, v72, s4
+; FLAT_SCR_OPT-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
 ; FLAT_SCR_OPT-NEXT:    s_waitcnt lgkmcnt(0)
-; FLAT_SCR_OPT-NEXT:    v_writelane_b32 v72, s2, 0
-; FLAT_SCR_OPT-NEXT:    s_mov_b32 s4, 4
-; FLAT_SCR_OPT-NEXT:    v_writelane_b32 v72, s3, 1
-; FLAT_SCR_OPT-NEXT:    scratch_store_dword off, v72, s4 ; 4-byte Folded Spill
+; FLAT_SCR_OPT-NEXT:    v_writelane_b32 v0, s2, 0
+; FLAT_SCR_OPT-NEXT:    v_writelane_b32 v0, s3, 1
+; FLAT_SCR_OPT-NEXT:    s_or_saveexec_b32 s105, -1
+; FLAT_SCR_OPT-NEXT:    s_mov_b32 s2, 4
+; FLAT_SCR_OPT-NEXT:    scratch_store_dword off, v0, s2 ; 4-byte Folded Spill
 ; FLAT_SCR_OPT-NEXT:    s_waitcnt_depctr 0xffe3
-; FLAT_SCR_OPT-NEXT:    s_mov_b32 s4, 0
-; FLAT_SCR_OPT-NEXT:    scratch_load_dword v72, off, s4
-; FLAT_SCR_OPT-NEXT:    s_waitcnt vmcnt(0)
-; FLAT_SCR_OPT-NEXT:    s_waitcnt_depctr 0xffe3
-; FLAT_SCR_OPT-NEXT:    s_mov_b32 exec_lo, s104
+; FLAT_SCR_OPT-NEXT:    s_mov_b32 exec_lo, s105
 ; FLAT_SCR_OPT-NEXT:    s_load_dword vcc_lo, s[0:1], 0x8
 ; FLAT_SCR_OPT-NEXT:    ; kill: killed $sgpr0_sgpr1
 ; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
@@ -228,44 +222,33 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, i32 %in) {
 ; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
 ; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
 ; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    s_mov_b32 s2, exec_lo
-; FLAT_SCR_OPT-NEXT:    s_mov_b32 exec_lo, 3
-; FLAT_SCR_OPT-NEXT:    s_mov_b32 s3, 0
-; FLAT_SCR_OPT-NEXT:    scratch_store_dword off, v2, s3
+; FLAT_SCR_OPT-NEXT:    s_or_saveexec_b32 s105, -1
+; FLAT_SCR_OPT-NEXT:    s_mov_b32 s0, 4
+; FLAT_SCR_OPT-NEXT:    scratch_load_dword v1, off, s0 ; 4-byte Folded Reload
 ; FLAT_SCR_OPT-NEXT:    s_waitcnt_depctr 0xffe3
-; FLAT_SCR_OPT-NEXT:    s_mov_b32 s3, 4
-; FLAT_SCR_OPT-NEXT:    scratch_load_dword v2, off, s3 ; 4-byte Folded Reload
-; FLAT_SCR_OPT-NEXT:    s_waitcnt_depctr 0xffe3
-; FLAT_SCR_OPT-NEXT:    s_mov_b32 s3, 0
+; FLAT_SCR_OPT-NEXT:    s_mov_b32 exec_lo, s105
 ; FLAT_SCR_OPT-NEXT:    s_waitcnt vmcnt(0)
-; FLAT_SCR_OPT-NEXT:    v_readlane_b32 s0, v2, 0
-; FLAT_SCR_OPT-NEXT:    v_readlane_b32 s1, v2, 1
-; FLAT_SCR_OPT-NEXT:    scratch_load_dword v2, off, s3
-; FLAT_SCR_OPT-NEXT:    s_waitcnt vmcnt(0)
-; FLAT_SCR_OPT-NEXT:    s_waitcnt_depctr 0xffe3
-; FLAT_SCR_OPT-NEXT:    s_mov_b32 exec_lo, s2
-; FLAT_SCR_OPT-NEXT:    v_mov_b32_e32 v1, 0
-; FLAT_SCR_OPT-NEXT:    global_store_dword v1, v0, s[0:1]
+; FLAT_SCR_OPT-NEXT:    v_readlane_b32 s0, v1, 0
+; FLAT_SCR_OPT-NEXT:    v_readlane_b32 s1, v1, 1
+; FLAT_SCR_OPT-NEXT:    s_or_saveexec_b32 s105, -1
+; FLAT_SCR_OPT-NEXT:    s_mov_b32 exec_lo, s105
+; FLAT_SCR_OPT-NEXT:    v_mov_b32_e32 v2, 0
+; FLAT_SCR_OPT-NEXT:    ; kill: killed $vgpr1
+; FLAT_SCR_OPT-NEXT:    global_store_dword v2, v0, s[0:1]
 ; FLAT_SCR_OPT-NEXT:    s_endpgm
 ;
 ; FLAT_SCR_ARCH-LABEL: test:
 ; FLAT_SCR_ARCH:       ; %bb.0:
 ; FLAT_SCR_ARCH-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; FLAT_SCR_ARCH-NEXT:    s_mov_b32 s104, exec_lo
-; FLAT_SCR_ARCH-NEXT:    s_mov_b32 exec_lo, 3
-; FLAT_SCR_ARCH-NEXT:    s_mov_b32 s4, 0
-; FLAT_SCR_ARCH-NEXT:    scratch_store_dword off, v72, s4
+; FLAT_SCR_ARCH-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
 ; FLAT_SCR_ARCH-NEXT:    s_waitcnt lgkmcnt(0)
-; FLAT_SCR_ARCH-NEXT:    v_writelane_b32 v72, s2, 0
-; FLAT_SCR_ARCH-NEXT:    s_mov_b32 s4, 4
-; FLAT_SCR_ARCH-NEXT:    v_writelane_b32 v72, s3, 1
-; FLAT_SCR_ARCH-NEXT:    scratch_store_dword off, v72, s4 ; 4-byte Folded Spill
+; FLAT_SCR_ARCH-NEXT:    v_writelane_b32 v0, s2, 0
+; FLAT_SCR_ARCH-NEXT:    v_writelane_b32 v0, s3, 1
+; FLAT_SCR_ARCH-NEXT:    s_or_saveexec_b32 s105, -1
+; FLAT_SCR_ARCH-NEXT:    s_mov_b32 s2, 4
+; FLAT_SCR_ARCH-NEXT:    scratch_store_dword off, v0, s2 ; 4-byte Folded Spill
 ; FLAT_SCR_ARCH-NEXT:    s_waitcnt_depctr 0xffe3
-; FLAT_SCR_ARCH-NEXT:    s_mov_b32 s4, 0
-; FLAT_SCR_ARCH-NEXT:    scratch_load_dword v72, off, s4
-; FLAT_SCR_ARCH-NEXT:    s_waitcnt vmcnt(0)
-; FLAT_SCR_ARCH-NEXT:    s_waitcnt_depctr 0xffe3
-; FLAT_SCR_ARCH-NEXT:    s_mov_b32 exec_lo, s104
+; FLAT_SCR_ARCH-NEXT:    s_mov_b32 exec_lo, s105
 ; FLAT_SCR_ARCH-NEXT:    s_load_dword vcc_lo, s[0:1], 0x8
 ; FLAT_SCR_ARCH-NEXT:    ; kill: killed $sgpr0_sgpr1
 ; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
@@ -362,24 +345,19 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, i32 %in) {
 ; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
 ; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
 ; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    s_mov_b32 s2, exec_lo
-; FLAT_SCR_ARCH-NEXT:    s_mov_b32 exec_lo, 3
-; FLAT_SCR_ARCH-NEXT:    s_mov_b32 s3, 0
-; FLAT_SCR_ARCH-NEXT:    scratch_store_dword off, v2, s3
+; FLAT_SCR_ARCH-NEXT:    s_or_saveexec_b32 s105, -1
+; FLAT_SCR_ARCH-NEXT:    s_mov_b32 s0, 4
+; FLAT_SCR_ARCH-NEXT:    scratch_load_dword v1, off, s0 ; 4-byte Folded Reload
 ; FLAT_SCR_ARCH-NEXT:    s_waitcnt_depctr 0xffe3
-; FLAT_SCR_ARCH-NEXT:    s_mov_b32 s3, 4
-; FLAT_SCR_ARCH-NEXT:    scratch_load_dword v2, off, s3 ; 4-byte Folded Reload
-; FLAT_SCR_ARCH-NEXT:    s_waitcnt_depctr 0xffe3
-; FLAT_SCR_ARCH-NEXT:    s_mov_b32 s3, 0
+; FLAT_SCR_ARCH-NEXT:    s_mov_b32 exec_lo, s105
 ; FLAT_SCR_ARCH-NEXT:    s_waitcnt vmcnt(0)
-; FLAT_SCR_ARCH-NEXT:    v_readlane_b32 s0, v2, 0
-; FLAT_SCR_ARCH-NEXT:    v_readlane_b32 s1, v2, 1
-; FLAT_SCR_ARCH-NEXT:    scratch_load_dword v2, off, s3
-; FLAT_SCR_ARCH-NEXT:    s_waitcnt vmcnt(0)
-; FLAT_SCR_ARCH-NEXT:    s_waitcnt_depctr 0xffe3
-; FLAT_SCR_ARCH-NEXT:    s_mov_b32 exec_lo, s2
-; FLAT_SCR_ARCH-NEXT:    v_mov_b32_e32 v1, 0
-; FLAT_SCR_ARCH-NEXT:    global_store_dword v1, v0, s[0:1]
+; FLAT_SCR_ARCH-NEXT:    v_readlane_b32 s0, v1, 0
+; FLAT_SCR_ARCH-NEXT:    v_readlane_b32 s1, v1, 1
+; FLAT_SCR_ARCH-NEXT:    s_or_saveexec_b32 s105, -1
+; FLAT_SCR_ARCH-NEXT:    s_mov_b32 exec_lo, s105
+; FLAT_SCR_ARCH-NEXT:    v_mov_b32_e32 v2, 0
+; FLAT_SCR_ARCH-NEXT:    ; kill: killed $vgpr1
+; FLAT_SCR_ARCH-NEXT:    global_store_dword v2, v0, s[0:1]
 ; FLAT_SCR_ARCH-NEXT:    s_endpgm
   call void asm sideeffect "", "~{s[0:7]}" ()
   call void asm sideeffect "", "~{s[8:15]}" ()

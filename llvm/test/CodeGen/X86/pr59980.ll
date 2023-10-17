@@ -7,21 +7,9 @@
 define void @foo(ptr %0, ptr %1, ptr %2) #0 {
 ; CHECK-LABEL: foo:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    pushq %rbp
-; CHECK-NEXT:    movq %rsp, %rbp
-; CHECK-NEXT:    andq $-32, %rsp
-; CHECK-NEXT:    subq $64, %rsp
 ; CHECK-NEXT:    movl (%rdx), %eax
-; CHECK-NEXT:    andl $15, %eax
 ; CHECK-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
-; CHECK-NEXT:    vmovups (%rsi), %ymm1
-; CHECK-NEXT:    vmovaps %ymm1, (%rsp)
-; CHECK-NEXT:    vpextrw $0, %xmm0, (%rsp,%rax,2)
-; CHECK-NEXT:    vmovaps (%rsp), %ymm0
-; CHECK-NEXT:    vmovups %ymm0, (%rsi)
-; CHECK-NEXT:    movq %rbp, %rsp
-; CHECK-NEXT:    popq %rbp
-; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    vpextrw $0, %xmm0, (%rsi,%rax,2)
 ; CHECK-NEXT:    retq
   %4 = bitcast ptr %2 to ptr
   %5 = load i64, ptr %4, align 8

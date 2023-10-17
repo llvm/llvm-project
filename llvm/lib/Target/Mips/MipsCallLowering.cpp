@@ -412,7 +412,7 @@ bool MipsCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     int VaArgOffset;
     unsigned RegSize = 4;
     if (ArgRegs.size() == Idx)
-      VaArgOffset = alignTo(CCInfo.getNextStackOffset(), RegSize);
+      VaArgOffset = alignTo(CCInfo.getStackSize(), RegSize);
     else {
       VaArgOffset =
           (int)ABI.GetCalleeAllocdArgSizeInBytes(CCInfo.getCallingConv()) -
@@ -524,14 +524,14 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   if (!handleAssignments(ArgHandler, ArgInfos, CCInfo, ArgLocs, MIRBuilder))
     return false;
 
-  unsigned NextStackOffset = CCInfo.getNextStackOffset();
+  unsigned StackSize = CCInfo.getStackSize();
   unsigned StackAlignment = F.getParent()->getOverrideStackAlignment();
   if (!StackAlignment) {
     const TargetFrameLowering *TFL = MF.getSubtarget().getFrameLowering();
     StackAlignment = TFL->getStackAlignment();
   }
-  NextStackOffset = alignTo(NextStackOffset, StackAlignment);
-  CallSeqStart.addImm(NextStackOffset).addImm(0);
+  StackSize = alignTo(StackSize, StackAlignment);
+  CallSeqStart.addImm(StackSize).addImm(0);
 
   if (IsCalleeGlobalPIC) {
     MIRBuilder.buildCopy(
@@ -570,7 +570,7 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       return false;
   }
 
-  MIRBuilder.buildInstr(Mips::ADJCALLSTACKUP).addImm(NextStackOffset).addImm(0);
+  MIRBuilder.buildInstr(Mips::ADJCALLSTACKUP).addImm(StackSize).addImm(0);
 
   return true;
 }

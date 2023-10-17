@@ -483,9 +483,9 @@ define <16 x double> @select_illegal(<16 x double> %a, <16 x double> %b) {
 define <2 x i64> @shrunkblend_2uses(<2 x i1> %cond, <2 x i64> %a, <2 x i64> %b, <2 x i64> %c, <2 x i64> %d) {
 ; SSE2-LABEL: shrunkblend_2uses:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    psllq $63, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,2,2]
+; SSE2-NEXT:    pslld $31, %xmm0
 ; SSE2-NEXT:    psrad $31, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; SSE2-NEXT:    movdqa %xmm0, %xmm5
 ; SSE2-NEXT:    pandn %xmm2, %xmm5
 ; SSE2-NEXT:    pand %xmm0, %xmm1
@@ -522,9 +522,9 @@ define <2 x i64> @shrunkblend_2uses(<2 x i1> %cond, <2 x i64> %a, <2 x i64> %b, 
 define <2 x i64> @shrunkblend_nonvselectuse(<2 x i1> %cond, <2 x i64> %a, <2 x i64> %b, <2 x i64> %c, <2 x i64> %d) {
 ; SSE2-LABEL: shrunkblend_nonvselectuse:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    psllq $63, %xmm0
-; SSE2-NEXT:    psrad $31, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[0,0,2,2]
+; SSE2-NEXT:    pslld $31, %xmm3
+; SSE2-NEXT:    psrad $31, %xmm3
 ; SSE2-NEXT:    movdqa %xmm3, %xmm0
 ; SSE2-NEXT:    pandn %xmm2, %xmm0
 ; SSE2-NEXT:    pand %xmm3, %xmm1
@@ -536,8 +536,8 @@ define <2 x i64> @shrunkblend_nonvselectuse(<2 x i1> %cond, <2 x i64> %a, <2 x i
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    psllq $63, %xmm0
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
-; SSE41-NEXT:    psrad $31, %xmm0
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; SSE41-NEXT:    psrad $31, %xmm0
 ; SSE41-NEXT:    paddq %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;

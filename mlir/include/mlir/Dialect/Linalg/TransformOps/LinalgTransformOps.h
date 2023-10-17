@@ -9,24 +9,56 @@
 #ifndef MLIR_DIALECT_LINALG_TRANSFORMOPS_LINALGTRANSFORMOPS_H
 #define MLIR_DIALECT_LINALG_TRANSFORMOPS_LINALGTRANSFORMOPS_H
 
-#include "mlir/Dialect/PDL/IR/PDLTypes.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Transform/IR/TransformAttrs.h"
+#include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/RegionKindInterface.h"
 
 namespace mlir {
 class TilingInterface;
 class RewriterBase;
+
 namespace linalg {
+class CopyOp;
+struct ForallTilingResult;
 class GenericOp;
 class LinalgOp;
 } // namespace linalg
+
+namespace tensor {
+class InsertSliceOp;
+class PackOp;
+class PadOp;
+class UnPackOp;
+} // namespace tensor
 
 namespace transform {
 class TransformHandleTypeInterface;
 // Types needed for builders.
 struct TileSizesSpec {};
 struct NumThreadsSpec {};
+} // namespace transform
+} // namespace mlir
+
+namespace mlir {
+class DialectRegistry;
+
+namespace transform {
+
+/// Implementation of tiling operations using `scf.forall`.
+DiagnosedSilenceableFailure
+tileToForallOpImpl(RewriterBase &rewriter, transform::TransformState &state,
+                   TransformOpInterface transformOp, Operation *target,
+                   ArrayRef<OpFoldResult> mixedNumThreads,
+                   ArrayRef<OpFoldResult> mixedTileSizes,
+                   std::optional<ArrayAttr> mapping,
+                   linalg::ForallTilingResult &tilingResult);
+
 } // namespace transform
 } // namespace mlir
 
@@ -38,24 +70,5 @@ struct NumThreadsSpec {};
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Linalg/TransformOps/LinalgTransformOps.h.inc"
-
-namespace mlir {
-class DialectRegistry;
-
-namespace transform {
-
-/// Implementation of tiling operations using `scf.foreach_thread`.
-DiagnosedSilenceableFailure tileToForeachThreadOpImpl(
-    RewriterBase &rewriter, transform::TransformState &state,
-    TransformOpInterface transformOp, ArrayRef<Operation *> targets,
-    ArrayRef<OpFoldResult> mixedNumThreads,
-    ArrayRef<OpFoldResult> mixedTileSizes, std::optional<ArrayAttr> mapping,
-    SmallVector<Operation *> &tileOps, SmallVector<Operation *> &tiledOps);
-} // namespace transform
-
-namespace linalg {
-void registerTransformDialectExtension(DialectRegistry &registry);
-} // namespace linalg
-} // namespace mlir
 
 #endif // MLIR_DIALECT_LINALG_TRANSFORMOPS_LINALGTRANSFORMOPS_H

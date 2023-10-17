@@ -58,12 +58,12 @@ entry:
 define void @stg16(ptr %p) {
 ; CHECK-LABEL: stg16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, #256
+; CHECK-NEXT:    mov x8, #256 // =0x100
 ; CHECK-NEXT:  .LBB5_1: // %entry
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    sub x8, x8, #32
 ; CHECK-NEXT:    st2g x0, [x0], #32
-; CHECK-NEXT:    cbnz x8, .LBB5_1
+; CHECK-NEXT:    subs x8, x8, #32
+; CHECK-NEXT:    b.ne .LBB5_1
 ; CHECK-NEXT:  // %bb.2: // %entry
 ; CHECK-NEXT:    ret
 entry:
@@ -74,13 +74,13 @@ entry:
 define void @stg17(ptr %p) {
 ; CHECK-LABEL: stg17:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, #256
 ; CHECK-NEXT:    stg x0, [x0], #16
+; CHECK-NEXT:    mov x8, #256 // =0x100
 ; CHECK-NEXT:  .LBB6_1: // %entry
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    sub x8, x8, #32
 ; CHECK-NEXT:    st2g x0, [x0], #32
-; CHECK-NEXT:    cbnz x8, .LBB6_1
+; CHECK-NEXT:    subs x8, x8, #32
+; CHECK-NEXT:    b.ne .LBB6_1
 ; CHECK-NEXT:  // %bb.2: // %entry
 ; CHECK-NEXT:    ret
 entry:
@@ -102,13 +102,13 @@ entry:
 define void @stzg17(ptr %p) {
 ; CHECK-LABEL: stzg17:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, #256
 ; CHECK-NEXT:    stzg x0, [x0], #16
+; CHECK-NEXT:    mov x8, #256 // =0x100
 ; CHECK-NEXT:  .LBB8_1: // %entry
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    sub x8, x8, #32
 ; CHECK-NEXT:    stz2g x0, [x0], #32
-; CHECK-NEXT:    cbnz x8, .LBB8_1
+; CHECK-NEXT:    subs x8, x8, #32
+; CHECK-NEXT:    b.ne .LBB8_1
 ; CHECK-NEXT:  // %bb.2: // %entry
 ; CHECK-NEXT:    ret
 entry:
@@ -150,13 +150,13 @@ define void @stg_alloca17() nounwind {
 ; CHECK-LABEL: stg_alloca17:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #288
-; CHECK-NEXT:    mov x8, #256
+; CHECK-NEXT:    mov x8, #256 // =0x100
 ; CHECK-NEXT:    str x29, [sp, #272] // 8-byte Folded Spill
 ; CHECK-NEXT:  .LBB11_1: // %entry
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    st2g sp, [sp], #32
-; CHECK-NEXT:    sub x8, x8, #32
-; CHECK-NEXT:    cbnz x8, .LBB11_1
+; CHECK-NEXT:    subs x8, x8, #32
+; CHECK-NEXT:    b.ne .LBB11_1
 ; CHECK-NEXT:  // %bb.2: // %entry
 ; CHECK-NEXT:    stg sp, [sp], #16
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -175,13 +175,13 @@ define void @stg_alloca18() uwtable {
 ; CHECK-NEXT:    str x29, [sp, #272] // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    mov x8, #256
+; CHECK-NEXT:    mov x8, #256 // =0x100
 ; CHECK-NEXT:    stg x9, [x9], #16
 ; CHECK-NEXT:  .LBB12_1: // %entry
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    sub x8, x8, #32
 ; CHECK-NEXT:    st2g x9, [x9], #32
-; CHECK-NEXT:    cbnz x8, .LBB12_1
+; CHECK-NEXT:    subs x8, x8, #32
+; CHECK-NEXT:    b.ne .LBB12_1
 ; CHECK-NEXT:  // %bb.2: // %entry
 ; CHECK-NEXT:    add sp, sp, #272
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
@@ -194,6 +194,41 @@ entry:
   call void @llvm.aarch64.settag(ptr %a, i64 272)
   ret void
 }
+
+; Verify that SLH works together with MTE stack tagging,
+; see issue https://github.com/llvm/llvm-project/issues/61830
+define void @test_slh() speculative_load_hardening {
+; CHECK-LABEL: test_slh:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp sp, #0
+; CHECK-NEXT:    csetm x16, ne
+; CHECK-NEXT:    sub sp, sp, #208
+; CHECK-NEXT:    str x30, [sp, #192] // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 208
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    mov x1, sp
+; CHECK-NEXT:    mov x0, sp
+; CHECK-NEXT:    and x1, x1, x16
+; CHECK-NEXT:    mov sp, x1
+; CHECK-NEXT:    bl b
+; CHECK-NEXT:    cmp sp, #0
+; CHECK-NEXT:    ldr x30, [sp, #192] // 8-byte Folded Reload
+; CHECK-NEXT:    csetm x16, ne
+; CHECK-NEXT:    and x30, x30, x16
+; CHECK-NEXT:    add sp, sp, #208
+; CHECK-NEXT:    mov x0, sp
+; CHECK-NEXT:    and x0, x0, x16
+; CHECK-NEXT:    mov sp, x0
+; CHECK-NEXT:    csdb
+; CHECK-NEXT:    ret
+; Verify that the memtag loop uses a b.cc conditional branch
+; rather than an cb[n]z branch.
+  %d = alloca [48 x i32], align 4
+  call void @b(ptr %d)
+  ret void
+}
+declare void @b(ptr)
+
 
 declare void @llvm.aarch64.settag(ptr %p, i64 %a)
 declare void @llvm.aarch64.settag.zero(ptr %p, i64 %a)

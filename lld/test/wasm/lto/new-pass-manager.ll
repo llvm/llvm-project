@@ -1,5 +1,5 @@
 ; RUN: llvm-as -o %t.bc %s
-; RUN: wasm-ld --no-lto-legacy-pass-manager --lto-debug-pass-manager -o /dev/null %t.bc 2>&1 | FileCheck %s
+; RUN: wasm-ld --lto-debug-pass-manager -o /dev/null %t.bc 2>&1 | FileCheck %s
 
 ; CHECK: Running pass: GlobalOptPass
 

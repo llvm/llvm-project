@@ -6867,7 +6867,8 @@ void TestNonADLCall3() {
 // CHECK-NEXT:             "qualType": "auto ()"
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "storageClass": "static",
-// CHECK-NEXT:            "inline": true
+// CHECK-NEXT:            "inline": true,
+// CHECK-NEXT:            "constexpr": true
 // CHECK-NEXT:           }
 // CHECK-NEXT:          ]
 // CHECK-NEXT:         },

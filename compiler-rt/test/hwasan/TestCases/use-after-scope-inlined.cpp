@@ -4,11 +4,10 @@
 // happens. "always_inline" is not enough, as Clang doesn't emit
 // llvm.lifetime intrinsics at -O0.
 //
-// RUN: %clangxx_hwasan -mllvm -hwasan-use-after-scope -O2 %s -o %t && \
+// RUN: %clangxx_hwasan -O2 %s -o %t && \
 // RUN:     not %run %t 2>&1 | FileCheck %s
 
 // REQUIRES: aarch64-target-arch || riscv64-target-arch
-// REQUIRES: stable-runtime
 
 int *arr;
 __attribute__((always_inline)) void inlined(int arg) {

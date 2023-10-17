@@ -6,20 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SUPPORT_BLOCKSTORE_H
-#define LLVM_LIBC_SUPPORT_BLOCKSTORE_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_BLOCKSTORE_H
+#define LLVM_LIBC_SRC___SUPPORT_BLOCKSTORE_H
 
 #include <src/__support/CPP/new.h>
+#include <src/__support/libc_assert.h>
 
 #include <stddef.h>
 #include <stdint.h>
 
-// TODO: fix our assert.h to make it useable
-#define assert(x)                                                              \
-  if (!(x))                                                                    \
-  __builtin_trap()
-
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace cpp {
 
 // The difference between BlockStore a traditional vector types is that,
@@ -56,7 +52,7 @@ protected:
     Block *curr = &first;
     for (; curr->next; prev = curr, curr = curr->next)
       ;
-    assert(curr == current);
+    LIBC_ASSERT(curr == current);
     return {curr, prev};
   }
 
@@ -152,10 +148,10 @@ public:
       return;
     auto [last, prev] = getLastBlocks();
     if (REVERSE_ORDER) {
-      assert(last == current);
+      LIBC_ASSERT(last == current);
       current = current->next;
     } else {
-      assert(prev->next == last);
+      LIBC_ASSERT(prev->next == last);
       current = prev;
       current->next = nullptr;
     }
@@ -208,6 +204,6 @@ template <typename T, size_t BLOCK_SIZE>
 using ReverseOrderBlockStore = BlockStore<T, BLOCK_SIZE, true>;
 
 } // namespace cpp
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SUPPORT_BLOCKSTORE_H
+#endif // LLVM_LIBC_SRC___SUPPORT_BLOCKSTORE_H

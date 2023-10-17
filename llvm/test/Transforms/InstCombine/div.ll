@@ -129,8 +129,8 @@ define i32 @test5(i32 %A) {
 
 define i1 @test6(i32 %A) {
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A:%.*]], 123
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[A:%.*]], 123
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %B = udiv i32 %A, 123
   ; A < 123
@@ -141,8 +141,8 @@ define i1 @test6(i32 %A) {
 define i1 @test7(i32 %A) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:    [[A_OFF:%.*]] = add i32 [[A:%.*]], -20
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A_OFF]], 10
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[A_OFF]], 10
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %B = udiv i32 %A, 10
   ; A >= 20 && A < 30
@@ -153,8 +153,8 @@ define i1 @test7(i32 %A) {
 define <2 x i1> @test7vec(<2 x i32> %A) {
 ; CHECK-LABEL: @test7vec(
 ; CHECK-NEXT:    [[A_OFF:%.*]] = add <2 x i32> [[A:%.*]], <i32 -20, i32 -20>
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i32> [[A_OFF]], <i32 10, i32 10>
-; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult <2 x i32> [[A_OFF]], <i32 10, i32 10>
+; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %B = udiv <2 x i32> %A, <i32 10, i32 10>
   %C = icmp eq <2 x i32> %B, <i32 2, i32 2>
@@ -400,7 +400,7 @@ define i32 @test28(i32 %a) {
 
 define i32 @test29(i32 %a) {
 ; CHECK-LABEL: @test29(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[A:%.*]], 0
 ; CHECK-NEXT:    [[DIV:%.*]] = zext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[DIV]]
 ;
@@ -1308,8 +1308,8 @@ define i32 @udiv_select_of_constants_divisor(i1 %b, i32 %x) {
 define i1 @sdiv_one_icmpeq_one(i32 %x) {
 ; CHECK-LABEL: @sdiv_one_icmpeq_one(
 ; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X_FR]], 1
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[B:%.*]] = icmp eq i32 [[X_FR]], 1
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %A = sdiv i32 1, %x
   %B = icmp eq i32 %A, 1
@@ -1319,8 +1319,8 @@ define i1 @sdiv_one_icmpeq_one(i32 %x) {
 define i1 @sdiv_one_icmpeq_negone(i32 %x) {
 ; CHECK-LABEL: @sdiv_one_icmpeq_negone(
 ; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X_FR]], -1
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[B:%.*]] = icmp eq i32 [[X_FR]], -1
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %A = sdiv i32 1, %x
   %B = icmp eq i32 %A, -1
@@ -1490,4 +1490,107 @@ define i8 @sdiv_udiv_mul_nsw(i8 %x, i8 %y, i8 %z) {
   %d = udiv i8 %m, %z
   %r = sdiv i8 %d, %x
   ret i8 %r
+}
+
+; ((X * C2) + C1) / C2 --> X + C1/C2
+
+define i6 @sdiv_distribute_mul_nsw_add_nsw(i6 %x) {
+; CHECK-LABEL: @sdiv_distribute_mul_nsw_add_nsw(
+; CHECK-NEXT:    [[DIV:%.*]] = add nsw i6 [[X:%.*]], -5
+; CHECK-NEXT:    ret i6 [[DIV]]
+;
+  %mul = mul nsw i6 %x, 3
+  %add = add nsw i6 %mul, -15
+  %div = sdiv i6 %add, 3
+  ret i6 %div
+}
+
+; extra uses are ok
+
+define i32 @sdiv_distribute_mul_nsw_add_nsw_uses(i32 %x) {
+; CHECK-LABEL: @sdiv_distribute_mul_nsw_add_nsw_uses(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[X:%.*]], 42
+; CHECK-NEXT:    call void @use(i32 [[MUL]])
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[MUL]], 126
+; CHECK-NEXT:    call void @use(i32 [[ADD]])
+; CHECK-NEXT:    [[DIV:%.*]] = add nsw i32 [[X]], 3
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+  %mul = mul nsw i32 %x, 42
+  call void @use(i32 %mul)
+  %add = add nsw i32 %mul, 126
+  call void @use(i32 %add)
+  %div = sdiv i32 %add, 42
+  ret i32 %div
+}
+
+; vector splats work
+
+define <2 x i6> @udiv_distribute_mul_nuw_add_nuw(<2 x i6> %x) {
+; CHECK-LABEL: @udiv_distribute_mul_nuw_add_nuw(
+; CHECK-NEXT:    [[DIV:%.*]] = add nuw <2 x i6> [[X:%.*]], <i6 5, i6 5>
+; CHECK-NEXT:    ret <2 x i6> [[DIV]]
+;
+  %mul = mul nuw <2 x i6> %x, <i6 3, i6 3>
+  %add = add nuw <2 x i6> %mul, <i6 15, i6 15>
+  %div = udiv <2 x i6> %add, <i6 3, i6 3>
+  ret <2 x i6> %div
+}
+
+; negative test - constants must be evenly divisible
+
+define i6 @sdiv_distribute_mul_nsw_add_nsw_not_multiple_offset(i6 %x) {
+; CHECK-LABEL: @sdiv_distribute_mul_nsw_add_nsw_not_multiple_offset(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i6 [[X:%.*]], 3
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i6 [[MUL]], -16
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i6 [[ADD]], 3
+; CHECK-NEXT:    ret i6 [[DIV]]
+;
+  %mul = mul nsw i6 %x, 3
+  %add = add nsw i6 %mul, -16
+  %div = sdiv i6 %add, 3
+  ret i6 %div
+}
+
+; constants do not have to be evenly divisible with unsigned division
+
+define i6 @udiv_distribute_mul_nuw_add_nuw_not_multiple_offset(i6 %x) {
+; CHECK-LABEL: @udiv_distribute_mul_nuw_add_nuw_not_multiple_offset(
+; CHECK-NEXT:    [[DIV:%.*]] = add nuw i6 [[X:%.*]], 2
+; CHECK-NEXT:    ret i6 [[DIV]]
+;
+  %mul = mul nuw i6 %x, 3
+  %add = add nuw i6 %mul, 7
+  %div = udiv i6 %add, 3
+  ret i6 %div
+}
+
+; negative test - wrong no-wrap
+
+define i6 @sdiv_distribute_mul_nuw_add_nsw(i6 %x) {
+; CHECK-LABEL: @sdiv_distribute_mul_nuw_add_nsw(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i6 [[X:%.*]], 3
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i6 [[MUL]], -15
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i6 [[ADD]], 3
+; CHECK-NEXT:    ret i6 [[DIV]]
+;
+  %mul = mul nuw i6 %x, 3
+  %add = add nsw i6 %mul, -15
+  %div = sdiv i6 %add, 3
+  ret i6 %div
+}
+
+; negative test - wrong no-wrap
+
+define i6 @udiv_distribute_mul_nsw_add_nuw(i6 %x) {
+; CHECK-LABEL: @udiv_distribute_mul_nsw_add_nuw(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i6 [[X:%.*]], 3
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i6 [[MUL]], 9
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i6 [[ADD]], 3
+; CHECK-NEXT:    ret i6 [[DIV]]
+;
+  %mul = mul nsw i6 %x, 3
+  %add = add nuw i6 %mul, 9
+  %div = udiv i6 %add, 3
+  ret i6 %div
 }

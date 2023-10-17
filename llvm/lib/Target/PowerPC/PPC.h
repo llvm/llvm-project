@@ -46,13 +46,14 @@ class ModulePass;
   FunctionPass *createPPCMIPeepholePass();
   FunctionPass *createPPCBranchSelectionPass();
   FunctionPass *createPPCBranchCoalescingPass();
-  FunctionPass *createPPCISelDag(PPCTargetMachine &TM, CodeGenOpt::Level OL);
+  FunctionPass *createPPCISelDag(PPCTargetMachine &TM, CodeGenOptLevel OL);
   FunctionPass *createPPCTLSDynamicCallPass();
   FunctionPass *createPPCBoolRetToIntPass();
   FunctionPass *createPPCExpandISELPass();
   FunctionPass *createPPCPreEmitPeepholePass();
   FunctionPass *createPPCExpandAtomicPseudoPass();
   FunctionPass *createPPCCTRLoopsPass();
+  ModulePass *createPPCMergeStringPoolPass();
   void LowerPPCMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
                                     AsmPrinter &AP);
   bool LowerPPCMachineOperandToMCOperand(const MachineOperand &MO,
@@ -78,6 +79,7 @@ class ModulePass;
   void initializePPCExpandAtomicPseudoPass(PassRegistry &);
   void initializePPCCTRLoopsPass(PassRegistry &);
   void initializePPCDAGToDAGISelPass(PassRegistry &);
+  void initializePPCMergeStringPoolPass(PassRegistry &);
 
   extern char &PPCVSXFMAMutateID;
 
@@ -127,8 +129,9 @@ class ModulePass;
     /// General Dynamic model for AIX.
     MO_TLSGD_FLAG = 32,
 
-    /// MO_TPREL_FLAG - If this bit is set the symbol reference is relative to
-    /// TLS Initial Exec model.
+    /// MO_TPREL_FLAG - If this bit is set, the symbol reference is relative to
+    /// the thread pointer and the symbol can be used for the TLS Initial Exec
+    /// and Local Exec models.
     MO_TPREL_FLAG = 64,
 
     /// MO_TLSLD_FLAG - If this bit is set the symbol reference is relative to

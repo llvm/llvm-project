@@ -83,7 +83,7 @@ entry:
 define float @rem_f(float %a, float %b) {
 entry:
 ; CHECK-LABEL: rem_f:
-; NONE: bl fmodf
+; NONE: {{b|bl}} fmodf
 ; HARD: b fmodf
   %0 = frem float %a, %b
   ret float %0
@@ -92,16 +92,23 @@ entry:
 define double @rem_d(double %a, double %b) {
 entry:
 ; CHECK-LABEL: rem_d:
-; NONE: bl fmod
+; NONE: {{b|bl}} fmod
 ; HARD: b fmod
   %0 = frem double %a, %b
   ret double %0
 }
 
+; In the ONLYREGS case (where we have integer MVE but no floating
+; point), we still expect the hard float ABI, because we asked for it
+; in the triple, and since the FP registers exist, it's possible to
+; use them to pass arguments. So the generated code should load the
+; return value into s0, not r0. Similarly for the other load and store
+; tests.
 define float @load_f(ptr %a) {
 entry:
 ; CHECK-LABEL: load_f:
-; NONE: ldr r0, [r0]
+; NOREGS: ldr r0, [r0]
+; ONLYREGS: vldr s0, [r0]
 ; HARD: vldr s0, [r0]
   %0 = load float, ptr %a, align 4
   ret float %0
@@ -120,7 +127,8 @@ entry:
 define void @store_f(ptr %a, float %b) {
 entry:
 ; CHECK-LABEL: store_f:
-; NONE: str r1, [r0]
+; NOREGS: str r1, [r0]
+; ONLYREGS: vstr s0, [r0]
 ; HARD: vstr s0, [r0]
   store float %b, ptr %a, align 4
   ret void
@@ -130,7 +138,7 @@ define void @store_d(ptr %a, double %b) {
 entry:
 ; CHECK-LABEL: store_d:
 ; NOREGS: strd r2, r3, [r0]
-; ONLYREGS: strd r2, r3, [r0]
+; ONLYREGS: vstr d0, [r0]
 ; HARD: vstr d0, [r0]
   store double %b, ptr %a, align 8
   ret void
@@ -230,7 +238,8 @@ define double @ui_to_d(i32 %a) {
 
 define float @bitcast_i_to_f(i32 %a) {
 ; CHECK-LABEL: bitcast_i_to_f:
-; NONE-NOT: mov
+; NOREGS-NOT: mov
+; ONLYREGS: vmov s0, r0
 ; HARD: vmov s0, r0
   %1 = bitcast i32 %a to float
   ret float %1
@@ -238,15 +247,17 @@ define float @bitcast_i_to_f(i32 %a) {
 
 define double @bitcast_i_to_d(i64 %a) {
 ; CHECK-LABEL: bitcast_i_to_d:
-; NONE-NOT: mov
+; NOREGS-NOT: mov
+; ONLYREGS: vmov d0, r0, r1
 ; HARD: vmov d0, r0, r1
-  %1 = bitcast i64 %a to double
+ %1 = bitcast i64 %a to double
   ret double %1
 }
 
 define i32 @bitcast_f_to_i(float %a) {
 ; CHECK-LABEL: bitcast_f_to_i:
-; NONE-NOT: mov
+; NOREGS-NOT: mov
+; ONLYREGS: vmov r0, s0
 ; HARD: vmov r0, s0
   %1 = bitcast float %a to i32
   ret i32 %1
@@ -254,7 +265,8 @@ define i32 @bitcast_f_to_i(float %a) {
 
 define i64 @bitcast_d_to_i(double %a) {
 ; CHECK-LABEL: bitcast_d_to_i:
-; NONE-NOT: mov
+; NOREGS-NOT: mov
+; ONLYREGS: vmov r0, r1, d0
 ; HARD: vmov r0, r1, d0
   %1 = bitcast double %a to i64
   ret i64 %1
@@ -264,8 +276,8 @@ define float @select_f(float %a, float %b, i1 %c) {
 ; CHECK-LABEL: select_f:
 ; NOREGS: lsls    r2, r2, #31
 ; NOREGS: moveq   r0, r1
-; ONLYREGS: lsls    r2, r2, #31
-; ONLYREGS: vmovne.f32      s2, s0
+; ONLYREGS: lsls    r0, r0, #31
+; ONLYREGS: vmovne.f32      s1, s0
 ; HARD: lsls    r0, r0, #31
 ; VFP4-ALL: vmovne.f32      s1, s0
 ; VFP4-ALL: vmov.f32        s0, s1
@@ -276,8 +288,9 @@ define float @select_f(float %a, float %b, i1 %c) {
 
 define double @select_d(double %a, double %b, i1 %c) {
 ; CHECK-LABEL: select_d:
-; NONE: ldr{{(.w)?}}     [[REG:r[0-9]+]], [sp]
-; NONE: ands    [[REG]], [[REG]], #1
+; NOREGS: ldr{{(.w)?}}     [[REG:r[0-9]+]], [sp]
+; NOREGS: ands    [[REG]], [[REG]], #1
+; ONLYREGS: ands    r0, r0, #1
 ; NOREGS-DAG: moveq   r0, r2
 ; NOREGS-DAG: moveq   r1, r3
 ; ONLYREGS-DAG: csel   r0, r0, r2

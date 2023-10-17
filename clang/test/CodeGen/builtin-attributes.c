@@ -4,6 +4,10 @@
 int printf(const char *, ...);
 void exit(int);
 
+float frexpf(float, int*);
+double frexp(double, int*);
+long double frexpl(long double, int*);
+
 // CHECK: declare i32 @printf(ptr noundef, ...)
 void f0() {
   printf("a\n");
@@ -21,7 +25,6 @@ char* f2(char* a, char* b) {
 }
 
 // frexp is NOT readnone. It writes to its pointer argument.
-// <rdar://problem/10070234>
 //
 // CHECK: f3
 // CHECK: call double @frexp(double noundef %
@@ -49,9 +52,9 @@ char* f2(char* a, char* b) {
 // CHECK: ret
 int f3(double x) {
   int e;
-  __builtin_frexp(x, &e);
-  __builtin_frexpf(x, &e);
-  __builtin_frexpl(x, &e);
+  frexp(x, &e);
+  frexpf(x, &e);
+  frexpl(x, &e);
   __builtin_modf(x, &e);
   __builtin_modff(x, &e);
   __builtin_modfl(x, &e);

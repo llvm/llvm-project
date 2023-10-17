@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Sema/AnalysisBasedWarnings.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/EvaluatedExprVisitor.h"
@@ -25,6 +26,8 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/Type.h"
 #include "clang/Analysis/Analyses/CFGReachabilityAnalysis.h"
 #include "clang/Analysis/Analyses/CalledOnceCheck.h"
 #include "clang/Analysis/Analyses/Consumed.h"
@@ -35,6 +38,7 @@
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/CFGStmtMap.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Preprocessor.h"
@@ -43,6 +47,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -66,11 +71,17 @@ namespace {
   public:
     UnreachableCodeHandler(Sema &s) : S(s) {}
 
-    void HandleUnreachable(reachable_code::UnreachableKind UK,
-                           SourceLocation L,
-                           SourceRange SilenceableCondVal,
-                           SourceRange R1,
-                           SourceRange R2) override {
+    void HandleUnreachable(reachable_code::UnreachableKind UK, SourceLocation L,
+                           SourceRange SilenceableCondVal, SourceRange R1,
+                           SourceRange R2, bool HasFallThroughAttr) override {
+      // If the diagnosed code is `[[fallthrough]];` and
+      // `-Wunreachable-code-fallthrough` is  enabled, suppress `code will never
+      // be executed` warning to avoid generating diagnostic twice
+      if (HasFallThroughAttr &&
+          !S.getDiagnostics().isIgnored(diag::warn_unreachable_fallthrough_attr,
+                                        SourceLocation()))
+        return;
+
       // Avoid reporting multiple unreachable code diagnostics that are
       // triggered by the same conditional value.
       if (PreviousSilenceableCondVal.isValid() &&
@@ -147,6 +158,17 @@ public:
     return false;
   }
 
+  void logicAlwaysTrue(const BinaryOperator *B, bool isAlwaysTrue) override {
+    if (HasMacroID(B))
+      return;
+
+    unsigned DiagID = isAlwaysTrue
+                          ? diag::warn_tautological_negation_or_compare
+                          : diag::warn_tautological_negation_and_compare;
+    SourceRange DiagRange = B->getSourceRange();
+    S.Diag(B->getExprLoc(), DiagID) << DiagRange;
+  }
+
   void compareAlwaysTrue(const BinaryOperator *B, bool isAlwaysTrue) override {
     if (HasMacroID(B))
       return;
@@ -177,7 +199,8 @@ public:
   static bool hasActiveDiagnostics(DiagnosticsEngine &Diags,
                                    SourceLocation Loc) {
     return !Diags.isIgnored(diag::warn_tautological_overlap_comparison, Loc) ||
-           !Diags.isIgnored(diag::warn_comparison_bitwise_or, Loc);
+           !Diags.isIgnored(diag::warn_comparison_bitwise_or, Loc) ||
+           !Diags.isIgnored(diag::warn_tautological_negation_and_compare, Loc);
   }
 };
 } // anonymous namespace
@@ -574,6 +597,7 @@ struct CheckFallThroughDiagnostics {
     D.diag_AlwaysFallThrough_HasNoReturn = 0;
     D.diag_AlwaysFallThrough_ReturnsNonVoid =
         diag::warn_falloff_nonvoid_coroutine;
+    D.diag_NeverFallThroughOrReturn = 0;
     D.funMode = Coroutine;
     return D;
   }
@@ -1235,7 +1259,7 @@ static StringRef getFallthroughAttrSpelling(Preprocessor &PP,
     tok::r_square, tok::r_square
   };
 
-  bool PreferClangAttr = !PP.getLangOpts().CPlusPlus17 && !PP.getLangOpts().C2x;
+  bool PreferClangAttr = !PP.getLangOpts().CPlusPlus17 && !PP.getLangOpts().C23;
 
   StringRef MacroName;
   if (PreferClangAttr)
@@ -2149,9 +2173,46 @@ public:
 namespace {
 class UnsafeBufferUsageReporter : public UnsafeBufferUsageHandler {
   Sema &S;
+  bool SuggestSuggestions;  // Recommend -fsafe-buffer-usage-suggestions?
+
+  // Lists as a string the names of variables in `VarGroupForVD` except for `VD`
+  // itself:
+  std::string listVariableGroupAsString(
+      const VarDecl *VD, const ArrayRef<const VarDecl *> &VarGroupForVD) const {
+    if (VarGroupForVD.size() <= 1)
+      return "";
+
+    std::vector<StringRef> VarNames;
+    auto PutInQuotes = [](StringRef S) -> std::string {
+      return "'" + S.str() + "'";
+    };
+
+    for (auto *V : VarGroupForVD) {
+      if (V == VD)
+        continue;
+      VarNames.push_back(V->getName());
+    }
+    if (VarNames.size() == 1) {
+      return PutInQuotes(VarNames[0]);
+    }
+    if (VarNames.size() == 2) {
+      return PutInQuotes(VarNames[0]) + " and " + PutInQuotes(VarNames[1]);
+    }
+    assert(VarGroupForVD.size() > 3);
+    const unsigned N = VarNames.size() -
+                       2; // need to print the last two names as "..., X, and Y"
+    std::string AllVars = "";
+
+    for (unsigned I = 0; I < N; ++I)
+      AllVars.append(PutInQuotes(VarNames[I]) + ", ");
+    AllVars.append(PutInQuotes(VarNames[N]) + ", and " +
+                   PutInQuotes(VarNames[N + 1]));
+    return AllVars;
+  }
 
 public:
-  UnsafeBufferUsageReporter(Sema &S) : S(S) {}
+  UnsafeBufferUsageReporter(Sema &S, bool SuggestSuggestions)
+    : S(S), SuggestSuggestions(SuggestSuggestions) {}
 
   void handleUnsafeOperation(const Stmt *Operation,
                              bool IsRelatedToDecl) override {
@@ -2184,25 +2245,91 @@ public:
         MsgParam = 1;
       }
     } else {
+      if (isa<CallExpr>(Operation)) {
+        // note_unsafe_buffer_operation doesn't have this mode yet.
+        assert(!IsRelatedToDecl && "Not implemented yet!");
+        MsgParam = 3;
+      }
       Loc = Operation->getBeginLoc();
       Range = Operation->getSourceRange();
     }
-    if (IsRelatedToDecl)
+    if (IsRelatedToDecl) {
+      assert(!SuggestSuggestions &&
+             "Variables blamed for unsafe buffer usage without suggestions!");
       S.Diag(Loc, diag::note_unsafe_buffer_operation) << MsgParam << Range;
-    else
+    } else {
       S.Diag(Loc, diag::warn_unsafe_buffer_operation) << MsgParam << Range;
+      if (SuggestSuggestions) {
+        S.Diag(Loc, diag::note_safe_buffer_usage_suggestions_disabled);
+      }
+    }
   }
 
-  // FIXME: rename to handleUnsafeVariable
-  void handleFixableVariable(const VarDecl *Variable,
-                             FixItList &&Fixes) override {
-    const auto &D =
-        S.Diag(Variable->getLocation(), diag::warn_unsafe_buffer_variable);
-    D << Variable;
-    D << (Variable->getType()->isPointerType() ? 0 : 1);
-    D << Variable->getSourceRange();
-    for (const auto &F : Fixes)
-      D << F;
+  void handleUnsafeVariableGroup(const VarDecl *Variable,
+                                 const VariableGroupsManager &VarGrpMgr,
+                                 FixItList &&Fixes, const Decl *D) override {
+    assert(!SuggestSuggestions &&
+           "Unsafe buffer usage fixits displayed without suggestions!");
+    S.Diag(Variable->getLocation(), diag::warn_unsafe_buffer_variable)
+        << Variable << (Variable->getType()->isPointerType() ? 0 : 1)
+        << Variable->getSourceRange();
+    if (!Fixes.empty()) {
+      assert(isa<NamedDecl>(D) &&
+             "Fix-its are generated only for `NamedDecl`s");
+      const NamedDecl *ND = cast<NamedDecl>(D);
+      bool BriefMsg = false;
+      // If the variable group involves parameters, the diagnostic message will
+      // NOT explain how the variables are grouped as the reason is non-trivial
+      // and irrelavant to users' experience:
+      const auto VarGroupForVD = VarGrpMgr.getGroupOfVar(Variable, &BriefMsg);
+      unsigned FixItStrategy = 0; // For now we only have 'std::span' strategy
+      const auto &FD =
+          S.Diag(Variable->getLocation(),
+                 BriefMsg ? diag::note_unsafe_buffer_variable_fixit_together
+                          : diag::note_unsafe_buffer_variable_fixit_group);
+
+      FD << Variable << FixItStrategy;
+      FD << listVariableGroupAsString(Variable, VarGroupForVD)
+         << (VarGroupForVD.size() > 1) << ND;
+      for (const auto &F : Fixes) {
+        FD << F;
+      }
+    }
+
+#ifndef NDEBUG
+    if (areDebugNotesRequested())
+      for (const DebugNote &Note: DebugNotesByVar[Variable])
+        S.Diag(Note.first, diag::note_safe_buffer_debug_mode) << Note.second;
+#endif
+  }
+
+  bool isSafeBufferOptOut(const SourceLocation &Loc) const override {
+    return S.PP.isSafeBufferOptOut(S.getSourceManager(), Loc);
+  }
+
+  // Returns the text representation of clang::unsafe_buffer_usage attribute.
+  // `WSSuffix` holds customized "white-space"s, e.g., newline or whilespace
+  // characters.
+  std::string
+  getUnsafeBufferUsageAttributeTextAt(SourceLocation Loc,
+                                      StringRef WSSuffix = "") const override {
+    Preprocessor &PP = S.getPreprocessor();
+    TokenValue ClangUnsafeBufferUsageTokens[] = {
+        tok::l_square,
+        tok::l_square,
+        PP.getIdentifierInfo("clang"),
+        tok::coloncolon,
+        PP.getIdentifierInfo("unsafe_buffer_usage"),
+        tok::r_square,
+        tok::r_square};
+
+    StringRef MacroName;
+
+    // The returned macro (it returns) is guaranteed not to be function-like:
+    MacroName = PP.getLastMacroWithSpelling(Loc, ClangUnsafeBufferUsageTokens);
+    if (MacroName.empty())
+      MacroName = "[[clang::unsafe_buffer_usage]]";
+    return MacroName.str() + WSSuffix.str();
   }
 };
 } // namespace
@@ -2269,6 +2396,94 @@ sema::AnalysisBasedWarnings::~AnalysisBasedWarnings() = default;
 static void flushDiagnostics(Sema &S, const sema::FunctionScopeInfo *fscope) {
   for (const auto &D : fscope->PossiblyUnreachableDiags)
     S.Diag(D.Loc, D.PD);
+}
+
+// An AST Visitor that calls a callback function on each callable DEFINITION
+// that is NOT in a dependent context:
+class CallableVisitor : public RecursiveASTVisitor<CallableVisitor> {
+private:
+  llvm::function_ref<void(const Decl *)> Callback;
+
+public:
+  CallableVisitor(llvm::function_ref<void(const Decl *)> Callback)
+      : Callback(Callback) {}
+
+  bool VisitFunctionDecl(FunctionDecl *Node) {
+    if (cast<DeclContext>(Node)->isDependentContext())
+      return true; // Not to analyze dependent decl
+    // `FunctionDecl->hasBody()` returns true if the function has a body
+    // somewhere defined.  But we want to know if this `Node` has a body
+    // child.  So we use `doesThisDeclarationHaveABody`:
+    if (Node->doesThisDeclarationHaveABody())
+      Callback(Node);
+    return true;
+  }
+
+  bool VisitBlockDecl(BlockDecl *Node) {
+    if (cast<DeclContext>(Node)->isDependentContext())
+      return true; // Not to analyze dependent decl
+    Callback(Node);
+    return true;
+  }
+
+  bool VisitObjCMethodDecl(ObjCMethodDecl *Node) {
+    if (cast<DeclContext>(Node)->isDependentContext())
+      return true; // Not to analyze dependent decl
+    if (Node->hasBody())
+      Callback(Node);
+    return true;
+  }
+
+  bool VisitLambdaExpr(LambdaExpr *Node) {
+    return VisitFunctionDecl(Node->getCallOperator());
+  }
+
+  bool shouldVisitTemplateInstantiations() const { return true; }
+  bool shouldVisitImplicitCode() const { return false; }
+};
+
+void clang::sema::AnalysisBasedWarnings::IssueWarnings(
+     TranslationUnitDecl *TU) {
+  if (!TU)
+    return; // This is unexpected, give up quietly.
+
+  DiagnosticsEngine &Diags = S.getDiagnostics();
+
+  if (S.hasUncompilableErrorOccurred() || Diags.getIgnoreAllWarnings())
+    // exit if having uncompilable errors or ignoring all warnings:
+    return;
+
+  DiagnosticOptions &DiagOpts = Diags.getDiagnosticOptions();
+
+  // UnsafeBufferUsage analysis settings.
+  bool UnsafeBufferUsageCanEmitSuggestions = S.getLangOpts().CPlusPlus20;
+  bool UnsafeBufferUsageShouldEmitSuggestions =  // Should != Can.
+      UnsafeBufferUsageCanEmitSuggestions &&
+      DiagOpts.ShowSafeBufferUsageSuggestions;
+  bool UnsafeBufferUsageShouldSuggestSuggestions =
+      UnsafeBufferUsageCanEmitSuggestions &&
+      !DiagOpts.ShowSafeBufferUsageSuggestions;
+  UnsafeBufferUsageReporter R(S, UnsafeBufferUsageShouldSuggestSuggestions);
+
+  // The Callback function that performs analyses:
+  auto CallAnalyzers = [&](const Decl *Node) -> void {
+    // Perform unsafe buffer usage analysis:
+    if (!Diags.isIgnored(diag::warn_unsafe_buffer_operation,
+                         Node->getBeginLoc()) ||
+        !Diags.isIgnored(diag::warn_unsafe_buffer_variable,
+                         Node->getBeginLoc())) {
+      clang::checkUnsafeBufferUsage(Node, R,
+                                    UnsafeBufferUsageShouldEmitSuggestions);
+    }
+
+    // More analysis ...
+  };
+  // Emit per-function analysis-based warnings that require the whole-TU
+  // reasoning. Check if any of them is enabled at all before scanning the AST:
+  if (!Diags.isIgnored(diag::warn_unsafe_buffer_operation, SourceLocation()) ||
+      !Diags.isIgnored(diag::warn_unsafe_buffer_variable, SourceLocation())) {
+    CallableVisitor(CallAnalyzers).TraverseTranslationUnitDecl(TU);
+  }
 }
 
 void clang::sema::AnalysisBasedWarnings::IssueWarnings(
@@ -2496,15 +2711,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   // Check for throw out of non-throwing function.
   if (!Diags.isIgnored(diag::warn_throw_in_noexcept_func, D->getBeginLoc()))
     if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D))
-      if (S.getLangOpts().CPlusPlus && isNoexcept(FD))
+      if (S.getLangOpts().CPlusPlus && !fscope->isCoroutine() && isNoexcept(FD))
         checkThrowInNonThrowingFunc(S, FD, AC);
-
-  // Emit unsafe buffer usage warnings and fixits.
-  if (!Diags.isIgnored(diag::warn_unsafe_buffer_operation, D->getBeginLoc()) ||
-      !Diags.isIgnored(diag::warn_unsafe_buffer_variable, D->getBeginLoc())) {
-    UnsafeBufferUsageReporter R(S);
-    checkUnsafeBufferUsage(D, R);
-  }
 
   // If none of the previous checks caused a CFG build, trigger one here
   // for the logical error handler.

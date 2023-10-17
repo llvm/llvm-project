@@ -11,8 +11,8 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/ADT/Triple.h"
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 #include "gtest/gtest.h"
 
 namespace clang {
@@ -1638,6 +1638,95 @@ TEST_P(ASTMatchersTest, IsExplicit_CXXConversionDecl_CXX20) {
                       cxxConversionDecl(isExplicit())));
   EXPECT_TRUE(notMatches("struct S { explicit(false) operator int(); };",
                          cxxConversionDecl(isExplicit())));
+}
+
+TEST_P(ASTMatchersTest, ArgumentCountAtLeast_CallExpr) {
+  StatementMatcher Call2PlusArgs = callExpr(argumentCountAtLeast(2));
+
+  EXPECT_TRUE(notMatches("void x(void) { x(); }", Call2PlusArgs));
+  EXPECT_TRUE(notMatches("void x(int) { x(0); }", Call2PlusArgs));
+  EXPECT_TRUE(matches("void x(int, int) { x(0, 0); }", Call2PlusArgs));
+  EXPECT_TRUE(matches("void x(int, int, int) { x(0, 0, 0); }", Call2PlusArgs));
+
+  if (!GetParam().isCXX()) {
+    return;
+  }
+
+  EXPECT_TRUE(
+      notMatches("void x(int = 1) { x(); }", traverse(TK_AsIs, Call2PlusArgs)));
+  EXPECT_TRUE(matches("void x(int, int = 1) { x(0); }",
+                      traverse(TK_AsIs, Call2PlusArgs)));
+  EXPECT_TRUE(matches("void x(int, int = 1, int = 1) { x(0); }",
+                      traverse(TK_AsIs, Call2PlusArgs)));
+  EXPECT_TRUE(matches("void x(int, int, int = 1) { x(0, 0); }",
+                      traverse(TK_AsIs, Call2PlusArgs)));
+  EXPECT_TRUE(matches("void x(int, int, int, int = 1) { x(0, 0, 0); }",
+                      traverse(TK_AsIs, Call2PlusArgs)));
+
+  EXPECT_TRUE(
+      notMatches("void x(int = 1) { x(); }",
+                 traverse(TK_IgnoreUnlessSpelledInSource, Call2PlusArgs)));
+  EXPECT_TRUE(
+      notMatches("void x(int, int = 1) { x(0); }",
+                 traverse(TK_IgnoreUnlessSpelledInSource, Call2PlusArgs)));
+  EXPECT_TRUE(
+      notMatches("void x(int, int = 1, int = 1) { x(0); }",
+                 traverse(TK_IgnoreUnlessSpelledInSource, Call2PlusArgs)));
+  EXPECT_TRUE(matches("void x(int, int, int = 1) { x(0, 0); }",
+                      traverse(TK_IgnoreUnlessSpelledInSource, Call2PlusArgs)));
+  EXPECT_TRUE(matches("void x(int, int, int, int = 1) { x(0, 0, 0); }",
+                      traverse(TK_IgnoreUnlessSpelledInSource, Call2PlusArgs)));
+}
+
+TEST_P(ASTMatchersTest, ArgumentCountAtLeast_CallExpr_CXX) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+
+  StatementMatcher Call2PlusArgs = callExpr(argumentCountAtLeast(2));
+  EXPECT_TRUE(notMatches("class X { void x() { x(); } };", Call2PlusArgs));
+  EXPECT_TRUE(notMatches("class X { void x(int) { x(0); } };", Call2PlusArgs));
+  EXPECT_TRUE(
+      matches("class X { void x(int, int) { x(0, 0); } };", Call2PlusArgs));
+  EXPECT_TRUE(matches("class X { void x(int, int, int) { x(0, 0, 0); } };",
+                      Call2PlusArgs));
+
+  EXPECT_TRUE(notMatches("class X { void x(int = 1) { x(0); } };",
+                         traverse(TK_AsIs, Call2PlusArgs)));
+  EXPECT_TRUE(matches("class X { void x(int, int = 1) { x(0); } };",
+                      traverse(TK_AsIs, Call2PlusArgs)));
+  EXPECT_TRUE(matches("class X { void x(int, int = 1, int = 1) { x(0); } };",
+                      traverse(TK_AsIs, Call2PlusArgs)));
+  EXPECT_TRUE(matches("class X { void x(int, int, int = 1) { x(0, 0); } };",
+                      traverse(TK_AsIs, Call2PlusArgs)));
+  EXPECT_TRUE(
+      matches("class X { void x(int, int, int, int = 1) { x(0, 0, 0); } };",
+              traverse(TK_AsIs, Call2PlusArgs)));
+
+  EXPECT_TRUE(
+      notMatches("class X { void x(int = 1) { x(0); } };",
+                 traverse(TK_IgnoreUnlessSpelledInSource, Call2PlusArgs)));
+  EXPECT_TRUE(
+      notMatches("class X { void x(int, int = 1) { x(0); } };",
+                 traverse(TK_IgnoreUnlessSpelledInSource, Call2PlusArgs)));
+  EXPECT_TRUE(
+      notMatches("class X { void x(int, int = 1, int = 1) { x(0); } };",
+                 traverse(TK_IgnoreUnlessSpelledInSource, Call2PlusArgs)));
+  EXPECT_TRUE(matches("class X { void x(int, int, int = 1) { x(0, 0); } };",
+                      traverse(TK_IgnoreUnlessSpelledInSource, Call2PlusArgs)));
+  EXPECT_TRUE(
+      matches("class X { void x(int, int, int, int = 1) { x(0, 0, 0); } };",
+              traverse(TK_IgnoreUnlessSpelledInSource, Call2PlusArgs)));
+
+  EXPECT_TRUE(
+      notMatches("class X { static void x() { x(); } };", Call2PlusArgs));
+  EXPECT_TRUE(
+      notMatches("class X { static void x(int) { x(0); } };", Call2PlusArgs));
+  EXPECT_TRUE(matches("class X { static void x(int, int) { x(0, 0); } };",
+                      Call2PlusArgs));
+  EXPECT_TRUE(
+      matches("class X { static void x(int, int, int) { x(0, 0, 0); } };",
+              Call2PlusArgs));
 }
 
 TEST_P(ASTMatchersTest, ArgumentCountIs_CallExpr) {

@@ -23,6 +23,7 @@ class ImmediateTLSAsmOperand<string name>
 
 class ImmediateOp<ValueType vt, string asmop> : Operand<vt> {
   let PrintMethod = "print"#asmop#"Operand";
+  let EncoderMethod = "getImmOpValue<SystemZ::FK_390_"#asmop#">";
   let DecoderMethod = "decode"#asmop#"Operand";
   let ParserMatchClass = !cast<AsmOperandClass>(asmop);
   let OperandType = "OPERAND_IMMEDIATE";
@@ -105,9 +106,6 @@ class AddressOperand<string bitsize, string dispsize, string length,
                      string format, dag operands>
   : Operand<!cast<ValueType>("i"#bitsize)> {
   let PrintMethod = "print"#format#"Operand";
-  let EncoderMethod = "get"#format#dispsize#length#"Encoding";
-  let DecoderMethod =
-    "decode"#format#bitsize#"Disp"#dispsize#length#"Operand";
   let OperandType = "OPERAND_MEMORY";
   let MIOperandInfo = operands;
   let ParserMatchClass =
@@ -151,7 +149,7 @@ class BDLMode<string type, string bitsize, string dispsize, string suffix,
                    "BDLAddr",
                    (ops !cast<RegisterOperand>("ADDR"#bitsize),
                         !cast<Operand>("disp"#dispsize#"imm"#bitsize),
-                        !cast<Operand>("imm"#bitsize))>;
+                        !cast<Operand>("len"#lensize#"imm"#bitsize))>;
 
 // A BDMode paired with a register length operand.
 class BDRMode<string type, string bitsize, string dispsize, string suffix>
@@ -300,7 +298,6 @@ def U1Imm  : ImmediateAsmOperand<"U1Imm">;
 def U2Imm  : ImmediateAsmOperand<"U2Imm">;
 def U3Imm  : ImmediateAsmOperand<"U3Imm">;
 def U4Imm  : ImmediateAsmOperand<"U4Imm">;
-def U6Imm  : ImmediateAsmOperand<"U6Imm">;
 def S8Imm  : ImmediateAsmOperand<"S8Imm">;
 def U8Imm  : ImmediateAsmOperand<"U8Imm">;
 def U12Imm : ImmediateAsmOperand<"U12Imm">;
@@ -356,10 +353,6 @@ defm imm32zx4 : Immediate<i32, [{
 defm imm32zx4even : Immediate<i32, [{
   return isUInt<4>(N->getZExtValue());
 }], UIMM8EVEN, "U4Imm">;
-
-defm imm32zx6 : Immediate<i32, [{
-  return isUInt<6>(N->getZExtValue());
-}], NOOP_SDNodeXForm, "U6Imm">;
 
 defm imm32sx8 : Immediate<i32, [{
   return isInt<8>(N->getSExtValue());
@@ -512,8 +505,18 @@ defm imm64zx48 : Immediate<i64, [{
   return isUInt<64>(N->getZExtValue());
 }], UIMM48, "U48Imm">;
 
-let OperandType = "OPERAND_IMMEDIATE" in
-  def imm64 : ImmLeaf<i64, [{}]>, Operand<i64>;
+class Imm64 : ImmLeaf<i64, [{}]>, Operand<i64> {
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+def imm64 : Imm64;
+def len4imm64 : Imm64 {
+  let EncoderMethod = "getLenEncoding<SystemZ::FK_390_U4Imm>";
+  let DecoderMethod = "decodeLenOperand<4>";
+}
+def len8imm64 : Imm64 {
+  let EncoderMethod = "getLenEncoding<SystemZ::FK_390_U8Imm>";
+  let DecoderMethod = "decodeLenOperand<8>";
+}
 
 //===----------------------------------------------------------------------===//
 // Floating-point immediates
@@ -588,12 +591,18 @@ def pcrel32 : PCRelAddress<i64, "pcrel32", PCRel32> {
 //===----------------------------------------------------------------------===//
 
 // 12-bit displacement operands.
-def disp12imm32 : Operand<i32>;
-def disp12imm64 : Operand<i64>;
+let EncoderMethod = "getImmOpValue<SystemZ::FK_390_U12Imm>",
+    DecoderMethod = "decodeU12ImmOperand" in {
+  def disp12imm32 : Operand<i32>;
+  def disp12imm64 : Operand<i64>;
+}
 
 // 20-bit displacement operands.
-def disp20imm32 : Operand<i32>;
-def disp20imm64 : Operand<i64>;
+let EncoderMethod = "getImmOpValue<SystemZ::FK_390_S20Imm>",
+    DecoderMethod = "decodeS20ImmOperand" in {
+  def disp20imm32 : Operand<i32>;
+  def disp20imm64 : Operand<i64>;
+}
 
 def BDAddr32Disp12      : AddressAsmOperand<"BDAddr",   "32", "12">;
 def BDAddr32Disp20      : AddressAsmOperand<"BDAddr",   "32", "20">;

@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
+// UNSUPPORTED: no-filesystem
+// UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
 
@@ -16,14 +18,11 @@
 #include "filesystem_include.h"
 
 #include "test_macros.h"
-#include "rapid-cxx-test.h"
 #include "filesystem_test_helper.h"
 
 using namespace fs;
 
-TEST_SUITE(filesystem_resize_file_test_suite)
-
-TEST_CASE(test_signatures)
+static void test_signatures()
 {
     const path p; ((void)p);
     std::uintmax_t i; ((void)i);
@@ -36,7 +35,7 @@ TEST_CASE(test_signatures)
     ASSERT_NOEXCEPT(fs::resize_file(p, i, ec));
 }
 
-TEST_CASE(test_error_reporting)
+static void test_error_reporting()
 {
     auto checkThrow = [](path const& f, std::uintmax_t s, const std::error_code& ec)
     {
@@ -64,12 +63,12 @@ TEST_CASE(test_error_reporting)
     for (auto& p : cases) {
         std::error_code ec;
         resize_file(p, 42, ec);
-        TEST_REQUIRE(ec);
-        TEST_CHECK(checkThrow(p, 42, ec));
+        assert(ec);
+        assert(checkThrow(p, 42, ec));
     }
 }
 
-TEST_CASE(basic_resize_file_test)
+static void basic_resize_file_test()
 {
     scoped_test_env env;
     const path file1 = env.create_file("file1", 42);
@@ -78,31 +77,36 @@ TEST_CASE(basic_resize_file_test)
         const std::uintmax_t new_s = 100;
         std::error_code ec = set_ec;
         resize_file(file1, new_s, ec);
-        TEST_CHECK(!ec);
-        TEST_CHECK(file_size(file1) == new_s);
+        assert(!ec);
+        assert(file_size(file1) == new_s);
     }
     { // shrink file
         const std::uintmax_t new_s = 1;
         std::error_code ec = set_ec;
         resize_file(file1, new_s, ec);
-        TEST_CHECK(!ec);
-        TEST_CHECK(file_size(file1) == new_s);
+        assert(!ec);
+        assert(file_size(file1) == new_s);
     }
     { // shrink file to zero
         const std::uintmax_t new_s = 0;
         std::error_code ec = set_ec;
         resize_file(file1, new_s, ec);
-        TEST_CHECK(!ec);
-        TEST_CHECK(file_size(file1) == new_s);
+        assert(!ec);
+        assert(file_size(file1) == new_s);
     }
     const path sym = env.create_symlink(file1, "sym");
     { // grow file via symlink
         const std::uintmax_t new_s = 1024;
         std::error_code ec = set_ec;
         resize_file(sym, new_s, ec);
-        TEST_CHECK(!ec);
-        TEST_CHECK(file_size(file1) == new_s);
+        assert(!ec);
+        assert(file_size(file1) == new_s);
     }
 }
 
-TEST_SUITE_END()
+int main(int, char**) {
+    test_signatures();
+    test_error_reporting();
+    basic_resize_file_test();
+    return 0;
+}

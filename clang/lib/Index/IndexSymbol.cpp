@@ -71,7 +71,6 @@ bool index::isFunctionLocalSymbol(const Decl *D) {
         return true;
       case VisibleNoLinkage:
       case UniqueExternalLinkage:
-      case ModuleInternalLinkage:
         llvm_unreachable("Not a sema linkage");
       case ModuleLinkage:
       case ExternalLinkage:
@@ -347,7 +346,6 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
       }
       break;
     case Decl::ClassTemplatePartialSpecialization:
-    case Decl::ClassScopeFunctionSpecialization:
     case Decl::ClassTemplateSpecialization:
     case Decl::CXXRecord:
     case Decl::Enum:

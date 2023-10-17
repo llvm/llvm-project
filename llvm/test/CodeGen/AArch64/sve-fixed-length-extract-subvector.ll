@@ -45,8 +45,8 @@ define void @extract_subvector_v32i8(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @extract_subvector_v64i8(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: extract_subvector_v64i8:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov w8, #32
 ; VBITS_GE_256-NEXT:    ptrue p0.b, vl32
+; VBITS_GE_256-NEXT:    mov w8, #32 // =0x20
 ; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x0, x8]
 ; VBITS_GE_256-NEXT:    st1b { z0.b }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
@@ -137,8 +137,8 @@ define void @extract_subvector_v16i16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @extract_subvector_v32i16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: extract_subvector_v32i16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
@@ -228,8 +228,8 @@ define void @extract_subvector_v8i32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @extract_subvector_v16i32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: extract_subvector_v16i32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
@@ -308,8 +308,8 @@ define void @extract_subvector_v4i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @extract_subvector_v8i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: extract_subvector_v8i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #4
 ; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    mov x8, #4 // =0x4
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
@@ -322,14 +322,14 @@ define void @extract_subvector_v8i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @extract_subvector_v16i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: extract_subvector_v16i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8
-; VBITS_GE_256-NEXT:    mov x9, #12
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    mov x8, #12 // =0xc
+; VBITS_GE_256-NEXT:    mov x9, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0, x9, lsl #3]
-; VBITS_GE_256-NEXT:    mov x8, #4
-; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x1, x8, lsl #3]
-; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x1]
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x1, x8, lsl #3]
+; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
   %op = load <16 x i64>, ptr %a
   %ret = call <8 x i64> @llvm.vector.extract.v8i64.v16i64(<16 x i64> %op, i64 8)
@@ -340,8 +340,8 @@ define void @extract_subvector_v16i64(ptr %a, ptr %b) #0 {
 define void @extract_subvector_v32i64(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: extract_subvector_v32i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #16
 ; CHECK-NEXT:    ptrue p0.d, vl16
+; CHECK-NEXT:    mov x8, #16 // =0x10
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
@@ -392,8 +392,8 @@ define void @extract_subvector_v16f16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @extract_subvector_v32f16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: extract_subvector_v32f16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
@@ -483,8 +483,8 @@ define void @extract_subvector_v8f32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @extract_subvector_v16f32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: extract_subvector_v16f32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
@@ -563,8 +563,8 @@ define void @extract_subvector_v4f64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @extract_subvector_v8f64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: extract_subvector_v8f64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret

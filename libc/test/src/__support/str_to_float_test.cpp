@@ -9,56 +9,63 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/UInt128.h"
 #include "src/__support/str_to_float.h"
+#include "src/errno/libc_errno.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
-class LlvmLibcStrToFloatTest : public __llvm_libc::testing::Test {
+class LlvmLibcStrToFloatTest : public LIBC_NAMESPACE::testing::Test {
 public:
   template <class T>
   void clinger_fast_path_test(
-      const typename __llvm_libc::fputil::FPBits<T>::UIntType inputMantissa,
+      const typename LIBC_NAMESPACE::fputil::FPBits<T>::UIntType inputMantissa,
       const int32_t inputExp10,
-      const typename __llvm_libc::fputil::FPBits<T>::UIntType
+      const typename LIBC_NAMESPACE::fputil::FPBits<T>::UIntType
           expectedOutputMantissa,
       const uint32_t expectedOutputExp2) {
-    typename __llvm_libc::fputil::FPBits<T>::UIntType actual_output_mantissa =
-        0;
+    typename LIBC_NAMESPACE::fputil::FPBits<T>::UIntType
+        actual_output_mantissa = 0;
     uint32_t actual_output_exp2 = 0;
 
-    ASSERT_TRUE(__llvm_libc::internal::clinger_fast_path<T>(
-        inputMantissa, inputExp10, &actual_output_mantissa,
-        &actual_output_exp2));
+    auto result = LIBC_NAMESPACE::internal::clinger_fast_path<T>(
+        {inputMantissa, inputExp10});
+
+    ASSERT_TRUE(result.has_value());
+
+    actual_output_mantissa = result->mantissa;
+    actual_output_exp2 = result->exponent;
+
     EXPECT_EQ(actual_output_mantissa, expectedOutputMantissa);
     EXPECT_EQ(actual_output_exp2, expectedOutputExp2);
   }
 
   template <class T>
   void clinger_fast_path_fails_test(
-      const typename __llvm_libc::fputil::FPBits<T>::UIntType inputMantissa,
+      const typename LIBC_NAMESPACE::fputil::FPBits<T>::UIntType inputMantissa,
       const int32_t inputExp10) {
-    typename __llvm_libc::fputil::FPBits<T>::UIntType actual_output_mantissa =
-        0;
-    uint32_t actual_output_exp2 = 0;
-
-    ASSERT_FALSE(__llvm_libc::internal::clinger_fast_path<T>(
-        inputMantissa, inputExp10, &actual_output_mantissa,
-        &actual_output_exp2));
+    ASSERT_FALSE(LIBC_NAMESPACE::internal::clinger_fast_path<T>(
+                     {inputMantissa, inputExp10})
+                     .has_value());
   }
 
   template <class T>
   void eisel_lemire_test(
-      const typename __llvm_libc::fputil::FPBits<T>::UIntType inputMantissa,
+      const typename LIBC_NAMESPACE::fputil::FPBits<T>::UIntType inputMantissa,
       const int32_t inputExp10,
-      const typename __llvm_libc::fputil::FPBits<T>::UIntType
+      const typename LIBC_NAMESPACE::fputil::FPBits<T>::UIntType
           expectedOutputMantissa,
       const uint32_t expectedOutputExp2) {
-    typename __llvm_libc::fputil::FPBits<T>::UIntType actual_output_mantissa =
-        0;
+    typename LIBC_NAMESPACE::fputil::FPBits<T>::UIntType
+        actual_output_mantissa = 0;
     uint32_t actual_output_exp2 = 0;
 
-    ASSERT_TRUE(__llvm_libc::internal::eisel_lemire<T>(
-        inputMantissa, inputExp10, &actual_output_mantissa,
-        &actual_output_exp2));
+    auto result =
+        LIBC_NAMESPACE::internal::eisel_lemire<T>({inputMantissa, inputExp10});
+
+    ASSERT_TRUE(result.has_value());
+
+    actual_output_mantissa = result->mantissa;
+    actual_output_exp2 = result->exponent;
+
     EXPECT_EQ(actual_output_mantissa, expectedOutputMantissa);
     EXPECT_EQ(actual_output_exp2, expectedOutputExp2);
   }
@@ -66,58 +73,63 @@ public:
   template <class T>
   void simple_decimal_conversion_test(
       const char *__restrict numStart,
-      const typename __llvm_libc::fputil::FPBits<T>::UIntType
+      const typename LIBC_NAMESPACE::fputil::FPBits<T>::UIntType
           expectedOutputMantissa,
       const uint32_t expectedOutputExp2, const int expectedErrno = 0) {
-    typename __llvm_libc::fputil::FPBits<T>::UIntType actual_output_mantissa =
-        0;
+    typename LIBC_NAMESPACE::fputil::FPBits<T>::UIntType
+        actual_output_mantissa = 0;
     uint32_t actual_output_exp2 = 0;
-    errno = 0;
+    libc_errno = 0;
 
-    __llvm_libc::internal::simple_decimal_conversion<T>(
-        numStart, &actual_output_mantissa, &actual_output_exp2);
+    auto result =
+        LIBC_NAMESPACE::internal::simple_decimal_conversion<T>(numStart);
+
+    actual_output_mantissa = result.num.mantissa;
+    actual_output_exp2 = result.num.exponent;
+
     EXPECT_EQ(actual_output_mantissa, expectedOutputMantissa);
     EXPECT_EQ(actual_output_exp2, expectedOutputExp2);
-    EXPECT_EQ(errno, expectedErrno);
+    EXPECT_EQ(result.error, expectedErrno);
   }
 };
 
 TEST(LlvmLibcStrToFloatTest, LeadingZeroes) {
   uint64_t test_num64 = 1;
   uint32_t num_of_zeroes = 63;
-  EXPECT_EQ(__llvm_libc::internal::leading_zeroes<uint64_t>(0), 64u);
+  EXPECT_EQ(LIBC_NAMESPACE::internal::leading_zeroes<uint64_t>(0), 64u);
   for (; num_of_zeroes < 64; test_num64 <<= 1, num_of_zeroes--) {
-    EXPECT_EQ(__llvm_libc::internal::leading_zeroes<uint64_t>(test_num64),
+    EXPECT_EQ(LIBC_NAMESPACE::internal::leading_zeroes<uint64_t>(test_num64),
               num_of_zeroes);
   }
 
   test_num64 = 3;
   num_of_zeroes = 62;
   for (; num_of_zeroes > 63; test_num64 <<= 1, num_of_zeroes--) {
-    EXPECT_EQ(__llvm_libc::internal::leading_zeroes<uint64_t>(test_num64),
+    EXPECT_EQ(LIBC_NAMESPACE::internal::leading_zeroes<uint64_t>(test_num64),
               num_of_zeroes);
   }
 
-  EXPECT_EQ(__llvm_libc::internal::leading_zeroes<uint64_t>(0xffffffffffffffff),
-            0u);
+  EXPECT_EQ(
+      LIBC_NAMESPACE::internal::leading_zeroes<uint64_t>(0xffffffffffffffff),
+      0u);
 
   test_num64 = 1;
   num_of_zeroes = 63;
   for (; num_of_zeroes > 63;
        test_num64 = (test_num64 << 1) + 1, num_of_zeroes--) {
-    EXPECT_EQ(__llvm_libc::internal::leading_zeroes<uint64_t>(test_num64),
+    EXPECT_EQ(LIBC_NAMESPACE::internal::leading_zeroes<uint64_t>(test_num64),
               num_of_zeroes);
   }
 
   uint64_t test_num32 = 1;
   num_of_zeroes = 31;
-  EXPECT_EQ(__llvm_libc::internal::leading_zeroes<uint32_t>(0), 32u);
+  EXPECT_EQ(LIBC_NAMESPACE::internal::leading_zeroes<uint32_t>(0), 32u);
   for (; num_of_zeroes < 32; test_num32 <<= 1, num_of_zeroes--) {
-    EXPECT_EQ(__llvm_libc::internal::leading_zeroes<uint32_t>(test_num32),
+    EXPECT_EQ(LIBC_NAMESPACE::internal::leading_zeroes<uint32_t>(test_num32),
               num_of_zeroes);
   }
 
-  EXPECT_EQ(__llvm_libc::internal::leading_zeroes<uint32_t>(0xffffffff), 0u);
+  EXPECT_EQ(LIBC_NAMESPACE::internal::leading_zeroes<uint32_t>(0xffffffff), 0u);
 }
 
 TEST_F(LlvmLibcStrToFloatTest, ClingerFastPathFloat64Simple) {
@@ -172,20 +184,17 @@ TEST_F(LlvmLibcStrToFloatTest, EiselLemireFloat64SpecificFailures) {
   eisel_lemire_test<double>(2794967654709307188u, 1, 0x183e132bc608c9, 1087);
 }
 
+// Check the fallback states for the algorithm:
 TEST_F(LlvmLibcStrToFloatTest, EiselLemireFallbackStates) {
-  // Check the fallback states for the algorithm:
-  uint32_t float_output_mantissa = 0;
-  uint64_t double_output_mantissa = 0;
-  uint32_t output_exp2 = 0;
-
   // This number can't be evaluated by Eisel-Lemire since it's exactly 1024 away
   // from both of its closest floating point approximations
   // (12345678901234548736 and 12345678901234550784)
-  ASSERT_FALSE(__llvm_libc::internal::eisel_lemire<double>(
-      12345678901234549760u, 0, &double_output_mantissa, &output_exp2));
+  ASSERT_FALSE(
+      LIBC_NAMESPACE::internal::eisel_lemire<double>({12345678901234549760u, 0})
+          .has_value());
 
-  ASSERT_FALSE(__llvm_libc::internal::eisel_lemire<float>(
-      20040229, 0, &float_output_mantissa, &output_exp2));
+  ASSERT_FALSE(
+      LIBC_NAMESPACE::internal::eisel_lemire<float>({20040229, 0}).has_value());
 }
 
 TEST_F(LlvmLibcStrToFloatTest, SimpleDecimalConversion64BasicWholeNumbers) {
@@ -244,22 +253,30 @@ TEST(LlvmLibcStrToFloatTest, SimpleDecimalConversionExtraTypes) {
   uint32_t float_output_mantissa = 0;
   uint32_t output_exp2 = 0;
 
-  errno = 0;
-  __llvm_libc::internal::simple_decimal_conversion<float>(
-      "123456789012345678900", &float_output_mantissa, &output_exp2);
+  libc_errno = 0;
+  auto float_result =
+      LIBC_NAMESPACE::internal::simple_decimal_conversion<float>(
+          "123456789012345678900");
+  float_output_mantissa = float_result.num.mantissa;
+  output_exp2 = float_result.num.exponent;
   EXPECT_EQ(float_output_mantissa, uint32_t(0xd629d4));
   EXPECT_EQ(output_exp2, uint32_t(193));
-  EXPECT_EQ(errno, 0);
+  EXPECT_EQ(float_result.error, 0);
 
   uint64_t double_output_mantissa = 0;
   output_exp2 = 0;
 
-  errno = 0;
-  __llvm_libc::internal::simple_decimal_conversion<double>(
-      "123456789012345678900", &double_output_mantissa, &output_exp2);
+  libc_errno = 0;
+  auto double_result =
+      LIBC_NAMESPACE::internal::simple_decimal_conversion<double>(
+          "123456789012345678900");
+
+  double_output_mantissa = double_result.num.mantissa;
+  output_exp2 = double_result.num.exponent;
+
   EXPECT_EQ(double_output_mantissa, uint64_t(0x1AC53A7E04BCDA));
   EXPECT_EQ(output_exp2, uint32_t(1089));
-  EXPECT_EQ(errno, 0);
+  EXPECT_EQ(double_result.error, 0);
 }
 
 #if defined(LONG_DOUBLE_IS_DOUBLE)
@@ -299,20 +316,18 @@ TEST_F(LlvmLibcStrToFloatTest, EiselLemireFloat80TableLimits) {
 }
 
 TEST_F(LlvmLibcStrToFloatTest, EiselLemireFloat80Fallback) {
-  uint32_t outputExp2 = 0;
-  UInt128 quadOutputMantissa = 0;
-
   // This number is halfway between two possible results, and the algorithm
   // can't determine which is correct.
-  ASSERT_FALSE(__llvm_libc::internal::eisel_lemire<long double>(
-      12345678901234567890u, 1, &quadOutputMantissa, &outputExp2));
+  ASSERT_FALSE(LIBC_NAMESPACE::internal::eisel_lemire<long double>(
+                   {12345678901234567890u, 1})
+                   .has_value());
 
   // These numbers' exponents are out of range for the current powers of ten
   // table.
-  ASSERT_FALSE(__llvm_libc::internal::eisel_lemire<long double>(
-      1, 1000, &quadOutputMantissa, &outputExp2));
-  ASSERT_FALSE(__llvm_libc::internal::eisel_lemire<long double>(
-      1, -1000, &quadOutputMantissa, &outputExp2));
+  ASSERT_FALSE(LIBC_NAMESPACE::internal::eisel_lemire<long double>({1, 1000})
+                   .has_value());
+  ASSERT_FALSE(LIBC_NAMESPACE::internal::eisel_lemire<long double>({1, -1000})
+                   .has_value());
 }
 #else // Quad precision long double
 TEST_F(LlvmLibcStrToFloatTest, EiselLemireFloat128Simple) {
@@ -336,11 +351,10 @@ TEST_F(LlvmLibcStrToFloatTest, EiselLemireFloat128LongerMantissa) {
 }
 
 TEST_F(LlvmLibcStrToFloatTest, EiselLemireFloat128Fallback) {
-  uint32_t outputExp2 = 0;
-  UInt128 quadOutputMantissa = 0;
-
-  ASSERT_FALSE(__llvm_libc::internal::eisel_lemire<long double>(
-      (UInt128(0x5ce0e9a56015fec5) << 64) + UInt128(0xaadfa328ae39b333), 1,
-      &quadOutputMantissa, &outputExp2));
+  ASSERT_FALSE(
+      LIBC_NAMESPACE::internal::eisel_lemire<long double>(
+          {(UInt128(0x5ce0e9a56015fec5) << 64) + UInt128(0xaadfa328ae39b333),
+           1})
+          .has_value());
 }
 #endif

@@ -30,24 +30,21 @@ def fold_global_offset : GICombineRule<
   (defs root:$root, fold_global_offset_matchdata:$matchinfo),
   (match (wip_match_opcode G_GLOBAL_VALUE):$root,
           [{ return matchFoldGlobalOffset(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{  return applyFoldGlobalOffset(*${root}, MRI, B, Observer, ${matchinfo});}])
+  (apply [{ applyFoldGlobalOffset(*${root}, MRI, B, Observer, ${matchinfo});}])
 >;
 
-def AArch64PreLegalizerCombinerHelper: GICombinerHelper<
-  "AArch64GenPreLegalizerCombinerHelper", [all_combines,
-                                           fconstant_to_constant,
-                                           icmp_redundant_trunc,
-                                           fold_global_offset]> {
-  let DisableRuleOption = "aarch64prelegalizercombiner-disable-rule";
-  let StateClass = "AArch64PreLegalizerCombinerHelperState";
-  let AdditionalArguments = [];
+def AArch64PreLegalizerCombiner: GICombiner<
+  "AArch64PreLegalizerCombinerImpl", [all_combines,
+                                      fconstant_to_constant,
+                                      icmp_redundant_trunc,
+                                      fold_global_offset,
+                                      shuffle_to_extract]> {
+  let CombineAllMethodName = "tryCombineAllImpl";
 }
 
-def AArch64O0PreLegalizerCombinerHelper: GICombinerHelper<
-  "AArch64GenO0PreLegalizerCombinerHelper", [optnone_combines]> {
-  let DisableRuleOption = "aarch64O0prelegalizercombiner-disable-rule";
-  let StateClass = "AArch64O0PreLegalizerCombinerHelperState";
-  let AdditionalArguments = [];
+def AArch64O0PreLegalizerCombiner: GICombiner<
+  "AArch64O0PreLegalizerCombinerImpl", [optnone_combines]> {
+  let CombineAllMethodName = "tryCombineAllImpl";
 }
 
 // Matchdata for combines which replace a G_SHUFFLE_VECTOR with a
@@ -101,7 +98,7 @@ def shuf_to_ins: GICombineRule <
   (defs root:$root, shuf_to_ins_matchdata:$matchinfo),
   (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
          [{ return matchINS(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{ return applyINS(*${root}, MRI, B, ${matchinfo}); }])
+  (apply [{ applyINS(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
 def vashr_vlshr_imm_matchdata : GIDefMatchData<"int64_t">;
@@ -159,11 +156,18 @@ def mul_const : GICombineRule<
   (apply [{ applyAArch64MulConstCombine(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
+def lower_mull : GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_MUL):$root,
+          [{ return matchExtMulToMULL(*${root}, MRI); }]),
+  (apply [{ applyExtMulToMULL(*${root}, MRI, B, Observer); }])
+>;
+
 def build_vector_to_dup : GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_BUILD_VECTOR):$root,
           [{ return matchBuildVectorToDup(*${root}, MRI); }]),
-  (apply [{ return applyBuildVectorToDup(*${root}, MRI, B); }])
+  (apply [{ applyBuildVectorToDup(*${root}, MRI, B); }])
 >;
 
 def build_vector_lowering : GICombineGroup<[build_vector_to_dup]>;
@@ -171,8 +175,8 @@ def build_vector_lowering : GICombineGroup<[build_vector_to_dup]>;
 def lower_vector_fcmp : GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_FCMP):$root,
-    [{ return lowerVectorFCMP(*${root}, MRI, B); }]),
-  (apply [{}])>;
+    [{ return matchLowerVectorFCMP(*${root}, MRI, B); }]),
+  (apply [{ applyLowerVectorFCMP(*${root}, MRI, B); }])>;
 
 def form_truncstore_matchdata : GIDefMatchData<"Register">;
 def form_truncstore : GICombineRule<
@@ -210,21 +214,37 @@ def vector_sext_inreg_to_shift : GICombineRule<
   (apply [{ applyVectorSextInReg(*${d}, MRI, B, Observer); }])
 >;
 
+def unmerge_ext_to_unmerge_matchdata : GIDefMatchData<"Register">;
+def unmerge_ext_to_unmerge : GICombineRule<
+  (defs root:$d, unmerge_ext_to_unmerge_matchdata:$matchinfo),
+  (match (wip_match_opcode G_UNMERGE_VALUES):$d,
+          [{ return matchUnmergeExtToUnmerge(*${d}, MRI, ${matchinfo}); }]),
+  (apply [{ applyUnmergeExtToUnmerge(*${d}, MRI, B, Observer, ${matchinfo}); }])
+>;
+
+def regtriple_matchdata : GIDefMatchData<"std::tuple<Register, Register, Register>">;
+def or_to_bsp: GICombineRule <
+  (defs root:$root, regtriple_matchdata:$matchinfo),
+  (match (wip_match_opcode G_OR):$root,
+         [{ return matchOrToBSP(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ applyOrToBSP(*${root}, MRI, B, ${matchinfo}); }])
+>;
+
 // Post-legalization combines which should happen at all optimization levels.
 // (E.g. ones that facilitate matching for the selector) For example, matching
 // pseudos.
-def AArch64PostLegalizerLoweringHelper
-    : GICombinerHelper<"AArch64GenPostLegalizerLoweringHelper",
+def AArch64PostLegalizerLowering
+    : GICombiner<"AArch64PostLegalizerLoweringImpl",
                        [shuffle_vector_lowering, vashr_vlshr_imm,
                         icmp_lowering, build_vector_lowering,
                         lower_vector_fcmp, form_truncstore,
-                        vector_sext_inreg_to_shift]> {
-  let DisableRuleOption = "aarch64postlegalizerlowering-disable-rule";
+                        vector_sext_inreg_to_shift,
+                        unmerge_ext_to_unmerge, lower_mull]> {
 }
 
 // Post-legalization combines which are primarily optimizations.
-def AArch64PostLegalizerCombinerHelper
-    : GICombinerHelper<"AArch64GenPostLegalizerCombinerHelper",
+def AArch64PostLegalizerCombiner
+    : GICombiner<"AArch64PostLegalizerCombinerImpl",
                        [copy_prop, combines_for_extload,
                         sext_trunc_sextload, mutate_anyext_to_zext,
                         hoist_logic_op_with_same_opcode_hands,
@@ -234,9 +254,8 @@ def AArch64PostLegalizerCombinerHelper
                         form_bitfield_extract, rotate_out_of_range,
                         icmp_to_true_false_known_bits, merge_unmerge,
                         select_combines, fold_merge_to_zext,
-                        constant_fold, identity_combines,
+                        constant_fold_binops, identity_combines,
                         ptr_add_immed_chain, overlapping_and,
                         split_store_zero_128, undef_combines,
-                        select_to_minmax]> {
-  let DisableRuleOption = "aarch64postlegalizercombiner-disable-rule";
+                        select_to_minmax, or_to_bsp]> {
 }

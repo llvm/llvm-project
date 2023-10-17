@@ -22,12 +22,12 @@
   (list
    ;; Attributes
    `(,(regexp-opt
-       '("alwaysinline" "argmemonly" "allocsize" "builtin" "cold" "convergent" "dereferenceable" "dereferenceable_or_null" "hot" "inaccessiblememonly"
-         "inaccessiblemem_or_argmemonly" "inalloca" "inlinehint" "jumptable" "minsize" "mustprogress" "naked" "nobuiltin" "nonnull"
+       '("alwaysinline" "argmemonly" "allocsize" "builtin" "cold" "convergent" "dereferenceable" "dereferenceable_or_null" "hot" "immarg" "inaccessiblememonly"
+         "inaccessiblemem_or_argmemonly" "inalloca" "inlinehint" "jumptable" "minsize" "mustprogress" "naked" "nobuiltin" "nonnull" "nocapture"
          "nocallback" "nocf_check" "noduplicate" "nofree" "noimplicitfloat" "noinline" "nomerge" "nonlazybind" "noprofile" "noredzone" "noreturn"
          "norecurse" "nosync" "noundef" "nounwind" "nosanitize_bounds" "nosanitize_coverage" "null_pointer_is_valid" "optforfuzzing" "optnone" "optsize" "preallocated" "readnone" "readonly" "returned" "returns_twice"
-         "shadowcallstack" "speculatable" "speculative_load_hardening" "ssp" "sspreq" "sspstrong" "safestack" "sanitize_address" "sanitize_hwaddress" "sanitize_memtag"
-         "sanitize_thread" "sanitize_memory" "strictfp" "swifterror" "uwtable" "vscale_range" "willreturn" "writeonly" "immarg") 'symbols) . font-lock-constant-face)
+         "shadowcallstack" "signext" "speculatable" "speculative_load_hardening" "ssp" "sspreq" "sspstrong" "safestack" "sanitize_address" "sanitize_hwaddress" "sanitize_memtag"
+         "sanitize_thread" "sanitize_memory" "strictfp" "swifterror" "uwtable" "vscale_range" "willreturn" "writeonly" "zeroext") 'symbols) . font-lock-constant-face)
    ;; Variables
    '("%[-a-zA-Z$._][-a-zA-Z$._0-9]*" . font-lock-variable-name-face)
    ;; Labels
@@ -36,14 +36,14 @@
    '("%[-]?[0-9]+" . font-lock-variable-name-face)
    ;; Types
    `(,(regexp-opt
-       '("void" "i1" "i8" "i16" "i32" "i64" "i128" "half" "bfloat" "float" "double" "fp128" "x86_fp80" "ppc_fp128" "x86_mmx" "x86_amx"
+       '("void" "i1" "i8" "i16" "i32" "i64" "i128" "half" "bfloat" "float" "double" "fp128" "x86_fp80" "ppc_fp128" "x86_mmx" "x86_amx" "ptr"
          "type" "label" "opaque" "token") 'symbols) . font-lock-type-face)
    ;; Integer literals
    '("\\b[-]?[0-9]+\\b" . font-lock-preprocessor-face)
    ;; Floating point constants
    '("\\b[-+]?[0-9]+.[0-9]*\\([eE][-+]?[0-9]+\\)?\\b" . font-lock-preprocessor-face)
    ;; Hex constants
-   '("\\b0x[0-9A-Fa-f]+\\b" . font-lock-preprocessor-face)
+   '("\\b[us]?0x[0-9A-Fa-f]+\\b" . font-lock-preprocessor-face)
    ;; Keywords
    `(,(regexp-opt
        '(;; Toplevel entities
@@ -95,12 +95,21 @@
    `(,(regexp-opt '("uselistorder" "uselistorder_bb") 'symbols) . font-lock-keyword-face))
   "Syntax highlighting for LLVM.")
 
+(defun llvm-current-defun-name ()
+  "The `add-log-current-defun' function in LLVM mode."
+  (save-excursion
+    (end-of-line)
+    (if (re-search-backward "^[ \t]*define[ \t]+.+[ \t]+@\\(.+\\)(.*)" nil t)
+	(match-string-no-properties 1))))
+
 ;;;###autoload
 (define-derived-mode llvm-mode prog-mode "LLVM"
   "Major mode for editing LLVM source files.
 \\{llvm-mode-map}
   Runs `llvm-mode-hook' on startup."
   (setq font-lock-defaults `(llvm-font-lock-keywords))
+  (setq-local defun-prompt-regexp "^[ \t]*define[ \t]+.+[ \t]+@.+(.*).+")
+  (setq-local add-log-current-defun-function #'llvm-current-defun-name)
   (setq-local comment-start ";"))
 
 ;; Associate .ll files with llvm-mode

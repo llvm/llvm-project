@@ -46,9 +46,9 @@
 
 ; INT: {{^}}Address
 ; INT: -----
-; INT-NEXT: 2 0 1 0 0 is_stmt{{$}}
-; INT-NEXT: 3 3 1 0 0 is_stmt prologue_end{{$}}
-; INT-NEXT: 4 3 1 0 0 is_stmt{{$}}
+; INT-NEXT: 2 0 1 0 0 0 is_stmt{{$}}
+; INT-NEXT: 3 3 1 0 0 0 is_stmt prologue_end{{$}}
+; INT-NEXT: 4 3 1 0 0 0 is_stmt{{$}}
 
 
 ; Function Attrs: nounwind uwtable

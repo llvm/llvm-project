@@ -165,7 +165,6 @@ If this worked well for you and you plan on doing it often, there's a slight
 optimization that can be made: LLVM and Clang have a tool called tblgen that's
 built and run during the build process. While it's potentially nice to build
 this for coverage as part of step 3, none of your other builds should benefit
-from building it. You can pass the CMake options
-``-DCLANG_TABLEGEN=/path/to/stage1/bin/clang-tblgen
--DLLVM_TABLEGEN=/path/to/stage1/bin/llvm-tblgen`` to steps 2 and onward to avoid
-these useless rebuilds.
+from building it. You can pass the CMake option
+``-DLLVM_NATIVE_TOOL_DIR=/path/to/stage1/bin``
+to steps 2 and onward to avoid these useless rebuilds.

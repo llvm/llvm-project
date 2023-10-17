@@ -103,7 +103,7 @@ uint32_t Opcode::GetData(DataExtractor &data) const {
         buf = GetOpcodeDataBytes();
         break;
       case Opcode::eType16:
-        *(uint16_t *)swap_buf = llvm::ByteSwap_16(m_data.inst16);
+        *(uint16_t *)swap_buf = llvm::byteswap<uint16_t>(m_data.inst16);
         buf = swap_buf;
         break;
       case Opcode::eType16_2:
@@ -114,11 +114,11 @@ uint32_t Opcode::GetData(DataExtractor &data) const {
         buf = swap_buf;
         break;
       case Opcode::eType32:
-        *(uint32_t *)swap_buf = llvm::ByteSwap_32(m_data.inst32);
+        *(uint32_t *)swap_buf = llvm::byteswap<uint32_t>(m_data.inst32);
         buf = swap_buf;
         break;
       case Opcode::eType64:
-        *(uint32_t *)swap_buf = llvm::ByteSwap_64(m_data.inst64);
+        *(uint32_t *)swap_buf = llvm::byteswap<uint64_t>(m_data.inst64);
         buf = swap_buf;
         break;
       case Opcode::eTypeBytes:

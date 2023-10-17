@@ -111,11 +111,9 @@ define i24 @test_bitreverse_i24(i24 %a) nounwind {
 define i48 @test_bitreverse_i48(i48 %a) nounwind {
 ; LA32-LABEL: test_bitreverse_i48:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    bitrev.w $a1, $a1
-; LA32-NEXT:    srli.w $a1, $a1, 16
 ; LA32-NEXT:    bitrev.w $a2, $a0
-; LA32-NEXT:    slli.w $a0, $a2, 16
-; LA32-NEXT:    or $a0, $a1, $a0
+; LA32-NEXT:    bitrev.w $a0, $a1
+; LA32-NEXT:    bytepick.w $a0, $a0, $a2, 2
 ; LA32-NEXT:    srli.w $a1, $a2, 16
 ; LA32-NEXT:    ret
 ;

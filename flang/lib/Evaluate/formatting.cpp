@@ -19,23 +19,43 @@
 
 namespace Fortran::evaluate {
 
-static void ShapeAsFortran(
-    llvm::raw_ostream &o, const ConstantSubscripts &shape) {
-  if (GetRank(shape) > 1) {
+// Constant arrays can have non-default lower bounds, but this can't be
+// expressed in Fortran syntax directly, only implied through the use of
+// named constant (PARAMETER) definitions.  For debugging, setting this flag
+// enables a non-standard %LBOUND=[...] argument to the RESHAPE intrinsic
+// calls used to dumy constants.  It's off by default so that this syntax
+// doesn't show up in module files.
+static const bool printLbounds{false};
+
+static void ShapeAsFortran(llvm::raw_ostream &o,
+    const ConstantSubscripts &shape, const ConstantSubscripts &lbounds,
+    bool hasNonDefaultLowerBound) {
+  if (GetRank(shape) > 1 || hasNonDefaultLowerBound) {
     o << ",shape=";
     char ch{'['};
     for (auto dim : shape) {
       o << ch << dim;
       ch = ',';
     }
-    o << "])";
+    o << ']';
+    if (hasNonDefaultLowerBound) {
+      o << ",%lbound=";
+      ch = '[';
+      for (auto lb : lbounds) {
+        o << ch << lb;
+        ch = ',';
+      }
+      o << ']';
+    }
+    o << ')';
   }
 }
 
 template <typename RESULT, typename VALUE>
 llvm::raw_ostream &ConstantBase<RESULT, VALUE>::AsFortran(
     llvm::raw_ostream &o) const {
-  if (Rank() > 1) {
+  bool hasNonDefaultLowerBound{printLbounds && HasNonDefaultLowerBound()};
+  if (Rank() > 1 || hasNonDefaultLowerBound) {
     o << "reshape(";
   }
   if (Rank() > 0) {
@@ -71,14 +91,15 @@ llvm::raw_ostream &ConstantBase<RESULT, VALUE>::AsFortran(
   if (Rank() > 0) {
     o << ']';
   }
-  ShapeAsFortran(o, shape());
+  ShapeAsFortran(o, shape(), lbounds(), hasNonDefaultLowerBound);
   return o;
 }
 
 template <int KIND>
 llvm::raw_ostream &Constant<Type<TypeCategory::Character, KIND>>::AsFortran(
     llvm::raw_ostream &o) const {
-  if (Rank() > 1) {
+  bool hasNonDefaultLowerBound{printLbounds && HasNonDefaultLowerBound()};
+  if (Rank() > 1 || hasNonDefaultLowerBound) {
     o << "reshape(";
   }
   if (Rank() > 0) {
@@ -98,7 +119,7 @@ llvm::raw_ostream &Constant<Type<TypeCategory::Character, KIND>>::AsFortran(
   if (Rank() > 0) {
     o << ']';
   }
-  ShapeAsFortran(o, shape());
+  ShapeAsFortran(o, shape(), lbounds(), hasNonDefaultLowerBound);
   return o;
 }
 
@@ -135,6 +156,18 @@ llvm::raw_ostream &ProcedureRef::AsFortran(llvm::raw_ostream &o) const {
     }
   }
   proc_.AsFortran(o);
+  if (!chevrons_.empty()) {
+    bool first{true};
+    for (const auto &expr : chevrons_) {
+      if (first) {
+        expr.AsFortran(o << "<<<");
+        first = false;
+      } else {
+        expr.AsFortran(o << ",");
+      }
+    }
+    o << ">>>";
+  }
   char separator{'('};
   for (const auto &arg : arguments_) {
     if (arg && !arg->isPassedObject()) {
@@ -479,7 +512,11 @@ llvm::raw_ostream &StructureConstructor::AsFortran(llvm::raw_ostream &o) const {
 std::string DynamicType::AsFortran() const {
   if (derived_) {
     CHECK(category_ == TypeCategory::Derived);
-    return DerivedTypeSpecAsFortran(*derived_);
+    std::string result{DerivedTypeSpecAsFortran(*derived_)};
+    if (IsPolymorphic()) {
+      result = "CLASS("s + result + ')';
+    }
+    return result;
   } else if (charLengthParamValue_ || knownLength()) {
     std::string result{"CHARACTER(KIND="s + std::to_string(kind_) + ",LEN="};
     if (knownLength()) {

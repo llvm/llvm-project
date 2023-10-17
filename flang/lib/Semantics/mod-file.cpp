@@ -244,6 +244,14 @@ bool ModFileWriter::PutComponents(const Symbol &typeSymbol) {
   }
 }
 
+// Return the symbol's attributes that should be written
+// into the mod file.
+static Attrs getSymbolAttrsToWrite(const Symbol &symbol) {
+  // Is SAVE attribute is implicit, it should be omitted
+  // to not violate F202x C862 for a common block member.
+  return symbol.attrs() & ~(symbol.implicitAttrs() & Attrs{Attr::SAVE});
+}
+
 static llvm::raw_ostream &PutGenericName(
     llvm::raw_ostream &os, const Symbol &symbol) {
   if (IsGenericDefinedOp(symbol)) {
@@ -271,13 +279,6 @@ void ModFileWriter::PutSymbol(
               }
             } else {
               PutGeneric(symbol);
-              if (x.specific() && &x.specific()->owner() == &symbol.owner()) {
-                PutSymbol(typeBindings, *x.specific());
-              }
-              if (x.derivedType() &&
-                  &x.derivedType()->owner() == &symbol.owner()) {
-                PutSymbol(typeBindings, *x.derivedType());
-              }
             }
           },
           [&](const UseDetails &) { PutUse(symbol); },
@@ -321,7 +322,8 @@ void ModFileWriter::PutSymbol(
             }
             decls_ << '\n';
             if (symbol.attrs().test(Attr::BIND_C)) {
-              PutAttrs(decls_, symbol.attrs(), x.bindName(), ""s);
+              PutAttrs(decls_, getSymbolAttrsToWrite(symbol), x.bindName(),
+                  x.isExplicitBindName(), ""s);
               decls_ << "::/" << symbol.name() << "/\n";
             }
           },
@@ -329,9 +331,7 @@ void ModFileWriter::PutSymbol(
           [](const MiscDetails &) {},
           [&](const auto &) {
             PutEntity(decls_, symbol);
-            if (symbol.test(Symbol::Flag::OmpThreadprivate)) {
-              decls_ << "!$omp threadprivate(" << symbol.name() << ")\n";
-            }
+            PutDirective(decls_, symbol);
           },
       },
       symbol.details());
@@ -420,6 +420,35 @@ void ModFileWriter::PutDECStructure(
 static const Attrs subprogramPrefixAttrs{Attr::ELEMENTAL, Attr::IMPURE,
     Attr::MODULE, Attr::NON_RECURSIVE, Attr::PURE, Attr::RECURSIVE};
 
+static void PutOpenACCRoutineInfo(
+    llvm::raw_ostream &os, const SubprogramDetails &details) {
+  for (auto info : details.openACCRoutineInfos()) {
+    os << "!$acc routine";
+    if (info.isSeq()) {
+      os << " seq";
+    }
+    if (info.isGang()) {
+      os << " gang";
+      if (info.gangDim() > 0) {
+        os << "(dim: " << info.gangDim() << ")";
+      }
+    }
+    if (info.isVector()) {
+      os << " vector";
+    }
+    if (info.isWorker()) {
+      os << " worker";
+    }
+    if (info.isNohost()) {
+      os << " nohost";
+    }
+    if (info.bindName()) {
+      os << " bind(" << *info.bindName() << ")";
+    }
+    os << "\n";
+  }
+}
+
 void ModFileWriter::PutSubprogram(const Symbol &symbol) {
   auto &details{symbol.get<SubprogramDetails>()};
   if (const Symbol * interface{details.moduleInterface()}) {
@@ -455,7 +484,32 @@ void ModFileWriter::PutSubprogram(const Symbol &symbol) {
   if (isInterface) {
     os << (isAbstract ? "abstract " : "") << "interface\n";
   }
-  PutAttrs(os, prefixAttrs, nullptr, ""s, " "s);
+  PutAttrs(os, prefixAttrs, nullptr, false, ""s, " "s);
+  if (auto attrs{details.cudaSubprogramAttrs()}) {
+    if (*attrs == common::CUDASubprogramAttrs::HostDevice) {
+      os << "attributes(host,device) ";
+    } else {
+      PutLower(os << "attributes(", common::EnumToString(*attrs)) << ") ";
+    }
+    if (!details.cudaLaunchBounds().empty()) {
+      os << "launch_bounds";
+      char sep{'('};
+      for (auto x : details.cudaLaunchBounds()) {
+        os << sep << x;
+        sep = ',';
+      }
+      os << ") ";
+    }
+    if (!details.cudaClusterDims().empty()) {
+      os << "cluster_dims";
+      char sep{'('};
+      for (auto x : details.cudaClusterDims()) {
+        os << sep << x;
+        sep = ',';
+      }
+      os << ") ";
+    }
+  }
   os << (details.isFunction() ? "function " : "subroutine ");
   os << symbol.name() << '(';
   int n = 0;
@@ -470,7 +524,8 @@ void ModFileWriter::PutSubprogram(const Symbol &symbol) {
     }
   }
   os << ')';
-  PutAttrs(os, bindAttrs, details.bindName(), " "s, ""s);
+  PutAttrs(os, bindAttrs, details.bindName(), details.isExplicitBindName(),
+      " "s, ""s);
   if (details.isFunction()) {
     const Symbol &result{details.result()};
     if (result.name() != symbol.name()) {
@@ -478,7 +533,6 @@ void ModFileWriter::PutSubprogram(const Symbol &symbol) {
     }
   }
   os << '\n';
-
   // walk symbols, collect ones needed for interface
   const Scope &scope{
       details.entryScope() ? *details.entryScope() : DEREF(symbol.scope())};
@@ -496,6 +550,7 @@ void ModFileWriter::PutSubprogram(const Symbol &symbol) {
     decls_ << "import::" << import << "\n";
   }
   os << writer.decls_.str();
+  PutOpenACCRoutineInfo(os, details);
   os << "end\n";
   if (isInterface) {
     os << "end interface\n";
@@ -559,21 +614,8 @@ void ModFileWriter::PutUseExtraAttr(
   }
 }
 
-// When a generic interface has the same name as a derived type
-// in the same scope, the generic shadows the derived type.
-// If the derived type were declared first, emit the generic
-// interface at the position of derived type's declaration.
-// (ReplaceName() is not used for this purpose because doing so
-// would confusingly position error messages pertaining to the generic
-// interface upon the derived type's declaration.)
 static inline SourceName NameInModuleFile(const Symbol &symbol) {
-  if (const auto *generic{symbol.detailsIf<GenericDetails>()}) {
-    if (const auto *derivedTypeOverload{generic->derivedType()}) {
-      if (derivedTypeOverload->name().begin() < symbol.name().begin()) {
-        return derivedTypeOverload->name();
-      }
-    }
-  } else if (const auto *use{symbol.detailsIf<UseDetails>()}) {
+  if (const auto *use{symbol.detailsIf<UseDetails>()}) {
     if (use->symbol().attrs().test(Attr::PRIVATE)) {
       // Avoid the use in sorting of names created to access private
       // specific procedures as a result of generic resolution;
@@ -585,10 +627,10 @@ static inline SourceName NameInModuleFile(const Symbol &symbol) {
 }
 
 // Collect the symbols of this scope sorted by their original order, not name.
-// Namelists are an exception: they are sorted after other symbols.
+// Generics and namelists are exceptions: they are sorted after other symbols.
 void CollectSymbols(
     const Scope &scope, SymbolVector &sorted, SymbolVector &uses) {
-  SymbolVector namelist;
+  SymbolVector namelist, generics;
   std::size_t commonSize{scope.commonBlocks().size()};
   auto symbols{scope.GetSymbols()};
   sorted.reserve(symbols.size() + commonSize);
@@ -596,6 +638,15 @@ void CollectSymbols(
     if (!symbol->test(Symbol::Flag::ParentComp)) {
       if (symbol->has<NamelistDetails>()) {
         namelist.push_back(symbol);
+      } else if (const auto *generic{symbol->detailsIf<GenericDetails>()}) {
+        if (generic->specific() &&
+            &generic->specific()->owner() == &symbol->owner()) {
+          sorted.push_back(*generic->specific());
+        } else if (generic->derivedType() &&
+            &generic->derivedType()->owner() == &symbol->owner()) {
+          sorted.push_back(*generic->derivedType());
+        }
+        generics.push_back(symbol);
       } else {
         sorted.push_back(symbol);
       }
@@ -606,9 +657,12 @@ void CollectSymbols(
   }
   // Sort most symbols by name: use of Symbol::ReplaceName ensures the source
   // location of a symbol's name is the first "real" use.
-  std::sort(sorted.begin(), sorted.end(), [](SymbolRef x, SymbolRef y) {
-    return NameInModuleFile(x).begin() < NameInModuleFile(y).begin();
-  });
+  auto sorter{[](SymbolRef x, SymbolRef y) {
+    return NameInModuleFile(*x).begin() < NameInModuleFile(*y).begin();
+  }};
+  std::sort(sorted.begin(), sorted.end(), sorter);
+  std::sort(generics.begin(), generics.end(), sorter);
+  sorted.insert(sorted.end(), generics.begin(), generics.end());
   sorted.insert(sorted.end(), namelist.begin(), namelist.end());
   for (const auto &pair : scope.commonBlocks()) {
     sorted.push_back(*pair.second);
@@ -677,11 +731,51 @@ void ModFileWriter::PutObjectEntity(
   }
   PutEntity(
       os, symbol, [&]() { PutType(os, DEREF(symbol.GetType())); },
-      symbol.attrs());
+      getSymbolAttrsToWrite(symbol));
   PutShape(os, details.shape(), '(', ')');
   PutShape(os, details.coshape(), '[', ']');
   PutInit(os, symbol, details.init(), details.unanalyzedPDTComponentInit());
   os << '\n';
+  if (auto tkr{GetIgnoreTKR(symbol)}; !tkr.empty()) {
+    os << "!dir$ ignore_tkr(";
+    tkr.IterateOverMembers([&](common::IgnoreTKR tkr) {
+      switch (tkr) {
+        SWITCH_COVERS_ALL_CASES
+      case common::IgnoreTKR::Type:
+        os << 't';
+        break;
+      case common::IgnoreTKR::Kind:
+        os << 'k';
+        break;
+      case common::IgnoreTKR::Rank:
+        os << 'r';
+        break;
+      case common::IgnoreTKR::Device:
+        os << 'd';
+        break;
+      case common::IgnoreTKR::Managed:
+        os << 'm';
+        break;
+      case common::IgnoreTKR::Contiguous:
+        os << 'c';
+        break;
+      }
+    });
+    os << ") " << symbol.name() << '\n';
+  }
+  if (auto attr{details.cudaDataAttr()}) {
+    PutLower(os << "attributes(", common::EnumToString(*attr))
+        << ") " << symbol.name() << '\n';
+  }
+  if (symbol.test(Fortran::semantics::Symbol::Flag::CrayPointer)) {
+    if (!symbol.owner().crayPointers().empty()) {
+      for (const auto &[pointee, pointer] : symbol.owner().crayPointers()) {
+        if (pointer == symbol) {
+          os << "pointer(" << symbol.name() << "," << pointee << ")\n";
+        }
+      }
+    }
+  }
 }
 
 void ModFileWriter::PutProcEntity(llvm::raw_ostream &os, const Symbol &symbol) {
@@ -766,7 +860,7 @@ void PutBound(llvm::raw_ostream &os, const Bound &x) {
 void ModFileWriter::PutEntity(llvm::raw_ostream &os, const Symbol &symbol,
     std::function<void()> writeType, Attrs attrs) {
   writeType();
-  PutAttrs(os, attrs, symbol.GetBindName());
+  PutAttrs(os, attrs, symbol.GetBindName(), symbol.GetIsExplicitBindName());
   if (symbol.owner().kind() == Scope::Kind::DerivedType &&
       context_.IsTempName(symbol.name().ToString())) {
     os << "::%FILL";
@@ -778,14 +872,19 @@ void ModFileWriter::PutEntity(llvm::raw_ostream &os, const Symbol &symbol,
 // Put out each attribute to os, surrounded by `before` and `after` and
 // mapped to lower case.
 llvm::raw_ostream &ModFileWriter::PutAttrs(llvm::raw_ostream &os, Attrs attrs,
-    const std::string *bindName, std::string before, std::string after) const {
+    const std::string *bindName, bool isExplicitBindName, std::string before,
+    std::string after) const {
   attrs.set(Attr::PUBLIC, false); // no need to write PUBLIC
   attrs.set(Attr::EXTERNAL, false); // no need to write EXTERNAL
   if (isSubmodule_) {
     attrs.set(Attr::PRIVATE, false);
   }
-  if (bindName) {
-    os << before << "bind(c, name=\"" << *bindName << "\")" << after;
+  if (bindName || isExplicitBindName) {
+    os << before << "bind(c";
+    if (isExplicitBindName) {
+      os << ",name=\"" << (bindName ? *bindName : ""s) << '"';
+    }
+    os << ')' << after;
     attrs.set(Attr::BIND_C, false);
   }
   for (std::size_t i{0}; i < Attr_enumSize; ++i) {
@@ -810,6 +909,46 @@ llvm::raw_ostream &PutLower(llvm::raw_ostream &os, std::string_view str) {
     os << parser::ToLowerCaseLetter(c);
   }
   return os;
+}
+
+void PutOpenACCDirective(llvm::raw_ostream &os, const Symbol &symbol) {
+  if (symbol.test(Symbol::Flag::AccDeclare)) {
+    os << "!$acc declare ";
+    if (symbol.test(Symbol::Flag::AccCopy)) {
+      os << "copy";
+    } else if (symbol.test(Symbol::Flag::AccCopyIn) ||
+        symbol.test(Symbol::Flag::AccCopyInReadOnly)) {
+      os << "copyin";
+    } else if (symbol.test(Symbol::Flag::AccCopyOut)) {
+      os << "copyout";
+    } else if (symbol.test(Symbol::Flag::AccCreate)) {
+      os << "create";
+    } else if (symbol.test(Symbol::Flag::AccPresent)) {
+      os << "present";
+    } else if (symbol.test(Symbol::Flag::AccDevicePtr)) {
+      os << "deviceptr";
+    } else if (symbol.test(Symbol::Flag::AccDeviceResident)) {
+      os << "device_resident";
+    } else if (symbol.test(Symbol::Flag::AccLink)) {
+      os << "link";
+    }
+    os << "(";
+    if (symbol.test(Symbol::Flag::AccCopyInReadOnly)) {
+      os << "readonly: ";
+    }
+    os << symbol.name() << ")\n";
+  }
+}
+
+void PutOpenMPDirective(llvm::raw_ostream &os, const Symbol &symbol) {
+  if (symbol.test(Symbol::Flag::OmpThreadprivate)) {
+    os << "!$omp threadprivate(" << symbol.name() << ")\n";
+  }
+}
+
+void ModFileWriter::PutDirective(llvm::raw_ostream &os, const Symbol &symbol) {
+  PutOpenACCDirective(os, symbol);
+  PutOpenMPDirective(os, symbol);
 }
 
 struct Temp {
@@ -957,14 +1096,17 @@ Scope *ModFileReader::Read(const SourceName &name,
   options.isModuleFile = true;
   options.features.Enable(common::LanguageFeature::BackslashEscapes);
   options.features.Enable(common::LanguageFeature::OpenMP);
+  options.features.Enable(common::LanguageFeature::CUDA);
   if (!isIntrinsic.value_or(false) && !notAModule) {
     // The search for this module file will scan non-intrinsic module
     // directories.  If a directory is in both the intrinsic and non-intrinsic
     // directory lists, the intrinsic module directory takes precedence.
     options.searchDirectories = context_.searchDirectories();
     for (const auto &dir : context_.intrinsicModuleDirectories()) {
-      std::remove(options.searchDirectories.begin(),
-          options.searchDirectories.end(), dir);
+      options.searchDirectories.erase(
+          std::remove(options.searchDirectories.begin(),
+              options.searchDirectories.end(), dir),
+          options.searchDirectories.end());
     }
     options.searchDirectories.insert(options.searchDirectories.begin(), "."s);
   }

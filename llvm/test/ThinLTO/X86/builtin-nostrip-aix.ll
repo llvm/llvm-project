@@ -30,7 +30,7 @@
 ; CHECK-NM: D __ssp_canary_word
 ; CHECK-NM: T __stack_chk_fail
 
-target datalayout = "E-m:a-p:32:32-i64:64-n32"
+target datalayout = "E-m:a-p:32:32-Fi32-i64:64-n32"
 target triple = "powerpc-ibm-aix-xcoff"
 
 define void @bar() {

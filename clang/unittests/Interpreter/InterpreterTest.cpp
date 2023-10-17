@@ -17,6 +17,7 @@
 #include "clang/AST/Mangle.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
+#include "clang/Interpreter/Value.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 
@@ -33,6 +34,11 @@ using namespace clang;
 #define CLANG_INTERPRETER_NO_SUPPORT_EXEC
 #endif
 
+int Global = 42;
+// JIT reports symbol not found on Windows without the visibility attribute.
+REPL_EXTERNAL_VISIBILITY int getGlobal() { return Global; }
+REPL_EXTERNAL_VISIBILITY void setGlobal(int val) { Global = val; }
+
 namespace {
 using Args = std::vector<const char *>;
 static std::unique_ptr<Interpreter>
@@ -40,7 +46,9 @@ createInterpreter(const Args &ExtraArgs = {},
                   DiagnosticConsumer *Client = nullptr) {
   Args ClangArgs = {"-Xclang", "-emit-llvm-only"};
   ClangArgs.insert(ClangArgs.end(), ExtraArgs.begin(), ExtraArgs.end());
-  auto CI = cantFail(clang::IncrementalCompilerBuilder::create(ClangArgs));
+  auto CB = clang::IncrementalCompilerBuilder();
+  CB.SetCompilerArgs(ClangArgs);
+  auto CI = cantFail(CB.CreateCpp());
   if (Client)
     CI->getDiagnostics().setClient(Client, /*ShouldOwnClient=*/false);
   return cantFail(clang::Interpreter::create(std::move(CI)));
@@ -224,10 +232,20 @@ TEST(IncrementalProcessing, FindMangledNameSymbol) {
   }
 
   std::string MangledName = MangleName(FD);
-  auto Addr = cantFail(Interp->getSymbolAddress(MangledName));
-  EXPECT_NE(0U, Addr);
+  auto Addr = Interp->getSymbolAddress(MangledName);
+  EXPECT_FALSE(!Addr);
+  EXPECT_NE(0U, Addr->getValue());
   GlobalDecl GD(FD);
-  EXPECT_EQ(Addr, cantFail(Interp->getSymbolAddress(GD)));
+  EXPECT_EQ(*Addr, cantFail(Interp->getSymbolAddress(GD)));
+  cantFail(
+      Interp->ParseAndExecute("extern \"C\" int printf(const char*,...);"));
+  Addr = Interp->getSymbolAddress("printf");
+  EXPECT_FALSE(!Addr);
+
+  // FIXME: Re-enable when we investigate the way we handle dllimports on Win.
+#ifndef _WIN32
+  EXPECT_EQ((uintptr_t)&printf, Addr->getValue());
+#endif // _WIN32
 }
 
 static void *AllocateObject(TypeDecl *TD, Interpreter &Interp) {
@@ -276,8 +294,7 @@ TEST(IncrementalProcessing, InstantiateTemplate) {
   std::vector<const char *> Args = {"-fno-delayed-template-parsing"};
   std::unique_ptr<Interpreter> Interp = createInterpreter(Args);
 
-  llvm::cantFail(Interp->Parse("void* operator new(__SIZE_TYPE__, void* __p);"
-                               "extern \"C\" int printf(const char*,...);"
+  llvm::cantFail(Interp->Parse("extern \"C\" int printf(const char*,...);"
                                "class A {};"
                                "struct B {"
                                "  template<typename T>"
@@ -309,9 +326,109 @@ TEST(IncrementalProcessing, InstantiateTemplate) {
 
   std::string MangledName = MangleName(TmpltSpec);
   typedef int (*TemplateSpecFn)(void *);
-  auto fn = (TemplateSpecFn)cantFail(Interp->getSymbolAddress(MangledName));
+  auto fn =
+      cantFail(Interp->getSymbolAddress(MangledName)).toPtr<TemplateSpecFn>();
   EXPECT_EQ(42, fn(NewA));
   free(NewA);
 }
 
+#ifdef CLANG_INTERPRETER_NO_SUPPORT_EXEC
+TEST(InterpreterTest, DISABLED_Value) {
+#else
+TEST(InterpreterTest, Value) {
+#endif
+  // We cannot execute on the platform.
+  if (!HostSupportsJit())
+    return;
+
+  std::unique_ptr<Interpreter> Interp = createInterpreter();
+
+  Value V1;
+  llvm::cantFail(Interp->ParseAndExecute("int x = 42;"));
+  llvm::cantFail(Interp->ParseAndExecute("x", &V1));
+  EXPECT_TRUE(V1.isValid());
+  EXPECT_TRUE(V1.hasValue());
+  EXPECT_EQ(V1.getInt(), 42);
+  EXPECT_EQ(V1.convertTo<int>(), 42);
+  EXPECT_TRUE(V1.getType()->isIntegerType());
+  EXPECT_EQ(V1.getKind(), Value::K_Int);
+  EXPECT_FALSE(V1.isManuallyAlloc());
+
+  Value V2;
+  llvm::cantFail(Interp->ParseAndExecute("double y = 3.14;"));
+  llvm::cantFail(Interp->ParseAndExecute("y", &V2));
+  EXPECT_TRUE(V2.isValid());
+  EXPECT_TRUE(V2.hasValue());
+  EXPECT_EQ(V2.getDouble(), 3.14);
+  EXPECT_EQ(V2.convertTo<double>(), 3.14);
+  EXPECT_TRUE(V2.getType()->isFloatingType());
+  EXPECT_EQ(V2.getKind(), Value::K_Double);
+  EXPECT_FALSE(V2.isManuallyAlloc());
+
+  Value V3;
+  llvm::cantFail(Interp->ParseAndExecute(
+      "struct S { int* p; S() { p = new int(42); } ~S() { delete p; }};"));
+  llvm::cantFail(Interp->ParseAndExecute("S{}", &V3));
+  EXPECT_TRUE(V3.isValid());
+  EXPECT_TRUE(V3.hasValue());
+  EXPECT_TRUE(V3.getType()->isRecordType());
+  EXPECT_EQ(V3.getKind(), Value::K_PtrOrObj);
+  EXPECT_TRUE(V3.isManuallyAlloc());
+
+  Value V4;
+  llvm::cantFail(Interp->ParseAndExecute("int getGlobal();"));
+  llvm::cantFail(Interp->ParseAndExecute("void setGlobal(int);"));
+  llvm::cantFail(Interp->ParseAndExecute("getGlobal()", &V4));
+  EXPECT_EQ(V4.getInt(), 42);
+  EXPECT_TRUE(V4.getType()->isIntegerType());
+
+  Value V5;
+  // Change the global from the compiled code.
+  setGlobal(43);
+  llvm::cantFail(Interp->ParseAndExecute("getGlobal()", &V5));
+  EXPECT_EQ(V5.getInt(), 43);
+  EXPECT_TRUE(V5.getType()->isIntegerType());
+
+  // Change the global from the interpreted code.
+  llvm::cantFail(Interp->ParseAndExecute("setGlobal(44);"));
+  EXPECT_EQ(getGlobal(), 44);
+
+  Value V6;
+  llvm::cantFail(Interp->ParseAndExecute("void foo() {}"));
+  llvm::cantFail(Interp->ParseAndExecute("foo()", &V6));
+  EXPECT_TRUE(V6.isValid());
+  EXPECT_FALSE(V6.hasValue());
+  EXPECT_TRUE(V6.getType()->isVoidType());
+  EXPECT_EQ(V6.getKind(), Value::K_Void);
+  EXPECT_FALSE(V2.isManuallyAlloc());
+
+  Value V7;
+  llvm::cantFail(Interp->ParseAndExecute("foo", &V7));
+  EXPECT_TRUE(V7.isValid());
+  EXPECT_TRUE(V7.hasValue());
+  EXPECT_TRUE(V7.getType()->isFunctionProtoType());
+  EXPECT_EQ(V7.getKind(), Value::K_PtrOrObj);
+  EXPECT_FALSE(V7.isManuallyAlloc());
+
+  Value V8;
+  llvm::cantFail(Interp->ParseAndExecute("struct SS{ void f() {} };"));
+  llvm::cantFail(Interp->ParseAndExecute("&SS::f", &V8));
+  EXPECT_TRUE(V8.isValid());
+  EXPECT_TRUE(V8.hasValue());
+  EXPECT_TRUE(V8.getType()->isMemberFunctionPointerType());
+  EXPECT_EQ(V8.getKind(), Value::K_PtrOrObj);
+  EXPECT_TRUE(V8.isManuallyAlloc());
+
+  Value V9;
+  llvm::cantFail(Interp->ParseAndExecute("struct A { virtual int f(); };"));
+  llvm::cantFail(
+      Interp->ParseAndExecute("struct B : A { int f() { return 42; }};"));
+  llvm::cantFail(Interp->ParseAndExecute("int (B::*ptr)() = &B::f;"));
+  llvm::cantFail(Interp->ParseAndExecute("ptr", &V9));
+  EXPECT_TRUE(V9.isValid());
+  EXPECT_TRUE(V9.hasValue());
+  EXPECT_TRUE(V9.getType()->isMemberFunctionPointerType());
+  EXPECT_EQ(V9.getKind(), Value::K_PtrOrObj);
+  EXPECT_TRUE(V9.isManuallyAlloc());
+}
 } // end anonymous namespace

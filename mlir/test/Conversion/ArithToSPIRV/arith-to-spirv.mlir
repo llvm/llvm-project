@@ -179,6 +179,13 @@ func.func @int_vector234(%arg0: vector<2xi8>, %arg1: vector<4xi64>) {
   return
 }
 
+// CHECK-LABEL: @index_vector
+func.func @index_vector(%arg0: vector<4xindex>) {
+  // CHECK: spirv.UMod %{{.*}}, %{{.*}}: vector<4xi32>
+  %0 = arith.remui %arg0, %arg0: vector<4xindex>
+  return
+}
+
 // CHECK-LABEL: @vector_srem
 // CHECK-SAME: (%[[LHS:.+]]: vector<3xi16>, %[[RHS:.+]]: vector<3xi16>)
 func.func @vector_srem(%arg0: vector<3xi16>, %arg1: vector<3xi16>) {
@@ -414,6 +421,31 @@ func.func @cmpi(%arg0 : i32, %arg1 : i32) {
   %8 = arith.cmpi ugt, %arg0, %arg1 : i32
   // CHECK: spirv.UGreaterThanEqual
   %9 = arith.cmpi uge, %arg0, %arg1 : i32
+  return
+}
+
+// CHECK-LABEL: @indexcmpi
+func.func @indexcmpi(%arg0 : index, %arg1 : index) {
+  // CHECK: spirv.IEqual
+  %0 = arith.cmpi eq, %arg0, %arg1 : index
+  // CHECK: spirv.INotEqual
+  %1 = arith.cmpi ne, %arg0, %arg1 : index
+  // CHECK: spirv.SLessThan
+  %2 = arith.cmpi slt, %arg0, %arg1 : index
+  // CHECK: spirv.SLessThanEqual
+  %3 = arith.cmpi sle, %arg0, %arg1 : index
+  // CHECK: spirv.SGreaterThan
+  %4 = arith.cmpi sgt, %arg0, %arg1 : index
+  // CHECK: spirv.SGreaterThanEqual
+  %5 = arith.cmpi sge, %arg0, %arg1 : index
+  // CHECK: spirv.ULessThan
+  %6 = arith.cmpi ult, %arg0, %arg1 : index
+  // CHECK: spirv.ULessThanEqual
+  %7 = arith.cmpi ule, %arg0, %arg1 : index
+  // CHECK: spirv.UGreaterThan
+  %8 = arith.cmpi ugt, %arg0, %arg1 : index
+  // CHECK: spirv.UGreaterThanEqual
+  %9 = arith.cmpi uge, %arg0, %arg1 : index
   return
 }
 
@@ -958,6 +990,70 @@ func.func @fpext2(%arg0 : f32) -> f64 {
   return %0: f64
 }
 
+// CHECK-LABEL: @trunci4_scalar
+//  CHECK-SAME: %[[ARG:.*]]: i32
+func.func @trunci4_scalar(%arg0 : i32) -> i4 {
+  // CHECK: %[[MASK:.+]] = spirv.Constant 15 : i32
+  // CHECK: %[[AND:.+]] = spirv.BitwiseAnd %[[ARG]], %[[MASK]] : i32
+  %0 = arith.trunci %arg0 : i32 to i4
+  // CHECK: %[[RET:.+]] = builtin.unrealized_conversion_cast %[[AND]] : i32 to i4
+  // CHECK: return %[[RET]] : i4
+  return %0 : i4
+}
+
+// CHECK-LABEL: @trunci4_vector
+//  CHECK-SAME: %[[ARG:.*]]: vector<2xi32>
+func.func @trunci4_vector(%arg0 : vector<2xi32>) -> vector<2xi4> {
+  // CHECK: %[[MASK:.+]] = spirv.Constant dense<15> : vector<2xi32>
+  // CHECK: %[[AND:.+]] = spirv.BitwiseAnd %[[ARG]], %[[MASK]] : vector<2xi32>
+  %0 = arith.trunci %arg0 : vector<2xi32> to vector<2xi4>
+  // CHECK: %[[RET:.+]] = builtin.unrealized_conversion_cast %[[AND]] : vector<2xi32> to vector<2xi4>
+  // CHECK: return %[[RET]] : vector<2xi4>
+  return %0 : vector<2xi4>
+}
+
+// CHECK-LABEL: @zexti4_scalar
+func.func @zexti4_scalar(%arg0: i4) -> i32 {
+  // CHECK: %[[INPUT:.+]] = builtin.unrealized_conversion_cast %{{.+}} : i4 to i32
+  // CHECK: %[[MASK:.+]] = spirv.Constant 15 : i32
+  // CHECK: %[[AND:.+]] = spirv.BitwiseAnd %[[INPUT]], %[[MASK]] : i32
+  %0 = arith.extui %arg0 : i4 to i32
+  // CHECK: return %[[AND]] : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: @zexti4_vector
+func.func @zexti4_vector(%arg0: vector<3xi4>) -> vector<3xi32> {
+  // CHECK: %[[INPUT:.+]] = builtin.unrealized_conversion_cast %{{.+}} : vector<3xi4> to vector<3xi32>
+  // CHECK: %[[MASK:.+]] = spirv.Constant dense<15> : vector<3xi32>
+  // CHECK: %[[AND:.+]] = spirv.BitwiseAnd %[[INPUT]], %[[MASK]] : vector<3xi32>
+  %0 = arith.extui %arg0 : vector<3xi4> to vector<3xi32>
+  // CHECK: return %[[AND]] : vector<3xi32>
+  return %0 : vector<3xi32>
+}
+
+// CHECK-LABEL: @sexti4_scalar
+func.func @sexti4_scalar(%arg0: i4) -> i32 {
+  // CHECK: %[[INPUT:.+]] = builtin.unrealized_conversion_cast %arg0 : i4 to i32
+  // CHECK: %[[SIZE:.+]] = spirv.Constant 28 : i32
+  // CHECK: %[[SL:.+]] = spirv.ShiftLeftLogical %[[INPUT]], %[[SIZE]] : i32, i32
+  // CHECK: %[[SR:.+]] = spirv.ShiftRightArithmetic %[[SL]], %[[SIZE]] : i32, i32
+  %0 = arith.extsi %arg0 : i4 to i32
+  // CHECK: return %[[SR]] : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: @sexti4_vector
+func.func @sexti4_vector(%arg0: vector<4xi4>) -> vector<4xi32> {
+  // CHECK: %[[INPUT:.+]] = builtin.unrealized_conversion_cast %arg0 : vector<4xi4> to vector<4xi32>
+  // CHECK: %[[SIZE:.+]] = spirv.Constant dense<28> : vector<4xi32>
+  // CHECK: %[[SL:.+]] = spirv.ShiftLeftLogical %[[INPUT]], %[[SIZE]] : vector<4xi32>, vector<4xi32>
+  // CHECK: %[[SR:.+]] = spirv.ShiftRightArithmetic %[[SL]], %[[SIZE]] : vector<4xi32>, vector<4xi32>
+  %0 = arith.extsi %arg0 : vector<4xi4> to vector<4xi32>
+  // CHECK: return %[[SR]] : vector<4xi32>
+  return %0 : vector<4xi32>
+}
+
 } // end module
 
 // -----
@@ -1028,31 +1124,50 @@ func.func @float32_binary_scalar(%lhs: f32, %rhs: f32) {
   return
 }
 
-// CHECK-LABEL: @float32_minf_scalar
+// CHECK-LABEL: @float32_minimumf_scalar
 // CHECK-SAME: %[[LHS:.+]]: f32, %[[RHS:.+]]: f32
-func.func @float32_minf_scalar(%arg0 : f32, %arg1 : f32) -> f32 {
+func.func @float32_minimumf_scalar(%arg0 : f32, %arg1 : f32) -> f32 {
   // CHECK: %[[MIN:.+]] = spirv.CL.fmin %arg0, %arg1 : f32
   // CHECK: %[[LHS_NAN:.+]] = spirv.IsNan %[[LHS]] : f32
   // CHECK: %[[RHS_NAN:.+]] = spirv.IsNan %[[RHS]] : f32
   // CHECK: %[[SELECT1:.+]] = spirv.Select %[[LHS_NAN]], %[[LHS]], %[[MIN]]
   // CHECK: %[[SELECT2:.+]] = spirv.Select %[[RHS_NAN]], %[[RHS]], %[[SELECT1]]
-  %0 = arith.minf %arg0, %arg1 : f32
+  %0 = arith.minimumf %arg0, %arg1 : f32
   // CHECK: return %[[SELECT2]]
   return %0: f32
 }
 
-// CHECK-LABEL: @float32_maxf_scalar
+// CHECK-LABEL: @float32_minnumf_scalar
+// CHECK-SAME: %[[LHS:.+]]: f32, %[[RHS:.+]]: f32
+func.func @float32_minnumf_scalar(%arg0 : f32, %arg1 : f32) -> f32 {
+  // CHECK: %[[MIN:.+]] = spirv.CL.fmin %arg0, %arg1 : f32
+  %0 = arith.minnumf %arg0, %arg1 : f32
+  // CHECK: return %[[MIN]]
+  return %0: f32
+}
+
+// CHECK-LABEL: @float32_maximumf_scalar
 // CHECK-SAME: %[[LHS:.+]]: vector<2xf32>, %[[RHS:.+]]: vector<2xf32>
-func.func @float32_maxf_scalar(%arg0 : vector<2xf32>, %arg1 : vector<2xf32>) -> vector<2xf32> {
+func.func @float32_maximumf_scalar(%arg0 : vector<2xf32>, %arg1 : vector<2xf32>) -> vector<2xf32> {
   // CHECK: %[[MAX:.+]] = spirv.CL.fmax %arg0, %arg1 : vector<2xf32>
   // CHECK: %[[LHS_NAN:.+]] = spirv.IsNan %[[LHS]] : vector<2xf32>
   // CHECK: %[[RHS_NAN:.+]] = spirv.IsNan %[[RHS]] : vector<2xf32>
   // CHECK: %[[SELECT1:.+]] = spirv.Select %[[LHS_NAN]], %[[LHS]], %[[MAX]]
   // CHECK: %[[SELECT2:.+]] = spirv.Select %[[RHS_NAN]], %[[RHS]], %[[SELECT1]]
-  %0 = arith.maxf %arg0, %arg1 : vector<2xf32>
+  %0 = arith.maximumf %arg0, %arg1 : vector<2xf32>
   // CHECK: return %[[SELECT2]]
   return %0: vector<2xf32>
 }
+
+// CHECK-LABEL: @float32_maxnumf_scalar
+// CHECK-SAME: %[[LHS:.+]]: vector<2xf32>, %[[RHS:.+]]: vector<2xf32>
+func.func @float32_maxnumf_scalar(%arg0 : vector<2xf32>, %arg1 : vector<2xf32>) -> vector<2xf32> {
+  // CHECK: %[[MAX:.+]] = spirv.CL.fmax %arg0, %arg1 : vector<2xf32>
+  %0 = arith.maxnumf %arg0, %arg1 : vector<2xf32>
+  // CHECK: return %[[MAX]]
+  return %0: vector<2xf32>
+}
+
 
 // CHECK-LABEL: @scalar_srem
 // CHECK-SAME: (%[[LHS:.+]]: i32, %[[RHS:.+]]: i32)
@@ -1174,28 +1289,54 @@ func.func @float32_binary_scalar(%lhs: f32, %rhs: f32) {
   return
 }
 
-// CHECK-LABEL: @float32_minf_scalar
+// CHECK-LABEL: @float32_minimumf_scalar
 // CHECK-SAME: %[[LHS:.+]]: f32, %[[RHS:.+]]: f32
-func.func @float32_minf_scalar(%arg0 : f32, %arg1 : f32) -> f32 {
+func.func @float32_minimumf_scalar(%arg0 : f32, %arg1 : f32) -> f32 {
   // CHECK: %[[MIN:.+]] = spirv.GL.FMin %arg0, %arg1 : f32
   // CHECK: %[[LHS_NAN:.+]] = spirv.IsNan %[[LHS]] : f32
   // CHECK: %[[RHS_NAN:.+]] = spirv.IsNan %[[RHS]] : f32
   // CHECK: %[[SELECT1:.+]] = spirv.Select %[[LHS_NAN]], %[[LHS]], %[[MIN]]
   // CHECK: %[[SELECT2:.+]] = spirv.Select %[[RHS_NAN]], %[[RHS]], %[[SELECT1]]
-  %0 = arith.minf %arg0, %arg1 : f32
+  %0 = arith.minimumf %arg0, %arg1 : f32
   // CHECK: return %[[SELECT2]]
   return %0: f32
 }
 
-// CHECK-LABEL: @float32_maxf_scalar
+// CHECK-LABEL: @float32_minnumf_scalar
+// CHECK-SAME: %[[LHS:.+]]: f32, %[[RHS:.+]]: f32
+func.func @float32_minnumf_scalar(%arg0 : f32, %arg1 : f32) -> f32 {
+  // CHECK: %[[MIN:.+]] = spirv.GL.FMin %arg0, %arg1 : f32
+  // CHECK: %[[LHS_NAN:.+]] = spirv.IsNan %[[LHS]] : f32
+  // CHECK: %[[RHS_NAN:.+]] = spirv.IsNan %[[RHS]] : f32
+  // CHECK: %[[SELECT1:.+]] = spirv.Select %[[LHS_NAN]], %[[RHS]], %[[MIN]]
+  // CHECK: %[[SELECT2:.+]] = spirv.Select %[[RHS_NAN]], %[[LHS]], %[[SELECT1]]
+  %0 = arith.minnumf %arg0, %arg1 : f32
+  // CHECK: return %[[SELECT2]]
+  return %0: f32
+}
+
+// CHECK-LABEL: @float32_maximumf_scalar
 // CHECK-SAME: %[[LHS:.+]]: vector<2xf32>, %[[RHS:.+]]: vector<2xf32>
-func.func @float32_maxf_scalar(%arg0 : vector<2xf32>, %arg1 : vector<2xf32>) -> vector<2xf32> {
+func.func @float32_maximumf_scalar(%arg0 : vector<2xf32>, %arg1 : vector<2xf32>) -> vector<2xf32> {
   // CHECK: %[[MAX:.+]] = spirv.GL.FMax %arg0, %arg1 : vector<2xf32>
   // CHECK: %[[LHS_NAN:.+]] = spirv.IsNan %[[LHS]] : vector<2xf32>
   // CHECK: %[[RHS_NAN:.+]] = spirv.IsNan %[[RHS]] : vector<2xf32>
   // CHECK: %[[SELECT1:.+]] = spirv.Select %[[LHS_NAN]], %[[LHS]], %[[MAX]]
   // CHECK: %[[SELECT2:.+]] = spirv.Select %[[RHS_NAN]], %[[RHS]], %[[SELECT1]]
-  %0 = arith.maxf %arg0, %arg1 : vector<2xf32>
+  %0 = arith.maximumf %arg0, %arg1 : vector<2xf32>
+  // CHECK: return %[[SELECT2]]
+  return %0: vector<2xf32>
+}
+
+// CHECK-LABEL: @float32_maxnumf_scalar
+// CHECK-SAME: %[[LHS:.+]]: vector<2xf32>, %[[RHS:.+]]: vector<2xf32>
+func.func @float32_maxnumf_scalar(%arg0 : vector<2xf32>, %arg1 : vector<2xf32>) -> vector<2xf32> {
+  // CHECK: %[[MAX:.+]] = spirv.GL.FMax %arg0, %arg1 : vector<2xf32>
+  // CHECK: %[[LHS_NAN:.+]] = spirv.IsNan %[[LHS]] : vector<2xf32>
+  // CHECK: %[[RHS_NAN:.+]] = spirv.IsNan %[[RHS]] : vector<2xf32>
+  // CHECK: %[[SELECT1:.+]] = spirv.Select %[[LHS_NAN]], %[[RHS]], %[[MAX]]
+  // CHECK: %[[SELECT2:.+]] = spirv.Select %[[RHS_NAN]], %[[LHS]], %[[SELECT1]]
+  %0 = arith.maxnumf %arg0, %arg1 : vector<2xf32>
   // CHECK: return %[[SELECT2]]
   return %0: vector<2xf32>
 }

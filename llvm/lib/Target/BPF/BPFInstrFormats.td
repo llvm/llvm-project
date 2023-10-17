@@ -90,6 +90,7 @@ def BPF_IMM  : BPFModeModifer<0x0>;
 def BPF_ABS  : BPFModeModifer<0x1>;
 def BPF_IND  : BPFModeModifer<0x2>;
 def BPF_MEM  : BPFModeModifer<0x3>;
+def BPF_MEMSX  : BPFModeModifer<0x4>;
 def BPF_ATOMIC : BPFModeModifer<0x6>;
 
 class BPFAtomicFlag<bits<4> val> {

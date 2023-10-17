@@ -194,34 +194,60 @@ define <8 x i1> @t2_narrow(<8 x i16> %X) nounwind {
 }
 
 define <2 x i1> @t3_wide(<2 x i64> %X) nounwind {
-; CHECK-SSE-LABEL: t3_wide:
-; CHECK-SSE:       # %bb.0:
-; CHECK-SSE-NEXT:    movdqa {{.*#+}} xmm1 = [12297829382473034411,12297829382473034411]
-; CHECK-SSE-NEXT:    movdqa %xmm0, %xmm2
-; CHECK-SSE-NEXT:    pmuludq %xmm1, %xmm2
-; CHECK-SSE-NEXT:    movdqa %xmm0, %xmm3
-; CHECK-SSE-NEXT:    psrlq $32, %xmm3
-; CHECK-SSE-NEXT:    pmuludq %xmm1, %xmm3
-; CHECK-SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-SSE-NEXT:    paddq %xmm3, %xmm0
-; CHECK-SSE-NEXT:    psllq $32, %xmm0
-; CHECK-SSE-NEXT:    paddq %xmm2, %xmm0
-; CHECK-SSE-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; CHECK-SSE-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,0,2,2]
-; CHECK-SSE-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; CHECK-SSE-NEXT:    pand %xmm2, %xmm1
-; CHECK-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; CHECK-SSE-NEXT:    por %xmm1, %xmm0
-; CHECK-SSE-NEXT:    pcmpeqd %xmm1, %xmm1
-; CHECK-SSE-NEXT:    pxor %xmm0, %xmm1
-; CHECK-SSE-NEXT:    movq {{.*#+}} xmm0 = xmm1[0],zero
-; CHECK-SSE-NEXT:    retq
+; CHECK-SSE2-LABEL: t3_wide:
+; CHECK-SSE2:       # %bb.0:
+; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [12297829382473034411,12297829382473034411]
+; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm2
+; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm2
+; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm3
+; CHECK-SSE2-NEXT:    psrlq $32, %xmm3
+; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm3
+; CHECK-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE2-NEXT:    paddq %xmm3, %xmm0
+; CHECK-SSE2-NEXT:    psllq $32, %xmm0
+; CHECK-SSE2-NEXT:    paddq %xmm2, %xmm0
+; CHECK-SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; CHECK-SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,0,2,2]
+; CHECK-SSE2-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-SSE2-NEXT:    pand %xmm2, %xmm1
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; CHECK-SSE2-NEXT:    por %xmm1, %xmm0
+; CHECK-SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; CHECK-SSE2-NEXT:    pxor %xmm0, %xmm1
+; CHECK-SSE2-NEXT:    movq {{.*#+}} xmm0 = xmm1[0],zero
+; CHECK-SSE2-NEXT:    retq
+;
+; CHECK-SSE41-LABEL: t3_wide:
+; CHECK-SSE41:       # %bb.0:
+; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [12297829382473034411,12297829382473034411]
+; CHECK-SSE41-NEXT:    movdqa %xmm0, %xmm2
+; CHECK-SSE41-NEXT:    pmuludq %xmm1, %xmm2
+; CHECK-SSE41-NEXT:    movdqa %xmm0, %xmm3
+; CHECK-SSE41-NEXT:    psrlq $32, %xmm3
+; CHECK-SSE41-NEXT:    pmuludq %xmm1, %xmm3
+; CHECK-SSE41-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE41-NEXT:    paddq %xmm3, %xmm0
+; CHECK-SSE41-NEXT:    psllq $32, %xmm0
+; CHECK-SSE41-NEXT:    paddq %xmm2, %xmm0
+; CHECK-SSE41-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; CHECK-SSE41-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE41-NEXT:    pmovsxdq %xmm0, %xmm2
+; CHECK-SSE41-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-SSE41-NEXT:    pand %xmm2, %xmm1
+; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; CHECK-SSE41-NEXT:    por %xmm1, %xmm0
+; CHECK-SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
+; CHECK-SSE41-NEXT:    pxor %xmm0, %xmm1
+; CHECK-SSE41-NEXT:    movq {{.*#+}} xmm0 = xmm1[0],zero
+; CHECK-SSE41-NEXT:    retq
 ;
 ; CHECK-AVX1-LABEL: t3_wide:
 ; CHECK-AVX1:       # %bb.0:
-; CHECK-AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [12297829382473034411,12297829382473034411]
+; CHECK-AVX1-NEXT:    vmovddup {{.*#+}} xmm1 = [12297829382473034411,12297829382473034411]
+; CHECK-AVX1-NEXT:    # xmm1 = mem[0,0]
 ; CHECK-AVX1-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
 ; CHECK-AVX1-NEXT:    vpsrlq $32, %xmm0, %xmm3
 ; CHECK-AVX1-NEXT:    vpmuludq %xmm1, %xmm3, %xmm1
@@ -238,7 +264,7 @@ define <2 x i1> @t3_wide(<2 x i64> %X) nounwind {
 ;
 ; CHECK-AVX2-LABEL: t3_wide:
 ; CHECK-AVX2:       # %bb.0:
-; CHECK-AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [12297829382473034411,12297829382473034411]
+; CHECK-AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [12297829382473034411,12297829382473034411]
 ; CHECK-AVX2-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
 ; CHECK-AVX2-NEXT:    vpsrlq $32, %xmm0, %xmm3
 ; CHECK-AVX2-NEXT:    vpmuludq %xmm1, %xmm3, %xmm1

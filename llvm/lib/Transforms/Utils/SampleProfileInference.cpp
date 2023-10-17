@@ -20,6 +20,7 @@
 #include <queue>
 #include <set>
 #include <stack>
+#include <unordered_set>
 
 using namespace llvm;
 #define DEBUG_TYPE "sample-profile-inference"
@@ -158,7 +159,7 @@ public:
 
   /// Get the total flow from a given source node.
   /// Returns a list of pairs (target node, amount of flow to the target).
-  const std::vector<std::pair<uint64_t, int64_t>> getFlow(uint64_t Src) const {
+  std::vector<std::pair<uint64_t, int64_t>> getFlow(uint64_t Src) const {
     std::vector<std::pair<uint64_t, int64_t>> Flow;
     for (const auto &Edge : Edges[Src]) {
       if (Edge.Flow > 0)
@@ -1218,10 +1219,23 @@ void extractWeights(const ProfiParams &Params, MinCostMaxFlow &Network,
 #ifndef NDEBUG
 /// Verify that the provided block/jump weights are as expected.
 void verifyInput(const FlowFunction &Func) {
-  // Verify the entry block
+  // Verify entry and exit blocks
   assert(Func.Entry == 0 && Func.Blocks[0].isEntry());
+  size_t NumExitBlocks = 0;
   for (size_t I = 1; I < Func.Blocks.size(); I++) {
     assert(!Func.Blocks[I].isEntry() && "multiple entry blocks");
+    if (Func.Blocks[I].isExit())
+      NumExitBlocks++;
+  }
+  assert(NumExitBlocks > 0 && "cannot find exit blocks");
+
+  // Verify that there are no parallel edges
+  for (auto &Block : Func.Blocks) {
+    std::unordered_set<uint64_t> UniqueSuccs;
+    for (auto &Jump : Block.SuccJumps) {
+      auto It = UniqueSuccs.insert(Jump->Target);
+      assert(It.second && "input CFG contains parallel edges");
+    }
   }
   // Verify CFG jumps
   for (auto &Block : Func.Blocks) {
@@ -1304,8 +1318,26 @@ void verifyOutput(const FlowFunction &Func) {
 
 } // end of anonymous namespace
 
-/// Apply the profile inference algorithm for a given function
+/// Apply the profile inference algorithm for a given function and provided
+/// profi options
 void llvm::applyFlowInference(const ProfiParams &Params, FlowFunction &Func) {
+  // Check if the function has samples and assign initial flow values
+  bool HasSamples = false;
+  for (FlowBlock &Block : Func.Blocks) {
+    if (Block.Weight > 0)
+      HasSamples = true;
+    Block.Flow = Block.Weight;
+  }
+  for (FlowJump &Jump : Func.Jumps) {
+    if (Jump.Weight > 0)
+      HasSamples = true;
+    Jump.Flow = Jump.Weight;
+  }
+
+  // Quit early for functions with a single block or ones w/o samples
+  if (Func.Blocks.size() <= 1 || !HasSamples)
+    return;
+
 #ifndef NDEBUG
   // Verify the input data
   verifyInput(Func);

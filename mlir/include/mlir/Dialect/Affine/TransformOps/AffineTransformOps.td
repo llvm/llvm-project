@@ -9,9 +9,7 @@
 #ifndef AFFINE_TRANSFORM_OPS
 #define AFFINE_TRANSFORM_OPS
 
-include "mlir/Dialect/PDL/IR/PDLTypes.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
-include "mlir/Dialect/Transform/IR/TransformEffects.td"
 include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -51,16 +49,17 @@ def SimplifyBoundedAffineOpsOp
     TODO: Allow mixed PDL_Operation/int64_t for lower_bounds and upper_bounds.
   }];
 
-  let arguments = (ins PDL_Operation:$target,
-                       Variadic<PDL_Operation>:$bounded_values,
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                       Variadic<TransformHandleTypeInterface>:$bounded_values,
                        DenseI64ArrayAttr:$lower_bounds,
                        DenseI64ArrayAttr:$upper_bounds);
   let results = (outs);
   let hasVerifier = 1;
 
   let assemblyFormat = [{
-      $target `with` `[` $bounded_values `]`
+      $target `with` `[` ($bounded_values^ `:` type($bounded_values))? `]`
           `within` $lower_bounds `and` $upper_bounds attr-dict
+          `:` type($target)
   }];
 }
 

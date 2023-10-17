@@ -51,6 +51,8 @@ Lsection_abbrev:
   .byte  114                     ## DW_AT_str_offsets_base
   .byte  23                      ## DW_FORM_sec_offset
   .byte  0                       ## EOM(1)
+  .byte  0                       ## EOM(2)
+  .byte  0                       ## EOM(3)
 .section  __DWARF,__debug_info,regular,debug
 .set Lset0, Ldebug_info_end0-Ldebug_info_start0 ## Length of Unit
   .long  Lset0

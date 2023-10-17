@@ -17,22 +17,33 @@
 #define LLVM_UTILS_TABLEGEN_CODEGENTARGET_H
 
 #include "CodeGenHwModes.h"
-#include "CodeGenRegisters.h"
 #include "InfoByHwMode.h"
 #include "SDNodeProperties.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/MachineValueType.h"
+#include <cassert>
+#include <memory>
+#include <optional>
+#include <string>
+#include <vector>
 
 namespace llvm {
 
 class RecordKeeper;
 class Record;
 class CodeGenInstruction;
-struct CodeGenRegister;
+class CodeGenRegBank;
+class CodeGenRegister;
+class CodeGenRegisterClass;
 class CodeGenSchedModels;
-class CodeGenTarget;
+class CodeGenSubRegIndex;
 
 /// getValueType - Return the MVT::SimpleValueType that the specified TableGen
 /// record corresponds to.
-MVT::SimpleValueType getValueType(Record *Rec);
+MVT::SimpleValueType getValueType(const Record *Rec);
 
 StringRef getName(MVT::SimpleValueType T);
 StringRef getEnumName(MVT::SimpleValueType T);
@@ -122,9 +133,7 @@ public:
     return RegAltNameIndices;
   }
 
-  const CodeGenRegisterClass &getRegisterClass(Record *R) const {
-    return *getRegBank().getRegClass(R);
-  }
+  const CodeGenRegisterClass &getRegisterClass(Record *R) const;
 
   /// getRegisterVTs - Find the union of all possible SimpleValueTypes for the
   /// specified physical register.

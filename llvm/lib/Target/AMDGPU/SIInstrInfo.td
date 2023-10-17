@@ -50,14 +50,6 @@ def SIds_ordered_count : SDNode<"AMDGPUISD::DS_ORDERED_COUNT",
   [SDNPMayLoad, SDNPMayStore, SDNPMemOperand, SDNPHasChain, SDNPInGlue]
 >;
 
-def SIatomic_inc : SDNode<"AMDGPUISD::ATOMIC_INC", SDTAtomic2,
-  [SDNPMayLoad, SDNPMayStore, SDNPMemOperand, SDNPHasChain]
->;
-
-def SIatomic_dec : SDNode<"AMDGPUISD::ATOMIC_DEC", SDTAtomic2,
-  [SDNPMayLoad, SDNPMayStore, SDNPMemOperand, SDNPHasChain]
->;
-
 def SDTAtomic2_f32 : SDTypeProfile<1, 2, [
   SDTCisSameAs<0,2>, SDTCisFP<0>, SDTCisPtrTy<1>
 ]>;
@@ -218,6 +210,7 @@ defm SIbuffer_atomic_or : SDBufferAtomicNoRet;
 defm SIbuffer_atomic_xor : SDBufferAtomicNoRet;
 defm SIbuffer_atomic_inc : SDBufferAtomicNoRet;
 defm SIbuffer_atomic_dec : SDBufferAtomicNoRet;
+defm SIbuffer_atomic_csub : SDBufferAtomicNoRet;
 defm SIbuffer_atomic_fadd : SDBufferAtomicNoRet;
 defm SIbuffer_atomic_fmin : SDBufferAtomicNoRet;
 defm SIbuffer_atomic_fmax : SDBufferAtomicNoRet;
@@ -355,8 +348,6 @@ class isPackedType<ValueType SrcVT> {
 // PatFrags for global memory operations
 //===----------------------------------------------------------------------===//
 
-defm atomic_inc : binary_atomic_op_all_as<SIatomic_inc>;
-defm atomic_dec : binary_atomic_op_all_as<SIatomic_dec>;
 defm atomic_load_fmin : binary_atomic_op_all_as<SIatomic_fmin, 0>;
 defm atomic_load_fmax : binary_atomic_op_all_as<SIatomic_fmax, 0>;
 
@@ -614,14 +605,14 @@ def atomic_store_64_glue : PatFrag <
 }
 
 let IsAtomic = 1, AddressSpaces = StoreAddress_local.AddrSpaces in {
-def atomic_store_8_local_m0 : PatFrag<(ops node:$ptr, node:$val),
-                                       (atomic_store_8_glue node:$ptr, node:$val)>;
-def atomic_store_16_local_m0 : PatFrag<(ops node:$ptr, node:$val),
-                                       (atomic_store_16_glue node:$ptr, node:$val)>;
-def atomic_store_32_local_m0 : PatFrag<(ops node:$ptr, node:$val),
-                                       (atomic_store_32_glue node:$ptr, node:$val)>;
-def atomic_store_64_local_m0 : PatFrag<(ops node:$ptr, node:$val),
-                                       (atomic_store_64_glue node:$ptr, node:$val)>;
+def atomic_store_8_local_m0 : PatFrag<(ops node:$val, node:$ptr),
+                                       (atomic_store_8_glue node:$val, node:$ptr)>;
+def atomic_store_16_local_m0 : PatFrag<(ops node:$val, node:$ptr),
+                                       (atomic_store_16_glue node:$val, node:$ptr)>;
+def atomic_store_32_local_m0 : PatFrag<(ops node:$val, node:$ptr),
+                                       (atomic_store_32_glue node:$val, node:$ptr)>;
+def atomic_store_64_local_m0 : PatFrag<(ops node:$val, node:$ptr),
+                                       (atomic_store_64_glue node:$val, node:$ptr)>;
 } // End let IsAtomic = 1, AddressSpaces = StoreAddress_local.AddrSpaces
 
 
@@ -762,8 +753,8 @@ multiclass SIAtomicM0Glue2 <string op_name, bit is_amdgpu = 0,
 
 defm atomic_load_add : SIAtomicM0Glue2 <"LOAD_ADD">;
 defm atomic_load_sub : SIAtomicM0Glue2 <"LOAD_SUB">;
-defm atomic_inc : SIAtomicM0Glue2 <"INC", 1>;
-defm atomic_dec : SIAtomicM0Glue2 <"DEC", 1>;
+defm atomic_load_uinc_wrap : SIAtomicM0Glue2 <"LOAD_UINC_WRAP">;
+defm atomic_load_udec_wrap : SIAtomicM0Glue2 <"LOAD_UDEC_WRAP">;
 defm atomic_load_and : SIAtomicM0Glue2 <"LOAD_AND">;
 defm atomic_load_min : SIAtomicM0Glue2 <"LOAD_MIN">;
 defm atomic_load_max : SIAtomicM0Glue2 <"LOAD_MAX">;
@@ -931,144 +922,39 @@ def set_glc : SDNodeXForm<timm, [{
 // Custom Operands
 //===----------------------------------------------------------------------===//
 
-def SoppBrTarget : AsmOperandClass {
-  let Name = "SoppBrTarget";
-  let ParserMethod = "parseSOppBrTarget";
-}
-
-def sopp_brtarget : Operand<OtherVT> {
+def SOPPBrTarget : CustomOperand<OtherVT> {
+  let PrintMethod = "printOperand";
   let EncoderMethod = "getSOPPBrEncoding";
-  let DecoderMethod = "decodeSoppBrTarget";
+  let DecoderMethod = "decodeSOPPBrTarget";
   let OperandType = "OPERAND_PCREL";
-  let ParserMatchClass = SoppBrTarget;
 }
 
 def si_ga : Operand<iPTR>;
 
-def InterpSlotMatchClass : AsmOperandClass {
-  let Name = "InterpSlot";
-  let PredicateMethod = "isInterpSlot";
-  let ParserMethod = "parseInterpSlot";
-  let RenderMethod = "addImmOperands";
-}
-
-def InterpSlot : Operand<i32> {
-  let PrintMethod = "printInterpSlot";
-  let ParserMatchClass = InterpSlotMatchClass;
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-
-def AttrMatchClass : AsmOperandClass {
-  let Name = "Attr";
-  let PredicateMethod = "isInterpAttr";
-  let ParserMethod = "parseInterpAttr";
-  let RenderMethod = "addImmOperands";
-}
+def InterpSlot : CustomOperand<i32>;
 
 // It appears to be necessary to create a separate operand for this to
 // be able to parse attr<num> with no space.
-def Attr : Operand<i32> {
-  let PrintMethod = "printInterpAttr";
-  let ParserMatchClass = AttrMatchClass;
-  let OperandType = "OPERAND_IMMEDIATE";
-}
+def InterpAttr : CustomOperand<i32>;
 
-def AttrChanMatchClass : AsmOperandClass {
-  let Name = "AttrChan";
-  let PredicateMethod = "isAttrChan";
-  let RenderMethod = "addImmOperands";
-}
-
-def AttrChan : Operand<i32> {
-  let PrintMethod = "printInterpAttrChan";
-  let ParserMatchClass = AttrChanMatchClass;
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-
-def SendMsgMatchClass : AsmOperandClass {
-  let Name = "SendMsg";
-  let PredicateMethod = "isSendMsg";
-  let ParserMethod = "parseSendMsgOp";
-  let RenderMethod = "addImmOperands";
-}
-
-def SwizzleMatchClass : AsmOperandClass {
-  let Name = "Swizzle";
-  let PredicateMethod = "isSwizzle";
-  let ParserMethod = "parseSwizzleOp";
-  let RenderMethod = "addImmOperands";
-  let IsOptional = 1;
-}
-
-def EndpgmMatchClass : AsmOperandClass {
-  let Name = "EndpgmImm";
-  let PredicateMethod = "isEndpgm";
-  let ParserMethod = "parseEndpgmOp";
-  let RenderMethod = "addImmOperands";
-  let IsOptional = 1;
-}
-
-def ExpTgtMatchClass : AsmOperandClass {
-  let Name = "ExpTgt";
-  let PredicateMethod = "isExpTgt";
-  let ParserMethod = "parseExpTgt";
-  let RenderMethod = "printExpTgt";
-}
-
-def SWaitMatchClass : AsmOperandClass {
-  let Name = "SWaitCnt";
-  let RenderMethod = "addImmOperands";
-  let ParserMethod = "parseSWaitCntOps";
-}
-
-def DepCtrMatchClass : AsmOperandClass {
-  let Name = "DepCtr";
-  let RenderMethod = "addImmOperands";
-  let ParserMethod = "parseDepCtrOps";
-}
-
-def SDelayMatchClass : AsmOperandClass {
-  let Name = "SDelayAlu";
-  let RenderMethod = "addImmOperands";
-  let ParserMethod = "parseSDelayAluOps";
-}
+def InterpAttrChan : ImmOperand<i32>;
 
 def VReg32OrOffClass : AsmOperandClass {
   let Name = "VReg32OrOff";
   let ParserMethod = "parseVReg32OrOff";
 }
 
-let OperandType = "OPERAND_IMMEDIATE" in {
-def SendMsgImm : Operand<i32> {
-  let PrintMethod = "printSendMsg";
-  let ParserMatchClass = SendMsgMatchClass;
-}
+def SendMsg : CustomOperand<i32>;
 
-def SwizzleImm : Operand<i16> {
-  let PrintMethod = "printSwizzle";
-  let ParserMatchClass = SwizzleMatchClass;
-}
+def Swizzle : CustomOperand<i16, 1>;
 
-def EndpgmImm : Operand<i16> {
-  let PrintMethod = "printEndpgm";
-  let ParserMatchClass = EndpgmMatchClass;
-}
+def Endpgm : CustomOperand<i16, 1>;
 
-def WAIT_FLAG : Operand <i32> {
-  let ParserMatchClass = SWaitMatchClass;
-  let PrintMethod = "printWaitFlag";
-}
+def SWaitCnt : CustomOperand<i32>;
 
-def DepCtrImm : Operand <i32> {
-  let ParserMatchClass = DepCtrMatchClass;
-  let PrintMethod = "printDepCtr";
-}
+def DepCtr : CustomOperand<i32>;
 
-def DELAY_FLAG : Operand <i32> {
-  let ParserMatchClass = SDelayMatchClass;
-  let PrintMethod = "printDelayFlag";
-}
-} // End OperandType = "OPERAND_IMMEDIATE"
+def SDelayALU : CustomOperand<i32>;
 
 include "SIInstrFormats.td"
 include "VIInstrFormats.td"
@@ -1148,111 +1034,71 @@ def SDWAVopcDst : BoolRC {
   let PrintMethod = "printVOPDst";
 }
 
-class NamedMatchClass<string CName, bit Optional = 1> : AsmOperandClass {
-  let Name = "Imm"#CName;
-  let PredicateMethod = "is"#CName;
-  let ParserMethod = !if(Optional, "", "parse"#CName);
-  let RenderMethod = "addImmOperands";
-  let IsOptional = Optional;
-  let DefaultMethod = !if(Optional, "default"#CName, ?);
-}
-
-class CustomOperandClass<string CName, bit Optional> : AsmOperandClass {
-  let Name = CName;
-  let PredicateMethod = "is"#CName;
-  let ParserMethod = "parse"#CName;
-  let RenderMethod = "addImmOperands";
-  let IsOptional = Optional;
-  let DefaultMethod = "default"#CName;
-}
-
-class CustomOperandProps<bit Optional = 0, string Name = NAME,
-    AsmOperandClass Class = CustomOperandClass<Name, Optional>> {
-  string PrintMethod = "print"#Name;
-  AsmOperandClass ParserMatchClass = Class;
-}
-
-class CustomOperand<ValueType Type, bit Optional = 0, string Name = NAME,
-    AsmOperandClass Class = CustomOperandClass<Name, Optional>>
-  : Operand<Type>, CustomOperandProps<Optional, Name, Class>;
-
-class NamedIntOperandClass<string Prefix, string Name, string ConvertMethod>
-    : CustomOperandClass<Name, 1> {
-  string ImmTy = "AMDGPUOperand::ImmTy"#Name;
-  let ParserMethod =
-    "[this](OperandVector &Operands) -> OperandMatchResultTy { "#
-    "return parseIntWithPrefix(\""#Prefix#"\", Operands, "#ImmTy#", "#
-    ConvertMethod#"); }";
-}
-
 class NamedIntOperand<ValueType Type, string Prefix, string Name = NAME,
                       string ConvertMethod = "nullptr">
-  : CustomOperand<Type, 1, Name, NamedIntOperandClass<Prefix, Name, ConvertMethod>>;
-
-class BitOperandClass<string Id, string Name>
-    : CustomOperandClass<Name, 1> {
-  string ImmTy = "AMDGPUOperand::ImmTy"#Name;
+    : CustomOperand<Type, 1, Name> {
   let ParserMethod =
-    "[this](OperandVector &Operands) -> OperandMatchResultTy { "#
-    "return parseNamedBit(\""#Id#"\", Operands, "#ImmTy#"); }";
+    "[this](OperandVector &Operands) -> ParseStatus { "#
+    "return parseIntWithPrefix(\""#Prefix#"\", Operands, "#
+    "AMDGPUOperand::"#ImmTy#", "#ConvertMethod#"); }";
 }
 
 class NamedBitOperand<string Id, string Name = NAME>
-  : CustomOperand<i1, 1, Name, BitOperandClass<Id, Name>>;
-
-class DefaultOperand_0<CustomOperand Op>
-  : OperandWithDefaultOps<Op.Type, (ops (Op.Type 0))>,
-    CustomOperandProps<1, Op.ParserMatchClass.Name, Op.ParserMatchClass>;
-
-class NamedOperandU32<string Name, AsmOperandClass MatchClass> : Operand<i32> {
-  let PrintMethod = "print"#Name;
-  let ParserMatchClass = MatchClass;
+    : CustomOperand<i1, 1, Name> {
+  let ParserMethod =
+    "[this](OperandVector &Operands) -> ParseStatus { "#
+    "return parseNamedBit(\""#Id#"\", Operands, AMDGPUOperand::"#ImmTy#"); }";
+  let PrintMethod = "[this](const MCInst *MI, unsigned OpNo, "#
+    "const MCSubtargetInfo &STI, raw_ostream &O) { "#
+    "printNamedBit(MI, OpNo, O, \""#Id#"\"); }";
 }
 
-class NamedOperandU32_0<string Name, AsmOperandClass MatchClass> :
-  OperandWithDefaultOps<i32, (ops (i32 0))> {
-  let PrintMethod = "print"#Name;
-  let ParserMatchClass = MatchClass;
+class DefaultOperand<CustomOperand Op, int Value>
+  : OperandWithDefaultOps<Op.Type, (ops (Op.Type Value))>,
+    CustomOperandProps<1, Op.ParserMatchClass.Name> {
+  let ParserMethod = Op.ParserMatchClass.ParserMethod;
+  let PrintMethod = Op.PrintMethod;
 }
 
-class NamedOperandU32Default0<string Name, AsmOperandClass MatchClass> :
-  OperandWithDefaultOps<i32, (ops (i32 0))> {
-  let PrintMethod = "print"#Name;
-  let ParserMatchClass = MatchClass;
+class SDWAOperand<string Id, string Name = NAME>
+    : CustomOperand<i32, 1, Name> {
+  let ParserMethod =
+    "[this](OperandVector &Operands) -> ParseStatus { "#
+    "return parseSDWASel(Operands, \""#Id#"\", AMDGPUOperand::"#ImmTy#"); }";
 }
 
-class NamedOperandU32Default1<string Name, AsmOperandClass MatchClass> :
-  OperandWithDefaultOps<i32, (ops (i32 1))> {
-  let PrintMethod = "print"#Name;
-  let ParserMatchClass = MatchClass;
+class ArrayOperand0<string Id, string Name = NAME>
+  : OperandWithDefaultOps<i32, (ops (i32 0))>,
+    CustomOperandProps<1, Name> {
+  let ParserMethod =
+    "[this](OperandVector &Operands) -> ParseStatus { "#
+    "return parseOperandArrayWithPrefix(\""#Id#"\", Operands, "#
+    "AMDGPUOperand::"#ImmTy#"); }";
 }
 
-let OperandType = "OPERAND_IMMEDIATE" in {
-
-def flat_offset : CustomOperand<i16, 1, "FlatOffset">;
-def offset : NamedIntOperand<i16, "offset", "Offset">;
+let ImmTy = "ImmTyOffset" in
+def flat_offset : CustomOperand<i32, 1, "FlatOffset">;
+def offset : NamedIntOperand<i32, "offset", "Offset">;
 def offset0 : NamedIntOperand<i8, "offset0", "Offset0">;
 def offset1 : NamedIntOperand<i8, "offset1", "Offset1">;
 
 def gds : NamedBitOperand<"gds", "GDS">;
 
-def omod : NamedOperandU32<"OModSI", NamedMatchClass<"OModSI">>;
-def omod0 : NamedOperandU32_0<"OModSI", NamedMatchClass<"OModSI">>;
+def omod : CustomOperand<i32, 1, "OModSI">;
+def omod0 : DefaultOperand<omod, 0>;
 
 // We need to make the cases with a default of 0 distinct from no
 // default to help deal with some cases where the operand appears
 // before a mandatory operand.
 def clampmod : NamedBitOperand<"clamp", "ClampSI">;
-def clampmod0 : DefaultOperand_0<clampmod>;
+def clampmod0 : DefaultOperand<clampmod, 0>;
 def highmod : NamedBitOperand<"high", "High">;
 
-def CPol : NamedOperandU32<"CPol", NamedMatchClass<"CPol">>;
-def CPol_0 : NamedOperandU32Default0<"CPol", NamedMatchClass<"CPol">>;
-def CPol_GLC1 : NamedOperandU32Default1<"CPol", NamedMatchClass<"CPol">>;
+def CPol : CustomOperand<i32, 1>;
+def CPol_0 : DefaultOperand<CPol, 0>;
+def CPol_GLC1 : DefaultOperand<CPol, 1>;
 
 def TFE : NamedBitOperand<"tfe">;
-def SWZ : NamedBitOperand<"swz">;
-def SWZ_0 : DefaultOperand_0<SWZ>;
 def UNorm : NamedBitOperand<"unorm">;
 def DA : NamedBitOperand<"da">;
 def R128A16 : CustomOperand<i1, 1>;
@@ -1267,62 +1113,51 @@ def FORMAT : CustomOperand<i8>;
 def DMask : NamedIntOperand<i16, "dmask">;
 def Dim : CustomOperand<i8>;
 
-def dst_sel : NamedOperandU32<"SDWADstSel", NamedMatchClass<"SDWADstSel">>;
-def src0_sel : NamedOperandU32<"SDWASrc0Sel", NamedMatchClass<"SDWASrc0Sel">>;
-def src1_sel : NamedOperandU32<"SDWASrc1Sel", NamedMatchClass<"SDWASrc1Sel">>;
-def dst_unused : NamedOperandU32<"SDWADstUnused", NamedMatchClass<"SDWADstUnused">>;
+def dst_sel : SDWAOperand<"dst_sel", "SDWADstSel">;
+def src0_sel : SDWAOperand<"src0_sel", "SDWASrc0Sel">;
+def src1_sel : SDWAOperand<"src1_sel", "SDWASrc1Sel">;
+def dst_unused : CustomOperand<i32, 1, "SDWADstUnused">;
 
-def op_sel0 : NamedOperandU32Default0<"OpSel", NamedMatchClass<"OpSel">>;
-def op_sel_hi0 : NamedOperandU32Default0<"OpSelHi", NamedMatchClass<"OpSelHi">>;
-def neg_lo0 : NamedOperandU32Default0<"NegLo", NamedMatchClass<"NegLo">>;
-def neg_hi0 : NamedOperandU32Default0<"NegHi", NamedMatchClass<"NegHi">>;
+def op_sel0 : ArrayOperand0<"op_sel", "OpSel">;
+def op_sel_hi0 : ArrayOperand0<"op_sel_hi", "OpSelHi">;
+def neg_lo0 : ArrayOperand0<"neg_lo", "NegLo">;
+def neg_hi0 : ArrayOperand0<"neg_hi", "NegHi">;
 
-def dpp8 : NamedOperandU32<"DPP8", NamedMatchClass<"DPP8", 0>>;
-def dpp_ctrl : NamedOperandU32<"DPPCtrl", NamedMatchClass<"DPPCtrl", 0>>;
+def dpp8 : CustomOperand<i32, 0, "DPP8">;
+def dpp_ctrl : CustomOperand<i32, 0, "DPPCtrl">;
 
-def row_mask : NamedOperandU32<"RowMask", NamedMatchClass<"RowMask">>;
-def bank_mask : NamedOperandU32<"BankMask", NamedMatchClass<"BankMask">>;
-def bound_ctrl : NamedIntOperand<i1, "bound_ctrl", "DppBoundCtrl", "ConvertDppBoundCtrl">;
-def FI : NamedOperandU32<"FI", NamedMatchClass<"FI">>;
-
-def blgp : NamedOperandU32<"BLGP", NamedMatchClass<"BLGP">>;
-def cbsz : NamedOperandU32<"CBSZ", NamedMatchClass<"CBSZ">>;
-def abid : NamedOperandU32<"ABID", NamedMatchClass<"ABID">>;
-
-def hwreg : NamedOperandU32<"Hwreg", NamedMatchClass<"Hwreg", 0>>;
-
-def exp_tgt : NamedOperandU32<"ExpTgt", NamedMatchClass<"ExpTgt", 0>> {
-
+let DefaultValue = "0xf" in {
+def row_mask : NamedIntOperand<i32, "row_mask", "DppRowMask">;
+def bank_mask : NamedIntOperand<i32, "bank_mask", "DppBankMask">;
 }
+def bound_ctrl : NamedIntOperand<i1, "bound_ctrl", "DppBoundCtrl",
+    "[this] (int64_t &BC) -> bool { return convertDppBoundCtrl(BC); }">;
+def FI : NamedIntOperand<i32, "fi", "DppFI">;
+
+def blgp : CustomOperand<i32, 1, "BLGP">;
+def cbsz : NamedIntOperand<i32, "cbsz", "CBSZ">;
+def abid : NamedIntOperand<i32, "abid", "ABID">;
+
+def hwreg : CustomOperand<i32, 0, "Hwreg">;
+
+def exp_tgt : CustomOperand<i32, 0, "ExpTgt">;
 
 def wait_vdst : NamedIntOperand<i8, "wait_vdst", "WaitVDST">;
 def wait_exp : NamedIntOperand<i8, "wait_exp", "WaitEXP">;
 
-} // End OperandType = "OPERAND_IMMEDIATE"
-
-class KImmMatchClass<int size> : AsmOperandClass {
-  let Name = "KImmFP"#size;
-  let PredicateMethod = "isKImmFP"#size;
-  let ParserMethod = "parseImm";
-  let RenderMethod = "addKImmFP"#size#"Operands";
-}
-
-class kimmOperand<ValueType vt> : Operand<vt> {
+class KImmFPOperand<ValueType vt> : ImmOperand<vt> {
   let OperandNamespace = "AMDGPU";
   let OperandType = "OPERAND_KIMM"#vt.Size;
   let PrintMethod = "printU"#vt.Size#"ImmOperand";
-  let ParserMatchClass = !cast<AsmOperandClass>("KImmFP"#vt.Size#"MatchClass");
-  let DecoderMethod = "decodeOperand_f"#vt.Size#"kimm";
+  let DecoderMethod = "decodeOperand_KImmFP";
 }
 
 // 32-bit VALU immediate operand that uses the constant bus.
-def KImmFP32MatchClass : KImmMatchClass<32>;
-def f32kimm : kimmOperand<i32>;
+def KImmFP32 : KImmFPOperand<i32>;
 
 // 32-bit VALU immediate operand with a 16-bit value that uses the
 // constant bus.
-def KImmFP16MatchClass : KImmMatchClass<16>;
-def f16kimm : kimmOperand<i16>;
+def KImmFP16 : KImmFPOperand<i16>;
 
 class FPInputModsMatchClass <int opSize> : AsmOperandClass {
   let Name = "RegOrImmWithFP"#opSize#"InputMods";
@@ -1336,6 +1171,10 @@ class FPVCSrcInputModsMatchClass <int opSize> : FPInputModsMatchClass <opSize> {
 }
 
 def FP16InputModsMatchClass : FPInputModsMatchClass<16>;
+def FPT16InputModsMatchClass : FPInputModsMatchClass<16> {
+  let Name = "RegOrImmWithFPT16InputMods";
+  let PredicateMethod = "isRegOrImmWithFPT16InputMods";
+}
 def FP32InputModsMatchClass : FPInputModsMatchClass<32>;
 def FP64InputModsMatchClass : FPInputModsMatchClass<64>;
 
@@ -1353,6 +1192,7 @@ class FPInputMods <FPInputModsMatchClass matchClass> : InputMods <matchClass> {
 }
 
 def FP16InputMods : FPInputMods<FP16InputModsMatchClass>;
+def FPT16InputMods : FPInputMods<FPT16InputModsMatchClass>;
 def FP32InputMods : FPInputMods<FP32InputModsMatchClass>;
 def FP64InputMods : FPInputMods<FP64InputModsMatchClass>;
 
@@ -1368,6 +1208,10 @@ class IntVCSrcInputModsMatchClass <int opSize> : IntInputModsMatchClass <opSize>
   let Name = "RegOrInlineImmWithInt"#opSize#"InputMods";
   let PredicateMethod = "isRegOrInlineImmWithInt"#opSize#"InputMods";
 }
+def IntT16InputModsMatchClass : IntInputModsMatchClass<16> {
+  let Name = "RegOrImmWithIntT16InputMods";
+  let PredicateMethod = "isRegOrImmWithIntT16InputMods";
+}
 def Int32InputModsMatchClass : IntInputModsMatchClass<32>;
 def Int64InputModsMatchClass : IntInputModsMatchClass<64>;
 def Int32VCSrcInputModsMatchClass : IntVCSrcInputModsMatchClass<32>;
@@ -1375,6 +1219,7 @@ def Int32VCSrcInputModsMatchClass : IntVCSrcInputModsMatchClass<32>;
 class IntInputMods <IntInputModsMatchClass matchClass> : InputMods <matchClass> {
   let PrintMethod = "printOperandAndIntInputMods";
 }
+def IntT16InputMods : IntInputMods<IntT16InputModsMatchClass>;
 def Int32InputMods : IntInputMods<Int32InputModsMatchClass>;
 def Int64InputMods : IntInputMods<Int64InputModsMatchClass>;
 def Int32VCSrcInputMods : IntInputMods<Int32VCSrcInputModsMatchClass>;
@@ -1506,7 +1351,16 @@ def DS128Bit8ByteAligned : ComplexPattern<iPTR, 3, "SelectDS128Bit8ByteAligned">
 def MOVRELOffset : ComplexPattern<iPTR, 2, "SelectMOVRELOffset">;
 
 def VOP3Mods0 : ComplexPattern<untyped, 4, "SelectVOP3Mods0">;
+
+// Modifiers for floating point instructions.
 def VOP3Mods  : ComplexPattern<untyped, 2, "SelectVOP3Mods">;
+
+// VOP3 modifiers used for instructions that do not read canonicalized
+// floating point values (i.e. integer operations with FP source
+// modifiers)
+def VOP3ModsNonCanonicalizing : ComplexPattern<untyped, 2,
+  "SelectVOP3ModsNonCanonicalizing">;
+
 def VOP3NoMods : ComplexPattern<untyped, 1, "SelectVOP3NoMods">;
 
 def VOP3OMods : ComplexPattern<untyped, 3, "SelectVOP3OMods">;
@@ -1521,7 +1375,8 @@ def VOP3OpSel  : ComplexPattern<untyped, 2, "SelectVOP3OpSel">;
 
 def VOP3OpSelMods  : ComplexPattern<untyped, 2, "SelectVOP3OpSelMods">;
 
-def VOP3PMadMixMods  : ComplexPattern<untyped, 2, "SelectVOP3PMadMixMods">;
+def VOP3PMadMixModsExt : ComplexPattern<untyped, 2, "SelectVOP3PMadMixModsExt">;
+def VOP3PMadMixMods : ComplexPattern<untyped, 2, "SelectVOP3PMadMixMods">;
 
 def VINTERPMods  : ComplexPattern<untyped, 2, "SelectVINTERPMods">;
 def VINTERPModsHi  : ComplexPattern<untyped, 2, "SelectVINTERPModsHi">;
@@ -1619,15 +1474,18 @@ class getNumSrcArgs<ValueType Src0, ValueType Src1, ValueType Src2> {
 
 // Returns the register class to use for the destination of VOP[123C]
 // instructions for the given VT.
-class getVALUDstForVT<ValueType VT> {
+class getVALUDstForVT<ValueType VT, bit IsTrue16 = 0, bit IsVOP3Encoding = 0> {
+  defvar op16 = !if(IsTrue16, !if (IsVOP3Encoding, VOPDstOperand_t16,
+                                   VOPDstOperand_t16Lo128),
+                    VOPDstOperand<VGPR_32>);
   RegisterOperand ret = !if(!eq(VT.Size, 32), VOPDstOperand<VGPR_32>,
                           !if(!eq(VT.Size, 128), VOPDstOperand<VReg_128>,
                             !if(!eq(VT.Size, 64), VOPDstOperand<VReg_64>,
-                              !if(!eq(VT.Size, 16), VOPDstOperand<VGPR_32>,
+                              !if(!eq(VT.Size, 16), op16,
                               VOPDstS64orS32)))); // else VT == i1
 }
 
-class getVALUDstForVT_t16<ValueType VT> {
+class getVALUDstForVT_fake16<ValueType VT> {
   RegisterOperand ret = !if(!eq(VT.Size, 32), VOPDstOperand<VGPR_32>,
                           !if(!eq(VT.Size, 128), VOPDstOperand<VReg_128>,
                             !if(!eq(VT.Size, 64), VOPDstOperand<VReg_64>,
@@ -1645,7 +1503,7 @@ class getSDWADstForVT<ValueType VT> {
 
 // Returns the register class to use for source 0 of VOP[12C]
 // instructions for the given VT.
-class getVOPSrc0ForVT<ValueType VT, bit IsTrue16> {
+class getVOPSrc0ForVT<ValueType VT, bit IsTrue16, bit IsFake16 = 1> {
   bit isFP = isFloatType<VT>.ret;
 
   RegisterOperand ret =
@@ -1654,7 +1512,7 @@ class getVOPSrc0ForVT<ValueType VT, bit IsTrue16> {
          VSrc_f64,
          !if(!eq(VT.Value, f16.Value),
             !if(IsTrue16,
-              VSrcT_f16_Lo128,
+              !if(IsFake16, VSrcFake16_f16_Lo128, VSrcT_f16_Lo128),
               VSrc_f16
             ),
             !if(!eq(VT.Value, v2f16.Value),
@@ -1670,7 +1528,7 @@ class getVOPSrc0ForVT<ValueType VT, bit IsTrue16> {
           VSrc_b64,
           !if(!eq(VT.Value, i16.Value),
             !if(IsTrue16,
-              VSrcT_b16_Lo128,
+              !if(IsFake16, VSrcFake16_b16_Lo128, VSrcT_b16_Lo128),
               VSrc_b16
             ),
              !if(!eq(VT.Value, v2i16.Value),
@@ -1695,13 +1553,17 @@ class getVregSrcForVT<ValueType VT> {
                               VGPR_32))));
 }
 
-class getVregSrcForVT_t16<ValueType VT> {
+class getVregSrcForVT_t16<ValueType VT, bit IsFake16 = 1> {
   RegisterClass ret = !if(!eq(VT.Size, 128), VReg_128,
                         !if(!eq(VT.Size, 96), VReg_96,
                           !if(!eq(VT.Size, 64), VReg_64,
                             !if(!eq(VT.Size, 48), VReg_64,
-                              !if(!eq(VT.Size, 16), VGPR_32_Lo128,
+                              !if(!eq(VT.Size, 16),
+                                  !if(IsFake16, VGPR_32_Lo128, VGPR_16_Lo128),
                                   VGPR_32)))));
+
+  RegisterOperand op = !if (!and(!eq(VT.Size, 16), !not(IsFake16)),
+                            VGPRSrc_16_Lo128, RegisterOperand<ret>);
 }
 
 class getSDWASrcForVT <ValueType VT> {
@@ -1713,11 +1575,11 @@ class getSDWASrcForVT <ValueType VT> {
 
 // Returns the register class to use for sources of VOP3 instructions for the
 // given VT.
-class getVOP3SrcForVT<ValueType VT> {
+class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
   bit isFP = isFloatType<VT>.ret;
   RegisterOperand ret =
   !if(!eq(VT.Size, 128),
-     VSrc_128,
+     VRegSrc_128,
      !if(!eq(VT.Size, 64),
         !if(isFP,
            !if(!eq(VT.Value, v2f32.Value),
@@ -1730,7 +1592,7 @@ class getVOP3SrcForVT<ValueType VT> {
            SSrc_i1,
            !if(isFP,
               !if(!eq(VT.Value, f16.Value),
-                 VSrc_f16,
+                 !if(IsTrue16, VSrcT_f16, VSrc_f16),
                  !if(!eq(VT.Value, v2f16.Value),
                     VSrc_v2f16,
                     !if(!eq(VT.Value, v4f16.Value),
@@ -1740,7 +1602,7 @@ class getVOP3SrcForVT<ValueType VT> {
                  )
               ),
               !if(!eq(VT.Value, i16.Value),
-                 VSrc_b16,
+                 !if(IsTrue16, VSrcT_b16, VSrc_b16),
                  !if(!eq(VT.Value, v2i16.Value),
                     VSrc_v2b16,
                     VSrc_b32
@@ -1787,18 +1649,15 @@ class isModifierType<ValueType SrcVT> {
 }
 
 // Return type of input modifiers operand for specified input operand
-class getSrcMod <ValueType VT> {
+class getSrcMod <ValueType VT, bit IsTrue16 = 0> {
   bit isFP = isFloatType<VT>.ret;
   bit isPacked = isPackedType<VT>.ret;
   Operand ret =  !if(!eq(VT.Size, 64),
                      !if(isFP, FP64InputMods, Int64InputMods),
-                       !if(isFP,
-                         !if(!eq(VT.Value, f16.Value),
-                            FP16InputMods,
-                            FP32InputMods
-                          ),
-                         Int32InputMods)
-                     );
+                     !if(!eq(VT.Size, 16),
+                         !if(isFP, !if(IsTrue16, FPT16InputMods, FP16InputMods),
+                                   !if(IsTrue16, IntT16InputMods, IntOpSelMods)),
+                         !if(isFP, FP32InputMods, Int32InputMods)));
 }
 
 class getOpSelMod <ValueType VT> {
@@ -2390,14 +2249,6 @@ class getLdStRegisterOperand<RegisterClass RC> {
     )))));
 }
 
-class BitOr<bit a, bit b> {
-  bit ret = !if(a, 1, !if(b, 1, 0));
-}
-
-class BitAnd<bit a, bit b> {
-  bit ret = !if(a, !if(b, 1, 0), 0);
-}
-
 class getHasVOP3DPP <ValueType DstVT = i32, ValueType Src0VT = i32,
                  ValueType Src1VT = i32, ValueType Src2VT = i32> {
   bit ret =    !if(!eq(DstVT.Size, 64),
@@ -2426,6 +2277,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field list<ValueType> ArgVT = _ArgVT;
   field bit EnableClamp = _EnableClamp;
   field bit IsTrue16 = 0;
+  field bit IsRealTrue16 = 0;
 
   field ValueType DstVT = ArgVT[0];
   field ValueType Src0VT = ArgVT[1];
@@ -2445,7 +2297,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field RegisterClass Src1DPP = getVregSrcForVT<Src1VT>.ret;
   field RegisterClass Src2DPP = getVregSrcForVT<Src2VT>.ret;
   field RegisterOperand Src0VOP3DPP = VGPRSrc_32;
-  field RegisterOperand Src1VOP3DPP = VGPRSrc_32;
+  field RegisterOperand Src1VOP3DPP = getVOP3DPPSrcForVT<Src1VT>.ret;
   field RegisterOperand Src2VOP3DPP = getVOP3DPPSrcForVT<Src2VT>.ret;
   field RegisterOperand Src0SDWA = getSDWASrcForVT<Src0VT>.ret;
   field RegisterOperand Src1SDWA = getSDWASrcForVT<Src0VT>.ret;
@@ -2509,8 +2361,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
 
   field bit HasExt = getHasExt<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret;
   field bit HasExtVOP3DPP = getHasVOP3DPP<DstVT, Src0VT, Src1VT, Src2VT>.ret;
-  field bit HasExtDPP = !if(!or(getHasDPP<NumSrcArgs>.ret,
-                HasExtVOP3DPP), 1, 0);
+  field bit HasExtDPP = !or(getHasDPP<NumSrcArgs>.ret, HasExtVOP3DPP);
   field bit HasExt32BitDPP = getHasExt32BitDPP<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret;
   field bit HasExt64BitDPP = getHasExt64BitDPP<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret;
   field bit HasExtSDWA = getHasSDWA<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret;
@@ -2619,8 +2470,32 @@ class VOP_PAT_GEN <VOPProfile p, int mode=PatGenMode.NoPattern> : VOPProfile <p.
 // class, so copy changes to this class in those profiles
 class VOPProfile_True16<VOPProfile P> : VOPProfile<P.ArgVT> {
   let IsTrue16 = 1;
+  let IsRealTrue16 = 1;
+  // Most DstVT are 16-bit, but not all.
+  let DstRC = getVALUDstForVT<DstVT, 1 /*IsTrue16*/, 0 /*IsVOP3Encoding*/>.ret;
+  let DstRC64 = getVALUDstForVT<DstVT>.ret;
+  let Src0RC32 = getVOPSrc0ForVT<Src0VT, 1 /*IsTrue16*/, 0 /*IsFake16*/>.ret;
+  let Src1RC32 = getVregSrcForVT_t16<Src1VT, 0 /*IsFake16*/>.op;
+  let Src0DPP = getVregSrcForVT_t16<Src0VT>.ret;
+  let Src1DPP = getVregSrcForVT_t16<Src1VT>.ret;
+  let Src2DPP = getVregSrcForVT_t16<Src2VT>.ret;
+  let Src0ModDPP = getSrcModDPP_t16<Src0VT>.ret;
+  let Src1ModDPP = getSrcModDPP_t16<Src1VT>.ret;
+  let Src2ModDPP = getSrcModDPP_t16<Src2VT>.ret;
+
+  let DstRC64 = getVALUDstForVT<DstVT, 1 /*IsTrue16*/, 1 /*IsVOP3Encoding*/>.ret;
+  let Src0RC64 = getVOP3SrcForVT<Src0VT, 1 /*IsTrue16*/>.ret;
+  let Src1RC64 = getVOP3SrcForVT<Src1VT, 1 /*IsTrue16*/>.ret;
+  let Src2RC64 = getVOP3SrcForVT<Src2VT, 1 /*IsTrue16*/>.ret;
+  let Src0Mod = getSrcMod<Src0VT, 1 /*IsTrue16*/>.ret;
+  let Src1Mod = getSrcMod<Src1VT, 1 /*IsTrue16*/>.ret;
+  let Src2Mod = getSrcMod<Src2VT, 1 /*IsTrue16*/>.ret;
+}
+
+class VOPProfile_Fake16<VOPProfile P> : VOPProfile<P.ArgVT> {
+  let IsTrue16 = 1;
   // Most DstVT are 16-bit, but not all
-  let DstRC = getVALUDstForVT_t16<DstVT>.ret;
+  let DstRC = getVALUDstForVT_fake16<DstVT>.ret;
   let DstRC64 = getVALUDstForVT<DstVT>.ret;
   let Src1RC32 = RegisterOperand<getVregSrcForVT_t16<Src1VT>.ret>;
   let Src0DPP = getVregSrcForVT_t16<Src0VT>.ret;

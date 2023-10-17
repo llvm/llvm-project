@@ -54,7 +54,7 @@ public:
 // TargetPassConfig, but can't put this logic into TargetPassConfig directly
 // because the CodeGen library can't depend on GlobalISel.
 std::unique_ptr<CSEConfigBase>
-getStandardCSEConfigForOpt(CodeGenOpt::Level Level);
+getStandardCSEConfigForOpt(CodeGenOptLevel Level);
 
 /// The CSE Analysis object.
 /// This installs itself as a delegate to the MachineFunction to track
@@ -110,6 +110,8 @@ class GISelCSEInfo : public GISelChangeObserver {
   /// Use this method to allocate a new UniqueMachineInstr for MI and insert it
   /// into the CSEMap. MI should return true for shouldCSE(MI->getOpcode())
   void insertInstr(MachineInstr *MI, void *InsertPos = nullptr);
+
+  bool HandlingRecordedInstrs = false;
 
 public:
   GISelCSEInfo() = default;

@@ -218,6 +218,28 @@ TEST(IndexTest, IndexParametersInDecls) {
   EXPECT_THAT(Index->Symbols, Not(Contains(QName("bar"))));
 }
 
+TEST(IndexTest, IndexLabels) {
+  std::string Code = R"cpp(
+        int main() {
+          goto theLabel;
+          theLabel:
+            return 1;
+        }
+      )cpp";
+  auto Index = std::make_shared<Indexer>();
+  IndexingOptions Opts;
+  Opts.IndexFunctionLocals = true;
+  tooling::runToolOnCode(std::make_unique<IndexAction>(Index, Opts), Code);
+  EXPECT_THAT(Index->Symbols,
+              Contains(AllOf(QName("theLabel"), WrittenAt(Position(3, 16)),
+                             DeclAt(Position(4, 11)))));
+
+  Opts.IndexFunctionLocals = false;
+  Index->Symbols.clear();
+  tooling::runToolOnCode(std::make_unique<IndexAction>(Index, Opts), Code);
+  EXPECT_THAT(Index->Symbols, Not(Contains(QName("theLabel"))));
+}
+
 TEST(IndexTest, IndexExplicitTemplateInstantiation) {
   std::string Code = R"cpp(
     template <typename T>
@@ -392,6 +414,20 @@ TEST(IndexTest, EnumBase) {
             Contains(AllOf(QName("MyTypedef"), HasRole(SymbolRole::Reference),
                            WrittenAt(Position(4, 16))))));
 }
+
+TEST(IndexTest, NonTypeTemplateParameter) {
+  std::string Code = R"cpp(
+    enum class Foobar { foo };
+    template <Foobar f>
+    constexpr void func() {}
+  )cpp";
+  auto Index = std::make_shared<Indexer>();
+  tooling::runToolOnCode(std::make_unique<IndexAction>(Index), Code);
+  EXPECT_THAT(Index->Symbols,
+              Contains(AllOf(QName("Foobar"), HasRole(SymbolRole::Reference),
+                             WrittenAt(Position(3, 15)))));
+}
+
 } // namespace
 } // namespace index
 } // namespace clang

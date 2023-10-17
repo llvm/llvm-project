@@ -125,17 +125,38 @@ define float @lower_constantpool(float %a) nounwind {
 ; RV32I-SMALL-LABEL: lower_constantpool:
 ; RV32I-SMALL:       # %bb.0:
 ; RV32I-SMALL-NEXT:    lui a0, %hi(.LCPI3_0)
-; RV32I-SMALL-NEXT:    flw ft0, %lo(.LCPI3_0)(a0)
-; RV32I-SMALL-NEXT:    fadd.s fa0, fa0, ft0
+; RV32I-SMALL-NEXT:    flw fa5, %lo(.LCPI3_0)(a0)
+; RV32I-SMALL-NEXT:    fadd.s fa0, fa0, fa5
 ; RV32I-SMALL-NEXT:    ret
 ;
 ; RV32I-MEDIUM-LABEL: lower_constantpool:
 ; RV32I-MEDIUM:       # %bb.0:
 ; RV32I-MEDIUM-NEXT:  .Lpcrel_hi3:
 ; RV32I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(.LCPI3_0)
-; RV32I-MEDIUM-NEXT:    flw ft0, %pcrel_lo(.Lpcrel_hi3)(a0)
-; RV32I-MEDIUM-NEXT:    fadd.s fa0, fa0, ft0
+; RV32I-MEDIUM-NEXT:    flw fa5, %pcrel_lo(.Lpcrel_hi3)(a0)
+; RV32I-MEDIUM-NEXT:    fadd.s fa0, fa0, fa5
 ; RV32I-MEDIUM-NEXT:    ret
-  %1 = fadd float %a, 1.0
+  %1 = fadd float %a, 1.000244140625
   ret float %1
+}
+
+; Check lowering of extern_weaks
+@W = extern_weak global i32
+
+define i32 @lower_extern_weak(i32 %a) nounwind {
+; RV32I-SMALL-LABEL: lower_extern_weak:
+; RV32I-SMALL:       # %bb.0:
+; RV32I-SMALL-NEXT:    lui a0, %hi(W)
+; RV32I-SMALL-NEXT:    lw a0, %lo(W)(a0)
+; RV32I-SMALL-NEXT:    ret
+;
+; RV32I-MEDIUM-LABEL: lower_extern_weak:
+; RV32I-MEDIUM:       # %bb.0:
+; RV32I-MEDIUM-NEXT:  .Lpcrel_hi4:
+; RV32I-MEDIUM-NEXT:    auipc a0, %got_pcrel_hi(W)
+; RV32I-MEDIUM-NEXT:    lw a0, %pcrel_lo(.Lpcrel_hi4)(a0)
+; RV32I-MEDIUM-NEXT:    lw a0, 0(a0)
+; RV32I-MEDIUM-NEXT:    ret
+  %1 = load volatile i32, ptr @W
+  ret i32 %1
 }

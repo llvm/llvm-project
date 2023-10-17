@@ -13,38 +13,20 @@ define void @test_stack_realign(<8 x i32> %val, i32 %idx) #0 {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s16, s33
-; GCN-NEXT:    s_add_i32 s33, s32, 0xfc0
-; GCN-NEXT:    s_and_b32 s33, s33, 0xfffff000
+; GCN-NEXT:    s_mov_b32 s33, s32
 ; GCN-NEXT:    s_or_saveexec_b64 s[18:19], -1
-; GCN-NEXT:    buffer_store_dword v42, off, s[0:3], s33 offset:96 ; 4-byte Folded Spill
-; GCN-NEXT:    buffer_store_dword v43, off, s[0:3], s33 offset:100 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v42, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[18:19]
-; GCN-NEXT:    s_addk_i32 s32, 0x3000
-; GCN-NEXT:    v_writelane_b32 v43, s16, 0
+; GCN-NEXT:    s_addk_i32 s32, 0x400
+; GCN-NEXT:    v_writelane_b32 v42, s16, 2
 ; GCN-NEXT:    s_getpc_b64 s[16:17]
 ; GCN-NEXT:    s_add_u32 s16, s16, extern_func@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s17, s17, extern_func@gotpcrel32@hi+12
 ; GCN-NEXT:    s_load_dwordx2 s[16:17], s[16:17], 0x0
+; GCN-NEXT:    v_writelane_b32 v42, s30, 0
+; GCN-NEXT:    v_mov_b32_e32 v0, v8
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v41, off, s[0:3], s33 ; 4-byte Folded Spill
-; GCN-NEXT:    v_writelane_b32 v42, s30, 0
-; GCN-NEXT:    buffer_store_dword v7, off, s[0:3], s33 offset:92
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    buffer_store_dword v6, off, s[0:3], s33 offset:88
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    buffer_store_dword v5, off, s[0:3], s33 offset:84
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    buffer_store_dword v4, off, s[0:3], s33 offset:80
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    buffer_store_dword v3, off, s[0:3], s33 offset:76
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    buffer_store_dword v2, off, s[0:3], s33 offset:72
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], s33 offset:68
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:64
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, v8
 ; GCN-NEXT:    v_writelane_b32 v42, s31, 1
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND
@@ -56,12 +38,11 @@ define void @test_stack_realign(<8 x i32> %val, i32 %idx) #0 {
 ; GCN-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; GCN-NEXT:    v_readlane_b32 s31, v42, 1
 ; GCN-NEXT:    v_readlane_b32 s30, v42, 0
-; GCN-NEXT:    v_readlane_b32 s4, v43, 0
+; GCN-NEXT:    v_readlane_b32 s4, v42, 2
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
-; GCN-NEXT:    buffer_load_dword v42, off, s[0:3], s33 offset:96 ; 4-byte Folded Reload
-; GCN-NEXT:    buffer_load_dword v43, off, s[0:3], s33 offset:100 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v42, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[6:7]
-; GCN-NEXT:    s_addk_i32 s32, 0xd000
+; GCN-NEXT:    s_addk_i32 s32, 0xfc00
 ; GCN-NEXT:    s_mov_b32 s33, s4
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]

@@ -6,13 +6,14 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-format
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
 // <format>
 
 // basic_format_arg<basic_format_context> arg(size_t id) const;
 
 #include <format>
+#include <iterator>
 #include <cassert>
 
 #include "test_basic_format_arg.h"
@@ -31,7 +32,7 @@ void test() {
   const std::basic_format_context context = test_format_context_create(OutIt{output}, args);
   LIBCPP_ASSERT(args.__size() == 4);
   ASSERT_NOEXCEPT(context.arg(0));
-  for (size_t i = 0, e = args.__size(); i != e; ++i) {
+  for (std::size_t i = 0, e = args.__size(); i != e; ++i) {
     assert(context.arg(i));
   }
   assert(!context.arg(args.__size()));

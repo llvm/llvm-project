@@ -26,8 +26,7 @@ namespace llvm {
       fixup_sparc_br19,
 
       /// fixup_sparc_bpr  - 16-bit fixup for bpr
-      fixup_sparc_br16_2,
-      fixup_sparc_br16_14,
+      fixup_sparc_br16,
 
       /// fixup_sparc_13 - 13-bit fixup
       fixup_sparc_13,

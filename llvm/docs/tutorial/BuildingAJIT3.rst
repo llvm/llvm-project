@@ -119,8 +119,8 @@ to create the compile callback needed for each function.
 
 Next we have to update our constructor to initialize the new members. To create
 an appropriate compile callback manager we use the
-createLocalCompileCallbackManager function, which takes a TargetMachine and a
-JITTargetAddress to call if it receives a request to compile an unknown
+createLocalCompileCallbackManager function, which takes a TargetMachine and an
+ExecutorAddr to call if it receives a request to compile an unknown
 function.  In our simple JIT this situation is unlikely to come up, so we'll
 cheat and just pass '0' here. In a production quality JIT you could give the
 address of a function that throws an exception in order to unwind the JIT'd

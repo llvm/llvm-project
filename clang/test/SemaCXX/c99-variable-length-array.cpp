@@ -128,7 +128,7 @@ namespace PR8209 {
   }
 }
 
-namespace rdar8733881 { // rdar://8733881
+namespace rdar8733881 {
 
 static const int k_cVal3 = (int)(1000*0.2f);
   int f() {

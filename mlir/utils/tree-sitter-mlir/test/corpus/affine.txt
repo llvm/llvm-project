@@ -1,0 +1,500 @@
+================================================================================
+affine_map with indexing and sum
+================================================================================
+#inline_map_minmax_loop2 = affine_map<()[s0] -> (100, s0 + 1)>
+#map0 = affine_map<(i) -> ()>
+#bound_map1 = affine_map<(i, j)[s] -> (i + j + s)>
+--------------------------------------------------------------------------------
+
+(toplevel
+  (attribute_alias_def
+    (attribute_value
+      (builtin_attribute
+        (affine_map
+          (bare_id)
+          (integer_literal)
+          (bare_id)
+          (integer_literal)))))
+  (attribute_alias_def
+    (attribute_value
+      (builtin_attribute
+        (affine_map
+          (bare_id)))))
+  (attribute_alias_def
+    (attribute_value
+      (builtin_attribute
+        (affine_map
+          (bare_id)
+          (bare_id)
+          (bare_id)
+          (bare_id)
+          (bare_id)
+          (bare_id))))))
+
+================================================================================
+affine_set expression
+================================================================================
+#set0 = affine_set<(i)[N, M] : (i >= 0, -i + N >= 0, N - 5 == 0, -i + M + 1 >= 0)>
+--------------------------------------------------------------------------------
+
+(toplevel
+  (attribute_alias_def
+    (attribute_value
+      (builtin_attribute
+        (affine_set
+          (bare_id)
+          (bare_id)
+          (bare_id)
+          (bare_id)
+          (integer_literal)
+          (bare_id)
+          (bare_id)
+          (integer_literal)
+          (bare_id)
+          (integer_literal)
+          (integer_literal)
+          (bare_id)
+          (bare_id)
+          (integer_literal)
+          (integer_literal))))))
+
+================================================================================
+affine.min and affine.max with non-trivial affine maps
+================================================================================
+func.func @affine_min(%arg0 : index, %arg1 : index, %arg2 : index) {
+  %0 = affine.min affine_map<(d0)[s0] -> (1000, d0 + 512, s0)> (%arg0)[%arg1]
+  %1 = affine.min affine_map<(d0, d1)[s0] -> (d0 - d1, s0 + 512)> (%arg0, %arg1)[%arg2]
+  %2 = affine.min affine_map<()[s0, s1] -> (s0 - s1, 11)> ()[%arg1, %arg2]
+  %3 = affine.min affine_map<()[] -> (77, 78, 79)> ()[]
+  return
+}
+
+func.func @affine_max(%arg0 : index, %arg1 : index, %arg2 : index) {
+  %0 = affine.max affine_map<(d0)[s0] -> (1000, d0 + 512, s0)> (%arg0)[%arg1]
+  %1 = affine.max affine_map<(d0, d1)[s0] -> (d0 - d1, s0 + 512)> (%arg0, %arg1)[%arg2]
+  %2 = affine.max affine_map<()[s0, s1] -> (s0 - s1, 11)> ()[%arg1, %arg2]
+  %3 = affine.max affine_map<()[] -> (77, 78, 79)> ()[]
+  return
+}
+--------------------------------------------------------------------------------
+
+(toplevel
+  (operation
+    (custom_operation
+      (func_dialect
+        (symbol_ref_id)
+        (func_arg_list
+          (value_use)
+          (type
+            (builtin_type
+              (index_type)))
+          (value_use)
+          (type
+            (builtin_type
+              (index_type)))
+          (value_use)
+          (type
+            (builtin_type
+              (index_type))))
+        (region
+          (entry_block
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (affine_dialect
+                  (attribute
+                    (builtin_attribute
+                      (affine_map
+                        (bare_id)
+                        (bare_id)
+                        (integer_literal)
+                        (bare_id)
+                        (integer_literal)
+                        (bare_id))))
+                  (value_use)
+                  (value_use))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (affine_dialect
+                  (attribute
+                    (builtin_attribute
+                      (affine_map
+                        (bare_id)
+                        (bare_id)
+                        (bare_id)
+                        (bare_id)
+                        (bare_id)
+                        (bare_id)
+                        (integer_literal))))
+                  (value_use)
+                  (value_use)
+                  (value_use))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (affine_dialect
+                  (attribute
+                    (builtin_attribute
+                      (affine_map
+                        (bare_id)
+                        (bare_id)
+                        (bare_id)
+                        (bare_id)
+                        (integer_literal))))
+                  (value_use)
+                  (value_use))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (affine_dialect
+                  (attribute
+                    (builtin_attribute
+                      (affine_map
+                        (integer_literal)
+                        (integer_literal)
+                        (integer_literal)))))))
+            (operation
+              (custom_operation
+                (func_dialect))))))))
+  (operation
+    (custom_operation
+      (func_dialect
+        (symbol_ref_id)
+        (func_arg_list
+          (value_use)
+          (type
+            (builtin_type
+              (index_type)))
+          (value_use)
+          (type
+            (builtin_type
+              (index_type)))
+          (value_use)
+          (type
+            (builtin_type
+              (index_type))))
+        (region
+          (entry_block
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (affine_dialect
+                  (attribute
+                    (builtin_attribute
+                      (affine_map
+                        (bare_id)
+                        (bare_id)
+                        (integer_literal)
+                        (bare_id)
+                        (integer_literal)
+                        (bare_id))))
+                  (value_use)
+                  (value_use))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (affine_dialect
+                  (attribute
+                    (builtin_attribute
+                      (affine_map
+                        (bare_id)
+                        (bare_id)
+                        (bare_id)
+                        (bare_id)
+                        (bare_id)
+                        (bare_id)
+                        (integer_literal))))
+                  (value_use)
+                  (value_use)
+                  (value_use))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (affine_dialect
+                  (attribute
+                    (builtin_attribute
+                      (affine_map
+                        (bare_id)
+                        (bare_id)
+                        (bare_id)
+                        (bare_id)
+                        (integer_literal))))
+                  (value_use)
+                  (value_use))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (affine_dialect
+                  (attribute
+                    (builtin_attribute
+                      (affine_map
+                        (integer_literal)
+                        (integer_literal)
+                        (integer_literal)))))))
+            (operation
+              (custom_operation
+                (func_dialect)))))))))
+
+================================================================================
+affine.dma_start and affine.dma_wait with complicated affine expressions
+================================================================================
+func.func @test4(%arg0 : index, %arg1 : index) {
+  %0 = memref.alloc() : memref<100x100xf32>
+  %1 = memref.alloc() : memref<100x100xf32, 2>
+  %2 = memref.alloc() : memref<1xi32>
+  %c64 = arith.constant 64 : index
+  affine.for %i0 = 0 to 10 {
+    affine.for %i1 = 0 to 10 {
+      affine.dma_start %0[(%i0 + symbol(%arg0)) floordiv 3, %i1],
+                       %1[%i0, (%i1 + symbol(%arg1)) mod 9 + 7],
+                       %2[%i0 + %i1 + 11], %c64
+        : memref<100x100xf32>, memref<100x100xf32, 2>, memref<1xi32>
+      affine.dma_wait %2[%i0 + %i1 + 11], %c64 : memref<1xi32>
+    }
+  }
+  return
+}
+--------------------------------------------------------------------------------
+
+(toplevel
+  (operation
+    (custom_operation
+      (func_dialect
+        (symbol_ref_id)
+        (func_arg_list
+          (value_use)
+          (type
+            (builtin_type
+              (index_type)))
+          (value_use)
+          (type
+            (builtin_type
+              (index_type))))
+        (region
+          (entry_block
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (memref_dialect
+                  (type
+                    (builtin_type
+                      (memref_type
+                        (dim_list
+                          (float_type))))))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (memref_dialect
+                  (type
+                    (builtin_type
+                      (memref_type
+                        (dim_list
+                          (float_type))
+                        (attribute_value
+                          (integer_literal))))))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (memref_dialect
+                  (type
+                    (builtin_type
+                      (memref_type
+                        (dim_list
+                          (integer_type))))))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (arith_dialect
+                  (integer_literal)
+                  (type
+                    (builtin_type
+                      (index_type))))))
+            (operation
+              (custom_operation
+                (affine_dialect
+                  (value_use)
+                  (integer_literal)
+                  (integer_literal)
+                  (region
+                    (entry_block
+                      (operation
+                        (custom_operation
+                          (affine_dialect
+                            (value_use)
+                            (integer_literal)
+                            (integer_literal)
+                            (region
+                              (entry_block
+                                (operation
+                                  (custom_operation
+                                    (affine_dialect
+                                      (value_use)
+                                      (value_use)
+                                      (value_use)
+                                      (integer_literal)
+                                      (value_use)
+                                      (value_use)
+                                      (value_use)
+                                      (value_use)
+                                      (value_use)
+                                      (integer_literal)
+                                      (integer_literal)
+                                      (value_use)
+                                      (value_use)
+                                      (value_use)
+                                      (integer_literal)
+                                      (value_use)
+                                      (type
+                                        (builtin_type
+                                          (memref_type
+                                            (dim_list
+                                              (float_type)))))
+                                      (type
+                                        (builtin_type
+                                          (memref_type
+                                            (dim_list
+                                              (float_type))
+                                            (attribute_value
+                                              (integer_literal)))))
+                                      (type
+                                        (builtin_type
+                                          (memref_type
+                                            (dim_list
+                                              (integer_type))))))))
+                                (operation
+                                  (custom_operation
+                                    (affine_dialect
+                                      (value_use)
+                                      (value_use)
+                                      (value_use)
+                                      (integer_literal)
+                                      (value_use)
+                                      (type
+                                        (builtin_type
+                                          (memref_type
+                                            (dim_list
+                                              (integer_type))))))))))))))))))
+            (operation
+              (custom_operation
+                (func_dialect)))))))))
+
+================================================================================
+affine_map with complex affine expression
+================================================================================
+func.func @semiaffine_mod(%arg0: index, %arg1: index) -> index {
+  %a = affine.apply affine_map<(d0)[s0] ->((-((d0 floordiv s0) * s0) + s0 * s0) mod s0)> (%arg0)[%arg1]
+  return %a : index
+}
+
+func.func @semiaffine_floordiv(%arg0: index, %arg1: index) -> index {
+  %a = affine.apply affine_map<(d0)[s0] ->((-((d0 floordiv s0) * s0) + ((2 * s0) mod (3 * s0))) floordiv s0)> (%arg0)[%arg1]
+  return %a : index
+}
+--------------------------------------------------------------------------------
+
+(toplevel
+  (operation
+    (custom_operation
+      (func_dialect
+        (symbol_ref_id)
+        (func_arg_list
+          (value_use)
+          (type
+            (builtin_type
+              (index_type)))
+          (value_use)
+          (type
+            (builtin_type
+              (index_type))))
+        (func_return
+          (type_list_attr_parens
+            (type
+              (builtin_type
+                (index_type)))))
+        (region
+          (entry_block
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (affine_dialect
+                  (attribute
+                    (builtin_attribute
+                      (affine_map
+                        (bare_id)
+                        (bare_id)
+                        (bare_id)
+                        (bare_id)
+                        (bare_id)
+                        (bare_id)
+                        (bare_id)
+                        (bare_id))))
+                  (value_use)
+                  (value_use))))
+            (operation
+              (custom_operation
+                (func_dialect
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (index_type)))))))))))
+  (operation
+    (custom_operation
+      (func_dialect
+        (symbol_ref_id)
+        (func_arg_list
+          (value_use)
+          (type
+            (builtin_type
+              (index_type)))
+          (value_use)
+          (type
+            (builtin_type
+              (index_type))))
+        (func_return
+          (type_list_attr_parens
+            (type
+              (builtin_type
+                (index_type)))))
+        (region
+          (entry_block
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (affine_dialect
+                  (attribute
+                    (builtin_attribute
+                      (affine_map
+                        (bare_id)
+                        (bare_id)
+                        (bare_id)
+                        (bare_id)
+                        (bare_id)
+                        (integer_literal)
+                        (bare_id)
+                        (integer_literal)
+                        (bare_id)
+                        (bare_id))))
+                  (value_use)
+                  (value_use))))
+            (operation
+              (custom_operation
+                (func_dialect
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (index_type))))))))))))

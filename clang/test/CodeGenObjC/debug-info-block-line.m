@@ -1,7 +1,6 @@
 // REQUIRES: x86-registered-target
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -fblocks -fobjc-arc -debug-info-kind=limited -triple x86_64-apple-darwin10 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -fblocks -fobjc-arc -debug-info-kind=limited -triple x86_64-apple-darwin10 %s -o - | FileCheck %s
 
-// rdar://11562117
 typedef unsigned int NSUInteger;
 typedef long NSInteger;
 typedef signed char BOOL;
@@ -62,16 +61,13 @@ typedef enum : NSUInteger {
     TMap       *map = [TMap mapForID:mapID];
 // Make sure we do not map code generated for the block to the above line.
 // CHECK: define internal void @"__39-[TServer serverConnection:getCommand:]_block_invoke"
-// CHECK: call void @llvm.objc.storeStrong(i8** [[ZERO:%.*]], i8* [[ONE:%.*]]) [[NUW:#[0-9]+]]
-// CHECK: call void @llvm.objc.storeStrong(i8** [[TWO:%.*]], i8* [[THREE:%.*]]) [[NUW]]
+// CHECK: call void @llvm.objc.storeStrong(ptr [[CONNECTION_ADDR:%.*]], ptr [[ONE:%.*]]) [[NUW:#[0-9]+]]
+// CHECK: call void @llvm.objc.storeStrong(ptr [[STR_ADDR:%.*]], ptr [[THREE:%.*]]) [[NUW]]
 // CHECK: call {{.*}}@objc_msgSend{{.*}}, !dbg ![[LINE_ABOVE:[0-9]+]]
 // CHECK: getelementptr
 // CHECK-NOT: !dbg, ![[LINE_ABOVE]]
-// CHECK: bitcast %5** [[TMP:%.*]] to i8**
-// CHECK-NOT: !dbg, ![[LINE_ABOVE]]
-// CHECK: call void @llvm.objc.storeStrong(i8** [[VAL1:%.*]], i8* null) [[NUW]]
-// CHECK-NEXT: bitcast %4** [[TMP:%.*]] to i8**
-// CHECK-NEXT: call void @llvm.objc.storeStrong(i8** [[VAL2:%.*]], i8* null) [[NUW]]
+// CHECK: call void @llvm.objc.storeStrong(ptr [[STR_ADDR]], ptr null) [[NUW]]
+// CHECK-NEXT: call void @llvm.objc.storeStrong(ptr [[CONNECTION_ADDR]], ptr null) [[NUW]]
 // CHECK-NEXT: ret
 // CHECK: attributes [[NUW]] = { nounwind }
     [map dataWithCompletionBlock:^(NSData *data, NSError *error) {

@@ -29,8 +29,8 @@ struct S {
 
 template <std::size_t N, std::size_t... Is>
 static auto genVariants(std::index_sequence<Is...>) {
-  using V = std::variant<S<Is>...>;
-  using F = V (*)();
+  using V                 = std::variant<S<Is>...>;
+  using F                 = V (*)();
   static constexpr F fs[] = {[] { return V(std::in_place_index<Is>); }...};
 
   std::array<V, N> result = {};
@@ -45,11 +45,8 @@ template <std::size_t N, std::size_t Alts>
 static void BM_Visit(benchmark::State& state) {
   auto args = genVariants<N>(std::make_index_sequence<Alts>{});
   for (auto _ : state) {
-    benchmark::DoNotOptimize(std::apply(
-        [](auto... vs) {
-          return std::visit([](auto... is) { return (is.v + ... + 0); }, vs...);
-        },
-        args));
+    benchmark::DoNotOptimize(
+        std::apply([](auto... vs) { return std::visit([](auto... is) { return (is.v + ... + 0); }, vs...); }, args));
   }
 }
 

@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -relocation-model=pic -o - %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -relocation-model=static -o - < %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -code-model=large -o - %s | FileCheck --check-prefix=CHECK-LARGE %s
-; RUN: llc -mtriple=aarch64-none-none-eabi -code-model=tiny -o - %s | FileCheck --check-prefix=CHECK-TINY %s
+; RUN: llc -mtriple=aarch64-none-elf -code-model=tiny -o - %s | FileCheck --check-prefix=CHECK-TINY %s
 
 declare extern_weak dso_local i32 @var()
 

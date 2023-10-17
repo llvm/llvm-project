@@ -12,8 +12,7 @@
 #include "clang-tidy-config.h"
 #include "llvm/Support/Compiler.h"
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 
 // This anchor is used to force the linker to link the AbseilModule.
 extern volatile int AbseilModuleAnchorSource;
@@ -138,7 +137,6 @@ extern volatile int ZirconModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED ZirconModuleAnchorDestination =
     ZirconModuleAnchorSource;
 
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy
 
 #endif

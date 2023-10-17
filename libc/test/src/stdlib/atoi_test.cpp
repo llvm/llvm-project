@@ -1,4 +1,4 @@
-//===-- Unittests for atoi -----------------------------------------------===//
+//===-- Unittests for atoi ------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,6 +10,6 @@
 
 #include "src/stdlib/atoi.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
-ATOI_TEST(Atoi, __llvm_libc::atoi)
+ATOI_TEST(Atoi, LIBC_NAMESPACE::atoi)

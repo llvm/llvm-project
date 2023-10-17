@@ -19,6 +19,12 @@
 #ifndef LLVM_SUPPORT_ALLOCATORBASE_H
 #define LLVM_SUPPORT_ALLOCATORBASE_H
 
+#ifdef _MSC_VER
+#define LLVM_ALLOCATORHOLDER_EMPTYBASE __declspec(empty_bases)
+#else
+#define LLVM_ALLOCATORHOLDER_EMPTYBASE
+#endif // _MSC_VER
+
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemAlloc.h"
 #include <type_traits>
@@ -72,7 +78,7 @@ public:
 
   /// Deallocate space for a sequence of objects without constructing them.
   template <typename T>
-  std::enable_if_t<!std::is_same<std::remove_cv_t<T>, void>::value, void>
+  std::enable_if_t<!std::is_same_v<std::remove_cv_t<T>, void>, void>
   Deallocate(T *Ptr, size_t Num = 1) {
     Deallocate(static_cast<const void *>(Ptr), Num * sizeof(T), alignof(T));
   }

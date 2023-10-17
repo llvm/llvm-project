@@ -82,6 +82,11 @@ class CompilerInvocation : public CompilerInvocationBase {
   /// Options controlling language dialect.
   Fortran::frontend::LangOptions langOpts;
 
+  // The original invocation of the compiler driver.
+  // This string will be set as the return value from the COMPILER_OPTIONS
+  // intrinsic of iso_fortran_env.
+  std::string allCompilerInvocOpts;
+
   // Semantics context
   std::unique_ptr<Fortran::semantics::SemanticsContext> semanticsContext;
 
@@ -106,6 +111,7 @@ class CompilerInvocation : public CompilerInvocationBase {
   Fortran::common::IntrinsicTypeDefaultKinds defaultKinds;
 
   bool enableConformanceChecks = false;
+  bool enableUsageChecks = false;
 
   /// Used in e.g. unparsing to dump the analyzed rather than the original
   /// parse-tree objects.
@@ -184,6 +190,9 @@ public:
     return enableConformanceChecks;
   }
 
+  bool &getEnableUsageChecks() { return enableUsageChecks; }
+  const bool &getEnableUsageChecks() const { return enableUsageChecks; }
+
   Fortran::parser::AnalyzedObjectsAsFortran &getAsFortran() {
     return asFortran;
   }
@@ -204,10 +213,14 @@ public:
   /// \param [out] res - The resulting invocation.
   static bool createFromArgs(CompilerInvocation &res,
                              llvm::ArrayRef<const char *> commandLineArgs,
-                             clang::DiagnosticsEngine &diags);
+                             clang::DiagnosticsEngine &diags,
+                             const char *argv0 = nullptr);
 
   // Enables the std=f2018 conformance check
   void setEnableConformanceChecks() { enableConformanceChecks = true; }
+
+  // Enables the usage checks
+  void setEnableUsageChecks() { enableUsageChecks = true; }
 
   /// Useful setters
   void setModuleDir(std::string &dir) { moduleDir = dir; }

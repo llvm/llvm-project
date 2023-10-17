@@ -12,10 +12,10 @@ add_clang_tool(clang-repl
   )
 
 clang_target_link_libraries(clang-repl PRIVATE
+  clangAST
   clangBasic
   clangFrontend
   clangInterpreter
-  clangTooling
   )
 
 # Support plugins.

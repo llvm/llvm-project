@@ -3,6 +3,8 @@
 ;RUN:   | FileCheck %s --check-prefix=NOFUSION
 ;RUN: llc < %s -mtriple=riscv64 -mattr=+f,+lui-addi-fusion -mcpu=sifive-u74 \
 ;RUN:   -target-abi=lp64f | FileCheck %s --check-prefix=FUSION
+;RUN: llc < %s -mtriple=riscv64 -mattr=+f,+lui-addi-fusion,+use-postra-scheduler -mcpu=sifive-u74 \
+;RUN:   -target-abi=lp64f | FileCheck %s --check-prefixes=FUSION-POSTRA
 
 @.str = private constant [4 x i8] c"%f\0A\00", align 1
 
@@ -20,6 +22,13 @@ define void @foo(i32 signext %0, i32 signext %1) {
 ; FUSION-NEXT:    lui a0, %hi(.L.str)
 ; FUSION-NEXT:    addi a0, a0, %lo(.L.str)
 ; FUSION-NEXT:    tail bar@plt
+;
+; FUSION-POSTRA-LABEL: foo:
+; FUSION-POSTRA:       # %bb.0:
+; FUSION-POSTRA-NEXT:    lui a0, %hi(.L.str)
+; FUSION-POSTRA-NEXT:    fcvt.s.w fa0, a1
+; FUSION-POSTRA-NEXT:    addi a0, a0, %lo(.L.str)
+; FUSION-POSTRA-NEXT:    tail bar@plt
   %3 = sitofp i32 %1 to float
   tail call void @bar(ptr @.str, float %3)
   ret void
@@ -40,5 +49,11 @@ define i32 @test_matint() {
 ; FUSION-NEXT:    lui a0, 1
 ; FUSION-NEXT:    addiw a0, a0, -2048
 ; FUSION-NEXT:    ret
+;
+; FUSION-POSTRA-LABEL: test_matint:
+; FUSION-POSTRA:       # %bb.0:
+; FUSION-POSTRA-NEXT:    lui a0, 1
+; FUSION-POSTRA-NEXT:    addiw a0, a0, -2048
+; FUSION-POSTRA-NEXT:    ret
   ret i32 2048
 }

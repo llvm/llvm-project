@@ -1,12 +1,11 @@
-// Here we test the order of the Checkers when StdCLibraryFunctionArgs is
+// Here we test the order of the Checkers when StdCLibraryFunctions is
 // enabled.
 
 // RUN: %clang --analyze %s --target=x86_64-pc-linux-gnu \
 // RUN:   -Xclang -analyzer-checker=core \
-// RUN:   -Xclang -analyzer-checker=apiModeling.StdCLibraryFunctions \
+// RUN:   -Xclang -analyzer-checker=unix.StdCLibraryFunctions \
 // RUN:   -Xclang -analyzer-config \
-// RUN:      -Xclang apiModeling.StdCLibraryFunctions:ModelPOSIX=true \
-// RUN:   -Xclang -analyzer-checker=alpha.unix.StdCLibraryFunctionArgs \
+// RUN:      -Xclang unix.StdCLibraryFunctions:ModelPOSIX=true \
 // RUN:   -Xclang -analyzer-checker=alpha.unix.Stream \
 // RUN:   -Xclang -analyzer-list-enabled-checkers \
 // RUN:   -Xclang -analyzer-display-progress \
@@ -15,17 +14,16 @@
 
 // CHECK:      OVERVIEW: Clang Static Analyzer Enabled Checkers List
 // CHECK-EMPTY:
-// CHECK-NEXT: core.CallAndMessageModeling
-// CHECK-NEXT: core.CallAndMessage
 // CHECK-NEXT: core.NonNullParamChecker
-// CHECK-NEXT: apiModeling.StdCLibraryFunctions
-// CHECK-NEXT: alpha.unix.StdCLibraryFunctionArgs
 // CHECK-NEXT: alpha.unix.Stream
 // CHECK-NEXT: apiModeling.Errno
 // CHECK-NEXT: apiModeling.TrustNonnull
 // CHECK-NEXT: apiModeling.TrustReturnsNonnull
 // CHECK-NEXT: apiModeling.llvm.CastValue
 // CHECK-NEXT: apiModeling.llvm.ReturnValue
+// CHECK-NEXT: core.BitwiseShift
+// CHECK-NEXT: core.CallAndMessageModeling
+// CHECK-NEXT: core.CallAndMessage
 // CHECK-NEXT: core.DivideZero
 // CHECK-NEXT: core.DynamicTypePropagation
 // CHECK-NEXT: core.NonnilStringConstants
@@ -58,6 +56,7 @@
 // CHECK-NEXT: unix.Malloc
 // CHECK-NEXT: unix.MallocSizeof
 // CHECK-NEXT: unix.MismatchedDeallocator
+// CHECK-NEXT: unix.StdCLibraryFunctions
 // CHECK-NEXT: unix.Vfork
 // CHECK-NEXT: unix.cstring.BadSizeArg
 // CHECK-NEXT: unix.cstring.NullArg

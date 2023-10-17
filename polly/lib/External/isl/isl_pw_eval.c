@@ -16,6 +16,16 @@
 
 #include <isl_pw_macro.h>
 
+#undef SUFFIX
+#define SUFFIX	point
+#undef ARG1
+#define ARG1	PW
+#undef ARG2
+#define ARG2	isl_point
+
+static
+#include "isl_align_params_templ.c"
+
 /* Evaluate "pw" in the void point "pnt".
  * In particular, return the value NaN.
  */
@@ -34,6 +44,9 @@ static __isl_give isl_val *FN(PW,eval_void)(__isl_take PW *pw,
  * If the point is void, then return NaN.
  * If the point lies outside the domain of "pw", then return 0 or NaN
  * depending on whether 0 is the default value for this type of function.
+ *
+ * Align the parameters if needed, but "pnt" should specify a value
+ * for all parameters in "pw".
  */
 __isl_give isl_val *FN(PW,eval)(__isl_take PW *pw, __isl_take isl_point *pnt)
 {
@@ -44,6 +57,8 @@ __isl_give isl_val *FN(PW,eval)(__isl_take PW *pw, __isl_take isl_point *pnt)
 	isl_bool ok;
 	isl_space *pnt_space, *pw_space;
 	isl_val *v;
+
+	FN(PW,align_params_point)(&pw, &pnt);
 
 	pnt_space = isl_point_peek_space(pnt);
 	pw_space = FN(PW,peek_space)(pw);

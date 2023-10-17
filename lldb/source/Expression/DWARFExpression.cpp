@@ -45,6 +45,7 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
+using namespace lldb_private::plugin::dwarf;
 
 // DWARFExpression constructor
 DWARFExpression::DWARFExpression() : m_data() {}
@@ -355,39 +356,28 @@ static offset_t GetOpcodeDataSize(const DataExtractor &data,
 }
 
 lldb::addr_t DWARFExpression::GetLocation_DW_OP_addr(const DWARFUnit *dwarf_cu,
-                                                     uint32_t op_addr_idx,
                                                      bool &error) const {
   error = false;
   lldb::offset_t offset = 0;
-  uint32_t curr_op_addr_idx = 0;
   while (m_data.ValidOffset(offset)) {
     const uint8_t op = m_data.GetU8(&offset);
 
-    if (op == DW_OP_addr) {
-      const lldb::addr_t op_file_addr = m_data.GetAddress(&offset);
-      if (curr_op_addr_idx == op_addr_idx)
-        return op_file_addr;
-      ++curr_op_addr_idx;
-    } else if (op == DW_OP_GNU_addr_index || op == DW_OP_addrx) {
+    if (op == DW_OP_addr)
+      return m_data.GetAddress(&offset);
+    if (op == DW_OP_GNU_addr_index || op == DW_OP_addrx) {
       uint64_t index = m_data.GetULEB128(&offset);
-      if (curr_op_addr_idx == op_addr_idx) {
-        if (!dwarf_cu) {
-          error = true;
-          break;
-        }
-
+      if (dwarf_cu)
         return dwarf_cu->ReadAddressFromDebugAddrSection(index);
-      }
-      ++curr_op_addr_idx;
-    } else {
-      const offset_t op_arg_size =
-          GetOpcodeDataSize(m_data, offset, op, dwarf_cu);
-      if (op_arg_size == LLDB_INVALID_OFFSET) {
-        error = true;
-        break;
-      }
-      offset += op_arg_size;
+      error = true;
+      break;
     }
+    const offset_t op_arg_size =
+        GetOpcodeDataSize(m_data, offset, op, dwarf_cu);
+    if (op_arg_size == LLDB_INVALID_OFFSET) {
+      error = true;
+      break;
+    }
+    offset += op_arg_size;
   }
   return LLDB_INVALID_ADDRESS;
 }
@@ -419,13 +409,33 @@ bool DWARFExpression::Update_DW_OP_addr(const DWARFUnit *dwarf_cu,
       // the heap data so "m_data" will now correctly manage the heap data.
       m_data.SetData(encoder.GetDataBuffer());
       return true;
-    } else {
-      const offset_t op_arg_size =
-          GetOpcodeDataSize(m_data, offset, op, dwarf_cu);
-      if (op_arg_size == LLDB_INVALID_OFFSET)
-        break;
-      offset += op_arg_size;
     }
+    if (op == DW_OP_addrx) {
+      // Replace DW_OP_addrx with DW_OP_addr, since we can't modify the
+      // read-only debug_addr table.
+      // Subtract one to account for the opcode.
+      llvm::ArrayRef data_before_op = m_data.GetData().take_front(offset - 1);
+
+      // Read the addrx index to determine how many bytes it needs.
+      const lldb::offset_t old_offset = offset;
+      m_data.GetULEB128(&offset);
+      if (old_offset == offset)
+        return false;
+      llvm::ArrayRef data_after_op = m_data.GetData().drop_front(offset);
+
+      DataEncoder encoder(m_data.GetByteOrder(), m_data.GetAddressByteSize());
+      encoder.AppendData(data_before_op);
+      encoder.AppendU8(DW_OP_addr);
+      encoder.AppendAddress(file_addr);
+      encoder.AppendData(data_after_op);
+      m_data.SetData(encoder.GetDataBuffer());
+      return true;
+    }
+    const offset_t op_arg_size =
+        GetOpcodeDataSize(m_data, offset, op, dwarf_cu);
+    if (op_arg_size == LLDB_INVALID_OFFSET)
+      break;
+    offset += op_arg_size;
   }
   return false;
 }
@@ -1080,6 +1090,13 @@ bool DWARFExpression::Evaluate(
         return false;
       }
       uint8_t size = opcodes.GetU8(&offset);
+      if (size > 8) {
+        if (error_ptr)
+              error_ptr->SetErrorStringWithFormat(
+                  "Invalid address size for DW_OP_deref_size: %d\n",
+                  size);
+        return false;
+      }
       Value::ValueType value_type = stack.back().GetValueType();
       switch (value_type) {
       case Value::ValueType::HostAddress: {
@@ -1140,9 +1157,9 @@ bool DWARFExpression::Evaluate(
           uint8_t addr_bytes[8];
           Status error;
 
-          if (exe_ctx->GetTargetRef().ReadMemory(
-                  so_addr, &addr_bytes, size, error,
-                  /*force_live_memory=*/false) == size) {
+          if (target &&
+              target->ReadMemory(so_addr, &addr_bytes, size, error,
+                                 /*force_live_memory=*/false) == size) {
             ObjectFile *objfile = module_sp->GetObjectFile();
 
             stack.back().GetScalar() = DerefSizeExtractDataHelper(
@@ -1152,7 +1169,7 @@ bool DWARFExpression::Evaluate(
           } else {
             if (error_ptr)
               error_ptr->SetErrorStringWithFormat(
-                  "Failed to dereference pointer for for DW_OP_deref_size: "
+                  "Failed to dereference pointer for DW_OP_deref_size: "
                   "%s\n",
                   error.AsCString());
             return false;
@@ -1436,8 +1453,12 @@ bool DWARFExpression::Evaluate(
           return false;
         } else {
           stack.pop_back();
-          stack.back() =
-              stack.back().ResolveValue(exe_ctx) / tmp.ResolveValue(exe_ctx);
+          Scalar divisor, dividend;
+          divisor = tmp.ResolveValue(exe_ctx);
+          dividend = stack.back().ResolveValue(exe_ctx);
+          divisor.MakeSigned();
+          dividend.MakeSigned();
+          stack.back() = dividend / divisor;
           if (!stack.back().ResolveValue(exe_ctx).IsValid()) {
             if (error_ptr)
               error_ptr->SetErrorString("Divide failed.");

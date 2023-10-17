@@ -4,11 +4,13 @@
 
 ; CHECK-LABEL: @bar_prof
 ; CHECK: loop:
-; CHECK: %mul = mul
-; CHECK: %mul.1 = mul
-; CHECK: %mul.2 = mul
-; CHECK: %mul.3 = mul
+; CHECK:   %mul = mul
+; CHECK:   %mul.1 = mul
+; CHECK:   %mul.2 = mul
+; CHECK:   %mul.3 = mul
+; CHECK:   br i1 %niter.ncmp.7, label %loop.end.unr-lcssa.loopexit, label %loop, !prof [[PROF0:![0-9]+]]
 ; CHECK: loop.epil:
+; CHECK:   br i1 %epil.iter.cmp, label %loop.epil, label %loop.end.epilog-lcssa, !prof [[PROF1:![0-9]+]], !llvm.loop {{![0-9]+}}
 define i32 @bar_prof(ptr noalias nocapture readonly %src, i64 %c) !prof !1 {
 entry:
   br label %loop
@@ -57,3 +59,6 @@ loop.end:
 
 !1 = !{!"function_entry_count", i64 1}
 !2 = !{!"branch_weights", i32 1, i32 1000}
+
+; CHECK: [[PROF0]] = !{!"branch_weights", i32 1, i32 124}
+; CHECK: [[PROF1]] = !{!"branch_weights", i32 3, i32 1}

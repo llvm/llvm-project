@@ -8,9 +8,6 @@ extern float groupshared f; // Ok, redeclaration?
 // expected-warning@+1 {{'auto' type specifier is a C++11 extension}}
 auto l = []() groupshared  {};
 
-
-// NOTE: remove this error once [[]] attribute is supported except for hlsl202x.
-// expected-error@+1 {{expected expression}}
 float groupshared [[]] i = 12;
 
 float groupshared const i2 = 12;

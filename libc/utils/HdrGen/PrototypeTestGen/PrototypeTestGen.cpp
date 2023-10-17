@@ -26,6 +26,8 @@ bool TestGeneratorMain(llvm::raw_ostream &OS, llvm::RecordKeeper &records) {
   llvm_libc::APIIndexer G(records);
   std::unordered_set<std::string> headerFileSet;
   for (const auto &entrypoint : EntrypointNamesOption) {
+    if (entrypoint == "errno")
+      continue;
     auto match = G.FunctionToHeaderMap.find(entrypoint);
     if (match == G.FunctionToHeaderMap.end()) {
       auto objectMatch = G.ObjectToHeaderMap.find(entrypoint);
@@ -47,6 +49,8 @@ bool TestGeneratorMain(llvm::raw_ostream &OS, llvm::RecordKeeper &records) {
 
   OS << "extern \"C\" int main() {\n";
   for (const auto &entrypoint : EntrypointNamesOption) {
+    if (entrypoint == "errno")
+      continue;
     auto match = G.FunctionSpecMap.find(entrypoint);
     if (match == G.FunctionSpecMap.end()) {
       auto objectMatch = G.ObjectSpecMap.find(entrypoint);
@@ -73,7 +77,8 @@ bool TestGeneratorMain(llvm::raw_ostream &OS, llvm::RecordKeeper &records) {
     if (llvm::StringRef(returnType).contains("_Noreturn"))
       returnType = "void";
 
-    OS << "  static_assert(__llvm_libc::cpp::is_same_v<" << returnType << '(';
+    OS << "  static_assert(LIBC_NAMESPACE::cpp::is_same_v<" << returnType
+       << '(';
     auto args = functionSpec->getValueAsListOfDefs("Args");
     for (size_t i = 0, size = args.size(); i < size; ++i) {
       llvm::Record *argType = args[i]->getValueAsDef("ArgType");
@@ -90,12 +95,6 @@ bool TestGeneratorMain(llvm::raw_ostream &OS, llvm::RecordKeeper &records) {
   OS << '\n';
   OS << "  return 0;\n";
   OS << "}\n\n";
-
-  // We provide dummy malloc and free implementations to support the case
-  // when LLVM libc does to include them.
-  OS << "void *malloc(size_t) __NOEXCEPT { return nullptr; }\n";
-  OS << "void *realloc(void *, size_t) __NOEXCEPT { return nullptr; }\n";
-  OS << "void free(void *) __NOEXCEPT {}\n";
 
   return false;
 }

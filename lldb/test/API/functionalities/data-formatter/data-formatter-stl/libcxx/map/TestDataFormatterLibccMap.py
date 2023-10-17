@@ -3,7 +3,6 @@ Test lldb data formatter subsystem.
 """
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -11,15 +10,16 @@ from lldbsuite.test import lldbutil
 
 
 class LibcxxMapDataFormatterTestCase(TestBase):
-
     def setUp(self):
         TestBase.setUp(self)
-        ns = 'ndk' if lldbplatformutil.target_is_android() else ''
-        self.namespace = 'std'
+        ns = "ndk" if lldbplatformutil.target_is_android() else ""
+        self.namespace = "std"
 
     def check_pair(self, first_value, second_value):
-        pair_children = [ValueCheck(name="first", value=first_value),
-                         ValueCheck(name="second", value=second_value)]
+        pair_children = [
+            ValueCheck(name="first", value=first_value),
+            ValueCheck(name="second", value=second_value),
+        ]
         return ValueCheck(children=pair_children)
 
     @add_test_categories(["libc++"])
@@ -30,25 +30,27 @@ class LibcxxMapDataFormatterTestCase(TestBase):
 
         bkpt = self.target().FindBreakpointByID(
             lldbutil.run_break_set_by_source_regexp(
-                self, "Set break point at this line."))
+                self, "Set break point at this line."
+            )
+        )
 
         self.runCmd("run", RUN_SUCCEEDED)
 
         # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
+        )
 
         # This is the function to remove the custom formats in order to have a
         # clean slate for the next test case.
         def cleanup():
-            self.runCmd('type format clear', check=False)
-            self.runCmd('type summary clear', check=False)
-            self.runCmd('type filter clear', check=False)
-            self.runCmd('type synth clear', check=False)
-            self.runCmd(
-                "settings set target.max-children-count 256",
-                check=False)
+            self.runCmd("type format clear", check=False)
+            self.runCmd("type summary clear", check=False)
+            self.runCmd("type filter clear", check=False)
+            self.runCmd("type synth clear", check=False)
+            self.runCmd("settings set target.max-children-count 256", check=False)
 
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
@@ -56,80 +58,101 @@ class LibcxxMapDataFormatterTestCase(TestBase):
         ns = self.namespace
         self.expect_expr("ii", result_summary="size=0", result_children=[])
 
-        self.expect('frame var ii',
-                    substrs=['%s::map' % ns,
-                             'size=0',
-                             '{}'])
+        self.expect("frame var ii", substrs=["%s::map" % ns, "size=0", "{}"])
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
-        self.expect_expr("ii", result_summary="size=2", result_children=[
-            self.check_pair("0", "0"),
-            self.check_pair("1", "1")
-        ])
+        self.expect_expr(
+            "ii",
+            result_summary="size=2",
+            result_children=[self.check_pair("0", "0"), self.check_pair("1", "1")],
+        )
 
-        self.expect('frame variable ii',
-                    substrs=['%s::map' % ns, 'size=2',
-                             '[0] = ',
-                             'first = 0',
-                             'second = 0',
-                             '[1] = ',
-                             'first = 1',
-                             'second = 1'])
-
-        lldbutil.continue_to_breakpoint(self.process(), bkpt)
-
-        self.expect('frame variable ii',
-                    substrs=['%s::map' % ns, 'size=4',
-                             '[2] = ',
-                             'first = 2',
-                             'second = 0',
-                             '[3] = ',
-                             'first = 3',
-                             'second = 1'])
+        self.expect(
+            "frame variable ii",
+            substrs=[
+                "%s::map" % ns,
+                "size=2",
+                "[0] = ",
+                "first = 0",
+                "second = 0",
+                "[1] = ",
+                "first = 1",
+                "second = 1",
+            ],
+        )
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
-        self.expect("p ii",
-                    substrs=['%s::map' % ns, 'size=8',
-                             '[5] = ',
-                             'first = 5',
-                             'second = 0',
-                             '[7] = ',
-                             'first = 7',
-                             'second = 1'])
+        self.expect(
+            "frame variable ii",
+            substrs=[
+                "%s::map" % ns,
+                "size=4",
+                "[2] = ",
+                "first = 2",
+                "second = 0",
+                "[3] = ",
+                "first = 3",
+                "second = 1",
+            ],
+        )
 
-        self.expect("frame var ii",
-                    substrs=['%s::map' % ns, 'size=8',
-                             '[5] = ',
-                             'first = 5',
-                             'second = 0',
-                             '[7] = ',
-                             'first = 7',
-                             'second = 1'])
+        lldbutil.continue_to_breakpoint(self.process(), bkpt)
+
+        self.expect(
+            "expression ii",
+            substrs=[
+                "%s::map" % ns,
+                "size=8",
+                "[5] = ",
+                "first = 5",
+                "second = 0",
+                "[7] = ",
+                "first = 7",
+                "second = 1",
+            ],
+        )
+
+        self.expect(
+            "frame var ii",
+            substrs=[
+                "%s::map" % ns,
+                "size=8",
+                "[5] = ",
+                "first = 5",
+                "second = 0",
+                "[7] = ",
+                "first = 7",
+                "second = 1",
+            ],
+        )
 
         # check access-by-index
-        self.expect("frame variable ii[0]",
-                    substrs=['first = 0',
-                             'second = 0'])
-        self.expect("frame variable ii[3]",
-                    substrs=['first =',
-                             'second ='])
+        self.expect("frame variable ii[0]", substrs=["first = 0", "second = 0"])
+        self.expect("frame variable ii[3]", substrs=["first =", "second ="])
 
         # (Non-)const key/val iterators
-        self.expect_expr("it", result_children=[
-            ValueCheck(name="first", value="0"),
-            ValueCheck(name="second", value="0")
-        ])
-        self.expect_expr("const_it", result_children=[
-            ValueCheck(name="first", value="0"),
-            ValueCheck(name="second", value="0")
-        ])
+        self.expect_expr(
+            "it",
+            result_children=[
+                ValueCheck(name="first", value="0"),
+                ValueCheck(name="second", value="0"),
+            ],
+        )
+        self.expect_expr(
+            "const_it",
+            result_children=[
+                ValueCheck(name="first", value="0"),
+                ValueCheck(name="second", value="0"),
+            ],
+        )
 
         # check that MightHaveChildren() gets it right
         self.assertTrue(
             self.frame().FindVariable("ii").MightHaveChildren(),
-            "ii.MightHaveChildren() says False for non empty!")
+            "ii.MightHaveChildren() says False for non empty!",
+        )
 
         # check that the expression parser does not make use of
         # synthetic children instead of running code
@@ -141,55 +164,57 @@ class LibcxxMapDataFormatterTestCase(TestBase):
 
         self.runCmd("continue")
 
-        self.expect('frame variable ii',
-                    substrs=['%s::map' % ns, 'size=0',
-                             '{}'])
+        self.expect("frame variable ii", substrs=["%s::map" % ns, "size=0", "{}"])
 
-        self.expect('frame variable si',
-                    substrs=['%s::map' % ns, 'size=0',
-                             '{}'])
+        self.expect("frame variable si", substrs=["%s::map" % ns, "size=0", "{}"])
 
         self.runCmd("continue")
 
-        self.expect('frame variable si',
-                    substrs=['%s::map' % ns, 'size=1',
-                             '[0] = ',
-                             'first = \"zero\"',
-                             'second = 0'])
+        self.expect(
+            "frame variable si",
+            substrs=[
+                "%s::map" % ns,
+                "size=1",
+                "[0] = ",
+                'first = "zero"',
+                "second = 0",
+            ],
+        )
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
         self.expect(
             "frame variable si",
             substrs=[
-                '%s::map' % ns,
-                'size=4',
+                "%s::map" % ns,
+                "size=4",
                 '[0] = (first = "one", second = 1)',
                 '[1] = (first = "three", second = 3)',
                 '[2] = (first = "two", second = 2)',
                 '[3] = (first = "zero", second = 0)',
-            ])
+            ],
+        )
 
         self.expect(
-            "p si",
+            "expression si",
             substrs=[
-                '%s::map' % ns,
-                'size=4',
+                "%s::map" % ns,
+                "size=4",
                 '[0] = (first = "one", second = 1)',
                 '[1] = (first = "three", second = 3)',
                 '[2] = (first = "two", second = 2)',
                 '[3] = (first = "zero", second = 0)',
-            ])
+            ],
+        )
 
         # check that MightHaveChildren() gets it right
         self.assertTrue(
             self.frame().FindVariable("si").MightHaveChildren(),
-            "si.MightHaveChildren() says False for non empty!")
+            "si.MightHaveChildren() says False for non empty!",
+        )
 
         # check access-by-index
-        self.expect("frame variable si[0]",
-                    substrs=['first = ', 'one',
-                             'second = 1'])
+        self.expect("frame variable si[0]", substrs=["first = ", "one", "second = 1"])
 
         # check that the expression parser does not make use of
         # synthetic children instead of running code
@@ -201,49 +226,46 @@ class LibcxxMapDataFormatterTestCase(TestBase):
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
-        self.expect('frame variable si',
-                    substrs=['%s::map' % ns, 'size=0',
-                             '{}'])
+        self.expect("frame variable si", substrs=["%s::map" % ns, "size=0", "{}"])
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
-        self.expect('frame variable is',
-                    substrs=['%s::map' % ns, 'size=0',
-                             '{}'])
+        self.expect("frame variable is", substrs=["%s::map" % ns, "size=0", "{}"])
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
         self.expect(
             "frame variable is",
             substrs=[
-                '%s::map' % ns,
-                'size=4',
+                "%s::map" % ns,
+                "size=4",
                 '[0] = (first = 1, second = "is")',
                 '[1] = (first = 2, second = "smart")',
                 '[2] = (first = 3, second = "!!!")',
                 '[3] = (first = 85, second = "goofy")',
-            ])
+            ],
+        )
 
         self.expect(
-            "p is",
+            "expression is",
             substrs=[
-                '%s::map' % ns,
-                'size=4',
+                "%s::map" % ns,
+                "size=4",
                 '[0] = (first = 1, second = "is")',
                 '[1] = (first = 2, second = "smart")',
                 '[2] = (first = 3, second = "!!!")',
                 '[3] = (first = 85, second = "goofy")',
-            ])
+            ],
+        )
 
         # check that MightHaveChildren() gets it right
         self.assertTrue(
             self.frame().FindVariable("is").MightHaveChildren(),
-            "is.MightHaveChildren() says False for non empty!")
+            "is.MightHaveChildren() says False for non empty!",
+        )
 
         # check access-by-index
-        self.expect("frame variable is[0]",
-                    substrs=['first = ',
-                             'second ='])
+        self.expect("frame variable is[0]", substrs=["first = ", "second ="])
 
         # check that the expression parser does not make use of
         # synthetic children instead of running code
@@ -255,46 +277,44 @@ class LibcxxMapDataFormatterTestCase(TestBase):
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
-        self.expect('frame variable is',
-                    substrs=['%s::map' % ns, 'size=0',
-                             '{}'])
+        self.expect("frame variable is", substrs=["%s::map" % ns, "size=0", "{}"])
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
-        self.expect('frame variable ss',
-                    substrs=['%s::map' % ns, 'size=0',
-                             '{}'])
+        self.expect("frame variable ss", substrs=["%s::map" % ns, "size=0", "{}"])
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
         self.expect(
             "frame variable ss",
             substrs=[
-                '%s::map' % ns,
-                'size=3',
+                "%s::map" % ns,
+                "size=3",
                 '[0] = (first = "casa", second = "house")',
                 '[1] = (first = "ciao", second = "hello")',
                 '[2] = (first = "gatto", second = "cat")',
-            ])
+            ],
+        )
 
         self.expect(
-            "p ss",
+            "expression ss",
             substrs=[
-                '%s::map' % ns,
-                'size=3',
+                "%s::map" % ns,
+                "size=3",
                 '[0] = (first = "casa", second = "house")',
                 '[1] = (first = "ciao", second = "hello")',
                 '[2] = (first = "gatto", second = "cat")',
-            ])
+            ],
+        )
 
         # check that MightHaveChildren() gets it right
         self.assertTrue(
             self.frame().FindVariable("ss").MightHaveChildren(),
-            "ss.MightHaveChildren() says False for non empty!")
+            "ss.MightHaveChildren() says False for non empty!",
+        )
 
         # check access-by-index
-        self.expect("frame variable ss[2]",
-                    substrs=['gatto', 'cat'])
+        self.expect("frame variable ss[2]", substrs=["gatto", "cat"])
 
         # check that the expression parser does not make use of
         # synthetic children instead of running code
@@ -306,6 +326,4 @@ class LibcxxMapDataFormatterTestCase(TestBase):
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
-        self.expect('frame variable ss',
-                    substrs=['%s::map' % ns, 'size=0',
-                             '{}'])
+        self.expect("frame variable ss", substrs=["%s::map" % ns, "size=0", "{}"])

@@ -170,9 +170,12 @@ enum Kind {
   kw_amdgpu_gs,
   kw_amdgpu_ps,
   kw_amdgpu_cs,
+  kw_amdgpu_cs_chain,
+  kw_amdgpu_cs_chain_preserve,
   kw_amdgpu_kernel,
   kw_amdgpu_gfx,
   kw_tailcc,
+  kw_m68k_rtdcc,
 
   // Attributes:
   kw_attributes,
@@ -194,6 +197,24 @@ enum Kind {
   kw_argmemonly,
   kw_inaccessiblememonly,
   kw_inaccessiblemem_or_argmemonly,
+
+  // nofpclass attribute:
+  kw_all,
+  kw_nan,
+  kw_snan,
+  kw_qnan,
+  kw_inf,
+  // kw_ninf, - already an fmf
+  kw_pinf,
+  kw_norm,
+  kw_nnorm,
+  kw_pnorm,
+  // kw_sub,  - already an instruction
+  kw_nsub,
+  kw_psub,
+  kw_zero,
+  kw_nzero,
+  kw_pzero,
 
   kw_type,
   kw_opaque,
@@ -237,6 +258,8 @@ enum Kind {
   kw_umin,
   kw_fmax,
   kw_fmin,
+  kw_uinc_wrap,
+  kw_udec_wrap,
 
   // Instruction Opcodes (Opcode in UIntVal).
   kw_fneg,
@@ -414,7 +437,6 @@ enum Kind {
   kw_versions,
   kw_memProf,
   kw_notcold,
-  kw_notcoldandcold,
 
   // GV's with __attribute__((no_sanitize("address"))), or things in
   // -fsanitize-ignorelist when built with ASan.

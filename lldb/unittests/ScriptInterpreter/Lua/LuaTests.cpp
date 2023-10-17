@@ -14,14 +14,16 @@ using namespace lldb_private;
 
 extern "C" int luaopen_lldb(lua_State *L) { return 0; }
 
-llvm::Expected<bool> lldb_private::LLDBSwigLuaBreakpointCallbackFunction(
+llvm::Expected<bool>
+lldb_private::lua::SWIGBridge::LLDBSwigLuaBreakpointCallbackFunction(
     lua_State *L, lldb::StackFrameSP stop_frame_sp,
     lldb::BreakpointLocationSP bp_loc_sp,
     const StructuredDataImpl &extra_args_impl) {
   return false;
 }
 
-llvm::Expected<bool> lldb_private::LLDBSwigLuaWatchpointCallbackFunction(
+llvm::Expected<bool>
+lldb_private::lua::SWIGBridge::LLDBSwigLuaWatchpointCallbackFunction(
     lua_State *L, lldb::StackFrameSP stop_frame_sp, lldb::WatchpointSP wp_sp) {
   return false;
 }

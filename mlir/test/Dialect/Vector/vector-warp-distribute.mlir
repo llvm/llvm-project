@@ -505,7 +505,7 @@ func.func @warp_scf_for_multiple_yield(%arg0: index, %arg1: memref<?xf32>, %arg2
 //       CHECK-PROP:   %[[warp_op:.*]] = vector.warp_execute_on_lane_0(%[[laneid]])[32] -> (vector<1xf32>) {
 //       CHECK-PROP:     vector.yield %{{.*}} : vector<32xf32>
 //       CHECK-PROP:   }
-//       CHECK-PROP:   %[[a:.*]] = vector.extract %[[warp_op]][0] : vector<1xf32>
+//       CHECK-PROP:   %[[a:.*]] = vector.extract %[[warp_op]][0] : f32 from vector<1xf32>
 //       CHECK-PROP:   %[[r0:.*]], %{{.*}} = gpu.shuffle  xor %[[a]], %[[c1]], %[[c32]]
 //       CHECK-PROP:   %[[a0:.*]] = arith.addf %[[a]], %[[r0]]
 //       CHECK-PROP:   %[[r1:.*]], %{{.*}} = gpu.shuffle  xor %[[a0]], %[[c2]], %[[c32]]
@@ -663,7 +663,7 @@ func.func @warp_constant(%laneid: index) -> (vector<1xf32>) {
 func.func @vector_extract_1d(%laneid: index) -> (f32) {
   %r = vector.warp_execute_on_lane_0(%laneid)[32] -> (f32) {
     %0 = "some_def"() : () -> (vector<64xf32>)
-    %1 = vector.extract %0[9] : vector<64xf32>
+    %1 = vector.extract %0[9] : f32 from vector<64xf32>
     vector.yield %1 : f32
   }
   return %r : f32
@@ -676,12 +676,12 @@ func.func @vector_extract_1d(%laneid: index) -> (f32) {
 //       CHECK-PROP:     %[[V:.*]] = "some_def"
 //       CHECK-PROP:     vector.yield %[[V]] : vector<5x96xf32>
 //       CHECK-PROP:   }
-//       CHECK-PROP:   %[[E:.*]] = vector.extract %[[W]][2] : vector<5x3xf32>
+//       CHECK-PROP:   %[[E:.*]] = vector.extract %[[W]][2] : vector<3xf32> from vector<5x3xf32>
 //       CHECK-PROP:   return %[[E]]
 func.func @vector_extract_2d(%laneid: index) -> (vector<3xf32>) {
   %r = vector.warp_execute_on_lane_0(%laneid)[32] -> (vector<3xf32>) {
     %0 = "some_def"() : () -> (vector<5x96xf32>)
-    %1 = vector.extract %0[2] : vector<5x96xf32>
+    %1 = vector.extract %0[2] : vector<96xf32> from vector<5x96xf32>
     vector.yield %1 : vector<96xf32>
   }
   return %r : vector<3xf32>
@@ -694,12 +694,12 @@ func.func @vector_extract_2d(%laneid: index) -> (vector<3xf32>) {
 //       CHECK-PROP:     %[[V:.*]] = "some_def"
 //       CHECK-PROP:     vector.yield %[[V]] : vector<5x96xf32>
 //       CHECK-PROP:   }
-//       CHECK-PROP:   %[[E:.*]] = vector.extract %[[W]][1, 2] : vector<5x96xf32>
+//       CHECK-PROP:   %[[E:.*]] = vector.extract %[[W]][1, 2] : f32 from vector<5x96xf32>
 //       CHECK-PROP:   return %[[E]]
 func.func @vector_extract_2d_broadcast_scalar(%laneid: index) -> (f32) {
   %r = vector.warp_execute_on_lane_0(%laneid)[32] -> (f32) {
     %0 = "some_def"() : () -> (vector<5x96xf32>)
-    %1 = vector.extract %0[1, 2] : vector<5x96xf32>
+    %1 = vector.extract %0[1, 2] : f32 from vector<5x96xf32>
     vector.yield %1 : f32
   }
   return %r : f32
@@ -712,12 +712,12 @@ func.func @vector_extract_2d_broadcast_scalar(%laneid: index) -> (f32) {
 //       CHECK-PROP:     %[[V:.*]] = "some_def"
 //       CHECK-PROP:     vector.yield %[[V]] : vector<5x96xf32>
 //       CHECK-PROP:   }
-//       CHECK-PROP:   %[[E:.*]] = vector.extract %[[W]][2] : vector<5x96xf32>
+//       CHECK-PROP:   %[[E:.*]] = vector.extract %[[W]][2] : vector<96xf32> from vector<5x96xf32>
 //       CHECK-PROP:   return %[[E]]
 func.func @vector_extract_2d_broadcast(%laneid: index) -> (vector<96xf32>) {
   %r = vector.warp_execute_on_lane_0(%laneid)[32] -> (vector<96xf32>) {
     %0 = "some_def"() : () -> (vector<5x96xf32>)
-    %1 = vector.extract %0[2] : vector<5x96xf32>
+    %1 = vector.extract %0[2] : vector<96xf32> from vector<5x96xf32>
     vector.yield %1 : vector<96xf32>
   }
   return %r : vector<96xf32>
@@ -730,12 +730,12 @@ func.func @vector_extract_2d_broadcast(%laneid: index) -> (vector<96xf32>) {
 //       CHECK-PROP:     %[[V:.*]] = "some_def"
 //       CHECK-PROP:     vector.yield %[[V]] : vector<8x128x96xf32>
 //       CHECK-PROP:   }
-//       CHECK-PROP:   %[[E:.*]] = vector.extract %[[W]][2] : vector<8x4x96xf32>
+//       CHECK-PROP:   %[[E:.*]] = vector.extract %[[W]][2] : vector<4x96xf32> from vector<8x4x96xf32>
 //       CHECK-PROP:   return %[[E]]
 func.func @vector_extract_3d(%laneid: index) -> (vector<4x96xf32>) {
   %r = vector.warp_execute_on_lane_0(%laneid)[32] -> (vector<4x96xf32>) {
     %0 = "some_def"() : () -> (vector<8x128x96xf32>)
-    %1 = vector.extract %0[2] : vector<8x128x96xf32>
+    %1 = vector.extract %0[2] : vector<128x96xf32> from vector<8x128x96xf32>
     vector.yield %1 : vector<128x96xf32>
   }
   return %r : vector<4x96xf32>
@@ -824,6 +824,50 @@ func.func @lane_dependent_warp_propagate_read(
   vector.transfer_write %r, %dest[%c0, %laneid] : vector<1x1xf32>, memref<1x1024xf32>
   return
 }
+
+// -----
+
+func.func @warp_propagate_read_3d(%laneid: index, %src: memref<32x4x32xf32>) -> vector<1x1x4xf32> {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %r = vector.warp_execute_on_lane_0(%laneid)[1024] -> (vector<1x1x4xf32>) {
+    %2 = vector.transfer_read %src[%c0, %c0, %c0], %cst : memref<32x4x32xf32>, vector<32x4x32xf32>
+    vector.yield %2 : vector<32x4x32xf32>
+  }
+  return %r : vector<1x1x4xf32>
+}
+
+//   CHECK-PROP-DAG: #[[$ID0MAP:.+]] = affine_map<()[s0] -> (s0 * 4 - (s0 floordiv 8) * 32)>
+//   CHECK-PROP-DAG: #[[$ID1MAP:.+]] = affine_map<()[s0] -> ((s0 floordiv 8) mod 4)>
+//   CHECK-PROP-DAG: #[[$ID2MAP:.+]] = affine_map<()[s0] -> ((s0 floordiv 8) floordiv 32)>
+// CHECK-PROP-LABEL: func.func @warp_propagate_read_3d
+//  CHECK-PROP-SAME: (%[[LANE:.+]]: index, %[[SRC:.+]]: memref<32x4x32xf32>)
+//   CHECK-PROP-DAG: %[[ID0:.+]] = affine.apply #[[$ID0MAP]]()[%[[LANE]]]
+//   CHECK-PROP-DAG: %[[ID1:.+]] = affine.apply #[[$ID1MAP]]()[%[[LANE]]]
+//   CHECK-PROP-DAG: %[[ID2:.+]] = affine.apply #[[$ID2MAP]]()[%[[LANE]]]
+//       CHECK-PROP: %[[READ:.+]] = vector.transfer_read %[[SRC]][%[[ID2]], %[[ID1]], %[[ID0]]], %{{.+}} : memref<32x4x32xf32>, vector<1x1x4xf32>
+//       CHECK-PROP: return %[[READ]] : vector<1x1x4xf32>
+
+// -----
+
+func.func @warp_propagate_read_broadcast(%laneid: index, %src: memref<32x1xf32>) -> vector<1x4xf32> {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %r = vector.warp_execute_on_lane_0(%laneid)[512] -> (vector<1x4xf32>) {
+    %2 = vector.transfer_read %src[%c0, %c0], %cst {in_bounds = [true, true], permutation_map = affine_map<(d0, d1) -> (d0, 0)>} : memref<32x1xf32>, vector<32x64xf32>
+    vector.yield %2 : vector<32x64xf32>
+  }
+  return %r : vector<1x4xf32>
+}
+
+//   CHECK-PROP-DAG: #[[$MAP:.+]] = affine_map<()[s0] -> (s0 floordiv 16)>
+//   CHECK-PROP-DAG: #[[$READMAP:.+]] = affine_map<(d0, d1) -> (d0, 0)>
+// CHECK-PROP-LABEL: func.func @warp_propagate_read_broadcast
+//  CHECK-PROP-SAME: (%[[LANE:.+]]: index, %[[SRC:.+]]: memref<32x1xf32>)
+//       CHECK-PROP:  %[[C0:.+]] = arith.constant 0 : index
+//       CHECK-PROP:  %[[ID:.+]] = affine.apply #[[$MAP]]()[%[[LANE]]]
+//       CHECK-PROP:  %[[READ:.+]] = vector.transfer_read %[[SRC]][%[[ID]], %[[C0]]], %{{.+}} {in_bounds = [true, true], permutation_map = #[[$READMAP]]} : memref<32x1xf32>, vector<1x4xf32>
+//       CHECK-PROP:  return %[[READ]] : vector<1x4xf32>
 
 // -----
 
@@ -1109,3 +1153,101 @@ func.func @vector_insert_2d_broadcast(%laneid: index) -> (vector<4x96xf32>) {
   }
   return %r : vector<4x96xf32>
 }
+
+// -----
+
+// Check that we don't propagate transfer_reads that have dependencies on
+// values inside the warp_execute_on_lane_0.
+// In this case, propagating would create transfer_read that depends on the
+// extractelment defined in the body.
+
+// CHECK-PROP-LABEL: func @transfer_read_no_prop(
+//  CHECK-PROP-SAME:     %[[IN2:[^ :]*]]: vector<1x2xindex>,
+//  CHECK-PROP-SAME:     %[[AR1:[^ :]*]]: memref<1x4x2xi32>,
+//  CHECK-PROP-SAME:     %[[AR2:[^ :]*]]: memref<1x4x1024xf32>)
+//   CHECK-PROP-DAG:   %[[C0:.*]] = arith.constant 0 : index
+//   CHECK-PROP-DAG:   %[[THREADID:.*]] = gpu.thread_id  x
+//       CHECK-PROP:   %[[W:.*]] = vector.warp_execute_on_lane_0(%[[THREADID]])[32] args(%[[IN2]]
+//       CHECK-PROP:     %[[GATHER:.*]] = vector.gather %[[AR1]][{{.*}}]
+//       CHECK-PROP:     %[[EXTRACT:.*]] = vector.extract %[[GATHER]][0] : vector<64xi32> from vector<1x64xi32>
+//       CHECK-PROP:     %[[CAST:.*]] = arith.index_cast %[[EXTRACT]] : vector<64xi32> to vector<64xindex>
+//       CHECK-PROP:     %[[EXTRACTELT:.*]] = vector.extractelement %[[CAST]][{{.*}}: i32] : vector<64xindex>
+//       CHECK-PROP:     %[[TRANSFERREAD:.*]] = vector.transfer_read %[[AR2]][%[[C0]], %[[EXTRACTELT]], %[[C0]]],
+//       CHECK-PROP:     vector.yield %[[TRANSFERREAD]] : vector<64xf32>
+//       CHECK-PROP:   return %[[W]]
+func.func @transfer_read_no_prop(%in2: vector<1x2xindex>, %ar1 :  memref<1x4x2xi32>, %ar2 : memref<1x4x1024xf32>)-> vector<2xf32> {
+  %0 = gpu.thread_id  x
+  %c0_i32 = arith.constant 0 : i32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant dense<0> : vector<1x64xi32>
+  %cst_0 = arith.constant dense<true> : vector<1x64xi1>
+  %cst_1 = arith.constant dense<3> : vector<64xindex>
+  %cst_2 = arith.constant dense<0> : vector<64xindex>
+  %cst_6 = arith.constant 0.000000e+00 : f32
+
+  %18 = vector.warp_execute_on_lane_0(%0)[32] args(%in2 : vector<1x2xindex>) -> (vector<2xf32>) {
+  ^bb0(%arg4: vector<1x64xindex>):
+    %28 = vector.gather %ar1[%c0, %c0, %c0] [%arg4], %cst_0, %cst : memref<1x4x2xi32>, vector<1x64xindex>, vector<1x64xi1>, vector<1x64xi32> into vector<1x64xi32>
+    %29 = vector.extract %28[0] : vector<64xi32> from vector<1x64xi32>
+    %30 = arith.index_cast %29 : vector<64xi32> to vector<64xindex>
+    %36 = vector.extractelement %30[%c0_i32 : i32] : vector<64xindex>
+    %37 = vector.transfer_read %ar2[%c0, %36, %c0], %cst_6 {in_bounds = [true]} : memref<1x4x1024xf32>, vector<64xf32>
+    vector.yield %37 : vector<64xf32>
+  }
+  return %18 : vector<2xf32>
+}
+
+// -----
+
+// Check that we don't fold vector.broadcast when each thread doesn't get the
+// same value.
+
+// CHECK-PROP-LABEL: func @dont_fold_vector_broadcast(
+//       CHECK-PROP:   %[[r:.*]] = vector.warp_execute_on_lane_0{{.*}} -> (vector<1x2xf32>)
+//       CHECK-PROP:     %[[some_def:.*]] = "some_def"
+//       CHECK-PROP:     %[[broadcast:.*]] = vector.broadcast %[[some_def]] : vector<64xf32> to vector<1x64xf32>
+//       CHECK-PROP:     vector.yield %[[broadcast]] : vector<1x64xf32>
+//       CHECK-PROP:   vector.print %[[r]] : vector<1x2xf32>
+func.func @dont_fold_vector_broadcast(%laneid: index) {
+  %r = vector.warp_execute_on_lane_0(%laneid)[32] -> (vector<1x2xf32>) {
+    %0 = "some_def"() : () -> (vector<64xf32>)
+    %1 = vector.broadcast %0 : vector<64xf32> to vector<1x64xf32>
+    vector.yield %1 : vector<1x64xf32>
+  }
+  vector.print %r : vector<1x2xf32>
+  return
+}
+
+// -----
+
+func.func @warp_propagate_shape_cast(%laneid: index, %src: memref<32x4x32xf32>) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %r = vector.warp_execute_on_lane_0(%laneid)[1024] -> (vector<4xf32>) {
+    %2 = vector.transfer_read %src[%c0, %c0, %c0], %cst : memref<32x4x32xf32>, vector<32x4x32xf32>
+    %3 = vector.shape_cast %2 : vector<32x4x32xf32> to vector<4096xf32>
+    vector.yield %3 : vector<4096xf32>
+  }
+  return %r : vector<4xf32>
+}
+
+// CHECK-PROP-LABEL: func.func @warp_propagate_shape_cast
+// CHECK-PROP:   %[[READ:.+]] = vector.transfer_read {{.+}} : memref<32x4x32xf32>, vector<1x1x4xf32>
+// CHECK-PROP:   %[[CAST:.+]] = vector.shape_cast %[[READ]] : vector<1x1x4xf32> to vector<4xf32>
+// CHECK-PROP:   return %[[CAST]] : vector<4xf32>
+
+// -----
+
+func.func @warp_propagate_uniform_transfer_read(%laneid: index, %src: memref<4096xf32>, %index: index) -> vector<1xf32> {
+  %f0 = arith.constant 0.000000e+00 : f32
+  %r = vector.warp_execute_on_lane_0(%laneid)[64] -> (vector<1xf32>) {
+    %1 = vector.transfer_read %src[%index], %f0 {in_bounds = [true]} : memref<4096xf32>, vector<1xf32>
+    vector.yield %1 : vector<1xf32>
+  }
+  return %r : vector<1xf32>
+}
+
+// CHECK-PROP-LABEL: func.func @warp_propagate_uniform_transfer_read
+//  CHECK-PROP-SAME: (%{{.+}}: index, %[[SRC:.+]]: memref<4096xf32>, %[[INDEX:.+]]: index)
+//       CHECK-PROP:   %[[READ:.+]] = vector.transfer_read %[[SRC]][%[[INDEX]]], %cst {in_bounds = [true]} : memref<4096xf32>, vector<1xf32>
+//       CHECK-PROP:   return %[[READ]] : vector<1xf32>

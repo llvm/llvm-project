@@ -1,5 +1,10 @@
 include "llvm/Option/OptParser.td"
 
+multiclass BB<string name, string help1, string help2> {
+  def NAME: Flag<["--"], name>, HelpText<help1>;
+  def no_ # NAME: Flag<["--"], "no-" # name>, HelpText<help2>;
+}
+
 // Flags that lld/MachO understands but ld64 doesn't. These take
 // '--' instead of '-' and use dashes instead of underscores, so
 // they don't collide with the ld64 compat options.
@@ -53,9 +58,6 @@ def reproduce_eq: Joined<["--"], "reproduce=">,
 def version: Flag<["--"], "version">,
     HelpText<"Display the version number and exit">,
     Group<grp_lld>;
-def no_lto_legacy_pass_manager : Flag<["--"], "no-lto-legacy-pass-manager">,
-    HelpText<"Use the new pass manager in LLVM">,
-    Group<grp_lld>;
 def time_trace_eq: Joined<["--"], "time-trace=">,
     HelpText<"Record time trace to <file>">,
     MetaVarName<"<file>">,
@@ -86,6 +88,10 @@ def icf_eq: Joined<["--"], "icf=">,
 def lto_O: Joined<["--"], "lto-O">,
     HelpText<"Set optimization level for LTO (default: 2)">,
     MetaVarName<"<opt-level>">,
+    Group<grp_lld>;
+def lto_CGO: Joined<["--"], "lto-CGO">,
+    HelpText<"Set codegen optimization level for LTO (default: 2)">,
+    MetaVarName<"<cgopt-level>">,
     Group<grp_lld>;
 def thinlto_cache_policy_eq: Joined<["--"], "thinlto-cache-policy=">,
     HelpText<"Pruning policy for the ThinLTO cache">,
@@ -120,6 +126,18 @@ def ignore_auto_link_option_eq : Joined<["--"], "ignore-auto-link-option=">,
 def strict_auto_link : Flag<["--"], "strict-auto-link">,
     HelpText<"Always warn for missing frameworks or libraries if they are loaded via LC_LINKER_OPTIONS">,
     Group<grp_lld>;
+def check_category_conflicts : Flag<["--"], "check-category-conflicts">,
+    HelpText<"Check for conflicts between category & class methods">,
+    Group<grp_lld>;
+def lto_debug_pass_manager: Flag<["--"], "lto-debug-pass-manager">,
+    HelpText<"Debug new pass manager">, Group<grp_lld>;
+def cs_profile_generate: Flag<["--"], "cs-profile-generate">,
+    HelpText<"Perform context senstive PGO instrumentation">, Group<grp_lld>;
+def cs_profile_path: Joined<["--"], "cs-profile-path=">,
+    HelpText<"Context sensitive profile file path">, Group<grp_lld>;
+defm pgo_warn_mismatch: BB<"pgo-warn-mismatch",
+  "turn on warnings about profile cfg mismatch (default)",
+  "turn off warnings about profile cfg mismatch">, Group<grp_lld>;
 
 // This is a complete Options.td compiled from Apple's ld(1) manpage
 // dated 2018-03-07 and cross checked with ld64 source code in repo
@@ -640,21 +658,6 @@ def add_ast_path : Separate<["-"], "add_ast_path">,
     HelpText<"AST paths will be emitted as STABS">,
     Group<grp_symtab>;
 
-def grp_bitcode : OptionGroup<"bitcode">, HelpText<"BITCODE BUILD FLOW">;
-
-def bitcode_bundle : Flag<["-"], "bitcode_bundle">,
-    HelpText<"Generate an embedded bitcode bundle in the __LLVM,__bundle section of the output">,
-    Group<grp_bitcode>;
-def bitcode_hide_symbols : Flag<["-"], "bitcode_hide_symbols">,
-    HelpText<"With -bitcode_bundle, hide all non-exported symbols from output bitcode bundle.">,
-    Flags<[HelpHidden]>,
-    Group<grp_bitcode>;
-def bitcode_symbol_map : Separate<["-"], "bitcode_symbol_map">,
-    MetaVarName<"<path>">,
-    HelpText<"Write the bitcode symbol reverse mapping to file <path>, or if a directory, to <path>/UUID.bcsymbolmap">,
-    Flags<[HelpHidden]>,
-    Group<grp_bitcode>;
-
 def grp_rare : OptionGroup<"rare">, HelpText<"RARELY USED">;
 
 def v : Flag<["-"], "v">,
@@ -665,6 +668,9 @@ def adhoc_codesign : Flag<["-"], "adhoc_codesign">,
     Group<grp_rare>;
 def no_adhoc_codesign : Flag<["-"], "no_adhoc_codesign">,
     HelpText<"Do not write an ad-hoc code signature to the output file (default for x86_64 binaries)">,
+    Group<grp_rare>;
+def reproducible : Flag<["-"], "reproducible">,
+    HelpText<"Make the output reproducible by removing timestamps and other non-deterministic data. This is the default behavior.">,
     Group<grp_rare>;
 def version_details : Flag<["-"], "version_details">,
     HelpText<"Print the linker version in JSON form">,
@@ -684,10 +690,6 @@ def no_inits : Flag<["-"], "no_inits">,
     Group<grp_rare>;
 def no_warn_inits : Flag<["-"], "no_warn_inits">,
     HelpText<"Suppress warnings for static initializers in the output">,
-    Flags<[HelpHidden]>,
-    Group<grp_rare>;
-def debug_variant : Flag<["-"], "debug_variant">,
-    HelpText<"Suppress warnings germane to binaries shipping to customers">,
     Flags<[HelpHidden]>,
     Group<grp_rare>;
 def unaligned_pointers : Separate<["-"], "unaligned_pointers">,
@@ -797,7 +799,6 @@ def allow_sub_type_mismatches : Flag<["-"], "allow_sub_type_mismatches">,
     Group<grp_rare>;
 def no_uuid : Flag<["-"], "no_uuid">,
     HelpText<"Do not generate the LC_UUID load command">,
-    Flags<[HelpHidden]>,
     Group<grp_rare>;
 def root_safe : Flag<["-"], "root_safe">,
     HelpText<"Set the MH_ROOT_SAFE bit in the mach-o header">,
@@ -1197,6 +1198,28 @@ def slow_stubs : Flag<["-"], "slow_stubs">,
     Flags<[HelpHidden]>,
     Group<grp_obsolete>;
 
+def bitcode_bundle : Flag<["-"], "bitcode_bundle">,
+    HelpText<"Obsolete since the App Store no longer supports binaries with embedded bitcode">,
+    Flags<[HelpHidden]>,
+    Group<grp_obsolete>;
+def bitcode_hide_symbols : Flag<["-"], "bitcode_hide_symbols">,
+    HelpText<"Obsolete since the App Store no longer supports binaries with embedded bitcode">,
+    Flags<[HelpHidden]>,
+    Group<grp_obsolete>;
+def bitcode_symbol_map : Separate<["-"], "bitcode_symbol_map">,
+    MetaVarName<"<path>">,
+    HelpText<"Obsolete since the App Store no longer supports binaries with embedded bitcode">,
+    Flags<[HelpHidden]>,
+    Group<grp_obsolete>;
+def bitcode_process_mode : Separate<["-"], "bitcode_process_mode">,
+    HelpText<"Obsolete since the App Store no longer supports binaries with embedded bitcode">,
+    Flags<[HelpHidden]>,
+    Group<grp_obsolete>;
+def bitcode_verify : Flag<["-"], "bitcode_verify">,
+    HelpText<"Obsolete since the App Store no longer supports binaries with embedded bitcode">,
+    Flags<[HelpHidden]>,
+    Group<grp_obsolete>;
+
 def grp_undocumented : OptionGroup<"undocumented">, HelpText<"UNDOCUMENTED">;
 
 def add_linker_option : Flag<["-"], "add_linker_option">,
@@ -1220,14 +1243,6 @@ def allow_dead_duplicates : Flag<["-"], "allow_dead_duplicates">,
     Flags<[HelpHidden]>,
     Group<grp_undocumented>;
 def allow_simulator_linking_to_macosx_dylibs : Flag<["-"], "allow_simulator_linking_to_macosx_dylibs">,
-    HelpText<"This option is undocumented in ld64">,
-    Flags<[HelpHidden]>,
-    Group<grp_undocumented>;
-def bitcode_process_mode : Separate<["-"], "bitcode_process_mode">,
-    HelpText<"This option is undocumented in ld64">,
-    Flags<[HelpHidden]>,
-    Group<grp_undocumented>;
-def bitcode_verify : Flag<["-"], "bitcode_verify">,
     HelpText<"This option is undocumented in ld64">,
     Flags<[HelpHidden]>,
     Group<grp_undocumented>;
@@ -1384,5 +1399,9 @@ def grp_ignored_silently : OptionGroup<"ignored_silently">, HelpText<"IGNORED SI
 
 def objc_abi_version : Separate<["-"], "objc_abi_version">,
     HelpText<"This option only applies to i386 in ld64">,
+    Flags<[HelpHidden]>,
+    Group<grp_ignored_silently>;
+def debug_variant : Flag<["-"], "debug_variant">,
+    HelpText<"Do not warn about issues that are only problems for binaries shipping to customers.">,
     Flags<[HelpHidden]>,
     Group<grp_ignored_silently>;

@@ -74,7 +74,8 @@ Expected<bool> Reader::read(Object &Obj) {
       return make_error<StringError>(
           "Invalid Float32 with insufficient payload",
           std::make_error_code(std::errc::invalid_argument));
-    Obj.Float = BitsToFloat(endian::read<uint32_t, Endianness>(Current));
+    Obj.Float =
+        llvm::bit_cast<float>(endian::read<uint32_t, Endianness>(Current));
     Current += sizeof(float);
     return true;
   case FirstByte::Float64:
@@ -83,7 +84,8 @@ Expected<bool> Reader::read(Object &Obj) {
       return make_error<StringError>(
           "Invalid Float64 with insufficient payload",
           std::make_error_code(std::errc::invalid_argument));
-    Obj.Float = BitsToDouble(endian::read<uint64_t, Endianness>(Current));
+    Obj.Float =
+        llvm::bit_cast<double>(endian::read<uint64_t, Endianness>(Current));
     Current += sizeof(double);
     return true;
   case FirstByte::Str8:

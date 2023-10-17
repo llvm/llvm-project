@@ -36,7 +36,7 @@
 #include <bsm/audit_session.h>
 #endif
 
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
 
 #include <asl.h>
 #include <crt_externs.h>
@@ -325,12 +325,37 @@ LaunchInNewTerminalWithAppleScript(const char *exe_path,
 
 #endif // TARGET_OS_OSX
 
-bool Host::OpenFileInExternalEditor(const FileSpec &file_spec,
-                                    uint32_t line_no) {
+llvm::Error Host::OpenFileInExternalEditor(llvm::StringRef editor,
+                                           const FileSpec &file_spec,
+                                           uint32_t line_no) {
 #if !TARGET_OS_OSX
-  return false;
+  return llvm::errorCodeToError(
+      std::error_code(ENOTSUP, std::system_category()));
 #else // !TARGET_OS_OSX
-  // We attach this to an 'odoc' event to specify a particular selection
+  Log *log = GetLog(LLDBLog::Host);
+
+  const std::string file_path = file_spec.GetPath();
+
+  LLDB_LOG(log, "Sending {0}:{1} to external editor",
+           file_path.empty() ? "<invalid>" : file_path, line_no);
+
+  if (file_path.empty())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "no file specified");
+
+  CFCString file_cfstr(file_path.c_str(), kCFStringEncodingUTF8);
+  CFCReleaser<CFURLRef> file_URL = ::CFURLCreateWithFileSystemPath(
+      /*allocator=*/NULL,
+      /*filePath*/ file_cfstr.get(),
+      /*pathStyle=*/kCFURLPOSIXPathStyle,
+      /*isDirectory=*/false);
+
+  if (!file_URL.get())
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        llvm::formatv("could not create CFURL from path \"{0}\"", file_path));
+
+  // Create a new Apple Event descriptor.
   typedef struct {
     int16_t reserved0; // must be zero
     int16_t fLineNumber;
@@ -340,18 +365,7 @@ bool Host::OpenFileInExternalEditor(const FileSpec &file_spec,
     uint32_t reserved2; // must be zero
   } BabelAESelInfo;
 
-  Log *log = GetLog(LLDBLog::Host);
-  char file_path[PATH_MAX];
-  file_spec.GetPath(file_path, PATH_MAX);
-  CFCString file_cfstr(file_path, kCFStringEncodingUTF8);
-  CFCReleaser<CFURLRef> file_URL(::CFURLCreateWithFileSystemPath(
-      NULL, file_cfstr.get(), kCFURLPOSIXPathStyle, false));
-
-  LLDB_LOGF(log,
-            "Sending source file: \"%s\" and line: %d to external editor.\n",
-            file_path, line_no);
-
-  long error;
+  // We attach this to an 'odoc' event to specify a particular selection.
   BabelAESelInfo file_and_line_info = {
       0,                      // reserved0
       (int16_t)(line_no - 1), // fLineNumber (zero based line number)
@@ -362,64 +376,69 @@ bool Host::OpenFileInExternalEditor(const FileSpec &file_spec,
   };
 
   AEKeyDesc file_and_line_desc;
+  file_and_line_desc.descKey = keyAEPosition;
+  long error = ::AECreateDesc(/*typeCode=*/typeUTF8Text,
+                              /*dataPtr=*/&file_and_line_info,
+                              /*dataSize=*/sizeof(file_and_line_info),
+                              /*result=*/&(file_and_line_desc.descContent));
 
-  error = ::AECreateDesc(typeUTF8Text, &file_and_line_info,
-                         sizeof(file_and_line_info),
-                         &(file_and_line_desc.descContent));
+  if (error != noErr)
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        llvm::formatv("creating Apple Event descriptor failed: error {0}",
+                      error));
 
-  if (error != noErr) {
-    LLDB_LOGF(log, "Error creating AEDesc: %ld.\n", error);
-    return false;
+  // Deallocate the descriptor on exit.
+  auto on_exit = llvm::make_scope_exit(
+      [&]() { AEDisposeDesc(&(file_and_line_desc.descContent)); });
+
+  if (editor.empty()) {
+    if (const char *lldb_external_editor = ::getenv("LLDB_EXTERNAL_EDITOR"))
+      editor = lldb_external_editor;
   }
 
-  file_and_line_desc.descKey = keyAEPosition;
+  std::optional<FSRef> app_fsref;
+  if (!editor.empty()) {
+    LLDB_LOG(log, "Looking for external editor: {0}", editor);
 
-  static std::string g_app_name;
-  static FSRef g_app_fsref;
+    app_fsref.emplace();
+    CFCString editor_name(editor.data(), kCFStringEncodingUTF8);
+    long app_error = ::LSFindApplicationForInfo(
+        /*inCreator=*/kLSUnknownCreator, /*inBundleID=*/NULL,
+        /*inName=*/editor_name.get(), /*outAppRef=*/&(*app_fsref),
+        /*outAppURL=*/NULL);
+    if (app_error != noErr)
+      return llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
+          llvm::formatv("could not find external editor \"{0}\": "
+                        "LSFindApplicationForInfo returned error {1}",
+                        editor, app_error));
+  }
 
+  // Build app launch parameters.
   LSApplicationParameters app_params;
   ::memset(&app_params, 0, sizeof(app_params));
   app_params.flags =
       kLSLaunchDefaults | kLSLaunchDontAddToRecents | kLSLaunchDontSwitch;
-
-  char *external_editor = ::getenv("LLDB_EXTERNAL_EDITOR");
-
-  if (external_editor) {
-    LLDB_LOGF(log, "Looking for external editor \"%s\".\n", external_editor);
-
-    if (g_app_name.empty() ||
-        strcmp(g_app_name.c_str(), external_editor) != 0) {
-      CFCString editor_name(external_editor, kCFStringEncodingUTF8);
-      error = ::LSFindApplicationForInfo(kLSUnknownCreator, NULL,
-                                         editor_name.get(), &g_app_fsref, NULL);
-
-      // If we found the app, then store away the name so we don't have to
-      // re-look it up.
-      if (error != noErr) {
-        LLDB_LOGF(log,
-                  "Could not find External Editor application, error: %ld.\n",
-                  error);
-        return false;
-      }
-    }
-    app_params.application = &g_app_fsref;
-  }
+  if (app_fsref)
+    app_params.application = &(*app_fsref);
 
   ProcessSerialNumber psn;
-  CFCReleaser<CFArrayRef> file_array(
-      CFArrayCreate(NULL, (const void **)file_URL.ptr_address(false), 1, NULL));
-  error = ::LSOpenURLsWithRole(file_array.get(), kLSRolesAll,
-                               &file_and_line_desc, &app_params, &psn, 1);
+  std::array<CFURLRef, 1> file_array = {file_URL.get()};
+  CFCReleaser<CFArrayRef> cf_array(
+      CFArrayCreate(/*allocator=*/NULL, /*values=*/(const void **)&file_array,
+                    /*numValues*/ 1, /*callBacks=*/NULL));
+  error = ::LSOpenURLsWithRole(
+      /*inURLs=*/cf_array.get(), /*inRole=*/kLSRolesEditor,
+      /*inAEParam=*/&file_and_line_desc,
+      /*inAppParams=*/&app_params, /*outPSNs=*/&psn, /*inMaxPSNCount=*/1);
 
-  AEDisposeDesc(&(file_and_line_desc.descContent));
+  if (error != noErr)
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        llvm::formatv("LSOpenURLsWithRole failed: error {0}", error));
 
-  if (error != noErr) {
-    LLDB_LOGF(log, "LSOpenURLsWithRole failed, error: %ld.\n", error);
-
-    return false;
-  }
-
-  return true;
+  return llvm::Error::success();
 #endif // TARGET_OS_OSX
 }
 
@@ -719,12 +738,12 @@ static void PackageXPCArguments(xpc_object_t message, const char *prefix,
                                 const Args &args) {
   size_t count = args.GetArgumentCount();
   char buf[50]; // long enough for 'argXXX'
-  memset(buf, 0, 50);
-  sprintf(buf, "%sCount", prefix);
+  memset(buf, 0, sizeof(buf));
+  snprintf(buf, sizeof(buf), "%sCount", prefix);
   xpc_dictionary_set_int64(message, buf, count);
   for (size_t i = 0; i < count; i++) {
-    memset(buf, 0, 50);
-    sprintf(buf, "%s%zi", prefix, i);
+    memset(buf, 0, sizeof(buf));
+    snprintf(buf, sizeof(buf), "%s%zi", prefix, i);
     xpc_dictionary_set_string(message, buf, args.GetArgumentAtIndex(i));
   }
 }
@@ -805,7 +824,7 @@ static Status getXPCAuthorization(ProcessLaunchInfo &launch_info) {
     if (copyRightStatus != errAuthorizationSuccess) {
       // Eventually when the commandline supports running as root and the user
       // is not
-      // logged in in the current audit session, we will need the trick in gdb
+      // logged in to the current audit session, we will need the trick in gdb
       // where
       // we ask the user to type in the root passwd in the terminal.
       error.SetError(2, eErrorTypeGeneric);

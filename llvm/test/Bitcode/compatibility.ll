@@ -874,6 +874,34 @@ define void @fp_atomics(ptr %word) {
   ret void
 }
 
+define void @uinc_udec_wrap_atomics(ptr %word) {
+; CHECK: %atomicrmw.inc0 = atomicrmw uinc_wrap ptr %word, i32 64 monotonic
+  %atomicrmw.inc0 = atomicrmw uinc_wrap ptr %word, i32 64 monotonic
+
+; CHECK: %atomicrmw.inc1 = atomicrmw uinc_wrap ptr %word, i32 128 seq_cst
+  %atomicrmw.inc1 = atomicrmw uinc_wrap ptr %word, i32 128 seq_cst
+
+; CHECK: %atomicrmw.inc2 = atomicrmw volatile uinc_wrap ptr %word, i32 128 seq_cst
+  %atomicrmw.inc2 = atomicrmw volatile uinc_wrap ptr %word, i32 128 seq_cst
+
+; CHECK: %atomicrmw.inc0.syncscope = atomicrmw uinc_wrap ptr %word, i32 27 syncscope("agent") monotonic
+  %atomicrmw.inc0.syncscope = atomicrmw uinc_wrap ptr %word, i32 27 syncscope("agent") monotonic
+
+; CHECK: %atomicrmw.dec0 = atomicrmw udec_wrap ptr %word, i32 99 monotonic
+  %atomicrmw.dec0 = atomicrmw udec_wrap ptr %word, i32 99 monotonic
+
+; CHECK: %atomicrmw.dec1 = atomicrmw udec_wrap ptr %word, i32 12 seq_cst
+  %atomicrmw.dec1 = atomicrmw udec_wrap ptr %word, i32 12 seq_cst
+
+; CHECK: %atomicrmw.dec2 = atomicrmw volatile udec_wrap ptr %word, i32 12 seq_cst
+  %atomicrmw.dec2 = atomicrmw volatile udec_wrap ptr %word, i32 12 seq_cst
+
+; CHECK: %atomicrmw.dec0.syncscope = atomicrmw udec_wrap ptr %word, i32 5 syncscope("system") monotonic
+  %atomicrmw.dec0.syncscope = atomicrmw udec_wrap ptr %word, i32 5 syncscope("system") monotonic
+
+  ret void
+}
+
 define void @pointer_atomics(ptr %word) {
 ; CHECK: %atomicrmw.xchg = atomicrmw xchg ptr %word, ptr null monotonic
   %atomicrmw.xchg = atomicrmw xchg ptr %word, ptr null monotonic
@@ -1681,9 +1709,9 @@ define void @intrinsics.codegen() {
   ; CHECK: call void @llvm.write_register.i64(metadata !10, i64 0)
 
   %stack = call ptr @llvm.stacksave()
-  ; CHECK: %stack = call ptr @llvm.stacksave()
+  ; CHECK: %stack = call ptr @llvm.stacksave.p0()
   call void @llvm.stackrestore(ptr %stack)
-  ; CHECK: call void @llvm.stackrestore(ptr %stack)
+  ; CHECK: call void @llvm.stackrestore.p0(ptr %stack)
 
   call void @llvm.prefetch.p0(ptr %stack, i32 0, i32 3, i32 0)
   ; CHECK: call void @llvm.prefetch.p0(ptr %stack, i32 0, i32 3, i32 0)
@@ -1951,6 +1979,77 @@ declare void @f.nosanitize_bounds() nosanitize_bounds
 
 declare void @f.allockind() allockind("alloc,uninitialized")
 ; CHECK: declare void @f.allockind() #50
+
+
+; CHECK: declare nofpclass(snan) float @nofpclass_snan(float nofpclass(snan))
+declare nofpclass(snan) float @nofpclass_snan(float nofpclass(snan))
+
+; CHECK: declare nofpclass(qnan) float @nofpclass_qnan(float nofpclass(qnan))
+declare nofpclass(qnan) float @nofpclass_qnan(float nofpclass(qnan))
+
+; CHECK: declare nofpclass(ninf) float @nofpclass_ninf(float nofpclass(ninf))
+declare nofpclass(ninf) float @nofpclass_ninf(float nofpclass(ninf))
+
+; CHECK: declare nofpclass(nnorm) float @nofpclass_nnorm(float nofpclass(nnorm))
+declare nofpclass(nnorm) float @nofpclass_nnorm(float nofpclass(nnorm))
+
+; CHECK: declare nofpclass(nsub) float @nofpclass_nsub(float nofpclass(nsub))
+declare nofpclass(nsub) float @nofpclass_nsub(float nofpclass(nsub))
+
+; CHECK: declare nofpclass(nzero) float @nofpclass_nzero(float nofpclass(nzero))
+declare nofpclass(nzero) float @nofpclass_nzero(float nofpclass(nzero))
+
+; CHECK: declare nofpclass(pzero) float @nofpclass_pzero(float nofpclass(pzero))
+declare nofpclass(pzero) float @nofpclass_pzero(float nofpclass(pzero))
+
+; CHECK: declare nofpclass(psub) float @nofpclass_psub(float nofpclass(psub))
+declare nofpclass(psub) float @nofpclass_psub(float nofpclass(psub))
+
+; CHECK: declare nofpclass(pnorm) float @nofpclass_pnorm(float nofpclass(pnorm))
+declare nofpclass(pnorm) float @nofpclass_pnorm(float nofpclass(pnorm))
+
+; CHECK: declare nofpclass(pinf) float @nofpclass_pinf(float nofpclass(pinf))
+declare nofpclass(pinf) float @nofpclass_pinf(float nofpclass(pinf))
+
+; CHECK: declare nofpclass(nan) float @nofpclass_nan(float nofpclass(nan))
+declare nofpclass(nan) float @nofpclass_nan(float nofpclass(nan))
+
+; CHECK: declare nofpclass(inf) float @nofpclass_inf(float nofpclass(inf))
+declare nofpclass(inf) float @nofpclass_inf(float nofpclass(inf))
+
+; CHECK: declare nofpclass(norm) float @nofpclass_norm(float nofpclass(norm))
+declare nofpclass(norm) float @nofpclass_norm(float nofpclass(norm))
+
+; CHECK: declare nofpclass(zero) float @nofpclass_zero(float nofpclass(zero))
+declare nofpclass(zero) float @nofpclass_zero(float nofpclass(zero))
+
+; CHECK: declare nofpclass(sub) float @nofpclass_sub(float nofpclass(sub))
+declare nofpclass(sub) float @nofpclass_sub(float nofpclass(sub))
+
+; CHECK: declare nofpclass(all) float @nofpclass_all(float nofpclass(all))
+declare nofpclass(all) float @nofpclass_all(float nofpclass(all))
+
+; CHECK: declare nofpclass(zero sub) float @nofpclass_sub_zero(float nofpclass(zero sub))
+declare nofpclass(sub zero) float @nofpclass_sub_zero(float nofpclass(sub zero))
+
+; CHECK: declare nofpclass(inf sub) float @nofpclass_sub_inf(float nofpclass(inf sub))
+declare nofpclass(sub inf) float @nofpclass_sub_inf(float nofpclass(sub inf))
+
+declare float @unknown_fpclass_func(float)
+
+define float @nofpclass_callsites(float %arg) {
+  ; CHECK: %call0 = call nofpclass(nan) float @unknown_fpclass_func(float nofpclass(ninf) %arg)
+  %call0 = call nofpclass(nan) float @unknown_fpclass_func(float nofpclass(ninf) %arg)
+
+  ; CHECK: %call1 = call nofpclass(inf) float @unknown_fpclass_func(float nofpclass(inf) %arg)
+  %call1 = call nofpclass(inf) float @unknown_fpclass_func(float nofpclass(inf) %arg)
+
+  ; CHECK: %call2 = call nofpclass(zero) float @unknown_fpclass_func(float nofpclass(norm) %arg)
+  %call2 = call nofpclass(zero) float @unknown_fpclass_func(float nofpclass(norm) %arg)
+  %add0 = fadd float %call0, %call1
+  %add1 = fadd float %add0, %call2
+  ret float %add1
+}
 
 ; CHECK: attributes #0 = { alignstack=4 }
 ; CHECK: attributes #1 = { alignstack=8 }

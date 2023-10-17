@@ -16,7 +16,6 @@
 #include "handle_llvm.h"
 #include "input_arrays.h"
 
-#include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/CommandFlags.h"
@@ -41,6 +40,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 
@@ -48,20 +48,16 @@ using namespace llvm;
 typedef void (*LLVMFunc)(int*, int*, int*, int);
 
 // Helper function to parse command line args and find the optimization level
-static CodeGenOpt::Level
-getOptLevel(const std::vector<const char *> &ExtraArgs) {
+static CodeGenOptLevel getOptLevel(const std::vector<const char *> &ExtraArgs) {
   // Find the optimization level from the command line args
-  CodeGenOpt::Level OLvl = CodeGenOpt::Default;
+  CodeGenOptLevel OLvl = CodeGenOptLevel::Default;
   for (auto &A : ExtraArgs) {
     if (A[0] == '-' && A[1] == 'O') {
-      switch(A[2]) {
-        case '0': OLvl = CodeGenOpt::None; break;
-        case '1': OLvl = CodeGenOpt::Less; break;
-        case '2': OLvl = CodeGenOpt::Default; break;
-        case '3': OLvl = CodeGenOpt::Aggressive; break;
-        default:
-          errs() << "error: opt level must be between 0 and 3.\n";
-          std::exit(1);
+      if (auto Level = CodeGenOpt::parseLevel(A[2])) {
+        OLvl = *Level;
+      } else {
+        errs() << "error: opt level must be between 0 and 3.\n";
+        std::exit(1);
       }
     }
   }
@@ -76,19 +72,19 @@ static void ErrorAndExit(std::string message) {
 // Helper function to add optimization passes to the TargetMachine at the 
 // specified optimization level, OptLevel
 static void RunOptimizationPasses(raw_ostream &OS, Module &M,
-                                  CodeGenOpt::Level OptLevel) {
+                                  CodeGenOptLevel OptLevel) {
   llvm::OptimizationLevel OL;
   switch (OptLevel) {
-  case CodeGenOpt::None:
+  case CodeGenOptLevel::None:
     OL = OptimizationLevel::O0;
     break;
-  case CodeGenOpt::Less:
+  case CodeGenOptLevel::Less:
     OL = OptimizationLevel::O1;
     break;
-  case CodeGenOpt::Default:
+  case CodeGenOptLevel::Default:
     OL = OptimizationLevel::O2;
     break;
-  case CodeGenOpt::Aggressive:
+  case CodeGenOptLevel::Aggressive:
     OL = OptimizationLevel::O3;
     break;
   }
@@ -106,18 +102,14 @@ static void RunOptimizationPasses(raw_ostream &OS, Module &M,
   PB.registerLoopAnalyses(LAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
-  ModulePassManager MPM;
-  if (OL == OptimizationLevel::O0)
-    MPM = PB.buildO0DefaultPipeline(OL);
-  else
-    MPM = PB.buildPerModuleDefaultPipeline(OL);
+  ModulePassManager MPM = PB.buildPerModuleDefaultPipeline(OL);
   MPM.addPass(PrintModulePass(OS));
 
   MPM.run(M, MAM);
 }
 
 // Mimics the opt tool to run an optimization pass over the provided IR
-static std::string OptLLVM(const std::string &IR, CodeGenOpt::Level OLvl) {
+static std::string OptLLVM(const std::string &IR, CodeGenOptLevel OLvl) {
   // Create a module that will run the optimization passes
   SMDiagnostic Err;
   LLVMContext Context;
@@ -161,7 +153,7 @@ static void RunFuncOnInputs(LLVMFunc f, int Arr[kNumArrays][kArraySize]) {
 }
 
 // Takes a string of IR and compiles it using LLVM's JIT Engine
-static void CreateAndRunJITFunc(const std::string &IR, CodeGenOpt::Level OLvl) {
+static void CreateAndRunJITFunc(const std::string &IR, CodeGenOptLevel OLvl) {
   SMDiagnostic Err;
   LLVMContext Context;
   std::unique_ptr<Module> M = parseIR(MemoryBufferRef(IR, "IR"), Err, Context);
@@ -212,7 +204,7 @@ static void CreateAndRunJITFunc(const std::string &IR, CodeGenOpt::Level OLvl) {
 #endif
 
   // Figure out if we are running the optimized func or the unoptimized func
-  RunFuncOnInputs(f, (OLvl == CodeGenOpt::None) ? UnoptArrays : OptArrays);
+  RunFuncOnInputs(f, (OLvl == CodeGenOptLevel::None) ? UnoptArrays : OptArrays);
 
   EE->runStaticConstructorsDestructors(true);
 }
@@ -226,13 +218,13 @@ void clang_fuzzer::HandleLLVM(const std::string &IR,
   memcpy(UnoptArrays, InputArrays, kTotalSize);
 
   // Parse ExtraArgs to set the optimization level
-  CodeGenOpt::Level OLvl = getOptLevel(ExtraArgs);
+  CodeGenOptLevel OLvl = getOptLevel(ExtraArgs);
 
   // First we optimize the IR by running a loop vectorizer pass
   std::string OptIR = OptLLVM(IR, OLvl);
 
   CreateAndRunJITFunc(OptIR, OLvl);
-  CreateAndRunJITFunc(IR, CodeGenOpt::None);
+  CreateAndRunJITFunc(IR, CodeGenOptLevel::None);
 
   if (memcmp(OptArrays, UnoptArrays, kTotalSize))
     ErrorAndExit("!!!BUG!!!");

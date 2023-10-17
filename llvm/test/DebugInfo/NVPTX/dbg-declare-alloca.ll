@@ -221,7 +221,7 @@
 ; Function Attrs: noinline nounwind uwtable
 define void @use_dbg_declare() #0 !dbg !7 {
 entry:
-  %o = alloca %struct.Foo, align 4
+  %o = alloca %struct.Foo, align 8
   call void @llvm.dbg.declare(metadata ptr %o, metadata !10, metadata !15), !dbg !16
   call void @escape_foo(ptr %o), !dbg !17
   ret void, !dbg !18

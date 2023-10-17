@@ -2,15 +2,16 @@
 
 @c = dso_local global i8 42
 
+; CHECK: @i = internal global i8 42
 @i = internal global i8 42
-; CHECK: @ia = internal global i8 42
+; CHECK-DAG: @ia = internal alias i8, ptr @i
 @ia = internal alias i8, ptr @i
 
 @llvm.used = appending global [3 x ptr] [ptr @fa, ptr @f, ptr @ca], section "llvm.metadata"
 ; CHECK-DAG: @llvm.used = appending global [3 x ptr] [ptr @ca, ptr @f, ptr @fa], section "llvm.metadata"
 
 @llvm.compiler.used = appending global [4 x ptr] [ptr @fa3, ptr @fa, ptr @ia, ptr @i], section "llvm.metadata"
-; CHECK-DAG: @llvm.compiler.used = appending global [2 x ptr] [ptr @fa3, ptr @ia], section "llvm.metadata"
+; CHECK-DAG: @llvm.compiler.used = appending global [3 x ptr] [ptr @fa3, ptr @i, ptr @ia], section "llvm.metadata"
 
 @sameAsUsed = global [3 x ptr] [ptr @fa, ptr @f, ptr @ca]
 ; CHECK-DAG: @sameAsUsed = local_unnamed_addr global [3 x ptr] [ptr @f, ptr @f, ptr @c]

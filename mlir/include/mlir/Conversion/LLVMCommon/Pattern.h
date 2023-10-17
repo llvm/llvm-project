@@ -23,7 +23,7 @@ namespace detail {
 LogicalResult oneToOneRewrite(Operation *op, StringRef targetOp,
                               ValueRange operands,
                               ArrayRef<NamedAttribute> targetAttrs,
-                              LLVMTypeConverter &typeConverter,
+                              const LLVMTypeConverter &typeConverter,
                               ConversionPatternRewriter &rewriter);
 
 } // namespace detail
@@ -37,14 +37,14 @@ LogicalResult oneToOneRewrite(Operation *op, StringRef targetOp,
 class ConvertToLLVMPattern : public ConversionPattern {
 public:
   ConvertToLLVMPattern(StringRef rootOpName, MLIRContext *context,
-                       LLVMTypeConverter &typeConverter,
+                       const LLVMTypeConverter &typeConverter,
                        PatternBenefit benefit = 1);
 
 protected:
   /// Returns the LLVM dialect.
   LLVM::LLVMDialect &getDialect() const;
 
-  LLVMTypeConverter *getTypeConverter() const;
+  const LLVMTypeConverter *getTypeConverter() const;
 
   /// Gets the MLIR type wrapping the LLVM integer type whose bit width is
   /// defined by the used type converter.
@@ -65,10 +65,6 @@ protected:
   static Value createIndexAttrConstant(OpBuilder &builder, Location loc,
                                        Type resultType, int64_t value);
 
-  /// Create an LLVM dialect operation defining the given index constant.
-  Value createIndexConstant(ConversionPatternRewriter &builder, Location loc,
-                            uint64_t value) const;
-
   // This is a strided getElementPtr variant that linearizes subscripts as:
   //   `base_offset + index_0 * stride_0 + ... + index_n * stride_n`.
   Value getStridedElementPtr(Location loc, MemRefType type, Value memRefDesc,
@@ -82,34 +78,42 @@ protected:
   /// Returns the type of a pointer to an element of the memref.
   Type getElementPtrType(MemRefType type) const;
 
-  /// Computes sizes, strides and buffer size in bytes of `memRefType` with
-  /// identity layout. Emits constant ops for the static sizes of `memRefType`,
-  /// and uses `dynamicSizes` for the others. Emits instructions to compute
-  /// strides and buffer size from these sizes.
+  /// Computes sizes, strides and buffer size of `memRefType` with identity
+  /// layout. Emits constant ops for the static sizes of `memRefType`, and uses
+  /// `dynamicSizes` for the others. Emits instructions to compute strides and
+  /// buffer size from these sizes.
   ///
-  /// For example, memref<4x?xf32> emits:
+  /// For example, memref<4x?xf32> with `sizeInBytes = true` emits:
   /// `sizes[0]`   = llvm.mlir.constant(4 : index) : i64
   /// `sizes[1]`   = `dynamicSizes[0]`
   /// `strides[1]` = llvm.mlir.constant(1 : index) : i64
   /// `strides[0]` = `sizes[0]`
   /// %size        = llvm.mul `sizes[0]`, `sizes[1]` : i64
-  /// %nullptr     = llvm.mlir.null : !llvm.ptr<f32>
+  /// %nullptr     = llvm.mlir.zero : !llvm.ptr<f32>
   /// %gep         = llvm.getelementptr %nullptr[%size]
   ///                  : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
   /// `sizeBytes`  = llvm.ptrtoint %gep : !llvm.ptr<f32> to i64
+  ///
+  /// If `sizeInBytes = false`, memref<4x?xf32> emits:
+  /// `sizes[0]`   = llvm.mlir.constant(4 : index) : i64
+  /// `sizes[1]`   = `dynamicSizes[0]`
+  /// `strides[1]` = llvm.mlir.constant(1 : index) : i64
+  /// `strides[0]` = `sizes[0]`
+  /// %size        = llvm.mul `sizes[0]`, `sizes[1]` : i64
   void getMemRefDescriptorSizes(Location loc, MemRefType memRefType,
                                 ValueRange dynamicSizes,
                                 ConversionPatternRewriter &rewriter,
                                 SmallVectorImpl<Value> &sizes,
-                                SmallVectorImpl<Value> &strides,
-                                Value &sizeBytes) const;
+                                SmallVectorImpl<Value> &strides, Value &size,
+                                bool sizeInBytes = true) const;
 
   /// Computes the size of type in bytes.
   Value getSizeInBytes(Location loc, Type type,
                        ConversionPatternRewriter &rewriter) const;
 
-  /// Computes total number of elements for the given shape.
-  Value getNumElements(Location loc, ArrayRef<Value> shape,
+  /// Computes total number of elements for the given MemRef and dynamicSizes.
+  Value getNumElements(Location loc, MemRefType memRefType,
+                       ValueRange dynamicSizes,
                        ConversionPatternRewriter &rewriter) const;
 
   /// Creates and populates a canonical memref descriptor struct.
@@ -136,7 +140,7 @@ class ConvertOpToLLVMPattern : public ConvertToLLVMPattern {
 public:
   using OpAdaptor = typename SourceOp::Adaptor;
 
-  explicit ConvertOpToLLVMPattern(LLVMTypeConverter &typeConverter,
+  explicit ConvertOpToLLVMPattern(const LLVMTypeConverter &typeConverter,
                                   PatternBenefit benefit = 1)
       : ConvertToLLVMPattern(SourceOp::getOperationName(),
                              &typeConverter.getContext(), typeConverter,
@@ -145,7 +149,7 @@ public:
   /// Wrappers around the RewritePattern methods that pass the derived op type.
   void rewrite(Operation *op, ArrayRef<Value> operands,
                ConversionPatternRewriter &rewriter) const final {
-    rewrite(cast<SourceOp>(op), OpAdaptor(operands, op->getAttrDictionary()),
+    rewrite(cast<SourceOp>(op), OpAdaptor(operands, cast<SourceOp>(op)),
             rewriter);
   }
   LogicalResult match(Operation *op) const final {
@@ -155,8 +159,7 @@ public:
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
     return matchAndRewrite(cast<SourceOp>(op),
-                           OpAdaptor(operands, op->getAttrDictionary()),
-                           rewriter);
+                           OpAdaptor(operands, cast<SourceOp>(op)), rewriter);
   }
 
   /// Rewrite and Match methods that operate on the SourceOp type. These must be

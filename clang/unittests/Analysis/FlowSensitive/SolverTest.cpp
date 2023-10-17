@@ -9,11 +9,15 @@
 #include <utility>
 
 #include "TestingSupport.h"
+#include "clang/Analysis/FlowSensitive/Arena.h"
+#include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/Solver.h"
-#include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Analysis/FlowSensitive/WatchedLiteralsSolver.h"
+#include "clang/Basic/LLVM.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <vector>
 
 namespace {
 
@@ -23,26 +27,46 @@ using namespace dataflow;
 using test::ConstraintContext;
 using testing::_;
 using testing::AnyOf;
-using testing::IsEmpty;
-using testing::Optional;
 using testing::Pair;
 using testing::UnorderedElementsAre;
 
+constexpr auto AssignedTrue = Solver::Result::Assignment::AssignedTrue;
+constexpr auto AssignedFalse = Solver::Result::Assignment::AssignedFalse;
+
+std::vector<const Formula *> parseAll(Arena &A, StringRef Lines) {
+  std::vector<const Formula *> Result;
+  while (!Lines.empty()) {
+    auto [First, Rest] = Lines.split('\n');
+    Lines = Rest;
+    if (First.trim().empty())
+      continue;
+    if (auto F = A.parseFormula(First))
+      Result.push_back(&*F);
+    else
+      ADD_FAILURE() << llvm::toString(F.takeError());
+  }
+  return Result;
+}
+
 // Checks if the conjunction of `Vals` is satisfiable and returns the
 // corresponding result.
-Solver::Result solve(llvm::DenseSet<BoolValue *> Vals) {
-  return WatchedLiteralsSolver().solve(std::move(Vals));
+Solver::Result solve(llvm::ArrayRef<const Formula *> Vals) {
+  return WatchedLiteralsSolver().solve(Vals);
 }
 
-void expectUnsatisfiable(Solver::Result Result) {
-  EXPECT_EQ(Result.getStatus(), Solver::Result::Status::Unsatisfiable);
-  EXPECT_FALSE(Result.getSolution().has_value());
+MATCHER(unsat, "") {
+  return arg.getStatus() == Solver::Result::Status::Unsatisfiable;
 }
-
-template <typename Matcher>
-void expectSatisfiable(Solver::Result Result, Matcher Solution) {
-  EXPECT_EQ(Result.getStatus(), Solver::Result::Status::Satisfiable);
-  EXPECT_THAT(Result.getSolution(), Optional(Solution));
+MATCHER_P(sat, SolutionMatcher,
+          "is satisfiable, where solution " +
+              (testing::DescribeMatcher<
+                  llvm::DenseMap<Atom, Solver::Result::Assignment>>(
+                  SolutionMatcher))) {
+  if (arg.getStatus() != Solver::Result::Status::Satisfiable)
+    return false;
+  auto Solution = *arg.getSolution();
+  return testing::ExplainMatchResult(SolutionMatcher, Solution,
+                                     result_listener);
 }
 
 TEST(SolverTest, Var) {
@@ -50,9 +74,8 @@ TEST(SolverTest, Var) {
   auto X = Ctx.atom();
 
   // X
-  expectSatisfiable(
-      solve({X}),
-      UnorderedElementsAre(Pair(X, Solver::Result::Assignment::AssignedTrue)));
+  EXPECT_THAT(solve({X}),
+              sat(UnorderedElementsAre(Pair(X->getAtom(), AssignedTrue))));
 }
 
 TEST(SolverTest, NegatedVar) {
@@ -61,9 +84,8 @@ TEST(SolverTest, NegatedVar) {
   auto NotX = Ctx.neg(X);
 
   // !X
-  expectSatisfiable(
-      solve({NotX}),
-      UnorderedElementsAre(Pair(X, Solver::Result::Assignment::AssignedFalse)));
+  EXPECT_THAT(solve({NotX}),
+              sat(UnorderedElementsAre(Pair(X->getAtom(), AssignedFalse))));
 }
 
 TEST(SolverTest, UnitConflict) {
@@ -72,7 +94,7 @@ TEST(SolverTest, UnitConflict) {
   auto NotX = Ctx.neg(X);
 
   // X ^ !X
-  expectUnsatisfiable(solve({X, NotX}));
+  EXPECT_THAT(solve({X, NotX}), unsat());
 }
 
 TEST(SolverTest, DistinctVars) {
@@ -82,36 +104,9 @@ TEST(SolverTest, DistinctVars) {
   auto NotY = Ctx.neg(Y);
 
   // X ^ !Y
-  expectSatisfiable(
-      solve({X, NotY}),
-      UnorderedElementsAre(Pair(X, Solver::Result::Assignment::AssignedTrue),
-                           Pair(Y, Solver::Result::Assignment::AssignedFalse)));
-}
-
-TEST(SolverTest, Top) {
-  ConstraintContext Ctx;
-  auto X = Ctx.top();
-
-  // X. Since Top is anonymous, we do not get any results in the solution.
-  expectSatisfiable(solve({X}), IsEmpty());
-}
-
-TEST(SolverTest, NegatedTop) {
-  ConstraintContext Ctx;
-  auto X = Ctx.top();
-
-  // !X
-  expectSatisfiable(solve({Ctx.neg(X)}), IsEmpty());
-}
-
-TEST(SolverTest, DistinctTops) {
-  ConstraintContext Ctx;
-  auto X = Ctx.top();
-  auto Y = Ctx.top();
-  auto NotY = Ctx.neg(Y);
-
-  // X ^ !Y
-  expectSatisfiable(solve({X, NotY}), IsEmpty());
+  EXPECT_THAT(solve({X, NotY}),
+              sat(UnorderedElementsAre(Pair(X->getAtom(), AssignedTrue),
+                                       Pair(Y->getAtom(), AssignedFalse))));
 }
 
 TEST(SolverTest, DoubleNegation) {
@@ -121,7 +116,7 @@ TEST(SolverTest, DoubleNegation) {
   auto NotNotX = Ctx.neg(NotX);
 
   // !!X ^ !X
-  expectUnsatisfiable(solve({NotNotX, NotX}));
+  EXPECT_THAT(solve({NotNotX, NotX}), unsat());
 }
 
 TEST(SolverTest, NegatedDisjunction) {
@@ -132,7 +127,7 @@ TEST(SolverTest, NegatedDisjunction) {
   auto NotXOrY = Ctx.neg(XOrY);
 
   // !(X v Y) ^ (X v Y)
-  expectUnsatisfiable(solve({NotXOrY, XOrY}));
+  EXPECT_THAT(solve({NotXOrY, XOrY}), unsat());
 }
 
 TEST(SolverTest, NegatedConjunction) {
@@ -143,7 +138,7 @@ TEST(SolverTest, NegatedConjunction) {
   auto NotXAndY = Ctx.neg(XAndY);
 
   // !(X ^ Y) ^ (X ^ Y)
-  expectUnsatisfiable(solve({NotXAndY, XAndY}));
+  EXPECT_THAT(solve({NotXAndY, XAndY}), unsat());
 }
 
 TEST(SolverTest, DisjunctionSameVarWithNegation) {
@@ -153,7 +148,7 @@ TEST(SolverTest, DisjunctionSameVarWithNegation) {
   auto XOrNotX = Ctx.disj(X, NotX);
 
   // X v !X
-  expectSatisfiable(solve({XOrNotX}), _);
+  EXPECT_THAT(solve({XOrNotX}), sat(_));
 }
 
 TEST(SolverTest, DisjunctionSameVar) {
@@ -162,7 +157,7 @@ TEST(SolverTest, DisjunctionSameVar) {
   auto XOrX = Ctx.disj(X, X);
 
   // X v X
-  expectSatisfiable(solve({XOrX}), _);
+  EXPECT_THAT(solve({XOrX}), sat(_));
 }
 
 TEST(SolverTest, ConjunctionSameVarsConflict) {
@@ -172,7 +167,7 @@ TEST(SolverTest, ConjunctionSameVarsConflict) {
   auto XAndNotX = Ctx.conj(X, NotX);
 
   // X ^ !X
-  expectUnsatisfiable(solve({XAndNotX}));
+  EXPECT_THAT(solve({XAndNotX}), unsat());
 }
 
 TEST(SolverTest, ConjunctionSameVar) {
@@ -181,7 +176,7 @@ TEST(SolverTest, ConjunctionSameVar) {
   auto XAndX = Ctx.conj(X, X);
 
   // X ^ X
-  expectSatisfiable(solve({XAndX}), _);
+  EXPECT_THAT(solve({XAndX}), sat(_));
 }
 
 TEST(SolverTest, PureVar) {
@@ -194,10 +189,9 @@ TEST(SolverTest, PureVar) {
   auto NotXOrNotY = Ctx.disj(NotX, NotY);
 
   // (!X v Y) ^ (!X v !Y)
-  expectSatisfiable(
-      solve({NotXOrY, NotXOrNotY}),
-      UnorderedElementsAre(Pair(X, Solver::Result::Assignment::AssignedFalse),
-                           Pair(Y, _)));
+  EXPECT_THAT(solve({NotXOrY, NotXOrNotY}),
+              sat(UnorderedElementsAre(Pair(X->getAtom(), AssignedFalse),
+                                       Pair(Y->getAtom(), _))));
 }
 
 TEST(SolverTest, MustAssumeVarIsFalse) {
@@ -211,10 +205,9 @@ TEST(SolverTest, MustAssumeVarIsFalse) {
   auto NotXOrNotY = Ctx.disj(NotX, NotY);
 
   // (X v Y) ^ (!X v Y) ^ (!X v !Y)
-  expectSatisfiable(
-      solve({XOrY, NotXOrY, NotXOrNotY}),
-      UnorderedElementsAre(Pair(X, Solver::Result::Assignment::AssignedFalse),
-                           Pair(Y, Solver::Result::Assignment::AssignedTrue)));
+  EXPECT_THAT(solve({XOrY, NotXOrY, NotXOrNotY}),
+              sat(UnorderedElementsAre(Pair(X->getAtom(), AssignedFalse),
+                                       Pair(Y->getAtom(), AssignedTrue))));
 }
 
 TEST(SolverTest, DeepConflict) {
@@ -229,7 +222,7 @@ TEST(SolverTest, DeepConflict) {
   auto XOrNotY = Ctx.disj(X, NotY);
 
   // (X v Y) ^ (!X v Y) ^ (!X v !Y) ^ (X v !Y)
-  expectUnsatisfiable(solve({XOrY, NotXOrY, NotXOrNotY, XOrNotY}));
+  EXPECT_THAT(solve({XOrY, NotXOrY, NotXOrNotY, XOrNotY}), unsat());
 }
 
 TEST(SolverTest, IffIsEquivalentToDNF) {
@@ -243,7 +236,7 @@ TEST(SolverTest, IffIsEquivalentToDNF) {
   auto NotEquivalent = Ctx.neg(Ctx.iff(XIffY, XIffYDNF));
 
   // !((X <=> Y) <=> ((X ^ Y) v (!X ^ !Y)))
-  expectUnsatisfiable(solve({NotEquivalent}));
+  EXPECT_THAT(solve({NotEquivalent}), unsat());
 }
 
 TEST(SolverTest, IffSameVars) {
@@ -252,7 +245,7 @@ TEST(SolverTest, IffSameVars) {
   auto XEqX = Ctx.iff(X, X);
 
   // X <=> X
-  expectSatisfiable(solve({XEqX}), _);
+  EXPECT_THAT(solve({XEqX}), sat(_));
 }
 
 TEST(SolverTest, IffDistinctVars) {
@@ -262,14 +255,12 @@ TEST(SolverTest, IffDistinctVars) {
   auto XEqY = Ctx.iff(X, Y);
 
   // X <=> Y
-  expectSatisfiable(
+  EXPECT_THAT(
       solve({XEqY}),
-      AnyOf(UnorderedElementsAre(
-                Pair(X, Solver::Result::Assignment::AssignedTrue),
-                Pair(Y, Solver::Result::Assignment::AssignedTrue)),
-            UnorderedElementsAre(
-                Pair(X, Solver::Result::Assignment::AssignedFalse),
-                Pair(Y, Solver::Result::Assignment::AssignedFalse))));
+      sat(AnyOf(UnorderedElementsAre(Pair(X->getAtom(), AssignedTrue),
+                                     Pair(Y->getAtom(), AssignedTrue)),
+                UnorderedElementsAre(Pair(X->getAtom(), AssignedFalse),
+                                     Pair(Y->getAtom(), AssignedFalse)))));
 }
 
 TEST(SolverTest, IffWithUnits) {
@@ -279,85 +270,106 @@ TEST(SolverTest, IffWithUnits) {
   auto XEqY = Ctx.iff(X, Y);
 
   // (X <=> Y) ^ X ^ Y
-  expectSatisfiable(
-      solve({XEqY, X, Y}),
-      UnorderedElementsAre(Pair(X, Solver::Result::Assignment::AssignedTrue),
-                           Pair(Y, Solver::Result::Assignment::AssignedTrue)));
+  EXPECT_THAT(solve({XEqY, X, Y}),
+              sat(UnorderedElementsAre(Pair(X->getAtom(), AssignedTrue),
+                                       Pair(Y->getAtom(), AssignedTrue))));
 }
 
 TEST(SolverTest, IffWithUnitsConflict) {
-  ConstraintContext Ctx;
-  auto X = Ctx.atom();
-  auto Y = Ctx.atom();
-  auto XEqY = Ctx.iff(X, Y);
-  auto NotY = Ctx.neg(Y);
-
-  // (X <=> Y) ^ X  !Y
-  expectUnsatisfiable(solve({XEqY, X, NotY}));
+  Arena A;
+  auto Constraints = parseAll(A, R"(
+     (V0 = V1)
+     V0
+     !V1
+  )");
+  EXPECT_THAT(solve(Constraints), unsat());
 }
 
 TEST(SolverTest, IffTransitiveConflict) {
-  ConstraintContext Ctx;
-  auto X = Ctx.atom();
-  auto Y = Ctx.atom();
-  auto Z = Ctx.atom();
-  auto XEqY = Ctx.iff(X, Y);
-  auto YEqZ = Ctx.iff(Y, Z);
-  auto NotX = Ctx.neg(X);
-
-  // (X <=> Y) ^ (Y <=> Z) ^ Z ^ !X
-  expectUnsatisfiable(solve({XEqY, YEqZ, Z, NotX}));
+  Arena A;
+  auto Constraints = parseAll(A, R"(
+     (V0 = V1)
+     (V1 = V2)
+     V2
+     !V0
+  )");
+  EXPECT_THAT(solve(Constraints), unsat());
 }
 
 TEST(SolverTest, DeMorgan) {
-  ConstraintContext Ctx;
-  auto X = Ctx.atom();
-  auto Y = Ctx.atom();
-  auto Z = Ctx.atom();
-  auto W = Ctx.atom();
-
-  // !(X v Y) <=> !X ^ !Y
-  auto A = Ctx.iff(Ctx.neg(Ctx.disj(X, Y)), Ctx.conj(Ctx.neg(X), Ctx.neg(Y)));
-
-  // !(Z ^ W) <=> !Z v !W
-  auto B = Ctx.iff(Ctx.neg(Ctx.conj(Z, W)), Ctx.disj(Ctx.neg(Z), Ctx.neg(W)));
-
-  // A ^ B
-  expectSatisfiable(solve({A, B}), _);
+  Arena A;
+  auto Constraints = parseAll(A, R"(
+     (!(V0 | V1) = (!V0 & !V1))
+     (!(V2 & V3) = (!V2 | !V3))
+  )");
+  EXPECT_THAT(solve(Constraints), sat(_));
 }
 
 TEST(SolverTest, RespectsAdditionalConstraints) {
-  ConstraintContext Ctx;
-  auto X = Ctx.atom();
-  auto Y = Ctx.atom();
-  auto XEqY = Ctx.iff(X, Y);
-  auto NotY = Ctx.neg(Y);
-
-  // (X <=> Y) ^ X ^ !Y
-  expectUnsatisfiable(solve({XEqY, X, NotY}));
+  Arena A;
+  auto Constraints = parseAll(A, R"(
+     (V0 = V1)
+     V0
+     !V1
+  )");
+  EXPECT_THAT(solve(Constraints), unsat());
 }
 
 TEST(SolverTest, ImplicationIsEquivalentToDNF) {
-  ConstraintContext Ctx;
-  auto X = Ctx.atom();
-  auto Y = Ctx.atom();
-  auto XImpliesY = Ctx.impl(X, Y);
-  auto XImpliesYDNF = Ctx.disj(Ctx.neg(X), Y);
-  auto NotEquivalent = Ctx.neg(Ctx.iff(XImpliesY, XImpliesYDNF));
-
-  // !((X => Y) <=> (!X v Y))
-  expectUnsatisfiable(solve({NotEquivalent}));
+  Arena A;
+  auto Constraints = parseAll(A, R"(
+     !((V0 => V1) = (!V0 | V1))
+  )");
+  EXPECT_THAT(solve(Constraints), unsat());
 }
 
 TEST(SolverTest, ImplicationConflict) {
-  ConstraintContext Ctx;
-  auto X = Ctx.atom();
-  auto Y = Ctx.atom();
-  auto *XImplY = Ctx.impl(X, Y);
-  auto *XAndNotY = Ctx.conj(X, Ctx.neg(Y));
+  Arena A;
+  auto Constraints = parseAll(A, R"(
+     (V0 => V1)
+     (V0 & !V1)
+  )");
+  EXPECT_THAT(solve(Constraints), unsat());
+}
 
-  // X => Y ^ X ^ !Y
-  expectUnsatisfiable(solve({XImplY, XAndNotY}));
+TEST(SolverTest, ReachedLimitsReflectsTimeouts) {
+  Arena A;
+  auto Constraints = parseAll(A, R"(
+     (!(V0 | V1) = (!V0 & !V1))
+     (!(V2 & V3) = (!V2 & !V3))
+  )");
+  WatchedLiteralsSolver solver(10);
+  ASSERT_EQ(solver.solve(Constraints).getStatus(),
+            Solver::Result::Status::TimedOut);
+  EXPECT_TRUE(solver.reachedLimit());
+}
+
+TEST(SolverTest, SimpleButLargeContradiction) {
+  // This test ensures that the solver takes a short-cut on known
+  // contradictory inputs, without using max_iterations. At the time
+  // this test is added, formulas that are easily recognized to be
+  // contradictory at CNF construction time would lead to timeout.
+  WatchedLiteralsSolver solver(10);
+  ConstraintContext Ctx;
+  auto first = Ctx.atom();
+  auto last = first;
+  for (int i = 1; i < 10000; ++i) {
+    last = Ctx.conj(last, Ctx.atom());
+  }
+  last = Ctx.conj(Ctx.neg(first), last);
+  ASSERT_EQ(solver.solve({last}).getStatus(),
+            Solver::Result::Status::Unsatisfiable);
+  EXPECT_FALSE(solver.reachedLimit());
+
+  first = Ctx.atom();
+  last = Ctx.neg(first);
+  for (int i = 1; i < 10000; ++i) {
+    last = Ctx.conj(last, Ctx.neg(Ctx.atom()));
+  }
+  last = Ctx.conj(first, last);
+  ASSERT_EQ(solver.solve({last}).getStatus(),
+            Solver::Result::Status::Unsatisfiable);
+  EXPECT_FALSE(solver.reachedLimit());
 }
 
 } // namespace

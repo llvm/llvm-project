@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -Wno-strict-prototypes -Wno-incompatible-function-pointer-types -fcf-protection=branch -triple i386-linux-gnu %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -Wno-strict-prototypes -Wno-incompatible-function-pointer-types -fcf-protection=branch -triple i386-linux-gnu %s -o - | FileCheck %s
 
 // CHECK: @t5 = weak{{.*}} global i32 2
 int t5 __attribute__((weak)) = 2;
@@ -25,7 +25,7 @@ int t6 __attribute__((visibility("protected")));
 // CHECK: @t12 ={{.*}} global i32 0, section "SECT"
 int t12 __attribute__((section("SECT")));
 
-// CHECK: @t9 = weak{{.*}} alias void (...), bitcast (void ()* @__t8 to void (...)*)
+// CHECK: @t9 = weak{{.*}} alias void (...), ptr @__t8
 void __t8() {}
 void t9() __attribute__((weak, alias("__t8")));
 
@@ -92,7 +92,7 @@ void (__attribute__((fastcall)) *fptr)(int);
 void t21(void) {
   fptr(10);
 }
-// CHECK: [[FPTRVAR:%[a-z0-9]+]] = load void (i32)*, void (i32)** @fptr
+// CHECK: [[FPTRVAR:%[a-z0-9]+]] = load ptr, ptr @fptr
 // CHECK-NEXT: call x86_fastcallcc void [[FPTRVAR]](i32 inreg noundef 10)
 
 

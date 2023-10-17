@@ -162,6 +162,9 @@ class Sema;
     /// Arm SVE Vector conversions
     ICK_SVE_Vector_Conversion,
 
+    /// RISC-V RVV Vector conversions
+    ICK_RVV_Vector_Conversion,
+
     /// A vector splat from an arithmetic type
     ICK_Vector_Splat,
 

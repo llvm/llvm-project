@@ -134,7 +134,7 @@ class Reporter {
   llvm::raw_ostream &OS;
   const ASTContext &Ctx;
   const SourceManager &SM;
-  HeaderSearch &HS;
+  const HeaderSearch &HS;
   const include_cleaner::Includes &Includes;
   const PragmaIncludes *PI;
   FileID MainFile;
@@ -170,10 +170,10 @@ class Reporter {
   std::string spellHeader(const Header &H) {
     switch (H.kind()) {
     case Header::Physical: {
-      bool IsSystem = false;
+      bool IsAngled = false;
       std::string Path = HS.suggestPathToFileForDiagnostics(
-          H.physical(), MainFE->tryGetRealPathName(), &IsSystem);
-      return IsSystem ? "<" + Path + ">" : "\"" + Path + "\"";
+          H.physical(), MainFE->tryGetRealPathName(), &IsAngled);
+      return IsAngled ? "<" + Path + ">" : "\"" + Path + "\"";
     }
     case Header::Standard:
       return H.standard().name().str();
@@ -187,8 +187,7 @@ class Reporter {
     // Duplicates logic from walkUsed(), which doesn't expose SymbolLocations.
     for (auto &Loc : locateSymbol(R.Sym))
       R.Locations.push_back(Loc);
-    for (const auto &Loc : R.Locations)
-      R.Headers.append(findHeaders(Loc, SM, PI));
+    R.Headers = headersForSymbol(R.Sym, SM, PI);
 
     for (const auto &H : R.Headers) {
       R.Includes.append(Includes.match(H));
@@ -205,12 +204,11 @@ class Reporter {
                      R.Includes.end());
 
     if (!R.Headers.empty())
-      // FIXME: library should tell us which header to use.
       R.Insert = spellHeader(R.Headers.front());
   }
 
 public:
-  Reporter(llvm::raw_ostream &OS, ASTContext &Ctx, HeaderSearch &HS,
+  Reporter(llvm::raw_ostream &OS, ASTContext &Ctx, const HeaderSearch &HS,
            const include_cleaner::Includes &Includes, const PragmaIncludes *PI,
            FileID MainFile)
       : OS(OS), Ctx(Ctx), SM(Ctx.getSourceManager()), HS(HS),
@@ -392,7 +390,7 @@ private:
       OS << "<tr><th>Header</th><td>";
       switch (H.kind()) {
       case Header::Physical:
-        printFilename(H.physical()->getName());
+        printFilename(H.physical().getName());
         break;
       case Header::Standard:
         OS << "stdlib " << H.standard().name();
@@ -515,7 +513,7 @@ private:
 void writeHTMLReport(FileID File, const include_cleaner::Includes &Includes,
                      llvm::ArrayRef<Decl *> Roots,
                      llvm::ArrayRef<SymbolReference> MacroRefs, ASTContext &Ctx,
-                     HeaderSearch &HS, PragmaIncludes *PI,
+                     const HeaderSearch &HS, PragmaIncludes *PI,
                      llvm::raw_ostream &OS) {
   Reporter R(OS, Ctx, HS, Includes, PI, File);
   const auto& SM = Ctx.getSourceManager();
@@ -523,7 +521,7 @@ void writeHTMLReport(FileID File, const include_cleaner::Includes &Includes,
     walkAST(*Root, [&](SourceLocation Loc, const NamedDecl &D, RefType T) {
       if(!SM.isWrittenInMainFile(SM.getSpellingLoc(Loc)))
         return;
-      R.addRef(SymbolReference{Loc, D, T});
+      R.addRef(SymbolReference{D, Loc, T});
     });
   for (const SymbolReference &Ref : MacroRefs) {
     if (!SM.isWrittenInMainFile(SM.getSpellingLoc(Ref.RefLocation)))

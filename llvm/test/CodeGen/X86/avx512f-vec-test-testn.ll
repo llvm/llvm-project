@@ -220,9 +220,9 @@ define <2 x i64> @setcc_commute(<2 x i64> %a) {
 ; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vpsubq %xmm0, %xmm1, %xmm1
-; CHECK-NEXT:    vptestnmq %zmm0, %zmm0, %k1
-; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k1}
-; CHECK-NEXT:    vmovdqa %xmm1, %xmm0
+; CHECK-NEXT:    vptestmq %zmm0, %zmm0, %k1
+; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = sub <2 x i64> zeroinitializer, %a

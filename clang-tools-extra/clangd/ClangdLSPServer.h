@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CLANGDLSPSERVER_H
 
 #include "ClangdServer.h"
+#include "Diagnostics.h"
 #include "GlobalCompilationDatabase.h"
 #include "LSPBinder.h"
 #include "Protocol.h"
@@ -18,9 +19,11 @@
 #include "support/MemoryTree.h"
 #include "support/Path.h"
 #include "support/Threading.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/JSON.h"
 #include <chrono>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -79,10 +82,12 @@ public:
 private:
   // Implement ClangdServer::Callbacks.
   void onDiagnosticsReady(PathRef File, llvm::StringRef Version,
-                          std::vector<Diag> Diagnostics) override;
+                          llvm::ArrayRef<Diag> Diagnostics) override;
   void onFileUpdated(PathRef File, const TUStatus &Status) override;
   void onBackgroundIndexProgress(const BackgroundQueue::Stats &Stats) override;
   void onSemanticsMaybeChanged(PathRef File) override;
+  void onInactiveRegionsReady(PathRef File,
+                              std::vector<Range> InactiveRegions) override;
 
   // LSP methods. Notifications have signature void(const Params&).
   // Calls have signature void(const Params&, Callback<Response>).
@@ -148,9 +153,6 @@ private:
   void onCallHierarchyIncomingCalls(
       const CallHierarchyIncomingCallsParams &,
       Callback<std::vector<CallHierarchyIncomingCall>>);
-  void onCallHierarchyOutgoingCalls(
-      const CallHierarchyOutgoingCallsParams &,
-      Callback<std::vector<CallHierarchyOutgoingCall>>);
   void onClangdInlayHints(const InlayHintsParams &,
                           Callback<llvm::json::Value>);
   void onInlayHint(const InlayHintsParams &, Callback<std::vector<InlayHint>>);
@@ -180,6 +182,7 @@ private:
   LSPBinder::OutgoingNotification<ShowMessageParams> ShowMessage;
   LSPBinder::OutgoingNotification<PublishDiagnosticsParams> PublishDiagnostics;
   LSPBinder::OutgoingNotification<FileStatus> NotifyFileStatus;
+  LSPBinder::OutgoingNotification<InactiveRegionsParams> PublishInactiveRegions;
   LSPBinder::OutgoingMethod<WorkDoneProgressCreateParams, std::nullptr_t>
       CreateWorkDoneProgress;
   LSPBinder::OutgoingNotification<ProgressParams<WorkDoneProgressBegin>>
@@ -194,7 +197,8 @@ private:
                  Callback<llvm::json::Value> Reply);
 
   void bindMethods(LSPBinder &, const ClientCapabilities &Caps);
-  std::vector<Fix> getFixes(StringRef File, const clangd::Diagnostic &D);
+  std::optional<ClangdServer::DiagRef> getDiagRef(StringRef File,
+                                                  const clangd::Diagnostic &D);
 
   /// Checks if completion request should be ignored. We need this due to the
   /// limitation of the LSP. Per LSP, a client sends requests for all "trigger
@@ -227,11 +231,28 @@ private:
   /// Used to indicate the ClangdLSPServer is being destroyed.
   std::atomic<bool> IsBeingDestroyed = {false};
 
-  std::mutex FixItsMutex;
-  typedef std::map<clangd::Diagnostic, std::vector<Fix>, LSPDiagnosticCompare>
-      DiagnosticToReplacementMap;
-  /// Caches FixIts per file and diagnostics
-  llvm::StringMap<DiagnosticToReplacementMap> FixItsMap;
+  // FIXME: The caching is a temporary solution to get corresponding clangd 
+  // diagnostic from a LSP diagnostic.
+  // Ideally, ClangdServer can generate an identifier for each diagnostic,
+  // emit them via the LSP's data field (which was newly added in LSP 3.16).
+  std::mutex DiagRefMutex;
+  struct DiagKey {
+    clangd::Range Rng;
+    std::string Message;
+    bool operator<(const DiagKey &Other) const {
+      return std::tie(Rng, Message) < std::tie(Other.Rng, Other.Message);
+    }
+  };
+  DiagKey toDiagKey(const clangd::Diagnostic &LSPDiag) {
+    return {LSPDiag.range, LSPDiag.message};
+  }
+  /// A map from LSP diagnostic to clangd-naive diagnostic.
+  typedef std::map<DiagKey, ClangdServer::DiagRef>
+      DiagnosticToDiagRefMap;
+  /// Caches the mapping LSP and clangd-naive diagnostics per file.
+  llvm::StringMap<DiagnosticToDiagRefMap>
+      DiagRefMap;
+
   // Last semantic-tokens response, for incremental requests.
   std::mutex SemanticTokensMutex;
   llvm::StringMap<SemanticTokens> LastSemanticTokens;
@@ -256,6 +277,8 @@ private:
   SymbolKindBitset SupportedSymbolKinds;
   /// The supported completion item kinds of the client.
   CompletionItemKindBitset SupportedCompletionItemKinds;
+  // Whether the client supports CompletionItem.labelDetails.
+  bool SupportsCompletionLabelDetails = false;
   /// Whether the client supports CodeAction response objects.
   bool SupportsCodeAction = false;
   /// From capabilities of textDocument/documentSymbol.
@@ -268,6 +291,11 @@ private:
   MarkupKind HoverContentFormat = MarkupKind::PlainText;
   /// Whether the client supports offsets for parameter info labels.
   bool SupportsOffsetsInSignatureHelp = false;
+  /// Whether the client supports the versioned document changes.
+  bool SupportsDocumentChanges = false;
+  /// Whether the client supports change annotations on text edits.
+  bool SupportsChangeAnnotation = false;
+
   std::mutex BackgroundIndexProgressMutex;
   enum class BackgroundIndexProgress {
     // Client doesn't support reporting progress. No transitions possible.

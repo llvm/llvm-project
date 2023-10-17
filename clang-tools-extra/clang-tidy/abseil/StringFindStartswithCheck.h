@@ -17,9 +17,7 @@
 #include <string>
 #include <vector>
 
-namespace clang {
-namespace tidy {
-namespace abseil {
+namespace clang::tidy::abseil {
 
 // Find string.find(...) == 0 comparisons and suggest replacing with StartsWith.
 // FIXME(niko): Add similar check for EndsWith
@@ -40,8 +38,6 @@ private:
   const StringRef AbseilStringsMatchHeader;
 };
 
-} // namespace abseil
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::abseil
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ABSEIL_STRINGFINDSTARTSWITHCHECK_H

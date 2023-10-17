@@ -9,14 +9,14 @@ declare void @f(i32)
 define void @test(i32 %len) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.umin.i32(i32 [[LEN:%.*]], i32 8)
-; CHECK-NEXT:    [[CMP11_NOT:%.*]] = icmp eq i32 [[TMP0]], 0
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.umin.i32(i32 [[LEN:%.*]], i32 8)
+; CHECK-NEXT:    [[CMP11_NOT:%.*]] = icmp eq i32 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[CMP11_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_02:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    tail call void @f(i32 [[TMP0]])
+; CHECK-NEXT:    tail call void @f(i32 [[COND]])
 ; CHECK-NEXT:    [[INC]] = add i32 [[I_02]], 1
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[INC]], [[TMP0]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[INC]], [[COND]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_BODY]], label [[FOR_END]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void

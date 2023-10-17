@@ -5,14 +5,8 @@ define float @test() {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTOBIT1683:%.*]] = extractvalue { i64, i1 } zeroinitializer, 1
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i1> poison, i1 [[DOTOBIT1683]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i1> [[TMP0]], <8 x i1> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> zeroinitializer)
-; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP1]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = or i1 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = or i1 [[OP_RDX]], false
-; CHECK-NEXT:    [[OP_RDX2:%.*]] = or i1 [[OP_RDX1]], false
-; CHECK-NEXT:    br i1 [[OP_RDX2]], label [[EXIT1:%.*]], label [[EXIT2:%.*]]
+; CHECK-NEXT:    [[OP_RDX:%.*]] = or i1 false, [[DOTOBIT1683]]
+; CHECK-NEXT:    br i1 [[OP_RDX]], label [[EXIT1:%.*]], label [[EXIT2:%.*]]
 ; CHECK:       exit2:
 ; CHECK-NEXT:    ret float 0.000000e+00
 ; CHECK:       exit1:

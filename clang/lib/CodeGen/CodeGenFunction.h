@@ -117,7 +117,7 @@ enum TypeEvaluationKind {
   SANITIZER_CHECK(DivremOverflow, divrem_overflow, 0)                          \
   SANITIZER_CHECK(DynamicTypeCacheMiss, dynamic_type_cache_miss, 0)            \
   SANITIZER_CHECK(FloatCastOverflow, float_cast_overflow, 0)                   \
-  SANITIZER_CHECK(FunctionTypeMismatch, function_type_mismatch, 1)             \
+  SANITIZER_CHECK(FunctionTypeMismatch, function_type_mismatch, 0)             \
   SANITIZER_CHECK(ImplicitConversion, implicit_conversion, 0)                  \
   SANITIZER_CHECK(InvalidBuiltin, invalid_builtin, 0)                          \
   SANITIZER_CHECK(InvalidObjCCast, invalid_objc_cast, 0)                       \
@@ -318,10 +318,10 @@ public:
 
   /// CurFuncDecl - Holds the Decl for the current outermost
   /// non-closure context.
-  const Decl *CurFuncDecl;
+  const Decl *CurFuncDecl = nullptr;
   /// CurCodeDecl - This is the inner-most code context, which includes blocks.
-  const Decl *CurCodeDecl;
-  const CGFunctionInfo *CurFnInfo;
+  const Decl *CurCodeDecl = nullptr;
+  const CGFunctionInfo *CurFnInfo = nullptr;
   QualType FnRetTy;
   llvm::Function *CurFn = nullptr;
 
@@ -333,6 +333,7 @@ public:
   // in this header.
   struct CGCoroInfo {
     std::unique_ptr<CGCoroData> Data;
+    bool InSuspendBlock = false;
     CGCoroInfo();
     ~CGCoroInfo();
   };
@@ -340,6 +341,10 @@ public:
 
   bool isCoroutine() const {
     return CurCoro.Data != nullptr;
+  }
+
+  bool inSuspendBlock() const {
+    return isCoroutine() && CurCoro.InSuspendBlock;
   }
 
   /// CurGD - The GlobalDecl for the current function being compiled.
@@ -743,11 +748,11 @@ public:
 
     /// An i1 variable indicating whether or not the @finally is
     /// running for an exception.
-    llvm::AllocaInst *ForEHVar;
+    llvm::AllocaInst *ForEHVar = nullptr;
 
     /// An i8* variable into which the exception pointer to rethrow
     /// has been saved.
-    llvm::AllocaInst *SavedExnVar;
+    llvm::AllocaInst *SavedExnVar = nullptr;
 
   public:
     void enter(CodeGenFunction &CGF, const Stmt *Finally,
@@ -1245,11 +1250,11 @@ public:
   /// destroyed by aggressive peephole optimizations that assume that
   /// all uses of a value have been realized in the IR.
   class PeepholeProtection {
-    llvm::Instruction *Inst;
+    llvm::Instruction *Inst = nullptr;
     friend class CodeGenFunction;
 
   public:
-    PeepholeProtection() : Inst(nullptr) {}
+    PeepholeProtection() = default;
   };
 
   /// A non-RAII class containing all the information about a bound
@@ -1958,6 +1963,9 @@ private:
   /// Check if the return value of this function requires sanitization.
   bool requiresReturnValueCheck() const;
 
+  bool isInAllocaArgument(CGCXXABI &ABI, QualType Ty);
+  bool hasInAllocaArg(const CXXMethodDecl *MD);
+
   llvm::BasicBlock *TerminateLandingPad = nullptr;
   llvm::BasicBlock *TerminateHandler = nullptr;
   llvm::SmallVector<llvm::BasicBlock *, 2> TrapBBs;
@@ -2060,6 +2068,8 @@ public:
                                    llvm::Value *CompletePtr,
                                    QualType ElementType);
   void pushStackRestore(CleanupKind kind, Address SPMem);
+  void pushKmpcAllocFree(CleanupKind Kind,
+                         std::pair<llvm::Value *, llvm::Value *> AddrSizePair);
   void emitDestroy(Address addr, QualType type, Destroyer *destroyer,
                    bool useEHCleanupForArray);
   llvm::Function *generateDestroyHelper(Address addr, QualType type,
@@ -2220,10 +2230,17 @@ public:
   void EmitBlockWithFallThrough(llvm::BasicBlock *BB, const Stmt *S);
 
   void EmitForwardingCallToLambda(const CXXMethodDecl *LambdaCallOperator,
-                                  CallArgList &CallArgs);
+                                  CallArgList &CallArgs,
+                                  const CGFunctionInfo *CallOpFnInfo = nullptr,
+                                  llvm::Constant *CallOpFn = nullptr);
   void EmitLambdaBlockInvokeBody();
-  void EmitLambdaDelegatingInvokeBody(const CXXMethodDecl *MD);
   void EmitLambdaStaticInvokeBody(const CXXMethodDecl *MD);
+  void EmitLambdaDelegatingInvokeBody(const CXXMethodDecl *MD,
+                                      CallArgList &CallArgs);
+  void EmitLambdaInAllocaImplFn(const CXXMethodDecl *CallOp,
+                                const CGFunctionInfo **ImplFnInfo,
+                                llvm::Function **ImplFn);
+  void EmitLambdaInAllocaCallOpBody(const CXXMethodDecl *MD);
   void EmitLambdaVLACapture(const VariableArrayType *VAT, LValue LV) {
     EmitStoreThroughLValue(RValue::get(VLASizeMap[VAT->getSizeExpr()]), LV);
   }
@@ -2363,10 +2380,9 @@ public:
   /// XRay typed event handling calls.
   bool AlwaysEmitXRayTypedEvents() const;
 
-  /// Decode an address used in a function prologue, encoded by \c
-  /// EncodeAddrForUseInPrologue.
-  llvm::Value *DecodeAddrUsedInPrologue(llvm::Value *F,
-                                        llvm::Value *EncodedAddr);
+  /// Return a type hash constant for a function instrumented by
+  /// -fsanitize=function.
+  llvm::ConstantInt *getUBSanFunctionTypeHash(QualType T) const;
 
   /// EmitFunctionProlog - Emit the target specific LLVM code to load the
   /// arguments for the given function. This is also responsible for naming the
@@ -2620,9 +2636,6 @@ public:
                                  AggValueSlot::IsNotAliased,
                                  AggValueSlot::DoesNotOverlap);
   }
-
-  /// Emit a cast to void* in the appropriate address space.
-  llvm::Value *EmitCastToVoidPtr(llvm::Value *value);
 
   /// EvaluateExprAsBool - Perform the usual unary conversions on the specified
   /// expression and compare the result against zero, returning an Int1Ty value.
@@ -3009,6 +3022,12 @@ public:
   void EmitBoundsCheck(const Expr *E, const Expr *Base, llvm::Value *Index,
                        QualType IndexType, bool Accessed);
 
+  /// Find the FieldDecl specified in a FAM's "counted_by" attribute. Returns
+  /// \p nullptr if either the attribute or the field doesn't exist.
+  FieldDecl *FindCountedByField(
+      const Expr *Base,
+      LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel);
+
   llvm::Value *EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
                                        bool isInc, bool isPre);
   ComplexPairTy EmitComplexPrePostIncDec(const UnaryOperator *E, LValue LV,
@@ -3164,7 +3183,8 @@ public:
 
     Address getIndirectAddress() const {
       assert(isIndirect());
-      return Address(Value, ElementType, CharUnits::fromQuantity(Alignment));
+      return Address(Value, ElementType, CharUnits::fromQuantity(Alignment),
+                     KnownNonNull);
     }
   };
 
@@ -3399,10 +3419,12 @@ public:
                             OMPPrivateScope &PrivateScope);
   void EmitOMPUseDevicePtrClause(
       const OMPUseDevicePtrClause &C, OMPPrivateScope &PrivateScope,
-      const llvm::DenseMap<const ValueDecl *, Address> &CaptureDeviceAddrMap);
+      const llvm::DenseMap<const ValueDecl *, llvm::Value *>
+          CaptureDeviceAddrMap);
   void EmitOMPUseDeviceAddrClause(
       const OMPUseDeviceAddrClause &C, OMPPrivateScope &PrivateScope,
-      const llvm::DenseMap<const ValueDecl *, Address> &CaptureDeviceAddrMap);
+      const llvm::DenseMap<const ValueDecl *, llvm::Value *>
+          CaptureDeviceAddrMap);
   /// Emit code for copyin clause in \a D directive. The next code is
   /// generated at the start of outlined functions for directives:
   /// \code
@@ -3578,7 +3600,14 @@ public:
   void EmitOMPTargetTeamsDistributeSimdDirective(
       const OMPTargetTeamsDistributeSimdDirective &S);
   void EmitOMPGenericLoopDirective(const OMPGenericLoopDirective &S);
+  void EmitOMPParallelGenericLoopDirective(const OMPLoopDirective &S);
+  void EmitOMPTargetParallelGenericLoopDirective(
+      const OMPTargetParallelGenericLoopDirective &S);
+  void EmitOMPTargetTeamsGenericLoopDirective(
+      const OMPTargetTeamsGenericLoopDirective &S);
+  void EmitOMPTeamsGenericLoopDirective(const OMPTeamsGenericLoopDirective &S);
   void EmitOMPInteropDirective(const OMPInteropDirective &S);
+  void EmitOMPParallelMaskedDirective(const OMPParallelMaskedDirective &S);
 
   /// Emit device code for the target directive.
   static void EmitOMPTargetDeviceFunction(CodeGenModule &CGM,
@@ -3616,6 +3645,16 @@ public:
   static void EmitOMPTargetTeamsDistributeParallelForSimdDeviceFunction(
       CodeGenModule &CGM, StringRef ParentName,
       const OMPTargetTeamsDistributeParallelForSimdDirective &S);
+
+  /// Emit device code for the target teams loop directive.
+  static void EmitOMPTargetTeamsGenericLoopDeviceFunction(
+      CodeGenModule &CGM, StringRef ParentName,
+      const OMPTargetTeamsGenericLoopDirective &S);
+
+  /// Emit device code for the target parallel loop directive.
+  static void EmitOMPTargetParallelGenericLoopDeviceFunction(
+      CodeGenModule &CGM, StringRef ParentName,
+      const OMPTargetParallelGenericLoopDirective &S);
 
   static void EmitOMPTargetTeamsDistributeParallelForDeviceFunction(
       CodeGenModule &CGM, StringRef ParentName,
@@ -3771,8 +3810,13 @@ public:
   /// an LLVM type of the same size of the lvalue's type.  If the lvalue has a
   /// variable length type, this is not possible.
   ///
-  LValue EmitLValue(const Expr *E);
+  LValue EmitLValue(const Expr *E,
+                    KnownNonNull_t IsKnownNonNull = NotKnownNonNull);
 
+private:
+  LValue EmitLValueHelper(const Expr *E, KnownNonNull_t IsKnownNonNull);
+
+public:
   /// Same as EmitLValue but additionally we generate checking code to
   /// guard against undefined behavior.  This is only suitable when we know
   /// that the address will be used to access the object.
@@ -3979,6 +4023,8 @@ public:
                                            const ObjCIvarDecl *Ivar);
   LValue EmitLValueForField(LValue Base, const FieldDecl* Field);
   LValue EmitLValueForLambdaField(const FieldDecl *Field);
+  LValue EmitLValueForLambdaField(const FieldDecl *Field,
+                                  llvm::Value *ThisValue);
 
   /// EmitLValueForFieldInitialization - Like EmitLValueForField, except that
   /// if the Field is a reference, this will return the address of the reference
@@ -4234,6 +4280,7 @@ public:
   llvm::Value *EmitSVEMaskedStore(const CallExpr *,
                                   SmallVectorImpl<llvm::Value *> &Ops,
                                   unsigned BuiltinID);
+  llvm::Value *EmitTileslice(llvm::Value *Offset, llvm::Value *Base);
   llvm::Value *EmitSVEPrefetchLoad(const SVETypeFlags &TypeFlags,
                                    SmallVectorImpl<llvm::Value *> &Ops,
                                    unsigned BuiltinID);
@@ -4247,6 +4294,20 @@ public:
                                   SmallVectorImpl<llvm::Value *> &Ops,
                                   unsigned IntID);
   llvm::Value *EmitAArch64SVEBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
+
+  llvm::Value *EmitSMELd1St1(const SVETypeFlags &TypeFlags,
+                             llvm::SmallVectorImpl<llvm::Value *> &Ops,
+                             unsigned IntID);
+  llvm::Value *EmitSMEReadWrite(const SVETypeFlags &TypeFlags,
+                                llvm::SmallVectorImpl<llvm::Value *> &Ops,
+                                unsigned IntID);
+  llvm::Value *EmitSMEZero(const SVETypeFlags &TypeFlags,
+                           llvm::SmallVectorImpl<llvm::Value *> &Ops,
+                           unsigned IntID);
+  llvm::Value *EmitSMELdrStr(const SVETypeFlags &TypeFlags,
+                             llvm::SmallVectorImpl<llvm::Value *> &Ops,
+                             unsigned IntID);
+  llvm::Value *EmitAArch64SMEBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
 
   llvm::Value *EmitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
                                       llvm::Triple::ArchType Arch);
@@ -4263,7 +4324,6 @@ public:
   llvm::Value *EmitHexagonBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitRISCVBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
                                     ReturnValueSlot ReturnValue);
-  llvm::Value *EmitLoongArchBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   void ProcessOrderScopeAMDGCN(llvm::Value *Order, llvm::Value *Scope,
                                llvm::AtomicOrdering &AO,
                                llvm::SyncScope::ID &SSID);
@@ -4674,6 +4734,14 @@ public:
   /// point operation, expressed as the maximum relative error in ulp.
   void SetFPAccuracy(llvm::Value *Val, float Accuracy);
 
+  /// Set the minimum required accuracy of the given sqrt operation
+  /// based on CodeGenOpts.
+  void SetSqrtFPAccuracy(llvm::Value *Val);
+
+  /// Set the minimum required accuracy of the given sqrt operation based on
+  /// CodeGenOpts.
+  void SetDivFPAccuracy(llvm::Value *Val);
+
   /// Set the codegen fast-math flags.
   void SetFastMathFlags(FPOptions FPFeatures);
 
@@ -4783,9 +4851,10 @@ public:
   /// into the address of a local variable.  In such a case, it's quite
   /// reasonable to just ignore the returned alignment when it isn't from an
   /// explicit source.
-  Address EmitPointerWithAlignment(const Expr *Addr,
-                                   LValueBaseInfo *BaseInfo = nullptr,
-                                   TBAAAccessInfo *TBAAInfo = nullptr);
+  Address
+  EmitPointerWithAlignment(const Expr *Addr, LValueBaseInfo *BaseInfo = nullptr,
+                           TBAAAccessInfo *TBAAInfo = nullptr,
+                           KnownNonNull_t IsKnownNonNull = NotKnownNonNull);
 
   /// If \p E references a parameter with pass_object_size info or a constant
   /// array size modifier, emit the object size divided by the size of \p EltTy.
@@ -4836,7 +4905,7 @@ private:
   llvm::Value *EmitX86CpuIs(StringRef CPUStr);
   llvm::Value *EmitX86CpuSupports(const CallExpr *E);
   llvm::Value *EmitX86CpuSupports(ArrayRef<StringRef> FeatureStrs);
-  llvm::Value *EmitX86CpuSupports(uint64_t Mask);
+  llvm::Value *EmitX86CpuSupports(std::array<uint32_t, 4> FeatureMask);
   llvm::Value *EmitX86CpuInit();
   llvm::Value *FormX86ResolverCondition(const MultiVersionResolverOption &RO);
   llvm::Value *EmitAArch64CpuInit();

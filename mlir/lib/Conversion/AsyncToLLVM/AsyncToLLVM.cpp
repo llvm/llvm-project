@@ -8,8 +8,10 @@
 
 #include "mlir/Conversion/AsyncToLLVM/AsyncToLLVM.h"
 
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
+#include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Async/IR/Async.h"
@@ -24,7 +26,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTASYNCTOLLVM
+#define GEN_PASS_DEF_CONVERTASYNCTOLLVMPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -70,11 +72,14 @@ namespace {
 /// Async Runtime API function types.
 ///
 /// Because we can't create API function signature for type parametrized
-/// async.getValue type, we use opaque pointers (!llvm.ptr<i8>) instead. After
+/// async.getValue type, we use opaque pointers (!llvm.ptr) instead. After
 /// lowering all async data types become opaque pointers at runtime.
 struct AsyncAPI {
-  // All async types are lowered to opaque i8* LLVM pointers at runtime.
-  static LLVM::LLVMPointerType opaquePointerType(MLIRContext *ctx) {
+  // All async types are lowered to opaque LLVM pointers at runtime.
+  static LLVM::LLVMPointerType opaquePointerType(MLIRContext *ctx,
+                                                 bool useLLVMOpaquePointers) {
+    if (useLLVMOpaquePointers)
+      return LLVM::LLVMPointerType::get(ctx);
     return LLVM::LLVMPointerType::get(IntegerType::get(ctx, 8));
   }
 
@@ -82,8 +87,9 @@ struct AsyncAPI {
     return LLVM::LLVMTokenType::get(ctx);
   }
 
-  static FunctionType addOrDropRefFunctionType(MLIRContext *ctx) {
-    auto ref = opaquePointerType(ctx);
+  static FunctionType addOrDropRefFunctionType(MLIRContext *ctx,
+                                               bool useLLVMOpaquePointers) {
+    auto ref = opaquePointerType(ctx, useLLVMOpaquePointers);
     auto count = IntegerType::get(ctx, 64);
     return FunctionType::get(ctx, {ref, count}, {});
   }
@@ -92,9 +98,10 @@ struct AsyncAPI {
     return FunctionType::get(ctx, {}, {TokenType::get(ctx)});
   }
 
-  static FunctionType createValueFunctionType(MLIRContext *ctx) {
+  static FunctionType createValueFunctionType(MLIRContext *ctx,
+                                              bool useLLVMOpaquePointers) {
     auto i64 = IntegerType::get(ctx, 64);
-    auto value = opaquePointerType(ctx);
+    auto value = opaquePointerType(ctx, useLLVMOpaquePointers);
     return FunctionType::get(ctx, {i64}, {value});
   }
 
@@ -103,9 +110,10 @@ struct AsyncAPI {
     return FunctionType::get(ctx, {i64}, {GroupType::get(ctx)});
   }
 
-  static FunctionType getValueStorageFunctionType(MLIRContext *ctx) {
-    auto value = opaquePointerType(ctx);
-    auto storage = opaquePointerType(ctx);
+  static FunctionType getValueStorageFunctionType(MLIRContext *ctx,
+                                                  bool useLLVMOpaquePointers) {
+    auto value = opaquePointerType(ctx, useLLVMOpaquePointers);
+    auto storage = opaquePointerType(ctx, useLLVMOpaquePointers);
     return FunctionType::get(ctx, {value}, {storage});
   }
 
@@ -113,8 +121,9 @@ struct AsyncAPI {
     return FunctionType::get(ctx, {TokenType::get(ctx)}, {});
   }
 
-  static FunctionType emplaceValueFunctionType(MLIRContext *ctx) {
-    auto value = opaquePointerType(ctx);
+  static FunctionType emplaceValueFunctionType(MLIRContext *ctx,
+                                               bool useLLVMOpaquePointers) {
+    auto value = opaquePointerType(ctx, useLLVMOpaquePointers);
     return FunctionType::get(ctx, {value}, {});
   }
 
@@ -122,8 +131,9 @@ struct AsyncAPI {
     return FunctionType::get(ctx, {TokenType::get(ctx)}, {});
   }
 
-  static FunctionType setValueErrorFunctionType(MLIRContext *ctx) {
-    auto value = opaquePointerType(ctx);
+  static FunctionType setValueErrorFunctionType(MLIRContext *ctx,
+                                                bool useLLVMOpaquePointers) {
+    auto value = opaquePointerType(ctx, useLLVMOpaquePointers);
     return FunctionType::get(ctx, {value}, {});
   }
 
@@ -132,8 +142,9 @@ struct AsyncAPI {
     return FunctionType::get(ctx, {TokenType::get(ctx)}, {i1});
   }
 
-  static FunctionType isValueErrorFunctionType(MLIRContext *ctx) {
-    auto value = opaquePointerType(ctx);
+  static FunctionType isValueErrorFunctionType(MLIRContext *ctx,
+                                               bool useLLVMOpaquePointers) {
+    auto value = opaquePointerType(ctx, useLLVMOpaquePointers);
     auto i1 = IntegerType::get(ctx, 1);
     return FunctionType::get(ctx, {value}, {i1});
   }
@@ -147,8 +158,9 @@ struct AsyncAPI {
     return FunctionType::get(ctx, {TokenType::get(ctx)}, {});
   }
 
-  static FunctionType awaitValueFunctionType(MLIRContext *ctx) {
-    auto value = opaquePointerType(ctx);
+  static FunctionType awaitValueFunctionType(MLIRContext *ctx,
+                                             bool useLLVMOpaquePointers) {
+    auto value = opaquePointerType(ctx, useLLVMOpaquePointers);
     return FunctionType::get(ctx, {value}, {});
   }
 
@@ -156,9 +168,15 @@ struct AsyncAPI {
     return FunctionType::get(ctx, {GroupType::get(ctx)}, {});
   }
 
-  static FunctionType executeFunctionType(MLIRContext *ctx) {
-    auto hdl = opaquePointerType(ctx);
-    auto resume = LLVM::LLVMPointerType::get(resumeFunctionType(ctx));
+  static FunctionType executeFunctionType(MLIRContext *ctx,
+                                          bool useLLVMOpaquePointers) {
+    auto hdl = opaquePointerType(ctx, useLLVMOpaquePointers);
+    Type resume;
+    if (useLLVMOpaquePointers)
+      resume = LLVM::LLVMPointerType::get(ctx);
+    else
+      resume = LLVM::LLVMPointerType::get(
+          resumeFunctionType(ctx, useLLVMOpaquePointers));
     return FunctionType::get(ctx, {hdl, resume}, {});
   }
 
@@ -168,22 +186,42 @@ struct AsyncAPI {
                              {i64});
   }
 
-  static FunctionType awaitTokenAndExecuteFunctionType(MLIRContext *ctx) {
-    auto hdl = opaquePointerType(ctx);
-    auto resume = LLVM::LLVMPointerType::get(resumeFunctionType(ctx));
+  static FunctionType
+  awaitTokenAndExecuteFunctionType(MLIRContext *ctx,
+                                   bool useLLVMOpaquePointers) {
+    auto hdl = opaquePointerType(ctx, useLLVMOpaquePointers);
+    Type resume;
+    if (useLLVMOpaquePointers)
+      resume = LLVM::LLVMPointerType::get(ctx);
+    else
+      resume = LLVM::LLVMPointerType::get(
+          resumeFunctionType(ctx, useLLVMOpaquePointers));
     return FunctionType::get(ctx, {TokenType::get(ctx), hdl, resume}, {});
   }
 
-  static FunctionType awaitValueAndExecuteFunctionType(MLIRContext *ctx) {
-    auto value = opaquePointerType(ctx);
-    auto hdl = opaquePointerType(ctx);
-    auto resume = LLVM::LLVMPointerType::get(resumeFunctionType(ctx));
+  static FunctionType
+  awaitValueAndExecuteFunctionType(MLIRContext *ctx,
+                                   bool useLLVMOpaquePointers) {
+    auto value = opaquePointerType(ctx, useLLVMOpaquePointers);
+    auto hdl = opaquePointerType(ctx, useLLVMOpaquePointers);
+    Type resume;
+    if (useLLVMOpaquePointers)
+      resume = LLVM::LLVMPointerType::get(ctx);
+    else
+      resume = LLVM::LLVMPointerType::get(
+          resumeFunctionType(ctx, useLLVMOpaquePointers));
     return FunctionType::get(ctx, {value, hdl, resume}, {});
   }
 
-  static FunctionType awaitAllAndExecuteFunctionType(MLIRContext *ctx) {
-    auto hdl = opaquePointerType(ctx);
-    auto resume = LLVM::LLVMPointerType::get(resumeFunctionType(ctx));
+  static FunctionType
+  awaitAllAndExecuteFunctionType(MLIRContext *ctx, bool useLLVMOpaquePointers) {
+    auto hdl = opaquePointerType(ctx, useLLVMOpaquePointers);
+    Type resume;
+    if (useLLVMOpaquePointers)
+      resume = LLVM::LLVMPointerType::get(ctx);
+    else
+      resume = LLVM::LLVMPointerType::get(
+          resumeFunctionType(ctx, useLLVMOpaquePointers));
     return FunctionType::get(ctx, {GroupType::get(ctx), hdl, resume}, {});
   }
 
@@ -192,16 +230,17 @@ struct AsyncAPI {
   }
 
   // Auxiliary coroutine resume intrinsic wrapper.
-  static Type resumeFunctionType(MLIRContext *ctx) {
+  static Type resumeFunctionType(MLIRContext *ctx, bool useLLVMOpaquePointers) {
     auto voidTy = LLVM::LLVMVoidType::get(ctx);
-    auto i8Ptr = opaquePointerType(ctx);
-    return LLVM::LLVMFunctionType::get(voidTy, {i8Ptr}, false);
+    auto ptrType = opaquePointerType(ctx, useLLVMOpaquePointers);
+    return LLVM::LLVMFunctionType::get(voidTy, {ptrType}, false);
   }
 };
 } // namespace
 
 /// Adds Async Runtime C API declarations to the module.
-static void addAsyncRuntimeApiDeclarations(ModuleOp module) {
+static void addAsyncRuntimeApiDeclarations(ModuleOp module,
+                                           bool useLLVMOpaquePointers) {
   auto builder =
       ImplicitLocOpBuilder::atBlockEnd(module.getLoc(), module.getBody());
 
@@ -212,30 +251,39 @@ static void addAsyncRuntimeApiDeclarations(ModuleOp module) {
   };
 
   MLIRContext *ctx = module.getContext();
-  addFuncDecl(kAddRef, AsyncAPI::addOrDropRefFunctionType(ctx));
-  addFuncDecl(kDropRef, AsyncAPI::addOrDropRefFunctionType(ctx));
+  addFuncDecl(kAddRef,
+              AsyncAPI::addOrDropRefFunctionType(ctx, useLLVMOpaquePointers));
+  addFuncDecl(kDropRef,
+              AsyncAPI::addOrDropRefFunctionType(ctx, useLLVMOpaquePointers));
   addFuncDecl(kCreateToken, AsyncAPI::createTokenFunctionType(ctx));
-  addFuncDecl(kCreateValue, AsyncAPI::createValueFunctionType(ctx));
+  addFuncDecl(kCreateValue,
+              AsyncAPI::createValueFunctionType(ctx, useLLVMOpaquePointers));
   addFuncDecl(kCreateGroup, AsyncAPI::createGroupFunctionType(ctx));
   addFuncDecl(kEmplaceToken, AsyncAPI::emplaceTokenFunctionType(ctx));
-  addFuncDecl(kEmplaceValue, AsyncAPI::emplaceValueFunctionType(ctx));
+  addFuncDecl(kEmplaceValue,
+              AsyncAPI::emplaceValueFunctionType(ctx, useLLVMOpaquePointers));
   addFuncDecl(kSetTokenError, AsyncAPI::setTokenErrorFunctionType(ctx));
-  addFuncDecl(kSetValueError, AsyncAPI::setValueErrorFunctionType(ctx));
+  addFuncDecl(kSetValueError,
+              AsyncAPI::setValueErrorFunctionType(ctx, useLLVMOpaquePointers));
   addFuncDecl(kIsTokenError, AsyncAPI::isTokenErrorFunctionType(ctx));
-  addFuncDecl(kIsValueError, AsyncAPI::isValueErrorFunctionType(ctx));
+  addFuncDecl(kIsValueError,
+              AsyncAPI::isValueErrorFunctionType(ctx, useLLVMOpaquePointers));
   addFuncDecl(kIsGroupError, AsyncAPI::isGroupErrorFunctionType(ctx));
   addFuncDecl(kAwaitToken, AsyncAPI::awaitTokenFunctionType(ctx));
-  addFuncDecl(kAwaitValue, AsyncAPI::awaitValueFunctionType(ctx));
+  addFuncDecl(kAwaitValue,
+              AsyncAPI::awaitValueFunctionType(ctx, useLLVMOpaquePointers));
   addFuncDecl(kAwaitGroup, AsyncAPI::awaitGroupFunctionType(ctx));
-  addFuncDecl(kExecute, AsyncAPI::executeFunctionType(ctx));
-  addFuncDecl(kGetValueStorage, AsyncAPI::getValueStorageFunctionType(ctx));
+  addFuncDecl(kExecute,
+              AsyncAPI::executeFunctionType(ctx, useLLVMOpaquePointers));
+  addFuncDecl(kGetValueStorage, AsyncAPI::getValueStorageFunctionType(
+                                    ctx, useLLVMOpaquePointers));
   addFuncDecl(kAddTokenToGroup, AsyncAPI::addTokenToGroupFunctionType(ctx));
-  addFuncDecl(kAwaitTokenAndExecute,
-              AsyncAPI::awaitTokenAndExecuteFunctionType(ctx));
-  addFuncDecl(kAwaitValueAndExecute,
-              AsyncAPI::awaitValueAndExecuteFunctionType(ctx));
-  addFuncDecl(kAwaitAllAndExecute,
-              AsyncAPI::awaitAllAndExecuteFunctionType(ctx));
+  addFuncDecl(kAwaitTokenAndExecute, AsyncAPI::awaitTokenAndExecuteFunctionType(
+                                         ctx, useLLVMOpaquePointers));
+  addFuncDecl(kAwaitValueAndExecute, AsyncAPI::awaitValueAndExecuteFunctionType(
+                                         ctx, useLLVMOpaquePointers));
+  addFuncDecl(kAwaitAllAndExecute, AsyncAPI::awaitAllAndExecuteFunctionType(
+                                       ctx, useLLVMOpaquePointers));
   addFuncDecl(kGetNumWorkerThreads, AsyncAPI::getNumWorkerThreads(ctx));
 }
 
@@ -248,7 +296,7 @@ static constexpr const char *kResume = "__resume";
 /// A function that takes a coroutine handle and calls a `llvm.coro.resume`
 /// intrinsics. We need this function to be able to pass it to the async
 /// runtime execute API.
-static void addResumeFunction(ModuleOp module) {
+static void addResumeFunction(ModuleOp module, bool useOpaquePointers) {
   if (module.lookupSymbol(kResume))
     return;
 
@@ -257,10 +305,14 @@ static void addResumeFunction(ModuleOp module) {
   auto moduleBuilder = ImplicitLocOpBuilder::atBlockEnd(loc, module.getBody());
 
   auto voidTy = LLVM::LLVMVoidType::get(ctx);
-  auto i8Ptr = LLVM::LLVMPointerType::get(IntegerType::get(ctx, 8));
+  Type ptrType;
+  if (useOpaquePointers)
+    ptrType = LLVM::LLVMPointerType::get(ctx);
+  else
+    ptrType = LLVM::LLVMPointerType::get(IntegerType::get(ctx, 8));
 
   auto resumeOp = moduleBuilder.create<LLVM::LLVMFuncOp>(
-      kResume, LLVM::LLVMFunctionType::get(voidTy, {i8Ptr}));
+      kResume, LLVM::LLVMFunctionType::get(voidTy, {ptrType}));
   resumeOp.setPrivate();
 
   auto *block = resumeOp.addEntryBlock();
@@ -278,10 +330,15 @@ namespace {
 /// AsyncRuntimeTypeConverter only converts types from the Async dialect to
 /// their runtime type (opaque pointers) and does not convert any other types.
 class AsyncRuntimeTypeConverter : public TypeConverter {
+  bool llvmOpaquePointers = false;
+
 public:
-  AsyncRuntimeTypeConverter() {
+  AsyncRuntimeTypeConverter(const LowerToLLVMOptions &options)
+      : llvmOpaquePointers(options.useOpaquePointers) {
     addConversion([](Type type) { return type; });
-    addConversion(convertAsyncTypes);
+    addConversion([this](Type type) {
+      return convertAsyncTypes(type, llvmOpaquePointers);
+    });
 
     // Use UnrealizedConversionCast as the bridge so that we don't need to pull
     // in patterns for other dialects.
@@ -295,18 +352,53 @@ public:
     addTargetMaterialization(addUnrealizedCast);
   }
 
-  static std::optional<Type> convertAsyncTypes(Type type) {
-    if (type.isa<TokenType, GroupType, ValueType>())
-      return AsyncAPI::opaquePointerType(type.getContext());
+  /// Returns whether LLVM opaque pointers should be used instead of typed
+  /// pointers.
+  bool useOpaquePointers() const { return llvmOpaquePointers; }
 
-    if (type.isa<CoroIdType, CoroStateType>())
+  /// Creates an LLVM pointer type which may either be a typed pointer or an
+  /// opaque pointer, depending on what options the converter was constructed
+  /// with.
+  LLVM::LLVMPointerType getPointerType(Type elementType) const {
+    if (llvmOpaquePointers)
+      return LLVM::LLVMPointerType::get(elementType.getContext());
+    return LLVM::LLVMPointerType::get(elementType);
+  }
+
+  static std::optional<Type> convertAsyncTypes(Type type,
+                                               bool useOpaquePointers) {
+    if (isa<TokenType, GroupType, ValueType>(type))
+      return AsyncAPI::opaquePointerType(type.getContext(), useOpaquePointers);
+
+    if (isa<CoroIdType, CoroStateType>(type))
       return AsyncAPI::tokenType(type.getContext());
-    if (type.isa<CoroHandleType>())
-      return AsyncAPI::opaquePointerType(type.getContext());
+    if (isa<CoroHandleType>(type))
+      return AsyncAPI::opaquePointerType(type.getContext(), useOpaquePointers);
 
     return std::nullopt;
   }
 };
+
+/// Base class for conversion patterns requiring AsyncRuntimeTypeConverter
+/// as type converter. Allows access to it via the 'getTypeConverter'
+/// convenience method.
+template <typename SourceOp>
+class AsyncOpConversionPattern : public OpConversionPattern<SourceOp> {
+
+  using Base = OpConversionPattern<SourceOp>;
+
+public:
+  AsyncOpConversionPattern(const AsyncRuntimeTypeConverter &typeConverter,
+                           MLIRContext *context)
+      : Base(typeConverter, context) {}
+
+  /// Returns the 'AsyncRuntimeTypeConverter' of the pattern.
+  const AsyncRuntimeTypeConverter *getTypeConverter() const {
+    return static_cast<const AsyncRuntimeTypeConverter *>(
+        Base::getTypeConverter());
+  }
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -314,21 +406,22 @@ public:
 //===----------------------------------------------------------------------===//
 
 namespace {
-class CoroIdOpConversion : public OpConversionPattern<CoroIdOp> {
+class CoroIdOpConversion : public AsyncOpConversionPattern<CoroIdOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using AsyncOpConversionPattern::AsyncOpConversionPattern;
 
   LogicalResult
   matchAndRewrite(CoroIdOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto token = AsyncAPI::tokenType(op->getContext());
-    auto i8Ptr = AsyncAPI::opaquePointerType(op->getContext());
+    auto ptrType = AsyncAPI::opaquePointerType(
+        op->getContext(), getTypeConverter()->useOpaquePointers());
     auto loc = op->getLoc();
 
     // Constants for initializing coroutine frame.
     auto constZero =
         rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI32Type(), 0);
-    auto nullPtr = rewriter.create<LLVM::NullOp>(loc, i8Ptr);
+    auto nullPtr = rewriter.create<LLVM::ZeroOp>(loc, ptrType);
 
     // Get coroutine id: @llvm.coro.id.
     rewriter.replaceOpWithNewOp<LLVM::CoroIdOp>(
@@ -344,14 +437,15 @@ public:
 //===----------------------------------------------------------------------===//
 
 namespace {
-class CoroBeginOpConversion : public OpConversionPattern<CoroBeginOp> {
+class CoroBeginOpConversion : public AsyncOpConversionPattern<CoroBeginOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using AsyncOpConversionPattern::AsyncOpConversionPattern;
 
   LogicalResult
   matchAndRewrite(CoroBeginOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto i8Ptr = AsyncAPI::opaquePointerType(op->getContext());
+    auto ptrType = AsyncAPI::opaquePointerType(
+        op->getContext(), getTypeConverter()->useOpaquePointers());
     auto loc = op->getLoc();
 
     // Get coroutine frame size: @llvm.coro.size.i64.
@@ -378,14 +472,15 @@ public:
 
     // Allocate memory for the coroutine frame.
     auto allocFuncOp = LLVM::lookupOrCreateAlignedAllocFn(
-        op->getParentOfType<ModuleOp>(), rewriter.getI64Type());
+        op->getParentOfType<ModuleOp>(), rewriter.getI64Type(),
+        getTypeConverter()->useOpaquePointers());
     auto coroAlloc = rewriter.create<LLVM::CallOp>(
         loc, allocFuncOp, ValueRange{coroAlign, coroSize});
 
     // Begin a coroutine: @llvm.coro.begin.
     auto coroId = CoroBeginOpAdaptor(adaptor.getOperands()).getId();
     rewriter.replaceOpWithNewOp<LLVM::CoroBeginOp>(
-        op, i8Ptr, ValueRange({coroId, coroAlloc.getResult()}));
+        op, ptrType, ValueRange({coroId, coroAlloc.getResult()}));
 
     return success();
   }
@@ -397,23 +492,25 @@ public:
 //===----------------------------------------------------------------------===//
 
 namespace {
-class CoroFreeOpConversion : public OpConversionPattern<CoroFreeOp> {
+class CoroFreeOpConversion : public AsyncOpConversionPattern<CoroFreeOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using AsyncOpConversionPattern::AsyncOpConversionPattern;
 
   LogicalResult
   matchAndRewrite(CoroFreeOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto i8Ptr = AsyncAPI::opaquePointerType(op->getContext());
+    auto ptrType = AsyncAPI::opaquePointerType(
+        op->getContext(), getTypeConverter()->useOpaquePointers());
     auto loc = op->getLoc();
 
     // Get a pointer to the coroutine frame memory: @llvm.coro.free.
     auto coroMem =
-        rewriter.create<LLVM::CoroFreeOp>(loc, i8Ptr, adaptor.getOperands());
+        rewriter.create<LLVM::CoroFreeOp>(loc, ptrType, adaptor.getOperands());
 
     // Free the memory.
     auto freeFuncOp =
-        LLVM::lookupOrCreateFreeFn(op->getParentOfType<ModuleOp>());
+        LLVM::lookupOrCreateFreeFn(op->getParentOfType<ModuleOp>(),
+                                   getTypeConverter()->useOpaquePointers());
     rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, freeFuncOp,
                                               ValueRange(coroMem.getResult()));
 
@@ -437,11 +534,12 @@ public:
     // We are not in the block that is part of the unwind sequence.
     auto constFalse = rewriter.create<LLVM::ConstantOp>(
         op->getLoc(), rewriter.getI1Type(), rewriter.getBoolAttr(false));
+    auto noneToken = rewriter.create<LLVM::NoneTokenOp>(op->getLoc());
 
     // Mark the end of a coroutine: @llvm.coro.end.
     auto coroHdl = adaptor.getHandle();
     rewriter.create<LLVM::CoroEndOp>(op->getLoc(), rewriter.getI1Type(),
-                                     ValueRange({coroHdl, constFalse}));
+                                     ValueRange({coroHdl, constFalse, noneToken}));
     rewriter.eraseOp(op);
 
     return success();
@@ -550,38 +648,39 @@ public:
 //===----------------------------------------------------------------------===//
 
 namespace {
-class RuntimeCreateOpLowering : public OpConversionPattern<RuntimeCreateOp> {
+class RuntimeCreateOpLowering : public ConvertOpToLLVMPattern<RuntimeCreateOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(RuntimeCreateOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    TypeConverter *converter = getTypeConverter();
+    const TypeConverter *converter = getTypeConverter();
     Type resultType = op->getResultTypes()[0];
 
     // Tokens creation maps to a simple function call.
-    if (resultType.isa<TokenType>()) {
+    if (isa<TokenType>(resultType)) {
       rewriter.replaceOpWithNewOp<func::CallOp>(
           op, kCreateToken, converter->convertType(resultType));
       return success();
     }
 
     // To create a value we need to compute the storage requirement.
-    if (auto value = resultType.dyn_cast<ValueType>()) {
+    if (auto value = dyn_cast<ValueType>(resultType)) {
       // Returns the size requirements for the async value storage.
       auto sizeOf = [&](ValueType valueType) -> Value {
         auto loc = op->getLoc();
         auto i64 = rewriter.getI64Type();
 
         auto storedType = converter->convertType(valueType.getValueType());
-        auto storagePtrType = LLVM::LLVMPointerType::get(storedType);
+        auto storagePtrType = getTypeConverter()->getPointerType(storedType);
 
         // %Size = getelementptr %T* null, int 1
         // %SizeI = ptrtoint %T* %Size to i64
-        auto nullPtr = rewriter.create<LLVM::NullOp>(loc, storagePtrType);
-        auto gep = rewriter.create<LLVM::GEPOp>(loc, storagePtrType, nullPtr,
-                                                ArrayRef<LLVM::GEPArg>{1});
+        auto nullPtr = rewriter.create<LLVM::ZeroOp>(loc, storagePtrType);
+        auto gep =
+            rewriter.create<LLVM::GEPOp>(loc, storagePtrType, storedType,
+                                         nullPtr, ArrayRef<LLVM::GEPArg>{1});
         return rewriter.create<LLVM::PtrToIntOp>(loc, i64, gep);
       };
 
@@ -602,14 +701,14 @@ public:
 
 namespace {
 class RuntimeCreateGroupOpLowering
-    : public OpConversionPattern<RuntimeCreateGroupOp> {
+    : public ConvertOpToLLVMPattern<RuntimeCreateGroupOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(RuntimeCreateGroupOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    TypeConverter *converter = getTypeConverter();
+    const TypeConverter *converter = getTypeConverter();
     Type resultType = op.getResult().getType();
 
     rewriter.replaceOpWithNewOp<func::CallOp>(
@@ -730,9 +829,9 @@ public:
 
 namespace {
 class RuntimeAwaitAndResumeOpLowering
-    : public OpConversionPattern<RuntimeAwaitAndResumeOp> {
+    : public AsyncOpConversionPattern<RuntimeAwaitAndResumeOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using AsyncOpConversionPattern::AsyncOpConversionPattern;
 
   LogicalResult
   matchAndRewrite(RuntimeAwaitAndResumeOp op, OpAdaptor adaptor,
@@ -747,10 +846,12 @@ public:
     Value handle = adaptor.getHandle();
 
     // A pointer to coroutine resume intrinsic wrapper.
-    addResumeFunction(op->getParentOfType<ModuleOp>());
-    auto resumeFnTy = AsyncAPI::resumeFunctionType(op->getContext());
+    addResumeFunction(op->getParentOfType<ModuleOp>(),
+                      getTypeConverter()->useOpaquePointers());
+    auto resumeFnTy = AsyncAPI::resumeFunctionType(
+        op->getContext(), getTypeConverter()->useOpaquePointers());
     auto resumePtr = rewriter.create<LLVM::AddressOfOp>(
-        op->getLoc(), LLVM::LLVMPointerType::get(resumeFnTy), kResume);
+        op->getLoc(), getTypeConverter()->getPointerType(resumeFnTy), kResume);
 
     rewriter.create<func::CallOp>(
         op->getLoc(), apiFuncName, TypeRange(),
@@ -767,18 +868,21 @@ public:
 //===----------------------------------------------------------------------===//
 
 namespace {
-class RuntimeResumeOpLowering : public OpConversionPattern<RuntimeResumeOp> {
+class RuntimeResumeOpLowering
+    : public AsyncOpConversionPattern<RuntimeResumeOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using AsyncOpConversionPattern::AsyncOpConversionPattern;
 
   LogicalResult
   matchAndRewrite(RuntimeResumeOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // A pointer to coroutine resume intrinsic wrapper.
-    addResumeFunction(op->getParentOfType<ModuleOp>());
-    auto resumeFnTy = AsyncAPI::resumeFunctionType(op->getContext());
+    addResumeFunction(op->getParentOfType<ModuleOp>(),
+                      getTypeConverter()->useOpaquePointers());
+    auto resumeFnTy = AsyncAPI::resumeFunctionType(
+        op->getContext(), getTypeConverter()->useOpaquePointers());
     auto resumePtr = rewriter.create<LLVM::AddressOfOp>(
-        op->getLoc(), LLVM::LLVMPointerType::get(resumeFnTy), kResume);
+        op->getLoc(), getTypeConverter()->getPointerType(resumeFnTy), kResume);
 
     // Call async runtime API to execute a coroutine in the managed thread.
     auto coroHdl = adaptor.getHandle();
@@ -795,9 +899,9 @@ public:
 //===----------------------------------------------------------------------===//
 
 namespace {
-class RuntimeStoreOpLowering : public OpConversionPattern<RuntimeStoreOp> {
+class RuntimeStoreOpLowering : public ConvertOpToLLVMPattern<RuntimeStoreOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(RuntimeStoreOp op, OpAdaptor adaptor,
@@ -805,10 +909,11 @@ public:
     Location loc = op->getLoc();
 
     // Get a pointer to the async value storage from the runtime.
-    auto i8Ptr = AsyncAPI::opaquePointerType(rewriter.getContext());
+    auto ptrType = AsyncAPI::opaquePointerType(
+        rewriter.getContext(), getTypeConverter()->useOpaquePointers());
     auto storage = adaptor.getStorage();
-    auto storagePtr = rewriter.create<func::CallOp>(loc, kGetValueStorage,
-                                                    TypeRange(i8Ptr), storage);
+    auto storagePtr = rewriter.create<func::CallOp>(
+        loc, kGetValueStorage, TypeRange(ptrType), storage);
 
     // Cast from i8* to the LLVM pointer type.
     auto valueType = op.getValue().getType();
@@ -817,13 +922,15 @@ public:
       return rewriter.notifyMatchFailure(
           op, "failed to convert stored value type to LLVM type");
 
-    auto castedStoragePtr = rewriter.create<LLVM::BitcastOp>(
-        loc, LLVM::LLVMPointerType::get(llvmValueType),
-        storagePtr.getResult(0));
+    Value castedStoragePtr = storagePtr.getResult(0);
+    if (!getTypeConverter()->useOpaquePointers())
+      castedStoragePtr = rewriter.create<LLVM::BitcastOp>(
+          loc, getTypeConverter()->getPointerType(llvmValueType),
+          castedStoragePtr);
 
     // Store the yielded value into the async value storage.
     auto value = adaptor.getValue();
-    rewriter.create<LLVM::StoreOp>(loc, value, castedStoragePtr.getResult());
+    rewriter.create<LLVM::StoreOp>(loc, value, castedStoragePtr);
 
     // Erase the original runtime store operation.
     rewriter.eraseOp(op);
@@ -838,9 +945,9 @@ public:
 //===----------------------------------------------------------------------===//
 
 namespace {
-class RuntimeLoadOpLowering : public OpConversionPattern<RuntimeLoadOp> {
+class RuntimeLoadOpLowering : public ConvertOpToLLVMPattern<RuntimeLoadOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(RuntimeLoadOp op, OpAdaptor adaptor,
@@ -848,10 +955,11 @@ public:
     Location loc = op->getLoc();
 
     // Get a pointer to the async value storage from the runtime.
-    auto i8Ptr = AsyncAPI::opaquePointerType(rewriter.getContext());
+    auto ptrType = AsyncAPI::opaquePointerType(
+        rewriter.getContext(), getTypeConverter()->useOpaquePointers());
     auto storage = adaptor.getStorage();
-    auto storagePtr = rewriter.create<func::CallOp>(loc, kGetValueStorage,
-                                                    TypeRange(i8Ptr), storage);
+    auto storagePtr = rewriter.create<func::CallOp>(
+        loc, kGetValueStorage, TypeRange(ptrType), storage);
 
     // Cast from i8* to the LLVM pointer type.
     auto valueType = op.getResult().getType();
@@ -860,12 +968,15 @@ public:
       return rewriter.notifyMatchFailure(
           op, "failed to convert loaded value type to LLVM type");
 
-    auto castedStoragePtr = rewriter.create<LLVM::BitcastOp>(
-        loc, LLVM::LLVMPointerType::get(llvmValueType),
-        storagePtr.getResult(0));
+    Value castedStoragePtr = storagePtr.getResult(0);
+    if (!getTypeConverter()->useOpaquePointers())
+      castedStoragePtr = rewriter.create<LLVM::BitcastOp>(
+          loc, getTypeConverter()->getPointerType(llvmValueType),
+          castedStoragePtr);
 
     // Load from the casted pointer.
-    rewriter.replaceOpWithNewOp<LLVM::LoadOp>(op, castedStoragePtr.getResult());
+    rewriter.replaceOpWithNewOp<LLVM::LoadOp>(op, llvmValueType,
+                                              castedStoragePtr);
 
     return success();
   }
@@ -886,7 +997,7 @@ public:
   matchAndRewrite(RuntimeAddToGroupOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // Currently we can only add tokens to the group.
-    if (!op.getOperand().getType().isa<TokenType>())
+    if (!isa<TokenType>(op.getOperand().getType()))
       return rewriter.notifyMatchFailure(op, "only token type is supported");
 
     // Replace with a runtime API function call.
@@ -931,8 +1042,8 @@ namespace {
 template <typename RefCountingOp>
 class RefCountingOpLowering : public OpConversionPattern<RefCountingOp> {
 public:
-  explicit RefCountingOpLowering(TypeConverter &converter, MLIRContext *ctx,
-                                 StringRef apiFunctionName)
+  explicit RefCountingOpLowering(const TypeConverter &converter,
+                                 MLIRContext *ctx, StringRef apiFunctionName)
       : OpConversionPattern<RefCountingOp>(converter, ctx),
         apiFunctionName(apiFunctionName) {}
 
@@ -956,14 +1067,16 @@ private:
 
 class RuntimeAddRefOpLowering : public RefCountingOpLowering<RuntimeAddRefOp> {
 public:
-  explicit RuntimeAddRefOpLowering(TypeConverter &converter, MLIRContext *ctx)
+  explicit RuntimeAddRefOpLowering(const TypeConverter &converter,
+                                   MLIRContext *ctx)
       : RefCountingOpLowering(converter, ctx, kAddRef) {}
 };
 
 class RuntimeDropRefOpLowering
     : public RefCountingOpLowering<RuntimeDropRefOp> {
 public:
-  explicit RuntimeDropRefOpLowering(TypeConverter &converter, MLIRContext *ctx)
+  explicit RuntimeDropRefOpLowering(const TypeConverter &converter,
+                                    MLIRContext *ctx)
       : RefCountingOpLowering(converter, ctx, kDropRef) {}
 };
 } // namespace
@@ -990,7 +1103,9 @@ public:
 
 namespace {
 struct ConvertAsyncToLLVMPass
-    : public impl::ConvertAsyncToLLVMBase<ConvertAsyncToLLVMPass> {
+    : public impl::ConvertAsyncToLLVMPassBase<ConvertAsyncToLLVMPass> {
+  using Base::Base;
+
   void runOnOperation() override;
 };
 } // namespace
@@ -999,22 +1114,28 @@ void ConvertAsyncToLLVMPass::runOnOperation() {
   ModuleOp module = getOperation();
   MLIRContext *ctx = module->getContext();
 
+  LowerToLLVMOptions options(ctx);
+  options.useOpaquePointers = useOpaquePointers;
+
   // Add declarations for most functions required by the coroutines lowering.
   // We delay adding the resume function until it's needed because it currently
   // fails to compile unless '-O0' is specified.
-  addAsyncRuntimeApiDeclarations(module);
+  addAsyncRuntimeApiDeclarations(module, useOpaquePointers);
 
   // Lower async.runtime and async.coro operations to Async Runtime API and
   // LLVM coroutine intrinsics.
 
   // Convert async dialect types and operations to LLVM dialect.
-  AsyncRuntimeTypeConverter converter;
+  AsyncRuntimeTypeConverter converter(options);
   RewritePatternSet patterns(ctx);
 
   // We use conversion to LLVM type to lower async.runtime load and store
   // operations.
-  LLVMTypeConverter llvmConverter(ctx);
-  llvmConverter.addConversion(AsyncRuntimeTypeConverter::convertAsyncTypes);
+  LLVMTypeConverter llvmConverter(ctx, options);
+  llvmConverter.addConversion([&](Type type) {
+    return AsyncRuntimeTypeConverter::convertAsyncTypes(
+        type, llvmConverter.useOpaquePointers());
+  });
 
   // Convert async types in function signatures and function calls.
   populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(patterns,
@@ -1035,8 +1156,7 @@ void ConvertAsyncToLLVMPass::runOnOperation() {
   // Lower async.runtime operations that rely on LLVM type converter to convert
   // from async value payload type to the LLVM type.
   patterns.add<RuntimeCreateOpLowering, RuntimeCreateGroupOpLowering,
-               RuntimeStoreOpLowering, RuntimeLoadOpLowering>(llvmConverter,
-                                                              ctx);
+               RuntimeStoreOpLowering, RuntimeLoadOpLowering>(llvmConverter);
 
   // Lower async coroutine operations to LLVM coroutine intrinsics.
   patterns
@@ -1120,10 +1240,6 @@ public:
   }
 };
 } // namespace
-
-std::unique_ptr<OperationPass<ModuleOp>> mlir::createConvertAsyncToLLVMPass() {
-  return std::make_unique<ConvertAsyncToLLVMPass>();
-}
 
 void mlir::populateAsyncStructuralTypeConversionsAndLegality(
     TypeConverter &typeConverter, RewritePatternSet &patterns,

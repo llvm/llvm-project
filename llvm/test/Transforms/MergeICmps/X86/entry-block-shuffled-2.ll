@@ -22,12 +22,12 @@ define i1 @test() {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[LAND_RHS1:%.*]], label [[LAND_END:%.*]]
 ; CHECK:       land.rhs1:
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[H]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[I]], align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[H]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[I]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    br label [[LAND_END]]
 ; CHECK:       land.end:
-; CHECK-NEXT:    [[V9:%.*]] = phi i1 [ [[TMP7]], [[LAND_RHS1]] ], [ false, %"land.lhs.true+entry" ]
+; CHECK-NEXT:    [[V9:%.*]] = phi i1 [ [[TMP5]], [[LAND_RHS1]] ], [ false, %"land.lhs.true+entry" ]
 ; CHECK-NEXT:    ret i1 [[V9]]
 ;
 entry:

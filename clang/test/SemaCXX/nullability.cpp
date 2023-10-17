@@ -136,3 +136,9 @@ void arraysInLambdas() {
 void testNullabilityCompletenessWithTemplate() {
   Template<int*> tip;
 }
+
+namespace GH60344 {
+class a;
+template <typename b> using c = b _Nullable; // expected-error {{'_Nullable' cannot be applied to non-pointer type 'GH60344::a'}}
+c<a>;  // expected-note {{in instantiation of template type alias 'c' requested here}}
+}

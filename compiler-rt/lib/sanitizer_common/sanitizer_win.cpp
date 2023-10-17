@@ -362,6 +362,11 @@ bool MprotectReadOnly(uptr addr, uptr size) {
   return VirtualProtect((LPVOID)addr, size, PAGE_READONLY, &old_protection);
 }
 
+bool MprotectReadWrite(uptr addr, uptr size) {
+  DWORD old_protection;
+  return VirtualProtect((LPVOID)addr, size, PAGE_READWRITE, &old_protection);
+}
+
 void ReleaseMemoryPagesToOS(uptr beg, uptr end) {
   uptr beg_aligned = RoundDownTo(beg, GetPageSizeCached()),
        end_aligned = RoundDownTo(end, GetPageSizeCached());
@@ -718,13 +723,24 @@ void ListOfModules::fallbackInit() { clear(); }
 // atexit() as soon as it is ready for use (i.e. after .CRT$XIC initializers).
 InternalMmapVectorNoCtor<void (*)(void)> atexit_functions;
 
-int Atexit(void (*function)(void)) {
+static int queueAtexit(void (*function)(void)) {
   atexit_functions.push_back(function);
   return 0;
 }
 
+// If Atexit() is being called after RunAtexit() has already been run, it needs
+// to be able to call atexit() directly. Here we use a function ponter to
+// switch out its behaviour.
+// An example of where this is needed is the asan_dynamic runtime on MinGW-w64.
+// On this environment, __asan_init is called during global constructor phase,
+// way after calling the .CRT$XID initializer.
+static int (*volatile queueOrCallAtExit)(void (*)(void)) = &queueAtexit;
+
+int Atexit(void (*function)(void)) { return queueOrCallAtExit(function); }
+
 static int RunAtexit() {
   TraceLoggingUnregister(g_asan_provider);
+  queueOrCallAtExit = &atexit;
   int ret = 0;
   for (uptr i = 0; i < atexit_functions.size(); ++i) {
     ret |= atexit(atexit_functions[i]);

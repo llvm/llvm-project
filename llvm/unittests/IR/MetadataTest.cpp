@@ -551,7 +551,7 @@ TEST_F(MDNodeTest, UniquedOnDeletedOperand) {
 
 TEST_F(MDNodeTest, DistinctOnDeletedValueOperand) {
   // i1* @GV
-  Type *Ty = Type::getInt1PtrTy(Context);
+  Type *Ty = PointerType::getUnqual(Context);
   std::unique_ptr<GlobalVariable> GV(
       new GlobalVariable(Ty, false, GlobalValue::ExternalLinkage));
   ConstantAsMetadata *Op = ConstantAsMetadata::get(GV.get());
@@ -790,7 +790,7 @@ TEST_F(MDNodeTest, replaceWithUniquedResolvingOperand) {
 
 TEST_F(MDNodeTest, replaceWithUniquedDeletedOperand) {
   // i1* @GV
-  Type *Ty = Type::getInt1PtrTy(Context);
+  Type *Ty = PointerType::getUnqual(Context);
   std::unique_ptr<GlobalVariable> GV(
       new GlobalVariable(Ty, false, GlobalValue::ExternalLinkage));
   ConstantAsMetadata *Op = ConstantAsMetadata::get(GV.get());
@@ -813,7 +813,7 @@ TEST_F(MDNodeTest, replaceWithUniquedDeletedOperand) {
 
 TEST_F(MDNodeTest, replaceWithUniquedChangedOperand) {
   // i1* @GV
-  Type *Ty = Type::getInt1PtrTy(Context);
+  Type *Ty = PointerType::getUnqual(Context);
   std::unique_ptr<GlobalVariable> GV(
       new GlobalVariable(Ty, false, GlobalValue::ExternalLinkage));
   ConstantAsMetadata *Op = ConstantAsMetadata::get(GV.get());
@@ -1089,6 +1089,159 @@ TEST_F(DILocationTest, Merge) {
     EXPECT_EQ(SPI, M->getScope());
     EXPECT_EQ(nullptr, M->getInlinedAt());
   }
+
+  // Merge a location in C, which is inlined-at in B that is inlined in A,
+  // with a location in A that has the same scope, line and column as B's
+  // inlined-at location.
+  {
+    auto *FA = getFile();
+    auto *FB = getFile();
+    auto *FC = getFile();
+
+    auto *SPA = DISubprogram::getDistinct(Context, FA, "a", "a", FA, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    auto *SPB = DISubprogram::getDistinct(Context, FB, "b", "b", FB, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    auto *SPC = DISubprogram::getDistinct(Context, FC, "c", "c", FC, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    auto *A = DILocation::get(Context, 3, 2, SPA);
+    auto *B = DILocation::get(Context, 2, 4, SPB, A);
+    auto *C = DILocation::get(Context, 13, 2, SPC, B);
+    auto *M = DILocation::getMergedLocation(A, C);
+    EXPECT_EQ(3u, M->getLine());
+    EXPECT_EQ(2u, M->getColumn());
+    EXPECT_TRUE(isa<DILocalScope>(M->getScope()));
+    EXPECT_EQ(SPA, M->getScope());
+    EXPECT_EQ(nullptr, M->getInlinedAt());
+  }
+
+  // Two inlined locations with the same scope, line and column
+  // in the same inlined-at function at different line and column.
+  {
+    auto *FA = getFile();
+    auto *FB = getFile();
+    auto *FC = getFile();
+
+    auto *SPA = DISubprogram::getDistinct(Context, FA, "a", "a", FA, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    auto *SPB = DISubprogram::getDistinct(Context, FB, "b", "b", FB, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    auto *SPC = DISubprogram::getDistinct(Context, FC, "c", "c", FC, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    auto *A = DILocation::get(Context, 10, 20, SPA);
+    auto *B1 = DILocation::get(Context, 3, 2, SPB, A);
+    auto *B2 = DILocation::get(Context, 4, 5, SPB, A);
+    auto *C1 = DILocation::get(Context, 2, 4, SPC, B1);
+    auto *C2 = DILocation::get(Context, 2, 4, SPC, B2);
+
+    auto *M = DILocation::getMergedLocation(C1, C2);
+    EXPECT_EQ(2u, M->getLine());
+    EXPECT_EQ(4u, M->getColumn());
+    EXPECT_EQ(SPC, M->getScope());
+    ASSERT_NE(nullptr, M->getInlinedAt());
+
+    auto *I1 = M->getInlinedAt();
+    EXPECT_EQ(0u, I1->getLine());
+    EXPECT_EQ(0u, I1->getColumn());
+    EXPECT_EQ(SPB, I1->getScope());
+    EXPECT_EQ(A, I1->getInlinedAt());
+  }
+
+  // Two locations, different line/column and scope in the same subprogram,
+  // inlined at the same place. This should result in a 0:0 location with
+  // the nearest common scope in the inlined function.
+  {
+    auto *FA = getFile();
+    auto *FI = getFile();
+
+    auto *SPA = DISubprogram::getDistinct(Context, FA, "a", "a", FA, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    auto *SPI = DISubprogram::getDistinct(Context, FI, "i", "i", FI, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    // Nearest common scope for the two locations in a.
+    auto *SPAScope1 = DILexicalBlock::getDistinct(Context, SPA, FA, 4, 9);
+
+    // Scope for the first location in a.
+    auto *SPAScope2 =
+        DILexicalBlock::getDistinct(Context, SPAScope1, FA, 10, 12);
+
+    // Scope for the second location in a.
+    auto *SPAScope3 =
+        DILexicalBlock::getDistinct(Context, SPAScope1, FA, 20, 8);
+    auto *SPAScope4 =
+        DILexicalBlock::getDistinct(Context, SPAScope3, FA, 21, 12);
+
+    auto *I = DILocation::get(Context, 3, 8, SPI);
+    auto *A1 = DILocation::get(Context, 12, 7, SPAScope2, I);
+    auto *A2 = DILocation::get(Context, 21, 15, SPAScope4, I);
+    auto *M = DILocation::getMergedLocation(A1, A2);
+    EXPECT_EQ(0u, M->getLine());
+    EXPECT_EQ(0u, M->getColumn());
+    EXPECT_TRUE(isa<DILocalScope>(M->getScope()));
+    EXPECT_EQ(SPAScope1, M->getScope());
+    EXPECT_EQ(I, M->getInlinedAt());
+  }
+
+  // Regression test to catch a case where an iterator was invalidated due to
+  // handling the chain of inlined-at locations after the nearest common
+  // location for the two arguments were found.
+  {
+    auto *FA = getFile();
+    auto *FB = getFile();
+    auto *FI = getFile();
+
+    auto *SPA = DISubprogram::getDistinct(Context, FA, "a", "a", FA, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    auto *SPB = DISubprogram::getDistinct(Context, FB, "b", "b", FB, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    auto *SPI = DISubprogram::getDistinct(Context, FI, "i", "i", FI, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    auto *SPAScope1 = DILexicalBlock::getDistinct(Context, SPA, FA, 4, 9);
+    auto *SPAScope2 = DILexicalBlock::getDistinct(Context, SPA, FA, 8, 3);
+
+    DILocation *InlinedAt = nullptr;
+
+    // Create a chain of inlined-at locations.
+    for (int i = 0; i < 256; i++) {
+      InlinedAt = DILocation::get(Context, 3 + i, 8 + i, SPI, InlinedAt);
+    }
+
+    auto *A1 = DILocation::get(Context, 5, 9, SPAScope1, InlinedAt);
+    auto *A2 = DILocation::get(Context, 9, 8, SPAScope2, InlinedAt);
+    auto *B = DILocation::get(Context, 10, 3, SPB, A1);
+    auto *M1 = DILocation::getMergedLocation(B, A2);
+    EXPECT_EQ(0u, M1->getLine());
+    EXPECT_EQ(0u, M1->getColumn());
+    EXPECT_TRUE(isa<DILocalScope>(M1->getScope()));
+    EXPECT_EQ(SPA, M1->getScope());
+    EXPECT_EQ(InlinedAt, M1->getInlinedAt());
+
+    // Test the other argument order for good measure.
+    auto *M2 = DILocation::getMergedLocation(A2, B);
+    EXPECT_EQ(M1, M2);
+  }
 }
 
 TEST_F(DILocationTest, getDistinct) {
@@ -1267,9 +1420,9 @@ TEST_F(DISubrangeTest, get) {
   auto Lower = N->getLowerBound();
   EXPECT_EQ(dwarf::DW_TAG_subrange_type, N->getTag());
   ASSERT_TRUE(Count);
-  ASSERT_TRUE(Count.is<ConstantInt*>());
-  EXPECT_EQ(5, Count.get<ConstantInt*>()->getSExtValue());
-  EXPECT_EQ(7, Lower.get<ConstantInt *>()->getSExtValue());
+  ASSERT_TRUE(isa<ConstantInt *>(Count));
+  EXPECT_EQ(5, cast<ConstantInt *>(Count)->getSExtValue());
+  EXPECT_EQ(7, cast<ConstantInt *>(Lower)->getSExtValue());
   EXPECT_EQ(N, DISubrange::get(Context, 5, 7));
   EXPECT_EQ(DISubrange::get(Context, 5, 0), DISubrange::get(Context, 5));
 
@@ -1283,9 +1436,9 @@ TEST_F(DISubrangeTest, getEmptyArray) {
   auto Lower = N->getLowerBound();
   EXPECT_EQ(dwarf::DW_TAG_subrange_type, N->getTag());
   ASSERT_TRUE(Count);
-  ASSERT_TRUE(Count.is<ConstantInt*>());
-  EXPECT_EQ(-1, Count.get<ConstantInt*>()->getSExtValue());
-  EXPECT_EQ(0, Lower.get<ConstantInt *>()->getSExtValue());
+  ASSERT_TRUE(isa<ConstantInt *>(Count));
+  EXPECT_EQ(-1, cast<ConstantInt *>(Count)->getSExtValue());
+  EXPECT_EQ(0, cast<ConstantInt *>(Lower)->getSExtValue());
   EXPECT_EQ(N, DISubrange::get(Context, -1, 0));
 }
 
@@ -1301,11 +1454,11 @@ TEST_F(DISubrangeTest, getVariableCount) {
   auto Count = N->getCount();
   auto Lower = N->getLowerBound();
   ASSERT_TRUE(Count);
-  ASSERT_TRUE(Count.is<DIVariable*>());
-  EXPECT_EQ(VlaExpr, Count.get<DIVariable*>());
+  ASSERT_TRUE(isa<DIVariable *>(Count));
+  EXPECT_EQ(VlaExpr, cast<DIVariable *>(Count));
   ASSERT_TRUE(isa<DIVariable>(N->getRawCountNode()));
-  EXPECT_EQ(0, Lower.get<ConstantInt *>()->getSExtValue());
-  EXPECT_EQ("vla_expr", Count.get<DIVariable*>()->getName());
+  EXPECT_EQ(0, cast<ConstantInt *>(Lower)->getSExtValue());
+  EXPECT_EQ("vla_expr", cast<DIVariable *>(Count)->getName());
   EXPECT_EQ(N, DISubrange::get(Context, VlaExpr, 0));
 }
 
@@ -1334,18 +1487,18 @@ TEST_F(DISubrangeTest, fortranAllocatableInt) {
 
   auto Lower = N->getLowerBound();
   ASSERT_TRUE(Lower);
-  ASSERT_TRUE(Lower.is<ConstantInt *>());
-  EXPECT_EQ(cast<ConstantInt>(LI->getValue()), Lower.get<ConstantInt *>());
+  ASSERT_TRUE(isa<ConstantInt *>(Lower));
+  EXPECT_EQ(cast<ConstantInt>(LI->getValue()), cast<ConstantInt *>(Lower));
 
   auto Upper = N->getUpperBound();
   ASSERT_TRUE(Upper);
-  ASSERT_TRUE(Upper.is<ConstantInt *>());
-  EXPECT_EQ(cast<ConstantInt>(UI->getValue()), Upper.get<ConstantInt *>());
+  ASSERT_TRUE(isa<ConstantInt *>(Upper));
+  EXPECT_EQ(cast<ConstantInt>(UI->getValue()), cast<ConstantInt *>(Upper));
 
   auto Stride = N->getStride();
   ASSERT_TRUE(Stride);
-  ASSERT_TRUE(Stride.is<ConstantInt *>());
-  EXPECT_EQ(cast<ConstantInt>(SI->getValue()), Stride.get<ConstantInt *>());
+  ASSERT_TRUE(isa<ConstantInt *>(Stride));
+  EXPECT_EQ(cast<ConstantInt>(SI->getValue()), cast<ConstantInt *>(Stride));
 
   EXPECT_EQ(N, DISubrange::get(Context, nullptr, LI, UI, SI));
 
@@ -1384,18 +1537,18 @@ TEST_F(DISubrangeTest, fortranAllocatableVar) {
 
   auto Lower = N->getLowerBound();
   ASSERT_TRUE(Lower);
-  ASSERT_TRUE(Lower.is<DIVariable *>());
-  EXPECT_EQ(LV, Lower.get<DIVariable *>());
+  ASSERT_TRUE(isa<DIVariable *>(Lower));
+  EXPECT_EQ(LV, cast<DIVariable *>(Lower));
 
   auto Upper = N->getUpperBound();
   ASSERT_TRUE(Upper);
-  ASSERT_TRUE(Upper.is<DIVariable *>());
-  EXPECT_EQ(UV, Upper.get<DIVariable *>());
+  ASSERT_TRUE(isa<DIVariable *>(Upper));
+  EXPECT_EQ(UV, cast<DIVariable *>(Upper));
 
   auto Stride = N->getStride();
   ASSERT_TRUE(Stride);
-  ASSERT_TRUE(Stride.is<DIVariable *>());
-  EXPECT_EQ(SV, Stride.get<DIVariable *>());
+  ASSERT_TRUE(isa<DIVariable *>(Stride));
+  EXPECT_EQ(SV, cast<DIVariable *>(Stride));
 
   EXPECT_EQ(N, DISubrange::get(Context, nullptr, LV, UV, SV));
 
@@ -1422,18 +1575,18 @@ TEST_F(DISubrangeTest, fortranAllocatableExpr) {
 
   auto Lower = N->getLowerBound();
   ASSERT_TRUE(Lower);
-  ASSERT_TRUE(Lower.is<DIExpression *>());
-  EXPECT_EQ(LE, Lower.get<DIExpression *>());
+  ASSERT_TRUE(isa<DIExpression *>(Lower));
+  EXPECT_EQ(LE, cast<DIExpression *>(Lower));
 
   auto Upper = N->getUpperBound();
   ASSERT_TRUE(Upper);
-  ASSERT_TRUE(Upper.is<DIExpression *>());
-  EXPECT_EQ(UE, Upper.get<DIExpression *>());
+  ASSERT_TRUE(isa<DIExpression *>(Upper));
+  EXPECT_EQ(UE, cast<DIExpression *>(Upper));
 
   auto Stride = N->getStride();
   ASSERT_TRUE(Stride);
-  ASSERT_TRUE(Stride.is<DIExpression *>());
-  EXPECT_EQ(SE, Stride.get<DIExpression *>());
+  ASSERT_TRUE(isa<DIExpression *>(Stride));
+  EXPECT_EQ(SE, cast<DIExpression *>(Stride));
 
   EXPECT_EQ(N, DISubrange::get(Context, nullptr, LE, UE, SE));
 
@@ -1464,18 +1617,18 @@ TEST_F(DIGenericSubrangeTest, fortranAssumedRankInt) {
 
   auto Lower = N->getLowerBound();
   ASSERT_TRUE(Lower);
-  ASSERT_TRUE(Lower.is<DIExpression *>());
-  EXPECT_EQ(dyn_cast_or_null<DIExpression>(LI), Lower.get<DIExpression *>());
+  ASSERT_TRUE(isa<DIExpression *>(Lower));
+  EXPECT_EQ(dyn_cast_or_null<DIExpression>(LI), cast<DIExpression *>(Lower));
 
   auto Upper = N->getUpperBound();
   ASSERT_TRUE(Upper);
-  ASSERT_TRUE(Upper.is<DIExpression *>());
-  EXPECT_EQ(dyn_cast_or_null<DIExpression>(UI), Upper.get<DIExpression *>());
+  ASSERT_TRUE(isa<DIExpression *>(Upper));
+  EXPECT_EQ(dyn_cast_or_null<DIExpression>(UI), cast<DIExpression *>(Upper));
 
   auto Stride = N->getStride();
   ASSERT_TRUE(Stride);
-  ASSERT_TRUE(Stride.is<DIExpression *>());
-  EXPECT_EQ(dyn_cast_or_null<DIExpression>(SI), Stride.get<DIExpression *>());
+  ASSERT_TRUE(isa<DIExpression *>(Stride));
+  EXPECT_EQ(dyn_cast_or_null<DIExpression>(SI), cast<DIExpression *>(Stride));
 
   EXPECT_EQ(N, DIGenericSubrange::get(Context, nullptr, LI, UI, SI));
 
@@ -1516,18 +1669,18 @@ TEST_F(DIGenericSubrangeTest, fortranAssumedRankVar) {
 
   auto Lower = N->getLowerBound();
   ASSERT_TRUE(Lower);
-  ASSERT_TRUE(Lower.is<DIVariable *>());
-  EXPECT_EQ(LV, Lower.get<DIVariable *>());
+  ASSERT_TRUE(isa<DIVariable *>(Lower));
+  EXPECT_EQ(LV, cast<DIVariable *>(Lower));
 
   auto Upper = N->getUpperBound();
   ASSERT_TRUE(Upper);
-  ASSERT_TRUE(Upper.is<DIVariable *>());
-  EXPECT_EQ(UV, Upper.get<DIVariable *>());
+  ASSERT_TRUE(isa<DIVariable *>(Upper));
+  EXPECT_EQ(UV, cast<DIVariable *>(Upper));
 
   auto Stride = N->getStride();
   ASSERT_TRUE(Stride);
-  ASSERT_TRUE(Stride.is<DIVariable *>());
-  EXPECT_EQ(SV, Stride.get<DIVariable *>());
+  ASSERT_TRUE(isa<DIVariable *>(Stride));
+  EXPECT_EQ(SV, cast<DIVariable *>(Stride));
 
   EXPECT_EQ(N, DIGenericSubrange::get(Context, nullptr, LV, UV, SV));
 
@@ -1560,18 +1713,18 @@ TEST_F(DIGenericSubrangeTest, useDIBuilder) {
 
   auto Lower = N->getLowerBound();
   ASSERT_TRUE(Lower);
-  ASSERT_TRUE(Lower.is<DIVariable *>());
-  EXPECT_EQ(LV, Lower.get<DIVariable *>());
+  ASSERT_TRUE(isa<DIVariable *>(Lower));
+  EXPECT_EQ(LV, cast<DIVariable *>(Lower));
 
   auto Upper = N->getUpperBound();
   ASSERT_TRUE(Upper);
-  ASSERT_TRUE(Upper.is<DIExpression *>());
-  EXPECT_EQ(UE, Upper.get<DIExpression *>());
+  ASSERT_TRUE(isa<DIExpression *>(Upper));
+  EXPECT_EQ(UE, cast<DIExpression *>(Upper));
 
   auto Stride = N->getStride();
   ASSERT_TRUE(Stride);
-  ASSERT_TRUE(Stride.is<DIExpression *>());
-  EXPECT_EQ(SE, Stride.get<DIExpression *>());
+  ASSERT_TRUE(isa<DIExpression *>(Stride));
+  EXPECT_EQ(SE, cast<DIExpression *>(Stride));
 
   EXPECT_EQ(
       N, DIB.getOrCreateGenericSubrange(DIGenericSubrange::BoundType(nullptr),
@@ -1610,7 +1763,7 @@ TEST_F(DIEnumeratorTest, get) {
 
 TEST_F(DIEnumeratorTest, getWithLargeValues) {
   auto *N = DIEnumerator::get(Context, APInt::getMaxValue(128), false, "val");
-  EXPECT_EQ(128U, N->getValue().countPopulation());
+  EXPECT_EQ(128U, N->getValue().popcount());
   EXPECT_EQ(N,
             DIEnumerator::get(Context, APInt::getMaxValue(128), false, "val"));
   EXPECT_NE(N,
@@ -3558,7 +3711,7 @@ TEST_F(MetadataAsValueTest, MDNodeConstant) {
 typedef MetadataTest ValueAsMetadataTest;
 
 TEST_F(ValueAsMetadataTest, UpdatesOnRAUW) {
-  Type *Ty = Type::getInt1PtrTy(Context);
+  Type *Ty = PointerType::getUnqual(Context);
   std::unique_ptr<GlobalVariable> GV0(
       new GlobalVariable(Ty, false, GlobalValue::ExternalLinkage));
   auto *MD = ValueAsMetadata::get(GV0.get());
@@ -3630,7 +3783,7 @@ TEST_F(DIArgListTest, get) {
 }
 
 TEST_F(DIArgListTest, UpdatesOnRAUW) {
-  Type *Ty = Type::getInt1PtrTy(Context);
+  Type *Ty = PointerType::getUnqual(Context);
   ConstantAsMetadata *CI =
       ConstantAsMetadata::get(ConstantInt::get(Context, APInt(8, 0)));
   std::unique_ptr<GlobalVariable> GV0(
@@ -3655,7 +3808,7 @@ TEST_F(DIArgListTest, UpdatesOnRAUW) {
 typedef MetadataTest TrackingMDRefTest;
 
 TEST_F(TrackingMDRefTest, UpdatesOnRAUW) {
-  Type *Ty = Type::getInt1PtrTy(Context);
+  Type *Ty = PointerType::getUnqual(Context);
   std::unique_ptr<GlobalVariable> GV0(
       new GlobalVariable(Ty, false, GlobalValue::ExternalLinkage));
   TypedTrackingMDRef<ValueAsMetadata> MD(ValueAsMetadata::get(GV0.get()));
@@ -3672,7 +3825,7 @@ TEST_F(TrackingMDRefTest, UpdatesOnRAUW) {
 }
 
 TEST_F(TrackingMDRefTest, UpdatesOnDeletion) {
-  Type *Ty = Type::getInt1PtrTy(Context);
+  Type *Ty = PointerType::getUnqual(Context);
   std::unique_ptr<GlobalVariable> GV(
       new GlobalVariable(Ty, false, GlobalValue::ExternalLinkage));
   TypedTrackingMDRef<ValueAsMetadata> MD(ValueAsMetadata::get(GV.get()));

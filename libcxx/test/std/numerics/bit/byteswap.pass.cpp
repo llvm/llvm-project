@@ -54,15 +54,15 @@ constexpr void test_implementation_defined_size() {
 }
 
 constexpr bool test() {
-  test_num<uint8_t>(0xAB, 0xAB);
-  test_num<uint16_t>(0xCDEF, 0xEFCD);
-  test_num<uint32_t>(0x01234567, 0x67452301);
-  test_num<uint64_t>(0x0123456789ABCDEF, 0xEFCDAB8967452301);
+  test_num<std::uint8_t>(0xAB, 0xAB);
+  test_num<std::uint16_t>(0xCDEF, 0xEFCD);
+  test_num<std::uint32_t>(0x01234567, 0x67452301);
+  test_num<std::uint64_t>(0x0123456789ABCDEF, 0xEFCDAB8967452301);
 
-  test_num<int8_t>(static_cast<int8_t>(0xAB), static_cast<int8_t>(0xAB));
-  test_num<int16_t>(static_cast<int16_t>(0xCDEF), static_cast<int16_t>(0xEFCD));
-  test_num<int32_t>(0x01234567, 0x67452301);
-  test_num<int64_t>(0x0123456789ABCDEF, 0xEFCDAB8967452301);
+  test_num<std::int8_t>(static_cast<std::int8_t>(0xAB), static_cast<std::int8_t>(0xAB));
+  test_num<std::int16_t>(static_cast<std::int16_t>(0xCDEF), static_cast<std::int16_t>(0xEFCD));
+  test_num<std::int32_t>(0x01234567, 0x67452301);
+  test_num<std::int64_t>(0x0123456789ABCDEF, 0xEFCDAB8967452301);
 
 #ifndef TEST_HAS_NO_INT128
   const auto in = static_cast<__uint128_t>(0x0123456789ABCDEF) << 64 | 0x13579BDF02468ACE;

@@ -399,11 +399,8 @@ Below is an example of constructing a pipeline that operates on the above
 structure:
 
 ```c++
-// Create a top-level `PassManager` class. If an operation type is not
-// explicitly specific, the default is the builtin `module` operation.
-PassManager pm(ctx);
-// Note: We could also create the above `PassManager` this way.
-PassManager pm(ctx, /*operationName=*/"builtin.module");
+// Create a top-level `PassManager` class.
+auto pm = PassManager::on<ModuleOp>(ctx);
 
 // Add a pass on the top-level module operation.
 pm.addPass(std::make_unique<MyModulePass>());
@@ -461,7 +458,7 @@ program has been run through the passes. This provides several benefits:
 In some situations it may be useful to run a pass pipeline within another pass,
 to allow configuring or filtering based on some invariants of the current
 operation being operated on. For example, the
-[Inliner Pass](Passes.md/#-inline-inline-function-calls) may want to run
+[Inliner Pass](Passes.md/#-inline) may want to run
 intraprocedural simplification passes while it is inlining to produce a better
 cost model, and provide more optimal inlining. To enable this, passes may run an
 arbitrary `OpPassManager` on the current operation being operated on or any
@@ -1336,9 +1333,9 @@ module {
 #-}
 ```
 
-The configuration dumped can be passed to `mlir-opt`. This will result in
-parsing the configuration of the reproducer and adjusting the necessary opt
-state, e.g. configuring the pass manager, context, etc.
+The configuration dumped can be passed to `mlir-opt` by specifying
+`-run-reproducer` flag. This will result in parsing the configuration of the reproducer
+and adjusting the necessary opt state, e.g. configuring the pass manager, context, etc.
 
 Beyond specifying a filename, one can also register a `ReproducerStreamFactory`
 function that would be invoked in the case of a crash and the reproducer written

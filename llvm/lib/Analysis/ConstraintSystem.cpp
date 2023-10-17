@@ -10,6 +10,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Support/Debug.h"
 
 #include <string>
@@ -27,114 +28,169 @@ bool ConstraintSystem::eliminateUsingFM() {
   // IEEE conference on Supercomputing. IEEE, 1991.
   assert(!Constraints.empty() &&
          "should only be called for non-empty constraint systems");
-  unsigned NumVariables = Constraints[0].size();
-  SmallVector<SmallVector<int64_t, 8>, 4> NewSystem;
 
-  unsigned NumConstraints = Constraints.size();
   uint32_t NewGCD = 1;
-  // FIXME do not use copy
-  for (unsigned R1 = 0; R1 < NumConstraints; R1++) {
-    if (Constraints[R1][1] == 0) {
-      SmallVector<int64_t, 8> NR;
-      NR.push_back(Constraints[R1][0]);
-      for (unsigned i = 2; i < NumVariables; i++) {
-        NR.push_back(Constraints[R1][i]);
-      }
-      NewSystem.push_back(std::move(NR));
-      continue;
-    }
+  unsigned LastIdx = NumVariables - 1;
 
+  // First, either remove the variable in place if it is 0 or add the row to
+  // RemainingRows and remove it from the system.
+  SmallVector<SmallVector<Entry, 8>, 4> RemainingRows;
+  for (unsigned R1 = 0; R1 < Constraints.size();) {
+    SmallVector<Entry, 8> &Row1 = Constraints[R1];
+    if (getLastCoefficient(Row1, LastIdx) == 0) {
+      if (Row1.size() > 0 && Row1.back().Id == LastIdx)
+        Row1.pop_back();
+      R1++;
+    } else {
+      std::swap(Constraints[R1], Constraints.back());
+      RemainingRows.push_back(std::move(Constraints.back()));
+      Constraints.pop_back();
+    }
+  }
+
+  // Process rows where the variable is != 0.
+  unsigned NumRemainingConstraints = RemainingRows.size();
+  for (unsigned R1 = 0; R1 < NumRemainingConstraints; R1++) {
     // FIXME do not use copy
-    for (unsigned R2 = R1 + 1; R2 < NumConstraints; R2++) {
+    for (unsigned R2 = R1 + 1; R2 < NumRemainingConstraints; R2++) {
       if (R1 == R2)
         continue;
 
-      // FIXME: can we do better than just dropping things here?
-      if (Constraints[R2][1] == 0)
-        continue;
+      int64_t UpperLast = getLastCoefficient(RemainingRows[R2], LastIdx);
+      int64_t LowerLast = getLastCoefficient(RemainingRows[R1], LastIdx);
+      assert(
+          UpperLast != 0 && LowerLast != 0 &&
+          "RemainingRows should only contain rows where the variable is != 0");
 
-      if ((Constraints[R1][1] < 0 && Constraints[R2][1] < 0) ||
-          (Constraints[R1][1] > 0 && Constraints[R2][1] > 0))
+      if ((LowerLast < 0 && UpperLast < 0) || (LowerLast > 0 && UpperLast > 0))
         continue;
 
       unsigned LowerR = R1;
       unsigned UpperR = R2;
-      if (Constraints[UpperR][1] < 0)
+      if (UpperLast < 0) {
         std::swap(LowerR, UpperR);
+        std::swap(LowerLast, UpperLast);
+      }
 
-      SmallVector<int64_t, 8> NR;
-      for (unsigned I = 0; I < NumVariables; I++) {
-        if (I == 1)
-          continue;
-
+      SmallVector<Entry, 8> NR;
+      unsigned IdxUpper = 0;
+      unsigned IdxLower = 0;
+      auto &LowerRow = RemainingRows[LowerR];
+      auto &UpperRow = RemainingRows[UpperR];
+      while (true) {
+        if (IdxUpper >= UpperRow.size() || IdxLower >= LowerRow.size())
+          break;
         int64_t M1, M2, N;
-        if (MulOverflow(Constraints[UpperR][I],
-                                   ((-1) * Constraints[LowerR][1] / GCD), M1))
+        int64_t UpperV = 0;
+        int64_t LowerV = 0;
+        uint16_t CurrentId = std::numeric_limits<uint16_t>::max();
+        if (IdxUpper < UpperRow.size()) {
+          CurrentId = std::min(UpperRow[IdxUpper].Id, CurrentId);
+        }
+        if (IdxLower < LowerRow.size()) {
+          CurrentId = std::min(LowerRow[IdxLower].Id, CurrentId);
+        }
+
+        if (IdxUpper < UpperRow.size() && UpperRow[IdxUpper].Id == CurrentId) {
+          UpperV = UpperRow[IdxUpper].Coefficient;
+          IdxUpper++;
+        }
+
+        if (MulOverflow(UpperV, ((-1) * LowerLast / GCD), M1))
           return false;
-        if (MulOverflow(Constraints[LowerR][I],
-                                   (Constraints[UpperR][1] / GCD), M2))
+        if (IdxLower < LowerRow.size() && LowerRow[IdxLower].Id == CurrentId) {
+          LowerV = LowerRow[IdxLower].Coefficient;
+          IdxLower++;
+        }
+
+        if (MulOverflow(LowerV, (UpperLast / GCD), M2))
           return false;
         if (AddOverflow(M1, M2, N))
           return false;
-        NR.push_back(N);
+        if (N == 0)
+          continue;
+        NR.emplace_back(N, CurrentId);
 
-        NewGCD = APIntOps::GreatestCommonDivisor({32, (uint32_t)NR.back()},
-                                                 {32, NewGCD})
-                     .getZExtValue();
+        NewGCD =
+            APIntOps::GreatestCommonDivisor({32, (uint32_t)N}, {32, NewGCD})
+                .getZExtValue();
       }
-      NewSystem.push_back(std::move(NR));
+      if (NR.empty())
+        continue;
+      Constraints.push_back(std::move(NR));
       // Give up if the new system gets too big.
-      if (NewSystem.size() > 500)
+      if (Constraints.size() > 500)
         return false;
     }
   }
-  Constraints = std::move(NewSystem);
+  NumVariables -= 1;
   GCD = NewGCD;
 
   return true;
 }
 
 bool ConstraintSystem::mayHaveSolutionImpl() {
-  while (!Constraints.empty() && Constraints[0].size() > 1) {
+  while (!Constraints.empty() && NumVariables > 1) {
     if (!eliminateUsingFM())
       return true;
   }
 
-  if (Constraints.empty() || Constraints[0].size() > 1)
+  if (Constraints.empty() || NumVariables > 1)
     return true;
 
-  return all_of(Constraints, [](auto &R) { return R[0] >= 0; });
+  return all_of(Constraints, [](auto &R) {
+    if (R.empty())
+      return true;
+    if (R[0].Id == 0)
+      return R[0].Coefficient >= 0;
+    return true;
+  });
 }
 
-void ConstraintSystem::dump(ArrayRef<std::string> Names) const {
-  if (Constraints.empty())
-    return;
-
-  for (const auto &Row : Constraints) {
-    SmallVector<std::string, 16> Parts;
-    for (unsigned I = 1, S = Row.size(); I < S; ++I) {
-      if (Row[I] == 0)
-        continue;
-      std::string Coefficient;
-      if (Row[I] != 1)
-        Coefficient = std::to_string(Row[I]) + " * ";
-      Parts.push_back(Coefficient + Names[I - 1]);
-    }
-    assert(!Parts.empty() && "need to have at least some parts");
-    LLVM_DEBUG(dbgs() << join(Parts, std::string(" + "))
-                      << " <= " << std::to_string(Row[0]) << "\n");
+SmallVector<std::string> ConstraintSystem::getVarNamesList() const {
+  SmallVector<std::string> Names(Value2Index.size(), "");
+#ifndef NDEBUG
+  for (auto &[V, Index] : Value2Index) {
+    std::string OperandName;
+    if (V->getName().empty())
+      OperandName = V->getNameOrAsOperand();
+    else
+      OperandName = std::string("%") + V->getName().str();
+    Names[Index - 1] = OperandName;
   }
+#endif
+  return Names;
 }
 
 void ConstraintSystem::dump() const {
-  SmallVector<std::string, 16> Names;
-  for (unsigned i = 1; i < Constraints.back().size(); ++i)
-    Names.push_back("x" + std::to_string(i));
-  LLVM_DEBUG(dbgs() << "---\n");
-  dump(Names);
+#ifndef NDEBUG
+  if (Constraints.empty())
+    return;
+  SmallVector<std::string> Names = getVarNamesList();
+  for (const auto &Row : Constraints) {
+    SmallVector<std::string, 16> Parts;
+    for (unsigned I = 0, S = Row.size(); I < S; ++I) {
+      if (Row[I].Id >= NumVariables)
+        break;
+      if (Row[I].Id == 0)
+        continue;
+      std::string Coefficient;
+      if (Row[I].Coefficient != 1)
+        Coefficient = std::to_string(Row[I].Coefficient) + " * ";
+      Parts.push_back(Coefficient + Names[Row[I].Id - 1]);
+    }
+    // assert(!Parts.empty() && "need to have at least some parts");
+    int64_t ConstPart = 0;
+    if (Row[0].Id == 0)
+      ConstPart = Row[0].Coefficient;
+    LLVM_DEBUG(dbgs() << join(Parts, std::string(" + "))
+                      << " <= " << std::to_string(ConstPart) << "\n");
+  }
+#endif
 }
 
 bool ConstraintSystem::mayHaveSolution() {
+  LLVM_DEBUG(dbgs() << "---\n");
   LLVM_DEBUG(dump());
   bool HasSolution = mayHaveSolutionImpl();
   LLVM_DEBUG(dbgs() << (HasSolution ? "sat" : "unsat") << "\n");
@@ -150,6 +206,8 @@ bool ConstraintSystem::isConditionImplied(SmallVector<int64_t, 8> R) const {
   // If there is no solution with the negation of R added to the system, the
   // condition must hold based on the existing constraints.
   R = ConstraintSystem::negate(R);
+  if (R.empty())
+    return false;
 
   auto NewSystem = *this;
   NewSystem.addVariableRow(R);

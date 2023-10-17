@@ -210,12 +210,13 @@ define void @bcast_unfold_mul_v16i32(i32* %arg) {
 ; CHECK-LABEL: bcast_unfold_mul_v16i32:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movq $-4096, %rax # imm = 0xF000
-; CHECK-NEXT:    vpbroadcastd {{.*#+}} zmm0 = [3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3]
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB6_1: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vpmulld 4096(%rdi,%rax), %zmm0, %zmm1
-; CHECK-NEXT:    vmovdqu64 %zmm1, 4096(%rdi,%rax)
+; CHECK-NEXT:    vmovdqu64 4096(%rdi,%rax), %zmm0
+; CHECK-NEXT:    vpaddd %zmm0, %zmm0, %zmm1
+; CHECK-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vmovdqu64 %zmm0, 4096(%rdi,%rax)
 ; CHECK-NEXT:    addq $64, %rax
 ; CHECK-NEXT:    jne .LBB6_1
 ; CHECK-NEXT:  # %bb.2: # %bb10
@@ -244,12 +245,13 @@ define void @bcast_unfold_mul_v8i32(i32* %arg) {
 ; CHECK-LABEL: bcast_unfold_mul_v8i32:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movq $-4096, %rax # imm = 0xF000
-; CHECK-NEXT:    vpbroadcastd {{.*#+}} ymm0 = [3,3,3,3,3,3,3,3]
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB7_1: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vpmulld 4096(%rdi,%rax), %ymm0, %ymm1
-; CHECK-NEXT:    vmovdqu %ymm1, 4096(%rdi,%rax)
+; CHECK-NEXT:    vmovdqu 4096(%rdi,%rax), %ymm0
+; CHECK-NEXT:    vpaddd %ymm0, %ymm0, %ymm1
+; CHECK-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vmovdqu %ymm0, 4096(%rdi,%rax)
 ; CHECK-NEXT:    addq $32, %rax
 ; CHECK-NEXT:    jne .LBB7_1
 ; CHECK-NEXT:  # %bb.2: # %bb10
@@ -278,12 +280,13 @@ define void @bcast_unfold_mul_v4i32(i32* %arg) {
 ; CHECK-LABEL: bcast_unfold_mul_v4i32:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movq $-4096, %rax # imm = 0xF000
-; CHECK-NEXT:    vpbroadcastd {{.*#+}} xmm0 = [3,3,3,3]
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB8_1: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vpmulld 4096(%rdi,%rax), %xmm0, %xmm1
-; CHECK-NEXT:    vmovdqu %xmm1, 4096(%rdi,%rax)
+; CHECK-NEXT:    vmovdqu 4096(%rdi,%rax), %xmm0
+; CHECK-NEXT:    vpaddd %xmm0, %xmm0, %xmm1
+; CHECK-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vmovdqu %xmm0, 4096(%rdi,%rax)
 ; CHECK-NEXT:    addq $16, %rax
 ; CHECK-NEXT:    jne .LBB8_1
 ; CHECK-NEXT:  # %bb.2: # %bb10

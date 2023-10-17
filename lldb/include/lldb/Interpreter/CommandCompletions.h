@@ -11,10 +11,10 @@
 
 #include <set>
 
-#include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/SearchFilter.h"
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Utility/CompletionRequest.h"
+#include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/lldb-private.h"
 
@@ -24,39 +24,6 @@ namespace lldb_private {
 class TildeExpressionResolver;
 class CommandCompletions {
 public:
-  enum CommonCompletionTypes {
-    eNoCompletion = 0u,
-    eSourceFileCompletion = (1u << 0),
-    eDiskFileCompletion = (1u << 1),
-    eDiskDirectoryCompletion = (1u << 2),
-    eSymbolCompletion = (1u << 3),
-    eModuleCompletion = (1u << 4),
-    eSettingsNameCompletion = (1u << 5),
-    ePlatformPluginCompletion = (1u << 6),
-    eArchitectureCompletion = (1u << 7),
-    eVariablePathCompletion = (1u << 8),
-    eRegisterCompletion = (1u << 9),
-    eBreakpointCompletion = (1u << 10),
-    eProcessPluginCompletion = (1u << 11),
-    eDisassemblyFlavorCompletion = (1u << 12),
-    eTypeLanguageCompletion = (1u << 13),
-    eFrameIndexCompletion = (1u << 14),
-    eModuleUUIDCompletion = (1u << 15),
-    eStopHookIDCompletion = (1u << 16),
-    eThreadIndexCompletion = (1u << 17),
-    eWatchPointIDCompletion = (1u << 18),
-    eBreakpointNameCompletion = (1u << 19),
-    eProcessIDCompletion = (1u << 20),
-    eProcessNameCompletion = (1u << 21),
-    eRemoteDiskFileCompletion = (1u << 22),
-    eRemoteDiskDirectoryCompletion = (1u << 23),
-    eTypeCategoryNameCompletion = (1u << 24),
-    // This item serves two purposes.  It is the last element in the enum, so
-    // you can add custom enums starting from here in your Option class. Also
-    // if you & in this bit the base code will not process the option.
-    eCustomCompletion = (1u << 24)
-  };
-
   static bool InvokeCommonCompletionCallbacks(
       CommandInterpreter &interpreter, uint32_t completion_mask,
       lldb_private::CompletionRequest &request, SearchFilter *searcher);

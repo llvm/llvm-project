@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #define fixint_t si_int
+#define fixuint_t su_int
 #include "int_mulo_impl.inc"
 
 // Returns: a * b

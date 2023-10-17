@@ -69,7 +69,7 @@ define dso_local i32 @test4(ptr readonly %0, i1 %cond) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    br label [[TMP4]]
 ; CHECK:       4:
-; CHECK-NEXT:    [[TMP5:%.*]] = phi i32 [ [[TMP3]], [[TMP2]] ], [ 0, [[A]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi i32 [ [[TMP3]], [[TMP2]] ], [ poison, [[A]] ]
 ; CHECK-NEXT:    ret i32 [[TMP5]]
 ;
   call void @llvm.assume(i1 true) ["dereferenceable"(ptr %0, i32 4)]
@@ -100,10 +100,10 @@ define dso_local i32 @test4a(ptr readonly %0, i1 %cond) {
 ; CHECK:       A:
 ; CHECK-NEXT:    br i1 false, label [[TMP4:%.*]], label [[TMP2:%.*]]
 ; CHECK:       2:
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP0]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    br label [[TMP4]]
 ; CHECK:       4:
-; CHECK-NEXT:    [[TMP5:%.*]] = phi i32 [ [[TMP3]], [[TMP2]] ], [ 0, [[A]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi i32 [ [[TMP3]], [[TMP2]] ], [ poison, [[A]] ]
 ; CHECK-NEXT:    ret i32 [[TMP5]]
 ;
   call void @llvm.assume(i1 true) ["dereferenceable"(ptr %0, i32 4), "align"(ptr %0, i32 8)]

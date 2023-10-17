@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -42,7 +43,6 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include <cassert>
@@ -62,15 +62,15 @@ STATISTIC(NumOfStatepoints, "Number of statepoint nodes encountered");
 STATISTIC(StatepointMaxSlotsRequired,
           "Maximum number of stack slots required for a singe statepoint");
 
-cl::opt<bool> UseRegistersForDeoptValues(
+static cl::opt<bool> UseRegistersForDeoptValues(
     "use-registers-for-deopt-values", cl::Hidden, cl::init(false),
     cl::desc("Allow using registers for non pointer deopt args"));
 
-cl::opt<bool> UseRegistersForGCPointersInLandingPad(
+static cl::opt<bool> UseRegistersForGCPointersInLandingPad(
     "use-registers-for-gc-values-in-landing-pad", cl::Hidden, cl::init(false),
     cl::desc("Allow using registers for gc pointer in landing pad"));
 
-cl::opt<unsigned> MaxRegistersForGCPointers(
+static cl::opt<unsigned> MaxRegistersForGCPointers(
     "max-registers-for-gc-values", cl::Hidden, cl::init(0),
     cl::desc("Max number of VRegs allowed to pass GC pointer meta args in"));
 
@@ -258,8 +258,7 @@ static bool willLowerDirectly(SDValue Incoming) {
   if (Incoming.getValueType().getSizeInBits() > 64)
     return false;
 
-  return (isa<ConstantSDNode>(Incoming) || isa<ConstantFPSDNode>(Incoming) ||
-          Incoming.isUndef());
+  return isIntOrFPConstant(Incoming) || Incoming.isUndef();
 }
 
 /// Try to find existing copies of the incoming values in stack slots used for
@@ -502,7 +501,7 @@ lowerIncomingStatepointValue(SDValue Incoming, bool RequireSpillSlot,
         Builder.DAG.getTargetConstant(StackMaps::NextLive, DL, MVT::i64));
     if (auto *MMO = std::get<2>(Res))
       MemRefs.push_back(MMO);
-    Chain = std::get<1>(Res);;
+    Chain = std::get<1>(Res);
     Builder.DAG.setRoot(Chain);
   }
 
@@ -538,7 +537,7 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
   // deopt argument length, deopt arguments.., gc arguments...
 
   // Figure out what lowering strategy we're going to use for each part
-  // Note: Is is conservatively correct to lower both "live-in" and "live-out"
+  // Note: It is conservatively correct to lower both "live-in" and "live-out"
   // as "live-through". A "live-through" variable is one which is "live-in",
   // "live-out", and live throughout the lifetime of the call (i.e. we can find
   // it from any PC within the transitive callee of the statepoint).  In
@@ -730,7 +729,8 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
   assert((GFI || SI.Bases.empty()) &&
          "No gc specified, so cannot relocate pointers!");
 
-  LLVM_DEBUG(dbgs() << "Lowering statepoint " << *SI.StatepointInstr << "\n");
+  LLVM_DEBUG(if (SI.StatepointInstr) dbgs()
+             << "Lowering statepoint " << *SI.StatepointInstr << "\n");
 #ifndef NDEBUG
   for (const auto *Reloc : SI.GCRelocates)
     if (Reloc->getParent() == SI.StatepointInstr->getParent())
@@ -1047,10 +1047,16 @@ SelectionDAGBuilder::LowerStatepoint(const GCStatepointInst &I,
     ActualCallee = Callee;
   }
 
+  const auto GCResultLocality = getGCResultLocality(I);
+  AttributeSet retAttrs;
+  if (GCResultLocality.first)
+    retAttrs = GCResultLocality.first->getAttributes().getRetAttrs();
+
   StatepointLoweringInfo SI(DAG);
   populateCallLoweringInfo(SI.CLI, &I, GCStatepointInst::CallArgsBeginPos,
                            I.getNumCallArgs(), ActualCallee,
-                           I.getActualReturnType(), false /* IsPatchPoint */);
+                           I.getActualReturnType(), retAttrs,
+                           /*IsPatchPoint=*/false);
 
   // There may be duplication in the gc.relocate list; such as two copies of
   // each relocation on normal and exceptional path for an invoke.  We only
@@ -1106,8 +1112,6 @@ SelectionDAGBuilder::LowerStatepoint(const GCStatepointInst &I,
   SDValue ReturnValue = LowerAsSTATEPOINT(SI);
 
   // Export the result value if needed
-  const auto GCResultLocality = getGCResultLocality(I);
-
   if (!GCResultLocality.first && !GCResultLocality.second) {
     // The return value is not needed, just generate a poison value.
     // Note: This covers the void return case.
@@ -1152,7 +1156,7 @@ void SelectionDAGBuilder::LowerCallSiteWithDeoptBundleImpl(
   populateCallLoweringInfo(
       SI.CLI, Call, ArgBeginIndex, Call->arg_size(), Callee,
       ForceVoidReturnTy ? Type::getVoidTy(*DAG.getContext()) : Call->getType(),
-      false);
+      Call->getAttributes().getRetAttrs(), /*IsPatchPoint=*/false);
   if (!VarArgDisallowed)
     SI.CLI.IsVarArg = Call->getFunctionType()->isVarArg();
 
@@ -1171,6 +1175,7 @@ void SelectionDAGBuilder::LowerCallSiteWithDeoptBundleImpl(
 
   // NB! The GC arguments are deliberately left empty.
 
+  LLVM_DEBUG(dbgs() << "Lowering call with deopt bundle " << *Call << "\n");
   if (SDValue ReturnVal = LowerAsSTATEPOINT(SI)) {
     ReturnVal = lowerRangeToAssertZExt(DAG, *Call, ReturnVal);
     setValue(Call, ReturnVal);
@@ -1264,7 +1269,7 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
 
     // All the reloads are independent and are reading memory only modified by
     // statepoints (i.e. no other aliasing stores); informing SelectionDAG of
-    // this this let's CSE kick in for free and allows reordering of
+    // this lets CSE kick in for free and allows reordering of
     // instructions if possible.  The lowering for statepoint sets the root,
     // so this is ordering all reloads with the either
     // a) the statepoint node itself, or

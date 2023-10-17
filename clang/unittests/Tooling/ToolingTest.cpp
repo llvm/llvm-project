@@ -17,14 +17,14 @@
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
+#include "clang/Testing/CommandLineArgs.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/TargetParser/Host.h"
 #include "gtest/gtest.h"
 #include <algorithm>
 #include <string>
@@ -446,6 +446,13 @@ TEST_F(CommandLineExtractorTest, AcceptSaveTemps) {
   addFile("test.c", "int main() {}\n");
   const char *Args[] = {"clang", "-target",     "arm64-apple-macosx11.0.0",
                         "-c",    "-save-temps", "test.c"};
+  EXPECT_NE(extractCC1Arguments(Args), nullptr);
+}
+
+TEST_F(CommandLineExtractorTest, AcceptPreprocessedInputFile) {
+  addFile("test.i", "int main() {}\n");
+  const char *Args[] = {"clang", "-target", "arm64-apple-macosx11.0.0", "-c",
+                        "test.i"};
   EXPECT_NE(extractCC1Arguments(Args), nullptr);
 }
 
@@ -871,28 +878,10 @@ TEST(ClangToolTest, StripPluginsAdjuster) {
   EXPECT_FALSE(HasFlag("-random-plugin"));
 }
 
-namespace {
-/// Find a target name such that looking for it in TargetRegistry by that name
-/// returns the same target. We expect that there is at least one target
-/// configured with this property.
-std::string getAnyTarget() {
-  llvm::InitializeAllTargets();
-  for (const auto &Target : llvm::TargetRegistry::targets()) {
-    std::string Error;
-    StringRef TargetName(Target.getName());
-    if (TargetName == "x86-64")
-      TargetName = "x86_64";
-    if (llvm::TargetRegistry::lookupTarget(std::string(TargetName), Error) ==
-        &Target) {
-      return std::string(TargetName);
-    }
-  }
-  return "";
-}
-}
-
 TEST(addTargetAndModeForProgramName, AddsTargetAndMode) {
-  std::string Target = getAnyTarget();
+  llvm::InitializeAllTargets();
+
+  std::string Target = getAnyTargetForTesting();
   ASSERT_FALSE(Target.empty());
 
   std::vector<std::string> Args = {"clang", "-foo"};
@@ -905,7 +894,8 @@ TEST(addTargetAndModeForProgramName, AddsTargetAndMode) {
 }
 
 TEST(addTargetAndModeForProgramName, PathIgnored) {
-  std::string Target = getAnyTarget();
+  llvm::InitializeAllTargets();
+  std::string Target = getAnyTargetForTesting();
   ASSERT_FALSE(Target.empty());
 
   SmallString<32> ToolPath;
@@ -919,7 +909,8 @@ TEST(addTargetAndModeForProgramName, PathIgnored) {
 }
 
 TEST(addTargetAndModeForProgramName, IgnoresExistingTarget) {
-  std::string Target = getAnyTarget();
+  llvm::InitializeAllTargets();
+  std::string Target = getAnyTargetForTesting();
   ASSERT_FALSE(Target.empty());
 
   std::vector<std::string> Args = {"clang", "-foo", "-target", "something"};
@@ -936,7 +927,8 @@ TEST(addTargetAndModeForProgramName, IgnoresExistingTarget) {
 }
 
 TEST(addTargetAndModeForProgramName, IgnoresExistingMode) {
-  std::string Target = getAnyTarget();
+  llvm::InitializeAllTargets();
+  std::string Target = getAnyTargetForTesting();
   ASSERT_FALSE(Target.empty());
 
   std::vector<std::string> Args = {"clang", "-foo", "--driver-mode=abc"};

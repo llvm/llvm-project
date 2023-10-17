@@ -12,10 +12,16 @@ import time
 from collections import defaultdict
 from itertools import chain
 
-from dex.debugger.DebuggerControllers.ControllerHelpers import in_source_file, update_step_watches
-from dex.debugger.DebuggerControllers.DebuggerControllerBase import DebuggerControllerBase
+from dex.debugger.DebuggerControllers.ControllerHelpers import (
+    in_source_file,
+    update_step_watches,
+)
+from dex.debugger.DebuggerControllers.DebuggerControllerBase import (
+    DebuggerControllerBase,
+)
 from dex.debugger.DebuggerBase import DebuggerBase
 from dex.utils.Exceptions import DebuggerException
+from dex.utils.Timeout import Timeout
 
 
 class BreakpointRange:
@@ -36,8 +42,16 @@ class BreakpointRange:
                   leading breakpoint is triggered before it is removed.
     """
 
-    def __init__(self, expression: str, path: str, range_from: int, range_to: int,
-                 values: list, hit_count: int, finish_on_remove: bool):
+    def __init__(
+        self,
+        expression: str,
+        path: str,
+        range_from: int,
+        range_to: int,
+        values: list,
+        hit_count: int,
+        finish_on_remove: bool,
+    ):
         self.expression = expression
         self.path = path
         self.range_from = range_from
@@ -54,7 +68,7 @@ class BreakpointRange:
         conditional_list = []
         for value in self.conditional_values:
             # (<expression>) == (<value>)
-            conditional_expression = '({}) == ({})'.format(self.expression, value)
+            conditional_expression = "({}) == ({})".format(self.expression, value)
             conditional_list.append(conditional_expression)
         return conditional_list
 
@@ -69,44 +83,48 @@ class BreakpointRange:
 
 class ConditionalController(DebuggerControllerBase):
     def __init__(self, context, step_collection):
-      self._bp_ranges = None
-      self._watches = set()
-      self._step_index = 0
-      self._pause_between_steps = context.options.pause_between_steps
-      self._max_steps = context.options.max_steps
-      # Map {id: BreakpointRange}
-      self._leading_bp_handles = {}
-      super(ConditionalController, self).__init__(context, step_collection)
-      self._build_bp_ranges()
+        self._bp_ranges = None
+        self._watches = set()
+        self._step_index = 0
+        self._pause_between_steps = context.options.pause_between_steps
+        self._max_steps = context.options.max_steps
+        # Map {id: BreakpointRange}
+        self._leading_bp_handles = {}
+        super(ConditionalController, self).__init__(context, step_collection)
+        self._build_bp_ranges()
 
     def _build_bp_ranges(self):
         commands = self.step_collection.commands
         self._bp_ranges = []
         try:
-            limit_commands = commands['DexLimitSteps']
+            limit_commands = commands["DexLimitSteps"]
             for lc in limit_commands:
                 bpr = BreakpointRange(
-                  lc.expression,
-                  lc.path,
-                  lc.from_line,
-                  lc.to_line,
-                  lc.values,
-                  lc.hit_count,
-                  False)
+                    lc.expression,
+                    lc.path,
+                    lc.from_line,
+                    lc.to_line,
+                    lc.values,
+                    lc.hit_count,
+                    False,
+                )
                 self._bp_ranges.append(bpr)
         except KeyError:
-            raise DebuggerException('Missing DexLimitSteps commands, cannot conditionally step.')
-        if 'DexFinishTest' in commands:
-            finish_commands = commands['DexFinishTest']
+            raise DebuggerException(
+                "Missing DexLimitSteps commands, cannot conditionally step."
+            )
+        if "DexFinishTest" in commands:
+            finish_commands = commands["DexFinishTest"]
             for ic in finish_commands:
                 bpr = BreakpointRange(
-                  ic.expression,
-                  ic.path,
-                  ic.on_line,
-                  ic.on_line,
-                  ic.values,
-                  ic.hit_count + 1,
-                  True)
+                    ic.expression,
+                    ic.path,
+                    ic.on_line,
+                    ic.on_line,
+                    ic.values,
+                    ic.hit_count + 1,
+                    True,
+                )
                 self._bp_ranges.append(bpr)
 
     def _set_leading_bps(self):
@@ -116,9 +134,9 @@ class ConditionalController(DebuggerControllerBase):
             if bpr.has_conditions():
                 # Add a conditional breakpoint for each condition.
                 for cond_expr in bpr.get_conditional_expression_list():
-                    id = self.debugger.add_conditional_breakpoint(bpr.path,
-                                                                  bpr.range_from,
-                                                                  cond_expr)
+                    id = self.debugger.add_conditional_breakpoint(
+                        bpr.path, bpr.range_from, cond_expr
+                    )
                     self._leading_bp_handles[id] = bpr
             else:
                 # Add an unconditional breakpoint.
@@ -127,8 +145,10 @@ class ConditionalController(DebuggerControllerBase):
 
     def _run_debugger_custom(self, cmdline):
         # TODO: Add conditional and unconditional breakpoint support to dbgeng.
-        if self.debugger.get_name() == 'dbgeng':
-            raise DebuggerException('DexLimitSteps commands are not supported by dbgeng')
+        if self.debugger.get_name() == "dbgeng":
+            raise DebuggerException(
+                "DexLimitSteps commands are not supported by dbgeng"
+            )
 
         self.step_collection.clear_steps()
         self._set_leading_bps()
@@ -140,15 +160,36 @@ class ConditionalController(DebuggerControllerBase):
         time.sleep(self._pause_between_steps)
 
         exit_desired = False
+        timed_out = False
+        total_timeout = Timeout(self.context.options.timeout_total)
 
         while not self.debugger.is_finished:
-            while self.debugger.is_running:
-                pass
+            breakpoint_timeout = Timeout(self.context.options.timeout_breakpoint)
+            while self.debugger.is_running and not timed_out:
+                # Check to see whether we've timed out while we're waiting.
+                if total_timeout.timed_out():
+                    self.context.logger.error(
+                        "Debugger session has been "
+                        f"running for {total_timeout.elapsed}s, timeout reached!"
+                    )
+                    timed_out = True
+                if breakpoint_timeout.timed_out():
+                    self.context.logger.error(
+                        f"Debugger session has not "
+                        f"hit a breakpoint for {breakpoint_timeout.elapsed}s, timeout "
+                        "reached!"
+                    )
+                    timed_out = True
+
+            if timed_out:
+                break
 
             step_info = self.debugger.get_step_info(self._watches, self._step_index)
             if step_info.current_frame:
                 self._step_index += 1
-                update_step_watches(step_info, self._watches, self.step_collection.commands)
+                update_step_watches(
+                    step_info, self._watches, self.step_collection.commands
+                )
                 self.step_collection.new_step(self.context, step_info)
 
             bp_to_delete = []

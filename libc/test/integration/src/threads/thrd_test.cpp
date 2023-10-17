@@ -9,7 +9,7 @@
 #include "src/threads/thrd_create.h"
 #include "src/threads/thrd_join.h"
 
-#include "utils/IntegrationTest/test.h"
+#include "test/IntegrationTest/test.h"
 
 #include <threads.h>
 
@@ -24,10 +24,10 @@ void create_and_join() {
   for (counter = 0; counter <= thread_count;) {
     thrd_t thread;
     int old_counter_val = counter;
-    ASSERT_EQ(__llvm_libc::thrd_create(&thread, thread_func, nullptr),
+    ASSERT_EQ(LIBC_NAMESPACE::thrd_create(&thread, thread_func, nullptr),
               (int)thrd_success);
     int retval = thread_count + 1; // Start with a retval we dont expect.
-    ASSERT_EQ(__llvm_libc::thrd_join(thread, &retval), (int)thrd_success);
+    ASSERT_EQ(LIBC_NAMESPACE::thrd_join(thread, &retval), (int)thrd_success);
     ASSERT_EQ(retval, 0);
     ASSERT_EQ(counter, old_counter_val + 1);
   }
@@ -41,13 +41,14 @@ void spawn_and_join() {
 
   for (int i = 0; i < thread_count; ++i) {
     args[i] = i;
-    ASSERT_EQ(__llvm_libc::thrd_create(thread_list + i, return_arg, args + i),
-              (int)thrd_success);
+    ASSERT_EQ(
+        LIBC_NAMESPACE::thrd_create(thread_list + i, return_arg, args + i),
+        (int)thrd_success);
   }
 
   for (int i = 0; i < thread_count; ++i) {
     int retval = thread_count + 1; // Start with a retval we dont expect.
-    ASSERT_EQ(__llvm_libc::thrd_join(thread_list[i], &retval),
+    ASSERT_EQ(LIBC_NAMESPACE::thrd_join(thread_list[i], &retval),
               (int)thrd_success);
     ASSERT_EQ(retval, i);
   }

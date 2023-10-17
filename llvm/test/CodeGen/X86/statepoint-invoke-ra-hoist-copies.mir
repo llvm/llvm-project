@@ -2,7 +2,7 @@
 # YKFIXME: needs StackMaps::NextLive markers in STATEPOINT instructions.
 #
 # REQUIRES: asserts
-# RUN: llc -x mir -run-pass=simple-register-coalescing,greedy -verify-machineinstrs < %s 2>&1  | FileCheck %s
+# RUN: llc -x mir -run-pass=register-coalescer,greedy -verify-machineinstrs < %s 2>&1  | FileCheck %s
 
 # CHECK-NOT: Bad Parent VNI
 --- |

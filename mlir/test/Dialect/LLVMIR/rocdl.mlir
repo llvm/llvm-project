@@ -203,6 +203,66 @@ func.func @rocdl.xdlops(%arg0 : f32, %arg1 : f32,
   llvm.return
 }
 
+llvm.func @rocdl.make.buffer.rsrc(%ptr : !llvm.ptr,
+                                  %stride : i16,
+                                  %numRecords : i32,
+                                  %flags : i32) -> !llvm.ptr<8> {
+  // CHECK-LABEL: rocdl.make.buffer.rsrc
+  // CHECK: %{{.*}} = rocdl.make.buffer.rsrc %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : !llvm.ptr to <8>
+  %rsrc = rocdl.make.buffer.rsrc %ptr, %stride, %numRecords, %flags : !llvm.ptr to !llvm.ptr<8>
+  llvm.return %rsrc : !llvm.ptr<8>
+}
+
+llvm.func @rocdl.raw.ptr.buffer.f32(%rsrc : !llvm.ptr<8>,
+                       %offset : i32, %soffset : i32,
+                       %aux : i32, %vdata1 : f32,
+                       %vdata2 : vector<2xf32>, %vdata4 : vector<4xf32>) {
+  // CHECK-LABEL: rocdl.raw.ptr.buffer.f32
+  // CHECK: %{{.*}} = rocdl.raw.ptr.buffer.load %{{.*}}, %{{.*}} %{{.*}}, %{{.*}} : f32
+  // CHECK: %{{.*}} = rocdl.raw.ptr.buffer.load %{{.*}}, %{{.*}} %{{.*}}, %{{.*}} : vector<2xf32>
+  // CHECK: %{{.*}} = rocdl.raw.ptr.buffer.load %{{.*}}, %{{.*}} %{{.*}}, %{{.*}} : vector<4xf32>
+
+  // CHECK: rocdl.raw.ptr.buffer.store %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : f32
+  // CHECK: rocdl.raw.ptr.buffer.store %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : vector<2xf32>
+  // CHECK: rocdl.raw.ptr.buffer.store %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : vector<4xf32>
+
+  // CHECK: rocdl.raw.ptr.buffer.atomic.fadd %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : f32
+  // CHECK: rocdl.raw.ptr.buffer.atomic.fmax %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : f32
+
+  %r1 = rocdl.raw.ptr.buffer.load %rsrc, %offset, %soffset, %aux : f32
+  %r2 = rocdl.raw.ptr.buffer.load %rsrc, %offset, %soffset, %aux : vector<2xf32>
+  %r4 = rocdl.raw.ptr.buffer.load %rsrc, %offset, %soffset, %aux : vector<4xf32>
+
+  rocdl.raw.ptr.buffer.store %vdata1, %rsrc, %offset, %soffset, %aux : f32
+  rocdl.raw.ptr.buffer.store %vdata2, %rsrc, %offset, %soffset, %aux : vector<2xf32>
+  rocdl.raw.ptr.buffer.store %vdata4, %rsrc, %offset, %offset, %aux : vector<4xf32>
+
+  rocdl.raw.ptr.buffer.atomic.fadd %vdata1, %rsrc, %offset, %soffset, %aux : f32
+  rocdl.raw.ptr.buffer.atomic.fmax %vdata1, %rsrc, %offset, %soffset, %aux : f32
+
+  llvm.return
+}
+
+
+llvm.func @rocdl.raw.ptr.buffer.i32(%rsrc : !llvm.ptr<8>,
+                       %offset : i32, %soffset : i32,
+                       %aux : i32, %vdata1 : i32,
+                       %vdata2 : vector<2xi32>, %vdata4 : vector<4xi32>) {
+  // CHECK-LABEL: rocdl.raw.ptr.buffer.i32
+  // CHECK: rocdl.raw.ptr.buffer.atomic.smax %{{.*}}, %{{.*}}, %{{.*}} %{{.*}}, %{{.*}} : i32
+  // CHECK: rocdl.raw.ptr.buffer.atomic.umin %{{.*}}, %{{.*}}, %{{.*}} %{{.*}}, %{{.*}} : i32
+  // CHECK: %{{.*}} = rocdl.raw.ptr.buffer.atomic.cmpswap %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : i32
+
+  rocdl.raw.ptr.buffer.atomic.smax %vdata1, %rsrc, %offset, %soffset, %aux : i32
+  rocdl.raw.ptr.buffer.atomic.umin %vdata1, %rsrc, %offset, %soffset, %aux : i32
+  %val = rocdl.raw.ptr.buffer.atomic.cmpswap %vdata1, %vdata1, %rsrc, %offset, %soffset, %aux : i32
+  llvm.return
+}
+
+// -----
+
+// Tests for deprecated buffer ops.
+
 llvm.func @rocdl.mubuf(%rsrc : vector<4xi32>, %vindex : i32,
                        %offset : i32, %glc : i1,
                        %slc : i1, %vdata1 : vector<1xf32>,
@@ -225,11 +285,11 @@ llvm.func @rocdl.mubuf(%rsrc : vector<4xi32>, %vindex : i32,
   llvm.return
 }
 
-llvm.func @rocdl.raw.buffer(%rsrc : vector<4xi32>,
+llvm.func @rocdl.raw.buffer.f32(%rsrc : vector<4xi32>,
                        %offset : i32, %soffset : i32,
                        %aux : i32, %vdata1 : f32,
                        %vdata2 : vector<2xf32>, %vdata4 : vector<4xf32>) {
-  // CHECK-LABEL: rocdl.raw.buffer
+  // CHECK-LABEL: rocdl.raw.buffer.f32
   // CHECK: %{{.*}} = rocdl.raw.buffer.load %{{.*}} %{{.*}} %{{.*}} %{{.*}} : f32
   // CHECK: %{{.*}} = rocdl.raw.buffer.load %{{.*}} %{{.*}} %{{.*}} %{{.*}} : vector<2xf32>
   // CHECK: %{{.*}} = rocdl.raw.buffer.load %{{.*}} %{{.*}} %{{.*}} %{{.*}} : vector<4xf32>
@@ -249,11 +309,58 @@ llvm.func @rocdl.raw.buffer(%rsrc : vector<4xi32>,
   rocdl.raw.buffer.store %vdata4, %rsrc, %offset, %offset, %aux : vector<4xf32>
 
   rocdl.raw.buffer.atomic.fadd %vdata1, %rsrc, %offset, %soffset, %aux : f32
+  rocdl.raw.buffer.atomic.fmax %vdata1, %rsrc, %offset, %soffset, %aux : f32
 
   llvm.return
+}
+
+
+llvm.func @rocdl.raw.buffer.i32(%rsrc : vector<4xi32>,
+                       %offset : i32, %soffset : i32,
+                       %aux : i32, %vdata1 : i32,
+                       %vdata2 : vector<2xi32>, %vdata4 : vector<4xi32>) {
+  // CHECK-LABEL: rocdl.raw.buffer.i32
+  // CHECK: rocdl.raw.buffer.atomic.smax %{{.*}} %{{.*}} %{{.*}} %{{.*}} %{{.*}} : i32
+  // CHECK: rocdl.raw.buffer.atomic.umin %{{.*}} %{{.*}} %{{.*}} %{{.*}} %{{.*}} : i32
+  // CHECK: %{{.*}} = rocdl.raw.buffer.atomic.cmpswap(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : i32, vector<4xi32>
+
+  rocdl.raw.buffer.atomic.smax %vdata1, %rsrc, %offset, %soffset, %aux : i32
+  rocdl.raw.buffer.atomic.umin %vdata1, %rsrc, %offset, %soffset, %aux : i32
+  %val = rocdl.raw.buffer.atomic.cmpswap(%vdata1, %vdata1, %rsrc, %offset, %soffset, %aux) : i32, vector<4xi32>
+  llvm.return
+}
+
+llvm.func @rocdl_8bit_floats(%source: i32, %stoch: i32) -> i32 {
+// CHECK-LABEL: @rocdl_8bit_floats
+// CHECK: rocdl.cvt.f32.bf8
+// CHECK: rocdl.cvt.f32.fp8
+// CHECK: rocdl.cvt.pk.bf8.f32
+// CHECK: rocdl.cvt.pk.fp8.f32
+// CHECK: rocdl.cvt.sr.bf8.f32
+// CHECK: rocdl.cvt.sr.fp8.f32
+  %c0 = llvm.mlir.constant(0 : i32) : i32
+  %c2 = llvm.mlir.constant(2 : i32) : i32
+  %c3 = llvm.mlir.constant(3 : i32) : i32
+  %false = llvm.mlir.constant(false) : i1
+  %v1 = rocdl.cvt.f32.bf8 %source[%c0] : f32
+  %v2 = rocdl.cvt.f32.fp8 %source[%c0] : f32
+  %source2 = rocdl.cvt.pk.bf8.f32 %v1, %v2 -> %source[%false] : i32
+  %source3 = rocdl.cvt.pk.fp8.f32 %v1, %v2 -> %source2[%false] : i32
+  %source4 = rocdl.cvt.sr.bf8.f32 %v1, %stoch -> %source3[%c2] : i32
+  %source5 = rocdl.cvt.sr.fp8.f32 %v2, %stoch -> %source4[%c3] : i32
+  llvm.return %source5 : i32
 }
 
 // -----
 
 // expected-error@below {{attribute attached to unexpected op}}
 func.func private @expected_llvm_func() attributes { rocdl.kernel }
+
+// -----
+
+// Just check these don't emit errors.
+gpu.module @module_1 [#rocdl.target<O = 1, chip = "gfx900", abi = "500", link = ["my_device_lib.bc"], flags = {fast, daz, unsafe_math}>] {
+}
+
+gpu.module @module_2 [#rocdl.target<chip = "gfx900">, #rocdl.target<chip = "gfx90a">] {
+}

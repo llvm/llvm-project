@@ -17,51 +17,52 @@
 #include "src/stdio/funlockfile.h"
 #include "src/stdio/fwrite.h"
 #include "src/stdio/getc_unlocked.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
-#include <errno.h>
+#include "src/errno/libc_errno.h"
 #include <stdio.h>
 
-class LlvmLibcGetcTest : public __llvm_libc::testing::Test {
+class LlvmLibcGetcTest : public LIBC_NAMESPACE::testing::Test {
 public:
   using GetcFunc = int(FILE *);
   void test_with_func(GetcFunc *func, const char *filename) {
-    ::FILE *file = __llvm_libc::fopen(filename, "w");
+    ::FILE *file = LIBC_NAMESPACE::fopen(filename, "w");
     ASSERT_FALSE(file == nullptr);
     constexpr char CONTENT[] = "123456789";
     constexpr size_t WRITE_SIZE = sizeof(CONTENT) - 1;
-    ASSERT_EQ(WRITE_SIZE, __llvm_libc::fwrite(CONTENT, 1, WRITE_SIZE, file));
+    ASSERT_EQ(WRITE_SIZE, LIBC_NAMESPACE::fwrite(CONTENT, 1, WRITE_SIZE, file));
     // This is a write-only file so reads should fail.
     ASSERT_EQ(func(file), EOF);
     // This is an error and not a real EOF.
-    ASSERT_EQ(__llvm_libc::feof(file), 0);
-    ASSERT_NE(__llvm_libc::ferror(file), 0);
-    errno = 0;
+    ASSERT_EQ(LIBC_NAMESPACE::feof(file), 0);
+    ASSERT_NE(LIBC_NAMESPACE::ferror(file), 0);
+    libc_errno = 0;
 
-    ASSERT_EQ(0, __llvm_libc::fclose(file));
+    ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file));
 
-    file = __llvm_libc::fopen(filename, "r");
+    file = LIBC_NAMESPACE::fopen(filename, "r");
     ASSERT_FALSE(file == nullptr);
 
-    __llvm_libc::flockfile(file);
+    LIBC_NAMESPACE::flockfile(file);
     for (size_t i = 0; i < WRITE_SIZE; ++i) {
       int c = func(file);
       ASSERT_EQ(c, int('1' + i));
     }
     // Reading more should return EOF but not set error.
     ASSERT_EQ(func(file), EOF);
-    ASSERT_NE(__llvm_libc::feof_unlocked(file), 0);
-    ASSERT_EQ(__llvm_libc::ferror_unlocked(file), 0);
+    ASSERT_NE(LIBC_NAMESPACE::feof_unlocked(file), 0);
+    ASSERT_EQ(LIBC_NAMESPACE::ferror_unlocked(file), 0);
 
-    __llvm_libc::funlockfile(file);
-    ASSERT_EQ(0, __llvm_libc::fclose(file));
+    LIBC_NAMESPACE::funlockfile(file);
+    ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file));
   }
 };
 
 TEST_F(LlvmLibcGetcTest, WriteAndReadCharactersWithFgetcUnlocked) {
-  test_with_func(&__llvm_libc::fgetc_unlocked, "testdata/fgetc_unlocked.test");
+  test_with_func(&LIBC_NAMESPACE::fgetc_unlocked,
+                 "testdata/fgetc_unlocked.test");
 }
 
 TEST_F(LlvmLibcGetcTest, WriteAndReadCharactersWithGetcUnlocked) {
-  test_with_func(&__llvm_libc::getc_unlocked, "testdata/getc_unlocked.test");
+  test_with_func(&LIBC_NAMESPACE::getc_unlocked, "testdata/getc_unlocked.test");
 }

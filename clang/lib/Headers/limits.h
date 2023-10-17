@@ -52,7 +52,11 @@
 #define LONG_MIN  (-__LONG_MAX__ -1L)
 
 #define UCHAR_MAX (__SCHAR_MAX__*2  +1)
-#define USHRT_MAX (__SHRT_MAX__ *2  +1)
+#if __SHRT_WIDTH__ < __INT_WIDTH__
+#define USHRT_MAX (__SHRT_MAX__ * 2 + 1)
+#else
+#define USHRT_MAX (__SHRT_MAX__ * 2U + 1U)
+#endif
 #define UINT_MAX  (__INT_MAX__  *2U +1U)
 #define ULONG_MAX (__LONG_MAX__ *2UL+1UL)
 
@@ -62,10 +66,8 @@
 
 #define CHAR_BIT  __CHAR_BIT__
 
-/* C2x 5.2.4.2.1 */
-/* FIXME: This is using the placeholder dates Clang produces for these macros
-   in C2x mode; switch to the correct values once they've been published. */
-#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202000L
+/* C23 5.2.4.2.1 */
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
 #define BOOL_WIDTH   __BOOL_WIDTH__
 #define CHAR_WIDTH   CHAR_BIT
 #define SCHAR_WIDTH  CHAR_BIT

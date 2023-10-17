@@ -8,8 +8,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// Throwing bad_variant_access is supported starting in macosx10.13
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12}} && !no-exceptions
+// XFAIL: availability-bad_variant_access-missing && !no-exceptions
 
 // <variant>
 
@@ -161,7 +160,7 @@ void test_move_ctor_sfinae() {
 }
 
 template <typename T>
-struct Result { size_t index; T value; };
+struct Result { std::size_t index; T value; };
 
 void test_move_ctor_basic() {
   {
@@ -292,7 +291,7 @@ void test_move_ctor_valueless_by_exception() {
 #endif // TEST_HAS_NO_EXCEPTIONS
 }
 
-template <size_t Idx>
+template <std::size_t Idx>
 constexpr bool test_constexpr_ctor_imp(std::variant<long, void*, const int> const& v) {
   auto copy = v;
   auto v2 = std::move(copy);

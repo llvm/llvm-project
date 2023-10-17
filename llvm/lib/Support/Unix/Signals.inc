@@ -62,6 +62,9 @@
 #if HAVE_MACH_MACH_H
 #include <mach/mach.h>
 #endif
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#endif
 #if HAVE_LINK_H
 #include <link.h>
 #endif
@@ -84,13 +87,11 @@ static void InfoSignalHandler(int Sig); // defined below.
 
 using SignalHandlerFunctionType = void (*)();
 /// The function to call if ctrl-c is pressed.
-static std::atomic<SignalHandlerFunctionType> InterruptFunction =
-    ATOMIC_VAR_INIT(nullptr);
-static std::atomic<SignalHandlerFunctionType> InfoSignalFunction =
-    ATOMIC_VAR_INIT(nullptr);
+static std::atomic<SignalHandlerFunctionType> InterruptFunction = nullptr;
+static std::atomic<SignalHandlerFunctionType> InfoSignalFunction = nullptr;
 /// The function to call on SIGPIPE (one-time use only).
 static std::atomic<SignalHandlerFunctionType> OneShotPipeSignalFunction =
-    ATOMIC_VAR_INIT(nullptr);
+    nullptr;
 
 namespace {
 /// Signal-safe removal of files.
@@ -98,8 +99,8 @@ namespace {
 /// themselves is signal-safe. Memory is freed when the head is freed, deletion
 /// is therefore not signal-safe either.
 class FileToRemoveList {
-  std::atomic<char *> Filename = ATOMIC_VAR_INIT(nullptr);
-  std::atomic<FileToRemoveList *> Next = ATOMIC_VAR_INIT(nullptr);
+  std::atomic<char *> Filename = nullptr;
+  std::atomic<FileToRemoveList *> Next = nullptr;
 
   FileToRemoveList() = default;
   // Not signal-safe.
@@ -188,7 +189,7 @@ public:
     Head.exchange(OldHead);
   }
 };
-static std::atomic<FileToRemoveList *> FilesToRemove = ATOMIC_VAR_INIT(nullptr);
+static std::atomic<FileToRemoveList *> FilesToRemove = nullptr;
 
 /// Clean up the list in a signal-friendly manner.
 /// Recall that signals can fire during llvm_shutdown. If this occurs we should
@@ -248,7 +249,7 @@ static const int InfoSigs[] = {SIGUSR1
 static const size_t NumSigs = std::size(IntSigs) + std::size(KillSigs) +
                               std::size(InfoSigs) + 1 /* SIGPIPE */;
 
-static std::atomic<unsigned> NumRegisteredSignals = ATOMIC_VAR_INIT(0);
+static std::atomic<unsigned> NumRegisteredSignals = 0;
 static struct {
   struct sigaction SA;
   int SigNo;
@@ -463,7 +464,7 @@ void llvm::sys::AddSignalHandler(sys::SignalHandlerCallback FnPtr,
   RegisterHandlers();
 }
 
-#if defined(HAVE_BACKTRACE) && ENABLE_BACKTRACES && HAVE_LINK_H &&             \
+#if ENABLE_BACKTRACES && defined(HAVE_BACKTRACE) && HAVE_LINK_H &&             \
     (defined(__linux__) || defined(__FreeBSD__) ||                             \
      defined(__FreeBSD_kernel__) || defined(__NetBSD__))
 struct DlIteratePhdrData {
@@ -509,16 +510,171 @@ static bool findModulesAndOffsets(void **StackTrace, int Depth,
   dl_iterate_phdr(dl_iterate_phdr_cb, &data);
   return true;
 }
+
+class DSOMarkupPrinter {
+  llvm::raw_ostream &OS;
+  const char *MainExecutableName;
+  size_t ModuleCount = 0;
+  bool IsFirst = true;
+
+public:
+  DSOMarkupPrinter(llvm::raw_ostream &OS, const char *MainExecutableName)
+      : OS(OS), MainExecutableName(MainExecutableName) {}
+
+  /// Print llvm-symbolizer markup describing the layout of the given DSO.
+  void printDSOMarkup(dl_phdr_info *Info) {
+    ArrayRef<uint8_t> BuildID = findBuildID(Info);
+    if (BuildID.empty())
+      return;
+    OS << format("{{{module:%d:%s:elf:", ModuleCount,
+                 IsFirst ? MainExecutableName : Info->dlpi_name);
+    for (uint8_t X : BuildID)
+      OS << format("%02x", X);
+    OS << "}}}\n";
+
+    for (int I = 0; I < Info->dlpi_phnum; I++) {
+      const auto *Phdr = &Info->dlpi_phdr[I];
+      if (Phdr->p_type != PT_LOAD)
+        continue;
+      uintptr_t StartAddress = Info->dlpi_addr + Phdr->p_vaddr;
+      uintptr_t ModuleRelativeAddress = Phdr->p_vaddr;
+      std::array<char, 4> ModeStr = modeStrFromFlags(Phdr->p_flags);
+      OS << format("{{{mmap:%#016x:%#x:load:%d:%s:%#016x}}}\n", StartAddress,
+                   Phdr->p_memsz, ModuleCount, &ModeStr[0],
+                   ModuleRelativeAddress);
+    }
+    IsFirst = false;
+    ModuleCount++;
+  }
+
+  /// Callback for use with dl_iterate_phdr. The last dl_iterate_phdr argument
+  /// must be a pointer to an instance of this class.
+  static int printDSOMarkup(dl_phdr_info *Info, size_t Size, void *Arg) {
+    static_cast<DSOMarkupPrinter *>(Arg)->printDSOMarkup(Info);
+    return 0;
+  }
+
+  // Returns the build ID for the given DSO as an array of bytes. Returns an
+  // empty array if none could be found.
+  ArrayRef<uint8_t> findBuildID(dl_phdr_info *Info) {
+    for (int I = 0; I < Info->dlpi_phnum; I++) {
+      const auto *Phdr = &Info->dlpi_phdr[I];
+      if (Phdr->p_type != PT_NOTE)
+        continue;
+
+      ArrayRef<uint8_t> Notes(
+          reinterpret_cast<const uint8_t *>(Info->dlpi_addr + Phdr->p_vaddr),
+          Phdr->p_memsz);
+      while (Notes.size() > 12) {
+        uint32_t NameSize = *reinterpret_cast<const uint32_t *>(Notes.data());
+        Notes = Notes.drop_front(4);
+        uint32_t DescSize = *reinterpret_cast<const uint32_t *>(Notes.data());
+        Notes = Notes.drop_front(4);
+        uint32_t Type = *reinterpret_cast<const uint32_t *>(Notes.data());
+        Notes = Notes.drop_front(4);
+
+        ArrayRef<uint8_t> Name = Notes.take_front(NameSize);
+        auto CurPos = reinterpret_cast<uintptr_t>(Notes.data());
+        uint32_t BytesUntilDesc =
+            alignToPowerOf2(CurPos + NameSize, 4) - CurPos;
+        if (BytesUntilDesc >= Notes.size())
+          break;
+        Notes = Notes.drop_front(BytesUntilDesc);
+
+        ArrayRef<uint8_t> Desc = Notes.take_front(DescSize);
+        CurPos = reinterpret_cast<uintptr_t>(Notes.data());
+        uint32_t BytesUntilNextNote =
+            alignToPowerOf2(CurPos + DescSize, 4) - CurPos;
+        if (BytesUntilNextNote > Notes.size())
+          break;
+        Notes = Notes.drop_front(BytesUntilNextNote);
+
+        if (Type == 3 /*NT_GNU_BUILD_ID*/ && Name.size() >= 3 &&
+            Name[0] == 'G' && Name[1] == 'N' && Name[2] == 'U')
+          return Desc;
+      }
+    }
+    return {};
+  }
+
+  // Returns a symbolizer markup string describing the permissions on a DSO
+  // with the given p_flags.
+  std::array<char, 4> modeStrFromFlags(uint32_t Flags) {
+    std::array<char, 4> Mode;
+    char *Cur = &Mode[0];
+    if (Flags & PF_R)
+      *Cur++ = 'r';
+    if (Flags & PF_W)
+      *Cur++ = 'w';
+    if (Flags & PF_X)
+      *Cur++ = 'x';
+    *Cur = '\0';
+    return Mode;
+  }
+};
+
+static bool printMarkupContext(llvm::raw_ostream &OS,
+                               const char *MainExecutableName) {
+  OS << "{{{reset}}}\n";
+  DSOMarkupPrinter MP(OS, MainExecutableName);
+  dl_iterate_phdr(DSOMarkupPrinter::printDSOMarkup, &MP);
+  return true;
+}
+
+#elif ENABLE_BACKTRACES && defined(__APPLE__) && defined(__LP64__)
+static bool findModulesAndOffsets(void **StackTrace, int Depth,
+                                  const char **Modules, intptr_t *Offsets,
+                                  const char *MainExecutableName,
+                                  StringSaver &StrPool) {
+  uint32_t NumImgs = _dyld_image_count();
+  for (uint32_t ImageIndex = 0; ImageIndex < NumImgs; ImageIndex++) {
+    const char *Name = _dyld_get_image_name(ImageIndex);
+    intptr_t Slide = _dyld_get_image_vmaddr_slide(ImageIndex);
+    auto *Header =
+        (const struct mach_header_64 *)_dyld_get_image_header(ImageIndex);
+    if (Header == NULL)
+      continue;
+    auto Cmd = (const struct load_command *)(&Header[1]);
+    for (uint32_t CmdNum = 0; CmdNum < Header->ncmds; ++CmdNum) {
+      uint32_t BaseCmd = Cmd->cmd & ~LC_REQ_DYLD;
+      if (BaseCmd == LC_SEGMENT_64) {
+        auto CmdSeg64 = (const struct segment_command_64 *)Cmd;
+        for (int j = 0; j < Depth; j++) {
+          if (Modules[j])
+            continue;
+          intptr_t Addr = (intptr_t)StackTrace[j];
+          if ((intptr_t)CmdSeg64->vmaddr + Slide <= Addr &&
+              Addr < intptr_t(CmdSeg64->vmaddr + CmdSeg64->vmsize + Slide)) {
+            Modules[j] = Name;
+            Offsets[j] = Addr - Slide;
+          }
+        }
+      }
+      Cmd = (const load_command *)(((const char *)Cmd) + (Cmd->cmdsize));
+    }
+  }
+  return true;
+}
+
+static bool printMarkupContext(llvm::raw_ostream &OS,
+                               const char *MainExecutableName) {
+  return false;
+}
 #else
-/// This platform does not have dl_iterate_phdr, so we do not yet know how to
-/// find all loaded DSOs.
+/// Backtraces are not enabled or we don't yet know how to find all loaded DSOs
+/// on this platform.
 static bool findModulesAndOffsets(void **StackTrace, int Depth,
                                   const char **Modules, intptr_t *Offsets,
                                   const char *MainExecutableName,
                                   StringSaver &StrPool) {
   return false;
 }
-#endif // defined(HAVE_BACKTRACE) && ENABLE_BACKTRACES && ...
+
+static bool printMarkupContext(llvm::raw_ostream &OS,
+                               const char *MainExecutableName) {
+  return false;
+}
+#endif // ENABLE_BACKTRACES && ... (findModulesAndOffsets variants)
 
 #if ENABLE_BACKTRACES && defined(HAVE__UNWIND_BACKTRACE)
 static int unwindBacktrace(void **StackTrace, int MaxEntries) {
@@ -578,6 +734,8 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS, int Depth) {
   // backtrace() for printing a symbolized stack trace.
   if (!Depth)
     Depth = depth;
+  if (printMarkupStackTrace(Argv0, StackTrace, Depth, OS))
+    return;
   if (printSymbolizedStackTrace(Argv0, StackTrace, Depth, OS))
     return;
   OS << "Stack dump without symbol names (ensure you have llvm-symbolizer in "
@@ -617,13 +775,12 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS, int Depth) {
 
     if (dlinfo.dli_sname != nullptr) {
       OS << ' ';
-      int res;
-      char *d = itaniumDemangle(dlinfo.dli_sname, nullptr, nullptr, &res);
-      if (!d)
-        OS << dlinfo.dli_sname;
-      else
+      if (char *d = itaniumDemangle(dlinfo.dli_sname)) {
         OS << d;
-      free(d);
+        free(d);
+      } else {
+        OS << dlinfo.dli_sname;
+      }
 
       OS << format(" + %tu", (static_cast<const char *>(StackTrace[i]) -
                               static_cast<const char *>(dlinfo.dli_saddr)));

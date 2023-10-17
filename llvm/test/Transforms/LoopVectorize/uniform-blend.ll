@@ -1,4 +1,4 @@
-; RUN: opt -opaque-pointers=0 -passes=loop-vectorize -force-vector-width=4 -S %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -force-vector-width=4 -S %s | FileCheck %s
 
 @dst = external global [32 x i16], align 1
 
@@ -17,10 +17,9 @@ define void @blend_uniform_iv_trunc(i1 %c) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor <4 x i1> [[MASK1]], <i1 true, i1 true, i1 true, i1 true>
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[MASK1]], <4 x i16> [[BROADCAST_SPLAT2]], <4 x i16> undef
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i16> [[PREDPHI]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [32 x i16], [32 x i16]* @dst, i16 0, i16 [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, i16* [[TMP5]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i16* [[TMP6]] to <4 x i16>*
-; CHECK-NEXT:    store <4 x i16> zeroinitializer, <4 x i16>* [[TMP7]], align 2
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i16 [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, ptr [[TMP5]], i32 0
+; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr [[TMP6]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 32
 ; CHECK-NEXT:    br i1 [[TMP8]], label %middle.block, label %vector.body
@@ -38,8 +37,8 @@ loop.next:                                        ; preds = %loop.header
 
 loop.latch:                                       ; preds = %loop.next, %loop.header
   %blend = phi i16 [ undef, %loop.header ], [ %iv.trunc.2, %loop.next ]
-  %dst.ptr = getelementptr inbounds [32 x i16], [32 x i16]* @dst, i16 0, i16 %blend
-  store i16 0, i16* %dst.ptr
+  %dst.ptr = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i16 %blend
+  store i16 0, ptr %dst.ptr
   %iv.next = add nuw nsw i64 %iv, 1
   %cmp439 = icmp ult i64 %iv, 31
   br i1 %cmp439, label %loop.header, label %exit
@@ -62,10 +61,9 @@ define void @blend_uniform_iv(i1 %c) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i1> [[MASK1]], <i1 true, i1 true, i1 true, i1 true>
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[MASK1]], <4 x i64> [[BROADCAST_SPLAT2]], <4 x i64> undef
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i64> [[PREDPHI]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [32 x i16], [32 x i16]* @dst, i16 0, i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, i16* [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i16* [[TMP4]] to <4 x i16>*
-; CHECK-NEXT:    store <4 x i16> zeroinitializer, <4 x i16>* [[TMP5]], align 2
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, ptr [[TMP3]], i32 0
+; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr [[TMP4]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 32
 ; CHECK-NEXT:    br i1 [[TMP6]], label %middle.block, label %vector.body
@@ -82,8 +80,8 @@ loop.next:                                        ; preds = %loop.header
 
 loop.latch:                                       ; preds = %loop.next, %loop.header
   %blend = phi i64 [ undef, %loop.header ], [ %iv, %loop.next ]
-  %dst.ptr = getelementptr inbounds [32 x i16], [32 x i16]* @dst, i16 0, i64 %blend
-  store i16 0, i16* %dst.ptr
+  %dst.ptr = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 %blend
+  store i16 0, ptr %dst.ptr
   %iv.next = add nuw nsw i64 %iv, 1
   %cmp439 = icmp ult i64 %iv, 31
   br i1 %cmp439, label %loop.header, label %exit
@@ -109,17 +107,17 @@ define void @blend_chain_iv(i1 %c) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = or <4 x i1> [[TMP6]], [[TMP5]]
 ; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <4 x i1> [[TMP8]], <4 x i64> [[PREDPHI]], <4 x i64> undef
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i64> [[PREDPHI1]], i32 0
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [32 x i16], [32 x i16]* @dst, i16 0, i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i64> [[PREDPHI1]], i32 1
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [32 x i16], [32 x i16]* @dst, i16 0, i64 [[TMP11]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i64> [[PREDPHI1]], i32 2
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [32 x i16], [32 x i16]* @dst, i16 0, i64 [[TMP13]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[TMP13]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i64> [[PREDPHI1]], i32 3
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [32 x i16], [32 x i16]* @dst, i16 0, i64 [[TMP15]]
-; CHECK-NEXT:    store i16 0, i16* [[TMP10]], align 2
-; CHECK-NEXT:    store i16 0, i16* [[TMP12]], align 2
-; CHECK-NEXT:    store i16 0, i16* [[TMP14]], align 2
-; CHECK-NEXT:    store i16 0, i16* [[TMP16]], align 2
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[TMP15]]
+; CHECK-NEXT:    store i16 0, ptr [[TMP10]], align 2
+; CHECK-NEXT:    store i16 0, ptr [[TMP12]], align 2
+; CHECK-NEXT:    store i16 0, ptr [[TMP14]], align 2
+; CHECK-NEXT:    store i16 0, ptr [[TMP16]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], 32
@@ -144,8 +142,8 @@ loop.next.3:
 
 loop.latch:                                       ; preds = %loop.next, %loop.header
   %blend = phi i64 [ undef, %loop.header ], [ %blend.1, %loop.next.3 ]
-  %dst.ptr = getelementptr inbounds [32 x i16], [32 x i16]* @dst, i16 0, i64 %blend
-  store i16 0, i16* %dst.ptr
+  %dst.ptr = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 %blend
+  store i16 0, ptr %dst.ptr
   %iv.next = add nuw nsw i64 %iv, 1
   %cmp439 = icmp ult i64 %iv, 31
   br i1 %cmp439, label %loop.header, label %exit

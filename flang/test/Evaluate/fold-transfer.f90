@@ -39,4 +39,7 @@ module m
   character*5, parameter :: le1c(*) = transfer(le1, [character(5)::])
   character*5, parameter :: be1c(*) = transfer(be1, [character(5)::])
   logical, parameter :: test_i2c_s = all(le1c == ["abcd"//char(0)]) .or. all(be1c == ["efgh"//char(0)])
+
+  character*4, parameter :: i2ss1 = transfer(int(z'61626364', 4), "12345678"(2:5))
+  logical, parameter :: test_i2ss1 = any(i2ss1 == ["abcd", "dcba"])
 end module

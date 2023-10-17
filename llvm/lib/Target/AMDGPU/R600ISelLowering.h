@@ -114,6 +114,9 @@ private:
                           SelectionDAG &DAG) const;
 
   SDNode *PostISelFolding(MachineSDNode *N, SelectionDAG &DAG) const override;
+
+  TargetLowering::AtomicExpansionKind
+  shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const override;
 };
 
 } // End namespace llvm;

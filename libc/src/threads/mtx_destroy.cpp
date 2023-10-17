@@ -7,12 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/threads/mtx_destroy.h"
-#include "include/threads.h" // For mtx_t definition.
 #include "src/__support/common.h"
 #include "src/__support/threads/mutex.h"
 
-namespace __llvm_libc {
+#include <threads.h> // For mtx_t definition.
+
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(void, mtx_destroy, (mtx_t *)) {}
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

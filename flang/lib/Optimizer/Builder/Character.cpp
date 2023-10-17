@@ -208,7 +208,9 @@ fir::factory::CharacterExprHelper::createEmbox(const fir::CharBoxValue &box) {
     builder.create<fir::StoreOp>(loc, buff, temp);
     buff = temp;
   }
-  buff = builder.createConvert(loc, refType, buff);
+  // fir.emboxchar only accepts scalar, cast array buffer to a scalar buffer.
+  if (mlir::isa<fir::SequenceType>(fir::dyn_cast_ptrEleTy(buff.getType())))
+    buff = builder.createConvert(loc, refType, buff);
   // Convert in case the provided length is not of the integer type that must
   // be used in boxchar.
   auto len = builder.createConvert(loc, builder.getCharacterLengthType(),
@@ -400,10 +402,19 @@ void fir::factory::CharacterExprHelper::createLengthOneAssign(
   auto addr = lhs.getBuffer();
   auto toTy = fir::unwrapRefType(addr.getType());
   mlir::Value val = rhs.getBuffer();
-  if (fir::isa_ref_type(val.getType()))
-    val = builder.create<fir::LoadOp>(loc, val);
-  val = builder.createConvert(loc, toTy, val);
-  builder.create<fir::StoreOp>(loc, val, addr);
+  if (fir::isa_ref_type(val.getType())) {
+    auto fromCharLen1RefTy = builder.getRefType(getSingletonCharType(
+        builder.getContext(),
+        getCharacterKind(fir::unwrapRefType(val.getType()))));
+    val = builder.create<fir::LoadOp>(
+        loc, builder.createConvert(loc, fromCharLen1RefTy, val));
+  }
+  auto toCharLen1Ty =
+      getSingletonCharType(builder.getContext(), getCharacterKind(toTy));
+  val = builder.createConvert(loc, toCharLen1Ty, val);
+  builder.create<fir::StoreOp>(
+      loc, val,
+      builder.createConvert(loc, builder.getRefType(toCharLen1Ty), addr));
 }
 
 /// Returns the minimum of integer mlir::Value \p a and \b.
@@ -418,11 +429,29 @@ void fir::factory::CharacterExprHelper::createAssign(
     const fir::CharBoxValue &lhs, const fir::CharBoxValue &rhs) {
   auto rhsCstLen = getCompileTimeLength(rhs);
   auto lhsCstLen = getCompileTimeLength(lhs);
-  bool compileTimeSameLength =
-      (lhsCstLen && rhsCstLen && *lhsCstLen == *rhsCstLen) ||
-      (rhs.getLen() == lhs.getLen());
+  bool compileTimeSameLength = false;
+  bool isLengthOneAssign = false;
 
-  if (compileTimeSameLength && *lhsCstLen == 1) {
+  if (lhsCstLen && rhsCstLen && *lhsCstLen == *rhsCstLen) {
+    compileTimeSameLength = true;
+    if (*lhsCstLen == 1)
+      isLengthOneAssign = true;
+  } else if (rhs.getLen() == lhs.getLen()) {
+    compileTimeSameLength = true;
+
+    // If the length values are the same for LHS and RHS,
+    // then we can rely on the constant length deduced from
+    // any of the two types.
+    if (lhsCstLen && *lhsCstLen == 1)
+      isLengthOneAssign = true;
+    if (rhsCstLen && *rhsCstLen == 1)
+      isLengthOneAssign = true;
+
+    // We could have recognized constant operations here (e.g.
+    // two different arith.constant ops may produce the same value),
+    // but for now leave it to CSE to get rid of the duplicates.
+  }
+  if (isLengthOneAssign) {
     createLengthOneAssign(lhs, rhs);
     return;
   }
@@ -710,15 +739,17 @@ mlir::Value fir::factory::CharacterExprHelper::getLength(mlir::Value memref) {
 std::pair<mlir::Value, mlir::Value>
 fir::factory::extractCharacterProcedureTuple(fir::FirOpBuilder &builder,
                                              mlir::Location loc,
-                                             mlir::Value tuple) {
+                                             mlir::Value tuple,
+                                             bool openBoxProc) {
   mlir::TupleType tupleType = tuple.getType().cast<mlir::TupleType>();
   mlir::Value addr = builder.create<fir::ExtractValueOp>(
       loc, tupleType.getType(0), tuple,
       builder.getArrayAttr(
           {builder.getIntegerAttr(builder.getIndexType(), 0)}));
   mlir::Value proc = [&]() -> mlir::Value {
-    if (auto addrTy = addr.getType().dyn_cast<fir::BoxProcType>())
-      return builder.create<fir::BoxAddrOp>(loc, addrTy.getEleTy(), addr);
+    if (openBoxProc)
+      if (auto addrTy = addr.getType().dyn_cast<fir::BoxProcType>())
+        return builder.create<fir::BoxAddrOp>(loc, addrTy.getEleTy(), addr);
     return addr;
   }();
   mlir::Value len = builder.create<fir::ExtractValueOp>(
@@ -754,4 +785,69 @@ fir::factory::getCharacterProcedureTupleType(mlir::Type funcPointerType) {
   mlir::MLIRContext *context = funcPointerType.getContext();
   mlir::Type lenType = mlir::IntegerType::get(context, 64);
   return mlir::TupleType::get(context, {funcPointerType, lenType});
+}
+
+fir::CharBoxValue fir::factory::CharacterExprHelper::createCharExtremum(
+    bool predIsMin, llvm::ArrayRef<fir::CharBoxValue> opCBVs) {
+  // inputs: we are given a vector of all of the charboxes of the arguments
+  // passed to hlfir.char_extremum, as well as the predicate for whether we
+  // want llt or lgt
+  //
+  // note: we know that, regardless of whether we're looking at smallest or
+  // largest char, the size of the output buffer will be the same size as the
+  // largest character out of all of the operands. so, we find the biggest
+  // length first. It's okay if these char lengths are not known at compile
+  // time.
+
+  fir::CharBoxValue firstCBV = opCBVs[0];
+  mlir::Value firstBuf = getCharBoxBuffer(firstCBV);
+  auto firstLen = builder.createConvert(loc, builder.getCharacterLengthType(),
+                                        firstCBV.getLen());
+
+  mlir::Value resultBuf = firstBuf;
+  mlir::Value resultLen = firstLen;
+  mlir::Value biggestLen = firstLen;
+
+  // values for casting buf type and len type
+  auto typeLen = fir::CharacterType::unknownLen();
+  auto kind = recoverCharacterType(firstBuf.getType()).getFKind();
+  auto charTy = fir::CharacterType::get(builder.getContext(), kind, typeLen);
+  auto type = fir::ReferenceType::get(charTy);
+
+  size_t numOperands = opCBVs.size();
+  for (size_t cbv_idx = 1; cbv_idx < numOperands; ++cbv_idx) {
+    auto currChar = opCBVs[cbv_idx];
+    auto currBuf = getCharBoxBuffer(currChar);
+    auto currLen = builder.createConvert(loc, builder.getCharacterLengthType(),
+                                         currChar.getLen());
+    // biggest len result
+    mlir::Value lhsBigger = builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::uge, biggestLen, currLen);
+    biggestLen = builder.create<mlir::arith::SelectOp>(loc, lhsBigger,
+                                                       biggestLen, currLen);
+
+    auto cmp = predIsMin ? mlir::arith::CmpIPredicate::slt
+                         : mlir::arith::CmpIPredicate::sgt;
+
+    // lexical compare result
+    mlir::Value resultCmp = fir::runtime::genCharCompare(
+        builder, loc, cmp, currBuf, currLen, resultBuf, resultLen);
+
+    // it's casting (to unknown size) time!
+    resultBuf = builder.createConvert(loc, type, resultBuf);
+    currBuf = builder.createConvert(loc, type, currBuf);
+
+    resultBuf = builder.create<mlir::arith::SelectOp>(loc, resultCmp, currBuf,
+                                                      resultBuf);
+    resultLen = builder.create<mlir::arith::SelectOp>(loc, resultCmp, currLen,
+                                                      resultLen);
+  }
+
+  // now that we know the lexicographically biggest/smallest char and which char
+  // had the biggest len, we can populate a temp CBV and return it
+  fir::CharBoxValue temp = createCharacterTemp(resultBuf.getType(), biggestLen);
+  auto toBuf = temp;
+  fir::CharBoxValue fromBuf{resultBuf, resultLen};
+  createAssign(toBuf, fromBuf);
+  return temp;
 }

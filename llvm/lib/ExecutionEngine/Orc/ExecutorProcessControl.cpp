@@ -9,10 +9,12 @@
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/TargetExecutionUtils.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/Process.h"
+#include "llvm/TargetParser/Host.h"
 
 #define DEBUG_TYPE "orc"
 
@@ -27,7 +29,8 @@ SelfExecutorProcessControl::SelfExecutorProcessControl(
     std::shared_ptr<SymbolStringPool> SSP, std::unique_ptr<TaskDispatcher> D,
     Triple TargetTriple, unsigned PageSize,
     std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr)
-    : ExecutorProcessControl(std::move(SSP), std::move(D)) {
+    : ExecutorProcessControl(std::move(SSP), std::move(D)),
+      InProcessMemoryAccess(TargetTriple.isArch64Bit()) {
 
   OwnedMemMgr = std::move(MemMgr);
   if (!OwnedMemMgr)
@@ -42,6 +45,11 @@ SelfExecutorProcessControl::SelfExecutorProcessControl(
                ExecutorAddr::fromPtr(this)};
   if (this->TargetTriple.isOSBinFormatMachO())
     GlobalManglingPrefix = '_';
+
+  this->BootstrapSymbols[rt::RegisterEHFrameSectionWrapperName] =
+      ExecutorAddr::fromPtr(&llvm_orc_registerEHFrameSectionWrapper);
+  this->BootstrapSymbols[rt::DeregisterEHFrameSectionWrapperName] =
+      ExecutorAddr::fromPtr(&llvm_orc_deregisterEHFrameSectionWrapper);
 }
 
 Expected<std::unique_ptr<SelfExecutorProcessControl>>
@@ -139,38 +147,51 @@ Error SelfExecutorProcessControl::disconnect() {
   return Error::success();
 }
 
-void SelfExecutorProcessControl::writeUInt8sAsync(
-    ArrayRef<tpctypes::UInt8Write> Ws, WriteResultFn OnWriteComplete) {
+void InProcessMemoryAccess::writeUInt8sAsync(ArrayRef<tpctypes::UInt8Write> Ws,
+                                             WriteResultFn OnWriteComplete) {
   for (auto &W : Ws)
     *W.Addr.toPtr<uint8_t *>() = W.Value;
   OnWriteComplete(Error::success());
 }
 
-void SelfExecutorProcessControl::writeUInt16sAsync(
+void InProcessMemoryAccess::writeUInt16sAsync(
     ArrayRef<tpctypes::UInt16Write> Ws, WriteResultFn OnWriteComplete) {
   for (auto &W : Ws)
     *W.Addr.toPtr<uint16_t *>() = W.Value;
   OnWriteComplete(Error::success());
 }
 
-void SelfExecutorProcessControl::writeUInt32sAsync(
+void InProcessMemoryAccess::writeUInt32sAsync(
     ArrayRef<tpctypes::UInt32Write> Ws, WriteResultFn OnWriteComplete) {
   for (auto &W : Ws)
     *W.Addr.toPtr<uint32_t *>() = W.Value;
   OnWriteComplete(Error::success());
 }
 
-void SelfExecutorProcessControl::writeUInt64sAsync(
+void InProcessMemoryAccess::writeUInt64sAsync(
     ArrayRef<tpctypes::UInt64Write> Ws, WriteResultFn OnWriteComplete) {
   for (auto &W : Ws)
     *W.Addr.toPtr<uint64_t *>() = W.Value;
   OnWriteComplete(Error::success());
 }
 
-void SelfExecutorProcessControl::writeBuffersAsync(
+void InProcessMemoryAccess::writeBuffersAsync(
     ArrayRef<tpctypes::BufferWrite> Ws, WriteResultFn OnWriteComplete) {
   for (auto &W : Ws)
     memcpy(W.Addr.toPtr<char *>(), W.Buffer.data(), W.Buffer.size());
+  OnWriteComplete(Error::success());
+}
+
+void InProcessMemoryAccess::writePointersAsync(
+    ArrayRef<tpctypes::PointerWrite> Ws, WriteResultFn OnWriteComplete) {
+  if (IsArch64Bit) {
+    for (auto &W : Ws)
+      *W.Addr.toPtr<uint64_t *>() = W.Value.getValue();
+  } else {
+    for (auto &W : Ws)
+      *W.Addr.toPtr<uint32_t *>() = static_cast<uint32_t>(W.Value.getValue());
+  }
+
   OnWriteComplete(Error::success());
 }
 
@@ -192,7 +213,7 @@ SelfExecutorProcessControl::jitDispatchViaWrapperFunctionManager(
               shared::WrapperFunctionResult Result) mutable {
             ResultP.set_value(std::move(Result));
           },
-          pointerToJITTargetAddress(FnTag), {Data, Size});
+          ExecutorAddr::fromPtr(FnTag), {Data, Size});
 
   return ResultF.get().release();
 }

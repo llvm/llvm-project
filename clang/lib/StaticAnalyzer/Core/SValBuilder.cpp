@@ -275,7 +275,7 @@ DefinedSVal SValBuilder::getMemberPointer(const NamedDecl *ND) {
     // We don't need to play a similar trick for static member fields
     // because these are represented as plain VarDecls and not FieldDecls
     // in the AST.
-    if (MD->isStatic())
+    if (!MD->isImplicitObjectMemberFunction())
       return getFunctionPointer(MD);
   }
 
@@ -395,7 +395,6 @@ std::optional<SVal> SValBuilder::getConstantVal(const Expr *E) {
       return evalCast(*Val, CE->getType(), SE->getType());
     }
     }
-    // FALLTHROUGH
     [[fallthrough]];
   }
 
@@ -599,11 +598,9 @@ SVal SValBuilder::evalIntegralCast(ProgramStateRef state, SVal val,
   APSIntType ToType(getContext().getTypeSize(castTy),
                     castTy->isUnsignedIntegerType());
   llvm::APSInt ToTypeMax = ToType.getMaxValue();
-  NonLoc ToTypeMaxVal =
-      makeIntVal(ToTypeMax.isUnsigned() ? ToTypeMax.getZExtValue()
-                                        : ToTypeMax.getSExtValue(),
-                 castTy)
-          .castAs<NonLoc>();
+
+  NonLoc ToTypeMaxVal = makeIntVal(ToTypeMax);
+
   // Check the range of the symbol being casted against the maximum value of the
   // target type.
   NonLoc FromVal = val.castAs<NonLoc>();

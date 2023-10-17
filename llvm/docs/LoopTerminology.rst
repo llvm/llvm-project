@@ -43,7 +43,7 @@ The definition of a loop comes with some additional terminology:
 
 * An **entering block** (or **loop predecessor**) is a non-loop node
   that has an edge into the loop (necessarily the header). If there is
-  only one entering block entering block, and its only edge is to the
+  only one entering block, and its only edge is to the
   header, it is also called the loop's **preheader**. The preheader
   dominates the loop without itself being part of the loop.
 
@@ -373,7 +373,7 @@ PHI nodes in the exit blocks (the alternative would be to
 scan the def-use chain [#def-use-chain]_ of all instructions in the loop).
 
 Then, consider for example
-:ref:`-loop-unswitch <passes-loop-unswitch>` ing the loop above.
+:ref:`simple-loop-unswitch <passes-simple-loop-unswitch>` ing the loop above.
 Because it is in LCSSA form, we know that any value defined inside of
 the loop will be used either only inside the loop or in a loop closing
 PHI node. In this case, the only loop closing PHI node is X4.

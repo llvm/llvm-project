@@ -22,6 +22,7 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include <optional>
@@ -270,7 +271,8 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
       OutputName = Names[i]->getName();
 
     TargetInfo::ConstraintInfo Info(Literal->getString(), OutputName);
-    if (!Context.getTargetInfo().validateOutputConstraint(Info)) {
+    if (!Context.getTargetInfo().validateOutputConstraint(Info) &&
+        !(LangOpts.HIPStdPar && LangOpts.CUDAIsDevice)) {
       targetDiag(Literal->getBeginLoc(),
                  diag::err_asm_invalid_output_constraint)
           << Info.getConstraintStr();

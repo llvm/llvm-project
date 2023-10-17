@@ -52,8 +52,8 @@ define <8 x float> @load_v8f32(ptr %a) #0 {
 define <16 x float> @load_v16f32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: load_v16f32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x9, #8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    mov x9, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x9, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x8, x9, lsl #2]
@@ -87,24 +87,24 @@ define <16 x float> @load_v16f32(ptr %a) #0 {
 define <32 x float> @load_v32f32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: load_v32f32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x9, #16
-; VBITS_GE_256-NEXT:    mov x10, #24
-; VBITS_GE_256-NEXT:    mov x11, #8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    mov x9, #24 // =0x18
+; VBITS_GE_256-NEXT:    mov x10, #16 // =0x10
+; VBITS_GE_256-NEXT:    mov x11, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x9, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0, x10, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z2.s }, p0/z, [x0, x11, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z3.s }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x8, x10, lsl #2]
 ; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x8, x9, lsl #2]
+; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x8, x10, lsl #2]
 ; VBITS_GE_256-NEXT:    st1w { z2.s }, p0, [x8, x11, lsl #2]
 ; VBITS_GE_256-NEXT:    st1w { z3.s }, p0, [x8]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: load_v32f32:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    mov x9, #16
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
+; VBITS_GE_512-NEXT:    mov x9, #16 // =0x10
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x0, x9, lsl #2]
 ; VBITS_GE_512-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x8, x9, lsl #2]
@@ -131,52 +131,52 @@ define <32 x float> @load_v32f32(ptr %a) #0 {
 define <64 x float> @load_v64f32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: load_v64f32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x9, #8
-; VBITS_GE_256-NEXT:    mov x10, #48
-; VBITS_GE_256-NEXT:    mov x11, #56
-; VBITS_GE_256-NEXT:    mov x12, #32
-; VBITS_GE_256-NEXT:    mov x13, #40
-; VBITS_GE_256-NEXT:    mov x14, #16
-; VBITS_GE_256-NEXT:    mov x15, #24
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
-; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x10, lsl #2]
-; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0, x11, lsl #2]
-; VBITS_GE_256-NEXT:    ld1w { z2.s }, p0/z, [x0, x12, lsl #2]
-; VBITS_GE_256-NEXT:    ld1w { z3.s }, p0/z, [x0, x13, lsl #2]
-; VBITS_GE_256-NEXT:    ld1w { z4.s }, p0/z, [x0, x14, lsl #2]
+; VBITS_GE_256-NEXT:    mov x9, #8 // =0x8
+; VBITS_GE_256-NEXT:    mov x10, #16 // =0x10
+; VBITS_GE_256-NEXT:    mov x11, #24 // =0x18
+; VBITS_GE_256-NEXT:    mov x12, #56 // =0x38
+; VBITS_GE_256-NEXT:    mov x13, #32 // =0x20
+; VBITS_GE_256-NEXT:    mov x14, #48 // =0x30
+; VBITS_GE_256-NEXT:    mov x15, #40 // =0x28
+; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x12, lsl #2]
+; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0, x9, lsl #2]
+; VBITS_GE_256-NEXT:    ld1w { z2.s }, p0/z, [x0, x14, lsl #2]
+; VBITS_GE_256-NEXT:    ld1w { z3.s }, p0/z, [x0, x10, lsl #2]
+; VBITS_GE_256-NEXT:    ld1w { z4.s }, p0/z, [x0, x11, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z5.s }, p0/z, [x0, x15, lsl #2]
-; VBITS_GE_256-NEXT:    ld1w { z6.s }, p0/z, [x0, x9, lsl #2]
+; VBITS_GE_256-NEXT:    ld1w { z6.s }, p0/z, [x0, x13, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z7.s }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x8, x11, lsl #2]
-; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x8, x10, lsl #2]
-; VBITS_GE_256-NEXT:    st1w { z3.s }, p0, [x8, x13, lsl #2]
-; VBITS_GE_256-NEXT:    st1w { z2.s }, p0, [x8, x12, lsl #2]
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x8, x12, lsl #2]
+; VBITS_GE_256-NEXT:    st1w { z2.s }, p0, [x8, x14, lsl #2]
 ; VBITS_GE_256-NEXT:    st1w { z5.s }, p0, [x8, x15, lsl #2]
-; VBITS_GE_256-NEXT:    st1w { z4.s }, p0, [x8, x14, lsl #2]
-; VBITS_GE_256-NEXT:    st1w { z6.s }, p0, [x8, x9, lsl #2]
+; VBITS_GE_256-NEXT:    st1w { z6.s }, p0, [x8, x13, lsl #2]
+; VBITS_GE_256-NEXT:    st1w { z4.s }, p0, [x8, x11, lsl #2]
+; VBITS_GE_256-NEXT:    st1w { z3.s }, p0, [x8, x10, lsl #2]
+; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x8, x9, lsl #2]
 ; VBITS_GE_256-NEXT:    st1w { z7.s }, p0, [x8]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: load_v64f32:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    mov x9, #32
-; VBITS_GE_512-NEXT:    mov x10, #48
-; VBITS_GE_512-NEXT:    mov x11, #16
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
+; VBITS_GE_512-NEXT:    mov x9, #48 // =0x30
+; VBITS_GE_512-NEXT:    mov x10, #32 // =0x20
+; VBITS_GE_512-NEXT:    mov x11, #16 // =0x10
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x0, x9, lsl #2]
 ; VBITS_GE_512-NEXT:    ld1w { z1.s }, p0/z, [x0, x10, lsl #2]
 ; VBITS_GE_512-NEXT:    ld1w { z2.s }, p0/z, [x0, x11, lsl #2]
 ; VBITS_GE_512-NEXT:    ld1w { z3.s }, p0/z, [x0]
-; VBITS_GE_512-NEXT:    st1w { z1.s }, p0, [x8, x10, lsl #2]
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x8, x9, lsl #2]
+; VBITS_GE_512-NEXT:    st1w { z1.s }, p0, [x8, x10, lsl #2]
 ; VBITS_GE_512-NEXT:    st1w { z2.s }, p0, [x8, x11, lsl #2]
 ; VBITS_GE_512-NEXT:    st1w { z3.s }, p0, [x8]
 ; VBITS_GE_512-NEXT:    ret
 ;
 ; VBITS_GE_1024-LABEL: load_v64f32:
 ; VBITS_GE_1024:       // %bb.0:
-; VBITS_GE_1024-NEXT:    mov x9, #32
 ; VBITS_GE_1024-NEXT:    ptrue p0.s, vl32
+; VBITS_GE_1024-NEXT:    mov x9, #32 // =0x20
 ; VBITS_GE_1024-NEXT:    ld1w { z0.s }, p0/z, [x0, x9, lsl #2]
 ; VBITS_GE_1024-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_GE_1024-NEXT:    st1w { z0.s }, p0, [x8, x9, lsl #2]

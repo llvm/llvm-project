@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "lldb/Host/File.h"
+#include "lldb/Utility/AddressableBits.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/GDBRemote.h"
 #include "lldb/Utility/ProcessInfo.h"
@@ -194,13 +195,9 @@ public:
 
   Status GetMemoryRegionInfo(lldb::addr_t addr, MemoryRegionInfo &range_info);
 
-  Status GetWatchpointSupportInfo(uint32_t &num);
+  std::optional<uint32_t> GetWatchpointSlotCount();
 
-  Status GetWatchpointSupportInfo(uint32_t &num, bool &after,
-                                  const ArchSpec &arch);
-
-  Status GetWatchpointsTriggerAfterInstruction(bool &after,
-                                               const ArchSpec &arch);
+  std::optional<bool> GetWatchpointReportedAfter();
 
   const ArchSpec &GetHostArchitecture();
 
@@ -241,7 +238,7 @@ public:
 
   ArchSpec GetSystemArchitecture();
 
-  uint32_t GetAddressingBits();
+  lldb_private::AddressableBits GetAddressableBits();
 
   bool GetHostname(std::string &s);
 
@@ -496,7 +493,7 @@ public:
   ///
   /// \see \b Process::ConfigureStructuredData(...) for details.
   Status
-  ConfigureRemoteStructuredData(ConstString type_name,
+  ConfigureRemoteStructuredData(llvm::StringRef type_name,
                                 const StructuredData::ObjectSP &config_sp);
 
   llvm::Expected<TraceSupportedResponse>
@@ -584,9 +581,11 @@ protected:
   lldb::tid_t m_curr_tid_run = LLDB_INVALID_THREAD_ID;
 
   uint32_t m_num_supported_hardware_watchpoints = 0;
-  uint32_t m_addressing_bits = 0;
+  uint32_t m_low_mem_addressing_bits = 0;
+  uint32_t m_high_mem_addressing_bits = 0;
 
   ArchSpec m_host_arch;
+  std::string m_host_distribution_id;
   ArchSpec m_process_arch;
   UUID m_process_standalone_uuid;
   lldb::addr_t m_process_standalone_value = LLDB_INVALID_ADDRESS;

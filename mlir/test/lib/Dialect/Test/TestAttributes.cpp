@@ -22,6 +22,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
 using namespace test;
@@ -75,7 +76,7 @@ Attribute TestI64ElementsAttr::parse(AsmParser &parser, Type type) {
   if (parser.parseRSquare() || parser.parseGreater())
     return Attribute();
   return parser.getChecked<TestI64ElementsAttr>(
-      parser.getContext(), type.cast<ShapedType>(), elements);
+      parser.getContext(), llvm::cast<ShapedType>(type), elements);
 }
 
 void TestI64ElementsAttr::print(AsmPrinter &printer) const {
@@ -98,11 +99,10 @@ TestI64ElementsAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   return success();
 }
 
-LogicalResult
-TestAttrWithFormatAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                               int64_t one, std::string two, IntegerAttr three,
-                               ArrayRef<int> four, uint64_t five,
-                               ArrayRef<AttrWithTypeBuilderAttr> arrayOfAttrs) {
+LogicalResult TestAttrWithFormatAttr::verify(
+    function_ref<InFlightDiagnostic()> emitError, int64_t one, std::string two,
+    IntegerAttr three, ArrayRef<int> four, uint64_t five, ArrayRef<int> six,
+    ArrayRef<AttrWithTypeBuilderAttr> arrayOfAttrs) {
   if (four.size() != static_cast<unsigned>(one))
     return emitError() << "expected 'one' to equal 'four.size()'";
   return success();
@@ -176,6 +176,45 @@ static void printTrueFalse(AsmPrinter &p, std::optional<int> result) {
   p << (*result ? "true" : "false");
 }
 
+//===----------------------------------------------------------------------===//
+// CopyCountAttr Implementation
+//===----------------------------------------------------------------------===//
+
+CopyCount::CopyCount(const CopyCount &rhs) : value(rhs.value) {
+  CopyCount::counter++;
+}
+
+CopyCount &CopyCount::operator=(const CopyCount &rhs) {
+  CopyCount::counter++;
+  value = rhs.value;
+  return *this;
+}
+
+int CopyCount::counter;
+
+static bool operator==(const test::CopyCount &lhs, const test::CopyCount &rhs) {
+  return lhs.value == rhs.value;
+}
+
+llvm::raw_ostream &test::operator<<(llvm::raw_ostream &os,
+                                    const test::CopyCount &value) {
+  return os << value.value;
+}
+
+template <>
+struct mlir::FieldParser<test::CopyCount> {
+  static FailureOr<test::CopyCount> parse(AsmParser &parser) {
+    std::string value;
+    if (parser.parseKeyword(value))
+      return failure();
+    return test::CopyCount(value);
+  }
+};
+namespace test {
+llvm::hash_code hash_value(const test::CopyCount &copyCount) {
+  return llvm::hash_value(copyCount.value);
+}
+} // namespace test
 //===----------------------------------------------------------------------===//
 // Tablegen Generated Definitions
 //===----------------------------------------------------------------------===//

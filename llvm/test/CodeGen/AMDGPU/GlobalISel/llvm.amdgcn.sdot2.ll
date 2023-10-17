@@ -14,13 +14,13 @@ define i32 @v_sdot2(<2 x i16> %a, <2 x i16> %b, i32 %c) {
 ; GFX908-LABEL: v_sdot2:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX908-NEXT:    v_dot2_i32_i16 v0, v0, v1, v2
+; GFX908-NEXT:    v_dot2c_i32_i16_e32 v2, v0, v1
+; GFX908-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_sdot2:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_dot2_i32_i16 v0, v0, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %r = call i32 @llvm.amdgcn.sdot2(<2 x i16> %a, <2 x i16> %b, i32 %c, i1 false)
@@ -43,7 +43,6 @@ define i32 @v_sdot2_clamp(<2 x i16> %a, <2 x i16> %b, i32 %c) {
 ; GFX10-LABEL: v_sdot2_clamp:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_dot2_i32_i16 v0, v0, v1, v2 clamp
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %r = call i32 @llvm.amdgcn.sdot2(<2 x i16> %a, <2 x i16> %b, i32 %c, i1 true)
@@ -60,9 +59,9 @@ define amdgpu_ps float @v_sdot2_sgpr_sgpr_sgpr(<2 x i16> inreg %a, <2 x i16> inr
 ;
 ; GFX908-LABEL: v_sdot2_sgpr_sgpr_sgpr:
 ; GFX908:       ; %bb.0:
-; GFX908-NEXT:    v_mov_b32_e32 v0, s1
-; GFX908-NEXT:    v_mov_b32_e32 v1, s2
-; GFX908-NEXT:    v_dot2_i32_i16 v0, s0, v0, v1
+; GFX908-NEXT:    v_mov_b32_e32 v1, s1
+; GFX908-NEXT:    v_mov_b32_e32 v0, s2
+; GFX908-NEXT:    v_dot2c_i32_i16_e32 v0, s0, v1
 ; GFX908-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: v_sdot2_sgpr_sgpr_sgpr:
@@ -85,13 +84,13 @@ define i32 @v_sdot2_inline_literal_a(<2 x i16> %b, i32 %c) {
 ; GFX908-LABEL: v_sdot2_inline_literal_a:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX908-NEXT:    v_dot2_i32_i16 v0, 4, v0, v1 op_sel_hi:[0,1,1]
+; GFX908-NEXT:    v_dot2c_i32_i16_e32 v1, 0x40004, v0
+; GFX908-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_sdot2_inline_literal_a:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_dot2_i32_i16 v0, 4, v0, v1 op_sel_hi:[0,1,1]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %r = call i32 @llvm.amdgcn.sdot2(<2 x i16> <i16 4, i16 4>, <2 x i16> %b, i32 %c, i1 false)
@@ -108,13 +107,13 @@ define i32 @v_sdot2_inline_literal_b(<2 x i16> %a, i32 %c) {
 ; GFX908-LABEL: v_sdot2_inline_literal_b:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX908-NEXT:    v_dot2_i32_i16 v0, v0, 4, v1 op_sel_hi:[1,0,1]
+; GFX908-NEXT:    v_dot2c_i32_i16_e32 v1, 0x40004, v0
+; GFX908-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_sdot2_inline_literal_b:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_dot2_i32_i16 v0, v0, 4, v1 op_sel_hi:[1,0,1]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %r = call i32 @llvm.amdgcn.sdot2(<2 x i16> %a, <2 x i16> <i16 4, i16 4>, i32 %c, i1 false)
@@ -131,13 +130,14 @@ define i32 @v_sdot2_inline_literal_a_b(<2 x i16> %a, i32 %c) {
 ; GFX908-LABEL: v_sdot2_inline_literal_a_b:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX908-NEXT:    v_dot2_i32_i16 v0, 8, 4, v1 op_sel_hi:[0,0,1]
+; GFX908-NEXT:    v_mov_b32_e32 v0, v1
+; GFX908-NEXT:    v_mov_b32_e32 v1, 0x40004
+; GFX908-NEXT:    v_dot2c_i32_i16_e32 v0, 0x80008, v1
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_sdot2_inline_literal_a_b:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_dot2_i32_i16 v0, 8, 4, v1 op_sel_hi:[0,0,1]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %r = call i32 @llvm.amdgcn.sdot2(<2 x i16> <i16 8, i16 8>, <2 x i16> <i16 4, i16 4>, i32 %c, i1 false)
@@ -154,13 +154,14 @@ define i32 @v_sdot2_inline_literal_a_b_c() {
 ; GFX908-LABEL: v_sdot2_inline_literal_a_b_c:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX908-NEXT:    v_dot2_i32_i16 v0, 8, 4, 8 op_sel_hi:[0,0,1]
+; GFX908-NEXT:    v_mov_b32_e32 v1, 0x40004
+; GFX908-NEXT:    v_mov_b32_e32 v0, 8
+; GFX908-NEXT:    v_dot2c_i32_i16_e32 v0, 0x80008, v1
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_sdot2_inline_literal_a_b_c:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_dot2_i32_i16 v0, 8, 4, 8 op_sel_hi:[0,0,1]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %r = call i32 @llvm.amdgcn.sdot2(<2 x i16> <i16 8, i16 8>, <2 x i16> <i16 4, i16 4>, i32 8, i1 false)
@@ -177,13 +178,14 @@ define i32 @v_sdot2_inline_literal_c(<2 x i16> %a, <2 x i16> %b) {
 ; GFX908-LABEL: v_sdot2_inline_literal_c:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX908-NEXT:    v_dot2_i32_i16 v0, v0, v1, 7
+; GFX908-NEXT:    v_mov_b32_e32 v2, 7
+; GFX908-NEXT:    v_dot2c_i32_i16_e32 v2, v0, v1
+; GFX908-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_sdot2_inline_literal_c:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_dot2_i32_i16 v0, v0, v1, 7
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %r = call i32 @llvm.amdgcn.sdot2(<2 x i16> %a, <2 x i16> %b, i32 7, i1 false)
@@ -200,13 +202,14 @@ define i32 @v_sdot2_fneg_a(<2 x half> %a, <2 x i16> %b, i32 %c) {
 ; GFX908-LABEL: v_sdot2_fneg_a:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX908-NEXT:    v_dot2_i32_i16 v0, v0, v1, v2 neg_lo:[1,0,0] neg_hi:[1,0,0]
+; GFX908-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
+; GFX908-NEXT:    v_dot2c_i32_i16_e32 v2, v0, v1
+; GFX908-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_sdot2_fneg_a:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_dot2_i32_i16 v0, v0, v1, v2 neg_lo:[1,0,0] neg_hi:[1,0,0]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %neg.a = fneg <2 x half> %a
@@ -225,13 +228,14 @@ define i32 @v_sdot2_fneg_b(<2 x i16> %a, <2 x half> %b, i32 %c) {
 ; GFX908-LABEL: v_sdot2_fneg_b:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX908-NEXT:    v_dot2_i32_i16 v0, v0, v1, v2 neg_lo:[0,1,0] neg_hi:[0,1,0]
+; GFX908-NEXT:    v_xor_b32_e32 v1, 0x80008000, v1
+; GFX908-NEXT:    v_dot2c_i32_i16_e32 v2, v0, v1
+; GFX908-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_sdot2_fneg_b:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_dot2_i32_i16 v0, v0, v1, v2 neg_lo:[0,1,0] neg_hi:[0,1,0]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %neg.b = fneg <2 x half> %b
@@ -252,13 +256,13 @@ define i32 @v_sdot2_fnegf32_c(<2 x i16> %a, <2 x i16> %b, float %c) {
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
-; GFX908-NEXT:    v_dot2_i32_i16 v0, v0, v1, v2
+; GFX908-NEXT:    v_dot2c_i32_i16_e32 v2, v0, v1
+; GFX908-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_sdot2_fnegf32_c:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
 ; GFX10-NEXT:    v_dot2_i32_i16 v0, v0, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -280,13 +284,13 @@ define i32 @v_sdot2_fnegv2f16_c(<2 x i16> %a, <2 x i16> %b, <2 x half> %c) {
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    v_xor_b32_e32 v2, 0x80008000, v2
-; GFX908-NEXT:    v_dot2_i32_i16 v0, v0, v1, v2
+; GFX908-NEXT:    v_dot2c_i32_i16_e32 v2, v0, v1
+; GFX908-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_sdot2_fnegv2f16_c:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_xor_b32_e32 v2, 0x80008000, v2
 ; GFX10-NEXT:    v_dot2_i32_i16 v0, v0, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -308,13 +312,13 @@ define i32 @v_sdot2_shuffle10_a(<2 x i16> %a, <2 x i16> %b, i32 %c) {
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    v_alignbit_b32 v0, v0, v0, 16
-; GFX908-NEXT:    v_dot2_i32_i16 v0, v0, v1, v2
+; GFX908-NEXT:    v_dot2c_i32_i16_e32 v2, v0, v1
+; GFX908-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_sdot2_shuffle10_a:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_alignbit_b32 v0, v0, v0, 16
 ; GFX10-NEXT:    v_dot2_i32_i16 v0, v0, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -335,13 +339,13 @@ define i32 @v_sdot2_shuffle10_b(<2 x i16> %a, <2 x i16> %b, i32 %c) {
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    v_alignbit_b32 v1, v1, v1, 16
-; GFX908-NEXT:    v_dot2_i32_i16 v0, v0, v1, v2
+; GFX908-NEXT:    v_dot2c_i32_i16_e32 v2, v0, v1
+; GFX908-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_sdot2_shuffle10_b:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_alignbit_b32 v1, v1, v1, 16
 ; GFX10-NEXT:    v_dot2_i32_i16 v0, v0, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]

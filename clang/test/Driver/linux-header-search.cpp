@@ -13,8 +13,8 @@
 // RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBCXX-SYSROOT %s
 // CHECK-BASIC-LIBCXX-SYSROOT: "-cc1"
 // CHECK-BASIC-LIBCXX-SYSROOT: "-isysroot" "[[SYSROOT:[^"]+]]"
-// CHECK-BASIC-LIBCXX-SYSROOT: "-internal-isystem" "[[SYSROOT]]/usr/include/x86_64-unknown-linux-gnu/c++/v1"
-// CHECK-BASIC-LIBCXX-SYSROOT: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
+// CHECK-BASIC-LIBCXX-SYSROOT: "-internal-isystem" "[[SYSROOT]][[SEP:/|\\\\]]usr[[SEP]]include[[SEP]]x86_64-unknown-linux-gnu[[SEP]]c++[[SEP]]v1"
+// CHECK-BASIC-LIBCXX-SYSROOT: "-internal-isystem" "[[SYSROOT]][[SEP]]usr[[SEP]]include[[SEP]]c++[[SEP]]v1"
 // CHECK-BASIC-LIBCXX-SYSROOT: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 
 // Test include paths when the sysroot path ends with `/`.
@@ -28,8 +28,8 @@
 // RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBCXX-SYSROOT-SLASH %s
 // CHECK-BASIC-LIBCXX-SYSROOT-SLASH: "-cc1"
 // CHECK-BASIC-LIBCXX-SYSROOT-SLASH-SAME: "-isysroot" "[[SYSROOT:[^"]+/]]"
-// CHECK-BASIC-LIBCXX-SYSROOT-SLASH-SAME: "-internal-isystem" "[[SYSROOT]]usr/include/x86_64-unknown-linux-gnu/c++/v1"
-// CHECK-BASIC-LIBCXX-SYSROOT-SLASH-SAME: "-internal-isystem" "[[SYSROOT]]usr/include/c++/v1"
+// CHECK-BASIC-LIBCXX-SYSROOT-SLASH-SAME: "-internal-isystem" "[[SYSROOT]]usr[[SEP:/|\\\\]]include[[SEP]]x86_64-unknown-linux-gnu[[SEP]]c++[[SEP]]v1"
+// CHECK-BASIC-LIBCXX-SYSROOT-SLASH-SAME: "-internal-isystem" "[[SYSROOT]]usr[[SEP]]include[[SEP]]c++[[SEP]]v1"
 // CHECK-BASIC-LIBCXX-SYSROOT-SLASH-SAME: "-internal-isystem" "[[SYSROOT]]usr/local/include"
 
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
@@ -42,8 +42,8 @@
 // RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBCXX-INSTALL %s
 // CHECK-BASIC-LIBCXX-INSTALL: "-cc1"
 // CHECK-BASIC-LIBCXX-INSTALL: "-isysroot" "[[SYSROOT:[^"]+]]"
-// CHECK-BASIC-LIBCXX-INSTALL: "-internal-isystem" "[[SYSROOT]]/usr/bin/../include/x86_64-unknown-linux-gnu/c++/v1"
-// CHECK-BASIC-LIBCXX-INSTALL: "-internal-isystem" "[[SYSROOT]]/usr/bin/../include/c++/v1"
+// CHECK-BASIC-LIBCXX-INSTALL: "-internal-isystem" "[[SYSROOT]]/usr/bin[[SEP:/|\\\\]]..[[SEP]]include[[SEP]]x86_64-unknown-linux-gnu[[SEP]]c++[[SEP]]v1"
+// CHECK-BASIC-LIBCXX-INSTALL: "-internal-isystem" "[[SYSROOT]]/usr/bin[[SEP]]..[[SEP]]include[[SEP]]c++[[SEP]]v1"
 // CHECK-BASIC-LIBCXX-INSTALL: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 //
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
@@ -56,8 +56,8 @@
 // RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBCXXV2-SYSROOT %s
 // CHECK-BASIC-LIBCXXV2-SYSROOT: "-cc1"
 // CHECK-BASIC-LIBCXXV2-SYSROOT: "-isysroot" "[[SYSROOT:[^"]+]]"
-// CHECK-BASIC-LIBCXXV2-SYSROOT: "-internal-isystem" "[[SYSROOT]]/usr/include/x86_64-unknown-linux-gnu/c++/v2"
-// CHECK-BASIC-LIBCXXV2-SYSROOT: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v2"
+// CHECK-BASIC-LIBCXXV2-SYSROOT: "-internal-isystem" "[[SYSROOT]][[SEP:/|\\\\]]usr[[SEP]]include[[SEP]]x86_64-unknown-linux-gnu[[SEP]]c++[[SEP]]v2"
+// CHECK-BASIC-LIBCXXV2-SYSROOT: "-internal-isystem" "[[SYSROOT]][[SEP]]usr[[SEP]]include[[SEP]]c++[[SEP]]v2"
 // CHECK-BASIC-LIBCXXV2-SYSROOT: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnu \
@@ -69,8 +69,8 @@
 // RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBCXXV2-INSTALL %s
 // CHECK-BASIC-LIBCXXV2-INSTALL: "-cc1"
 // CHECK-BASIC-LIBCXXV2-INSTALL: "-isysroot" "[[SYSROOT:[^"]+]]"
-// CHECK-BASIC-LIBCXXV2-INSTALL: "-internal-isystem" "[[SYSROOT]]/usr/bin/../include/x86_64-unknown-linux-gnu/c++/v2"
-// CHECK-BASIC-LIBCXXV2-INSTALL: "-internal-isystem" "[[SYSROOT]]/usr/bin/../include/c++/v2"
+// CHECK-BASIC-LIBCXXV2-INSTALL: "-internal-isystem" "[[SYSROOT]]/usr/bin[[SEP:/|\\\\]]..[[SEP]]include[[SEP]]x86_64-unknown-linux-gnu[[SEP]]c++[[SEP]]v2"
+// CHECK-BASIC-LIBCXXV2-INSTALL: "-internal-isystem" "[[SYSROOT]]/usr/bin[[SEP]]..[[SEP]]include[[SEP]]c++[[SEP]]v2"
 // CHECK-BASIC-LIBCXXV2-INSTALL: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 
 // Test Linux with libstdc++ when the sysroot path ends with `/`.
@@ -97,8 +97,8 @@
 // RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBSTDCXX-LIBCXXV2-SYSROOT %s
 // CHECK-BASIC-LIBSTDCXX-LIBCXXV2-SYSROOT: "-cc1"
 // CHECK-BASIC-LIBSTDCXX-LIBCXXV2-SYSROOT: "-isysroot" "[[SYSROOT:[^"]+]]"
-// CHECK-BASIC-LIBSTDCXX-LIBCXXV2-SYSROOT: "-internal-isystem" "[[SYSROOT]]/usr/include/x86_64-unknown-linux-gnu/c++/v2"
-// CHECK-BASIC-LIBSTDCXX-LIBCXXV2-SYSROOT: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v2"
+// CHECK-BASIC-LIBSTDCXX-LIBCXXV2-SYSROOT: "-internal-isystem" "[[SYSROOT]][[SEP:/|\\\\]]usr[[SEP]]include[[SEP]]x86_64-unknown-linux-gnu[[SEP]]c++[[SEP]]v2"
+// CHECK-BASIC-LIBSTDCXX-LIBCXXV2-SYSROOT: "-internal-isystem" "[[SYSROOT]][[SEP]]usr[[SEP]]include[[SEP]]c++[[SEP]]v2"
 // CHECK-BASIC-LIBSTDCXX-LIBCXXV2-SYSROOT: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 
 // Test Gentoo's weirdness both before and after they changed it in their GCC
@@ -243,6 +243,32 @@
 // CHECK-GENTOO-4-9-X-32: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // CHECK-GENTOO-4-9-X-32: "-internal-externc-isystem" "[[SYSROOT]]/include"
 // CHECK-GENTOO-4-9-X-32: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
+//
+// Check header search on Debian loong64
+// RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     --target=loongarch64-unknown-linux-gnu -stdlib=libstdc++ \
+// RUN:     --sysroot=%S/Inputs/debian_loong64_tree \
+// RUN:     --gcc-toolchain="" \
+// RUN:   | FileCheck --check-prefix=CHECK-LOONG64-GNU %s
+//
+// Check that "-gnuf64" is seen as "-gnu" for loong64.
+// RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     --target=loongarch64-unknown-linux-gnuf64 -stdlib=libstdc++ \
+// RUN:     --sysroot=%S/Inputs/debian_loong64_tree \
+// RUN:     --gcc-toolchain="" \
+// RUN:   | FileCheck --check-prefix=CHECK-LOONG64-GNU %s
+// CHECK-LOONG64-GNU: "-cc1"
+// CHECK-LOONG64-GNU: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-LOONG64-GNU: "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-LOONG64-GNU: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/loongarch64-linux-gnu/13/../../../../include/c++/13"
+// CHECK-LOONG64-GNU: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/loongarch64-linux-gnu/13/../../../../include/c++/13/loongarch64-linux-gnu"
+// CHECK-LOONG64-GNU: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/loongarch64-linux-gnu/13/../../../../include/c++/13/backward"
+// CHECK-LOONG64-GNU: "-internal-isystem" "[[RESOURCE_DIR]]{{/|\\\\}}include"
+// CHECK-LOONG64-GNU: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
+// CHECK-LOONG64-GNU: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/loongarch64-linux-gnu/13/../../../../loongarch64-linux-gnu/include"
+// CHECK-LOONG64-GNU: "-internal-externc-isystem" "[[SYSROOT]]/usr/include/loongarch64-linux-gnu"
+// CHECK-LOONG64-GNU: "-internal-externc-isystem" "[[SYSROOT]]/include"
+// CHECK-LOONG64-GNU: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
 //
 // Check header search on Debian 6 / MIPS64
 // RUN: %clang -### %s -fsyntax-only 2>&1 \

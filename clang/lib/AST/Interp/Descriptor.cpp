@@ -8,6 +8,9 @@
 
 #include "Descriptor.h"
 #include "Boolean.h"
+#include "Floating.h"
+#include "FunctionPointer.h"
+#include "IntegralAP.h"
 #include "Pointer.h"
 #include "PrimType.h"
 #include "Record.h"
@@ -16,30 +19,34 @@ using namespace clang;
 using namespace clang::interp;
 
 template <typename T>
-static void ctorTy(Block *, char *Ptr, bool, bool, bool, Descriptor *) {
+static void ctorTy(Block *, std::byte *Ptr, bool, bool, bool,
+                   const Descriptor *) {
   new (Ptr) T();
 }
 
-template <typename T> static void dtorTy(Block *, char *Ptr, Descriptor *) {
+template <typename T>
+static void dtorTy(Block *, std::byte *Ptr, const Descriptor *) {
   reinterpret_cast<T *>(Ptr)->~T();
 }
 
 template <typename T>
-static void moveTy(Block *, char *Src, char *Dst, Descriptor *) {
-  auto *SrcPtr = reinterpret_cast<T *>(Src);
+static void moveTy(Block *, const std::byte *Src, std::byte *Dst,
+                   const Descriptor *) {
+  const auto *SrcPtr = reinterpret_cast<const T *>(Src);
   auto *DstPtr = reinterpret_cast<T *>(Dst);
   new (DstPtr) T(std::move(*SrcPtr));
 }
 
 template <typename T>
-static void ctorArrayTy(Block *, char *Ptr, bool, bool, bool, Descriptor *D) {
+static void ctorArrayTy(Block *, std::byte *Ptr, bool, bool, bool,
+                        const Descriptor *D) {
   for (unsigned I = 0, NE = D->getNumElems(); I < NE; ++I) {
     new (&reinterpret_cast<T *>(Ptr)[I]) T();
   }
 }
 
 template <typename T>
-static void dtorArrayTy(Block *, char *Ptr, Descriptor *D) {
+static void dtorArrayTy(Block *, std::byte *Ptr, const Descriptor *D) {
   InitMap *IM = *reinterpret_cast<InitMap **>(Ptr);
   if (IM != (InitMap *)-1)
     free(IM);
@@ -51,16 +58,17 @@ static void dtorArrayTy(Block *, char *Ptr, Descriptor *D) {
 }
 
 template <typename T>
-static void moveArrayTy(Block *, char *Src, char *Dst, Descriptor *D) {
+static void moveArrayTy(Block *, const std::byte *Src, std::byte *Dst,
+                        const Descriptor *D) {
   for (unsigned I = 0, NE = D->getNumElems(); I < NE; ++I) {
-    auto *SrcPtr = &reinterpret_cast<T *>(Src)[I];
+    const auto *SrcPtr = &reinterpret_cast<const T *>(Src)[I];
     auto *DstPtr = &reinterpret_cast<T *>(Dst)[I];
     new (DstPtr) T(std::move(*SrcPtr));
   }
 }
 
-static void ctorArrayDesc(Block *B, char *Ptr, bool IsConst, bool IsMutable,
-                          bool IsActive, Descriptor *D) {
+static void ctorArrayDesc(Block *B, std::byte *Ptr, bool IsConst,
+                          bool IsMutable, bool IsActive, const Descriptor *D) {
   const unsigned NumElems = D->getNumElems();
   const unsigned ElemSize =
       D->ElemDesc->getAllocSize() + sizeof(InlineDescriptor);
@@ -69,7 +77,7 @@ static void ctorArrayDesc(Block *B, char *Ptr, bool IsConst, bool IsMutable,
   for (unsigned I = 0; I < NumElems; ++I, ElemOffset += ElemSize) {
     auto *ElemPtr = Ptr + ElemOffset;
     auto *Desc = reinterpret_cast<InlineDescriptor *>(ElemPtr);
-    auto *ElemLoc = reinterpret_cast<char *>(Desc + 1);
+    auto *ElemLoc = reinterpret_cast<std::byte *>(Desc + 1);
     auto *SD = D->ElemDesc;
 
     Desc->Offset = ElemOffset + sizeof(InlineDescriptor);
@@ -85,7 +93,7 @@ static void ctorArrayDesc(Block *B, char *Ptr, bool IsConst, bool IsMutable,
   }
 }
 
-static void dtorArrayDesc(Block *B, char *Ptr, Descriptor *D) {
+static void dtorArrayDesc(Block *B, std::byte *Ptr, const Descriptor *D) {
   const unsigned NumElems = D->getNumElems();
   const unsigned ElemSize =
       D->ElemDesc->getAllocSize() + sizeof(InlineDescriptor);
@@ -94,26 +102,27 @@ static void dtorArrayDesc(Block *B, char *Ptr, Descriptor *D) {
   for (unsigned I = 0; I < NumElems; ++I, ElemOffset += ElemSize) {
     auto *ElemPtr = Ptr + ElemOffset;
     auto *Desc = reinterpret_cast<InlineDescriptor *>(ElemPtr);
-    auto *ElemLoc = reinterpret_cast<char *>(Desc + 1);
+    auto *ElemLoc = reinterpret_cast<std::byte *>(Desc + 1);
     if (auto Fn = D->ElemDesc->DtorFn)
       Fn(B, ElemLoc, D->ElemDesc);
   }
 }
 
-static void moveArrayDesc(Block *B, char *Src, char *Dst, Descriptor *D) {
+static void moveArrayDesc(Block *B, const std::byte *Src, std::byte *Dst,
+                          const Descriptor *D) {
   const unsigned NumElems = D->getNumElems();
   const unsigned ElemSize =
       D->ElemDesc->getAllocSize() + sizeof(InlineDescriptor);
 
   unsigned ElemOffset = 0;
   for (unsigned I = 0; I < NumElems; ++I, ElemOffset += ElemSize) {
-    auto *SrcPtr = Src + ElemOffset;
+    const auto *SrcPtr = Src + ElemOffset;
     auto *DstPtr = Dst + ElemOffset;
 
-    auto *SrcDesc = reinterpret_cast<InlineDescriptor *>(SrcPtr);
-    auto *SrcElemLoc = reinterpret_cast<char *>(SrcDesc + 1);
+    const auto *SrcDesc = reinterpret_cast<const InlineDescriptor *>(SrcPtr);
+    const auto *SrcElemLoc = reinterpret_cast<const std::byte *>(SrcDesc + 1);
     auto *DstDesc = reinterpret_cast<InlineDescriptor *>(DstPtr);
-    auto *DstElemLoc = reinterpret_cast<char *>(DstDesc + 1);
+    auto *DstElemLoc = reinterpret_cast<std::byte *>(DstDesc + 1);
 
     *DstDesc = *SrcDesc;
     if (auto Fn = D->ElemDesc->MoveFn)
@@ -121,8 +130,8 @@ static void moveArrayDesc(Block *B, char *Src, char *Dst, Descriptor *D) {
   }
 }
 
-static void ctorRecord(Block *B, char *Ptr, bool IsConst, bool IsMutable,
-                       bool IsActive, Descriptor *D) {
+static void ctorRecord(Block *B, std::byte *Ptr, bool IsConst, bool IsMutable,
+                       bool IsActive, const Descriptor *D) {
   const bool IsUnion = D->ElemRecord->isUnion();
   auto CtorSub = [=](unsigned SubOff, Descriptor *F, bool IsBase) {
     auto *Desc = reinterpret_cast<InlineDescriptor *>(Ptr + SubOff) - 1;
@@ -145,7 +154,7 @@ static void ctorRecord(Block *B, char *Ptr, bool IsConst, bool IsMutable,
     CtorSub(V.Offset, V.Desc, /*isBase=*/true);
 }
 
-static void dtorRecord(Block *B, char *Ptr, Descriptor *D) {
+static void dtorRecord(Block *B, std::byte *Ptr, const Descriptor *D) {
   auto DtorSub = [=](unsigned SubOff, Descriptor *F) {
     if (auto Fn = F->DtorFn)
       Fn(B, Ptr + SubOff, F);
@@ -158,22 +167,40 @@ static void dtorRecord(Block *B, char *Ptr, Descriptor *D) {
     DtorSub(F.Offset, F.Desc);
 }
 
-static void moveRecord(Block *B, char *Src, char *Dst, Descriptor *D) {
+static void moveRecord(Block *B, const std::byte *Src, std::byte *Dst,
+                       const Descriptor *D) {
   for (const auto &F : D->ElemRecord->fields()) {
     auto FieldOff = F.Offset;
-    auto FieldDesc = F.Desc;
+    auto *FieldDesc = F.Desc;
 
-    *(reinterpret_cast<Descriptor **>(Dst + FieldOff) - 1) = FieldDesc;
     if (auto Fn = FieldDesc->MoveFn)
       Fn(B, Src + FieldOff, Dst + FieldOff, FieldDesc);
   }
 }
 
 static BlockCtorFn getCtorPrim(PrimType Type) {
+  // Floating types are special. They are primitives, but need their
+  // constructor called.
+  if (Type == PT_Float)
+    return ctorTy<PrimConv<PT_Float>::T>;
+  if (Type == PT_IntAP)
+    return ctorTy<PrimConv<PT_IntAP>::T>;
+  if (Type == PT_IntAPS)
+    return ctorTy<PrimConv<PT_IntAPS>::T>;
+
   COMPOSITE_TYPE_SWITCH(Type, return ctorTy<T>, return nullptr);
 }
 
 static BlockDtorFn getDtorPrim(PrimType Type) {
+  // Floating types are special. They are primitives, but need their
+  // destructor called, since they might allocate memory.
+  if (Type == PT_Float)
+    return dtorTy<PrimConv<PT_Float>::T>;
+  if (Type == PT_IntAP)
+    return dtorTy<PrimConv<PT_IntAP>::T>;
+  if (Type == PT_IntAPS)
+    return dtorTy<PrimConv<PT_IntAPS>::T>;
+
   COMPOSITE_TYPE_SWITCH(Type, return dtorTy<T>, return nullptr);
 }
 
@@ -194,6 +221,7 @@ static BlockMoveFn getMoveArrayPrim(PrimType Type) {
   COMPOSITE_TYPE_SWITCH(Type, return moveArrayTy<T>, return nullptr);
 }
 
+/// Primitives.
 Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
                        bool IsConst, bool IsTemporary, bool IsMutable)
     : Source(D), ElemSize(primSize(Type)), Size(ElemSize),
@@ -204,6 +232,7 @@ Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
   assert(Source && "Missing source");
 }
 
+/// Primitive arrays.
 Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
                        size_t NumElems, bool IsConst, bool IsTemporary,
                        bool IsMutable)
@@ -216,6 +245,7 @@ Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
   assert(Source && "Missing source");
 }
 
+/// Primitive unknown-size arrays.
 Descriptor::Descriptor(const DeclTy &D, PrimType Type, bool IsTemporary,
                        UnknownSize)
     : Source(D), ElemSize(primSize(Type)), Size(UnknownSizeMark), MDSize(0),
@@ -225,6 +255,7 @@ Descriptor::Descriptor(const DeclTy &D, PrimType Type, bool IsTemporary,
   assert(Source && "Missing source");
 }
 
+/// Arrays of composite elements.
 Descriptor::Descriptor(const DeclTy &D, Descriptor *Elem, MetadataSize MD,
                        unsigned NumElems, bool IsConst, bool IsTemporary,
                        bool IsMutable)
@@ -237,6 +268,7 @@ Descriptor::Descriptor(const DeclTy &D, Descriptor *Elem, MetadataSize MD,
   assert(Source && "Missing source");
 }
 
+/// Unknown-size arrays of composite elements.
 Descriptor::Descriptor(const DeclTy &D, Descriptor *Elem, bool IsTemporary,
                        UnknownSize)
     : Source(D), ElemSize(Elem->getAllocSize() + sizeof(InlineDescriptor)),
@@ -247,6 +279,7 @@ Descriptor::Descriptor(const DeclTy &D, Descriptor *Elem, bool IsTemporary,
   assert(Source && "Missing source");
 }
 
+/// Composite records.
 Descriptor::Descriptor(const DeclTy &D, Record *R, MetadataSize MD,
                        bool IsConst, bool IsTemporary, bool IsMutable)
     : Source(D), ElemSize(std::max<size_t>(alignof(void *), R->getFullSize())),
@@ -262,7 +295,15 @@ QualType Descriptor::getType() const {
     return E->getType();
   if (auto *D = asValueDecl())
     return D->getType();
+  if (auto *T = dyn_cast<TypeDecl>(asDecl()))
+    return QualType(T->getTypeForDecl(), 0);
   llvm_unreachable("Invalid descriptor type");
+}
+
+QualType Descriptor::getElemQualType() const {
+  assert(isArray());
+  const auto *AT = cast<ArrayType>(getType());
+  return AT->getElementType();
 }
 
 SourceLocation Descriptor::getLocation() const {

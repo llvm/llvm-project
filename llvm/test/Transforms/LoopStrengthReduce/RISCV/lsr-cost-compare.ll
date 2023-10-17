@@ -41,11 +41,12 @@ define void @test2(ptr %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[LSR_IV]]
-; CHECK-NEXT:    store float 1.000000e+00, ptr [[UGLYGEP]], align 4
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i64 [[LSR_IV]], 4
-; CHECK-NEXT:    [[T21:%.*]] = icmp eq i64 128000, [[LSR_IV_NEXT]]
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[UGLYGEP:%.*]], [[LOOP]] ], [ [[A:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[LOOP]] ], [ 32000, [[ENTRY]] ]
+; CHECK-NEXT:    store float 1.000000e+00, ptr [[LSR_IV1]], align 4
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i64 [[LSR_IV]], -1
+; CHECK-NEXT:    [[UGLYGEP]] = getelementptr i8, ptr [[LSR_IV1]], i64 4
+; CHECK-NEXT:    [[T21:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[T21]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    call void @use(ptr [[A]])
@@ -111,14 +112,16 @@ define void @test4(ptr %a, ptr %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[LSR_IV]]
-; CHECK-NEXT:    [[T17:%.*]] = load float, ptr [[UGLYGEP1]], align 4
+; CHECK-NEXT:    [[LSR_IV2:%.*]] = phi ptr [ [[UGLYGEP3:%.*]], [[LOOP]] ], [ [[A:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[UGLYGEP:%.*]], [[LOOP]] ], [ [[B:%.*]], [[ENTRY]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[LOOP]] ], [ 32000, [[ENTRY]] ]
+; CHECK-NEXT:    [[T17:%.*]] = load float, ptr [[LSR_IV2]], align 4
 ; CHECK-NEXT:    [[T18:%.*]] = fadd float [[T17]], 1.000000e+00
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[LSR_IV]]
-; CHECK-NEXT:    store float [[T18]], ptr [[UGLYGEP]], align 4
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i64 [[LSR_IV]], 4
-; CHECK-NEXT:    [[T21:%.*]] = icmp eq i64 128000, [[LSR_IV_NEXT]]
+; CHECK-NEXT:    store float [[T18]], ptr [[LSR_IV1]], align 4
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i64 [[LSR_IV]], -1
+; CHECK-NEXT:    [[UGLYGEP]] = getelementptr i8, ptr [[LSR_IV1]], i64 4
+; CHECK-NEXT:    [[UGLYGEP3]] = getelementptr i8, ptr [[LSR_IV2]], i64 4
+; CHECK-NEXT:    [[T21:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[T21]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    call void @use(ptr [[A]])

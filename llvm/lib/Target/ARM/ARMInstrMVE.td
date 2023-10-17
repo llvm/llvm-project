@@ -3192,19 +3192,18 @@ defm MVE_VQRSHL_by_vec : mve_shift_by_vec_multi<"vqrshl", 0b1, 0b1>;
 defm MVE_VRSHL_by_vec  : mve_shift_by_vec_multi<"vrshl",  0b0, 0b1>;
 
 let Predicates = [HasMVEInt] in {
-  def : Pat<(v4i32 (ARMvshlu (v4i32 MQPR:$Qm), (v4i32 MQPR:$Qn))),
-            (v4i32 (MVE_VSHL_by_vecu32 (v4i32 MQPR:$Qm), (v4i32 MQPR:$Qn)))>;
-  def : Pat<(v8i16 (ARMvshlu (v8i16 MQPR:$Qm), (v8i16 MQPR:$Qn))),
-            (v8i16 (MVE_VSHL_by_vecu16 (v8i16 MQPR:$Qm), (v8i16 MQPR:$Qn)))>;
-  def : Pat<(v16i8 (ARMvshlu (v16i8 MQPR:$Qm), (v16i8 MQPR:$Qn))),
-            (v16i8 (MVE_VSHL_by_vecu8 (v16i8 MQPR:$Qm), (v16i8 MQPR:$Qn)))>;
-
-  def : Pat<(v4i32 (ARMvshls (v4i32 MQPR:$Qm), (v4i32 MQPR:$Qn))),
-            (v4i32 (MVE_VSHL_by_vecs32 (v4i32 MQPR:$Qm), (v4i32 MQPR:$Qn)))>;
-  def : Pat<(v8i16 (ARMvshls (v8i16 MQPR:$Qm), (v8i16 MQPR:$Qn))),
-            (v8i16 (MVE_VSHL_by_vecs16 (v8i16 MQPR:$Qm), (v8i16 MQPR:$Qn)))>;
-  def : Pat<(v16i8 (ARMvshls (v16i8 MQPR:$Qm), (v16i8 MQPR:$Qn))),
-            (v16i8 (MVE_VSHL_by_vecs8 (v16i8 MQPR:$Qm), (v16i8 MQPR:$Qn)))>;
+  defm : MVE_TwoOpPattern<MVE_v16i8, ARMvshlu, int_arm_mve_vshl_vector_predicated,
+                          (? (i32 0), (i32 0), (i32 1)), MVE_VSHL_by_vecu8, null_frag>;
+  defm : MVE_TwoOpPattern<MVE_v8i16, ARMvshlu, int_arm_mve_vshl_vector_predicated,
+                          (? (i32 0), (i32 0), (i32 1)), MVE_VSHL_by_vecu16, null_frag>;
+  defm : MVE_TwoOpPattern<MVE_v4i32, ARMvshlu, int_arm_mve_vshl_vector_predicated,
+                          (? (i32 0), (i32 0), (i32 1)), MVE_VSHL_by_vecu32, null_frag>;
+  defm : MVE_TwoOpPattern<MVE_v16i8, ARMvshls, int_arm_mve_vshl_vector_predicated,
+                          (? (i32 0), (i32 0), (i32 0)), MVE_VSHL_by_vecs8, null_frag>;
+  defm : MVE_TwoOpPattern<MVE_v8i16, ARMvshls, int_arm_mve_vshl_vector_predicated,
+                          (? (i32 0), (i32 0), (i32 0)), MVE_VSHL_by_vecs16, null_frag>;
+  defm : MVE_TwoOpPattern<MVE_v4i32, ARMvshls, int_arm_mve_vshl_vector_predicated,
+                          (? (i32 0), (i32 0), (i32 0)), MVE_VSHL_by_vecs32, null_frag>;
 }
 
 class MVE_shift_with_imm<string iname, string suffix, dag oops, dag iops,
@@ -3683,6 +3682,13 @@ multiclass MVE_VCMLA_m<MVEVectorVTInfo VTI> {
                              (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm),
                              imm:$rot))>;
 
+    def: Pat<(VTI.Vec (fadd_contract MQPR:$Qd_src,
+                            (int_arm_mve_vcmulq imm:$rot,
+                              (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm)))),
+              (VTI.Vec (Inst (VTI.Vec MQPR:$Qd_src),
+                             (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm),
+                             imm:$rot))>;
+
     def : Pat<(VTI.Vec (int_arm_mve_vcmlaq_predicated
                             imm:$rot, (VTI.Vec MQPR:$Qd_src),
                             (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm),
@@ -3690,7 +3696,6 @@ multiclass MVE_VCMLA_m<MVEVectorVTInfo VTI> {
               (VTI.Vec (Inst (VTI.Vec MQPR:$Qd_src), (VTI.Vec MQPR:$Qn),
                              (VTI.Vec MQPR:$Qm), imm:$rot,
                              ARMVCCThen, (VTI.Pred VCCR:$mask), zero_reg))>;
-
   }
 }
 

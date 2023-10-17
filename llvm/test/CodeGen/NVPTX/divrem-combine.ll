@@ -1,7 +1,7 @@
-; RUN: llc -O2 < %s -march=nvptx -mcpu=sm_35 | FileCheck %s --check-prefix=O2 --check-prefix=CHECK
-; RUN: llc -O0 < %s -march=nvptx -mcpu=sm_35 | FileCheck %s --check-prefix=O0 --check-prefix=CHECK
-; RUN: %if ptxas %{ llc -O2 < %s -march=nvptx -mcpu=sm_35 | %ptxas-verify -arch=sm_35 %}
-; RUN: %if ptxas %{ llc -O0 < %s -march=nvptx -mcpu=sm_35 | %ptxas-verify -arch=sm_35 %}
+; RUN: llc -O2 < %s -march=nvptx64 -mcpu=sm_35 | FileCheck %s --check-prefix=O2 --check-prefix=CHECK
+; RUN: llc -O0 < %s -march=nvptx64 -mcpu=sm_35 | FileCheck %s --check-prefix=O0 --check-prefix=CHECK
+; RUN: %if ptxas %{ llc -O2 < %s -march=nvptx64 -mcpu=sm_35 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc -O0 < %s -march=nvptx64 -mcpu=sm_35 | %ptxas-verify %}
 
 ; The following IR
 ;

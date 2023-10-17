@@ -10,20 +10,20 @@
 
 #include "src/__support/File/dir.h"
 #include "src/__support/common.h"
+#include "src/errno/libc_errno.h"
 
 #include <dirent.h>
-#include <errno.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(struct ::dirent *, readdir, (::DIR * dir)) {
-  auto *d = reinterpret_cast<__llvm_libc::Dir *>(dir);
+  auto *d = reinterpret_cast<LIBC_NAMESPACE::Dir *>(dir);
   auto dirent_val = d->read();
   if (!dirent_val) {
-    errno = dirent_val.error();
+    libc_errno = dirent_val.error();
     return nullptr;
   }
-  return dirent_val;
+  return dirent_val.value();
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

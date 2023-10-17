@@ -141,7 +141,16 @@ public:
   void printStrippedAttrOrType(AttrOrType attrOrType) {
     if (succeeded(printAlias(attrOrType)))
       return;
+
+    raw_ostream &os = getStream();
+    uint64_t posPrior = os.tell();
     attrOrType.print(*this);
+    if (posPrior != os.tell())
+      return;
+
+    // Fallback to printing with prefix if the above failed to write anything
+    // to the output stream.
+    *this << attrOrType;
   }
 
   /// Print the provided array of attributes or types in the context of an
@@ -175,6 +184,10 @@ public:
   /// has any special or non-printable characters in it.
   virtual void printKeywordOrString(StringRef keyword);
 
+  /// Print the given string as a quoted string, escaping any special or
+  /// non-printable characters in it.
+  virtual void printString(StringRef string);
+
   /// Print the given string as a symbol reference, i.e. a form representable by
   /// a SymbolRefAttr. A symbol reference is represented as a string prefixed
   /// with '@'. The reference is surrounded with ""'s and escaped if it has any
@@ -195,7 +208,7 @@ public:
     auto &os = getStream() << " -> ";
 
     bool wrapped = !llvm::hasSingleElement(types) ||
-                   (*types.begin()).template isa<FunctionType>();
+                   llvm::isa<FunctionType>((*types.begin()));
     if (wrapped)
       os << '(';
     llvm::interleaveComma(types, *this);
@@ -213,10 +226,68 @@ public:
     printArrowTypeList(results);
   }
 
+  /// Class used to automatically end a cyclic region on destruction.
+  class CyclicPrintReset {
+  public:
+    explicit CyclicPrintReset(AsmPrinter *printer) : printer(printer) {}
+
+    ~CyclicPrintReset() {
+      if (printer)
+        printer->popCyclicPrinting();
+    }
+
+    CyclicPrintReset(const CyclicPrintReset &) = delete;
+
+    CyclicPrintReset &operator=(const CyclicPrintReset &) = delete;
+
+    CyclicPrintReset(CyclicPrintReset &&rhs)
+        : printer(std::exchange(rhs.printer, nullptr)) {}
+
+    CyclicPrintReset &operator=(CyclicPrintReset &&rhs) {
+      printer = std::exchange(rhs.printer, nullptr);
+      return *this;
+    }
+
+  private:
+    AsmPrinter *printer;
+  };
+
+  /// Attempts to start a cyclic printing region for `attrOrType`.
+  /// A cyclic printing region starts with this call and ends with the
+  /// destruction of the returned `CyclicPrintReset`. During this time,
+  /// calling `tryStartCyclicPrint` with the same attribute in any printer
+  /// will lead to returning failure.
+  ///
+  /// This makes it possible to break infinite recursions when trying to print
+  /// cyclic attributes or types by printing only immutable parameters if nested
+  /// within itself.
+  template <class AttrOrTypeT>
+  FailureOr<CyclicPrintReset> tryStartCyclicPrint(AttrOrTypeT attrOrType) {
+    static_assert(
+        std::is_base_of_v<AttributeTrait::IsMutable<AttrOrTypeT>,
+                          AttrOrTypeT> ||
+            std::is_base_of_v<TypeTrait::IsMutable<AttrOrTypeT>, AttrOrTypeT>,
+        "Only mutable attributes or types can be cyclic");
+    if (failed(pushCyclicPrinting(attrOrType.getAsOpaquePointer())))
+      return failure();
+    return CyclicPrintReset(this);
+  }
+
 protected:
   /// Initialize the printer with no internal implementation. In this case, all
   /// virtual methods of this class must be overriden.
   AsmPrinter() = default;
+
+  /// Pushes a new attribute or type in the form of a type erased pointer
+  /// into an internal set.
+  /// Returns success if the type or attribute was inserted in the set or
+  /// failure if it was already contained.
+  virtual LogicalResult pushCyclicPrinting(const void *opaquePointer);
+
+  /// Removes the element that was last inserted with a successful call to
+  /// `pushCyclicPrinting`. There must be exactly one `popCyclicPrinting` call
+  /// in reverse order of all successful `pushCyclicPrinting`.
+  virtual void popCyclicPrinting();
 
 private:
   AsmPrinter(const AsmPrinter &) = delete;
@@ -279,7 +350,8 @@ template <typename AsmPrinterT, typename T,
                                !std::is_convertible<T &, Attribute &>::value &&
                                !std::is_convertible<T &, ValueRange>::value &&
                                !std::is_convertible<T &, APFloat &>::value &&
-                               !llvm::is_one_of<T, bool, float, double>::value,
+                               !llvm::is_one_of<T, bool, int8_t, uint8_t, float,
+                                                double>::value,
                            T> * = nullptr>
 inline std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value,
                         AsmPrinterT &>
@@ -295,6 +367,17 @@ operator<<(AsmPrinterT &p, bool value) {
   return p << (value ? StringRef("true") : "false");
 }
 
+/// Specialization for 8-bit integers to ensure values are printed as integers
+// and not characters.
+template <
+    typename AsmPrinterT, typename T,
+    std::enable_if_t<llvm::is_one_of<T, int8_t, uint8_t>::value, T> * = nullptr>
+inline std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value,
+                        AsmPrinterT &>
+operator<<(AsmPrinterT &p, T value) {
+  return p << static_cast<int16_t>(value);
+}
+
 template <typename AsmPrinterT, typename ValueRangeT>
 inline std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value,
                         AsmPrinterT &>
@@ -302,6 +385,7 @@ operator<<(AsmPrinterT &p, const ValueTypeRange<ValueRangeT> &types) {
   llvm::interleaveComma(types, p);
   return p;
 }
+
 template <typename AsmPrinterT>
 inline std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value,
                         AsmPrinterT &>
@@ -309,6 +393,18 @@ operator<<(AsmPrinterT &p, const TypeRange &types) {
   llvm::interleaveComma(types, p);
   return p;
 }
+
+// Prevent matching the TypeRange version above for ValueRange
+// printing through base AsmPrinter. This is needed so that the
+// ValueRange printing behaviour does not change from printing
+// the SSA values to printing the types for the operands when
+// using AsmPrinter instead of OpAsmPrinter.
+template <typename AsmPrinterT, typename T>
+inline std::enable_if_t<std::is_same<AsmPrinter, AsmPrinterT>::value &&
+                            std::is_convertible<T &, ValueRange>::value,
+                        AsmPrinterT &>
+operator<<(AsmPrinterT &p, const T &other) = delete;
+
 template <typename AsmPrinterT, typename ElementT>
 inline std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value,
                         AsmPrinterT &>
@@ -693,18 +789,20 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// This class represents a StringSwitch like class that is useful for parsing
-  /// expected keywords. On construction, it invokes `parseKeyword` and
-  /// processes each of the provided cases statements until a match is hit. The
-  /// provided `ResultT` must be assignable from `failure()`.
+  /// expected keywords. On construction, unless a non-empty keyword is
+  /// provided, it invokes `parseKeyword` and processes each of the provided
+  /// cases statements until a match is hit. The provided `ResultT` must be
+  /// assignable from `failure()`.
   template <typename ResultT = ParseResult>
   class KeywordSwitch {
   public:
-    KeywordSwitch(AsmParser &parser)
+    KeywordSwitch(AsmParser &parser, StringRef *keyword = nullptr)
         : parser(parser), loc(parser.getCurrentLocation()) {
-      if (failed(parser.parseKeywordOrCompletion(&keyword)))
+      if (keyword && !keyword->empty())
+        this->keyword = *keyword;
+      else if (failed(parser.parseKeywordOrCompletion(&this->keyword)))
         result = failure();
     }
-
     /// Case that uses the provided value when true.
     KeywordSwitch &Case(StringLiteral str, ResultT value) {
       return Case(str, [&](StringRef, SMLoc) { return std::move(value); });
@@ -756,7 +854,7 @@ public:
     /// The parsed keyword itself.
     StringRef keyword;
 
-    /// The result of the switch statement or none if currently unknown.
+    /// The result of the switch statement or std::nullopt if currently unknown.
     std::optional<ResultT> result;
   };
 
@@ -843,7 +941,7 @@ public:
       return failure();
 
     // Check for the right kind of attribute.
-    if (!(result = attr.dyn_cast<AttrType>()))
+    if (!(result = llvm::dyn_cast<AttrType>(attr)))
       return emitError(loc, "invalid kind of attribute specified");
 
     return success();
@@ -877,7 +975,7 @@ public:
       return failure();
 
     // Check for the right kind of attribute.
-    result = attr.dyn_cast<AttrType>();
+    result = llvm::dyn_cast<AttrType>(attr);
     if (!result)
       return emitError(loc, "invalid kind of attribute specified");
 
@@ -914,7 +1012,7 @@ public:
       return failure();
 
     // Check for the right kind of attribute.
-    result = attr.dyn_cast<AttrType>();
+    result = llvm::dyn_cast<AttrType>(attr);
     if (!result)
       return emitError(loc, "invalid kind of attribute specified");
 
@@ -935,20 +1033,20 @@ public:
   /// populated in `result`.
   template <typename AttrType>
   std::enable_if_t<detect_has_parse_method<AttrType>::value, ParseResult>
-  parseCustomAttributeWithFallback(AttrType &result) {
+  parseCustomAttributeWithFallback(AttrType &result, Type type = {}) {
     SMLoc loc = getCurrentLocation();
 
     // Parse any kind of attribute.
     Attribute attr;
     if (parseCustomAttributeWithFallback(
-            attr, {}, [&](Attribute &result, Type type) -> ParseResult {
+            attr, type, [&](Attribute &result, Type type) -> ParseResult {
               result = AttrType::parse(*this, type);
               return success(!!result);
             }))
       return failure();
 
     // Check for the right kind of attribute.
-    result = attr.dyn_cast<AttrType>();
+    result = llvm::dyn_cast<AttrType>(attr);
     if (!result)
       return emitError(loc, "invalid kind of attribute specified");
     return success();
@@ -957,8 +1055,8 @@ public:
   /// SFINAE parsing method for Attribute that don't implement a parse method.
   template <typename AttrType>
   std::enable_if_t<!detect_has_parse_method<AttrType>::value, ParseResult>
-  parseCustomAttributeWithFallback(AttrType &result) {
-    return parseAttribute(result);
+  parseCustomAttributeWithFallback(AttrType &result, Type type = {}) {
+    return parseAttribute(result, type);
   }
 
   /// Parse an arbitrary optional attribute of a given type and return it in
@@ -1010,8 +1108,14 @@ public:
   /// Parse an affine map instance into 'map'.
   virtual ParseResult parseAffineMap(AffineMap &map) = 0;
 
+  /// Parse an affine expr instance into 'expr' using the already computed
+  /// mapping from symbols to affine expressions in 'symbolSet'.
+  virtual ParseResult
+  parseAffineExpr(ArrayRef<std::pair<StringRef, AffineExpr>> symbolSet,
+                  AffineExpr &expr) = 0;
+
   /// Parse an integer set instance into 'set'.
-  virtual ParseResult printIntegerSet(IntegerSet &set) = 0;
+  virtual ParseResult parseIntegerSet(IntegerSet &set) = 0;
 
   //===--------------------------------------------------------------------===//
   // Identifier Parsing
@@ -1104,7 +1208,7 @@ public:
       return failure();
 
     // Check for the right kind of type.
-    result = type.dyn_cast<TypeT>();
+    result = llvm::dyn_cast<TypeT>(type);
     if (!result)
       return emitError(loc, "invalid kind of type specified");
 
@@ -1136,7 +1240,7 @@ public:
       return failure();
 
     // Check for the right kind of Type.
-    result = type.dyn_cast<TypeT>();
+    result = llvm::dyn_cast<TypeT>(type);
     if (!result)
       return emitError(loc, "invalid kind of Type specified");
     return success();
@@ -1150,10 +1254,7 @@ public:
   }
 
   /// Parse a type list.
-  ParseResult parseTypeList(SmallVectorImpl<Type> &result) {
-    return parseCommaSeparatedList(
-        [&]() { return parseType(result.emplace_back()); });
-  }
+  ParseResult parseTypeList(SmallVectorImpl<Type> &result);
 
   /// Parse an arrow followed by a type list.
   virtual ParseResult parseArrowTypeList(SmallVectorImpl<Type> &result) = 0;
@@ -1176,7 +1277,7 @@ public:
       return failure();
 
     // Check for the right kind of type.
-    result = type.dyn_cast<TypeType>();
+    result = llvm::dyn_cast<TypeType>(type);
     if (!result)
       return emitError(loc, "invalid kind of type specified");
 
@@ -1235,11 +1336,66 @@ public:
   /// next token.
   virtual ParseResult parseXInDimensionList() = 0;
 
+  /// Class used to automatically end a cyclic region on destruction.
+  class CyclicParseReset {
+  public:
+    explicit CyclicParseReset(AsmParser *parser) : parser(parser) {}
+
+    ~CyclicParseReset() {
+      if (parser)
+        parser->popCyclicParsing();
+    }
+
+    CyclicParseReset(const CyclicParseReset &) = delete;
+    CyclicParseReset &operator=(const CyclicParseReset &) = delete;
+    CyclicParseReset(CyclicParseReset &&rhs)
+        : parser(std::exchange(rhs.parser, nullptr)) {}
+    CyclicParseReset &operator=(CyclicParseReset &&rhs) {
+      parser = std::exchange(rhs.parser, nullptr);
+      return *this;
+    }
+
+  private:
+    AsmParser *parser;
+  };
+
+  /// Attempts to start a cyclic parsing region for `attrOrType`.
+  /// A cyclic parsing region starts with this call and ends with the
+  /// destruction of the returned `CyclicParseReset`. During this time,
+  /// calling `tryStartCyclicParse` with the same attribute in any parser
+  /// will lead to returning failure.
+  ///
+  /// This makes it possible to parse cyclic attributes or types by parsing a
+  /// short from if nested within itself.
+  template <class AttrOrTypeT>
+  FailureOr<CyclicParseReset> tryStartCyclicParse(AttrOrTypeT attrOrType) {
+    static_assert(
+        std::is_base_of_v<AttributeTrait::IsMutable<AttrOrTypeT>,
+                          AttrOrTypeT> ||
+            std::is_base_of_v<TypeTrait::IsMutable<AttrOrTypeT>, AttrOrTypeT>,
+        "Only mutable attributes or types can be cyclic");
+    if (failed(pushCyclicParsing(attrOrType.getAsOpaquePointer())))
+      return failure();
+
+    return CyclicParseReset(this);
+  }
+
 protected:
   /// Parse a handle to a resource within the assembly format for the given
   /// dialect.
   virtual FailureOr<AsmDialectResourceHandle>
   parseResourceHandle(Dialect *dialect) = 0;
+
+  /// Pushes a new attribute or type in the form of a type erased pointer
+  /// into an internal set.
+  /// Returns success if the type or attribute was inserted in the set or
+  /// failure if it was already contained.
+  virtual LogicalResult pushCyclicParsing(const void *opaquePointer) = 0;
+
+  /// Removes the element that was last inserted with a successful call to
+  /// `pushCyclicParsing`. There must be exactly one `popCyclicParsing` call
+  /// in reverse order of all successful `pushCyclicParsing`.
+  virtual void popCyclicParsing() = 0;
 
   //===--------------------------------------------------------------------===//
   // Code Completion
@@ -1346,6 +1502,7 @@ public:
       std::optional<MutableArrayRef<std::unique_ptr<Region>>> parsedRegions =
           std::nullopt,
       std::optional<ArrayRef<NamedAttribute>> parsedAttributes = std::nullopt,
+      std::optional<Attribute> parsedPropertiesAttribute = std::nullopt,
       std::optional<FunctionType> parsedFnType = std::nullopt) = 0;
 
   /// Parse a single SSA value operand name along with a result number if
@@ -1416,13 +1573,13 @@ public:
   std::enable_if_t<!std::is_convertible<Types, Type>::value, ParseResult>
   resolveOperands(Operands &&operands, Types &&types, SMLoc loc,
                   SmallVectorImpl<Value> &result) {
-    size_t operandSize = std::distance(operands.begin(), operands.end());
-    size_t typeSize = std::distance(types.begin(), types.end());
+    size_t operandSize = llvm::range_size(operands);
+    size_t typeSize = llvm::range_size(types);
     if (operandSize != typeSize)
       return emitError(loc)
              << operandSize << " operands present, but expected " << typeSize;
 
-    for (auto [operand, type] : llvm::zip(operands, types))
+    for (auto [operand, type] : llvm::zip_equal(operands, types))
       if (resolveOperand(operand, type, result))
         return failure();
     return success();

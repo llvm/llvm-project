@@ -18,25 +18,28 @@ import re
 import subprocess
 import optparse
 
-# Look for indirect calls/jmps in a binary. re: (call|jmp).*\* 
+# Look for indirect calls/jmps in a binary. re: (call|jmp).*\*
 def look_for_indirect(file):
-    args = ['llvm-objdump']
+    args = ["llvm-objdump"]
     args.extend(["-d"])
     args.extend([file])
 
-    p = subprocess.Popen(args=args, stdin=None, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-    (stdout,stderr) = p.communicate()
+    p = subprocess.Popen(
+        args=args, stdin=None, stderr=subprocess.PIPE, stdout=subprocess.PIPE
+    )
+    (stdout, stderr) = p.communicate()
 
     function = ""
     for line in stdout.splitlines():
-        if line.startswith(' ') == False:
+        if line.startswith(" ") == False:
             function = line
-        result = re.search('(call|jmp).*\*', line)
+        result = re.search("(call|jmp).*\*", line)
         if result != None:
             # TODO: Perhaps use cxxfilt to demangle functions?
             print(function)
             print(line)
     return
+
 
 def main(args):
     # No options currently other than the binary.
@@ -46,5 +49,6 @@ def main(args):
         parser.error("invalid number of arguments: %s" % len(args))
     look_for_indirect(args[1])
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main(sys.argv)

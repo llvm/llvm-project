@@ -7,10 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
-#include "utils/testutils/StreamWrapper.h"
-#include "utils/testutils/Timer.h"
+#include "test/src/math/differential_testing/Timer.h"
 
-namespace __llvm_libc {
+#include <fstream>
+
+namespace LIBC_NAMESPACE {
 namespace testing {
 
 template <typename T> class BinaryOpSingleOutputDiff {
@@ -24,8 +25,7 @@ public:
 
   static uint64_t run_diff_in_range(Func myFunc, Func otherFunc,
                                     UIntType startingBit, UIntType endingBit,
-                                    UIntType N,
-                                    testutils::OutputFileStream &log) {
+                                    UIntType N, std::ofstream &log) {
     uint64_t result = 0;
     if (endingBit < startingBit) {
       return result;
@@ -58,7 +58,7 @@ public:
 
   static void run_perf_in_range(Func myFunc, Func otherFunc,
                                 UIntType startingBit, UIntType endingBit,
-                                UIntType N, testutils::OutputFileStream &log) {
+                                UIntType N, std::ofstream &log) {
     auto runner = [=](Func func) {
       volatile T result;
       if (endingBit < startingBit) {
@@ -105,7 +105,7 @@ public:
   }
 
   static void run_perf(Func myFunc, Func otherFunc, const char *logFile) {
-    testutils::OutputFileStream log(logFile);
+    std::ofstream log(logFile);
     log << " Performance tests with inputs in denormal range:\n";
     run_perf_in_range(myFunc, otherFunc, /* startingBit= */ UIntType(0),
                       /* endingBit= */ FPBits::MAX_SUBNORMAL, 1'000'001, log);
@@ -121,7 +121,7 @@ public:
 
   static void run_diff(Func myFunc, Func otherFunc, const char *logFile) {
     uint64_t diffCount = 0;
-    testutils::OutputFileStream log(logFile);
+    std::ofstream log(logFile);
     log << " Diff tests with inputs in denormal range:\n";
     diffCount += run_diff_in_range(
         myFunc, otherFunc, /* startingBit= */ UIntType(0),
@@ -141,18 +141,18 @@ public:
 };
 
 } // namespace testing
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #define BINARY_OP_SINGLE_OUTPUT_DIFF(T, myFunc, otherFunc, filename)           \
   int main() {                                                                 \
-    __llvm_libc::testing::BinaryOpSingleOutputDiff<T>::run_diff(               \
+    LIBC_NAMESPACE::testing::BinaryOpSingleOutputDiff<T>::run_diff(            \
         &myFunc, &otherFunc, filename);                                        \
     return 0;                                                                  \
   }
 
 #define BINARY_OP_SINGLE_OUTPUT_PERF(T, myFunc, otherFunc, filename)           \
   int main() {                                                                 \
-    __llvm_libc::testing::BinaryOpSingleOutputDiff<T>::run_perf(               \
+    LIBC_NAMESPACE::testing::BinaryOpSingleOutputDiff<T>::run_perf(            \
         &myFunc, &otherFunc, filename);                                        \
     return 0;                                                                  \
   }

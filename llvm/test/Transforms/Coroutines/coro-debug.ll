@@ -1,45 +1,44 @@
 ; Tests that debug information is sane after coro-split
-; RUN: opt -opaque-pointers=0 < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 source_filename = "simple-repro.c"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: noinline nounwind
-define i8* @f(i32 %x) #0 personality i32 0 !dbg !6 {
+define ptr @f(i32 %x) #0 personality i32 0 !dbg !6 {
 entry:
   %x.addr = alloca i32, align 4
-  %coro_hdl = alloca i8*, align 8
-  store i32 %x, i32* %x.addr, align 4
-  %0 = call token @llvm.coro.id(i32 0, i8* null, i8* bitcast (i8* (i32)* @f to i8*), i8* null), !dbg !16
-  %undef = bitcast i8* undef to [16 x i8]*
+  %coro_hdl = alloca ptr, align 8
+  store i32 %x, ptr %x.addr, align 4
+  %0 = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr null), !dbg !16
   %1 = call i64 @llvm.coro.size.i64(), !dbg !16
-  %call = call i8* @malloc(i64 %1), !dbg !16
-  %2 = call i8* @llvm.coro.begin(token %0, i8* %call) #7, !dbg !16
-  store i8* %2, i8** %coro_hdl, align 8, !dbg !16
+  %call = call ptr @malloc(i64 %1), !dbg !16
+  %2 = call ptr @llvm.coro.begin(token %0, ptr %call) #7, !dbg !16
+  store ptr %2, ptr %coro_hdl, align 8, !dbg !16
   %3 = call i8 @llvm.coro.suspend(token none, i1 false), !dbg !17
   %conv = sext i8 %3 to i32, !dbg !17
   %late_local = alloca i32, align 4
-  call void @coro.devirt.trigger(i8* null)
+  call void @coro.devirt.trigger(ptr null)
   switch i32 %conv, label %sw.default [
     i32 0, label %sw.bb
     i32 1, label %sw.bb1
   ], !dbg !17
 
 sw.bb:                                            ; preds = %entry
-  %direct = load i32, i32* %x.addr, align 4, !dbg !14
-  %gep = getelementptr inbounds [16 x i8], [16 x i8]* %undef, i32 %direct, !dbg !14
-  call void @llvm.dbg.declare(metadata [16 x i8] *%gep, metadata !27, metadata !13), !dbg !14
+  %direct = load i32, ptr %x.addr, align 4, !dbg !14
+  %gep = getelementptr inbounds [16 x i8], ptr undef, i32 %direct, !dbg !14
+  call void @llvm.dbg.declare(metadata ptr %gep, metadata !27, metadata !13), !dbg !14
   call void @llvm.dbg.declare(metadata i32 %conv, metadata !26, metadata !13), !dbg !14
   call void @llvm.dbg.declare(metadata i32 %direct, metadata !25, metadata !13), !dbg !14
-  call void @llvm.dbg.declare(metadata i32* %x.addr, metadata !12, metadata !13), !dbg !14
-  call void @llvm.dbg.declare(metadata i8** %coro_hdl, metadata !15, metadata !13), !dbg !16
-  call void @llvm.dbg.declare(metadata i32* %late_local, metadata !29, metadata !13), !dbg !16
+  call void @llvm.dbg.declare(metadata ptr %x.addr, metadata !12, metadata !13), !dbg !14
+  call void @llvm.dbg.declare(metadata ptr %coro_hdl, metadata !15, metadata !13), !dbg !16
+  call void @llvm.dbg.declare(metadata ptr %late_local, metadata !29, metadata !13), !dbg !16
   call void @llvm.dbg.value(metadata i32 %direct, metadata !30, metadata !13), !dbg !14
   ; don't crash when encountering nonsensical debug info, verfifier doesn't yet reject these
-  call void @llvm.dbg.declare(metadata i8* null, metadata !28, metadata !13), !dbg !16
+  call void @llvm.dbg.declare(metadata ptr null, metadata !28, metadata !13), !dbg !16
   call void @llvm.dbg.declare(metadata !{}, metadata !28, metadata !13), !dbg !16
-  %new_storgae = invoke i8* @allocate()
+  %new_storgae = invoke ptr @allocate()
     to label %next unwind label %ehcleanup, !dbg !18
 
 next:
@@ -52,10 +51,10 @@ sw.default:                                       ; preds = %entry
   br label %coro_Suspend, !dbg !18
 
 sw.epilog:                                        ; preds = %sw.bb
-  call void @llvm.dbg.declare(metadata i8* %new_storgae, metadata !31, metadata !13), !dbg !16
-  %4 = load i32, i32* %x.addr, align 4, !dbg !20
+  call void @llvm.dbg.declare(metadata ptr %new_storgae, metadata !31, metadata !13), !dbg !16
+  %4 = load i32, ptr %x.addr, align 4, !dbg !20
   %add = add nsw i32 %4, 1, !dbg !21
-  store i32 %add, i32* %x.addr, align 4, !dbg !22
+  store i32 %add, ptr %x.addr, align 4, !dbg !22
   %asm_res = callbr i32 asm "", "=r,r,!i"(i32 %x)
           to label %coro_Cleanup [label %indirect.dest]
 
@@ -64,22 +63,22 @@ indirect.dest:
   br label %coro_Cleanup
 
 coro_Cleanup:                                     ; preds = %sw.epilog, %sw.bb1
-  %5 = load i8*, i8** %coro_hdl, align 8, !dbg !24
-  %6 = call i8* @llvm.coro.free(token %0, i8* %5), !dbg !24
-  call void @free(i8* %6), !dbg !24
+  %5 = load ptr, ptr %coro_hdl, align 8, !dbg !24
+  %6 = call ptr @llvm.coro.free(token %0, ptr %5), !dbg !24
+  call void @free(ptr %6), !dbg !24
   call void @llvm.dbg.declare(metadata i32 %asm_res, metadata !32, metadata !13), !dbg !16
   br label %coro_Suspend, !dbg !24
 
 coro_Suspend:                                     ; preds = %coro_Cleanup, %sw.default
-  %7 = call i1 @llvm.coro.end(i8* null, i1 false) #7, !dbg !24
-  %8 = load i8*, i8** %coro_hdl, align 8, !dbg !24
-  store i32 0, i32* %late_local, !dbg !24
-  ret i8* %8, !dbg !24
+  %7 = call i1 @llvm.coro.end(ptr null, i1 false, token none) #7, !dbg !24
+  %8 = load ptr, ptr %coro_hdl, align 8, !dbg !24
+  store i32 0, ptr %late_local, !dbg !24
+  ret ptr %8, !dbg !24
 
 ehcleanup:
-  %ex = landingpad { i8*, i32 }
-          catch i8* null
-  call void @print({ i8*, i32 } %ex)
+  %ex = landingpad { ptr, i32 }
+          catch ptr null
+  call void @print({ ptr, i32 } %ex)
   unreachable
 }
 
@@ -90,38 +89,38 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: argmemonly nounwind readonly
-declare token @llvm.coro.id(i32, i8* readnone, i8* nocapture readonly, i8*) #2
+declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr) #2
 
-declare i8* @malloc(i64) #3
-declare i8* @allocate() 
-declare void @print({ i8*, i32 })
+declare ptr @malloc(i64) #3
+declare ptr @allocate() 
+declare void @print({ ptr, i32 })
 declare void @log()
 
 ; Function Attrs: nounwind readnone
 declare i64 @llvm.coro.size.i64() #4
 
 ; Function Attrs: nounwind
-declare i8* @llvm.coro.begin(token, i8* writeonly) #5
+declare ptr @llvm.coro.begin(token, ptr writeonly) #5
 
 ; Function Attrs: nounwind
 declare i8 @llvm.coro.suspend(token, i1) #5
 
-declare void @free(i8*) #3
+declare void @free(ptr) #3
 
 ; Function Attrs: argmemonly nounwind readonly
-declare i8* @llvm.coro.free(token, i8* nocapture readonly) #2
+declare ptr @llvm.coro.free(token, ptr nocapture readonly) #2
 
 ; Function Attrs: nounwind
-declare i1 @llvm.coro.end(i8*, i1) #5
+declare i1 @llvm.coro.end(ptr, i1, token) #5
 
 ; Function Attrs: alwaysinline
-define private void @coro.devirt.trigger(i8*) #6 {
+define private void @coro.devirt.trigger(ptr) #6 {
 entry:
   ret void
 }
 
 ; Function Attrs: argmemonly nounwind readonly
-declare i8* @llvm.coro.subfn.addr(i8* nocapture readonly, i8) #2
+declare ptr @llvm.coro.subfn.addr(ptr nocapture readonly, i8) #2
 
 attributes #0 = { noinline nounwind presplitcoroutine "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone speculatable }
@@ -171,31 +170,32 @@ attributes #7 = { noduplicate }
 !31 = !DILocalVariable(name: "allocated", scope: !6, file: !7, line: 55, type: !11)
 !32 = !DILocalVariable(name: "inline_asm", scope: !6, file: !7, line: 55, type: !11)
 
-; CHECK: define i8* @f(i32 %x) #0 personality i32 0 !dbg ![[ORIG:[0-9]+]]
-; CHECK: define internal fastcc void @f.resume(%f.Frame* noundef nonnull align 8 dereferenceable(40) %FramePtr) #0 personality i32 0 !dbg ![[RESUME:[0-9]+]]
+; CHECK: define ptr @f(i32 %x) #0 personality i32 0 !dbg ![[ORIG:[0-9]+]]
+; CHECK: define internal fastcc void @f.resume(ptr noundef nonnull align 8 dereferenceable(40) %0) #0 personality i32 0 !dbg ![[RESUME:[0-9]+]]
 ; CHECK: entry.resume:
-; CHECK: %[[DBG_PTR:.*]] = alloca %f.Frame*
-; CHECK: call void @llvm.dbg.declare(metadata %f.Frame** %[[DBG_PTR]], metadata ![[RESUME_COROHDL:[0-9]+]], metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst,
-; CHECK: call void @llvm.dbg.declare(metadata %f.Frame** %[[DBG_PTR]], metadata ![[RESUME_X:[0-9]+]], metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, [[EXPR_TAIL:.*]])
-; CHECK: call void @llvm.dbg.declare(metadata %f.Frame** %[[DBG_PTR]], metadata ![[RESUME_DIRECT:[0-9]+]], metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, [[EXPR_TAIL]])
-; CHECK: store %f.Frame* {{.*}}, %f.Frame** %[[DBG_PTR]]
-; CHECK-NOT: alloca %struct.test*
+; CHECK: %[[DBG_PTR:.*]] = alloca ptr
+; CHECK: call void @llvm.dbg.declare(metadata ptr %[[DBG_PTR]], metadata ![[RESUME_COROHDL:[0-9]+]], metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst,
+; CHECK: call void @llvm.dbg.declare(metadata ptr %[[DBG_PTR]], metadata ![[RESUME_X:[0-9]+]], metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, [[EXPR_TAIL:.*]])
+; CHECK: call void @llvm.dbg.declare(metadata ptr %[[DBG_PTR]], metadata ![[RESUME_DIRECT:[0-9]+]], metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, [[EXPR_TAIL]])
+; CHECK: store ptr {{.*}}, ptr %[[DBG_PTR]]
+; CHECK-NOT: alloca ptr
 ; CHECK: call void @llvm.dbg.declare(metadata i8 0, metadata ![[RESUME_CONST:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_convert, 8, DW_ATE_signed, DW_OP_LLVM_convert, 32, DW_ATE_signed))
 ; Note that keeping the undef value here could be acceptable, too.
-; CHECK-NOT: call void @llvm.dbg.declare(metadata i32* undef, metadata !{{[0-9]+}}, metadata !DIExpression())
-; CHECK: call void @coro.devirt.trigger(i8* null)
-; CHECK: call void @llvm.dbg.value(metadata %f.Frame** {{.*}}, metadata ![[RESUME_DIRECT_VALUE:[0-9]+]], metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, {{[0-9]+}}, DW_OP_deref))
+; CHECK-NOT: call void @llvm.dbg.declare(metadata ptr undef, metadata !{{[0-9]+}}, metadata !DIExpression())
+; CHECK: call void @coro.devirt.trigger(ptr null)
+; CHECK: call void @llvm.dbg.value(metadata ptr {{.*}}, metadata ![[RESUME_DIRECT_VALUE:[0-9]+]], metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, {{[0-9]+}}, DW_OP_deref))
 ; Check that the dbg.declare intrinsic of invoke instruction is hanled correctly.
-; CHECK: %[[ALLOCATED_STORAGE:.+]] = invoke i8* @allocate()
+; CHECK: %[[ALLOCATED_STORAGE:.+]] = invoke ptr @allocate()
 ; CHECK-NEXT: to label %[[NORMAL_DEST:.+]] unwind
 ; CHECK: [[NORMAL_DEST]]
-; CHECK-NEXT: call void @llvm.dbg.declare(metadata i8* %[[ALLOCATED_STORAGE]]
+; CHECK-NEXT: call void @llvm.dbg.declare(metadata ptr %[[ALLOCATED_STORAGE]]
 ; CHECK: %[[CALLBR_RES:.+]] = callbr i32 asm
 ; CHECK-NEXT: to label %[[DEFAULT_DEST:.+]] [label
 ; CHECK: [[DEFAULT_DEST]]:
-; CHECK-NEXT: call void @llvm.dbg.declare(metadata i32 %[[CALLBR_RES]]
-; CHECK: define internal fastcc void @f.destroy(%f.Frame* noundef nonnull align 8 dereferenceable(40) %FramePtr) #0 personality i32 0 !dbg ![[DESTROY:[0-9]+]]
-; CHECK: define internal fastcc void @f.cleanup(%f.Frame* noundef nonnull align 8 dereferenceable(40) %FramePtr) #0 personality i32 0 !dbg ![[CLEANUP:[0-9]+]]
+; CHECK-NOT: {{.*}}:
+; CHECK: call void @llvm.dbg.declare(metadata i32 %[[CALLBR_RES]]
+; CHECK: define internal fastcc void @f.destroy(ptr noundef nonnull align 8 dereferenceable(40) %0) #0 personality i32 0 !dbg ![[DESTROY:[0-9]+]]
+; CHECK: define internal fastcc void @f.cleanup(ptr noundef nonnull align 8 dereferenceable(40) %0) #0 personality i32 0 !dbg ![[CLEANUP:[0-9]+]]
 
 ; CHECK: ![[ORIG]] = distinct !DISubprogram(name: "f", linkageName: "flink"
 

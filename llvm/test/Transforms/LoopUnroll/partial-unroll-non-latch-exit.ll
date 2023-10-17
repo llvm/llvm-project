@@ -23,7 +23,7 @@ define i1 @test(ptr %a1, ptr %a2) {
 ; CHECK:       loop.1:
 ; CHECK-NEXT:    br label [[LATCH_1:%.*]]
 ; CHECK:       latch.1:
-; CHECK-NEXT:    [[IV_NEXT_1:%.*]] = add nuw nsw i64 [[IV_NEXT]], 1
+; CHECK-NEXT:    [[IV_NEXT_1:%.*]] = add nuw nsw i64 [[IV]], 2
 ; CHECK-NEXT:    [[GEP1_1:%.*]] = getelementptr inbounds i64, ptr [[A1]], i64 [[IV_NEXT]]
 ; CHECK-NEXT:    [[GEP2_1:%.*]] = getelementptr inbounds i64, ptr [[A2]], i64 [[IV_NEXT]]
 ; CHECK-NEXT:    [[LOAD1_1:%.*]] = load i64, ptr [[GEP1_1]], align 8
@@ -33,7 +33,7 @@ define i1 @test(ptr %a1, ptr %a2) {
 ; CHECK:       loop.2:
 ; CHECK-NEXT:    br label [[LATCH_2:%.*]]
 ; CHECK:       latch.2:
-; CHECK-NEXT:    [[IV_NEXT_2:%.*]] = add nuw nsw i64 [[IV_NEXT_1]], 1
+; CHECK-NEXT:    [[IV_NEXT_2:%.*]] = add nuw nsw i64 [[IV]], 3
 ; CHECK-NEXT:    [[GEP1_2:%.*]] = getelementptr inbounds i64, ptr [[A1]], i64 [[IV_NEXT_1]]
 ; CHECK-NEXT:    [[GEP2_2:%.*]] = getelementptr inbounds i64, ptr [[A2]], i64 [[IV_NEXT_1]]
 ; CHECK-NEXT:    [[LOAD1_2:%.*]] = load i64, ptr [[GEP1_2]], align 8
@@ -43,7 +43,7 @@ define i1 @test(ptr %a1, ptr %a2) {
 ; CHECK:       loop.3:
 ; CHECK-NEXT:    br label [[LATCH_3:%.*]]
 ; CHECK:       latch.3:
-; CHECK-NEXT:    [[IV_NEXT_3:%.*]] = add nuw nsw i64 [[IV_NEXT_2]], 1
+; CHECK-NEXT:    [[IV_NEXT_3:%.*]] = add nuw nsw i64 [[IV]], 4
 ; CHECK-NEXT:    [[GEP1_3:%.*]] = getelementptr inbounds i64, ptr [[A1]], i64 [[IV_NEXT_2]]
 ; CHECK-NEXT:    [[GEP2_3:%.*]] = getelementptr inbounds i64, ptr [[A2]], i64 [[IV_NEXT_2]]
 ; CHECK-NEXT:    [[LOAD1_3:%.*]] = load i64, ptr [[GEP1_3]], align 8
@@ -54,7 +54,7 @@ define i1 @test(ptr %a1, ptr %a2) {
 ; CHECK-NEXT:    [[EXITCOND_4:%.*]] = icmp eq i64 [[IV_NEXT_3]], 24
 ; CHECK-NEXT:    br i1 [[EXITCOND_4]], label [[EXIT]], label [[LATCH_4]]
 ; CHECK:       latch.4:
-; CHECK-NEXT:    [[IV_NEXT_4]] = add nuw nsw i64 [[IV_NEXT_3]], 1
+; CHECK-NEXT:    [[IV_NEXT_4]] = add nuw nsw i64 [[IV]], 5
 ; CHECK-NEXT:    [[GEP1_4:%.*]] = getelementptr inbounds i64, ptr [[A1]], i64 [[IV_NEXT_3]]
 ; CHECK-NEXT:    [[GEP2_4:%.*]] = getelementptr inbounds i64, ptr [[A2]], i64 [[IV_NEXT_3]]
 ; CHECK-NEXT:    [[LOAD1_4:%.*]] = load i64, ptr [[GEP1_4]], align 8

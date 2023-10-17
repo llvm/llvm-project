@@ -219,5 +219,349 @@ double3 trunc(double3);
 __attribute__((clang_builtin_alias(__builtin_elementwise_trunc)))
 double4 trunc(double4);
 
+// log builtins
+#ifdef __HLSL_ENABLE_16_BIT
+__attribute__((clang_builtin_alias(__builtin_elementwise_log))) half log(half);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log)))
+half2 log(half2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log)))
+half3 log(half3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log)))
+half4 log(half4);
+#endif
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_log))) float
+log(float);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log)))
+float2 log(float2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log)))
+float3 log(float3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log)))
+float4 log(float4);
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_log))) double
+log(double);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log)))
+double2 log(double2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log)))
+double3 log(double3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log)))
+double4 log(double4);
+
+// log2 builtins
+#ifdef __HLSL_ENABLE_16_BIT
+__attribute__((clang_builtin_alias(__builtin_elementwise_log2)))
+half log2(half);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log2)))
+half2 log2(half2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log2)))
+half3 log2(half3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log2)))
+half4 log2(half4);
+#endif
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_log2))) float
+log2(float);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log2)))
+float2 log2(float2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log2)))
+float3 log2(float3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log2)))
+float4 log2(float4);
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_log2))) double
+log2(double);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log2)))
+double2 log2(double2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log2)))
+double3 log2(double3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log2)))
+double4 log2(double4);
+
+// log10 builtins
+#ifdef __HLSL_ENABLE_16_BIT
+__attribute__((clang_builtin_alias(__builtin_elementwise_log10)))
+half log10(half);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log10)))
+half2 log10(half2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log10)))
+half3 log10(half3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log10)))
+half4 log10(half4);
+#endif
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_log10))) float
+log10(float);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log10)))
+float2 log10(float2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log10)))
+float3 log10(float3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log10)))
+float4 log10(float4);
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_log10))) double
+log10(double);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log10)))
+double2 log10(double2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log10)))
+double3 log10(double3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log10)))
+double4 log10(double4);
+
+// max builtins
+#ifdef __HLSL_ENABLE_16_BIT
+__attribute__((clang_builtin_alias(__builtin_elementwise_max)))
+half max(half, half);
+__attribute__((clang_builtin_alias(__builtin_elementwise_max)))
+half2 max(half2, half2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_max)))
+half3 max(half3, half3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_max)))
+half4 max(half4, half4);
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_max)))
+int16_t max(int16_t, int16_t);
+__attribute__((clang_builtin_alias(__builtin_elementwise_max)))
+int16_t2 max(int16_t2, int16_t2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_max)))
+int16_t3 max(int16_t3, int16_t3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_max)))
+int16_t4 max(int16_t4, int16_t4);
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_max)))
+uint16_t max(uint16_t, uint16_t);
+__attribute__((clang_builtin_alias(__builtin_elementwise_max)))
+uint16_t2 max(uint16_t2, uint16_t2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_max)))
+uint16_t3 max(uint16_t3, uint16_t3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_max)))
+uint16_t4 max(uint16_t4, uint16_t4);
+#endif
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_max))) int max(int,
+                                                                        int);
+__attribute__((clang_builtin_alias(__builtin_elementwise_max)))
+int2 max(int2, int2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_max)))
+int3 max(int3, int3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_max)))
+int4 max(int4, int4);
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_max)))
+uint max(uint, uint);
+__attribute__((clang_builtin_alias(__builtin_elementwise_max)))
+uint2 max(uint2, uint2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_max)))
+uint3 max(uint3, uint3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_max)))
+uint4 max(uint4, uint4);
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_max)))
+int64_t max(int64_t, int64_t);
+__attribute__((clang_builtin_alias(__builtin_elementwise_max)))
+int64_t2 max(int64_t2, int64_t2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_max)))
+int64_t3 max(int64_t3, int64_t3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_max)))
+int64_t4 max(int64_t4, int64_t4);
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_max)))
+uint64_t max(uint64_t, uint64_t);
+__attribute__((clang_builtin_alias(__builtin_elementwise_max)))
+uint64_t2 max(uint64_t2, uint64_t2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_max)))
+uint64_t3 max(uint64_t3, uint64_t3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_max)))
+uint64_t4 max(uint64_t4, uint64_t4);
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_max))) float
+max(float, float);
+__attribute__((clang_builtin_alias(__builtin_elementwise_max)))
+float2 max(float2, float2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_max)))
+float3 max(float3, float3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_max)))
+float4 max(float4, float4);
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_max))) double
+max(double, double);
+__attribute__((clang_builtin_alias(__builtin_elementwise_max)))
+double2 max(double2, double2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_max)))
+double3 max(double3, double3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_max)))
+double4 max(double4, double4);
+
+// min builtins
+#ifdef __HLSL_ENABLE_16_BIT
+__attribute__((clang_builtin_alias(__builtin_elementwise_min)))
+half min(half, half);
+__attribute__((clang_builtin_alias(__builtin_elementwise_min)))
+half2 min(half2, half2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_min)))
+half3 min(half3, half3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_min)))
+half4 min(half4, half4);
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_min)))
+int16_t min(int16_t, int16_t);
+__attribute__((clang_builtin_alias(__builtin_elementwise_min)))
+int16_t2 min(int16_t2, int16_t2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_min)))
+int16_t3 min(int16_t3, int16_t3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_min)))
+int16_t4 min(int16_t4, int16_t4);
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_min)))
+uint16_t min(uint16_t, uint16_t);
+__attribute__((clang_builtin_alias(__builtin_elementwise_min)))
+uint16_t2 min(uint16_t2, uint16_t2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_min)))
+uint16_t3 min(uint16_t3, uint16_t3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_min)))
+uint16_t4 min(uint16_t4, uint16_t4);
+#endif
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_min))) int min(int,
+                                                                        int);
+__attribute__((clang_builtin_alias(__builtin_elementwise_min)))
+int2 min(int2, int2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_min)))
+int3 min(int3, int3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_min)))
+int4 min(int4, int4);
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_min)))
+uint min(uint, uint);
+__attribute__((clang_builtin_alias(__builtin_elementwise_min)))
+uint2 min(uint2, uint2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_min)))
+uint3 min(uint3, uint3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_min)))
+uint4 min(uint4, uint4);
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_min)))
+int64_t min(int64_t, int64_t);
+__attribute__((clang_builtin_alias(__builtin_elementwise_min)))
+int64_t2 min(int64_t2, int64_t2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_min)))
+int64_t3 min(int64_t3, int64_t3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_min)))
+int64_t4 min(int64_t4, int64_t4);
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_min)))
+uint64_t min(uint64_t, uint64_t);
+__attribute__((clang_builtin_alias(__builtin_elementwise_min)))
+uint64_t2 min(uint64_t2, uint64_t2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_min)))
+uint64_t3 min(uint64_t3, uint64_t3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_min)))
+uint64_t4 min(uint64_t4, uint64_t4);
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_min))) float
+min(float, float);
+__attribute__((clang_builtin_alias(__builtin_elementwise_min)))
+float2 min(float2, float2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_min)))
+float3 min(float3, float3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_min)))
+float4 min(float4, float4);
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_min))) double
+min(double, double);
+__attribute__((clang_builtin_alias(__builtin_elementwise_min)))
+double2 min(double2, double2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_min)))
+double3 min(double3, double3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_min)))
+double4 min(double4, double4);
+
+// reversebits builtins
+#ifdef __HLSL_ENABLE_16_BIT
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+int16_t reversebits(int16_t);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+int16_t2 reversebits(int16_t2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+int16_t3 reversebits(int16_t3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+int16_t4 reversebits(int16_t4);
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+uint16_t reversebits(uint16_t);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+uint16_t2 reversebits(uint16_t2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+uint16_t3 reversebits(uint16_t3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+uint16_t4 reversebits(uint16_t4);
+#endif
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse))) int
+reversebits(int);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+int2 reversebits(int2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+int3 reversebits(int3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+int4 reversebits(int4);
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+uint reversebits(uint);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+uint2 reversebits(uint2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+uint3 reversebits(uint3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+uint4 reversebits(uint4);
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+int64_t reversebits(int64_t);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+int64_t2 reversebits(int64_t2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+int64_t3 reversebits(int64_t3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+int64_t4 reversebits(int64_t4);
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+uint64_t reversebits(uint64_t);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+uint64_t2 reversebits(uint64_t2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+uint64_t3 reversebits(uint64_t3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+uint64_t4 reversebits(uint64_t4);
+
+// pow builtins
+#ifdef __HLSL_ENABLE_16_BIT
+__attribute__((clang_builtin_alias(__builtin_elementwise_pow)))
+half pow(half, half);
+__attribute__((clang_builtin_alias(__builtin_elementwise_pow)))
+half2 pow(half2, half2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_pow)))
+half3 pow(half3, half3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_pow)))
+half4 pow(half4, half4);
+#endif
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_pow))) float
+pow(float, float);
+__attribute__((clang_builtin_alias(__builtin_elementwise_pow)))
+float2 pow(float2, float2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_pow)))
+float3 pow(float3, float3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_pow)))
+float4 pow(float4, float4);
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_pow))) double
+pow(double, double);
+__attribute__((clang_builtin_alias(__builtin_elementwise_pow)))
+double2 pow(double2, double2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_pow)))
+double3 pow(double3, double3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_pow)))
+double4 pow(double4, double4);
+
 } // namespace hlsl
 #endif //_HLSL_HLSL_INTRINSICS_H_

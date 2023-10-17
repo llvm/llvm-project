@@ -115,7 +115,7 @@ define <4 x i8> @sel_shuf_use(<4 x i8> %x, <4 x i8> %y, <4 x i1> %cmp) {
 
 define <4 x i8> @sel_shuf_undef(<4 x i8> %x, <4 x i8> %y, <4 x i1> %cmp) {
 ; CHECK-LABEL: @sel_shuf_undef(
-; CHECK-NEXT:    [[BLEND:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> [[Y:%.*]], <4 x i32> <i32 0, i32 5, i32 2, i32 undef>
+; CHECK-NEXT:    [[BLEND:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> [[Y:%.*]], <4 x i32> <i32 0, i32 5, i32 2, i32 poison>
 ; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[CMP:%.*]], <4 x i8> [[BLEND]], <4 x i8> [[Y]]
 ; CHECK-NEXT:    ret <4 x i8> [[R]]
 ;
@@ -175,3 +175,426 @@ define <2 x i8> @sel_shuf_narrowing_commute2(<4 x i8> %x, <4 x i8> %y, <2 x i8> 
   %r = select <2 x i1> %cmp, <2 x i8> %x2, <2 x i8> %blend
   ret <2 x i8> %r
 }
+
+define i8 @strong_order_cmp_slt_eq(i32 %a, i32 %b) {
+; CHECK-LABEL: @strong_order_cmp_slt_eq(
+; CHECK-NEXT:    [[CMP_LT:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SEL_LT:%.*]] = select i1 [[CMP_LT]], i8 -1, i8 1
+; CHECK-NEXT:    [[CMP_EQ:%.*]] = icmp eq i32 [[A]], [[B]]
+; CHECK-NEXT:    [[SEL_EQ:%.*]] = select i1 [[CMP_EQ]], i8 0, i8 [[SEL_LT]]
+; CHECK-NEXT:    ret i8 [[SEL_EQ]]
+;
+  %cmp.lt = icmp slt i32 %a, %b
+  %sel.lt = select i1 %cmp.lt, i8 -1, i8 1
+  %cmp.eq = icmp eq i32 %a, %b
+  %sel.eq = select i1 %cmp.eq, i8 0, i8 %sel.lt
+  ret i8 %sel.eq
+}
+
+define i8 @strong_order_cmp_ult_eq(i32 %a, i32 %b) {
+; CHECK-LABEL: @strong_order_cmp_ult_eq(
+; CHECK-NEXT:    [[CMP_LT:%.*]] = icmp ult i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SEL_LT:%.*]] = select i1 [[CMP_LT]], i8 -1, i8 1
+; CHECK-NEXT:    [[CMP_EQ:%.*]] = icmp eq i32 [[A]], [[B]]
+; CHECK-NEXT:    [[SEL_EQ:%.*]] = select i1 [[CMP_EQ]], i8 0, i8 [[SEL_LT]]
+; CHECK-NEXT:    ret i8 [[SEL_EQ]]
+;
+  %cmp.lt = icmp ult i32 %a, %b
+  %sel.lt = select i1 %cmp.lt, i8 -1, i8 1
+  %cmp.eq = icmp eq i32 %a, %b
+  %sel.eq = select i1 %cmp.eq, i8 0, i8 %sel.lt
+  ret i8 %sel.eq
+}
+
+define i8 @strong_order_cmp_slt_eq_wrong_const(i32 %a, i32 %b) {
+; CHECK-LABEL: @strong_order_cmp_slt_eq_wrong_const(
+; CHECK-NEXT:    [[CMP_LT:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SEL_LT:%.*]] = select i1 [[CMP_LT]], i8 -2, i8 1
+; CHECK-NEXT:    [[CMP_EQ:%.*]] = icmp eq i32 [[A]], [[B]]
+; CHECK-NEXT:    [[SEL_EQ:%.*]] = select i1 [[CMP_EQ]], i8 0, i8 [[SEL_LT]]
+; CHECK-NEXT:    ret i8 [[SEL_EQ]]
+;
+  %cmp.lt = icmp slt i32 %a, %b
+  %sel.lt = select i1 %cmp.lt, i8 -2, i8 1
+  %cmp.eq = icmp eq i32 %a, %b
+  %sel.eq = select i1 %cmp.eq, i8 0, i8 %sel.lt
+  ret i8 %sel.eq
+}
+
+define i8 @strong_order_cmp_ult_eq_wrong_const(i32 %a, i32 %b) {
+; CHECK-LABEL: @strong_order_cmp_ult_eq_wrong_const(
+; CHECK-NEXT:    [[CMP_LT:%.*]] = icmp ult i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SEL_LT:%.*]] = select i1 [[CMP_LT]], i8 -1, i8 3
+; CHECK-NEXT:    [[CMP_EQ:%.*]] = icmp eq i32 [[A]], [[B]]
+; CHECK-NEXT:    [[SEL_EQ:%.*]] = select i1 [[CMP_EQ]], i8 0, i8 [[SEL_LT]]
+; CHECK-NEXT:    ret i8 [[SEL_EQ]]
+;
+  %cmp.lt = icmp ult i32 %a, %b
+  %sel.lt = select i1 %cmp.lt, i8 -1, i8 3
+  %cmp.eq = icmp eq i32 %a, %b
+  %sel.eq = select i1 %cmp.eq, i8 0, i8 %sel.lt
+  ret i8 %sel.eq
+}
+
+define i8 @strong_order_cmp_slt_ult_wrong_pred(i32 %a, i32 %b) {
+; CHECK-LABEL: @strong_order_cmp_slt_ult_wrong_pred(
+; CHECK-NEXT:    [[CMP_LT:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SEL_LT:%.*]] = select i1 [[CMP_LT]], i8 -1, i8 1
+; CHECK-NEXT:    [[CMP_EQ:%.*]] = icmp ult i32 [[A]], [[B]]
+; CHECK-NEXT:    [[SEL_EQ:%.*]] = select i1 [[CMP_EQ]], i8 0, i8 [[SEL_LT]]
+; CHECK-NEXT:    ret i8 [[SEL_EQ]]
+;
+  %cmp.lt = icmp slt i32 %a, %b
+  %sel.lt = select i1 %cmp.lt, i8 -1, i8 1
+  %cmp.eq = icmp ult i32 %a, %b
+  %sel.eq = select i1 %cmp.eq, i8 0, i8 %sel.lt
+  ret i8 %sel.eq
+}
+
+define i8 @strong_order_cmp_sgt_eq(i32 %a, i32 %b) {
+; CHECK-LABEL: @strong_order_cmp_sgt_eq(
+; CHECK-NEXT:    [[CMP_GT:%.*]] = icmp sgt i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SEL_GT:%.*]] = select i1 [[CMP_GT]], i8 1, i8 -1
+; CHECK-NEXT:    [[CMP_EQ:%.*]] = icmp eq i32 [[A]], [[B]]
+; CHECK-NEXT:    [[SEL_EQ:%.*]] = select i1 [[CMP_EQ]], i8 0, i8 [[SEL_GT]]
+; CHECK-NEXT:    ret i8 [[SEL_EQ]]
+;
+  %cmp.gt = icmp sgt i32 %a, %b
+  %sel.gt = select i1 %cmp.gt, i8 1, i8 -1
+  %cmp.eq = icmp eq i32 %a, %b
+  %sel.eq = select i1 %cmp.eq, i8 0, i8 %sel.gt
+  ret i8 %sel.eq
+}
+
+define i8 @strong_order_cmp_ugt_eq(i32 %a, i32 %b) {
+; CHECK-LABEL: @strong_order_cmp_ugt_eq(
+; CHECK-NEXT:    [[CMP_GT:%.*]] = icmp ugt i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SEL_GT:%.*]] = select i1 [[CMP_GT]], i8 1, i8 -1
+; CHECK-NEXT:    [[CMP_EQ:%.*]] = icmp eq i32 [[A]], [[B]]
+; CHECK-NEXT:    [[SEL_EQ:%.*]] = select i1 [[CMP_EQ]], i8 0, i8 [[SEL_GT]]
+; CHECK-NEXT:    ret i8 [[SEL_EQ]]
+;
+  %cmp.gt = icmp ugt i32 %a, %b
+  %sel.gt = select i1 %cmp.gt, i8 1, i8 -1
+  %cmp.eq = icmp eq i32 %a, %b
+  %sel.eq = select i1 %cmp.eq, i8 0, i8 %sel.gt
+  ret i8 %sel.eq
+}
+
+define i8 @strong_order_cmp_eq_slt(i32 %a, i32 %b) {
+; CHECK-LABEL: @strong_order_cmp_eq_slt(
+; CHECK-NEXT:    [[CMP_EQ:%.*]] = icmp ne i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SEL_EQ:%.*]] = zext i1 [[CMP_EQ]] to i8
+; CHECK-NEXT:    [[CMP_LT:%.*]] = icmp slt i32 [[A]], [[B]]
+; CHECK-NEXT:    [[SEL_LT:%.*]] = select i1 [[CMP_LT]], i8 -1, i8 [[SEL_EQ]]
+; CHECK-NEXT:    ret i8 [[SEL_LT]]
+;
+  %cmp.eq = icmp eq i32 %a, %b
+  %sel.eq = select i1 %cmp.eq, i8 0, i8 1
+  %cmp.lt = icmp slt i32 %a, %b
+  %sel.lt = select i1 %cmp.lt, i8 -1, i8 %sel.eq
+  ret i8 %sel.lt
+}
+
+define i8 @strong_order_cmp_eq_sgt(i32 %a, i32 %b) {
+; CHECK-LABEL: @strong_order_cmp_eq_sgt(
+; CHECK-NEXT:    [[CMP_EQ:%.*]] = icmp ne i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SEL_EQ:%.*]] = sext i1 [[CMP_EQ]] to i8
+; CHECK-NEXT:    [[CMP_GT:%.*]] = icmp sgt i32 [[A]], [[B]]
+; CHECK-NEXT:    [[SEL_GT:%.*]] = select i1 [[CMP_GT]], i8 1, i8 [[SEL_EQ]]
+; CHECK-NEXT:    ret i8 [[SEL_GT]]
+;
+  %cmp.eq = icmp eq i32 %a, %b
+  %sel.eq = select i1 %cmp.eq, i8 0, i8 -1
+  %cmp.gt = icmp sgt i32 %a, %b
+  %sel.gt = select i1 %cmp.gt, i8 1, i8 %sel.eq
+  ret i8 %sel.gt
+}
+
+define i8 @strong_order_cmp_eq_ult(i32 %a, i32 %b) {
+; CHECK-LABEL: @strong_order_cmp_eq_ult(
+; CHECK-NEXT:    [[CMP_EQ:%.*]] = icmp ne i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SEL_EQ:%.*]] = zext i1 [[CMP_EQ]] to i8
+; CHECK-NEXT:    [[CMP_LT:%.*]] = icmp ult i32 [[A]], [[B]]
+; CHECK-NEXT:    [[SEL_LT:%.*]] = select i1 [[CMP_LT]], i8 -1, i8 [[SEL_EQ]]
+; CHECK-NEXT:    ret i8 [[SEL_LT]]
+;
+  %cmp.eq = icmp eq i32 %a, %b
+  %sel.eq = select i1 %cmp.eq, i8 0, i8 1
+  %cmp.lt = icmp ult i32 %a, %b
+  %sel.lt = select i1 %cmp.lt, i8 -1, i8 %sel.eq
+  ret i8 %sel.lt
+}
+
+define i8 @strong_order_cmp_eq_ugt(i32 %a, i32 %b) {
+; CHECK-LABEL: @strong_order_cmp_eq_ugt(
+; CHECK-NEXT:    [[CMP_EQ:%.*]] = icmp ne i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SEL_EQ:%.*]] = sext i1 [[CMP_EQ]] to i8
+; CHECK-NEXT:    [[CMP_GT:%.*]] = icmp ugt i32 [[A]], [[B]]
+; CHECK-NEXT:    [[SEL_GT:%.*]] = select i1 [[CMP_GT]], i8 1, i8 [[SEL_EQ]]
+; CHECK-NEXT:    ret i8 [[SEL_GT]]
+;
+  %cmp.eq = icmp eq i32 %a, %b
+  %sel.eq = select i1 %cmp.eq, i8 0, i8 -1
+  %cmp.gt = icmp ugt i32 %a, %b
+  %sel.gt = select i1 %cmp.gt, i8 1, i8 %sel.eq
+  ret i8 %sel.gt
+}
+
+define i8 @strong_order_cmp_slt_sgt(i32 %a, i32 %b) {
+; CHECK-LABEL: @strong_order_cmp_slt_sgt(
+; CHECK-NEXT:    [[CMP_LT:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[CMP_LT]] to i8
+; CHECK-NEXT:    [[CMP_GT:%.*]] = icmp sgt i32 [[A]], [[B]]
+; CHECK-NEXT:    [[SEL_GT:%.*]] = select i1 [[CMP_GT]], i8 1, i8 [[SEXT]]
+; CHECK-NEXT:    ret i8 [[SEL_GT]]
+;
+  %cmp.lt = icmp slt i32 %a, %b
+  %sext = sext i1 %cmp.lt to i8
+  %cmp.gt = icmp sgt i32 %a, %b
+  %sel.gt = select i1 %cmp.gt, i8 1, i8 %sext
+  ret i8 %sel.gt
+}
+
+define i8 @strong_order_cmp_ult_ugt(i32 %a, i32 %b) {
+; CHECK-LABEL: @strong_order_cmp_ult_ugt(
+; CHECK-NEXT:    [[CMP_LT:%.*]] = icmp ult i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[CMP_LT]] to i8
+; CHECK-NEXT:    [[CMP_GT:%.*]] = icmp ugt i32 [[A]], [[B]]
+; CHECK-NEXT:    [[SEL_GT:%.*]] = select i1 [[CMP_GT]], i8 1, i8 [[SEXT]]
+; CHECK-NEXT:    ret i8 [[SEL_GT]]
+;
+  %cmp.lt = icmp ult i32 %a, %b
+  %sext = sext i1 %cmp.lt to i8
+  %cmp.gt = icmp ugt i32 %a, %b
+  %sel.gt = select i1 %cmp.gt, i8 1, i8 %sext
+  ret i8 %sel.gt
+}
+
+define i8 @strong_order_cmp_sgt_slt(i32 %a, i32 %b) {
+; CHECK-LABEL: @strong_order_cmp_sgt_slt(
+; CHECK-NEXT:    [[CMP_GT:%.*]] = icmp sgt i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP_GT]] to i8
+; CHECK-NEXT:    [[CMP_LT:%.*]] = icmp slt i32 [[A]], [[B]]
+; CHECK-NEXT:    [[SEL_LT:%.*]] = select i1 [[CMP_LT]], i8 -1, i8 [[ZEXT]]
+; CHECK-NEXT:    ret i8 [[SEL_LT]]
+;
+  %cmp.gt = icmp sgt i32 %a, %b
+  %zext = zext i1 %cmp.gt to i8
+  %cmp.lt = icmp slt i32 %a, %b
+  %sel.lt = select i1 %cmp.lt, i8 -1, i8 %zext
+  ret i8 %sel.lt
+}
+
+define i8 @strong_order_cmp_ugt_ult(i32 %a, i32 %b) {
+; CHECK-LABEL: @strong_order_cmp_ugt_ult(
+; CHECK-NEXT:    [[CMP_GT:%.*]] = icmp ugt i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP_GT]] to i8
+; CHECK-NEXT:    [[CMP_LT:%.*]] = icmp ult i32 [[A]], [[B]]
+; CHECK-NEXT:    [[SEL_LT:%.*]] = select i1 [[CMP_LT]], i8 -1, i8 [[ZEXT]]
+; CHECK-NEXT:    ret i8 [[SEL_LT]]
+;
+  %cmp.gt = icmp ugt i32 %a, %b
+  %zext = zext i1 %cmp.gt to i8
+  %cmp.lt = icmp ult i32 %a, %b
+  %sel.lt = select i1 %cmp.lt, i8 -1, i8 %zext
+  ret i8 %sel.lt
+}
+
+define i8 @strong_order_cmp_ne_ugt_ne_not_one_use(i32 %a, i32 %b) {
+; CHECK-LABEL: @strong_order_cmp_ne_ugt_ne_not_one_use(
+; CHECK-NEXT:    [[CMP_NE:%.*]] = icmp ne i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    call void @use1(i1 [[CMP_NE]])
+; CHECK-NEXT:    [[SEL_EQ:%.*]] = sext i1 [[CMP_NE]] to i8
+; CHECK-NEXT:    [[CMP_GT:%.*]] = icmp ugt i32 [[A]], [[B]]
+; CHECK-NEXT:    [[SEL_GT:%.*]] = select i1 [[CMP_GT]], i8 1, i8 [[SEL_EQ]]
+; CHECK-NEXT:    ret i8 [[SEL_GT]]
+;
+  %cmp.ne = icmp ne i32 %a, %b
+  call void @use1(i1 %cmp.ne)
+  %sel.eq = sext i1 %cmp.ne to i8
+  %cmp.gt = icmp ugt i32 %a, %b
+  %sel.gt = select i1 %cmp.gt, i8 1, i8 %sel.eq
+  ret i8 %sel.gt
+}
+
+define i8 @strong_order_cmp_slt_eq_slt_not_oneuse(i32 %a, i32 %b) {
+; CHECK-LABEL: @strong_order_cmp_slt_eq_slt_not_oneuse(
+; CHECK-NEXT:    [[CMP_LT:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    call void @use1(i1 [[CMP_LT]])
+; CHECK-NEXT:    [[SEL_LT:%.*]] = select i1 [[CMP_LT]], i8 -1, i8 1
+; CHECK-NEXT:    [[CMP_EQ:%.*]] = icmp eq i32 [[A]], [[B]]
+; CHECK-NEXT:    [[SEL_EQ:%.*]] = select i1 [[CMP_EQ]], i8 0, i8 [[SEL_LT]]
+; CHECK-NEXT:    ret i8 [[SEL_EQ]]
+;
+  %cmp.lt = icmp slt i32 %a, %b
+  call void @use1(i1 %cmp.lt)
+  %sel.lt = select i1 %cmp.lt, i8 -1, i8 1
+  %cmp.eq = icmp eq i32 %a, %b
+  %sel.eq = select i1 %cmp.eq, i8 0, i8 %sel.lt
+  ret i8 %sel.eq
+}
+
+define i8 @strong_order_cmp_sgt_eq_eq_not_oneuse(i32 %a, i32 %b) {
+; CHECK-LABEL: @strong_order_cmp_sgt_eq_eq_not_oneuse(
+; CHECK-NEXT:    [[CMP_GT:%.*]] = icmp sgt i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SEL_GT:%.*]] = select i1 [[CMP_GT]], i8 1, i8 -1
+; CHECK-NEXT:    [[CMP_EQ:%.*]] = icmp eq i32 [[A]], [[B]]
+; CHECK-NEXT:    call void @use1(i1 [[CMP_EQ]])
+; CHECK-NEXT:    [[SEL_EQ:%.*]] = select i1 [[CMP_EQ]], i8 0, i8 [[SEL_GT]]
+; CHECK-NEXT:    ret i8 [[SEL_EQ]]
+;
+  %cmp.gt = icmp sgt i32 %a, %b
+  %sel.gt = select i1 %cmp.gt, i8 1, i8 -1
+  %cmp.eq = icmp eq i32 %a, %b
+  call void @use1(i1 %cmp.eq)
+  %sel.eq = select i1 %cmp.eq, i8 0, i8 %sel.gt
+  ret i8 %sel.eq
+}
+
+define i8 @strong_order_cmp_eq_ugt_eq_not_oneuse(i32 %a, i32 %b) {
+; CHECK-LABEL: @strong_order_cmp_eq_ugt_eq_not_oneuse(
+; CHECK-NEXT:    [[CMP_EQ:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    call void @use1(i1 [[CMP_EQ]])
+; CHECK-NEXT:    [[NOT_CMP_EQ:%.*]] = xor i1 [[CMP_EQ]], true
+; CHECK-NEXT:    [[SEL_EQ:%.*]] = sext i1 [[NOT_CMP_EQ]] to i8
+; CHECK-NEXT:    [[CMP_GT:%.*]] = icmp ugt i32 [[A]], [[B]]
+; CHECK-NEXT:    [[SEL_GT:%.*]] = select i1 [[CMP_GT]], i8 1, i8 [[SEL_EQ]]
+; CHECK-NEXT:    ret i8 [[SEL_GT]]
+;
+  %cmp.eq = icmp eq i32 %a, %b
+  call void @use1(i1 %cmp.eq)
+  %sel.eq = select i1 %cmp.eq, i8 0, i8 -1
+  %cmp.gt = icmp ugt i32 %a, %b
+  %sel.gt = select i1 %cmp.gt, i8 1, i8 %sel.eq
+  ret i8 %sel.gt
+}
+
+define i8 @strong_order_cmp_ugt_ult_zext_not_oneuse(i32 %a, i32 %b) {
+; CHECK-LABEL: @strong_order_cmp_ugt_ult_zext_not_oneuse(
+; CHECK-NEXT:    [[CMP_GT:%.*]] = icmp ugt i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP_GT]] to i8
+; CHECK-NEXT:    call void @use8(i8 [[ZEXT]])
+; CHECK-NEXT:    [[CMP_LT:%.*]] = icmp ult i32 [[A]], [[B]]
+; CHECK-NEXT:    [[SEL_LT:%.*]] = select i1 [[CMP_LT]], i8 -1, i8 [[ZEXT]]
+; CHECK-NEXT:    ret i8 [[SEL_LT]]
+;
+  %cmp.gt = icmp ugt i32 %a, %b
+  %zext = zext i1 %cmp.gt to i8
+  call void @use8(i8 %zext)
+  %cmp.lt = icmp ult i32 %a, %b
+  %sel.lt = select i1 %cmp.lt, i8 -1, i8 %zext
+  ret i8 %sel.lt
+}
+
+define i8 @strong_order_cmp_slt_sgt_sext_not_oneuse(i32 %a, i32 %b) {
+; CHECK-LABEL: @strong_order_cmp_slt_sgt_sext_not_oneuse(
+; CHECK-NEXT:    [[CMP_LT:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[CMP_LT]] to i8
+; CHECK-NEXT:    call void @use8(i8 [[SEXT]])
+; CHECK-NEXT:    [[CMP_GT:%.*]] = icmp sgt i32 [[A]], [[B]]
+; CHECK-NEXT:    [[SEL_GT:%.*]] = select i1 [[CMP_GT]], i8 1, i8 [[SEXT]]
+; CHECK-NEXT:    ret i8 [[SEL_GT]]
+;
+  %cmp.lt = icmp slt i32 %a, %b
+  %sext = sext i1 %cmp.lt to i8
+  call void @use8(i8 %sext)
+  %cmp.gt = icmp sgt i32 %a, %b
+  %sel.gt = select i1 %cmp.gt, i8 1, i8 %sext
+  ret i8 %sel.gt
+}
+
+define <2 x i8> @strong_order_cmp_ugt_ult_vector(<2 x i32> %a, <2 x i32> %b) {
+; CHECK-LABEL: @strong_order_cmp_ugt_ult_vector(
+; CHECK-NEXT:    [[CMP_GT:%.*]] = icmp ugt <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i1> [[CMP_GT]] to <2 x i8>
+; CHECK-NEXT:    [[CMP_LT:%.*]] = icmp ult <2 x i32> [[A]], [[B]]
+; CHECK-NEXT:    [[SEL_LT:%.*]] = select <2 x i1> [[CMP_LT]], <2 x i8> <i8 -1, i8 -1>, <2 x i8> [[ZEXT]]
+; CHECK-NEXT:    ret <2 x i8> [[SEL_LT]]
+;
+  %cmp.gt = icmp ugt <2 x i32> %a, %b
+  %zext = zext <2 x i1> %cmp.gt to <2 x i8>
+  %cmp.lt = icmp ult <2 x i32> %a, %b
+  %sel.lt = select <2 x i1> %cmp.lt, <2 x i8> <i8 -1, i8 -1>, <2 x i8> %zext
+  ret <2 x i8> %sel.lt
+}
+
+define <2 x i8> @strong_order_cmp_ugt_ult_vector_poison(<2 x i32> %a, <2 x i32> %b) {
+; CHECK-LABEL: @strong_order_cmp_ugt_ult_vector_poison(
+; CHECK-NEXT:    [[CMP_GT:%.*]] = icmp ugt <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i1> [[CMP_GT]] to <2 x i8>
+; CHECK-NEXT:    [[CMP_LT:%.*]] = icmp ult <2 x i32> [[A]], [[B]]
+; CHECK-NEXT:    [[SEL_LT:%.*]] = select <2 x i1> [[CMP_LT]], <2 x i8> <i8 poison, i8 -1>, <2 x i8> [[ZEXT]]
+; CHECK-NEXT:    ret <2 x i8> [[SEL_LT]]
+;
+  %cmp.gt = icmp ugt <2 x i32> %a, %b
+  %zext = zext <2 x i1> %cmp.gt to <2 x i8>
+  %cmp.lt = icmp ult <2 x i32> %a, %b
+  %sel.lt = select <2 x i1> %cmp.lt, <2 x i8> <i8 poison, i8 -1>, <2 x i8> %zext
+  ret <2 x i8> %sel.lt
+}
+
+define <2 x i8> @strong_order_cmp_eq_ugt_vector(<2 x i32> %a, <2 x i32> %b) {
+; CHECK-LABEL: @strong_order_cmp_eq_ugt_vector(
+; CHECK-NEXT:    [[CMP_EQ:%.*]] = icmp ne <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SEL_EQ:%.*]] = sext <2 x i1> [[CMP_EQ]] to <2 x i8>
+; CHECK-NEXT:    [[CMP_GT:%.*]] = icmp ugt <2 x i32> [[A]], [[B]]
+; CHECK-NEXT:    [[SEL_GT:%.*]] = select <2 x i1> [[CMP_GT]], <2 x i8> <i8 1, i8 1>, <2 x i8> [[SEL_EQ]]
+; CHECK-NEXT:    ret <2 x i8> [[SEL_GT]]
+;
+  %cmp.eq = icmp eq <2 x i32> %a, %b
+  %sel.eq = select <2 x i1> %cmp.eq, <2 x i8> <i8 0, i8 0>, <2 x i8> <i8 -1, i8 -1>
+  %cmp.gt = icmp ugt <2 x i32> %a, %b
+  %sel.gt = select <2 x i1> %cmp.gt, <2 x i8> <i8 1, i8 1>, <2 x i8> %sel.eq
+  ret <2 x i8> %sel.gt
+}
+
+define <2 x i8> @strong_order_cmp_eq_ugt_vector_poison1(<2 x i32> %a, <2 x i32> %b) {
+; CHECK-LABEL: @strong_order_cmp_eq_ugt_vector_poison1(
+; CHECK-NEXT:    [[CMP_EQ:%.*]] = icmp ne <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SEL_EQ:%.*]] = sext <2 x i1> [[CMP_EQ]] to <2 x i8>
+; CHECK-NEXT:    [[CMP_GT:%.*]] = icmp ugt <2 x i32> [[A]], [[B]]
+; CHECK-NEXT:    [[SEL_GT:%.*]] = select <2 x i1> [[CMP_GT]], <2 x i8> <i8 1, i8 1>, <2 x i8> [[SEL_EQ]]
+; CHECK-NEXT:    ret <2 x i8> [[SEL_GT]]
+;
+  %cmp.eq = icmp eq <2 x i32> %a, %b
+  %sel.eq = select <2 x i1> %cmp.eq, <2 x i8> <i8 0, i8 poison>, <2 x i8> <i8 -1, i8 -1>
+  %cmp.gt = icmp ugt <2 x i32> %a, %b
+  %sel.gt = select <2 x i1> %cmp.gt, <2 x i8> <i8 1, i8 1>, <2 x i8> %sel.eq
+  ret <2 x i8> %sel.gt
+}
+
+define <2 x i8> @strong_order_cmp_eq_ugt_vector_poison2(<2 x i32> %a, <2 x i32> %b) {
+; CHECK-LABEL: @strong_order_cmp_eq_ugt_vector_poison2(
+; CHECK-NEXT:    [[CMP_EQ:%.*]] = icmp ne <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SEL_EQ:%.*]] = sext <2 x i1> [[CMP_EQ]] to <2 x i8>
+; CHECK-NEXT:    [[CMP_GT:%.*]] = icmp ugt <2 x i32> [[A]], [[B]]
+; CHECK-NEXT:    [[SEL_GT:%.*]] = select <2 x i1> [[CMP_GT]], <2 x i8> <i8 1, i8 1>, <2 x i8> [[SEL_EQ]]
+; CHECK-NEXT:    ret <2 x i8> [[SEL_GT]]
+;
+  %cmp.eq = icmp eq <2 x i32> %a, %b
+  %sel.eq = select <2 x i1> %cmp.eq, <2 x i8> <i8 0, i8 0>, <2 x i8> <i8 poison, i8 -1>
+  %cmp.gt = icmp ugt <2 x i32> %a, %b
+  %sel.gt = select <2 x i1> %cmp.gt, <2 x i8> <i8 1, i8 1>, <2 x i8> %sel.eq
+  ret <2 x i8> %sel.gt
+}
+
+define <2 x i8> @strong_order_cmp_eq_ugt_vector_poison3(<2 x i32> %a, <2 x i32> %b) {
+; CHECK-LABEL: @strong_order_cmp_eq_ugt_vector_poison3(
+; CHECK-NEXT:    [[CMP_EQ:%.*]] = icmp ne <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SEL_EQ:%.*]] = sext <2 x i1> [[CMP_EQ]] to <2 x i8>
+; CHECK-NEXT:    [[CMP_GT:%.*]] = icmp ugt <2 x i32> [[A]], [[B]]
+; CHECK-NEXT:    [[SEL_GT:%.*]] = select <2 x i1> [[CMP_GT]], <2 x i8> <i8 1, i8 poison>, <2 x i8> [[SEL_EQ]]
+; CHECK-NEXT:    ret <2 x i8> [[SEL_GT]]
+;
+  %cmp.eq = icmp eq <2 x i32> %a, %b
+  %sel.eq = select <2 x i1> %cmp.eq, <2 x i8> <i8 0, i8 0>, <2 x i8> <i8 -1, i8 -1>
+  %cmp.gt = icmp ugt <2 x i32> %a, %b
+  %sel.gt = select <2 x i1> %cmp.gt, <2 x i8> <i8 1, i8 poison>, <2 x i8> %sel.eq
+  ret <2 x i8> %sel.gt
+}
+
+
+
+declare void @use1(i1)
+declare void @use8(i8)

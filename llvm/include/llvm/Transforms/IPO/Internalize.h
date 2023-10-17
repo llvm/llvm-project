@@ -28,7 +28,6 @@
 
 namespace llvm {
 class Module;
-class CallGraph;
 
 /// A pass that internalizes all functions and variables other than those that
 /// must be preserved according to \c MustPreserveGV.
@@ -66,10 +65,7 @@ public:
 
   /// Run the internalizer on \p TheModule, returns true if any changes was
   /// made.
-  ///
-  /// If the CallGraph \p CG is supplied, it will be updated when
-  /// internalizing a function (by removing any edge from the "external node")
-  bool internalizeModule(Module &TheModule, CallGraph *CG = nullptr);
+  bool internalizeModule(Module &TheModule);
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
@@ -77,10 +73,9 @@ public:
 /// Helper function to internalize functions and variables in a Module.
 inline bool
 internalizeModule(Module &TheModule,
-                  std::function<bool(const GlobalValue &)> MustPreserveGV,
-                  CallGraph *CG = nullptr) {
+                  std::function<bool(const GlobalValue &)> MustPreserveGV) {
   return InternalizePass(std::move(MustPreserveGV))
-      .internalizeModule(TheModule, CG);
+      .internalizeModule(TheModule);
 }
 } // end namespace llvm
 

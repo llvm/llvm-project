@@ -12,9 +12,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/Wasm.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Object/ObjectFile.h"
@@ -25,6 +23,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -38,7 +38,18 @@ using namespace object;
 void WasmSymbol::print(raw_ostream &Out) const {
   Out << "Name=" << Info.Name
       << ", Kind=" << toString(wasm::WasmSymbolType(Info.Kind)) << ", Flags=0x"
-      << Twine::utohexstr(Info.Flags);
+      << Twine::utohexstr(Info.Flags) << " [";
+  switch (getBinding()) {
+    case wasm::WASM_SYMBOL_BINDING_GLOBAL: Out << "global"; break;
+    case wasm::WASM_SYMBOL_BINDING_LOCAL: Out << "local"; break;
+    case wasm::WASM_SYMBOL_BINDING_WEAK: Out << "weak"; break;
+  }
+  if (isHidden()) {
+    Out << ", hidden";
+  } else {
+    Out << ", default";
+  }
+  Out << "]";
   if (!isTypeData()) {
     Out << ", ElemIndex=" << Info.ElementIndex;
   } else if (isDefined()) {
@@ -257,7 +268,11 @@ static Error readSection(WasmSection &Section, WasmObjectFile::ReadContext &Ctx,
   Section.Offset = Ctx.Ptr - Ctx.Start;
   Section.Type = readUint8(Ctx);
   LLVM_DEBUG(dbgs() << "readSection type=" << Section.Type << "\n");
+  // When reading the section's size, store the size of the LEB used to encode
+  // it. This allows objcopy/strip to reproduce the binary identically.
+  const uint8_t *PreSizePtr = Ctx.Ptr;
   uint32_t Size = readVaruint32(Ctx);
+  Section.HeaderSecSizeEncodingLen = Ctx.Ptr - PreSizePtr;
   if (Size == 0)
     return make_error<StringError>("zero length section",
                                    object_error::parse_failed);
@@ -708,17 +723,21 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
       Info.Name = readString(Ctx);
       if (IsDefined) {
         auto Index = readVaruint32(Ctx);
-        if (Index >= DataSegments.size())
-          return make_error<GenericBinaryError>("invalid data symbol index",
-                                                object_error::parse_failed);
         auto Offset = readVaruint64(Ctx);
         auto Size = readVaruint64(Ctx);
-        size_t SegmentSize = DataSegments[Index].Data.Content.size();
-        if (Offset > SegmentSize)
-          return make_error<GenericBinaryError>(
-              "invalid data symbol offset: `" + Info.Name + "` (offset: " +
-                  Twine(Offset) + " segment size: " + Twine(SegmentSize) + ")",
-              object_error::parse_failed);
+        if (!(Info.Flags & wasm::WASM_SYMBOL_ABSOLUTE)) {
+          if (static_cast<size_t>(Index) >= DataSegments.size())
+            return make_error<GenericBinaryError>(
+                "invalid data segment index: " + Twine(Index),
+                object_error::parse_failed);
+          size_t SegmentSize = DataSegments[Index].Data.Content.size();
+          if (Offset > SegmentSize)
+            return make_error<GenericBinaryError>(
+                "invalid data symbol offset: `" + Info.Name +
+                    "` (offset: " + Twine(Offset) +
+                    " segment size: " + Twine(SegmentSize) + ")",
+                object_error::parse_failed);
+        }
         Info.DataRef = wasm::WasmDataReference{Index, Offset, Size};
       }
       break;
@@ -937,6 +956,7 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
     Reloc.Index = readVaruint32(Ctx);
     switch (type) {
     case wasm::R_WASM_FUNCTION_INDEX_LEB:
+    case wasm::R_WASM_FUNCTION_INDEX_I32:
     case wasm::R_WASM_TABLE_INDEX_SLEB:
     case wasm::R_WASM_TABLE_INDEX_SLEB64:
     case wasm::R_WASM_TABLE_INDEX_I32:
@@ -1034,6 +1054,7 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
         Reloc.Type == wasm::R_WASM_MEMORY_ADDR_LOCREL_I32 ||
         Reloc.Type == wasm::R_WASM_SECTION_OFFSET_I32 ||
         Reloc.Type == wasm::R_WASM_FUNCTION_OFFSET_I32 ||
+        Reloc.Type == wasm::R_WASM_FUNCTION_INDEX_I32 ||
         Reloc.Type == wasm::R_WASM_GLOBAL_INDEX_I32)
       Size = 4;
     if (Reloc.Type == wasm::R_WASM_TABLE_INDEX_I64 ||

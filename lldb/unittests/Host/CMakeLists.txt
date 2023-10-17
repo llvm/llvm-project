@@ -38,3 +38,5 @@ add_lldb_unittest(HostTests
     LLVMTestingSupport
     LLVMTargetParser
   )
+
+add_subdirectory(common)

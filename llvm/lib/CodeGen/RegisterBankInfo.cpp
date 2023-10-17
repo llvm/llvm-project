@@ -10,6 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/RegisterBankInfo.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
@@ -52,9 +53,11 @@ const unsigned RegisterBankInfo::InvalidMappingID = UINT_MAX - 1;
 //------------------------------------------------------------------------------
 // RegisterBankInfo implementation.
 //------------------------------------------------------------------------------
-RegisterBankInfo::RegisterBankInfo(RegisterBank **RegBanks,
-                                   unsigned NumRegBanks)
-    : RegBanks(RegBanks), NumRegBanks(NumRegBanks) {
+RegisterBankInfo::RegisterBankInfo(const RegisterBank **RegBanks,
+                                   unsigned NumRegBanks, const unsigned *Sizes,
+                                   unsigned HwMode)
+    : RegBanks(RegBanks), NumRegBanks(NumRegBanks), Sizes(Sizes),
+      HwMode(HwMode) {
 #ifndef NDEBUG
   for (unsigned Idx = 0, End = getNumRegBanks(); Idx != End; ++Idx) {
     assert(RegBanks[Idx] != nullptr && "Invalid RegisterBank");
@@ -70,7 +73,7 @@ bool RegisterBankInfo::verify(const TargetRegisterInfo &TRI) const {
     assert(Idx == RegBank.getID() &&
            "ID does not match the index in the array");
     LLVM_DEBUG(dbgs() << "Verify " << RegBank << '\n');
-    assert(RegBank.verify(TRI) && "RegBank is invalid");
+    assert(RegBank.verify(*this, TRI) && "RegBank is invalid");
   }
 #endif // NDEBUG
   return true;
@@ -79,31 +82,32 @@ bool RegisterBankInfo::verify(const TargetRegisterInfo &TRI) const {
 const RegisterBank *
 RegisterBankInfo::getRegBank(Register Reg, const MachineRegisterInfo &MRI,
                              const TargetRegisterInfo &TRI) const {
-  if (Reg.isPhysical()) {
+  if (!Reg.isVirtual()) {
     // FIXME: This was probably a copy to a virtual register that does have a
     // type we could use.
-    return &getRegBankFromRegClass(getMinimalPhysRegClass(Reg, TRI), LLT());
+    const TargetRegisterClass *RC = getMinimalPhysRegClass(Reg, TRI);
+    return RC ? &getRegBankFromRegClass(*RC, LLT()) : nullptr;
   }
 
-  assert(Reg && "NoRegister does not have a register bank");
   const RegClassOrRegBank &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
-  if (auto *RB = RegClassOrBank.dyn_cast<const RegisterBank *>())
+  if (auto *RB = dyn_cast_if_present<const RegisterBank *>(RegClassOrBank))
     return RB;
-  if (auto *RC = RegClassOrBank.dyn_cast<const TargetRegisterClass *>())
+  if (auto *RC =
+          dyn_cast_if_present<const TargetRegisterClass *>(RegClassOrBank))
     return &getRegBankFromRegClass(*RC, MRI.getType(Reg));
   return nullptr;
 }
 
-const TargetRegisterClass &
+const TargetRegisterClass *
 RegisterBankInfo::getMinimalPhysRegClass(Register Reg,
                                          const TargetRegisterInfo &TRI) const {
   assert(Reg.isPhysical() && "Reg must be a physreg");
   const auto &RegRCIt = PhysRegMinimalRCs.find(Reg);
   if (RegRCIt != PhysRegMinimalRCs.end())
-    return *RegRCIt->second;
-  const TargetRegisterClass *PhysRC = TRI.getMinimalPhysRegClass(Reg);
+    return RegRCIt->second;
+  const TargetRegisterClass *PhysRC = TRI.getMinimalPhysRegClassLLT(Reg, LLT());
   PhysRegMinimalRCs[Reg] = PhysRC;
-  return *PhysRC;
+  return PhysRC;
 }
 
 const RegisterBank *RegisterBankInfo::getRegBankFromConstraints(
@@ -131,10 +135,10 @@ const TargetRegisterClass *RegisterBankInfo::constrainGenericRegister(
 
   // If the register already has a class, fallback to MRI::constrainRegClass.
   auto &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
-  if (RegClassOrBank.is<const TargetRegisterClass *>())
+  if (isa<const TargetRegisterClass *>(RegClassOrBank))
     return MRI.constrainRegClass(Reg, &RC);
 
-  const RegisterBank *RB = RegClassOrBank.get<const RegisterBank *>();
+  const RegisterBank *RB = cast<const RegisterBank *>(RegClassOrBank);
   // Otherwise, all we can do is ensure the bank covers the class, and set it.
   if (RB && !RB->covers(RC))
     return nullptr;
@@ -498,7 +502,7 @@ unsigned RegisterBankInfo::getSizeInBits(Register Reg,
     // Instead, we need to access a register class that contains Reg and
     // get the size of that register class.
     // Because this is expensive, we'll cache the register class by calling
-    auto *RC = &getMinimalPhysRegClass(Reg, TRI);
+    auto *RC = getMinimalPhysRegClass(Reg, TRI);
     assert(RC && "Expecting Register class");
     return TRI.getRegSizeInBits(*RC);
   }
@@ -515,12 +519,14 @@ LLVM_DUMP_METHOD void RegisterBankInfo::PartialMapping::dump() const {
 }
 #endif
 
-bool RegisterBankInfo::PartialMapping::verify() const {
+bool RegisterBankInfo::PartialMapping::verify(
+    const RegisterBankInfo &RBI) const {
   assert(RegBank && "Register bank not set");
   assert(Length && "Empty mapping");
   assert((StartIdx <= getHighBitIdx()) && "Overflow, switch to APInt?");
   // Check if the minimum width fits into RegBank.
-  assert(RegBank->getSize() >= Length && "Register bank too small for Mask");
+  assert(RBI.getMaximumSize(RegBank->getID()) >= Length &&
+         "Register bank too small for Mask");
   return true;
 }
 
@@ -545,13 +551,14 @@ bool RegisterBankInfo::ValueMapping::partsAllUniform() const {
   return true;
 }
 
-bool RegisterBankInfo::ValueMapping::verify(unsigned MeaningfulBitWidth) const {
+bool RegisterBankInfo::ValueMapping::verify(const RegisterBankInfo &RBI,
+                                            unsigned MeaningfulBitWidth) const {
   assert(NumBreakDowns && "Value mapped nowhere?!");
   unsigned OrigValueBitWidth = 0;
   for (const RegisterBankInfo::PartialMapping &PartMap : *this) {
     // Check that each register bank is big enough to hold the partial value:
     // this check is done by PartialMapping::verify
-    assert(PartMap.verify() && "Partial mapping is invalid");
+    assert(PartMap.verify(RBI) && "Partial mapping is invalid");
     // The original value should completely be mapped.
     // Thus the maximum accessed index + 1 is the size of the original value.
     OrigValueBitWidth =
@@ -625,8 +632,9 @@ bool RegisterBankInfo::InstructionMapping::verify(
     (void)MOMapping;
     // Register size in bits.
     // This size must match what the mapping expects.
-    assert(MOMapping.verify(RBI->getSizeInBits(
-               Reg, MF.getRegInfo(), *MF.getSubtarget().getRegisterInfo())) &&
+    assert(MOMapping.verify(*RBI, RBI->getSizeInBits(
+                                      Reg, MF.getRegInfo(),
+                                      *MF.getSubtarget().getRegisterInfo())) &&
            "Value mapping is invalid");
   }
   return true;

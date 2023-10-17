@@ -10,65 +10,14 @@
 
 #include "src/__support/CPP/limits.h"
 #include "src/__support/ctype_utils.h"
+#include "src/stdio/scanf_core/converter_utils.h"
 #include "src/stdio/scanf_core/core_structs.h"
 #include "src/stdio/scanf_core/reader.h"
 
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace scanf_core {
-
-constexpr char inline to_lower(char a) { return a | 32; }
-
-constexpr inline int b36_char_to_int(char input) {
-  if (internal::isdigit(input))
-    return input - '0';
-  if (internal::isalpha(input))
-    return to_lower(input) + 10 - 'a';
-  return 0;
-}
-
-void write_with_length(uintmax_t output_val, const FormatSection &to_conv) {
-  if ((to_conv.flags & NO_WRITE) != 0) {
-    return;
-  }
-  LengthModifier lm = to_conv.length_modifier;
-  void *output_ptr = to_conv.output_ptr;
-  switch (lm) {
-  case (LengthModifier::hh):
-    *reinterpret_cast<unsigned char *>(output_ptr) =
-        static_cast<unsigned char>(output_val);
-    break;
-  case (LengthModifier::h):
-    *reinterpret_cast<unsigned short *>(output_ptr) =
-        static_cast<unsigned short>(output_val);
-    break;
-  case (LengthModifier::NONE):
-    *reinterpret_cast<unsigned int *>(output_ptr) =
-        static_cast<unsigned int>(output_val);
-    break;
-  case (LengthModifier::l):
-    *reinterpret_cast<unsigned long *>(output_ptr) =
-        static_cast<unsigned long>(output_val);
-    break;
-  case (LengthModifier::ll):
-  case (LengthModifier::L):
-    *reinterpret_cast<unsigned long long *>(output_ptr) =
-        static_cast<unsigned long long>(output_val);
-    break;
-  case (LengthModifier::j):
-    *reinterpret_cast<uintmax_t *>(output_ptr) =
-        static_cast<uintmax_t>(output_val);
-    break;
-  case (LengthModifier::z):
-    *reinterpret_cast<size_t *>(output_ptr) = static_cast<size_t>(output_val);
-    break;
-  case (LengthModifier::t):
-    *reinterpret_cast<ptrdiff_t *>(output_ptr) =
-        static_cast<ptrdiff_t>(output_val);
-    break;
-  }
-}
 
 // This code is very similar to the code in __support/str_to_integer.h but is
 // not quite the same. Here is the list of differences and why they exist:
@@ -130,7 +79,7 @@ int convert_int(Reader *reader, const FormatSection &to_conv) {
     is_signed = true;
   } else if (to_conv.conv_name == 'o') {
     base = 8;
-  } else if (to_lower(to_conv.conv_name) == 'x') {
+  } else if (to_lower(to_conv.conv_name) == 'x' || to_conv.conv_name == 'p') {
     base = 16;
   } else if (to_conv.conv_name == 'd') {
     base = 10;
@@ -150,7 +99,7 @@ int convert_int(Reader *reader, const FormatSection &to_conv) {
     } else {
       // If the max width has been hit already, then the return value must be 0
       // since no actual digits of the number have been parsed yet.
-      write_with_length(0, to_conv);
+      write_int_with_length(0, to_conv);
       return MATCHING_FAILURE;
     }
   }
@@ -168,7 +117,7 @@ int convert_int(Reader *reader, const FormatSection &to_conv) {
         --max_width;
         cur_char = reader->getc();
       } else {
-        write_with_length(0, to_conv);
+        write_int_with_length(0, to_conv);
         return READ_OK;
       }
 
@@ -179,7 +128,7 @@ int convert_int(Reader *reader, const FormatSection &to_conv) {
           --max_width;
           cur_char = reader->getc();
         } else {
-          write_with_length(0, to_conv);
+          write_int_with_length(0, to_conv);
           return READ_OK;
         }
 
@@ -196,7 +145,7 @@ int convert_int(Reader *reader, const FormatSection &to_conv) {
         // If the first character isn't a valid digit, then there are no valid
         // digits at all. The number is 0.
         reader->ungetc(cur_char);
-        write_with_length(0, to_conv);
+        write_int_with_length(0, to_conv);
         return MATCHING_FAILURE;
       }
     }
@@ -249,12 +198,12 @@ int convert_int(Reader *reader, const FormatSection &to_conv) {
   reader->ungetc(cur_char);
 
   if (has_overflow) {
-    write_with_length(MAX, to_conv);
+    write_int_with_length(MAX, to_conv);
   } else {
     if (is_negative)
       result = -result;
 
-    write_with_length(result, to_conv);
+    write_int_with_length(result, to_conv);
   }
 
   if (!is_number)
@@ -263,4 +212,4 @@ int convert_int(Reader *reader, const FormatSection &to_conv) {
 }
 
 } // namespace scanf_core
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

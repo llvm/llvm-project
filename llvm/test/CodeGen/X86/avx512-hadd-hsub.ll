@@ -16,7 +16,7 @@ define i32 @hadd_16(<16 x i32> %x225) {
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SKX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; SKX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; SKX-NEXT:    vpsrlq $32, %xmm0, %xmm1
 ; SKX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; SKX-NEXT:    vmovd %xmm0, %eax
 ; SKX-NEXT:    vzeroupper
@@ -43,7 +43,7 @@ define i32 @hsub_16(<16 x i32> %x225) {
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SKX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; SKX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; SKX-NEXT:    vpsrlq $32, %xmm0, %xmm1
 ; SKX-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; SKX-NEXT:    vmovd %xmm0, %eax
 ; SKX-NEXT:    vzeroupper
@@ -59,7 +59,7 @@ define i32 @hsub_16(<16 x i32> %x225) {
 define float @fhadd_16(<16 x float> %x225) {
 ; KNL-LABEL: fhadd_16:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; KNL-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; KNL-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; KNL-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; KNL-NEXT:    vaddss %xmm1, %xmm0, %xmm0
@@ -67,7 +67,7 @@ define float @fhadd_16(<16 x float> %x225) {
 ;
 ; SKX-LABEL: fhadd_16:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; SKX-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; SKX-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; SKX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
@@ -84,7 +84,7 @@ define float @fhadd_16(<16 x float> %x225) {
 define float @fhsub_16(<16 x float> %x225) {
 ; KNL-LABEL: fhsub_16:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; KNL-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; KNL-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; KNL-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; KNL-NEXT:    vsubss %xmm1, %xmm0, %xmm0
@@ -92,7 +92,7 @@ define float @fhsub_16(<16 x float> %x225) {
 ;
 ; SKX-LABEL: fhsub_16:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; SKX-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; SKX-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; SKX-NEXT:    vsubss %xmm1, %xmm0, %xmm0
@@ -192,13 +192,13 @@ define <8 x i32> @hadd_16_3_sv(<16 x i32> %x225, <16 x i32> %x227) {
 define double @fadd_noundef_eel(<8 x double> %x225, <8 x double> %x227) {
 ; KNL-LABEL: fadd_noundef_eel:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; KNL-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; KNL-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: fadd_noundef_eel:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; SKX-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; SKX-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
@@ -215,14 +215,14 @@ define double @fsub_noundef_ee (<8 x double> %x225, <8 x double> %x227) {
 ; KNL-LABEL: fsub_noundef_ee:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vextractf32x4 $2, %zmm1, %xmm0
-; KNL-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; KNL-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; KNL-NEXT:    vsubsd %xmm1, %xmm0, %xmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: fsub_noundef_ee:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vextractf32x4 $2, %zmm1, %xmm0
-; SKX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; SKX-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; SKX-NEXT:    vsubsd %xmm1, %xmm0, %xmm0
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq

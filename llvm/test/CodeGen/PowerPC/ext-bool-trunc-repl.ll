@@ -11,26 +11,35 @@ define void @fn2() #0 {
 
   br i1 undef, label %1, label %10
 
-; <label>:1:                                      ; preds = %0
+1:                                                ; preds = %0
   br i1 undef, label %3, label %2
 
-; <label>:2:                                      ; preds = %2, %1
+2:                                                ; preds = %2, %1
   br i1 undef, label %3, label %2
 
-; <label>:3:                                      ; preds = %2, %1
+3:                                                ; preds = %2, %1
   br i1 undef, label %8, label %4
 
-; <label>:4:                                      ; preds = %4, %3
+4:                                                ; preds = %4, %3
   %5 = phi i64 [ %6, %4 ], [ undef, %3 ]
-  %6 = and i64 %5, and (i64 and (i64 and (i64 and (i64 and (i64 and (i64 and (i64 sext (i32 select (i1 icmp slt (i16 zext (i1 icmp eq (ptr getelementptr inbounds ([2 x i32], ptr @d, i64 0, i64 1), ptr @c) to i16), i16 0), i32 zext (i1 icmp eq (ptr getelementptr inbounds ([2 x i32], ptr @d, i64 0, i64 1), ptr @c) to i32), i32 lshr (i32 zext (i1 icmp eq (ptr getelementptr inbounds ([2 x i32], ptr @d, i64 0, i64 1), ptr @c) to i32), i32 6)) to i64), i64 sext (i32 select (i1 icmp slt (i16 zext (i1 icmp eq (ptr getelementptr inbounds ([2 x i32], ptr @d, i64 0, i64 1), ptr @c) to i16), i16 0), i32 zext (i1 icmp eq (ptr getelementptr inbounds ([2 x i32], ptr @d, i64 0, i64 1), ptr @c) to i32), i32 lshr (i32 zext (i1 icmp eq (ptr getelementptr inbounds ([2 x i32], ptr @d, i64 0, i64 1), ptr @c) to i32), i32 6)) to i64)), i64 sext (i32 select (i1 icmp slt (i16 zext (i1 icmp eq (ptr getelementptr inbounds ([2 x i32], ptr @d, i64 0, i64 1), ptr @c) to i16), i16 0), i32 zext (i1 icmp eq (ptr getelementptr inbounds ([2 x i32], ptr @d, i64 0, i64 1), ptr @c) to i32), i32 lshr (i32 zext (i1 icmp eq (ptr getelementptr inbounds ([2 x i32], ptr @d, i64 0, i64 1), ptr @c) to i32), i32 6)) to i64)), i64 sext (i32 select (i1 icmp slt (i16 zext (i1 icmp eq (ptr getelementptr inbounds ([2 x i32], ptr @d, i64 0, i64 1), ptr @c) to i16), i16 0), i32 zext (i1 icmp eq (ptr getelementptr inbounds ([2 x i32], ptr @d, i64 0, i64 1), ptr @c) to i32), i32 lshr (i32 zext (i1 icmp eq (ptr getelementptr inbounds ([2 x i32], ptr @d, i64 0, i64 1), ptr @c) to i32), i32 6)) to i64)), i64 sext (i32 select (i1 icmp slt (i16 zext (i1 icmp eq (ptr getelementptr inbounds ([2 x i32], ptr @d, i64 0, i64 1), ptr @c) to i16), i16 0), i32 zext (i1 icmp eq (ptr getelementptr inbounds ([2 x i32], ptr @d, i64 0, i64 1), ptr @c) to i32), i32 lshr (i32 zext (i1 icmp eq (ptr getelementptr inbounds ([2 x i32], ptr @d, i64 0, i64 1), ptr @c) to i32), i32 6)) to i64)), i64 sext (i32 select (i1 icmp slt (i16 zext (i1 icmp eq (ptr getelementptr inbounds ([2 x i32], ptr @d, i64 0, i64 1), ptr @c) to i16), i16 0), i32 zext (i1 icmp eq (ptr getelementptr inbounds ([2 x i32], ptr @d, i64 0, i64 1), ptr @c) to i32), i32 lshr (i32 zext (i1 icmp eq (ptr getelementptr inbounds ([2 x i32], ptr @d, i64 0, i64 1), ptr @c) to i32), i32 6)) to i64)), i64 sext (i32 select (i1 icmp slt (i16 zext (i1 icmp eq (ptr getelementptr inbounds ([2 x i32], ptr @d, i64 0, i64 1), ptr @c) to i16), i16 0), i32 zext (i1 icmp eq (ptr getelementptr inbounds ([2 x i32], ptr @d, i64 0, i64 1), ptr @c) to i32), i32 lshr (i32 zext (i1 icmp eq (ptr getelementptr inbounds ([2 x i32], ptr @d, i64 0, i64 1), ptr @c) to i32), i32 6)) to i64)), i64 sext (i32 select (i1 icmp slt (i16 zext (i1 icmp eq (ptr getelementptr inbounds ([2 x i32], ptr @d, i64 0, i64 1), ptr @c) to i16), i16 0), i32 zext (i1 icmp eq (ptr getelementptr inbounds ([2 x i32], ptr @d, i64 0, i64 1), ptr @c) to i32), i32 lshr (i32 zext (i1 icmp eq (ptr getelementptr inbounds ([2 x i32], ptr @d, i64 0, i64 1), ptr @c) to i32), i32 6)) to i64))
+  %constexpr = select i1 icmp slt (i16 zext (i1 icmp eq (ptr getelementptr inbounds ([2 x i32], ptr @d, i64 0, i64 1), ptr @c) to i16), i16 0), i32 zext (i1 icmp eq (ptr getelementptr inbounds ([2 x i32], ptr @d, i64 0, i64 1), ptr @c) to i32), i32 lshr (i32 zext (i1 icmp eq (ptr getelementptr inbounds ([2 x i32], ptr @d, i64 0, i64 1), ptr @c) to i32), i32 6)
+  %constexpr1 = sext i32 %constexpr to i64
+  %constexpr2 = and i64 %constexpr1, %constexpr1
+  %constexpr3 = and i64 %constexpr2, %constexpr1
+  %constexpr4 = and i64 %constexpr3, %constexpr1
+  %constexpr5 = and i64 %constexpr4, %constexpr1
+  %constexpr6 = and i64 %constexpr5, %constexpr1
+  %constexpr7 = and i64 %constexpr6, %constexpr1
+  %constexpr8 = and i64 %constexpr7, %constexpr1
+  %6 = and i64 %5, %constexpr8
   %7 = icmp slt i32 undef, 6
   br i1 %7, label %4, label %8
 
-; <label>:8:                                      ; preds = %4, %3
+8:                                                ; preds = %4, %3
   %9 = phi i64 [ undef, %3 ], [ %6, %4 ]
   br label %10
 
-; <label>:10:                                     ; preds = %8, %0
+10:                                               ; preds = %8, %0
   ret void
 }
 

@@ -27,7 +27,7 @@ def Tosa_Dialect : Dialect {
     The Tensor Operator Set Architecture (TOSA) dialect.
 
     This dialect implements the TOSA standard described at
-    https://developer.mlplatform.org/w/tosa/ .
+    https://www.mlplatform.org/tosa/tosa_spec.html .
 
     Tensor Operator Set Architecture (TOSA) provides a set of whole-tensor
     operations commonly employed by Deep Neural Networks. The intent is to
@@ -40,12 +40,11 @@ def Tosa_Dialect : Dialect {
     there will be tools to lower from the ML frameworks into TOSA.
   }];
 
-  let dependentDialects = ["tensor::TensorDialect"];
+  let dependentDialects = ["tensor::TensorDialect", "quant::QuantizationDialect"];
 
   let cppNamespace = "mlir::tosa";
   let hasConstantMaterializer = 1;
   let useDefaultAttributePrinterParser = 1;
-  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 //===----------------------------------------------------------------------===//
@@ -174,10 +173,10 @@ def Tosa_MatMulOpQuantInfoBuilder : OpBuilder<
 def Tosa_AvgPool2dOpQuantInfoBuilder : OpBuilder<
   (ins "::mlir::Type":$outputType, "::mlir::Value":$input,
        "::mlir::DenseI64ArrayAttr":$kernel, "::mlir::DenseI64ArrayAttr":$stride,
-       "::mlir::DenseI64ArrayAttr":$pad),
+       "::mlir::DenseI64ArrayAttr":$pad, "::mlir::TypeAttr":$acc_type),
   [{
     buildAvgPool2dOpWithQuantInfo($_builder, $_state, outputType,
-                                  input, kernel, stride, pad);
+                                  input, kernel, stride, pad, acc_type);
   }]>;
 
 // This builder is called on single-parameter unary operators that have a scale
@@ -208,11 +207,33 @@ def Tosa_ExplicitValuePadOpQuantInfoBuilder : OpBuilder<
   }]>;
 
 //===----------------------------------------------------------------------===//
-// TOSA Operator.
+// TOSA Operator Class.
 //===----------------------------------------------------------------------===//
 
 class Tosa_Op<string mnemonic, list<Trait> traits = []> :
     Op<Tosa_Dialect, mnemonic, !listconcat(traits, [TosaOpInterface])> {
+}
+
+class Tosa_ElementwiseOp<string mnemonic, list<Trait> traits = []> :
+    Tosa_Op<mnemonic, !listconcat(traits, [
+              DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
+                                        ["inferReturnTypeComponents"]>,
+              ResultsBroadcastableShape,
+              Pure])> {
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
+}
+
+class Tosa_InferTensorTypeOp<string mnemonic, list<Trait> traits = []>
+    : Tosa_Op<mnemonic, !listconcat(traits, [InferTensorTypeAdaptor, Pure])> {
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
+}
+
+class Tosa_InferShapedTypeOp<string mnemonic, list<Trait> traits = []>
+    : Tosa_Op<mnemonic, !listconcat(traits, [InferShapedTypeOpAdaptor, Pure])> {
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
 }
 
 #endif // TOSA_OP_BASE

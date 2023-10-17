@@ -76,9 +76,9 @@ bool CSEConfigConstantOnly::shouldCSEOpc(unsigned Opc) {
 }
 
 std::unique_ptr<CSEConfigBase>
-llvm::getStandardCSEConfigForOpt(CodeGenOpt::Level Level) {
+llvm::getStandardCSEConfigForOpt(CodeGenOptLevel Level) {
   std::unique_ptr<CSEConfigBase> Config;
-  if (Level == CodeGenOpt::None)
+  if (Level == CodeGenOptLevel::None)
     Config = std::make_unique<CSEConfigConstantOnly>();
   else
     Config = std::make_unique<CSEConfigFull>();
@@ -217,10 +217,14 @@ void GISelCSEInfo::handleRemoveInst(MachineInstr *MI) {
 }
 
 void GISelCSEInfo::handleRecordedInsts() {
+  if (HandlingRecordedInstrs)
+    return;
+  HandlingRecordedInstrs = true;
   while (!TemporaryInsts.empty()) {
     auto *MI = TemporaryInsts.pop_back_val();
     handleRecordedInst(MI);
   }
+  HandlingRecordedInstrs = false;
 }
 
 bool GISelCSEInfo::shouldCSE(unsigned Opc) const {
@@ -240,8 +244,6 @@ void GISelCSEInfo::changedInstr(MachineInstr &MI) { changingInstr(MI); }
 void GISelCSEInfo::analyze(MachineFunction &MF) {
   setMF(MF);
   for (auto &MBB : MF) {
-    if (MBB.empty())
-      continue;
     for (MachineInstr &MI : MBB) {
       if (!shouldCSE(MI.getOpcode()))
         continue;
@@ -392,9 +394,10 @@ GISelInstProfileBuilder::addNodeIDReg(Register Reg) const {
     addNodeIDRegType(Ty);
 
   if (const RegClassOrRegBank &RCOrRB = MRI.getRegClassOrRegBank(Reg)) {
-    if (const auto *RB = RCOrRB.dyn_cast<const RegisterBank *>())
+    if (const auto *RB = dyn_cast_if_present<const RegisterBank *>(RCOrRB))
       addNodeIDRegType(RB);
-    else if (const auto *RC = RCOrRB.dyn_cast<const TargetRegisterClass *>())
+    else if (const auto *RC =
+                 dyn_cast_if_present<const TargetRegisterClass *>(RCOrRB))
       addNodeIDRegType(RC);
   }
   return *this;

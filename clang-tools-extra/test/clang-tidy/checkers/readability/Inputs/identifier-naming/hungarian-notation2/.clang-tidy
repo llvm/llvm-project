@@ -1,272 +1,139 @@
 Checks: readability-identifier-naming
 CheckOptions:
-  - key:    readability-identifier-naming.AbstractClassCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.ClassCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.ClassConstantCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.ClassMemberCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.ConstantCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.ConstantMemberCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.ConstantParameterCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.ConstantPointerParameterCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.ConstexprVariableCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.EnumConstantCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.GlobalConstantCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.GlobalConstantPointerCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.GlobalPointerCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.GlobalVariableCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.LocalConstantCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.LocalConstantPointerCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.LocalPointerCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.LocalVariableCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.MemberCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.ParameterCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.PointerParameterCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.PrivateMemberCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.ProtectedMemberCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.PublicMemberCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.ScopedEnumConstantCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.StaticConstantCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.StaticVariableCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.VariableCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.AbstractClassHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.ClassHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.ClassConstantHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.ClassMemberHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.ConstantHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.ConstantMemberHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.ConstantParameterHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.ConstantPointerParameterHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.ConstexprVariableHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.EnumConstantHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.GlobalConstantHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.GlobalConstantPointerHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.GlobalPointerHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.GlobalVariableHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.LocalConstantHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.LocalConstantPointerHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.LocalPointerHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.LocalVariableHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.MemberHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.ParameterHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.PointerParameterHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.PrivateMemberHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.ProtectedMemberHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.PublicMemberHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.ScopedEnumConstantHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.StaticConstantHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.StaticVariableHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.VariableHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.HungarianNotation.Options.TreatStructAsClass
-    value:  false
-  - key:    readability-identifier-naming.HungarianNotation.DerivedType.Array
-    value:  ary
-  - key:    readability-identifier-naming.HungarianNotation.DerivedType.Pointer
-    value:  p
-  - key:    readability-identifier-naming.HungarianNotation.DerivedType.FunctionPointer
-    value:  fn
-  - key:    readability-identifier-naming.HungarianNotation.CString.CharPrinter
-    value:  sz
-  - key:    readability-identifier-naming.HungarianNotation.CString.CharArray
-    value:  sz
-  - key:    readability-identifier-naming.HungarianNotation.CString.WideCharPrinter
-    value:  wsz
-  - key:    readability-identifier-naming.HungarianNotation.CString.WideCharArray
-    value:  wsz
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.int8_t
-    value:  i8
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.int16_t
-    value:  i16
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.int32_t
-    value:  i32
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.int64_t
-    value:  i64
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.uint8_t
-    value:  u8
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.uint16_t
-    value:  u16
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.uint32_t
-    value:  u32
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.uint64_t
-    value:  u64
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.char8_t
-    value:  c8
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.char16_t
-    value:  c16
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.char32_t
-    value:  c32
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.float
-    value:  f
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.double
-    value:  d
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.char
-    value:  c
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.bool
-    value:  b
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType._Bool
-    value:  b
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.int
-    value:  i
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.size_t
-    value:  n
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.wchar_t
-    value:  wc
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.short-int
-    value:  si
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.short
-    value:  s
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.signed-int
-    value:  si
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.signed-short
-    value:  ss
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.signed-short-int
-    value:  ssi
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.signed-long-long-int
-    value:  slli
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.signed-long-long
-    value:  sll
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.signed-long-int
-    value:  sli
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.signed-long
-    value:  sl
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.signed
-    value:  s
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.unsigned-long-long-int
-    value:  ulli
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.unsigned-long-long
-    value:  ull
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.unsigned-long-int
-    value:  uli
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.unsigned-long
-    value:  ul
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.unsigned-short-int
-    value:  usi
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.unsigned-short
-    value:  us
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.unsigned-int
-    value:  ui
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.unsigned
-    value:  u
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.long-long-int
-    value:  lli
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.long-double
-    value:  ld
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.long-long
-    value:  ll
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.long-int
-    value:  li
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.long
-    value:  l
-  - key:    readability-identifier-naming.HungarianNotation.PrimitiveType.ptrdiff_t
-    value:  p
-  - key:    readability-identifier-naming.HungarianNotation.UserDefinedType.BOOL
-    value:  b
-  - key:    readability-identifier-naming.HungarianNotation.UserDefinedType.BOOLEAN
-    value:  b
-  - key:    readability-identifier-naming.HungarianNotation.UserDefinedType.BYTE
-    value:  by
-  - key:    readability-identifier-naming.HungarianNotation.UserDefinedType.CHAR
-    value:  c
-  - key:    readability-identifier-naming.HungarianNotation.UserDefinedType.UCHAR
-    value:  uc
-  - key:    readability-identifier-naming.HungarianNotation.UserDefinedType.SHORT
-    value:  s
-  - key:    readability-identifier-naming.HungarianNotation.UserDefinedType.USHORT
-    value:  us
-  - key:    readability-identifier-naming.HungarianNotation.UserDefinedType.WORD
-    value:  w
-  - key:    readability-identifier-naming.HungarianNotation.UserDefinedType.DWORD
-    value:  dw
-  - key:    readability-identifier-naming.HungarianNotation.UserDefinedType.DWORD32
-    value:  dw32
-  - key:    readability-identifier-naming.HungarianNotation.UserDefinedType.DWORD64
-    value:  dw64
-  - key:    readability-identifier-naming.HungarianNotation.UserDefinedType.LONG
-    value:  l
-  - key:    readability-identifier-naming.HungarianNotation.UserDefinedType.ULONG
-    value:  ul
-  - key:    readability-identifier-naming.HungarianNotation.UserDefinedType.ULONG32
-    value:  ul32
-  - key:    readability-identifier-naming.HungarianNotation.UserDefinedType.ULONG64
-    value:  ul64
-  - key:    readability-identifier-naming.HungarianNotation.UserDefinedType.ULONGLONG
-    value:  ull
-  - key:    readability-identifier-naming.HungarianNotation.UserDefinedType.HANDLE
-    value:  h
-  - key:    readability-identifier-naming.HungarianNotation.UserDefinedType.INT
-    value:  i
-  - key:    readability-identifier-naming.HungarianNotation.UserDefinedType.INT8
-    value:  i8
-  - key:    readability-identifier-naming.HungarianNotation.UserDefinedType.INT16
-    value:  i16
-  - key:    readability-identifier-naming.HungarianNotation.UserDefinedType.INT32
-    value:  i32
-  - key:    readability-identifier-naming.HungarianNotation.UserDefinedType.INT64
-    value:  i64
-  - key:    readability-identifier-naming.HungarianNotation.UserDefinedType.UINT
-    value:  ui
-  - key:    readability-identifier-naming.HungarianNotation.UserDefinedType.UINT8
-    value:  u8
-  - key:    readability-identifier-naming.HungarianNotation.UserDefinedType.UINT16
-    value:  u16
-  - key:    readability-identifier-naming.HungarianNotation.UserDefinedType.UINT32
-    value:  u32
-  - key:    readability-identifier-naming.HungarianNotation.UserDefinedType.UINT64
-    value:  u64
-  - key:    readability-identifier-naming.HungarianNotation.UserDefinedType.PVOID
-    value:  p
+  readability-identifier-naming.AbstractClassCase: CamelCase
+  readability-identifier-naming.ClassCase: CamelCase
+  readability-identifier-naming.ClassConstantCase: CamelCase
+  readability-identifier-naming.ClassMemberCase: CamelCase
+  readability-identifier-naming.ConstantCase: CamelCase
+  readability-identifier-naming.ConstantMemberCase: CamelCase
+  readability-identifier-naming.ConstantParameterCase: CamelCase
+  readability-identifier-naming.ConstantPointerParameterCase: CamelCase
+  readability-identifier-naming.ConstexprVariableCase: CamelCase
+  readability-identifier-naming.EnumConstantCase: CamelCase
+  readability-identifier-naming.GlobalConstantCase: CamelCase
+  readability-identifier-naming.GlobalConstantPointerCase: CamelCase
+  readability-identifier-naming.GlobalPointerCase: CamelCase
+  readability-identifier-naming.GlobalVariableCase: CamelCase
+  readability-identifier-naming.LocalConstantCase: CamelCase
+  readability-identifier-naming.LocalConstantPointerCase: CamelCase
+  readability-identifier-naming.LocalPointerCase: CamelCase
+  readability-identifier-naming.LocalVariableCase: CamelCase
+  readability-identifier-naming.MemberCase: CamelCase
+  readability-identifier-naming.ParameterCase: CamelCase
+  readability-identifier-naming.PointerParameterCase: CamelCase
+  readability-identifier-naming.PrivateMemberCase: CamelCase
+  readability-identifier-naming.ProtectedMemberCase: CamelCase
+  readability-identifier-naming.PublicMemberCase: CamelCase
+  readability-identifier-naming.ScopedEnumConstantCase: CamelCase
+  readability-identifier-naming.StaticConstantCase: CamelCase
+  readability-identifier-naming.StaticVariableCase: CamelCase
+  readability-identifier-naming.VariableCase: CamelCase
+  readability-identifier-naming.AbstractClassHungarianPrefix: On
+  readability-identifier-naming.ClassHungarianPrefix: On
+  readability-identifier-naming.ClassConstantHungarianPrefix: On
+  readability-identifier-naming.ClassMemberHungarianPrefix: On
+  readability-identifier-naming.ConstantHungarianPrefix: On
+  readability-identifier-naming.ConstantMemberHungarianPrefix: On
+  readability-identifier-naming.ConstantParameterHungarianPrefix: On
+  readability-identifier-naming.ConstantPointerParameterHungarianPrefix: On
+  readability-identifier-naming.ConstexprVariableHungarianPrefix: On
+  readability-identifier-naming.EnumConstantHungarianPrefix: On
+  readability-identifier-naming.GlobalConstantHungarianPrefix: On
+  readability-identifier-naming.GlobalConstantPointerHungarianPrefix: On
+  readability-identifier-naming.GlobalPointerHungarianPrefix: On
+  readability-identifier-naming.GlobalVariableHungarianPrefix: On
+  readability-identifier-naming.LocalConstantHungarianPrefix: On
+  readability-identifier-naming.LocalConstantPointerHungarianPrefix: On
+  readability-identifier-naming.LocalPointerHungarianPrefix: On
+  readability-identifier-naming.LocalVariableHungarianPrefix: On
+  readability-identifier-naming.MemberHungarianPrefix: On
+  readability-identifier-naming.ParameterHungarianPrefix: On
+  readability-identifier-naming.PointerParameterHungarianPrefix: On
+  readability-identifier-naming.PrivateMemberHungarianPrefix: On
+  readability-identifier-naming.ProtectedMemberHungarianPrefix: On
+  readability-identifier-naming.PublicMemberHungarianPrefix: On
+  readability-identifier-naming.ScopedEnumConstantHungarianPrefix: On
+  readability-identifier-naming.StaticConstantHungarianPrefix: On
+  readability-identifier-naming.StaticVariableHungarianPrefix: On
+  readability-identifier-naming.VariableHungarianPrefix: On
+  readability-identifier-naming.HungarianNotation.General.TreatStructAsClass: true
+  readability-identifier-naming.HungarianNotation.DerivedType.Array: mya
+  readability-identifier-naming.HungarianNotation.DerivedType.Pointer: myp
+  readability-identifier-naming.HungarianNotation.DerivedType.FunctionPointer: myfn
+  readability-identifier-naming.HungarianNotation.CString.CharPointer: mysz
+  readability-identifier-naming.HungarianNotation.CString.CharArray: mysz
+  readability-identifier-naming.HungarianNotation.CString.WideCharPointer: mywsz
+  readability-identifier-naming.HungarianNotation.CString.WideCharArray: mywsz
+  readability-identifier-naming.HungarianNotation.PrimitiveType.int8_t: myi8
+  readability-identifier-naming.HungarianNotation.PrimitiveType.int16_t: myi16
+  readability-identifier-naming.HungarianNotation.PrimitiveType.int32_t: myi32
+  readability-identifier-naming.HungarianNotation.PrimitiveType.int64_t: myi64
+  readability-identifier-naming.HungarianNotation.PrimitiveType.uint8_t: myu8
+  readability-identifier-naming.HungarianNotation.PrimitiveType.uint16_t: myu16
+  readability-identifier-naming.HungarianNotation.PrimitiveType.uint32_t: myu32
+  readability-identifier-naming.HungarianNotation.PrimitiveType.uint64_t: myu64
+  readability-identifier-naming.HungarianNotation.PrimitiveType.char8_t: myc8
+  readability-identifier-naming.HungarianNotation.PrimitiveType.char16_t: myc16
+  readability-identifier-naming.HungarianNotation.PrimitiveType.char32_t: myc32
+  readability-identifier-naming.HungarianNotation.PrimitiveType.float: myf
+  readability-identifier-naming.HungarianNotation.PrimitiveType.double: myd
+  readability-identifier-naming.HungarianNotation.PrimitiveType.char: myc
+  readability-identifier-naming.HungarianNotation.PrimitiveType.bool: myb
+  readability-identifier-naming.HungarianNotation.PrimitiveType._Bool: myb
+  readability-identifier-naming.HungarianNotation.PrimitiveType.int: myi
+  readability-identifier-naming.HungarianNotation.PrimitiveType.size_t: myn
+  readability-identifier-naming.HungarianNotation.PrimitiveType.wchar_t: mywc
+  readability-identifier-naming.HungarianNotation.PrimitiveType.short-int: mysi
+  readability-identifier-naming.HungarianNotation.PrimitiveType.short: mys
+  readability-identifier-naming.HungarianNotation.PrimitiveType.signed-int: mysi
+  readability-identifier-naming.HungarianNotation.PrimitiveType.signed-short: myss
+  readability-identifier-naming.HungarianNotation.PrimitiveType.signed-short-int: myssi
+  readability-identifier-naming.HungarianNotation.PrimitiveType.signed-long-long-int: myslli
+  readability-identifier-naming.HungarianNotation.PrimitiveType.signed-long-long: mysll
+  readability-identifier-naming.HungarianNotation.PrimitiveType.signed-long-int: mysli
+  readability-identifier-naming.HungarianNotation.PrimitiveType.signed-long: mysl
+  readability-identifier-naming.HungarianNotation.PrimitiveType.signed: mys
+  readability-identifier-naming.HungarianNotation.PrimitiveType.unsigned-long-long-int: myulli
+  readability-identifier-naming.HungarianNotation.PrimitiveType.unsigned-long-long: myull
+  readability-identifier-naming.HungarianNotation.PrimitiveType.unsigned-long-int: myuli
+  readability-identifier-naming.HungarianNotation.PrimitiveType.unsigned-long: myul
+  readability-identifier-naming.HungarianNotation.PrimitiveType.unsigned-short-int: myusi
+  readability-identifier-naming.HungarianNotation.PrimitiveType.unsigned-short: myus
+  readability-identifier-naming.HungarianNotation.PrimitiveType.unsigned-int: myui
+  readability-identifier-naming.HungarianNotation.PrimitiveType.unsigned-char: myuc
+  readability-identifier-naming.HungarianNotation.PrimitiveType.unsigned: myu
+  readability-identifier-naming.HungarianNotation.PrimitiveType.long-long-int: mylli
+  readability-identifier-naming.HungarianNotation.PrimitiveType.long-double: myld
+  readability-identifier-naming.HungarianNotation.PrimitiveType.long-long: myll
+  readability-identifier-naming.HungarianNotation.PrimitiveType.long-int: myli
+  readability-identifier-naming.HungarianNotation.PrimitiveType.long: myl
+  readability-identifier-naming.HungarianNotation.PrimitiveType.ptrdiff_t: myp
+  readability-identifier-naming.HungarianNotation.PrimitiveType.void: myv
+  readability-identifier-naming.HungarianNotation.UserDefinedType.BOOL: myb
+  readability-identifier-naming.HungarianNotation.UserDefinedType.BOOLEAN: myb
+  readability-identifier-naming.HungarianNotation.UserDefinedType.BYTE: myby
+  readability-identifier-naming.HungarianNotation.UserDefinedType.CHAR: myc
+  readability-identifier-naming.HungarianNotation.UserDefinedType.UCHAR: myuc
+  readability-identifier-naming.HungarianNotation.UserDefinedType.SHORT: mys
+  readability-identifier-naming.HungarianNotation.UserDefinedType.USHORT: myus
+  readability-identifier-naming.HungarianNotation.UserDefinedType.WORD: myw
+  readability-identifier-naming.HungarianNotation.UserDefinedType.DWORD: mydw
+  readability-identifier-naming.HungarianNotation.UserDefinedType.DWORD32: mydw32
+  readability-identifier-naming.HungarianNotation.UserDefinedType.DWORD64: mydw64
+  readability-identifier-naming.HungarianNotation.UserDefinedType.LONG: myl
+  readability-identifier-naming.HungarianNotation.UserDefinedType.ULONG: myul
+  readability-identifier-naming.HungarianNotation.UserDefinedType.ULONG32: myul32
+  readability-identifier-naming.HungarianNotation.UserDefinedType.ULONG64: myul64
+  readability-identifier-naming.HungarianNotation.UserDefinedType.ULONGLONG: myull
+  readability-identifier-naming.HungarianNotation.UserDefinedType.HANDLE: myh
+  readability-identifier-naming.HungarianNotation.UserDefinedType.INT: myi
+  readability-identifier-naming.HungarianNotation.UserDefinedType.INT8: myi8
+  readability-identifier-naming.HungarianNotation.UserDefinedType.INT16: myi16
+  readability-identifier-naming.HungarianNotation.UserDefinedType.INT32: myi32
+  readability-identifier-naming.HungarianNotation.UserDefinedType.INT64: myi64
+  readability-identifier-naming.HungarianNotation.UserDefinedType.UINT: myui
+  readability-identifier-naming.HungarianNotation.UserDefinedType.UINT8: myu8
+  readability-identifier-naming.HungarianNotation.UserDefinedType.UINT16: myu16
+  readability-identifier-naming.HungarianNotation.UserDefinedType.UINT32: myu32
+  readability-identifier-naming.HungarianNotation.UserDefinedType.UINT64: myu64
+  readability-identifier-naming.HungarianNotation.UserDefinedType.PVOID: myp

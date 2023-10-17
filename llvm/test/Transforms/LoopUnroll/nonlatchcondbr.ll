@@ -93,7 +93,7 @@ define void @test2(ptr noalias %A) {
 ; CHECK-NEXT:    [[ARRAYIDX_PHI_TRANS_INSERT:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INC]]
 ; CHECK-NEXT:    [[DOTPRE:%.*]] = load i32, ptr [[ARRAYIDX_PHI_TRANS_INSERT]], align 4
 ; CHECK-NEXT:    call void @bar(i32 [[DOTPRE]])
-; CHECK-NEXT:    [[INC_1:%.*]] = add nuw nsw i64 [[INC]], 1
+; CHECK-NEXT:    [[INC_1:%.*]] = add nuw nsw i64 [[I]], 2
 ; CHECK-NEXT:    br i1 true, label [[FOR_BODY_1:%.*]], label [[FOR_BODY_FOR_BODY_CRIT_EDGE_1:%.*]]
 ; CHECK:       for.body.1:
 ; CHECK-NEXT:    [[CMP_1:%.*]] = call i1 @foo(i64 [[INC]])
@@ -102,7 +102,7 @@ define void @test2(ptr noalias %A) {
 ; CHECK-NEXT:    [[ARRAYIDX_PHI_TRANS_INSERT_1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INC_1]]
 ; CHECK-NEXT:    [[DOTPRE_1:%.*]] = load i32, ptr [[ARRAYIDX_PHI_TRANS_INSERT_1]], align 4
 ; CHECK-NEXT:    call void @bar(i32 [[DOTPRE_1]])
-; CHECK-NEXT:    [[INC_2:%.*]] = add nuw nsw i64 [[INC_1]], 1
+; CHECK-NEXT:    [[INC_2:%.*]] = add nuw nsw i64 [[I]], 3
 ; CHECK-NEXT:    br i1 true, label [[FOR_BODY_2:%.*]], label [[FOR_BODY_FOR_BODY_CRIT_EDGE_2:%.*]]
 ; CHECK:       for.body.2:
 ; CHECK-NEXT:    [[CMP_2:%.*]] = call i1 @foo(i64 [[INC_1]])
@@ -111,7 +111,7 @@ define void @test2(ptr noalias %A) {
 ; CHECK-NEXT:    [[ARRAYIDX_PHI_TRANS_INSERT_2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INC_2]]
 ; CHECK-NEXT:    [[DOTPRE_2:%.*]] = load i32, ptr [[ARRAYIDX_PHI_TRANS_INSERT_2]], align 4
 ; CHECK-NEXT:    call void @bar(i32 [[DOTPRE_2]])
-; CHECK-NEXT:    [[INC_3]] = add nsw i64 [[INC_2]], 1
+; CHECK-NEXT:    [[INC_3]] = add nsw i64 [[I]], 4
 ; CHECK-NEXT:    br i1 true, label [[FOR_BODY_3:%.*]], label [[FOR_BODY_FOR_BODY_CRIT_EDGE_3]]
 ; CHECK:       for.body.3:
 ; CHECK-NEXT:    [[CMP_3:%.*]] = call i1 @foo(i64 [[INC_2]])

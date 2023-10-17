@@ -1,4 +1,4 @@
-//===-- Unittests for strtol ---------------------------------------------===//
+//===-- Unittests for strtol ----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,8 +8,8 @@
 
 #include "src/stdlib/strtol.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 #include "StrtolTest.h"
 
-STRTOL_TEST(Strtol, __llvm_libc::strtol)
+STRTOL_TEST(Strtol, LIBC_NAMESPACE::strtol)

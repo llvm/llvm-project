@@ -48,7 +48,7 @@ define void @switch_4_arms(i32 %in, ptr %out) nounwind {
 ;
 ; LA64-LABEL: switch_4_arms:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
+; LA64-NEXT:    addi.w $a0, $a0, 0
 ; LA64-NEXT:    ori $a2, $zero, 2
 ; LA64-NEXT:    blt $a2, $a0, .LBB0_4
 ; LA64-NEXT:  # %bb.1: # %entry
@@ -105,7 +105,7 @@ define void @switch_4_arms(i32 %in, ptr %out) nounwind {
 ;
 ; LA64-JT-LABEL: switch_4_arms:
 ; LA64-JT:       # %bb.0: # %entry
-; LA64-JT-NEXT:    bstrpick.d $a0, $a0, 31, 0
+; LA64-JT-NEXT:    addi.w $a0, $a0, 0
 ; LA64-JT-NEXT:    addi.d $a2, $a0, -1
 ; LA64-JT-NEXT:    ori $a0, $zero, 3
 ; LA64-JT-NEXT:    bltu $a0, $a2, .LBB0_6

@@ -1,9 +1,9 @@
-; RUN: opt -passes="ipsccp<func-spec>" -force-function-specialization -S < %s | FileCheck %s
+; RUN: opt -passes="ipsccp<func-spec>" -force-specialization -S < %s | FileCheck %s
 
 ; The if.then block is not executed, so check that we don't specialise here.
 
-; CHECK-NOT: @foo.1(
-; CHECK-NOT: @foo.2(
+; CHECK-NOT: @foo.specialized.1(
+; CHECK-NOT: @foo.specialized.2(
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 

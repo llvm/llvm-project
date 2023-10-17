@@ -39,21 +39,15 @@ mlir::Value genGetCommandArgument(fir::FirOpBuilder &, mlir::Location,
                                   mlir::Value number, mlir::Value value,
                                   mlir::Value length, mlir::Value errmsg);
 
-/// Generate a call to EnvVariableValue runtime function which implements
-/// the part of GET_ENVIRONMENT_ARGUMENT related to VALUE, ERRMSG, and STATUS.
-/// \p value and \p errmsg must be fir.box that can be absent (but not null
-/// mlir values). The status value is returned. \p name must be a fir.box.
-/// and \p trimName a boolean value.
-mlir::Value genEnvVariableValue(fir::FirOpBuilder &, mlir::Location,
-                                mlir::Value name, mlir::Value value,
-                                mlir::Value trimName, mlir::Value errmsg);
-
-/// Generate a call to EnvVariableLength runtime function which implements
-/// the part of GET_ENVIRONMENT_ARGUMENT related to LENGTH.
-/// It returns the length of the \p number command arguments.
-/// \p name must be a fir.box and \p trimName a boolean value.
-mlir::Value genEnvVariableLength(fir::FirOpBuilder &, mlir::Location,
-                                 mlir::Value name, mlir::Value trimName);
+/// Generate a call to GetEnvVariable runtime function which implements
+/// the GET_ENVIRONMENT_VARIABLE intrinsic.
+/// \p value, \p length and \p errmsg must be fir.box that can be absent (but
+/// not null mlir values). The status value is returned. \p name must be a
+/// fir.box and \p trimName a boolean value.
+mlir::Value genGetEnvVariable(fir::FirOpBuilder &, mlir::Location,
+                              mlir::Value name, mlir::Value value,
+                              mlir::Value length, mlir::Value trimName,
+                              mlir::Value errmsg);
 
 } // namespace fir::runtime
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_COMMAND_H

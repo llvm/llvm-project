@@ -190,6 +190,47 @@ TEST(MetadataTest, DeleteInstUsedByDbgValue) {
   EXPECT_TRUE(isa<UndefValue>(DVIs[0]->getValue(0)));
 }
 
+TEST(DbgVariableIntrinsic, EmptyMDIsKillLocation) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+    define dso_local void @fun() local_unnamed_addr #0 !dbg !9 {
+    entry:
+      call void @llvm.dbg.declare(metadata !{}, metadata !13, metadata !DIExpression()), !dbg !16
+      ret void, !dbg !16
+    }
+
+    declare void @llvm.dbg.declare(metadata, metadata, metadata)
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!2, !3}
+    !llvm.ident = !{!8}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 16.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
+    !1 = !DIFile(filename: "test.c", directory: "/")
+    !2 = !{i32 7, !"Dwarf Version", i32 5}
+    !3 = !{i32 2, !"Debug Info Version", i32 3}
+    !8 = !{!"clang version 16.0.0"}
+    !9 = distinct !DISubprogram(name: "fun", scope: !1, file: !1, line: 1, type: !10, scopeLine: 1, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !12)
+    !10 = !DISubroutineType(types: !11)
+    !11 = !{null}
+    !12 = !{!13}
+    !13 = !DILocalVariable(name: "a", scope: !9, file: !1, line: 1, type: !14)
+    !14 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+    !16 = !DILocation(line: 1, column: 21, scope: !9)
+    )");
+
+  bool BrokenDebugInfo = true;
+  verifyModule(*M, &errs(), &BrokenDebugInfo);
+  ASSERT_FALSE(BrokenDebugInfo);
+
+  // Get the dbg.declare.
+  Function &F = *cast<Function>(M->getNamedValue("fun"));
+  DbgVariableIntrinsic *DbgDeclare =
+      cast<DbgVariableIntrinsic>(&F.front().front());
+  // Check that this form counts as a "no location" marker.
+  EXPECT_TRUE(DbgDeclare->isKillLocation());
+}
+
 TEST(DIBuiler, CreateFile) {
   LLVMContext Ctx;
   std::unique_ptr<Module> M(new Module("MyModule", Ctx));
@@ -321,71 +362,6 @@ TEST(DIBuilder, DIEnumerator) {
   EXPECT_FALSE(E2);
 }
 
-TEST(DIBuilder, createDbgAddr) {
-  LLVMContext C;
-  std::unique_ptr<Module> M = parseIR(C, R"(
-    define void @f() !dbg !6 {
-      %a = alloca i16, align 8
-      ;; It is important that we put the debug marker on the return.
-      ;; We take advantage of that to conjure up a debug loc without
-      ;; having to synthesize one programatically.
-      ret void, !dbg !11
-    }
-    declare void @llvm.dbg.value(metadata, metadata, metadata) #0
-    attributes #0 = { nounwind readnone speculatable willreturn }
-
-    !llvm.dbg.cu = !{!0}
-    !llvm.module.flags = !{!5}
-
-    !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
-    !1 = !DIFile(filename: "t.ll", directory: "/")
-    !2 = !{}
-    !5 = !{i32 2, !"Debug Info Version", i32 3}
-    !6 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: null, file: !1, line: 1, type: !7, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !8)
-    !7 = !DISubroutineType(types: !2)
-    !8 = !{!9}
-    !9 = !DILocalVariable(name: "1", scope: !6, file: !1, line: 1, type: !10)
-    !10 = !DIBasicType(name: "ty16", size: 16, encoding: DW_ATE_unsigned)
-    !11 = !DILocation(line: 1, column: 1, scope: !6)
-)");
-  auto *F = M->getFunction("f");
-  auto *EntryBlock = &F->getEntryBlock();
-
-  auto *CU =
-      cast<DICompileUnit>(M->getNamedMetadata("llvm.dbg.cu")->getOperand(0));
-  auto *Alloca = &*EntryBlock->begin();
-  auto *Ret = EntryBlock->getTerminator();
-
-  auto *SP = cast<DISubprogram>(F->getMetadata(LLVMContext::MD_dbg));
-  auto *File = SP->getFile();
-  std::string Name = "myName";
-  const auto *Loc = Ret->getDebugLoc().get();
-
-  IRBuilder<> Builder(EntryBlock);
-  DIBuilder DIB(*M, true, CU);
-  DIType *DT = DIB.createBasicType("ty16", 16, dwarf::DW_ATE_unsigned);
-
-  DILocalVariable *LocalVar =
-      DIB.createAutoVariable(SP, Name, File, 5 /*line*/, DT,
-                             /*AlwaysPreserve=*/true);
-
-  auto *Inst = DIB.insertDbgAddrIntrinsic(Alloca, LocalVar,
-                                          DIB.createExpression(), Loc, Ret);
-
-  DIB.finalize();
-
-  EXPECT_EQ(Inst->getDebugLoc().get(), Loc);
-
-  auto *MD0 = cast<MetadataAsValue>(Inst->getOperand(0))->getMetadata();
-  auto *MD0Local = cast<LocalAsMetadata>(MD0);
-  EXPECT_EQ(MD0Local->getValue(), Alloca);
-  auto *MD1 = cast<MetadataAsValue>(Inst->getOperand(1))->getMetadata();
-  EXPECT_EQ(MD1->getMetadataID(), Metadata::MetadataKind::DILocalVariableKind);
-  auto *MD2 = cast<MetadataAsValue>(Inst->getOperand(2))->getMetadata();
-  auto *MDExp = cast<DIExpression>(MD2);
-  EXPECT_EQ(MDExp->getNumElements(), 0u);
-}
-
 TEST(DbgAssignIntrinsicTest, replaceVariableLocationOp) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C, R"(
@@ -435,6 +411,12 @@ TEST(DbgAssignIntrinsicTest, replaceVariableLocationOp) {
   // Replace both.
   TEST_REPLACE(/*Old*/ P2, /*New*/ P1, /*Value*/ P1, /*Address*/ P1);
 
+  // Replace address only, value uses a DIArgList.
+  // Value = {DIArgList(V1)}, Addr = P1.
+  DAI->setRawLocation(DIArgList::get(C, ValueAsMetadata::get(V1)));
+  DAI->setExpression(DIExpression::get(
+      C, {dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_stack_value}));
+  TEST_REPLACE(/*Old*/ P1, /*New*/ P2, /*Value*/ V1, /*Address*/ P2);
 #undef TEST_REPLACE
 }
 
@@ -582,6 +564,19 @@ TEST(AssignmentTrackingTest, Utils) {
   EXPECT_EQ(Fun2ID, cast_or_null<DIAssignID>(
                         Fun2Alloca.getMetadata(LLVMContext::MD_DIAssignID)));
   EXPECT_FALSE(at::getAssignmentMarkers(&Fun2Alloca).empty());
+}
+
+TEST(IRBuilder, GetSetInsertionPointWithEmptyBasicBlock) {
+  LLVMContext C;
+  std::unique_ptr<BasicBlock> BB(BasicBlock::Create(C, "start"));
+  Module *M = new Module("module", C);
+  IRBuilder<> Builder(BB.get());
+  Function *DbgDeclare = Intrinsic::getDeclaration(M, Intrinsic::dbg_declare);
+  Value *DIV = MetadataAsValue::get(C, (Metadata *)nullptr);
+  SmallVector<Value *, 3> Args = {DIV, DIV, DIV};
+  Builder.CreateCall(DbgDeclare, Args);
+  auto IP = BB->getFirstInsertionPt();
+  Builder.SetInsertPoint(BB.get(), IP);
 }
 
 TEST(AssignmentTrackingTest, InstrMethods) {

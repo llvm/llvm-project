@@ -108,7 +108,6 @@ function(_pdll_tablegen project ofn)
   add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ofn}
     COMMAND ${tablegen_exe} ${ARG_UNPARSED_ARGUMENTS} -I ${CMAKE_CURRENT_SOURCE_DIR}
     ${tblgen_includes}
-    ${LLVM_TABLEGEN_FLAGS}
     ${LLVM_TARGET_DEFINITIONS_ABSOLUTE}
     ${tblgen_change_flag}
     ${additional_cmdline}
@@ -189,7 +188,8 @@ endfunction()
 # Generate Documentation
 function(add_mlir_doc doc_filename output_file output_directory command)
   set(LLVM_TARGET_DEFINITIONS ${doc_filename}.td)
-  tablegen(MLIR ${output_file}.md ${command} ${ARGN})
+  # The MLIR docs use Hugo, so we allow Hugo specific features here.
+  tablegen(MLIR ${output_file}.md ${command} -allow-hugo-specific-features ${ARGN})
   set(GEN_DOC_FILE ${MLIR_BINARY_DIR}/docs/${output_directory}${output_file}.md)
   add_custom_command(
           OUTPUT ${GEN_DOC_FILE}
@@ -201,25 +201,9 @@ function(add_mlir_doc doc_filename output_file output_directory command)
   add_dependencies(mlir-doc ${output_file}DocGen)
 endfunction()
 
-# Declare an mlir library which can be compiled in libMLIR.so
-# In addition to everything that llvm_add_library accepts, this
-# also has the following option:
-# EXCLUDE_FROM_LIBMLIR
-#   Don't include this library in libMLIR.so.  This option should be used
-#   for test libraries, executable-specific libraries, or rarely used libraries
-#   with large dependencies.
-# ENABLE_AGGREGATION
-#   Forces generation of an OBJECT library, exports additional metadata,
-#   and installs additional object files needed to include this as part of an
-#   aggregate shared library.
-#   TODO: Make this the default for all MLIR libraries once all libraries
-#   are compatible with building an object library.
-function(add_mlir_library name)
-  cmake_parse_arguments(ARG
-    "SHARED;INSTALL_WITH_TOOLCHAIN;EXCLUDE_FROM_LIBMLIR;DISABLE_INSTALL;ENABLE_AGGREGATION"
-    ""
-    "ADDITIONAL_HEADERS;DEPENDS;LINK_COMPONENTS;LINK_LIBS"
-    ${ARGN})
+# Sets ${srcs} to contain the list of additional headers for the target. Extra
+# arguments are included into the list of additional headers.
+function(_set_mlir_additional_headers_as_srcs)
   set(srcs)
   if(MSVC_IDE OR XCODE)
     # Add public headers
@@ -245,13 +229,83 @@ function(add_mlir_library name)
       endif()
     endif()
   endif(MSVC_IDE OR XCODE)
-  if(srcs OR ARG_ADDITIONAL_HEADERS)
+  if(srcs OR ARGN)
     set(srcs
       ADDITIONAL_HEADERS
       ${srcs}
-      ${ARG_ADDITIONAL_HEADERS} # It may contain unparsed unknown args.
+      ${ARGN} # It may contain unparsed unknown args.
+      PARENT_SCOPE
       )
   endif()
+endfunction()
+
+# Checks that the LLVM components are not listed in the extra arguments,
+# assumed to be coming from the LINK_LIBS variable.
+function(_check_llvm_components_usage name)
+  # LINK_COMPONENTS is necessary to allow libLLVM.so to be properly
+  # substituted for individual library dependencies if LLVM_LINK_LLVM_DYLIB
+  # Perhaps this should be in llvm_add_library instead?  However, it fails
+  # on libclang-cpp.so
+  get_property(llvm_component_libs GLOBAL PROPERTY LLVM_COMPONENT_LIBS)
+  foreach(lib ${ARGN})
+    if(${lib} IN_LIST llvm_component_libs)
+      message(SEND_ERROR "${name} specifies LINK_LIBS ${lib}, but LINK_LIBS cannot be used for LLVM libraries.  Please use LINK_COMPONENTS instead.")
+    endif()
+  endforeach()
+endfunction()
+
+function(add_mlir_example_library name)
+  cmake_parse_arguments(ARG
+    "SHARED;DISABLE_INSTALL"
+    ""
+    "ADDITIONAL_HEADERS;DEPENDS;LINK_COMPONENTS;LINK_LIBS"
+    ${ARGN})
+  _set_mlir_additional_headers_as_srcs(${ARG_ADDITIONAL_HEADERS})
+  if (ARG_SHARED)
+    set(LIBTYPE SHARED)
+  else()
+    if(BUILD_SHARED_LIBS)
+      set(LIBTYPE SHARED)
+    else()
+      set(LIBTYPE STATIC)
+    endif()
+  endif()
+
+  # MLIR libraries uniformly depend on LLVMSupport.  Just specify it once here.
+  list(APPEND ARG_LINK_COMPONENTS Support)
+  _check_llvm_components_usage(${name} ${ARG_LINK_LIBS})
+
+  list(APPEND ARG_DEPENDS mlir-generic-headers)
+
+  llvm_add_library(${name} ${LIBTYPE} ${ARG_UNPARSED_ARGUMENTS} ${srcs} DEPENDS ${ARG_DEPENDS} LINK_COMPONENTS ${ARG_LINK_COMPONENTS} LINK_LIBS ${ARG_LINK_LIBS})
+  set_target_properties(${name} PROPERTIES FOLDER "Examples")
+  if (LLVM_BUILD_EXAMPLES AND NOT ${ARG_DISABLE_INSTALL})
+    add_mlir_library_install(${name})
+  else()
+    set_target_properties(${name} PROPERTIES EXCLUDE_FROM_ALL ON)
+  endif()
+endfunction()
+
+# Declare an mlir library which can be compiled in libMLIR.so
+# In addition to everything that llvm_add_library accepts, this
+# also has the following option:
+# EXCLUDE_FROM_LIBMLIR
+#   Don't include this library in libMLIR.so.  This option should be used
+#   for test libraries, executable-specific libraries, or rarely used libraries
+#   with large dependencies.
+# ENABLE_AGGREGATION
+#   Forces generation of an OBJECT library, exports additional metadata,
+#   and installs additional object files needed to include this as part of an
+#   aggregate shared library.
+#   TODO: Make this the default for all MLIR libraries once all libraries
+#   are compatible with building an object library.
+function(add_mlir_library name)
+  cmake_parse_arguments(ARG
+    "SHARED;INSTALL_WITH_TOOLCHAIN;EXCLUDE_FROM_LIBMLIR;DISABLE_INSTALL;ENABLE_AGGREGATION"
+    ""
+    "ADDITIONAL_HEADERS;DEPENDS;LINK_COMPONENTS;LINK_LIBS"
+    ${ARGN})
+  _set_mlir_additional_headers_as_srcs(${ARG_ADDITIONAL_HEADERS})
 
   # Is an object library needed.
   set(NEEDS_OBJECT_LIB OFF)
@@ -287,17 +341,7 @@ function(add_mlir_library name)
 
   # MLIR libraries uniformly depend on LLVMSupport.  Just specify it once here.
   list(APPEND ARG_LINK_COMPONENTS Support)
-
-  # LINK_COMPONENTS is necessary to allow libLLVM.so to be properly
-  # substituted for individual library dependencies if LLVM_LINK_LLVM_DYLIB
-  # Perhaps this should be in llvm_add_library instead?  However, it fails
-  # on libclang-cpp.so
-  get_property(llvm_component_libs GLOBAL PROPERTY LLVM_COMPONENT_LIBS)
-  foreach(lib ${ARG_LINK_LIBS})
-    if(${lib} IN_LIST llvm_component_libs)
-      message(SEND_ERROR "${name} specifies LINK_LIBS ${lib}, but LINK_LIBS cannot be used for LLVM libraries.  Please use LINK_COMPONENTS instead.")
-    endif()
-  endforeach()
+  _check_llvm_components_usage(${name} ${ARG_LINK_LIBS})
 
   list(APPEND ARG_DEPENDS mlir-generic-headers)
   llvm_add_library(${name} ${LIBTYPE} ${ARG_UNPARSED_ARGUMENTS} ${srcs} DEPENDS ${ARG_DEPENDS} LINK_COMPONENTS ${ARG_LINK_COMPONENTS} LINK_LIBS ${ARG_LINK_LIBS})
@@ -495,7 +539,9 @@ function(add_mlir_aggregate name)
   # many other platforms are more strict. We want these libraries to be
   # self contained, and we want any undefined symbols to be reported at
   # library construction time, not at library use, so make Linux strict too.
-  if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  # We make an exception for sanitizer builds, since the AddressSanitizer
+  # run-time doesn't get linked into shared libraries.
+  if((CMAKE_SYSTEM_NAME STREQUAL "Linux") AND (NOT LLVM_USE_SANITIZER))
     target_link_options(${name} PRIVATE
       "LINKER:-z,defs"
     )
@@ -585,6 +631,12 @@ function(add_mlir_conversion_library name)
   set_property(GLOBAL APPEND PROPERTY MLIR_CONVERSION_LIBS ${name})
   add_mlir_library(${ARGV} DEPENDS mlir-headers)
 endfunction(add_mlir_conversion_library)
+
+# Declare the library associated with an extension.
+function(add_mlir_extension_library name)
+  set_property(GLOBAL APPEND PROPERTY MLIR_EXTENSION_LIBS ${name})
+  add_mlir_library(${ARGV} DEPENDS mlir-headers)
+endfunction(add_mlir_extension_library)
 
 # Declare the library associated with a translation.
 function(add_mlir_translation_library name)

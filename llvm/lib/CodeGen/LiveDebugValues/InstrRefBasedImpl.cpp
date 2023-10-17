@@ -601,7 +601,7 @@ public:
     if (Var.getInlinedAt())
       return false;
 
-    if (Expr->getNumElements() > 0)
+    if (Expr->getNumElements() > 0 && !Expr->isDeref())
       return false;
 
     return true;
@@ -1544,12 +1544,12 @@ std::optional<ValueIDNum> InstrRefBasedLDV::getValueForInstrRef(
       if (Size != MainRegSize || Offset) {
         // Enumerate all subregisters, searching.
         Register NewReg = 0;
-        for (MCSubRegIterator SRI(Reg, TRI, false); SRI.isValid(); ++SRI) {
-          unsigned Subreg = TRI->getSubRegIndex(Reg, *SRI);
+        for (MCPhysReg SR : TRI->subregs(Reg)) {
+          unsigned Subreg = TRI->getSubRegIndex(Reg, SR);
           unsigned SubregSize = TRI->getSubRegIdxSize(Subreg);
           unsigned SubregOffset = TRI->getSubRegIdxOffset(Subreg);
           if (SubregSize == Size && SubregOffset == Offset) {
-            NewReg = *SRI;
+            NewReg = SR;
             break;
           }
         }
@@ -2066,12 +2066,12 @@ bool InstrRefBasedLDV::transferSpillOrRestoreInst(MachineInstr &MI) {
     };
 
     // Then, transfer subreg bits.
-    for (MCSubRegIterator SRI(Reg, TRI, false); SRI.isValid(); ++SRI) {
+    for (MCPhysReg SR : TRI->subregs(Reg)) {
       // Ensure this reg is tracked,
-      (void)MTracker->lookupOrTrackRegister(*SRI);
-      unsigned SubregIdx = TRI->getSubRegIndex(Reg, *SRI);
+      (void)MTracker->lookupOrTrackRegister(SR);
+      unsigned SubregIdx = TRI->getSubRegIndex(Reg, SR);
       unsigned SpillID = MTracker->getLocID(Loc, SubregIdx);
-      DoTransfer(*SRI, SpillID);
+      DoTransfer(SR, SpillID);
     }
 
     // Directly lookup size of main source reg, and transfer.
@@ -2101,10 +2101,10 @@ bool InstrRefBasedLDV::transferSpillOrRestoreInst(MachineInstr &MI) {
       MTracker->setReg(DestReg, ReadValue);
     };
 
-    for (MCSubRegIterator SRI(Reg, TRI, false); SRI.isValid(); ++SRI) {
-      unsigned Subreg = TRI->getSubRegIndex(Reg, *SRI);
+    for (MCPhysReg SR : TRI->subregs(Reg)) {
+      unsigned Subreg = TRI->getSubRegIndex(Reg, SR);
       unsigned SpillID = MTracker->getLocID(*Loc, Subreg);
-      DoTransfer(*SRI, SpillID);
+      DoTransfer(SR, SpillID);
     }
 
     // Directly look up this registers slot idx by size, and transfer.
@@ -2513,8 +2513,8 @@ void InstrRefBasedLDV::placeMLocPHIs(
     Register R = MTracker->LocIdxToLocID[L];
     SmallSet<Register, 8> FoundRegUnits;
     bool AnyIllegal = false;
-    for (MCRegUnitIterator RUI(R.asMCReg(), TRI); RUI.isValid(); ++RUI) {
-      for (MCRegUnitRootIterator URoot(*RUI, TRI); URoot.isValid(); ++URoot){
+    for (MCRegUnit Unit : TRI->regunits(R.asMCReg())) {
+      for (MCRegUnitRootIterator URoot(Unit, TRI); URoot.isValid(); ++URoot) {
         if (!MTracker->isRegisterTracked(*URoot)) {
           // Not all roots were loaded into the tracking map: this register
           // isn't actually def'd anywhere, we only read from it. Generate PHIs
@@ -2543,7 +2543,7 @@ void InstrRefBasedLDV::placeMLocPHIs(
     for (unsigned int I = 0; I < OrderToBB.size(); ++I) {
       MachineBasicBlock *MBB = OrderToBB[I];
       const auto &TransferFunc = MLocTransfer[MBB->getNumber()];
-      if (TransferFunc.find(L) != TransferFunc.end())
+      if (TransferFunc.contains(L))
         DefBlocks.insert(MBB);
     }
 
@@ -3179,7 +3179,7 @@ void InstrRefBasedLDV::buildVLocValueMap(
     SmallPtrSet<MachineBasicBlock *, 32> DefBlocks;
     for (const MachineBasicBlock *ExpMBB : BlocksToExplore) {
       auto &TransferFunc = AllTheVLocs[ExpMBB->getNumber()].Vars;
-      if (TransferFunc.find(Var) != TransferFunc.end())
+      if (TransferFunc.contains(Var))
         DefBlocks.insert(const_cast<MachineBasicBlock *>(ExpMBB));
     }
 
@@ -3295,7 +3295,7 @@ void InstrRefBasedLDV::buildVLocValueMap(
         // to be visited next time around.
         for (auto *s : MBB->successors()) {
           // Ignore out of scope / not-to-be-explored successors.
-          if (LiveInIdx.find(s) == LiveInIdx.end())
+          if (!LiveInIdx.contains(s))
             continue;
 
           if (BBToOrder[s] > BBToOrder[MBB]) {
@@ -3411,7 +3411,7 @@ void InstrRefBasedLDV::initialSetup(MachineFunction &MF) {
   for (MachineBasicBlock *MBB : RPOT)
     processMBB(MBB);
   for (MachineBasicBlock &MBB : MF)
-    if (BBToOrder.find(&MBB) == BBToOrder.end())
+    if (!BBToOrder.contains(&MBB))
       processMBB(&MBB);
 
   // Order value substitutions by their "source" operand pair, for quick lookup.
@@ -3716,7 +3716,12 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
 
     unsigned BlockNo = Num.getBlock();
     LocIdx LocNo = Num.getLoc();
-    Num = MInLocs[BlockNo][LocNo.asU64()];
+    ValueIDNum ResolvedValue = MInLocs[BlockNo][LocNo.asU64()];
+    // If there is no resolved value for this live-in then it is not directly
+    // reachable from the entry block -- model it as a PHI on entry to this
+    // block, which means we leave the ValueIDNum unchanged.
+    if (ResolvedValue != ValueIDNum::EmptyValue)
+      Num = ResolvedValue;
   }
   // Later, we'll be looking up ranges of instruction numbers.
   llvm::sort(DebugPHINumToValue);
@@ -4050,10 +4055,7 @@ public:
   /// ValueIsPHI - Check if the instruction that defines the specified value
   /// is a PHI instruction.
   static LDVSSAPhi *ValueIsPHI(BlockValueNum Val, LDVSSAUpdater *Updater) {
-    auto PHIIt = Updater->PHIs.find(Val);
-    if (PHIIt == Updater->PHIs.end())
-      return nullptr;
-    return PHIIt->second;
+    return Updater->PHIs.lookup(Val);
   }
 
   /// ValueIsNewPHI - Like ValueIsPHI but also check if the PHI has no source
@@ -4195,7 +4197,7 @@ std::optional<ValueIDNum> InstrRefBasedLDV::resolveDbgPHIsImpl(
     // Are all these things actually defined?
     for (auto &PHIIt : PHI->IncomingValues) {
       // Any undef input means DBG_PHIs didn't dominate the use point.
-      if (Updater.UndefMap.find(&PHIIt.first->BB) != Updater.UndefMap.end())
+      if (Updater.UndefMap.contains(&PHIIt.first->BB))
         return std::nullopt;
 
       ValueIDNum ValueToCheck;

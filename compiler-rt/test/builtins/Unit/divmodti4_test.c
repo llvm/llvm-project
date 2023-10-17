@@ -1,4 +1,3 @@
-// XFAIL: target=aarch64-pc-windows-{{.*}}
 // RUN: %clang_builtins %s %librt -o %t && %run %t
 // REQUIRES: librt_has_divmodti4
 // REQUIRES: int128
@@ -55,22 +54,22 @@ char assumption_1[sizeof(ti_int) == 2*sizeof(di_int)] = {0};
 
 tu_int tests[][4] =
 {
-{ (ti_int) 0,                             (ti_int) 1, (ti_int) 0,                                                (ti_int) 0 },
-{ (ti_int) 0,                             (ti_int)-1, (ti_int) 0,                                                (ti_int) 0 },
-{ (ti_int) 2,                             (ti_int) 1, (ti_int) 2,                                                (ti_int) 0 },
-{ (ti_int) 2,                             (ti_int)-1, (ti_int)-2,                                                (ti_int) 0 },
-{ (ti_int)-2,                             (ti_int) 1, (ti_int)-2,                                                (ti_int) 0 },
-{ (ti_int)-2,                             (ti_int)-1, (ti_int) 2,                                                (ti_int) 0 },
-{ (ti_int) 5,                             (ti_int) 3, (ti_int) 1,                                                (ti_int) 2 },
-{ (ti_int) 5,                             (ti_int)-3, (ti_int)-1,                                                (ti_int) 2 },
-{ (ti_int)-5,                             (ti_int) 3, (ti_int)-1,                                                (ti_int)-2 },
-{ (ti_int)-5,                             (ti_int)-3, (ti_int) 1,                                                (ti_int)-2 },
-{ (ti_int)0x8000000000000000LL << 64 | 0, (ti_int) 1, (ti_int)0x8000000000000000LL << 64 | 0,                    (ti_int)0x0LL },
-{ (ti_int)0x8000000000000000LL << 64 | 0, (ti_int)-1, (ti_int)0x8000000000000000LL << 64 | 0,                    (ti_int)0x0LL },
-{ (ti_int)0x8000000000000000LL << 64 | 0, (ti_int)-2, (ti_int)0x4000000000000000LL << 64 | 0,                    (ti_int)0x0LL },
-{ (ti_int)0x8000000000000000LL << 64 | 0, (ti_int) 2, (ti_int)0xC000000000000000LL << 64 | 0,                    (ti_int)0x0LL },
-{ (ti_int)0x8000000000000000LL << 64 | 0, (ti_int)-3, (ti_int)0x2AAAAAAAAAAAAAAALL << 64 | 0xAAAAAAAAAAAAAAAALL, (ti_int)-2 },
-{ (ti_int)0x8000000000000000LL << 64 | 0, (ti_int) 3, (ti_int)0xD555555555555555LL << 64 | 0x5555555555555556LL, (ti_int)-2 },
+{ (ti_int) 0,                              (ti_int) 1, (ti_int) 0,                                                  (ti_int) 0 },
+{ (ti_int) 0,                              (ti_int)-1, (ti_int) 0,                                                  (ti_int) 0 },
+{ (ti_int) 2,                              (ti_int) 1, (ti_int) 2,                                                  (ti_int) 0 },
+{ (ti_int) 2,                              (ti_int)-1, (ti_int)-2,                                                  (ti_int) 0 },
+{ (ti_int)-2,                              (ti_int) 1, (ti_int)-2,                                                  (ti_int) 0 },
+{ (ti_int)-2,                              (ti_int)-1, (ti_int) 2,                                                  (ti_int) 0 },
+{ (ti_int) 5,                              (ti_int) 3, (ti_int) 1,                                                  (ti_int) 2 },
+{ (ti_int) 5,                              (ti_int)-3, (ti_int)-1,                                                  (ti_int) 2 },
+{ (ti_int)-5,                              (ti_int) 3, (ti_int)-1,                                                  (ti_int)-2 },
+{ (ti_int)-5,                              (ti_int)-3, (ti_int) 1,                                                  (ti_int)-2 },
+{ (ti_int)0x8000000000000000ULL << 64 | 0, (ti_int) 1, (ti_int)0x8000000000000000ULL << 64 | 0,                     (ti_int)0x0LL },
+{ (ti_int)0x8000000000000000ULL << 64 | 0, (ti_int)-1, (ti_int)0x8000000000000000ULL << 64 | 0,                     (ti_int)0x0LL },
+{ (ti_int)0x8000000000000000ULL << 64 | 0, (ti_int)-2, (ti_int)0x4000000000000000ULL << 64 | 0,                     (ti_int)0x0LL },
+{ (ti_int)0x8000000000000000ULL << 64 | 0, (ti_int) 2, (ti_int)0xC000000000000000ULL << 64 | 0,                     (ti_int)0x0LL },
+{ (ti_int)0x8000000000000000ULL << 64 | 0, (ti_int)-3, (ti_int)0x2AAAAAAAAAAAAAAAULL << 64 | 0xAAAAAAAAAAAAAAAAULL, (ti_int)-2 },
+{ (ti_int)0x8000000000000000ULL << 64 | 0, (ti_int) 3, (ti_int)0xD555555555555555ULL << 64 | 0x5555555555555556ULL, (ti_int)-2 },
 };
 
 #endif

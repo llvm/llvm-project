@@ -1,5 +1,5 @@
-; RUN: opt -opaque-pointers=0 %loadPolly -polly-print-ast -disable-output < %s | FileCheck %s --check-prefix=AST
-; RUN: opt -opaque-pointers=0 %loadPolly -S -polly-codegen < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-ast -disable-output < %s | FileCheck %s --check-prefix=AST
+; RUN: opt %loadPolly -S -polly-codegen < %s | FileCheck %s
 ;
 ;    void jd(int *A, int c) {
 ;      for (int i = 0; i < 1024; i++) {
@@ -21,19 +21,19 @@
 ; CHECK-LABEL:  entry:
 ; CHECK-NEXT:     %phi.phiops = alloca i32
 ; CHECK-LABEL:  polly.stmt.if.end:
-; CHECK-NEXT:     %phi.phiops.reload = load i32, i32* %phi.phiops
-; CHECK-NEXT:     %scevgep
-; CHECK-NEXT:     store i32 %phi.phiops.reload, i32*
+; CHECK-NEXT:     %phi.phiops.reload = load i32, ptr %phi.phiops
+; CHECK:          %scevgep
+; CHECK-NEXT:     store i32 %phi.phiops.reload, ptr
 ; CHECK-LABEL:  polly.stmt.if.then:
-; CHECK-NEXT:     store i32 1, i32* %phi.phiops
+; CHECK-NEXT:     store i32 1, ptr %phi.phiops
 ; CHECK-NEXT:     br label %polly.merge{{[.]?}}
 ; CHECK-LABEL:  polly.stmt.if.else:
-; CHECK-NEXT:     store i32 2, i32* %phi.phiops
+; CHECK-NEXT:     store i32 2, ptr %phi.phiops
 ; CHECK-NEXT:     br label %polly.merge{{[.]?}}
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @jd(i32* %A, i32 %c) {
+define void @jd(ptr %A, i32 %c) {
 entry:
   br label %for.cond
 
@@ -54,8 +54,8 @@ if.else:
 
 if.end:
   %phi = phi i32 [ 1, %if.then], [ 2, %if.else ]
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  store i32 %phi, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  store i32 %phi, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:

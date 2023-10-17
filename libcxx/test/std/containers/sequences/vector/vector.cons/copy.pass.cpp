@@ -73,6 +73,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
         int a[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 8, 7, 6, 5, 4, 3, 1, 0};
         int* an = a + sizeof(a)/sizeof(a[0]);
         test(std::vector<int, min_allocator<int>>(a, an));
+        test(std::vector<int, safe_allocator<int>>(a, an));
     }
     {
         std::vector<int, min_allocator<int> > v(3, 2, min_allocator<int>());
@@ -84,9 +85,27 @@ TEST_CONSTEXPR_CXX20 bool tests() {
         assert(is_contiguous_container_asan_correct(v));
         assert(is_contiguous_container_asan_correct(v2));
     }
+    {
+      std::vector<int, safe_allocator<int> > v(3, 2, safe_allocator<int>());
+      std::vector<int, safe_allocator<int> > v2 = v;
+      assert(is_contiguous_container_asan_correct(v));
+      assert(is_contiguous_container_asan_correct(v2));
+      assert(v2 == v);
+      assert(v2.get_allocator() == v.get_allocator());
+      assert(is_contiguous_container_asan_correct(v));
+      assert(is_contiguous_container_asan_correct(v2));
+    }
 #endif
 
     return true;
+}
+
+void test_copy_from_volatile_src() {
+    volatile int src[] = {1, 2, 3};
+    std::vector<int> v(src, src + 3);
+    assert(v[0] == 1);
+    assert(v[1] == 2);
+    assert(v[2] == 3);
 }
 
 int main(int, char**)
@@ -95,5 +114,6 @@ int main(int, char**)
 #if TEST_STD_VER > 17
     static_assert(tests());
 #endif
+    test_copy_from_volatile_src();
     return 0;
 }

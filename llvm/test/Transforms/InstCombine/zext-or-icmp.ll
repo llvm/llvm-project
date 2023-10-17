@@ -100,10 +100,7 @@ define i1 @knownbits_out_of_range_shift(i32 %x) {
 ; CHECK:       block1:
 ; CHECK-NEXT:    br label [[BLOCK2]]
 ; CHECK:       block2:
-; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 63, [[ENTRY:%.*]] ], [ 31, [[BLOCK1:%.*]] ]
-; CHECK-NEXT:    [[L:%.*]] = lshr i32 [[X:%.*]], [[P]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[L]], 2
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   br label %block2
@@ -123,8 +120,8 @@ block2:
 define i32 @zext_or_eq_ult_add(i32 %i) {
 ; CHECK-LABEL: @zext_or_eq_ult_add(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[I:%.*]], -3
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 3
-; CHECK-NEXT:    [[R:%.*]] = zext i1 [[TMP2]] to i32
+; CHECK-NEXT:    [[O:%.*]] = icmp ult i32 [[TMP1]], 3
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[O]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add i32 %i, -3
@@ -138,8 +135,8 @@ define i32 @zext_or_eq_ult_add(i32 %i) {
 define i32 @select_zext_or_eq_ult_add(i32 %i) {
 ; CHECK-LABEL: @select_zext_or_eq_ult_add(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[I:%.*]], -3
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 3
-; CHECK-NEXT:    [[R:%.*]] = zext i1 [[TMP2]] to i32
+; CHECK-NEXT:    [[NARROW:%.*]] = icmp ult i32 [[TMP1]], 3
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[NARROW]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add i32 %i, -3
@@ -176,22 +173,20 @@ define i8 @PR49475_infloop(i32 %t0, i16 %insert, i64 %e, i8 %i162) {
 ; CHECK-NEXT:    [[B:%.*]] = icmp eq i32 [[T0:%.*]], 0
 ; CHECK-NEXT:    [[B2:%.*]] = icmp eq i16 [[INSERT:%.*]], 0
 ; CHECK-NEXT:    [[T1:%.*]] = or i1 [[B]], [[B2]]
-; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[T1]] to i32
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[EXT]], [[T0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[AND]], 140
-; CHECK-NEXT:    [[XOR1:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[T0]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[TMP1]], 140
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[XOR1:%.*]] = select i1 [[T1]], i64 [[TMP3]], i64 140
 ; CHECK-NEXT:    [[CONV16:%.*]] = sext i8 [[I162:%.*]] to i64
 ; CHECK-NEXT:    [[SUB17:%.*]] = sub i64 [[CONV16]], [[E:%.*]]
 ; CHECK-NEXT:    [[SEXT:%.*]] = shl i64 [[SUB17]], 32
 ; CHECK-NEXT:    [[CONV18:%.*]] = ashr exact i64 [[SEXT]], 32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i64 [[CONV18]], [[XOR1]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i64 [[XOR1]], [[CONV18]]
 ; CHECK-NEXT:    [[CONV19:%.*]] = zext i1 [[CMP]] to i16
 ; CHECK-NEXT:    [[OR21:%.*]] = or i16 [[CONV19]], [[INSERT]]
-; CHECK-NEXT:    [[TRUNC44:%.*]] = trunc i16 [[OR21]] to i8
-; CHECK-NEXT:    [[INC:%.*]] = or i8 [[TRUNC44]], [[I162]]
 ; CHECK-NEXT:    [[TOBOOL23_NOT:%.*]] = icmp eq i16 [[OR21]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[TOBOOL23_NOT]])
-; CHECK-NEXT:    ret i8 [[INC]]
+; CHECK-NEXT:    ret i8 [[I162]]
 ;
   %b = icmp eq i32 %t0, 0
   %b2 = icmp eq i16 %insert, 0
@@ -251,7 +246,7 @@ define i1 @PR51762(ptr %i, i32 %t0, i16 %t1, ptr %p, ptr %d, ptr %f, i32 %p2, i1
 ; CHECK-NEXT:    store i32 0, ptr [[D]], align 8
 ; CHECK-NEXT:    [[R:%.*]] = icmp ult i64 [[INSERT_INSERT41]], [[CONV19]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[R]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 [[R]]
 ;
 entry:
   br label %for.cond

@@ -14,16 +14,14 @@ include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
-include "mlir/IR/FunctionInterfaces.td"
+include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def Func_Dialect : Dialect {
   let name = "func";
   let cppNamespace = "::mlir::func";
-  let dependentDialects = ["cf::ControlFlowDialect"];
   let hasConstantMaterializer = 1;
-  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 // Base class for Func dialect ops.
@@ -84,12 +82,21 @@ def CallOp : Func_Op<"call",
       return {arg_operand_begin(), arg_operand_end()};
     }
 
+    MutableOperandRange getArgOperandsMutable() {
+      return getOperandsMutable();
+    }
+
     operand_iterator arg_operand_begin() { return operand_begin(); }
     operand_iterator arg_operand_end() { return operand_end(); }
 
     /// Return the callee of this operation.
     CallInterfaceCallable getCallableForCallee() {
       return (*this)->getAttrOfType<SymbolRefAttr>("callee");
+    }
+
+    /// Set the callee for this operation.
+    void setCalleeFromCallable(CallInterfaceCallable callee) {
+      (*this)->setAttr("callee", callee.get<SymbolRefAttr>());
     }
   }];
 
@@ -106,10 +113,10 @@ def CallIndirectOp : Func_Op<"call_indirect", [
       CallOpInterface,
       TypesMatchWith<"callee input types match argument types",
                      "callee", "callee_operands",
-                     "$_self.cast<FunctionType>().getInputs()">,
+                     "::llvm::cast<FunctionType>($_self).getInputs()">,
       TypesMatchWith<"callee result types match result types",
                      "callee", "results",
-                     "$_self.cast<FunctionType>().getResults()">
+                     "::llvm::cast<FunctionType>($_self).getResults()">
     ]> {
   let summary = "indirect call operation";
   let description = [{
@@ -136,7 +143,7 @@ def CallIndirectOp : Func_Op<"call_indirect", [
     OpBuilder<(ins "Value":$callee, CArg<"ValueRange", "{}">:$operands), [{
       $_state.operands.push_back(callee);
       $_state.addOperands(operands);
-      $_state.addTypes(callee.getType().cast<FunctionType>().getResults());
+      $_state.addTypes(::llvm::cast<FunctionType>(callee.getType()).getResults());
     }]>];
 
   let extraClassDeclaration = [{
@@ -148,11 +155,20 @@ def CallIndirectOp : Func_Op<"call_indirect", [
       return {arg_operand_begin(), arg_operand_end()};
     }
 
+    MutableOperandRange getArgOperandsMutable() {
+      return getCalleeOperandsMutable();
+    }
+
     operand_iterator arg_operand_begin() { return ++operand_begin(); }
     operand_iterator arg_operand_end() { return operand_end(); }
 
     /// Return the callee of this operation.
     CallInterfaceCallable getCallableForCallee() { return getCallee(); }
+
+    /// Set the callee for this operation.
+    void setCalleeFromCallable(CallInterfaceCallable callee) {
+      setOperand(0, callee.get<Value>());
+    }
   }];
 
   let hasCanonicalizeMethod = 1;
@@ -208,7 +224,7 @@ def ConstantOp : Func_Op<"constant",
 //===----------------------------------------------------------------------===//
 
 def FuncOp : Func_Op<"func", [
-  AffineScope, AutomaticAllocationScope, CallableOpInterface,
+  AffineScope, AutomaticAllocationScope,
   FunctionOpInterface, IsolatedFromAbove, OpAsmOpInterface
 ]> {
   let summary = "An operation with a name containing a single `SSACFG` region";
@@ -230,8 +246,8 @@ def FuncOp : Func_Op<"func", [
 
     ```mlir
     // External function definitions.
-    func.func @abort()
-    func.func @scribble(i32, i64, memref<? x 128 x f32, #layout_map0>) -> f64
+    func.func private @abort()
+    func.func private @scribble(i32, i64, memref<? x 128 x f32, #layout_map0>) -> f64
 
     // A function that returns its argument twice:
     func.func @count(%x: i64) -> (i64, i64)
@@ -240,13 +256,13 @@ def FuncOp : Func_Op<"func", [
     }
 
     // A function with an argument attribute
-    func.func @example_fn_arg(%x: i32 {swift.self = unit})
+    func.func private @example_fn_arg(%x: i32 {swift.self = unit})
 
     // A function with a result attribute
-    func.func @example_fn_result() -> (f64 {dialectName.attrName = 0 : i64})
+    func.func private @example_fn_result() -> (f64 {dialectName.attrName = 0 : i64})
 
     // A function with an attribute
-    func.func @example_fn_attr() attributes {dialectName.attrName = false}
+    func.func private @example_fn_attr() attributes {dialectName.attrName = false}
     ```
   }];
 
@@ -288,21 +304,13 @@ def FuncOp : Func_Op<"func", [
     void cloneInto(FuncOp dest, IRMapping &mapper);
 
     //===------------------------------------------------------------------===//
-    // CallableOpInterface
+    // FunctionOpInterface Methods
     //===------------------------------------------------------------------===//
 
     /// Returns the region on the current operation that is callable. This may
     /// return null in the case of an external callable object, e.g. an external
     /// function.
     ::mlir::Region *getCallableRegion() { return isExternal() ? nullptr : &getBody(); }
-
-    /// Returns the results types that the callable region produces when
-    /// executed.
-    ArrayRef<Type> getCallableResults() { return getFunctionType().getResults(); }
-
-    //===------------------------------------------------------------------===//
-    // FunctionOpInterface Methods
-    //===------------------------------------------------------------------===//
 
     /// Returns the argument types of this function.
     ArrayRef<Type> getArgumentTypes() { return getFunctionType().getInputs(); }

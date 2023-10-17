@@ -202,6 +202,93 @@ define half @test_lane2_2xf16(<vscale x 2 x half> %a) #0 {
   ret half %b
 }
 
+define bfloat @test_lane0_8xbf16(<vscale x 8 x bfloat> %a) #0 {
+; CHECK-LABEL: test_lane0_8xbf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
+; CHECK-NEXT:    ret
+  %b = extractelement <vscale x 8 x bfloat> %a, i32 0
+  ret bfloat %b
+}
+
+define bfloat @test_lane7_8xbf16(<vscale x 8 x bfloat> %a) #0 {
+; CHECK-LABEL: test_lane7_8xbf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.h, z0.h[7]
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
+; CHECK-NEXT:    ret
+  %b = extractelement <vscale x 8 x bfloat> %a, i32 7
+  ret bfloat %b
+}
+
+define bfloat @test_lane8_8xbf16(<vscale x 8 x bfloat> %a) #0 {
+; CHECK-LABEL: test_lane8_8xbf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.h, z0.h[8]
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
+; CHECK-NEXT:    ret
+  %b = extractelement <vscale x 8 x bfloat> %a, i32 8
+  ret bfloat %b
+}
+
+define bfloat @test_lane0_4xbf16(<vscale x 4 x bfloat> %a) #0 {
+; CHECK-LABEL: test_lane0_4xbf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
+; CHECK-NEXT:    ret
+  %b = extractelement <vscale x 4 x bfloat> %a, i32 0
+  ret bfloat %b
+}
+
+define bfloat @test_lane3_4xbf16(<vscale x 4 x bfloat> %a) #0 {
+; CHECK-LABEL: test_lane3_4xbf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.s, z0.s[3]
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
+; CHECK-NEXT:    ret
+  %b = extractelement <vscale x 4 x bfloat> %a, i32 3
+  ret bfloat %b
+}
+
+define bfloat @test_lane4_4xbf16(<vscale x 4 x bfloat> %a) #0 {
+; CHECK-LABEL: test_lane4_4xbf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.s, z0.s[4]
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
+; CHECK-NEXT:    ret
+  %b = extractelement <vscale x 4 x bfloat> %a, i32 4
+  ret bfloat %b
+}
+
+define bfloat @test_lane0_2xbf16(<vscale x 2 x bfloat> %a) #0 {
+; CHECK-LABEL: test_lane0_2xbf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
+; CHECK-NEXT:    ret
+  %b = extractelement <vscale x 2 x bfloat> %a, i32 0
+  ret bfloat %b
+}
+
+define bfloat @test_lane1_2xbf16(<vscale x 2 x bfloat> %a) #0 {
+; CHECK-LABEL: test_lane1_2xbf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.d, z0.d[1]
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
+; CHECK-NEXT:    ret
+  %b = extractelement <vscale x 2 x bfloat> %a, i32 1
+  ret bfloat %b
+}
+
+define bfloat @test_lane2_2xbf16(<vscale x 2 x bfloat> %a) #0 {
+; CHECK-LABEL: test_lane2_2xbf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.d, z0.d[2]
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
+; CHECK-NEXT:    ret
+  %b = extractelement <vscale x 2 x bfloat> %a, i32 2
+  ret bfloat %b
+}
+
 define float @test_lane0_4xf32(<vscale x 4 x float> %a) #0 {
 ; CHECK-LABEL: test_lane0_4xf32:
 ; CHECK:       // %bb.0:
@@ -366,6 +453,39 @@ define half @test_lanex_2xf16(<vscale x 2 x half> %a, i32 %x) #0 {
   ret half %b
 }
 
+define bfloat @test_lanex_8xbf16(<vscale x 8 x bfloat> %a, i32 %x) #0 {
+; CHECK-LABEL: test_lanex_8xbf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    whilels p0.h, xzr, x8
+; CHECK-NEXT:    lastb h0, p0, z0.h
+; CHECK-NEXT:    ret
+  %b = extractelement <vscale x 8 x bfloat> %a, i32 %x
+  ret bfloat %b
+}
+
+define bfloat @test_lanex_4xbf16(<vscale x 4 x bfloat> %a, i32 %x) #0 {
+; CHECK-LABEL: test_lanex_4xbf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    whilels p0.s, xzr, x8
+; CHECK-NEXT:    lastb h0, p0, z0.h
+; CHECK-NEXT:    ret
+  %b = extractelement <vscale x 4 x bfloat> %a, i32 %x
+  ret bfloat %b
+}
+
+define bfloat @test_lanex_2xbf16(<vscale x 2 x bfloat> %a, i32 %x) #0 {
+; CHECK-LABEL: test_lanex_2xbf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    whilels p0.d, xzr, x8
+; CHECK-NEXT:    lastb h0, p0, z0.h
+; CHECK-NEXT:    ret
+  %b = extractelement <vscale x 2 x bfloat> %a, i32 %x
+  ret bfloat %b
+}
+
 define float @test_lanex_4xf32(<vscale x 4 x float> %a, i32 %x) #0 {
 ; CHECK-LABEL: test_lanex_4xf32:
 ; CHECK:       // %bb.0:
@@ -510,8 +630,8 @@ define i1 @test_lanex_4xi1(<vscale x 4 x i1> %a, i32 %x) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z0.s, p0/z, #1 // =0x1
-; CHECK-NEXT:    whilels p0.s, xzr, x8
-; CHECK-NEXT:    lastb w8, p0, z0.s
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    lastb w8, p1, z0.s
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
   %b = extractelement <vscale x 4 x i1> %a, i32 %x
@@ -532,4 +652,4 @@ define i1 @test_lane4_2xi1(<vscale x 2 x i1> %a) #0 {
 
 declare i64 @llvm.vscale.i64()
 
-attributes #0 = { "target-features"="+sve" }
+attributes #0 = { "target-features"="+sve,+bf16" }

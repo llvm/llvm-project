@@ -56,10 +56,14 @@ public:
     return BasicSymbolRef(Symb, this);
   }
 
+  bool is64Bit() const override { return false; }
+
   const coff_import_header *getCOFFImportHeader() const {
     return reinterpret_cast<const object::coff_import_header *>(
         Data.getBufferStart());
   }
+
+  uint16_t getMachine() const { return getCOFFImportHeader()->Machine; }
 
 private:
   bool isData() const {

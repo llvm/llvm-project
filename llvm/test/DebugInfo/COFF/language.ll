@@ -39,6 +39,12 @@
 ;
 ; RUN: sed -e 's/<LANG1>/DW_LANG_Rust/;s/<LANG2>/Rust/' %s > %t
 ; RUN: llc -filetype=obj -o - %t | llvm-readobj --codeview - | FileCheck %t
+;
+; RUN: sed -e 's/<LANG1>/DW_LANG_ObjC/;s/<LANG2>/ObjC/' %s > %t
+; RUN: llc -filetype=obj -o - %t | llvm-readobj --codeview - | FileCheck %t
+;
+; RUN: sed -e 's/<LANG1>/DW_LANG_ObjC_plus_plus/;s/<LANG2>/ObjCpp/' %s > %t
+; RUN: llc -filetype=obj -o - %t | llvm-readobj --codeview - | FileCheck %t
 
 ; CHECK:      CodeViewDebugInfo [
 ; CHECK:        Subsection [

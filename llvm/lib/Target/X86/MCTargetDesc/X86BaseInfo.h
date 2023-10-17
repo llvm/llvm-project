@@ -829,9 +829,10 @@ namespace X86II {
     /// this flag to indicate that the encoder should do the wacky 3DNow! thing.
     ThreeDNow = 7 << OpMapShift,
 
-    // MAP5, MAP6 - Prefix after the 0x0F prefix.
+    // MAP5, MAP6, MAP7 - Prefix after the 0x0F prefix.
     T_MAP5 = 8 << OpMapShift,
     T_MAP6 = 9 << OpMapShift,
+    T_MAP7 = 10 << OpMapShift,
 
     //===------------------------------------------------------------------===//
     // REX_W - REX prefixes are instruction prefixes used in 64-bit mode.
@@ -924,15 +925,10 @@ namespace X86II {
     // Opcode
     OpcodeShift   = EncodingShift + 2,
 
-    /// VEX_W - Has a opcode specific functionality, but is used in the same
-    /// way as REX_W is for regular SSE instructions.
-    VEX_WShift  = OpcodeShift + 8,
-    VEX_W       = 1ULL << VEX_WShift,
-
     /// VEX_4V - Used to specify an additional AVX/SSE register. Several 2
     /// address instructions in SSE are represented as 3 address ones in AVX
     /// and the additional register is encoded in VEX_VVVV prefix.
-    VEX_4VShift = VEX_WShift + 1,
+    VEX_4VShift = OpcodeShift + 8,
     VEX_4V      = 1ULL << VEX_4VShift,
 
     /// VEX_L - Stands for a bit in the VEX opcode prefix meaning the current
@@ -960,10 +956,10 @@ namespace X86II {
 
     // The scaling factor for the AVX512's 8-bit compressed displacement.
     CD8_Scale_Shift = EVEX_BShift + 1,
-    CD8_Scale_Mask = 127ULL << CD8_Scale_Shift,
+    CD8_Scale_Mask = 7ULL << CD8_Scale_Shift,
 
     /// Explicitly specified rounding control
-    EVEX_RCShift = CD8_Scale_Shift + 7,
+    EVEX_RCShift = CD8_Scale_Shift + 3,
     EVEX_RC = 1ULL << EVEX_RCShift,
 
     // NOTRACK prefix

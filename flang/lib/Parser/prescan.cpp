@@ -106,7 +106,7 @@ void Prescanner::Statement() {
   case LineClassification::Kind::PreprocessorDirective:
     preprocessor_.Directive(TokenizePreprocessorDirective(), *this);
     return;
-  case LineClassification::Kind::CompilerDirective:
+  case LineClassification::Kind::CompilerDirective: {
     directiveSentinel_ = line.sentinel;
     CHECK(InCompilerDirective());
     BeginStatementAndAdvance();
@@ -118,11 +118,22 @@ void Prescanner::Statement() {
       }
       CHECK(*at_ == '!');
     }
+    std::optional<int> condOffset;
     if (directiveSentinel_[0] == '$' && directiveSentinel_[1] == '\0') {
-      // OpenMP conditional compilation line.  Remove the sentinel and then
-      // treat the line as if it were normal source.
-      at_ += 2, column_ += 2;
-      if (inFixedForm_) {
+      // OpenMP conditional compilation line.
+      condOffset = 2;
+    } else if (directiveSentinel_[0] == '@' && directiveSentinel_[1] == 'c' &&
+        directiveSentinel_[2] == 'u' && directiveSentinel_[3] == 'f' &&
+        directiveSentinel_[4] == '\0') {
+      // CUDA conditional compilation line.
+      condOffset = 5;
+    }
+    if (condOffset) {
+      at_ += *condOffset, column_ += *condOffset;
+      if (auto payload{IsIncludeLine(at_)}) {
+        FortranInclude(at_ + *payload);
+        return;
+      } else if (inFixedForm_) {
         LabelField(tokens);
       } else {
         SkipSpaces();
@@ -142,6 +153,7 @@ void Prescanner::Statement() {
       tokens.CloseToken();
     }
     break;
+  }
   case LineClassification::Kind::Source:
     BeginStatementAndAdvance();
     if (inFixedForm_) {
@@ -204,7 +216,7 @@ void Prescanner::Statement() {
       NormalizeCompilerDirectiveCommentMarker(*preprocessed);
       preprocessed->ToLowerCase();
       SourceFormChange(preprocessed->ToString());
-      preprocessed->ClipComment(true /* skip first ! */)
+      preprocessed->ClipComment(*this, true /* skip first ! */)
           .CheckBadFortranCharacters(messages_)
           .CheckBadParentheses(messages_)
           .Emit(cooked_);
@@ -220,7 +232,7 @@ void Prescanner::Statement() {
         }
       }
       preprocessed->ToLowerCase()
-          .ClipComment()
+          .ClipComment(*this)
           .CheckBadFortranCharacters(messages_)
           .CheckBadParentheses(messages_)
           .Emit(cooked_);
@@ -269,9 +281,9 @@ void Prescanner::NextLine() {
 }
 
 void Prescanner::LabelField(TokenSequence &token) {
-  const char *bad{nullptr};
   int outCol{1};
   const char *start{at_};
+  std::optional<int> badColumn;
   for (; *at_ != '\n' && column_ <= 6; ++at_) {
     if (*at_ == '\t') {
       ++at_;
@@ -282,18 +294,24 @@ void Prescanner::LabelField(TokenSequence &token) {
         !(*at_ == '0' && column_ == 6)) { // '0' in column 6 becomes space
       EmitChar(token, *at_);
       ++outCol;
-      if (!bad && !IsDecimalDigit(*at_)) {
-        bad = at_;
+      if (!badColumn && (column_ == 6 || !IsDecimalDigit(*at_))) {
+        badColumn = column_;
       }
     }
     ++column_;
   }
-  if (bad && !preprocessor_.IsNameDefined(token.CurrentOpenToken())) {
-    Say(GetProvenance(bad),
-        "Character in fixed-form label field must be a digit"_warn_en_US);
+  if (badColumn && !preprocessor_.IsNameDefined(token.CurrentOpenToken())) {
+    Say(GetProvenance(start + *badColumn - 1),
+        *badColumn == 6
+            ? "Statement should not begin with a continuation line"_warn_en_US
+            : "Character in fixed-form label field must be a digit"_warn_en_US);
     token.clear();
-    at_ = start;
-    return;
+    if (*badColumn < 6) {
+      at_ = start;
+      column_ = 1;
+      return;
+    }
+    outCol = 1;
   }
   if (outCol == 1) { // empty label field
     // Emit a space so that, if the line is rescanned after preprocessing,
@@ -332,7 +350,7 @@ void Prescanner::EnforceStupidEndStatementRules(const TokenSequence &tokens) {
   if (!start || !end) {
     return;
   }
-  if (&start->file == &end->file && start->line == end->line) {
+  if (&*start->sourceFile == &*end->sourceFile && start->line == end->line) {
     return; // no continuation
   }
   j += 3;
@@ -360,9 +378,11 @@ void Prescanner::EnforceStupidEndStatementRules(const TokenSequence &tokens) {
       auto endOfPrefixPos{
           allSources_.GetSourcePosition(tokens.GetCharProvenance(endOfPrefix))};
       auto next{allSources_.GetSourcePosition(tokens.GetCharProvenance(j))};
-      if (endOfPrefixPos && next && &endOfPrefixPos->file == &start->file &&
+      if (endOfPrefixPos && next &&
+          &*endOfPrefixPos->sourceFile == &*start->sourceFile &&
           endOfPrefixPos->line == start->line &&
-          (&next->file != &start->file || next->line != start->line)) {
+          (&*next->sourceFile != &*start->sourceFile ||
+              next->line != start->line)) {
         Say(range,
             "Initial line of continued statement must not appear to be a program unit END in fixed form source"_err_en_US);
       }
@@ -588,13 +608,18 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
     }
     preventHollerith_ = false;
   } else if (IsLegalInIdentifier(*at_)) {
-    do {
-    } while (IsLegalInIdentifier(EmitCharAndAdvance(tokens, *at_)));
+    while (IsLegalInIdentifier(EmitCharAndAdvance(tokens, *at_))) {
+    }
+    if (InFixedFormSource()) {
+      SkipSpaces();
+    }
     if ((*at_ == '\'' || *at_ == '"') &&
         tokens.CharAt(tokens.SizeInChars() - 1) == '_') { // kind_"..."
       QuotedCharacterLiteral(tokens, start);
+      preventHollerith_ = false;
+    } else {
+      preventHollerith_ = true; // DO 10 H = ...
     }
-    preventHollerith_ = false;
   } else if (*at_ == '*') {
     if (EmitCharAndAdvance(tokens, '*') == '*') {
       EmitCharAndAdvance(tokens, '*');
@@ -606,10 +631,14 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
     }
   } else {
     char ch{*at_};
-    if (ch == '(' || ch == '[') {
-      ++delimiterNesting_;
-    } else if ((ch == ')' || ch == ']') && delimiterNesting_ > 0) {
-      --delimiterNesting_;
+    if (ch == '(') {
+      if (parenthesisNesting_++ == 0) {
+        isPossibleMacroCall_ = tokens.SizeInTokens() > 0 &&
+            preprocessor_.IsFunctionLikeDefinition(
+                tokens.TokenAt(tokens.SizeInTokens() - 1));
+      }
+    } else if (ch == ')' && parenthesisNesting_ > 0) {
+      --parenthesisNesting_;
     }
     char nch{EmitCharAndAdvance(tokens, ch)};
     preventHollerith_ = false;
@@ -623,6 +652,12 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
       EmitCharAndAdvance(tokens, nch);
     } else if (ch == '/') {
       slashInCurrentStatement_ = true;
+    } else if (ch == ';' && InFixedFormSource()) {
+      SkipSpaces();
+      if (IsDecimalDigit(*at_)) {
+        Say(GetProvenanceRange(at_, at_ + 1),
+            "Label should be in the label field"_port_en_US);
+      }
     }
   }
   tokens.CloseToken();
@@ -696,6 +731,11 @@ void Prescanner::QuotedCharacterLiteral(
         break;
       }
       inCharLiteral_ = true;
+      if (insertASpace_) {
+        Say(GetProvenanceRange(at_, end),
+            "Repeated quote mark in character literal continuation line should have been preceded by '&'"_port_en_US);
+        insertASpace_ = false;
+      }
     }
   }
   inCharLiteral_ = false;
@@ -760,8 +800,23 @@ bool Prescanner::PadOutCharacterLiteral(TokenSequence &tokens) {
   return false;
 }
 
+static bool IsAtProcess(const char *p) {
+  static const char pAtProc[]{"process"};
+  for (std::size_t i{0}; i < sizeof pAtProc - 1; ++i) {
+    if (ToLowerCaseLetter(*++p) != pAtProc[i])
+      return false;
+  }
+  return true;
+}
+
 bool Prescanner::IsFixedFormCommentLine(const char *start) const {
   const char *p{start};
+
+  // The @process directive must start in column 1.
+  if (*p == '@' && IsAtProcess(p)) {
+    return true;
+  }
+
   if (IsFixedFormCommentChar(*p) || *p == '%' || // VAX %list, %eject, &c.
       ((*p == 'D' || *p == 'd') &&
           !features_.IsEnabled(LanguageFeature::OldDebugLines))) {
@@ -793,6 +848,8 @@ const char *Prescanner::IsFreeFormComment(const char *p) const {
   p = SkipWhiteSpaceAndCComments(p);
   if (*p == '!' || *p == '\n') {
     return p;
+  } else if (*p == '@') {
+    return IsAtProcess(p) ? p : nullptr;
   } else {
     return nullptr;
   }
@@ -800,12 +857,25 @@ const char *Prescanner::IsFreeFormComment(const char *p) const {
 
 std::optional<std::size_t> Prescanner::IsIncludeLine(const char *start) const {
   const char *p{SkipWhiteSpace(start)};
-  for (char ch : "include"s) {
-    if (ToLowerCaseLetter(*p++) != ch) {
+  if (*p == '0' && inFixedForm_ && p == start + 5) {
+    // Accept "     0INCLUDE" in fixed form.
+    p = SkipWhiteSpace(p + 1);
+  }
+  for (const char *q{"include"}; *q; ++q) {
+    if (ToLowerCaseLetter(*p) != *q) {
       return std::nullopt;
     }
+    p = SkipWhiteSpace(p + 1);
   }
-  p = SkipWhiteSpace(p);
+  if (IsDecimalDigit(*p)) { // accept & ignore a numeric kind prefix
+    for (p = SkipWhiteSpace(p + 1); IsDecimalDigit(*p);
+         p = SkipWhiteSpace(p + 1)) {
+    }
+    if (*p != '_') {
+      return std::nullopt;
+    }
+    p = SkipWhiteSpace(p + 1);
+  }
   if (*p == '"' || *p == '\'') {
     return {p - start};
   }
@@ -971,11 +1041,18 @@ const char *Prescanner::FixedFormContinuationLine(bool mightNeedSpace) {
       tabInCurrentLine_ = true;
       return nextLine_ + 2; // VAX extension
     }
-    if (col1 == ' ' && nextLine_[1] == ' ' && nextLine_[2] == ' ' &&
-        nextLine_[3] == ' ' && nextLine_[4] == ' ') {
+    if ((col1 == ' ' ||
+            ((col1 == 'D' || col1 == 'd') &&
+                features_.IsEnabled(LanguageFeature::OldDebugLines))) &&
+        nextLine_[1] == ' ' && nextLine_[2] == ' ' && nextLine_[3] == ' ' &&
+        nextLine_[4] == ' ') {
       char col6{nextLine_[5]};
       if (col6 != '\n' && col6 != '\t' && col6 != ' ' && col6 != '0') {
-        return nextLine_ + 6;
+        if ((col6 == 'i' || col6 == 'I') && IsIncludeLine(nextLine_)) {
+          // It's An INCLUDE line, not a continuation
+        } else {
+          return nextLine_ + 6;
+        }
       }
     }
     if (IsImplicitContinuation()) {
@@ -1073,8 +1150,8 @@ bool Prescanner::FreeFormContinuation() {
 // Implicit line continuation allows a preprocessor macro call with
 // arguments to span multiple lines.
 bool Prescanner::IsImplicitContinuation() const {
-  return !inPreprocessorDirective_ && !inCharLiteral_ &&
-      delimiterNesting_ > 0 && !IsAtEnd() &&
+  return !inPreprocessorDirective_ && !inCharLiteral_ && isPossibleMacroCall_ &&
+      parenthesisNesting_ > 0 && !IsAtEnd() &&
       ClassifyLine(nextLine_).kind == LineClassification::Kind::Source;
 }
 
@@ -1123,7 +1200,8 @@ Prescanner::IsFixedFormCompilerDirectiveLine(const char *start) const {
     return std::nullopt;
   }
   *sp = '\0';
-  if (const char *ss{IsCompilerDirectiveSentinel(sentinel)}) {
+  if (const char *ss{IsCompilerDirectiveSentinel(
+          sentinel, static_cast<std::size_t>(sp - sentinel))}) {
     std::size_t payloadOffset = p - start;
     return {LineClassification{
         LineClassification::Kind::CompilerDirective, payloadOffset, ss}};
@@ -1151,7 +1229,7 @@ Prescanner::IsFreeFormCompilerDirectiveLine(const char *start) const {
       if (*p == '!') {
         break;
       }
-      if (const char *sp{IsCompilerDirectiveSentinel(sentinel)}) {
+      if (const char *sp{IsCompilerDirectiveSentinel(sentinel, j)}) {
         std::size_t offset = p - start;
         return {LineClassification{
             LineClassification::Kind::CompilerDirective, offset, sp}};
@@ -1175,17 +1253,16 @@ Prescanner &Prescanner::AddCompilerDirectiveSentinel(const std::string &dir) {
 }
 
 const char *Prescanner::IsCompilerDirectiveSentinel(
-    const char *sentinel) const {
+    const char *sentinel, std::size_t len) const {
   std::uint64_t packed{0};
-  std::size_t n{0};
-  for (; sentinel[n] != '\0'; ++n) {
-    packed = (packed << 8) | (sentinel[n] & 0xff);
+  for (std::size_t j{0}; j < len; ++j) {
+    packed = (packed << 8) | (sentinel[j] & 0xff);
   }
-  if (n == 0 || !compilerDirectiveBloomFilter_.test(packed % prime1) ||
+  if (len == 0 || !compilerDirectiveBloomFilter_.test(packed % prime1) ||
       !compilerDirectiveBloomFilter_.test(packed % prime2)) {
     return nullptr;
   }
-  const auto iter{compilerDirectiveSentinels_.find(std::string(sentinel, n))};
+  const auto iter{compilerDirectiveSentinels_.find(std::string(sentinel, len))};
   return iter == compilerDirectiveSentinels_.end() ? nullptr : iter->c_str();
 }
 

@@ -10,10 +10,10 @@ import json
 
 
 class TsanBasicTestCase(TestBase):
-
     @expectedFailureAll(
         oslist=["linux"],
-        bugnumber="non-core functionality, need to reenable and fix later (DES 2014.11.07)")
+        bugnumber="non-core functionality, need to reenable and fix later (DES 2014.11.07)",
+    )
     @expectedFailureNetBSD
     @skipIfFreeBSD  # llvm.org/pr21136 runtimes not yet available by default
     @skipIfRemote
@@ -26,37 +26,42 @@ class TsanBasicTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
-        self.line_malloc = line_number('main.c', '// malloc line')
-        self.line_thread1 = line_number('main.c', '// thread1 line')
-        self.line_thread2 = line_number('main.c', '// thread2 line')
+        self.line_malloc = line_number("main.c", "// malloc line")
+        self.line_thread1 = line_number("main.c", "// thread1 line")
+        self.line_thread2 = line_number("main.c", "// thread2 line")
 
     def tsan_tests(self):
         exe = self.getBuildArtifact("a.out")
-        self.expect(
-            "file " + exe,
-            patterns=["Current executable set to .*a.out"])
+        self.expect("file " + exe, patterns=["Current executable set to .*a.out"])
 
         self.runCmd("run")
 
-        stop_reason = self.dbg.GetSelectedTarget().process.GetSelectedThread().GetStopReason()
+        stop_reason = (
+            self.dbg.GetSelectedTarget().process.GetSelectedThread().GetStopReason()
+        )
         if stop_reason == lldb.eStopReasonExec:
             # On OS X 10.10 and older, we need to re-exec to enable
             # interceptors.
             self.runCmd("continue")
 
         # the stop reason of the thread should be breakpoint.
-        self.expect("thread list", "A data race should be detected",
-                    substrs=['stopped', 'stop reason = Data race detected'])
+        self.expect(
+            "thread list",
+            "A data race should be detected",
+            substrs=["stopped", "stop reason = Data race detected"],
+        )
 
         self.assertEqual(
             self.dbg.GetSelectedTarget().process.GetSelectedThread().GetStopReason(),
-            lldb.eStopReasonInstrumentation)
+            lldb.eStopReasonInstrumentation,
+        )
 
         # test that the TSan dylib is present
         self.expect(
             "image lookup -n __tsan_get_current_report",
             "__tsan_get_current_report should be present",
-            substrs=['1 match found'])
+            substrs=["1 match found"],
+        )
 
         # We should be stopped in __tsan_on_report
         process = self.dbg.GetSelectedTarget().process
@@ -79,24 +84,24 @@ class TsanBasicTestCase(TestBase):
         self.expect(
             "thread info -s",
             "The extended stop info should contain the TSan provided fields",
-            substrs=[
-                "instrumentation_class",
-                "description",
-                "mops"])
+            substrs=["instrumentation_class", "description", "mops"],
+        )
 
-        output_lines = self.res.GetOutput().split('\n')
-        json_line = '\n'.join(output_lines[2:])
+        output_lines = self.res.GetOutput().split("\n")
+        json_line = "\n".join(output_lines[2:])
         data = json.loads(json_line)
         self.assertEqual(data["instrumentation_class"], "ThreadSanitizer")
         self.assertEqual(data["issue_type"], "data-race")
         self.assertEqual(len(data["mops"]), 2)
 
         backtraces = thread.GetStopReasonExtendedBacktraces(
-            lldb.eInstrumentationRuntimeTypeAddressSanitizer)
+            lldb.eInstrumentationRuntimeTypeAddressSanitizer
+        )
         self.assertEqual(backtraces.GetSize(), 0)
 
         backtraces = thread.GetStopReasonExtendedBacktraces(
-            lldb.eInstrumentationRuntimeTypeThreadSanitizer)
+            lldb.eInstrumentationRuntimeTypeThreadSanitizer
+        )
         self.assertTrue(backtraces.GetSize() >= 2)
 
         # First backtrace is a memory operation
@@ -126,9 +131,15 @@ class TsanBasicTestCase(TestBase):
         self.runCmd("continue")
 
         # the stop reason of the thread should be a SIGABRT.
-        self.expect("thread list", "We should be stopped due a SIGABRT",
-                    substrs=['stopped', 'stop reason = signal SIGABRT'])
+        self.expect(
+            "thread list",
+            "We should be stopped due a SIGABRT",
+            substrs=["stopped", "stop reason = signal SIGABRT"],
+        )
 
         # test that we're in pthread_kill now (TSan abort the process)
-        self.expect("thread list", "We should be stopped in pthread_kill",
-                    substrs=['pthread_kill'])
+        self.expect(
+            "thread list",
+            "We should be stopped in pthread_kill",
+            substrs=["pthread_kill"],
+        )

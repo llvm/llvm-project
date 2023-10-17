@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -ffreestanding -flax-vector-conversions=none %s -triple=x86_64-unknown-unknown -target-feature +avx512fp16 -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -ffreestanding -flax-vector-conversions=none %s -triple=x86_64-unknown-unknown -target-feature +avx512fp16 -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 #include <immintrin.h>
 
@@ -83,7 +83,6 @@ __m512h test_mm512_set1_ph(_Float16 h) {
 
 __m512h test_mm512_set1_pch(_Float16 _Complex h) {
   // CHECK-LABEL: @test_mm512_set1_pch
-  // CHECK: bitcast { half, half }{{.*}} to float
   // CHECK: insertelement <16 x float> {{.*}}, i32 0
   // CHECK: insertelement <16 x float> {{.*}}, i32 1
   // CHECK: insertelement <16 x float> {{.*}}, i32 2
@@ -326,19 +325,26 @@ __m256h test_mm512_castph512_ph256(__m512h __a) {
 
 __m256h test_mm256_castph128_ph256(__m128h __a) {
   // CHECK-LABEL: test_mm256_castph128_ph256
-  // CHECK: shufflevector <8 x half> %{{.*}}, <8 x half> %{{.*}}, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  // CHECK: [[A:%.*]] = freeze <8 x half> poison 
+  // CHECK: shufflevector <8 x half> %{{.*}}, <8 x half> [[A]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   return _mm256_castph128_ph256(__a);
 }
 
 __m512h test_mm512_castph128_ph512(__m128h __a) {
   // CHECK-LABEL: test_mm512_castph128_ph512
-  // CHECK: shufflevector <8 x half> %{{.*}}, <8 x half> %{{.*}}, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  // CHECK: [[B:%.*]] = freeze <16 x half> poison
+  // CHECK: store <16 x half> [[B]], ptr [[BA:%.*]]
+  // CHECK: [[A:%.*]] = freeze <8 x half> poison
+  // CHECK: [[SV:%.*]] = shufflevector <8 x half> %{{.*}}, <8 x half> [[A]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  // CHECK: [[C:%.*]] = load <16 x half>, ptr [[BA]]
+  // CHECK: shufflevector <16 x half> [[SV]], <16 x half> [[C]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   return _mm512_castph128_ph512(__a);
 }
 
 __m512h test_mm512_castph256_ph512(__m256h __a) {
   // CHECK-LABEL: test_mm512_castph256_ph512
-  // CHECK: shufflevector <16 x half> %{{.*}}, <16 x half> %{{.*}}, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  // CHECK: [[A:%.*]] = freeze <16 x half> poison 
+  // CHECK: shufflevector <16 x half> %{{.*}}, <16 x half> [[A]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   return _mm512_castph256_ph512(__a);
 }
 
@@ -1455,106 +1461,106 @@ __mmask8 test_mm_mask_cmp_sh_mask(__mmask8 __M, __m128h __X, __m128h __Y) {
 
 __m128h test_mm_load_sh(void const *A) {
   // CHECK-LABEL: test_mm_load_sh
-  // CHECK: load half, half* %{{.*}}, align 1{{$}}
+  // CHECK: load half, ptr %{{.*}}, align 1{{$}}
   return _mm_load_sh(A);
 }
 
 __m128h test_mm_mask_load_sh(__m128h __A, __mmask8 __U, const void *__W) {
   // CHECK-LABEL: @test_mm_mask_load_sh
-  // CHECK: %{{.*}} = call <8 x half> @llvm.masked.load.v8f16.p0v8f16(<8 x half>* %{{.*}}, i32 1, <8 x i1> %{{.*}}, <8 x half> %{{.*}})
+  // CHECK: %{{.*}} = call <8 x half> @llvm.masked.load.v8f16.p0(ptr %{{.*}}, i32 1, <8 x i1> %{{.*}}, <8 x half> %{{.*}})
   return _mm_mask_load_sh(__A, __U, __W);
 }
 
 __m128h test_mm_maskz_load_sh(__mmask8 __U, const void *__W) {
   // CHECK-LABEL: @test_mm_maskz_load_sh
-  // CHECK: %{{.*}} = call <8 x half> @llvm.masked.load.v8f16.p0v8f16(<8 x half>* %{{.*}}, i32 1, <8 x i1> %{{.*}}, <8 x half> %{{.*}})
+  // CHECK: %{{.*}} = call <8 x half> @llvm.masked.load.v8f16.p0(ptr %{{.*}}, i32 1, <8 x i1> %{{.*}}, <8 x half> %{{.*}})
   return _mm_maskz_load_sh(__U, __W);
 }
 
 __m512h test_mm512_load_ph(void *p) {
   // CHECK-LABEL: @test_mm512_load_ph
-  // CHECK: load <32 x half>, <32 x half>* %{{.*}}, align 64{{$}}
+  // CHECK: load <32 x half>, ptr %{{.*}}, align 64{{$}}
   return _mm512_load_ph(p);
 }
 
 __m256h test_mm256_load_ph(void *p) {
   // CHECK-LABEL: @test_mm256_load_ph
-  // CHECK: load <16 x half>, <16 x half>* %{{.*}}, align 32{{$}}
+  // CHECK: load <16 x half>, ptr %{{.*}}, align 32{{$}}
   return _mm256_load_ph(p);
 }
 
 __m128h test_mm_load_ph(void *p) {
   // CHECK-LABEL: @test_mm_load_ph
-  // CHECK: load <8 x half>, <8 x half>* %{{.*}}, align 16{{$}}
+  // CHECK: load <8 x half>, ptr %{{.*}}, align 16{{$}}
   return _mm_load_ph(p);
 }
 
 __m512h test_mm512_loadu_ph(void *p) {
   // CHECK-LABEL: @test_mm512_loadu_ph
-  // CHECK: load <32 x half>, <32 x half>* {{.*}}, align 1{{$}}
+  // CHECK: load <32 x half>, ptr {{.*}}, align 1{{$}}
   return _mm512_loadu_ph(p);
 }
 
 __m256h test_mm256_loadu_ph(void *p) {
   // CHECK-LABEL: @test_mm256_loadu_ph
-  // CHECK: load <16 x half>, <16 x half>* {{.*}}, align 1{{$}}
+  // CHECK: load <16 x half>, ptr {{.*}}, align 1{{$}}
   return _mm256_loadu_ph(p);
 }
 
 __m128h test_mm_loadu_ph(void *p) {
   // CHECK-LABEL: @test_mm_loadu_ph
-  // CHECK: load <8 x half>, <8 x half>* {{.*}}, align 1{{$}}
+  // CHECK: load <8 x half>, ptr {{.*}}, align 1{{$}}
   return _mm_loadu_ph(p);
 }
 
 void test_mm_store_sh(void *A, __m128h B) {
   // CHECK-LABEL: test_mm_store_sh
   // CHECK: extractelement <8 x half> %{{.*}}, i32 0
-  // CHECK: store half %{{.*}}, half* %{{.*}}, align 1{{$}}
+  // CHECK: store half %{{.*}}, ptr %{{.*}}, align 1{{$}}
   _mm_store_sh(A, B);
 }
 
 void test_mm_mask_store_sh(void *__P, __mmask8 __U, __m128h __A) {
   // CHECK-LABEL: @test_mm_mask_store_sh
-  // CHECK: call void @llvm.masked.store.v8f16.p0v8f16(<8 x half> %{{.*}}, <8 x half>* %{{.*}}, i32 1, <8 x i1> %{{.*}})
+  // CHECK: call void @llvm.masked.store.v8f16.p0(<8 x half> %{{.*}}, ptr %{{.*}}, i32 1, <8 x i1> %{{.*}})
   _mm_mask_store_sh(__P, __U, __A);
 }
 
 void test_mm512_store_ph(void *p, __m512h a) {
   // CHECK-LABEL: @test_mm512_store_ph
-  // CHECK: store <32 x half> %{{.*}}, <32 x half>* %{{.*}}, align 64
+  // CHECK: store <32 x half> %{{.*}}, ptr %{{.*}}, align 64
   _mm512_store_ph(p, a);
 }
 
 void test_mm256_store_ph(void *p, __m256h a) {
   // CHECK-LABEL: @test_mm256_store_ph
-  // CHECK: store <16 x half> %{{.*}}, <16 x half>* %{{.*}}, align 32
+  // CHECK: store <16 x half> %{{.*}}, ptr %{{.*}}, align 32
   _mm256_store_ph(p, a);
 }
 
 void test_mm_store_ph(void *p, __m128h a) {
   // CHECK-LABEL: @test_mm_store_ph
-  // CHECK: store <8 x half> %{{.*}}, <8 x half>* %{{.*}}, align 16
+  // CHECK: store <8 x half> %{{.*}}, ptr %{{.*}}, align 16
   _mm_store_ph(p, a);
 }
 
 void test_mm512_storeu_ph(void *p, __m512h a) {
   // CHECK-LABEL: @test_mm512_storeu_ph
-  // CHECK: store <32 x half> %{{.*}}, <32 x half>* %{{.*}}, align 1{{$}}
+  // CHECK: store <32 x half> %{{.*}}, ptr %{{.*}}, align 1{{$}}
   // CHECK-NEXT: ret void
   _mm512_storeu_ph(p, a);
 }
 
 void test_mm256_storeu_ph(void *p, __m256h a) {
   // CHECK-LABEL: @test_mm256_storeu_ph
-  // CHECK: store <16 x half> %{{.*}}, <16 x half>* %{{.*}}, align 1{{$}}
+  // CHECK: store <16 x half> %{{.*}}, ptr %{{.*}}, align 1{{$}}
   // CHECK-NEXT: ret void
   _mm256_storeu_ph(p, a);
 }
 
 void test_mm_storeu_ph(void *p, __m128h a) {
   // CHECK-LABEL: @test_mm_storeu_ph
-  // CHECK: store <8 x half> %{{.*}}, <8 x half>* %{{.*}}, align 1{{$}}
+  // CHECK: store <8 x half> %{{.*}}, ptr %{{.*}}, align 1{{$}}
   // CHECK-NEXT: ret void
   _mm_storeu_ph(p, a);
 }

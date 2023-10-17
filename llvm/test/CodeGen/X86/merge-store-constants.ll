@@ -58,14 +58,14 @@ define void @big_nonzero_32_bytes_splat(ptr nocapture %a) {
 ; X32-LABEL: big_nonzero_32_bytes_splat:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vmovaps {{.*#+}} ymm0 = [42,42,42,42,42,42,42,42]
+; X32-NEXT:    vbroadcastss {{.*#+}} ymm0 = [42,42,42,42,42,42,42,42]
 ; X32-NEXT:    vmovups %ymm0, (%eax)
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: big_nonzero_32_bytes_splat:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovaps {{.*#+}} ymm0 = [42,42,42,42,42,42,42,42]
+; X64-NEXT:    vbroadcastss {{.*#+}} ymm0 = [42,42,42,42,42,42,42,42]
 ; X64-NEXT:    vmovups %ymm0, (%rdi)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq

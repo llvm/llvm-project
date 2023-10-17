@@ -432,7 +432,7 @@ define i32 @phi_with_constant_values(i1 %cmp) {
 
 ; CHECK-LABEL: merge:
 ; CHECK:       ; 3 = MemoryPhi({lhs,1},{rhs,2})
-; CHECK-NEXT   %storemerge2 = phi i32 [ 2, %lhs ], [ 3, %rhs ]
+; CHECK-NEXT:   %storemerge2 = phi i32 [ 2, %lhs ], [ 3, %rhs ]
 ; LIMIT:       ; MemoryUse(3)
 ; LIMIT-NEXT:  %lv = load i16, ptr %arrayidx, align 2
 ; NOLIMIT:     ; MemoryUse(liveOnEntry)

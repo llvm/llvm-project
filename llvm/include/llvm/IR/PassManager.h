@@ -489,7 +489,7 @@ public:
       auto *P = Passes[Idx].get();
       P->printPipeline(OS, MapClassName2PassName);
       if (Idx + 1 < Size)
-        OS << ",";
+        OS << ',';
     }
   }
 
@@ -516,13 +516,13 @@ public:
 
       PreservedAnalyses PassPA = Pass->run(IR, AM, ExtraArgs...);
 
-      // Call onto PassInstrumentation's AfterPass callbacks immediately after
-      // running the pass.
-      PI.runAfterPass<IRUnitT>(*Pass, IR, PassPA);
-
       // Update the analysis manager as each pass runs and potentially
       // invalidates analyses.
       AM.invalidate(IR, PassPA);
+
+      // Call onto PassInstrumentation's AfterPass callbacks immediately after
+      // running the pass.
+      PI.runAfterPass<IRUnitT>(*Pass, IR, PassPA);
 
       // Finally, intersect the preserved analyses to compute the aggregate
       // preserved set for this pass manager.
@@ -1260,7 +1260,7 @@ struct RequireAnalysisPass
                      function_ref<StringRef(StringRef)> MapClassName2PassName) {
     auto ClassName = AnalysisT::name();
     auto PassName = MapClassName2PassName(ClassName);
-    OS << "require<" << PassName << ">";
+    OS << "require<" << PassName << '>';
   }
   static bool isRequired() { return true; }
 };
@@ -1286,7 +1286,7 @@ struct InvalidateAnalysisPass
                      function_ref<StringRef(StringRef)> MapClassName2PassName) {
     auto ClassName = AnalysisT::name();
     auto PassName = MapClassName2PassName(ClassName);
-    OS << "invalidate<" << PassName << ">";
+    OS << "invalidate<" << PassName << '>';
   }
 };
 
@@ -1341,7 +1341,7 @@ public:
                      function_ref<StringRef(StringRef)> MapClassName2PassName) {
     OS << "repeat<" << Count << ">(";
     P.printPipeline(OS, MapClassName2PassName);
-    OS << ")";
+    OS << ')';
   }
 
 private:

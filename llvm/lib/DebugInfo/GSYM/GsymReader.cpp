@@ -23,11 +23,10 @@
 using namespace llvm;
 using namespace gsym;
 
-GsymReader::GsymReader(std::unique_ptr<MemoryBuffer> Buffer) :
-    MemBuffer(std::move(Buffer)),
-    Endian(support::endian::system_endianness()) {}
+GsymReader::GsymReader(std::unique_ptr<MemoryBuffer> Buffer)
+    : MemBuffer(std::move(Buffer)), Endian(llvm::endianness::native) {}
 
-  GsymReader::GsymReader(GsymReader &&RHS) = default;
+GsymReader::GsymReader(GsymReader &&RHS) = default;
 
 GsymReader::~GsymReader() = default;
 
@@ -60,8 +59,7 @@ GsymReader::create(std::unique_ptr<MemoryBuffer> &MemBuffer) {
 
 llvm::Error
 GsymReader::parse() {
-  BinaryStreamReader FileData(MemBuffer->getBuffer(),
-                              support::endian::system_endianness());
+  BinaryStreamReader FileData(MemBuffer->getBuffer(), llvm::endianness::native);
   // Check for the magic bytes. This file format is designed to be mmap'ed
   // into a process and accessed as read only. This is done for performance
   // and efficiency for symbolicating and parsing GSYM data.
@@ -69,14 +67,15 @@ GsymReader::parse() {
     return createStringError(std::errc::invalid_argument,
                              "not enough data for a GSYM header");
 
-  const auto HostByteOrder = support::endian::system_endianness();
+  const auto HostByteOrder = llvm::endianness::native;
   switch (Hdr->Magic) {
     case GSYM_MAGIC:
       Endian = HostByteOrder;
       break;
     case GSYM_CIGAM:
       // This is a GSYM file, but not native endianness.
-      Endian = sys::IsBigEndianHost ? support::little : support::big;
+      Endian = sys::IsBigEndianHost ? llvm::endianness::little
+                                    : llvm::endianness::big;
       Swap.reset(new SwappedData);
       break;
     default:
@@ -84,7 +83,7 @@ GsymReader::parse() {
                                "not a GSYM file");
   }
 
-  bool DataIsLittleEndian = HostByteOrder != support::little;
+  bool DataIsLittleEndian = HostByteOrder != llvm::endianness::little;
   // Read a correctly byte swapped header if we need to.
   if (Swap) {
     DataExtractor Data(MemBuffer->getBuffer(), DataIsLittleEndian, 4);
@@ -261,7 +260,11 @@ llvm::Expected<FunctionInfo> GsymReader::getFunctionInfo(uint64_t Addr) const {
   // Address info offsets size should have been checked in parse().
   assert(*AddressIndex < AddrInfoOffsets.size());
   auto AddrInfoOffset = AddrInfoOffsets[*AddressIndex];
-  DataExtractor Data(MemBuffer->getBuffer().substr(AddrInfoOffset), Endian, 4);
+  assert(
+      (Endian == llvm::endianness::big || Endian == llvm::endianness::little) &&
+      "Endian must be either big or little");
+  DataExtractor Data(MemBuffer->getBuffer().substr(AddrInfoOffset),
+                     Endian == llvm::endianness::little, 4);
   if (std::optional<uint64_t> OptAddr = getAddress(*AddressIndex)) {
     auto ExpectedFI = FunctionInfo::decode(Data, *OptAddr);
     if (ExpectedFI) {
@@ -283,7 +286,11 @@ llvm::Expected<LookupResult> GsymReader::lookup(uint64_t Addr) const {
   // Address info offsets size should have been checked in parse().
   assert(*AddressIndex < AddrInfoOffsets.size());
   auto AddrInfoOffset = AddrInfoOffsets[*AddressIndex];
-  DataExtractor Data(MemBuffer->getBuffer().substr(AddrInfoOffset), Endian, 4);
+  assert(
+      (Endian == llvm::endianness::big || Endian == llvm::endianness::little) &&
+      "Endian must be either big or little");
+  DataExtractor Data(MemBuffer->getBuffer().substr(AddrInfoOffset),
+                     Endian == llvm::endianness::little, 4);
   if (std::optional<uint64_t> OptAddr = getAddress(*AddressIndex))
     return FunctionInfo::lookup(Data, *this, *OptAddr, Addr);
   return createStringError(std::errc::invalid_argument,

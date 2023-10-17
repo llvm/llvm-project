@@ -86,17 +86,17 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define dso_local noundef i32 @_Z3funii(i32 noundef %a, i32 noundef %b) local_unnamed_addr #0 !dbg !17 {
 entry:
-  %a.addr = alloca i64, align 4, !DIAssignID !58 ; VAR:a
+  %a.addr = alloca i64, align 8, !DIAssignID !58 ; VAR:a
   call void @llvm.dbg.assign(metadata i1 undef, metadata !21, metadata !DIExpression(), metadata !58, metadata ptr %a.addr, metadata !DIExpression()), !dbg !27 ; VAR:a
-  %b.addr = alloca i64, align 4, !DIAssignID !64 ; VAR:b
+  %b.addr = alloca i64, align 8, !DIAssignID !64 ; VAR:b
   call void @llvm.dbg.assign(metadata i1 undef, metadata !22, metadata !DIExpression(), metadata !64, metadata ptr %b.addr, metadata !DIExpression()), !dbg !27 ; VAR:b
-  %c.addr = alloca i64, align 4, !DIAssignID !68 ; VAR:c
+  %c.addr = alloca i64, align 8, !DIAssignID !68 ; VAR:c
   call void @llvm.dbg.assign(metadata i1 undef, metadata !67, metadata !DIExpression(), metadata !68, metadata ptr %c.addr, metadata !DIExpression()), !dbg !27 ; VAR:c
-  %d.addr = alloca i64, align 4, !DIAssignID !73 ; VAR:d
+  %d.addr = alloca i64, align 8, !DIAssignID !73 ; VAR:d
   call void @llvm.dbg.assign(metadata i1 undef, metadata !72, metadata !DIExpression(), metadata !73, metadata ptr %d.addr, metadata !DIExpression()), !dbg !27 ; VAR:d
-  %e.addr = alloca i64, align 4, !DIAssignID !76 ; VAR:e
+  %e.addr = alloca i64, align 8, !DIAssignID !76 ; VAR:e
   call void @llvm.dbg.assign(metadata i1 undef, metadata !75, metadata !DIExpression(), metadata !76, metadata ptr %e.addr, metadata !DIExpression()), !dbg !27 ; VAR:e
-  ;%f.addr = alloca i64, align 4, !DIAssignID !80 ; VAR:f
+  ;%f.addr = alloca i64, align 8, !DIAssignID !80 ; VAR:f
   ;call void @llvm.dbg.assign(metadata i1 undef, metadata !79, metadata !DIExpression(), metadata !80, metadata ptr %f.addr, metadata !DIExpression()), !dbg !27 ; VAR:f
   store i64 1, ptr %a.addr, !DIAssignID !70 ; VAR:a
   call void @llvm.dbg.assign(metadata i64 1, metadata !21, metadata !DIExpression(), metadata !70, metadata ptr %a.addr, metadata !DIExpression()), !dbg !27 ; VAR:a
@@ -121,15 +121,7 @@ entry:
 ; CHECK-NEXT:    DBG_VALUE %stack.1.b.addr, $noreg, ![[b]], !DIExpression(DW_OP_deref)
 ; CHECK-NEXT:    DBG_VALUE %stack.4.e.addr, $noreg, ![[e]], !DIExpression(DW_OP_deref)
 ; CHECK-NEXT:    MOV64mi32 %stack.0.a.addr, 1, $noreg, 0, $noreg, 1
-; CHECK-NEXT:    DBG_VALUE $noreg, $noreg, ![[a]], !DIExpression(DW_OP_LLVM_fragment, 32, 32)
-; CHECK-NEXT:    DBG_VALUE %stack.0.a.addr, $noreg, ![[a]], !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 0, 32)
-; CHECK-NEXT:    DBG_VALUE %stack.0.a.addr, $noreg, ![[a]], !DIExpression(DW_OP_deref)
 ; CHECK-NEXT:    MOV64mi32 %stack.1.b.addr, 1, $noreg, 0, $noreg, 2
-; CHECK-NEXT:    DBG_VALUE $noreg, $noreg, ![[b]], !DIExpression(DW_OP_LLVM_fragment, 32, 32)
-; CHECK-NEXT:    DBG_VALUE %stack.1.b.addr, $noreg, ![[b]], !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 0, 32)
-; CHECK-NEXT:    DBG_VALUE %stack.1.b.addr, $noreg, ![[b]], !DIExpression(DW_OP_deref)
-; CHECK-NEXT:    DBG_VALUE %stack.4.e.addr, $noreg, ![[e]], !DIExpression(DW_OP_plus_uconst, 4, DW_OP_deref, DW_OP_LLVM_fragment, 32, 32)
-; CHECK-NEXT:    DBG_VALUE %stack.4.e.addr, $noreg, ![[e]], !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 0, 32)
 ; CHECK-NEXT:    MOV32mi %stack.0.a.addr, 1, $noreg, 0, $noreg, 3
 ; CHECK-NEXT:    DBG_VALUE $noreg, $noreg, ![[a]], !DIExpression(DW_OP_LLVM_fragment, 0, 32)
 ; CHECK-NEXT:    DBG_VALUE %stack.0.a.addr, $noreg, ![[a]], !DIExpression(DW_OP_plus_uconst, 4, DW_OP_deref, DW_OP_LLVM_fragment, 32, 32)
@@ -162,7 +154,6 @@ do.body1:                                         ; preds = %do.cond, %do.body
 ; CHECK-LABEL: bb.2.do.body1:
 ; CHECK-NEXT: successors
 ; CHECK-NEXT: {{^ *$}}
-; CxHECK-NEXT:    DBG_VALUE 11, $noreg, ![[f]], !DIExpression(DW_OP_LLVM_fragment, 0, 32)
 ; CHECK:         JMP_1
 ; CHECK-NEXT: {{^ *$}}
 
@@ -180,13 +171,12 @@ if.then:                                          ; preds = %do.body1
 ; CHECK-NEXT: {{^ *$}}
 ; CHECK-NEXT:    %5:gr32 = MOV32rm $rip, 1, $noreg, @g_a, $noreg
 ; CHECK-NEXT:    MOV32mr %stack.1.b.addr, 1, $noreg, 0, $noreg, killed %5
-; CHECK-NEXT:    DBG_VALUE %stack.1.b.addr, $noreg, ![[b]], !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 0, 32)
+; CHECK-NEXT:    DBG_VALUE %stack.1.b.addr, $noreg, ![[b]], !DIExpression(DW_OP_deref)
 ; CHECK-NEXT:    MOV32mi %stack.3.d.addr, 1, $noreg, 0, $noreg, 6
 ; CHECK-NEXT:    DBG_VALUE 8, $noreg, ![[e]], !DIExpression(DW_OP_LLVM_fragment, 32, 32)
 ; CHECK-NEXT:    MOV32mi %stack.4.e.addr, 1, $noreg, 0, $noreg, 8
 ; CHECK-NEXT:    DBG_VALUE %stack.4.e.addr, $noreg, ![[e]], !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 32, 32)
 ; CHECK-NEXT:    JMP_1 %bb.5
-; CHECxK-NEXT: {{^ *$}}
 
 if.else:                                          ; preds = %do.body1
   store i32 6, ptr %d.addr, !DIAssignID !74 ; VAR:d
@@ -213,8 +203,6 @@ do.cond:                                          ; preds = %if.then, %if.else
 ; CHECK-LABEL: bb.5.do.cond:
 ; CHECK-NEXT: successors
 ; CHECK-NEXT: {{^ *$}}
-; xCHECK-NEXT:    XXX ?DBG_VALUE %stack.2.c.addr, $noreg, ![[c]], !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 32, 32)
-; xCHECK-NEXT:    DBG_VALUE 11, $noreg, ![[f]], !DIExpression(DW_OP_LLVM_fragment, 32, 32)
 ; CHECK-NOT: DBG_VALUE
 ; CHECK:      {{^ *$}}
 
@@ -230,7 +218,7 @@ do.cond4:                                         ; preds = %do.cond
 
 do.end6:                                          ; preds = %do.cond4
   call void @llvm.dbg.assign(metadata i32 3, metadata !21, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32), metadata !63, metadata ptr %a.addr, metadata !DIExpression()), !dbg !27; VAR:a
-  call void @llvm.dbg.assign(metadata i32 0, metadata !21, metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32), metadata !70, metadata ptr %a.addr, metadata !DIExpression()), !dbg !27; VAR:a
+  call void @llvm.dbg.assign(metadata i32 0, metadata !21, metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32), metadata !70, metadata ptr %a.addr, metadata !DIExpression(DW_OP_plus_uconst, 32)), !dbg !27; VAR:a
   ;call void @llvm.dbg.assign(metadata i32 3, metadata !21, metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32), metadata !81, metadata ptr %a.addr, metadata !DIExpression()), !dbg !27; VAR:a
   call void @llvm.dbg.assign(metadata i32 4, metadata !22, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32), metadata !65, metadata ptr %b.addr, metadata !DIExpression()), !dbg !27 ; VAR:b
   call void @llvm.dbg.assign(metadata i32 0, metadata !22, metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32), metadata !71, metadata ptr %b.addr, metadata !DIExpression()), !dbg !27 ; VAR:b
@@ -240,12 +228,10 @@ do.end6:                                          ; preds = %do.cond4
   ;call void @llvm.dbg.assign(metadata i32 11, metadata !79, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32), metadata !81, metadata ptr %f.addr, metadata !DIExpression()), !dbg !27 ; VAR:f
   ret i32 0, !dbg !53
 ; CHECK-LABEL: bb.7.do.end6:
+; CHECK-NEXT:    DBG_VALUE %stack.0.a.addr, $noreg, ![[a]], !DIExpression(DW_OP_plus_uconst, 32, DW_OP_deref, DW_OP_LLVM_fragment, 32, 32)
 ; CHECK-NEXT:    DBG_VALUE %stack.0.a.addr, $noreg, ![[a]], !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 0, 32)
-; CHECK-NEXT:    DBG_VALUE %stack.0.a.addr, $noreg, ![[a]], !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 32, 32)
 ; CHECK-NEXT:    DBG_VALUE 4, $noreg, ![[b]], !DIExpression(DW_OP_LLVM_fragment, 0, 32)
 ; CHECK-NEXT:    DBG_VALUE %stack.1.b.addr, $noreg, ![[b]], !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 32, 32)
-; xCHECK-NEXT:    XXX ? DBG_VALUE %stack.3.d.addr, $noreg, ![[d]], !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 32, 32)
-; xCHECK-NEXT:    DBG_VALUE 11, $noreg, ![[f]], !DIExpression(DW_OP_LLVM_fragment, 32, 32)
 }
 
 declare !dbg !54 void @_Z4calli(i32 noundef) local_unnamed_addr #1

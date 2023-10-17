@@ -54,8 +54,9 @@ struct InlineScalarOperands : public OpRewritePattern<GenericOp> {
     if (scalarOperands.empty())
       return failure();
 
-    for (OpOperand *opOperand : genericOp.getDpsInitOperands())
-      newIndexingMaps.emplace_back(genericOp.getMatchingIndexingMap(opOperand));
+    for (OpOperand &opOperand : genericOp.getDpsInitsMutable())
+      newIndexingMaps.emplace_back(
+          genericOp.getMatchingIndexingMap(&opOperand));
 
     Location loc = genericOp->getLoc();
     SmallVector<Value> outputOperands = genericOp.getOutputs();
@@ -103,17 +104,15 @@ struct LinalgInlineScalarOperandsPass
     : public impl::LinalgInlineScalarOperandsBase<
           LinalgInlineScalarOperandsPass> {
   void runOnOperation() override {
-    func::FuncOp funcOp = getOperation();
-    MLIRContext *context = funcOp.getContext();
-    RewritePatternSet patterns(context);
-
+    Operation *op = getOperation();
+    MLIRContext &ctx = getContext();
+    RewritePatternSet patterns(&ctx);
     populateInlineConstantOperandsPatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(funcOp.getBody(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
 };
 } // namespace
 
-std::unique_ptr<OperationPass<func::FuncOp>>
-mlir::createLinalgInlineScalarOperandsPass() {
+std::unique_ptr<Pass> mlir::createLinalgInlineScalarOperandsPass() {
   return std::make_unique<LinalgInlineScalarOperandsPass>();
 }

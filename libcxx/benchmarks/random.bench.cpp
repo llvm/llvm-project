@@ -14,7 +14,7 @@
 #include "benchmark/benchmark.h"
 
 constexpr std::size_t MAX_BUFFER_LEN = 256;
-constexpr std::size_t MAX_SEED_LEN = 16;
+constexpr std::size_t MAX_SEED_LEN   = 16;
 
 static void BM_SeedSeq_Generate(benchmark::State& state) {
   std::array<std::uint32_t, MAX_BUFFER_LEN> buffer;

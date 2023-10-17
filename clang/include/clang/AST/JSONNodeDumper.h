@@ -208,6 +208,14 @@ public:
   void Visit(const concepts::Requirement *R);
   void Visit(const APValue &Value, QualType Ty);
 
+  void VisitAliasAttr(const AliasAttr *AA);
+  void VisitCleanupAttr(const CleanupAttr *CA);
+  void VisitDeprecatedAttr(const DeprecatedAttr *DA);
+  void VisitUnavailableAttr(const UnavailableAttr *UA);
+  void VisitSectionAttr(const SectionAttr *SA);
+  void VisitVisibilityAttr(const VisibilityAttr *VA);
+  void VisitTLSModelAttr(const TLSModelAttr *TA);
+
   void VisitTypedefType(const TypedefType *TT);
   void VisitUsingType(const UsingType *TT);
   void VisitFunctionType(const FunctionType *T);
@@ -277,6 +285,7 @@ public:
   void VisitBinaryOperator(const BinaryOperator *BO);
   void VisitCompoundAssignOperator(const CompoundAssignOperator *CAO);
   void VisitMemberExpr(const MemberExpr *ME);
+  void VisitAtomicExpr(const AtomicExpr *AE);
   void VisitCXXNewExpr(const CXXNewExpr *NE);
   void VisitCXXDeleteExpr(const CXXDeleteExpr *DE);
   void VisitCXXThisExpr(const CXXThisExpr *TE);

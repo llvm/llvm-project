@@ -36,9 +36,9 @@ define <4 x float> @extend_to_float_low_i8x16_u(<8 x i8> %x) {
 ; CHECK-LABEL: extend_to_float_low_i8x16_u:
 ; CHECK:         .functype extend_to_float_low_i8x16_u (v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    v128.const 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 16, 1, 2, 3, 17, 5, 6, 7, 18, 9, 10, 11, 19, 13, 14, 15
+; CHECK-NEXT:    i16x8.extend_low_i8x16_u
+; CHECK-NEXT:    i32x4.extend_low_i16x8_u
 ; CHECK-NEXT:    f32x4.convert_i32x4_u
 ; CHECK-NEXT:    # fallthrough-return
   %low = shufflevector <8 x i8> %x, <8 x i8> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -51,8 +51,10 @@ define <4 x float> @extend_to_float_high_i8x16_u(<8 x i8> %x) {
 ; CHECK:         .functype extend_to_float_high_i8x16_u (v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    v128.const 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT:    i8x16.shuffle 4, 17, 18, 19, 5, 21, 22, 23, 6, 25, 26, 27, 7, 29, 30, 31
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i8x16.shuffle 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i16x8.extend_low_i8x16_u
+; CHECK-NEXT:    i32x4.extend_low_i16x8_u
 ; CHECK-NEXT:    f32x4.convert_i32x4_u
 ; CHECK-NEXT:    # fallthrough-return
   %high = shufflevector <8 x i8> %x, <8 x i8> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -91,12 +93,8 @@ define <4 x float> @extend_to_float_low_i8x16_s(<8 x i8> %x) {
 ; CHECK:         .functype extend_to_float_low_i8x16_s (v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0
-; CHECK-NEXT:    i32.const 24
-; CHECK-NEXT:    i32x4.shl
-; CHECK-NEXT:    i32.const 24
-; CHECK-NEXT:    i32x4.shr_s
+; CHECK-NEXT:    i16x8.extend_low_i8x16_s
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s
 ; CHECK-NEXT:    f32x4.convert_i32x4_s
 ; CHECK-NEXT:    # fallthrough-return
   %low = shufflevector <8 x i8> %x, <8 x i8> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -110,11 +108,9 @@ define <4 x float> @extend_to_float_high_i8x16_s(<8 x i8> %x) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 4, 0, 0, 0, 5, 0, 0, 0, 6, 0, 0, 0, 7, 0, 0, 0
-; CHECK-NEXT:    i32.const 24
-; CHECK-NEXT:    i32x4.shl
-; CHECK-NEXT:    i32.const 24
-; CHECK-NEXT:    i32x4.shr_s
+; CHECK-NEXT:    i8x16.shuffle 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i16x8.extend_low_i8x16_s
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s
 ; CHECK-NEXT:    f32x4.convert_i32x4_s
 ; CHECK-NEXT:    # fallthrough-return
   %high = shufflevector <8 x i8> %x, <8 x i8> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -138,9 +134,8 @@ define <2 x double> @extend_to_double_low_i16x4_u(<4 x i16> %x) {
 ; CHECK-LABEL: extend_to_double_low_i16x4_u:
 ; CHECK:         .functype extend_to_double_low_i16x4_u (v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    v128.const 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 16, 17, 2, 3, 18, 19, 6, 7, 20, 21, 10, 11, 22, 23, 14, 15
+; CHECK-NEXT:    i32x4.extend_low_i16x8_u
 ; CHECK-NEXT:    f64x2.convert_low_i32x4_u
 ; CHECK-NEXT:    # fallthrough-return
   %low = shufflevector <4 x i16> %x, <4 x i16> undef, <2 x i32> <i32 0, i32 1>

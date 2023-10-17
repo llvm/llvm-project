@@ -197,8 +197,7 @@ static dfsan_origin GetOriginIfTainted(uptr addr, uptr size) {
 
 #define PRINT_CALLER_STACK_TRACE        \
   {                                     \
-    GET_CALLER_PC_BP_SP;                \
-    (void)sp;                           \
+    GET_CALLER_PC_BP;                   \
     GET_STORE_STACK_TRACE_PC_BP(pc, bp) \
     stack.Print();                      \
   }
@@ -381,8 +380,7 @@ static void SetOrigin(const void *dst, uptr size, u32 origin) {
 }
 
 #define RET_CHAIN_ORIGIN(id)           \
-  GET_CALLER_PC_BP_SP;                 \
-  (void)sp;                            \
+  GET_CALLER_PC_BP;                    \
   GET_STORE_STACK_TRACE_PC_BP(pc, bp); \
   return ChainOrigin(id, &stack);
 
@@ -567,8 +565,7 @@ void SetShadow(dfsan_label label, void *addr, uptr size, dfsan_origin origin) {
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_maybe_store_origin(
     dfsan_label s, void *p, uptr size, dfsan_origin o) {
   if (UNLIKELY(s)) {
-    GET_CALLER_PC_BP_SP;
-    (void)sp;
+    GET_CALLER_PC_BP;
     GET_STORE_STACK_TRACE_PC_BP(pc, bp);
     SetOrigin(p, size, ChainOrigin(o, &stack));
   }
@@ -826,12 +823,12 @@ bool PrintOriginTraceFramesToStr(Origin o, InternalScopedString *out) {
     dfsan_origin origin_id = o.raw_id();
     o = o.getNextChainedOrigin(&stack);
     if (o.isChainedOrigin())
-      out->append(
+      out->AppendF(
           "  %sOrigin value: 0x%x, Taint value was stored to memory at%s\n",
           d.Origin(), origin_id, d.Default());
     else
-      out->append("  %sOrigin value: 0x%x, Taint value was created at%s\n",
-                  d.Origin(), origin_id, d.Default());
+      out->AppendF("  %sOrigin value: 0x%x, Taint value was created at%s\n",
+                   d.Origin(), origin_id, d.Default());
 
     // Includes a trailing newline, so no need to add it again.
     stack.PrintTo(out);
@@ -852,9 +849,9 @@ bool PrintOriginTraceToStr(const void *addr, const char *description,
 
   const dfsan_origin origin = *__dfsan::origin_for(addr);
 
-  out->append("  %sTaint value 0x%x (at %p) origin tracking (%s)%s\n",
-              d.Origin(), label, addr, description ? description : "",
-              d.Default());
+  out->AppendF("  %sTaint value 0x%x (at %p) origin tracking (%s)%s\n",
+               d.Origin(), label, addr, description ? description : "",
+               d.Default());
 
   Origin o = Origin::FromRawId(origin);
   return PrintOriginTraceFramesToStr(o, out);

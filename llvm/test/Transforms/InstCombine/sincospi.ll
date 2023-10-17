@@ -24,8 +24,7 @@ define float @test_instbased_f32() {
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[SINCOSPI:%.*]] = call <2 x float> @__sincospif_stret(float [[VAL]])
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[SINPI:%.*]] = extractelement <2 x float> [[SINCOSPI]], i64 0
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[COSPI:%.*]] = extractelement <2 x float> [[SINCOSPI]], i64 1
-; CHECK-FLOAT-IN-VEC-NEXT:    [[SIN:%.*]] = call float @__sinpif(float [[VAL]]) #[[ATTR0:[0-9]+]]
-; CHECK-FLOAT-IN-VEC-NEXT:    [[COS:%.*]] = call float @__cospif(float [[VAL]]) #[[ATTR0]]
+; CHECK-FLOAT-IN-VEC-NEXT:    [[COS:%.*]] = call float @__cospif(float [[VAL]]) #[[ATTR0:[0-9]+]]
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[RES:%.*]] = fadd float [[SINPI]], [[COSPI]]
 ; CHECK-FLOAT-IN-VEC-NEXT:    ret float [[RES]]
 ;
@@ -34,8 +33,7 @@ define float @test_instbased_f32() {
 ; CHECK-NEXT:    [[SINCOSPI:%.*]] = call { float, float } @__sincospif_stret(float [[VAL]])
 ; CHECK-NEXT:    [[SINPI:%.*]] = extractvalue { float, float } [[SINCOSPI]], 0
 ; CHECK-NEXT:    [[COSPI:%.*]] = extractvalue { float, float } [[SINCOSPI]], 1
-; CHECK-NEXT:    [[SIN:%.*]] = call float @__sinpif(float [[VAL]]) #[[ATTR0:[0-9]+]]
-; CHECK-NEXT:    [[COS:%.*]] = call float @__cospif(float [[VAL]]) #[[ATTR0]]
+; CHECK-NEXT:    [[COS:%.*]] = call float @__cospif(float [[VAL]]) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    [[RES:%.*]] = fadd float [[SINPI]], [[COSPI]]
 ; CHECK-NEXT:    ret float [[RES]]
 ;
@@ -60,7 +58,6 @@ define float @test_instbased_f32_other_user(ptr %ptr) {
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[SINPI:%.*]] = extractelement <2 x float> [[SINCOSPI]], i64 0
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[COSPI:%.*]] = extractelement <2 x float> [[SINCOSPI]], i64 1
 ; CHECK-FLOAT-IN-VEC-NEXT:    store float [[VAL]], ptr [[PTR:%.*]], align 4
-; CHECK-FLOAT-IN-VEC-NEXT:    [[SIN:%.*]] = call float @__sinpif(float [[VAL]]) #[[ATTR0]]
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[COS:%.*]] = call float @__cospif(float [[VAL]]) #[[ATTR0]]
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[RES:%.*]] = fadd float [[SINPI]], [[COSPI]]
 ; CHECK-FLOAT-IN-VEC-NEXT:    ret float [[RES]]
@@ -71,7 +68,6 @@ define float @test_instbased_f32_other_user(ptr %ptr) {
 ; CHECK-NEXT:    [[SINPI:%.*]] = extractvalue { float, float } [[SINCOSPI]], 0
 ; CHECK-NEXT:    [[COSPI:%.*]] = extractvalue { float, float } [[SINCOSPI]], 1
 ; CHECK-NEXT:    store float [[VAL]], ptr [[PTR:%.*]], align 4
-; CHECK-NEXT:    [[SIN:%.*]] = call float @__sinpif(float [[VAL]]) #[[ATTR0]]
 ; CHECK-NEXT:    [[COS:%.*]] = call float @__cospif(float [[VAL]]) #[[ATTR0]]
 ; CHECK-NEXT:    [[RES:%.*]] = fadd float [[SINPI]], [[COSPI]]
 ; CHECK-NEXT:    ret float [[RES]]
@@ -97,7 +93,6 @@ define float @test_constant_f32() {
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[SINCOSPI:%.*]] = call <2 x float> @__sincospif_stret(float 1.000000e+00)
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[SINPI:%.*]] = extractelement <2 x float> [[SINCOSPI]], i64 0
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[COSPI:%.*]] = extractelement <2 x float> [[SINCOSPI]], i64 1
-; CHECK-FLOAT-IN-VEC-NEXT:    [[SIN:%.*]] = call float @__sinpif(float 1.000000e+00) #[[ATTR0]]
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[COS:%.*]] = call float @__cospif(float 1.000000e+00) #[[ATTR0]]
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[RES:%.*]] = fadd float [[SINPI]], [[COSPI]]
 ; CHECK-FLOAT-IN-VEC-NEXT:    ret float [[RES]]
@@ -106,7 +101,6 @@ define float @test_constant_f32() {
 ; CHECK-NEXT:    [[SINCOSPI:%.*]] = call { float, float } @__sincospif_stret(float 1.000000e+00)
 ; CHECK-NEXT:    [[SINPI:%.*]] = extractvalue { float, float } [[SINCOSPI]], 0
 ; CHECK-NEXT:    [[COSPI:%.*]] = extractvalue { float, float } [[SINCOSPI]], 1
-; CHECK-NEXT:    [[SIN:%.*]] = call float @__sinpif(float 1.000000e+00) #[[ATTR0]]
 ; CHECK-NEXT:    [[COS:%.*]] = call float @__cospif(float 1.000000e+00) #[[ATTR0]]
 ; CHECK-NEXT:    [[RES:%.*]] = fadd float [[SINPI]], [[COSPI]]
 ; CHECK-NEXT:    ret float [[RES]]
@@ -131,7 +125,6 @@ define double @test_instbased_f64() {
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[SINCOSPI:%.*]] = call { double, double } @__sincospi_stret(double [[VAL]])
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[SINPI:%.*]] = extractvalue { double, double } [[SINCOSPI]], 0
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[COSPI:%.*]] = extractvalue { double, double } [[SINCOSPI]], 1
-; CHECK-FLOAT-IN-VEC-NEXT:    [[SIN:%.*]] = call double @__sinpi(double [[VAL]]) #[[ATTR0]]
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[COS:%.*]] = call double @__cospi(double [[VAL]]) #[[ATTR0]]
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[RES:%.*]] = fadd double [[SINPI]], [[COSPI]]
 ; CHECK-FLOAT-IN-VEC-NEXT:    ret double [[RES]]
@@ -141,7 +134,6 @@ define double @test_instbased_f64() {
 ; CHECK-NEXT:    [[SINCOSPI:%.*]] = call { double, double } @__sincospi_stret(double [[VAL]])
 ; CHECK-NEXT:    [[SINPI:%.*]] = extractvalue { double, double } [[SINCOSPI]], 0
 ; CHECK-NEXT:    [[COSPI:%.*]] = extractvalue { double, double } [[SINCOSPI]], 1
-; CHECK-NEXT:    [[SIN:%.*]] = call double @__sinpi(double [[VAL]]) #[[ATTR0]]
 ; CHECK-NEXT:    [[COS:%.*]] = call double @__cospi(double [[VAL]]) #[[ATTR0]]
 ; CHECK-NEXT:    [[RES:%.*]] = fadd double [[SINPI]], [[COSPI]]
 ; CHECK-NEXT:    ret double [[RES]]
@@ -167,7 +159,6 @@ define double @test_constant_f64() {
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[SINCOSPI:%.*]] = call { double, double } @__sincospi_stret(double 1.000000e+00)
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[SINPI:%.*]] = extractvalue { double, double } [[SINCOSPI]], 0
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[COSPI:%.*]] = extractvalue { double, double } [[SINCOSPI]], 1
-; CHECK-FLOAT-IN-VEC-NEXT:    [[SIN:%.*]] = call double @__sinpi(double 1.000000e+00) #[[ATTR0]]
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[COS:%.*]] = call double @__cospi(double 1.000000e+00) #[[ATTR0]]
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[RES:%.*]] = fadd double [[SINPI]], [[COSPI]]
 ; CHECK-FLOAT-IN-VEC-NEXT:    ret double [[RES]]
@@ -176,7 +167,6 @@ define double @test_constant_f64() {
 ; CHECK-NEXT:    [[SINCOSPI:%.*]] = call { double, double } @__sincospi_stret(double 1.000000e+00)
 ; CHECK-NEXT:    [[SINPI:%.*]] = extractvalue { double, double } [[SINCOSPI]], 0
 ; CHECK-NEXT:    [[COSPI:%.*]] = extractvalue { double, double } [[SINCOSPI]], 1
-; CHECK-NEXT:    [[SIN:%.*]] = call double @__sinpi(double 1.000000e+00) #[[ATTR0]]
 ; CHECK-NEXT:    [[COS:%.*]] = call double @__cospi(double 1.000000e+00) #[[ATTR0]]
 ; CHECK-NEXT:    [[RES:%.*]] = fadd double [[SINPI]], [[COSPI]]
 ; CHECK-NEXT:    ret double [[RES]]
@@ -218,4 +208,47 @@ define double @test_fptr(ptr %fptr, double %p1) {
   %cos = call double %fptr(double %p1)
   %res = fadd double %sin, %cos
   ret double %res
+}
+
+define i1 @test_cospif_used_in_branch_cond() {
+; CHECK-FLOAT-IN-VEC-LABEL: @test_cospif_used_in_branch_cond(
+; CHECK-FLOAT-IN-VEC-NEXT:  entry:
+; CHECK-FLOAT-IN-VEC-NEXT:    [[RES:%.*]] = call float @__cospif(float noundef 0.000000e+00)
+; CHECK-FLOAT-IN-VEC-NEXT:    [[CMP:%.*]] = fcmp uno float [[RES]], 0.000000e+00
+; CHECK-FLOAT-IN-VEC-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-FLOAT-IN-VEC:       then:
+; CHECK-FLOAT-IN-VEC-NEXT:    ret i1 false
+; CHECK-FLOAT-IN-VEC:       else:
+; CHECK-FLOAT-IN-VEC-NEXT:    ret i1 true
+;
+; CHECK-LABEL: @test_cospif_used_in_branch_cond(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RES:%.*]] = call float @__cospif(float noundef 0.000000e+00)
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[RES]], 0.000000e+00
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 true
+;
+; CHECK-NO-SINCOS-LABEL: @test_cospif_used_in_branch_cond(
+; CHECK-NO-SINCOS-NEXT:  entry:
+; CHECK-NO-SINCOS-NEXT:    [[RES:%.*]] = call float @__cospif(float noundef 0.000000e+00)
+; CHECK-NO-SINCOS-NEXT:    [[CMP:%.*]] = fcmp uno float [[RES]], 0.000000e+00
+; CHECK-NO-SINCOS-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-NO-SINCOS:       then:
+; CHECK-NO-SINCOS-NEXT:    ret i1 false
+; CHECK-NO-SINCOS:       else:
+; CHECK-NO-SINCOS-NEXT:    ret i1 true
+;
+entry:
+  %res = call float @__cospif(float noundef 0.000000e+00) #3
+  %cmp = fcmp uno float %res, 0.000000e+00
+  br i1 %cmp, label %then, label %else
+
+then:
+  ret i1 false
+
+else:
+  ret i1 true
 }

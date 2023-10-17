@@ -18,26 +18,47 @@ using namespace llvm::memprof;
 
 #define DEBUG_TYPE "memory-profile-info"
 
-// Upper bound on accesses per byte for marking an allocation cold.
-cl::opt<float> MemProfAccessesPerByteColdThreshold(
-    "memprof-accesses-per-byte-cold-threshold", cl::init(10.0), cl::Hidden,
-    cl::desc("The threshold the accesses per byte must be under to consider "
-             "an allocation cold"));
+// Upper bound on lifetime access density (accesses per byte per lifetime sec)
+// for marking an allocation cold.
+cl::opt<float> MemProfLifetimeAccessDensityColdThreshold(
+    "memprof-lifetime-access-density-cold-threshold", cl::init(0.05),
+    cl::Hidden,
+    cl::desc("The threshold the lifetime access density (accesses per byte per "
+             "lifetime sec) must be under to consider an allocation cold"));
 
 // Lower bound on lifetime to mark an allocation cold (in addition to accesses
-// per byte above). This is to avoid pessimizing short lived objects.
-cl::opt<unsigned> MemProfMinLifetimeColdThreshold(
-    "memprof-min-lifetime-cold-threshold", cl::init(200), cl::Hidden,
-    cl::desc("The minimum lifetime (s) for an allocation to be considered "
+// per byte per sec above). This is to avoid pessimizing short lived objects.
+cl::opt<unsigned> MemProfAveLifetimeColdThreshold(
+    "memprof-ave-lifetime-cold-threshold", cl::init(200), cl::Hidden,
+    cl::desc("The average lifetime (s) for an allocation to be considered "
              "cold"));
 
-AllocationType llvm::memprof::getAllocType(uint64_t MaxAccessCount,
-                                           uint64_t MinSize,
-                                           uint64_t MinLifetime) {
-  if (((float)MaxAccessCount) / MinSize < MemProfAccessesPerByteColdThreshold &&
-      // MinLifetime is expected to be in ms, so convert the threshold to ms.
-      MinLifetime >= MemProfMinLifetimeColdThreshold * 1000)
+// Lower bound on average lifetime accesses density (total life time access
+// density / alloc count) for marking an allocation hot.
+cl::opt<unsigned> MemProfMinAveLifetimeAccessDensityHotThreshold(
+    "memprof-min-ave-lifetime-access-density-hot-threshold", cl::init(1000),
+    cl::Hidden,
+    cl::desc("The minimum TotalLifetimeAccessDensity / AllocCount for an "
+             "allocation to be considered hot"));
+
+AllocationType llvm::memprof::getAllocType(uint64_t TotalLifetimeAccessDensity,
+                                           uint64_t AllocCount,
+                                           uint64_t TotalLifetime) {
+  // The access densities are multiplied by 100 to hold 2 decimal places of
+  // precision, so need to divide by 100.
+  if (((float)TotalLifetimeAccessDensity) / AllocCount / 100 <
+          MemProfLifetimeAccessDensityColdThreshold
+      // Lifetime is expected to be in ms, so convert the threshold to ms.
+      && ((float)TotalLifetime) / AllocCount >=
+             MemProfAveLifetimeColdThreshold * 1000)
     return AllocationType::Cold;
+
+  // The access densities are multiplied by 100 to hold 2 decimal places of
+  // precision, so need to divide by 100.
+  if (((float)TotalLifetimeAccessDensity) / AllocCount / 100 >
+      MemProfMinAveLifetimeAccessDensityHotThreshold)
+    return AllocationType::Hot;
+
   return AllocationType::NotCold;
 }
 
@@ -65,18 +86,24 @@ AllocationType llvm::memprof::getMIBAllocType(const MDNode *MIB) {
   // types that can be applied based on the allocation profile data.
   auto *MDS = dyn_cast<MDString>(MIB->getOperand(1));
   assert(MDS);
-  if (MDS->getString().equals("cold"))
+  if (MDS->getString().equals("cold")) {
     return AllocationType::Cold;
+  } else if (MDS->getString().equals("hot")) {
+    return AllocationType::Hot;
+  }
   return AllocationType::NotCold;
 }
 
-static std::string getAllocTypeAttributeString(AllocationType Type) {
+std::string llvm::memprof::getAllocTypeAttributeString(AllocationType Type) {
   switch (Type) {
   case AllocationType::NotCold:
     return "notcold";
     break;
   case AllocationType::Cold:
     return "cold";
+    break;
+  case AllocationType::Hot:
+    return "hot";
     break;
   default:
     assert(false && "Unexpected alloc type");
@@ -91,7 +118,7 @@ static void addAllocTypeAttribute(LLVMContext &Ctx, CallBase *CI,
   CI->addFnAttr(A);
 }
 
-static bool hasSingleAllocType(uint8_t AllocTypes) {
+bool llvm::memprof::hasSingleAllocType(uint8_t AllocTypes) {
   const unsigned NumAllocTypes = llvm::popcount(AllocTypes);
   assert(NumAllocTypes != 0);
   return NumAllocTypes == 1;
@@ -241,4 +268,10 @@ CallStack<MDNode, MDNode::op_iterator>::CallStackIterator::operator*() {
   ConstantInt *StackIdCInt = mdconst::dyn_extract<ConstantInt>(*Iter);
   assert(StackIdCInt);
   return StackIdCInt->getZExtValue();
+}
+
+template <> uint64_t CallStack<MDNode, MDNode::op_iterator>::back() const {
+  assert(N);
+  return mdconst::dyn_extract<ConstantInt>(N->operands().back())
+      ->getZExtValue();
 }

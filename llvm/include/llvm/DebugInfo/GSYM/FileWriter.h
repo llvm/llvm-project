@@ -28,9 +28,10 @@ namespace gsym {
 /// offsets and sizes.
 class FileWriter {
   llvm::raw_pwrite_stream &OS;
-  llvm::support::endianness ByteOrder;
+  llvm::endianness ByteOrder;
+
 public:
-  FileWriter(llvm::raw_pwrite_stream &S, llvm::support::endianness B)
+  FileWriter(llvm::raw_pwrite_stream &S, llvm::endianness B)
       : OS(S), ByteOrder(B) {}
   ~FileWriter();
   /// Write a single uint8_t value into the stream at the current file
@@ -112,6 +113,8 @@ public:
   llvm::raw_pwrite_stream &get_stream() {
     return OS;
   }
+
+  llvm::endianness getByteOrder() const { return ByteOrder; }
 
 private:
   FileWriter(const FileWriter &rhs) = delete;

@@ -132,9 +132,9 @@ Error SimpleExecutorMemoryManager::finalize(tpctypes::FinalizeRequest &FR) {
     assert(Seg.Size <= std::numeric_limits<size_t>::max());
     if (auto EC = sys::Memory::protectMappedMemory(
             {Mem, static_cast<size_t>(Seg.Size)},
-            toSysMemoryProtectionFlags(Seg.AG.getMemProt())))
+            toSysMemoryProtectionFlags(Seg.RAG.Prot)))
       return BailOut(errorCodeToError(EC));
-    if ((Seg.AG.getMemProt() & MemProt::Exec) == MemProt::Exec)
+    if ((Seg.RAG.Prot & MemProt::Exec) == MemProt::Exec)
       sys::Memory::InvalidateInstructionCache(Mem, Seg.Size);
   }
 

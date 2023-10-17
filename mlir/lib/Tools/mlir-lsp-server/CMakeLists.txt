@@ -9,6 +9,7 @@ add_mlir_library(MLIRLspServerLib
 
   LINK_LIBS PUBLIC
   MLIRBytecodeWriter
+  MLIRFunctionInterfaces
   MLIRIR
   MLIRLspServerSupportLib
   MLIRParser

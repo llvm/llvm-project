@@ -1,5 +1,9 @@
 // RUN: %libomp-compile-and-run
 // RUN: %libomp-irbuilder-compile-and-run
+
+// irbuilder is only available with clang
+// REQUIRES: clang
+
 #include <stdio.h>
 #include "omp_testsuite.h"
 

@@ -126,6 +126,19 @@ def WebKitAlpha : Package<"webkit">, ParentPackage<Alpha>;
 
 let ParentPackage = Core in {
 
+def BitwiseShiftChecker : Checker<"BitwiseShift">,
+  HelpText<"Finds cases where bitwise shift operation causes undefined behaviour.">,
+  CheckerOptions<[
+    CmdLineOption<Boolean,
+                  "Pedantic",
+                  "If set to true, the checker reports undefined behavior even "
+                  "if it is supported by most compilers. (This flag has no "
+                  "effect in C++20 where these constructs are legal.)",
+                  "false",
+                  Released>,
+  ]>,
+  Documentation<HasDocumentation>;
+
 def CallAndMessageModeling : Checker<"CallAndMessageModeling">,
   HelpText<"Responsible for essential modeling and assumptions after a "
            "function/method call. For instance, if we can't reason about the "
@@ -359,29 +372,6 @@ def ErrnoModeling : Checker<"Errno">,
   HelpText<"Make the special value 'errno' available to other checkers.">,
   Documentation<NotDocumented>;
 
-def StdCLibraryFunctionsChecker : Checker<"StdCLibraryFunctions">,
-  HelpText<"Improve modeling of the C standard library functions">,
-  // Uninitialized value check is a mandatory dependency. This Checker asserts
-  // that arguments are always initialized.
-  Dependencies<[CallAndMessageModeling]>,
-  CheckerOptions<[
-    CmdLineOption<Boolean,
-                  "DisplayLoadedSummaries",
-                  "If set to true, the checker displays the found summaries "
-                  "for the given translation unit.",
-                  "false",
-                  Released,
-                  Hide>,
-    CmdLineOption<Boolean,
-                  "ModelPOSIX",
-                  "If set to true, the checker models functions from the "
-                  "POSIX standard.",
-                  "false",
-                  InAlpha>
-  ]>,
-  Documentation<NotDocumented>,
-  Hidden;
-
 def TrustNonnullChecker : Checker<"TrustNonnull">,
   HelpText<"Trust that returns from framework methods annotated with _Nonnull "
            "are not null">,
@@ -486,12 +476,12 @@ def CStringNotNullTerm : Checker<"NotNullTerminated">,
   HelpText<"Check for arguments which are not null-terminating strings">,
   Dependencies<[CStringModeling]>,
   Documentation<HasDocumentation>;
- 
+
 def CStringUninitializedRead : Checker<"UninitializedRead">,
   HelpText<"Checks if the string manipulation function would read uninitialized bytes">,
   Dependencies<[CStringModeling]>,
   Documentation<HasDocumentation>;
-  
+
 } // end "alpha.unix.cstring"
 
 let ParentPackage = Unix in {
@@ -542,6 +532,27 @@ def MismatchedDeallocatorChecker : Checker<"MismatchedDeallocator">,
   Dependencies<[DynamicMemoryModeling]>,
   Documentation<HasDocumentation>;
 
+def StdCLibraryFunctionsChecker : Checker<"StdCLibraryFunctions">,
+  HelpText<"Check for invalid arguments of C standard library functions, "
+           "and apply relations between arguments and return value">,
+  CheckerOptions<[
+    CmdLineOption<Boolean,
+                  "DisplayLoadedSummaries",
+                  "If set to true, the checker displays the found summaries "
+                  "for the given translation unit.",
+                  "false",
+                  Released,
+                  Hide>,
+    CmdLineOption<Boolean,
+                  "ModelPOSIX",
+                  "If set to true, the checker models additional functions "
+                  "from the POSIX standard.",
+                  "false",
+                  InAlpha>
+  ]>,
+  WeakDependencies<[CallAndMessageChecker, NonNullParamChecker]>,
+  Documentation<HasDocumentation>;
+
 def VforkChecker : Checker<"Vfork">,
   HelpText<"Check for proper usage of vfork">,
   Documentation<HasDocumentation>;
@@ -573,6 +584,7 @@ def PthreadLockChecker : Checker<"PthreadLock">,
 
 def StreamChecker : Checker<"Stream">,
   HelpText<"Check stream handling functions">,
+  WeakDependencies<[NonNullParamChecker]>,
   Documentation<HasDocumentation>;
 
 def SimpleStreamChecker : Checker<"SimpleStream">,
@@ -581,14 +593,6 @@ def SimpleStreamChecker : Checker<"SimpleStream">,
 
 def BlockInCriticalSectionChecker : Checker<"BlockInCriticalSection">,
   HelpText<"Check for calls to blocking functions inside a critical section">,
-  Documentation<HasDocumentation>;
-
-def StdCLibraryFunctionArgsChecker : Checker<"StdCLibraryFunctionArgs">,
-  HelpText<"Check constraints of arguments of C standard library functions, "
-           "such as whether the parameter of isalpha is in the range [0, 255] "
-           "or is EOF.">,
-  Dependencies<[StdCLibraryFunctionsChecker]>,
-  WeakDependencies<[CallAndMessageChecker, NonNullParamChecker]>,
   Documentation<HasDocumentation>;
 
 } // end "alpha.unix"
@@ -753,6 +757,11 @@ def ContainerModeling : Checker<"ContainerModeling">,
   HelpText<"Models C++ containers">,
   Documentation<NotDocumented>,
   Hidden;
+
+def CXXArrayDeleteChecker : Checker<"ArrayDelete">,
+  HelpText<"Reports destructions of arrays of polymorphic objects that are "
+           "destructed as their base class.">,
+  Documentation<HasDocumentation>;
 
 def DeleteWithNonVirtualDtorChecker : Checker<"DeleteWithNonVirtualDtor">,
   HelpText<"Reports destructions of polymorphic objects with a non-virtual "
@@ -1618,7 +1627,7 @@ def DebugIteratorModeling : Checker<"DebugIteratorModeling">,
 def StdCLibraryFunctionsTesterChecker : Checker<"StdCLibraryFunctionsTester">,
   HelpText<"Add test functions to the summary map, so testing of individual "
            "summary constituents becomes possible.">,
-  Dependencies<[StdCLibraryFunctionsChecker]>,
+  WeakDependencies<[StdCLibraryFunctionsChecker]>,
   Documentation<NotDocumented>;
 
 } // end "debug"

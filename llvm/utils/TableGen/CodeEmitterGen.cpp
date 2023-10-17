@@ -7,15 +7,25 @@
 //===----------------------------------------------------------------------===//
 //
 // CodeEmitterGen uses the descriptions of instructions and their fields to
-// construct an automated code emitter: a function that, given a MachineInstr,
-// returns the (currently, 32-bit unsigned) value of the instruction.
+// construct an automated code emitter: a function called
+// getBinaryCodeForInstr() that, given a MCInst, returns the value of the
+// instruction - either as an uint64_t or as an APInt, depending on the
+// maximum bit width of all Inst definitions.
+//
+// In addition, it generates another function called getOperandBitOffset()
+// that, given a MCInst and an operand index, returns the minimum of indices of
+// all bits that carry some portion of the respective operand. When the target's
+// encodeInstruction() stores the instruction in a little-endian byte order, the
+// returned value is the offset of the start of the operand in the encoded
+// instruction. Other targets might need to adjust the returned value according
+// to their encodeInstruction() implementation.
 //
 //===----------------------------------------------------------------------===//
 
+#include "CodeGenHwModes.h"
 #include "CodeGenInstruction.h"
 #include "CodeGenTarget.h"
-#include "SubtargetFeatureInfo.h"
-#include "Types.h"
+#include "InfoByHwMode.h"
 #include "VarLenCodeEmitterGen.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -46,19 +56,24 @@ public:
 
 private:
   int getVariableBit(const std::string &VarName, BitsInit *BI, int bit);
-  std::string getInstructionCase(Record *R, CodeGenTarget &Target);
-  std::string getInstructionCaseForEncoding(Record *R, Record *EncodingDef,
-                                            CodeGenTarget &Target);
+  std::pair<std::string, std::string>
+  getInstructionCases(Record *R, CodeGenTarget &Target);
+  void addInstructionCasesForEncoding(Record *R, Record *EncodingDef,
+                                      CodeGenTarget &Target, std::string &Case,
+                                      std::string &BitOffsetCase);
   bool addCodeToMergeInOperand(Record *R, BitsInit *BI,
-                               const std::string &VarName, unsigned &NumberedOp,
-                               std::set<unsigned> &NamedOpIndices,
-                               std::string &Case, CodeGenTarget &Target);
+                               const std::string &VarName, std::string &Case,
+                               std::string &BitOffsetCase,
+                               CodeGenTarget &Target);
 
   void emitInstructionBaseValues(
       raw_ostream &o, ArrayRef<const CodeGenInstruction *> NumberedInstructions,
       CodeGenTarget &Target, int HwMode = -1);
-  unsigned BitWidth;
-  bool UseAPInt;
+  void
+  emitCaseMap(raw_ostream &o,
+              const std::map<std::string, std::vector<std::string>> &CaseMap);
+  unsigned BitWidth = 0u;
+  bool UseAPInt = false;
 };
 
 // If the VarBitInit at position 'bit' matches the specified variable then
@@ -80,9 +95,8 @@ int CodeEmitterGen::getVariableBit(const std::string &VarName,
 // Returns true if it succeeds, false if an error.
 bool CodeEmitterGen::addCodeToMergeInOperand(Record *R, BitsInit *BI,
                                              const std::string &VarName,
-                                             unsigned &NumberedOp,
-                                             std::set<unsigned> &NamedOpIndices,
                                              std::string &Case,
+                                             std::string &BitOffsetCase,
                                              CodeGenTarget &Target) {
   CodeGenInstruction &CGI = Target.getInstruction(R);
 
@@ -113,52 +127,8 @@ bool CodeEmitterGen::addCodeToMergeInOperand(Record *R, BitsInit *BI,
     // Get the machine operand number for the indicated operand.
     OpIdx = CGI.Operands[OpIdx].MIOperandNo;
   } else {
-    // Fall back to positional lookup. By default, we now disable positional
-    // lookup (and print an error, below), but even so, we'll do the lookup to
-    // help print a helpful diagnostic message.
-    //
-    // TODO: When we remove useDeprecatedPositionallyEncodedOperands, delete all
-    // this code, just leaving a "no operand named X in record Y" error.
-
-    unsigned NumberOps = CGI.Operands.size();
-    /// If this operand is not supposed to be emitted by the
-    /// generated emitter, skip it.
-    while (NumberedOp < NumberOps &&
-           (CGI.Operands.isFlatOperandNotEmitted(NumberedOp) ||
-              (!NamedOpIndices.empty() && NamedOpIndices.count(
-                CGI.Operands.getSubOperandNumber(NumberedOp).first)))) {
-      ++NumberedOp;
-    }
-
-    if (NumberedOp >=
-        CGI.Operands.back().MIOperandNo + CGI.Operands.back().MINumOperands) {
-      if (!Target.getInstructionSet()->getValueAsBit(
-              "useDeprecatedPositionallyEncodedOperands")) {
-        PrintError(R, Twine("No operand named ") + VarName + " in record " +
-                          R->getName() +
-                          " (would've given 'too few operands' error with "
-                          "useDeprecatedPositionallyEncodedOperands=true)");
-      } else {
-        PrintError(R, "Too few operands in record " + R->getName() +
-                          " (no match for variable " + VarName + ")");
-      }
-      return false;
-    }
-
-    OpIdx = NumberedOp++;
-
-    if (!Target.getInstructionSet()->getValueAsBit(
-            "useDeprecatedPositionallyEncodedOperands")) {
-      std::pair<unsigned, unsigned> SO =
-          CGI.Operands.getSubOperandNumber(OpIdx);
-      std::string OpName = CGI.Operands[SO.first].Name;
-      PrintError(R, Twine("No operand named ") + VarName + " in record " +
-                        R->getName() + " (would've used positional operand #" +
-                        Twine(SO.first) + " ('" + OpName + "') sub-op #" +
-                        Twine(SO.second) +
-                        " with useDeprecatedPositionallyEncodedOperands=true)");
-      return false;
-    }
+    PrintError(R, Twine("No operand named ") + VarName + " in record " + R->getName());
+    return false;
   }
 
   if (CGI.Operands.isFlatOperandNotEmitted(OpIdx)) {
@@ -222,6 +192,7 @@ bool CodeEmitterGen::addCodeToMergeInOperand(Record *R, BitsInit *BI,
     ++numOperandLits;
   }
 
+  unsigned BitOffset = -1;
   for (; bit >= 0; ) {
     int varBit = getVariableBit(VarName, BI, bit);
     
@@ -230,7 +201,7 @@ bool CodeEmitterGen::addCodeToMergeInOperand(Record *R, BitsInit *BI,
       --bit;
       continue;
     }
-    
+
     // Figure out the consecutive range of bits covered by this operand, in
     // order to generate better encoding code.
     int beginInstBit = bit;
@@ -249,6 +220,7 @@ bool CodeEmitterGen::addCodeToMergeInOperand(Record *R, BitsInit *BI,
     unsigned loBit = beginVarBit - N + 1;
     unsigned hiBit = loBit + N;
     unsigned loInstBit = beginInstBit - N + 1;
+    BitOffset = loInstBit;
     if (UseAPInt) {
       std::string extractStr;
       if (N >= 64) {
@@ -290,65 +262,71 @@ bool CodeEmitterGen::addCodeToMergeInOperand(Record *R, BitsInit *BI,
       }
     }
   }
+
+  if (BitOffset != (unsigned)-1) {
+    BitOffsetCase += "      case " + utostr(OpIdx) + ":\n";
+    BitOffsetCase += "        // op: " + VarName + "\n";
+    BitOffsetCase += "        return " + utostr(BitOffset) + ";\n";
+  }
+
   return true;
 }
 
-std::string CodeEmitterGen::getInstructionCase(Record *R,
-                                               CodeGenTarget &Target) {
-  std::string Case;
+std::pair<std::string, std::string>
+CodeEmitterGen::getInstructionCases(Record *R, CodeGenTarget &Target) {
+  std::string Case, BitOffsetCase;
+
+  auto append = [&](const char *S) {
+    Case += S;
+    BitOffsetCase += S;
+  };
+
   if (const RecordVal *RV = R->getValue("EncodingInfos")) {
     if (auto *DI = dyn_cast_or_null<DefInit>(RV->getValue())) {
       const CodeGenHwModes &HWM = Target.getHwModes();
       EncodingInfoByHwMode EBM(DI->getDef(), HWM);
-      Case += "      switch (HwMode) {\n";
-      Case += "      default: llvm_unreachable(\"Unhandled HwMode\");\n";
+      append("      switch (HwMode) {\n");
+      append("      default: llvm_unreachable(\"Unhandled HwMode\");\n");
       for (auto &KV : EBM) {
-        Case += "      case " + itostr(KV.first) + ": {\n";
-        Case += getInstructionCaseForEncoding(R, KV.second, Target);
-        Case += "      break;\n";
-        Case += "      }\n";
+        append(("      case " + itostr(KV.first) + ": {\n").c_str());
+        addInstructionCasesForEncoding(R, KV.second, Target, Case,
+                                       BitOffsetCase);
+        append("      break;\n");
+        append("      }\n");
       }
-      Case += "      }\n";
-      return Case;
+      append("      }\n");
+      return std::make_pair(std::move(Case), std::move(BitOffsetCase));
     }
   }
-  return getInstructionCaseForEncoding(R, R, Target);
+  addInstructionCasesForEncoding(R, R, Target, Case, BitOffsetCase);
+  return std::make_pair(std::move(Case), std::move(BitOffsetCase));
 }
 
-std::string CodeEmitterGen::getInstructionCaseForEncoding(Record *R, Record *EncodingDef,
-                                                          CodeGenTarget &Target) {
-  std::string Case;
+void CodeEmitterGen::addInstructionCasesForEncoding(
+    Record *R, Record *EncodingDef, CodeGenTarget &Target, std::string &Case,
+    std::string &BitOffsetCase) {
   BitsInit *BI = EncodingDef->getValueAsBitsInit("Inst");
-  unsigned NumberedOp = 0;
-  std::set<unsigned> NamedOpIndices;
-
-  // Collect the set of operand indices that might correspond to named
-  // operand, and skip these when assigning operands based on position.
-  if (Target.getInstructionSet()->
-       getValueAsBit("noNamedPositionallyEncodedOperands")) {
-    CodeGenInstruction &CGI = Target.getInstruction(R);
-    for (const RecordVal &RV : R->getValues()) {
-      unsigned OpIdx;
-      if (!CGI.Operands.hasOperandNamed(RV.getName(), OpIdx))
-        continue;
-
-      NamedOpIndices.insert(OpIdx);
-    }
-  }
 
   // Loop over all of the fields in the instruction, determining which are the
   // operands to the instruction.
   bool Success = true;
+  size_t OrigBitOffsetCaseSize = BitOffsetCase.size();
+  BitOffsetCase += "      switch (OpNum) {\n";
+  size_t BitOffsetCaseSizeBeforeLoop = BitOffsetCase.size();
   for (const RecordVal &RV : EncodingDef->getValues()) {
     // Ignore fixed fields in the record, we're looking for values like:
     //    bits<5> RST = { ?, ?, ?, ?, ? };
     if (RV.isNonconcreteOK() || RV.getValue()->isComplete())
       continue;
 
-    Success &=
-        addCodeToMergeInOperand(R, BI, std::string(RV.getName()), NumberedOp,
-                                NamedOpIndices, Case, Target);
+    Success &= addCodeToMergeInOperand(R, BI, std::string(RV.getName()), Case,
+                                       BitOffsetCase, Target);
   }
+  // Avoid empty switches.
+  if (BitOffsetCase.size() == BitOffsetCaseSizeBeforeLoop)
+    BitOffsetCase.resize(OrigBitOffsetCaseSize);
+  else
+    BitOffsetCase += "      }\n";
 
   if (!Success) {
     // Dump the record, so we can see what's going on...
@@ -367,8 +345,6 @@ std::string CodeEmitterGen::getInstructionCaseForEncoding(Record *R, Record *Enc
     Case += ", STI";
     Case += ");\n";
   }
-  
-  return Case;
 }
 
 static void emitInstBits(raw_ostream &OS, const APInt &Bits) {
@@ -419,7 +395,29 @@ void CodeEmitterGen::emitInstructionBaseValues(
   o << "    UINT64_C(0)\n  };\n";
 }
 
+void CodeEmitterGen::emitCaseMap(
+    raw_ostream &o,
+    const std::map<std::string, std::vector<std::string>> &CaseMap) {
+  std::map<std::string, std::vector<std::string>>::const_iterator IE, EE;
+  for (IE = CaseMap.begin(), EE = CaseMap.end(); IE != EE; ++IE) {
+    const std::string &Case = IE->first;
+    const std::vector<std::string> &InstList = IE->second;
+
+    for (int i = 0, N = InstList.size(); i < N; i++) {
+      if (i)
+        o << "\n";
+      o << "    case " << InstList[i] << ":";
+    }
+    o << " {\n";
+    o << Case;
+    o << "      break;\n"
+      << "    }\n";
+  }
+}
+
 void CodeEmitterGen::run(raw_ostream &o) {
+  emitSourceFileHeader("Machine Code Emitter", o);
+
   CodeGenTarget Target(Records);
   std::vector<Record*> Insts = Records.getAllDerivedDefinitions("Instruction");
 
@@ -498,6 +496,7 @@ void CodeEmitterGen::run(raw_ostream &o) {
 
     // Map to accumulate all the cases.
     std::map<std::string, std::vector<std::string>> CaseMap;
+    std::map<std::string, std::vector<std::string>> BitOffsetCaseMap;
 
     // Construct all cases statement for each opcode
     for (Record *R : Insts) {
@@ -506,9 +505,11 @@ void CodeEmitterGen::run(raw_ostream &o) {
         continue;
       std::string InstName =
           (R->getValueAsString("Namespace") + "::" + R->getName()).str();
-      std::string Case = getInstructionCase(R, Target);
+      std::string Case, BitOffsetCase;
+      std::tie(Case, BitOffsetCase) = getInstructionCases(R, Target);
 
-      CaseMap[Case].push_back(std::move(InstName));
+      CaseMap[Case].push_back(InstName);
+      BitOffsetCaseMap[BitOffsetCase].push_back(std::move(InstName));
     }
 
     // Emit initial function code
@@ -531,21 +532,7 @@ void CodeEmitterGen::run(raw_ostream &o) {
     }
 
     // Emit each case statement
-    std::map<std::string, std::vector<std::string>>::iterator IE, EE;
-    for (IE = CaseMap.begin(), EE = CaseMap.end(); IE != EE; ++IE) {
-      const std::string &Case = IE->first;
-      std::vector<std::string> &InstList = IE->second;
-
-      for (int i = 0, N = InstList.size(); i < N; i++) {
-        if (i)
-          o << "\n";
-        o << "    case " << InstList[i] << ":";
-      }
-      o << " {\n";
-      o << Case;
-      o << "      break;\n"
-        << "    }\n";
-    }
+    emitCaseMap(o, CaseMap);
 
     // Default case: unhandled opcode
     o << "  default:\n"
@@ -559,16 +546,27 @@ void CodeEmitterGen::run(raw_ostream &o) {
     else
       o << "  return Value;\n";
     o << "}\n\n";
+
+    o << "#ifdef GET_OPERAND_BIT_OFFSET\n"
+      << "#undef GET_OPERAND_BIT_OFFSET\n\n"
+      << "uint32_t " << Target.getName()
+      << "MCCodeEmitter::getOperandBitOffset(const MCInst &MI,\n"
+      << "    unsigned OpNum,\n"
+      << "    const MCSubtargetInfo &STI) const {\n"
+      << "  switch (MI.getOpcode()) {\n";
+    emitCaseMap(o, BitOffsetCaseMap);
+    o << "  }\n"
+      << "  std::string msg;\n"
+      << "  raw_string_ostream Msg(msg);\n"
+      << "  Msg << \"Not supported instr[opcode]: \" << MI << \"[\" << OpNum "
+         "<< \"]\";\n"
+      << "  report_fatal_error(Msg.str().c_str());\n"
+      << "}\n\n"
+      << "#endif // GET_OPERAND_BIT_OFFSET\n\n";
   }
 }
 
 } // end anonymous namespace
 
-namespace llvm {
-
-void EmitCodeEmitter(RecordKeeper &RK, raw_ostream &OS) {
-  emitSourceFileHeader("Machine Code Emitter", OS);
-  CodeEmitterGen(RK).run(OS);
-}
-
-} // end namespace llvm
+static TableGen::Emitter::OptClass<CodeEmitterGen>
+    X("gen-emitter", "Generate machine code emitter");

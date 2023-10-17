@@ -117,13 +117,13 @@ func.func @instructions() {
 // CHECK: [[VAL_31:%.*]] = fir.call @box3() : () -> !fir.class<!fir.type<derived3{f:f32}>>
 // CHECK: [[VAL_32:%.*]] = fir.dispatch "method"([[VAL_31]] : !fir.class<!fir.type<derived3{f:f32}>>) -> i32
 // CHECK: [[VAL_33:%.*]] = fir.convert [[VAL_32]] : (i32) -> i64
-// CHECK: [[VAL_34:%.*]] = fir.gentypedesc !fir.type<x>
+// CHECK: [[VAL_34:%.*]] = fir.type_desc !fir.type<x>
 // CHECK: fir.call @user_tdesc([[VAL_34]]) : (!fir.tdesc<!fir.type<x>>) -> ()
 // CHECK: [[VAL_35:%.*]] = fir.no_reassoc [[VAL_33]] : i64
   %27 = fir.call @box3() : () -> !fir.class<!fir.type<derived3{f:f32}>>
   %28 = fir.dispatch "method"(%27 : !fir.class<!fir.type<derived3{f:f32}>>) -> i32
   %29 = fir.convert %28 : (i32) -> i64
-  %30 = fir.gentypedesc !fir.type<x>
+  %30 = fir.type_desc !fir.type<x>
   fir.call @user_tdesc(%30) : (!fir.tdesc<!fir.type<x>>) -> ()
   %31 = fir.no_reassoc %29 : i64
 
@@ -450,12 +450,15 @@ fir.global linkonce_odr @global_linkonce_odr : i32 {
   fir.has_value %0 : i32
 }
 
-// CHECK-LABEL: fir.dispatch_table @dispatch_tbl {
+// CHECK-LABEL: fir.type_info @dispatch_tbl : !fir.type<dispatch_tbl{i:i32}> dispatch_table {
 // CHECK: fir.dt_entry "method", @method_impl
 // CHECK: }
-fir.dispatch_table @dispatch_tbl {
+fir.type_info @dispatch_tbl : !fir.type<dispatch_tbl{i:i32}> dispatch_table {
   fir.dt_entry "method", @method_impl
 }
+
+// CHECK-LABEL: fir.type_info @test_type_info noinit nodestroy nofinal extends !fir.type<parent{i:i32}> : !fir.type<test_type_info{i:i32,j:f32}>
+fir.type_info @test_type_info noinit nodestroy nofinal extends !fir.type<parent{i:i32}> : !fir.type<test_type_info{i:i32,j:f32}>
 
 // CHECK-LABEL: func @compare_complex(
 // CHECK-SAME: [[VAL_151:%.*]]: !fir.complex<16>, [[VAL_152:%.*]]: !fir.complex<16>) {

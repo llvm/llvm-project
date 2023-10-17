@@ -78,9 +78,8 @@ namespace lto {
 /// Given the original \p Path to an output file, replace any path
 /// prefix matching \p OldPrefix with \p NewPrefix. Also, create the
 /// resulting directory if it does not yet exist.
-std::string getThinLTOOutputFile(const std::string &Path,
-                                 const std::string &OldPrefix,
-                                 const std::string &NewPrefix);
+std::string getThinLTOOutputFile(StringRef Path, StringRef OldPrefix,
+                                 StringRef NewPrefix);
 
 /// Setup optimization remarks.
 Expected<std::unique_ptr<ToolOutputFile>> setupLLVMOptimizationRemarks(
@@ -95,6 +94,11 @@ setupStatsFile(StringRef StatsFilename);
 /// Produces a container ordering for optimal multi-threaded processing. Returns
 /// ordered indices to elements in the input array.
 std::vector<int> generateModulesOrdering(ArrayRef<BitcodeModule *> R);
+
+/// Updates MemProf attributes (and metadata) based on whether the index
+/// has recorded that we are linking with allocation libraries containing
+/// the necessary APIs for downstream transformations.
+void updateMemProfAttributes(Module &Mod, const ModuleSummaryIndex &Index);
 
 class LTO;
 struct SymbolResolution;
@@ -192,7 +196,7 @@ private:
 /// create a ThinBackend using one of the create*ThinBackend() functions below.
 using ThinBackend = std::function<std::unique_ptr<ThinBackendProc>(
     const Config &C, ModuleSummaryIndex &CombinedIndex,
-    StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
+    DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     AddStreamFn AddStream, FileCache Cache)>;
 
 /// This ThinBackend runs the individual backend jobs in-process.
@@ -219,11 +223,14 @@ ThinBackend createInProcessThinBackend(ThreadPoolStrategy Parallelism,
 /// ShouldEmitImportsFiles is true it also writes a list of imported files to a
 /// similar path with ".imports" appended instead.
 /// LinkedObjectsFile is an output stream to write the list of object files for
-/// the final ThinLTO linking. Can be nullptr.
-/// OnWrite is callback which receives module identifier and notifies LTO user
-/// that index file for the module (and optionally imports file) was created.
+/// the final ThinLTO linking. Can be nullptr.  If LinkedObjectsFile is not
+/// nullptr and NativeObjectPrefix is not empty then it replaces the prefix of
+/// the objects with NativeObjectPrefix instead of NewPrefix. OnWrite is
+/// callback which receives module identifier and notifies LTO user that index
+/// file for the module (and optionally imports file) was created.
 ThinBackend createWriteIndexesThinBackend(std::string OldPrefix,
                                           std::string NewPrefix,
+                                          std::string NativeObjectPrefix,
                                           bool ShouldEmitImportsFiles,
                                           raw_fd_ostream *LinkedObjectsFile,
                                           IndexWriteCallback OnWrite);
@@ -248,13 +255,26 @@ class LTO {
   friend InputFile;
 
 public:
+  /// Unified LTO modes
+  enum LTOKind {
+    /// Any LTO mode without Unified LTO. The default mode.
+    LTOK_Default,
+
+    /// Regular LTO, with Unified LTO enabled.
+    LTOK_UnifiedRegular,
+
+    /// ThinLTO, with Unified LTO enabled.
+    LTOK_UnifiedThin,
+  };
+
   /// Create an LTO object. A default constructed LTO object has a reasonable
   /// production configuration, but you can customize it by passing arguments to
   /// this constructor.
   /// FIXME: We do currently require the DiagHandler field to be set in Conf.
   /// Until that is fixed, a Config argument is required.
   LTO(Config Conf, ThinBackend Backend = nullptr,
-      unsigned ParallelCodeGenParallelismLevel = 1);
+      unsigned ParallelCodeGenParallelismLevel = 1,
+      LTOKind LTOMode = LTOK_Default);
   ~LTO();
 
   /// Add an input file to the LTO link, using the provided symbol resolutions.
@@ -289,7 +309,7 @@ private:
                     const Config &Conf);
     struct CommonResolution {
       uint64_t Size = 0;
-      MaybeAlign Align;
+      Align Alignment;
       /// Record if at least one instance of the common was marked as prevailing
       bool Prevailing = false;
     };
@@ -413,6 +433,9 @@ private:
   Error checkPartiallySplit();
 
   mutable bool CalledGetMaxTasks = false;
+
+  // LTO mode when using Unified LTO.
+  LTOKind LTOMode;
 
   // Use Optional to distinguish false from not yet initialized.
   std::optional<bool> EnableSplitLTOUnit;

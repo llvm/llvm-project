@@ -76,13 +76,13 @@ SDValue SystemZSelectionDAGInfo::EmitTargetCodeForMemcpy(
 // MVI, MVHHI, MVHI and MVGHI respectively.
 static SDValue memsetStore(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
                            SDValue Dst, uint64_t ByteVal, uint64_t Size,
-                           unsigned Align, MachinePointerInfo DstPtrInfo) {
+                           Align Alignment, MachinePointerInfo DstPtrInfo) {
   uint64_t StoreVal = ByteVal;
   for (unsigned I = 1; I < Size; ++I)
     StoreVal |= ByteVal << (I * 8);
   return DAG.getStore(
       Chain, DL, DAG.getConstant(StoreVal, DL, MVT::getIntegerVT(Size * 8)),
-      Dst, DstPtrInfo, Align);
+      Dst, DstPtrInfo, Alignment);
 }
 
 SDValue SystemZSelectionDAGInfo::EmitTargetCodeForMemset(
@@ -108,18 +108,18 @@ SDValue SystemZSelectionDAGInfo::EmitTargetCodeForMemset(
       if (ByteVal == 0 || ByteVal == 255
               ? Bytes <= 16 && llvm::popcount(Bytes) <= 2
               : Bytes <= 4) {
-        unsigned Size1 = Bytes == 16 ? 8 : 1 << findLastSet(Bytes);
+        unsigned Size1 = Bytes == 16 ? 8 : llvm::bit_floor(Bytes);
         unsigned Size2 = Bytes - Size1;
         SDValue Chain1 = memsetStore(DAG, DL, Chain, Dst, ByteVal, Size1,
-                                     Alignment.value(), DstPtrInfo);
+                                     Alignment, DstPtrInfo);
         if (Size2 == 0)
           return Chain1;
         Dst = DAG.getNode(ISD::ADD, DL, PtrVT, Dst,
                           DAG.getConstant(Size1, DL, PtrVT));
         DstPtrInfo = DstPtrInfo.getWithOffset(Size1);
-        SDValue Chain2 = memsetStore(
-            DAG, DL, Chain, Dst, ByteVal, Size2,
-            std::min((unsigned)Alignment.value(), Size1), DstPtrInfo);
+        SDValue Chain2 =
+            memsetStore(DAG, DL, Chain, Dst, ByteVal, Size2,
+                        std::min(Alignment, Align(Size1)), DstPtrInfo);
         return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Chain1, Chain2);
       }
     } else {

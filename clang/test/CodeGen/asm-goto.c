@@ -22,12 +22,12 @@ label_true:
 int test2(int cond) {
   // CHECK-LABEL: define{{.*}} i32 @test2(
   // CHECK: callbr i32 asm sideeffect
-  // CHECK: to label %asm.fallthrough [label %label_true, label %loop]
+  // CHECK: to label %asm.fallthrough [label %label_true.split, label %loop.split]
   // CHECK-LABEL: asm.fallthrough:
   asm volatile goto("testl %0, %0; jne %l2;" : "=r"(cond) : "r"(cond) :: label_true, loop);
   asm volatile goto("testl %0, %0; jne %l3;" : "=r"(cond) : "r"(cond) :: label_true, loop);
   // CHECK: callbr i32 asm sideeffect
-  // CHECK: to label %asm.fallthrough1 [label %label_true, label %loop]
+  // CHECK: to label %asm.fallthrough1 [label %label_true.split2, label %loop.split3]
   // CHECK-LABEL: asm.fallthrough1:
   return 0;
 loop:
@@ -39,13 +39,13 @@ label_true:
 int test3(int out1, int out2) {
   // CHECK-LABEL: define{{.*}} i32 @test3(
   // CHECK: callbr { i32, i32 } asm sideeffect
-  // CHECK: to label %asm.fallthrough [label %label_true, label %loop]
+  // CHECK: to label %asm.fallthrough [label %label_true.split, label %loop.split]
   // CHECK-LABEL: asm.fallthrough:
   asm volatile goto("testl %0, %0; jne %l3;" : "=r"(out1), "=r"(out2) : "r"(out1) :: label_true, loop);
   asm volatile goto("testl %0, %0; jne %l4;" : "=r"(out1), "=r"(out2) : "r"(out1) :: label_true, loop);
   // CHECK: callbr { i32, i32 } asm sideeffect
-  // CHECK: to label %asm.fallthrough2 [label %label_true, label %loop]
-  // CHECK-LABEL: asm.fallthrough2:
+  // CHECK: to label %asm.fallthrough6 [label %label_true.split11, label %loop.split14]
+  // CHECK-LABEL: asm.fallthrough6:
   return 0;
 loop:
   return 0;
@@ -56,15 +56,15 @@ label_true:
 int test4(int out1, int out2) {
   // CHECK-LABEL: define{{.*}} i32 @test4(
   // CHECK: callbr { i32, i32 } asm sideeffect "jne ${5:l}", "={si},={di},r,0,1,!i,!i
-  // CHECK: to label %asm.fallthrough [label %label_true, label %loop]
+  // CHECK: to label %asm.fallthrough [label %label_true.split, label %loop.split]
   // CHECK-LABEL: asm.fallthrough:
   if (out1 < out2)
     asm volatile goto("jne %l5" : "+S"(out1), "+D"(out2) : "r"(out1) :: label_true, loop);
   else
     asm volatile goto("jne %l7" : "+S"(out1), "+D"(out2) : "r"(out1), "r"(out2) :: label_true, loop);
   // CHECK: callbr { i32, i32 } asm sideeffect "jne ${7:l}", "={si},={di},r,r,0,1,!i,!i
-  // CHECK: to label %asm.fallthrough2 [label %label_true, label %loop]
-  // CHECK-LABEL: asm.fallthrough2:
+  // CHECK: to label %asm.fallthrough6 [label %label_true.split11, label %loop.split14]
+  // CHECK-LABEL: asm.fallthrough6:
   return out1 + out2;
 loop:
   return -1;
@@ -75,7 +75,7 @@ label_true:
 int test5(int addr, int size, int limit) {
   // CHECK-LABEL: define{{.*}} i32 @test5(
   // CHECK: callbr i32 asm "add $1,$0 ; jc ${4:l} ; cmp $2,$0 ; ja ${4:l} ; ", "=r,imr,imr,0,!i
-  // CHECK: to label %asm.fallthrough [label %t_err]
+  // CHECK: to label %asm.fallthrough [label %t_err.split]
   // CHECK-LABEL: asm.fallthrough:
   asm goto(
       "add %1,%0 ; "
@@ -93,7 +93,7 @@ t_err:
 int test6(int out1) {
   // CHECK-LABEL: define{{.*}} i32 @test6(
   // CHECK: callbr i32 asm sideeffect "testl $0, $0; testl $1, $1; jne ${3:l}", "={si},r,0,!i,!i,{{.*}}
-  // CHECK: to label %asm.fallthrough [label %label_true, label %landing]
+  // CHECK: to label %asm.fallthrough [label %label_true.split, label %landing.split]
   // CHECK-LABEL: asm.fallthrough:
   // CHECK-LABEL: landing:
   int out2 = 42;
@@ -111,7 +111,7 @@ label_true:
 void *test7(void) {
   // CHECK-LABEL: define{{.*}} ptr @test7(
   // CHECK: %1 = callbr ptr asm "# $0\0A\09# ${2:l}", "=r,0,!i,~{dirflag},~{fpsr},~{flags}"(ptr %0)
-  // CHECK-NEXT: to label %asm.fallthrough [label %foo]
+  // CHECK-NEXT: to label %asm.fallthrough [label %foo.split]
   void *p = &&foo;
   asm goto ("# %0\n\t# %l2":"+r"(p):::foo);
 foo:
@@ -123,7 +123,7 @@ foo:
 void *test8(void) {
   // CHECK-LABEL: define{{.*}} ptr @test8(
   // CHECK: %1 = callbr ptr asm "# $0\0A\09# ${2:l}", "=r,0,!i,~{dirflag},~{fpsr},~{flags}"(ptr %0)
-  // CHECK-NEXT: to label %asm.fallthrough [label %foo]
+  // CHECK-NEXT: to label %asm.fallthrough [label %foo.split]
   void *p = &&foo;
   asm goto ("# %0\n\t# %l[foo]":"+r"(p):::foo);
 foo:

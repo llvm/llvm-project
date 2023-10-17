@@ -330,10 +330,10 @@ body:             |
     ; RV32-LABEL: name: store_common_value_float
     ; RV32: liveins: $x10, $x11, $x12, $f16_f
     ; RV32-NEXT: {{  $}}
-    ; RV32-NEXT: $f10_f = FSGNJ_S $f16_f, $f16_f
-    ; RV32-NEXT: FSW $f10_f, killed renamable $x10, 0 :: (store (s32) into %ir.a)
-    ; RV32-NEXT: FSW $f10_f, killed renamable $x11, 0 :: (store (s32) into %ir.b)
-    ; RV32-NEXT: FSW killed $f10_f, killed renamable $x12, 0 :: (store (s32) into %ir.c)
+    ; RV32-NEXT: $f15_f = FSGNJ_S $f16_f, $f16_f
+    ; RV32-NEXT: FSW $f15_f, killed renamable $x10, 0 :: (store (s32) into %ir.a)
+    ; RV32-NEXT: FSW $f15_f, killed renamable $x11, 0 :: (store (s32) into %ir.b)
+    ; RV32-NEXT: FSW killed $f15_f, killed renamable $x12, 0 :: (store (s32) into %ir.c)
     ; RV32-NEXT: PseudoRET
     ; RV64-LABEL: name: store_common_value_float
     ; RV64: liveins: $x10, $x11, $x12, $f16_f
@@ -358,18 +358,18 @@ body:             |
     ; RV32-LABEL: name: store_common_value_double
     ; RV32: liveins: $x10, $x11, $x12, $f16_d
     ; RV32-NEXT: {{  $}}
-    ; RV32-NEXT: $f10_d = FSGNJ_D $f16_d, $f16_d
-    ; RV32-NEXT: FSD $f10_d, killed renamable $x10, 0 :: (store (s64) into %ir.a)
-    ; RV32-NEXT: FSD $f10_d, killed renamable $x11, 0 :: (store (s64) into %ir.b)
-    ; RV32-NEXT: FSD killed $f10_d, killed renamable $x12, 0 :: (store (s64) into %ir.c)
+    ; RV32-NEXT: $f15_d = FSGNJ_D $f16_d, $f16_d
+    ; RV32-NEXT: FSD $f15_d, killed renamable $x10, 0 :: (store (s64) into %ir.a)
+    ; RV32-NEXT: FSD $f15_d, killed renamable $x11, 0 :: (store (s64) into %ir.b)
+    ; RV32-NEXT: FSD killed $f15_d, killed renamable $x12, 0 :: (store (s64) into %ir.c)
     ; RV32-NEXT: PseudoRET
     ; RV64-LABEL: name: store_common_value_double
     ; RV64: liveins: $x10, $x11, $x12, $f16_d
     ; RV64-NEXT: {{  $}}
-    ; RV64-NEXT: $f10_d = FSGNJ_D $f16_d, $f16_d
-    ; RV64-NEXT: FSD $f10_d, killed renamable $x10, 0 :: (store (s64) into %ir.a)
-    ; RV64-NEXT: FSD $f10_d, killed renamable $x11, 0 :: (store (s64) into %ir.b)
-    ; RV64-NEXT: FSD killed $f10_d, killed renamable $x12, 0 :: (store (s64) into %ir.c)
+    ; RV64-NEXT: $f15_d = FSGNJ_D $f16_d, $f16_d
+    ; RV64-NEXT: FSD $f15_d, killed renamable $x10, 0 :: (store (s64) into %ir.a)
+    ; RV64-NEXT: FSD $f15_d, killed renamable $x11, 0 :: (store (s64) into %ir.b)
+    ; RV64-NEXT: FSD killed $f15_d, killed renamable $x12, 0 :: (store (s64) into %ir.c)
     ; RV64-NEXT: PseudoRET
     FSD renamable $f16_d, killed renamable $x10, 0 :: (store (s64) into %ir.a)
     FSD renamable $f16_d, killed renamable $x11, 0 :: (store (s64) into %ir.b)

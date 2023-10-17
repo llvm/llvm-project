@@ -13,12 +13,10 @@
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/DenseSet.h"
 
-namespace llvm {
-namespace vfs {
+namespace llvm::vfs {
 class OverlayFileSystem;
 class InMemoryFileSystem;
-} // namespace vfs
-} // namespace llvm
+} // namespace llvm::vfs
 
 namespace clang {
 class CompilerInstance;
@@ -43,7 +41,7 @@ namespace tooling {
 class ExpandModularHeadersPPCallbacks : public PPCallbacks {
 public:
   ExpandModularHeadersPPCallbacks(
-      CompilerInstance *Compiler,
+      CompilerInstance *CI,
       IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS);
   ~ExpandModularHeadersPPCallbacks();
 

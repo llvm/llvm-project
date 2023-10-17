@@ -337,7 +337,14 @@ int internal_snprintf(char *buffer, uptr length, const char *format, ...) {
   return needed_length;
 }
 
-void InternalScopedString::append(const char *format, ...) {
+void InternalScopedString::Append(const char *str) {
+  uptr prev_len = length();
+  uptr str_len = internal_strlen(str);
+  buffer_.resize(prev_len + str_len + 1);
+  internal_memcpy(buffer_.data() + prev_len, str, str_len + 1);
+}
+
+void InternalScopedString::AppendF(const char *format, ...) {
   uptr prev_len = length();
 
   while (true) {

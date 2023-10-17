@@ -113,6 +113,12 @@ struct HasBaseWithVTable : BaseWithVTable {
 };
 HasBaseWithVTable base_with_vtable;
 
+struct DerivedWithVTable : public Base {
+  virtual ~DerivedWithVTable() {}
+  unsigned a : 1;
+};
+DerivedWithVTable derived_with_vtable;
+
 int main(int argc, char const *argv[]) {
   lba.a = 2;
 
@@ -152,6 +158,9 @@ int main(int argc, char const *argv[]) {
   base_with_vtable.a = 5;
   base_with_vtable.b = 0;
   base_with_vtable.c = 5;
+
+  derived_with_vtable.b_a = 2;
+  derived_with_vtable.a = 1;
 
   return 0; // break here
 }

@@ -6,8 +6,9 @@ The LLDB Debugger
 Welcome to the LLDB documentation!
 
 LLDB is a next generation, high-performance debugger. It is built as a set of
-reusable components which highly leverage existing libraries in the larger LLVM
-Project, such as the Clang expression parser and LLVM disassembler.
+reusable components which highly leverage existing libraries in the larger
+`LLVM Project <https://llvm.org>`_, such as the Clang expression parser and
+LLVM disassembler.
 
 LLDB is the default debugger in Xcode on macOS and supports debugging C,
 Objective-C and C++ on the desktop and iOS devices and simulator.
@@ -25,9 +26,8 @@ Tutorial <https://lldb.llvm.org/use/tutorial.html>`_. For users already familiar
 with GDB there is a cheat sheet listing common tasks and their LLDB equivalent
 in the `GDB to LLDB command map <https://lldb.llvm.org/use/map.html>`_.
 
-There are also multiple resources on how to script LLDB using Python `Python
-Reference <https://lldb.llvm.org/use/python-reference.html>`_ is a great
-starting point for that.
+There are also multiple resources on how to script LLDB using Python: the
+:doc:`use/python-reference` is a great starting point for that.
 
 Compiler Integration Benefits
 -----------------------------
@@ -72,8 +72,7 @@ are welcome:
 * macOS debugging for i386, x86_64 and AArch64
 * iOS, tvOS, and watchOS simulator debugging on i386, x86_64 and AArch64
 * iOS, tvOS, and watchOS device debugging on ARM and AArch64
-* Linux user-space debugging for i386, x86_64, ARM, AArch64, MIPS64, PPC64le,
-  s390x
+* Linux user-space debugging for i386, x86_64, ARM, AArch64, PPC64le, s390x
 * FreeBSD user-space debugging for i386, x86_64, ARM, AArch64, MIPS64, PPC
 * NetBSD user-space debugging for i386 and x86_64
 * Windows user-space debugging for i386, x86_64, ARM and AArch64 (*)
@@ -108,24 +107,13 @@ messages are automatically sent to the `lldb-commits
 <http://lists.llvm.org/mailman/listinfo/lldb-commits>`__ mailing list, and
 this is also the preferred mailing list for patch submissions.
 
-See the :doc:`Projects page <status/projects>` if you are looking for some
+See the :doc:`Projects page <resources/projects>` if you are looking for some
 interesting areas to contribute to lldb.
 
 .. toctree::
    :hidden:
    :maxdepth: 1
-   :caption: Project
-
-   status/goals
-   status/features
-   status/status
-   status/projects
-   status/releases
-
-.. toctree::
-   :hidden:
-   :maxdepth: 1
-   :caption: Use & Extension
+   :caption: Using LLDB
 
    use/tutorial
    use/map
@@ -133,46 +121,42 @@ interesting areas to contribute to lldb.
    use/variable
    use/symbolication
    use/symbols
-   use/extensions
-   use/python
-   use/python-reference
    use/remote
    use/qemu-testing
    use/intel_pt
    use/ondemand
    use/troubleshooting
    use/links
+   Man Page <man/lldb>
 
 .. toctree::
    :hidden:
    :maxdepth: 1
-   :caption: Development
+   :caption: Scripting LLDB
 
+   use/python
+   use/python-reference
+   Python API <python_api>
+
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+   :caption: Developing LLDB
+
+   resources/overview
    resources/contributing
    resources/build
    resources/test
+   resources/debugging
    resources/fuzzing
-   resources/bots
+   resources/sbapi
+   resources/dataformatters
+   resources/extensions
    resources/caveats
-
-
-.. toctree::
-   :hidden:
-   :maxdepth: 1
-   :caption: Design
-
-   design/overview
-   design/sbapi
-
-.. toctree::
-   :hidden:
-   :maxdepth: 1
-   :caption: Reference
-
-   Public Python API <python_api>
+   resources/projects
    Public C++ API <https://lldb.llvm.org/cpp_reference/namespacelldb.html>
    Private C++ API <https://lldb.llvm.org/cpp_reference/index.html>
-   Man Page <man/lldb>
 
 .. toctree::
    :hidden:
@@ -180,5 +164,8 @@ interesting areas to contribute to lldb.
    :caption: External Links
 
    Source Code <https://github.com/llvm/llvm-project>
-   Code Reviews <https://reviews.llvm.org>
-   Bug Reports <https://github.com/llvm/llvm-project/issues/labels/lldb/>
+   Releases <https://github.com/llvm/llvm-project/releases>
+   Discussion Forums <https://discourse.llvm.org/c/subprojects/lldb/8>
+   Developer Policy <https://llvm.org/docs/DeveloperPolicy.html>
+   Bug Reports <https://github.com/llvm/llvm-project/issues?q=is%3Aissue+label%3Alldb+is%3Aopen>
+   Code Reviews <https://github.com/llvm/llvm-project/pulls?q=is%3Apr+label%3Alldb+is%3Aopen>

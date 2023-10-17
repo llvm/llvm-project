@@ -23,7 +23,6 @@ extern "C" int foo;
 extern "C" const int bar;
 extern "C" int const bar;
 
-// <rdar://problem/6895431>
 extern "C" struct bar d;
 extern struct bar e;
 
@@ -82,7 +81,6 @@ extern "C" void pr7859_b(int) {} // expected-error {{conflicting}}
 extern "C" void pr7859_c(short) {} // expected-note {{previous definition}}
 extern "C" void pr7859_c(int) {} // expected-error {{conflicting}}
 
-// <rdar://problem/8318976>
 extern "C" {
   struct s0 {
   private:

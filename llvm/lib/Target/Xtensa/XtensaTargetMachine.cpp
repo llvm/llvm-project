@@ -17,9 +17,7 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Scalar.h"
 #include <optional>
 
@@ -49,7 +47,7 @@ XtensaTargetMachine::XtensaTargetMachine(const Target &T, const Triple &TT,
                                          const TargetOptions &Options,
                                          std::optional<Reloc::Model> RM,
                                          std::optional<CodeModel::Model> CM,
-                                         CodeGenOpt::Level OL, bool JIT,
+                                         CodeGenOptLevel OL, bool JIT,
                                          bool IsLittle)
     : LLVMTargetMachine(T, computeDataLayout(TT, CPU, Options, IsLittle), TT,
                         CPU, FS, Options, getEffectiveRelocModel(JIT, RM),
@@ -63,7 +61,7 @@ XtensaTargetMachine::XtensaTargetMachine(const Target &T, const Triple &TT,
                                          const TargetOptions &Options,
                                          std::optional<Reloc::Model> RM,
                                          std::optional<CodeModel::Model> CM,
-                                         CodeGenOpt::Level OL, bool JIT)
+                                         CodeGenOptLevel OL, bool JIT)
     : XtensaTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, JIT, true) {}
 
 TargetPassConfig *XtensaTargetMachine::createPassConfig(PassManagerBase &PM) {

@@ -1,6 +1,29 @@
+source_set("llvm-min-tblgen-sources") {
+  sources = [
+    "Attributes.cpp",
+    "CodeGenIntrinsics.cpp",
+    "DirectiveEmitter.cpp",
+    "IntrinsicEmitter.cpp",
+    "RISCVTargetDefEmitter.cpp",
+    "SDNodeProperties.cpp",
+    "TableGen.cpp",
+    "VTEmitter.cpp",
+  ]
+  deps = [ "//llvm/lib/Support" ]
+}
+
+executable("llvm-min-tblgen") {
+  deps = [
+    ":llvm-min-tblgen-sources",
+    "//llvm/lib/TableGen",
+  ]
+}
+
 executable("llvm-tblgen") {
   deps = [
+    ":llvm-min-tblgen-sources",
     "//llvm/include/llvm/Config:llvm-config",
+    "//llvm/lib/CodeGen:CodeGenTypes",
     "//llvm/lib/Support",
     "//llvm/lib/TableGen",
     "//llvm/utils/TableGen/GlobalISel",
@@ -9,12 +32,12 @@ executable("llvm-tblgen") {
     "AsmMatcherEmitter.cpp",
     "AsmWriterEmitter.cpp",
     "AsmWriterInst.cpp",
-    "Attributes.cpp",
     "CTagsEmitter.cpp",
     "CallingConvEmitter.cpp",
     "CodeEmitterGen.cpp",
     "CodeGenDAGPatterns.cpp",
     "CodeGenHwModes.cpp",
+    "CodeGenInstAlias.cpp",
     "CodeGenInstruction.cpp",
     "CodeGenMapTable.cpp",
     "CodeGenRegisters.cpp",
@@ -30,29 +53,26 @@ executable("llvm-tblgen") {
     "DFAPacketizerEmitter.cpp",
     "DXILEmitter.cpp",
     "DecoderEmitter.cpp",
-    "DirectiveEmitter.cpp",
     "DisassemblerEmitter.cpp",
     "ExegesisEmitter.cpp",
     "FastISelEmitter.cpp",
-    "GICombinerEmitter.cpp",
     "GlobalISelEmitter.cpp",
+    "GlobalISelMatchTable.cpp",
+    "GlobalISelCombinerEmitter.cpp",
+    "GlobalISelMatchTableExecutorEmitter.cpp",
     "InfoByHwMode.cpp",
     "InstrDocsEmitter.cpp",
     "InstrInfoEmitter.cpp",
-    "IntrinsicEmitter.cpp",
     "OptEmitter.cpp",
     "OptParserEmitter.cpp",
     "OptRSTEmitter.cpp",
     "PredicateExpander.cpp",
     "PseudoLoweringEmitter.cpp",
-    "RISCVTargetDefEmitter.cpp",
     "RegisterBankEmitter.cpp",
     "RegisterInfoEmitter.cpp",
-    "SDNodeProperties.cpp",
     "SearchableTableEmitter.cpp",
     "SubtargetEmitter.cpp",
     "SubtargetFeatureInfo.cpp",
-    "TableGen.cpp",
     "Types.cpp",
     "VarLenCodeEmitterGen.cpp",
     "WebAssemblyDisassemblerEmitter.cpp",

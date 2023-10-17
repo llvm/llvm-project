@@ -185,7 +185,7 @@ define i32 @constant_fold_bitcast_itof_load() {
 
 define <4 x float> @constant_fold_bitcast_vector_as() {
 ; CHECK-LABEL: @constant_fold_bitcast_vector_as(
-; CHECK-NEXT:    [[A:%.*]] = load <4 x float>, ptr addrspace(3) @g_v4f_as3, align 16
+; CHECK-NEXT:    [[A:%.*]] = load <4 x float>, ptr addrspace(3) @g_v4f_as3, align 4
 ; CHECK-NEXT:    ret <4 x float> [[A]]
 ;
   %a = load <4 x float>, ptr addrspace(3) @g_v4f_as3, align 4
@@ -196,7 +196,7 @@ define <4 x float> @constant_fold_bitcast_vector_as() {
 
 define i32 @test_cast_gep_small_indices_as() {
 ; CHECK-LABEL: @test_cast_gep_small_indices_as(
-; CHECK-NEXT:    [[X:%.*]] = load i32, ptr addrspace(3) @i32_array_as3, align 16
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr addrspace(3) @i32_array_as3, align 4
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   %x = load i32, ptr addrspace(3) @i32_array_as3, align 4
@@ -214,7 +214,7 @@ define i32 @test_cast_gep_small_indices_as() {
 
 define i32 @test_cast_gep_large_indices_as() {
 ; CHECK-LABEL: @test_cast_gep_large_indices_as(
-; CHECK-NEXT:    [[X:%.*]] = load i32, ptr addrspace(3) @i32_array_as3, align 16
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr addrspace(3) @i32_array_as3, align 4
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   %x = load i32, ptr addrspace(3) @i32_array_as3, align 4
@@ -223,7 +223,7 @@ define i32 @test_cast_gep_large_indices_as() {
 
 define i32 @test_constant_cast_gep_struct_indices_as() {
 ; CHECK-LABEL: @test_constant_cast_gep_struct_indices_as(
-; CHECK-NEXT:    [[Y:%.*]] = load i32, ptr addrspace(3) getelementptr inbounds (%struct.foo, ptr addrspace(3) @constant_fold_global_ptr, i16 0, i32 2, i16 2), align 16
+; CHECK-NEXT:    [[Y:%.*]] = load i32, ptr addrspace(3) getelementptr inbounds ([[STRUCT_FOO:%.*]], ptr addrspace(3) @constant_fold_global_ptr, i16 0, i32 2, i16 2), align 4
 ; CHECK-NEXT:    ret i32 [[Y]]
 ;
   %x = getelementptr %struct.foo, ptr addrspace(3) @constant_fold_global_ptr, i18 0, i32 2, i12 2

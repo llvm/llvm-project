@@ -33,8 +33,6 @@ struct _st {
  int x, y;
 } s __attribute ((address_space(1))) = {1, 1};
 
-
-// rdar://6774906
 __attribute__((address_space(256))) void * * const base = 0;
 void * get_0(void) {
   return base[0];  // expected-error {{returning '__attribute__((address_space(256))) void *' from a function with result type 'void *' changes address space of pointer}}

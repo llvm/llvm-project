@@ -675,9 +675,15 @@ using InstListTy = GISelWorkList<4>;
 namespace {
 class InstManager : public GISelChangeObserver {
   InstListTy &InstList;
+  MachineIRBuilder &B;
 
 public:
-  InstManager(InstListTy &Insts) : InstList(Insts) {}
+  InstManager(MachineIRBuilder &B, InstListTy &Insts) : InstList(Insts), B(B) {
+    assert(!B.isObservingChanges());
+    B.setChangeObserver(*this);
+  }
+
+  ~InstManager() { B.stopObservingChanges(); }
 
   void createdInstr(MachineInstr &MI) override { InstList.insert(&MI); }
   void erasingInstr(MachineInstr &MI) override {}
@@ -724,17 +730,18 @@ combineAwayG_UNMERGE_VALUES(LegalizationArtifactCombiner &ArtCombiner,
 }
 
 void MipsRegisterBankInfo::applyMappingImpl(
-    const OperandsMapper &OpdMapper) const {
+    MachineIRBuilder &Builder, const OperandsMapper &OpdMapper) const {
   MachineInstr &MI = OpdMapper.getMI();
+  Builder.setInstrAndDebugLoc(MI);
+
   InstListTy NewInstrs;
   MachineFunction *MF = MI.getMF();
   MachineRegisterInfo &MRI = OpdMapper.getMRI();
   const LegalizerInfo &LegInfo = *MF->getSubtarget().getLegalizerInfo();
 
-  InstManager NewInstrObserver(NewInstrs);
-  MachineIRBuilder B(MI, NewInstrObserver);
-  LegalizerHelper Helper(*MF, NewInstrObserver, B);
-  LegalizationArtifactCombiner ArtCombiner(B, MF->getRegInfo(), LegInfo);
+  InstManager NewInstrObserver(Builder, NewInstrs);
+  LegalizerHelper Helper(*MF, NewInstrObserver, Builder);
+  LegalizationArtifactCombiner ArtCombiner(Builder, MF->getRegInfo(), LegInfo);
 
   switch (MI.getOpcode()) {
   case TargetOpcode::G_LOAD:

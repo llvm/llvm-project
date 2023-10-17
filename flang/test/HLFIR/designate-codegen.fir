@@ -14,8 +14,9 @@ func.func @array_ref(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.ref<i64>) {
 // CHECK-SAME:    %[[VAL_1:.*]]: !fir.ref<i64>) {
 // CHECK:  %[[VAL_2:.*]] = fir.declare %[[VAL_1]] {uniq_name = "n"} : (!fir.ref<i64>) -> !fir.ref<i64>
 // CHECK:  %[[VAL_3:.*]] = fir.declare %[[VAL_0]] {uniq_name = "x"} : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
+// CHECK:  %[[VAL_4:.*]] = fir.rebox %[[VAL_3]] : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
 // CHECK:  %[[VAL_5:.*]] = fir.load %[[VAL_2]] : !fir.ref<i64>
-// CHECK:  %[[VAL_6:.*]] = fir.array_coor %[[VAL_3]] %[[VAL_5]] : (!fir.box<!fir.array<?xf32>>, i64) -> !fir.ref<f32>
+// CHECK:  %[[VAL_6:.*]] = fir.array_coor %[[VAL_4]] %[[VAL_5]] : (!fir.box<!fir.array<?xf32>>, i64) -> !fir.ref<f32>
 
 
 func.func @char_array_ref(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>>, %arg1: !fir.ref<i32>) {
@@ -31,9 +32,10 @@ func.func @char_array_ref(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>>, %arg1: 
 // CHECK-SAME:    %[[VAL_1:.*]]: !fir.ref<i32>) {
 // CHECK:  %[[VAL_2:.*]] = fir.declare %[[VAL_1]] {uniq_name = "n"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:  %[[VAL_3:.*]] = fir.declare %[[VAL_0]] {uniq_name = "x"} : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
-// CHECK:  %[[VAL_5:.*]] = fir.box_elesize %[[VAL_3]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> index
+// CHECK:  %[[VAL_4:.*]] = fir.rebox %[[VAL_3]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
+// CHECK:  %[[VAL_5:.*]] = fir.box_elesize %[[VAL_4]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> index
 // CHECK:  %[[VAL_6:.*]] = arith.constant 10 : index
-// CHECK:  %[[VAL_7:.*]] = fir.array_coor %[[VAL_3]] %[[VAL_6]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>, index) -> !fir.ref<!fir.char<1,?>>
+// CHECK:  %[[VAL_7:.*]] = fir.array_coor %[[VAL_4]] %[[VAL_6]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>, index) -> !fir.ref<!fir.char<1,?>>
 // CHECK:  %[[VAL_8:.*]] = fir.emboxchar %[[VAL_7]], %[[VAL_5]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
 
 
@@ -51,8 +53,9 @@ func.func @char_array_ref_cst_len(%arg0: !fir.box<!fir.array<?x!fir.char<1,5>>>,
 // CHECK:  %[[VAL_2:.*]] = fir.declare %[[VAL_1]] {uniq_name = "n"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:  %[[VAL_3:.*]] = arith.constant 5 : index
 // CHECK:  %[[VAL_4:.*]] = fir.declare %[[VAL_0]] typeparams %[[VAL_3]] {uniq_name = "x"} : (!fir.box<!fir.array<?x!fir.char<1,5>>>, index) -> !fir.box<!fir.array<?x!fir.char<1,5>>>
+// CHECK:  %[[VAL_5:.*]] = fir.rebox %[[VAL_4]] : (!fir.box<!fir.array<?x!fir.char<1,5>>>) -> !fir.box<!fir.array<?x!fir.char<1,5>>>
 // CHECK:  %[[VAL_6:.*]] = arith.constant 10 : index
-// CHECK:  %[[VAL_7:.*]] = fir.array_coor %[[VAL_4]] %[[VAL_6]] : (!fir.box<!fir.array<?x!fir.char<1,5>>>, index) -> !fir.ref<!fir.char<1,5>>
+// CHECK:  %[[VAL_7:.*]] = fir.array_coor %[[VAL_5]] %[[VAL_6]] : (!fir.box<!fir.array<?x!fir.char<1,5>>>, index) -> !fir.ref<!fir.char<1,5>>
 
 
 func.func @char_array_ref_3(%arg0: !fir.ref<!fir.array<100x!fir.char<1,?>>>, %arg1: !fir.ref<i32>) {
@@ -121,16 +124,17 @@ func.func @array_section_2(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.ref<i
 // CHECK-SAME:    %[[VAL_1:.*]]: !fir.ref<i64>) {
 // CHECK:  %[[VAL_2:.*]] = fir.declare %[[VAL_1]] {uniq_name = "n"} : (!fir.ref<i64>) -> !fir.ref<i64>
 // CHECK:  %[[VAL_3:.*]] = fir.declare %[[VAL_0]] {uniq_name = "x"} : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
+// CHECK:  %[[VAL_4:.*]] = fir.rebox %[[VAL_3]] : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
 // CHECK:  %[[VAL_5:.*]] = fir.load %[[VAL_2]] : !fir.ref<i64>
 // CHECK:  %[[VAL_6:.*]] = arith.constant 0 : index
-// CHECK:  %[[VAL_7:.*]]:3 = fir.box_dims %[[VAL_3]], %[[VAL_6]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
+// CHECK:  %[[VAL_7:.*]]:3 = fir.box_dims %[[VAL_4]], %[[VAL_6]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 // CHECK:  %[[VAL_8:.*]] = fir.convert %[[VAL_5]] : (i64) -> index
 // CHECK:  %[[VAL_9:.*]] = arith.constant 3 : index
 // CHECK:  %[[VAL_10:.*]] = arith.constant 42 : index
 // CHECK:  %[[VAL_11:.*]] = fir.shape %[[VAL_10]] : (index) -> !fir.shape<1>
 // CHECK:  %[[VAL_12:.*]] = fir.undefined index
 // CHECK:  %[[VAL_13:.*]] = fir.slice %[[VAL_8]], %[[VAL_7]]#1, %[[VAL_9]] : (index, index, index) -> !fir.slice<1>
-// CHECK:  %[[VAL_14:.*]] = fir.rebox %[[VAL_3]] {{\[}}%[[VAL_13]]] : (!fir.box<!fir.array<?xf32>>, !fir.slice<1>) -> !fir.box<!fir.array<?xf32>>
+// CHECK:  %[[VAL_14:.*]] = fir.rebox %[[VAL_4]] {{\[}}%[[VAL_13]]] : (!fir.box<!fir.array<?xf32>>, !fir.slice<1>) -> !fir.box<!fir.array<?xf32>>
 
 
 func.func @char_array_section(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>>, %arg1: !fir.ref<i32>) {
@@ -151,16 +155,17 @@ func.func @char_array_section(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>>, %ar
 // CHECK-SAME:    %[[VAL_1:.*]]: !fir.ref<i32>) {
 // CHECK:  %[[VAL_2:.*]] = fir.declare %[[VAL_1]] {uniq_name = "n"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:  %[[VAL_3:.*]] = fir.declare %[[VAL_0]] {uniq_name = "x"} : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
-// CHECK:  %[[VAL_5:.*]] = fir.box_elesize %[[VAL_3]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> index
+// CHECK:  %[[VAL_4:.*]] = fir.rebox %[[VAL_3]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
+// CHECK:  %[[VAL_5:.*]] = fir.box_elesize %[[VAL_4]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> index
 // CHECK:  %[[VAL_6:.*]] = arith.constant 1 : index
 // CHECK:  %[[VAL_7:.*]] = arith.constant 0 : index
-// CHECK:  %[[VAL_8:.*]]:3 = fir.box_dims %[[VAL_3]], %[[VAL_7]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>, index) -> (index, index, index)
+// CHECK:  %[[VAL_8:.*]]:3 = fir.box_dims %[[VAL_4]], %[[VAL_7]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>, index) -> (index, index, index)
 // CHECK:  %[[VAL_9:.*]] = arith.constant 3 : index
 // CHECK:  %[[VAL_10:.*]] = arith.constant 42 : index
 // CHECK:  %[[VAL_11:.*]] = fir.shape %[[VAL_10]] : (index) -> !fir.shape<1>
 // CHECK:  %[[VAL_12:.*]] = fir.undefined index
 // CHECK:  %[[VAL_13:.*]] = fir.slice %[[VAL_6]], %[[VAL_8]]#1, %[[VAL_9]] : (index, index, index) -> !fir.slice<1>
-// CHECK:  %[[VAL_14:.*]] = fir.rebox %[[VAL_3]] {{\[}}%[[VAL_13]]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.slice<1>) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
+// CHECK:  %[[VAL_14:.*]] = fir.rebox %[[VAL_4]] {{\[}}%[[VAL_13]]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.slice<1>) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
 
 
 func.func @char_array_section_cst_len(%arg0: !fir.box<!fir.array<?x!fir.char<1,5>>>, %arg1: !fir.ref<i32>) {
@@ -182,12 +187,29 @@ func.func @char_array_section_cst_len(%arg0: !fir.box<!fir.array<?x!fir.char<1,5
 // CHECK:  %[[VAL_2:.*]] = fir.declare %[[VAL_1]] {uniq_name = "n"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:  %[[VAL_3:.*]] = arith.constant 5 : index
 // CHECK:  %[[VAL_4:.*]] = fir.declare %[[VAL_0]] typeparams %[[VAL_3]] {uniq_name = "x"} : (!fir.box<!fir.array<?x!fir.char<1,5>>>, index) -> !fir.box<!fir.array<?x!fir.char<1,5>>>
+// CHECK:  %[[VAL_5:.*]] = fir.rebox %[[VAL_4]] : (!fir.box<!fir.array<?x!fir.char<1,5>>>) -> !fir.box<!fir.array<?x!fir.char<1,5>>>
 // CHECK:  %[[VAL_6:.*]] = arith.constant 1 : index
 // CHECK:  %[[VAL_7:.*]] = arith.constant 0 : index
-// CHECK:  %[[VAL_8:.*]]:3 = fir.box_dims %[[VAL_4]], %[[VAL_7]] : (!fir.box<!fir.array<?x!fir.char<1,5>>>, index) -> (index, index, index)
+// CHECK:  %[[VAL_8:.*]]:3 = fir.box_dims %[[VAL_5]], %[[VAL_7]] : (!fir.box<!fir.array<?x!fir.char<1,5>>>, index) -> (index, index, index)
 // CHECK:  %[[VAL_9:.*]] = arith.constant 3 : index
 // CHECK:  %[[VAL_10:.*]] = arith.constant 42 : index
 // CHECK:  %[[VAL_11:.*]] = fir.shape %[[VAL_10]] : (index) -> !fir.shape<1>
 // CHECK:  %[[VAL_12:.*]] = fir.undefined index
 // CHECK:  %[[VAL_13:.*]] = fir.slice %[[VAL_6]], %[[VAL_8]]#1, %[[VAL_9]] : (index, index, index) -> !fir.slice<1>
-// CHECK:  %[[VAL_14:.*]] = fir.rebox %[[VAL_4]] {{\[}}%[[VAL_13]]] : (!fir.box<!fir.array<?x!fir.char<1,5>>>, !fir.slice<1>) -> !fir.box<!fir.array<?x!fir.char<1,5>>>
+// CHECK:  %[[VAL_14:.*]] = fir.rebox %[[VAL_5]] {{\[}}%[[VAL_13]]] : (!fir.box<!fir.array<?x!fir.char<1,5>>>, !fir.slice<1>) -> !fir.box<!fir.array<?x!fir.char<1,5>>>
+
+func.func @test_polymorphic_array_elt(%arg0: !fir.class<!fir.array<?x!fir.type<_QMtypesTt1>>> {fir.bindc_name = "x"}) {
+  %0:2 = hlfir.declare %arg0 {uniq_name = "_QFtest1Ex"} : (!fir.class<!fir.array<?x!fir.type<_QMtypesTt1>>>) -> (!fir.class<!fir.array<?x!fir.type<_QMtypesTt1>>>, !fir.class<!fir.array<?x!fir.type<_QMtypesTt1>>>)
+  %c7 = arith.constant 7 : index
+  %1 = hlfir.designate %0#0 (%c7)  : (!fir.class<!fir.array<?x!fir.type<_QMtypesTt1>>>, index) -> !fir.class<!fir.type<_QMtypesTt1>>
+  return
+}
+// CHECK-LABEL:   func.func @test_polymorphic_array_elt(
+// CHECK-SAME:        %[[VAL_0:.*]]: !fir.class<!fir.array<?x!fir.type<_QMtypesTt1>>> {fir.bindc_name = "x"}) {
+// CHECK:           %[[VAL_1:.*]] = fir.declare %[[VAL_0]] {uniq_name = "_QFtest1Ex"} : (!fir.class<!fir.array<?x!fir.type<_QMtypesTt1>>>) -> !fir.class<!fir.array<?x!fir.type<_QMtypesTt1>>>
+// CHECK:           %[[VAL_2:.*]] = fir.rebox %[[VAL_1]] : (!fir.class<!fir.array<?x!fir.type<_QMtypesTt1>>>) -> !fir.class<!fir.array<?x!fir.type<_QMtypesTt1>>>
+// CHECK:           %[[VAL_3:.*]] = arith.constant 7 : index
+// CHECK:           %[[VAL_4:.*]] = fir.array_coor %[[VAL_2]] %[[VAL_3]] : (!fir.class<!fir.array<?x!fir.type<_QMtypesTt1>>>, index) -> !fir.ref<!fir.type<_QMtypesTt1>>
+// CHECK:           %[[VAL_5:.*]] = fir.embox %[[VAL_4]] source_box %[[VAL_2]] : (!fir.ref<!fir.type<_QMtypesTt1>>, !fir.class<!fir.array<?x!fir.type<_QMtypesTt1>>>) -> !fir.class<!fir.type<_QMtypesTt1>>
+// CHECK:           return
+// CHECK:         }

@@ -55,7 +55,13 @@ public:
   ValueSetT resolve(Value value) const;
 
   /// Removes the given values from all alias sets.
-  void remove(const SmallPtrSetImpl<Value> &aliasValues);
+  void remove(const SetVector<Value> &aliasValues);
+
+  /// Replaces all occurrences of 'from' in the internal datastructures with
+  /// 'to'. This is useful when the defining operation of a value has to be
+  /// re-built because additional results have to be added or the types of
+  /// results have to be changed.
+  void rename(Value from, Value to);
 
 private:
   /// This function constructs a mapping from values to its immediate

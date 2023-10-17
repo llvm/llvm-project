@@ -20,9 +20,6 @@
 #include "llvm/ADT/Twine.h"
 
 namespace mlir {
-class MLIRContext;
-class Type;
-
 //===----------------------------------------------------------------------===//
 // AbstractAttribute
 //===----------------------------------------------------------------------===//
@@ -32,6 +29,10 @@ class Type;
 class AbstractAttribute {
 public:
   using HasTraitFn = llvm::unique_function<bool(TypeID) const>;
+  using WalkImmediateSubElementsFn = function_ref<void(
+      Attribute, function_ref<void(Attribute)>, function_ref<void(Type)>)>;
+  using ReplaceImmediateSubElementsFn =
+      function_ref<Attribute(Attribute, ArrayRef<Attribute>, ArrayRef<Type>)>;
 
   /// Look up the specified abstract attribute in the MLIRContext and return a
   /// reference to it.
@@ -42,6 +43,8 @@ public:
   template <typename T>
   static AbstractAttribute get(Dialect &dialect) {
     return AbstractAttribute(dialect, T::getInterfaceMap(), T::getHasTraitFn(),
+                             T::getWalkImmediateSubElementsFn(),
+                             T::getReplaceImmediateSubElementsFn(),
                              T::getTypeID());
   }
 
@@ -49,11 +52,15 @@ public:
   /// custom TypeIDs.
   /// The use of this method is in general discouraged in favor of
   /// 'get<CustomAttribute>(dialect)'.
-  static AbstractAttribute get(Dialect &dialect,
-                               detail::InterfaceMap &&interfaceMap,
-                               HasTraitFn &&hasTrait, TypeID typeID) {
+  static AbstractAttribute
+  get(Dialect &dialect, detail::InterfaceMap &&interfaceMap,
+      HasTraitFn &&hasTrait,
+      WalkImmediateSubElementsFn walkImmediateSubElementsFn,
+      ReplaceImmediateSubElementsFn replaceImmediateSubElementsFn,
+      TypeID typeID) {
     return AbstractAttribute(dialect, std::move(interfaceMap),
-                             std::move(hasTrait), typeID);
+                             std::move(hasTrait), walkImmediateSubElementsFn,
+                             replaceImmediateSubElementsFn, typeID);
   }
 
   /// Return the dialect this attribute was registered to.
@@ -82,14 +89,30 @@ public:
   /// Returns true if the attribute has a particular trait.
   bool hasTrait(TypeID traitID) const { return hasTraitFn(traitID); }
 
+  /// Walk the immediate sub-elements of this attribute.
+  void walkImmediateSubElements(Attribute attr,
+                                function_ref<void(Attribute)> walkAttrsFn,
+                                function_ref<void(Type)> walkTypesFn) const;
+
+  /// Replace the immediate sub-elements of this attribute.
+  Attribute replaceImmediateSubElements(Attribute attr,
+                                        ArrayRef<Attribute> replAttrs,
+                                        ArrayRef<Type> replTypes) const;
+
   /// Return the unique identifier representing the concrete attribute class.
   TypeID getTypeID() const { return typeID; }
 
 private:
   AbstractAttribute(Dialect &dialect, detail::InterfaceMap &&interfaceMap,
-                    HasTraitFn &&hasTrait, TypeID typeID)
+                    HasTraitFn &&hasTraitFn,
+                    WalkImmediateSubElementsFn walkImmediateSubElementsFn,
+                    ReplaceImmediateSubElementsFn replaceImmediateSubElementsFn,
+                    TypeID typeID)
       : dialect(dialect), interfaceMap(std::move(interfaceMap)),
-        hasTraitFn(std::move(hasTrait)), typeID(typeID) {}
+        hasTraitFn(std::move(hasTraitFn)),
+        walkImmediateSubElementsFn(walkImmediateSubElementsFn),
+        replaceImmediateSubElementsFn(replaceImmediateSubElementsFn),
+        typeID(typeID) {}
 
   /// Give StorageUserBase access to the mutable lookup.
   template <typename ConcreteT, typename BaseT, typename StorageT,
@@ -110,6 +133,12 @@ private:
   /// Function to check if the attribute has a particular trait.
   HasTraitFn hasTraitFn;
 
+  /// Function to walk the immediate sub-elements of this attribute.
+  WalkImmediateSubElementsFn walkImmediateSubElementsFn;
+
+  /// Function to replace the immediate sub-elements of this attribute.
+  ReplaceImmediateSubElementsFn replaceImmediateSubElementsFn;
+
   /// The unique identifier of the derived Attribute class.
   const TypeID typeID;
 };
@@ -120,12 +149,14 @@ private:
 
 namespace detail {
 class AttributeUniquer;
+class DistinctAttributeUniquer;
 } // namespace detail
 
 /// Base storage class appearing in an attribute. Derived storage classes should
 /// only be constructed within the context of the AttributeUniquer.
 class alignas(8) AttributeStorage : public StorageUniquer::BaseStorage {
   friend detail::AttributeUniquer;
+  friend detail::DistinctAttributeUniquer;
   friend StorageUniquer;
 
 public:

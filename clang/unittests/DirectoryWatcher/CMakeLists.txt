@@ -12,7 +12,6 @@ if(APPLE OR CMAKE_SYSTEM_NAME MATCHES "Linux" OR CMAKE_SYSTEM_NAME STREQUAL Wind
     PRIVATE
     LLVMTestingSupport
     clangDirectoryWatcher
-    clangBasic
     )
 
 endif()

@@ -9,8 +9,10 @@
 #include "BinaryHolder.h"
 #include "DebugMap.h"
 #include "MachOUtils.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Object/MachO.h"
+#include "llvm/Support/Chrono.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -26,12 +28,10 @@ class MachODebugMapParser {
 public:
   MachODebugMapParser(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
                       StringRef BinaryPath, ArrayRef<std::string> Archs,
-                      StringRef PathPrefix = "",
-                      bool PaperTrailWarnings = false, bool Verbose = false)
+                      StringRef PathPrefix = "", bool Verbose = false)
       : BinaryPath(std::string(BinaryPath)), Archs(Archs.begin(), Archs.end()),
-        PathPrefix(std::string(PathPrefix)),
-        PaperTrailWarnings(PaperTrailWarnings), BinHolder(VFS, Verbose),
-        CurrentDebugMapObject(nullptr) {}
+        PathPrefix(std::string(PathPrefix)), BinHolder(VFS, Verbose),
+        CurrentDebugMapObject(nullptr), SkipDebugMapObject(false) {}
 
   /// Parses and returns the DebugMaps of the input binary. The binary contains
   /// multiple maps in case it is a universal binary.
@@ -42,11 +42,12 @@ public:
   /// Walk the symbol table and dump it.
   bool dumpStab();
 
+  using OSO = std::pair<llvm::StringRef, uint64_t>;
+
 private:
   std::string BinaryPath;
   SmallVector<StringRef, 1> Archs;
   std::string PathPrefix;
-  bool PaperTrailWarnings;
 
   /// Owns the MemoryBuffer for the main binary.
   BinaryHolder BinHolder;
@@ -70,12 +71,18 @@ private:
   /// Element of the debug map corresponding to the current object file.
   DebugMapObject *CurrentDebugMapObject;
 
+  /// Whether we need to skip the current debug map object.
+  bool SkipDebugMapObject;
+
   /// Holds function info while function scope processing.
   const char *CurrentFunctionName;
   uint64_t CurrentFunctionAddress;
 
   std::unique_ptr<DebugMap> parseOneBinary(const MachOObjectFile &MainBinary,
                                            StringRef BinaryPath);
+  void handleStabDebugMap(
+      const MachOObjectFile &MainBinary,
+      std::function<void(uint32_t, uint8_t, uint8_t, uint16_t, uint64_t)> F);
 
   void
   switchToNewDebugMapObject(StringRef Filename,
@@ -85,13 +92,21 @@ private:
   std::vector<StringRef> getMainBinarySymbolNames(uint64_t Value);
   void loadMainBinarySymbols(const MachOObjectFile &MainBinary);
   void loadCurrentObjectFileSymbols(const object::MachOObjectFile &Obj);
+
+  void handleStabOSOEntry(uint32_t StringIndex, uint8_t Type,
+                          uint8_t SectionIndex, uint16_t Flags, uint64_t Value,
+                          llvm::DenseSet<OSO> &OSOs,
+                          llvm::SmallSet<OSO, 4> &Duplicates);
   void handleStabSymbolTableEntry(uint32_t StringIndex, uint8_t Type,
                                   uint8_t SectionIndex, uint16_t Flags,
-                                  uint64_t Value);
+                                  uint64_t Value,
+                                  const llvm::SmallSet<OSO, 4> &Duplicates);
 
-  template <typename STEType> void handleStabDebugMapEntry(const STEType &STE) {
-    handleStabSymbolTableEntry(STE.n_strx, STE.n_type, STE.n_sect, STE.n_desc,
-                               STE.n_value);
+  template <typename STEType>
+  void handleStabDebugMapEntry(
+      const STEType &STE,
+      std::function<void(uint32_t, uint8_t, uint8_t, uint16_t, uint64_t)> F) {
+    F(STE.n_strx, STE.n_type, STE.n_sect, STE.n_desc, STE.n_value);
   }
 
   void addCommonSymbols();
@@ -113,17 +128,12 @@ private:
                          StringRef BinaryPath);
 
   void Warning(const Twine &Msg, StringRef File = StringRef()) {
+    assert(Result &&
+           "The debug map must be initialized before calling this function");
     WithColor::warning() << "("
                          << MachOUtils::getArchName(
                                 Result->getTriple().getArchName())
                          << ") " << File << " " << Msg << "\n";
-
-    if (PaperTrailWarnings) {
-      if (!File.empty())
-        Result->addDebugMapObject(File, sys::TimePoint<std::chrono::seconds>());
-      if (Result->end() != Result->begin())
-        (*--Result->end())->addWarning(Msg.str());
-    }
   }
 };
 
@@ -138,6 +148,7 @@ void MachODebugMapParser::resetParserState() {
   CurrentObjectAliasMap.clear();
   SeenAliasValues.clear();
   CurrentDebugMapObject = nullptr;
+  SkipDebugMapObject = false;
 }
 
 /// Commons symbols won't show up in the symbol map but might need to be
@@ -197,21 +208,59 @@ static std::string getArchName(const object::MachOObjectFile &Obj) {
   return std::string(T.getArchName());
 }
 
-std::unique_ptr<DebugMap>
-MachODebugMapParser::parseOneBinary(const MachOObjectFile &MainBinary,
-                                    StringRef BinaryPath) {
-  loadMainBinarySymbols(MainBinary);
-  ArrayRef<uint8_t> UUID = MainBinary.getUuid();
-  Result =
-      std::make_unique<DebugMap>(MainBinary.getArchTriple(), BinaryPath, UUID);
-  MainBinaryStrings = MainBinary.getStringTableData();
+void MachODebugMapParser::handleStabDebugMap(
+    const MachOObjectFile &MainBinary,
+    std::function<void(uint32_t, uint8_t, uint8_t, uint16_t, uint64_t)> F) {
   for (const SymbolRef &Symbol : MainBinary.symbols()) {
     const DataRefImpl &DRI = Symbol.getRawDataRefImpl();
     if (MainBinary.is64Bit())
-      handleStabDebugMapEntry(MainBinary.getSymbol64TableEntry(DRI));
+      handleStabDebugMapEntry(MainBinary.getSymbol64TableEntry(DRI), F);
     else
-      handleStabDebugMapEntry(MainBinary.getSymbolTableEntry(DRI));
+      handleStabDebugMapEntry(MainBinary.getSymbolTableEntry(DRI), F);
   }
+}
+
+std::unique_ptr<DebugMap>
+MachODebugMapParser::parseOneBinary(const MachOObjectFile &MainBinary,
+                                    StringRef BinaryPath) {
+  Result = std::make_unique<DebugMap>(MainBinary.getArchTriple(), BinaryPath,
+                                      MainBinary.getUuid());
+  loadMainBinarySymbols(MainBinary);
+  MainBinaryStrings = MainBinary.getStringTableData();
+
+  // Static archives can contain multiple object files with identical names, in
+  // which case the timestamp is used to disambiguate. However, if both are
+  // identical, there's no way to tell them apart. Detect this and skip
+  // duplicate debug map objects.
+  llvm::DenseSet<OSO> OSOs;
+  llvm::SmallSet<OSO, 4> Duplicates;
+
+  // Iterate over all the STABS to find duplicate OSO entries.
+  handleStabDebugMap(MainBinary,
+                     [&](uint32_t StringIndex, uint8_t Type,
+                         uint8_t SectionIndex, uint16_t Flags, uint64_t Value) {
+                       handleStabOSOEntry(StringIndex, Type, SectionIndex,
+                                          Flags, Value, OSOs, Duplicates);
+                     });
+
+  // Print an informative warning with the duplicate object file name and time
+  // stamp.
+  for (const auto &OSO : Duplicates) {
+    std::string Buffer;
+    llvm::raw_string_ostream OS(Buffer);
+    OS << sys::TimePoint<std::chrono::seconds>(sys::toTimePoint(OSO.second));
+    Warning("skipping debug map object with duplicate name and timestamp: " +
+            OS.str() + Twine(" ") + Twine(OSO.first));
+  }
+
+  // Build the debug map by iterating over the STABS again but ignore the
+  // duplicate debug objects.
+  handleStabDebugMap(MainBinary, [&](uint32_t StringIndex, uint8_t Type,
+                                     uint8_t SectionIndex, uint16_t Flags,
+                                     uint64_t Value) {
+    handleStabSymbolTableEntry(StringIndex, Type, SectionIndex, Flags, Value,
+                               Duplicates);
+  });
 
   resetParserState();
   return std::move(Result);
@@ -407,20 +456,38 @@ ErrorOr<std::vector<std::unique_ptr<DebugMap>>> MachODebugMapParser::parse() {
   return std::move(Results);
 }
 
+void MachODebugMapParser::handleStabOSOEntry(
+    uint32_t StringIndex, uint8_t Type, uint8_t SectionIndex, uint16_t Flags,
+    uint64_t Value, llvm::DenseSet<OSO> &OSOs,
+    llvm::SmallSet<OSO, 4> &Duplicates) {
+  if (Type != MachO::N_OSO)
+    return;
+
+  OSO O(&MainBinaryStrings.data()[StringIndex], Value);
+  if (!OSOs.insert(O).second)
+    Duplicates.insert(O);
+}
+
 /// Interpret the STAB entries to fill the DebugMap.
-void MachODebugMapParser::handleStabSymbolTableEntry(uint32_t StringIndex,
-                                                     uint8_t Type,
-                                                     uint8_t SectionIndex,
-                                                     uint16_t Flags,
-                                                     uint64_t Value) {
+void MachODebugMapParser::handleStabSymbolTableEntry(
+    uint32_t StringIndex, uint8_t Type, uint8_t SectionIndex, uint16_t Flags,
+    uint64_t Value, const llvm::SmallSet<OSO, 4> &Duplicates) {
   if (!(Type & MachO::N_STAB))
     return;
 
   const char *Name = &MainBinaryStrings.data()[StringIndex];
 
   // An N_OSO entry represents the start of a new object file description.
-  if (Type == MachO::N_OSO)
+  if (Type == MachO::N_OSO) {
+    if (Duplicates.count(OSO(Name, Value))) {
+      SkipDebugMapObject = true;
+      return;
+    }
     return switchToNewDebugMapObject(Name, sys::toTimePoint(Value));
+  }
+
+  if (SkipDebugMapObject)
+    return;
 
   if (Type == MachO::N_AST) {
     SmallString<80> Path(PathPrefix);
@@ -627,13 +694,11 @@ namespace dsymutil {
 llvm::ErrorOr<std::vector<std::unique_ptr<DebugMap>>>
 parseDebugMap(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
               StringRef InputFile, ArrayRef<std::string> Archs,
-              StringRef PrependPath, bool PaperTrailWarnings, bool Verbose,
-              bool InputIsYAML) {
+              StringRef PrependPath, bool Verbose, bool InputIsYAML) {
   if (InputIsYAML)
     return DebugMap::parseYAMLDebugMap(InputFile, PrependPath, Verbose);
 
-  MachODebugMapParser Parser(VFS, InputFile, Archs, PrependPath,
-                             PaperTrailWarnings, Verbose);
+  MachODebugMapParser Parser(VFS, InputFile, Archs, PrependPath, Verbose);
   return Parser.parse();
 }
 

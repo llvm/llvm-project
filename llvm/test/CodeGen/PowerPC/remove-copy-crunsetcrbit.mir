@@ -1,4 +1,4 @@
-# RUN: llc -run-pass simple-register-coalescing %s -o - | FileCheck %s
+# RUN: llc -run-pass register-coalescer %s -o - | FileCheck %s
 --- |
   target datalayout = "e-m:e-i64:64-n32:64"
   target triple = "powerpc64le-unknown-linux-gnu"
@@ -168,7 +168,7 @@ body:             |
     BLR8 implicit $lr8, implicit $rm, implicit killed $x3
 
 ...
-#Copy of CRUNSET should be removed in simple register coalescing pass
+#Copy of CRUNSET should be removed in register coalescing pass
 #CHECK-LABEL: copycrunset
 #CHECK: bb.1.while.body.preheader:
 #CHECK-NOT: %9:crbitrc = CRUNSET

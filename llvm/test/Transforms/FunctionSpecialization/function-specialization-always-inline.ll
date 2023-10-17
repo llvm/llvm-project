@@ -1,6 +1,6 @@
-; RUN: opt -passes="ipsccp<func-spec>" -func-specialization-avg-iters-cost=3 -func-specialization-size-threshold=10 -S < %s | FileCheck %s
+; RUN: opt -passes="ipsccp<func-spec>" -force-specialization -S < %s | FileCheck %s
 
-; CHECK-NOT: foo.{{[0-9]+}}
+; CHECK-NOT: foo.specialized.{{[0-9]+}}
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 

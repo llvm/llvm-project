@@ -136,7 +136,7 @@ using LaneMaskTy = uint64_t;
 #pragma omp end declare variant
 
 #pragma omp begin declare variant match(                                       \
-    device = {arch(amdgcn)}, implementation = {extension(match_none)})
+        device = {arch(amdgcn)}, implementation = {extension(match_none)})
 using LaneMaskTy = uint64_t;
 #pragma omp end declare variant
 

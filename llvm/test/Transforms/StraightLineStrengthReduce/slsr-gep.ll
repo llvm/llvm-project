@@ -1,7 +1,7 @@
 ; RUN: opt < %s -passes=slsr,gvn -S | FileCheck %s
 ; RUN: opt < %s -passes='slsr,gvn' -S | FileCheck %s
 
-target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64-p:64:64:64-p1:32:32:32"
+target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64-p:64:64:64-p1:32:32:32-p2:128:128:128:32"
 
 ; foo(input[0]);
 ; foo(input[s]);
@@ -183,6 +183,23 @@ define void @slsr_gep_32bit_pointer(ptr addrspace(1) %input, i64 %s) {
   ret void
 }
 
+define void @slsr_gep_fat_pointer(ptr addrspace(2) %input, i32 %s) {
+  ; p1 = &input[s]
+  %p1 = getelementptr inbounds i32, ptr addrspace(2) %input, i32 %s
+  call void @baz2(ptr addrspace(2) %p1)
+
+  ; p2 = &input[s * 2]
+  %s2 = mul nsw i32 %s, 2
+  %p2 = getelementptr inbounds i32, ptr addrspace(2) %input, i32 %s2
+; CHECK: %p2 = getelementptr inbounds i32, ptr addrspace(2) %p1, i32 %s
+  ; Use index bitwidth, not pointer size (i128)
+  call void @baz2(ptr addrspace(2) %p2)
+
+  ret void
+}
+
+
 declare void @foo(ptr)
 declare void @bar(ptr)
 declare void @baz(ptr addrspace(1))
+declare void @baz2(ptr addrspace(2))

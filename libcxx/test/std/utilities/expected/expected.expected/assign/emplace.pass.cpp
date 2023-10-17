@@ -7,9 +7,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// Older Clangs do not support the C++20 feature to constrain destructors
-// XFAIL: clang-14, apple-clang-14
-
 // template<class... Args>
 //   constexpr T& emplace(Args&&... args) noexcept;
 // Constraints: is_nothrow_constructible_v<T, Args...> is true.

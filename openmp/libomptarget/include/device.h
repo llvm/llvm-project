@@ -16,6 +16,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <list>
 #include <map>
 #include <memory>
@@ -26,6 +27,7 @@
 #include "ExclusiveAccess.h"
 #include "omptarget.h"
 #include "rtl.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 
 // Forward declarations.
@@ -43,6 +45,22 @@ enum kmp_target_offload_kind {
 };
 typedef enum kmp_target_offload_kind kmp_target_offload_kind_t;
 
+/// Information about shadow pointers.
+struct ShadowPtrInfoTy {
+  void **HstPtrAddr = nullptr;
+  void *HstPtrVal = nullptr;
+  void **TgtPtrAddr = nullptr;
+  void *TgtPtrVal = nullptr;
+
+  bool operator==(const ShadowPtrInfoTy &Other) const {
+    return HstPtrAddr == Other.HstPtrAddr;
+  }
+};
+
+inline bool operator<(const ShadowPtrInfoTy &lhs, const ShadowPtrInfoTy &rhs) {
+  return lhs.HstPtrAddr < rhs.HstPtrAddr;
+}
+
 /// Map between host data and target data.
 struct HostDataToTargetTy {
   const uintptr_t HstPtrBase; // host info.
@@ -50,7 +68,8 @@ struct HostDataToTargetTy {
   const uintptr_t HstPtrEnd;       // non-inclusive.
   const map_var_info_t HstPtrName; // Optional source name of mapped variable.
 
-  const uintptr_t TgtPtrBegin; // target info.
+  const uintptr_t TgtAllocBegin; // allocated target memory
+  const uintptr_t TgtPtrBegin; // mapped target memory = TgtAllocBegin + padding
 
 private:
   static const uint64_t INFRefCount = ~(uint64_t)0;
@@ -60,8 +79,7 @@ private:
 
   struct StatesTy {
     StatesTy(uint64_t DRC, uint64_t HRC)
-        : DynRefCount(DRC), HoldRefCount(HRC),
-          MayContainAttachedPointers(false) {}
+        : DynRefCount(DRC), HoldRefCount(HRC) {}
     /// The dynamic reference count is the standard reference count as of OpenMP
     /// 4.5.  The hold reference count is an OpenMP extension for the sake of
     /// OpenACC support.
@@ -80,17 +98,10 @@ private:
     uint64_t DynRefCount;
     uint64_t HoldRefCount;
 
-    /// Boolean flag to remember if any subpart of the mapped region might be
-    /// an attached pointer.
-    bool MayContainAttachedPointers;
+    /// A map of shadow pointers associated with this entry, the keys are host
+    /// pointer addresses to identify stale entries.
+    llvm::SmallSet<ShadowPtrInfoTy, 2> ShadowPtrInfos;
 
-    /// This mutex will be locked when data movement is issued. For targets that
-    /// doesn't support async data movement, this mutex can guarantee that after
-    /// it is released, memory region on the target is update to date. For
-    /// targets that support async data movement, this can guarantee that data
-    /// movement has been issued. This mutex *must* be locked right before
-    /// releasing the mapping table lock.
-    std::mutex UpdateMtx;
     /// Pointer to the event corresponding to the data update of this map.
     /// Note: At present this event is created when the first data transfer from
     /// host to device is issued, and only being used for H2D. It is not used
@@ -110,16 +121,18 @@ private:
   const std::unique_ptr<StatesTy> States;
 
 public:
-  HostDataToTargetTy(uintptr_t BP, uintptr_t B, uintptr_t E, uintptr_t TB,
+  HostDataToTargetTy(uintptr_t BP, uintptr_t B, uintptr_t E,
+                     uintptr_t TgtAllocBegin, uintptr_t TgtPtrBegin,
                      bool UseHoldRefCount, map_var_info_t Name = nullptr,
                      bool IsINF = false)
       : HstPtrBase(BP), HstPtrBegin(B), HstPtrEnd(E), HstPtrName(Name),
-        TgtPtrBegin(TB), States(std::make_unique<StatesTy>(UseHoldRefCount ? 0
-                                                           : IsINF ? INFRefCount
-                                                                   : 1,
-                                                           !UseHoldRefCount ? 0
-                                                           : IsINF ? INFRefCount
-                                                                   : 1)) {}
+        TgtAllocBegin(TgtAllocBegin), TgtPtrBegin(TgtPtrBegin),
+        States(std::make_unique<StatesTy>(UseHoldRefCount ? 0
+                                          : IsINF         ? INFRefCount
+                                                          : 1,
+                                          !UseHoldRefCount ? 0
+                                          : IsINF          ? INFRefCount
+                                                           : 1)) {}
 
   /// Get the total reference count.  This is smarter than just getDynRefCount()
   /// + getHoldRefCount() because it handles the case where at least one is
@@ -222,16 +235,41 @@ public:
     return ThisRefCount == 1;
   }
 
-  void setMayContainAttachedPointers() const {
-    States->MayContainAttachedPointers = true;
-  }
-  bool getMayContainAttachedPointers() const {
-    return States->MayContainAttachedPointers;
+  /// Add the shadow pointer info \p ShadowPtrInfo to this entry but only if the
+  /// the target ptr value was not already present in the existing set of shadow
+  /// pointers. Return true if something was added.
+  bool addShadowPointer(const ShadowPtrInfoTy &ShadowPtrInfo) const {
+    auto Pair = States->ShadowPtrInfos.insert(ShadowPtrInfo);
+    if (Pair.second)
+      return true;
+    // Check for a stale entry, if found, replace the old one.
+    if ((*Pair.first).TgtPtrVal == ShadowPtrInfo.TgtPtrVal)
+      return false;
+    States->ShadowPtrInfos.erase(ShadowPtrInfo);
+    return addShadowPointer(ShadowPtrInfo);
   }
 
-  void lock() const { States->UpdateMtx.lock(); }
+  /// Apply \p CB to all shadow pointers of this entry. Returns OFFLOAD_FAIL if
+  /// \p CB returned OFFLOAD_FAIL for any of them, otherwise this returns
+  /// OFFLOAD_SUCCESS. The entry is locked for this operation.
+  template <typename CBTy> int foreachShadowPointerInfo(CBTy CB) const {
+    for (auto &It : States->ShadowPtrInfos)
+      if (CB(const_cast<ShadowPtrInfoTy &>(It)) == OFFLOAD_FAIL)
+        return OFFLOAD_FAIL;
+    return OFFLOAD_SUCCESS;
+  }
 
-  void unlock() const { States->UpdateMtx.unlock(); }
+  /// Lock this entry for exclusive access. Ensure to get exclusive access to
+  /// HDTTMap first!
+  void lock() const { Mtx.lock(); }
+
+  /// Unlock this entry to allow other threads inspecting it.
+  void unlock() const { Mtx.unlock(); }
+
+private:
+  // Mutex that needs to be held before the entry is inspected or modified. The
+  // HDTTMap mutex needs to be held before trying to lock any HDTT Entry.
+  mutable std::mutex Mtx;
 };
 
 /// Wrapper around the HostDataToTargetTy to be used in the HDTT map. In
@@ -243,6 +281,7 @@ struct HostDataToTargetMapKeyTy {
   uintptr_t KeyValue;
 
   HostDataToTargetMapKeyTy(void *Key) : KeyValue(uintptr_t(Key)) {}
+  HostDataToTargetMapKeyTy(uintptr_t Key) : KeyValue(Key) {}
   HostDataToTargetMapKeyTy(HostDataToTargetTy *HDTT)
       : KeyValue(HDTT->HstPtrBegin), HDTT(HDTT) {}
   HostDataToTargetTy *HDTT;
@@ -260,6 +299,82 @@ inline bool operator<(const HostDataToTargetMapKeyTy &LHS,
   return LHS.KeyValue < RHS.KeyValue;
 }
 
+/// This struct will be returned by \p DeviceTy::getTargetPointer which provides
+/// more data than just a target pointer. A TargetPointerResultTy that has a non
+/// null Entry owns the entry. As long as the TargetPointerResultTy (TPR) exists
+/// the entry is locked. To give up ownership without destroying the TPR use the
+/// reset() function.
+struct TargetPointerResultTy {
+  struct FlagTy {
+    /// If the map table entry is just created
+    unsigned IsNewEntry : 1;
+    /// If the pointer is actually a host pointer (when unified memory enabled)
+    unsigned IsHostPointer : 1;
+    /// If the pointer is present in the mapping table.
+    unsigned IsPresent : 1;
+    /// Flag indicating that this was the last user of the entry and the ref
+    /// count is now 0.
+    unsigned IsLast : 1;
+    /// If the pointer is contained.
+    unsigned IsContained : 1;
+  } Flags = {0, 0, 0, 0, 0};
+
+  TargetPointerResultTy(const TargetPointerResultTy &) = delete;
+  TargetPointerResultTy &operator=(const TargetPointerResultTy &TPR) = delete;
+  TargetPointerResultTy() {}
+
+  TargetPointerResultTy(FlagTy Flags, HostDataToTargetTy *Entry,
+                        void *TargetPointer)
+      : Flags(Flags), TargetPointer(TargetPointer), Entry(Entry) {
+    if (Entry)
+      Entry->lock();
+  }
+
+  TargetPointerResultTy(TargetPointerResultTy &&TPR)
+      : Flags(TPR.Flags), TargetPointer(TPR.TargetPointer), Entry(TPR.Entry) {
+    TPR.Entry = nullptr;
+  }
+
+  TargetPointerResultTy &operator=(TargetPointerResultTy &&TPR) {
+    if (&TPR != this) {
+      std::swap(Flags, TPR.Flags);
+      std::swap(Entry, TPR.Entry);
+      std::swap(TargetPointer, TPR.TargetPointer);
+    }
+    return *this;
+  }
+
+  ~TargetPointerResultTy() {
+    if (Entry)
+      Entry->unlock();
+  }
+
+  bool isPresent() const { return Flags.IsPresent; }
+
+  bool isHostPointer() const { return Flags.IsHostPointer; }
+
+  bool isContained() const { return Flags.IsContained; }
+
+  /// The corresponding target pointer
+  void *TargetPointer = nullptr;
+
+  HostDataToTargetTy *getEntry() const { return Entry; }
+  void setEntry(HostDataToTargetTy *HDTTT,
+                HostDataToTargetTy *OwnedTPR = nullptr) {
+    if (Entry)
+      Entry->unlock();
+    Entry = HDTTT;
+    if (Entry && Entry != OwnedTPR)
+      Entry->lock();
+  }
+
+  void reset() { *this = TargetPointerResultTy(); }
+
+private:
+  /// The corresponding map table entry which is stable.
+  HostDataToTargetTy *Entry = nullptr;
+};
+
 struct LookupResult {
   struct {
     unsigned IsContained : 1;
@@ -267,42 +382,10 @@ struct LookupResult {
     unsigned ExtendsAfter : 1;
   } Flags;
 
-  /// The corresponding map table entry which is stable.
-  HostDataToTargetTy *Entry = nullptr;
+  LookupResult() : Flags({0, 0, 0}), TPR() {}
 
-  LookupResult() : Flags({0, 0, 0}), Entry() {}
+  TargetPointerResultTy TPR;
 };
-
-/// This struct will be returned by \p DeviceTy::getTargetPointer which provides
-/// more data than just a target pointer.
-struct TargetPointerResultTy {
-  struct {
-    /// If the map table entry is just created
-    unsigned IsNewEntry : 1;
-    /// If the pointer is actually a host pointer (when unified memory enabled)
-    unsigned IsHostPointer : 1;
-    /// If the pointer is present in the mapping table.
-    unsigned IsPresent : 1;
-  } Flags = {0, 0, 0};
-
-  bool isPresent() const { return Flags.IsPresent; }
-
-  bool isHostPointer() const { return Flags.IsHostPointer; }
-
-  /// The corresponding map table entry which is stable.
-  HostDataToTargetTy *Entry = nullptr;
-
-  /// The corresponding target pointer
-  void *TargetPointer = nullptr;
-};
-
-/// Map for shadow pointers
-struct ShadowPtrValTy {
-  void *HstPtrVal;
-  void *TgtPtrAddr;
-  void *TgtPtrVal;
-};
-typedef std::map<void *, ShadowPtrValTy> ShadowPtrListTy;
 
 ///
 struct PendingCtorDtorListsTy {
@@ -336,9 +419,7 @@ struct DeviceTy {
 
   PendingCtorsDtorsPerLibrary PendingCtorsDtors;
 
-  ShadowPtrListTy ShadowPtrMap;
-
-  std::mutex PendingGlobalsMtx, ShadowMtx;
+  std::mutex PendingGlobalsMtx;
 
   DeviceTy(RTLInfoTy *RTL);
   // DeviceTy is not copyable
@@ -353,7 +434,8 @@ struct DeviceTy {
   /// Lookup the mapping of \p HstPtrBegin in \p HDTTMap. The accessor ensures
   /// exclusive access to the HDTT map.
   LookupResult lookupMapping(HDTTMapAccessorTy &HDTTMap, void *HstPtrBegin,
-                             int64_t Size);
+                             int64_t Size,
+                             HostDataToTargetTy *OwnedTPR = nullptr);
 
   /// Get the target pointer based on host pointer begin and base. If the
   /// mapping already exists, the target pointer will be returned directly. In
@@ -365,12 +447,13 @@ struct DeviceTy {
   /// - Data allocation failed;
   /// - The user tried to do an illegal mapping;
   /// - Data transfer issue fails.
-  TargetPointerResultTy
-  getTargetPointer(void *HstPtrBegin, void *HstPtrBase, int64_t Size,
-                   map_var_info_t HstPtrName, bool HasFlagTo,
-                   bool HasFlagAlways, bool IsImplicit, bool UpdateRefCount,
-                   bool HasCloseModifier, bool HasPresentModifier,
-                   bool HasHoldModifier, AsyncInfoTy &AsyncInfo);
+  TargetPointerResultTy getTargetPointer(
+      HDTTMapAccessorTy &HDTTMap, void *HstPtrBegin, void *HstPtrBase,
+      int64_t TgtPadding, int64_t Size, map_var_info_t HstPtrName,
+      bool HasFlagTo, bool HasFlagAlways, bool IsImplicit, bool UpdateRefCount,
+      bool HasCloseModifier, bool HasPresentModifier, bool HasHoldModifier,
+      AsyncInfoTy &AsyncInfo, HostDataToTargetTy *OwnedTPR = nullptr,
+      bool ReleaseHDTTMap = true);
 
   /// Return the target pointer for \p HstPtrBegin in \p HDTTMap. The accessor
   /// ensures exclusive access to the HDTT map.
@@ -388,10 +471,9 @@ struct DeviceTy {
   /// - \p FromDataEnd tracks the number of threads referencing the entry at
   /// targetDataEnd for delayed deletion purpose.
   [[nodiscard]] TargetPointerResultTy
-  getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
-                 bool UpdateRefCount, bool UseHoldRefCount, bool &IsHostPtr,
-                 bool MustContain = false, bool ForceDelete = false,
-                 bool FromDataEnd = false);
+  getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool UpdateRefCount,
+                 bool UseHoldRefCount, bool MustContain = false,
+                 bool ForceDelete = false, bool FromDataEnd = false);
 
   /// Remove the \p Entry from the data map. Expect the entry's total reference
   /// count to be zero and the caller thread to be the last one using it. \p
@@ -436,13 +518,23 @@ struct DeviceTy {
   // synchronous.
   // Copy data from host to device
   int32_t submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
-                     AsyncInfoTy &AsyncInfo);
+                     AsyncInfoTy &AsyncInfo,
+                     HostDataToTargetTy *Entry = nullptr);
   // Copy data from device back to host
   int32_t retrieveData(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size,
-                       AsyncInfoTy &AsyncInfo);
+                       AsyncInfoTy &AsyncInfo,
+                       HostDataToTargetTy *Entry = nullptr);
   // Copy data from current device to destination device directly
   int32_t dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
                        int64_t Size, AsyncInfoTy &AsyncInfo);
+
+  /// Notify the plugin about a new mapping starting at the host address
+  /// \p HstPtr and \p Size bytes.
+  int32_t notifyDataMapped(void *HstPtr, int64_t Size);
+
+  /// Notify the plugin about an existing mapping being unmapped starting at
+  /// the host address \p HstPtr.
+  int32_t notifyDataUnmapped(void *HstPtr);
 
   // Launch the kernel identified by \p TgtEntryPtr with the given arguments.
   int32_t launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,

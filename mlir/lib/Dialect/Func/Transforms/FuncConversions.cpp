@@ -29,6 +29,11 @@ struct CallOpSignatureConversion : public OpConversionPattern<CallOp> {
                                            convertedResults)))
       return failure();
 
+    // If this isn't a one-to-one type mapping, we don't know how to aggregate
+    // the results.
+    if (callOp->getNumResults() != convertedResults.size())
+      return failure();
+
     // Substitute with the new result types from the corresponding FuncType
     // conversion.
     rewriter.replaceOpWithNewOp<CallOp>(
@@ -141,7 +146,7 @@ bool mlir::isLegalForReturnOpTypeConversionPattern(Operation *op,
                                                    TypeConverter &converter,
                                                    bool returnOpAlwaysLegal) {
   // If this is a `return` and the user pass wants to convert/transform across
-  // function boundaries, then `converter` is invoked to check whether the the
+  // function boundaries, then `converter` is invoked to check whether the
   // `return` op is legal.
   if (isa<ReturnOp>(op) && !returnOpAlwaysLegal)
     return converter.isLegal(op);

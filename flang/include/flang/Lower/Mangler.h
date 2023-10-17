@@ -19,20 +19,6 @@
 #include "llvm/ADT/StringRef.h"
 #include <string>
 
-namespace fir {
-
-/// Returns a name suitable to define mlir functions for Fortran intrinsic
-/// Procedure. These names are guaranteed to not conflict with user defined
-/// procedures. This is needed to implement Fortran generic intrinsics as
-/// several mlir functions specialized for the argument types.
-/// The result is guaranteed to be distinct for different mlir::FunctionType
-/// arguments. The mangling pattern is:
-///    fir.<generic name>.<result type>.<arg type>...
-/// e.g ACOS(COMPLEX(4)) is mangled as fir.acos.z4.z4
-std::string mangleIntrinsicProcedure(llvm::StringRef genericName,
-                                     mlir::FunctionType);
-} // namespace fir
-
 namespace Fortran {
 namespace common {
 template <typename>
@@ -40,28 +26,41 @@ class Reference;
 }
 
 namespace semantics {
+class Scope;
 class Symbol;
 class DerivedTypeSpec;
 } // namespace semantics
 
 namespace lower::mangle {
 
-/// Convert a front-end Symbol to an internal name.
-/// If \p keepExternalInScope is true, the mangling of external symbols
-/// retains the scope of the symbol declaring externals. Otherwise,
-/// external symbols are mangled outside of any scope. Keeping the scope is
-/// useful in attributes where all the Fortran context is to be maintained.
+using ScopeBlockIdMap =
+    llvm::DenseMap<Fortran::semantics::Scope *, std::int64_t>;
+
+/// Convert a front-end symbol to a unique internal name.
+/// A symbol that could be in a block scope must provide a ScopeBlockIdMap.
+/// If \p keepExternalInScope is true, mangling an external symbol retains
+/// the scope of the symbol. This is useful when setting the attributes of
+/// a symbol where all the Fortran context is needed. Otherwise, external
+/// symbols are mangled outside of any scope.
+std::string mangleName(const semantics::Symbol &, ScopeBlockIdMap &,
+                       bool keepExternalInScope = false,
+                       bool underscoring = true);
 std::string mangleName(const semantics::Symbol &,
-                       bool keepExternalInScope = false);
+                       bool keepExternalInScope = false,
+                       bool underscoring = true);
 
 /// Convert a derived type instance to an internal name.
-std::string mangleName(const semantics::DerivedTypeSpec &);
+std::string mangleName(const semantics::DerivedTypeSpec &, ScopeBlockIdMap &);
+
+/// Add a scope specific mangling prefix to a compiler generated name.
+std::string mangleName(std::string &, const Fortran::semantics::Scope &,
+                       ScopeBlockIdMap &);
 
 /// Recover the bare name of the original symbol from an internal name.
 std::string demangleName(llvm::StringRef name);
 
 std::string
-mangleArrayLiteral(const uint8_t *addr, size_t size,
+mangleArrayLiteral(size_t size,
                    const Fortran::evaluate::ConstantSubscripts &shape,
                    Fortran::common::TypeCategory cat, int kind = 0,
                    Fortran::common::ConstantSubscript charLen = -1,
@@ -71,9 +70,8 @@ template <Fortran::common::TypeCategory TC, int KIND>
 std::string mangleArrayLiteral(
     mlir::Type,
     const Fortran::evaluate::Constant<Fortran::evaluate::Type<TC, KIND>> &x) {
-  return mangleArrayLiteral(
-      reinterpret_cast<const uint8_t *>(x.values().data()),
-      x.values().size() * sizeof(x.values()[0]), x.shape(), TC, KIND);
+  return mangleArrayLiteral(x.values().size() * sizeof(x.values()[0]),
+                            x.shape(), TC, KIND);
 }
 
 template <int KIND>
@@ -81,29 +79,29 @@ std::string
 mangleArrayLiteral(mlir::Type,
                    const Fortran::evaluate::Constant<Fortran::evaluate::Type<
                        Fortran::common::TypeCategory::Character, KIND>> &x) {
-  return mangleArrayLiteral(
-      reinterpret_cast<const uint8_t *>(x.values().data()),
-      x.values().size() * sizeof(x.values()[0]), x.shape(),
-      Fortran::common::TypeCategory::Character, KIND, x.LEN());
+  return mangleArrayLiteral(x.values().size() * sizeof(x.values()[0]),
+                            x.shape(), Fortran::common::TypeCategory::Character,
+                            KIND, x.LEN());
 }
 
-// FIXME: derived type mangling is safe but not reproducible between two
-// compilation of a same file because `values().data()` is a nontrivial compile
-// time data structure containing pointers and vectors. In particular, this
-// means that similar structure constructors are not "combined" into the same
-// global constant by lowering.
 inline std::string mangleArrayLiteral(
     mlir::Type eleTy,
     const Fortran::evaluate::Constant<Fortran::evaluate::SomeDerived> &x) {
-  return mangleArrayLiteral(
-      reinterpret_cast<const uint8_t *>(x.values().data()),
-      x.values().size() * sizeof(x.values()[0]), x.shape(),
-      Fortran::common::TypeCategory::Derived, /*kind=*/0, /*charLen=*/-1,
-      eleTy.cast<fir::RecordType>().getName());
+  return mangleArrayLiteral(x.values().size() * sizeof(x.values()[0]),
+                            x.shape(), Fortran::common::TypeCategory::Derived,
+                            /*kind=*/0, /*charLen=*/-1,
+                            eleTy.cast<fir::RecordType>().getName());
 }
 
 /// Return the compiler-generated name of a static namelist variable descriptor.
 std::string globalNamelistDescriptorName(const Fortran::semantics::Symbol &sym);
+
+/// Return the field name for a derived type component inside a fir.record type.
+/// It is the component name if the component is not private. Otherwise it is
+/// mangled with the component parent type to avoid any name clashes in type
+/// extensions.
+std::string getRecordTypeFieldName(const Fortran::semantics::Symbol &component,
+                                   ScopeBlockIdMap &);
 
 } // namespace lower::mangle
 } // namespace Fortran

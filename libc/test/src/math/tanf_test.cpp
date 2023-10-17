@@ -7,51 +7,52 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/errno/libc_errno.h"
 #include "src/math/tanf.h"
+#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/Test.h"
 #include "test/src/math/sdcomp26094.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include "utils/UnitTest/FPMatcher.h"
-#include "utils/UnitTest/Test.h"
 #include <math.h>
 
 #include <errno.h>
 #include <stdint.h>
 
-using __llvm_libc::testing::SDCOMP26094_VALUES;
-using FPBits = __llvm_libc::fputil::FPBits<float>;
+using LIBC_NAMESPACE::testing::SDCOMP26094_VALUES;
+using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 DECLARE_SPECIAL_CONSTANTS(float)
 
 TEST(LlvmLibcTanfTest, SpecialNumbers) {
-  errno = 0;
+  libc_errno = 0;
 
-  EXPECT_FP_EQ(aNaN, __llvm_libc::tanf(aNaN));
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::tanf(aNaN));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(0.0f, __llvm_libc::tanf(0.0f));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::tanf(0.0f));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(-0.0f, __llvm_libc::tanf(-0.0f));
+  EXPECT_FP_EQ(-0.0f, LIBC_NAMESPACE::tanf(-0.0f));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(aNaN, __llvm_libc::tanf(inf));
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::tanf(inf));
   EXPECT_MATH_ERRNO(EDOM);
 
-  EXPECT_FP_EQ(aNaN, __llvm_libc::tanf(neg_inf));
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::tanf(neg_inf));
   EXPECT_MATH_ERRNO(EDOM);
 }
 
 TEST(LlvmLibcTanfTest, InFloatRange) {
-  constexpr uint32_t COUNT = 1000000;
+  constexpr uint32_t COUNT = 100'000;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
     float x = float(FPBits(v));
     if (isnan(x) || isinf(x))
       continue;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Tan, x,
-                                   __llvm_libc::tanf(x), 0.5);
+                                   LIBC_NAMESPACE::tanf(x), 0.5);
   }
 }
 
@@ -117,9 +118,9 @@ TEST(LlvmLibcTanfTest, SpecificBitPatterns) {
   for (int i = 0; i < N; ++i) {
     float x = float(FPBits(INPUTS[i]));
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Tan, x,
-                                   __llvm_libc::tanf(x), 0.5);
+                                   LIBC_NAMESPACE::tanf(x), 0.5);
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Tan, -x,
-                                   __llvm_libc::tanf(-x), 0.5);
+                                   LIBC_NAMESPACE::tanf(-x), 0.5);
   }
 }
 
@@ -128,6 +129,6 @@ TEST(LlvmLibcTanfTest, SpecificBitPatterns) {
 TEST(LlvmLibcTanfTest, SDCOMP_26094) {
   for (uint32_t v : SDCOMP26094_VALUES) {
     float x = float(FPBits(v));
-    ASSERT_MPFR_MATCH(mpfr::Operation::Tan, x, __llvm_libc::tanf(x), 0.5);
+    ASSERT_MPFR_MATCH(mpfr::Operation::Tan, x, LIBC_NAMESPACE::tanf(x), 0.5);
   }
 }

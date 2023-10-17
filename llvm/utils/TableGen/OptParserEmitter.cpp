@@ -34,37 +34,21 @@ static raw_ostream &write_cstring(raw_ostream &OS, llvm::StringRef Str) {
   return OS;
 }
 
-static std::string getOptionSpelling(const Record &R, size_t &PrefixLength) {
+static std::string getOptionPrefixedName(const Record &R) {
   std::vector<StringRef> Prefixes = R.getValueAsListOfStrings("Prefixes");
   StringRef Name = R.getValueAsString("Name");
 
-  if (Prefixes.empty()) {
-    PrefixLength = 0;
+  if (Prefixes.empty())
     return Name.str();
-  }
 
-  PrefixLength = Prefixes[0].size();
-  return (Twine(Prefixes[0]) + Twine(Name)).str();
-}
-
-static std::string getOptionSpelling(const Record &R) {
-  size_t PrefixLength;
-  return getOptionSpelling(R, PrefixLength);
-}
-
-static void emitNameUsingSpelling(raw_ostream &OS, const Record &R) {
-  size_t PrefixLength;
-  OS << "llvm::StringLiteral(";
-  write_cstring(
-      OS, StringRef(getOptionSpelling(R, PrefixLength)).substr(PrefixLength));
-  OS << ")";
+  return (Prefixes[0] + Twine(Name)).str();
 }
 
 class MarshallingInfo {
 public:
   static constexpr const char *MacroName = "OPTION_WITH_MARSHALLING";
   const Record &R;
-  bool ShouldAlwaysEmit;
+  bool ShouldAlwaysEmit = false;
   StringRef MacroPrefix;
   StringRef KeyPath;
   StringRef DefaultValue;
@@ -105,8 +89,6 @@ struct SimpleEnumValueTable {
   }
 
   void emit(raw_ostream &OS) const {
-    write_cstring(OS, StringRef(getOptionSpelling(R)));
-    OS << ", ";
     OS << ShouldParse;
     OS << ", ";
     OS << ShouldAlwaysEmit;
@@ -212,8 +194,7 @@ static MarshallingInfo createMarshallingInfo(const Record &R) {
 /// OptParserEmitter - This tablegen backend takes an input .td file
 /// describing a list of options and emits a data structure for parsing and
 /// working with those options when given an input command line.
-namespace llvm {
-void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
+static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
   // Get the option groups and options.
   const std::vector<Record*> &Groups =
     Records.getAllDerivedDefinitions("OptionGroup");
@@ -321,7 +302,7 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
       OS << "INVALID";
 
     // The other option arguments (unused for groups).
-    OS << ", INVALID, nullptr, 0, 0";
+    OS << ", INVALID, nullptr, 0, 0, 0";
 
     // The option help text.
     if (!isa<UnsetInit>(R.getValueInit("HelpText"))) {
@@ -347,8 +328,8 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     std::vector<StringRef> RPrefixes = R.getValueAsListOfStrings("Prefixes");
     OS << Prefixes[PrefixKeyT(RPrefixes.begin(), RPrefixes.end())] << ", ";
 
-    // The option string.
-    emitNameUsingSpelling(OS, R);
+    // The option prefixed name.
+    write_cstring(OS, getOptionPrefixedName(R));
 
     // The option identifier name.
     OS << ", " << getOptionName(R);
@@ -359,8 +340,10 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     // The containing option group (if any).
     OS << ", ";
     const ListInit *GroupFlags = nullptr;
+    const ListInit *GroupVis = nullptr;
     if (const DefInit *DI = dyn_cast<DefInit>(R.getValueInit("Group"))) {
       GroupFlags = DI->getDef()->getValueAsListInit("Flags");
+      GroupVis = DI->getDef()->getValueAsListInit("Visibility");
       OS << getOptionName(*DI->getDef());
     } else
       OS << "INVALID";
@@ -387,7 +370,7 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
       OS << "\"";
     }
 
-    // The option flags.
+    // "Flags" for the option, such as HelpHidden and Render*
     OS << ", ";
     int NumFlags = 0;
     const ListInit *LI = R.getValueAsListInit("Flags");
@@ -399,6 +382,21 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
            << cast<DefInit>(I)->getDef()->getName();
     }
     if (NumFlags == 0)
+      OS << '0';
+
+    // Option visibility, for sharing options between drivers.
+    OS << ", ";
+    int NumVisFlags = 0;
+    LI = R.getValueAsListInit("Visibility");
+    for (Init *I : *LI)
+      OS << (NumVisFlags++ ? " | " : "")
+         << cast<DefInit>(I)->getDef()->getName();
+    if (GroupVis) {
+      for (Init *I : *GroupVis)
+        OS << (NumVisFlags++ ? " | " : "")
+           << cast<DefInit>(I)->getDef()->getName();
+    }
+    if (NumVisFlags == 0)
       OS << '0';
 
     // The option parameter field.
@@ -499,4 +497,6 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
 
   OS << "\n";
 }
-} // end namespace llvm
+
+static TableGen::Emitter::Opt X("gen-opt-parser-defs", EmitOptParser,
+                                "Generate option definitions");

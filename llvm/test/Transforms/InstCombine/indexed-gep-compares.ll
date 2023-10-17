@@ -226,7 +226,7 @@ define i1 @test7() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[BB7:%.*]]
 ; CHECK:       bb7:
-; CHECK-NEXT:    [[CMP:%.*]] = phi i1 [ true, [[BB7]] ], [ false, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ true, [[BB7]] ]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BB10:%.*]], label [[BB7]]
 ; CHECK:       bb10:
 ; CHECK-NEXT:    ret i1 [[CMP]]

@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -sparse-compiler="vl=8" |  FileCheck %s
 
 #Dense = #sparse_tensor.encoding<{
-  dimLevelType = [ "dense", "dense" ]
+  map = (d0, d1) -> (d0 : dense, d1 : dense)
 }>
 
 #matvec = {

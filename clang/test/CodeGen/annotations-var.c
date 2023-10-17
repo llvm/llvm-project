@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -o %t1 %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -o %t1 %s
 // RUN: FileCheck --check-prefix=LOCAL %s < %t1
 // RUN: FileCheck --check-prefix=UNDEF %s < %t1
 // RUN: FileCheck --check-prefix=PARAM %s < %t1
@@ -19,24 +19,18 @@ int foo(int v __attribute__((annotate("param_ann_0"))) __attribute__((annotate("
     return v + 1;
 // PARAM: define {{.*}}@foo
 // PARAM:      [[V:%.*]] = alloca i32
-// PARAM:      bitcast i32* [[V]] to i8*
-// PARAM-NEXT: call void @llvm.var.annotation.p0i8.p0i8(
-// PARAM-NEXT: bitcast i32* [[V]] to i8*
-// PARAM-NEXT: call void @llvm.var.annotation.p0i8.p0i8(
-// PARAM-NEXT: bitcast i32* [[V]] to i8*
-// PARAM-NEXT: call void @llvm.var.annotation.p0i8.p0i8(
-// PARAM-NEXT: bitcast i32* [[V]] to i8*
-// PARAM-NEXT: call void @llvm.var.annotation.p0i8.p0i8(
+// PARAM:      call void @llvm.var.annotation.p0.p0(
+// PARAM-NEXT: call void @llvm.var.annotation.p0.p0(
+// PARAM-NEXT: call void @llvm.var.annotation.p0.p0(
+// PARAM-NEXT: call void @llvm.var.annotation.p0.p0(
 }
 
 void local(void) {
     int localvar __attribute__((annotate("localvar_ann_0"))) __attribute__((annotate("localvar_ann_1"))) = 3;
 // LOCAL-LABEL: define{{.*}} void @local()
 // LOCAL:      [[LOCALVAR:%.*]] = alloca i32,
-// LOCAL-NEXT: [[T0:%.*]] = bitcast i32* [[LOCALVAR]] to i8*
-// LOCAL-NEXT: call void @llvm.var.annotation.p0i8.p0i8(i8* [[T0]], i8* getelementptr inbounds ([15 x i8], [15 x i8]* @{{.*}}), i8* getelementptr inbounds ({{.*}}), i32 33, i8* null)
-// LOCAL-NEXT: [[T0:%.*]] = bitcast i32* [[LOCALVAR]] to i8*
-// LOCAL-NEXT: call void @llvm.var.annotation.p0i8.p0i8(i8* [[T0]], i8* getelementptr inbounds ([15 x i8], [15 x i8]* @{{.*}}), i8* getelementptr inbounds ({{.*}}), i32 33, i8* null)
+// LOCAL-NEXT: call void @llvm.var.annotation.p0.p0(ptr [[LOCALVAR]], ptr @{{.*}}, ptr @{{.*}}, i32 29, ptr null)
+// LOCAL-NEXT: call void @llvm.var.annotation.p0.p0(ptr [[LOCALVAR]], ptr @{{.*}}, ptr @{{.*}}, i32 29, ptr null)
 }
 
 void local_after_return(void) {
@@ -52,6 +46,5 @@ void undef(void) {
     int undefvar __attribute__((annotate("undefvar_ann_0")));
 // UNDEF-LABEL: define{{.*}} void @undef()
 // UNDEF:      [[UNDEFVAR:%.*]] = alloca i32,
-// UNDEF-NEXT: [[T0:%.*]] = bitcast i32* [[UNDEFVAR]] to i8*
-// UNDEF-NEXT: call void @llvm.var.annotation.p0i8.p0i8(i8* [[T0]], i8* getelementptr inbounds ([15 x i8], [15 x i8]* @{{.*}}), i8* getelementptr inbounds ({{.*}}), i32 52, i8* null)
+// UNDEF-NEXT: call void @llvm.var.annotation.p0.p0(ptr [[UNDEFVAR]], ptr @{{.*}}, ptr @{{.*}}, i32 46, ptr null)
 }

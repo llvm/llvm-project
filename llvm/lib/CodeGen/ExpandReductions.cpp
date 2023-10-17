@@ -1,4 +1,4 @@
-//===--- ExpandReductions.cpp - Expand experimental reduction intrinsics --===//
+//===- ExpandReductions.cpp - Expand reduction intrinsics -----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -133,10 +133,38 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
       }
       break;
     }
+    case Intrinsic::vector_reduce_and:
+    case Intrinsic::vector_reduce_or: {
+      // Canonicalize logical or/and reductions:
+      // Or reduction for i1 is represented as:
+      // %val = bitcast <ReduxWidth x i1> to iReduxWidth
+      // %res = cmp ne iReduxWidth %val, 0
+      // And reduction for i1 is represented as:
+      // %val = bitcast <ReduxWidth x i1> to iReduxWidth
+      // %res = cmp eq iReduxWidth %val, 11111
+      Value *Vec = II->getArgOperand(0);
+      auto *FTy = cast<FixedVectorType>(Vec->getType());
+      unsigned NumElts = FTy->getNumElements();
+      if (!isPowerOf2_32(NumElts))
+        continue;
+
+      if (FTy->getElementType() == Builder.getInt1Ty()) {
+        Rdx = Builder.CreateBitCast(Vec, Builder.getIntNTy(NumElts));
+        if (ID == Intrinsic::vector_reduce_and) {
+          Rdx = Builder.CreateICmpEQ(
+              Rdx, ConstantInt::getAllOnesValue(Rdx->getType()));
+        } else {
+          assert(ID == Intrinsic::vector_reduce_or && "Expected or reduction.");
+          Rdx = Builder.CreateIsNotNull(Rdx);
+        }
+        break;
+      }
+
+      Rdx = getShuffleReduction(Builder, Vec, getOpcode(ID), RK);
+      break;
+    }
     case Intrinsic::vector_reduce_add:
     case Intrinsic::vector_reduce_mul:
-    case Intrinsic::vector_reduce_and:
-    case Intrinsic::vector_reduce_or:
     case Intrinsic::vector_reduce_xor:
     case Intrinsic::vector_reduce_smax:
     case Intrinsic::vector_reduce_smin:

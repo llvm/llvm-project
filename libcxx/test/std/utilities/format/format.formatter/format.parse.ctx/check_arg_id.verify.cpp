@@ -6,13 +6,10 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-format
 
 // constexpr void check_arg_id(size_t id);
 
 #include <format>
-
-#include "test_macros.h"
 
 constexpr bool test() {
   // [format.parse.ctx]/11
@@ -24,9 +21,7 @@ constexpr bool test() {
   return true;
 }
 
-int main(int, char**) {
-  // expected-error-re@+1 {{{{(static_assert|static assertion)}} expression is not an integral constant expression}}
+void f() {
+  // expected-error@+1 {{static assertion expression is not an integral constant expression}}
   static_assert(test());
-
-  return 0;
 }

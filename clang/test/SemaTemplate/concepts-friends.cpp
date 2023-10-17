@@ -441,3 +441,27 @@ namespace NTTP {
     templ_func<1>(u2);
   }
 }
+
+
+namespace FriendOfFriend {
+
+template <typename>
+concept Concept = true;
+
+template <Concept> class FriendOfBar;
+
+template <Concept> class Bar {
+  template <Concept> friend class FriendOfBar;
+};
+
+Bar<void> BarInstance;
+
+namespace internal {
+void FriendOfFoo(FriendOfBar<void>);
+}
+
+template <Concept> class Foo {
+  friend void internal::FriendOfFoo(FriendOfBar<void>);
+};
+
+} // namespace FriendOfFriend

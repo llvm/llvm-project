@@ -1749,40 +1749,72 @@ void HvxSelector::select(SDNode *ISelN) {
   // node in the DAG.
   assert(ISelN->getOpcode() == HexagonISD::ISEL);
   SDNode *N0 = ISelN->getOperand(0).getNode();
-  if (N0->isMachineOpcode()) {
-    ISel.ReplaceNode(ISelN, N0);
-    return;
-  }
 
   // There could have been nodes created (i.e. inserted into the DAG)
   // that are now dead. Remove them, in case they use any of the nodes
   // to select (and make them look shared).
   DAG.RemoveDeadNodes();
 
-  SetVector<SDNode*> SubNodes, TmpQ;
-  std::map<SDNode*,unsigned> NumOps;
+  SetVector<SDNode *> SubNodes;
 
-  // Don't want to select N0 if it's shared with another node, except if
-  // it's shared with other ISELs.
-  auto IsISelN = [](SDNode *T) { return T->getOpcode() == HexagonISD::ISEL; };
-  if (llvm::all_of(N0->uses(), IsISelN))
-    SubNodes.insert(N0);
+  if (!N0->isMachineOpcode()) {
+    // Don't want to select N0 if it's shared with another node, except if
+    // it's shared with other ISELs.
+    auto IsISelN = [](SDNode *T) { return T->getOpcode() == HexagonISD::ISEL; };
+    if (llvm::all_of(N0->uses(), IsISelN))
+      SubNodes.insert(N0);
+  }
+  if (SubNodes.empty()) {
+    ISel.ReplaceNode(ISelN, N0);
+    return;
+  }
 
-  auto InSubNodes = [&SubNodes](SDNode *T) { return SubNodes.count(T); };
-  for (unsigned I = 0; I != SubNodes.size(); ++I) {
-    SDNode *S = SubNodes[I];
-    unsigned OpN = 0;
-    // Only add subnodes that are only reachable from N0.
-    for (SDValue Op : S->ops()) {
-      SDNode *O = Op.getNode();
-      if (llvm::all_of(O->uses(), InSubNodes)) {
-        SubNodes.insert(O);
-        ++OpN;
+  // Need to manually select the nodes that are dominated by the ISEL. Other
+  // nodes are reachable from the rest of the DAG, and so will be selected
+  // by the DAG selection routine.
+  SetVector<SDNode*> Dom, NonDom;
+  Dom.insert(N0);
+
+  auto IsDomRec = [&Dom, &NonDom] (SDNode *T, auto Rec) -> bool {
+    if (Dom.count(T))
+      return true;
+    if (T->use_empty() || NonDom.count(T))
+      return false;
+    for (SDNode *U : T->uses()) {
+      // If T is reachable from a known non-dominated node, then T itself
+      // is non-dominated.
+      if (!Rec(U, Rec)) {
+        NonDom.insert(T);
+        return false;
       }
     }
-    NumOps.insert({S, OpN});
-    if (OpN == 0)
-      TmpQ.insert(S);
+    Dom.insert(T);
+    return true;
+  };
+
+  auto IsDom = [&IsDomRec] (SDNode *T) { return IsDomRec(T, IsDomRec); };
+
+  // Add the rest of nodes dominated by ISEL to SubNodes.
+  for (unsigned I = 0; I != SubNodes.size(); ++I) {
+    for (SDValue Op : SubNodes[I]->ops()) {
+      SDNode *O = Op.getNode();
+      if (IsDom(O))
+        SubNodes.insert(O);
+    }
+  }
+
+  // Do a topological sort of nodes from Dom.
+  SetVector<SDNode*> TmpQ;
+
+  std::map<SDNode *, unsigned> OpCount;
+  for (SDNode *T : Dom) {
+    unsigned NumDomOps = llvm::count_if(T->ops(), [&Dom](const SDUse &U) {
+                             return Dom.count(U.getNode());
+                           });
+
+    OpCount.insert({T, NumDomOps});
+    if (NumDomOps == 0)
+      TmpQ.insert(T);
   }
 
   for (unsigned I = 0; I != TmpQ.size(); ++I) {
@@ -1790,8 +1822,8 @@ void HvxSelector::select(SDNode *ISelN) {
     for (SDNode *U : S->uses()) {
       if (U == ISelN)
         continue;
-      auto F = NumOps.find(U);
-      assert(F != NumOps.end());
+      auto F = OpCount.find(U);
+      assert(F != OpCount.end());
       if (F->second > 0 && !--F->second)
         TmpQ.insert(F->first);
     }
@@ -1971,10 +2003,10 @@ SmallVector<uint32_t, 8> HvxSelector::getPerfectCompletions(ShuffleMask SM,
     if ((unsigned)llvm::popcount(P) < Count) {
       // Reset all occurences of P, if there are more occurrences of P
       // than there are bits in P.
-      for_each(Worklist, [P](unsigned &Q) {
+      for (unsigned &Q : Worklist) {
         if (Q == P)
           Q = 0;
-      });
+      }
     }
   }
 
@@ -2309,7 +2341,7 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   }
 
   auto Comps = getPerfectCompletions(SM, LogLen);
-  if (llvm::any_of(Comps, [](uint32_t P) { return P == 0; }))
+  if (llvm::is_contained(Comps, 0))
     return OpRef::fail();
 
   auto Pick = completeToPerfect(Comps, LogLen);

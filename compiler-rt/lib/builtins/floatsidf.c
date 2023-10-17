@@ -27,20 +27,21 @@ COMPILER_RT_ABI fp_t __floatsidf(si_int a) {
 
   // All other cases begin by extracting the sign and absolute value of a
   rep_t sign = 0;
+  su_int aAbs = (su_int)a;
   if (a < 0) {
     sign = signBit;
-    a = -a;
+    aAbs = -aAbs;
   }
 
   // Exponent of (fp_t)a is the width of abs(a).
-  const int exponent = (aWidth - 1) - clzsi(a);
+  const int exponent = (aWidth - 1) - clzsi(aAbs);
   rep_t result;
 
   // Shift a into the significand field and clear the implicit bit.  Extra
   // cast to unsigned int is necessary to get the correct behavior for
   // the input INT_MIN.
   const int shift = significandBits - exponent;
-  result = (rep_t)(su_int)a << shift ^ implicitBit;
+  result = (rep_t)aAbs << shift ^ implicitBit;
 
   // Insert the exponent
   result += (rep_t)(exponent + exponentBias) << significandBits;

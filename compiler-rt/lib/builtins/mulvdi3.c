@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #define fixint_t di_int
+#define fixuint_t du_int
 #include "int_mulv_impl.inc"
 
 // Returns: a * b

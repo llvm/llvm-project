@@ -12,6 +12,7 @@
 
 #include "MipsLegalizerInfo.h"
 #include "MipsTargetMachine.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/IR/IntrinsicsMips.h"
@@ -445,7 +446,7 @@ bool MipsLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
         MIRBuilder.buildMergeLikeInstr(s64, {Src, C_HiMask.getReg(0)});
 
     MachineInstrBuilder TwoP52FP = MIRBuilder.buildFConstant(
-        s64, BitsToDouble(UINT64_C(0x4330000000000000)));
+        s64, llvm::bit_cast<double>(UINT64_C(0x4330000000000000)));
 
     if (DstTy == s64)
       MIRBuilder.buildFSub(Dst, Bitcast, TwoP52FP);
@@ -510,7 +511,7 @@ bool MipsLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   const MipsRegisterInfo &TRI = *ST.getRegisterInfo();
   const RegisterBankInfo &RBI = *ST.getRegBankInfo();
 
-  switch (MI.getIntrinsicID()) {
+  switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
   case Intrinsic::trap: {
     MachineInstr *Trap = MIRBuilder.buildInstr(Mips::TRAP);
     MI.eraseFromParent();

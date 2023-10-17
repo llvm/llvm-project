@@ -7,15 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/ctype/isblank.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcIsBlank, DefaultLocale) {
   // Loops through all characters, verifying that space and horizontal tab
   // return a non-zero integer and everything else returns zero.
-  for (int ch = 0; ch < 255; ++ch) {
+  for (int ch = -255; ch < 255; ++ch) {
     if (ch == ' ' || ch == '\t')
-      EXPECT_NE(__llvm_libc::isblank(ch), 0);
+      EXPECT_NE(LIBC_NAMESPACE::isblank(ch), 0);
     else
-      EXPECT_EQ(__llvm_libc::isblank(ch), 0);
+      EXPECT_EQ(LIBC_NAMESPACE::isblank(ch), 0);
   }
 }

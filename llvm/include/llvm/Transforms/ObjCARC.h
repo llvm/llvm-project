@@ -22,27 +22,9 @@ class Pass;
 
 //===----------------------------------------------------------------------===//
 //
-// ObjCARCAPElim - ObjC ARC autorelease pool elimination.
-//
-Pass *createObjCARCAPElimPass();
-
-//===----------------------------------------------------------------------===//
-//
-// ObjCARCExpand - ObjC ARC preliminary simplifications.
-//
-Pass *createObjCARCExpandPass();
-
-//===----------------------------------------------------------------------===//
-//
 // ObjCARCContract - Late ObjC ARC cleanups.
 //
 Pass *createObjCARCContractPass();
-
-//===----------------------------------------------------------------------===//
-//
-// ObjCARCOpt - ObjC ARC optimization.
-//
-Pass *createObjCARCOptPass();
 
 struct ObjCARCOptPass : public PassInfoMixin<ObjCARCOptPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);

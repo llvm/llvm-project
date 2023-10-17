@@ -457,54 +457,50 @@ define amdgpu_kernel void @v_ctpop_v4i16(ptr addrspace(1) noalias %out, ptr addr
 ;
 ; EG-LABEL: v_ctpop_v4i16:
 ; EG:       ; %bb.0:
-; EG-NEXT:    ALU 2, @8, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 3, @8, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @6
-; EG-NEXT:    ALU 42, @11, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 37, @12, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T8.XY, T0.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    Fetch clause starting at 6:
-; EG-NEXT:     VTX_READ_64 T0.XY, T0.X, 0, #1
+; EG-NEXT:     VTX_READ_64 T8.XY, T0.X, 0, #1
 ; EG-NEXT:    ALU clause starting at 8:
-; EG-NEXT:     LSHL * T0.W, T0.X, literal.x,
+; EG-NEXT:     MOV T0.Y, T4.X,
+; EG-NEXT:     LSHL * T0.W, T0.X, literal.x, BS:VEC_120/SCL_212
 ; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
 ; EG-NEXT:     ADD_INT * T0.X, KC0[2].Z, PV.W,
-; EG-NEXT:    ALU clause starting at 11:
-; EG-NEXT:     MOV T2.X, T0.X,
-; EG-NEXT:     MOV * T3.X, T0.Y,
-; EG-NEXT:     MOV T0.X, T4.X,
-; EG-NEXT:     MOV * T0.Y, PV.X,
-; EG-NEXT:     AND_INT * T0.W, PV.Y, literal.x,
+; EG-NEXT:    ALU clause starting at 12:
+; EG-NEXT:     AND_INT * T0.W, T8.X, literal.x,
 ; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
 ; EG-NEXT:     BCNT_INT T0.W, PV.W,
-; EG-NEXT:     AND_INT * T1.W, T0.X, literal.x,
+; EG-NEXT:     AND_INT * T1.W, T0.Y, literal.x,
 ; EG-NEXT:    -65536(nan), 0(0.000000e+00)
 ; EG-NEXT:     OR_INT * T0.W, PS, PV.W,
-; EG-NEXT:     MOV T0.X, T3.X,
 ; EG-NEXT:     MOV * T4.X, PV.W,
-; EG-NEXT:     MOV T0.Z, PS,
-; EG-NEXT:     LSHR * T0.W, T0.Y, literal.x,
+; EG-NEXT:     MOV T0.X, PV.X,
+; EG-NEXT:     LSHR * T0.W, T8.X, literal.x,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
 ; EG-NEXT:     BCNT_INT T0.W, PV.W,
-; EG-NEXT:     AND_INT * T1.W, PV.Z, literal.x,
+; EG-NEXT:     AND_INT * T1.W, PV.X, literal.x,
 ; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
 ; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
 ; EG-NEXT:     OR_INT * T0.W, T1.W, PV.W,
 ; EG-NEXT:     MOV T4.X, PV.W,
-; EG-NEXT:     MOV T0.Y, T5.X,
-; EG-NEXT:     AND_INT * T0.W, T0.X, literal.x, BS:VEC_120/SCL_212
+; EG-NEXT:     MOV * T0.X, T5.X,
+; EG-NEXT:     AND_INT * T0.W, T8.Y, literal.x,
 ; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
 ; EG-NEXT:     BCNT_INT T0.W, PV.W,
-; EG-NEXT:     AND_INT * T1.W, PV.Y, literal.x,
+; EG-NEXT:     AND_INT * T1.W, T0.X, literal.x,
 ; EG-NEXT:    -65536(nan), 0(0.000000e+00)
 ; EG-NEXT:     OR_INT * T0.W, PS, PV.W,
 ; EG-NEXT:     MOV * T5.X, PV.W,
-; EG-NEXT:     MOV T0.Y, PV.X,
-; EG-NEXT:     LSHR * T0.W, T0.X, literal.x,
+; EG-NEXT:     MOV T0.X, PV.X,
+; EG-NEXT:     LSHR * T0.W, T8.Y, literal.x,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
 ; EG-NEXT:     BCNT_INT T0.W, PV.W,
-; EG-NEXT:     AND_INT * T1.W, PV.Y, literal.x,
+; EG-NEXT:     AND_INT * T1.W, PV.X, literal.x,
 ; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
 ; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
@@ -524,18 +520,18 @@ define amdgpu_kernel void @v_ctpop_v4i16(ptr addrspace(1) noalias %out, ptr addr
 define amdgpu_kernel void @v_ctpop_v8i16(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; SI-LABEL: v_ctpop_v8i16:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
-; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
+; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s10, 0
-; SI-NEXT:    s_mov_b32 s11, s7
+; SI-NEXT:    s_mov_b32 s11, s3
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_mov_b64 s[8:9], s[2:3]
+; SI-NEXT:    s_mov_b64 s[8:9], s[6:7]
 ; SI-NEXT:    v_mov_b32_e32 v1, 0
 ; SI-NEXT:    buffer_load_dwordx4 v[0:3], v[0:1], s[8:11], 0 addr64
-; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    s_mov_b32 s4, s0
-; SI-NEXT:    s_mov_b32 s5, s1
+; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    s_mov_b32 s0, s4
+; SI-NEXT:    s_mov_b32 s1, s5
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v4, 0xffff, v0
 ; SI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
@@ -561,7 +557,7 @@ define amdgpu_kernel void @v_ctpop_v8i16(ptr addrspace(1) noalias %out, ptr addr
 ; SI-NEXT:    v_or_b32_e32 v2, v6, v2
 ; SI-NEXT:    v_or_b32_e32 v1, v5, v1
 ; SI-NEXT:    v_or_b32_e32 v0, v4, v0
-; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
+; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: v_ctpop_v8i16:
@@ -1527,9 +1523,8 @@ define amdgpu_kernel void @ctpop_i16_in_br(ptr addrspace(1) %out, ptr addrspace(
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_lshr_b32 s5, s4, 16
-; VI-NEXT:    v_cmp_ne_u16_e64 s[6:7], s5, 0
-; VI-NEXT:    s_and_b64 vcc, exec, s[6:7]
-; VI-NEXT:    s_cbranch_vccz .LBB14_4
+; VI-NEXT:    s_cmp_lg_u32 s5, 0
+; VI-NEXT:    s_cbranch_scc0 .LBB14_4
 ; VI-NEXT:  ; %bb.1: ; %else
 ; VI-NEXT:    s_mov_b32 s11, 0xf000
 ; VI-NEXT:    s_mov_b32 s10, -1

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64-none-eabi -code-model=tiny < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64 -code-model=tiny < %s | FileCheck %s
 
 @var8 = dso_local global i8 0
 @var16 = dso_local global i16 0

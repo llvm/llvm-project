@@ -57,6 +57,10 @@
 ; CHECK-DEFAULT-AA-DAG: Running analysis: BasicAA
 ; CHECK-DEFAULT-AA-DAG: Running analysis: TypeBasedAA
 
+; RUN: not opt -passes='function<no-rerun>(no-op-function)' %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefix=CHECK-RERUN-BAD
+; CHECK-RERUN-BAD: cannot have a no-rerun module to function adaptor
+
 ; RUN: not opt -disable-output -debug-pass-manager \
 ; RUN:     -passes='no-op-module)' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-UNBALANCED1

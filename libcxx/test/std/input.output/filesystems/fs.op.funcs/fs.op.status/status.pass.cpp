@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
+// UNSUPPORTED: no-filesystem
+// UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
 
@@ -15,15 +17,13 @@
 
 #include "filesystem_include.h"
 
+#include "assert_macros.h"
 #include "test_macros.h"
-#include "rapid-cxx-test.h"
 #include "filesystem_test_helper.h"
 
 using namespace fs;
 
-TEST_SUITE(filesystem_status_test_suite)
-
-TEST_CASE(signature_test)
+static void signature_test()
 {
     const path p; ((void)p);
     std::error_code ec; ((void)ec);
@@ -31,7 +31,7 @@ TEST_CASE(signature_test)
     ASSERT_NOEXCEPT(status(p, ec));
 }
 
-TEST_CASE(test_status_not_found)
+static void test_status_not_found()
 {
     static_test_env static_env;
     const std::errc expect_errc = std::errc::no_such_file_or_directory;
@@ -43,14 +43,14 @@ TEST_CASE(test_status_not_found)
         std::error_code ec = std::make_error_code(std::errc::address_in_use);
         // test non-throwing overload.
         file_status st = status(p, ec);
-        TEST_CHECK(ErrorIs(ec, expect_errc));
-        TEST_CHECK(st.type() == file_type::not_found);
-        TEST_CHECK(st.permissions() == perms::unknown);
+        assert(ErrorIs(ec, expect_errc));
+        assert(st.type() == file_type::not_found);
+        assert(st.permissions() == perms::unknown);
         // test throwing overload. It should not throw even though it reports
         // that the file was not found.
-        TEST_CHECK_NO_THROW(st = status(p));
-        TEST_CHECK(st.type() == file_type::not_found);
-        TEST_CHECK(st.permissions() == perms::unknown);
+        TEST_DOES_NOT_THROW(st = status(p));
+        assert(st.type() == file_type::not_found);
+        assert(st.permissions() == perms::unknown);
     }
 }
 
@@ -60,7 +60,7 @@ TEST_CASE(test_status_not_found)
 // for. Finally, status() for a too long file name doesn't return errors
 // on windows.
 #ifndef TEST_WIN_NO_FILESYSTEM_PERMS_NONE
-TEST_CASE(test_status_cannot_resolve)
+static void test_status_cannot_resolve()
 {
     scoped_test_env env;
     const path dir = env.create_dir("dir");
@@ -85,26 +85,26 @@ TEST_CASE(test_status_cannot_resolve)
         { // test non-throwing case
             std::error_code ec = std::make_error_code(set_errc);
             file_status st = status(TC.p, ec);
-            TEST_CHECK(ErrorIs(ec, TC.expect_errc));
-            TEST_CHECK(st.type() == file_type::none);
-            TEST_CHECK(st.permissions() == perms::unknown);
+            assert(ErrorIs(ec, TC.expect_errc));
+            assert(st.type() == file_type::none);
+            assert(st.permissions() == perms::unknown);
         }
 #ifndef TEST_HAS_NO_EXCEPTIONS
         { // test throwing case
             try {
                 status(TC.p);
             } catch (filesystem_error const& err) {
-                TEST_CHECK(err.path1() == TC.p);
-                TEST_CHECK(err.path2() == "");
-                TEST_CHECK(ErrorIs(err.code(), TC.expect_errc));
+                assert(err.path1() == TC.p);
+                assert(err.path2() == "");
+                assert(ErrorIs(err.code(), TC.expect_errc));
             }
         }
 #endif
     }
 }
-#endif
+#endif // TEST_WIN_NO_FILESYSTEM_PERMS_NONE
 
-TEST_CASE(status_file_types_test)
+static void status_file_types_test()
 {
     static_test_env static_env;
     scoped_test_env env;
@@ -131,17 +131,17 @@ TEST_CASE(status_file_types_test)
         // test non-throwing case
         std::error_code ec = std::make_error_code(std::errc::address_in_use);
         file_status st = status(TC.p, ec);
-        TEST_CHECK(!ec);
-        TEST_CHECK(st.type() == TC.expect_type);
-        TEST_CHECK(st.permissions() != perms::unknown);
+        assert(!ec);
+        assert(st.type() == TC.expect_type);
+        assert(st.permissions() != perms::unknown);
         // test throwing case
-        TEST_REQUIRE_NO_THROW(st = status(TC.p));
-        TEST_CHECK(st.type() == TC.expect_type);
-        TEST_CHECK(st.permissions() != perms::unknown);
+        TEST_DOES_NOT_THROW(st = status(TC.p));
+        assert(st.type() == TC.expect_type);
+        assert(st.permissions() != perms::unknown);
     }
 }
 
-TEST_CASE(test_block_file)
+static void test_block_file()
 {
     const path possible_paths[] = {
         "/dev/drive0", // Apple
@@ -157,18 +157,29 @@ TEST_CASE(test_block_file)
         }
     }
     if (p == path{}) {
-        TEST_UNSUPPORTED();
+        // No possible path found.
+        return;
     }
     // test non-throwing case
     std::error_code ec = std::make_error_code(std::errc::address_in_use);
     file_status st = status(p, ec);
-    TEST_CHECK(!ec);
-    TEST_CHECK(st.type() == file_type::block);
-    TEST_CHECK(st.permissions() != perms::unknown);
+    assert(!ec);
+    assert(st.type() == file_type::block);
+    assert(st.permissions() != perms::unknown);
     // test throwing case
-    TEST_REQUIRE_NO_THROW(st = status(p));
-    TEST_CHECK(st.type() == file_type::block);
-    TEST_CHECK(st.permissions() != perms::unknown);
+    TEST_DOES_NOT_THROW(st = status(p));
+    assert(st.type() == file_type::block);
+    assert(st.permissions() != perms::unknown);
 }
 
-TEST_SUITE_END()
+int main(int, char**) {
+    signature_test();
+    test_status_not_found();
+#ifndef TEST_WIN_NO_FILESYSTEM_PERMS_NONE
+    test_status_cannot_resolve();
+#endif
+    status_file_types_test();
+    test_block_file();
+
+    return 0;
+}

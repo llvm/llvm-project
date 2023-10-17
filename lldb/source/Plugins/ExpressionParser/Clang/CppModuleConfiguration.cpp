@@ -10,7 +10,7 @@
 
 #include "ClangHost.h"
 #include "lldb/Host/FileSystem.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/TargetParser/Triple.h"
 #include <optional>
 
 using namespace lldb_private;

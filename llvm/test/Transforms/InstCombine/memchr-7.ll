@@ -3,15 +3,20 @@
 
 @.str = private unnamed_addr constant [27 x i8] c"abcdefghijklmnopqrstuvwxyz\00", align 1
 @.str.1 = private unnamed_addr constant [2 x i8] c"\0D\0A", align 1
+@.str.2 = private unnamed_addr constant [10 x i8] c"abcdefmno\00", align 1
+@.str.3 = private unnamed_addr constant [10 x i8] c"abcijkmno\00", align 1
+@.str.4 = private unnamed_addr constant [7 x i8] c"mnabcc\00", align 1
 
 declare ptr @strchr(ptr, i32)
 declare ptr @memchr(ptr, i32, i64)
 
 define zeroext i1 @strchr_to_memchr_n_equals_len(i32 %c) {
 ; CHECK-LABEL: @strchr_to_memchr_n_equals_len(
-; CHECK-NEXT:    [[MEMCHR:%.*]] = tail call ptr @memchr(ptr noundef nonnull dereferenceable(1) @.str, i32 [[C:%.*]], i64 27)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[MEMCHR]], null
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[C:%.*]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[C]], -97
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP2]], 26
+; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    ret i1 [[TMP4]]
 ;
   %call = tail call ptr @strchr(ptr nonnull dereferenceable(27) @.str, i32 %c)
   %cmp = icmp ne ptr %call, null
@@ -33,9 +38,9 @@ define zeroext i1 @memchr_n_equals_len(i32 %c) {
 
 define zeroext i1 @memchr_n_less_than_len(i32 %c) {
 ; CHECK-LABEL: @memchr_n_less_than_len(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @memchr(ptr noundef nonnull dereferenceable(1) @.str, i32 [[C:%.*]], i64 15)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[CALL]], null
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[C:%.*]], -97
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 15
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %call = tail call ptr @memchr(ptr @.str, i32 %c, i64 15)
   %cmp = icmp ne ptr %call, null
@@ -45,9 +50,11 @@ define zeroext i1 @memchr_n_less_than_len(i32 %c) {
 
 define zeroext i1 @memchr_n_more_than_len(i32 %c) {
 ; CHECK-LABEL: @memchr_n_more_than_len(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @memchr(ptr noundef nonnull dereferenceable(1) @.str, i32 [[C:%.*]], i64 30)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[CALL]], null
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[C:%.*]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[C]], -97
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP2]], 26
+; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    ret i1 [[TMP4]]
 ;
   %call = tail call ptr @memchr(ptr @.str, i32 %c, i64 30)
   %cmp = icmp ne ptr %call, null
@@ -101,5 +108,47 @@ define zeroext i1 @memchr_n_equals_len2_minsize(i32 %c) minsize {
 ;
   %call = tail call ptr @memchr(ptr nonnull dereferenceable(3) @.str.1, i32 %c, i64 2)
   %cmp = icmp eq ptr %call, null
+  ret i1 %cmp
+}
+
+; Positive test - 2 non-contiguous ranges
+define zeroext i1 @strchr_to_memchr_2_non_cont_ranges(i32 %c) {
+; CHECK-LABEL: @strchr_to_memchr_2_non_cont_ranges(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[C:%.*]], -97
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 6
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[C]], -109
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[TMP3]], 3
+; CHECK-NEXT:    [[TMP5:%.*]] = or i1 [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    ret i1 [[TMP5]]
+;
+  %call = tail call ptr @memchr(ptr @.str.2, i32 %c, i64 9)
+  %cmp = icmp ne ptr %call, null
+  ret i1 %cmp
+}
+
+; Positive test - 2 non-contiguous ranges with char duplication
+define zeroext i1 @strchr_to_memchr_2_non_cont_ranges_char_dup(i32 %c) {
+; CHECK-LABEL: @strchr_to_memchr_2_non_cont_ranges_char_dup(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[C:%.*]], -97
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[C]], -109
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[TMP3]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = or i1 [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    ret i1 [[TMP5]]
+;
+  %call = tail call ptr @memchr(ptr @.str.4, i32 %c, i64 6)
+  %cmp = icmp ne ptr %call, null
+  ret i1 %cmp
+}
+
+; Negative test - more than 2 non-contiguous ranges
+define zeroext i1 @strchr_to_memchr_3_non_cont_ranges(i32 %c) {
+; CHECK-LABEL: @strchr_to_memchr_3_non_cont_ranges(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @memchr(ptr noundef nonnull dereferenceable(1) @.str.3, i32 [[C:%.*]], i64 9)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[CALL]], null
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %call = tail call ptr @memchr(ptr @.str.3, i32 %c, i64 9)
+  %cmp = icmp ne ptr %call, null
   ret i1 %cmp
 }

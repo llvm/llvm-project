@@ -29,7 +29,10 @@ class IntegerRelation;
 class IntegerPolyhedron;
 class PresburgerSet;
 class PresburgerRelation;
-struct SymbolicLexMin;
+struct SymbolicLexOpt;
+
+/// The type of bound: equal, lower bound or upper bound.
+enum class BoundType { EQ, LB, UB };
 
 /// An IntegerRelation represents the set of points from a PresburgerSpace that
 /// satisfy a list of affine constraints. Affine constraints can be inequalities
@@ -54,10 +57,12 @@ class IntegerRelation {
 public:
   /// All derived classes of IntegerRelation.
   enum class Kind {
-    FlatAffineConstraints,
-    FlatAffineValueConstraints,
     IntegerRelation,
     IntegerPolyhedron,
+    FlatLinearConstraints,
+    FlatLinearValueConstraints,
+    FlatAffineValueConstraints,
+    FlatAffineRelation
   };
 
   /// Constructs a relation reserving memory for the specified number
@@ -127,6 +132,13 @@ public:
   /// and somewhat expensive, since it uses the integer emptiness check
   /// (see IntegerRelation::findIntegerSample()).
   bool isEqual(const IntegerRelation &other) const;
+
+  /// Perform a quick equality check on `this` and `other`. The relations are
+  /// equal if the check return true, but may or may not be equal if the check
+  /// returns false. The equality check is performed in a plain manner, by
+  /// comparing if all the equalities and inequalities in `this` and `other`
+  /// are the same.
+  bool isPlainEqual(const IntegerRelation &other) const;
 
   /// Return whether this is a subset of the given IntegerRelation. This is
   /// integer-exact and somewhat expensive, since it uses the integer emptiness
@@ -203,27 +215,27 @@ public:
   /// Get the number of vars of the specified kind.
   unsigned getNumVarKind(VarKind kind) const {
     return space.getNumVarKind(kind);
-  };
+  }
 
   /// Return the index at which the specified kind of vars starts.
   unsigned getVarKindOffset(VarKind kind) const {
     return space.getVarKindOffset(kind);
-  };
+  }
 
   /// Return the index at Which the specified kind of vars ends.
   unsigned getVarKindEnd(VarKind kind) const {
     return space.getVarKindEnd(kind);
-  };
+  }
 
   /// Get the number of elements of the specified kind in the range
   /// [varStart, varLimit).
   unsigned getVarKindOverlap(VarKind kind, unsigned varStart,
                              unsigned varLimit) const {
     return space.getVarKindOverlap(kind, varStart, varLimit);
-  };
+  }
 
   /// Return the VarKind of the var at the specified position.
-  VarKind getVarKindAt(unsigned pos) const { return space.getVarKindAt(pos); };
+  VarKind getVarKindAt(unsigned pos) const { return space.getVarKindAt(pos); }
 
   /// The struct CountsSnapshot stores the count of each VarKind, and also of
   /// each constraint type. getCounts() returns a CountsSnapshot object
@@ -354,7 +366,7 @@ public:
   /// bounded. The span of the returned vectors is guaranteed to contain all
   /// such vectors. The returned vectors are NOT guaranteed to be linearly
   /// independent. This function should not be called on empty sets.
-  Matrix getBoundedDirections() const;
+  IntMatrix getBoundedDirections() const;
 
   /// Find an integer sample point satisfying the constraints using a
   /// branch and bound algorithm with generalized basis reduction, with some
@@ -394,9 +406,6 @@ public:
   /// pair/equality can be found, the kind attribute in `MaybeLocalRepr` is set
   /// to None.
   DivisionRepr getLocalReprs(std::vector<MaybeLocalRepr> *repr = nullptr) const;
-
-  /// The type of bound: equal, lower bound or upper bound.
-  enum BoundType { EQ, LB, UB };
 
   /// Adds a constant bound for the specified variable.
   void addBound(BoundType type, unsigned pos, const MPInt &value);
@@ -493,7 +502,7 @@ public:
     if (ub)
       *ub = getInt64Vec(ubMPInt);
     if (boundFloorDivisor)
-      *boundFloorDivisor = int64_t(boundFloorDivisorMPInt);
+      *boundFloorDivisor = static_cast<int64_t>(boundFloorDivisorMPInt);
     return llvm::transformOptional(result, int64FromMPInt);
   }
 
@@ -657,15 +666,18 @@ public:
   /// x = a if b <= a, a <= c
   /// x = b if a <  b, b <= c
   ///
-  /// This function is stored in the `lexmin` function in the result.
+  /// This function is stored in the `lexopt` function in the result.
   /// Some assignments to the symbols might make the set empty.
   /// Such points are not part of the function's domain.
   /// In the above example, this happens when max(a, b) > c.
   ///
   /// For some values of the symbols, the lexmin may be unbounded.
-  /// `SymbolicLexMin` stores these parts of the symbolic domain in a separate
+  /// `SymbolicLexOpt` stores these parts of the symbolic domain in a separate
   /// `PresburgerSet`, `unboundedDomain`.
-  SymbolicLexMin findSymbolicIntegerLexMin() const;
+  SymbolicLexOpt findSymbolicIntegerLexMin() const;
+
+  /// Same as findSymbolicIntegerLexMin but produces lexmax instead of lexmin
+  SymbolicLexOpt findSymbolicIntegerLexMax() const;
 
   /// Return the set difference of this set and the given set, i.e.,
   /// return `this \ set`.
@@ -681,7 +693,7 @@ protected:
   /// false otherwise.
   bool hasInvalidConstraint() const;
 
-  /// Returns the constant lower bound bound if isLower is true, and the upper
+  /// Returns the constant lower bound if isLower is true, and the upper
   /// bound if isLower is false.
   template <bool isLower>
   std::optional<MPInt> computeConstantLowerOrUpperBound(unsigned pos);
@@ -780,10 +792,10 @@ protected:
   PresburgerSpace space;
 
   /// Coefficients of affine equalities (in == 0 form).
-  Matrix equalities;
+  IntMatrix equalities;
 
   /// Coefficients of affine inequalities (in >= 0 form).
-  Matrix inequalities;
+  IntMatrix inequalities;
 };
 
 /// An IntegerPolyhedron represents the set of points from a PresburgerSpace
@@ -848,7 +860,8 @@ public:
   Kind getKind() const override { return Kind::IntegerPolyhedron; }
 
   static bool classof(const IntegerRelation *cst) {
-    return cst->getKind() == Kind::IntegerPolyhedron;
+    return cst->getKind() >= Kind::IntegerPolyhedron &&
+           cst->getKind() <= Kind::FlatAffineRelation;
   }
 
   // Clones this object.

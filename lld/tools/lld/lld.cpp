@@ -25,22 +25,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Driver.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/CrashRecoveryContext.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/Process.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstdlib>
 #include <optional>
 
@@ -48,161 +47,15 @@ using namespace lld;
 using namespace llvm;
 using namespace llvm::sys;
 
-enum Flavor {
-  Invalid,
-  Gnu,     // -flavor gnu
-  WinLink, // -flavor link
-  Darwin,  // -flavor darwin
-  Wasm,    // -flavor wasm
-};
+namespace lld {
+extern bool inTestOutputDisabled;
 
-[[noreturn]] static void die(const Twine &s) {
-  llvm::errs() << s << "\n";
-  exit(1);
-}
-
-static Flavor getFlavor(StringRef s) {
-  return StringSwitch<Flavor>(s)
-      .CasesLower("ld", "ld.lld", "gnu", Gnu)
-      .CasesLower("wasm", "ld-wasm", Wasm)
-      .CaseLower("link", WinLink)
-      .CasesLower("ld64", "ld64.lld", "darwin", Darwin)
-      .Default(Invalid);
-}
-
-static cl::TokenizerCallback getDefaultQuotingStyle() {
-  if (Triple(sys::getProcessTriple()).getOS() == Triple::Win32)
-    return cl::TokenizeWindowsCommandLine;
-  return cl::TokenizeGNUCommandLine;
-}
-
-static bool isPETargetName(StringRef s) {
-  return s == "i386pe" || s == "i386pep" || s == "thumb2pe" || s == "arm64pe";
-}
-
-static bool isPETarget(std::vector<const char *> &v) {
-  for (auto it = v.begin(); it + 1 != v.end(); ++it) {
-    if (StringRef(*it) != "-m")
-      continue;
-    return isPETargetName(*(it + 1));
-  }
-  // Expand response files (arguments in the form of @<filename>)
-  // to allow detecting the -m argument from arguments in them.
-  SmallVector<const char *, 256> expandedArgs(v.data(), v.data() + v.size());
-  BumpPtrAllocator a;
-  StringSaver saver(a);
-  cl::ExpansionContext ECtx(saver.getAllocator(), getDefaultQuotingStyle());
-  if (Error Err = ECtx.expandResponseFiles(expandedArgs))
-    die(toString(std::move(Err)));
-  for (auto it = expandedArgs.begin(); it + 1 != expandedArgs.end(); ++it) {
-    if (StringRef(*it) != "-m")
-      continue;
-    return isPETargetName(*(it + 1));
-  }
-
-#ifdef LLD_DEFAULT_LD_LLD_IS_MINGW
-  return true;
-#else
-  return false;
-#endif
-}
-
-static Flavor parseProgname(StringRef progname) {
-  // Use GNU driver for "ld" by default.
-  if (progname == "ld")
-    return Gnu;
-
-  // Progname may be something like "lld-gnu". Parse it.
-  SmallVector<StringRef, 3> v;
-  progname.split(v, "-");
-  for (StringRef s : v)
-    if (Flavor f = getFlavor(s))
-      return f;
-  return Invalid;
-}
-
-static Flavor parseFlavor(std::vector<const char *> &v) {
-  // Parse -flavor option.
-  if (v.size() > 1 && v[1] == StringRef("-flavor")) {
-    if (v.size() <= 2)
-      die("missing arg value for '-flavor'");
-    Flavor f = getFlavor(v[2]);
-    if (f == Invalid)
-      die("Unknown flavor: " + StringRef(v[2]));
-    v.erase(v.begin() + 1, v.begin() + 3);
-    return f;
-  }
-
-  // Deduct the flavor from argv[0].
-  StringRef arg0 = path::filename(v[0]);
-  if (arg0.endswith_insensitive(".exe"))
-    arg0 = arg0.drop_back(4);
-  return parseProgname(arg0);
-}
-
-bool inTestOutputDisabled = false;
-
-/// Universal linker main(). This linker emulates the gnu, darwin, or
-/// windows linker based on the argv[0] or -flavor option.
-static int lldMain(int argc, const char **argv, llvm::raw_ostream &stdoutOS,
-                   llvm::raw_ostream &stderrOS, bool exitEarly = true) {
-  std::vector<const char *> args(argv, argv + argc);
-  auto link = [&args]() {
-    Flavor f = parseFlavor(args);
-    if (f == Gnu && isPETarget(args))
-      return mingw::link;
-    else if (f == Gnu)
-      return elf::link;
-    else if (f == WinLink)
-      return coff::link;
-    else if (f == Darwin)
-      return macho::link;
-    else if (f == Wasm)
-      return lld::wasm::link;
-    else
-      die("lld is a generic driver.\n"
-          "Invoke ld.lld (Unix), ld64.lld (macOS), lld-link (Windows), wasm-ld"
-          " (WebAssembly) instead");
-  }();
-  // Run the driver. If an error occurs, false will be returned.
-  bool r = link(args, stdoutOS, stderrOS, exitEarly, inTestOutputDisabled);
-
-  // Call exit() if we can to avoid calling destructors.
-  if (exitEarly)
-    exitLld(!r ? 1 : 0);
-
-  // Delete the global context and clear the global context pointer, so that it
-  // cannot be accessed anymore.
-  CommonLinkerContext::destroy();
-
-  return !r ? 1 : 0;
-}
-
-// Similar to lldMain except that exceptions are caught.
-SafeReturn lld::safeLldMain(int argc, const char **argv,
-                            llvm::raw_ostream &stdoutOS,
-                            llvm::raw_ostream &stderrOS) {
-  int r = 0;
-  {
-    // The crash recovery is here only to be able to recover from arbitrary
-    // control flow when fatal() is called (through setjmp/longjmp or
-    // __try/__except).
-    llvm::CrashRecoveryContext crc;
-    if (!crc.RunSafely([&]() {
-          r = lldMain(argc, argv, stdoutOS, stderrOS, /*exitEarly=*/false);
-        }))
-      return {crc.RetCode, /*canRunAgain=*/false};
-  }
-
-  // Cleanup memory and reset everything back in pristine condition. This path
-  // is only taken when LLD is in test, or when it is used as a library.
-  llvm::CrashRecoveryContext crc;
-  if (!crc.RunSafely([&]() { CommonLinkerContext::destroy(); })) {
-    // The memory is corrupted beyond any possible recovery.
-    return {r, /*canRunAgain=*/false};
-  }
-  return {r, /*canRunAgain=*/true};
-}
+// Bypass the crash recovery handler, which is only meant to be used in
+// LLD-as-lib scenarios.
+int unsafeLldMain(llvm::ArrayRef<const char *> args,
+                  llvm::raw_ostream &stdoutOS, llvm::raw_ostream &stderrOS,
+                  llvm::ArrayRef<DriverDef> drivers, bool exitEarly);
+} // namespace lld
 
 // When in lit tests, tells how many times the LLD tool should re-execute the
 // main loop with the same inputs. When not in test, returns a value of 0 which
@@ -214,7 +67,13 @@ static unsigned inTestVerbosity() {
   return v;
 }
 
-int lld_main(int argc, char **argv) {
+LLD_HAS_DRIVER(coff)
+LLD_HAS_DRIVER(elf)
+LLD_HAS_DRIVER(mingw)
+LLD_HAS_DRIVER(macho)
+LLD_HAS_DRIVER(wasm)
+
+int lld_main(int argc, char **argv, const llvm::ToolContext &) {
   InitLLVM x(argc, argv);
   sys::Process::UseANSIEscapeCodes(true);
 
@@ -224,11 +83,16 @@ int lld_main(int argc, char **argv) {
     LLVM_BUILTIN_TRAP;
   }
 
+  ArrayRef<const char *> args(argv, argv + argc);
+
   // Not running in lit tests, just take the shortest codepath with global
   // exception handling and no memory cleanup on exit.
-  if (!inTestVerbosity())
-    return lldMain(argc, const_cast<const char **>(argv), llvm::outs(),
-                   llvm::errs());
+  if (!inTestVerbosity()) {
+    int r =
+        lld::unsafeLldMain(args, llvm::outs(), llvm::errs(), LLD_ALL_DRIVERS,
+                           /*exitEarly=*/true);
+    return r;
+  }
 
   std::optional<int> mainRet;
   CrashRecoveryContext::Enable();
@@ -238,16 +102,15 @@ int lld_main(int argc, char **argv) {
     inTestOutputDisabled = (i != 1);
 
     // Execute one iteration.
-    auto r = safeLldMain(argc, const_cast<const char **>(argv), llvm::outs(),
-                         llvm::errs());
+    auto r = lldMain(args, llvm::outs(), llvm::errs(), LLD_ALL_DRIVERS);
     if (!r.canRunAgain)
-      exitLld(r.ret); // Exit now, can't re-execute again.
+      exitLld(r.retCode); // Exit now, can't re-execute again.
 
     if (!mainRet) {
-      mainRet = r.ret;
-    } else if (r.ret != *mainRet) {
+      mainRet = r.retCode;
+    } else if (r.retCode != *mainRet) {
       // Exit now, to fail the tests if the result is different between runs.
-      return r.ret;
+      return r.retCode;
     }
   }
   return *mainRet;

@@ -229,3 +229,33 @@ vs8r.v v24, (a0)
 # CHECK-ENCODING: [0x27,0x0c,0x85,0xe2]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors){{$}}
 # CHECK-UNKNOWN: 27 0c 85 e2 <unknown>
+
+vsm.v v24, 0(a0)
+# CHECK-INST: vsm.v v24, (a0)
+# CHECK-ENCODING: [0x27,0x0c,0xb5,0x02]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors){{$}}
+# CHECK-UNKNOWN: 27 0c b5 02 <unknown>
+
+vse8.v v24, 0(a0), v0.t
+# CHECK-INST: vse8.v v24, (a0), v0.t
+# CHECK-ENCODING: [0x27,0x0c,0x05,0x00]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors){{$}}
+# CHECK-UNKNOWN: 27 0c 05 00 <unknown>
+
+vsse16.v v24, 0(a0), a1, v0.t
+# CHECK-INST: vsse16.v v24, (a0), a1, v0.t
+# CHECK-ENCODING: [0x27,0x5c,0xb5,0x08]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors){{$}}
+# CHECK-UNKNOWN: 27 5c b5 08 <unknown>
+
+vsuxei8.v v24, 0(a0), v4, v0.t
+# CHECK-INST: vsuxei8.v v24, (a0), v4, v0.t
+# CHECK-ENCODING: [0x27,0x0c,0x45,0x04]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors){{$}}
+# CHECK-UNKNOWN: 27 0c 45 04 <unknown>
+
+vsoxei32.v v24, 0(a0), v4, v0.t
+# CHECK-INST: vsoxei32.v v24, (a0), v4, v0.t
+# CHECK-ENCODING: [0x27,0x6c,0x45,0x0c]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors){{$}}
+# CHECK-UNKNOWN: 27 6c 45 0c <unknown>

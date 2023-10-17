@@ -7,7 +7,9 @@ include(BuiltinTests)
 include(CheckIncludeFile)
 include(CheckCXXSourceCompiles)
 include(GNUInstallDirs)
+include(GetClangResourceDir)
 include(ExtendPath)
+include(CompilerRTDarwinUtils)
 
 check_include_file(unwind.h HAVE_UNWIND_H)
 
@@ -37,15 +39,10 @@ if (LLVM_LIBRARY_OUTPUT_INTDIR AND LLVM_RUNTIME_OUTPUT_INTDIR AND PACKAGE_VERSIO
 endif()
 
 if (LLVM_TREE_AVAILABLE)
-  # Compute the Clang version from the LLVM version.
-  # FIXME: We should be able to reuse CLANG_VERSION_MAJOR variable calculated
-  #        in Clang cmake files, instead of copying the rules here.
-  string(REGEX MATCH "^[0-9]+" CLANG_VERSION_MAJOR
-         ${PACKAGE_VERSION})
   # Setup the paths where compiler-rt runtimes and headers should be stored.
-  set(COMPILER_RT_OUTPUT_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/clang/${CLANG_VERSION_MAJOR})
+  get_clang_resource_dir(COMPILER_RT_OUTPUT_DIR PREFIX ${LLVM_LIBRARY_OUTPUT_INTDIR}/..)
   set(COMPILER_RT_EXEC_OUTPUT_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
-  set(COMPILER_RT_INSTALL_PATH lib${LLVM_LIBDIR_SUFFIX}/clang/${CLANG_VERSION_MAJOR})
+  get_clang_resource_dir(COMPILER_RT_INSTALL_PATH)
   option(COMPILER_RT_INCLUDE_TESTS "Generate and build compiler-rt unit tests."
          ${LLVM_INCLUDE_TESTS})
   option(COMPILER_RT_ENABLE_WERROR "Fail and stop if warning is triggered"
@@ -145,7 +142,18 @@ if(APPLE)
                    "-darwin-target-variant" "x86_64-apple-ios13.1-macabi"
                    "-Werror")
   option(COMPILER_RT_ENABLE_MACCATALYST "Enable building for Mac Catalyst" ${COMPILER_RT_HAS_DARWIN_TARGET_VARIANT_FLAG})
-  option(COMPILER_RT_ENABLE_IOS "Enable building for iOS" On)
+
+  # Don't enable COMPILER_RT_ENABLE_IOS if we can't find the sdk dir.
+  # This can happen when you only have the commandline tools installed
+  # which doesn't come with the iOS SDK.
+  find_darwin_sdk_dir(HAS_IOS_SDK "iphoneos")
+  set(COMPILER_RT_ENABLE_IOS_DEFAULT On)
+  if("${HAS_IOS_SDK}" STREQUAL "")
+    message(WARNING "iOS SDK not found! Building compiler-rt without iOS support.")
+    set(COMPILER_RT_ENABLE_IOS_DEFAULT Off)
+  endif()
+  option(COMPILER_RT_ENABLE_IOS "Enable building for iOS" ${COMPILER_RT_ENABLE_IOS_DEFAULT})
+
   option(COMPILER_RT_ENABLE_WATCHOS "Enable building for watchOS - Experimental" Off)
   option(COMPILER_RT_ENABLE_TVOS "Enable building for tvOS - Experimental" Off)
 
@@ -218,18 +226,31 @@ macro(test_targets)
       test_target_arch(sparc "" "-m32")
       test_target_arch(sparcv9 "" "-m64")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "mips")
+      CHECK_SYMBOL_EXISTS (_MIPS_ARCH_MIPS32R6 "" COMPILER_RT_MIPS32R6)
+      CHECK_SYMBOL_EXISTS (_MIPS_ARCH_MIPS64R6 "" COMPILER_RT_MIPS64R6)
+      CHECK_SYMBOL_EXISTS (__mips64 "" COMPILER_RT_MIPS_64)
+      CHECK_SYMBOL_EXISTS (__MIPSEL__ "" COMPILER_RT_MIPS_EL)
+      if ("${COMPILER_RT_MIPS_64}")
+        set(COMPILER_RT_DEFAULT_TARGET_ARCH "mips64")
+      else()
+        set(COMPILER_RT_DEFAULT_TARGET_ARCH "mips")
+      endif()
+      if ("${COMPILER_RT_MIPS_EL}")
+        set(COMPILER_RT_DEFAULT_TARGET_ARCH "${COMPILER_RT_DEFAULT_TARGET_ARCH}el")
+      endif()
+
       # FIXME: Ideally, we would build the N32 library too.
       if("${COMPILER_RT_MIPS_EL}" AND ("${COMPILER_RT_MIPS32R6}" OR "${COMPILER_RT_MIPS64R6}"))
-        test_target_arch(mipsel "" "-mips32r6" "-mabi=32" "-D_LARGEFILE_SOURCE" "-D_FILE_OFFSET_BITS=64")
+        test_target_arch(mipsel "" "-mips32r6" "-mabi=32" "-D_LARGEFILE_SOURCE=1" "-D_FILE_OFFSET_BITS=64")
         test_target_arch(mips64el "" "-mips64r6" "-mabi=64")
       elseif("${COMPILER_RT_MIPS_EL}")
-        test_target_arch(mipsel "" "-mips32r2" "-mabi=32" "-D_LARGEFILE_SOURCE" "-D_FILE_OFFSET_BITS=64")
+        test_target_arch(mipsel "" "-mips32r2" "-mabi=32" "-D_LARGEFILE_SOURCE=1" "-D_FILE_OFFSET_BITS=64")
         test_target_arch(mips64el "" "-mips64r2" "-mabi=64")
       elseif("${COMPILER_RT_MIPS32R6}" OR "${COMPILER_RT_MIPS64R6}")
-        test_target_arch(mips "" "-mips32r6" "-mabi=32" "-D_LARGEFILE_SOURCE" "-D_FILE_OFFSET_BITS=64")
+        test_target_arch(mips "" "-mips32r6" "-mabi=32" "-D_LARGEFILE_SOURCE=1" "-D_FILE_OFFSET_BITS=64")
         test_target_arch(mips64 "" "-mips64r6" "-mabi=64")
       else()
-        test_target_arch(mips "" "-mips32r2" "-mabi=32" "-D_LARGEFILE_SOURCE" "-D_FILE_OFFSET_BITS=64")
+        test_target_arch(mips "" "-mips32r2" "-mabi=32" "-D_LARGEFILE_SOURCE=1" "-D_FILE_OFFSET_BITS=64")
         test_target_arch(mips64 "" "-mips64r2" "-mabi=64")
       endif()
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "arm")

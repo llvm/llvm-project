@@ -145,13 +145,16 @@ StringMap<SmallVector<Symbol *, 0>> &SymbolTable::getDemangledSyms() {
       if (canBeVersioned(*sym)) {
         StringRef name = sym->getName();
         size_t pos = name.find('@');
+        std::string substr;
         if (pos == std::string::npos)
-          demangled = demangle(name.str());
-        else if (pos + 1 == name.size() || name[pos + 1] == '@')
-          demangled = demangle(name.substr(0, pos).str());
-        else
-          demangled =
-              (demangle(name.substr(0, pos).str()) + name.substr(pos)).str();
+          demangled = demangle(name);
+        else if (pos + 1 == name.size() || name[pos + 1] == '@') {
+          substr = name.substr(0, pos);
+          demangled = demangle(substr);
+        } else {
+          substr = name.substr(0, pos);
+          demangled = (demangle(substr) + name.substr(pos)).str();
+        }
         (*demangledSyms)[demangled].push_back(sym);
       }
   }
@@ -171,10 +174,11 @@ SmallVector<Symbol *, 0> SymbolTable::findAllByVersion(SymbolVersion ver,
                                                        bool includeNonDefault) {
   SmallVector<Symbol *, 0> res;
   SingleStringMatcher m(ver.name);
-  auto check = [&](StringRef name) {
-    size_t pos = name.find('@');
+  auto check = [&](const Symbol &sym) -> bool {
     if (!includeNonDefault)
-      return pos == StringRef::npos;
+      return !sym.hasVersionSuffix;
+    StringRef name = sym.getName();
+    size_t pos = name.find('@');
     return !(pos + 1 < name.size() && name[pos + 1] == '@');
   };
 
@@ -182,14 +186,13 @@ SmallVector<Symbol *, 0> SymbolTable::findAllByVersion(SymbolVersion ver,
     for (auto &p : getDemangledSyms())
       if (m.match(p.first()))
         for (Symbol *sym : p.second)
-          if (check(sym->getName()))
+          if (check(*sym))
             res.push_back(sym);
     return res;
   }
 
   for (Symbol *sym : symVector)
-    if (canBeVersioned(*sym) && check(sym->getName()) &&
-        m.match(sym->getName()))
+    if (canBeVersioned(*sym) && check(*sym) && m.match(sym->getName()))
       res.push_back(sym);
   return res;
 }
@@ -310,7 +313,7 @@ void SymbolTable::scanVersionScript() {
 
   // Then, assign versions to "*". In GNU linkers they have lower priority than
   // other wildcards.
-  for (VersionDefinition &v : config->versionDefinitions) {
+  for (VersionDefinition &v : llvm::reverse(config->versionDefinitions)) {
     for (SymbolVersion &pat : v.nonLocalPatterns)
       if (pat.hasWildcard && pat.name == "*")
         assignWildcard(pat, v.id, v.name);

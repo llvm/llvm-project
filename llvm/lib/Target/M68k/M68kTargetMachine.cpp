@@ -23,7 +23,6 @@
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/PassRegistry.h"
@@ -39,6 +38,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeM68kTarget() {
   auto *PR = PassRegistry::getPassRegistry();
   initializeGlobalISel(*PR);
   initializeM68kDAGToDAGISelPass(*PR);
+  initializeM68kExpandPseudoPass(*PR);
+  initializeM68kGlobalBaseRegPass(*PR);
+  initializeM68kCollapseMOVEMPass(*PR);
 }
 
 namespace {
@@ -99,7 +101,7 @@ M68kTargetMachine::M68kTargetMachine(const Target &T, const Triple &TT,
                                      const TargetOptions &Options,
                                      std::optional<Reloc::Model> RM,
                                      std::optional<CodeModel::Model> CM,
-                                     CodeGenOpt::Level OL, bool JIT)
+                                     CodeGenOptLevel OL, bool JIT)
     : LLVMTargetMachine(T, computeDataLayout(TT, CPU, Options), TT, CPU, FS,
                         Options, getEffectiveRelocModel(TT, RM),
                         ::getEffectiveCodeModel(CM, JIT), OL),

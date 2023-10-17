@@ -9,10 +9,6 @@
 define void @fn1() nounwind uwtable {
 ; CHECK-LABEL: fn1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl $4136, %eax # imm = 0x1028
-; CHECK-NEXT:    callq ___chkstk_ms
-; CHECK-NEXT:    subq %rax, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 4144
 ; CHECK-NEXT:    movl a(%rip), %eax
 ; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    jne .LBB0_2
@@ -24,6 +20,12 @@ define void @fn1() nounwind uwtable {
 ; CHECK-NEXT:    shrq $32, %rax
 ; CHECK-NEXT:    addl %ecx, %eax
 ; CHECK-NEXT:  .LBB0_2: # %select.end
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    movl $4128, %eax # imm = 0x1020
+; CHECK-NEXT:    callq ___chkstk_ms
+; CHECK-NEXT:    subq %rax, %rsp
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 4144
 ; CHECK-NEXT:    movl %eax, b(%rip)
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    # kill: def $ecx killed $ecx killed $rcx

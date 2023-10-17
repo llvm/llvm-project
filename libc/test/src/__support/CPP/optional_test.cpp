@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/optional.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
-using __llvm_libc::cpp::nullopt;
-using __llvm_libc::cpp::optional;
+using LIBC_NAMESPACE::cpp::nullopt;
+using LIBC_NAMESPACE::cpp::optional;
 
 // This class has three properties for testing:
 // 1) No default constructor.

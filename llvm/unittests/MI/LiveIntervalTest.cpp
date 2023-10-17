@@ -1,9 +1,11 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -13,6 +15,8 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "gtest/gtest.h"
+
+#include "../lib/CodeGen/RegisterCoalescer.h"
 
 using namespace llvm;
 
@@ -46,7 +50,7 @@ std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
   TargetOptions Options;
   return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
       T->createTargetMachine("AMDGPU", "gfx900", "", Options, std::nullopt,
-                             std::nullopt, CodeGenOpt::Aggressive)));
+                             std::nullopt, CodeGenOptLevel::Aggressive)));
 }
 
 std::unique_ptr<Module> parseMIR(LLVMContext &Context,
@@ -72,33 +76,42 @@ std::unique_ptr<Module> parseMIR(LLVMContext &Context,
   return M;
 }
 
-typedef std::function<void(MachineFunction&,LiveIntervals&)> LiveIntervalTest;
-
 struct TestPass : public MachineFunctionPass {
   static char ID;
-  TestPass() : MachineFunctionPass(ID) {
+  TestPass() : MachineFunctionPass(ID) {}
+};
+
+template <typename AnalysisType>
+struct TestPassT : public TestPass {
+
+  typedef std::function<void(MachineFunction&,AnalysisType&)> TestFx;
+
+  TestPassT() {
     // We should never call this but always use PM.add(new TestPass(...))
     abort();
   }
-  TestPass(LiveIntervalTest T) : MachineFunctionPass(ID), T(T) {
+  TestPassT(TestFx T, bool ShouldPass)
+      : T(T), ShouldPass(ShouldPass) {
     initializeTestPassPass(*PassRegistry::getPassRegistry());
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
-    LiveIntervals &LIS = getAnalysis<LiveIntervals>();
-    T(MF, LIS);
-    EXPECT_TRUE(MF.verify(this));
+    AnalysisType &A = getAnalysis<AnalysisType>();
+    T(MF, A);
+    EXPECT_EQ(MF.verify(this, /* Banner */ nullptr, /* AbortOnError */ false),
+              ShouldPass);
     return true;
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
-    AU.addRequired<LiveIntervals>();
-    AU.addPreserved<LiveIntervals>();
+    AU.addRequired<AnalysisType>();
+    AU.addPreserved<AnalysisType>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 private:
-  LiveIntervalTest T;
+  TestFx T;
+  bool ShouldPass;
 };
 
 static MachineInstr &getMI(MachineFunction &MF, unsigned At,
@@ -162,7 +175,30 @@ static void testSplitAt(MachineFunction &MF, LiveIntervals &LIS,
   MBB.splitAt(SplitInstr, false, &LIS);
 }
 
-static void liveIntervalTest(StringRef MIRFunc, LiveIntervalTest T) {
+/**
+ * Helper function to test for interference between a hard register and a
+ * virtual register live ranges.
+ */
+static bool checkRegUnitInterference(LiveIntervals &LIS,
+                                     const TargetRegisterInfo &TRI,
+                                     const LiveInterval &VirtReg,
+                                     MCRegister PhysReg) {
+  if (VirtReg.empty())
+    return false;
+  CoalescerPair CP(VirtReg.reg(), PhysReg, TRI);
+
+  for (MCRegUnit Unit : TRI.regunits(PhysReg)) {
+    const LiveRange &UnitRange = LIS.getRegUnit(Unit);
+    if (VirtReg.overlaps(UnitRange, CP, *LIS.getSlotIndexes()))
+      return true;
+  }
+  return false;
+}
+
+template <typename AnalysisType>
+static void doTest(StringRef MIRFunc,
+                   typename TestPassT<AnalysisType>::TestFx T,
+                   bool ShouldPass = true) {
   LLVMContext Context;
   std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
   // This test is designed for the X86 backend; stop if it is not available.
@@ -170,7 +206,18 @@ static void liveIntervalTest(StringRef MIRFunc, LiveIntervalTest T) {
     return;
 
   legacy::PassManager PM;
+  std::unique_ptr<MIRParser> MIR;
+  std::unique_ptr<Module> M = parseMIR(Context, PM, MIR, *TM, MIRFunc, "func");
+  ASSERT_TRUE(M);
 
+  PM.add(new TestPassT<AnalysisType>(T, ShouldPass));
+
+  PM.run(*M);
+}
+
+static void liveIntervalTest(StringRef MIRFunc,
+                             TestPassT<LiveIntervals>::TestFx T,
+                             bool ShouldPass = true) {
   SmallString<160> S;
   StringRef MIRString = (Twine(R"MIR(
 ---
@@ -181,14 +228,25 @@ registers:
 body: |
   bb.0:
 )MIR") + Twine(MIRFunc) + Twine("...\n")).toNullTerminatedStringRef(S);
-  std::unique_ptr<MIRParser> MIR;
-  std::unique_ptr<Module> M = parseMIR(Context, PM, MIR, *TM, MIRString,
-                                       "func");
-  ASSERT_TRUE(M);
 
-  PM.add(new TestPass(T));
+  doTest<LiveIntervals>(MIRString, T, ShouldPass);
+}
 
-  PM.run(*M);
+static void liveVariablesTest(StringRef MIRFunc,
+                             TestPassT<LiveVariables>::TestFx T,
+                             bool ShouldPass = true) {
+  SmallString<160> S;
+  StringRef MIRString = (Twine(R"MIR(
+---
+...
+name: func
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sreg_64 }
+body: |
+  bb.0:
+)MIR") + Twine(MIRFunc) + Twine("...\n")).toNullTerminatedStringRef(S);
+  doTest<LiveVariables>(MIRString, T, ShouldPass);
 }
 
 } // End of anonymous namespace.
@@ -680,6 +738,114 @@ TEST(LiveIntervalTest, RepairIntervals) {
       Instr2.getOperand(1).getReg(),
     };
     LIS.repairIntervalsInRange(MBB, Instr2, Instr3, OrigRegs);
+  });
+}
+
+TEST(LiveIntervalTest, AdjacentIntervals) {
+  liveIntervalTest(
+      R"MIR(
+    successors: %bb.1, %bb.2
+
+    $vgpr1 = IMPLICIT_DEF
+    S_NOP 0, implicit $vgpr1
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32 = IMPLICIT_DEF
+    S_CBRANCH_VCCNZ %bb.2, implicit undef $vcc
+    S_BRANCH %bb.1
+  bb.1:
+    $vgpr0, dead renamable $vcc = V_ADD_CO_U32_e64 %1, %2, 0, implicit $exec
+    S_NOP 0, implicit $vgpr0
+    S_BRANCH %bb.3
+  bb.2:
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1, dead renamable $vcc = V_ADD_CO_U32_e64 %1, %2, 0, implicit $exec
+    S_NOP 0, implicit $vgpr0, implicit $vgpr1
+    S_BRANCH %bb.3
+  bb.3:
+)MIR",
+      [](MachineFunction &MF, LiveIntervals &LIS) {
+        const auto &R1 =
+            LIS.getInterval(getMI(MF, 2, 0).getOperand(0).getReg());
+        const auto &R2 =
+            LIS.getInterval(getMI(MF, 3, 0).getOperand(0).getReg());
+        MCRegister V1 = getMI(MF, 1, 2).getOperand(0).getReg().asMCReg();
+
+        ASSERT_FALSE(checkRegUnitInterference(
+            LIS, *MF.getSubtarget().getRegisterInfo(), R1, V1));
+        ASSERT_FALSE(checkRegUnitInterference(
+            LIS, *MF.getSubtarget().getRegisterInfo(), R2, V1));
+      });
+}
+
+TEST(LiveIntervalTest, LiveThroughSegments) {
+  liveIntervalTest(
+      R"MIR(
+    %0 = IMPLICIT_DEF
+    S_BRANCH %bb.2
+  bb.1:
+    S_NOP 0, implicit %0
+    S_ENDPGM 0
+  bb.2:
+    S_BRANCH %bb.1
+)MIR",
+      [](MachineFunction &MF, LiveIntervals &LIS) {
+        MachineInstr &ImpDef = getMI(MF, 0, 0);
+        MachineInstr &Nop = getMI(MF, 0, 1);
+        LiveInterval &LI = LIS.getInterval(ImpDef.getOperand(0).getReg());
+        SlotIndex OrigIdx = LIS.getInstructionIndex(ImpDef).getRegSlot();
+        LiveInterval::iterator FirstSeg = LI.FindSegmentContaining(OrigIdx);
+
+        // %0 is live through bb.2. Move its def into bb.1 and update LIS but do
+        // not remove the segment for bb.2. This should cause machine
+        // verification to fail.
+        LIS.RemoveMachineInstrFromMaps(ImpDef);
+        ImpDef.moveBefore(&Nop);
+        LIS.InsertMachineInstrInMaps(ImpDef);
+
+        SlotIndex NewIdx = LIS.getInstructionIndex(ImpDef).getRegSlot();
+        FirstSeg->start = NewIdx;
+        FirstSeg->valno->def = NewIdx;
+      },
+      false);
+}
+
+TEST(LiveVariablesTest, recomputeForSingleDefVirtReg_handle_undef1) {
+  liveVariablesTest(R"MIR(
+    %0 = IMPLICIT_DEF
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit undef %0
+)MIR", [](MachineFunction &MF, LiveVariables &LV) {
+     auto &FirstNop = getMI(MF, 1, 0);
+     auto &SecondNop = getMI(MF, 2, 0);
+     EXPECT_TRUE(FirstNop.getOperand(1).isKill());
+     EXPECT_FALSE(SecondNop.getOperand(1).isKill());
+
+     Register R = Register::index2VirtReg(0);
+     LV.recomputeForSingleDefVirtReg(R);
+
+     EXPECT_TRUE(FirstNop.getOperand(1).isKill());
+     EXPECT_FALSE(SecondNop.getOperand(1).isKill());
+  });
+}
+
+TEST(LiveVariablesTest, recomputeForSingleDefVirtReg_handle_undef2) {
+  liveVariablesTest(R"MIR(
+    %0 = IMPLICIT_DEF
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit undef %0, implicit %0
+)MIR", [](MachineFunction &MF, LiveVariables &LV) {
+     auto &FirstNop = getMI(MF, 1, 0);
+     auto &SecondNop = getMI(MF, 2, 0);
+     EXPECT_FALSE(FirstNop.getOperand(1).isKill());
+     EXPECT_FALSE(SecondNop.getOperand(1).isKill());
+     EXPECT_TRUE(SecondNop.getOperand(2).isKill());
+
+     Register R = Register::index2VirtReg(0);
+     LV.recomputeForSingleDefVirtReg(R);
+
+     EXPECT_FALSE(FirstNop.getOperand(1).isKill());
+     EXPECT_FALSE(SecondNop.getOperand(1).isKill());
+     EXPECT_TRUE(SecondNop.getOperand(2).isKill());
   });
 }
 

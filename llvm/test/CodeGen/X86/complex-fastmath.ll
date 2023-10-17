@@ -70,7 +70,7 @@ define <2 x double> @complex_square_f64(<2 x double>) #0 {
 ;
 ; AVX1-LABEL: complex_square_f64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX1-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX1-NEXT:    vaddsd %xmm0, %xmm0, %xmm2
 ; AVX1-NEXT:    vmulsd %xmm2, %xmm1, %xmm2
 ; AVX1-NEXT:    vmulsd %xmm0, %xmm0, %xmm0
@@ -81,7 +81,7 @@ define <2 x double> @complex_square_f64(<2 x double>) #0 {
 ;
 ; FMA-LABEL: complex_square_f64:
 ; FMA:       # %bb.0:
-; FMA-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; FMA-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; FMA-NEXT:    vaddsd %xmm0, %xmm0, %xmm2
 ; FMA-NEXT:    vmulsd %xmm2, %xmm1, %xmm2
 ; FMA-NEXT:    vmulsd %xmm1, %xmm1, %xmm1
@@ -176,8 +176,8 @@ define <2 x double> @complex_mul_f64(<2 x double>, <2 x double>) #0 {
 ;
 ; AVX1-LABEL: complex_mul_f64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
-; AVX1-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm1[1,0]
+; AVX1-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
+; AVX1-NEXT:    vshufpd {{.*#+}} xmm3 = xmm1[1,0]
 ; AVX1-NEXT:    vmulsd %xmm0, %xmm3, %xmm4
 ; AVX1-NEXT:    vmulsd %xmm2, %xmm1, %xmm5
 ; AVX1-NEXT:    vaddsd %xmm5, %xmm4, %xmm4
@@ -189,8 +189,8 @@ define <2 x double> @complex_mul_f64(<2 x double>, <2 x double>) #0 {
 ;
 ; FMA-LABEL: complex_mul_f64:
 ; FMA:       # %bb.0:
-; FMA-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
-; FMA-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm1[1,0]
+; FMA-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
+; FMA-NEXT:    vshufpd {{.*#+}} xmm3 = xmm1[1,0]
 ; FMA-NEXT:    vmulsd %xmm2, %xmm1, %xmm4
 ; FMA-NEXT:    vfmadd231sd {{.*#+}} xmm4 = (xmm3 * xmm0) + xmm4
 ; FMA-NEXT:    vmulsd %xmm2, %xmm3, %xmm2

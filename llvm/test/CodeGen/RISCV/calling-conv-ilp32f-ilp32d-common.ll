@@ -25,8 +25,8 @@ define i32 @caller_float_in_fpr() nounwind {
 ; RV32-ILP32FD:       # %bb.0:
 ; RV32-ILP32FD-NEXT:    addi sp, sp, -16
 ; RV32-ILP32FD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-ILP32FD-NEXT:    lui a0, %hi(.LCPI1_0)
-; RV32-ILP32FD-NEXT:    flw fa0, %lo(.LCPI1_0)(a0)
+; RV32-ILP32FD-NEXT:    lui a0, 262144
+; RV32-ILP32FD-NEXT:    fmv.w.x fa0, a0
 ; RV32-ILP32FD-NEXT:    li a0, 1
 ; RV32-ILP32FD-NEXT:    call callee_float_in_fpr@plt
 ; RV32-ILP32FD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -55,8 +55,8 @@ define i32 @caller_float_in_fpr_exhausted_gprs() nounwind {
 ; RV32-ILP32FD-NEXT:    addi sp, sp, -16
 ; RV32-ILP32FD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-ILP32FD-NEXT:    li a1, 5
-; RV32-ILP32FD-NEXT:    lui a0, %hi(.LCPI3_0)
-; RV32-ILP32FD-NEXT:    flw fa0, %lo(.LCPI3_0)(a0)
+; RV32-ILP32FD-NEXT:    lui a0, 265216
+; RV32-ILP32FD-NEXT:    fmv.w.x fa0, a0
 ; RV32-ILP32FD-NEXT:    li a0, 1
 ; RV32-ILP32FD-NEXT:    li a2, 2
 ; RV32-ILP32FD-NEXT:    li a4, 3
@@ -79,9 +79,9 @@ define i32 @caller_float_in_fpr_exhausted_gprs() nounwind {
 define i32 @callee_float_in_gpr_exhausted_fprs(float %a, float %b, float %c, float %d, float %e, float %f, float %g, float %h, float %i) nounwind {
 ; RV32-ILP32FD-LABEL: callee_float_in_gpr_exhausted_fprs:
 ; RV32-ILP32FD:       # %bb.0:
-; RV32-ILP32FD-NEXT:    fmv.w.x ft0, a0
+; RV32-ILP32FD-NEXT:    fmv.w.x fa5, a0
 ; RV32-ILP32FD-NEXT:    fcvt.w.s a0, fa7, rtz
-; RV32-ILP32FD-NEXT:    fcvt.w.s a1, ft0, rtz
+; RV32-ILP32FD-NEXT:    fcvt.w.s a1, fa5, rtz
 ; RV32-ILP32FD-NEXT:    add a0, a0, a1
 ; RV32-ILP32FD-NEXT:    ret
   %h_fptosi = fptosi float %h to i32
@@ -95,22 +95,22 @@ define i32 @caller_float_in_gpr_exhausted_fprs() nounwind {
 ; RV32-ILP32FD:       # %bb.0:
 ; RV32-ILP32FD-NEXT:    addi sp, sp, -16
 ; RV32-ILP32FD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-ILP32FD-NEXT:    lui a0, %hi(.LCPI5_0)
-; RV32-ILP32FD-NEXT:    flw fa0, %lo(.LCPI5_0)(a0)
-; RV32-ILP32FD-NEXT:    lui a0, %hi(.LCPI5_1)
-; RV32-ILP32FD-NEXT:    flw fa1, %lo(.LCPI5_1)(a0)
-; RV32-ILP32FD-NEXT:    lui a0, %hi(.LCPI5_2)
-; RV32-ILP32FD-NEXT:    flw fa2, %lo(.LCPI5_2)(a0)
-; RV32-ILP32FD-NEXT:    lui a0, %hi(.LCPI5_3)
-; RV32-ILP32FD-NEXT:    flw fa3, %lo(.LCPI5_3)(a0)
-; RV32-ILP32FD-NEXT:    lui a0, %hi(.LCPI5_4)
-; RV32-ILP32FD-NEXT:    flw fa4, %lo(.LCPI5_4)(a0)
-; RV32-ILP32FD-NEXT:    lui a0, %hi(.LCPI5_5)
-; RV32-ILP32FD-NEXT:    flw fa5, %lo(.LCPI5_5)(a0)
-; RV32-ILP32FD-NEXT:    lui a0, %hi(.LCPI5_6)
-; RV32-ILP32FD-NEXT:    flw fa6, %lo(.LCPI5_6)(a0)
-; RV32-ILP32FD-NEXT:    lui a0, %hi(.LCPI5_7)
-; RV32-ILP32FD-NEXT:    flw fa7, %lo(.LCPI5_7)(a0)
+; RV32-ILP32FD-NEXT:    lui a0, 260096
+; RV32-ILP32FD-NEXT:    fmv.w.x fa0, a0
+; RV32-ILP32FD-NEXT:    lui a0, 262144
+; RV32-ILP32FD-NEXT:    fmv.w.x fa1, a0
+; RV32-ILP32FD-NEXT:    lui a0, 263168
+; RV32-ILP32FD-NEXT:    fmv.w.x fa2, a0
+; RV32-ILP32FD-NEXT:    lui a0, 264192
+; RV32-ILP32FD-NEXT:    fmv.w.x fa3, a0
+; RV32-ILP32FD-NEXT:    lui a0, 264704
+; RV32-ILP32FD-NEXT:    fmv.w.x fa4, a0
+; RV32-ILP32FD-NEXT:    lui a0, 265216
+; RV32-ILP32FD-NEXT:    fmv.w.x fa5, a0
+; RV32-ILP32FD-NEXT:    lui a0, 265728
+; RV32-ILP32FD-NEXT:    fmv.w.x fa6, a0
+; RV32-ILP32FD-NEXT:    lui a0, 266240
+; RV32-ILP32FD-NEXT:    fmv.w.x fa7, a0
 ; RV32-ILP32FD-NEXT:    lui a0, 266496
 ; RV32-ILP32FD-NEXT:    call callee_float_in_gpr_exhausted_fprs@plt
 ; RV32-ILP32FD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -126,8 +126,8 @@ define i32 @caller_float_in_gpr_exhausted_fprs() nounwind {
 define i32 @callee_float_on_stack_exhausted_gprs_fprs(i64 %a, float %b, i64 %c, float %d, i64 %e, float %f, i64 %g, float %h, float %i, float %j, float %k, float %l, float %m) nounwind {
 ; RV32-ILP32FD-LABEL: callee_float_on_stack_exhausted_gprs_fprs:
 ; RV32-ILP32FD:       # %bb.0:
-; RV32-ILP32FD-NEXT:    flw ft0, 0(sp)
-; RV32-ILP32FD-NEXT:    fcvt.w.s a0, ft0, rtz
+; RV32-ILP32FD-NEXT:    flw fa5, 0(sp)
+; RV32-ILP32FD-NEXT:    fcvt.w.s a0, fa5, rtz
 ; RV32-ILP32FD-NEXT:    add a0, a6, a0
 ; RV32-ILP32FD-NEXT:    ret
   %g_trunc = trunc i64 %g to i32
@@ -142,22 +142,22 @@ define i32 @caller_float_on_stack_exhausted_gprs_fprs() nounwind {
 ; RV32-ILP32FD-NEXT:    addi sp, sp, -16
 ; RV32-ILP32FD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-ILP32FD-NEXT:    lui a1, 267520
-; RV32-ILP32FD-NEXT:    lui a0, %hi(.LCPI7_0)
-; RV32-ILP32FD-NEXT:    flw fa0, %lo(.LCPI7_0)(a0)
-; RV32-ILP32FD-NEXT:    lui a0, %hi(.LCPI7_1)
-; RV32-ILP32FD-NEXT:    flw fa1, %lo(.LCPI7_1)(a0)
-; RV32-ILP32FD-NEXT:    lui a0, %hi(.LCPI7_2)
-; RV32-ILP32FD-NEXT:    flw fa2, %lo(.LCPI7_2)(a0)
-; RV32-ILP32FD-NEXT:    lui a0, %hi(.LCPI7_3)
-; RV32-ILP32FD-NEXT:    flw fa3, %lo(.LCPI7_3)(a0)
-; RV32-ILP32FD-NEXT:    lui a0, %hi(.LCPI7_4)
-; RV32-ILP32FD-NEXT:    flw fa4, %lo(.LCPI7_4)(a0)
-; RV32-ILP32FD-NEXT:    lui a0, %hi(.LCPI7_5)
-; RV32-ILP32FD-NEXT:    flw fa5, %lo(.LCPI7_5)(a0)
-; RV32-ILP32FD-NEXT:    lui a0, %hi(.LCPI7_6)
-; RV32-ILP32FD-NEXT:    flw fa6, %lo(.LCPI7_6)(a0)
-; RV32-ILP32FD-NEXT:    lui a0, %hi(.LCPI7_7)
-; RV32-ILP32FD-NEXT:    flw fa7, %lo(.LCPI7_7)(a0)
+; RV32-ILP32FD-NEXT:    lui a0, 262144
+; RV32-ILP32FD-NEXT:    fmv.w.x fa0, a0
+; RV32-ILP32FD-NEXT:    lui a0, 264192
+; RV32-ILP32FD-NEXT:    fmv.w.x fa1, a0
+; RV32-ILP32FD-NEXT:    lui a0, 265216
+; RV32-ILP32FD-NEXT:    fmv.w.x fa2, a0
+; RV32-ILP32FD-NEXT:    lui a0, 266240
+; RV32-ILP32FD-NEXT:    fmv.w.x fa3, a0
+; RV32-ILP32FD-NEXT:    lui a0, 266496
+; RV32-ILP32FD-NEXT:    fmv.w.x fa4, a0
+; RV32-ILP32FD-NEXT:    lui a0, 266752
+; RV32-ILP32FD-NEXT:    fmv.w.x fa5, a0
+; RV32-ILP32FD-NEXT:    lui a0, 267008
+; RV32-ILP32FD-NEXT:    fmv.w.x fa6, a0
+; RV32-ILP32FD-NEXT:    lui a0, 267264
+; RV32-ILP32FD-NEXT:    fmv.w.x fa7, a0
 ; RV32-ILP32FD-NEXT:    li a0, 1
 ; RV32-ILP32FD-NEXT:    li a2, 3
 ; RV32-ILP32FD-NEXT:    li a4, 5
@@ -180,8 +180,8 @@ define i32 @caller_float_on_stack_exhausted_gprs_fprs() nounwind {
 define float @callee_float_ret() nounwind {
 ; RV32-ILP32FD-LABEL: callee_float_ret:
 ; RV32-ILP32FD:       # %bb.0:
-; RV32-ILP32FD-NEXT:    lui a0, %hi(.LCPI8_0)
-; RV32-ILP32FD-NEXT:    flw fa0, %lo(.LCPI8_0)(a0)
+; RV32-ILP32FD-NEXT:    lui a0, 260096
+; RV32-ILP32FD-NEXT:    fmv.w.x fa0, a0
 ; RV32-ILP32FD-NEXT:    ret
   ret float 1.0
 }

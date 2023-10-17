@@ -1,4 +1,4 @@
-//===-- RISCVInstrInfo.h - RISCV Instruction Information --------*- C++ -*-===//
+//===-- RISCVInstrInfo.h - RISC-V Instruction Information -------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains the RISCV implementation of the TargetInstrInfo class.
+// This file contains the RISC-V implementation of the TargetInstrInfo class.
 //
 //===----------------------------------------------------------------------===//
 
@@ -24,6 +24,11 @@
 namespace llvm {
 
 class RISCVSubtarget;
+
+static const MachineMemOperand::Flags MONontemporalBit0 =
+    MachineMemOperand::MOTargetFlag1;
+static const MachineMemOperand::Flags MONontemporalBit1 =
+    MachineMemOperand::MOTargetFlag2;
 
 namespace RISCVCC {
 
@@ -51,8 +56,12 @@ public:
 
   unsigned isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
+  unsigned isLoadFromStackSlot(const MachineInstr &MI, int &FrameIndex,
+                               unsigned &MemBytes) const override;
   unsigned isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
+  unsigned isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex,
+                              unsigned &MemBytes) const override;
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                    const DebugLoc &DL, MCRegister DstReg, MCRegister SrcReg,
@@ -128,6 +137,13 @@ public:
   bool verifyInstruction(const MachineInstr &MI,
                          StringRef &ErrInfo) const override;
 
+  bool canFoldIntoAddrMode(const MachineInstr &MemI, Register Reg,
+                           const MachineInstr &AddrI,
+                           ExtAddrMode &AM) const override;
+
+  MachineInstr *emitLdStWithAddr(MachineInstr &MemI,
+                                 const ExtAddrMode &AM) const override;
+
   bool getMemOperandWithOffsetWidth(const MachineInstr &LdSt,
                                     const MachineOperand *&BaseOp,
                                     int64_t &Offset, unsigned &Width,
@@ -155,12 +171,13 @@ public:
   bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const override;
 
   // Calculate target-specific information for a set of outlining candidates.
-  outliner::OutlinedFunction getOutliningCandidateInfo(
+  std::optional<outliner::OutlinedFunction> getOutliningCandidateInfo(
       std::vector<outliner::Candidate> &RepeatedSequenceLocs) const override;
 
   // Return if/how a given MachineInstr should be outlined.
-  outliner::InstrType getOutliningType(MachineBasicBlock::iterator &MBBI,
-                                       unsigned Flags) const override;
+  virtual outliner::InstrType
+  getOutliningTypeImpl(MachineBasicBlock::iterator &MBBI,
+                       unsigned Flags) const override;
 
   // Insert a custom frame for outlined functions.
   void buildOutlinedFrame(MachineBasicBlock &MBB, MachineFunction &MF,
@@ -194,6 +211,8 @@ public:
 
   bool useMachineCombiner() const override { return true; }
 
+  MachineTraceStrategy getMachineCombinerTraceStrategy() const override;
+
   void setSpecialOperandAttr(MachineInstr &OldMI1, MachineInstr &OldMI2,
                              MachineInstr &NewMI1,
                              MachineInstr &NewMI2) const override;
@@ -220,19 +239,14 @@ public:
 
   std::optional<unsigned> getInverseOpcode(unsigned Opcode) const override;
 
-  // Returns true if all uses of OrigMI only depend on the lower \p NBits bits
-  // of its output.
-  bool hasAllNBitUsers(const MachineInstr &MI, const MachineRegisterInfo &MRI,
-                       unsigned NBits) const;
-  // Returns true if all uses of OrigMI only depend on the lower word of its
-  // output, so we can transform OrigMI to the corresponding W-version.
-  bool hasAllWUsers(const MachineInstr &MI,
-                    const MachineRegisterInfo &MRI) const {
-    return hasAllNBitUsers(MI, MRI, 32);
-  }
+  ArrayRef<std::pair<MachineMemOperand::Flags, const char *>>
+  getSerializableMachineMemOperandTargetFlags() const override;
 
 protected:
   const RISCVSubtarget &STI;
+
+private:
+  unsigned getInstBundleLength(const MachineInstr &MI) const;
 };
 
 namespace RISCV {
@@ -258,9 +272,26 @@ int16_t getNamedOperandIdx(uint16_t Opcode, uint16_t NamedIndex);
 // one of the instructions does not have rounding mode, false will be returned.
 bool hasEqualFRM(const MachineInstr &MI1, const MachineInstr &MI2);
 
+// If \p Opcode is a .vx vector instruction, returns the lower number of bits
+// that are used from the scalar .x operand for a given \p Log2SEW. Otherwise
+// returns null.
+std::optional<unsigned> getVectorLowDemandedScalarBits(uint16_t Opcode,
+                                                       unsigned Log2SEW);
+
 // Special immediate for AVL operand of V pseudo instructions to indicate VLMax.
 static constexpr int64_t VLMaxSentinel = -1LL;
 
+// Mask assignments for floating-point
+static constexpr unsigned FPMASK_Negative_Infinity = 0x001;
+static constexpr unsigned FPMASK_Negative_Normal = 0x002;
+static constexpr unsigned FPMASK_Negative_Subnormal = 0x004;
+static constexpr unsigned FPMASK_Negative_Zero = 0x008;
+static constexpr unsigned FPMASK_Positive_Zero = 0x010;
+static constexpr unsigned FPMASK_Positive_Subnormal = 0x020;
+static constexpr unsigned FPMASK_Positive_Normal = 0x040;
+static constexpr unsigned FPMASK_Positive_Infinity = 0x080;
+static constexpr unsigned FPMASK_Signaling_NaN = 0x100;
+static constexpr unsigned FPMASK_Quiet_NaN = 0x200;
 } // namespace RISCV
 
 namespace RISCVVPseudosTable {

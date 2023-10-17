@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_IR_MODREF_H
-#define LLVM_IR_MODREF_H
+#ifndef LLVM_SUPPORT_MODREF_H
+#define LLVM_SUPPORT_MODREF_H
 
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/Sequence.h"
@@ -55,22 +55,23 @@ enum class ModRefInfo : uint8_t {
 /// Debug print ModRefInfo.
 raw_ostream &operator<<(raw_ostream &OS, ModRefInfo MR);
 
-/// Summary of how a function affects memory in the program.
-///
-/// Loads from constant globals are not considered memory accesses for this
-/// interface. Also, functions may freely modify stack space local to their
-/// invocation without having to report it through these interfaces.
-class MemoryEffects {
+/// The locations at which a function might access memory.
+enum class IRMemLocation {
+  /// Access to memory via argument pointers.
+  ArgMem = 0,
+  /// Memory that is inaccessible via LLVM IR.
+  InaccessibleMem = 1,
+  /// Any other memory.
+  Other = 2,
+
+  /// Helpers to iterate all locations in the MemoryEffectsBase class.
+  First = ArgMem,
+  Last = Other,
+};
+
+template <typename LocationEnum> class MemoryEffectsBase {
 public:
-  /// The locations at which a function might access memory.
-  enum Location {
-    /// Access to memory via argument pointers.
-    ArgMem = 0,
-    /// Memory that is inaccessible via LLVM IR.
-    InaccessibleMem = 1,
-    /// Any other memory.
-    Other = 2,
-  };
+  using Location = LocationEnum;
 
 private:
   uint32_t Data = 0;
@@ -82,79 +83,79 @@ private:
     return (uint32_t)Loc * BitsPerLoc;
   }
 
-  MemoryEffects(uint32_t Data) : Data(Data) {}
+  MemoryEffectsBase(uint32_t Data) : Data(Data) {}
 
   void setModRef(Location Loc, ModRefInfo MR) {
     Data &= ~(LocMask << getLocationPos(Loc));
     Data |= static_cast<uint32_t>(MR) << getLocationPos(Loc);
   }
 
-  friend raw_ostream &operator<<(raw_ostream &OS, MemoryEffects RMRB);
-
 public:
   /// Returns iterator over all supported location kinds.
   static auto locations() {
-    return enum_seq_inclusive(Location::ArgMem, Location::Other,
+    return enum_seq_inclusive(Location::First, Location::Last,
                               force_iteration_on_noniterable_enum);
   }
 
-  /// Create MemoryEffects that can access only the given location with the
+  /// Create MemoryEffectsBase that can access only the given location with the
   /// given ModRefInfo.
-  MemoryEffects(Location Loc, ModRefInfo MR) { setModRef(Loc, MR); }
+  MemoryEffectsBase(Location Loc, ModRefInfo MR) { setModRef(Loc, MR); }
 
-  /// Create MemoryEffects that can access any location with the given
+  /// Create MemoryEffectsBase that can access any location with the given
   /// ModRefInfo.
-  explicit MemoryEffects(ModRefInfo MR) {
+  explicit MemoryEffectsBase(ModRefInfo MR) {
     for (Location Loc : locations())
       setModRef(Loc, MR);
   }
 
-  /// Create MemoryEffects that can read and write any memory.
-  static MemoryEffects unknown() {
-    return MemoryEffects(ModRefInfo::ModRef);
+  /// Create MemoryEffectsBase that can read and write any memory.
+  static MemoryEffectsBase unknown() {
+    return MemoryEffectsBase(ModRefInfo::ModRef);
   }
 
-  /// Create MemoryEffects that cannot read or write any memory.
-  static MemoryEffects none() {
-    return MemoryEffects(ModRefInfo::NoModRef);
+  /// Create MemoryEffectsBase that cannot read or write any memory.
+  static MemoryEffectsBase none() {
+    return MemoryEffectsBase(ModRefInfo::NoModRef);
   }
 
-  /// Create MemoryEffects that can read any memory.
-  static MemoryEffects readOnly() {
-    return MemoryEffects(ModRefInfo::Ref);
+  /// Create MemoryEffectsBase that can read any memory.
+  static MemoryEffectsBase readOnly() {
+    return MemoryEffectsBase(ModRefInfo::Ref);
   }
 
-  /// Create MemoryEffects that can write any memory.
-  static MemoryEffects writeOnly() {
-    return MemoryEffects(ModRefInfo::Mod);
+  /// Create MemoryEffectsBase that can write any memory.
+  static MemoryEffectsBase writeOnly() {
+    return MemoryEffectsBase(ModRefInfo::Mod);
   }
 
-  /// Create MemoryEffects that can only access argument memory.
-  static MemoryEffects argMemOnly(ModRefInfo MR = ModRefInfo::ModRef) {
-    return MemoryEffects(ArgMem, MR);
+  /// Create MemoryEffectsBase that can only access argument memory.
+  static MemoryEffectsBase argMemOnly(ModRefInfo MR = ModRefInfo::ModRef) {
+    return MemoryEffectsBase(Location::ArgMem, MR);
   }
 
-  /// Create MemoryEffects that can only access inaccessible memory.
-  static MemoryEffects inaccessibleMemOnly(ModRefInfo MR = ModRefInfo::ModRef) {
-    return MemoryEffects(InaccessibleMem, MR);
+  /// Create MemoryEffectsBase that can only access inaccessible memory.
+  static MemoryEffectsBase
+  inaccessibleMemOnly(ModRefInfo MR = ModRefInfo::ModRef) {
+    return MemoryEffectsBase(Location::InaccessibleMem, MR);
   }
 
-  /// Create MemoryEffects that can only access inaccessible or argument memory.
-  static MemoryEffects
+  /// Create MemoryEffectsBase that can only access inaccessible or argument
+  /// memory.
+  static MemoryEffectsBase
   inaccessibleOrArgMemOnly(ModRefInfo MR = ModRefInfo::ModRef) {
-    MemoryEffects FRMB = none();
-    FRMB.setModRef(ArgMem, MR);
-    FRMB.setModRef(InaccessibleMem, MR);
+    MemoryEffectsBase FRMB = none();
+    FRMB.setModRef(Location::ArgMem, MR);
+    FRMB.setModRef(Location::InaccessibleMem, MR);
     return FRMB;
   }
 
-  /// Create MemoryEffects from an encoded integer value (used by memory
+  /// Create MemoryEffectsBase from an encoded integer value (used by memory
   /// attribute).
-  static MemoryEffects createFromIntValue(uint32_t Data) {
-    return MemoryEffects(Data);
+  static MemoryEffectsBase createFromIntValue(uint32_t Data) {
+    return MemoryEffectsBase(Data);
   }
 
-  /// Convert MemoryEffects into an encoded integer value (used by memory
+  /// Convert MemoryEffectsBase into an encoded integer value (used by memory
   /// attribute).
   uint32_t toIntValue() const {
     return Data;
@@ -165,16 +166,16 @@ public:
     return ModRefInfo((Data >> getLocationPos(Loc)) & LocMask);
   }
 
-  /// Get new MemoryEffects with modified ModRefInfo for Loc.
-  MemoryEffects getWithModRef(Location Loc, ModRefInfo MR) const {
-    MemoryEffects ME = *this;
+  /// Get new MemoryEffectsBase with modified ModRefInfo for Loc.
+  MemoryEffectsBase getWithModRef(Location Loc, ModRefInfo MR) const {
+    MemoryEffectsBase ME = *this;
     ME.setModRef(Loc, MR);
     return ME;
   }
 
-  /// Get new MemoryEffects with NoModRef on the given Loc.
-  MemoryEffects getWithoutLoc(Location Loc) const {
-    MemoryEffects ME = *this;
+  /// Get new MemoryEffectsBase with NoModRef on the given Loc.
+  MemoryEffectsBase getWithoutLoc(Location Loc) const {
+    MemoryEffectsBase ME = *this;
     ME.setModRef(Loc, ModRefInfo::NoModRef);
     return ME;
   }
@@ -198,57 +199,73 @@ public:
 
   /// Whether this function only (at most) accesses argument memory.
   bool onlyAccessesArgPointees() const {
-    return getWithoutLoc(ArgMem).doesNotAccessMemory();
+    return getWithoutLoc(Location::ArgMem).doesNotAccessMemory();
   }
 
   /// Whether this function may access argument memory.
   bool doesAccessArgPointees() const {
-    return isModOrRefSet(getModRef(ArgMem));
+    return isModOrRefSet(getModRef(Location::ArgMem));
   }
 
   /// Whether this function only (at most) accesses inaccessible memory.
   bool onlyAccessesInaccessibleMem() const {
-    return getWithoutLoc(InaccessibleMem).doesNotAccessMemory();
+    return getWithoutLoc(Location::InaccessibleMem).doesNotAccessMemory();
   }
 
   /// Whether this function only (at most) accesses argument and inaccessible
   /// memory.
   bool onlyAccessesInaccessibleOrArgMem() const {
-    return isNoModRef(getModRef(Other));
+    return getWithoutLoc(Location::InaccessibleMem)
+        .getWithoutLoc(Location::ArgMem)
+        .doesNotAccessMemory();
   }
 
-  /// Intersect with other MemoryEffects.
-  MemoryEffects operator&(MemoryEffects Other) const {
-    return MemoryEffects(Data & Other.Data);
+  /// Intersect with other MemoryEffectsBase.
+  MemoryEffectsBase operator&(MemoryEffectsBase Other) const {
+    return MemoryEffectsBase(Data & Other.Data);
   }
 
-  /// Intersect (in-place) with other MemoryEffects.
-  MemoryEffects &operator&=(MemoryEffects Other) {
+  /// Intersect (in-place) with other MemoryEffectsBase.
+  MemoryEffectsBase &operator&=(MemoryEffectsBase Other) {
     Data &= Other.Data;
     return *this;
   }
 
-  /// Union with other MemoryEffects.
-  MemoryEffects operator|(MemoryEffects Other) const {
-    return MemoryEffects(Data | Other.Data);
+  /// Union with other MemoryEffectsBase.
+  MemoryEffectsBase operator|(MemoryEffectsBase Other) const {
+    return MemoryEffectsBase(Data | Other.Data);
   }
 
-  /// Union (in-place) with other MemoryEffects.
-  MemoryEffects &operator|=(MemoryEffects Other) {
+  /// Union (in-place) with other MemoryEffectsBase.
+  MemoryEffectsBase &operator|=(MemoryEffectsBase Other) {
     Data |= Other.Data;
     return *this;
   }
 
-  /// Check whether this is the same as other MemoryEffects.
-  bool operator==(MemoryEffects Other) const {
-    return Data == Other.Data;
+  /// Subtract other MemoryEffectsBase.
+  MemoryEffectsBase operator-(MemoryEffectsBase Other) const {
+    return MemoryEffectsBase(Data & ~Other.Data);
   }
 
-  /// Check whether this is different from other MemoryEffects.
-  bool operator!=(MemoryEffects Other) const {
-    return !operator==(Other);
+  /// Subtract (in-place) with other MemoryEffectsBase.
+  MemoryEffectsBase &operator-=(MemoryEffectsBase Other) {
+    Data &= ~Other.Data;
+    return *this;
   }
+
+  /// Check whether this is the same as other MemoryEffectsBase.
+  bool operator==(MemoryEffectsBase Other) const { return Data == Other.Data; }
+
+  /// Check whether this is different from other MemoryEffectsBase.
+  bool operator!=(MemoryEffectsBase Other) const { return !operator==(Other); }
 };
+
+/// Summary of how a function affects memory in the program.
+///
+/// Loads from constant globals are not considered memory accesses for this
+/// interface. Also, functions may freely modify stack space local to their
+/// invocation without having to report it through these interfaces.
+using MemoryEffects = MemoryEffectsBase<IRMemLocation>;
 
 /// Debug print MemoryEffects.
 raw_ostream &operator<<(raw_ostream &OS, MemoryEffects RMRB);

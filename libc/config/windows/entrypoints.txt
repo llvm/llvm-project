@@ -25,6 +25,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.memchr
     libc.src.string.memcmp
     libc.src.string.memcpy
+    libc.src.string.memmem
     libc.src.string.memmove
     libc.src.string.mempcpy
     libc.src.string.memrchr
@@ -32,8 +33,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.stpcpy
     libc.src.string.stpncpy
     libc.src.string.strcasecmp
+    libc.src.string.strcasestr
     libc.src.string.strcat
     libc.src.string.strchr
+    libc.src.string.strchrnul
     libc.src.string.strcmp
     libc.src.string.strcpy
     libc.src.string.strcspn
@@ -110,8 +113,9 @@ set(TARGET_LIBM_ENTRYPOINTS
 
     # math.h entrypoints
     libc.src.math.acosf
-    libc.src.math.asin
+    libc.src.math.acoshf
     libc.src.math.asinf
+    libc.src.math.asinhf
     libc.src.math.atanf    
     libc.src.math.atanhf
     libc.src.math.copysign
@@ -123,9 +127,14 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cos
     libc.src.math.cosf
     libc.src.math.coshf
+    libc.src.math.erff
+    libc.src.math.exp
     libc.src.math.expf
+    libc.src.math.exp10
     libc.src.math.exp10f
+    libc.src.math.exp2
     libc.src.math.exp2f
+    libc.src.math.expm1
     libc.src.math.expm1f
     libc.src.math.fabs
     libc.src.math.fabsf
@@ -165,8 +174,11 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.llroundl
     libc.src.math.log10
     libc.src.math.log10f
+    libc.src.math.log1p
     libc.src.math.log1pf
+    libc.src.math.log2
     libc.src.math.log2f
+    libc.src.math.log
     libc.src.math.logf
     libc.src.math.logb
     libc.src.math.logbf
@@ -186,7 +198,6 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.nextafter
     libc.src.math.nextafterf
     libc.src.math.nextafterl
-    libc.src.math.pow
     libc.src.math.remainderf
     libc.src.math.remainder
     libc.src.math.remainderl
@@ -199,6 +210,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.round
     libc.src.math.roundf
     libc.src.math.roundl
+    libc.src.math.scalbn
+    libc.src.math.scalbnf
+    libc.src.math.scalbnl
     libc.src.math.sin
     libc.src.math.sincosf
     libc.src.math.sinf

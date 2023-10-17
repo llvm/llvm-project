@@ -724,14 +724,14 @@ using TruncationConversionCastTypes =
                      CastType<int64_t, uint8_t>, CastType<uint64_t, int32_t>,
                      CastType<uint64_t, int16_t>, CastType<uint64_t, int8_t>>;
 
-TYPED_TEST_SUITE(RangeSetCastToNoopTest, NoopCastTypes);
-TYPED_TEST_SUITE(RangeSetCastToPromotionTest, PromotionCastTypes);
-TYPED_TEST_SUITE(RangeSetCastToTruncationTest, TruncationCastTypes);
-TYPED_TEST_SUITE(RangeSetCastToConversionTest, ConversionCastTypes);
+TYPED_TEST_SUITE(RangeSetCastToNoopTest, NoopCastTypes, );
+TYPED_TEST_SUITE(RangeSetCastToPromotionTest, PromotionCastTypes, );
+TYPED_TEST_SUITE(RangeSetCastToTruncationTest, TruncationCastTypes, );
+TYPED_TEST_SUITE(RangeSetCastToConversionTest, ConversionCastTypes, );
 TYPED_TEST_SUITE(RangeSetCastToPromotionConversionTest,
-                 PromotionConversionCastTypes);
+                 PromotionConversionCastTypes, );
 TYPED_TEST_SUITE(RangeSetCastToTruncationConversionTest,
-                 TruncationConversionCastTypes);
+                 TruncationConversionCastTypes, );
 
 TYPED_TEST(RangeSetCastToNoopTest, RangeSetCastToNoopTest) {
   // Just to reduce the verbosity.

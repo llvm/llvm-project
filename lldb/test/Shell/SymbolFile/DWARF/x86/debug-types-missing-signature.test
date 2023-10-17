@@ -14,10 +14,10 @@ LOOKUPE: no type was found matching 'E'
 RUN: %lldb %t -b -o "type lookup EC" | FileCheck --check-prefix=LOOKUPEC %s
 LOOKUPEC: no type was found matching 'EC'
 
-RUN: not %lldb %t -b -o "print (E) 1" 2>&1 | FileCheck --check-prefix=PRINTE %s
+RUN: not %lldb %t -b -o "expression (E) 1" 2>&1 | FileCheck --check-prefix=PRINTE %s
 PRINTE: use of undeclared identifier 'E'
 
-RUN: not %lldb %t -b -o "print (EC) 1" 2>&1 | FileCheck --check-prefix=PRINTEC %s
+RUN: not %lldb %t -b -o "expression (EC) 1" 2>&1 | FileCheck --check-prefix=PRINTEC %s
 PRINTEC: use of undeclared identifier 'EC'
 
 RUN: %lldb %t -b -o "target variable a e ec" | FileCheck --check-prefix=VARS %s

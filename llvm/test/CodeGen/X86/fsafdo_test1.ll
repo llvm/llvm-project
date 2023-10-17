@@ -1,17 +1,20 @@
-; RUN: llc -enable-fs-discriminator < %s | FileCheck %s
+; RUN: llc -enable-fs-discriminator -improved-fs-discriminator=false < %s | FileCheck %s --check-prefixes=V0,V01
+; RUN: llc -enable-fs-discriminator -improved-fs-discriminator=true < %s | FileCheck %s --check-prefixes=V1,V01
 ;
 ; Check that fs-afdo discriminators are generated.
-; CHECK: .loc    1 7 3 is_stmt 0 discriminator 2 # foo.c:7:3
-; ChECK: .loc    1 9 5 is_stmt 1 discriminator 2 # foo.c:9:5
-; CHECK: .loc    1 9 5 is_stmt 0 discriminator 11266 # foo.c:9:5
-; CHECK: .loc    1 7 3 is_stmt 1 discriminator 11266 # foo.c:7:3
+; V01: .loc    1 7 3 is_stmt 0 discriminator 2 # foo.c:7:3
+; V01: .loc    1 9 5 is_stmt 1 discriminator 2 # foo.c:9:5
+; V0: .loc    1 9 5 is_stmt 0 discriminator 11266 # foo.c:9:5
+; V0: .loc    1 7 3 is_stmt 1 discriminator 11266 # foo.c:7:3
+; V1: .loc    1 9 5 is_stmt 0 discriminator 258 # foo.c:9:5
+; V1: .loc    1 7 3 is_stmt 1 discriminator 258 # foo.c:7:3
 ; Check that variable __llvm_fs_discriminator__ is generated.
-; CHECK: .type   __llvm_fs_discriminator__,@object # @__llvm_fs_discriminator__
-; CHECK: .section        .rodata,"a",@progbits
-; CHECK: .weak   __llvm_fs_discriminator__
-; CHECK: __llvm_fs_discriminator__:
-; CHECK: .byte   1
-; CHECK: .size   __llvm_fs_discriminator__, 1
+; V01: .type   __llvm_fs_discriminator__,@object # @__llvm_fs_discriminator__
+; V01: .section        .rodata,"a",@progbits
+; V01: .weak   __llvm_fs_discriminator__
+; V01: __llvm_fs_discriminator__:
+; V01: .byte   1
+; V01: .size   __llvm_fs_discriminator__, 1
 
 target triple = "x86_64-unknown-linux-gnu"
 

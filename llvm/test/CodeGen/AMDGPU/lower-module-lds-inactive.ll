@@ -18,10 +18,6 @@
 @const_undef = addrspace(3) constant i32 undef
 @const_with_init = addrspace(3) constant i64 8
 
-; External and constant are both left to the optimizer / error diagnostics
-; CHECK: @extern = external addrspace(3) global i32
-@extern = external addrspace(3) global i32
-
 ; Use of an addrspace(3) variable with an initializer is skipped,
 ; so as to preserve the unimplemented error from llc
 ; CHECK: @with_init = addrspace(3) global i64 0
@@ -47,14 +43,12 @@
 ; CHECK: %c0 = load i32, ptr addrspace(3) @const_undef, align 4
 ; CHECK: %c1 = load i64, ptr addrspace(3) @const_with_init, align 4
 ; CHECK: %v0 = atomicrmw add ptr addrspace(3) @with_init, i64 1 seq_cst
-; CHECK: %v1 = cmpxchg ptr addrspace(3) @extern, i32 4, i32 %c0 acq_rel monotonic
-; CHECK: %v2 = atomicrmw add ptr addrspace(4) @addr4, i64 %c1 monotonic
+; CHECK: %v1 = atomicrmw add ptr addrspace(4) @addr4, i64 %c1 monotonic
 define void @use_variables() {
   %c0 = load i32, ptr addrspace(3) @const_undef, align 4
   %c1 = load i64, ptr addrspace(3) @const_with_init, align 4
   %v0 = atomicrmw add ptr addrspace(3) @with_init, i64 1 seq_cst
-  %v1 = cmpxchg ptr addrspace(3) @extern, i32 4, i32 %c0 acq_rel monotonic
-  %v2 = atomicrmw add ptr addrspace(4) @addr4, i64 %c1 monotonic
+  %v1 = atomicrmw add ptr addrspace(4) @addr4, i64 %c1 monotonic
   ret void
 }
 

@@ -24,10 +24,10 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/iterator.h"
-#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/IR/EHPersonalities.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ArrayRecycler.h"
 #include "llvm/Support/AtomicOrdering.h"
@@ -38,6 +38,7 @@
 #include <cstdint>
 #include <memory>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace llvm {
@@ -265,7 +266,7 @@ class LLVM_EXTERNAL_VISIBILITY MachineFunction {
   // RegInfo - Information about each register in use in the function.
   MachineRegisterInfo *RegInfo;
 
-  // Used to keep track of target-specific per-machine function information for
+  // Used to keep track of target-specific per-machine-function information for
   // the target implementation.
   MachineFunctionInfo *MFInfo;
 
@@ -374,6 +375,7 @@ class LLVM_EXTERNAL_VISIBILITY MachineFunction {
   bool HasEHCatchret = false;
   bool HasEHScopes = false;
   bool HasEHFunclets = false;
+  bool IsOutlined = false;
 
   /// BBID to assign to the next basic block of this function.
   unsigned NextBBID = 0;
@@ -406,16 +408,50 @@ class LLVM_EXTERNAL_VISIBILITY MachineFunction {
   void init();
 
 public:
-  struct VariableDbgInfo {
+  /// Description of the location of a variable whose Address is valid and
+  /// unchanging during function execution. The Address may be:
+  /// * A stack index, which can be negative for fixed stack objects.
+  /// * A MCRegister, whose entry value contains the address of the variable.
+  class VariableDbgInfo {
+    std::variant<int, MCRegister> Address;
+
+  public:
     const DILocalVariable *Var;
     const DIExpression *Expr;
-    // The Slot can be negative for fixed stack objects.
-    int Slot;
     const DILocation *Loc;
 
     VariableDbgInfo(const DILocalVariable *Var, const DIExpression *Expr,
                     int Slot, const DILocation *Loc)
-        : Var(Var), Expr(Expr), Slot(Slot), Loc(Loc) {}
+        : Address(Slot), Var(Var), Expr(Expr), Loc(Loc) {}
+
+    VariableDbgInfo(const DILocalVariable *Var, const DIExpression *Expr,
+                    MCRegister EntryValReg, const DILocation *Loc)
+        : Address(EntryValReg), Var(Var), Expr(Expr), Loc(Loc) {}
+
+    /// Return true if this variable is in a stack slot.
+    bool inStackSlot() const { return std::holds_alternative<int>(Address); }
+
+    /// Return true if this variable is in the entry value of a register.
+    bool inEntryValueRegister() const {
+      return std::holds_alternative<MCRegister>(Address);
+    }
+
+    /// Returns the stack slot of this variable, assuming `inStackSlot()` is
+    /// true.
+    int getStackSlot() const { return std::get<int>(Address); }
+
+    /// Returns the MCRegister of this variable, assuming
+    /// `inEntryValueRegister()` is true.
+    MCRegister getEntryValueRegister() const {
+      return std::get<MCRegister>(Address);
+    }
+
+    /// Updates the stack slot of this variable, assuming `inStackSlot()` is
+    /// true.
+    void updateStackSlot(int NewSlot) {
+      assert(inStackSlot());
+      Address = NewSlot;
+    }
   };
 
   class Delegate {
@@ -848,6 +884,12 @@ public:
   bool verify(Pass *p = nullptr, const char *Banner = nullptr,
               bool AbortOnError = true) const;
 
+  /// Run the current MachineFunction through the machine code verifier, useful
+  /// for debugger use.
+  /// \returns true if no problems were found.
+  bool verify(LiveIntervals *LiveInts, SlotIndexes *Indexes,
+              const char *Banner = nullptr, bool AbortOnError = true) const;
+
   // Provide accessors for the MachineBasicBlock list...
   using iterator = BasicBlockListType::iterator;
   using const_iterator = BasicBlockListType::const_iterator;
@@ -1116,6 +1158,9 @@ public:
   bool hasEHFunclets() const { return HasEHFunclets; }
   void setHasEHFunclets(bool V) { HasEHFunclets = V; }
 
+  bool isOutlined() const { return IsOutlined; }
+  void setIsOutlined(bool V) { IsOutlined = V; }
+
   /// Find or create an LandingPadInfo for the specified MachineBasicBlock.
   LandingPadInfo &getOrCreateLandingPadInfo(MachineBasicBlock *LandingPad);
 
@@ -1223,15 +1268,47 @@ public:
 
   /// \}
 
-  /// Collect information used to emit debugging information of a variable.
+  /// Collect information used to emit debugging information of a variable in a
+  /// stack slot.
   void setVariableDbgInfo(const DILocalVariable *Var, const DIExpression *Expr,
                           int Slot, const DILocation *Loc) {
     VariableDbgInfos.emplace_back(Var, Expr, Slot, Loc);
   }
 
+  /// Collect information used to emit debugging information of a variable in
+  /// the entry value of a register.
+  void setVariableDbgInfo(const DILocalVariable *Var, const DIExpression *Expr,
+                          MCRegister Reg, const DILocation *Loc) {
+    VariableDbgInfos.emplace_back(Var, Expr, Reg, Loc);
+  }
+
   VariableDbgInfoMapTy &getVariableDbgInfo() { return VariableDbgInfos; }
   const VariableDbgInfoMapTy &getVariableDbgInfo() const {
     return VariableDbgInfos;
+  }
+
+  /// Returns the collection of variables for which we have debug info and that
+  /// have been assigned a stack slot.
+  auto getInStackSlotVariableDbgInfo() {
+    return make_filter_range(getVariableDbgInfo(), [](auto &VarInfo) {
+      return VarInfo.inStackSlot();
+    });
+  }
+
+  /// Returns the collection of variables for which we have debug info and that
+  /// have been assigned a stack slot.
+  auto getInStackSlotVariableDbgInfo() const {
+    return make_filter_range(getVariableDbgInfo(), [](const auto &VarInfo) {
+      return VarInfo.inStackSlot();
+    });
+  }
+
+  /// Returns the collection of variables for which we have debug info and that
+  /// have been assigned an entry value register.
+  auto getEntryValueVariableDbgInfo() const {
+    return make_filter_range(getVariableDbgInfo(), [](const auto &VarInfo) {
+      return VarInfo.inEntryValueRegister();
+    });
   }
 
   /// Start tracking the arguments passed to the call \p CallI.

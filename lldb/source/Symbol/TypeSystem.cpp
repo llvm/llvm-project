@@ -36,6 +36,7 @@ size_t LanguageSet::Size() const { return bitvector.count(); }
 bool LanguageSet::Empty() const { return bitvector.none(); }
 bool LanguageSet::operator[](unsigned i) const { return bitvector[i]; }
 
+TypeSystem::TypeSystem() = default;
 TypeSystem::~TypeSystem() = default;
 
 static TypeSystemSP CreateInstanceHelper(lldb::LanguageType language,
@@ -185,6 +186,11 @@ std::optional<llvm::json::Value> TypeSystem::ReportStatistics() {
   return std::nullopt;
 }
 
+CompilerDeclContext
+TypeSystem::GetCompilerDeclContextForType(const CompilerType &type) {
+  return CompilerDeclContext();
+}
+
 #pragma mark TypeSystemMap
 
 TypeSystemMap::TypeSystemMap() : m_mutex(), m_map() {}
@@ -216,11 +222,21 @@ void TypeSystemMap::Clear() {
 
 void TypeSystemMap::ForEach(
     std::function<bool(lldb::TypeSystemSP)> const &callback) {
-  std::lock_guard<std::mutex> guard(m_mutex);
+
+  // The callback may call into this function again causing
+  // us to lock m_mutex twice if we held it across the callback.
+  // Since we just care about guarding access to 'm_map', make
+  // a local copy and iterate over that instead.
+  collection map_snapshot;
+  {
+      std::lock_guard<std::mutex> guard(m_mutex);
+      map_snapshot = m_map;
+  }
+
   // Use a std::set so we only call the callback once for each unique
   // TypeSystem instance.
   llvm::DenseSet<TypeSystem *> visited;
-  for (auto &pair : m_map) {
+  for (auto &pair : map_snapshot) {
     TypeSystem *type_system = pair.second.get();
     if (!type_system || visited.count(type_system))
       continue;

@@ -9,8 +9,11 @@ template<typename T> class S {
  public:
    S(T);
 };
+template<typename T> struct S2 { S2(T); };
+template <typename T> S2(T t) -> S2<T>;
 }
 using ns::S;
+using ns::S2;
 
 // TemplateName in TemplateSpecializationType.
 template<typename T>
@@ -36,3 +39,10 @@ using C = decltype(DeducedTemplateSpecializationT);
 // CHECK-NEXT:  |-DeclRefExpr {{.*}}
 // CHECK-NEXT:  `-ElaboratedType {{.*}} 'S<int>' sugar
 // CHECK-NEXT:    `-DeducedTemplateSpecializationType {{.*}} 'ns::S<int>' sugar using
+
+S2 DeducedTemplateSpecializationT2(123);
+using D = decltype(DeducedTemplateSpecializationT2);
+// CHECK:      DecltypeType {{.*}}
+// CHECK-NEXT:  |-DeclRefExpr {{.*}}
+// CHECK-NEXT:  `-ElaboratedType {{.*}} 'S2<int>' sugar
+// CHECK-NEXT:    `-DeducedTemplateSpecializationType {{.*}} 'S2<int>' sugar using

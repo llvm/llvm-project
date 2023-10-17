@@ -3,7 +3,7 @@
 # RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5_main.s -o %tmain.o
 # RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5_helper.s -o %thelper.o
 # RUN: %clang %cflags -dwarf-5 %tmain.o %thelper.o -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
+# RUN: llvm-bolt --always-convert-to-ranges %t.exe -o %t.bolt --update-debug-sections
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.exe | FileCheck --check-prefix=PRECHECK %s
 # RUN: llvm-dwarfdump --show-form --verbose --debug-addr %t.bolt > %t.txt
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt >> %t.txt
@@ -54,18 +54,12 @@
 # POSTCHECK-NEXT: DW_AT_rnglists_base [DW_FORM_sec_offset]	(0x0000000c)
 # POSTCHECK-EMPTY
 # POSTCHECK: DW_TAG_subprogram
-# POSTCHECK-NEXT: DW_AT_low_pc [DW_FORM_addrx]
-# POSTCHECK-SAME: indexed (00000001)
-# POSTCHECK-SAME: address = 0x0000000000000000
 # POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_rnglistx]
 # POSTCHECK-SAME: indexed (0x1)
 # POSTCHECK-SAME: rangelist = 0x00000021
 # POSTCHECK-NEXT: [0x[[#ADDR]], 0x[[#ADDR + 7]])
 
 # POSTCHECK: DW_TAG_subprogram
-# POSTCHECK-NEXT: DW_AT_low_pc [DW_FORM_addrx]
-# POSTCHECK-SAME: indexed (00000001)
-# POSTCHECK-SAME: address = 0x0000000000000000
 # POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_rnglistx]
 # POSTCHECK-SAME: indexed (0x2)
 # POSTCHECK-SAME: rangelist = 0x00000025
@@ -84,18 +78,12 @@
 # POSTCHECK-EMPTY
 
 # POSTCHECK: DW_TAG_subprogram
-# POSTCHECK-NEXT: DW_AT_low_pc [DW_FORM_addrx]
-# POSTCHECK-SAME: indexed (00000001)
-# POSTCHECK-SAME: address = 0x0000000000000000
 # POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_rnglistx]
 # POSTCHECK-SAME: indexed (0x1)
 # POSTCHECK-SAME: rangelist = 0x0000004e
 # POSTCHECK-NEXT: [0x[[#ADDR3]], 0x[[#ADDR3 + 4]])
 # POSTCHECK: DW_TAG_subprogram
 # POSTCHECK: DW_TAG_subprogram
-# POSTCHECK-NEXT: DW_AT_low_pc [DW_FORM_addrx]
-# POSTCHECK-SAME: indexed (00000001)
-# POSTCHECK-SAME: address = 0x0000000000000000
 # POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_rnglistx]
 # POSTCHECK-SAME: indexed (0x2)
 # POSTCHECK-SAME: rangelist = 0x00000052
@@ -103,9 +91,6 @@
 
 # POSTCHECK: DW_TAG_inlined_subroutine
 # POSTCHECK-NEXT: DW_AT_abstract_origin
-# POSTCHECK-NEXT: DW_AT_low_pc [DW_FORM_addrx]
-# POSTCHECK-SAME: indexed (00000001)
-# POSTCHECK-SAME: address = 0x0000000000000000
 # POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_rnglistx]
 # POSTCHECK-SAME: indexed (0x3)
 # POSTCHECK-SAME: rangelist = 0x00000056

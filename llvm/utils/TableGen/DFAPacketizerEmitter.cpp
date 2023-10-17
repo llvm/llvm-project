@@ -24,6 +24,7 @@
 #include "llvm/TableGen/TableGenBackend.h"
 #include <cassert>
 #include <cstdint>
+#include <deque>
 #include <map>
 #include <set>
 #include <string>
@@ -205,6 +206,7 @@ void DFAPacketizerEmitter::createScheduleClasses(unsigned ItineraryIdx,
 // Run the worklist algorithm to generate the DFA.
 //
 void DFAPacketizerEmitter::run(raw_ostream &OS) {
+  emitSourceFileHeader("Target DFA Packetizer Tables", OS);
   OS << "\n"
      << "#include \"llvm/CodeGen/DFAPacketizer.h\"\n";
   OS << "namespace llvm {\n";
@@ -352,11 +354,5 @@ void DFAPacketizerEmitter::emitForItineraries(
      << "\n}\n\n";
 }
 
-namespace llvm {
-
-void EmitDFAPacketizer(RecordKeeper &RK, raw_ostream &OS) {
-  emitSourceFileHeader("Target DFA Packetizer Tables", OS);
-  DFAPacketizerEmitter(RK).run(OS);
-}
-
-} // end namespace llvm
+static TableGen::Emitter::OptClass<DFAPacketizerEmitter>
+    X("gen-dfa-packetizer", "Generate DFA Packetizer for VLIW targets");

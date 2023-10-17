@@ -11,13 +11,13 @@ tablegen(LLVM AArch64GenDisassemblerTables.inc -gen-disassembler)
 tablegen(LLVM AArch64GenFastISel.inc -gen-fast-isel)
 tablegen(LLVM AArch64GenGlobalISel.inc -gen-global-isel)
 tablegen(LLVM AArch64GenO0PreLegalizeGICombiner.inc -gen-global-isel-combiner
-              -combiners="AArch64O0PreLegalizerCombinerHelper")
+              -combiners="AArch64O0PreLegalizerCombiner")
 tablegen(LLVM AArch64GenPreLegalizeGICombiner.inc -gen-global-isel-combiner
-              -combiners="AArch64PreLegalizerCombinerHelper")
+              -combiners="AArch64PreLegalizerCombiner")
 tablegen(LLVM AArch64GenPostLegalizeGICombiner.inc -gen-global-isel-combiner
-              -combiners="AArch64PostLegalizerCombinerHelper")
+              -combiners="AArch64PostLegalizerCombiner")
 tablegen(LLVM AArch64GenPostLegalizeGILowering.inc -gen-global-isel-combiner
-              -combiners="AArch64PostLegalizerLoweringHelper")
+              -combiners="AArch64PostLegalizerLowering")
 tablegen(LLVM AArch64GenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM AArch64GenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM AArch64GenMCPseudoLowering.inc -gen-pseudo-lowering)
@@ -56,13 +56,13 @@ add_llvm_target(AArch64CodeGen
   AArch64FastISel.cpp
   AArch64A53Fix835769.cpp
   AArch64FrameLowering.cpp
+  AArch64GlobalsTagging.cpp
   AArch64CompressJumpTables.cpp
   AArch64ConditionOptimizer.cpp
   AArch64RedundantCopyElimination.cpp
   AArch64ISelDAGToDAG.cpp
   AArch64ISelLowering.cpp
   AArch64InstrInfo.cpp
-  AArch64KCFI.cpp
   AArch64LoadStoreOptimizer.cpp
   AArch64LowerHomogeneousPrologEpilog.cpp
   AArch64MachineFunctionInfo.cpp
@@ -70,6 +70,7 @@ add_llvm_target(AArch64CodeGen
   AArch64MacroFusion.cpp
   AArch64MIPeepholeOpt.cpp
   AArch64MCInstLower.cpp
+  AArch64PointerAuth.cpp
   AArch64PromoteConstant.cpp
   AArch64PBQPRegAlloc.cpp
   AArch64RegisterInfo.cpp
@@ -96,8 +97,11 @@ add_llvm_target(AArch64CodeGen
   AArch64Utils
   Analysis
   AsmPrinter
+  CFGuard
   CodeGen
+  CodeGenTypes
   Core
+  GlobalISel
   MC
   Scalar
   SelectionDAG
@@ -105,12 +109,10 @@ add_llvm_target(AArch64CodeGen
   Target
   TargetParser
   TransformUtils
-  GlobalISel
-  CFGuard
 
   ADD_TO_COMPONENT
   AArch64
-)
+  )
 
 add_subdirectory(AsmParser)
 add_subdirectory(Disassembler)

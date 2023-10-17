@@ -5,13 +5,13 @@ add_llvm_exegesis_unittest_includes(
   )
 
 add_llvm_exegesis_unittest_sources(
-  AssemblerTest.cpp
   BenchmarkResultTest.cpp
   RegisterAliasingTest.cpp
   SchedClassResolutionTest.cpp
   SnippetFileTest.cpp
   SnippetGeneratorTest.cpp
   SnippetRepetitorTest.cpp
+  SubprocessMemoryTest.cpp
   TargetTest.cpp
   )
 
@@ -26,6 +26,12 @@ add_llvm_exegesis_unittest_link_components(
   X86
   )
 
+set(libs)
+if(HAVE_LIBRT)
+  list(APPEND libs rt)
+endif()
+
 add_llvm_exegesis_unittest_link_libraries(
   LLVMExegesisX86
+  ${libs}
   )

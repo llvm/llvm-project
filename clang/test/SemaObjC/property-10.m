@@ -38,7 +38,6 @@
 @property(nonatomic,weak) int (*PROP2)(void); // expected-error {{property with 'weak' attribute must be of object type}}
 @end
 
-// rdar://10357768
 @interface rdar10357768
 {
     int n1;

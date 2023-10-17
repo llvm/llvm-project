@@ -23,7 +23,7 @@ class CommandObjectRegexCommand : public CommandObjectRaw {
 public:
   CommandObjectRegexCommand(CommandInterpreter &interpreter,
                             llvm::StringRef name, llvm::StringRef help,
-                            llvm::StringRef syntax, uint32_t max_matches,
+                            llvm::StringRef syntax,
                             uint32_t completion_type_mask, bool is_removable);
 
   ~CommandObjectRegexCommand() override;
@@ -50,7 +50,6 @@ protected:
   };
 
   typedef std::list<Entry> EntryCollection;
-  const uint32_t m_max_matches;
   const uint32_t m_completion_type_mask;
   EntryCollection m_entries;
   bool m_is_removable;

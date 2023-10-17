@@ -12,6 +12,9 @@
 #if SCUDO_ANDROID && _BIONIC
 
 #include "allocator_config.h"
+#include "internal_defs.h"
+#include "platform.h"
+#include "scudo/interface.h"
 #include "wrappers_c.h"
 #include "wrappers_c_checks.h"
 
@@ -24,22 +27,7 @@
 
 extern "C" void SCUDO_PREFIX(malloc_postinit)();
 SCUDO_REQUIRE_CONSTANT_INITIALIZATION
-static scudo::Allocator<scudo::AndroidConfig, SCUDO_PREFIX(malloc_postinit)>
-    SCUDO_ALLOCATOR;
-
-#include "wrappers_c.inc"
-
-#undef SCUDO_ALLOCATOR
-#undef SCUDO_PREFIX
-
-// Svelte MallocDispatch definitions.
-#define SCUDO_PREFIX(name) CONCATENATE(scudo_svelte_, name)
-#define SCUDO_ALLOCATOR SvelteAllocator
-
-extern "C" void SCUDO_PREFIX(malloc_postinit)();
-SCUDO_REQUIRE_CONSTANT_INITIALIZATION
-static scudo::Allocator<scudo::AndroidSvelteConfig,
-                        SCUDO_PREFIX(malloc_postinit)>
+static scudo::Allocator<scudo::Config, SCUDO_PREFIX(malloc_postinit)>
     SCUDO_ALLOCATOR;
 
 #include "wrappers_c.inc"

@@ -30,19 +30,11 @@ package "bitwriter" (
 )
 
 package "executionengine" (
-    requires = "llvm,llvm.target,ctypes.foreign"
+    requires = "llvm,llvm.target,ctypes"
     version = "@PACKAGE_VERSION@"
     description = "JIT and Interpreter for LLVM"
     archive(byte) = "llvm_executionengine.cma"
     archive(native) = "llvm_executionengine.cmxa"
-)
-
-package "ipo" (
-    requires = "llvm"
-    version  = "@PACKAGE_VERSION@"
-    description = "IPO Transforms for LLVM"
-    archive(byte) = "llvm_ipo.cma"
-    archive(native) = "llvm_ipo.cmxa"
 )
 
 package "debuginfo" (
@@ -61,14 +53,6 @@ package "irreader" (
     archive(native) = "llvm_irreader.cmxa"
 )
 
-package "scalar_opts" (
-    requires = "llvm"
-    version = "@PACKAGE_VERSION@"
-    description = "Scalar Transforms for LLVM"
-    archive(byte) = "llvm_scalar_opts.cma"
-    archive(native) = "llvm_scalar_opts.cmxa"
-)
-
 package "transform_utils" (
     requires = "llvm"
     version = "@PACKAGE_VERSION@"
@@ -77,20 +61,12 @@ package "transform_utils" (
     archive(native) = "llvm_transform_utils.cmxa"
 )
 
-package "vectorize" (
-    requires = "llvm"
-    version = "@PACKAGE_VERSION@"
-    description = "Vector Transforms for LLVM"
-    archive(byte) = "llvm_vectorize.cma"
-    archive(native) = "llvm_vectorize.cmxa"
-)
-
-package "passmgr_builder" (
-    requires = "llvm"
+package "passbuilder" (
+    requires = "llvm,llvm.target"
     version = "@PACKAGE_VERSION@"
     description = "Pass Manager Builder for LLVM"
-    archive(byte) = "llvm_passmgr_builder.cma"
-    archive(native) = "llvm_passmgr_builder.cmxa"
+    archive(byte) = "llvm_passbuilder.cma"
+    archive(native) = "llvm_passbuilder.cmxa"
 )
 
 package "target" (

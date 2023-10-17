@@ -401,7 +401,7 @@ void CodeGenFunction::EmitAnyExprToExn(const Expr *e, Address addr) {
   // __cxa_allocate_exception returns a void*;  we need to cast this
   // to the appropriate type for the object.
   llvm::Type *ty = ConvertTypeForMem(e->getType());
-  Address typedAddr = Builder.CreateElementBitCast(addr, ty);
+  Address typedAddr = addr.withElementType(ty);
 
   // FIXME: this isn't quite right!  If there's a final unelided call
   // to a copy constructor, then according to [except.terminate]p1 we
@@ -440,6 +440,15 @@ llvm::Value *CodeGenFunction::getSelectorFromSlot() {
 
 void CodeGenFunction::EmitCXXThrowExpr(const CXXThrowExpr *E,
                                        bool KeepInsertionPoint) {
+  // If the exception is being emitted in an OpenMP target region,
+  // and the target is a GPU, we do not support exception handling.
+  // Therefore, we emit a trap which will abort the program, and
+  // prompt a warning indicating that a trap will be emitted.
+  const llvm::Triple &T = Target.getTriple();
+  if (CGM.getLangOpts().OpenMPIsTargetDevice && (T.isNVPTX() || T.isAMDGCN())) {
+    EmitTrapCall(llvm::Intrinsic::trap);
+    return;
+  }
   if (const Expr *SubExpr = E->getSubExpr()) {
     QualType ThrowType = SubExpr->getType();
     if (ThrowType->isObjCObjectPointerType()) {
@@ -609,9 +618,16 @@ void CodeGenFunction::EmitEndEHSpec(const Decl *D) {
 }
 
 void CodeGenFunction::EmitCXXTryStmt(const CXXTryStmt &S) {
-  EnterCXXTryStmt(S);
+  const llvm::Triple &T = Target.getTriple();
+  // If we encounter a try statement on in an OpenMP target region offloaded to
+  // a GPU, we treat it as a basic block.
+  const bool IsTargetDevice =
+      (CGM.getLangOpts().OpenMPIsTargetDevice && (T.isNVPTX() || T.isAMDGCN()));
+  if (!IsTargetDevice)
+    EnterCXXTryStmt(S);
   EmitStmt(S.getTryBlock());
-  ExitCXXTryStmt(S);
+  if (!IsTargetDevice)
+    ExitCXXTryStmt(S);
 }
 
 void CodeGenFunction::EnterCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
@@ -646,7 +662,7 @@ void CodeGenFunction::EnterCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
       // Under async exceptions, catch(...) need to catch HW exception too
       // Mark scope with SehTryBegin as a SEH __try scope
       if (getLangOpts().EHAsynch)
-        EmitRuntimeCallOrInvoke(getSehTryBeginFn(CGM));
+        EmitSehTryScopeBegin();
     }
   }
 }
@@ -1120,6 +1136,8 @@ static void emitCatchDispatchBlock(CodeGenFunction &CGF,
   // Select the right handler.
   llvm::Function *llvm_eh_typeid_for =
     CGF.CGM.getIntrinsic(llvm::Intrinsic::eh_typeid_for);
+  llvm::Type *argTy = llvm_eh_typeid_for->getArg(0)->getType();
+  LangAS globAS = CGF.CGM.GetGlobalVarAddressSpace(nullptr);
 
   // Load the selector value.
   llvm::Value *selector = CGF.getSelectorFromSlot();
@@ -1133,7 +1151,11 @@ static void emitCatchDispatchBlock(CodeGenFunction &CGF,
     assert(handler.Type.Flags == 0 &&
            "landingpads do not support catch handler flags");
     assert(typeValue && "fell into catch-all case!");
-    typeValue = CGF.Builder.CreateBitCast(typeValue, CGF.Int8PtrTy);
+    // With opaque ptrs, only the address space can be a mismatch.
+    if (typeValue->getType() != argTy)
+      typeValue =
+        CGF.getTargetHooks().performAddrSpaceCast(CGF, typeValue, globAS,
+                                                  LangAS::Default, argTy);
 
     // Figure out the next block.
     bool nextIsEnd;
@@ -1842,7 +1864,7 @@ Address CodeGenFunction::recoverAddrOfEscapedLocal(CodeGenFunction &ParentCGF,
   llvm::Value *ChildVar =
       Builder.CreateBitCast(RecoverCall, ParentVar.getType());
   ChildVar->setName(ParentVar.getName());
-  return ParentVar.withPointer(ChildVar);
+  return ParentVar.withPointer(ChildVar, KnownNonNull);
 }
 
 void CodeGenFunction::EmitCapturedLocals(CodeGenFunction &ParentCGF,
@@ -2101,7 +2123,6 @@ void CodeGenFunction::EmitSEHExceptionCodeSave(CodeGenFunction &ParentCGF,
     // pointer is stored in the second field. So, GEP 20 bytes backwards and
     // load the pointer.
     SEHInfo = Builder.CreateConstInBoundsGEP1_32(Int8Ty, EntryFP, -20);
-    SEHInfo = Builder.CreateBitCast(SEHInfo, Int8PtrTy->getPointerTo());
     SEHInfo = Builder.CreateAlignedLoad(Int8PtrTy, SEHInfo, getPointerAlign());
     SEHCodeSlotStack.push_back(recoverAddrOfEscapedLocal(
         ParentCGF, ParentCGF.SEHCodeSlotStack.back(), ParentFP));
@@ -2114,10 +2135,9 @@ void CodeGenFunction::EmitSEHExceptionCodeSave(CodeGenFunction &ParentCGF,
   //   CONTEXT *ContextRecord;
   // };
   // int exceptioncode = exception_pointers->ExceptionRecord->ExceptionCode;
-  llvm::Type *RecordTy = CGM.Int32Ty->getPointerTo();
+  llvm::Type *RecordTy = llvm::PointerType::getUnqual(getLLVMContext());
   llvm::Type *PtrsTy = llvm::StructType::get(RecordTy, CGM.VoidPtrTy);
-  llvm::Value *Ptrs = Builder.CreateBitCast(SEHInfo, PtrsTy->getPointerTo());
-  llvm::Value *Rec = Builder.CreateStructGEP(PtrsTy, Ptrs, 0);
+  llvm::Value *Rec = Builder.CreateStructGEP(PtrsTy, SEHInfo, 0);
   Rec = Builder.CreateAlignedLoad(RecordTy, Rec, getPointerAlign());
   llvm::Value *Code = Builder.CreateAlignedLoad(Int32Ty, Rec, getIntAlign());
   assert(!SEHCodeSlotStack.empty() && "emitting EH code outside of __except");

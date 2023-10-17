@@ -23,7 +23,7 @@
 #include "SourceCode.h"
 #include "TUScheduler.h"
 #include "XRefs.h"
-#include "index/CanonicalIncludes.h"
+#include "clang-include-cleaner/Record.h"
 #include "index/FileIndex.h"
 #include "index/Merge.h"
 #include "index/StdLib.h"
@@ -34,6 +34,7 @@
 #include "support/MemoryTree.h"
 #include "support/ThreadsafeFS.h"
 #include "support/Trace.h"
+#include "clang/Basic/Stack.h"
 #include "clang/Format/Format.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/CompilationDatabase.h"
@@ -52,37 +53,59 @@
 #include <optional>
 #include <string>
 #include <type_traits>
+#include <utility>
+#include <vector>
 
 namespace clang {
 namespace clangd {
 namespace {
 
+// Tracks number of times a tweak has been offered.
+static constexpr trace::Metric TweakAvailable(
+    "tweak_available", trace::Metric::Counter, "tweak_id");
+
 // Update the FileIndex with new ASTs and plumb the diagnostics responses.
 struct UpdateIndexCallbacks : public ParsingCallbacks {
   UpdateIndexCallbacks(FileIndex *FIndex,
                        ClangdServer::Callbacks *ServerCallbacks,
-                       const ThreadsafeFS &TFS, AsyncTaskRunner *Tasks)
+                       const ThreadsafeFS &TFS, AsyncTaskRunner *Tasks,
+                       bool CollectInactiveRegions)
       : FIndex(FIndex), ServerCallbacks(ServerCallbacks), TFS(TFS),
-        Stdlib{std::make_shared<StdLibSet>()}, Tasks(Tasks) {}
+        Stdlib{std::make_shared<StdLibSet>()}, Tasks(Tasks),
+        CollectInactiveRegions(CollectInactiveRegions) {}
 
-  void onPreambleAST(PathRef Path, llvm::StringRef Version,
-                     const CompilerInvocation &CI, ASTContext &Ctx,
-                     Preprocessor &PP,
-                     const CanonicalIncludes &CanonIncludes) override {
-    // If this preamble uses a standard library we haven't seen yet, index it.
-    if (FIndex)
-      if (auto Loc = Stdlib->add(*CI.getLangOpts(), PP.getHeaderSearchInfo()))
-        indexStdlib(CI, std::move(*Loc));
+  void onPreambleAST(
+      PathRef Path, llvm::StringRef Version, CapturedASTCtx ASTCtx,
+      std::shared_ptr<const include_cleaner::PragmaIncludes> PI) override {
 
-    if (FIndex)
-      FIndex->updatePreamble(Path, Version, Ctx, PP, CanonIncludes);
+    if (!FIndex)
+      return;
+
+    auto &PP = ASTCtx.getPreprocessor();
+    auto &CI = ASTCtx.getCompilerInvocation();
+    if (auto Loc = Stdlib->add(CI.getLangOpts(), PP.getHeaderSearchInfo()))
+      indexStdlib(CI, std::move(*Loc));
+
+    // FIndex outlives the UpdateIndexCallbacks.
+    auto Task = [FIndex(FIndex), Path(Path.str()), Version(Version.str()),
+                 ASTCtx(std::move(ASTCtx)), PI(std::move(PI))]() mutable {
+      trace::Span Tracer("PreambleIndexing");
+      FIndex->updatePreamble(Path, Version, ASTCtx.getASTContext(),
+                             ASTCtx.getPreprocessor(), *PI);
+    };
+
+    if (Tasks) {
+      Tasks->runAsync("Preamble indexing for:" + Path + Version,
+                      std::move(Task));
+    } else
+      Task();
   }
 
   void indexStdlib(const CompilerInvocation &CI, StdLibLocation Loc) {
     // This task is owned by Tasks, which outlives the TUScheduler and
     // therefore the UpdateIndexCallbacks.
     // We must be careful that the references we capture outlive TUScheduler.
-    auto Task = [LO(*CI.getLangOpts()), Loc(std::move(Loc)),
+    auto Task = [LO(CI.getLangOpts()), Loc(std::move(Loc)),
                  CI(std::make_unique<CompilerInvocation>(CI)),
                  // External values that outlive ClangdServer
                  TFS(&TFS),
@@ -90,6 +113,7 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
                  FIndex(FIndex),
                  // shared_ptr extends lifetime
                  Stdlib(Stdlib)]() mutable {
+      clang::noteBottomOfStack();
       IndexFileIn IF;
       IF.Symbols = indexStandardLibrary(std::move(CI), Loc, *TFS);
       if (Stdlib->isBest(LO))
@@ -106,13 +130,14 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
     if (FIndex)
       FIndex->updateMain(Path, AST);
 
-    assert(AST.getDiagnostics() &&
-           "We issue callback only with fresh preambles");
-    std::vector<Diag> Diagnostics = *AST.getDiagnostics();
     if (ServerCallbacks)
       Publish([&]() {
         ServerCallbacks->onDiagnosticsReady(Path, AST.version(),
-                                            std::move(Diagnostics));
+                                            AST.getDiagnostics());
+        if (CollectInactiveRegions) {
+          ServerCallbacks->onInactiveRegionsReady(Path,
+                                                  getInactiveRegions(AST));
+        }
       });
   }
 
@@ -139,6 +164,7 @@ private:
   const ThreadsafeFS &TFS;
   std::shared_ptr<StdLibSet> Stdlib;
   AsyncTaskRunner *Tasks;
+  bool CollectInactiveRegions;
 };
 
 class DraftStoreFS : public ThreadsafeFS {
@@ -189,6 +215,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
       LineFoldingOnly(Opts.LineFoldingOnly),
       PreambleParseForwardingFunctions(Opts.PreambleParseForwardingFunctions),
       ImportInsertions(Opts.ImportInsertions),
+      PublishInactiveRegions(Opts.PublishInactiveRegions),
       WorkspaceRoot(Opts.WorkspaceRoot),
       Transient(Opts.ImplicitCancellation ? TUScheduler::InvalidateOnUpdate
                                           : TUScheduler::NoInvalidation),
@@ -201,7 +228,8 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
   WorkScheduler.emplace(CDB, TUScheduler::Options(Opts),
                         std::make_unique<UpdateIndexCallbacks>(
                             DynamicIdx.get(), Callbacks, TFS,
-                            IndexTasks ? &*IndexTasks : nullptr));
+                            IndexTasks ? &*IndexTasks : nullptr,
+                            PublishInactiveRegions));
   // Adds an index to the stack, at higher priority than existing indexes.
   auto AddIndex = [&](SymbolIndex *Idx) {
     if (this->Index != nullptr) {
@@ -340,7 +368,7 @@ ClangdServer::createConfiguredContextProvider(const config::Provider *Provider,
         std::lock_guard<std::mutex> Lock(PublishMu);
         for (auto &Entry : ReportableDiagnostics)
           Publish->onDiagnosticsReady(Entry.first(), /*Version=*/"",
-                                      std::move(Entry.second));
+                                      Entry.second);
       }
       return Context::current().derive(Config::Key, std::move(C));
     }
@@ -620,38 +648,59 @@ tweakSelection(const Range &Sel, const InputsAndAST &AST,
   return std::move(Result);
 }
 
-void ClangdServer::enumerateTweaks(
-    PathRef File, Range Sel, llvm::unique_function<bool(const Tweak &)> Filter,
-    Callback<std::vector<TweakRef>> CB) {
-  // Tracks number of times a tweak has been offered.
-  static constexpr trace::Metric TweakAvailable(
-      "tweak_available", trace::Metric::Counter, "tweak_id");
-  auto Action = [Sel, CB = std::move(CB), Filter = std::move(Filter),
+void ClangdServer::codeAction(const CodeActionInputs &Params,
+                              Callback<CodeActionResult> CB) {
+  auto Action = [Params, CB = std::move(CB),
                  FeatureModules(this->FeatureModules)](
                     Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
       return CB(InpAST.takeError());
-    auto Selections = tweakSelection(Sel, *InpAST, /*FS=*/nullptr);
+    auto KindAllowed =
+        [Only(Params.RequestedActionKinds)](llvm::StringRef Kind) {
+          if (Only.empty())
+            return true;
+          return llvm::any_of(Only, [&](llvm::StringRef Base) {
+            return Kind.consume_front(Base) &&
+                   (Kind.empty() || Kind.startswith("."));
+          });
+        };
+
+    CodeActionResult Result;
+    Result.Version = InpAST->AST.version().str();
+    if (KindAllowed(CodeAction::QUICKFIX_KIND)) {
+      auto FindMatchedFixes =
+          [&InpAST](const DiagRef &DR) -> llvm::ArrayRef<Fix> {
+        for (const auto &Diag : InpAST->AST.getDiagnostics())
+          if (Diag.Range == DR.Range && Diag.Message == DR.Message)
+            return Diag.Fixes;
+        return {};
+      };
+      for (const auto &Diag : Params.Diagnostics)
+        for (const auto &Fix : FindMatchedFixes(Diag))
+          Result.QuickFixes.push_back({Diag, Fix});
+    }
+
+    // Collect Tweaks
+    auto Selections = tweakSelection(Params.Selection, *InpAST, /*FS=*/nullptr);
     if (!Selections)
       return CB(Selections.takeError());
-    std::vector<TweakRef> Res;
     // Don't allow a tweak to fire more than once across ambiguous selections.
     llvm::DenseSet<llvm::StringRef> PreparedTweaks;
     auto DeduplicatingFilter = [&](const Tweak &T) {
-      return Filter(T) && !PreparedTweaks.count(T.id());
+      return KindAllowed(T.kind()) && Params.TweakFilter(T) &&
+             !PreparedTweaks.count(T.id());
     };
     for (const auto &Sel : *Selections) {
       for (auto &T : prepareTweaks(*Sel, DeduplicatingFilter, FeatureModules)) {
-        Res.push_back({T->id(), T->title(), T->kind()});
+        Result.TweakRefs.push_back(TweakRef{T->id(), T->title(), T->kind()});
         PreparedTweaks.insert(T->id());
         TweakAvailable.record(1, T->id());
       }
     }
-
-    CB(std::move(Res));
+    CB(std::move(Result));
   };
 
-  WorkScheduler->runWithAST("EnumerateTweaks", File, std::move(Action),
+  WorkScheduler->runWithAST("codeAction", Params.File, std::move(Action),
                             Transient);
 }
 
@@ -877,12 +926,12 @@ void ClangdServer::foldingRanges(llvm::StringRef File,
 
 void ClangdServer::findType(llvm::StringRef File, Position Pos,
                             Callback<std::vector<LocatedSymbol>> CB) {
-  auto Action =
-      [Pos, CB = std::move(CB)](llvm::Expected<InputsAndAST> InpAST) mutable {
-        if (!InpAST)
-          return CB(InpAST.takeError());
-        CB(clangd::findType(InpAST->AST, Pos));
-      };
+  auto Action = [Pos, CB = std::move(CB),
+                 this](llvm::Expected<InputsAndAST> InpAST) mutable {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+    CB(clangd::findType(InpAST->AST, Pos, Index));
+  };
   WorkScheduler->runWithAST("FindType", File, std::move(Action));
 }
 
@@ -956,12 +1005,17 @@ void ClangdServer::documentLinks(PathRef File,
 
 void ClangdServer::semanticHighlights(
     PathRef File, Callback<std::vector<HighlightingToken>> CB) {
-  auto Action =
-      [CB = std::move(CB)](llvm::Expected<InputsAndAST> InpAST) mutable {
-        if (!InpAST)
-          return CB(InpAST.takeError());
-        CB(clangd::getSemanticHighlightings(InpAST->AST));
-      };
+
+  auto Action = [CB = std::move(CB),
+                 PublishInactiveRegions = PublishInactiveRegions](
+                    llvm::Expected<InputsAndAST> InpAST) mutable {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+    // Include inactive regions in semantic highlighting tokens only if the
+    // client doesn't support a dedicated protocol for being informed about
+    // them.
+    CB(clangd::getSemanticHighlightings(InpAST->AST, !PublishInactiveRegions));
+  };
   WorkScheduler->runWithAST("SemanticHighlights", File, std::move(Action),
                             Transient);
 }
@@ -1015,11 +1069,7 @@ void ClangdServer::diagnostics(PathRef File, Callback<std::vector<Diag>> CB) {
       [CB = std::move(CB)](llvm::Expected<InputsAndAST> InpAST) mutable {
         if (!InpAST)
           return CB(InpAST.takeError());
-        if (auto Diags = InpAST->AST.getDiagnostics())
-          return CB(*Diags);
-        // FIXME: Use ServerCancelled error once it is settled in LSP-3.17.
-        return CB(llvm::make_error<LSPError>("server is busy parsing includes",
-                                             ErrorCode::InternalError));
+        return CB(InpAST->AST.getDiagnostics());
       };
 
   WorkScheduler->runWithAST("Diagnostics", File, std::move(Action));
@@ -1037,7 +1087,8 @@ ClangdServer::blockUntilIdleForTest(std::optional<double> TimeoutSeconds) {
 #if defined(__has_feature) &&                                                  \
     (__has_feature(address_sanitizer) || __has_feature(hwaddress_sanitizer) || \
      __has_feature(memory_sanitizer) || __has_feature(thread_sanitizer))
-  (*TimeoutSeconds) *= 10;
+  if (TimeoutSeconds.has_value())
+    (*TimeoutSeconds) *= 10;
 #endif
 
   // Nothing else can schedule work on TUScheduler, because it's not threadsafe

@@ -24,7 +24,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/DFAPacketizer.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -61,6 +60,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -619,7 +619,8 @@ bool ARMBaseInstrInfo::PredicateInstruction(
     // IT block. This affects how they are printed.
     const MCInstrDesc &MCID = MI.getDesc();
     if (MCID.TSFlags & ARMII::ThumbArithFlagSetting) {
-      assert(MCID.OpInfo[1].isOptionalDef() && "CPSR def isn't expected operand");
+      assert(MCID.operands()[1].isOptionalDef() &&
+             "CPSR def isn't expected operand");
       assert((MI.getOperand(1).isDead() ||
               MI.getOperand(1).getReg() != ARM::CPSR) &&
              "if conversion tried to stop defining used CPSR");
@@ -1665,8 +1666,8 @@ void ARMBaseInstrInfo::expandMEMCPY(MachineBasicBlock::iterator MI) const {
   // Sort the scratch registers into ascending order.
   const TargetRegisterInfo &TRI = getRegisterInfo();
   SmallVector<unsigned, 6> ScratchRegs;
-  for(unsigned I = 5; I < MI->getNumOperands(); ++I)
-    ScratchRegs.push_back(MI->getOperand(I).getReg());
+  for (MachineOperand &MO : llvm::drop_begin(MI->operands(), 5))
+    ScratchRegs.push_back(MO.getReg());
   llvm::sort(ScratchRegs,
              [&TRI](const unsigned &Reg1, const unsigned &Reg2) -> bool {
                return TRI.getEncodingValue(Reg1) <
@@ -2382,7 +2383,7 @@ ARMBaseInstrInfo::optimizeSelect(MachineInstr &MI,
   // Copy all the DefMI operands, excluding its (null) predicate.
   const MCInstrDesc &DefDesc = DefMI->getDesc();
   for (unsigned i = 1, e = DefDesc.getNumOperands();
-       i != e && !DefDesc.OpInfo[i].isPredicate(); ++i)
+       i != e && !DefDesc.operands()[i].isPredicate(); ++i)
     NewMI.add(DefMI->getOperand(i));
 
   unsigned CondCode = MI.getOperand(3).getImm();
@@ -2498,7 +2499,7 @@ void llvm::emitARMRegPlusImmediate(MachineBasicBlock &MBB,
 
   while (NumBytes) {
     unsigned RotAmt = ARM_AM::getSOImmValRotate(NumBytes);
-    unsigned ThisVal = NumBytes & ARM_AM::rotr32(0xFF, RotAmt);
+    unsigned ThisVal = NumBytes & llvm::rotr<uint32_t>(0xFF, RotAmt);
     assert(ThisVal && "Didn't extract field correctly");
 
     // We will handle these bits from offset, clear them.
@@ -2679,7 +2680,7 @@ bool llvm::rewriteARMFrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
     // Otherwise, pull as much of the immedidate into this ADDri/SUBri
     // as possible.
     unsigned RotAmt = ARM_AM::getSOImmValRotate(Offset);
-    unsigned ThisImmVal = Offset & ARM_AM::rotr32(0xFF, RotAmt);
+    unsigned ThisImmVal = Offset & llvm::rotr<uint32_t>(0xFF, RotAmt);
 
     // We will handle these bits from offset, clear them.
     Offset &= ~ThisImmVal;
@@ -3326,7 +3327,8 @@ bool ARMBaseInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
                                      MachineRegisterInfo *MRI) const {
   // Fold large immediates into add, sub, or, xor.
   unsigned DefOpc = DefMI.getOpcode();
-  if (DefOpc != ARM::t2MOVi32imm && DefOpc != ARM::MOVi32imm)
+  if (DefOpc != ARM::t2MOVi32imm && DefOpc != ARM::MOVi32imm &&
+      DefOpc != ARM::tMOVi32imm)
     return false;
   if (!DefMI.getOperand(1).isImm())
     // Could be t2MOVi32imm @xx
@@ -4938,7 +4940,7 @@ void ARMBaseInstrInfo::expandLoadStackGuardBase(MachineBasicBlock::iterator MI,
   unsigned int Offset = 0;
 
   if (LoadImmOpc == ARM::MRC || LoadImmOpc == ARM::t2MRC) {
-    assert(Subtarget.isReadTPHard() &&
+    assert(!Subtarget.isReadTPSoft() &&
            "TLS stack protector requires hardware TLS register");
 
     BuildMI(MBB, MI, DL, get(LoadImmOpc), Reg)
@@ -4980,8 +4982,23 @@ void ARMBaseInstrInfo::expandLoadStackGuardBase(MachineBasicBlock::iterator MI,
       TargetFlags |= ARMII::MO_GOT;
     }
 
-    BuildMI(MBB, MI, DL, get(LoadImmOpc), Reg)
-        .addGlobalAddress(GV, 0, TargetFlags);
+    if (LoadImmOpc == ARM::tMOVi32imm) { // Thumb-1 execute-only
+      Register CPSRSaveReg = ARM::R12; // Use R12 as scratch register
+      auto APSREncoding =
+          ARMSysReg::lookupMClassSysRegByName("apsr_nzcvq")->Encoding;
+      BuildMI(MBB, MI, DL, get(ARM::t2MRS_M), CPSRSaveReg)
+          .addImm(APSREncoding)
+          .add(predOps(ARMCC::AL));
+      BuildMI(MBB, MI, DL, get(LoadImmOpc), Reg)
+          .addGlobalAddress(GV, 0, TargetFlags);
+      BuildMI(MBB, MI, DL, get(ARM::t2MSR_M))
+          .addImm(APSREncoding)
+          .addReg(CPSRSaveReg, RegState::Kill)
+          .add(predOps(ARMCC::AL));
+    } else {
+      BuildMI(MBB, MI, DL, get(LoadImmOpc), Reg)
+          .addGlobalAddress(GV, 0, TargetFlags);
+    }
 
     if (IsIndirect) {
       MIB = BuildMI(MBB, MI, DL, get(LoadOpc), Reg);
@@ -5432,7 +5449,7 @@ void ARMBaseInstrInfo::breakPartialRegDependency(
 }
 
 bool ARMBaseInstrInfo::hasNOP() const {
-  return Subtarget.getFeatureBits()[ARM::HasV6KOps];
+  return Subtarget.hasFeature(ARM::HasV6KOps);
 }
 
 bool ARMBaseInstrInfo::isSwiftFastImmShift(const MachineInstr *MI) const {
@@ -5537,7 +5554,10 @@ ARMBaseInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
   using namespace ARMII;
 
   static const std::pair<unsigned, const char *> TargetFlags[] = {
-      {MO_LO16, "arm-lo16"}, {MO_HI16, "arm-hi16"}};
+      {MO_LO16, "arm-lo16"},       {MO_HI16, "arm-hi16"},
+      {MO_LO_0_7, "arm-lo-0-7"},   {MO_HI_0_7, "arm-hi-0-7"},
+      {MO_LO_8_15, "arm-lo-8-15"}, {MO_HI_8_15, "arm-hi-8-15"},
+  };
   return ArrayRef(TargetFlags);
 }
 
@@ -5868,7 +5888,8 @@ static bool isLRAvailable(const TargetRegisterInfo &TRI,
   return !Live;
 }
 
-outliner::OutlinedFunction ARMBaseInstrInfo::getOutliningCandidateInfo(
+std::optional<outliner::OutlinedFunction>
+ARMBaseInstrInfo::getOutliningCandidateInfo(
     std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
   outliner::Candidate &FirstCand = RepeatedSequenceLocs[0];
   unsigned SequenceSize =
@@ -5914,7 +5935,7 @@ outliner::OutlinedFunction ARMBaseInstrInfo::getOutliningCandidateInfo(
 
     // If the sequence doesn't have enough candidates left, then we're done.
     if (RepeatedSequenceLocs.size() < 2)
-      return outliner::OutlinedFunction();
+      return std::nullopt;
   }
 
   // We expect the majority of the outlining candidates to be in consensus with
@@ -5940,7 +5961,7 @@ outliner::OutlinedFunction ARMBaseInstrInfo::getOutliningCandidateInfo(
     RepeatedSequenceLocs.erase(RepeatedSequenceLocs.begin(), NoBTI);
 
   if (RepeatedSequenceLocs.size() < 2)
-    return outliner::OutlinedFunction();
+    return std::nullopt;
 
   // Likewise, partition the candidates according to PAC-RET enablement.
   auto NoPAC =
@@ -5957,7 +5978,7 @@ outliner::OutlinedFunction ARMBaseInstrInfo::getOutliningCandidateInfo(
     RepeatedSequenceLocs.erase(RepeatedSequenceLocs.begin(), NoPAC);
 
   if (RepeatedSequenceLocs.size() < 2)
-    return outliner::OutlinedFunction();
+    return std::nullopt;
 
   // At this point, we have only "safe" candidates to outline. Figure out
   // frame + call instruction information.
@@ -6274,23 +6295,10 @@ bool ARMBaseInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
 }
 
 outliner::InstrType
-ARMBaseInstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
+ARMBaseInstrInfo::getOutliningTypeImpl(MachineBasicBlock::iterator &MIT,
                                    unsigned Flags) const {
   MachineInstr &MI = *MIT;
   const TargetRegisterInfo *TRI = &getRegisterInfo();
-
-  // Be conservative with inline ASM
-  if (MI.isInlineAsm())
-    return outliner::InstrType::Illegal;
-
-  // Don't allow debug values to impact outlining type.
-  if (MI.isDebugInstr() || MI.isIndirectDebugValue())
-    return outliner::InstrType::Invisible;
-
-  // At this point, KILL or IMPLICIT_DEF instructions don't really tell us much
-  // so we can go ahead and skip over them.
-  if (MI.isKill() || MI.isImplicitDef())
-    return outliner::InstrType::Invisible;
 
   // PIC instructions contain labels, outlining them would break offset
   // computing.  unsigned Opc = MI.getOpcode();
@@ -6317,25 +6325,10 @@ ARMBaseInstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
     return outliner::InstrType::Illegal;
 
   // Is this a terminator for a basic block?
-  if (MI.isTerminator()) {
-    // Don't outline if the branch is not unconditional.
-    if (isPredicated(MI))
-      return outliner::InstrType::Illegal;
-
-    // Is this the end of a function?
-    if (MI.getParent()->succ_empty())
-      return outliner::InstrType::Legal;
-
-    // It's not, so don't outline it.
-    return outliner::InstrType::Illegal;
-  }
-
-  // Make sure none of the operands are un-outlinable.
-  for (const MachineOperand &MOP : MI.operands()) {
-    if (MOP.isCPI() || MOP.isJTI() || MOP.isCFIIndex() || MOP.isFI() ||
-        MOP.isTargetIndex())
-      return outliner::InstrType::Illegal;
-  }
+  if (MI.isTerminator())
+    // TargetInstrInfo::getOutliningType has already filtered out anything
+    // that would break this, so we can allow it here.
+    return outliner::InstrType::Legal;
 
   // Don't outline if link register or program counter value are used.
   if (MI.readsRegister(ARM::LR, TRI) || MI.readsRegister(ARM::PC, TRI))
@@ -6440,8 +6433,8 @@ ARMBaseInstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
       MI.modifiesRegister(ARM::ITSTATE, TRI))
     return outliner::InstrType::Illegal;
 
-  // Don't outline positions.
-  if (MI.isPosition())
+  // Don't outline CFI instructions.
+  if (MI.isCFIInstruction())
     return outliner::InstrType::Illegal;
 
   return outliner::InstrType::Legal;
@@ -6753,7 +6746,8 @@ bool ARMBaseInstrInfo::isReallyTriviallyReMaterializable(
   // the tail predication conversion. This means that the element count
   // register has to be live for longer, but that has to be better than
   // spill/restore and VPT predication.
-  return isVCTP(&MI) && !isPredicated(MI);
+  return (isVCTP(&MI) && !isPredicated(MI)) ||
+         TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
 }
 
 unsigned llvm::getBLXOpcode(const MachineFunction &MF) {

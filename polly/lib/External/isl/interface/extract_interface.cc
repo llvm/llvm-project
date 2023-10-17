@@ -109,7 +109,7 @@ static llvm::cl::opt<string> OutputLanguage(llvm::cl::Required,
 	llvm::cl::value_desc("name"));
 
 static const char *ResourceDir =
-    CLANG_PREFIX "/lib/clang/" CLANG_VERSION_MAJOR_STRING;
+	CLANG_PREFIX "/lib/clang/" CLANG_VERSION_STRING;
 
 /* Does decl have an attribute of the following form?
  *
@@ -428,7 +428,7 @@ static void set_lang_defaults(CompilerInstance *Clang)
 	PreprocessorOptions &PO = Clang->getPreprocessorOpts();
 	TargetOptions &TO = Clang->getTargetOpts();
 	llvm::Triple T(TO.Triple);
-	CompilerInvocation::setLangDefaults(Clang->getLangOpts(), IK_C, T,
+	SETLANGDEFAULTS::setLangDefaults(Clang->getLangOpts(), IK_C, T,
 					    setLangDefaultsArg4(PO),
 					    LangStandard::lang_unspecified);
 }

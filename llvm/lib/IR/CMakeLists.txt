@@ -10,7 +10,9 @@ add_llvm_component_library(LLVMCore
   ConstantFold.cpp
   ConstantRange.cpp
   Constants.cpp
+  ConvergenceVerifier.cpp
   Core.cpp
+  CycleInfo.cpp
   DIBuilder.cpp
   DataLayout.cpp
   DebugInfo.cpp
@@ -20,6 +22,7 @@ add_llvm_component_library(LLVMCore
   DiagnosticInfo.cpp
   DiagnosticPrinter.cpp
   Dominators.cpp
+  EHPersonalities.cpp
   FPEnv.cpp
   Function.cpp
   GCStrategy.cpp
@@ -77,6 +80,7 @@ add_llvm_component_library(LLVMCore
 
   LINK_COMPONENTS
   BinaryFormat
+  Demangle
   Remarks
   Support
   TargetParser

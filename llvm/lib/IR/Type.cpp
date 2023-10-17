@@ -57,10 +57,14 @@ bool Type::isIntegerTy(unsigned Bitwidth) const {
   return isIntegerTy() && cast<IntegerType>(this)->getBitWidth() == Bitwidth;
 }
 
-bool Type::isOpaquePointerTy() const {
-  if (auto *PTy = dyn_cast<PointerType>(this))
-    return PTy->isOpaque();
-  return false;
+bool Type::isScalableTy() const {
+  if (const auto *ATy = dyn_cast<ArrayType>(this))
+    return ATy->getElementType()->isScalableTy();
+  if (const auto *STy = dyn_cast<StructType>(this)) {
+    SmallPtrSet<Type *, 4> Visited;
+    return STy->containsScalableVectorType(&Visited);
+  }
+  return getTypeID() == ScalableVectorTyID || isScalableTargetExtTy();
 }
 
 const fltSemantics &Type::getFltSemantics() const {
@@ -78,6 +82,12 @@ const fltSemantics &Type::getFltSemantics() const {
 
 bool Type::isIEEE() const {
   return APFloat::getZero(getFltSemantics()).isIEEE();
+}
+
+bool Type::isScalableTargetExtTy() const {
+  if (auto *TT = dyn_cast<TargetExtType>(this))
+    return isa<ScalableVectorType>(TT->getLayoutType());
+  return false;
 }
 
 Type *Type::getFloatingPointTy(LLVMContext &C, const fltSemantics &S) {
@@ -246,64 +256,20 @@ IntegerType *Type::getIntNTy(LLVMContext &C, unsigned N) {
   return IntegerType::get(C, N);
 }
 
-PointerType *Type::getHalfPtrTy(LLVMContext &C, unsigned AS) {
-  return getHalfTy(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getBFloatPtrTy(LLVMContext &C, unsigned AS) {
-  return getBFloatTy(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getFloatPtrTy(LLVMContext &C, unsigned AS) {
-  return getFloatTy(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getDoublePtrTy(LLVMContext &C, unsigned AS) {
-  return getDoubleTy(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getX86_FP80PtrTy(LLVMContext &C, unsigned AS) {
-  return getX86_FP80Ty(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getFP128PtrTy(LLVMContext &C, unsigned AS) {
-  return getFP128Ty(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getPPC_FP128PtrTy(LLVMContext &C, unsigned AS) {
-  return getPPC_FP128Ty(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getX86_MMXPtrTy(LLVMContext &C, unsigned AS) {
-  return getX86_MMXTy(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getX86_AMXPtrTy(LLVMContext &C, unsigned AS) {
-  return getX86_AMXTy(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getIntNPtrTy(LLVMContext &C, unsigned N, unsigned AS) {
-  return getIntNTy(C, N)->getPointerTo(AS);
-}
-
-PointerType *Type::getInt1PtrTy(LLVMContext &C, unsigned AS) {
-  return getInt1Ty(C)->getPointerTo(AS);
-}
-
 PointerType *Type::getInt8PtrTy(LLVMContext &C, unsigned AS) {
-  return getInt8Ty(C)->getPointerTo(AS);
+  return PointerType::get(C, AS);
 }
 
-PointerType *Type::getInt16PtrTy(LLVMContext &C, unsigned AS) {
-  return getInt16Ty(C)->getPointerTo(AS);
+Type *Type::getWasm_ExternrefTy(LLVMContext &C) {
+  // opaque pointer in addrspace(10)
+  static PointerType *Ty = PointerType::get(C, 10);
+  return Ty;
 }
 
-PointerType *Type::getInt32PtrTy(LLVMContext &C, unsigned AS) {
-  return getInt32Ty(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getInt64PtrTy(LLVMContext &C, unsigned AS) {
-  return getInt64Ty(C)->getPointerTo(AS);
+Type *Type::getWasm_FuncrefTy(LLVMContext &C) {
+  // opaque pointer in addrspace(20)
+  static PointerType *Ty = PointerType::get(C, 20);
+  return Ty;
 }
 
 //===----------------------------------------------------------------------===//
@@ -432,16 +398,49 @@ StructType *StructType::get(LLVMContext &Context, ArrayRef<Type*> ETypes,
   return ST;
 }
 
-bool StructType::containsScalableVectorType() const {
+bool StructType::containsScalableVectorType(
+    SmallPtrSetImpl<Type *> *Visited) const {
+  if ((getSubclassData() & SCDB_ContainsScalableVector) != 0)
+    return true;
+
+  if ((getSubclassData() & SCDB_NotContainsScalableVector) != 0)
+    return false;
+
+  if (Visited && !Visited->insert(const_cast<StructType *>(this)).second)
+    return false;
+
   for (Type *Ty : elements()) {
-    if (isa<ScalableVectorType>(Ty))
+    if (isa<ScalableVectorType>(Ty)) {
+      const_cast<StructType *>(this)->setSubclassData(
+          getSubclassData() | SCDB_ContainsScalableVector);
       return true;
-    if (auto *STy = dyn_cast<StructType>(Ty))
-      if (STy->containsScalableVectorType())
+    }
+    if (auto *STy = dyn_cast<StructType>(Ty)) {
+      if (STy->containsScalableVectorType(Visited)) {
+        const_cast<StructType *>(this)->setSubclassData(
+            getSubclassData() | SCDB_ContainsScalableVector);
         return true;
+      }
+    }
   }
 
+  // For structures that are opaque, return false but do not set the
+  // SCDB_NotContainsScalableVector flag since it may gain scalable vector type
+  // when it becomes non-opaque.
+  if (!isOpaque())
+    const_cast<StructType *>(this)->setSubclassData(
+        getSubclassData() | SCDB_NotContainsScalableVector);
   return false;
+}
+
+bool StructType::containsHomogeneousScalableVectorTypes() const {
+  Type *FirstTy = getNumElements() > 0 ? elements()[0] : nullptr;
+  if (!FirstTy || !isa<ScalableVectorType>(FirstTy))
+    return false;
+  for (Type *Ty : elements())
+    if (Ty != FirstTy)
+      return false;
+  return true;
 }
 
 void StructType::setBody(ArrayRef<Type*> Elements, bool isPacked) {
@@ -563,10 +562,19 @@ bool StructType::isSized(SmallPtrSetImpl<Type*> *Visited) const {
   // Okay, our struct is sized if all of the elements are, but if one of the
   // elements is opaque, the struct isn't sized *yet*, but may become sized in
   // the future, so just bail out without caching.
+  // The ONLY special case inside a struct that is considered sized is when the
+  // elements are homogeneous of a scalable vector type.
+  if (containsHomogeneousScalableVectorTypes()) {
+    const_cast<StructType *>(this)->setSubclassData(getSubclassData() |
+                                                    SCDB_IsSized);
+    return true;
+  }
   for (Type *Ty : elements()) {
     // If the struct contains a scalable vector type, don't consider it sized.
-    // This prevents it from being used in loads/stores/allocas/GEPs.
-    if (isa<ScalableVectorType>(Ty))
+    // This prevents it from being used in loads/stores/allocas/GEPs. The ONLY
+    // special case right now is a structure of homogenous scalable vector
+    // types and is handled by the if-statement before this for-loop.
+    if (Ty->isScalableTy())
       return false;
     if (!Ty->isSized(Visited))
       return false;
@@ -652,8 +660,7 @@ ArrayType *ArrayType::get(Type *ElementType, uint64_t NumElements) {
 bool ArrayType::isValidElementType(Type *ElemTy) {
   return !ElemTy->isVoidTy() && !ElemTy->isLabelTy() &&
          !ElemTy->isMetadataTy() && !ElemTy->isFunctionTy() &&
-         !ElemTy->isTokenTy() && !ElemTy->isX86_AMXTy() &&
-         !isa<ScalableVectorType>(ElemTy);
+         !ElemTy->isTokenTy() && !ElemTy->isX86_AMXTy();
 }
 
 //===----------------------------------------------------------------------===//
@@ -730,46 +737,24 @@ PointerType *PointerType::get(Type *EltTy, unsigned AddressSpace) {
   assert(EltTy && "Can't get a pointer to <null> type!");
   assert(isValidElementType(EltTy) && "Invalid type for pointer element!");
 
-  LLVMContextImpl *CImpl = EltTy->getContext().pImpl;
-
   // Automatically convert typed pointers to opaque pointers.
-  if (CImpl->getOpaquePointers())
-    return get(EltTy->getContext(), AddressSpace);
-
-  // Since AddressSpace #0 is the common case, we special case it.
-  PointerType *&Entry = AddressSpace == 0 ? CImpl->PointerTypes[EltTy]
-     : CImpl->ASPointerTypes[std::make_pair(EltTy, AddressSpace)];
-
-  if (!Entry)
-    Entry = new (CImpl->Alloc) PointerType(EltTy, AddressSpace);
-  return Entry;
+  return get(EltTy->getContext(), AddressSpace);
 }
 
 PointerType *PointerType::get(LLVMContext &C, unsigned AddressSpace) {
   LLVMContextImpl *CImpl = C.pImpl;
-  assert(CImpl->getOpaquePointers() &&
-         "Can only create opaque pointers in opaque pointer mode");
 
   // Since AddressSpace #0 is the common case, we special case it.
-  PointerType *&Entry =
-      AddressSpace == 0
-          ? CImpl->PointerTypes[nullptr]
-          : CImpl->ASPointerTypes[std::make_pair(nullptr, AddressSpace)];
+  PointerType *&Entry = AddressSpace == 0 ? CImpl->AS0PointerType
+                                          : CImpl->PointerTypes[AddressSpace];
 
   if (!Entry)
     Entry = new (CImpl->Alloc) PointerType(C, AddressSpace);
   return Entry;
 }
 
-PointerType::PointerType(Type *E, unsigned AddrSpace)
-  : Type(E->getContext(), PointerTyID), PointeeTy(E) {
-  ContainedTys = &PointeeTy;
-  NumContainedTys = 1;
-  setSubclassData(AddrSpace);
-}
-
 PointerType::PointerType(LLVMContext &C, unsigned AddrSpace)
-    : Type(C, PointerTyID), PointeeTy(nullptr) {
+    : Type(C, PointerTyID) {
   setSubclassData(AddrSpace);
 }
 
@@ -850,10 +835,14 @@ struct TargetTypeInfo {
 static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
   LLVMContext &C = Ty->getContext();
   StringRef Name = Ty->getName();
-  if (Name.startswith("spirv.")) {
-    return TargetTypeInfo(Type::getInt8PtrTy(C, 0), TargetExtType::HasZeroInit,
+  if (Name.startswith("spirv."))
+    return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::HasZeroInit,
                           TargetExtType::CanBeGlobal);
-  }
+
+  // Opaque types in the AArch64 name space.
+  if (Name == "aarch64.svcount")
+    return TargetTypeInfo(ScalableVectorType::get(Type::getInt1Ty(C), 16));
+
   return TargetTypeInfo(Type::getVoidTy(C));
 }
 

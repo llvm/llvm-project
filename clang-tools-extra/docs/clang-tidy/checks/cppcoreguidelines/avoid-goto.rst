@@ -6,9 +6,11 @@ cppcoreguidelines-avoid-goto
 The usage of ``goto`` for control flow is error prone and should be replaced
 with looping constructs. Only forward jumps in nested loops are accepted.
 
-This check implements `ES.76 <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#es76-avoid-goto>`_
-from the CppCoreGuidelines and
-`6.3.1 from High Integrity C++ <http://www.codingstandard.com/rule/6-3-1-ensure-that-the-labels-for-a-jump-statement-or-a-switch-condition-appear-later-in-the-same-or-an-enclosing-block/>`_.
+This check implements `ES.76
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#es76-avoid-goto>`_
+from the C++ Core Guidelines and
+`6.3.1 <https://www.perforce.com/resources/qac/high-integrity-cpp-coding-standard/statements>`_
+from High Integrity C++ Coding Standard.
 
 For more information on why to avoid programming
 with ``goto`` you can read the famous paper `A Case against the GO TO Statement. <https://www.cs.utexas.edu/users/EWD/ewd02xx/EWD215.PDF>`_.

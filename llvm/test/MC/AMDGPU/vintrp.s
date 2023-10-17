@@ -1,5 +1,5 @@
-// RUN: llvm-mc -arch=amdgcn -show-encoding %s | FileCheck -check-prefix=SI %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck -check-prefix=VI %s
+// RUN: llvm-mc -triple=amdgcn -show-encoding %s | FileCheck -check-prefix=SI %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck -check-prefix=VI %s
 
 v_interp_p1_f32 v1, v0, attr0.x
 // SI: v_interp_p1_f32 v1, v0, attr0.x ; encoding: [0x00,0x00,0x04,0xc8]
@@ -37,9 +37,9 @@ v_interp_p1_f32 v9, v0, attr4.w
 // SI: v_interp_p1_f32 v9, v0, attr4.w ; encoding: [0x00,0x13,0x24,0xc8]
 // VI: v_interp_p1_f32_e32 v9, v0, attr4.w ; encoding: [0x00,0x13,0x24,0xd4]
 
-v_interp_p1_f32 v10, v0, attr63.w
-// SI: v_interp_p1_f32 v10, v0, attr63.w ; encoding: [0x00,0xff,0x28,0xc8]
-// VI: v_interp_p1_f32_e32 v10, v0, attr63.w ; encoding: [0x00,0xff,0x28,0xd4]
+v_interp_p1_f32 v10, v0, attr32.w
+// SI: v_interp_p1_f32 v10, v0, attr32.w ; encoding: [0x00,0x83,0x28,0xc8]
+// VI: v_interp_p1_f32_e32 v10, v0, attr32.w ; encoding: [0x00,0x83,0x28,0xd4]
 
 
 v_interp_p2_f32 v2, v1, attr0.x
@@ -66,9 +66,9 @@ v_interp_p2_f32 v7, v1, attr1.x
 // SI: v_interp_p2_f32 v7, v1, attr1.x ; encoding: [0x01,0x04,0x1d,0xc8]
 // VI: v_interp_p2_f32_e32 v7, v1, attr1.x ; encoding: [0x01,0x04,0x1d,0xd4]
 
-v_interp_p2_f32 v8, v1, attr63.x
-// SI: v_interp_p2_f32 v8, v1, attr63.x ; encoding: [0x01,0xfc,0x21,0xc8]
-// VI: v_interp_p2_f32_e32 v8, v1, attr63.x ; encoding: [0x01,0xfc,0x21,0xd4]
+v_interp_p2_f32 v8, v1, attr32.x
+// SI: v_interp_p2_f32 v8, v1, attr32.x ; encoding: [0x01,0x80,0x21,0xc8]
+// VI: v_interp_p2_f32_e32 v8, v1, attr32.x ; encoding: [0x01,0x80,0x21,0xd4]
 
 
 v_interp_mov_f32 v0, p10, attr0.x
@@ -99,7 +99,7 @@ v_interp_mov_f32 v7, p10, attr0.x
 // SI: v_interp_mov_f32 v7, p10, attr0.x ; encoding: [0x00,0x00,0x1e,0xc8]
 // VI: v_interp_mov_f32_e32 v7, p10, attr0.x ; encoding: [0x00,0x00,0x1e,0xd4]
 
-v_interp_mov_f32 v9, p10, attr63.y
-// SI: v_interp_mov_f32 v9, p10, attr63.y ; encoding: [0x00,0xfd,0x26,0xc8]
-// VI: v_interp_mov_f32_e32 v9, p10, attr63.y ; encoding: [0x00,0xfd,0x26,0xd4]
+v_interp_mov_f32 v9, p10, attr32.y
+// SI: v_interp_mov_f32 v9, p10, attr32.y ; encoding: [0x00,0x81,0x26,0xc8]
+// VI: v_interp_mov_f32_e32 v9, p10, attr32.y ; encoding: [0x00,0x81,0x26,0xd4]
 

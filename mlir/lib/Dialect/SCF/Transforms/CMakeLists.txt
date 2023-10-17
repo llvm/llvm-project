@@ -1,4 +1,5 @@
 add_mlir_dialect_library(MLIRSCFTransforms
+  BufferDeallocationOpInterfaceImpl.cpp
   BufferizableOpInterfaceImpl.cpp
   Bufferize.cpp
   ForToWhile.cpp
@@ -6,6 +7,7 @@ add_mlir_dialect_library(MLIRSCFTransforms
   LoopPipelining.cpp
   LoopRangeFolding.cpp
   LoopSpecialization.cpp
+  OneToNTypeConversion.cpp
   ParallelLoopCollapsing.cpp
   ParallelLoopFusion.cpp
   ParallelLoopTiling.cpp

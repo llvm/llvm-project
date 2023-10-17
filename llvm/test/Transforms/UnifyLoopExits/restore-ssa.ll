@@ -30,7 +30,7 @@ define i32 @exiting-used-in-exit(ptr %arg1, ptr %arg2) local_unnamed_addr align 
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[INC]], [[C:%.*]] ], [ [[PHI_MOVED:%.*]], [[LOOP_EXIT_GUARD]] ]
 ; CHECK-NEXT:    ret i32 [[PHI]]
 ; CHECK:       loop.exit.guard:
-; CHECK-NEXT:    [[MYTMP41_MOVED]] = phi i32 [ undef, [[A]] ], [ [[MYTMP41]], [[B]] ]
+; CHECK-NEXT:    [[MYTMP41_MOVED]] = phi i32 [ poison, [[A]] ], [ [[MYTMP41]], [[B]] ]
 ; CHECK-NEXT:    [[PHI_MOVED]] = phi i32 [ [[MYTMP42]], [[A]] ], [ undef, [[B]] ]
 ; CHECK-NEXT:    [[GUARD_RETURN:%.*]] = phi i1 [ true, [[A]] ], [ false, [[B]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_RETURN]], label [[RETURN]], label [[C]]
@@ -84,7 +84,7 @@ define i32 @internal-used-in-exit(ptr %arg1, ptr %arg2) local_unnamed_addr align
 ; CHECK:       return:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       loop.exit.guard:
-; CHECK-NEXT:    [[MYTMP41_MOVED]] = phi i32 [ undef, [[A]] ], [ [[MYTMP41]], [[C]] ]
+; CHECK-NEXT:    [[MYTMP41_MOVED]] = phi i32 [ poison, [[A]] ], [ [[MYTMP41]], [[C]] ]
 ; CHECK-NEXT:    [[GUARD_RETURN:%.*]] = phi i1 [ true, [[A]] ], [ false, [[C]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_RETURN]], label [[RETURN]], label [[D:%.*]]
 ;
@@ -141,7 +141,7 @@ define i32 @mixed-use-in-exit(ptr %arg1, ptr %arg2) local_unnamed_addr align 2 {
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[MYTMP41_MOVED:%.*]], [[D:%.*]] ], [ [[MYTMP42]], [[ENTRY:%.*]] ], [ [[PHI_MOVED:%.*]], [[LOOP_EXIT_GUARD]] ]
 ; CHECK-NEXT:    ret i32 [[PHI]]
 ; CHECK:       loop.exit.guard:
-; CHECK-NEXT:    [[MYTMP41_MOVED]] = phi i32 [ undef, [[A]] ], [ [[MYTMP41]], [[C]] ]
+; CHECK-NEXT:    [[MYTMP41_MOVED]] = phi i32 [ poison, [[A]] ], [ [[MYTMP41]], [[C]] ]
 ; CHECK-NEXT:    [[PHI_MOVED]] = phi i32 [ [[MYTMP43]], [[A]] ], [ undef, [[C]] ]
 ; CHECK-NEXT:    [[GUARD_RETURN:%.*]] = phi i1 [ true, [[A]] ], [ false, [[C]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_RETURN]], label [[RETURN]], label [[D]]
@@ -206,7 +206,7 @@ define i32 @phi-via-external-block(ptr %arg1, ptr %arg2) local_unnamed_addr alig
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[MYTMP41_MOVED:%.*]], [[D:%.*]] ], [ [[MYTMP42]], [[E:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[PHI]]
 ; CHECK:       loop.exit.guard:
-; CHECK-NEXT:    [[MYTMP41_MOVED]] = phi i32 [ undef, [[A]] ], [ [[MYTMP41]], [[C]] ]
+; CHECK-NEXT:    [[MYTMP41_MOVED]] = phi i32 [ poison, [[A]] ], [ [[MYTMP41]], [[C]] ]
 ; CHECK-NEXT:    [[GUARD_E:%.*]] = phi i1 [ true, [[A]] ], [ false, [[C]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_E]], label [[E]], label [[D]]
 ;

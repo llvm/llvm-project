@@ -325,9 +325,8 @@ define <16 x i8> @combine_mul_to_abs_v16i8(<16 x i8> %x) {
 define <2 x i64> @combine_mul_to_abs_v2i64(<2 x i64> %x) {
 ; SSE-LABEL: combine_mul_to_abs_v2i64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; SSE-NEXT:    psrad $31, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
 ; SSE-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    movdqa %xmm0, %xmm2
 ; SSE-NEXT:    psrlq $32, %xmm2

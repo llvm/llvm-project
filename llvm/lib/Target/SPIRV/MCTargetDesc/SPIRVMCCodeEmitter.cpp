@@ -43,7 +43,7 @@ public:
                                  SmallVectorImpl<MCFixup> &Fixups,
                                  const MCSubtargetInfo &STI) const;
 
-  void encodeInstruction(const MCInst &MI, raw_ostream &OS,
+  void encodeInstruction(const MCInst &MI, SmallVectorImpl<char> &CB,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const override;
 };
@@ -61,25 +61,27 @@ using EndianWriter = support::endian::Writer;
 // output register in operand 0. If so, we need to swap operands 0 and 1 so the
 // type comes first in the output, despide coming second in the MCInst.
 static bool hasType(const MCInst &MI, const MCInstrInfo &MII) {
-  MCInstrDesc MCDesc = MII.get(MI.getOpcode());
+  const MCInstrDesc &MCDesc = MII.get(MI.getOpcode());
   // If we define an output, and have at least one other argument.
   if (MCDesc.getNumDefs() == 1 && MCDesc.getNumOperands() >= 2) {
     // Check if we define an ID, and take a type as operand 1.
-    auto DefOpInfo = MCDesc.opInfo_begin();
-    auto FirstArgOpInfo = MCDesc.opInfo_begin() + 1;
-    return (DefOpInfo->RegClass == SPIRV::IDRegClassID ||
-            DefOpInfo->RegClass == SPIRV::ANYIDRegClassID) &&
-           FirstArgOpInfo->RegClass == SPIRV::TYPERegClassID;
+    auto &DefOpInfo = MCDesc.operands()[0];
+    auto &FirstArgOpInfo = MCDesc.operands()[1];
+    return (DefOpInfo.RegClass == SPIRV::IDRegClassID ||
+            DefOpInfo.RegClass == SPIRV::ANYIDRegClassID) &&
+           FirstArgOpInfo.RegClass == SPIRV::TYPERegClassID;
   }
   return false;
 }
 
-static void emitOperand(const MCOperand &Op, EndianWriter &OSE) {
+static void emitOperand(const MCOperand &Op, SmallVectorImpl<char> &CB) {
   if (Op.isReg()) {
     // Emit the id index starting at 1 (0 is an invalid index).
-    OSE.write<uint32_t>(Register::virtReg2Index(Op.getReg()) + 1);
+    support::endian::write<uint32_t>(
+        CB, Register::virtReg2Index(Op.getReg()) + 1, llvm::endianness::little);
   } else if (Op.isImm()) {
-    OSE.write<uint32_t>(Op.getImm());
+    support::endian::write(CB, static_cast<uint32_t>(Op.getImm()),
+                           llvm::endianness::little);
   } else {
     llvm_unreachable("Unexpected operand type in VReg");
   }
@@ -87,36 +89,37 @@ static void emitOperand(const MCOperand &Op, EndianWriter &OSE) {
 
 // Emit the type in operand 1 before the ID in operand 0 it defines, and all
 // remaining operands in the order they come naturally.
-static void emitTypedInstrOperands(const MCInst &MI, EndianWriter &OSE) {
+static void emitTypedInstrOperands(const MCInst &MI,
+                                   SmallVectorImpl<char> &CB) {
   unsigned NumOps = MI.getNumOperands();
-  emitOperand(MI.getOperand(1), OSE);
-  emitOperand(MI.getOperand(0), OSE);
+  emitOperand(MI.getOperand(1), CB);
+  emitOperand(MI.getOperand(0), CB);
   for (unsigned i = 2; i < NumOps; ++i)
-    emitOperand(MI.getOperand(i), OSE);
+    emitOperand(MI.getOperand(i), CB);
 }
 
 // Emit operands in the order they come naturally.
-static void emitUntypedInstrOperands(const MCInst &MI, EndianWriter &OSE) {
+static void emitUntypedInstrOperands(const MCInst &MI,
+                                     SmallVectorImpl<char> &CB) {
   for (const auto &Op : MI)
-    emitOperand(Op, OSE);
+    emitOperand(Op, CB);
 }
 
-void SPIRVMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
+void SPIRVMCCodeEmitter::encodeInstruction(const MCInst &MI,
+                                           SmallVectorImpl<char> &CB,
                                            SmallVectorImpl<MCFixup> &Fixups,
                                            const MCSubtargetInfo &STI) const {
-  EndianWriter OSE(OS, support::little);
-
   // Encode the first 32 SPIR-V bytes with the number of args and the opcode.
   const uint64_t OpCode = getBinaryCodeForInstr(MI, Fixups, STI);
   const uint32_t NumWords = MI.getNumOperands() + 1;
   const uint32_t FirstWord = (NumWords << 16) | OpCode;
-  OSE.write<uint32_t>(FirstWord);
+  support::endian::write(CB, FirstWord, llvm::endianness::little);
 
   // Emit the instruction arguments (emitting the output type first if present).
   if (hasType(MI, MCII))
-    emitTypedInstrOperands(MI, OSE);
+    emitTypedInstrOperands(MI, CB);
   else
-    emitUntypedInstrOperands(MI, OSE);
+    emitUntypedInstrOperands(MI, CB);
 }
 
 #include "SPIRVGenMCCodeEmitter.inc"

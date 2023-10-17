@@ -16,9 +16,9 @@
 #include "OSTargets.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace clang {
 namespace targets {
@@ -60,6 +60,7 @@ class LLVM_LIBRARY_VISIBILITY PPCTargetInfo : public TargetInfo {
   bool HasMMA = false;
   bool HasROPProtect = false;
   bool HasPrivileged = false;
+  bool HasAIXSmallLocalExecTLS = false;
   bool HasVSX = false;
   bool UseCRBits = false;
   bool HasP8Vector = false;
@@ -87,7 +88,6 @@ public:
   PPCTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
       : TargetInfo(Triple) {
     SuitableAlign = 128;
-    SimdDefaultAlign = 128;
     LongDoubleWidth = LongDoubleAlign = 128;
     LongDoubleFormat = &llvm::APFloat::PPCDoubleDouble();
     HasStrictFP = true;
@@ -197,6 +197,8 @@ public:
 
   void setFeatureEnabled(llvm::StringMap<bool> &Features, StringRef Name,
                          bool Enabled) const override;
+
+  bool supportsTargetAttributeTune() const override { return true; }
 
   ArrayRef<const char *> getGCCRegNames() const override;
 
@@ -331,7 +333,7 @@ public:
     return R;
   }
 
-  const char *getClobbers() const override { return ""; }
+  std::string_view getClobbers() const override { return ""; }
   int getEHDataRegisterNumber(unsigned RegNo) const override {
     if (RegNo == 0)
       return 3;
@@ -364,11 +366,11 @@ public:
   PPC32TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : PPCTargetInfo(Triple, Opts) {
     if (Triple.isOSAIX())
-      resetDataLayout("E-m:a-p:32:32-i64:64-n32");
+      resetDataLayout("E-m:a-p:32:32-Fi32-i64:64-n32");
     else if (Triple.getArch() == llvm::Triple::ppcle)
-      resetDataLayout("e-m:e-p:32:32-i64:64-n32");
+      resetDataLayout("e-m:e-p:32:32-Fn32-i64:64-n32");
     else
-      resetDataLayout("E-m:e-p:32:32-i64:64-n32");
+      resetDataLayout("E-m:e-p:32:32-Fn32-i64:64-n32");
 
     switch (getTriple().getOS()) {
     case llvm::Triple::Linux:
@@ -401,7 +403,7 @@ public:
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
-    // This is the ELF definition, and is overridden by the Darwin sub-target
+    // This is the ELF definition
     return TargetInfo::PowerABIBuiltinVaList;
   }
 };
@@ -419,16 +421,23 @@ public:
 
     if (Triple.isOSAIX()) {
       // TODO: Set appropriate ABI for AIX platform.
-      DataLayout = "E-m:a-i64:64-n32:64";
+      DataLayout = "E-m:a-Fi64-i64:64-n32:64";
       LongDoubleWidth = 64;
       LongDoubleAlign = DoubleAlign = 32;
       LongDoubleFormat = &llvm::APFloat::IEEEdouble();
     } else if ((Triple.getArch() == llvm::Triple::ppc64le)) {
-      DataLayout = "e-m:e-i64:64-n32:64";
+      DataLayout = "e-m:e-Fn32-i64:64-n32:64";
       ABI = "elfv2";
     } else {
-      DataLayout = "E-m:e-i64:64-n32:64";
-      ABI = "elfv1";
+      DataLayout = "E-m:e";
+      if (Triple.isPPC64ELFv2ABI()) {
+        ABI = "elfv2";
+        DataLayout += "-Fn32";
+      } else {
+        ABI = "elfv1";
+        DataLayout += "-Fi64";
+      }
+      DataLayout += "-i64:64-n32:64";
     }
 
     if (Triple.isOSFreeBSD() || Triple.isOSOpenBSD() || Triple.isMusl()) {
@@ -476,33 +485,6 @@ public:
     default:
       return CCCR_Warning;
     }
-  }
-};
-
-class LLVM_LIBRARY_VISIBILITY DarwinPPC32TargetInfo
-    : public DarwinTargetInfo<PPC32TargetInfo> {
-public:
-  DarwinPPC32TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : DarwinTargetInfo<PPC32TargetInfo>(Triple, Opts) {
-    HasAlignMac68kSupport = true;
-    BoolWidth = BoolAlign = 32; // XXX support -mone-byte-bool?
-    PtrDiffType = SignedInt; // for http://llvm.org/bugs/show_bug.cgi?id=15726
-    LongLongAlign = 32;
-    resetDataLayout("E-m:o-p:32:32-f64:32:64-n32", "_");
-  }
-
-  BuiltinVaListKind getBuiltinVaListKind() const override {
-    return TargetInfo::CharPtrBuiltinVaList;
-  }
-};
-
-class LLVM_LIBRARY_VISIBILITY DarwinPPC64TargetInfo
-    : public DarwinTargetInfo<PPC64TargetInfo> {
-public:
-  DarwinPPC64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : DarwinTargetInfo<PPC64TargetInfo>(Triple, Opts) {
-    HasAlignMac68kSupport = true;
-    resetDataLayout("E-m:o-i64:64-n32:64", "_");
   }
 };
 

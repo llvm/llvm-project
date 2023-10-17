@@ -52,3 +52,14 @@ void test8() {
   int a = test7(1);
   double b = test7(2.0);
 }
+
+namespace GH48405 {
+void foo() {
+  struct S {
+    int i;
+    int j = ({i;}); // expected-error {{invalid use of non-static data member 'i'}}
+                    // expected-error@-1 {{cannot initialize a member subobject of type 'int' with an rvalue of type 'void'}}
+		    // expected-warning@-2 {{use of GNU statement expression extension}}
+  };
+}
+}

@@ -1,6 +1,6 @@
-; RUN: opt -opaque-pointers=0 < %s -wasm-lower-em-ehsjlj -wasm-enable-sjlj -S | FileCheck %s -DPTR=i32
-; RUN: opt -opaque-pointers=0 < %s -wasm-lower-em-ehsjlj -wasm-enable-sjlj -S --mattr=+atomics,+bulk-memory | FileCheck %s -DPTR=i32
-; RUN: opt -opaque-pointers=0 < %s -wasm-lower-em-ehsjlj -wasm-enable-sjlj --mtriple=wasm64-unknown-unknown -data-layout="e-m:e-p:64:64-i64:64-n32:64-S128" -S | FileCheck %s -DPTR=i64
+; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-sjlj -S | FileCheck %s -DPTR=i32
+; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-sjlj -S --mattr=+atomics,+bulk-memory | FileCheck %s -DPTR=i32
+; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-sjlj --mtriple=wasm64-unknown-unknown -data-layout="e-m:e-p:64:64-i64:64-n32:64-S128" -S | FileCheck %s -DPTR=i64
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
@@ -12,32 +12,29 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NOT: @__THREW__ =
 ; CHECK-NOT: @__threwValue =
 
-@global_longjmp_ptr = global void (%struct.__jmp_buf_tag*, i32)* @longjmp, align 4
-; CHECK-DAG: @global_longjmp_ptr = global void (%struct.__jmp_buf_tag*, i32)* bitcast (void (i8*, i32)* @__wasm_longjmp to void (%struct.__jmp_buf_tag*, i32)*)
+@global_longjmp_ptr = global ptr @longjmp, align 4
+; CHECK-DAG: @global_longjmp_ptr = global ptr @__wasm_longjmp
 
 ; Test a simple setjmp - longjmp sequence
 define void @setjmp_longjmp() {
 ; CHECK-LABEL: @setjmp_longjmp()
 entry:
   %buf = alloca [1 x %struct.__jmp_buf_tag], align 16
-  %arraydecay = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %buf, i32 0, i32 0
-  %call = call i32 @setjmp(%struct.__jmp_buf_tag* %arraydecay) #0
-  %arraydecay1 = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %buf, i32 0, i32 0
-  call void @longjmp(%struct.__jmp_buf_tag* %arraydecay1, i32 1) #1
+  %call = call i32 @setjmp(ptr %buf) #0
+  call void @longjmp(ptr %buf, i32 1) #1
   unreachable
 
 ; CHECK:    entry:
-; CHECK-NEXT: %malloccall = tail call i8* @malloc([[PTR]] 40)
-; CHECK-NEXT: %setjmpTable = bitcast i8* %malloccall to i32*
-; CHECK-NEXT: store i32 0, i32* %setjmpTable, align 4
+; CHECK-NEXT: %setjmpTable = tail call ptr @malloc([[PTR]] 40)
+; CHECK-NEXT: store i32 0, ptr %setjmpTable, align 4
 ; CHECK-NEXT: %setjmpTableSize = add i32 4, 0
 ; CHECK-NEXT: br label %setjmp.dispatch
 
 ; CHECK:    setjmp.dispatch:
-; CHECK-NEXT: %val10 = phi i32 [ %val, %if.end ], [ undef, %entry ]
-; CHECK-NEXT: %buf9 = phi [1 x %struct.__jmp_buf_tag]* [ %buf8, %if.end ], [ undef, %entry ]
-; CHECK-NEXT: %setjmpTableSize6 = phi i32 [ %setjmpTableSize7, %if.end ], [ %setjmpTableSize, %entry ]
-; CHECK-NEXT: %setjmpTable4 = phi i32* [ %setjmpTable5, %if.end ], [ %setjmpTable, %entry ]
+; CHECK-NEXT: %[[VAL2:.*]] = phi i32 [ %val, %if.end ], [ undef, %entry ]
+; CHECK-NEXT: %[[BUF:.*]] = phi ptr [ %[[BUF2:.*]], %if.end ], [ undef, %entry ]
+; CHECK-NEXT: %[[SETJMPTABLESIZE2:.*]] = phi i32 [ %[[SETJMPTABLESIZE3:.*]], %if.end ], [ %setjmpTableSize, %entry ]
+; CHECK-NEXT: %[[SETJMPTABLE2:.*]] = phi ptr [ %[[SETJMPTABLE3:.*]], %if.end ], [ %setjmpTable, %entry ]
 ; CHECK-NEXT: %label.phi = phi i32 [ %label, %if.end ], [ -1, %entry ]
 ; CHECK-NEXT: switch i32 %label.phi, label %entry.split [
 ; CHECK-NEXT:   i32 1, label %entry.split.split
@@ -45,19 +42,16 @@ entry:
 
 ; CHECK:    entry.split:
 ; CHECK-NEXT: %buf = alloca [1 x %struct.__jmp_buf_tag], align 16
-; CHECK-NEXT: %arraydecay = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %buf, i32 0, i32 0
-; CHECK-NEXT: %setjmpTable1 = call i32* @saveSetjmp(%struct.__jmp_buf_tag* %arraydecay, i32 1, i32* %setjmpTable4, i32 %setjmpTableSize6)
-; CHECK-NEXT: %setjmpTableSize2 = call i32 @getTempRet0()
+; CHECK-NEXT: %[[SETJMPTABLE4:.*]] = call ptr @saveSetjmp(ptr %buf, i32 1, ptr %[[SETJMPTABLE2]], i32 %[[SETJMPTABLESIZE2]])
+; CHECK-NEXT: %[[SETJMPTABLESIZE4:.*]] = call i32 @getTempRet0()
 ; CHECK-NEXT: br label %entry.split.split
 
 ; CHECK:    entry.split.split:
-; CHECK-NEXT: %buf8 = phi [1 x %struct.__jmp_buf_tag]* [ %buf9, %setjmp.dispatch ], [ %buf, %entry.split ]
-; CHECK-NEXT: %setjmpTableSize7 = phi i32 [ %setjmpTableSize2, %entry.split ], [ %setjmpTableSize6, %setjmp.dispatch ]
-; CHECK-NEXT: %setjmpTable5 = phi i32* [ %setjmpTable1, %entry.split ], [ %setjmpTable4, %setjmp.dispatch ]
-; CHECK-NEXT: %setjmp.ret = phi i32 [ 0, %entry.split ], [ %val10, %setjmp.dispatch ]
-; CHECK-NEXT: %arraydecay1 = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %buf8, i32 0, i32 0
-; CHECK-NEXT: %env = bitcast %struct.__jmp_buf_tag* %arraydecay1 to i8*
-; CHECK-NEXT: invoke void @__wasm_longjmp(i8* %env, i32 1)
+; CHECK-NEXT: %[[BUF2]] = phi ptr [ %[[BUF]], %setjmp.dispatch ], [ %buf, %entry.split ]
+; CHECK-NEXT: %[[SETJMPTABLESIZE3]] = phi i32 [ %[[SETJMPTABLESIZE4]], %entry.split ], [ %[[SETJMPTABLESIZE2]], %setjmp.dispatch ]
+; CHECK-NEXT: %[[SETJMPTABLE3]] = phi ptr [ %[[SETJMPTABLE4]], %entry.split ], [ %[[SETJMPTABLE2]], %setjmp.dispatch ]
+; CHECK-NEXT: %setjmp.ret = phi i32 [ 0, %entry.split ], [ %[[VAL2]], %setjmp.dispatch ]
+; CHECK-NEXT: invoke void @__wasm_longjmp(ptr %[[BUF2]], i32 1)
 ; CHECK-NEXT:         to label %.noexc unwind label %catch.dispatch.longjmp
 
 ; CHECK:    .noexc:
@@ -68,22 +62,19 @@ entry:
 
 ; CHECK:    catch.longjmp:
 ; CHECK-NEXT: %1 = catchpad within %0 []
-; CHECK-NEXT: %thrown = call i8* @llvm.wasm.catch(i32 1)
-; CHECK-NEXT: %longjmp.args = bitcast i8* %thrown to { i8*, i32 }*
-; CHECK-NEXT: %env_gep = getelementptr { i8*, i32 }, { i8*, i32 }* %longjmp.args, i32 0, i32 0
-; CHECK-NEXT: %val_gep = getelementptr { i8*, i32 }, { i8*, i32 }* %longjmp.args, i32 0, i32 1
-; CHECK-NEXT: %env3 = load i8*, i8** %env_gep, align {{.*}}
-; CHECK-NEXT: %val = load i32, i32* %val_gep, align 4
-; CHECK-NEXT: %env.p = bitcast i8* %env3 to [[PTR]]*
-; CHECK-NEXT: %setjmp.id = load [[PTR]], [[PTR]]* %env.p, align {{.*}}
-; CHECK-NEXT: %label = call i32 @testSetjmp([[PTR]] %setjmp.id, i32* %setjmpTable5, i32 %setjmpTableSize7) [ "funclet"(token %1) ]
+; CHECK-NEXT: %thrown = call ptr @llvm.wasm.catch(i32 1)
+; CHECK-NEXT: %env_gep = getelementptr { ptr, i32 }, ptr %thrown, i32 0, i32 0
+; CHECK-NEXT: %val_gep = getelementptr { ptr, i32 }, ptr %thrown, i32 0, i32 1
+; CHECK-NEXT: %env = load ptr, ptr %env_gep, align {{.*}}
+; CHECK-NEXT: %val = load i32, ptr %val_gep, align 4
+; CHECK-NEXT: %setjmp.id = load [[PTR]], ptr %env, align {{.*}}
+; CHECK-NEXT: %label = call i32 @testSetjmp([[PTR]] %setjmp.id, ptr %[[SETJMPTABLE3]], i32 %[[SETJMPTABLESIZE3]]) [ "funclet"(token %1) ]
 ; CHECK-NEXT: %2 = icmp eq i32 %label, 0
 ; CHECK-NEXT: br i1 %2, label %if.then, label %if.end
 
 ; CHECK:    if.then:
-; CHECK-NEXT: %3 = bitcast i32* %setjmpTable5 to i8*
-; CHECK-NEXT: tail call void @free(i8* %3) [ "funclet"(token %1) ]
-; CHECK-NEXT: call void @__wasm_longjmp(i8* %env3, i32 %val) [ "funclet"(token %1) ]
+; CHECK-NEXT: tail call void @free(ptr %[[SETJMPTABLE3]]) [ "funclet"(token %1) ]
+; CHECK-NEXT: call void @__wasm_longjmp(ptr %env, i32 %val) [ "funclet"(token %1) ]
 ; CHECK-NEXT: unreachable
 
 ; CHECK:    if.end:
@@ -97,8 +88,7 @@ define void @setjmp_multiple_longjmpable_calls() {
 ; CHECK-LABEL: @setjmp_multiple_longjmpable_calls
 entry:
   %buf = alloca [1 x %struct.__jmp_buf_tag], align 16
-  %arraydecay = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %buf, i32 0, i32 0
-  %call = call i32 @setjmp(%struct.__jmp_buf_tag* %arraydecay) #0
+  %call = call i32 @setjmp(ptr %buf) #0
   call void @foo()
   call void @foo()
   ret void
@@ -114,30 +104,28 @@ entry:
 
 ; Tests cases where longjmp function pointer is used in other ways than direct
 ; calls. longjmps should be replaced with (void(*)(jmp_buf*, int))__wasm_longjmp.
-declare void @take_longjmp(void (%struct.__jmp_buf_tag*, i32)* %arg_ptr)
+declare void @take_longjmp(ptr %arg_ptr)
 define void @indirect_longjmp() {
 ; CHECK-LABEL: @indirect_longjmp
 entry:
-  %local_longjmp_ptr = alloca void (%struct.__jmp_buf_tag*, i32)*, align 4
+  %local_longjmp_ptr = alloca ptr, align 4
   %buf0 = alloca [1 x %struct.__jmp_buf_tag], align 16
   %buf1 = alloca [1 x %struct.__jmp_buf_tag], align 16
 
   ; Store longjmp in a local variable, load it, and call it
-  store void (%struct.__jmp_buf_tag*, i32)* @longjmp, void (%struct.__jmp_buf_tag*, i32)** %local_longjmp_ptr, align 4
-  ; CHECK: store void (%struct.__jmp_buf_tag*, i32)* bitcast (void (i8*, i32)* @__wasm_longjmp to void (%struct.__jmp_buf_tag*, i32)*), void (%struct.__jmp_buf_tag*, i32)** %local_longjmp_ptr, align 4
-  %longjmp_from_local_ptr = load void (%struct.__jmp_buf_tag*, i32)*, void (%struct.__jmp_buf_tag*, i32)** %local_longjmp_ptr, align 4
-  %arraydecay = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %buf0, i32 0, i32 0
-  call void %longjmp_from_local_ptr(%struct.__jmp_buf_tag* %arraydecay, i32 0)
+  store ptr @longjmp, ptr %local_longjmp_ptr, align 4
+  ; CHECK: store ptr @__wasm_longjmp, ptr %local_longjmp_ptr, align 4
+  %longjmp_from_local_ptr = load ptr, ptr %local_longjmp_ptr, align 4
+  call void %longjmp_from_local_ptr(ptr %buf0, i32 0)
 
   ; Load longjmp from a global variable and call it
-  %longjmp_from_global_ptr = load void (%struct.__jmp_buf_tag*, i32)*, void (%struct.__jmp_buf_tag*, i32)** @global_longjmp_ptr, align 4
-  %arraydecay1 = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %buf1, i32 0, i32 0
-  call void %longjmp_from_global_ptr(%struct.__jmp_buf_tag* %arraydecay1, i32 0)
+  %longjmp_from_global_ptr = load ptr, ptr @global_longjmp_ptr, align 4
+  call void %longjmp_from_global_ptr(ptr %buf1, i32 0)
 
   ; Pass longjmp as a function argument. This is a call but longjmp is not a
   ; callee but an argument.
-  call void @take_longjmp(void (%struct.__jmp_buf_tag*, i32)* @longjmp)
-  ; CHECK: call void @take_longjmp(void (%struct.__jmp_buf_tag*, i32)* bitcast (void (i8*, i32)* @__wasm_longjmp to void (%struct.__jmp_buf_tag*, i32)*))
+  call void @take_longjmp(ptr @longjmp)
+  ; CHECK: call void @take_longjmp(ptr @__wasm_longjmp)
   ret void
 }
 
@@ -146,19 +134,19 @@ declare void @foo() #2
 ; The pass removes the 'nounwind' attribute, so there should be no attributes
 ; CHECK-NOT: declare void @foo #{{.*}}
 ; Function Attrs: returns_twice
-declare i32 @setjmp(%struct.__jmp_buf_tag*) #0
+declare i32 @setjmp(ptr) #0
 ; Function Attrs: noreturn
-declare void @longjmp(%struct.__jmp_buf_tag*, i32) #1
+declare void @longjmp(ptr, i32) #1
 declare i32 @__gxx_personality_v0(...)
-declare i8* @__cxa_begin_catch(i8*)
+declare ptr @__cxa_begin_catch(ptr)
 declare void @__cxa_end_catch()
-declare void @free(i8*)
+declare void @free(ptr)
 
 ; JS glue function declarations
 ; CHECK-DAG: declare i32 @getTempRet0()
-; CHECK-DAG: declare i32* @saveSetjmp(%struct.__jmp_buf_tag*, i32, i32*, i32)
-; CHECK-DAG: declare i32 @testSetjmp([[PTR]], i32*, i32)
-; CHECK-DAG: declare void @__wasm_longjmp(i8*, i32)
+; CHECK-DAG: declare ptr @saveSetjmp(ptr, i32, ptr, i32)
+; CHECK-DAG: declare i32 @testSetjmp([[PTR]], ptr, i32)
+; CHECK-DAG: declare void @__wasm_longjmp(ptr, i32)
 
 attributes #0 = { returns_twice }
 attributes #1 = { noreturn }

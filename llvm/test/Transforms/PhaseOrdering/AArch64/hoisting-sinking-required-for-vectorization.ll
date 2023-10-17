@@ -133,14 +133,14 @@ for.end:                                          ; preds = %for.cond.cleanup
 define void @loop2(ptr %A, ptr %B, ptr %C, float %x) {
 ; CHECK-LABEL: @loop2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 40000
-; CHECK-NEXT:    [[UGLYGEP2:%.*]] = getelementptr i8, ptr [[C:%.*]], i64 40000
-; CHECK-NEXT:    [[UGLYGEP3:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 40000
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ugt ptr [[UGLYGEP2]], [[B]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ugt ptr [[UGLYGEP]], [[C]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 40000
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[C:%.*]], i64 40000
+; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 40000
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ugt ptr [[SCEVGEP2]], [[B]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ugt ptr [[SCEVGEP]], [[C]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    [[BOUND04:%.*]] = icmp ugt ptr [[UGLYGEP3]], [[B]]
-; CHECK-NEXT:    [[BOUND15:%.*]] = icmp ugt ptr [[UGLYGEP]], [[A]]
+; CHECK-NEXT:    [[BOUND04:%.*]] = icmp ugt ptr [[SCEVGEP3]], [[B]]
+; CHECK-NEXT:    [[BOUND15:%.*]] = icmp ugt ptr [[SCEVGEP]], [[A]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT6:%.*]] = and i1 [[BOUND04]], [[BOUND15]]
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT6]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label [[LOOP_BODY:%.*]], label [[VECTOR_PH:%.*]]
@@ -152,18 +152,29 @@ define void @loop2(ptr %A, ptr %B, ptr %C, float %x) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4, !alias.scope !4
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], <i32 20, i32 20, i32 20, i32 20>
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x float>, ptr [[TMP2]], align 4, !alias.scope !7
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[WIDE_LOAD7]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr float, ptr [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x float>, ptr [[TMP4]], align 4, !alias.scope !9, !noalias !11
-; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP1]], <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, <4 x float> [[WIDE_LOAD8]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = fadd <4 x float> [[TMP3]], [[TMP5]]
-; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[TMP4]], align 4, !alias.scope !9, !noalias !11
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10000
-; CHECK-NEXT:    br i1 [[TMP6]], label [[EXIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 4
+; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4, !alias.scope !4
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], <i32 20, i32 20, i32 20, i32 20>
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD7]], <i32 20, i32 20, i32 20, i32 20>
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x float>, ptr [[TMP4]], align 4, !alias.scope !7
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[TMP4]], i64 4
+; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <4 x float>, ptr [[TMP5]], align 4, !alias.scope !7
+; CHECK-NEXT:    [[TMP6:%.*]] = fmul <4 x float> [[WIDE_LOAD8]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul <4 x float> [[WIDE_LOAD9]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr float, ptr [[B]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <4 x float>, ptr [[TMP8]], align 4, !alias.scope !9, !noalias !11
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr float, ptr [[TMP8]], i64 4
+; CHECK-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x float>, ptr [[TMP9]], align 4, !alias.scope !9, !noalias !11
+; CHECK-NEXT:    [[TMP10:%.*]] = select <4 x i1> [[TMP2]], <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, <4 x float> [[WIDE_LOAD10]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = fadd <4 x float> [[TMP6]], [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = select <4 x i1> [[TMP3]], <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, <4 x float> [[WIDE_LOAD11]]
+; CHECK-NEXT:    [[PREDPHI12:%.*]] = fadd <4 x float> [[TMP7]], [[TMP11]]
+; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[TMP8]], align 4, !alias.scope !9, !noalias !11
+; CHECK-NEXT:    store <4 x float> [[PREDPHI12]], ptr [[TMP9]], align 4, !alias.scope !9, !noalias !11
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10000
+; CHECK-NEXT:    br i1 [[TMP12]], label [[EXIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       loop.body:
 ; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[C_GEP:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[IV1]]

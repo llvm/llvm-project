@@ -128,8 +128,7 @@ ParallelLoopGeneratorGOMP::createSubFn(Value *Stride, AllocaInst *StructData,
   Builder.SetInsertPoint(HeaderBB);
   Value *LBPtr = Builder.CreateAlloca(LongType, nullptr, "polly.par.LBPtr");
   Value *UBPtr = Builder.CreateAlloca(LongType, nullptr, "polly.par.UBPtr");
-  Value *UserContext = Builder.CreateBitCast(
-      &*SubFn->arg_begin(), StructData->getType(), "polly.par.userContext");
+  Value *UserContext = &*SubFn->arg_begin();
 
   extractValuesFromStruct(Data, StructData->getAllocatedType(), UserContext,
                           Map);

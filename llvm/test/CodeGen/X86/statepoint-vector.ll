@@ -57,10 +57,10 @@ entry:
 define <2 x ptr addrspace(1)> @test3(i1 %cnd, ptr %ptr) gc "statepoint-example" {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    subq $40, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    movaps (%rsi), %xmm0
+; CHECK-NEXT:    subq $40, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    movaps %xmm0, (%rsp)
 ; CHECK-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    callq do_safepoint@PLT
@@ -122,9 +122,9 @@ define void @test5() gc "statepoint-example" {
 ; CHECK-NEXT:    subq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
-; CHECK-NEXT:    movups %xmm0, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq $-1, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq $-1, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq $-1, (%rsp)
 ; CHECK-NEXT:    callq do_safepoint@PLT
 ; CHECK-NEXT:  .Ltmp4:
 ; CHECK-NEXT:    addq $40, %rsp

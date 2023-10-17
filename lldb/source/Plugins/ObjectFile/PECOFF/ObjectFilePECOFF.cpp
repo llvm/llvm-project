@@ -10,12 +10,10 @@
 #include "PECallFrameInfo.h"
 #include "WindowsMiniDump.h"
 
-#include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Interpreter/OptionValueDictionary.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -25,6 +23,7 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
@@ -36,8 +35,8 @@
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatAdapters.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/TargetParser/Host.h"
 #include <optional>
 
 #define IMAGE_DOS_SIGNATURE 0x5A4D    // MZ
@@ -80,8 +79,8 @@ enum {
 
 class PluginProperties : public Properties {
 public:
-  static ConstString GetSettingName() {
-    return ConstString(ObjectFilePECOFF::GetPluginNameStatic());
+  static llvm::StringRef GetSettingName() {
+    return ObjectFilePECOFF::GetPluginNameStatic();
   }
 
   PluginProperties() {
@@ -90,14 +89,13 @@ public:
   }
 
   llvm::Triple::EnvironmentType ABI() const {
-    return (llvm::Triple::EnvironmentType)
-        m_collection_sp->GetPropertyAtIndexAsEnumeration(
-            nullptr, ePropertyABI, llvm::Triple::UnknownEnvironment);
+    return GetPropertyAtIndexAs<llvm::Triple::EnvironmentType>(
+        ePropertyABI, llvm::Triple::UnknownEnvironment);
   }
 
   OptionValueDictionary *ModuleABIMap() const {
     return m_collection_sp->GetPropertyAtIndexAsOptionValueDictionary(
-        nullptr, ePropertyModuleABIMap);
+        ePropertyModuleABIMap);
   }
 };
 
@@ -166,7 +164,7 @@ static UUID GetCoffUUID(llvm::object::COFFObjectFile &coff_obj) {
     auto raw_data = coff_obj.getData();
     LLDB_SCOPED_TIMERF(
         "Calculating module crc32 %s with size %" PRIu64 " KiB",
-        FileSpec(coff_obj.getFileName()).GetLastPathComponent().AsCString(),
+        FileSpec(coff_obj.getFileName()).GetFilename().AsCString(),
         static_cast<lldb::offset_t>(raw_data.size()) / 1024);
     gnu_debuglink_crc = llvm::crc32(0, llvm::arrayRefFromStringRef(raw_data));
   }
@@ -190,8 +188,7 @@ void ObjectFilePECOFF::DebuggerInitialize(Debugger &debugger) {
     const bool is_global_setting = true;
     PluginManager::CreateSettingForObjectFilePlugin(
         debugger, GetGlobalPluginProperties().GetValueProperties(),
-        ConstString("Properties for the PE/COFF object-file plug-in."),
-        is_global_setting);
+        "Properties for the PE/COFF object-file plug-in.", is_global_setting);
   }
 }
 
@@ -296,25 +293,23 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
   const auto *map = GetGlobalPluginProperties().ModuleABIMap();
   if (map->GetNumValues() > 0) {
     // Step 1: Try with the exact file name.
-    auto name = file.GetLastPathComponent();
+    auto name = file.GetFilename();
     module_env_option = map->GetValueForKey(name);
     if (!module_env_option) {
       // Step 2: Try with the file name in lowercase.
       auto name_lower = name.GetStringRef().lower();
-      module_env_option =
-          map->GetValueForKey(ConstString(llvm::StringRef(name_lower)));
+      module_env_option = map->GetValueForKey(llvm::StringRef(name_lower));
     }
     if (!module_env_option) {
       // Step 3: Try with the file name with ".debug" suffix stripped.
       auto name_stripped = name.GetStringRef();
       if (name_stripped.consume_back_insensitive(".debug")) {
-        module_env_option = map->GetValueForKey(ConstString(name_stripped));
+        module_env_option = map->GetValueForKey(name_stripped);
         if (!module_env_option) {
           // Step 4: Try with the file name in lowercase with ".debug" suffix
           // stripped.
           auto name_lower = name_stripped.lower();
-          module_env_option =
-              map->GetValueForKey(ConstString(llvm::StringRef(name_lower)));
+          module_env_option = map->GetValueForKey(llvm::StringRef(name_lower));
         }
       }
     }
@@ -322,7 +317,8 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
   llvm::Triple::EnvironmentType env;
   if (module_env_option)
     env =
-        (llvm::Triple::EnvironmentType)module_env_option->GetEnumerationValue();
+        module_env_option->GetValueAs<llvm::Triple::EnvironmentType>().value_or(
+            static_cast<llvm::Triple::EnvironmentType>(0));
   else
     env = GetGlobalPluginProperties().ABI();
 
@@ -346,6 +342,7 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
     specs.Append(module_spec);
     break;
   case MachineArm64:
+  case MachineArm64X:
     spec.SetTriple("aarch64-pc-windows");
     spec.GetTriple().setEnvironment(env);
     specs.Append(module_spec);
@@ -863,10 +860,14 @@ ObjectFilePECOFF::AppendFromExportTable(SectionList *sect_list,
   for (const auto &entry : m_binary->export_directories()) {
     llvm::StringRef sym_name;
     if (auto err = entry.getSymbolName(sym_name)) {
-      LLDB_LOG(log,
-               "ObjectFilePECOFF::AppendFromExportTable - failed to get export "
-               "table entry name: {0}",
-               llvm::fmt_consume(std::move(err)));
+      if (log)
+        log->Format(
+            __FILE__, __func__,
+            "ObjectFilePECOFF::AppendFromExportTable - failed to get export "
+            "table entry name: {0}",
+            llvm::fmt_consume(std::move(err)));
+      else
+        llvm::consumeError(std::move(err));
       continue;
     }
     Symbol symbol;
@@ -884,10 +885,13 @@ ObjectFilePECOFF::AppendFromExportTable(SectionList *sect_list,
       // it in symtab and make a note using the symbol name.
       llvm::StringRef forwarder_name;
       if (auto err = entry.getForwardTo(forwarder_name)) {
-        LLDB_LOG(log,
-                 "ObjectFilePECOFF::AppendFromExportTable - failed to get "
-                 "forwarder name of forwarder export '{0}': {1}",
-                 sym_name, llvm::fmt_consume(std::move(err)));
+        if (log)
+          log->Format(__FILE__, __func__,
+                      "ObjectFilePECOFF::AppendFromExportTable - failed to get "
+                      "forwarder name of forwarder export '{0}': {1}",
+                      sym_name, llvm::fmt_consume(std::move(err)));
+        else
+          llvm::consumeError(std::move(err));
         continue;
       }
       llvm::SmallString<256> new_name = {symbol.GetDisplayName().GetStringRef(),
@@ -899,10 +903,13 @@ ObjectFilePECOFF::AppendFromExportTable(SectionList *sect_list,
 
     uint32_t function_rva;
     if (auto err = entry.getExportRVA(function_rva)) {
-      LLDB_LOG(log,
-               "ObjectFilePECOFF::AppendFromExportTable - failed to get "
-               "address of export entry '{0}': {1}",
-               sym_name, llvm::fmt_consume(std::move(err)));
+      if (log)
+        log->Format(__FILE__, __func__,
+                    "ObjectFilePECOFF::AppendFromExportTable - failed to get "
+                    "address of export entry '{0}': {1}",
+                    sym_name, llvm::fmt_consume(std::move(err)));
+      else
+        llvm::consumeError(std::move(err));
       continue;
     }
     // Skip the symbol if it doesn't look valid.
@@ -1002,6 +1009,7 @@ SectionType ObjectFilePECOFF::GetSectionType(llvm::StringRef sect_name,
           // .eh_frame can be truncated to 8 chars.
           .Cases(".eh_frame", ".eh_fram", eSectionTypeEHFrame)
           .Case(".gosymtab", eSectionTypeGoSymtab)
+          .Case("swiftast", eSectionTypeSwiftModules)
           .Default(eSectionTypeInvalid);
   if (section_type != eSectionTypeInvalid)
     return section_type;
@@ -1017,6 +1025,16 @@ SectionType ObjectFilePECOFF::GetSectionType(llvm::StringRef sect_name,
       return eSectionTypeData;
   }
   return eSectionTypeOther;
+}
+
+size_t ObjectFilePECOFF::GetSectionDataSize(Section *section) {
+  // For executables, SizeOfRawData (getFileSize()) is aligned by
+  // FileAlignment and the actual section size is in VirtualSize
+  // (getByteSize()). See the comment on
+  // llvm::object::COFFObjectFile::getSectionSize().
+  if (m_binary->getPE32Header() || m_binary->getPE32PlusHeader())
+    return std::min(section->GetByteSize(), section->GetFileSize());
+  return section->GetFileSize();
 }
 
 void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
@@ -1039,7 +1057,6 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
     unified_section_list.AddSection(header_sp);
 
     const uint32_t nsects = m_sect_headers.size();
-    ModuleSP module_sp(GetModule());
     for (uint32_t idx = 0; idx < nsects; ++idx) {
       llvm::StringRef sect_name = GetSectionName(m_sect_headers[idx]);
       ConstString const_sect_name(sect_name);

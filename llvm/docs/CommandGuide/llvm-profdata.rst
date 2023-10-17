@@ -20,6 +20,7 @@ COMMANDS
 * :ref:`merge <profdata-merge>`
 * :ref:`show <profdata-show>`
 * :ref:`overlap <profdata-overlap>`
+* :ref:`order <profdata-order>`
 
 .. program:: llvm-profdata merge
 
@@ -161,6 +162,12 @@ OPTIONS
  coverage for the optimized target. This option can only be used with
  sample-based profile in extbinary format.
 
+.. option:: --convert-sample-profile-layout=[nest|flat]
+
+ Convert the merged profile into a profile with a new layout. Supported
+ layout are ``nest`` (Nested profile, the input should be CS flat profile) and
+ ``flat`` (Profile with nested inlinees flattened out).
+
 .. option:: --supplement-instr-with-sample=<file>
 
  Supplement an instrumentation profile with sample profile. The sample profile
@@ -191,6 +198,18 @@ OPTIONS
  When ``-debug-info-correlate`` was used for instrumentation, use this option
  to correlate the raw profile.
 
+.. option:: --temporal-profile-trace-reservoir-size
+
+ The maximum number of temporal profile traces to be stored in the output
+ profile. If more traces are added, we will use reservoir sampling to select
+ which traces to keep. Note that changing this value between different merge
+ invocations on the same indexed profile could result in sample bias. The
+ default value is 100.
+
+.. option:: --temporal-profile-max-trace-length
+
+ The maximum number of functions in a single temporal profile trace. Longer
+ traces will be truncated. The default value is 1000.
 
 EXAMPLES
 ^^^^^^^^
@@ -399,6 +418,40 @@ OPTIONS
 
  Only show overlap for the context sensitive profile counts. The default is to show
  non-context sensitive profile counts.
+
+.. program:: llvm-profdata order
+
+.. _profdata-order:
+
+ORDER
+-------
+
+SYNOPSIS
+^^^^^^^^
+
+:program:`llvm-profdata order` [*options*] [*filename*]
+
+DESCRIPTION
+^^^^^^^^^^^
+
+:program:`llvm-profdata order` uses temporal profiling traces from a profile and
+finds a function order that reduces the number of page faults for those traces.
+This output can be directly passed to ``lld`` via ``--symbol-ordering-file=``
+for ELF or ``-order-file`` for Mach-O. If the traces found in the profile are
+representative of the real world, then this order should improve startup
+performance.
+
+OPTIONS
+^^^^^^^
+
+.. option:: --help
+
+ Print a summary of command line options.
+
+.. option:: --output=<output>, -o
+
+ Specify the output file name.  If *output* is ``-`` or it isn't specified,
+ then the output is sent to standard output.
 
 EXIT STATUS
 -----------

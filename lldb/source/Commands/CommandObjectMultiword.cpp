@@ -274,10 +274,10 @@ void CommandObjectMultiword::HandleCompletion(CompletionRequest &request) {
 
   StringList new_matches;
   CommandObject *sub_command_object = GetSubcommandObject(arg0, &new_matches);
-  if (sub_command_object == nullptr) {
-    request.AddCompletions(new_matches);
+
+  // The subcommand is ambiguous. The completion isn't meaningful.
+  if (!sub_command_object)
     return;
-  }
 
   // Remove the one match that we got from calling GetSubcommandObject.
   new_matches.DeleteStringAtIndex(0);

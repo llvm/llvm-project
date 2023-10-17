@@ -21,8 +21,8 @@ define i8 @out8_constmask(i8 %x, i8 %y) {
 define i16 @out16_constmask(i16 %x, i16 %y) {
 ; CHECK-LABEL: out16_constmask:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #3855
-; CHECK-NEXT:    mov w9, #-3856
+; CHECK-NEXT:    mov w8, #3855 // =0xf0f
+; CHECK-NEXT:    mov w9, #-3856 // =0xfffff0f0
 ; CHECK-NEXT:    and w8, w0, w8
 ; CHECK-NEXT:    and w9, w1, w9
 ; CHECK-NEXT:    orr w0, w8, w9
@@ -79,9 +79,9 @@ define i8 @in8_constmask(i8 %x, i8 %y) {
 define i16 @in16_constmask(i16 %x, i16 %y) {
 ; CHECK-LABEL: in16_constmask:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    eor w8, w0, w1
-; CHECK-NEXT:    mov w9, #3855
-; CHECK-NEXT:    and w8, w8, w9
+; CHECK-NEXT:    mov w8, #3855 // =0xf0f
+; CHECK-NEXT:    eor w9, w0, w1
+; CHECK-NEXT:    and w8, w9, w8
 ; CHECK-NEXT:    eor w0, w8, w1
 ; CHECK-NEXT:    ret
   %n0 = xor i16 %x, %y
@@ -207,8 +207,8 @@ define i32 @in_multiuse_A_constmask(i32 %x, i32 %y, i32 %z) nounwind {
 ; CHECK-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
 ; CHECK-NEXT:    eor w8, w0, w1
 ; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    and w20, w8, #0xf0f0f0f
 ; CHECK-NEXT:    mov w19, w1
+; CHECK-NEXT:    and w20, w8, #0xf0f0f0f
 ; CHECK-NEXT:    mov w0, w20
 ; CHECK-NEXT:    bl use32
 ; CHECK-NEXT:    eor w0, w20, w19
@@ -247,7 +247,7 @@ define i32 @in_multiuse_B_constmask(i32 %x, i32 %y, i32 %z) nounwind {
 define i32 @n0_badconstmask(i32 %x, i32 %y) {
 ; CHECK-LABEL: n0_badconstmask:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #61681
+; CHECK-NEXT:    mov w8, #61681 // =0xf0f1
 ; CHECK-NEXT:    and w9, w0, #0xf0f0f0f
 ; CHECK-NEXT:    movk w8, #61680, lsl #16
 ; CHECK-NEXT:    and w8, w1, w8

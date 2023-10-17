@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <algorithm>
-
 // UNSUPPORTED: c++03, c++11, c++14, c++17
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
+
+// <algorithm>
 
 // template<bidirectional_iterator I1, sentinel_for<I1> S1, bidirectional_iterator I2>
 //   requires indirectly_movable<I1, I2>
@@ -23,6 +24,7 @@
 #include <array>
 #include <cassert>
 #include <deque>
+#include <iterator>
 #include <ranges>
 #include <vector>
 
@@ -188,6 +190,7 @@ constexpr bool test() {
   test_proxy_in_iterators<ProxyIterator>();
 
   { // check that a move-only type works
+    // When non-trivial
     {
       MoveOnly a[] = {1, 2, 3};
       MoveOnly b[3];
@@ -199,6 +202,24 @@ constexpr bool test() {
     {
       MoveOnly a[] = {1, 2, 3};
       MoveOnly b[3];
+      std::ranges::move_backward(std::begin(a), std::end(a), std::end(b));
+      assert(b[0].get() == 1);
+      assert(b[1].get() == 2);
+      assert(b[2].get() == 3);
+    }
+
+    // When trivial
+    {
+      TrivialMoveOnly a[] = {1, 2, 3};
+      TrivialMoveOnly b[3];
+      std::ranges::move_backward(a, std::end(b));
+      assert(b[0].get() == 1);
+      assert(b[1].get() == 2);
+      assert(b[2].get() == 3);
+    }
+    {
+      TrivialMoveOnly a[] = {1, 2, 3};
+      TrivialMoveOnly b[3];
       std::ranges::move_backward(std::begin(a), std::end(a), std::end(b));
       assert(b[0].get() == 1);
       assert(b[1].get() == 2);

@@ -23,9 +23,11 @@ define i32 @load_test0_noinbounds() {
 ; CHECK-LABEL: load_test0_noinbounds:
 ; CHECK:         .functype load_test0_noinbounds () -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    global.get $push0=, g@GOT
-; CHECK-NEXT:    i32.load $push1=, 40($pop0)
-; CHECK-NEXT:    return $pop1
+; CHECK-NEXT:    global.get $push1=, g@GOT
+; CHECK-NEXT:    i32.const $push0=, 40
+; CHECK-NEXT:    i32.add $push2=, $pop1, $pop0
+; CHECK-NEXT:    i32.load $push3=, 0($pop2)
+; CHECK-NEXT:    return $pop3
   %t = load i32, ptr getelementptr ([0 x i32], ptr @g, i32 0, i32 10), align 4
   ret i32 %t
 }
@@ -404,8 +406,10 @@ define void @store_test0_noinbounds(i32 %i) {
 ; CHECK-LABEL: store_test0_noinbounds:
 ; CHECK:         .functype store_test0_noinbounds (i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    global.get $push0=, g@GOT
-; CHECK-NEXT:    i32.store 40($pop0), $0
+; CHECK-NEXT:    global.get $push1=, g@GOT
+; CHECK-NEXT:    i32.const $push0=, 40
+; CHECK-NEXT:    i32.add $push2=, $pop1, $pop0
+; CHECK-NEXT:    i32.store 0($pop2), $0
 ; CHECK-NEXT:    return
   store i32 %i, ptr getelementptr ([0 x i32], ptr @g, i32 0, i32 10), align 4
   ret void

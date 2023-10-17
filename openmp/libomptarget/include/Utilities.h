@@ -14,7 +14,6 @@
 #ifndef OPENMP_LIBOMPTARGET_INCLUDE_UTILITIES_H
 #define OPENMP_LIBOMPTARGET_INCLUDE_UTILITIES_H
 
-#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 
@@ -81,6 +80,12 @@ public:
         Data = Default;
       }
     }
+  }
+
+  Envar<Ty> &operator=(const Ty &V) {
+    Data = V;
+    Initialized = true;
+    return *this;
   }
 
   /// Get the definitive value.

@@ -9,8 +9,6 @@
 #include "lldb/Host/FileSystem.h"
 
 #include "lldb/Utility/DataBufferLLVM.h"
-#include "lldb/Utility/LLDBAssert.h"
-#include "lldb/Utility/TildeExpressionResolver.h"
 
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Errno.h"
@@ -45,16 +43,6 @@ using namespace lldb_private;
 using namespace llvm;
 
 FileSystem &FileSystem::Instance() { return *InstanceImpl(); }
-
-void FileSystem::Initialize() {
-  lldbassert(!InstanceImpl() && "Already initialized.");
-  InstanceImpl().emplace();
-}
-
-void FileSystem::Initialize(IntrusiveRefCntPtr<vfs::FileSystem> fs) {
-  lldbassert(!InstanceImpl() && "Already initialized.");
-  InstanceImpl().emplace(fs);
-}
 
 void FileSystem::Terminate() {
   lldbassert(InstanceImpl() && "Already terminated.");
@@ -192,7 +180,7 @@ void FileSystem::EnumerateDirectory(Twine path, bool find_directories,
     const auto &Item = *Iter;
     ErrorOr<vfs::Status> Status = m_fs->status(Item.path());
     if (!Status)
-      break;
+      continue;
     if (!find_files && Status->isRegularFile())
       continue;
     if (!find_directories && Status->isDirectory())
@@ -239,9 +227,9 @@ void FileSystem::Resolve(SmallVectorImpl<char> &path) {
 
   // Resolve tilde in path.
   SmallString<128> resolved(path.begin(), path.end());
-  StandardTildeExpressionResolver Resolver;
-  Resolver.ResolveFullPath(llvm::StringRef(path.begin(), path.size()),
-                           resolved);
+  assert(m_tilde_resolver && "must initialize tilde resolver in constructor");
+  m_tilde_resolver->ResolveFullPath(llvm::StringRef(path.begin(), path.size()),
+                                    resolved);
 
   // Try making the path absolute if it exists.
   SmallString<128> absolute(resolved.begin(), resolved.end());

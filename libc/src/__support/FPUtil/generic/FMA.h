@@ -6,18 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_FMA_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_FMA_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_FMA_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_FMA_H
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/FloatProperties.h"
+#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/UInt128.h"
 #include "src/__support/builtin_wrappers.h"
-#include "src/__support/common.h"
+#include "src/__support/macros/attributes.h"   // LIBC_INLINE
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 namespace generic {
 
@@ -26,7 +28,7 @@ template <typename T> LIBC_INLINE T fma(T x, T y, T z);
 // TODO(lntue): Implement fmaf that is correctly rounded to all rounding modes.
 // The implementation below only is only correct for the default rounding mode,
 // round-to-nearest tie-to-even.
-template <> inline float fma<float>(float x, float y, float z) {
+template <> LIBC_INLINE float fma<float>(float x, float y, float z) {
   // Product is exact.
   double prod = static_cast<double>(x) * static_cast<double>(y);
   double z_d = static_cast<double>(z);
@@ -91,11 +93,11 @@ LIBC_INLINE bool shift_mantissa(int shift_length, UInt128 &mant) {
 
 } // namespace internal
 
-template <> inline double fma<double>(double x, double y, double z) {
+template <> LIBC_INLINE double fma<double>(double x, double y, double z) {
   using FPBits = fputil::FPBits<double>;
   using FloatProp = fputil::FloatProperties<double>;
 
-  if (unlikely(x == 0 || y == 0 || z == 0)) {
+  if (LIBC_UNLIKELY(x == 0 || y == 0 || z == 0)) {
     return x * y + z;
   }
 
@@ -104,15 +106,15 @@ template <> inline double fma<double>(double x, double y, double z) {
   int z_exp = 0;
 
   // Normalize denormal inputs.
-  if (unlikely(FPBits(x).get_unbiased_exponent() == 0)) {
+  if (LIBC_UNLIKELY(FPBits(x).get_unbiased_exponent() == 0)) {
     x_exp -= 52;
     x *= 0x1.0p+52;
   }
-  if (unlikely(FPBits(y).get_unbiased_exponent() == 0)) {
+  if (LIBC_UNLIKELY(FPBits(y).get_unbiased_exponent() == 0)) {
     y_exp -= 52;
     y *= 0x1.0p+52;
   }
-  if (unlikely(FPBits(z).get_unbiased_exponent() == 0)) {
+  if (LIBC_UNLIKELY(FPBits(z).get_unbiased_exponent() == 0)) {
     z_exp -= 52;
     z *= 0x1.0p+52;
   }
@@ -126,8 +128,9 @@ template <> inline double fma<double>(double x, double y, double z) {
   y_exp += y_bits.get_unbiased_exponent();
   z_exp += z_bits.get_unbiased_exponent();
 
-  if (unlikely(x_exp == FPBits::MAX_EXPONENT || y_exp == FPBits::MAX_EXPONENT ||
-               z_exp == FPBits::MAX_EXPONENT))
+  if (LIBC_UNLIKELY(x_exp == FPBits::MAX_EXPONENT ||
+                    y_exp == FPBits::MAX_EXPONENT ||
+                    z_exp == FPBits::MAX_EXPONENT))
     return x * y + z;
 
   // Extract mantissa and append hidden leading bits.
@@ -223,7 +226,7 @@ template <> inline double fma<double>(double x, double y, double z) {
     if (r_exp > 0) {
       // The result is normal.  We will shift the mantissa to the right by
       // 63 - 52 = 11 bits (from the locations of the most significant bit).
-      // Then the rounding bit will correspond the the 11th bit, and the lowest
+      // Then the rounding bit will correspond the 11th bit, and the lowest
       // 10 bits are merged into sticky bits.
       round_bit = (result & 0x0400ULL) != 0;
       sticky_bits |= (result & 0x03ffULL) != 0;
@@ -252,8 +255,8 @@ template <> inline double fma<double>(double x, double y, double z) {
   }
 
   // Finalize the result.
-  int round_mode = fputil::get_round();
-  if (unlikely(r_exp >= FPBits::MAX_EXPONENT)) {
+  int round_mode = fputil::quick_get_round();
+  if (LIBC_UNLIKELY(r_exp >= FPBits::MAX_EXPONENT)) {
     if ((round_mode == FE_TOWARDZERO) ||
         (round_mode == FE_UPWARD && prod_sign) ||
         (round_mode == FE_DOWNWARD && !prod_sign)) {
@@ -287,6 +290,6 @@ template <> inline double fma<double>(double x, double y, double z) {
 
 } // namespace generic
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_FMA_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_FMA_H

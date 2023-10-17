@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: modules-build
+// UNSUPPORTED: clang-modules-build
 
 // Poison the std:: names we might use inside __gnu_cxx to ensure they're
 // properly qualified.
@@ -16,9 +16,7 @@ struct equal_to;
 struct unique_ptr;
 
 // Prevent <ext/hash_set> from generating deprecated warnings for this test.
-#if defined(__DEPRECATED)
-#   undef __DEPRECATED
-#endif
+// ADDITIONAL_COMPILE_FLAGS: -Wno-deprecated
 
 #include <ext/hash_set>
 

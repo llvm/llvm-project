@@ -657,9 +657,12 @@ define i1 @t10() {
 ; V8MBASE-NEXT:    movs r0, #7
 ; V8MBASE-NEXT:    mvns r0, r0
 ; V8MBASE-NEXT:    str r0, [sp]
-; V8MBASE-NEXT:    adds r0, r0, #5
-; V8MBASE-NEXT:    str r0, [sp, #4]
-; V8MBASE-NEXT:    movs r1, #0
+; V8MBASE-NEXT:    adds r1, r0, #5
+; V8MBASE-NEXT:    str r1, [sp, #4]
+; V8MBASE-NEXT:    sdiv r2, r1, r0
+; V8MBASE-NEXT:    muls r2, r0, r2
+; V8MBASE-NEXT:    subs r0, r1, r2
+; V8MBASE-NEXT:    subs r1, r0, r1
 ; V8MBASE-NEXT:    rsbs r0, r1, #0
 ; V8MBASE-NEXT:    adcs r0, r1
 ; V8MBASE-NEXT:    add sp, #8

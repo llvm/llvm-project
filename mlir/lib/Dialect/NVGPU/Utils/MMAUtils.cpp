@@ -63,7 +63,7 @@ FailureOr<WarpMatrixInfo> nvgpu::getWarpMatrixInfo(Operation *op) {
     info.vectorType = writeOp.getVectorType();
   } else if (isa<vector::TransferReadOp, vector::ContractionOp,
                  vector::ExtractStridedSliceOp, arith::ConstantOp>(op)) {
-    info.vectorType = op->getResult(0).getType().cast<VectorType>();
+    info.vectorType = cast<VectorType>(op->getResult(0).getType());
   } else {
     return op->emitError()
            << "unhandled operation type in nvgpu.mma.sync conversion path";
@@ -170,7 +170,7 @@ static AffineMap getRegisterIndexToTileOffsetMap(int64_t lineSize,
 }
 
 FailureOr<AffineMap>
-nvgpu::getLaneIdAndValueIdToOperandCoord(Location loc, OpBuilder &builder,
+nvgpu::getLaneIdAndValueIdToOperandCoord(OpBuilder &builder, Location loc,
                                          const WarpMatrixInfo &fragmentType) {
   Type elementType = fragmentType.vectorType.getElementType();
   ArrayRef<int64_t> operandShape = fragmentType.vectorType.getShape();
@@ -235,7 +235,7 @@ nvgpu::getLdMatrixParams(const WarpMatrixInfo &type, bool transpose) {
 }
 
 FailureOr<AffineMap>
-nvgpu::getLaneIdToLdMatrixMatrixCoord(Location loc, OpBuilder &builder,
+nvgpu::getLaneIdToLdMatrixMatrixCoord(OpBuilder &builder, Location loc,
                                       const LdMatrixParams &params) {
   // One thread per 128b row.
   const int bitsPerElement = static_cast<int>(
@@ -273,59 +273,53 @@ nvgpu::getLaneIdToLdMatrixMatrixCoord(Location loc, OpBuilder &builder,
   return failure();
 }
 
-LogicalResult nvgpu::PrepareContractToGPUMMASync::matchAndRewrite(
-    vector::ContractionOp op, PatternRewriter &rewriter) const {
-  Location loc = op.getLoc();
-  Value lhs = op.getLhs();
-  Value rhs = op.getRhs();
-  Value res = op.getAcc();
+bool nvgpu::canLowerToWarpMatrixOperation(vector::TransferReadOp op) {
+  if (op.getMask() || op.hasOutOfBoundsDim())
+    return false;
+  VectorType type = op.getType();
+  // The result type should be 2D. Note that it is possible to expand support so
+  // that we are robust to extra unit dimensions that failed to fold, but that
+  // would significantly increase downstream code complexity in the conversion
+  // step. For now, we rely on other patterns to ensure canonical 2D form is
+  // used when targeting the `nvgpu.mma.sync` lowering path.
+  if (!type.hasStaticShape() || type.getRank() != 2)
+    return false;
 
-  // Set up the parallel/reduction structure in right form.
-  using MapList = ArrayRef<ArrayRef<AffineExpr>>;
-  auto infer = [](MapList m) { return AffineMap::inferFromExprList(m); };
-  AffineExpr m;
-  AffineExpr n;
-  AffineExpr k;
-  bindDims(rewriter.getContext(), m, n, k);
-  static constexpr std::array<int64_t, 2> perm = {1, 0};
-  auto iteratorTypes = op.getIteratorTypes().getValue();
-  SmallVector<AffineMap, 4> maps = op.getIndexingMapsArray();
-  if (iteratorTypes.size() != 3)
-    return failure();
-  if (!(vector::isParallelIterator(iteratorTypes[0]) &&
-        vector::isParallelIterator(iteratorTypes[1]) &&
-        vector::isReductionIterator(iteratorTypes[2])))
-    return failure();
+  // Currently we can't support reads on tensor types because we need stride
+  // information to ensure correctness of downstream assumptions. It is possible
+  // to enable this if caller can assert that tensor will be lowered in a
+  // particular manner.
+  auto sourceType = dyn_cast<MemRefType>(op.getSource().getType());
+  if (!sourceType)
+    return false;
 
-  // The canonical form is "TNT" = A row-major, B col-major, C row-major.
-  const auto canonicalForm = infer({{m, k}, {n, k}, {m, n}});
-  if (maps == canonicalForm) {
-    return failure();
-  }
-  if (maps == infer({{m, k}, {k, n}, {m, n}})) {
-    rhs = rewriter.create<vector::TransposeOp>(loc, rhs, perm);
-  } else if (maps == infer({{k, m}, {k, n}, {m, n}})) {
-    lhs = rewriter.create<vector::TransposeOp>(loc, lhs, perm);
-  } else if (maps == infer({{k, m}, {k, n}, {m, n}})) {
-    rhs = rewriter.create<vector::TransposeOp>(loc, rhs, perm);
-    lhs = rewriter.create<vector::TransposeOp>(loc, lhs, perm);
-  } else if (maps == infer({{k, m}, {k, n}, {n, m}})) {
-    std::swap(rhs, lhs);
-    rhs = rewriter.create<vector::TransposeOp>(loc, rhs, perm);
-    lhs = rewriter.create<vector::TransposeOp>(loc, lhs, perm);
-  } else if (maps == infer({{k, m}, {n, k}, {n, m}})) {
-    std::swap(rhs, lhs);
-    rhs = rewriter.create<vector::TransposeOp>(loc, rhs, perm);
-  } else if (maps == infer({{m, k}, {k, n}, {n, m}})) {
-    std::swap(lhs, rhs);
-    lhs = rewriter.create<vector::TransposeOp>(loc, lhs, perm);
-  } else if (maps == infer({{m, k}, {n, k}, {n, m}})) {
-    std::swap(lhs, rhs);
-  } else {
-    return failure();
-  }
-  rewriter.replaceOpWithNewOp<vector::ContractionOp>(
-      op, lhs, rhs, res, rewriter.getAffineMapArrayAttr(canonicalForm),
-      op.getIteratorTypes());
-  return success();
+  // Check that the last dimension of the read is contiguous. Note that it is
+  // possible to expand support for this by scalarizing all the loads during
+  // conversion.
+  auto [strides, offset] = mlir::getStridesAndOffset(sourceType);
+  return strides.back() == 1;
+}
+
+bool nvgpu::canLowerToWarpMatrixOperation(vector::TransferWriteOp op) {
+  if (op.getMask() || op.hasOutOfBoundsDim() || op.getTransferRank() == 0)
+    return false;
+  VectorType type = op.getVectorType();
+  if (!type.hasStaticShape() || type.getRank() != 2)
+    return false;
+  // TODO: Currently we rely on lowering to a `vector.store` operation. We could
+  // support the transposed write case by lowering to scalarized `memref.store`
+  // operations.
+  if (!op.getPermutationMap().isMinorIdentity())
+    return false;
+  // Currently we can't support reads on tensor types because we need stride
+  // information to ensure correctness of downstream assumptions.
+  auto sourceType = dyn_cast<MemRefType>(op.getSource().getType());
+  if (!sourceType)
+    return false;
+
+  // Check that the last dimension of the target memref is contiguous. Note that
+  // it is possible to expand support for this by scalarizing all the stores
+  // during conversion.
+  auto [strides, offset] = mlir::getStridesAndOffset(sourceType);
+  return strides.back() == 1;
 }

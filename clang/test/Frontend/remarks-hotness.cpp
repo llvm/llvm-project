@@ -13,6 +13,13 @@
 // RUN:     -fdiagnostics-hotness-threshold=auto 2>&1 \
 // RUN:     | FileCheck -check-prefix=HOT_CALL %s
 
+// Make sure -fdiagnostics-hotness-threshold implies -fdiagnostics-show-hotness
+// RUN: %clang_cc1 -triple x86_64-linux %s -emit-llvm-only -O3 \
+// RUN:     -fprofile-sample-use=%S/Inputs/remarks-hotness.prof \
+// RUN:     -Rpass=inline -Rpass-analysis=inline -Rpass-missed=inline \
+// RUN:     -fdiagnostics-hotness-threshold=auto 2>&1 \
+// RUN:     | FileCheck -check-prefix=HOT_CALL %s
+
 int callee1() {
   return 1;
 }

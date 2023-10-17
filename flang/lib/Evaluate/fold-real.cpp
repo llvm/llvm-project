@@ -43,6 +43,80 @@ static Expr<T> FoldTransformationalBessel(
   return Expr<T>{std::move(funcRef)};
 }
 
+// NORM2
+template <int KIND> class Norm2Accumulator {
+  using T = Type<TypeCategory::Real, KIND>;
+
+public:
+  Norm2Accumulator(
+      const Constant<T> &array, const Constant<T> &maxAbs, Rounding rounding)
+      : array_{array}, maxAbs_{maxAbs}, rounding_{rounding} {};
+  void operator()(Scalar<T> &element, const ConstantSubscripts &at) {
+    // Kahan summation of scaled elements
+    auto scale{maxAbs_.At(maxAbsAt_)};
+    if (scale.IsZero()) {
+      // If maxAbs is zero, so are all elements, and result
+      element = scale;
+    } else {
+      auto item{array_.At(at)};
+      auto scaled{item.Divide(scale).value};
+      auto square{item.Multiply(scaled).value};
+      auto next{square.Add(correction_, rounding_)};
+      overflow_ |= next.flags.test(RealFlag::Overflow);
+      auto sum{element.Add(next.value, rounding_)};
+      overflow_ |= sum.flags.test(RealFlag::Overflow);
+      correction_ = sum.value.Subtract(element, rounding_)
+                        .value.Subtract(next.value, rounding_)
+                        .value;
+      element = sum.value;
+    }
+  }
+  bool overflow() const { return overflow_; }
+  void Done(Scalar<T> &result) {
+    auto corrected{result.Add(correction_, rounding_)};
+    overflow_ |= corrected.flags.test(RealFlag::Overflow);
+    correction_ = Scalar<T>{};
+    auto rescaled{corrected.value.Multiply(maxAbs_.At(maxAbsAt_))};
+    maxAbs_.IncrementSubscripts(maxAbsAt_);
+    overflow_ |= rescaled.flags.test(RealFlag::Overflow);
+    result = rescaled.value.SQRT().value;
+  }
+
+private:
+  const Constant<T> &array_;
+  const Constant<T> &maxAbs_;
+  const Rounding rounding_;
+  bool overflow_{false};
+  Scalar<T> correction_{};
+  ConstantSubscripts maxAbsAt_{maxAbs_.lbounds()};
+};
+
+template <int KIND>
+static Expr<Type<TypeCategory::Real, KIND>> FoldNorm2(FoldingContext &context,
+    FunctionRef<Type<TypeCategory::Real, KIND>> &&funcRef) {
+  using T = Type<TypeCategory::Real, KIND>;
+  using Element = typename Constant<T>::Element;
+  std::optional<int> dim;
+  const Element identity{};
+  if (std::optional<Constant<T>> array{
+          ProcessReductionArgs<T>(context, funcRef.arguments(), dim, identity,
+              /*X=*/0, /*DIM=*/1)}) {
+    MaxvalMinvalAccumulator<T, /*ABS=*/true> maxAbsAccumulator{
+        RelationalOperator::GT, context, *array};
+    Constant<T> maxAbs{
+        DoReduction<T>(*array, dim, identity, maxAbsAccumulator)};
+    Norm2Accumulator norm2Accumulator{
+        *array, maxAbs, context.targetCharacteristics().roundingMode()};
+    Constant<T> result{DoReduction<T>(*array, dim, identity, norm2Accumulator)};
+    if (norm2Accumulator.overflow()) {
+      context.messages().Say(
+          "NORM2() of REAL(%d) data overflowed"_warn_en_US, KIND);
+    }
+    return Expr<T>{std::move(result)};
+  }
+  return Expr<T>{std::move(funcRef)};
+}
+
 template <int KIND>
 Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     FoldingContext &context,
@@ -138,17 +212,26 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
             }));
   } else if (name == "dim") {
     return FoldElementalIntrinsic<T, T, T>(context, std::move(funcRef),
-        ScalarFunc<T, T, T>(
-            [](const Scalar<T> &x, const Scalar<T> &y) -> Scalar<T> {
-              return x.DIM(y).value;
-            }));
+        ScalarFunc<T, T, T>([&context](const Scalar<T> &x,
+                                const Scalar<T> &y) -> Scalar<T> {
+          ValueWithRealFlags<Scalar<T>> result{x.DIM(y)};
+          if (result.flags.test(RealFlag::Overflow)) {
+            context.messages().Say("DIM intrinsic folding overflow"_warn_en_US);
+          }
+          return result.value;
+        }));
   } else if (name == "dot_product") {
     return FoldDotProduct<T>(context, std::move(funcRef));
   } else if (name == "dprod") {
-    if (auto scalars{GetScalarConstantArguments<T, T>(context, args)}) {
-      return Fold(context,
-          Expr<T>{Multiply<T>{
-              Expr<T>{std::get<0>(*scalars)}, Expr<T>{std::get<1>(*scalars)}}});
+    // Rewrite DPROD(x,y) -> DBLE(x)*DBLE(y)
+    if (args.at(0) && args.at(1)) {
+      const auto *xExpr{args[0]->UnwrapExpr()};
+      const auto *yExpr{args[1]->UnwrapExpr()};
+      if (xExpr && yExpr) {
+        return Fold(context,
+            ToReal<T::kind>(context, common::Clone(*xExpr)) *
+                ToReal<T::kind>(context, common::Clone(*yExpr)));
+      }
     }
   } else if (name == "epsilon") {
     return Expr<T>{Scalar<T>::EPSILON()};
@@ -162,16 +245,19 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     CHECK(args.size() == 2);
     return FoldElementalIntrinsic<T, T, T>(context, std::move(funcRef),
         ScalarFunc<T, T, T>(
-            [](const Scalar<T> &x, const Scalar<T> &y) -> Scalar<T> {
-              return x.HYPOT(y).value;
+            [&](const Scalar<T> &x, const Scalar<T> &y) -> Scalar<T> {
+              ValueWithRealFlags<Scalar<T>> result{x.HYPOT(y)};
+              if (result.flags.test(RealFlag::Overflow)) {
+                context.messages().Say(
+                    "HYPOT intrinsic folding overflow"_warn_en_US);
+              }
+              return result.value;
             }));
   } else if (name == "max") {
     return FoldMINorMAX(context, std::move(funcRef), Ordering::Greater);
   } else if (name == "maxval") {
     return FoldMaxvalMinval<T>(context, std::move(funcRef),
         RelationalOperator::GT, T::Scalar::HUGE().Negate());
-  } else if (name == "merge") {
-    return FoldMerge<T>(context, std::move(funcRef));
   } else if (name == "min") {
     return FoldMINorMAX(context, std::move(funcRef), Ordering::Less);
   } else if (name == "minval") {
@@ -226,6 +312,8 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
           },
           sExpr->u);
     }
+  } else if (name == "norm2") {
+    return FoldNorm2<T::kind>(context, std::move(funcRef));
   } else if (name == "product") {
     auto one{Scalar<T>::FromInteger(value::Integer<8>{1}).value};
     return FoldProduct<T>(context, std::move(funcRef), one);
@@ -290,6 +378,8 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     return FoldSum<T>(context, std::move(funcRef));
   } else if (name == "tiny") {
     return Expr<T>{Scalar<T>::TINY()};
+  } else if (name == "__builtin_fma") {
+    CHECK(args.size() == 3);
   } else if (name == "__builtin_ieee_next_after") {
     if (const auto *yExpr{UnwrapExpr<Expr<SomeReal>>(args[1])}) {
       return common::visit(
@@ -340,7 +430,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
           return result.value;
         }));
   }
-  // TODO: dot_product, matmul, norm2
+  // TODO: matmul
   return Expr<T>{std::move(funcRef)};
 }
 

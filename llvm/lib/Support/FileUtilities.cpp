@@ -169,7 +169,7 @@ static bool CompareNumbers(const char *&F1P, const char *&F2P,
 
 /// DiffFilesWithTolerance - Compare the two files specified, returning 0 if the
 /// files match, 1 if they are different, and 2 if there is a file error.  This
-/// function differs from DiffFiles in that you can specify an absolete and
+/// function differs from DiffFiles in that you can specify an absolute and
 /// relative FP error that is allowed to exist.  If you specify a string to fill
 /// in for the error option, it will set the string to an error message if an
 /// error occurs, allowing the caller to distinguish between a failed diff and a
@@ -267,64 +267,6 @@ int llvm::DiffFilesWithTolerance(StringRef NameA,
   return CompareFailed;
 }
 
-void llvm::AtomicFileWriteError::log(raw_ostream &OS) const {
-  OS << "atomic_write_error: ";
-  switch (Error) {
-  case atomic_write_error::failed_to_create_uniq_file:
-    OS << "failed_to_create_uniq_file";
-    return;
-  case atomic_write_error::output_stream_error:
-    OS << "output_stream_error";
-    return;
-  case atomic_write_error::failed_to_rename_temp_file:
-    OS << "failed_to_rename_temp_file";
-    return;
-  }
-  llvm_unreachable("unknown atomic_write_error value in "
-                   "failed_to_rename_temp_file::log()");
-}
-
-llvm::Error llvm::writeFileAtomically(StringRef TempPathModel,
-                                      StringRef FinalPath, StringRef Buffer) {
-  return writeFileAtomically(TempPathModel, FinalPath,
-                             [&Buffer](llvm::raw_ostream &OS) {
-                               OS.write(Buffer.data(), Buffer.size());
-                               return llvm::Error::success();
-                             });
-}
-
-llvm::Error llvm::writeFileAtomically(
-    StringRef TempPathModel, StringRef FinalPath,
-    std::function<llvm::Error(llvm::raw_ostream &)> Writer) {
-  SmallString<128> GeneratedUniqPath;
-  int TempFD;
-  if (sys::fs::createUniqueFile(TempPathModel, TempFD, GeneratedUniqPath)) {
-    return llvm::make_error<AtomicFileWriteError>(
-        atomic_write_error::failed_to_create_uniq_file);
-  }
-  llvm::FileRemover RemoveTmpFileOnFail(GeneratedUniqPath);
-
-  raw_fd_ostream OS(TempFD, /*shouldClose=*/true);
-  if (llvm::Error Err = Writer(OS)) {
-    return Err;
-  }
-
-  OS.close();
-  if (OS.has_error()) {
-    OS.clear_error();
-    return llvm::make_error<AtomicFileWriteError>(
-        atomic_write_error::output_stream_error);
-  }
-
-  if (sys::fs::rename(/*from=*/GeneratedUniqPath, /*to=*/FinalPath)) {
-    return llvm::make_error<AtomicFileWriteError>(
-        atomic_write_error::failed_to_rename_temp_file);
-  }
-
-  RemoveTmpFileOnFail.releaseFile();
-  return Error::success();
-}
-
 Expected<FilePermissionsApplier>
 FilePermissionsApplier::create(StringRef InputFilename) {
   sys::fs::file_status Status;
@@ -389,5 +331,3 @@ Error FilePermissionsApplier::apply(
 
   return Error::success();
 }
-
-char llvm::AtomicFileWriteError::ID;

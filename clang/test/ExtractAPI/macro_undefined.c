@@ -67,7 +67,7 @@ FUNC_GEN(bar, const int *, unsigned);
         },
         {
           "kind": "text",
-          "spelling": "()"
+          "spelling": "();"
         }
       ],
       "functionSignature": {
@@ -173,7 +173,7 @@ FUNC_GEN(bar, const int *, unsigned);
         },
         {
           "kind": "text",
-          "spelling": ")"
+          "spelling": ");"
         }
       ],
       "functionSignature": {

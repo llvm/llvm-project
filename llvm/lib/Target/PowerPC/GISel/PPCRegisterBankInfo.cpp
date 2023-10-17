@@ -12,6 +12,7 @@
 
 #include "PPCRegisterBankInfo.h"
 #include "PPCRegisterInfo.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Support/Debug.h"
@@ -48,6 +49,14 @@ PPCRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
   case PPC::VSSRCRegClassID:
   case PPC::F4RCRegClassID:
     return getRegBank(PPC::FPRRegBankID);
+  case PPC::VSRCRegClassID:
+  case PPC::VRRCRegClassID:
+  case PPC::VRRC_with_sub_64_in_SPILLTOVSRRCRegClassID:
+  case PPC::VSRC_with_sub_64_in_SPILLTOVSRRCRegClassID:
+  case PPC::SPILLTOVSRRCRegClassID:
+  case PPC::VSLRCRegClassID:
+  case PPC::VSLRC_with_sub_64_in_SPILLTOVSRRCRegClassID:
+    return getRegBank(PPC::VECRegBankID);
   case PPC::CRRCRegClassID:
   case PPC::CRBITRCRegClassID:
     return getRegBank(PPC::CRRegBankID);
@@ -90,11 +99,21 @@ PPCRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // Extension ops.
   case TargetOpcode::G_SEXT:
   case TargetOpcode::G_ZEXT:
-  case TargetOpcode::G_ANYEXT:
+  case TargetOpcode::G_ANYEXT: {
     assert(NumOperands <= 3 &&
            "This code is for instructions with 3 or less operands");
-    OperandsMapping = getValueMapping(PMI_GPR64);
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    unsigned Size = Ty.getSizeInBits();
+    switch (Size) {
+    case 128:
+      OperandsMapping = getValueMapping(PMI_VEC128);
+      break;
+    default:
+      OperandsMapping = getValueMapping(PMI_GPR64);
+      break;
+    }
     break;
+  }
   case TargetOpcode::G_FADD:
   case TargetOpcode::G_FSUB:
   case TargetOpcode::G_FMUL:
@@ -102,8 +121,19 @@ PPCRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     Register SrcReg = MI.getOperand(1).getReg();
     unsigned Size = getSizeInBits(SrcReg, MRI, TRI);
 
-    assert((Size == 32 || Size == 64) && "Unsupported floating point types!\n");
-    OperandsMapping = getValueMapping(Size == 32 ? PMI_FPR32 : PMI_FPR64);
+    assert((Size == 32 || Size == 64 || Size == 128) &&
+           "Unsupported floating point types!\n");
+    switch (Size) {
+    case 32:
+      OperandsMapping = getValueMapping(PMI_FPR32);
+      break;
+    case 64:
+      OperandsMapping = getValueMapping(PMI_FPR64);
+      break;
+    case 128:
+      OperandsMapping = getValueMapping(PMI_VEC128);
+      break;
+    }
     break;
   }
   case TargetOpcode::G_FCMP: {
@@ -116,6 +146,9 @@ PPCRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     break;
   }
   case TargetOpcode::G_CONSTANT:
+    OperandsMapping = getOperandsMapping({getValueMapping(PMI_GPR64), nullptr});
+    break;
+  case TargetOpcode::G_CONSTANT_POOL:
     OperandsMapping = getOperandsMapping({getValueMapping(PMI_GPR64), nullptr});
     break;
   case TargetOpcode::G_FPTOUI:
@@ -182,6 +215,23 @@ PPCRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     OperandsMapping = getOperandsMapping(OpdsMapping);
     break;
   }
+  case TargetOpcode::G_BITCAST: {
+    LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+    LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
+    unsigned DstSize = DstTy.getSizeInBits();
+
+    bool DstIsGPR = !DstTy.isVector();
+    bool SrcIsGPR = !SrcTy.isVector();
+    // TODO: Currently, only vector and GPR register banks are handled.
+    //       This needs to be extended to handle floating point register
+    //       banks in the future.
+    const RegisterBank &DstRB = DstIsGPR ? PPC::GPRRegBank : PPC::VECRegBank;
+    const RegisterBank &SrcRB = SrcIsGPR ? PPC::GPRRegBank : PPC::VECRegBank;
+
+    return getInstructionMapping(
+        MappingID, Cost, getCopyMapping(DstRB.getID(), SrcRB.getID(), DstSize),
+        NumOperands);
+  }
   default:
     return getInvalidInstructionMapping();
   }
@@ -240,8 +290,11 @@ bool PPCRegisterBankInfo::hasFPConstraints(const MachineInstr &MI,
                                            const TargetRegisterInfo &TRI,
                                            unsigned Depth) const {
   unsigned Op = MI.getOpcode();
-  if (Op == TargetOpcode::G_INTRINSIC && isFPIntrinsic(MI.getIntrinsicID()))
-    return true;
+
+  if (auto *GI = dyn_cast<GIntrinsic>(&MI)) {
+    if (isFPIntrinsic(GI->getIntrinsicID()))
+      return true;
+  }
 
   // Do we have an explicit floating point instruction?
   if (isPreISelGenericFloatingPointOpcode(Op))

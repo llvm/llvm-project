@@ -1,4 +1,4 @@
-// RUN: %clang_cl_asan -Od %s -Fe%t
+// RUN: %clang_cl_asan %Od %s %Fe%t
 // RUN: not %run %t 2>&1 | FileCheck %s
 
 #include <stdio.h>
@@ -23,7 +23,7 @@ int main() {
 //
 // The first frame is our wrapper normally but will be malloc in the dynamic
 // config.
-// CHECK:   #0 {{.*}} in {{malloc|__asan_wrap_strdup}}
+// CHECK:   #0 {{.*}} in {{malloc|strdup}}
 //
 // The local call to _strdup above may be the second or third frame depending
 // on whether we're using the dynamic config.

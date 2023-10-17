@@ -21,6 +21,7 @@
 #include "clang/Driver/Types.h"
 #include "clang/Driver/Util.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/Arg.h"
@@ -193,6 +194,9 @@ public:
   /// The file to log CC_PRINT_PROC_STAT_FILE output to, if enabled.
   std::string CCPrintStatReportFilename;
 
+  /// The file to log CC_PRINT_INTERNAL_STAT_FILE output to, if enabled.
+  std::string CCPrintInternalStatReportFilename;
+
   /// The file to log CC_PRINT_OPTIONS output to, if enabled.
   std::string CCPrintOptionsFilename;
 
@@ -257,11 +261,16 @@ public:
   /// performance report to CC_PRINT_PROC_STAT_FILE or to stdout.
   unsigned CCPrintProcessStats : 1;
 
+  /// Set CC_PRINT_INTERNAL_STAT mode, which causes the driver to dump internal
+  /// performance report to CC_PRINT_INTERNAL_STAT_FILE or to stdout.
+  unsigned CCPrintInternalStats : 1;
+
   /// Pointer to the ExecuteCC1Tool function, if available.
   /// When the clangDriver lib is used through clang.exe, this provides a
   /// shortcut for executing the -cc1 command-line directly, in the same
   /// process.
-  typedef int (*CC1ToolFunc)(SmallVectorImpl<const char *> &ArgV);
+  using CC1ToolFunc =
+      llvm::function_ref<int(SmallVectorImpl<const char *> &ArgV)>;
   CC1ToolFunc CC1Main = nullptr;
 
 private:
@@ -285,6 +294,12 @@ private:
 
   /// Arguments originated from command line.
   std::unique_ptr<llvm::opt::InputArgList> CLOptions;
+
+  /// If this is non-null, the driver will prepend this argument before
+  /// reinvoking clang. This is useful for the llvm-driver where clang's
+  /// realpath will be to the llvm binary and not clang, so it must pass
+  /// "clang" as it's first argument.
+  const char *PrependArg;
 
   /// Whether to check that input files exist when constructing compilation
   /// jobs.
@@ -383,6 +398,9 @@ public:
   bool getProbePrecompiled() const { return ProbePrecompiled; }
   void setProbePrecompiled(bool Value) { ProbePrecompiled = Value; }
 
+  const char *getPrependArg() const { return PrependArg; }
+  void setPrependArg(const char *Value) { PrependArg = Value; }
+
   void setTargetAndMode(const ParsedClangName &TM) { ClangNameParts = TM; }
 
   const std::string &getTitle() { return DriverTitle; }
@@ -437,7 +455,7 @@ public:
   /// ParseArgStrings - Parse the given list of strings into an
   /// ArgList.
   llvm::opt::InputArgList ParseArgStrings(ArrayRef<const char *> Args,
-                                          bool IsClCompatMode,
+                                          bool UseDriverMode,
                                           bool &ContainsError);
 
   /// BuildInputs - Construct the list of inputs and their types from
@@ -616,10 +634,19 @@ public:
   /// Returns the default name for linked images (e.g., "a.out").
   const char *getDefaultImageName() const;
 
-  // Creates a temp file with $Prefix-%%%%%%.$Suffix
+  /// Creates a temp file.
+  /// 1. If \p MultipleArch is false or \p BoundArch is empty, the temp file is
+  ///    in the temporary directory with name $Prefix-%%%%%%.$Suffix.
+  /// 2. If \p MultipleArch is true and \p BoundArch is not empty,
+  ///    2a. If \p NeedUniqueDirectory is false, the temp file is in the
+  ///        temporary directory with name $Prefix-$BoundArch-%%%%%.$Suffix.
+  ///    2b. If \p NeedUniqueDirectory is true, the temp file is in a unique
+  ///        subdiretory with random name under the temporary directory, and
+  ///        the temp file itself has name $Prefix-$BoundArch.$Suffix.
   const char *CreateTempFile(Compilation &C, StringRef Prefix, StringRef Suffix,
                              bool MultipleArchs = false,
-                             StringRef BoundArch = {}) const;
+                             StringRef BoundArch = {},
+                             bool NeedUniqueDirectory = false) const;
 
   /// GetNamedOutputPath - Return the name to use for the output of
   /// the action \p JA. The result is appended to the compilation's
@@ -732,7 +759,8 @@ private:
 
   /// Get bitmasks for which option flags to include and exclude based on
   /// the driver mode.
-  std::pair<unsigned, unsigned> getIncludeExcludeOptionFlagMasks(bool IsClCompatMode) const;
+  llvm::opt::Visibility
+  getOptionVisibilityMask(bool UseDriverMode = true) const;
 
   /// Helper used in BuildJobsForAction.  Doesn't use the cache when building
   /// jobs specifically for the given action, but will use the cache when
@@ -787,6 +815,16 @@ llvm::StringRef getDriverMode(StringRef ProgName, ArrayRef<const char *> Args);
 
 /// Checks whether the value produced by getDriverMode is for CL mode.
 bool IsClangCL(StringRef DriverMode);
+
+/// Expand response files from a clang driver or cc1 invocation.
+///
+/// \param Args The arguments that will be expanded.
+/// \param ClangCLMode Whether clang is in CL mode.
+/// \param Alloc Allocator for new arguments.
+/// \param FS Filesystem to use when expanding files.
+llvm::Error expandResponseFiles(SmallVectorImpl<const char *> &Args,
+                                bool ClangCLMode, llvm::BumpPtrAllocator &Alloc,
+                                llvm::vfs::FileSystem *FS = nullptr);
 
 } // end namespace driver
 } // end namespace clang

@@ -4,7 +4,7 @@
 .\"
 .\" This man page documents only lld's ELF linking support, obtained originally
 .\" from FreeBSD.
-.Dd May 12, 2019
+.Dd Jul 25, 2023
 .Dt LD.LLD 1
 .Os
 .Sh NAME
@@ -27,8 +27,8 @@ It accepts most of the same command line arguments and linker scripts
 as GNU linkers.
 .Pp
 .Nm
-currently supports i386, x86-64, ARM, AArch64, PowerPC32, PowerPC64,
-MIPS32, MIPS64, RISC-V, AMDGPU, Hexagon and SPARC V9 targets.
+currently supports i386, x86-64, ARM, AArch64, LoongArch, PowerPC32,
+PowerPC64, MIPS32, MIPS64, RISC-V, AMDGPU, Hexagon and SPARC V9 targets.
 .Nm
 acts as a Microsoft link.exe-compatible linker if invoked as
 .Nm lld-link
@@ -82,12 +82,17 @@ Bind default visibility defined symbols locally for
 Also set the
 .Dv DF_SYMBOLIC
 flag.
+.It Fl Bsymbolic-non-weak
+Bind default visibility defined STB_GLOBAL symbols locally for
+.Fl shared.
 .It Fl Bsymbolic-functions
 Bind default visibility defined function symbols locally for
 .Fl shared.
 .It Fl Bsymbolic-non-weak-functions
 Bind default visibility defined STB_GLOBAL function symbols locally for
 .Fl shared.
+.It Fl --be8
+Write a Big Endian ELF File using BE8 format(AArch32 only)
 .It Fl -build-id Ns = Ns Ar value
 Generate a build ID note.
 .Ar value
@@ -115,6 +120,19 @@ is not intended to be cryptographically secure.
 .It Fl -build-id
 Synonym for
 .Fl -build-id Ns = Ns Cm fast .
+.It Fl -call-graph-profile-sort Ns = Ns Ar algorithm
+.Ar algorithm
+may be:
+.Pp
+.Bl -tag -width 2n -compact
+.It Cm none
+Ignore call graph profile.
+.It Cm hfsort
+Use hfsort (default).
+.It Cm cdsort
+Use cdsort.
+.El
+.Pp
 .It Fl -color-diagnostics Ns = Ns Ar value
 Use colors in diagnostics.
 .Ar value
@@ -493,8 +511,25 @@ and
 .It Fl -pop-state
 Restore the states saved by
 .Fl -push-state.
+.It Fl --relax-gp
+Enable global pointer relaxation for RISC-V.
 .It Fl -relocatable , Fl r
 Create relocatable object file.
+.It Fl -remap-inputs Ns = Ns Ar from-glob=to-file
+Input files matching
+.Cm from-glob
+are mapped to
+.Cm to-file.
+Use
+.Cm /dev/null
+to ignore an input file.
+.It Fl -remap-inputs-file Ns = Ns Ar file
+Remap input files based on patterns in
+.Ar file .
+Each line in the remap file is of the format
+.Cm from-glob=to-file
+or a comment starting with
+.Cm # .
 .It Fl -reproduce Ns = Ns Ar path
 Write a tar file to
 .Ar path,
@@ -602,6 +637,10 @@ Number of threads.
 (default) means all of concurrent threads supported.
 .Cm 1
 disables multi-threading.
+.It Fl -fat-lto-objects
+Use the .llvm.lto section, which contains LLVM bitcode, in fat LTO object files to perform LTO.
+.It Fl -no-fat-lto-objects
+Ignore the .llvm.lto section in relocatable object files (default).
 .It Fl -time-trace
 Record time trace.
 .It Fl -time-trace-file Ns = Ns Ar file
@@ -877,6 +916,22 @@ Create a
 segment.
 .El
 .El
+
+.Sh ENVIRONMENT VARIABLES
+.Bl -tag -width LC_CTYPE
+.It Ev LLD_REPRODUCE
+Create a reproduce tarball with the specified filename. If
+.Fl -reproduce
+is specified,
+.Fl -reproduce
+takes precedence.
+.It Ev LLD_VERSION
+ld.lld creates a section named
+.Cm .comment
+containing the LLD version string. The version string can be overridden by this environment variable,
+which is useful to eliminate differences in the binary caused by LLD version number differences.
+.El
+
 .Sh IMPLEMENTATION NOTES
 .Nm Ap s
 handing of archive files (those with a

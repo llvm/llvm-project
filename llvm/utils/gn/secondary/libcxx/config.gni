@@ -5,6 +5,6 @@ declare_args() {
   # libc++ inline ABI namespace. Defaults to __n, where n is the ABI version.
   libcxx_abi_namespace = ""
 
-  # Whether to support libc++ opt-in debug mode via _LIBCPP_ENABLE_DEBUG_MODE.
-  libcxx_enable_debug_mode = false
+  # Build timezone database as part of libc++experimental.
+  libcxx_enable_time_zone_database = target_os == "linux"
 }

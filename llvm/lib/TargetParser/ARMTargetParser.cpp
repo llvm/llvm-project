@@ -13,6 +13,8 @@
 
 #include "llvm/TargetParser/ARMTargetParser.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cctype>
@@ -147,7 +149,8 @@ ARM::ProfileKind ARM::parseArchProfile(StringRef Arch) {
   return getProfileKind(parseArch(Arch));
 }
 
-bool ARM::getFPUFeatures(unsigned FPUKind, std::vector<StringRef> &Features) {
+bool ARM::getFPUFeatures(ARM::FPUKind FPUKind,
+                         std::vector<StringRef> &Features) {
 
   if (FPUKind >= FK_LAST || FPUKind == FK_INVALID)
     return false;
@@ -211,7 +214,7 @@ bool ARM::getFPUFeatures(unsigned FPUKind, std::vector<StringRef> &Features) {
   return true;
 }
 
-unsigned ARM::parseFPU(StringRef FPU) {
+ARM::FPUKind ARM::parseFPU(StringRef FPU) {
   StringRef Syn = getFPUSynonym(FPU);
   for (const auto &F : FPUNames) {
     if (Syn == F.Name)
@@ -220,7 +223,7 @@ unsigned ARM::parseFPU(StringRef FPU) {
   return FK_INVALID;
 }
 
-ARM::NeonSupportLevel ARM::getFPUNeonSupportLevel(unsigned FPUKind) {
+ARM::NeonSupportLevel ARM::getFPUNeonSupportLevel(ARM::FPUKind FPUKind) {
   if (FPUKind >= FK_LAST)
     return NeonSupportLevel::None;
   return FPUNames[FPUKind].NeonSupport;
@@ -243,33 +246,33 @@ StringRef ARM::getFPUSynonym(StringRef FPU) {
       .Default(FPU);
 }
 
-StringRef ARM::getFPUName(unsigned FPUKind) {
+StringRef ARM::getFPUName(ARM::FPUKind FPUKind) {
   if (FPUKind >= FK_LAST)
     return StringRef();
   return FPUNames[FPUKind].Name;
 }
 
-ARM::FPUVersion ARM::getFPUVersion(unsigned FPUKind) {
+ARM::FPUVersion ARM::getFPUVersion(ARM::FPUKind FPUKind) {
   if (FPUKind >= FK_LAST)
     return FPUVersion::NONE;
   return FPUNames[FPUKind].FPUVer;
 }
 
-ARM::FPURestriction ARM::getFPURestriction(unsigned FPUKind) {
+ARM::FPURestriction ARM::getFPURestriction(ARM::FPUKind FPUKind) {
   if (FPUKind >= FK_LAST)
     return FPURestriction::None;
   return FPUNames[FPUKind].Restriction;
 }
 
-unsigned ARM::getDefaultFPU(StringRef CPU, ARM::ArchKind AK) {
+ARM::FPUKind ARM::getDefaultFPU(StringRef CPU, ARM::ArchKind AK) {
   if (CPU == "generic")
     return ARM::ARMArchNames[static_cast<unsigned>(AK)].DefaultFPU;
 
-  return StringSwitch<unsigned>(CPU)
+  return StringSwitch<ARM::FPUKind>(CPU)
 #define ARM_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT)           \
   .Case(NAME, DEFAULT_FPU)
 #include "llvm/TargetParser/ARMTargetParser.def"
-   .Default(ARM::FK_INVALID);
+      .Default(ARM::FK_INVALID);
 }
 
 uint64_t ARM::getDefaultExtensions(StringRef CPU, ARM::ArchKind AK) {
@@ -362,7 +365,7 @@ StringRef ARM::getArchExtFeature(StringRef ArchExt) {
   return StringRef();
 }
 
-static unsigned findDoublePrecisionFPU(unsigned InputFPUKind) {
+static ARM::FPUKind findDoublePrecisionFPU(ARM::FPUKind InputFPUKind) {
   const ARM::FPUName &InputFPU = ARM::FPUNames[InputFPUKind];
 
   // If the input FPU already supports double-precision, then there
@@ -394,7 +397,7 @@ static unsigned findDoublePrecisionFPU(unsigned InputFPUKind) {
 bool ARM::appendArchExtFeatures(StringRef CPU, ARM::ArchKind AK,
                                 StringRef ArchExt,
                                 std::vector<StringRef> &Features,
-                                unsigned &ArgFPUID) {
+                                ARM::FPUKind &ArgFPUKind) {
 
   size_t StartingNumFeatures = Features.size();
   const bool Negated = stripNegationPrefix(ArchExt);
@@ -417,7 +420,7 @@ bool ARM::appendArchExtFeatures(StringRef CPU, ARM::ArchKind AK,
     CPU = "generic";
 
   if (ArchExt == "fp" || ArchExt == "fp.dp") {
-    unsigned FPUKind;
+    ARM::FPUKind FPUKind;
     if (ArchExt == "fp.dp") {
       if (Negated) {
         Features.push_back("-fp64");
@@ -429,7 +432,7 @@ bool ARM::appendArchExtFeatures(StringRef CPU, ARM::ArchKind AK,
     } else {
       FPUKind = getDefaultFPU(CPU, AK);
     }
-    ArgFPUID = FPUKind;
+    ArgFPUKind = FPUKind;
     return ARM::getFPUFeatures(FPUKind, Features);
   }
   return StartingNumFeatures != Features.size();
@@ -523,7 +526,8 @@ StringRef ARM::computeDefaultTargetABI(const Triple &TT, StringRef CPU) {
   default:
     if (TT.isOSNetBSD())
       return "apcs-gnu";
-    if (TT.isOSOpenBSD())
+    if (TT.isOSFreeBSD() || TT.isOSOpenBSD() || TT.isOSHaiku() ||
+        TT.isOHOSFamily())
       return "aapcs-linux";
     return "aapcs";
   }
@@ -539,6 +543,7 @@ StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
   case llvm::Triple::FreeBSD:
   case llvm::Triple::NetBSD:
   case llvm::Triple::OpenBSD:
+  case llvm::Triple::Haiku:
     if (!MArch.empty() && MArch == "v6")
       return "arm1176jzf-s";
     if (!MArch.empty() && MArch == "v7")
@@ -571,6 +576,8 @@ StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
   // If no specific architecture version is requested, return the minimum CPU
   // required by the OS and environment.
   switch (Triple.getOS()) {
+  case llvm::Triple::Haiku:
+    return "arm1176jzf-s";
   case llvm::Triple::NetBSD:
     switch (Triple.getEnvironment()) {
     case llvm::Triple::EABI:
@@ -596,4 +603,19 @@ StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
   }
 
   llvm_unreachable("invalid arch name");
+}
+
+void ARM::PrintSupportedExtensions(StringMap<StringRef> DescMap) {
+  outs() << "All available -march extensions for ARM\n\n"
+         << "    " << left_justify("Name", 20)
+         << (DescMap.empty() ? "\n" : "Description\n");
+  for (const auto &Ext : ARCHExtNames) {
+    // Extensions without a feature cannot be used with -march.
+    if (!Ext.Feature.empty()) {
+      std::string Description = DescMap[Ext.Name].str();
+      outs() << "    "
+             << format(Description.empty() ? "%s\n" : "%-20s%s\n",
+                       Ext.Name.str().c_str(), Description.c_str());
+    }
+  }
 }

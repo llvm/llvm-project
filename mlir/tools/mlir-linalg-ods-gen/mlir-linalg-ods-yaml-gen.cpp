@@ -317,10 +317,10 @@ struct ScalarTraits<SerializedAffineMap> {
                          SerializedAffineMap &value) {
     assert(rawYamlContext);
     auto *yamlContext = static_cast<LinalgYAMLContext *>(rawYamlContext);
-    if (auto attr = mlir::parseAttribute(scalar, yamlContext->mlirContext)
-                        .dyn_cast_or_null<AffineMapAttr>())
+    if (auto attr = dyn_cast_or_null<AffineMapAttr>(
+            mlir::parseAttribute(scalar, yamlContext->mlirContext)))
       value.affineMapAttr = attr;
-    else if (!value.affineMapAttr || !value.affineMapAttr.isa<AffineMapAttr>())
+    else if (!value.affineMapAttr || !isa<AffineMapAttr>(value.affineMapAttr))
       return "could not parse as an affine map attribute";
     return StringRef();
   }
@@ -378,7 +378,7 @@ static std::string generateCppExpression(SerializedAffineMap self,
   printedSs.flush();
 
   static const char exprFormat[] =
-      R"FMT(mlir::parseAttribute("{0}", {1}).cast<AffineMapAttr>().getValue())FMT";
+      R"FMT(llvm::cast<AffineMapAttr>(mlir::parseAttribute("{0}", {1})).getValue())FMT";
   return llvm::formatv(exprFormat, printedStr, contextName);
 }
 
@@ -563,9 +563,8 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([AttrSizedOperandSegments],
         return regionBuilder;
       }
 
-      std::pair<int64_t, int64_t> getDpsInitsPositionRange() {{
-        int64_t getNumOperands = this->getNumOperands();
-        return {{getNumOperands - 1, getNumOperands};
+      ::mlir::MutableOperandRange getDpsInitsMutable() {{
+        return getOutputsMutable();
       }
 
       // Generic methods.
@@ -661,7 +660,7 @@ void {0}::getEffects(SmallVectorImpl<
     SideEffects::EffectInstance<MemoryEffects::Effect> >&effects) {{
       if (hasTensorSemantics()) return;
       getGenericEffectsImpl(effects,
-        getOperation()->getResults(), getDpsInputOperands(), getDpsInitOperands());
+        getOperation()->getResults(), getDpsInputs(), getDpsInits());
 }
 )FMT";
 
@@ -693,14 +692,13 @@ static LogicalResult generateNamedGenericOpOds(LinalgOpConfig &opConfig,
   std::string doc;
   if (opConfig.metadata->doc) {
     static const char structuredOpDocFmt[] = R"FMT(
-  let summary = [{ {0} }];
-  let description = [{
-    {1}
-  }];
+  let summary = [{{{0}}];
+  let description = [{{{1}}];
 )FMT";
     StringRef summary, description;
     std::tie(summary, description) =
-        StringRef(*opConfig.metadata->doc).trim().split('\n');
+        StringRef(*opConfig.metadata->doc).trim().split("\n\n");
+
     doc = llvm::formatv(structuredOpDocFmt, summary.trim(), description.trim());
   }
 
@@ -869,14 +867,14 @@ exprs.push_back(getAffineConstantExpr(cst{1}, context));
           if (arg.kind != LinalgOperandDefKind::IndexAttr)
             continue;
           assert(arg.indexAttrMap);
-          for (auto &en :
+          for (auto [idx, result] :
                llvm::enumerate(arg.indexAttrMap->affineMap().getResults())) {
-            if (auto symbol = en.value().dyn_cast<AffineSymbolExpr>()) {
+            if (auto symbol = result.dyn_cast<AffineSymbolExpr>()) {
               std::string argName = arg.name;
               argName[0] = toupper(argName[0]);
               symbolBindings[symbol.getPosition()] =
                   llvm::formatv(structuredOpAccessAttrFormat, argName,
-                                symbol.getPosition(), en.index());
+                                symbol.getPosition(), idx);
             }
           }
         }
@@ -1031,13 +1029,13 @@ void {0}::regionBuilder(ImplicitLocOpBuilder &b,
       // {1}: attribute name
       // {2}: default type function name
       static const char attrDef[] = R"FMT(
-{0} {1}Val = {0}::{2};
-auto {1}Iter = llvm::find_if(attrs, [&](const NamedAttribute &attr) {{
-                              return attr.getName() == "{1}"; });
-if ({1}Iter != attrs.end()) {{
-  if (auto attr = {1}Iter->getValue().dyn_cast<{0}Attr>())
-    {1}Val = attr.getValue();
-}
+  {0} {1}Val = {0}::{2};
+  auto {1}Iter = llvm::find_if(attrs, [&](const NamedAttribute &attr) {{
+                                return attr.getName() == "{1}"; });
+  if ({1}Iter != attrs.end()) {{
+    if (auto attr = llvm::dyn_cast<{0}Attr>({1}Iter->getValue()))
+      {1}Val = attr.getValue();
+  }
 )FMT";
       std::string enumName = convertOperandKindToEnumName(arg.kind);
       attrs.push_back(

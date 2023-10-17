@@ -30,13 +30,13 @@
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Host.h"
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <optional>
@@ -165,7 +165,7 @@ static void cloneMemOperands(MachineInstr &DstMI, MachineInstr &SrcMI,
   for (MachineMemOperand *OldMMO : SrcMI.memoperands()) {
     MachinePointerInfo NewPtrInfo(OldMMO->getPointerInfo());
     if (const PseudoSourceValue *PSV =
-            NewPtrInfo.V.dyn_cast<const PseudoSourceValue *>()) {
+            dyn_cast_if_present<const PseudoSourceValue *>(NewPtrInfo.V)) {
       switch (PSV->kind()) {
       case PseudoSourceValue::Stack:
         NewPtrInfo.V = PSVMgr.getStack();
@@ -224,6 +224,8 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
     MachineBasicBlock *DstMBB =
         DstMF->CreateMachineBasicBlock(SrcMBB.getBasicBlock());
     Src2DstMBB[&SrcMBB] = DstMBB;
+
+    DstMBB->setCallFrameSize(SrcMBB.getCallFrameSize());
 
     if (SrcMBB.isIRBlockAddressTaken())
       DstMBB->setAddressTakenIRBlock(SrcMBB.getAddressTakenIRBlock());
@@ -372,6 +374,7 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
   DstMF->setHasEHCatchret(SrcMF->hasEHCatchret());
   DstMF->setHasEHScopes(SrcMF->hasEHScopes());
   DstMF->setHasEHFunclets(SrcMF->hasEHFunclets());
+  DstMF->setIsOutlined(SrcMF->isOutlined());
 
   if (!SrcMF->getLandingPads().empty() ||
       !SrcMF->getCodeViewAnnotations().empty() ||
@@ -443,7 +446,8 @@ bool ReducerWorkItem::isReduced(const TestRunner &Test) const {
       CurrentFilepath,
       UseBitcode && !isMIR() ? sys::fs::OF_None : sys::fs::OF_Text);
   if (EC) {
-    errs() << "Error making unique filename: " << EC.message() << "!\n";
+    WithColor::error(errs(), Test.getToolName())
+        << "error making unique filename: " << EC.message() << '\n';
     exit(1);
   }
 
@@ -453,8 +457,9 @@ bool ReducerWorkItem::isReduced(const TestRunner &Test) const {
 
   Out.os().close();
   if (Out.os().has_error()) {
-    errs() << "Error emitting bitcode to file '" << CurrentFilepath
-           << "': " << Out.os().error().message();
+    WithColor::error(errs(), Test.getToolName())
+        << "error emitting bitcode to file '" << CurrentFilepath
+        << "': " << Out.os().error().message() << '\n';
     exit(1);
   }
 
@@ -731,7 +736,8 @@ void ReducerWorkItem::writeBitcode(raw_ostream &OutStream) const {
       Index = std::make_unique<ModuleSummaryIndex>(
           buildModuleSummaryIndex(*M, nullptr, &PSI));
     }
-    WriteBitcodeToFile(getModule(), OutStream, Index.get());
+    WriteBitcodeToFile(getModule(), OutStream,
+                       /*ShouldPreserveUseListOrder=*/true, Index.get());
   }
 }
 
@@ -758,31 +764,17 @@ llvm::parseReducerWorkItem(StringRef ToolName, StringRef Filename,
 
     auto SetDataLayout = [&](StringRef DataLayoutTargetTriple,
                              StringRef OldDLStr) -> std::optional<std::string> {
-      // If we are supposed to override the target triple, do so now.
+      // NB: We always call createTargetMachineForTriple() even if an explicit
+      // DataLayout is already set in the module since we want to use this
+      // callback to setup the TargetMachine rather than doing it later.
       std::string IRTargetTriple = DataLayoutTargetTriple.str();
       if (!TargetTriple.empty())
         IRTargetTriple = Triple::normalize(TargetTriple);
       TheTriple = Triple(IRTargetTriple);
       if (TheTriple.getTriple().empty())
         TheTriple.setTriple(sys::getDefaultTargetTriple());
-
-      std::string Error;
-      const Target *TheTarget =
-          TargetRegistry::lookupTarget(codegen::getMArch(), TheTriple, Error);
-      if (!TheTarget) {
-        WithColor::error(errs(), ToolName) << Error;
-        exit(1);
-      }
-
-      // Hopefully the MIR parsing doesn't depend on any options.
-      TargetOptions Options;
-      std::optional<Reloc::Model> RM = codegen::getExplicitRelocModel();
-      std::string CPUStr = codegen::getCPUStr();
-      std::string FeaturesStr = codegen::getFeaturesStr();
-      TM = std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
-          TheTriple.getTriple(), CPUStr, FeaturesStr, Options, RM,
-          codegen::getExplicitCodeModel(), CodeGenOpt::Default));
-      assert(TM && "Could not allocate target machine!");
+      ExitOnError ExitOnErr(std::string(ToolName) + ": error: ");
+      TM = ExitOnErr(codegen::createTargetMachineForTriple(TheTriple.str()));
 
       return TM->createDataLayout().getStringRepresentation();
     };
@@ -805,7 +797,7 @@ llvm::parseReducerWorkItem(StringRef ToolName, StringRef Filename,
 
     if (!isBitcode((const unsigned char *)(*MB)->getBufferStart(),
                    (const unsigned char *)(*MB)->getBufferEnd())) {
-      std::unique_ptr<Module> Result = parseIRFile(Filename, Err, Ctxt);
+      std::unique_ptr<Module> Result = parseIR(**MB, Err, Ctxt);
       if (!Result) {
         Err.print(ToolName.data(), errs());
         return {nullptr, false};

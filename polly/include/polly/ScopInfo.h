@@ -509,7 +509,7 @@ private:
   /// Here not all iterations access the same memory location, but iterations
   /// for which j = 0 holds do. After lifting the equality check in ScopBuilder,
   /// subsequent transformations do not only need check if a statement is
-  /// reduction like, but they also need to verify that that the reduction
+  /// reduction like, but they also need to verify that the reduction
   /// property is only exploited for statement instances that load from and
   /// store to the same data location. Doing so at dependence analysis time
   /// could allow us to handle the above example.
@@ -1684,9 +1684,6 @@ private:
   /// Number of copy statements.
   unsigned CopyStmtsNum = 0;
 
-  /// Flag to indicate if the Scop is to be skipped.
-  bool SkipScop = false;
-
   using StmtSet = std::list<ScopStmt>;
 
   /// The statements in this Scop.
@@ -2143,12 +2140,6 @@ public:
 
   /// Check if the SCoP has been optimized by the scheduler.
   bool isOptimized() const { return IsOptimized; }
-
-  /// Mark the SCoP to be skipped by ScopPass passes.
-  void markAsToBeSkipped() { SkipScop = true; }
-
-  /// Check if the SCoP is to be skipped by ScopPass passes.
-  bool isToBeSkipped() const { return SkipScop; }
 
   /// Return the ID of the Scop
   int getID() const { return ID; }

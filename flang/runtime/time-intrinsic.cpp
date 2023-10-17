@@ -56,7 +56,12 @@ template <typename Unused = void> double GetCpuTime(fallback_implementation) {
   return -1.0;
 }
 
-#if defined CLOCK_PROCESS_CPUTIME_ID
+#if defined __MINGW32__
+// clock_gettime is implemented in the pthread library for MinGW.
+// Using it here would mean that all programs that link libFortranRuntime are
+// required to also link to pthread. Instead, don't use the function.
+#undef CLOCKID
+#elif defined CLOCK_PROCESS_CPUTIME_ID
 #define CLOCKID CLOCK_PROCESS_CPUTIME_ID
 #elif defined CLOCK_THREAD_CPUTIME_ID
 #define CLOCKID CLOCK_THREAD_CPUTIME_ID

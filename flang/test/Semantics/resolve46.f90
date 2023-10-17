@@ -20,6 +20,7 @@ program main
      end function chrcmp
   end interface
 
+  !PORTABILITY: Procedure pointer 'p' should not have an ELEMENTAL intrinsic as its interface
   procedure(sin), pointer :: p => cos
   !ERROR: Intrinsic procedure 'amin0' is not an unrestricted specific intrinsic permitted for use as the definition of the interface to procedure pointer 'q'
   procedure(amin0), pointer :: q
@@ -28,15 +29,16 @@ program main
   !ERROR: Intrinsic procedure 'llt' is not an unrestricted specific intrinsic permitted for use as the initializer for procedure pointer 's'
   procedure(chrcmp), pointer :: s => llt
   !ERROR: Intrinsic procedure 'bessel_j0' is not an unrestricted specific intrinsic permitted for use as the initializer for procedure pointer 't'
+  !PORTABILITY: Procedure pointer 't' should not have an ELEMENTAL intrinsic as its interface
   procedure(cos), pointer :: t => bessel_j0
   procedure(chrcmp), pointer :: u
   p => alog ! valid use of an unrestricted specific intrinsic
   p => alog10 ! ditto, but already declared intrinsic
   p => cos ! ditto, but also generic
   p => tan ! a generic & an unrestricted specific, not already declared
-  !ERROR: Function pointer 'p' associated with incompatible function designator 'mod': function results have incompatible types: REAL(4) vs INTEGER(4)
+  !ERROR: Function pointer 'p' associated with incompatible function designator 'mod': function results have distinct types: REAL(4) vs INTEGER(4)
   p => mod
-  !ERROR: Function pointer 'p' associated with incompatible function designator 'index': function results have incompatible types: REAL(4) vs INTEGER(4)
+  !ERROR: Function pointer 'p' associated with incompatible function designator 'index': function results have distinct types: REAL(4) vs INTEGER(4)
   p => index
   !ERROR: 'bessel_j0' is not an unrestricted specific intrinsic procedure
   p => bessel_j0

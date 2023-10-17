@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_GPU_TRANSFORMS_PASSES_H_
 #define MLIR_DIALECT_GPU_TRANSFORMS_PASSES_H_
 
+#include "Utils.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Pass/Pass.h"
 #include <optional>
@@ -52,34 +53,29 @@ std::unique_ptr<OperationPass<func::FuncOp>> createGpuAsyncRegionPass();
 /// mapped to sequential loops.
 std::unique_ptr<OperationPass<func::FuncOp>> createGpuMapParallelLoopsPass();
 
+/// Collect a set of patterns to rewrite GlobalIdOp op within the GPU dialect.
+void populateGpuGlobalIdPatterns(RewritePatternSet &patterns);
+
+/// Collect a set of patterns to rewrite shuffle ops within the GPU dialect.
+void populateGpuShufflePatterns(RewritePatternSet &patterns);
+
 /// Collect a set of patterns to rewrite all-reduce ops within the GPU dialect.
 void populateGpuAllReducePatterns(RewritePatternSet &patterns);
 
 /// Collect all patterns to rewrite ops within the GPU dialect.
 inline void populateGpuRewritePatterns(RewritePatternSet &patterns) {
   populateGpuAllReducePatterns(patterns);
+  populateGpuGlobalIdPatterns(patterns);
+  populateGpuShufflePatterns(patterns);
 }
 
 namespace gpu {
-/// A function that maps a MemorySpace enum to a target-specific integer value.
-using MemorySpaceMapping =
-    std::function<unsigned(gpu::AddressSpace gpuAddressSpace)>;
-
-/// Populates type conversion rules for lowering memory space attributes to
-/// numeric values.
-void populateMemorySpaceAttributeTypeConversions(
-    TypeConverter &typeConverter, const MemorySpaceMapping &mapping);
-
-/// Populates patterns to lower memory space attributes to numeric values.
-void populateMemorySpaceLoweringPatterns(TypeConverter &typeConverter,
-                                         RewritePatternSet &patterns);
-
-/// Populates legality rules for lowering memory space attriutes to numeric
-/// values.
-void populateLowerMemorySpaceOpLegality(ConversionTarget &target);
-
-/// Returns the default annotation name for GPU binary blobs.
-std::string getDefaultGpuBinaryAnnotation();
+/// Searches for all GPU modules in `op` and transforms them into GPU binary
+/// operations. The resulting `gpu.binary` has `handler` as its offloading
+/// handler attribute.
+LogicalResult transformGpuModulesToBinaries(
+    Operation *op, OffloadingLLVMTranslationAttrInterface handler = nullptr,
+    const gpu::TargetOptions &options = {});
 
 /// Base pass class to serialize kernel functions through LLVM into
 /// user-specified IR and add the resulting blob as module attribute.
@@ -91,8 +87,6 @@ public:
   void runOnOperation() final;
 
 protected:
-  void getDependentDialects(DialectRegistry &registry) const override;
-
   /// Hook allowing the application of optimizations before codegen
   /// By default, does nothing
   virtual LogicalResult optimizeLlvm(llvm::Module &llvmModule,
@@ -121,10 +115,16 @@ protected:
                            ::llvm::cl::desc("Target architecture")};
   Option<std::string> features{*this, "features",
                                ::llvm::cl::desc("Target features")};
+  Option<int> optLevel{*this, "opt-level",
+                       llvm::cl::desc("Optimization level for compilation"),
+                       llvm::cl::init(2)};
   Option<std::string> gpuBinaryAnnotation{
       *this, "gpu-binary-annotation",
       llvm::cl::desc("Annotation attribute string for GPU binary"),
       llvm::cl::init(getDefaultGpuBinaryAnnotation())};
+  Option<bool> dumpPtx{*this, "dump-ptx",
+                       ::llvm::cl::desc("Dump generated PTX"),
+                       llvm::cl::init(false)};
 };
 } // namespace gpu
 
@@ -134,24 +134,36 @@ protected:
 
 /// Register pass to serialize GPU kernel functions to a CUBIN binary
 /// annotation.
+LLVM_DEPRECATED("use Target attributes instead", "")
 void registerGpuSerializeToCubinPass();
 
 /// Register pass to serialize GPU kernel functions to a HSAco binary
 /// annotation.
+LLVM_DEPRECATED("use Target attributes instead", "")
 void registerGpuSerializeToHsacoPass();
 
 /// Create an instance of the GPU kernel function to CUBIN binary serialization
-/// pass.
+/// pass with optLevel (default level 2).
+LLVM_DEPRECATED("use Target attributes instead", "")
 std::unique_ptr<Pass> createGpuSerializeToCubinPass(StringRef triple,
                                                     StringRef chip,
-                                                    StringRef features);
+                                                    StringRef features,
+                                                    int optLevel = 2,
+                                                    bool dumpPtx = false);
 
 /// Create an instance of the GPU kernel function to HSAco binary serialization
 /// pass.
+LLVM_DEPRECATED("use Target attributes instead", "")
 std::unique_ptr<Pass> createGpuSerializeToHsacoPass(StringRef triple,
                                                     StringRef arch,
                                                     StringRef features,
                                                     int optLevel);
+
+/// Collect a set of patterns to decompose memrefs ops.
+void populateGpuDecomposeMemrefsPatterns(RewritePatternSet &patterns);
+
+/// Pass decomposes memref ops inside `gpu.launch` body.
+std::unique_ptr<Pass> createGpuDecomposeMemrefsPass();
 
 /// Generate the code for registering passes.
 #define GEN_PASS_REGISTRATION

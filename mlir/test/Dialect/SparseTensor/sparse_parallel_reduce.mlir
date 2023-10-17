@@ -2,7 +2,7 @@
 // RUN:   FileCheck %s
 
 #CSR = #sparse_tensor.encoding<{
-  dimLevelType = [ "dense", "compressed" ]
+  map = (d0, d1) -> (d0 : dense, d1 : compressed)
 }>
 
 #trait_matvec = {
@@ -15,14 +15,14 @@
   doc = "x(i) += A(i,j) * b(j)"
 }
 // CHECK-LABEL:  func.func @matvec(
-//  CHECK-SAME:    %[[TMP_arg0:.*]]: tensor<16x32xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ] }>>,
+//  CHECK-SAME:    %[[TMP_arg0:.*]]: tensor<16x32xf32, #sparse_tensor.encoding<{{{.*}}}>>,
 //  CHECK-SAME:    %[[TMP_arg1:.*]]: tensor<32xf32>,
 //  CHECK-SAME:    %[[TMP_arg2:.*]]: tensor<16xf32>) -> tensor<16xf32> {
 //   CHECK-DAG:  %[[TMP_c16:.*]] = arith.constant 16 : index
 //   CHECK-DAG:  %[[TMP_c0:.*]] = arith.constant 0 : index
 //   CHECK-DAG:  %[[TMP_c1:.*]] = arith.constant 1 : index
-//       CHECK:  %[[TMP_0:.*]] = sparse_tensor.pointers %[[TMP_arg0]] {dimension = 1 : index}
-//       CHECK:  %[[TMP_1:.*]] = sparse_tensor.indices %[[TMP_arg0]] {dimension = 1 : index}
+//       CHECK:  %[[TMP_0:.*]] = sparse_tensor.positions %[[TMP_arg0]] {level = 1 : index}
+//       CHECK:  %[[TMP_1:.*]] = sparse_tensor.coordinates %[[TMP_arg0]] {level = 1 : index}
 //       CHECK:  %[[TMP_2:.*]] = sparse_tensor.values %[[TMP_arg0]]
 //       CHECK:  %[[TMP_3:.*]] = bufferization.to_memref %[[TMP_arg1]] : memref<32xf32>
 //       CHECK:  %[[TMP_4:.*]] = bufferization.to_memref %[[TMP_arg2]] : memref<16xf32>

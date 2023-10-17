@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s --sparse-tensor-codegen --sparse-storage-specifier-to-llvm | FileCheck %s
 
-#SparseVector = #sparse_tensor.encoding<{ dimLevelType = ["compressed"] }>
+#SparseVector = #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>
 
 // CHECK-LABEL: func @sparse_nop(
 //  CHECK-SAME: %[[A0:.*0]]: memref<?xindex>,

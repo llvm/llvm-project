@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -arch=amdgcn %s 2>&1 | FileCheck -check-prefix=GCN --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn %s 2>&1 | FileCheck -check-prefix=GCN --implicit-check-not=error: %s
 
 s_cbranch_g_fork 100, s[6:7]
 // GCN: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction

@@ -20,6 +20,11 @@ def h : Flag<["-"], "h">,
   Alias<help>,
   HelpText<"Alias for --help">;
 
+def linker: Separate<["--", "-"], "linker">,
+  MetaVarName<"<DWARF linker type>">,
+  HelpText<"Specify the desired type of DWARF linker. Defaults to 'apple'">;
+def: Joined<["--", "-"], "linker=">, Alias<linker>;
+
 defm odr_deduplication : BB<"odr-deduplication",
   "Do ODR deduplication for debug types(default)",
   "Don`t do ODR deduplication for debug types">;

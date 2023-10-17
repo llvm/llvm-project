@@ -45,7 +45,6 @@ define i32 @s_add_co_select_user() {
 ; GFX10-LABEL: s_add_co_select_user:
 ; GFX10:       ; %bb.0: ; %bb
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX10-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -63,7 +62,6 @@ define i32 @s_add_co_select_user() {
 ; GFX11-LABEL: s_add_co_select_user:
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -196,6 +194,7 @@ define amdgpu_kernel void @s_add_co_br_user(i32 %i) {
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 10
 ; GFX11-NEXT:    global_store_b32 v[0:1], v2, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:

@@ -338,6 +338,7 @@ private:
   ///
   ///{
   const SCEV *visitConstant(const SCEVConstant *E) { return E; }
+  const SCEV *visitVScale(const SCEVVScale *E) { return E; }
   const SCEV *visitPtrToIntExpr(const SCEVPtrToIntExpr *E) {
     return SE.getPtrToIntExpr(visit(E->getOperand()), E->getType());
   }

@@ -1,17 +1,18 @@
 // RUN: %clang_cc1 -std=c++17 -fsanitize=function -emit-llvm -triple x86_64-linux-gnu %s -o - | FileCheck %s
 
-// Check that typeinfo recorded in function prolog doesn't have "Do" noexcept
-// qualifier in its mangled name.
-// CHECK: [[PROXY:@.*]] = private unnamed_addr constant ptr @_ZTIFvvE
-// CHECK: define{{.*}} void @_Z1fv() #{{.*}} !func_sanitize ![[FUNCSAN:.*]] {
-void f() noexcept {}
+/// Check the following two functions have the same func_sanitize metadata, i.e.
+/// they have the same type hash despite the exception specifier.
+// CHECK: define{{.*}} void @_Z1fv() #[[#]] !func_sanitize ![[FUNCSAN:.*]] {
+// CHECK: define{{.*}} void @_Z10f_noexceptv() #[[#]] !func_sanitize 
+// CHECK-SAME: ![[FUNCSAN]] {
+void f() {}
+void f_noexcept() noexcept {}
 
 // CHECK: define{{.*}} void @_Z1gPDoFvvE
 void g(void (*p)() noexcept) {
-  // Check that reference typeinfo at call site doesn't have "Do" noexcept
-  // qualifier in its mangled name, either.
-  // CHECK: icmp eq ptr %{{.*}}, @_ZTIFvvE, !nosanitize
+  // CHECK: icmp eq i32 %{{.*}}, -1056584962, !nosanitize
+  // CHECK: icmp eq i32 %{{.*}}, [[Hash:[-0-9]+]], !nosanitize
   p();
 }
 
-// CHECK: ![[FUNCSAN]] = !{i32 846595819, ptr [[PROXY]]}
+// CHECK: ![[FUNCSAN]] = !{i32 -1056584962, i32 [[Hash]]}

@@ -51,7 +51,7 @@ static_assert(!HasRotateCopyR<UncheckedRange<int*>, OutputIteratorNotInputOrOutp
 static_assert(std::is_same_v<std::ranges::rotate_copy_result<int, int>, std::ranges::in_out_result<int, int>>);
 
 template <class Iter, class OutIter, class Sent, int N>
-constexpr void test(std::array<int, N> value, size_t middle, std::array<int, N> expected) {
+constexpr void test(std::array<int, N> value, std::size_t middle, std::array<int, N> expected) {
   {
     std::array<int, N> out;
     std::same_as<std::ranges::in_out_result<Iter, OutIter>> decltype(auto) ret =

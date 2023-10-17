@@ -75,6 +75,13 @@ bool ArgList::hasFlag(OptSpecifier Pos, OptSpecifier Neg, bool Default) const {
   return Default;
 }
 
+bool ArgList::hasFlagNoClaim(OptSpecifier Pos, OptSpecifier Neg,
+                             bool Default) const {
+  if (Arg *A = getLastArgNoClaim(Pos, Neg))
+    return A->getOption().matches(Pos);
+  return Default;
+}
+
 bool ArgList::hasFlag(OptSpecifier Pos, OptSpecifier PosAlias, OptSpecifier Neg,
                       bool Default) const {
   if (Arg *A = getLastArg(Pos, PosAlias, Neg))
@@ -125,17 +132,14 @@ void ArgList::AddAllArgsExcept(ArgStringList &Output,
 }
 
 /// This is a nicer interface when you don't have a list of Ids to exclude.
-void ArgList::AddAllArgs(ArgStringList &Output,
+void ArgList::addAllArgs(ArgStringList &Output,
                          ArrayRef<OptSpecifier> Ids) const {
   ArrayRef<OptSpecifier> Exclude = std::nullopt;
   AddAllArgsExcept(Output, Ids, Exclude);
 }
 
-/// This 3-opt variant of AddAllArgs could be eliminated in favor of one
-/// that accepts a single specifier, given the above which accepts any number.
-void ArgList::AddAllArgs(ArgStringList &Output, OptSpecifier Id0,
-                         OptSpecifier Id1, OptSpecifier Id2) const {
-  for (auto *Arg : filtered(Id0, Id1, Id2)) {
+void ArgList::AddAllArgs(ArgStringList &Output, OptSpecifier Id0) const {
+  for (auto *Arg : filtered(Id0)) {
     Arg->claim();
     Arg->render(*this, Output);
   }

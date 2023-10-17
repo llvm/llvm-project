@@ -11,25 +11,62 @@
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_stacktrace_printer.h"
+
 #include "sanitizer_file.h"
+#include "sanitizer_flags.h"
 #include "sanitizer_fuchsia.h"
 
 namespace __sanitizer {
 
-// sanitizer_symbolizer_markup.cpp implements these differently.
-#if !SANITIZER_SYMBOLIZER_MARKUP
+StackTracePrinter *StackTracePrinter::GetOrInit() {
+  static StackTracePrinter *stacktrace_printer;
+  static StaticSpinMutex init_mu;
+  SpinMutexLock l(&init_mu);
+  if (stacktrace_printer)
+    return stacktrace_printer;
 
-static const char *StripFunctionName(const char *function, const char *prefix) {
-  if (!function) return nullptr;
-  if (!prefix) return function;
-  uptr prefix_len = internal_strlen(prefix);
-  if (0 == internal_strncmp(function, prefix, prefix_len))
-    return function + prefix_len;
+  stacktrace_printer =
+      new (GetGlobalLowLevelAllocator()) FormattedStackTracePrinter();
+
+  CHECK(stacktrace_printer);
+  return stacktrace_printer;
+}
+
+const char *FormattedStackTracePrinter::StripFunctionName(
+    const char *function) {
+  if (!common_flags()->demangle)
+    return function;
+  if (!function)
+    return nullptr;
+  auto try_strip = [function](const char *prefix) -> const char * {
+    const uptr prefix_len = internal_strlen(prefix);
+    if (!internal_strncmp(function, prefix, prefix_len))
+      return function + prefix_len;
+    return nullptr;
+  };
+  if (SANITIZER_APPLE) {
+    if (const char *s = try_strip("wrap_"))
+      return s;
+  } else if (SANITIZER_WINDOWS) {
+    if (const char *s = try_strip("__asan_wrap_"))
+      return s;
+  } else {
+    if (const char *s = try_strip("___interceptor_"))
+      return s;
+    if (const char *s = try_strip("__interceptor_"))
+      return s;
+  }
   return function;
 }
 
+// sanitizer_symbolizer_markup.cpp implements these differently.
+#if !SANITIZER_SYMBOLIZER_MARKUP
+
 static const char *DemangleFunctionName(const char *function) {
-  if (!function) return nullptr;
+  if (!common_flags()->demangle)
+    return function;
+  if (!function)
+    return nullptr;
 
   // NetBSD uses indirection for old threading functions for historical reasons
   // The mangled names are internal implementation detail and should not be
@@ -108,20 +145,23 @@ static void MaybeBuildIdToBuffer(const AddressInfo &info, bool PrefixSpace,
                                  InternalScopedString *buffer) {
   if (info.uuid_size) {
     if (PrefixSpace)
-      buffer->append(" ");
-    buffer->append("(BuildId: ");
+      buffer->AppendF(" ");
+    buffer->AppendF("(BuildId: ");
     for (uptr i = 0; i < info.uuid_size; ++i) {
-      buffer->append("%02x", info.uuid[i]);
+      buffer->AppendF("%02x", info.uuid[i]);
     }
-    buffer->append(")");
+    buffer->AppendF(")");
   }
 }
 
 static const char kDefaultFormat[] = "    #%n %p %F %L";
 
-void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
-                 uptr address, const AddressInfo *info, bool vs_style,
-                 const char *strip_path_prefix, const char *strip_func_prefix) {
+void FormattedStackTracePrinter::RenderFrame(InternalScopedString *buffer,
+                                             const char *format, int frame_no,
+                                             uptr address,
+                                             const AddressInfo *info,
+                                             bool vs_style,
+                                             const char *strip_path_prefix) {
   // info will be null in the case where symbolization is not needed for the
   // given format. This ensures that the code below will get a hard failure
   // rather than print incorrect information in case RenderNeedsSymbolization
@@ -132,56 +172,56 @@ void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
     format = kDefaultFormat;
   for (const char *p = format; *p != '\0'; p++) {
     if (*p != '%') {
-      buffer->append("%c", *p);
+      buffer->AppendF("%c", *p);
       continue;
     }
     p++;
     switch (*p) {
     case '%':
-      buffer->append("%%");
+      buffer->Append("%");
       break;
     // Frame number and all fields of AddressInfo structure.
     case 'n':
-      buffer->append("%u", frame_no);
+      buffer->AppendF("%u", frame_no);
       break;
     case 'p':
-      buffer->append("0x%zx", address);
+      buffer->AppendF("0x%zx", address);
       break;
     case 'm':
-      buffer->append("%s", StripPathPrefix(info->module, strip_path_prefix));
+      buffer->AppendF("%s", StripPathPrefix(info->module, strip_path_prefix));
       break;
     case 'o':
-      buffer->append("0x%zx", info->module_offset);
+      buffer->AppendF("0x%zx", info->module_offset);
       break;
     case 'b':
       MaybeBuildIdToBuffer(*info, /*PrefixSpace=*/false, buffer);
       break;
     case 'f':
-      buffer->append("%s", DemangleFunctionName(StripFunctionName(
-                               info->function, strip_func_prefix)));
+      buffer->AppendF("%s",
+                      DemangleFunctionName(StripFunctionName(info->function)));
       break;
     case 'q':
-      buffer->append("0x%zx", info->function_offset != AddressInfo::kUnknown
-                                  ? info->function_offset
-                                  : 0x0);
+      buffer->AppendF("0x%zx", info->function_offset != AddressInfo::kUnknown
+                                   ? info->function_offset
+                                   : 0x0);
       break;
     case 's':
-      buffer->append("%s", StripPathPrefix(info->file, strip_path_prefix));
+      buffer->AppendF("%s", StripPathPrefix(info->file, strip_path_prefix));
       break;
     case 'l':
-      buffer->append("%d", info->line);
+      buffer->AppendF("%d", info->line);
       break;
     case 'c':
-      buffer->append("%d", info->column);
+      buffer->AppendF("%d", info->column);
       break;
     // Smarter special cases.
     case 'F':
       // Function name and offset, if file is unknown.
       if (info->function) {
-        buffer->append("in %s", DemangleFunctionName(StripFunctionName(
-                                    info->function, strip_func_prefix)));
+        buffer->AppendF(
+            "in %s", DemangleFunctionName(StripFunctionName(info->function)));
         if (!info->file && info->function_offset != AddressInfo::kUnknown)
-          buffer->append("+0x%zx", info->function_offset);
+          buffer->AppendF("+0x%zx", info->function_offset);
       }
       break;
     case 'S':
@@ -198,9 +238,11 @@ void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
         RenderModuleLocation(buffer, info->module, info->module_offset,
                              info->module_arch, strip_path_prefix);
 
+#if !SANITIZER_APPLE
         MaybeBuildIdToBuffer(*info, /*PrefixSpace=*/true, buffer);
+#endif
       } else {
-        buffer->append("(<unknown module>)");
+        buffer->AppendF("(<unknown module>)");
       }
       break;
     case 'M':
@@ -211,9 +253,11 @@ void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
         // Always strip the module name for %M.
         RenderModuleLocation(buffer, StripModuleName(info->module),
                              info->module_offset, info->module_arch, "");
+#if !SANITIZER_APPLE
         MaybeBuildIdToBuffer(*info, /*PrefixSpace=*/true, buffer);
+#endif
       } else {
-        buffer->append("(%p)", (void *)address);
+        buffer->AppendF("(%p)", (void *)address);
       }
       break;
     default:
@@ -224,7 +268,7 @@ void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
   }
 }
 
-bool RenderNeedsSymbolization(const char *format) {
+bool FormattedStackTracePrinter::RenderNeedsSymbolization(const char *format) {
   if (0 == internal_strcmp(format, "DEFAULT"))
     format = kDefaultFormat;
   for (const char *p = format; *p != '\0'; p++) {
@@ -247,26 +291,28 @@ bool RenderNeedsSymbolization(const char *format) {
   return false;
 }
 
-void RenderData(InternalScopedString *buffer, const char *format,
-                const DataInfo *DI, const char *strip_path_prefix) {
+void FormattedStackTracePrinter::RenderData(InternalScopedString *buffer,
+                                            const char *format,
+                                            const DataInfo *DI,
+                                            const char *strip_path_prefix) {
   for (const char *p = format; *p != '\0'; p++) {
     if (*p != '%') {
-      buffer->append("%c", *p);
+      buffer->AppendF("%c", *p);
       continue;
     }
     p++;
     switch (*p) {
       case '%':
-        buffer->append("%%");
+        buffer->Append("%");
         break;
       case 's':
-        buffer->append("%s", StripPathPrefix(DI->file, strip_path_prefix));
+        buffer->AppendF("%s", StripPathPrefix(DI->file, strip_path_prefix));
         break;
       case 'l':
-        buffer->append("%zu", DI->line);
+        buffer->AppendF("%zu", DI->line);
         break;
       case 'g':
-        buffer->append("%s", DI->name);
+        buffer->AppendF("%s", DI->name);
         break;
       default:
         Report("Unsupported specifier in stack frame format: %c (%p)!\n", *p,
@@ -278,33 +324,33 @@ void RenderData(InternalScopedString *buffer, const char *format,
 
 #endif  // !SANITIZER_SYMBOLIZER_MARKUP
 
-void RenderSourceLocation(InternalScopedString *buffer, const char *file,
-                          int line, int column, bool vs_style,
-                          const char *strip_path_prefix) {
+void FormattedStackTracePrinter::RenderSourceLocation(
+    InternalScopedString *buffer, const char *file, int line, int column,
+    bool vs_style, const char *strip_path_prefix) {
   if (vs_style && line > 0) {
-    buffer->append("%s(%d", StripPathPrefix(file, strip_path_prefix), line);
+    buffer->AppendF("%s(%d", StripPathPrefix(file, strip_path_prefix), line);
     if (column > 0)
-      buffer->append(",%d", column);
-    buffer->append(")");
+      buffer->AppendF(",%d", column);
+    buffer->AppendF(")");
     return;
   }
 
-  buffer->append("%s", StripPathPrefix(file, strip_path_prefix));
+  buffer->AppendF("%s", StripPathPrefix(file, strip_path_prefix));
   if (line > 0) {
-    buffer->append(":%d", line);
+    buffer->AppendF(":%d", line);
     if (column > 0)
-      buffer->append(":%d", column);
+      buffer->AppendF(":%d", column);
   }
 }
 
-void RenderModuleLocation(InternalScopedString *buffer, const char *module,
-                          uptr offset, ModuleArch arch,
-                          const char *strip_path_prefix) {
-  buffer->append("(%s", StripPathPrefix(module, strip_path_prefix));
+void FormattedStackTracePrinter::RenderModuleLocation(
+    InternalScopedString *buffer, const char *module, uptr offset,
+    ModuleArch arch, const char *strip_path_prefix) {
+  buffer->AppendF("(%s", StripPathPrefix(module, strip_path_prefix));
   if (arch != kModuleArchUnknown) {
-    buffer->append(":%s", ModuleArchToString(arch));
+    buffer->AppendF(":%s", ModuleArchToString(arch));
   }
-  buffer->append("+0x%zx)", offset);
+  buffer->AppendF("+0x%zx)", offset);
 }
 
 } // namespace __sanitizer

@@ -83,7 +83,7 @@ define amdgpu_kernel void @test_fold_canonicalize_sqrt_value_f32(ptr addrspace(1
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds float, ptr addrspace(1) %arg, i32 %id
   %load = load float, ptr addrspace(1) %gep, align 4
-  %v = call float @llvm.sqrt.f32(float %load)
+  %v = call afn float @llvm.sqrt.f32(float %load)
   %canonicalized = tail call float @llvm.canonicalize.f32(float %v)
   store float %canonicalized, ptr addrspace(1) %gep, align 4
   ret void
@@ -872,6 +872,26 @@ define float @v_test_canonicalize_frexp_mant(float %a) {
   ret float %canonicalized
 }
 
+; GCN-LABEL: {{^}}v_test_canonicalize_amdgcn_log:
+; GCN: s_waitcnt
+; GCN-NEXT: v_log_f32
+; GCN-NEXT: s_setpc_b64
+define float @v_test_canonicalize_amdgcn_log(float %a) {
+  %log = call float @llvm.amdgcn.log.f32(float %a)
+  %canonicalized = call float @llvm.canonicalize.f32(float %log)
+  ret float %canonicalized
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_amdgcn_exp2:
+; GCN: s_waitcnt
+; GCN-NEXT: v_exp_f32
+; GCN-NEXT: s_setpc_b64
+define float @v_test_canonicalize_amdgcn_exp2(float %a) {
+  %log = call float @llvm.amdgcn.exp2.f32(float %a)
+  %canonicalized = call float @llvm.canonicalize.f32(float %log)
+  ret float %canonicalized
+}
+
 ; Avoid failing the test on FreeBSD11.0 which will match the GCN-NOT: 1.0
 ; in the .amd_amdgpu_isa "amdgcn-unknown-freebsd11.0--gfx802" directive
 ; GCN: .amd_amdgpu_isa
@@ -900,6 +920,8 @@ declare double @llvm.maxnum.f64(double, double) #0
 declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #0
 declare float @llvm.amdgcn.cubeid(float, float, float) #0
 declare float @llvm.amdgcn.frexp.mant.f32(float) #0
+declare float @llvm.amdgcn.log.f32(float) #0
+declare float @llvm.amdgcn.exp2.f32(float) #0
 
 attributes #0 = { nounwind readnone }
 attributes #1 = { "no-nans-fp-math"="true" }

@@ -54,9 +54,10 @@ struct Config {
   std::function<void(legacy::PassManager &)> PreCodeGenPassesHook;
   std::optional<Reloc::Model> RelocModel = Reloc::PIC_;
   std::optional<CodeModel::Model> CodeModel;
-  CodeGenOpt::Level CGOptLevel = CodeGenOpt::Default;
-  CodeGenFileType CGFileType = CGFT_ObjectFile;
+  CodeGenOptLevel CGOptLevel = CodeGenOptLevel::Default;
+  CodeGenFileType CGFileType = CodeGenFileType::ObjectFile;
   unsigned OptLevel = 2;
+  bool VerifyEach = false;
   bool DisableVerify = false;
 
   /// Use the standard optimization pipeline.
@@ -78,6 +79,12 @@ struct Config {
   /// Asserts whether we can assume whole program visibility during the LTO
   /// link.
   bool HasWholeProgramVisibility = false;
+
+  /// We're validating that all native vtables have corresponding type infos.
+  bool ValidateAllVtablesHaveTypeInfos = false;
+  /// If all native vtables have corresponding type infos, allow
+  /// usage of RTTI to block devirtualization on types used in native files.
+  bool AllVtablesHaveTypeInfos = false;
 
   /// Always emit a Regular LTO object even when it is empty because no Regular
   /// LTO modules were linked. This option is useful for some build system which
@@ -178,10 +185,6 @@ struct Config {
 
   /// Add FSAFDO discriminators.
   bool AddFSDiscriminator = false;
-
-  /// Use opaque pointer types. Used to call LLVMContext::setOpaquePointers
-  /// unless already set by the `-opaque-pointers` commandline option.
-  bool OpaquePointers = true;
 
   /// If this field is set, LTO will write input file paths and symbol
   /// resolutions here in llvm-lto2 command line flag format. This can be
@@ -298,7 +301,6 @@ struct LTOLLVMContext : LLVMContext {
     enableDebugTypeODRUniquing();
     setDiagnosticHandler(
         std::make_unique<LTOLLVMDiagnosticHandler>(&DiagHandler), true);
-    setOpaquePointers(C.OpaquePointers);
   }
   DiagnosticHandlerFunction DiagHandler;
 };

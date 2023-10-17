@@ -34,7 +34,7 @@ def FeatureV9
   : SubtargetFeature<"v9", "IsV9", "true",
                      "Enable SPARC-V9 instructions">;
 def FeatureV8Deprecated
-  : SubtargetFeature<"deprecated-v8", "V8DeprecatedInsts", "true",
+  : SubtargetFeature<"deprecated-v8", "UseV8DeprecatedInsts", "true",
                      "Enable deprecated V8 instructions in V9 mode">;
 def FeatureVIS
   : SubtargetFeature<"vis", "IsVIS", "true",
@@ -69,6 +69,7 @@ include "LeonFeatures.td"
 // Register File, Calling Conv, Instruction Descriptions
 //===----------------------------------------------------------------------===//
 
+include "SparcASITags.td"
 include "SparcRegisterInfo.td"
 include "SparcCallingConv.td"
 include "SparcSchedule.td"
@@ -78,6 +79,10 @@ def SparcInstrInfo : InstrInfo;
 
 def SparcAsmParser : AsmParser {
   bit ShouldEmitMatchRegisterName = 0;
+}
+
+def SparcAsmParserVariant : AsmParserVariant {
+  let RegisterPrefix = "%";
 }
 
 //===----------------------------------------------------------------------===//
@@ -178,6 +183,7 @@ def Sparc : Target {
   // Pull in Instruction Info:
   let InstructionSet = SparcInstrInfo;
   let AssemblyParsers  = [SparcAsmParser];
+  let AssemblyParserVariants = [SparcAsmParserVariant];
   let AssemblyWriters = [SparcAsmWriter];
   let AllowRegisterRenaming = 1;
 }

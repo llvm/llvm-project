@@ -45,6 +45,7 @@ void MappingTraits<WasmYAML::Object>::mapping(IO &IO,
 static void commonSectionMapping(IO &IO, WasmYAML::Section &Section) {
   IO.mapRequired("Type", Section.Type);
   IO.mapOptional("Relocations", Section.Relocations);
+  IO.mapOptional("HeaderSecSizeEncodingLen", Section.HeaderSecSizeEncodingLen);
 }
 
 static void sectionMapping(IO &IO, WasmYAML::DylinkSection &Section) {
@@ -517,7 +518,9 @@ void MappingTraits<WasmYAML::SymbolInfo>::mapping(IO &IO,
     IO.mapRequired("Tag", Info.ElementIndex);
   } else if (Info.Kind == wasm::WASM_SYMBOL_TYPE_DATA) {
     if ((Info.Flags & wasm::WASM_SYMBOL_UNDEFINED) == 0) {
-      IO.mapRequired("Segment", Info.DataRef.Segment);
+      if ((Info.Flags & wasm::WASM_SYMBOL_ABSOLUTE) == 0) {
+        IO.mapRequired("Segment", Info.DataRef.Segment);
+      }
       IO.mapOptional("Offset", Info.DataRef.Offset, 0u);
       IO.mapRequired("Size", Info.DataRef.Size);
     }
@@ -572,6 +575,7 @@ void ScalarBitSetTraits<WasmYAML::SymbolFlags>::bitset(
   BCaseMask(EXPLICIT_NAME, EXPLICIT_NAME);
   BCaseMask(NO_STRIP, NO_STRIP);
   BCaseMask(TLS, TLS);
+  BCaseMask(ABSOLUTE, ABSOLUTE);
 #undef BCaseMask
 }
 

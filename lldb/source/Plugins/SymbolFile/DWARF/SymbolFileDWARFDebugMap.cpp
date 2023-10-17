@@ -18,13 +18,11 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Utility/RangeMap.h"
 #include "lldb/Utility/RegularExpression.h"
-#include "lldb/Utility/Timer.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/StructuredData.h"
+#include "lldb/Utility/Timer.h"
 
 //#define DEBUG_OSO_DMAP // DO NOT CHECKIN WITH THIS NOT COMMENTED OUT
-#if defined(DEBUG_OSO_DMAP)
-#include "lldb/Core/StreamFile.h"
-#endif
 
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/LineTable.h"
@@ -32,6 +30,7 @@
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/TypeMap.h"
 #include "lldb/Symbol/VariableList.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 #include "lldb/Target/StackFrame.h"
@@ -44,6 +43,7 @@
 
 using namespace lldb;
 using namespace lldb_private;
+using namespace lldb_private::plugin::dwarf;
 
 char SymbolFileDWARFDebugMap::ID;
 
@@ -168,11 +168,13 @@ SymbolFileDWARFDebugMap::CompileUnitInfo::GetFileRangeMap(
   return file_range_map;
 }
 
+namespace lldb_private::plugin {
+namespace dwarf {
 class DebugMapModule : public Module {
 public:
   DebugMapModule(const ModuleSP &exe_module_sp, uint32_t cu_idx,
                  const FileSpec &file_spec, const ArchSpec &arch,
-                 const ConstString *object_name, off_t object_offset,
+                 ConstString object_name, off_t object_offset,
                  const llvm::sys::TimePoint<> object_mod_time)
       : Module(file_spec, arch, object_name, object_offset, object_mod_time),
         m_exe_module_wp(exe_module_sp), m_cu_idx(cu_idx) {}
@@ -211,7 +213,7 @@ public:
             // Set the ID of the symbol file DWARF to the index of the OSO
             // shifted left by 32 bits to provide a unique prefix for any
             // UserID's that get created in the symbol file.
-            oso_symfile->SetID(((uint64_t)m_cu_idx + 1ull) << 32ull);
+            oso_symfile->SetFileIndex((uint64_t)m_cu_idx);
           }
           return symfile;
         }
@@ -224,6 +226,8 @@ protected:
   ModuleWP m_exe_module_wp;
   const uint32_t m_cu_idx;
 };
+} // namespace dwarf
+} // namespace lldb_private::plugin
 
 void SymbolFileDWARFDebugMap::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
@@ -286,112 +290,105 @@ void SymbolFileDWARFDebugMap::InitOSO() {
   // we return the abilities of the first N_OSO's DWARF.
 
   Symtab *symtab = m_objfile_sp->GetSymtab();
-  if (symtab) {
-    Log *log = GetLog(DWARFLog::DebugMap);
+  if (!symtab)
+    return;
 
-    std::vector<uint32_t> oso_indexes;
-    // When a mach-o symbol is encoded, the n_type field is encoded in bits
-    // 23:16, and the n_desc field is encoded in bits 15:0.
-    //
-    // To find all N_OSO entries that are part of the DWARF + debug map we find
-    // only object file symbols with the flags value as follows: bits 23:16 ==
-    // 0x66 (N_OSO) bits 15: 0 == 0x0001 (specifies this is a debug map object
-    // file)
-    const uint32_t k_oso_symbol_flags_value = 0x660001u;
+  Log *log = GetLog(DWARFLog::DebugMap);
 
-    const uint32_t oso_index_count =
-        symtab->AppendSymbolIndexesWithTypeAndFlagsValue(
-            eSymbolTypeObjectFile, k_oso_symbol_flags_value, oso_indexes);
+  std::vector<uint32_t> oso_indexes;
+  // When a mach-o symbol is encoded, the n_type field is encoded in bits
+  // 23:16, and the n_desc field is encoded in bits 15:0.
+  //
+  // To find all N_OSO entries that are part of the DWARF + debug map we find
+  // only object file symbols with the flags value as follows: bits 23:16 ==
+  // 0x66 (N_OSO) bits 15: 0 == 0x0001 (specifies this is a debug map object
+  // file)
+  const uint32_t k_oso_symbol_flags_value = 0x660001u;
 
-    if (oso_index_count > 0) {
-      symtab->AppendSymbolIndexesWithType(eSymbolTypeCode, Symtab::eDebugYes,
-                                          Symtab::eVisibilityAny,
-                                          m_func_indexes);
-      symtab->AppendSymbolIndexesWithType(eSymbolTypeData, Symtab::eDebugYes,
-                                          Symtab::eVisibilityAny,
-                                          m_glob_indexes);
+  const uint32_t oso_index_count =
+      symtab->AppendSymbolIndexesWithTypeAndFlagsValue(
+          eSymbolTypeObjectFile, k_oso_symbol_flags_value, oso_indexes);
 
-      symtab->SortSymbolIndexesByValue(m_func_indexes, true);
-      symtab->SortSymbolIndexesByValue(m_glob_indexes, true);
+  if (oso_index_count == 0)
+    return;
 
-      for (uint32_t sym_idx : m_func_indexes) {
-        const Symbol *symbol = symtab->SymbolAtIndex(sym_idx);
-        lldb::addr_t file_addr = symbol->GetAddressRef().GetFileAddress();
-        lldb::addr_t byte_size = symbol->GetByteSize();
-        DebugMap::Entry debug_map_entry(
-            file_addr, byte_size, OSOEntry(sym_idx, LLDB_INVALID_ADDRESS));
-        m_debug_map.Append(debug_map_entry);
+  symtab->AppendSymbolIndexesWithType(eSymbolTypeCode, Symtab::eDebugYes,
+                                      Symtab::eVisibilityAny, m_func_indexes);
+  symtab->AppendSymbolIndexesWithType(eSymbolTypeData, Symtab::eDebugYes,
+                                      Symtab::eVisibilityAny, m_glob_indexes);
+
+  symtab->SortSymbolIndexesByValue(m_func_indexes, true);
+  symtab->SortSymbolIndexesByValue(m_glob_indexes, true);
+
+  for (uint32_t sym_idx :
+       llvm::concat<uint32_t>(m_func_indexes, m_glob_indexes)) {
+    const Symbol *symbol = symtab->SymbolAtIndex(sym_idx);
+    lldb::addr_t file_addr = symbol->GetAddressRef().GetFileAddress();
+    lldb::addr_t byte_size = symbol->GetByteSize();
+    DebugMap::Entry debug_map_entry(file_addr, byte_size,
+                                    OSOEntry(sym_idx, LLDB_INVALID_ADDRESS));
+    m_debug_map.Append(debug_map_entry);
+  }
+  m_debug_map.Sort();
+
+  m_compile_unit_infos.resize(oso_index_count);
+
+  for (uint32_t i = 0; i < oso_index_count; ++i) {
+    const uint32_t so_idx = oso_indexes[i] - 1;
+    const uint32_t oso_idx = oso_indexes[i];
+    const Symbol *so_symbol = symtab->SymbolAtIndex(so_idx);
+    const Symbol *oso_symbol = symtab->SymbolAtIndex(oso_idx);
+    if (so_symbol && oso_symbol &&
+        so_symbol->GetType() == eSymbolTypeSourceFile &&
+        oso_symbol->GetType() == eSymbolTypeObjectFile) {
+      m_compile_unit_infos[i].so_file.SetFile(so_symbol->GetName().AsCString(),
+                                              FileSpec::Style::native);
+      m_compile_unit_infos[i].oso_path = oso_symbol->GetName();
+      m_compile_unit_infos[i].oso_mod_time =
+          llvm::sys::toTimePoint(oso_symbol->GetIntegerValue(0));
+      uint32_t sibling_idx = so_symbol->GetSiblingIndex();
+      // The sibling index can't be less that or equal to the current index
+      // "i"
+      if (sibling_idx <= i || sibling_idx == UINT32_MAX) {
+        m_objfile_sp->GetModule()->ReportError(
+            "N_SO in symbol with UID {0} has invalid sibling in debug "
+            "map, "
+            "please file a bug and attach the binary listed in this error",
+            so_symbol->GetID());
+      } else {
+        const Symbol *last_symbol = symtab->SymbolAtIndex(sibling_idx - 1);
+        m_compile_unit_infos[i].first_symbol_index = so_idx;
+        m_compile_unit_infos[i].last_symbol_index = sibling_idx - 1;
+        m_compile_unit_infos[i].first_symbol_id = so_symbol->GetID();
+        m_compile_unit_infos[i].last_symbol_id = last_symbol->GetID();
+
+        LLDB_LOGF(log, "Initialized OSO 0x%8.8x: file=%s", i,
+                  oso_symbol->GetName().GetCString());
       }
-      for (uint32_t sym_idx : m_glob_indexes) {
-        const Symbol *symbol = symtab->SymbolAtIndex(sym_idx);
-        lldb::addr_t file_addr = symbol->GetAddressRef().GetFileAddress();
-        lldb::addr_t byte_size = symbol->GetByteSize();
-        DebugMap::Entry debug_map_entry(
-            file_addr, byte_size, OSOEntry(sym_idx, LLDB_INVALID_ADDRESS));
-        m_debug_map.Append(debug_map_entry);
-      }
-      m_debug_map.Sort();
-
-      m_compile_unit_infos.resize(oso_index_count);
-
-      for (uint32_t i = 0; i < oso_index_count; ++i) {
-        const uint32_t so_idx = oso_indexes[i] - 1;
-        const uint32_t oso_idx = oso_indexes[i];
-        const Symbol *so_symbol = symtab->SymbolAtIndex(so_idx);
-        const Symbol *oso_symbol = symtab->SymbolAtIndex(oso_idx);
-        if (so_symbol && oso_symbol &&
-            so_symbol->GetType() == eSymbolTypeSourceFile &&
-            oso_symbol->GetType() == eSymbolTypeObjectFile) {
-          m_compile_unit_infos[i].so_file.SetFile(
-              so_symbol->GetName().AsCString(), FileSpec::Style::native);
-          m_compile_unit_infos[i].oso_path = oso_symbol->GetName();
-          m_compile_unit_infos[i].oso_mod_time =
-              llvm::sys::toTimePoint(oso_symbol->GetIntegerValue(0));
-          uint32_t sibling_idx = so_symbol->GetSiblingIndex();
-          // The sibling index can't be less that or equal to the current index
-          // "i"
-          if (sibling_idx == UINT32_MAX) {
-            m_objfile_sp->GetModule()->ReportError(
-                "N_SO in symbol with UID {0} has invalid sibling in debug "
-                "map, "
-                "please file a bug and attach the binary listed in this error",
-                so_symbol->GetID());
-          } else {
-            const Symbol *last_symbol = symtab->SymbolAtIndex(sibling_idx - 1);
-            m_compile_unit_infos[i].first_symbol_index = so_idx;
-            m_compile_unit_infos[i].last_symbol_index = sibling_idx - 1;
-            m_compile_unit_infos[i].first_symbol_id = so_symbol->GetID();
-            m_compile_unit_infos[i].last_symbol_id = last_symbol->GetID();
-
-            LLDB_LOGF(log, "Initialized OSO 0x%8.8x: file=%s", i,
-                      oso_symbol->GetName().GetCString());
-          }
-        } else {
-          if (oso_symbol == nullptr)
-            m_objfile_sp->GetModule()->ReportError(
-                "N_OSO symbol[{0}] can't be found, please file a bug and "
-                "attach "
-                "the binary listed in this error",
-                oso_idx);
-          else if (so_symbol == nullptr)
-            m_objfile_sp->GetModule()->ReportError(
-                "N_SO not found for N_OSO symbol[{0}], please file a bug and "
-                "attach the binary listed in this error",
-                oso_idx);
-          else if (so_symbol->GetType() != eSymbolTypeSourceFile)
-            m_objfile_sp->GetModule()->ReportError(
-                "N_SO has incorrect symbol type ({0}) for N_OSO "
-                "symbol[{1}], "
-                "please file a bug and attach the binary listed in this error",
-                so_symbol->GetType(), oso_idx);
-          else if (oso_symbol->GetType() != eSymbolTypeSourceFile)
-            m_objfile_sp->GetModule()->ReportError(
-                "N_OSO has incorrect symbol type ({0}) for N_OSO "
-                "symbol[{1}], "
-                "please file a bug and attach the binary listed in this error",
-                oso_symbol->GetType(), oso_idx);
-        }
-      }
+    } else {
+      if (oso_symbol == nullptr)
+        m_objfile_sp->GetModule()->ReportError(
+            "N_OSO symbol[{0}] can't be found, please file a bug and "
+            "attach "
+            "the binary listed in this error",
+            oso_idx);
+      else if (so_symbol == nullptr)
+        m_objfile_sp->GetModule()->ReportError(
+            "N_SO not found for N_OSO symbol[{0}], please file a bug and "
+            "attach the binary listed in this error",
+            oso_idx);
+      else if (so_symbol->GetType() != eSymbolTypeSourceFile)
+        m_objfile_sp->GetModule()->ReportError(
+            "N_SO has incorrect symbol type ({0}) for N_OSO "
+            "symbol[{1}], "
+            "please file a bug and attach the binary listed in this error",
+            so_symbol->GetType(), oso_idx);
+      else if (oso_symbol->GetType() != eSymbolTypeSourceFile)
+        m_objfile_sp->GetModule()->ReportError(
+            "N_OSO has incorrect symbol type ({0}) for N_OSO "
+            "symbol[{1}], "
+            "please file a bug and attach the binary listed in this error",
+            oso_symbol->GetType(), oso_idx);
     }
   }
 }
@@ -468,21 +465,20 @@ Module *SymbolFileDWARFDebugMap::GetModuleByCompUnitInfo(
                              .c_str());
       comp_unit_info->oso_sp->module_sp = std::make_shared<DebugMapModule>(
           obj_file->GetModule(), GetCompUnitInfoIndex(comp_unit_info), oso_file,
-          oso_arch, oso_object ? &oso_object : nullptr, 0,
+          oso_arch, oso_object, 0,
           oso_object ? comp_unit_info->oso_mod_time : llvm::sys::TimePoint<>());
 
-      if (!comp_unit_info->oso_sp->module_sp || !comp_unit_info->oso_sp->module_sp->GetObjectFile()) {
-        if (oso_object && FileSystem::Instance().Exists(oso_file)) {
-          // If we are loading a .o file from a .a file the "oso_object" will
-          // have a valid value name and if the .a file exists, either the .o
-          // file didn't exist in the .a file or the mod time didn't match.
-          comp_unit_info->oso_load_error.SetErrorStringWithFormat(
-              "\"%s\" object from the \"%s\" archive: "
-              "either the .o file doesn't exist in the archive or the "
-              "modification time (0x%8.8x) of the .o file doesn't match",
-              oso_object.AsCString(), oso_file.GetPath().c_str(),
-              (uint32_t)llvm::sys::toTimeT(comp_unit_info->oso_mod_time));
-        }
+      if (oso_object && !comp_unit_info->oso_sp->module_sp->GetObjectFile() &&
+          FileSystem::Instance().Exists(oso_file)) {
+        // If we are loading a .o file from a .a file the "oso_object" will
+        // have a valid value name and if the .a file exists, either the .o
+        // file didn't exist in the .a file or the mod time didn't match.
+        comp_unit_info->oso_load_error.SetErrorStringWithFormat(
+            "\"%s\" object from the \"%s\" archive: "
+            "either the .o file doesn't exist in the archive or the "
+            "modification time (0x%8.8x) of the .o file doesn't match",
+            oso_object.AsCString(), oso_file.GetPath().c_str(),
+            (uint32_t)llvm::sys::toTimeT(comp_unit_info->oso_mod_time));
       }
     }
   }
@@ -681,6 +677,17 @@ XcodeSDK SymbolFileDWARFDebugMap::ParseXcodeSDK(CompileUnit &comp_unit) {
   if (oso_dwarf)
     return oso_dwarf->ParseXcodeSDK(comp_unit);
   return {};
+}
+
+llvm::SmallSet<lldb::LanguageType, 4>
+SymbolFileDWARFDebugMap::ParseAllLanguages(
+    lldb_private::CompileUnit &comp_unit) {
+  llvm::SmallSet<lldb::LanguageType, 4> langs;
+  auto *info = GetCompUnitInfo(comp_unit);
+  for (auto &comp_unit : info->compile_units_sps) {
+    langs.insert(comp_unit->GetLanguage());
+  }
+  return langs;
 }
 
 size_t SymbolFileDWARFDebugMap::ParseFunctions(CompileUnit &comp_unit) {
@@ -1121,7 +1128,8 @@ void SymbolFileDWARFDebugMap::GetTypes(SymbolContextScope *sc_scope,
 }
 
 std::vector<std::unique_ptr<lldb_private::CallEdge>>
-SymbolFileDWARFDebugMap::ParseCallEdgesInFunction(UserID func_id) {
+SymbolFileDWARFDebugMap::ParseCallEdgesInFunction(
+    lldb_private::UserID func_id) {
   uint32_t oso_idx = GetOSOIndexFromUserID(func_id.GetID());
   SymbolFileDWARF *oso_dwarf = GetSymbolFileByOSOIndex(oso_idx);
   if (oso_dwarf)
@@ -1244,13 +1252,14 @@ void SymbolFileDWARFDebugMap::FindTypes(
 }
 
 CompilerDeclContext SymbolFileDWARFDebugMap::FindNamespace(
-    lldb_private::ConstString name,
-    const CompilerDeclContext &parent_decl_ctx) {
+    lldb_private::ConstString name, const CompilerDeclContext &parent_decl_ctx,
+    bool only_root_namespaces) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   CompilerDeclContext matching_namespace;
 
   ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
-    matching_namespace = oso_dwarf->FindNamespace(name, parent_decl_ctx);
+    matching_namespace =
+        oso_dwarf->FindNamespace(name, parent_decl_ctx, only_root_namespaces);
 
     return (bool)matching_namespace;
   });
@@ -1266,6 +1275,42 @@ void SymbolFileDWARFDebugMap::DumpClangAST(Stream &s) {
     // this once and can stop after the first iteration hence we return true.
     return true;
   });
+}
+
+bool SymbolFileDWARFDebugMap::GetSeparateDebugInfo(
+    lldb_private::StructuredData::Dictionary &d) {
+  StructuredData::Array separate_debug_info_files;
+  const uint32_t cu_count = GetNumCompileUnits();
+  for (uint32_t cu_idx = 0; cu_idx < cu_count; ++cu_idx) {
+    const auto &info = m_compile_unit_infos[cu_idx];
+    StructuredData::DictionarySP oso_data =
+        std::make_shared<StructuredData::Dictionary>();
+    oso_data->AddStringItem("so_file", info.so_file.GetPath());
+    oso_data->AddStringItem("oso_path", info.oso_path);
+    oso_data->AddIntegerItem("oso_mod_time",
+                             (uint32_t)llvm::sys::toTimeT(info.oso_mod_time));
+
+    bool loaded_successfully = false;
+    if (GetModuleByOSOIndex(cu_idx)) {
+      // If we have a valid pointer to the module, we successfully
+      // loaded the oso if there are no load errors.
+      if (!info.oso_load_error.Fail()) {
+        loaded_successfully = true;
+      }
+    }
+    if (!loaded_successfully) {
+      oso_data->AddStringItem("error", info.oso_load_error.AsCString());
+    }
+    oso_data->AddBooleanItem("loaded", loaded_successfully);
+    separate_debug_info_files.AddItem(oso_data);
+  }
+
+  d.AddStringItem("type", "oso");
+  d.AddStringItem("symfile", GetMainObjectFile()->GetFileSpec().GetPath());
+  d.AddItem("separate-debug-info-files",
+            std::make_shared<StructuredData::Array>(
+                std::move(separate_debug_info_files)));
+  return true;
 }
 
 lldb::CompUnitSP
@@ -1468,7 +1513,8 @@ SymbolFileDWARFDebugMap::AddOSOARanges(SymbolFileDWARF *dwarf2Data,
       for (size_t idx = 0; idx < file_range_map.GetSize(); idx++) {
         const FileRangeMap::Entry *entry = file_range_map.GetEntryAtIndex(idx);
         if (entry) {
-          debug_aranges->AppendRange(dwarf2Data->GetID(), entry->GetRangeBase(),
+          debug_aranges->AppendRange(*dwarf2Data->GetFileIndex(),
+                                     entry->GetRangeBase(),
                                      entry->GetRangeEnd());
           num_line_entries_added++;
         }
@@ -1535,4 +1581,13 @@ Status SymbolFileDWARFDebugMap::CalculateFrameVariableError(StackFrame &frame) {
     }
   }
   return Status();
+}
+
+void SymbolFileDWARFDebugMap::GetCompileOptions(
+    std::unordered_map<lldb::CompUnitSP, lldb_private::Args> &args) {
+
+  ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
+    oso_dwarf->GetCompileOptions(args);
+    return false;
+  });
 }

@@ -44,9 +44,13 @@ using namespace lld::macho;
 
 // Create table mapping all options defined in Options.td
 static constexpr OptTable::Info optInfo[] = {
-#define OPTION(X1, X2, ID, KIND, GROUP, ALIAS, X7, X8, X9, X10, X11, X12)      \
-  {X1, X2, X10,         X11,         OPT_##ID, Option::KIND##Class,            \
-   X9, X8, OPT_##GROUP, OPT_##ALIAS, X7,       X12},
+#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,         \
+               VISIBILITY, PARAM, HELPTEXT, METAVAR, VALUES)                   \
+  {PREFIX,      NAME,        HELPTEXT,                                         \
+   METAVAR,     OPT_##ID,    opt::Option::KIND##Class,                         \
+   PARAM,       FLAGS,       VISIBILITY,                                       \
+   OPT_##GROUP, OPT_##ALIAS, ALIASARGS,                                        \
+   VALUES},
 #include "Options.inc"
 #undef OPTION
 };
@@ -275,7 +279,7 @@ macho::findPathCombination(const Twine &name,
 }
 
 StringRef macho::rerootPath(StringRef path) {
-  if (!path::is_absolute(path, path::Style::posix) || path.endswith(".o"))
+  if (!path::is_absolute(path, path::Style::posix) || path.ends_with(".o"))
     return path;
 
   if (std::optional<StringRef> rerootedPath =

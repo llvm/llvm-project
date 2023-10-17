@@ -106,9 +106,7 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   if (IsPPC64 && has64BitSupport())
     Use64BitRegs = true;
 
-  if ((TargetTriple.isOSFreeBSD() && TargetTriple.getOSMajorVersion() >= 13) ||
-      TargetTriple.isOSNetBSD() || TargetTriple.isOSOpenBSD() ||
-      TargetTriple.isMusl())
+  if (TargetTriple.isPPC32SecurePlt())
     IsSecurePlt = true;
 
   if (HasSPE && IsPPC64)
@@ -125,6 +123,11 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
 
   // Determine endianness.
   IsLittleEndian = TM.isLittleEndian();
+
+  if (HasAIXSmallLocalExecTLS && (!TargetTriple.isOSAIX() || !IsPPC64))
+    report_fatal_error(
+      "The aix-small-local-exec-tls attribute is only supported on AIX in "
+      "64-bit mode.\n", false);
 }
 
 bool PPCSubtarget::enableMachineScheduler() const { return true; }

@@ -33,15 +33,47 @@ define <4 x float> @bitcast_shuf_same_size(<4 x i32> %v) {
   ret <4 x float> %r
 }
 
-; Negative test - length-changing shuffle
+; Length-changing shuffles
 
-define <16 x i8> @bitcast_shuf_narrow_element_wrong_size(<2 x i32> %v) {
-; CHECK-LABEL: @bitcast_shuf_narrow_element_wrong_size(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x i32> [[V:%.*]], <2 x i32> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
-; CHECK-NEXT:    [[R:%.*]] = bitcast <4 x i32> [[SHUF]] to <16 x i8>
-; CHECK-NEXT:    ret <16 x i8> [[R]]
+define <16 x i8> @bitcast_shuf_narrow_element_subvector(<2 x i32> %v) {
+; SSE-LABEL: @bitcast_shuf_narrow_element_subvector(
+; SSE-NEXT:    [[SHUF:%.*]] = shufflevector <2 x i32> [[V:%.*]], <2 x i32> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
+; SSE-NEXT:    [[R:%.*]] = bitcast <4 x i32> [[SHUF]] to <16 x i8>
+; SSE-NEXT:    ret <16 x i8> [[R]]
+;
+; AVX-LABEL: @bitcast_shuf_narrow_element_subvector(
+; AVX-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[V:%.*]] to <8 x i8>
+; AVX-NEXT:    [[R:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> poison, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
+; AVX-NEXT:    ret <16 x i8> [[R]]
 ;
   %shuf = shufflevector <2 x i32> %v, <2 x i32> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
+  %r = bitcast <4 x i32> %shuf to <16 x i8>
+  ret <16 x i8> %r
+}
+
+define <16 x i16> @bitcast_shuf_narrow_element_concat_subvectors(<2 x i64> %v) {
+; SSE-LABEL: @bitcast_shuf_narrow_element_concat_subvectors(
+; SSE-NEXT:    [[SHUF:%.*]] = shufflevector <2 x i64> [[V:%.*]], <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; SSE-NEXT:    [[R:%.*]] = bitcast <4 x i64> [[SHUF]] to <16 x i16>
+; SSE-NEXT:    ret <16 x i16> [[R]]
+;
+; AVX-LABEL: @bitcast_shuf_narrow_element_concat_subvectors(
+; AVX-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[V:%.*]] to <8 x i16>
+; AVX-NEXT:    [[R:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; AVX-NEXT:    ret <16 x i16> [[R]]
+;
+  %shuf = shufflevector <2 x i64> %v, <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+  %r = bitcast <4 x i64> %shuf to <16 x i16>
+  ret <16 x i16> %r
+}
+
+define <16 x i8> @bitcast_shuf_extract_subvector(<8 x i32> %v) {
+; CHECK-LABEL: @bitcast_shuf_extract_subvector(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i32> [[V:%.*]] to <32 x i8>
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <32 x i8> [[TMP1]], <32 x i8> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+; CHECK-NEXT:    ret <16 x i8> [[R]]
+;
+  %shuf = shufflevector <8 x i32> %v, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %r = bitcast <4 x i32> %shuf to <16 x i8>
   ret <16 x i8> %r
 }
@@ -170,8 +202,8 @@ define <4 x float> @shuf_fdiv_v4f32_yy(<4 x float> %x, <4 x float> %y, <4 x floa
 
 define <4 x i32> @shuf_add_v4i32_xx(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 ; CHECK-LABEL: @shuf_add_v4i32_xx(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 undef, i32 undef, i32 2, i32 0>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[Y:%.*]], <4 x i32> [[Z:%.*]], <4 x i32> <i32 undef, i32 undef, i32 6, i32 0>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 poison, i32 poison, i32 2, i32 0>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[Y:%.*]], <4 x i32> [[Z:%.*]], <4 x i32> <i32 poison, i32 poison, i32 6, i32 0>
 ; CHECK-NEXT:    [[R:%.*]] = add <4 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
@@ -326,7 +358,7 @@ define <16 x i16> @shuf_and_v16i16_yy_expensive_shuf(<16 x i16> %x, <16 x i16> %
 ; CHECK-LABEL: @shuf_and_v16i16_yy_expensive_shuf(
 ; CHECK-NEXT:    [[B0:%.*]] = and <16 x i16> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[B1:%.*]] = and <16 x i16> [[Y]], [[Z:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <16 x i16> [[B0]], <16 x i16> [[B1]], <16 x i32> <i32 15, i32 22, i32 25, i32 13, i32 28, i32 0, i32 undef, i32 3, i32 0, i32 30, i32 3, i32 7, i32 9, i32 19, i32 2, i32 22>
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <16 x i16> [[B0]], <16 x i16> [[B1]], <16 x i32> <i32 15, i32 22, i32 25, i32 13, i32 28, i32 0, i32 poison, i32 3, i32 0, i32 30, i32 3, i32 7, i32 9, i32 19, i32 2, i32 22>
 ; CHECK-NEXT:    ret <16 x i16> [[R]]
 ;
   %b0 = and <16 x i16> %x, %y

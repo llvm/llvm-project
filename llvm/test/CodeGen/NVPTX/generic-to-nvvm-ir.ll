@@ -1,6 +1,7 @@
 ; Verify functionality of NVPTXGenericToNVVM.cpp pass.
 ;
 ; RUN: opt < %s -march nvptx64 -S -generic-to-nvvm | FileCheck %s
+; RUN: opt < %s -march nvptx64 -S -passes='generic-to-nvvm' | FileCheck %s
 
 target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64-nvidia-cuda"

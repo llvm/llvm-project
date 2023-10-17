@@ -10,7 +10,7 @@ define void @t0(ptr %out, ptr %in) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    mov w2, #16
+; CHECK-NEXT:    mov w2, #16 ; =0x10
 ; CHECK-NEXT:    bl _memcpy
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -39,12 +39,12 @@ define void @t2(ptr %out, ptr %in) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    ldrb w8, [x1, #3]
 ; CHECK-NEXT:    ldrb w9, [x1, #2]
-; CHECK-NEXT:    ldrb w10, [x1, #1]
-; CHECK-NEXT:    ldrb w11, [x1]
+; CHECK-NEXT:    ldrb w10, [x1]
+; CHECK-NEXT:    ldrb w11, [x1, #1]
 ; CHECK-NEXT:    strb w8, [x0, #3]
 ; CHECK-NEXT:    strb w9, [x0, #2]
-; CHECK-NEXT:    strb w10, [x0, #1]
-; CHECK-NEXT:    strb w11, [x0]
+; CHECK-NEXT:    strb w11, [x0, #1]
+; CHECK-NEXT:    strb w10, [x0]
 ; CHECK-NEXT:    ret
 entry:
   call void @llvm.memcpy.p0.p0.i64(ptr %out, ptr %in, i64 4, i1 false)

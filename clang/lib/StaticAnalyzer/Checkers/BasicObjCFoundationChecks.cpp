@@ -30,6 +30,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/raw_ostream.h"
@@ -95,56 +96,64 @@ static FoundationClass findKnownClass(const ObjCInterfaceDecl *ID,
 //===----------------------------------------------------------------------===//
 
 namespace {
-  class NilArgChecker : public Checker<check::PreObjCMessage,
-                                       check::PostStmt<ObjCDictionaryLiteral>,
-                                       check::PostStmt<ObjCArrayLiteral> > {
-    mutable std::unique_ptr<APIMisuse> BT;
+class NilArgChecker : public Checker<check::PreObjCMessage,
+                                     check::PostStmt<ObjCDictionaryLiteral>,
+                                     check::PostStmt<ObjCArrayLiteral>,
+                                     EventDispatcher<ImplicitNullDerefEvent>> {
+  mutable std::unique_ptr<APIMisuse> BT;
 
-    mutable llvm::SmallDenseMap<Selector, unsigned, 16> StringSelectors;
-    mutable Selector ArrayWithObjectSel;
-    mutable Selector AddObjectSel;
-    mutable Selector InsertObjectAtIndexSel;
-    mutable Selector ReplaceObjectAtIndexWithObjectSel;
-    mutable Selector SetObjectAtIndexedSubscriptSel;
-    mutable Selector ArrayByAddingObjectSel;
-    mutable Selector DictionaryWithObjectForKeySel;
-    mutable Selector SetObjectForKeySel;
-    mutable Selector SetObjectForKeyedSubscriptSel;
-    mutable Selector RemoveObjectForKeySel;
+  mutable llvm::SmallDenseMap<Selector, unsigned, 16> StringSelectors;
+  mutable Selector ArrayWithObjectSel;
+  mutable Selector AddObjectSel;
+  mutable Selector InsertObjectAtIndexSel;
+  mutable Selector ReplaceObjectAtIndexWithObjectSel;
+  mutable Selector SetObjectAtIndexedSubscriptSel;
+  mutable Selector ArrayByAddingObjectSel;
+  mutable Selector DictionaryWithObjectForKeySel;
+  mutable Selector SetObjectForKeySel;
+  mutable Selector SetObjectForKeyedSubscriptSel;
+  mutable Selector RemoveObjectForKeySel;
 
-    void warnIfNilExpr(const Expr *E,
-                       const char *Msg,
-                       CheckerContext &C) const;
+  void warnIfNilExpr(const Expr *E, const char *Msg, CheckerContext &C) const;
 
-    void warnIfNilArg(CheckerContext &C,
-                      const ObjCMethodCall &msg, unsigned Arg,
-                      FoundationClass Class,
-                      bool CanBeSubscript = false) const;
+  void warnIfNilArg(CheckerContext &C, const ObjCMethodCall &msg, unsigned Arg,
+                    FoundationClass Class, bool CanBeSubscript = false) const;
 
-    void generateBugReport(ExplodedNode *N,
-                           StringRef Msg,
-                           SourceRange Range,
-                           const Expr *Expr,
-                           CheckerContext &C) const;
+  void generateBugReport(ExplodedNode *N, StringRef Msg, SourceRange Range,
+                         const Expr *Expr, CheckerContext &C) const;
 
-  public:
-    void checkPreObjCMessage(const ObjCMethodCall &M, CheckerContext &C) const;
-    void checkPostStmt(const ObjCDictionaryLiteral *DL,
-                       CheckerContext &C) const;
-    void checkPostStmt(const ObjCArrayLiteral *AL,
-                       CheckerContext &C) const;
-  };
+public:
+  void checkPreObjCMessage(const ObjCMethodCall &M, CheckerContext &C) const;
+  void checkPostStmt(const ObjCDictionaryLiteral *DL, CheckerContext &C) const;
+  void checkPostStmt(const ObjCArrayLiteral *AL, CheckerContext &C) const;
+};
 } // end anonymous namespace
 
 void NilArgChecker::warnIfNilExpr(const Expr *E,
                                   const char *Msg,
                                   CheckerContext &C) const {
-  ProgramStateRef State = C.getState();
-  if (State->isNull(C.getSVal(E)).isConstrainedTrue()) {
+  auto Location = C.getSVal(E).getAs<Loc>();
+  if (!Location)
+    return;
 
+  auto [NonNull, Null] = C.getState()->assume(*Location);
+
+  // If it's known to be null.
+  if (!NonNull && Null) {
     if (ExplodedNode *N = C.generateErrorNode()) {
       generateBugReport(N, Msg, E->getSourceRange(), E, C);
+      return;
     }
+  }
+
+  // If it might be null, assume that it cannot after this operation.
+  if (Null) {
+    // One needs to make sure the pointer is non-null to be used here.
+    if (ExplodedNode *N = C.generateSink(Null, C.getPredecessor())) {
+      dispatchEvent({*Location, /*IsLoad=*/false, N, &C.getBugReporter(),
+                     /*IsDirectDereference=*/false});
+    }
+    C.addTransition(NonNull);
   }
 }
 
@@ -343,9 +352,9 @@ void NilArgChecker::checkPostStmt(const ObjCDictionaryLiteral *DL,
 namespace {
 class CFNumberChecker : public Checker< check::PreStmt<CallExpr> > {
   mutable std::unique_ptr<APIMisuse> BT;
-  mutable IdentifierInfo *ICreate, *IGetValue;
+  mutable IdentifierInfo *ICreate = nullptr, *IGetValue = nullptr;
 public:
-  CFNumberChecker() : ICreate(nullptr), IGetValue(nullptr) {}
+  CFNumberChecker() = default;
 
   void checkPreStmt(const CallExpr *CE, CheckerContext &C) const;
 };
@@ -810,13 +819,13 @@ class ObjCLoopChecker
                    check::PostObjCMessage,
                    check::DeadSymbols,
                    check::PointerEscape > {
-  mutable IdentifierInfo *CountSelectorII;
+  mutable IdentifierInfo *CountSelectorII = nullptr;
 
   bool isCollectionCountMethod(const ObjCMethodCall &M,
                                CheckerContext &C) const;
 
 public:
-  ObjCLoopChecker() : CountSelectorII(nullptr) {}
+  ObjCLoopChecker() = default;
   void checkPostStmt(const ObjCForCollectionStmt *FCS, CheckerContext &C) const;
   void checkPostObjCMessage(const ObjCMethodCall &M, CheckerContext &C) const;
   void checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const;
@@ -965,9 +974,8 @@ static bool alreadyExecutedAtLeastOneLoopIteration(const ExplodedNode *N,
   }
 
   // Keep looking for a block edge.
-  for (ExplodedNode::const_pred_iterator I = N->pred_begin(),
-                                         E = N->pred_end(); I != E; ++I) {
-    if (alreadyExecutedAtLeastOneLoopIteration(*I, FCS))
+  for (const ExplodedNode *N : N->preds()) {
+    if (alreadyExecutedAtLeastOneLoopIteration(N, FCS))
       return true;
   }
 
@@ -1096,11 +1104,7 @@ ObjCLoopChecker::checkPointerEscape(ProgramStateRef State,
   SymbolRef ImmutableReceiver = getMethodReceiverIfKnownImmutable(Call);
 
   // Remove the invalidated symbols from the collection count map.
-  for (InvalidatedSymbols::const_iterator I = Escaped.begin(),
-       E = Escaped.end();
-       I != E; ++I) {
-    SymbolRef Sym = *I;
-
+  for (SymbolRef Sym : Escaped) {
     // Don't invalidate this symbol's count if we know the method being called
     // is declared on an immutable class. This isn't completely correct if the
     // receiver is also passed as an argument, but in most uses of NSArray,
@@ -1122,9 +1126,7 @@ void ObjCLoopChecker::checkDeadSymbols(SymbolReaper &SymReaper,
 
   // Remove the dead symbols from the collection count map.
   ContainerCountMapTy Tracked = State->get<ContainerCountMap>();
-  for (ContainerCountMapTy::iterator I = Tracked.begin(),
-                                     E = Tracked.end(); I != E; ++I) {
-    SymbolRef Sym = I->first;
+  for (SymbolRef Sym : llvm::make_first_range(Tracked)) {
     if (SymReaper.isDead(Sym)) {
       State = State->remove<ContainerCountMap>(Sym);
       State = State->remove<ContainerNonEmptyMap>(Sym);
@@ -1143,13 +1145,13 @@ class ObjCNonNilReturnValueChecker
                    check::PostStmt<ObjCArrayLiteral>,
                    check::PostStmt<ObjCDictionaryLiteral>,
                    check::PostStmt<ObjCBoxedExpr> > {
-    mutable bool Initialized;
+    mutable bool Initialized = false;
     mutable Selector ObjectAtIndex;
     mutable Selector ObjectAtIndexedSubscript;
     mutable Selector NullSelector;
 
 public:
-  ObjCNonNilReturnValueChecker() : Initialized(false) {}
+  ObjCNonNilReturnValueChecker() = default;
 
   ProgramStateRef assumeExprIsNonNull(const Expr *NonNullExpr,
                                       ProgramStateRef State,

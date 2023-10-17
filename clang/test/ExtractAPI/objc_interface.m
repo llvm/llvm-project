@@ -434,14 +434,6 @@
         },
         {
           "kind": "keyword",
-          "spelling": "atomic"
-        },
-        {
-          "kind": "text",
-          "spelling": ", "
-        },
-        {
-          "kind": "keyword",
           "spelling": "readonly"
         },
         {
@@ -587,6 +579,10 @@
         {
           "kind": "identifier",
           "spelling": "Ivar"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {

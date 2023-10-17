@@ -32,32 +32,44 @@
 #include "CompileCommands.h"
 #include "GlobalCompilationDatabase.h"
 #include "support/Logger.h"
-#include "support/Path.h"
+#include "support/Threading.h"
 #include "support/Trace.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticIDs.h"
+#include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Driver/Types.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/ScopedPrinter.h"
-#include <algorithm>
+#include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstddef>
 #include <iterator>
-#include <map>
+#include <memory>
 #include <optional>
 #include <string>
+#include <tuple>
+#include <utility>
 #include <vector>
 
-namespace clang {
-namespace clangd {
+namespace clang::clangd {
 namespace {
 
 struct DriverInfo {
@@ -65,12 +77,150 @@ struct DriverInfo {
   std::string Target;
 };
 
+struct DriverArgs {
+  // Name of the driver program to execute or absolute path to it.
+  std::string Driver;
+  // Whether certain includes should be part of query.
+  bool StandardIncludes = true;
+  bool StandardCXXIncludes = true;
+  // Language to use while querying.
+  std::string Lang;
+  std::string Sysroot;
+  std::string ISysroot;
+  std::string Target;
+
+  bool operator==(const DriverArgs &RHS) const {
+    return std::tie(Driver, StandardIncludes, StandardCXXIncludes, Lang,
+                    Sysroot, ISysroot, Target) ==
+           std::tie(RHS.Driver, RHS.StandardIncludes, RHS.StandardCXXIncludes,
+                    RHS.Lang, RHS.Sysroot, RHS.ISysroot, RHS.Target);
+  }
+
+  DriverArgs(const tooling::CompileCommand &Cmd, llvm::StringRef File) {
+    llvm::SmallString<128> Driver(Cmd.CommandLine.front());
+    // Driver is a not a single executable name but instead a path (either
+    // relative or absolute).
+    if (llvm::any_of(Driver,
+                     [](char C) { return llvm::sys::path::is_separator(C); })) {
+      llvm::sys::fs::make_absolute(Cmd.Directory, Driver);
+    }
+    this->Driver = Driver.str().str();
+    for (size_t I = 0, E = Cmd.CommandLine.size(); I < E; ++I) {
+      llvm::StringRef Arg = Cmd.CommandLine[I];
+
+      // Look for Language related flags.
+      if (Arg.consume_front("-x")) {
+        if (Arg.empty() && I + 1 < E)
+          Lang = Cmd.CommandLine[I + 1];
+        else
+          Lang = Arg.str();
+      }
+      // Look for standard/builtin includes.
+      else if (Arg == "-nostdinc" || Arg == "--no-standard-includes")
+        StandardIncludes = false;
+      else if (Arg == "-nostdinc++")
+        StandardCXXIncludes = false;
+      // Figure out sysroot
+      else if (Arg.consume_front("--sysroot")) {
+        if (Arg.consume_front("="))
+          Sysroot = Arg.str();
+        else if (Arg.empty() && I + 1 < E)
+          Sysroot = Cmd.CommandLine[I + 1];
+      } else if (Arg.consume_front("-isysroot")) {
+        if (Arg.empty() && I + 1 < E)
+          ISysroot = Cmd.CommandLine[I + 1];
+        else
+          ISysroot = Arg.str();
+      } else if (Arg.consume_front("--target=")) {
+        Target = Arg.str();
+      } else if (Arg.consume_front("-target")) {
+        if (Arg.empty() && I + 1 < E)
+          Target = Cmd.CommandLine[I + 1];
+      }
+    }
+
+    // Downgrade objective-c++-header (used in clangd's fallback flags for .h
+    // files) to c++-header, as some drivers may fail to run the extraction
+    // command if it contains `-xobjective-c++-header` and objective-c++ support
+    // is not installed.
+    // In practice, we don't see different include paths for the two on
+    // clang+mac, which is the most common objectve-c compiler.
+    if (Lang == "objective-c++-header") {
+      Lang = "c++-header";
+    }
+
+    // If language is not explicit in the flags, infer from the file.
+    // This is important as we want to cache each language separately.
+    if (Lang.empty()) {
+      llvm::StringRef Ext = llvm::sys::path::extension(File).trim('.');
+      auto Type = driver::types::lookupTypeForExtension(Ext);
+      if (Type == driver::types::TY_INVALID) {
+        elog("System include extraction: invalid file type for {0}", Ext);
+      } else {
+        Lang = driver::types::getTypeName(Type);
+      }
+    }
+  }
+  llvm::SmallVector<llvm::StringRef> render() const {
+    // FIXME: Don't treat lang specially?
+    assert(!Lang.empty());
+    llvm::SmallVector<llvm::StringRef> Args = {"-x", Lang};
+    if (!StandardIncludes)
+      Args.push_back("-nostdinc");
+    if (!StandardCXXIncludes)
+      Args.push_back("-nostdinc++");
+    if (!Sysroot.empty())
+      Args.append({"--sysroot", Sysroot});
+    if (!ISysroot.empty())
+      Args.append({"-isysroot", ISysroot});
+    if (!Target.empty())
+      Args.append({"-target", Target});
+    return Args;
+  }
+
+  static DriverArgs getEmpty() { return {}; }
+
+private:
+  DriverArgs() = default;
+};
+} // namespace
+} // namespace clang::clangd
+namespace llvm {
+using DriverArgs = clang::clangd::DriverArgs;
+template <> struct DenseMapInfo<DriverArgs> {
+  static DriverArgs getEmptyKey() {
+    auto Driver = DriverArgs::getEmpty();
+    Driver.Driver = "EMPTY_KEY";
+    return Driver;
+  }
+  static DriverArgs getTombstoneKey() {
+    auto Driver = DriverArgs::getEmpty();
+    Driver.Driver = "TOMBSTONE_KEY";
+    return Driver;
+  }
+  static unsigned getHashValue(const DriverArgs &Val) {
+    return llvm::hash_value(std::tuple{
+        Val.Driver,
+        Val.StandardIncludes,
+        Val.StandardCXXIncludes,
+        Val.Lang,
+        Val.Sysroot,
+        Val.ISysroot,
+    });
+  }
+  static bool isEqual(const DriverArgs &LHS, const DriverArgs &RHS) {
+    return LHS == RHS;
+  }
+};
+} // namespace llvm
+namespace clang::clangd {
+namespace {
 bool isValidTarget(llvm::StringRef Triple) {
   std::shared_ptr<TargetOptions> TargetOpts(new TargetOptions);
   TargetOpts->Triple = Triple.str();
   DiagnosticsEngine Diags(new DiagnosticIDs, new DiagnosticOptions,
                           new IgnoringDiagConsumer);
-  IntrusiveRefCntPtr<TargetInfo> Target =
+  llvm::IntrusiveRefCntPtr<TargetInfo> Target =
       TargetInfo::CreateTargetInfo(Diags, TargetOpts);
   return bool(Target);
 }
@@ -136,16 +286,49 @@ std::optional<DriverInfo> parseDriverOutput(llvm::StringRef Output) {
   return std::move(Info);
 }
 
+std::optional<std::string> run(llvm::ArrayRef<llvm::StringRef> Argv,
+                               bool OutputIsStderr) {
+  llvm::SmallString<128> OutputPath;
+  if (auto EC = llvm::sys::fs::createTemporaryFile("system-includes", "clangd",
+                                                   OutputPath)) {
+    elog("System include extraction: failed to create temporary file with "
+         "error {0}",
+         EC.message());
+    return std::nullopt;
+  }
+  auto CleanUp = llvm::make_scope_exit(
+      [&OutputPath]() { llvm::sys::fs::remove(OutputPath); });
+
+  std::optional<llvm::StringRef> Redirects[] = {{""}, {""}, {""}};
+  Redirects[OutputIsStderr ? 2 : 1] = OutputPath.str();
+
+  std::string ErrMsg;
+  if (int RC =
+          llvm::sys::ExecuteAndWait(Argv.front(), Argv, /*Env=*/std::nullopt,
+                                    Redirects, /*SecondsToWait=*/0,
+                                    /*MemoryLimit=*/0, &ErrMsg)) {
+    elog("System include extraction: driver execution failed with return code: "
+         "{0} - '{1}'. Args: [{2}]",
+         llvm::to_string(RC), ErrMsg, printArgv(Argv));
+    return std::nullopt;
+  }
+
+  auto BufOrError = llvm::MemoryBuffer::getFile(OutputPath);
+  if (!BufOrError) {
+    elog("System include extraction: failed to read {0} with error {1}",
+         OutputPath, BufOrError.getError().message());
+    return std::nullopt;
+  }
+  return BufOrError.get().get()->getBuffer().str();
+}
+
 std::optional<DriverInfo>
-extractSystemIncludesAndTarget(llvm::SmallString<128> Driver,
-                               llvm::StringRef Lang,
-                               llvm::ArrayRef<std::string> CommandLine,
+extractSystemIncludesAndTarget(const DriverArgs &InputArgs,
                                const llvm::Regex &QueryDriverRegex) {
   trace::Span Tracer("Extract system includes and target");
 
+  std::string Driver = InputArgs.Driver;
   if (!llvm::sys::path::is_absolute(Driver)) {
-    assert(llvm::none_of(
-        Driver, [](char C) { return llvm::sys::path::is_separator(C); }));
     auto DriverProgram = llvm::sys::findProgramByName(Driver);
     if (DriverProgram) {
       vlog("System include extraction: driver {0} expanded to {1}", Driver,
@@ -158,78 +341,50 @@ extractSystemIncludesAndTarget(llvm::SmallString<128> Driver,
   }
 
   SPAN_ATTACH(Tracer, "driver", Driver);
-  SPAN_ATTACH(Tracer, "lang", Lang);
+  SPAN_ATTACH(Tracer, "lang", InputArgs.Lang);
 
-  if (!QueryDriverRegex.match(Driver)) {
+  // If driver was "../foo" then having to allowlist "/path/a/../foo" rather
+  // than "/path/foo" is absurd.
+  // Allow either to match the allowlist, then proceed with "/path/a/../foo".
+  // This was our historical behavior, and it *could* resolve to something else.
+  llvm::SmallString<256> NoDots(Driver);
+  llvm::sys::path::remove_dots(NoDots, /*remove_dot_dot=*/true);
+  if (!QueryDriverRegex.match(Driver) && !QueryDriverRegex.match(NoDots)) {
     vlog("System include extraction: not allowed driver {0}", Driver);
     return std::nullopt;
   }
 
-  llvm::SmallString<128> StdErrPath;
-  if (auto EC = llvm::sys::fs::createTemporaryFile("system-includes", "clangd",
-                                                   StdErrPath)) {
-    elog("System include extraction: failed to create temporary file with "
-         "error {0}",
-         EC.message());
+  llvm::SmallVector<llvm::StringRef> Args = {Driver, "-E", "-v"};
+  Args.append(InputArgs.render());
+  // Input needs to go after Lang flags.
+  Args.push_back("-");
+  auto Output = run(Args, /*OutputIsStderr=*/true);
+  if (!Output)
     return std::nullopt;
-  }
-  auto CleanUp = llvm::make_scope_exit(
-      [&StdErrPath]() { llvm::sys::fs::remove(StdErrPath); });
 
-  std::optional<llvm::StringRef> Redirects[] = {{""}, {""}, StdErrPath.str()};
+  std::optional<DriverInfo> Info = parseDriverOutput(*Output);
+  if (!Info)
+    return std::nullopt;
 
-  llvm::SmallVector<llvm::StringRef> Args = {Driver, "-E", "-x",
-                                             Lang,   "-",  "-v"};
-
-  // These flags will be preserved
-  const llvm::StringRef FlagsToPreserve[] = {
-      "-nostdinc", "--no-standard-includes", "-nostdinc++", "-nobuiltininc"};
-  // Preserves these flags and their values, either as separate args or with an
-  // equalsbetween them
-  const llvm::StringRef ArgsToPreserve[] = {"--sysroot", "-isysroot"};
-
-  for (size_t I = 0, E = CommandLine.size(); I < E; ++I) {
-    llvm::StringRef Arg = CommandLine[I];
-    if (llvm::is_contained(FlagsToPreserve, Arg)) {
-      Args.push_back(Arg);
-    } else {
-      const auto *Found =
-          llvm::find_if(ArgsToPreserve, [&Arg](llvm::StringRef S) {
-            return Arg.startswith(S);
-          });
-      if (Found == std::end(ArgsToPreserve))
-        continue;
-      Arg = Arg.drop_front(Found->size());
-      if (Arg.empty() && I + 1 < E) {
-        Args.push_back(CommandLine[I]);
-        Args.push_back(CommandLine[++I]);
-      } else if (Arg.startswith("=")) {
-        Args.push_back(CommandLine[I]);
-      }
+  // The built-in headers are tightly coupled to parser builtins.
+  // (These are clang's "resource dir", GCC's GCC_INCLUDE_DIR.)
+  // We should keep using clangd's versions, so exclude the queried builtins.
+  // They're not specially marked in the -v output, but we can get the path
+  // with `$DRIVER -print-file-name=include`.
+  if (auto BuiltinHeaders =
+          run({Driver, "-print-file-name=include"}, /*OutputIsStderr=*/false)) {
+    auto Path = llvm::StringRef(*BuiltinHeaders).trim();
+    if (!Path.empty() && llvm::sys::path::is_absolute(Path)) {
+      auto Size = Info->SystemIncludes.size();
+      llvm::erase_if(Info->SystemIncludes,
+                     [&](llvm::StringRef Entry) { return Path == Entry; });
+      vlog("System includes extractor: builtin headers {0} {1}", Path,
+           (Info->SystemIncludes.size() != Size)
+               ? "excluded"
+               : "not found in driver's response");
     }
   }
 
-  std::string ErrMsg;
-  if (int RC = llvm::sys::ExecuteAndWait(Driver, Args, /*Env=*/std::nullopt,
-                                         Redirects, /*SecondsToWait=*/0,
-                                         /*MemoryLimit=*/0, &ErrMsg)) {
-    elog("System include extraction: driver execution failed with return code: "
-         "{0} - '{1}'. Args: [{2}]",
-         llvm::to_string(RC), ErrMsg, printArgv(Args));
-    return std::nullopt;
-  }
-
-  auto BufOrError = llvm::MemoryBuffer::getFile(StdErrPath);
-  if (!BufOrError) {
-    elog("System include extraction: failed to read {0} with error {1}",
-         StdErrPath, BufOrError.getError().message());
-    return std::nullopt;
-  }
-
-  std::optional<DriverInfo> Info =
-      parseDriverOutput(BufOrError->get()->getBuffer());
-  if (!Info)
-    return std::nullopt;
   log("System includes extractor: successfully executed {0}\n\tgot includes: "
       "\"{1}\"\n\tgot target: \"{2}\"",
       Driver, llvm::join(Info->SystemIncludes, ", "), Info->Target);
@@ -325,43 +480,19 @@ public:
     if (Cmd.CommandLine.empty())
       return;
 
-    llvm::StringRef Lang;
-    for (size_t I = 0, E = Cmd.CommandLine.size(); I < E; ++I) {
-      llvm::StringRef Arg = Cmd.CommandLine[I];
-      if (Arg == "-x" && I + 1 < E)
-        Lang = Cmd.CommandLine[I + 1];
-      else if (Arg.startswith("-x"))
-        Lang = Arg.drop_front(2).trim();
-    }
-    if (Lang.empty()) {
-      llvm::StringRef Ext = llvm::sys::path::extension(File).trim('.');
-      auto Type = driver::types::lookupTypeForExtension(Ext);
-      if (Type == driver::types::TY_INVALID) {
-        elog("System include extraction: invalid file type for {0}", Ext);
-        return;
-      }
-      Lang = driver::types::getTypeName(Type);
-    }
-
-    llvm::SmallString<128> Driver(Cmd.CommandLine.front());
-    if (llvm::any_of(Driver,
-                     [](char C) { return llvm::sys::path::is_separator(C); }))
-      // Driver is a not a single executable name but instead a path (either
-      // relative or absolute).
-      llvm::sys::fs::make_absolute(Cmd.Directory, Driver);
-
-    if (auto Info =
-            QueriedDrivers.get(/*Key=*/(Driver + ":" + Lang).str(), [&] {
-              return extractSystemIncludesAndTarget(
-                  Driver, Lang, Cmd.CommandLine, QueryDriverRegex);
-            })) {
+    DriverArgs Args(Cmd, File);
+    if (Args.Lang.empty())
+      return;
+    if (auto Info = QueriedDrivers.get(Args, [&] {
+          return extractSystemIncludesAndTarget(Args, QueryDriverRegex);
+        })) {
       setTarget(addSystemIncludes(Cmd, Info->SystemIncludes), Info->Target);
     }
   }
 
 private:
   // Caches includes extracted from a driver. Key is driver:lang.
-  Memoize<llvm::StringMap<std::optional<DriverInfo>>> QueriedDrivers;
+  Memoize<llvm::DenseMap<DriverArgs, std::optional<DriverInfo>>> QueriedDrivers;
   llvm::Regex QueryDriverRegex;
 };
 } // namespace
@@ -373,5 +504,4 @@ getSystemIncludeExtractor(llvm::ArrayRef<std::string> QueryDriverGlobs) {
   return SystemIncludeExtractor(QueryDriverGlobs);
 }
 
-} // namespace clangd
-} // namespace clang
+} // namespace clang::clangd

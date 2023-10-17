@@ -235,8 +235,8 @@ static int tab_freeze_constraints(struct isl_tab *tab)
 }
 
 /* Check for redundant constraints starting at offset.
- * Put the indices of the redundant constraints in index
- * and return the number of redundant constraints.
+ * Put the indices of the non-redundant constraints in index
+ * and return the number of non-redundant constraints.
  */
 static int n_non_redundant(isl_ctx *ctx, struct isl_tab *tab,
 	int offset, int **index)

@@ -1,31 +1,21 @@
 // RUN: %check_clang_tidy %s readability-function-cognitive-complexity %t -- \
 // RUN:   -config='{CheckOptions: \
-// RUN:             [{key: readability-function-cognitive-complexity.Threshold, \
-// RUN:               value: 0}, \
-// RUN:              {key: readability-function-cognitive-complexity.DescribeBasicIncrements, \
-// RUN:               value: "false"} ]}'
+// RUN:             {readability-function-cognitive-complexity.Threshold: 0, \
+// RUN:              readability-function-cognitive-complexity.DescribeBasicIncrements: "false"}}'
 // RUN: %check_clang_tidy -check-suffix=THRESHOLD5 %s readability-function-cognitive-complexity %t -- \
 // RUN:   -config='{CheckOptions: \
-// RUN:             [{key: readability-function-cognitive-complexity.Threshold, \
-// RUN:               value: 5}, \
-// RUN:              {key: readability-function-cognitive-complexity.DescribeBasicIncrements, \
-// RUN:               value: "false"} ]}'
+// RUN:             {readability-function-cognitive-complexity.Threshold: 5, \
+// RUN:              readability-function-cognitive-complexity.DescribeBasicIncrements: "false"}}'
 // RUN: %check_clang_tidy -check-suffix=IGNORE-MACROS %s readability-function-cognitive-complexity %t -- \
 // RUN:   -config='{CheckOptions: \
-// RUN:             [{key: readability-function-cognitive-complexity.Threshold, \
-// RUN:               value: 0}, \
-// RUN:              {key: readability-function-cognitive-complexity.IgnoreMacros, \
-// RUN:               value: "true"}, \
-// RUN:              {key: readability-function-cognitive-complexity.DescribeBasicIncrements, \
-// RUN:               value: "false"} ]}'
+// RUN:             {readability-function-cognitive-complexity.Threshold: 0, \
+// RUN:              readability-function-cognitive-complexity.IgnoreMacros: "true", \
+// RUN:              readability-function-cognitive-complexity.DescribeBasicIncrements: "false"}}'
 // RUN: %check_clang_tidy -check-suffix=GLOBAL-IGNORE-MACROS %s readability-function-cognitive-complexity %t -- \
 // RUN:   -config='{CheckOptions: \
-// RUN:             [{key: readability-function-cognitive-complexity.Threshold, \
-// RUN:               value: 0}, \
-// RUN:              {key: IgnoreMacros, \
-// RUN:               value: "true"}, \
-// RUN:              {key: readability-function-cognitive-complexity.DescribeBasicIncrements, \
-// RUN:               value: "false"} ]}'
+// RUN:             {readability-function-cognitive-complexity.Threshold: 0, \
+// RUN:              IgnoreMacros: "true", \
+// RUN:              readability-function-cognitive-complexity.DescribeBasicIncrements: "false"}}'
 
 void func_of_complexity_4() {
   // CHECK-NOTES: :[[@LINE-1]]:6: warning: function 'func_of_complexity_4' has cognitive complexity of 4 (threshold 0) [readability-function-cognitive-complexity]

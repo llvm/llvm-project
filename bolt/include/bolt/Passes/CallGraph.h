@@ -148,7 +148,7 @@ public:
   // samples for every node
   void adjustArcWeights();
 
-  template <typename L> void printDot(char *fileName, L getLabel) const;
+  template <typename L> void printDot(StringRef FileName, L getLabel) const;
 
 private:
   void setSamples(const NodeId Id, uint64_t Samples) {
@@ -160,9 +160,10 @@ private:
   ArcsType Arcs;
 };
 
-template <class L> void CallGraph::printDot(char *FileName, L GetLabel) const {
+template <class L>
+void CallGraph::printDot(StringRef FileName, L GetLabel) const {
   std::error_code EC;
-  raw_fd_ostream OS(std::string(FileName), EC, sys::fs::OF_None);
+  raw_fd_ostream OS(FileName, EC, sys::fs::OF_None);
   if (EC)
     return;
 

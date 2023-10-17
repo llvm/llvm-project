@@ -506,9 +506,7 @@ struct has_CustomMappingTraits
 // has_FlowTraits<int> will cause an error with some compilers because
 // it subclasses int.  Using this wrapper only instantiates the
 // real has_FlowTraits only if the template type is a class.
-template <typename T, bool Enabled = std::is_class<T>::value>
-class has_FlowTraits
-{
+template <typename T, bool Enabled = std::is_class_v<T>> class has_FlowTraits {
 public:
    static const bool value = false;
 };
@@ -1279,7 +1277,7 @@ struct ScalarTraits<double> {
 // For endian types, we use existing scalar Traits class for the underlying
 // type.  This way endian aware types are supported whenever the traits are
 // defined for the underlying type.
-template <typename value_type, support::endianness endian, size_t alignment>
+template <typename value_type, llvm::endianness endian, size_t alignment>
 struct ScalarTraits<support::detail::packed_endian_specific_integral<
                         value_type, endian, alignment>,
                     std::enable_if_t<has_ScalarTraits<value_type>::value>> {
@@ -1303,7 +1301,7 @@ struct ScalarTraits<support::detail::packed_endian_specific_integral<
   }
 };
 
-template <typename value_type, support::endianness endian, size_t alignment>
+template <typename value_type, llvm::endianness endian, size_t alignment>
 struct ScalarEnumerationTraits<
     support::detail::packed_endian_specific_integral<value_type, endian,
                                                      alignment>,
@@ -1319,7 +1317,7 @@ struct ScalarEnumerationTraits<
   }
 };
 
-template <typename value_type, support::endianness endian, size_t alignment>
+template <typename value_type, llvm::endianness endian, size_t alignment>
 struct ScalarBitSetTraits<
     support::detail::packed_endian_specific_integral<value_type, endian,
                                                      alignment>,
@@ -1466,11 +1464,8 @@ private:
   bool canElideEmptySequence() override;
 
   class HNode {
-    virtual void anchor();
-
   public:
-    HNode(Node *n) : _node(n) { }
-    virtual ~HNode() = default;
+    HNode(Node *n) : _node(n) {}
 
     static bool classof(const HNode *) { return true; }
 
@@ -1478,8 +1473,6 @@ private:
   };
 
   class EmptyHNode : public HNode {
-    void anchor() override;
-
   public:
     EmptyHNode(Node *n) : HNode(n) { }
 
@@ -1489,8 +1482,6 @@ private:
   };
 
   class ScalarHNode : public HNode {
-    void anchor() override;
-
   public:
     ScalarHNode(Node *n, StringRef s) : HNode(n), _value(s) { }
 
@@ -1508,8 +1499,6 @@ private:
   };
 
   class MapHNode : public HNode {
-    void anchor() override;
-
   public:
     MapHNode(Node *n) : HNode(n) { }
 
@@ -1519,16 +1508,13 @@ private:
 
     static bool classof(const MapHNode *) { return true; }
 
-    using NameToNodeAndLoc =
-        StringMap<std::pair<std::unique_ptr<HNode>, SMRange>>;
+    using NameToNodeAndLoc = StringMap<std::pair<HNode *, SMRange>>;
 
     NameToNodeAndLoc Mapping;
     SmallVector<std::string, 6> ValidKeys;
   };
 
   class SequenceHNode : public HNode {
-    void anchor() override;
-
   public:
     SequenceHNode(Node *n) : HNode(n) { }
 
@@ -1538,10 +1524,10 @@ private:
 
     static bool classof(const SequenceHNode *) { return true; }
 
-    std::vector<std::unique_ptr<HNode>> Entries;
+    std::vector<HNode *> Entries;
   };
 
-  std::unique_ptr<Input::HNode> createHNodes(Node *node);
+  Input::HNode *createHNodes(Node *node);
   void setError(HNode *hnode, const Twine &message);
   void setError(Node *node, const Twine &message);
   void setError(const SMRange &Range, const Twine &message);
@@ -1549,6 +1535,9 @@ private:
   void reportWarning(HNode *hnode, const Twine &message);
   void reportWarning(Node *hnode, const Twine &message);
   void reportWarning(const SMRange &Range, const Twine &message);
+
+  /// Release memory used by HNodes.
+  void releaseHNodeBuffers();
 
 public:
   // These are only used by operator>>. They could be private
@@ -1564,9 +1553,13 @@ public:
 private:
   SourceMgr                           SrcMgr; // must be before Strm
   std::unique_ptr<llvm::yaml::Stream> Strm;
-  std::unique_ptr<HNode>              TopNode;
+  HNode *TopNode = nullptr;
   std::error_code                     EC;
   BumpPtrAllocator                    StringAllocator;
+  SpecificBumpPtrAllocator<EmptyHNode> EmptyHNodeAllocator;
+  SpecificBumpPtrAllocator<ScalarHNode> ScalarHNodeAllocator;
+  SpecificBumpPtrAllocator<MapHNode> MapHNodeAllocator;
+  SpecificBumpPtrAllocator<SequenceHNode> SequenceHNodeAllocator;
   document_iterator                   DocIterator;
   llvm::BitVector                     BitValuesUsed;
   HNode *CurrentNode = nullptr;
@@ -2011,8 +2004,7 @@ struct SequenceTraits<
 
 // Sequences of fundamental types use flow formatting.
 template <typename T>
-struct SequenceElementTraits<T,
-                             std::enable_if_t<std::is_fundamental<T>::value>> {
+struct SequenceElementTraits<T, std::enable_if_t<std::is_fundamental_v<T>>> {
   static const bool flow = true;
 };
 

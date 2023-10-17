@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -O0 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -O0 -emit-llvm -o - %s | FileCheck %s
 
 void use(void *);
 
@@ -55,12 +55,6 @@ void test_most_a(void) {
 void test_pointers(void) {
   // CHECK-LABEL: define{{.*}} void @test_pointers()
   void *a[] = {&use, &use, &use, &use, &use, &use};
-  // CHECK: call void @llvm.memset.{{.*}}
-  // CHECK: store i8*
-  // CHECK: store i8*
-  // CHECK: store i8*
-  // CHECK: store i8*
-  // CHECK: store i8*
-  // CHECK: store i8*
+  // CHECK: call void @llvm.memcpy.{{.*}}
   use(a);
 }

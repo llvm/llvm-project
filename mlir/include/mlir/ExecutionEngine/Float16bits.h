@@ -48,5 +48,8 @@ MLIR_FLOAT16_EXPORT std::ostream &operator<<(std::ostream &os, const f16 &f);
 // Outputs a bfloat value.
 MLIR_FLOAT16_EXPORT std::ostream &operator<<(std::ostream &os, const bf16 &d);
 
+extern "C" MLIR_FLOAT16_EXPORT void printF16(uint16_t bits);
+extern "C" MLIR_FLOAT16_EXPORT void printBF16(uint16_t bits);
+
 #undef MLIR_FLOAT16_EXPORT
 #endif // MLIR_EXECUTIONENGINE_FLOAT16BITS_H_

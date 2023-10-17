@@ -50,7 +50,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/LazyMachineBlockFrequencyInfo.h"
-#include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
@@ -79,11 +79,10 @@ class FixupBWInstPass : public MachineFunctionPass {
   /// byte or word instructions with better alternatives.
   void processBasicBlock(MachineFunction &MF, MachineBasicBlock &MBB);
 
-  /// This sets the \p SuperDestReg to the 32 bit super reg of the original
-  /// destination register of the MachineInstr passed in. It returns true if
-  /// that super register is dead just prior to \p OrigMI, and false if not.
-  bool getSuperRegDestIfDead(MachineInstr *OrigMI,
-                             Register &SuperDestReg) const;
+  /// This returns the 32 bit super reg of the original destination register of
+  /// the MachineInstr passed in, if that super register is dead just prior to
+  /// \p OrigMI. Otherwise it returns Register().
+  Register getSuperRegDestIfDead(MachineInstr *OrigMI) const;
 
   /// Change the MachineInstr \p MI into the equivalent extending load to 32 bit
   /// register if it is safe to do so.  Return the replacement instruction if
@@ -146,10 +145,10 @@ private:
   MachineLoopInfo *MLI = nullptr;
 
   /// Register Liveness information after the current instruction.
-  LivePhysRegs LiveRegs;
+  LiveRegUnits LiveUnits;
 
-  ProfileSummaryInfo *PSI;
-  MachineBlockFrequencyInfo *MBFI;
+  ProfileSummaryInfo *PSI = nullptr;
+  MachineBlockFrequencyInfo *MBFI = nullptr;
 };
 char FixupBWInstPass::ID = 0;
 }
@@ -170,7 +169,7 @@ bool FixupBWInstPass::runOnMachineFunction(MachineFunction &MF) {
   MBFI = (PSI && PSI->hasProfileSummary()) ?
          &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI() :
          nullptr;
-  LiveRegs.init(TII->getRegisterInfo());
+  LiveUnits.init(TII->getRegisterInfo());
 
   LLVM_DEBUG(dbgs() << "Start X86FixupBWInsts\n";);
 
@@ -188,11 +187,11 @@ bool FixupBWInstPass::runOnMachineFunction(MachineFunction &MF) {
 /// destination register.
 ///
 /// If so, return that super register in \p SuperDestReg.
-bool FixupBWInstPass::getSuperRegDestIfDead(MachineInstr *OrigMI,
-                                            Register &SuperDestReg) const {
+Register FixupBWInstPass::getSuperRegDestIfDead(MachineInstr *OrigMI) const {
   const X86RegisterInfo *TRI = &TII->getRegisterInfo();
   Register OrigDestReg = OrigMI->getOperand(0).getReg();
-  SuperDestReg = getX86SubSuperRegister(OrigDestReg, 32);
+  Register SuperDestReg = getX86SubSuperRegister(OrigDestReg, 32);
+  assert(SuperDestReg.isValid() && "Invalid Operand");
 
   const auto SubRegIdx = TRI->getSubRegIndex(SuperDestReg, OrigDestReg);
 
@@ -201,24 +200,23 @@ bool FixupBWInstPass::getSuperRegDestIfDead(MachineInstr *OrigMI,
   // If it isn't, then the register isn't really dead even if the
   // super-register is considered dead.
   if (SubRegIdx == X86::sub_8bit_hi)
-    return false;
+    return Register();
 
-  // If neither the destination-super register nor any applicable subregisters
-  // are live after this instruction, then the super register is safe to use.
-  if (!LiveRegs.contains(SuperDestReg)) {
-    // If the original destination register was not the low 8-bit subregister
-    // then the super register check is sufficient.
-    if (SubRegIdx != X86::sub_8bit)
-      return true;
-    // If the original destination register was the low 8-bit subregister and
-    // we also need to check the 16-bit subregister and the high 8-bit
-    // subregister.
-    if (!LiveRegs.contains(getX86SubSuperRegister(OrigDestReg, 16)) &&
-        !LiveRegs.contains(getX86SubSuperRegister(SuperDestReg, 8,
-                                                  /*High=*/true)))
-      return true;
-    // Otherwise, we have a little more checking to do.
+  // Test all regunits of the super register that are not part of the
+  // sub register. If none of them are live then the super register is safe to
+  // use.
+  bool SuperIsLive = false;
+  auto Range = TRI->regunits(OrigDestReg);
+  MCRegUnitIterator I = Range.begin(), E = Range.end();
+  for (MCRegUnit S : TRI->regunits(SuperDestReg)) {
+    I = std::lower_bound(I, E, S);
+    if ((I == E || *I > S) && LiveUnits.getBitVector().test(S)) {
+      SuperIsLive = true;
+      break;
+    }
   }
+  if (!SuperIsLive)
+    return SuperDestReg;
 
   // If we get here, the super-register destination (or some part of it) is
   // marked as live after the original instruction.
@@ -256,7 +254,7 @@ bool FixupBWInstPass::getSuperRegDestIfDead(MachineInstr *OrigMI,
   // same properties.
   if (Opc != X86::MOV8rm && Opc != X86::MOV16rm && Opc != X86::MOV8rr &&
       Opc != X86::MOV16rr)
-    return false;
+    return Register();
 
   bool IsDefined = false;
   for (auto &MO: OrigMI->implicit_operands()) {
@@ -274,31 +272,30 @@ bool FixupBWInstPass::getSuperRegDestIfDead(MachineInstr *OrigMI,
     // %eax, or %rax will prevent us from using the %eax register.
     if (MO.isUse() && !TRI->isSubRegisterEq(OrigDestReg, MO.getReg()) &&
         TRI->regsOverlap(SuperDestReg, MO.getReg()))
-      return false;
+      return Register();
   }
   // Reg is not Imp-def'ed -> it's live both before/after the instruction.
   if (!IsDefined)
-    return false;
+    return Register();
 
   // Otherwise, the Reg is not live before the MI and the MOV can't
   // make it really live, so it's in fact dead even after the MI.
-  return true;
+  return SuperDestReg;
 }
 
 MachineInstr *FixupBWInstPass::tryReplaceLoad(unsigned New32BitOpcode,
                                               MachineInstr *MI) const {
-  Register NewDestReg;
-
   // We are going to try to rewrite this load to a larger zero-extending
   // load.  This is safe if all portions of the 32 bit super-register
   // of the original destination register, except for the original destination
   // register are dead. getSuperRegDestIfDead checks that.
-  if (!getSuperRegDestIfDead(MI, NewDestReg))
+  Register NewDestReg = getSuperRegDestIfDead(MI);
+  if (!NewDestReg)
     return nullptr;
 
   // Safe to change the instruction.
   MachineInstrBuilder MIB =
-      BuildMI(*MF, MI->getDebugLoc(), TII->get(New32BitOpcode), NewDestReg);
+      BuildMI(*MF, MIMetadata(*MI), TII->get(New32BitOpcode), NewDestReg);
 
   unsigned NumArgs = MI->getNumOperands();
   for (unsigned i = 1; i < NumArgs; ++i)
@@ -322,11 +319,12 @@ MachineInstr *FixupBWInstPass::tryReplaceCopy(MachineInstr *MI) const {
   auto &OldDest = MI->getOperand(0);
   auto &OldSrc = MI->getOperand(1);
 
-  Register NewDestReg;
-  if (!getSuperRegDestIfDead(MI, NewDestReg))
+  Register NewDestReg = getSuperRegDestIfDead(MI);
+  if (!NewDestReg)
     return nullptr;
 
   Register NewSrcReg = getX86SubSuperRegister(OldSrc.getReg(), 32);
+  assert(NewSrcReg.isValid() && "Invalid Operand");
 
   // This is only correct if we access the same subregister index: otherwise,
   // we could try to replace "movb %ah, %al" with "movl %eax, %eax".
@@ -341,7 +339,7 @@ MachineInstr *FixupBWInstPass::tryReplaceCopy(MachineInstr *MI) const {
   // we don't care about the higher bits by reading it as Undef, and adding
   // an imp-use on the original subregister.
   MachineInstrBuilder MIB =
-      BuildMI(*MF, MI->getDebugLoc(), TII->get(X86::MOV32rr), NewDestReg)
+      BuildMI(*MF, MIMetadata(*MI), TII->get(X86::MOV32rr), NewDestReg)
           .addReg(NewSrcReg, RegState::Undef)
           .addReg(OldSrc.getReg(), RegState::Implicit);
 
@@ -355,8 +353,8 @@ MachineInstr *FixupBWInstPass::tryReplaceCopy(MachineInstr *MI) const {
 
 MachineInstr *FixupBWInstPass::tryReplaceExtend(unsigned New32BitOpcode,
                                                 MachineInstr *MI) const {
-  Register NewDestReg;
-  if (!getSuperRegDestIfDead(MI, NewDestReg))
+  Register NewDestReg = getSuperRegDestIfDead(MI);
+  if (!NewDestReg)
     return nullptr;
 
   // Don't interfere with formation of CBW instructions which should be a
@@ -369,7 +367,7 @@ MachineInstr *FixupBWInstPass::tryReplaceExtend(unsigned New32BitOpcode,
 
   // Safe to change the instruction.
   MachineInstrBuilder MIB =
-      BuildMI(*MF, MI->getDebugLoc(), TII->get(New32BitOpcode), NewDestReg);
+      BuildMI(*MF, MIMetadata(*MI), TII->get(New32BitOpcode), NewDestReg);
 
   unsigned NumArgs = MI->getNumOperands();
   for (unsigned i = 1; i < NumArgs; ++i)
@@ -450,9 +448,9 @@ void FixupBWInstPass::processBasicBlock(MachineFunction &MF,
 
   // Start computing liveness for this block. We iterate from the end to be able
   // to update this for each instruction.
-  LiveRegs.clear();
+  LiveUnits.clear();
   // We run after PEI, so we need to AddPristinesAndCSRs.
-  LiveRegs.addLiveOuts(MBB);
+  LiveUnits.addLiveOuts(MBB);
 
   OptForSize = MF.getFunction().hasOptSize() ||
                llvm::shouldOptimizeForSize(&MBB, PSI, MBFI);
@@ -462,7 +460,7 @@ void FixupBWInstPass::processBasicBlock(MachineFunction &MF,
       MIReplacements.push_back(std::make_pair(&MI, NewMI));
 
     // We're done with this instruction, update liveness for the next one.
-    LiveRegs.stepBackward(MI);
+    LiveUnits.stepBackward(MI);
   }
 
   while (!MIReplacements.empty()) {

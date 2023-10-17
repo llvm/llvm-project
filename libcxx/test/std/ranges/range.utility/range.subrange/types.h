@@ -211,7 +211,7 @@ struct DifferentSentinelWithSizeMember {
 
   constexpr ForwardIter begin() const { return ForwardIter(globalBuff); }
   constexpr sentinel end() const { return sentinel{globalBuff + 8}; }
-  constexpr size_t size() const { return 8; }
+  constexpr std::size_t size() const { return 8; }
 };
 
 template<>

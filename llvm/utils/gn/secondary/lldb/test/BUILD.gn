@@ -98,6 +98,7 @@ write_lit_cfg("lit_shell_site_cfg") {
   input = "//lldb/test/Shell/lit.site.cfg.py.in"
   output = lldb_lit_shell_site_cfg_file
   extra_values = [
+    "CMAKE_SYSROOT=",
     "LLDB_ENABLE_LUA=0",  # FIXME: gn arg, use in Config.h
     "LLDB_ENABLE_LZMA=0",  # FIXME: gn arg, use in Config.h
     "LLDB_ENABLE_PYTHON=0",  # FIXME: gn arg, use in Config.h
@@ -111,6 +112,7 @@ write_lit_cfg("lit_shell_site_cfg") {
     "LLDB_TEST_MODULE_CACHE_LLDB=" +
         rebase_path(
             "$target_gen_dir/lldb-test-build.noindex/module-cache-lldb"),
+    "LLDB_TEST_OBJC_GNUSTEP_DIR=",
     "LLDB_TOOL_LLDB_SERVER_BUILD=1",
     "LLDB_TOOLS_DIR=" + rebase_path("$root_out_dir/bin"),
     "LLDB_USE_SYSTEM_DEBUGSERVER=1",  # XXX port //lldb/tools/debugserver (?)

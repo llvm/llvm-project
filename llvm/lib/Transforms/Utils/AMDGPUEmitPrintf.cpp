@@ -16,7 +16,11 @@
 
 #include "llvm/Transforms/Utils/AMDGPUEmitPrintf.h"
 #include "llvm/ADT/SparseBitVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/MD5.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
 
@@ -179,11 +183,7 @@ static Value *processArg(IRBuilder<> &Builder, Value *Desc, Value *Arg,
 
 // Scan the format string to locate all specifiers, and mark the ones that
 // specify a string, i.e, the "%s" specifier with optional '*' characters.
-static void locateCStrings(SparseBitVector<8> &BV, Value *Fmt) {
-  StringRef Str;
-  if (!getConstantStringInfo(Fmt, Str) || Str.empty())
-    return;
-
+static void locateCStrings(SparseBitVector<8> &BV, StringRef Str) {
   static const char ConvSpecifiers[] = "diouxXfFeEgGaAcspn";
   size_t SpecPos = 0;
   // Skip the first argument, the format string.
@@ -207,14 +207,320 @@ static void locateCStrings(SparseBitVector<8> &BV, Value *Fmt) {
   }
 }
 
-Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder,
-                                  ArrayRef<Value *> Args) {
+// helper struct to package the string related data
+struct StringData {
+  StringRef Str;
+  Value *RealSize = nullptr;
+  Value *AlignedSize = nullptr;
+  bool IsConst = true;
+
+  StringData(StringRef ST, Value *RS, Value *AS, bool IC)
+      : Str(ST), RealSize(RS), AlignedSize(AS), IsConst(IC) {}
+};
+
+// Calculates frame size required for current printf expansion and allocates
+// space on printf buffer. Printf frame includes following contents
+// [ ControlDWord , format string/Hash , Arguments (each aligned to 8 byte) ]
+static Value *callBufferedPrintfStart(
+    IRBuilder<> &Builder, ArrayRef<Value *> Args, Value *Fmt,
+    bool isConstFmtStr, SparseBitVector<8> &SpecIsCString,
+    SmallVectorImpl<StringData> &StringContents, Value *&ArgSize) {
+  Module *M = Builder.GetInsertBlock()->getModule();
+  Value *NonConstStrLen = nullptr;
+  Value *LenWithNull = nullptr;
+  Value *LenWithNullAligned = nullptr;
+  Value *TempAdd = nullptr;
+
+  // First 4 bytes to be reserved for control dword
+  size_t BufSize = 4;
+  if (isConstFmtStr)
+    // First 8 bytes of MD5 hash
+    BufSize += 8;
+  else {
+    LenWithNull = getStrlenWithNull(Builder, Fmt);
+
+    // Align the computed length to next 8 byte boundary
+    TempAdd = Builder.CreateAdd(LenWithNull,
+                                ConstantInt::get(LenWithNull->getType(), 7U));
+    NonConstStrLen = Builder.CreateAnd(
+        TempAdd, ConstantInt::get(LenWithNull->getType(), ~7U));
+
+    StringContents.push_back(
+        StringData(StringRef(), LenWithNull, NonConstStrLen, false));
+  }
+
+  for (size_t i = 1; i < Args.size(); i++) {
+    if (SpecIsCString.test(i)) {
+      StringRef ArgStr;
+      if (getConstantStringInfo(Args[i], ArgStr)) {
+        auto alignedLen = alignTo(ArgStr.size() + 1, 8);
+        StringContents.push_back(StringData(
+            ArgStr,
+            /*RealSize*/ nullptr, /*AlignedSize*/ nullptr, /*IsConst*/ true));
+        BufSize += alignedLen;
+      } else {
+        LenWithNull = getStrlenWithNull(Builder, Args[i]);
+
+        // Align the computed length to next 8 byte boundary
+        TempAdd = Builder.CreateAdd(
+            LenWithNull, ConstantInt::get(LenWithNull->getType(), 7U));
+        LenWithNullAligned = Builder.CreateAnd(
+            TempAdd, ConstantInt::get(LenWithNull->getType(), ~7U));
+
+        if (NonConstStrLen) {
+          auto Val = Builder.CreateAdd(LenWithNullAligned, NonConstStrLen,
+                                       "cumulativeAdd");
+          NonConstStrLen = Val;
+        } else
+          NonConstStrLen = LenWithNullAligned;
+
+        StringContents.push_back(
+            StringData(StringRef(), LenWithNull, LenWithNullAligned, false));
+      }
+    } else {
+      int AllocSize = M->getDataLayout().getTypeAllocSize(Args[i]->getType());
+      // We end up expanding non string arguments to 8 bytes
+      // (args smaller than 8 bytes)
+      BufSize += std::max(AllocSize, 8);
+    }
+  }
+
+  // calculate final size value to be passed to printf_alloc
+  Value *SizeToReserve = ConstantInt::get(Builder.getInt64Ty(), BufSize, false);
+  SmallVector<Value *, 1> Alloc_args;
+  if (NonConstStrLen)
+    SizeToReserve = Builder.CreateAdd(NonConstStrLen, SizeToReserve);
+
+  ArgSize = Builder.CreateTrunc(SizeToReserve, Builder.getInt32Ty());
+  Alloc_args.push_back(ArgSize);
+
+  // call the printf_alloc function
+  AttributeList Attr = AttributeList::get(
+      Builder.getContext(), AttributeList::FunctionIndex, Attribute::NoUnwind);
+
+  Type *Tys_alloc[1] = {Builder.getInt32Ty()};
+  Type *I8Ptr =
+      Builder.getInt8PtrTy(M->getDataLayout().getDefaultGlobalsAddressSpace());
+  FunctionType *FTy_alloc = FunctionType::get(I8Ptr, Tys_alloc, false);
+  auto PrintfAllocFn =
+      M->getOrInsertFunction(StringRef("__printf_alloc"), FTy_alloc, Attr);
+
+  return Builder.CreateCall(PrintfAllocFn, Alloc_args, "printf_alloc_fn");
+}
+
+// Prepare constant string argument to push onto the buffer
+static void processConstantStringArg(StringData *SD, IRBuilder<> &Builder,
+                                     SmallVectorImpl<Value *> &WhatToStore) {
+  std::string Str(SD->Str.str() + '\0');
+
+  DataExtractor Extractor(Str, /*IsLittleEndian=*/true, 8);
+  DataExtractor::Cursor Offset(0);
+  while (Offset && Offset.tell() < Str.size()) {
+    const uint64_t ReadSize = 4;
+    uint64_t ReadNow = std::min(ReadSize, Str.size() - Offset.tell());
+    uint64_t ReadBytes = 0;
+    switch (ReadNow) {
+    default:
+      llvm_unreachable("min(4, X) > 4?");
+    case 1:
+      ReadBytes = Extractor.getU8(Offset);
+      break;
+    case 2:
+      ReadBytes = Extractor.getU16(Offset);
+      break;
+    case 3:
+      ReadBytes = Extractor.getU24(Offset);
+      break;
+    case 4:
+      ReadBytes = Extractor.getU32(Offset);
+      break;
+    }
+    cantFail(Offset.takeError(), "failed to read bytes from constant array");
+
+    APInt IntVal(8 * ReadSize, ReadBytes);
+
+    // TODO: Should not bother aligning up.
+    if (ReadNow < ReadSize)
+      IntVal = IntVal.zext(8 * ReadSize);
+
+    Type *IntTy = Type::getIntNTy(Builder.getContext(), IntVal.getBitWidth());
+    WhatToStore.push_back(ConstantInt::get(IntTy, IntVal));
+  }
+  // Additional padding for 8 byte alignment
+  int Rem = (Str.size() % 8);
+  if (Rem > 0 && Rem <= 4)
+    WhatToStore.push_back(ConstantInt::get(Builder.getInt32Ty(), 0));
+}
+
+static Value *processNonStringArg(Value *Arg, IRBuilder<> &Builder) {
+  const DataLayout &DL = Builder.GetInsertBlock()->getModule()->getDataLayout();
+  auto Ty = Arg->getType();
+
+  if (auto IntTy = dyn_cast<IntegerType>(Ty)) {
+    if (IntTy->getBitWidth() < 64) {
+      return Builder.CreateZExt(Arg, Builder.getInt64Ty());
+    }
+  }
+
+  if (Ty->isFloatingPointTy()) {
+    if (DL.getTypeAllocSize(Ty) < 8) {
+      return Builder.CreateFPExt(Arg, Builder.getDoubleTy());
+    }
+  }
+
+  return Arg;
+}
+
+static void
+callBufferedPrintfArgPush(IRBuilder<> &Builder, ArrayRef<Value *> Args,
+                          Value *PtrToStore, SparseBitVector<8> &SpecIsCString,
+                          SmallVectorImpl<StringData> &StringContents,
+                          bool IsConstFmtStr) {
+  Module *M = Builder.GetInsertBlock()->getModule();
+  const DataLayout &DL = M->getDataLayout();
+  auto StrIt = StringContents.begin();
+  size_t i = IsConstFmtStr ? 1 : 0;
+  for (; i < Args.size(); i++) {
+    SmallVector<Value *, 32> WhatToStore;
+    if ((i == 0) || SpecIsCString.test(i)) {
+      if (StrIt->IsConst) {
+        processConstantStringArg(StrIt, Builder, WhatToStore);
+        StrIt++;
+      } else {
+        // This copies the contents of the string, however the next offset
+        // is at aligned length, the extra space that might be created due
+        // to alignment padding is not populated with any specific value
+        // here. This would be safe as long as runtime is sync with
+        // the offsets.
+        Builder.CreateMemCpy(PtrToStore, /*DstAlign*/ Align(1), Args[i],
+                             /*SrcAlign*/ Args[i]->getPointerAlignment(DL),
+                             StrIt->RealSize);
+
+        PtrToStore =
+            Builder.CreateInBoundsGEP(Builder.getInt8Ty(), PtrToStore,
+                                      {StrIt->AlignedSize}, "PrintBuffNextPtr");
+        LLVM_DEBUG(dbgs() << "inserting gep to the printf buffer:"
+                          << *PtrToStore << '\n');
+
+        // done with current argument, move to next
+        StrIt++;
+        continue;
+      }
+    } else {
+      WhatToStore.push_back(processNonStringArg(Args[i], Builder));
+    }
+
+    for (unsigned I = 0, E = WhatToStore.size(); I != E; ++I) {
+      Value *toStore = WhatToStore[I];
+
+      StoreInst *StBuff = Builder.CreateStore(toStore, PtrToStore);
+      LLVM_DEBUG(dbgs() << "inserting store to printf buffer:" << *StBuff
+                        << '\n');
+      (void)StBuff;
+      PtrToStore = Builder.CreateConstInBoundsGEP1_32(
+          Builder.getInt8Ty(), PtrToStore,
+          M->getDataLayout().getTypeAllocSize(toStore->getType()),
+          "PrintBuffNextPtr");
+      LLVM_DEBUG(dbgs() << "inserting gep to the printf buffer:" << *PtrToStore
+                        << '\n');
+    }
+  }
+}
+
+Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
+                                  bool IsBuffered) {
   auto NumOps = Args.size();
   assert(NumOps >= 1);
 
   auto Fmt = Args[0];
   SparseBitVector<8> SpecIsCString;
-  locateCStrings(SpecIsCString, Fmt);
+  StringRef FmtStr;
+
+  if (getConstantStringInfo(Fmt, FmtStr))
+    locateCStrings(SpecIsCString, FmtStr);
+
+  if (IsBuffered) {
+    SmallVector<StringData, 8> StringContents;
+    Module *M = Builder.GetInsertBlock()->getModule();
+    LLVMContext &Ctx = Builder.getContext();
+    auto Int8Ty = Builder.getInt8Ty();
+    auto Int32Ty = Builder.getInt32Ty();
+    bool IsConstFmtStr = !FmtStr.empty();
+
+    Value *ArgSize = nullptr;
+    Value *Ptr =
+        callBufferedPrintfStart(Builder, Args, Fmt, IsConstFmtStr,
+                                SpecIsCString, StringContents, ArgSize);
+
+    // The buffered version still follows OpenCL printf standards for
+    // printf return value, i.e 0 on success, -1 on failure.
+    ConstantPointerNull *zeroIntPtr =
+        ConstantPointerNull::get(cast<PointerType>(Ptr->getType()));
+
+    auto *Cmp = cast<ICmpInst>(Builder.CreateICmpNE(Ptr, zeroIntPtr, ""));
+
+    BasicBlock *End = BasicBlock::Create(Ctx, "end.block",
+                                         Builder.GetInsertBlock()->getParent());
+    BasicBlock *ArgPush = BasicBlock::Create(
+        Ctx, "argpush.block", Builder.GetInsertBlock()->getParent());
+
+    BranchInst::Create(ArgPush, End, Cmp, Builder.GetInsertBlock());
+    Builder.SetInsertPoint(ArgPush);
+
+    // Create controlDWord and store as the first entry, format as follows
+    // Bit 0 (LSB) -> stream (1 if stderr, 0 if stdout, printf always outputs to
+    // stdout) Bit 1 -> constant format string (1 if constant) Bits 2-31 -> size
+    // of printf data frame
+    auto ConstantTwo = Builder.getInt32(2);
+    auto ControlDWord = Builder.CreateShl(ArgSize, ConstantTwo);
+    if (IsConstFmtStr)
+      ControlDWord = Builder.CreateOr(ControlDWord, ConstantTwo);
+
+    Builder.CreateStore(ControlDWord, Ptr);
+
+    Ptr = Builder.CreateConstInBoundsGEP1_32(Int8Ty, Ptr, 4);
+
+    // Create MD5 hash for costant format string, push low 64 bits of the
+    // same onto buffer and metadata.
+    NamedMDNode *metaD = M->getOrInsertNamedMetadata("llvm.printf.fmts");
+    if (IsConstFmtStr) {
+      MD5 Hasher;
+      MD5::MD5Result Hash;
+      Hasher.update(FmtStr);
+      Hasher.final(Hash);
+
+      // Try sticking to llvm.printf.fmts format, although we are not going to
+      // use the ID and argument size fields while printing,
+      std::string MetadataStr =
+          "0:0:" + llvm::utohexstr(Hash.low(), /*LowerCase=*/true) + "," +
+          FmtStr.str();
+      MDString *fmtStrArray = MDString::get(Ctx, MetadataStr);
+      MDNode *myMD = MDNode::get(Ctx, fmtStrArray);
+      metaD->addOperand(myMD);
+
+      Builder.CreateStore(Builder.getInt64(Hash.low()), Ptr);
+      Ptr = Builder.CreateConstInBoundsGEP1_32(Int8Ty, Ptr, 8);
+    } else {
+      // Include a dummy metadata instance in case of only non constant
+      // format string usage, This might be an absurd usecase but needs to
+      // be done for completeness
+      if (metaD->getNumOperands() == 0) {
+        MDString *fmtStrArray =
+            MDString::get(Ctx, "0:0:ffffffff,\"Non const format string\"");
+        MDNode *myMD = MDNode::get(Ctx, fmtStrArray);
+        metaD->addOperand(myMD);
+      }
+    }
+
+    // Push The printf arguments onto buffer
+    callBufferedPrintfArgPush(Builder, Args, Ptr, SpecIsCString, StringContents,
+                              IsConstFmtStr);
+
+    // End block, returns -1 on failure
+    BranchInst::Create(End, ArgPush);
+    Builder.SetInsertPoint(End);
+    return Builder.CreateSExt(Builder.CreateNot(Cmp), Int32Ty, "printf_result");
+  }
 
   auto Desc = callPrintfBegin(Builder, Builder.getIntN(64, 0));
   Desc = appendString(Builder, Desc, Fmt, NumOps == 1);

@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
+// UNSUPPORTED: no-filesystem
+// UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
 
@@ -18,15 +20,13 @@
 #include <type_traits>
 #include <cassert>
 
+#include "assert_macros.h"
 #include "test_macros.h"
-#include "rapid-cxx-test.h"
 #include "filesystem_test_helper.h"
 
 using namespace fs;
 
-TEST_SUITE(is_regular_file_test_suite)
-
-TEST_CASE(signature_test)
+static void signature_test()
 {
     file_status s; ((void)s);
     const path p; ((void)p);
@@ -36,7 +36,7 @@ TEST_CASE(signature_test)
     ASSERT_NOT_NOEXCEPT(is_regular_file(p));
 }
 
-TEST_CASE(is_regular_file_status_test)
+static void is_regular_file_status_test()
 {
     struct TestCase {
         file_type type;
@@ -56,21 +56,21 @@ TEST_CASE(is_regular_file_status_test)
     };
     for (auto& TC : testCases) {
         file_status s(TC.type);
-        TEST_CHECK(is_regular_file(s) == TC.expect);
+        assert(is_regular_file(s) == TC.expect);
     }
 }
 
-TEST_CASE(test_exist_not_found)
+static void test_exist_not_found()
 {
     static_test_env static_env;
     const path p = static_env.DNE;
-    TEST_CHECK(is_regular_file(p) == false);
+    assert(is_regular_file(p) == false);
     std::error_code ec;
-    TEST_CHECK(is_regular_file(p, ec) == false);
-    TEST_CHECK(ec);
+    assert(is_regular_file(p, ec) == false);
+    assert(ec);
 }
 
-TEST_CASE(test_is_regular_file_fails)
+static void test_is_regular_file_fails()
 {
     scoped_test_env env;
 #ifdef _WIN32
@@ -79,7 +79,7 @@ TEST_CASE(test_is_regular_file_fails)
     // instead.
     const path p = GetWindowsInaccessibleDir();
     if (p.empty())
-        TEST_UNSUPPORTED();
+        return;
 #else
     const path dir = env.create_dir("dir");
     const path p = env.create_file("dir/file", 42);
@@ -87,10 +87,17 @@ TEST_CASE(test_is_regular_file_fails)
 #endif
 
     std::error_code ec;
-    TEST_CHECK(is_regular_file(p, ec) == false);
-    TEST_CHECK(ec);
+    assert(is_regular_file(p, ec) == false);
+    assert(ec);
 
-    TEST_CHECK_THROW(filesystem_error, is_regular_file(p));
+    TEST_THROWS_TYPE(filesystem_error, is_regular_file(p));
 }
 
-TEST_SUITE_END()
+int main(int, char**) {
+    signature_test();
+    is_regular_file_status_test();
+    test_exist_not_found();
+    test_is_regular_file_fails();
+
+    return 0;
+}

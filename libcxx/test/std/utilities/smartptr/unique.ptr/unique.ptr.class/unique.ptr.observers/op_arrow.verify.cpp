@@ -13,13 +13,12 @@
 // test op->()
 
 #include <memory>
-#include <cassert>
 
 struct V {
   int member;
 };
 
-int main(int, char**) {
+void f() {
   std::unique_ptr<V[]> p;
   std::unique_ptr<V[]> const& cp = p;
 
@@ -28,6 +27,4 @@ int main(int, char**) {
 
   cp->member; // expected-error-re {{member reference type 'const std::unique_ptr<V{{[ ]*}}[]>' is not a pointer}}
               // expected-error@-1 {{no member named 'member'}}
-
-  return 0;
 }

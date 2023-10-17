@@ -41,7 +41,7 @@
 ; CHECK: %A.sroa.0.sroa.5 = alloca [5 x i32]
 ; CHECK: llvm.memcpy{{.*}}(ptr align 4 %A.sroa.0.sroa.5, ptr align 4 getelementptr inbounds (i8, ptr @Glob, i64 4), i64 20, i1 false){{.*}}!DIAssignID ![[ID:[0-9]+]]
 ;; Here's the dbg.assign for element 0 - it's not important for the test.
-; CHECK-NEXT: llvm.dbg.assign({{.*}}!DIExpression(DW_OP_LLVM_fragment, 0, 32){{.*}})
+; CHECK-NEXT: llvm.dbg.value({{.*}}!DIExpression(DW_OP_LLVM_fragment, 0, 32){{.*}})
 ;; This is the dbg.assign we care about:
 ; CHECK-NEXT: llvm.dbg.assign(metadata i1 undef, metadata ![[VAR:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 32, 160), metadata ![[ID]], metadata ptr %A.sroa.0.sroa.5, metadata !DIExpression())
 

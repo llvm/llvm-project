@@ -2,7 +2,6 @@
 // RUN: %clang_cc1 -triple x86_64-darwin -std=c++11 -fcxx-exceptions -fexceptions -emit-llvm -o - %s | FileCheck %s --check-prefix=EXCEPTIONS
 
 // PR36748
-// rdar://problem/45805151
 
 // Classes to verify order of destroying function parameters.
 struct S1 {

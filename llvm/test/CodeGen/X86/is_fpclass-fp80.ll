@@ -70,7 +70,7 @@ define i1 @is_nan_f80_strict(x86_fp80 %x) strictfp {
 ; CHECK-64-NEXT:    orb %dl, %al
 ; CHECK-64-NEXT:    retq
 entry:
-  %0 = tail call i1 @llvm.is.fpclass.f80(x86_fp80 %x, i32 3)  ; "nan"
+  %0 = tail call i1 @llvm.is.fpclass.f80(x86_fp80 %x, i32 3) strictfp ; "nan"
   ret i1 %0
 }
 
@@ -160,26 +160,19 @@ entry:
 define i1 @is_zero_f80(x86_fp80 %x) {
 ; CHECK-32-LABEL: is_zero_f80:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    fldt {{[0-9]+}}(%esp)
-; CHECK-32-NEXT:    fldz
-; CHECK-32-NEXT:    fucompp
-; CHECK-32-NEXT:    fnstsw %ax
-; CHECK-32-NEXT:    # kill: def $ah killed $ah killed $ax
-; CHECK-32-NEXT:    sahf
-; CHECK-32-NEXT:    setnp %cl
+; CHECK-32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    andl $32767, %eax # imm = 0x7FFF
+; CHECK-32-NEXT:    orl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    orl {{[0-9]+}}(%esp), %eax
 ; CHECK-32-NEXT:    sete %al
-; CHECK-32-NEXT:    andb %cl, %al
 ; CHECK-32-NEXT:    retl
 ;
 ; CHECK-64-LABEL: is_zero_f80:
 ; CHECK-64:       # %bb.0: # %entry
-; CHECK-64-NEXT:    fldt {{[0-9]+}}(%rsp)
-; CHECK-64-NEXT:    fldz
-; CHECK-64-NEXT:    fucompi %st(1), %st
-; CHECK-64-NEXT:    fstp %st(0)
-; CHECK-64-NEXT:    setnp %cl
+; CHECK-64-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
+; CHECK-64-NEXT:    andl $32767, %eax # imm = 0x7FFF
+; CHECK-64-NEXT:    orq {{[0-9]+}}(%rsp), %rax
 ; CHECK-64-NEXT:    sete %al
-; CHECK-64-NEXT:    andb %cl, %al
 ; CHECK-64-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f80(x86_fp80 %x, i32 96)  ; 0x60 = "zero"
@@ -204,7 +197,7 @@ define i1 @is_zero_f80_strict(x86_fp80 %x) strictfp {
 ; CHECK-64-NEXT:    sete %al
 ; CHECK-64-NEXT:    retq
 entry:
-  %0 = tail call i1 @llvm.is.fpclass.f80(x86_fp80 %x, i32 96)  ; 0x60 = "zero"
+  %0 = tail call i1 @llvm.is.fpclass.f80(x86_fp80 %x, i32 96) strictfp ; 0x60 = "zero"
   ret i1 %0
 }
 
@@ -267,10 +260,10 @@ define i1 @is_inf_f80(x86_fp80 %x) {
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; CHECK-64-NEXT:    notl %eax
-; CHECK-64-NEXT:    andl $32767, %eax # imm = 0x7FFF
 ; CHECK-64-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
 ; CHECK-64-NEXT:    xorq {{[0-9]+}}(%rsp), %rcx
-; CHECK-64-NEXT:    orq %rax, %rcx
+; CHECK-64-NEXT:    andl $32767, %eax # imm = 0x7FFF
+; CHECK-64-NEXT:    orq %rcx, %rax
 ; CHECK-64-NEXT:    sete %al
 ; CHECK-64-NEXT:    retq
 entry:
@@ -318,9 +311,8 @@ define i1 @is_neginf_f80(x86_fp80 %x) {
 ;
 ; CHECK-64-LABEL: is_neginf_f80:
 ; CHECK-64:       # %bb.0: # %entry
-; CHECK-64-NEXT:    movl {{[0-9]+}}(%rsp), %eax
-; CHECK-64-NEXT:    notl %eax
-; CHECK-64-NEXT:    movzwl %ax, %eax
+; CHECK-64-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
+; CHECK-64-NEXT:    xorq $65535, %rax # imm = 0xFFFF
 ; CHECK-64-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
 ; CHECK-64-NEXT:    xorq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-64-NEXT:    orq %rax, %rcx

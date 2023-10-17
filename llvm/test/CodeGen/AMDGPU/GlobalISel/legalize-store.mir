@@ -664,8 +664,7 @@ body: |
     ; VI-NEXT: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[AND1]], [[C1]](s16)
     ; VI-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[SHL]]
     ; VI-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s16)
-    ; VI-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[ANYEXT]](s32)
-    ; VI-NEXT: [[LSHR:%[0-9]+]]:_(s16) = G_LSHR [[TRUNC2]], [[C1]](s16)
+    ; VI-NEXT: [[LSHR:%[0-9]+]]:_(s16) = G_LSHR [[OR]], [[C1]](s16)
     ; VI-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
     ; VI-NEXT: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C2]](s64)
     ; VI-NEXT: G_STORE [[ANYEXT]](s32), [[COPY]](p1) :: (store (s8), addrspace 1)

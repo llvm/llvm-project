@@ -67,13 +67,13 @@ bool LibStdcppTupleSyntheticFrontEnd::Update() {
 
     size_t child_count = current_child->GetNumChildren();
     for (size_t i = 0; i < child_count; ++i) {
-      ValueObjectSP child_sp = current_child->GetChildAtIndex(i, true);
+      ValueObjectSP child_sp = current_child->GetChildAtIndex(i);
       llvm::StringRef name_str = child_sp->GetName().GetStringRef();
       if (name_str.startswith("std::_Tuple_impl<")) {
         next_child_sp = child_sp;
       } else if (name_str.startswith("std::_Head_base<")) {
         ValueObjectSP value_sp =
-            child_sp->GetChildMemberWithName(ConstString("_M_head_impl"), true);
+            child_sp->GetChildMemberWithName("_M_head_impl");
         if (value_sp) {
           StreamString name;
           name.Printf("[%zd]", m_members.size());

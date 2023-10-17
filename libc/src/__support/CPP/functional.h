@@ -6,25 +6,65 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_FUNCTIONAL_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_FUNCTIONAL_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_FUNCTIONAL_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_FUNCTIONAL_H
 
-namespace __llvm_libc {
+#include "src/__support/CPP/type_traits/enable_if.h"
+#include "src/__support/CPP/type_traits/is_convertible.h"
+#include "src/__support/CPP/type_traits/is_same.h"
+#include "src/__support/CPP/type_traits/is_void.h"
+#include "src/__support/CPP/type_traits/remove_cvref.h"
+#include "src/__support/CPP/type_traits/remove_reference.h"
+#include "src/__support/CPP/utility/forward.h"
+#include "src/__support/macros/attributes.h"
+
+#include <stdint.h>
+
+namespace LIBC_NAMESPACE {
 namespace cpp {
 
-template <typename F> class function;
+/// A function type adapted from LLVM's function_ref.
+/// This class does not own the callable, so it is not in general safe to
+/// store a function.
+template <typename Fn> class function;
 
-template <typename R, typename... Args> class function<R(Args...)> {
-  R (*func)(Args...) = nullptr;
+template <typename Ret, typename... Params> class function<Ret(Params...)> {
+  Ret (*callback)(intptr_t callable, Params... params) = nullptr;
+  intptr_t callable;
+
+  template <typename Callable>
+  LIBC_INLINE static Ret callback_fn(intptr_t callable, Params... params) {
+    return (*reinterpret_cast<Callable *>(callable))(
+        cpp::forward<Params>(params)...);
+  }
 
 public:
-  constexpr function() = default;
-  template <typename F> constexpr function(F &&f) : func(f) {}
+  LIBC_INLINE function() = default;
+  LIBC_INLINE function(decltype(nullptr)) {}
+  LIBC_INLINE ~function() = default;
 
-  constexpr R operator()(Args... params) { return func(params...); }
+  template <typename Callable>
+  LIBC_INLINE function(
+      Callable &&callable,
+      // This is not the copy-constructor.
+      enable_if_t<!cpp::is_same_v<remove_cvref_t<Callable>, function>> * =
+          nullptr,
+      // Functor must be callable and return a suitable type.
+      enable_if_t<cpp::is_void_v<Ret> ||
+                  cpp::is_convertible_v<
+                      decltype(declval<Callable>()(declval<Params>()...)), Ret>>
+          * = nullptr)
+      : callback(callback_fn<cpp::remove_reference_t<Callable>>),
+        callable(reinterpret_cast<intptr_t>(&callable)) {}
+
+  LIBC_INLINE Ret operator()(Params... params) const {
+    return callback(callable, cpp::forward<Params>(params)...);
+  }
+
+  LIBC_INLINE explicit operator bool() const { return callback; }
 };
 
 } // namespace cpp
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_FUNCTIONAL_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_FUNCTIONAL_H

@@ -65,6 +65,14 @@ let Definition = "debugger" in {
     DefaultEnumValue<"OptionValueString::eOptionEncodeCharacterEscapeSequences">,
     DefaultStringValue<"(lldb) ">,
     Desc<"The debugger command line prompt displayed for the user.">;
+  def PromptAnsiPrefix: Property<"prompt-ansi-prefix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.faint}">,
+    Desc<"When in a color-enabled terminal, use the ANSI terminal code specified in this format immediately before the prompt.">;
+  def PromptAnsiSuffix: Property<"prompt-ansi-suffix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.normal}">,
+    Desc<"When in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the prompt.">;
   def ScriptLanguage: Property<"script-lang", "Enum">,
     Global,
     DefaultEnumValue<"eScriptLanguagePython">,
@@ -74,7 +82,7 @@ let Definition = "debugger" in {
     Global,
     DefaultEnumValue<"eLanguageTypeUnknown">,
     Desc<"The language to use for the REPL.">;
-  def StopDisassemblyCount: Property<"stop-disassembly-count", "SInt64">,
+  def StopDisassemblyCount: Property<"stop-disassembly-count", "UInt64">,
     Global,
     DefaultUnsignedValue<4>,
     Desc<"The number of disassembly lines to show when displaying a stopped context.">;
@@ -87,11 +95,11 @@ let Definition = "debugger" in {
     Global,
     DefaultUnsignedValue<32000>,
     Desc<"The size limit to use when disassembling large functions (default: 32KB).">;
-  def StopLineCountAfter: Property<"stop-line-count-after", "SInt64">,
+  def StopLineCountAfter: Property<"stop-line-count-after", "UInt64">,
     Global,
     DefaultUnsignedValue<3>,
     Desc<"The number of sources lines to display that come after the current source line when displaying a stopped context.">;
-  def StopLineCountBefore: Property<"stop-line-count-before", "SInt64">,
+  def StopLineCountBefore: Property<"stop-line-count-before", "UInt64">,
     Global,
     DefaultUnsignedValue<3>,
     Desc<"The number of sources lines to display that come before the current source line when displaying a stopped context.">;
@@ -135,6 +143,10 @@ let Definition = "debugger" in {
     Global,
     DefaultFalse,
     Desc<"Whether to use an external editor or not.">;
+  def ExternalEditor: Property<"external-editor", "String">,
+    Global,
+    DefaultStringValue<"">,
+    Desc<"External editor to use when use-external-editor is enabled.">;
   def UseColor: Property<"use-color", "Boolean">,
     Global,
     DefaultTrue,
@@ -169,8 +181,8 @@ let Definition = "debugger" in {
     Desc<"If true, LLDB will print the values of variables declared in an expression. Currently only supported in the REPL (default: true).">;
   def TabSize: Property<"tab-size", "UInt64">,
     Global,
-    DefaultUnsignedValue<4>,
-    Desc<"The tab size to use when indenting code in multi-line input mode (default: 4).">;
+    DefaultUnsignedValue<2>,
+    Desc<"The tab size to use when indenting code in multi-line input mode (default: 2).">;
   def EscapeNonPrintables: Property<"escape-non-printables", "Boolean">,
     Global,
     DefaultTrue,
@@ -191,9 +203,13 @@ let Definition = "debugger" in {
     Global,
     DefaultStringValue<"${ansi.normal}">,
     Desc<"When displaying suggestion in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the suggestion.">;
+  def ShowDontUsePoHint: Property<"show-dont-use-po-hint", "Boolean">,
+    Global,
+    DefaultTrue,
+    Desc<"If true, and object description was requested for a type that does not implement it, LLDB will print a hint telling the user to consider using p instead.">;
   def DWIMPrintVerbosity: Property<"dwim-print-verbosity", "Enum">,
     Global,
-    DefaultEnumValue<"eDWIMPrintVerbosityExpression">,
+    DefaultEnumValue<"eDWIMPrintVerbosityNone">,
     EnumValues<"OptionEnumValues(g_dwim_print_verbosities)">,
     Desc<"The verbosity level used by dwim-print.">;
 }

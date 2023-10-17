@@ -10,8 +10,8 @@
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/TargetParser.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/TargetParser/TargetParser.h"
 #include "gtest/gtest.h"
 
 #include "AMDGPUGenSubtargetInfo.inc"

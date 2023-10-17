@@ -18,12 +18,14 @@ module m
   end type
 
   !ERROR: 't1' may not have both the BIND(C) and PARAMETER attributes
+  !ERROR: The derived type of a BIND(C) object must also be BIND(C)
   type(my_type1), bind(c), parameter :: t1 = my_type1(1)
   !ERROR: 't2' may not have both the BIND(C) and PARAMETER attributes
   type(my_type2), bind(c), parameter :: t2 = my_type2(1)
 
   type(my_type2), parameter :: t3 = my_type2(1) ! no error
   !ERROR: 't4' may not have both the BIND(C) and PARAMETER attributes
+  !ERROR: The derived type of a BIND(C) object must also be BIND(C)
   type(my_type1), parameter :: t4 = my_type1(1)
   !ERROR: 't5' may not have both the BIND(C) and PARAMETER attributes
   type(my_type2), parameter :: t5 = my_type2(1)

@@ -15,36 +15,47 @@
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
+def riscv_sha256sig0 : SDNode<"RISCVISD::SHA256SIG0", SDTIntUnaryOp>;
+def riscv_sha256sig1 : SDNode<"RISCVISD::SHA256SIG1", SDTIntUnaryOp>;
+def riscv_sha256sum0 : SDNode<"RISCVISD::SHA256SUM0", SDTIntUnaryOp>;
+def riscv_sha256sum1 : SDNode<"RISCVISD::SHA256SUM1", SDTIntUnaryOp>;
+
+def SDT_RISCVZkByteSelect : SDTypeProfile<1, 3, [SDTCisVT<0, XLenVT>,
+                                                 SDTCisVT<1, XLenVT>,
+                                                 SDTCisVT<2, XLenVT>,
+                                                 SDTCisVT<3, i32>]>;
+def riscv_sm4ks : SDNode<"RISCVISD::SM4KS", SDT_RISCVZkByteSelect>;
+def riscv_sm4ed : SDNode<"RISCVISD::SM4ED", SDT_RISCVZkByteSelect>;
+
+def riscv_sm3p0 : SDNode<"RISCVISD::SM3P0", SDTIntUnaryOp>;
+def riscv_sm3p1 : SDNode<"RISCVISD::SM3P1", SDTIntUnaryOp>;
+
 def RnumArg : AsmOperandClass {
   let Name = "RnumArg";
   let RenderMethod = "addImmOperands";
   let DiagnosticType = "InvalidRnumArg";
 }
 
-def rnum : Operand<i32>, TImmLeaf<i32, [{return (Imm >= 0 && Imm <= 10);}]> {
+def rnum : RISCVOp<i32>, TImmLeaf<i32, [{return (Imm >= 0 && Imm <= 10);}]> {
   let ParserMatchClass = RnumArg;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeUImmOperand<4>";
   let OperandType = "OPERAND_RVKRNUM";
-  let OperandNamespace = "RISCVOp";
 }
 
-def byteselect : Operand<i8>, TImmLeaf<i8, [{return isUInt<2>(Imm);}]> {
+def byteselect : RISCVOp<i32>, TImmLeaf<i32, [{return isUInt<2>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<2>;
   let DecoderMethod = "decodeUImmOperand<2>";
   let OperandType = "OPERAND_UIMM2";
-  let OperandNamespace = "RISCVOp";
 }
 
 //===----------------------------------------------------------------------===//
 // Instruction class templates
 //===----------------------------------------------------------------------===//
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVKUnary<bits<12> imm12_in, bits<3> funct3, string opcodestr>
-    : RVInstI<funct3, OPC_OP_IMM, (outs GPR:$rd), (ins GPR:$rs1),
-              opcodestr, "$rd, $rs1">{
-  let imm12 = imm12_in;
-}
+class RVKUnary<bits<12> imm12, bits<3> funct3, string opcodestr>
+    : RVInstIUnary<imm12, funct3, OPC_OP_IMM, (outs GPR:$rd), (ins GPR:$rs1),
+                   opcodestr, "$rd, $rs1">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVKByteSelect<bits<5> funct5, string opcodestr>
@@ -57,12 +68,12 @@ class RVKByteSelect<bits<5> funct5, string opcodestr>
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVKUnary_rnum<bits<7> funct7, bits<3> funct3, string opcodestr>
-    : RVInstI<funct3, OPC_OP_IMM, (outs GPR:$rd), (ins GPR:$rs1, rnum:$rnum),
-              opcodestr, "$rd, $rs1, $rnum">{
-    bits<4> rnum;
-    let Inst{31-25} = funct7;
-    let Inst{24} = 1;
-    let Inst{23-20} = rnum;
+    : RVInstIBase<funct3, OPC_OP_IMM, (outs GPR:$rd),
+                  (ins GPR:$rs1, rnum:$rnum), opcodestr, "$rd, $rs1, $rnum"> {
+  bits<4> rnum;
+  let Inst{31-25} = funct7;
+  let Inst{24} = 0b1;
+  let Inst{23-20} = rnum;
 }
 
 //===----------------------------------------------------------------------===//
@@ -119,12 +130,12 @@ def SHA512SUM0 : RVKUnary<0b000100000100, 0b001, "sha512sum0">;
 def SHA512SUM1 : RVKUnary<0b000100000101, 0b001, "sha512sum1">;
 } // Predicates = [HasStdExtZknh, IsRV64]
 
-let Predicates = [HasStdExtZksed] in {
+let Predicates = [HasStdExtZksed], IsSignExtendingOpW = 1 in {
 def SM4ED : RVKByteSelect<0b11000, "sm4ed">;
 def SM4KS : RVKByteSelect<0b11010, "sm4ks">;
 } // Predicates = [HasStdExtZksed]
 
-let Predicates = [HasStdExtZksh] in {
+let Predicates = [HasStdExtZksh], IsSignExtendingOpW = 1 in {
 def SM3P0 : RVKUnary<0b000100001000, 0b001, "sm3p0">;
 def SM3P1 : RVKUnary<0b000100001001, 0b001, "sm3p1">;
 } // Predicates = [HasStdExtZksh]
@@ -134,7 +145,7 @@ def SM3P1 : RVKUnary<0b000100001001, 0b001, "sm3p1">;
 //===----------------------------------------------------------------------===//
 
 class PatGprGprByteSelect<SDPatternOperator OpNode, RVInst Inst>
-    : Pat<(OpNode GPR:$rs1, GPR:$rs2, i8:$imm),
+    : Pat<(XLenVT (OpNode (XLenVT GPR:$rs1), (XLenVT GPR:$rs2), byteselect:$imm)),
           (Inst GPR:$rs1, GPR:$rs2, byteselect:$imm)>;
 
 // Zknd
@@ -151,7 +162,7 @@ def : PatGpr<int_riscv_aes64im, AES64IM>;
 
 let Predicates = [HasStdExtZkndOrZkne, IsRV64] in {
 def : PatGprGpr<int_riscv_aes64ks2, AES64KS2>;
-def : Pat<(int_riscv_aes64ks1i GPR:$rs1, i32:$rnum),
+def : Pat<(int_riscv_aes64ks1i GPR:$rs1, rnum:$rnum),
           (AES64KS1I GPR:$rs1, rnum:$rnum)>;
 } // Predicates = [HasStdExtZkndOrZkne, IsRV64]
 
@@ -168,10 +179,10 @@ def : PatGprGpr<int_riscv_aes64esm, AES64ESM>;
 
 // Zknh
 let Predicates = [HasStdExtZknh] in {
-def : PatGpr<int_riscv_sha256sig0, SHA256SIG0>;
-def : PatGpr<int_riscv_sha256sig1, SHA256SIG1>;
-def : PatGpr<int_riscv_sha256sum0, SHA256SUM0>;
-def : PatGpr<int_riscv_sha256sum1, SHA256SUM1>;
+def : PatGpr<riscv_sha256sig0, SHA256SIG0>;
+def : PatGpr<riscv_sha256sig1, SHA256SIG1>;
+def : PatGpr<riscv_sha256sum0, SHA256SUM0>;
+def : PatGpr<riscv_sha256sum1, SHA256SUM1>;
 } // Predicates = [HasStdExtZknh]
 
 let Predicates = [HasStdExtZknh, IsRV32] in {
@@ -192,12 +203,12 @@ def : PatGpr<int_riscv_sha512sum1, SHA512SUM1>;
 
 // Zksed
 let Predicates = [HasStdExtZksed] in {
-def : PatGprGprByteSelect<int_riscv_sm4ks, SM4KS>;
-def : PatGprGprByteSelect<int_riscv_sm4ed, SM4ED>;
+def : PatGprGprByteSelect<riscv_sm4ks, SM4KS>;
+def : PatGprGprByteSelect<riscv_sm4ed, SM4ED>;
 } // Predicates = [HasStdExtZksed]
 
 // Zksh
 let Predicates = [HasStdExtZksh] in {
-def : PatGpr<int_riscv_sm3p0, SM3P0>;
-def : PatGpr<int_riscv_sm3p1, SM3P1>;
+def : PatGpr<riscv_sm3p0, SM3P0>;
+def : PatGpr<riscv_sm3p1, SM3P1>;
 } // Predicates = [HasStdExtZksh]

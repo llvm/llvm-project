@@ -33,8 +33,8 @@ struct Y<int> {
 
 int Y<int>::value = 0;
 
-// CHECK-NOT: @_ZW1a1xIiE = {{.*}}available_externally{{.*}}global
-// CHECK-NOT: @_ZNW1a1YIiE5valueE = {{.*}}available_externally{{.*}}global
+// CHECK-NOT: @_ZW1a1xIiE = {{.*}}external{{.*}}global
+// CHECK-NOT: @_ZNW1a1YIiE5valueE = {{.*}}external{{.*}}global
 
 //--- use.cpp
 import a;
@@ -42,5 +42,5 @@ int foo() {
     return x<int> + Y<int>::value;
 }
 
-// CHECK: @_ZW1a1xIiE = {{.*}}available_externally{{.*}}global
-// CHECK: @_ZNW1a1YIiE5valueE = {{.*}}available_externally{{.*}}global
+// CHECK: @_ZW1a1xIiE = {{.*}}external{{.*}}global
+// CHECK: @_ZNW1a1YIiE5valueE = {{.*}}external{{.*}}global

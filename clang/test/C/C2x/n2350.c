@@ -38,8 +38,7 @@ int struct_in_second_param(void) {
     int a, b;
     int x[20];
   };
-  return __builtin_offsetof(struct A, x[sizeof(struct B{int a;})]); // cpp-error {{'B' cannot be defined in a type specifier}} \
-                                                                       expected-warning {{using an array subscript expression within '__builtin_offsetof' is a Clang extension}}
+  return __builtin_offsetof(struct A, x[sizeof(struct B{int a;})]); // cpp-error {{'B' cannot be defined in a type specifier}}
 }
 
 

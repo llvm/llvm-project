@@ -12,3 +12,7 @@ iocsrrd.d $a0, $a1
 # ERR32: :[[#@LINE-1]]:1: error: instruction requires the following: LA64 Basic Integer and Privilege Instruction Set
 iocsrwr.d $a0, $a1
 # ERR32: :[[#@LINE-1]]:1: error: instruction requires the following: LA64 Basic Integer and Privilege Instruction Set
+
+## uimm8
+lddir $a0, $a0, 0x1ff
+# CHECK: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [0, 255]

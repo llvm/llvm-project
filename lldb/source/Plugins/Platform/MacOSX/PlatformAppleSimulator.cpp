@@ -41,12 +41,15 @@ PlatformAppleSimulator::PlatformAppleSimulator(
     const char *class_name, const char *description, ConstString plugin_name,
     llvm::Triple::OSType preferred_os,
     llvm::SmallVector<llvm::StringRef, 4> supported_triples,
-    llvm::StringRef sdk, lldb_private::XcodeSDK::Type sdk_type,
+    std::string sdk_name_primary, std::string sdk_name_secondary,
+    lldb_private::XcodeSDK::Type sdk_type,
     CoreSimulatorSupport::DeviceType::ProductFamilyID kind)
     : PlatformDarwin(true), m_class_name(class_name),
       m_description(description), m_plugin_name(plugin_name), m_kind(kind),
       m_os_type(preferred_os), m_supported_triples(supported_triples),
-      m_sdk(sdk), m_sdk_type(sdk_type) {}
+      m_sdk_name_primary(std::move(sdk_name_primary)),
+      m_sdk_name_secondary(std::move(sdk_name_secondary)),
+      m_sdk_type(sdk_type) {}
 
 /// Destructor.
 ///
@@ -83,8 +86,9 @@ lldb_private::Status PlatformAppleSimulator::LaunchProcess(
 
 void PlatformAppleSimulator::GetStatus(Stream &strm) {
   Platform::GetStatus(strm);
-  if (!m_sdk.empty())
-    strm << "  SDK Path: \"" << m_sdk << "\"\n";
+  llvm::StringRef sdk = GetSDKFilepath();
+  if (!sdk.empty())
+    strm << "  SDK Path: \"" << sdk << "\"\n";
   else
     strm << "  SDK Path: error: unable to locate SDK\n";
 
@@ -280,7 +284,8 @@ static llvm::StringRef GetXcodeSDKDir(std::string preferred,
                                       std::string secondary) {
   llvm::StringRef sdk;
   auto get_sdk = [&](std::string sdk) -> llvm::StringRef {
-    auto sdk_path_or_err = HostInfo::GetXcodeSDKPath(XcodeSDK(std::move(sdk)));
+    auto sdk_path_or_err =
+        HostInfo::GetSDKRoot(HostInfo::SDKOptions{XcodeSDK(std::move(sdk))});
     if (!sdk_path_or_err) {
       Debugger::ReportError("Error while searching for Xcode SDK: " +
                             toString(sdk_path_or_err.takeError()));
@@ -295,13 +300,21 @@ static llvm::StringRef GetXcodeSDKDir(std::string preferred,
   return sdk;
 }
 
+llvm::StringRef PlatformAppleSimulator::GetSDKFilepath() {
+  if (!m_have_searched_for_sdk) {
+    m_sdk = GetXcodeSDKDir(m_sdk_name_primary, m_sdk_name_secondary);
+    m_have_searched_for_sdk = true;
+  }
+  return m_sdk;
+}
+
 PlatformSP PlatformAppleSimulator::CreateInstance(
     const char *class_name, const char *description, ConstString plugin_name,
     llvm::SmallVector<llvm::Triple::ArchType, 4> supported_arch,
     llvm::Triple::OSType preferred_os,
     llvm::SmallVector<llvm::Triple::OSType, 4> supported_os,
     llvm::SmallVector<llvm::StringRef, 4> supported_triples,
-    std::string sdk_name_preferred, std::string sdk_name_secondary,
+    std::string sdk_name_primary, std::string sdk_name_secondary,
     lldb_private::XcodeSDK::Type sdk_type,
     CoreSimulatorSupport::DeviceType::ProductFamilyID kind, bool force,
     const ArchSpec *arch) {
@@ -360,11 +373,9 @@ PlatformSP PlatformAppleSimulator::CreateInstance(
   if (create) {
     LLDB_LOGF(log, "%s::%s() creating platform", class_name, __FUNCTION__);
 
-    llvm::StringRef sdk =
-        GetXcodeSDKDir(sdk_name_preferred, sdk_name_secondary);
     return PlatformSP(new PlatformAppleSimulator(
         class_name, description, plugin_name, preferred_os, supported_triples,
-        sdk, sdk_type, kind));
+        sdk_name_primary, sdk_name_secondary, sdk_type, kind));
   }
 
   LLDB_LOGF(log, "%s::%s() aborting creation of platform", class_name,
@@ -456,9 +467,10 @@ Status PlatformAppleSimulator::GetSymbolFile(const FileSpec &platform_file,
   if (platform_file.GetPath(platform_file_path, sizeof(platform_file_path))) {
     char resolved_path[PATH_MAX];
 
-    if (!m_sdk.empty()) {
+    llvm::StringRef sdk = GetSDKFilepath();
+    if (!sdk.empty()) {
       ::snprintf(resolved_path, sizeof(resolved_path), "%s/%s",
-                 m_sdk.str().c_str(), platform_file_path);
+                 sdk.str().c_str(), platform_file_path);
 
       // First try in the SDK and see if the file is in there
       local_file.SetFile(resolved_path, FileSpec::Style::native);
@@ -533,7 +545,7 @@ static bool shouldSkipSimulatorPlatform(bool force, const ArchSpec *arch) {
   // If the arch is known not to specify a simulator environment, skip creating
   // the simulator platform (we can create it later if there's a matching arch).
   // This avoids very slow xcrun queries for non-simulator archs (the slowness
-  // is due to xcrun not caching negative queries (rdar://74882205)).
+  // is due to xcrun not caching negative queries.
   return !force && arch && arch->IsValid() &&
          !arch->TripleEnvironmentWasSpecified();
 }

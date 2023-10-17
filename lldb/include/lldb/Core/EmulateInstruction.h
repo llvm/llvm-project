@@ -375,7 +375,7 @@ public:
     return UnconditionalCondition;
   }
 
-  virtual bool TestEmulation(Stream *out_stream, ArchSpec &arch,
+  virtual bool TestEmulation(Stream &out_stream, ArchSpec &arch,
                              OptionValueDictionary *test_data) = 0;
 
   virtual std::optional<RegisterInfo>

@@ -93,10 +93,12 @@
 #include "NVPTXTargetMachine.h"
 #include "NVPTXUtilities.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include <numeric>
 #include <queue>
@@ -113,11 +115,11 @@ namespace {
 class NVPTXLowerArgs : public FunctionPass {
   bool runOnFunction(Function &F) override;
 
-  bool runOnKernelFunction(Function &F);
-  bool runOnDeviceFunction(Function &F);
+  bool runOnKernelFunction(const NVPTXTargetMachine &TM, Function &F);
+  bool runOnDeviceFunction(const NVPTXTargetMachine &TM, Function &F);
 
   // handle byval parameters
-  void handleByValParam(Argument *Arg);
+  void handleByValParam(const NVPTXTargetMachine &TM, Argument *Arg);
   // Knowing Ptr must point to the global address space, this function
   // addrspacecasts Ptr to global and then back to generic. This allows
   // NVPTXInferAddressSpaces to fold the global-to-generic cast into
@@ -126,21 +128,23 @@ class NVPTXLowerArgs : public FunctionPass {
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  NVPTXLowerArgs(const NVPTXTargetMachine *TM = nullptr)
-      : FunctionPass(ID), TM(TM) {}
+  NVPTXLowerArgs() : FunctionPass(ID) {}
   StringRef getPassName() const override {
     return "Lower pointer arguments of CUDA kernels";
   }
-
-private:
-  const NVPTXTargetMachine *TM;
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<TargetPassConfig>();
+  }
 };
 } // namespace
 
 char NVPTXLowerArgs::ID = 1;
 
-INITIALIZE_PASS(NVPTXLowerArgs, "nvptx-lower-args",
-                "Lower arguments (NVPTX)", false, false)
+INITIALIZE_PASS_BEGIN(NVPTXLowerArgs, "nvptx-lower-args",
+                      "Lower arguments (NVPTX)", false, false)
+INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
+INITIALIZE_PASS_END(NVPTXLowerArgs, "nvptx-lower-args",
+                    "Lower arguments (NVPTX)", false, false)
 
 // =============================================================================
 // If the function had a byval struct ptr arg, say foo(%struct.x* byval %d),
@@ -186,8 +190,7 @@ static void convertToParamAS(Value *OldUser, Value *Param) {
       return NewGEP;
     }
     if (auto *BC = dyn_cast<BitCastInst>(I.OldInstruction)) {
-      auto *NewBCType = PointerType::getWithSamePointeeType(
-          cast<PointerType>(BC->getType()), ADDRESS_SPACE_PARAM);
+      auto *NewBCType = PointerType::get(BC->getContext(), ADDRESS_SPACE_PARAM);
       return BitCastInst::Create(BC->getOpcode(), I.NewParam, NewBCType,
                                  BC->getName(), BC);
     }
@@ -310,7 +313,8 @@ static void adjustByValArgAlignment(Argument *Arg, Value *ArgInParamAS,
   }
 }
 
-void NVPTXLowerArgs::handleByValParam(Argument *Arg) {
+void NVPTXLowerArgs::handleByValParam(const NVPTXTargetMachine &TM,
+                                      Argument *Arg) {
   Function *Func = Arg->getParent();
   Instruction *FirstInst = &(Func->getEntryBlock().front());
   Type *StructType = Arg->getParamByValType();
@@ -354,12 +358,8 @@ void NVPTXLowerArgs::handleByValParam(Argument *Arg) {
       convertToParamAS(V, ArgInParamAS);
     LLVM_DEBUG(dbgs() << "No need to copy " << *Arg << "\n");
 
-    // Further optimizations require target lowering info.
-    if (!TM)
-      return;
-
     const auto *TLI =
-        cast<NVPTXTargetLowering>(TM->getSubtargetImpl()->getTargetLowering());
+        cast<NVPTXTargetLowering>(TM.getSubtargetImpl()->getTargetLowering());
 
     adjustByValArgAlignment(Arg, ArgInParamAS, TLI);
 
@@ -390,7 +390,7 @@ void NVPTXLowerArgs::handleByValParam(Argument *Arg) {
 }
 
 void NVPTXLowerArgs::markPointerAsGlobal(Value *Ptr) {
-  if (Ptr->getType()->getPointerAddressSpace() == ADDRESS_SPACE_GLOBAL)
+  if (Ptr->getType()->getPointerAddressSpace() != ADDRESS_SPACE_GENERIC)
     return;
 
   // Deciding where to emit the addrspacecast pair.
@@ -406,9 +406,7 @@ void NVPTXLowerArgs::markPointerAsGlobal(Value *Ptr) {
   }
 
   Instruction *PtrInGlobal = new AddrSpaceCastInst(
-      Ptr,
-      PointerType::getWithSamePointeeType(cast<PointerType>(Ptr->getType()),
-                                          ADDRESS_SPACE_GLOBAL),
+      Ptr, PointerType::get(Ptr->getContext(), ADDRESS_SPACE_GLOBAL),
       Ptr->getName(), &*InsertPt);
   Value *PtrInGeneric = new AddrSpaceCastInst(PtrInGlobal, Ptr->getType(),
                                               Ptr->getName(), &*InsertPt);
@@ -420,18 +418,33 @@ void NVPTXLowerArgs::markPointerAsGlobal(Value *Ptr) {
 // =============================================================================
 // Main function for this pass.
 // =============================================================================
-bool NVPTXLowerArgs::runOnKernelFunction(Function &F) {
-  if (TM && TM->getDrvInterface() == NVPTX::CUDA) {
+bool NVPTXLowerArgs::runOnKernelFunction(const NVPTXTargetMachine &TM,
+                                         Function &F) {
+  // Copying of byval aggregates + SROA may result in pointers being loaded as
+  // integers, followed by intotoptr. We may want to mark those as global, too,
+  // but only if the loaded integer is used exclusively for conversion to a
+  // pointer with inttoptr.
+  auto HandleIntToPtr = [this](Value &V) {
+    if (llvm::all_of(V.users(), [](User *U) { return isa<IntToPtrInst>(U); })) {
+      SmallVector<User *, 16> UsersToUpdate(V.users());
+      for (User *U : UsersToUpdate)
+        markPointerAsGlobal(U);
+    }
+  };
+  if (TM.getDrvInterface() == NVPTX::CUDA) {
     // Mark pointers in byval structs as global.
     for (auto &B : F) {
       for (auto &I : B) {
         if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
-          if (LI->getType()->isPointerTy()) {
+          if (LI->getType()->isPointerTy() || LI->getType()->isIntegerTy()) {
             Value *UO = getUnderlyingObject(LI->getPointerOperand());
             if (Argument *Arg = dyn_cast<Argument>(UO)) {
               if (Arg->hasByValAttr()) {
                 // LI is a load from a pointer within a byval kernel parameter.
-                markPointerAsGlobal(LI);
+                if (LI->getType()->isPointerTy())
+                  markPointerAsGlobal(LI);
+                else
+                  HandleIntToPtr(*LI);
               }
             }
           }
@@ -444,28 +457,32 @@ bool NVPTXLowerArgs::runOnKernelFunction(Function &F) {
   for (Argument &Arg : F.args()) {
     if (Arg.getType()->isPointerTy()) {
       if (Arg.hasByValAttr())
-        handleByValParam(&Arg);
-      else if (TM && TM->getDrvInterface() == NVPTX::CUDA)
+        handleByValParam(TM, &Arg);
+      else if (TM.getDrvInterface() == NVPTX::CUDA)
         markPointerAsGlobal(&Arg);
+    } else if (Arg.getType()->isIntegerTy() &&
+               TM.getDrvInterface() == NVPTX::CUDA) {
+      HandleIntToPtr(Arg);
     }
   }
   return true;
 }
 
 // Device functions only need to copy byval args into local memory.
-bool NVPTXLowerArgs::runOnDeviceFunction(Function &F) {
+bool NVPTXLowerArgs::runOnDeviceFunction(const NVPTXTargetMachine &TM,
+                                         Function &F) {
   LLVM_DEBUG(dbgs() << "Lowering function args of " << F.getName() << "\n");
   for (Argument &Arg : F.args())
     if (Arg.getType()->isPointerTy() && Arg.hasByValAttr())
-      handleByValParam(&Arg);
+      handleByValParam(TM, &Arg);
   return true;
 }
 
 bool NVPTXLowerArgs::runOnFunction(Function &F) {
-  return isKernelFunction(F) ? runOnKernelFunction(F) : runOnDeviceFunction(F);
+  auto &TM = getAnalysis<TargetPassConfig>().getTM<NVPTXTargetMachine>();
+
+  return isKernelFunction(F) ? runOnKernelFunction(TM, F)
+                             : runOnDeviceFunction(TM, F);
 }
 
-FunctionPass *
-llvm::createNVPTXLowerArgsPass(const NVPTXTargetMachine *TM) {
-  return new NVPTXLowerArgs(TM);
-}
+FunctionPass *llvm::createNVPTXLowerArgsPass() { return new NVPTXLowerArgs(); }

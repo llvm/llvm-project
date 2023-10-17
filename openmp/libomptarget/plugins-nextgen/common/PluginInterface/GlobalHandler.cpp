@@ -53,8 +53,8 @@ Error GenericGlobalHandlerTy::getGlobalMetadataFromELF(
 
   // The global's address is computed as the image begin + the ELF section
   // offset + the ELF symbol value.
-  ImageGlobal.setPtr(
-      advanceVoidPtr(Image.getStart(), Section.sh_offset + Symbol.st_value));
+  ImageGlobal.setPtr(advanceVoidPtr(
+      Image.getStart(), Section.sh_offset - Section.sh_addr + Symbol.st_value));
 
   // Set the global's size.
   ImageGlobal.setSize(Symbol.st_size);
@@ -73,16 +73,15 @@ Error GenericGlobalHandlerTy::moveGlobalBetweenDeviceAndHost(
     return Err;
 
   // Perform the actual transfer.
-  return moveGlobalBetweenDeviceAndHost(Device, Image, HostGlobal, DeviceGlobal,
+  return moveGlobalBetweenDeviceAndHost(Device, HostGlobal, DeviceGlobal,
                                         Device2Host);
 }
 
 /// Actually move memory between host and device. See readGlobalFromDevice and
 /// writeGlobalToDevice for the interface description.
 Error GenericGlobalHandlerTy::moveGlobalBetweenDeviceAndHost(
-    GenericDeviceTy &Device, DeviceImageTy &DeviceImage,
-    const GlobalTy &HostGlobal, const GlobalTy &DeviceGlobal,
-    bool Device2Host) {
+    GenericDeviceTy &Device, const GlobalTy &HostGlobal,
+    const GlobalTy &DeviceGlobal, bool Device2Host) {
 
   // Transfer the data from the source to the destination.
   if (Device2Host) {
@@ -115,7 +114,7 @@ Error GenericGlobalHandlerTy::getGlobalMetadataFromImage(
     return Plugin::error("Unable to create ELF object for image %p",
                          Image.getStart());
 
-  // Search the ELF symbol using the the symbol name.
+  // Search the ELF symbol using the symbol name.
   auto SymOrErr = getELFSymbol(*ELFObj, ImageGlobal.getName());
   if (!SymOrErr)
     return Plugin::error("Failed ELF lookup of global '%s': %s",

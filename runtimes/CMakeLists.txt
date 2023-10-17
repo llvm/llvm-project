@@ -1,16 +1,13 @@
 # This file handles building LLVM runtime sub-projects.
-cmake_minimum_required(VERSION 3.13.4)
-if ("${CMAKE_VERSION}" VERSION_LESS "3.20.0")
-  message(WARNING
-    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 17.0.0, the "
-    "minimum version of CMake required to build LLVM will become 3.20.0, and "
-    "using an older CMake will become an error. Please upgrade your CMake to "
-    "at least 3.20.0 now to avoid issues in the future!")
-endif()
-project(Runtimes C CXX ASM)
+cmake_minimum_required(VERSION 3.20.0)
 
 # Add path for custom and the LLVM build's modules to the CMake module path.
 set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
+include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
+  NO_POLICY_SCOPE)
+
+project(Runtimes C CXX ASM)
+
 list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
@@ -103,36 +100,38 @@ filter_prefixed("${CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES}" ${LLVM_BINARY_DIR} CMA
 filter_prefixed("${CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES}" ${LLVM_BINARY_DIR} CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES)
 filter_prefixed("${CMAKE_ASM_IMPLICIT_INCLUDE_DIRECTORIES}" ${LLVM_BINARY_DIR} CMAKE_ASM_IMPLICIT_INCLUDE_DIRECTORIES)
 
-check_c_compiler_flag("" LLVM_RUNTIMES_LINKING_WORKS)
-if (NOT LLVM_RUNTIMES_LINKING_WORKS)
-  # The compiler driver may be implicitly trying to link against libunwind,
-  # which might not work if libunwind doesn't exist yet. Try to check if
-  # --unwindlib=none is supported, and use that if possible.
-  # Don't add this if not necessary to fix linking, as it can break using
-  # e.g. ASAN/TSAN.
-  llvm_check_compiler_linker_flag(C "--unwindlib=none" CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
-  if (CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
-    set(ORIG_CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
-    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} --unwindlib=none")
-    # TODO: When we can require CMake 3.14, we should use
-    # CMAKE_REQUIRED_LINK_OPTIONS here. Until then, we need a workaround:
-    # When using CMAKE_REQUIRED_FLAGS, this option gets added both to
-    # compilation and linking commands. That causes warnings in the
-    # compilation commands during cmake tests. This is normally benign, but
-    # when testing whether -Werror works, that test fails (due to the
-    # preexisting warning).
-    #
-    # Therefore, before we can use CMAKE_REQUIRED_LINK_OPTIONS, check if we
-    # can use --start-no-unused-arguments to silence the warnings about
-    # --unwindlib=none during compilation.
-    #
-    # We must first add --unwindlib=none to CMAKE_REQUIRED_FLAGS above, to
-    # allow this subsequent test to succeed, then rewrite CMAKE_REQUIRED_FLAGS
-    # below.
-    check_c_compiler_flag("--start-no-unused-arguments" C_SUPPORTS_START_NO_UNUSED_ARGUMENTS)
-    if (C_SUPPORTS_START_NO_UNUSED_ARGUMENTS)
-      set(CMAKE_REQUIRED_FLAGS "${ORIG_CMAKE_REQUIRED_FLAGS} --start-no-unused-arguments --unwindlib=none --end-no-unused-arguments")
-    endif()
+# The compiler driver may be implicitly trying to link against libunwind,
+# which might not work if libunwind doesn't exist yet. Try to check if
+# --unwindlib=none is supported, and use that if possible.
+#
+# TODO: Note that this is problematic when LLVM_USE_SANITIZER is used
+# because some sanitizers require the unwinder and so the combination of
+# -fsanitize=... --unwindlib=none will always result in a linking error.
+# Currently, we counteract this issue by adding -fno-sanitize=all flag in
+# the project specific code within */cmake/config-ix.cmake files but that's
+# brittle. We should ideally move this to runtimes/CMakeLists.txt.
+llvm_check_compiler_linker_flag(C "--unwindlib=none" CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
+if (CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
+  set(ORIG_CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} --unwindlib=none")
+  # TODO: When we can require CMake 3.14, we should use
+  # CMAKE_REQUIRED_LINK_OPTIONS here. Until then, we need a workaround:
+  # When using CMAKE_REQUIRED_FLAGS, this option gets added both to
+  # compilation and linking commands. That causes warnings in the
+  # compilation commands during cmake tests. This is normally benign, but
+  # when testing whether -Werror works, that test fails (due to the
+  # preexisting warning).
+  #
+  # Therefore, before we can use CMAKE_REQUIRED_LINK_OPTIONS, check if we
+  # can use --start-no-unused-arguments to silence the warnings about
+  # --unwindlib=none during compilation.
+  #
+  # We must first add --unwindlib=none to CMAKE_REQUIRED_FLAGS above, to
+  # allow this subsequent test to succeed, then rewrite CMAKE_REQUIRED_FLAGS
+  # below.
+  check_c_compiler_flag("--start-no-unused-arguments" C_SUPPORTS_START_NO_UNUSED_ARGUMENTS)
+  if (C_SUPPORTS_START_NO_UNUSED_ARGUMENTS)
+    set(CMAKE_REQUIRED_FLAGS "${ORIG_CMAKE_REQUIRED_FLAGS} --start-no-unused-arguments --unwindlib=none --end-no-unused-arguments")
   endif()
 endif()
 
@@ -161,8 +160,15 @@ find_package(Python3 REQUIRED COMPONENTS Interpreter)
 # Host triple is used by tests to check if they are running natively.
 include(GetHostTriple)
 get_host_triple(LLVM_HOST_TRIPLE)
+message(STATUS "LLVM host triple: ${LLVM_HOST_TRIPLE}")
+
+# TODO: We shouldn't be using LLVM_DEFAULT_TARGET_TRIPLE for runtimes since we
+# aren't generating code, LLVM_TARGET_TRIPLE is a better fit.
 set(LLVM_DEFAULT_TARGET_TRIPLE "${LLVM_HOST_TRIPLE}" CACHE STRING
-  "Default target for which the runtimes will be built.")
+    "Default target for which the runtimes will be built.")
+message(STATUS "LLVM default target triple: ${LLVM_DEFAULT_TARGET_TRIPLE}")
+
+set(LLVM_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}")
 
 option(LLVM_INCLUDE_TESTS "Generate build targets for the runtimes unit tests." ON)
 option(LLVM_INCLUDE_DOCS "Generate build targets for the runtimes documentation." ON)
@@ -175,9 +181,6 @@ endif()
 
 # This can be used to detect whether we're in the runtimes build.
 set(LLVM_RUNTIMES_BUILD ON)
-
-include(SetTargetTriple)
-set_llvm_target_triple()
 
 foreach(entry ${runtimes})
   get_filename_component(projName ${entry} NAME)
@@ -211,23 +214,6 @@ if(LLVM_INCLUDE_TESTS)
   set(LLVM_LIT_ARGS "${LIT_ARGS_DEFAULT}" CACHE STRING "Default options for lit")
 
   umbrella_lit_testsuite_begin(check-runtimes)
-endif()
-
-# llvm-libgcc incorporates both compiler-rt and libunwind as subprojects with very
-# specific flags, which causes clashes when they're independently built too.
-if("llvm-libgcc" IN_LIST runtimes)
-  if("compiler-rt" IN_LIST runtimes OR "compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS)
-    message(FATAL_ERROR
-      "Attempting to build both compiler-rt and llvm-libgcc will cause irreconcilable "
-      "target clashes. Please choose one or the other, but not both.")
-  endif()
-
-  if("libunwind" IN_LIST runtimes)
-    message(
-      FATAL_ERROR
-      "Attempting to build both libunwind and llvm-libgcc will cause irreconcilable "
-      "target clashes. Please choose one or the other, but not both.")
-  endif()
 endif()
 
 # We do this in two loops so that HAVE_* is set for each runtime before the

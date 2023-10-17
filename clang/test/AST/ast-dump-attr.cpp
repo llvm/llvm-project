@@ -129,6 +129,38 @@ extern int x;
 // CHECK-NEXT: AlignedAttr{{.*}} Inherited
 }
 
+namespace TestAligns {
+
+template<typename...T> struct my_union {
+  alignas(T...) char buffer[1024];
+};
+
+template<typename...T> struct my_union2 {
+  _Alignas(T...) char buffer[1024];
+};
+
+struct alignas(8) A { char c; };
+struct alignas(4) B { short s; };
+struct C { char a[16]; };
+
+// CHECK: ClassTemplateSpecializationDecl {{.*}} struct my_union
+// CHECK: CXXRecordDecl {{.*}} implicit struct my_union
+// CHECK: FieldDecl {{.*}} buffer 'char[1024]'
+// CHECK-NEXT: AlignedAttr {{.*}} alignas 'TestAligns::A':'TestAligns::A'
+// CHECK-NEXT: AlignedAttr {{.*}} alignas 'TestAligns::B':'TestAligns::B'
+// CHECK-NEXT: AlignedAttr {{.*}} alignas 'TestAligns::C':'TestAligns::C'
+my_union<A, B, C> my_union_val;
+
+// CHECK: ClassTemplateSpecializationDecl {{.*}} struct my_union2
+// CHECK: CXXRecordDecl {{.*}} implicit struct my_union2
+// CHECK: FieldDecl {{.*}} buffer 'char[1024]'
+// CHECK-NEXT: AlignedAttr {{.*}} _Alignas 'TestAligns::A':'TestAligns::A'
+// CHECK-NEXT: AlignedAttr {{.*}} _Alignas 'TestAligns::B':'TestAligns::B'
+// CHECK-NEXT: AlignedAttr {{.*}} _Alignas 'TestAligns::C':'TestAligns::C'
+my_union2<A, B, C> my_union2_val;
+
+} // namespace TestAligns
+
 int __attribute__((cdecl)) TestOne(void), TestTwo(void);
 // CHECK: FunctionDecl{{.*}}TestOne{{.*}}__attribute__((cdecl))
 // CHECK: FunctionDecl{{.*}}TestTwo{{.*}}__attribute__((cdecl))
@@ -175,7 +207,7 @@ __attribute__((external_source_symbol(language="Swift", defined_in="module", gen
 void TestExternalSourceSymbolAttr2()
 __attribute__((external_source_symbol(defined_in="module", language="Swift")));
 // CHECK: FunctionDecl{{.*}} TestExternalSourceSymbolAttr2
-// CHECK-NEXT: ExternalSourceSymbolAttr{{.*}} "Swift" "module"{{$}}
+// CHECK-NEXT: ExternalSourceSymbolAttr{{.*}} "Swift" "module" ""{{$}}
 
 void TestExternalSourceSymbolAttr3()
 __attribute__((external_source_symbol(generated_declaration, language="Objective-C++", defined_in="module")));
@@ -191,6 +223,11 @@ void TestExternalSourceSymbolAttr5()
 __attribute__((external_source_symbol(generated_declaration, defined_in="module", language="Swift")));
 // CHECK: FunctionDecl{{.*}} TestExternalSourceSymbolAttr5
 // CHECK-NEXT: ExternalSourceSymbolAttr{{.*}} "Swift" "module" GeneratedDeclaration
+
+void TestExternalSourceSymbolAttr6()
+__attribute__((external_source_symbol(generated_declaration, defined_in="module", language="Swift", USR="testUSR")));
+// CHECK: FunctionDecl{{.*}} TestExternalSourceSymbolAttr6
+// CHECK-NEXT: ExternalSourceSymbolAttr{{.*}} "Swift" "module" GeneratedDeclaration "testUSR"
 
 namespace TestNoEscape {
   void noescapeFunc(int *p0, __attribute__((noescape)) int *p1) {}

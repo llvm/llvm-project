@@ -3,6 +3,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/ADT/StringExtras.h"
 #include <optional>
 
 using namespace clang;
@@ -529,6 +530,39 @@ JSONNodeDumper::createCXXBaseSpecifier(const CXXBaseSpecifier &BS) {
   return Ret;
 }
 
+void JSONNodeDumper::VisitAliasAttr(const AliasAttr *AA) {
+  JOS.attribute("aliasee", AA->getAliasee());
+}
+
+void JSONNodeDumper::VisitCleanupAttr(const CleanupAttr *CA) {
+  JOS.attribute("cleanup_function", createBareDeclRef(CA->getFunctionDecl()));
+}
+
+void JSONNodeDumper::VisitDeprecatedAttr(const DeprecatedAttr *DA) {
+  if (!DA->getMessage().empty())
+    JOS.attribute("message", DA->getMessage());
+  if (!DA->getReplacement().empty())
+    JOS.attribute("replacement", DA->getReplacement());
+}
+
+void JSONNodeDumper::VisitUnavailableAttr(const UnavailableAttr *UA) {
+  if (!UA->getMessage().empty())
+    JOS.attribute("message", UA->getMessage());
+}
+
+void JSONNodeDumper::VisitSectionAttr(const SectionAttr *SA) {
+  JOS.attribute("section_name", SA->getName());
+}
+
+void JSONNodeDumper::VisitVisibilityAttr(const VisibilityAttr *VA) {
+  JOS.attribute("visibility", VisibilityAttr::ConvertVisibilityTypeToStr(
+                                  VA->getVisibility()));
+}
+
+void JSONNodeDumper::VisitTLSModelAttr(const TLSModelAttr *TA) {
+  JOS.attribute("tls_model", TA->getModel());
+}
+
 void JSONNodeDumper::VisitTypedefType(const TypedefType *TT) {
   JOS.attribute("decl", createBareDeclRef(TT->getDecl()));
   if (!TT->typeMatchesDecl())
@@ -662,6 +696,9 @@ void JSONNodeDumper::VisitVectorType(const VectorType *VT) {
   case VectorType::SveFixedLengthPredicateVector:
     JOS.attribute("vectorKind", "fixed-length sve predicate vector");
     break;
+  case VectorType::RVVFixedLengthDataVector:
+    JOS.attribute("vectorKind", "fixed-length rvv data vector");
+    break;
   }
 }
 
@@ -770,6 +807,12 @@ void JSONNodeDumper::VisitNamedDecl(const NamedDecl *ND) {
     if (isa<RequiresExprBodyDecl>(ND->getDeclContext()))
       return;
 
+    // If the declaration is dependent or is in a dependent context, then the
+    // mangling is unlikely to be meaningful (and in some cases may cause
+    // "don't know how to mangle this" assertion failures.
+    if (ND->isTemplated())
+      return;
+
     // Mangled names are not meaningful for locals, and may not be well-defined
     // in the case of VLAs.
     auto *VD = dyn_cast<VarDecl>(ND);
@@ -833,6 +876,9 @@ void JSONNodeDumper::VisitUsingShadowDecl(const UsingShadowDecl *USD) {
 void JSONNodeDumper::VisitVarDecl(const VarDecl *VD) {
   VisitNamedDecl(VD);
   JOS.attribute("type", createQualType(VD->getType()));
+  if (const auto *P = dyn_cast<ParmVarDecl>(VD))
+    attributeOnlyIfTrue("explicitObjectParameter",
+                        P->isExplicitObjectParameter());
 
   StorageClass SC = VD->getStorageClass();
   if (SC != SC_None)
@@ -880,6 +926,7 @@ void JSONNodeDumper::VisitFunctionDecl(const FunctionDecl *FD) {
   attributeOnlyIfTrue("explicitlyDeleted", FD->isDeletedAsWritten());
   attributeOnlyIfTrue("constexpr", FD->isConstexpr());
   attributeOnlyIfTrue("variadic", FD->isVariadic());
+  attributeOnlyIfTrue("immediate", FD->isImmediateFunction());
 
   if (FD->isDefaulted())
     JOS.attribute("explicitlyDefaulted",
@@ -1135,6 +1182,10 @@ void JSONNodeDumper::VisitBlockDecl(const BlockDecl *D) {
   attributeOnlyIfTrue("capturesThis", D->capturesCXXThis());
 }
 
+void JSONNodeDumper::VisitAtomicExpr(const AtomicExpr *AE) {
+  JOS.attribute("name", AE->getOpAsString());
+}
+
 void JSONNodeDumper::VisitObjCEncodeExpr(const ObjCEncodeExpr *OEE) {
   JOS.attribute("encodedType", createQualType(OEE->getEncodedType()));
 }
@@ -1240,6 +1291,7 @@ void JSONNodeDumper::VisitDeclRefExpr(const DeclRefExpr *DRE) {
   case NOUR_Constant: JOS.attribute("nonOdrUseReason", "constant"); break;
   case NOUR_Discarded: JOS.attribute("nonOdrUseReason", "discarded"); break;
   }
+  attributeOnlyIfTrue("isImmediateEscalating", DRE->isImmediateEscalating());
 }
 
 void JSONNodeDumper::VisitSYCLUniqueStableNameExpr(
@@ -1399,6 +1451,7 @@ void JSONNodeDumper::VisitCXXConstructExpr(const CXXConstructExpr *CE) {
   attributeOnlyIfTrue("initializer_list", CE->isStdInitListInitialization());
   attributeOnlyIfTrue("zeroing", CE->requiresZeroInitialization());
   attributeOnlyIfTrue("hadMultipleCandidates", CE->hadMultipleCandidates());
+  attributeOnlyIfTrue("isImmediateEscalating", CE->isImmediateEscalating());
 
   switch (CE->getConstructionKind()) {
   case CXXConstructExpr::CK_Complete:

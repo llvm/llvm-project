@@ -175,6 +175,7 @@ namespace {
 /// PrintRawCompoundStmt - Print a compound stmt without indenting the {, and
 /// with no newline after the }.
 void StmtPrinter::PrintRawCompoundStmt(CompoundStmt *Node) {
+  assert(Node && "Compound statement cannot be null");
   OS << "{" << NL;
   PrintFPPragmas(Node);
   for (auto *I : Node->body())
@@ -400,7 +401,9 @@ void StmtPrinter::VisitForStmt(ForStmt *Node) {
     PrintInitStmt(Node->getInit(), 5);
   else
     OS << (Node->getCond() ? "; " : ";");
-  if (Node->getCond())
+  if (const DeclStmt *DS = Node->getConditionVariableDeclStmt())
+    PrintRawDeclStmt(DS);
+  else if (Node->getCond())
     PrintExpr(Node->getCond());
   OS << ";";
   if (Node->getInc()) {
@@ -597,8 +600,10 @@ void StmtPrinter::VisitObjCAtTryStmt(ObjCAtTryStmt *Node) {
 
   if (auto *FS = static_cast<ObjCAtFinallyStmt *>(Node->getFinallyStmt())) {
     Indent() << "@finally";
-    PrintRawCompoundStmt(dyn_cast<CompoundStmt>(FS->getFinallyBody()));
-    OS << NL;
+    if (auto *CS = dyn_cast<CompoundStmt>(FS->getFinallyBody())) {
+      PrintRawCompoundStmt(CS);
+      OS << NL;
+    }
   }
 }
 
@@ -633,7 +638,7 @@ void StmtPrinter::VisitObjCAtSynchronizedStmt(ObjCAtSynchronizedStmt *Node) {
 
 void StmtPrinter::VisitObjCAutoreleasePoolStmt(ObjCAutoreleasePoolStmt *Node) {
   Indent() << "@autoreleasepool";
-  PrintRawCompoundStmt(dyn_cast<CompoundStmt>(Node->getSubStmt()));
+  PrintRawCompoundStmt(cast<CompoundStmt>(Node->getSubStmt()));
   OS << NL;
 }
 
@@ -772,6 +777,11 @@ void StmtPrinter::VisitOMPSectionsDirective(OMPSectionsDirective *Node) {
 
 void StmtPrinter::VisitOMPSectionDirective(OMPSectionDirective *Node) {
   Indent() << "#pragma omp section";
+  PrintOMPExecutableDirective(Node);
+}
+
+void StmtPrinter::VisitOMPScopeDirective(OMPScopeDirective *Node) {
+  Indent() << "#pragma omp scope";
   PrintOMPExecutableDirective(Node);
 }
 
@@ -1458,8 +1468,12 @@ void StmtPrinter::VisitUnaryExprOrTypeTraitExpr(
 
 void StmtPrinter::VisitGenericSelectionExpr(GenericSelectionExpr *Node) {
   OS << "_Generic(";
-  PrintExpr(Node->getControllingExpr());
-  for (const GenericSelectionExpr::Association Assoc : Node->associations()) {
+  if (Node->isExprPredicate())
+    PrintExpr(Node->getControllingExpr());
+  else
+    Node->getControllingType()->getType().print(OS, Policy);
+
+  for (const GenericSelectionExpr::Association &Assoc : Node->associations()) {
     OS << ", ";
     QualType T = Assoc.getType();
     if (T.isNull())
@@ -1740,7 +1754,7 @@ void StmtPrinter::VisitDesignatedInitExpr(DesignatedInitExpr *Node) {
   for (const DesignatedInitExpr::Designator &D : Node->designators()) {
     if (D.isFieldDesignator()) {
       if (D.getDotLoc().isInvalid()) {
-        if (IdentifierInfo *II = D.getFieldName()) {
+        if (const IdentifierInfo *II = D.getFieldName()) {
           OS << II->getName() << ":";
           NeedsEquals = false;
         }
@@ -2539,7 +2553,7 @@ void StmtPrinter::VisitRequiresExpr(RequiresExpr *E) {
   OS << "}";
 }
 
-// C++ Coroutines TS
+// C++ Coroutines
 
 void StmtPrinter::VisitCoroutineBodyStmt(CoroutineBodyStmt *S) {
   Visit(S->getBody());

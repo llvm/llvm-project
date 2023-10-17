@@ -1,4 +1,6 @@
 function(collect_object_file_deps target result)
+  # NOTE: This function does add entrypoint targets to |result|.
+  # It is expected that the caller adds them separately.
   set(all_deps "")
   get_target_property(target_type ${target} "TARGET_TYPE")
   if(NOT target_type)
@@ -12,11 +14,13 @@ function(collect_object_file_deps target result)
       collect_object_file_deps(${dep} dep_targets)
       list(APPEND all_deps ${dep_targets})
     endforeach(dep)
+    list(REMOVE_DUPLICATES all_deps)
     set(${result} ${all_deps} PARENT_SCOPE)
     return()
   endif()
 
-  if(${target_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE})
+  if(${target_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE} OR
+     ${target_type} STREQUAL ${ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE})
     set(entrypoint_target ${target})
     get_target_property(is_alias ${entrypoint_target} "IS_ALIAS")
     if(is_alias)
@@ -27,12 +31,12 @@ function(collect_object_file_deps target result)
       endif()
       set(entrypoint_target ${aliasee})
     endif()
-    list(APPEND all_deps ${entrypoint_target})
     get_target_property(deps ${target} "DEPS")
     foreach(dep IN LISTS deps)
       collect_object_file_deps(${dep} dep_targets)
       list(APPEND all_deps ${dep_targets})
     endforeach(dep)
+    list(REMOVE_DUPLICATES all_deps)
     set(${result} ${all_deps} PARENT_SCOPE)
     return()
   endif()
@@ -72,12 +76,30 @@ function(add_entrypoint_library target_name)
   set(all_deps "")
   foreach(dep IN LISTS fq_deps_list)
     get_target_property(dep_type ${dep} "TARGET_TYPE")
-    if(NOT ((${dep_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE}) OR (${dep_type} STREQUAL ${ENTRYPOINT_EXT_TARGET_TYPE})))
+    if(NOT ((${dep_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE}) OR
+            (${dep_type} STREQUAL ${ENTRYPOINT_EXT_TARGET_TYPE}) OR
+            (${dep_type} STREQUAL ${ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE})))
       message(FATAL_ERROR "Dependency '${dep}' of 'add_entrypoint_collection' is "
                           "not an 'add_entrypoint_object' or 'add_entrypoint_external' target.")
     endif()
     collect_object_file_deps(${dep} recursive_deps)
     list(APPEND all_deps ${recursive_deps})
+    # Add the entrypoint object target explicitly as collect_object_file_deps
+    # only collects object files from non-entrypoint targets.
+    if(${dep_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE} OR
+       ${dep_type} STREQUAL ${ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE})
+      set(entrypoint_target ${dep})
+      get_target_property(is_alias ${entrypoint_target} "IS_ALIAS")
+      if(is_alias)
+        get_target_property(aliasee ${entrypoint_target} "DEPS")
+        if(NOT aliasee)
+          message(FATAL_ERROR
+                  "Entrypoint alias ${entrypoint_target} does not have an aliasee.")
+        endif()
+        set(entrypoint_target ${aliasee})
+      endif()
+    endif()
+    list(APPEND all_deps ${entrypoint_target})
   endforeach(dep)
   list(REMOVE_DUPLICATES all_deps)
   set(objects "")
@@ -90,7 +112,7 @@ function(add_entrypoint_library target_name)
     STATIC
     ${objects}
   )
-  set_target_properties(${target_name}  PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+  set_target_properties(${target_name} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${LIBC_LIBRARY_DIR})
 endfunction(add_entrypoint_library)
 
 # Rule to build a shared library of redirector objects.
@@ -117,7 +139,7 @@ function(add_redirector_library target_name)
     SHARED
     ${obj_files}
   )
-  set_target_properties(${target_name}  PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+  set_target_properties(${target_name}  PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${LIBC_LIBRARY_DIR})
   target_link_libraries(${target_name}  -nostdlib -lc -lm)
   set_target_properties(${target_name}  PROPERTIES LINKER_LANGUAGE "C")
 endfunction(add_redirector_library)
@@ -130,20 +152,13 @@ function(create_header_library fq_target_name)
     "ADD_HEADER"
     "" # Optional arguments
     "" # Single value arguments
-    "HDRS;DEPENDS;FLAGS" # Multi-value arguments
+    "HDRS;DEPENDS;FLAGS;COMPILE_OPTIONS" # Multi-value arguments
     ${ARGN}
   )
 
   if(NOT ADD_HEADER_HDRS)
     message(FATAL_ERROR "'add_header_library' target requires a HDRS list of .h files.")
   endif()
-
-  set(FULL_HDR_PATHS "")
-  # TODO: Remove this foreach block when we can switch to the new
-  # version of the CMake policy CMP0076.
-  foreach(hdr IN LISTS ADD_HEADER_HDRS)
-    list(APPEND FULL_HDR_PATHS ${CMAKE_CURRENT_SOURCE_DIR}/${hdr})
-  endforeach()
 
   if(SHOW_INTERMEDIATE_OBJECTS)
     message(STATUS "Adding header library ${fq_target_name}")
@@ -153,24 +168,20 @@ function(create_header_library fq_target_name)
       endforeach()
     endif()
   endif()
-  set(interface_target_name "${fq_target_name}.__header_library__")
 
-  add_library(${interface_target_name} INTERFACE)
-  target_sources(${interface_target_name} INTERFACE ${FULL_HDR_PATHS})
+  add_library(${fq_target_name} INTERFACE)
+  target_sources(${fq_target_name} INTERFACE ${ADD_HEADER_HDRS})
   if(ADD_HEADER_DEPENDS)
-    add_dependencies(${interface_target_name} ${ADD_HEADER_DEPENDS})
+    add_dependencies(${fq_target_name} ${ADD_HEADER_DEPENDS})
+    target_link_libraries(${fq_target_name} INTERFACE ${ADD_HEADER_DEPENDS})
   endif()
-  set_target_properties(
-    ${interface_target_name}
-    PROPERTIES
-      INTERFACE_FLAGS "${ADD_HEADER_FLAGS}"
-  )
-
-  add_custom_target(${fq_target_name})
-  add_dependencies(${fq_target_name} ${interface_target_name})
+  if(ADD_HEADER_COMPILE_OPTIONS)
+    target_compile_options(${fq_target_name} INTERFACE ${ADD_HEADER_COMPILE_OPTIONS})
+  endif()
   set_target_properties(
     ${fq_target_name}
     PROPERTIES
+      INTERFACE_FLAGS "${ADD_HEADER_FLAGS}"
       TARGET_TYPE "${HDR_LIBRARY_TARGET_TYPE}"
       DEPS "${ADD_HEADER_DEPENDS}"
       FLAGS "${ADD_HEADER_FLAGS}"

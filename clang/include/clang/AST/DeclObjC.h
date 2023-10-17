@@ -172,7 +172,7 @@ private:
                  Selector SelInfo, QualType T, TypeSourceInfo *ReturnTInfo,
                  DeclContext *contextDecl, bool isInstance = true,
                  bool isVariadic = false, bool isPropertyAccessor = false,
-                 bool isSynthesizedAccessorStub = false, 
+                 bool isSynthesizedAccessorStub = false,
                  bool isImplicitlyDeclared = false, bool isDefined = false,
                  ImplementationControl impControl = None,
                  bool HasRelatedResultType = false);

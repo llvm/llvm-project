@@ -22,7 +22,7 @@ MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(Transform, transform,
 //===---------------------------------------------------------------------===//
 
 bool mlirTypeIsATransformAnyOpType(MlirType type) {
-  return unwrap(type).isa<transform::AnyOpType>();
+  return isa<transform::AnyOpType>(unwrap(type));
 }
 
 MlirType mlirTransformAnyOpTypeGet(MlirContext ctx) {
@@ -30,11 +30,39 @@ MlirType mlirTransformAnyOpTypeGet(MlirContext ctx) {
 }
 
 //===---------------------------------------------------------------------===//
+// AnyParamType
+//===---------------------------------------------------------------------===//
+
+bool mlirTypeIsATransformAnyParamType(MlirType type) {
+  return isa<transform::AnyParamType>(unwrap(type));
+}
+
+MlirType mlirTransformAnyParamTypeGet(MlirContext ctx) {
+  return wrap(transform::AnyParamType::get(unwrap(ctx)));
+}
+
+//===---------------------------------------------------------------------===//
+// AnyValueType
+//===---------------------------------------------------------------------===//
+
+bool mlirTypeIsATransformAnyValueType(MlirType type) {
+  return isa<transform::AnyValueType>(unwrap(type));
+}
+
+MlirType mlirTransformAnyValueTypeGet(MlirContext ctx) {
+  return wrap(transform::AnyValueType::get(unwrap(ctx)));
+}
+
+//===---------------------------------------------------------------------===//
 // OperationType
 //===---------------------------------------------------------------------===//
 
 bool mlirTypeIsATransformOperationType(MlirType type) {
-  return unwrap(type).isa<transform::OperationType>();
+  return isa<transform::OperationType>(unwrap(type));
+}
+
+MlirTypeID mlirTransformOperationTypeGetTypeID(void) {
+  return wrap(transform::OperationType::getTypeID());
 }
 
 MlirType mlirTransformOperationTypeGet(MlirContext ctx,
@@ -44,5 +72,21 @@ MlirType mlirTransformOperationTypeGet(MlirContext ctx,
 }
 
 MlirStringRef mlirTransformOperationTypeGetOperationName(MlirType type) {
-  return wrap(unwrap(type).cast<transform::OperationType>().getOperationName());
+  return wrap(cast<transform::OperationType>(unwrap(type)).getOperationName());
+}
+
+//===---------------------------------------------------------------------===//
+// AnyOpType
+//===---------------------------------------------------------------------===//
+
+bool mlirTypeIsATransformParamType(MlirType type) {
+  return isa<transform::ParamType>(unwrap(type));
+}
+
+MlirType mlirTransformParamTypeGet(MlirContext ctx, MlirType type) {
+  return wrap(transform::ParamType::get(unwrap(ctx), unwrap(type)));
+}
+
+MlirType mlirTransformParamTypeGetType(MlirType type) {
+  return wrap(cast<transform::ParamType>(unwrap(type)).getType());
 }

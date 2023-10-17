@@ -6,7 +6,7 @@ target triple = "dxil-unknown-shadermodel6.7-library"
 ; Make sure vec combine min vec size is 1 instead of 4 for float.
 ; CHECK:@foo()
 ; CHECK-NEXT:%[[LD:[0-9]+]] = load <1 x float>, ptr @a, align 8
-; CHECK-NEXT:%insert = shufflevector <1 x float> %[[LD]], <1 x float> poison, <2 x i32> <i32 0, i32 undef>
+; CHECK-NEXT:%insert = shufflevector <1 x float> %[[LD]], <1 x float> poison, <2 x i32> <i32 0, i32 poison>
 ; CHECK-NEXT:%shuffle = shufflevector <2 x float> %insert, <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:ret <2 x float> %shuffle
 

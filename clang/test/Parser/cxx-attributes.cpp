@@ -41,7 +41,7 @@ void fn() {
   pi = &i[0];
 }
 
-[[deprecated([""])]] int WrongArgs; // expected-error {{expected variable name or 'this' in lambda capture list}}
+[[deprecated([""])]] int WrongArgs; // expected-error {{expected string literal as argument of 'deprecated' attribute}}
 [[,,,,,]] int Commas1; // ok
 [[,, maybe_unused]] int Commas2; // ok
 [[maybe_unused,,,]] int Commas3; // ok

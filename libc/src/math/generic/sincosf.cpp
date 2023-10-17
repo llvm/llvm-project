@@ -11,12 +11,14 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
-#include "src/__support/cpu_features.h"
+#include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
+#include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 
 #include <errno.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // Exceptional values
 static constexpr int N_EXCEPTS = 6;
@@ -97,8 +99,8 @@ LLVM_LIBC_FUNCTION(void, sincosf, (float x, float *sinp, float *cosp)) {
   // Sollya respectively.
 
   // |x| < 0x1.0p-12f
-  if (unlikely(x_abs < 0x3980'0000U)) {
-    if (unlikely(x_abs == 0U)) {
+  if (LIBC_UNLIKELY(x_abs < 0x3980'0000U)) {
+    if (LIBC_UNLIKELY(x_abs == 0U)) {
       // For signed zeros.
       *sinp = x;
       *cosp = 1.0f;
@@ -129,22 +131,22 @@ LLVM_LIBC_FUNCTION(void, sincosf, (float x, float *sinp, float *cosp)) {
     // |x| < 2^-125. For targets without FMA instructions, we simply use
     // double for intermediate results as it is more efficient than using an
     // emulated version of FMA.
-#if defined(LIBC_TARGET_HAS_FMA)
+#if defined(LIBC_TARGET_CPU_HAS_FMA)
     *sinp = fputil::multiply_add(x, -0x1.0p-25f, x);
     *cosp = fputil::multiply_add(FPBits(x_abs).get_val(), -0x1.0p-25f, 1.0f);
 #else
     *sinp = static_cast<float>(fputil::multiply_add(xd, -0x1.0p-25, xd));
     *cosp = static_cast<float>(fputil::multiply_add(
         static_cast<double>(FPBits(x_abs).get_val()), -0x1.0p-25, 1.0));
-#endif // LIBC_TARGET_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA
     return;
   }
 
   // x is inf or nan.
-  if (unlikely(x_abs >= 0x7f80'0000U)) {
+  if (LIBC_UNLIKELY(x_abs >= 0x7f80'0000U)) {
     if (x_abs == 0x7f80'0000U) {
-      errno = EDOM;
-      fputil::set_except(FE_INVALID);
+      fputil::set_errno_if_required(EDOM);
+      fputil::raise_except_if_required(FE_INVALID);
     }
     *sinp =
         x + FPBits::build_nan(1 << (fputil::MantissaWidth<float>::VALUE - 1));
@@ -154,11 +156,11 @@ LLVM_LIBC_FUNCTION(void, sincosf, (float x, float *sinp, float *cosp)) {
 
   // Check exceptional values.
   for (int i = 0; i < N_EXCEPTS; ++i) {
-    if (unlikely(x_abs == EXCEPT_INPUTS[i])) {
+    if (LIBC_UNLIKELY(x_abs == EXCEPT_INPUTS[i])) {
       uint32_t s = EXCEPT_OUTPUTS_SIN[i][0]; // FE_TOWARDZERO
       uint32_t c = EXCEPT_OUTPUTS_COS[i][0]; // FE_TOWARDZERO
       bool x_sign = x < 0;
-      switch (fputil::get_round()) {
+      switch (fputil::quick_get_round()) {
       case FE_UPWARD:
         s += x_sign ? EXCEPT_OUTPUTS_SIN[i][2] : EXCEPT_OUTPUTS_SIN[i][1];
         c += EXCEPT_OUTPUTS_COS[i][1];
@@ -192,10 +194,10 @@ LLVM_LIBC_FUNCTION(void, sincosf, (float x, float *sinp, float *cosp)) {
 
   sincosf_eval(xd, x_abs, sin_k, cos_k, sin_y, cosm1_y);
 
-  *sinp = fputil::multiply_add(sin_y, cos_k,
-                               fputil::multiply_add(cosm1_y, sin_k, sin_k));
-  *cosp = fputil::multiply_add(sin_y, -sin_k,
-                               fputil::multiply_add(cosm1_y, cos_k, cos_k));
+  *sinp = static_cast<float>(fputil::multiply_add(
+      sin_y, cos_k, fputil::multiply_add(cosm1_y, sin_k, sin_k)));
+  *cosp = static_cast<float>(fputil::multiply_add(
+      sin_y, -sin_k, fputil::multiply_add(cosm1_y, cos_k, cos_k)));
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

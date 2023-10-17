@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin11 -fsyntax-only -fobjc-arc -verify %s
 // RUN: not %clang_cc1 -triple x86_64-apple-darwin11 -fsyntax-only -fobjc-arc -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
-// rdar://11913153
 
 typedef const struct __CFString * CFStringRef;
 typedef struct __CFString * CFMutableStringRef;
@@ -35,5 +34,5 @@ NSMutableString *test(void) {
 					
 }
 
-// CHECK: fix-it:"{{.*}}":{32:25-32:25}:"CFBridgingRelease("
-// CHECK: fix-it:"{{.*}}":{32:63-32:63}:")"
+// CHECK: fix-it:"{{.*}}":{31:25-31:25}:"CFBridgingRelease("
+// CHECK: fix-it:"{{.*}}":{31:63-31:63}:")"

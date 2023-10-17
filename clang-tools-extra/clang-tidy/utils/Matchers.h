@@ -10,12 +10,11 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_MATCHERS_H
 
 #include "TypeTraits.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include <optional>
 
-namespace clang {
-namespace tidy {
-namespace matchers {
+namespace clang::tidy::matchers {
 
 AST_MATCHER(BinaryOperator, isRelationalOperator) {
   return Node.isRelationalOp();
@@ -48,6 +47,23 @@ AST_MATCHER_FUNCTION(ast_matchers::TypeMatcher, isReferenceToConst) {
 AST_MATCHER_FUNCTION(ast_matchers::TypeMatcher, isPointerToConst) {
   using namespace ast_matchers;
   return pointerType(pointee(qualType(isConstQualified())));
+}
+
+AST_MATCHER(Expr, hasUnevaluatedContext) {
+  if (isa<CXXNoexceptExpr>(Node) || isa<RequiresExpr>(Node))
+    return true;
+  if (const auto *UnaryExpr = dyn_cast<UnaryExprOrTypeTraitExpr>(&Node)) {
+    switch (UnaryExpr->getKind()) {
+    case UETT_SizeOf:
+    case UETT_AlignOf:
+      return true;
+    default:
+      return false;
+    }
+  }
+  if (const auto *TypeIDExpr = dyn_cast<CXXTypeidExpr>(&Node))
+    return !TypeIDExpr->isPotentiallyEvaluated();
+  return false;
 }
 
 // A matcher implementation that matches a list of type name regular expressions
@@ -96,7 +112,9 @@ private:
       case MatchMode::MatchFullyQualified:
         return Regex.match("::" + ND.getQualifiedNameAsString());
       default:
-        return Regex.match(ND.getName());
+        if (const IdentifierInfo *II = ND.getIdentifier())
+          return Regex.match(II->getName());
+        return false;
       }
     }
 
@@ -122,8 +140,46 @@ matchesAnyListedName(llvm::ArrayRef<StringRef> NameList) {
       new MatchesAnyListedNameMatcher(NameList));
 }
 
-} // namespace matchers
-} // namespace tidy
-} // namespace clang
+// Predicate that verify if statement is not identical to one bound to ID node.
+struct NotIdenticalStatementsPredicate {
+  bool
+  operator()(const clang::ast_matchers::internal::BoundNodesMap &Nodes) const;
+
+  std::string ID;
+  ::clang::DynTypedNode Node;
+  ASTContext *Context;
+};
+
+// Checks if statement is identical (utils::areStatementsIdentical) to one bound
+// to ID node.
+AST_MATCHER_P(Stmt, isStatementIdenticalToBoundNode, std::string, ID) {
+  NotIdenticalStatementsPredicate Predicate{
+      ID, ::clang::DynTypedNode::create(Node), &(Finder->getASTContext())};
+  return Builder->removeBindings(Predicate);
+}
+
+// A matcher implementation that matches a list of type name regular expressions
+// against a QualType.
+class MatchesAnyListedTypeNameMatcher
+    : public ast_matchers::internal::MatcherInterface<QualType> {
+public:
+  explicit MatchesAnyListedTypeNameMatcher(llvm::ArrayRef<StringRef> NameList);
+  ~MatchesAnyListedTypeNameMatcher() override;
+  bool matches(
+      const QualType &Node, ast_matchers::internal::ASTMatchFinder *Finder,
+      ast_matchers::internal::BoundNodesTreeBuilder *Builder) const override;
+
+private:
+  std::vector<llvm::Regex> NameMatchers;
+};
+
+// Returns a matcher that matches QualType against a list of provided regular.
+inline ::clang::ast_matchers::internal::Matcher<QualType>
+matchesAnyListedTypeName(llvm::ArrayRef<StringRef> NameList) {
+  return ::clang::ast_matchers::internal::makeMatcher(
+      new MatchesAnyListedTypeNameMatcher(NameList));
+}
+
+} // namespace clang::tidy::matchers
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_MATCHERS_H

@@ -109,15 +109,11 @@ entry:
   ret void
 }
 
-; Externally-defined functions with weak linkage should not be tail-called.
-; The behaviour of branch instructions in this situation (as used for tail
-; calls) is implementation-defined, so we cannot rely on the linker replacing
-; the tail call with a return.
+; Perform tail call optimization for external weak symbol.
 declare extern_weak void @callee_weak()
 define void @caller_weak() nounwind {
 ; CHECK-LABEL: caller_weak
-; CHECK-NOT: tail callee_weak
-; CHECK: call callee_weak
+; CHECK: tail callee_weak
 entry:
   tail call void @callee_weak()
   ret void

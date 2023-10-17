@@ -236,6 +236,7 @@
 #CHECK: aghi	%r0, 1                  # encoding: [0xa7,0x0b,0x00,0x01]
 #CHECK: aghi	%r0, 32767              # encoding: [0xa7,0x0b,0x7f,0xff]
 #CHECK: aghi	%r15, 0                 # encoding: [0xa7,0xfb,0x00,0x00]
+#CHECK: aghi	%r0, foo                # encoding: [0xa7,0x0b,A,A]
 
 	aghi	%r0, -32768
 	aghi	%r0, -1
@@ -243,6 +244,7 @@
 	aghi	%r0, 1
 	aghi	%r0, 32767
 	aghi	%r15, 0
+	aghi	%r0, foo
 
 #CHECK: agr	%r0, %r0                # encoding: [0xb9,0x08,0x00,0x00]
 #CHECK: agr	%r0, %r15               # encoding: [0xb9,0x08,0x00,0x0f]
@@ -304,6 +306,7 @@
 #CHECK: ahi	%r0, 1                  # encoding: [0xa7,0x0a,0x00,0x01]
 #CHECK: ahi	%r0, 32767              # encoding: [0xa7,0x0a,0x7f,0xff]
 #CHECK: ahi	%r15, 0                 # encoding: [0xa7,0xfa,0x00,0x00]
+#CHECK: ahi	%r0, foo                # encoding: [0xa7,0x0a,A,A]
 
 	ahi	%r0, -32768
 	ahi	%r0, -1
@@ -311,6 +314,7 @@
 	ahi	%r0, 1
 	ahi	%r0, 32767
 	ahi	%r15, 0
+	ahi	%r0, foo
 
 #CHECK: ahy	%r0, -524288            # encoding: [0xe3,0x00,0x00,0x00,0x80,0x7a]
 #CHECK: ahy	%r0, -1                 # encoding: [0xe3,0x00,0x0f,0xff,0xff,0x7a]
@@ -3425,6 +3429,7 @@
 #CHECK: cghi	%r0, 1                  # encoding: [0xa7,0x0f,0x00,0x01]
 #CHECK: cghi	%r0, 32767              # encoding: [0xa7,0x0f,0x7f,0xff]
 #CHECK: cghi	%r15, 0                 # encoding: [0xa7,0xff,0x00,0x00]
+#CHECK: cghi	%r0, foo                # encoding: [0xa7,0x0f,A,A]
 
 	cghi	%r0, -32768
 	cghi	%r0, -1
@@ -3432,6 +3437,7 @@
 	cghi	%r0, 1
 	cghi	%r0, 32767
 	cghi	%r15, 0
+	cghi	%r0, foo
 
 #CHECK: cghrl	%r0, .[[LAB:L.*]]-4294967296 # encoding: [0xc6,0x04,A,A,A,A]
 #CHECK:  fixup A - offset: 2, value: (.[[LAB]]-4294967296)+2, kind: FK_390_PC32DBL
@@ -4286,6 +4292,7 @@
 #CHECK: chi	%r0, 1                  # encoding: [0xa7,0x0e,0x00,0x01]
 #CHECK: chi	%r0, 32767              # encoding: [0xa7,0x0e,0x7f,0xff]
 #CHECK: chi	%r15, 0                 # encoding: [0xa7,0xfe,0x00,0x00]
+#CHECK: chi	%r0, foo                # encoding: [0xa7,0x0e,A,A]
 
 	chi	%r0, -32768
 	chi	%r0, -1
@@ -4293,6 +4300,7 @@
 	chi	%r0, 1
 	chi	%r0, 32767
 	chi	%r15, 0
+	chi	%r0, foo
 
 #CHECK: chrl	%r0, .[[LAB:L.*]]-4294967296 # encoding: [0xc6,0x05,A,A,A,A]
 #CHECK:  fixup A - offset: 2, value: (.[[LAB]]-4294967296)+2, kind: FK_390_PC32DBL
@@ -9608,6 +9616,7 @@
 #CHECK: lghi	%r0, 1                  # encoding: [0xa7,0x09,0x00,0x01]
 #CHECK: lghi	%r0, 32767              # encoding: [0xa7,0x09,0x7f,0xff]
 #CHECK: lghi	%r15, 0                 # encoding: [0xa7,0xf9,0x00,0x00]
+#CHECK: lghi	%r14, foo               # encoding: [0xa7,0xe9,A,A]
 
 	lghi	%r0, -32768
 	lghi	%r0, -1
@@ -9615,6 +9624,7 @@
 	lghi	%r0, 1
 	lghi	%r0, 32767
 	lghi	%r15, 0
+	lghi	%r14, foo
 
 #CHECK: lghr	%r0, %r15               # encoding: [0xb9,0x07,0x00,0x0f]
 #CHECK: lghr	%r7, %r8                # encoding: [0xb9,0x07,0x00,0x78]
@@ -9730,6 +9740,7 @@
 #CHECK: lhi	%r0, 1                  # encoding: [0xa7,0x08,0x00,0x01]
 #CHECK: lhi	%r0, 32767              # encoding: [0xa7,0x08,0x7f,0xff]
 #CHECK: lhi	%r15, 0                 # encoding: [0xa7,0xf8,0x00,0x00]
+#CHECK: lhi	%r0, foo                # encoding: [0xa7,0x08,A,A]
 
 	lhi	%r0, -32768
 	lhi	%r0, -1
@@ -9737,6 +9748,7 @@
 	lhi	%r0, 1
 	lhi	%r0, 32767
 	lhi	%r15, 0
+	lhi	%r0, foo
 
 #CHECK: lhr	%r0, %r15               # encoding: [0xb9,0x27,0x00,0x0f]
 #CHECK: lhr	%r7, %r8                # encoding: [0xb9,0x27,0x00,0x78]
@@ -11641,6 +11653,7 @@
 #CHECK: mghi	%r0, 1                  # encoding: [0xa7,0x0d,0x00,0x01]
 #CHECK: mghi	%r0, 32767              # encoding: [0xa7,0x0d,0x7f,0xff]
 #CHECK: mghi	%r15, 0                 # encoding: [0xa7,0xfd,0x00,0x00]
+#CHECK: mghi	%r0, foo                # encoding: [0xa7,0x0d,A,A]
 
 	mghi	%r0, -32768
 	mghi	%r0, -1
@@ -11648,6 +11661,7 @@
 	mghi	%r0, 1
 	mghi	%r0, 32767
 	mghi	%r15, 0
+	mghi	%r0, foo
 
 #CHECK: mh	%r0, 0                  # encoding: [0x4c,0x00,0x00,0x00]
 #CHECK: mh	%r0, 4095               # encoding: [0x4c,0x00,0x0f,0xff]
@@ -11671,6 +11685,7 @@
 #CHECK: mhi	%r0, 1                  # encoding: [0xa7,0x0c,0x00,0x01]
 #CHECK: mhi	%r0, 32767              # encoding: [0xa7,0x0c,0x7f,0xff]
 #CHECK: mhi	%r15, 0                 # encoding: [0xa7,0xfc,0x00,0x00]
+#CHECK: mhi	%r0, foo                # encoding: [0xa7,0x0c,A,A]
 
 	mhi	%r0, -32768
 	mhi	%r0, -1
@@ -11678,6 +11693,7 @@
 	mhi	%r0, 1
 	mhi	%r0, 32767
 	mhi	%r15, 0
+	mhi	%r0, foo
 
 #CHECK: mhy	%r0, -524288            # encoding: [0xe3,0x00,0x00,0x00,0x80,0x7c]
 #CHECK: mhy	%r0, -1                 # encoding: [0xe3,0x00,0x0f,0xff,0xff,0x7c]
@@ -13467,6 +13483,8 @@
 
 #CHECK: risbg	%r0, %r0, 0, 0, 0       # encoding: [0xec,0x00,0x00,0x00,0x00,0x55]
 #CHECK: risbg	%r0, %r0, 0, 0, 63      # encoding: [0xec,0x00,0x00,0x00,0x3f,0x55]
+#CHECK: risbg	%r0, %r0, 0, 0, 64      # encoding: [0xec,0x00,0x00,0x00,0x40,0x55]
+#CHECK: risbg	%r0, %r0, 0, 0, 255     # encoding: [0xec,0x00,0x00,0x00,0xff,0x55]
 #CHECK: risbg	%r0, %r0, 0, 255, 0     # encoding: [0xec,0x00,0x00,0xff,0x00,0x55]
 #CHECK: risbg	%r0, %r0, 255, 0, 0     # encoding: [0xec,0x00,0xff,0x00,0x00,0x55]
 #CHECK: risbg	%r0, %r15, 0, 0, 0      # encoding: [0xec,0x0f,0x00,0x00,0x00,0x55]
@@ -13475,6 +13493,8 @@
 
 	risbg	%r0,%r0,0,0,0
 	risbg	%r0,%r0,0,0,63
+	risbg	%r0,%r0,0,0,64
+	risbg	%r0,%r0,0,0,255
 	risbg	%r0,%r0,0,255,0
 	risbg	%r0,%r0,255,0,0
 	risbg	%r0,%r15,0,0,0
@@ -13535,6 +13555,8 @@
 
 #CHECK: rnsbg	%r0, %r0, 0, 0, 0       # encoding: [0xec,0x00,0x00,0x00,0x00,0x54]
 #CHECK: rnsbg	%r0, %r0, 0, 0, 63      # encoding: [0xec,0x00,0x00,0x00,0x3f,0x54]
+#CHECK: rnsbg	%r0, %r0, 0, 0, 64      # encoding: [0xec,0x00,0x00,0x00,0x40,0x54]
+#CHECK: rnsbg	%r0, %r0, 0, 0, 255     # encoding: [0xec,0x00,0x00,0x00,0xff,0x54]
 #CHECK: rnsbg	%r0, %r0, 0, 255, 0     # encoding: [0xec,0x00,0x00,0xff,0x00,0x54]
 #CHECK: rnsbg	%r0, %r0, 255, 0, 0     # encoding: [0xec,0x00,0xff,0x00,0x00,0x54]
 #CHECK: rnsbg	%r0, %r15, 0, 0, 0      # encoding: [0xec,0x0f,0x00,0x00,0x00,0x54]
@@ -13543,6 +13565,8 @@
 
 	rnsbg	%r0,%r0,0,0,0
 	rnsbg	%r0,%r0,0,0,63
+	rnsbg	%r0,%r0,0,0,64
+	rnsbg	%r0,%r0,0,0,255
 	rnsbg	%r0,%r0,0,255,0
 	rnsbg	%r0,%r0,255,0,0
 	rnsbg	%r0,%r15,0,0,0
@@ -13551,6 +13575,8 @@
 
 #CHECK: rosbg	%r0, %r0, 0, 0, 0       # encoding: [0xec,0x00,0x00,0x00,0x00,0x56]
 #CHECK: rosbg	%r0, %r0, 0, 0, 63      # encoding: [0xec,0x00,0x00,0x00,0x3f,0x56]
+#CHECK: rosbg	%r0, %r0, 0, 0, 64      # encoding: [0xec,0x00,0x00,0x00,0x40,0x56]
+#CHECK: rosbg	%r0, %r0, 0, 0, 255     # encoding: [0xec,0x00,0x00,0x00,0xff,0x56]
 #CHECK: rosbg	%r0, %r0, 0, 255, 0     # encoding: [0xec,0x00,0x00,0xff,0x00,0x56]
 #CHECK: rosbg	%r0, %r0, 255, 0, 0     # encoding: [0xec,0x00,0xff,0x00,0x00,0x56]
 #CHECK: rosbg	%r0, %r15, 0, 0, 0      # encoding: [0xec,0x0f,0x00,0x00,0x00,0x56]
@@ -13559,6 +13585,8 @@
 
 	rosbg	%r0,%r0,0,0,0
 	rosbg	%r0,%r0,0,0,63
+	rosbg	%r0,%r0,0,0,64
+	rosbg	%r0,%r0,0,0,255
 	rosbg	%r0,%r0,0,255,0
 	rosbg	%r0,%r0,255,0,0
 	rosbg	%r0,%r15,0,0,0
@@ -13625,6 +13653,8 @@
 
 #CHECK: rxsbg	%r0, %r0, 0, 0, 0       # encoding: [0xec,0x00,0x00,0x00,0x00,0x57]
 #CHECK: rxsbg	%r0, %r0, 0, 0, 63      # encoding: [0xec,0x00,0x00,0x00,0x3f,0x57]
+#CHECK: rxsbg	%r0, %r0, 0, 0, 64      # encoding: [0xec,0x00,0x00,0x00,0x40,0x57]
+#CHECK: rxsbg	%r0, %r0, 0, 0, 255     # encoding: [0xec,0x00,0x00,0x00,0xff,0x57]
 #CHECK: rxsbg	%r0, %r0, 0, 255, 0     # encoding: [0xec,0x00,0x00,0xff,0x00,0x57]
 #CHECK: rxsbg	%r0, %r0, 255, 0, 0     # encoding: [0xec,0x00,0xff,0x00,0x00,0x57]
 #CHECK: rxsbg	%r0, %r15, 0, 0, 0      # encoding: [0xec,0x0f,0x00,0x00,0x00,0x57]
@@ -13633,6 +13663,8 @@
 
 	rxsbg	%r0,%r0,0,0,0
 	rxsbg	%r0,%r0,0,0,63
+	rxsbg	%r0,%r0,0,0,64
+	rxsbg	%r0,%r0,0,0,255
 	rxsbg	%r0,%r0,0,255,0
 	rxsbg	%r0,%r0,255,0,0
 	rxsbg	%r0,%r15,0,0,0

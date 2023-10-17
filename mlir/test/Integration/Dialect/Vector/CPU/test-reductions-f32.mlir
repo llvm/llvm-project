@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s -convert-scf-to-cf -convert-vector-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
+// RUN: mlir-opt %s -convert-vector-to-scf -convert-scf-to-cf -convert-vector-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
-// RUN:   -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
+// RUN:   -shared-libs=%mlir_c_runner_utils | \
 // RUN: FileCheck %s
 
 func.func @entry() {
@@ -39,11 +39,17 @@ func.func @entry() {
   %1 = vector.reduction <mul>, %v9 : vector<10xf32> into f32
   vector.print %1 : f32
   // CHECK: -5760
-  %2 = vector.reduction <minf>, %v9 : vector<10xf32> into f32
+  %2 = vector.reduction <minimumf>, %v9 : vector<10xf32> into f32
   vector.print %2 : f32
   // CHECK: -16
-  %3 = vector.reduction <maxf>, %v9 : vector<10xf32> into f32
+  %3 = vector.reduction <maximumf>, %v9 : vector<10xf32> into f32
   vector.print %3 : f32
+  // CHECK: 5
+  %4 = vector.reduction <minf>, %v9 : vector<10xf32> into f32
+  vector.print %4 : f32
+  // CHECK: -16
+  %5 = vector.reduction <maxf>, %v9 : vector<10xf32> into f32
+  vector.print %5 : f32
   // CHECK: 5
 
   return

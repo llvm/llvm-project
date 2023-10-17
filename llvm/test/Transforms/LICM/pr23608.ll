@@ -25,9 +25,8 @@ define void @fn1() {
 ; NO_ASSUME-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[TMP4]], 0
 ; NO_ASSUME-NEXT:    br i1 [[TOBOOL]], label [[BB13:%.*]], label [[BB15:%.*]]
 ; NO_ASSUME:       bb13:
-; NO_ASSUME-NEXT:    [[F_IBLOCK_LCSSA:%.*]] = phi ptr [ [[TMP]], [[BB2]] ]
-; NO_ASSUME-NEXT:    [[TMP4_LE:%.*]] = ptrtoint ptr [[F_IBLOCK_LCSSA]] to i64
-; NO_ASSUME-NEXT:    [[TMP8_LE:%.*]] = inttoptr i64 [[TMP4_LE]] to ptr
+; NO_ASSUME-NEXT:    [[TMP4_LCSSA:%.*]] = phi i64 [ [[TMP4]], [[BB2]] ]
+; NO_ASSUME-NEXT:    [[TMP8_LE:%.*]] = inttoptr i64 [[TMP4_LCSSA]] to ptr
 ; NO_ASSUME-NEXT:    call void @__msan_warning_noreturn()
 ; NO_ASSUME-NEXT:    unreachable
 ; NO_ASSUME:       bb15:
@@ -42,8 +41,6 @@ define void @fn1() {
 ; USE_ASSUME-NEXT:    br label [[INDIRECTGOTO:%.*]]
 ; USE_ASSUME:       while.cond:
 ; USE_ASSUME-NEXT:    [[TMP:%.*]] = load ptr, ptr @a, align 8
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr inttoptr (i64 and (i64 ptrtoint (ptr @a to i64), i64 -70368744177665) to ptr), i64 8), "nonnull"(ptr inttoptr (i64 and (i64 ptrtoint (ptr @a to i64), i64 -70368744177665) to ptr)), "align"(ptr inttoptr (i64 and (i64 ptrtoint (ptr @a to i64), i64 -70368744177665) to ptr), i64 8) ]
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr inttoptr (i64 add (i64 and (i64 ptrtoint (ptr @a to i64), i64 -70368744177665), i64 35184372088832) to ptr), i64 4), "nonnull"(ptr inttoptr (i64 add (i64 and (i64 ptrtoint (ptr @a to i64), i64 -70368744177665), i64 35184372088832) to ptr)), "align"(ptr inttoptr (i64 add (i64 and (i64 ptrtoint (ptr @a to i64), i64 -70368744177665), i64 35184372088832) to ptr), i64 8) ]
 ; USE_ASSUME-NEXT:    br label [[BB2:%.*]]
 ; USE_ASSUME:       bb:
 ; USE_ASSUME-NEXT:    call void @__msan_warning_noreturn()
@@ -54,9 +51,8 @@ define void @fn1() {
 ; USE_ASSUME-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[TMP4]], 0
 ; USE_ASSUME-NEXT:    br i1 [[TOBOOL]], label [[BB13:%.*]], label [[BB15:%.*]]
 ; USE_ASSUME:       bb13:
-; USE_ASSUME-NEXT:    [[F_IBLOCK_LCSSA:%.*]] = phi ptr [ [[TMP]], [[BB2]] ]
-; USE_ASSUME-NEXT:    [[TMP4_LE:%.*]] = ptrtoint ptr [[F_IBLOCK_LCSSA]] to i64
-; USE_ASSUME-NEXT:    [[TMP8_LE:%.*]] = inttoptr i64 [[TMP4_LE]] to ptr
+; USE_ASSUME-NEXT:    [[TMP4_LCSSA:%.*]] = phi i64 [ [[TMP4]], [[BB2]] ]
+; USE_ASSUME-NEXT:    [[TMP8_LE:%.*]] = inttoptr i64 [[TMP4_LCSSA]] to ptr
 ; USE_ASSUME-NEXT:    call void @__msan_warning_noreturn()
 ; USE_ASSUME-NEXT:    unreachable
 ; USE_ASSUME:       bb15:
@@ -71,8 +67,12 @@ entry:
 
 while.cond:                                       ; preds = %indirectgoto, %bb15
   %tmp = load ptr, ptr @a, align 8
-  %_msld = load i64, ptr inttoptr (i64 and (i64 ptrtoint (ptr @a to i64), i64 -70368744177665) to ptr), align 8
-  %tmp1 = load i32, ptr inttoptr (i64 add (i64 and (i64 ptrtoint (ptr @a to i64), i64 -70368744177665), i64 35184372088832) to ptr), align 8
+  %and = and i64 ptrtoint (ptr @a to i64), -70368744177665
+  %itop = inttoptr i64 %and to ptr
+  %_msld = load i64, ptr %itop, align 8
+  %add = add i64 %and, 35184372088832
+  %itop2 = inttoptr i64 %add to ptr
+  %tmp1 = load i32, ptr %itop2, align 8
   br label %bb2
 
 bb:                                               ; preds = %while.cond

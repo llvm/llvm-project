@@ -7,80 +7,81 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 #include <math.h>
 
-using FPBits = __llvm_libc::fputil::FPBits<long double>;
+using FPBits = LIBC_NAMESPACE::fputil::FPBits<long double>;
 
-TEST(X86LongDoubleTest, is_nan) {
+TEST(LlvmLibcX86LongDoubleTest, is_nan) {
   // In the nan checks below, we use the macro isnan from math.h to ensure that
   // a number is actually a NaN. The isnan macro resolves to the compiler
   // builtin function. Hence, matching LLVM-libc's notion of NaN with the
   // isnan result ensures that LLVM-libc's behavior matches the compiler's
   // behavior.
+  constexpr uint32_t COUNT = 100'000;
 
   FPBits bits(0.0l);
-  bits.exponent = FPBits::MAX_EXPONENT;
-  for (unsigned int i = 0; i < 1000000; ++i) {
+  bits.set_unbiased_exponent(FPBits::MAX_EXPONENT);
+  for (unsigned int i = 0; i < COUNT; ++i) {
     // If exponent has the max value and the implicit bit is 0,
     // then the number is a NaN for all values of mantissa.
-    bits.mantissa = i;
+    bits.set_mantissa(i);
     long double nan = bits;
-    ASSERT_NE(isnan(nan), 0);
+    ASSERT_NE(static_cast<int>(isnan(nan)), 0);
     ASSERT_TRUE(bits.is_nan());
   }
 
-  bits.implicitBit = 1;
-  for (unsigned int i = 1; i < 1000000; ++i) {
+  bits.set_implicit_bit(1);
+  for (unsigned int i = 1; i < COUNT; ++i) {
     // If exponent has the max value and the implicit bit is 1,
     // then the number is a NaN for all non-zero values of mantissa.
     // Note the initial value of |i| of 1 to avoid a zero mantissa.
-    bits.mantissa = i;
+    bits.set_mantissa(i);
     long double nan = bits;
-    ASSERT_NE(isnan(nan), 0);
+    ASSERT_NE(static_cast<int>(isnan(nan)), 0);
     ASSERT_TRUE(bits.is_nan());
   }
 
-  bits.exponent = 1;
-  bits.implicitBit = 0;
-  for (unsigned int i = 0; i < 1000000; ++i) {
+  bits.set_unbiased_exponent(1);
+  bits.set_implicit_bit(0);
+  for (unsigned int i = 0; i < COUNT; ++i) {
     // If exponent is non-zero and also not max, and the implicit bit is 0,
     // then the number is a NaN for all values of mantissa.
-    bits.mantissa = i;
+    bits.set_mantissa(i);
     long double nan = bits;
-    ASSERT_NE(isnan(nan), 0);
+    ASSERT_NE(static_cast<int>(isnan(nan)), 0);
     ASSERT_TRUE(bits.is_nan());
   }
 
-  bits.exponent = 1;
-  bits.implicitBit = 1;
-  for (unsigned int i = 0; i < 1000000; ++i) {
+  bits.set_unbiased_exponent(1);
+  bits.set_implicit_bit(1);
+  for (unsigned int i = 0; i < COUNT; ++i) {
     // If exponent is non-zero and also not max, and the implicit bit is 1,
     // then the number is normal value for all values of mantissa.
-    bits.mantissa = i;
+    bits.set_mantissa(i);
     long double valid = bits;
-    ASSERT_EQ(isnan(valid), 0);
+    ASSERT_EQ(static_cast<int>(isnan(valid)), 0);
     ASSERT_FALSE(bits.is_nan());
   }
 
-  bits.exponent = 0;
-  bits.implicitBit = 1;
-  for (unsigned int i = 0; i < 1000000; ++i) {
+  bits.set_unbiased_exponent(0);
+  bits.set_implicit_bit(1);
+  for (unsigned int i = 0; i < COUNT; ++i) {
     // If exponent is zero, then the number is a valid but denormal value.
-    bits.mantissa = i;
+    bits.set_mantissa(i);
     long double valid = bits;
-    ASSERT_EQ(isnan(valid), 0);
+    ASSERT_EQ(static_cast<int>(isnan(valid)), 0);
     ASSERT_FALSE(bits.is_nan());
   }
 
-  bits.exponent = 0;
-  bits.implicitBit = 0;
-  for (unsigned int i = 0; i < 1000000; ++i) {
+  bits.set_unbiased_exponent(0);
+  bits.set_implicit_bit(0);
+  for (unsigned int i = 0; i < COUNT; ++i) {
     // If exponent is zero, then the number is a valid but denormal value.
-    bits.mantissa = i;
+    bits.set_mantissa(i);
     long double valid = bits;
-    ASSERT_EQ(isnan(valid), 0);
+    ASSERT_EQ(static_cast<int>(isnan(valid)), 0);
     ASSERT_FALSE(bits.is_nan());
   }
 }

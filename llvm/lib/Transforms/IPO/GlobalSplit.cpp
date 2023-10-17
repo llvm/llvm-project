@@ -29,8 +29,6 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Transforms/IPO.h"
 #include <cstdint>
@@ -149,41 +147,18 @@ static bool splitGlobals(Module &M) {
       M.getFunction(Intrinsic::getName(Intrinsic::type_test));
   Function *TypeCheckedLoadFunc =
       M.getFunction(Intrinsic::getName(Intrinsic::type_checked_load));
+  Function *TypeCheckedLoadRelativeFunc =
+      M.getFunction(Intrinsic::getName(Intrinsic::type_checked_load_relative));
   if ((!TypeTestFunc || TypeTestFunc->use_empty()) &&
-      (!TypeCheckedLoadFunc || TypeCheckedLoadFunc->use_empty()))
+      (!TypeCheckedLoadFunc || TypeCheckedLoadFunc->use_empty()) &&
+      (!TypeCheckedLoadRelativeFunc ||
+       TypeCheckedLoadRelativeFunc->use_empty()))
     return false;
 
   bool Changed = false;
   for (GlobalVariable &GV : llvm::make_early_inc_range(M.globals()))
     Changed |= splitGlobal(GV);
   return Changed;
-}
-
-namespace {
-
-struct GlobalSplit : public ModulePass {
-  static char ID;
-
-  GlobalSplit() : ModulePass(ID) {
-    initializeGlobalSplitPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnModule(Module &M) override {
-    if (skipModule(M))
-      return false;
-
-    return splitGlobals(M);
-  }
-};
-
-} // end anonymous namespace
-
-char GlobalSplit::ID = 0;
-
-INITIALIZE_PASS(GlobalSplit, "globalsplit", "Global splitter", false, false)
-
-ModulePass *llvm::createGlobalSplitPass() {
-  return new GlobalSplit;
 }
 
 PreservedAnalyses GlobalSplitPass::run(Module &M, ModuleAnalysisManager &AM) {

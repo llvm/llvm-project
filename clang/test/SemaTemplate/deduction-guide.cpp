@@ -224,9 +224,7 @@ F s(0);
 // CHECK: |-NonTypeTemplateParmDecl {{.*}} 'char' depth 0 index 0
 // CHECK:   `-TemplateArgument expr
 // CHECK: |   |-inherited from NonTypeTemplateParm {{.*}} '' 'char'
-// CHECK: |   `-ConstantExpr {{.*}} 'char'
-// CHECK: |     |-value: Int 120
-// CHECK: |     `-CharacterLiteral {{.*}} 'char' 120
+// CHECK: |   `-CharacterLiteral {{.*}} 'char' 120
 // CHECK: |-TemplateTypeParmDecl {{.*}} typename depth 0 index 1 U
 // CHECK: |-ParenExpr {{.*}} 'bool'
 // CHECK: | `-CXXBoolLiteralExpr {{.*}} 'bool' false

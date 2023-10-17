@@ -36,5 +36,3 @@ check_cxx_compiler_flag(-Wenum-constexpr-conversion OPENMP_HAVE_WENUM_CONSTEXPR_
 check_cxx_compiler_flag(-Wextra OPENMP_HAVE_WEXTRA_FLAG)
 check_cxx_compiler_flag(-Wpedantic OPENMP_HAVE_WPEDANTIC_FLAG)
 check_cxx_compiler_flag(-Wmaybe-uninitialized OPENMP_HAVE_WMAYBE_UNINITIALIZED_FLAG)
-
-check_cxx_compiler_flag(-std=c++17 OPENMP_HAVE_STD_CPP17_FLAG)

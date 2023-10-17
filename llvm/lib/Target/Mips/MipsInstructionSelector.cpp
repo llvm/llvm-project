@@ -15,7 +15,7 @@
 #include "MipsMachineFunction.h"
 #include "MipsRegisterBankInfo.h"
 #include "MipsTargetMachine.h"
-#include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
+#include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/IR/IntrinsicsMips.h"

@@ -159,27 +159,27 @@ BracesAroundStatementsCheck::findRParenLoc(const IfOrWhileStmt *S,
                                            const ASTContext *Context) {
   // Skip macros.
   if (S->getBeginLoc().isMacroID())
-    return SourceLocation();
+    return {};
 
   SourceLocation CondEndLoc = S->getCond()->getEndLoc();
   if (const DeclStmt *CondVar = S->getConditionVariableDeclStmt())
     CondEndLoc = CondVar->getEndLoc();
 
   if (!CondEndLoc.isValid()) {
-    return SourceLocation();
+    return {};
   }
 
   SourceLocation PastCondEndLoc =
       Lexer::getLocForEndOfToken(CondEndLoc, 0, SM, Context->getLangOpts());
   if (PastCondEndLoc.isInvalid())
-    return SourceLocation();
+    return {};
   SourceLocation RParenLoc =
       forwardSkipWhitespaceAndComments(PastCondEndLoc, SM, Context);
   if (RParenLoc.isInvalid())
-    return SourceLocation();
+    return {};
   tok::TokenKind TokKind = getTokenKind(RParenLoc, SM, Context);
   if (TokKind != tok::r_paren)
-    return SourceLocation();
+    return {};
   return RParenLoc;
 }
 
@@ -187,10 +187,13 @@ BracesAroundStatementsCheck::findRParenLoc(const IfOrWhileStmt *S,
 /// Returns true if braces where added.
 bool BracesAroundStatementsCheck::checkStmt(
     const MatchFinder::MatchResult &Result, const Stmt *S,
-    SourceLocation InitialLoc, SourceLocation EndLocHint) {
+    SourceLocation StartLoc, SourceLocation EndLocHint) {
 
   while (const auto *AS = dyn_cast<AttributedStmt>(S))
     S = AS->getSubStmt();
+
+  const SourceManager &SM = *Result.SourceManager;
+  const ASTContext *Context = Result.Context;
 
   // 1) If there's a corresponding "else" or "while", the check inserts "} "
   // right before that token.
@@ -204,22 +207,27 @@ bool BracesAroundStatementsCheck::checkStmt(
     return false;
   }
 
-  if (!InitialLoc.isValid())
+  // When TreeTransform, Stmt in constexpr IfStmt will be transform to NullStmt.
+  // This NullStmt can be detected according to beginning token.
+  const SourceLocation StmtBeginLoc = S->getBeginLoc();
+  if (isa<NullStmt>(S) && StmtBeginLoc.isValid() &&
+      getTokenKind(StmtBeginLoc, SM, Context) == tok::l_brace)
     return false;
-  const SourceManager &SM = *Result.SourceManager;
-  const ASTContext *Context = Result.Context;
 
-  // Convert InitialLoc to file location, if it's on the same macro expansion
+  if (StartLoc.isInvalid())
+    return false;
+
+  // Convert StartLoc to file location, if it's on the same macro expansion
   // level as the start of the statement. We also need file locations for
   // Lexer::getLocForEndOfToken working properly.
-  InitialLoc = Lexer::makeFileCharRange(
-                   CharSourceRange::getCharRange(InitialLoc, S->getBeginLoc()),
-                   SM, Context->getLangOpts())
-                   .getBegin();
-  if (InitialLoc.isInvalid())
+  StartLoc = Lexer::makeFileCharRange(
+                 CharSourceRange::getCharRange(StartLoc, S->getBeginLoc()), SM,
+                 Context->getLangOpts())
+                 .getBegin();
+  if (StartLoc.isInvalid())
     return false;
-  SourceLocation StartLoc =
-      Lexer::getLocForEndOfToken(InitialLoc, 0, SM, Context->getLangOpts());
+  StartLoc =
+      Lexer::getLocForEndOfToken(StartLoc, 0, SM, Context->getLangOpts());
 
   // StartLoc points at the location of the opening brace to be inserted.
   SourceLocation EndLoc;

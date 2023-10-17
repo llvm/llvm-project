@@ -124,8 +124,7 @@ public:
   ///     multiple architectures).
   Module(
       const FileSpec &file_spec, const ArchSpec &arch,
-      const ConstString *object_name = nullptr,
-      lldb::offset_t object_offset = 0,
+      ConstString object_name = ConstString(), lldb::offset_t object_offset = 0,
       const llvm::sys::TimePoint<> &object_mod_time = llvm::sys::TimePoint<>());
 
   Module(const ModuleSpec &module_spec);
@@ -563,7 +562,7 @@ public:
   bool IsLoadedInTarget(Target *target);
 
   bool LoadScriptingResourceInTarget(Target *target, Status &error,
-                                     Stream *feedback_stream = nullptr);
+                                     Stream &feedback_stream);
 
   /// Get the number of compile units for this module.
   ///
@@ -1085,7 +1084,7 @@ protected:
       ModuleList::GetGlobalModuleListProperties().GetSymlinkMappings();
 
   lldb::SectionListUP m_sections_up; ///< Unified section list for module that
-                                     /// is used by the ObjectFile and and
+                                     /// is used by the ObjectFile and
                                      /// ObjectFile instances for the debug info
 
   std::atomic<bool> m_did_load_objfile{false};
@@ -1105,43 +1104,6 @@ protected:
 
   std::once_flag m_optimization_warning;
   std::once_flag m_language_warning;
-
-  /// Resolve a file or load virtual address.
-  ///
-  /// Tries to resolve \a vm_addr as a file address (if \a
-  /// vm_addr_is_file_addr is true) or as a load address if \a
-  /// vm_addr_is_file_addr is false) in the symbol vendor. \a resolve_scope
-  /// indicates what clients wish to resolve and can be used to limit the
-  /// scope of what is parsed.
-  ///
-  /// \param[in] vm_addr
-  ///     The load virtual address to resolve.
-  ///
-  /// \param[in] vm_addr_is_file_addr
-  ///     If \b true, \a vm_addr is a file address, else \a vm_addr
-  ///     if a load address.
-  ///
-  /// \param[in] resolve_scope
-  ///     The scope that should be resolved (see
-  ///     SymbolContext::Scope).
-  ///
-  /// \param[out] so_addr
-  ///     The section offset based address that got resolved if
-  ///     any bits are returned.
-  ///
-  /// \param[out] sc
-  //      The symbol context that has objects filled in. Each bit
-  ///     in the \a resolve_scope pertains to a member in the \a sc.
-  ///
-  /// \return
-  ///     A integer that contains SymbolContext::Scope bits set for
-  ///     each item that was successfully resolved.
-  ///
-  /// \see SymbolContext::Scope
-  uint32_t ResolveSymbolContextForAddress(lldb::addr_t vm_addr,
-                                          bool vm_addr_is_file_addr,
-                                          lldb::SymbolContextItem resolve_scope,
-                                          Address &so_addr, SymbolContext &sc);
 
   void SymbolIndicesToSymbolContextList(Symtab *symtab,
                                         std::vector<uint32_t> &symbol_indexes,

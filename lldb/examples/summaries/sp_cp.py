@@ -8,7 +8,6 @@ SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 
 class SharedPtr_SyntheticChildrenProvider:
-
     def __init__(self, valobj, dict):
         self.valobj = valobj
         self.update()
@@ -28,20 +27,21 @@ class SharedPtr_SyntheticChildrenProvider:
 
     def get_child_at_index(self, index):
         if index == 0:
-            return self.valobj.GetChildMemberWithName('_M_ptr')
+            return self.valobj.GetChildMemberWithName("_M_ptr")
         if index == 1:
-            return self.valobj.GetChildMemberWithName('_M_refcount').GetChildMemberWithName(
-                '_M_pi').GetChildMemberWithName('_M_use_count')
+            return (
+                self.valobj.GetChildMemberWithName("_M_refcount")
+                .GetChildMemberWithName("_M_pi")
+                .GetChildMemberWithName("_M_use_count")
+            )
         return None
 
 
 def SharedPtr_SummaryProvider(valobj, dict):
-    return 'use = ' + \
-        str(valobj.GetChildMemberWithName("count").GetValueAsUnsigned())
+    return "use = " + str(valobj.GetChildMemberWithName("count").GetValueAsUnsigned())
 
 
 class ValueObjectSP_SyntheticChildrenProvider:
-
     def __init__(self, valobj, dict):
         self.valobj = valobj
         self.update()
@@ -61,24 +61,30 @@ class ValueObjectSP_SyntheticChildrenProvider:
 
     def get_child_at_index(self, index):
         if index == 0:
-            return self.valobj.GetChildMemberWithName('ptr_')
+            return self.valobj.GetChildMemberWithName("ptr_")
         if index == 1:
-            return self.valobj.GetChildMemberWithName(
-                'cntrl_').GetChildMemberWithName('shared_owners_')
+            return self.valobj.GetChildMemberWithName("cntrl_").GetChildMemberWithName(
+                "shared_owners_"
+            )
         return None
 
 
 def ValueObjectSP_SummaryProvider(valobj, dict):
-    return 'use = ' + \
-        str(1 + valobj.GetChildMemberWithName("count").GetValueAsUnsigned())
+    return "use = " + str(
+        1 + valobj.GetChildMemberWithName("count").GetValueAsUnsigned()
+    )
 
 
 def __lldb_init_module(debugger, dict):
     debugger.HandleCommand(
-        'type summary add -x ".*ValueObjectSP" --expand -F sp_cp.ValueObjectSP_SummaryProvider')
+        'type summary add -x ".*ValueObjectSP" --expand -F sp_cp.ValueObjectSP_SummaryProvider'
+    )
     debugger.HandleCommand(
-        'type synthetic add -x ".*ValueObjectSP" -l sp_cp.ValueObjectSP_SyntheticChildrenProvider')
+        'type synthetic add -x ".*ValueObjectSP" -l sp_cp.ValueObjectSP_SyntheticChildrenProvider'
+    )
     debugger.HandleCommand(
-        'type summary add -x ".*SP" --expand -F sp_cp.SharedPtr_SummaryProvider')
+        'type summary add -x ".*SP" --expand -F sp_cp.SharedPtr_SummaryProvider'
+    )
     debugger.HandleCommand(
-        'type synthetic add -x ".*SP" -l sp_cp.SharedPtr_SyntheticChildrenProvider')
+        'type synthetic add -x ".*SP" -l sp_cp.SharedPtr_SyntheticChildrenProvider'
+    )

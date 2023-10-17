@@ -38,7 +38,7 @@ public:
   NVPTXTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                      StringRef FS, const TargetOptions &Options,
                      std::optional<Reloc::Model> RM,
-                     std::optional<CodeModel::Model> CM, CodeGenOpt::Level OP,
+                     std::optional<CodeModel::Model> CM, CodeGenOptLevel OP,
                      bool is64bit);
   ~NVPTXTargetMachine() override;
   const NVPTXSubtarget *getSubtargetImpl(const Function &) const override {
@@ -67,6 +67,8 @@ public:
   createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
                             const TargetSubtargetInfo *STI) const override;
 
+  void registerDefaultAliasAnalyses(AAManager &AAM) override;
+
   void registerPassBuilderCallbacks(PassBuilder &PB) override;
 
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
@@ -86,7 +88,7 @@ public:
   NVPTXTargetMachine32(const Target &T, const Triple &TT, StringRef CPU,
                        StringRef FS, const TargetOptions &Options,
                        std::optional<Reloc::Model> RM,
-                       std::optional<CodeModel::Model> CM, CodeGenOpt::Level OL,
+                       std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
                        bool JIT);
 };
 
@@ -97,7 +99,7 @@ public:
   NVPTXTargetMachine64(const Target &T, const Triple &TT, StringRef CPU,
                        StringRef FS, const TargetOptions &Options,
                        std::optional<Reloc::Model> RM,
-                       std::optional<CodeModel::Model> CM, CodeGenOpt::Level OL,
+                       std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
                        bool JIT);
 };
 

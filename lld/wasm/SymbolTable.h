@@ -18,8 +18,7 @@
 #include "llvm/BinaryFormat/WasmTraits.h"
 #include <optional>
 
-namespace lld {
-namespace wasm {
+namespace lld::wasm {
 
 class InputSegment;
 
@@ -41,7 +40,7 @@ public:
 
   void wrap(Symbol *sym, Symbol *real, Symbol *wrap);
 
-  void addFile(InputFile *file);
+  void addFile(InputFile *file, StringRef symName = {});
 
   void compileBitcodeFiles();
 
@@ -103,6 +102,7 @@ public:
   DefinedFunction *createUndefinedStub(const WasmSignature &sig);
 
   std::vector<ObjFile *> objectFiles;
+  std::vector<StubFile *> stubFiles;
   std::vector<SharedFile *> sharedFiles;
   std::vector<BitcodeFile *> bitcodeFiles;
   std::vector<InputFunction *> syntheticFunctions;
@@ -144,7 +144,6 @@ private:
 
 extern SymbolTable *symtab;
 
-} // namespace wasm
-} // namespace lld
+} // namespace lld::wasm
 
 #endif

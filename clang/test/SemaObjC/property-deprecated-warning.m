@@ -1,7 +1,6 @@
 // RUN: %clang_cc1  -fsyntax-only -triple thumbv6-apple-ios3.0 -verify -Wno-objc-root-class %s
 // RUN: %clang_cc1 -D WARN_PARTIAL -Wpartial-availability -fsyntax-only -triple thumbv6-apple-ios3.0 -verify -Wno-objc-root-class %s
 // RUN: %clang_cc1 -x objective-c++ -fsyntax-only -triple thumbv6-apple-ios3.0 -verify -Wno-objc-root-class %s
-// rdar://12324295
 
 typedef signed char BOOL;
 
@@ -144,7 +143,6 @@ id useDeprecatedProperty(ProtocolInCategory *obj, id<P> obj2, int flag) {
   return [obj2 partialPtarget];
 }
 
-// rdar://15951801
 @interface Foo
 {
   int _x;

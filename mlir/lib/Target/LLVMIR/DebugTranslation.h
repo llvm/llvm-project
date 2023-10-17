@@ -35,7 +35,7 @@ public:
   void finalize();
 
   /// Translate the given location to an llvm debug location.
-  const llvm::DILocation *translateLoc(Location loc, llvm::DILocalScope *scope);
+  llvm::DILocation *translateLoc(Location loc, llvm::DILocalScope *scope);
 
   /// Translate the debug information for the given function.
   void translate(LLVMFuncOp func, llvm::Function &llvmFunc);
@@ -54,33 +54,40 @@ public:
 private:
   /// Translate the given location to an llvm debug location with the given
   /// scope and inlinedAt parameters.
-  const llvm::DILocation *translateLoc(Location loc, llvm::DILocalScope *scope,
-                                       const llvm::DILocation *inlinedAt);
+  llvm::DILocation *translateLoc(Location loc, llvm::DILocalScope *scope,
+                                 llvm::DILocation *inlinedAt);
 
   /// Create an llvm debug file for the given file path.
   llvm::DIFile *translateFile(StringRef fileName);
 
   /// Translate the given attribute to the corresponding llvm debug metadata.
-  llvm::DIType *translateImpl(DIVoidResultTypeAttr attr);
+  llvm::DIType *translateImpl(DINullTypeAttr attr);
   llvm::DIBasicType *translateImpl(DIBasicTypeAttr attr);
   llvm::DICompileUnit *translateImpl(DICompileUnitAttr attr);
   llvm::DICompositeType *translateImpl(DICompositeTypeAttr attr);
   llvm::DIDerivedType *translateImpl(DIDerivedTypeAttr attr);
   llvm::DIFile *translateImpl(DIFileAttr attr);
+  llvm::DILabel *translateImpl(DILabelAttr attr);
   llvm::DILexicalBlock *translateImpl(DILexicalBlockAttr attr);
   llvm::DILexicalBlockFile *translateImpl(DILexicalBlockFileAttr attr);
   llvm::DILocalScope *translateImpl(DILocalScopeAttr attr);
   llvm::DILocalVariable *translateImpl(DILocalVariableAttr attr);
+  llvm::DIModule *translateImpl(DIModuleAttr attr);
+  llvm::DINamespace *translateImpl(DINamespaceAttr attr);
   llvm::DIScope *translateImpl(DIScopeAttr attr);
   llvm::DISubprogram *translateImpl(DISubprogramAttr attr);
   llvm::DISubrange *translateImpl(DISubrangeAttr attr);
   llvm::DISubroutineType *translateImpl(DISubroutineTypeAttr attr);
   llvm::DIType *translateImpl(DITypeAttr attr);
 
+  /// Constructs a string metadata node from the string attribute. Returns
+  /// nullptr if `stringAttr` is null or contains and empty string.
+  llvm::MDString *getMDStringOrNull(StringAttr stringAttr);
+
   /// A mapping between mlir location+scope and the corresponding llvm debug
   /// metadata.
   DenseMap<std::tuple<Location, llvm::DILocalScope *, const llvm::DILocation *>,
-           const llvm::DILocation *>
+           llvm::DILocation *>
       locationToLoc;
 
   /// A mapping between debug attribute and the corresponding llvm debug

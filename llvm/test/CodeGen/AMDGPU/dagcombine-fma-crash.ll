@@ -20,16 +20,16 @@ define void @main(float %arg) {
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1065353216, implicit $exec
-  ; CHECK-NEXT:   %20:vgpr_32 = contract reassoc nofpexcept V_FMAC_F32_e64 0, [[S_MOV_B32_]], 0, [[S_MOV_B32_]], 0, [[V_MOV_B32_e32_]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   %1:vgpr_32 = contract reassoc nofpexcept V_FMAC_F32_e64 0, [[COPY]], 0, [[COPY]], 0, %20, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   %2:vgpr_32 = contract reassoc nofpexcept V_ADD_F32_e64 0, %1, 0, [[V_MOV_B32_e32_]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_FMAC_F32_e64_:%[0-9]+]]:vgpr_32 = contract reassoc nofpexcept V_FMAC_F32_e64 0, [[S_MOV_B32_]], 0, [[S_MOV_B32_]], 0, [[V_MOV_B32_e32_]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_FMAC_F32_e64_1:%[0-9]+]]:vgpr_32 = contract reassoc nofpexcept V_FMAC_F32_e64 0, [[COPY]], 0, [[COPY]], 0, [[V_FMAC_F32_e64_]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_ADD_F32_e64_:%[0-9]+]]:vgpr_32 = contract reassoc nofpexcept V_ADD_F32_e64 0, [[V_FMAC_F32_e64_1]], 0, [[V_MOV_B32_e32_]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.bb11:
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.4(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[DEF]], %bb.0, %1, %bb.1
-  ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:vgpr_32 = PHI [[DEF]], %bb.0, %2, %bb.1
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[DEF]], %bb.0, [[V_FMAC_F32_e64_1]], %bb.1
+  ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:vgpr_32 = PHI [[DEF]], %bb.0, [[V_ADD_F32_e64_]], %bb.1
   ; CHECK-NEXT:   [[PHI2:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, [[S_MOV_B32_2]], %bb.1
   ; CHECK-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, [[PHI2]], implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 1
@@ -78,3 +78,40 @@ bb17:
   %i19 = phi float [ %i12, %bb11 ], [ 0.000000e+00, %bb15 ]
   ret void
 }
+
+define float @test2(float %arg, float %arg1) {
+  ; CHECK-LABEL: name: test2
+  ; CHECK: bb.0.bb:
+  ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1082130432, implicit $exec
+  ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 1120534528
+  ; CHECK-NEXT:   [[V_FMAC_F32_e64_:%[0-9]+]]:vgpr_32 = nsz contract reassoc nofpexcept V_FMAC_F32_e64 0, [[COPY]], 0, killed [[S_MOV_B32_]], 0, [[V_MOV_B32_e32_]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
+  ; CHECK-NEXT:   [[V_FMAC_F32_e64_1:%[0-9]+]]:vgpr_32 = nsz contract reassoc nofpexcept V_FMAC_F32_e64 0, [[COPY1]], 0, killed [[S_MOV_B32_1]], 0, [[V_FMAC_F32_e64_]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_ADD_F32_e64_:%[0-9]+]]:vgpr_32 = nsz contract reassoc nofpexcept V_ADD_F32_e64 0, [[V_FMAC_F32_e64_1]], 0, [[V_MOV_B32_e32_]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_RCP_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_RCP_F32_e64 0, [[V_FMAC_F32_e64_1]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_RCP_F32_e64_1:%[0-9]+]]:vgpr_32 = nofpexcept V_RCP_F32_e64 0, killed [[V_ADD_F32_e64_]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_MUL_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_MUL_F32_e64 0, [[V_RCP_F32_e64_1]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_MAX_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_MAX_F32_e64 0, killed [[V_MUL_F32_e64_]], 0, [[V_RCP_F32_e64_1]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_ADD_F32_e64_1:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, killed [[V_MAX_F32_e64_]], 0, killed [[V_RCP_F32_e64_]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   $vgpr0 = COPY [[V_ADD_F32_e64_1]]
+  ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
+bb:
+  %i = fmul contract float %arg1, 1.000000e+02
+  %i2 = fmul contract float %arg, 0.000000e+00
+  %i3 = fadd reassoc nsz contract float %i, %arg1
+  %i4 = fadd nsz contract float %i3, %i2
+  %i5 = fsub reassoc nsz contract float 1.000000e+00, %i4
+  %i6 = fdiv afn float 1.000000e+00, %i5
+  %i7 = fneg float %arg
+  %i9 = fmul float %i6, %i7
+  %i10 = fmul float %i6, -1.000000e+00
+  %i13 = call float @llvm.maxnum.f32(float %i9, float %i10)
+  %ret = fadd float %i10, %i13
+  ret float %ret
+}
+
+declare float @llvm.maxnum.f32(float, float)

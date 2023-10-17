@@ -1,17 +1,17 @@
-; RUN: opt -opaque-pointers=0 < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
-declare i8* @malloc(i64)
-declare void @free(i8*)
-declare void @usePointer(i8*)
-declare void @usePointer2([0 x i8]*)
+declare ptr @malloc(i64)
+declare void @free(ptr)
+declare void @usePointer(ptr)
+declare void @usePointer2(ptr)
 
-declare token @llvm.coro.id(i32, i8* readnone, i8* nocapture readonly, i8*)
+declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr)
 declare i64 @llvm.coro.size.i64()
-declare i8* @llvm.coro.begin(token, i8* writeonly)
+declare ptr @llvm.coro.begin(token, ptr writeonly)
 declare i8 @llvm.coro.suspend(token, i1)
-declare i1 @llvm.coro.end(i8*, i1)
-declare i8* @llvm.coro.free(token, i8* nocapture readonly)
-declare token @llvm.coro.save(i8*)
+declare i1 @llvm.coro.end(ptr, i1, token)
+declare ptr @llvm.coro.free(token, ptr nocapture readonly)
+declare token @llvm.coro.save(ptr)
 
 define void @foo() presplitcoroutine {
 entry:
@@ -21,16 +21,11 @@ entry:
   %a3 = alloca [0 x i8]
   %a4 = alloca i16
   %a5 = alloca [0 x i8]
-  %a0.cast = bitcast [0 x i8]* %a0 to i8*
-  %a1.cast = bitcast i32* %a1 to i8*
-  %a2.cast = bitcast [0 x i8]* %a2 to i8*
-  %a3.cast = bitcast [0 x i8]* %a3 to i8*
-  %a4.cast = bitcast i16* %a4 to i8*
-  %coro.id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
+  %coro.id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
   %coro.size = call i64 @llvm.coro.size.i64()
-  %coro.alloc = call i8* @malloc(i64 %coro.size)
-  %coro.state = call i8* @llvm.coro.begin(token %coro.id, i8* %coro.alloc)
-  %coro.save = call token @llvm.coro.save(i8* %coro.state)
+  %coro.alloc = call ptr @malloc(i64 %coro.size)
+  %coro.state = call ptr @llvm.coro.begin(token %coro.id, ptr %coro.alloc)
+  %coro.save = call token @llvm.coro.save(ptr %coro.state)
   %call.suspend = call i8 @llvm.coro.suspend(token %coro.save, i1 false)
   switch i8 %call.suspend, label %suspend [
     i8 0, label %wakeup
@@ -38,41 +33,35 @@ entry:
   ]
 
 wakeup:                                           ; preds = %entry
-  call void @usePointer(i8* %a0.cast)
-  call void @usePointer(i8* %a1.cast)
-  call void @usePointer(i8* %a2.cast)
-  call void @usePointer(i8* %a3.cast)
-  call void @usePointer(i8* %a4.cast)
-  call void @usePointer2([0 x i8]* %a5)
+  call void @usePointer(ptr %a0)
+  call void @usePointer(ptr %a1)
+  call void @usePointer(ptr %a2)
+  call void @usePointer(ptr %a3)
+  call void @usePointer(ptr %a4)
+  call void @usePointer2(ptr %a5)
   br label %cleanup
 
 suspend:                                          ; preds = %cleanup, %entry
-  %unused = call i1 @llvm.coro.end(i8* %coro.state, i1 false)
+  %unused = call i1 @llvm.coro.end(ptr %coro.state, i1 false, token none)
   ret void
 
 cleanup:                                          ; preds = %wakeup, %entry
-  %coro.memFree = call i8* @llvm.coro.free(token %coro.id, i8* %coro.state)
-  call void @free(i8* %coro.memFree)
+  %coro.memFree = call ptr @llvm.coro.free(token %coro.id, ptr %coro.state)
+  call void @free(ptr %coro.memFree)
   br label %suspend
 }
 
-; CHECK:       %foo.Frame = type { void (%foo.Frame*)*, void (%foo.Frame*)*, i32, i16, i1 }
+; CHECK:       %foo.Frame = type { ptr, ptr, i32, i16, i1 }
 
 ; CHECK-LABEL: @foo.resume(
 ; CHECK-NEXT:  entry.resume:
-; CHECK-NEXT:    [[VFRAME:%.*]] = bitcast %foo.Frame* [[FRAMEPTR:%.*]] to i8*
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[FOO_FRAME:%.*]], %foo.Frame* [[FRAMEPTR]], i32 0, i32 0
-; CHECK-NEXT:    [[A0_RELOAD_ADDR:%.*]] = bitcast void (%foo.Frame*)** [[TMP0]] to [0 x i8]*
-; CHECK-NEXT:    [[A1_RELOAD_ADDR:%.*]] = getelementptr inbounds [[FOO_FRAME]], %foo.Frame* [[FRAMEPTR]], i32 0, i32 2
-; CHECK-NEXT:    [[A4_RELOAD_ADDR:%.*]] = getelementptr inbounds [[FOO_FRAME]], %foo.Frame* [[FRAMEPTR]], i32 0, i32 3
-; CHECK-NEXT:    [[A4_CAST5:%.*]] = bitcast i16* [[A4_RELOAD_ADDR]] to i8*
-; CHECK-NEXT:    [[A3_CAST4:%.*]] = bitcast [0 x i8]* [[A0_RELOAD_ADDR]] to i8*
-; CHECK-NEXT:    [[A1_CAST2:%.*]] = bitcast i32* [[A1_RELOAD_ADDR]] to i8*
-; CHECK-NEXT:    call void @usePointer(i8* [[A3_CAST4]])
-; CHECK-NEXT:    call void @usePointer(i8* [[A1_CAST2]])
-; CHECK-NEXT:    call void @usePointer(i8* [[A3_CAST4]])
-; CHECK-NEXT:    call void @usePointer(i8* [[A3_CAST4]])
-; CHECK-NEXT:    call void @usePointer(i8* [[A4_CAST5]])
-; CHECK-NEXT:    call void @usePointer2([0 x i8]* [[A0_RELOAD_ADDR]])
-; CHECK-NEXT:    call void @free(i8* [[VFRAME]])
+; CHECK-NEXT:    [[A1_RELOAD_ADDR:%.*]] = getelementptr inbounds [[FOO_FRAME:%foo.Frame]], ptr [[FRAMEPTR:%.*]], i32 0, i32 2
+; CHECK-NEXT:    [[A4_RELOAD_ADDR:%.*]] = getelementptr inbounds [[FOO_FRAME]], ptr [[FRAMEPTR]], i32 0, i32 3
+; CHECK-NEXT:    call void @usePointer(ptr [[FRAMEPTR]])
+; CHECK-NEXT:    call void @usePointer(ptr [[A1_RELOAD_ADDR]])
+; CHECK-NEXT:    call void @usePointer(ptr [[FRAMEPTR]])
+; CHECK-NEXT:    call void @usePointer(ptr [[FRAMEPTR]])
+; CHECK-NEXT:    call void @usePointer(ptr [[A4_RELOAD_ADDR]])
+; CHECK-NEXT:    call void @usePointer2(ptr [[FRAMEPTR]])
+; CHECK-NEXT:    call void @free(ptr [[FRAMEPTR]])
 ; CHECK-NEXT:    ret void

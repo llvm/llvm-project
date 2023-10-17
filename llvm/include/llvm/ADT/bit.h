@@ -27,6 +27,31 @@
 #include <cstdlib>  // for _byteswap_{ushort,ulong,uint64}
 #endif
 
+#if defined(__linux__) || defined(__GNU__) || defined(__HAIKU__) ||            \
+    defined(__Fuchsia__) || defined(__EMSCRIPTEN__)
+#include <endian.h>
+#elif defined(_AIX)
+#include <sys/machine.h>
+#elif defined(__sun)
+/* Solaris provides _BIG_ENDIAN/_LITTLE_ENDIAN selector in sys/types.h */
+#include <sys/types.h>
+#define BIG_ENDIAN 4321
+#define LITTLE_ENDIAN 1234
+#if defined(_BIG_ENDIAN)
+#define BYTE_ORDER BIG_ENDIAN
+#else
+#define BYTE_ORDER LITTLE_ENDIAN
+#endif
+#elif defined(__MVS__)
+#define BIG_ENDIAN 4321
+#define LITTLE_ENDIAN 1234
+#define BYTE_ORDER BIG_ENDIAN
+#else
+#if !defined(BYTE_ORDER) && !defined(_WIN32)
+#include <machine/endian.h>
+#endif
+#endif
+
 #ifdef _MSC_VER
 // Declare these intrinsics manually rather including intrin.h. It's very
 // expensive, and bit.h is popular via MathExtras.h.
@@ -40,6 +65,16 @@ unsigned char _BitScanReverse64(unsigned long *_Index, unsigned __int64 _Mask);
 #endif
 
 namespace llvm {
+
+enum class endianness {
+  big,
+  little,
+#if defined(BYTE_ORDER) && defined(BIG_ENDIAN) && BYTE_ORDER == BIG_ENDIAN
+  native = big
+#else
+  native = little
+#endif
+};
 
 // This implementation of bit_cast is different from the C++20 one in two ways:
 //  - It isn't constexpr because that requires compiler support.
@@ -297,7 +332,7 @@ template <typename T> [[nodiscard]] T bit_floor(T Value) {
 }
 
 /// Returns the smallest integral power of two no smaller than Value if Value is
-/// nonzero.  Returns 0 otherwise.
+/// nonzero.  Returns 1 otherwise.
 ///
 /// Ex. bit_ceil(5) == 8.
 ///
@@ -348,6 +383,37 @@ template <typename T> struct PopulationCounter<T, 8> {
 template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
 [[nodiscard]] inline int popcount(T Value) noexcept {
   return detail::PopulationCounter<T, sizeof(T)>::count(Value);
+}
+
+// Forward-declare rotr so that rotl can use it.
+template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
+[[nodiscard]] constexpr T rotr(T V, int R);
+
+template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
+[[nodiscard]] constexpr T rotl(T V, int R) {
+  unsigned N = std::numeric_limits<T>::digits;
+
+  R = R % N;
+  if (!R)
+    return V;
+
+  if (R < 0)
+    return llvm::rotr(V, -R);
+
+  return (V << R) | (V >> (N - R));
+}
+
+template <typename T, typename> [[nodiscard]] constexpr T rotr(T V, int R) {
+  unsigned N = std::numeric_limits<T>::digits;
+
+  R = R % N;
+  if (!R)
+    return V;
+
+  if (R < 0)
+    return llvm::rotl(V, -R);
+
+  return (V >> R) | (V << (N - R));
 }
 
 } // namespace llvm

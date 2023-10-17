@@ -12,6 +12,7 @@
 
 #include "CodeGenDAGPatterns.h"
 #include "CodeGenInstruction.h"
+#include "CodeGenTarget.h"
 #include "DAGISelMatcher.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/TableGen/Record.h"
@@ -123,6 +124,7 @@ struct PatternSortingPredicate {
 
 
 void DAGISelEmitter::run(raw_ostream &OS) {
+  Records.startTimer("Parse patterns");
   emitSourceFileHeader("DAG Instruction Selector for the " +
                        CGP.getTargetInfo().getName().str() + " target", OS);
 
@@ -163,7 +165,7 @@ void DAGISelEmitter::run(raw_ostream &OS) {
 
   // Convert each variant of each pattern into a Matcher.
   Records.startTimer("Convert to matchers");
-  std::vector<Matcher*> PatternMatchers;
+  SmallVector<Matcher *, 0> PatternMatchers;
   for (const PatternToMatch *PTM : Patterns) {
     for (unsigned Variant = 0; ; ++Variant) {
       if (Matcher *M = ConvertPatternToMatcher(*PTM, Variant, CGP))
@@ -174,7 +176,7 @@ void DAGISelEmitter::run(raw_ostream &OS) {
   }
 
   std::unique_ptr<Matcher> TheMatcher =
-    std::make_unique<ScopeMatcher>(PatternMatchers);
+      std::make_unique<ScopeMatcher>(std::move(PatternMatchers));
 
   Records.startTimer("Optimize matchers");
   OptimizeMatcher(TheMatcher, CGP);
@@ -185,11 +187,5 @@ void DAGISelEmitter::run(raw_ostream &OS) {
   EmitMatcherTable(TheMatcher.get(), CGP, OS);
 }
 
-namespace llvm {
-
-void EmitDAGISel(RecordKeeper &RK, raw_ostream &OS) {
-  RK.startTimer("Parse patterns");
-  DAGISelEmitter(RK).run(OS);
-}
-
-} // End llvm namespace
+static TableGen::Emitter::OptClass<DAGISelEmitter>
+    X("gen-dag-isel", "Generate a DAG instruction selector");

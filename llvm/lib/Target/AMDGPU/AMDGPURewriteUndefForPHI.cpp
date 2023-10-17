@@ -10,7 +10,7 @@
 // StructurizedCFG pass, and this pass has some additional limitation that make
 // it can only run after SIAnnotateControlFlow.
 //
-// To achieve optimal code generation for AMDGPU, we assume that divergence
+// To achieve optimal code generation for AMDGPU, we assume that uniformity
 // analysis reports the PHI in join block of divergent branch as uniform if
 // it has one unique uniform value plus additional undefined/poisoned incoming
 // value. That is to say the later compiler pipeline will ensure such PHI always
@@ -56,7 +56,7 @@
 // \---
 
 #include "AMDGPU.h"
-#include "llvm/Analysis/LegacyDivergenceAnalysis.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
@@ -69,11 +69,11 @@ using namespace llvm;
 
 namespace {
 
-class AMDGPURewriteUndefForPHI : public FunctionPass {
+class AMDGPURewriteUndefForPHILegacy : public FunctionPass {
 public:
   static char ID;
-  AMDGPURewriteUndefForPHI() : FunctionPass(ID) {
-    initializeAMDGPURewriteUndefForPHIPass(*PassRegistry::getPassRegistry());
+  AMDGPURewriteUndefForPHILegacy() : FunctionPass(ID) {
+    initializeAMDGPURewriteUndefForPHILegacyPass(*PassRegistry::getPassRegistry());
   }
   bool runOnFunction(Function &F) override;
   StringRef getPassName() const override {
@@ -81,31 +81,31 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<LegacyDivergenceAnalysis>();
+    AU.addRequired<UniformityInfoWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
 
     AU.addPreserved<DominatorTreeWrapperPass>();
-    AU.addPreserved<LegacyDivergenceAnalysis>();
+    AU.addPreserved<UniformityInfoWrapperPass>();
     AU.setPreservesCFG();
   }
 };
 
 } // end anonymous namespace
-char AMDGPURewriteUndefForPHI::ID = 0;
+char AMDGPURewriteUndefForPHILegacy::ID = 0;
 
-INITIALIZE_PASS_BEGIN(AMDGPURewriteUndefForPHI, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(AMDGPURewriteUndefForPHILegacy, DEBUG_TYPE,
                       "Rewrite undef for PHI", false, false)
-INITIALIZE_PASS_DEPENDENCY(LegacyDivergenceAnalysis)
+INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_END(AMDGPURewriteUndefForPHI, DEBUG_TYPE,
+INITIALIZE_PASS_END(AMDGPURewriteUndefForPHILegacy, DEBUG_TYPE,
                     "Rewrite undef for PHI", false, false)
 
-bool rewritePHIs(Function &F, LegacyDivergenceAnalysis *DA, DominatorTree *DT) {
+bool rewritePHIs(Function &F, UniformityInfo &UA, DominatorTree *DT) {
   bool Changed = false;
   SmallVector<PHINode *> ToBeDeleted;
   for (auto &BB : F) {
     for (auto &PHI : BB.phis()) {
-      if (DA->isDivergent(&PHI))
+      if (UA.isDivergent(&PHI))
         continue;
 
       // The unique incoming value except undef/poison for the PHI node.
@@ -147,7 +147,7 @@ bool rewritePHIs(Function &F, LegacyDivergenceAnalysis *DA, DominatorTree *DT) {
       // TODO: We should still be able to replace undef value if the unique
       // value is a Constant.
       if (!UniqueDefinedIncoming || Undefs.empty() ||
-          !DA->isDivergent(DominateBB->getTerminator()))
+          !UA.isDivergent(DominateBB->getTerminator()))
         continue;
 
       // We only replace the undef when DominateBB truly dominates all the
@@ -170,12 +170,27 @@ bool rewritePHIs(Function &F, LegacyDivergenceAnalysis *DA, DominatorTree *DT) {
   return Changed;
 }
 
-bool AMDGPURewriteUndefForPHI::runOnFunction(Function &F) {
-  LegacyDivergenceAnalysis *DA = &getAnalysis<LegacyDivergenceAnalysis>();
+bool AMDGPURewriteUndefForPHILegacy::runOnFunction(Function &F) {
+  UniformityInfo &UA =
+      getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
   DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  return rewritePHIs(F, DA, DT);
+  return rewritePHIs(F, UA, DT);
 }
 
-FunctionPass *llvm::createAMDGPURewriteUndefForPHIPass() {
-  return new AMDGPURewriteUndefForPHI();
+PreservedAnalyses
+AMDGPURewriteUndefForPHIPass::run(Function &F, FunctionAnalysisManager &AM) {
+  UniformityInfo &UA = AM.getResult<UniformityInfoAnalysis>(F);
+  DominatorTree *DT = &AM.getResult<DominatorTreeAnalysis>(F);
+  bool Changed = rewritePHIs(F, UA, DT);
+  if (Changed) {
+    PreservedAnalyses PA;
+    PA.preserveSet<CFGAnalyses>();
+    return PA;
+  }
+
+  return PreservedAnalyses::all();
+}
+
+FunctionPass *llvm::createAMDGPURewriteUndefForPHILegacyPass() {
+  return new AMDGPURewriteUndefForPHILegacy();
 }

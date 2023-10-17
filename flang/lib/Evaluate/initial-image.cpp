@@ -35,12 +35,10 @@ auto InitialImage::Add(ConstantSubscript offset, std::size_t bytes,
             AddPointer(offset + component.offset(), indExpr.value());
           } else if (IsAllocatable(component) || IsAutomatic(component)) {
             return NotAConstant;
-          } else {
-            Result added{Add(offset + component.offset(), component.size(),
-                indExpr.value(), context)};
-            if (added != Ok) {
-              return added;
-            }
+          } else if (auto result{Add(offset + component.offset(),
+                         component.size(), indExpr.value(), context)};
+                     result != Ok) {
+            return result;
           }
         }
         offset += elementBytes;
@@ -73,10 +71,11 @@ public:
   using Result = std::optional<Expr<SomeType>>;
   using Types = AllTypes;
   AsConstantHelper(FoldingContext &context, const DynamicType &type,
-      const ConstantSubscripts &extents, const InitialImage &image,
-      bool padWithZero = false, ConstantSubscript offset = 0)
-      : context_{context}, type_{type}, image_{image}, extents_{extents},
-        padWithZero_{padWithZero}, offset_{offset} {
+      std::optional<std::int64_t> charLength, const ConstantSubscripts &extents,
+      const InitialImage &image, bool padWithZero = false,
+      ConstantSubscript offset = 0)
+      : context_{context}, type_{type}, charLength_{charLength}, image_{image},
+        extents_{extents}, padWithZero_{padWithZero}, offset_{offset} {
     CHECK(!type.IsPolymorphic());
   }
   template <typename T> Result Test() {
@@ -92,8 +91,8 @@ public:
     using Scalar = typename Const::Element;
     std::size_t elements{TotalElementCount(extents_)};
     std::vector<Scalar> typedValue(elements);
-    auto elemBytes{
-        ToInt64(type_.MeasureSizeInBytes(context_, GetRank(extents_) > 0))};
+    auto elemBytes{ToInt64(type_.MeasureSizeInBytes(
+        context_, GetRank(extents_) > 0, charLength_))};
     CHECK(elemBytes && *elemBytes >= 0);
     std::size_t stride{static_cast<std::size_t>(*elemBytes)};
     CHECK(offset_ + elements * stride <= image_.data_.size() || padWithZero_);
@@ -123,7 +122,7 @@ public:
             CHECK(componentExtents.has_value());
             for (std::size_t j{0}; j < elements; ++j, at += stride) {
               if (Result value{image_.AsConstant(context_, *componentType,
-                      *componentExtents, padWithZero_, at)}) {
+                      std::nullopt, *componentExtents, padWithZero_, at)}) {
                 typedValue[j].emplace(component, std::move(*value));
               }
             }
@@ -182,6 +181,7 @@ public:
 private:
   FoldingContext &context_;
   const DynamicType &type_;
+  std::optional<std::int64_t> charLength_;
   const InitialImage &image_;
   ConstantSubscripts extents_; // a copy
   bool padWithZero_;
@@ -189,10 +189,11 @@ private:
 };
 
 std::optional<Expr<SomeType>> InitialImage::AsConstant(FoldingContext &context,
-    const DynamicType &type, const ConstantSubscripts &extents,
-    bool padWithZero, ConstantSubscript offset) const {
-  return common::SearchTypes(
-      AsConstantHelper{context, type, extents, *this, padWithZero, offset});
+    const DynamicType &type, std::optional<std::int64_t> charLength,
+    const ConstantSubscripts &extents, bool padWithZero,
+    ConstantSubscript offset) const {
+  return common::SearchTypes(AsConstantHelper{
+      context, type, charLength, extents, *this, padWithZero, offset});
 }
 
 std::optional<Expr<SomeType>> InitialImage::AsConstantPointer(

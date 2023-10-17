@@ -1,6 +1,12 @@
 RUN: dsymutil -f -o - -oso-prepend-path=%p/.. %p/../Inputs/basic-lto.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s
 RUN: dsymutil -oso-prepend-path=%p/.. -dump-debug-map %p/../Inputs/basic-lto.macho.x86_64 | dsymutil -f -o - -y - | llvm-dwarfdump -a - | FileCheck %s
 
+RUN: dsymutil --linker llvm -f -o - -oso-prepend-path=%p/.. \
+RUN:   %p/../Inputs/basic-lto.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s
+RUN: dsymutil --linker llvm -oso-prepend-path=%p/.. -dump-debug-map \
+RUN:   %p/../Inputs/basic-lto.macho.x86_64 | dsymutil -f -o - -y - | \
+RUN:   llvm-dwarfdump -a - | FileCheck %s
+
 CHECK: file format Mach-O 64-bit x86-64
 
 CHECK: debug_info contents
@@ -153,30 +159,30 @@ CHECK: .debug_line contents
 CHECK: file_names[  1]:
 CHECK-NEXT: name: "basic1.c"
 CHECK-NEXT: dir_index: 0
-CHECK: 0x0000000100000f40     23      0      1   0             0  is_stmt
-CHECK: 0x0000000100000f44     24      0      1   0             0  is_stmt prologue_end
-CHECK: 0x0000000100000f4b     24      0      1   0             0  is_stmt end_sequence
+CHECK: 0x0000000100000f40     23      0      1   0             0       0  is_stmt
+CHECK: 0x0000000100000f44     24      0      1   0             0       0  is_stmt prologue_end
+CHECK: 0x0000000100000f4b     24      0      1   0             0       0  is_stmt end_sequence
 
 CHECK: file_names[  1]:
 CHECK-NEXT: name: "basic2.c"
 CHECK-NEXT: dir_index: 0
-CHECK: 0x0000000100000f50     19      0      1   0             0  is_stmt
-CHECK: 0x0000000100000f54     20      0      1   0             0  is_stmt prologue_end
-CHECK: 0x0000000100000f63     15      0      1   0             0  is_stmt
-CHECK: 0x0000000100000f72     20      0      1   0             0  is_stmt
-CHECK: 0x0000000100000f89     20      0      1   0             0  is_stmt end_sequence
+CHECK: 0x0000000100000f50     19      0      1   0             0       0  is_stmt
+CHECK: 0x0000000100000f54     20      0      1   0             0       0  is_stmt prologue_end
+CHECK: 0x0000000100000f63     15      0      1   0             0       0  is_stmt
+CHECK: 0x0000000100000f72     20      0      1   0             0       0  is_stmt
+CHECK: 0x0000000100000f89     20      0      1   0             0       0  is_stmt end_sequence
 
 CHECK: file_names[  1]:
 CHECK-NEXT: name: "basic3.c"
 CHECK-NEXT: dir_index: 0
-CHECK: 0x0000000100000f90     16      0      1   0             0  is_stmt
-CHECK: 0x0000000100000f94     12      0      1   0             0  is_stmt prologue_end
-CHECK: 0x0000000100000f9a     17      0      1   0             0  is_stmt
-CHECK: 0x0000000100000f9f     12      0      1   0             0  is_stmt
-CHECK: 0x0000000100000fa7     20      0      1   0             0  is_stmt
-CHECK: 0x0000000100000fa9     19      0      1   0             0  is_stmt
-CHECK: 0x0000000100000fb2     20      0      1   0             0  is_stmt
-CHECK: 0x0000000100000fb4     20      0      1   0             0  is_stmt end_sequence
+CHECK: 0x0000000100000f90     16      0      1   0             0       0  is_stmt
+CHECK: 0x0000000100000f94     12      0      1   0             0       0  is_stmt prologue_end
+CHECK: 0x0000000100000f9a     17      0      1   0             0       0  is_stmt
+CHECK: 0x0000000100000f9f     12      0      1   0             0       0  is_stmt
+CHECK: 0x0000000100000fa7     20      0      1   0             0       0  is_stmt
+CHECK: 0x0000000100000fa9     19      0      1   0             0       0  is_stmt
+CHECK: 0x0000000100000fb2     20      0      1   0             0       0  is_stmt
+CHECK: 0x0000000100000fb4     20      0      1   0             0       0  is_stmt end_sequence
 
 CHECK-NOT: .debug_pubnames contents:
 CHECK-NOT: .debug_pubtypes contents:
@@ -192,6 +198,7 @@ CHECK-NEXT:   HeaderData length: 12
 CHECK-NEXT: }
 CHECK-NEXT: DIE offset base: 0
 CHECK-NEXT: Number of atoms: 1
+CHECK-NEXT: Size of each hash data entry: 4
 CHECK-NEXT: Atoms [
 CHECK-NEXT:   Atom 0 {
 CHECK-NEXT:     Type: DW_ATOM_die_offset
@@ -285,6 +292,7 @@ CHECK-NEXT:   HeaderData length: 24
 CHECK-NEXT: }
 CHECK-NEXT: DIE offset base: 0
 CHECK-NEXT: Number of atoms: 4
+CHECK-NEXT: Size of each hash data entry: 11
 CHECK-NEXT: Atoms [
 CHECK-NEXT:   Atom 0 {
 CHECK-NEXT:     Type: DW_ATOM_die_offset
@@ -341,6 +349,7 @@ CHECK-NEXT:   HeaderData length: 12
 CHECK-NEXT: }
 CHECK-NEXT: DIE offset base: 0
 CHECK-NEXT: Number of atoms: 1
+CHECK-NEXT: Size of each hash data entry: 4
 CHECK-NEXT: Atoms [
 CHECK-NEXT:   Atom 0 {
 CHECK-NEXT:     Type: DW_ATOM_die_offset
@@ -362,6 +371,7 @@ CHECK-NEXT:   HeaderData length: 12
 CHECK-NEXT: }
 CHECK-NEXT: DIE offset base: 0
 CHECK-NEXT: Number of atoms: 1
+CHECK-NEXT: Size of each hash data entry: 4
 CHECK-NEXT: Atoms [
 CHECK-NEXT:   Atom 0 {
 CHECK-NEXT:     Type: DW_ATOM_die_offset

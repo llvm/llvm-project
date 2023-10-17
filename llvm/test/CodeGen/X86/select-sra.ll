@@ -89,8 +89,8 @@ define <4 x i32> @isnonneg_v4i32(<4 x i32> %x) {
 define <2 x i64> @isnonneg_v2i64(<2 x i64> %x) {
 ; CHECK-LABEL: isnonneg_v2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    psrad $31, %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; CHECK-NEXT:    psrad $31, %xmm0
 ; CHECK-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %cond = icmp sgt <2 x i64> %x, <i64 -1, i64 -1>
@@ -186,8 +186,8 @@ define <4 x i32> @isneg_v4i32(<4 x i32> %x) {
 define <2 x i64> @isneg_v2i64(<2 x i64> %x) {
 ; CHECK-LABEL: isneg_v2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    psrad $31, %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; CHECK-NEXT:    psrad $31, %xmm0
 ; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %cond = icmp slt <2 x i64> %x, zeroinitializer

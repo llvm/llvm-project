@@ -18,7 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCInstrDesc.h"
-#include "llvm/MC/SubtargetFeature.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 
 namespace llvm {
 
@@ -31,12 +31,20 @@ enum {
   MO_CALL_PLT,
   MO_PCREL_HI,
   MO_PCREL_LO,
+  MO_PCREL64_LO,
+  MO_PCREL64_HI,
   MO_GOT_PC_HI,
   MO_GOT_PC_LO,
+  MO_GOT_PC64_LO,
+  MO_GOT_PC64_HI,
   MO_LE_HI,
   MO_LE_LO,
+  MO_LE64_LO,
+  MO_LE64_HI,
   MO_IE_PC_HI,
   MO_IE_PC_LO,
+  MO_IE_PC64_LO,
+  MO_IE_PC64_HI,
   MO_LD_PC_HI,
   MO_GD_PC_HI,
   // TODO: Add more flags.
@@ -54,6 +62,7 @@ enum ABI {
   ABI_Unknown
 };
 
+ABI computeTargetABI(const Triple &TT, StringRef ABIName);
 ABI getTargetABI(StringRef ABIName);
 
 // Returns the register used to hold the stack pointer after realignment.

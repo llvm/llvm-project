@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-vector-transfer-lowering-patterns -canonicalize -split-input-file | FileCheck %s
+// RUN: mlir-opt %s --test-transform-dialect-interpreter -canonicalize --split-input-file | FileCheck %s
 
 // CHECK-LABEL: func @vector_transfer_ops_0d_memref(
 //  CHECK-SAME:   %[[MEM:.*]]: memref<f32>
@@ -14,14 +14,12 @@ func.func @vector_transfer_ops_0d_memref(%M: memref<f32>, %v: vector<1x1x1xf32>)
 //  CHECK-NEXT:   memref.store %[[ss]], %[[MEM]][] : memref<f32>
     vector.transfer_write %0, %M[] : vector<f32>, memref<f32>
 
-//  CHECK-NEXT:   %[[VV:.*]] = vector.extract %arg1[0, 0, 0] : vector<1x1x1xf32>
+//  CHECK-NEXT:   %[[VV:.*]] = vector.extract %arg1[0, 0, 0] : f32 from vector<1x1x1xf32>
 //  CHECK-NEXT:   memref.store %[[VV]], %[[MEM]][] : memref<f32>
     vector.store %v, %M[] : memref<f32>, vector<1x1x1xf32>
 
     return
 }
-
-// -----
 
 // CHECK-LABEL: func @vector_transfer_ops_0d_tensor(
 //  CHECK-SAME:   %[[SOURCE:.*]]: tensor<f32>
@@ -36,8 +34,6 @@ func.func @vector_transfer_ops_0d_tensor(%M: tensor<f32>) -> vector<1xf32> {
 //  CHECK-NEXT:   return %[[V]]
     return %0: vector<1xf32>
 }
-
-// -----
 
 // transfer_read/write are lowered to vector.load/store
 // CHECK-LABEL:   func @transfer_to_load(
@@ -55,8 +51,6 @@ func.func @transfer_to_load(%mem : memref<8x8xf32>, %i : index) -> vector<4xf32>
   return %res : vector<4xf32>
 }
 
-// -----
-
 // n-D results are also supported.
 // CHECK-LABEL:   func @transfer_2D(
 // CHECK-SAME:                           %[[MEM:.*]]: memref<8x8xf32>,
@@ -73,8 +67,6 @@ func.func @transfer_2D(%mem : memref<8x8xf32>, %i : index) -> vector<2x4xf32> {
   return %res : vector<2x4xf32>
 }
 
-// -----
-
 // Vector element types are supported when the result has the same type.
 // CHECK-LABEL:   func @transfer_vector_element(
 // CHECK-SAME:                           %[[MEM:.*]]: memref<8x8xvector<2x4xf32>>,
@@ -90,8 +82,6 @@ func.func @transfer_vector_element(%mem : memref<8x8xvector<2x4xf32>>, %i : inde
   vector.transfer_write %res, %mem[%i, %i] : vector<2x4xf32>, memref<8x8xvector<2x4xf32>>
   return %res : vector<2x4xf32>
 }
-
-// -----
 
 // TODO: Vector element types are not supported yet when the result has a
 // different type.
@@ -111,8 +101,6 @@ func.func @transfer_vector_element_different_types(%mem : memref<8x8xvector<2x4x
   return %res : vector<1x2x4xf32>
 }
 
-// -----
-
 // TODO: transfer_read/write cannot be lowered because there is a dimension
 // that is not guaranteed to be in-bounds.
 // CHECK-LABEL:   func @transfer_2D_not_inbounds(
@@ -130,8 +118,6 @@ func.func @transfer_2D_not_inbounds(%mem : memref<8x8xf32>, %i : index) -> vecto
   vector.transfer_write %res, %mem[%i, %i] {in_bounds = [false, true]} : vector<2x4xf32>, memref<8x8xf32>
   return %res : vector<2x4xf32>
 }
-
-// -----
 
 // TODO: transfer_read/write cannot be lowered because they are not guaranteed
 // to be in-bounds.
@@ -151,8 +137,6 @@ func.func @transfer_not_inbounds(%mem : memref<8x8xf32>, %i : index) -> vector<4
   return %res : vector<4xf32>
 }
 
-// -----
-
 // CHECK-LABEL:   func @transfer_nondefault_layout(
 // CHECK-SAME:                                          %[[MEM:.*]]: memref<8x8xf32, #{{.*}}>,
 // CHECK-SAME:                                          %[[IDX:.*]]: index) -> vector<4xf32> {
@@ -168,8 +152,6 @@ func.func @transfer_nondefault_layout(%mem : memref<8x8xf32, #layout>, %i : inde
   vector.transfer_write %res, %mem[%i, %i] {in_bounds = [true]} : vector<4xf32>, memref<8x8xf32, #layout>
   return %res : vector<4xf32>
 }
-
-// -----
 
 // TODO: transfer_read/write cannot be lowered to vector.load/store yet when the
 // permutation map is not the minor identity map (up to broadcasting).
@@ -187,8 +169,6 @@ func.func @transfer_perm_map(%mem : memref<8x8xf32>, %i : index) -> vector<4xf32
   return %res : vector<4xf32>
 }
 
-// -----
-
 // Lowering of transfer_read with broadcasting is supported (note that a `load`
 // is generated instead of a `vector.load`).
 // CHECK-LABEL:   func @transfer_broadcasting(
@@ -199,14 +179,14 @@ func.func @transfer_perm_map(%mem : memref<8x8xf32>, %i : index) -> vector<4xf32
 // CHECK-NEXT:      return %[[RES]] : vector<4xf32>
 // CHECK-NEXT:    }
 
-#broadcast = affine_map<(d0, d1) -> (0)>
+#broadcast_1d = affine_map<(d0, d1) -> (0)>
 func.func @transfer_broadcasting(%mem : memref<8x8xf32>, %i : index) -> vector<4xf32> {
   %cf0 = arith.constant 0.0 : f32
-  %res = vector.transfer_read %mem[%i, %i], %cf0 {in_bounds = [true], permutation_map = #broadcast} : memref<8x8xf32>, vector<4xf32>
+  %res = vector.transfer_read %mem[%i, %i], %cf0 
+    {in_bounds = [true], permutation_map = #broadcast_1d} 
+      : memref<8x8xf32>, vector<4xf32>
   return %res : vector<4xf32>
 }
-
-// -----
 
 // CHECK-LABEL:   func @transfer_scalar(
 // CHECK-SAME:                          %[[MEM:.*]]: memref<?x?xf32>,
@@ -221,8 +201,6 @@ func.func @transfer_scalar(%mem : memref<?x?xf32>, %i : index) -> vector<1xf32> 
   return %res : vector<1xf32>
 }
 
-// -----
-
 // An example with two broadcasted dimensions.
 // CHECK-LABEL:   func @transfer_broadcasting_2D(
 // CHECK-SAME:                                %[[MEM:.*]]: memref<8x8xf32>,
@@ -232,14 +210,14 @@ func.func @transfer_scalar(%mem : memref<?x?xf32>, %i : index) -> vector<1xf32> 
 // CHECK-NEXT:      return %[[RES]] : vector<4x4xf32>
 // CHECK-NEXT:    }
 
-#broadcast = affine_map<(d0, d1) -> (0, 0)>
+#broadcast_2d = affine_map<(d0, d1) -> (0, 0)>
 func.func @transfer_broadcasting_2D(%mem : memref<8x8xf32>, %i : index) -> vector<4x4xf32> {
   %cf0 = arith.constant 0.0 : f32
-  %res = vector.transfer_read %mem[%i, %i], %cf0 {in_bounds = [true, true], permutation_map = #broadcast} : memref<8x8xf32>, vector<4x4xf32>
+  %res = vector.transfer_read %mem[%i, %i], %cf0 
+    {in_bounds = [true, true], permutation_map = #broadcast_2d} 
+      : memref<8x8xf32>, vector<4x4xf32>
   return %res : vector<4x4xf32>
 }
-
-// -----
 
 // More complex broadcasting case (here a `vector.load` is generated).
 // CHECK-LABEL:   func @transfer_broadcasting_complex(
@@ -250,11 +228,22 @@ func.func @transfer_broadcasting_2D(%mem : memref<8x8xf32>, %i : index) -> vecto
 // CHECK-NEXT:      return %[[RES]] : vector<3x2x4x5xf32>
 // CHECK-NEXT:    }
 
-#broadcast = affine_map<(d0, d1, d2, d3, d4) -> (d1, 0, 0, d4)>
+#broadcast_2d_in_4d = affine_map<(d0, d1, d2, d3, d4) -> (d1, 0, 0, d4)>
 func.func @transfer_broadcasting_complex(%mem : memref<10x20x30x8x8xf32>, %i : index) -> vector<3x2x4x5xf32> {
   %cf0 = arith.constant 0.0 : f32
-  %res = vector.transfer_read %mem[%i, %i, %i, %i, %i], %cf0 {in_bounds = [true, true, true, true], permutation_map = #broadcast} : memref<10x20x30x8x8xf32>, vector<3x2x4x5xf32>
+  %res = vector.transfer_read %mem[%i, %i, %i, %i, %i], %cf0 
+    {in_bounds = [true, true, true, true], permutation_map = #broadcast_2d_in_4d} 
+      : memref<10x20x30x8x8xf32>, vector<3x2x4x5xf32>
   return %res : vector<3x2x4x5xf32>
+}
+
+
+transform.sequence failures(propagate) {
+^bb1(%func_op: !transform.op<"func.func">):
+  transform.apply_patterns to %func_op {
+    transform.apply_patterns.vector.lower_transfer max_transfer_rank = 99
+    transform.apply_patterns.vector.transfer_permutation_patterns
+  } : !transform.op<"func.func">
 }
 
 // -----
@@ -321,8 +310,6 @@ func.func @transfer_read_permutations(%arg0 : memref<?x?xf32>, %arg1 : memref<?x
          vector<7x14x8x16xf32>, vector<8xf32>
 }
 
-// -----
-
 // CHECK-LABEL: func @transfer_write_permutations
 // CHECK-SAME:      %[[ARG0:.*]]: memref<?x?x?x?xf32>
 // CHECK-SAME:      %[[ARG1:.*]]: tensor<?x?x?x?xf32>
@@ -348,8 +335,6 @@ func.func @transfer_write_permutations(
   return %0 : tensor<?x?x?x?xf32>
 }
 
-// -----
-
 // CHECK-LABEL: func @transfer_write_broadcast_unit_dim
 // CHECK-SAME:      %[[ARG0:.*]]: memref<?x?x?x?xf32>
 // CHECK-SAME:      %[[ARG1:.*]]: tensor<?x?x?x?xf32>
@@ -370,7 +355,40 @@ func.func @transfer_write_broadcast_unit_dim(
   vector.transfer_write %v2, %arg0[%c0, %c0, %c0, %c0] {permutation_map = affine_map<(d0, d1, d2, d3) -> (d1, d2)>} : vector<8x16xf32>, memref<?x?x?x?xf32>
   // CHECK: %[[NEW_VEC2:.*]] = vector.broadcast %{{.*}} : vector<8x16xf32> to vector<1x8x16xf32>
   // CHECK: %[[NEW_VEC3:.*]] = vector.transpose %[[NEW_VEC2]], [1, 2, 0] : vector<1x8x16xf32> to vector<8x16x1xf32>
-  // CHECK: vector.transfer_write %[[NEW_VEC3]], %[[ARG0]][%[[C0]], %[[C0]], %[[C0]], %[[C0]]] : vector<8x16x1xf32>, memref<?x?x?x?xf32>
+  // CHECK: vector.transfer_write %[[NEW_VEC3]], %[[ARG0]][%[[C0]], %[[C0]], %[[C0]], %[[C0]]] {in_bounds = [false, false, true]} : vector<8x16x1xf32>, memref<?x?x?x?xf32>
 
   return %0 : tensor<?x?x?x?xf32>
+}
+
+transform.sequence failures(propagate) {
+^bb1(%func_op: !transform.op<"func.func">):
+  transform.apply_patterns to %func_op {
+    transform.apply_patterns.vector.lower_transfer max_transfer_rank = 99
+    transform.apply_patterns.vector.transfer_permutation_patterns
+  } : !transform.op<"func.func">
+}
+
+// -----
+
+/// Verify vector.maskedload and vector.maskedstore ops that operate on 1-D
+/// vectors aren't generated for rank > 1 transfer ops.
+
+// CHECK-LABEL: @transfer_2D_masked
+// CHECK-NOT: vector.maskedload
+// CHECK-NOT: vector.maskedstore
+// CHECK: vector.transfer_read
+// CHECK: vector.transfer_write
+func.func @transfer_2D_masked(%mem : memref<?x?xf32>, %mask : vector<2x4xi1>) -> vector<2x4xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %res = vector.transfer_read %mem[%c0, %c0], %pad, %mask {in_bounds = [true, true]} : memref<?x?xf32>, vector<2x4xf32>
+  vector.transfer_write %res, %mem[%c0, %c0], %mask {in_bounds = [true, true]} : vector<2x4xf32>, memref<?x?xf32>
+  return %res : vector<2x4xf32>
+}
+
+transform.sequence failures(propagate) {
+^bb1(%func_op: !transform.op<"func.func">):
+  transform.apply_patterns to %func_op {
+    transform.apply_patterns.vector.lower_transfer max_transfer_rank = 2
+  } : !transform.op<"func.func">
 }

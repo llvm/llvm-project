@@ -358,6 +358,12 @@ __m128i test_mm_stream_load_si128(__m128i const *a) {
   return _mm_stream_load_si128(a);
 }
 
+__m128i test_mm_stream_load_si128_void(const void *a) {
+  // CHECK-LABEL: test_mm_stream_load_si128_void
+  // CHECK: load <2 x i64>, ptr %{{.*}}, align 16, !nontemporal
+  return _mm_stream_load_si128(a);
+}
+
 int test_mm_test_all_ones(__m128i x) {
   // CHECK-LABEL: test_mm_test_all_ones
   // CHECK: call i32 @llvm.x86.sse41.ptestc(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
@@ -400,4 +406,14 @@ float pr51324(__m128 a) {
   // CHECK: call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %{{.*}}, i32 0)
   // CHECK: extractelement <4 x float> %{{.*}}, i32 0
   return _mm_round_ps(a, 0)[0];
+}
+
+// Ensure _mm_test_all_ones macro doesn't reuse argument
+__m128i expensive_call();
+int pr60006() {
+  // CHECK-LABEL: pr60006
+  // CHECK: call {{.*}} @expensive_call
+  // CHECK-NOT: call {{.*}} @expensive_call
+  // CHECK: call i32 @llvm.x86.sse41.ptestc(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
+  return _mm_test_all_ones(expensive_call());
 }

@@ -8,8 +8,8 @@ import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import decorators
 
-class TestCase(TestBase):
 
+class TestCase(TestBase):
     def test_typedef(self):
         target = self.dbg.GetDummyTarget()
 
@@ -17,7 +17,9 @@ class TestCase(TestBase):
         # parameter.
         opts = lldb.SBExpressionOptions()
         opts.SetTopLevel(True)
-        result = target.EvaluateExpression("template <typename T> struct X { T f; };", opts)
+        result = target.EvaluateExpression(
+            "template <typename T> struct X { T f; };", opts
+        )
         # FIXME: This fails with "Couldn't find $__lldb_expr() in the module"
         # but it should succeed. The fact that this code has nothing to run
         # shouldn't be an error.

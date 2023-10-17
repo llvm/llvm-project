@@ -14,13 +14,13 @@
 // region of each MBB, so that a successor block can learn from it.
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZMACHINESCHEDULER_H
+#define LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZMACHINESCHEDULER_H
+
 #include "SystemZHazardRecognizer.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include <set>
-
-#ifndef LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZMACHINESCHEDULER_H
-#define LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZMACHINESCHEDULER_H
 
 using namespace llvm;
 

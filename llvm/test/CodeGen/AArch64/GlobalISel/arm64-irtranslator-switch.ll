@@ -796,14 +796,14 @@ define void @jt_multiple_jump_tables(ptr %arg, i32 %arg1, ptr %arg2) {
   ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[PHI]], [[C111]]
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[GV]], [[MUL]](s64)
   ; CHECK-NEXT:   [[C112:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C112]](s64)
+  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[PTR_ADD]], [[C112]](s64)
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[PTR_ADD1]](p0) :: (load (p0) from %ir.tmp59)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $x0 = COPY [[COPY]](p0)
   ; CHECK-NEXT:   $x1 = COPY [[LOAD]](p0)
   ; CHECK-NEXT:   BL @wibble, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
   ; CHECK-NEXT:   G_BR %bb.59
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.57.bb62:
@@ -811,8 +811,8 @@ define void @jt_multiple_jump_tables(ptr %arg, i32 %arg1, ptr %arg2) {
   ; CHECK-NEXT:   $x0 = COPY [[COPY]](p0)
   ; CHECK-NEXT:   $x1 = COPY [[COPY2]](p0)
   ; CHECK-NEXT:   BL @wibble, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
   ; CHECK-NEXT:   G_BR %bb.59
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.58.bb64:
@@ -825,8 +825,8 @@ define void @jt_multiple_jump_tables(ptr %arg, i32 %arg1, ptr %arg2) {
   ; CHECK-NEXT:   $x0 = COPY [[COPY]](p0)
   ; CHECK-NEXT:   $x1 = COPY [[FRAME_INDEX]](p0)
   ; CHECK-NEXT:   BL @wibble, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
   ; CHECK-NEXT:   G_BR %bb.59
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.59.bb68:
@@ -1414,8 +1414,8 @@ define ptr @test_range_phi_switch_cycle() {
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $w0 = COPY [[PHI]](s32)
   ; CHECK-NEXT:   BL @ham, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit-def $x0
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
 bb:
   br label %bb1
 

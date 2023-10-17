@@ -1,63 +1,63 @@
 // RUN: echo -n "GPU binary would be here." > %t
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm %s \
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -target-sdk-version=8.0 -fcuda-include-gpubinary %t -o - \
 // RUN:   | FileCheck -allow-deprecated-dag-overlap %s \
 // RUN:       --check-prefixes=ALL,LNX,NORDC,CUDA,CUDANORDC,CUDA-OLD
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm %s \
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -target-sdk-version=8.0  -fcuda-include-gpubinary %t \
 // RUN:     -o - -DNOGLOBALS \
 // RUN:   | FileCheck -allow-deprecated-dag-overlap %s \
 // RUN:     -check-prefixes=NOGLOBALS,CUDANOGLOBALS
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm %s \
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -target-sdk-version=8.0 -fgpu-rdc -fcuda-include-gpubinary %t \
 // RUN:     -o - \
 // RUN:   | FileCheck -allow-deprecated-dag-overlap %s \
 // RUN:       --check-prefixes=ALL,LNX,RDC,CUDA,CUDARDC,CUDA-OLD
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm %s \
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -target-sdk-version=8.0 -o - \
 // RUN:   | FileCheck -allow-deprecated-dag-overlap %s -check-prefix=NOGPUBIN
 
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm %s       \
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s       \
 // RUN:     -target-sdk-version=9.2 -fcuda-include-gpubinary %t -o - \
 // RUN:   | FileCheck %s -allow-deprecated-dag-overlap \
 // RUN:       --check-prefixes=ALL,LNX,NORDC,CUDA,CUDANORDC,CUDA-NEW
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm %s \
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -target-sdk-version=9.2 -fcuda-include-gpubinary %t -o -  -DNOGLOBALS \
 // RUN:   | FileCheck -allow-deprecated-dag-overlap %s \
 // RUN:       --check-prefixes=NOGLOBALS,CUDANOGLOBALS
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm %s \
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -target-sdk-version=9.2 -fgpu-rdc -fcuda-include-gpubinary %t -o - \
 // RUN:   | FileCheck %s -allow-deprecated-dag-overlap \
 // RUN:       --check-prefixes=ALL,LNX,RDC,CUDA,CUDARDC,CUDA-NEW
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm %s -std=c++17 \
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s -std=c++17 \
 // RUN:     -target-sdk-version=9.2 -fcuda-include-gpubinary %t -o - \
 // RUN:   | FileCheck %s -allow-deprecated-dag-overlap \
 // RUN:       --check-prefixes=ALL,LNX,NORDC,CUDA,CUDANORDC,CUDA-NEW,LNX_17,NORDC17
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm %s -std=c++17 \
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s -std=c++17 \
 // RUN:     -target-sdk-version=9.2 -fgpu-rdc -fcuda-include-gpubinary %t -o - \
 // RUN:   | FileCheck %s -allow-deprecated-dag-overlap \
 // RUN:       --check-prefixes=ALL,LNX,RDC,CUDA,CUDARDC,CUDA-NEW,LNX_17,RDC17
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm %s \
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -target-sdk-version=9.2 -o - \
 // RUN:   | FileCheck -allow-deprecated-dag-overlap %s -check-prefix=NOGPUBIN
 
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm %s \
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -fcuda-include-gpubinary %t -o - -x hip\
 // RUN:   | FileCheck -allow-deprecated-dag-overlap %s --check-prefixes=ALL,LNX,NORDC,HIP,HIPEF
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm %s \
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -fcuda-include-gpubinary %t -o -  -DNOGLOBALS -x hip \
 // RUN:   | FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=NOGLOBALS,HIPNOGLOBALS
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm %s \
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -fgpu-rdc -fcuda-include-gpubinary %t -o - -x hip \
 // RUN:   | FileCheck -allow-deprecated-dag-overlap %s --check-prefixes=ALL,LNX,RDC,HIP,HIPEF
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm %s -o - -x hip\
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s -o - -x hip\
 // RUN:   | FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=ALL,LNX,NORDC,HIP,HIPNEF
 
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-pc-windows-msvc -aux-triple amdgcn -emit-llvm %s \
+// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -aux-triple amdgcn -emit-llvm %s \
 // RUN:     -fcuda-include-gpubinary %t -o - -x hip\
 // RUN:   | FileCheck -allow-deprecated-dag-overlap %s --check-prefixes=ALL,WIN
 
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-pc-windows-msvc -aux-triple amdgcn -emit-llvm %s \
+// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -aux-triple amdgcn -emit-llvm %s \
 // RUN:     -o - -x hip\
 // RUN:   | FileCheck -allow-deprecated-dag-overlap %s --check-prefixes=ALL,WIN,HIP,HIPNEF
 
@@ -166,26 +166,26 @@ __device__ void device_use() {
 // CUDARDC-SAME: section "__nv_relfatbin", align 8
 // * constant struct that wraps GPU binary
 // ALL: @__[[PREFIX:cuda|hip]]_fatbin_wrapper = internal constant
-// LNX-SAME: { i32, i32, i8*, i8* }
+// LNX-SAME: { i32, i32, ptr, ptr }
 // CUDA-SAME: { i32 1180844977, i32 1,
 // HIP-SAME: { i32 1212764230, i32 1,
-// CUDA-SAME: i8* getelementptr inbounds ({{.*}}@[[FATBIN]], i64 0, i64 0),
-// HIPEF-SAME: i8* getelementptr inbounds ({{.*}}@[[FATBIN]], i64 0, i64 0),
-// HIPNEF-SAME:  i8* @[[FATBIN]],
-// LNX-SAME: i8* null }
+// CUDA-SAME: ptr @[[FATBIN]],
+// HIPEF-SAME: ptr @[[FATBIN]],
+// HIPNEF-SAME:  ptr @[[FATBIN]],
+// LNX-SAME: ptr null }
 // CUDA-SAME: section ".nvFatBinSegment"
 // HIP-SAME: section ".hipFatBinSegment"
 // * variable to save GPU binary handle after initialization
-// CUDANORDC: @__[[PREFIX]]_gpubin_handle = internal global i8** null
-// HIPNEF: @__[[PREFIX]]_gpubin_handle = linkonce hidden global i8** null
+// CUDANORDC: @__[[PREFIX]]_gpubin_handle = internal global ptr null
+// HIPNEF: @__[[PREFIX]]_gpubin_handle = linkonce hidden global ptr null
 // * constant unnamed string with NVModuleID
 // CUDARDC: [[MODULE_ID_GLOBAL:@.*]] = private constant
 // CUDARDC-SAME: c"[[MODULE_ID:.+]]\00", section "__nv_module_id", align 32
 // * Make sure our constructor was added to global ctor list.
 // LNX: @llvm.global_ctors = appending global {{.*}}@__[[PREFIX]]_module_ctor
 // * Alias to global symbol containing the NVModuleID.
-// CUDARDC: @__fatbinwrap[[MODULE_ID]] ={{.*}} alias { i32, i32, i8*, i8* }
-// CUDARDC-SAME: { i32, i32, i8*, i8* }* @__[[PREFIX]]_fatbin_wrapper
+// CUDARDC: @__fatbinwrap[[MODULE_ID]] ={{.*}} alias { i32, i32, ptr, ptr }
+// CUDARDC-SAME: ptr @__[[PREFIX]]_fatbin_wrapper
 
 // Test that we build the correct number of calls to cudaSetupArgument followed
 // by a call to cudaLaunch.
@@ -225,13 +225,13 @@ void hostfunc(void) { kernelfunc<<<1, 1>>>(1, 1, 1); }
 
 // Test that we've built a function to register kernels and global vars.
 // ALL: define internal void @__[[PREFIX]]_register_globals
-// ALL: call{{.*}}[[PREFIX]]RegisterFunction(i8** %0, {{.*}}kernelfunc{{[^,]*}}, {{[^@]*}}@0
-// ALL-DAG: call void {{.*}}[[PREFIX]]RegisterVar(i8** %0, {{.*}}device_var{{[^,]*}}, {{[^@]*}}@1, {{.*}}i32 0, {{i32|i64}} 4, i32 0, i32 0
-// ALL-DAG: call void {{.*}}[[PREFIX]]RegisterVar(i8** %0, {{.*}}constant_var{{[^,]*}}, {{[^@]*}}@2, {{.*}}i32 0, {{i32|i64}} 4, i32 1, i32 0
-// ALL-DAG: call void {{.*}}[[PREFIX]]RegisterVar(i8** %0, {{.*}}ext_device_var_def{{[^,]*}}, {{[^@]*}}@3, {{.*}}i32 0, {{i32|i64}} 4, i32 0, i32 0
-// ALL-DAG: call void {{.*}}[[PREFIX]]RegisterVar(i8** %0, {{.*}}ext_constant_var_def{{[^,]*}}, {{[^@]*}}@4, {{.*}}i32 0, {{i32|i64}} 4, i32 1, i32 0
-// LNX_17-DAG: [[PREFIX]]RegisterVar(i8** %0, {{.*}}inline_var
-// LNX_17-NOT: [[PREFIX]]RegisterVar(i8** %0, {{.*}}inline_var2
+// ALL: call{{.*}}[[PREFIX]]RegisterFunction(ptr %0, {{.*}}kernelfunc{{[^,]*}}, {{[^@]*}}@0
+// ALL-DAG: call void {{.*}}[[PREFIX]]RegisterVar(ptr %0, {{.*}}device_var{{[^,]*}}, {{[^@]*}}@1, {{.*}}i32 0, {{i32|i64}} 4, i32 0, i32 0
+// ALL-DAG: call void {{.*}}[[PREFIX]]RegisterVar(ptr %0, {{.*}}constant_var{{[^,]*}}, {{[^@]*}}@2, {{.*}}i32 0, {{i32|i64}} 4, i32 1, i32 0
+// ALL-DAG: call void {{.*}}[[PREFIX]]RegisterVar(ptr %0, {{.*}}ext_device_var_def{{[^,]*}}, {{[^@]*}}@3, {{.*}}i32 0, {{i32|i64}} 4, i32 0, i32 0
+// ALL-DAG: call void {{.*}}[[PREFIX]]RegisterVar(ptr %0, {{.*}}ext_constant_var_def{{[^,]*}}, {{[^@]*}}@4, {{.*}}i32 0, {{i32|i64}} 4, i32 1, i32 0
+// LNX_17-DAG: [[PREFIX]]RegisterVar(ptr %0, {{.*}}inline_var
+// LNX_17-NOT: [[PREFIX]]RegisterVar(ptr %0, {{.*}}inline_var2
 // ALL: ret void
 
 // Test that we've built a constructor.
@@ -239,8 +239,8 @@ void hostfunc(void) { kernelfunc<<<1, 1>>>(1, 1, 1); }
 
 // In separate mode it calls __[[PREFIX]]RegisterFatBinary(&__[[PREFIX]]_fatbin_wrapper)
 // HIP only register fat binary once.
-// HIP: load i8**, i8*** @__hip_gpubin_handle
-// HIP-NEXT: icmp eq i8** {{.*}}, null
+// HIP: load ptr, ptr @__hip_gpubin_handle
+// HIP-NEXT: icmp eq ptr {{.*}}, null
 // HIP-NEXT: br i1 {{.*}}, label %if, label %exit
 // HIP: if:
 // CUDANORDC: call{{.*}}[[PREFIX]]RegisterFatBinary{{.*}}__[[PREFIX]]_fatbin_wrapper
@@ -253,12 +253,12 @@ void hostfunc(void) { kernelfunc<<<1, 1>>>(1, 1, 1); }
 //   .. and then calls __[[PREFIX]]_register_globals
 // HIP-NEXT: br label %exit
 // HIP: exit:
-// HIP-NEXT: load i8**, i8*** @__hip_gpubin_handle
+// HIP-NEXT: load ptr, ptr @__hip_gpubin_handle
 // CUDANORDC-NEXT: call void @__[[PREFIX]]_register_globals
 // HIP-NEXT: call void @__[[PREFIX]]_register_globals
 // * In separate mode we also register a destructor.
-// CUDANORDC-NEXT: call i32 @atexit(void ()* @__[[PREFIX]]_module_dtor)
-// HIP-NEXT: call i32 @atexit(void ()* @__[[PREFIX]]_module_dtor)
+// CUDANORDC-NEXT: call i32 @atexit(ptr @__[[PREFIX]]_module_dtor)
+// HIP-NEXT: call i32 @atexit(ptr @__[[PREFIX]]_module_dtor)
 
 // With relocatable device code we call __[[PREFIX]]RegisterLinkedBinary%NVModuleID%
 // CUDARDC: call{{.*}}__[[PREFIX]]RegisterLinkedBinary[[MODULE_ID]](
@@ -271,11 +271,11 @@ void hostfunc(void) { kernelfunc<<<1, 1>>>(1, 1, 1); }
 // CUDANORDC: load{{.*}}__[[PREFIX]]_gpubin_handle
 // HIP: load{{.*}}__[[PREFIX]]_gpubin_handle
 // CUDANORDC-NEXT: call void @__[[PREFIX]]UnregisterFatBinary
-// HIP-NEXT: icmp ne i8** {{.*}}, null
+// HIP-NEXT: icmp ne ptr {{.*}}, null
 // HIP-NEXT: br i1 {{.*}}, label %if, label %exit
 // HIP: if:
 // HIP-NEXT: call void @__[[PREFIX]]UnregisterFatBinary
-// HIP-NEXT: store i8** null, i8*** @__hip_gpubin_handle
+// HIP-NEXT: store ptr null, ptr @__hip_gpubin_handle
 // HIP-NEXT: br label %exit
 // HIP: exit:
 

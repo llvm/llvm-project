@@ -379,7 +379,7 @@ VETargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   // Analyze return values.
   CCInfo.AnalyzeReturn(Outs, getReturnCC(CallConv));
 
-  SDValue Flag;
+  SDValue Glue;
   SmallVector<SDValue, 4> RetOps(1, Chain);
 
   // Copy the result values into the output registers.
@@ -422,20 +422,20 @@ VETargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       llvm_unreachable("Unknown loc info!");
     }
 
-    Chain = DAG.getCopyToReg(Chain, DL, VA.getLocReg(), OutVal, Flag);
+    Chain = DAG.getCopyToReg(Chain, DL, VA.getLocReg(), OutVal, Glue);
 
     // Guarantee that all emitted copies are stuck together with flags.
-    Flag = Chain.getValue(1);
+    Glue = Chain.getValue(1);
     RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
   }
 
   RetOps[0] = Chain; // Update chain.
 
-  // Add the flag if we have it.
-  if (Flag.getNode())
-    RetOps.push_back(Flag);
+  // Add the glue if we have it.
+  if (Glue.getNode())
+    RetOps.push_back(Glue);
 
-  return DAG.getNode(VEISD::RET_FLAG, DL, MVT::Other, RetOps);
+  return DAG.getNode(VEISD::RET_GLUE, DL, MVT::Other, RetOps);
 }
 
 SDValue VETargetLowering::LowerFormalArguments(
@@ -615,7 +615,7 @@ SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     CCInfo2.AnalyzeCallOperands(CLI.Outs, getParamCC(CLI.CallConv, true));
 
   // Get the size of the outgoing arguments stack space requirement.
-  unsigned ArgsSize = CCInfo.getNextStackOffset();
+  unsigned ArgsSize = CCInfo.getStackSize();
 
   // Keep stack frames 16-byte aligned.
   ArgsSize = alignTo(ArgsSize, 16);
@@ -948,7 +948,7 @@ const char *VETargetLowering::getTargetNodeName(unsigned Opcode) const {
     TARGET_NODE_CASE(GLOBAL_BASE_REG)
     TARGET_NODE_CASE(Hi)
     TARGET_NODE_CASE(Lo)
-    TARGET_NODE_CASE(RET_FLAG)
+    TARGET_NODE_CASE(RET_GLUE)
     TARGET_NODE_CASE(TS1AM)
     TARGET_NODE_CASE(VEC_UNPACK_LO)
     TARGET_NODE_CASE(VEC_UNPACK_HI)
@@ -1130,7 +1130,7 @@ SDValue VETargetLowering::lowerATOMIC_FENCE(SDValue Op,
     case AtomicOrdering::AcquireRelease:
     case AtomicOrdering::SequentiallyConsistent:
       // Generate "fencem 3" as acq_rel and seq_cst fence.
-      // FIXME: "fencem 3" doesn't wait for for PCIe deveices accesses,
+      // FIXME: "fencem 3" doesn't wait for PCIe deveices accesses,
       //        so  seq_cst may require more instruction for them.
       return SDValue(DAG.getMachineNode(VE::FENCEM, DL, MVT::Other,
                                         DAG.getTargetConstant(3, DL, MVT::i32),
@@ -1325,9 +1325,9 @@ static SDValue lowerLoadF128(SDValue Op, SelectionDAG &DAG) {
   SDLoc DL(Op);
   LoadSDNode *LdNode = dyn_cast<LoadSDNode>(Op.getNode());
   assert(LdNode && LdNode->getOffset().isUndef() && "Unexpected node type");
-  unsigned Alignment = LdNode->getAlign().value();
+  Align Alignment = LdNode->getAlign();
   if (Alignment > 8)
-    Alignment = 8;
+    Alignment = Align(8);
 
   SDValue Lo64 =
       DAG.getLoad(MVT::f64, DL, LdNode->getChain(), LdNode->getBasePtr(),
@@ -1372,9 +1372,9 @@ static SDValue lowerLoadI1(SDValue Op, SelectionDAG &DAG) {
   assert(LdNode && LdNode->getOffset().isUndef() && "Unexpected node type");
 
   SDValue BasePtr = LdNode->getBasePtr();
-  unsigned Alignment = LdNode->getAlign().value();
+  Align Alignment = LdNode->getAlign();
   if (Alignment > 8)
-    Alignment = 8;
+    Alignment = Align(8);
 
   EVT AddrVT = BasePtr.getValueType();
   EVT MemVT = LdNode->getMemoryVT();
@@ -1428,11 +1428,10 @@ static SDValue lowerLoadI1(SDValue Op, SelectionDAG &DAG) {
 
 SDValue VETargetLowering::lowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   LoadSDNode *LdNode = cast<LoadSDNode>(Op.getNode());
-
   EVT MemVT = LdNode->getMemoryVT();
 
-  // Dispatch to vector isel.
-  if (MemVT.isVector() && !isMaskType(MemVT))
+  // If VPU is enabled, always expand non-mask vector loads to VVP
+  if (Subtarget->enableVPU() && MemVT.isVector() && !isMaskType(MemVT))
     return lowerToVVP(Op, DAG);
 
   SDValue BasePtr = LdNode->getBasePtr();
@@ -1464,9 +1463,9 @@ static SDValue lowerStoreF128(SDValue Op, SelectionDAG &DAG) {
   SDNode *Lo64 = DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, DL, MVT::i64,
                                     StNode->getValue(), SubRegOdd);
 
-  unsigned Alignment = StNode->getAlign().value();
+  Align Alignment = StNode->getAlign();
   if (Alignment > 8)
-    Alignment = 8;
+    Alignment = Align(8);
 
   // VE stores Hi64 to 8(addr) and Lo64 to 0(addr)
   SDValue OutChains[2];
@@ -1498,9 +1497,9 @@ static SDValue lowerStoreI1(SDValue Op, SelectionDAG &DAG) {
   assert(StNode && StNode->getOffset().isUndef() && "Unexpected node type");
 
   SDValue BasePtr = StNode->getBasePtr();
-  unsigned Alignment = StNode->getAlign().value();
+  Align Alignment = StNode->getAlign();
   if (Alignment > 8)
-    Alignment = 8;
+    Alignment = Align(8);
   EVT AddrVT = BasePtr.getValueType();
   EVT MemVT = StNode->getMemoryVT();
   if (MemVT == MVT::v256i1 || MemVT == MVT::v4i64) {
@@ -1542,10 +1541,10 @@ static SDValue lowerStoreI1(SDValue Op, SelectionDAG &DAG) {
 SDValue VETargetLowering::lowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   StoreSDNode *StNode = cast<StoreSDNode>(Op.getNode());
   assert(StNode && StNode->getOffset().isUndef() && "Unexpected node type");
-
-  // always expand non-mask vector loads to VVP
   EVT MemVT = StNode->getMemoryVT();
-  if (MemVT.isVector() && !isMaskType(MemVT))
+
+  // If VPU is enabled, always expand non-mask vector stores to VVP
+  if (Subtarget->enableVPU() && MemVT.isVector() && !isMaskType(MemVT))
     return lowerToVVP(Op, DAG);
 
   SDValue BasePtr = StNode->getBasePtr();
@@ -1632,8 +1631,9 @@ SDValue VETargetLowering::lowerVAARG(SDValue Op, SelectionDAG &DAG) const {
 
   // Load the actual argument out of the pointer VAList.
   // We can't count on greater alignment than the word size.
-  return DAG.getLoad(VT, DL, InChain, VAList, MachinePointerInfo(),
-                     std::min(PtrVT.getSizeInBits(), VT.getSizeInBits()) / 8);
+  return DAG.getLoad(
+      VT, DL, InChain, VAList, MachinePointerInfo(),
+      Align(std::min(PtrVT.getSizeInBits(), VT.getSizeInBits()) / 8));
 }
 
 SDValue VETargetLowering::lowerDYNAMIC_STACKALLOC(SDValue Op,
@@ -1870,7 +1870,7 @@ VETargetLowering::getCustomOperationAction(SDNode &Op) const {
 }
 
 SDValue VETargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
-  LLVM_DEBUG(dbgs() << "::LowerOperation"; Op->print(dbgs()););
+  LLVM_DEBUG(dbgs() << "::LowerOperation "; Op.dump(&DAG));
   unsigned Opcode = Op.getOpcode();
 
   /// Scalar isel.
@@ -1921,7 +1921,6 @@ SDValue VETargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   }
 
   /// Vector isel.
-  LLVM_DEBUG(dbgs() << "::LowerOperation_VVP"; Op->print(dbgs()););
   if (ISD::isVPOpcode(Opcode))
     return lowerToVVP(Op, DAG);
 

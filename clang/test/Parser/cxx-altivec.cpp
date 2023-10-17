@@ -1,4 +1,3 @@
-// RUN: %clang_cc1 -triple=powerpc-apple-darwin8 -target-feature +altivec -fsyntax-only -verify=expected,novsx -std=c++11 %s
 // RUN: %clang_cc1 -triple=powerpc64-unknown-linux-gnu -target-feature +altivec -target-feature +vsx -fsyntax-only -verify=expected,nonaix -std=c++11 %s
 // RUN: %clang_cc1 -triple=powerpc64le-unknown-linux-gnu -target-feature +altivec -fsyntax-only -verify=expected,novsx -std=c++11 %s
 // RUN: %clang_cc1 -triple=powerpc64-unknown-linux-gnu -target-feature +vsx -target-cpu pwr7 -fsyntax-only -verify=expected,nonaix -std=c++11 %s

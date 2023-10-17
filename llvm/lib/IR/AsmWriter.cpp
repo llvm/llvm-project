@@ -329,8 +329,12 @@ static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
   case CallingConv::Swift:         Out << "swiftcc"; break;
   case CallingConv::SwiftTail:     Out << "swifttailcc"; break;
   case CallingConv::X86_INTR:      Out << "x86_intrcc"; break;
-  case CallingConv::HHVM:          Out << "hhvmcc"; break;
-  case CallingConv::HHVM_C:        Out << "hhvm_ccc"; break;
+  case CallingConv::DUMMY_HHVM:
+    Out << "hhvmcc";
+    break;
+  case CallingConv::DUMMY_HHVM_C:
+    Out << "hhvm_ccc";
+    break;
   case CallingConv::AMDGPU_VS:     Out << "amdgpu_vs"; break;
   case CallingConv::AMDGPU_LS:     Out << "amdgpu_ls"; break;
   case CallingConv::AMDGPU_HS:     Out << "amdgpu_hs"; break;
@@ -338,8 +342,15 @@ static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
   case CallingConv::AMDGPU_GS:     Out << "amdgpu_gs"; break;
   case CallingConv::AMDGPU_PS:     Out << "amdgpu_ps"; break;
   case CallingConv::AMDGPU_CS:     Out << "amdgpu_cs"; break;
+  case CallingConv::AMDGPU_CS_Chain:
+    Out << "amdgpu_cs_chain";
+    break;
+  case CallingConv::AMDGPU_CS_ChainPreserve:
+    Out << "amdgpu_cs_chain_preserve";
+    break;
   case CallingConv::AMDGPU_KERNEL: Out << "amdgpu_kernel"; break;
   case CallingConv::AMDGPU_Gfx:    Out << "amdgpu_gfx"; break;
+  case CallingConv::M68k_RTD:      Out << "m68k_rtdcc"; break;
   }
 }
 
@@ -421,8 +432,8 @@ static void PrintShuffleMask(raw_ostream &Out, Type *Ty, ArrayRef<int> Mask) {
   bool FirstElt = true;
   if (all_of(Mask, [](int Elt) { return Elt == 0; })) {
     Out << "zeroinitializer";
-  } else if (all_of(Mask, [](int Elt) { return Elt == UndefMaskElem; })) {
-    Out << "undef";
+  } else if (all_of(Mask, [](int Elt) { return Elt == PoisonMaskElem; })) {
+    Out << "poison";
   } else {
     Out << "<";
     for (int Elt : Mask) {
@@ -431,8 +442,8 @@ static void PrintShuffleMask(raw_ostream &Out, Type *Ty, ArrayRef<int> Mask) {
       else
         Out << ", ";
       Out << "i32 ";
-      if (Elt == UndefMaskElem)
-        Out << "undef";
+      if (Elt == PoisonMaskElem)
+        Out << "poison";
       else
         Out << Elt;
     }
@@ -585,16 +596,9 @@ void TypePrinting::print(Type *Ty, raw_ostream &OS) {
   }
   case Type::PointerTyID: {
     PointerType *PTy = cast<PointerType>(Ty);
-    if (PTy->isOpaque()) {
-      OS << "ptr";
-      if (unsigned AddressSpace = PTy->getAddressSpace())
-        OS << " addrspace(" << AddressSpace << ')';
-      return;
-    }
-    print(PTy->getNonOpaquePointerElementType(), OS);
+    OS << "ptr";
     if (unsigned AddressSpace = PTy->getAddressSpace())
       OS << " addrspace(" << AddressSpace << ')';
-    OS << '*';
     return;
   }
   case Type::ArrayTyID: {
@@ -1066,12 +1070,13 @@ int SlotTracker::processIndex() {
 
   // The first block of slots are just the module ids, which start at 0 and are
   // assigned consecutively. Since the StringMap iteration order isn't
-  // guaranteed, use a std::map to order by module ID before assigning slots.
-  std::map<uint64_t, StringRef> ModuleIdToPathMap;
-  for (auto &[ModPath, ModId] : TheIndex->modulePaths())
-    ModuleIdToPathMap[ModId.first] = ModPath;
-  for (auto &ModPair : ModuleIdToPathMap)
-    CreateModulePathSlot(ModPair.second);
+  // guaranteed, order by path string before assigning slots.
+  std::vector<StringRef> ModulePaths;
+  for (auto &[ModPath, _] : TheIndex->modulePaths())
+    ModulePaths.push_back(ModPath);
+  llvm::sort(ModulePaths.begin(), ModulePaths.end());
+  for (auto &ModPath : ModulePaths)
+    CreateModulePathSlot(ModPath);
 
   // Start numbering the GUIDs after the module ids.
   GUIDNext = ModulePathNext;
@@ -1585,8 +1590,7 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
     Out << CE->getOpcodeName();
     WriteOptimizationInfo(Out, CE);
     if (CE->isCompare())
-      Out << ' ' << CmpInst::getPredicateName(
-                        static_cast<CmpInst::Predicate>(CE->getPredicate()));
+      Out << ' ' << static_cast<CmpInst::Predicate>(CE->getPredicate());
     Out << " (";
 
     std::optional<unsigned> InRangeOp;
@@ -2888,12 +2892,11 @@ void AssemblyWriter::printModuleSummaryIndex() {
   std::string RegularLTOModuleName =
       ModuleSummaryIndex::getRegularLTOModuleName();
   moduleVec.resize(TheIndex->modulePaths().size());
-  for (auto &[ModPath, ModId] : TheIndex->modulePaths())
+  for (auto &[ModPath, ModHash] : TheIndex->modulePaths())
     moduleVec[Machine.getModulePathSlot(ModPath)] = std::make_pair(
-        // A module id of -1 is a special entry for a regular LTO module created
-        // during the thin link.
-        ModId.first == -1u ? RegularLTOModuleName : std::string(ModPath),
-        ModId.second);
+        // An empty module path is a special entry for a regular LTO module
+        // created during the thin link.
+        ModPath.empty() ? RegularLTOModuleName : std::string(ModPath), ModHash);
 
   unsigned i = 0;
   for (auto &ModPair : moduleVec) {
@@ -3207,10 +3210,7 @@ void AssemblyWriter::printFunctionSummary(const FunctionSummary *FS) {
     printTypeIdInfo(*TIdInfo);
 
   // The AllocationType identifiers capture the profiled context behavior
-  // reaching a specific static allocation site (possibly cloned). Thus
-  // "notcoldandcold" implies there are multiple contexts which reach this site,
-  // some of which are cold and some of which are not, and that need to
-  // disambiguate via cloning or other context identification.
+  // reaching a specific static allocation site (possibly cloned).
   auto AllocTypeName = [](uint8_t Type) -> const char * {
     switch (Type) {
     case (uint8_t)AllocationType::None:
@@ -3219,8 +3219,8 @@ void AssemblyWriter::printFunctionSummary(const FunctionSummary *FS) {
       return "notcold";
     case (uint8_t)AllocationType::Cold:
       return "cold";
-    case (uint8_t)AllocationType::NotCold | (uint8_t)AllocationType::Cold:
-      return "notcoldandcold";
+    case (uint8_t)AllocationType::Hot:
+      return "hot";
     }
     llvm_unreachable("Unexpected alloc type");
   };
@@ -4082,7 +4082,7 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
 
   // Print out the compare instruction predicates
   if (const CmpInst *CI = dyn_cast<CmpInst>(&I))
-    Out << ' ' << CmpInst::getPredicateName(CI->getPredicate());
+    Out << ' ' << CI->getPredicate();
 
   // Print out the atomicrmw operation
   if (const AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(&I))

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_FLOAT_PROPERTIES_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_FLOAT_PROPERTIES_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_FLOATPROPERTIES_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FLOATPROPERTIES_H
 
 #include "PlatformDefs.h"
 
@@ -15,7 +15,7 @@
 
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 
 template <typename T> struct FloatProperties {};
@@ -28,6 +28,8 @@ template <> struct FloatProperties<float> {
   static constexpr uint32_t BIT_WIDTH = sizeof(BitsType) * 8;
 
   static constexpr uint32_t MANTISSA_WIDTH = 23;
+  // The mantissa precision includes the implicit bit.
+  static constexpr uint32_t MANTISSA_PRECISION = MANTISSA_WIDTH + 1;
   static constexpr uint32_t EXPONENT_WIDTH = 8;
   static constexpr BitsType MANTISSA_MASK = (BitsType(1) << MANTISSA_WIDTH) - 1;
   static constexpr BitsType SIGN_MASK = BitsType(1)
@@ -53,6 +55,7 @@ template <> struct FloatProperties<double> {
   static constexpr uint32_t BIT_WIDTH = sizeof(BitsType) * 8;
 
   static constexpr uint32_t MANTISSA_WIDTH = 52;
+  static constexpr uint32_t MANTISSA_PRECISION = MANTISSA_WIDTH + 1;
   static constexpr uint32_t EXPONENT_WIDTH = 11;
   static constexpr BitsType MANTISSA_MASK = (BitsType(1) << MANTISSA_WIDTH) - 1;
   static constexpr BitsType SIGN_MASK = BitsType(1)
@@ -82,6 +85,7 @@ template <> struct FloatProperties<long double> {
 
   static constexpr uint32_t MANTISSA_WIDTH =
       FloatProperties<double>::MANTISSA_WIDTH;
+  static constexpr uint32_t MANTISSA_PRECISION = MANTISSA_WIDTH + 1;
   static constexpr uint32_t EXPONENT_WIDTH =
       FloatProperties<double>::EXPONENT_WIDTH;
   static constexpr BitsType MANTISSA_MASK =
@@ -115,6 +119,7 @@ template <> struct FloatProperties<long double> {
   static constexpr BitsType FULL_WIDTH_MASK = ((BitsType(1) << BIT_WIDTH) - 1);
 
   static constexpr uint32_t MANTISSA_WIDTH = 63;
+  static constexpr uint32_t MANTISSA_PRECISION = MANTISSA_WIDTH + 1;
   static constexpr uint32_t EXPONENT_WIDTH = 15;
   static constexpr BitsType MANTISSA_MASK = (BitsType(1) << MANTISSA_WIDTH) - 1;
 
@@ -129,7 +134,7 @@ template <> struct FloatProperties<long double> {
   static constexpr uint32_t EXPONENT_BIAS = 16383;
 
   static constexpr BitsType EXP_MANT_MASK =
-      MANTISSA_MASK + EXPLICIT_BIT_MASK + EXPONENT_MASK;
+      MANTISSA_MASK | EXPLICIT_BIT_MASK | EXPONENT_MASK;
   static_assert(EXP_MANT_MASK == (~SIGN_MASK & FULL_WIDTH_MASK),
                 "Exponent and mantissa masks are not as expected.");
 
@@ -150,6 +155,7 @@ template <> struct FloatProperties<long double> {
   static constexpr uint32_t BIT_WIDTH = sizeof(BitsType) << 3;
 
   static constexpr uint32_t MANTISSA_WIDTH = 112;
+  static constexpr uint32_t MANTISSA_PRECISION = MANTISSA_WIDTH + 1;
   static constexpr uint32_t EXPONENT_WIDTH = 15;
   static constexpr BitsType MANTISSA_MASK = (BitsType(1) << MANTISSA_WIDTH) - 1;
   static constexpr BitsType SIGN_MASK = BitsType(1)
@@ -157,7 +163,7 @@ template <> struct FloatProperties<long double> {
   static constexpr BitsType EXPONENT_MASK = ~(SIGN_MASK | MANTISSA_MASK);
   static constexpr uint32_t EXPONENT_BIAS = 16383;
 
-  static constexpr BitsType EXP_MANT_MASK = MANTISSA_MASK + EXPONENT_MASK;
+  static constexpr BitsType EXP_MANT_MASK = MANTISSA_MASK | EXPONENT_MASK;
   static_assert(EXP_MANT_MASK == ~SIGN_MASK,
                 "Exponent and mantissa masks are not as expected.");
 
@@ -188,6 +194,6 @@ template <typename BitsType>
 using FloatTypeT = typename FloatType<BitsType>::Type;
 
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_FLOAT_PROPERTIES_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_FLOATPROPERTIES_H

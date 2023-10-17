@@ -21,7 +21,6 @@ define { double, double } @testfn(double %arg, double %arg1, double %arg2) {
 ; GFX10-LABEL: testfn:
 ; GFX10:       ; %bb.0: ; %bb
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_add_f64 v[4:5], v[4:5], -v[0:1]
 ; GFX10-NEXT:    v_add_f64 v[0:1], v[4:5], -v[2:3]
 ; GFX10-NEXT:    v_add_f64 v[2:3], -v[2:3], -v[4:5]

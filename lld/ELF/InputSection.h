@@ -15,6 +15,7 @@
 #include "lld/Common/Memory.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/Compiler.h"
@@ -137,7 +138,7 @@ public:
   // Used by --optimize-bb-jumps and RISC-V linker relaxation temporarily to
   // indicate the number of bytes which is not counted in the size. This should
   // be reset to zero after uses.
-  uint16_t bytesDropped = 0;
+  uint32_t bytesDropped = 0;
 
   mutable bool compressed = false;
 
@@ -395,13 +396,15 @@ public:
   static InputSection discarded;
 
 private:
-  template <class ELFT, class RelTy>
-  void copyRelocations(uint8_t *buf, llvm::ArrayRef<RelTy> rels);
+  template <class ELFT, class RelTy> void copyRelocations(uint8_t *buf);
+
+  template <class ELFT, class RelTy, class RelIt>
+  void copyRelocations(uint8_t *buf, llvm::iterator_range<RelIt> rels);
 
   template <class ELFT> void copyShtGroup(uint8_t *buf);
 };
 
-static_assert(sizeof(InputSection) <= 152, "InputSection is too big");
+static_assert(sizeof(InputSection) <= 160, "InputSection is too big");
 
 class SyntheticSection : public InputSection {
 public:
@@ -426,7 +429,7 @@ public:
 
 inline bool isDebugSection(const InputSectionBase &sec) {
   return (sec.flags & llvm::ELF::SHF_ALLOC) == 0 &&
-         sec.name.startswith(".debug");
+         sec.name.starts_with(".debug");
 }
 
 // The set of TOC entries (.toc + addend) for which we should not apply

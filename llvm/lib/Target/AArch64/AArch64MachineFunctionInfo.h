@@ -185,6 +185,8 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// The frame-index for the TPIDR2 object used for lazy saves.
   Register LazySaveTPIDR2Obj = 0;
 
+  /// Whether this function changes streaming mode within the function.
+  bool HasStreamingModeChanges = false;
 
   /// True if the function need unwind information.
   mutable std::optional<bool> NeedsDwarfUnwindInfo;
@@ -429,6 +431,8 @@ public:
   bool shouldSignReturnAddress(const MachineFunction &MF) const;
   bool shouldSignReturnAddress(bool SpillsLR) const;
 
+  bool needsShadowCallStackPrologueEpilogue(MachineFunction &MF) const;
+
   bool shouldSignWithBKey() const { return SignWithBKey; }
   bool isMTETagged() const { return IsMTETagged; }
 
@@ -446,6 +450,11 @@ public:
 
   bool needsDwarfUnwindInfo(const MachineFunction &MF) const;
   bool needsAsyncDwarfUnwindInfo(const MachineFunction &MF) const;
+
+  bool hasStreamingModeChanges() const { return HasStreamingModeChanges; }
+  void setHasStreamingModeChanges(bool HasChanges) {
+    HasStreamingModeChanges = HasChanges;
+  }
 
 private:
   // Hold the lists of LOHs.

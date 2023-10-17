@@ -32,7 +32,6 @@
 #include "llvm/Transforms/Utils/LoopUtils.h"
 
 namespace llvm {
-class AAResults;
 class AssumptionCache;
 class BasicBlock;
 class BlockFrequencyInfo;
@@ -293,9 +292,6 @@ public:
   /// Return the fixed-order recurrences found in the loop.
   RecurrenceSet &getFixedOrderRecurrences() { return FixedOrderRecurrences; }
 
-  /// Return the set of instructions to sink to handle fixed-order recurrences.
-  MapVector<Instruction *, Instruction *> &getSinkAfter() { return SinkAfter; }
-
   /// Returns the widest induction type.
   Type *getWidestInductionType() { return WidestIndTy; }
 
@@ -350,12 +346,18 @@ public:
   /// loop. Do not use after invoking 'createVectorizedLoopSkeleton' (PR34965).
   int isConsecutivePtr(Type *AccessTy, Value *Ptr) const;
 
-  /// Returns true if the value V is uniform within the loop.
-  bool isUniform(Value *V) const;
+  /// Returns true if value V is uniform across \p VF lanes, when \p VF is
+  /// provided, and otherwise if \p V is invariant across all loop iterations.
+  bool isInvariant(Value *V) const;
+
+  /// Returns true if value V is uniform across \p VF lanes, when \p VF is
+  /// provided, and otherwise if \p V is invariant across all loop iterations.
+  bool isUniform(Value *V, ElementCount VF) const;
 
   /// A uniform memory op is a load or store which accesses the same memory
-  /// location on all lanes.
-  bool isUniformMemOp(Instruction &I) const;
+  /// location on all \p VF lanes, if \p VF is provided and otherwise if the
+  /// memory location is invariant.
+  bool isUniformMemOp(Instruction &I, ElementCount VF) const;
 
   /// Returns the information that we collected about runtime memory check.
   const RuntimePointerChecking *getRuntimePointerChecking() const {
@@ -368,13 +370,9 @@ public:
     return LAI->getDepChecker().isSafeForAnyVectorWidth();
   }
 
-  unsigned getMaxSafeDepDistBytes() { return LAI->getMaxSafeDepDistBytes(); }
-
   uint64_t getMaxSafeVectorWidthInBits() const {
     return LAI->getDepChecker().getMaxSafeVectorWidthInBits();
   }
-
-  bool hasStride(Value *V) { return LAI->hasStride(V); }
 
   /// Returns true if vector representation of the instruction \p I
   /// requires mask.
@@ -385,11 +383,19 @@ public:
   unsigned getNumStores() const { return LAI->getNumStores(); }
   unsigned getNumLoads() const { return LAI->getNumLoads(); }
 
-  /// Returns all assume calls in predicated blocks. They need to be dropped
-  /// when flattening the CFG.
-  const SmallPtrSetImpl<Instruction *> &getConditionalAssumes() const {
-    return ConditionalAssumes;
+  PredicatedScalarEvolution *getPredicatedScalarEvolution() const {
+    return &PSE;
   }
+
+  Loop *getLoop() const { return TheLoop; }
+
+  LoopInfo *getLoopInfo() const { return LI; }
+
+  AssumptionCache *getAssumptionCache() const { return AC; }
+
+  ScalarEvolution *getScalarEvolution() const { return PSE.getSE(); }
+
+  DominatorTree *getDominatorTree() const { return DT; }
 
 private:
   /// Return true if the pre-header, exiting and latch blocks of \p Lp and all
@@ -438,29 +444,17 @@ private:
   /// \p SafePtrs is a list of addresses that are known to be legal and we know
   /// that we can read from them without segfault.
   /// \p MaskedOp is a list of instructions that have to be transformed into
-  /// calls to the appropriate masked intrinsic when the loop is vectorized.
-  /// \p ConditionalAssumes is a list of assume instructions in predicated
-  /// blocks that must be dropped if the CFG gets flattened.
-  bool blockCanBePredicated(
-      BasicBlock *BB, SmallPtrSetImpl<Value *> &SafePtrs,
-      SmallPtrSetImpl<const Instruction *> &MaskedOp,
-      SmallPtrSetImpl<Instruction *> &ConditionalAssumes) const;
+  /// calls to the appropriate masked intrinsic when the loop is vectorized
+  /// or dropped if the instruction is a conditional assume intrinsic.
+  bool
+  blockCanBePredicated(BasicBlock *BB, SmallPtrSetImpl<Value *> &SafePtrs,
+                       SmallPtrSetImpl<const Instruction *> &MaskedOp) const;
 
   /// Updates the vectorization state by adding \p Phi to the inductions list.
   /// This can set \p Phi as the main induction of the loop if \p Phi is a
   /// better choice for the main induction than the existing one.
   void addInductionPhi(PHINode *Phi, const InductionDescriptor &ID,
                        SmallPtrSetImpl<Value *> &AllowedExit);
-
-  /// If an access has a symbolic strides, this maps the pointer value to
-  /// the stride symbol.
-  const ValueToValueMap *getSymbolicStrides() const {
-    // FIXME: Currently, the set of symbolic strides is sometimes queried before
-    // it's collected.  This happens from canVectorizeWithIfConvert, when the
-    // pointer is checked to reference consecutive elements suitable for a
-    // masked access.
-    return LAI ? &LAI->getSymbolicStrides() : nullptr;
-  }
 
   /// The loop that we evaluate.
   Loop *TheLoop;
@@ -515,10 +509,6 @@ private:
   /// Holds the phi nodes that are fixed-order recurrences.
   RecurrenceSet FixedOrderRecurrences;
 
-  /// Holds instructions that need to sink past other instructions to handle
-  /// fixed-order recurrences.
-  MapVector<Instruction *, Instruction *> SinkAfter;
-
   /// Holds the widest induction type encountered.
   Type *WidestIndTy = nullptr;
 
@@ -541,12 +531,9 @@ private:
   AssumptionCache *AC;
 
   /// While vectorizing these instructions we have to generate a
-  /// call to the appropriate masked intrinsic
+  /// call to the appropriate masked intrinsic or drop them in case of
+  /// conditional assumes.
   SmallPtrSet<const Instruction *, 8> MaskedOp;
-
-  /// Assume instructions in predicated blocks must be dropped if the CFG gets
-  /// flattened.
-  SmallPtrSet<Instruction *, 8> ConditionalAssumes;
 
   /// BFI and PSI are used to check for profile guided size optimizations.
   BlockFrequencyInfo *BFI;

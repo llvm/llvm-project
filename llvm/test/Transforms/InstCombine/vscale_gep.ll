@@ -25,7 +25,7 @@ define ptr @gep_num_of_indices_1(ptr %p) {
 define void @gep_bitcast(ptr %p) {
 ; CHECK-LABEL: @gep_bitcast(
 ; CHECK-NEXT:    store <vscale x 16 x i8> zeroinitializer, ptr [[P:%.*]], align 16
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr <vscale x 16 x i8>, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr <vscale x 16 x i8>, ptr [[P]], i64 1
 ; CHECK-NEXT:    store <vscale x 16 x i8> zeroinitializer, ptr [[GEP2]], align 16
 ; CHECK-NEXT:    ret void
 ;
@@ -41,7 +41,7 @@ define i32 @gep_alloca_inbounds_vscale_zero() {
 ; CHECK-LABEL: @gep_alloca_inbounds_vscale_zero(
 ; CHECK-NEXT:    [[A:%.*]] = alloca <vscale x 4 x i32>, align 16
 ; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds <vscale x 4 x i32>, ptr [[A]], i64 0, i64 2
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[TMP]], align 8
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[TMP]], align 4
 ; CHECK-NEXT:    ret i32 [[LOAD]]
 ;
   %a = alloca <vscale x 4 x i32>
@@ -55,7 +55,7 @@ define i32 @gep_alloca_inbounds_vscale_nonzero() {
 ; CHECK-LABEL: @gep_alloca_inbounds_vscale_nonzero(
 ; CHECK-NEXT:    [[A:%.*]] = alloca <vscale x 4 x i32>, align 16
 ; CHECK-NEXT:    [[TMP:%.*]] = getelementptr <vscale x 4 x i32>, ptr [[A]], i64 1, i64 2
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[TMP]], align 8
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[TMP]], align 4
 ; CHECK-NEXT:    ret i32 [[LOAD]]
 ;
   %a = alloca <vscale x 4 x i32>

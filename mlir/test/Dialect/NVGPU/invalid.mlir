@@ -130,7 +130,6 @@ func.func @async_cp_memory_space(%dst : memref<16xf32>, %src : memref<16xf32>, %
   nvgpu.device_async_copy %src[%i], %dst[%i], 16 : memref<16xf32> to memref<16xf32>
   return
 }
-
 // -----
 
 func.func @async_cp_memref_type(%dst : memref<16xi32, 3>, %src : memref<16xf32>, %i : index) -> () {
@@ -138,7 +137,6 @@ func.func @async_cp_memref_type(%dst : memref<16xi32, 3>, %src : memref<16xf32>,
   nvgpu.device_async_copy %src[%i], %dst[%i], 16 : memref<16xf32> to memref<16xi32, 3>
   return
 }
-
 // -----
 
 func.func @async_cp_num_src_indices(%dst : memref<16xf32, 3>, %src : memref<16x16xf32>, %i : index) -> () {
@@ -146,7 +144,6 @@ func.func @async_cp_num_src_indices(%dst : memref<16xf32, 3>, %src : memref<16x1
   nvgpu.device_async_copy %src[%i], %dst[%i], 16 : memref<16x16xf32> to memref<16xf32, 3>
   return
 }
-
 // -----
 
 func.func @async_cp_num_dst_indices(%dst : memref<16x16xf32, 3>, %src : memref<16xf32>, %i : index) -> () {
@@ -154,7 +151,6 @@ func.func @async_cp_num_dst_indices(%dst : memref<16x16xf32, 3>, %src : memref<1
   nvgpu.device_async_copy %src[%i], %dst[%i], 16 : memref<16xf32> to memref<16x16xf32, 3>
   return
 }
-
 // -----
 
 func.func @async_cp_num_src_stride(
@@ -166,7 +162,6 @@ func.func @async_cp_num_src_stride(
     memref<200x100xf32, affine_map<(d0, d1) -> (200*d0 + 2*d1)>> to memref<200x100xf32, 3>
   return
 }
-
 // -----
 
 func.func @async_cp_num_dst_stride(
@@ -176,5 +171,97 @@ func.func @async_cp_num_dst_stride(
   // expected-error @+1 {{destination memref most minor dim must have unit stride}}
   nvgpu.device_async_copy %src[%i, %i], %dst[%i, %i], 16 :
     memref<200x100xf32> to memref<200x100xf32, affine_map<(d0, d1) -> (200*d0 + 2*d1)>, 3>
+  return
+}
+// -----
+
+// 42 is never the answer!
+func.func @mma_sp_sync_f16_16816(%arg0: vector<2x2xf16>,
+                                 %arg1: vector<2x2xf16>,
+                                 %arg2: vector<2x2xf16>,
+                                 %arg3: vector<2xi16>) -> vector<2x2xf16> {
+  // expected-error @+1 {{'nvgpu.mma.sp.sync' op sparsity selector should be 0 or 1}}
+  %d = nvgpu.mma.sp.sync(%arg0, %arg1, %arg2) metadata(%arg3) {mmaShape = [16, 8, 16], sparsitySelector = 42 : i32} :
+       (vector<2x2xf16>, vector<2x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
+  return %d : vector<2x2xf16>
+}
+
+// -----
+
+func.func @async_cp_zfill_f32_align1(
+  %src: memref<128x128xf32>, %dst: memref<3x16x128xf32, 3>, %i : index, %srcElements : index) {
+    // expected-error @+1 {{'nvgpu.device_async_copy' op bypassL1 does not satify alignment for 'memref<3x16x128xf32, 3>' with destination element 1. Unset bypassL1, or set destination element to 4}}
+  %0 = nvgpu.device_async_copy %src[%i, %i], %dst[%i, %i, %i], 1, %srcElements {bypassL1} : memref<128x128xf32> to memref<3x16x128xf32, 3>
+  return
+}
+
+// -----
+
+func.func @async_cp_size_invalid_f32(
+  %src: memref<128x128xf32>, %dst: memref<3x16x128xf32, 3>, %i : index) {
+    // expected-error @+1 {{Requested copy elements is 3 with width 32. But copy elements could be one of 1, 2, 4.}}
+  %0 = nvgpu.device_async_copy %src[%i, %i], %dst[%i, %i, %i], 3: memref<128x128xf32> to memref<3x16x128xf32, 3>
+  return
+}
+
+// -----
+
+func.func @async_cp_size_invalid_f16(
+  %src: memref<128x128xf16>, %dst: memref<3x16x128xf16, 3>, %i : index) {
+    // expected-error @+1 {{Requested copy elements is 3 with width 16. But copy elements could be one of 2, 4, 8.}}
+  %0 = nvgpu.device_async_copy %src[%i, %i], %dst[%i, %i, %i], 3: memref<128x128xf16> to memref<3x16x128xf16, 3>
+  return
+}
+
+// -----
+
+func.func @async_cp_size_invalid_f64(
+  %src: memref<128x128xf64>, %dst: memref<3x16x128xf64, 3>, %i : index) {
+    // expected-error @+1 {{Requested copy elements is 3 with width 64. But copy elements could be one of 1, 2.}}
+  %0 = nvgpu.device_async_copy %src[%i, %i], %dst[%i, %i, %i], 3: memref<128x128xf64> to memref<3x16x128xf64, 3>
+  return
+}
+
+// -----
+
+!tResult = !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xf32>>
+!tDescA  = !nvgpu.warpgroup.descriptor<tensor = memref<128x64xf16, 3>>
+!tDescB  = !nvgpu.warpgroup.descriptor<tensor = memref<64x121xf16, 3>>
+
+func.func @warpgroup_mma_wrong_input(%descA: !tDescA, %descB: !tDescB, %acc1: !tResult, %acc2: !tResult) {
+  // expected-error @+1 {{'nvgpu.warpgroup.mma' op 2nd dim matrix-B ( 121 ) != 2nd dim matrix-C ( 128 )}}  
+  %0:2 = nvgpu.warpgroup.mma %descA, %descB, %acc1, %acc1: !tDescA, !tDescB, !tResult, !tResult -> !tResult, !tResult
+  return
+}
+
+// -----
+
+!tResult = !nvgpu.warpgroup.accumulator<fragmented = vector<128xf32>>
+!tDescA  = !nvgpu.warpgroup.descriptor<tensor = memref<128x64xf16, 3>>
+!tDescB  = !nvgpu.warpgroup.descriptor<tensor = memref<64x128xf16, 3>>
+func.func @warpgroup_mma_wrong_input(%descA: !tDescA, %descB: !tDescB, %acc1: !tResult, %acc2: !tResult) {
+  // expected-error @+1 {{'nvgpu.warpgroup.mma' op has matrices A, B, C and D, they must be 2 dimensional}}  
+  %0:2 = nvgpu.warpgroup.mma %descA, %descB, %acc1, %acc1: !tDescA, !tDescB, !tResult, !tResult -> !tResult, !tResult
+  return
+}
+
+// -----
+!tResult = !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xf32>>
+!tDescA  = !nvgpu.warpgroup.descriptor<tensor = memref<128x64xf16, 3>>
+!tDescB  = !nvgpu.warpgroup.descriptor<tensor = memref<64x128xf32, 3>>
+func.func @warpgroup_mma_wrong_input(%descA: !tDescA, %descB: !tDescB, %acc1: !tResult, %acc2: !tResult) {
+  // expected-error @+1 {{'nvgpu.warpgroup.mma' op 'f32' += 'f16' * 'f32', it is not supported.}}  
+  %0:2 = nvgpu.warpgroup.mma %descA, %descB, %acc1, %acc1: !tDescA, !tDescB, !tResult, !tResult -> !tResult, !tResult
+  return
+}
+
+// -----
+
+!tResult = !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xf32>>
+!tDescA  = !nvgpu.warpgroup.descriptor<tensor = memref<128x64xf16, 3>>
+!tDescB  = !nvgpu.warpgroup.descriptor<tensor = memref<64x512xf16, 3>>
+func.func @warpgroup_mma_wrong_input(%descA: !tDescA, %descB: !tDescB, %acc1: !tResult, %acc2: !tResult) {
+  // expected-error @+1 {{'nvgpu.warpgroup.mma' op 2nd dim matrix-B ( 512 ) != 2nd dim matrix-C ( 128 )}}
+  %0:2 = nvgpu.warpgroup.mma %descA, %descB, %acc1, %acc1: !tDescA, !tDescB, !tResult, !tResult -> !tResult, !tResult
   return
 }

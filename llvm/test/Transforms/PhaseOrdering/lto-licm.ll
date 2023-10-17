@@ -4,6 +4,7 @@
 define void @hoist_fdiv(ptr %a, float %b) {
 ; CHECK-LABEL: @hoist_fdiv(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = fdiv fast float 1.000000e+00, [[B:%.*]]
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
@@ -12,9 +13,9 @@ define void @hoist_fdiv(ptr %a, float %b) {
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[I_0]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[IDXPROM]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv fast float [[TMP0]], [[B:%.*]]
-; CHECK-NEXT:    store float [[TMP1]], ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast float [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    store float [[TMP2]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_0]], 1
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       for.end:

@@ -17,16 +17,14 @@
 #include "min_allocator.h"
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void
-test(S s)
-{
-    typename S::size_type old_cap = s.capacity();
-    S s0 = s;
-    s.shrink_to_fit();
-    LIBCPP_ASSERT(s.__invariants());
-    assert(s == s0);
-    assert(s.capacity() <= old_cap);
-    assert(s.capacity() >= s.size());
+TEST_CONSTEXPR_CXX20 void test(S s) {
+  typename S::size_type old_cap = s.capacity();
+  S s0                          = s;
+  s.shrink_to_fit();
+  LIBCPP_ASSERT(s.__invariants());
+  assert(s == s0);
+  assert(s.capacity() <= old_cap);
+  assert(s.capacity() >= s.size());
 }
 
 template <class S>
@@ -52,8 +50,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());

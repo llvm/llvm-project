@@ -52,4 +52,11 @@ Status codes for GET_ENVIRONMENT_VARIABLE. Values mandated by the standard.
 #endif
 #define FORTRAN_RUNTIME_STAT_MISSING_ENV_VAR 1
 #define FORTRAN_RUNTIME_STAT_ENV_VARS_UNSUPPORTED 2
+
+#if 0
+Processor-defined status code for MOVE_ALLOC where arguments are the
+same allocatable.
+#endif
+#define FORTRAN_RUNTIME_STAT_MOVE_ALLOC_SAME_ALLOCATABLE 109
+
 #endif

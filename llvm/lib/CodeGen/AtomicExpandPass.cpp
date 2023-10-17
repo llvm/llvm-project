@@ -289,6 +289,24 @@ bool AtomicExpand::runOnFunction(Function &F) {
       if (FenceOrdering != AtomicOrdering::Monotonic) {
         MadeChange |= bracketInstWithFences(I, FenceOrdering);
       }
+    } else if (I->hasAtomicStore() &&
+               TLI->shouldInsertTrailingFenceForAtomicStore(I)) {
+      auto FenceOrdering = AtomicOrdering::Monotonic;
+      if (SI)
+        FenceOrdering = SI->getOrdering();
+      else if (RMWI)
+        FenceOrdering = RMWI->getOrdering();
+      else if (CASI && TLI->shouldExpandAtomicCmpXchgInIR(CASI) !=
+                           TargetLoweringBase::AtomicExpansionKind::LLSC)
+        // LLSC is handled in expandAtomicCmpXchg().
+        FenceOrdering = CASI->getSuccessOrdering();
+
+      IRBuilder Builder(I);
+      if (auto TrailingFence =
+              TLI->emitTrailingFence(Builder, I, FenceOrdering)) {
+        TrailingFence->moveAfter(I);
+        MadeChange = true;
+      }
     }
 
     if (LI)
@@ -355,10 +373,8 @@ LoadInst *AtomicExpand::convertAtomicLoadToIntegerType(LoadInst *LI) {
   ReplacementIRBuilder Builder(LI, *DL);
 
   Value *Addr = LI->getPointerOperand();
-  Type *PT = PointerType::get(NewTy, Addr->getType()->getPointerAddressSpace());
-  Value *NewAddr = Builder.CreateBitCast(Addr, PT);
 
-  auto *NewLI = Builder.CreateLoad(NewTy, NewAddr);
+  auto *NewLI = Builder.CreateLoad(NewTy, Addr);
   NewLI->setAlignment(LI->getAlign());
   NewLI->setVolatile(LI->isVolatile());
   NewLI->setAtomic(LI->getOrdering(), LI->getSyncScopeID());
@@ -380,14 +396,12 @@ AtomicExpand::convertAtomicXchgToIntegerType(AtomicRMWInst *RMWI) {
 
   Value *Addr = RMWI->getPointerOperand();
   Value *Val = RMWI->getValOperand();
-  Type *PT = PointerType::get(NewTy, RMWI->getPointerAddressSpace());
-  Value *NewAddr = Builder.CreateBitCast(Addr, PT);
   Value *NewVal = Val->getType()->isPointerTy()
                       ? Builder.CreatePtrToInt(Val, NewTy)
                       : Builder.CreateBitCast(Val, NewTy);
 
   auto *NewRMWI =
-      Builder.CreateAtomicRMW(AtomicRMWInst::Xchg, NewAddr, NewVal,
+      Builder.CreateAtomicRMW(AtomicRMWInst::Xchg, Addr, NewVal,
                               RMWI->getAlign(), RMWI->getOrdering());
   NewRMWI->setVolatile(RMWI->isVolatile());
   LLVM_DEBUG(dbgs() << "Replaced " << *RMWI << " with " << *NewRMWI << "\n");
@@ -490,10 +504,8 @@ StoreInst *AtomicExpand::convertAtomicStoreToIntegerType(StoreInst *SI) {
   Value *NewVal = Builder.CreateBitCast(SI->getValueOperand(), NewTy);
 
   Value *Addr = SI->getPointerOperand();
-  Type *PT = PointerType::get(NewTy, Addr->getType()->getPointerAddressSpace());
-  Value *NewAddr = Builder.CreateBitCast(Addr, PT);
 
-  StoreInst *NewSI = Builder.CreateStore(NewVal, NewAddr);
+  StoreInst *NewSI = Builder.CreateStore(NewVal, Addr);
   NewSI->setAlignment(SI->getAlign());
   NewSI->setVolatile(SI->isVolatile());
   NewSI->setAtomic(SI->getOrdering(), SI->getSyncScopeID());
@@ -535,8 +547,6 @@ static void createCmpXchgInstFun(IRBuilderBase &Builder, Value *Addr,
   bool NeedBitcast = OrigTy->isFloatingPointTy();
   if (NeedBitcast) {
     IntegerType *IntTy = Builder.getIntNTy(OrigTy->getPrimitiveSizeInBits());
-    unsigned AS = Addr->getType()->getPointerAddressSpace();
-    Addr = Builder.CreateBitCast(Addr, IntTy->getPointerTo(AS));
     NewVal = Builder.CreateBitCast(NewVal, IntTy);
     Loaded = Builder.CreateBitCast(Loaded, IntTy);
   }
@@ -709,7 +719,6 @@ static PartwordMaskValues createMaskInstrs(IRBuilderBase &Builder,
   assert(ValueSize < MinWordSize);
 
   PointerType *PtrTy = cast<PointerType>(Addr->getType());
-  Type *WordPtrType = PMV.WordType->getPointerTo(PtrTy->getAddressSpace());
   IntegerType *IntTy = DL.getIntPtrType(Ctx, PtrTy->getAddressSpace());
   Value *PtrLSB;
 
@@ -742,10 +751,6 @@ static PartwordMaskValues createMaskInstrs(IRBuilderBase &Builder,
       "Mask");
 
   PMV.Inv_Mask = Builder.CreateNot(PMV.Mask, "Inv_Mask");
-
-  // Cast for typed pointers.
-  PMV.AlignedAddr =
-    Builder.CreateBitCast(PMV.AlignedAddr, WordPtrType, "AlignedAddr");
 
   return PMV;
 }
@@ -815,7 +820,9 @@ static Value *performMaskedAtomicOp(AtomicRMWInst::BinOp Op,
   case AtomicRMWInst::FAdd:
   case AtomicRMWInst::FSub:
   case AtomicRMWInst::FMin:
-  case AtomicRMWInst::FMax: {
+  case AtomicRMWInst::FMax:
+  case AtomicRMWInst::UIncWrap:
+  case AtomicRMWInst::UDecWrap: {
     // Finally, other ops will operate on the full value, so truncate down to
     // the original size, and expand out again after doing the
     // operation. Bitcasts will be inserted for FP values.
@@ -904,9 +911,10 @@ AtomicRMWInst *AtomicExpand::widenPartwordAtomicRMW(AtomicRMWInst *AI) {
   else
     NewOperand = ValOperand_Shifted;
 
-  AtomicRMWInst *NewAI =
-      Builder.CreateAtomicRMW(Op, PMV.AlignedAddr, NewOperand,
-                              PMV.AlignedAddrAlignment, AI->getOrdering());
+  AtomicRMWInst *NewAI = Builder.CreateAtomicRMW(
+      Op, PMV.AlignedAddr, NewOperand, PMV.AlignedAddrAlignment,
+      AI->getOrdering(), AI->getSyncScopeID());
+  // TODO: Preserve metadata
 
   Value *FinalOldResult = extractMaskedValue(Builder, NewAI, PMV);
   AI->replaceAllUsesWith(FinalOldResult);
@@ -1168,14 +1176,12 @@ AtomicExpand::convertCmpXchgToIntegerType(AtomicCmpXchgInst *CI) {
   ReplacementIRBuilder Builder(CI, *DL);
 
   Value *Addr = CI->getPointerOperand();
-  Type *PT = PointerType::get(NewTy, Addr->getType()->getPointerAddressSpace());
-  Value *NewAddr = Builder.CreateBitCast(Addr, PT);
 
   Value *NewCmp = Builder.CreatePtrToInt(CI->getCompareOperand(), NewTy);
   Value *NewNewVal = Builder.CreatePtrToInt(CI->getNewValOperand(), NewTy);
 
   auto *NewCI = Builder.CreateAtomicCmpXchg(
-      NewAddr, NewCmp, NewNewVal, CI->getAlign(), CI->getSuccessOrdering(),
+      Addr, NewCmp, NewNewVal, CI->getAlign(), CI->getSuccessOrdering(),
       CI->getFailureOrdering(), CI->getSyncScopeID());
   NewCI->setVolatile(CI->isVolatile());
   NewCI->setWeak(CI->isWeak());
@@ -1356,7 +1362,8 @@ bool AtomicExpand::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
   // Make sure later instructions don't get reordered with a fence if
   // necessary.
   Builder.SetInsertPoint(SuccessBB);
-  if (ShouldInsertFencesForAtomic)
+  if (ShouldInsertFencesForAtomic ||
+      TLI->shouldInsertTrailingFenceForAtomicStore(CI))
     TLI->emitTrailingFence(Builder, CI, SuccessOrder);
   Builder.CreateBr(ExitBB);
 
@@ -1555,6 +1562,11 @@ bool AtomicExpand::tryExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
 bool llvm::expandAtomicRMWToCmpXchg(AtomicRMWInst *AI,
                                     CreateCmpXchgInstFun CreateCmpXchg) {
   ReplacementIRBuilder Builder(AI, AI->getModule()->getDataLayout());
+  Builder.setIsFPConstrained(
+      AI->getFunction()->hasFnAttribute(Attribute::StrictFP));
+
+  // FIXME: If FP exceptions are observable, we should force them off for the
+  // loop for the FP atomics.
   Value *Loaded = AtomicExpand::insertRMWCmpXchgLoop(
       Builder, AI->getType(), AI->getPointerOperand(), AI->getAlign(),
       AI->getOrdering(), AI->getSyncScopeID(),
@@ -1685,6 +1697,8 @@ static ArrayRef<RTLIB::Libcall> GetRMWLibcall(AtomicRMWInst::BinOp Op) {
   case AtomicRMWInst::FMin:
   case AtomicRMWInst::FAdd:
   case AtomicRMWInst::FSub:
+  case AtomicRMWInst::UIncWrap:
+  case AtomicRMWInst::UDecWrap:
     // No atomic libcalls are available for max/min/umax/umin.
     return {};
   }
@@ -1820,11 +1834,8 @@ bool AtomicExpand::expandAtomicOpToLibcall(
   // variables.
 
   AllocaInst *AllocaCASExpected = nullptr;
-  Value *AllocaCASExpected_i8 = nullptr;
   AllocaInst *AllocaValue = nullptr;
-  Value *AllocaValue_i8 = nullptr;
   AllocaInst *AllocaResult = nullptr;
-  Value *AllocaResult_i8 = nullptr;
 
   Type *ResultTy;
   SmallVector<Value *, 6> Args;
@@ -1841,23 +1852,17 @@ bool AtomicExpand::expandAtomicOpToLibcall(
   // implementation and that addresses are convertable.  For systems without
   // that property, we'd need to extend this mechanism to support AS-specific
   // families of atomic intrinsics.
-  auto PtrTypeAS = PointerOperand->getType()->getPointerAddressSpace();
-  Value *PtrVal =
-      Builder.CreateBitCast(PointerOperand, Type::getInt8PtrTy(Ctx, PtrTypeAS));
-  PtrVal = Builder.CreateAddrSpaceCast(PtrVal, Type::getInt8PtrTy(Ctx));
+  Value *PtrVal = PointerOperand;
+  PtrVal = Builder.CreateAddrSpaceCast(PtrVal, PointerType::getUnqual(Ctx));
   Args.push_back(PtrVal);
 
   // 'expected' argument, if present.
   if (CASExpected) {
     AllocaCASExpected = AllocaBuilder.CreateAlloca(CASExpected->getType());
     AllocaCASExpected->setAlignment(AllocaAlignment);
-    unsigned AllocaAS = AllocaCASExpected->getType()->getPointerAddressSpace();
-
-    AllocaCASExpected_i8 = Builder.CreateBitCast(
-        AllocaCASExpected, Type::getInt8PtrTy(Ctx, AllocaAS));
-    Builder.CreateLifetimeStart(AllocaCASExpected_i8, SizeVal64);
+    Builder.CreateLifetimeStart(AllocaCASExpected, SizeVal64);
     Builder.CreateAlignedStore(CASExpected, AllocaCASExpected, AllocaAlignment);
-    Args.push_back(AllocaCASExpected_i8);
+    Args.push_back(AllocaCASExpected);
   }
 
   // 'val' argument ('desired' for cas), if present.
@@ -1869,11 +1874,9 @@ bool AtomicExpand::expandAtomicOpToLibcall(
     } else {
       AllocaValue = AllocaBuilder.CreateAlloca(ValueOperand->getType());
       AllocaValue->setAlignment(AllocaAlignment);
-      AllocaValue_i8 =
-          Builder.CreateBitCast(AllocaValue, Type::getInt8PtrTy(Ctx));
-      Builder.CreateLifetimeStart(AllocaValue_i8, SizeVal64);
+      Builder.CreateLifetimeStart(AllocaValue, SizeVal64);
       Builder.CreateAlignedStore(ValueOperand, AllocaValue, AllocaAlignment);
-      Args.push_back(AllocaValue_i8);
+      Args.push_back(AllocaValue);
     }
   }
 
@@ -1881,11 +1884,8 @@ bool AtomicExpand::expandAtomicOpToLibcall(
   if (!CASExpected && HasResult && !UseSizedLibcall) {
     AllocaResult = AllocaBuilder.CreateAlloca(I->getType());
     AllocaResult->setAlignment(AllocaAlignment);
-    unsigned AllocaAS = AllocaResult->getType()->getPointerAddressSpace();
-    AllocaResult_i8 =
-        Builder.CreateBitCast(AllocaResult, Type::getInt8PtrTy(Ctx, AllocaAS));
-    Builder.CreateLifetimeStart(AllocaResult_i8, SizeVal64);
-    Args.push_back(AllocaResult_i8);
+    Builder.CreateLifetimeStart(AllocaResult, SizeVal64);
+    Args.push_back(AllocaResult);
   }
 
   // 'ordering' ('success_order' for cas) argument.
@@ -1917,7 +1917,7 @@ bool AtomicExpand::expandAtomicOpToLibcall(
 
   // And then, extract the results...
   if (ValueOperand && !UseSizedLibcall)
-    Builder.CreateLifetimeEnd(AllocaValue_i8, SizeVal64);
+    Builder.CreateLifetimeEnd(AllocaValue, SizeVal64);
 
   if (CASExpected) {
     // The final result from the CAS is {load of 'expected' alloca, bool result
@@ -1926,7 +1926,7 @@ bool AtomicExpand::expandAtomicOpToLibcall(
     Value *V = PoisonValue::get(FinalResultTy);
     Value *ExpectedOut = Builder.CreateAlignedLoad(
         CASExpected->getType(), AllocaCASExpected, AllocaAlignment);
-    Builder.CreateLifetimeEnd(AllocaCASExpected_i8, SizeVal64);
+    Builder.CreateLifetimeEnd(AllocaCASExpected, SizeVal64);
     V = Builder.CreateInsertValue(V, ExpectedOut, 0);
     V = Builder.CreateInsertValue(V, Result, 1);
     I->replaceAllUsesWith(V);
@@ -1937,7 +1937,7 @@ bool AtomicExpand::expandAtomicOpToLibcall(
     else {
       V = Builder.CreateAlignedLoad(I->getType(), AllocaResult,
                                     AllocaAlignment);
-      Builder.CreateLifetimeEnd(AllocaResult_i8, SizeVal64);
+      Builder.CreateLifetimeEnd(AllocaResult, SizeVal64);
     }
     I->replaceAllUsesWith(V);
   }

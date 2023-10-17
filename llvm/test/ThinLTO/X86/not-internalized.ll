@@ -6,7 +6,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; RUN: opt -module-summary %s -o %t.bc
 ; RUN: llvm-lto2 run -save-temps %t.bc -o %t.out \
 ; RUN:    -r=%t.bc,foo,plx \
-; RUN:    -r=%t.bc,bar,lx
+; RUN:    -r=%t.bc,bar,pl
 
 ; Check that we don't internalize `bar` during promotion,
 ; because foo and bar are members of the same comdat

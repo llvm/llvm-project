@@ -37,11 +37,18 @@ func.func @integer16(%arg0: i16, %arg1: si16, %arg2: ui16) { return }
 // CHECK-SAME: i64
 // CHECK-SAME: si64
 // CHECK-SAME: ui64
-// NOEMU-LABEL: func @integer64
+// NOEMU-LABEL: func.func @integer64
 // NOEMU-SAME: i64
 // NOEMU-SAME: si64
 // NOEMU-SAME: ui64
 func.func @integer64(%arg0: i64, %arg1: si64, %arg2: ui64) { return }
+
+// i128 is not supported by SPIR-V.
+// CHECK-LABEL: func.func @integer128
+// CHECK-SAME: i128
+// NOEMU-LABEL: func.func @integer128
+// NOEMU-SAME: i128
+func.func @integer128(%arg0: i128) { return }
 
 } // end module
 
@@ -87,13 +94,34 @@ func.func @integer64(%arg0: i64, %arg1: si64, %arg2: ui64) { return }
 
 // -----
 
-// Check that weird bitwidths are not supported.
+// Check that power-of-two sub-byte bitwidths are converted to i32.
 module attributes {
   spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [], []>, #spirv.resource_limits<>>
 } {
 
-// CHECK-NOT: spirv.func @integer4
+// CHECK: spirv.func @integer2(%{{.+}}: i32)
+func.func @integer2(%arg0: i8) { return }
+
+// CHECK: spirv.func @integer4(%{{.+}}: i32)
 func.func @integer4(%arg0: i4) { return }
+
+// CHECK: spirv.func @v3i4(%{{.+}}: vector<3xi32>)
+func.func @v3i4(%arg0: vector<3xi4>) { return }
+
+} // end module
+
+// -----
+
+// Check that other bitwidths are not supported.
+module attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [], []>, #spirv.resource_limits<>>
+} {
+
+// CHECK-NOT: spirv.func @integer3
+func.func @integer3(%arg0: i3) { return }
+
+// CHECK-NOT: spirv.func @integer13
+func.func @integer4(%arg0: i13) { return }
 
 // CHECK-NOT: spirv.func @integer128
 func.func @integer128(%arg0: i128) { return }
@@ -102,13 +130,15 @@ func.func @integer128(%arg0: i128) { return }
 func.func @integer42(%arg0: i42) { return }
 
 } // end module
+
 // -----
 
 //===----------------------------------------------------------------------===//
 // Index type
 //===----------------------------------------------------------------------===//
 
-// The index type is always converted into i32.
+// The index type is always converted into i32 or i64, with i32 being the
+// default.
 module attributes {
   spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [], []>, #spirv.resource_limits<>>
 } {
@@ -142,6 +172,13 @@ func.func @float16(%arg0: f16) { return }
 // NOEMU-LABEL: func.func @float64
 // NOEMU-SAME: f64
 func.func @float64(%arg0: f64) { return }
+
+// f80 is not supported by SPIR-V.
+// CHECK-LABEL: func.func @float80
+// CHECK-SAME: f80
+// NOEMU-LABEL: func.func @float80
+// NOEMU-SAME: f80
+func.func @float80(%arg0: f80) { return }
 
 } // end module
 
@@ -182,6 +219,61 @@ func.func @bf16_type(%arg0: bf16) { return }
 // -----
 
 //===----------------------------------------------------------------------===//
+// Complex types
+//===----------------------------------------------------------------------===//
+
+// Check that capabilities for scalar types affects complex types too: having
+// special capabilities means keep vector types untouched.
+module attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0,
+    [Float64, StorageUniform16, StorageBuffer16BitAccess],
+    [SPV_KHR_16bit_storage, SPV_KHR_8bit_storage]>, #spirv.resource_limits<>>
+} {
+
+// CHECK-LABEL: func @complex_types
+// CHECK-SAME: vector<2xf32>
+// CHECK-SAME: vector<2xf64>
+func.func @complex_types(
+    %arg0: complex<f32>,
+    %arg2: complex<f64>
+) { return }
+
+// CHECK-LABEL: func @memref_complex_types_with_cap
+// CHECK-SAME: !spirv.ptr<!spirv.struct<(!spirv.array<4 x vector<2xf16>, stride=4> [0])>, StorageBuffer>
+// CHECK-SAME: !spirv.ptr<!spirv.struct<(!spirv.array<16 x vector<2xf16>, stride=4> [0])>, Uniform>
+func.func @memref_complex_types_with_cap(
+    %arg0: memref<4xcomplex<f16>, #spirv.storage_class<StorageBuffer>>,
+    %arg1: memref<2x8xcomplex<f16>, #spirv.storage_class<Uniform>>
+) { return }
+
+} // end module
+
+// -----
+
+// Check that capabilities for scalar types affects complex types too: no special
+// capabilities available means widening element types to 32-bit.
+
+module attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [], []>, #spirv.resource_limits<>>
+} {
+
+// Emulation is unimplemented right now.
+// CHECK-LABEL: func @memref_complex_types_no_cap
+// CHECK-SAME: memref<4xcomplex<f16>, #spirv.storage_class<StorageBuffer>>
+// CHECK-SAME: memref<2x8xcomplex<f16>, #spirv.storage_class<Uniform>>
+// NOEMU-LABEL: func @memref_complex_types_no_cap
+// NOEMU-SAME: memref<4xcomplex<f16>, #spirv.storage_class<StorageBuffer>>
+// NOEMU-SAME: memref<2x8xcomplex<f16>, #spirv.storage_class<Uniform>>
+func.func @memref_complex_types_no_cap(
+    %arg0: memref<4xcomplex<f16>, #spirv.storage_class<StorageBuffer>>,
+    %arg1: memref<2x8xcomplex<f16>, #spirv.storage_class<Uniform>>
+) { return }
+
+} // end module
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // Vector types
 //===----------------------------------------------------------------------===//
 
@@ -208,6 +300,10 @@ func.func @float_vector(
 // CHECK-LABEL: spirv.func @one_element_vector
 // CHECK-SAME: %{{.+}}: i32
 func.func @one_element_vector(%arg0: vector<1xi8>) { return }
+
+// CHECK-LABEL: spirv.func @index_vector
+// CHECK-SAME: %{{.*}}: vector<4xi32>
+func.func @index_vector(%arg0: vector<4xindex>) { return }
 
 } // end module
 
@@ -299,6 +395,14 @@ func.func @memref_1bit_type(
     %arg1: memref<4x8xi1, #spirv.storage_class<Function>>
 ) { return }
 
+// CHECK-LABEL: func @memref_index_type
+// CHECK-SAME: !spirv.ptr<!spirv.struct<(!spirv.array<4 x i32, stride=4> [0])>, StorageBuffer>
+// CHECK-SAME: !spirv.ptr<!spirv.struct<(!spirv.array<4 x i32>)>, Function>
+func.func @memref_index_type(
+    %arg0: memref<4xindex, #spirv.storage_class<StorageBuffer>>,
+    %arg1: memref<4xindex, #spirv.storage_class<Function>>
+) { return }
+
 } // end module
 
 // -----
@@ -338,6 +442,16 @@ module attributes {
 // NOEMU-LABEL: func @memref_1bit_type
 // NOEMU-SAME: memref<5xi1, #spirv.storage_class<StorageBuffer>>
 func.func @memref_1bit_type(%arg0: memref<5xi1, #spirv.storage_class<StorageBuffer>>) { return }
+
+// 16 i2 values are tightly packed into one i32 value; so 33 i2 values takes 3 i32 value.
+// CHECK-LABEL: spirv.func @memref_2bit_type
+// CHECK-SAME: !spirv.ptr<!spirv.struct<(!spirv.array<3 x i32, stride=4> [0])>, StorageBuffer>
+func.func @memref_2bit_type(%arg0: memref<33xi2, #spirv.storage_class<StorageBuffer>>) { return }
+
+// 8 i4 values are tightly packed into one i32 value; so 16 i4 values takes 2 i32 value.
+// CHECK-LABEL: spirv.func @memref_4bit_type
+// CHECK-SAME: !spirv.ptr<!spirv.struct<(!spirv.array<2 x i32, stride=4> [0])>, StorageBuffer>
+func.func @memref_4bit_type(%arg0: memref<16xi4, #spirv.storage_class<StorageBuffer>>) { return }
 
 // CHECK-LABEL: spirv.func @memref_8bit_StorageBuffer
 // CHECK-SAME: !spirv.ptr<!spirv.struct<(!spirv.array<4 x i32, stride=4> [0])>, StorageBuffer>
@@ -643,6 +757,14 @@ func.func @unranked_memref(%arg0: memref<*xi32>) { return }
 // NOEMU-SAME: memref<?xi1, #spirv.storage_class<StorageBuffer>>
 func.func @memref_1bit_type(%arg0: memref<?xi1, #spirv.storage_class<StorageBuffer>>) { return }
 
+// CHECK-LABEL: spirv.func @memref_2bit_type
+// CHECK-SAME: !spirv.ptr<!spirv.struct<(!spirv.rtarray<i32, stride=4> [0])>, StorageBuffer>
+func.func @memref_2bit_type(%arg0: memref<?xi2, #spirv.storage_class<StorageBuffer>>) { return }
+
+// CHECK-LABEL: spirv.func @memref_4bit_type
+// CHECK-SAME: !spirv.ptr<!spirv.struct<(!spirv.rtarray<i32, stride=4> [0])>, StorageBuffer>
+func.func @memref_4bit_type(%arg0: memref<?xi4, #spirv.storage_class<StorageBuffer>>) { return }
+
 // CHECK-LABEL: func @dynamic_dim_memref
 // CHECK-SAME: !spirv.ptr<!spirv.struct<(!spirv.rtarray<i32, stride=4> [0])>, StorageBuffer>
 // CHECK-SAME: !spirv.ptr<!spirv.struct<(!spirv.rtarray<f32, stride=4> [0])>, StorageBuffer>
@@ -804,6 +926,11 @@ func.func @float_tensor_types(
   %arg1: tensor<8x4xf32>,
   %arg2: tensor<8x4xf16>
 ) { return }
+
+
+// CHECK-LABEL: spirv.func @index_tensor_type
+// CHECK-SAME: %{{.*}}: !spirv.array<20 x i32>
+func.func @index_tensor_type(%arg0: tensor<4x5xindex>) { return }
 
 } // end module
 

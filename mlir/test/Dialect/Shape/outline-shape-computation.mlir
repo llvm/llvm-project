@@ -207,3 +207,13 @@ func.func @multiple_reused(%arg0: tensor<?x4xf32>, %arg1: tensor<?x4xf32>) -> (t
 // CHECK-DAG:   %[[V5:.*]] = from_extents %[[V4]], %c4 : index, index
 // CHECK-DAG:   return %[[V5]] : !shape.shape
 
+// Make sure redundant with_shape is removed when with_shape input is !shape.value_shape.
+func.func @value_shape_with_shape(%arg0: !shape.value_shape, %arg1: !shape.value_shape) -> tensor<?xf32> {
+  %1 = shape.shape_of %arg0 : !shape.value_shape -> !shape.shape
+  %2 = shape.with_shape %arg1, %1 : !shape.value_shape, !shape.shape
+  %3 = shape.value_of %2 : tensor<?xf32>
+  return %3 : tensor<?xf32>
+}
+// CHECK-LABEL:func.func @value_shape_with_shape
+// CHECK-NEXT:%0 = shape.value_of %arg1 : tensor<?xf32>
+// CHECK-NEXT:return %0 : tensor<?xf32>

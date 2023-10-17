@@ -5,10 +5,10 @@
 //
 // RUN: %clang_cc1 -std=c++20 M.cpp -emit-module-interface -o M.pcm
 // RUN: %clang_cc1 -std=c++20 N.cpp -emit-module-interface -o N.pcm \
-// RUN:   -fmodule-file=M.pcm
+// RUN:   -fmodule-file=M=M.pcm
 // RUN: %clang_cc1 -std=c++20 Q.cpp -emit-module-interface -o Q.pcm
-// RUN: %clang_cc1 -std=c++20 Q-impl.cpp -fsyntax-only -fmodule-file=Q.pcm \
-// RUN:   -fmodule-file=N.pcm -verify
+// RUN: %clang_cc1 -std=c++20 Q-impl.cpp -fsyntax-only -fmodule-file=Q=Q.pcm \
+// RUN:   -fmodule-file=N=N.pcm -fmodule-file=M=M.pcm -verify
 
 //--- M.cpp
 export module M;

@@ -1,6 +1,7 @@
 // RUN: %check_clang_tidy %s bugprone-unchecked-optional-access %t -- -- -I %S/Inputs/unchecked-optional-access
 
 #include "absl/types/optional.h"
+#include "folly/types/Optional.h"
 
 void unchecked_value_access(const absl::optional<int> &opt) {
   opt.value();
@@ -21,8 +22,30 @@ void unchecked_arrow_operator_access(const absl::optional<Foo> &opt) {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value
 }
 
+void folly_check_value_then_reset(folly::Optional<int> opt) {
+  if (opt) {
+    opt.reset();
+    opt.value();
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: unchecked access to optional value
+  }
+}
+
+void folly_value_after_swap(folly::Optional<int> opt1, folly::Optional<int> opt2) {
+  if (opt1) {
+    opt1.swap(opt2);
+    opt1.value();
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: unchecked access to optional value
+  }
+}
+
 void checked_access(const absl::optional<int> &opt) {
   if (opt.has_value()) {
+    opt.value();
+  }
+}
+
+void folly_checked_access(const folly::Optional<int> &opt) {
+  if (opt.hasValue()) {
     opt.value();
   }
 }
@@ -110,3 +133,50 @@ class C4 {
   }
   int foo_;
 };
+
+// llvm#59705
+namespace std
+{
+  template <typename T>
+  constexpr T&& forward(T& type) noexcept {
+    return static_cast<T&&>(type);
+  }
+
+  template <typename T>
+  constexpr T&& forward(T&& type) noexcept {
+    return static_cast<T&&>(type);
+  }
+}
+
+void std_forward_copy(absl::optional<int> opt) {
+  std::forward<absl::optional<int>>(opt).value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional
+}
+
+void std_forward_copy_safe(absl::optional<int> opt) {
+  if (!opt) return;
+
+  std::forward<absl::optional<int>>(opt).value();
+}
+
+void std_forward_copy(absl::optional<int>& opt) {
+  std::forward<absl::optional<int>>(opt).value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional
+}
+
+void std_forward_lvalue_ref_safe(absl::optional<int>& opt) {
+  if (!opt) return;
+
+  std::forward<absl::optional<int>>(opt).value();
+}
+
+void std_forward_copy(absl::optional<int>&& opt) {
+  std::forward<absl::optional<int>>(opt).value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional
+}
+
+void std_forward_rvalue_ref_safe(absl::optional<int>&& opt) {
+  if (!opt) return;
+
+  std::forward<absl::optional<int>>(opt).value();
+}

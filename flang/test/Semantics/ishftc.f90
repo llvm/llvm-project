@@ -26,6 +26,10 @@ program test_ishftc
   n = ishftc(3, 2, 1)
   !ERROR: SHIFT=-2 count for ishftc is greater in magnitude than SIZE=1
   n = ishftc(3, -2, 1)
+  !ERROR: SHIFT=4 count for ishftc is greater in magnitude than SIZE=3
+  array_result = ishftc(666, [(j,integer::j=1,5)], 3)
+  !ERROR: SHIFT=4 count for ishftc is greater in magnitude than SIZE=3
+  array_result = ishftc(666, 4, [(j,integer::j=10,3,-1)])
   !ERROR: SIZE=-3 count for ishftc is not positive
   array_result = ishftc([3,3], [2,2], [-3,3])
   !ERROR: SIZE=-3 count for ishftc is not positive
@@ -44,5 +48,5 @@ program test_ishftc
   array_result = ishftc([3,3], [-2,-2], const_arr6)
   !ERROR: SIZE=0 count for ishftc is not positive
   array_result = ishftc([3,3], [-2,-2], const_arr7)
-
+  array_result = ishftc([(j,integer::j=1,0)], 10, 9) ! ok because empty
 end program test_ishftc

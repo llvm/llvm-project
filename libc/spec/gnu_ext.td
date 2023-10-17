@@ -2,6 +2,8 @@ def CpuSetT : NamedType<"cpu_set_t">;
 def CpuSetPtr : PtrType<CpuSetT>;
 def ConstCpuSetPtr : ConstType<CpuSetPtr>;
 
+def QSortRCompareT : NamedType<"__qsortrcompare_t">;
+
 def GnuExtensions : StandardSpec<"GNUExtensions"> {
   NamedType CookieIOFunctionsT = NamedType<"cookie_io_functions_t">;
   HeaderSpec CType = HeaderSpec<
@@ -29,10 +31,11 @@ def GnuExtensions : StandardSpec<"GNUExtensions"> {
             RetValSpec<VoidType>,
             [ArgSpec<FloatType>, ArgSpec<FloatPtr>, ArgSpec<FloatPtr>]
         >,
+        FunctionSpec<"exp10", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
         FunctionSpec<"exp10f", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
       ]
   >;
- 
+
   HeaderSpec Sched = HeaderSpec<
       "sched.h",
       [], // Macros
@@ -51,22 +54,37 @@ def GnuExtensions : StandardSpec<"GNUExtensions"> {
         >,
       ]
   >;
- 
+
   HeaderSpec String = HeaderSpec<
       "string.h",
       [], // Macros
       [], // Types
       [], // Enumerations
-      [ 
+      [
+         FunctionSpec<
+            "memmem",
+            RetValSpec<VoidPtr>,
+            [ArgSpec<ConstVoidPtr>, ArgSpec<SizeTType>, ArgSpec<ConstVoidPtr>, ArgSpec<SizeTType>]
+        >,
         FunctionSpec<
             "memrchr",
             RetValSpec<VoidPtr>,
-            [ArgSpec<VoidPtr>, ArgSpec<IntType>, ArgSpec<SizeTType>]
+            [ArgSpec<ConstVoidPtr>, ArgSpec<IntType>, ArgSpec<SizeTType>]
         >,
         FunctionSpec<
             "strerror_r",
             RetValSpec<CharPtr>,
             [ArgSpec<IntType>, ArgSpec<CharPtr>, ArgSpec<SizeTType>]
+        >,
+        FunctionSpec<
+            "strcasestr",
+            RetValSpec<CharPtr>,
+            [ArgSpec<ConstCharPtr>, ArgSpec<ConstCharPtr>]
+        >,
+        FunctionSpec<
+            "strchrnul",
+            RetValSpec<CharPtr>,
+            [ArgSpec<ConstCharPtr>, ArgSpec<IntType>]
         >,
       ]
   >;
@@ -145,6 +163,20 @@ def GnuExtensions : StandardSpec<"GNUExtensions"> {
       ]
   >;
 
+  HeaderSpec StdLib = HeaderSpec<
+      "stdlib.h",
+      [], // Macros
+      [QSortRCompareT], // Types
+      [], // Enumerations
+      [
+          FunctionSpec<
+                "qsort_r", 
+                RetValSpec<VoidType>, 
+                [ArgSpec<VoidPtr>, ArgSpec<SizeTType>, ArgSpec<SizeTType>, ArgSpec<QSortRCompareT>, ArgSpec<VoidPtr>]
+          >,
+      ]
+  >;
+
   HeaderSpec PThread = HeaderSpec<
       "pthread.h",
       [], // Macros
@@ -209,6 +241,7 @@ def GnuExtensions : StandardSpec<"GNUExtensions"> {
     SendFile,
     SysAuxv,
     StdIO,
+    StdLib,
     String,
     UniStd,
   ];

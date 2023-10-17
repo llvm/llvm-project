@@ -228,16 +228,17 @@ public:
 
   bool VisitDesignatedInitExpr(const DesignatedInitExpr *E) {
     for (const DesignatedInitExpr::Designator &D : E->designators()) {
-      if (D.isFieldDesignator() && D.getField()) {
-        const FieldDecl *Decl = D.getField();
-        if (isInUSRSet(Decl)) {
-          auto StartLoc = D.getFieldLoc();
-          auto EndLoc = D.getFieldLoc();
-          RenameInfos.push_back({StartLoc, EndLoc,
-                                 /*FromDecl=*/nullptr,
-                                 /*Context=*/nullptr,
-                                 /*Specifier=*/nullptr,
-                                 /*IgnorePrefixQualifiers=*/true});
+      if (D.isFieldDesignator()) {
+        if (const FieldDecl *Decl = D.getFieldDecl()) {
+          if (isInUSRSet(Decl)) {
+            auto StartLoc = D.getFieldLoc();
+            auto EndLoc = D.getFieldLoc();
+            RenameInfos.push_back({StartLoc, EndLoc,
+                                   /*FromDecl=*/nullptr,
+                                   /*Context=*/nullptr,
+                                   /*Specifier=*/nullptr,
+                                   /*IgnorePrefixQualifiers=*/true});
+          }
         }
       }
     }

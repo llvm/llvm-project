@@ -3,6 +3,7 @@
 
 @zeroinit = constant {} zeroinitializer
 @poison = constant {} poison
+@constzeroarray = internal constant [4 x i32] zeroinitializer
 
 define i32 @crash_on_zeroinit() {
 ; CHECK-LABEL: @crash_on_zeroinit(
@@ -39,4 +40,23 @@ define <3 x float> @load_vec3() {
 ;
   %1 = load <3 x float>, ptr getelementptr inbounds (<3 x float>, ptr @constvec, i64 1)
   ret <3 x float> %1
+}
+
+define i32 @load_gep_const_zero_array(i64 %idx) {
+; CHECK-LABEL: @load_gep_const_zero_array(
+; CHECK-NEXT:    ret i32 0
+;
+  %gep = getelementptr inbounds [4 x i32], ptr @constzeroarray, i64 0, i64 %idx
+  %load = load i32, ptr %gep
+  ret i32 %load
+}
+
+define i8 @load_i8_multi_gep_const_zero_array(i64 %idx1, i64 %idx2) {
+; CHECK-LABEL: @load_i8_multi_gep_const_zero_array(
+; CHECK-NEXT:    ret i8 0
+;
+  %gep1 = getelementptr inbounds i8, ptr @constzeroarray, i64 %idx1
+  %gep = getelementptr inbounds i8, ptr %gep1, i64 %idx2
+  %load = load i8, ptr %gep
+  ret i8 %load
 }

@@ -4,8 +4,8 @@
 ; targets with 16-bit int.  Although fls is available on a number of
 ; targets it's supported (hardcoded as available) only on FreeBSD.
 ;
-; RUN: opt < %s -mtriple=avr-freebsd -passes=instcombine -S | FileCheck %s
-; RUN: opt < %s -mtriple=msp430-freebsd -passes=instcombine -S | FileCheck %s
+; RUN: opt < %s -mtriple=avr-freebsd -passes=instcombine -S | FileCheck %s --check-prefix=AVR
+; RUN: opt < %s -mtriple=msp430-freebsd -passes=instcombine -S | FileCheck %s --check-prefix=MSP430
 
 declare i16 @fls(i16)
 
@@ -13,13 +13,21 @@ declare void @sink(i16)
 
 
 define void @fold_fls(i16 %x) {
-; CHECK-LABEL: @fold_fls(
-; CHECK-NEXT:    call void @sink(i16 0)
-; CHECK-NEXT:    call void @sink(i16 1)
-; CHECK-NEXT:    [[CTLZ:%.*]] = call i16 @llvm.ctlz.i16(i16 [[X:%.*]], i1 false), !range [[RNG0:![0-9]+]]
-; CHECK-NEXT:    [[TMP1:%.*]] = sub nuw nsw i16 16, [[CTLZ]]
-; CHECK-NEXT:    call void @sink(i16 [[TMP1]])
-; CHECK-NEXT:    ret void
+; AVR-LABEL: @fold_fls(
+; AVR-NEXT:    call void @sink(i16 0)
+; AVR-NEXT:    call void @sink(i16 1)
+; AVR-NEXT:    [[CTLZ:%.*]] = call i16 @llvm.ctlz.i16(i16 [[X:%.*]], i1 false), !range [[RNG0:![0-9]+]]
+; AVR-NEXT:    [[NX:%.*]] = sub nuw nsw i16 16, [[CTLZ]]
+; AVR-NEXT:    call void @sink(i16 [[NX]])
+; AVR-NEXT:    ret void
+;
+; MSP430-LABEL: @fold_fls(
+; MSP430-NEXT:    call void @sink(i16 0)
+; MSP430-NEXT:    call void @sink(i16 1)
+; MSP430-NEXT:    [[CTLZ:%.*]] = call i16 @llvm.ctlz.i16(i16 [[X:%.*]], i1 false), !range [[RNG0:![0-9]+]]
+; MSP430-NEXT:    [[NX:%.*]] = sub nuw nsw i16 16, [[CTLZ]]
+; MSP430-NEXT:    call void @sink(i16 [[NX]])
+; MSP430-NEXT:    ret void
 ;
   %n0 = call i16 @fls(i16 0)
   call void @sink(i16 %n0)

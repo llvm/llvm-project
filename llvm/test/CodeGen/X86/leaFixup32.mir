@@ -8,7 +8,7 @@
   ;generated using: llc -stop-after x86-pad-short-functions fixup-lea.ll > leaFinxup32.mir
 
   ;test2add_32: 3 operands LEA32r that can be replaced with 2 add instructions
-  ; where ADD32ri8 is chosen
+  ; where ADD32ri is chosen
   define i32 @test2add_32() {
     ret i32 0
   }
@@ -48,15 +48,15 @@
     ret i32 0
   }
 
-  ;test1mov1add_ebp_32: 2 operands LEA32r that can be replaced with 1 add 1 mov instructions
+  ;test_leab_ebp_leais_32: 2 operands LEA32r that can be replaced with LEA_IS form
   ; where the base is rbp/r13/ebp register
-  define i32 @test1mov1add_ebp_32() {
+  define i32 @test_leab_ebp_leais_32() {
     ret i32 0
   }
 
-  ;testleaadd_ebp_index_32: 3 operands LEA32r that can be replaced with 1 lea 1 add instructions
+  ;test_leabi_ebp_leais_32: 3 operands LEA32r that can be replaced with LEA_IS form
   ; where the base and the index are ebp register and there is offset
-  define i32 @testleaadd_ebp_index_32() {
+  define i32 @test_leabi_ebp_leais_32() {
     ret i32 0
   }
 
@@ -109,7 +109,7 @@ body:             |
     ; CHECK-LABEL: name: test2add_32
     ; CHECK: liveins: $eax, $ebp
     ; CHECK: $eax = ADD32rr $eax, $ebp, implicit-def $eflags
-    ; CHECK: $eax = ADD32ri8 $eax, -5, implicit-def $eflags
+    ; CHECK: $eax = ADD32ri $eax, -5, implicit-def $eflags
     ; CHECK: RET64 $eax
     $eax = LEA32r killed $eax, 1, killed $ebp, -5, $noreg
     RET64 $eax
@@ -147,7 +147,7 @@ body:             |
     ; CHECK-LABEL: name: test2add_ebp_32
     ; CHECK: liveins: $eax, $ebp
     ; CHECK: $ebp = ADD32rr $ebp, $eax, implicit-def $eflags
-    ; CHECK: $ebp = ADD32ri8 $ebp, -5, implicit-def $eflags
+    ; CHECK: $ebp = ADD32ri $ebp, -5, implicit-def $eflags
     ; CHECK: RET64 $ebp
     $ebp = LEA32r killed $ebp, 1, killed $eax, -5, $noreg
     RET64 $ebp
@@ -223,7 +223,7 @@ body:             |
     ; CHECK-LABEL: name: testleaadd_32
     ; CHECK: liveins: $eax, $ebp, $esi
     ; CHECK: $ebx = LEA32r killed $eax, 1, killed $ebp, 0, $noreg
-    ; CHECK: $ebx = ADD32ri8 $ebx, -5, implicit-def $eflags
+    ; CHECK: $ebx = ADD32ri $ebx, -5, implicit-def $eflags
     ; CHECK: RET64 $ebx
     $ebx = LEA32r killed $eax, 1, killed $ebp, -5, $noreg
     RET64 $ebx
@@ -262,7 +262,7 @@ body:             |
     ; CHECK-LABEL: name: testleaadd_ebp_32
     ; CHECK: liveins: $eax, $ebp
     ; CHECK: $ebx = LEA32r killed $eax, 1, killed $ebp, 0, $noreg
-    ; CHECK: $ebx = ADD32ri8 $ebx, -5, implicit-def $eflags
+    ; CHECK: $ebx = ADD32ri $ebx, -5, implicit-def $eflags
     ; CHECK: RET64 $ebx
     $ebx = LEA32r killed $ebp, 1, killed $eax, -5, $noreg
     RET64 $ebx
@@ -345,7 +345,7 @@ body:             |
 
 ...
 ---
-name:            test1mov1add_ebp_32
+name:            test_leab_ebp_leais_32
 alignment:       16
 exposesReturnsTwice: false
 legalized:       false
@@ -374,17 +374,16 @@ body:             |
   bb.0 (%ir-block.0):
     liveins: $eax, $ebp, $ebx
 
-    ; CHECK-LABEL: name: test1mov1add_ebp_32
+    ; CHECK-LABEL: name: test_leab_ebp_leais_32
     ; CHECK: liveins: $eax, $ebp, $ebx
-    ; CHECK: $ebx = MOV32rr $ebp
-    ; CHECK: $ebx = ADD32rr $ebx, $ebp, implicit-def $eflags
+    ; CHECK: $ebx = LEA32r $noreg, 2, $ebp, 0, $noreg
     ; CHECK: RET64 $ebx
     $ebx = LEA32r killed $ebp, 1, $ebp, 0, $noreg
     RET64 $ebx
 
 ...
 ---
-name:            testleaadd_ebp_index_32
+name:            test_leabi_ebp_leais_32
 alignment:       16
 exposesReturnsTwice: false
 legalized:       false
@@ -412,10 +411,9 @@ body:             |
   bb.0 (%ir-block.0):
     liveins: $eax, $ebp, $ebx
 
-    ; CHECK-LABEL: name: testleaadd_ebp_index_32
+    ; CHECK-LABEL: name: test_leabi_ebp_leais_32
     ; CHECK: liveins: $eax, $ebp, $ebx
-    ; CHECK: $ebx = LEA32r $noreg, 1, $ebp, 5, $noreg
-    ; CHECK: $ebx = ADD32rr $ebx, $ebp, implicit-def $eflags
+    ; CHECK: $ebx = LEA32r $noreg, 2, $ebp, 5, $noreg
     ; CHECK: RET64 $ebx
     $ebx = LEA32r $ebp, 1, $ebp, 5, $noreg
     RET64 $ebx
@@ -533,7 +531,7 @@ body:             |
   ; CHECK: bb.1:
   ; CHECK:   liveins: $eax, $ebp, $ebx
   ; CHECK:   $ebp = LEA32r killed $ebx, 4, killed $ebx, 0, $noreg
-  ; CHECK:   $ebp = ADD32ri8 $ebp, 5, implicit-def $eflags
+  ; CHECK:   $ebp = ADD32ri $ebp, 5, implicit-def $eflags
   ; CHECK:   RET64 $ebp
   bb.0 (%ir-block.0):
     liveins: $eax, $ebp, $ebx

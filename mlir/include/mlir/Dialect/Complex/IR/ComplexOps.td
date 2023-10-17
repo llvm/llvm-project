@@ -9,6 +9,8 @@
 #ifndef COMPLEX_OPS
 #define COMPLEX_OPS
 
+include "mlir/Dialect/Arith/IR/ArithBase.td"
+include "mlir/Dialect/Arith/IR/ArithOpsInterfaces.td"
 include "mlir/Dialect/Complex/IR/ComplexBase.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
@@ -22,19 +24,21 @@ class Complex_Op<string mnemonic, list<Trait> traits = []>
 // one result, all of which must be complex numbers of the same type.
 class ComplexArithmeticOp<string mnemonic, list<Trait> traits = []> :
     Complex_Op<mnemonic, traits # [Pure, SameOperandsAndResultType,
-    Elementwise]> {
-  let arguments = (ins Complex<AnyFloat>:$lhs, Complex<AnyFloat>:$rhs);
+    Elementwise, DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
+  let arguments = (ins Complex<AnyFloat>:$lhs, Complex<AnyFloat>:$rhs, DefaultValuedAttr<
+        Arith_FastMathAttr, "::mlir::arith::FastMathFlags::none">:$fastmath);
   let results = (outs Complex<AnyFloat>:$result);
-  let assemblyFormat = "$lhs `,` $rhs  attr-dict `:` type($result)";
+  let assemblyFormat = "$lhs `,` $rhs (`fastmath` `` $fastmath^)? attr-dict `:` type($result)";
 }
 
 // Base class for standard unary operations on complex numbers with a
 // floating-point element type. These operations take one operand and return
 // one result; the operand must be a complex number.
 class ComplexUnaryOp<string mnemonic, list<Trait> traits = []> :
-    Complex_Op<mnemonic, traits # [Pure, Elementwise]> {
-  let arguments = (ins Complex<AnyFloat>:$complex);
-  let assemblyFormat = "$complex attr-dict `:` type($complex)";
+    Complex_Op<mnemonic, traits # [Pure, Elementwise, DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
+  let arguments = (ins Complex<AnyFloat>:$complex, DefaultValuedAttr<
+        Arith_FastMathAttr, "::mlir::arith::FastMathFlags::none">:$fastmath);
+  let assemblyFormat = "$complex (`fastmath` `` $fastmath^)? attr-dict `:` type($complex)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -44,7 +48,7 @@ class ComplexUnaryOp<string mnemonic, list<Trait> traits = []> :
 def AbsOp : ComplexUnaryOp<"abs",
     [TypesMatchWith<"complex element type matches result type",
                     "complex", "result",
-                    "$_self.cast<ComplexType>().getElementType()">]> {
+                    "::llvm::cast<ComplexType>($_self).getElementType()">]> {
   let summary = "computes absolute value of a complex number";
   let description = [{
     The `abs` op takes a single complex number and computes its absolute value.
@@ -93,6 +97,31 @@ def Atan2Op : ComplexArithmeticOp<"atan2"> {
     %a = complex.atan2 %b, %c : complex<f32>
     ```
   }];
+}
+
+
+//===----------------------------------------------------------------------===//
+// Bitcast
+//===----------------------------------------------------------------------===//
+
+def BitcastOp : Complex_Op<"bitcast", [Pure]> {
+
+  let summary = "computes bitcast between complex and equal arith types";
+  let description = [{
+
+    Example:
+
+    ```mlir
+         %a = complex.bitcast %b : complex<f32> -> i64
+    ```
+  }];
+  let assemblyFormat = "$operand attr-dict `:` type($operand) `to` type($result)";
+  let arguments = (ins AnyType:$operand);
+  let results = (outs AnyType:$result);
+
+  let hasCanonicalizer = 1;
+  let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -158,10 +187,10 @@ def CreateOp : Complex_Op<"create",
      AllTypesMatch<["real", "imaginary"]>,
      TypesMatchWith<"complex element type matches real operand type",
                     "complex", "real",
-                    "$_self.cast<ComplexType>().getElementType()">,
+                    "::llvm::cast<ComplexType>($_self).getElementType()">,
      TypesMatchWith<"complex element type matches imaginary operand type",
                     "complex", "imaginary",
-                    "$_self.cast<ComplexType>().getElementType()">]> {
+                    "::llvm::cast<ComplexType>($_self).getElementType()">]> {
 
   let summary = "complex number creation operation";
   let description = [{
@@ -276,7 +305,7 @@ def Expm1Op : ComplexUnaryOp<"expm1", [SameOperandsAndResultType]> {
 def ImOp : ComplexUnaryOp<"im",
     [TypesMatchWith<"complex element type matches result type",
                     "complex", "imaginary",
-                    "$_self.cast<ComplexType>().getElementType()">]> {
+                    "::llvm::cast<ComplexType>($_self).getElementType()">]> {
   let summary = "extracts the imaginary part of a complex number";
   let description = [{
     The `im` op takes a single complex number and extracts the imaginary part.
@@ -290,6 +319,7 @@ def ImOp : ComplexUnaryOp<"im",
 
   let results = (outs AnyFloat:$imaginary);
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -350,6 +380,8 @@ def MulOp : ComplexArithmeticOp<"mul"> {
     %a = complex.mul %b, %c : complex<f32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -422,7 +454,7 @@ def PowOp : ComplexArithmeticOp<"pow"> {
 def ReOp : ComplexUnaryOp<"re",
     [TypesMatchWith<"complex element type matches result type",
                     "complex", "real",
-                    "$_self.cast<ComplexType>().getElementType()">]> {
+                    "::llvm::cast<ComplexType>($_self).getElementType()">]> {
   let summary = "extracts the real part of a complex number";
   let description = [{
     The `re` op takes a single complex number and extracts the real part.
@@ -436,6 +468,7 @@ def ReOp : ComplexUnaryOp<"re",
 
   let results = (outs AnyFloat:$real);
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -602,7 +635,7 @@ def ConjOp : ComplexUnaryOp<"conj", [SameOperandsAndResultType]> {
 def AngleOp : ComplexUnaryOp<"angle",
                            [TypesMatchWith<"complex element type matches result type",
                                            "complex", "result",
-                                           "$_self.cast<ComplexType>().getElementType()">]> {
+                                           "::llvm::cast<ComplexType>($_self).getElementType()">]> {
   let summary = "computes argument value of a complex number";
   let description = [{
     The `angle` op takes a single complex number and computes its argument value with a branch cut along the negative real axis.

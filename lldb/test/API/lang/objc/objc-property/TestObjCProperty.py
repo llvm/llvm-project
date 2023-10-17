@@ -3,7 +3,6 @@ Use lldb Python API to verify that expression evaluation for property references
 """
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -11,18 +10,17 @@ from lldbsuite.test import lldbutil
 
 
 class ObjCPropertyTestCase(TestBase):
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
 
         # Find the line number to break for main.c.
-        self.source_name = 'main.m'
+        self.source_name = "main.m"
 
-    @add_test_categories(['pyapi'])
+    @add_test_categories(["pyapi"])
     def test_objc_properties(self):
         """Test that expr uses the correct property getters and setters"""
-        if self.getArchitecture() == 'i386':
+        if self.getArchitecture() == "i386":
             self.skipTest("requires modern objc runtime")
 
         self.build()
@@ -36,20 +34,18 @@ class ObjCPropertyTestCase(TestBase):
         # Set up our breakpoints:
 
         main_bkpt = target.BreakpointCreateBySourceRegex(
-            "Set a breakpoint here.", lldb.SBFileSpec(self.source_name))
-        self.assertTrue(main_bkpt and
-                        main_bkpt.GetNumLocations() == 1,
-                        VALID_BREAKPOINT)
+            "Set a breakpoint here.", lldb.SBFileSpec(self.source_name)
+        )
+        self.assertTrue(
+            main_bkpt and main_bkpt.GetNumLocations() == 1, VALID_BREAKPOINT
+        )
 
         # Now launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
 
-        self.assertState(process.GetState(), lldb.eStateStopped,
-                         PROCESS_STOPPED)
+        self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
 
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, main_bkpt)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(process, main_bkpt)
         self.assertEquals(len(threads), 1)
         thread = threads[0]
         frame = thread.GetFrameAtIndex(0)
@@ -66,8 +62,7 @@ class ObjCPropertyTestCase(TestBase):
         # a property that actually only has a getter & setter and no
         # @property.
         #
-        nonexistant_value = frame.EvaluateExpression(
-            "mine.nonexistantInt", False)
+        nonexistant_value = frame.EvaluateExpression("mine.nonexistantInt", False)
         nonexistant_error = nonexistant_value.GetError()
         self.assertSuccess(nonexistant_error)
         nonexistant_int = nonexistant_value.GetValueAsUnsigned(123456)
@@ -82,8 +77,7 @@ class ObjCPropertyTestCase(TestBase):
 
         #
         # Now call the setter, then make sure that
-        nonexistant_change = frame.EvaluateExpression(
-            "mine.nonexistantInt = 10", False)
+        nonexistant_change = frame.EvaluateExpression("mine.nonexistantInt = 10", False)
         nonexistant_error = nonexistant_change.GetError()
         self.assertSuccess(nonexistant_error)
 
@@ -104,20 +98,23 @@ class ObjCPropertyTestCase(TestBase):
         self.assertSuccess(backed_error)
         backing_value = mine.GetChildMemberWithName("_backedInt")
         self.assertTrue(backing_value.IsValid())
-        self.assertEqual(backed_value.GetValueAsUnsigned(12345),
-                        backing_value.GetValueAsUnsigned(23456))
+        self.assertEqual(
+            backed_value.GetValueAsUnsigned(12345),
+            backing_value.GetValueAsUnsigned(23456),
+        )
 
         value_from_typedef = frame.EvaluateExpression("typedefd.backedInt", False)
         self.assertSuccess(value_from_typedef.GetError())
-        self.assertEqual(value_from_typedef.GetValueAsUnsigned(12345),
-                         backing_value.GetValueAsUnsigned(23456))
+        self.assertEqual(
+            value_from_typedef.GetValueAsUnsigned(12345),
+            backing_value.GetValueAsUnsigned(23456),
+        )
 
         unbacked_value = frame.EvaluateExpression("mine.unbackedInt", False)
         unbacked_error = unbacked_value.GetError()
         self.assertSuccess(unbacked_error)
 
-        idWithProtocol_value = frame.EvaluateExpression(
-            "mine.idWithProtocol", False)
+        idWithProtocol_value = frame.EvaluateExpression("mine.idWithProtocol", False)
         idWithProtocol_error = idWithProtocol_value.GetError()
         self.assertSuccess(idWithProtocol_error)
         self.assertEquals(idWithProtocol_value.GetTypeName(), "id")

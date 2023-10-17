@@ -97,8 +97,8 @@ define i1 @test_simplify8(ptr %str_p) {
 
 define i64 @test_simplify9(i1 %x) {
 ; CHECK-LABEL: @test_simplify9(
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[X:%.*]], i64 5, i64 6
-; CHECK-NEXT:    ret i64 [[TMP1]]
+; CHECK-NEXT:    [[L:%.*]] = select i1 [[X:%.*]], i64 5, i64 6
+; CHECK-NEXT:    ret i64 [[L]]
 ;
   %s = select i1 %x, ptr @hello, ptr @longer
   %l = call i64 @wcslen(ptr %s)
@@ -111,8 +111,8 @@ define i64 @test_simplify9(i1 %x) {
 define i64 @test_simplify10(i16 %x) {
 ; CHECK-LABEL: @test_simplify10(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i16 [[X:%.*]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw i64 5, [[TMP1]]
-; CHECK-NEXT:    ret i64 [[TMP2]]
+; CHECK-NEXT:    [[HELLO_L:%.*]] = sub nsw i64 5, [[TMP1]]
+; CHECK-NEXT:    ret i64 [[HELLO_L]]
 ;
   %hello_p = getelementptr inbounds [6 x i16], ptr @hello, i16 0, i16 %x
   %hello_l = call i64 @wcslen(ptr %hello_p)
@@ -125,8 +125,8 @@ define i64 @test_simplify11(i16 %x) {
 ; CHECK-LABEL: @test_simplify11(
 ; CHECK-NEXT:    [[AND:%.*]] = and i16 [[X:%.*]], 7
 ; CHECK-NEXT:    [[NARROW:%.*]] = sub nuw nsw i16 9, [[AND]]
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[NARROW]] to i64
-; CHECK-NEXT:    ret i64 [[TMP1]]
+; CHECK-NEXT:    [[HELLO_L:%.*]] = zext i16 [[NARROW]] to i64
+; CHECK-NEXT:    ret i64 [[HELLO_L]]
 ;
   %and = and i16 %x, 7
   %hello_p = getelementptr inbounds [13 x i16], ptr @null_hello_mid, i16 0, i16 %and

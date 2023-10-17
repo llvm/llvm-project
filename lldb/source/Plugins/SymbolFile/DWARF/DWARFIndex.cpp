@@ -17,6 +17,7 @@
 
 using namespace lldb_private;
 using namespace lldb;
+using namespace lldb_private::plugin::dwarf;
 
 DWARFIndex::~DWARFIndex() = default;
 
@@ -97,6 +98,12 @@ bool DWARFIndex::DIERefCallbackImpl::operator()(DIERef ref) const {
     return m_callback(die);
   m_index.ReportInvalidDIERef(ref, m_name);
   return true;
+}
+
+bool DWARFIndex::DIERefCallbackImpl::operator()(
+    const llvm::AppleAcceleratorTable::Entry &entry) const {
+  return this->operator()(DIERef(std::nullopt, DIERef::Section::DebugInfo,
+                                 *entry.getDIESectionOffset()));
 }
 
 void DWARFIndex::ReportInvalidDIERef(DIERef ref, llvm::StringRef name) const {

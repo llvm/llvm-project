@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_FLOAT_INF_NAN_CONVERTER_H
 
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/common.h"
 #include "src/stdio/printf_core/converter_utils.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/writer.h"
@@ -17,12 +18,12 @@
 #include <inttypes.h>
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace printf_core {
 
 using MantissaInt = fputil::FPBits<long double>::UIntType;
 
-int inline convert_inf_nan(Writer *writer, const FormatSection &to_conv) {
+LIBC_INLINE int convert_inf_nan(Writer *writer, const FormatSection &to_conv) {
   // All of the letters will be defined relative to variable a, which will be
   // the appropriate case based on the case of the conversion.
   const char a = (to_conv.conv_name & 32) | 'A';
@@ -35,7 +36,8 @@ int inline convert_inf_nan(Writer *writer, const FormatSection &to_conv) {
     is_negative = float_bits.get_sign();
     mantissa = float_bits.get_explicit_mantissa();
   } else {
-    fputil::FPBits<double>::UIntType float_raw = to_conv.conv_val_raw;
+    fputil::FPBits<double>::UIntType float_raw =
+        static_cast<fputil::FPBits<double>::UIntType>(to_conv.conv_val_raw);
     fputil::FPBits<double> float_bits(float_raw);
     is_negative = float_bits.get_sign();
     mantissa = float_bits.get_explicit_mantissa();
@@ -77,6 +79,6 @@ int inline convert_inf_nan(Writer *writer, const FormatSection &to_conv) {
 }
 
 } // namespace printf_core
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_FLOAT_INF_NAN_CONVERTER_H

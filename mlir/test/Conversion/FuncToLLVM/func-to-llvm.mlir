@@ -1,5 +1,12 @@
-// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-math-to-llvm,convert-arith-to-llvm),convert-func-to-llvm,reconcile-unrealized-casts)" %s -split-input-file | FileCheck %s
-// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-math-to-llvm,convert-arith-to-llvm{index-bitwidth=32}),convert-func-to-llvm{index-bitwidth=32},reconcile-unrealized-casts)" %s -split-input-file | FileCheck --check-prefix=CHECK32 %s
+// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-math-to-llvm,convert-arith-to-llvm),convert-func-to-llvm{use-opaque-pointers=1},reconcile-unrealized-casts)" %s | FileCheck %s
+
+// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-math-to-llvm,convert-arith-to-llvm{index-bitwidth=32}),convert-func-to-llvm{index-bitwidth=32 use-opaque-pointers=1},reconcile-unrealized-casts)" %s | FileCheck --check-prefix=CHECK32 %s
+
+// RUN: mlir-opt -test-transform-dialect-interpreter %s | FileCheck --check-prefix=CHECK32 %s
+
+// Same below, but using the `ConvertToLLVMPatternInterface` entry point
+// and the generic `convert-to-llvm` pass.
+// RUN: mlir-opt --convert-to-llvm="filter-dialects=arith,cf,func,math" %s | FileCheck %s
 
 // CHECK-LABEL: func @empty() {
 // CHECK-NEXT:  llvm.return
@@ -373,33 +380,33 @@ func.func private @get_c16() -> (complex<f16>)
 func.func private @get_c32() -> (complex<f32>)
 // CHECK-LABEL: llvm.func @get_c64() -> !llvm.struct<(f64, f64)>
 func.func private @get_c64() -> (complex<f64>)
-// CHECK-LABEL: llvm.func @get_memref() -> !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<4 x i64>, array<4 x i64>)>
-// CHECK32-LABEL: llvm.func @get_memref() -> !llvm.struct<(ptr<f32>, ptr<f32>, i32, array<4 x i32>, array<4 x i32>)>
+// CHECK-LABEL: llvm.func @get_memref() -> !llvm.struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>
+// CHECK32-LABEL: llvm.func @get_memref() -> !llvm.struct<(ptr, ptr, i32, array<4 x i32>, array<4 x i32>)>
 func.func private @get_memref() -> (memref<42x?x10x?xf32>)
 
-// CHECK-LABEL: llvm.func @multireturn() -> !llvm.struct<(i64, f32, struct<(ptr<f32>, ptr<f32>, i64, array<4 x i64>, array<4 x i64>)>)> {
-// CHECK32-LABEL: llvm.func @multireturn() -> !llvm.struct<(i64, f32, struct<(ptr<f32>, ptr<f32>, i32, array<4 x i32>, array<4 x i32>)>)> {
+// CHECK-LABEL: llvm.func @multireturn() -> !llvm.struct<(i64, f32, struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>)> {
+// CHECK32-LABEL: llvm.func @multireturn() -> !llvm.struct<(i64, f32, struct<(ptr, ptr, i32, array<4 x i32>, array<4 x i32>)>)> {
 func.func @multireturn() -> (i64, f32, memref<42x?x10x?xf32>) {
 ^bb0:
 // CHECK-NEXT:  {{.*}} = llvm.call @get_i64() : () -> i64
 // CHECK-NEXT:  {{.*}} = llvm.call @get_f32() : () -> f32
-// CHECK-NEXT:  {{.*}} = llvm.call @get_memref() : () -> !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<4 x i64>, array<4 x i64>)>
+// CHECK-NEXT:  {{.*}} = llvm.call @get_memref() : () -> !llvm.struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>
 // CHECK32-NEXT:  {{.*}} = llvm.call @get_i64() : () -> i64
 // CHECK32-NEXT:  {{.*}} = llvm.call @get_f32() : () -> f32
-// CHECK32-NEXT:  {{.*}} = llvm.call @get_memref() : () -> !llvm.struct<(ptr<f32>, ptr<f32>, i32, array<4 x i32>, array<4 x i32>)>
+// CHECK32-NEXT:  {{.*}} = llvm.call @get_memref() : () -> !llvm.struct<(ptr, ptr, i32, array<4 x i32>, array<4 x i32>)>
   %0 = call @get_i64() : () -> (i64)
   %1 = call @get_f32() : () -> (f32)
   %2 = call @get_memref() : () -> (memref<42x?x10x?xf32>)
-// CHECK-NEXT:  {{.*}} = llvm.mlir.undef : !llvm.struct<(i64, f32, struct<(ptr<f32>, ptr<f32>, i64, array<4 x i64>, array<4 x i64>)>)>
-// CHECK-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[0] : !llvm.struct<(i64, f32, struct<(ptr<f32>, ptr<f32>, i64, array<4 x i64>, array<4 x i64>)>)>
-// CHECK-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[1] : !llvm.struct<(i64, f32, struct<(ptr<f32>, ptr<f32>, i64, array<4 x i64>, array<4 x i64>)>)>
-// CHECK-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[2] : !llvm.struct<(i64, f32, struct<(ptr<f32>, ptr<f32>, i64, array<4 x i64>, array<4 x i64>)>)>
-// CHECK-NEXT:  llvm.return {{.*}} : !llvm.struct<(i64, f32, struct<(ptr<f32>, ptr<f32>, i64, array<4 x i64>, array<4 x i64>)>)>
-// CHECK32-NEXT:  {{.*}} = llvm.mlir.undef : !llvm.struct<(i64, f32, struct<(ptr<f32>, ptr<f32>, i32, array<4 x i32>, array<4 x i32>)>)>
-// CHECK32-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[0] : !llvm.struct<(i64, f32, struct<(ptr<f32>, ptr<f32>, i32, array<4 x i32>, array<4 x i32>)>)>
-// CHECK32-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[1] : !llvm.struct<(i64, f32, struct<(ptr<f32>, ptr<f32>, i32, array<4 x i32>, array<4 x i32>)>)>
-// CHECK32-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[2] : !llvm.struct<(i64, f32, struct<(ptr<f32>, ptr<f32>, i32, array<4 x i32>, array<4 x i32>)>)>
-// CHECK32-NEXT:  llvm.return {{.*}} : !llvm.struct<(i64, f32, struct<(ptr<f32>, ptr<f32>, i32, array<4 x i32>, array<4 x i32>)>)>
+// CHECK-NEXT:  {{.*}} = llvm.mlir.undef : !llvm.struct<(i64, f32, struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>)>
+// CHECK-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[0] : !llvm.struct<(i64, f32, struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>)>
+// CHECK-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[1] : !llvm.struct<(i64, f32, struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>)>
+// CHECK-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[2] : !llvm.struct<(i64, f32, struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>)>
+// CHECK-NEXT:  llvm.return {{.*}} : !llvm.struct<(i64, f32, struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>)>
+// CHECK32-NEXT:  {{.*}} = llvm.mlir.undef : !llvm.struct<(i64, f32, struct<(ptr, ptr, i32, array<4 x i32>, array<4 x i32>)>)>
+// CHECK32-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[0] : !llvm.struct<(i64, f32, struct<(ptr, ptr, i32, array<4 x i32>, array<4 x i32>)>)>
+// CHECK32-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[1] : !llvm.struct<(i64, f32, struct<(ptr, ptr, i32, array<4 x i32>, array<4 x i32>)>)>
+// CHECK32-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[2] : !llvm.struct<(i64, f32, struct<(ptr, ptr, i32, array<4 x i32>, array<4 x i32>)>)>
+// CHECK32-NEXT:  llvm.return {{.*}} : !llvm.struct<(i64, f32, struct<(ptr, ptr, i32, array<4 x i32>, array<4 x i32>)>)>
   return %0, %1, %2 : i64, f32, memref<42x?x10x?xf32>
 }
 
@@ -408,14 +415,14 @@ func.func @multireturn() -> (i64, f32, memref<42x?x10x?xf32>) {
 // CHECK32-LABEL: llvm.func @multireturn_caller() {
 func.func @multireturn_caller() {
 ^bb0:
-// CHECK-NEXT:  {{.*}} = llvm.call @multireturn() : () -> !llvm.struct<(i64, f32, struct<(ptr<f32>, ptr<f32>, i64, array<4 x i64>, array<4 x i64>)>)>
-// CHECK-NEXT:  {{.*}} = llvm.extractvalue {{.*}}[0] : !llvm.struct<(i64, f32, struct<(ptr<f32>, ptr<f32>, i64, array<4 x i64>, array<4 x i64>)>)>
-// CHECK-NEXT:  {{.*}} = llvm.extractvalue {{.*}}[1] : !llvm.struct<(i64, f32, struct<(ptr<f32>, ptr<f32>, i64, array<4 x i64>, array<4 x i64>)>)>
-// CHECK-NEXT:  {{.*}} = llvm.extractvalue {{.*}}[2] : !llvm.struct<(i64, f32, struct<(ptr<f32>, ptr<f32>, i64, array<4 x i64>, array<4 x i64>)>)>
-// CHECK32-NEXT:  {{.*}} = llvm.call @multireturn() : () -> !llvm.struct<(i64, f32, struct<(ptr<f32>, ptr<f32>, i32, array<4 x i32>, array<4 x i32>)>)>
-// CHECK32-NEXT:  {{.*}} = llvm.extractvalue {{.*}}[0] : !llvm.struct<(i64, f32, struct<(ptr<f32>, ptr<f32>, i32, array<4 x i32>, array<4 x i32>)>)>
-// CHECK32-NEXT:  {{.*}} = llvm.extractvalue {{.*}}[1] : !llvm.struct<(i64, f32, struct<(ptr<f32>, ptr<f32>, i32, array<4 x i32>, array<4 x i32>)>)>
-// CHECK32-NEXT:  {{.*}} = llvm.extractvalue {{.*}}[2] : !llvm.struct<(i64, f32, struct<(ptr<f32>, ptr<f32>, i32, array<4 x i32>, array<4 x i32>)>)>
+// CHECK-NEXT:  {{.*}} = llvm.call @multireturn() : () -> !llvm.struct<(i64, f32, struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>)>
+// CHECK-NEXT:  {{.*}} = llvm.extractvalue {{.*}}[0] : !llvm.struct<(i64, f32, struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>)>
+// CHECK-NEXT:  {{.*}} = llvm.extractvalue {{.*}}[1] : !llvm.struct<(i64, f32, struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>)>
+// CHECK-NEXT:  {{.*}} = llvm.extractvalue {{.*}}[2] : !llvm.struct<(i64, f32, struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>)>
+// CHECK32-NEXT:  {{.*}} = llvm.call @multireturn() : () -> !llvm.struct<(i64, f32, struct<(ptr, ptr, i32, array<4 x i32>, array<4 x i32>)>)>
+// CHECK32-NEXT:  {{.*}} = llvm.extractvalue {{.*}}[0] : !llvm.struct<(i64, f32, struct<(ptr, ptr, i32, array<4 x i32>, array<4 x i32>)>)>
+// CHECK32-NEXT:  {{.*}} = llvm.extractvalue {{.*}}[1] : !llvm.struct<(i64, f32, struct<(ptr, ptr, i32, array<4 x i32>, array<4 x i32>)>)>
+// CHECK32-NEXT:  {{.*}} = llvm.extractvalue {{.*}}[2] : !llvm.struct<(i64, f32, struct<(ptr, ptr, i32, array<4 x i32>, array<4 x i32>)>)>
   %0:3 = call @multireturn() : () -> (i64, f32, memref<42x?x10x?xf32>)
   %1 = arith.constant 42 : i64
 // CHECK:       {{.*}} = llvm.add {{.*}}, {{.*}} : i64
@@ -447,8 +454,6 @@ func.func @dfs_block_order(%arg0: i32) -> (i32) {
   cf.br ^bb1
 }
 
-// -----
-
 // CHECK-LABEL: func @ceilf(
 // CHECK-SAME: f32
 func.func @ceilf(%arg0 : f32) {
@@ -456,8 +461,6 @@ func.func @ceilf(%arg0 : f32) {
   %0 = math.ceil %arg0 : f32
   func.return
 }
-
-// -----
 
 // CHECK-LABEL: func @floorf(
 // CHECK-SAME: f32
@@ -467,8 +470,9 @@ func.func @floorf(%arg0 : f32) {
   func.return
 }
 
-// -----
-
+// Wrap the following tests in a module to control the place where 
+// `llvm.func @abort()` is produced.
+module {
 // Lowers `cf.assert` to a function call to `abort` if the assertion is violated.
 // CHECK: llvm.func @abort()
 // CHECK-LABEL: @assert_test_function
@@ -483,8 +487,7 @@ func.func @assert_test_function(%arg : i1) {
   cf.assert %arg, "Computer says no"
   return
 }
-
-// -----
+}
 
 // This should not trigger an assertion by creating an LLVM::CallOp with a
 // nullptr result type.
@@ -497,8 +500,6 @@ func.func @call_zero_result_func() {
 }
 func.func private @zero_result_func()
 
-// -----
-
 // CHECK-LABEL: func @fmaf(
 // CHECK-SAME: %[[ARG0:.*]]: f32
 // CHECK-SAME: %[[ARG1:.*]]: vector<4xf32>
@@ -509,8 +510,6 @@ func.func @fmaf(%arg0: f32, %arg1: vector<4xf32>) {
   %1 = math.fma %arg1, %arg1, %arg1 : vector<4xf32>
   func.return
 }
-
-// -----
 
 // CHECK-LABEL: func @switchi8(
 func.func @switchi8(%arg0 : i8) -> i32 {
@@ -537,3 +536,21 @@ func.func @switchi8(%arg0 : i8) -> i32 {
 // CHECK-NEXT:     %[[E1:.+]] = llvm.mlir.constant(42 : i32) : i32
 // CHECK-NEXT:     llvm.return %[[E1]] : i32
 // CHECK-NEXT:   }
+
+transform.sequence failures(propagate) {
+^bb1(%toplevel_module: !transform.any_op):
+  %func = transform.structured.match ops{["func.func"]} in %toplevel_module
+    : (!transform.any_op) -> !transform.any_op
+  transform.apply_conversion_patterns to %func {
+    transform.apply_conversion_patterns.dialect_to_llvm "math"
+    transform.apply_conversion_patterns.dialect_to_llvm "arith"
+    transform.apply_conversion_patterns.dialect_to_llvm "cf"
+    transform.apply_conversion_patterns.func.func_to_llvm
+  } with type_converter {
+    transform.apply_conversion_patterns.memref.memref_to_llvm_type_converter
+      {index_bitwidth = 32, use_opaque_pointers = true}
+  } {
+    legal_dialects = ["llvm"], 
+    partial_conversion
+  } : !transform.any_op
+}

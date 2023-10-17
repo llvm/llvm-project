@@ -7,7 +7,7 @@
 // latter class is linearized into one-dimensional buffers that are backed
 // by the runtime support library.
 
-#DenseMatrix = #sparse_tensor.encoding<{ dimLevelType = [ "dense", "dense"  ] }>
+#DenseMatrix = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : dense, d1 : dense) }>
 
 #trait_2d = {
   indexing_maps = [

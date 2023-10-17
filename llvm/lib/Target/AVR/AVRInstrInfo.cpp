@@ -35,14 +35,14 @@
 
 namespace llvm {
 
-AVRInstrInfo::AVRInstrInfo()
-    : AVRGenInstrInfo(AVR::ADJCALLSTACKDOWN, AVR::ADJCALLSTACKUP), RI() {}
+AVRInstrInfo::AVRInstrInfo(AVRSubtarget &STI)
+    : AVRGenInstrInfo(AVR::ADJCALLSTACKDOWN, AVR::ADJCALLSTACKUP), RI(),
+      STI(STI) {}
 
 void AVRInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MI,
                                const DebugLoc &DL, MCRegister DestReg,
                                MCRegister SrcReg, bool KillSrc) const {
-  const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
   const AVRRegisterInfo &TRI = *STI.getRegisterInfo();
   unsigned Opc;
 
@@ -58,16 +58,21 @@ void AVRInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       TRI.splitReg(DestReg, DestLo, DestHi);
       TRI.splitReg(SrcReg, SrcLo, SrcHi);
 
+      // Emit the copies.
+      // The original instruction was for a register pair, of which only one
+      // register might have been live. Add 'undef' to satisfy the machine
+      // verifier, when subreg liveness is enabled.
+      // TODO: Eliminate these unnecessary copies.
       if (DestLo == SrcHi) {
         BuildMI(MBB, MI, DL, get(AVR::MOVRdRr), DestHi)
-            .addReg(SrcHi, getKillRegState(KillSrc));
+            .addReg(SrcHi, getKillRegState(KillSrc) | RegState::Undef);
         BuildMI(MBB, MI, DL, get(AVR::MOVRdRr), DestLo)
-            .addReg(SrcLo, getKillRegState(KillSrc));
+            .addReg(SrcLo, getKillRegState(KillSrc) | RegState::Undef);
       } else {
         BuildMI(MBB, MI, DL, get(AVR::MOVRdRr), DestLo)
-            .addReg(SrcLo, getKillRegState(KillSrc));
+            .addReg(SrcLo, getKillRegState(KillSrc) | RegState::Undef);
         BuildMI(MBB, MI, DL, get(AVR::MOVRdRr), DestHi)
-            .addReg(SrcHi, getKillRegState(KillSrc));
+            .addReg(SrcHi, getKillRegState(KillSrc) | RegState::Undef);
       }
     }
   } else {
@@ -490,9 +495,7 @@ unsigned AVRInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     const MachineFunction &MF = *MI.getParent()->getParent();
     const AVRTargetMachine &TM =
         static_cast<const AVRTargetMachine &>(MF.getTarget());
-    const AVRSubtarget &STI = MF.getSubtarget<AVRSubtarget>();
     const TargetInstrInfo &TII = *STI.getInstrInfo();
-
     return TII.getInlineAsmLength(MI.getOperand(0).getSymbolName(),
                                   *TM.getMCAsmInfo());
   }
@@ -536,7 +539,7 @@ bool AVRInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
     llvm_unreachable("unexpected opcode!");
   case AVR::JMPk:
   case AVR::CALLk:
-    return true;
+    return STI.hasJMPCALL();
   case AVR::RCALLk:
   case AVR::RJMPk:
     return isIntN(13, BrOffset);
@@ -564,7 +567,13 @@ void AVRInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   // insertBranch or some hypothetical "insertDirectBranch".
   // See lib/CodeGen/RegisterRelaxation.cpp for details.
   // We end up here when a jump is too long for a RJMP instruction.
-  BuildMI(&MBB, DL, get(AVR::JMPk)).addMBB(&NewDestBB);
+  if (STI.hasJMPCALL())
+    BuildMI(&MBB, DL, get(AVR::JMPk)).addMBB(&NewDestBB);
+  else
+    // The RJMP may jump to a far place beyond its legal range. We let the
+    // linker to report 'out of range' rather than crash, or silently emit
+    // incorrect assembly code.
+    BuildMI(&MBB, DL, get(AVR::RJMPk)).addMBB(&NewDestBB);
 }
 
 } // end of namespace llvm

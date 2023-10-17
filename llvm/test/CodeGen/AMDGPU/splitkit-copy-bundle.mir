@@ -88,6 +88,7 @@ body:             |
   ; RA-NEXT:   S_NOP 0, csr_amdgpu, implicit [[DEF]], implicit [[DEF1]]
   ; RA-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit undef $vcc
   ; RA-NEXT:   S_BRANCH %bb.2
+  ;
   ; VR-LABEL: name: splitkit_copy_bundle
   ; VR: bb.0:
   ; VR-NEXT:   successors: %bb.1(0x80000000)
@@ -100,7 +101,7 @@ body:             |
   ; VR-NEXT: {{  $}}
   ; VR-NEXT: bb.1:
   ; VR-NEXT:   successors: %bb.2(0x80000000)
-  ; VR-NEXT:   liveins: $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67:0x000000000000000F, $sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95_sgpr96_sgpr97_sgpr98_sgpr99:0x0000000000000003, $sgpr30_sgpr31, $sgpr34_sgpr35
+  ; VR-NEXT:   liveins: $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67:0x000000000000000F, $sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95_sgpr96_sgpr97_sgpr98_sgpr99:0x0000000000000003
   ; VR-NEXT: {{  $}}
   ; VR-NEXT:   renamable $sgpr38 = COPY renamable $sgpr36
   ; VR-NEXT:   renamable $sgpr39 = COPY renamable $sgpr37
@@ -164,7 +165,7 @@ body:             |
   ; VR-NEXT: {{  $}}
   ; VR-NEXT: bb.2:
   ; VR-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; VR-NEXT:   liveins: $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67:0x000000000000000F, $sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95_sgpr96_sgpr97_sgpr98_sgpr99:0x0000000000000003, $sgpr30_sgpr31, $sgpr34_sgpr35
+  ; VR-NEXT:   liveins: $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67:0x000000000000000F, $sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95_sgpr96_sgpr97_sgpr98_sgpr99:0x0000000000000003
   ; VR-NEXT: {{  $}}
   ; VR-NEXT:   S_NOP 0, csr_amdgpu, implicit renamable $sgpr30_sgpr31, implicit renamable $sgpr34_sgpr35
   ; VR-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit undef $vcc
@@ -264,22 +265,36 @@ body:             |
     ; RA-NEXT: [[DEF2]].sub8:sgpr_512 = S_MOV_B32 -1
     ; RA-NEXT: [[DEF2]].sub13:sgpr_512 = S_MOV_B32 -1
     ; RA-NEXT: [[DEF2]].sub14:sgpr_512 = S_MOV_B32 -1
-    ; RA-NEXT: undef %15.sub4_sub5:sgpr_512 = COPY [[DEF2]].sub4_sub5 {
-    ; RA-NEXT:   internal %15.sub10_sub11:sgpr_512 = COPY [[DEF2]].sub10_sub11
-    ; RA-NEXT:   internal %15.sub7:sgpr_512 = COPY [[DEF2]].sub7
-    ; RA-NEXT:   internal %15.sub8:sgpr_512 = COPY [[DEF2]].sub8
-    ; RA-NEXT:   internal %15.sub13:sgpr_512 = COPY [[DEF2]].sub13
-    ; RA-NEXT:   internal %15.sub14:sgpr_512 = COPY [[DEF2]].sub14
+    ; RA-NEXT: undef %16.sub4_sub5:sgpr_512 = COPY [[DEF2]].sub4_sub5 {
+    ; RA-NEXT:   internal %16.sub10_sub11:sgpr_512 = COPY [[DEF2]].sub10_sub11
+    ; RA-NEXT:   internal %16.sub7:sgpr_512 = COPY [[DEF2]].sub7
+    ; RA-NEXT:   internal %16.sub8:sgpr_512 = COPY [[DEF2]].sub8
+    ; RA-NEXT:   internal %16.sub13:sgpr_512 = COPY [[DEF2]].sub13
+    ; RA-NEXT:   internal %16.sub14:sgpr_512 = COPY [[DEF2]].sub14
     ; RA-NEXT: }
-    ; RA-NEXT: SI_SPILL_S512_SAVE %15, %stack.0, implicit $exec, implicit $sgpr32 :: (store (s512) into %stack.0, align 4, addrspace 5)
+    ; RA-NEXT: undef %18.sub4_sub5:sgpr_512 = COPY %16.sub4_sub5 {
+    ; RA-NEXT:   internal %18.sub10_sub11:sgpr_512 = COPY %16.sub10_sub11
+    ; RA-NEXT:   internal %18.sub7:sgpr_512 = COPY %16.sub7
+    ; RA-NEXT:   internal %18.sub8:sgpr_512 = COPY %16.sub8
+    ; RA-NEXT:   internal %18.sub13:sgpr_512 = COPY %16.sub13
+    ; RA-NEXT:   internal %18.sub14:sgpr_512 = COPY %16.sub14
+    ; RA-NEXT: }
+    ; RA-NEXT: SI_SPILL_S512_SAVE %18, %stack.0, implicit $exec, implicit $sgpr32 :: (store (s512) into %stack.0, align 4, addrspace 5)
     ; RA-NEXT: S_NOP 0, implicit-def $sgpr8, implicit-def $sgpr12, implicit-def $sgpr16, implicit-def $sgpr20, implicit-def $sgpr24, implicit-def $sgpr28, implicit-def $sgpr32, implicit-def $sgpr36, implicit-def $sgpr40, implicit-def $sgpr44, implicit-def $sgpr48, implicit-def $sgpr52, implicit-def $sgpr56, implicit-def $sgpr60, implicit-def $sgpr64, implicit-def $sgpr68, implicit-def $sgpr72, implicit-def $sgpr74, implicit-def $sgpr78, implicit-def $sgpr82, implicit-def $sgpr86, implicit-def $sgpr90, implicit-def $sgpr94, implicit-def $sgpr98
     ; RA-NEXT: [[SI_SPILL_S512_RESTORE:%[0-9]+]]:sgpr_512 = SI_SPILL_S512_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s512) from %stack.0, align 4, addrspace 5)
-    ; RA-NEXT: undef %14.sub4_sub5:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub4_sub5 {
-    ; RA-NEXT:   internal %14.sub10_sub11:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub10_sub11
-    ; RA-NEXT:   internal %14.sub7:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub7
-    ; RA-NEXT:   internal %14.sub8:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub8
-    ; RA-NEXT:   internal %14.sub13:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub13
-    ; RA-NEXT:   internal %14.sub14:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub14
+    ; RA-NEXT: undef %17.sub4_sub5:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub4_sub5 {
+    ; RA-NEXT:   internal %17.sub10_sub11:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub10_sub11
+    ; RA-NEXT:   internal %17.sub7:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub7
+    ; RA-NEXT:   internal %17.sub8:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub8
+    ; RA-NEXT:   internal %17.sub13:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub13
+    ; RA-NEXT:   internal %17.sub14:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub14
+    ; RA-NEXT: }
+    ; RA-NEXT: undef %14.sub4_sub5:sgpr_512 = COPY %17.sub4_sub5 {
+    ; RA-NEXT:   internal %14.sub10_sub11:sgpr_512 = COPY %17.sub10_sub11
+    ; RA-NEXT:   internal %14.sub7:sgpr_512 = COPY %17.sub7
+    ; RA-NEXT:   internal %14.sub8:sgpr_512 = COPY %17.sub8
+    ; RA-NEXT:   internal %14.sub13:sgpr_512 = COPY %17.sub13
+    ; RA-NEXT:   internal %14.sub14:sgpr_512 = COPY %17.sub14
     ; RA-NEXT: }
     ; RA-NEXT: [[S_BUFFER_LOAD_DWORD_SGPR:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], %14.sub4, 0 :: (dereferenceable invariant load (s32))
     ; RA-NEXT: [[S_BUFFER_LOAD_DWORD_SGPR1:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], %14.sub5, 0 :: (dereferenceable invariant load (s32))
@@ -290,6 +305,7 @@ body:             |
     ; RA-NEXT: [[S_BUFFER_LOAD_DWORD_SGPR6:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], %14.sub13, 0 :: (dereferenceable invariant load (s32))
     ; RA-NEXT: [[S_BUFFER_LOAD_DWORD_SGPR7:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], %14.sub14, 0 :: (dereferenceable invariant load (s32))
     ; RA-NEXT: S_NOP 0, implicit [[DEF]], implicit [[DEF1]], implicit [[S_BUFFER_LOAD_DWORD_SGPR]], implicit [[S_BUFFER_LOAD_DWORD_SGPR1]], implicit [[S_BUFFER_LOAD_DWORD_SGPR2]], implicit [[S_BUFFER_LOAD_DWORD_SGPR3]], implicit [[S_BUFFER_LOAD_DWORD_SGPR4]], implicit [[S_BUFFER_LOAD_DWORD_SGPR5]], implicit [[S_BUFFER_LOAD_DWORD_SGPR6]], implicit [[S_BUFFER_LOAD_DWORD_SGPR7]]
+    ;
     ; VR-LABEL: name: splitkit_copy_unbundle_reorder
     ; VR: renamable $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27 = IMPLICIT_DEF
     ; VR-NEXT: renamable $sgpr16 = S_MOV_B32 -1

@@ -743,8 +743,6 @@ define <2 x i4> @simplify_and_common_op_commute3(<2 x i4> %x, <2 x i4> %y, <2 x 
   ret <2 x i4> %r
 }
 
-; TODO: This should simplify.
-
 define i4 @simplify_and_common_op_use1(i4 %x, i4 %y, i4 %z)  {
 ; CHECK-LABEL: @simplify_and_common_op_use1(
 ; CHECK-NEXT:    call void @use(i4 [[Y:%.*]])

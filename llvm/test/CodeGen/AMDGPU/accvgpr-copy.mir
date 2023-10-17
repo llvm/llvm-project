@@ -29,6 +29,7 @@
     define amdgpu_kernel void @a_to_a() #0 { ret void }
     define amdgpu_kernel void @a2_to_a2() #0 { ret void }
     define amdgpu_kernel void @a2_to_a2_kill() #0 { ret void }
+    define amdgpu_kernel void @a2_to_a2_implicit_defs() #0 { ret void }
     define amdgpu_kernel void @a3_to_a3_nonoverlap_kill() #0 { ret void }
     define amdgpu_kernel void @a3_to_a3_overlap_kill() #0 { ret void }
     define amdgpu_kernel void @a4_to_a4() #0 { ret void }
@@ -888,6 +889,48 @@ body:             |
 ...
 
 ---
+name:            a2_to_a2_implicit_defs
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $agpr0_agpr1
+    ; GFX908-LABEL: name: a2_to_a2_implicit_defs
+    ; GFX908: liveins: $agpr0_agpr1
+    ; GFX908-NEXT: {{  $}}
+    ; GFX908-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec, implicit $agpr0_agpr1
+    ; GFX908-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec, implicit-def $agpr1_agpr2
+    ; GFX908-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit $agpr0_agpr1
+    ; GFX908-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit $exec, implicit-def $agpr1_agpr2
+    ; GFX908-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr2, implicit $exec, implicit $agpr1_agpr2
+    ; GFX908-NEXT: $agpr4 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr3_agpr4
+    ; GFX908-NEXT: $vgpr255 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit killed $agpr1_agpr2
+    ; GFX908-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr255, implicit $exec, implicit $exec
+    ; GFX90A-LABEL: name: a2_to_a2_implicit_defs
+    ; GFX90A: liveins: $agpr0_agpr1
+    ; GFX90A-NEXT: {{  $}}
+    ; GFX90A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec, implicit $agpr0_agpr1
+    ; GFX90A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec, implicit-def $agpr1_agpr2
+    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit $agpr0_agpr1
+    ; GFX90A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit $exec, implicit-def $agpr1_agpr2
+    ; GFX90A-NEXT: $agpr4 = V_ACCVGPR_MOV_B32 $agpr2, implicit $exec, implicit-def $agpr3_agpr4, implicit $agpr1_agpr2
+    ; GFX90A-NEXT: $agpr3 = V_ACCVGPR_MOV_B32 $agpr1, implicit $exec, implicit killed $agpr1_agpr2, implicit $exec
+    ; GFX940-LABEL: name: a2_to_a2_implicit_defs
+    ; GFX940: liveins: $agpr0_agpr1
+    ; GFX940-NEXT: {{  $}}
+    ; GFX940-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec, implicit $agpr0_agpr1
+    ; GFX940-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec, implicit-def $agpr1_agpr2
+    ; GFX940-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit $agpr0_agpr1
+    ; GFX940-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit $exec, implicit-def $agpr1_agpr2
+    ; GFX940-NEXT: $agpr4 = V_ACCVGPR_MOV_B32 $agpr2, implicit $exec, implicit-def $agpr3_agpr4, implicit $agpr1_agpr2
+    ; GFX940-NEXT: $agpr3 = V_ACCVGPR_MOV_B32 $agpr1, implicit $exec, implicit killed $agpr1_agpr2, implicit $exec
+    $vgpr1 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec, implicit $agpr0_agpr1
+    $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec, implicit-def $agpr1_agpr2
+    $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit $agpr0_agpr1
+    $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit $exec, implicit-def $agpr1_agpr2
+    $agpr3_agpr4 = COPY killed $agpr1_agpr2, implicit $exec
+...
+
+---
 name:            a3_to_a3_nonoverlap_kill
 tracksRegLiveness: true
 body:             |
@@ -934,8 +977,8 @@ body:             |
     ; GFX908-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr255, implicit $exec, implicit-def $agpr0_agpr1_agpr2
     ; GFX908-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr2, implicit $exec, implicit $agpr1_agpr2_agpr3
     ; GFX908-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
-    ; GFX908-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 $agpr3, implicit $exec, implicit $agpr1_agpr2_agpr3
-    ; GFX908-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr2, implicit $exec
+    ; GFX908-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 $agpr3, implicit $exec, implicit $agpr1_agpr2_agpr3
+    ; GFX908-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr1, implicit $exec
     ; GFX908-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec
     ; GFX908-NEXT: S_ENDPGM 0, implicit $agpr0_agpr1_agpr2, implicit $vgpr1
     ; GFX90A-LABEL: name: a3_to_a3_overlap_kill

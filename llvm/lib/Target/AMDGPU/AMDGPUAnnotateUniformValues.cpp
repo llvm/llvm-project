@@ -16,8 +16,8 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "Utils/AMDGPUMemoryUtils.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/Analysis/MemorySSA.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/InitializePasses.h"
 
@@ -29,7 +29,7 @@ namespace {
 
 class AMDGPUAnnotateUniformValues : public FunctionPass,
                        public InstVisitor<AMDGPUAnnotateUniformValues> {
-  LegacyDivergenceAnalysis *DA;
+  UniformityInfo *UA;
   MemorySSA *MSSA;
   AliasAnalysis *AA;
   bool isEntryFunc;
@@ -55,7 +55,7 @@ public:
     return "AMDGPU Annotate Uniform Values";
   }
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<LegacyDivergenceAnalysis>();
+    AU.addRequired<UniformityInfoWrapperPass>();
     AU.addRequired<MemorySSAWrapperPass>();
     AU.addRequired<AAResultsWrapperPass>();
     AU.setPreservesAll();
@@ -69,7 +69,7 @@ public:
 
 INITIALIZE_PASS_BEGIN(AMDGPUAnnotateUniformValues, DEBUG_TYPE,
                       "Add AMDGPU uniform metadata", false, false)
-INITIALIZE_PASS_DEPENDENCY(LegacyDivergenceAnalysis)
+INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(AMDGPUAnnotateUniformValues, DEBUG_TYPE,
@@ -78,13 +78,13 @@ INITIALIZE_PASS_END(AMDGPUAnnotateUniformValues, DEBUG_TYPE,
 char AMDGPUAnnotateUniformValues::ID = 0;
 
 void AMDGPUAnnotateUniformValues::visitBranchInst(BranchInst &I) {
-  if (DA->isUniform(&I))
+  if (UA->isUniform(&I))
     setUniformMetadata(&I);
 }
 
 void AMDGPUAnnotateUniformValues::visitLoadInst(LoadInst &I) {
   Value *Ptr = I.getPointerOperand();
-  if (!DA->isUniform(Ptr))
+  if (!UA->isUniform(Ptr))
     return;
   Instruction *PtrI = dyn_cast<Instruction>(Ptr);
   if (PtrI)
@@ -108,7 +108,7 @@ bool AMDGPUAnnotateUniformValues::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
 
-  DA = &getAnalysis<LegacyDivergenceAnalysis>();
+  UA = &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
   MSSA = &getAnalysis<MemorySSAWrapperPass>().getMSSA();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   isEntryFunc = AMDGPU::isEntryFunctionCC(F.getCallingConv());

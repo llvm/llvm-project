@@ -13,15 +13,19 @@
 #include "mlir/Dialect/Affine/Passes.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/Transforms/Transforms.h"
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
+namespace affine {
 #define GEN_PASS_DEF_AFFINEEXPANDINDEXOPS
 #include "mlir/Dialect/Affine/Passes.h.inc"
+} // namespace affine
 } // namespace mlir
 
 using namespace mlir;
+using namespace mlir::affine;
 
 namespace {
 /// Lowers `affine.delinearize_index` into a sequence of division and remainder
@@ -42,7 +46,7 @@ struct LowerDelinearizeIndexOps
 };
 
 class ExpandAffineIndexOpsPass
-    : public impl::AffineExpandIndexOpsBase<ExpandAffineIndexOpsPass> {
+    : public affine::impl::AffineExpandIndexOpsBase<ExpandAffineIndexOpsPass> {
 public:
   ExpandAffineIndexOpsPass() = default;
 
@@ -58,10 +62,11 @@ public:
 
 } // namespace
 
-void mlir::populateAffineExpandIndexOpsPatterns(RewritePatternSet &patterns) {
+void mlir::affine::populateAffineExpandIndexOpsPatterns(
+    RewritePatternSet &patterns) {
   patterns.insert<LowerDelinearizeIndexOps>(patterns.getContext());
 }
 
-std::unique_ptr<Pass> mlir::createAffineExpandIndexOpsPass() {
+std::unique_ptr<Pass> mlir::affine::createAffineExpandIndexOpsPass() {
   return std::make_unique<ExpandAffineIndexOpsPass>();
 }

@@ -328,6 +328,7 @@ enum CFileStringType : uint8_t {
 
 enum CFileLangId : uint8_t {
   TB_C = 0,        ///< C language.
+  TB_Fortran = 1,  ///< Fortran language.
   TB_CPLUSPLUS = 9 ///< C++ language.
 };
 

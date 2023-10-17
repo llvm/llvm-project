@@ -87,6 +87,10 @@ file_magic llvm::identify_magic(StringRef Magic) {
     if (startswith(Magic, "BC\xC0\xDE"))
       return file_magic::bitcode;
     break;
+  case 'C':
+    if (startswith(Magic, "CCOB"))
+      return file_magic::offload_bundle_compressed;
+    break;
   case '!':
     if (startswith(Magic, "!<arch>\n") || startswith(Magic, "!<thin>\n"))
       return file_magic::archive;
@@ -228,11 +232,14 @@ file_magic llvm::identify_magic(StringRef Magic) {
       return file_magic::coff_object;
     break;
 
-  case 0x2d: // YAML '-'
+  case 0x2d: // YAML '-' MachO TBD.
     if (startswith(Magic, "--- !tapi") || startswith(Magic, "---\narchs:"))
       return file_magic::tapi_file;
     break;
-  
+  case 0x7b: // JSON '{' MachO TBD.
+    return file_magic::tapi_file;
+    break;
+
   case 'D': // DirectX container file - DXBC
     if (startswith(Magic, "DXBC"))
       return file_magic::dxcontainer_object;
@@ -242,6 +249,18 @@ file_magic llvm::identify_magic(StringRef Magic) {
     if (Magic[1] == char(0xA6))
       return file_magic::coff_object;
     break;
+
+  case 0x4e: // ARM64X windows
+    if (Magic[1] == char(0xA6))
+      return file_magic::coff_object;
+    break;
+
+  case '_': {
+    const char OBMagic[] = "__CLANG_OFFLOAD_BUNDLE__";
+    if (Magic.size() >= sizeof(OBMagic) && startswith(Magic, OBMagic))
+      return file_magic::offload_bundle;
+    break;
+  }
 
   default:
     break;

@@ -1,4 +1,4 @@
-//===-- Standalone implementation std::optional -----------------*- C++ -*-===//
+//===-- Standalone implementation of std::optional --------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,80 +6,118 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_OPTIONAL_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_OPTIONAL_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_OPTIONAL_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_OPTIONAL_H
 
-namespace __llvm_libc {
+#include "src/__support/CPP/type_traits.h"
+#include "src/__support/CPP/utility.h"
+#include "src/__support/macros/attributes.h"
+
+namespace LIBC_NAMESPACE {
 namespace cpp {
 
 // Trivial nullopt_t struct.
-struct nullopt_t {};
+struct nullopt_t {
+  LIBC_INLINE constexpr explicit nullopt_t() = default;
+};
 
-// nullopt that can be used and returned
-inline constexpr nullopt_t nullopt;
+// nullopt that can be used and returned.
+LIBC_INLINE_VAR constexpr nullopt_t nullopt{};
 
-// This is very simple implementation of the std::optional class.  There are a
-// number of guarantees in the standard that are not made here.
-//
-// This class will be extended as needed in future.
-//
-// T currently needs to be a scalar or an object with the following properties:
-//  - copy constructible
-//  - copy assignable
-//  - destructible
-template <class T> class optional {
-
-  template <class E> class OptionalStorage {
-  public:
+// This is very simple implementation of the std::optional class. It makes
+// several assumptions that the underlying type is trivially constructable,
+// copyable, or movable.
+template <typename T> class optional {
+  template <typename U, bool = !is_trivially_destructible<U>::value>
+  struct OptionalStorage {
     union {
-      E StoredValue;
-      char Placeholder;
+      char empty;
+      U stored_value;
     };
-    bool InUse = false;
 
-    OptionalStorage() : Placeholder(0), InUse(false) {}
-    OptionalStorage(const E &t) : StoredValue(t), InUse(true) {}
-    ~OptionalStorage() {
-      if (InUse)
-        StoredValue.~E();
-    }
+    LIBC_INLINE ~OptionalStorage() { stored_value.~U(); }
+    LIBC_INLINE constexpr OptionalStorage() : empty() {}
 
-    void reset() {
-      if (InUse)
-        StoredValue.~E();
-      InUse = false;
-    }
+    template <typename... Args>
+    LIBC_INLINE constexpr explicit OptionalStorage(in_place_t, Args &&...args)
+        : stored_value(forward<Args>(args)...) {}
   };
 
-  OptionalStorage<T> Storage;
+  template <typename U> struct OptionalStorage<U, false> {
+    union {
+      char empty;
+      U stored_value;
+    };
+
+    // The only difference is that this class doesn't have a destructor.
+    LIBC_INLINE constexpr OptionalStorage() : empty() {}
+
+    template <typename... Args>
+    LIBC_INLINE constexpr explicit OptionalStorage(in_place_t, Args &&...args)
+        : stored_value(forward<Args>(args)...) {}
+  };
+
+  OptionalStorage<T> storage;
+  bool in_use = false;
 
 public:
-  optional() {}
-  optional(nullopt_t) {}
-  optional(const T &t) : Storage(t) {}
+  LIBC_INLINE constexpr optional() = default;
+  LIBC_INLINE constexpr optional(nullopt_t) {}
 
-  T value() const { return Storage.StoredValue; }
+  LIBC_INLINE constexpr optional(const T &t)
+      : storage(in_place, t), in_use(true) {}
+  LIBC_INLINE constexpr optional(const optional &) = default;
 
-  bool has_value() const { return Storage.InUse; }
+  LIBC_INLINE constexpr optional(T &&t)
+      : storage(in_place, move(t)), in_use(true) {}
+  LIBC_INLINE constexpr optional(optional &&O) = default;
 
-  void reset() { Storage.reset(); }
+  template <typename... ArgTypes>
+  LIBC_INLINE constexpr optional(in_place_t, ArgTypes &&...Args)
+      : storage(in_place, forward<ArgTypes>(Args)...), in_use(true) {}
 
-  constexpr explicit operator bool() const { return Storage.InUse; }
-
-  constexpr optional &operator=(nullopt_t) {
-    reset();
+  LIBC_INLINE constexpr optional &operator=(T &&t) {
+    storage = move(t);
     return *this;
   }
+  LIBC_INLINE constexpr optional &operator=(optional &&) = default;
 
-  constexpr T &operator*() & { return Storage.StoredValue; }
+  LIBC_INLINE constexpr optional &operator=(const T &t) {
+    storage = t;
+    return *this;
+  }
+  LIBC_INLINE constexpr optional &operator=(const optional &) = default;
 
-  constexpr const T &operator*() const & { return Storage.StoredValue; }
+  LIBC_INLINE constexpr void reset() {
+    if (in_use)
+      storage.~OptionalStorage();
+    in_use = false;
+  }
 
-  constexpr T *operator->() { return &Storage.StoredValue; }
+  LIBC_INLINE constexpr const T &value() const & {
+    return storage.stored_value;
+  }
 
-  constexpr const T *operator->() const { return &Storage.StoredValue; }
+  LIBC_INLINE constexpr T &value() & { return storage.stored_value; }
+
+  LIBC_INLINE constexpr explicit operator bool() const { return in_use; }
+  LIBC_INLINE constexpr bool has_value() const { return in_use; }
+  LIBC_INLINE constexpr const T *operator->() const {
+    return &storage.stored_value;
+  }
+  LIBC_INLINE constexpr T *operator->() { return &storage.stored_value; }
+  LIBC_INLINE constexpr const T &operator*() const & {
+    return storage.stored_value;
+  }
+  LIBC_INLINE constexpr T &operator*() & { return storage.stored_value; }
+
+  LIBC_INLINE constexpr T &&value() && { return move(storage.stored_value); }
+  LIBC_INLINE constexpr T &&operator*() && {
+    return move(storage.stored_value);
+  }
 };
-} // namespace cpp
-} // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_OPTIONAL_H
+} // namespace cpp
+} // namespace LIBC_NAMESPACE
+
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_OPTIONAL_H

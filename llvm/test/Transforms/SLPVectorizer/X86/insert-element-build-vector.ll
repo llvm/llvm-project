@@ -43,7 +43,7 @@ define <8 x float> @simple_select2(<4 x float> %a, <4 x float> %b, <4 x i32> %c)
 ; CHECK-LABEL: @simple_select2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <4 x i32> [[C:%.*]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[A:%.*]], <4 x float> [[B:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <8 x i32> <i32 0, i32 undef, i32 1, i32 undef, i32 2, i32 undef, i32 undef, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> undef, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 7, i32 3>
 ; CHECK-NEXT:    ret <8 x float> [[TMP3]]
 ;
   %c0 = extractelement <4 x i32> %c, i32 0
@@ -180,16 +180,14 @@ define <4 x float> @simple_select_eph(<4 x float> %a, <4 x float> %b, <4 x i32> 
 ; MINTREESIZE-NEXT:    [[RD:%.*]] = insertelement <4 x float> [[RC]], float [[S3]], i32 3
 ; MINTREESIZE-NEXT:    [[Q0:%.*]] = extractelement <4 x float> [[RD]], i32 0
 ; MINTREESIZE-NEXT:    [[Q1:%.*]] = extractelement <4 x float> [[RD]], i32 1
-; MINTREESIZE-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> poison, float [[Q0]], i32 0
-; MINTREESIZE-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> [[TMP5]], float [[Q1]], i32 1
+; MINTREESIZE-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[RD]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
 ; MINTREESIZE-NEXT:    [[Q2:%.*]] = extractelement <4 x float> [[RD]], i32 2
 ; MINTREESIZE-NEXT:    [[Q3:%.*]] = extractelement <4 x float> [[RD]], i32 3
-; MINTREESIZE-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> poison, float [[Q2]], i32 0
-; MINTREESIZE-NEXT:    [[TMP8:%.*]] = insertelement <2 x float> [[TMP7]], float [[Q3]], i32 1
+; MINTREESIZE-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[RD]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
 ; MINTREESIZE-NEXT:    [[Q4:%.*]] = fadd float [[Q0]], [[Q1]]
 ; MINTREESIZE-NEXT:    [[Q5:%.*]] = fadd float [[Q2]], [[Q3]]
-; MINTREESIZE-NEXT:    [[TMP9:%.*]] = insertelement <2 x float> poison, float [[Q4]], i32 0
-; MINTREESIZE-NEXT:    [[TMP10:%.*]] = insertelement <2 x float> [[TMP9]], float [[Q5]], i32 1
+; MINTREESIZE-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> poison, float [[Q4]], i32 0
+; MINTREESIZE-NEXT:    [[TMP8:%.*]] = insertelement <2 x float> [[TMP7]], float [[Q5]], i32 1
 ; MINTREESIZE-NEXT:    [[Q6:%.*]] = fadd float [[Q4]], [[Q5]]
 ; MINTREESIZE-NEXT:    [[QI:%.*]] = fcmp olt float [[Q6]], [[Q5]]
 ; MINTREESIZE-NEXT:    call void @llvm.assume(i1 [[QI]])
@@ -309,37 +307,19 @@ define <4 x float> @simple_select_users(<4 x float> %a, <4 x float> %b, <4 x i32
 ; Unused insertelement
 define <4 x float> @simple_select_no_users(<4 x float> %a, <4 x float> %b, <4 x i32> %c) #0 {
 ; CHECK-LABEL: @simple_select_no_users(
-; CHECK-NEXT:    [[C0:%.*]] = extractelement <4 x i32> [[C:%.*]], i32 0
-; CHECK-NEXT:    [[C1:%.*]] = extractelement <4 x i32> [[C]], i32 1
-; CHECK-NEXT:    [[C2:%.*]] = extractelement <4 x i32> [[C]], i32 2
-; CHECK-NEXT:    [[C3:%.*]] = extractelement <4 x i32> [[C]], i32 3
-; CHECK-NEXT:    [[A0:%.*]] = extractelement <4 x float> [[A:%.*]], i32 0
-; CHECK-NEXT:    [[A1:%.*]] = extractelement <4 x float> [[A]], i32 1
-; CHECK-NEXT:    [[A2:%.*]] = extractelement <4 x float> [[A]], i32 2
-; CHECK-NEXT:    [[A3:%.*]] = extractelement <4 x float> [[A]], i32 3
-; CHECK-NEXT:    [[B0:%.*]] = extractelement <4 x float> [[B:%.*]], i32 0
-; CHECK-NEXT:    [[B1:%.*]] = extractelement <4 x float> [[B]], i32 1
-; CHECK-NEXT:    [[B2:%.*]] = extractelement <4 x float> [[B]], i32 2
-; CHECK-NEXT:    [[B3:%.*]] = extractelement <4 x float> [[B]], i32 3
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[C0]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[C1]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <2 x i32> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> poison, float [[A0]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> [[TMP4]], float [[A1]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> poison, float [[B0]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> [[TMP6]], float [[B1]], i32 1
-; CHECK-NEXT:    [[TMP8:%.*]] = select <2 x i1> [[TMP3]], <2 x float> [[TMP5]], <2 x float> [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> poison, i32 [[C2]], i32 0
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i32> [[TMP9]], i32 [[C3]], i32 1
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne <2 x i32> [[TMP10]], zeroinitializer
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x float> poison, float [[A2]], i32 0
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x float> [[TMP12]], float [[A3]], i32 1
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x float> poison, float [[B2]], i32 0
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x float> [[TMP14]], float [[B3]], i32 1
-; CHECK-NEXT:    [[TMP16:%.*]] = select <2 x i1> [[TMP11]], <2 x float> [[TMP13]], <2 x float> [[TMP15]]
-; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <2 x float> [[TMP8]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <2 x float> [[TMP16]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RD1:%.*]] = shufflevector <4 x float> [[TMP18]], <4 x float> undef, <4 x i32> <i32 4, i32 5, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[C:%.*]], <4 x i32> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[B:%.*]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = select <2 x i1> [[TMP2]], <2 x float> [[TMP3]], <2 x float> [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[C]], <4 x i32> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne <2 x i32> [[TMP6]], zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x float> [[A]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x float> [[B]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP10:%.*]] = select <2 x i1> [[TMP7]], <2 x float> [[TMP8]], <2 x float> [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x float> [[TMP10]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[RD1:%.*]] = shufflevector <4 x float> [[TMP12]], <4 x float> undef, <4 x i32> <i32 4, i32 5, i32 0, i32 1>
 ; CHECK-NEXT:    ret <4 x float> [[RD1]]
 ;
   %c0 = extractelement <4 x i32> %c, i32 0

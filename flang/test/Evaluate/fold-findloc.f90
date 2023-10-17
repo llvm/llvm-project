@@ -74,6 +74,8 @@ module m1
   logical, parameter:: test_xia1_mtd = all(maxloc(ia1, mask=.true., dim=1) == [3])
   logical, parameter:: test_fia1_mt  = all(findloc(ia1, 1, mask=.true.) == 1)
   logical, parameter:: test_fia1_mtd = all(findloc(ia1, 1, mask=.true., dim=1) == [1])
+  logical, parameter:: test_fia2_mtd1 = all(findloc(ia2, 1, dim=1, mask=.true.) == [1, 0, 2])
+  logical, parameter:: test_fia2_mtd2 = all(findloc(ia2, 1, dim=2, mask=.true.) == [1, 3])
 
   logical, parameter:: test_mia1_mf  = all(minloc(ia1, mask=.false.) == 0)
   logical, parameter:: test_mia1_mfd = all(minloc(ia1, mask=.false., dim=1) == [0])
@@ -81,4 +83,6 @@ module m1
   logical, parameter:: test_xia1_mfd = all(maxloc(ia1, mask=.false., dim=1) == [0])
   logical, parameter:: test_fia1_mf  = all(findloc(ia1, 1, mask=.false.) == 0)
   logical, parameter:: test_fia1_mfd = all(findloc(ia1, 1, mask=.false., dim=1) == [0])
+  logical, parameter:: test_fia2_mfd1 = all(findloc(ia2, 1, dim=1, mask=.false.) == [0, 0, 0])
+  logical, parameter:: test_fia2_mfd2 = all(findloc(ia2, 1, dim=2, mask=.false.) == [0, 0])
 end module

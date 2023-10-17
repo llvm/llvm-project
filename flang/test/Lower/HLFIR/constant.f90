@@ -1,5 +1,5 @@
 ! Test lowering of Constant<T>.
-! RUN: bbc -hlfir -emit-fir -o - %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s 2>&1 | FileCheck %s
 
 ! CHECK-LABEL: func.func @_QPtest_constant_scalar()
 subroutine test_constant_scalar()
@@ -42,11 +42,11 @@ end subroutine
 subroutine test_constant_with_lower_bounds()
   integer, parameter :: i(-1:0, -1:0) = reshape([1,2,3,4], shape=[2,2])
   print *, i
-! CHECK:  %[[VAL_12:.*]] = fir.address_of(@_QQro[[name:.*]]) : !fir.ref<!fir.array<2x2xi32>>
-! CHECK:  %[[VAL_13:.*]] = arith.constant 2 : index
+! CHECK:  %[[VAL_12:.*]] = fir.address_of(@_QFtest_constant_with_lower_boundsECi) : !fir.ref<!fir.array<2x2xi32>>
+! CHECK:  %[[VAL_13:.*]] = arith.constant -1 : index
 ! CHECK:  %[[VAL_14:.*]] = arith.constant 2 : index
 ! CHECK:  %[[VAL_15:.*]] = arith.constant -1 : index
-! CHECK:  %[[VAL_16:.*]] = arith.constant -1 : index
-! CHECK:  %[[VAL_17:.*]] = fir.shape_shift %[[VAL_15]], %[[VAL_13]], %[[VAL_16]], %[[VAL_14]] : (index, index, index, index) -> !fir.shapeshift<2>
-! CHECK:  hlfir.declare %[[VAL_12]](%[[VAL_17]]) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro[[name]]"} : (!fir.ref<!fir.array<2x2xi32>>, !fir.shapeshift<2>) -> (!fir.box<!fir.array<2x2xi32>>, !fir.ref<!fir.array<2x2xi32>>)
+! CHECK:  %[[VAL_16:.*]] = arith.constant 2 : index
+! CHECK:  %[[VAL_17:.*]] = fir.shape_shift %[[VAL_13]], %[[VAL_14]], %[[VAL_15]], %[[VAL_16]] : (index, index, index, index) -> !fir.shapeshift<2>
+! CHECK:  hlfir.declare %[[VAL_12]](%[[VAL_17]]) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QFtest_constant_with_lower_boundsECi"} : (!fir.ref<!fir.array<2x2xi32>>, !fir.shapeshift<2>) -> (!fir.box<!fir.array<2x2xi32>>, !fir.ref<!fir.array<2x2xi32>>)
 end subroutine

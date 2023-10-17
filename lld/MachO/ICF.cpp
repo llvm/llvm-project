@@ -213,8 +213,8 @@ bool ICF::equalsVariable(const ConcatInputSection *ia,
   // symbols at offset zero within the section (which is typically the case with
   // .subsections_via_symbols.)
   auto hasUnwind = [](Defined *d) { return d->unwindEntry != nullptr; };
-  auto itA = std::find_if(ia->symbols.begin(), ia->symbols.end(), hasUnwind);
-  auto itB = std::find_if(ib->symbols.begin(), ib->symbols.end(), hasUnwind);
+  const auto *itA = llvm::find_if(ia->symbols, hasUnwind);
+  const auto *itB = llvm::find_if(ib->symbols, hasUnwind);
   if (itA == ia->symbols.end())
     return itB == ib->symbols.end();
   if (itB == ib->symbols.end())
@@ -290,7 +290,7 @@ void ICF::run() {
         if (auto *sym = r.referent.dyn_cast<Symbol *>()) {
           if (auto *defined = dyn_cast<Defined>(sym)) {
             if (defined->isec) {
-              if (auto referentIsec =
+              if (auto *referentIsec =
                       dyn_cast<ConcatInputSection>(defined->isec))
                 hash += defined->value + referentIsec->icfEqClass[icfPass % 2];
               else
@@ -457,7 +457,7 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
     assert(isec->icfEqClass[0] == 0); // don't overwrite a unique ID!
     // Turn-on the top bit to guarantee that valid hashes have no collisions
     // with the small-integer unique IDs for ICF-ineligible sections
-    isec->icfEqClass[0] = xxHash64(isec->data) | (1ull << 31);
+    isec->icfEqClass[0] = xxh3_64bits(isec->data) | (1ull << 31);
   });
   // Now that every input section is either hashed or marked as unique, run the
   // segregation algorithm to detect foldable subsections.

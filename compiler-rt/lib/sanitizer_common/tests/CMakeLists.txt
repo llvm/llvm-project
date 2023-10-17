@@ -12,6 +12,7 @@ endif()
 set(SANITIZER_UNITTESTS
   sanitizer_addrhashmap_test.cpp
   sanitizer_allocator_test.cpp
+  sanitizer_array_ref_test.cpp
   sanitizer_atomic_test.cpp
   sanitizer_bitvector_test.cpp
   sanitizer_bvgraph_test.cpp
@@ -30,11 +31,14 @@ set(SANITIZER_UNITTESTS
   sanitizer_list_test.cpp
   sanitizer_lzw_test.cpp
   sanitizer_mac_test.cpp
+  sanitizer_module_uuid_size.cpp
   sanitizer_mutex_test.cpp
   sanitizer_nolibc_test.cpp
   sanitizer_posix_test.cpp
   sanitizer_printf_test.cpp
   sanitizer_procmaps_test.cpp
+  sanitizer_procmaps_mac_test.cpp
+  sanitizer_range_test.cpp
   sanitizer_ring_buffer_test.cpp
   sanitizer_quarantine_test.cpp
   sanitizer_stack_store_test.cpp
@@ -45,6 +49,7 @@ set(SANITIZER_UNITTESTS
   sanitizer_suppressions_test.cpp
   sanitizer_symbolizer_test.cpp
   sanitizer_test_main.cpp
+  sanitizer_thread_arg_retval_test.cpp
   sanitizer_thread_registry_test.cpp
   sanitizer_type_traits_test.cpp
   sanitizer_vector_test.cpp
@@ -67,6 +72,7 @@ set(SANITIZER_TEST_CFLAGS_COMMON
   -I${COMPILER_RT_SOURCE_DIR}/include
   -I${COMPILER_RT_SOURCE_DIR}/lib
   -I${COMPILER_RT_SOURCE_DIR}/lib/sanitizer_common
+  -DSANITIZER_COMMON_NO_REDEFINE_BUILTINS
   -fno-rtti
   -O2
   -Werror=sign-compare
@@ -112,12 +118,12 @@ endif()
 # The default stack size for clang is 8M.
 if(MSVC)
   list(APPEND SANITIZER_TEST_LINK_FLAGS_COMMON -Wl,/STACK:0xC00000)
+elseif (MINGW)
+  list(APPEND SANITIZER_TEST_LINK_FLAGS_COMMON -Wl,--stack=0xC00000)
 endif()
 
 set(SANITIZER_TEST_LINK_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBLOG log SANITIZER_TEST_LINK_LIBS)
-# NDK r10 requires -latomic almost always.
-append_list_if(ANDROID atomic SANITIZER_TEST_LINK_LIBS)
 
 append_list_if(COMPILER_RT_HAS_LIBDL -ldl SANITIZER_TEST_LINK_FLAGS_COMMON)
 append_list_if(COMPILER_RT_HAS_LIBRT -lrt SANITIZER_TEST_LINK_FLAGS_COMMON)
@@ -157,7 +163,7 @@ set_target_properties(SanitizerUnitTests PROPERTIES FOLDER "Compiler-RT Tests")
 macro(add_sanitizer_tests_for_arch arch)
   set(extra_flags)
   if( CMAKE_SIZEOF_VOID_P EQUAL 4 )
-    list(APPEND extra_flags "-D_LARGEFILE_SOURCE")
+    list(APPEND extra_flags "-D_LARGEFILE_SOURCE=1")
     list(APPEND extra_flags "-D_FILE_OFFSET_BITS=64")
   endif()
   get_sanitizer_common_lib_for_arch(${arch} SANITIZER_COMMON_LIB)
@@ -212,7 +218,8 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS AND NOT ANDROID)
       add_sanitizer_common_lib("RTSanitizerCommon.test.${arch}"
                                $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
                                $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
-                               $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>)
+                               $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
+                               $<TARGET_OBJECTS:RTSanitizerCommonSymbolizerInternal.${arch}>)
     endforeach()
   endif()
   foreach(arch ${SANITIZER_UNITTEST_SUPPORTED_ARCH})
@@ -228,7 +235,8 @@ if(ANDROID)
       ${COMPILER_RT_GMOCK_SOURCE}
       $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
       $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
-      $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>)
+      $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
+      $<TARGET_OBJECTS:RTSanitizerCommonSymbolizerInternal.${arch}>)
     set_target_compile_flags(SanitizerTest ${SANITIZER_TEST_CFLAGS_COMMON})
     # Setup correct output directory and link flags.
     set_target_properties(SanitizerTest PROPERTIES

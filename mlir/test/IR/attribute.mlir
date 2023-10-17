@@ -45,12 +45,28 @@ func.func @float_attrs_pass() {
     float_attr = 2. : f8E4M3FN
   } : () -> ()
   "test.float_attrs"() {
+    // CHECK: float_attr = 2.000000e+00 : f8E5M2FNUZ
+    float_attr = 2. : f8E5M2FNUZ
+  } : () -> ()
+  "test.float_attrs"() {
+    // CHECK: float_attr = 2.000000e+00 : f8E4M3FNUZ
+    float_attr = 2. : f8E4M3FNUZ
+  } : () -> ()
+  "test.float_attrs"() {
+    // CHECK: float_attr = 2.000000e+00 : f8E4M3B11FNUZ
+    float_attr = 2. : f8E4M3B11FNUZ
+  } : () -> ()
+  "test.float_attrs"() {
     // CHECK: float_attr = 2.000000e+00 : f16
     float_attr = 2. : f16
   } : () -> ()
   "test.float_attrs"() {
     // CHECK: float_attr = 2.000000e+00 : bf16
     float_attr = 2. : bf16
+  } : () -> ()
+  "test.float_attrs"() {
+    // CHECK: float_attr = 2.000000e+00 : tf32
+    float_attr = 2. : tf32
   } : () -> ()
   "test.float_attrs"() {
     // CHECK: float_attr = 2.000000e+00 : f32
@@ -866,4 +882,12 @@ func.func @default_value_printing(%arg0 : i32) {
   // CHECK: test.default_value_print {value_with_default = 1 : i32} %arg0
   "test.default_value_print"(%arg0) {"value_with_default" = 1 : i32} : (i32) -> ()
   return
+}
+
+// -----
+
+func.func @type_attr_of_fail() {
+    // expected-error @below {{failed to satisfy constraint: type attribute of 64-bit signless integer}}
+    test.type_attr_of i32
+    return
 }

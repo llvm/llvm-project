@@ -627,3 +627,47 @@ func.func @pipeline_op_with_region(%A: memref<?xf32>, %B: memref<?xf32>, %result
   }  { __test_pipelining_loop__ }
   return
 }
+
+// -----
+
+// CHECK-LABEL: @backedge_mix_order
+//  CHECK-SAME:   (%[[A:.*]]: memref<?xf32>) -> f32 {
+//   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+//   CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
+//   CHECK-DAG:   %[[C3:.*]] = arith.constant 3 : index
+//   CHECK-DAG:   %[[CSTF:.*]] = arith.constant 2.000000e+00 : f32
+// Prologue:
+//       CHECK:   %[[L0:.*]] = memref.load %[[A]][%[[C0]]] : memref<?xf32>
+//  CHECK-NEXT:   %[[L1:.*]] = memref.load %[[A]][%[[C1]]] : memref<?xf32>
+// Kernel:
+//  CHECK-NEXT:   %[[R:.*]]:3 = scf.for %[[IV:.*]] = %[[C0]] to %[[C3]]
+//  CHECK-SAME:     step %[[C1]] iter_args(%[[C:.*]] = %[[CSTF]],
+//  CHECK-SAME:     %[[ARG1:.*]] = %[[L0]], %[[ARG2:.*]] = %[[L1]]) -> (f32, f32, f32) {
+//  CHECK-NEXT:     %[[IV2:.*]] = arith.addi %[[IV]], %[[C1]] : index
+//  CHECK-NEXT:     %[[L2:.*]] = memref.load %[[A]][%[[IV2]]] : memref<?xf32>
+//  CHECK-NEXT:     %[[MUL0:.*]] = arith.mulf %[[C]], %[[ARG1]] : f32
+//  CHECK-NEXT:     %[[IV3:.*]] = arith.addi %[[IV]], %[[C1]] : index
+//  CHECK-NEXT:     %[[IV4:.*]] = arith.addi %[[IV3]], %[[C1]] : index
+//  CHECK-NEXT:     %[[L3:.*]] = memref.load %[[A]][%[[IV4]]] : memref<?xf32>
+//  CHECK-NEXT:     %[[MUL1:.*]] = arith.mulf %[[ARG2]], %[[MUL0]] : f32
+//  CHECK-NEXT:     scf.yield %[[MUL1]], %[[L2]], %[[L3]] : f32, f32, f32
+//  CHECK-NEXT:   }
+// Epilogue:
+//  CHECK-NEXT:   %[[MUL1:.*]] = arith.mulf %[[R]]#0, %[[R]]#1 : f32
+//  CHECK-NEXT:   %[[MUL2:.*]] = arith.mulf %[[R]]#2, %[[MUL1]] : f32
+//  CHECK-NEXT:   return %[[MUL2]] : f32
+func.func @backedge_mix_order(%A: memref<?xf32>) -> f32 {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %cf = arith.constant 2.0 : f32
+  %r = scf.for %i0 = %c0 to %c4 step %c1 iter_args(%arg0 = %cf) -> (f32) {
+    %A_elem = memref.load %A[%i0] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 0 } : memref<?xf32>
+    %A2_elem = arith.mulf %arg0, %A_elem { __test_pipelining_stage__ = 1, __test_pipelining_op_order__ = 1 } : f32
+    %i1 = arith.addi %i0, %c1 { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 2 } : index
+    %A1_elem = memref.load %A[%i1] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 3 } : memref<?xf32>
+    %A3_elem = arith.mulf %A1_elem, %A2_elem { __test_pipelining_stage__ = 1, __test_pipelining_op_order__ = 4 } : f32
+    scf.yield %A3_elem : f32
+  }  { __test_pipelining_loop__ }
+  return %r : f32
+}

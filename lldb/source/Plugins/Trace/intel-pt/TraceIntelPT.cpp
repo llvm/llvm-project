@@ -48,8 +48,8 @@ enum {
 #include "TraceIntelPTPropertiesEnum.inc"
 };
 
-ConstString TraceIntelPT::PluginProperties::GetSettingName() {
-  return ConstString(TraceIntelPT::GetPluginNameStatic());
+llvm::StringRef TraceIntelPT::PluginProperties::GetSettingName() {
+  return TraceIntelPT::GetPluginNameStatic();
 }
 
 TraceIntelPT::PluginProperties::PluginProperties() : Properties() {
@@ -88,8 +88,7 @@ void TraceIntelPT::DebuggerInitialize(Debugger &debugger) {
     const bool is_global_setting = true;
     PluginManager::CreateSettingForTracePlugin(
         debugger, GetGlobalProperties().GetValueProperties(),
-        ConstString("Properties for the intel-pt trace plug-in."),
-        is_global_setting);
+        "Properties for the intel-pt trace plug-in.", is_global_setting);
   }
 }
 

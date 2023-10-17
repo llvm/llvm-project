@@ -9,8 +9,8 @@
 #include "clang/Basic/LangStandard.h"
 #include "clang/Config/config.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/TargetParser/Triple.h"
 using namespace clang;
 
 #define LANGSTANDARD(id, name, lang, desc, features)                           \
@@ -54,8 +54,6 @@ LangStandard::Kind clang::getDefaultLanguageStandard(clang::Language Lang,
     return LangStandard::lang_opencl12;
   case Language::OpenCLCXX:
     return LangStandard::lang_openclcpp10;
-  case Language::CUDA:
-    return LangStandard::lang_cuda;
   case Language::Asm:
   case Language::C:
     // The PS4 uses C99 as the default C standard.
@@ -66,13 +64,11 @@ LangStandard::Kind clang::getDefaultLanguageStandard(clang::Language Lang,
     return LangStandard::lang_gnu11;
   case Language::CXX:
   case Language::ObjCXX:
-    if (T.isPS())
-      return LangStandard::lang_gnucxx14;
+  case Language::CUDA:
+  case Language::HIP:
     return LangStandard::lang_gnucxx17;
   case Language::RenderScript:
     return LangStandard::lang_c99;
-  case Language::HIP:
-    return LangStandard::lang_hip;
   case Language::HLSL:
     return LangStandard::lang_hlsl2021;
   }

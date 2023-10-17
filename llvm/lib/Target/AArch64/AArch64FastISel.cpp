@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/Argument.h"
@@ -53,6 +54,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
@@ -65,7 +67,6 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
 #include <cassert>
@@ -272,7 +273,7 @@ private:
   CCAssignFn *CCAssignFnForCall(CallingConv::ID CC) const;
   bool processCallArgs(CallLoweringInfo &CLI, SmallVectorImpl<MVT> &ArgVTs,
                        unsigned &NumBytes);
-  bool finishCall(CallLoweringInfo &CLI, MVT RetVT, unsigned NumBytes);
+  bool finishCall(CallLoweringInfo &CLI, unsigned NumBytes);
 
 public:
   // Backend specific FastISel code.
@@ -340,7 +341,11 @@ CCAssignFn *AArch64FastISel::CCAssignFnForCall(CallingConv::ID CC) const {
     return CC_AArch64_GHC;
   if (CC == CallingConv::CFGuard_Check)
     return CC_AArch64_Win64_CFGuard_Check;
-  return Subtarget->isTargetDarwin() ? CC_AArch64_DarwinPCS : CC_AArch64_AAPCS;
+  if (Subtarget->isTargetDarwin())
+    return CC_AArch64_DarwinPCS;
+  if (Subtarget->isTargetWindows())
+    return CC_AArch64_Win64PCS;
+  return CC_AArch64_AAPCS;
 }
 
 unsigned AArch64FastISel::fastMaterializeAlloca(const AllocaInst *AI) {
@@ -3021,7 +3026,7 @@ bool AArch64FastISel::processCallArgs(CallLoweringInfo &CLI,
   CCInfo.AnalyzeCallOperands(OutVTs, CLI.OutFlags, CCAssignFnForCall(CC));
 
   // Get a count of how many bytes are to be pushed on the stack.
-  NumBytes = CCInfo.getNextStackOffset();
+  NumBytes = CCInfo.getStackSize();
 
   // Issue CALLSEQ_START
   unsigned AdjStackDown = TII.getCallFrameSetupOpcode();
@@ -3102,8 +3107,7 @@ bool AArch64FastISel::processCallArgs(CallLoweringInfo &CLI,
   return true;
 }
 
-bool AArch64FastISel::finishCall(CallLoweringInfo &CLI, MVT RetVT,
-                                 unsigned NumBytes) {
+bool AArch64FastISel::finishCall(CallLoweringInfo &CLI, unsigned NumBytes) {
   CallingConv::ID CC = CLI.CallConv;
 
   // Issue CALLSEQ_END
@@ -3111,32 +3115,30 @@ bool AArch64FastISel::finishCall(CallLoweringInfo &CLI, MVT RetVT,
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(AdjStackUp))
     .addImm(NumBytes).addImm(0);
 
-  // Now the return value.
-  if (RetVT != MVT::isVoid) {
-    SmallVector<CCValAssign, 16> RVLocs;
-    CCState CCInfo(CC, false, *FuncInfo.MF, RVLocs, *Context);
-    CCInfo.AnalyzeCallResult(RetVT, CCAssignFnForCall(CC));
+  // Now the return values.
+  SmallVector<CCValAssign, 16> RVLocs;
+  CCState CCInfo(CC, false, *FuncInfo.MF, RVLocs, *Context);
+  CCInfo.AnalyzeCallResult(CLI.Ins, CCAssignFnForCall(CC));
 
-    // Only handle a single return value.
-    if (RVLocs.size() != 1)
-      return false;
-
-    // Copy all of the result registers out of their specified physreg.
-    MVT CopyVT = RVLocs[0].getValVT();
+  Register ResultReg = FuncInfo.CreateRegs(CLI.RetTy);
+  for (unsigned i = 0; i != RVLocs.size(); ++i) {
+    CCValAssign &VA = RVLocs[i];
+    MVT CopyVT = VA.getValVT();
+    unsigned CopyReg = ResultReg + i;
 
     // TODO: Handle big-endian results
     if (CopyVT.isVector() && !Subtarget->isLittleEndian())
       return false;
 
-    Register ResultReg = createResultReg(TLI.getRegClassFor(CopyVT));
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(TargetOpcode::COPY), ResultReg)
-        .addReg(RVLocs[0].getLocReg());
-    CLI.InRegs.push_back(RVLocs[0].getLocReg());
-
-    CLI.ResultReg = ResultReg;
-    CLI.NumResultRegs = 1;
+    // Copy result out of their specified physreg.
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
+            CopyReg)
+        .addReg(VA.getLocReg());
+    CLI.InRegs.push_back(VA.getLocReg());
   }
+
+  CLI.ResultReg = ResultReg;
+  CLI.NumResultRegs = RVLocs.size();
 
   return true;
 }
@@ -3183,13 +3185,6 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
 
   // Let SDISel handle vararg functions.
   if (IsVarArg)
-    return false;
-
-  // FIXME: Only handle *simple* calls for now.
-  MVT RetVT;
-  if (CLI.RetTy->isVoidTy())
-    RetVT = MVT::isVoid;
-  else if (!isTypeLegal(CLI.RetTy, RetVT))
     return false;
 
   for (auto Flag : CLI.OutFlags)
@@ -3287,7 +3282,7 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   CLI.Call = MIB;
 
   // Finish off the call including any return values.
-  return finishCall(CLI, RetVT, NumBytes);
+  return finishCall(CLI, NumBytes);
 }
 
 bool AArch64FastISel::isMemCpySmall(uint64_t Len, MaybeAlign Alignment) {
@@ -3784,6 +3779,57 @@ bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     assert((ResultReg1 + 1) == ResultReg2 &&
            "Nonconsecutive result registers.");
     updateValueMap(II, ResultReg1, 2);
+    return true;
+  }
+  case Intrinsic::aarch64_crc32b:
+  case Intrinsic::aarch64_crc32h:
+  case Intrinsic::aarch64_crc32w:
+  case Intrinsic::aarch64_crc32x:
+  case Intrinsic::aarch64_crc32cb:
+  case Intrinsic::aarch64_crc32ch:
+  case Intrinsic::aarch64_crc32cw:
+  case Intrinsic::aarch64_crc32cx: {
+    if (!Subtarget->hasCRC())
+      return false;
+
+    unsigned Opc;
+    switch (II->getIntrinsicID()) {
+    default:
+      llvm_unreachable("Unexpected intrinsic!");
+    case Intrinsic::aarch64_crc32b:
+      Opc = AArch64::CRC32Brr;
+      break;
+    case Intrinsic::aarch64_crc32h:
+      Opc = AArch64::CRC32Hrr;
+      break;
+    case Intrinsic::aarch64_crc32w:
+      Opc = AArch64::CRC32Wrr;
+      break;
+    case Intrinsic::aarch64_crc32x:
+      Opc = AArch64::CRC32Xrr;
+      break;
+    case Intrinsic::aarch64_crc32cb:
+      Opc = AArch64::CRC32CBrr;
+      break;
+    case Intrinsic::aarch64_crc32ch:
+      Opc = AArch64::CRC32CHrr;
+      break;
+    case Intrinsic::aarch64_crc32cw:
+      Opc = AArch64::CRC32CWrr;
+      break;
+    case Intrinsic::aarch64_crc32cx:
+      Opc = AArch64::CRC32CXrr;
+      break;
+    }
+
+    Register LHSReg = getRegForValue(II->getArgOperand(0));
+    Register RHSReg = getRegForValue(II->getArgOperand(1));
+    if (!LHSReg || !RHSReg)
+      return false;
+
+    Register ResultReg =
+        fastEmitInst_rr(Opc, &AArch64::GPR32RegClass, LHSReg, RHSReg);
+    updateValueMap(II, ResultReg);
     return true;
   }
   }
@@ -4848,7 +4894,7 @@ bool AArch64FastISel::selectSDiv(const Instruction *I) {
       !(C.isPowerOf2() || C.isNegatedPowerOf2()))
     return selectBinaryOp(I, ISD::SDIV);
 
-  unsigned Lg2 = C.countTrailingZeros();
+  unsigned Lg2 = C.countr_zero();
   Register Src0Reg = getRegForValue(I->getOperand(0));
   if (!Src0Reg)
     return false;
@@ -4992,7 +5038,7 @@ bool AArch64FastISel::selectGetElementPtr(const Instruction *I) {
 }
 
 bool AArch64FastISel::selectAtomicCmpXchg(const AtomicCmpXchgInst *I) {
-  assert(TM.getOptLevel() == CodeGenOpt::None &&
+  assert(TM.getOptLevel() == CodeGenOptLevel::None &&
          "cmpxchg survived AtomicExpand at optlevel > -O0");
 
   auto *RetPairTy = cast<StructType>(I->getType());
@@ -5145,8 +5191,8 @@ FastISel *AArch64::createFastISel(FunctionLoweringInfo &FuncInfo,
                                         const TargetLibraryInfo *LibInfo) {
 
   SMEAttrs CallerAttrs(*FuncInfo.Fn);
-  if (CallerAttrs.hasZAState() ||
-      (!CallerAttrs.hasStreamingInterface() && CallerAttrs.hasStreamingBody()))
+  if (CallerAttrs.hasZAState() || CallerAttrs.hasStreamingInterfaceOrBody() ||
+      CallerAttrs.hasStreamingCompatibleInterface())
     return nullptr;
   return new AArch64FastISel(FuncInfo, LibInfo);
 }

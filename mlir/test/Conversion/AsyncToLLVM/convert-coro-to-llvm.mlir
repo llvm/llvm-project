@@ -1,10 +1,10 @@
-// RUN: mlir-opt %s -convert-async-to-llvm | FileCheck %s
+// RUN: mlir-opt %s -convert-async-to-llvm='use-opaque-pointers=1' | FileCheck %s
 
 // CHECK-LABEL: @coro_id
 func.func @coro_id() {
   // CHECK: %0 = llvm.mlir.constant(0 : i32) : i32
-  // CHECK: %1 = llvm.mlir.null : !llvm.ptr<i8>
-  // CHECK: %2 = llvm.intr.coro.id %0, %1, %1, %1 : !llvm.token
+  // CHECK: %1 = llvm.mlir.zero : !llvm.ptr
+  // CHECK: %2 = llvm.intr.coro.id %0, %1, %1, %1 : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.token
   %0 = async.coro.id
   return
 }

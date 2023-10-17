@@ -31,6 +31,7 @@ write_cmake_config("llvm-lit") {
     "//clang/test:lit_site_cfg",
     "//clang/test:lit_unit_site_cfg",
     "//lld/test:lit_site_cfg",
+    "//lld/test:lit_unit_site_cfg",
     "//lldb/test:lit_api_site_cfg",
     "//lldb/test:lit_shell_site_cfg",
     "//lldb/test:lit_site_cfg",

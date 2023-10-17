@@ -12,8 +12,8 @@ declare void @usei1(i1)
 
 define i64 @max_sub_ugt(i64 %a, i64 %b) {
 ; CHECK-LABEL: @max_sub_ugt(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A:%.*]], i64 [[B:%.*]])
-; CHECK-NEXT:    ret i64 [[TMP1]]
+; CHECK-NEXT:    [[SEL:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A:%.*]], i64 [[B:%.*]])
+; CHECK-NEXT:    ret i64 [[SEL]]
 ;
   %cmp = icmp ugt i64 %a, %b
   %sub = sub i64 %a, %b
@@ -25,8 +25,8 @@ define i64 @max_sub_ugt(i64 %a, i64 %b) {
 
 define i64 @max_sub_uge(i64 %a, i64 %b) {
 ; CHECK-LABEL: @max_sub_uge(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A:%.*]], i64 [[B:%.*]])
-; CHECK-NEXT:    ret i64 [[TMP1]]
+; CHECK-NEXT:    [[SEL:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A:%.*]], i64 [[B:%.*]])
+; CHECK-NEXT:    ret i64 [[SEL]]
 ;
   %cmp = icmp uge i64 %a, %b
   %sub = sub i64 %a, %b
@@ -37,9 +37,9 @@ define i64 @max_sub_uge(i64 %a, i64 %b) {
 define i64 @max_sub_uge_extrause1(i64 %a, i64 %b) {
 ; CHECK-LABEL: @max_sub_uge_extrause1(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A]], i64 [[B]])
+; CHECK-NEXT:    [[SEL:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A]], i64 [[B]])
 ; CHECK-NEXT:    call void @use(i64 [[SUB]])
-; CHECK-NEXT:    ret i64 [[TMP1]]
+; CHECK-NEXT:    ret i64 [[SEL]]
 ;
   %cmp = icmp uge i64 %a, %b
   %sub = sub i64 %a, %b
@@ -51,9 +51,9 @@ define i64 @max_sub_uge_extrause1(i64 %a, i64 %b) {
 define i64 @max_sub_uge_extrause2(i64 %a, i64 %b) {
 ; CHECK-LABEL: @max_sub_uge_extrause2(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i64 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A]], i64 [[B]])
+; CHECK-NEXT:    [[SEL:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A]], i64 [[B]])
 ; CHECK-NEXT:    call void @usei1(i1 [[CMP]])
-; CHECK-NEXT:    ret i64 [[TMP1]]
+; CHECK-NEXT:    ret i64 [[SEL]]
 ;
   %cmp = icmp uge i64 %a, %b
   %sub = sub i64 %a, %b
@@ -66,10 +66,10 @@ define i64 @max_sub_uge_extrause3(i64 %a, i64 %b) {
 ; CHECK-LABEL: @max_sub_uge_extrause3(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i64 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[A]], [[B]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A]], i64 [[B]])
+; CHECK-NEXT:    [[SEL:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A]], i64 [[B]])
 ; CHECK-NEXT:    call void @use(i64 [[SUB]])
 ; CHECK-NEXT:    call void @usei1(i1 [[CMP]])
-; CHECK-NEXT:    ret i64 [[TMP1]]
+; CHECK-NEXT:    ret i64 [[SEL]]
 ;
   %cmp = icmp uge i64 %a, %b
   %sub = sub i64 %a, %b
@@ -84,8 +84,8 @@ define i64 @max_sub_uge_extrause3(i64 %a, i64 %b) {
 
 define <4 x i32> @max_sub_ugt_vec(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @max_sub_ugt_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.usub.sat.v4i32(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]])
-; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
+; CHECK-NEXT:    [[SEL:%.*]] = call <4 x i32> @llvm.usub.sat.v4i32(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]])
+; CHECK-NEXT:    ret <4 x i32> [[SEL]]
 ;
   %cmp = icmp ugt <4 x i32> %a, %b
   %sub = sub <4 x i32> %a, %b
@@ -98,10 +98,10 @@ define <4 x i32> @max_sub_ugt_vec(<4 x i32> %a, <4 x i32> %b) {
 
 define i64 @max_sub_ult(i64 %a, i64 %b) {
 ; CHECK-LABEL: @max_sub_ult(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A:%.*]], i64 [[B:%.*]])
+; CHECK-NEXT:    [[SEL:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A:%.*]], i64 [[B:%.*]])
 ; CHECK-NEXT:    [[EXTRASUB:%.*]] = sub i64 [[B]], [[A]]
 ; CHECK-NEXT:    call void @use(i64 [[EXTRASUB]])
-; CHECK-NEXT:    ret i64 [[TMP1]]
+; CHECK-NEXT:    ret i64 [[SEL]]
 ;
   %cmp = icmp ult i64 %b, %a
   %sub = sub i64 %a, %b
@@ -115,10 +115,10 @@ define i64 @max_sub_ult(i64 %a, i64 %b) {
 
 define i64 @max_sub_ugt_sel_swapped(i64 %a, i64 %b) {
 ; CHECK-LABEL: @max_sub_ugt_sel_swapped(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A:%.*]], i64 [[B:%.*]])
+; CHECK-NEXT:    [[SEL:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A:%.*]], i64 [[B:%.*]])
 ; CHECK-NEXT:    [[EXTRASUB:%.*]] = sub i64 [[B]], [[A]]
 ; CHECK-NEXT:    call void @use(i64 [[EXTRASUB]])
-; CHECK-NEXT:    ret i64 [[TMP1]]
+; CHECK-NEXT:    ret i64 [[SEL]]
 ;
   %cmp = icmp ugt i64 %b, %a
   %sub = sub i64 %a, %b
@@ -132,8 +132,8 @@ define i64 @max_sub_ugt_sel_swapped(i64 %a, i64 %b) {
 
 define i64 @max_sub_ult_sel_swapped(i64 %a, i64 %b) {
 ; CHECK-LABEL: @max_sub_ult_sel_swapped(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A:%.*]], i64 [[B:%.*]])
-; CHECK-NEXT:    ret i64 [[TMP1]]
+; CHECK-NEXT:    [[SEL:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A:%.*]], i64 [[B:%.*]])
+; CHECK-NEXT:    ret i64 [[SEL]]
 ;
   %cmp = icmp ult i64 %a, %b
   %sub = sub i64 %a, %b
@@ -146,10 +146,10 @@ define i64 @max_sub_ult_sel_swapped(i64 %a, i64 %b) {
 define i64 @neg_max_sub_ugt(i64 %a, i64 %b) {
 ; CHECK-LABEL: @neg_max_sub_ugt(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A:%.*]], i64 [[B:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 0, [[TMP1]]
+; CHECK-NEXT:    [[SEL:%.*]] = sub i64 0, [[TMP1]]
 ; CHECK-NEXT:    [[EXTRASUB:%.*]] = sub i64 [[A]], [[B]]
 ; CHECK-NEXT:    call void @use(i64 [[EXTRASUB]])
-; CHECK-NEXT:    ret i64 [[TMP2]]
+; CHECK-NEXT:    ret i64 [[SEL]]
 ;
   %cmp = icmp ugt i64 %a, %b
   %sub = sub i64 %b, %a
@@ -164,8 +164,8 @@ define i64 @neg_max_sub_ugt(i64 %a, i64 %b) {
 define i64 @neg_max_sub_ult(i64 %a, i64 %b) {
 ; CHECK-LABEL: @neg_max_sub_ult(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A:%.*]], i64 [[B:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 0, [[TMP1]]
-; CHECK-NEXT:    ret i64 [[TMP2]]
+; CHECK-NEXT:    [[SEL:%.*]] = sub i64 0, [[TMP1]]
+; CHECK-NEXT:    ret i64 [[SEL]]
 ;
   %cmp = icmp ult i64 %b, %a
   %sub = sub i64 %b, %a
@@ -178,8 +178,8 @@ define i64 @neg_max_sub_ult(i64 %a, i64 %b) {
 define i64 @neg_max_sub_ugt_sel_swapped(i64 %a, i64 %b) {
 ; CHECK-LABEL: @neg_max_sub_ugt_sel_swapped(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A:%.*]], i64 [[B:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 0, [[TMP1]]
-; CHECK-NEXT:    ret i64 [[TMP2]]
+; CHECK-NEXT:    [[SEL:%.*]] = sub i64 0, [[TMP1]]
+; CHECK-NEXT:    ret i64 [[SEL]]
 ;
   %cmp = icmp ugt i64 %b, %a
   %sub = sub i64 %b, %a
@@ -191,9 +191,9 @@ define i64 @neg_max_sub_ugt_sel_swapped_extrause1(i64 %a, i64 %b) {
 ; CHECK-LABEL: @neg_max_sub_ugt_sel_swapped_extrause1(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A]], i64 [[B]])
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 0, [[TMP1]]
+; CHECK-NEXT:    [[SEL:%.*]] = sub i64 0, [[TMP1]]
 ; CHECK-NEXT:    call void @usei1(i1 [[CMP]])
-; CHECK-NEXT:    ret i64 [[TMP2]]
+; CHECK-NEXT:    ret i64 [[SEL]]
 ;
   %cmp = icmp ugt i64 %b, %a
   %sub = sub i64 %b, %a
@@ -206,9 +206,9 @@ define i64 @neg_max_sub_ugt_sel_swapped_extrause2(i64 %a, i64 %b) {
 ; CHECK-LABEL: @neg_max_sub_ugt_sel_swapped_extrause2(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A]], i64 [[B]])
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 0, [[TMP1]]
+; CHECK-NEXT:    [[SEL:%.*]] = sub i64 0, [[TMP1]]
 ; CHECK-NEXT:    call void @use(i64 [[SUB]])
-; CHECK-NEXT:    ret i64 [[TMP2]]
+; CHECK-NEXT:    ret i64 [[SEL]]
 ;
   %cmp = icmp ugt i64 %b, %a
   %sub = sub i64 %b, %a
@@ -239,10 +239,10 @@ define i64 @neg_max_sub_ugt_sel_swapped_extrause3(i64 %a, i64 %b) {
 define i64 @neg_max_sub_ult_sel_swapped(i64 %a, i64 %b) {
 ; CHECK-LABEL: @neg_max_sub_ult_sel_swapped(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A:%.*]], i64 [[B:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 0, [[TMP1]]
+; CHECK-NEXT:    [[SEL:%.*]] = sub i64 0, [[TMP1]]
 ; CHECK-NEXT:    [[EXTRASUB:%.*]] = sub i64 [[A]], [[B]]
 ; CHECK-NEXT:    call void @use(i64 [[EXTRASUB]])
-; CHECK-NEXT:    ret i64 [[TMP2]]
+; CHECK-NEXT:    ret i64 [[SEL]]
 ;
   %cmp = icmp ult i64 %a, %b
   %sub = sub i64 %b, %a
@@ -254,8 +254,8 @@ define i64 @neg_max_sub_ult_sel_swapped(i64 %a, i64 %b) {
 
 define i32 @max_sub_ugt_c1(i32 %a) {
 ; CHECK-LABEL: @max_sub_ugt_c1(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[A:%.*]], i32 1)
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[SEL:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[A:%.*]], i32 1)
+; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %cmp = icmp ugt i32 %a, 1
   %sub = add i32 %a, -1
@@ -276,8 +276,8 @@ define i32 @max_sub_ugt_c01(i32 %a) {
 
 define i32 @max_sub_ugt_c10(i32 %a) {
 ; CHECK-LABEL: @max_sub_ugt_c10(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[A:%.*]], i32 10)
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[SEL:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[A:%.*]], i32 10)
+; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %cmp = icmp ugt i32 %a, 10
   %sub = add i32 %a, -10
@@ -349,8 +349,8 @@ define i32 @max_sub_ult_c1(i32 %a) {
 define i32 @max_sub_ult_c2(i32 %a) {
 ; CHECK-LABEL: @max_sub_ult_c2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.usub.sat.i32(i32 2, i32 [[A:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw i32 0, [[TMP1]]
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[SEL:%.*]] = sub nsw i32 0, [[TMP1]]
+; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %cmp = icmp ult i32 %a, 2
   %sub = add i32 %a, -2
@@ -362,9 +362,9 @@ define i32 @max_sub_ult_c2_oneuseicmp(i32 %a) {
 ; CHECK-LABEL: @max_sub_ult_c2_oneuseicmp(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[A:%.*]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.usub.sat.i32(i32 2, i32 [[A]])
-; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw i32 0, [[TMP1]]
+; CHECK-NEXT:    [[SEL:%.*]] = sub nsw i32 0, [[TMP1]]
 ; CHECK-NEXT:    call void @usei1(i1 [[CMP]])
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %cmp = icmp ult i32 %a, 2
   %sub = add i32 %a, -2
@@ -377,9 +377,9 @@ define i32 @max_sub_ult_c2_oneusesub(i32 %a) {
 ; CHECK-LABEL: @max_sub_ult_c2_oneusesub(
 ; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[A:%.*]], -2
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.usub.sat.i32(i32 2, i32 [[A]])
-; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw i32 0, [[TMP1]]
+; CHECK-NEXT:    [[SEL:%.*]] = sub nsw i32 0, [[TMP1]]
 ; CHECK-NEXT:    call void @usei32(i32 [[SUB]])
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %cmp = icmp ult i32 %a, 2
   %sub = add i32 %a, -2

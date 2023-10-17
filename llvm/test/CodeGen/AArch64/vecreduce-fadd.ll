@@ -172,8 +172,8 @@ define half @add_2H(<16 x half> %bin.rdx)  {
 ; CHECKNOFP16-NEXT:    mov h5, v0.h[6]
 ; CHECKNOFP16-NEXT:    mov h0, v0.h[7]
 ; CHECKNOFP16-NEXT:    fadd s2, s2, s3
-; CHECKNOFP16-NEXT:    mov h3, v1.h[6]
-; CHECKNOFP16-NEXT:    fcvt h4, s4
+; CHECKNOFP16-NEXT:    fcvt h3, s4
+; CHECKNOFP16-NEXT:    mov h4, v1.h[6]
 ; CHECKNOFP16-NEXT:    fcvt s5, h5
 ; CHECKNOFP16-NEXT:    mov h1, v1.h[7]
 ; CHECKNOFP16-NEXT:    fcvt s0, h0
@@ -182,15 +182,15 @@ define half @add_2H(<16 x half> %bin.rdx)  {
 ; CHECKNOFP16-NEXT:    fcvt s4, h4
 ; CHECKNOFP16-NEXT:    fcvt s1, h1
 ; CHECKNOFP16-NEXT:    fcvt s2, h2
-; CHECKNOFP16-NEXT:    fadd s3, s5, s3
 ; CHECKNOFP16-NEXT:    fadd s0, s0, s1
-; CHECKNOFP16-NEXT:    fadd s2, s2, s4
-; CHECKNOFP16-NEXT:    fcvt h3, s3
+; CHECKNOFP16-NEXT:    fadd s2, s2, s3
+; CHECKNOFP16-NEXT:    fadd s3, s5, s4
 ; CHECKNOFP16-NEXT:    fcvt h0, s0
 ; CHECKNOFP16-NEXT:    fcvt h2, s2
-; CHECKNOFP16-NEXT:    fcvt s3, h3
+; CHECKNOFP16-NEXT:    fcvt h3, s3
 ; CHECKNOFP16-NEXT:    fcvt s0, h0
 ; CHECKNOFP16-NEXT:    fcvt s2, h2
+; CHECKNOFP16-NEXT:    fcvt s3, h3
 ; CHECKNOFP16-NEXT:    fadd s2, s2, s3
 ; CHECKNOFP16-NEXT:    fcvt h1, s2
 ; CHECKNOFP16-NEXT:    fcvt s1, h1
@@ -227,7 +227,7 @@ define float @add_S_init_42(<4 x float> %bin.rdx)  {
 ; CHECK-LABEL: add_S_init_42:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    faddp v0.4s, v0.4s, v0.4s
-; CHECK-NEXT:    mov w8, #1109917696
+; CHECK-NEXT:    mov w8, #1109917696 // =0x42280000
 ; CHECK-NEXT:    fmov s1, w8
 ; CHECK-NEXT:    faddp s0, v0.2s
 ; CHECK-NEXT:    fadd s0, s0, s1
@@ -236,7 +236,7 @@ define float @add_S_init_42(<4 x float> %bin.rdx)  {
   ret float %r
 }
 
-; FIXME: The faddp.4s in the loop should not use v0.4s as second operand,
+; The faddp.4s in the loop should not use v0.4s as second operand,
 ; because this introduces an unnecessary cross-iteration dependency.
 define float @fadd_reduction_v4f32_in_loop(ptr %ptr.start) {
 ; CHECK-LABEL: fadd_reduction_v4f32_in_loop:
@@ -273,7 +273,7 @@ exit:
   ret float %red.next
 }
 
-; FIXME: The faddp.4h in the loop should not use v0.4h as second operand,
+; The faddp.4h in the loop should not use v0.4h as second operand,
 ; because this introduces an unnecessary cross-iteration dependency.
 define half @fadd_reduction_v4f16_in_loop(ptr %ptr.start) {
 ; FULLFP16-LABEL: fadd_reduction_v4f16_in_loop:
@@ -294,9 +294,8 @@ define half @fadd_reduction_v4f16_in_loop(ptr %ptr.start) {
 ;
 ; CHECKNOFP16-LABEL: fadd_reduction_v4f16_in_loop:
 ; CHECKNOFP16:       // %bb.0: // %entry
-; CHECKNOFP16-NEXT:    adrp x9, .LCPI10_0
+; CHECKNOFP16-NEXT:    movi d0, #0000000000000000
 ; CHECKNOFP16-NEXT:    mov x8, xzr
-; CHECKNOFP16-NEXT:    ldr h0, [x9, :lo12:.LCPI10_0]
 ; CHECKNOFP16-NEXT:  .LBB10_1: // %loop
 ; CHECKNOFP16-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECKNOFP16-NEXT:    ldr d1, [x0, x8]
@@ -343,7 +342,7 @@ exit:
   ret half %red.next
 }
 
-; FIXME: The faddp.8h in the loop should not use v0.8h as second operand,
+; The faddp.8h in the loop should not use v0.8h as second operand,
 ; because this introduces an unnecessary cross-iteration dependency.
 define half @fadd_reduction_v8f16_in_loop(ptr %ptr.start) {
 ; FULLFP16-LABEL: fadd_reduction_v8f16_in_loop:
@@ -365,9 +364,8 @@ define half @fadd_reduction_v8f16_in_loop(ptr %ptr.start) {
 ;
 ; CHECKNOFP16-LABEL: fadd_reduction_v8f16_in_loop:
 ; CHECKNOFP16:       // %bb.0: // %entry
-; CHECKNOFP16-NEXT:    adrp x9, .LCPI11_0
+; CHECKNOFP16-NEXT:    movi d0, #0000000000000000
 ; CHECKNOFP16-NEXT:    mov x8, xzr
-; CHECKNOFP16-NEXT:    ldr h0, [x9, :lo12:.LCPI11_0]
 ; CHECKNOFP16-NEXT:  .LBB11_1: // %loop
 ; CHECKNOFP16-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECKNOFP16-NEXT:    ldr q1, [x0, x8]
@@ -432,6 +430,188 @@ loop:
 
 exit:
   ret half %red.next
+}
+
+
+define half @fadd_reduct_reassoc_v8f16(<8 x half> %a, <8 x half> %b) {
+; FULLFP16-LABEL: fadd_reduct_reassoc_v8f16:
+; FULLFP16:       // %bb.0:
+; FULLFP16-NEXT:    fadd v0.8h, v0.8h, v1.8h
+; FULLFP16-NEXT:    faddp v1.8h, v0.8h, v0.8h
+; FULLFP16-NEXT:    faddp v0.8h, v1.8h, v0.8h
+; FULLFP16-NEXT:    faddp h0, v0.2h
+; FULLFP16-NEXT:    ret
+;
+; CHECKNOFP16-LABEL: fadd_reduct_reassoc_v8f16:
+; CHECKNOFP16:       // %bb.0:
+; CHECKNOFP16-NEXT:    mov h2, v0.h[1]
+; CHECKNOFP16-NEXT:    mov h3, v1.h[1]
+; CHECKNOFP16-NEXT:    fcvt s4, h0
+; CHECKNOFP16-NEXT:    fcvt s5, h1
+; CHECKNOFP16-NEXT:    fcvt s2, h2
+; CHECKNOFP16-NEXT:    fcvt s3, h3
+; CHECKNOFP16-NEXT:    fadd s2, s4, s2
+; CHECKNOFP16-NEXT:    fadd s3, s5, s3
+; CHECKNOFP16-NEXT:    mov h4, v0.h[2]
+; CHECKNOFP16-NEXT:    mov h5, v1.h[2]
+; CHECKNOFP16-NEXT:    fcvt h2, s2
+; CHECKNOFP16-NEXT:    fcvt h3, s3
+; CHECKNOFP16-NEXT:    fcvt s4, h4
+; CHECKNOFP16-NEXT:    fcvt s5, h5
+; CHECKNOFP16-NEXT:    fcvt s2, h2
+; CHECKNOFP16-NEXT:    fcvt s3, h3
+; CHECKNOFP16-NEXT:    fadd s2, s2, s4
+; CHECKNOFP16-NEXT:    fadd s3, s3, s5
+; CHECKNOFP16-NEXT:    mov h4, v0.h[3]
+; CHECKNOFP16-NEXT:    mov h5, v1.h[3]
+; CHECKNOFP16-NEXT:    fcvt h2, s2
+; CHECKNOFP16-NEXT:    fcvt h3, s3
+; CHECKNOFP16-NEXT:    fcvt s4, h4
+; CHECKNOFP16-NEXT:    fcvt s5, h5
+; CHECKNOFP16-NEXT:    fcvt s2, h2
+; CHECKNOFP16-NEXT:    fcvt s3, h3
+; CHECKNOFP16-NEXT:    fadd s2, s2, s4
+; CHECKNOFP16-NEXT:    fadd s3, s3, s5
+; CHECKNOFP16-NEXT:    mov h4, v0.h[4]
+; CHECKNOFP16-NEXT:    mov h5, v1.h[4]
+; CHECKNOFP16-NEXT:    fcvt h2, s2
+; CHECKNOFP16-NEXT:    fcvt h3, s3
+; CHECKNOFP16-NEXT:    fcvt s4, h4
+; CHECKNOFP16-NEXT:    fcvt s5, h5
+; CHECKNOFP16-NEXT:    fcvt s2, h2
+; CHECKNOFP16-NEXT:    fcvt s3, h3
+; CHECKNOFP16-NEXT:    fadd s2, s2, s4
+; CHECKNOFP16-NEXT:    fadd s3, s3, s5
+; CHECKNOFP16-NEXT:    mov h4, v0.h[5]
+; CHECKNOFP16-NEXT:    mov h5, v1.h[5]
+; CHECKNOFP16-NEXT:    fcvt h2, s2
+; CHECKNOFP16-NEXT:    fcvt h3, s3
+; CHECKNOFP16-NEXT:    fcvt s4, h4
+; CHECKNOFP16-NEXT:    fcvt s5, h5
+; CHECKNOFP16-NEXT:    fcvt s2, h2
+; CHECKNOFP16-NEXT:    fcvt s3, h3
+; CHECKNOFP16-NEXT:    fadd s2, s2, s4
+; CHECKNOFP16-NEXT:    fadd s3, s3, s5
+; CHECKNOFP16-NEXT:    mov h4, v0.h[6]
+; CHECKNOFP16-NEXT:    mov h5, v1.h[6]
+; CHECKNOFP16-NEXT:    mov h1, v1.h[7]
+; CHECKNOFP16-NEXT:    mov h0, v0.h[7]
+; CHECKNOFP16-NEXT:    fcvt h2, s2
+; CHECKNOFP16-NEXT:    fcvt h3, s3
+; CHECKNOFP16-NEXT:    fcvt s4, h4
+; CHECKNOFP16-NEXT:    fcvt s5, h5
+; CHECKNOFP16-NEXT:    fcvt s0, h0
+; CHECKNOFP16-NEXT:    fcvt s1, h1
+; CHECKNOFP16-NEXT:    fcvt s2, h2
+; CHECKNOFP16-NEXT:    fcvt s3, h3
+; CHECKNOFP16-NEXT:    fadd s2, s2, s4
+; CHECKNOFP16-NEXT:    fadd s3, s3, s5
+; CHECKNOFP16-NEXT:    fcvt h2, s2
+; CHECKNOFP16-NEXT:    fcvt h3, s3
+; CHECKNOFP16-NEXT:    fcvt s2, h2
+; CHECKNOFP16-NEXT:    fcvt s3, h3
+; CHECKNOFP16-NEXT:    fadd s0, s2, s0
+; CHECKNOFP16-NEXT:    fadd s1, s3, s1
+; CHECKNOFP16-NEXT:    fcvt h0, s0
+; CHECKNOFP16-NEXT:    fcvt h1, s1
+; CHECKNOFP16-NEXT:    fcvt s1, h1
+; CHECKNOFP16-NEXT:    fcvt s0, h0
+; CHECKNOFP16-NEXT:    fadd s0, s0, s1
+; CHECKNOFP16-NEXT:    fcvt h0, s0
+; CHECKNOFP16-NEXT:    ret
+  %r1 = call fast half @llvm.vector.reduce.fadd.f16.v8f16(half -0.0, <8 x half> %a)
+  %r2 = call fast half @llvm.vector.reduce.fadd.f16.v8f16(half -0.0, <8 x half> %b)
+  %r = fadd fast half %r1, %r2
+  ret half %r
+}
+
+define float @fadd_reduct_reassoc_v8f32(<8 x float> %a, <8 x float> %b) {
+; CHECK-LABEL: fadd_reduct_reassoc_v8f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fadd v2.4s, v2.4s, v3.4s
+; CHECK-NEXT:    fadd v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    fadd v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    faddp v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    faddp s0, v0.2s
+; CHECK-NEXT:    ret
+  %r1 = call fast float @llvm.vector.reduce.fadd.f32.v8f32(float -0.0, <8 x float> %a)
+  %r2 = call fast float @llvm.vector.reduce.fadd.f32.v8f32(float -0.0, <8 x float> %b)
+  %r = fadd fast float %r1, %r2
+  ret float %r
+}
+
+define float @fadd_reduct_reassoc_v4f32(<4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: fadd_reduct_reassoc_v4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fadd v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    faddp v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    faddp s0, v0.2s
+; CHECK-NEXT:    ret
+  %r1 = call fast float @llvm.vector.reduce.fadd.f32.v4f32(float -0.0, <4 x float> %a)
+  %r2 = call fast float @llvm.vector.reduce.fadd.f32.v4f32(float -0.0, <4 x float> %b)
+  %r = fadd fast float %r1, %r2
+  ret float %r
+}
+
+define float @fadd_reduct_reassoc_v4f32_init(float %i, <4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: fadd_reduct_reassoc_v4f32_init:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    faddp v1.4s, v1.4s, v1.4s
+; CHECK-NEXT:    faddp v2.4s, v2.4s, v2.4s
+; CHECK-NEXT:    faddp s1, v1.2s
+; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    faddp s1, v2.2s
+; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    ret
+  %r1 = call fast float @llvm.vector.reduce.fadd.f32.v4f32(float %i, <4 x float> %a)
+  %r2 = call fast float @llvm.vector.reduce.fadd.f32.v4f32(float -0.0, <4 x float> %b)
+  %r = fadd fast float %r1, %r2
+  ret float %r
+}
+
+define float @fadd_reduct_reassoc_v4v8f32(<4 x float> %a, <8 x float> %b) {
+; CHECK-LABEL: fadd_reduct_reassoc_v4v8f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fadd v1.4s, v1.4s, v2.4s
+; CHECK-NEXT:    fadd v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    faddp v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    faddp s0, v0.2s
+; CHECK-NEXT:    ret
+  %r1 = call fast float @llvm.vector.reduce.fadd.f32.v4f32(float -0.0, <4 x float> %a)
+  %r2 = call fast float @llvm.vector.reduce.fadd.f32.v8f32(float -0.0, <8 x float> %b)
+  %r = fadd fast float %r1, %r2
+  ret float %r
+}
+
+define double @fadd_reduct_reassoc_v4f64(<4 x double> %a, <4 x double> %b) {
+; CHECK-LABEL: fadd_reduct_reassoc_v4f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fadd v2.2d, v2.2d, v3.2d
+; CHECK-NEXT:    fadd v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    fadd v0.2d, v0.2d, v2.2d
+; CHECK-NEXT:    faddp d0, v0.2d
+; CHECK-NEXT:    ret
+  %r1 = call fast double @llvm.vector.reduce.fadd.f64.v4f64(double -0.0, <4 x double> %a)
+  %r2 = call fast double @llvm.vector.reduce.fadd.f64.v4f64(double -0.0, <4 x double> %b)
+  %r = fadd fast double %r1, %r2
+  ret double %r
+}
+
+define float @fadd_reduct_reassoc_v4f32_extrause(<4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: fadd_reduct_reassoc_v4f32_extrause:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    faddp v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    faddp v1.4s, v1.4s, v1.4s
+; CHECK-NEXT:    faddp s0, v0.2s
+; CHECK-NEXT:    faddp s1, v1.2s
+; CHECK-NEXT:    fadd s1, s0, s1
+; CHECK-NEXT:    fmul s0, s1, s0
+; CHECK-NEXT:    ret
+  %r1 = call fast float @llvm.vector.reduce.fadd.f32.v4f32(float -0.0, <4 x float> %a)
+  %r2 = call fast float @llvm.vector.reduce.fadd.f32.v4f32(float -0.0, <4 x float> %b)
+  %r = fadd fast float %r1, %r2
+  %p = fmul float %r, %r1
+  ret float %p
 }
 
 ; Function Attrs: nounwind readnone

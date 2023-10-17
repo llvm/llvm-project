@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief Uniformity info and uniformity-aware uniform info for Machine IR
+/// \brief Machine IR instance of the generic uniformity analysis
 //
 //===----------------------------------------------------------------------===//
 
@@ -24,11 +24,13 @@ namespace llvm {
 extern template class GenericUniformityInfo<MachineSSAContext>;
 using MachineUniformityInfo = GenericUniformityInfo<MachineSSAContext>;
 
-/// \brief Compute the uniform information of a Machine IR function.
-MachineUniformityInfo
-computeMachineUniformityInfo(MachineFunction &F,
-                             const MachineCycleInfo &cycleInfo,
-                             const MachineDomTree &domTree);
+/// \brief Compute uniformity information for a Machine IR function.
+///
+/// If \p HasBranchDivergence is false, produces a dummy result which assumes
+/// everything is uniform.
+MachineUniformityInfo computeMachineUniformityInfo(
+    MachineFunction &F, const MachineCycleInfo &cycleInfo,
+    const MachineDomTree &domTree, bool HasBranchDivergence);
 
 } // namespace llvm
 

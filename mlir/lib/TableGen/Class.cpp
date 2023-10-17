@@ -93,6 +93,17 @@ void MethodSignature::writeDefTo(raw_indented_ostream &os,
   os << ")";
 }
 
+void MethodSignature::writeTemplateParamsTo(
+    mlir::raw_indented_ostream &os) const {
+  if (templateParams.empty())
+    return;
+
+  os << "template <";
+  llvm::interleaveComma(templateParams, os,
+                        [&](StringRef param) { os << "typename " << param; });
+  os << ">\n";
+}
+
 //===----------------------------------------------------------------------===//
 // MethodBody definitions
 //===----------------------------------------------------------------------===//
@@ -114,6 +125,12 @@ void MethodBody::writeTo(raw_indented_ostream &os) const {
 //===----------------------------------------------------------------------===//
 
 void Method::writeDeclTo(raw_indented_ostream &os) const {
+  methodSignature.writeTemplateParamsTo(os);
+  if (deprecationMessage) {
+    os << "[[deprecated(\"";
+    os.write_escaped(*deprecationMessage);
+    os << "\")]]\n";
+  }
   if (isStatic())
     os << "static ";
   if (properties & ConstexprValue)
@@ -148,6 +165,7 @@ void Method::writeDefTo(raw_indented_ostream &os, StringRef namePrefix) const {
 //===----------------------------------------------------------------------===//
 
 void Constructor::writeDeclTo(raw_indented_ostream &os) const {
+  methodSignature.writeTemplateParamsTo(os);
   if (properties & ConstexprValue)
     os << "constexpr ";
   methodSignature.writeDeclTo(os);

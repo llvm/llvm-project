@@ -18,8 +18,8 @@ define zeroext i1 @saddo1.i32(i32 %v1, i32 %v2, ptr %res) {
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    adds w8, w0, w1
 ; FAST-NEXT:    cset w9, vs
-; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    str w8, [x2]
+; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: saddo1.i32:
@@ -49,8 +49,8 @@ define zeroext i1 @saddo2.i32(i32 %v1, ptr %res) {
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    adds w8, w0, #4
 ; FAST-NEXT:    cset w9, vs
-; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    str w8, [x1]
+; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: saddo2.i32:
@@ -80,8 +80,8 @@ define zeroext i1 @saddo3.i32(i32 %v1, ptr %res) {
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    subs w8, w0, #4
 ; FAST-NEXT:    cset w9, vs
-; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    str w8, [x1]
+; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: saddo3.i32:
@@ -102,7 +102,7 @@ entry:
 define zeroext i1 @saddo4.i32(i32 %v1, ptr %res) {
 ; SDAG-LABEL: saddo4.i32:
 ; SDAG:       // %bb.0: // %entry
-; SDAG-NEXT:    mov w8, #16777215
+; SDAG-NEXT:    mov w8, #16777215 // =0xffffff
 ; SDAG-NEXT:    adds w8, w0, w8
 ; SDAG-NEXT:    cset w0, vs
 ; SDAG-NEXT:    str w8, [x1]
@@ -110,16 +110,16 @@ define zeroext i1 @saddo4.i32(i32 %v1, ptr %res) {
 ;
 ; FAST-LABEL: saddo4.i32:
 ; FAST:       // %bb.0: // %entry
-; FAST-NEXT:    mov w8, #16777215
+; FAST-NEXT:    mov w8, #16777215 // =0xffffff
 ; FAST-NEXT:    adds w8, w0, w8
 ; FAST-NEXT:    cset w9, vs
-; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    str w8, [x1]
+; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: saddo4.i32:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    mov w8, #16777215
+; GISEL-NEXT:    mov w8, #16777215 // =0xffffff
 ; GISEL-NEXT:    adds w8, w0, w8
 ; GISEL-NEXT:    cset w0, vs
 ; GISEL-NEXT:    str w8, [x1]
@@ -176,8 +176,8 @@ define zeroext i1 @saddo1.i64(i64 %v1, i64 %v2, ptr %res) {
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    adds x8, x0, x1
 ; FAST-NEXT:    cset w9, vs
-; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    str x8, [x2]
+; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: saddo1.i64:
@@ -206,8 +206,8 @@ define zeroext i1 @saddo2.i64(i64 %v1, ptr %res) {
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    adds x8, x0, #4
 ; FAST-NEXT:    cset w9, vs
-; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    str x8, [x1]
+; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: saddo2.i64:
@@ -236,8 +236,8 @@ define zeroext i1 @saddo3.i64(i64 %v1, ptr %res) {
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    subs x8, x0, #4
 ; FAST-NEXT:    cset w9, vs
-; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    str x8, [x1]
+; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: saddo3.i64:
@@ -266,8 +266,8 @@ define zeroext i1 @uaddo.i32(i32 %v1, i32 %v2, ptr %res) {
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    adds w8, w0, w1
 ; FAST-NEXT:    cset w9, hs
-; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    str w8, [x2]
+; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: uaddo.i32:
@@ -296,8 +296,8 @@ define zeroext i1 @uaddo.i64(i64 %v1, i64 %v2, ptr %res) {
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    adds x8, x0, x1
 ; FAST-NEXT:    cset w9, hs
-; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    str x8, [x2]
+; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: uaddo.i64:
@@ -326,8 +326,8 @@ define zeroext i1 @ssubo1.i32(i32 %v1, i32 %v2, ptr %res) {
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    subs w8, w0, w1
 ; FAST-NEXT:    cset w9, vs
-; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    str w8, [x2]
+; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: ssubo1.i32:
@@ -356,8 +356,8 @@ define zeroext i1 @ssubo2.i32(i32 %v1, ptr %res) {
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    adds w8, w0, #4
 ; FAST-NEXT:    cset w9, vs
-; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    str w8, [x1]
+; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: ssubo2.i32:
@@ -386,8 +386,8 @@ define zeroext i1 @ssubo.i64(i64 %v1, i64 %v2, ptr %res) {
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    subs x8, x0, x1
 ; FAST-NEXT:    cset w9, vs
-; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    str x8, [x2]
+; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: ssubo.i64:
@@ -416,8 +416,8 @@ define zeroext i1 @usubo.i32(i32 %v1, i32 %v2, ptr %res) {
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    subs w8, w0, w1
 ; FAST-NEXT:    cset w9, lo
-; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    str w8, [x2]
+; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: usubo.i32:
@@ -446,8 +446,8 @@ define zeroext i1 @usubo.i64(i64 %v1, i64 %v2, ptr %res) {
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    subs x8, x0, x1
 ; FAST-NEXT:    cset w9, lo
-; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    str x8, [x2]
+; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: usubo.i64:
@@ -469,16 +469,16 @@ define zeroext i1 @smulo.i32(i32 %v1, i32 %v2, ptr %res) {
 ; SDAG:       // %bb.0: // %entry
 ; SDAG-NEXT:    smull x8, w0, w1
 ; SDAG-NEXT:    cmp x8, w8, sxtw
-; SDAG-NEXT:    cset w0, ne
 ; SDAG-NEXT:    str w8, [x2]
+; SDAG-NEXT:    cset w0, ne
 ; SDAG-NEXT:    ret
 ;
 ; FAST-LABEL: smulo.i32:
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    smull x8, w0, w1
 ; FAST-NEXT:    cmp x8, w8, sxtw
-; FAST-NEXT:    cset w9, ne
 ; FAST-NEXT:    str w8, [x2]
+; FAST-NEXT:    cset w9, ne
 ; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    ret
 ;
@@ -487,9 +487,9 @@ define zeroext i1 @smulo.i32(i32 %v1, i32 %v2, ptr %res) {
 ; GISEL-NEXT:    smull x8, w0, w1
 ; GISEL-NEXT:    mul w9, w0, w1
 ; GISEL-NEXT:    asr x8, x8, #32
+; GISEL-NEXT:    str w9, [x2]
 ; GISEL-NEXT:    cmp w8, w9, asr #31
 ; GISEL-NEXT:    cset w0, ne
-; GISEL-NEXT:    str w9, [x2]
 ; GISEL-NEXT:    ret
 entry:
   %t = call {i32, i1} @llvm.smul.with.overflow.i32(i32 %v1, i32 %v2)
@@ -504,28 +504,28 @@ define zeroext i1 @smulo.i64(i64 %v1, i64 %v2, ptr %res) {
 ; SDAG:       // %bb.0: // %entry
 ; SDAG-NEXT:    mul x8, x0, x1
 ; SDAG-NEXT:    smulh x9, x0, x1
+; SDAG-NEXT:    str x8, [x2]
 ; SDAG-NEXT:    cmp x9, x8, asr #63
 ; SDAG-NEXT:    cset w0, ne
-; SDAG-NEXT:    str x8, [x2]
 ; SDAG-NEXT:    ret
 ;
 ; FAST-LABEL: smulo.i64:
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    mul x8, x0, x1
 ; FAST-NEXT:    smulh x9, x0, x1
+; FAST-NEXT:    str x8, [x2]
 ; FAST-NEXT:    cmp x9, x8, asr #63
 ; FAST-NEXT:    cset w9, ne
-; FAST-NEXT:    str x8, [x2]
 ; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: smulo.i64:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    mul x8, x0, x1
-; GISEL-NEXT:    smulh x9, x0, x1
-; GISEL-NEXT:    cmp x9, x8, asr #63
+; GISEL-NEXT:    smulh x8, x0, x1
+; GISEL-NEXT:    mul x9, x0, x1
+; GISEL-NEXT:    cmp x8, x9, asr #63
+; GISEL-NEXT:    str x9, [x2]
 ; GISEL-NEXT:    cset w0, ne
-; GISEL-NEXT:    str x8, [x2]
 ; GISEL-NEXT:    ret
 entry:
   %t = call {i64, i1} @llvm.smul.with.overflow.i64(i64 %v1, i64 %v2)
@@ -547,8 +547,8 @@ define zeroext i1 @smulo2.i64(i64 %v1, ptr %res) {
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    adds x8, x0, x0
 ; FAST-NEXT:    cset w9, vs
-; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    str x8, [x1]
+; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: smulo2.i64:
@@ -570,17 +570,17 @@ define zeroext i1 @umulo.i32(i32 %v1, i32 %v2, ptr %res) {
 ; SDAG:       // %bb.0: // %entry
 ; SDAG-NEXT:    umull x8, w0, w1
 ; SDAG-NEXT:    tst x8, #0xffffffff00000000
-; SDAG-NEXT:    cset w0, ne
 ; SDAG-NEXT:    str w8, [x2]
+; SDAG-NEXT:    cset w0, ne
 ; SDAG-NEXT:    ret
 ;
 ; FAST-LABEL: umulo.i32:
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    umull x8, w0, w1
 ; FAST-NEXT:    tst x8, #0xffffffff00000000
+; FAST-NEXT:    str w8, [x2]
 ; FAST-NEXT:    cset w9, ne
 ; FAST-NEXT:    and w0, w9, #0x1
-; FAST-NEXT:    str w8, [x2]
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: umulo.i32:
@@ -588,10 +588,9 @@ define zeroext i1 @umulo.i32(i32 %v1, i32 %v2, ptr %res) {
 ; GISEL-NEXT:    umull x8, w0, w1
 ; GISEL-NEXT:    mul w9, w0, w1
 ; GISEL-NEXT:    lsr x8, x8, #32
-; GISEL-NEXT:    cmp w8, #0
-; GISEL-NEXT:    cset w8, ne
-; GISEL-NEXT:    mov w0, w8
 ; GISEL-NEXT:    str w9, [x2]
+; GISEL-NEXT:    cmp w8, #0
+; GISEL-NEXT:    cset w0, ne
 ; GISEL-NEXT:    ret
 entry:
   %t = call {i32, i1} @llvm.umul.with.overflow.i32(i32 %v1, i32 %v2)
@@ -607,8 +606,7 @@ define zeroext i1 @umulo.i64(i64 %v1, i64 %v2, ptr %res) {
 ; SDAG-NEXT:    umulh x8, x0, x1
 ; SDAG-NEXT:    mul x9, x0, x1
 ; SDAG-NEXT:    cmp xzr, x8
-; SDAG-NEXT:    cset w8, ne
-; SDAG-NEXT:    mov w0, w8
+; SDAG-NEXT:    cset w0, ne
 ; SDAG-NEXT:    str x9, [x2]
 ; SDAG-NEXT:    ret
 ;
@@ -618,8 +616,7 @@ define zeroext i1 @umulo.i64(i64 %v1, i64 %v2, ptr %res) {
 ; FAST-NEXT:    mul x9, x0, x1
 ; FAST-NEXT:    cmp xzr, x8
 ; FAST-NEXT:    cset w8, ne
-; FAST-NEXT:    and w8, w8, #0x1
-; FAST-NEXT:    mov w0, w8
+; FAST-NEXT:    and w0, w8, #0x1
 ; FAST-NEXT:    str x9, [x2]
 ; FAST-NEXT:    ret
 ;
@@ -628,8 +625,7 @@ define zeroext i1 @umulo.i64(i64 %v1, i64 %v2, ptr %res) {
 ; GISEL-NEXT:    umulh x8, x0, x1
 ; GISEL-NEXT:    mul x9, x0, x1
 ; GISEL-NEXT:    cmp x8, #0
-; GISEL-NEXT:    cset w8, ne
-; GISEL-NEXT:    mov w0, w8
+; GISEL-NEXT:    cset w0, ne
 ; GISEL-NEXT:    str x9, [x2]
 ; GISEL-NEXT:    ret
 entry:
@@ -652,8 +648,8 @@ define zeroext i1 @umulo2.i64(i64 %v1, ptr %res) {
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    adds x8, x0, x0
 ; FAST-NEXT:    cset w9, hs
-; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    str x8, [x1]
+; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: umulo2.i64:
@@ -1160,13 +1156,29 @@ entry:
 }
 
 define i64 @smulo.select.i64(i64 %v1, i64 %v2) {
-; CHECK-LABEL: smulo.select.i64:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mul x8, x0, x1
-; CHECK-NEXT:    smulh x9, x0, x1
-; CHECK-NEXT:    cmp x9, x8, asr #63
-; CHECK-NEXT:    csel x0, x0, x1, ne
-; CHECK-NEXT:    ret
+; SDAG-LABEL: smulo.select.i64:
+; SDAG:       // %bb.0: // %entry
+; SDAG-NEXT:    mul x8, x0, x1
+; SDAG-NEXT:    smulh x9, x0, x1
+; SDAG-NEXT:    cmp x9, x8, asr #63
+; SDAG-NEXT:    csel x0, x0, x1, ne
+; SDAG-NEXT:    ret
+;
+; FAST-LABEL: smulo.select.i64:
+; FAST:       // %bb.0: // %entry
+; FAST-NEXT:    mul x8, x0, x1
+; FAST-NEXT:    smulh x9, x0, x1
+; FAST-NEXT:    cmp x9, x8, asr #63
+; FAST-NEXT:    csel x0, x0, x1, ne
+; FAST-NEXT:    ret
+;
+; GISEL-LABEL: smulo.select.i64:
+; GISEL:       // %bb.0: // %entry
+; GISEL-NEXT:    smulh x8, x0, x1
+; GISEL-NEXT:    mul x9, x0, x1
+; GISEL-NEXT:    cmp x8, x9, asr #63
+; GISEL-NEXT:    csel x0, x0, x1, ne
+; GISEL-NEXT:    ret
 entry:
   %t = call {i64, i1} @llvm.smul.with.overflow.i64(i64 %v1, i64 %v2)
   %obit = extractvalue {i64, i1} %t, 1
@@ -1193,9 +1205,9 @@ define i1 @smulo.not.i64(i64 %v1, i64 %v2) {
 ;
 ; GISEL-LABEL: smulo.not.i64:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    mul x8, x0, x1
-; GISEL-NEXT:    smulh x9, x0, x1
-; GISEL-NEXT:    cmp x9, x8, asr #63
+; GISEL-NEXT:    smulh x8, x0, x1
+; GISEL-NEXT:    mul x9, x0, x1
+; GISEL-NEXT:    cmp x8, x9, asr #63
 ; GISEL-NEXT:    cset w8, ne
 ; GISEL-NEXT:    eor w0, w8, #0x1
 ; GISEL-NEXT:    ret
@@ -1326,29 +1338,29 @@ entry:
 define i8 @uaddo.selectboth.i8(i8 %a, i8 %b) {
 ; SDAG-LABEL: uaddo.selectboth.i8:
 ; SDAG:       // %bb.0: // %entry
-; SDAG-NEXT:    and w8, w0, #0xff
-; SDAG-NEXT:    mov w9, #10
-; SDAG-NEXT:    add w8, w8, w1, uxtb
-; SDAG-NEXT:    tst w8, #0x100
-; SDAG-NEXT:    csel w0, w8, w9, ne
+; SDAG-NEXT:    and w9, w0, #0xff
+; SDAG-NEXT:    mov w8, #10 // =0xa
+; SDAG-NEXT:    add w9, w9, w1, uxtb
+; SDAG-NEXT:    tst w9, #0x100
+; SDAG-NEXT:    csel w0, w9, w8, ne
 ; SDAG-NEXT:    ret
 ;
 ; FAST-LABEL: uaddo.selectboth.i8:
 ; FAST:       // %bb.0: // %entry
-; FAST-NEXT:    and w8, w0, #0xff
-; FAST-NEXT:    mov w9, #10
-; FAST-NEXT:    add w8, w8, w1, uxtb
-; FAST-NEXT:    tst w8, #0x100
-; FAST-NEXT:    csel w0, w8, w9, ne
+; FAST-NEXT:    and w9, w0, #0xff
+; FAST-NEXT:    mov w8, #10 // =0xa
+; FAST-NEXT:    add w9, w9, w1, uxtb
+; FAST-NEXT:    tst w9, #0x100
+; FAST-NEXT:    csel w0, w9, w8, ne
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: uaddo.selectboth.i8:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    and w8, w1, #0xff
-; GISEL-NEXT:    mov w9, #10
-; GISEL-NEXT:    add w8, w8, w0, uxtb
-; GISEL-NEXT:    cmp w8, w8, uxtb
-; GISEL-NEXT:    csel w0, w8, w9, ne
+; GISEL-NEXT:    and w9, w1, #0xff
+; GISEL-NEXT:    mov w8, #10 // =0xa
+; GISEL-NEXT:    add w9, w9, w0, uxtb
+; GISEL-NEXT:    cmp w9, w9, uxtb
+; GISEL-NEXT:    csel w0, w9, w8, ne
 ; GISEL-NEXT:    ret
 entry:
   %m = call { i8, i1 } @llvm.uadd.with.overflow.i8(i8 %a, i8 %b)
@@ -1361,29 +1373,29 @@ entry:
 define i8 @saddo.selectboth.i8(i8 %a, i8 %b) {
 ; SDAG-LABEL: saddo.selectboth.i8:
 ; SDAG:       // %bb.0: // %entry
-; SDAG-NEXT:    sxtb w8, w0
-; SDAG-NEXT:    mov w9, #10
-; SDAG-NEXT:    add w8, w8, w1, sxtb
-; SDAG-NEXT:    cmp w8, w8, sxtb
-; SDAG-NEXT:    csel w0, w8, w9, ne
+; SDAG-NEXT:    sxtb w9, w0
+; SDAG-NEXT:    mov w8, #10 // =0xa
+; SDAG-NEXT:    add w9, w9, w1, sxtb
+; SDAG-NEXT:    cmp w9, w9, sxtb
+; SDAG-NEXT:    csel w0, w9, w8, ne
 ; SDAG-NEXT:    ret
 ;
 ; FAST-LABEL: saddo.selectboth.i8:
 ; FAST:       // %bb.0: // %entry
-; FAST-NEXT:    sxtb w8, w0
-; FAST-NEXT:    mov w9, #10
-; FAST-NEXT:    add w8, w8, w1, sxtb
-; FAST-NEXT:    cmp w8, w8, sxtb
-; FAST-NEXT:    csel w0, w8, w9, ne
+; FAST-NEXT:    sxtb w9, w0
+; FAST-NEXT:    mov w8, #10 // =0xa
+; FAST-NEXT:    add w9, w9, w1, sxtb
+; FAST-NEXT:    cmp w9, w9, sxtb
+; FAST-NEXT:    csel w0, w9, w8, ne
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: saddo.selectboth.i8:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    sxtb w8, w1
-; GISEL-NEXT:    mov w9, #10
-; GISEL-NEXT:    add w8, w8, w0, sxtb
-; GISEL-NEXT:    cmp w8, w8, sxtb
-; GISEL-NEXT:    csel w0, w8, w9, ne
+; GISEL-NEXT:    sxtb w9, w1
+; GISEL-NEXT:    mov w8, #10 // =0xa
+; GISEL-NEXT:    add w9, w9, w0, sxtb
+; GISEL-NEXT:    cmp w9, w9, sxtb
+; GISEL-NEXT:    csel w0, w9, w8, ne
 ; GISEL-NEXT:    ret
 entry:
   %m = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %a, i8 %b)
@@ -1396,29 +1408,29 @@ entry:
 define i16 @uaddo.selectboth.i16(i16 %a, i16 %b) {
 ; SDAG-LABEL: uaddo.selectboth.i16:
 ; SDAG:       // %bb.0: // %entry
-; SDAG-NEXT:    and w8, w0, #0xffff
-; SDAG-NEXT:    mov w9, #10
-; SDAG-NEXT:    add w8, w8, w1, uxth
-; SDAG-NEXT:    tst w8, #0x10000
-; SDAG-NEXT:    csel w0, w8, w9, ne
+; SDAG-NEXT:    and w9, w0, #0xffff
+; SDAG-NEXT:    mov w8, #10 // =0xa
+; SDAG-NEXT:    add w9, w9, w1, uxth
+; SDAG-NEXT:    tst w9, #0x10000
+; SDAG-NEXT:    csel w0, w9, w8, ne
 ; SDAG-NEXT:    ret
 ;
 ; FAST-LABEL: uaddo.selectboth.i16:
 ; FAST:       // %bb.0: // %entry
-; FAST-NEXT:    and w8, w0, #0xffff
-; FAST-NEXT:    mov w9, #10
-; FAST-NEXT:    add w8, w8, w1, uxth
-; FAST-NEXT:    tst w8, #0x10000
-; FAST-NEXT:    csel w0, w8, w9, ne
+; FAST-NEXT:    and w9, w0, #0xffff
+; FAST-NEXT:    mov w8, #10 // =0xa
+; FAST-NEXT:    add w9, w9, w1, uxth
+; FAST-NEXT:    tst w9, #0x10000
+; FAST-NEXT:    csel w0, w9, w8, ne
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: uaddo.selectboth.i16:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    and w8, w1, #0xffff
-; GISEL-NEXT:    mov w9, #10
-; GISEL-NEXT:    add w8, w8, w0, uxth
-; GISEL-NEXT:    cmp w8, w8, uxth
-; GISEL-NEXT:    csel w0, w8, w9, ne
+; GISEL-NEXT:    and w9, w1, #0xffff
+; GISEL-NEXT:    mov w8, #10 // =0xa
+; GISEL-NEXT:    add w9, w9, w0, uxth
+; GISEL-NEXT:    cmp w9, w9, uxth
+; GISEL-NEXT:    csel w0, w9, w8, ne
 ; GISEL-NEXT:    ret
 entry:
   %m = call { i16, i1 } @llvm.uadd.with.overflow.i16(i16 %a, i16 %b)
@@ -1431,29 +1443,29 @@ entry:
 define i16 @saddo.selectboth.i16(i16 %a, i16 %b) {
 ; SDAG-LABEL: saddo.selectboth.i16:
 ; SDAG:       // %bb.0: // %entry
-; SDAG-NEXT:    sxth w8, w0
-; SDAG-NEXT:    mov w9, #10
-; SDAG-NEXT:    add w8, w8, w1, sxth
-; SDAG-NEXT:    cmp w8, w8, sxth
-; SDAG-NEXT:    csel w0, w8, w9, ne
+; SDAG-NEXT:    sxth w9, w0
+; SDAG-NEXT:    mov w8, #10 // =0xa
+; SDAG-NEXT:    add w9, w9, w1, sxth
+; SDAG-NEXT:    cmp w9, w9, sxth
+; SDAG-NEXT:    csel w0, w9, w8, ne
 ; SDAG-NEXT:    ret
 ;
 ; FAST-LABEL: saddo.selectboth.i16:
 ; FAST:       // %bb.0: // %entry
-; FAST-NEXT:    sxth w8, w0
-; FAST-NEXT:    mov w9, #10
-; FAST-NEXT:    add w8, w8, w1, sxth
-; FAST-NEXT:    cmp w8, w8, sxth
-; FAST-NEXT:    csel w0, w8, w9, ne
+; FAST-NEXT:    sxth w9, w0
+; FAST-NEXT:    mov w8, #10 // =0xa
+; FAST-NEXT:    add w9, w9, w1, sxth
+; FAST-NEXT:    cmp w9, w9, sxth
+; FAST-NEXT:    csel w0, w9, w8, ne
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: saddo.selectboth.i16:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    sxth w8, w1
-; GISEL-NEXT:    mov w9, #10
-; GISEL-NEXT:    add w8, w8, w0, sxth
-; GISEL-NEXT:    cmp w8, w8, sxth
-; GISEL-NEXT:    csel w0, w8, w9, ne
+; GISEL-NEXT:    sxth w9, w1
+; GISEL-NEXT:    mov w8, #10 // =0xa
+; GISEL-NEXT:    add w9, w9, w0, sxth
+; GISEL-NEXT:    cmp w9, w9, sxth
+; GISEL-NEXT:    csel w0, w9, w8, ne
 ; GISEL-NEXT:    ret
 entry:
   %m = call { i16, i1 } @llvm.sadd.with.overflow.i16(i16 %a, i16 %b)
@@ -1466,25 +1478,25 @@ entry:
 define i32 @uaddo.selectboth.i32(i32 %a, i32 %b) {
 ; SDAG-LABEL: uaddo.selectboth.i32:
 ; SDAG:       // %bb.0: // %entry
-; SDAG-NEXT:    adds w8, w0, w1
-; SDAG-NEXT:    mov w9, #10
-; SDAG-NEXT:    csel w0, w8, w9, hs
+; SDAG-NEXT:    mov w8, #10 // =0xa
+; SDAG-NEXT:    adds w9, w0, w1
+; SDAG-NEXT:    csel w0, w9, w8, hs
 ; SDAG-NEXT:    ret
 ;
 ; FAST-LABEL: uaddo.selectboth.i32:
 ; FAST:       // %bb.0: // %entry
-; FAST-NEXT:    adds w8, w0, w1
-; FAST-NEXT:    mov w9, #10
-; FAST-NEXT:    csel w0, w8, w9, hs
+; FAST-NEXT:    mov w8, #10 // =0xa
+; FAST-NEXT:    adds w9, w0, w1
+; FAST-NEXT:    csel w0, w9, w8, hs
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: uaddo.selectboth.i32:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    adds w8, w0, w1
-; GISEL-NEXT:    mov w10, #10
-; GISEL-NEXT:    cset w9, hs
-; GISEL-NEXT:    tst w9, #0x1
-; GISEL-NEXT:    csel w0, w8, w10, ne
+; GISEL-NEXT:    adds w9, w0, w1
+; GISEL-NEXT:    mov w8, #10 // =0xa
+; GISEL-NEXT:    cset w10, hs
+; GISEL-NEXT:    tst w10, #0x1
+; GISEL-NEXT:    csel w0, w9, w8, ne
 ; GISEL-NEXT:    ret
 entry:
   %m = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
@@ -1497,25 +1509,25 @@ entry:
 define i32 @saddo.selectboth.i32(i32 %a, i32 %b) {
 ; SDAG-LABEL: saddo.selectboth.i32:
 ; SDAG:       // %bb.0: // %entry
-; SDAG-NEXT:    adds w8, w0, w1
-; SDAG-NEXT:    mov w9, #10
-; SDAG-NEXT:    csel w0, w8, w9, vs
+; SDAG-NEXT:    mov w8, #10 // =0xa
+; SDAG-NEXT:    adds w9, w0, w1
+; SDAG-NEXT:    csel w0, w9, w8, vs
 ; SDAG-NEXT:    ret
 ;
 ; FAST-LABEL: saddo.selectboth.i32:
 ; FAST:       // %bb.0: // %entry
-; FAST-NEXT:    adds w8, w0, w1
-; FAST-NEXT:    mov w9, #10
-; FAST-NEXT:    csel w0, w8, w9, vs
+; FAST-NEXT:    mov w8, #10 // =0xa
+; FAST-NEXT:    adds w9, w0, w1
+; FAST-NEXT:    csel w0, w9, w8, vs
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: saddo.selectboth.i32:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    adds w8, w0, w1
-; GISEL-NEXT:    mov w10, #10
-; GISEL-NEXT:    cset w9, vs
-; GISEL-NEXT:    tst w9, #0x1
-; GISEL-NEXT:    csel w0, w8, w10, ne
+; GISEL-NEXT:    adds w9, w0, w1
+; GISEL-NEXT:    mov w8, #10 // =0xa
+; GISEL-NEXT:    cset w10, vs
+; GISEL-NEXT:    tst w10, #0x1
+; GISEL-NEXT:    csel w0, w9, w8, ne
 ; GISEL-NEXT:    ret
 entry:
   %m = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %a, i32 %b)
@@ -1528,25 +1540,25 @@ entry:
 define i64 @uaddo.selectboth.i64(i64 %a, i64 %b) {
 ; SDAG-LABEL: uaddo.selectboth.i64:
 ; SDAG:       // %bb.0: // %entry
-; SDAG-NEXT:    adds x8, x0, x1
-; SDAG-NEXT:    mov w9, #10
-; SDAG-NEXT:    csel x0, x8, x9, hs
+; SDAG-NEXT:    mov w8, #10 // =0xa
+; SDAG-NEXT:    adds x9, x0, x1
+; SDAG-NEXT:    csel x0, x9, x8, hs
 ; SDAG-NEXT:    ret
 ;
 ; FAST-LABEL: uaddo.selectboth.i64:
 ; FAST:       // %bb.0: // %entry
-; FAST-NEXT:    adds x8, x0, x1
-; FAST-NEXT:    mov x9, #10
-; FAST-NEXT:    csel x0, x8, x9, hs
+; FAST-NEXT:    mov x8, #10 // =0xa
+; FAST-NEXT:    adds x9, x0, x1
+; FAST-NEXT:    csel x0, x9, x8, hs
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: uaddo.selectboth.i64:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    adds x8, x0, x1
-; GISEL-NEXT:    mov w10, #10
-; GISEL-NEXT:    cset w9, hs
-; GISEL-NEXT:    tst w9, #0x1
-; GISEL-NEXT:    csel x0, x8, x10, ne
+; GISEL-NEXT:    adds x9, x0, x1
+; GISEL-NEXT:    mov w8, #10 // =0xa
+; GISEL-NEXT:    cset w10, hs
+; GISEL-NEXT:    tst w10, #0x1
+; GISEL-NEXT:    csel x0, x9, x8, ne
 ; GISEL-NEXT:    ret
 entry:
   %m = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %a, i64 %b)
@@ -1559,25 +1571,25 @@ entry:
 define i64 @saddo.selectboth.i64(i64 %a, i64 %b) {
 ; SDAG-LABEL: saddo.selectboth.i64:
 ; SDAG:       // %bb.0: // %entry
-; SDAG-NEXT:    adds x8, x0, x1
-; SDAG-NEXT:    mov w9, #10
-; SDAG-NEXT:    csel x0, x8, x9, vs
+; SDAG-NEXT:    mov w8, #10 // =0xa
+; SDAG-NEXT:    adds x9, x0, x1
+; SDAG-NEXT:    csel x0, x9, x8, vs
 ; SDAG-NEXT:    ret
 ;
 ; FAST-LABEL: saddo.selectboth.i64:
 ; FAST:       // %bb.0: // %entry
-; FAST-NEXT:    adds x8, x0, x1
-; FAST-NEXT:    mov x9, #10
-; FAST-NEXT:    csel x0, x8, x9, vs
+; FAST-NEXT:    mov x8, #10 // =0xa
+; FAST-NEXT:    adds x9, x0, x1
+; FAST-NEXT:    csel x0, x9, x8, vs
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: saddo.selectboth.i64:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    adds x8, x0, x1
-; GISEL-NEXT:    mov w10, #10
-; GISEL-NEXT:    cset w9, vs
-; GISEL-NEXT:    tst w9, #0x1
-; GISEL-NEXT:    csel x0, x8, x10, ne
+; GISEL-NEXT:    adds x9, x0, x1
+; GISEL-NEXT:    mov w8, #10 // =0xa
+; GISEL-NEXT:    cset w10, vs
+; GISEL-NEXT:    tst w10, #0x1
+; GISEL-NEXT:    csel x0, x9, x8, ne
 ; GISEL-NEXT:    ret
 entry:
   %m = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %a, i64 %b)
@@ -1590,29 +1602,29 @@ entry:
 define i8 @usubo.selectboth.i8(i8 %a, i8 %b) {
 ; SDAG-LABEL: usubo.selectboth.i8:
 ; SDAG:       // %bb.0: // %entry
-; SDAG-NEXT:    and w8, w0, #0xff
-; SDAG-NEXT:    mov w9, #10
-; SDAG-NEXT:    sub w8, w8, w1, uxtb
-; SDAG-NEXT:    tst w8, #0xffffff00
-; SDAG-NEXT:    csel w0, w8, w9, ne
+; SDAG-NEXT:    and w9, w0, #0xff
+; SDAG-NEXT:    mov w8, #10 // =0xa
+; SDAG-NEXT:    sub w9, w9, w1, uxtb
+; SDAG-NEXT:    tst w9, #0xffffff00
+; SDAG-NEXT:    csel w0, w9, w8, ne
 ; SDAG-NEXT:    ret
 ;
 ; FAST-LABEL: usubo.selectboth.i8:
 ; FAST:       // %bb.0: // %entry
-; FAST-NEXT:    and w8, w0, #0xff
-; FAST-NEXT:    mov w9, #10
-; FAST-NEXT:    sub w8, w8, w1, uxtb
-; FAST-NEXT:    tst w8, #0xffffff00
-; FAST-NEXT:    csel w0, w8, w9, ne
+; FAST-NEXT:    and w9, w0, #0xff
+; FAST-NEXT:    mov w8, #10 // =0xa
+; FAST-NEXT:    sub w9, w9, w1, uxtb
+; FAST-NEXT:    tst w9, #0xffffff00
+; FAST-NEXT:    csel w0, w9, w8, ne
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: usubo.selectboth.i8:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    and w8, w0, #0xff
-; GISEL-NEXT:    mov w9, #10
-; GISEL-NEXT:    sub w8, w8, w1, uxtb
-; GISEL-NEXT:    cmp w8, w8, uxtb
-; GISEL-NEXT:    csel w0, w8, w9, ne
+; GISEL-NEXT:    and w9, w0, #0xff
+; GISEL-NEXT:    mov w8, #10 // =0xa
+; GISEL-NEXT:    sub w9, w9, w1, uxtb
+; GISEL-NEXT:    cmp w9, w9, uxtb
+; GISEL-NEXT:    csel w0, w9, w8, ne
 ; GISEL-NEXT:    ret
 entry:
   %m = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 %a, i8 %b)
@@ -1625,11 +1637,11 @@ entry:
 define i8 @ssubo.selectboth.i8(i8 %a, i8 %b) {
 ; CHECK-LABEL: ssubo.selectboth.i8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sxtb w8, w0
-; CHECK-NEXT:    mov w9, #10
-; CHECK-NEXT:    sub w8, w8, w1, sxtb
-; CHECK-NEXT:    cmp w8, w8, sxtb
-; CHECK-NEXT:    csel w0, w8, w9, ne
+; CHECK-NEXT:    sxtb w9, w0
+; CHECK-NEXT:    mov w8, #10 // =0xa
+; CHECK-NEXT:    sub w9, w9, w1, sxtb
+; CHECK-NEXT:    cmp w9, w9, sxtb
+; CHECK-NEXT:    csel w0, w9, w8, ne
 ; CHECK-NEXT:    ret
 entry:
   %m = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 %a, i8 %b)
@@ -1642,29 +1654,29 @@ entry:
 define i16 @usubo.selectboth.i16(i16 %a, i16 %b) {
 ; SDAG-LABEL: usubo.selectboth.i16:
 ; SDAG:       // %bb.0: // %entry
-; SDAG-NEXT:    and w8, w0, #0xffff
-; SDAG-NEXT:    mov w9, #10
-; SDAG-NEXT:    sub w8, w8, w1, uxth
-; SDAG-NEXT:    tst w8, #0xffff0000
-; SDAG-NEXT:    csel w0, w8, w9, ne
+; SDAG-NEXT:    and w9, w0, #0xffff
+; SDAG-NEXT:    mov w8, #10 // =0xa
+; SDAG-NEXT:    sub w9, w9, w1, uxth
+; SDAG-NEXT:    tst w9, #0xffff0000
+; SDAG-NEXT:    csel w0, w9, w8, ne
 ; SDAG-NEXT:    ret
 ;
 ; FAST-LABEL: usubo.selectboth.i16:
 ; FAST:       // %bb.0: // %entry
-; FAST-NEXT:    and w8, w0, #0xffff
-; FAST-NEXT:    mov w9, #10
-; FAST-NEXT:    sub w8, w8, w1, uxth
-; FAST-NEXT:    tst w8, #0xffff0000
-; FAST-NEXT:    csel w0, w8, w9, ne
+; FAST-NEXT:    and w9, w0, #0xffff
+; FAST-NEXT:    mov w8, #10 // =0xa
+; FAST-NEXT:    sub w9, w9, w1, uxth
+; FAST-NEXT:    tst w9, #0xffff0000
+; FAST-NEXT:    csel w0, w9, w8, ne
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: usubo.selectboth.i16:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    and w8, w0, #0xffff
-; GISEL-NEXT:    mov w9, #10
-; GISEL-NEXT:    sub w8, w8, w1, uxth
-; GISEL-NEXT:    cmp w8, w8, uxth
-; GISEL-NEXT:    csel w0, w8, w9, ne
+; GISEL-NEXT:    and w9, w0, #0xffff
+; GISEL-NEXT:    mov w8, #10 // =0xa
+; GISEL-NEXT:    sub w9, w9, w1, uxth
+; GISEL-NEXT:    cmp w9, w9, uxth
+; GISEL-NEXT:    csel w0, w9, w8, ne
 ; GISEL-NEXT:    ret
 entry:
   %m = call { i16, i1 } @llvm.usub.with.overflow.i16(i16 %a, i16 %b)
@@ -1677,11 +1689,11 @@ entry:
 define i16 @ssubo.selectboth.i16(i16 %a, i16 %b) {
 ; CHECK-LABEL: ssubo.selectboth.i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sxth w8, w0
-; CHECK-NEXT:    mov w9, #10
-; CHECK-NEXT:    sub w8, w8, w1, sxth
-; CHECK-NEXT:    cmp w8, w8, sxth
-; CHECK-NEXT:    csel w0, w8, w9, ne
+; CHECK-NEXT:    sxth w9, w0
+; CHECK-NEXT:    mov w8, #10 // =0xa
+; CHECK-NEXT:    sub w9, w9, w1, sxth
+; CHECK-NEXT:    cmp w9, w9, sxth
+; CHECK-NEXT:    csel w0, w9, w8, ne
 ; CHECK-NEXT:    ret
 entry:
   %m = call { i16, i1 } @llvm.ssub.with.overflow.i16(i16 %a, i16 %b)
@@ -1694,25 +1706,25 @@ entry:
 define i32 @usubo.selectboth.i32(i32 %a, i32 %b) {
 ; SDAG-LABEL: usubo.selectboth.i32:
 ; SDAG:       // %bb.0: // %entry
-; SDAG-NEXT:    subs w8, w0, w1
-; SDAG-NEXT:    mov w9, #10
-; SDAG-NEXT:    csel w0, w8, w9, lo
+; SDAG-NEXT:    mov w8, #10 // =0xa
+; SDAG-NEXT:    subs w9, w0, w1
+; SDAG-NEXT:    csel w0, w9, w8, lo
 ; SDAG-NEXT:    ret
 ;
 ; FAST-LABEL: usubo.selectboth.i32:
 ; FAST:       // %bb.0: // %entry
-; FAST-NEXT:    subs w8, w0, w1
-; FAST-NEXT:    mov w9, #10
-; FAST-NEXT:    csel w0, w8, w9, lo
+; FAST-NEXT:    mov w8, #10 // =0xa
+; FAST-NEXT:    subs w9, w0, w1
+; FAST-NEXT:    csel w0, w9, w8, lo
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: usubo.selectboth.i32:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    subs w8, w0, w1
-; GISEL-NEXT:    mov w10, #10
-; GISEL-NEXT:    cset w9, lo
-; GISEL-NEXT:    tst w9, #0x1
-; GISEL-NEXT:    csel w0, w8, w10, ne
+; GISEL-NEXT:    subs w9, w0, w1
+; GISEL-NEXT:    mov w8, #10 // =0xa
+; GISEL-NEXT:    cset w10, lo
+; GISEL-NEXT:    tst w10, #0x1
+; GISEL-NEXT:    csel w0, w9, w8, ne
 ; GISEL-NEXT:    ret
 entry:
   %m = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 %a, i32 %b)
@@ -1725,25 +1737,25 @@ entry:
 define i32 @ssubo.selectboth.i32(i32 %a, i32 %b) {
 ; SDAG-LABEL: ssubo.selectboth.i32:
 ; SDAG:       // %bb.0: // %entry
-; SDAG-NEXT:    subs w8, w0, w1
-; SDAG-NEXT:    mov w9, #10
-; SDAG-NEXT:    csel w0, w8, w9, vs
+; SDAG-NEXT:    mov w8, #10 // =0xa
+; SDAG-NEXT:    subs w9, w0, w1
+; SDAG-NEXT:    csel w0, w9, w8, vs
 ; SDAG-NEXT:    ret
 ;
 ; FAST-LABEL: ssubo.selectboth.i32:
 ; FAST:       // %bb.0: // %entry
-; FAST-NEXT:    subs w8, w0, w1
-; FAST-NEXT:    mov w9, #10
-; FAST-NEXT:    csel w0, w8, w9, vs
+; FAST-NEXT:    mov w8, #10 // =0xa
+; FAST-NEXT:    subs w9, w0, w1
+; FAST-NEXT:    csel w0, w9, w8, vs
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: ssubo.selectboth.i32:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    subs w8, w0, w1
-; GISEL-NEXT:    mov w10, #10
-; GISEL-NEXT:    cset w9, vs
-; GISEL-NEXT:    tst w9, #0x1
-; GISEL-NEXT:    csel w0, w8, w10, ne
+; GISEL-NEXT:    subs w9, w0, w1
+; GISEL-NEXT:    mov w8, #10 // =0xa
+; GISEL-NEXT:    cset w10, vs
+; GISEL-NEXT:    tst w10, #0x1
+; GISEL-NEXT:    csel w0, w9, w8, ne
 ; GISEL-NEXT:    ret
 entry:
   %m = call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 %a, i32 %b)
@@ -1756,25 +1768,25 @@ entry:
 define i64 @usubo.selectboth.i64(i64 %a, i64 %b) {
 ; SDAG-LABEL: usubo.selectboth.i64:
 ; SDAG:       // %bb.0: // %entry
-; SDAG-NEXT:    subs x8, x0, x1
-; SDAG-NEXT:    mov w9, #10
-; SDAG-NEXT:    csel x0, x8, x9, lo
+; SDAG-NEXT:    mov w8, #10 // =0xa
+; SDAG-NEXT:    subs x9, x0, x1
+; SDAG-NEXT:    csel x0, x9, x8, lo
 ; SDAG-NEXT:    ret
 ;
 ; FAST-LABEL: usubo.selectboth.i64:
 ; FAST:       // %bb.0: // %entry
-; FAST-NEXT:    subs x8, x0, x1
-; FAST-NEXT:    mov x9, #10
-; FAST-NEXT:    csel x0, x8, x9, lo
+; FAST-NEXT:    mov x8, #10 // =0xa
+; FAST-NEXT:    subs x9, x0, x1
+; FAST-NEXT:    csel x0, x9, x8, lo
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: usubo.selectboth.i64:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    subs x8, x0, x1
-; GISEL-NEXT:    mov w10, #10
-; GISEL-NEXT:    cset w9, lo
-; GISEL-NEXT:    tst w9, #0x1
-; GISEL-NEXT:    csel x0, x8, x10, ne
+; GISEL-NEXT:    subs x9, x0, x1
+; GISEL-NEXT:    mov w8, #10 // =0xa
+; GISEL-NEXT:    cset w10, lo
+; GISEL-NEXT:    tst w10, #0x1
+; GISEL-NEXT:    csel x0, x9, x8, ne
 ; GISEL-NEXT:    ret
 entry:
   %m = call { i64, i1 } @llvm.usub.with.overflow.i64(i64 %a, i64 %b)
@@ -1787,25 +1799,25 @@ entry:
 define i64 @ssubo.selectboth.i64(i64 %a, i64 %b) {
 ; SDAG-LABEL: ssubo.selectboth.i64:
 ; SDAG:       // %bb.0: // %entry
-; SDAG-NEXT:    subs x8, x0, x1
-; SDAG-NEXT:    mov w9, #10
-; SDAG-NEXT:    csel x0, x8, x9, vs
+; SDAG-NEXT:    mov w8, #10 // =0xa
+; SDAG-NEXT:    subs x9, x0, x1
+; SDAG-NEXT:    csel x0, x9, x8, vs
 ; SDAG-NEXT:    ret
 ;
 ; FAST-LABEL: ssubo.selectboth.i64:
 ; FAST:       // %bb.0: // %entry
-; FAST-NEXT:    subs x8, x0, x1
-; FAST-NEXT:    mov x9, #10
-; FAST-NEXT:    csel x0, x8, x9, vs
+; FAST-NEXT:    mov x8, #10 // =0xa
+; FAST-NEXT:    subs x9, x0, x1
+; FAST-NEXT:    csel x0, x9, x8, vs
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: ssubo.selectboth.i64:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    subs x8, x0, x1
-; GISEL-NEXT:    mov w10, #10
-; GISEL-NEXT:    cset w9, vs
-; GISEL-NEXT:    tst w9, #0x1
-; GISEL-NEXT:    csel x0, x8, x10, ne
+; GISEL-NEXT:    subs x9, x0, x1
+; GISEL-NEXT:    mov w8, #10 // =0xa
+; GISEL-NEXT:    cset w10, vs
+; GISEL-NEXT:    tst w10, #0x1
+; GISEL-NEXT:    csel x0, x9, x8, ne
 ; GISEL-NEXT:    ret
 entry:
   %m = call { i64, i1 } @llvm.ssub.with.overflow.i64(i64 %a, i64 %b)
@@ -1819,32 +1831,32 @@ entry:
 define i8 @umulo.selectboth.i8(i8 %a, i8 %b) {
 ; SDAG-LABEL: umulo.selectboth.i8:
 ; SDAG:       // %bb.0: // %entry
-; SDAG-NEXT:    and w8, w1, #0xff
-; SDAG-NEXT:    and w9, w0, #0xff
-; SDAG-NEXT:    mul w8, w9, w8
-; SDAG-NEXT:    mov w9, #10
-; SDAG-NEXT:    tst w8, #0xff00
-; SDAG-NEXT:    csel w0, w8, w9, ne
+; SDAG-NEXT:    and w9, w1, #0xff
+; SDAG-NEXT:    and w10, w0, #0xff
+; SDAG-NEXT:    mov w8, #10 // =0xa
+; SDAG-NEXT:    mul w9, w10, w9
+; SDAG-NEXT:    tst w9, #0xff00
+; SDAG-NEXT:    csel w0, w9, w8, ne
 ; SDAG-NEXT:    ret
 ;
 ; FAST-LABEL: umulo.selectboth.i8:
 ; FAST:       // %bb.0: // %entry
-; FAST-NEXT:    and w8, w1, #0xff
-; FAST-NEXT:    and w9, w0, #0xff
-; FAST-NEXT:    mul w8, w9, w8
-; FAST-NEXT:    mov w9, #10
-; FAST-NEXT:    tst w8, #0xff00
-; FAST-NEXT:    csel w0, w8, w9, ne
+; FAST-NEXT:    and w9, w1, #0xff
+; FAST-NEXT:    and w10, w0, #0xff
+; FAST-NEXT:    mov w8, #10 // =0xa
+; FAST-NEXT:    mul w9, w10, w9
+; FAST-NEXT:    tst w9, #0xff00
+; FAST-NEXT:    csel w0, w9, w8, ne
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: umulo.selectboth.i8:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    and w8, w0, #0xff
-; GISEL-NEXT:    and w9, w1, #0xff
-; GISEL-NEXT:    mul w8, w8, w9
-; GISEL-NEXT:    mov w9, #10
-; GISEL-NEXT:    cmp w8, w8, uxtb
-; GISEL-NEXT:    csel w0, w8, w9, ne
+; GISEL-NEXT:    and w9, w0, #0xff
+; GISEL-NEXT:    and w10, w1, #0xff
+; GISEL-NEXT:    mov w8, #10 // =0xa
+; GISEL-NEXT:    mul w9, w9, w10
+; GISEL-NEXT:    cmp w9, w9, uxtb
+; GISEL-NEXT:    csel w0, w9, w8, ne
 ; GISEL-NEXT:    ret
 entry:
   %m = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 %a, i8 %b)
@@ -1857,32 +1869,32 @@ entry:
 define i8 @smulo.selectboth.i8(i8 %a, i8 %b) {
 ; SDAG-LABEL: smulo.selectboth.i8:
 ; SDAG:       // %bb.0: // %entry
-; SDAG-NEXT:    sxtb w8, w1
-; SDAG-NEXT:    sxtb w9, w0
-; SDAG-NEXT:    mul w8, w9, w8
-; SDAG-NEXT:    mov w9, #10
-; SDAG-NEXT:    cmp w8, w8, sxtb
-; SDAG-NEXT:    csel w0, w8, w9, ne
+; SDAG-NEXT:    sxtb w9, w1
+; SDAG-NEXT:    sxtb w10, w0
+; SDAG-NEXT:    mov w8, #10 // =0xa
+; SDAG-NEXT:    mul w9, w10, w9
+; SDAG-NEXT:    cmp w9, w9, sxtb
+; SDAG-NEXT:    csel w0, w9, w8, ne
 ; SDAG-NEXT:    ret
 ;
 ; FAST-LABEL: smulo.selectboth.i8:
 ; FAST:       // %bb.0: // %entry
-; FAST-NEXT:    sxtb w8, w1
-; FAST-NEXT:    sxtb w9, w0
-; FAST-NEXT:    mul w8, w9, w8
-; FAST-NEXT:    mov w9, #10
-; FAST-NEXT:    cmp w8, w8, sxtb
-; FAST-NEXT:    csel w0, w8, w9, ne
+; FAST-NEXT:    sxtb w9, w1
+; FAST-NEXT:    sxtb w10, w0
+; FAST-NEXT:    mov w8, #10 // =0xa
+; FAST-NEXT:    mul w9, w10, w9
+; FAST-NEXT:    cmp w9, w9, sxtb
+; FAST-NEXT:    csel w0, w9, w8, ne
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: smulo.selectboth.i8:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    sxtb w8, w0
-; GISEL-NEXT:    sxtb w9, w1
-; GISEL-NEXT:    mul w8, w8, w9
-; GISEL-NEXT:    mov w9, #10
-; GISEL-NEXT:    cmp w8, w8, sxtb
-; GISEL-NEXT:    csel w0, w8, w9, ne
+; GISEL-NEXT:    sxtb w9, w0
+; GISEL-NEXT:    sxtb w10, w1
+; GISEL-NEXT:    mov w8, #10 // =0xa
+; GISEL-NEXT:    mul w9, w9, w10
+; GISEL-NEXT:    cmp w9, w9, sxtb
+; GISEL-NEXT:    csel w0, w9, w8, ne
 ; GISEL-NEXT:    ret
 entry:
   %m = call { i8, i1 } @llvm.smul.with.overflow.i8(i8 %a, i8 %b)
@@ -1895,32 +1907,32 @@ entry:
 define i16 @umulo.selectboth.i16(i16 %a, i16 %b) {
 ; SDAG-LABEL: umulo.selectboth.i16:
 ; SDAG:       // %bb.0: // %entry
-; SDAG-NEXT:    and w8, w1, #0xffff
-; SDAG-NEXT:    and w9, w0, #0xffff
-; SDAG-NEXT:    mul w8, w9, w8
-; SDAG-NEXT:    mov w9, #10
-; SDAG-NEXT:    tst w8, #0xffff0000
-; SDAG-NEXT:    csel w0, w8, w9, ne
+; SDAG-NEXT:    and w9, w1, #0xffff
+; SDAG-NEXT:    and w10, w0, #0xffff
+; SDAG-NEXT:    mov w8, #10 // =0xa
+; SDAG-NEXT:    mul w9, w10, w9
+; SDAG-NEXT:    tst w9, #0xffff0000
+; SDAG-NEXT:    csel w0, w9, w8, ne
 ; SDAG-NEXT:    ret
 ;
 ; FAST-LABEL: umulo.selectboth.i16:
 ; FAST:       // %bb.0: // %entry
-; FAST-NEXT:    and w8, w1, #0xffff
-; FAST-NEXT:    and w9, w0, #0xffff
-; FAST-NEXT:    mul w8, w9, w8
-; FAST-NEXT:    mov w9, #10
-; FAST-NEXT:    tst w8, #0xffff0000
-; FAST-NEXT:    csel w0, w8, w9, ne
+; FAST-NEXT:    and w9, w1, #0xffff
+; FAST-NEXT:    and w10, w0, #0xffff
+; FAST-NEXT:    mov w8, #10 // =0xa
+; FAST-NEXT:    mul w9, w10, w9
+; FAST-NEXT:    tst w9, #0xffff0000
+; FAST-NEXT:    csel w0, w9, w8, ne
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: umulo.selectboth.i16:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    and w8, w0, #0xffff
-; GISEL-NEXT:    and w9, w1, #0xffff
-; GISEL-NEXT:    mul w8, w8, w9
-; GISEL-NEXT:    mov w9, #10
-; GISEL-NEXT:    cmp w8, w8, uxth
-; GISEL-NEXT:    csel w0, w8, w9, ne
+; GISEL-NEXT:    and w9, w0, #0xffff
+; GISEL-NEXT:    and w10, w1, #0xffff
+; GISEL-NEXT:    mov w8, #10 // =0xa
+; GISEL-NEXT:    mul w9, w9, w10
+; GISEL-NEXT:    cmp w9, w9, uxth
+; GISEL-NEXT:    csel w0, w9, w8, ne
 ; GISEL-NEXT:    ret
 entry:
   %m = call { i16, i1 } @llvm.umul.with.overflow.i16(i16 %a, i16 %b)
@@ -1933,32 +1945,32 @@ entry:
 define i16 @smulo.selectboth.i16(i16 %a, i16 %b) {
 ; SDAG-LABEL: smulo.selectboth.i16:
 ; SDAG:       // %bb.0: // %entry
-; SDAG-NEXT:    sxth w8, w1
-; SDAG-NEXT:    sxth w9, w0
-; SDAG-NEXT:    mul w8, w9, w8
-; SDAG-NEXT:    mov w9, #10
-; SDAG-NEXT:    cmp w8, w8, sxth
-; SDAG-NEXT:    csel w0, w8, w9, ne
+; SDAG-NEXT:    sxth w9, w1
+; SDAG-NEXT:    sxth w10, w0
+; SDAG-NEXT:    mov w8, #10 // =0xa
+; SDAG-NEXT:    mul w9, w10, w9
+; SDAG-NEXT:    cmp w9, w9, sxth
+; SDAG-NEXT:    csel w0, w9, w8, ne
 ; SDAG-NEXT:    ret
 ;
 ; FAST-LABEL: smulo.selectboth.i16:
 ; FAST:       // %bb.0: // %entry
-; FAST-NEXT:    sxth w8, w1
-; FAST-NEXT:    sxth w9, w0
-; FAST-NEXT:    mul w8, w9, w8
-; FAST-NEXT:    mov w9, #10
-; FAST-NEXT:    cmp w8, w8, sxth
-; FAST-NEXT:    csel w0, w8, w9, ne
+; FAST-NEXT:    sxth w9, w1
+; FAST-NEXT:    sxth w10, w0
+; FAST-NEXT:    mov w8, #10 // =0xa
+; FAST-NEXT:    mul w9, w10, w9
+; FAST-NEXT:    cmp w9, w9, sxth
+; FAST-NEXT:    csel w0, w9, w8, ne
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: smulo.selectboth.i16:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    sxth w8, w0
-; GISEL-NEXT:    sxth w9, w1
-; GISEL-NEXT:    mul w8, w8, w9
-; GISEL-NEXT:    mov w9, #10
-; GISEL-NEXT:    cmp w8, w8, sxth
-; GISEL-NEXT:    csel w0, w8, w9, ne
+; GISEL-NEXT:    sxth w9, w0
+; GISEL-NEXT:    sxth w10, w1
+; GISEL-NEXT:    mov w8, #10 // =0xa
+; GISEL-NEXT:    mul w9, w9, w10
+; GISEL-NEXT:    cmp w9, w9, sxth
+; GISEL-NEXT:    csel w0, w9, w8, ne
 ; GISEL-NEXT:    ret
 entry:
   %m = call { i16, i1 } @llvm.smul.with.overflow.i16(i16 %a, i16 %b)
@@ -1972,7 +1984,7 @@ define i32 @umulo.selectboth.i32(i32 %a, i32 %b) {
 ; SDAG-LABEL: umulo.selectboth.i32:
 ; SDAG:       // %bb.0: // %entry
 ; SDAG-NEXT:    umull x9, w0, w1
-; SDAG-NEXT:    mov w8, #10
+; SDAG-NEXT:    mov w8, #10 // =0xa
 ; SDAG-NEXT:    tst x9, #0xffffffff00000000
 ; SDAG-NEXT:    csel w0, w9, w8, ne
 ; SDAG-NEXT:    ret
@@ -1980,7 +1992,7 @@ define i32 @umulo.selectboth.i32(i32 %a, i32 %b) {
 ; FAST-LABEL: umulo.selectboth.i32:
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    umull x9, w0, w1
-; FAST-NEXT:    mov w8, #10
+; FAST-NEXT:    mov w8, #10 // =0xa
 ; FAST-NEXT:    tst x9, #0xffffffff00000000
 ; FAST-NEXT:    csel w0, w9, w8, ne
 ; FAST-NEXT:    ret
@@ -1988,7 +2000,7 @@ define i32 @umulo.selectboth.i32(i32 %a, i32 %b) {
 ; GISEL-LABEL: umulo.selectboth.i32:
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    umull x9, w0, w1
-; GISEL-NEXT:    mov w8, #10
+; GISEL-NEXT:    mov w8, #10 // =0xa
 ; GISEL-NEXT:    mul w10, w0, w1
 ; GISEL-NEXT:    lsr x9, x9, #32
 ; GISEL-NEXT:    cmp w9, #0
@@ -2006,7 +2018,7 @@ define i32 @smulo.selectboth.i32(i32 %a, i32 %b) {
 ; SDAG-LABEL: smulo.selectboth.i32:
 ; SDAG:       // %bb.0: // %entry
 ; SDAG-NEXT:    smull x9, w0, w1
-; SDAG-NEXT:    mov w8, #10
+; SDAG-NEXT:    mov w8, #10 // =0xa
 ; SDAG-NEXT:    cmp x9, w9, sxtw
 ; SDAG-NEXT:    csel w0, w9, w8, ne
 ; SDAG-NEXT:    ret
@@ -2014,7 +2026,7 @@ define i32 @smulo.selectboth.i32(i32 %a, i32 %b) {
 ; FAST-LABEL: smulo.selectboth.i32:
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    smull x9, w0, w1
-; FAST-NEXT:    mov w8, #10
+; FAST-NEXT:    mov w8, #10 // =0xa
 ; FAST-NEXT:    cmp x9, w9, sxtw
 ; FAST-NEXT:    csel w0, w9, w8, ne
 ; FAST-NEXT:    ret
@@ -2022,7 +2034,7 @@ define i32 @smulo.selectboth.i32(i32 %a, i32 %b) {
 ; GISEL-LABEL: smulo.selectboth.i32:
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    smull x9, w0, w1
-; GISEL-NEXT:    mov w8, #10
+; GISEL-NEXT:    mov w8, #10 // =0xa
 ; GISEL-NEXT:    mul w10, w0, w1
 ; GISEL-NEXT:    asr x9, x9, #32
 ; GISEL-NEXT:    cmp w9, w10, asr #31
@@ -2040,7 +2052,7 @@ define i64 @umulo.selectboth.i64(i64 %a, i64 %b) {
 ; SDAG-LABEL: umulo.selectboth.i64:
 ; SDAG:       // %bb.0: // %entry
 ; SDAG-NEXT:    umulh x9, x0, x1
-; SDAG-NEXT:    mov w8, #10
+; SDAG-NEXT:    mov w8, #10 // =0xa
 ; SDAG-NEXT:    mul x10, x0, x1
 ; SDAG-NEXT:    cmp xzr, x9
 ; SDAG-NEXT:    csel x0, x10, x8, ne
@@ -2049,7 +2061,7 @@ define i64 @umulo.selectboth.i64(i64 %a, i64 %b) {
 ; FAST-LABEL: umulo.selectboth.i64:
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    umulh x9, x0, x1
-; FAST-NEXT:    mov x8, #10
+; FAST-NEXT:    mov x8, #10 // =0xa
 ; FAST-NEXT:    mul x10, x0, x1
 ; FAST-NEXT:    cmp xzr, x9
 ; FAST-NEXT:    csel x0, x10, x8, ne
@@ -2058,7 +2070,7 @@ define i64 @umulo.selectboth.i64(i64 %a, i64 %b) {
 ; GISEL-LABEL: umulo.selectboth.i64:
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    umulh x9, x0, x1
-; GISEL-NEXT:    mov w8, #10
+; GISEL-NEXT:    mov w8, #10 // =0xa
 ; GISEL-NEXT:    mul x10, x0, x1
 ; GISEL-NEXT:    cmp x9, #0
 ; GISEL-NEXT:    csel x0, x10, x8, ne
@@ -2075,7 +2087,7 @@ define i64 @smulo.selectboth.i64(i64 %a, i64 %b) {
 ; SDAG-LABEL: smulo.selectboth.i64:
 ; SDAG:       // %bb.0: // %entry
 ; SDAG-NEXT:    mul x9, x0, x1
-; SDAG-NEXT:    mov w8, #10
+; SDAG-NEXT:    mov w8, #10 // =0xa
 ; SDAG-NEXT:    smulh x10, x0, x1
 ; SDAG-NEXT:    cmp x10, x9, asr #63
 ; SDAG-NEXT:    csel x0, x9, x8, ne
@@ -2084,7 +2096,7 @@ define i64 @smulo.selectboth.i64(i64 %a, i64 %b) {
 ; FAST-LABEL: smulo.selectboth.i64:
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    mul x9, x0, x1
-; FAST-NEXT:    mov x8, #10
+; FAST-NEXT:    mov x8, #10 // =0xa
 ; FAST-NEXT:    smulh x10, x0, x1
 ; FAST-NEXT:    cmp x10, x9, asr #63
 ; FAST-NEXT:    csel x0, x9, x8, ne
@@ -2092,11 +2104,11 @@ define i64 @smulo.selectboth.i64(i64 %a, i64 %b) {
 ;
 ; GISEL-LABEL: smulo.selectboth.i64:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    mul x9, x0, x1
-; GISEL-NEXT:    mov w8, #10
-; GISEL-NEXT:    smulh x10, x0, x1
-; GISEL-NEXT:    cmp x10, x9, asr #63
-; GISEL-NEXT:    csel x0, x9, x8, ne
+; GISEL-NEXT:    smulh x9, x0, x1
+; GISEL-NEXT:    mov w8, #10 // =0xa
+; GISEL-NEXT:    mul x10, x0, x1
+; GISEL-NEXT:    cmp x9, x10, asr #63
+; GISEL-NEXT:    csel x0, x10, x8, ne
 ; GISEL-NEXT:    ret
 entry:
   %m = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %a, i64 %b)
@@ -2120,9 +2132,9 @@ define zeroext i1 @saddo.br.i32(i32 %v1, i32 %v2) {
 ; FAST-LABEL: saddo.br.i32:
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    cmn w0, w1
-; FAST-NEXT:    mov w9, #1
-; FAST-NEXT:    cset w8, vs
-; FAST-NEXT:    bic w8, w9, w8
+; FAST-NEXT:    mov w8, #1 // =0x1
+; FAST-NEXT:    cset w9, vs
+; FAST-NEXT:    bic w8, w8, w9
 ; FAST-NEXT:    and w0, w8, #0x1
 ; FAST-NEXT:    ret
 ;
@@ -2155,9 +2167,9 @@ define zeroext i1 @saddo.br.i64(i64 %v1, i64 %v2) {
 ; FAST-LABEL: saddo.br.i64:
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    cmn x0, x1
-; FAST-NEXT:    mov w9, #1
-; FAST-NEXT:    cset w8, vs
-; FAST-NEXT:    bic w8, w9, w8
+; FAST-NEXT:    mov w8, #1 // =0x1
+; FAST-NEXT:    cset w9, vs
+; FAST-NEXT:    bic w8, w8, w9
 ; FAST-NEXT:    and w0, w8, #0x1
 ; FAST-NEXT:    ret
 ;
@@ -2190,9 +2202,9 @@ define zeroext i1 @uaddo.br.i32(i32 %v1, i32 %v2) {
 ; FAST-LABEL: uaddo.br.i32:
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    cmn w0, w1
-; FAST-NEXT:    mov w9, #1
-; FAST-NEXT:    cset w8, hs
-; FAST-NEXT:    bic w8, w9, w8
+; FAST-NEXT:    mov w8, #1 // =0x1
+; FAST-NEXT:    cset w9, hs
+; FAST-NEXT:    bic w8, w8, w9
 ; FAST-NEXT:    and w0, w8, #0x1
 ; FAST-NEXT:    ret
 ;
@@ -2225,9 +2237,9 @@ define zeroext i1 @uaddo.br.i64(i64 %v1, i64 %v2) {
 ; FAST-LABEL: uaddo.br.i64:
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    cmn x0, x1
-; FAST-NEXT:    mov w9, #1
-; FAST-NEXT:    cset w8, hs
-; FAST-NEXT:    bic w8, w9, w8
+; FAST-NEXT:    mov w8, #1 // =0x1
+; FAST-NEXT:    cset w9, hs
+; FAST-NEXT:    bic w8, w8, w9
 ; FAST-NEXT:    and w0, w8, #0x1
 ; FAST-NEXT:    ret
 ;
@@ -2260,9 +2272,9 @@ define zeroext i1 @ssubo.br.i32(i32 %v1, i32 %v2) {
 ; FAST-LABEL: ssubo.br.i32:
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    cmp w0, w1
-; FAST-NEXT:    mov w9, #1
-; FAST-NEXT:    cset w8, vs
-; FAST-NEXT:    bic w8, w9, w8
+; FAST-NEXT:    mov w8, #1 // =0x1
+; FAST-NEXT:    cset w9, vs
+; FAST-NEXT:    bic w8, w8, w9
 ; FAST-NEXT:    and w0, w8, #0x1
 ; FAST-NEXT:    ret
 ;
@@ -2295,9 +2307,9 @@ define zeroext i1 @ssubo.br.i64(i64 %v1, i64 %v2) {
 ; FAST-LABEL: ssubo.br.i64:
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    cmp x0, x1
-; FAST-NEXT:    mov w9, #1
-; FAST-NEXT:    cset w8, vs
-; FAST-NEXT:    bic w8, w9, w8
+; FAST-NEXT:    mov w8, #1 // =0x1
+; FAST-NEXT:    cset w9, vs
+; FAST-NEXT:    bic w8, w8, w9
 ; FAST-NEXT:    and w0, w8, #0x1
 ; FAST-NEXT:    ret
 ;
@@ -2330,9 +2342,9 @@ define zeroext i1 @usubo.br.i32(i32 %v1, i32 %v2) {
 ; FAST-LABEL: usubo.br.i32:
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    cmp w0, w1
-; FAST-NEXT:    mov w9, #1
-; FAST-NEXT:    cset w8, lo
-; FAST-NEXT:    bic w8, w9, w8
+; FAST-NEXT:    mov w8, #1 // =0x1
+; FAST-NEXT:    cset w9, lo
+; FAST-NEXT:    bic w8, w8, w9
 ; FAST-NEXT:    and w0, w8, #0x1
 ; FAST-NEXT:    ret
 ;
@@ -2365,9 +2377,9 @@ define zeroext i1 @usubo.br.i64(i64 %v1, i64 %v2) {
 ; FAST-LABEL: usubo.br.i64:
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    cmp x0, x1
-; FAST-NEXT:    mov w9, #1
-; FAST-NEXT:    cset w8, lo
-; FAST-NEXT:    bic w8, w9, w8
+; FAST-NEXT:    mov w8, #1 // =0x1
+; FAST-NEXT:    cset w9, lo
+; FAST-NEXT:    bic w8, w8, w9
 ; FAST-NEXT:    and w0, w8, #0x1
 ; FAST-NEXT:    ret
 ;
@@ -2401,7 +2413,7 @@ define zeroext i1 @smulo.br.i32(i32 %v1, i32 %v2) {
 ; FAST-LABEL: smulo.br.i32:
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    smull x9, w0, w1
-; FAST-NEXT:    mov w8, #1
+; FAST-NEXT:    mov w8, #1 // =0x1
 ; FAST-NEXT:    cmp x9, w9, sxtw
 ; FAST-NEXT:    cset w9, ne
 ; FAST-NEXT:    bic w8, w8, w9
@@ -2442,7 +2454,7 @@ define zeroext i1 @smulo.br.i64(i64 %v1, i64 %v2) {
 ; FAST-LABEL: smulo.br.i64:
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    mul x9, x0, x1
-; FAST-NEXT:    mov w8, #1
+; FAST-NEXT:    mov w8, #1 // =0x1
 ; FAST-NEXT:    smulh x10, x0, x1
 ; FAST-NEXT:    cmp x10, x9, asr #63
 ; FAST-NEXT:    cset w9, ne
@@ -2452,9 +2464,9 @@ define zeroext i1 @smulo.br.i64(i64 %v1, i64 %v2) {
 ;
 ; GISEL-LABEL: smulo.br.i64:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    mul x8, x0, x1
-; GISEL-NEXT:    smulh x9, x0, x1
-; GISEL-NEXT:    cmp x9, x8, asr #63
+; GISEL-NEXT:    smulh x8, x0, x1
+; GISEL-NEXT:    mul x9, x0, x1
+; GISEL-NEXT:    cmp x8, x9, asr #63
 ; GISEL-NEXT:    cset w8, ne
 ; GISEL-NEXT:    eor w0, w8, #0x1
 ; GISEL-NEXT:    ret
@@ -2481,7 +2493,7 @@ define zeroext i1 @smulo2.br.i64(i64 %v1) {
 ; FAST-LABEL: smulo2.br.i64:
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    cmn x0, x0
-; FAST-NEXT:    mov w8, #1
+; FAST-NEXT:    mov w8, #1 // =0x1
 ; FAST-NEXT:    cset w9, vs
 ; FAST-NEXT:    bic w8, w8, w9
 ; FAST-NEXT:    and w0, w8, #0x1
@@ -2517,7 +2529,7 @@ define zeroext i1 @umulo.br.i32(i32 %v1, i32 %v2) {
 ; FAST-LABEL: umulo.br.i32:
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    umull x9, w0, w1
-; FAST-NEXT:    mov w8, #1
+; FAST-NEXT:    mov w8, #1 // =0x1
 ; FAST-NEXT:    tst x9, #0xffffffff00000000
 ; FAST-NEXT:    cset w9, ne
 ; FAST-NEXT:    bic w8, w8, w9
@@ -2556,7 +2568,7 @@ define zeroext i1 @umulo.br.i64(i64 %v1, i64 %v2) {
 ; FAST-LABEL: umulo.br.i64:
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    umulh x9, x0, x1
-; FAST-NEXT:    mov w8, #1
+; FAST-NEXT:    mov w8, #1 // =0x1
 ; FAST-NEXT:    cmp xzr, x9
 ; FAST-NEXT:    cset w9, ne
 ; FAST-NEXT:    bic w8, w8, w9
@@ -2593,7 +2605,7 @@ define zeroext i1 @umulo2.br.i64(i64 %v1) {
 ; FAST-LABEL: umulo2.br.i64:
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    cmn x0, x0
-; FAST-NEXT:    mov w8, #1
+; FAST-NEXT:    mov w8, #1 // =0x1
 ; FAST-NEXT:    cset w9, hs
 ; FAST-NEXT:    bic w8, w8, w9
 ; FAST-NEXT:    and w0, w8, #0x1
@@ -2616,6 +2628,35 @@ overflow:
 
 continue:
   ret i1 true
+}
+
+define i8 @pr60530() {
+; SDAG-LABEL: pr60530:
+; SDAG:       // %bb.0:
+; SDAG-NEXT:    mov w0, #-1 // =0xffffffff
+; SDAG-NEXT:    ret
+;
+; FAST-LABEL: pr60530:
+; FAST:       // %bb.0:
+; FAST-NEXT:    mov w0, #-1 // =0xffffffff
+; FAST-NEXT:    ret
+;
+; GISEL-LABEL: pr60530:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    mov w8, #1 // =0x1
+; GISEL-NEXT:    sbfx w0, w8, #0, #1
+; GISEL-NEXT:    ret
+  %1 = call { i8, i1 } @llvm.uadd.with.overflow.i8(i8 0, i8 1)
+  %2 = extractvalue { i8, i1 } %1, 1
+  %3 = zext i1 %2 to i8
+  %4 = shl i8 -1, %3
+  %5 = lshr i8 1, %4
+  %6 = icmp uge i8 %5, 1
+  %7 = sext i1 %6 to i8
+  %8 = zext i1 %2 to i8
+  %9 = icmp uge i8 %7, %8
+  %10 = sext i1 %9 to i8
+  ret i8 %10
 }
 
 declare {i8, i1} @llvm.sadd.with.overflow.i8(i8, i8) nounwind readnone

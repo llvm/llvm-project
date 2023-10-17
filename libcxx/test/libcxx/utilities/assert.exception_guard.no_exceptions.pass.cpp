@@ -6,13 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-
 // REQUIRES: has-unix-headers
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0}}
-// ADDITIONAL_COMPILE_FLAGS: -fno-exceptions -D_LIBCPP_ENABLE_ASSERTIONS
-
-// ADDITIONAL_COMPILE_FLAGS: -Wno-private-header
+// UNSUPPORTED: c++03
+// REQUIRES: libcpp-hardening-mode={{safe|debug}}
+// XFAIL: availability-verbose_abort-missing
+// ADDITIONAL_COMPILE_FLAGS: -fno-exceptions
 
 #include <__utility/exception_guard.h>
 

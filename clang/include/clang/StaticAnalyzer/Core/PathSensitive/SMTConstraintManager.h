@@ -203,9 +203,9 @@ public:
     auto CZ = State->get<ConstraintSMT>();
     auto &CZFactory = State->get_context<ConstraintSMT>();
 
-    for (auto I = CZ.begin(), E = CZ.end(); I != E; ++I) {
-      if (SymReaper.isDead(I->first))
-        CZ = CZFactory.remove(CZ, *I);
+    for (const auto &Entry : CZ) {
+      if (SymReaper.isDead(Entry.first))
+        CZ = CZFactory.remove(CZ, Entry);
     }
 
     return State->set<ConstraintSMT>(CZ);

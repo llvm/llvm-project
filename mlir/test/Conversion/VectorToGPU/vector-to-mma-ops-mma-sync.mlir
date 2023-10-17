@@ -47,7 +47,7 @@ func.func @m16n8k32_int8_row_row_row(%arg0: memref<128x128xi8, #gpu.address_spac
   // CHECK: nvgpu.ldmatrix %arg0[[[m_coord]], [[k_coord]]] {numTiles = 4 : i32, transpose = false} : memref<128x128xi8, #gpu.address_space<workgroup>> -> vector<4x4xi8>
 
   // Verify that the operandB load is lowered to scalar load to be able
-  // to transpose at 8-bit granularity. ldmatrix can only transpose at 
+  // to transpose at 8-bit granularity. ldmatrix can only transpose at
   // 16-bit granularity.
 
   // CHECK-DAG: [[row:%.+]] = affine.apply [[$rowB0_map]]()[{{%.+}}]
@@ -213,7 +213,6 @@ func.func @m16n8k16_fp16_row_row_row(%arg0: memref<20x20xf16, #gpu.address_space
 
 // CHECK-LABEL: func @m16n16k16_mmasync16816_fp16_f16_row_row_row
 func.func @m16n16k16_mmasync16816_fp16_f16_row_row_row(%arg0: memref<42x32xf16, #gpu.address_space<workgroup>>, %arg1: memref<32x64xf16, #gpu.address_space<workgroup>>, %arg2: memref<42x64xf16, #gpu.address_space<workgroup>>) {
-  %cst_0 = arith.constant dense<0.000000e+00> : vector<16x8xf16>
   %c0 = arith.constant 0 : index
   %c8 = arith.constant 8 : index
   %cst = arith.constant 0.000000e+00 : f16
@@ -251,6 +250,55 @@ func.func @m16n16k16_mmasync16816_fp16_f16_row_row_row(%arg0: memref<42x32xf16, 
 
   return
 }
+// -----
+
+//#################################################################################################################
+// FP16 row-row-row (Determine the transpose for multi-dimensional vector.transfer_read in vector-to-gpu lowering)
+//#################################################################################################################
+
+// CHECK-DAG: [[$strided_map:#.+]] = affine_map<()[s0] -> (s0 mod 16)>
+// CHECK-DAG: [[$contiguous_map:#.+]] = affine_map<()[s0] -> ((s0 floordiv 16) * 8)>
+
+#map0 = affine_map<(d0, d1, d2) -> (d2, d1)>
+#map1 = affine_map<(d0, d1, d2) -> (d0, d2)>
+#map2 = affine_map<(d0, d1, d2) -> (d1, d2)>
+#map3 = affine_map<(d0, d1, d2) -> (d0, d1)>
+#map_a = affine_map<(d0, d1, d2, d3) -> (d1, d3)>
+#map_b = affine_map<(d0, d1, d2, d3) -> (d3, d2)>
+
+// CHECK-LABEL: func @multi_dim_m16n8k16_fp16_row_row_row
+func.func @multi_dim_m16n8k16_fp16_row_row_row(%arg0: memref<4x32x1x32xf16, #gpu.address_space<workgroup>>, %arg1: memref<4x1x32x32xf16, #gpu.address_space<workgroup>>, %arg2:  memref<1x32x40xf16, #gpu.address_space<workgroup>>) {
+
+  // CHECK-DAG: [[c0:%.+]] = arith.constant 0 : index
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f16
+
+  // CHECK-DAG: [[m_coord:%.+]] = affine.apply [[$strided_map]]
+  // CHECK-DAG: [[k_coord:%.+]] = affine.apply [[$contiguous_map]]
+  // CHECK: [[fragmentA:%.+]] = nvgpu.ldmatrix %arg0[[[c0]], [[m_coord]], [[c0]], [[k_coord]]] {numTiles = 4 : i32, transpose = false}
+  %A = vector.transfer_read %arg0[%c0, %c0, %c0, %c0], %cst {in_bounds = [true, true], permutation_map = #map_a} : memref<4x32x1x32xf16, #gpu.address_space<workgroup>>, vector<16x16xf16>
+
+  // CHECK-DAG: [[n_coord:%.+]] = affine.apply [[$contiguous_map]]
+  // CHECK-DAG: [[k_coord:%.+]] = affine.apply [[$strided_map]]
+  // CHECK-DAG: [[fragmentB:%.+]] = nvgpu.ldmatrix %arg1[[[c0]], [[c0]], [[k_coord]], [[n_coord]]] {numTiles = 4 : i32, transpose = true}
+  %B = vector.transfer_read %arg1[%c0, %c0, %c0, %c0], %cst {in_bounds = [true, true], permutation_map = #map_b} : memref<4x1x32x32xf16, #gpu.address_space<workgroup>>, vector<16x16xf16>
+
+  // CHECK-DAG: [[m_coord:%.+]] = affine.apply [[$strided_map]]
+  // CHECK-DAG: [[n_coord:%.+]] = affine.apply [[$contiguous_map]]
+  // CHECK-DAG: [[fragmentC:%.*]] = nvgpu.ldmatrix %arg2[[[c0]], [[m_coord]], [[n_coord]]] {numTiles = 4 : i32, transpose = false}
+  %C = vector.transfer_read %arg2[%c0, %c0, %c0], %cst {in_bounds = [true, true]} : memref<1x32x40xf16, #gpu.address_space<workgroup>>, vector<16x16xf16>
+
+  // CHECK-DAG: [[fragmentB0:%.+]] = vector.extract_strided_slice [[fragmentB]] {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x2xf16> to vector<2x2xf16>
+  // CHECK-DAG: [[fragmentC0:%.+]] = vector.extract_strided_slice [[fragmentC]] {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x2xf16> to vector<2x2xf16>
+  // CHECK: nvgpu.mma.sync([[fragmentA]], [[fragmentB0]], [[fragmentC0]]) {mmaShape = [16, 8, 16]} : (vector<4x2xf16>, vector<2x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
+  %B0 = vector.extract_strided_slice %B {offsets = [0, 0], sizes = [8, 16], strides = [1, 1]} : vector<16x16xf16> to vector<8x16xf16>
+  %C0 = vector.extract_strided_slice %C {offsets = [0, 0], sizes = [16, 8], strides = [1, 1]} : vector<16x16xf16> to vector<16x8xf16>
+  %D0 = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %A, %B0, %C0 : vector<16x16xf16>, vector<8x16xf16> into vector<16x8xf16>
+  vector.transfer_write %D0, %arg2[%c0, %c0, %c0] {in_bounds = [true, true]} : vector<16x8xf16>, memref<1x32x40xf16, #gpu.address_space<workgroup>>
+
+  return
+}
+
 // -----
 
 // CHECK-DAG: [[$strided_map:#.+]] = affine_map<()[s0] -> (s0 mod 16)>
@@ -382,11 +430,11 @@ func.func @m16n8k4_tf32_f32_row_row_row(%arg0: memref<20x20xf32, #gpu.address_sp
   %B = vector.transfer_read %arg1[%c3, %c3], %cst {permutation_map = #map0, in_bounds = [true, true]} : memref<20x20xf32, #gpu.address_space<workgroup>>, vector<8x4xf32>
   %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %A, %B, %cst_0 : vector<16x4xf32>, vector<8x4xf32> into vector<16x8xf32>
 
-  // CHECK: vector.extract [[d_frag]][0] : vector<2x2xf32>
+  // CHECK: vector.extract [[d_frag]][0] : vector<2xf32> from vector<2x2xf32>
   // CHECK: affine.apply [[$rowC_map]]
   // CHECK: affine.apply [[$colC_map]]
   // CHECK: vector.store
-  // CHECK: vector.extract [[d_frag]][1] : vector<2x2xf32>
+  // CHECK: vector.extract [[d_frag]][1] : vector<2xf32> from vector<2x2xf32>
   // CHECK: affine.apply [[$rowC8_map]]
   // CHECK: affine.apply [[$colC_map]]
   // CHECK: vector.store
@@ -445,11 +493,11 @@ func.func @m16n8k8_tf32_f32_row_row_row(%arg0: memref<20x20xf32, #gpu.address_sp
   %B = vector.transfer_read %arg1[%c3, %c3], %cst {permutation_map = #map0, in_bounds = [true, true]} : memref<20x20xf32, #gpu.address_space<workgroup>>, vector<8x8xf32>
   %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %A, %B, %cst_0 : vector<16x8xf32>, vector<8x8xf32> into vector<16x8xf32>
 
-  // CHECK: vector.extract [[d_frag]][0] : vector<2x2xf32>
+  // CHECK: vector.extract [[d_frag]][0] : vector<2xf32> from vector<2x2xf32>
   // CHECK: affine.apply [[$rowC_map]]
   // CHECK: affine.apply [[$colC_map]]
   // CHECK: vector.store
-  // CHECK: vector.extract [[d_frag]][1] : vector<2x2xf32>
+  // CHECK: vector.extract [[d_frag]][1] : vector<2xf32> from vector<2x2xf32>
   // CHECK: affine.apply [[$rowC8_map]]
   // CHECK: affine.apply [[$colC_map]]
   // CHECK: vector.store
@@ -516,11 +564,11 @@ func.func @m16n8k8_tf32_f32_col_col_row(%arg0: memref<20x20xf32, #gpu.address_sp
   %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"],
     kind = #vector.kind<add>} %A, %B, %cst_0 : vector<16x8xf32>, vector<8x8xf32> into vector<16x8xf32>
 
-  // CHECK: vector.extract [[d_frag]][0] : vector<2x2xf32>
+  // CHECK: vector.extract [[d_frag]][0] : vector<2xf32> from vector<2x2xf32>
   // CHECK: affine.apply [[$rowC_map]]
   // CHECK: affine.apply [[$colC_map]]
   // CHECK: vector.store
-  // CHECK: vector.extract [[d_frag]][1] : vector<2x2xf32>
+  // CHECK: vector.extract [[d_frag]][1] : vector<2xf32> from vector<2x2xf32>
   // CHECK: affine.apply [[$rowC8_map]]
   // CHECK: affine.apply [[$colC_map]]
   // CHECK: vector.store
@@ -584,12 +632,12 @@ func.func @m16n8k64_int4_row_col_row(%arg0: memref<128x128xi4, #gpu.address_spac
   %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %A, %B, %C : vector<16x64xi4>, vector<8x64xi4> into vector<16x8xi32>
 
   // CHECK: [[lane:%.+]] = gpu.lane_id
-  // CHECK: [[v:%.+]] = vector.extract [[d]][0] : vector<2x2xi32>
+  // CHECK: [[v:%.+]] = vector.extract [[d]][0] : vector<2xi32> from vector<2x2xi32>
   // CHECK: [[row:%.+]] = affine.apply [[$rowC0_map]]()[[[lane]]]
   // CHECK: [[col:%.+]] = affine.apply [[$colC0_map]]()[[[lane]]]
   // CHECK: vector.store [[v]], %arg2[[[row]], [[col]]] : memref<128x128xi32>, vector<2xi32>
 
-  // CHECK: [[v:%.+]] = vector.extract [[d]][1] : vector<2x2xi32>
+  // CHECK: [[v:%.+]] = vector.extract [[d]][1] : vector<2xi32> from vector<2x2xi32>
   // CHECK: [[row:%.+]] = affine.apply [[$rowC8_map]]()[[[lane]]]
   // CHECK: [[col:%.+]] = affine.apply [[$colC0_map]]()[[[lane]]]
   // CHECK: vector.store [[v]], %arg2[[[row]], [[col]]] : memref<128x128xi32>, vector<2xi32>
@@ -654,14 +702,136 @@ func.func @m16n8k32_int8_row_col_row(%arg0: memref<128x128xi8, #gpu.address_spac
   %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %A, %B, %C : vector<16x32xi8>, vector<8x32xi8> into vector<16x8xi32>
 
   // CHECK: [[lane:%.+]] = gpu.lane_id
-  // CHECK: [[v:%.+]] = vector.extract [[d]][0] : vector<2x2xi32>
+  // CHECK: [[v:%.+]] = vector.extract [[d]][0] : vector<2xi32> from vector<2x2xi32>
   // CHECK: [[row:%.+]] = affine.apply [[$rowC0_map]]()[[[lane]]]
   // CHECK: [[col:%.+]] = affine.apply [[$colC0_map]]()[[[lane]]]
   // CHECK: vector.store [[v]], %arg2[[[row]], [[col]]] : memref<128x128xi32>, vector<2xi32>
-  // CHECK: [[v:%.+]] = vector.extract [[d]][1] : vector<2x2xi32>
+  // CHECK: [[v:%.+]] = vector.extract [[d]][1] : vector<2xi32> from vector<2x2xi32>
   // CHECK: [[row:%.+]] = affine.apply [[$rowC8_map]]()[[[lane]]]
   // CHECK: [[col:%.+]] = affine.apply [[$colC0_map]]()[[[lane]]]
   // CHECK: vector.store [[v]], %arg2[[[row]], [[col]]] : memref<128x128xi32>, vector<2xi32>
   vector.transfer_write %D, %arg2[%c0, %c0] {in_bounds = [true, true]} : vector<16x8xi32>, memref<128x128xi32>
+  return
+}
+
+// -----
+
+
+#map0 = affine_map<(d0, d1) -> (d1, d0)>
+#map1 = affine_map<(d0, d1, d2) -> (d0, d2)>
+#map2 = affine_map<(d0, d1, d2) -> (d1, d2)>
+#map3 = affine_map<(d0, d1, d2) -> (d0, d1)>
+!smem_type = memref<20x20xf16, strided<[?, 1], offset: ?>, #gpu.address_space<workgroup>>
+
+// This test case is identical to m16n8k16 test case, but it tests that having
+// n row dimension with unknown stride is handled correctly.
+
+// CHECK-DAG: [[$strided_map:#.+]] = affine_map<()[s0] -> (s0 mod 16)>
+// CHECK-DAG: [[$contiguous_map:#.+]] = affine_map<()[s0] -> ((s0 floordiv 16) * 8)>
+// CHECK-LABEL: func @strided_memref_read_write
+func.func @strided_memref_read_write(%arg0: !smem_type,
+                                     %arg1: !smem_type,
+                                     %arg2: !smem_type) {
+  %cst_0 = arith.constant dense<0.000000e+00> : vector<16x8xf16>
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f16
+
+  // CHECK-DAG: [[m_coord:%.+]] = affine.apply [[$strided_map]]
+  // CHECK-DAG: [[k_coord:%.+]] = affine.apply [[$contiguous_map]]
+  // CHECK: nvgpu.ldmatrix %arg0[[[m_coord]], [[k_coord]]] {numTiles = 4 : i32, transpose = false}
+  // CHECK-DAG: [[n_coord:%.+]] = affine.apply [[$contiguous_map]]
+  // CHECK-DAG: [[k_coord:%.+]] = affine.apply [[$strided_map]]
+  // CHECK: nvgpu.ldmatrix %arg1[[[k_coord]], [[n_coord]]] {numTiles = 2 : i32, transpose = true}
+  %A = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = [true, true]} : !smem_type, vector<16x16xf16>
+  %B = vector.transfer_read %arg1[%c0, %c0], %cst {permutation_map = #map0, in_bounds = [true, true]} : !smem_type, vector<8x16xf16>
+  %C = vector.transfer_read %arg2[%c0, %c0], %cst {in_bounds = [true, true]} : !smem_type, vector<16x8xf16>
+  %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+    %A, %B, %C : vector<16x16xf16>, vector<8x16xf16> into vector<16x8xf16>
+  vector.transfer_write %D, %arg2[%c0, %c0] {in_bounds = [true, true]} : vector<16x8xf16>, !smem_type
+  return
+}
+
+// -----
+
+
+#map0 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+#map1 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
+#map2 = affine_map<(d0, d1, d2, d3) -> (d2, d0, d3)>
+#map3 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+!smem_type = memref<20x20x20xf16, strided<[?, ?, 1], offset: ?>, #gpu.address_space<workgroup>>
+
+// CHECK-LABEL: func @unsupported_non_2d_load_store
+func.func @unsupported_non_2d_load_store(%arg0: !smem_type,
+                           %arg1: !smem_type,
+                           %arg2: !smem_type) {
+  %cst_0 = arith.constant dense<0.000000e+00> : vector<16x8xf16>
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f16
+
+  // CHECK-NOT: nvgpu.ldmatrix
+  // CHECK-NOT: nvgpu.mma
+  %A = vector.transfer_read %arg0[%c0, %c0, %c0], %cst {in_bounds = [true, true, true]} : !smem_type, vector<1x16x16xf16>
+  %B = vector.transfer_read %arg1[%c0, %c0, %c0], %cst {permutation_map = #map0, in_bounds = [true, true, true]} : !smem_type, vector<8x1x16xf16>
+  %C = vector.transfer_read %arg2[%c0, %c0, %c0], %cst {in_bounds = [true, true, true]} : !smem_type, vector<1x16x8xf16>
+  %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+    %A, %B, %C : vector<1x16x16xf16>, vector<8x1x16xf16> into vector<1x16x8xf16>
+  vector.transfer_write %D, %arg2[%c0, %c0, %c0] {in_bounds = [true, true, true]} : vector<1x16x8xf16>, !smem_type
+  return
+}
+
+// -----
+
+#map0 = affine_map<(d0, d1) -> (d1, d0)>
+#map1 = affine_map<(d0, d1, d2) -> (d0, d2)>
+#map2 = affine_map<(d0, d1, d2) -> (d1, d2)>
+#map3 = affine_map<(d0, d1, d2) -> (d0, d1)>
+
+!smem_type = memref<20x20xf16, strided<[?, ?], offset: ?>, #gpu.address_space<workgroup>>
+
+// CHECK-LABEL: func @unsupported_fully_dynamic_strides
+func.func @unsupported_fully_dynamic_strides(%arg0: !smem_type,
+                                         %arg1: !smem_type,
+                                         %arg2: !smem_type) {
+  %cst_0 = arith.constant dense<0.000000e+00> : vector<16x8xf16>
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f16
+
+  // CHECK-NOT: nvgpu.ldmatrix
+  // CHECK-NOT: nvgpu.mma
+  %A = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = [true, true]} : !smem_type, vector<16x16xf16>
+  %B = vector.transfer_read %arg1[%c0, %c0], %cst {permutation_map = #map0, in_bounds = [true, true]} : !smem_type, vector<8x16xf16>
+  %C = vector.transfer_read %arg2[%c0, %c0], %cst {in_bounds = [true, true]} : !smem_type, vector<16x8xf16>
+  %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+    %A, %B, %C : vector<16x16xf16>, vector<8x16xf16> into vector<16x8xf16>
+  vector.transfer_write %D, %arg2[%c0, %c0] {in_bounds = [true, true]} : vector<16x8xf16>, !smem_type
+  return
+}
+
+// -----
+
+#map0 = affine_map<(d0, d1) -> (d1, d0)>
+#map1 = affine_map<(d0, d1, d2) -> (d0, d2)>
+#map2 = affine_map<(d0, d1, d2) -> (d1, d2)>
+#map3 = affine_map<(d0, d1, d2) -> (d0, d1)>
+
+
+!smem_type = memref<20x20xf16, strided<[?, 1], offset: ?>, #gpu.address_space<workgroup>>
+
+// CHECK-LABEL: func @unsupported_transposed_store
+func.func @unsupported_transposed_store(%arg0: !smem_type,
+                            %arg1: !smem_type,
+                            %arg2: !smem_type) {
+  %cst_0 = arith.constant dense<0.000000e+00> : vector<16x8xf16>
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f16
+
+  // CHECK-NOT: nvgpu.ldmatrix
+  // CHECK-NOT: nvgpu.mma
+  %A = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = [true, true]} : !smem_type, vector<16x16xf16>
+  %B = vector.transfer_read %arg1[%c0, %c0], %cst {permutation_map = #map0, in_bounds = [true, true]} : !smem_type, vector<8x16xf16>
+  %C = vector.transfer_read %arg2[%c0, %c0], %cst {in_bounds = [true, true]} : !smem_type, vector<16x8xf16>
+  %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+    %A, %B, %C : vector<16x16xf16>, vector<8x16xf16> into vector<16x8xf16>
+  vector.transfer_write %D, %arg2[%c0, %c0] {in_bounds = [true, true], permutation_map = affine_map<(d0, d1)->(d1, d0)>} : vector<16x8xf16>, !smem_type
   return
 }

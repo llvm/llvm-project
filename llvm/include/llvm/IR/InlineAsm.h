@@ -15,6 +15,7 @@
 #ifndef LLVM_IR_INLINEASM_H
 #define LLVM_IR_INLINEASM_H
 
+#include "llvm/ADT/Bitfields.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Value.h"
@@ -196,34 +197,17 @@ public:
     return V->getValueID() == Value::InlineAsmVal;
   }
 
-  // These are helper methods for dealing with flags in the INLINEASM SDNode
-  // in the backend.
-  //
-  // The encoding of the flag word is currently:
-  //   Bits 2-0 - A Kind_* value indicating the kind of the operand.
-  //   Bits 15-3 - The number of SDNode operands associated with this inline
-  //               assembly operand.
-  //   If bit 31 is set:
-  //     Bit 30-16 - The operand number that this operand must match.
-  //                 When bits 2-0 are Kind_Mem, the Constraint_* value must be
-  //                 obtained from the flags for this operand number.
-  //   Else if bits 2-0 are Kind_Mem:
-  //     Bit 30-16 - A Constraint_* value indicating the original constraint
-  //                 code.
-  //   Else:
-  //     Bit 30-16 - The register class ID to use for the operand.
-
   enum : uint32_t {
     // Fixed operands on an INLINEASM SDNode.
     Op_InputChain = 0,
     Op_AsmString = 1,
     Op_MDNode = 2,
-    Op_ExtraInfo = 3,    // HasSideEffects, IsAlignStack, AsmDialect.
+    Op_ExtraInfo = 3, // HasSideEffects, IsAlignStack, AsmDialect.
     Op_FirstOperand = 4,
 
     // Fixed operands on an INLINEASM MachineInstr.
     MIOp_AsmString = 0,
-    MIOp_ExtraInfo = 1,    // HasSideEffects, IsAlignStack, AsmDialect.
+    MIOp_ExtraInfo = 1, // HasSideEffects, IsAlignStack, AsmDialect.
     MIOp_FirstOperand = 2,
 
     // Interpretation of the MIOp_ExtraInfo bit field.
@@ -233,159 +217,203 @@ public:
     Extra_MayLoad = 8,
     Extra_MayStore = 16,
     Extra_IsConvergent = 32,
-
-    // Inline asm operands map to multiple SDNode / MachineInstr operands.
-    // The first operand is an immediate describing the asm operand, the low
-    // bits is the kind:
-    Kind_RegUse = 1,             // Input register, "r".
-    Kind_RegDef = 2,             // Output register, "=r".
-    Kind_RegDefEarlyClobber = 3, // Early-clobber output register, "=&r".
-    Kind_Clobber = 4,            // Clobbered register, "~r".
-    Kind_Imm = 5,                // Immediate.
-    Kind_Mem = 6,                // Memory operand, "m", or an address, "p".
-    Kind_Func = 7,               // Address operand of function call
-
-    // Memory constraint codes.
-    // These could be tablegenerated but there's little need to do that since
-    // there's plenty of space in the encoding to support the union of all
-    // constraint codes for all targets.
-    // Addresses are included here as they need to be treated the same by the
-    // backend, the only difference is that they are not used to actaully
-    // access memory by the instruction.
-    Constraint_Unknown = 0,
-    Constraint_es,
-    Constraint_i,
-    Constraint_k,
-    Constraint_m,
-    Constraint_o,
-    Constraint_v,
-    Constraint_A,
-    Constraint_Q,
-    Constraint_R,
-    Constraint_S,
-    Constraint_T,
-    Constraint_Um,
-    Constraint_Un,
-    Constraint_Uq,
-    Constraint_Us,
-    Constraint_Ut,
-    Constraint_Uv,
-    Constraint_Uy,
-    Constraint_X,
-    Constraint_Z,
-    Constraint_ZB,
-    Constraint_ZC,
-    Constraint_Zy,
-
-    // Address constraints
-    Constraint_p,
-    Constraint_ZQ,
-    Constraint_ZR,
-    Constraint_ZS,
-    Constraint_ZT,
-
-    Constraints_Max = Constraint_ZT,
-    Constraints_ShiftAmount = 16,
-
-    Flag_MatchingOperand = 0x80000000
   };
 
-  static unsigned getFlagWord(unsigned Kind, unsigned NumOps) {
-    assert(((NumOps << 3) & ~0xffff) == 0 && "Too many inline asm operands!");
-    assert(Kind >= Kind_RegUse && Kind <= Kind_Func && "Invalid Kind");
-    return Kind | (NumOps << 3);
-  }
+  // Inline asm operands map to multiple SDNode / MachineInstr operands.
+  // The first operand is an immediate describing the asm operand, the low
+  // bits is the kind:
+  enum class Kind : uint8_t {
+    RegUse = 1,             // Input register, "r".
+    RegDef = 2,             // Output register, "=r".
+    RegDefEarlyClobber = 3, // Early-clobber output register, "=&r".
+    Clobber = 4,            // Clobbered register, "~r".
+    Imm = 5,                // Immediate.
+    Mem = 6,                // Memory operand, "m", or an address, "p".
+    Func = 7,               // Address operand of function call
+  };
 
-  static bool isRegDefKind(unsigned Flag){ return getKind(Flag) == Kind_RegDef;}
-  static bool isImmKind(unsigned Flag) { return getKind(Flag) == Kind_Imm; }
-  static bool isMemKind(unsigned Flag) { return getKind(Flag) == Kind_Mem; }
-  static bool isFuncKind(unsigned Flag) { return getKind(Flag) == Kind_Func; }
-  static bool isRegDefEarlyClobberKind(unsigned Flag) {
-    return getKind(Flag) == Kind_RegDefEarlyClobber;
-  }
-  static bool isClobberKind(unsigned Flag) {
-    return getKind(Flag) == Kind_Clobber;
-  }
+  // Memory constraint codes.
+  // Addresses are included here as they need to be treated the same by the
+  // backend, the only difference is that they are not used to actaully
+  // access memory by the instruction.
+  enum class ConstraintCode : uint32_t {
+    Unknown = 0,
+    es,
+    i,
+    k,
+    m,
+    o,
+    v,
+    A,
+    Q,
+    R,
+    S,
+    T,
+    Um,
+    Un,
+    Uq,
+    Us,
+    Ut,
+    Uv,
+    Uy,
+    X,
+    Z,
+    ZB,
+    ZC,
+    Zy,
 
-  /// getFlagWordForMatchingOp - Augment an existing flag word returned by
-  /// getFlagWord with information indicating that this input operand is tied
-  /// to a previous output operand.
-  static unsigned getFlagWordForMatchingOp(unsigned InputFlag,
-                                           unsigned MatchedOperandNo) {
-    assert(MatchedOperandNo <= 0x7fff && "Too big matched operand");
-    assert((InputFlag & ~0xffff) == 0 && "High bits already contain data");
-    return InputFlag | Flag_MatchingOperand | (MatchedOperandNo << 16);
-  }
+    // Address constraints
+    p,
+    ZQ,
+    ZR,
+    ZS,
+    ZT,
 
-  /// getFlagWordForRegClass - Augment an existing flag word returned by
-  /// getFlagWord with the required register class for the following register
-  /// operands.
-  /// A tied use operand cannot have a register class, use the register class
-  /// from the def operand instead.
-  static unsigned getFlagWordForRegClass(unsigned InputFlag, unsigned RC) {
-    // Store RC + 1, reserve the value 0 to mean 'no register class'.
-    ++RC;
-    assert(!isImmKind(InputFlag) && "Immediates cannot have a register class");
-    assert(!isMemKind(InputFlag) && "Memory operand cannot have a register class");
-    assert(RC <= 0x7fff && "Too large register class ID");
-    assert((InputFlag & ~0xffff) == 0 && "High bits already contain data");
-    return InputFlag | (RC << 16);
-  }
+    Max = ZT,
+  };
 
-  /// Augment an existing flag word returned by getFlagWord with the constraint
-  /// code for a memory constraint.
-  static unsigned getFlagWordForMem(unsigned InputFlag, unsigned Constraint) {
-    assert((isMemKind(InputFlag) || isFuncKind(InputFlag)) &&
-           "InputFlag is not a memory (include function) constraint!");
-    assert(Constraint <= 0x7fff && "Too large a memory constraint ID");
-    assert(Constraint <= Constraints_Max && "Unknown constraint ID");
-    assert((InputFlag & ~0xffff) == 0 && "High bits already contain data");
-    return InputFlag | (Constraint << Constraints_ShiftAmount);
-  }
+  // This class is intentionally packed into a 32b value as it is used as a
+  // MVT::i32 ConstantSDNode SDValue for SelectionDAG and as immediate operands
+  // on INLINEASM and INLINEASM_BR MachineInstr's.
+  //
+  // The encoding of Flag is currently:
+  //   Bits 2-0  - A Kind::* value indicating the kind of the operand.
+  //               (KindField)
+  //   Bits 15-3 - The number of SDNode operands associated with this inline
+  //               assembly operand. Once lowered to MIR, this represents the
+  //               number of MachineOperands necessary to refer to a
+  //               MachineOperandType::MO_FrameIndex. (NumOperands)
+  //   Bit 31    - Determines if this is a matched operand. (IsMatched)
+  //   If bit 31 is set:
+  //     Bits 30-16 - The operand number that this operand must match.
+  //                  (MatchedOperandNo)
+  //   Else if bits 2-0 are Kind::Mem:
+  //     Bits 30-16 - A ConstraintCode:: value indicating the original
+  //                  constraint code. (MemConstraintCode)
+  //   Else:
+  //     Bits 30-16 - The register class ID to use for the operand. (RegClass)
+  //
+  //   As such, MatchedOperandNo, MemConstraintCode, and RegClass are views of
+  //   the same slice of bits, but are mutually exclusive depending on the
+  //   fields IsMatched then KindField.
+  class Flag {
+    uint32_t Storage;
+    using KindField = Bitfield::Element<Kind, 0, 3, Kind::Func>;
+    using NumOperands = Bitfield::Element<unsigned, 3, 13>;
+    using MatchedOperandNo = Bitfield::Element<unsigned, 16, 15>;
+    using MemConstraintCode = Bitfield::Element<ConstraintCode, 16, 15, ConstraintCode::Max>;
+    using RegClass = Bitfield::Element<unsigned, 16, 15>;
+    using IsMatched = Bitfield::Element<bool, 31, 1>;
 
-  static unsigned convertMemFlagWordToMatchingFlagWord(unsigned InputFlag) {
-    assert(isMemKind(InputFlag));
-    return InputFlag & ~(0x7fff << Constraints_ShiftAmount);
-  }
 
-  static unsigned getKind(unsigned Flags) {
-    return Flags & 7;
-  }
+    unsigned getMatchedOperandNo() const { return Bitfield::get<MatchedOperandNo>(Storage); }
+    unsigned getRegClass() const { return Bitfield::get<RegClass>(Storage); }
+    bool isMatched() const { return Bitfield::get<IsMatched>(Storage); }
 
-  static unsigned getMemoryConstraintID(unsigned Flag) {
-    assert((isMemKind(Flag) || isFuncKind(Flag)) &&
-           "Not expected mem or function flang!");
-    return (Flag >> Constraints_ShiftAmount) & 0x7fff;
-  }
+  public:
+    Flag() : Storage(0) {}
+    explicit Flag(uint32_t F) : Storage(F) {}
+    Flag(enum Kind K, unsigned NumOps) : Storage(0) {
+      Bitfield::set<KindField>(Storage, K);
+      Bitfield::set<NumOperands>(Storage, NumOps);
+    }
+    operator uint32_t() { return Storage; }
+    Kind getKind() const { return Bitfield::get<KindField>(Storage); }
+    bool isRegUseKind() const { return getKind() == Kind::RegUse; }
+    bool isRegDefKind() const { return getKind() == Kind::RegDef; }
+    bool isRegDefEarlyClobberKind() const {
+      return getKind() == Kind::RegDefEarlyClobber;
+    }
+    bool isClobberKind() const { return getKind() == Kind::Clobber; }
+    bool isImmKind() const { return getKind() == Kind::Imm; }
+    bool isMemKind() const { return getKind() == Kind::Mem; }
+    bool isFuncKind() const { return getKind() == Kind::Func; }
+    StringRef getKindName() const {
+      switch (getKind()) {
+      case Kind::RegUse:
+        return "reguse";
+      case Kind::RegDef:
+        return "regdef";
+      case Kind::RegDefEarlyClobber:
+        return "regdef-ec";
+      case Kind::Clobber:
+        return "clobber";
+      case Kind::Imm:
+        return "imm";
+      case Kind::Mem:
+      case Kind::Func:
+        return "mem";
+      }
+      llvm_unreachable("impossible kind");
+    }
 
-  /// getNumOperandRegisters - Extract the number of registers field from the
-  /// inline asm operand flag.
-  static unsigned getNumOperandRegisters(unsigned Flag) {
-    return (Flag & 0xffff) >> 3;
-  }
+    /// getNumOperandRegisters - Extract the number of registers field from the
+    /// inline asm operand flag.
+    unsigned getNumOperandRegisters() const {
+      return Bitfield::get<NumOperands>(Storage);
+    }
 
-  /// isUseOperandTiedToDef - Return true if the flag of the inline asm
-  /// operand indicates it is an use operand that's matched to a def operand.
-  static bool isUseOperandTiedToDef(unsigned Flag, unsigned &Idx) {
-    if ((Flag & Flag_MatchingOperand) == 0)
-      return false;
-    Idx = (Flag & ~Flag_MatchingOperand) >> 16;
-    return true;
-  }
+    /// isUseOperandTiedToDef - Return true if the flag of the inline asm
+    /// operand indicates it is an use operand that's matched to a def operand.
+    bool isUseOperandTiedToDef(unsigned &Idx) const {
+      if (!isMatched())
+        return false;
+      Idx = getMatchedOperandNo();
+      return true;
+    }
 
-  /// hasRegClassConstraint - Returns true if the flag contains a register
-  /// class constraint.  Sets RC to the register class ID.
-  static bool hasRegClassConstraint(unsigned Flag, unsigned &RC) {
-    if (Flag & Flag_MatchingOperand)
-      return false;
-    unsigned High = Flag >> 16;
-    // getFlagWordForRegClass() uses 0 to mean no register class, and otherwise
-    // stores RC + 1.
-    if (!High)
-      return false;
-    RC = High - 1;
-    return true;
-  }
+    /// hasRegClassConstraint - Returns true if the flag contains a register
+    /// class constraint.  Sets RC to the register class ID.
+    bool hasRegClassConstraint(unsigned &RC) const {
+      if (isMatched())
+        return false;
+      // setRegClass() uses 0 to mean no register class, and otherwise stores
+      // RC + 1.
+      if (!getRegClass())
+        return false;
+      RC = getRegClass() - 1;
+      return true;
+    }
+
+    ConstraintCode getMemoryConstraintID() const {
+      assert((isMemKind() || isFuncKind()) &&
+             "Not expected mem or function flag!");
+      return Bitfield::get<MemConstraintCode>(Storage);
+    }
+
+    /// setMatchingOp - Augment an existing flag with information indicating
+    /// that this input operand is tied to a previous output operand.
+    void setMatchingOp(unsigned OperandNo) {
+      assert(getMatchedOperandNo() == 0 && "Matching operand already set");
+      Bitfield::set<MatchedOperandNo>(Storage, OperandNo);
+      Bitfield::set<IsMatched>(Storage, true);
+    }
+
+    /// setRegClass - Augment an existing flag with the required register class
+    /// for the following register operands. A tied use operand cannot have a
+    /// register class, use the register class from the def operand instead.
+    void setRegClass(unsigned RC) {
+      assert(!isImmKind() && "Immediates cannot have a register class");
+      assert(!isMemKind() && "Memory operand cannot have a register class");
+      assert(getRegClass() == 0 && "Register class already set");
+      // Store RC + 1, reserve the value 0 to mean 'no register class'.
+      Bitfield::set<RegClass>(Storage, RC + 1);
+    }
+
+    /// setMemConstraint - Augment an existing flag with the constraint code for
+    /// a memory constraint.
+    void setMemConstraint(ConstraintCode C) {
+      assert(getMemoryConstraintID() == ConstraintCode::Unknown && "Mem constraint already set");
+      Bitfield::set<MemConstraintCode>(Storage, C);
+    }
+    /// clearMemConstraint - Similar to setMemConstraint(0), but without the
+    /// assertion checking that the constraint has not been set previously.
+    void clearMemConstraint() {
+      assert((isMemKind() || isFuncKind()) &&
+             "Flag is not a memory or function constraint!");
+      Bitfield::set<MemConstraintCode>(Storage, ConstraintCode::Unknown);
+    }
+  };
 
   static std::vector<StringRef> getExtraInfoNames(unsigned ExtraInfo) {
     std::vector<StringRef> Result;
@@ -411,81 +439,63 @@ public:
     return Result;
   }
 
-  static StringRef getKindName(unsigned Kind) {
-    switch (Kind) {
-    case InlineAsm::Kind_RegUse:
-      return "reguse";
-    case InlineAsm::Kind_RegDef:
-      return "regdef";
-    case InlineAsm::Kind_RegDefEarlyClobber:
-      return "regdef-ec";
-    case InlineAsm::Kind_Clobber:
-      return "clobber";
-    case InlineAsm::Kind_Imm:
-      return "imm";
-    case InlineAsm::Kind_Mem:
-    case InlineAsm::Kind_Func:
-      return "mem";
-    default:
-      llvm_unreachable("Unknown operand kind");
-    }
-  }
-
-  static StringRef getMemConstraintName(unsigned Constraint) {
-    switch (Constraint) {
-    case InlineAsm::Constraint_es:
+  static StringRef getMemConstraintName(ConstraintCode C) {
+    switch (C) {
+    case ConstraintCode::es:
       return "es";
-    case InlineAsm::Constraint_i:
+    case ConstraintCode::i:
       return "i";
-    case InlineAsm::Constraint_k:
+    case ConstraintCode::k:
       return "k";
-    case InlineAsm::Constraint_m:
+    case ConstraintCode::m:
       return "m";
-    case InlineAsm::Constraint_o:
+    case ConstraintCode::o:
       return "o";
-    case InlineAsm::Constraint_v:
+    case ConstraintCode::v:
       return "v";
-    case InlineAsm::Constraint_Q:
+    case ConstraintCode::A:
+      return "A";
+    case ConstraintCode::Q:
       return "Q";
-    case InlineAsm::Constraint_R:
+    case ConstraintCode::R:
       return "R";
-    case InlineAsm::Constraint_S:
+    case ConstraintCode::S:
       return "S";
-    case InlineAsm::Constraint_T:
+    case ConstraintCode::T:
       return "T";
-    case InlineAsm::Constraint_Um:
+    case ConstraintCode::Um:
       return "Um";
-    case InlineAsm::Constraint_Un:
+    case ConstraintCode::Un:
       return "Un";
-    case InlineAsm::Constraint_Uq:
+    case ConstraintCode::Uq:
       return "Uq";
-    case InlineAsm::Constraint_Us:
+    case ConstraintCode::Us:
       return "Us";
-    case InlineAsm::Constraint_Ut:
+    case ConstraintCode::Ut:
       return "Ut";
-    case InlineAsm::Constraint_Uv:
+    case ConstraintCode::Uv:
       return "Uv";
-    case InlineAsm::Constraint_Uy:
+    case ConstraintCode::Uy:
       return "Uy";
-    case InlineAsm::Constraint_X:
+    case ConstraintCode::X:
       return "X";
-    case InlineAsm::Constraint_Z:
+    case ConstraintCode::Z:
       return "Z";
-    case InlineAsm::Constraint_ZB:
+    case ConstraintCode::ZB:
       return "ZB";
-    case InlineAsm::Constraint_ZC:
+    case ConstraintCode::ZC:
       return "ZC";
-    case InlineAsm::Constraint_Zy:
+    case ConstraintCode::Zy:
       return "Zy";
-    case InlineAsm::Constraint_p:
+    case ConstraintCode::p:
       return "p";
-    case InlineAsm::Constraint_ZQ:
+    case ConstraintCode::ZQ:
       return "ZQ";
-    case InlineAsm::Constraint_ZR:
+    case ConstraintCode::ZR:
       return "ZR";
-    case InlineAsm::Constraint_ZS:
+    case ConstraintCode::ZS:
       return "ZS";
-    case InlineAsm::Constraint_ZT:
+    case ConstraintCode::ZT:
       return "ZT";
     default:
       llvm_unreachable("Unknown memory constraint");

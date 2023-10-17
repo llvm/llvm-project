@@ -13,8 +13,15 @@
 #include "src/stdio/printf_core/vfprintf_internal.h"
 
 #include <stdarg.h>
+#include <stdio.h>
 
-namespace __llvm_libc {
+#ifndef LIBC_COPT_STDIO_USE_SYSTEM_FILE
+#define PRINTF_STDOUT LIBC_NAMESPACE::stdout
+#else // LIBC_COPT_STDIO_USE_SYSTEM_FILE
+#define PRINTF_STDOUT ::stdout
+#endif // LIBC_COPT_STDIO_USE_SYSTEM_FILE
+
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, printf, (const char *__restrict format, ...)) {
   va_list vlist;
@@ -24,8 +31,8 @@ LLVM_LIBC_FUNCTION(int, printf, (const char *__restrict format, ...)) {
                                  // destruction automatically.
   va_end(vlist);
   int ret_val = printf_core::vfprintf_internal(
-      reinterpret_cast<::FILE *>(__llvm_libc::stdout), format, args);
+      reinterpret_cast<::FILE *>(PRINTF_STDOUT), format, args);
   return ret_val;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

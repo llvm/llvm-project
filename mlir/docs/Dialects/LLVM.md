@@ -103,9 +103,10 @@ Some value kinds in LLVM IR, such as constants and undefs, are uniqued in
 context and used directly in relevant operations. MLIR does not support such
 values for thread-safety and concept parsimony reasons. Instead, regular values
 are produced by dedicated operations that have the corresponding semantics:
-[`llvm.mlir.constant`](#llvmmlirconstant-mlirllvmconstantop),
-[`llvm.mlir.undef`](#llvmmlirundef-mlirllvmundefop),
-[`llvm.mlir.null`](#llvmmlirnull-mlirllvmnullop). Note how these operations are
+[`llvm.mlir.constant`](#llvmmlirconstant-llvmconstantop),
+[`llvm.mlir.undef`](#llvmmlirundef-llvmundefop),
+[`llvm.mlir.poison`](#llvmmlirpoison-llvmpoisonop),
+[`llvm.mlir.zero`](#llvmmlirzero-llvmzeroop). Note how these operations are
 prefixed with `mlir.` to indicate that they don't belong to LLVM IR but are only
 necessary to model it in MLIR. The values produced by these operations are
 usable just like any other value.
@@ -117,11 +118,12 @@ Examples:
 // by a float.
 %0 = llvm.mlir.undef : !llvm.struct<(i32, f32)>
 
-// Null pointer to i8.
-%1 = llvm.mlir.null : !llvm.ptr<i8>
+// Null pointer.
+%1 = llvm.mlir.zero : !llvm.ptr
 
-// Null pointer to a function with signature void().
-%2 = llvm.mlir.null : !llvm.ptr<func<void ()>>
+// Create an zero initialized value of structure type with a 32-bit integer
+// followed by a float.
+%2 = llvm.mlir.zero :  !llvm.struct<(i32, f32)>
 
 // Constant 42 as i32.
 %3 = llvm.mlir.constant(42 : i32) : i32
@@ -159,6 +161,10 @@ is present, `external` linkage is assumed by default. Linkage is _distinct_ from
 MLIR symbol visibility.
 
 ### Attribute Pass-Through
+
+**WARNING:** this feature MUST NOT be used for any real workload. It is
+exclusively intended for quick prototyping. After that, attributes must be
+introduced as proper first-class concepts in the dialect.
 
 The LLVM dialect provides a mechanism to forward function-level attributes to
 LLVM IR using the `passthrough` attribute. This is an array attribute containing

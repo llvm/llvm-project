@@ -74,7 +74,7 @@ struct ConnectionState : public ConnectionAttributes {
 
   std::int64_t currentRecordNumber{1}; // 1 is first
 
-  // positionInRecord is the 0-based bytes offset in the current recurd
+  // positionInRecord is the 0-based bytes offset in the current record
   // to/from which the next data transfer will occur.  It can be past
   // furthestPositionInRecord if moved by an X or T or TR control edit
   // descriptor.

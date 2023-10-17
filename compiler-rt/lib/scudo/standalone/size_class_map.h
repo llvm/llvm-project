@@ -254,7 +254,7 @@ struct AndroidSizeClassConfig {
   static const u16 MaxNumCachedHint = 13;
   static const uptr MaxBytesCachedLog = 13;
 
-  static constexpr u32 Classes[] = {
+  static constexpr uptr Classes[] = {
       0x00020, 0x00030, 0x00040, 0x00050, 0x00060, 0x00070, 0x00090, 0x000b0,
       0x000c0, 0x000e0, 0x00120, 0x00160, 0x001c0, 0x00250, 0x00320, 0x00450,
       0x00670, 0x00830, 0x00a10, 0x00c30, 0x01010, 0x01210, 0x01bd0, 0x02210,
@@ -269,7 +269,7 @@ struct AndroidSizeClassConfig {
   static const u16 MaxNumCachedHint = 14;
   static const uptr MaxBytesCachedLog = 13;
 
-  static constexpr u32 Classes[] = {
+  static constexpr uptr Classes[] = {
       0x00020, 0x00030, 0x00040, 0x00050, 0x00060, 0x00070, 0x00080, 0x00090,
       0x000a0, 0x000b0, 0x000c0, 0x000e0, 0x000f0, 0x00110, 0x00120, 0x00130,
       0x00150, 0x00160, 0x00170, 0x00190, 0x001d0, 0x00210, 0x00240, 0x002a0,
@@ -289,35 +289,11 @@ typedef TableSizeClassMap<AndroidSizeClassConfig> AndroidSizeClassMap;
 static_assert(AndroidSizeClassMap::usesCompressedLSBFormat(), "");
 #endif
 
-struct SvelteSizeClassConfig {
-#if SCUDO_WORDSIZE == 64U
-  static const uptr NumBits = 4;
-  static const uptr MinSizeLog = 4;
-  static const uptr MidSizeLog = 8;
-  static const uptr MaxSizeLog = 14;
-  static const u16 MaxNumCachedHint = 13;
-  static const uptr MaxBytesCachedLog = 10;
-  static const uptr SizeDelta = Chunk::getHeaderSize();
-#else
-  static const uptr NumBits = 4;
-  static const uptr MinSizeLog = 3;
-  static const uptr MidSizeLog = 7;
-  static const uptr MaxSizeLog = 14;
-  static const u16 MaxNumCachedHint = 14;
-  static const uptr MaxBytesCachedLog = 10;
-  static const uptr SizeDelta = Chunk::getHeaderSize();
-#endif
-};
-
-typedef FixedSizeClassMap<SvelteSizeClassConfig> SvelteSizeClassMap;
-
-// Trusty is configured to only have one region containing blocks of size
-// 2^7 bytes.
 struct TrustySizeClassConfig {
   static const uptr NumBits = 1;
-  static const uptr MinSizeLog = 7;
-  static const uptr MidSizeLog = 7;
-  static const uptr MaxSizeLog = 7;
+  static const uptr MinSizeLog = 5;
+  static const uptr MidSizeLog = 5;
+  static const uptr MaxSizeLog = 15;
   static const u16 MaxNumCachedHint = 12;
   static const uptr MaxBytesCachedLog = 10;
   static const uptr SizeDelta = 0;

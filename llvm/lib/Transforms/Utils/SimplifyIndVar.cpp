@@ -93,6 +93,7 @@ namespace {
     void replaceRemWithNumeratorOrZero(BinaryOperator *Rem);
     void replaceSRemWithURem(BinaryOperator *Rem);
     bool eliminateSDiv(BinaryOperator *SDiv);
+    bool strengthenBinaryOp(BinaryOperator *BO, Instruction *IVOperand);
     bool strengthenOverflowingOperation(BinaryOperator *OBO,
                                         Instruction *IVOperand);
     bool strengthenRightShift(BinaryOperator *BO, Instruction *IVOperand);
@@ -216,8 +217,10 @@ bool SimplifyIndvar::makeIVComparisonInvariant(ICmpInst *ICmp,
 
   // Do not generate something ridiculous.
   auto *PHTerm = Preheader->getTerminator();
-  if (Rewriter.isHighCostExpansion({ InvariantLHS, InvariantRHS }, L,
-                                   2 * SCEVCheapExpansionBudget, TTI, PHTerm))
+  if (Rewriter.isHighCostExpansion({InvariantLHS, InvariantRHS}, L,
+                                   2 * SCEVCheapExpansionBudget, TTI, PHTerm) ||
+      !Rewriter.isSafeToExpandAt(InvariantLHS, PHTerm) ||
+      !Rewriter.isSafeToExpandAt(InvariantRHS, PHTerm))
     return false;
   auto *NewLHS =
       Rewriter.expandCodeFor(InvariantLHS, IVOperand->getType(), PHTerm);
@@ -747,6 +750,13 @@ bool SimplifyIndvar::eliminateIdentitySCEV(Instruction *UseInst,
   return true;
 }
 
+bool SimplifyIndvar::strengthenBinaryOp(BinaryOperator *BO,
+                                        Instruction *IVOperand) {
+  return (isa<OverflowingBinaryOperator>(BO) &&
+          strengthenOverflowingOperation(BO, IVOperand)) ||
+         (isa<ShlOperator>(BO) && strengthenRightShift(BO, IVOperand));
+}
+
 /// Annotate BO with nsw / nuw if it provably does not signed-overflow /
 /// unsigned-overflow.  Returns true if anything changed, false otherwise.
 bool SimplifyIndvar::strengthenOverflowingOperation(BinaryOperator *BO,
@@ -898,6 +908,14 @@ void SimplifyIndvar::simplifyUsers(PHINode *CurrIV, IVVisitor *V) {
     if (replaceIVUserWithLoopInvariant(UseInst))
       continue;
 
+    // Go further for the bitcast ''prtoint ptr to i64'
+    if (isa<PtrToIntInst>(UseInst))
+      for (Use &U : UseInst->uses()) {
+        Instruction *User = cast<Instruction>(U.getUser());
+        if (replaceIVUserWithLoopInvariant(User))
+          break; // done replacing
+      }
+
     Instruction *IVOperand = UseOper.second;
     for (unsigned N = 0; IVOperand; ++N) {
       assert(N <= Simplified.size() && "runaway iteration");
@@ -917,9 +935,7 @@ void SimplifyIndvar::simplifyUsers(PHINode *CurrIV, IVVisitor *V) {
     }
 
     if (BinaryOperator *BO = dyn_cast<BinaryOperator>(UseInst)) {
-      if ((isa<OverflowingBinaryOperator>(BO) &&
-           strengthenOverflowingOperation(BO, IVOperand)) ||
-          (isa<ShlOperator>(BO) && strengthenRightShift(BO, IVOperand))) {
+      if (strengthenBinaryOp(BO, IVOperand)) {
         // re-queue uses of the now modified binary operator and fall
         // through to the checks that remain.
         pushIVUsers(IVOperand, L, Simplified, SimpleIVUsers);
@@ -1657,7 +1673,8 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
     assert(LoopExitingBlock && L->contains(LoopExitingBlock) &&
            "Not a LCSSA Phi?");
     WidePN->addIncoming(WideBO, LoopExitingBlock);
-    Builder.SetInsertPoint(&*User->getParent()->getFirstInsertionPt());
+    Builder.SetInsertPoint(User->getParent(),
+                           User->getParent()->getFirstInsertionPt());
     auto *TruncPN = Builder.CreateTrunc(WidePN, User->getType());
     User->replaceAllUsesWith(TruncPN);
     DeadInsts.emplace_back(User);
@@ -1710,7 +1727,8 @@ Instruction *WidenIV::widenIVUse(WidenIV::NarrowIVDefUse DU, SCEVExpander &Rewri
           PHINode::Create(DU.WideDef->getType(), 1, UsePhi->getName() + ".wide",
                           UsePhi);
         WidePhi->addIncoming(DU.WideDef, UsePhi->getIncomingBlock(0));
-        IRBuilder<> Builder(&*WidePhi->getParent()->getFirstInsertionPt());
+        BasicBlock *WidePhiBB = WidePhi->getParent();
+        IRBuilder<> Builder(WidePhiBB, WidePhiBB->getFirstInsertionPt());
         Value *Trunc = Builder.CreateTrunc(WidePhi, DU.NarrowDef->getType());
         UsePhi->replaceAllUsesWith(Trunc);
         DeadInsts.emplace_back(UsePhi);
@@ -1928,13 +1946,15 @@ PHINode *WidenIV::createWideIV(SCEVExpander &Rewriter) {
   // SCEVExpander. Henceforth, we produce 1-to-1 narrow to wide uses.
   if (BasicBlock *LatchBlock = L->getLoopLatch()) {
     WideInc =
-      cast<Instruction>(WidePhi->getIncomingValueForBlock(LatchBlock));
-    WideIncExpr = SE->getSCEV(WideInc);
-    // Propagate the debug location associated with the original loop increment
-    // to the new (widened) increment.
-    auto *OrigInc =
-      cast<Instruction>(OrigPhi->getIncomingValueForBlock(LatchBlock));
-    WideInc->setDebugLoc(OrigInc->getDebugLoc());
+        dyn_cast<Instruction>(WidePhi->getIncomingValueForBlock(LatchBlock));
+    if (WideInc) {
+      WideIncExpr = SE->getSCEV(WideInc);
+      // Propagate the debug location associated with the original loop
+      // increment to the new (widened) increment.
+      auto *OrigInc =
+          cast<Instruction>(OrigPhi->getIncomingValueForBlock(LatchBlock));
+      WideInc->setDebugLoc(OrigInc->getDebugLoc());
+    }
   }
 
   LLVM_DEBUG(dbgs() << "Wide IV: " << *WidePhi << "\n");

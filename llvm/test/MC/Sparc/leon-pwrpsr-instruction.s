@@ -1,4 +1,4 @@
-! RUN: llvm-mc %s -arch=sparc -mcpu=gr740 -show-encoding | FileCheck %s
+! RUN: llvm-mc %s -triple=sparc -mcpu=gr740 -show-encoding | FileCheck %s
 
     ! CHECK: pwr %g0, 0, %psr                ! encoding: [0x83,0x88,0x20,0x00]
     pwr 0, %psr

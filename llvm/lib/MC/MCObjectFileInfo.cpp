@@ -8,7 +8,6 @@
 
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/Wasm.h"
@@ -24,6 +23,7 @@
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCSectionXCOFF.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 
@@ -48,6 +48,10 @@ static bool useCompactUnwind(const Triple &T) {
   if (T.isiOS() && T.isX86())
     return true;
 
+  // The rest of the simulators always have it.
+  if (T.isSimulatorEnvironment())
+    return true;
+
   return false;
 }
 
@@ -62,7 +66,8 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
       SectionKind::getReadOnly());
 
   if (T.isOSDarwin() &&
-      (T.getArch() == Triple::aarch64 || T.getArch() == Triple::aarch64_32))
+      (T.getArch() == Triple::aarch64 || T.getArch() == Triple::aarch64_32 ||
+      T.isSimulatorEnvironment()))
     SupportsCompactUnwindWithoutEHFrame = true;
 
   switch (Ctx->emitDwarfUnwindInfo()) {
@@ -249,7 +254,7 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
                            SectionKind::getMetadata(), "section_line_str");
   DwarfFrameSection =
       Ctx->getMachOSection("__DWARF", "__debug_frame", MachO::S_ATTR_DEBUG,
-                           SectionKind::getMetadata());
+                           SectionKind::getMetadata(), "section_frame");
   DwarfPubNamesSection =
       Ctx->getMachOSection("__DWARF", "__debug_pubnames", MachO::S_ATTR_DEBUG,
                            SectionKind::getMetadata());
@@ -542,6 +547,8 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
   PPA1Section =
       Ctx->getGOFFSection(".ppa1", SectionKind::getMetadata(), TextSection,
                           MCConstantExpr::create(GOFF::SK_PPA1, *Ctx));
+  ADASection =
+      Ctx->getGOFFSection(".ada", SectionKind::getData(), nullptr, nullptr);
 }
 
 void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
@@ -918,10 +925,10 @@ void MCObjectFileInfo::initWasmMCObjectFileInfo(const Triple &T) {
 void MCObjectFileInfo::initXCOFFMCObjectFileInfo(const Triple &T) {
   // The default csect for program code. Functions without a specified section
   // get placed into this csect. The choice of csect name is not a property of
-  // the ABI or object file format. For example, the XL compiler uses an unnamed
-  // csect for program code.
+  // the ABI or object file format, but various tools rely on the section
+  // name being empty (considering named symbols to be "user symbol names").
   TextSection = Ctx->getXCOFFSection(
-      ".text", SectionKind::getText(),
+      "", SectionKind::getText(),
       XCOFF::CsectProperties(XCOFF::StorageMappingClass::XMC_PR, XCOFF::XTY_SD),
       /* MultiSymbolsAllowed*/ true);
 
@@ -1170,18 +1177,20 @@ MCObjectFileInfo::getKCFITrapSection(const MCSection &TextSec) const {
 
 MCSection *
 MCObjectFileInfo::getPseudoProbeSection(const MCSection &TextSec) const {
-  if (Ctx->getObjectFileType() == MCContext::IsELF) {
-    const auto &ElfSec = static_cast<const MCSectionELF &>(TextSec);
-    // Create a separate section for probes that comes with a comdat function.
-    if (const MCSymbol *Group = ElfSec.getGroup()) {
-      auto *S = static_cast<MCSectionELF *>(PseudoProbeSection);
-      auto Flags = S->getFlags() | ELF::SHF_GROUP;
-      return Ctx->getELFSection(S->getName(), S->getType(), Flags,
-                                S->getEntrySize(), Group->getName(),
-                                /*IsComdat=*/true);
-    }
+  if (Ctx->getObjectFileType() != MCContext::IsELF)
+    return PseudoProbeSection;
+
+  const auto &ElfSec = static_cast<const MCSectionELF &>(TextSec);
+  unsigned Flags = ELF::SHF_LINK_ORDER;
+  StringRef GroupName;
+  if (const MCSymbol *Group = ElfSec.getGroup()) {
+    GroupName = Group->getName();
+    Flags |= ELF::SHF_GROUP;
   }
-  return PseudoProbeSection;
+
+  return Ctx->getELFSection(PseudoProbeSection->getName(), ELF::SHT_PROGBITS,
+                            Flags, 0, GroupName, true, ElfSec.getUniqueID(),
+                            cast<MCSymbolELF>(TextSec.getBeginSymbol()));
 }
 
 MCSection *

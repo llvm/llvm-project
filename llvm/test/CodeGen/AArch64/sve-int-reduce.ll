@@ -380,12 +380,12 @@ define i8 @smin_nxv10i8(<vscale x 10 x i8> %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uunpkhi z2.h, z0.b
 ; CHECK-NEXT:    mov z1.d, #127 // =0x7f
+; CHECK-NEXT:    uunpklo z0.h, z0.b
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    uunpklo z3.s, z2.h
 ; CHECK-NEXT:    uunpkhi z2.s, z2.h
 ; CHECK-NEXT:    uunpklo z3.d, z3.s
-; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    uzp1 z3.s, z3.s, z1.s
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    uzp1 z2.h, z3.h, z2.h
 ; CHECK-NEXT:    uzp1 z2.b, z0.b, z2.b
 ; CHECK-NEXT:    uunpkhi z2.h, z2.b
@@ -416,10 +416,10 @@ define i8 @uaddv_nxv12i8(<vscale x 12 x i8> %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uunpkhi z2.h, z0.b
 ; CHECK-NEXT:    mov z1.s, #0 // =0x0
-; CHECK-NEXT:    uunpklo z2.s, z2.h
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
-; CHECK-NEXT:    uzp1 z1.h, z2.h, z1.h
 ; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    uunpklo z2.s, z2.h
+; CHECK-NEXT:    uzp1 z1.h, z2.h, z1.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
 ; CHECK-NEXT:    uaddv d0, p0, z0.b
 ; CHECK-NEXT:    fmov x0, d0
@@ -436,12 +436,12 @@ define i8 @umax_nxv14i8(<vscale x 14 x i8> %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uunpkhi z2.h, z0.b
 ; CHECK-NEXT:    mov z1.d, #0 // =0x0
+; CHECK-NEXT:    uunpklo z0.h, z0.b
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    uunpkhi z3.s, z2.h
 ; CHECK-NEXT:    uunpklo z2.s, z2.h
 ; CHECK-NEXT:    uunpklo z3.d, z3.s
-; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    uzp1 z1.s, z3.s, z1.s
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    uzp1 z1.h, z2.h, z1.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
 ; CHECK-NEXT:    umaxv b0, p0, z0.b

@@ -350,3 +350,23 @@ Sections:
 Symbols:
   - Name: foo
   - Name: bar
+
+## Check that we report a warning when we fail to get a section associated with
+## a relocation section.
+
+# RUN: yaml2obj %s --docnum=8 -o %t9.o
+# RUN: llvm-readobj %t9.o --cg-profile 2>&1 | FileCheck %s -DFILE=%t9.o --check-prefix=LLVM-RELOC-NO-SECTIONS
+# RUN: llvm-readobj %t9.o --elf-cg-profile 2>&1 | FileCheck %s -DFILE=%t9.o --check-prefix=LLVM-RELOC-NO-SECTIONS
+
+# LLVM-RELOC-NO-SECTIONS: warning: '[[FILE]]': unable to get CG Profile section(s): SHT_RELA section with index 1: failed to get a relocated section: invalid section index: 255
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .rela.llvm.call-graph-profile
+    Type: SHT_RELA
+    Info: 0xFF

@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -test-symbol-rauw -split-input-file | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -mlir-print-local-scope %s -test-symbol-rauw -split-input-file | FileCheck %s
 
 // Symbol references to the module itself don't affect uses of symbols within
 // its table.
@@ -76,7 +76,7 @@ module {
 
 // -----
 
-// Check that replacement works in any implementations of SubElementsAttrInterface
+// Check that replacement works in any implementations of SubElements.
 module {
     // CHECK: func private @replaced_foo
     func.func private @symbol_foo() attributes {sym.new_name = "replaced_foo" }
@@ -85,11 +85,11 @@ module {
     func.func @symbol_bar() {
       // CHECK: foo.op
       // CHECK-SAME: non_symbol_attr,
-      // CHECK-SAME: use = [#test.sub_elements_access<[@replaced_foo], @symbol_bar, @replaced_foo>],
+      // CHECK-SAME: use = [#test.sub_elements_access<[@replaced_foo], @symbol_bar, @replaced_foo>, distinct[0]<@replaced_foo>],
       // CHECK-SAME: z_non_symbol_attr_3
       "foo.op"() {
         non_symbol_attr,
-        use = [#test.sub_elements_access<[@symbol_foo],@symbol_bar,@symbol_foo>],
+        use = [#test.sub_elements_access<[@symbol_foo],@symbol_bar,@symbol_foo>, distinct[0]<@symbol_foo>],
         z_non_symbol_attr_3
       } : () -> ()
     }

@@ -7,17 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/bitset.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcBitsetTest, SetBitForSizeEqualToOne) {
-  __llvm_libc::cpp::bitset<1> bitset;
+  LIBC_NAMESPACE::cpp::bitset<1> bitset;
   EXPECT_FALSE(bitset.test(0));
   bitset.set(0);
   EXPECT_TRUE(bitset.test(0));
 }
 
 TEST(LlvmLibcBitsetTest, SetsBitsForSizeEqualToTwo) {
-  __llvm_libc::cpp::bitset<2> bitset;
+  LIBC_NAMESPACE::cpp::bitset<2> bitset;
   bitset.set(0);
   EXPECT_TRUE(bitset.test(0));
   bitset.set(1);
@@ -25,7 +25,7 @@ TEST(LlvmLibcBitsetTest, SetsBitsForSizeEqualToTwo) {
 }
 
 TEST(LlvmLibcBitsetTest, SetsAllBitsForSizeLessThanEight) {
-  __llvm_libc::cpp::bitset<7> bitset;
+  LIBC_NAMESPACE::cpp::bitset<7> bitset;
   for (size_t i = 0; i < 7; ++i)
     bitset.set(i);
   // Verify all bits are now set.
@@ -34,7 +34,7 @@ TEST(LlvmLibcBitsetTest, SetsAllBitsForSizeLessThanEight) {
 }
 
 TEST(LlvmLibcBitsetTest, SetsAllBitsForSizeLessThanSixteen) {
-  __llvm_libc::cpp::bitset<15> bitset;
+  LIBC_NAMESPACE::cpp::bitset<15> bitset;
   for (size_t i = 0; i < 15; ++i)
     bitset.set(i);
   // Verify all bits are now set.
@@ -43,7 +43,7 @@ TEST(LlvmLibcBitsetTest, SetsAllBitsForSizeLessThanSixteen) {
 }
 
 TEST(LlvmLibcBitsetTest, SetsAllBitsForSizeLessThanThirtyTwo) {
-  __llvm_libc::cpp::bitset<31> bitset;
+  LIBC_NAMESPACE::cpp::bitset<31> bitset;
   for (size_t i = 0; i < 31; ++i)
     bitset.set(i);
   // Verify all bits are now set.
@@ -52,12 +52,12 @@ TEST(LlvmLibcBitsetTest, SetsAllBitsForSizeLessThanThirtyTwo) {
 }
 
 TEST(LlvmLibcBitsetTest, DefaultHasNoSetBits) {
-  __llvm_libc::cpp::bitset<64> bitset;
+  LIBC_NAMESPACE::cpp::bitset<64> bitset;
   for (size_t i = 0; i < 64; ++i) {
     EXPECT_FALSE(bitset.test(i));
   }
   // Same for odd number.
-  __llvm_libc::cpp::bitset<65> odd_bitset;
+  LIBC_NAMESPACE::cpp::bitset<65> odd_bitset;
   for (size_t i = 0; i < 65; ++i) {
     EXPECT_FALSE(odd_bitset.test(i));
   }
@@ -66,7 +66,7 @@ TEST(LlvmLibcBitsetTest, DefaultHasNoSetBits) {
 TEST(LlvmLibcBitsetTest, SettingBitXDoesNotSetBitY) {
   for (size_t i = 0; i < 256; ++i) {
     // Initialize within the loop to start with a fresh bitset.
-    __llvm_libc::cpp::bitset<256> bitset;
+    LIBC_NAMESPACE::cpp::bitset<256> bitset;
     bitset.set(i);
 
     for (size_t neighbor = 0; neighbor < 256; ++neighbor) {
@@ -79,7 +79,7 @@ TEST(LlvmLibcBitsetTest, SettingBitXDoesNotSetBitY) {
   // Same for odd number.
   for (size_t i = 0; i < 255; ++i) {
 
-    __llvm_libc::cpp::bitset<255> bitset;
+    LIBC_NAMESPACE::cpp::bitset<255> bitset;
     bitset.set(i);
 
     for (size_t neighbor = 0; neighbor < 255; ++neighbor) {
@@ -92,7 +92,7 @@ TEST(LlvmLibcBitsetTest, SettingBitXDoesNotSetBitY) {
 }
 
 TEST(LlvmLibcBitsetTest, SettingBitXDoesNotResetBitY) {
-  __llvm_libc::cpp::bitset<128> bitset;
+  LIBC_NAMESPACE::cpp::bitset<128> bitset;
   for (size_t i = 0; i < 128; ++i)
     bitset.set(i);
 
@@ -102,7 +102,7 @@ TEST(LlvmLibcBitsetTest, SettingBitXDoesNotResetBitY) {
 }
 
 TEST(LlvmLibcBitsetTest, FlipTest) {
-  __llvm_libc::cpp::bitset<128> bitset;
+  LIBC_NAMESPACE::cpp::bitset<128> bitset;
 
   bitset.flip();
 
@@ -146,8 +146,8 @@ TEST(LlvmLibcBitsetTest, FlipTest) {
 }
 
 TEST(LlvmLibcBitsetTest, EqualTest) {
-  __llvm_libc::cpp::bitset<128> bitset_a;
-  __llvm_libc::cpp::bitset<128> bitset_b;
+  LIBC_NAMESPACE::cpp::bitset<128> bitset_a;
+  LIBC_NAMESPACE::cpp::bitset<128> bitset_b;
 
   // New sets should be empty, and so they should be equal.
   ASSERT_TRUE(bitset_a == bitset_b);
@@ -174,7 +174,7 @@ TEST(LlvmLibcBitsetTest, EqualTest) {
 }
 
 TEST(LlvmLibcBitsetTest, SetRangeTest) {
-  __llvm_libc::cpp::bitset<256> bitset;
+  LIBC_NAMESPACE::cpp::bitset<256> bitset;
 
   // Range from 1 to 1 should only set bit 1
   bitset.set_range(1, 1);
@@ -194,7 +194,7 @@ TEST(LlvmLibcBitsetTest, SetRangeTest) {
   // Check setting exactly one unit
   bitset.set_range(0, 63);
   for (size_t j = 0; j < 256; ++j)
-    EXPECT_EQ(bitset.test(j), (j >= 0 && j <= 63));
+    EXPECT_EQ(bitset.test(j), j <= 63);
   bitset.reset();
 
   // Check ranges across unit boundaries work.

@@ -15,8 +15,8 @@
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Transforms/InliningUtils.h"
 
 using namespace mlir;
@@ -114,7 +114,7 @@ static mlir::ParseResult parseBinaryOp(mlir::OpAsmParser &parser,
 
   // If the type is a function type, it contains the input and result types of
   // this operation.
-  if (FunctionType funcType = type.dyn_cast<FunctionType>()) {
+  if (FunctionType funcType = llvm::dyn_cast<FunctionType>(type)) {
     if (parser.resolveOperands(operands, funcType.getInputs(), operandsLoc,
                                result.operands))
       return mlir::failure();
@@ -193,13 +193,13 @@ void ConstantOp::print(mlir::OpAsmPrinter &printer) {
 mlir::LogicalResult ConstantOp::verify() {
   // If the return type of the constant is not an unranked tensor, the shape
   // must match the shape of the attribute holding the data.
-  auto resultType = getResult().getType().dyn_cast<mlir::RankedTensorType>();
+  auto resultType = llvm::dyn_cast<mlir::RankedTensorType>(getResult().getType());
   if (!resultType)
     return success();
 
   // Check that the rank of the attribute type matches the rank of the constant
   // result type.
-  auto attrType = getValue().getType().cast<mlir::TensorType>();
+  auto attrType = llvm::cast<mlir::RankedTensorType>(getValue().getType());
   if (attrType.getRank() != resultType.getRank()) {
     return emitOpError("return type must match the one of the attached value "
                        "attribute: ")
@@ -237,7 +237,7 @@ void AddOp::print(mlir::OpAsmPrinter &p) { printBinaryOp(p, *this); }
 
 /// Infer the output shape of the AddOp, this is required by the shape inference
 /// interface.
-void AddOp::inferShapes() { getResult().setType(getOperand(0).getType()); }
+void AddOp::inferShapes() { getResult().setType(getLhs().getType()); }
 
 //===----------------------------------------------------------------------===//
 // CastOp
@@ -245,7 +245,7 @@ void AddOp::inferShapes() { getResult().setType(getOperand(0).getType()); }
 
 /// Infer the output shape of the CastOp, this is required by the shape
 /// inference interface.
-void CastOp::inferShapes() { getResult().setType(getOperand().getType()); }
+void CastOp::inferShapes() { getResult().setType(getInput().getType()); }
 
 /// Returns true if the given set of input and result types are compatible with
 /// this cast operation. This is required by the `CastOpInterface` to verify
@@ -254,8 +254,8 @@ bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   if (inputs.size() != 1 || outputs.size() != 1)
     return false;
   // The inputs must be Tensors with the same element type.
-  TensorType input = inputs.front().dyn_cast<TensorType>();
-  TensorType output = outputs.front().dyn_cast<TensorType>();
+  TensorType input = llvm::dyn_cast<TensorType>(inputs.front());
+  TensorType output = llvm::dyn_cast<TensorType>(outputs.front());
   if (!input || !output || input.getElementType() != output.getElementType())
     return false;
   // The shape is required to match if both types are ranked.
@@ -298,15 +298,6 @@ void FuncOp::print(mlir::OpAsmPrinter &p) {
       getArgAttrsAttrName(), getResAttrsAttrName());
 }
 
-/// Returns the region on the function operation that is callable.
-mlir::Region *FuncOp::getCallableRegion() { return &getBody(); }
-
-/// Returns the results types that the callable region produces when
-/// executed.
-llvm::ArrayRef<mlir::Type> FuncOp::getCallableResults() {
-  return getFunctionType().getResults();
-}
-
 //===----------------------------------------------------------------------===//
 // GenericCallOp
 //===----------------------------------------------------------------------===//
@@ -326,9 +317,21 @@ CallInterfaceCallable GenericCallOp::getCallableForCallee() {
   return (*this)->getAttrOfType<SymbolRefAttr>("callee");
 }
 
+/// Set the callee for the generic call operation, this is required by the call
+/// interface.
+void GenericCallOp::setCalleeFromCallable(CallInterfaceCallable callee) {
+  (*this)->setAttr("callee", callee.get<SymbolRefAttr>());
+}
+
 /// Get the argument operands to the called function, this is required by the
 /// call interface.
 Operation::operand_range GenericCallOp::getArgOperands() { return getInputs(); }
+
+/// Get the argument operands to the called function as a mutable range, this is
+/// required by the call interface.
+MutableOperandRange GenericCallOp::getArgOperandsMutable() {
+  return getInputsMutable();
+}
 
 //===----------------------------------------------------------------------===//
 // MulOp
@@ -349,7 +352,7 @@ void MulOp::print(mlir::OpAsmPrinter &p) { printBinaryOp(p, *this); }
 
 /// Infer the output shape of the MulOp, this is required by the shape inference
 /// interface.
-void MulOp::inferShapes() { getResult().setType(getOperand(0).getType()); }
+void MulOp::inferShapes() { getResult().setType(getLhs().getType()); }
 
 //===----------------------------------------------------------------------===//
 // ReturnOp
@@ -379,8 +382,8 @@ mlir::LogicalResult ReturnOp::verify() {
   auto resultType = results.front();
 
   // Check that the result type of the function matches the operand type.
-  if (inputType == resultType || inputType.isa<mlir::UnrankedTensorType>() ||
-      resultType.isa<mlir::UnrankedTensorType>())
+  if (inputType == resultType || llvm::isa<mlir::UnrankedTensorType>(inputType) ||
+      llvm::isa<mlir::UnrankedTensorType>(resultType))
     return mlir::success();
 
   return emitError() << "type of return operand (" << inputType
@@ -399,14 +402,14 @@ void TransposeOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
 }
 
 void TransposeOp::inferShapes() {
-  auto arrayTy = getOperand().getType().cast<RankedTensorType>();
+  auto arrayTy = llvm::cast<RankedTensorType>(getOperand().getType());
   SmallVector<int64_t, 2> dims(llvm::reverse(arrayTy.getShape()));
   getResult().setType(RankedTensorType::get(dims, arrayTy.getElementType()));
 }
 
 mlir::LogicalResult TransposeOp::verify() {
-  auto inputType = getOperand().getType().dyn_cast<RankedTensorType>();
-  auto resultType = getType().dyn_cast<RankedTensorType>();
+  auto inputType = llvm::dyn_cast<RankedTensorType>(getOperand().getType());
+  auto resultType = llvm::dyn_cast<RankedTensorType>(getType());
   if (!inputType || !resultType)
     return mlir::success();
 

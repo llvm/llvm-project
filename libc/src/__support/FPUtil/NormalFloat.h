@@ -6,16 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_NORMAL_FLOAT_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_NORMAL_FLOAT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_NORMALFLOAT_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_NORMALFLOAT_H
 
 #include "FPBits.h"
 
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/common.h"
 
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 
 // A class which stores the normalized form of a floating point value.
@@ -44,7 +45,7 @@ template <typename T> struct NormalFloat {
 
   bool sign;
 
-  NormalFloat(int32_t e, UIntType m, bool s)
+  LIBC_INLINE NormalFloat(int32_t e, UIntType m, bool s)
       : exponent(e), mantissa(m), sign(s) {
     if (mantissa >= ONE)
       return;
@@ -54,14 +55,14 @@ template <typename T> struct NormalFloat {
     exponent -= normalization_shift;
   }
 
-  explicit NormalFloat(T x) { init_from_bits(FPBits<T>(x)); }
+  LIBC_INLINE explicit NormalFloat(T x) { init_from_bits(FPBits<T>(x)); }
 
-  explicit NormalFloat(FPBits<T> bits) { init_from_bits(bits); }
+  LIBC_INLINE explicit NormalFloat(FPBits<T> bits) { init_from_bits(bits); }
 
   // Compares this normalized number with another normalized number.
   // Returns -1 is this number is less than |other|, 0 if this number is equal
   // to |other|, and 1 if this number is greater than |other|.
-  int cmp(const NormalFloat<T> &other) const {
+  LIBC_INLINE int cmp(const NormalFloat<T> &other) const {
     if (sign != other.sign)
       return sign ? -1 : 1;
 
@@ -82,13 +83,13 @@ template <typename T> struct NormalFloat {
   // Returns a new normalized floating point number which is equal in value
   // to this number multiplied by 2^e. That is:
   //     new = this *  2^e
-  NormalFloat<T> mul2(int e) const {
+  LIBC_INLINE NormalFloat<T> mul2(int e) const {
     NormalFloat<T> result = *this;
     result.exponent += e;
     return result;
   }
 
-  operator T() const {
+  LIBC_INLINE operator T() const {
     int biased_exponent = exponent + FPBits<T>::EXPONENT_BIAS;
     // Max exponent is of the form 0xFF...E. That is why -2 and not -1.
     constexpr int MAX_EXPONENT_VALUE = (1 << ExponentWidth<T>::VALUE) - 2;
@@ -138,7 +139,7 @@ template <typename T> struct NormalFloat {
   }
 
 private:
-  void init_from_bits(FPBits<T> bits) {
+  LIBC_INLINE void init_from_bits(FPBits<T> bits) {
     sign = bits.get_sign();
 
     if (bits.is_inf_or_nan() || bits.is_zero()) {
@@ -160,7 +161,7 @@ private:
     }
   }
 
-  unsigned evaluate_normalization_shift(UIntType m) {
+  LIBC_INLINE unsigned evaluate_normalization_shift(UIntType m) {
     unsigned shift = 0;
     for (; (ONE & m) == 0 && (shift < MantissaWidth<T>::VALUE);
          m <<= 1, ++shift)
@@ -171,7 +172,8 @@ private:
 
 #ifdef SPECIAL_X86_LONG_DOUBLE
 template <>
-inline void NormalFloat<long double>::init_from_bits(FPBits<long double> bits) {
+LIBC_INLINE void
+NormalFloat<long double>::init_from_bits(FPBits<long double> bits) {
   sign = bits.get_sign();
 
   if (bits.is_inf_or_nan() || bits.is_zero()) {
@@ -205,7 +207,7 @@ inline void NormalFloat<long double>::init_from_bits(FPBits<long double> bits) {
   }
 }
 
-template <> inline NormalFloat<long double>::operator long double() const {
+template <> LIBC_INLINE NormalFloat<long double>::operator long double() const {
   int biased_exponent = exponent + FPBits<long double>::EXPONENT_BIAS;
   // Max exponent is of the form 0xFF...E. That is why -2 and not -1.
   constexpr int MAX_EXPONENT_VALUE =
@@ -260,6 +262,6 @@ template <> inline NormalFloat<long double>::operator long double() const {
 #endif // SPECIAL_X86_LONG_DOUBLE
 
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_NORMAL_FLOAT_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_NORMALFLOAT_H

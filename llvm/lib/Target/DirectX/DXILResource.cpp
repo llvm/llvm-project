@@ -105,6 +105,7 @@ StringRef ResourceBase::getComponentTypeName(ComponentType CompType) {
   case ComponentType::PackedU8x32:
     return "p32u8";
   }
+  llvm_unreachable("All ComponentType enums are handled in switch");
 }
 
 void ResourceBase::printComponentType(Kinds Kind, ComponentType CompType,
@@ -172,6 +173,7 @@ StringRef ResourceBase::getKindName(Kinds Kind) {
   case Kinds::FeedbackTexture2DArray:
     return "fbtex2darray";
   }
+  llvm_unreachable("All Kinds enums are handled in switch");
 }
 
 void ResourceBase::printKind(Kinds Kind, unsigned Alignment, raw_ostream &OS,

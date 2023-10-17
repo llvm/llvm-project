@@ -789,6 +789,13 @@ public:
     Op.MD = nullptr;
     return *this;
   }
+
+  // Check if MDOperand is of type MDString and equals `Str`.
+  bool equalsStr(StringRef Str) const {
+    return isa<MDString>(this->get()) &&
+           cast<MDString>(this->get())->getString() == Str;
+  }
+
   ~MDOperand() { untrack(); }
 
   Metadata *get() const { return MD; }
@@ -861,18 +868,18 @@ public:
 
   /// Whether this contains RAUW support.
   bool hasReplaceableUses() const {
-    return Ptr.is<ReplaceableMetadataImpl *>();
+    return isa<ReplaceableMetadataImpl *>(Ptr);
   }
 
   LLVMContext &getContext() const {
     if (hasReplaceableUses())
       return getReplaceableUses()->getContext();
-    return *Ptr.get<LLVMContext *>();
+    return *cast<LLVMContext *>(Ptr);
   }
 
   ReplaceableMetadataImpl *getReplaceableUses() const {
     if (hasReplaceableUses())
-      return Ptr.get<ReplaceableMetadataImpl *>();
+      return cast<ReplaceableMetadataImpl *>(Ptr);
     return nullptr;
   }
 
@@ -1274,6 +1281,11 @@ private:
   template <class NodeTy>
   static void dispatchResetHash(NodeTy *, std::false_type) {}
 
+  /// Merge branch weights from two direct callsites.
+  static MDNode *mergeDirectCallProfMetadata(MDNode *A, MDNode *B,
+                                             const Instruction *AInstr,
+                                             const Instruction *BInstr);
+
 public:
   using op_iterator = const MDOperand *;
   using op_range = iterator_range<op_iterator>;
@@ -1319,6 +1331,11 @@ public:
   static MDNode *getMostGenericRange(MDNode *A, MDNode *B);
   static MDNode *getMostGenericAliasScope(MDNode *A, MDNode *B);
   static MDNode *getMostGenericAlignmentOrDereferenceable(MDNode *A, MDNode *B);
+  /// Merge !prof metadata from two instructions.
+  /// Currently only implemented with direct callsites with branch weights.
+  static MDNode *getMergedProfMetadata(MDNode *A, MDNode *B,
+                                       const Instruction *AInstr,
+                                       const Instruction *BInstr);
 };
 
 /// Tuple of metadata.

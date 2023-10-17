@@ -11,7 +11,7 @@
         bl      shortend
         .space 0x3fffff
 shortend:
-// CHECKSHORT-NOT: error
+// CHECKSHORT-NOT: error:
 // CHECKSHORT: [[@LINE+1]]:{{[0-9]}}: error: Relocation out of range
         bl      shortend2
         .space 0x400000
@@ -31,8 +31,8 @@ end2:
         .global end3
 end3:
 
-// CHECK-NOT: error
-// CHECKSHORT-NOT: error
+// CHECK-NOT: error:
+// CHECKSHORT-NOT: error:
 // CHECKSHORT: [[@LINE+2]]:{{[0-9]}}: error: Relocation out of range
 // CHECK: [[@LINE+1]]:{{[0-9]}}: error: Relocation out of range
         bl      end4
@@ -63,7 +63,7 @@ start3:
         .space 0xfffffd
         bl start3
 
-// CHECK-NOT: error
+// CHECK-NOT: error:
 start4:
         .space 0xfffffd
 // CHECK: [[@LINE+2]]:{{[0-9]}}: error: Relocation out of range

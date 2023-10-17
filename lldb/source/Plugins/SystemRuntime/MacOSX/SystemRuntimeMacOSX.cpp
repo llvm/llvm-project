@@ -220,8 +220,7 @@ void SystemRuntimeMacOSX::AddThreadExtendedInfoPacketHints(
 }
 
 bool SystemRuntimeMacOSX::SafeToCallFunctionsOnThisThread(ThreadSP thread_sp) {
-  if (thread_sp && thread_sp->GetStackFrameCount() > 0 &&
-      thread_sp->GetFrameWithConcreteFrameIndex(0)) {
+  if (thread_sp && thread_sp->GetFrameWithConcreteFrameIndex(0)) {
     const SymbolContext sym_ctx(
         thread_sp->GetFrameWithConcreteFrameIndex(0)->GetSymbolContext(
             eSymbolContextSymbol));
@@ -443,13 +442,13 @@ void SystemRuntimeMacOSX::ReadLibdispatchTSDIndexes() {
                                         dispatch_tsd_indexes_s);
 
       m_libdispatch_tsd_indexes.dti_version =
-          struct_reader.GetField<uint16_t>(ConstString("dti_version"));
+          struct_reader.GetField<uint16_t>("dti_version");
       m_libdispatch_tsd_indexes.dti_queue_index =
-          struct_reader.GetField<uint16_t>(ConstString("dti_queue_index"));
+          struct_reader.GetField<uint16_t>("dti_queue_index");
       m_libdispatch_tsd_indexes.dti_voucher_index =
-          struct_reader.GetField<uint16_t>(ConstString("dti_voucher_index"));
+          struct_reader.GetField<uint16_t>("dti_voucher_index");
       m_libdispatch_tsd_indexes.dti_qos_class_index =
-          struct_reader.GetField<uint16_t>(ConstString("dti_qos_class_index"));
+          struct_reader.GetField<uint16_t>("dti_qos_class_index");
     }
   }
 }

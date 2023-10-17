@@ -171,7 +171,7 @@ body:             |
     ; CHECK-NEXT:       mov sp, x1
     ; CHECK-NEXT:       blr x30
     liveins: $x0, $lr
-    BLR killed renamable $lr, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $w0
+    BLR killed renamable $lr, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $w0, implicit $x0
     $w0 = nsw ADDWri killed $w0, 1, 0
     RET undef $lr, implicit $w0
 ...
@@ -197,6 +197,6 @@ body:             |
     ; CHECK-NEXT:  csetm x16, ne
     ; CHECK-NEXT:  ret
     liveins: $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x17, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $fp, $lr
-     $x0 = LDRXui killed $x0, 0
-     RET undef $lr, implicit $x0
+    $x0 = LDRXui killed $x0, 0
+    RET $lr, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit $x8, implicit $x9, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x17, implicit $x18, implicit $x19, implicit $x20, implicit $x21, implicit $x22, implicit $x23, implicit $x24, implicit $x25, implicit $x26, implicit $x27, implicit $x28
 ...

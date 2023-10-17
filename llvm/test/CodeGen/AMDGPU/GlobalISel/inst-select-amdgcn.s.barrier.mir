@@ -13,7 +13,7 @@ body: |
   bb.0:
     ; GCN-LABEL: name: s_barrier
     ; GCN: S_BARRIER
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.s.barrier)
+    G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.s.barrier)
 
 
 ...

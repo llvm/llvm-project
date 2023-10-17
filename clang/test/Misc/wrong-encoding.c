@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -fno-diagnostics-show-line-numbers %s 2>&1 | FileCheck %s
 // REQUIRES: asserts
 
 void foo(void) {

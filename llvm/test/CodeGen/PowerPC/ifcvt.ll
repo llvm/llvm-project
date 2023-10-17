@@ -25,9 +25,9 @@ cond.false:                                       ; preds = %sw.epilog
 ; CHECK: sub [[REG2:[0-9]+]],
 ; CHECK: iselgt {{[0-9]+}}, [[REG]], [[REG2]]
 ; CHECK-NO-ISEL: bc 12, 1, [[TRUE:.LBB[0-9]+]]
+; CHECK-NO-ISEL: ori 5, 6, 0
 ; CHECK-NO-ISEL-NEXT: b [[SUCCESSOR:.LBB[0-9]+]]
 ; CHECK-NO-ISEL: [[TRUE]]
-; CHECK-NO-ISEL-NEXT: addi 5, 6, 0
 ; CHECK-NO-ISEL: extsh 5, 5
 ; CHECK-NO-ISEL-NEXT: add 3, 3, 5
 ; CHECK-NO-ISEL-NEXT: blr

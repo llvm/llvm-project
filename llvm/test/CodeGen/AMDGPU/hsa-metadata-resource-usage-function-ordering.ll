@@ -1,10 +1,10 @@
 ; Note: uses a randomly selected assumed external call stack size so that the
 ; test assertions are unlikely to succeed by accident.
 
-; RUN: llc -amdgpu-assume-external-call-stack-size=5310 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 --amdhsa-code-object-version=4 -enable-misched=0 -filetype=asm -o - < %s | FileCheck --check-prefixes CHECK,GFX7 %s
-; RUN: llc -amdgpu-assume-external-call-stack-size=5310 -mattr=-xnack -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=4 -mcpu=gfx803 -enable-misched=0 -filetype=asm -o - < %s | FileCheck --check-prefixes CHECK,GFX8 %s
-; RUN: llc -amdgpu-assume-external-call-stack-size=5310 -mattr=-xnack -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=4 -mcpu=gfx900 -enable-misched=0 -filetype=asm -o - < %s | FileCheck --check-prefixes CHECK,GFX9 %s
-; RUN: llc -amdgpu-assume-external-call-stack-size=5310 -mattr=-xnack -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=4 -mcpu=gfx1010 -enable-misched=0 -filetype=asm -o - < %s | FileCheck --check-prefixes CHECK,GFX10 %s
+; RUN: llc -amdgpu-assume-external-call-stack-size=5310 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -enable-misched=0 -filetype=asm -o - < %s | FileCheck --check-prefixes CHECK,GFX7 %s
+; RUN: llc -amdgpu-assume-external-call-stack-size=5310 -mattr=-xnack -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -enable-misched=0 -filetype=asm -o - < %s | FileCheck --check-prefixes CHECK,GFX8 %s
+; RUN: llc -amdgpu-assume-external-call-stack-size=5310 -mattr=-xnack -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-misched=0 -filetype=asm -o - < %s | FileCheck --check-prefixes CHECK,GFX9 %s
+; RUN: llc -amdgpu-assume-external-call-stack-size=5310 -mattr=-xnack -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -enable-misched=0 -filetype=asm -o - < %s | FileCheck --check-prefixes CHECK,GFX10 %s
 
 ; CHECK-LABEL: amdhsa.kernels
 
@@ -135,3 +135,6 @@ define amdgpu_kernel void @test4() {
 }
 
 attributes #0 = { norecurse }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}

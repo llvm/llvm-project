@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=nvptx-unknown-unknown | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -mtriple=nvptx-unknown-unknown | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64-unknown-unknown | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64-unknown-unknown | %ptxas-verify %}
 ;
 ; NVPTXTargetLowering::getFunctionParamOptimizedAlign, which was introduces in
 ; D120129, contained a poorly designed assertion checking that a function with

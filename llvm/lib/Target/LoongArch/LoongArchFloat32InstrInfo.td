@@ -1,4 +1,4 @@
-//=-- LoongArchInstrInfoF.td - Single-Precision Float instr --*- tablegen -*-=//
+// LoongArchFloat32InstrInfo.td - Single-Precision Float instr --*- tablegen -*-
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -33,93 +33,91 @@ def loongarch_ftint : SDNode<"LoongArchISD::FTINT", SDT_LoongArchFTINT>;
 let Predicates = [HasBasicF] in {
 
 // Arithmetic Operation Instructions
-def FADD_S : FP_ALU_3R<0b00000001000000001, "fadd.s", FPR32>;
-def FSUB_S : FP_ALU_3R<0b00000001000000101, "fsub.s", FPR32>;
-def FMUL_S : FP_ALU_3R<0b00000001000001001, "fmul.s", FPR32>;
-def FDIV_S : FP_ALU_3R<0b00000001000001101, "fdiv.s", FPR32>;
-def FMADD_S  : FP_ALU_4R<0b000010000001, "fmadd.s", FPR32>;
-def FMSUB_S  : FP_ALU_4R<0b000010000101, "fmsub.s", FPR32>;
-def FNMADD_S : FP_ALU_4R<0b000010001001, "fnmadd.s", FPR32>;
-def FNMSUB_S : FP_ALU_4R<0b000010001101, "fnmsub.s", FPR32>;
-def FMAX_S  : FP_ALU_3R<0b00000001000010001, "fmax.s", FPR32>;
-def FMIN_S  : FP_ALU_3R<0b00000001000010101, "fmin.s", FPR32>;
-def FMAXA_S : FP_ALU_3R<0b00000001000011001, "fmaxa.s", FPR32>;
-def FMINA_S : FP_ALU_3R<0b00000001000011101, "fmina.s", FPR32>;
-def FABS_S   : FP_ALU_2R<0b0000000100010100000001, "fabs.s", FPR32>;
-def FNEG_S   : FP_ALU_2R<0b0000000100010100000101, "fneg.s", FPR32>;
-def FSQRT_S  : FP_ALU_2R<0b0000000100010100010001, "fsqrt.s", FPR32>;
-def FRECIP_S : FP_ALU_2R<0b0000000100010100010101, "frecip.s", FPR32>;
-def FRSQRT_S : FP_ALU_2R<0b0000000100010100011001, "frsqrt.s", FPR32>;
-def FSCALEB_S : FP_ALU_3R<0b00000001000100001, "fscaleb.s", FPR32>;
-def FLOGB_S   : FP_ALU_2R<0b0000000100010100001001, "flogb.s", FPR32>;
-def FCOPYSIGN_S : FP_ALU_3R<0b00000001000100101, "fcopysign.s", FPR32>;
-def FCLASS_S  : FP_ALU_2R<0b0000000100010100001101, "fclass.s", FPR32>;
+def FADD_S : FP_ALU_3R<0x01008000>;
+def FSUB_S : FP_ALU_3R<0x01028000>;
+def FMUL_S : FP_ALU_3R<0x01048000>;
+def FDIV_S : FP_ALU_3R<0x01068000>;
+def FMADD_S  : FP_ALU_4R<0x08100000>;
+def FMSUB_S  : FP_ALU_4R<0x08500000>;
+def FNMADD_S : FP_ALU_4R<0x08900000>;
+def FNMSUB_S : FP_ALU_4R<0x08d00000>;
+def FMAX_S  : FP_ALU_3R<0x01088000>;
+def FMIN_S  : FP_ALU_3R<0x010a8000>;
+def FMAXA_S : FP_ALU_3R<0x010c8000>;
+def FMINA_S : FP_ALU_3R<0x010e8000>;
+def FABS_S   : FP_ALU_2R<0x01140400>;
+def FNEG_S   : FP_ALU_2R<0x01141400>;
+def FSQRT_S  : FP_ALU_2R<0x01144400>;
+def FRECIP_S : FP_ALU_2R<0x01145400>;
+def FRSQRT_S : FP_ALU_2R<0x01146400>;
+def FSCALEB_S : FP_ALU_3R<0x01108000>;
+def FLOGB_S   : FP_ALU_2R<0x01142400>;
+def FCOPYSIGN_S : FP_ALU_3R<0x01128000>;
+def FCLASS_S  : FP_ALU_2R<0x01143400>;
 
 
 // Comparison Instructions
-def FCMP_CAF_S  : FP_CMP<FPCMP_OPC_S, FPCMP_COND_CAF, "fcmp.caf.s", FPR32>;
-def FCMP_CUN_S  : FP_CMP<FPCMP_OPC_S, FPCMP_COND_CUN, "fcmp.cun.s", FPR32>;
-def FCMP_CEQ_S  : FP_CMP<FPCMP_OPC_S, FPCMP_COND_CEQ, "fcmp.ceq.s", FPR32>;
-def FCMP_CUEQ_S : FP_CMP<FPCMP_OPC_S, FPCMP_COND_CUEQ, "fcmp.cueq.s", FPR32>;
-def FCMP_CLT_S  : FP_CMP<FPCMP_OPC_S, FPCMP_COND_CLT, "fcmp.clt.s", FPR32>;
-def FCMP_CULT_S : FP_CMP<FPCMP_OPC_S, FPCMP_COND_CULT, "fcmp.cult.s", FPR32>;
-def FCMP_CLE_S  : FP_CMP<FPCMP_OPC_S, FPCMP_COND_CLE, "fcmp.cle.s", FPR32>;
-def FCMP_CULE_S : FP_CMP<FPCMP_OPC_S, FPCMP_COND_CULE, "fcmp.cule.s", FPR32>;
-def FCMP_CNE_S  : FP_CMP<FPCMP_OPC_S, FPCMP_COND_CNE, "fcmp.cne.s", FPR32>;
-def FCMP_COR_S  : FP_CMP<FPCMP_OPC_S, FPCMP_COND_COR, "fcmp.cor.s", FPR32>;
-def FCMP_CUNE_S : FP_CMP<FPCMP_OPC_S, FPCMP_COND_CUNE, "fcmp.cune.s", FPR32>;
-def FCMP_SAF_S  : FP_CMP<FPCMP_OPC_S, FPCMP_COND_SAF, "fcmp.saf.s", FPR32>;
-def FCMP_SUN_S  : FP_CMP<FPCMP_OPC_S, FPCMP_COND_SUN, "fcmp.sun.s", FPR32>;
-def FCMP_SEQ_S  : FP_CMP<FPCMP_OPC_S, FPCMP_COND_SEQ, "fcmp.seq.s", FPR32>;
-def FCMP_SUEQ_S : FP_CMP<FPCMP_OPC_S, FPCMP_COND_SUEQ, "fcmp.sueq.s", FPR32>;
-def FCMP_SLT_S  : FP_CMP<FPCMP_OPC_S, FPCMP_COND_SLT, "fcmp.slt.s", FPR32>;
-def FCMP_SULT_S : FP_CMP<FPCMP_OPC_S, FPCMP_COND_SULT, "fcmp.sult.s", FPR32>;
-def FCMP_SLE_S  : FP_CMP<FPCMP_OPC_S, FPCMP_COND_SLE, "fcmp.sle.s", FPR32>;
-def FCMP_SULE_S : FP_CMP<FPCMP_OPC_S, FPCMP_COND_SULE, "fcmp.sule.s", FPR32>;
-def FCMP_SNE_S  : FP_CMP<FPCMP_OPC_S, FPCMP_COND_SNE, "fcmp.sne.s", FPR32>;
-def FCMP_SOR_S  : FP_CMP<FPCMP_OPC_S, FPCMP_COND_SOR, "fcmp.sor.s", FPR32>;
-def FCMP_SUNE_S : FP_CMP<FPCMP_OPC_S, FPCMP_COND_SUNE, "fcmp.sune.s", FPR32>;
+def FCMP_CAF_S  : FP_CMP<0x0c100000>;
+def FCMP_CUN_S  : FP_CMP<0x0c140000>;
+def FCMP_CEQ_S  : FP_CMP<0x0c120000>;
+def FCMP_CUEQ_S : FP_CMP<0x0c160000>;
+def FCMP_CLT_S  : FP_CMP<0x0c110000>;
+def FCMP_CULT_S : FP_CMP<0x0c150000>;
+def FCMP_CLE_S  : FP_CMP<0x0c130000>;
+def FCMP_CULE_S : FP_CMP<0x0c170000>;
+def FCMP_CNE_S  : FP_CMP<0x0c180000>;
+def FCMP_COR_S  : FP_CMP<0x0c1a0000>;
+def FCMP_CUNE_S : FP_CMP<0x0c1c0000>;
+def FCMP_SAF_S  : FP_CMP<0x0c108000>;
+def FCMP_SUN_S  : FP_CMP<0x0c148000>;
+def FCMP_SEQ_S  : FP_CMP<0x0c128000>;
+def FCMP_SUEQ_S : FP_CMP<0x0c168000>;
+def FCMP_SLT_S  : FP_CMP<0x0c118000>;
+def FCMP_SULT_S : FP_CMP<0x0c158000>;
+def FCMP_SLE_S  : FP_CMP<0x0c138000>;
+def FCMP_SULE_S : FP_CMP<0x0c178000>;
+def FCMP_SNE_S  : FP_CMP<0x0c188000>;
+def FCMP_SOR_S  : FP_CMP<0x0c1a8000>;
+def FCMP_SUNE_S : FP_CMP<0x0c1c8000>;
 
 // Conversion Instructions
-def FFINT_S_W    : FP_CONV<0b0000000100011101000100, "ffint.s.w", FPR32, FPR32>;
-def FTINT_W_S    : FP_CONV<0b0000000100011011000001, "ftint.w.s", FPR32, FPR32>;
-def FTINTRM_W_S  : FP_CONV<0b0000000100011010000001, "ftintrm.w.s", FPR32,
-                           FPR32>;
-def FTINTRP_W_S  : FP_CONV<0b0000000100011010010001, "ftintrp.w.s", FPR32,
-                           FPR32>;
-def FTINTRZ_W_S  : FP_CONV<0b0000000100011010100001, "ftintrz.w.s", FPR32,
-                           FPR32>;
-def FTINTRNE_W_S : FP_CONV<0b0000000100011010110001, "ftintrne.w.s", FPR32,
-                           FPR32>;
-def FRINT_S      : FP_CONV<0b0000000100011110010001, "frint.s", FPR32, FPR32>;
+def FFINT_S_W    : FP_CONV<0x011d1000>;
+def FTINT_W_S    : FP_CONV<0x011b0400>;
+def FTINTRM_W_S  : FP_CONV<0x011a0400>;
+def FTINTRP_W_S  : FP_CONV<0x011a4400>;
+def FTINTRZ_W_S  : FP_CONV<0x011a8400>;
+def FTINTRNE_W_S : FP_CONV<0x011ac400>;
+def FRINT_S      : FP_CONV<0x011e4400>;
 
 // Move Instructions
-def FSEL_S : FP_SEL<0b00001101000000, "fsel", FPR32>;
-def FMOV_S     : FP_MOV<0b0000000100010100100101, "fmov.s", FPR32, FPR32>;
-def MOVGR2FR_W : FP_MOV<0b0000000100010100101001, "movgr2fr.w", FPR32, GPR>;
-def MOVFR2GR_S : FP_MOV<0b0000000100010100101101, "movfr2gr.s", GPR, FPR32>;
-def MOVGR2FCSR : FP_MOV<0b0000000100010100110000, "movgr2fcsr", FCSR, GPR>;
-def MOVFCSR2GR : FP_MOV<0b0000000100010100110010, "movfcsr2gr", GPR, FCSR>;
-def MOVFR2CF_S : FP_MOV<0b0000000100010100110100, "movfr2cf", CFR, FPR32>;
-def MOVCF2FR_S : FP_MOV<0b0000000100010100110101, "movcf2fr", FPR32, CFR>;
-def MOVGR2CF   : FP_MOV<0b0000000100010100110110, "movgr2cf", CFR, GPR>;
-def MOVCF2GR   : FP_MOV<0b0000000100010100110111, "movcf2gr", GPR, CFR>;
+def FSEL_xS    : FP_SEL<0x0d000000>;
+def FMOV_S     : FP_MOV<0x01149400>;
+def MOVGR2FR_W : FP_MOV<0x0114a400, FPR32, GPR>;
+def MOVFR2GR_S : FP_MOV<0x0114b400, GPR, FPR32>;
+let hasSideEffects = 1 in {
+def MOVGR2FCSR : FP_MOV<0x0114c000, FCSR, GPR>;
+def MOVFCSR2GR : FP_MOV<0x0114c800, GPR, FCSR>;
+} // hasSideEffects = 1
+def MOVFR2CF_xS : FP_MOV<0x0114d000, CFR, FPR32>;
+def MOVCF2FR_xS : FP_MOV<0x0114d400, FPR32, CFR>;
+def MOVGR2CF    : FP_MOV<0x0114d800, CFR, GPR>;
+def MOVCF2GR    : FP_MOV<0x0114dc00, GPR, CFR>;
 
 // Branch Instructions
-def BCEQZ : FP_BRANCH<0b01001000, "bceqz">;
-def BCNEZ : FP_BRANCH<0b01001001, "bcnez">;
+def BCEQZ : FP_BRANCH<0x48000000>;
+def BCNEZ : FP_BRANCH<0x48000100>;
 
 // Common Memory Access Instructions
-def FLD_S : FP_LOAD_2RI12<0b0010101100, "fld.s", FPR32>;
-def FST_S : FP_STORE_2RI12<0b0010101101, "fst.s", FPR32>;
-def FLDX_S : FP_LOAD_3R<0b00111000001100000, "fldx.s", FPR32>;
-def FSTX_S : FP_STORE_3R<0b00111000001110000, "fstx.s", FPR32>;
+def FLD_S : FP_LOAD_2RI12<0x2b000000>;
+def FST_S : FP_STORE_2RI12<0x2b400000>;
+def FLDX_S : FP_LOAD_3R<0x38300000>;
+def FSTX_S : FP_STORE_3R<0x38380000>;
 
 // Bound Check Memory Access Instructions
-def FLDGT_S : FP_LOAD_3R<0b00111000011101000, "fldgt.s", FPR32>;
-def FLDLE_S : FP_LOAD_3R<0b00111000011101010, "fldle.s", FPR32>;
-def FSTGT_S : FP_STORE_3R<0b00111000011101100, "fstgt.s", FPR32>;
-def FSTLE_S : FP_STORE_3R<0b00111000011101110, "fstle.s", FPR32>;
+def FLDGT_S : FP_LOAD_3R<0x38740000>;
+def FLDLE_S : FP_LOAD_3R<0x38750000>;
+def FSTGT_S : FP_STORE_3R<0x38760000>;
+def FSTLE_S : FP_STORE_3R<0x38770000>;
 
 // Pseudo instructions for spill/reload CFRs.
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
@@ -155,10 +153,11 @@ def : PatFprFpr<fminnum_ieee, FMIN_S, FPR32>;
 def : PatFpr<fneg, FNEG_S, FPR32>;
 def : PatFpr<fabs, FABS_S, FPR32>;
 def : PatFpr<fsqrt, FSQRT_S, FPR32>;
-
 def : Pat<(fdiv fpimm1, (fsqrt FPR32:$fj)), (FRSQRT_S FPR32:$fj)>;
-
 def : Pat<(fcanonicalize FPR32:$fj), (FMAX_S $fj, $fj)>;
+def : Pat<(is_fpclass FPR32:$fj, (i32 timm:$mask)),
+          (SLTU R0, (ANDI (MOVFR2GR_S (FCLASS_S FPR32:$fj)),
+                          (to_fclass_mask timm:$mask)))>;
 
 /// Setcc
 
@@ -223,7 +222,7 @@ def : PatStrictFsetccs<SETLT,  FCMP_SLT_S,  FPR32>;
 /// Select
 
 def : Pat<(select CFR:$cc, FPR32:$fk, FPR32:$fj),
-          (FSEL_S FPR32:$fj, FPR32:$fk, CFR:$cc)>;
+          (FSEL_xS FPR32:$fj, FPR32:$fk, CFR:$cc)>;
 
 /// Selectcc
 
@@ -231,16 +230,16 @@ class PatFPSelectcc<CondCode cc, LAInst CmpInst, LAInst SelInst,
                     RegisterClass RegTy>
     : Pat<(select (GRLenVT (setcc RegTy:$a, RegTy:$b, cc)), RegTy:$t, RegTy:$f),
           (SelInst RegTy:$f, RegTy:$t, (CmpInst RegTy:$a, RegTy:$b))>;
-def : PatFPSelectcc<SETOEQ, FCMP_CEQ_S,  FSEL_S, FPR32>;
-def : PatFPSelectcc<SETOLT, FCMP_CLT_S,  FSEL_S, FPR32>;
-def : PatFPSelectcc<SETOLE, FCMP_CLE_S,  FSEL_S, FPR32>;
-def : PatFPSelectcc<SETONE, FCMP_CNE_S,  FSEL_S, FPR32>;
-def : PatFPSelectcc<SETO,   FCMP_COR_S,  FSEL_S, FPR32>;
-def : PatFPSelectcc<SETUEQ, FCMP_CUEQ_S, FSEL_S, FPR32>;
-def : PatFPSelectcc<SETULT, FCMP_CULT_S, FSEL_S, FPR32>;
-def : PatFPSelectcc<SETULE, FCMP_CULE_S, FSEL_S, FPR32>;
-def : PatFPSelectcc<SETUNE, FCMP_CUNE_S, FSEL_S, FPR32>;
-def : PatFPSelectcc<SETUO,  FCMP_CUN_S,  FSEL_S, FPR32>;
+def : PatFPSelectcc<SETOEQ, FCMP_CEQ_S,  FSEL_xS, FPR32>;
+def : PatFPSelectcc<SETOLT, FCMP_CLT_S,  FSEL_xS, FPR32>;
+def : PatFPSelectcc<SETOLE, FCMP_CLE_S,  FSEL_xS, FPR32>;
+def : PatFPSelectcc<SETONE, FCMP_CNE_S,  FSEL_xS, FPR32>;
+def : PatFPSelectcc<SETO,   FCMP_COR_S,  FSEL_xS, FPR32>;
+def : PatFPSelectcc<SETUEQ, FCMP_CUEQ_S, FSEL_xS, FPR32>;
+def : PatFPSelectcc<SETULT, FCMP_CULT_S, FSEL_xS, FPR32>;
+def : PatFPSelectcc<SETULE, FCMP_CULE_S, FSEL_xS, FPR32>;
+def : PatFPSelectcc<SETUNE, FCMP_CUNE_S, FSEL_xS, FPR32>;
+def : PatFPSelectcc<SETUO,  FCMP_CUN_S,  FSEL_xS, FPR32>;
 
 /// Loads
 

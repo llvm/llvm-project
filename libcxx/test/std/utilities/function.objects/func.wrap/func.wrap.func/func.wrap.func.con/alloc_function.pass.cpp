@@ -22,6 +22,12 @@
 #include "count_new.h"
 #include "../function_types.h"
 
+template <class T>
+struct non_default_test_allocator : test_allocator<T> {
+  non_default_test_allocator() = delete;
+  using test_allocator<T>::test_allocator;
+};
+
 class DummyClass {};
 
 template <class FuncType, class AllocType>

@@ -1,0 +1,53 @@
+add_custom_target(libc_network_unittests)
+
+add_libc_unittest(
+  htonl
+  SUITE
+    libc_network_unittests
+  SRCS
+    htonl_test.cpp
+  CXX_STANDARD
+    20
+  DEPENDS
+    libc.src.network.htonl
+    libc.src.network.ntohl
+)
+
+add_libc_unittest(
+  htons
+  SUITE
+    libc_network_unittests
+  SRCS
+    htons_test.cpp
+  CXX_STANDARD
+    20
+  DEPENDS
+    libc.src.network.htons
+    libc.src.network.ntohs
+)
+
+add_libc_unittest(
+  ntohl
+  SUITE
+    libc_network_unittests
+  SRCS
+    ntohl_test.cpp
+  CXX_STANDARD
+    20
+  DEPENDS
+    libc.src.network.htonl
+    libc.src.network.ntohl
+)
+
+add_libc_unittest(
+  ntohs
+  SUITE
+    libc_network_unittests
+  SRCS
+    ntohs_test.cpp
+  CXX_STANDARD
+    20
+  DEPENDS
+    libc.src.network.htons
+    libc.src.network.ntohs
+)

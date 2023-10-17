@@ -36,7 +36,7 @@ define i1 @overflow_check_2_and(ptr %dst) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DST_5:%.*]] = getelementptr i32, ptr [[DST:%.*]], i64 5
 ; CHECK-NEXT:    [[DST_5_UGE:%.*]] = icmp uge ptr [[DST_5]], [[DST]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[DST_5_UGE]], [[DST_5_UGE]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[DST_5_UGE]], true
 ; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[DST_4:%.*]] = getelementptr i32, ptr [[DST]], i64 4
@@ -65,7 +65,7 @@ define i1 @overflow_check_3_and(ptr %dst) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DST_5:%.*]] = getelementptr i32, ptr [[DST:%.*]], i64 5
 ; CHECK-NEXT:    [[DST_5_UGE:%.*]] = icmp uge ptr [[DST_5]], [[DST]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[DST_5_UGE]], [[DST_5_UGE]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[DST_5_UGE]], true
 ; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[DST_4:%.*]] = getelementptr i32, ptr [[DST]], i64 4
@@ -98,7 +98,7 @@ define i1 @overflow_check_4_and(ptr %dst) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DST_5:%.*]] = getelementptr i32, ptr [[DST:%.*]], i64 5
 ; CHECK-NEXT:    [[DST_5_UGE:%.*]] = icmp uge ptr [[DST_5]], [[DST]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[DST_5_UGE]], [[DST_5_UGE]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[DST_5_UGE]], true
 ; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[DST_4:%.*]] = getelementptr i32, ptr [[DST]], i64 4

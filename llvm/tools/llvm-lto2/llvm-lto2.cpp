@@ -167,10 +167,6 @@ static cl::opt<bool>
                  cl::desc("Run PGO context sensitive IR instrumentation"),
                  cl::Hidden);
 
-static cl::opt<bool> LtoOpaquePointers("lto-opaque-pointers",
-                                       cl::desc("Enable opaque pointer types"),
-                                       cl::init(true), cl::Hidden);
-
 static cl::opt<bool>
     DebugPassManager("debug-pass-manager", cl::Hidden,
                      cl::desc("Print pass management debugging information"));
@@ -181,6 +177,10 @@ static cl::opt<std::string>
 static cl::list<std::string>
     PassPlugins("load-pass-plugin",
                 cl::desc("Load passes from plugin library"));
+
+static cl::opt<std::string> UnifiedLTOMode("unified-lto", cl::Optional,
+                                           cl::desc("Set LTO mode"),
+                                           cl::value_desc("mode"));
 
 static cl::opt<bool> EnableFreestanding(
     "lto-freestanding",
@@ -306,20 +306,9 @@ static int run(int argc, char **argv) {
   Conf.Freestanding = EnableFreestanding;
   for (auto &PluginFN : PassPlugins)
     Conf.PassPlugins.push_back(PluginFN);
-  switch (CGOptLevel) {
-  case '0':
-    Conf.CGOptLevel = CodeGenOpt::None;
-    break;
-  case '1':
-    Conf.CGOptLevel = CodeGenOpt::Less;
-    break;
-  case '2':
-    Conf.CGOptLevel = CodeGenOpt::Default;
-    break;
-  case '3':
-    Conf.CGOptLevel = CodeGenOpt::Aggressive;
-    break;
-  default:
+  if (auto Level = CodeGenOpt::parseLevel(CGOptLevel)) {
+    Conf.CGOptLevel = *Level;
+  } else {
     llvm::errs() << "invalid cg optimization level: " << CGOptLevel << '\n';
     return 1;
   }
@@ -332,15 +321,15 @@ static int run(int argc, char **argv) {
   Conf.StatsFile = StatsFile;
   Conf.PTO.LoopVectorization = Conf.OptLevel > 1;
   Conf.PTO.SLPVectorization = Conf.OptLevel > 1;
-  Conf.OpaquePointers = LtoOpaquePointers;
 
   ThinBackend Backend;
   if (ThinLTODistributedIndexes)
-    Backend =
-        createWriteIndexesThinBackend(/* OldPrefix */ "",
-                                      /* NewPrefix */ "", ThinLTOEmitImports,
-                                      /* LinkedObjectsFile */ nullptr,
-                                      /* OnWrite */ {});
+    Backend = createWriteIndexesThinBackend(/*OldPrefix=*/"",
+                                            /*NewPrefix=*/"",
+                                            /*NativeObjectPrefix=*/"",
+                                            ThinLTOEmitImports,
+                                            /*LinkedObjectsFile=*/nullptr,
+                                            /*OnWrite=*/{});
   else
     Backend = createInProcessThinBackend(
         llvm::heavyweight_hardware_concurrency(Threads),
@@ -363,7 +352,20 @@ static int run(int argc, char **argv) {
       HasErrors = true;
   };
 
-  LTO Lto(std::move(Conf), std::move(Backend));
+  LTO::LTOKind LTOMode = LTO::LTOK_Default;
+
+  if (UnifiedLTOMode == "full") {
+    LTOMode = LTO::LTOK_UnifiedRegular;
+  } else if (UnifiedLTOMode == "thin") {
+    LTOMode = LTO::LTOK_UnifiedThin;
+  } else if (UnifiedLTOMode == "default") {
+    LTOMode = LTO::LTOK_Default;
+  } else if (!UnifiedLTOMode.empty()) {
+    llvm::errs() << "invalid LTO mode\n";
+    return 1;
+  }
+
+  LTO Lto(std::move(Conf), std::move(Backend), 1, LTOMode);
 
   for (std::string F : InputFilenames) {
     std::unique_ptr<MemoryBuffer> MB = check(MemoryBuffer::getFile(F), F);

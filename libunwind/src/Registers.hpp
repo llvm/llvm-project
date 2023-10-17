@@ -2869,7 +2869,7 @@ inline bool Registers_mips_o32::validRegister(int regNum) const {
     return false;
   if (regNum <= UNW_MIPS_R31)
     return true;
-#if __mips_isa_rev != 6
+#if __mips_isa_rev < 6
   if (regNum == UNW_MIPS_HI)
     return true;
   if (regNum == UNW_MIPS_LO)
@@ -2903,10 +2903,12 @@ inline uint32_t Registers_mips_o32::getRegister(int regNum) const {
     return _registers.__pc;
   case UNW_REG_SP:
     return _registers.__r[29];
+#if __mips_isa_rev < 6
   case UNW_MIPS_HI:
     return _registers.__hi;
   case UNW_MIPS_LO:
     return _registers.__lo;
+#endif
   }
   _LIBUNWIND_ABORT("unsupported mips_o32 register");
 }
@@ -2936,11 +2938,13 @@ inline void Registers_mips_o32::setRegister(int regNum, uint32_t value) {
   case UNW_REG_SP:
     _registers.__r[29] = value;
     return;
+#if __mips_isa_rev < 6
   case UNW_MIPS_HI:
     _registers.__hi = value;
     return;
   case UNW_MIPS_LO:
     _registers.__lo = value;
+#endif
     return;
   }
   _LIBUNWIND_ABORT("unsupported mips_o32 register");
@@ -3120,10 +3124,12 @@ inline const char *Registers_mips_o32::getRegisterName(int regNum) {
     return "$f30";
   case UNW_MIPS_F31:
     return "$f31";
+#if __mips_isa_rev < 6
   case UNW_MIPS_HI:
     return "$hi";
   case UNW_MIPS_LO:
     return "$lo";
+#endif
   default:
     return "unknown register";
   }
@@ -3193,7 +3199,7 @@ inline bool Registers_mips_newabi::validRegister(int regNum) const {
     return false;
   if (regNum <= UNW_MIPS_R31)
     return true;
-#if __mips_isa_rev != 6
+#if __mips_isa_rev < 6
   if (regNum == UNW_MIPS_HI)
     return true;
   if (regNum == UNW_MIPS_LO)
@@ -3212,10 +3218,12 @@ inline uint64_t Registers_mips_newabi::getRegister(int regNum) const {
     return _registers.__pc;
   case UNW_REG_SP:
     return _registers.__r[29];
+#if __mips_isa_rev < 6
   case UNW_MIPS_HI:
     return _registers.__hi;
   case UNW_MIPS_LO:
     return _registers.__lo;
+#endif
   }
   _LIBUNWIND_ABORT("unsupported mips_newabi register");
 }
@@ -3233,12 +3241,14 @@ inline void Registers_mips_newabi::setRegister(int regNum, uint64_t value) {
   case UNW_REG_SP:
     _registers.__r[29] = value;
     return;
+#if __mips_isa_rev < 6
   case UNW_MIPS_HI:
     _registers.__hi = value;
     return;
   case UNW_MIPS_LO:
     _registers.__lo = value;
     return;
+#endif
   }
   _LIBUNWIND_ABORT("unsupported mips_newabi register");
 }
@@ -3417,10 +3427,12 @@ inline const char *Registers_mips_newabi::getRegisterName(int regNum) {
     return "$f30";
   case UNW_MIPS_F31:
     return "$f31";
+#if __mips_isa_rev < 6
   case UNW_MIPS_HI:
     return "$hi";
   case UNW_MIPS_LO:
     return "$lo";
+#endif
   default:
     return "unknown register";
   }

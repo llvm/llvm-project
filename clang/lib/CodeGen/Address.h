@@ -22,77 +22,35 @@
 namespace clang {
 namespace CodeGen {
 
-// We try to save some space by using 6 bits over two PointerIntPairs to store
-// the alignment. However, some arches don't support 3 bits in a PointerIntPair
-// so we fallback to storing the alignment separately.
-template <typename T, bool = alignof(llvm::Value *) >= 8> class AddressImpl {};
-
-template <typename T> class AddressImpl<T, false> {
-  llvm::Value *Pointer;
-  llvm::Type *ElementType;
-  CharUnits Alignment;
-
-public:
-  AddressImpl(llvm::Value *Pointer, llvm::Type *ElementType,
-              CharUnits Alignment)
-      : Pointer(Pointer), ElementType(ElementType), Alignment(Alignment) {}
-  llvm::Value *getPointer() const { return Pointer; }
-  llvm::Type *getElementType() const { return ElementType; }
-  CharUnits getAlignment() const { return Alignment; }
-};
-
-template <typename T> class AddressImpl<T, true> {
-  // Int portion stores upper 3 bits of the log of the alignment.
-  llvm::PointerIntPair<llvm::Value *, 3, unsigned> Pointer;
-  // Int portion stores lower 3 bits of the log of the alignment.
-  llvm::PointerIntPair<llvm::Type *, 3, unsigned> ElementType;
-
-public:
-  AddressImpl(llvm::Value *Pointer, llvm::Type *ElementType,
-              CharUnits Alignment)
-      : Pointer(Pointer), ElementType(ElementType) {
-    if (Alignment.isZero())
-      return;
-    // Currently the max supported alignment is much less than 1 << 63 and is
-    // guaranteed to be a power of 2, so we can store the log of the alignment
-    // into 6 bits.
-    assert(Alignment.isPowerOfTwo() && "Alignment cannot be zero");
-    auto AlignLog = llvm::Log2_64(Alignment.getQuantity());
-    assert(AlignLog < (1 << 6) && "cannot fit alignment into 6 bits");
-    this->Pointer.setInt(AlignLog >> 3);
-    this->ElementType.setInt(AlignLog & 7);
-  }
-  llvm::Value *getPointer() const { return Pointer.getPointer(); }
-  llvm::Type *getElementType() const { return ElementType.getPointer(); }
-  CharUnits getAlignment() const {
-    unsigned AlignLog = (Pointer.getInt() << 3) | ElementType.getInt();
-    return CharUnits::fromQuantity(CharUnits::QuantityType(1) << AlignLog);
-  }
-};
+// Indicates whether a pointer is known not to be null.
+enum KnownNonNull_t { NotKnownNonNull, KnownNonNull };
 
 /// An aligned address.
 class Address {
-  AddressImpl<void> A;
+  llvm::PointerIntPair<llvm::Value *, 1, bool> PointerAndKnownNonNull;
+  llvm::Type *ElementType;
+  CharUnits Alignment;
 
 protected:
-  Address(std::nullptr_t) : A(nullptr, nullptr, CharUnits::Zero()) {}
+  Address(std::nullptr_t) : ElementType(nullptr) {}
 
 public:
-  Address(llvm::Value *Pointer, llvm::Type *ElementType, CharUnits Alignment)
-      : A(Pointer, ElementType, Alignment) {
+  Address(llvm::Value *Pointer, llvm::Type *ElementType, CharUnits Alignment,
+          KnownNonNull_t IsKnownNonNull = NotKnownNonNull)
+      : PointerAndKnownNonNull(Pointer, IsKnownNonNull),
+        ElementType(ElementType), Alignment(Alignment) {
     assert(Pointer != nullptr && "Pointer cannot be null");
     assert(ElementType != nullptr && "Element type cannot be null");
-    assert(llvm::cast<llvm::PointerType>(Pointer->getType())
-               ->isOpaqueOrPointeeTypeMatches(ElementType) &&
-           "Incorrect pointer element type");
   }
 
   static Address invalid() { return Address(nullptr); }
-  bool isValid() const { return A.getPointer() != nullptr; }
+  bool isValid() const {
+    return PointerAndKnownNonNull.getPointer() != nullptr;
+  }
 
   llvm::Value *getPointer() const {
     assert(isValid());
-    return A.getPointer();
+    return PointerAndKnownNonNull.getPointer();
   }
 
   /// Return the type of the pointer value.
@@ -103,7 +61,7 @@ public:
   /// Return the type of the values stored in this address.
   llvm::Type *getElementType() const {
     assert(isValid());
-    return A.getElementType();
+    return ElementType;
   }
 
   /// Return the address space that this address resides in.
@@ -119,19 +77,41 @@ public:
   /// Return the alignment of this pointer.
   CharUnits getAlignment() const {
     assert(isValid());
-    return A.getAlignment();
+    return Alignment;
   }
 
   /// Return address with different pointer, but same element type and
   /// alignment.
-  Address withPointer(llvm::Value *NewPointer) const {
-    return Address(NewPointer, getElementType(), getAlignment());
+  Address withPointer(llvm::Value *NewPointer,
+                      KnownNonNull_t IsKnownNonNull) const {
+    return Address(NewPointer, getElementType(), getAlignment(),
+                   IsKnownNonNull);
   }
 
   /// Return address with different alignment, but same pointer and element
   /// type.
   Address withAlignment(CharUnits NewAlignment) const {
-    return Address(getPointer(), getElementType(), NewAlignment);
+    return Address(getPointer(), getElementType(), NewAlignment,
+                   isKnownNonNull());
+  }
+
+  /// Return address with different element type, but same pointer and
+  /// alignment.
+  Address withElementType(llvm::Type *ElemTy) const {
+    return Address(getPointer(), ElemTy, getAlignment(), isKnownNonNull());
+  }
+
+  /// Whether the pointer is known not to be null.
+  KnownNonNull_t isKnownNonNull() const {
+    assert(isValid());
+    return (KnownNonNull_t)PointerAndKnownNonNull.getInt();
+  }
+
+  /// Set the non-null bit.
+  Address setKnownNonNull() {
+    assert(isValid());
+    PointerAndKnownNonNull.setInt(true);
+    return *this;
   }
 };
 
@@ -153,10 +133,8 @@ public:
     return llvm::cast<llvm::Constant>(Address::getPointer());
   }
 
-  ConstantAddress getElementBitCast(llvm::Type *ElemTy) const {
-    llvm::Constant *BitCast = llvm::ConstantExpr::getBitCast(
-        getPointer(), ElemTy->getPointerTo(getAddressSpace()));
-    return ConstantAddress(BitCast, ElemTy, getAlignment());
+  ConstantAddress withElementType(llvm::Type *ElemTy) const {
+    return ConstantAddress(getPointer(), ElemTy, getAlignment());
   }
 
   static bool isaImpl(Address addr) {

@@ -69,7 +69,7 @@ static void initializeUsedResources(InstrDesc &ID,
   for (unsigned I = 0, E = SCDesc.NumWriteProcResEntries; I < E; ++I) {
     const MCWriteProcResEntry *PRE = STI.getWriteProcResBegin(&SCDesc) + I;
     const MCProcResourceDesc &PR = *SM.getProcResource(PRE->ProcResourceIdx);
-    if (!PRE->Cycles) {
+    if (!PRE->ReleaseAtCycle) {
 #ifndef NDEBUG
       WithColor::warning()
           << "Ignoring invalid write of zero cycles on processor resource "
@@ -89,11 +89,11 @@ static void initializeUsedResources(InstrDesc &ID,
       AllInOrderResources &= (PR.BufferSize <= 1);
     }
 
-    CycleSegment RCy(0, PRE->Cycles, false);
+    CycleSegment RCy(0, PRE->ReleaseAtCycle, false);
     Worklist.emplace_back(ResourcePlusCycles(Mask, ResourceUsage(RCy)));
     if (PR.SuperIdx) {
       uint64_t Super = ProcResourceMasks[PR.SuperIdx];
-      SuperResources[Super] += PRE->Cycles;
+      SuperResources[Super] += PRE->ReleaseAtCycle;
     }
   }
 
@@ -123,7 +123,7 @@ static void initializeUsedResources(InstrDesc &ID,
     ResourcePlusCycles &A = Worklist[I];
     if (!A.second.size()) {
       assert(llvm::popcount(A.first) > 1 && "Expected a group!");
-      UsedResourceGroups |= PowerOf2Floor(A.first);
+      UsedResourceGroups |= llvm::bit_floor(A.first);
       continue;
     }
 
@@ -134,7 +134,7 @@ static void initializeUsedResources(InstrDesc &ID,
       UsedResourceUnits |= A.first;
     } else {
       // Remove the leading 1 from the resource group mask.
-      NormalizedMask ^= PowerOf2Floor(NormalizedMask);
+      NormalizedMask ^= llvm::bit_floor(NormalizedMask);
       if (UnitsFromResourceGroups & NormalizedMask)
         ID.HasPartiallyOverlappingGroups = true;
 
@@ -156,7 +156,7 @@ static void initializeUsedResources(InstrDesc &ID,
   // is reserved. For example (on target x86; cpu Haswell):
   //
   //  SchedWriteRes<[HWPort0, HWPort1, HWPort01]> {
-  //    let ResourceCycles = [2, 2, 3];
+  //    let ReleaseAtCycles = [2, 2, 3];
   //  }
   //
   // This means:
@@ -172,7 +172,7 @@ static void initializeUsedResources(InstrDesc &ID,
   for (ResourcePlusCycles &RPC : ID.Resources) {
     if (llvm::popcount(RPC.first) > 1 && !RPC.second.isReserved()) {
       // Remove the leading 1 from the resource group mask.
-      uint64_t Mask = RPC.first ^ PowerOf2Floor(RPC.first);
+      uint64_t Mask = RPC.first ^ llvm::bit_floor(RPC.first);
       uint64_t MaxResourceUnits = llvm::popcount(Mask);
       if (RPC.second.NumUnits > (unsigned)llvm::popcount(Mask)) {
         RPC.second.setReserved();
@@ -312,7 +312,7 @@ void InstrBuilder::populateWrites(InstrDesc &ID, const MCInst &MCI,
   // According to assumption 2. register reads start at #(NumExplicitDefs-1).
   // That means, register R1 from the example is both read and written.
   unsigned NumExplicitDefs = MCDesc.getNumDefs();
-  unsigned NumImplicitDefs = MCDesc.getNumImplicitDefs();
+  unsigned NumImplicitDefs = MCDesc.implicit_defs().size();
   unsigned NumWriteLatencyEntries = SCDesc.NumWriteLatencyEntries;
   unsigned TotalDefs = NumExplicitDefs + NumImplicitDefs;
   if (MCDesc.hasOptionalDef())
@@ -331,7 +331,7 @@ void InstrBuilder::populateWrites(InstrDesc &ID, const MCInst &MCI,
     if (!Op.isReg())
       continue;
 
-    if (MCDesc.OpInfo[CurrentDef].isOptionalDef()) {
+    if (MCDesc.operands()[CurrentDef].isOptionalDef()) {
       OptionalDefIdx = CurrentDef++;
       continue;
     }
@@ -365,7 +365,7 @@ void InstrBuilder::populateWrites(InstrDesc &ID, const MCInst &MCI,
     unsigned Index = NumExplicitDefs + CurrentDef;
     WriteDescriptor &Write = ID.Writes[Index];
     Write.OpIndex = ~CurrentDef;
-    Write.RegisterID = MCDesc.getImplicitDefs()[CurrentDef];
+    Write.RegisterID = MCDesc.implicit_defs()[CurrentDef];
     if (Index < NumWriteLatencyEntries) {
       const MCWriteLatencyEntry &WLE =
           *STI.getWriteLatencyEntry(&SCDesc, Index);
@@ -435,7 +435,7 @@ void InstrBuilder::populateReads(InstrDesc &ID, const MCInst &MCI,
                                  unsigned SchedClassID) {
   const MCInstrDesc &MCDesc = MCII.get(MCI.getOpcode());
   unsigned NumExplicitUses = MCDesc.getNumOperands() - MCDesc.getNumDefs();
-  unsigned NumImplicitUses = MCDesc.getNumImplicitUses();
+  unsigned NumImplicitUses = MCDesc.implicit_uses().size();
   // Remove the optional definition.
   if (MCDesc.hasOptionalDef())
     --NumExplicitUses;
@@ -464,7 +464,7 @@ void InstrBuilder::populateReads(InstrDesc &ID, const MCInst &MCI,
     ReadDescriptor &Read = ID.Reads[CurrentUse + I];
     Read.OpIndex = ~I;
     Read.UseIndex = NumExplicitUses + I;
-    Read.RegisterID = MCDesc.getImplicitUses()[I];
+    Read.RegisterID = MCDesc.implicit_uses()[I];
     Read.SchedClassID = SchedClassID;
     LLVM_DEBUG(dbgs() << "\t\t[Use][I] OpIdx=" << ~Read.OpIndex
                       << ", UseIndex=" << Read.UseIndex << ", RegisterID="
@@ -511,7 +511,7 @@ Error InstrBuilder::verifyInstrDesc(const InstrDesc &ID,
 
 Expected<const InstrDesc &>
 InstrBuilder::createInstrDescImpl(const MCInst &MCI,
-                                  const SmallVector<SharedInstrument> &IVec) {
+                                  const SmallVector<Instrument *> &IVec) {
   assert(STI.getSchedModel().hasInstrSchedModel() &&
          "Itineraries are not yet supported!");
 
@@ -601,7 +601,7 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI,
 
 Expected<const InstrDesc &>
 InstrBuilder::getOrCreateInstrDesc(const MCInst &MCI,
-                                   const SmallVector<SharedInstrument> &IVec) {
+                                   const SmallVector<Instrument *> &IVec) {
   // Cache lookup using SchedClassID from Instrumentation
   unsigned SchedClassID = IM.getSchedClassID(MCII, MCI, IVec);
 
@@ -612,7 +612,7 @@ InstrBuilder::getOrCreateInstrDesc(const MCInst &MCI,
   unsigned CPUID = STI.getSchedModel().getProcessorID();
   SchedClassID = STI.resolveVariantSchedClass(SchedClassID, &MCI, &MCII, CPUID);
   auto VDKey = std::make_pair(&MCI, SchedClassID);
-  if (VariantDescriptors.find(VDKey) != VariantDescriptors.end())
+  if (VariantDescriptors.contains(VDKey))
     return *VariantDescriptors[VDKey];
 
   return createInstrDescImpl(MCI, IVec);
@@ -622,7 +622,7 @@ STATISTIC(NumVariantInst, "Number of MCInsts that doesn't have static Desc");
 
 Expected<std::unique_ptr<Instruction>>
 InstrBuilder::createInstruction(const MCInst &MCI,
-                                const SmallVector<SharedInstrument> &IVec) {
+                                const SmallVector<Instrument *> &IVec) {
   Expected<const InstrDesc &> DescOrErr = getOrCreateInstrDesc(MCI, IVec);
   if (!DescOrErr)
     return DescOrErr.takeError();

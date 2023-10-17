@@ -3,7 +3,6 @@ Read in a library with a version number of 0.0.0, make sure we produce a good ve
 """
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
@@ -11,7 +10,6 @@ from lldbsuite.test.lldbtest import *
 
 
 class TestGetVersionForZero(TestBase):
-
     # If your test case doesn't stress debug info, then
     # set this to true.  That way it won't be run once for
     # each debug info format.
@@ -34,4 +32,3 @@ class TestGetVersionForZero(TestBase):
         for elem in module.GetVersion():
             did_iterate = True
         self.assertTrue(did_iterate, "Didn't get into the GetVersion loop")
-

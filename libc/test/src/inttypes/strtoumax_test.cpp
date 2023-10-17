@@ -8,8 +8,8 @@
 
 #include "src/inttypes/strtoumax.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 #include "test/src/stdlib/StrtolTest.h"
 
-STRTOL_TEST(Strtoumax, __llvm_libc::strtoumax)
+STRTOL_TEST(Strtoumax, LIBC_NAMESPACE::strtoumax)

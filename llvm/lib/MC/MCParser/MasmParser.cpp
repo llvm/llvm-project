@@ -151,14 +151,14 @@ struct IntFieldInfo {
 
   IntFieldInfo() = default;
   IntFieldInfo(const SmallVector<const MCExpr *, 1> &V) { Values = V; }
-  IntFieldInfo(SmallVector<const MCExpr *, 1> &&V) { Values = V; }
+  IntFieldInfo(SmallVector<const MCExpr *, 1> &&V) { Values = std::move(V); }
 };
 struct RealFieldInfo {
   SmallVector<APInt, 1> AsIntValues;
 
   RealFieldInfo() = default;
   RealFieldInfo(const SmallVector<APInt, 1> &V) { AsIntValues = V; }
-  RealFieldInfo(SmallVector<APInt, 1> &&V) { AsIntValues = V; }
+  RealFieldInfo(SmallVector<APInt, 1> &&V) { AsIntValues = std::move(V); }
 };
 struct StructFieldInfo {
   std::vector<StructInitializer> Initializers;
@@ -269,12 +269,12 @@ FieldInitializer::FieldInitializer(FieldType FT) : FT(FT) {
 
 FieldInitializer::FieldInitializer(SmallVector<const MCExpr *, 1> &&Values)
     : FT(FT_INTEGRAL) {
-  new (&IntInfo) IntFieldInfo(Values);
+  new (&IntInfo) IntFieldInfo(std::move(Values));
 }
 
 FieldInitializer::FieldInitializer(SmallVector<APInt, 1> &&AsIntValues)
     : FT(FT_REAL) {
-  new (&RealInfo) RealFieldInfo(AsIntValues);
+  new (&RealInfo) RealFieldInfo(std::move(AsIntValues));
 }
 
 FieldInitializer::FieldInitializer(
@@ -479,7 +479,7 @@ public:
   void addDirectiveHandler(StringRef Directive,
                            ExtensionDirectiveHandler Handler) override {
     ExtensionDirectiveMap[Directive] = Handler;
-    if (DirectiveKindMap.find(Directive) == DirectiveKindMap.end()) {
+    if (!DirectiveKindMap.contains(Directive)) {
       DirectiveKindMap[Directive] = DK_HANDLER_DIRECTIVE;
     }
   }
@@ -962,22 +962,22 @@ private:
 
   // .cfi directives
   bool parseDirectiveCFIRegister(SMLoc DirectiveLoc);
-  bool parseDirectiveCFIWindowSave();
+  bool parseDirectiveCFIWindowSave(SMLoc DirectiveLoc);
   bool parseDirectiveCFISections();
   bool parseDirectiveCFIStartProc();
   bool parseDirectiveCFIEndProc();
-  bool parseDirectiveCFIDefCfaOffset();
+  bool parseDirectiveCFIDefCfaOffset(SMLoc DirectiveLoc);
   bool parseDirectiveCFIDefCfa(SMLoc DirectiveLoc);
-  bool parseDirectiveCFIAdjustCfaOffset();
+  bool parseDirectiveCFIAdjustCfaOffset(SMLoc DirectiveLoc);
   bool parseDirectiveCFIDefCfaRegister(SMLoc DirectiveLoc);
   bool parseDirectiveCFIOffset(SMLoc DirectiveLoc);
   bool parseDirectiveCFIRelOffset(SMLoc DirectiveLoc);
   bool parseDirectiveCFIPersonalityOrLsda(bool IsPersonality);
-  bool parseDirectiveCFIRememberState();
-  bool parseDirectiveCFIRestoreState();
+  bool parseDirectiveCFIRememberState(SMLoc DirectiveLoc);
+  bool parseDirectiveCFIRestoreState(SMLoc DirectiveLoc);
   bool parseDirectiveCFISameValue(SMLoc DirectiveLoc);
   bool parseDirectiveCFIRestore(SMLoc DirectiveLoc);
-  bool parseDirectiveCFIEscape();
+  bool parseDirectiveCFIEscape(SMLoc DirectiveLoc);
   bool parseDirectiveCFIReturnColumn(SMLoc DirectiveLoc);
   bool parseDirectiveCFISignalFrame();
   bool parseDirectiveCFIUndefined(SMLoc DirectiveLoc);
@@ -1618,19 +1618,7 @@ bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
     // Parse symbol variant.
     std::pair<StringRef, StringRef> Split;
     if (!MAI.useParensForSymbolVariant()) {
-      if (FirstTokenKind == AsmToken::String) {
-        if (Lexer.is(AsmToken::At)) {
-          Lex(); // eat @
-          SMLoc AtLoc = getLexer().getLoc();
-          StringRef VName;
-          if (parseIdentifier(VName))
-            return Error(AtLoc, "expected symbol variant after '@'");
-
-          Split = std::make_pair(Identifier, VName);
-        }
-      } else {
-        Split = Identifier.split('@');
-      }
+      Split = Identifier.split('@');
     } else if (Lexer.is(AsmToken::LParen)) {
       Lex(); // eat '('.
       StringRef VName;
@@ -2125,20 +2113,6 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     // Treat '.' as a valid identifier in this context.
     Lex();
     IDVal = ".";
-  } else if (Lexer.is(AsmToken::LCurly)) {
-    // Treat '{' as a valid identifier in this context.
-    Lex();
-    IDVal = "{";
-
-  } else if (Lexer.is(AsmToken::RCurly)) {
-    // Treat '}' as a valid identifier in this context.
-    Lex();
-    IDVal = "}";
-  } else if (Lexer.is(AsmToken::Star) &&
-             getTargetParser().starIsStartOfStatement()) {
-    // Accept '*' as a valid start of statement.
-    Lex();
-    IDVal = "*";
   } else if (Lexer.is(AsmToken::Real)) {
     // Treat ".<number>" as a valid identifier in this context.
     IDVal = getTok().getString();
@@ -2330,21 +2304,15 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
       return (*Handler.second)(Handler.first, IDVal, IDLoc);
 
     // Next, let the target-specific assembly parser try.
-    SMLoc StartTokLoc = getTok().getLoc();
-    bool TPDirectiveReturn =
-        ID.is(AsmToken::Identifier) && getTargetParser().ParseDirective(ID);
+    if (ID.isNot(AsmToken::Identifier))
+      return false;
 
-    if (hasPendingError())
+    ParseStatus TPDirectiveReturn = getTargetParser().parseDirective(ID);
+    assert(TPDirectiveReturn.isFailure() == hasPendingError() &&
+           "Should only return Failure iff there was an error");
+    if (TPDirectiveReturn.isFailure())
       return true;
-    // Currently the return value should be true if we are
-    // uninterested but as this is at odds with the standard parsing
-    // convention (return true = error) we have instances of a parsed
-    // directive that fails returning true as an error. Catch these
-    // cases as best as possible errors here.
-    if (TPDirectiveReturn && StartTokLoc != getTok().getLoc())
-      return true;
-    // Return if we did some parsing or believe we succeeded.
-    if (!TPDirectiveReturn || StartTokLoc != getTok().getLoc())
+    if (TPDirectiveReturn.isSuccess())
       return false;
 
     // Finally, if no one else is interested in this directive, it must be
@@ -2452,9 +2420,9 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     case DK_CFI_DEF_CFA:
       return parseDirectiveCFIDefCfa(IDLoc);
     case DK_CFI_DEF_CFA_OFFSET:
-      return parseDirectiveCFIDefCfaOffset();
+      return parseDirectiveCFIDefCfaOffset(IDLoc);
     case DK_CFI_ADJUST_CFA_OFFSET:
-      return parseDirectiveCFIAdjustCfaOffset();
+      return parseDirectiveCFIAdjustCfaOffset(IDLoc);
     case DK_CFI_DEF_CFA_REGISTER:
       return parseDirectiveCFIDefCfaRegister(IDLoc);
     case DK_CFI_OFFSET:
@@ -2466,15 +2434,15 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     case DK_CFI_LSDA:
       return parseDirectiveCFIPersonalityOrLsda(false);
     case DK_CFI_REMEMBER_STATE:
-      return parseDirectiveCFIRememberState();
+      return parseDirectiveCFIRememberState(IDLoc);
     case DK_CFI_RESTORE_STATE:
-      return parseDirectiveCFIRestoreState();
+      return parseDirectiveCFIRestoreState(IDLoc);
     case DK_CFI_SAME_VALUE:
       return parseDirectiveCFISameValue(IDLoc);
     case DK_CFI_RESTORE:
       return parseDirectiveCFIRestore(IDLoc);
     case DK_CFI_ESCAPE:
-      return parseDirectiveCFIEscape();
+      return parseDirectiveCFIEscape(IDLoc);
     case DK_CFI_RETURN_COLUMN:
       return parseDirectiveCFIReturnColumn(IDLoc);
     case DK_CFI_SIGNAL_FRAME:
@@ -2484,7 +2452,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     case DK_CFI_REGISTER:
       return parseDirectiveCFIRegister(IDLoc);
     case DK_CFI_WINDOW_SAVE:
-      return parseDirectiveCFIWindowSave();
+      return parseDirectiveCFIWindowSave(IDLoc);
     case DK_EXITM:
       Info.ExitValue = "";
       return parseDirectiveExitMacro(IDLoc, IDVal, *Info.ExitValue);
@@ -4563,7 +4531,7 @@ bool MasmParser::parseDirectiveStruct(StringRef Directive,
                                      "' directive; expected none or NONUNIQUE");
   }
 
-  if (parseToken(AsmToken::EndOfStatement))
+  if (parseEOL())
     return addErrorSuffix(" in '" + Twine(Directive) + "' directive");
 
   StructInProgress.emplace_back(Name, DirKind == DK_UNION, AlignmentValue);
@@ -4585,7 +4553,7 @@ bool MasmParser::parseDirectiveNestedStruct(StringRef Directive,
     Name = getTok().getIdentifier();
     parseToken(AsmToken::Identifier);
   }
-  if (parseToken(AsmToken::EndOfStatement))
+  if (parseEOL())
     return addErrorSuffix(" in '" + Twine(Directive) + "' directive");
 
   // Reserve space to ensure Alignment doesn't get invalidated when
@@ -4611,7 +4579,7 @@ bool MasmParser::parseDirectiveEnds(StringRef Name, SMLoc NameLoc) {
       Structure.Size, std::min(Structure.Alignment, Structure.AlignmentSize));
   Structs[Name.lower()] = Structure;
 
-  if (parseToken(AsmToken::EndOfStatement))
+  if (parseEOL())
     return addErrorSuffix(" in ENDS directive");
 
   return false;
@@ -4623,7 +4591,7 @@ bool MasmParser::parseDirectiveNestedEnds() {
   if (StructInProgress.size() == 1)
     return TokError("missing name in top-level ENDS directive");
 
-  if (parseToken(AsmToken::EndOfStatement))
+  if (parseEOL())
     return addErrorSuffix(" in nested ENDS directive");
 
   StructInfo Structure = StructInProgress.pop_back_val();
@@ -4695,7 +4663,7 @@ bool MasmParser::parseDirectiveOrg() {
   SMLoc OffsetLoc = Lexer.getLoc();
   if (checkForValidSection() || parseExpression(Offset))
     return true;
-  if (parseToken(AsmToken::EndOfStatement))
+  if (parseEOL())
     return addErrorSuffix(" in 'org' directive");
 
   if (StructInProgress.empty()) {
@@ -4764,10 +4732,9 @@ bool MasmParser::parseDirectiveAlign() {
   if (getTok().is(AsmToken::EndOfStatement)) {
     return Warning(AlignmentLoc,
                    "align directive with no operand is ignored") &&
-           parseToken(AsmToken::EndOfStatement);
+           parseEOL();
   }
-  if (parseAbsoluteExpression(Alignment) ||
-      parseToken(AsmToken::EndOfStatement))
+  if (parseAbsoluteExpression(Alignment) || parseEOL())
     return addErrorSuffix(" in align directive");
 
   // Always emit an alignment here even if we throw an error.
@@ -4790,7 +4757,7 @@ bool MasmParser::parseDirectiveAlign() {
 /// parseDirectiveEven
 ///  ::= even
 bool MasmParser::parseDirectiveEven() {
-  if (parseToken(AsmToken::EndOfStatement) || emitAlignTo(2))
+  if (parseEOL() || emitAlignTo(2))
     return addErrorSuffix(" in even directive");
 
   return false;
@@ -5508,7 +5475,7 @@ bool MasmParser::parseDirectiveCFIStartProc() {
   if (!parseOptionalToken(AsmToken::EndOfStatement)) {
     if (check(parseIdentifier(Simple) || Simple != "simple",
               "unexpected token") ||
-        parseToken(AsmToken::EndOfStatement))
+        parseEOL())
       return addErrorSuffix(" in '.cfi_startproc' directive");
   }
 
@@ -5558,12 +5525,12 @@ bool MasmParser::parseDirectiveCFIDefCfa(SMLoc DirectiveLoc) {
 
 /// parseDirectiveCFIDefCfaOffset
 /// ::= .cfi_def_cfa_offset offset
-bool MasmParser::parseDirectiveCFIDefCfaOffset() {
+bool MasmParser::parseDirectiveCFIDefCfaOffset(SMLoc DirectiveLoc) {
   int64_t Offset = 0;
   if (parseAbsoluteExpression(Offset))
     return true;
 
-  getStreamer().emitCFIDefCfaOffset(Offset);
+  getStreamer().emitCFIDefCfaOffset(Offset, DirectiveLoc);
   return false;
 }
 
@@ -5576,25 +5543,25 @@ bool MasmParser::parseDirectiveCFIRegister(SMLoc DirectiveLoc) {
       parseRegisterOrRegisterNumber(Register2, DirectiveLoc))
     return true;
 
-  getStreamer().emitCFIRegister(Register1, Register2);
+  getStreamer().emitCFIRegister(Register1, Register2, DirectiveLoc);
   return false;
 }
 
 /// parseDirectiveCFIWindowSave
 /// ::= .cfi_window_save
-bool MasmParser::parseDirectiveCFIWindowSave() {
-  getStreamer().emitCFIWindowSave();
+bool MasmParser::parseDirectiveCFIWindowSave(SMLoc DirectiveLoc) {
+  getStreamer().emitCFIWindowSave(DirectiveLoc);
   return false;
 }
 
 /// parseDirectiveCFIAdjustCfaOffset
 /// ::= .cfi_adjust_cfa_offset adjustment
-bool MasmParser::parseDirectiveCFIAdjustCfaOffset() {
+bool MasmParser::parseDirectiveCFIAdjustCfaOffset(SMLoc DirectiveLoc) {
   int64_t Adjustment = 0;
   if (parseAbsoluteExpression(Adjustment))
     return true;
 
-  getStreamer().emitCFIAdjustCfaOffset(Adjustment);
+  getStreamer().emitCFIAdjustCfaOffset(Adjustment, DirectiveLoc);
   return false;
 }
 
@@ -5634,7 +5601,7 @@ bool MasmParser::parseDirectiveCFIRelOffset(SMLoc DirectiveLoc) {
       parseAbsoluteExpression(Offset))
     return true;
 
-  getStreamer().emitCFIRelOffset(Register, Offset);
+  getStreamer().emitCFIRelOffset(Register, Offset, DirectiveLoc);
   return false;
 }
 
@@ -5688,15 +5655,15 @@ bool MasmParser::parseDirectiveCFIPersonalityOrLsda(bool IsPersonality) {
 
 /// parseDirectiveCFIRememberState
 /// ::= .cfi_remember_state
-bool MasmParser::parseDirectiveCFIRememberState() {
-  getStreamer().emitCFIRememberState();
+bool MasmParser::parseDirectiveCFIRememberState(SMLoc DirectiveLoc) {
+  getStreamer().emitCFIRememberState(DirectiveLoc);
   return false;
 }
 
 /// parseDirectiveCFIRestoreState
 /// ::= .cfi_remember_state
-bool MasmParser::parseDirectiveCFIRestoreState() {
-  getStreamer().emitCFIRestoreState();
+bool MasmParser::parseDirectiveCFIRestoreState(SMLoc DirectiveLoc) {
+  getStreamer().emitCFIRestoreState(DirectiveLoc);
   return false;
 }
 
@@ -5708,7 +5675,7 @@ bool MasmParser::parseDirectiveCFISameValue(SMLoc DirectiveLoc) {
   if (parseRegisterOrRegisterNumber(Register, DirectiveLoc))
     return true;
 
-  getStreamer().emitCFISameValue(Register);
+  getStreamer().emitCFISameValue(Register, DirectiveLoc);
   return false;
 }
 
@@ -5725,7 +5692,7 @@ bool MasmParser::parseDirectiveCFIRestore(SMLoc DirectiveLoc) {
 
 /// parseDirectiveCFIEscape
 /// ::= .cfi_escape expression[,...]
-bool MasmParser::parseDirectiveCFIEscape() {
+bool MasmParser::parseDirectiveCFIEscape(SMLoc DirectiveLoc) {
   std::string Values;
   int64_t CurrValue;
   if (parseAbsoluteExpression(CurrValue))
@@ -5742,7 +5709,7 @@ bool MasmParser::parseDirectiveCFIEscape() {
     Values.push_back((uint8_t)CurrValue);
   }
 
-  getStreamer().emitCFIEscape(Values);
+  getStreamer().emitCFIEscape(Values, DirectiveLoc);
   return false;
 }
 
@@ -6129,6 +6096,7 @@ bool MasmParser::parseDirectiveComm(bool IsLocal) {
 bool MasmParser::parseDirectiveComment(SMLoc DirectiveLoc) {
   std::string FirstLine = parseStringTo(AsmToken::EndOfStatement);
   size_t DelimiterEnd = FirstLine.find_first_of("\b\t\v\f\r\x1A ");
+  assert(DelimiterEnd != std::string::npos);
   StringRef Delimiter = StringRef(FirstLine).take_front(DelimiterEnd);
   if (Delimiter.empty())
     return Error(DirectiveLoc, "no delimiter in 'comment' directive");
@@ -6266,17 +6234,17 @@ bool MasmParser::parseDirectiveIfdef(SMLoc DirectiveLoc, bool expect_defined) {
     bool is_defined = false;
     MCRegister Reg;
     SMLoc StartLoc, EndLoc;
-    is_defined = (getTargetParser().tryParseRegister(Reg, StartLoc, EndLoc) ==
-                  MatchOperand_Success);
+    is_defined =
+        getTargetParser().tryParseRegister(Reg, StartLoc, EndLoc).isSuccess();
     if (!is_defined) {
       StringRef Name;
       if (check(parseIdentifier(Name), "expected identifier after 'ifdef'") ||
           parseEOL())
         return true;
 
-      if (BuiltinSymbolMap.find(Name.lower()) != BuiltinSymbolMap.end()) {
+      if (BuiltinSymbolMap.contains(Name.lower())) {
         is_defined = true;
-      } else if (Variables.find(Name.lower()) != Variables.end()) {
+      } else if (Variables.contains(Name.lower())) {
         is_defined = true;
       } else {
         MCSymbol *Sym = getContext().lookupSymbol(Name.lower());
@@ -6386,8 +6354,8 @@ bool MasmParser::parseDirectiveElseIfdef(SMLoc DirectiveLoc,
     bool is_defined = false;
     MCRegister Reg;
     SMLoc StartLoc, EndLoc;
-    is_defined = (getTargetParser().tryParseRegister(Reg, StartLoc, EndLoc) ==
-                  MatchOperand_Success);
+    is_defined =
+        getTargetParser().tryParseRegister(Reg, StartLoc, EndLoc).isSuccess();
     if (!is_defined) {
       StringRef Name;
       if (check(parseIdentifier(Name),
@@ -6395,9 +6363,9 @@ bool MasmParser::parseDirectiveElseIfdef(SMLoc DirectiveLoc,
           parseEOL())
         return true;
 
-      if (BuiltinSymbolMap.find(Name.lower()) != BuiltinSymbolMap.end()) {
+      if (BuiltinSymbolMap.contains(Name.lower())) {
         is_defined = true;
-      } else if (Variables.find(Name.lower()) != Variables.end()) {
+      } else if (Variables.contains(Name.lower())) {
         is_defined = true;
       } else {
         MCSymbol *Sym = getContext().lookupSymbol(Name);
@@ -6558,16 +6526,16 @@ bool MasmParser::parseDirectiveErrorIfdef(SMLoc DirectiveLoc,
   bool IsDefined = false;
   MCRegister Reg;
   SMLoc StartLoc, EndLoc;
-  IsDefined = (getTargetParser().tryParseRegister(Reg, StartLoc, EndLoc) ==
-               MatchOperand_Success);
+  IsDefined =
+      getTargetParser().tryParseRegister(Reg, StartLoc, EndLoc).isSuccess();
   if (!IsDefined) {
     StringRef Name;
     if (check(parseIdentifier(Name), "expected identifier after '.errdef'"))
       return true;
 
-    if (BuiltinSymbolMap.find(Name.lower()) != BuiltinSymbolMap.end()) {
+    if (BuiltinSymbolMap.contains(Name.lower())) {
       IsDefined = true;
-    } else if (Variables.find(Name.lower()) != Variables.end()) {
+    } else if (Variables.contains(Name.lower())) {
       IsDefined = true;
     } else {
       MCSymbol *Sym = getContext().lookupSymbol(Name);
@@ -7458,7 +7426,7 @@ bool MasmParser::parseMSInlineAsm(
         InputDecls.push_back(OpDecl);
         InputDeclsAddressOf.push_back(Operand.needAddressOf());
         InputConstraints.push_back(Constraint.str());
-        if (Desc.OpInfo[i - 1].isBranchTarget())
+        if (Desc.operands()[i - 1].isBranchTarget())
           AsmStrRewrites.emplace_back(AOK_CallInput, Start, SymName.size());
         else
           AsmStrRewrites.emplace_back(AOK_Input, Start, SymName.size());
@@ -7466,9 +7434,7 @@ bool MasmParser::parseMSInlineAsm(
     }
 
     // Consider implicit defs to be clobbers.  Think of cpuid and push.
-    ArrayRef<MCPhysReg> ImpDefs(Desc.getImplicitDefs(),
-                                Desc.getNumImplicitDefs());
-    llvm::append_range(ClobberRegs, ImpDefs);
+    llvm::append_range(ClobberRegs, Desc.implicit_defs());
   }
 
   // Set the number of Outputs and Inputs.

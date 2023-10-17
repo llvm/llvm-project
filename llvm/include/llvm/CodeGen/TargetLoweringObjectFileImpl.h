@@ -156,6 +156,8 @@ public:
 
   void getNameWithPrefix(SmallVectorImpl<char> &OutName, const GlobalValue *GV,
                          const TargetMachine &TM) const override;
+
+  MCSection *getSectionForCommandLines() const override;
 };
 
 class TargetLoweringObjectFileCOFF : public TargetLoweringObjectFile {
@@ -177,6 +179,9 @@ public:
 
   MCSection *getSectionForJumpTable(const Function &F,
                                     const TargetMachine &TM) const override;
+
+  bool shouldPutJumpTableInFunctionSection(bool UsesLabelDifference,
+                                           const Function &F) const override;
 
   /// Emit Obj-C garbage collection and linker options.
   void emitModuleMetadata(MCStreamer &Streamer, Module &M) const override;

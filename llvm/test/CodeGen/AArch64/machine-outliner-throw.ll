@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs -enable-machine-outliner -mtriple=aarch64-arm-none-eabi < %s | FileCheck %s
-; RUN: llc -verify-machineinstrs -enable-machine-outliner -mtriple=aarch64-arm-none-eabi -stop-after=machine-outliner < %s | FileCheck %s -check-prefix=TARGET_FEATURES
+; RUN: llc -verify-machineinstrs -enable-machine-outliner -mtriple=aarch64 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -enable-machine-outliner -mtriple=aarch64 -stop-after=machine-outliner < %s | FileCheck %s -check-prefix=TARGET_FEATURES
 
 ; Make sure that we haven't added nouwind.
 ; TARGET_FEATURES: define internal void @OUTLINED_FUNCTION_0()

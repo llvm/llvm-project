@@ -2,7 +2,7 @@
 # Setup Project
 #===============================================================================
 
-cmake_minimum_required(VERSION 3.13.4)
+cmake_minimum_required(VERSION 3.20.0)
 
 set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
 
@@ -10,6 +10,7 @@ set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
 list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../runtimes/cmake/Modules"
   "${LLVM_COMMON_CMAKE_UTILS}"
   "${LLVM_COMMON_CMAKE_UTILS}/Modules"
   )
@@ -50,6 +51,7 @@ option(LIBUNWIND_IS_BAREMETAL "Build libunwind for baremetal targets." OFF)
 option(LIBUNWIND_USE_FRAME_HEADER_CACHE "Cache frame headers for unwinding. Requires locking dl_iterate_phdr." OFF)
 option(LIBUNWIND_REMEMBER_HEAP_ALLOC "Use heap instead of the stack for .cfi_remember_state." OFF)
 option(LIBUNWIND_INSTALL_HEADERS "Install the libunwind headers." ON)
+option(LIBUNWIND_ENABLE_FRAME_APIS "Include libgcc-compatible frame apis." OFF)
 
 set(LIBUNWIND_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
     "Define suffix of library directory name (32/64)")
@@ -66,7 +68,9 @@ if(LIBUNWIND_SYSROOT OR LIBUNWIND_TARGET_TRIPLE OR LIBUNWIND_GCC_TOOLCHAIN)
   message(WARNING "LIBUNWIND_SYSROOT, LIBUNWIND_TARGET_TRIPLE and LIBUNWIND_GCC_TOOLCHAIN are not supported anymore, please use the native CMake equivalents instead")
 endif()
 
-if (LIBUNWIND_ENABLE_SHARED)
+if(MINGW)
+  set(LIBUNWIND_DEFAULT_TEST_CONFIG "llvm-libunwind-mingw.cfg.in")
+elseif (LIBUNWIND_ENABLE_SHARED)
   set(LIBUNWIND_DEFAULT_TEST_CONFIG "llvm-libunwind-shared.cfg.in")
 else()
   set(LIBUNWIND_DEFAULT_TEST_CONFIG "llvm-libunwind-static.cfg.in")
@@ -140,6 +144,10 @@ set(LIBUNWIND_C_FLAGS "")
 set(LIBUNWIND_CXX_FLAGS "")
 set(LIBUNWIND_COMPILE_FLAGS "")
 set(LIBUNWIND_LINK_FLAGS "")
+set(LIBUNWIND_ADDITIONAL_COMPILE_FLAGS "" CACHE STRING
+    "Additional Compile only flags which can be provided in cache")
+set(LIBUNWIND_ADDITIONAL_LIBRARIES "" CACHE STRING
+    "Additional libraries libunwind is linked to which can be provided in cache")
 
 # Include macros for adding and removing libunwind flags.
 include(HandleLibunwindFlags)
@@ -168,46 +176,12 @@ if (LIBUNWIND_ENABLE_CET)
   endif()
 endif()
 
-# Get warning flags
-add_compile_flags_if_supported(-W)
-add_compile_flags_if_supported(-Wall)
-add_compile_flags_if_supported(-Wchar-subscripts)
-add_compile_flags_if_supported(-Wconversion)
-add_compile_flags_if_supported(-Wmismatched-tags)
-add_compile_flags_if_supported(-Wmissing-braces)
-add_compile_flags_if_supported(-Wnewline-eof)
-add_compile_flags_if_supported(-Wno-unused-function)
-add_compile_flags_if_supported(-Wshadow)
-add_compile_flags_if_supported(-Wshorten-64-to-32)
-add_compile_flags_if_supported(-Wsign-compare)
-add_compile_flags_if_supported(-Wsign-conversion)
-add_compile_flags_if_supported(-Wstrict-aliasing=2)
-add_compile_flags_if_supported(-Wstrict-overflow=4)
-add_compile_flags_if_supported(-Wunused-parameter)
-add_compile_flags_if_supported(-Wunused-variable)
-add_compile_flags_if_supported(-Wwrite-strings)
-add_compile_flags_if_supported(-Wundef)
-
-add_compile_flags_if_supported(-Wno-suggest-override)
-
 if (WIN32)
   # The headers lack matching dllexport attributes (_LIBUNWIND_EXPORT);
   # silence the warning instead of cluttering the headers (which aren't
   # necessarily the ones that the callers will use anyway) with the
   # attributes.
   add_compile_flags_if_supported(-Wno-dll-attribute-on-redeclaration)
-endif()
-
-if (LIBUNWIND_ENABLE_WERROR)
-  add_compile_flags_if_supported(-Werror)
-  add_compile_flags_if_supported(-WX)
-else()
-  add_compile_flags_if_supported(-Wno-error)
-  add_compile_flags_if_supported(-WX-)
-endif()
-
-if (LIBUNWIND_ENABLE_PEDANTIC)
-  add_compile_flags_if_supported(-pedantic)
 endif()
 
 # Get feature flags.
@@ -275,6 +249,11 @@ endif()
 # Cross-unwinding
 if (NOT LIBUNWIND_ENABLE_CROSS_UNWINDING)
   add_compile_flags(-D_LIBUNWIND_IS_NATIVE_ONLY)
+endif()
+
+# Include stubs for __register_frame_info_bases and related
+if (LIBUNWIND_ENABLE_FRAME_APIS)
+  add_compile_flags(-D_LIBUNWIND_SUPPORT_FRAME_APIS)
 endif()
 
 # Threading-support

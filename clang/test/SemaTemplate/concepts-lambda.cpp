@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -std=c++20 -verify %s
 // RUN: %clang_cc1 -std=c++20 -verify %s -triple powerpc64-ibm-aix
-// expected-no-diagnostics
 
 namespace GH57945 {
   template<typename T>
@@ -91,4 +90,29 @@ struct Foo {
 
 static_assert(ConstructibleWithN<Foo>);
 
+}
+
+// GH60642 reported an assert being hit, make sure we don't assert.
+namespace GH60642 {
+template<auto Q> concept C = requires { Q.template operator()<float>(); };
+template<class> concept D = true;
+static_assert(C<[]<D>{}>);  // ok
+template<class> concept E = C<[]<D>{}>;
+static_assert(E<int>);  // previously Asserted.
+
+// ensure we properly diagnose when "D" is false.
+namespace DIsFalse {
+template<auto Q> concept C = requires { Q.template operator()<float>(); };
+template<class> concept D = false;
+static_assert(C<[]<D>{}>);
+// expected-error@-1{{static assertion failed}}
+// expected-note@-2{{does not satisfy 'C'}}
+// expected-note@-5{{because 'Q.template operator()<float>()' would be invalid: no matching member function for call to 'operator()'}}
+template<class> concept E = C<[]<D>{}>;
+static_assert(E<int>);
+// expected-error@-1{{static assertion failed}}
+// expected-note@-2{{because 'int' does not satisfy 'E'}}
+// expected-note@-4{{does not satisfy 'C'}}
+// expected-note@-11{{because 'Q.template operator()<float>()' would be invalid: no matching member function for call to 'operator()'}}
+}
 }

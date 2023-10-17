@@ -34,7 +34,7 @@ constexpr bool testConstexprSpan(Span s)
         ret = ret &&  (&*( e-1) == last);
     }
 
-    ret = ret &&  (static_cast<size_t>(e - s.begin()) == s.size());
+    ret = ret &&  (static_cast<std::size_t>(e - s.begin()) == s.size());
     return ret;
 }
 
@@ -53,7 +53,7 @@ void testRuntimeSpan(Span s)
         assert(&*( e-1) == last);
     }
 
-    assert(static_cast<size_t>(e - s.begin()) == s.size());
+    assert(static_cast<std::size_t>(e - s.begin()) == s.size());
 }
 
 

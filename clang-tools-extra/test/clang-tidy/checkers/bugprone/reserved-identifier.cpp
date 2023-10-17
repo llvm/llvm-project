@@ -45,7 +45,7 @@ struct S {};
 
 #define __macro(m) int m = 0
 // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: declaration uses identifier '__macro', which is a reserved identifier [bugprone-reserved-identifier]
-// CHECK-FIXES: {{^}}#define macro(m) int m = 0{{$}}
+// CHECK-FIXES: {{^}}#define _macro(m) int m = 0{{$}}
 
 namespace __ns {
 // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: declaration uses identifier '__ns', which is a reserved identifier [bugprone-reserved-identifier]
@@ -115,9 +115,9 @@ struct S {};
 
 //
 
+// OK, this rule does not apply to macros:
+// https://github.com/llvm/llvm-project/issues/64130#issuecomment-1655751676
 #define _macro(m) int m = 0
-// CHECK-MESSAGES: :[[@LINE-1]]:9: warning: declaration uses identifier '_macro', which is reserved in the global namespace [bugprone-reserved-identifier]
-// CHECK-FIXES: {{^}}#define macro(m) int m = 0{{$}}
 
 namespace _ns {
 // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: declaration uses identifier '_ns', which is reserved in the global namespace [bugprone-reserved-identifier]
@@ -171,10 +171,9 @@ int _;
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: declaration uses identifier '_', which is reserved in the global namespace; cannot be fixed automatically [bugprone-reserved-identifier]
 // CHECK-FIXES: {{^}}int _;{{$}}
 
+// This should not trigger a warning
 // https://github.com/llvm/llvm-project/issues/52895
 #define _5_kmph_rpm 459
-// CHECK-MESSAGES: :[[@LINE-1]]:9: warning: declaration uses identifier '_5_kmph_rpm', which is reserved in the global namespace; cannot be fixed automatically [bugprone-reserved-identifier]
-// CHECK-FIXES: {{^}}#define _5_kmph_rpm 459{{$}}
 
 // these should pass
 #define MACRO(m) int m = 0

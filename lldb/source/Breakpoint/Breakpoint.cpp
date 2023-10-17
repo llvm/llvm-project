@@ -37,11 +37,6 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace llvm;
 
-ConstString Breakpoint::GetEventIdentifier() {
-  static ConstString g_identifier("event-identifier.breakpoint.changed");
-  return g_identifier;
-}
-
 const char *Breakpoint::g_option_names[static_cast<uint32_t>(
     Breakpoint::OptionNames::LastOptionName)]{"Names", "Hardware"};
 
@@ -418,7 +413,7 @@ const char *Breakpoint::GetConditionText() const {
 void Breakpoint::SetCallback(BreakpointHitCallback callback, void *baton,
                              bool is_synchronous) {
   // The default "Baton" class will keep a copy of "baton" and won't free or
-  // delete it when it goes goes out of scope.
+  // delete it when it goes out of scope.
   m_options.SetCallback(callback, std::make_shared<UntypedBaton>(baton),
                         is_synchronous);
 
@@ -532,12 +527,12 @@ void Breakpoint::ModulesChanged(ModuleList &module_list, bool load,
           locations_with_no_section.Add(break_loc_sp);
           continue;
         }
-          
+
         if (!break_loc_sp->IsEnabled())
           continue;
-        
+
         SectionSP section_sp(section_addr.GetSection());
-        
+
         // If we don't have a Section, that means this location is a raw
         // address that we haven't resolved to a section yet.  So we'll have to
         // look in all the new modules to resolve this location. Otherwise, if
@@ -554,9 +549,9 @@ void Breakpoint::ModulesChanged(ModuleList &module_list, bool load,
           }
         }
       }
-      
+
       size_t num_to_delete = locations_with_no_section.GetSize();
-      
+
       for (size_t i = 0; i < num_to_delete; i++)
         m_locations.RemoveLocation(locations_with_no_section.GetByIndex(i));
 
@@ -847,7 +842,7 @@ bool Breakpoint::HasResolvedLocations() const {
 size_t Breakpoint::GetNumLocations() const { return m_locations.GetSize(); }
 
 bool Breakpoint::AddName(llvm::StringRef new_name) {
-  m_name_list.insert(new_name.str().c_str());
+  m_name_list.insert(new_name.str());
   return true;
 }
 
@@ -1044,12 +1039,11 @@ Breakpoint::BreakpointEventData::BreakpointEventData(
 
 Breakpoint::BreakpointEventData::~BreakpointEventData() = default;
 
-ConstString Breakpoint::BreakpointEventData::GetFlavorString() {
-  static ConstString g_flavor("Breakpoint::BreakpointEventData");
-  return g_flavor;
+llvm::StringRef Breakpoint::BreakpointEventData::GetFlavorString() {
+  return "Breakpoint::BreakpointEventData";
 }
 
-ConstString Breakpoint::BreakpointEventData::GetFlavor() const {
+llvm::StringRef Breakpoint::BreakpointEventData::GetFlavor() const {
   return BreakpointEventData::GetFlavorString();
 }
 
@@ -1132,12 +1126,13 @@ json::Value Breakpoint::GetStatistics() {
   bp.try_emplace("resolveTime", m_resolve_time.get().count());
   bp.try_emplace("numLocations", (int64_t)GetNumLocations());
   bp.try_emplace("numResolvedLocations", (int64_t)GetNumResolvedLocations());
+  bp.try_emplace("hitCount", (int64_t)GetHitCount());
   bp.try_emplace("internal", IsInternal());
   if (!m_kind_description.empty())
     bp.try_emplace("kindDescription", m_kind_description);
   // Put the full structured data for reproducing this breakpoint in a key/value
   // pair named "details". This allows the breakpoint's details to be visible
-  // in the stats in case we need to reproduce a breakpoint that has long 
+  // in the stats in case we need to reproduce a breakpoint that has long
   // resolve times
   StructuredData::ObjectSP bp_data_sp = SerializeToStructuredData();
   if (bp_data_sp) {

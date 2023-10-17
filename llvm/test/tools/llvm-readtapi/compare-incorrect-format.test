@@ -1,0 +1,7 @@
+; RUN: mkdir -p %t
+; RUN: yaml2obj %S/Inputs/macho.yaml -o %t/macho.dylib
+; RUN: not llvm-readtapi --compare %S/Inputs/v4A.tbd %t/macho.dylib 2>&1 | FileCheck %s
+
+; CHECK: error: {{.*}}macho.dylib' unsupported file format
+; CHECK-NOT: error:
+; CHECK-NOT: warning:

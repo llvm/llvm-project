@@ -13,14 +13,13 @@
 #include "MCTargetDesc/PPCInstPrinter.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "MCTargetDesc/PPCPredicates.h"
-#include "PPCInstrInfo.h"
-#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -161,7 +160,7 @@ void PPCInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   // On AIX, only emit the extended mnemonics for dcbt and dcbtst if
   // the "modern assembler" is available.
   if ((MI->getOpcode() == PPC::DCBT || MI->getOpcode() == PPC::DCBTST) &&
-      (!TT.isOSAIX() || STI.getFeatureBits()[PPC::FeatureModernAIXAs])) {
+      (!TT.isOSAIX() || STI.hasFeature(PPC::FeatureModernAIXAs))) {
     unsigned char TH = MI->getOperand(0).getImm();
     O << "\tdcbt";
     if (MI->getOpcode() == PPC::DCBTST)
@@ -170,7 +169,7 @@ void PPCInstPrinter::printInst(const MCInst *MI, uint64_t Address,
       O << "t";
     O << " ";
 
-    bool IsBookE = STI.getFeatureBits()[PPC::FeatureBookE];
+    bool IsBookE = STI.hasFeature(PPC::FeatureBookE);
     if (IsBookE && TH != 0 && TH != 16)
       O << (unsigned int) TH << ", ";
 
@@ -564,10 +563,10 @@ void PPCInstPrinter::printTLSCall(const MCInst *MI, unsigned OpNo,
   // come at the _end_ of the expression.
   const MCOperand &Op = MI->getOperand(OpNo);
   const MCSymbolRefExpr *RefExp = nullptr;
-  const MCConstantExpr *ConstExp = nullptr;
+  const MCExpr *Rhs = nullptr;
   if (const MCBinaryExpr *BinExpr = dyn_cast<MCBinaryExpr>(Op.getExpr())) {
     RefExp = cast<MCSymbolRefExpr>(BinExpr->getLHS());
-    ConstExp = cast<MCConstantExpr>(BinExpr->getRHS());
+    Rhs = BinExpr->getRHS();
   } else
     RefExp = cast<MCSymbolRefExpr>(Op.getExpr());
 
@@ -584,8 +583,14 @@ void PPCInstPrinter::printTLSCall(const MCInst *MI, unsigned OpNo,
   if (RefExp->getKind() != MCSymbolRefExpr::VK_None &&
       RefExp->getKind() != MCSymbolRefExpr::VK_PPC_NOTOC)
     O << '@' << MCSymbolRefExpr::getVariantKindName(RefExp->getKind());
-  if (ConstExp != nullptr)
-    O << '+' << ConstExp->getValue();
+  if (Rhs) {
+    SmallString<0> Buf;
+    raw_svector_ostream Tmp(Buf);
+    Rhs->print(Tmp, &MAI);
+    if (isdigit(Buf[0]))
+      O << '+';
+    O << Buf;
+  }
 }
 
 /// showRegistersWithPercentPrefix - Check if this register name should be
@@ -640,8 +645,7 @@ void PPCInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   if (Op.isReg()) {
     unsigned Reg = Op.getReg();
     if (!ShowVSRNumsAsVR)
-      Reg = PPCInstrInfo::getRegNumForOperand(MII.get(MI->getOpcode()),
-                                              Reg, OpNo);
+      Reg = PPC::getRegNumForOperand(MII.get(MI->getOpcode()), Reg, OpNo);
 
     const char *RegName;
     RegName = getVerboseConditionRegName(Reg, MRI.getEncodingValue(Reg));
@@ -650,7 +654,7 @@ void PPCInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     if (showRegistersWithPercentPrefix(RegName))
       O << "%";
     if (!showRegistersWithPrefix())
-      RegName = PPCRegisterInfo::stripRegisterPrefix(RegName);
+      RegName = PPC::stripRegisterPrefix(RegName);
 
     O << RegName;
     return;

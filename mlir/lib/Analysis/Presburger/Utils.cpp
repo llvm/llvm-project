@@ -83,7 +83,7 @@ static void normalizeDivisionByGCD(MutableArrayRef<MPInt> dividend,
 ///     4q - i - j + 2 >= 0                       <-- Lower bound for 'q'
 ///    -4q + i + j     >= 0                       <-- Tight upper bound for 'q'
 ///
-/// To extract floor divisions with tighter bounds, we assume that that the
+/// To extract floor divisions with tighter bounds, we assume that the
 /// constraints are of the form:
 ///     c <= expr - divisior * var <= divisor - 1, where 0 <= c <= divisor - 1
 /// Rearranging, we have:
@@ -437,6 +437,7 @@ void DivisionRepr::removeDuplicateDivs(
   // variable at position `i` only depends on local variables at position <
   // `i`. This would make sure that all divisions depending on other local
   // variables that can be merged, are merged.
+  normalizeDivs();
   for (unsigned i = 0; i < getNumDivs(); ++i) {
     // Check if a division representation exists for the `i^th` local var.
     if (denoms[i] == 0)
@@ -472,6 +473,14 @@ void DivisionRepr::removeDuplicateDivs(
   }
 }
 
+void DivisionRepr::normalizeDivs() {
+  for (unsigned i = 0, e = getNumDivs(); i < e; ++i) {
+    if (getDenom(i) == 0 || getDividend(i).empty())
+      continue;
+    normalizeDiv(getDividend(i), getDenom(i));
+  }
+}
+
 void DivisionRepr::insertDiv(unsigned pos, ArrayRef<MPInt> dividend,
                              const MPInt &divisor) {
   assert(pos <= getNumDivs() && "Invalid insertion position");
@@ -493,8 +502,8 @@ void DivisionRepr::print(raw_ostream &os) const {
   os << "Dividends:\n";
   dividends.print(os);
   os << "Denominators\n";
-  for (unsigned i = 0, e = denoms.size(); i < e; ++i)
-    os << denoms[i] << " ";
+  for (const MPInt &denom : denoms)
+    os << denom << " ";
   os << "\n";
 }
 

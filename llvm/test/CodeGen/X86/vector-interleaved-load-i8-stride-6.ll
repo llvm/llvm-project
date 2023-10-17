@@ -4,14 +4,14 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx2 | FileCheck %s --check-prefixes=AVX,AVX1,AVX2,AVX2-ONLY,AVX2-SLOW,FALLBACK2
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx2,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX1,AVX2,AVX2-ONLY,AVX2-FAST,FALLBACK3
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx2,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX1,AVX2,AVX2-ONLY,AVX2-FAST-PERLANE,FALLBACK4
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512F,AVX512F-SLOW,AVX512F-ONLY-SLOW,FALLBACK5
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512F,AVX512F-FAST,AVX512F-ONLY-FAST,FALLBACK6
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512dq | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512F,AVX512F-SLOW,AVX512DQ-SLOW,FALLBACK7
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512dq,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512F,AVX512F-FAST,AVX512DQ-FAST,FALLBACK8
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512bw | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512BW,AVX512BW-SLOW,AVX512BW-ONLY-SLOW,FALLBACK9
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512bw,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512BW,AVX512BW-FAST,AVX512BW-ONLY-FAST,FALLBACK10
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512dq,+avx512bw | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512BW,AVX512BW-SLOW,AVX512DQBW-SLOW,FALLBACK11
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512dq,+avx512bw,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512BW,AVX512BW-FAST,AVX512DQBW-FAST,FALLBACK12
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512F,AVX512-SLOW,AVX512F-SLOW,AVX512F-ONLY-SLOW,FALLBACK5
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512F,AVX512-FAST,AVX512F-FAST,AVX512F-ONLY-FAST,FALLBACK6
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512dq | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512F,AVX512-SLOW,AVX512F-SLOW,AVX512DQ-SLOW,FALLBACK7
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512dq,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512F,AVX512-FAST,AVX512F-FAST,AVX512DQ-FAST,FALLBACK8
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512bw | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512BW,AVX512-SLOW,AVX512BW-SLOW,AVX512BW-ONLY-SLOW,FALLBACK9
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512bw,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512BW,AVX512-FAST,AVX512BW-FAST,AVX512BW-ONLY-FAST,FALLBACK10
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512dq,+avx512bw | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512BW,AVX512-SLOW,AVX512BW-SLOW,AVX512DQBW-SLOW,FALLBACK11
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512dq,+avx512bw,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512BW,AVX512-FAST,AVX512BW-FAST,AVX512DQBW-FAST,FALLBACK12
 
 ; These patterns are produced by LoopVectorizer for interleaved loads.
 
@@ -97,73 +97,73 @@ define void @load_i8_stride6_vf4(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr 
 ; SSE-LABEL: load_i8_stride6_vf4:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; SSE-NEXT:    movdqa (%rdi), %xmm3
-; SSE-NEXT:    movdqa 16(%rdi), %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [65535,0,65535,65535,65535,65535,65535,65535]
-; SSE-NEXT:    movdqa %xmm3, %xmm2
-; SSE-NEXT:    pand %xmm1, %xmm2
-; SSE-NEXT:    pandn %xmm0, %xmm1
-; SSE-NEXT:    por %xmm2, %xmm1
+; SSE-NEXT:    movdqa (%rdi), %xmm5
+; SSE-NEXT:    movdqa 16(%rdi), %xmm1
+; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [65535,0,65535,65535,65535,65535,65535,65535]
+; SSE-NEXT:    movdqa %xmm5, %xmm2
+; SSE-NEXT:    pand %xmm0, %xmm2
+; SSE-NEXT:    pandn %xmm1, %xmm0
+; SSE-NEXT:    por %xmm2, %xmm0
 ; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
-; SSE-NEXT:    pand %xmm2, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,1,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,6,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,3,2,1,4,5,6,7]
-; SSE-NEXT:    packuswb %xmm1, %xmm1
-; SSE-NEXT:    pxor %xmm4, %xmm4
-; SSE-NEXT:    movdqa %xmm3, %xmm6
-; SSE-NEXT:    movdqa {{.*#+}} xmm5 = [255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255]
-; SSE-NEXT:    pandn %xmm0, %xmm5
-; SSE-NEXT:    movdqa %xmm0, %xmm7
-; SSE-NEXT:    shufps {{.*#+}} xmm7 = xmm7[1,0],xmm3[0,0]
-; SSE-NEXT:    shufps {{.*#+}} xmm7 = xmm7[2,0],xmm3[2,3]
-; SSE-NEXT:    movdqa {{.*#+}} xmm8 = [65535,65535,0,65535,65535,0,65535,65535]
-; SSE-NEXT:    pand %xmm8, %xmm0
-; SSE-NEXT:    pandn %xmm3, %xmm8
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8],xmm4[8],xmm3[9],xmm4[9],xmm3[10],xmm4[10],xmm3[11],xmm4[11],xmm3[12],xmm4[12],xmm3[13],xmm4[13],xmm3[14],xmm4[14],xmm3[15],xmm4[15]
-; SSE-NEXT:    movdqa %xmm3, %xmm9
-; SSE-NEXT:    psrld $16, %xmm9
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm6 = xmm6[0],xmm4[0],xmm6[1],xmm4[1],xmm6[2],xmm4[2],xmm6[3],xmm4[3],xmm6[4],xmm4[4],xmm6[5],xmm4[5],xmm6[6],xmm4[6],xmm6[7],xmm4[7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[0,1,0,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,5,7,6,7]
-; SSE-NEXT:    punpckhdq {{.*#+}} xmm6 = xmm6[2],xmm9[2],xmm6[3],xmm9[3]
-; SSE-NEXT:    packuswb %xmm6, %xmm6
-; SSE-NEXT:    por %xmm6, %xmm5
-; SSE-NEXT:    movaps %xmm7, %xmm6
-; SSE-NEXT:    andps %xmm2, %xmm6
-; SSE-NEXT:    pshuflw {{.*#+}} xmm6 = xmm6[2,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,4,7,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[0,2,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm6 = xmm6[1,2,3,0,4,5,6,7]
-; SSE-NEXT:    packuswb %xmm6, %xmm6
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm7 = xmm7[0],xmm4[0],xmm7[1],xmm4[1],xmm7[2],xmm4[2],xmm7[3],xmm4[3],xmm7[4],xmm4[4],xmm7[5],xmm4[5],xmm7[6],xmm4[6],xmm7[7],xmm4[7]
-; SSE-NEXT:    shufps {{.*#+}} xmm7 = xmm7[1,2],xmm3[0,3]
-; SSE-NEXT:    shufps {{.*#+}} xmm7 = xmm7[2,0,1,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm7 = xmm7[3,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm7 = xmm7[0,1,2,3,7,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm7 = xmm7[0,2,2,3]
-; SSE-NEXT:    packuswb %xmm7, %xmm7
-; SSE-NEXT:    por %xmm0, %xmm8
-; SSE-NEXT:    pand %xmm8, %xmm2
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[3,1,2,0]
+; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,1,3]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,6,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,1,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[2,1,0,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,3,2,1,4,5,6,7]
 ; SSE-NEXT:    packuswb %xmm0, %xmm0
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm8 = xmm8[0],xmm4[0],xmm8[1],xmm4[1],xmm8[2],xmm4[2],xmm8[3],xmm4[3],xmm8[4],xmm4[4],xmm8[5],xmm4[5],xmm8[6],xmm4[6],xmm8[7],xmm4[7]
-; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,0],xmm8[0,0]
-; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[2,0],xmm8[2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm3[3,1,2,3,4,5,6,7]
+; SSE-NEXT:    pxor %xmm3, %xmm3
+; SSE-NEXT:    movdqa %xmm5, %xmm7
+; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255]
+; SSE-NEXT:    pandn %xmm1, %xmm4
+; SSE-NEXT:    movdqa %xmm1, %xmm6
+; SSE-NEXT:    shufps {{.*#+}} xmm6 = xmm6[1,0],xmm5[0,0]
+; SSE-NEXT:    shufps {{.*#+}} xmm6 = xmm6[2,0],xmm5[2,3]
+; SSE-NEXT:    movdqa {{.*#+}} xmm8 = [65535,65535,0,65535,65535,0,65535,65535]
+; SSE-NEXT:    pand %xmm8, %xmm1
+; SSE-NEXT:    pandn %xmm5, %xmm8
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm5 = xmm5[8],xmm3[8],xmm5[9],xmm3[9],xmm5[10],xmm3[10],xmm5[11],xmm3[11],xmm5[12],xmm3[12],xmm5[13],xmm3[13],xmm5[14],xmm3[14],xmm5[15],xmm3[15]
+; SSE-NEXT:    movdqa %xmm5, %xmm9
+; SSE-NEXT:    psrld $16, %xmm9
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm7 = xmm7[0],xmm3[0],xmm7[1],xmm3[1],xmm7[2],xmm3[2],xmm7[3],xmm3[3],xmm7[4],xmm3[4],xmm7[5],xmm3[5],xmm7[6],xmm3[6],xmm7[7],xmm3[7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm7 = xmm7[0,1,0,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm7 = xmm7[0,1,2,3,5,7,6,7]
+; SSE-NEXT:    punpckhdq {{.*#+}} xmm7 = xmm7[2],xmm9[2],xmm7[3],xmm9[3]
+; SSE-NEXT:    packuswb %xmm7, %xmm7
+; SSE-NEXT:    por %xmm7, %xmm4
+; SSE-NEXT:    movaps %xmm6, %xmm7
+; SSE-NEXT:    andps %xmm2, %xmm7
+; SSE-NEXT:    pshuflw {{.*#+}} xmm7 = xmm7[2,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm7 = xmm7[0,1,2,3,4,7,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm7 = xmm7[0,2,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm7 = xmm7[1,2,3,0,4,5,6,7]
+; SSE-NEXT:    packuswb %xmm7, %xmm7
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm6 = xmm6[0],xmm3[0],xmm6[1],xmm3[1],xmm6[2],xmm3[2],xmm6[3],xmm3[3],xmm6[4],xmm3[4],xmm6[5],xmm3[5],xmm6[6],xmm3[6],xmm6[7],xmm3[7]
+; SSE-NEXT:    shufps {{.*#+}} xmm6 = xmm6[1,2],xmm5[0,3]
+; SSE-NEXT:    shufps {{.*#+}} xmm6 = xmm6[2,0,1,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm6 = xmm6[3,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,7,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[0,2,2,3]
+; SSE-NEXT:    packuswb %xmm6, %xmm6
+; SSE-NEXT:    por %xmm1, %xmm8
+; SSE-NEXT:    pand %xmm8, %xmm2
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[3,1,2,0]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,6,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,1,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[2,1,0,3,4,5,6,7]
+; SSE-NEXT:    packuswb %xmm1, %xmm1
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm8 = xmm8[0],xmm3[0],xmm8[1],xmm3[1],xmm8[2],xmm3[2],xmm8[3],xmm3[3],xmm8[4],xmm3[4],xmm8[5],xmm3[5],xmm8[6],xmm3[6],xmm8[7],xmm3[7]
+; SSE-NEXT:    shufps {{.*#+}} xmm5 = xmm5[1,0],xmm8[0,0]
+; SSE-NEXT:    shufps {{.*#+}} xmm5 = xmm5[2,0],xmm8[2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm5[3,1,2,3,4,5,6,7]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,7,5,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[3,0,1,2,4,5,6,7]
 ; SSE-NEXT:    packuswb %xmm2, %xmm2
-; SSE-NEXT:    movd %xmm1, (%rsi)
-; SSE-NEXT:    movd %xmm5, (%rdx)
-; SSE-NEXT:    movd %xmm6, (%rcx)
-; SSE-NEXT:    movd %xmm7, (%r8)
-; SSE-NEXT:    movd %xmm0, (%r9)
+; SSE-NEXT:    movd %xmm0, (%rsi)
+; SSE-NEXT:    movd %xmm4, (%rdx)
+; SSE-NEXT:    movd %xmm7, (%rcx)
+; SSE-NEXT:    movd %xmm6, (%r8)
+; SSE-NEXT:    movd %xmm1, (%r9)
 ; SSE-NEXT:    movd %xmm2, (%rax)
 ; SSE-NEXT:    retq
 ;
@@ -383,7 +383,8 @@ define void @load_i8_stride6_vf8(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr 
 ; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm5 = zero,zero,zero,xmm2[4,10,u,u,u,u,u,u,u,u,u,u,u]
 ; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm6 = xmm1[2,8,14],zero,zero,xmm1[u,u,u,u,u,u,u,u,u,u,u]
 ; AVX1-ONLY-NEXT:    vpor %xmm5, %xmm6, %xmm5
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm6 = <0,1,2,3,4,128,128,128,u,u,u,u,u,u,u,u>
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm6 = [0,1,2,3,4,128,128,128,0,1,2,3,4,128,128,128]
+; AVX1-ONLY-NEXT:    # xmm6 = mem[0,0]
 ; AVX1-ONLY-NEXT:    vpshufb %xmm6, %xmm5, %xmm5
 ; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm7 = zero,zero,zero,zero,zero,xmm0[0,6,12,u,u,u,u,u,u,u,u]
 ; AVX1-ONLY-NEXT:    vpor %xmm7, %xmm5, %xmm5
@@ -469,81 +470,78 @@ define void @load_i8_stride6_vf8(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr 
 define void @load_i8_stride6_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr %out.vec2, ptr %out.vec3, ptr %out.vec4, ptr %out.vec5) nounwind {
 ; SSE-LABEL: load_i8_stride6_vf16:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa 64(%rdi), %xmm1
-; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa 64(%rdi), %xmm11
+; SSE-NEXT:    movdqa %xmm11, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa (%rdi), %xmm5
-; SSE-NEXT:    movdqa 16(%rdi), %xmm11
-; SSE-NEXT:    movdqa 32(%rdi), %xmm10
+; SSE-NEXT:    movdqa 16(%rdi), %xmm2
+; SSE-NEXT:    movdqa 32(%rdi), %xmm8
 ; SSE-NEXT:    movdqa 48(%rdi), %xmm6
-; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [65535,65535,0,65535,65535,0,65535,65535]
-; SSE-NEXT:    movdqa %xmm3, %xmm7
-; SSE-NEXT:    pandn %xmm10, %xmm7
-; SSE-NEXT:    movdqa {{.*#+}} xmm8 = [65535,0,65535,65535,0,65535,65535,0]
-; SSE-NEXT:    movdqa %xmm8, %xmm0
+; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [65535,65535,0,65535,65535,0,65535,65535]
+; SSE-NEXT:    movdqa %xmm4, %xmm7
+; SSE-NEXT:    pandn %xmm8, %xmm7
+; SSE-NEXT:    movdqa {{.*#+}} xmm10 = [65535,0,65535,65535,0,65535,65535,0]
+; SSE-NEXT:    movdqa %xmm10, %xmm0
 ; SSE-NEXT:    pandn %xmm6, %xmm0
 ; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm3, %xmm0
+; SSE-NEXT:    movdqa %xmm4, %xmm0
 ; SSE-NEXT:    pandn %xmm6, %xmm0
 ; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pand %xmm3, %xmm6
+; SSE-NEXT:    pand %xmm4, %xmm6
 ; SSE-NEXT:    por %xmm7, %xmm6
 ; SSE-NEXT:    movdqa {{.*#+}} xmm7 = [255,255,255,255,255,255,255,255]
 ; SSE-NEXT:    movdqa %xmm6, %xmm0
 ; SSE-NEXT:    pand %xmm7, %xmm0
-; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm0[0,3,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,3,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm3 = xmm0[0,3,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,3,2,3]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,2,1]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6,5]
-; SSE-NEXT:    packuswb %xmm2, %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [65535,65535,65535,0,0,0,65535,65535]
-; SSE-NEXT:    pandn %xmm0, %xmm4
-; SSE-NEXT:    movdqa %xmm8, %xmm9
-; SSE-NEXT:    movdqa %xmm11, %xmm0
-; SSE-NEXT:    pandn %xmm11, %xmm9
-; SSE-NEXT:    movdqa %xmm1, %xmm11
-; SSE-NEXT:    pand %xmm3, %xmm11
-; SSE-NEXT:    movdqa %xmm3, %xmm2
-; SSE-NEXT:    pandn %xmm0, %xmm2
-; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    packuswb %xmm3, %xmm0
+; SSE-NEXT:    movdqa {{.*#+}} xmm9 = [65535,65535,65535,0,0,0,65535,65535]
+; SSE-NEXT:    pandn %xmm0, %xmm9
+; SSE-NEXT:    movdqa %xmm10, %xmm0
+; SSE-NEXT:    pandn %xmm2, %xmm10
+; SSE-NEXT:    pand %xmm4, %xmm11
+; SSE-NEXT:    movdqa %xmm4, %xmm3
+; SSE-NEXT:    pandn %xmm2, %xmm3
 ; SSE-NEXT:    movdqa %xmm5, %xmm14
-; SSE-NEXT:    pand %xmm3, %xmm14
-; SSE-NEXT:    movdqa 80(%rdi), %xmm0
-; SSE-NEXT:    movdqa %xmm0, %xmm13
-; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pand %xmm3, %xmm13
-; SSE-NEXT:    movdqa %xmm10, %xmm15
-; SSE-NEXT:    pand %xmm3, %xmm10
-; SSE-NEXT:    pand %xmm3, %xmm1
+; SSE-NEXT:    pand %xmm4, %xmm14
+; SSE-NEXT:    movdqa 80(%rdi), %xmm1
+; SSE-NEXT:    movdqa %xmm1, %xmm13
 ; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm3, %xmm1
-; SSE-NEXT:    movdqa %xmm3, %xmm12
-; SSE-NEXT:    pandn %xmm5, %xmm3
-; SSE-NEXT:    pand %xmm8, %xmm5
-; SSE-NEXT:    por %xmm9, %xmm5
-; SSE-NEXT:    movdqa %xmm5, %xmm9
+; SSE-NEXT:    pand %xmm4, %xmm13
+; SSE-NEXT:    movdqa %xmm8, %xmm15
+; SSE-NEXT:    pand %xmm4, %xmm8
+; SSE-NEXT:    pand %xmm4, %xmm2
+; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm4, %xmm12
+; SSE-NEXT:    movdqa %xmm4, %xmm2
+; SSE-NEXT:    pandn %xmm5, %xmm4
+; SSE-NEXT:    pand %xmm0, %xmm5
+; SSE-NEXT:    por %xmm10, %xmm5
+; SSE-NEXT:    movdqa %xmm5, %xmm10
+; SSE-NEXT:    pand %xmm7, %xmm10
+; SSE-NEXT:    pshufd {{.*#+}} xmm10 = xmm10[0,2,1,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm10 = xmm10[0,1,2,3,6,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm10 = xmm10[0,2,1,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm10 = xmm10[0,3,2,1,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm10[0,1,2,3,4,7,6,7]
+; SSE-NEXT:    packuswb %xmm0, %xmm0
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    por %xmm9, %xmm0
+; SSE-NEXT:    pandn %xmm1, %xmm12
+; SSE-NEXT:    por %xmm12, %xmm11
+; SSE-NEXT:    movdqa %xmm11, %xmm9
 ; SSE-NEXT:    pand %xmm7, %xmm9
-; SSE-NEXT:    pshufd {{.*#+}} xmm9 = xmm9[0,2,1,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm9 = xmm9[0,1,2,3,6,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm9 = xmm9[0,2,1,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm9 = xmm9[0,3,2,1,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm9 = xmm9[0,1,2,3,4,7,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm9 = xmm9[3,1,2,0]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm9 = xmm9[2,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm9 = xmm9[0,3,2,0]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm9 = xmm9[0,1,2,3,4,7,6,5]
 ; SSE-NEXT:    packuswb %xmm9, %xmm9
-; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm9
-; SSE-NEXT:    por %xmm4, %xmm9
-; SSE-NEXT:    pandn %xmm0, %xmm1
-; SSE-NEXT:    por %xmm1, %xmm11
-; SSE-NEXT:    movdqa %xmm11, %xmm1
-; SSE-NEXT:    pand %xmm7, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[3,1,2,0]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[2,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,3,2,0]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,7,6,5]
-; SSE-NEXT:    packuswb %xmm1, %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0]
-; SSE-NEXT:    movdqa %xmm4, %xmm1
-; SSE-NEXT:    pandn %xmm0, %xmm1
-; SSE-NEXT:    pand %xmm4, %xmm9
-; SSE-NEXT:    por %xmm9, %xmm1
+; SSE-NEXT:    movdqa {{.*#+}} xmm10 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0]
+; SSE-NEXT:    movdqa %xmm10, %xmm1
+; SSE-NEXT:    pandn %xmm9, %xmm1
+; SSE-NEXT:    pand %xmm10, %xmm0
+; SSE-NEXT:    por %xmm0, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    pxor %xmm9, %xmm9
 ; SSE-NEXT:    movdqa %xmm6, %xmm0
@@ -570,10 +568,10 @@ define void @load_i8_stride6_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; SSE-NEXT:    pandn %xmm0, %xmm6
 ; SSE-NEXT:    por %xmm5, %xmm6
 ; SSE-NEXT:    packuswb %xmm6, %xmm6
-; SSE-NEXT:    movdqa {{.*#+}} xmm8 = [65535,65535,65535,0,0,0,65535,65535]
-; SSE-NEXT:    pand %xmm8, %xmm6
-; SSE-NEXT:    pandn %xmm1, %xmm8
-; SSE-NEXT:    por %xmm8, %xmm6
+; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [65535,65535,65535,0,0,0,65535,65535]
+; SSE-NEXT:    pand %xmm0, %xmm6
+; SSE-NEXT:    pandn %xmm1, %xmm0
+; SSE-NEXT:    por %xmm0, %xmm6
 ; SSE-NEXT:    movdqa %xmm11, %xmm0
 ; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm9[0],xmm0[1],xmm9[1],xmm0[2],xmm9[2],xmm0[3],xmm9[3],xmm0[4],xmm9[4],xmm0[5],xmm9[5],xmm0[6],xmm9[6],xmm0[7],xmm9[7]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,5,5,5]
@@ -586,10 +584,10 @@ define void @load_i8_stride6_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; SSE-NEXT:    pandn %xmm0, %xmm5
 ; SSE-NEXT:    por %xmm1, %xmm5
 ; SSE-NEXT:    packuswb %xmm5, %xmm0
-; SSE-NEXT:    movdqa %xmm4, %xmm11
-; SSE-NEXT:    pandn %xmm0, %xmm11
-; SSE-NEXT:    pand %xmm4, %xmm6
-; SSE-NEXT:    por %xmm6, %xmm11
+; SSE-NEXT:    movdqa %xmm10, %xmm12
+; SSE-NEXT:    pandn %xmm0, %xmm12
+; SSE-NEXT:    pand %xmm10, %xmm6
+; SSE-NEXT:    por %xmm6, %xmm12
 ; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm15
 ; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Folded Reload
 ; SSE-NEXT:    movdqa %xmm15, %xmm0
@@ -601,7 +599,7 @@ define void @load_i8_stride6_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,3]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,4,5,6]
 ; SSE-NEXT:    packuswb %xmm1, %xmm0
-; SSE-NEXT:    por %xmm2, %xmm14
+; SSE-NEXT:    por %xmm3, %xmm14
 ; SSE-NEXT:    movdqa %xmm14, %xmm1
 ; SSE-NEXT:    pand %xmm7, %xmm1
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[2,1,2,3,4,5,6,7]
@@ -610,13 +608,14 @@ define void @load_i8_stride6_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[1,2,3,0,4,5,6,7]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,5,5,5,5]
 ; SSE-NEXT:    packuswb %xmm1, %xmm1
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [0,0,0,0,0,255,255,255,255,255,255,255,255,255,255,255]
-; SSE-NEXT:    movdqa %xmm2, %xmm5
+; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [0,0,0,0,0,255,255,255,255,255,255,255,255,255,255,255]
+; SSE-NEXT:    movdqa %xmm3, %xmm5
 ; SSE-NEXT:    pandn %xmm1, %xmm5
-; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    pand %xmm3, %xmm0
 ; SSE-NEXT:    por %xmm0, %xmm5
-; SSE-NEXT:    pandn {{[-0-9]+}}(%r{{[sb]}}p), %xmm12 # 16-byte Folded Reload
-; SSE-NEXT:    por %xmm12, %xmm13
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm11 # 16-byte Reload
+; SSE-NEXT:    pandn %xmm11, %xmm2
+; SSE-NEXT:    por %xmm2, %xmm13
 ; SSE-NEXT:    movdqa %xmm13, %xmm0
 ; SSE-NEXT:    pand %xmm7, %xmm0
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,3,2,3,4,5,6,7]
@@ -625,25 +624,25 @@ define void @load_i8_stride6_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[2,2,2,2,4,5,6,7]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,6,7,4]
 ; SSE-NEXT:    packuswb %xmm0, %xmm0
-; SSE-NEXT:    movdqa %xmm4, %xmm8
-; SSE-NEXT:    pandn %xmm0, %xmm8
-; SSE-NEXT:    pand %xmm4, %xmm5
-; SSE-NEXT:    por %xmm5, %xmm8
+; SSE-NEXT:    movdqa %xmm10, %xmm1
+; SSE-NEXT:    pandn %xmm0, %xmm1
+; SSE-NEXT:    pand %xmm10, %xmm5
+; SSE-NEXT:    por %xmm5, %xmm1
 ; SSE-NEXT:    movdqa %xmm15, %xmm0
 ; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm9[0],xmm0[1],xmm9[1],xmm0[2],xmm9[2],xmm0[3],xmm9[3],xmm0[4],xmm9[4],xmm0[5],xmm9[5],xmm0[6],xmm9[6],xmm0[7],xmm9[7]
 ; SSE-NEXT:    punpckhbw {{.*#+}} xmm15 = xmm15[8],xmm9[8],xmm15[9],xmm9[9],xmm15[10],xmm9[10],xmm15[11],xmm9[11],xmm15[12],xmm9[12],xmm15[13],xmm9[13],xmm15[14],xmm9[14],xmm15[15],xmm9[15]
-; SSE-NEXT:    movdqa %xmm15, %xmm1
-; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,0],xmm0[3,0]
+; SSE-NEXT:    movdqa %xmm15, %xmm2
+; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[2,0],xmm0[3,0]
 ; SSE-NEXT:    movaps %xmm0, %xmm5
-; SSE-NEXT:    shufps {{.*#+}} xmm5 = xmm5[0,1],xmm1[0,2]
+; SSE-NEXT:    shufps {{.*#+}} xmm5 = xmm5[0,1],xmm2[0,2]
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,0],xmm15[0,0]
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0],xmm15[2,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm5[0,1,2,3,7,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,2]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm2 = xmm5[0,1,2,3,7,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,1,0,2]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,1,2,3,4,5,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,3,2,3]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,1,3,3,4,5,6,7]
-; SSE-NEXT:    packuswb %xmm0, %xmm1
+; SSE-NEXT:    packuswb %xmm0, %xmm2
 ; SSE-NEXT:    movdqa %xmm14, %xmm0
 ; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm9[0],xmm0[1],xmm9[1],xmm0[2],xmm9[2],xmm0[3],xmm9[3],xmm0[4],xmm9[4],xmm0[5],xmm9[5],xmm0[6],xmm9[6],xmm0[7],xmm9[7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,1,2,3]
@@ -656,114 +655,113 @@ define void @load_i8_stride6_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; SSE-NEXT:    pand %xmm6, %xmm5
 ; SSE-NEXT:    pandn %xmm0, %xmm6
 ; SSE-NEXT:    por %xmm5, %xmm6
-; SSE-NEXT:    pand %xmm2, %xmm1
+; SSE-NEXT:    pand %xmm3, %xmm2
 ; SSE-NEXT:    packuswb %xmm6, %xmm6
-; SSE-NEXT:    pandn %xmm6, %xmm2
-; SSE-NEXT:    por %xmm1, %xmm2
+; SSE-NEXT:    pandn %xmm6, %xmm3
+; SSE-NEXT:    por %xmm2, %xmm3
 ; SSE-NEXT:    movdqa %xmm13, %xmm0
 ; SSE-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8],xmm9[8],xmm0[9],xmm9[9],xmm0[10],xmm9[10],xmm0[11],xmm9[11],xmm0[12],xmm9[12],xmm0[13],xmm9[13],xmm0[14],xmm9[14],xmm0[15],xmm9[15]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,2,1]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,5,6,5]
 ; SSE-NEXT:    punpcklbw {{.*#+}} xmm13 = xmm13[0],xmm9[0],xmm13[1],xmm9[1],xmm13[2],xmm9[2],xmm13[3],xmm9[3],xmm13[4],xmm9[4],xmm13[5],xmm9[5],xmm13[6],xmm9[6],xmm13[7],xmm9[7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm13[0,2,0,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5,7,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm13[0,2,0,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,4,5,7,7]
 ; SSE-NEXT:    movdqa {{.*#+}} xmm5 = [65535,65535,65535,65535,0,65535,65535,0]
-; SSE-NEXT:    pand %xmm5, %xmm1
+; SSE-NEXT:    pand %xmm5, %xmm2
 ; SSE-NEXT:    pandn %xmm0, %xmm5
-; SSE-NEXT:    por %xmm1, %xmm5
-; SSE-NEXT:    pand %xmm4, %xmm2
+; SSE-NEXT:    por %xmm2, %xmm5
+; SSE-NEXT:    pand %xmm10, %xmm3
 ; SSE-NEXT:    packuswb %xmm5, %xmm0
-; SSE-NEXT:    pandn %xmm0, %xmm4
-; SSE-NEXT:    por %xmm2, %xmm4
-; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm10 # 16-byte Folded Reload
-; SSE-NEXT:    movdqa %xmm10, %xmm0
+; SSE-NEXT:    pandn %xmm0, %xmm10
+; SSE-NEXT:    por %xmm3, %xmm10
+; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm8 # 16-byte Folded Reload
+; SSE-NEXT:    movdqa %xmm8, %xmm0
 ; SSE-NEXT:    pand %xmm7, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,1,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[2,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,1,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[2,1,2,3,4,5,6,7]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,7,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,2]
-; SSE-NEXT:    packuswb %xmm1, %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255,255,0,0,0,0,0,255,255,255,255,255,255]
-; SSE-NEXT:    movdqa %xmm2, %xmm1
-; SSE-NEXT:    pandn %xmm0, %xmm1
-; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Folded Reload
-; SSE-NEXT:    movdqa %xmm3, %xmm0
+; SSE-NEXT:    packuswb %xmm2, %xmm0
+; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [255,255,255,255,255,0,0,0,0,0,255,255,255,255,255,255]
+; SSE-NEXT:    movdqa %xmm3, %xmm2
+; SSE-NEXT:    pandn %xmm0, %xmm2
+; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Folded Reload
+; SSE-NEXT:    movdqa %xmm4, %xmm0
 ; SSE-NEXT:    pand %xmm7, %xmm0
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,0]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,6,5,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,1,0,3]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm5 = xmm0[2,1,0,3,4,5,6,7]
 ; SSE-NEXT:    packuswb %xmm5, %xmm5
-; SSE-NEXT:    pand %xmm2, %xmm5
-; SSE-NEXT:    por %xmm1, %xmm5
-; SSE-NEXT:    movdqa {{.*#+}} xmm12 = [65535,0,65535,65535,0,65535,65535,0]
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE-NEXT:    pand %xmm12, %xmm1
-; SSE-NEXT:    pandn {{[-0-9]+}}(%r{{[sb]}}p), %xmm12 # 16-byte Folded Reload
+; SSE-NEXT:    pand %xmm3, %xmm5
+; SSE-NEXT:    por %xmm2, %xmm5
+; SSE-NEXT:    movdqa {{.*#+}} xmm13 = [65535,0,65535,65535,0,65535,65535,0]
+; SSE-NEXT:    pand %xmm13, %xmm11
+; SSE-NEXT:    pandn {{[-0-9]+}}(%r{{[sb]}}p), %xmm13 # 16-byte Folded Reload
 ; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [65535,65535,65535,65535,65535,0,0,0]
 ; SSE-NEXT:    pand %xmm0, %xmm5
-; SSE-NEXT:    por %xmm1, %xmm12
-; SSE-NEXT:    pand %xmm12, %xmm7
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm7[0,2,1,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,1,2,1,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,1,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,1,0,3,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,6,5,4,7]
-; SSE-NEXT:    packuswb %xmm1, %xmm1
-; SSE-NEXT:    movdqa %xmm0, %xmm7
-; SSE-NEXT:    pandn %xmm1, %xmm7
-; SSE-NEXT:    por %xmm5, %xmm7
-; SSE-NEXT:    movdqa %xmm10, %xmm1
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8],xmm9[8],xmm1[9],xmm9[9],xmm1[10],xmm9[10],xmm1[11],xmm9[11],xmm1[12],xmm9[12],xmm1[13],xmm9[13],xmm1[14],xmm9[14],xmm1[15],xmm9[15]
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm10 = xmm10[0],xmm9[0],xmm10[1],xmm9[1],xmm10[2],xmm9[2],xmm10[3],xmm9[3],xmm10[4],xmm9[4],xmm10[5],xmm9[5],xmm10[6],xmm9[6],xmm10[7],xmm9[7]
-; SSE-NEXT:    movdqa %xmm10, %xmm5
-; SSE-NEXT:    shufps {{.*#+}} xmm10 = xmm10[1,0],xmm1[0,0]
-; SSE-NEXT:    shufps {{.*#+}} xmm10 = xmm10[2,0],xmm1[2,3]
-; SSE-NEXT:    psrlq $48, %xmm1
+; SSE-NEXT:    por %xmm11, %xmm13
+; SSE-NEXT:    pand %xmm13, %xmm7
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm7[0,2,1,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,1,2,1,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,1,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,1,0,3,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,6,5,4,7]
+; SSE-NEXT:    packuswb %xmm2, %xmm2
+; SSE-NEXT:    movdqa %xmm0, %xmm6
+; SSE-NEXT:    pandn %xmm2, %xmm6
+; SSE-NEXT:    por %xmm5, %xmm6
+; SSE-NEXT:    movdqa %xmm8, %xmm2
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm2 = xmm2[8],xmm9[8],xmm2[9],xmm9[9],xmm2[10],xmm9[10],xmm2[11],xmm9[11],xmm2[12],xmm9[12],xmm2[13],xmm9[13],xmm2[14],xmm9[14],xmm2[15],xmm9[15]
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm8 = xmm8[0],xmm9[0],xmm8[1],xmm9[1],xmm8[2],xmm9[2],xmm8[3],xmm9[3],xmm8[4],xmm9[4],xmm8[5],xmm9[5],xmm8[6],xmm9[6],xmm8[7],xmm9[7]
+; SSE-NEXT:    movdqa %xmm8, %xmm5
+; SSE-NEXT:    shufps {{.*#+}} xmm8 = xmm8[1,0],xmm2[0,0]
+; SSE-NEXT:    shufps {{.*#+}} xmm8 = xmm8[2,0],xmm2[2,3]
+; SSE-NEXT:    psrlq $48, %xmm2
 ; SSE-NEXT:    psrldq {{.*#+}} xmm5 = xmm5[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; SSE-NEXT:    punpcklwd {{.*#+}} xmm5 = xmm5[0],xmm1[0],xmm5[1],xmm1[1],xmm5[2],xmm1[2],xmm5[3],xmm1[3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm10[3,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,4,5,7]
-; SSE-NEXT:    packuswb %xmm5, %xmm1
-; SSE-NEXT:    movdqa %xmm3, %xmm5
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm5 = xmm5[8],xmm9[8],xmm5[9],xmm9[9],xmm5[10],xmm9[10],xmm5[11],xmm9[11],xmm5[12],xmm9[12],xmm5[13],xmm9[13],xmm5[14],xmm9[14],xmm5[15],xmm9[15]
-; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[1,1,2,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm5 = xmm5[0,1,2,3,5,5,5,5]
-; SSE-NEXT:    movdqa {{.*#+}} xmm6 = [65535,0,65535,65535,0,65535,65535,65535]
+; SSE-NEXT:    punpcklwd {{.*#+}} xmm5 = xmm5[0],xmm2[0],xmm5[1],xmm2[1],xmm5[2],xmm2[2],xmm5[3],xmm2[3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm8[3,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,1,0,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm7 = xmm2[0,1,2,3,4,4,5,7]
+; SSE-NEXT:    packuswb %xmm5, %xmm7
+; SSE-NEXT:    movdqa %xmm4, %xmm2
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm2 = xmm2[8],xmm9[8],xmm2[9],xmm9[9],xmm2[10],xmm9[10],xmm2[11],xmm9[11],xmm2[12],xmm9[12],xmm2[13],xmm9[13],xmm2[14],xmm9[14],xmm2[15],xmm9[15]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,2,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm5 = xmm2[0,1,2,3,5,5,5,5]
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [65535,0,65535,65535,0,65535,65535,65535]
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm9[0],xmm4[1],xmm9[1],xmm4[2],xmm9[2],xmm4[3],xmm9[3],xmm4[4],xmm9[4],xmm4[5],xmm9[5],xmm4[6],xmm9[6],xmm4[7],xmm9[7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm4 = xmm4[0,1,2,3,7,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,2,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm4 = xmm4[3,1,1,2,4,5,6,7]
+; SSE-NEXT:    pand %xmm2, %xmm4
+; SSE-NEXT:    pandn %xmm5, %xmm2
+; SSE-NEXT:    por %xmm4, %xmm2
+; SSE-NEXT:    packuswb %xmm2, %xmm2
+; SSE-NEXT:    pand %xmm3, %xmm2
+; SSE-NEXT:    pandn %xmm7, %xmm3
+; SSE-NEXT:    por %xmm3, %xmm2
+; SSE-NEXT:    movdqa %xmm13, %xmm3
 ; SSE-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm9[0],xmm3[1],xmm9[1],xmm3[2],xmm9[2],xmm3[3],xmm9[3],xmm3[4],xmm9[4],xmm3[5],xmm9[5],xmm3[6],xmm9[6],xmm3[7],xmm9[7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm3 = xmm3[0,1,2,3,7,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,2,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm3 = xmm3[3,1,1,2,4,5,6,7]
-; SSE-NEXT:    pand %xmm6, %xmm3
-; SSE-NEXT:    pandn %xmm5, %xmm6
-; SSE-NEXT:    por %xmm3, %xmm6
-; SSE-NEXT:    packuswb %xmm6, %xmm6
-; SSE-NEXT:    pand %xmm2, %xmm6
-; SSE-NEXT:    pandn %xmm1, %xmm2
-; SSE-NEXT:    por %xmm2, %xmm6
-; SSE-NEXT:    movdqa %xmm12, %xmm1
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm9[0],xmm1[1],xmm9[1],xmm1[2],xmm9[2],xmm1[3],xmm9[3],xmm1[4],xmm9[4],xmm1[5],xmm9[5],xmm1[6],xmm9[6],xmm1[7],xmm9[7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,3,1,1]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,1,1,3,4,5,6,7]
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm12 = xmm12[8],xmm9[8],xmm12[9],xmm9[9],xmm12[10],xmm9[10],xmm12[11],xmm9[11],xmm12[12],xmm9[12],xmm12[13],xmm9[13],xmm12[14],xmm9[14],xmm12[15],xmm9[15]
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [65535,65535,65535,65535,0,65535,0,0]
-; SSE-NEXT:    pand %xmm2, %xmm1
-; SSE-NEXT:    pshufhw {{.*#+}} xmm3 = xmm12[0,1,2,3,7,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,1,2,0]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm3 = xmm3[0,1,2,3,5,5,7,4]
-; SSE-NEXT:    pandn %xmm3, %xmm2
-; SSE-NEXT:    por %xmm1, %xmm2
-; SSE-NEXT:    pand %xmm0, %xmm6
-; SSE-NEXT:    packuswb %xmm2, %xmm1
-; SSE-NEXT:    pandn %xmm1, %xmm0
-; SSE-NEXT:    por %xmm6, %xmm0
-; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE-NEXT:    movaps %xmm1, (%rsi)
-; SSE-NEXT:    movdqa %xmm11, (%rdx)
-; SSE-NEXT:    movdqa %xmm8, (%rcx)
-; SSE-NEXT:    movdqa %xmm4, (%r8)
-; SSE-NEXT:    movdqa %xmm7, (%r9)
+; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,3,1,1]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm3 = xmm3[0,1,1,3,4,5,6,7]
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm13 = xmm13[8],xmm9[8],xmm13[9],xmm9[9],xmm13[10],xmm9[10],xmm13[11],xmm9[11],xmm13[12],xmm9[12],xmm13[13],xmm9[13],xmm13[14],xmm9[14],xmm13[15],xmm9[15]
+; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [65535,65535,65535,65535,0,65535,0,0]
+; SSE-NEXT:    pand %xmm4, %xmm3
+; SSE-NEXT:    pshufhw {{.*#+}} xmm5 = xmm13[0,1,2,3,7,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[0,1,2,0]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm5 = xmm5[0,1,2,3,5,5,7,4]
+; SSE-NEXT:    pandn %xmm5, %xmm4
+; SSE-NEXT:    por %xmm3, %xmm4
+; SSE-NEXT:    pand %xmm0, %xmm2
+; SSE-NEXT:    packuswb %xmm4, %xmm3
+; SSE-NEXT:    pandn %xmm3, %xmm0
+; SSE-NEXT:    por %xmm2, %xmm0
+; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
+; SSE-NEXT:    movaps %xmm2, (%rsi)
+; SSE-NEXT:    movdqa %xmm12, (%rdx)
+; SSE-NEXT:    movdqa %xmm1, (%rcx)
+; SSE-NEXT:    movdqa %xmm10, (%r8)
+; SSE-NEXT:    movdqa %xmm6, (%r9)
 ; SSE-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; SSE-NEXT:    movdqa %xmm0, (%rax)
 ; SSE-NEXT:    retq
@@ -1079,450 +1077,457 @@ define void @load_i8_stride6_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; SSE-LABEL: load_i8_stride6_vf32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    subq $280, %rsp # imm = 0x118
-; SSE-NEXT:    movdqa 64(%rdi), %xmm8
-; SSE-NEXT:    movdqa %xmm8, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa 80(%rdi), %xmm6
-; SSE-NEXT:    movdqa (%rdi), %xmm15
-; SSE-NEXT:    movdqa 16(%rdi), %xmm13
+; SSE-NEXT:    movdqa 64(%rdi), %xmm10
+; SSE-NEXT:    movdqa %xmm10, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa 80(%rdi), %xmm9
+; SSE-NEXT:    movdqa (%rdi), %xmm14
+; SSE-NEXT:    movdqa 16(%rdi), %xmm2
 ; SSE-NEXT:    movdqa 32(%rdi), %xmm1
 ; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa 48(%rdi), %xmm7
-; SSE-NEXT:    movdqa {{.*#+}} xmm5 = [65535,65535,0,65535,65535,0,65535,65535]
-; SSE-NEXT:    movdqa %xmm5, %xmm0
+; SSE-NEXT:    movdqa 48(%rdi), %xmm5
+; SSE-NEXT:    movdqa {{.*#+}} xmm7 = [65535,65535,0,65535,65535,0,65535,65535]
+; SSE-NEXT:    movdqa %xmm7, %xmm0
 ; SSE-NEXT:    pandn %xmm1, %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm10 = [65535,0,65535,65535,0,65535,65535,0]
-; SSE-NEXT:    movdqa %xmm10, %xmm1
-; SSE-NEXT:    pandn %xmm7, %xmm1
+; SSE-NEXT:    movdqa {{.*#+}} xmm12 = [65535,0,65535,65535,0,65535,65535,0]
+; SSE-NEXT:    movdqa %xmm12, %xmm1
+; SSE-NEXT:    pandn %xmm5, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm5, %xmm1
-; SSE-NEXT:    pandn %xmm7, %xmm1
+; SSE-NEXT:    movdqa %xmm7, %xmm1
+; SSE-NEXT:    pandn %xmm5, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm7, %xmm14
-; SSE-NEXT:    pand %xmm5, %xmm14
-; SSE-NEXT:    por %xmm0, %xmm14
-; SSE-NEXT:    movdqa {{.*#+}} xmm11 = [255,255,255,255,255,255,255,255]
-; SSE-NEXT:    movdqa %xmm14, %xmm0
-; SSE-NEXT:    pand %xmm11, %xmm0
+; SSE-NEXT:    movdqa %xmm5, %xmm15
+; SSE-NEXT:    pand %xmm7, %xmm15
+; SSE-NEXT:    por %xmm0, %xmm15
+; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [255,255,255,255,255,255,255,255]
+; SSE-NEXT:    movdqa %xmm15, %xmm0
+; SSE-NEXT:    pand %xmm1, %xmm0
+; SSE-NEXT:    movdqa %xmm1, %xmm3
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm0[0,3,2,3,4,5,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,3,2,3]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,2,1]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6,5]
 ; SSE-NEXT:    packuswb %xmm1, %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm9 = [65535,65535,65535,0,0,0,65535,65535]
-; SSE-NEXT:    movdqa %xmm10, %xmm1
-; SSE-NEXT:    pandn %xmm13, %xmm1
-; SSE-NEXT:    movdqa %xmm15, %xmm12
-; SSE-NEXT:    pand %xmm10, %xmm12
-; SSE-NEXT:    por %xmm1, %xmm12
+; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [65535,65535,65535,0,0,0,65535,65535]
 ; SSE-NEXT:    movdqa %xmm12, %xmm1
-; SSE-NEXT:    pand %xmm11, %xmm1
+; SSE-NEXT:    pandn %xmm2, %xmm1
+; SSE-NEXT:    movdqa %xmm14, %xmm11
+; SSE-NEXT:    pand %xmm12, %xmm11
+; SSE-NEXT:    por %xmm1, %xmm11
+; SSE-NEXT:    movdqa %xmm11, %xmm1
+; SSE-NEXT:    pand %xmm3, %xmm1
+; SSE-NEXT:    movdqa %xmm3, %xmm6
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,1,3]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,6,5,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,1,3]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,3,2,1,4,5,6,7]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,7,6,7]
 ; SSE-NEXT:    packuswb %xmm1, %xmm1
-; SSE-NEXT:    pand %xmm9, %xmm1
-; SSE-NEXT:    movdqa %xmm9, %xmm2
-; SSE-NEXT:    pandn %xmm0, %xmm2
-; SSE-NEXT:    por %xmm2, %xmm1
-; SSE-NEXT:    movdqa %xmm5, %xmm0
-; SSE-NEXT:    pandn %xmm6, %xmm0
-; SSE-NEXT:    pand %xmm5, %xmm8
-; SSE-NEXT:    por %xmm0, %xmm8
-; SSE-NEXT:    movdqa %xmm8, %xmm0
-; SSE-NEXT:    pand %xmm11, %xmm0
+; SSE-NEXT:    pand %xmm4, %xmm1
+; SSE-NEXT:    movdqa %xmm4, %xmm3
+; SSE-NEXT:    pandn %xmm0, %xmm3
+; SSE-NEXT:    por %xmm3, %xmm1
+; SSE-NEXT:    movdqa %xmm7, %xmm0
+; SSE-NEXT:    pandn %xmm9, %xmm0
+; SSE-NEXT:    pand %xmm7, %xmm10
+; SSE-NEXT:    por %xmm0, %xmm10
+; SSE-NEXT:    movdqa %xmm10, %xmm0
+; SSE-NEXT:    pand %xmm6, %xmm0
+; SSE-NEXT:    movdqa %xmm6, %xmm8
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,0]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[2,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,3,2,0]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,7,6,5]
+; SSE-NEXT:    packuswb %xmm0, %xmm0
+; SSE-NEXT:    movdqa {{.*#+}} xmm5 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0]
+; SSE-NEXT:    movdqa %xmm5, %xmm3
+; SSE-NEXT:    pandn %xmm0, %xmm3
+; SSE-NEXT:    pand %xmm5, %xmm1
+; SSE-NEXT:    por %xmm1, %xmm3
+; SSE-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa 128(%rdi), %xmm13
+; SSE-NEXT:    movdqa %xmm7, %xmm0
+; SSE-NEXT:    pandn %xmm13, %xmm0
+; SSE-NEXT:    movdqa 144(%rdi), %xmm6
+; SSE-NEXT:    movdqa %xmm12, %xmm3
+; SSE-NEXT:    pandn %xmm6, %xmm3
+; SSE-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm7, %xmm3
+; SSE-NEXT:    pandn %xmm6, %xmm3
+; SSE-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    pand %xmm7, %xmm6
+; SSE-NEXT:    por %xmm0, %xmm6
+; SSE-NEXT:    movdqa %xmm6, %xmm0
+; SSE-NEXT:    pand %xmm8, %xmm0
+; SSE-NEXT:    pshuflw {{.*#+}} xmm3 = xmm0[0,3,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,3,2,3]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,2,1]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6,5]
+; SSE-NEXT:    packuswb %xmm3, %xmm0
+; SSE-NEXT:    movdqa %xmm4, %xmm8
+; SSE-NEXT:    pandn %xmm0, %xmm8
+; SSE-NEXT:    movdqa %xmm7, %xmm0
+; SSE-NEXT:    movdqa %xmm7, %xmm1
+; SSE-NEXT:    pandn %xmm14, %xmm1
+; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa 112(%rdi), %xmm1
+; SSE-NEXT:    movdqa %xmm12, %xmm4
+; SSE-NEXT:    pandn %xmm1, %xmm4
+; SSE-NEXT:    movdqa 160(%rdi), %xmm7
+; SSE-NEXT:    movdqa %xmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    pand %xmm0, %xmm7
+; SSE-NEXT:    movdqa %xmm0, %xmm3
+; SSE-NEXT:    pandn %xmm2, %xmm3
+; SSE-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    pand %xmm0, %xmm14
+; SSE-NEXT:    pandn %xmm9, %xmm12
+; SSE-NEXT:    movdqa %xmm12, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    pand %xmm0, %xmm9
+; SSE-NEXT:    movdqa %xmm9, (%rsp) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm0, %xmm3
+; SSE-NEXT:    pandn %xmm1, %xmm3
+; SSE-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa 96(%rdi), %xmm3
+; SSE-NEXT:    movdqa %xmm3, %xmm5
+; SSE-NEXT:    pand %xmm0, %xmm5
+; SSE-NEXT:    movdqa %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa 176(%rdi), %xmm5
+; SSE-NEXT:    movdqa %xmm5, %xmm12
+; SSE-NEXT:    movdqa %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    pand %xmm0, %xmm12
+; SSE-NEXT:    movdqa %xmm12, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm9 # 16-byte Reload
+; SSE-NEXT:    movdqa %xmm9, %xmm12
+; SSE-NEXT:    pand %xmm0, %xmm9
+; SSE-NEXT:    movdqa %xmm9, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    pand %xmm0, %xmm2
+; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm13, %xmm2
+; SSE-NEXT:    pand %xmm0, %xmm2
+; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm0, %xmm2
+; SSE-NEXT:    pand %xmm0, %xmm1
+; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    pandn %xmm3, %xmm2
+; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm3, %xmm2
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE-NEXT:    por %xmm4, %xmm2
+; SSE-NEXT:    movdqa %xmm2, %xmm4
+; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [255,255,255,255,255,255,255,255]
+; SSE-NEXT:    pand %xmm1, %xmm4
+; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,2,1,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm4 = xmm4[0,1,2,3,6,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,2,1,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm4 = xmm4[0,3,2,1,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm4 = xmm4[0,1,2,3,4,7,6,7]
+; SSE-NEXT:    packuswb %xmm4, %xmm4
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4
+; SSE-NEXT:    por %xmm8, %xmm4
+; SSE-NEXT:    pandn %xmm5, %xmm0
+; SSE-NEXT:    por %xmm0, %xmm7
+; SSE-NEXT:    movdqa %xmm7, %xmm0
+; SSE-NEXT:    pand %xmm1, %xmm0
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,0]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[2,1,2,3,4,5,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,3,2,0]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,7,6,5]
 ; SSE-NEXT:    packuswb %xmm0, %xmm0
 ; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0]
-; SSE-NEXT:    movdqa %xmm3, %xmm2
-; SSE-NEXT:    pandn %xmm0, %xmm2
-; SSE-NEXT:    pand %xmm3, %xmm1
-; SSE-NEXT:    por %xmm1, %xmm2
-; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa 128(%rdi), %xmm1
-; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm5, %xmm0
-; SSE-NEXT:    pandn %xmm1, %xmm0
-; SSE-NEXT:    movdqa 144(%rdi), %xmm3
-; SSE-NEXT:    movdqa %xmm10, %xmm2
-; SSE-NEXT:    pandn %xmm3, %xmm2
-; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm5, %xmm2
-; SSE-NEXT:    pandn %xmm3, %xmm2
-; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pand %xmm5, %xmm3
-; SSE-NEXT:    por %xmm0, %xmm3
-; SSE-NEXT:    movdqa %xmm3, %xmm0
-; SSE-NEXT:    pand %xmm11, %xmm0
-; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm0[0,3,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,3,2,3]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,2,1]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6,5]
-; SSE-NEXT:    packuswb %xmm2, %xmm0
-; SSE-NEXT:    pandn %xmm0, %xmm9
-; SSE-NEXT:    movdqa %xmm5, %xmm1
-; SSE-NEXT:    movdqa %xmm5, %xmm0
-; SSE-NEXT:    pandn %xmm15, %xmm0
-; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa 112(%rdi), %xmm0
-; SSE-NEXT:    movdqa %xmm10, %xmm7
-; SSE-NEXT:    pandn %xmm0, %xmm7
-; SSE-NEXT:    movdqa 160(%rdi), %xmm4
-; SSE-NEXT:    movdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pand %xmm5, %xmm4
-; SSE-NEXT:    movdqa %xmm13, %xmm2
-; SSE-NEXT:    pandn %xmm13, %xmm5
-; SSE-NEXT:    movdqa %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pand %xmm1, %xmm15
-; SSE-NEXT:    movdqa %xmm10, %xmm5
-; SSE-NEXT:    pandn %xmm6, %xmm5
-; SSE-NEXT:    movdqa %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pand %xmm1, %xmm6
-; SSE-NEXT:    movdqa %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm1, %xmm5
-; SSE-NEXT:    pandn %xmm0, %xmm5
-; SSE-NEXT:    movdqa %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm0, %xmm5
-; SSE-NEXT:    movdqa 96(%rdi), %xmm0
-; SSE-NEXT:    movdqa %xmm0, %xmm6
-; SSE-NEXT:    pand %xmm1, %xmm6
-; SSE-NEXT:    movdqa %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa 176(%rdi), %xmm13
-; SSE-NEXT:    movdqa %xmm13, %xmm10
-; SSE-NEXT:    movdqa %xmm13, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pand %xmm1, %xmm10
-; SSE-NEXT:    movdqa %xmm10, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm10 # 16-byte Reload
-; SSE-NEXT:    movdqa %xmm10, %xmm6
-; SSE-NEXT:    pand %xmm1, %xmm10
-; SSE-NEXT:    movdqa %xmm10, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pand %xmm1, %xmm2
-; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
-; SSE-NEXT:    movdqa %xmm2, %xmm10
-; SSE-NEXT:    pand %xmm1, %xmm2
-; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pand %xmm1, %xmm5
-; SSE-NEXT:    movdqa %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm1, %xmm2
-; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm1, (%rsp) # 16-byte Spill
-; SSE-NEXT:    pandn %xmm0, %xmm1
-; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    por %xmm7, %xmm0
-; SSE-NEXT:    movdqa %xmm0, %xmm5
-; SSE-NEXT:    pand %xmm11, %xmm5
-; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[0,2,1,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm5 = xmm5[0,1,2,3,6,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[0,2,1,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm5 = xmm5[0,3,2,1,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm5 = xmm5[0,1,2,3,4,7,6,7]
-; SSE-NEXT:    packuswb %xmm5, %xmm5
-; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm5
-; SSE-NEXT:    por %xmm9, %xmm5
-; SSE-NEXT:    pandn %xmm13, %xmm2
-; SSE-NEXT:    por %xmm2, %xmm4
-; SSE-NEXT:    movdqa %xmm4, %xmm2
-; SSE-NEXT:    pand %xmm11, %xmm2
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[3,1,2,0]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[2,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,3,2,0]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,4,7,6,5]
-; SSE-NEXT:    packuswb %xmm2, %xmm2
-; SSE-NEXT:    movdqa {{.*#+}} xmm9 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0]
-; SSE-NEXT:    movdqa %xmm9, %xmm1
-; SSE-NEXT:    pandn %xmm2, %xmm1
-; SSE-NEXT:    pand %xmm9, %xmm5
-; SSE-NEXT:    por %xmm5, %xmm1
-; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pxor %xmm2, %xmm2
-; SSE-NEXT:    movdqa %xmm14, %xmm5
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm5 = xmm5[8],xmm2[8],xmm5[9],xmm2[9],xmm5[10],xmm2[10],xmm5[11],xmm2[11],xmm5[12],xmm2[12],xmm5[13],xmm2[13],xmm5[14],xmm2[14],xmm5[15],xmm2[15]
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm14 = xmm14[0],xmm2[0],xmm14[1],xmm2[1],xmm14[2],xmm2[2],xmm14[3],xmm2[3],xmm14[4],xmm2[4],xmm14[5],xmm2[5],xmm14[6],xmm2[6],xmm14[7],xmm2[7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm7 = xmm14[2,2,3,3]
-; SSE-NEXT:    punpcklwd {{.*#+}} xmm7 = xmm7[0],xmm5[0],xmm7[1],xmm5[1],xmm7[2],xmm5[2],xmm7[3],xmm5[3]
-; SSE-NEXT:    psrld $16, %xmm5
-; SSE-NEXT:    pshufd {{.*#+}} xmm14 = xmm14[0,1,0,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm14 = xmm14[0,1,2,3,5,7,6,7]
-; SSE-NEXT:    punpckhdq {{.*#+}} xmm14 = xmm14[2],xmm5[2],xmm14[3],xmm5[3]
-; SSE-NEXT:    packuswb %xmm14, %xmm7
-; SSE-NEXT:    movdqa {{.*#+}} xmm13 = [65535,65535,65535,0,0,0,65535,65535]
-; SSE-NEXT:    movdqa %xmm13, %xmm5
-; SSE-NEXT:    pandn %xmm7, %xmm5
-; SSE-NEXT:    movdqa %xmm12, %xmm7
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm7 = xmm7[8],xmm2[8],xmm7[9],xmm2[9],xmm7[10],xmm2[10],xmm7[11],xmm2[11],xmm7[12],xmm2[12],xmm7[13],xmm2[13],xmm7[14],xmm2[14],xmm7[15],xmm2[15]
-; SSE-NEXT:    pshufd {{.*#+}} xmm7 = xmm7[2,1,0,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm7 = xmm7[1,1,1,1,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm7 = xmm7[0,1,2,3,5,7,6,7]
-; SSE-NEXT:    movdqa {{.*#+}} xmm14 = [65535,65535,0,65535,0,0,65535,65535]
-; SSE-NEXT:    movdqa %xmm14, %xmm1
-; SSE-NEXT:    pandn %xmm7, %xmm1
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm12 = xmm12[0],xmm2[0],xmm12[1],xmm2[1],xmm12[2],xmm2[2],xmm12[3],xmm2[3],xmm12[4],xmm2[4],xmm12[5],xmm2[5],xmm12[6],xmm2[6],xmm12[7],xmm2[7]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm7 = xmm12[3,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm7 = xmm7[0,3,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm7 = xmm7[1,3,2,0,4,5,6,7]
-; SSE-NEXT:    pand %xmm14, %xmm7
-; SSE-NEXT:    por %xmm1, %xmm7
-; SSE-NEXT:    packuswb %xmm7, %xmm7
-; SSE-NEXT:    pand %xmm13, %xmm7
-; SSE-NEXT:    por %xmm5, %xmm7
-; SSE-NEXT:    movdqa %xmm8, %xmm1
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3],xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,5,5,5,5]
-; SSE-NEXT:    movdqa {{.*#+}} xmm5 = [65535,65535,65535,0,65535,65535,0,65535]
-; SSE-NEXT:    movdqa %xmm5, %xmm12
-; SSE-NEXT:    pandn %xmm1, %xmm12
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm8 = xmm8[8],xmm2[8],xmm8[9],xmm2[9],xmm8[10],xmm2[10],xmm8[11],xmm2[11],xmm8[12],xmm2[12],xmm8[13],xmm2[13],xmm8[14],xmm2[14],xmm8[15],xmm2[15]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm8[3,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,5,7,6,4]
-; SSE-NEXT:    pand %xmm5, %xmm1
-; SSE-NEXT:    por %xmm12, %xmm1
-; SSE-NEXT:    packuswb %xmm1, %xmm1
-; SSE-NEXT:    movdqa %xmm9, %xmm8
-; SSE-NEXT:    pandn %xmm1, %xmm8
-; SSE-NEXT:    pand %xmm9, %xmm7
-; SSE-NEXT:    por %xmm7, %xmm8
-; SSE-NEXT:    movdqa %xmm8, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa %xmm3, %xmm1
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8],xmm2[8],xmm1[9],xmm2[9],xmm1[10],xmm2[10],xmm1[11],xmm2[11],xmm1[12],xmm2[12],xmm1[13],xmm2[13],xmm1[14],xmm2[14],xmm1[15],xmm2[15]
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3],xmm3[4],xmm2[4],xmm3[5],xmm2[5],xmm3[6],xmm2[6],xmm3[7],xmm2[7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm7 = xmm3[2,2,3,3]
-; SSE-NEXT:    punpcklwd {{.*#+}} xmm7 = xmm7[0],xmm1[0],xmm7[1],xmm1[1],xmm7[2],xmm1[2],xmm7[3],xmm1[3]
-; SSE-NEXT:    psrld $16, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,1,0,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm3 = xmm3[0,1,2,3,5,7,6,7]
-; SSE-NEXT:    punpckhdq {{.*#+}} xmm3 = xmm3[2],xmm1[2],xmm3[3],xmm1[3]
-; SSE-NEXT:    packuswb %xmm3, %xmm7
-; SSE-NEXT:    movdqa %xmm0, %xmm1
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8],xmm2[8],xmm1[9],xmm2[9],xmm1[10],xmm2[10],xmm1[11],xmm2[11],xmm1[12],xmm2[12],xmm1[13],xmm2[13],xmm1[14],xmm2[14],xmm1[15],xmm2[15]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,1,0,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[1,1,1,1,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,5,7,6,7]
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3],xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,3,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[1,3,2,0,4,5,6,7]
-; SSE-NEXT:    pand %xmm14, %xmm0
-; SSE-NEXT:    pandn %xmm1, %xmm14
-; SSE-NEXT:    por %xmm0, %xmm14
-; SSE-NEXT:    packuswb %xmm14, %xmm14
-; SSE-NEXT:    movdqa %xmm13, %xmm0
-; SSE-NEXT:    pand %xmm13, %xmm14
-; SSE-NEXT:    pandn %xmm7, %xmm0
-; SSE-NEXT:    por %xmm0, %xmm14
-; SSE-NEXT:    movdqa %xmm4, %xmm0
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3],xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,5,5,5]
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm4 = xmm4[8],xmm2[8],xmm4[9],xmm2[9],xmm4[10],xmm2[10],xmm4[11],xmm2[11],xmm4[12],xmm2[12],xmm4[13],xmm2[13],xmm4[14],xmm2[14],xmm4[15],xmm2[15]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm4[3,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,5,7,6,4]
-; SSE-NEXT:    pand %xmm5, %xmm1
-; SSE-NEXT:    pandn %xmm0, %xmm5
-; SSE-NEXT:    por %xmm1, %xmm5
-; SSE-NEXT:    packuswb %xmm5, %xmm0
-; SSE-NEXT:    movdqa %xmm9, %xmm1
 ; SSE-NEXT:    pandn %xmm0, %xmm1
-; SSE-NEXT:    pand %xmm9, %xmm14
-; SSE-NEXT:    por %xmm14, %xmm1
+; SSE-NEXT:    pand %xmm3, %xmm4
+; SSE-NEXT:    por %xmm4, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [65535,0,65535,65535,0,65535,65535,0]
-; SSE-NEXT:    pand %xmm4, %xmm6
-; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Folded Reload
-; SSE-NEXT:    movdqa %xmm6, %xmm0
-; SSE-NEXT:    pand %xmm11, %xmm0
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm0[0,1,2,3,4,7,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[1,2,3,3,4,5,6,7]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,3,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,4,5,6]
-; SSE-NEXT:    packuswb %xmm1, %xmm0
-; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Folded Reload
-; SSE-NEXT:    movdqa %xmm15, %xmm1
-; SSE-NEXT:    pand %xmm11, %xmm1
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[2,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5,4,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,3,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[1,2,3,0,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,5,5,5,5]
-; SSE-NEXT:    packuswb %xmm1, %xmm1
-; SSE-NEXT:    movdqa {{.*#+}} xmm13 = [0,0,0,0,0,255,255,255,255,255,255,255,255,255,255,255]
-; SSE-NEXT:    movdqa %xmm13, %xmm3
-; SSE-NEXT:    pandn %xmm1, %xmm3
-; SSE-NEXT:    pand %xmm13, %xmm0
-; SSE-NEXT:    por %xmm0, %xmm3
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE-NEXT:    pandn {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm12 # 16-byte Reload
-; SSE-NEXT:    por %xmm0, %xmm12
-; SSE-NEXT:    movdqa %xmm12, %xmm0
-; SSE-NEXT:    pand %xmm11, %xmm0
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,3,2,3,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,6,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,2,0]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[2,2,2,2,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,6,7,4]
-; SSE-NEXT:    packuswb %xmm0, %xmm0
-; SSE-NEXT:    movdqa %xmm9, %xmm1
-; SSE-NEXT:    pandn %xmm0, %xmm1
-; SSE-NEXT:    pand %xmm9, %xmm3
-; SSE-NEXT:    por %xmm3, %xmm1
-; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pand %xmm4, %xmm10
-; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm10 # 16-byte Folded Reload
-; SSE-NEXT:    movdqa %xmm10, %xmm0
-; SSE-NEXT:    pand %xmm11, %xmm0
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm0[0,1,2,3,4,7,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[1,2,3,3,4,5,6,7]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,3,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,4,5,6]
-; SSE-NEXT:    packuswb %xmm1, %xmm0
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm7 # 16-byte Reload
-; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm7 # 16-byte Folded Reload
-; SSE-NEXT:    movdqa %xmm7, %xmm1
-; SSE-NEXT:    pand %xmm11, %xmm1
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[2,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5,4,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,3,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[1,2,3,0,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,5,5,5,5]
-; SSE-NEXT:    packuswb %xmm1, %xmm1
-; SSE-NEXT:    movdqa %xmm13, %xmm3
-; SSE-NEXT:    pandn %xmm1, %xmm3
-; SSE-NEXT:    pand %xmm13, %xmm0
-; SSE-NEXT:    por %xmm0, %xmm3
-; SSE-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; SSE-NEXT:    pandn {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm8 # 16-byte Reload
-; SSE-NEXT:    por %xmm0, %xmm8
-; SSE-NEXT:    movdqa %xmm8, %xmm0
-; SSE-NEXT:    pand %xmm11, %xmm0
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,3,2,3,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,6,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,2,0]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[2,2,2,2,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,6,7,4]
-; SSE-NEXT:    packuswb %xmm0, %xmm0
-; SSE-NEXT:    movdqa %xmm9, %xmm14
-; SSE-NEXT:    pandn %xmm0, %xmm14
-; SSE-NEXT:    pand %xmm9, %xmm3
-; SSE-NEXT:    por %xmm3, %xmm14
-; SSE-NEXT:    movdqa %xmm6, %xmm0
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3],xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm6 = xmm6[8],xmm2[8],xmm6[9],xmm2[9],xmm6[10],xmm2[10],xmm6[11],xmm2[11],xmm6[12],xmm2[12],xmm6[13],xmm2[13],xmm6[14],xmm2[14],xmm6[15],xmm2[15]
-; SSE-NEXT:    movdqa %xmm6, %xmm1
-; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,0],xmm0[3,0]
-; SSE-NEXT:    movaps %xmm0, %xmm3
-; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[0,1],xmm1[0,2]
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,0],xmm6[0,0]
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0],xmm6[2,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm3[0,1,2,3,7,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,2]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,3,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,1,3,3,4,5,6,7]
-; SSE-NEXT:    packuswb %xmm0, %xmm1
+; SSE-NEXT:    pxor %xmm9, %xmm9
 ; SSE-NEXT:    movdqa %xmm15, %xmm0
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3],xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,1,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,1,2,1,4,5,6,7]
-; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [0,65535,65535,0,65535,65535,65535,65535]
-; SSE-NEXT:    movdqa %xmm3, %xmm4
-; SSE-NEXT:    pandn %xmm0, %xmm4
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm15 = xmm15[8],xmm2[8],xmm15[9],xmm2[9],xmm15[10],xmm2[10],xmm15[11],xmm2[11],xmm15[12],xmm2[12],xmm15[13],xmm2[13],xmm15[14],xmm2[14],xmm15[15],xmm2[15]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm15[0,3,2,1]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,1,3,3,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,7,7,7]
-; SSE-NEXT:    pand %xmm3, %xmm0
-; SSE-NEXT:    por %xmm4, %xmm0
-; SSE-NEXT:    packuswb %xmm0, %xmm0
-; SSE-NEXT:    movdqa %xmm13, %xmm4
-; SSE-NEXT:    pandn %xmm0, %xmm4
-; SSE-NEXT:    pand %xmm13, %xmm1
-; SSE-NEXT:    por %xmm1, %xmm4
-; SSE-NEXT:    movdqa %xmm12, %xmm0
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8],xmm2[8],xmm0[9],xmm2[9],xmm0[10],xmm2[10],xmm0[11],xmm2[11],xmm0[12],xmm2[12],xmm0[13],xmm2[13],xmm0[14],xmm2[14],xmm0[15],xmm2[15]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,2,1]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,5,6,5]
-; SSE-NEXT:    movdqa {{.*#+}} xmm5 = [65535,65535,65535,65535,0,65535,65535,0]
-; SSE-NEXT:    movdqa %xmm5, %xmm1
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8],xmm9[8],xmm0[9],xmm9[9],xmm0[10],xmm9[10],xmm0[11],xmm9[11],xmm0[12],xmm9[12],xmm0[13],xmm9[13],xmm0[14],xmm9[14],xmm0[15],xmm9[15]
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm15 = xmm15[0],xmm9[0],xmm15[1],xmm9[1],xmm15[2],xmm9[2],xmm15[3],xmm9[3],xmm15[4],xmm9[4],xmm15[5],xmm9[5],xmm15[6],xmm9[6],xmm15[7],xmm9[7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm15[2,2,3,3]
+; SSE-NEXT:    punpcklwd {{.*#+}} xmm5 = xmm5[0],xmm0[0],xmm5[1],xmm0[1],xmm5[2],xmm0[2],xmm5[3],xmm0[3]
+; SSE-NEXT:    psrld $16, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm15 = xmm15[0,1,0,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm15 = xmm15[0,1,2,3,5,7,6,7]
+; SSE-NEXT:    punpckhdq {{.*#+}} xmm15 = xmm15[2],xmm0[2],xmm15[3],xmm0[3]
+; SSE-NEXT:    packuswb %xmm15, %xmm5
+; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [65535,65535,65535,0,0,0,65535,65535]
+; SSE-NEXT:    movdqa %xmm4, %xmm1
+; SSE-NEXT:    pandn %xmm5, %xmm1
+; SSE-NEXT:    movdqa %xmm11, %xmm5
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm5 = xmm5[8],xmm9[8],xmm5[9],xmm9[9],xmm5[10],xmm9[10],xmm5[11],xmm9[11],xmm5[12],xmm9[12],xmm5[13],xmm9[13],xmm5[14],xmm9[14],xmm5[15],xmm9[15]
+; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[2,1,0,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm5 = xmm5[1,1,1,1,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm5 = xmm5[0,1,2,3,5,7,6,7]
+; SSE-NEXT:    movdqa {{.*#+}} xmm15 = [65535,65535,0,65535,0,0,65535,65535]
+; SSE-NEXT:    movdqa %xmm15, %xmm0
+; SSE-NEXT:    pandn %xmm5, %xmm0
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm11 = xmm11[0],xmm9[0],xmm11[1],xmm9[1],xmm11[2],xmm9[2],xmm11[3],xmm9[3],xmm11[4],xmm9[4],xmm11[5],xmm9[5],xmm11[6],xmm9[6],xmm11[7],xmm9[7]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm5 = xmm11[3,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[0,3,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm5 = xmm5[1,3,2,0,4,5,6,7]
+; SSE-NEXT:    pand %xmm15, %xmm5
+; SSE-NEXT:    por %xmm0, %xmm5
+; SSE-NEXT:    packuswb %xmm5, %xmm5
+; SSE-NEXT:    pand %xmm4, %xmm5
+; SSE-NEXT:    por %xmm1, %xmm5
+; SSE-NEXT:    movdqa %xmm10, %xmm0
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm9[0],xmm0[1],xmm9[1],xmm0[2],xmm9[2],xmm0[3],xmm9[3],xmm0[4],xmm9[4],xmm0[5],xmm9[5],xmm0[6],xmm9[6],xmm0[7],xmm9[7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,5,5,5]
+; SSE-NEXT:    movdqa {{.*#+}} xmm8 = [65535,65535,65535,0,65535,65535,0,65535]
+; SSE-NEXT:    movdqa %xmm8, %xmm1
 ; SSE-NEXT:    pandn %xmm0, %xmm1
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm12 = xmm12[0],xmm2[0],xmm12[1],xmm2[1],xmm12[2],xmm2[2],xmm12[3],xmm2[3],xmm12[4],xmm2[4],xmm12[5],xmm2[5],xmm12[6],xmm2[6],xmm12[7],xmm2[7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm12[0,2,0,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,7,7]
-; SSE-NEXT:    pand %xmm5, %xmm0
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm10 = xmm10[8],xmm9[8],xmm10[9],xmm9[9],xmm10[10],xmm9[10],xmm10[11],xmm9[11],xmm10[12],xmm9[12],xmm10[13],xmm9[13],xmm10[14],xmm9[14],xmm10[15],xmm9[15]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm10[3,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,7,6,4]
+; SSE-NEXT:    pand %xmm8, %xmm0
 ; SSE-NEXT:    por %xmm1, %xmm0
 ; SSE-NEXT:    packuswb %xmm0, %xmm0
-; SSE-NEXT:    movdqa %xmm9, %xmm12
-; SSE-NEXT:    pandn %xmm0, %xmm12
-; SSE-NEXT:    pand %xmm9, %xmm4
-; SSE-NEXT:    por %xmm4, %xmm12
-; SSE-NEXT:    movdqa %xmm10, %xmm0
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3],xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm10 = xmm10[8],xmm2[8],xmm10[9],xmm2[9],xmm10[10],xmm2[10],xmm10[11],xmm2[11],xmm10[12],xmm2[12],xmm10[13],xmm2[13],xmm10[14],xmm2[14],xmm10[15],xmm2[15]
-; SSE-NEXT:    movdqa %xmm10, %xmm4
-; SSE-NEXT:    shufps {{.*#+}} xmm4 = xmm4[2,0],xmm0[3,0]
-; SSE-NEXT:    movaps %xmm0, %xmm6
-; SSE-NEXT:    shufps {{.*#+}} xmm6 = xmm6[0,1],xmm4[0,2]
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,0],xmm10[0,0]
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0],xmm10[2,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm4 = xmm6[0,1,2,3,7,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,1,0,2]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,3,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,1,3,3,4,5,6,7]
-; SSE-NEXT:    packuswb %xmm0, %xmm4
+; SSE-NEXT:    movdqa %xmm3, %xmm1
+; SSE-NEXT:    pandn %xmm0, %xmm1
+; SSE-NEXT:    pand %xmm3, %xmm5
+; SSE-NEXT:    por %xmm5, %xmm1
+; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm6, %xmm0
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8],xmm9[8],xmm0[9],xmm9[9],xmm0[10],xmm9[10],xmm0[11],xmm9[11],xmm0[12],xmm9[12],xmm0[13],xmm9[13],xmm0[14],xmm9[14],xmm0[15],xmm9[15]
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm6 = xmm6[0],xmm9[0],xmm6[1],xmm9[1],xmm6[2],xmm9[2],xmm6[3],xmm9[3],xmm6[4],xmm9[4],xmm6[5],xmm9[5],xmm6[6],xmm9[6],xmm6[7],xmm9[7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm6[2,2,3,3]
+; SSE-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; SSE-NEXT:    psrld $16, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm6[0,1,0,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm5 = xmm5[0,1,2,3,5,7,6,7]
+; SSE-NEXT:    punpckhdq {{.*#+}} xmm5 = xmm5[2],xmm0[2],xmm5[3],xmm0[3]
+; SSE-NEXT:    packuswb %xmm5, %xmm1
+; SSE-NEXT:    movdqa %xmm2, %xmm0
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8],xmm9[8],xmm0[9],xmm9[9],xmm0[10],xmm9[10],xmm0[11],xmm9[11],xmm0[12],xmm9[12],xmm0[13],xmm9[13],xmm0[14],xmm9[14],xmm0[15],xmm9[15]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,1,0,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[1,1,1,1,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,7,6,7]
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm9[0],xmm2[1],xmm9[1],xmm2[2],xmm9[2],xmm2[3],xmm9[3],xmm2[4],xmm9[4],xmm2[5],xmm9[5],xmm2[6],xmm9[6],xmm2[7],xmm9[7]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[3,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,3,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[1,3,2,0,4,5,6,7]
+; SSE-NEXT:    pand %xmm15, %xmm2
+; SSE-NEXT:    pandn %xmm0, %xmm15
+; SSE-NEXT:    por %xmm2, %xmm15
+; SSE-NEXT:    packuswb %xmm15, %xmm15
+; SSE-NEXT:    movdqa %xmm4, %xmm0
+; SSE-NEXT:    pand %xmm4, %xmm15
+; SSE-NEXT:    pandn %xmm1, %xmm0
+; SSE-NEXT:    por %xmm0, %xmm15
 ; SSE-NEXT:    movdqa %xmm7, %xmm0
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3],xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,1,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,1,2,1,4,5,6,7]
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm7 = xmm7[8],xmm2[8],xmm7[9],xmm2[9],xmm7[10],xmm2[10],xmm7[11],xmm2[11],xmm7[12],xmm2[12],xmm7[13],xmm2[13],xmm7[14],xmm2[14],xmm7[15],xmm2[15]
-; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm7[0,3,2,1]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm6 = xmm6[0,1,3,3,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,7,7,7,7]
-; SSE-NEXT:    pand %xmm3, %xmm6
-; SSE-NEXT:    pandn %xmm0, %xmm3
-; SSE-NEXT:    por %xmm6, %xmm3
-; SSE-NEXT:    pand %xmm13, %xmm4
-; SSE-NEXT:    packuswb %xmm3, %xmm3
-; SSE-NEXT:    pandn %xmm3, %xmm13
-; SSE-NEXT:    por %xmm4, %xmm13
-; SSE-NEXT:    movdqa %xmm8, %xmm0
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8],xmm2[8],xmm0[9],xmm2[9],xmm0[10],xmm2[10],xmm0[11],xmm2[11],xmm0[12],xmm2[12],xmm0[13],xmm2[13],xmm0[14],xmm2[14],xmm0[15],xmm2[15]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,2,1]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,5,6,5]
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm8 = xmm8[0],xmm2[0],xmm8[1],xmm2[1],xmm8[2],xmm2[2],xmm8[3],xmm2[3],xmm8[4],xmm2[4],xmm8[5],xmm2[5],xmm8[6],xmm2[6],xmm8[7],xmm2[7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm8[0,2,0,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm3 = xmm3[0,1,2,3,4,5,7,7]
-; SSE-NEXT:    pand %xmm5, %xmm3
-; SSE-NEXT:    pandn %xmm0, %xmm5
-; SSE-NEXT:    por %xmm3, %xmm5
-; SSE-NEXT:    pand %xmm9, %xmm13
-; SSE-NEXT:    packuswb %xmm5, %xmm0
-; SSE-NEXT:    pandn %xmm0, %xmm9
-; SSE-NEXT:    por %xmm13, %xmm9
-; SSE-NEXT:    movdqa %xmm9, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm8 # 16-byte Reload
-; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm8 # 16-byte Folded Reload
-; SSE-NEXT:    movdqa %xmm8, %xmm0
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm9[0],xmm0[1],xmm9[1],xmm0[2],xmm9[2],xmm0[3],xmm9[3],xmm0[4],xmm9[4],xmm0[5],xmm9[5],xmm0[6],xmm9[6],xmm0[7],xmm9[7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,5,5,5]
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm7 = xmm7[8],xmm9[8],xmm7[9],xmm9[9],xmm7[10],xmm9[10],xmm7[11],xmm9[11],xmm7[12],xmm9[12],xmm7[13],xmm9[13],xmm7[14],xmm9[14],xmm7[15],xmm9[15]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm7[3,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,5,7,6,4]
+; SSE-NEXT:    pand %xmm8, %xmm1
+; SSE-NEXT:    pandn %xmm0, %xmm8
+; SSE-NEXT:    por %xmm1, %xmm8
+; SSE-NEXT:    packuswb %xmm8, %xmm0
+; SSE-NEXT:    movdqa %xmm3, %xmm1
+; SSE-NEXT:    pandn %xmm0, %xmm1
+; SSE-NEXT:    pand %xmm3, %xmm15
+; SSE-NEXT:    movdqa %xmm3, %xmm8
+; SSE-NEXT:    por %xmm15, %xmm1
+; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [65535,0,65535,65535,0,65535,65535,0]
+; SSE-NEXT:    pand %xmm4, %xmm12
+; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm12 # 16-byte Folded Reload
+; SSE-NEXT:    movdqa %xmm12, %xmm0
+; SSE-NEXT:    movdqa {{.*#+}} xmm11 = [255,255,255,255,255,255,255,255]
 ; SSE-NEXT:    pand %xmm11, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,1,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm3 = xmm3[2,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm0[0,1,2,3,4,7,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[1,2,3,3,4,5,6,7]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,3,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm2 = xmm0[0,1,2,3,4,4,5,6]
+; SSE-NEXT:    packuswb %xmm1, %xmm2
+; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm14 # 16-byte Folded Reload
+; SSE-NEXT:    movdqa %xmm14, %xmm0
+; SSE-NEXT:    pand %xmm11, %xmm0
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[2,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,4,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,3,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[1,2,3,0,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm0[0,1,2,3,5,5,5,5]
+; SSE-NEXT:    packuswb %xmm1, %xmm1
+; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [0,0,0,0,0,255,255,255,255,255,255,255,255,255,255,255]
+; SSE-NEXT:    movdqa %xmm0, %xmm3
+; SSE-NEXT:    pandn %xmm1, %xmm3
+; SSE-NEXT:    pand %xmm0, %xmm2
+; SSE-NEXT:    por %xmm2, %xmm3
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; SSE-NEXT:    pandn {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; SSE-NEXT:    movdqa (%rsp), %xmm15 # 16-byte Reload
+; SSE-NEXT:    por %xmm1, %xmm15
+; SSE-NEXT:    movdqa %xmm15, %xmm1
+; SSE-NEXT:    pand %xmm11, %xmm1
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,3,2,3,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,6,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,2,0]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[2,2,2,2,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,5,6,7,4]
+; SSE-NEXT:    packuswb %xmm1, %xmm1
+; SSE-NEXT:    movdqa %xmm8, %xmm2
+; SSE-NEXT:    pandn %xmm1, %xmm2
+; SSE-NEXT:    pand %xmm8, %xmm3
+; SSE-NEXT:    por %xmm3, %xmm2
+; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    pand %xmm4, %xmm13
+; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm13 # 16-byte Folded Reload
+; SSE-NEXT:    movdqa %xmm13, %xmm1
+; SSE-NEXT:    pand %xmm11, %xmm1
+; SSE-NEXT:    pshufhw {{.*#+}} xmm2 = xmm1[0,1,2,3,4,7,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[1,2,3,3,4,5,6,7]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,3,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,4,5,6]
+; SSE-NEXT:    packuswb %xmm2, %xmm1
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Reload
+; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Folded Reload
+; SSE-NEXT:    movdqa %xmm4, %xmm2
+; SSE-NEXT:    pand %xmm11, %xmm2
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[2,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,4,5,4,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,3,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[1,2,3,0,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,5,5,5,5]
+; SSE-NEXT:    packuswb %xmm2, %xmm2
+; SSE-NEXT:    movdqa %xmm0, %xmm3
+; SSE-NEXT:    pandn %xmm2, %xmm3
+; SSE-NEXT:    pand %xmm0, %xmm1
+; SSE-NEXT:    por %xmm1, %xmm3
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; SSE-NEXT:    pandn {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm10 # 16-byte Reload
+; SSE-NEXT:    por %xmm1, %xmm10
+; SSE-NEXT:    movdqa %xmm10, %xmm1
+; SSE-NEXT:    pand %xmm11, %xmm1
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,3,2,3,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,6,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,2,0]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[2,2,2,2,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,5,6,7,4]
+; SSE-NEXT:    packuswb %xmm1, %xmm1
+; SSE-NEXT:    movdqa %xmm8, %xmm2
+; SSE-NEXT:    pandn %xmm1, %xmm2
+; SSE-NEXT:    pand %xmm8, %xmm3
+; SSE-NEXT:    por %xmm3, %xmm2
+; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm12, %xmm1
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm9[0],xmm1[1],xmm9[1],xmm1[2],xmm9[2],xmm1[3],xmm9[3],xmm1[4],xmm9[4],xmm1[5],xmm9[5],xmm1[6],xmm9[6],xmm1[7],xmm9[7]
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm12 = xmm12[8],xmm9[8],xmm12[9],xmm9[9],xmm12[10],xmm9[10],xmm12[11],xmm9[11],xmm12[12],xmm9[12],xmm12[13],xmm9[13],xmm12[14],xmm9[14],xmm12[15],xmm9[15]
+; SSE-NEXT:    movdqa %xmm12, %xmm3
+; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[2,0],xmm1[3,0]
+; SSE-NEXT:    movaps %xmm1, %xmm5
+; SSE-NEXT:    shufps {{.*#+}} xmm5 = xmm5[0,1],xmm3[0,2]
+; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,0],xmm12[0,0]
+; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,0],xmm12[2,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm3 = xmm5[0,1,2,3,7,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,1,0,2]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[3,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,3,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,1,3,3,4,5,6,7]
+; SSE-NEXT:    packuswb %xmm1, %xmm3
+; SSE-NEXT:    movdqa %xmm14, %xmm1
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm9[0],xmm1[1],xmm9[1],xmm1[2],xmm9[2],xmm1[3],xmm9[3],xmm1[4],xmm9[4],xmm1[5],xmm9[5],xmm1[6],xmm9[6],xmm1[7],xmm9[7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,1,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm5 = xmm1[3,1,2,1,4,5,6,7]
+; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [0,65535,65535,0,65535,65535,65535,65535]
+; SSE-NEXT:    movdqa %xmm1, %xmm6
+; SSE-NEXT:    pandn %xmm5, %xmm6
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm14 = xmm14[8],xmm9[8],xmm14[9],xmm9[9],xmm14[10],xmm9[10],xmm14[11],xmm9[11],xmm14[12],xmm9[12],xmm14[13],xmm9[13],xmm14[14],xmm9[14],xmm14[15],xmm9[15]
+; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm14[0,3,2,1]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm5 = xmm5[0,1,3,3,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm5 = xmm5[0,1,2,3,7,7,7,7]
+; SSE-NEXT:    pand %xmm1, %xmm5
+; SSE-NEXT:    por %xmm6, %xmm5
+; SSE-NEXT:    packuswb %xmm5, %xmm5
+; SSE-NEXT:    movdqa %xmm0, %xmm6
+; SSE-NEXT:    pandn %xmm5, %xmm6
+; SSE-NEXT:    pand %xmm0, %xmm3
+; SSE-NEXT:    por %xmm3, %xmm6
+; SSE-NEXT:    movdqa %xmm15, %xmm3
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8],xmm9[8],xmm3[9],xmm9[9],xmm3[10],xmm9[10],xmm3[11],xmm9[11],xmm3[12],xmm9[12],xmm3[13],xmm9[13],xmm3[14],xmm9[14],xmm3[15],xmm9[15]
+; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,1,2,1]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm5 = xmm3[0,1,2,3,7,5,6,5]
+; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [65535,65535,65535,65535,0,65535,65535,0]
+; SSE-NEXT:    movdqa %xmm3, %xmm7
+; SSE-NEXT:    pandn %xmm5, %xmm7
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm15 = xmm15[0],xmm9[0],xmm15[1],xmm9[1],xmm15[2],xmm9[2],xmm15[3],xmm9[3],xmm15[4],xmm9[4],xmm15[5],xmm9[5],xmm15[6],xmm9[6],xmm15[7],xmm9[7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm15[0,2,0,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm5 = xmm5[0,1,2,3,4,5,7,7]
+; SSE-NEXT:    pand %xmm3, %xmm5
+; SSE-NEXT:    por %xmm7, %xmm5
+; SSE-NEXT:    packuswb %xmm5, %xmm5
+; SSE-NEXT:    movdqa %xmm8, %xmm15
+; SSE-NEXT:    pandn %xmm5, %xmm15
+; SSE-NEXT:    pand %xmm8, %xmm6
+; SSE-NEXT:    por %xmm6, %xmm15
+; SSE-NEXT:    movdqa %xmm13, %xmm5
+; SSE-NEXT:    pxor %xmm2, %xmm2
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm5 = xmm5[0],xmm2[0],xmm5[1],xmm2[1],xmm5[2],xmm2[2],xmm5[3],xmm2[3],xmm5[4],xmm2[4],xmm5[5],xmm2[5],xmm5[6],xmm2[6],xmm5[7],xmm2[7]
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm13 = xmm13[8],xmm2[8],xmm13[9],xmm2[9],xmm13[10],xmm2[10],xmm13[11],xmm2[11],xmm13[12],xmm2[12],xmm13[13],xmm2[13],xmm13[14],xmm2[14],xmm13[15],xmm2[15]
+; SSE-NEXT:    movdqa %xmm13, %xmm6
+; SSE-NEXT:    shufps {{.*#+}} xmm6 = xmm6[2,0],xmm5[3,0]
+; SSE-NEXT:    movaps %xmm5, %xmm7
+; SSE-NEXT:    shufps {{.*#+}} xmm7 = xmm7[0,1],xmm6[0,2]
+; SSE-NEXT:    shufps {{.*#+}} xmm5 = xmm5[1,0],xmm13[0,0]
+; SSE-NEXT:    shufps {{.*#+}} xmm5 = xmm5[2,0],xmm13[2,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm6 = xmm7[0,1,2,3,7,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[0,1,0,2]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm5 = xmm5[3,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[0,3,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm5 = xmm5[0,1,3,3,4,5,6,7]
+; SSE-NEXT:    packuswb %xmm5, %xmm6
+; SSE-NEXT:    movdqa %xmm4, %xmm5
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm5 = xmm5[0],xmm2[0],xmm5[1],xmm2[1],xmm5[2],xmm2[2],xmm5[3],xmm2[3],xmm5[4],xmm2[4],xmm5[5],xmm2[5],xmm5[6],xmm2[6],xmm5[7],xmm2[7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[2,1,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm5 = xmm5[3,1,2,1,4,5,6,7]
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm4 = xmm4[8],xmm2[8],xmm4[9],xmm2[9],xmm4[10],xmm2[10],xmm4[11],xmm2[11],xmm4[12],xmm2[12],xmm4[13],xmm2[13],xmm4[14],xmm2[14],xmm4[15],xmm2[15]
+; SSE-NEXT:    pshufd {{.*#+}} xmm7 = xmm4[0,3,2,1]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm7 = xmm7[0,1,3,3,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm7 = xmm7[0,1,2,3,7,7,7,7]
+; SSE-NEXT:    pand %xmm1, %xmm7
+; SSE-NEXT:    pandn %xmm5, %xmm1
+; SSE-NEXT:    por %xmm7, %xmm1
+; SSE-NEXT:    pand %xmm0, %xmm6
+; SSE-NEXT:    packuswb %xmm1, %xmm1
+; SSE-NEXT:    pandn %xmm1, %xmm0
+; SSE-NEXT:    por %xmm6, %xmm0
+; SSE-NEXT:    movdqa %xmm10, %xmm1
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8],xmm2[8],xmm1[9],xmm2[9],xmm1[10],xmm2[10],xmm1[11],xmm2[11],xmm1[12],xmm2[12],xmm1[13],xmm2[13],xmm1[14],xmm2[14],xmm1[15],xmm2[15]
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,2,1]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,7,5,6,5]
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm10 = xmm10[0],xmm2[0],xmm10[1],xmm2[1],xmm10[2],xmm2[2],xmm10[3],xmm2[3],xmm10[4],xmm2[4],xmm10[5],xmm2[5],xmm10[6],xmm2[6],xmm10[7],xmm2[7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm10[0,2,0,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm5 = xmm5[0,1,2,3,4,5,7,7]
+; SSE-NEXT:    pand %xmm3, %xmm5
+; SSE-NEXT:    pandn %xmm1, %xmm3
+; SSE-NEXT:    por %xmm5, %xmm3
+; SSE-NEXT:    movdqa %xmm8, %xmm4
+; SSE-NEXT:    pand %xmm8, %xmm0
+; SSE-NEXT:    packuswb %xmm3, %xmm1
+; SSE-NEXT:    pandn %xmm1, %xmm4
+; SSE-NEXT:    por %xmm0, %xmm4
+; SSE-NEXT:    movdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm9 # 16-byte Reload
+; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm9 # 16-byte Folded Reload
+; SSE-NEXT:    movdqa %xmm9, %xmm0
+; SSE-NEXT:    pand %xmm11, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,1,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[2,1,2,3,4,5,6,7]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,7,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,2]
-; SSE-NEXT:    packuswb %xmm3, %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [255,255,255,255,255,0,0,0,0,0,255,255,255,255,255,255]
-; SSE-NEXT:    movdqa %xmm3, %xmm4
-; SSE-NEXT:    pandn %xmm0, %xmm4
+; SSE-NEXT:    packuswb %xmm1, %xmm0
+; SSE-NEXT:    movdqa {{.*#+}} xmm5 = [255,255,255,255,255,0,0,0,0,0,255,255,255,255,255,255]
+; SSE-NEXT:    movdqa %xmm5, %xmm1
+; SSE-NEXT:    pandn %xmm0, %xmm1
 ; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm10 # 16-byte Reload
 ; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm10 # 16-byte Folded Reload
 ; SSE-NEXT:    movdqa %xmm10, %xmm0
@@ -1530,191 +1535,196 @@ define void @load_i8_stride6_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,0]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,6,5,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,1,0,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm5 = xmm0[2,1,0,3,4,5,6,7]
-; SSE-NEXT:    packuswb %xmm5, %xmm5
-; SSE-NEXT:    pand %xmm3, %xmm5
-; SSE-NEXT:    por %xmm4, %xmm5
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
+; SSE-NEXT:    pshuflw {{.*#+}} xmm3 = xmm0[2,1,0,3,4,5,6,7]
+; SSE-NEXT:    packuswb %xmm3, %xmm3
+; SSE-NEXT:    pand %xmm5, %xmm3
+; SSE-NEXT:    por %xmm1, %xmm3
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm12 # 16-byte Reload
 ; SSE-NEXT:    movdqa {{.*#+}} xmm13 = [65535,0,65535,65535,0,65535,65535,0]
-; SSE-NEXT:    pand %xmm13, %xmm15
-; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Folded Reload
-; SSE-NEXT:    movdqa %xmm15, %xmm0
+; SSE-NEXT:    pand %xmm13, %xmm12
+; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm12 # 16-byte Folded Reload
+; SSE-NEXT:    movdqa %xmm12, %xmm0
 ; SSE-NEXT:    pand %xmm11, %xmm0
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,1,3]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,1,2,1,4,5,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,1,3]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,1,0,3,4,5,6,7]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,6,5,4,7]
-; SSE-NEXT:    packuswb %xmm0, %xmm4
+; SSE-NEXT:    packuswb %xmm0, %xmm6
 ; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [65535,65535,65535,65535,65535,0,0,0]
-; SSE-NEXT:    movdqa %xmm0, %xmm6
-; SSE-NEXT:    pandn %xmm4, %xmm6
-; SSE-NEXT:    pand %xmm0, %xmm5
-; SSE-NEXT:    por %xmm5, %xmm6
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Reload
-; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Folded Reload
-; SSE-NEXT:    movdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pand %xmm11, %xmm4
-; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[2,1,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm5 = xmm5[2,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm4 = xmm4[0,1,2,3,4,7,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,1,0,2]
-; SSE-NEXT:    packuswb %xmm5, %xmm4
-; SSE-NEXT:    movdqa %xmm3, %xmm5
-; SSE-NEXT:    pandn %xmm4, %xmm5
+; SSE-NEXT:    movdqa %xmm0, %xmm8
+; SSE-NEXT:    pandn %xmm6, %xmm8
+; SSE-NEXT:    pand %xmm0, %xmm3
+; SSE-NEXT:    por %xmm3, %xmm8
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm14 # 16-byte Reload
+; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm14 # 16-byte Folded Reload
+; SSE-NEXT:    movdqa %xmm14, %xmm3
+; SSE-NEXT:    pand %xmm11, %xmm3
+; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm3[2,1,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm6 = xmm6[2,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm3 = xmm3[0,1,2,3,4,7,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,1,0,2]
+; SSE-NEXT:    packuswb %xmm6, %xmm3
+; SSE-NEXT:    movdqa %xmm5, %xmm6
+; SSE-NEXT:    pandn %xmm3, %xmm6
 ; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; SSE-NEXT:    movdqa %xmm1, %xmm4
-; SSE-NEXT:    pand %xmm11, %xmm4
-; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[3,1,2,0]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm4 = xmm4[0,1,2,3,6,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[2,1,0,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm7 = xmm4[2,1,0,3,4,5,6,7]
+; SSE-NEXT:    movdqa %xmm1, %xmm3
+; SSE-NEXT:    pand %xmm11, %xmm3
+; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[3,1,2,0]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm3 = xmm3[0,1,2,3,6,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[2,1,0,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm7 = xmm3[2,1,0,3,4,5,6,7]
 ; SSE-NEXT:    packuswb %xmm7, %xmm7
-; SSE-NEXT:    pand %xmm3, %xmm7
-; SSE-NEXT:    por %xmm5, %xmm7
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Reload
-; SSE-NEXT:    pand %xmm13, %xmm4
+; SSE-NEXT:    pand %xmm5, %xmm7
+; SSE-NEXT:    por %xmm6, %xmm7
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Reload
+; SSE-NEXT:    pand %xmm13, %xmm3
 ; SSE-NEXT:    pandn {{[-0-9]+}}(%r{{[sb]}}p), %xmm13 # 16-byte Folded Reload
-; SSE-NEXT:    por %xmm4, %xmm13
-; SSE-NEXT:    pand %xmm13, %xmm11
-; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm11[0,2,1,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm4 = xmm4[0,1,2,1,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,2,1,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm4 = xmm4[0,1,0,3,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm4 = xmm4[0,1,2,3,6,5,4,7]
-; SSE-NEXT:    packuswb %xmm4, %xmm5
-; SSE-NEXT:    movdqa %xmm0, %xmm4
-; SSE-NEXT:    pandn %xmm5, %xmm4
+; SSE-NEXT:    por %xmm3, %xmm13
+; SSE-NEXT:    movdqa %xmm11, %xmm3
+; SSE-NEXT:    pand %xmm13, %xmm3
+; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,2,1,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm3 = xmm3[0,1,2,1,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,2,1,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm3 = xmm3[0,1,0,3,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm3 = xmm3[0,1,2,3,6,5,4,7]
+; SSE-NEXT:    packuswb %xmm3, %xmm6
+; SSE-NEXT:    movdqa %xmm0, %xmm3
+; SSE-NEXT:    pandn %xmm6, %xmm3
 ; SSE-NEXT:    pand %xmm0, %xmm7
-; SSE-NEXT:    por %xmm7, %xmm4
-; SSE-NEXT:    movdqa %xmm8, %xmm5
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm5 = xmm5[8],xmm2[8],xmm5[9],xmm2[9],xmm5[10],xmm2[10],xmm5[11],xmm2[11],xmm5[12],xmm2[12],xmm5[13],xmm2[13],xmm5[14],xmm2[14],xmm5[15],xmm2[15]
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm8 = xmm8[0],xmm2[0],xmm8[1],xmm2[1],xmm8[2],xmm2[2],xmm8[3],xmm2[3],xmm8[4],xmm2[4],xmm8[5],xmm2[5],xmm8[6],xmm2[6],xmm8[7],xmm2[7]
-; SSE-NEXT:    movdqa %xmm8, %xmm7
-; SSE-NEXT:    shufps {{.*#+}} xmm8 = xmm8[1,0],xmm5[0,0]
-; SSE-NEXT:    shufps {{.*#+}} xmm8 = xmm8[2,0],xmm5[2,3]
-; SSE-NEXT:    psrlq $48, %xmm5
+; SSE-NEXT:    por %xmm7, %xmm3
+; SSE-NEXT:    movdqa %xmm9, %xmm6
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm6 = xmm6[8],xmm2[8],xmm6[9],xmm2[9],xmm6[10],xmm2[10],xmm6[11],xmm2[11],xmm6[12],xmm2[12],xmm6[13],xmm2[13],xmm6[14],xmm2[14],xmm6[15],xmm2[15]
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm9 = xmm9[0],xmm2[0],xmm9[1],xmm2[1],xmm9[2],xmm2[2],xmm9[3],xmm2[3],xmm9[4],xmm2[4],xmm9[5],xmm2[5],xmm9[6],xmm2[6],xmm9[7],xmm2[7]
+; SSE-NEXT:    movdqa %xmm9, %xmm7
+; SSE-NEXT:    shufps {{.*#+}} xmm9 = xmm9[1,0],xmm6[0,0]
+; SSE-NEXT:    shufps {{.*#+}} xmm9 = xmm9[2,0],xmm6[2,3]
+; SSE-NEXT:    psrlq $48, %xmm6
 ; SSE-NEXT:    psrldq {{.*#+}} xmm7 = xmm7[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; SSE-NEXT:    punpcklwd {{.*#+}} xmm7 = xmm7[0],xmm5[0],xmm7[1],xmm5[1],xmm7[2],xmm5[2],xmm7[3],xmm5[3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm5 = xmm8[3,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[0,1,0,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm5 = xmm5[0,1,2,3,4,4,5,7]
-; SSE-NEXT:    packuswb %xmm7, %xmm5
-; SSE-NEXT:    movdqa %xmm3, %xmm7
-; SSE-NEXT:    pandn %xmm5, %xmm7
-; SSE-NEXT:    movdqa %xmm10, %xmm5
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm5 = xmm5[8],xmm2[8],xmm5[9],xmm2[9],xmm5[10],xmm2[10],xmm5[11],xmm2[11],xmm5[12],xmm2[12],xmm5[13],xmm2[13],xmm5[14],xmm2[14],xmm5[15],xmm2[15]
-; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[1,1,2,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm8 = xmm5[0,1,2,3,5,5,5,5]
-; SSE-NEXT:    movdqa {{.*#+}} xmm5 = [65535,0,65535,65535,0,65535,65535,65535]
-; SSE-NEXT:    movdqa %xmm5, %xmm9
-; SSE-NEXT:    pandn %xmm8, %xmm9
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm10 = xmm10[0],xmm2[0],xmm10[1],xmm2[1],xmm10[2],xmm2[2],xmm10[3],xmm2[3],xmm10[4],xmm2[4],xmm10[5],xmm2[5],xmm10[6],xmm2[6],xmm10[7],xmm2[7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm8 = xmm10[0,1,2,3,7,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm8 = xmm8[0,2,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm10 = xmm8[3,1,1,2,4,5,6,7]
-; SSE-NEXT:    pand %xmm5, %xmm10
-; SSE-NEXT:    por %xmm9, %xmm10
-; SSE-NEXT:    packuswb %xmm10, %xmm10
-; SSE-NEXT:    pand %xmm3, %xmm10
-; SSE-NEXT:    por %xmm7, %xmm10
-; SSE-NEXT:    movdqa %xmm15, %xmm8
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm15 = xmm15[8],xmm2[8],xmm15[9],xmm2[9],xmm15[10],xmm2[10],xmm15[11],xmm2[11],xmm15[12],xmm2[12],xmm15[13],xmm2[13],xmm15[14],xmm2[14],xmm15[15],xmm2[15]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm7 = xmm15[0,1,2,3,7,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm7 = xmm7[0,1,2,0]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm9 = xmm7[0,1,2,3,5,5,7,4]
-; SSE-NEXT:    movdqa {{.*#+}} xmm7 = [65535,65535,65535,65535,0,65535,0,0]
-; SSE-NEXT:    movdqa %xmm7, %xmm11
+; SSE-NEXT:    punpcklwd {{.*#+}} xmm7 = xmm7[0],xmm6[0],xmm7[1],xmm6[1],xmm7[2],xmm6[2],xmm7[3],xmm6[3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm6 = xmm9[3,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[0,1,0,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,4,4,5,7]
+; SSE-NEXT:    packuswb %xmm7, %xmm6
+; SSE-NEXT:    movdqa %xmm5, %xmm7
+; SSE-NEXT:    pandn %xmm6, %xmm7
+; SSE-NEXT:    movdqa %xmm10, %xmm6
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm6 = xmm6[8],xmm2[8],xmm6[9],xmm2[9],xmm6[10],xmm2[10],xmm6[11],xmm2[11],xmm6[12],xmm2[12],xmm6[13],xmm2[13],xmm6[14],xmm2[14],xmm6[15],xmm2[15]
+; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[1,1,2,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm9 = xmm6[0,1,2,3,5,5,5,5]
+; SSE-NEXT:    movdqa {{.*#+}} xmm6 = [65535,0,65535,65535,0,65535,65535,65535]
+; SSE-NEXT:    movdqa %xmm6, %xmm11
 ; SSE-NEXT:    pandn %xmm9, %xmm11
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm8 = xmm8[0],xmm2[0],xmm8[1],xmm2[1],xmm8[2],xmm2[2],xmm8[3],xmm2[3],xmm8[4],xmm2[4],xmm8[5],xmm2[5],xmm8[6],xmm2[6],xmm8[7],xmm2[7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm8 = xmm8[0,3,1,1]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm8 = xmm8[0,1,1,3,4,5,6,7]
-; SSE-NEXT:    pand %xmm7, %xmm8
-; SSE-NEXT:    por %xmm8, %xmm11
-; SSE-NEXT:    packuswb %xmm11, %xmm9
-; SSE-NEXT:    movdqa %xmm0, %xmm8
-; SSE-NEXT:    pandn %xmm9, %xmm8
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm10 = xmm10[0],xmm2[0],xmm10[1],xmm2[1],xmm10[2],xmm2[2],xmm10[3],xmm2[3],xmm10[4],xmm2[4],xmm10[5],xmm2[5],xmm10[6],xmm2[6],xmm10[7],xmm2[7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm9 = xmm10[0,1,2,3,7,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm9 = xmm9[0,2,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm10 = xmm9[3,1,1,2,4,5,6,7]
+; SSE-NEXT:    pand %xmm6, %xmm10
+; SSE-NEXT:    por %xmm11, %xmm10
+; SSE-NEXT:    packuswb %xmm10, %xmm10
+; SSE-NEXT:    pand %xmm5, %xmm10
+; SSE-NEXT:    por %xmm7, %xmm10
+; SSE-NEXT:    movdqa %xmm12, %xmm7
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm12 = xmm12[8],xmm2[8],xmm12[9],xmm2[9],xmm12[10],xmm2[10],xmm12[11],xmm2[11],xmm12[12],xmm2[12],xmm12[13],xmm2[13],xmm12[14],xmm2[14],xmm12[15],xmm2[15]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm9 = xmm12[0,1,2,3,7,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm9 = xmm9[0,1,2,0]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm11 = xmm9[0,1,2,3,5,5,7,4]
+; SSE-NEXT:    movdqa {{.*#+}} xmm9 = [65535,65535,65535,65535,0,65535,0,0]
+; SSE-NEXT:    movdqa %xmm9, %xmm12
+; SSE-NEXT:    pandn %xmm11, %xmm12
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm7 = xmm7[0],xmm2[0],xmm7[1],xmm2[1],xmm7[2],xmm2[2],xmm7[3],xmm2[3],xmm7[4],xmm2[4],xmm7[5],xmm2[5],xmm7[6],xmm2[6],xmm7[7],xmm2[7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm7 = xmm7[0,3,1,1]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm7 = xmm7[0,1,1,3,4,5,6,7]
+; SSE-NEXT:    pand %xmm9, %xmm7
+; SSE-NEXT:    por %xmm7, %xmm12
+; SSE-NEXT:    packuswb %xmm12, %xmm11
+; SSE-NEXT:    movdqa %xmm0, %xmm7
+; SSE-NEXT:    pandn %xmm11, %xmm7
 ; SSE-NEXT:    pand %xmm0, %xmm10
-; SSE-NEXT:    por %xmm10, %xmm8
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm11 # 16-byte Reload
-; SSE-NEXT:    movdqa %xmm11, %xmm9
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm9 = xmm9[8],xmm2[8],xmm9[9],xmm2[9],xmm9[10],xmm2[10],xmm9[11],xmm2[11],xmm9[12],xmm2[12],xmm9[13],xmm2[13],xmm9[14],xmm2[14],xmm9[15],xmm2[15]
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm11 = xmm11[0],xmm2[0],xmm11[1],xmm2[1],xmm11[2],xmm2[2],xmm11[3],xmm2[3],xmm11[4],xmm2[4],xmm11[5],xmm2[5],xmm11[6],xmm2[6],xmm11[7],xmm2[7]
-; SSE-NEXT:    movdqa %xmm11, %xmm10
-; SSE-NEXT:    shufps {{.*#+}} xmm11 = xmm11[1,0],xmm9[0,0]
-; SSE-NEXT:    shufps {{.*#+}} xmm11 = xmm11[2,0],xmm9[2,3]
-; SSE-NEXT:    psrlq $48, %xmm9
-; SSE-NEXT:    psrldq {{.*#+}} xmm10 = xmm10[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; SSE-NEXT:    punpcklwd {{.*#+}} xmm10 = xmm10[0],xmm9[0],xmm10[1],xmm9[1],xmm10[2],xmm9[2],xmm10[3],xmm9[3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm9 = xmm11[3,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm9 = xmm9[0,1,0,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm9 = xmm9[0,1,2,3,4,4,5,7]
-; SSE-NEXT:    packuswb %xmm10, %xmm9
-; SSE-NEXT:    movdqa %xmm1, %xmm10
+; SSE-NEXT:    por %xmm10, %xmm7
+; SSE-NEXT:    movdqa %xmm14, %xmm10
 ; SSE-NEXT:    punpckhbw {{.*#+}} xmm10 = xmm10[8],xmm2[8],xmm10[9],xmm2[9],xmm10[10],xmm2[10],xmm10[11],xmm2[11],xmm10[12],xmm2[12],xmm10[13],xmm2[13],xmm10[14],xmm2[14],xmm10[15],xmm2[15]
-; SSE-NEXT:    pshufd {{.*#+}} xmm10 = xmm10[1,1,2,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm10 = xmm10[0,1,2,3,5,5,5,5]
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm14 = xmm14[0],xmm2[0],xmm14[1],xmm2[1],xmm14[2],xmm2[2],xmm14[3],xmm2[3],xmm14[4],xmm2[4],xmm14[5],xmm2[5],xmm14[6],xmm2[6],xmm14[7],xmm2[7]
+; SSE-NEXT:    movdqa %xmm14, %xmm11
+; SSE-NEXT:    shufps {{.*#+}} xmm14 = xmm14[1,0],xmm10[0,0]
+; SSE-NEXT:    shufps {{.*#+}} xmm14 = xmm14[2,0],xmm10[2,3]
+; SSE-NEXT:    psrlq $48, %xmm10
+; SSE-NEXT:    psrldq {{.*#+}} xmm11 = xmm11[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; SSE-NEXT:    punpcklwd {{.*#+}} xmm11 = xmm11[0],xmm10[0],xmm11[1],xmm10[1],xmm11[2],xmm10[2],xmm11[3],xmm10[3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm10 = xmm14[3,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm10 = xmm10[0,1,0,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm10 = xmm10[0,1,2,3,4,4,5,7]
+; SSE-NEXT:    packuswb %xmm11, %xmm10
+; SSE-NEXT:    movdqa %xmm1, %xmm11
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm11 = xmm11[8],xmm2[8],xmm11[9],xmm2[9],xmm11[10],xmm2[10],xmm11[11],xmm2[11],xmm11[12],xmm2[12],xmm11[13],xmm2[13],xmm11[14],xmm2[14],xmm11[15],xmm2[15]
+; SSE-NEXT:    pshufd {{.*#+}} xmm11 = xmm11[1,1,2,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm11 = xmm11[0,1,2,3,5,5,5,5]
 ; SSE-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3],xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm11 = xmm1[0,1,2,3,7,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm11 = xmm11[0,2,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm11 = xmm11[3,1,1,2,4,5,6,7]
-; SSE-NEXT:    pand %xmm5, %xmm11
+; SSE-NEXT:    pshufhw {{.*#+}} xmm12 = xmm1[0,1,2,3,7,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm12 = xmm12[0,2,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm12 = xmm12[3,1,1,2,4,5,6,7]
+; SSE-NEXT:    pand %xmm6, %xmm12
+; SSE-NEXT:    pandn %xmm11, %xmm6
+; SSE-NEXT:    por %xmm12, %xmm6
+; SSE-NEXT:    packuswb %xmm6, %xmm6
+; SSE-NEXT:    pand %xmm5, %xmm6
 ; SSE-NEXT:    pandn %xmm10, %xmm5
-; SSE-NEXT:    por %xmm11, %xmm5
-; SSE-NEXT:    packuswb %xmm5, %xmm5
-; SSE-NEXT:    pand %xmm3, %xmm5
-; SSE-NEXT:    pandn %xmm9, %xmm3
-; SSE-NEXT:    por %xmm3, %xmm5
-; SSE-NEXT:    movdqa %xmm13, %xmm3
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3],xmm3[4],xmm2[4],xmm3[5],xmm2[5],xmm3[6],xmm2[6],xmm3[7],xmm2[7]
+; SSE-NEXT:    por %xmm5, %xmm6
+; SSE-NEXT:    movdqa %xmm13, %xmm5
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm5 = xmm5[0],xmm2[0],xmm5[1],xmm2[1],xmm5[2],xmm2[2],xmm5[3],xmm2[3],xmm5[4],xmm2[4],xmm5[5],xmm2[5],xmm5[6],xmm2[6],xmm5[7],xmm2[7]
 ; SSE-NEXT:    punpckhbw {{.*#+}} xmm13 = xmm13[8],xmm2[8],xmm13[9],xmm2[9],xmm13[10],xmm2[10],xmm13[11],xmm2[11],xmm13[12],xmm2[12],xmm13[13],xmm2[13],xmm13[14],xmm2[14],xmm13[15],xmm2[15]
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[0,3,1,1]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,1,1,3,4,5,6,7]
-; SSE-NEXT:    pand %xmm7, %xmm2
-; SSE-NEXT:    pshufhw {{.*#+}} xmm3 = xmm13[0,1,2,3,7,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,1,2,0]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm3 = xmm3[0,1,2,3,5,5,7,4]
-; SSE-NEXT:    pandn %xmm3, %xmm7
-; SSE-NEXT:    por %xmm2, %xmm7
-; SSE-NEXT:    pand %xmm0, %xmm5
-; SSE-NEXT:    packuswb %xmm7, %xmm2
-; SSE-NEXT:    pandn %xmm2, %xmm0
-; SSE-NEXT:    por %xmm5, %xmm0
-; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
-; SSE-NEXT:    movaps %xmm2, 16(%rsi)
-; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
-; SSE-NEXT:    movaps %xmm2, (%rsi)
+; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm5[0,3,1,1]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm4 = xmm4[0,1,1,3,4,5,6,7]
+; SSE-NEXT:    pand %xmm9, %xmm4
+; SSE-NEXT:    pshufhw {{.*#+}} xmm5 = xmm13[0,1,2,3,7,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[0,1,2,0]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm5 = xmm5[0,1,2,3,5,5,7,4]
+; SSE-NEXT:    pandn %xmm5, %xmm9
+; SSE-NEXT:    por %xmm4, %xmm9
+; SSE-NEXT:    pand %xmm0, %xmm6
+; SSE-NEXT:    packuswb %xmm9, %xmm4
+; SSE-NEXT:    pandn %xmm4, %xmm0
+; SSE-NEXT:    por %xmm6, %xmm0
+; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Reload
+; SSE-NEXT:    movaps %xmm4, 16(%rsi)
+; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Reload
+; SSE-NEXT:    movaps %xmm4, (%rsi)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; SSE-NEXT:    movaps %xmm1, 16(%rdx)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; SSE-NEXT:    movaps %xmm1, (%rdx)
-; SSE-NEXT:    movdqa %xmm14, 16(%rcx)
+; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; SSE-NEXT:    movaps %xmm1, 16(%rcx)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; SSE-NEXT:    movaps %xmm1, (%rcx)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; SSE-NEXT:    movaps %xmm1, 16(%r8)
-; SSE-NEXT:    movdqa %xmm12, (%r8)
-; SSE-NEXT:    movdqa %xmm4, 16(%r9)
-; SSE-NEXT:    movdqa %xmm6, (%r9)
+; SSE-NEXT:    movdqa %xmm15, (%r8)
+; SSE-NEXT:    movdqa %xmm3, 16(%r9)
+; SSE-NEXT:    movdqa %xmm8, (%r9)
 ; SSE-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; SSE-NEXT:    movdqa %xmm0, 16(%rax)
-; SSE-NEXT:    movdqa %xmm8, (%rax)
+; SSE-NEXT:    movdqa %xmm7, (%rax)
 ; SSE-NEXT:    addq $280, %rsp # imm = 0x118
 ; SSE-NEXT:    retq
 ;
 ; AVX1-ONLY-LABEL: load_i8_stride6_vf32:
 ; AVX1-ONLY:       # %bb.0:
 ; AVX1-ONLY-NEXT:    subq $168, %rsp
-; AVX1-ONLY-NEXT:    vmovdqa 128(%rdi), %xmm4
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm0 = xmm4[u,u,4,10,u,u,u,u,u,u,u,u,u,u,u,u]
-; AVX1-ONLY-NEXT:    vmovdqa 144(%rdi), %xmm5
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm1 = xmm5[u,u,u,u,0,6,12,u,u,u,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vmovdqa 128(%rdi), %xmm1
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm0 = xmm1[u,u,4,10,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vmovdqa %xmm1, %xmm4
+; AVX1-ONLY-NEXT:    vmovdqa 144(%rdi), %xmm2
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm1 = xmm2[u,u,u,u,0,6,12,u,u,u,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vmovdqa %xmm2, %xmm5
 ; AVX1-ONLY-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; AVX1-ONLY-NEXT:    vmovdqa 176(%rdi), %xmm6
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm0 = xmm6[u,u,u,u,u,u,u,u,u,u,u],zero,zero,zero,xmm6[4,10]
-; AVX1-ONLY-NEXT:    vmovdqa 160(%rdi), %xmm7
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm2 = xmm7[u,u,u,u,u,u,u,u,u,u,u,2,8,14],zero,zero
+; AVX1-ONLY-NEXT:    vmovdqa 176(%rdi), %xmm2
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm0 = xmm2[u,u,u,u,u,u,u,u,u,u,u],zero,zero,zero,xmm2[4,10]
+; AVX1-ONLY-NEXT:    vmovdqa %xmm2, %xmm6
+; AVX1-ONLY-NEXT:    vmovdqa 160(%rdi), %xmm3
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm2 = xmm3[u,u,u,u,u,u,u,u,u,u,u,2,8,14],zero,zero
+; AVX1-ONLY-NEXT:    vmovdqa %xmm3, %xmm7
 ; AVX1-ONLY-NEXT:    vpor %xmm0, %xmm2, %xmm2
 ; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm0 = <u,u,u,u,u,u,255,255,255,255,255,0,0,0,0,0>
 ; AVX1-ONLY-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm1
@@ -1723,15 +1733,16 @@ define void @load_i8_stride6_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm2 = xmm5[u,u,u,u,1,7,13,u,u,u,u,u,u,u,u,u]
 ; AVX1-ONLY-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
 ; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm2 = xmm6[u,u,u,u,u,u,u,u,u,u,u],zero,zero,zero,xmm6[5,11]
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm3 = xmm7[u,u,u,u,u,u,u,u,u,u,u,3,9,15],zero,zero
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm3 = xmm3[u,u,u,u,u,u,u,u,u,u,u,3,9,15],zero,zero
 ; AVX1-ONLY-NEXT:    vpor %xmm2, %xmm3, %xmm2
 ; AVX1-ONLY-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm0
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX1-ONLY-NEXT:    vmovdqa 32(%rdi), %xmm15
-; AVX1-ONLY-NEXT:    vmovdqa 48(%rdi), %xmm14
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm2 = xmm14[2,8,14,u,u,u,u,u,u,u,u,u,u,u,u,u]
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm1 = <u,u,u,u,u,0,6,12,u,u,u,u,u,u,u,u>
-; AVX1-ONLY-NEXT:    vpshufb %xmm1, %xmm15, %xmm3
+; AVX1-ONLY-NEXT:    vmovdqa 32(%rdi), %xmm14
+; AVX1-ONLY-NEXT:    vmovdqa 48(%rdi), %xmm15
+; AVX1-ONLY-NEXT:    vbroadcastss {{.*#+}} xmm0 = [2,8,14,0,2,8,14,0,2,8,14,0,2,8,14,0]
+; AVX1-ONLY-NEXT:    vpshufb %xmm0, %xmm15, %xmm2
+; AVX1-ONLY-NEXT:    vbroadcastss {{.*#+}} xmm1 = [0,0,6,12,0,0,6,12,0,0,6,12,0,0,6,12]
+; AVX1-ONLY-NEXT:    vpshufb %xmm1, %xmm14, %xmm3
 ; AVX1-ONLY-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm2[0]
 ; AVX1-ONLY-NEXT:    vmovdqa (%rdi), %xmm9
 ; AVX1-ONLY-NEXT:    vmovdqa 16(%rdi), %xmm8
@@ -1741,18 +1752,18 @@ define void @load_i8_stride6_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm2 = <0,0,0,0,0,255,255,255,255,255,255,u,u,u,u,u>
 ; AVX1-ONLY-NEXT:    vpblendvb %xmm2, %xmm3, %xmm10, %xmm3
 ; AVX1-ONLY-NEXT:    vmovdqu %ymm3, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm3 = <3,9,15,u,u,u,u,u,u,u,u,u,u,u,u,u>
-; AVX1-ONLY-NEXT:    vpshufb %xmm3, %xmm14, %xmm10
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm11 = <u,u,u,u,u,1,7,13,u,u,u,u,u,u,u,u>
-; AVX1-ONLY-NEXT:    vpshufb %xmm11, %xmm15, %xmm12
+; AVX1-ONLY-NEXT:    vbroadcastss {{.*#+}} xmm3 = [3,9,15,0,3,9,15,0,3,9,15,0,3,9,15,0]
+; AVX1-ONLY-NEXT:    vpshufb %xmm3, %xmm15, %xmm10
+; AVX1-ONLY-NEXT:    vbroadcastss {{.*#+}} xmm11 = [0,1,7,13,0,1,7,13,0,1,7,13,0,1,7,13]
+; AVX1-ONLY-NEXT:    vpshufb %xmm11, %xmm14, %xmm12
 ; AVX1-ONLY-NEXT:    vpunpcklqdq {{.*#+}} xmm10 = xmm12[0],xmm10[0]
 ; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm12 = zero,zero,zero,xmm8[5,11,u,u,u,u,u,u,u,u,u,u,u]
 ; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm13 = xmm9[3,9,15],zero,zero,xmm9[u,u,u,u,u,u,u,u,u,u,u]
 ; AVX1-ONLY-NEXT:    vpor %xmm12, %xmm13, %xmm12
-; AVX1-ONLY-NEXT:    vpblendvb %xmm2, %xmm10, %xmm12, %xmm0
-; AVX1-ONLY-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX1-ONLY-NEXT:    vpblendvb %xmm2, %xmm10, %xmm12, %xmm2
+; AVX1-ONLY-NEXT:    vmovdqu %ymm2, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm0 = xmm5[2,8,14,u,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vpshufb %xmm0, %xmm5, %xmm0
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX1-ONLY-NEXT:    vpshufb %xmm1, %xmm4, %xmm1
 ; AVX1-ONLY-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
@@ -1775,8 +1786,8 @@ define void @load_i8_stride6_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm0 = xmm9[4,10],zero,zero,zero,xmm9[u,u,u,u,u,u,u,u,u,u,u]
 ; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm1 = zero,zero,xmm8[0,6,12,u,u,u,u,u,u,u,u,u,u,u]
 ; AVX1-ONLY-NEXT:    vpor %xmm0, %xmm1, %xmm1
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm0 = xmm14[u,u,u,u,u,u,u,u,4,10,u,u,u,u,u,u]
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm2 = xmm15[u,u,u,u,u,u,u,u,u,u,u,u,u,2,8,14]
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm0 = xmm15[u,u,u,u,u,u,u,u,4,10,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm2 = xmm14[u,u,u,u,u,u,u,u,u,u,u,u,u,2,8,14]
 ; AVX1-ONLY-NEXT:    vpunpckhqdq {{.*#+}} xmm2 = xmm2[1],xmm0[1]
 ; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm0 = <255,255,255,255,255,0,0,0,0,0,u,u,u,u,u,u>
 ; AVX1-ONLY-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm1
@@ -1784,85 +1795,89 @@ define void @load_i8_stride6_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm1 = xmm9[5,11],zero,zero,zero,xmm9[u,u,u,u,u,u,u,u,u,u,u]
 ; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm2 = zero,zero,xmm8[1,7,13,u,u,u,u,u,u,u,u,u,u,u]
 ; AVX1-ONLY-NEXT:    vpor %xmm1, %xmm2, %xmm1
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm2 = xmm14[u,u,u,u,u,u,u,u,5,11,u,u,u,u,u,u]
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm3 = xmm15[u,u,u,u,u,u,u,u,u,u,u,u,u,3,9,15]
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm2 = xmm15[u,u,u,u,u,u,u,u,5,11,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm3 = xmm14[u,u,u,u,u,u,u,u,u,u,u,u,u,3,9,15]
 ; AVX1-ONLY-NEXT:    vpunpckhqdq {{.*#+}} xmm2 = xmm3[1],xmm2[1]
 ; AVX1-ONLY-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm0
 ; AVX1-ONLY-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm10 = <128,128,128,2,8,14,u,u,u,u,u,u,u,u,u,u>
-; AVX1-ONLY-NEXT:    vmovdqa 112(%rdi), %xmm3
-; AVX1-ONLY-NEXT:    vpshufb %xmm10, %xmm3, %xmm1
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm6 = <0,6,12,128,128,128,u,u,u,u,u,u,u,u,u,u>
-; AVX1-ONLY-NEXT:    vmovdqa 96(%rdi), %xmm0
-; AVX1-ONLY-NEXT:    vpshufb %xmm6, %xmm0, %xmm2
-; AVX1-ONLY-NEXT:    vpor %xmm1, %xmm2, %xmm5
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm10 = [128,128,128,2,8,14,0,0,128,128,128,2,8,14,0,0]
+; AVX1-ONLY-NEXT:    # xmm10 = mem[0,0]
+; AVX1-ONLY-NEXT:    vmovdqa 112(%rdi), %xmm5
+; AVX1-ONLY-NEXT:    vpshufb %xmm10, %xmm5, %xmm1
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm6 = [0,6,12,128,128,128,0,0,0,6,12,128,128,128,0,0]
+; AVX1-ONLY-NEXT:    # xmm6 = mem[0,0]
+; AVX1-ONLY-NEXT:    vmovdqa 96(%rdi), %xmm3
+; AVX1-ONLY-NEXT:    vpshufb %xmm6, %xmm3, %xmm2
+; AVX1-ONLY-NEXT:    vpor %xmm1, %xmm2, %xmm1
 ; AVX1-ONLY-NEXT:    vmovdqa 80(%rdi), %xmm2
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm4 = xmm2[u,u,u,u,u,u,u,u,u,u,u],zero,zero,zero,xmm2[4,10]
-; AVX1-ONLY-NEXT:    vmovdqa 64(%rdi), %xmm1
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm13 = xmm1[u,u,u,u,u,u,u,u,u,u,u,2,8,14],zero,zero
-; AVX1-ONLY-NEXT:    vpor %xmm4, %xmm13, %xmm4
-; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm5, %ymm4, %ymm4
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm5 = xmm15[u,u,4,10,u,u,u,u,u,u,u,u,u,u,u,u]
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm13 = xmm14[u,u,u,u,0,6,12,u,u,u,u,u,u,u,u,u]
-; AVX1-ONLY-NEXT:    vpunpckldq {{.*#+}} xmm5 = xmm13[0],xmm5[0],xmm13[1],xmm5[1]
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm0 = xmm2[u,u,u,u,u,u,u,u,u,u,u],zero,zero,zero,xmm2[4,10]
+; AVX1-ONLY-NEXT:    vmovdqa 64(%rdi), %xmm4
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm13 = xmm4[u,u,u,u,u,u,u,u,u,u,u,2,8,14],zero,zero
+; AVX1-ONLY-NEXT:    vpor %xmm0, %xmm13, %xmm0
+; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm1 = xmm14[u,u,4,10,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm13 = xmm15[u,u,u,u,0,6,12,u,u,u,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm13[0],xmm1[0],xmm13[1],xmm1[1]
 ; AVX1-ONLY-NEXT:    vpshufb %xmm10, %xmm8, %xmm10
 ; AVX1-ONLY-NEXT:    vpshufb %xmm6, %xmm9, %xmm6
 ; AVX1-ONLY-NEXT:    vpor %xmm6, %xmm10, %xmm6
-; AVX1-ONLY-NEXT:    vpblendw {{.*#+}} xmm5 = xmm6[0,1,2],xmm5[3,4,5],xmm6[6,7]
+; AVX1-ONLY-NEXT:    vpblendw {{.*#+}} xmm1 = xmm6[0,1,2],xmm1[3,4,5],xmm6[6,7]
 ; AVX1-ONLY-NEXT:    vmovaps {{.*#+}} ymm6 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0,0,0,0,0,0,255,255,255,255,255,255,255,255,255,255]
-; AVX1-ONLY-NEXT:    vandnps %ymm4, %ymm6, %ymm4
-; AVX1-ONLY-NEXT:    vandps %ymm6, %ymm5, %ymm5
-; AVX1-ONLY-NEXT:    vorps %ymm4, %ymm5, %ymm4
-; AVX1-ONLY-NEXT:    vmovaps {{.*#+}} ymm5 = [65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,0,0,0,0,0]
-; AVX1-ONLY-NEXT:    vandps %ymm5, %ymm4, %ymm4
+; AVX1-ONLY-NEXT:    vandnps %ymm0, %ymm6, %ymm0
+; AVX1-ONLY-NEXT:    vandps %ymm6, %ymm1, %ymm1
+; AVX1-ONLY-NEXT:    vorps %ymm0, %ymm1, %ymm0
+; AVX1-ONLY-NEXT:    vmovaps {{.*#+}} ymm1 = [65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,0,0,0,0,0]
+; AVX1-ONLY-NEXT:    vandps %ymm1, %ymm0, %ymm0
 ; AVX1-ONLY-NEXT:    vinsertf128 $1, (%rsp), %ymm0, %ymm10 # 16-byte Folded Reload
-; AVX1-ONLY-NEXT:    vandnps %ymm10, %ymm5, %ymm10
-; AVX1-ONLY-NEXT:    vorps %ymm4, %ymm10, %ymm4
-; AVX1-ONLY-NEXT:    vmovups %ymm4, (%rsp) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm7 = <128,128,128,3,9,15,u,u,u,u,u,u,u,u,u,u>
-; AVX1-ONLY-NEXT:    vpshufb %xmm7, %xmm3, %xmm13
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm4 = <1,7,13,128,128,128,u,u,u,u,u,u,u,u,u,u>
-; AVX1-ONLY-NEXT:    vpshufb %xmm4, %xmm0, %xmm12
+; AVX1-ONLY-NEXT:    vandnps %ymm10, %ymm1, %ymm10
+; AVX1-ONLY-NEXT:    vorps %ymm0, %ymm10, %ymm0
+; AVX1-ONLY-NEXT:    vmovups %ymm0, (%rsp) # 32-byte Spill
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm7 = [128,128,128,3,9,15,0,0,128,128,128,3,9,15,0,0]
+; AVX1-ONLY-NEXT:    # xmm7 = mem[0,0]
+; AVX1-ONLY-NEXT:    vpshufb %xmm7, %xmm5, %xmm13
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm0 = [1,7,13,128,128,128,0,0,1,7,13,128,128,128,0,0]
+; AVX1-ONLY-NEXT:    # xmm0 = mem[0,0]
+; AVX1-ONLY-NEXT:    vpshufb %xmm0, %xmm3, %xmm12
 ; AVX1-ONLY-NEXT:    vpor %xmm13, %xmm12, %xmm12
 ; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm13 = xmm2[u,u,u,u,u,u,u,u,u,u,u],zero,zero,zero,xmm2[5,11]
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm11 = xmm1[u,u,u,u,u,u,u,u,u,u,u,3,9,15],zero,zero
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm11 = xmm4[u,u,u,u,u,u,u,u,u,u,u,3,9,15],zero,zero
 ; AVX1-ONLY-NEXT:    vpor %xmm13, %xmm11, %xmm11
 ; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm12, %ymm11, %ymm11
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm12 = xmm15[u,u,5,11,u,u,u,u,u,u,u,u,u,u,u,u]
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm13 = xmm14[u,u,u,u,1,7,13,u,u,u,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm12 = xmm14[u,u,5,11,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm13 = xmm15[u,u,u,u,1,7,13,u,u,u,u,u,u,u,u,u]
 ; AVX1-ONLY-NEXT:    vpunpckldq {{.*#+}} xmm12 = xmm13[0],xmm12[0],xmm13[1],xmm12[1]
 ; AVX1-ONLY-NEXT:    vpshufb %xmm7, %xmm8, %xmm7
-; AVX1-ONLY-NEXT:    vpshufb %xmm4, %xmm9, %xmm4
-; AVX1-ONLY-NEXT:    vpor %xmm7, %xmm4, %xmm4
-; AVX1-ONLY-NEXT:    vpblendw {{.*#+}} xmm4 = xmm4[0,1,2],xmm12[3,4,5],xmm4[6,7]
+; AVX1-ONLY-NEXT:    vpshufb %xmm0, %xmm9, %xmm0
+; AVX1-ONLY-NEXT:    vpor %xmm7, %xmm0, %xmm0
+; AVX1-ONLY-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2],xmm12[3,4,5],xmm0[6,7]
 ; AVX1-ONLY-NEXT:    vandnps %ymm11, %ymm6, %ymm7
-; AVX1-ONLY-NEXT:    vandps %ymm6, %ymm4, %ymm4
-; AVX1-ONLY-NEXT:    vorps %ymm7, %ymm4, %ymm4
-; AVX1-ONLY-NEXT:    vandps %ymm5, %ymm4, %ymm4
+; AVX1-ONLY-NEXT:    vandps %ymm6, %ymm0, %ymm0
+; AVX1-ONLY-NEXT:    vorps %ymm7, %ymm0, %ymm0
+; AVX1-ONLY-NEXT:    vandps %ymm1, %ymm0, %ymm0
 ; AVX1-ONLY-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm6 # 16-byte Folded Reload
-; AVX1-ONLY-NEXT:    vandnps %ymm6, %ymm5, %ymm5
-; AVX1-ONLY-NEXT:    vorps %ymm5, %ymm4, %ymm4
-; AVX1-ONLY-NEXT:    vmovups %ymm4, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm5 = zero,zero,zero,xmm3[4,10,u,u,u,u,u,u,u,u,u,u,u]
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm6 = xmm0[2,8,14],zero,zero,xmm0[u,u,u,u,u,u,u,u,u,u,u]
-; AVX1-ONLY-NEXT:    vpor %xmm5, %xmm6, %xmm5
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm6 = xmm1[u,u,u,u,u,u,u,u,u,u,u,4,10],zero,zero,zero
+; AVX1-ONLY-NEXT:    vandnps %ymm6, %ymm1, %ymm1
+; AVX1-ONLY-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; AVX1-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm1 = zero,zero,zero,xmm5[4,10,u,u,u,u,u,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm6 = xmm3[2,8,14],zero,zero,xmm3[u,u,u,u,u,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vpor %xmm1, %xmm6, %xmm1
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm6 = xmm4[u,u,u,u,u,u,u,u,u,u,u,4,10],zero,zero,zero
 ; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm7 = xmm2[u,u,u,u,u,u,u,u,u,u,u],zero,zero,xmm2[0,6,12]
 ; AVX1-ONLY-NEXT:    vpor %xmm6, %xmm7, %xmm6
-; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm5, %ymm6, %ymm5
+; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm1, %ymm6, %ymm1
 ; AVX1-ONLY-NEXT:    vmovaps {{.*#+}} ymm6 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0,0,0,0,0,255,255,255,255,255,255,255,255,255,255,255]
-; AVX1-ONLY-NEXT:    vandnps %ymm5, %ymm6, %ymm5
+; AVX1-ONLY-NEXT:    vandnps %ymm1, %ymm6, %ymm1
 ; AVX1-ONLY-NEXT:    vandps {{[-0-9]+}}(%r{{[sb]}}p), %ymm6, %ymm7 # 32-byte Folded Reload
-; AVX1-ONLY-NEXT:    vorps %ymm5, %ymm7, %ymm7
+; AVX1-ONLY-NEXT:    vorps %ymm1, %ymm7, %ymm7
 ; AVX1-ONLY-NEXT:    vmovaps {{.*#+}} ymm10 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0,0,0,0,0,0]
 ; AVX1-ONLY-NEXT:    vandps %ymm7, %ymm10, %ymm7
 ; AVX1-ONLY-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm8 # 16-byte Folded Reload
 ; AVX1-ONLY-NEXT:    vandnps %ymm8, %ymm10, %ymm8
 ; AVX1-ONLY-NEXT:    vorps %ymm7, %ymm8, %ymm13
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm7 = zero,zero,zero,xmm3[5,11,u,u,u,u,u,u,u,u,u,u,u]
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm8 = xmm0[3,9,15],zero,zero,xmm0[u,u,u,u,u,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm7 = zero,zero,zero,xmm5[5,11,u,u,u,u,u,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm8 = xmm3[3,9,15],zero,zero,xmm3[u,u,u,u,u,u,u,u,u,u,u]
 ; AVX1-ONLY-NEXT:    vpor %xmm7, %xmm8, %xmm7
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm8 = xmm1[u,u,u,u,u,u,u,u,u,u,u,5,11],zero,zero,zero
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm8 = xmm4[u,u,u,u,u,u,u,u,u,u,u,5,11],zero,zero,zero
 ; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm9 = xmm2[u,u,u,u,u,u,u,u,u,u,u],zero,zero,xmm2[1,7,13]
 ; AVX1-ONLY-NEXT:    vpor %xmm8, %xmm9, %xmm8
 ; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm7, %ymm8, %ymm7
@@ -1872,299 +1887,287 @@ define void @load_i8_stride6_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX1-ONLY-NEXT:    vandps %ymm6, %ymm10, %ymm6
 ; AVX1-ONLY-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm7 # 16-byte Folded Reload
 ; AVX1-ONLY-NEXT:    vandnps %ymm7, %ymm10, %ymm7
-; AVX1-ONLY-NEXT:    vorps %ymm7, %ymm6, %ymm6
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm7 = xmm0[4,10],zero,zero,zero,xmm0[u,u,u,u,u,u,u,u,u,u,u]
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm8 = zero,zero,xmm3[0,6,12,u,u,u,u,u,u,u,u,u,u,u]
-; AVX1-ONLY-NEXT:    vpor %xmm7, %xmm8, %xmm7
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm8 = <u,u,u,u,u,u,u,u,u,u,128,128,128,2,8,14>
-; AVX1-ONLY-NEXT:    vpshufb %xmm8, %xmm2, %xmm9
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm11 = <u,u,u,u,u,u,u,u,u,u,0,6,12,128,128,128>
-; AVX1-ONLY-NEXT:    vpshufb %xmm11, %xmm1, %xmm12
-; AVX1-ONLY-NEXT:    vpor %xmm9, %xmm12, %xmm9
-; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm7, %ymm9, %ymm7
-; AVX1-ONLY-NEXT:    vmovaps {{.*#+}} ymm9 = [0,0,0,0,0,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535]
-; AVX1-ONLY-NEXT:    vandnps {{[-0-9]+}}(%r{{[sb]}}p), %ymm9, %ymm12 # 32-byte Folded Reload
-; AVX1-ONLY-NEXT:    vandps %ymm7, %ymm9, %ymm7
-; AVX1-ONLY-NEXT:    vorps %ymm7, %ymm12, %ymm7
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm5 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm8, %xmm5, %xmm8
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm11, %xmm4, %xmm11
+; AVX1-ONLY-NEXT:    vorps %ymm7, %ymm6, %ymm14
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm6 = xmm3[4,10],zero,zero,zero,xmm3[u,u,u,u,u,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm7 = zero,zero,xmm5[0,6,12,u,u,u,u,u,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vpor %xmm6, %xmm7, %xmm6
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm7 = [0,0,128,128,128,2,8,14,0,0,128,128,128,2,8,14]
+; AVX1-ONLY-NEXT:    # xmm7 = mem[0,0]
+; AVX1-ONLY-NEXT:    vpshufb %xmm7, %xmm2, %xmm8
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm9 = [0,0,0,6,12,128,128,128,0,0,0,6,12,128,128,128]
+; AVX1-ONLY-NEXT:    # xmm9 = mem[0,0]
+; AVX1-ONLY-NEXT:    vpshufb %xmm9, %xmm4, %xmm11
 ; AVX1-ONLY-NEXT:    vpor %xmm8, %xmm11, %xmm8
+; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm6, %ymm8, %ymm6
+; AVX1-ONLY-NEXT:    vmovaps {{.*#+}} ymm8 = [0,0,0,0,0,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535]
+; AVX1-ONLY-NEXT:    vandnps {{[-0-9]+}}(%r{{[sb]}}p), %ymm8, %ymm11 # 32-byte Folded Reload
+; AVX1-ONLY-NEXT:    vandps %ymm6, %ymm8, %ymm6
+; AVX1-ONLY-NEXT:    vorps %ymm6, %ymm11, %ymm6
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm7, %xmm1, %xmm7
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm9, %xmm0, %xmm9
+; AVX1-ONLY-NEXT:    vpor %xmm7, %xmm9, %xmm7
 ; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm11 = xmm15[u,u,u,u,u,u,u,u,4,10,u,u,u,u,u,u]
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm14 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm12 = xmm14[u,u,u,u,u,u,u,u,u,u,u,u,u,2,8,14]
-; AVX1-ONLY-NEXT:    vpunpckhqdq {{.*#+}} xmm11 = xmm12[1],xmm11[1]
-; AVX1-ONLY-NEXT:    vpblendw {{.*#+}} xmm8 = xmm11[0,1,2,3,4],xmm8[5,6,7]
-; AVX1-ONLY-NEXT:    vandps %ymm7, %ymm10, %ymm7
-; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm8, %ymm0, %ymm8
-; AVX1-ONLY-NEXT:    vandnps %ymm8, %ymm10, %ymm8
-; AVX1-ONLY-NEXT:    vorps %ymm7, %ymm8, %ymm7
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[5,11],zero,zero,zero,xmm0[u,u,u,u,u,u,u,u,u,u,u]
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm3 = zero,zero,xmm3[1,7,13,u,u,u,u,u,u,u,u,u,u,u]
-; AVX1-ONLY-NEXT:    vpor %xmm0, %xmm3, %xmm0
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm3 = <u,u,u,u,u,u,u,u,u,u,128,128,128,3,9,15>
-; AVX1-ONLY-NEXT:    vpshufb %xmm3, %xmm2, %xmm2
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm8 = <u,u,u,u,u,u,u,u,u,u,1,7,13,128,128,128>
-; AVX1-ONLY-NEXT:    vpshufb %xmm8, %xmm1, %xmm1
-; AVX1-ONLY-NEXT:    vpor %xmm2, %xmm1, %xmm1
-; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX1-ONLY-NEXT:    vandnps {{[-0-9]+}}(%r{{[sb]}}p), %ymm9, %ymm1 # 32-byte Folded Reload
-; AVX1-ONLY-NEXT:    vandps %ymm0, %ymm9, %ymm0
-; AVX1-ONLY-NEXT:    vorps %ymm1, %ymm0, %ymm0
-; AVX1-ONLY-NEXT:    vpshufb %xmm3, %xmm5, %xmm1
-; AVX1-ONLY-NEXT:    vpshufb %xmm8, %xmm4, %xmm2
-; AVX1-ONLY-NEXT:    vpor %xmm1, %xmm2, %xmm1
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm2 = xmm15[u,u,u,u,u,u,u,u,5,11,u,u,u,u,u,u]
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm3 = xmm14[u,u,u,u,u,u,u,u,u,u,u,u,u,3,9,15]
-; AVX1-ONLY-NEXT:    vpunpckhqdq {{.*#+}} xmm2 = xmm3[1],xmm2[1]
-; AVX1-ONLY-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1,2,3,4],xmm1[5,6,7]
-; AVX1-ONLY-NEXT:    vandps %ymm0, %ymm10, %ymm0
-; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
-; AVX1-ONLY-NEXT:    vandnps %ymm1, %ymm10, %ymm1
-; AVX1-ONLY-NEXT:    vorps %ymm1, %ymm0, %ymm0
-; AVX1-ONLY-NEXT:    vmovups (%rsp), %ymm1 # 32-byte Reload
-; AVX1-ONLY-NEXT:    vmovaps %ymm1, (%rsi)
-; AVX1-ONLY-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Reload
-; AVX1-ONLY-NEXT:    vmovaps %ymm1, (%rdx)
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm9 = xmm15[u,u,u,u,u,u,u,u,4,10,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm12 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm11 = xmm12[u,u,u,u,u,u,u,u,u,u,u,u,u,2,8,14]
+; AVX1-ONLY-NEXT:    vpunpckhqdq {{.*#+}} xmm9 = xmm11[1],xmm9[1]
+; AVX1-ONLY-NEXT:    vpblendw {{.*#+}} xmm7 = xmm9[0,1,2,3,4],xmm7[5,6,7]
+; AVX1-ONLY-NEXT:    vandps %ymm6, %ymm10, %ymm6
+; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm7, %ymm0, %ymm7
+; AVX1-ONLY-NEXT:    vandnps %ymm7, %ymm10, %ymm7
+; AVX1-ONLY-NEXT:    vorps %ymm7, %ymm6, %ymm6
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm3 = xmm3[5,11],zero,zero,zero,xmm3[u,u,u,u,u,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm5 = zero,zero,xmm5[1,7,13,u,u,u,u,u,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vpor %xmm3, %xmm5, %xmm3
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm5 = [0,0,128,128,128,3,9,15,0,0,128,128,128,3,9,15]
+; AVX1-ONLY-NEXT:    # xmm5 = mem[0,0]
+; AVX1-ONLY-NEXT:    vpshufb %xmm5, %xmm2, %xmm2
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm7 = [0,0,1,7,13,128,128,128,0,0,1,7,13,128,128,128]
+; AVX1-ONLY-NEXT:    # xmm7 = mem[0,0]
+; AVX1-ONLY-NEXT:    vpshufb %xmm7, %xmm4, %xmm4
+; AVX1-ONLY-NEXT:    vpor %xmm2, %xmm4, %xmm2
+; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
+; AVX1-ONLY-NEXT:    vandnps {{[-0-9]+}}(%r{{[sb]}}p), %ymm8, %ymm3 # 32-byte Folded Reload
+; AVX1-ONLY-NEXT:    vandps %ymm2, %ymm8, %ymm2
+; AVX1-ONLY-NEXT:    vorps %ymm3, %ymm2, %ymm2
+; AVX1-ONLY-NEXT:    vpshufb %xmm5, %xmm1, %xmm3
+; AVX1-ONLY-NEXT:    vpshufb %xmm7, %xmm0, %xmm4
+; AVX1-ONLY-NEXT:    vpor %xmm3, %xmm4, %xmm3
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm4 = xmm15[u,u,u,u,u,u,u,u,5,11,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm5 = xmm12[u,u,u,u,u,u,u,u,u,u,u,u,u,3,9,15]
+; AVX1-ONLY-NEXT:    vpunpckhqdq {{.*#+}} xmm4 = xmm5[1],xmm4[1]
+; AVX1-ONLY-NEXT:    vpblendw {{.*#+}} xmm3 = xmm4[0,1,2,3,4],xmm3[5,6,7]
+; AVX1-ONLY-NEXT:    vandps %ymm2, %ymm10, %ymm2
+; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm3
+; AVX1-ONLY-NEXT:    vandnps %ymm3, %ymm10, %ymm1
+; AVX1-ONLY-NEXT:    vorps %ymm1, %ymm2, %ymm1
+; AVX1-ONLY-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
+; AVX1-ONLY-NEXT:    vmovaps %ymm0, (%rsi)
+; AVX1-ONLY-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
+; AVX1-ONLY-NEXT:    vmovaps %ymm0, (%rdx)
 ; AVX1-ONLY-NEXT:    vmovaps %ymm13, (%rcx)
-; AVX1-ONLY-NEXT:    vmovaps %ymm6, (%r8)
-; AVX1-ONLY-NEXT:    vmovaps %ymm7, (%r9)
+; AVX1-ONLY-NEXT:    vmovaps %ymm14, (%r8)
+; AVX1-ONLY-NEXT:    vmovaps %ymm6, (%r9)
 ; AVX1-ONLY-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; AVX1-ONLY-NEXT:    vmovaps %ymm0, (%rax)
+; AVX1-ONLY-NEXT:    vmovaps %ymm1, (%rax)
 ; AVX1-ONLY-NEXT:    addq $168, %rsp
 ; AVX1-ONLY-NEXT:    vzeroupper
 ; AVX1-ONLY-NEXT:    retq
 ;
 ; AVX2-ONLY-LABEL: load_i8_stride6_vf32:
 ; AVX2-ONLY:       # %bb.0:
-; AVX2-ONLY-NEXT:    vmovdqa (%rdi), %ymm1
-; AVX2-ONLY-NEXT:    vmovdqa 32(%rdi), %ymm2
+; AVX2-ONLY-NEXT:    vmovdqa 160(%rdi), %ymm4
+; AVX2-ONLY-NEXT:    vmovdqa (%rdi), %ymm2
+; AVX2-ONLY-NEXT:    vmovdqa 32(%rdi), %ymm3
 ; AVX2-ONLY-NEXT:    vmovdqa 64(%rdi), %ymm0
-; AVX2-ONLY-NEXT:    vmovdqa 96(%rdi), %ymm4
-; AVX2-ONLY-NEXT:    vmovdqa 160(%rdi), %ymm5
-; AVX2-ONLY-NEXT:    vmovdqa 128(%rdi), %ymm6
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm9 = <255,255,u,u,0,0,255,255,u,u,0,0,255,255,u,u,0,0,255,255,u,u,0,0,255,255,u,u,0,0,255,255>
-; AVX2-ONLY-NEXT:    vpblendvb %ymm9, %ymm1, %ymm2, %ymm7
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm3 = xmm7[0,6,12],zero,zero,zero,xmm7[4,10],zero,zero,zero,xmm7[u,u,u,u,u]
-; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm7, %xmm10
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm8 = zero,zero,zero,xmm10[2,8,14],zero,zero,xmm10[0,6,12,u,u,u,u,u]
-; AVX2-ONLY-NEXT:    vpor %xmm3, %xmm8, %xmm11
-; AVX2-ONLY-NEXT:    vperm2i128 {{.*#+}} ymm3 = ymm0[2,3],ymm4[2,3]
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} ymm8 = zero,zero,zero,ymm3[2,8,14],zero,zero,zero,zero,zero,zero,zero,zero,ymm3[4,10],zero,zero,zero,ymm3[18,24,30],zero,zero,zero,zero,zero,zero,zero,zero,ymm3[20,26]
-; AVX2-ONLY-NEXT:    vperm2i128 {{.*#+}} ymm4 = ymm0[0,1],ymm4[0,1]
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} ymm0 = ymm4[0,6,12],zero,zero,zero,zero,zero,zero,zero,zero,ymm4[2,8,14],zero,zero,ymm4[16,22,28],zero,zero,zero,zero,zero,zero,zero,zero,ymm4[18,24,30],zero,zero
-; AVX2-ONLY-NEXT:    vpor %ymm0, %ymm8, %ymm0
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm8 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0]
-; AVX2-ONLY-NEXT:    vpblendvb %ymm8, %ymm11, %ymm0, %ymm0
-; AVX2-ONLY-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm7 = xmm7[1,7,13],zero,zero,zero,xmm7[5,11],zero,zero,zero,xmm7[u,u,u,u,u]
+; AVX2-ONLY-NEXT:    vmovdqa 96(%rdi), %ymm1
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm8 = <255,255,u,u,0,0,255,255,u,u,0,0,255,255,u,u,0,0,255,255,u,u,0,0,255,255,u,u,0,0,255,255>
+; AVX2-ONLY-NEXT:    vpblendvb %ymm8, %ymm2, %ymm3, %ymm9
+; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm5 = xmm9[0,6,12],zero,zero,zero,xmm9[4,10],zero,zero,zero,xmm9[u,u,u,u,u]
+; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm9, %xmm10
+; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm6 = zero,zero,zero,xmm10[2,8,14],zero,zero,xmm10[0,6,12,u,u,u,u,u]
+; AVX2-ONLY-NEXT:    vpor %xmm5, %xmm6, %xmm11
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm7 = <u,u,255,255,0,0,u,u,255,255,0,0,u,u,255,255,255,255,0,0,u,u,255,255,0,0,u,u,255,255,0,0>
+; AVX2-ONLY-NEXT:    vperm2i128 {{.*#+}} ymm5 = ymm0[0,1],ymm1[0,1]
+; AVX2-ONLY-NEXT:    vperm2i128 {{.*#+}} ymm6 = ymm0[2,3],ymm1[2,3]
+; AVX2-ONLY-NEXT:    vpblendvb %ymm7, %ymm5, %ymm6, %ymm1
+; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} ymm0 = ymm1[u,u,u,u,u,u,u,u,u,u,u,2,8,14,4,10,16,22,28,18,24,30,u,u,u,u,u,u,u,u,u,u]
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm7 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0]
+; AVX2-ONLY-NEXT:    vpblendvb %ymm7, %ymm11, %ymm0, %ymm0
+; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm9 = xmm9[1,7,13],zero,zero,zero,xmm9[5,11],zero,zero,zero,xmm9[u,u,u,u,u]
 ; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm10 = zero,zero,zero,xmm10[3,9,15],zero,zero,xmm10[1,7,13,u,u,u,u,u]
+; AVX2-ONLY-NEXT:    vpor %xmm9, %xmm10, %xmm9
+; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[u,u,u,u,u,u,u,u,u,u,u,3,9,15,5,11,17,23,29,19,25,31,u,u,u,u,u,u,u,u,u,u]
+; AVX2-ONLY-NEXT:    vpblendvb %ymm7, %ymm9, %ymm1, %ymm1
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm11 = <255,255,0,0,u,u,255,255,0,0,u,u,255,255,0,0,u,u,255,255,0,0,u,u,255,255,0,0,u,u,255,255>
+; AVX2-ONLY-NEXT:    vpblendvb %ymm11, %ymm3, %ymm2, %ymm9
+; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm9, %xmm10
+; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm12 = zero,zero,zero,xmm10[4,10],zero,zero,zero,xmm10[2,8,14,u,u,u,u,u]
+; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm13 = xmm9[2,8,14],zero,zero,xmm9[0,6,12],zero,zero,zero,xmm9[u,u,u,u,u]
+; AVX2-ONLY-NEXT:    vpor %xmm12, %xmm13, %xmm12
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm13 = <255,255,u,u,0,0,255,255,u,u,0,0,255,255,u,u,u,u,0,0,255,255,u,u,0,0,255,255,u,u,0,0>
+; AVX2-ONLY-NEXT:    vpblendvb %ymm13, %ymm6, %ymm5, %ymm13
+; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} ymm14 = ymm13[u,u,u,u,u,u,u,u,u,u,u,4,10,0,6,12,18,24,30,20,26,u,u,u,u,u,u,u,u,u,u,u]
+; AVX2-ONLY-NEXT:    vpblendvb %ymm7, %ymm12, %ymm14, %ymm12
+; AVX2-ONLY-NEXT:    vmovdqa 128(%rdi), %ymm14
+; AVX2-ONLY-NEXT:    vpblendvb %ymm8, %ymm14, %ymm4, %ymm8
+; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm10 = zero,zero,zero,xmm10[5,11],zero,zero,zero,xmm10[3,9,15,u,u,u,u,u]
+; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm9 = xmm9[3,9,15],zero,zero,xmm9[1,7,13],zero,zero,zero,xmm9[u,u,u,u,u]
+; AVX2-ONLY-NEXT:    vpor %xmm10, %xmm9, %xmm9
+; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm10 = xmm8[u,u,u,u,u,0,6,12],zero,zero,zero,xmm8[4,10],zero,zero,zero
+; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} ymm13 = ymm13[u,u,u,u,u,u,u,u,u,u,u,5,11,1,7,13,19,25,31,21,27,u,u,u,u,u,u,u,u,u,u,u]
+; AVX2-ONLY-NEXT:    vpblendvb %ymm7, %ymm9, %ymm13, %ymm13
+; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm8, %xmm9
+; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm7 = xmm9[u,u,u,u,u],zero,zero,zero,xmm9[2,8,14],zero,zero,xmm9[0,6,12]
 ; AVX2-ONLY-NEXT:    vpor %xmm7, %xmm10, %xmm7
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} ymm10 = zero,zero,zero,ymm3[3,9,15],zero,zero,zero,zero,zero,zero,zero,zero,ymm3[5,11],zero,zero,zero,ymm3[19,25,31],zero,zero,zero,zero,zero,zero,zero,zero,ymm3[21,27]
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} ymm11 = ymm4[1,7,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm4[3,9,15],zero,zero,ymm4[17,23,29],zero,zero,zero,zero,zero,zero,zero,zero,ymm4[19,25,31],zero,zero
-; AVX2-ONLY-NEXT:    vpor %ymm10, %ymm11, %ymm10
-; AVX2-ONLY-NEXT:    vpblendvb %ymm8, %ymm7, %ymm10, %ymm7
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm12 = <255,255,0,0,u,u,255,255,0,0,u,u,255,255,0,0,u,u,255,255,0,0,u,u,255,255,0,0,u,u,255,255>
-; AVX2-ONLY-NEXT:    vpblendvb %ymm12, %ymm2, %ymm1, %ymm10
-; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm10, %xmm11
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm13 = zero,zero,zero,xmm11[4,10],zero,zero,zero,xmm11[2,8,14,u,u,u,u,u]
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm14 = xmm10[2,8,14],zero,zero,xmm10[0,6,12],zero,zero,zero,xmm10[u,u,u,u,u]
-; AVX2-ONLY-NEXT:    vpor %xmm13, %xmm14, %xmm13
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} ymm14 = zero,zero,zero,ymm3[4,10],zero,zero,zero,zero,zero,zero,zero,zero,ymm3[0,6,12],zero,zero,zero,ymm3[20,26],zero,zero,zero,zero,zero,zero,zero,zero,ymm3[16,22,28]
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} ymm15 = ymm4[2,8,14],zero,zero,zero,zero,zero,zero,zero,zero,ymm4[4,10],zero,zero,zero,ymm4[18,24,30],zero,zero,zero,zero,zero,zero,zero,zero,ymm4[20,26],zero,zero,zero
-; AVX2-ONLY-NEXT:    vpor %ymm14, %ymm15, %ymm14
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm15 = <u,u,255,255,0,0,u,u,255,255,0,0,u,u,255,255,0,0,u,u,255,255,0,0,u,u,255,255,0,0,u,u>
-; AVX2-ONLY-NEXT:    vpblendvb %ymm9, %ymm6, %ymm5, %ymm9
-; AVX2-ONLY-NEXT:    vpblendvb %ymm8, %ymm13, %ymm14, %ymm13
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm11 = zero,zero,zero,xmm11[5,11],zero,zero,zero,xmm11[3,9,15,u,u,u,u,u]
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm10 = xmm10[3,9,15],zero,zero,xmm10[1,7,13],zero,zero,zero,xmm10[u,u,u,u,u]
-; AVX2-ONLY-NEXT:    vpor %xmm11, %xmm10, %xmm10
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} ymm11 = zero,zero,zero,ymm3[5,11],zero,zero,zero,zero,zero,zero,zero,zero,ymm3[1,7,13],zero,zero,zero,ymm3[21,27],zero,zero,zero,zero,zero,zero,zero,zero,ymm3[17,23,29]
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} ymm14 = ymm4[3,9,15],zero,zero,zero,zero,zero,zero,zero,zero,ymm4[5,11],zero,zero,zero,ymm4[19,25,31],zero,zero,zero,zero,zero,zero,zero,zero,ymm4[21,27],zero,zero,zero
-; AVX2-ONLY-NEXT:    vpor %ymm11, %ymm14, %ymm11
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm14 = xmm9[u,u,u,u,u,0,6,12],zero,zero,zero,xmm9[4,10],zero,zero,zero
-; AVX2-ONLY-NEXT:    vpblendvb %ymm8, %ymm10, %ymm11, %ymm0
-; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm9, %xmm8
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm10 = xmm8[u,u,u,u,u],zero,zero,zero,xmm8[2,8,14],zero,zero,xmm8[0,6,12]
-; AVX2-ONLY-NEXT:    vpor %xmm14, %xmm10, %xmm10
-; AVX2-ONLY-NEXT:    vinserti128 $1, %xmm10, %ymm0, %ymm10
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm11 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0,0,0,0,0,0]
-; AVX2-ONLY-NEXT:    vpblendvb %ymm11, %ymm13, %ymm10, %ymm13
-; AVX2-ONLY-NEXT:    vpblendvb %ymm15, %ymm5, %ymm6, %ymm10
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm9 = xmm9[u,u,u,u,u,1,7,13],zero,zero,zero,xmm9[5,11],zero,zero,zero
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm8 = xmm8[u,u,u,u,u],zero,zero,zero,xmm8[3,9,15],zero,zero,xmm8[1,7,13]
-; AVX2-ONLY-NEXT:    vpor %xmm9, %xmm8, %xmm8
+; AVX2-ONLY-NEXT:    vinserti128 $1, %xmm7, %ymm0, %ymm7
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm10 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0,0,0,0,0,0]
+; AVX2-ONLY-NEXT:    vpblendvb %ymm10, %ymm12, %ymm7, %ymm7
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm12 = <u,u,255,255,0,0,u,u,255,255,0,0,u,u,255,255,0,0,u,u,255,255,0,0,u,u,255,255,0,0,u,u>
+; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm8 = xmm8[u,u,u,u,u,1,7,13],zero,zero,zero,xmm8[5,11],zero,zero,zero
+; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm9 = xmm9[u,u,u,u,u],zero,zero,zero,xmm9[3,9,15],zero,zero,xmm9[1,7,13]
+; AVX2-ONLY-NEXT:    vpor %xmm8, %xmm9, %xmm8
+; AVX2-ONLY-NEXT:    vpblendvb %ymm12, %ymm4, %ymm14, %ymm9
 ; AVX2-ONLY-NEXT:    vinserti128 $1, %xmm8, %ymm0, %ymm8
-; AVX2-ONLY-NEXT:    vpblendvb %ymm11, %ymm0, %ymm8, %ymm9
-; AVX2-ONLY-NEXT:    vpblendvb %ymm12, %ymm5, %ymm6, %ymm0
-; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm0, %xmm5
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm6 = xmm5[u,u,u,u,u],zero,zero,zero,xmm5[4,10],zero,zero,zero,xmm5[2,8,14]
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm8 = xmm0[u,u,u,u,u,2,8,14],zero,zero,xmm0[0,6,12],zero,zero,zero
-; AVX2-ONLY-NEXT:    vpor %xmm6, %xmm8, %xmm6
-; AVX2-ONLY-NEXT:    vpblendvb %ymm15, %ymm2, %ymm1, %ymm1
-; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm8 = zero,zero,xmm2[0,6,12],zero,zero,zero,xmm2[4,10,u,u,u,u,u,u]
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm12 = xmm1[4,10],zero,zero,zero,xmm1[2,8,14],zero,zero,xmm1[u,u,u,u,u,u]
-; AVX2-ONLY-NEXT:    vpor %xmm8, %xmm12, %xmm8
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} ymm12 = ymm4[4,10],zero,zero,zero,zero,zero,zero,zero,zero,ymm4[0,6,12],zero,zero,zero,ymm4[20,26],zero,zero,zero,zero,zero,zero,zero,zero,ymm4[16,22,28],zero,zero,zero
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} ymm14 = zero,zero,ymm3[0,6,12],zero,zero,zero,zero,zero,zero,zero,zero,ymm3[2,8,14],zero,zero,ymm3[16,22,28],zero,zero,zero,zero,zero,zero,zero,zero,ymm3[18,24,30]
-; AVX2-ONLY-NEXT:    vpor %ymm12, %ymm14, %ymm12
-; AVX2-ONLY-NEXT:    vpblendw {{.*#+}} xmm8 = xmm8[0,1,2,3,4],xmm12[5,6,7]
-; AVX2-ONLY-NEXT:    vpblendd {{.*#+}} ymm8 = ymm8[0,1,2,3],ymm12[4,5,6,7]
-; AVX2-ONLY-NEXT:    vinserti128 $1, %xmm6, %ymm0, %ymm6
-; AVX2-ONLY-NEXT:    vpblendvb %ymm11, %ymm8, %ymm6, %ymm6
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm5 = xmm5[u,u,u,u,u],zero,zero,zero,xmm5[5,11],zero,zero,zero,xmm5[3,9,15]
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[u,u,u,u,u,3,9,15],zero,zero,xmm0[1,7,13],zero,zero,zero
-; AVX2-ONLY-NEXT:    vpor %xmm5, %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm2 = zero,zero,xmm2[1,7,13],zero,zero,zero,xmm2[5,11,u,u,u,u,u,u]
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[5,11],zero,zero,zero,xmm1[3,9,15],zero,zero,xmm1[u,u,u,u,u,u]
-; AVX2-ONLY-NEXT:    vpor %xmm2, %xmm1, %xmm1
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} ymm2 = ymm4[5,11],zero,zero,zero,zero,zero,zero,zero,zero,ymm4[1,7,13],zero,zero,zero,ymm4[21,27],zero,zero,zero,zero,zero,zero,zero,zero,ymm4[17,23,29],zero,zero,zero
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} ymm3 = zero,zero,ymm3[1,7,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm3[3,9,15],zero,zero,ymm3[17,23,29],zero,zero,zero,zero,zero,zero,zero,zero,ymm3[19,25,31]
-; AVX2-ONLY-NEXT:    vpor %ymm2, %ymm3, %ymm2
-; AVX2-ONLY-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3,4],xmm2[5,6,7]
-; AVX2-ONLY-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
-; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm10, %xmm2
-; AVX2-ONLY-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; AVX2-ONLY-NEXT:    vpblendvb %ymm11, %ymm1, %ymm0, %ymm0
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm1 = xmm2[u,u,u,u,u,u],zero,zero,xmm2[0,6,12],zero,zero,zero,xmm2[4,10]
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm3 = xmm10[u,u,u,u,u,u,4,10],zero,zero,zero,xmm10[2,8,14],zero,zero
-; AVX2-ONLY-NEXT:    vpor %xmm1, %xmm3, %xmm1
-; AVX2-ONLY-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
-; AVX2-ONLY-NEXT:    vmovdqu {{[-0-9]+}}(%r{{[sb]}}p), %ymm3 # 32-byte Reload
-; AVX2-ONLY-NEXT:    vpblendw {{.*#+}} ymm1 = ymm3[0,1,2],ymm1[3,4,5,6,7],ymm3[8,9,10],ymm1[11,12,13,14,15]
-; AVX2-ONLY-NEXT:    vpblendd {{.*#+}} ymm1 = ymm3[0,1,2,3],ymm1[4,5,6,7]
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm2 = xmm2[u,u,u,u,u,u],zero,zero,xmm2[1,7,13],zero,zero,zero,xmm2[5,11]
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm3 = xmm10[u,u,u,u,u,u,5,11],zero,zero,zero,xmm10[3,9,15],zero,zero
-; AVX2-ONLY-NEXT:    vpor %xmm2, %xmm3, %xmm2
-; AVX2-ONLY-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm2
-; AVX2-ONLY-NEXT:    vpblendw {{.*#+}} ymm2 = ymm7[0,1,2],ymm2[3,4,5,6,7],ymm7[8,9,10],ymm2[11,12,13,14,15]
-; AVX2-ONLY-NEXT:    vpblendd {{.*#+}} ymm2 = ymm7[0,1,2,3],ymm2[4,5,6,7]
-; AVX2-ONLY-NEXT:    vmovdqa %ymm1, (%rsi)
-; AVX2-ONLY-NEXT:    vmovdqa %ymm2, (%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %ymm13, (%rcx)
-; AVX2-ONLY-NEXT:    vmovdqa %ymm9, (%r8)
+; AVX2-ONLY-NEXT:    vpblendvb %ymm10, %ymm13, %ymm8, %ymm8
+; AVX2-ONLY-NEXT:    vpblendvb %ymm11, %ymm4, %ymm14, %ymm4
+; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm4, %xmm11
+; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm13 = xmm11[u,u,u,u,u],zero,zero,zero,xmm11[4,10],zero,zero,zero,xmm11[2,8,14]
+; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm14 = xmm4[u,u,u,u,u,2,8,14],zero,zero,xmm4[0,6,12],zero,zero,zero
+; AVX2-ONLY-NEXT:    vpor %xmm13, %xmm14, %xmm13
+; AVX2-ONLY-NEXT:    vpblendvb %ymm12, %ymm3, %ymm2, %ymm2
+; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm2, %xmm3
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm12 = <0,0,255,255,u,u,0,0,255,255,u,u,0,0,255,255,255,255,u,u,0,0,255,255,u,u,0,0,255,255,u,u>
+; AVX2-ONLY-NEXT:    vpblendvb %ymm12, %ymm6, %ymm5, %ymm5
+; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm6 = zero,zero,xmm3[0,6,12],zero,zero,zero,xmm3[4,10,u,u,u,u,u,u]
+; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm12 = xmm2[4,10],zero,zero,zero,xmm2[2,8,14],zero,zero,xmm2[u,u,u,u,u,u]
+; AVX2-ONLY-NEXT:    vpor %xmm6, %xmm12, %xmm6
+; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} ymm12 = ymm5[u,u,u,u,u,u,u,u,u,u,0,6,12,2,8,14,20,26,16,22,28,u,u,u,u,u,u,u,u,u,u,u]
+; AVX2-ONLY-NEXT:    vpblendw {{.*#+}} xmm6 = xmm6[0,1,2,3,4],xmm12[5,6,7]
+; AVX2-ONLY-NEXT:    vpblendd {{.*#+}} ymm6 = ymm6[0,1,2,3],ymm12[4,5,6,7]
+; AVX2-ONLY-NEXT:    vinserti128 $1, %xmm13, %ymm0, %ymm12
+; AVX2-ONLY-NEXT:    vpblendvb %ymm10, %ymm6, %ymm12, %ymm6
+; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm11 = xmm11[u,u,u,u,u],zero,zero,zero,xmm11[5,11],zero,zero,zero,xmm11[3,9,15]
+; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm4 = xmm4[u,u,u,u,u,3,9,15],zero,zero,xmm4[1,7,13],zero,zero,zero
+; AVX2-ONLY-NEXT:    vpor %xmm4, %xmm11, %xmm4
+; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm3 = zero,zero,xmm3[1,7,13],zero,zero,zero,xmm3[5,11,u,u,u,u,u,u]
+; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm2 = xmm2[5,11],zero,zero,zero,xmm2[3,9,15],zero,zero,xmm2[u,u,u,u,u,u]
+; AVX2-ONLY-NEXT:    vpor %xmm3, %xmm2, %xmm2
+; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} ymm3 = ymm5[u,u,u,u,u,u,u,u,u,u,1,7,13,3,9,15,21,27,17,23,29,u,u,u,u,u,u,u,u,u,u,u]
+; AVX2-ONLY-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1,2,3,4],xmm3[5,6,7]
+; AVX2-ONLY-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm3[4,5,6,7]
+; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm9, %xmm3
+; AVX2-ONLY-NEXT:    vinserti128 $1, %xmm4, %ymm0, %ymm4
+; AVX2-ONLY-NEXT:    vpblendvb %ymm10, %ymm2, %ymm4, %ymm2
+; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm4 = xmm3[u,u,u,u,u,u],zero,zero,xmm3[0,6,12],zero,zero,zero,xmm3[4,10]
+; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm5 = xmm9[u,u,u,u,u,u,4,10],zero,zero,zero,xmm9[2,8,14],zero,zero
+; AVX2-ONLY-NEXT:    vpor %xmm4, %xmm5, %xmm4
+; AVX2-ONLY-NEXT:    vinserti128 $1, %xmm4, %ymm0, %ymm4
+; AVX2-ONLY-NEXT:    vpblendw {{.*#+}} ymm4 = ymm0[0,1,2],ymm4[3,4,5,6,7],ymm0[8,9,10],ymm4[11,12,13,14,15]
+; AVX2-ONLY-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm4[4,5,6,7]
+; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm3 = xmm3[u,u,u,u,u,u],zero,zero,xmm3[1,7,13],zero,zero,zero,xmm3[5,11]
+; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm4 = xmm9[u,u,u,u,u,u,5,11],zero,zero,zero,xmm9[3,9,15],zero,zero
+; AVX2-ONLY-NEXT:    vpor %xmm3, %xmm4, %xmm3
+; AVX2-ONLY-NEXT:    vinserti128 $1, %xmm3, %ymm0, %ymm3
+; AVX2-ONLY-NEXT:    vpblendw {{.*#+}} ymm3 = ymm1[0,1,2],ymm3[3,4,5,6,7],ymm1[8,9,10],ymm3[11,12,13,14,15]
+; AVX2-ONLY-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm3[4,5,6,7]
+; AVX2-ONLY-NEXT:    vmovdqa %ymm0, (%rsi)
+; AVX2-ONLY-NEXT:    vmovdqa %ymm1, (%rdx)
+; AVX2-ONLY-NEXT:    vmovdqa %ymm7, (%rcx)
+; AVX2-ONLY-NEXT:    vmovdqa %ymm8, (%r8)
 ; AVX2-ONLY-NEXT:    vmovdqa %ymm6, (%r9)
 ; AVX2-ONLY-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; AVX2-ONLY-NEXT:    vmovdqa %ymm0, (%rax)
+; AVX2-ONLY-NEXT:    vmovdqa %ymm2, (%rax)
 ; AVX2-ONLY-NEXT:    vzeroupper
 ; AVX2-ONLY-NEXT:    retq
 ;
 ; AVX512F-LABEL: load_i8_stride6_vf32:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; AVX512F-NEXT:    vmovdqa (%rdi), %ymm3
-; AVX512F-NEXT:    vmovdqa 32(%rdi), %ymm5
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm0 = [65535,65535,0,65535,65535,0,65535,65535,0,65535,65535,0,65535,65535,0,65535]
+; AVX512F-NEXT:    vmovdqa64 (%rdi), %ymm17
+; AVX512F-NEXT:    vmovdqa 32(%rdi), %ymm3
 ; AVX512F-NEXT:    vmovdqa 64(%rdi), %ymm1
 ; AVX512F-NEXT:    vmovdqa 128(%rdi), %ymm6
-; AVX512F-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm1[2,3],mem[2,3]
-; AVX512F-NEXT:    vpshufb {{.*#+}} ymm2 = ymm0[u,u,u,u,u,u,u,u,u,u,u],zero,zero,zero,ymm0[4,10],zero,zero,zero,ymm0[18,24,30,u,u,u,u,u,u,u,u,u,u]
+; AVX512F-NEXT:    vmovdqa %ymm0, %ymm7
+; AVX512F-NEXT:    vpternlogq $202, %ymm3, %ymm17, %ymm7
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm4 = xmm7[0,6,12],zero,zero,zero,xmm7[4,10],zero,zero,zero,xmm7[u,u,u,u,u]
+; AVX512F-NEXT:    vextracti128 $1, %ymm7, %xmm8
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm5 = zero,zero,zero,xmm8[2,8,14],zero,zero,xmm8[0,6,12,u,u,u,u,u]
+; AVX512F-NEXT:    vpor %xmm4, %xmm5, %xmm4
+; AVX512F-NEXT:    vperm2i128 {{.*#+}} ymm5 = ymm1[2,3],mem[2,3]
 ; AVX512F-NEXT:    vinserti128 $1, 96(%rdi), %ymm1, %ymm1
-; AVX512F-NEXT:    vpshufb {{.*#+}} ymm4 = ymm1[u,u,u,u,u,u,u,u,u,u,u,2,8,14],zero,zero,ymm1[16,22,28],zero,zero,zero,ymm1[u,u,u,u,u,u,u,u,u,u]
-; AVX512F-NEXT:    vpor %ymm2, %ymm4, %ymm4
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm2 = [65535,65535,0,65535,65535,0,65535,65535,0,65535,65535,0,65535,65535,0,65535]
-; AVX512F-NEXT:    vmovdqa %ymm2, %ymm7
-; AVX512F-NEXT:    vpternlogq $202, %ymm5, %ymm3, %ymm7
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm8 = xmm7[0,6,12],zero,zero,zero,xmm7[4,10],zero,zero,zero,xmm7[u,u,u,u,u]
-; AVX512F-NEXT:    vextracti128 $1, %ymm7, %xmm9
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm10 = zero,zero,zero,xmm9[2,8,14],zero,zero,xmm9[0,6,12,u,u,u,u,u]
-; AVX512F-NEXT:    vpor %xmm8, %xmm10, %xmm10
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm11 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0,0,0,0,0,0,255,255,255,255,255,255,255,255,255,255]
-; AVX512F-NEXT:    vpternlogq $226, %ymm4, %ymm11, %ymm10
-; AVX512F-NEXT:    vmovdqa 160(%rdi), %ymm8
-; AVX512F-NEXT:    vmovdqa %ymm2, %ymm12
-; AVX512F-NEXT:    vpternlogq $202, %ymm6, %ymm8, %ymm12
-; AVX512F-NEXT:    vextracti128 $1, %ymm12, %xmm13
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm4 = xmm13[u,u,u,u,u,u],zero,zero,xmm13[0,6,12],zero,zero,zero,xmm13[4,10]
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm14 = xmm12[u,u,u,u,u,u,4,10],zero,zero,zero,xmm12[2,8,14],zero,zero
-; AVX512F-NEXT:    vpor %xmm4, %xmm14, %xmm4
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm9 = [65535,65535,0,65535,65535,0,65535,65535,65535,0,65535,65535,0,65535,65535,0]
+; AVX512F-NEXT:    vmovdqa %ymm9, %ymm10
+; AVX512F-NEXT:    vpternlogq $202, %ymm5, %ymm1, %ymm10
+; AVX512F-NEXT:    vpshufb {{.*#+}} ymm11 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm10[2,8,14,4,10,16,22,28,18,24,30],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512F-NEXT:    vmovdqa64 {{.*#+}} ymm16 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0,0,0,0,0,0,255,255,255,255,255,255,255,255,255,255]
+; AVX512F-NEXT:    vpternlogq $248, %ymm16, %ymm4, %ymm11
+; AVX512F-NEXT:    vmovdqa 160(%rdi), %ymm13
+; AVX512F-NEXT:    vmovdqa %ymm0, %ymm14
+; AVX512F-NEXT:    vpternlogq $202, %ymm6, %ymm13, %ymm14
+; AVX512F-NEXT:    vextracti128 $1, %ymm14, %xmm15
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm4 = xmm15[u,u,u,u,u,u],zero,zero,xmm15[0,6,12],zero,zero,zero,xmm15[4,10]
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm12 = xmm14[u,u,u,u,u,u,4,10],zero,zero,zero,xmm14[2,8,14],zero,zero
+; AVX512F-NEXT:    vpor %xmm4, %xmm12, %xmm4
 ; AVX512F-NEXT:    vinserti128 $1, %xmm4, %ymm0, %ymm4
-; AVX512F-NEXT:    vpblendw {{.*#+}} ymm4 = ymm10[0,1,2],ymm4[3,4,5,6,7],ymm10[8,9,10],ymm4[11,12,13,14,15]
-; AVX512F-NEXT:    vpblendd {{.*#+}} ymm4 = ymm10[0,1,2,3],ymm4[4,5,6,7]
-; AVX512F-NEXT:    vmovdqa64 %ymm4, %ymm17
-; AVX512F-NEXT:    vpshufb {{.*#+}} ymm10 = ymm0[u,u,u,u,u,u,u,u,u,u,u],zero,zero,zero,ymm0[5,11],zero,zero,zero,ymm0[19,25,31,u,u,u,u,u,u,u,u,u,u]
-; AVX512F-NEXT:    vpshufb {{.*#+}} ymm14 = ymm1[u,u,u,u,u,u,u,u,u,u,u,3,9,15],zero,zero,ymm1[17,23,29],zero,zero,zero,ymm1[u,u,u,u,u,u,u,u,u,u]
-; AVX512F-NEXT:    vpor %ymm10, %ymm14, %ymm10
+; AVX512F-NEXT:    vpblendw {{.*#+}} ymm4 = ymm11[0,1,2],ymm4[3,4,5,6,7],ymm11[8,9,10],ymm4[11,12,13,14,15]
+; AVX512F-NEXT:    vpblendd {{.*#+}} ymm2 = ymm11[0,1,2,3],ymm4[4,5,6,7]
+; AVX512F-NEXT:    vmovdqa64 %ymm2, %ymm18
 ; AVX512F-NEXT:    vpshufb {{.*#+}} xmm7 = xmm7[1,7,13],zero,zero,zero,xmm7[5,11],zero,zero,zero,xmm7[u,u,u,u,u]
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm9 = zero,zero,zero,xmm9[3,9,15],zero,zero,xmm9[1,7,13,u,u,u,u,u]
-; AVX512F-NEXT:    vpor %xmm7, %xmm9, %xmm7
-; AVX512F-NEXT:    vpternlogq $226, %ymm10, %ymm11, %ymm7
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm9 = xmm13[u,u,u,u,u,u],zero,zero,xmm13[1,7,13],zero,zero,zero,xmm13[5,11]
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm10 = xmm12[u,u,u,u,u,u,5,11],zero,zero,zero,xmm12[3,9,15],zero,zero
-; AVX512F-NEXT:    vpor %xmm9, %xmm10, %xmm9
-; AVX512F-NEXT:    vinserti128 $1, %xmm9, %ymm0, %ymm9
-; AVX512F-NEXT:    vpblendw {{.*#+}} ymm9 = ymm7[0,1,2],ymm9[3,4,5,6,7],ymm7[8,9,10],ymm9[11,12,13,14,15]
-; AVX512F-NEXT:    vpblendd {{.*#+}} ymm4 = ymm7[0,1,2,3],ymm9[4,5,6,7]
-; AVX512F-NEXT:    vmovdqa64 %ymm4, %ymm18
-; AVX512F-NEXT:    vpshufb {{.*#+}} ymm9 = ymm0[u,u,u,u,u,u,u,u,u,u,u],zero,zero,ymm0[0,6,12],zero,zero,zero,ymm0[20,26,u,u,u,u,u,u,u,u,u,u,u]
-; AVX512F-NEXT:    vpshufb {{.*#+}} ymm10 = ymm1[u,u,u,u,u,u,u,u,u,u,u,4,10],zero,zero,zero,ymm1[18,24,30],zero,zero,ymm1[u,u,u,u,u,u,u,u,u,u,u]
-; AVX512F-NEXT:    vpor %ymm9, %ymm10, %ymm10
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm9 = [65535,0,65535,65535,0,65535,65535,0,65535,65535,0,65535,65535,0,65535,65535]
-; AVX512F-NEXT:    vmovdqa %ymm9, %ymm11
-; AVX512F-NEXT:    vpternlogq $202, %ymm3, %ymm5, %ymm11
-; AVX512F-NEXT:    vextracti128 $1, %ymm11, %xmm12
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm13 = zero,zero,zero,xmm12[4,10],zero,zero,zero,xmm12[2,8,14,u,u,u,u,u]
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm14 = xmm11[2,8,14],zero,zero,xmm11[0,6,12],zero,zero,zero,xmm11[u,u,u,u,u]
-; AVX512F-NEXT:    vpor %xmm13, %xmm14, %xmm13
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm8 = zero,zero,zero,xmm8[3,9,15],zero,zero,xmm8[1,7,13,u,u,u,u,u]
+; AVX512F-NEXT:    vpor %xmm7, %xmm8, %xmm7
+; AVX512F-NEXT:    vpshufb {{.*#+}} ymm8 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm10[3,9,15,5,11,17,23,29,19,25,31],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512F-NEXT:    vpternlogq $248, %ymm16, %ymm7, %ymm8
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm7 = xmm15[u,u,u,u,u,u],zero,zero,xmm15[1,7,13],zero,zero,zero,xmm15[5,11]
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm10 = xmm14[u,u,u,u,u,u,5,11],zero,zero,zero,xmm14[3,9,15],zero,zero
+; AVX512F-NEXT:    vpor %xmm7, %xmm10, %xmm7
+; AVX512F-NEXT:    vinserti128 $1, %xmm7, %ymm0, %ymm7
+; AVX512F-NEXT:    vpblendw {{.*#+}} ymm7 = ymm8[0,1,2],ymm7[3,4,5,6,7],ymm8[8,9,10],ymm7[11,12,13,14,15]
+; AVX512F-NEXT:    vpblendd {{.*#+}} ymm7 = ymm8[0,1,2,3],ymm7[4,5,6,7]
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm8 = [65535,0,65535,65535,0,65535,65535,0,65535,65535,0,65535,65535,0,65535,65535]
+; AVX512F-NEXT:    vmovdqa %ymm8, %ymm10
+; AVX512F-NEXT:    vpternlogq $202, %ymm17, %ymm3, %ymm10
+; AVX512F-NEXT:    vextracti128 $1, %ymm10, %xmm11
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm12 = zero,zero,zero,xmm11[4,10],zero,zero,zero,xmm11[2,8,14,u,u,u,u,u]
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm14 = xmm10[2,8,14],zero,zero,xmm10[0,6,12],zero,zero,zero,xmm10[u,u,u,u,u]
+; AVX512F-NEXT:    vpor %xmm12, %xmm14, %xmm12
+; AVX512F-NEXT:    vpternlogq $202, %ymm1, %ymm5, %ymm9
+; AVX512F-NEXT:    vpshufb {{.*#+}} ymm14 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm9[4,10,0,6,12,18,24,30,20,26,u,u,u,u,u,u,u,u,u,u,u]
 ; AVX512F-NEXT:    vmovdqa64 {{.*#+}} ymm16 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0,0,0,0,0,255,255,255,255,255,255,255,255,255,255,255]
-; AVX512F-NEXT:    vpternlogq $226, %ymm10, %ymm16, %ymm13
-; AVX512F-NEXT:    vmovdqa %ymm2, %ymm10
-; AVX512F-NEXT:    vpternlogq $202, %ymm8, %ymm6, %ymm10
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm15 = xmm10[u,u,u,u,u,0,6,12],zero,zero,zero,xmm10[4,10],zero,zero,zero
-; AVX512F-NEXT:    vextracti128 $1, %ymm10, %xmm14
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm4 = xmm14[u,u,u,u,u],zero,zero,zero,xmm14[2,8,14],zero,zero,xmm14[0,6,12]
+; AVX512F-NEXT:    vpternlogq $248, %ymm16, %ymm12, %ymm14
+; AVX512F-NEXT:    vmovdqa %ymm0, %ymm12
+; AVX512F-NEXT:    vpternlogq $202, %ymm13, %ymm6, %ymm12
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm15 = xmm12[u,u,u,u,u,0,6,12],zero,zero,zero,xmm12[4,10],zero,zero,zero
+; AVX512F-NEXT:    vextracti128 $1, %ymm12, %xmm2
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm4 = xmm2[u,u,u,u,u],zero,zero,zero,xmm2[2,8,14],zero,zero,xmm2[0,6,12]
 ; AVX512F-NEXT:    vpor %xmm4, %xmm15, %xmm4
 ; AVX512F-NEXT:    vinserti128 $1, %xmm4, %ymm0, %ymm4
 ; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm15 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0,0,0,0,0,0]
-; AVX512F-NEXT:    vpternlogq $184, %ymm13, %ymm15, %ymm4
-; AVX512F-NEXT:    vpshufb {{.*#+}} ymm13 = ymm0[u,u,u,u,u,u,u,u,u,u,u],zero,zero,ymm0[1,7,13],zero,zero,zero,ymm0[21,27,u,u,u,u,u,u,u,u,u,u,u]
-; AVX512F-NEXT:    vpshufb {{.*#+}} ymm7 = ymm1[u,u,u,u,u,u,u,u,u,u,u,5,11],zero,zero,zero,ymm1[19,25,31],zero,zero,ymm1[u,u,u,u,u,u,u,u,u,u,u]
-; AVX512F-NEXT:    vpor %ymm7, %ymm13, %ymm7
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm12 = zero,zero,zero,xmm12[5,11],zero,zero,zero,xmm12[3,9,15,u,u,u,u,u]
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm11 = xmm11[3,9,15],zero,zero,xmm11[1,7,13],zero,zero,zero,xmm11[u,u,u,u,u]
-; AVX512F-NEXT:    vpor %xmm12, %xmm11, %xmm11
-; AVX512F-NEXT:    vpternlogq $226, %ymm7, %ymm16, %ymm11
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm7 = xmm10[u,u,u,u,u,1,7,13],zero,zero,zero,xmm10[5,11],zero,zero,zero
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm10 = xmm14[u,u,u,u,u],zero,zero,zero,xmm14[3,9,15],zero,zero,xmm14[1,7,13]
-; AVX512F-NEXT:    vpor %xmm7, %xmm10, %xmm7
-; AVX512F-NEXT:    vinserti128 $1, %xmm7, %ymm0, %ymm7
-; AVX512F-NEXT:    vpternlogq $184, %ymm11, %ymm15, %ymm7
-; AVX512F-NEXT:    vpternlogq $202, %ymm6, %ymm8, %ymm9
-; AVX512F-NEXT:    vextracti128 $1, %ymm9, %xmm6
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm8 = xmm6[u,u,u,u,u],zero,zero,zero,xmm6[4,10],zero,zero,zero,xmm6[2,8,14]
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm10 = xmm9[u,u,u,u,u,2,8,14],zero,zero,xmm9[0,6,12],zero,zero,zero
-; AVX512F-NEXT:    vpor %xmm8, %xmm10, %xmm8
-; AVX512F-NEXT:    vinserti128 $1, %xmm8, %ymm0, %ymm8
-; AVX512F-NEXT:    vpternlogq $202, %ymm3, %ymm5, %ymm2
-; AVX512F-NEXT:    vextracti128 $1, %ymm2, %xmm3
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm5 = zero,zero,xmm3[0,6,12],zero,zero,zero,xmm3[4,10,u,u,u,u,u,u]
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm10 = xmm2[4,10],zero,zero,zero,xmm2[2,8,14],zero,zero,xmm2[u,u,u,u,u,u]
-; AVX512F-NEXT:    vpor %xmm5, %xmm10, %xmm5
-; AVX512F-NEXT:    vpshufb {{.*#+}} ymm10 = ymm1[4,10],zero,zero,zero,zero,zero,zero,zero,zero,ymm1[0,6,12],zero,zero,zero,ymm1[20,26],zero,zero,zero,zero,zero,zero,zero,zero,ymm1[16,22,28],zero,zero,zero
-; AVX512F-NEXT:    vpshufb {{.*#+}} ymm11 = zero,zero,ymm0[0,6,12,u,u,u,u,u],zero,zero,zero,ymm0[2,8,14],zero,zero,ymm0[16,22,28,u,u,u,u,u],zero,zero,zero,ymm0[18,24,30]
-; AVX512F-NEXT:    vpor %ymm10, %ymm11, %ymm10
-; AVX512F-NEXT:    vpblendw {{.*#+}} xmm5 = xmm5[0,1,2,3,4],xmm10[5,6,7]
-; AVX512F-NEXT:    vpblendd {{.*#+}} ymm5 = ymm5[0,1,2,3],ymm10[4,5,6,7]
-; AVX512F-NEXT:    vpternlogq $226, %ymm8, %ymm15, %ymm5
+; AVX512F-NEXT:    vpternlogq $184, %ymm14, %ymm15, %ymm4
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm11 = zero,zero,zero,xmm11[5,11],zero,zero,zero,xmm11[3,9,15,u,u,u,u,u]
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm10 = xmm10[3,9,15],zero,zero,xmm10[1,7,13],zero,zero,zero,xmm10[u,u,u,u,u]
+; AVX512F-NEXT:    vpor %xmm11, %xmm10, %xmm10
+; AVX512F-NEXT:    vpshufb {{.*#+}} ymm9 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm9[5,11,1,7,13,19,25,31,21,27,u,u,u,u,u,u,u,u,u,u,u]
+; AVX512F-NEXT:    vpternlogq $248, %ymm16, %ymm10, %ymm9
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm10 = xmm12[u,u,u,u,u,1,7,13],zero,zero,zero,xmm12[5,11],zero,zero,zero
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm2 = xmm2[u,u,u,u,u],zero,zero,zero,xmm2[3,9,15],zero,zero,xmm2[1,7,13]
+; AVX512F-NEXT:    vpor %xmm2, %xmm10, %xmm2
+; AVX512F-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm2
+; AVX512F-NEXT:    vpternlogq $184, %ymm9, %ymm15, %ymm2
+; AVX512F-NEXT:    vpternlogq $202, %ymm6, %ymm13, %ymm8
+; AVX512F-NEXT:    vextracti128 $1, %ymm8, %xmm6
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm9 = xmm6[u,u,u,u,u],zero,zero,zero,xmm6[4,10],zero,zero,zero,xmm6[2,8,14]
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm10 = xmm8[u,u,u,u,u,2,8,14],zero,zero,xmm8[0,6,12],zero,zero,zero
+; AVX512F-NEXT:    vpor %xmm9, %xmm10, %xmm9
+; AVX512F-NEXT:    vinserti128 $1, %xmm9, %ymm0, %ymm9
+; AVX512F-NEXT:    vpternlogq $202, %ymm17, %ymm3, %ymm0
+; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm3
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm10 = zero,zero,xmm3[0,6,12],zero,zero,zero,xmm3[4,10,u,u,u,u,u,u]
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm11 = xmm0[4,10],zero,zero,zero,xmm0[2,8,14],zero,zero,xmm0[u,u,u,u,u,u]
+; AVX512F-NEXT:    vpor %xmm10, %xmm11, %xmm10
+; AVX512F-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm5, %ymm1
+; AVX512F-NEXT:    vpshufb {{.*#+}} ymm5 = ymm1[u,u,u,u,u,u,u,u,u,u,0,6,12,2,8,14,20,26,16,22,28,u,u,u,u,u,u,u,u,u,u,u]
+; AVX512F-NEXT:    vpblendw {{.*#+}} xmm10 = xmm10[0,1,2,3,4],xmm5[5,6,7]
+; AVX512F-NEXT:    vpblendd {{.*#+}} ymm5 = ymm10[0,1,2,3],ymm5[4,5,6,7]
+; AVX512F-NEXT:    vpternlogq $226, %ymm9, %ymm15, %ymm5
 ; AVX512F-NEXT:    vpshufb {{.*#+}} xmm6 = xmm6[u,u,u,u,u],zero,zero,zero,xmm6[5,11],zero,zero,zero,xmm6[3,9,15]
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm8 = xmm9[u,u,u,u,u,3,9,15],zero,zero,xmm9[1,7,13],zero,zero,zero
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm8 = xmm8[u,u,u,u,u,3,9,15],zero,zero,xmm8[1,7,13],zero,zero,zero
 ; AVX512F-NEXT:    vpor %xmm6, %xmm8, %xmm6
 ; AVX512F-NEXT:    vinserti128 $1, %xmm6, %ymm0, %ymm6
 ; AVX512F-NEXT:    vpshufb {{.*#+}} xmm3 = zero,zero,xmm3[1,7,13],zero,zero,zero,xmm3[5,11,u,u,u,u,u,u]
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm2 = xmm2[5,11],zero,zero,zero,xmm2[3,9,15],zero,zero,xmm2[u,u,u,u,u,u]
-; AVX512F-NEXT:    vpor %xmm3, %xmm2, %xmm2
-; AVX512F-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[5,11],zero,zero,zero,zero,zero,zero,zero,zero,ymm1[1,7,13],zero,zero,zero,ymm1[21,27],zero,zero,zero,zero,zero,zero,zero,zero,ymm1[17,23,29],zero,zero,zero
-; AVX512F-NEXT:    vpshufb {{.*#+}} ymm0 = zero,zero,ymm0[1,7,13,u,u,u,u,u],zero,zero,zero,ymm0[3,9,15],zero,zero,ymm0[17,23,29,u,u,u,u,u],zero,zero,zero,ymm0[19,25,31]
-; AVX512F-NEXT:    vpor %ymm1, %ymm0, %ymm0
-; AVX512F-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1,2,3,4],xmm0[5,6,7]
-; AVX512F-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[5,11],zero,zero,zero,xmm0[3,9,15],zero,zero,xmm0[u,u,u,u,u,u]
+; AVX512F-NEXT:    vpor %xmm3, %xmm0, %xmm0
+; AVX512F-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[u,u,u,u,u,u,u,u,u,u,1,7,13,3,9,15,21,27,17,23,29,u,u,u,u,u,u,u,u,u,u,u]
+; AVX512F-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3,4],xmm1[5,6,7]
+; AVX512F-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; AVX512F-NEXT:    vpternlogq $226, %ymm6, %ymm15, %ymm0
-; AVX512F-NEXT:    vmovdqa64 %ymm17, (%rsi)
-; AVX512F-NEXT:    vmovdqa64 %ymm18, (%rdx)
+; AVX512F-NEXT:    vmovdqa64 %ymm18, (%rsi)
+; AVX512F-NEXT:    vmovdqa %ymm7, (%rdx)
 ; AVX512F-NEXT:    vmovdqa %ymm4, (%rcx)
-; AVX512F-NEXT:    vmovdqa %ymm7, (%r8)
+; AVX512F-NEXT:    vmovdqa %ymm2, (%r8)
 ; AVX512F-NEXT:    vmovdqa %ymm5, (%r9)
 ; AVX512F-NEXT:    vmovdqa %ymm0, (%rax)
 ; AVX512F-NEXT:    vzeroupper
@@ -2173,115 +2176,106 @@ define void @load_i8_stride6_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512BW-LABEL: load_i8_stride6_vf32:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; AVX512BW-NEXT:    vmovdqa (%rdi), %ymm6
-; AVX512BW-NEXT:    vmovdqa 32(%rdi), %ymm1
-; AVX512BW-NEXT:    vmovdqa 64(%rdi), %ymm2
-; AVX512BW-NEXT:    vmovdqa 128(%rdi), %ymm3
-; AVX512BW-NEXT:    vinserti128 $1, 96(%rdi), %ymm2, %ymm0
-; AVX512BW-NEXT:    vpshufb {{.*#+}} ymm4 = ymm0[0,6,12],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[2,8,14],zero,zero,ymm0[16,22,28],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[18,24,30],zero,zero
-; AVX512BW-NEXT:    vperm2i128 {{.*#+}} ymm2 = ymm2[2,3],mem[2,3]
-; AVX512BW-NEXT:    vpshufb {{.*#+}} ymm5 = zero,zero,zero,ymm2[2,8,14],zero,zero,zero,zero,zero,zero,zero,zero,ymm2[4,10],zero,zero,zero,ymm2[18,24,30],zero,zero,zero,zero,zero,zero,zero,zero,ymm2[20,26]
-; AVX512BW-NEXT:    vpor %ymm4, %ymm5, %ymm4
+; AVX512BW-NEXT:    vmovdqa (%rdi), %ymm4
+; AVX512BW-NEXT:    vmovdqa 32(%rdi), %ymm0
+; AVX512BW-NEXT:    vmovdqa 64(%rdi), %ymm3
+; AVX512BW-NEXT:    vmovdqa 128(%rdi), %ymm2
+; AVX512BW-NEXT:    vperm2i128 {{.*#+}} ymm1 = ymm3[2,3],mem[2,3]
+; AVX512BW-NEXT:    vinserti128 $1, 96(%rdi), %ymm3, %ymm8
+; AVX512BW-NEXT:    movw $-28124, %r10w # imm = 0x9224
+; AVX512BW-NEXT:    kmovd %r10d, %k2
+; AVX512BW-NEXT:    vpblendmw %ymm1, %ymm8, %ymm6 {%k2}
 ; AVX512BW-NEXT:    movw $18724, %r10w # imm = 0x4924
 ; AVX512BW-NEXT:    kmovd %r10d, %k1
-; AVX512BW-NEXT:    vpblendmw %ymm1, %ymm6, %ymm7 {%k1}
-; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm5 = xmm7[0,6,12],zero,zero,zero,xmm7[4,10],zero,zero,zero,xmm7[u,u,u,u,u]
-; AVX512BW-NEXT:    vextracti128 $1, %ymm7, %xmm8
-; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm9 = zero,zero,zero,xmm8[2,8,14],zero,zero,xmm8[0,6,12,u,u,u,u,u]
-; AVX512BW-NEXT:    vpor %xmm5, %xmm9, %xmm5
+; AVX512BW-NEXT:    vpblendmw %ymm0, %ymm4, %ymm7 {%k1}
+; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm3 = xmm7[0,6,12],zero,zero,zero,xmm7[4,10],zero,zero,zero,xmm7[u,u,u,u,u]
+; AVX512BW-NEXT:    vextracti128 $1, %ymm7, %xmm9
+; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm5 = zero,zero,zero,xmm9[2,8,14],zero,zero,xmm9[0,6,12,u,u,u,u,u]
+; AVX512BW-NEXT:    vpor %xmm3, %xmm5, %xmm5
 ; AVX512BW-NEXT:    movl $4192256, %r10d # imm = 0x3FF800
-; AVX512BW-NEXT:    kmovd %r10d, %k2
-; AVX512BW-NEXT:    vmovdqu8 %ymm4, %ymm5 {%k2}
-; AVX512BW-NEXT:    vmovdqa 160(%rdi), %ymm4
-; AVX512BW-NEXT:    vpblendmw %ymm3, %ymm4, %ymm9 {%k1}
-; AVX512BW-NEXT:    vextracti128 $1, %ymm9, %xmm10
-; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm11 = xmm10[u,u,u,u,u,u],zero,zero,xmm10[0,6,12],zero,zero,zero,xmm10[4,10]
-; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm12 = xmm9[u,u,u,u,u,u,4,10],zero,zero,zero,xmm9[2,8,14],zero,zero
-; AVX512BW-NEXT:    vpor %xmm11, %xmm12, %xmm11
-; AVX512BW-NEXT:    vinserti128 $1, %xmm11, %ymm0, %ymm11
-; AVX512BW-NEXT:    vpblendw {{.*#+}} ymm11 = ymm5[0,1,2],ymm11[3,4,5,6,7],ymm5[8,9,10],ymm11[11,12,13,14,15]
-; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm5 = ymm5[0,1,2,3],ymm11[4,5,6,7]
-; AVX512BW-NEXT:    vpshufb {{.*#+}} ymm11 = ymm0[1,7,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[3,9,15],zero,zero,ymm0[17,23,29],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[19,25,31],zero,zero
-; AVX512BW-NEXT:    vpshufb {{.*#+}} ymm12 = zero,zero,zero,ymm2[3,9,15],zero,zero,zero,zero,zero,zero,zero,zero,ymm2[5,11],zero,zero,zero,ymm2[19,25,31],zero,zero,zero,zero,zero,zero,zero,zero,ymm2[21,27]
-; AVX512BW-NEXT:    vpor %ymm11, %ymm12, %ymm11
+; AVX512BW-NEXT:    kmovd %r10d, %k3
+; AVX512BW-NEXT:    vpshufb {{.*#+}} ymm5 {%k3} = ymm6[u,u,u,u,u,u,u,u,u,u,u,2,8,14,4,10,16,22,28,18,24,30,u,u,u,u,u,u,u,u,u,u]
+; AVX512BW-NEXT:    vmovdqa 160(%rdi), %ymm3
+; AVX512BW-NEXT:    vpblendmw %ymm2, %ymm3, %ymm10 {%k1}
+; AVX512BW-NEXT:    vextracti128 $1, %ymm10, %xmm11
+; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm12 = xmm11[u,u,u,u,u,u],zero,zero,xmm11[0,6,12],zero,zero,zero,xmm11[4,10]
+; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm13 = xmm10[u,u,u,u,u,u,4,10],zero,zero,zero,xmm10[2,8,14],zero,zero
+; AVX512BW-NEXT:    vpor %xmm12, %xmm13, %xmm12
+; AVX512BW-NEXT:    vinserti128 $1, %xmm12, %ymm0, %ymm12
+; AVX512BW-NEXT:    vpblendw {{.*#+}} ymm12 = ymm5[0,1,2],ymm12[3,4,5,6,7],ymm5[8,9,10],ymm12[11,12,13,14,15]
+; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm5 = ymm5[0,1,2,3],ymm12[4,5,6,7]
 ; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm7 = xmm7[1,7,13],zero,zero,zero,xmm7[5,11],zero,zero,zero,xmm7[u,u,u,u,u]
-; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm8 = zero,zero,zero,xmm8[3,9,15],zero,zero,xmm8[1,7,13,u,u,u,u,u]
-; AVX512BW-NEXT:    vpor %xmm7, %xmm8, %xmm7
-; AVX512BW-NEXT:    vmovdqu8 %ymm11, %ymm7 {%k2}
-; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm8 = xmm10[u,u,u,u,u,u],zero,zero,xmm10[1,7,13],zero,zero,zero,xmm10[5,11]
-; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm9 = xmm9[u,u,u,u,u,u,5,11],zero,zero,zero,xmm9[3,9,15],zero,zero
-; AVX512BW-NEXT:    vpor %xmm8, %xmm9, %xmm8
-; AVX512BW-NEXT:    vinserti128 $1, %xmm8, %ymm0, %ymm8
-; AVX512BW-NEXT:    vpblendw {{.*#+}} ymm8 = ymm7[0,1,2],ymm8[3,4,5,6,7],ymm7[8,9,10],ymm8[11,12,13,14,15]
-; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm7 = ymm7[0,1,2,3],ymm8[4,5,6,7]
-; AVX512BW-NEXT:    vpshufb {{.*#+}} ymm8 = ymm0[2,8,14],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[4,10],zero,zero,zero,ymm0[18,24,30],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[20,26],zero,zero,zero
-; AVX512BW-NEXT:    vpshufb {{.*#+}} ymm9 = zero,zero,zero,ymm2[4,10],zero,zero,zero,zero,zero,zero,zero,zero,ymm2[0,6,12],zero,zero,zero,ymm2[20,26],zero,zero,zero,zero,zero,zero,zero,zero,ymm2[16,22,28]
-; AVX512BW-NEXT:    vpor %ymm8, %ymm9, %ymm9
+; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm9 = zero,zero,zero,xmm9[3,9,15],zero,zero,xmm9[1,7,13,u,u,u,u,u]
+; AVX512BW-NEXT:    vpor %xmm7, %xmm9, %xmm7
+; AVX512BW-NEXT:    vpshufb {{.*#+}} ymm7 {%k3} = ymm6[u,u,u,u,u,u,u,u,u,u,u,3,9,15,5,11,17,23,29,19,25,31,u,u,u,u,u,u,u,u,u,u]
+; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm6 = xmm11[u,u,u,u,u,u],zero,zero,xmm11[1,7,13],zero,zero,zero,xmm11[5,11]
+; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm9 = xmm10[u,u,u,u,u,u,5,11],zero,zero,zero,xmm10[3,9,15],zero,zero
+; AVX512BW-NEXT:    vpor %xmm6, %xmm9, %xmm6
+; AVX512BW-NEXT:    vinserti128 $1, %xmm6, %ymm0, %ymm6
+; AVX512BW-NEXT:    vpblendw {{.*#+}} ymm6 = ymm7[0,1,2],ymm6[3,4,5,6,7],ymm7[8,9,10],ymm6[11,12,13,14,15]
+; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm6 = ymm7[0,1,2,3],ymm6[4,5,6,7]
+; AVX512BW-NEXT:    vpblendmw %ymm8, %ymm1, %ymm9 {%k2}
 ; AVX512BW-NEXT:    movw $9362, %di # imm = 0x2492
 ; AVX512BW-NEXT:    kmovd %edi, %k3
-; AVX512BW-NEXT:    vpblendmw %ymm6, %ymm1, %ymm10 {%k3}
+; AVX512BW-NEXT:    vpblendmw %ymm4, %ymm0, %ymm10 {%k3}
 ; AVX512BW-NEXT:    vextracti128 $1, %ymm10, %xmm11
-; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm8 = zero,zero,zero,xmm11[4,10],zero,zero,zero,xmm11[2,8,14,u,u,u,u,u]
+; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm7 = zero,zero,zero,xmm11[4,10],zero,zero,zero,xmm11[2,8,14,u,u,u,u,u]
 ; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm12 = xmm10[2,8,14],zero,zero,xmm10[0,6,12],zero,zero,zero,xmm10[u,u,u,u,u]
-; AVX512BW-NEXT:    vpor %xmm8, %xmm12, %xmm8
+; AVX512BW-NEXT:    vpor %xmm7, %xmm12, %xmm7
 ; AVX512BW-NEXT:    movl $2095104, %edi # imm = 0x1FF800
 ; AVX512BW-NEXT:    kmovd %edi, %k4
-; AVX512BW-NEXT:    vmovdqu8 %ymm9, %ymm8 {%k4}
-; AVX512BW-NEXT:    vpblendmw %ymm4, %ymm3, %ymm9 {%k1}
-; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm12 = xmm9[u,u,u,u,u,0,6,12],zero,zero,zero,xmm9[4,10],zero,zero,zero
-; AVX512BW-NEXT:    vextracti128 $1, %ymm9, %xmm13
-; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm14 = xmm13[u,u,u,u,u],zero,zero,zero,xmm13[2,8,14],zero,zero,xmm13[0,6,12]
-; AVX512BW-NEXT:    vpor %xmm12, %xmm14, %xmm12
-; AVX512BW-NEXT:    vinserti128 $1, %xmm12, %ymm0, %ymm12
+; AVX512BW-NEXT:    vpshufb {{.*#+}} ymm7 {%k4} = ymm9[u,u,u,u,u,u,u,u,u,u,u,4,10,0,6,12,18,24,30,20,26,u,u,u,u,u,u,u,u,u,u,u]
+; AVX512BW-NEXT:    vpblendmw %ymm3, %ymm2, %ymm12 {%k1}
+; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm13 = xmm12[u,u,u,u,u,0,6,12],zero,zero,zero,xmm12[4,10],zero,zero,zero
+; AVX512BW-NEXT:    vextracti128 $1, %ymm12, %xmm14
+; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm15 = xmm14[u,u,u,u,u],zero,zero,zero,xmm14[2,8,14],zero,zero,xmm14[0,6,12]
+; AVX512BW-NEXT:    vpor %xmm13, %xmm15, %xmm13
+; AVX512BW-NEXT:    vinserti128 $1, %xmm13, %ymm0, %ymm13
 ; AVX512BW-NEXT:    movl $-2097152, %edi # imm = 0xFFE00000
 ; AVX512BW-NEXT:    kmovd %edi, %k2
-; AVX512BW-NEXT:    vmovdqu8 %ymm12, %ymm8 {%k2}
-; AVX512BW-NEXT:    vpshufb {{.*#+}} ymm12 = ymm0[3,9,15],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[5,11],zero,zero,zero,ymm0[19,25,31],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[21,27],zero,zero,zero
-; AVX512BW-NEXT:    vpshufb {{.*#+}} ymm14 = zero,zero,zero,ymm2[5,11],zero,zero,zero,zero,zero,zero,zero,zero,ymm2[1,7,13],zero,zero,zero,ymm2[21,27],zero,zero,zero,zero,zero,zero,zero,zero,ymm2[17,23,29]
-; AVX512BW-NEXT:    vpor %ymm12, %ymm14, %ymm12
-; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm11 = zero,zero,zero,xmm11[5,11],zero,zero,zero,xmm11[3,9,15,u,u,u,u,u]
+; AVX512BW-NEXT:    vmovdqu8 %ymm13, %ymm7 {%k2}
+; AVX512BW-NEXT:    movw $9289, %di # imm = 0x2449
+; AVX512BW-NEXT:    kmovd %edi, %k5
+; AVX512BW-NEXT:    vmovdqu16 %ymm8, %ymm1 {%k5}
+; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm8 = zero,zero,zero,xmm11[5,11],zero,zero,zero,xmm11[3,9,15,u,u,u,u,u]
 ; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm10 = xmm10[3,9,15],zero,zero,xmm10[1,7,13],zero,zero,zero,xmm10[u,u,u,u,u]
-; AVX512BW-NEXT:    vpor %xmm11, %xmm10, %xmm10
-; AVX512BW-NEXT:    vmovdqu8 %ymm12, %ymm10 {%k4}
-; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm9 = xmm9[u,u,u,u,u,1,7,13],zero,zero,zero,xmm9[5,11],zero,zero,zero
-; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm11 = xmm13[u,u,u,u,u],zero,zero,zero,xmm13[3,9,15],zero,zero,xmm13[1,7,13]
-; AVX512BW-NEXT:    vpor %xmm9, %xmm11, %xmm9
+; AVX512BW-NEXT:    vpor %xmm8, %xmm10, %xmm8
+; AVX512BW-NEXT:    vpshufb {{.*#+}} ymm8 {%k4} = ymm9[u,u,u,u,u,u,u,u,u,u,u,5,11,1,7,13,19,25,31,21,27,u,u,u,u,u,u,u,u,u,u,u]
+; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm9 = xmm12[u,u,u,u,u,1,7,13],zero,zero,zero,xmm12[5,11],zero,zero,zero
+; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm10 = xmm14[u,u,u,u,u],zero,zero,zero,xmm14[3,9,15],zero,zero,xmm14[1,7,13]
+; AVX512BW-NEXT:    vpor %xmm9, %xmm10, %xmm9
 ; AVX512BW-NEXT:    vinserti128 $1, %xmm9, %ymm0, %ymm9
-; AVX512BW-NEXT:    vmovdqu8 %ymm9, %ymm10 {%k2}
-; AVX512BW-NEXT:    vmovdqu16 %ymm6, %ymm1 {%k1}
-; AVX512BW-NEXT:    vextracti128 $1, %ymm1, %xmm6
-; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm9 = zero,zero,xmm6[0,6,12],zero,zero,zero,xmm6[4,10,u,u,u,u,u,u]
-; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm11 = xmm1[4,10],zero,zero,zero,xmm1[2,8,14],zero,zero,xmm1[u,u,u,u,u,u]
-; AVX512BW-NEXT:    vpor %xmm9, %xmm11, %xmm9
-; AVX512BW-NEXT:    vpshufb {{.*#+}} ymm11 = zero,zero,ymm2[0,6,12],zero,zero,zero,zero,zero,zero,zero,zero,ymm2[2,8,14],zero,zero,ymm2[16,22,28],zero,zero,zero,zero,zero,zero,zero,zero,ymm2[18,24,30]
-; AVX512BW-NEXT:    vpshufb {{.*#+}} ymm12 = ymm0[4,10],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[0,6,12],zero,zero,zero,ymm0[20,26],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,22,28],zero,zero,zero
-; AVX512BW-NEXT:    vpor %ymm11, %ymm12, %ymm11
-; AVX512BW-NEXT:    vpblendw {{.*#+}} xmm9 = xmm9[0,1,2,3,4],xmm11[5,6,7]
-; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm9 = ymm9[0,1,2,3],ymm11[4,5,6,7]
-; AVX512BW-NEXT:    vmovdqu16 %ymm3, %ymm4 {%k3}
-; AVX512BW-NEXT:    vextracti128 $1, %ymm4, %xmm3
-; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm11 = xmm3[u,u,u,u,u],zero,zero,zero,xmm3[4,10],zero,zero,zero,xmm3[2,8,14]
-; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm12 = xmm4[u,u,u,u,u,2,8,14],zero,zero,xmm4[0,6,12],zero,zero,zero
-; AVX512BW-NEXT:    vpor %xmm11, %xmm12, %xmm11
-; AVX512BW-NEXT:    vinserti128 $1, %xmm11, %ymm0, %ymm11
-; AVX512BW-NEXT:    vmovdqu8 %ymm11, %ymm9 {%k2}
-; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm6 = zero,zero,xmm6[1,7,13],zero,zero,zero,xmm6[5,11,u,u,u,u,u,u]
-; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[5,11],zero,zero,zero,xmm1[3,9,15],zero,zero,xmm1[u,u,u,u,u,u]
-; AVX512BW-NEXT:    vpor %xmm6, %xmm1, %xmm1
-; AVX512BW-NEXT:    vpshufb {{.*#+}} ymm2 = zero,zero,ymm2[1,7,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm2[3,9,15],zero,zero,ymm2[17,23,29],zero,zero,zero,zero,zero,zero,zero,zero,ymm2[19,25,31]
-; AVX512BW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[5,11],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[1,7,13],zero,zero,zero,ymm0[21,27],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[17,23,29],zero,zero,zero
-; AVX512BW-NEXT:    vpor %ymm2, %ymm0, %ymm0
-; AVX512BW-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3,4],xmm0[5,6,7]
-; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
-; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm1 = xmm3[u,u,u,u,u],zero,zero,zero,xmm3[5,11],zero,zero,zero,xmm3[3,9,15]
-; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm2 = xmm4[u,u,u,u,u,3,9,15],zero,zero,xmm4[1,7,13],zero,zero,zero
+; AVX512BW-NEXT:    vmovdqu8 %ymm9, %ymm8 {%k2}
+; AVX512BW-NEXT:    vpshufb {{.*#+}} ymm9 = ymm1[u,u,u,u,u,u,u,u,u,u,0,6,12,2,8,14,20,26,16,22,28,u,u,u,u,u,u,u,u,u,u,u]
+; AVX512BW-NEXT:    vmovdqu16 %ymm4, %ymm0 {%k1}
+; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm4
+; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm10 = zero,zero,xmm4[0,6,12],zero,zero,zero,xmm4[4,10,u,u,u,u,u,u]
+; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm11 = xmm0[4,10],zero,zero,zero,xmm0[2,8,14],zero,zero,xmm0[u,u,u,u,u,u]
+; AVX512BW-NEXT:    vpor %xmm10, %xmm11, %xmm10
+; AVX512BW-NEXT:    vpblendw {{.*#+}} xmm10 = xmm10[0,1,2,3,4],xmm9[5,6,7]
+; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm9 = ymm10[0,1,2,3],ymm9[4,5,6,7]
+; AVX512BW-NEXT:    vmovdqu16 %ymm2, %ymm3 {%k3}
+; AVX512BW-NEXT:    vextracti128 $1, %ymm3, %xmm2
+; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm10 = xmm2[u,u,u,u,u],zero,zero,zero,xmm2[4,10],zero,zero,zero,xmm2[2,8,14]
+; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm11 = xmm3[u,u,u,u,u,2,8,14],zero,zero,xmm3[0,6,12],zero,zero,zero
+; AVX512BW-NEXT:    vpor %xmm10, %xmm11, %xmm10
+; AVX512BW-NEXT:    vinserti128 $1, %xmm10, %ymm0, %ymm10
+; AVX512BW-NEXT:    vmovdqu8 %ymm10, %ymm9 {%k2}
+; AVX512BW-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[u,u,u,u,u,u,u,u,u,u,1,7,13,3,9,15,21,27,17,23,29,u,u,u,u,u,u,u,u,u,u,u]
+; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm4 = zero,zero,xmm4[1,7,13],zero,zero,zero,xmm4[5,11,u,u,u,u,u,u]
+; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[5,11],zero,zero,zero,xmm0[3,9,15],zero,zero,xmm0[u,u,u,u,u,u]
+; AVX512BW-NEXT:    vpor %xmm4, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3,4],xmm1[5,6,7]
+; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm1 = xmm2[u,u,u,u,u],zero,zero,zero,xmm2[5,11],zero,zero,zero,xmm2[3,9,15]
+; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm2 = xmm3[u,u,u,u,u,3,9,15],zero,zero,xmm3[1,7,13],zero,zero,zero
 ; AVX512BW-NEXT:    vpor %xmm1, %xmm2, %xmm1
 ; AVX512BW-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
 ; AVX512BW-NEXT:    vmovdqu8 %ymm1, %ymm0 {%k2}
 ; AVX512BW-NEXT:    vmovdqa %ymm5, (%rsi)
-; AVX512BW-NEXT:    vmovdqa %ymm7, (%rdx)
-; AVX512BW-NEXT:    vmovdqa %ymm8, (%rcx)
-; AVX512BW-NEXT:    vmovdqa %ymm10, (%r8)
+; AVX512BW-NEXT:    vmovdqa %ymm6, (%rdx)
+; AVX512BW-NEXT:    vmovdqa %ymm7, (%rcx)
+; AVX512BW-NEXT:    vmovdqa %ymm8, (%r8)
 ; AVX512BW-NEXT:    vmovdqa %ymm9, (%r9)
 ; AVX512BW-NEXT:    vmovdqa %ymm0, (%rax)
 ; AVX512BW-NEXT:    vzeroupper
@@ -2305,23 +2299,146 @@ define void @load_i8_stride6_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 define void @load_i8_stride6_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr %out.vec2, ptr %out.vec3, ptr %out.vec4, ptr %out.vec5) nounwind {
 ; SSE-LABEL: load_i8_stride6_vf64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    subq $824, %rsp # imm = 0x338
-; SSE-NEXT:    movdqa 256(%rdi), %xmm3
-; SSE-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa 272(%rdi), %xmm4
+; SSE-NEXT:    subq $808, %rsp # imm = 0x328
+; SSE-NEXT:    movdqa 64(%rdi), %xmm4
 ; SSE-NEXT:    movdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movaps 192(%rdi), %xmm0
-; SSE-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa 208(%rdi), %xmm2
+; SSE-NEXT:    movdqa 80(%rdi), %xmm5
+; SSE-NEXT:    movdqa %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa (%rdi), %xmm7
+; SSE-NEXT:    movdqa %xmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa 16(%rdi), %xmm6
+; SSE-NEXT:    movdqa %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa 32(%rdi), %xmm2
 ; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa 240(%rdi), %xmm14
+; SSE-NEXT:    movdqa 48(%rdi), %xmm0
+; SSE-NEXT:    movdqa {{.*#+}} xmm9 = [65535,65535,0,65535,65535,0,65535,65535]
+; SSE-NEXT:    movdqa %xmm9, %xmm1
+; SSE-NEXT:    pandn %xmm2, %xmm1
+; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [65535,0,65535,65535,0,65535,65535,0]
+; SSE-NEXT:    movdqa %xmm3, %xmm2
+; SSE-NEXT:    pandn %xmm0, %xmm2
+; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm9, %xmm2
+; SSE-NEXT:    pandn %xmm0, %xmm2
+; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    pand %xmm9, %xmm0
+; SSE-NEXT:    por %xmm1, %xmm0
+; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [255,255,255,255,255,255,255,255]
+; SSE-NEXT:    pand %xmm1, %xmm0
+; SSE-NEXT:    movdqa %xmm1, %xmm11
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm0[0,3,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,3,2,3]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,2,1]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6,5]
+; SSE-NEXT:    packuswb %xmm1, %xmm0
+; SSE-NEXT:    movdqa {{.*#+}} xmm8 = [65535,65535,65535,0,0,0,65535,65535]
+; SSE-NEXT:    movdqa %xmm3, %xmm1
+; SSE-NEXT:    pandn %xmm6, %xmm1
+; SSE-NEXT:    movdqa %xmm7, %xmm2
+; SSE-NEXT:    pand %xmm3, %xmm2
+; SSE-NEXT:    por %xmm1, %xmm2
+; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm2, %xmm1
+; SSE-NEXT:    pand %xmm11, %xmm1
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,1,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,6,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,1,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,3,2,1,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,7,6,7]
+; SSE-NEXT:    packuswb %xmm1, %xmm1
+; SSE-NEXT:    pand %xmm8, %xmm1
+; SSE-NEXT:    movdqa %xmm8, %xmm2
+; SSE-NEXT:    pandn %xmm0, %xmm2
+; SSE-NEXT:    por %xmm2, %xmm1
+; SSE-NEXT:    movdqa %xmm9, %xmm6
+; SSE-NEXT:    movdqa %xmm9, %xmm0
+; SSE-NEXT:    pandn %xmm5, %xmm0
+; SSE-NEXT:    pand %xmm9, %xmm4
+; SSE-NEXT:    por %xmm0, %xmm4
+; SSE-NEXT:    movdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm4, %xmm0
+; SSE-NEXT:    pand %xmm11, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,0]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[2,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,3,2,0]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,7,6,5]
+; SSE-NEXT:    packuswb %xmm0, %xmm0
+; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0]
+; SSE-NEXT:    movdqa %xmm4, %xmm2
+; SSE-NEXT:    pandn %xmm0, %xmm2
+; SSE-NEXT:    pand %xmm4, %xmm1
+; SSE-NEXT:    por %xmm1, %xmm2
+; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa 320(%rdi), %xmm1
+; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm9, %xmm0
+; SSE-NEXT:    pandn %xmm1, %xmm0
+; SSE-NEXT:    movdqa 336(%rdi), %xmm13
+; SSE-NEXT:    movdqa %xmm3, %xmm1
+; SSE-NEXT:    pandn %xmm13, %xmm1
+; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm9, %xmm1
+; SSE-NEXT:    pandn %xmm13, %xmm1
+; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    pand %xmm9, %xmm13
+; SSE-NEXT:    por %xmm0, %xmm13
+; SSE-NEXT:    movdqa %xmm13, %xmm0
+; SSE-NEXT:    pand %xmm11, %xmm0
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm0[0,3,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,3,2,3]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,2,1]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6,5]
+; SSE-NEXT:    packuswb %xmm1, %xmm0
+; SSE-NEXT:    movdqa %xmm8, %xmm2
+; SSE-NEXT:    pandn %xmm0, %xmm2
+; SSE-NEXT:    movdqa 304(%rdi), %xmm1
+; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm3, %xmm0
+; SSE-NEXT:    pandn %xmm1, %xmm0
+; SSE-NEXT:    movdqa 288(%rdi), %xmm7
+; SSE-NEXT:    movdqa %xmm7, %xmm1
+; SSE-NEXT:    pand %xmm3, %xmm1
+; SSE-NEXT:    por %xmm0, %xmm1
+; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    pand %xmm11, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,1,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,6,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,1,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,3,2,1,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,7,6,7]
+; SSE-NEXT:    packuswb %xmm0, %xmm0
+; SSE-NEXT:    pand %xmm8, %xmm0
+; SSE-NEXT:    por %xmm2, %xmm0
+; SSE-NEXT:    movdqa 368(%rdi), %xmm1
+; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm9, %xmm2
+; SSE-NEXT:    pandn %xmm1, %xmm2
+; SSE-NEXT:    movdqa 352(%rdi), %xmm1
+; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    pand %xmm9, %xmm1
+; SSE-NEXT:    por %xmm2, %xmm1
+; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm1, %xmm2
+; SSE-NEXT:    pand %xmm11, %xmm2
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[3,1,2,0]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[2,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,3,2,0]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,4,7,6,5]
+; SSE-NEXT:    packuswb %xmm2, %xmm2
+; SSE-NEXT:    movdqa %xmm4, %xmm1
+; SSE-NEXT:    pandn %xmm2, %xmm1
+; SSE-NEXT:    pand %xmm4, %xmm0
+; SSE-NEXT:    movdqa %xmm4, %xmm9
+; SSE-NEXT:    por %xmm0, %xmm1
+; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa 224(%rdi), %xmm1
 ; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa {{.*#+}} xmm6 = [65535,65535,0,65535,65535,0,65535,65535]
 ; SSE-NEXT:    movdqa %xmm6, %xmm0
 ; SSE-NEXT:    pandn %xmm1, %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm5 = [65535,0,65535,65535,0,65535,65535,0]
-; SSE-NEXT:    movdqa %xmm5, %xmm1
+; SSE-NEXT:    movdqa 240(%rdi), %xmm14
+; SSE-NEXT:    movdqa %xmm3, %xmm1
 ; SSE-NEXT:    pandn %xmm14, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa %xmm6, %xmm1
@@ -2329,224 +2446,106 @@ define void @load_i8_stride6_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    pand %xmm6, %xmm14
 ; SSE-NEXT:    por %xmm0, %xmm14
-; SSE-NEXT:    movdqa %xmm14, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa {{.*#+}} xmm15 = [255,255,255,255,255,255,255,255]
 ; SSE-NEXT:    movdqa %xmm14, %xmm0
-; SSE-NEXT:    pand %xmm15, %xmm0
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm0[0,3,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,3,2,3]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,2,1]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6,5]
-; SSE-NEXT:    packuswb %xmm1, %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm11 = [65535,65535,65535,0,0,0,65535,65535]
-; SSE-NEXT:    movdqa %xmm5, %xmm1
-; SSE-NEXT:    pandn %xmm2, %xmm1
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
-; SSE-NEXT:    pand %xmm5, %xmm2
-; SSE-NEXT:    por %xmm1, %xmm2
-; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm2, %xmm1
-; SSE-NEXT:    pand %xmm15, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,1,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,6,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,1,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,3,2,1,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,7,6,7]
-; SSE-NEXT:    packuswb %xmm1, %xmm1
-; SSE-NEXT:    pand %xmm11, %xmm1
-; SSE-NEXT:    movdqa %xmm11, %xmm2
-; SSE-NEXT:    pandn %xmm0, %xmm2
-; SSE-NEXT:    por %xmm2, %xmm1
-; SSE-NEXT:    movdqa %xmm6, %xmm0
-; SSE-NEXT:    pandn %xmm4, %xmm0
-; SSE-NEXT:    pand %xmm6, %xmm3
-; SSE-NEXT:    por %xmm0, %xmm3
-; SSE-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm3, %xmm0
-; SSE-NEXT:    pand %xmm15, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,0]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[2,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,3,2,0]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,7,6,5]
-; SSE-NEXT:    packuswb %xmm0, %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0]
-; SSE-NEXT:    movdqa %xmm3, %xmm2
-; SSE-NEXT:    pandn %xmm0, %xmm2
-; SSE-NEXT:    pand %xmm3, %xmm1
-; SSE-NEXT:    movdqa %xmm3, %xmm8
-; SSE-NEXT:    por %xmm1, %xmm2
-; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa 320(%rdi), %xmm1
-; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm6, %xmm0
-; SSE-NEXT:    pandn %xmm1, %xmm0
-; SSE-NEXT:    movdqa 336(%rdi), %xmm9
-; SSE-NEXT:    movdqa %xmm5, %xmm1
-; SSE-NEXT:    pandn %xmm9, %xmm1
-; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm6, %xmm1
-; SSE-NEXT:    pandn %xmm9, %xmm1
-; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pand %xmm6, %xmm9
-; SSE-NEXT:    por %xmm0, %xmm9
-; SSE-NEXT:    movdqa %xmm9, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm9, %xmm0
-; SSE-NEXT:    pand %xmm15, %xmm0
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm0[0,3,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,3,2,3]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,2,1]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6,5]
-; SSE-NEXT:    packuswb %xmm1, %xmm0
-; SSE-NEXT:    movdqa %xmm11, %xmm2
-; SSE-NEXT:    pandn %xmm0, %xmm2
-; SSE-NEXT:    movdqa 304(%rdi), %xmm1
-; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm5, %xmm0
-; SSE-NEXT:    pandn %xmm1, %xmm0
-; SSE-NEXT:    movdqa 288(%rdi), %xmm1
-; SSE-NEXT:    movdqa %xmm1, %xmm3
-; SSE-NEXT:    pand %xmm5, %xmm3
-; SSE-NEXT:    movdqa %xmm5, %xmm10
-; SSE-NEXT:    por %xmm0, %xmm3
-; SSE-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm3, %xmm0
-; SSE-NEXT:    pand %xmm15, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,1,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,6,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,1,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,3,2,1,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,7,6,7]
-; SSE-NEXT:    packuswb %xmm0, %xmm0
 ; SSE-NEXT:    pand %xmm11, %xmm0
-; SSE-NEXT:    por %xmm2, %xmm0
-; SSE-NEXT:    movdqa 368(%rdi), %xmm3
-; SSE-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm6, %xmm2
-; SSE-NEXT:    pandn %xmm3, %xmm2
-; SSE-NEXT:    movdqa 352(%rdi), %xmm3
-; SSE-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pand %xmm6, %xmm3
-; SSE-NEXT:    por %xmm2, %xmm3
-; SSE-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm3, %xmm2
-; SSE-NEXT:    pand %xmm15, %xmm2
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[3,1,2,0]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[2,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,3,2,0]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,4,7,6,5]
-; SSE-NEXT:    packuswb %xmm2, %xmm2
-; SSE-NEXT:    movdqa %xmm8, %xmm3
-; SSE-NEXT:    pandn %xmm2, %xmm3
-; SSE-NEXT:    pand %xmm8, %xmm0
-; SSE-NEXT:    por %xmm0, %xmm3
-; SSE-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa 32(%rdi), %xmm2
-; SSE-NEXT:    movdqa %xmm2, (%rsp) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm6, %xmm0
-; SSE-NEXT:    pandn %xmm2, %xmm0
-; SSE-NEXT:    movdqa 48(%rdi), %xmm12
-; SSE-NEXT:    movdqa %xmm5, %xmm2
-; SSE-NEXT:    pandn %xmm12, %xmm2
-; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm6, %xmm2
-; SSE-NEXT:    pandn %xmm12, %xmm2
-; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pand %xmm6, %xmm12
-; SSE-NEXT:    por %xmm0, %xmm12
-; SSE-NEXT:    movdqa %xmm12, %xmm0
-; SSE-NEXT:    pand %xmm15, %xmm0
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm0[0,3,2,3,4,5,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,3,2,3]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,2,1]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6,5]
 ; SSE-NEXT:    packuswb %xmm2, %xmm0
-; SSE-NEXT:    movdqa %xmm11, %xmm2
+; SSE-NEXT:    movdqa %xmm8, %xmm5
+; SSE-NEXT:    movdqa %xmm8, %xmm2
 ; SSE-NEXT:    pandn %xmm0, %xmm2
-; SSE-NEXT:    movdqa 16(%rdi), %xmm3
-; SSE-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm5, %xmm0
-; SSE-NEXT:    pandn %xmm3, %xmm0
-; SSE-NEXT:    movdqa (%rdi), %xmm9
-; SSE-NEXT:    movdqa %xmm9, %xmm4
-; SSE-NEXT:    pand %xmm5, %xmm4
+; SSE-NEXT:    movdqa 208(%rdi), %xmm4
+; SSE-NEXT:    movdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm3, %xmm1
+; SSE-NEXT:    movdqa %xmm3, %xmm0
+; SSE-NEXT:    pandn %xmm4, %xmm0
+; SSE-NEXT:    movdqa 192(%rdi), %xmm3
+; SSE-NEXT:    movdqa %xmm3, %xmm4
+; SSE-NEXT:    pand %xmm1, %xmm4
+; SSE-NEXT:    movdqa %xmm1, %xmm8
 ; SSE-NEXT:    por %xmm0, %xmm4
 ; SSE-NEXT:    movdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa %xmm4, %xmm0
-; SSE-NEXT:    pand %xmm15, %xmm0
+; SSE-NEXT:    pand %xmm11, %xmm0
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,1,3]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,6,5,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,1,3]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,3,2,1,4,5,6,7]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,7,6,7]
 ; SSE-NEXT:    packuswb %xmm0, %xmm0
-; SSE-NEXT:    pand %xmm11, %xmm0
+; SSE-NEXT:    pand %xmm5, %xmm0
+; SSE-NEXT:    movdqa %xmm5, %xmm1
 ; SSE-NEXT:    por %xmm2, %xmm0
-; SSE-NEXT:    movdqa 80(%rdi), %xmm14
+; SSE-NEXT:    movdqa 272(%rdi), %xmm15
 ; SSE-NEXT:    movdqa %xmm6, %xmm2
-; SSE-NEXT:    pandn %xmm14, %xmm2
-; SSE-NEXT:    movdqa 64(%rdi), %xmm13
-; SSE-NEXT:    movdqa %xmm13, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pand %xmm6, %xmm13
-; SSE-NEXT:    por %xmm2, %xmm13
-; SSE-NEXT:    movdqa %xmm13, %xmm2
-; SSE-NEXT:    pand %xmm15, %xmm2
+; SSE-NEXT:    pandn %xmm15, %xmm2
+; SSE-NEXT:    movdqa 256(%rdi), %xmm12
+; SSE-NEXT:    movdqa %xmm12, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    pand %xmm6, %xmm12
+; SSE-NEXT:    por %xmm2, %xmm12
+; SSE-NEXT:    movdqa %xmm12, %xmm2
+; SSE-NEXT:    pand %xmm11, %xmm2
 ; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[3,1,2,0]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[2,1,2,3,4,5,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,3,2,0]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,4,7,6,5]
 ; SSE-NEXT:    packuswb %xmm2, %xmm2
-; SSE-NEXT:    movdqa %xmm8, %xmm4
+; SSE-NEXT:    movdqa %xmm9, %xmm4
 ; SSE-NEXT:    pandn %xmm2, %xmm4
-; SSE-NEXT:    pand %xmm8, %xmm0
+; SSE-NEXT:    pand %xmm9, %xmm0
 ; SSE-NEXT:    por %xmm0, %xmm4
 ; SSE-NEXT:    movdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa 128(%rdi), %xmm2
-; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm2, (%rsp) # 16-byte Spill
 ; SSE-NEXT:    movdqa %xmm6, %xmm0
 ; SSE-NEXT:    pandn %xmm2, %xmm0
-; SSE-NEXT:    movdqa 144(%rdi), %xmm7
-; SSE-NEXT:    movdqa %xmm5, %xmm4
-; SSE-NEXT:    pandn %xmm7, %xmm4
+; SSE-NEXT:    movdqa 144(%rdi), %xmm10
+; SSE-NEXT:    movdqa %xmm8, %xmm4
+; SSE-NEXT:    pandn %xmm10, %xmm4
 ; SSE-NEXT:    movdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa %xmm6, %xmm4
-; SSE-NEXT:    pandn %xmm7, %xmm4
+; SSE-NEXT:    pandn %xmm10, %xmm4
 ; SSE-NEXT:    movdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pand %xmm6, %xmm7
-; SSE-NEXT:    por %xmm0, %xmm7
-; SSE-NEXT:    movdqa %xmm7, %xmm0
-; SSE-NEXT:    pand %xmm15, %xmm0
+; SSE-NEXT:    pand %xmm6, %xmm10
+; SSE-NEXT:    por %xmm0, %xmm10
+; SSE-NEXT:    movdqa %xmm10, %xmm0
+; SSE-NEXT:    pand %xmm11, %xmm0
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm5 = xmm0[0,3,2,3,4,5,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[0,3,2,3]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,2,1]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6,5]
 ; SSE-NEXT:    packuswb %xmm5, %xmm0
+; SSE-NEXT:    movdqa %xmm1, %xmm11
 ; SSE-NEXT:    pandn %xmm0, %xmm11
 ; SSE-NEXT:    movdqa %xmm6, %xmm0
 ; SSE-NEXT:    movdqa %xmm6, %xmm4
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Reload
-; SSE-NEXT:    pandn %xmm3, %xmm4
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; SSE-NEXT:    pandn %xmm1, %xmm4
 ; SSE-NEXT:    movdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa %xmm6, %xmm2
-; SSE-NEXT:    pandn %xmm1, %xmm2
+; SSE-NEXT:    pandn %xmm7, %xmm2
 ; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm1, %xmm4
-; SSE-NEXT:    movdqa %xmm6, %xmm1
-; SSE-NEXT:    pandn %xmm9, %xmm1
-; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm9, %xmm5
+; SSE-NEXT:    movdqa %xmm7, %xmm4
+; SSE-NEXT:    movdqa %xmm6, %xmm2
+; SSE-NEXT:    pandn %xmm3, %xmm2
+; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm3, %xmm5
 ; SSE-NEXT:    movdqa 112(%rdi), %xmm6
-; SSE-NEXT:    movdqa %xmm10, %xmm9
-; SSE-NEXT:    pandn %xmm6, %xmm10
+; SSE-NEXT:    movdqa %xmm8, %xmm7
+; SSE-NEXT:    movdqa %xmm8, %xmm9
+; SSE-NEXT:    pandn %xmm6, %xmm9
 ; SSE-NEXT:    movdqa 160(%rdi), %xmm8
 ; SSE-NEXT:    movdqa %xmm8, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    pand %xmm0, %xmm8
-; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    movdqa %xmm0, %xmm3
 ; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
-; SSE-NEXT:    pandn %xmm2, %xmm1
-; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pand %xmm0, %xmm3
+; SSE-NEXT:    pandn %xmm2, %xmm3
 ; SSE-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm9, %xmm1
+; SSE-NEXT:    pand %xmm0, %xmm1
+; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm7, %xmm1
 ; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Reload
 ; SSE-NEXT:    pandn %xmm3, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -2558,7 +2557,7 @@ define void @load_i8_stride6_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; SSE-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    pand %xmm0, %xmm4
 ; SSE-NEXT:    movdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm9, %xmm3
+; SSE-NEXT:    movdqa %xmm7, %xmm3
 ; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Reload
 ; SSE-NEXT:    pandn %xmm4, %xmm3
 ; SSE-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -2571,21 +2570,22 @@ define void @load_i8_stride6_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; SSE-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    pand %xmm0, %xmm5
 ; SSE-NEXT:    movdqa %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm9, %xmm3
-; SSE-NEXT:    pandn %xmm14, %xmm3
+; SSE-NEXT:    movdqa %xmm7, %xmm3
+; SSE-NEXT:    pandn %xmm15, %xmm3
 ; SSE-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pand %xmm0, %xmm14
-; SSE-NEXT:    movdqa %xmm14, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    pand %xmm0, %xmm15
+; SSE-NEXT:    movdqa %xmm15, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa %xmm0, %xmm3
 ; SSE-NEXT:    pandn %xmm6, %xmm3
 ; SSE-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm6, %xmm15
 ; SSE-NEXT:    movdqa 96(%rdi), %xmm5
 ; SSE-NEXT:    movdqa %xmm5, %xmm3
 ; SSE-NEXT:    pand %xmm0, %xmm3
 ; SSE-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa 176(%rdi), %xmm14
-; SSE-NEXT:    movdqa %xmm14, %xmm3
-; SSE-NEXT:    movdqa %xmm14, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa 176(%rdi), %xmm6
+; SSE-NEXT:    movdqa %xmm6, %xmm3
+; SSE-NEXT:    movdqa %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    pand %xmm0, %xmm3
 ; SSE-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Reload
@@ -2600,52 +2600,54 @@ define void @load_i8_stride6_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    pand %xmm0, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa (%rsp), %xmm1 # 16-byte Reload
-; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pand %xmm0, %xmm1
-; SSE-NEXT:    movdqa %xmm1, (%rsp) # 16-byte Spill
-; SSE-NEXT:    pand %xmm0, %xmm4
-; SSE-NEXT:    movdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    pand %xmm0, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    pand %xmm0, %xmm4
+; SSE-NEXT:    movdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa (%rsp), %xmm1 # 16-byte Reload
+; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    pand %xmm0, %xmm1
+; SSE-NEXT:    movdqa %xmm1, (%rsp) # 16-byte Spill
 ; SSE-NEXT:    movdqa %xmm0, %xmm1
-; SSE-NEXT:    pand %xmm0, %xmm6
-; SSE-NEXT:    movdqa %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    pand %xmm0, %xmm15
+; SSE-NEXT:    movdqa %xmm15, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    pandn %xmm5, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm5, %xmm2
-; SSE-NEXT:    pand %xmm9, %xmm2
-; SSE-NEXT:    por %xmm10, %xmm2
-; SSE-NEXT:    movdqa %xmm2, %xmm5
-; SSE-NEXT:    pand %xmm15, %xmm5
+; SSE-NEXT:    movdqa %xmm5, %xmm3
+; SSE-NEXT:    pand %xmm7, %xmm3
+; SSE-NEXT:    por %xmm9, %xmm3
+; SSE-NEXT:    movdqa %xmm3, %xmm5
+; SSE-NEXT:    movdqa {{.*#+}} xmm7 = [255,255,255,255,255,255,255,255]
+; SSE-NEXT:    pand %xmm7, %xmm5
 ; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[0,2,1,3]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm5 = xmm5[0,1,2,3,6,5,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[0,2,1,3]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm5 = xmm5[0,3,2,1,4,5,6,7]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm5 = xmm5[0,1,2,3,4,7,6,7]
 ; SSE-NEXT:    packuswb %xmm5, %xmm5
-; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [65535,65535,65535,0,0,0,65535,65535]
-; SSE-NEXT:    pand %xmm4, %xmm5
+; SSE-NEXT:    movdqa {{.*#+}} xmm9 = [65535,65535,65535,0,0,0,65535,65535]
+; SSE-NEXT:    pand %xmm9, %xmm5
 ; SSE-NEXT:    por %xmm11, %xmm5
-; SSE-NEXT:    pandn %xmm14, %xmm0
+; SSE-NEXT:    pandn %xmm6, %xmm0
 ; SSE-NEXT:    por %xmm0, %xmm8
 ; SSE-NEXT:    movdqa %xmm8, %xmm0
-; SSE-NEXT:    pand %xmm15, %xmm0
+; SSE-NEXT:    pand %xmm7, %xmm0
+; SSE-NEXT:    movdqa %xmm7, %xmm11
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,0]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[2,1,2,3,4,5,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,3,2,0]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,7,6,5]
 ; SSE-NEXT:    packuswb %xmm0, %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm9 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0]
-; SSE-NEXT:    movdqa %xmm9, %xmm1
+; SSE-NEXT:    movdqa {{.*#+}} xmm7 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0]
+; SSE-NEXT:    movdqa %xmm7, %xmm1
 ; SSE-NEXT:    pandn %xmm0, %xmm1
-; SSE-NEXT:    pand %xmm9, %xmm5
+; SSE-NEXT:    pand %xmm7, %xmm5
 ; SSE-NEXT:    por %xmm5, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    pxor %xmm5, %xmm5
@@ -2653,196 +2655,195 @@ define void @load_i8_stride6_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
 ; SSE-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8],xmm5[8],xmm0[9],xmm5[9],xmm0[10],xmm5[10],xmm0[11],xmm5[11],xmm0[12],xmm5[12],xmm0[13],xmm5[13],xmm0[14],xmm5[14],xmm0[15],xmm5[15]
 ; SSE-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm5[0],xmm1[1],xmm5[1],xmm1[2],xmm5[2],xmm1[3],xmm5[3],xmm1[4],xmm5[4],xmm1[5],xmm5[5],xmm1[6],xmm5[6],xmm1[7],xmm5[7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm1[2,2,3,3]
-; SSE-NEXT:    punpcklwd {{.*#+}} xmm6 = xmm6[0],xmm0[0],xmm6[1],xmm0[1],xmm6[2],xmm0[2],xmm6[3],xmm0[3]
+; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[2,2,3,3]
+; SSE-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm0[0],xmm4[1],xmm0[1],xmm4[2],xmm0[2],xmm4[3],xmm0[3]
 ; SSE-NEXT:    psrld $16, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm14 = xmm1[0,1,0,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm14 = xmm14[0,1,2,3,5,7,6,7]
-; SSE-NEXT:    punpckhdq {{.*#+}} xmm14 = xmm14[2],xmm0[2],xmm14[3],xmm0[3]
-; SSE-NEXT:    packuswb %xmm14, %xmm6
-; SSE-NEXT:    movdqa %xmm4, %xmm1
-; SSE-NEXT:    pandn %xmm6, %xmm1
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Reload
-; SSE-NEXT:    movdqa %xmm3, %xmm6
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm6 = xmm6[8],xmm5[8],xmm6[9],xmm5[9],xmm6[10],xmm5[10],xmm6[11],xmm5[11],xmm6[12],xmm5[12],xmm6[13],xmm5[13],xmm6[14],xmm5[14],xmm6[15],xmm5[15]
-; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[2,1,0,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm6 = xmm6[1,1,1,1,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,5,7,6,7]
-; SSE-NEXT:    movdqa {{.*#+}} xmm14 = [65535,65535,0,65535,0,0,65535,65535]
-; SSE-NEXT:    movdqa %xmm14, %xmm0
-; SSE-NEXT:    pandn %xmm6, %xmm0
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm5[0],xmm3[1],xmm5[1],xmm3[2],xmm5[2],xmm3[3],xmm5[3],xmm3[4],xmm5[4],xmm3[5],xmm5[5],xmm3[6],xmm5[6],xmm3[7],xmm5[7]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm6 = xmm3[3,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[0,3,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm6 = xmm6[1,3,2,0,4,5,6,7]
-; SSE-NEXT:    pand %xmm14, %xmm6
-; SSE-NEXT:    por %xmm0, %xmm6
-; SSE-NEXT:    packuswb %xmm6, %xmm6
-; SSE-NEXT:    pand %xmm4, %xmm6
-; SSE-NEXT:    movdqa %xmm4, %xmm10
-; SSE-NEXT:    por %xmm1, %xmm6
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Reload
-; SSE-NEXT:    movdqa %xmm4, %xmm0
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm5[0],xmm0[1],xmm5[1],xmm0[2],xmm5[2],xmm0[3],xmm5[3],xmm0[4],xmm5[4],xmm0[5],xmm5[5],xmm0[6],xmm5[6],xmm0[7],xmm5[7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm3 = xmm0[0,1,2,3,5,5,5,5]
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [65535,65535,65535,0,65535,65535,0,65535]
-; SSE-NEXT:    movdqa %xmm1, %xmm0
-; SSE-NEXT:    pandn %xmm3, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm15 = xmm1[0,1,0,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm15 = xmm15[0,1,2,3,5,7,6,7]
+; SSE-NEXT:    punpckhdq {{.*#+}} xmm15 = xmm15[2],xmm0[2],xmm15[3],xmm0[3]
+; SSE-NEXT:    packuswb %xmm15, %xmm4
+; SSE-NEXT:    movdqa %xmm9, %xmm1
+; SSE-NEXT:    pandn %xmm4, %xmm1
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
+; SSE-NEXT:    movdqa %xmm2, %xmm4
 ; SSE-NEXT:    punpckhbw {{.*#+}} xmm4 = xmm4[8],xmm5[8],xmm4[9],xmm5[9],xmm4[10],xmm5[10],xmm4[11],xmm5[11],xmm4[12],xmm5[12],xmm4[13],xmm5[13],xmm4[14],xmm5[14],xmm4[15],xmm5[15]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm3 = xmm4[3,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[2,1,0,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm4 = xmm4[1,1,1,1,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm4 = xmm4[0,1,2,3,5,7,6,7]
+; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [65535,65535,0,65535,0,0,65535,65535]
+; SSE-NEXT:    movdqa %xmm0, %xmm15
+; SSE-NEXT:    pandn %xmm4, %xmm15
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm5[0],xmm2[1],xmm5[1],xmm2[2],xmm5[2],xmm2[3],xmm5[3],xmm2[4],xmm5[4],xmm2[5],xmm5[5],xmm2[6],xmm5[6],xmm2[7],xmm5[7]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm4 = xmm2[3,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,3,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm4 = xmm4[1,3,2,0,4,5,6,7]
+; SSE-NEXT:    pand %xmm0, %xmm4
+; SSE-NEXT:    por %xmm15, %xmm4
+; SSE-NEXT:    packuswb %xmm4, %xmm4
+; SSE-NEXT:    pand %xmm9, %xmm4
+; SSE-NEXT:    por %xmm1, %xmm4
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Reload
+; SSE-NEXT:    movdqa %xmm6, %xmm1
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm5[0],xmm1[1],xmm5[1],xmm1[2],xmm5[2],xmm1[3],xmm5[3],xmm1[4],xmm5[4],xmm1[5],xmm5[5],xmm1[6],xmm5[6],xmm1[7],xmm5[7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm15 = xmm1[0,1,2,3,5,5,5,5]
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [65535,65535,65535,0,65535,65535,0,65535]
+; SSE-NEXT:    movdqa %xmm2, %xmm1
+; SSE-NEXT:    pandn %xmm15, %xmm1
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm6 = xmm6[8],xmm5[8],xmm6[9],xmm5[9],xmm6[10],xmm5[10],xmm6[11],xmm5[11],xmm6[12],xmm5[12],xmm6[13],xmm5[13],xmm6[14],xmm5[14],xmm6[15],xmm5[15]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm15 = xmm6[3,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm15 = xmm15[0,1,0,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm15 = xmm15[0,1,2,3,5,7,6,4]
+; SSE-NEXT:    pand %xmm2, %xmm15
+; SSE-NEXT:    por %xmm1, %xmm15
+; SSE-NEXT:    packuswb %xmm15, %xmm1
+; SSE-NEXT:    movdqa %xmm7, %xmm15
+; SSE-NEXT:    pandn %xmm1, %xmm15
+; SSE-NEXT:    pand %xmm7, %xmm4
+; SSE-NEXT:    por %xmm4, %xmm15
+; SSE-NEXT:    movdqa %xmm15, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm13, %xmm1
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8],xmm5[8],xmm1[9],xmm5[9],xmm1[10],xmm5[10],xmm1[11],xmm5[11],xmm1[12],xmm5[12],xmm1[13],xmm5[13],xmm1[14],xmm5[14],xmm1[15],xmm5[15]
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm13 = xmm13[0],xmm5[0],xmm13[1],xmm5[1],xmm13[2],xmm5[2],xmm13[3],xmm5[3],xmm13[4],xmm5[4],xmm13[5],xmm5[5],xmm13[6],xmm5[6],xmm13[7],xmm5[7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm13[2,2,3,3]
+; SSE-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm1[0],xmm4[1],xmm1[1],xmm4[2],xmm1[2],xmm4[3],xmm1[3]
+; SSE-NEXT:    psrld $16, %xmm1
+; SSE-NEXT:    pshufd {{.*#+}} xmm13 = xmm13[0,1,0,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm13 = xmm13[0,1,2,3,5,7,6,7]
+; SSE-NEXT:    punpckhdq {{.*#+}} xmm13 = xmm13[2],xmm1[2],xmm13[3],xmm1[3]
+; SSE-NEXT:    packuswb %xmm13, %xmm4
+; SSE-NEXT:    movdqa %xmm9, %xmm15
+; SSE-NEXT:    movdqa %xmm9, %xmm1
+; SSE-NEXT:    pandn %xmm4, %xmm1
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Reload
+; SSE-NEXT:    movdqa %xmm6, %xmm4
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm4 = xmm4[8],xmm5[8],xmm4[9],xmm5[9],xmm4[10],xmm5[10],xmm4[11],xmm5[11],xmm4[12],xmm5[12],xmm4[13],xmm5[13],xmm4[14],xmm5[14],xmm4[15],xmm5[15]
+; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[2,1,0,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm4 = xmm4[1,1,1,1,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm4 = xmm4[0,1,2,3,5,7,6,7]
+; SSE-NEXT:    movdqa %xmm0, %xmm13
+; SSE-NEXT:    pandn %xmm4, %xmm13
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm6 = xmm6[0],xmm5[0],xmm6[1],xmm5[1],xmm6[2],xmm5[2],xmm6[3],xmm5[3],xmm6[4],xmm5[4],xmm6[5],xmm5[5],xmm6[6],xmm5[6],xmm6[7],xmm5[7]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm4 = xmm6[3,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,3,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm4 = xmm4[1,3,2,0,4,5,6,7]
+; SSE-NEXT:    pand %xmm0, %xmm4
+; SSE-NEXT:    por %xmm13, %xmm4
+; SSE-NEXT:    packuswb %xmm4, %xmm4
+; SSE-NEXT:    pand %xmm9, %xmm4
+; SSE-NEXT:    por %xmm1, %xmm4
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Reload
+; SSE-NEXT:    movdqa %xmm6, %xmm1
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm5[0],xmm1[1],xmm5[1],xmm1[2],xmm5[2],xmm1[3],xmm5[3],xmm1[4],xmm5[4],xmm1[5],xmm5[5],xmm1[6],xmm5[6],xmm1[7],xmm5[7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,5,5,5,5]
+; SSE-NEXT:    movdqa %xmm2, %xmm13
+; SSE-NEXT:    pandn %xmm1, %xmm13
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm6 = xmm6[8],xmm5[8],xmm6[9],xmm5[9],xmm6[10],xmm5[10],xmm6[11],xmm5[11],xmm6[12],xmm5[12],xmm6[13],xmm5[13],xmm6[14],xmm5[14],xmm6[15],xmm5[15]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm6[3,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,5,7,6,4]
+; SSE-NEXT:    pand %xmm2, %xmm1
+; SSE-NEXT:    por %xmm13, %xmm1
+; SSE-NEXT:    packuswb %xmm1, %xmm1
+; SSE-NEXT:    movdqa %xmm7, %xmm13
+; SSE-NEXT:    pandn %xmm1, %xmm13
+; SSE-NEXT:    pand %xmm7, %xmm4
+; SSE-NEXT:    por %xmm4, %xmm13
+; SSE-NEXT:    movdqa %xmm13, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm14, %xmm1
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8],xmm5[8],xmm1[9],xmm5[9],xmm1[10],xmm5[10],xmm1[11],xmm5[11],xmm1[12],xmm5[12],xmm1[13],xmm5[13],xmm1[14],xmm5[14],xmm1[15],xmm5[15]
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm14 = xmm14[0],xmm5[0],xmm14[1],xmm5[1],xmm14[2],xmm5[2],xmm14[3],xmm5[3],xmm14[4],xmm5[4],xmm14[5],xmm5[5],xmm14[6],xmm5[6],xmm14[7],xmm5[7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm14[2,2,3,3]
+; SSE-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm1[0],xmm4[1],xmm1[1],xmm4[2],xmm1[2],xmm4[3],xmm1[3]
+; SSE-NEXT:    psrld $16, %xmm1
+; SSE-NEXT:    pshufd {{.*#+}} xmm9 = xmm14[0,1,0,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm9 = xmm9[0,1,2,3,5,7,6,7]
+; SSE-NEXT:    punpckhdq {{.*#+}} xmm9 = xmm9[2],xmm1[2],xmm9[3],xmm1[3]
+; SSE-NEXT:    packuswb %xmm9, %xmm4
+; SSE-NEXT:    movdqa %xmm15, %xmm1
+; SSE-NEXT:    pandn %xmm4, %xmm1
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Reload
+; SSE-NEXT:    movdqa %xmm6, %xmm4
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm4 = xmm4[8],xmm5[8],xmm4[9],xmm5[9],xmm4[10],xmm5[10],xmm4[11],xmm5[11],xmm4[12],xmm5[12],xmm4[13],xmm5[13],xmm4[14],xmm5[14],xmm4[15],xmm5[15]
+; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[2,1,0,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm4 = xmm4[1,1,1,1,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm4 = xmm4[0,1,2,3,5,7,6,7]
+; SSE-NEXT:    movdqa %xmm0, %xmm9
+; SSE-NEXT:    pandn %xmm4, %xmm9
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm6 = xmm6[0],xmm5[0],xmm6[1],xmm5[1],xmm6[2],xmm5[2],xmm6[3],xmm5[3],xmm6[4],xmm5[4],xmm6[5],xmm5[5],xmm6[6],xmm5[6],xmm6[7],xmm5[7]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm4 = xmm6[3,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,3,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm4 = xmm4[1,3,2,0,4,5,6,7]
+; SSE-NEXT:    pand %xmm0, %xmm4
+; SSE-NEXT:    por %xmm9, %xmm4
+; SSE-NEXT:    packuswb %xmm4, %xmm4
+; SSE-NEXT:    pand %xmm15, %xmm4
+; SSE-NEXT:    por %xmm1, %xmm4
+; SSE-NEXT:    movdqa %xmm12, %xmm1
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm5[0],xmm1[1],xmm5[1],xmm1[2],xmm5[2],xmm1[3],xmm5[3],xmm1[4],xmm5[4],xmm1[5],xmm5[5],xmm1[6],xmm5[6],xmm1[7],xmm5[7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,5,5,5,5]
+; SSE-NEXT:    movdqa %xmm2, %xmm9
+; SSE-NEXT:    pandn %xmm1, %xmm9
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm12 = xmm12[8],xmm5[8],xmm12[9],xmm5[9],xmm12[10],xmm5[10],xmm12[11],xmm5[11],xmm12[12],xmm5[12],xmm12[13],xmm5[13],xmm12[14],xmm5[14],xmm12[15],xmm5[15]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm12[3,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,5,7,6,4]
+; SSE-NEXT:    pand %xmm2, %xmm1
+; SSE-NEXT:    por %xmm9, %xmm1
+; SSE-NEXT:    packuswb %xmm1, %xmm1
+; SSE-NEXT:    movdqa %xmm7, %xmm9
+; SSE-NEXT:    pandn %xmm1, %xmm9
+; SSE-NEXT:    pand %xmm7, %xmm4
+; SSE-NEXT:    por %xmm4, %xmm9
+; SSE-NEXT:    movdqa %xmm9, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm10, %xmm1
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8],xmm5[8],xmm1[9],xmm5[9],xmm1[10],xmm5[10],xmm1[11],xmm5[11],xmm1[12],xmm5[12],xmm1[13],xmm5[13],xmm1[14],xmm5[14],xmm1[15],xmm5[15]
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm10 = xmm10[0],xmm5[0],xmm10[1],xmm5[1],xmm10[2],xmm5[2],xmm10[3],xmm5[3],xmm10[4],xmm5[4],xmm10[5],xmm5[5],xmm10[6],xmm5[6],xmm10[7],xmm5[7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm10[2,2,3,3]
+; SSE-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm1[0],xmm4[1],xmm1[1],xmm4[2],xmm1[2],xmm4[3],xmm1[3]
+; SSE-NEXT:    psrld $16, %xmm1
+; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm10[0,1,0,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,5,7,6,7]
+; SSE-NEXT:    punpckhdq {{.*#+}} xmm6 = xmm6[2],xmm1[2],xmm6[3],xmm1[3]
+; SSE-NEXT:    packuswb %xmm6, %xmm4
+; SSE-NEXT:    movdqa %xmm3, %xmm1
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8],xmm5[8],xmm1[9],xmm5[9],xmm1[10],xmm5[10],xmm1[11],xmm5[11],xmm1[12],xmm5[12],xmm1[13],xmm5[13],xmm1[14],xmm5[14],xmm1[15],xmm5[15]
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,1,0,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[1,1,1,1,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,5,7,6,7]
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm5[0],xmm3[1],xmm5[1],xmm3[2],xmm5[2],xmm3[3],xmm5[3],xmm3[4],xmm5[4],xmm3[5],xmm5[5],xmm3[6],xmm5[6],xmm3[7],xmm5[7]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm3 = xmm3[3,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,3,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm3 = xmm3[1,3,2,0,4,5,6,7]
+; SSE-NEXT:    pand %xmm0, %xmm3
+; SSE-NEXT:    pandn %xmm1, %xmm0
+; SSE-NEXT:    por %xmm3, %xmm0
+; SSE-NEXT:    packuswb %xmm0, %xmm0
+; SSE-NEXT:    movdqa %xmm15, %xmm1
+; SSE-NEXT:    pand %xmm15, %xmm0
+; SSE-NEXT:    pandn %xmm4, %xmm1
+; SSE-NEXT:    por %xmm1, %xmm0
+; SSE-NEXT:    movdqa %xmm8, %xmm1
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm5[0],xmm1[1],xmm5[1],xmm1[2],xmm5[2],xmm1[3],xmm5[3],xmm1[4],xmm5[4],xmm1[5],xmm5[5],xmm1[6],xmm5[6],xmm1[7],xmm5[7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,5,5,5,5]
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm8 = xmm8[8],xmm5[8],xmm8[9],xmm5[9],xmm8[10],xmm5[10],xmm8[11],xmm5[11],xmm8[12],xmm5[12],xmm8[13],xmm5[13],xmm8[14],xmm5[14],xmm8[15],xmm5[15]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm3 = xmm8[3,1,2,3,4,5,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,1,0,3]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm3 = xmm3[0,1,2,3,5,7,6,4]
-; SSE-NEXT:    pand %xmm1, %xmm3
-; SSE-NEXT:    por %xmm0, %xmm3
-; SSE-NEXT:    packuswb %xmm3, %xmm0
-; SSE-NEXT:    movdqa %xmm9, %xmm3
-; SSE-NEXT:    pandn %xmm0, %xmm3
-; SSE-NEXT:    pand %xmm9, %xmm6
-; SSE-NEXT:    por %xmm6, %xmm3
-; SSE-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Reload
-; SSE-NEXT:    movdqa %xmm4, %xmm0
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8],xmm5[8],xmm0[9],xmm5[9],xmm0[10],xmm5[10],xmm0[11],xmm5[11],xmm0[12],xmm5[12],xmm0[13],xmm5[13],xmm0[14],xmm5[14],xmm0[15],xmm5[15]
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[1],xmm5[1],xmm4[2],xmm5[2],xmm4[3],xmm5[3],xmm4[4],xmm5[4],xmm4[5],xmm5[5],xmm4[6],xmm5[6],xmm4[7],xmm5[7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm4[2,2,3,3]
-; SSE-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm0[0],xmm3[1],xmm0[1],xmm3[2],xmm0[2],xmm3[3],xmm0[3]
-; SSE-NEXT:    psrld $16, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm4[0,1,0,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,5,7,6,7]
-; SSE-NEXT:    punpckhdq {{.*#+}} xmm6 = xmm6[2],xmm0[2],xmm6[3],xmm0[3]
-; SSE-NEXT:    packuswb %xmm6, %xmm3
-; SSE-NEXT:    movdqa %xmm10, %xmm0
-; SSE-NEXT:    pandn %xmm3, %xmm0
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Reload
-; SSE-NEXT:    movdqa %xmm4, %xmm3
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8],xmm5[8],xmm3[9],xmm5[9],xmm3[10],xmm5[10],xmm3[11],xmm5[11],xmm3[12],xmm5[12],xmm3[13],xmm5[13],xmm3[14],xmm5[14],xmm3[15],xmm5[15]
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[2,1,0,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm3 = xmm3[1,1,1,1,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm3 = xmm3[0,1,2,3,5,7,6,7]
-; SSE-NEXT:    movdqa %xmm14, %xmm6
-; SSE-NEXT:    pandn %xmm3, %xmm6
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[1],xmm5[1],xmm4[2],xmm5[2],xmm4[3],xmm5[3],xmm4[4],xmm5[4],xmm4[5],xmm5[5],xmm4[6],xmm5[6],xmm4[7],xmm5[7]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm3 = xmm4[3,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,3,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm3 = xmm3[1,3,2,0,4,5,6,7]
-; SSE-NEXT:    pand %xmm14, %xmm3
-; SSE-NEXT:    por %xmm6, %xmm3
-; SSE-NEXT:    packuswb %xmm3, %xmm3
-; SSE-NEXT:    pand %xmm10, %xmm3
-; SSE-NEXT:    por %xmm0, %xmm3
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Reload
-; SSE-NEXT:    movdqa %xmm4, %xmm0
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm5[0],xmm0[1],xmm5[1],xmm0[2],xmm5[2],xmm0[3],xmm5[3],xmm0[4],xmm5[4],xmm0[5],xmm5[5],xmm0[6],xmm5[6],xmm0[7],xmm5[7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,5,5,5]
-; SSE-NEXT:    movdqa %xmm1, %xmm6
-; SSE-NEXT:    pandn %xmm0, %xmm6
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm4 = xmm4[8],xmm5[8],xmm4[9],xmm5[9],xmm4[10],xmm5[10],xmm4[11],xmm5[11],xmm4[12],xmm5[12],xmm4[13],xmm5[13],xmm4[14],xmm5[14],xmm4[15],xmm5[15]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm4[3,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,7,6,4]
-; SSE-NEXT:    pand %xmm1, %xmm0
-; SSE-NEXT:    por %xmm6, %xmm0
-; SSE-NEXT:    packuswb %xmm0, %xmm0
-; SSE-NEXT:    movdqa %xmm9, %xmm6
-; SSE-NEXT:    pandn %xmm0, %xmm6
-; SSE-NEXT:    pand %xmm9, %xmm3
-; SSE-NEXT:    por %xmm3, %xmm6
-; SSE-NEXT:    movdqa %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm12, %xmm0
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8],xmm5[8],xmm0[9],xmm5[9],xmm0[10],xmm5[10],xmm0[11],xmm5[11],xmm0[12],xmm5[12],xmm0[13],xmm5[13],xmm0[14],xmm5[14],xmm0[15],xmm5[15]
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm12 = xmm12[0],xmm5[0],xmm12[1],xmm5[1],xmm12[2],xmm5[2],xmm12[3],xmm5[3],xmm12[4],xmm5[4],xmm12[5],xmm5[5],xmm12[6],xmm5[6],xmm12[7],xmm5[7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm12[2,2,3,3]
-; SSE-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm0[0],xmm3[1],xmm0[1],xmm3[2],xmm0[2],xmm3[3],xmm0[3]
-; SSE-NEXT:    psrld $16, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm12[0,1,0,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,5,7,6,7]
-; SSE-NEXT:    punpckhdq {{.*#+}} xmm6 = xmm6[2],xmm0[2],xmm6[3],xmm0[3]
-; SSE-NEXT:    packuswb %xmm6, %xmm3
-; SSE-NEXT:    movdqa %xmm10, %xmm0
-; SSE-NEXT:    pandn %xmm3, %xmm0
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Reload
-; SSE-NEXT:    movdqa %xmm4, %xmm3
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8],xmm5[8],xmm3[9],xmm5[9],xmm3[10],xmm5[10],xmm3[11],xmm5[11],xmm3[12],xmm5[12],xmm3[13],xmm5[13],xmm3[14],xmm5[14],xmm3[15],xmm5[15]
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[2,1,0,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm3 = xmm3[1,1,1,1,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm3 = xmm3[0,1,2,3,5,7,6,7]
-; SSE-NEXT:    movdqa %xmm14, %xmm6
-; SSE-NEXT:    pandn %xmm3, %xmm6
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[1],xmm5[1],xmm4[2],xmm5[2],xmm4[3],xmm5[3],xmm4[4],xmm5[4],xmm4[5],xmm5[5],xmm4[6],xmm5[6],xmm4[7],xmm5[7]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm3 = xmm4[3,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,3,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm3 = xmm3[1,3,2,0,4,5,6,7]
-; SSE-NEXT:    pand %xmm14, %xmm3
-; SSE-NEXT:    por %xmm6, %xmm3
-; SSE-NEXT:    packuswb %xmm3, %xmm3
-; SSE-NEXT:    pand %xmm10, %xmm3
-; SSE-NEXT:    por %xmm0, %xmm3
-; SSE-NEXT:    movdqa %xmm13, %xmm0
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm5[0],xmm0[1],xmm5[1],xmm0[2],xmm5[2],xmm0[3],xmm5[3],xmm0[4],xmm5[4],xmm0[5],xmm5[5],xmm0[6],xmm5[6],xmm0[7],xmm5[7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,5,5,5]
-; SSE-NEXT:    movdqa %xmm1, %xmm6
-; SSE-NEXT:    pandn %xmm0, %xmm6
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm13 = xmm13[8],xmm5[8],xmm13[9],xmm5[9],xmm13[10],xmm5[10],xmm13[11],xmm5[11],xmm13[12],xmm5[12],xmm13[13],xmm5[13],xmm13[14],xmm5[14],xmm13[15],xmm5[15]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm13[3,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,7,6,4]
-; SSE-NEXT:    pand %xmm1, %xmm0
-; SSE-NEXT:    por %xmm6, %xmm0
-; SSE-NEXT:    packuswb %xmm0, %xmm0
-; SSE-NEXT:    movdqa %xmm9, %xmm6
-; SSE-NEXT:    pandn %xmm0, %xmm6
-; SSE-NEXT:    pand %xmm9, %xmm3
-; SSE-NEXT:    por %xmm3, %xmm6
-; SSE-NEXT:    movdqa %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm7, %xmm0
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8],xmm5[8],xmm0[9],xmm5[9],xmm0[10],xmm5[10],xmm0[11],xmm5[11],xmm0[12],xmm5[12],xmm0[13],xmm5[13],xmm0[14],xmm5[14],xmm0[15],xmm5[15]
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm7 = xmm7[0],xmm5[0],xmm7[1],xmm5[1],xmm7[2],xmm5[2],xmm7[3],xmm5[3],xmm7[4],xmm5[4],xmm7[5],xmm5[5],xmm7[6],xmm5[6],xmm7[7],xmm5[7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm7[2,2,3,3]
-; SSE-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm0[0],xmm3[1],xmm0[1],xmm3[2],xmm0[2],xmm3[3],xmm0[3]
-; SSE-NEXT:    psrld $16, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm7[0,1,0,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm4 = xmm4[0,1,2,3,5,7,6,7]
-; SSE-NEXT:    punpckhdq {{.*#+}} xmm4 = xmm4[2],xmm0[2],xmm4[3],xmm0[3]
-; SSE-NEXT:    packuswb %xmm4, %xmm3
-; SSE-NEXT:    movdqa %xmm2, %xmm0
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8],xmm5[8],xmm0[9],xmm5[9],xmm0[10],xmm5[10],xmm0[11],xmm5[11],xmm0[12],xmm5[12],xmm0[13],xmm5[13],xmm0[14],xmm5[14],xmm0[15],xmm5[15]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,1,0,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[1,1,1,1,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,7,6,7]
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm5[0],xmm2[1],xmm5[1],xmm2[2],xmm5[2],xmm2[3],xmm5[3],xmm2[4],xmm5[4],xmm2[5],xmm5[5],xmm2[6],xmm5[6],xmm2[7],xmm5[7]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[3,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,3,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[1,3,2,0,4,5,6,7]
-; SSE-NEXT:    pand %xmm14, %xmm2
-; SSE-NEXT:    pandn %xmm0, %xmm14
-; SSE-NEXT:    por %xmm2, %xmm14
-; SSE-NEXT:    packuswb %xmm14, %xmm14
-; SSE-NEXT:    movdqa %xmm10, %xmm0
-; SSE-NEXT:    pand %xmm10, %xmm14
-; SSE-NEXT:    pandn %xmm3, %xmm0
-; SSE-NEXT:    por %xmm0, %xmm14
-; SSE-NEXT:    movdqa %xmm8, %xmm0
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm5[0],xmm0[1],xmm5[1],xmm0[2],xmm5[2],xmm0[3],xmm5[3],xmm0[4],xmm5[4],xmm0[5],xmm5[5],xmm0[6],xmm5[6],xmm0[7],xmm5[7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,5,5,5]
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm8 = xmm8[8],xmm5[8],xmm8[9],xmm5[9],xmm8[10],xmm5[10],xmm8[11],xmm5[11],xmm8[12],xmm5[12],xmm8[13],xmm5[13],xmm8[14],xmm5[14],xmm8[15],xmm5[15]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm8[3,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,1,0,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,5,7,6,4]
-; SSE-NEXT:    pand %xmm1, %xmm2
-; SSE-NEXT:    pandn %xmm0, %xmm1
-; SSE-NEXT:    por %xmm2, %xmm1
-; SSE-NEXT:    packuswb %xmm1, %xmm0
-; SSE-NEXT:    movdqa %xmm9, %xmm1
-; SSE-NEXT:    pandn %xmm0, %xmm1
-; SSE-NEXT:    pand %xmm9, %xmm14
-; SSE-NEXT:    por %xmm14, %xmm1
-; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa {{.*#+}} xmm14 = [65535,0,65535,65535,0,65535,65535,0]
+; SSE-NEXT:    pand %xmm2, %xmm3
+; SSE-NEXT:    pandn %xmm1, %xmm2
+; SSE-NEXT:    por %xmm3, %xmm2
+; SSE-NEXT:    packuswb %xmm2, %xmm1
+; SSE-NEXT:    movdqa %xmm7, %xmm2
+; SSE-NEXT:    pandn %xmm1, %xmm2
+; SSE-NEXT:    pand %xmm7, %xmm0
+; SSE-NEXT:    por %xmm0, %xmm2
+; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa {{.*#+}} xmm12 = [65535,0,65535,65535,0,65535,65535,0]
 ; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE-NEXT:    pand %xmm14, %xmm0
+; SSE-NEXT:    pand %xmm12, %xmm0
 ; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pand %xmm15, %xmm0
+; SSE-NEXT:    pand %xmm11, %xmm0
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm0[0,1,2,3,4,7,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[1,2,3,3,4,5,6,7]
@@ -2853,821 +2854,828 @@ define void @load_i8_stride6_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Reload
 ; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Folded Reload
 ; SSE-NEXT:    movdqa %xmm6, %xmm1
-; SSE-NEXT:    pand %xmm15, %xmm1
+; SSE-NEXT:    pand %xmm11, %xmm1
+; SSE-NEXT:    movdqa %xmm11, %xmm4
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[2,1,2,3,4,5,6,7]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5,4,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,3,2,3]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[1,2,3,0,4,5,6,7]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,5,5,5,5]
 ; SSE-NEXT:    packuswb %xmm1, %xmm1
-; SSE-NEXT:    movdqa {{.*#+}} xmm8 = [0,0,0,0,0,255,255,255,255,255,255,255,255,255,255,255]
-; SSE-NEXT:    movdqa %xmm8, %xmm3
-; SSE-NEXT:    pandn %xmm1, %xmm3
-; SSE-NEXT:    pand %xmm8, %xmm0
-; SSE-NEXT:    por %xmm0, %xmm3
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE-NEXT:    pandn {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE-NEXT:    por %xmm0, %xmm1
-; SSE-NEXT:    movdqa %xmm1, %xmm0
-; SSE-NEXT:    movdqa %xmm1, %xmm5
-; SSE-NEXT:    pand %xmm15, %xmm0
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,3,2,3,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,6,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,2,0]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[2,2,2,2,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,6,7,4]
-; SSE-NEXT:    packuswb %xmm0, %xmm0
-; SSE-NEXT:    movdqa %xmm9, %xmm2
-; SSE-NEXT:    movdqa %xmm9, %xmm1
-; SSE-NEXT:    pandn %xmm0, %xmm1
-; SSE-NEXT:    pand %xmm9, %xmm3
-; SSE-NEXT:    por %xmm3, %xmm1
-; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE-NEXT:    pand %xmm14, %xmm0
-; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pand %xmm15, %xmm0
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm0[0,1,2,3,4,7,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[1,2,3,3,4,5,6,7]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,3,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,4,5,6]
-; SSE-NEXT:    packuswb %xmm1, %xmm0
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm9 # 16-byte Reload
-; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm9 # 16-byte Folded Reload
-; SSE-NEXT:    movdqa %xmm9, %xmm1
-; SSE-NEXT:    pand %xmm15, %xmm1
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[2,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5,4,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,3,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[1,2,3,0,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,5,5,5,5]
-; SSE-NEXT:    packuswb %xmm1, %xmm1
-; SSE-NEXT:    movdqa %xmm8, %xmm3
-; SSE-NEXT:    pandn %xmm1, %xmm3
-; SSE-NEXT:    pand %xmm8, %xmm0
-; SSE-NEXT:    por %xmm0, %xmm3
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE-NEXT:    pandn {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm11 # 16-byte Reload
-; SSE-NEXT:    por %xmm0, %xmm11
-; SSE-NEXT:    movdqa %xmm11, %xmm0
-; SSE-NEXT:    pand %xmm15, %xmm0
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,3,2,3,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,6,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,2,0]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[2,2,2,2,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,6,7,4]
-; SSE-NEXT:    packuswb %xmm0, %xmm0
-; SSE-NEXT:    movdqa %xmm2, %xmm1
-; SSE-NEXT:    pandn %xmm0, %xmm1
-; SSE-NEXT:    pand %xmm2, %xmm3
-; SSE-NEXT:    por %xmm3, %xmm1
-; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE-NEXT:    pand %xmm14, %xmm0
-; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pand %xmm15, %xmm0
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm0[0,1,2,3,4,7,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[1,2,3,3,4,5,6,7]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,3,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,4,5,6]
-; SSE-NEXT:    packuswb %xmm1, %xmm0
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm7 # 16-byte Reload
-; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm7 # 16-byte Folded Reload
-; SSE-NEXT:    movdqa %xmm7, %xmm1
-; SSE-NEXT:    pand %xmm15, %xmm1
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[2,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5,4,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,3,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[1,2,3,0,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,5,5,5,5]
-; SSE-NEXT:    packuswb %xmm1, %xmm1
-; SSE-NEXT:    movdqa %xmm8, %xmm3
-; SSE-NEXT:    pandn %xmm1, %xmm3
-; SSE-NEXT:    pand %xmm8, %xmm0
-; SSE-NEXT:    por %xmm0, %xmm3
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE-NEXT:    pandn {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm13 # 16-byte Reload
-; SSE-NEXT:    por %xmm0, %xmm13
-; SSE-NEXT:    movdqa %xmm13, %xmm0
-; SSE-NEXT:    pand %xmm15, %xmm0
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,3,2,3,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,6,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,2,0]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[2,2,2,2,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,6,7,4]
-; SSE-NEXT:    packuswb %xmm0, %xmm0
-; SSE-NEXT:    movdqa %xmm2, %xmm1
-; SSE-NEXT:    pandn %xmm0, %xmm1
-; SSE-NEXT:    pand %xmm2, %xmm3
-; SSE-NEXT:    por %xmm3, %xmm1
-; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE-NEXT:    pand %xmm14, %xmm0
-; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pand %xmm15, %xmm0
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm0[0,1,2,3,4,7,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[1,2,3,3,4,5,6,7]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,3,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,4,5,6]
-; SSE-NEXT:    packuswb %xmm1, %xmm0
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm12 # 16-byte Reload
-; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm12 # 16-byte Folded Reload
-; SSE-NEXT:    movdqa %xmm12, %xmm1
-; SSE-NEXT:    pand %xmm15, %xmm1
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[2,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5,4,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,3,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[1,2,3,0,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,5,5,5,5]
-; SSE-NEXT:    packuswb %xmm1, %xmm1
-; SSE-NEXT:    movdqa %xmm8, %xmm3
-; SSE-NEXT:    pandn %xmm1, %xmm3
-; SSE-NEXT:    pand %xmm8, %xmm0
-; SSE-NEXT:    por %xmm0, %xmm3
+; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [0,0,0,0,0,255,255,255,255,255,255,255,255,255,255,255]
+; SSE-NEXT:    movdqa %xmm3, %xmm2
+; SSE-NEXT:    pandn %xmm1, %xmm2
+; SSE-NEXT:    pand %xmm3, %xmm0
+; SSE-NEXT:    por %xmm0, %xmm2
 ; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    pandn {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm14 # 16-byte Reload
 ; SSE-NEXT:    por %xmm0, %xmm14
 ; SSE-NEXT:    movdqa %xmm14, %xmm0
-; SSE-NEXT:    pand %xmm15, %xmm0
+; SSE-NEXT:    pand %xmm11, %xmm0
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,3,2,3,4,5,6,7]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,6,5,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,2,0]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[2,2,2,2,4,5,6,7]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,6,7,4]
 ; SSE-NEXT:    packuswb %xmm0, %xmm0
-; SSE-NEXT:    movdqa %xmm2, %xmm1
+; SSE-NEXT:    movdqa %xmm7, %xmm1
 ; SSE-NEXT:    pandn %xmm0, %xmm1
-; SSE-NEXT:    pand %xmm2, %xmm3
-; SSE-NEXT:    por %xmm3, %xmm1
+; SSE-NEXT:    pand %xmm7, %xmm2
+; SSE-NEXT:    por %xmm2, %xmm1
+; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; SSE-NEXT:    pand %xmm12, %xmm1
+; SSE-NEXT:    movdqa %xmm12, %xmm10
+; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    movdqa %xmm1, %xmm12
+; SSE-NEXT:    pand %xmm11, %xmm0
+; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm0[0,1,2,3,4,7,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[1,2,3,3,4,5,6,7]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,3,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,4,5,6]
+; SSE-NEXT:    packuswb %xmm1, %xmm0
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
+; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Folded Reload
+; SSE-NEXT:    movdqa %xmm15, %xmm1
+; SSE-NEXT:    pand %xmm11, %xmm1
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[2,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5,4,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,3,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[1,2,3,0,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,5,5,5,5]
+; SSE-NEXT:    packuswb %xmm1, %xmm1
+; SSE-NEXT:    movdqa %xmm3, %xmm2
+; SSE-NEXT:    pandn %xmm1, %xmm2
+; SSE-NEXT:    pand %xmm3, %xmm0
+; SSE-NEXT:    por %xmm0, %xmm2
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; SSE-NEXT:    pandn {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm9 # 16-byte Reload
+; SSE-NEXT:    por %xmm0, %xmm9
+; SSE-NEXT:    movdqa %xmm9, %xmm0
+; SSE-NEXT:    pand %xmm11, %xmm0
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,3,2,3,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,6,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,2,0]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[2,2,2,2,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,6,7,4]
+; SSE-NEXT:    packuswb %xmm0, %xmm0
+; SSE-NEXT:    movdqa %xmm7, %xmm1
+; SSE-NEXT:    pandn %xmm0, %xmm1
+; SSE-NEXT:    pand %xmm7, %xmm2
+; SSE-NEXT:    por %xmm2, %xmm1
+; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm8 # 16-byte Reload
+; SSE-NEXT:    pand %xmm10, %xmm8
+; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm8 # 16-byte Folded Reload
+; SSE-NEXT:    movdqa %xmm8, %xmm0
+; SSE-NEXT:    pand %xmm11, %xmm0
+; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm0[0,1,2,3,4,7,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[1,2,3,3,4,5,6,7]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,3,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,4,5,6]
+; SSE-NEXT:    packuswb %xmm1, %xmm0
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm13 # 16-byte Reload
+; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm13 # 16-byte Folded Reload
+; SSE-NEXT:    movdqa %xmm13, %xmm1
+; SSE-NEXT:    pand %xmm11, %xmm1
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[2,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5,4,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,3,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[1,2,3,0,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,5,5,5,5]
+; SSE-NEXT:    packuswb %xmm1, %xmm1
+; SSE-NEXT:    movdqa %xmm3, %xmm2
+; SSE-NEXT:    pandn %xmm1, %xmm2
+; SSE-NEXT:    pand %xmm3, %xmm0
+; SSE-NEXT:    por %xmm0, %xmm2
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; SSE-NEXT:    pandn {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; SSE-NEXT:    por %xmm0, %xmm1
+; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    pand %xmm11, %xmm0
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,3,2,3,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,6,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,2,0]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[2,2,2,2,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,6,7,4]
+; SSE-NEXT:    packuswb %xmm0, %xmm0
+; SSE-NEXT:    movdqa %xmm7, %xmm1
+; SSE-NEXT:    pandn %xmm0, %xmm1
+; SSE-NEXT:    pand %xmm7, %xmm2
+; SSE-NEXT:    por %xmm2, %xmm1
+; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm7 # 16-byte Reload
+; SSE-NEXT:    pand %xmm10, %xmm7
+; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm7 # 16-byte Folded Reload
+; SSE-NEXT:    movdqa %xmm7, %xmm0
+; SSE-NEXT:    pand %xmm11, %xmm0
+; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm0[0,1,2,3,4,7,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[1,2,3,3,4,5,6,7]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,3,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,4,5,6]
+; SSE-NEXT:    packuswb %xmm1, %xmm0
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm11 # 16-byte Reload
+; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm11 # 16-byte Folded Reload
+; SSE-NEXT:    movdqa %xmm11, %xmm1
+; SSE-NEXT:    pand %xmm4, %xmm1
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[2,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5,4,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,3,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[1,2,3,0,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,5,5,5,5]
+; SSE-NEXT:    packuswb %xmm1, %xmm1
+; SSE-NEXT:    movdqa %xmm3, %xmm2
+; SSE-NEXT:    pandn %xmm1, %xmm2
+; SSE-NEXT:    pand %xmm3, %xmm0
+; SSE-NEXT:    por %xmm0, %xmm2
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; SSE-NEXT:    pandn {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm10 # 16-byte Reload
+; SSE-NEXT:    por %xmm0, %xmm10
+; SSE-NEXT:    movdqa %xmm10, %xmm0
+; SSE-NEXT:    pand %xmm4, %xmm0
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,3,2,3,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,6,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,2,0]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[2,2,2,2,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,6,7,4]
+; SSE-NEXT:    packuswb %xmm0, %xmm0
+; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0]
+; SSE-NEXT:    movdqa %xmm4, %xmm1
+; SSE-NEXT:    pandn %xmm0, %xmm1
+; SSE-NEXT:    pand %xmm4, %xmm2
+; SSE-NEXT:    por %xmm2, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Reload
 ; SSE-NEXT:    movdqa %xmm4, %xmm0
-; SSE-NEXT:    pxor %xmm10, %xmm10
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm10[0],xmm0[1],xmm10[1],xmm0[2],xmm10[2],xmm0[3],xmm10[3],xmm0[4],xmm10[4],xmm0[5],xmm10[5],xmm0[6],xmm10[6],xmm0[7],xmm10[7]
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm4 = xmm4[8],xmm10[8],xmm4[9],xmm10[9],xmm4[10],xmm10[10],xmm4[11],xmm10[11],xmm4[12],xmm10[12],xmm4[13],xmm10[13],xmm4[14],xmm10[14],xmm4[15],xmm10[15]
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm5[0],xmm0[1],xmm5[1],xmm0[2],xmm5[2],xmm0[3],xmm5[3],xmm0[4],xmm5[4],xmm0[5],xmm5[5],xmm0[6],xmm5[6],xmm0[7],xmm5[7]
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm4 = xmm4[8],xmm5[8],xmm4[9],xmm5[9],xmm4[10],xmm5[10],xmm4[11],xmm5[11],xmm4[12],xmm5[12],xmm4[13],xmm5[13],xmm4[14],xmm5[14],xmm4[15],xmm5[15]
 ; SSE-NEXT:    movdqa %xmm4, %xmm1
 ; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,0],xmm0[3,0]
-; SSE-NEXT:    movaps %xmm0, %xmm3
-; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[0,1],xmm1[0,2]
+; SSE-NEXT:    movaps %xmm0, %xmm2
+; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,1],xmm1[0,2]
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,0],xmm4[0,0]
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0],xmm4[2,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm3[0,1,2,3,7,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm2[0,1,2,3,7,5,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,2]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,1,2,3,4,5,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,3,2,3]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,1,3,3,4,5,6,7]
 ; SSE-NEXT:    packuswb %xmm0, %xmm1
 ; SSE-NEXT:    movdqa %xmm6, %xmm0
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm10[0],xmm0[1],xmm10[1],xmm0[2],xmm10[2],xmm0[3],xmm10[3],xmm0[4],xmm10[4],xmm0[5],xmm10[5],xmm0[6],xmm10[6],xmm0[7],xmm10[7]
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm5[0],xmm0[1],xmm5[1],xmm0[2],xmm5[2],xmm0[3],xmm5[3],xmm0[4],xmm5[4],xmm0[5],xmm5[5],xmm0[6],xmm5[6],xmm0[7],xmm5[7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,1,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,1,2,1,4,5,6,7]
-; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [0,65535,65535,0,65535,65535,65535,65535]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm0[3,1,2,1,4,5,6,7]
+; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [0,65535,65535,0,65535,65535,65535,65535]
+; SSE-NEXT:    movdqa %xmm0, %xmm4
+; SSE-NEXT:    pandn %xmm2, %xmm4
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm6 = xmm6[8],xmm5[8],xmm6[9],xmm5[9],xmm6[10],xmm5[10],xmm6[11],xmm5[11],xmm6[12],xmm5[12],xmm6[13],xmm5[13],xmm6[14],xmm5[14],xmm6[15],xmm5[15]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm6[0,3,2,1]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,1,3,3,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,7,7,7,7]
+; SSE-NEXT:    pand %xmm0, %xmm2
+; SSE-NEXT:    por %xmm4, %xmm2
+; SSE-NEXT:    packuswb %xmm2, %xmm2
 ; SSE-NEXT:    movdqa %xmm3, %xmm4
-; SSE-NEXT:    pandn %xmm0, %xmm4
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm6 = xmm6[8],xmm10[8],xmm6[9],xmm10[9],xmm6[10],xmm10[10],xmm6[11],xmm10[11],xmm6[12],xmm10[12],xmm6[13],xmm10[13],xmm6[14],xmm10[14],xmm6[15],xmm10[15]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm6[0,3,2,1]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,1,3,3,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,7,7,7]
-; SSE-NEXT:    pand %xmm3, %xmm0
-; SSE-NEXT:    por %xmm4, %xmm0
-; SSE-NEXT:    packuswb %xmm0, %xmm0
-; SSE-NEXT:    movdqa %xmm8, %xmm6
-; SSE-NEXT:    pandn %xmm0, %xmm6
-; SSE-NEXT:    pand %xmm8, %xmm1
-; SSE-NEXT:    por %xmm1, %xmm6
-; SSE-NEXT:    movdqa %xmm5, %xmm1
-; SSE-NEXT:    movdqa %xmm5, %xmm0
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8],xmm10[8],xmm0[9],xmm10[9],xmm0[10],xmm10[10],xmm0[11],xmm10[11],xmm0[12],xmm10[12],xmm0[13],xmm10[13],xmm0[14],xmm10[14],xmm0[15],xmm10[15]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,2,1]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,5,6,5]
-; SSE-NEXT:    movdqa {{.*#+}} xmm5 = [65535,65535,65535,65535,0,65535,65535,0]
-; SSE-NEXT:    movdqa %xmm5, %xmm4
-; SSE-NEXT:    pandn %xmm0, %xmm4
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm10[0],xmm1[1],xmm10[1],xmm1[2],xmm10[2],xmm1[3],xmm10[3],xmm1[4],xmm10[4],xmm1[5],xmm10[5],xmm1[6],xmm10[6],xmm1[7],xmm10[7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,2,0,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,7,7]
-; SSE-NEXT:    pand %xmm5, %xmm0
-; SSE-NEXT:    por %xmm4, %xmm0
-; SSE-NEXT:    packuswb %xmm0, %xmm0
-; SSE-NEXT:    movdqa %xmm2, %xmm1
-; SSE-NEXT:    pandn %xmm0, %xmm1
-; SSE-NEXT:    pand %xmm2, %xmm6
-; SSE-NEXT:    movdqa %xmm2, %xmm4
-; SSE-NEXT:    por %xmm6, %xmm1
-; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE-NEXT:    movdqa %xmm1, %xmm0
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm10[0],xmm0[1],xmm10[1],xmm0[2],xmm10[2],xmm0[3],xmm10[3],xmm0[4],xmm10[4],xmm0[5],xmm10[5],xmm0[6],xmm10[6],xmm0[7],xmm10[7]
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8],xmm10[8],xmm1[9],xmm10[9],xmm1[10],xmm10[10],xmm1[11],xmm10[11],xmm1[12],xmm10[12],xmm1[13],xmm10[13],xmm1[14],xmm10[14],xmm1[15],xmm10[15]
-; SSE-NEXT:    movdqa %xmm1, %xmm2
-; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[2,0],xmm0[3,0]
-; SSE-NEXT:    movaps %xmm0, %xmm6
-; SSE-NEXT:    shufps {{.*#+}} xmm6 = xmm6[0,1],xmm2[0,2]
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,0],xmm1[0,0]
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0],xmm1[2,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm6[0,1,2,3,7,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,2]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,3,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,1,3,3,4,5,6,7]
-; SSE-NEXT:    packuswb %xmm0, %xmm1
-; SSE-NEXT:    movdqa %xmm9, %xmm0
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm10[0],xmm0[1],xmm10[1],xmm0[2],xmm10[2],xmm0[3],xmm10[3],xmm0[4],xmm10[4],xmm0[5],xmm10[5],xmm0[6],xmm10[6],xmm0[7],xmm10[7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,1,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,1,2,1,4,5,6,7]
-; SSE-NEXT:    movdqa %xmm3, %xmm6
-; SSE-NEXT:    pandn %xmm0, %xmm6
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm9 = xmm9[8],xmm10[8],xmm9[9],xmm10[9],xmm9[10],xmm10[10],xmm9[11],xmm10[11],xmm9[12],xmm10[12],xmm9[13],xmm10[13],xmm9[14],xmm10[14],xmm9[15],xmm10[15]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm9[0,3,2,1]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,1,3,3,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,7,7,7]
-; SSE-NEXT:    pand %xmm3, %xmm0
-; SSE-NEXT:    por %xmm6, %xmm0
-; SSE-NEXT:    packuswb %xmm0, %xmm0
-; SSE-NEXT:    movdqa %xmm8, %xmm6
-; SSE-NEXT:    pandn %xmm0, %xmm6
-; SSE-NEXT:    pand %xmm8, %xmm1
-; SSE-NEXT:    por %xmm1, %xmm6
-; SSE-NEXT:    movdqa %xmm11, %xmm0
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8],xmm10[8],xmm0[9],xmm10[9],xmm0[10],xmm10[10],xmm0[11],xmm10[11],xmm0[12],xmm10[12],xmm0[13],xmm10[13],xmm0[14],xmm10[14],xmm0[15],xmm10[15]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,2,1]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,5,6,5]
-; SSE-NEXT:    movdqa %xmm5, %xmm1
-; SSE-NEXT:    pandn %xmm0, %xmm1
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm11 = xmm11[0],xmm10[0],xmm11[1],xmm10[1],xmm11[2],xmm10[2],xmm11[3],xmm10[3],xmm11[4],xmm10[4],xmm11[5],xmm10[5],xmm11[6],xmm10[6],xmm11[7],xmm10[7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm11[0,2,0,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,7,7]
-; SSE-NEXT:    pand %xmm5, %xmm0
-; SSE-NEXT:    por %xmm1, %xmm0
-; SSE-NEXT:    packuswb %xmm0, %xmm0
-; SSE-NEXT:    movdqa %xmm4, %xmm1
-; SSE-NEXT:    pandn %xmm0, %xmm1
-; SSE-NEXT:    pand %xmm4, %xmm6
-; SSE-NEXT:    por %xmm6, %xmm1
-; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm9 # 16-byte Reload
-; SSE-NEXT:    movdqa %xmm9, %xmm0
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm10[0],xmm0[1],xmm10[1],xmm0[2],xmm10[2],xmm0[3],xmm10[3],xmm0[4],xmm10[4],xmm0[5],xmm10[5],xmm0[6],xmm10[6],xmm0[7],xmm10[7]
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm9 = xmm9[8],xmm10[8],xmm9[9],xmm10[9],xmm9[10],xmm10[10],xmm9[11],xmm10[11],xmm9[12],xmm10[12],xmm9[13],xmm10[13],xmm9[14],xmm10[14],xmm9[15],xmm10[15]
-; SSE-NEXT:    movdqa %xmm9, %xmm1
-; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,0],xmm0[3,0]
-; SSE-NEXT:    movaps %xmm0, %xmm6
-; SSE-NEXT:    shufps {{.*#+}} xmm6 = xmm6[0,1],xmm1[0,2]
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,0],xmm9[0,0]
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0],xmm9[2,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm6[0,1,2,3,7,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,2]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,3,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,1,3,3,4,5,6,7]
-; SSE-NEXT:    packuswb %xmm0, %xmm1
-; SSE-NEXT:    movdqa %xmm7, %xmm0
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm10[0],xmm0[1],xmm10[1],xmm0[2],xmm10[2],xmm0[3],xmm10[3],xmm0[4],xmm10[4],xmm0[5],xmm10[5],xmm0[6],xmm10[6],xmm0[7],xmm10[7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,1,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,1,2,1,4,5,6,7]
-; SSE-NEXT:    movdqa %xmm3, %xmm6
-; SSE-NEXT:    pandn %xmm0, %xmm6
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm7 = xmm7[8],xmm10[8],xmm7[9],xmm10[9],xmm7[10],xmm10[10],xmm7[11],xmm10[11],xmm7[12],xmm10[12],xmm7[13],xmm10[13],xmm7[14],xmm10[14],xmm7[15],xmm10[15]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm7[0,3,2,1]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,1,3,3,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,7,7,7]
-; SSE-NEXT:    pand %xmm3, %xmm0
-; SSE-NEXT:    por %xmm6, %xmm0
-; SSE-NEXT:    packuswb %xmm0, %xmm0
-; SSE-NEXT:    movdqa %xmm8, %xmm6
-; SSE-NEXT:    pandn %xmm0, %xmm6
-; SSE-NEXT:    pand %xmm8, %xmm1
-; SSE-NEXT:    por %xmm1, %xmm6
-; SSE-NEXT:    movdqa %xmm13, %xmm0
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8],xmm10[8],xmm0[9],xmm10[9],xmm0[10],xmm10[10],xmm0[11],xmm10[11],xmm0[12],xmm10[12],xmm0[13],xmm10[13],xmm0[14],xmm10[14],xmm0[15],xmm10[15]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,2,1]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,5,6,5]
-; SSE-NEXT:    movdqa %xmm5, %xmm1
-; SSE-NEXT:    pandn %xmm0, %xmm1
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm13 = xmm13[0],xmm10[0],xmm13[1],xmm10[1],xmm13[2],xmm10[2],xmm13[3],xmm10[3],xmm13[4],xmm10[4],xmm13[5],xmm10[5],xmm13[6],xmm10[6],xmm13[7],xmm10[7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm13[0,2,0,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,7,7]
-; SSE-NEXT:    pand %xmm5, %xmm0
-; SSE-NEXT:    por %xmm1, %xmm0
-; SSE-NEXT:    packuswb %xmm0, %xmm1
-; SSE-NEXT:    movdqa %xmm4, %xmm0
-; SSE-NEXT:    pandn %xmm1, %xmm0
-; SSE-NEXT:    pand %xmm4, %xmm6
-; SSE-NEXT:    por %xmm6, %xmm0
-; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE-NEXT:    movdqa %xmm0, %xmm1
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm10[0],xmm1[1],xmm10[1],xmm1[2],xmm10[2],xmm1[3],xmm10[3],xmm1[4],xmm10[4],xmm1[5],xmm10[5],xmm1[6],xmm10[6],xmm1[7],xmm10[7]
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8],xmm10[8],xmm0[9],xmm10[9],xmm0[10],xmm10[10],xmm0[11],xmm10[11],xmm0[12],xmm10[12],xmm0[13],xmm10[13],xmm0[14],xmm10[14],xmm0[15],xmm10[15]
-; SSE-NEXT:    movdqa %xmm0, %xmm6
-; SSE-NEXT:    shufps {{.*#+}} xmm6 = xmm6[2,0],xmm1[3,0]
-; SSE-NEXT:    movaps %xmm1, %xmm7
-; SSE-NEXT:    shufps {{.*#+}} xmm7 = xmm7[0,1],xmm6[0,2]
-; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,0],xmm0[0,0]
-; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,0],xmm0[2,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm6 = xmm7[0,1,2,3,7,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[0,1,0,2]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[3,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,3,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,1,3,3,4,5,6,7]
-; SSE-NEXT:    packuswb %xmm1, %xmm6
-; SSE-NEXT:    movdqa %xmm12, %xmm1
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm10[0],xmm1[1],xmm10[1],xmm1[2],xmm10[2],xmm1[3],xmm10[3],xmm1[4],xmm10[4],xmm1[5],xmm10[5],xmm1[6],xmm10[6],xmm1[7],xmm10[7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,1,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[3,1,2,1,4,5,6,7]
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm12 = xmm12[8],xmm10[8],xmm12[9],xmm10[9],xmm12[10],xmm10[10],xmm12[11],xmm10[11],xmm12[12],xmm10[12],xmm12[13],xmm10[13],xmm12[14],xmm10[14],xmm12[15],xmm10[15]
-; SSE-NEXT:    pshufd {{.*#+}} xmm7 = xmm12[0,3,2,1]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm7 = xmm7[0,1,3,3,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm7 = xmm7[0,1,2,3,7,7,7,7]
-; SSE-NEXT:    pand %xmm3, %xmm7
-; SSE-NEXT:    pandn %xmm1, %xmm3
-; SSE-NEXT:    por %xmm7, %xmm3
-; SSE-NEXT:    pand %xmm8, %xmm6
-; SSE-NEXT:    packuswb %xmm3, %xmm3
-; SSE-NEXT:    pandn %xmm3, %xmm8
-; SSE-NEXT:    por %xmm6, %xmm8
+; SSE-NEXT:    pandn %xmm2, %xmm4
+; SSE-NEXT:    pand %xmm3, %xmm1
+; SSE-NEXT:    por %xmm1, %xmm4
 ; SSE-NEXT:    movdqa %xmm14, %xmm1
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8],xmm10[8],xmm1[9],xmm10[9],xmm1[10],xmm10[10],xmm1[11],xmm10[11],xmm1[12],xmm10[12],xmm1[13],xmm10[13],xmm1[14],xmm10[14],xmm1[15],xmm10[15]
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8],xmm5[8],xmm1[9],xmm5[9],xmm1[10],xmm5[10],xmm1[11],xmm5[11],xmm1[12],xmm5[12],xmm1[13],xmm5[13],xmm1[14],xmm5[14],xmm1[15],xmm5[15]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,2,1]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,7,5,6,5]
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm14 = xmm14[0],xmm10[0],xmm14[1],xmm10[1],xmm14[2],xmm10[2],xmm14[3],xmm10[3],xmm14[4],xmm10[4],xmm14[5],xmm10[5],xmm14[6],xmm10[6],xmm14[7],xmm10[7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm14[0,2,0,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm3 = xmm3[0,1,2,3,4,5,7,7]
-; SSE-NEXT:    pand %xmm5, %xmm3
-; SSE-NEXT:    pandn %xmm1, %xmm5
-; SSE-NEXT:    por %xmm3, %xmm5
-; SSE-NEXT:    movdqa %xmm4, %xmm0
-; SSE-NEXT:    pand %xmm4, %xmm8
-; SSE-NEXT:    packuswb %xmm5, %xmm1
-; SSE-NEXT:    pandn %xmm1, %xmm0
-; SSE-NEXT:    por %xmm8, %xmm0
-; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    pshufhw {{.*#+}} xmm2 = xmm1[0,1,2,3,7,5,6,5]
+; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [65535,65535,65535,65535,0,65535,65535,0]
+; SSE-NEXT:    movdqa %xmm1, %xmm6
+; SSE-NEXT:    pandn %xmm2, %xmm6
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm14 = xmm14[0],xmm5[0],xmm14[1],xmm5[1],xmm14[2],xmm5[2],xmm14[3],xmm5[3],xmm14[4],xmm5[4],xmm14[5],xmm5[5],xmm14[6],xmm5[6],xmm14[7],xmm5[7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm14[0,2,0,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,4,5,7,7]
+; SSE-NEXT:    pand %xmm1, %xmm2
+; SSE-NEXT:    por %xmm6, %xmm2
+; SSE-NEXT:    packuswb %xmm2, %xmm2
+; SSE-NEXT:    movdqa {{.*#+}} xmm14 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0]
+; SSE-NEXT:    movdqa %xmm14, %xmm6
+; SSE-NEXT:    pandn %xmm2, %xmm6
+; SSE-NEXT:    pand %xmm14, %xmm4
+; SSE-NEXT:    por %xmm4, %xmm6
+; SSE-NEXT:    movdqa %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm12, %xmm2
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm5[0],xmm2[1],xmm5[1],xmm2[2],xmm5[2],xmm2[3],xmm5[3],xmm2[4],xmm5[4],xmm2[5],xmm5[5],xmm2[6],xmm5[6],xmm2[7],xmm5[7]
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm12 = xmm12[8],xmm5[8],xmm12[9],xmm5[9],xmm12[10],xmm5[10],xmm12[11],xmm5[11],xmm12[12],xmm5[12],xmm12[13],xmm5[13],xmm12[14],xmm5[14],xmm12[15],xmm5[15]
+; SSE-NEXT:    movdqa %xmm12, %xmm4
+; SSE-NEXT:    shufps {{.*#+}} xmm4 = xmm4[2,0],xmm2[3,0]
+; SSE-NEXT:    movaps %xmm2, %xmm6
+; SSE-NEXT:    shufps {{.*#+}} xmm6 = xmm6[0,1],xmm4[0,2]
+; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,0],xmm12[0,0]
+; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[2,0],xmm12[2,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm4 = xmm6[0,1,2,3,7,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,1,0,2]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[3,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,3,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,1,3,3,4,5,6,7]
+; SSE-NEXT:    packuswb %xmm2, %xmm4
+; SSE-NEXT:    movdqa %xmm15, %xmm2
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm5[0],xmm2[1],xmm5[1],xmm2[2],xmm5[2],xmm2[3],xmm5[3],xmm2[4],xmm5[4],xmm2[5],xmm5[5],xmm2[6],xmm5[6],xmm2[7],xmm5[7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[2,1,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[3,1,2,1,4,5,6,7]
+; SSE-NEXT:    movdqa %xmm0, %xmm6
+; SSE-NEXT:    pandn %xmm2, %xmm6
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm15 = xmm15[8],xmm5[8],xmm15[9],xmm5[9],xmm15[10],xmm5[10],xmm15[11],xmm5[11],xmm15[12],xmm5[12],xmm15[13],xmm5[13],xmm15[14],xmm5[14],xmm15[15],xmm5[15]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm15[0,3,2,1]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,1,3,3,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,7,7,7,7]
+; SSE-NEXT:    pand %xmm0, %xmm2
+; SSE-NEXT:    por %xmm6, %xmm2
+; SSE-NEXT:    packuswb %xmm2, %xmm2
+; SSE-NEXT:    movdqa %xmm3, %xmm6
+; SSE-NEXT:    pandn %xmm2, %xmm6
+; SSE-NEXT:    pand %xmm3, %xmm4
+; SSE-NEXT:    por %xmm4, %xmm6
+; SSE-NEXT:    movdqa %xmm9, %xmm2
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm2 = xmm2[8],xmm5[8],xmm2[9],xmm5[9],xmm2[10],xmm5[10],xmm2[11],xmm5[11],xmm2[12],xmm5[12],xmm2[13],xmm5[13],xmm2[14],xmm5[14],xmm2[15],xmm5[15]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,1,2,1]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,7,5,6,5]
+; SSE-NEXT:    movdqa %xmm1, %xmm4
+; SSE-NEXT:    pandn %xmm2, %xmm4
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm9 = xmm9[0],xmm5[0],xmm9[1],xmm5[1],xmm9[2],xmm5[2],xmm9[3],xmm5[3],xmm9[4],xmm5[4],xmm9[5],xmm5[5],xmm9[6],xmm5[6],xmm9[7],xmm5[7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm9[0,2,0,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,4,5,7,7]
+; SSE-NEXT:    pand %xmm1, %xmm2
+; SSE-NEXT:    por %xmm4, %xmm2
+; SSE-NEXT:    packuswb %xmm2, %xmm2
+; SSE-NEXT:    movdqa %xmm14, %xmm4
+; SSE-NEXT:    pandn %xmm2, %xmm4
+; SSE-NEXT:    pand %xmm14, %xmm6
+; SSE-NEXT:    por %xmm6, %xmm4
+; SSE-NEXT:    movdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm8, %xmm2
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm5[0],xmm2[1],xmm5[1],xmm2[2],xmm5[2],xmm2[3],xmm5[3],xmm2[4],xmm5[4],xmm2[5],xmm5[5],xmm2[6],xmm5[6],xmm2[7],xmm5[7]
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm8 = xmm8[8],xmm5[8],xmm8[9],xmm5[9],xmm8[10],xmm5[10],xmm8[11],xmm5[11],xmm8[12],xmm5[12],xmm8[13],xmm5[13],xmm8[14],xmm5[14],xmm8[15],xmm5[15]
+; SSE-NEXT:    movdqa %xmm8, %xmm4
+; SSE-NEXT:    shufps {{.*#+}} xmm4 = xmm4[2,0],xmm2[3,0]
+; SSE-NEXT:    movaps %xmm2, %xmm6
+; SSE-NEXT:    shufps {{.*#+}} xmm6 = xmm6[0,1],xmm4[0,2]
+; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,0],xmm8[0,0]
+; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[2,0],xmm8[2,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm4 = xmm6[0,1,2,3,7,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,1,0,2]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[3,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,3,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,1,3,3,4,5,6,7]
+; SSE-NEXT:    packuswb %xmm2, %xmm4
+; SSE-NEXT:    movdqa %xmm13, %xmm2
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm5[0],xmm2[1],xmm5[1],xmm2[2],xmm5[2],xmm2[3],xmm5[3],xmm2[4],xmm5[4],xmm2[5],xmm5[5],xmm2[6],xmm5[6],xmm2[7],xmm5[7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[2,1,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[3,1,2,1,4,5,6,7]
+; SSE-NEXT:    movdqa %xmm0, %xmm6
+; SSE-NEXT:    pandn %xmm2, %xmm6
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm13 = xmm13[8],xmm5[8],xmm13[9],xmm5[9],xmm13[10],xmm5[10],xmm13[11],xmm5[11],xmm13[12],xmm5[12],xmm13[13],xmm5[13],xmm13[14],xmm5[14],xmm13[15],xmm5[15]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm13[0,3,2,1]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,1,3,3,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,7,7,7,7]
+; SSE-NEXT:    pand %xmm0, %xmm2
+; SSE-NEXT:    por %xmm6, %xmm2
+; SSE-NEXT:    packuswb %xmm2, %xmm2
+; SSE-NEXT:    movdqa %xmm3, %xmm6
+; SSE-NEXT:    pandn %xmm2, %xmm6
+; SSE-NEXT:    pand %xmm3, %xmm4
+; SSE-NEXT:    por %xmm4, %xmm6
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm8 # 16-byte Reload
+; SSE-NEXT:    movdqa %xmm8, %xmm2
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm2 = xmm2[8],xmm5[8],xmm2[9],xmm5[9],xmm2[10],xmm5[10],xmm2[11],xmm5[11],xmm2[12],xmm5[12],xmm2[13],xmm5[13],xmm2[14],xmm5[14],xmm2[15],xmm5[15]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,1,2,1]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,7,5,6,5]
+; SSE-NEXT:    movdqa %xmm1, %xmm4
+; SSE-NEXT:    pandn %xmm2, %xmm4
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm8 = xmm8[0],xmm5[0],xmm8[1],xmm5[1],xmm8[2],xmm5[2],xmm8[3],xmm5[3],xmm8[4],xmm5[4],xmm8[5],xmm5[5],xmm8[6],xmm5[6],xmm8[7],xmm5[7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm8[0,2,0,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,4,5,7,7]
+; SSE-NEXT:    pand %xmm1, %xmm2
+; SSE-NEXT:    por %xmm4, %xmm2
+; SSE-NEXT:    packuswb %xmm2, %xmm2
+; SSE-NEXT:    movdqa %xmm14, %xmm4
+; SSE-NEXT:    pandn %xmm2, %xmm4
+; SSE-NEXT:    pand %xmm14, %xmm6
+; SSE-NEXT:    por %xmm6, %xmm4
+; SSE-NEXT:    movdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm7, %xmm2
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm5[0],xmm2[1],xmm5[1],xmm2[2],xmm5[2],xmm2[3],xmm5[3],xmm2[4],xmm5[4],xmm2[5],xmm5[5],xmm2[6],xmm5[6],xmm2[7],xmm5[7]
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm7 = xmm7[8],xmm5[8],xmm7[9],xmm5[9],xmm7[10],xmm5[10],xmm7[11],xmm5[11],xmm7[12],xmm5[12],xmm7[13],xmm5[13],xmm7[14],xmm5[14],xmm7[15],xmm5[15]
+; SSE-NEXT:    movdqa %xmm7, %xmm4
+; SSE-NEXT:    shufps {{.*#+}} xmm4 = xmm4[2,0],xmm2[3,0]
+; SSE-NEXT:    movaps %xmm2, %xmm6
+; SSE-NEXT:    shufps {{.*#+}} xmm6 = xmm6[0,1],xmm4[0,2]
+; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,0],xmm7[0,0]
+; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[2,0],xmm7[2,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm4 = xmm6[0,1,2,3,7,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,1,0,2]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[3,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,3,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,1,3,3,4,5,6,7]
+; SSE-NEXT:    packuswb %xmm2, %xmm4
+; SSE-NEXT:    movdqa %xmm11, %xmm2
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm5[0],xmm2[1],xmm5[1],xmm2[2],xmm5[2],xmm2[3],xmm5[3],xmm2[4],xmm5[4],xmm2[5],xmm5[5],xmm2[6],xmm5[6],xmm2[7],xmm5[7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[2,1,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[3,1,2,1,4,5,6,7]
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm11 = xmm11[8],xmm5[8],xmm11[9],xmm5[9],xmm11[10],xmm5[10],xmm11[11],xmm5[11],xmm11[12],xmm5[12],xmm11[13],xmm5[13],xmm11[14],xmm5[14],xmm11[15],xmm5[15]
+; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm11[0,3,2,1]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm6 = xmm6[0,1,3,3,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,7,7,7,7]
+; SSE-NEXT:    pand %xmm0, %xmm6
+; SSE-NEXT:    pandn %xmm2, %xmm0
+; SSE-NEXT:    por %xmm6, %xmm0
+; SSE-NEXT:    pand %xmm3, %xmm4
+; SSE-NEXT:    packuswb %xmm0, %xmm0
+; SSE-NEXT:    pandn %xmm0, %xmm3
+; SSE-NEXT:    por %xmm4, %xmm3
+; SSE-NEXT:    movdqa %xmm10, %xmm0
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8],xmm5[8],xmm0[9],xmm5[9],xmm0[10],xmm5[10],xmm0[11],xmm5[11],xmm0[12],xmm5[12],xmm0[13],xmm5[13],xmm0[14],xmm5[14],xmm0[15],xmm5[15]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,2,1]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,5,6,5]
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm10 = xmm10[0],xmm5[0],xmm10[1],xmm5[1],xmm10[2],xmm5[2],xmm10[3],xmm5[3],xmm10[4],xmm5[4],xmm10[5],xmm5[5],xmm10[6],xmm5[6],xmm10[7],xmm5[7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm10[0,2,0,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,4,5,7,7]
+; SSE-NEXT:    pand %xmm1, %xmm2
+; SSE-NEXT:    pandn %xmm0, %xmm1
+; SSE-NEXT:    por %xmm2, %xmm1
+; SSE-NEXT:    movdqa %xmm14, %xmm2
+; SSE-NEXT:    pand %xmm14, %xmm3
+; SSE-NEXT:    packuswb %xmm1, %xmm0
+; SSE-NEXT:    pandn %xmm0, %xmm2
+; SSE-NEXT:    por %xmm3, %xmm2
+; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm10 # 16-byte Reload
 ; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm10 # 16-byte Folded Reload
-; SSE-NEXT:    movdqa %xmm10, %xmm1
-; SSE-NEXT:    pand %xmm15, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,1,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[2,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,7,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,2]
-; SSE-NEXT:    packuswb %xmm2, %xmm1
-; SSE-NEXT:    movdqa {{.*#+}} xmm14 = [255,255,255,255,255,0,0,0,0,0,255,255,255,255,255,255]
-; SSE-NEXT:    movdqa %xmm14, %xmm2
-; SSE-NEXT:    pandn %xmm1, %xmm2
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm12 # 16-byte Reload
-; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm12 # 16-byte Folded Reload
-; SSE-NEXT:    movdqa %xmm12, %xmm1
-; SSE-NEXT:    pand %xmm15, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[3,1,2,0]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,6,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,1,0,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[2,1,0,3,4,5,6,7]
-; SSE-NEXT:    packuswb %xmm1, %xmm1
-; SSE-NEXT:    pand %xmm14, %xmm1
-; SSE-NEXT:    por %xmm2, %xmm1
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm13 # 16-byte Reload
-; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [65535,0,65535,65535,0,65535,65535,0]
-; SSE-NEXT:    pand %xmm0, %xmm13
-; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm13 # 16-byte Folded Reload
+; SSE-NEXT:    movdqa %xmm10, %xmm0
+; SSE-NEXT:    movdqa {{.*#+}} xmm8 = [255,255,255,255,255,255,255,255]
+; SSE-NEXT:    pand %xmm8, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,1,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[2,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,7,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,2]
+; SSE-NEXT:    packuswb %xmm1, %xmm0
+; SSE-NEXT:    movdqa {{.*#+}} xmm13 = [255,255,255,255,255,0,0,0,0,0,255,255,255,255,255,255]
 ; SSE-NEXT:    movdqa %xmm13, %xmm2
-; SSE-NEXT:    pand %xmm15, %xmm2
+; SSE-NEXT:    pandn %xmm0, %xmm2
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm11 # 16-byte Reload
+; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm11 # 16-byte Folded Reload
+; SSE-NEXT:    movdqa %xmm11, %xmm0
+; SSE-NEXT:    pand %xmm8, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,0]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,6,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,1,0,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[2,1,0,3,4,5,6,7]
+; SSE-NEXT:    packuswb %xmm0, %xmm0
+; SSE-NEXT:    pand %xmm13, %xmm0
+; SSE-NEXT:    por %xmm2, %xmm0
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm9 # 16-byte Reload
+; SSE-NEXT:    movdqa {{.*#+}} xmm6 = [65535,0,65535,65535,0,65535,65535,0]
+; SSE-NEXT:    pand %xmm6, %xmm9
+; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm9 # 16-byte Folded Reload
+; SSE-NEXT:    movdqa %xmm9, %xmm2
+; SSE-NEXT:    pand %xmm8, %xmm2
 ; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,1,3]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,1,2,1,4,5,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,1,3]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,1,0,3,4,5,6,7]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,6,5,4,7]
-; SSE-NEXT:    packuswb %xmm2, %xmm6
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [65535,65535,65535,65535,65535,0,0,0]
-; SSE-NEXT:    movdqa %xmm2, %xmm3
-; SSE-NEXT:    pandn %xmm6, %xmm3
-; SSE-NEXT:    pand %xmm2, %xmm1
-; SSE-NEXT:    por %xmm1, %xmm3
-; SSE-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pand %xmm15, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm1[2,1,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm6 = xmm6[2,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,7,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,2]
-; SSE-NEXT:    packuswb %xmm6, %xmm1
-; SSE-NEXT:    movdqa %xmm14, %xmm6
-; SSE-NEXT:    pandn %xmm1, %xmm6
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Reload
-; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Folded Reload
+; SSE-NEXT:    packuswb %xmm2, %xmm2
+; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [65535,65535,65535,65535,65535,0,0,0]
 ; SSE-NEXT:    movdqa %xmm4, %xmm1
-; SSE-NEXT:    pand %xmm15, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[3,1,2,0]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,6,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,1,0,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm7 = xmm1[2,1,0,3,4,5,6,7]
-; SSE-NEXT:    packuswb %xmm7, %xmm7
-; SSE-NEXT:    pand %xmm14, %xmm7
-; SSE-NEXT:    por %xmm6, %xmm7
+; SSE-NEXT:    pandn %xmm2, %xmm1
+; SSE-NEXT:    pand %xmm4, %xmm0
+; SSE-NEXT:    por %xmm0, %xmm1
+; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm12 # 16-byte Reload
+; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm12 # 16-byte Folded Reload
+; SSE-NEXT:    movdqa %xmm12, %xmm0
+; SSE-NEXT:    pand %xmm8, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,1,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[2,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,7,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,2]
+; SSE-NEXT:    packuswb %xmm2, %xmm0
+; SSE-NEXT:    movdqa %xmm13, %xmm2
+; SSE-NEXT:    pandn %xmm0, %xmm2
 ; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Reload
-; SSE-NEXT:    pand %xmm0, %xmm3
-; SSE-NEXT:    movdqa %xmm0, %xmm11
 ; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Folded Reload
-; SSE-NEXT:    movdqa %xmm3, %xmm1
-; SSE-NEXT:    pand %xmm15, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,1,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,1,2,1,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,1,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,1,0,3,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,6,5,4,7]
-; SSE-NEXT:    packuswb %xmm1, %xmm6
-; SSE-NEXT:    movdqa %xmm2, %xmm0
-; SSE-NEXT:    pandn %xmm6, %xmm0
-; SSE-NEXT:    pand %xmm2, %xmm7
-; SSE-NEXT:    por %xmm7, %xmm0
-; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa (%rsp), %xmm6 # 16-byte Reload
-; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Folded Reload
-; SSE-NEXT:    movdqa %xmm6, (%rsp) # 16-byte Spill
-; SSE-NEXT:    pand %xmm15, %xmm6
-; SSE-NEXT:    pshufd {{.*#+}} xmm7 = xmm6[2,1,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm7 = xmm7[2,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,4,7,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[0,1,0,2]
-; SSE-NEXT:    packuswb %xmm7, %xmm6
-; SSE-NEXT:    movdqa %xmm14, %xmm7
-; SSE-NEXT:    pandn %xmm6, %xmm7
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Reload
-; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Folded Reload
-; SSE-NEXT:    movdqa %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pand %xmm15, %xmm6
-; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[3,1,2,0]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,6,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[2,1,0,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm8 = xmm6[2,1,0,3,4,5,6,7]
-; SSE-NEXT:    packuswb %xmm8, %xmm8
-; SSE-NEXT:    pand %xmm14, %xmm8
-; SSE-NEXT:    por %xmm7, %xmm8
+; SSE-NEXT:    movdqa %xmm3, %xmm0
+; SSE-NEXT:    pand %xmm8, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,0]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,6,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,1,0,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[2,1,0,3,4,5,6,7]
+; SSE-NEXT:    packuswb %xmm0, %xmm0
+; SSE-NEXT:    pand %xmm13, %xmm0
+; SSE-NEXT:    por %xmm2, %xmm0
 ; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE-NEXT:    pand %xmm11, %xmm1
+; SSE-NEXT:    pand %xmm6, %xmm1
+; SSE-NEXT:    movdqa %xmm6, %xmm7
 ; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; SSE-NEXT:    movdqa %xmm1, %xmm6
-; SSE-NEXT:    pand %xmm15, %xmm6
-; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[0,2,1,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm6 = xmm6[0,1,2,1,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[0,2,1,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm6 = xmm6[0,1,0,3,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,6,5,4,7]
-; SSE-NEXT:    packuswb %xmm6, %xmm7
-; SSE-NEXT:    movdqa %xmm2, %xmm6
-; SSE-NEXT:    pandn %xmm7, %xmm6
-; SSE-NEXT:    pand %xmm2, %xmm8
-; SSE-NEXT:    por %xmm8, %xmm6
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm7 # 16-byte Reload
-; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm7 # 16-byte Folded Reload
-; SSE-NEXT:    movdqa %xmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pand %xmm15, %xmm7
-; SSE-NEXT:    pshufd {{.*#+}} xmm8 = xmm7[2,1,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm8 = xmm8[2,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm7 = xmm7[0,1,2,3,4,7,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm7 = xmm7[0,1,0,2]
-; SSE-NEXT:    packuswb %xmm8, %xmm7
-; SSE-NEXT:    movdqa %xmm14, %xmm8
-; SSE-NEXT:    pandn %xmm7, %xmm8
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm7 # 16-byte Reload
-; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm7 # 16-byte Folded Reload
-; SSE-NEXT:    movdqa %xmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pand %xmm15, %xmm7
-; SSE-NEXT:    pshufd {{.*#+}} xmm7 = xmm7[3,1,2,0]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm7 = xmm7[0,1,2,3,6,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm7 = xmm7[2,1,0,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm9 = xmm7[2,1,0,3,4,5,6,7]
-; SSE-NEXT:    packuswb %xmm9, %xmm9
-; SSE-NEXT:    pand %xmm14, %xmm9
-; SSE-NEXT:    por %xmm8, %xmm9
-; SSE-NEXT:    movdqa %xmm11, %xmm0
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm7 # 16-byte Reload
-; SSE-NEXT:    pand %xmm11, %xmm7
-; SSE-NEXT:    pandn {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; SSE-NEXT:    por %xmm7, %xmm0
-; SSE-NEXT:    pand %xmm0, %xmm15
-; SSE-NEXT:    pshufd {{.*#+}} xmm7 = xmm15[0,2,1,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm7 = xmm7[0,1,2,1,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm7 = xmm7[0,2,1,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm7 = xmm7[0,1,0,3,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm7 = xmm7[0,1,2,3,6,5,4,7]
-; SSE-NEXT:    packuswb %xmm7, %xmm8
-; SSE-NEXT:    movdqa %xmm2, %xmm7
-; SSE-NEXT:    pandn %xmm8, %xmm7
-; SSE-NEXT:    pand %xmm2, %xmm9
-; SSE-NEXT:    por %xmm9, %xmm7
-; SSE-NEXT:    movdqa %xmm10, %xmm8
-; SSE-NEXT:    pxor %xmm5, %xmm5
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm8 = xmm8[8],xmm5[8],xmm8[9],xmm5[9],xmm8[10],xmm5[10],xmm8[11],xmm5[11],xmm8[12],xmm5[12],xmm8[13],xmm5[13],xmm8[14],xmm5[14],xmm8[15],xmm5[15]
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm10 = xmm10[0],xmm5[0],xmm10[1],xmm5[1],xmm10[2],xmm5[2],xmm10[3],xmm5[3],xmm10[4],xmm5[4],xmm10[5],xmm5[5],xmm10[6],xmm5[6],xmm10[7],xmm5[7]
-; SSE-NEXT:    movdqa %xmm10, %xmm9
-; SSE-NEXT:    shufps {{.*#+}} xmm10 = xmm10[1,0],xmm8[0,0]
-; SSE-NEXT:    shufps {{.*#+}} xmm10 = xmm10[2,0],xmm8[2,3]
-; SSE-NEXT:    psrlq $48, %xmm8
-; SSE-NEXT:    psrldq {{.*#+}} xmm9 = xmm9[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; SSE-NEXT:    punpcklwd {{.*#+}} xmm9 = xmm9[0],xmm8[0],xmm9[1],xmm8[1],xmm9[2],xmm8[2],xmm9[3],xmm8[3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm8 = xmm10[3,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm8 = xmm8[0,1,0,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm8 = xmm8[0,1,2,3,4,4,5,7]
-; SSE-NEXT:    packuswb %xmm9, %xmm8
-; SSE-NEXT:    movdqa %xmm14, %xmm10
-; SSE-NEXT:    pandn %xmm8, %xmm10
-; SSE-NEXT:    movdqa %xmm12, %xmm8
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm8 = xmm8[8],xmm5[8],xmm8[9],xmm5[9],xmm8[10],xmm5[10],xmm8[11],xmm5[11],xmm8[12],xmm5[12],xmm8[13],xmm5[13],xmm8[14],xmm5[14],xmm8[15],xmm5[15]
-; SSE-NEXT:    pshufd {{.*#+}} xmm8 = xmm8[1,1,2,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm8 = xmm8[0,1,2,3,5,5,5,5]
-; SSE-NEXT:    movdqa {{.*#+}} xmm9 = [65535,0,65535,65535,0,65535,65535,65535]
-; SSE-NEXT:    movdqa %xmm9, %xmm11
-; SSE-NEXT:    pandn %xmm8, %xmm11
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm12 = xmm12[0],xmm5[0],xmm12[1],xmm5[1],xmm12[2],xmm5[2],xmm12[3],xmm5[3],xmm12[4],xmm5[4],xmm12[5],xmm5[5],xmm12[6],xmm5[6],xmm12[7],xmm5[7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm8 = xmm12[0,1,2,3,7,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm8 = xmm8[0,2,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm12 = xmm8[3,1,1,2,4,5,6,7]
-; SSE-NEXT:    pand %xmm9, %xmm12
-; SSE-NEXT:    por %xmm11, %xmm12
-; SSE-NEXT:    packuswb %xmm12, %xmm12
-; SSE-NEXT:    pand %xmm14, %xmm12
-; SSE-NEXT:    por %xmm10, %xmm12
+; SSE-NEXT:    movdqa %xmm1, %xmm2
+; SSE-NEXT:    pand %xmm8, %xmm2
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,1,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,1,2,1,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,1,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,1,0,3,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,6,5,4,7]
+; SSE-NEXT:    packuswb %xmm2, %xmm2
+; SSE-NEXT:    movdqa %xmm4, %xmm6
+; SSE-NEXT:    pandn %xmm2, %xmm6
+; SSE-NEXT:    pand %xmm4, %xmm0
+; SSE-NEXT:    por %xmm0, %xmm6
+; SSE-NEXT:    movdqa %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    pand %xmm8, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,1,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[2,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,7,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,2]
+; SSE-NEXT:    packuswb %xmm2, %xmm0
+; SSE-NEXT:    movdqa %xmm13, %xmm2
+; SSE-NEXT:    pandn %xmm0, %xmm2
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm14 # 16-byte Reload
+; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm14 # 16-byte Folded Reload
+; SSE-NEXT:    movdqa %xmm14, %xmm0
+; SSE-NEXT:    pand %xmm8, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,0]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,6,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,1,0,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[2,1,0,3,4,5,6,7]
+; SSE-NEXT:    packuswb %xmm0, %xmm0
+; SSE-NEXT:    pand %xmm13, %xmm0
+; SSE-NEXT:    por %xmm2, %xmm0
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
+; SSE-NEXT:    pand %xmm7, %xmm15
+; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Folded Reload
+; SSE-NEXT:    movdqa %xmm15, %xmm2
+; SSE-NEXT:    pand %xmm8, %xmm2
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,1,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,1,2,1,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,1,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,1,0,3,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,6,5,4,7]
+; SSE-NEXT:    packuswb %xmm2, %xmm2
+; SSE-NEXT:    movdqa %xmm4, %xmm6
+; SSE-NEXT:    pandn %xmm2, %xmm6
+; SSE-NEXT:    pand %xmm4, %xmm0
+; SSE-NEXT:    por %xmm0, %xmm6
+; SSE-NEXT:    movdqa %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
+; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; SSE-NEXT:    movdqa %xmm0, (%rsp) # 16-byte Spill
+; SSE-NEXT:    pand %xmm8, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,1,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[2,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,7,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,2]
+; SSE-NEXT:    packuswb %xmm2, %xmm0
+; SSE-NEXT:    movdqa %xmm13, %xmm2
+; SSE-NEXT:    pandn %xmm0, %xmm2
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    pand %xmm8, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,0]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,6,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,1,0,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm6 = xmm0[2,1,0,3,4,5,6,7]
+; SSE-NEXT:    packuswb %xmm6, %xmm6
+; SSE-NEXT:    pand %xmm13, %xmm6
+; SSE-NEXT:    por %xmm2, %xmm6
+; SSE-NEXT:    movdqa %xmm7, %xmm2
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; SSE-NEXT:    pand %xmm7, %xmm0
+; SSE-NEXT:    pandn {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Folded Reload
+; SSE-NEXT:    por %xmm0, %xmm2
+; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm8, %xmm0
+; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,1,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,1,2,1,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,1,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,1,0,3,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,6,5,4,7]
+; SSE-NEXT:    packuswb %xmm0, %xmm2
+; SSE-NEXT:    movdqa %xmm4, %xmm7
+; SSE-NEXT:    pandn %xmm2, %xmm7
+; SSE-NEXT:    pand %xmm4, %xmm6
+; SSE-NEXT:    por %xmm6, %xmm7
+; SSE-NEXT:    movdqa %xmm10, %xmm0
+; SSE-NEXT:    movdqa %xmm10, %xmm2
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm2 = xmm2[8],xmm5[8],xmm2[9],xmm5[9],xmm2[10],xmm5[10],xmm2[11],xmm5[11],xmm2[12],xmm5[12],xmm2[13],xmm5[13],xmm2[14],xmm5[14],xmm2[15],xmm5[15]
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm5[0],xmm0[1],xmm5[1],xmm0[2],xmm5[2],xmm0[3],xmm5[3],xmm0[4],xmm5[4],xmm0[5],xmm5[5],xmm0[6],xmm5[6],xmm0[7],xmm5[7]
+; SSE-NEXT:    movdqa %xmm0, %xmm6
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,0],xmm2[0,0]
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0],xmm2[2,3]
+; SSE-NEXT:    psrlq $48, %xmm2
+; SSE-NEXT:    psrldq {{.*#+}} xmm6 = xmm6[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; SSE-NEXT:    punpcklwd {{.*#+}} xmm6 = xmm6[0],xmm2[0],xmm6[1],xmm2[1],xmm6[2],xmm2[2],xmm6[3],xmm2[3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm0[3,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,1,0,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,4,4,5,7]
+; SSE-NEXT:    packuswb %xmm6, %xmm2
 ; SSE-NEXT:    movdqa %xmm13, %xmm8
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm13 = xmm13[8],xmm5[8],xmm13[9],xmm5[9],xmm13[10],xmm5[10],xmm13[11],xmm5[11],xmm13[12],xmm5[12],xmm13[13],xmm5[13],xmm13[14],xmm5[14],xmm13[15],xmm5[15]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm10 = xmm13[0,1,2,3,7,5,6,7]
+; SSE-NEXT:    pandn %xmm2, %xmm8
+; SSE-NEXT:    movdqa %xmm11, %xmm2
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm2 = xmm2[8],xmm5[8],xmm2[9],xmm5[9],xmm2[10],xmm5[10],xmm2[11],xmm5[11],xmm2[12],xmm5[12],xmm2[13],xmm5[13],xmm2[14],xmm5[14],xmm2[15],xmm5[15]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,2,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,5,5,5,5]
+; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [65535,0,65535,65535,0,65535,65535,65535]
+; SSE-NEXT:    movdqa %xmm0, %xmm10
+; SSE-NEXT:    pandn %xmm2, %xmm10
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm11 = xmm11[0],xmm5[0],xmm11[1],xmm5[1],xmm11[2],xmm5[2],xmm11[3],xmm5[3],xmm11[4],xmm5[4],xmm11[5],xmm5[5],xmm11[6],xmm5[6],xmm11[7],xmm5[7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm2 = xmm11[0,1,2,3,7,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm6 = xmm2[3,1,1,2,4,5,6,7]
+; SSE-NEXT:    pand %xmm0, %xmm6
+; SSE-NEXT:    por %xmm10, %xmm6
+; SSE-NEXT:    packuswb %xmm6, %xmm6
+; SSE-NEXT:    pand %xmm13, %xmm6
+; SSE-NEXT:    por %xmm8, %xmm6
+; SSE-NEXT:    movdqa %xmm9, %xmm2
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm9 = xmm9[8],xmm5[8],xmm9[9],xmm5[9],xmm9[10],xmm5[10],xmm9[11],xmm5[11],xmm9[12],xmm5[12],xmm9[13],xmm5[13],xmm9[14],xmm5[14],xmm9[15],xmm5[15]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm8 = xmm9[0,1,2,3,7,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm8 = xmm8[0,1,2,0]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm8 = xmm8[0,1,2,3,5,5,7,4]
+; SSE-NEXT:    movdqa {{.*#+}} xmm11 = [65535,65535,65535,65535,0,65535,0,0]
+; SSE-NEXT:    movdqa %xmm11, %xmm10
+; SSE-NEXT:    pandn %xmm8, %xmm10
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm5[0],xmm2[1],xmm5[1],xmm2[2],xmm5[2],xmm2[3],xmm5[3],xmm2[4],xmm5[4],xmm2[5],xmm5[5],xmm2[6],xmm5[6],xmm2[7],xmm5[7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,3,1,1]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,1,1,3,4,5,6,7]
+; SSE-NEXT:    pand %xmm11, %xmm2
+; SSE-NEXT:    por %xmm2, %xmm10
+; SSE-NEXT:    packuswb %xmm10, %xmm8
+; SSE-NEXT:    movdqa %xmm4, %xmm2
+; SSE-NEXT:    pandn %xmm8, %xmm2
+; SSE-NEXT:    pand %xmm4, %xmm6
+; SSE-NEXT:    por %xmm6, %xmm2
+; SSE-NEXT:    movdqa %xmm12, %xmm9
+; SSE-NEXT:    movdqa %xmm12, %xmm6
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm6 = xmm6[8],xmm5[8],xmm6[9],xmm5[9],xmm6[10],xmm5[10],xmm6[11],xmm5[11],xmm6[12],xmm5[12],xmm6[13],xmm5[13],xmm6[14],xmm5[14],xmm6[15],xmm5[15]
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm9 = xmm9[0],xmm5[0],xmm9[1],xmm5[1],xmm9[2],xmm5[2],xmm9[3],xmm5[3],xmm9[4],xmm5[4],xmm9[5],xmm5[5],xmm9[6],xmm5[6],xmm9[7],xmm5[7]
+; SSE-NEXT:    movdqa %xmm9, %xmm8
+; SSE-NEXT:    shufps {{.*#+}} xmm9 = xmm9[1,0],xmm6[0,0]
+; SSE-NEXT:    shufps {{.*#+}} xmm9 = xmm9[2,0],xmm6[2,3]
+; SSE-NEXT:    psrlq $48, %xmm6
+; SSE-NEXT:    psrldq {{.*#+}} xmm8 = xmm8[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; SSE-NEXT:    punpcklwd {{.*#+}} xmm8 = xmm8[0],xmm6[0],xmm8[1],xmm6[1],xmm8[2],xmm6[2],xmm8[3],xmm6[3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm6 = xmm9[3,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[0,1,0,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,4,4,5,7]
+; SSE-NEXT:    packuswb %xmm8, %xmm6
+; SSE-NEXT:    movdqa %xmm13, %xmm8
+; SSE-NEXT:    pandn %xmm6, %xmm8
+; SSE-NEXT:    movdqa %xmm3, %xmm6
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm6 = xmm6[8],xmm5[8],xmm6[9],xmm5[9],xmm6[10],xmm5[10],xmm6[11],xmm5[11],xmm6[12],xmm5[12],xmm6[13],xmm5[13],xmm6[14],xmm5[14],xmm6[15],xmm5[15]
+; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[1,1,2,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,5,5,5,5]
+; SSE-NEXT:    movdqa %xmm0, %xmm10
+; SSE-NEXT:    pandn %xmm6, %xmm10
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm5[0],xmm3[1],xmm5[1],xmm3[2],xmm5[2],xmm3[3],xmm5[3],xmm3[4],xmm5[4],xmm3[5],xmm5[5],xmm3[6],xmm5[6],xmm3[7],xmm5[7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm6 = xmm3[0,1,2,3,7,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[0,2,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm6 = xmm6[3,1,1,2,4,5,6,7]
+; SSE-NEXT:    pand %xmm0, %xmm6
+; SSE-NEXT:    por %xmm10, %xmm6
+; SSE-NEXT:    packuswb %xmm6, %xmm6
+; SSE-NEXT:    pand %xmm13, %xmm6
+; SSE-NEXT:    por %xmm8, %xmm6
+; SSE-NEXT:    movdqa %xmm1, %xmm8
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8],xmm5[8],xmm1[9],xmm5[9],xmm1[10],xmm5[10],xmm1[11],xmm5[11],xmm1[12],xmm5[12],xmm1[13],xmm5[13],xmm1[14],xmm5[14],xmm1[15],xmm5[15]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm10 = xmm1[0,1,2,3,7,5,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm10 = xmm10[0,1,2,0]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm10 = xmm10[0,1,2,3,5,5,7,4]
-; SSE-NEXT:    movdqa {{.*#+}} xmm11 = [65535,65535,65535,65535,0,65535,0,0]
-; SSE-NEXT:    movdqa %xmm11, %xmm13
-; SSE-NEXT:    pandn %xmm10, %xmm13
+; SSE-NEXT:    movdqa %xmm11, %xmm12
+; SSE-NEXT:    pandn %xmm10, %xmm12
 ; SSE-NEXT:    punpcklbw {{.*#+}} xmm8 = xmm8[0],xmm5[0],xmm8[1],xmm5[1],xmm8[2],xmm5[2],xmm8[3],xmm5[3],xmm8[4],xmm5[4],xmm8[5],xmm5[5],xmm8[6],xmm5[6],xmm8[7],xmm5[7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm8 = xmm8[0,3,1,1]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm8 = xmm8[0,1,1,3,4,5,6,7]
 ; SSE-NEXT:    pand %xmm11, %xmm8
-; SSE-NEXT:    por %xmm8, %xmm13
-; SSE-NEXT:    packuswb %xmm13, %xmm10
-; SSE-NEXT:    movdqa %xmm2, %xmm8
-; SSE-NEXT:    pandn %xmm10, %xmm8
-; SSE-NEXT:    pand %xmm2, %xmm12
-; SSE-NEXT:    por %xmm12, %xmm8
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm13 # 16-byte Reload
-; SSE-NEXT:    movdqa %xmm13, %xmm10
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm10 = xmm10[8],xmm5[8],xmm10[9],xmm5[9],xmm10[10],xmm5[10],xmm10[11],xmm5[11],xmm10[12],xmm5[12],xmm10[13],xmm5[13],xmm10[14],xmm5[14],xmm10[15],xmm5[15]
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm13 = xmm13[0],xmm5[0],xmm13[1],xmm5[1],xmm13[2],xmm5[2],xmm13[3],xmm5[3],xmm13[4],xmm5[4],xmm13[5],xmm5[5],xmm13[6],xmm5[6],xmm13[7],xmm5[7]
-; SSE-NEXT:    movdqa %xmm13, %xmm12
-; SSE-NEXT:    shufps {{.*#+}} xmm13 = xmm13[1,0],xmm10[0,0]
-; SSE-NEXT:    shufps {{.*#+}} xmm13 = xmm13[2,0],xmm10[2,3]
-; SSE-NEXT:    psrlq $48, %xmm10
-; SSE-NEXT:    psrldq {{.*#+}} xmm12 = xmm12[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; SSE-NEXT:    punpcklwd {{.*#+}} xmm12 = xmm12[0],xmm10[0],xmm12[1],xmm10[1],xmm12[2],xmm10[2],xmm12[3],xmm10[3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm10 = xmm13[3,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm10 = xmm10[0,1,0,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm10 = xmm10[0,1,2,3,4,4,5,7]
-; SSE-NEXT:    packuswb %xmm12, %xmm10
-; SSE-NEXT:    movdqa %xmm14, %xmm12
-; SSE-NEXT:    pandn %xmm10, %xmm12
-; SSE-NEXT:    movdqa %xmm4, %xmm10
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm10 = xmm10[8],xmm5[8],xmm10[9],xmm5[9],xmm10[10],xmm5[10],xmm10[11],xmm5[11],xmm10[12],xmm5[12],xmm10[13],xmm5[13],xmm10[14],xmm5[14],xmm10[15],xmm5[15]
-; SSE-NEXT:    pshufd {{.*#+}} xmm10 = xmm10[1,1,2,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm10 = xmm10[0,1,2,3,5,5,5,5]
-; SSE-NEXT:    movdqa %xmm9, %xmm13
-; SSE-NEXT:    pandn %xmm10, %xmm13
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[1],xmm5[1],xmm4[2],xmm5[2],xmm4[3],xmm5[3],xmm4[4],xmm5[4],xmm4[5],xmm5[5],xmm4[6],xmm5[6],xmm4[7],xmm5[7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm10 = xmm4[0,1,2,3,7,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm10 = xmm10[0,2,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm10 = xmm10[3,1,1,2,4,5,6,7]
-; SSE-NEXT:    pand %xmm9, %xmm10
-; SSE-NEXT:    por %xmm13, %xmm10
-; SSE-NEXT:    packuswb %xmm10, %xmm10
-; SSE-NEXT:    pand %xmm14, %xmm10
-; SSE-NEXT:    movdqa %xmm14, %xmm4
-; SSE-NEXT:    por %xmm12, %xmm10
-; SSE-NEXT:    movdqa %xmm3, %xmm12
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8],xmm5[8],xmm3[9],xmm5[9],xmm3[10],xmm5[10],xmm3[11],xmm5[11],xmm3[12],xmm5[12],xmm3[13],xmm5[13],xmm3[14],xmm5[14],xmm3[15],xmm5[15]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm13 = xmm3[0,1,2,3,7,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm13 = xmm13[0,1,2,0]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm13 = xmm13[0,1,2,3,5,5,7,4]
-; SSE-NEXT:    movdqa %xmm11, %xmm14
-; SSE-NEXT:    pandn %xmm13, %xmm14
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm12 = xmm12[0],xmm5[0],xmm12[1],xmm5[1],xmm12[2],xmm5[2],xmm12[3],xmm5[3],xmm12[4],xmm5[4],xmm12[5],xmm5[5],xmm12[6],xmm5[6],xmm12[7],xmm5[7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm12 = xmm12[0,3,1,1]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm12 = xmm12[0,1,1,3,4,5,6,7]
-; SSE-NEXT:    pand %xmm11, %xmm12
-; SSE-NEXT:    por %xmm12, %xmm14
-; SSE-NEXT:    packuswb %xmm14, %xmm13
-; SSE-NEXT:    movdqa %xmm2, %xmm12
-; SSE-NEXT:    pandn %xmm13, %xmm12
-; SSE-NEXT:    pand %xmm2, %xmm10
-; SSE-NEXT:    por %xmm10, %xmm12
-; SSE-NEXT:    movdqa (%rsp), %xmm14 # 16-byte Reload
-; SSE-NEXT:    movdqa %xmm14, %xmm10
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm10 = xmm10[8],xmm5[8],xmm10[9],xmm5[9],xmm10[10],xmm5[10],xmm10[11],xmm5[11],xmm10[12],xmm5[12],xmm10[13],xmm5[13],xmm10[14],xmm5[14],xmm10[15],xmm5[15]
+; SSE-NEXT:    por %xmm8, %xmm12
+; SSE-NEXT:    packuswb %xmm12, %xmm8
+; SSE-NEXT:    movdqa %xmm4, %xmm12
+; SSE-NEXT:    pandn %xmm8, %xmm12
+; SSE-NEXT:    pand %xmm4, %xmm6
+; SSE-NEXT:    por %xmm6, %xmm12
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm9 # 16-byte Reload
+; SSE-NEXT:    movdqa %xmm9, %xmm6
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm6 = xmm6[8],xmm5[8],xmm6[9],xmm5[9],xmm6[10],xmm5[10],xmm6[11],xmm5[11],xmm6[12],xmm5[12],xmm6[13],xmm5[13],xmm6[14],xmm5[14],xmm6[15],xmm5[15]
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm9 = xmm9[0],xmm5[0],xmm9[1],xmm5[1],xmm9[2],xmm5[2],xmm9[3],xmm5[3],xmm9[4],xmm5[4],xmm9[5],xmm5[5],xmm9[6],xmm5[6],xmm9[7],xmm5[7]
+; SSE-NEXT:    movdqa %xmm9, %xmm8
+; SSE-NEXT:    shufps {{.*#+}} xmm9 = xmm9[1,0],xmm6[0,0]
+; SSE-NEXT:    shufps {{.*#+}} xmm9 = xmm9[2,0],xmm6[2,3]
+; SSE-NEXT:    psrlq $48, %xmm6
+; SSE-NEXT:    psrldq {{.*#+}} xmm8 = xmm8[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; SSE-NEXT:    punpcklwd {{.*#+}} xmm8 = xmm8[0],xmm6[0],xmm8[1],xmm6[1],xmm8[2],xmm6[2],xmm8[3],xmm6[3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm6 = xmm9[3,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[0,1,0,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,4,4,5,7]
+; SSE-NEXT:    packuswb %xmm8, %xmm6
+; SSE-NEXT:    movdqa %xmm13, %xmm8
+; SSE-NEXT:    pandn %xmm6, %xmm8
+; SSE-NEXT:    movdqa %xmm14, %xmm6
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm6 = xmm6[8],xmm5[8],xmm6[9],xmm5[9],xmm6[10],xmm5[10],xmm6[11],xmm5[11],xmm6[12],xmm5[12],xmm6[13],xmm5[13],xmm6[14],xmm5[14],xmm6[15],xmm5[15]
+; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[1,1,2,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,5,5,5,5]
+; SSE-NEXT:    movdqa %xmm0, %xmm9
+; SSE-NEXT:    pandn %xmm6, %xmm9
 ; SSE-NEXT:    punpcklbw {{.*#+}} xmm14 = xmm14[0],xmm5[0],xmm14[1],xmm5[1],xmm14[2],xmm5[2],xmm14[3],xmm5[3],xmm14[4],xmm5[4],xmm14[5],xmm5[5],xmm14[6],xmm5[6],xmm14[7],xmm5[7]
-; SSE-NEXT:    movdqa %xmm14, %xmm13
-; SSE-NEXT:    shufps {{.*#+}} xmm14 = xmm14[1,0],xmm10[0,0]
-; SSE-NEXT:    shufps {{.*#+}} xmm14 = xmm14[2,0],xmm10[2,3]
-; SSE-NEXT:    psrlq $48, %xmm10
-; SSE-NEXT:    psrldq {{.*#+}} xmm13 = xmm13[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; SSE-NEXT:    punpcklwd {{.*#+}} xmm13 = xmm13[0],xmm10[0],xmm13[1],xmm10[1],xmm13[2],xmm10[2],xmm13[3],xmm10[3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm10 = xmm14[3,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm10 = xmm10[0,1,0,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm10 = xmm10[0,1,2,3,4,4,5,7]
-; SSE-NEXT:    packuswb %xmm13, %xmm10
-; SSE-NEXT:    movdqa %xmm4, %xmm13
-; SSE-NEXT:    pandn %xmm10, %xmm13
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Reload
-; SSE-NEXT:    movdqa %xmm3, %xmm10
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm10 = xmm10[8],xmm5[8],xmm10[9],xmm5[9],xmm10[10],xmm5[10],xmm10[11],xmm5[11],xmm10[12],xmm5[12],xmm10[13],xmm5[13],xmm10[14],xmm5[14],xmm10[15],xmm5[15]
-; SSE-NEXT:    pshufd {{.*#+}} xmm10 = xmm10[1,1,2,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm10 = xmm10[0,1,2,3,5,5,5,5]
-; SSE-NEXT:    movdqa %xmm9, %xmm14
-; SSE-NEXT:    pandn %xmm10, %xmm14
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm5[0],xmm3[1],xmm5[1],xmm3[2],xmm5[2],xmm3[3],xmm5[3],xmm3[4],xmm5[4],xmm3[5],xmm5[5],xmm3[6],xmm5[6],xmm3[7],xmm5[7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm10 = xmm3[0,1,2,3,7,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm6 = xmm14[0,1,2,3,7,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[0,2,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm10 = xmm6[3,1,1,2,4,5,6,7]
+; SSE-NEXT:    pand %xmm0, %xmm10
+; SSE-NEXT:    por %xmm9, %xmm10
+; SSE-NEXT:    packuswb %xmm10, %xmm10
+; SSE-NEXT:    pand %xmm13, %xmm10
+; SSE-NEXT:    por %xmm8, %xmm10
+; SSE-NEXT:    movdqa %xmm15, %xmm6
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm15 = xmm15[8],xmm5[8],xmm15[9],xmm5[9],xmm15[10],xmm5[10],xmm15[11],xmm5[11],xmm15[12],xmm5[12],xmm15[13],xmm5[13],xmm15[14],xmm5[14],xmm15[15],xmm5[15]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm8 = xmm15[0,1,2,3,7,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm8 = xmm8[0,1,2,0]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm8 = xmm8[0,1,2,3,5,5,7,4]
+; SSE-NEXT:    movdqa %xmm11, %xmm9
+; SSE-NEXT:    pandn %xmm8, %xmm9
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm6 = xmm6[0],xmm5[0],xmm6[1],xmm5[1],xmm6[2],xmm5[2],xmm6[3],xmm5[3],xmm6[4],xmm5[4],xmm6[5],xmm5[5],xmm6[6],xmm5[6],xmm6[7],xmm5[7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[0,3,1,1]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm6 = xmm6[0,1,1,3,4,5,6,7]
+; SSE-NEXT:    pand %xmm11, %xmm6
+; SSE-NEXT:    por %xmm6, %xmm9
+; SSE-NEXT:    packuswb %xmm9, %xmm8
+; SSE-NEXT:    movdqa %xmm4, %xmm6
+; SSE-NEXT:    pandn %xmm8, %xmm6
+; SSE-NEXT:    pand %xmm4, %xmm10
+; SSE-NEXT:    por %xmm10, %xmm6
+; SSE-NEXT:    movdqa (%rsp), %xmm1 # 16-byte Reload
+; SSE-NEXT:    movdqa %xmm1, %xmm8
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm8 = xmm8[8],xmm5[8],xmm8[9],xmm5[9],xmm8[10],xmm5[10],xmm8[11],xmm5[11],xmm8[12],xmm5[12],xmm8[13],xmm5[13],xmm8[14],xmm5[14],xmm8[15],xmm5[15]
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm5[0],xmm1[1],xmm5[1],xmm1[2],xmm5[2],xmm1[3],xmm5[3],xmm1[4],xmm5[4],xmm1[5],xmm5[5],xmm1[6],xmm5[6],xmm1[7],xmm5[7]
+; SSE-NEXT:    movdqa %xmm1, %xmm9
+; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,0],xmm8[0,0]
+; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,0],xmm8[2,3]
+; SSE-NEXT:    psrlq $48, %xmm8
+; SSE-NEXT:    psrldq {{.*#+}} xmm9 = xmm9[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; SSE-NEXT:    punpcklwd {{.*#+}} xmm9 = xmm9[0],xmm8[0],xmm9[1],xmm8[1],xmm9[2],xmm8[2],xmm9[3],xmm8[3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm8 = xmm1[3,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm8 = xmm8[0,1,0,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm8 = xmm8[0,1,2,3,4,4,5,7]
+; SSE-NEXT:    packuswb %xmm9, %xmm8
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm14 # 16-byte Reload
+; SSE-NEXT:    movdqa %xmm14, %xmm9
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm9 = xmm9[8],xmm5[8],xmm9[9],xmm5[9],xmm9[10],xmm5[10],xmm9[11],xmm5[11],xmm9[12],xmm5[12],xmm9[13],xmm5[13],xmm9[14],xmm5[14],xmm9[15],xmm5[15]
+; SSE-NEXT:    pshufd {{.*#+}} xmm9 = xmm9[1,1,2,3]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm9 = xmm9[0,1,2,3,5,5,5,5]
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm14 = xmm14[0],xmm5[0],xmm14[1],xmm5[1],xmm14[2],xmm5[2],xmm14[3],xmm5[3],xmm14[4],xmm5[4],xmm14[5],xmm5[5],xmm14[6],xmm5[6],xmm14[7],xmm5[7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm10 = xmm14[0,1,2,3,7,5,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm10 = xmm10[0,2,2,3]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm10 = xmm10[3,1,1,2,4,5,6,7]
-; SSE-NEXT:    pand %xmm9, %xmm10
-; SSE-NEXT:    por %xmm14, %xmm10
-; SSE-NEXT:    packuswb %xmm10, %xmm10
-; SSE-NEXT:    pand %xmm4, %xmm10
-; SSE-NEXT:    por %xmm13, %xmm10
-; SSE-NEXT:    movdqa %xmm1, %xmm13
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8],xmm5[8],xmm1[9],xmm5[9],xmm1[10],xmm5[10],xmm1[11],xmm5[11],xmm1[12],xmm5[12],xmm1[13],xmm5[13],xmm1[14],xmm5[14],xmm1[15],xmm5[15]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm14 = xmm1[0,1,2,3,7,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm14 = xmm14[0,1,2,0]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm14 = xmm14[0,1,2,3,5,5,7,4]
-; SSE-NEXT:    movdqa %xmm11, %xmm15
-; SSE-NEXT:    pandn %xmm14, %xmm15
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm13 = xmm13[0],xmm5[0],xmm13[1],xmm5[1],xmm13[2],xmm5[2],xmm13[3],xmm5[3],xmm13[4],xmm5[4],xmm13[5],xmm5[5],xmm13[6],xmm5[6],xmm13[7],xmm5[7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm13 = xmm13[0,3,1,1]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm13 = xmm13[0,1,1,3,4,5,6,7]
-; SSE-NEXT:    pand %xmm11, %xmm13
-; SSE-NEXT:    por %xmm13, %xmm15
-; SSE-NEXT:    packuswb %xmm15, %xmm14
-; SSE-NEXT:    movdqa %xmm2, %xmm13
-; SSE-NEXT:    pandn %xmm14, %xmm13
-; SSE-NEXT:    pand %xmm2, %xmm10
-; SSE-NEXT:    por %xmm10, %xmm13
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Reload
-; SSE-NEXT:    movdqa %xmm3, %xmm10
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm10 = xmm10[8],xmm5[8],xmm10[9],xmm5[9],xmm10[10],xmm5[10],xmm10[11],xmm5[11],xmm10[12],xmm5[12],xmm10[13],xmm5[13],xmm10[14],xmm5[14],xmm10[15],xmm5[15]
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm5[0],xmm3[1],xmm5[1],xmm3[2],xmm5[2],xmm3[3],xmm5[3],xmm3[4],xmm5[4],xmm3[5],xmm5[5],xmm3[6],xmm5[6],xmm3[7],xmm5[7]
-; SSE-NEXT:    movdqa %xmm3, %xmm14
-; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,0],xmm10[0,0]
-; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[2,0],xmm10[2,3]
-; SSE-NEXT:    psrlq $48, %xmm10
-; SSE-NEXT:    psrldq {{.*#+}} xmm14 = xmm14[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; SSE-NEXT:    punpcklwd {{.*#+}} xmm14 = xmm14[0],xmm10[0],xmm14[1],xmm10[1],xmm14[2],xmm10[2],xmm14[3],xmm10[3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm10 = xmm3[3,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm10 = xmm10[0,1,0,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm10 = xmm10[0,1,2,3,4,4,5,7]
-; SSE-NEXT:    packuswb %xmm14, %xmm10
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE-NEXT:    movdqa %xmm1, %xmm14
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm14 = xmm14[8],xmm5[8],xmm14[9],xmm5[9],xmm14[10],xmm5[10],xmm14[11],xmm5[11],xmm14[12],xmm5[12],xmm14[13],xmm5[13],xmm14[14],xmm5[14],xmm14[15],xmm5[15]
-; SSE-NEXT:    pshufd {{.*#+}} xmm14 = xmm14[1,1,2,3]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm14 = xmm14[0,1,2,3,5,5,5,5]
+; SSE-NEXT:    pand %xmm0, %xmm10
+; SSE-NEXT:    pandn %xmm9, %xmm0
+; SSE-NEXT:    por %xmm10, %xmm0
+; SSE-NEXT:    packuswb %xmm0, %xmm0
+; SSE-NEXT:    pand %xmm13, %xmm0
+; SSE-NEXT:    pandn %xmm8, %xmm13
+; SSE-NEXT:    por %xmm13, %xmm0
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm14 # 16-byte Reload
+; SSE-NEXT:    movdqa %xmm14, %xmm1
 ; SSE-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm5[0],xmm1[1],xmm5[1],xmm1[2],xmm5[2],xmm1[3],xmm5[3],xmm1[4],xmm5[4],xmm1[5],xmm5[5],xmm1[6],xmm5[6],xmm1[7],xmm5[7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm15 = xmm1[0,1,2,3,7,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm15 = xmm15[0,2,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm15 = xmm15[3,1,1,2,4,5,6,7]
-; SSE-NEXT:    pand %xmm9, %xmm15
-; SSE-NEXT:    pandn %xmm14, %xmm9
-; SSE-NEXT:    por %xmm15, %xmm9
-; SSE-NEXT:    packuswb %xmm9, %xmm9
-; SSE-NEXT:    pand %xmm4, %xmm9
-; SSE-NEXT:    pandn %xmm10, %xmm4
-; SSE-NEXT:    por %xmm4, %xmm9
-; SSE-NEXT:    movdqa %xmm0, %xmm4
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[1],xmm5[1],xmm4[2],xmm5[2],xmm4[3],xmm5[3],xmm4[4],xmm5[4],xmm4[5],xmm5[5],xmm4[6],xmm5[6],xmm4[7],xmm5[7]
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8],xmm5[8],xmm0[9],xmm5[9],xmm0[10],xmm5[10],xmm0[11],xmm5[11],xmm0[12],xmm5[12],xmm0[13],xmm5[13],xmm0[14],xmm5[14],xmm0[15],xmm5[15]
-; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,3,1,1]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm4 = xmm4[0,1,1,3,4,5,6,7]
-; SSE-NEXT:    pand %xmm11, %xmm4
-; SSE-NEXT:    pshufhw {{.*#+}} xmm5 = xmm0[0,1,2,3,7,5,6,7]
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm14 = xmm14[8],xmm5[8],xmm14[9],xmm5[9],xmm14[10],xmm5[10],xmm14[11],xmm5[11],xmm14[12],xmm5[12],xmm14[13],xmm5[13],xmm14[14],xmm5[14],xmm14[15],xmm5[15]
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,3,1,1]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,1,1,3,4,5,6,7]
+; SSE-NEXT:    pand %xmm11, %xmm1
+; SSE-NEXT:    pshufhw {{.*#+}} xmm5 = xmm14[0,1,2,3,7,5,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[0,1,2,0]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm5 = xmm5[0,1,2,3,5,5,7,4]
 ; SSE-NEXT:    pandn %xmm5, %xmm11
-; SSE-NEXT:    por %xmm4, %xmm11
-; SSE-NEXT:    pand %xmm2, %xmm9
-; SSE-NEXT:    packuswb %xmm11, %xmm4
-; SSE-NEXT:    pandn %xmm4, %xmm2
-; SSE-NEXT:    por %xmm9, %xmm2
+; SSE-NEXT:    por %xmm1, %xmm11
+; SSE-NEXT:    pand %xmm4, %xmm0
+; SSE-NEXT:    packuswb %xmm11, %xmm1
+; SSE-NEXT:    pandn %xmm1, %xmm4
+; SSE-NEXT:    por %xmm0, %xmm4
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movaps %xmm0, 16(%rsi)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE-NEXT:    movaps %xmm0, (%rsi)
+; SSE-NEXT:    movaps %xmm0, 32(%rsi)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movaps %xmm0, 48(%rsi)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE-NEXT:    movaps %xmm0, 32(%rsi)
+; SSE-NEXT:    movaps %xmm0, (%rsi)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movaps %xmm0, 16(%rdx)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE-NEXT:    movaps %xmm0, (%rdx)
+; SSE-NEXT:    movaps %xmm0, 32(%rdx)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movaps %xmm0, 48(%rdx)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE-NEXT:    movaps %xmm0, 32(%rdx)
+; SSE-NEXT:    movaps %xmm0, (%rdx)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movaps %xmm0, 16(%rcx)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE-NEXT:    movaps %xmm0, (%rcx)
+; SSE-NEXT:    movaps %xmm0, 32(%rcx)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movaps %xmm0, 48(%rcx)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE-NEXT:    movaps %xmm0, 32(%rcx)
+; SSE-NEXT:    movaps %xmm0, (%rcx)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movaps %xmm0, 16(%r8)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE-NEXT:    movaps %xmm0, (%r8)
+; SSE-NEXT:    movaps %xmm0, 32(%r8)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movaps %xmm0, 48(%r8)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE-NEXT:    movaps %xmm0, 32(%r8)
+; SSE-NEXT:    movaps %xmm0, (%r8)
 ; SSE-NEXT:    movdqa %xmm7, 16(%r9)
-; SSE-NEXT:    movdqa %xmm6, (%r9)
+; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; SSE-NEXT:    movaps %xmm0, 32(%r9)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movaps %xmm0, 48(%r9)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE-NEXT:    movaps %xmm0, 32(%r9)
+; SSE-NEXT:    movaps %xmm0, (%r9)
 ; SSE-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; SSE-NEXT:    movdqa %xmm2, 16(%rax)
-; SSE-NEXT:    movdqa %xmm13, (%rax)
+; SSE-NEXT:    movdqa %xmm4, 16(%rax)
+; SSE-NEXT:    movdqa %xmm6, 32(%rax)
 ; SSE-NEXT:    movdqa %xmm12, 48(%rax)
-; SSE-NEXT:    movdqa %xmm8, 32(%rax)
-; SSE-NEXT:    addq $824, %rsp # imm = 0x338
+; SSE-NEXT:    movdqa %xmm2, (%rax)
+; SSE-NEXT:    addq $808, %rsp # imm = 0x328
 ; SSE-NEXT:    retq
 ;
 ; AVX1-ONLY-LABEL: load_i8_stride6_vf64:
 ; AVX1-ONLY:       # %bb.0:
 ; AVX1-ONLY-NEXT:    subq $808, %rsp # imm = 0x328
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm3 = <u,u,u,u,u,u,u,u,u,u,u,128,128,128,4,10>
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm5 = <u,u,u,u,u,u,u,u,u,u,u,2,8,14,128,128>
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm2 = <u,u,4,10,u,u,u,u,u,u,u,u,u,u,u,u>
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm4 = <u,u,u,u,0,6,12,u,u,u,u,u,u,u,u,u>
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm6 = [0,0,0,128,128,128,4,10,0,0,0,128,128,128,4,10]
+; AVX1-ONLY-NEXT:    # xmm6 = mem[0,0]
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm7 = [0,0,0,2,8,14,128,128,0,0,0,2,8,14,128,128]
+; AVX1-ONLY-NEXT:    # xmm7 = mem[0,0]
+; AVX1-ONLY-NEXT:    vbroadcastss {{.*#+}} xmm2 = [0,0,4,10,0,0,4,10,0,0,4,10,0,0,4,10]
+; AVX1-ONLY-NEXT:    vbroadcastss {{.*#+}} xmm3 = [0,6,12,0,0,6,12,0,0,6,12,0,0,6,12,0]
 ; AVX1-ONLY-NEXT:    vmovdqa 128(%rdi), %xmm1
 ; AVX1-ONLY-NEXT:    vpshufb %xmm2, %xmm1, %xmm0
-; AVX1-ONLY-NEXT:    vmovdqa %xmm2, %xmm6
+; AVX1-ONLY-NEXT:    vmovdqa %xmm2, %xmm4
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm1, %xmm8
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX1-ONLY-NEXT:    vmovdqa 144(%rdi), %xmm2
-; AVX1-ONLY-NEXT:    vpshufb %xmm4, %xmm2, %xmm1
+; AVX1-ONLY-NEXT:    vpshufb %xmm3, %xmm2, %xmm1
+; AVX1-ONLY-NEXT:    vmovdqa %xmm3, %xmm5
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm2, %xmm10
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX1-ONLY-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; AVX1-ONLY-NEXT:    vmovdqa 176(%rdi), %xmm2
-; AVX1-ONLY-NEXT:    vpshufb %xmm3, %xmm2, %xmm0
-; AVX1-ONLY-NEXT:    vmovdqa %xmm3, %xmm7
+; AVX1-ONLY-NEXT:    vpshufb %xmm6, %xmm2, %xmm0
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm2, %xmm9
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX1-ONLY-NEXT:    vmovdqa 160(%rdi), %xmm3
-; AVX1-ONLY-NEXT:    vpshufb %xmm5, %xmm3, %xmm2
+; AVX1-ONLY-NEXT:    vpshufb %xmm7, %xmm3, %xmm2
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm3, %xmm11
-; AVX1-ONLY-NEXT:    vmovdqa %xmm3, (%rsp) # 16-byte Spill
+; AVX1-ONLY-NEXT:    vmovdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX1-ONLY-NEXT:    vpor %xmm0, %xmm2, %xmm2
 ; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm0 = <u,u,u,u,u,u,255,255,255,255,255,0,0,0,0,0>
 ; AVX1-ONLY-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm1
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX1-ONLY-NEXT:    vmovdqa 320(%rdi), %xmm2
-; AVX1-ONLY-NEXT:    vpshufb %xmm6, %xmm2, %xmm1
+; AVX1-ONLY-NEXT:    vpshufb %xmm4, %xmm2, %xmm1
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm2, %xmm12
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX1-ONLY-NEXT:    vmovdqa 336(%rdi), %xmm3
-; AVX1-ONLY-NEXT:    vpshufb %xmm4, %xmm3, %xmm2
+; AVX1-ONLY-NEXT:    vpshufb %xmm5, %xmm3, %xmm2
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm3, %xmm13
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX1-ONLY-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
 ; AVX1-ONLY-NEXT:    vmovdqa 368(%rdi), %xmm3
-; AVX1-ONLY-NEXT:    vpshufb %xmm7, %xmm3, %xmm2
+; AVX1-ONLY-NEXT:    vpshufb %xmm6, %xmm3, %xmm2
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm3, %xmm14
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX1-ONLY-NEXT:    vmovdqa 352(%rdi), %xmm4
-; AVX1-ONLY-NEXT:    vpshufb %xmm5, %xmm4, %xmm3
+; AVX1-ONLY-NEXT:    vpshufb %xmm7, %xmm4, %xmm3
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm4, %xmm15
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX1-ONLY-NEXT:    vpor %xmm2, %xmm3, %xmm2
 ; AVX1-ONLY-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm1
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm2 = <u,u,5,11,u,u,u,u,u,u,u,u,u,u,u,u>
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm3 = <u,u,u,u,1,7,13,u,u,u,u,u,u,u,u,u>
+; AVX1-ONLY-NEXT:    vbroadcastss {{.*#+}} xmm2 = [0,0,5,11,0,0,5,11,0,0,5,11,0,0,5,11]
+; AVX1-ONLY-NEXT:    vbroadcastss {{.*#+}} xmm3 = [1,7,13,0,1,7,13,0,1,7,13,0,1,7,13,0]
 ; AVX1-ONLY-NEXT:    vpshufb %xmm2, %xmm8, %xmm1
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm2, %xmm4
 ; AVX1-ONLY-NEXT:    vpshufb %xmm3, %xmm10, %xmm2
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm3, %xmm5
 ; AVX1-ONLY-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm3 = <u,u,u,u,u,u,u,u,u,u,u,128,128,128,5,11>
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm6 = <u,u,u,u,u,u,u,u,u,u,u,3,9,15,128,128>
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm3 = [0,0,0,128,128,128,5,11,0,0,0,128,128,128,5,11]
+; AVX1-ONLY-NEXT:    # xmm3 = mem[0,0]
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm6 = [0,0,0,3,9,15,128,128,0,0,0,3,9,15,128,128]
+; AVX1-ONLY-NEXT:    # xmm6 = mem[0,0]
 ; AVX1-ONLY-NEXT:    vpshufb %xmm3, %xmm9, %xmm2
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm3, %xmm7
 ; AVX1-ONLY-NEXT:    vpshufb %xmm6, %xmm11, %xmm3
@@ -3682,497 +3690,547 @@ define void @load_i8_stride6_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX1-ONLY-NEXT:    vpor %xmm2, %xmm3, %xmm2
 ; AVX1-ONLY-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm0
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX1-ONLY-NEXT:    vmovdqa 32(%rdi), %xmm12
+; AVX1-ONLY-NEXT:    vmovdqa 32(%rdi), %xmm4
 ; AVX1-ONLY-NEXT:    vmovdqa 48(%rdi), %xmm11
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm2 = <2,8,14,u,u,u,u,u,u,u,u,u,u,u,u,u>
-; AVX1-ONLY-NEXT:    vpshufb %xmm2, %xmm11, %xmm0
+; AVX1-ONLY-NEXT:    vbroadcastss {{.*#+}} xmm0 = [2,8,14,0,2,8,14,0,2,8,14,0,2,8,14,0]
+; AVX1-ONLY-NEXT:    vpshufb %xmm0, %xmm11, %xmm2
+; AVX1-ONLY-NEXT:    vmovdqa %xmm0, %xmm8
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm11, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm15 = <u,u,u,u,u,0,6,12,u,u,u,u,u,u,u,u>
-; AVX1-ONLY-NEXT:    vpshufb %xmm15, %xmm12, %xmm3
-; AVX1-ONLY-NEXT:    vmovdqa %xmm12, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX1-ONLY-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm0[0]
+; AVX1-ONLY-NEXT:    vbroadcastss {{.*#+}} xmm15 = [0,0,6,12,0,0,6,12,0,0,6,12,0,0,6,12]
+; AVX1-ONLY-NEXT:    vpshufb %xmm15, %xmm4, %xmm3
+; AVX1-ONLY-NEXT:    vmovdqa %xmm4, %xmm0
+; AVX1-ONLY-NEXT:    vmovdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX1-ONLY-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm2[0]
 ; AVX1-ONLY-NEXT:    vmovdqa (%rdi), %xmm10
 ; AVX1-ONLY-NEXT:    vmovdqa 16(%rdi), %xmm14
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm4 = <128,128,128,4,10,u,u,u,u,u,u,u,u,u,u,u>
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm5 = <2,8,14,128,128,u,u,u,u,u,u,u,u,u,u,u>
-; AVX1-ONLY-NEXT:    vpshufb %xmm4, %xmm14, %xmm0
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm4 = [128,128,128,4,10,0,0,0,128,128,128,4,10,0,0,0]
+; AVX1-ONLY-NEXT:    # xmm4 = mem[0,0]
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm5 = [2,8,14,128,128,0,0,0,2,8,14,128,128,0,0,0]
+; AVX1-ONLY-NEXT:    # xmm5 = mem[0,0]
+; AVX1-ONLY-NEXT:    vpshufb %xmm4, %xmm14, %xmm2
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm14, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX1-ONLY-NEXT:    vmovdqa %xmm4, %xmm6
+; AVX1-ONLY-NEXT:    vmovdqa %xmm4, %xmm12
 ; AVX1-ONLY-NEXT:    vpshufb %xmm5, %xmm10, %xmm4
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm10, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX1-ONLY-NEXT:    vmovdqa %xmm5, %xmm7
-; AVX1-ONLY-NEXT:    vpor %xmm0, %xmm4, %xmm4
+; AVX1-ONLY-NEXT:    vmovdqa %xmm5, %xmm6
+; AVX1-ONLY-NEXT:    vpor %xmm2, %xmm4, %xmm4
 ; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm13 = <0,0,0,0,0,255,255,255,255,255,255,u,u,u,u,u>
 ; AVX1-ONLY-NEXT:    vpblendvb %xmm13, %xmm3, %xmm4, %xmm3
 ; AVX1-ONLY-NEXT:    vmovdqu %ymm3, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX1-ONLY-NEXT:    vmovdqa 224(%rdi), %xmm5
-; AVX1-ONLY-NEXT:    vmovdqa 240(%rdi), %xmm1
-; AVX1-ONLY-NEXT:    vpshufb %xmm2, %xmm1, %xmm3
-; AVX1-ONLY-NEXT:    vmovdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX1-ONLY-NEXT:    vmovdqa 240(%rdi), %xmm9
+; AVX1-ONLY-NEXT:    vpshufb %xmm8, %xmm9, %xmm3
+; AVX1-ONLY-NEXT:    vmovdqa %xmm9, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX1-ONLY-NEXT:    vpshufb %xmm15, %xmm5, %xmm4
-; AVX1-ONLY-NEXT:    vmovdqa %xmm5, %xmm2
+; AVX1-ONLY-NEXT:    vmovdqa %xmm5, %xmm8
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX1-ONLY-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm4[0],xmm3[0]
-; AVX1-ONLY-NEXT:    vmovdqa 208(%rdi), %xmm8
-; AVX1-ONLY-NEXT:    vmovdqa 192(%rdi), %xmm9
-; AVX1-ONLY-NEXT:    vpshufb %xmm6, %xmm8, %xmm4
-; AVX1-ONLY-NEXT:    vmovdqa %xmm8, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX1-ONLY-NEXT:    vpshufb %xmm7, %xmm9, %xmm5
+; AVX1-ONLY-NEXT:    vmovdqa 208(%rdi), %xmm1
+; AVX1-ONLY-NEXT:    vmovdqa 192(%rdi), %xmm2
+; AVX1-ONLY-NEXT:    vpshufb %xmm12, %xmm1, %xmm4
+; AVX1-ONLY-NEXT:    vmovdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX1-ONLY-NEXT:    vpshufb %xmm6, %xmm2, %xmm5
+; AVX1-ONLY-NEXT:    vmovdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX1-ONLY-NEXT:    vpor %xmm4, %xmm5, %xmm4
 ; AVX1-ONLY-NEXT:    vpblendvb %xmm13, %xmm3, %xmm4, %xmm3
 ; AVX1-ONLY-NEXT:    vmovdqu %ymm3, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm0 = <3,9,15,u,u,u,u,u,u,u,u,u,u,u,u,u>
-; AVX1-ONLY-NEXT:    vpshufb %xmm0, %xmm11, %xmm5
-; AVX1-ONLY-NEXT:    vmovdqa %xmm0, %xmm11
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm4 = <u,u,u,u,u,1,7,13,u,u,u,u,u,u,u,u>
-; AVX1-ONLY-NEXT:    vpshufb %xmm4, %xmm12, %xmm6
+; AVX1-ONLY-NEXT:    vbroadcastss {{.*#+}} xmm3 = [3,9,15,0,3,9,15,0,3,9,15,0,3,9,15,0]
+; AVX1-ONLY-NEXT:    vpshufb %xmm3, %xmm11, %xmm5
+; AVX1-ONLY-NEXT:    vmovdqa %xmm3, %xmm11
+; AVX1-ONLY-NEXT:    vbroadcastss {{.*#+}} xmm12 = [0,1,7,13,0,1,7,13,0,1,7,13,0,1,7,13]
+; AVX1-ONLY-NEXT:    vpshufb %xmm12, %xmm0, %xmm6
 ; AVX1-ONLY-NEXT:    vpunpcklqdq {{.*#+}} xmm5 = xmm6[0],xmm5[0]
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm3 = <128,128,128,5,11,u,u,u,u,u,u,u,u,u,u,u>
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm0 = <3,9,15,128,128,u,u,u,u,u,u,u,u,u,u,u>
-; AVX1-ONLY-NEXT:    vpshufb %xmm3, %xmm14, %xmm6
-; AVX1-ONLY-NEXT:    vpshufb %xmm0, %xmm10, %xmm7
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm4 = [128,128,128,5,11,0,0,0,128,128,128,5,11,0,0,0]
+; AVX1-ONLY-NEXT:    # xmm4 = mem[0,0]
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm3 = [3,9,15,128,128,0,0,0,3,9,15,128,128,0,0,0]
+; AVX1-ONLY-NEXT:    # xmm3 = mem[0,0]
+; AVX1-ONLY-NEXT:    vpshufb %xmm4, %xmm14, %xmm6
+; AVX1-ONLY-NEXT:    vpshufb %xmm3, %xmm10, %xmm7
 ; AVX1-ONLY-NEXT:    vpor %xmm6, %xmm7, %xmm6
-; AVX1-ONLY-NEXT:    vpblendvb %xmm13, %xmm5, %xmm6, %xmm5
-; AVX1-ONLY-NEXT:    vmovdqu %ymm5, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vpshufb %xmm11, %xmm1, %xmm5
-; AVX1-ONLY-NEXT:    vmovdqa %xmm11, %xmm12
-; AVX1-ONLY-NEXT:    vpshufb %xmm4, %xmm2, %xmm6
+; AVX1-ONLY-NEXT:    vpblendvb %xmm13, %xmm5, %xmm6, %xmm0
+; AVX1-ONLY-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX1-ONLY-NEXT:    vpshufb %xmm11, %xmm9, %xmm5
+; AVX1-ONLY-NEXT:    vmovdqa %xmm11, %xmm14
+; AVX1-ONLY-NEXT:    vpshufb %xmm12, %xmm8, %xmm6
 ; AVX1-ONLY-NEXT:    vpunpcklqdq {{.*#+}} xmm5 = xmm6[0],xmm5[0]
-; AVX1-ONLY-NEXT:    vpshufb %xmm3, %xmm8, %xmm6
-; AVX1-ONLY-NEXT:    vpshufb %xmm0, %xmm9, %xmm7
-; AVX1-ONLY-NEXT:    vmovdqa %xmm9, %xmm14
+; AVX1-ONLY-NEXT:    vpshufb %xmm4, %xmm1, %xmm6
+; AVX1-ONLY-NEXT:    vpshufb %xmm3, %xmm2, %xmm7
 ; AVX1-ONLY-NEXT:    vpor %xmm6, %xmm7, %xmm6
 ; AVX1-ONLY-NEXT:    vpblendvb %xmm13, %xmm5, %xmm6, %xmm0
 ; AVX1-ONLY-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm9 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm7 = <2,8,14,u,u,u,u,u,u,u,u,u,u,u,u,u>
-; AVX1-ONLY-NEXT:    vpshufb %xmm7, %xmm9, %xmm0
+; AVX1-ONLY-NEXT:    vbroadcastss {{.*#+}} xmm1 = [2,8,14,0,2,8,14,0,2,8,14,0,2,8,14,0]
+; AVX1-ONLY-NEXT:    vpshufb %xmm1, %xmm9, %xmm2
 ; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm8 # 16-byte Reload
 ; AVX1-ONLY-NEXT:    vpshufb %xmm15, %xmm8, %xmm5
-; AVX1-ONLY-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm5[0],xmm0[0]
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm2 = <u,u,u,u,u,u,u,u,u,u,u,4,10,128,128,128>
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm3 = <u,u,u,u,u,u,u,u,u,u,u,128,128,0,6,12>
-; AVX1-ONLY-NEXT:    vmovdqa (%rsp), %xmm11 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm2, %xmm11, %xmm5
+; AVX1-ONLY-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm5[0],xmm2[0]
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm7 = [0,0,0,4,10,128,128,128,0,0,0,4,10,128,128,128]
+; AVX1-ONLY-NEXT:    # xmm7 = mem[0,0]
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm3 = [0,0,0,128,128,0,6,12,0,0,0,128,128,0,6,12]
+; AVX1-ONLY-NEXT:    # xmm3 = mem[0,0]
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm11 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm7, %xmm11, %xmm5
 ; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm10 # 16-byte Reload
 ; AVX1-ONLY-NEXT:    vpshufb %xmm3, %xmm10, %xmm6
 ; AVX1-ONLY-NEXT:    vpor %xmm5, %xmm6, %xmm5
 ; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm6 = <u,u,u,u,u,255,255,255,255,255,255,0,0,0,0,0>
-; AVX1-ONLY-NEXT:    vpblendvb %xmm6, %xmm0, %xmm5, %xmm0
+; AVX1-ONLY-NEXT:    vpblendvb %xmm6, %xmm2, %xmm5, %xmm0
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm13 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm7, %xmm13, %xmm0
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm7 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm15, %xmm7, %xmm1
+; AVX1-ONLY-NEXT:    vpshufb %xmm1, %xmm13, %xmm0
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm5 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm15, %xmm5, %xmm1
 ; AVX1-ONLY-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm2, %xmm15, %xmm1
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm5 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm3, %xmm5, %xmm2
+; AVX1-ONLY-NEXT:    vpshufb %xmm7, %xmm15, %xmm1
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm7 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm3, %xmm7, %xmm2
 ; AVX1-ONLY-NEXT:    vpor %xmm1, %xmm2, %xmm1
 ; AVX1-ONLY-NEXT:    vpblendvb %xmm6, %xmm0, %xmm1, %xmm0
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX1-ONLY-NEXT:    vpshufb %xmm12, %xmm9, %xmm0
-; AVX1-ONLY-NEXT:    vpshufb %xmm4, %xmm8, %xmm1
+; AVX1-ONLY-NEXT:    vpshufb %xmm14, %xmm9, %xmm0
+; AVX1-ONLY-NEXT:    vpshufb %xmm12, %xmm8, %xmm1
 ; AVX1-ONLY-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm3 = <u,u,u,u,u,u,u,u,u,u,u,5,11,128,128,128>
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm8 = <u,u,u,u,u,u,u,u,u,u,u,128,128,1,7,13>
-; AVX1-ONLY-NEXT:    vpshufb %xmm3, %xmm11, %xmm1
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm2 = [0,0,0,5,11,128,128,128,0,0,0,5,11,128,128,128]
+; AVX1-ONLY-NEXT:    # xmm2 = mem[0,0]
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm8 = [0,0,0,128,128,1,7,13,0,0,0,128,128,1,7,13]
+; AVX1-ONLY-NEXT:    # xmm8 = mem[0,0]
+; AVX1-ONLY-NEXT:    vpshufb %xmm2, %xmm11, %xmm1
+; AVX1-ONLY-NEXT:    vmovdqa %xmm2, %xmm3
 ; AVX1-ONLY-NEXT:    vpshufb %xmm8, %xmm10, %xmm2
 ; AVX1-ONLY-NEXT:    vpor %xmm1, %xmm2, %xmm1
 ; AVX1-ONLY-NEXT:    vpblendvb %xmm6, %xmm0, %xmm1, %xmm0
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX1-ONLY-NEXT:    vpshufb %xmm12, %xmm13, %xmm0
-; AVX1-ONLY-NEXT:    vpshufb %xmm4, %xmm7, %xmm1
+; AVX1-ONLY-NEXT:    vpshufb %xmm14, %xmm13, %xmm0
+; AVX1-ONLY-NEXT:    vpshufb %xmm12, %xmm5, %xmm1
 ; AVX1-ONLY-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; AVX1-ONLY-NEXT:    vpshufb %xmm3, %xmm15, %xmm1
-; AVX1-ONLY-NEXT:    vpshufb %xmm8, %xmm5, %xmm2
+; AVX1-ONLY-NEXT:    vpshufb %xmm8, %xmm7, %xmm2
 ; AVX1-ONLY-NEXT:    vpor %xmm1, %xmm2, %xmm1
 ; AVX1-ONLY-NEXT:    vpblendvb %xmm6, %xmm0, %xmm1, %xmm0
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm1 = <4,10,128,128,128,u,u,u,u,u,u,u,u,u,u,u>
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm5 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm1, %xmm5, %xmm0
-; AVX1-ONLY-NEXT:    vmovdqa %xmm1, %xmm9
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm2 = <128,128,0,6,12,u,u,u,u,u,u,u,u,u,u,u>
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm13 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm2, %xmm13, %xmm1
-; AVX1-ONLY-NEXT:    vmovdqa %xmm2, %xmm6
-; AVX1-ONLY-NEXT:    vpor %xmm0, %xmm1, %xmm1
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm2 = <u,u,u,u,u,u,u,u,4,10,u,u,u,u,u,u>
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm1 = [4,10,128,128,128,0,0,0,4,10,128,128,128,0,0,0]
+; AVX1-ONLY-NEXT:    # xmm1 = mem[0,0]
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm10 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm1, %xmm10, %xmm0
+; AVX1-ONLY-NEXT:    vmovdqa %xmm1, %xmm5
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm2 = [128,128,0,6,12,0,0,0,128,128,0,6,12,0,0,0]
+; AVX1-ONLY-NEXT:    # xmm2 = mem[0,0]
 ; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm2, %xmm4, %xmm0
-; AVX1-ONLY-NEXT:    vmovdqa %xmm2, %xmm7
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm3 = <u,u,u,u,u,u,u,u,u,u,u,u,u,2,8,14>
+; AVX1-ONLY-NEXT:    vpshufb %xmm2, %xmm4, %xmm1
+; AVX1-ONLY-NEXT:    vmovdqa %xmm2, %xmm9
+; AVX1-ONLY-NEXT:    vpor %xmm0, %xmm1, %xmm1
+; AVX1-ONLY-NEXT:    vbroadcastss {{.*#+}} xmm2 = [4,10,0,0,4,10,0,0,4,10,0,0,4,10,0,0]
 ; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm12 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm3, %xmm12, %xmm2
+; AVX1-ONLY-NEXT:    vpshufb %xmm2, %xmm12, %xmm0
+; AVX1-ONLY-NEXT:    vmovdqa %xmm2, %xmm6
+; AVX1-ONLY-NEXT:    vbroadcastss {{.*#+}} xmm3 = [0,2,8,14,0,2,8,14,0,2,8,14,0,2,8,14]
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm14 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm3, %xmm14, %xmm2
 ; AVX1-ONLY-NEXT:    vpunpckhqdq {{.*#+}} xmm2 = xmm2[1],xmm0[1]
 ; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm0 = <255,255,255,255,255,0,0,0,0,0,u,u,u,u,u,u>
 ; AVX1-ONLY-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm1
-; AVX1-ONLY-NEXT:    vmovdqa %xmm0, %xmm10
 ; AVX1-ONLY-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vmovdqa %xmm14, %xmm8
-; AVX1-ONLY-NEXT:    vmovdqa %xmm14, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX1-ONLY-NEXT:    vpshufb %xmm9, %xmm14, %xmm1
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm9 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm6, %xmm9, %xmm2
-; AVX1-ONLY-NEXT:    vpor %xmm1, %xmm2, %xmm1
 ; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm7, %xmm15, %xmm2
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm3, %xmm0, %xmm3
-; AVX1-ONLY-NEXT:    vpunpckhqdq {{.*#+}} xmm2 = xmm3[1],xmm2[1]
-; AVX1-ONLY-NEXT:    vpblendvb %xmm10, %xmm1, %xmm2, %xmm1
-; AVX1-ONLY-NEXT:    vmovdqa %xmm10, %xmm7
-; AVX1-ONLY-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm2 = <5,11,128,128,128,u,u,u,u,u,u,u,u,u,u,u>
-; AVX1-ONLY-NEXT:    vpshufb %xmm2, %xmm5, %xmm1
-; AVX1-ONLY-NEXT:    vmovdqa %xmm2, %xmm6
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm3 = <128,128,1,7,13,u,u,u,u,u,u,u,u,u,u,u>
-; AVX1-ONLY-NEXT:    vpshufb %xmm3, %xmm13, %xmm2
-; AVX1-ONLY-NEXT:    vmovdqa %xmm3, %xmm14
+; AVX1-ONLY-NEXT:    vpshufb %xmm5, %xmm15, %xmm1
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm8 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm9, %xmm8, %xmm2
 ; AVX1-ONLY-NEXT:    vpor %xmm1, %xmm2, %xmm1
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm3 = <u,u,u,u,u,u,u,u,5,11,u,u,u,u,u,u>
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm7 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm6, %xmm7, %xmm2
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm3, %xmm6, %xmm3
+; AVX1-ONLY-NEXT:    vpunpckhqdq {{.*#+}} xmm2 = xmm3[1],xmm2[1]
+; AVX1-ONLY-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm1
+; AVX1-ONLY-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm2 = [5,11,128,128,128,0,0,0,5,11,128,128,128,0,0,0]
+; AVX1-ONLY-NEXT:    # xmm2 = mem[0,0]
+; AVX1-ONLY-NEXT:    vpshufb %xmm2, %xmm10, %xmm1
+; AVX1-ONLY-NEXT:    vmovdqa %xmm2, %xmm9
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm3 = [128,128,1,7,13,0,0,0,128,128,1,7,13,0,0,0]
+; AVX1-ONLY-NEXT:    # xmm3 = mem[0,0]
 ; AVX1-ONLY-NEXT:    vpshufb %xmm3, %xmm4, %xmm2
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm3, %xmm10
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm11 = <u,u,u,u,u,u,u,u,u,u,u,u,u,3,9,15>
-; AVX1-ONLY-NEXT:    vmovdqa %xmm12, %xmm4
-; AVX1-ONLY-NEXT:    vpshufb %xmm11, %xmm12, %xmm3
-; AVX1-ONLY-NEXT:    vpunpckhqdq {{.*#+}} xmm2 = xmm3[1],xmm2[1]
-; AVX1-ONLY-NEXT:    vpblendvb %xmm7, %xmm1, %xmm2, %xmm1
-; AVX1-ONLY-NEXT:    vmovdqa %xmm7, %xmm12
-; AVX1-ONLY-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vpshufb %xmm6, %xmm8, %xmm1
-; AVX1-ONLY-NEXT:    vpshufb %xmm14, %xmm9, %xmm2
-; AVX1-ONLY-NEXT:    vmovdqa %xmm9, %xmm7
+; AVX1-ONLY-NEXT:    vmovdqa %xmm4, %xmm13
 ; AVX1-ONLY-NEXT:    vpor %xmm1, %xmm2, %xmm1
-; AVX1-ONLY-NEXT:    vpshufb %xmm10, %xmm15, %xmm2
-; AVX1-ONLY-NEXT:    vmovdqa %xmm15, %xmm6
-; AVX1-ONLY-NEXT:    vpshufb %xmm11, %xmm0, %xmm3
-; AVX1-ONLY-NEXT:    vmovdqa %xmm0, %xmm5
+; AVX1-ONLY-NEXT:    vbroadcastss {{.*#+}} xmm3 = [5,11,0,0,5,11,0,0,5,11,0,0,5,11,0,0]
+; AVX1-ONLY-NEXT:    vpshufb %xmm3, %xmm12, %xmm2
+; AVX1-ONLY-NEXT:    vmovdqa %xmm3, %xmm11
+; AVX1-ONLY-NEXT:    vbroadcastss {{.*#+}} xmm4 = [0,3,9,15,0,3,9,15,0,3,9,15,0,3,9,15]
+; AVX1-ONLY-NEXT:    vpshufb %xmm4, %xmm14, %xmm3
 ; AVX1-ONLY-NEXT:    vpunpckhqdq {{.*#+}} xmm2 = xmm3[1],xmm2[1]
-; AVX1-ONLY-NEXT:    vpblendvb %xmm12, %xmm1, %xmm2, %xmm0
+; AVX1-ONLY-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm1
+; AVX1-ONLY-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX1-ONLY-NEXT:    vpshufb %xmm9, %xmm15, %xmm1
+; AVX1-ONLY-NEXT:    vpshufb %xmm10, %xmm8, %xmm2
+; AVX1-ONLY-NEXT:    vpor %xmm1, %xmm2, %xmm1
+; AVX1-ONLY-NEXT:    vpshufb %xmm11, %xmm7, %xmm2
+; AVX1-ONLY-NEXT:    vpshufb %xmm4, %xmm6, %xmm3
+; AVX1-ONLY-NEXT:    vpunpckhqdq {{.*#+}} xmm2 = xmm3[1],xmm2[1]
+; AVX1-ONLY-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm0
 ; AVX1-ONLY-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm11 = <128,128,128,2,8,14,u,u,u,u,u,u,u,u,u,u>
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm1 = [128,128,128,2,8,14,0,0,128,128,128,2,8,14,0,0]
+; AVX1-ONLY-NEXT:    # xmm1 = mem[0,0]
 ; AVX1-ONLY-NEXT:    vmovdqa 112(%rdi), %xmm0
-; AVX1-ONLY-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX1-ONLY-NEXT:    vpshufb %xmm11, %xmm0, %xmm0
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm10 = <0,6,12,128,128,128,u,u,u,u,u,u,u,u,u,u>
+; AVX1-ONLY-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
+; AVX1-ONLY-NEXT:    vpshufb %xmm1, %xmm0, %xmm0
+; AVX1-ONLY-NEXT:    vmovdqa %xmm1, %xmm3
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm2 = [0,6,12,128,128,128,0,0,0,6,12,128,128,128,0,0]
+; AVX1-ONLY-NEXT:    # xmm2 = mem[0,0]
 ; AVX1-ONLY-NEXT:    vmovdqa 96(%rdi), %xmm1
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX1-ONLY-NEXT:    vpshufb %xmm10, %xmm1, %xmm1
+; AVX1-ONLY-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
+; AVX1-ONLY-NEXT:    vmovdqa %xmm2, %xmm5
 ; AVX1-ONLY-NEXT:    vpor %xmm0, %xmm1, %xmm0
 ; AVX1-ONLY-NEXT:    vmovdqa 80(%rdi), %xmm2
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm12 = <u,u,u,u,u,u,u,u,u,u,u,128,128,128,4,10>
-; AVX1-ONLY-NEXT:    vpshufb %xmm12, %xmm2, %xmm1
-; AVX1-ONLY-NEXT:    vmovdqa %xmm2, %xmm14
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm10 = [0,0,0,128,128,128,4,10,0,0,0,128,128,128,4,10]
+; AVX1-ONLY-NEXT:    # xmm10 = mem[0,0]
+; AVX1-ONLY-NEXT:    vpshufb %xmm10, %xmm2, %xmm1
+; AVX1-ONLY-NEXT:    vmovdqa %xmm2, %xmm9
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX1-ONLY-NEXT:    vmovdqa 64(%rdi), %xmm2
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm15 = <u,u,u,u,u,u,u,u,u,u,u,2,8,14,128,128>
-; AVX1-ONLY-NEXT:    vpshufb %xmm15, %xmm2, %xmm2
-; AVX1-ONLY-NEXT:    vpor %xmm1, %xmm2, %xmm1
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm11 = [0,0,0,2,8,14,128,128,0,0,0,2,8,14,128,128]
+; AVX1-ONLY-NEXT:    # xmm11 = mem[0,0]
+; AVX1-ONLY-NEXT:    vpshufb %xmm11, %xmm2, %xmm4
+; AVX1-ONLY-NEXT:    vpor %xmm1, %xmm4, %xmm1
 ; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm1
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm0 = xmm4[u,u,4,10,u,u,u,u,u,u,u,u,u,u,u,u]
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm9 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm2 = xmm9[u,u,u,u,0,6,12,u,u,u,u,u,u,u,u,u]
-; AVX1-ONLY-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
-; AVX1-ONLY-NEXT:    vpshufb %xmm11, %xmm13, %xmm2
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm8 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm10, %xmm8, %xmm3
-; AVX1-ONLY-NEXT:    vpor %xmm2, %xmm3, %xmm2
-; AVX1-ONLY-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1,2],xmm0[3,4,5],xmm2[6,7]
-; AVX1-ONLY-NEXT:    vmovaps {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0,0,0,0,0,0,255,255,255,255,255,255,255,255,255,255]
-; AVX1-ONLY-NEXT:    vandnps %ymm1, %ymm4, %ymm1
-; AVX1-ONLY-NEXT:    vandps %ymm4, %ymm2, %ymm2
-; AVX1-ONLY-NEXT:    vorps %ymm1, %ymm2, %ymm2
-; AVX1-ONLY-NEXT:    vmovaps {{.*#+}} ymm1 = [65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,0,0,0,0,0]
-; AVX1-ONLY-NEXT:    vandps %ymm1, %ymm2, %ymm2
-; AVX1-ONLY-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm3 # 16-byte Folded Reload
-; AVX1-ONLY-NEXT:    vandnps %ymm3, %ymm1, %ymm3
-; AVX1-ONLY-NEXT:    vorps %ymm3, %ymm2, %ymm0
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm0 = xmm14[u,u,4,10,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm4 = xmm12[u,u,u,u,0,6,12,u,u,u,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm4[0],xmm0[0],xmm4[1],xmm0[1]
+; AVX1-ONLY-NEXT:    vpshufb %xmm3, %xmm13, %xmm4
+; AVX1-ONLY-NEXT:    vmovdqa %xmm3, %xmm14
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vmovdqa %xmm5, %xmm12
+; AVX1-ONLY-NEXT:    vpshufb %xmm5, %xmm2, %xmm5
+; AVX1-ONLY-NEXT:    vpor %xmm4, %xmm5, %xmm4
+; AVX1-ONLY-NEXT:    vpblendw {{.*#+}} xmm4 = xmm4[0,1,2],xmm0[3,4,5],xmm4[6,7]
+; AVX1-ONLY-NEXT:    vmovaps {{.*#+}} ymm13 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0,0,0,0,0,0,255,255,255,255,255,255,255,255,255,255]
+; AVX1-ONLY-NEXT:    vandnps %ymm1, %ymm13, %ymm1
+; AVX1-ONLY-NEXT:    vandps %ymm4, %ymm13, %ymm4
+; AVX1-ONLY-NEXT:    vorps %ymm1, %ymm4, %ymm4
+; AVX1-ONLY-NEXT:    vmovaps {{.*#+}} ymm3 = [65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,0,0,0,0,0]
+; AVX1-ONLY-NEXT:    vandps %ymm3, %ymm4, %ymm4
+; AVX1-ONLY-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm5 # 16-byte Folded Reload
+; AVX1-ONLY-NEXT:    vandnps %ymm5, %ymm3, %ymm5
+; AVX1-ONLY-NEXT:    vorps %ymm5, %ymm4, %ymm0
 ; AVX1-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX1-ONLY-NEXT:    vmovdqa 304(%rdi), %xmm0
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX1-ONLY-NEXT:    vpshufb %xmm11, %xmm0, %xmm2
-; AVX1-ONLY-NEXT:    vmovdqa 288(%rdi), %xmm13
-; AVX1-ONLY-NEXT:    vpshufb %xmm10, %xmm13, %xmm3
-; AVX1-ONLY-NEXT:    vpor %xmm2, %xmm3, %xmm2
-; AVX1-ONLY-NEXT:    vmovdqa 272(%rdi), %xmm3
-; AVX1-ONLY-NEXT:    vpshufb %xmm12, %xmm3, %xmm0
-; AVX1-ONLY-NEXT:    vmovdqa %xmm3, %xmm12
-; AVX1-ONLY-NEXT:    vmovdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX1-ONLY-NEXT:    vmovdqa 256(%rdi), %xmm3
-; AVX1-ONLY-NEXT:    vmovdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX1-ONLY-NEXT:    vpshufb %xmm15, %xmm3, %xmm15
-; AVX1-ONLY-NEXT:    vpor %xmm0, %xmm15, %xmm0
-; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm2 = xmm5[u,u,4,10,u,u,u,u,u,u,u,u,u,u,u,u]
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm15 = xmm6[u,u,u,u,0,6,12,u,u,u,u,u,u,u,u,u]
-; AVX1-ONLY-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm15[0],xmm2[0],xmm15[1],xmm2[1]
-; AVX1-ONLY-NEXT:    vpshufb %xmm11, %xmm7, %xmm11
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm10, %xmm3, %xmm10
-; AVX1-ONLY-NEXT:    vpor %xmm11, %xmm10, %xmm10
-; AVX1-ONLY-NEXT:    vpblendw {{.*#+}} xmm2 = xmm10[0,1,2],xmm2[3,4,5],xmm10[6,7]
-; AVX1-ONLY-NEXT:    vandnps %ymm0, %ymm4, %ymm0
-; AVX1-ONLY-NEXT:    vandps %ymm4, %ymm2, %ymm2
-; AVX1-ONLY-NEXT:    vorps %ymm0, %ymm2, %ymm0
-; AVX1-ONLY-NEXT:    vandps %ymm1, %ymm0, %ymm0
-; AVX1-ONLY-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm2 # 16-byte Folded Reload
-; AVX1-ONLY-NEXT:    vandnps %ymm2, %ymm1, %ymm2
-; AVX1-ONLY-NEXT:    vorps %ymm2, %ymm0, %ymm0
-; AVX1-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm0 = <128,128,128,3,9,15,u,u,u,u,u,u,u,u,u,u>
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm0, %xmm6, %xmm2
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm10 = <1,7,13,128,128,128,u,u,u,u,u,u,u,u,u,u>
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm7 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm10, %xmm7, %xmm11
-; AVX1-ONLY-NEXT:    vpor %xmm2, %xmm11, %xmm2
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm11 = xmm14[u,u,u,u,u,u,u,u,u,u,u],zero,zero,zero,xmm14[5,11]
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm7 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm15 = xmm7[u,u,u,u,u,u,u,u,u,u,u,3,9,15],zero,zero
-; AVX1-ONLY-NEXT:    vpor %xmm11, %xmm15, %xmm11
-; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm2, %ymm11, %ymm2
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm5 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm11 = xmm5[u,u,5,11,u,u,u,u,u,u,u,u,u,u,u,u]
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm15 = xmm9[u,u,u,u,1,7,13,u,u,u,u,u,u,u,u,u]
-; AVX1-ONLY-NEXT:    vpunpckldq {{.*#+}} xmm11 = xmm15[0],xmm11[0],xmm15[1],xmm11[1]
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm5 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm0, %xmm5, %xmm15
-; AVX1-ONLY-NEXT:    vpshufb %xmm10, %xmm8, %xmm14
-; AVX1-ONLY-NEXT:    vpor %xmm15, %xmm14, %xmm14
-; AVX1-ONLY-NEXT:    vpblendw {{.*#+}} xmm11 = xmm14[0,1,2],xmm11[3,4,5],xmm14[6,7]
-; AVX1-ONLY-NEXT:    vandnps %ymm2, %ymm4, %ymm2
-; AVX1-ONLY-NEXT:    vandps %ymm4, %ymm11, %ymm11
-; AVX1-ONLY-NEXT:    vorps %ymm2, %ymm11, %ymm2
-; AVX1-ONLY-NEXT:    vandps %ymm1, %ymm2, %ymm2
-; AVX1-ONLY-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm11 # 16-byte Folded Reload
-; AVX1-ONLY-NEXT:    vandnps %ymm11, %ymm1, %ymm11
-; AVX1-ONLY-NEXT:    vorps %ymm2, %ymm11, %ymm2
-; AVX1-ONLY-NEXT:    vmovups %ymm2, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm8 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm0, %xmm8, %xmm2
-; AVX1-ONLY-NEXT:    vpshufb %xmm10, %xmm13, %xmm11
-; AVX1-ONLY-NEXT:    vmovdqa %xmm13, %xmm9
-; AVX1-ONLY-NEXT:    vpor %xmm2, %xmm11, %xmm2
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm11 = xmm12[u,u,u,u,u,u,u,u,u,u,u],zero,zero,zero,xmm12[5,11]
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm5 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm14 = xmm5[u,u,u,u,u,u,u,u,u,u,u,3,9,15],zero,zero
-; AVX1-ONLY-NEXT:    vpor %xmm11, %xmm14, %xmm11
-; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm2, %ymm11, %ymm2
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm5 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm11 = xmm5[u,u,5,11,u,u,u,u,u,u,u,u,u,u,u,u]
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm5 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm14 = xmm5[u,u,u,u,1,7,13,u,u,u,u,u,u,u,u,u]
-; AVX1-ONLY-NEXT:    vpunpckldq {{.*#+}} xmm11 = xmm14[0],xmm11[0],xmm14[1],xmm11[1]
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm5 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm0, %xmm5, %xmm0
-; AVX1-ONLY-NEXT:    vpshufb %xmm10, %xmm3, %xmm10
+; AVX1-ONLY-NEXT:    vpshufb %xmm14, %xmm0, %xmm4
+; AVX1-ONLY-NEXT:    vmovdqa 288(%rdi), %xmm0
+; AVX1-ONLY-NEXT:    vpshufb %xmm12, %xmm0, %xmm5
+; AVX1-ONLY-NEXT:    vmovdqa %xmm0, %xmm12
+; AVX1-ONLY-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX1-ONLY-NEXT:    vpor %xmm4, %xmm5, %xmm1
+; AVX1-ONLY-NEXT:    vmovdqa 272(%rdi), %xmm0
+; AVX1-ONLY-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX1-ONLY-NEXT:    vpshufb %xmm10, %xmm0, %xmm0
+; AVX1-ONLY-NEXT:    vmovdqa 256(%rdi), %xmm2
+; AVX1-ONLY-NEXT:    vmovdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX1-ONLY-NEXT:    vpshufb %xmm11, %xmm2, %xmm10
 ; AVX1-ONLY-NEXT:    vpor %xmm0, %xmm10, %xmm0
-; AVX1-ONLY-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2],xmm11[3,4,5],xmm0[6,7]
-; AVX1-ONLY-NEXT:    vandnps %ymm2, %ymm4, %ymm2
-; AVX1-ONLY-NEXT:    vandps %ymm4, %ymm0, %ymm0
-; AVX1-ONLY-NEXT:    vorps %ymm2, %ymm0, %ymm0
-; AVX1-ONLY-NEXT:    vandps %ymm1, %ymm0, %ymm0
-; AVX1-ONLY-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm2 # 16-byte Folded Reload
-; AVX1-ONLY-NEXT:    vandnps %ymm2, %ymm1, %ymm1
+; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm1 = xmm6[u,u,4,10,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm10 = xmm7[u,u,u,u,0,6,12,u,u,u,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm10[0],xmm1[0],xmm10[1],xmm1[1]
+; AVX1-ONLY-NEXT:    vpshufb %xmm14, %xmm8, %xmm7
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm6 = xmm15[0,6,12],zero,zero,zero,xmm15[u,u,u,u,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vpor %xmm7, %xmm6, %xmm6
+; AVX1-ONLY-NEXT:    vpblendw {{.*#+}} xmm1 = xmm6[0,1,2],xmm1[3,4,5],xmm6[6,7]
+; AVX1-ONLY-NEXT:    vandnps %ymm0, %ymm13, %ymm0
+; AVX1-ONLY-NEXT:    vandps %ymm1, %ymm13, %ymm1
+; AVX1-ONLY-NEXT:    vorps %ymm0, %ymm1, %ymm0
+; AVX1-ONLY-NEXT:    vandps %ymm3, %ymm0, %ymm0
+; AVX1-ONLY-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm1 # 16-byte Folded Reload
+; AVX1-ONLY-NEXT:    vandnps %ymm1, %ymm3, %ymm1
 ; AVX1-ONLY-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; AVX1-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm0 = <128,128,128,4,10,u,u,u,u,u,u,u,u,u,u,u>
-; AVX1-ONLY-NEXT:    vpshufb %xmm0, %xmm6, %xmm1
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm14 = <2,8,14,128,128,u,u,u,u,u,u,u,u,u,u,u>
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm13 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm14, %xmm13, %xmm2
-; AVX1-ONLY-NEXT:    vpor %xmm1, %xmm2, %xmm1
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm5 = <u,u,u,u,u,u,u,u,u,u,u,4,10,128,128,128>
-; AVX1-ONLY-NEXT:    vmovdqa %xmm7, %xmm15
-; AVX1-ONLY-NEXT:    vpshufb %xmm5, %xmm7, %xmm2
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm3 = <u,u,u,u,u,u,u,u,u,u,u,128,128,0,6,12>
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm0 = [128,128,128,3,9,15,0,0,128,128,128,3,9,15,0,0]
+; AVX1-ONLY-NEXT:    # xmm0 = mem[0,0]
+; AVX1-ONLY-NEXT:    vmovdqa (%rsp), %xmm14 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm0, %xmm14, %xmm1
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm6 = [1,7,13,128,128,128,0,0,1,7,13,128,128,128,0,0]
+; AVX1-ONLY-NEXT:    # xmm6 = mem[0,0]
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm6, %xmm15, %xmm7
+; AVX1-ONLY-NEXT:    vpor %xmm1, %xmm7, %xmm1
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm8 = [0,0,0,128,128,128,5,11,0,0,0,128,128,128,5,11]
+; AVX1-ONLY-NEXT:    # xmm8 = mem[0,0]
+; AVX1-ONLY-NEXT:    vpshufb %xmm8, %xmm9, %xmm7
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm9 = [0,0,0,3,9,15,128,128,0,0,0,3,9,15,128,128]
+; AVX1-ONLY-NEXT:    # xmm9 = mem[0,0]
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm9, %xmm2, %xmm10
+; AVX1-ONLY-NEXT:    vpor %xmm7, %xmm10, %xmm7
+; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm1, %ymm7, %ymm1
+; AVX1-ONLY-NEXT:    vbroadcastss {{.*#+}} xmm4 = [0,0,5,11,0,0,5,11,0,0,5,11,0,0,5,11]
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm5 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm4, %xmm5, %xmm7
+; AVX1-ONLY-NEXT:    vbroadcastss {{.*#+}} xmm5 = [1,7,13,0,1,7,13,0,1,7,13,0,1,7,13,0]
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm10 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm5, %xmm10, %xmm10
+; AVX1-ONLY-NEXT:    vpunpckldq {{.*#+}} xmm7 = xmm10[0],xmm7[0],xmm10[1],xmm7[1]
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm10 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm0, %xmm10, %xmm10
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm11 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm6, %xmm11, %xmm11
+; AVX1-ONLY-NEXT:    vpor %xmm10, %xmm11, %xmm10
+; AVX1-ONLY-NEXT:    vpblendw {{.*#+}} xmm7 = xmm10[0,1,2],xmm7[3,4,5],xmm10[6,7]
+; AVX1-ONLY-NEXT:    vandnps %ymm1, %ymm13, %ymm1
+; AVX1-ONLY-NEXT:    vandps %ymm7, %ymm13, %ymm7
+; AVX1-ONLY-NEXT:    vorps %ymm1, %ymm7, %ymm1
+; AVX1-ONLY-NEXT:    vandps %ymm3, %ymm1, %ymm1
+; AVX1-ONLY-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm7 # 16-byte Folded Reload
+; AVX1-ONLY-NEXT:    vandnps %ymm7, %ymm3, %ymm7
+; AVX1-ONLY-NEXT:    vorps %ymm7, %ymm1, %ymm1
+; AVX1-ONLY-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm11 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm0, %xmm11, %xmm1
+; AVX1-ONLY-NEXT:    vpshufb %xmm6, %xmm12, %xmm7
+; AVX1-ONLY-NEXT:    vpor %xmm1, %xmm7, %xmm1
 ; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm12 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm3, %xmm12, %xmm4
-; AVX1-ONLY-NEXT:    vpor %xmm2, %xmm4, %xmm2
-; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
-; AVX1-ONLY-NEXT:    vmovaps {{.*#+}} ymm10 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0,0,0,0,0,255,255,255,255,255,255,255,255,255,255,255]
-; AVX1-ONLY-NEXT:    vandnps %ymm1, %ymm10, %ymm1
-; AVX1-ONLY-NEXT:    vandps {{[-0-9]+}}(%r{{[sb]}}p), %ymm10, %ymm2 # 32-byte Folded Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm8, %xmm12, %xmm7
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm8 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm9, %xmm8, %xmm10
+; AVX1-ONLY-NEXT:    vpor %xmm7, %xmm10, %xmm7
+; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm1, %ymm7, %ymm1
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm7 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm4, %xmm7, %xmm7
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm5, %xmm4, %xmm10
+; AVX1-ONLY-NEXT:    vpunpckldq {{.*#+}} xmm7 = xmm10[0],xmm7[0],xmm10[1],xmm7[1]
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm0, %xmm4, %xmm0
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm6, %xmm4, %xmm6
+; AVX1-ONLY-NEXT:    vpor %xmm0, %xmm6, %xmm0
+; AVX1-ONLY-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2],xmm7[3,4,5],xmm0[6,7]
+; AVX1-ONLY-NEXT:    vandnps %ymm1, %ymm13, %ymm1
+; AVX1-ONLY-NEXT:    vandps %ymm0, %ymm13, %ymm0
+; AVX1-ONLY-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; AVX1-ONLY-NEXT:    vandps %ymm3, %ymm0, %ymm0
+; AVX1-ONLY-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm1 # 16-byte Folded Reload
+; AVX1-ONLY-NEXT:    vandnps %ymm1, %ymm3, %ymm1
+; AVX1-ONLY-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; AVX1-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm3 = [128,128,128,4,10,0,0,0,128,128,128,4,10,0,0,0]
+; AVX1-ONLY-NEXT:    # xmm3 = mem[0,0]
+; AVX1-ONLY-NEXT:    vmovdqa %xmm14, %xmm13
+; AVX1-ONLY-NEXT:    vpshufb %xmm3, %xmm14, %xmm0
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm4 = [2,8,14,128,128,0,0,0,2,8,14,128,128,0,0,0]
+; AVX1-ONLY-NEXT:    # xmm4 = mem[0,0]
+; AVX1-ONLY-NEXT:    vpshufb %xmm4, %xmm15, %xmm1
+; AVX1-ONLY-NEXT:    vmovdqa %xmm15, %xmm4
+; AVX1-ONLY-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm15 = [0,0,0,4,10,128,128,128,0,0,0,4,10,128,128,128]
+; AVX1-ONLY-NEXT:    # xmm15 = mem[0,0]
+; AVX1-ONLY-NEXT:    vpshufb %xmm15, %xmm2, %xmm1
+; AVX1-ONLY-NEXT:    vmovdqa %xmm2, %xmm5
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm6 = [0,0,0,128,128,0,6,12,0,0,0,128,128,0,6,12]
+; AVX1-ONLY-NEXT:    # xmm6 = mem[0,0]
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm7 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm6, %xmm7, %xmm2
+; AVX1-ONLY-NEXT:    vpor %xmm1, %xmm2, %xmm1
+; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm1
+; AVX1-ONLY-NEXT:    vmovaps {{.*#+}} ymm0 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0,0,0,0,0,255,255,255,255,255,255,255,255,255,255,255]
+; AVX1-ONLY-NEXT:    vandnps %ymm1, %ymm0, %ymm1
+; AVX1-ONLY-NEXT:    vandps {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm2 # 32-byte Folded Reload
 ; AVX1-ONLY-NEXT:    vorps %ymm1, %ymm2, %ymm1
-; AVX1-ONLY-NEXT:    vmovaps {{.*#+}} ymm11 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0,0,0,0,0,0]
-; AVX1-ONLY-NEXT:    vandps %ymm1, %ymm11, %ymm1
+; AVX1-ONLY-NEXT:    vmovaps {{.*#+}} ymm14 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0,0,0,0,0,0]
+; AVX1-ONLY-NEXT:    vandps %ymm1, %ymm14, %ymm1
 ; AVX1-ONLY-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm2 # 16-byte Folded Reload
-; AVX1-ONLY-NEXT:    vandnps %ymm2, %ymm11, %ymm2
+; AVX1-ONLY-NEXT:    vandnps %ymm2, %ymm14, %ymm2
 ; AVX1-ONLY-NEXT:    vorps %ymm2, %ymm1, %ymm1
 ; AVX1-ONLY-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vpshufb %xmm0, %xmm8, %xmm2
-; AVX1-ONLY-NEXT:    vpshufb %xmm14, %xmm9, %xmm4
-; AVX1-ONLY-NEXT:    vpor %xmm2, %xmm4, %xmm2
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm8 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm5, %xmm8, %xmm4
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm5 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm3, %xmm5, %xmm14
-; AVX1-ONLY-NEXT:    vpor %xmm4, %xmm14, %xmm4
-; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm2, %ymm4, %ymm2
-; AVX1-ONLY-NEXT:    vandnps %ymm2, %ymm10, %ymm2
-; AVX1-ONLY-NEXT:    vandps {{[-0-9]+}}(%r{{[sb]}}p), %ymm10, %ymm4 # 32-byte Folded Reload
-; AVX1-ONLY-NEXT:    vorps %ymm2, %ymm4, %ymm2
-; AVX1-ONLY-NEXT:    vandps %ymm2, %ymm11, %ymm2
-; AVX1-ONLY-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm4 # 16-byte Folded Reload
-; AVX1-ONLY-NEXT:    vandnps %ymm4, %ymm11, %ymm4
-; AVX1-ONLY-NEXT:    vorps %ymm4, %ymm2, %ymm0
-; AVX1-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm1 = <128,128,128,5,11,u,u,u,u,u,u,u,u,u,u,u>
-; AVX1-ONLY-NEXT:    vpshufb %xmm1, %xmm6, %xmm4
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm0 = <3,9,15,128,128,u,u,u,u,u,u,u,u,u,u,u>
-; AVX1-ONLY-NEXT:    vpshufb %xmm0, %xmm13, %xmm14
-; AVX1-ONLY-NEXT:    vmovdqa %xmm13, %xmm7
-; AVX1-ONLY-NEXT:    vpor %xmm4, %xmm14, %xmm4
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm2 = <u,u,u,u,u,u,u,u,u,u,u,5,11,128,128,128>
-; AVX1-ONLY-NEXT:    vmovdqa %xmm15, %xmm6
-; AVX1-ONLY-NEXT:    vpshufb %xmm2, %xmm15, %xmm14
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm3 = <u,u,u,u,u,u,u,u,u,u,u,128,128,1,7,13>
-; AVX1-ONLY-NEXT:    vpshufb %xmm3, %xmm12, %xmm15
-; AVX1-ONLY-NEXT:    vpor %xmm14, %xmm15, %xmm14
-; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm4, %ymm14, %ymm4
-; AVX1-ONLY-NEXT:    vandnps %ymm4, %ymm10, %ymm4
-; AVX1-ONLY-NEXT:    vandps {{[-0-9]+}}(%r{{[sb]}}p), %ymm10, %ymm14 # 32-byte Folded Reload
-; AVX1-ONLY-NEXT:    vorps %ymm4, %ymm14, %ymm4
-; AVX1-ONLY-NEXT:    vandps %ymm4, %ymm11, %ymm4
-; AVX1-ONLY-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm14 # 16-byte Folded Reload
-; AVX1-ONLY-NEXT:    vandnps %ymm14, %ymm11, %ymm14
-; AVX1-ONLY-NEXT:    vorps %ymm4, %ymm14, %ymm1
+; AVX1-ONLY-NEXT:    vmovdqa %xmm11, %xmm9
+; AVX1-ONLY-NEXT:    vpshufb %xmm3, %xmm11, %xmm2
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm10 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm3 = xmm10[2,8,14],zero,zero,xmm10[u,u,u,u,u,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vpor %xmm2, %xmm3, %xmm2
+; AVX1-ONLY-NEXT:    vpshufb %xmm15, %xmm8, %xmm3
+; AVX1-ONLY-NEXT:    vmovdqa %xmm8, %xmm15
+; AVX1-ONLY-NEXT:    vpshufb %xmm6, %xmm12, %xmm6
+; AVX1-ONLY-NEXT:    vmovdqa %xmm12, %xmm11
+; AVX1-ONLY-NEXT:    vpor %xmm3, %xmm6, %xmm3
+; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
+; AVX1-ONLY-NEXT:    vandnps %ymm2, %ymm0, %ymm2
+; AVX1-ONLY-NEXT:    vandps {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm3 # 32-byte Folded Reload
+; AVX1-ONLY-NEXT:    vorps %ymm2, %ymm3, %ymm2
+; AVX1-ONLY-NEXT:    vandps %ymm2, %ymm14, %ymm2
+; AVX1-ONLY-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm3 # 16-byte Folded Reload
+; AVX1-ONLY-NEXT:    vandnps %ymm3, %ymm14, %ymm3
+; AVX1-ONLY-NEXT:    vorps %ymm3, %ymm2, %ymm1
 ; AVX1-ONLY-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm14 = zero,zero,zero,xmm1[5,11,u,u,u,u,u,u,u,u,u,u,u]
-; AVX1-ONLY-NEXT:    vpshufb %xmm0, %xmm9, %xmm15
-; AVX1-ONLY-NEXT:    vmovdqa %xmm9, %xmm13
-; AVX1-ONLY-NEXT:    vmovdqa %xmm9, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX1-ONLY-NEXT:    vpor %xmm14, %xmm15, %xmm14
-; AVX1-ONLY-NEXT:    vpshufb %xmm2, %xmm8, %xmm15
-; AVX1-ONLY-NEXT:    vpshufb %xmm3, %xmm5, %xmm0
-; AVX1-ONLY-NEXT:    vpor %xmm0, %xmm15, %xmm0
-; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm14, %ymm0, %ymm0
-; AVX1-ONLY-NEXT:    vandnps %ymm0, %ymm10, %ymm0
-; AVX1-ONLY-NEXT:    vandps {{[-0-9]+}}(%r{{[sb]}}p), %ymm10, %ymm10 # 32-byte Folded Reload
-; AVX1-ONLY-NEXT:    vorps %ymm0, %ymm10, %ymm0
-; AVX1-ONLY-NEXT:    vandps %ymm0, %ymm11, %ymm0
-; AVX1-ONLY-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm10 # 16-byte Folded Reload
-; AVX1-ONLY-NEXT:    vandnps %ymm10, %ymm11, %ymm10
-; AVX1-ONLY-NEXT:    vorps %ymm0, %ymm10, %ymm0
-; AVX1-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm9 = <4,10,128,128,128,u,u,u,u,u,u,u,u,u,u,u>
-; AVX1-ONLY-NEXT:    vpshufb %xmm9, %xmm7, %xmm0
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm10 = zero,zero,xmm2[0,6,12,u,u,u,u,u,u,u,u,u,u,u]
-; AVX1-ONLY-NEXT:    vpor %xmm0, %xmm10, %xmm0
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm7 = <u,u,u,u,u,u,u,u,u,u,128,128,128,2,8,14>
-; AVX1-ONLY-NEXT:    vpshufb %xmm7, %xmm12, %xmm10
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm15 = <u,u,u,u,u,u,u,u,u,u,0,6,12,128,128,128>
-; AVX1-ONLY-NEXT:    vpshufb %xmm15, %xmm6, %xmm2
-; AVX1-ONLY-NEXT:    vpor %xmm2, %xmm10, %xmm2
-; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
-; AVX1-ONLY-NEXT:    vmovaps {{.*#+}} ymm10 = [0,0,0,0,0,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535]
-; AVX1-ONLY-NEXT:    vandnps {{[-0-9]+}}(%r{{[sb]}}p), %ymm10, %ymm2 # 32-byte Folded Reload
-; AVX1-ONLY-NEXT:    vandps %ymm0, %ymm10, %ymm0
-; AVX1-ONLY-NEXT:    vorps %ymm2, %ymm0, %ymm0
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm8 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm7, %xmm8, %xmm2
-; AVX1-ONLY-NEXT:    vmovdqa (%rsp), %xmm6 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm15, %xmm6, %xmm4
-; AVX1-ONLY-NEXT:    vpor %xmm2, %xmm4, %xmm2
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm5 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm4 = xmm5[u,u,u,u,u,u,u,u,4,10,u,u,u,u,u,u]
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm14 = xmm3[u,u,u,u,u,u,u,u,u,u,u,u,u,2,8,14]
-; AVX1-ONLY-NEXT:    vpunpckhqdq {{.*#+}} xmm4 = xmm14[1],xmm4[1]
-; AVX1-ONLY-NEXT:    vpblendw {{.*#+}} xmm2 = xmm4[0,1,2,3,4],xmm2[5,6,7]
-; AVX1-ONLY-NEXT:    vandps %ymm0, %ymm11, %ymm0
-; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm2
-; AVX1-ONLY-NEXT:    vandnps %ymm2, %ymm11, %ymm2
-; AVX1-ONLY-NEXT:    vorps %ymm2, %ymm0, %ymm0
-; AVX1-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vpshufb %xmm9, %xmm13, %xmm2
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm4 = zero,zero,xmm1[0,6,12,u,u,u,u,u,u,u,u,u,u,u]
-; AVX1-ONLY-NEXT:    vpor %xmm2, %xmm4, %xmm2
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm7, %xmm0, %xmm4
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm15, %xmm0, %xmm14
-; AVX1-ONLY-NEXT:    vpor %xmm4, %xmm14, %xmm4
-; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm2, %ymm4, %ymm2
-; AVX1-ONLY-NEXT:    vandnps {{[-0-9]+}}(%r{{[sb]}}p), %ymm10, %ymm4 # 32-byte Folded Reload
-; AVX1-ONLY-NEXT:    vandps %ymm2, %ymm10, %ymm2
-; AVX1-ONLY-NEXT:    vorps %ymm4, %ymm2, %ymm2
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm7, %xmm0, %xmm1
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm9 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm15, %xmm9, %xmm4
-; AVX1-ONLY-NEXT:    vpor %xmm1, %xmm4, %xmm1
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm4 = xmm0[u,u,u,u,u,u,u,u,4,10,u,u,u,u,u,u]
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm14 = xmm15[u,u,u,u,u,u,u,u,u,u,u,u,u,2,8,14]
-; AVX1-ONLY-NEXT:    vpunpckhqdq {{.*#+}} xmm4 = xmm14[1],xmm4[1]
-; AVX1-ONLY-NEXT:    vpblendw {{.*#+}} xmm1 = xmm4[0,1,2,3,4],xmm1[5,6,7]
-; AVX1-ONLY-NEXT:    vandps %ymm2, %ymm11, %ymm2
-; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
-; AVX1-ONLY-NEXT:    vandnps %ymm1, %ymm11, %ymm1
-; AVX1-ONLY-NEXT:    vorps %ymm1, %ymm2, %ymm1
-; AVX1-ONLY-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm1 = <5,11,128,128,128,u,u,u,u,u,u,u,u,u,u,u>
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm1, %xmm2, %xmm2
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm4 = zero,zero,xmm4[1,7,13,u,u,u,u,u,u,u,u,u,u,u]
-; AVX1-ONLY-NEXT:    vpor %xmm2, %xmm4, %xmm2
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm4 = <u,u,u,u,u,u,u,u,u,u,128,128,128,3,9,15>
-; AVX1-ONLY-NEXT:    vpshufb %xmm4, %xmm12, %xmm7
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm14 = <u,u,u,u,u,u,u,u,u,u,1,7,13,128,128,128>
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm12 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm14, %xmm12, %xmm12
-; AVX1-ONLY-NEXT:    vpor %xmm7, %xmm12, %xmm7
-; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm2, %ymm7, %ymm2
-; AVX1-ONLY-NEXT:    vandnps {{[-0-9]+}}(%r{{[sb]}}p), %ymm10, %ymm7 # 32-byte Folded Reload
-; AVX1-ONLY-NEXT:    vandps %ymm2, %ymm10, %ymm2
-; AVX1-ONLY-NEXT:    vorps %ymm7, %ymm2, %ymm2
-; AVX1-ONLY-NEXT:    vpshufb %xmm4, %xmm8, %xmm7
-; AVX1-ONLY-NEXT:    vpshufb %xmm14, %xmm6, %xmm12
-; AVX1-ONLY-NEXT:    vpor %xmm7, %xmm12, %xmm7
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm8 = <u,u,u,u,u,u,u,u,5,11,u,u,u,u,u,u>
-; AVX1-ONLY-NEXT:    vpshufb %xmm8, %xmm5, %xmm12
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm13 = xmm3[u,u,u,u,u,u,u,u,u,u,u,u,u,3,9,15]
-; AVX1-ONLY-NEXT:    vpunpckhqdq {{.*#+}} xmm12 = xmm13[1],xmm12[1]
-; AVX1-ONLY-NEXT:    vpblendw {{.*#+}} xmm7 = xmm12[0,1,2,3,4],xmm7[5,6,7]
-; AVX1-ONLY-NEXT:    vandps %ymm2, %ymm11, %ymm2
-; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm7, %ymm0, %ymm7
-; AVX1-ONLY-NEXT:    vandnps %ymm7, %ymm11, %ymm7
-; AVX1-ONLY-NEXT:    vorps %ymm7, %ymm2, %ymm2
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm1, %xmm3, %xmm6
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm7 = zero,zero,xmm1[1,7,13,u,u,u,u,u,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm1 = [128,128,128,5,11,0,0,0,128,128,128,5,11,0,0,0]
+; AVX1-ONLY-NEXT:    # xmm1 = mem[0,0]
+; AVX1-ONLY-NEXT:    vpshufb %xmm1, %xmm13, %xmm3
+; AVX1-ONLY-NEXT:    vmovdqa %xmm13, %xmm1
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm2 = [3,9,15,128,128,0,0,0,3,9,15,128,128,0,0,0]
+; AVX1-ONLY-NEXT:    # xmm2 = mem[0,0]
+; AVX1-ONLY-NEXT:    vmovdqa %xmm4, %xmm13
+; AVX1-ONLY-NEXT:    vpshufb %xmm2, %xmm4, %xmm6
+; AVX1-ONLY-NEXT:    vpor %xmm3, %xmm6, %xmm3
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm4 = [0,0,0,5,11,128,128,128,0,0,0,5,11,128,128,128]
+; AVX1-ONLY-NEXT:    # xmm4 = mem[0,0]
+; AVX1-ONLY-NEXT:    vmovdqa %xmm5, %xmm12
+; AVX1-ONLY-NEXT:    vpshufb %xmm4, %xmm5, %xmm6
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm5 = [0,0,0,128,128,1,7,13,0,0,0,128,128,1,7,13]
+; AVX1-ONLY-NEXT:    # xmm5 = mem[0,0]
+; AVX1-ONLY-NEXT:    vmovdqa %xmm7, %xmm8
+; AVX1-ONLY-NEXT:    vpshufb %xmm5, %xmm7, %xmm7
 ; AVX1-ONLY-NEXT:    vpor %xmm6, %xmm7, %xmm6
+; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm3, %ymm6, %ymm3
+; AVX1-ONLY-NEXT:    vandnps %ymm3, %ymm0, %ymm3
+; AVX1-ONLY-NEXT:    vandps {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm6 # 32-byte Folded Reload
+; AVX1-ONLY-NEXT:    vorps %ymm3, %ymm6, %ymm3
+; AVX1-ONLY-NEXT:    vandps %ymm3, %ymm14, %ymm3
+; AVX1-ONLY-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm6 # 16-byte Folded Reload
+; AVX1-ONLY-NEXT:    vandnps %ymm6, %ymm14, %ymm6
+; AVX1-ONLY-NEXT:    vorps %ymm6, %ymm3, %ymm3
+; AVX1-ONLY-NEXT:    vmovups %ymm3, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm6 = zero,zero,zero,xmm9[5,11,u,u,u,u,u,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vpshufb %xmm2, %xmm10, %xmm7
+; AVX1-ONLY-NEXT:    vmovdqa %xmm10, %xmm9
+; AVX1-ONLY-NEXT:    vpor %xmm6, %xmm7, %xmm6
+; AVX1-ONLY-NEXT:    vpshufb %xmm4, %xmm15, %xmm7
+; AVX1-ONLY-NEXT:    vmovdqa %xmm15, %xmm4
+; AVX1-ONLY-NEXT:    vpshufb %xmm5, %xmm11, %xmm10
+; AVX1-ONLY-NEXT:    vmovdqa %xmm11, %xmm2
+; AVX1-ONLY-NEXT:    vpor %xmm7, %xmm10, %xmm7
+; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm6, %ymm7, %ymm6
+; AVX1-ONLY-NEXT:    vandnps %ymm6, %ymm0, %ymm6
+; AVX1-ONLY-NEXT:    vandps {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 32-byte Folded Reload
+; AVX1-ONLY-NEXT:    vorps %ymm6, %ymm0, %ymm0
+; AVX1-ONLY-NEXT:    vandps %ymm0, %ymm14, %ymm0
+; AVX1-ONLY-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm6 # 16-byte Folded Reload
+; AVX1-ONLY-NEXT:    vandnps %ymm6, %ymm14, %ymm6
+; AVX1-ONLY-NEXT:    vmovaps %ymm14, %ymm11
+; AVX1-ONLY-NEXT:    vorps %ymm6, %ymm0, %ymm0
+; AVX1-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm14 = [4,10,128,128,128,0,0,0,4,10,128,128,128,0,0,0]
+; AVX1-ONLY-NEXT:    # xmm14 = mem[0,0]
+; AVX1-ONLY-NEXT:    vpshufb %xmm14, %xmm13, %xmm0
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm15 = [128,128,0,6,12,0,0,0,128,128,0,6,12,0,0,0]
+; AVX1-ONLY-NEXT:    # xmm15 = mem[0,0]
+; AVX1-ONLY-NEXT:    vpshufb %xmm15, %xmm1, %xmm7
+; AVX1-ONLY-NEXT:    vpor %xmm0, %xmm7, %xmm0
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm1 = [0,0,128,128,128,2,8,14,0,0,128,128,128,2,8,14]
+; AVX1-ONLY-NEXT:    # xmm1 = mem[0,0]
+; AVX1-ONLY-NEXT:    vpshufb %xmm1, %xmm8, %xmm7
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm5 = [0,0,0,6,12,128,128,128,0,0,0,6,12,128,128,128]
+; AVX1-ONLY-NEXT:    # xmm5 = mem[0,0]
+; AVX1-ONLY-NEXT:    vpshufb %xmm5, %xmm12, %xmm10
+; AVX1-ONLY-NEXT:    vpor %xmm7, %xmm10, %xmm7
+; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm0, %ymm7, %ymm0
+; AVX1-ONLY-NEXT:    vmovaps {{.*#+}} ymm10 = [0,0,0,0,0,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535]
+; AVX1-ONLY-NEXT:    vandnps {{[-0-9]+}}(%r{{[sb]}}p), %ymm10, %ymm7 # 32-byte Folded Reload
+; AVX1-ONLY-NEXT:    vandps %ymm0, %ymm10, %ymm0
+; AVX1-ONLY-NEXT:    vorps %ymm7, %ymm0, %ymm0
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm1, %xmm15, %xmm7
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm8 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm5, %xmm8, %xmm3
+; AVX1-ONLY-NEXT:    vpor %xmm7, %xmm3, %xmm3
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm14 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vbroadcastss {{.*#+}} xmm12 = [4,10,0,0,4,10,0,0,4,10,0,0,4,10,0,0]
+; AVX1-ONLY-NEXT:    vpshufb %xmm12, %xmm14, %xmm7
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm12 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vbroadcastss {{.*#+}} xmm13 = [0,2,8,14,0,2,8,14,0,2,8,14,0,2,8,14]
+; AVX1-ONLY-NEXT:    vpshufb %xmm13, %xmm12, %xmm6
+; AVX1-ONLY-NEXT:    vpunpckhqdq {{.*#+}} xmm6 = xmm6[1],xmm7[1]
+; AVX1-ONLY-NEXT:    vpblendw {{.*#+}} xmm3 = xmm6[0,1,2,3,4],xmm3[5,6,7]
+; AVX1-ONLY-NEXT:    vandps %ymm0, %ymm11, %ymm0
+; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm3
+; AVX1-ONLY-NEXT:    vandnps %ymm3, %ymm11, %ymm3
+; AVX1-ONLY-NEXT:    vorps %ymm3, %ymm0, %ymm0
+; AVX1-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm0 = xmm9[4,10],zero,zero,zero,xmm9[u,u,u,u,u,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm7 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm3 = zero,zero,xmm7[0,6,12,u,u,u,u,u,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vpor %xmm0, %xmm3, %xmm0
+; AVX1-ONLY-NEXT:    vpshufb %xmm1, %xmm2, %xmm3
+; AVX1-ONLY-NEXT:    vpshufb %xmm5, %xmm4, %xmm6
+; AVX1-ONLY-NEXT:    vpor %xmm3, %xmm6, %xmm3
+; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm0, %ymm3, %ymm0
+; AVX1-ONLY-NEXT:    vandnps {{[-0-9]+}}(%r{{[sb]}}p), %ymm10, %ymm3 # 32-byte Folded Reload
+; AVX1-ONLY-NEXT:    vandps %ymm0, %ymm10, %ymm0
+; AVX1-ONLY-NEXT:    vorps %ymm3, %ymm0, %ymm0
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm11 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm1, %xmm11, %xmm2
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm9 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm5, %xmm9, %xmm1
+; AVX1-ONLY-NEXT:    vpor %xmm2, %xmm1, %xmm1
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm2 = xmm2[u,u,u,u,u,u,u,u,4,10,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm13, %xmm4, %xmm3
+; AVX1-ONLY-NEXT:    vpunpckhqdq {{.*#+}} xmm2 = xmm3[1],xmm2[1]
+; AVX1-ONLY-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1,2,3,4],xmm1[5,6,7]
+; AVX1-ONLY-NEXT:    vmovaps {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0,0,0,0,0,0]
+; AVX1-ONLY-NEXT:    vandps %ymm2, %ymm0, %ymm0
+; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
+; AVX1-ONLY-NEXT:    vandnps %ymm1, %ymm2, %ymm1
+; AVX1-ONLY-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; AVX1-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm1 = xmm0[5,11],zero,zero,zero,xmm0[u,u,u,u,u,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm2 = zero,zero,xmm0[1,7,13,u,u,u,u,u,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vpor %xmm1, %xmm2, %xmm1
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm13 = [0,0,128,128,128,3,9,15,0,0,128,128,128,3,9,15]
+; AVX1-ONLY-NEXT:    # xmm13 = mem[0,0]
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm13, %xmm0, %xmm2
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm0 = [0,0,1,7,13,128,128,128,0,0,1,7,13,128,128,128]
+; AVX1-ONLY-NEXT:    # xmm0 = mem[0,0]
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm0, %xmm3, %xmm3
+; AVX1-ONLY-NEXT:    vpor %xmm2, %xmm3, %xmm2
+; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
+; AVX1-ONLY-NEXT:    vandnps {{[-0-9]+}}(%r{{[sb]}}p), %ymm10, %ymm2 # 32-byte Folded Reload
+; AVX1-ONLY-NEXT:    vandps %ymm1, %ymm10, %ymm1
+; AVX1-ONLY-NEXT:    vorps %ymm2, %ymm1, %ymm1
+; AVX1-ONLY-NEXT:    vpshufb %xmm13, %xmm15, %xmm2
+; AVX1-ONLY-NEXT:    vpshufb %xmm0, %xmm8, %xmm3
+; AVX1-ONLY-NEXT:    vpor %xmm2, %xmm3, %xmm2
+; AVX1-ONLY-NEXT:    vbroadcastss {{.*#+}} xmm8 = [5,11,0,0,5,11,0,0,5,11,0,0,5,11,0,0]
+; AVX1-ONLY-NEXT:    vpshufb %xmm8, %xmm14, %xmm3
+; AVX1-ONLY-NEXT:    vbroadcastss {{.*#+}} xmm5 = [0,3,9,15,0,3,9,15,0,3,9,15,0,3,9,15]
+; AVX1-ONLY-NEXT:    vpshufb %xmm5, %xmm12, %xmm6
+; AVX1-ONLY-NEXT:    vpunpckhqdq {{.*#+}} xmm3 = xmm6[1],xmm3[1]
+; AVX1-ONLY-NEXT:    vpblendw {{.*#+}} xmm2 = xmm3[0,1,2,3,4],xmm2[5,6,7]
+; AVX1-ONLY-NEXT:    vmovaps {{.*#+}} ymm3 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0,0,0,0,0,0]
+; AVX1-ONLY-NEXT:    vandps %ymm3, %ymm1, %ymm1
+; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm2
+; AVX1-ONLY-NEXT:    vandnps %ymm2, %ymm3, %ymm2
+; AVX1-ONLY-NEXT:    vmovaps %ymm3, %ymm12
+; AVX1-ONLY-NEXT:    vorps %ymm2, %ymm1, %ymm6
 ; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm4, %xmm1, %xmm5
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm14, %xmm1, %xmm3
-; AVX1-ONLY-NEXT:    vpor %xmm5, %xmm3, %xmm3
-; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm6, %ymm3, %ymm3
-; AVX1-ONLY-NEXT:    vandnps {{[-0-9]+}}(%r{{[sb]}}p), %ymm10, %ymm5 # 32-byte Folded Reload
-; AVX1-ONLY-NEXT:    vandps %ymm3, %ymm10, %ymm3
-; AVX1-ONLY-NEXT:    vorps %ymm5, %ymm3, %ymm3
-; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm5 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpshufb %xmm4, %xmm5, %xmm4
-; AVX1-ONLY-NEXT:    vpshufb %xmm14, %xmm9, %xmm5
-; AVX1-ONLY-NEXT:    vpor %xmm4, %xmm5, %xmm4
-; AVX1-ONLY-NEXT:    vpshufb %xmm8, %xmm0, %xmm5
-; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm6 = xmm15[u,u,u,u,u,u,u,u,u,u,u,u,u,3,9,15]
-; AVX1-ONLY-NEXT:    vpunpckhqdq {{.*#+}} xmm5 = xmm6[1],xmm5[1]
-; AVX1-ONLY-NEXT:    vpblendw {{.*#+}} xmm4 = xmm5[0,1,2,3,4],xmm4[5,6,7]
-; AVX1-ONLY-NEXT:    vandps %ymm3, %ymm11, %ymm3
-; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm4
-; AVX1-ONLY-NEXT:    vandnps %ymm4, %ymm11, %ymm4
-; AVX1-ONLY-NEXT:    vorps %ymm4, %ymm3, %ymm3
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[5,11],zero,zero,zero,xmm1[u,u,u,u,u,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm2 = zero,zero,xmm7[1,7,13,u,u,u,u,u,u,u,u,u,u,u]
+; AVX1-ONLY-NEXT:    vpor %xmm1, %xmm2, %xmm1
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm13, %xmm2, %xmm2
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm0, %xmm3, %xmm3
+; AVX1-ONLY-NEXT:    vpor %xmm2, %xmm3, %xmm2
+; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
+; AVX1-ONLY-NEXT:    vandnps {{[-0-9]+}}(%r{{[sb]}}p), %ymm10, %ymm2 # 32-byte Folded Reload
+; AVX1-ONLY-NEXT:    vandps %ymm1, %ymm10, %ymm1
+; AVX1-ONLY-NEXT:    vorps %ymm2, %ymm1, %ymm1
+; AVX1-ONLY-NEXT:    vpshufb %xmm13, %xmm11, %xmm2
+; AVX1-ONLY-NEXT:    vpshufb %xmm0, %xmm9, %xmm3
+; AVX1-ONLY-NEXT:    vpor %xmm2, %xmm3, %xmm2
+; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX1-ONLY-NEXT:    vpshufb %xmm8, %xmm0, %xmm3
+; AVX1-ONLY-NEXT:    vpshufb %xmm5, %xmm4, %xmm4
+; AVX1-ONLY-NEXT:    vpunpckhqdq {{.*#+}} xmm3 = xmm4[1],xmm3[1]
+; AVX1-ONLY-NEXT:    vpblendw {{.*#+}} xmm2 = xmm3[0,1,2,3,4],xmm2[5,6,7]
+; AVX1-ONLY-NEXT:    vandps %ymm1, %ymm12, %ymm1
+; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm2
+; AVX1-ONLY-NEXT:    vandnps %ymm2, %ymm12, %ymm2
+; AVX1-ONLY-NEXT:    vorps %ymm2, %ymm1, %ymm1
 ; AVX1-ONLY-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; AVX1-ONLY-NEXT:    vmovaps %ymm0, 32(%rsi)
 ; AVX1-ONLY-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
@@ -4194,607 +4252,537 @@ define void @load_i8_stride6_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX1-ONLY-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; AVX1-ONLY-NEXT:    vmovaps %ymm0, (%r9)
 ; AVX1-ONLY-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; AVX1-ONLY-NEXT:    vmovaps %ymm3, 32(%rax)
-; AVX1-ONLY-NEXT:    vmovaps %ymm2, (%rax)
+; AVX1-ONLY-NEXT:    vmovaps %ymm1, 32(%rax)
+; AVX1-ONLY-NEXT:    vmovaps %ymm6, (%rax)
 ; AVX1-ONLY-NEXT:    addq $808, %rsp # imm = 0x328
 ; AVX1-ONLY-NEXT:    vzeroupper
 ; AVX1-ONLY-NEXT:    retq
 ;
 ; AVX2-ONLY-LABEL: load_i8_stride6_vf64:
 ; AVX2-ONLY:       # %bb.0:
-; AVX2-ONLY-NEXT:    subq $488, %rsp # imm = 0x1E8
-; AVX2-ONLY-NEXT:    vmovdqa 192(%rdi), %ymm12
-; AVX2-ONLY-NEXT:    vmovdqu %ymm12, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vmovdqa 224(%rdi), %ymm15
-; AVX2-ONLY-NEXT:    vmovdqa (%rdi), %ymm4
-; AVX2-ONLY-NEXT:    vmovdqu %ymm4, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vmovdqa 32(%rdi), %ymm6
-; AVX2-ONLY-NEXT:    vmovdqu %ymm6, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX2-ONLY-NEXT:    subq $328, %rsp # imm = 0x148
+; AVX2-ONLY-NEXT:    vmovdqa 192(%rdi), %ymm7
+; AVX2-ONLY-NEXT:    vmovdqa (%rdi), %ymm3
+; AVX2-ONLY-NEXT:    vmovdqa 32(%rdi), %ymm5
+; AVX2-ONLY-NEXT:    vmovdqu %ymm5, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX2-ONLY-NEXT:    vmovdqa 64(%rdi), %ymm0
 ; AVX2-ONLY-NEXT:    vmovdqa 96(%rdi), %ymm1
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm9 = [128,128,128,2,8,14,128,128,128,128,128,128,128,128,4,10,128,128,128,18,24,30,128,128,128,128,128,128,128,128,20,26]
-; AVX2-ONLY-NEXT:    vperm2i128 {{.*#+}} ymm5 = ymm0[2,3],ymm1[2,3]
-; AVX2-ONLY-NEXT:    vpshufb %ymm9, %ymm5, %ymm3
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm14 = [0,6,12,128,128,128,128,128,128,128,128,2,8,14,128,128,16,22,28,128,128,128,128,128,128,128,128,18,24,30,128,128]
-; AVX2-ONLY-NEXT:    vperm2i128 {{.*#+}} ymm8 = ymm0[0,1],ymm1[0,1]
-; AVX2-ONLY-NEXT:    vpshufb %ymm14, %ymm8, %ymm0
-; AVX2-ONLY-NEXT:    vpor %ymm3, %ymm0, %ymm1
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm0 = <255,255,u,u,0,0,255,255,u,u,0,0,255,255,u,u,0,0,255,255,u,u,0,0,255,255,u,u,0,0,255,255>
-; AVX2-ONLY-NEXT:    vpblendvb %ymm0, %ymm4, %ymm6, %ymm2
-; AVX2-ONLY-NEXT:    vmovdqa %ymm0, %ymm10
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm4 = <0,6,12,128,128,128,4,10,128,128,128,u,u,u,u,u>
-; AVX2-ONLY-NEXT:    vpshufb %xmm4, %xmm2, %xmm6
-; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm2, %xmm3
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm7 = <128,128,128,2,8,14,128,128,0,6,12,u,u,u,u,u>
-; AVX2-ONLY-NEXT:    vpshufb %xmm7, %xmm3, %xmm13
-; AVX2-ONLY-NEXT:    vpor %xmm6, %xmm13, %xmm6
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm11 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0]
-; AVX2-ONLY-NEXT:    vpblendvb %ymm11, %ymm6, %ymm1, %ymm0
-; AVX2-ONLY-NEXT:    vmovdqa %ymm11, %ymm13
-; AVX2-ONLY-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vpblendvb %ymm10, %ymm12, %ymm15, %ymm1
-; AVX2-ONLY-NEXT:    vmovdqa %ymm15, %ymm11
-; AVX2-ONLY-NEXT:    vpshufb %xmm4, %xmm1, %xmm4
-; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm1, %xmm6
-; AVX2-ONLY-NEXT:    vpshufb %xmm7, %xmm6, %xmm7
-; AVX2-ONLY-NEXT:    vpor %xmm4, %xmm7, %xmm15
-; AVX2-ONLY-NEXT:    vmovdqa 288(%rdi), %ymm7
-; AVX2-ONLY-NEXT:    vmovdqa 256(%rdi), %ymm0
-; AVX2-ONLY-NEXT:    vperm2i128 {{.*#+}} ymm10 = ymm0[2,3],ymm7[2,3]
-; AVX2-ONLY-NEXT:    vperm2i128 {{.*#+}} ymm7 = ymm0[0,1],ymm7[0,1]
-; AVX2-ONLY-NEXT:    vpshufb %ymm9, %ymm10, %ymm0
-; AVX2-ONLY-NEXT:    vpshufb %ymm14, %ymm7, %ymm9
-; AVX2-ONLY-NEXT:    vpor %ymm0, %ymm9, %ymm0
-; AVX2-ONLY-NEXT:    vpblendvb %ymm13, %ymm15, %ymm0, %ymm0
-; AVX2-ONLY-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm4 = [128,128,128,3,9,15,128,128,128,128,128,128,128,128,5,11,128,128,128,19,25,31,128,128,128,128,128,128,128,128,21,27]
-; AVX2-ONLY-NEXT:    vpshufb %ymm4, %ymm5, %ymm9
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm14 = [1,7,13,128,128,128,128,128,128,128,128,3,9,15,128,128,17,23,29,128,128,128,128,128,128,128,128,19,25,31,128,128]
-; AVX2-ONLY-NEXT:    vpshufb %ymm14, %ymm8, %ymm15
-; AVX2-ONLY-NEXT:    vpor %ymm9, %ymm15, %ymm9
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm15 = <1,7,13,128,128,128,5,11,128,128,128,u,u,u,u,u>
-; AVX2-ONLY-NEXT:    vpshufb %xmm15, %xmm2, %xmm2
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm0 = <128,128,128,3,9,15,128,128,1,7,13,u,u,u,u,u>
-; AVX2-ONLY-NEXT:    vpshufb %xmm0, %xmm3, %xmm3
-; AVX2-ONLY-NEXT:    vpor %xmm2, %xmm3, %xmm2
-; AVX2-ONLY-NEXT:    vpblendvb %ymm13, %ymm2, %ymm9, %ymm2
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm13 = <u,u,255,255,0,0,u,u,255,255,0,0,u,u,255,255,255,255,0,0,u,u,255,255,0,0,u,u,255,255,0,0>
+; AVX2-ONLY-NEXT:    vperm2i128 {{.*#+}} ymm2 = ymm0[0,1],ymm1[0,1]
 ; AVX2-ONLY-NEXT:    vmovdqu %ymm2, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vpshufb %xmm15, %xmm1, %xmm1
-; AVX2-ONLY-NEXT:    vpshufb %xmm0, %xmm6, %xmm0
-; AVX2-ONLY-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpshufb %ymm4, %ymm10, %ymm1
-; AVX2-ONLY-NEXT:    vpshufb %ymm14, %ymm7, %ymm2
-; AVX2-ONLY-NEXT:    vpor %ymm1, %ymm2, %ymm1
-; AVX2-ONLY-NEXT:    vpblendvb %ymm13, %ymm0, %ymm1, %ymm0
+; AVX2-ONLY-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3]
 ; AVX2-ONLY-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm15 = [128,128,128,4,10,128,128,128,128,128,128,128,128,0,6,12,128,128,128,20,26,128,128,128,128,128,128,128,128,16,22,28]
-; AVX2-ONLY-NEXT:    vpshufb %ymm15, %ymm5, %ymm0
-; AVX2-ONLY-NEXT:    vmovdqu %ymm5, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm14 = [2,8,14,128,128,128,128,128,128,128,128,4,10,128,128,128,18,24,30,128,128,128,128,128,128,128,128,20,26,128,128,128]
-; AVX2-ONLY-NEXT:    vpshufb %ymm14, %ymm8, %ymm1
-; AVX2-ONLY-NEXT:    vmovdqu %ymm8, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vpor %ymm0, %ymm1, %ymm2
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm4 = <255,255,0,0,u,u,255,255,0,0,u,u,255,255,0,0,u,u,255,255,0,0,u,u,255,255,0,0,u,u,255,255>
-; AVX2-ONLY-NEXT:    vmovdqu {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; AVX2-ONLY-NEXT:    vpblendvb %ymm4, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 32-byte Folded Reload
-; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm6 = <128,128,128,4,10,128,128,128,2,8,14,u,u,u,u,u>
-; AVX2-ONLY-NEXT:    vpshufb %xmm6, %xmm1, %xmm3
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm9 = <2,8,14,128,128,0,6,12,128,128,128,u,u,u,u,u>
-; AVX2-ONLY-NEXT:    vpshufb %xmm9, %xmm0, %xmm12
-; AVX2-ONLY-NEXT:    vpor %xmm3, %xmm12, %xmm3
-; AVX2-ONLY-NEXT:    vmovdqa %ymm13, %ymm12
-; AVX2-ONLY-NEXT:    vpblendvb %ymm13, %ymm3, %ymm2, %ymm2
-; AVX2-ONLY-NEXT:    vmovdqu %ymm2, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vmovdqu {{[-0-9]+}}(%r{{[sb]}}p), %ymm13 # 32-byte Reload
-; AVX2-ONLY-NEXT:    vpblendvb %ymm4, %ymm11, %ymm13, %ymm2
+; AVX2-ONLY-NEXT:    vpblendvb %ymm13, %ymm2, %ymm0, %ymm4
+; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} ymm0 = ymm4[u,u,u,u,u,u,u,u,u,u,u,2,8,14,4,10,16,22,28,18,24,30,u,u,u,u,u,u,u,u,u,u]
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm1 = <255,255,u,u,0,0,255,255,u,u,0,0,255,255,u,u,0,0,255,255,u,u,0,0,255,255,u,u,0,0,255,255>
+; AVX2-ONLY-NEXT:    vpblendvb %ymm1, %ymm3, %ymm5, %ymm2
+; AVX2-ONLY-NEXT:    vmovdqa %ymm3, %ymm5
+; AVX2-ONLY-NEXT:    vmovdqu %ymm3, (%rsp) # 32-byte Spill
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm10 = <0,6,12,128,128,128,4,10,128,128,128,u,u,u,u,u>
+; AVX2-ONLY-NEXT:    vpshufb %xmm10, %xmm2, %xmm9
 ; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm2, %xmm3
-; AVX2-ONLY-NEXT:    vpshufb %xmm6, %xmm3, %xmm4
-; AVX2-ONLY-NEXT:    vpshufb %xmm9, %xmm2, %xmm9
-; AVX2-ONLY-NEXT:    vpor %xmm4, %xmm9, %xmm4
-; AVX2-ONLY-NEXT:    vmovdqu %ymm10, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vpshufb %ymm15, %ymm10, %ymm6
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm11 = <128,128,128,2,8,14,128,128,0,6,12,u,u,u,u,u>
+; AVX2-ONLY-NEXT:    vpshufb %xmm11, %xmm3, %xmm12
+; AVX2-ONLY-NEXT:    vpor %xmm9, %xmm12, %xmm9
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm12 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0]
+; AVX2-ONLY-NEXT:    vpblendvb %ymm12, %ymm9, %ymm0, %ymm0
+; AVX2-ONLY-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX2-ONLY-NEXT:    vmovdqa 224(%rdi), %ymm8
+; AVX2-ONLY-NEXT:    vpblendvb %ymm1, %ymm7, %ymm8, %ymm14
 ; AVX2-ONLY-NEXT:    vmovdqu %ymm7, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vpshufb %ymm14, %ymm7, %ymm9
-; AVX2-ONLY-NEXT:    vpor %ymm6, %ymm9, %ymm6
-; AVX2-ONLY-NEXT:    vpblendvb %ymm12, %ymm4, %ymm6, %ymm4
-; AVX2-ONLY-NEXT:    vmovdqa %ymm12, %ymm15
-; AVX2-ONLY-NEXT:    vmovdqu %ymm4, (%rsp) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm14 = [128,128,128,5,11,128,128,128,128,128,128,128,128,1,7,13,128,128,128,21,27,128,128,128,128,128,128,128,128,17,23,29]
-; AVX2-ONLY-NEXT:    vpshufb %ymm14, %ymm5, %ymm6
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm9 = [3,9,15,128,128,128,128,128,128,128,128,5,11,128,128,128,19,25,31,128,128,128,128,128,128,128,128,21,27,128,128,128]
-; AVX2-ONLY-NEXT:    vpshufb %ymm9, %ymm8, %ymm12
-; AVX2-ONLY-NEXT:    vpor %ymm6, %ymm12, %ymm6
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm12 = <128,128,128,5,11,128,128,128,3,9,15,u,u,u,u,u>
-; AVX2-ONLY-NEXT:    vpshufb %xmm12, %xmm1, %xmm1
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm4 = <3,9,15,128,128,1,7,13,128,128,128,u,u,u,u,u>
-; AVX2-ONLY-NEXT:    vpshufb %xmm4, %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpblendvb %ymm15, %ymm0, %ymm6, %ymm0
+; AVX2-ONLY-NEXT:    vpshufb %xmm10, %xmm14, %xmm0
+; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm14, %xmm15
+; AVX2-ONLY-NEXT:    vpshufb %xmm11, %xmm15, %xmm10
+; AVX2-ONLY-NEXT:    vpor %xmm0, %xmm10, %xmm1
+; AVX2-ONLY-NEXT:    vmovdqa 288(%rdi), %ymm11
+; AVX2-ONLY-NEXT:    vmovdqa 256(%rdi), %ymm0
+; AVX2-ONLY-NEXT:    vperm2i128 {{.*#+}} ymm9 = ymm0[0,1],ymm11[0,1]
+; AVX2-ONLY-NEXT:    vperm2i128 {{.*#+}} ymm11 = ymm0[2,3],ymm11[2,3]
+; AVX2-ONLY-NEXT:    vpblendvb %ymm13, %ymm9, %ymm11, %ymm13
+; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} ymm0 = ymm13[u,u,u,u,u,u,u,u,u,u,u,2,8,14,4,10,16,22,28,18,24,30,u,u,u,u,u,u,u,u,u,u]
+; AVX2-ONLY-NEXT:    vpblendvb %ymm12, %ymm1, %ymm0, %ymm0
 ; AVX2-ONLY-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vpshufb %xmm12, %xmm3, %xmm0
-; AVX2-ONLY-NEXT:    vpshufb %xmm4, %xmm2, %xmm1
-; AVX2-ONLY-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; AVX2-ONLY-NEXT:    vpshufb %ymm14, %ymm10, %ymm1
-; AVX2-ONLY-NEXT:    vpshufb %ymm9, %ymm7, %ymm2
-; AVX2-ONLY-NEXT:    vpor %ymm1, %ymm2, %ymm1
-; AVX2-ONLY-NEXT:    vpblendvb %ymm15, %ymm0, %ymm1, %ymm14
-; AVX2-ONLY-NEXT:    vmovdqa 160(%rdi), %ymm0
-; AVX2-ONLY-NEXT:    vmovdqa 128(%rdi), %ymm2
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm3 = <u,u,255,255,0,0,u,u,255,255,0,0,u,u,255,255,0,0,u,u,255,255,0,0,u,u,255,255,0,0,u,u>
-; AVX2-ONLY-NEXT:    vpblendvb %ymm3, %ymm0, %ymm2, %ymm1
-; AVX2-ONLY-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm6 = <255,255,u,u,0,0,255,255,u,u,0,0,255,255,u,u,0,0,255,255,u,u,0,0,255,255,u,u,0,0,255,255>
-; AVX2-ONLY-NEXT:    vpblendvb %ymm6, %ymm2, %ymm0, %ymm1
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm7 = <255,255,0,0,u,u,255,255,0,0,u,u,255,255,0,0,u,u,255,255,0,0,u,u,255,255,0,0,u,u,255,255>
-; AVX2-ONLY-NEXT:    vpblendvb %ymm7, %ymm0, %ymm2, %ymm8
-; AVX2-ONLY-NEXT:    vmovdqa 352(%rdi), %ymm4
-; AVX2-ONLY-NEXT:    vmovdqa 320(%rdi), %ymm5
-; AVX2-ONLY-NEXT:    vpblendvb %ymm6, %ymm5, %ymm4, %ymm0
-; AVX2-ONLY-NEXT:    vpblendvb %ymm7, %ymm4, %ymm5, %ymm12
-; AVX2-ONLY-NEXT:    vpblendvb %ymm3, %ymm4, %ymm5, %ymm2
-; AVX2-ONLY-NEXT:    vmovdqu %ymm2, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vmovdqu {{[-0-9]+}}(%r{{[sb]}}p), %ymm2 # 32-byte Reload
-; AVX2-ONLY-NEXT:    vpblendvb %ymm3, {{[-0-9]+}}(%r{{[sb]}}p), %ymm2, %ymm9 # 32-byte Folded Reload
-; AVX2-ONLY-NEXT:    vpblendvb %ymm3, %ymm11, %ymm13, %ymm11
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm3 = <u,u,u,u,u,0,6,12,128,128,128,4,10,128,128,128>
-; AVX2-ONLY-NEXT:    vpshufb %xmm3, %xmm1, %xmm4
-; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm1, %xmm5
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm2 = <u,u,u,u,u,128,128,128,2,8,14,128,128,0,6,12>
-; AVX2-ONLY-NEXT:    vpshufb %xmm2, %xmm5, %xmm10
-; AVX2-ONLY-NEXT:    vpor %xmm4, %xmm10, %xmm4
-; AVX2-ONLY-NEXT:    vinserti128 $1, %xmm4, %ymm0, %ymm4
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm15 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0,0,0,0,0,0]
-; AVX2-ONLY-NEXT:    vpblendvb %ymm15, {{[-0-9]+}}(%r{{[sb]}}p), %ymm4, %ymm4 # 32-byte Folded Reload
-; AVX2-ONLY-NEXT:    vmovdqu %ymm4, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vpshufb %xmm3, %xmm0, %xmm3
-; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm0, %xmm4
-; AVX2-ONLY-NEXT:    vpshufb %xmm2, %xmm4, %xmm2
-; AVX2-ONLY-NEXT:    vpor %xmm3, %xmm2, %xmm2
-; AVX2-ONLY-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm2
-; AVX2-ONLY-NEXT:    vpblendvb %ymm15, (%rsp), %ymm2, %ymm2 # 32-byte Folded Reload
-; AVX2-ONLY-NEXT:    vmovdqu %ymm2, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm3 = <u,u,u,u,u,1,7,13,128,128,128,5,11,128,128,128>
-; AVX2-ONLY-NEXT:    vpshufb %xmm3, %xmm1, %xmm1
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm2 = <u,u,u,u,u,128,128,128,3,9,15,128,128,1,7,13>
-; AVX2-ONLY-NEXT:    vpshufb %xmm2, %xmm5, %xmm5
-; AVX2-ONLY-NEXT:    vpor %xmm1, %xmm5, %xmm1
-; AVX2-ONLY-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
-; AVX2-ONLY-NEXT:    vpblendvb %ymm15, {{[-0-9]+}}(%r{{[sb]}}p), %ymm1, %ymm1 # 32-byte Folded Reload
-; AVX2-ONLY-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vpshufb %xmm3, %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpshufb %xmm2, %xmm4, %xmm2
-; AVX2-ONLY-NEXT:    vpor %xmm0, %xmm2, %xmm0
-; AVX2-ONLY-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; AVX2-ONLY-NEXT:    vpblendvb %ymm15, %ymm14, %ymm0, %ymm0
-; AVX2-ONLY-NEXT:    vmovdqu %ymm0, (%rsp) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vmovdqu %ymm8, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm8, %xmm2
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm3 = xmm2[u,u,u,u,u],zero,zero,zero,xmm2[4,10],zero,zero,zero,xmm2[2,8,14]
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm7 = <u,u,u,u,u,2,8,14,128,128,0,6,12,128,128,128>
-; AVX2-ONLY-NEXT:    vpshufb %xmm7, %xmm8, %xmm14
-; AVX2-ONLY-NEXT:    vpor %xmm3, %xmm14, %xmm4
-; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm9, %xmm14
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm5 = <128,128,0,6,12,128,128,128,4,10,u,u,u,u,u,u>
-; AVX2-ONLY-NEXT:    vpshufb %xmm5, %xmm14, %xmm0
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm6 = <4,10,128,128,128,2,8,14,128,128,u,u,u,u,u,u>
-; AVX2-ONLY-NEXT:    vpshufb %xmm6, %xmm9, %xmm8
-; AVX2-ONLY-NEXT:    vpor %xmm0, %xmm8, %xmm1
-; AVX2-ONLY-NEXT:    vmovdqu {{[-0-9]+}}(%r{{[sb]}}p), %ymm10 # 32-byte Reload
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} ymm0 = ymm10[4,10],zero,zero,zero,zero,zero,zero,zero,zero,ymm10[0,6,12],zero,zero,zero,ymm10[20,26],zero,zero,zero,zero,zero,zero,zero,zero,ymm10[16,22,28],zero,zero,zero
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm8 = [128,128,0,6,12,128,128,128,128,128,128,128,128,2,8,14,128,128,16,22,28,128,128,128,128,128,128,128,128,18,24,30]
-; AVX2-ONLY-NEXT:    vmovdqu {{[-0-9]+}}(%r{{[sb]}}p), %ymm3 # 32-byte Reload
-; AVX2-ONLY-NEXT:    vpshufb %ymm8, %ymm3, %ymm13
-; AVX2-ONLY-NEXT:    vpor %ymm0, %ymm13, %ymm0
-; AVX2-ONLY-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3,4],xmm0[5,6,7]
-; AVX2-ONLY-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
-; AVX2-ONLY-NEXT:    vinserti128 $1, %xmm4, %ymm0, %ymm1
-; AVX2-ONLY-NEXT:    vpblendvb %ymm15, %ymm0, %ymm1, %ymm0
-; AVX2-ONLY-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vmovdqu %ymm12, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm12, %xmm0
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm1 = xmm0[u,u,u,u,u],zero,zero,zero,xmm0[4,10],zero,zero,zero,xmm0[2,8,14]
-; AVX2-ONLY-NEXT:    vpshufb %xmm7, %xmm12, %xmm7
-; AVX2-ONLY-NEXT:    vpor %xmm1, %xmm7, %xmm1
-; AVX2-ONLY-NEXT:    vmovdqu %ymm11, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm11, %xmm12
-; AVX2-ONLY-NEXT:    vpshufb %xmm5, %xmm12, %xmm5
-; AVX2-ONLY-NEXT:    vpshufb %xmm6, %xmm11, %xmm6
-; AVX2-ONLY-NEXT:    vpor %xmm5, %xmm6, %xmm5
-; AVX2-ONLY-NEXT:    vmovdqu {{[-0-9]+}}(%r{{[sb]}}p), %ymm11 # 32-byte Reload
-; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} ymm6 = ymm11[4,10],zero,zero,zero,zero,zero,zero,zero,zero,ymm11[0,6,12],zero,zero,zero,ymm11[20,26],zero,zero,zero,zero,zero,zero,zero,zero,ymm11[16,22,28],zero,zero,zero
-; AVX2-ONLY-NEXT:    vmovdqu {{[-0-9]+}}(%r{{[sb]}}p), %ymm7 # 32-byte Reload
-; AVX2-ONLY-NEXT:    vpshufb %ymm8, %ymm7, %ymm4
-; AVX2-ONLY-NEXT:    vpor %ymm6, %ymm4, %ymm4
-; AVX2-ONLY-NEXT:    vpblendw {{.*#+}} xmm5 = xmm5[0,1,2,3,4],xmm4[5,6,7]
-; AVX2-ONLY-NEXT:    vpblendd {{.*#+}} ymm4 = ymm5[0,1,2,3],ymm4[4,5,6,7]
-; AVX2-ONLY-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
-; AVX2-ONLY-NEXT:    vpblendvb %ymm15, %ymm4, %ymm1, %ymm1
-; AVX2-ONLY-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm1 = <u,u,u,u,u,128,128,128,5,11,128,128,128,3,9,15>
-; AVX2-ONLY-NEXT:    vpshufb %xmm1, %xmm2, %xmm2
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm5 = <u,u,u,u,u,3,9,15,128,128,1,7,13,128,128,128>
-; AVX2-ONLY-NEXT:    vmovdqu {{[-0-9]+}}(%r{{[sb]}}p), %ymm4 # 32-byte Reload
-; AVX2-ONLY-NEXT:    vpshufb %xmm5, %xmm4, %xmm6
-; AVX2-ONLY-NEXT:    vpor %xmm2, %xmm6, %xmm2
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm6 = <128,128,1,7,13,128,128,128,5,11,u,u,u,u,u,u>
-; AVX2-ONLY-NEXT:    vpshufb %xmm6, %xmm14, %xmm8
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm4 = <5,11,128,128,128,3,9,15,128,128,u,u,u,u,u,u>
-; AVX2-ONLY-NEXT:    vpshufb %xmm4, %xmm9, %xmm9
-; AVX2-ONLY-NEXT:    vpor %xmm8, %xmm9, %xmm8
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm9 = [5,11,128,128,128,128,128,128,128,128,1,7,13,128,128,128,21,27,128,128,128,128,128,128,128,128,17,23,29,128,128,128]
-; AVX2-ONLY-NEXT:    vpshufb %ymm9, %ymm10, %ymm13
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm14 = [128,128,1,7,13,128,128,128,128,128,128,128,128,3,9,15,128,128,17,23,29,128,128,128,128,128,128,128,128,19,25,31]
-; AVX2-ONLY-NEXT:    vpshufb %ymm14, %ymm3, %ymm3
-; AVX2-ONLY-NEXT:    vpor %ymm3, %ymm13, %ymm3
-; AVX2-ONLY-NEXT:    vpblendw {{.*#+}} xmm8 = xmm8[0,1,2,3,4],xmm3[5,6,7]
-; AVX2-ONLY-NEXT:    vpblendd {{.*#+}} ymm3 = ymm8[0,1,2,3],ymm3[4,5,6,7]
-; AVX2-ONLY-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm2
-; AVX2-ONLY-NEXT:    vpblendvb %ymm15, %ymm3, %ymm2, %ymm2
-; AVX2-ONLY-NEXT:    vpshufb %xmm1, %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vmovdqu {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Reload
-; AVX2-ONLY-NEXT:    vpshufb %xmm5, %xmm1, %xmm1
-; AVX2-ONLY-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; AVX2-ONLY-NEXT:    vpshufb %xmm6, %xmm12, %xmm1
-; AVX2-ONLY-NEXT:    vmovdqu {{[-0-9]+}}(%r{{[sb]}}p), %ymm3 # 32-byte Reload
-; AVX2-ONLY-NEXT:    vpshufb %xmm4, %xmm3, %xmm3
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm0 = <1,7,13,128,128,128,5,11,128,128,128,u,u,u,u,u>
+; AVX2-ONLY-NEXT:    vpshufb %xmm0, %xmm2, %xmm1
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm2 = <128,128,128,3,9,15,128,128,1,7,13,u,u,u,u,u>
+; AVX2-ONLY-NEXT:    vpshufb %xmm2, %xmm3, %xmm3
 ; AVX2-ONLY-NEXT:    vpor %xmm1, %xmm3, %xmm1
-; AVX2-ONLY-NEXT:    vpshufb %ymm9, %ymm11, %ymm3
-; AVX2-ONLY-NEXT:    vpshufb %ymm14, %ymm7, %ymm5
-; AVX2-ONLY-NEXT:    vpor %ymm3, %ymm5, %ymm3
-; AVX2-ONLY-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3,4],xmm3[5,6,7]
-; AVX2-ONLY-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm3[4,5,6,7]
-; AVX2-ONLY-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; AVX2-ONLY-NEXT:    vpblendvb %ymm15, %ymm1, %ymm0, %ymm0
-; AVX2-ONLY-NEXT:    vmovdqu {{[-0-9]+}}(%r{{[sb]}}p), %ymm4 # 32-byte Reload
-; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm4, %xmm1
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm3 = <u,u,u,u,u,u,128,128,0,6,12,128,128,128,4,10>
-; AVX2-ONLY-NEXT:    vpshufb %xmm3, %xmm1, %xmm5
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm6 = <u,u,u,u,u,u,4,10,128,128,128,2,8,14,128,128>
-; AVX2-ONLY-NEXT:    vpshufb %xmm6, %xmm4, %xmm7
-; AVX2-ONLY-NEXT:    vpor %xmm5, %xmm7, %xmm5
-; AVX2-ONLY-NEXT:    vinserti128 $1, %xmm5, %ymm0, %ymm5
-; AVX2-ONLY-NEXT:    vmovdqu {{[-0-9]+}}(%r{{[sb]}}p), %ymm7 # 32-byte Reload
-; AVX2-ONLY-NEXT:    vpblendw {{.*#+}} ymm5 = ymm7[0,1,2],ymm5[3,4,5,6,7],ymm7[8,9,10],ymm5[11,12,13,14,15]
-; AVX2-ONLY-NEXT:    vpblendd {{.*#+}} ymm5 = ymm7[0,1,2,3],ymm5[4,5,6,7]
-; AVX2-ONLY-NEXT:    vmovdqu {{[-0-9]+}}(%r{{[sb]}}p), %ymm8 # 32-byte Reload
-; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm8, %xmm7
-; AVX2-ONLY-NEXT:    vpshufb %xmm3, %xmm7, %xmm3
-; AVX2-ONLY-NEXT:    vpshufb %xmm6, %xmm8, %xmm6
-; AVX2-ONLY-NEXT:    vmovdqa %ymm8, %ymm10
-; AVX2-ONLY-NEXT:    vpor %xmm3, %xmm6, %xmm3
-; AVX2-ONLY-NEXT:    vinserti128 $1, %xmm3, %ymm0, %ymm3
-; AVX2-ONLY-NEXT:    vmovdqu {{[-0-9]+}}(%r{{[sb]}}p), %ymm6 # 32-byte Reload
-; AVX2-ONLY-NEXT:    vpblendw {{.*#+}} ymm3 = ymm6[0,1,2],ymm3[3,4,5,6,7],ymm6[8,9,10],ymm3[11,12,13,14,15]
-; AVX2-ONLY-NEXT:    vpblendd {{.*#+}} ymm3 = ymm6[0,1,2,3],ymm3[4,5,6,7]
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm6 = <u,u,u,u,u,u,128,128,1,7,13,128,128,128,5,11>
+; AVX2-ONLY-NEXT:    vpbroadcastq {{.*#+}} ymm3 = [1,7,13,3,9,15,5,11,1,7,13,3,9,15,5,11,1,7,13,3,9,15,5,11,1,7,13,3,9,15,5,11]
+; AVX2-ONLY-NEXT:    vpshufb %ymm3, %ymm4, %ymm4
+; AVX2-ONLY-NEXT:    vpblendvb %ymm12, %ymm1, %ymm4, %ymm1
+; AVX2-ONLY-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX2-ONLY-NEXT:    vpshufb %xmm0, %xmm14, %xmm0
+; AVX2-ONLY-NEXT:    vpshufb %xmm2, %xmm15, %xmm1
+; AVX2-ONLY-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; AVX2-ONLY-NEXT:    vpshufb %ymm3, %ymm13, %ymm1
+; AVX2-ONLY-NEXT:    vpblendvb %ymm12, %ymm0, %ymm1, %ymm0
+; AVX2-ONLY-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm13 = <255,255,0,0,u,u,255,255,0,0,u,u,255,255,0,0,u,u,255,255,0,0,u,u,255,255,0,0,u,u,255,255>
+; AVX2-ONLY-NEXT:    vmovdqu {{[-0-9]+}}(%r{{[sb]}}p), %ymm10 # 32-byte Reload
+; AVX2-ONLY-NEXT:    vpblendvb %ymm13, %ymm10, %ymm5, %ymm1
+; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm6 = <128,128,128,4,10,128,128,128,2,8,14,u,u,u,u,u>
+; AVX2-ONLY-NEXT:    vpshufb %xmm6, %xmm2, %xmm3
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm4 = <2,8,14,128,128,0,6,12,128,128,128,u,u,u,u,u>
+; AVX2-ONLY-NEXT:    vpshufb %xmm4, %xmm1, %xmm5
+; AVX2-ONLY-NEXT:    vpor %xmm3, %xmm5, %xmm5
+; AVX2-ONLY-NEXT:    vpbroadcastq {{.*#+}} ymm14 = [2,8,14,4,10,0,6,12,2,8,14,4,10,0,6,12,2,8,14,4,10,0,6,12,2,8,14,4,10,0,6,12]
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm0 = <255,255,u,u,0,0,255,255,u,u,0,0,255,255,u,u,u,u,0,0,255,255,u,u,0,0,255,255,u,u,0,0>
+; AVX2-ONLY-NEXT:    vmovdqu {{[-0-9]+}}(%r{{[sb]}}p), %ymm3 # 32-byte Reload
+; AVX2-ONLY-NEXT:    vpblendvb %ymm0, {{[-0-9]+}}(%r{{[sb]}}p), %ymm3, %ymm3 # 32-byte Folded Reload
+; AVX2-ONLY-NEXT:    vpshufb %ymm14, %ymm3, %ymm15
+; AVX2-ONLY-NEXT:    vpblendvb %ymm12, %ymm5, %ymm15, %ymm5
+; AVX2-ONLY-NEXT:    vmovdqu %ymm5, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX2-ONLY-NEXT:    vpblendvb %ymm13, %ymm8, %ymm7, %ymm5
+; AVX2-ONLY-NEXT:    vmovdqa %ymm8, %ymm7
+; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm5, %xmm15
+; AVX2-ONLY-NEXT:    vpshufb %xmm6, %xmm15, %xmm6
+; AVX2-ONLY-NEXT:    vpshufb %xmm4, %xmm5, %xmm4
+; AVX2-ONLY-NEXT:    vpor %xmm6, %xmm4, %xmm4
+; AVX2-ONLY-NEXT:    vpblendvb %ymm0, %ymm11, %ymm9, %ymm0
+; AVX2-ONLY-NEXT:    vpshufb %ymm14, %ymm0, %ymm6
+; AVX2-ONLY-NEXT:    vpblendvb %ymm12, %ymm4, %ymm6, %ymm4
+; AVX2-ONLY-NEXT:    vmovdqu %ymm4, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm4 = <128,128,128,5,11,128,128,128,3,9,15,u,u,u,u,u>
+; AVX2-ONLY-NEXT:    vpshufb %xmm4, %xmm2, %xmm2
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm6 = <3,9,15,128,128,1,7,13,128,128,128,u,u,u,u,u>
 ; AVX2-ONLY-NEXT:    vpshufb %xmm6, %xmm1, %xmm1
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm8 = <u,u,u,u,u,u,5,11,128,128,128,3,9,15,128,128>
-; AVX2-ONLY-NEXT:    vpshufb %xmm8, %xmm4, %xmm9
-; AVX2-ONLY-NEXT:    vpor %xmm1, %xmm9, %xmm1
-; AVX2-ONLY-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
-; AVX2-ONLY-NEXT:    vmovdqu {{[-0-9]+}}(%r{{[sb]}}p), %ymm9 # 32-byte Reload
-; AVX2-ONLY-NEXT:    vpblendw {{.*#+}} ymm1 = ymm9[0,1,2],ymm1[3,4,5,6,7],ymm9[8,9,10],ymm1[11,12,13,14,15]
-; AVX2-ONLY-NEXT:    vpblendd {{.*#+}} ymm1 = ymm9[0,1,2,3],ymm1[4,5,6,7]
-; AVX2-ONLY-NEXT:    vpshufb %xmm6, %xmm7, %xmm6
-; AVX2-ONLY-NEXT:    vpshufb %xmm8, %xmm10, %xmm7
-; AVX2-ONLY-NEXT:    vpor %xmm6, %xmm7, %xmm6
+; AVX2-ONLY-NEXT:    vpor %xmm2, %xmm1, %xmm1
+; AVX2-ONLY-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [3,9,15,5,11,1,7,13,3,9,15,5,11,1,7,13,3,9,15,5,11,1,7,13,3,9,15,5,11,1,7,13]
+; AVX2-ONLY-NEXT:    vpshufb %ymm2, %ymm3, %ymm3
+; AVX2-ONLY-NEXT:    vpblendvb %ymm12, %ymm1, %ymm3, %ymm1
+; AVX2-ONLY-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX2-ONLY-NEXT:    vpshufb %xmm4, %xmm15, %xmm1
+; AVX2-ONLY-NEXT:    vpshufb %xmm6, %xmm5, %xmm3
+; AVX2-ONLY-NEXT:    vpor %xmm1, %xmm3, %xmm1
+; AVX2-ONLY-NEXT:    vpshufb %ymm2, %ymm0, %ymm0
+; AVX2-ONLY-NEXT:    vpblendvb %ymm12, %ymm1, %ymm0, %ymm14
+; AVX2-ONLY-NEXT:    vmovdqa 160(%rdi), %ymm0
+; AVX2-ONLY-NEXT:    vmovdqa 128(%rdi), %ymm3
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm2 = <u,u,255,255,0,0,u,u,255,255,0,0,u,u,255,255,0,0,u,u,255,255,0,0,u,u,255,255,0,0,u,u>
+; AVX2-ONLY-NEXT:    vpblendvb %ymm2, %ymm0, %ymm3, %ymm1
+; AVX2-ONLY-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm1 = <255,255,u,u,0,0,255,255,u,u,0,0,255,255,u,u,0,0,255,255,u,u,0,0,255,255,u,u,0,0,255,255>
+; AVX2-ONLY-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm5
+; AVX2-ONLY-NEXT:    vpblendvb %ymm13, %ymm0, %ymm3, %ymm15
+; AVX2-ONLY-NEXT:    vmovdqa 352(%rdi), %ymm4
+; AVX2-ONLY-NEXT:    vmovdqa 320(%rdi), %ymm6
+; AVX2-ONLY-NEXT:    vpblendvb %ymm1, %ymm6, %ymm4, %ymm1
+; AVX2-ONLY-NEXT:    vpblendvb %ymm13, %ymm4, %ymm6, %ymm12
+; AVX2-ONLY-NEXT:    vpblendvb %ymm2, %ymm4, %ymm6, %ymm0
+; AVX2-ONLY-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX2-ONLY-NEXT:    vmovdqu (%rsp), %ymm0 # 32-byte Reload
+; AVX2-ONLY-NEXT:    vpblendvb %ymm2, %ymm10, %ymm0, %ymm8
+; AVX2-ONLY-NEXT:    vmovdqu {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
+; AVX2-ONLY-NEXT:    vpblendvb %ymm2, %ymm7, %ymm0, %ymm10
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm2 = <0,0,255,255,u,u,0,0,255,255,u,u,0,0,255,255,255,255,u,u,0,0,255,255,u,u,0,0,255,255,u,u>
+; AVX2-ONLY-NEXT:    vmovdqu {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
+; AVX2-ONLY-NEXT:    vpblendvb %ymm2, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm13 # 32-byte Folded Reload
+; AVX2-ONLY-NEXT:    vpblendvb %ymm2, %ymm11, %ymm9, %ymm0
+; AVX2-ONLY-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm2 = <u,u,u,u,u,0,6,12,128,128,128,4,10,128,128,128>
+; AVX2-ONLY-NEXT:    vpshufb %xmm2, %xmm5, %xmm6
+; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm5, %xmm11
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm0 = <u,u,u,u,u,128,128,128,2,8,14,128,128,0,6,12>
+; AVX2-ONLY-NEXT:    vpshufb %xmm0, %xmm11, %xmm9
+; AVX2-ONLY-NEXT:    vpor %xmm6, %xmm9, %xmm6
 ; AVX2-ONLY-NEXT:    vinserti128 $1, %xmm6, %ymm0, %ymm6
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm9 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0,0,0,0,0,0]
+; AVX2-ONLY-NEXT:    vpblendvb %ymm9, {{[-0-9]+}}(%r{{[sb]}}p), %ymm6, %ymm3 # 32-byte Folded Reload
+; AVX2-ONLY-NEXT:    vmovdqu %ymm3, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX2-ONLY-NEXT:    vpshufb %xmm2, %xmm1, %xmm2
+; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm1, %xmm6
+; AVX2-ONLY-NEXT:    vpshufb %xmm0, %xmm6, %xmm0
+; AVX2-ONLY-NEXT:    vpor %xmm2, %xmm0, %xmm0
+; AVX2-ONLY-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; AVX2-ONLY-NEXT:    vpblendvb %ymm9, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 32-byte Folded Reload
+; AVX2-ONLY-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm0 = <u,u,u,u,u,1,7,13,128,128,128,5,11,128,128,128>
+; AVX2-ONLY-NEXT:    vpshufb %xmm0, %xmm5, %xmm2
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm5 = <u,u,u,u,u,128,128,128,3,9,15,128,128,1,7,13>
+; AVX2-ONLY-NEXT:    vpshufb %xmm5, %xmm11, %xmm11
+; AVX2-ONLY-NEXT:    vpor %xmm2, %xmm11, %xmm2
+; AVX2-ONLY-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm2
+; AVX2-ONLY-NEXT:    vpblendvb %ymm9, {{[-0-9]+}}(%r{{[sb]}}p), %ymm2, %ymm2 # 32-byte Folded Reload
+; AVX2-ONLY-NEXT:    vmovdqu %ymm2, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX2-ONLY-NEXT:    vpshufb %xmm0, %xmm1, %xmm0
+; AVX2-ONLY-NEXT:    vpshufb %xmm5, %xmm6, %xmm1
+; AVX2-ONLY-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; AVX2-ONLY-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; AVX2-ONLY-NEXT:    vpblendvb %ymm9, %ymm14, %ymm0, %ymm0
+; AVX2-ONLY-NEXT:    vmovdqu %ymm0, (%rsp) # 32-byte Spill
+; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm15, %xmm14
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm7 = <u,u,u,u,u,128,128,128,4,10,128,128,128,2,8,14>
+; AVX2-ONLY-NEXT:    vpshufb %xmm7, %xmm14, %xmm0
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm2 = <u,u,u,u,u,2,8,14,128,128,0,6,12,128,128,128>
+; AVX2-ONLY-NEXT:    vpshufb %xmm2, %xmm15, %xmm1
+; AVX2-ONLY-NEXT:    vpor %xmm0, %xmm1, %xmm1
+; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm8, %xmm3
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm5 = <128,128,0,6,12,128,128,128,4,10,u,u,u,u,u,u>
+; AVX2-ONLY-NEXT:    vpshufb %xmm5, %xmm3, %xmm6
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm4 = <4,10,128,128,128,2,8,14,128,128,u,u,u,u,u,u>
+; AVX2-ONLY-NEXT:    vpshufb %xmm4, %xmm8, %xmm11
+; AVX2-ONLY-NEXT:    vpor %xmm6, %xmm11, %xmm6
+; AVX2-ONLY-NEXT:    vpbroadcastq {{.*#+}} ymm11 = [4,10,0,6,12,2,8,14,4,10,0,6,12,2,8,14,4,10,0,6,12,2,8,14,4,10,0,6,12,2,8,14]
+; AVX2-ONLY-NEXT:    vpshufb %ymm11, %ymm13, %ymm0
+; AVX2-ONLY-NEXT:    vpblendw {{.*#+}} xmm6 = xmm6[0,1,2,3,4],xmm0[5,6,7]
+; AVX2-ONLY-NEXT:    vpblendd {{.*#+}} ymm0 = ymm6[0,1,2,3],ymm0[4,5,6,7]
+; AVX2-ONLY-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
+; AVX2-ONLY-NEXT:    vpblendvb %ymm9, %ymm0, %ymm1, %ymm0
+; AVX2-ONLY-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm12, %xmm1
+; AVX2-ONLY-NEXT:    vpshufb %xmm7, %xmm1, %xmm0
+; AVX2-ONLY-NEXT:    vpshufb %xmm2, %xmm12, %xmm2
+; AVX2-ONLY-NEXT:    vpor %xmm0, %xmm2, %xmm0
+; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm10, %xmm2
+; AVX2-ONLY-NEXT:    vpshufb %xmm5, %xmm2, %xmm5
+; AVX2-ONLY-NEXT:    vpshufb %xmm4, %xmm10, %xmm4
+; AVX2-ONLY-NEXT:    vpor %xmm5, %xmm4, %xmm4
+; AVX2-ONLY-NEXT:    vmovdqu {{[-0-9]+}}(%r{{[sb]}}p), %ymm6 # 32-byte Reload
+; AVX2-ONLY-NEXT:    vpshufb %ymm11, %ymm6, %ymm5
+; AVX2-ONLY-NEXT:    vpblendw {{.*#+}} xmm4 = xmm4[0,1,2,3,4],xmm5[5,6,7]
+; AVX2-ONLY-NEXT:    vpblendd {{.*#+}} ymm4 = ymm4[0,1,2,3],ymm5[4,5,6,7]
+; AVX2-ONLY-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; AVX2-ONLY-NEXT:    vpblendvb %ymm9, %ymm4, %ymm0, %ymm5
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm0 = <u,u,u,u,u,128,128,128,5,11,128,128,128,3,9,15>
+; AVX2-ONLY-NEXT:    vpshufb %xmm0, %xmm14, %xmm4
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm7 = <u,u,u,u,u,3,9,15,128,128,1,7,13,128,128,128>
+; AVX2-ONLY-NEXT:    vpshufb %xmm7, %xmm15, %xmm11
+; AVX2-ONLY-NEXT:    vpor %xmm4, %xmm11, %xmm4
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm11 = <128,128,1,7,13,128,128,128,5,11,u,u,u,u,u,u>
+; AVX2-ONLY-NEXT:    vpshufb %xmm11, %xmm3, %xmm3
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm14 = <5,11,128,128,128,3,9,15,128,128,u,u,u,u,u,u>
+; AVX2-ONLY-NEXT:    vpshufb %xmm14, %xmm8, %xmm8
+; AVX2-ONLY-NEXT:    vpor %xmm3, %xmm8, %xmm3
+; AVX2-ONLY-NEXT:    vpbroadcastq {{.*#+}} ymm8 = [5,11,1,7,13,3,9,15,5,11,1,7,13,3,9,15,5,11,1,7,13,3,9,15,5,11,1,7,13,3,9,15]
+; AVX2-ONLY-NEXT:    vpshufb %ymm8, %ymm13, %ymm13
+; AVX2-ONLY-NEXT:    vpblendw {{.*#+}} xmm3 = xmm3[0,1,2,3,4],xmm13[5,6,7]
+; AVX2-ONLY-NEXT:    vpblendd {{.*#+}} ymm3 = ymm3[0,1,2,3],ymm13[4,5,6,7]
+; AVX2-ONLY-NEXT:    vinserti128 $1, %xmm4, %ymm0, %ymm4
+; AVX2-ONLY-NEXT:    vpblendvb %ymm9, %ymm3, %ymm4, %ymm4
+; AVX2-ONLY-NEXT:    vpshufb %xmm0, %xmm1, %xmm0
+; AVX2-ONLY-NEXT:    vpshufb %xmm7, %xmm12, %xmm1
+; AVX2-ONLY-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; AVX2-ONLY-NEXT:    vpshufb %xmm11, %xmm2, %xmm1
+; AVX2-ONLY-NEXT:    vpshufb %xmm14, %xmm10, %xmm2
+; AVX2-ONLY-NEXT:    vpor %xmm1, %xmm2, %xmm1
+; AVX2-ONLY-NEXT:    vpshufb %ymm8, %ymm6, %ymm2
+; AVX2-ONLY-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3,4],xmm2[5,6,7]
+; AVX2-ONLY-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
+; AVX2-ONLY-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; AVX2-ONLY-NEXT:    vpblendvb %ymm9, %ymm1, %ymm0, %ymm3
+; AVX2-ONLY-NEXT:    vmovdqu {{[-0-9]+}}(%r{{[sb]}}p), %ymm9 # 32-byte Reload
+; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm9, %xmm0
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm1 = <u,u,u,u,u,u,128,128,0,6,12,128,128,128,4,10>
+; AVX2-ONLY-NEXT:    vpshufb %xmm1, %xmm0, %xmm2
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm7 = <u,u,u,u,u,u,4,10,128,128,128,2,8,14,128,128>
+; AVX2-ONLY-NEXT:    vpshufb %xmm7, %xmm9, %xmm8
+; AVX2-ONLY-NEXT:    vmovdqa %ymm9, %ymm10
+; AVX2-ONLY-NEXT:    vpor %xmm2, %xmm8, %xmm2
+; AVX2-ONLY-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm2
+; AVX2-ONLY-NEXT:    vmovdqu {{[-0-9]+}}(%r{{[sb]}}p), %ymm8 # 32-byte Reload
+; AVX2-ONLY-NEXT:    vpblendw {{.*#+}} ymm2 = ymm8[0,1,2],ymm2[3,4,5,6,7],ymm8[8,9,10],ymm2[11,12,13,14,15]
+; AVX2-ONLY-NEXT:    vpblendd {{.*#+}} ymm2 = ymm8[0,1,2,3],ymm2[4,5,6,7]
+; AVX2-ONLY-NEXT:    vmovdqu {{[-0-9]+}}(%r{{[sb]}}p), %ymm9 # 32-byte Reload
+; AVX2-ONLY-NEXT:    vextracti128 $1, %ymm9, %xmm8
+; AVX2-ONLY-NEXT:    vpshufb %xmm1, %xmm8, %xmm1
+; AVX2-ONLY-NEXT:    vpshufb %xmm7, %xmm9, %xmm7
+; AVX2-ONLY-NEXT:    vmovdqa %ymm9, %ymm11
+; AVX2-ONLY-NEXT:    vpor %xmm1, %xmm7, %xmm1
+; AVX2-ONLY-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
 ; AVX2-ONLY-NEXT:    vmovdqu {{[-0-9]+}}(%r{{[sb]}}p), %ymm7 # 32-byte Reload
-; AVX2-ONLY-NEXT:    vpblendw {{.*#+}} ymm6 = ymm7[0,1,2],ymm6[3,4,5,6,7],ymm7[8,9,10],ymm6[11,12,13,14,15]
-; AVX2-ONLY-NEXT:    vpblendd {{.*#+}} ymm6 = ymm7[0,1,2,3],ymm6[4,5,6,7]
-; AVX2-ONLY-NEXT:    vmovdqa %ymm3, 32(%rsi)
-; AVX2-ONLY-NEXT:    vmovdqa %ymm5, (%rsi)
-; AVX2-ONLY-NEXT:    vmovdqa %ymm6, 32(%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %ymm1, (%rdx)
-; AVX2-ONLY-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Reload
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, 32(%rcx)
-; AVX2-ONLY-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Reload
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, (%rcx)
-; AVX2-ONLY-NEXT:    vmovups (%rsp), %ymm1 # 32-byte Reload
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, 32(%r8)
-; AVX2-ONLY-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Reload
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, (%r8)
-; AVX2-ONLY-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Reload
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, 32(%r9)
-; AVX2-ONLY-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Reload
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, (%r9)
+; AVX2-ONLY-NEXT:    vpblendw {{.*#+}} ymm1 = ymm7[0,1,2],ymm1[3,4,5,6,7],ymm7[8,9,10],ymm1[11,12,13,14,15]
+; AVX2-ONLY-NEXT:    vpblendd {{.*#+}} ymm1 = ymm7[0,1,2,3],ymm1[4,5,6,7]
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm7 = <u,u,u,u,u,u,128,128,1,7,13,128,128,128,5,11>
+; AVX2-ONLY-NEXT:    vpshufb %xmm7, %xmm0, %xmm0
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm9 = <u,u,u,u,u,u,5,11,128,128,128,3,9,15,128,128>
+; AVX2-ONLY-NEXT:    vpshufb %xmm9, %xmm10, %xmm10
+; AVX2-ONLY-NEXT:    vpor %xmm0, %xmm10, %xmm0
+; AVX2-ONLY-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; AVX2-ONLY-NEXT:    vmovdqu {{[-0-9]+}}(%r{{[sb]}}p), %ymm10 # 32-byte Reload
+; AVX2-ONLY-NEXT:    vpblendw {{.*#+}} ymm0 = ymm10[0,1,2],ymm0[3,4,5,6,7],ymm10[8,9,10],ymm0[11,12,13,14,15]
+; AVX2-ONLY-NEXT:    vpblendd {{.*#+}} ymm0 = ymm10[0,1,2,3],ymm0[4,5,6,7]
+; AVX2-ONLY-NEXT:    vpshufb %xmm7, %xmm8, %xmm7
+; AVX2-ONLY-NEXT:    vpshufb %xmm9, %xmm11, %xmm8
+; AVX2-ONLY-NEXT:    vpor %xmm7, %xmm8, %xmm7
+; AVX2-ONLY-NEXT:    vinserti128 $1, %xmm7, %ymm0, %ymm7
+; AVX2-ONLY-NEXT:    vmovdqu {{[-0-9]+}}(%r{{[sb]}}p), %ymm8 # 32-byte Reload
+; AVX2-ONLY-NEXT:    vpblendw {{.*#+}} ymm7 = ymm8[0,1,2],ymm7[3,4,5,6,7],ymm8[8,9,10],ymm7[11,12,13,14,15]
+; AVX2-ONLY-NEXT:    vpblendd {{.*#+}} ymm7 = ymm8[0,1,2,3],ymm7[4,5,6,7]
+; AVX2-ONLY-NEXT:    vmovdqa %ymm1, 32(%rsi)
+; AVX2-ONLY-NEXT:    vmovdqa %ymm2, (%rsi)
+; AVX2-ONLY-NEXT:    vmovdqa %ymm7, 32(%rdx)
+; AVX2-ONLY-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX2-ONLY-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 32(%rcx)
+; AVX2-ONLY-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, (%rcx)
+; AVX2-ONLY-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 32(%r8)
+; AVX2-ONLY-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, (%r8)
+; AVX2-ONLY-NEXT:    vmovdqa %ymm5, 32(%r9)
+; AVX2-ONLY-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, (%r9)
 ; AVX2-ONLY-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; AVX2-ONLY-NEXT:    vmovdqa %ymm0, 32(%rax)
-; AVX2-ONLY-NEXT:    vmovdqa %ymm2, (%rax)
-; AVX2-ONLY-NEXT:    addq $488, %rsp # imm = 0x1E8
+; AVX2-ONLY-NEXT:    vmovdqa %ymm3, 32(%rax)
+; AVX2-ONLY-NEXT:    vmovdqa %ymm4, (%rax)
+; AVX2-ONLY-NEXT:    addq $328, %rsp # imm = 0x148
 ; AVX2-ONLY-NEXT:    vzeroupper
 ; AVX2-ONLY-NEXT:    retq
 ;
 ; AVX512F-LABEL: load_i8_stride6_vf64:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    subq $264, %rsp # imm = 0x108
-; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm3 = <0,6,12,128,128,128,4,10,128,128,128,u,u,u,u,u>
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm7 = [65535,65535,0,65535,65535,0,65535,65535,0,65535,65535,0,65535,65535,0,65535]
-; AVX512F-NEXT:    vmovdqa64 224(%rdi), %ymm19
-; AVX512F-NEXT:    vmovdqa64 192(%rdi), %ymm21
-; AVX512F-NEXT:    vmovdqa %ymm7, %ymm0
-; AVX512F-NEXT:    vpternlogq $202, %ymm19, %ymm21, %ymm0
-; AVX512F-NEXT:    vpshufb %xmm3, %xmm0, %xmm2
-; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm10 = <128,128,128,2,8,14,128,128,0,6,12,u,u,u,u,u>
-; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512F-NEXT:    vpshufb %xmm10, %xmm1, %xmm4
-; AVX512F-NEXT:    vpor %xmm2, %xmm4, %xmm2
-; AVX512F-NEXT:    vmovdqu %ymm2, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX512F-NEXT:    vmovdqa 64(%rdi), %ymm5
-; AVX512F-NEXT:    vmovdqa64 128(%rdi), %ymm23
+; AVX512F-NEXT:    subq $40, %rsp
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm1 = <0,6,12,128,128,128,4,10,128,128,128,u,u,u,u,u>
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm11 = [65535,65535,0,65535,65535,0,65535,65535,0,65535,65535,0,65535,65535,0,65535]
+; AVX512F-NEXT:    vmovdqa64 224(%rdi), %ymm25
+; AVX512F-NEXT:    vmovdqa64 192(%rdi), %ymm26
+; AVX512F-NEXT:    vmovdqa %ymm11, %ymm0
+; AVX512F-NEXT:    vpternlogq $202, %ymm25, %ymm26, %ymm0
+; AVX512F-NEXT:    vpshufb %xmm1, %xmm0, %xmm3
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm5 = <128,128,128,2,8,14,128,128,0,6,12,u,u,u,u,u>
+; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm4
+; AVX512F-NEXT:    vpshufb %xmm5, %xmm4, %xmm6
+; AVX512F-NEXT:    vpor %xmm3, %xmm6, %xmm9
+; AVX512F-NEXT:    vmovdqa64 (%rdi), %ymm30
+; AVX512F-NEXT:    vmovdqa64 32(%rdi), %ymm31
+; AVX512F-NEXT:    vmovdqa64 128(%rdi), %ymm29
 ; AVX512F-NEXT:    vmovdqa64 160(%rdi), %ymm18
-; AVX512F-NEXT:    vmovdqa %ymm7, %ymm2
-; AVX512F-NEXT:    vpternlogq $202, %ymm23, %ymm18, %ymm2
-; AVX512F-NEXT:    vextracti128 $1, %ymm2, %xmm4
-; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm8 = <u,u,u,u,u,u,128,128,0,6,12,128,128,128,4,10>
-; AVX512F-NEXT:    vpshufb %xmm8, %xmm4, %xmm6
-; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm13 = <u,u,u,u,u,u,4,10,128,128,128,2,8,14,128,128>
-; AVX512F-NEXT:    vpshufb %xmm13, %xmm2, %xmm9
-; AVX512F-NEXT:    vpor %xmm6, %xmm9, %xmm6
-; AVX512F-NEXT:    vmovdqa %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX512F-NEXT:    vperm2i128 {{.*#+}} ymm9 = ymm5[2,3],mem[2,3]
-; AVX512F-NEXT:    vpshufb {{.*#+}} ymm6 = zero,zero,zero,ymm9[2,8,14],zero,zero,zero,zero,zero,zero,zero,zero,ymm9[4,10],zero,zero,zero,ymm9[18,24,30],zero,zero,zero,zero,zero,zero,zero,zero,ymm9[20,26]
-; AVX512F-NEXT:    vinserti128 $1, 96(%rdi), %ymm5, %ymm12
-; AVX512F-NEXT:    vpshufb {{.*#+}} ymm5 = ymm12[0,6,12],zero,zero,zero,ymm12[u,u,u,u,u,2,8,14],zero,zero,ymm12[16,22,28],zero,zero,zero,ymm12[u,u,u,u,u,18,24,30],zero,zero
-; AVX512F-NEXT:    vpor %ymm6, %ymm5, %ymm5
-; AVX512F-NEXT:    vmovdqu %ymm5, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX512F-NEXT:    vmovdqa64 (%rdi), %ymm22
-; AVX512F-NEXT:    vmovdqa64 32(%rdi), %ymm20
-; AVX512F-NEXT:    vmovdqa %ymm7, %ymm5
-; AVX512F-NEXT:    vpternlogq $202, %ymm20, %ymm22, %ymm5
+; AVX512F-NEXT:    vmovdqa %ymm11, %ymm6
+; AVX512F-NEXT:    vpternlogq $202, %ymm29, %ymm18, %ymm6
+; AVX512F-NEXT:    vextracti128 $1, %ymm6, %xmm7
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm3 = <u,u,u,u,u,u,128,128,0,6,12,128,128,128,4,10>
+; AVX512F-NEXT:    vpshufb %xmm3, %xmm7, %xmm12
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm8 = <u,u,u,u,u,u,4,10,128,128,128,2,8,14,128,128>
+; AVX512F-NEXT:    vpshufb %xmm8, %xmm6, %xmm13
+; AVX512F-NEXT:    vpor %xmm12, %xmm13, %xmm12
+; AVX512F-NEXT:    vinserti128 $1, %xmm12, %ymm0, %ymm12
+; AVX512F-NEXT:    vinserti32x4 $2, %xmm9, %zmm12, %zmm2
+; AVX512F-NEXT:    vmovdqu64 %zmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
+; AVX512F-NEXT:    vmovdqa %ymm11, %ymm9
+; AVX512F-NEXT:    vpternlogq $202, %ymm31, %ymm30, %ymm9
+; AVX512F-NEXT:    vpshufb %xmm1, %xmm9, %xmm1
+; AVX512F-NEXT:    vextracti128 $1, %ymm9, %xmm13
+; AVX512F-NEXT:    vpshufb %xmm5, %xmm13, %xmm5
+; AVX512F-NEXT:    vporq %xmm1, %xmm5, %xmm17
+; AVX512F-NEXT:    vmovdqa64 320(%rdi), %ymm24
+; AVX512F-NEXT:    vmovdqa64 352(%rdi), %ymm22
+; AVX512F-NEXT:    vmovdqa %ymm11, %ymm1
+; AVX512F-NEXT:    vpternlogq $202, %ymm24, %ymm22, %ymm1
+; AVX512F-NEXT:    vextracti128 $1, %ymm1, %xmm5
 ; AVX512F-NEXT:    vpshufb %xmm3, %xmm5, %xmm3
-; AVX512F-NEXT:    vextracti128 $1, %ymm5, %xmm6
-; AVX512F-NEXT:    vpshufb %xmm10, %xmm6, %xmm10
-; AVX512F-NEXT:    vporq %xmm3, %xmm10, %xmm16
-; AVX512F-NEXT:    vmovdqa64 320(%rdi), %ymm17
-; AVX512F-NEXT:    vmovdqa64 352(%rdi), %ymm26
-; AVX512F-NEXT:    vmovdqa %ymm7, %ymm3
-; AVX512F-NEXT:    vpternlogq $202, %ymm17, %ymm26, %ymm3
-; AVX512F-NEXT:    vextracti128 $1, %ymm3, %xmm10
-; AVX512F-NEXT:    vpshufb %xmm8, %xmm10, %xmm8
-; AVX512F-NEXT:    vpshufb %xmm13, %xmm3, %xmm13
-; AVX512F-NEXT:    vpor %xmm8, %xmm13, %xmm8
-; AVX512F-NEXT:    vmovdqa %xmm8, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512F-NEXT:    vpshufb %xmm8, %xmm1, %xmm8
+; AVX512F-NEXT:    vpor %xmm3, %xmm8, %xmm3
+; AVX512F-NEXT:    vinserti128 $1, %xmm3, %ymm0, %ymm3
 ; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm8 = <1,7,13,128,128,128,5,11,128,128,128,u,u,u,u,u>
 ; AVX512F-NEXT:    vpshufb %xmm8, %xmm0, %xmm0
-; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm13 = <128,128,128,3,9,15,128,128,1,7,13,u,u,u,u,u>
-; AVX512F-NEXT:    vpshufb %xmm13, %xmm1, %xmm1
-; AVX512F-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; AVX512F-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm0 = <u,u,u,u,u,u,128,128,1,7,13,128,128,128,5,11>
-; AVX512F-NEXT:    vpshufb %xmm0, %xmm4, %xmm1
-; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm4 = <u,u,u,u,u,u,5,11,128,128,128,3,9,15,128,128>
-; AVX512F-NEXT:    vpshufb %xmm4, %xmm2, %xmm2
-; AVX512F-NEXT:    vpor %xmm1, %xmm2, %xmm1
-; AVX512F-NEXT:    vmovdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX512F-NEXT:    vpshufb {{.*#+}} ymm1 = zero,zero,zero,ymm9[3,9,15],zero,zero,zero,zero,zero,zero,zero,zero,ymm9[5,11],zero,zero,zero,ymm9[19,25,31],zero,zero,zero,zero,zero,zero,zero,zero,ymm9[21,27]
-; AVX512F-NEXT:    vpshufb {{.*#+}} ymm2 = ymm12[1,7,13],zero,zero,zero,ymm12[u,u,u,u,u,3,9,15],zero,zero,ymm12[17,23,29],zero,zero,zero,ymm12[u,u,u,u,u,19,25,31],zero,zero
-; AVX512F-NEXT:    vpor %ymm1, %ymm2, %ymm1
-; AVX512F-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX512F-NEXT:    vpshufb %xmm8, %xmm5, %xmm1
-; AVX512F-NEXT:    vpshufb %xmm13, %xmm6, %xmm2
-; AVX512F-NEXT:    vporq %xmm1, %xmm2, %xmm31
-; AVX512F-NEXT:    vpshufb %xmm0, %xmm10, %xmm0
-; AVX512F-NEXT:    vpshufb %xmm4, %xmm3, %xmm1
-; AVX512F-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; AVX512F-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm1 = <128,128,128,4,10,128,128,128,2,8,14,u,u,u,u,u>
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm2 = [65535,0,65535,65535,0,65535,65535,0,65535,65535,0,65535,65535,0,65535,65535]
-; AVX512F-NEXT:    vmovdqa %ymm2, %ymm4
-; AVX512F-NEXT:    vpternlogq $202, %ymm21, %ymm19, %ymm4
-; AVX512F-NEXT:    vextracti128 $1, %ymm4, %xmm8
-; AVX512F-NEXT:    vpshufb %xmm1, %xmm8, %xmm0
-; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm3 = <2,8,14,128,128,0,6,12,128,128,128,u,u,u,u,u>
-; AVX512F-NEXT:    vpshufb %xmm3, %xmm4, %xmm5
-; AVX512F-NEXT:    vpor %xmm0, %xmm5, %xmm0
-; AVX512F-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX512F-NEXT:    vmovdqa %ymm7, %ymm6
-; AVX512F-NEXT:    vpternlogq $202, %ymm18, %ymm23, %ymm6
-; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm5 = <u,u,u,u,u,0,6,12,128,128,128,4,10,128,128,128>
-; AVX512F-NEXT:    vpshufb %xmm5, %xmm6, %xmm0
-; AVX512F-NEXT:    vmovdqa64 %xmm5, %xmm24
-; AVX512F-NEXT:    vextracti128 $1, %ymm6, %xmm10
-; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm5 = <u,u,u,u,u,128,128,128,2,8,14,128,128,0,6,12>
-; AVX512F-NEXT:    vpshufb %xmm5, %xmm10, %xmm13
-; AVX512F-NEXT:    vpor %xmm0, %xmm13, %xmm0
-; AVX512F-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm11 = [128,128,128,4,10,128,128,128,128,128,128,128,128,0,6,12,128,128,128,20,26,128,128,128,128,128,128,128,128,16,22,28]
-; AVX512F-NEXT:    vpshufb %ymm11, %ymm9, %ymm0
-; AVX512F-NEXT:    vmovdqa %ymm9, %ymm15
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm9 = <2,8,14,128,128,u,u,u,u,u,u,4,10,128,128,128,18,24,30,128,128,u,u,u,u,u,u,20,26,128,128,128>
-; AVX512F-NEXT:    vpshufb %ymm9, %ymm12, %ymm13
-; AVX512F-NEXT:    vpor %ymm0, %ymm13, %ymm0
-; AVX512F-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX512F-NEXT:    vmovdqa %ymm2, %ymm0
-; AVX512F-NEXT:    vpternlogq $202, %ymm22, %ymm20, %ymm0
-; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm13
-; AVX512F-NEXT:    vpshufb %xmm1, %xmm13, %xmm1
-; AVX512F-NEXT:    vpshufb %xmm3, %xmm0, %xmm3
-; AVX512F-NEXT:    vporq %xmm1, %xmm3, %xmm27
-; AVX512F-NEXT:    vmovdqa %ymm7, %ymm14
-; AVX512F-NEXT:    vpternlogq $202, %ymm26, %ymm17, %ymm14
-; AVX512F-NEXT:    vmovdqa64 %xmm24, %xmm1
-; AVX512F-NEXT:    vpshufb %xmm1, %xmm14, %xmm3
-; AVX512F-NEXT:    vextracti128 $1, %ymm14, %xmm1
-; AVX512F-NEXT:    vpshufb %xmm5, %xmm1, %xmm5
-; AVX512F-NEXT:    vpor %xmm3, %xmm5, %xmm3
-; AVX512F-NEXT:    vmovdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX512F-NEXT:    vmovdqa 256(%rdi), %ymm3
-; AVX512F-NEXT:    vperm2i128 {{.*#+}} ymm5 = ymm3[2,3],mem[2,3]
-; AVX512F-NEXT:    vpshufb %ymm11, %ymm5, %ymm11
-; AVX512F-NEXT:    vinserti128 $1, 288(%rdi), %ymm3, %ymm3
-; AVX512F-NEXT:    vpshufb %ymm9, %ymm3, %ymm9
-; AVX512F-NEXT:    vporq %ymm11, %ymm9, %ymm30
-; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm9 = <128,128,128,5,11,128,128,128,3,9,15,u,u,u,u,u>
-; AVX512F-NEXT:    vpshufb %xmm9, %xmm8, %xmm8
-; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm11 = <3,9,15,128,128,1,7,13,128,128,128,u,u,u,u,u>
-; AVX512F-NEXT:    vpshufb %xmm11, %xmm4, %xmm4
-; AVX512F-NEXT:    vpor %xmm4, %xmm8, %xmm4
-; AVX512F-NEXT:    vmovdqu %ymm4, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm4 = <u,u,u,u,u,1,7,13,128,128,128,5,11,128,128,128>
-; AVX512F-NEXT:    vpshufb %xmm4, %xmm6, %xmm6
-; AVX512F-NEXT:    vmovdqa64 %xmm4, %xmm29
-; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm8 = <u,u,u,u,u,128,128,128,3,9,15,128,128,1,7,13>
-; AVX512F-NEXT:    vpshufb %xmm8, %xmm10, %xmm10
-; AVX512F-NEXT:    vpor %xmm6, %xmm10, %xmm4
-; AVX512F-NEXT:    vmovdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm6 = [128,128,128,5,11,128,128,128,128,128,128,128,128,1,7,13,128,128,128,21,27,128,128,128,128,128,128,128,128,17,23,29]
-; AVX512F-NEXT:    vpshufb %ymm6, %ymm15, %ymm10
-; AVX512F-NEXT:    vmovdqa64 %ymm15, %ymm28
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm4 = <3,9,15,128,128,u,u,u,u,u,u,5,11,128,128,128,19,25,31,128,128,u,u,u,u,u,u,21,27,128,128,128>
-; AVX512F-NEXT:    vpshufb %ymm4, %ymm12, %ymm15
-; AVX512F-NEXT:    vmovdqa64 %ymm12, %ymm24
-; AVX512F-NEXT:    vpor %ymm10, %ymm15, %ymm10
-; AVX512F-NEXT:    vmovdqu %ymm10, (%rsp) # 32-byte Spill
-; AVX512F-NEXT:    vpshufb %xmm9, %xmm13, %xmm9
-; AVX512F-NEXT:    vpshufb %xmm11, %xmm0, %xmm0
-; AVX512F-NEXT:    vporq %xmm9, %xmm0, %xmm25
-; AVX512F-NEXT:    vmovdqa64 %xmm29, %xmm0
-; AVX512F-NEXT:    vpshufb %xmm0, %xmm14, %xmm0
-; AVX512F-NEXT:    vpshufb %xmm8, %xmm1, %xmm1
-; AVX512F-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; AVX512F-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX512F-NEXT:    vpshufb %ymm6, %ymm5, %ymm0
-; AVX512F-NEXT:    vpshufb %ymm4, %ymm3, %ymm1
-; AVX512F-NEXT:    vpor %ymm0, %ymm1, %ymm6
-; AVX512F-NEXT:    vmovdqa64 %ymm19, %ymm12
-; AVX512F-NEXT:    vpternlogq $226, %ymm21, %ymm7, %ymm12
-; AVX512F-NEXT:    vextracti128 $1, %ymm12, %xmm1
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm0 = zero,zero,xmm1[0,6,12],zero,zero,zero,xmm1[4,10,u,u,u,u,u,u]
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm4 = xmm12[4,10],zero,zero,zero,xmm12[2,8,14],zero,zero,xmm12[u,u,u,u,u,u]
-; AVX512F-NEXT:    vporq %xmm0, %xmm4, %xmm21
-; AVX512F-NEXT:    vmovdqa64 %ymm18, %ymm13
-; AVX512F-NEXT:    vpternlogq $226, %ymm23, %ymm2, %ymm13
-; AVX512F-NEXT:    vextracti128 $1, %ymm13, %xmm4
-; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm8 = <u,u,u,u,u,128,128,128,4,10,128,128,128,2,8,14>
-; AVX512F-NEXT:    vpshufb %xmm8, %xmm4, %xmm0
-; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm9 = <u,u,u,u,u,2,8,14,128,128,0,6,12,128,128,128>
-; AVX512F-NEXT:    vpshufb %xmm9, %xmm13, %xmm10
-; AVX512F-NEXT:    vporq %xmm0, %xmm10, %xmm23
-; AVX512F-NEXT:    vpternlogq $202, %ymm17, %ymm26, %ymm2
-; AVX512F-NEXT:    vextracti128 $1, %ymm2, %xmm0
-; AVX512F-NEXT:    vpshufb %xmm8, %xmm0, %xmm8
-; AVX512F-NEXT:    vpshufb %xmm9, %xmm2, %xmm9
-; AVX512F-NEXT:    vpor %xmm8, %xmm9, %xmm8
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm11 = <128,128,0,6,12,u,u,u,u,u,128,128,128,2,8,14,128,128,16,22,28,u,u,u,u,u,128,128,128,18,24,30>
-; AVX512F-NEXT:    vpshufb {{.*#+}} ymm9 = ymm3[4,10],zero,zero,zero,zero,zero,zero,zero,zero,ymm3[0,6,12],zero,zero,zero,ymm3[20,26],zero,zero,zero,zero,zero,zero,zero,zero,ymm3[16,22,28],zero,zero,zero
-; AVX512F-NEXT:    vpshufb %ymm11, %ymm5, %ymm10
-; AVX512F-NEXT:    vmovdqa64 %ymm11, %ymm29
-; AVX512F-NEXT:    vpor %ymm9, %ymm10, %ymm9
-; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm10 = <128,128,1,7,13,128,128,128,5,11,u,u,u,u,u,u>
-; AVX512F-NEXT:    vpshufb %xmm10, %xmm1, %xmm11
-; AVX512F-NEXT:    vmovdqa64 %xmm10, %xmm19
-; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm1 = <5,11,128,128,128,3,9,15,128,128,u,u,u,u,u,u>
-; AVX512F-NEXT:    vpshufb %xmm1, %xmm12, %xmm12
-; AVX512F-NEXT:    vmovdqa64 %xmm1, %xmm18
-; AVX512F-NEXT:    vporq %xmm11, %xmm12, %xmm17
-; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm12 = <u,u,u,u,u,128,128,128,5,11,128,128,128,3,9,15>
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm12 = <128,128,128,3,9,15,128,128,1,7,13,u,u,u,u,u>
 ; AVX512F-NEXT:    vpshufb %xmm12, %xmm4, %xmm4
-; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm15 = <u,u,u,u,u,3,9,15,128,128,1,7,13,128,128,128>
-; AVX512F-NEXT:    vpshufb %xmm15, %xmm13, %xmm14
-; AVX512F-NEXT:    vporq %xmm4, %xmm14, %xmm26
-; AVX512F-NEXT:    vpshufb %xmm12, %xmm0, %xmm0
-; AVX512F-NEXT:    vpshufb %xmm15, %xmm2, %xmm2
-; AVX512F-NEXT:    vpor %xmm0, %xmm2, %xmm0
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm2 = [5,11,128,128,128,128,128,128,128,128,1,7,13,128,128,128,21,27,128,128,128,128,128,128,128,128,17,23,29,128,128,128]
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm12 = <128,128,1,7,13,u,u,u,u,u,128,128,128,3,9,15,128,128,17,23,29,u,u,u,u,u,128,128,128,19,25,31>
-; AVX512F-NEXT:    vpshufb %ymm2, %ymm3, %ymm14
-; AVX512F-NEXT:    vpshufb %ymm12, %ymm5, %ymm15
-; AVX512F-NEXT:    vpor %ymm14, %ymm15, %ymm14
-; AVX512F-NEXT:    vpshufb {{.*#+}} ymm15 = zero,zero,zero,ymm5[2,8,14],zero,zero,zero,zero,zero,zero,zero,zero,ymm5[4,10],zero,zero,zero,ymm5[18,24,30],zero,zero,zero,zero,zero,zero,zero,zero,ymm5[20,26]
-; AVX512F-NEXT:    vpshufb {{.*#+}} ymm13 = ymm3[0,6,12],zero,zero,zero,ymm3[u,u,u,u,u,2,8,14],zero,zero,ymm3[16,22,28],zero,zero,zero,ymm3[u,u,u,u,u,18,24,30],zero,zero
-; AVX512F-NEXT:    vpor %ymm15, %ymm13, %ymm13
-; AVX512F-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm15 # 16-byte Folded Reload
-; AVX512F-NEXT:    vpblendw {{.*#+}} ymm15 = ymm13[0,1,2],ymm15[3,4,5,6,7],ymm13[8,9,10],ymm15[11,12,13,14,15]
-; AVX512F-NEXT:    vpblendd {{.*#+}} ymm13 = ymm13[0,1,2,3],ymm15[4,5,6,7]
-; AVX512F-NEXT:    vpternlogq $202, %ymm22, %ymm20, %ymm7
-; AVX512F-NEXT:    vpshufb {{.*#+}} ymm5 = zero,zero,zero,ymm5[3,9,15],zero,zero,zero,zero,zero,zero,zero,zero,ymm5[5,11],zero,zero,zero,ymm5[19,25,31],zero,zero,zero,zero,zero,zero,zero,zero,ymm5[21,27]
-; AVX512F-NEXT:    vpshufb {{.*#+}} ymm3 = ymm3[1,7,13],zero,zero,zero,ymm3[u,u,u,u,u,3,9,15],zero,zero,ymm3[17,23,29],zero,zero,zero,ymm3[u,u,u,u,u,19,25,31],zero,zero
-; AVX512F-NEXT:    vpor %ymm5, %ymm3, %ymm3
-; AVX512F-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm5 # 16-byte Folded Reload
-; AVX512F-NEXT:    vpblendw {{.*#+}} ymm5 = ymm3[0,1,2],ymm5[3,4,5,6,7],ymm3[8,9,10],ymm5[11,12,13,14,15]
-; AVX512F-NEXT:    vpblendd {{.*#+}} ymm3 = ymm3[0,1,2,3],ymm5[4,5,6,7]
-; AVX512F-NEXT:    vextracti128 $1, %ymm7, %xmm5
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm15 = zero,zero,xmm5[0,6,12],zero,zero,zero,xmm5[4,10,u,u,u,u,u,u]
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm10 = xmm7[4,10],zero,zero,zero,xmm7[2,8,14],zero,zero,xmm7[u,u,u,u,u,u]
-; AVX512F-NEXT:    vpor %xmm15, %xmm10, %xmm10
-; AVX512F-NEXT:    vmovdqa64 %ymm24, %ymm4
-; AVX512F-NEXT:    vpshufb {{.*#+}} ymm15 = ymm4[4,10],zero,zero,zero,zero,zero,zero,zero,zero,ymm4[0,6,12],zero,zero,zero,ymm4[20,26],zero,zero,zero,zero,zero,zero,zero,zero,ymm4[16,22,28],zero,zero,zero
-; AVX512F-NEXT:    vmovdqa64 %ymm28, %ymm11
-; AVX512F-NEXT:    vmovdqa64 %ymm29, %ymm1
-; AVX512F-NEXT:    vpshufb %ymm1, %ymm11, %ymm1
-; AVX512F-NEXT:    vpor %ymm1, %ymm15, %ymm1
-; AVX512F-NEXT:    vpblendw {{.*#+}} xmm10 = xmm10[0,1,2,3,4],xmm1[5,6,7]
-; AVX512F-NEXT:    vpblendd {{.*#+}} ymm1 = ymm10[0,1,2,3],ymm1[4,5,6,7]
-; AVX512F-NEXT:    vinserti32x4 $1, %xmm23, %ymm0, %ymm10
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm21, %zmm10, %zmm10
-; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm15 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; AVX512F-NEXT:    vpternlogq $226, %zmm10, %zmm15, %zmm1
-; AVX512F-NEXT:    vinserti128 $1, %xmm8, %ymm0, %ymm8
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm10 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0,0,0,0,0,0]
-; AVX512F-NEXT:    vpternlogq $226, %ymm8, %ymm10, %ymm9
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm9, %zmm0, %zmm8
-; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm9 = [65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,0,0,0,0,0,0,0,0,0,0,0]
-; AVX512F-NEXT:    vpternlogq $184, %zmm1, %zmm9, %zmm8
-; AVX512F-NEXT:    vmovdqa64 %xmm19, %xmm1
-; AVX512F-NEXT:    vpshufb %xmm1, %xmm5, %xmm1
-; AVX512F-NEXT:    vmovdqa64 %xmm18, %xmm5
-; AVX512F-NEXT:    vpshufb %xmm5, %xmm7, %xmm5
+; AVX512F-NEXT:    vpor %xmm0, %xmm4, %xmm0
+; AVX512F-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm0 = <u,u,u,u,u,u,128,128,1,7,13,128,128,128,5,11>
+; AVX512F-NEXT:    vpshufb %xmm0, %xmm7, %xmm4
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm7 = <u,u,u,u,u,u,5,11,128,128,128,3,9,15,128,128>
+; AVX512F-NEXT:    vpshufb %xmm7, %xmm6, %xmm6
+; AVX512F-NEXT:    vporq %xmm4, %xmm6, %xmm28
+; AVX512F-NEXT:    vpshufb %xmm8, %xmm9, %xmm4
+; AVX512F-NEXT:    vpshufb %xmm12, %xmm13, %xmm6
+; AVX512F-NEXT:    vporq %xmm4, %xmm6, %xmm21
+; AVX512F-NEXT:    vpshufb %xmm0, %xmm5, %xmm0
+; AVX512F-NEXT:    vpshufb %xmm7, %xmm1, %xmm1
+; AVX512F-NEXT:    vporq %xmm0, %xmm1, %xmm27
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm0 = <128,128,128,4,10,128,128,128,2,8,14,u,u,u,u,u>
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm9 = [65535,0,65535,65535,0,65535,65535,0,65535,65535,0,65535,65535,0,65535,65535]
+; AVX512F-NEXT:    vmovdqa %ymm9, %ymm4
+; AVX512F-NEXT:    vpternlogq $202, %ymm26, %ymm25, %ymm4
+; AVX512F-NEXT:    vextracti128 $1, %ymm4, %xmm15
+; AVX512F-NEXT:    vpshufb %xmm0, %xmm15, %xmm1
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm6 = <2,8,14,128,128,0,6,12,128,128,128,u,u,u,u,u>
+; AVX512F-NEXT:    vpshufb %xmm6, %xmm4, %xmm5
 ; AVX512F-NEXT:    vpor %xmm1, %xmm5, %xmm1
-; AVX512F-NEXT:    vpshufb %ymm2, %ymm4, %ymm2
-; AVX512F-NEXT:    vpshufb %ymm12, %ymm11, %ymm5
-; AVX512F-NEXT:    vpor %ymm2, %ymm5, %ymm2
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm13, %zmm0, %zmm5
+; AVX512F-NEXT:    vmovdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512F-NEXT:    vmovdqa %ymm11, %ymm5
+; AVX512F-NEXT:    vpternlogq $202, %ymm18, %ymm29, %ymm5
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm7 = <u,u,u,u,u,0,6,12,128,128,128,4,10,128,128,128>
+; AVX512F-NEXT:    vpshufb %xmm7, %xmm5, %xmm8
+; AVX512F-NEXT:    vextracti128 $1, %ymm5, %xmm1
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm12 = <u,u,u,u,u,128,128,128,2,8,14,128,128,0,6,12>
+; AVX512F-NEXT:    vpshufb %xmm12, %xmm1, %xmm13
+; AVX512F-NEXT:    vpor %xmm8, %xmm13, %xmm2
+; AVX512F-NEXT:    vmovdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512F-NEXT:    vmovdqa %ymm9, %ymm13
+; AVX512F-NEXT:    vpternlogq $202, %ymm30, %ymm31, %ymm13
+; AVX512F-NEXT:    vextracti128 $1, %ymm13, %xmm14
+; AVX512F-NEXT:    vpshufb %xmm0, %xmm14, %xmm0
+; AVX512F-NEXT:    vpshufb %xmm6, %xmm13, %xmm6
+; AVX512F-NEXT:    vporq %xmm0, %xmm6, %xmm16
+; AVX512F-NEXT:    vmovdqa %ymm11, %ymm10
+; AVX512F-NEXT:    vpternlogq $202, %ymm22, %ymm24, %ymm10
+; AVX512F-NEXT:    vpshufb %xmm7, %xmm10, %xmm8
+; AVX512F-NEXT:    vextracti128 $1, %ymm10, %xmm7
+; AVX512F-NEXT:    vpshufb %xmm12, %xmm7, %xmm12
+; AVX512F-NEXT:    vpor %xmm8, %xmm12, %xmm0
+; AVX512F-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm12 = <128,128,128,5,11,128,128,128,3,9,15,u,u,u,u,u>
+; AVX512F-NEXT:    vpshufb %xmm12, %xmm15, %xmm15
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm8 = <3,9,15,128,128,1,7,13,128,128,128,u,u,u,u,u>
+; AVX512F-NEXT:    vpshufb %xmm8, %xmm4, %xmm4
+; AVX512F-NEXT:    vpor %xmm4, %xmm15, %xmm0
+; AVX512F-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm15 = xmm5[u,u,u,u,u,1,7,13],zero,zero,zero,xmm5[5,11],zero,zero,zero
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[u,u,u,u,u],zero,zero,zero,xmm1[3,9,15],zero,zero,xmm1[1,7,13]
+; AVX512F-NEXT:    vpor %xmm1, %xmm15, %xmm0
+; AVX512F-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512F-NEXT:    vmovdqa 256(%rdi), %ymm1
+; AVX512F-NEXT:    vshufi64x2 {{.*#+}} ymm19 = ymm1[2,3],mem[2,3]
+; AVX512F-NEXT:    vinserti32x4 $1, 288(%rdi), %ymm1, %ymm20
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm5 = [65535,65535,0,65535,65535,0,65535,65535,65535,0,65535,65535,0,65535,65535,0]
+; AVX512F-NEXT:    vmovdqa %ymm5, %ymm1
+; AVX512F-NEXT:    vpternlogq $202, %ymm19, %ymm20, %ymm1
+; AVX512F-NEXT:    vpshufb {{.*#+}} ymm15 = ymm1[u,u,u,u,u,u,u,u,u,u,u,2,8,14,4,10,16,22,28,18,24,30,u,u,u,u,u,u,u,u,u,u]
+; AVX512F-NEXT:    vpblendw {{.*#+}} ymm3 = ymm15[0,1,2],ymm3[3,4,5,6,7],ymm15[8,9,10],ymm3[11,12,13,14,15]
+; AVX512F-NEXT:    vpblendd {{.*#+}} ymm15 = ymm15[0,1,2,3],ymm3[4,5,6,7]
+; AVX512F-NEXT:    vmovdqa64 64(%rdi), %ymm23
+; AVX512F-NEXT:    vshufi64x2 {{.*#+}} ymm6 = ymm23[2,3],mem[2,3]
+; AVX512F-NEXT:    vinserti32x4 $1, 96(%rdi), %ymm23, %ymm23
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm15, %zmm0, %zmm15
+; AVX512F-NEXT:    vmovdqa %ymm5, %ymm2
+; AVX512F-NEXT:    vpternlogq $202, %ymm6, %ymm23, %ymm2
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0,0,0,0,0,0,255,255,255,255,255,255,255,255,255,255]
+; AVX512F-NEXT:    vpshufb {{.*#+}} ymm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm2[2,8,14,4,10,16,22,28,18,24,30],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512F-NEXT:    vpternlogq $248, %ymm4, %ymm17, %ymm0
+; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm17 = [65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,0,0,0,0,0,0,0,0,0,0,0,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535]
+; AVX512F-NEXT:    vpternlogq $226, {{[-0-9]+}}(%r{{[sb]}}p), %zmm17, %zmm0 # 64-byte Folded Reload
+; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+; AVX512F-NEXT:    vpternlogq $184, %zmm0, %zmm3, %zmm15
+; AVX512F-NEXT:    vpshufb {{.*#+}} ymm0 = ymm1[u,u,u,u,u,u,u,u,u,u,u,3,9,15,5,11,17,23,29,19,25,31,u,u,u,u,u,u,u,u,u,u]
+; AVX512F-NEXT:    vinserti32x4 $1, %xmm27, %ymm0, %ymm1
+; AVX512F-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0,1,2],ymm1[3,4,5,6,7],ymm0[8,9,10],ymm1[11,12,13,14,15]
+; AVX512F-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; AVX512F-NEXT:    vpshufb {{.*#+}} ymm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm2[3,9,15,5,11,17,23,29,19,25,31],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512F-NEXT:    vpternlogq $248, %ymm4, %ymm21, %ymm1
+; AVX512F-NEXT:    vinserti32x4 $1, %xmm28, %ymm0, %ymm2
+; AVX512F-NEXT:    vinserti32x4 $2, {{[-0-9]+}}(%r{{[sb]}}p), %zmm2, %zmm2 # 16-byte Folded Reload
+; AVX512F-NEXT:    vpternlogq $226, %zmm2, %zmm17, %zmm1
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm17
+; AVX512F-NEXT:    vpternlogq $184, %zmm1, %zmm3, %zmm17
+; AVX512F-NEXT:    vpshufb %xmm12, %xmm14, %xmm0
+; AVX512F-NEXT:    vpshufb %xmm8, %xmm13, %xmm1
+; AVX512F-NEXT:    vporq %xmm0, %xmm1, %xmm21
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm0 = xmm10[u,u,u,u,u,1,7,13],zero,zero,zero,xmm10[5,11],zero,zero,zero
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm1 = xmm7[u,u,u,u,u],zero,zero,zero,xmm7[3,9,15],zero,zero,xmm7[1,7,13]
+; AVX512F-NEXT:    vporq %xmm0, %xmm1, %xmm28
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm2 = <128,128,0,6,12,128,128,128,4,10,u,u,u,u,u,u>
+; AVX512F-NEXT:    vmovdqa64 %ymm25, %ymm7
+; AVX512F-NEXT:    vpternlogq $226, %ymm26, %ymm11, %ymm7
+; AVX512F-NEXT:    vextracti128 $1, %ymm7, %xmm0
+; AVX512F-NEXT:    vpshufb %xmm2, %xmm0, %xmm1
+; AVX512F-NEXT:    vmovdqa64 %xmm2, %xmm25
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm14 = <4,10,128,128,128,2,8,14,128,128,u,u,u,u,u,u>
+; AVX512F-NEXT:    vpshufb %xmm14, %xmm7, %xmm2
+; AVX512F-NEXT:    vporq %xmm1, %xmm2, %xmm26
+; AVX512F-NEXT:    vmovdqa64 %ymm18, %ymm10
+; AVX512F-NEXT:    vpternlogq $226, %ymm29, %ymm9, %ymm10
+; AVX512F-NEXT:    vextracti128 $1, %ymm10, %xmm8
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm1 = <u,u,u,u,u,128,128,128,4,10,128,128,128,2,8,14>
+; AVX512F-NEXT:    vpshufb %xmm1, %xmm8, %xmm2
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm3 = <u,u,u,u,u,2,8,14,128,128,0,6,12,128,128,128>
+; AVX512F-NEXT:    vpshufb %xmm3, %xmm10, %xmm4
+; AVX512F-NEXT:    vporq %xmm2, %xmm4, %xmm27
+; AVX512F-NEXT:    vpternlogq $202, %ymm30, %ymm31, %ymm11
+; AVX512F-NEXT:    vmovdqa %ymm5, %ymm4
+; AVX512F-NEXT:    vpternlogq $202, %ymm23, %ymm6, %ymm4
+; AVX512F-NEXT:    vpternlogq $202, %ymm24, %ymm22, %ymm9
+; AVX512F-NEXT:    vextracti128 $1, %ymm9, %xmm12
+; AVX512F-NEXT:    vpshufb %xmm1, %xmm12, %xmm1
+; AVX512F-NEXT:    vpshufb %xmm3, %xmm9, %xmm2
+; AVX512F-NEXT:    vporq %xmm1, %xmm2, %xmm24
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm1 = <128,128,1,7,13,128,128,128,5,11,u,u,u,u,u,u>
+; AVX512F-NEXT:    vpshufb %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vmovdqa64 %xmm1, %xmm29
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm13 = <5,11,128,128,128,3,9,15,128,128,u,u,u,u,u,u>
+; AVX512F-NEXT:    vpshufb %xmm13, %xmm7, %xmm1
+; AVX512F-NEXT:    vporq %xmm0, %xmm1, %xmm18
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm2 = <u,u,u,u,u,128,128,128,5,11,128,128,128,3,9,15>
+; AVX512F-NEXT:    vpshufb %xmm2, %xmm8, %xmm1
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm0 = <u,u,u,u,u,3,9,15,128,128,1,7,13,128,128,128>
+; AVX512F-NEXT:    vpshufb %xmm0, %xmm10, %xmm8
+; AVX512F-NEXT:    vpor %xmm1, %xmm8, %xmm8
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm1 = [128,128,128,128,128,128,128,128,128,128,128,4,10,0,6,12,18,24,30,20,26,128,128,128,128,128,128,128,128,128,128,128]
+; AVX512F-NEXT:    vpshufb %ymm1, %ymm4, %ymm3
+; AVX512F-NEXT:    vmovdqa64 {{.*#+}} ymm22 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0,0,0,0,0,255,255,255,255,255,255,255,255,255,255,255]
+; AVX512F-NEXT:    vpternlogq $236, %ymm22, %ymm3, %ymm16
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm3 = [128,128,128,128,128,128,128,128,128,128,128,5,11,1,7,13,19,25,31,21,27,128,128,128,128,128,128,128,128,128,128,128]
+; AVX512F-NEXT:    vpshufb %ymm3, %ymm4, %ymm4
+; AVX512F-NEXT:    vpternlogq $236, %ymm22, %ymm4, %ymm21
+; AVX512F-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm4 # 16-byte Folded Reload
+; AVX512F-NEXT:    vpternlogq $202, %ymm20, %ymm19, %ymm5
+; AVX512F-NEXT:    vpshufb %ymm1, %ymm5, %ymm1
+; AVX512F-NEXT:    vpternlogq $248, %ymm22, %ymm4, %ymm1
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm4
+; AVX512F-NEXT:    vpshufb %ymm3, %ymm5, %ymm3
+; AVX512F-NEXT:    vextracti128 $1, %ymm11, %xmm1
+; AVX512F-NEXT:    vmovdqa64 %xmm25, %xmm5
+; AVX512F-NEXT:    vpshufb %xmm5, %xmm1, %xmm5
+; AVX512F-NEXT:    vpshufb %xmm14, %xmm11, %xmm14
+; AVX512F-NEXT:    vpor %xmm5, %xmm14, %xmm5
+; AVX512F-NEXT:    vpshufb %xmm2, %xmm12, %xmm2
+; AVX512F-NEXT:    vpshufb %xmm0, %xmm9, %xmm0
+; AVX512F-NEXT:    vpor %xmm2, %xmm0, %xmm0
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,65535,65535,0,65535,65535,0,65535,65535,65535,0,65535,65535,0,65535,65535]
+; AVX512F-NEXT:    vpternlogq $226, %ymm23, %ymm2, %ymm6
+; AVX512F-NEXT:    vpshufb {{.*#+}} ymm9 = ymm6[u,u,u,u,u,u,u,u,u,u,0,6,12,2,8,14,20,26,16,22,28,u,u,u,u,u,u,u,u,u,u,u]
+; AVX512F-NEXT:    vpblendw {{.*#+}} xmm5 = xmm5[0,1,2,3,4],xmm9[5,6,7]
+; AVX512F-NEXT:    vpblendd {{.*#+}} ymm5 = ymm5[0,1,2,3],ymm9[4,5,6,7]
+; AVX512F-NEXT:    vinserti32x4 $1, %xmm28, %ymm0, %ymm9
+; AVX512F-NEXT:    vpternlogq $248, %ymm22, %ymm9, %ymm3
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm3, %zmm0, %zmm3
-; AVX512F-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3,4],xmm2[5,6,7]
-; AVX512F-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
-; AVX512F-NEXT:    vinserti32x4 $1, %xmm26, %ymm0, %ymm2
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm17, %zmm2, %zmm2
-; AVX512F-NEXT:    vpternlogq $226, %zmm2, %zmm15, %zmm1
+; AVX512F-NEXT:    vinserti32x4 $1, %xmm24, %ymm0, %ymm9
+; AVX512F-NEXT:    vpternlogq $202, %ymm20, %ymm19, %ymm2
+; AVX512F-NEXT:    vpshufb {{.*#+}} ymm10 = ymm2[u,u,u,u,u,u,u,u,u,u,0,6,12,2,8,14,20,26,16,22,28],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm12 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0,0,0,0,0,0]
+; AVX512F-NEXT:    vpternlogq $242, %ymm9, %ymm12, %ymm10
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm10, %zmm0, %zmm9
+; AVX512F-NEXT:    vinserti32x4 $1, %xmm27, %ymm0, %ymm10
+; AVX512F-NEXT:    vinserti32x4 $2, %xmm26, %zmm10, %zmm10
+; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm14 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; AVX512F-NEXT:    vpternlogq $226, %zmm10, %zmm14, %zmm5
+; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm10 = [65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,0,0,0,0,0,0,0,0,0,0,0]
+; AVX512F-NEXT:    vpternlogq $184, %zmm5, %zmm10, %zmm9
+; AVX512F-NEXT:    vmovdqa64 %xmm29, %xmm5
+; AVX512F-NEXT:    vpshufb %xmm5, %xmm1, %xmm1
+; AVX512F-NEXT:    vpshufb %xmm13, %xmm11, %xmm5
+; AVX512F-NEXT:    vpor %xmm1, %xmm5, %xmm1
+; AVX512F-NEXT:    vpshufb {{.*#+}} ymm5 = ymm6[u,u,u,u,u,u,u,u,u,u,1,7,13,3,9,15,21,27,17,23,29,u,u,u,u,u,u,u,u,u,u,u]
+; AVX512F-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3,4],xmm5[5,6,7]
+; AVX512F-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm5[4,5,6,7]
 ; AVX512F-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; AVX512F-NEXT:    vpternlogq $226, %ymm0, %ymm10, %ymm14
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm14, %zmm0, %zmm0
-; AVX512F-NEXT:    vpternlogq $184, %zmm1, %zmm9, %zmm0
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm1 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0,0,0,0,0,0,255,255,255,255,255,255,255,255,255,255]
-; AVX512F-NEXT:    vpternlogq $226, {{[-0-9]+}}(%r{{[sb]}}p), %ymm1, %ymm16 # 32-byte Folded Reload
-; AVX512F-NEXT:    vpternlogq $226, {{[-0-9]+}}(%r{{[sb]}}p), %ymm1, %ymm31 # 32-byte Folded Reload
+; AVX512F-NEXT:    vpshufb {{.*#+}} ymm2 = ymm2[u,u,u,u,u,u,u,u,u,u,1,7,13,3,9,15,21,27,17,23,29],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512F-NEXT:    vpternlogq $242, %ymm0, %ymm12, %ymm2
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX512F-NEXT:    vinserti128 $1, %xmm8, %ymm0, %ymm2
+; AVX512F-NEXT:    vinserti32x4 $2, %xmm18, %zmm2, %zmm2
+; AVX512F-NEXT:    vpternlogq $226, %zmm2, %zmm14, %zmm1
+; AVX512F-NEXT:    vpternlogq $184, %zmm1, %zmm10, %zmm0
 ; AVX512F-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm1 # 16-byte Folded Reload
-; AVX512F-NEXT:    vinserti64x4 $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm1, %zmm1 # 32-byte Folded Reload
-; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,0,0,0,0,0,0,0,0,0,0,0,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535]
-; AVX512F-NEXT:    vpternlogq $226, %zmm1, %zmm2, %zmm16
+; AVX512F-NEXT:    vinserti32x4 $2, {{[-0-9]+}}(%r{{[sb]}}p), %zmm1, %zmm1 # 16-byte Folded Reload
+; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; AVX512F-NEXT:    vpternlogq $184, %zmm1, %zmm2, %zmm16
 ; AVX512F-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm1 # 16-byte Folded Reload
-; AVX512F-NEXT:    vinserti64x4 $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm1, %zmm1 # 32-byte Folded Reload
-; AVX512F-NEXT:    vpternlogq $226, %zmm1, %zmm2, %zmm31
-; AVX512F-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm1 # 16-byte Folded Reload
-; AVX512F-NEXT:    vinserti64x4 $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm1, %zmm1 # 32-byte Folded Reload
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0,0,0,0,0,255,255,255,255,255,255,255,255,255,255,255]
-; AVX512F-NEXT:    vpternlogq $226, {{[-0-9]+}}(%r{{[sb]}}p), %ymm2, %ymm27 # 32-byte Folded Reload
-; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm4 = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; AVX512F-NEXT:    vpternlogq $184, %zmm1, %zmm4, %zmm27
-; AVX512F-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm1 # 16-byte Folded Reload
-; AVX512F-NEXT:    vinserti64x4 $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm1, %zmm1 # 32-byte Folded Reload
-; AVX512F-NEXT:    vpternlogq $226, (%rsp), %ymm2, %ymm25 # 32-byte Folded Reload
-; AVX512F-NEXT:    vpternlogq $184, %zmm1, %zmm4, %zmm25
-; AVX512F-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm1 # 16-byte Folded Reload
-; AVX512F-NEXT:    vpternlogq $184, %ymm1, %ymm2, %ymm30
-; AVX512F-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm1 # 16-byte Folded Reload
-; AVX512F-NEXT:    vpternlogq $184, %ymm1, %ymm2, %ymm6
+; AVX512F-NEXT:    vinserti32x4 $2, {{[-0-9]+}}(%r{{[sb]}}p), %zmm1, %zmm1 # 16-byte Folded Reload
+; AVX512F-NEXT:    vpternlogq $184, %zmm1, %zmm2, %zmm21
 ; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-; AVX512F-NEXT:    vpternlogq $184, %zmm16, %zmm1, %zmm5
-; AVX512F-NEXT:    vpternlogq $184, %zmm31, %zmm1, %zmm3
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm30, %zmm0, %zmm2
-; AVX512F-NEXT:    vpternlogq $184, %zmm27, %zmm1, %zmm2
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm6, %zmm0, %zmm4
-; AVX512F-NEXT:    vpternlogq $184, %zmm25, %zmm1, %zmm4
-; AVX512F-NEXT:    vmovdqa64 %zmm5, (%rsi)
-; AVX512F-NEXT:    vmovdqa64 %zmm3, (%rdx)
-; AVX512F-NEXT:    vmovdqa64 %zmm2, (%rcx)
-; AVX512F-NEXT:    vmovdqa64 %zmm4, (%r8)
-; AVX512F-NEXT:    vmovdqa64 %zmm8, (%r9)
+; AVX512F-NEXT:    vpternlogq $184, %zmm16, %zmm1, %zmm4
+; AVX512F-NEXT:    vpternlogq $184, %zmm21, %zmm1, %zmm3
+; AVX512F-NEXT:    vmovdqa64 %zmm15, (%rsi)
+; AVX512F-NEXT:    vmovdqa64 %zmm17, (%rdx)
+; AVX512F-NEXT:    vmovdqa64 %zmm4, (%rcx)
+; AVX512F-NEXT:    vmovdqa64 %zmm3, (%r8)
+; AVX512F-NEXT:    vmovdqa64 %zmm9, (%r9)
 ; AVX512F-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; AVX512F-NEXT:    vmovdqa64 %zmm0, (%rax)
-; AVX512F-NEXT:    addq $264, %rsp # imm = 0x108
+; AVX512F-NEXT:    addq $40, %rsp
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -4803,260 +4791,234 @@ define void @load_i8_stride6_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512BW-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm2 = <0,6,12,128,128,128,4,10,128,128,128,u,u,u,u,u>
 ; AVX512BW-NEXT:    vmovdqa 224(%rdi), %ymm0
-; AVX512BW-NEXT:    vmovdqa64 192(%rdi), %ymm24
+; AVX512BW-NEXT:    vmovdqa64 192(%rdi), %ymm23
 ; AVX512BW-NEXT:    movw $18724, %r10w # imm = 0x4924
 ; AVX512BW-NEXT:    kmovd %r10d, %k1
-; AVX512BW-NEXT:    vpblendmw %ymm0, %ymm24, %ymm10 {%k1}
-; AVX512BW-NEXT:    vpshufb %xmm2, %xmm10, %xmm1
-; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm6 = <128,128,128,2,8,14,128,128,0,6,12,u,u,u,u,u>
-; AVX512BW-NEXT:    vextracti128 $1, %ymm10, %xmm14
-; AVX512BW-NEXT:    vpshufb %xmm6, %xmm14, %xmm3
-; AVX512BW-NEXT:    vpor %xmm1, %xmm3, %xmm4
-; AVX512BW-NEXT:    vmovdqa64 (%rdi), %ymm22
-; AVX512BW-NEXT:    vmovdqa 32(%rdi), %ymm1
-; AVX512BW-NEXT:    vmovdqa 64(%rdi), %ymm5
-; AVX512BW-NEXT:    vmovdqa 128(%rdi), %ymm12
-; AVX512BW-NEXT:    vmovdqa 160(%rdi), %ymm3
-; AVX512BW-NEXT:    vpblendmw %ymm12, %ymm3, %ymm15 {%k1}
+; AVX512BW-NEXT:    vpblendmw %ymm0, %ymm23, %ymm9 {%k1}
+; AVX512BW-NEXT:    vpshufb %xmm2, %xmm9, %xmm1
+; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm4 = <128,128,128,2,8,14,128,128,0,6,12,u,u,u,u,u>
+; AVX512BW-NEXT:    vextracti128 $1, %ymm9, %xmm12
+; AVX512BW-NEXT:    vpshufb %xmm4, %xmm12, %xmm3
+; AVX512BW-NEXT:    vpor %xmm1, %xmm3, %xmm5
+; AVX512BW-NEXT:    vmovdqa (%rdi), %ymm10
+; AVX512BW-NEXT:    vmovdqa 32(%rdi), %ymm3
+; AVX512BW-NEXT:    vmovdqa 64(%rdi), %ymm6
+; AVX512BW-NEXT:    vmovdqa64 128(%rdi), %ymm26
+; AVX512BW-NEXT:    vmovdqa 160(%rdi), %ymm1
+; AVX512BW-NEXT:    vpblendmw %ymm26, %ymm1, %ymm15 {%k1}
 ; AVX512BW-NEXT:    vextracti32x4 $1, %ymm15, %xmm16
 ; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} xmm17 = <u,u,u,u,u,u,128,128,0,6,12,128,128,128,4,10>
-; AVX512BW-NEXT:    vpshufb %xmm17, %xmm16, %xmm7
+; AVX512BW-NEXT:    vpshufb %xmm17, %xmm16, %xmm11
 ; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} xmm18 = <u,u,u,u,u,u,4,10,128,128,128,2,8,14,128,128>
-; AVX512BW-NEXT:    vpshufb %xmm18, %xmm15, %xmm8
-; AVX512BW-NEXT:    vpor %xmm7, %xmm8, %xmm7
-; AVX512BW-NEXT:    vinserti128 $1, %xmm7, %ymm0, %ymm7
-; AVX512BW-NEXT:    vinserti64x4 $1, %ymm4, %zmm7, %zmm7
-; AVX512BW-NEXT:    vinserti128 $1, 96(%rdi), %ymm5, %ymm4
-; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm8 = [0,6,12,128,128,128,128,128,128,128,128,2,8,14,128,128,16,22,28,128,128,128,128,128,128,128,128,18,24,30,128,128]
-; AVX512BW-NEXT:    vpshufb %ymm8, %ymm4, %ymm13
-; AVX512BW-NEXT:    vperm2i128 {{.*#+}} ymm5 = ymm5[2,3],mem[2,3]
-; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} ymm19 = [128,128,128,2,8,14,128,128,128,128,128,128,128,128,4,10,128,128,128,18,24,30,128,128,128,128,128,128,128,128,20,26]
-; AVX512BW-NEXT:    vpshufb %ymm19, %ymm5, %ymm20
-; AVX512BW-NEXT:    vporq %ymm13, %ymm20, %ymm13
-; AVX512BW-NEXT:    vpblendmw %ymm1, %ymm22, %ymm20 {%k1}
+; AVX512BW-NEXT:    vpshufb %xmm18, %xmm15, %xmm13
+; AVX512BW-NEXT:    vpor %xmm11, %xmm13, %xmm11
+; AVX512BW-NEXT:    vinserti128 $1, %xmm11, %ymm0, %ymm11
+; AVX512BW-NEXT:    vinserti32x4 $2, %xmm5, %zmm11, %zmm11
+; AVX512BW-NEXT:    vperm2i128 {{.*#+}} ymm5 = ymm6[2,3],mem[2,3]
+; AVX512BW-NEXT:    vinserti128 $1, 96(%rdi), %ymm6, %ymm13
+; AVX512BW-NEXT:    movw $-28124, %r10w # imm = 0x9224
+; AVX512BW-NEXT:    kmovd %r10d, %k4
+; AVX512BW-NEXT:    vpblendmw %ymm5, %ymm13, %ymm19 {%k4}
+; AVX512BW-NEXT:    vpblendmw %ymm3, %ymm10, %ymm20 {%k1}
 ; AVX512BW-NEXT:    vpshufb %xmm2, %xmm20, %xmm2
 ; AVX512BW-NEXT:    vextracti32x4 $1, %ymm20, %xmm21
-; AVX512BW-NEXT:    vpshufb %xmm6, %xmm21, %xmm6
-; AVX512BW-NEXT:    vpor %xmm2, %xmm6, %xmm2
+; AVX512BW-NEXT:    vpshufb %xmm4, %xmm21, %xmm4
+; AVX512BW-NEXT:    vpor %xmm2, %xmm4, %xmm2
+; AVX512BW-NEXT:    vpbroadcastq {{.*#+}} ymm6 = [0,6,12,2,8,14,4,10,0,6,12,2,8,14,4,10,0,6,12,2,8,14,4,10,0,6,12,2,8,14,4,10]
 ; AVX512BW-NEXT:    movl $4192256, %r10d # imm = 0x3FF800
-; AVX512BW-NEXT:    kmovd %r10d, %k3
-; AVX512BW-NEXT:    vmovdqu8 %ymm13, %ymm2 {%k3}
-; AVX512BW-NEXT:    vmovdqu16 %zmm7, %zmm2 {%k3}
-; AVX512BW-NEXT:    vmovdqa 256(%rdi), %ymm7
-; AVX512BW-NEXT:    vinserti128 $1, 288(%rdi), %ymm7, %ymm6
-; AVX512BW-NEXT:    vpshufb %ymm8, %ymm6, %ymm8
-; AVX512BW-NEXT:    vperm2i128 {{.*#+}} ymm7 = ymm7[2,3],mem[2,3]
-; AVX512BW-NEXT:    vpshufb %ymm19, %ymm7, %ymm13
-; AVX512BW-NEXT:    vpor %ymm8, %ymm13, %ymm9
-; AVX512BW-NEXT:    vmovdqa64 320(%rdi), %ymm28
-; AVX512BW-NEXT:    vmovdqa 352(%rdi), %ymm8
-; AVX512BW-NEXT:    vpblendmw %ymm28, %ymm8, %ymm19 {%k1}
-; AVX512BW-NEXT:    vextracti32x4 $1, %ymm19, %xmm23
-; AVX512BW-NEXT:    vpshufb %xmm17, %xmm23, %xmm17
-; AVX512BW-NEXT:    vpshufb %xmm18, %xmm19, %xmm18
+; AVX512BW-NEXT:    kmovd %r10d, %k2
+; AVX512BW-NEXT:    vpshufb %ymm6, %ymm19, %ymm2 {%k2}
+; AVX512BW-NEXT:    vmovdqu16 %zmm11, %zmm2 {%k2}
+; AVX512BW-NEXT:    vmovdqa 256(%rdi), %ymm11
+; AVX512BW-NEXT:    vperm2i128 {{.*#+}} ymm4 = ymm11[2,3],mem[2,3]
+; AVX512BW-NEXT:    vinserti128 $1, 288(%rdi), %ymm11, %ymm14
+; AVX512BW-NEXT:    vpblendmw %ymm4, %ymm14, %ymm22 {%k4}
+; AVX512BW-NEXT:    vpshufb %ymm6, %ymm22, %ymm7
+; AVX512BW-NEXT:    vmovdqa 320(%rdi), %ymm11
+; AVX512BW-NEXT:    vmovdqa 352(%rdi), %ymm6
+; AVX512BW-NEXT:    vpblendmw %ymm11, %ymm6, %ymm24 {%k1}
+; AVX512BW-NEXT:    vextracti32x4 $1, %ymm24, %xmm25
+; AVX512BW-NEXT:    vpshufb %xmm17, %xmm25, %xmm17
+; AVX512BW-NEXT:    vpshufb %xmm18, %xmm24, %xmm18
 ; AVX512BW-NEXT:    vporq %xmm17, %xmm18, %xmm17
-; AVX512BW-NEXT:    vinserti32x4 $1, %xmm17, %ymm0, %ymm11
-; AVX512BW-NEXT:    vpblendw {{.*#+}} ymm11 = ymm9[0,1,2],ymm11[3,4,5,6,7],ymm9[8,9,10],ymm11[11,12,13,14,15]
-; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm9 = ymm9[0,1,2,3],ymm11[4,5,6,7]
-; AVX512BW-NEXT:    vinserti64x4 $1, %ymm9, %zmm0, %zmm9
+; AVX512BW-NEXT:    vinserti32x4 $1, %xmm17, %ymm0, %ymm8
+; AVX512BW-NEXT:    vpblendw {{.*#+}} ymm8 = ymm7[0,1,2],ymm8[3,4,5,6,7],ymm7[8,9,10],ymm8[11,12,13,14,15]
+; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm7 = ymm7[0,1,2,3],ymm8[4,5,6,7]
+; AVX512BW-NEXT:    vinserti64x4 $1, %ymm7, %zmm0, %zmm7
 ; AVX512BW-NEXT:    movabsq $-8796093022208, %rdi # imm = 0xFFFFF80000000000
-; AVX512BW-NEXT:    kmovq %rdi, %k2
-; AVX512BW-NEXT:    vmovdqu8 %zmm9, %zmm2 {%k2}
-; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm9 = <1,7,13,128,128,128,5,11,128,128,128,u,u,u,u,u>
-; AVX512BW-NEXT:    vpshufb %xmm9, %xmm10, %xmm10
-; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm11 = <128,128,128,3,9,15,128,128,1,7,13,u,u,u,u,u>
-; AVX512BW-NEXT:    vpshufb %xmm11, %xmm14, %xmm14
-; AVX512BW-NEXT:    vpor %xmm10, %xmm14, %xmm10
-; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm14 = <u,u,u,u,u,u,128,128,1,7,13,128,128,128,5,11>
-; AVX512BW-NEXT:    vpshufb %xmm14, %xmm16, %xmm16
+; AVX512BW-NEXT:    kmovq %rdi, %k3
+; AVX512BW-NEXT:    vmovdqu8 %zmm7, %zmm2 {%k3}
+; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm7 = <1,7,13,128,128,128,5,11,128,128,128,u,u,u,u,u>
+; AVX512BW-NEXT:    vpshufb %xmm7, %xmm9, %xmm8
+; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm9 = <128,128,128,3,9,15,128,128,1,7,13,u,u,u,u,u>
+; AVX512BW-NEXT:    vpshufb %xmm9, %xmm12, %xmm12
+; AVX512BW-NEXT:    vpor %xmm8, %xmm12, %xmm8
+; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm12 = <u,u,u,u,u,u,128,128,1,7,13,128,128,128,5,11>
+; AVX512BW-NEXT:    vpshufb %xmm12, %xmm16, %xmm16
 ; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} xmm17 = <u,u,u,u,u,u,5,11,128,128,128,3,9,15,128,128>
 ; AVX512BW-NEXT:    vpshufb %xmm17, %xmm15, %xmm15
 ; AVX512BW-NEXT:    vporq %xmm16, %xmm15, %xmm15
 ; AVX512BW-NEXT:    vinserti128 $1, %xmm15, %ymm0, %ymm15
-; AVX512BW-NEXT:    vinserti64x4 $1, %ymm10, %zmm15, %zmm15
-; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} ymm16 = [1,7,13,128,128,128,128,128,128,128,128,3,9,15,128,128,17,23,29,128,128,128,128,128,128,128,128,19,25,31,128,128]
-; AVX512BW-NEXT:    vpshufb %ymm16, %ymm4, %ymm10
-; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} ymm18 = [128,128,128,3,9,15,128,128,128,128,128,128,128,128,5,11,128,128,128,19,25,31,128,128,128,128,128,128,128,128,21,27]
-; AVX512BW-NEXT:    vpshufb %ymm18, %ymm5, %ymm25
-; AVX512BW-NEXT:    vporq %ymm10, %ymm25, %ymm25
-; AVX512BW-NEXT:    vpshufb %xmm9, %xmm20, %xmm9
-; AVX512BW-NEXT:    vpshufb %xmm11, %xmm21, %xmm10
-; AVX512BW-NEXT:    vpor %xmm9, %xmm10, %xmm10
-; AVX512BW-NEXT:    vmovdqu8 %ymm25, %ymm10 {%k3}
-; AVX512BW-NEXT:    vmovdqu16 %zmm15, %zmm10 {%k3}
-; AVX512BW-NEXT:    vpshufb %ymm16, %ymm6, %ymm9
-; AVX512BW-NEXT:    vpshufb %ymm18, %ymm7, %ymm11
-; AVX512BW-NEXT:    vpor %ymm9, %ymm11, %ymm9
-; AVX512BW-NEXT:    vpshufb %xmm14, %xmm23, %xmm11
-; AVX512BW-NEXT:    vpshufb %xmm17, %xmm19, %xmm14
-; AVX512BW-NEXT:    vpor %xmm11, %xmm14, %xmm11
-; AVX512BW-NEXT:    vinserti128 $1, %xmm11, %ymm0, %ymm11
-; AVX512BW-NEXT:    vpblendw {{.*#+}} ymm11 = ymm9[0,1,2],ymm11[3,4,5,6,7],ymm9[8,9,10],ymm11[11,12,13,14,15]
-; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm9 = ymm9[0,1,2,3],ymm11[4,5,6,7]
-; AVX512BW-NEXT:    vinserti64x4 $1, %ymm9, %zmm0, %zmm9
-; AVX512BW-NEXT:    vmovdqu8 %zmm9, %zmm10 {%k2}
-; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm9 = [2,8,14,128,128,128,128,128,128,128,128,4,10,128,128,128,18,24,30,128,128,128,128,128,128,128,128,20,26,128,128,128]
-; AVX512BW-NEXT:    vpshufb %ymm9, %ymm4, %ymm11
-; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm15 = [128,128,128,4,10,128,128,128,128,128,128,128,128,0,6,12,128,128,128,20,26,128,128,128,128,128,128,128,128,16,22,28]
-; AVX512BW-NEXT:    vpshufb %ymm15, %ymm5, %ymm14
-; AVX512BW-NEXT:    vpor %ymm11, %ymm14, %ymm11
-; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm14 = <128,128,128,4,10,128,128,128,2,8,14,u,u,u,u,u>
+; AVX512BW-NEXT:    vinserti32x4 $2, %xmm8, %zmm15, %zmm8
+; AVX512BW-NEXT:    vpshufb %xmm7, %xmm20, %xmm7
+; AVX512BW-NEXT:    vpshufb %xmm9, %xmm21, %xmm9
+; AVX512BW-NEXT:    vpor %xmm7, %xmm9, %xmm9
+; AVX512BW-NEXT:    vpbroadcastq {{.*#+}} ymm7 = [1,7,13,3,9,15,5,11,1,7,13,3,9,15,5,11,1,7,13,3,9,15,5,11,1,7,13,3,9,15,5,11]
+; AVX512BW-NEXT:    vpshufb %ymm7, %ymm19, %ymm9 {%k2}
+; AVX512BW-NEXT:    vmovdqu16 %zmm8, %zmm9 {%k2}
+; AVX512BW-NEXT:    vpshufb %ymm7, %ymm22, %ymm7
+; AVX512BW-NEXT:    vpshufb %xmm12, %xmm25, %xmm8
+; AVX512BW-NEXT:    vpshufb %xmm17, %xmm24, %xmm12
+; AVX512BW-NEXT:    vpor %xmm8, %xmm12, %xmm8
+; AVX512BW-NEXT:    vinserti128 $1, %xmm8, %ymm0, %ymm8
+; AVX512BW-NEXT:    vpblendw {{.*#+}} ymm8 = ymm7[0,1,2],ymm8[3,4,5,6,7],ymm7[8,9,10],ymm8[11,12,13,14,15]
+; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm7 = ymm7[0,1,2,3],ymm8[4,5,6,7]
+; AVX512BW-NEXT:    vinserti64x4 $1, %ymm7, %zmm0, %zmm7
+; AVX512BW-NEXT:    vmovdqu8 %zmm7, %zmm9 {%k3}
+; AVX512BW-NEXT:    vpblendmw %ymm13, %ymm5, %ymm15 {%k4}
+; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm7 = <128,128,128,4,10,128,128,128,2,8,14,u,u,u,u,u>
 ; AVX512BW-NEXT:    movw $9362, %di # imm = 0x2492
-; AVX512BW-NEXT:    kmovd %edi, %k3
-; AVX512BW-NEXT:    vpblendmw %ymm22, %ymm1, %ymm16 {%k3}
-; AVX512BW-NEXT:    vextracti32x4 $1, %ymm16, %xmm17
-; AVX512BW-NEXT:    vpshufb %xmm14, %xmm17, %xmm18
-; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} xmm19 = <2,8,14,128,128,0,6,12,128,128,128,u,u,u,u,u>
-; AVX512BW-NEXT:    vpshufb %xmm19, %xmm16, %xmm20
-; AVX512BW-NEXT:    vporq %xmm18, %xmm20, %xmm18
+; AVX512BW-NEXT:    kmovd %edi, %k2
+; AVX512BW-NEXT:    vpblendmw %ymm10, %ymm3, %ymm8 {%k2}
+; AVX512BW-NEXT:    vextracti32x4 $1, %ymm8, %xmm16
+; AVX512BW-NEXT:    vpshufb %xmm7, %xmm16, %xmm12
+; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} xmm17 = <2,8,14,128,128,0,6,12,128,128,128,u,u,u,u,u>
+; AVX512BW-NEXT:    vpshufb %xmm17, %xmm8, %xmm18
+; AVX512BW-NEXT:    vporq %xmm12, %xmm18, %xmm18
+; AVX512BW-NEXT:    vpbroadcastq {{.*#+}} ymm19 = [2,8,14,4,10,0,6,12,2,8,14,4,10,0,6,12,2,8,14,4,10,0,6,12,2,8,14,4,10,0,6,12]
 ; AVX512BW-NEXT:    movl $2095104, %edi # imm = 0x1FF800
-; AVX512BW-NEXT:    kmovd %edi, %k4
-; AVX512BW-NEXT:    vmovdqu8 %ymm11, %ymm18 {%k4}
-; AVX512BW-NEXT:    vpblendmw %ymm24, %ymm0, %ymm11 {%k3}
-; AVX512BW-NEXT:    vextracti32x4 $1, %ymm11, %xmm20
-; AVX512BW-NEXT:    vpshufb %xmm14, %xmm20, %xmm14
-; AVX512BW-NEXT:    vpshufb %xmm19, %xmm11, %xmm19
-; AVX512BW-NEXT:    vporq %xmm14, %xmm19, %xmm14
-; AVX512BW-NEXT:    vpblendmw %ymm3, %ymm12, %ymm19 {%k1}
-; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} xmm21 = <u,u,u,u,u,0,6,12,128,128,128,4,10,128,128,128>
-; AVX512BW-NEXT:    vpshufb %xmm21, %xmm19, %xmm23
-; AVX512BW-NEXT:    vextracti32x4 $1, %ymm19, %xmm25
-; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} xmm26 = <u,u,u,u,u,128,128,128,2,8,14,128,128,0,6,12>
-; AVX512BW-NEXT:    vpshufb %xmm26, %xmm25, %xmm27
-; AVX512BW-NEXT:    vporq %xmm23, %xmm27, %xmm23
-; AVX512BW-NEXT:    vinserti32x4 $1, %xmm23, %ymm0, %ymm23
-; AVX512BW-NEXT:    vinserti64x4 $1, %ymm14, %zmm23, %zmm14
+; AVX512BW-NEXT:    kmovd %edi, %k5
+; AVX512BW-NEXT:    vpshufb %ymm19, %ymm15, %ymm18 {%k5}
+; AVX512BW-NEXT:    vpblendmw %ymm23, %ymm0, %ymm20 {%k2}
+; AVX512BW-NEXT:    vextracti32x4 $1, %ymm20, %xmm21
+; AVX512BW-NEXT:    vpshufb %xmm7, %xmm21, %xmm7
+; AVX512BW-NEXT:    vpshufb %xmm17, %xmm20, %xmm12
+; AVX512BW-NEXT:    vpor %xmm7, %xmm12, %xmm7
+; AVX512BW-NEXT:    vpblendmw %ymm1, %ymm26, %ymm17 {%k1}
+; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} xmm22 = <u,u,u,u,u,0,6,12,128,128,128,4,10,128,128,128>
+; AVX512BW-NEXT:    vpshufb %xmm22, %xmm17, %xmm12
+; AVX512BW-NEXT:    vextracti32x4 $1, %ymm17, %xmm24
+; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} xmm25 = <u,u,u,u,u,128,128,128,2,8,14,128,128,0,6,12>
+; AVX512BW-NEXT:    vpshufb %xmm25, %xmm24, %xmm27
+; AVX512BW-NEXT:    vporq %xmm12, %xmm27, %xmm12
+; AVX512BW-NEXT:    vinserti128 $1, %xmm12, %ymm0, %ymm12
+; AVX512BW-NEXT:    vinserti32x4 $2, %xmm7, %zmm12, %zmm12
 ; AVX512BW-NEXT:    movl $2097151, %edi # imm = 0x1FFFFF
-; AVX512BW-NEXT:    kmovq %rdi, %k5
-; AVX512BW-NEXT:    vmovdqu8 %zmm18, %zmm14 {%k5}
-; AVX512BW-NEXT:    vpshufb %ymm9, %ymm6, %ymm9
-; AVX512BW-NEXT:    vpshufb %ymm15, %ymm7, %ymm15
-; AVX512BW-NEXT:    vpor %ymm9, %ymm15, %ymm9
-; AVX512BW-NEXT:    vpblendmw %ymm8, %ymm28, %ymm18 {%k1}
-; AVX512BW-NEXT:    vpshufb %xmm21, %xmm18, %xmm15
-; AVX512BW-NEXT:    vextracti32x4 $1, %ymm18, %xmm21
-; AVX512BW-NEXT:    vpshufb %xmm26, %xmm21, %xmm23
-; AVX512BW-NEXT:    vporq %xmm15, %xmm23, %xmm15
-; AVX512BW-NEXT:    vinserti128 $1, %xmm15, %ymm0, %ymm15
-; AVX512BW-NEXT:    vmovdqu8 %ymm9, %ymm15 {%k4}
-; AVX512BW-NEXT:    vinserti64x4 $1, %ymm15, %zmm0, %zmm9
-; AVX512BW-NEXT:    vmovdqu8 %zmm9, %zmm14 {%k2}
-; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm9 = [3,9,15,128,128,128,128,128,128,128,128,5,11,128,128,128,19,25,31,128,128,128,128,128,128,128,128,21,27,128,128,128]
-; AVX512BW-NEXT:    vpshufb %ymm9, %ymm4, %ymm15
-; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} ymm23 = [128,128,128,5,11,128,128,128,128,128,128,128,128,1,7,13,128,128,128,21,27,128,128,128,128,128,128,128,128,17,23,29]
-; AVX512BW-NEXT:    vpshufb %ymm23, %ymm5, %ymm26
-; AVX512BW-NEXT:    vporq %ymm15, %ymm26, %ymm15
-; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} xmm26 = <128,128,128,5,11,128,128,128,3,9,15,u,u,u,u,u>
-; AVX512BW-NEXT:    vpshufb %xmm26, %xmm17, %xmm17
-; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} xmm27 = <3,9,15,128,128,1,7,13,128,128,128,u,u,u,u,u>
-; AVX512BW-NEXT:    vpshufb %xmm27, %xmm16, %xmm16
-; AVX512BW-NEXT:    vporq %xmm17, %xmm16, %xmm16
-; AVX512BW-NEXT:    vmovdqu8 %ymm15, %ymm16 {%k4}
-; AVX512BW-NEXT:    vpshufb %xmm26, %xmm20, %xmm15
-; AVX512BW-NEXT:    vpshufb %xmm27, %xmm11, %xmm11
-; AVX512BW-NEXT:    vpor %xmm15, %xmm11, %xmm11
-; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} xmm17 = <u,u,u,u,u,1,7,13,128,128,128,5,11,128,128,128>
-; AVX512BW-NEXT:    vpshufb %xmm17, %xmm19, %xmm15
-; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} xmm19 = <u,u,u,u,u,128,128,128,3,9,15,128,128,1,7,13>
-; AVX512BW-NEXT:    vpshufb %xmm19, %xmm25, %xmm20
-; AVX512BW-NEXT:    vporq %xmm15, %xmm20, %xmm15
-; AVX512BW-NEXT:    vinserti128 $1, %xmm15, %ymm0, %ymm15
-; AVX512BW-NEXT:    vinserti64x4 $1, %ymm11, %zmm15, %zmm15
-; AVX512BW-NEXT:    vmovdqu8 %zmm16, %zmm15 {%k5}
-; AVX512BW-NEXT:    vpshufb %ymm9, %ymm6, %ymm9
-; AVX512BW-NEXT:    vpshufb %ymm23, %ymm7, %ymm11
-; AVX512BW-NEXT:    vpor %ymm9, %ymm11, %ymm9
-; AVX512BW-NEXT:    vpshufb %xmm17, %xmm18, %xmm11
-; AVX512BW-NEXT:    vpshufb %xmm19, %xmm21, %xmm16
-; AVX512BW-NEXT:    vporq %xmm11, %xmm16, %xmm11
-; AVX512BW-NEXT:    vinserti128 $1, %xmm11, %ymm0, %ymm11
-; AVX512BW-NEXT:    vmovdqu8 %ymm9, %ymm11 {%k4}
-; AVX512BW-NEXT:    vinserti64x4 $1, %ymm11, %zmm0, %zmm9
-; AVX512BW-NEXT:    vmovdqu8 %zmm9, %zmm15 {%k2}
-; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm9 = <128,128,0,6,12,128,128,128,4,10,u,u,u,u,u,u>
-; AVX512BW-NEXT:    vmovdqu16 %ymm24, %ymm0 {%k1}
-; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm11
-; AVX512BW-NEXT:    vpshufb %xmm9, %xmm11, %xmm16
-; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} xmm17 = <4,10,128,128,128,2,8,14,128,128,u,u,u,u,u,u>
-; AVX512BW-NEXT:    vpshufb %xmm17, %xmm0, %xmm18
-; AVX512BW-NEXT:    vporq %xmm16, %xmm18, %xmm16
-; AVX512BW-NEXT:    vmovdqu16 %ymm12, %ymm3 {%k3}
-; AVX512BW-NEXT:    vextracti128 $1, %ymm3, %xmm12
-; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} xmm18 = <u,u,u,u,u,128,128,128,4,10,128,128,128,2,8,14>
-; AVX512BW-NEXT:    vpshufb %xmm18, %xmm12, %xmm19
-; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} xmm20 = <u,u,u,u,u,2,8,14,128,128,0,6,12,128,128,128>
-; AVX512BW-NEXT:    vpshufb %xmm20, %xmm3, %xmm21
-; AVX512BW-NEXT:    vporq %xmm19, %xmm21, %xmm19
-; AVX512BW-NEXT:    vinserti32x4 $1, %xmm19, %ymm0, %ymm19
-; AVX512BW-NEXT:    vinserti64x4 $1, %ymm16, %zmm19, %zmm16
-; AVX512BW-NEXT:    vmovdqu16 %ymm22, %ymm1 {%k1}
-; AVX512BW-NEXT:    vextracti32x4 $1, %ymm1, %xmm19
-; AVX512BW-NEXT:    vpshufb %xmm9, %xmm19, %xmm9
-; AVX512BW-NEXT:    vpshufb %xmm17, %xmm1, %xmm17
-; AVX512BW-NEXT:    vporq %xmm9, %xmm17, %xmm9
-; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} ymm17 = [128,128,0,6,12,128,128,128,128,128,128,128,128,2,8,14,128,128,16,22,28,128,128,128,128,128,128,128,128,18,24,30]
-; AVX512BW-NEXT:    vpshufb %ymm17, %ymm5, %ymm21
-; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} ymm22 = [4,10,128,128,128,128,128,128,128,128,0,6,12,128,128,128,20,26,128,128,128,128,128,128,128,128,16,22,28,128,128,128]
-; AVX512BW-NEXT:    vpshufb %ymm22, %ymm4, %ymm23
-; AVX512BW-NEXT:    vporq %ymm21, %ymm23, %ymm13
-; AVX512BW-NEXT:    vpblendw {{.*#+}} xmm9 = xmm9[0,1,2,3,4],xmm13[5,6,7]
-; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm9 = ymm9[0,1,2,3],ymm13[4,5,6,7]
+; AVX512BW-NEXT:    kmovq %rdi, %k6
+; AVX512BW-NEXT:    vmovdqu8 %zmm18, %zmm12 {%k6}
+; AVX512BW-NEXT:    vpblendmw %ymm14, %ymm4, %ymm7 {%k4}
+; AVX512BW-NEXT:    vpblendmw %ymm6, %ymm11, %ymm18 {%k1}
+; AVX512BW-NEXT:    vpshufb %xmm22, %xmm18, %xmm22
+; AVX512BW-NEXT:    vextracti32x4 $1, %ymm18, %xmm27
+; AVX512BW-NEXT:    vpshufb %xmm25, %xmm27, %xmm25
+; AVX512BW-NEXT:    vporq %xmm22, %xmm25, %xmm22
+; AVX512BW-NEXT:    vinserti32x4 $1, %xmm22, %ymm0, %ymm22
+; AVX512BW-NEXT:    vpshufb %ymm19, %ymm7, %ymm22 {%k5}
+; AVX512BW-NEXT:    vinserti64x4 $1, %ymm22, %zmm0, %zmm19
+; AVX512BW-NEXT:    vmovdqu8 %zmm19, %zmm12 {%k3}
+; AVX512BW-NEXT:    movw $9289, %di # imm = 0x2449
+; AVX512BW-NEXT:    kmovd %edi, %k4
+; AVX512BW-NEXT:    vmovdqu16 %ymm14, %ymm4 {%k4}
+; AVX512BW-NEXT:    vmovdqu16 %ymm13, %ymm5 {%k4}
+; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm13 = <128,128,128,5,11,128,128,128,3,9,15,u,u,u,u,u>
+; AVX512BW-NEXT:    vpshufb %xmm13, %xmm16, %xmm14
+; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} xmm16 = <3,9,15,128,128,1,7,13,128,128,128,u,u,u,u,u>
+; AVX512BW-NEXT:    vpshufb %xmm16, %xmm8, %xmm8
+; AVX512BW-NEXT:    vpor %xmm14, %xmm8, %xmm8
+; AVX512BW-NEXT:    vpbroadcastq {{.*#+}} ymm14 = [3,9,15,5,11,1,7,13,3,9,15,5,11,1,7,13,3,9,15,5,11,1,7,13,3,9,15,5,11,1,7,13]
+; AVX512BW-NEXT:    vpshufb %ymm14, %ymm15, %ymm8 {%k5}
+; AVX512BW-NEXT:    vpshufb %xmm13, %xmm21, %xmm13
+; AVX512BW-NEXT:    vpshufb %xmm16, %xmm20, %xmm15
+; AVX512BW-NEXT:    vpor %xmm13, %xmm15, %xmm13
+; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm15 = <u,u,u,u,u,1,7,13,128,128,128,5,11,128,128,128>
+; AVX512BW-NEXT:    vpshufb %xmm15, %xmm17, %xmm16
+; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} xmm17 = <u,u,u,u,u,128,128,128,3,9,15,128,128,1,7,13>
+; AVX512BW-NEXT:    vpshufb %xmm17, %xmm24, %xmm19
+; AVX512BW-NEXT:    vporq %xmm16, %xmm19, %xmm16
+; AVX512BW-NEXT:    vinserti32x4 $1, %xmm16, %ymm0, %ymm16
+; AVX512BW-NEXT:    vinserti32x4 $2, %xmm13, %zmm16, %zmm13
+; AVX512BW-NEXT:    vmovdqu8 %zmm8, %zmm13 {%k6}
+; AVX512BW-NEXT:    vpshufb %xmm15, %xmm18, %xmm8
+; AVX512BW-NEXT:    vpshufb %xmm17, %xmm27, %xmm15
+; AVX512BW-NEXT:    vpor %xmm8, %xmm15, %xmm8
+; AVX512BW-NEXT:    vinserti128 $1, %xmm8, %ymm0, %ymm8
+; AVX512BW-NEXT:    vpshufb %ymm14, %ymm7, %ymm8 {%k5}
+; AVX512BW-NEXT:    vinserti64x4 $1, %ymm8, %zmm0, %zmm7
+; AVX512BW-NEXT:    vmovdqu8 %zmm7, %zmm13 {%k3}
+; AVX512BW-NEXT:    vpbroadcastq {{.*#+}} ymm7 = [4,10,0,6,12,2,8,14,4,10,0,6,12,2,8,14,4,10,0,6,12,2,8,14,4,10,0,6,12,2,8,14]
+; AVX512BW-NEXT:    vpshufb %ymm7, %ymm5, %ymm8
+; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm14 = <128,128,0,6,12,128,128,128,4,10,u,u,u,u,u,u>
+; AVX512BW-NEXT:    vmovdqu16 %ymm10, %ymm3 {%k1}
+; AVX512BW-NEXT:    vextracti128 $1, %ymm3, %xmm15
+; AVX512BW-NEXT:    vpshufb %xmm14, %xmm15, %xmm10
+; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} xmm16 = <4,10,128,128,128,2,8,14,128,128,u,u,u,u,u,u>
+; AVX512BW-NEXT:    vpshufb %xmm16, %xmm3, %xmm17
+; AVX512BW-NEXT:    vporq %xmm10, %xmm17, %xmm10
+; AVX512BW-NEXT:    vpblendw {{.*#+}} xmm10 = xmm10[0,1,2,3,4],xmm8[5,6,7]
+; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm10 = ymm10[0,1,2,3],ymm8[4,5,6,7]
+; AVX512BW-NEXT:    vmovdqu16 %ymm23, %ymm0 {%k1}
+; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm8
+; AVX512BW-NEXT:    vpshufb %xmm14, %xmm8, %xmm14
+; AVX512BW-NEXT:    vpshufb %xmm16, %xmm0, %xmm16
+; AVX512BW-NEXT:    vporq %xmm14, %xmm16, %xmm14
+; AVX512BW-NEXT:    vmovdqu16 %ymm26, %ymm1 {%k2}
+; AVX512BW-NEXT:    vextracti32x4 $1, %ymm1, %xmm16
+; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} xmm17 = <u,u,u,u,u,128,128,128,4,10,128,128,128,2,8,14>
+; AVX512BW-NEXT:    vpshufb %xmm17, %xmm16, %xmm18
+; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} xmm19 = <u,u,u,u,u,2,8,14,128,128,0,6,12,128,128,128>
+; AVX512BW-NEXT:    vpshufb %xmm19, %xmm1, %xmm20
+; AVX512BW-NEXT:    vporq %xmm18, %xmm20, %xmm18
+; AVX512BW-NEXT:    vinserti32x4 $1, %xmm18, %ymm0, %ymm18
+; AVX512BW-NEXT:    vinserti32x4 $2, %xmm14, %zmm18, %zmm14
 ; AVX512BW-NEXT:    movabsq $4398044413952, %rdi # imm = 0x3FFFFE00000
 ; AVX512BW-NEXT:    kmovq %rdi, %k1
-; AVX512BW-NEXT:    vmovdqu8 %zmm16, %zmm9 {%k1}
-; AVX512BW-NEXT:    vpshufb %ymm17, %ymm7, %ymm13
-; AVX512BW-NEXT:    vpshufb %ymm22, %ymm6, %ymm16
-; AVX512BW-NEXT:    vporq %ymm13, %ymm16, %ymm13
-; AVX512BW-NEXT:    vmovdqu16 %ymm28, %ymm8 {%k3}
-; AVX512BW-NEXT:    vextracti32x4 $1, %ymm8, %xmm16
-; AVX512BW-NEXT:    vpshufb %xmm18, %xmm16, %xmm17
-; AVX512BW-NEXT:    vpshufb %xmm20, %xmm8, %xmm18
-; AVX512BW-NEXT:    vporq %xmm17, %xmm18, %xmm17
-; AVX512BW-NEXT:    vinserti32x4 $1, %xmm17, %ymm0, %ymm17
+; AVX512BW-NEXT:    vmovdqu8 %zmm14, %zmm10 {%k1}
+; AVX512BW-NEXT:    vpshufb %ymm7, %ymm4, %ymm7
+; AVX512BW-NEXT:    vmovdqu16 %ymm11, %ymm6 {%k2}
+; AVX512BW-NEXT:    vextracti128 $1, %ymm6, %xmm11
+; AVX512BW-NEXT:    vpshufb %xmm17, %xmm11, %xmm14
+; AVX512BW-NEXT:    vpshufb %xmm19, %xmm6, %xmm17
+; AVX512BW-NEXT:    vporq %xmm14, %xmm17, %xmm14
+; AVX512BW-NEXT:    vinserti128 $1, %xmm14, %ymm0, %ymm14
 ; AVX512BW-NEXT:    movl $-2097152, %edi # imm = 0xFFE00000
 ; AVX512BW-NEXT:    kmovd %edi, %k2
-; AVX512BW-NEXT:    vmovdqu8 %ymm17, %ymm13 {%k2}
-; AVX512BW-NEXT:    vinserti64x4 $1, %ymm13, %zmm0, %zmm13
-; AVX512BW-NEXT:    vmovdqu16 %zmm13, %zmm9 {%k2}
-; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm13 = <128,128,1,7,13,128,128,128,5,11,u,u,u,u,u,u>
-; AVX512BW-NEXT:    vpshufb %xmm13, %xmm11, %xmm11
+; AVX512BW-NEXT:    vmovdqu8 %ymm14, %ymm7 {%k2}
+; AVX512BW-NEXT:    vinserti64x4 $1, %ymm7, %zmm0, %zmm7
+; AVX512BW-NEXT:    vmovdqu16 %zmm7, %zmm10 {%k2}
+; AVX512BW-NEXT:    vpbroadcastq {{.*#+}} ymm7 = [5,11,1,7,13,3,9,15,5,11,1,7,13,3,9,15,5,11,1,7,13,3,9,15,5,11,1,7,13,3,9,15]
+; AVX512BW-NEXT:    vpshufb %ymm7, %ymm5, %ymm5
+; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm14 = <128,128,1,7,13,128,128,128,5,11,u,u,u,u,u,u>
+; AVX512BW-NEXT:    vpshufb %xmm14, %xmm15, %xmm15
 ; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} xmm17 = <5,11,128,128,128,3,9,15,128,128,u,u,u,u,u,u>
+; AVX512BW-NEXT:    vpshufb %xmm17, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpor %xmm3, %xmm15, %xmm3
+; AVX512BW-NEXT:    vpblendw {{.*#+}} xmm3 = xmm3[0,1,2,3,4],xmm5[5,6,7]
+; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm3 = ymm3[0,1,2,3],ymm5[4,5,6,7]
+; AVX512BW-NEXT:    vpshufb %xmm14, %xmm8, %xmm5
 ; AVX512BW-NEXT:    vpshufb %xmm17, %xmm0, %xmm0
-; AVX512BW-NEXT:    vpor %xmm0, %xmm11, %xmm0
-; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm11 = <u,u,u,u,u,128,128,128,5,11,128,128,128,3,9,15>
-; AVX512BW-NEXT:    vpshufb %xmm11, %xmm12, %xmm12
-; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} xmm18 = <u,u,u,u,u,3,9,15,128,128,1,7,13,128,128,128>
-; AVX512BW-NEXT:    vpshufb %xmm18, %xmm3, %xmm3
-; AVX512BW-NEXT:    vpor %xmm3, %xmm12, %xmm3
-; AVX512BW-NEXT:    vinserti128 $1, %xmm3, %ymm0, %ymm3
-; AVX512BW-NEXT:    vinserti64x4 $1, %ymm0, %zmm3, %zmm0
-; AVX512BW-NEXT:    vpshufb %xmm13, %xmm19, %xmm3
-; AVX512BW-NEXT:    vpshufb %xmm17, %xmm1, %xmm1
-; AVX512BW-NEXT:    vpor %xmm3, %xmm1, %xmm1
-; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm3 = [128,128,1,7,13,128,128,128,128,128,128,128,128,3,9,15,128,128,17,23,29,128,128,128,128,128,128,128,128,19,25,31]
-; AVX512BW-NEXT:    vpshufb %ymm3, %ymm5, %ymm5
-; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm12 = [5,11,128,128,128,128,128,128,128,128,1,7,13,128,128,128,21,27,128,128,128,128,128,128,128,128,17,23,29,128,128,128]
-; AVX512BW-NEXT:    vpshufb %ymm12, %ymm4, %ymm4
-; AVX512BW-NEXT:    vpor %ymm5, %ymm4, %ymm4
-; AVX512BW-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3,4],xmm4[5,6,7]
-; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm4[4,5,6,7]
-; AVX512BW-NEXT:    vmovdqu8 %zmm0, %zmm1 {%k1}
-; AVX512BW-NEXT:    vpshufb %ymm3, %ymm7, %ymm0
-; AVX512BW-NEXT:    vpshufb %ymm12, %ymm6, %ymm3
-; AVX512BW-NEXT:    vpor %ymm0, %ymm3, %ymm0
-; AVX512BW-NEXT:    vpshufb %xmm11, %xmm16, %xmm3
-; AVX512BW-NEXT:    vpshufb %xmm18, %xmm8, %xmm4
-; AVX512BW-NEXT:    vpor %xmm3, %xmm4, %xmm3
-; AVX512BW-NEXT:    vinserti128 $1, %xmm3, %ymm0, %ymm3
-; AVX512BW-NEXT:    vmovdqu8 %ymm3, %ymm0 {%k2}
+; AVX512BW-NEXT:    vpor %xmm5, %xmm0, %xmm0
+; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm5 = <u,u,u,u,u,128,128,128,5,11,128,128,128,3,9,15>
+; AVX512BW-NEXT:    vpshufb %xmm5, %xmm16, %xmm8
+; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm14 = <u,u,u,u,u,3,9,15,128,128,1,7,13,128,128,128>
+; AVX512BW-NEXT:    vpshufb %xmm14, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpor %xmm1, %xmm8, %xmm1
+; AVX512BW-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
+; AVX512BW-NEXT:    vinserti32x4 $2, %xmm0, %zmm1, %zmm0
+; AVX512BW-NEXT:    vmovdqu8 %zmm0, %zmm3 {%k1}
+; AVX512BW-NEXT:    vpshufb %ymm7, %ymm4, %ymm0
+; AVX512BW-NEXT:    vpshufb %xmm5, %xmm11, %xmm1
+; AVX512BW-NEXT:    vpshufb %xmm14, %xmm6, %xmm4
+; AVX512BW-NEXT:    vpor %xmm1, %xmm4, %xmm1
+; AVX512BW-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
+; AVX512BW-NEXT:    vmovdqu8 %ymm1, %ymm0 {%k2}
 ; AVX512BW-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm0
-; AVX512BW-NEXT:    vmovdqu16 %zmm0, %zmm1 {%k2}
+; AVX512BW-NEXT:    vmovdqu16 %zmm0, %zmm3 {%k2}
 ; AVX512BW-NEXT:    vmovdqa64 %zmm2, (%rsi)
-; AVX512BW-NEXT:    vmovdqa64 %zmm10, (%rdx)
-; AVX512BW-NEXT:    vmovdqa64 %zmm14, (%rcx)
-; AVX512BW-NEXT:    vmovdqa64 %zmm15, (%r8)
-; AVX512BW-NEXT:    vmovdqa64 %zmm9, (%r9)
-; AVX512BW-NEXT:    vmovdqa64 %zmm1, (%rax)
+; AVX512BW-NEXT:    vmovdqa64 %zmm9, (%rdx)
+; AVX512BW-NEXT:    vmovdqa64 %zmm12, (%rcx)
+; AVX512BW-NEXT:    vmovdqa64 %zmm13, (%r8)
+; AVX512BW-NEXT:    vmovdqa64 %zmm10, (%r9)
+; AVX512BW-NEXT:    vmovdqa64 %zmm3, (%rax)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
   %wide.vec = load <384 x i8>, ptr %in.vec, align 64
@@ -5080,6 +5042,8 @@ define void @load_i8_stride6_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX2-FAST-PERLANE: {{.*}}
 ; AVX2-SLOW: {{.*}}
 ; AVX512: {{.*}}
+; AVX512-FAST: {{.*}}
+; AVX512-SLOW: {{.*}}
 ; AVX512BW-FAST: {{.*}}
 ; AVX512BW-ONLY-FAST: {{.*}}
 ; AVX512BW-ONLY-SLOW: {{.*}}

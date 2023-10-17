@@ -856,6 +856,7 @@ define i32 @test16_unsigned_pos1(i32 %start, ptr %p, ptr %q, i32 %x) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[START:%.*]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[TMP0]], -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[X:%.*]] to i64
+; CHECK-NEXT:    [[ICMP_USER_WIDE_FIRST_ITER:%.*]] = icmp ult i64 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[BACKEDGE:%.*]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
@@ -863,8 +864,7 @@ define i32 @test16_unsigned_pos1(i32 %start, ptr %p, ptr %q, i32 %x) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i64 [[INDVARS_IV]], -1
 ; CHECK-NEXT:    br i1 [[COND]], label [[EXIT:%.*]], label [[GUARDED:%.*]]
 ; CHECK:       guarded:
-; CHECK-NEXT:    [[ICMP_USER_WIDE5:%.*]] = icmp ult i64 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    br i1 [[ICMP_USER_WIDE5]], label [[BACKEDGE]], label [[SIDE_EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[ICMP_USER_WIDE_FIRST_ITER]], label [[BACKEDGE]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[STORE_ADDR:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[TMP3]]
 ; CHECK-NEXT:    store i32 1, ptr [[STORE_ADDR]], align 4
@@ -1196,6 +1196,7 @@ define i32 @test16_signed_neg(i32 %start, ptr %p, ptr %q, i32 %x) {
 ; CHECK-LABEL: @test16_signed_neg(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[START:%.*]], -1
+; CHECK-NEXT:    [[ICMP_USER_FIRST_ITER:%.*]] = icmp ult i32 [[TMP0]], [[X:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT_1:%.*]], [[BACKEDGE:%.*]] ]
@@ -1203,8 +1204,7 @@ define i32 @test16_signed_neg(i32 %start, ptr %p, ptr %q, i32 %x) {
 ; CHECK-NEXT:    [[FOO:%.*]] = add i32 [[IV]], -1
 ; CHECK-NEXT:    br i1 [[COND]], label [[EXIT:%.*]], label [[GUARDED:%.*]]
 ; CHECK:       guarded:
-; CHECK-NEXT:    [[ICMP_USER3:%.*]] = icmp ult i32 [[TMP0]], [[X:%.*]]
-; CHECK-NEXT:    br i1 [[ICMP_USER3]], label [[BACKEDGE]], label [[SIDE_EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[ICMP_USER_FIRST_ITER]], label [[BACKEDGE]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[INDEX:%.*]] = sext i32 [[FOO]] to i64
 ; CHECK-NEXT:    [[STORE_ADDR:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[INDEX]]
@@ -1440,15 +1440,17 @@ exit:                                             ; preds = %loop
   ret void
 }
 
+; Don't perform replacement here; SCEV won't recognize the new PHI as an
+; induction variable.
 define void @test22(ptr %ptr) {
 ; CHECK-LABEL: @test22(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i16 0, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[INDVARS:%.*]] = trunc i32 [[IV]] to i16
-; CHECK-NEXT:    [[VAL_INC:%.*]] = add i16 [[INDVARS]], 1
+; CHECK-NEXT:    [[VAL:%.*]] = phi i16 [ [[VAL_INC:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[ENTRY]] ]
+; CHECK-NEXT:    [[VAL_INC]] = add i16 [[VAL]], 1
 ; CHECK-NEXT:    store i16 [[VAL_INC]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[IV_WIDE:%.*]] = zext i32 [[IV]] to i64
 ; CHECK-NEXT:    call void @foo(i64 [[IV_WIDE]])

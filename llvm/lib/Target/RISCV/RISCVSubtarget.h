@@ -1,4 +1,4 @@
-//===-- RISCVSubtarget.h - Define Subtarget for the RISCV -------*- C++ -*-===//
+//===-- RISCVSubtarget.h - Define Subtarget for the RISC-V ------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file declares the RISCV specific subclass of TargetSubtargetInfo.
+// This file declares the RISC-V specific subclass of TargetSubtargetInfo.
 //
 //===----------------------------------------------------------------------===//
 
@@ -32,6 +32,18 @@
 namespace llvm {
 class StringRef;
 
+namespace RISCVTuneInfoTable {
+
+struct RISCVTuneInfo {
+  const char *Name;
+  uint8_t PrefFunctionAlignment;
+  uint8_t PrefLoopAlignment;
+};
+
+#define GET_RISCVTuneInfoTable_DECL
+#include "RISCVGenSearchableTables.inc"
+} // namespace RISCVTuneInfoTable
+
 class RISCVSubtarget : public RISCVGenSubtargetInfo {
 public:
   enum RISCVProcFamilyEnum : uint8_t {
@@ -48,14 +60,14 @@ private:
   bool ATTRIBUTE = DEFAULT;
 #include "RISCVGenSubtargetInfo.inc"
 
-  unsigned XLen = 32;
   unsigned ZvlLen = 0;
-  MVT XLenVT = MVT::i32;
   unsigned RVVVectorBitsMin;
   unsigned RVVVectorBitsMax;
   uint8_t MaxInterleaveFactor = 2;
   RISCVABI::ABI TargetABI = RISCVABI::ABI_Unknown;
   std::bitset<RISCV::NUM_TARGET_REGS> UserReservedRegister;
+  const RISCVTuneInfoTable::RISCVTuneInfo *TuneInfo;
+
   RISCVFrameLowering FrameLowering;
   RISCVInstrInfo InstrInfo;
   RISCVRegisterInfo RegInfo;
@@ -95,7 +107,18 @@ public:
   }
   bool enableMachineScheduler() const override { return true; }
 
-  /// Returns RISCV processor family.
+  bool enablePostRAScheduler() const override {
+    return getSchedModel().PostRAScheduler || UsePostRAScheduler;
+  }
+
+  Align getPrefFunctionAlignment() const {
+    return Align(TuneInfo->PrefFunctionAlignment);
+  }
+  Align getPrefLoopAlignment() const {
+    return Align(TuneInfo->PrefLoopAlignment);
+  }
+
+  /// Returns RISC-V processor family.
   /// Avoid this function! CPU specifics should be kept local to this class
   /// and preferably modeled with SubtargetFeatures or properties in
   /// initializeProperties().
@@ -107,10 +130,26 @@ public:
 
   bool hasStdExtCOrZca() const { return HasStdExtC || HasStdExtZca; }
   bool hasStdExtZvl() const { return ZvlLen != 0; }
+  bool hasStdExtFOrZfinx() const { return HasStdExtF || HasStdExtZfinx; }
+  bool hasStdExtDOrZdinx() const { return HasStdExtD || HasStdExtZdinx; }
   bool hasStdExtZfhOrZfhmin() const { return HasStdExtZfh || HasStdExtZfhmin; }
-  bool is64Bit() const { return HasRV64; }
-  MVT getXLenVT() const { return XLenVT; }
-  unsigned getXLen() const { return XLen; }
+  bool hasStdExtZfhOrZhinx() const { return HasStdExtZfh || HasStdExtZhinx; }
+  bool hasStdExtZhinxOrZhinxmin() const {
+    return HasStdExtZhinx || HasStdExtZhinxmin;
+  }
+  bool hasStdExtZfhOrZfhminOrZhinxOrZhinxmin() const {
+    return hasStdExtZfhOrZfhmin() || hasStdExtZhinxOrZhinxmin();
+  }
+  bool hasHalfFPLoadStoreMove() const {
+    return hasStdExtZfhOrZfhmin() || HasStdExtZfbfmin;
+  }
+  bool is64Bit() const { return IsRV64; }
+  MVT getXLenVT() const {
+    return is64Bit() ? MVT::i64 : MVT::i32;
+  }
+  unsigned getXLen() const {
+    return is64Bit() ? 64 : 32;
+  }
   unsigned getFLen() const {
     if (HasStdExtD)
       return 64;
@@ -120,7 +159,7 @@ public:
 
     return 0;
   }
-  unsigned getELEN() const {
+  unsigned getELen() const {
     assert(hasVInstructions() && "Expected V extension");
     return hasVInstructionsI64() ? 64 : 32;
   }
@@ -133,6 +172,11 @@ public:
     return VLen == 0 ? 65536 : VLen;
   }
   RISCVABI::ABI getTargetABI() const { return TargetABI; }
+  bool isSoftFPABI() const {
+    return TargetABI == RISCVABI::ABI_LP64 ||
+           TargetABI == RISCVABI::ABI_ILP32 ||
+           TargetABI == RISCVABI::ABI_ILP32E;
+  }
   bool isRegisterReservedByUser(Register i) const {
     assert(i < RISCV::NUM_TARGET_REGS && "Register out of range");
     return UserReservedRegister[i];
@@ -143,17 +187,26 @@ public:
   // Vector codegen related methods.
   bool hasVInstructions() const { return HasStdExtZve32x; }
   bool hasVInstructionsI64() const { return HasStdExtZve64x; }
-  bool hasVInstructionsF16() const {
-    return HasStdExtZvfh && hasStdExtZfhOrZfhmin();
+  bool hasVInstructionsF16Minimal() const {
+    return HasStdExtZvfhmin || HasStdExtZvfh;
   }
-  // FIXME: Consider Zfinx in the future
-  bool hasVInstructionsF32() const { return HasStdExtZve32f && HasStdExtF; }
-  // FIXME: Consider Zdinx in the future
-  bool hasVInstructionsF64() const { return HasStdExtZve64d && HasStdExtD; }
+  bool hasVInstructionsF16() const { return HasStdExtZvfh; }
+  bool hasVInstructionsBF16() const { return HasStdExtZvfbfmin; }
+  bool hasVInstructionsF32() const { return HasStdExtZve32f; }
+  bool hasVInstructionsF64() const { return HasStdExtZve64d; }
   // F16 and F64 both require F32.
   bool hasVInstructionsAnyF() const { return hasVInstructionsF32(); }
+  bool hasVInstructionsFullMultiply() const { return HasStdExtV; }
   unsigned getMaxInterleaveFactor() const {
     return hasVInstructions() ? MaxInterleaveFactor : 1;
+  }
+
+  // Returns VLEN divided by DLEN. Where DLEN is the datapath width of the
+  // vector hardware implementation which may be less than VLEN.
+  unsigned getDLenFactor() const {
+    if (DLenFactor2)
+      return 2;
+    return 1;
   }
 
 protected:
@@ -176,6 +229,8 @@ public:
   const LegalizerInfo *getLegalizerInfo() const override;
   const RegisterBankInfo *getRegBankInfo() const override;
 
+  bool isTargetFuchsia() const { return getTargetTriple().isOSFuchsia(); }
+
   bool useConstantPoolForLargeInts() const;
 
   // Maximum cost used for building integers, integers will be put into constant
@@ -189,6 +244,8 @@ public:
 
   void getPostRAMutations(std::vector<std::unique_ptr<ScheduleDAGMutation>>
                               &Mutations) const override;
+
+  bool useAA() const override;
 };
 } // End llvm namespace
 

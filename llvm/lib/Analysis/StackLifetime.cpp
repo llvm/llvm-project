@@ -39,7 +39,7 @@ StackLifetime::getLiveRange(const AllocaInst *AI) const {
 }
 
 bool StackLifetime::isReachable(const Instruction *I) const {
-  return BlockInstRange.find(I->getParent()) != BlockInstRange.end();
+  return BlockInstRange.contains(I->getParent());
 }
 
 bool StackLifetime::isAliveAfter(const AllocaInst *AI,
@@ -414,7 +414,7 @@ void StackLifetimePrinterPass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
   static_cast<PassInfoMixin<StackLifetimePrinterPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
-  OS << "<";
+  OS << '<';
   switch (Type) {
   case StackLifetime::LivenessType::May:
     OS << "may";
@@ -423,5 +423,5 @@ void StackLifetimePrinterPass::printPipeline(
     OS << "must";
     break;
   }
-  OS << ">";
+  OS << '>';
 }

@@ -7,7 +7,7 @@
 # RUN: llvm-readelf -x .rodata %t | FileCheck --check-prefix=SAME %s --implicit-check-not=section
 
 # SAME:      section '.rodata':
-# SAME-NEXT: 0x00000000 01000200 0300
+# SAME-NEXT: 0x00000000 03000100 0200
 
 ## SHF_MERGE sections with different output sections cannot be merged.
 # RUN: echo 'SECTIONS { \
@@ -18,7 +18,7 @@
 # RUN: llvm-readelf -x .rodata.foo -x .rodata.bar %t2 | FileCheck --check-prefix=DIFF %s --implicit-check-not=section
 
 # DIFF:      section '.rodata.foo':
-# DIFF-NEXT: 0x00000000 01000200 0300
+# DIFF-NEXT: 0x00000000 03000100 0200
 # DIFF:      section '.rodata.bar':
 # DIFF-NEXT: 0x00000006 0100
 

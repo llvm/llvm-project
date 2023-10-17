@@ -22,3 +22,11 @@ Internally, each ABI-changing feature is placed under its own C++ macro,
 ``_LIBCPP_ABI_VERSION``, which is controlled by the ``LIBCXX_ABI_VERSION`` set
 at build time. Libc++ does not intend users to interact with these C++ macros
 directly.
+
+-----------------
+MSVC environments
+-----------------
+
+The exception to this is MSVC environments. Libc++ does not currently have users
+that require a stable ABI in MSVC environments, so MSVC-only changes may be
+applied unconditionally.

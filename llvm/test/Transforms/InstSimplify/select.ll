@@ -9,6 +9,14 @@ define i1 @bool_true_or_false(i1 %cond) {
   ret i1 %s
 }
 
+define i1 @cond_constexpr_bool_true_or_false(i1 %cond) {
+; CHECK-LABEL: @cond_constexpr_bool_true_or_false(
+; CHECK-NEXT:    ret i1 ptrtoint (ptr @cond_constexpr_bool_true_or_false to i1)
+;
+  %s = select i1 ptrtoint (ptr @cond_constexpr_bool_true_or_false to i1), i1 true, i1 false
+  ret i1 %s
+}
+
 define <2 x i1> @bool_true_or_false_vec(<2 x i1> %cond) {
 ; CHECK-LABEL: @bool_true_or_false_vec(
 ; CHECK-NEXT:    ret <2 x i1> [[COND:%.*]]
@@ -884,8 +892,7 @@ define <2 x float> @all_constant_false_undef_vec() {
 ; Negative tests. Don't fold if the non-undef operand is a constexpr.
 define i32 @all_constant_false_undef_true_constexpr() {
 ; CHECK-LABEL: @all_constant_false_undef_true_constexpr(
-; CHECK-NEXT:    [[S:%.*]] = select i1 ptrtoint (ptr @all_constant_false_undef_true_constexpr to i1), i32 ptrtoint (ptr @all_constant_false_undef_true_constexpr to i32), i32 undef
-; CHECK-NEXT:    ret i32 [[S]]
+; CHECK-NEXT:    ret i32 ptrtoint (ptr @all_constant_false_undef_true_constexpr to i32)
 ;
   %s = select i1 ptrtoint (ptr @all_constant_false_undef_true_constexpr to i1), i32 ptrtoint (ptr @all_constant_false_undef_true_constexpr to i32), i32 undef
   ret i32 %s
@@ -893,8 +900,7 @@ define i32 @all_constant_false_undef_true_constexpr() {
 
 define i32 @all_constant_true_undef_false_constexpr() {
 ; CHECK-LABEL: @all_constant_true_undef_false_constexpr(
-; CHECK-NEXT:    [[S:%.*]] = select i1 ptrtoint (ptr @all_constant_true_undef_false_constexpr to i1), i32 undef, i32 ptrtoint (ptr @all_constant_true_undef_false_constexpr to i32)
-; CHECK-NEXT:    ret i32 [[S]]
+; CHECK-NEXT:    ret i32 ptrtoint (ptr @all_constant_true_undef_false_constexpr to i32)
 ;
   %s = select i1 ptrtoint (ptr @all_constant_true_undef_false_constexpr to i1), i32 undef, i32 ptrtoint (ptr @all_constant_true_undef_false_constexpr to i32)
   ret i32 %s
@@ -903,8 +909,7 @@ define i32 @all_constant_true_undef_false_constexpr() {
 ; Negative tests. Don't fold if the non-undef operand is a vector containing a constexpr.
 define <2 x i32> @all_constant_false_undef_true_constexpr_vec() {
 ; CHECK-LABEL: @all_constant_false_undef_true_constexpr_vec(
-; CHECK-NEXT:    [[S:%.*]] = select i1 ptrtoint (ptr @all_constant_false_undef_true_constexpr_vec to i1), <2 x i32> <i32 ptrtoint (ptr @all_constant_false_undef_true_constexpr_vec to i32), i32 -1>, <2 x i32> undef
-; CHECK-NEXT:    ret <2 x i32> [[S]]
+; CHECK-NEXT:    ret <2 x i32> <i32 ptrtoint (ptr @all_constant_false_undef_true_constexpr_vec to i32), i32 -1>
 ;
   %s = select i1 ptrtoint (ptr @all_constant_false_undef_true_constexpr_vec to i1), <2 x i32> <i32 ptrtoint (ptr @all_constant_false_undef_true_constexpr_vec to i32), i32 -1>, <2 x i32> undef
   ret <2 x i32> %s
@@ -912,8 +917,7 @@ define <2 x i32> @all_constant_false_undef_true_constexpr_vec() {
 
 define <2 x i32> @all_constant_true_undef_false_constexpr_vec() {
 ; CHECK-LABEL: @all_constant_true_undef_false_constexpr_vec(
-; CHECK-NEXT:    [[S:%.*]] = select i1 ptrtoint (ptr @all_constant_true_undef_false_constexpr_vec to i1), <2 x i32> undef, <2 x i32> <i32 -1, i32 ptrtoint (ptr @all_constant_true_undef_false_constexpr_vec to i32)>
-; CHECK-NEXT:    ret <2 x i32> [[S]]
+; CHECK-NEXT:    ret <2 x i32> <i32 -1, i32 ptrtoint (ptr @all_constant_true_undef_false_constexpr_vec to i32)>
 ;
   %s = select i1 ptrtoint (ptr @all_constant_true_undef_false_constexpr_vec to i1), <2 x i32> undef, <2 x i32><i32 -1, i32 ptrtoint (ptr @all_constant_true_undef_false_constexpr_vec to i32)>
   ret <2 x i32> %s
@@ -1086,6 +1090,161 @@ define <2 x i32> @vec_select_no_equivalence(<2 x i32> %x, <2 x i32> %y) {
   ret <2 x i32> %s
 }
 
+define i8 @select_eq_xor_recursive(i8 %a, i8 %b) {
+; CHECK-LABEL: @select_eq_xor_recursive(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[INV:%.*]] = xor i8 [[XOR]], -1
+; CHECK-NEXT:    ret i8 [[INV]]
+;
+  %xor = xor i8 %a, %b
+  %inv = xor i8 %xor, -1
+  %cmp = icmp eq i8 %a, %b
+  %sel = select i1 %cmp, i8 -1, i8 %inv
+  ret i8 %sel
+}
+
+define i8 @select_eq_xor_recursive2(i8 %a, i8 %b) {
+; CHECK-LABEL: @select_eq_xor_recursive2(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[INV:%.*]] = xor i8 [[XOR]], -1
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[INV]], 10
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %xor = xor i8 %a, %b
+  %inv = xor i8 %xor, -1
+  %add = add i8 %inv, 10
+  %cmp = icmp eq i8 %a, %b
+  %sel = select i1 %cmp, i8 9, i8 %add
+  ret i8 %sel
+}
+
+define i8 @select_eq_xor_recursive3(i8 %a, i8 %b) {
+; CHECK-LABEL: @select_eq_xor_recursive3(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[INV:%.*]] = xor i8 [[XOR]], -1
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[INV]], 10
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[ADD]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], [[B]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 9, i8 [[MUL]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %xor = xor i8 %a, %b
+  %inv = xor i8 %xor, -1
+  %add = add i8 %inv, 10
+  %mul = mul i8 %add, 3
+  %cmp = icmp eq i8 %a, %b
+  %sel = select i1 %cmp, i8 9, i8 %mul
+  ret i8 %sel
+}
+
+; Cannot drop select, because this would propagate poison from %a.
+define i8 @select_eq_xor_recursive_propagates_poison(i8 %a, i8 %b) {
+; CHECK-LABEL: @select_eq_xor_recursive_propagates_poison(
+; CHECK-NEXT:    [[XOR1:%.*]] = add i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[XOR2:%.*]] = xor i8 [[A]], [[XOR1]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[B]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 0, i8 [[XOR2]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %xor1 = add i8 %a, %b
+  %xor2 = xor i8 %a, %xor1
+  %cmp = icmp eq i8 %b, 0
+  %sel = select i1 %cmp, i8 0, i8 %xor2
+  ret i8 %sel
+}
+
+define i8 @select_eq_and_recursive(i8 %a) {
+; CHECK-LABEL: @select_eq_and_recursive(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[A:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[NEG]], [[A]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[AND]], 1
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %neg = sub i8 0, %a
+  %and = and i8 %neg, %a
+  %add = add i8 %and, 1
+  %cmp = icmp eq i8 %a, 0
+  %sel = select i1 %cmp, i8 1, i8 %add
+  ret i8 %sel
+}
+
+; Cannot drop select, because this would propagate poison from %b.
+define i8 @select_eq_and_recursive_propagates_poison(i8 %a, i8 %b) {
+; CHECK-LABEL: @select_eq_and_recursive_propagates_poison(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i8 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[NEG]], [[A]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[AND]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 1, i8 [[ADD]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %neg = sub i8 %b, %a
+  %and = and i8 %neg, %a
+  %add = add i8 %and, 1
+  %cmp = icmp eq i8 %a, 0
+  %sel = select i1 %cmp, i8 1, i8 %add
+  ret i8 %sel
+}
+
+define i8 @select_eq_xor_recursive_allow_refinement(i8 %a, i8 %b) {
+; CHECK-LABEL: @select_eq_xor_recursive_allow_refinement(
+; CHECK-NEXT:    ret i8 0
+;
+  %xor1 = add i8 %a, %b
+  %xor2 = xor i8 %a, %xor1
+  %cmp = icmp eq i8 %b, 0
+  %sel = select i1 %cmp, i8 %xor2, i8 0
+  ret i8 %sel
+}
+
+define i8 @select_eq_mul_absorber(i8 %x, i8 noundef %y) {
+; CHECK-LABEL: @select_eq_mul_absorber(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[ADD]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[MUL]]
+;
+  %cmp = icmp eq i8 %x, 1
+  %add = add i8 %x, -1
+  %mul = mul i8 %add, %y
+  %sel = select i1 %cmp, i8 0, i8 %mul
+  ret i8 %sel
+}
+
+define i8 @select_eq_mul_not_absorber(i8 %x, i8 noundef %y) {
+; CHECK-LABEL: @select_eq_mul_not_absorber(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], -1
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[ADD]], [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 0, i8 [[MUL]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %cmp = icmp eq i8 %x, 0
+  %add = add i8 %x, -1
+  %mul = mul i8 %add, %y
+  %sel = select i1 %cmp, i8 0, i8 %mul
+  ret i8 %sel
+}
+
+; Vector to scalar options should be treated as lane-crossing.
+define <2 x i8> @select_eq_vector_insert_extract(<2 x i8> %a, <2 x i8> %b) {
+; CHECK-LABEL: @select_eq_vector_insert_extract(
+; CHECK-NEXT:    [[EXTRACT0:%.*]] = extractelement <2 x i8> [[A:%.*]], i64 0
+; CHECK-NEXT:    [[EXTRACT1:%.*]] = extractelement <2 x i8> [[A]], i64 1
+; CHECK-NEXT:    [[INSERT0:%.*]] = insertelement <2 x i8> poison, i8 [[EXTRACT1]], i64 0
+; CHECK-NEXT:    [[INSERT1:%.*]] = insertelement <2 x i8> [[INSERT0]], i8 [[EXTRACT0]], i64 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[A]], zeroinitializer
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[INSERT1]], <2 x i8> zeroinitializer
+; CHECK-NEXT:    ret <2 x i8> [[SEL]]
+;
+  %extract0 = extractelement <2 x i8> %a, i64 0
+  %extract1 = extractelement <2 x i8> %a, i64 1
+  %insert0 = insertelement <2 x i8> poison, i8 %extract1, i64 0
+  %insert1 = insertelement <2 x i8> %insert0, i8 %extract0, i64 1
+  %cmp = icmp eq <2 x i8> %a, zeroinitializer
+  %sel = select <2 x i1> %cmp, <2 x i8> %insert1, <2 x i8> zeroinitializer
+  ret <2 x i8> %sel
+}
+
 define i32 @poison(i32 %x, i32 %y) {
 ; CHECK-LABEL: @poison(
 ; CHECK-NEXT:    ret i32 [[X:%.*]]
@@ -1116,4 +1275,380 @@ define <2 x i32> @poison4(<2 x i1> %cond, <2 x i32> %x) {
 ;
   %v = select <2 x i1> %cond, <2 x i32> %x, <2 x i32> poison
   ret <2 x i32> %v
+}
+
+; 0 is the absorber constant for 'and'.
+; The 'select' can't block extra poison because both sides of 'and' have 'x' operand.
+
+define i8 @replace_false_op_eq_neg_and(i8 %x) {
+; CHECK-LABEL: @replace_false_op_eq_neg_and(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[NEG]], [[X]]
+; CHECK-NEXT:    ret i8 [[AND]]
+;
+  %eq0 = icmp eq i8 %x, 0
+  %neg = sub i8 0, %x
+  %and = and i8 %neg, %x
+  %sel = select i1 %eq0, i8 0, i8 %and
+  ret i8 %sel
+}
+
+; same as above, but commute 'and'
+
+define i8 @replace_false_op_eq_neg_and_commute(i8 %x) {
+; CHECK-LABEL: @replace_false_op_eq_neg_and_commute(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], [[NEG]]
+; CHECK-NEXT:    ret i8 [[AND]]
+;
+  %eq0 = icmp eq i8 %x, 0
+  %neg = sub i8 0, %x
+  %and = and i8 %x, %neg
+  %sel = select i1 %eq0, i8 0, i8 %and
+  ret i8 %sel
+}
+
+; same as above, but swap 'select'
+
+define i8 @replace_false_op_ne_neg_and(i8 %x) {
+; CHECK-LABEL: @replace_false_op_ne_neg_and(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[NEG]], [[X]]
+; CHECK-NEXT:    ret i8 [[AND]]
+;
+  %ne0 = icmp ne i8 %x, 0
+  %neg = sub i8 0, %x
+  %and = and i8 %neg, %x
+  %sel = select i1 %ne0, i8 %and, i8 0
+  ret i8 %sel
+}
+
+; same as above, but commute 'and' and swap 'select'
+
+define i8 @replace_false_op_ne_neg_and_commute(i8 %x) {
+; CHECK-LABEL: @replace_false_op_ne_neg_and_commute(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], [[NEG]]
+; CHECK-NEXT:    ret i8 [[AND]]
+;
+  %ne0 = icmp ne i8 %x, 0
+  %neg = sub i8 0, %x
+  %and = and i8 %x, %neg
+  %sel = select i1 %ne0, i8 %and, i8 0
+  ret i8 %sel
+}
+
+; the first binop can be anything as long as it has the common operand
+
+define i8 @replace_false_op_eq_dec_and(i8 %x) {
+; CHECK-LABEL: @replace_false_op_eq_dec_and(
+; CHECK-NEXT:    [[DEC:%.*]] = add i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[DEC]], [[X]]
+; CHECK-NEXT:    ret i8 [[AND]]
+;
+  %eq0 = icmp eq i8 %x, 0
+  %dec = add i8 %x, -1
+  %and = and i8 %dec, %x
+  %sel = select i1 %eq0, i8 0, i8 %and
+  ret i8 %sel
+}
+
+; mul has the same absorber constant - "0"
+
+define i8 @replace_false_op_eq_add_mul(i8 %x) {
+; CHECK-LABEL: @replace_false_op_eq_add_mul(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], 42
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[ADD]], [[X]]
+; CHECK-NEXT:    ret i8 [[MUL]]
+;
+  %eq0 = icmp eq i8 %x, 0
+  %add = add i8 %x, 42
+  %mul = mul i8 %add, %x
+  %sel = select i1 %eq0, i8 0, i8 %mul
+  ret i8 %sel
+}
+
+; or has a different absorber constant = "-1"
+
+define i8 @replace_false_op_eq_shl_or(i8 %x) {
+; CHECK-LABEL: @replace_false_op_eq_shl_or(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X]], [[SHL]]
+; CHECK-NEXT:    ret i8 [[OR]]
+;
+  %eq0 = icmp eq i8 %x, -1
+  %shl = shl i8 %x, 3
+  %or = or i8 %x, %shl
+  %sel = select i1 %eq0, i8 -1, i8 %or
+  ret i8 %sel
+}
+
+; negative test - wrong cmp predicate
+
+define i8 @replace_false_op_sgt_neg_and(i8 %x) {
+; CHECK-LABEL: @replace_false_op_sgt_neg_and(
+; CHECK-NEXT:    [[EQ0:%.*]] = icmp sgt i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[X]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[NEG]], [[X]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[EQ0]], i8 0, i8 [[AND]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %eq0 = icmp sgt i8 %x, 0
+  %neg = sub i8 0, %x
+  %and = and i8 %neg, %x
+  %sel = select i1 %eq0, i8 0, i8 %and
+  ret i8 %sel
+}
+
+; negative test - the binop must use a compare operand
+
+define i8 @replace_false_op_eq_shl_or_wrong_cmp_op(i8 %x, i8 %y) {
+; CHECK-LABEL: @replace_false_op_eq_shl_or_wrong_cmp_op(
+; CHECK-NEXT:    [[EQ0:%.*]] = icmp eq i8 [[Y:%.*]], -1
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X]], [[SHL]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[EQ0]], i8 -1, i8 [[OR]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %eq0 = icmp eq i8 %y, -1
+  %shl = shl i8 %x, 3
+  %or = or i8 %x, %shl
+  %sel = select i1 %eq0, i8 -1, i8 %or
+  ret i8 %sel
+}
+
+; negative test - can't have extra source of potential poison
+
+define i8 @replace_false_op_eq_neg_and_leak1(i8 %x, i8 %y) {
+; CHECK-LABEL: @replace_false_op_eq_neg_and_leak1(
+; CHECK-NEXT:    [[EQ0:%.*]] = icmp eq i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[Y:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[NEG]], [[X]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[EQ0]], i8 0, i8 [[AND]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %eq0 = icmp eq i8 %x, 0
+  %neg = sub i8 0, %y
+  %and = and i8 %neg, %x
+  %sel = select i1 %eq0, i8 0, i8 %and
+  ret i8 %sel
+}
+
+; negative test - can't have extra source of potential poison
+
+define i8 @replace_false_op_eq_neg_and_leak2(i8 %x, i8 %y) {
+; CHECK-LABEL: @replace_false_op_eq_neg_and_leak2(
+; CHECK-NEXT:    [[EQ0:%.*]] = icmp eq i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[X]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[NEG]], [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[EQ0]], i8 0, i8 [[AND]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %eq0 = icmp eq i8 %x, 0
+  %neg = sub i8 0, %x
+  %and = and i8 %neg, %y
+  %sel = select i1 %eq0, i8 0, i8 %and
+  ret i8 %sel
+}
+
+; negative test - can't have extra source of potential poison
+
+define i8 @replace_false_op_eq_add_mul_leak3(i8 %x, i8 %y) {
+; CHECK-LABEL: @replace_false_op_eq_add_mul_leak3(
+; CHECK-NEXT:    [[EQ0:%.*]] = icmp eq i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[ADD]], [[X]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[EQ0]], i8 0, i8 [[MUL]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %eq0 = icmp eq i8 %x, 0
+  %add = add i8 %x, %y
+  %mul = mul i8 %add, %x
+  %sel = select i1 %eq0, i8 0, i8 %mul
+  ret i8 %sel
+}
+
+; negative test - can't have extra source of potential poison
+
+define i8 @replace_false_op_eq_shl_or_leak4(i8 %x, i8 %y) {
+; CHECK-LABEL: @replace_false_op_eq_shl_or_leak4(
+; CHECK-NEXT:    [[EQ0:%.*]] = icmp eq i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X]], [[SHL]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[EQ0]], i8 -1, i8 [[OR]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %eq0 = icmp eq i8 %x, -1
+  %shl = shl i8 %y, %x
+  %or = or i8 %x, %shl
+  %sel = select i1 %eq0, i8 -1, i8 %or
+  ret i8 %sel
+}
+
+; negative test - wrong cmp constant
+
+define i8 @replace_false_op_eq42_neg_and(i8 %x) {
+; CHECK-LABEL: @replace_false_op_eq42_neg_and(
+; CHECK-NEXT:    [[EQ42:%.*]] = icmp eq i8 [[X:%.*]], 42
+; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[X]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[NEG]], [[X]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[EQ42]], i8 0, i8 [[AND]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %eq42 = icmp eq i8 %x, 42
+  %neg = sub i8 0, %x
+  %and = and i8 %neg, %x
+  %sel = select i1 %eq42, i8 0, i8 %and
+  ret i8 %sel
+}
+
+define ptr @select_op_replacement_in_phi(ptr %head) {
+; CHECK-LABEL: @select_op_replacement_in_phi(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[CURRENT:%.*]] = phi ptr [ [[HEAD:%.*]], [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    [[PREV:%.*]] = phi ptr [ null, [[ENTRY]] ], [ [[CURRENT]], [[LATCH]] ]
+; CHECK-NEXT:    [[CURRENT_NULL:%.*]] = icmp eq ptr [[CURRENT]], null
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CURRENT_NULL]], ptr [[PREV]], ptr null
+; CHECK-NEXT:    br i1 [[CURRENT_NULL]], label [[EXIT:%.*]], label [[LATCH]]
+; CHECK:       latch:
+; CHECK-NEXT:    [[NEXT]] = load ptr, ptr [[CURRENT]], align 8
+; CHECK-NEXT:    br label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret ptr [[SEL]]
+;
+entry:
+  br label %loop
+
+loop:
+  %current = phi ptr [ %head, %entry ], [ %next, %latch ]
+  %prev = phi ptr [ null, %entry ], [ %current, %latch ]
+  %current.null = icmp eq ptr %current, null
+  %sel = select i1 %current.null, ptr %prev, ptr null
+  br i1 %current.null, label %exit, label %latch
+
+latch:
+  %next = load ptr, ptr %current
+  br label %loop
+
+exit:
+  ret ptr %sel
+}
+
+define i8 @select_sub_cmp(i8 %0, i8 %1) {
+; CHECK-LABEL: @select_sub_cmp(
+; CHECK-NEXT:    [[TMP3:%.*]] = sub nsw i8 [[TMP1:%.*]], [[TMP0:%.*]]
+; CHECK-NEXT:    ret i8 [[TMP3]]
+;
+  %3 = icmp eq i8 %1, %0
+  %4 = sub nsw i8 %1, %0
+  %5 = select i1 %3, i8 0, i8 %4
+  ret i8 %5
+}
+
+define <2 x i8> @select_sub_cmp_vec(<2 x i8> %0, <2 x i8> %1) {
+; CHECK-LABEL: @select_sub_cmp_vec(
+; CHECK-NEXT:    [[TMP3:%.*]] = sub nsw <2 x i8> [[TMP1:%.*]], [[TMP0:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[TMP3]]
+;
+  %3 = icmp eq <2 x i8> %1, %0
+  %4 = sub nsw <2 x i8> %1, %0
+  %5 = select <2 x i1> %3, <2 x i8> <i8 0, i8 0>, <2 x i8> %4
+  ret <2 x i8> %5
+}
+
+define i8 @select_sub_cmp_swap(i8 %0, i8 %1) {
+; CHECK-LABEL: @select_sub_cmp_swap(
+; CHECK-NEXT:    [[TMP3:%.*]] = sub nsw i8 [[TMP0:%.*]], [[TMP1:%.*]]
+; CHECK-NEXT:    ret i8 [[TMP3]]
+;
+  %3 = icmp eq i8 %1, %0
+  %4 = sub nsw i8 %0, %1
+  %5 = select i1 %3, i8 0, i8 %4
+  ret i8 %5
+}
+
+define <2 x i8> @select_sub_cmp_vec_swap(<2 x i8> %0, <2 x i8> %1) {
+; CHECK-LABEL: @select_sub_cmp_vec_swap(
+; CHECK-NEXT:    [[TMP3:%.*]] = sub nsw <2 x i8> [[TMP0:%.*]], [[TMP1:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[TMP3]]
+;
+  %3 = icmp eq <2 x i8> %1, %0
+  %4 = sub nsw <2 x i8> %0, %1
+  %5 = select <2 x i1> %3, <2 x i8> <i8 0, i8 0>, <2 x i8> %4
+  ret <2 x i8> %5
+}
+
+; negative test
+define i8 @select_sub_cmp_nonzero(i8 %0, i8 %1) {
+; CHECK-LABEL: @select_sub_cmp_nonzero(
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[TMP1:%.*]], [[TMP0:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = sub nsw i8 [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP3]], i8 42, i8 [[TMP4]]
+; CHECK-NEXT:    ret i8 [[TMP5]]
+;
+  %3 = icmp eq i8 %1, %0
+  %4 = sub nsw i8 %1, %0
+  %5 = select i1 %3, i8 42, i8 %4
+  ret i8 %5
+}
+
+; X == Y ? 0 : X ^ Y --> X ^ Y, https://alive2.llvm.org/ce/z/cykffE
+define i8 @select_xor_cmp(i8 %0, i8 %1) {
+; CHECK-LABEL: @select_xor_cmp(
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i8 [[TMP1:%.*]], [[TMP0:%.*]]
+; CHECK-NEXT:    ret i8 [[TMP3]]
+;
+  %3 = icmp eq i8 %1, %0
+  %4 = xor i8 %1, %0
+  %5 = select i1 %3, i8 0, i8 %4
+  ret i8 %5
+}
+
+define <2 x i8> @select_xor_cmp_vec(<2 x i8> %0, <2 x i8> %1) {
+; CHECK-LABEL: @select_xor_cmp_vec(
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i8> [[TMP1:%.*]], [[TMP0:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[TMP3]]
+;
+  %3 = icmp eq <2 x i8> %1, %0
+  %4 = xor <2 x i8> %1, %0
+  %5 = select <2 x i1> %3, <2 x i8> <i8 0, i8 0>, <2 x i8> %4
+  ret <2 x i8> %5
+}
+
+define i8 @select_xor_cmp_swap(i8 %0, i8 %1) {
+; CHECK-LABEL: @select_xor_cmp_swap(
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i8 [[TMP0:%.*]], [[TMP1:%.*]]
+; CHECK-NEXT:    ret i8 [[TMP3]]
+;
+  %3 = icmp eq i8 %1, %0
+  %4 = xor i8 %0, %1
+  %5 = select i1 %3, i8 0, i8 %4
+  ret i8 %5
+}
+
+define <2 x i8> @select_xor_cmp_vec_swap(<2 x i8> %0, <2 x i8> %1) {
+; CHECK-LABEL: @select_xor_cmp_vec_swap(
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i8> [[TMP0:%.*]], [[TMP1:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[TMP3]]
+;
+  %3 = icmp eq <2 x i8> %1, %0
+  %4 = xor <2 x i8> %0, %1
+  %5 = select <2 x i1> %3, <2 x i8> <i8 0, i8 0>, <2 x i8> %4
+  ret <2 x i8> %5
+}
+
+; Negative test: the xor operands are not %0 and %1
+define i8 @select_xor_cmp_unmatched_operands(i8 %0, i8 %1, i8 %c) {
+; CHECK-LABEL: @select_xor_cmp_unmatched_operands(
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[TMP1:%.*]], [[TMP0:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = xor i8 [[TMP1]], [[C:%.*]]
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP3]], i8 0, i8 [[TMP4]]
+; CHECK-NEXT:    ret i8 [[TMP5]]
+;
+  %3 = icmp eq i8 %1, %0
+  %4 = xor i8 %1, %c
+  %5 = select i1 %3, i8 0, i8 %4
+  ret i8 %5
 }

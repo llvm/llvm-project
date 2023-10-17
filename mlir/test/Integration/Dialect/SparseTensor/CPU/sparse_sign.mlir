@@ -1,17 +1,36 @@
-// DEFINE: %{option} = enable-runtime-library=true
-// DEFINE: %{command} = mlir-opt %s --sparse-compiler=%{option} | \
-// DEFINE: mlir-cpu-runner \
-// DEFINE:  -e entry -entry-point-result=void  \
-// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
-// DEFINE: FileCheck %s
+//--------------------------------------------------------------------------------------------------
+// WHEN CREATING A NEW TEST, PLEASE JUST COPY & PASTE WITHOUT EDITS.
 //
-// RUN: %{command}
+// Set-up that's shared across all tests in this directory. In principle, this
+// config could be moved to lit.local.cfg. However, there are downstream users that
+//  do not use these LIT config files. Hence why this is kept inline.
+//
+// DEFINE: %{sparse_compiler_opts} = enable-runtime-library=true
+// DEFINE: %{sparse_compiler_opts_sve} = enable-arm-sve=true %{sparse_compiler_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts_sve}"
+// DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
+// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+//
+// DEFINE: %{env} =
+//--------------------------------------------------------------------------------------------------
+
+// RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true"
-// RUN: %{command}
+// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false enable-buffer-initialization=true
+// RUN: %{compile} | %{run} | FileCheck %s
+//
+// Do the same run, but now with vectorization.
+// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false vl=4 enable-buffer-initialization=true
+// RUN: %{compile} | %{run} | FileCheck %s
+//
+// Do the same run, but now with  VLA vectorization.
+// RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
-#SparseVector = #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ] }>
+#SparseVector = #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>
 
 #trait_op = {
   indexing_maps = [
@@ -37,7 +56,7 @@ module {
                              -> tensor<?xf64, #SparseVector> {
     %c0 = arith.constant 0 : index
     %d = tensor.dim %arg0, %c0 : tensor<?xf64, #SparseVector>
-    %xin = bufferization.alloc_tensor(%d) : tensor<?xf64, #SparseVector>
+    %xin = tensor.empty(%d) : tensor<?xf64, #SparseVector>
     %0 = linalg.generic #trait_op
       ins(%arg0: tensor<?xf64, #SparseVector>)
       outs(%xin: tensor<?xf64, #SparseVector>) {

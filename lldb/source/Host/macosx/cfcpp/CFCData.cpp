@@ -47,8 +47,7 @@ CFDataRef CFCData::Serialize(CFPropertyListRef plist,
   CFCReleaser<CFWriteStreamRef> stream(
       ::CFWriteStreamCreateWithAllocatedBuffers(alloc, alloc));
   ::CFWriteStreamOpen(stream.get());
-  CFIndex len =
-      ::CFPropertyListWriteToStream(plist, stream.get(), format, NULL);
+  CFIndex len = ::CFPropertyListWrite(plist, stream.get(), format, 0, nullptr);
   if (len > 0)
     reset((CFDataRef)::CFWriteStreamCopyProperty(stream.get(),
                                                  kCFStreamPropertyDataWritten));

@@ -1,5 +1,5 @@
-; RUN: opt -opaque-pointers=0 %loadPolly -polly-print-ast -disable-output < %s | FileCheck %s
-; RUN: opt -opaque-pointers=0 %loadPolly -polly-codegen  -S < %s | FileCheck %s -check-prefix=CODEGEN
+; RUN: opt %loadPolly -polly-print-ast -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-codegen  -S < %s | FileCheck %s -check-prefix=CODEGEN
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 
 @A = common global [1024 x i32] zeroinitializer
@@ -11,12 +11,12 @@ start:
 
 loop.header:
   %i = phi i64 [ 0, %start ], [ %i.next, %loop.backedge ]
-  %scevgep = getelementptr [1024 x i32], [1024 x i32]* @A, i64 0, i64 %i
+  %scevgep = getelementptr [1024 x i32], ptr @A, i64 0, i64 %i
   %exitcond = icmp ne i64 %i, %n
   br i1 %exitcond, label %loop.body, label %ret
 
 loop.body:
-  store i32 1, i32* %scevgep
+  store i32 1, ptr %scevgep
   br label %loop.backedge
 
 loop.backedge:
@@ -46,8 +46,9 @@ ret:
 ; CODEGEN:   br label %polly.stmt.loop.body
 
 ; CODEGEN: polly.stmt.loop.body:
-; CODEGEN:   [[PTR:%[a-zA-Z0-9_\.]+]] =  getelementptr [1024 x i32], [1024 x i32]* @A, i64 0, i64 %polly.indvar
-; CODEGEN:   store i32 1, i32* [[PTR]]
+; CODEGEN:   %[[offset:.*]] = shl i64 %polly.indvar, 2
+; CODEGEN:   [[PTR:%[a-zA-Z0-9_\.]+]] = getelementptr i8, ptr @A, i64 %[[offset]]
+; CODEGEN:   store i32 1, ptr [[PTR]]
 ; CODEGEN:   %polly.indvar_next = add nsw i64 %polly.indvar, 1
 ; CODEGEN:   %polly.loop_cond = icmp slt i64 %polly.indvar_next, %n
 ; CODEGEN:   br i1 %polly.loop_cond, label %polly.loop_header, label %polly.loop_exit

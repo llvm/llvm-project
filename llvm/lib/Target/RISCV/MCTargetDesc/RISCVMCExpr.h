@@ -1,4 +1,4 @@
-//===-- RISCVMCExpr.h - RISCV specific MC expression classes ----*- C++ -*-===//
+//===-- RISCVMCExpr.h - RISC-V specific MC expression classes----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file describes RISCV-specific MCExprs, used for modifiers like
+// This file describes RISC-V specific MCExprs, used for modifiers like
 // "%hi" or "%lo" etc.,
 //
 //===----------------------------------------------------------------------===//
@@ -79,8 +79,6 @@ public:
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;
   }
-
-  static bool classof(const RISCVMCExpr *) { return true; }
 
   static VariantKind getVariantKindForName(StringRef name);
   static StringRef getVariantKindName(VariantKind Kind);

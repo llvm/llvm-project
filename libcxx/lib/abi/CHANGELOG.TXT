@@ -13,6 +13,96 @@ To generate a summary, re-generate the new ABI list using the
 New entries should be added directly below the "Version" header.
 
 ------------
+Version 18.0
+------------
+
+* [libc++] Simplify the implementation of locale::id
+
+  This patch removes a symbol defined in the library for std::locale::id::__init().
+  The symbol '__init' was defined as a private static function as part of the locale::id
+  class and was never visible from outside the dylib. The addition of this symbol to the
+  ABI was most likely accidental. The deletion of the symbol should not be a breaking change.
+
+  All platforms
+  -------------
+  Symbol removed: _ZNSt3__16locale2id6__initEv
+
+* [libc++] Remove symbol for std::system_error from the dylib
+
+  This patch removes a symbol defined in the library for std::system_error.
+  The symbol '__init' was defined as a private static function as part of the
+  system_error class and was never visible. The addition of this symbol to the ABI was most likely accidental.
+  The function '__init' is replaced by another equivalent function which is placed in the
+  anonymous namespace of the std::system_error source code file.
+  There are no internal references to this symbol which seems to support the reasoning that
+  this was never used outside of the dylib.
+  The deletion of the symbol should not be a breaking change.
+
+  All platforms
+  -------------
+  Symbol removed: _ZNSt3__112system_error6__initERKNS_10error_codeENS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE
+
+------------
+Version 17.0
+------------
+
+* [libc++] Remove symbols for a std::allocator_arg & friends from the dylib
+
+  This patch removes the symbols defined in the library for std::allocator_arg,
+  std::defer_lock, std::try_to_lock, std::adopt_lock, and std::piecewise_construct.
+  Those were defined in the library because we provided them in C++03 as an
+  extension, and in C++03 it was impossible to define them as `constexpr`
+  variables, as required by the Standard.
+
+  This is technically an ABI break since we are removing symbols from the
+  library. However, in practice, only programs compiled in C++03 mode that
+  take the address of those objects (or pass them as a reference) will have
+  an undefined ref to those symbols. In practice, this is expected to be
+  rare. First, those are C++11 features that we happen to provide in C++03,
+  and only the C++03 definition can potentially lead to code referencing
+  the dylib definition. So any code that is using these objects but compiling
+  in C++11 mode (as they should) is not at risk. Second, all uses of these
+  types in the library is done by passing those types by value to a function
+  that can get inlined. Since they are empty types, the compiler won't
+  generate an undefined reference if passed by value, since there's nothing
+  to pass anyway.
+
+  Long story short, the risk for code actually containing an undefined
+  reference to one of these types is rather small (but non-zero).
+
+  All platforms
+  -------------
+  Symbol removed: _ZNSt3__110adopt_lockE
+  Symbol removed: _ZNSt3__110defer_lockE
+  Symbol removed: _ZNSt3__111try_to_lockE
+  Symbol removed: _ZNSt3__113allocator_argE
+  Symbol removed: _ZNSt3__119piecewise_constructE
+
+* [libc++] Remove explicit instantiations of __insertion_sort_incomplete and __sort5 from the dylib
+
+  These instantiations were never visible, because they are only used in `__sort`, which is also explicitly
+  instantiated in the dylib.
+
+  All platforms
+  -------------
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIaaEEPaEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIccEEPcEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIddEEPdEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIeeEEPeEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIffEEPfEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIhhEEPhEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIiiEEPiEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIjjEEPjEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIllEEPlEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessImmEEPmEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIssEEPsEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIttEEPtEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIwwEEPwEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIxxEEPxEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIyyEEPyEEbT0_S5_T_
+  Symbol removed: _ZNSt3__17__sort5IRNS_6__lessIeeEEPeEEjT0_S5_S5_S5_S5_T_
+
+------------
 Version 16.0
 ------------
 
@@ -159,7 +249,7 @@ Version 14.0
   In fact, any program that would have attempted to refer to that symbol would
   have previously failed to link.
 
-  x86_64-apple-apple-darwin
+  <arch>-apple-darwin
   -------------------------
   Symbol added: _ZNSt3__15ctypeIcE10table_sizeE
 
@@ -338,7 +428,7 @@ Version 12.0
   Those were previously defined in both libc++ and libc++abi, which was an
   ODR violation.
 
-  <arch>-apple-apple-darwin
+  <arch>-apple-darwin
   -------------------------
   The following symbols are now re-exported from libc++abi instead of exported
   by libc++ directly (this should not be an ABI break):
@@ -396,8 +486,8 @@ Version 12.0
   We re-export some symbols that were exported from libc++abi but not from
   libc++. Exporting new symbols is not an ABI break.
 
-  x86_64-apple-apple-darwin
-  -------------------------
+  <arch>-apple-darwin
+  -------------------
   Symbol added: ___cxa_allocate_dependent_exception
   Symbol added: ___cxa_free_dependent_exception
 
@@ -411,12 +501,8 @@ Version 10.0
   adds a few symbols to the dylib. This is backwards-compatible since we're
   just adding new symbols.
 
-  x86_64-unknown-linux-gnu
-  ------------------------
-  TODO
-
-  <arch>-apple-apple-darwin
-  -------------------------
+  All platforms
+  -------------
   Symbol added: __ZNSt3__120__libcpp_atomic_waitEPVKNS_17__cxx_atomic_implIxNS_22__cxx_atomic_base_implIxEEEEx
   Symbol added: __ZNSt3__120__libcpp_atomic_waitEPVKvx
   Symbol added: __ZNSt3__123__cxx_atomic_notify_allEPVKNS_17__cxx_atomic_implIxNS_22__cxx_atomic_base_implIxEEEE
@@ -441,12 +527,8 @@ Version 9.0
   against an older version of libc++abi that doesn't provide those symbols,
   however doing so is not supported anyway.
 
-  x86_64-unknown-linux-gnu
-  ------------------------
-  TODO
-
-  x86_64-apple-apple-darwin
-  -------------------------
+  <arch>-apple-darwin
+  -------------------
   Symbol added: ___cxa_throw_bad_array_new_length
   Symbol added: ___cxa_uncaught_exceptions
 
@@ -566,11 +648,10 @@ Version 9.0
   Symbol removed: _ZTSNSt3__124__libcpp_debug_exceptionE
   Symbol removed: _ZTVNSt3__124__libcpp_debug_exceptionE
 
-
-    x86_64-apple-apple-darwin
-    -------------------------
-    Symbol added: __ZNSt3__111__libcpp_db10__insert_cEPvPFPNS_8__c_nodeES1_S1_S3_E
-    Symbol removed: __ZNSt3__111__libcpp_db10__insert_cEPv
+  <arch>-apple-darwin
+  -------------------
+  Symbol added: __ZNSt3__111__libcpp_db10__insert_cEPvPFPNS_8__c_nodeES1_S1_S3_E
+  Symbol removed: __ZNSt3__111__libcpp_db10__insert_cEPv
 
 * r355367 - Fix -fsanitize=vptr badness in <__debug>
 
@@ -598,8 +679,8 @@ Version 8.0
   users couldn't be relying on the functionality because it is marked as being
   unavailable using Clang's availability attribute.
 
-  x86_64-apple-darwin16.0
-  -----------------------
+  <arch>-apple-darwin
+  -------------------
   Symbol removed: __ZNKSt16bad_array_length4whatEv
   Symbol removed: __ZNKSt16bad_array_length4whatEv
   Symbol removed: __ZNSt16bad_array_lengthC1Ev
@@ -678,8 +759,8 @@ Version 8.0
   Symbol removed: _ZNSt3__121__thread_specific_ptrINS_15__thread_structEE16__at_thread_exitEPv
   Symbol removed: _ZNSt3__119__start_std_streamsE
 
-  x86_64-apple-darwin16.0
-  -----------------------
+  <arch>-apple-darwin
+  -------------------
   Symbol removed: __ZNSt3__221__thread_specific_ptrINS_15__thread_structEE16__at_thread_exitEPv
   Symbol removed: __ZNSt3__119__start_std_streamsE
 
@@ -696,8 +777,8 @@ Version 7.0
   Symbol added: _ZNSt3__16__itoa8__u64toaEmPc
   Symbol added: _ZNSt3__16__itoa8__u32toaEjPc
 
-  x86_64-apple-darwin16.0
-  -----------------------
+  <arch>-apple-darwin
+  -------------------
   Symbol added: __ZNSt3__16__itoa8__u64toaEyPc
   Symbol added: __ZNSt3__16__itoa8__u32toaEjPc
 
@@ -725,8 +806,8 @@ Version 5.0
   ----------------
   No changes
 
-  x86_64-apple-darwin16.0
-  -----------------------
+  <arch>-apple-darwin
+  -------------------
   Symbol added: ___cxa_deleted_virtual
 
 * r296729 - Remove std::num_get template methods which should be inline
@@ -757,8 +838,8 @@ Version 5.0
   Symbol removed: _ZNKSt3__17num_getIwNS_19istreambuf_iteratorIwNS_11char_traitsIwEEEEE23__do_get_floating_pointIeEES4_S4_S4_RNS_8ios_baseERjRT_
   Symbol removed: _ZNKSt3__17num_getIwNS_19istreambuf_iteratorIwNS_11char_traitsIwEEEEE23__do_get_floating_pointIfEES4_S4_S4_RNS_8ios_baseERjRT_
 
-  x86_64-apple-darwin16.0
-  -----------------------
+  <arch>-apple-darwin
+  -------------------
   No changes
 
 -----------
@@ -808,8 +889,8 @@ Version 4.0
   Symbol removed: _ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE6appendIPcEENS_9enable_ifIXaasr21__is_forward_iteratorIT_EE5valuesr38__libcpp_string_gets_noexcept_iteratorIS9_EE5valueERS5_E4typeES9_S9_
   Symbol removed: _ZNSt3__112basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6appendIPwEENS_9enable_ifIXaasr21__is_forward_iteratorIT_EE5valuesr38__libcpp_string_gets_noexcept_iteratorIS9_EE5valueERS5_E4typeES9_S9_
 
-  x86_64-apple-darwin16.0
-  -----------------------
+  <arch>-apple-darwin
+  -------------------
   No changes
 
 * r285101 - Add -fvisibility-inlines-hidden when building libc++.
@@ -841,8 +922,8 @@ Version 4.0
   Symbol removed: _ZNSt3__120__codecvt_utf8_utf16IDsED0Ev
   Symbol removed: _ZNSt3__120__codecvt_utf8_utf16IwED0Ev
 
-  x86_64-apple-darwin16.0
-  -----------------------
+  <arch>-apple-darwin
+  -------------------
   No Changes - inline symbols are already hidden
 
 * r284206 - Implement C++17 aligned allocation in <new>
@@ -881,8 +962,7 @@ Version 4.0
   Symbol added: _ZTSSt12bad_any_cast
   Symbol added: _ZTVSt12bad_any_cast
 
-* r295398 - Remove basic_string::insert and basic_string::replace template methods
-    which should be inline.
+* r295398 - Remove basic_string::insert and basic_string::replace template methods which should be inline.
 
   These functions should never have had visible definitions in the dylib but
   since they were previously not specified with 'inline' they accidentally

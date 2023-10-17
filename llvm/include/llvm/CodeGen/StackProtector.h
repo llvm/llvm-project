@@ -17,22 +17,19 @@
 #define LLVM_CODEGEN_STACKPROTECTOR_H
 
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Pass.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 
 class BasicBlock;
-class DominatorTree;
 class Function;
-class Instruction;
 class Module;
 class TargetLoweringBase;
 class TargetMachine;
-class Type;
 
 class StackProtector : public FunctionPass {
 private:
@@ -49,8 +46,8 @@ private:
   const TargetLoweringBase *TLI = nullptr;
   Triple Trip;
 
-  Function *F;
-  Module *M;
+  Function *F = nullptr;
+  Module *M = nullptr;
 
   std::optional<DomTreeUpdater> DTU;
 
@@ -62,12 +59,6 @@ private:
   /// The minimum size of buffers that will receive stack smashing
   /// protection when -fstack-protection is used.
   unsigned SSPBufferSize = DefaultSSPBufferSize;
-
-  /// VisitedPHIs - The set of PHI nodes visited when determining
-  /// if a variable's reference has been taken.  This set
-  /// is maintained to ensure we don't visit the same PHI node multiple
-  /// times.
-  SmallPtrSet<const PHINode *, 16> VisitedPHIs;
 
   // A prologue is generated.
   bool HasPrologue = false;
@@ -87,22 +78,6 @@ private:
   /// check fails.
   BasicBlock *CreateFailBB();
 
-  /// ContainsProtectableArray - Check whether the type either is an array or
-  /// contains an array of sufficient size so that we need stack protectors
-  /// for it.
-  /// \param [out] IsLarge is set to true if a protectable array is found and
-  /// it is "large" ( >= ssp-buffer-size).  In the case of a structure with
-  /// multiple arrays, this gets set if any of them is large.
-  bool ContainsProtectableArray(Type *Ty, bool &IsLarge, bool Strong = false,
-                                bool InStruct = false) const;
-
-  /// Check whether a stack allocation has its address taken.
-  bool HasAddressTaken(const Instruction *AI, TypeSize AllocSize);
-
-  /// RequiresStackProtector - Check whether or not this function needs a
-  /// stack protector based upon the stack protector level.
-  bool RequiresStackProtector();
-
 public:
   static char ID; // Pass identification, replacement for typeid.
 
@@ -116,6 +91,11 @@ public:
   bool runOnFunction(Function &Fn) override;
 
   void copyToMachineFrameInfo(MachineFrameInfo &MFI) const;
+
+  /// Check whether or not \p F needs a stack protector based upon the stack
+  /// protector level.
+  static bool requiresStackProtector(Function *F, SSPLayoutMap *Layout = nullptr);
+
 };
 
 } // end namespace llvm

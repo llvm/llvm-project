@@ -1,3 +1,7 @@
+; This test should verify that adding !pcsections metadata is encoded properly
+; by the AsmPrinter. For tests to check that metadata is propagated to
+; assembly, see pcsections-*.ll tests.
+
 ; RUN: llc -O0 < %s | FileCheck %s --check-prefixes=CHECK,DEFCM
 ; RUN: llc -O1 < %s | FileCheck %s --check-prefixes=CHECK,DEFCM
 ; RUN: llc -O2 < %s | FileCheck %s --check-prefixes=CHECK,DEFCM
@@ -73,48 +77,25 @@ entry:
   ret i64 %0
 }
 
-define i64 @test_simple_atomic() {
-; CHECK-LABEL: test_simple_atomic:
-; CHECK:       .Lpcsection1:
-; CHECK-NEXT:    movq
-; CHECK-NOT:   .Lpcsection
-; CHECK:         addq
-; CHECK-NEXT:    retq
-; CHECK-NEXT:  .Lfunc_end3:
-; CHECK:       .section	section_no_aux,"awo",@progbits,.text
+define void @multiple_uleb128() !pcsections !6 {
+; CHECK-LABEL: multiple_uleb128:
+; CHECK:       .section	section_aux,"awo",@progbits,.text
 ; CHECK-NEXT:  .Lpcsection_base5:
-; DEFCM-NEXT:  .long	.Lpcsection1-.Lpcsection_base5
-; LARGE-NEXT:  .quad	.Lpcsection1-.Lpcsection_base5
-; CHECK-NEXT:  .text
-entry:
-  %0 = load atomic i64, ptr @foo monotonic, align 8, !pcsections !0
-  %1 = load i64, ptr @bar, align 8
-  %add = add nsw i64 %1, %0
-  ret i64 %add
-}
-
-define i64 @test_complex_atomic() {
-; CHECK-LABEL: test_complex_atomic:
-; CHECK:         movl $1
-; CHECK-NEXT:  .Lpcsection2:
-; CHECK-NEXT:    lock xaddq
-; CHECK-NOT:   .Lpcsection
-; CHECK:         movq
-; CHECK:         addq
-; CHECK:         retq
-; CHECK-NEXT:  .Lfunc_end4:
-; CHECK:       .section	section_no_aux,"awo",@progbits,.text
+; DEFCM-NEXT:  .long	.Lfunc_begin3-.Lpcsection_base5
+; LARGE-NEXT:  .quad	.Lfunc_begin3-.Lpcsection_base5
+; CHECK-NEXT:  .uleb128	.Lfunc_end3-.Lfunc_begin3
+; CHECK-NEXT:  .byte	42
+; CHECK-NEXT:  .ascii	"\345\216&"
+; CHECK-NEXT:  .byte	255
+; CHECK-NEXT:  .section	section_aux_21264,"awo",@progbits,.text
 ; CHECK-NEXT:  .Lpcsection_base6:
-; DEFCM-NEXT:  .long	.Lpcsection2-.Lpcsection_base6
-; LARGE-NEXT:  .quad	.Lpcsection2-.Lpcsection_base6
+; DEFCM-NEXT:  .long	.Lfunc_begin3-.Lpcsection_base6
+; LARGE-NEXT:  .quad	.Lfunc_begin3-.Lpcsection_base6
+; CHECK-NEXT:  .long	.Lfunc_end3-.Lfunc_begin3
+; CHECK-NEXT:  .long	21264
 ; CHECK-NEXT:  .text
 entry:
-  %0 = atomicrmw add ptr @foo, i64 1 monotonic, align 8, !pcsections !0
-  %1 = load i64, ptr @bar, align 8
-  %inc = add nsw i64 %1, 1
-  store i64 %inc, ptr @bar, align 8
-  %add = add nsw i64 %1, %0
-  ret i64 %add
+  ret void
 }
 
 !0 = !{!"section_no_aux"}
@@ -123,3 +104,5 @@ entry:
 !3 = !{i32 10, i32 20, i32 30}
 !4 = !{i32 42}
 !5 = !{i32 21264}
+!6 = !{!"section_aux!C", !7, !"section_aux_21264", !5}
+!7 = !{i64 42, i32 624485, i8 255}

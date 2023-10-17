@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple=powerpc-apple-darwin8 -target-feature +altivec -verify -pedantic -fsyntax-only
+// RUN: %clang_cc1 %s -triple=powerpc-ibm-aix -target-feature +altivec -verify -pedantic -fsyntax-only
 
 typedef int v4 __attribute((vector_size(16)));
 typedef short v8 __attribute((vector_size(16)));

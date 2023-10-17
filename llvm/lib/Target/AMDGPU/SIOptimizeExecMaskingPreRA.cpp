@@ -96,8 +96,8 @@ static bool isDefBetween(const SIRegisterInfo &TRI,
   if (Reg.isVirtual())
     return isDefBetween(LIS->getInterval(Reg), AndIdx, SelIdx);
 
-  for (MCRegUnitIterator UI(Reg.asMCReg(), &TRI); UI.isValid(); ++UI) {
-    if (isDefBetween(LIS->getRegUnit(*UI), AndIdx, SelIdx))
+  for (MCRegUnit Unit : TRI.regunits(Reg.asMCReg())) {
+    if (isDefBetween(LIS->getRegUnit(Unit), AndIdx, SelIdx))
       return true;
   }
 
@@ -106,7 +106,7 @@ static bool isDefBetween(const SIRegisterInfo &TRI,
 
 // Optimize sequence
 //    %sel = V_CNDMASK_B32_e64 0, 1, %cc
-//    %cmp = V_CMP_NE_U32 1, %1
+//    %cmp = V_CMP_NE_U32 1, %sel
 //    $vcc = S_AND_B64 $exec, %cmp
 //    S_CBRANCH_VCC[N]Z
 // =>
@@ -218,46 +218,11 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
   // and their associated liveness information.
   SlotIndex CmpIdx = LIS->getInstructionIndex(*Cmp);
   if (CCReg.isVirtual()) {
-    // Apply live ranges from SelLI to CCReg potentially matching splits
-    // and extending to loop boundaries.
-
-    auto applyLiveRanges = [&](LiveRange &Dst, VNInfo *VNI) {
-      // Copy live ranges from SelLI, adjusting start and end as required
-      auto DefSegment = SelLI->FindSegmentContaining(SelIdx.getRegSlot());
-      assert(DefSegment != SelLI->end() &&
-             "No live interval segment covering definition?");
-      for (auto I = DefSegment; I != SelLI->end() && I->start <= AndIdx; ++I) {
-        SlotIndex Start = I->start < SelIdx.getRegSlot() ?
-                          SelIdx.getRegSlot() : I->start;
-        SlotIndex End = I->end < AndIdx.getRegSlot() || I->end.isBlock() ?
-                        I->end : AndIdx.getRegSlot();
-        Dst.addSegment(LiveRange::Segment(Start, End, VNI));
-      }
-      // If SelLI does not cover AndIdx (because Cmp killed Sel) then extend.
-      if (!SelLI->getSegmentContaining(AndIdx.getRegSlot()))
-        Dst.addSegment(LiveRange::Segment(CmpIdx.getRegSlot(), AndIdx.getRegSlot(), VNI));
-    };
-
     LiveInterval &CCLI = LIS->getInterval(CCReg);
     auto CCQ = CCLI.Query(SelIdx.getRegSlot());
-    if (CCQ.valueIn())
-      applyLiveRanges(CCLI, CCQ.valueIn());
-
-    if (CC->getSubReg()) {
-      LaneBitmask Mask = TRI->getSubRegIndexLaneMask(CC->getSubReg());
-      BumpPtrAllocator &Allocator = LIS->getVNInfoAllocator();
-      CCLI.refineSubRanges(
-          Allocator, Mask,
-          [=](LiveInterval::SubRange &SR) {
-            auto CCQS = SR.Query(SelIdx.getRegSlot());
-            if (CCQS.valueIn())
-              applyLiveRanges(SR, CCQS.valueIn());
-          },
-          *LIS->getSlotIndexes(), *TRI);
-      CCLI.removeEmptySubRanges();
-
-      SmallVector<LiveInterval *> SplitLIs;
-      LIS->splitSeparateComponents(CCLI, SplitLIs);
+    if (CCQ.valueIn()) {
+      LIS->removeInterval(CCReg);
+      LIS->createAndComputeVirtRegInterval(CCReg);
     }
   } else
     LIS->removeAllRegUnitsForPhysReg(CCReg);
@@ -287,7 +252,13 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
 
       LIS->removeVRegDefAt(*SelLI, SelIdx.getRegSlot());
       LIS->RemoveMachineInstrFromMaps(*Sel);
+      bool ShrinkSel = Sel->getOperand(0).readsReg();
       Sel->eraseFromParent();
+      if (ShrinkSel) {
+        // The result of the V_CNDMASK was a subreg def which counted as a read
+        // from the other parts of the reg. Shrink their live ranges.
+        LIS->shrinkToUses(SelLI);
+      }
     }
   }
 
@@ -349,8 +320,8 @@ bool SIOptimizeExecMaskingPreRA::optimizeElseBranch(MachineBasicBlock &MBB) {
   // Instead just check that the def segments are adjacent.
   SlotIndex StartIdx = LIS->getInstructionIndex(SaveExecMI);
   SlotIndex EndIdx = LIS->getInstructionIndex(*AndExecMI);
-  for (MCRegUnitIterator UI(ExecReg, TRI); UI.isValid(); ++UI) {
-    LiveRange &RegUnit = LIS->getRegUnit(*UI);
+  for (MCRegUnit Unit : TRI->regunits(ExecReg)) {
+    LiveRange &RegUnit = LIS->getRegUnit(Unit);
     if (RegUnit.find(StartIdx) != std::prev(RegUnit.find(EndIdx)))
       return false;
   }

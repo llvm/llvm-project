@@ -49,9 +49,9 @@ module m4
   type :: t1
     private
     sequence
-    !WARNING: PRIVATE may not appear more than once in derived type components
+    !WARNING: PRIVATE should not appear more than once in derived type components
     private
-    !WARNING: SEQUENCE may not appear more than once in derived type components
+    !WARNING: SEQUENCE should not appear more than once in derived type components
     sequence
     real :: t1Field
   end type
@@ -68,7 +68,7 @@ module m4
   !ERROR: A sequence type may not have a CONTAINS statement
   contains
   end type
-  !ERROR: A sequence type must have at least one component
+  !WARNING: A sequence type should have at least one component
   type :: emptyType
     sequence
   end type emptyType

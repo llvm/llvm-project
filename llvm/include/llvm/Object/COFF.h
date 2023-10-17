@@ -15,7 +15,6 @@
 
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/COFF.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/CVDebugRecord.h"
 #include "llvm/Object/Error.h"
@@ -24,6 +23,7 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -722,6 +722,53 @@ struct coff_load_configuration64 {
   support::ulittle64_t CastGuardOsDeterminedFailureMode;
 };
 
+struct chpe_metadata {
+  support::ulittle32_t Version;
+  support::ulittle32_t CodeMap;
+  support::ulittle32_t CodeMapCount;
+  support::ulittle32_t CodeRangesToEntryPoints;
+  support::ulittle32_t RedirectionMetadata;
+  support::ulittle32_t __os_arm64x_dispatch_call_no_redirect;
+  support::ulittle32_t __os_arm64x_dispatch_ret;
+  support::ulittle32_t __os_arm64x_dispatch_call;
+  support::ulittle32_t __os_arm64x_dispatch_icall;
+  support::ulittle32_t __os_arm64x_dispatch_icall_cfg;
+  support::ulittle32_t AlternateEntryPoint;
+  support::ulittle32_t AuxiliaryIAT;
+  support::ulittle32_t CodeRangesToEntryPointsCount;
+  support::ulittle32_t RedirectionMetadataCount;
+  support::ulittle32_t GetX64InformationFunctionPointer;
+  support::ulittle32_t SetX64InformationFunctionPointer;
+  support::ulittle32_t ExtraRFETable;
+  support::ulittle32_t ExtraRFETableSize;
+  support::ulittle32_t __os_arm64x_dispatch_fptr;
+  support::ulittle32_t AuxiliaryIATCopy;
+};
+
+enum chpe_range_type { Arm64 = 0, Arm64EC = 1, Amd64 = 2 };
+
+struct chpe_range_entry {
+  support::ulittle32_t StartOffset;
+  support::ulittle32_t Length;
+
+  // The two low bits of StartOffset contain a range type.
+  static constexpr uint32_t TypeMask = 3;
+
+  uint32_t getStart() const { return StartOffset & ~TypeMask; }
+  uint16_t getType() const { return StartOffset & TypeMask; }
+};
+
+struct chpe_code_range_entry {
+  support::ulittle32_t StartRva;
+  support::ulittle32_t EndRva;
+  support::ulittle32_t EntryPoint;
+};
+
+struct chpe_redirection_entry {
+  support::ulittle32_t Source;
+  support::ulittle32_t Destination;
+};
+
 struct coff_runtime_function_x64 {
   support::ulittle32_t BeginAddress;
   support::ulittle32_t EndAddress;
@@ -813,6 +860,7 @@ private:
   const coff_tls_directory64 *TLSDirectory64;
   // Either coff_load_configuration32 or coff_load_configuration64.
   const void *LoadConfig = nullptr;
+  const chpe_metadata *CHPEMetadata = nullptr;
 
   Expected<StringRef> getString(uint32_t offset) const;
 
@@ -846,8 +894,17 @@ public:
   }
 
   uint16_t getMachine() const {
-    if (COFFHeader)
+    if (COFFHeader) {
+      if (CHPEMetadata) {
+        switch (COFFHeader->Machine) {
+        case COFF::IMAGE_FILE_MACHINE_AMD64:
+          return COFF::IMAGE_FILE_MACHINE_ARM64EC;
+        case COFF::IMAGE_FILE_MACHINE_ARM64:
+          return COFF::IMAGE_FILE_MACHINE_ARM64X;
+        }
+      }
       return COFFHeader->Machine;
+    }
     if (COFFBigObjHeader)
       return COFFBigObjHeader->Machine;
     llvm_unreachable("no COFF header!");
@@ -927,6 +984,9 @@ public:
     assert(is64());
     return reinterpret_cast<const coff_load_configuration64 *>(LoadConfig);
   }
+
+  const chpe_metadata *getCHPEMetadata() const { return CHPEMetadata; }
+
   StringRef getRelocationTypeName(uint16_t Type) const;
 
 protected:
@@ -968,6 +1028,8 @@ public:
   basic_symbol_iterator symbol_end() const override;
   section_iterator section_begin() const override;
   section_iterator section_end() const override;
+
+  bool is64Bit() const override { return false; }
 
   const coff_section *getCOFFSection(const SectionRef &Section) const;
   COFFSymbolRef getCOFFSymbol(const DataRefImpl &Ref) const;
@@ -1236,7 +1298,8 @@ private:
 class ResourceSectionRef {
 public:
   ResourceSectionRef() = default;
-  explicit ResourceSectionRef(StringRef Ref) : BBS(Ref, support::little) {}
+  explicit ResourceSectionRef(StringRef Ref)
+      : BBS(Ref, llvm::endianness::little) {}
 
   Error load(const COFFObjectFile *O);
   Error load(const COFFObjectFile *O, const SectionRef &S);
@@ -1257,7 +1320,7 @@ private:
   BinaryByteStream BBS;
 
   SectionRef Section;
-  const COFFObjectFile *Obj;
+  const COFFObjectFile *Obj = nullptr;
 
   std::vector<const coff_relocation *> Relocs;
 

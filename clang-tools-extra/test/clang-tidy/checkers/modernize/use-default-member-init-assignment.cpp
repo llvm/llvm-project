@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s modernize-use-default-member-init %t -- \
-// RUN: -config="{CheckOptions: [{key: modernize-use-default-member-init.UseAssignment, value: true}]}"
+// RUN: -config="{CheckOptions: {modernize-use-default-member-init.UseAssignment: true}}"
 
 struct S {
 };
@@ -190,3 +190,39 @@ struct NegativeTemplate {
 
 NegativeTemplate<int> nti;
 NegativeTemplate<double> ntd;
+
+namespace PR63285 {
+
+class ArrayValueInit {
+  ArrayValueInit() : m_array() {}
+  double m_array[1];
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: use default member initializer for 'm_array' [modernize-use-default-member-init]
+  // CHECK-FIXES:      {{^  }}ArrayValueInit()  {}
+  // CHECK-FIXES-NEXT: {{^  }}double m_array[1] = {};
+};
+
+class ArrayBraceInit {
+  ArrayBraceInit() : m_array{} {}
+  double m_array[1];
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: use default member initializer for 'm_array' [modernize-use-default-member-init]
+  // CHECK-FIXES:      {{^  }}ArrayBraceInit()  {}
+  // CHECK-FIXES-NEXT: {{^  }}double m_array[1] = {};
+};
+
+class ArrayBraceInitWithValue {
+  ArrayBraceInitWithValue() : m_array{3.14} {}
+  double m_array[1];
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: use default member initializer for 'm_array' [modernize-use-default-member-init]
+  // CHECK-FIXES:      {{^  }}ArrayBraceInitWithValue()  {}
+  // CHECK-FIXES-NEXT: {{^  }}double m_array[1] = {3.14};
+};
+
+class ArrayBraceInitMultipleValues {
+  ArrayBraceInitMultipleValues() : m_array{1.0, 2.0, 3.0} {}
+  double m_array[3];
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: use default member initializer for 'm_array' [modernize-use-default-member-init]
+  // CHECK-FIXES:      {{^  }}ArrayBraceInitMultipleValues()  {}
+  // CHECK-FIXES-NEXT: {{^  }}double m_array[3] = {1.0, 2.0, 3.0};
+};
+
+} // namespace PR63285

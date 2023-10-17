@@ -637,6 +637,12 @@ func.func @test_extf_tensor(%arg0 : tensor<8x8xf32>) -> tensor<8x8xf64> {
   return %0 : tensor<8x8xf64>
 }
 
+// CHECK-LABEL: test_extf_tensor_encoding
+func.func @test_extf_tensor_encoding(%arg0 : tensor<8x8xf32, "foo">) -> tensor<8x8xf64, "foo"> {
+  %0 = arith.extf %arg0 : tensor<8x8xf32, "foo"> to tensor<8x8xf64, "foo">
+  return %0 : tensor<8x8xf64, "foo">
+}
+
 // CHECK-LABEL: test_extf_vector
 func.func @test_extf_vector(%arg0 : vector<8xf32>) -> vector<8xf64> {
   %0 = arith.extf %arg0 : vector<8xf32> to vector<8xf64>
@@ -950,6 +956,12 @@ func.func @test_cmpi_tensor(%arg0 : tensor<8x8xi64>, %arg1 : tensor<8x8xi64>) ->
   return %0 : tensor<8x8xi1>
 }
 
+// CHECK-LABEL: test_cmpi_tensor_encoding
+func.func @test_cmpi_tensor_encoding(%arg0 : tensor<8x8xi64, "foo">, %arg1 : tensor<8x8xi64, "foo">) -> tensor<8x8xi1, "foo"> {
+  %0 = arith.cmpi slt, %arg0, %arg1 : tensor<8x8xi64, "foo">
+  return %0 : tensor<8x8xi1, "foo">
+}
+
 // CHECK-LABEL: test_cmpi_vector
 func.func @test_cmpi_vector(%arg0 : vector<8xi64>, %arg1 : vector<8xi64>) -> vector<8xi1> {
   %0 = arith.cmpi ult, %arg0, %arg1 : vector<8xi64>
@@ -1059,9 +1071,12 @@ func.func @maximum(%v1: vector<4xf32>, %v2: vector<4xf32>,
                %sv1: vector<[4]xf32>, %sv2: vector<[4]xf32>,
                %f1: f32, %f2: f32,
                %i1: i32, %i2: i32) {
-  %max_vector = arith.maxf %v1, %v2 : vector<4xf32>
-  %max_scalable_vector = arith.maxf %sv1, %sv2 : vector<[4]xf32>
-  %max_float = arith.maxf %f1, %f2 : f32
+  %maximum_vector = arith.maximumf %v1, %v2 : vector<4xf32>
+  %maximum_scalable_vector = arith.maximumf %sv1, %sv2 : vector<[4]xf32>
+  %maximum_float = arith.maximumf %f1, %f2 : f32
+  %maxnum_vector = arith.maxnumf %v1, %v2 : vector<4xf32>
+  %maxnum_scalable_vector = arith.maxnumf %sv1, %sv2 : vector<[4]xf32>
+  %maxnum_float = arith.maxnumf %f1, %f2 : f32
   %max_signed = arith.maxsi %i1, %i2 : i32
   %max_unsigned = arith.maxui %i1, %i2 : i32
   return
@@ -1072,9 +1087,12 @@ func.func @minimum(%v1: vector<4xf32>, %v2: vector<4xf32>,
                %sv1: vector<[4]xf32>, %sv2: vector<[4]xf32>,
                %f1: f32, %f2: f32,
                %i1: i32, %i2: i32) {
-  %min_vector = arith.minf %v1, %v2 : vector<4xf32>
-  %min_scalable_vector = arith.minf %sv1, %sv2 : vector<[4]xf32>
-  %min_float = arith.minf %f1, %f2 : f32
+  %minimum_vector = arith.minimumf %v1, %v2 : vector<4xf32>
+  %minimum_scalable_vector = arith.minimumf %sv1, %sv2 : vector<[4]xf32>
+  %minimum_float = arith.minimumf %f1, %f2 : f32
+  %minnum_vector = arith.minnumf %v1, %v2 : vector<4xf32>
+  %minnum_scalable_vector = arith.minnumf %sv1, %sv2 : vector<[4]xf32>
+  %minnum_float = arith.minnumf %f1, %f2 : f32
   %min_signed = arith.minsi %i1, %i2 : i32
   %min_unsigned = arith.minui %i1, %i2 : i32
   return
@@ -1102,4 +1120,19 @@ func.func @fastmath(%arg0: f32, %arg1: f32, %arg2: i32) {
   %8 = arith.mulf %arg0, %arg1 fastmath<reassoc,nnan,ninf,nsz,arcp,contract,afn> : f32
 
   return
+}
+
+// CHECK-LABEL: @select_tensor
+func.func @select_tensor(%arg0 : tensor<8xi1>, %arg1 : tensor<8xi32>, %arg2 : tensor<8xi32>) -> tensor<8xi32> {
+  // CHECK: = arith.select %{{.*}}, %{{.*}}, %{{.*}} : tensor<8xi1>, tensor<8xi32>
+  %0 = arith.select %arg0, %arg1, %arg2 : tensor<8xi1>, tensor<8xi32>
+  return %0 : tensor<8xi32>
+}
+
+// CHECK-LABEL: @select_tensor_encoding
+func.func @select_tensor_encoding(
+  %arg0 : tensor<8xi1, "foo">, %arg1 : tensor<8xi32, "foo">, %arg2 : tensor<8xi32, "foo">) -> tensor<8xi32, "foo"> {
+  // CHECK: = arith.select %{{.*}}, %{{.*}}, %{{.*}} : tensor<8xi1, "foo">, tensor<8xi32, "foo">
+  %0 = arith.select %arg0, %arg1, %arg2 : tensor<8xi1, "foo">, tensor<8xi32, "foo">
+  return %0 : tensor<8xi32, "foo">
 }

@@ -26,7 +26,7 @@ static const std::pair<StringRef, StringRef> FeatureExtensionMap[] = {
     {"cl_khr_3d_image_writes", "__opencl_c_3d_image_writes"}};
 
 bool OpenCLOptions::isKnown(llvm::StringRef Ext) const {
-  return OptMap.find(Ext) != OptMap.end();
+  return OptMap.contains(Ext);
 }
 
 bool OpenCLOptions::isAvailableOption(llvm::StringRef Ext,

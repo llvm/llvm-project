@@ -44,6 +44,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
@@ -55,9 +58,9 @@ struct _LIBCPP_TEMPLATE_VIS default_delete {
 #else
   _LIBCPP_INLINE_VISIBILITY default_delete() {}
 #endif
-  template <class _Up>
+  template <class _Up, __enable_if_t<is_convertible<_Up*, _Tp*>::value, int> = 0>
   _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23 default_delete(
-      const default_delete<_Up>&, typename enable_if<is_convertible<_Up*, _Tp*>::value>::type* = 0) _NOEXCEPT {}
+      const default_delete<_Up>&) _NOEXCEPT {}
 
   _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23 void operator()(_Tp* __ptr) const _NOEXCEPT {
     static_assert(sizeof(_Tp) >= 0, "cannot delete an incomplete type");
@@ -115,7 +118,7 @@ struct __unique_ptr_deleter_sfinae<_Deleter&> {
 };
 
 #if defined(_LIBCPP_ABI_ENABLE_UNIQUE_PTR_TRIVIAL_ABI)
-#  define _LIBCPP_UNIQUE_PTR_TRIVIAL_ABI __attribute__((trivial_abi))
+#  define _LIBCPP_UNIQUE_PTR_TRIVIAL_ABI __attribute__((__trivial_abi__))
 #else
 #  define _LIBCPP_UNIQUE_PTR_TRIVIAL_ABI
 #endif
@@ -152,29 +155,29 @@ private:
   template <bool _Dummy, class _Deleter = typename __dependent_type<
                              __type_identity<deleter_type>, _Dummy>::type>
   using _EnableIfDeleterDefaultConstructible _LIBCPP_NODEBUG =
-      typename enable_if<is_default_constructible<_Deleter>::value &&
-                         !is_pointer<_Deleter>::value>::type;
+      __enable_if_t<is_default_constructible<_Deleter>::value &&
+                         !is_pointer<_Deleter>::value>;
 
   template <class _ArgType>
   using _EnableIfDeleterConstructible _LIBCPP_NODEBUG =
-      typename enable_if<is_constructible<deleter_type, _ArgType>::value>::type;
+      __enable_if_t<is_constructible<deleter_type, _ArgType>::value>;
 
   template <class _UPtr, class _Up>
-  using _EnableIfMoveConvertible _LIBCPP_NODEBUG = typename enable_if<
+  using _EnableIfMoveConvertible _LIBCPP_NODEBUG = __enable_if_t<
       is_convertible<typename _UPtr::pointer, pointer>::value &&
       !is_array<_Up>::value
-  >::type;
+  >;
 
   template <class _UDel>
-  using _EnableIfDeleterConvertible _LIBCPP_NODEBUG = typename enable_if<
+  using _EnableIfDeleterConvertible _LIBCPP_NODEBUG = __enable_if_t<
       (is_reference<_Dp>::value && is_same<_Dp, _UDel>::value) ||
       (!is_reference<_Dp>::value && is_convertible<_UDel, _Dp>::value)
-    >::type;
+    >;
 
   template <class _UDel>
-  using _EnableIfDeleterAssignable = typename enable_if<
+  using _EnableIfDeleterAssignable = __enable_if_t<
       is_assignable<_Dp&, _UDel&&>::value
-    >::type;
+    >;
 
 public:
   template <bool _Dummy = true,
@@ -218,12 +221,10 @@ public:
       : __ptr_(__u.release(), _VSTD::forward<_Ep>(__u.get_deleter())) {}
 
 #if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
-  template <class _Up>
+  template <class _Up, __enable_if_t<is_convertible<_Up*, _Tp*>::value &&
+                                     is_same<_Dp, default_delete<_Tp> >::value, int> = 0>
   _LIBCPP_INLINE_VISIBILITY
-  unique_ptr(auto_ptr<_Up>&& __p,
-             typename enable_if<is_convertible<_Up*, _Tp*>::value &&
-                                    is_same<_Dp, default_delete<_Tp> >::value,
-                                __nat>::type = __nat()) _NOEXCEPT
+  unique_ptr(auto_ptr<_Up>&& __p) _NOEXCEPT
       : __ptr_(__p.release(), __value_init_tag()) {}
 #endif
 
@@ -244,11 +245,10 @@ public:
   }
 
 #if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
-  template <class _Up>
+  template <class _Up, __enable_if_t<is_convertible<_Up*, _Tp*>::value &&
+                                     is_same<_Dp, default_delete<_Tp> >::value, int> = 0>
   _LIBCPP_INLINE_VISIBILITY
-      typename enable_if<is_convertible<_Up*, _Tp*>::value &&
-                             is_same<_Dp, default_delete<_Tp> >::value,
-                         unique_ptr&>::type
+  unique_ptr&
       operator=(auto_ptr<_Up> __p) {
     reset(__p.release());
     return *this;
@@ -342,37 +342,37 @@ private:
   template <bool _Dummy, class _Deleter = typename __dependent_type<
                              __type_identity<deleter_type>, _Dummy>::type>
   using _EnableIfDeleterDefaultConstructible _LIBCPP_NODEBUG =
-      typename enable_if<is_default_constructible<_Deleter>::value &&
-                         !is_pointer<_Deleter>::value>::type;
+      __enable_if_t<is_default_constructible<_Deleter>::value &&
+                         !is_pointer<_Deleter>::value>;
 
   template <class _ArgType>
   using _EnableIfDeleterConstructible _LIBCPP_NODEBUG =
-      typename enable_if<is_constructible<deleter_type, _ArgType>::value>::type;
+      __enable_if_t<is_constructible<deleter_type, _ArgType>::value>;
 
   template <class _Pp>
-  using _EnableIfPointerConvertible _LIBCPP_NODEBUG = typename enable_if<
+  using _EnableIfPointerConvertible _LIBCPP_NODEBUG = __enable_if_t<
       _CheckArrayPointerConversion<_Pp>::value
-  >::type;
+  >;
 
   template <class _UPtr, class _Up,
         class _ElemT = typename _UPtr::element_type>
-  using _EnableIfMoveConvertible _LIBCPP_NODEBUG = typename enable_if<
+  using _EnableIfMoveConvertible _LIBCPP_NODEBUG = __enable_if_t<
       is_array<_Up>::value &&
       is_same<pointer, element_type*>::value &&
       is_same<typename _UPtr::pointer, _ElemT*>::value &&
       is_convertible<_ElemT(*)[], element_type(*)[]>::value
-    >::type;
+    >;
 
   template <class _UDel>
-  using _EnableIfDeleterConvertible _LIBCPP_NODEBUG = typename enable_if<
+  using _EnableIfDeleterConvertible _LIBCPP_NODEBUG = __enable_if_t<
       (is_reference<_Dp>::value && is_same<_Dp, _UDel>::value) ||
       (!is_reference<_Dp>::value && is_convertible<_UDel, _Dp>::value)
-    >::type;
+    >;
 
   template <class _UDel>
-  using _EnableIfDeleterAssignable _LIBCPP_NODEBUG = typename enable_if<
+  using _EnableIfDeleterAssignable _LIBCPP_NODEBUG = __enable_if_t<
       is_assignable<_Dp&, _UDel&&>::value
-    >::type;
+    >;
 
 public:
   template <bool _Dummy = true,
@@ -487,10 +487,9 @@ public:
     return __t;
   }
 
-  template <class _Pp>
+  template <class _Pp, __enable_if_t<_CheckArrayPointerConversion<_Pp>::value, int> = 0>
   _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
-      typename enable_if< _CheckArrayPointerConversion<_Pp>::value >::type
-      reset(_Pp __p) _NOEXCEPT {
+  void reset(_Pp __p) _NOEXCEPT {
     pointer __tmp = __ptr_.first();
     __ptr_.first() = __p;
     if (__tmp)
@@ -509,9 +508,9 @@ public:
   }
 };
 
-template <class _Tp, class _Dp>
+template <class _Tp, class _Dp, __enable_if_t<__is_swappable<_Dp>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
-    typename enable_if< __is_swappable<_Dp>::value, void >::type
+    void
     swap(unique_ptr<_Tp, _Dp>& __x, unique_ptr<_Tp, _Dp>& __y) _NOEXCEPT {
   __x.swap(__y);
 }
@@ -556,7 +555,7 @@ bool
 operator>=(const unique_ptr<_T1, _D1>& __x, const unique_ptr<_T2, _D2>& __y) {return !(__x < __y);}
 
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 template <class _T1, class _D1, class _T2, class _D2>
 requires three_way_comparable_with<typename unique_ptr<_T1, _D1>::pointer,
                                    typename unique_ptr<_T2, _D2>::pointer>
@@ -650,7 +649,7 @@ operator>=(nullptr_t, const unique_ptr<_T1, _D1>& __x) {
   return !(nullptr < __x);
 }
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 template <class _T1, class _D1>
   requires three_way_comparable<
       typename unique_ptr<_T1, _D1>::pointer> _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
@@ -660,7 +659,7 @@ operator<=>(const unique_ptr<_T1, _D1>& __x, nullptr_t) {
 }
 #endif
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 
 template<class _Tp>
 struct __unique_if
@@ -697,7 +696,26 @@ template<class _Tp, class... _Args>
     typename __unique_if<_Tp>::__unique_array_known_bound
     make_unique(_Args&&...) = delete;
 
-#endif // _LIBCPP_STD_VER > 11
+#endif // _LIBCPP_STD_VER >= 14
+
+#if _LIBCPP_STD_VER >= 20
+
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 typename __unique_if<_Tp>::__unique_single
+make_unique_for_overwrite() {
+  return unique_ptr<_Tp>(new _Tp);
+}
+
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 typename __unique_if<_Tp>::__unique_array_unknown_bound
+make_unique_for_overwrite(size_t __n) {
+  return unique_ptr<_Tp>(new __remove_extent_t<_Tp>[__n]);
+}
+
+template<class _Tp, class... _Args>
+typename __unique_if<_Tp>::__unique_array_known_bound make_unique_for_overwrite(_Args&&...) = delete;
+
+#endif // _LIBCPP_STD_VER >= 20
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS hash;
 
@@ -723,5 +741,7 @@ struct _LIBCPP_TEMPLATE_VIS hash<__enable_hash_helper<
 };
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___MEMORY_UNIQUE_PTR_H

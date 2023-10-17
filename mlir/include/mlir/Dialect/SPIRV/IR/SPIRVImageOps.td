@@ -147,7 +147,7 @@ def SPIRV_ImageOp : SPIRV_Op<"Image",
     [Pure,
      TypesMatchWith<"type of 'result' matches image type of 'sampledimage'",
                     "sampledimage", "result",
-                    "$_self.cast<spirv::SampledImageType>().getImageType()">]> {
+                    "::llvm::cast<spirv::SampledImageType>($_self).getImageType()">]> {
   let summary = "Extract the image from a sampled image.";
 
   let description = [{

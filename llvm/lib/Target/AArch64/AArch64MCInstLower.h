@@ -9,8 +9,8 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_AARCH64MCINSTLOWER_H
 #define LLVM_LIB_TARGET_AARCH64_AARCH64MCINSTLOWER_H
 
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 class AsmPrinter;
@@ -34,8 +34,8 @@ public:
   bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp) const;
   void Lower(const MachineInstr *MI, MCInst &OutMI) const;
 
-  MCOperand lowerSymbolOperandDarwin(const MachineOperand &MO,
-                                     MCSymbol *Sym) const;
+  MCOperand lowerSymbolOperandMachO(const MachineOperand &MO,
+                                    MCSymbol *Sym) const;
   MCOperand lowerSymbolOperandELF(const MachineOperand &MO,
                                   MCSymbol *Sym) const;
   MCOperand lowerSymbolOperandCOFF(const MachineOperand &MO,

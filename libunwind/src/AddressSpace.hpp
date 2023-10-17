@@ -66,6 +66,10 @@ char *getFuncNameFromTBTable(uintptr_t pc, uint16_t &NameLen,
   // In 10.7.0 or later, libSystem.dylib implements this function.
   extern "C" bool _dyld_find_unwind_sections(void *, dyld_unwind_sections *);
 
+namespace libunwind {
+  bool findDynamicUnwindSections(void *, unw_dynamic_unwind_sections *);
+}
+
 #elif defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND) && defined(_LIBUNWIND_IS_BAREMETAL)
 
 // When statically linked on bare-metal, the symbols for the EH table are looked
@@ -410,8 +414,8 @@ static bool checkForUnwindInfoSegment(const Elf_Phdr *phdr, size_t image_base,
     cbdata->sects->dwarf_index_section = eh_frame_hdr_start;
     cbdata->sects->dwarf_index_section_length = phdr->p_memsz;
     if (EHHeaderParser<LocalAddressSpace>::decodeEHHdr(
-            *cbdata->addressSpace, eh_frame_hdr_start, phdr->p_memsz,
-            hdrInfo)) {
+            *cbdata->addressSpace, eh_frame_hdr_start,
+            eh_frame_hdr_start + phdr->p_memsz, hdrInfo)) {
       // .eh_frame_hdr records the start of .eh_frame, but not its size.
       // Rely on a zero terminator to find the end of the section.
       cbdata->sects->dwarf_section = hdrInfo.eh_frame_ptr;
@@ -497,6 +501,22 @@ inline bool LocalAddressSpace::findUnwindSections(pint_t targetAddr,
     info.compact_unwind_section_length = (size_t)dyldInfo.compact_unwind_section_length;
     return true;
   }
+
+  unw_dynamic_unwind_sections dynamicUnwindSectionInfo;
+  if (findDynamicUnwindSections((void *)targetAddr,
+                                &dynamicUnwindSectionInfo)) {
+    info.dso_base = dynamicUnwindSectionInfo.dso_base;
+#if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
+    info.dwarf_section = (uintptr_t)dynamicUnwindSectionInfo.dwarf_section;
+    info.dwarf_section_length = dynamicUnwindSectionInfo.dwarf_section_length;
+#endif
+    info.compact_unwind_section =
+        (uintptr_t)dynamicUnwindSectionInfo.compact_unwind_section;
+    info.compact_unwind_section_length =
+        dynamicUnwindSectionInfo.compact_unwind_section_length;
+    return true;
+  }
+
 #elif defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND) && defined(_LIBUNWIND_IS_BAREMETAL)
   info.dso_base = 0;
   // Bare metal is statically linked, so no need to ask the dynamic loader
@@ -618,7 +638,8 @@ inline bool LocalAddressSpace::findUnwindSections(pint_t targetAddr,
     info.dwarf_index_section_length = SIZE_MAX;
     EHHeaderParser<LocalAddressSpace>::EHHeaderInfo hdrInfo;
     if (!EHHeaderParser<LocalAddressSpace>::decodeEHHdr(
-            *this, info.dwarf_index_section, info.dwarf_index_section_length,
+            *this, info.dwarf_index_section,
+            info.dwarf_index_section + info.dwarf_index_section_length,
             hdrInfo)) {
       return false;
     }

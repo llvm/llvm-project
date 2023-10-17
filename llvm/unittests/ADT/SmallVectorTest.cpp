@@ -171,6 +171,11 @@ LLVM_ATTRIBUTE_USED void CompileTest() {
   V.resize(42);
 }
 
+TEST(SmallVectorTest, ConstructNonCopyableTest) {
+  SmallVector<NonCopyable, 0> V(42);
+  EXPECT_EQ(V.size(), (size_t)42);
+}
+
 // Assert that v contains the specified values, in order.
 template <typename VectorT>
 void assertValuesInOrder(VectorT &v, size_t size, ...) {

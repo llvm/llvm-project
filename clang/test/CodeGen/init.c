@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s
 
 struct I { int k[3]; };
 struct M { struct I o[2]; };
@@ -10,7 +10,7 @@ unsigned v2[2][3] = {[0 ... 1][0 ... 1] = 2222, 3333};
 
 // CHECK-DAG: [1 x %struct.M] [%struct.M { [2 x %struct.I] [%struct.I { [3 x i32] [i32 4, i32 4, i32 0] }, %struct.I { [3 x i32] [i32 4, i32 4, i32 5] }] }],
 // CHECK-DAG: [2 x [3 x i32]] {{[[][[]}}3 x i32] [i32 2222, i32 2222, i32 0], [3 x i32] [i32 2222, i32 2222, i32 3333]],
-// CHECK-DAG: [[INIT14:.*]] = private global [16 x i32] [i32 0, i32 0, i32 0, i32 0, i32 0, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 0, i32 0, i32 0, i32 0], align 4
+// CHECK-DAG: [[INIT14:.*]] = private constant [16 x i32] [i32 0, i32 0, i32 0, i32 0, i32 0, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 0, i32 0, i32 0, i32 0], align 4
 
 void f1(void) {
   // Scalars in braces.
@@ -53,7 +53,6 @@ vec3 f5(vec3 value) {
   }};
 }
 
-// rdar://problem/8154689
 void f6(void) {
   int x;
   long ids[] = { (long) &x };  
@@ -88,11 +87,11 @@ const char large_array_with_zeroes[1000] = {
 
 char global;
 
-// CHECK-DAG: @large_array_with_zeroes_2 ={{.*}} global <{ [10 x i8*], [90 x i8*] }> <{ [10 x i8*] [i8* null, i8* null, i8* null, i8* null, i8* null, i8* null, i8* null, i8* null, i8* null, i8* @global], [90 x i8*] zeroinitializer }>
+// CHECK-DAG: @large_array_with_zeroes_2 ={{.*}} global <{ [10 x ptr], [90 x ptr] }> <{ [10 x ptr] [ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr @global], [90 x ptr] zeroinitializer }>
 const void *large_array_with_zeroes_2[100] = {
   [9] = &global
 };
-// CHECK-DAG: @large_array_with_zeroes_3 ={{.*}} global <{ [10 x i8*], [990 x i8*] }> <{ [10 x i8*] [i8* null, i8* null, i8* null, i8* null, i8* null, i8* null, i8* null, i8* null, i8* null, i8* @global], [990 x i8*] zeroinitializer }>
+// CHECK-DAG: @large_array_with_zeroes_3 ={{.*}} global <{ [10 x ptr], [990 x ptr] }> <{ [10 x ptr] [ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr @global], [990 x ptr] zeroinitializer }>
 const void *large_array_with_zeroes_3[1000] = {
   [9] = &global
 };
@@ -103,9 +102,9 @@ char test8(int X) {
   return str[X];
   // CHECK-LABEL: @test8(
   // CHECK: call void @llvm.memset
-  // CHECK: store i8 97, i8* %{{[0-9]*}}, align 1
-  // CHECK: store i8 98, i8* %{{[0-9]*}}, align 1
-  // CHECK: store i8 99, i8* %{{[0-9]*}}, align 1
+  // CHECK: store i8 97, ptr %{{[0-9]*}}, align 1
+  // CHECK: store i8 98, ptr %{{[0-9]*}}, align 1
+  // CHECK: store i8 99, ptr %{{[0-9]*}}, align 1
   // CHECK-NOT: getelementptr
   // CHECK: load
 }
@@ -145,7 +144,7 @@ void nonzeroMemseti8(void) {
   // CHECK-LABEL: @nonzeroMemseti8(
   // CHECK-NOT: store
   // CHECK-NOT: memcpy
-  // CHECK: call void @llvm.memset.p0i8.i32(i8* {{.*}}, i8 42, i32 33, i1 false)
+  // CHECK: call void @llvm.memset.p0.i32(ptr {{.*}}, i8 42, i32 33, i1 false)
 }
 
 void nonzeroMemseti16(void) {
@@ -153,7 +152,7 @@ void nonzeroMemseti16(void) {
   // CHECK-LABEL: @nonzeroMemseti16(
   // CHECK-NOT: store
   // CHECK-NOT: memcpy
-  // CHECK: call void @llvm.memset.p0i8.i32(i8* {{.*}}, i8 66, i32 34, i1 false)
+  // CHECK: call void @llvm.memset.p0.i32(ptr {{.*}}, i8 66, i32 34, i1 false)
 }
 
 void nonzeroMemseti32(void) {
@@ -161,7 +160,7 @@ void nonzeroMemseti32(void) {
   // CHECK-LABEL: @nonzeroMemseti32(
   // CHECK-NOT: store
   // CHECK-NOT: memcpy
-  // CHECK: call void @llvm.memset.p0i8.i32(i8* {{.*}}, i8 -16, i32 36, i1 false)
+  // CHECK: call void @llvm.memset.p0.i32(ptr {{.*}}, i8 -16, i32 36, i1 false)
 }
 
 void nonzeroMemseti64(void) {
@@ -169,7 +168,7 @@ void nonzeroMemseti64(void) {
   // CHECK-LABEL: @nonzeroMemseti64(
   // CHECK-NOT: store
   // CHECK-NOT: memcpy
-  // CHECK: call void @llvm.memset.p0i8.i32(i8* {{.*}}, i8 -86, i32 56, i1 false)
+  // CHECK: call void @llvm.memset.p0.i32(ptr {{.*}}, i8 -86, i32 56, i1 false)
 }
 
 void nonzeroMemsetf32(void) {
@@ -177,7 +176,7 @@ void nonzeroMemsetf32(void) {
   // CHECK-LABEL: @nonzeroMemsetf32(
   // CHECK-NOT: store
   // CHECK-NOT: memcpy
-  // CHECK: call void @llvm.memset.p0i8.i32(i8* {{.*}}, i8 101, i32 36, i1 false)
+  // CHECK: call void @llvm.memset.p0.i32(ptr {{.*}}, i8 101, i32 36, i1 false)
 }
 
 void nonzeroMemsetf64(void) {
@@ -185,7 +184,7 @@ void nonzeroMemsetf64(void) {
   // CHECK-LABEL: @nonzeroMemsetf64(
   // CHECK-NOT: store
   // CHECK-NOT: memcpy
-  // CHECK: call void @llvm.memset.p0i8.i32(i8* {{.*}}, i8 68, i32 56, i1 false)
+  // CHECK: call void @llvm.memset.p0.i32(ptr {{.*}}, i8 68, i32 56, i1 false)
 }
 
 void nonzeroPaddedUnionMemset(void) {
@@ -194,7 +193,7 @@ void nonzeroPaddedUnionMemset(void) {
   // CHECK-LABEL: @nonzeroPaddedUnionMemset(
   // CHECK-NOT: store
   // CHECK-NOT: memcpy
-  // CHECK: call void @llvm.memset.p0i8.i32(i8* {{.*}}, i8 -16, i32 36, i1 false)
+  // CHECK: call void @llvm.memset.p0.i32(ptr {{.*}}, i8 -16, i32 36, i1 false)
 }
 
 void nonzeroNestedMemset(void) {
@@ -204,7 +203,7 @@ void nonzeroNestedMemset(void) {
   // CHECK-LABEL: @nonzeroNestedMemset(
   // CHECK-NOT: store
   // CHECK-NOT: memcpy
-  // CHECK: call void @llvm.memset.p0i8.i32(i8* {{.*}}, i8 -16, i32 40, i1 false)
+  // CHECK: call void @llvm.memset.p0.i32(ptr {{.*}}, i8 -16, i32 40, i1 false)
 }
 
 // PR9257
@@ -214,10 +213,10 @@ struct test11S {
 void test11(struct test11S *P) {
   *P = (struct test11S) { .A = { [0 ... 3] = 4 } };
   // CHECK-LABEL: @test11(
-  // CHECK: store i32 4, i32* %{{.*}}, align 4
-  // CHECK: store i32 4, i32* %{{.*}}, align 4
-  // CHECK: store i32 4, i32* %{{.*}}, align 4
-  // CHECK: store i32 4, i32* %{{.*}}, align 4
+  // CHECK: store i32 4, ptr %{{.*}}, align 4
+  // CHECK: store i32 4, ptr %{{.*}}, align 4
+  // CHECK: store i32 4, ptr %{{.*}}, align 4
+  // CHECK: store i32 4, ptr %{{.*}}, align 4
   // CHECK: ret void
 }
 
@@ -238,9 +237,9 @@ void test13(int x) {
 
 // CHECK-LABEL: @PR20473(
 void PR20473(void) {
-  // CHECK: memcpy{{.*}}getelementptr inbounds ([2 x i8], [2 x i8]* @
+  // CHECK: memcpy{{.*}}
   bar((char[2]) {""});
-  // CHECK: memcpy{{.*}}getelementptr inbounds ([3 x i8], [3 x i8]* @
+  // CHECK: memcpy{{.*}}
   bar((char[3]) {""});
 }
 
@@ -250,7 +249,7 @@ struct S14 { int a[16]; };
 
 void test14(struct S14 *s14) {
   // CHECK-LABEL: @test14(
-  // CHECK: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 {{.*}}, i8* align 4 {{.*}} [[INIT14]] {{.*}}, i32 64, i1 false)
+  // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 {{.*}}, ptr align 4 [[INIT14]], i32 64, i1 false)
   // CHECK-NOT: store
   // CHECK: ret void
   *s14 = (struct S14) { { [5 ... 11] = 17 } };

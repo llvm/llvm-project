@@ -15,9 +15,8 @@ define void @test_sink_ptrue_into_ptest(i32 %n) {
 ; CHECK-NEXT:    cntw x8
 ; CHECK-NEXT:  .LBB0_2: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add w10, w9, w8
 ; CHECK-NEXT:    whilelt p0.s, w9, w0
-; CHECK-NEXT:    mov w9, w10
+; CHECK-NEXT:    add w9, w9, w8
 ; CHECK-NEXT:    b.mi .LBB0_2
 ; CHECK-NEXT:  .LBB0_3: // %exit
 ; CHECK-NEXT:    ret

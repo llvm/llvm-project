@@ -22,7 +22,7 @@ tablegen("AArch64GenO0PreLegalizeGICombiner") {
   visibility = [ ":LLVMAArch64CodeGen" ]
   args = [
     "-gen-global-isel-combiner",
-    "-combiners=AArch64O0PreLegalizerCombinerHelper",
+    "-combiners=AArch64O0PreLegalizerCombiner",
   ]
   td_file = "AArch64.td"
 }
@@ -43,7 +43,7 @@ tablegen("AArch64GenPostLegalizeGICombiner") {
   visibility = [ ":LLVMAArch64CodeGen" ]
   args = [
     "-gen-global-isel-combiner",
-    "-combiners=AArch64PostLegalizerCombinerHelper",
+    "-combiners=AArch64PostLegalizerCombiner",
   ]
   td_file = "AArch64.td"
 }
@@ -52,7 +52,7 @@ tablegen("AArch64GenPreLegalizeGICombiner") {
   visibility = [ ":LLVMAArch64CodeGen" ]
   args = [
     "-gen-global-isel-combiner",
-    "-combiners=AArch64PreLegalizerCombinerHelper",
+    "-combiners=AArch64PreLegalizerCombiner",
   ]
   td_file = "AArch64.td"
 }
@@ -61,7 +61,7 @@ tablegen("AArch64GenPostLegalizeGILowering") {
   visibility = [ ":LLVMAArch64CodeGen" ]
   args = [
     "-gen-global-isel-combiner",
-    "-combiners=AArch64PostLegalizerLoweringHelper",
+    "-combiners=AArch64PostLegalizerLowering",
   ]
   td_file = "AArch64.td"
 }
@@ -124,10 +124,10 @@ static_library("LLVMAArch64CodeGen") {
     "AArch64FalkorHWPFFix.cpp",
     "AArch64FastISel.cpp",
     "AArch64FrameLowering.cpp",
+    "AArch64GlobalsTagging.cpp",
     "AArch64ISelDAGToDAG.cpp",
     "AArch64ISelLowering.cpp",
     "AArch64InstrInfo.cpp",
-    "AArch64KCFI.cpp",
     "AArch64LoadStoreOptimizer.cpp",
     "AArch64LowerHomogeneousPrologEpilog.cpp",
     "AArch64MCInstLower.cpp",
@@ -136,6 +136,7 @@ static_library("LLVMAArch64CodeGen") {
     "AArch64MachineScheduler.cpp",
     "AArch64MacroFusion.cpp",
     "AArch64PBQPRegAlloc.cpp",
+    "AArch64PointerAuth.cpp",
     "AArch64PromoteConstant.cpp",
     "AArch64RedundantCopyElimination.cpp",
     "AArch64RegisterInfo.cpp",

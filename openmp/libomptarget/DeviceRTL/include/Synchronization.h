@@ -16,34 +16,6 @@
 
 namespace ompx {
 
-namespace synchronize {
-
-/// Initialize the synchronization machinery. Must be called by all threads.
-void init(bool IsSPMD);
-
-/// Synchronize all threads in a warp identified by \p Mask.
-void warp(LaneMaskTy Mask);
-
-/// Synchronize all threads in a block.
-void threads();
-
-/// Synchronizing threads is allowed even if they all hit different instances of
-/// `synchronize::threads()`. However, `synchronize::threadsAligned()` is more
-/// restrictive in that it requires all threads to hit the same instance. The
-/// noinline is removed by the openmp-opt pass and helps to preserve the
-/// information till then.
-///{
-#pragma omp begin assumes ext_aligned_barrier
-
-/// Synchronize all threads in a block, they are are reaching the same
-/// instruction (hence all threads in the block are "aligned").
-__attribute__((noinline)) void threadsAligned();
-
-#pragma omp end assumes
-///}
-
-} // namespace synchronize
-
 namespace atomic {
 
 enum OrderingTy {
@@ -54,8 +26,15 @@ enum OrderingTy {
   seq_cst = __ATOMIC_SEQ_CST,
 };
 
+enum MemScopeTy {
+  all,    // All threads on all devices
+  device, // All threads on the device
+  cgroup  // All threads in the contention group, e.g. the team
+};
+
 /// Atomically increment \p *Addr and wrap at \p V with \p Ordering semantics.
-uint32_t inc(uint32_t *Addr, uint32_t V, OrderingTy Ordering);
+uint32_t inc(uint32_t *Addr, uint32_t V, OrderingTy Ordering,
+             MemScopeTy MemScope = MemScopeTy::all);
 
 /// Atomically perform <op> on \p V and \p *Addr with \p Ordering semantics. The
 /// result is stored in \p *Addr;
@@ -110,6 +89,38 @@ ATOMIC_FP_OP(double)
 ///}
 
 } // namespace atomic
+
+namespace synchronize {
+
+/// Initialize the synchronization machinery. Must be called by all threads.
+void init(bool IsSPMD);
+
+/// Synchronize all threads in a warp identified by \p Mask.
+void warp(LaneMaskTy Mask);
+
+/// Synchronize all threads in a block and perform a fence before and after the
+/// barrier according to \p Ordering. Note that the fence might be part of the
+/// barrier.
+void threads(atomic::OrderingTy Ordering);
+
+/// Synchronizing threads is allowed even if they all hit different instances of
+/// `synchronize::threads()`. However, `synchronize::threadsAligned()` is more
+/// restrictive in that it requires all threads to hit the same instance. The
+/// noinline is removed by the openmp-opt pass and helps to preserve the
+/// information till then.
+///{
+#pragma omp begin assumes ext_aligned_barrier
+
+/// Synchronize all threads in a block, they are reaching the same instruction
+/// (hence all threads in the block are "aligned"). Also perform a fence before
+/// and after the barrier according to \p Ordering. Note that the
+/// fence might be part of the barrier if the target offers this.
+__attribute__((noinline)) void threadsAligned(atomic::OrderingTy Ordering);
+
+#pragma omp end assumes
+///}
+
+} // namespace synchronize
 
 namespace fence {
 

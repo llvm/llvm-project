@@ -12,6 +12,7 @@ subroutine foo(A, B, P)
     end function
   end interface
   real :: A(:), B(:)
+  !PORTABILITY: A dummy procedure should not have an ELEMENTAL intrinsic as its interface
   procedure(sqrt), pointer :: P
   !ERROR: Rank of dummy argument is 0, but actual argument has rank 1
   A = P(B)

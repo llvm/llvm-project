@@ -1,7 +1,5 @@
 // RUN: %clangxx_hwasan -DSIZE=16 -O0 %s -o %t && %run %t 2>&1 | FileCheck %s
 
-// REQUIRES: stable-runtime
-
 #include <assert.h>
 #include <stdlib.h>
 #include <sys/mman.h>
@@ -18,9 +16,7 @@ int main() {
   alloc[79] = 0xee;
   alloc[95] = 0xff;
 
-  // __hwasan_tag_memory expects untagged pointers.
-  char *p = (char *)__hwasan_tag_pointer(alloc, 0);
-  assert(p);
+  char *p = alloc;
 
   // Write tags to shadow.
   __hwasan_tag_memory(p, 1, 32);

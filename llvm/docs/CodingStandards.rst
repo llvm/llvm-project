@@ -50,6 +50,9 @@ code imported into the tree. Generally, our preference is for standards
 conforming, modern, and portable C++ code as the implementation language of
 choice.
 
+For automation, build-systems and utility scripts Python is preferred and
+is widely used in the LLVM repository already.
+
 C++ Standard Versions
 ---------------------
 
@@ -101,6 +104,51 @@ subjects is available in the :doc:`ProgrammersManual`.
 For more information about LLVM's data structures and the tradeoffs they make,
 please consult `that section of the programmer's manual
 <https://llvm.org/docs/ProgrammersManual.html#picking-the-right-data-structure-for-a-task>`_.
+
+Python version and Source Code Formatting
+-----------------------------------------
+
+The current minimum version of Python required is documented in the :doc:`GettingStarted`
+section. Python code in the LLVM repository should only use language features
+available in this version of Python.
+
+The Python code within the LLVM repository should adhere to the formatting guidelines
+outlined in `PEP 8 <https://peps.python.org/pep-0008/>`_.
+
+For consistency and to limit churn, code should be automatically formatted with
+the `black <https://github.com/psf/black>`_ utility, which is PEP 8 compliant.
+Use its default rules. For example, avoid specifying ``--line-length`` even
+though it does not default to 80. The default rules can change between major
+versions of black. In order to avoid unnecessary churn in the formatting rules,
+we currently use black version 23.x in LLVM.
+
+When contributing a patch unrelated to formatting, you should format only the
+Python code that the patch modifies. For this purpose, use the `darker
+<https://pypi.org/project/darker/>`_ utility, which runs default black rules
+over only the modified Python code. Doing so should ensure the patch will pass
+the Python format checks in LLVM's pre-commit CI, which also uses darker. When
+contributing a patch specifically for reformatting Python files, use black,
+which currently only supports formatting entire files.
+
+Here are some quick examples, but see the black and darker documentation for
+details:
+
+.. code-block:: bash
+
+    $ pip install black=='23.*' darker # install black 23.x and darker
+    $ darker test.py                   # format uncommitted changes
+    $ darker -r HEAD^ test.py          # also format changes from last commit
+    $ black test.py                    # format entire file
+
+Instead of individual file names, you can specify directories to
+darker, and it will find the changed files. However, if a directory is
+large, like a clone of the LLVM repository, darker can be painfully
+slow. In that case, you might wish to use git to list changed files.
+For example:
+
+.. code-block:: bash
+
+   $ darker -r HEAD^ $(git diff --name-only HEAD^)
 
 Mechanical Source Issues
 ========================
@@ -552,7 +600,7 @@ constructor or destructor) should not be added to the code base, and should be
 removed wherever possible.
 
 Globals in different source files are initialized in `arbitrary order
-<https://yosefk.com/c++fqa/ctors.html#fqa-10.12>`, making the code more
+<https://yosefk.com/c++fqa/ctors.html#fqa-10.12>`_, making the code more
 difficult to reason about.
 
 Static constructors have negative impact on launch time of programs that use

@@ -80,10 +80,10 @@ define void @f5() "patchable-function-entry"="5" comdat {
 ;; the remaining instructions do not need to be modified.
 define void @f3_2() "patchable-function-entry"="1" "patchable-function-prefix"="2" {
 ; CHECK-LABEL: .type f3_2,@function
-; CHECK-NEXT: .Ltmp0: # @f3_2
+; CHECK-NEXT: .Ltmp0:
 ; CHECK-NEXT:  nop
 ; CHECK-NEXT:  nop
-; CHECK-NEXT: f3_2:
+; CHECK-NEXT: f3_2: # @f3_2
 ; CHECK:      # %bb.0:
 ; CHECK-NEXT:  nop
 ; CHECK-NEXT:  ret

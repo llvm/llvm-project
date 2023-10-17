@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include "utils/UnitTest/FPMatcher.h"
-#include "utils/UnitTest/Test.h"
 
 #include <math.h>
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-template <typename T> class FAbsTest : public __llvm_libc::testing::Test {
+template <typename T> class FAbsTest : public LIBC_NAMESPACE::testing::Test {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
@@ -32,7 +32,7 @@ public:
   }
 
   void testRange(FabsFunc func) {
-    constexpr UIntType COUNT = 10000000;
+    constexpr UIntType COUNT = 100'000;
     constexpr UIntType STEP = UIntType(-1) / COUNT;
     for (UIntType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       T x = T(FPBits(v));

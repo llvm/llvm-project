@@ -21,14 +21,24 @@ class DeclContext;
 
 /// Mapped value in the address map is the offset to apply to the
 /// linked address.
-using RangesTy = AddressRangesMap<int64_t>;
+using RangesTy = AddressRangesMap;
 
-// FIXME: Delete this structure.
+// This structure keeps patch for the attribute and, optionally,
+// the value of relocation which should be applied. Currently,
+// only location attribute needs to have relocation: either to the
+// function ranges if location attribute is of type 'loclist',
+// either to the operand of DW_OP_addr/DW_OP_addrx if location attribute
+// is of type 'exprloc'.
+// ASSUMPTION: Location attributes of 'loclist' type containing 'exprloc'
+//             with address expression operands are not supported yet.
 struct PatchLocation {
   DIE::value_iterator I;
+  int64_t RelocAdjustment = 0;
 
   PatchLocation() = default;
   PatchLocation(DIE::value_iterator I) : I(I) {}
+  PatchLocation(DIE::value_iterator I, int64_t Reloc)
+      : I(I), RelocAdjustment(Reloc) {}
 
   void set(uint64_t New) const {
     assert(I);
@@ -42,6 +52,9 @@ struct PatchLocation {
     return I->getDIEInteger().getValue();
   }
 };
+
+using RngListAttributesTy = SmallVector<PatchLocation>;
+using LocListAttributesTy = SmallVector<PatchLocation>;
 
 /// Stores all information relating to a compile unit, be it in its original
 /// instance in the object file to its brand new cloned and generated DIE tree.
@@ -81,6 +94,9 @@ public:
 
     /// Is this a reference to a DIE that hasn't been cloned yet?
     bool UnclonedReference : 1;
+
+    /// Is this a variable with a location attribute referencing address?
+    bool HasLocationExpressionAddr : 1;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
     LLVM_DUMP_METHOD void dump();
@@ -143,18 +159,15 @@ public:
   uint64_t getHighPc() const { return HighPc; }
   bool hasLabelAt(uint64_t Addr) const { return Labels.count(Addr); }
 
+  const RangesTy &getFunctionRanges() const { return Ranges; }
+
+  const RngListAttributesTy &getRangesAttributes() { return RangeAttributes; }
+
   std::optional<PatchLocation> getUnitRangesAttribute() const {
     return UnitRangeAttribute;
   }
 
-  const RangesTy &getFunctionRanges() const { return Ranges; }
-
-  const std::vector<PatchLocation> &getRangesAttributes() const {
-    return RangeAttributes;
-  }
-
-  const std::vector<std::pair<PatchLocation, int64_t>> &
-  getLocationAttributes() const {
+  const LocListAttributesTy &getLocationAttributes() const {
     return LocationAttributes;
   }
 
@@ -191,7 +204,7 @@ public:
 
   /// Keep track of a location attribute pointing to a location list in the
   /// debug_loc section.
-  void noteLocationAttribute(PatchLocation Attr, int64_t PcOffset);
+  void noteLocationAttribute(PatchLocation Attr);
 
   /// Add a name accelerator entry for \a Die with \a Name.
   void addNamespaceAccelerator(const DIE *Die, DwarfStringPoolEntryRef Name);
@@ -278,18 +291,19 @@ private:
   /// The DW_AT_low_pc of each DW_TAG_label.
   SmallDenseMap<uint64_t, uint64_t, 1> Labels;
 
-  /// DW_AT_ranges attributes to patch after we have gathered
-  /// all the unit's function addresses.
+  /// 'rnglist'(DW_AT_ranges, DW_AT_start_scope) attributes to patch after
+  /// we have gathered all the unit's function addresses.
   /// @{
-  std::vector<PatchLocation> RangeAttributes;
+  RngListAttributesTy RangeAttributes;
   std::optional<PatchLocation> UnitRangeAttribute;
   /// @}
 
   /// Location attributes that need to be transferred from the
-  /// original debug_loc section to the liked one. They are stored
+  /// original debug_loc section to the linked one. They are stored
   /// along with the PC offset that is to be applied to their
-  /// function's address.
-  std::vector<std::pair<PatchLocation, int64_t>> LocationAttributes;
+  /// function's address or to be applied to address operands of
+  /// location expression.
+  LocListAttributesTy LocationAttributes;
 
   /// Accelerator entries for the unit, both for the pub*
   /// sections and the apple* ones.

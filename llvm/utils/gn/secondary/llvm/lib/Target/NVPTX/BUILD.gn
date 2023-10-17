@@ -28,10 +28,12 @@ static_library("LLVMNVPTXCodeGen") {
   ]
   include_dirs = [ "." ]
   sources = [
+    "NVPTXAliasAnalysis.cpp",
     "NVPTXAllocaHoisting.cpp",
     "NVPTXAsmPrinter.cpp",
     "NVPTXAssignValidGlobalNames.cpp",
     "NVPTXAtomicLower.cpp",
+    "NVPTXCtorDtorLowering.cpp",
     "NVPTXFrameLowering.cpp",
     "NVPTXGenericToNVVM.cpp",
     "NVPTXISelDAGToDAG.cpp",
@@ -41,6 +43,7 @@ static_library("LLVMNVPTXCodeGen") {
     "NVPTXLowerAggrCopies.cpp",
     "NVPTXLowerAlloca.cpp",
     "NVPTXLowerArgs.cpp",
+    "NVPTXLowerUnreachable.cpp",
     "NVPTXMCExpr.cpp",
     "NVPTXPeephole.cpp",
     "NVPTXPrologEpilogPass.cpp",

@@ -3,12 +3,12 @@
 Inputs/InconsistentHeader1.h
 Inputs/InconsistentHeader2.h
 
-# CHECK: error: macro 'SYMBOL' defined at multiple locations:
-# CHECK-NEXT:     {{.*}}{{[/\\]}}Inputs{{[/\\]}}InconsistentSubHeader.h:3:9
-# CHECK-NEXT:     {{.*}}{{[/\\]}}Inputs{{[/\\]}}InconsistentSubHeader.h:7:9
-# CHECK-NEXT: error: macro 'FUNC_STYLE' defined at multiple locations:
+# CHECK:      error: macro 'FUNC_STYLE' defined at multiple locations:
 # CHECK-NEXT:     {{.*}}{{[/\\]}}Inputs{{[/\\]}}InconsistentSubHeader.h:4:9
 # CHECK-NEXT:     {{.*}}{{[/\\]}}Inputs{{[/\\]}}InconsistentSubHeader.h:8:9
+# CHECK-NEXT: error: macro 'SYMBOL' defined at multiple locations:
+# CHECK-NEXT:     {{.*}}{{[/\\]}}Inputs{{[/\\]}}InconsistentSubHeader.h:3:9
+# CHECK-NEXT:     {{.*}}{{[/\\]}}Inputs{{[/\\]}}InconsistentSubHeader.h:7:9
 # CHECK-NEXT: {{.*}}{{[/\\]}}Inputs{{[/\\]}}InconsistentSubHeader.h:15:11:
 # CHECK-NEXT: int var = FUNC_STYLE(1, 0);
 # CHECK-NEXT:           ^

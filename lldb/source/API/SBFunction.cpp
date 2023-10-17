@@ -54,30 +54,27 @@ SBFunction::operator bool() const {
 const char *SBFunction::GetName() const {
   LLDB_INSTRUMENT_VA(this);
 
-  const char *cstr = nullptr;
   if (m_opaque_ptr)
-    cstr = m_opaque_ptr->GetName().AsCString();
+    return m_opaque_ptr->GetName().AsCString();
 
-  return cstr;
+  return nullptr;
 }
 
 const char *SBFunction::GetDisplayName() const {
   LLDB_INSTRUMENT_VA(this);
 
-  const char *cstr = nullptr;
   if (m_opaque_ptr)
-    cstr = m_opaque_ptr->GetMangled().GetDisplayDemangledName().AsCString();
+    return m_opaque_ptr->GetMangled().GetDisplayDemangledName().AsCString();
 
-  return cstr;
+  return nullptr;
 }
 
 const char *SBFunction::GetMangledName() const {
   LLDB_INSTRUMENT_VA(this);
 
-  const char *cstr = nullptr;
   if (m_opaque_ptr)
-    cstr = m_opaque_ptr->GetMangled().GetMangledName().AsCString();
-  return cstr;
+    return m_opaque_ptr->GetMangled().GetMangledName().AsCString();
+  return nullptr;
 }
 
 bool SBFunction::operator==(const SBFunction &rhs) const {
@@ -166,19 +163,22 @@ SBAddress SBFunction::GetEndAddress() {
 const char *SBFunction::GetArgumentName(uint32_t arg_idx) {
   LLDB_INSTRUMENT_VA(this, arg_idx);
 
-  if (m_opaque_ptr) {
-    Block &block = m_opaque_ptr->GetBlock(true);
-    VariableListSP variable_list_sp = block.GetBlockVariableList(true);
-    if (variable_list_sp) {
-      VariableList arguments;
-      variable_list_sp->AppendVariablesWithScope(eValueTypeVariableArgument,
-                                                 arguments, true);
-      lldb::VariableSP variable_sp = arguments.GetVariableAtIndex(arg_idx);
-      if (variable_sp)
-        return variable_sp->GetName().GetCString();
-    }
-  }
-  return nullptr;
+  if (!m_opaque_ptr)
+    return nullptr;
+
+  Block &block = m_opaque_ptr->GetBlock(true);
+  VariableListSP variable_list_sp = block.GetBlockVariableList(true);
+  if (!variable_list_sp)
+    return nullptr;
+
+  VariableList arguments;
+  variable_list_sp->AppendVariablesWithScope(eValueTypeVariableArgument,
+                                             arguments, true);
+  lldb::VariableSP variable_sp = arguments.GetVariableAtIndex(arg_idx);
+  if (!variable_sp)
+    return nullptr;
+
+  return variable_sp->GetName().GetCString();
 }
 
 uint32_t SBFunction::GetPrologueByteSize() {

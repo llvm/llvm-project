@@ -290,3 +290,21 @@ define signext i32 @pack_i32_allWUsers(i16 zeroext %0, i16 zeroext %1, i16 zeroe
   %8 = or i32 %6, %7
   ret i32 %8
 }
+
+define i64 @pack_i64_imm() {
+; RV64I-LABEL: pack_i64_imm:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a0, 65793
+; RV64I-NEXT:    addiw a0, a0, 16
+; RV64I-NEXT:    slli a1, a0, 32
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBKB-LABEL: pack_i64_imm:
+; RV64ZBKB:       # %bb.0:
+; RV64ZBKB-NEXT:    lui a0, 65793
+; RV64ZBKB-NEXT:    addi a0, a0, 16
+; RV64ZBKB-NEXT:    pack a0, a0, a0
+; RV64ZBKB-NEXT:    ret
+  ret i64 1157442765409226768 ; 0x0101010101010101
+}

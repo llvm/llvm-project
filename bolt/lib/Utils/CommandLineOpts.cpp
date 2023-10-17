@@ -172,9 +172,9 @@ cl::opt<bool>
 
                cl::cat(BoltCategory));
 
-llvm::cl::opt<bool> TimeOpts("time-opts",
-                             cl::desc("print time spent in each optimization"),
-                             cl::cat(BoltOptCategory));
+cl::opt<bool> TimeOpts("time-opts",
+                       cl::desc("print time spent in each optimization"),
+                       cl::cat(BoltOptCategory));
 
 cl::opt<bool> UseOldText(
     "use-old-text",

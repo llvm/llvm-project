@@ -18,9 +18,9 @@
 #include "SystemZInstrInfo.h"
 #include "SystemZRegisterInfo.h"
 #include "SystemZSelectionDAGInfo.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/TargetParser/Triple.h"
 #include <string>
 
 #define GET_SUBTARGETINFO_HEADER
@@ -105,6 +105,8 @@ public:
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
   bool GETTER() const { return ATTRIBUTE; }
 #include "SystemZGenSubtargetInfo.inc"
+
+  bool isAddressedViaADA(const GlobalValue *GV) const;
 
   // Return true if GV can be accessed using LARL for reloc model RM
   // and code model CM.

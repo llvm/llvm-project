@@ -20,8 +20,6 @@ target triple = "i386-apple-macosx10.5"
 define i32 @eflagsLiveInPrologue() #0 {
 ; ENABLE-LABEL: eflagsLiveInPrologue:
 ; ENABLE:       ## %bb.0: ## %entry
-; ENABLE-NEXT:    pushl %esi
-; ENABLE-NEXT:    subl $8, %esp
 ; ENABLE-NEXT:    movl L_a$non_lazy_ptr, %eax
 ; ENABLE-NEXT:    cmpl $0, (%eax)
 ; ENABLE-NEXT:    je LBB0_2
@@ -37,6 +35,8 @@ define i32 @eflagsLiveInPrologue() #0 {
 ; ENABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; ENABLE-NEXT:    jmp LBB0_3
 ; ENABLE-NEXT:  LBB0_4: ## %for.end
+; ENABLE-NEXT:    pushl %esi
+; ENABLE-NEXT:    subl $8, %esp
 ; ENABLE-NEXT:    xorl %edx, %edx
 ; ENABLE-NEXT:    cmpb $0, _d
 ; ENABLE-NEXT:    movl $6, %ecx

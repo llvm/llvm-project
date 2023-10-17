@@ -31,8 +31,8 @@
 #ifndef C99_KEYWORD
 #define C99_KEYWORD(X,Y) KEYWORD(X,KEYC99|(Y))
 #endif
-#ifndef C2X_KEYWORD
-#define C2X_KEYWORD(X,Y) KEYWORD(X,KEYC2X|(Y))
+#ifndef C23_KEYWORD
+#define C23_KEYWORD(X,Y) KEYWORD(X,KEYC23|(Y))
 #endif
 #ifndef COROUTINES_KEYWORD
 #define COROUTINES_KEYWORD(X) CXX20_KEYWORD(X,KEYCOROUTINES)
@@ -84,6 +84,9 @@
 #endif
 #ifndef PRAGMA_ANNOTATION
 #define PRAGMA_ANNOTATION(X) ANNOTATION(X)
+#endif
+#ifndef INTERESTING_IDENTIFIER
+#define INTERESTING_IDENTIFIER(X)
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -256,7 +259,7 @@ PUNCTUATOR(caretcaret,            "^^")
 //              always be treated as a keyword
 //   KEYC99   - This is a keyword introduced to C in C99
 //   KEYC11   - This is a keyword introduced to C in C11
-//   KEYC2X   - This is a keyword introduced to C in C2x
+//   KEYC23   - This is a keyword introduced to C in C23
 //   KEYCXX   - This is a C++ keyword, or a C++-specific keyword in the
 //              implementation namespace
 //   KEYNOCXX - This is a keyword in every non-C++ dialect.
@@ -333,7 +336,7 @@ KEYWORD(__objc_no                   , KEYALL)
 
 // C++ 2.11p1: Keywords.
 KEYWORD(asm                         , KEYCXX|KEYGNU)
-KEYWORD(bool                        , BOOLSUPPORT|KEYC2X)
+KEYWORD(bool                        , BOOLSUPPORT|KEYC23)
 KEYWORD(catch                       , KEYCXX)
 KEYWORD(class                       , KEYCXX)
 KEYWORD(const_cast                  , KEYCXX)
@@ -341,7 +344,7 @@ KEYWORD(delete                      , KEYCXX)
 KEYWORD(dynamic_cast                , KEYCXX)
 KEYWORD(explicit                    , KEYCXX)
 KEYWORD(export                      , KEYCXX)
-KEYWORD(false                       , BOOLSUPPORT|KEYC2X)
+KEYWORD(false                       , BOOLSUPPORT|KEYC23)
 KEYWORD(friend                      , KEYCXX)
 KEYWORD(mutable                     , KEYCXX)
 KEYWORD(namespace                   , KEYCXX)
@@ -355,7 +358,7 @@ KEYWORD(static_cast                 , KEYCXX)
 KEYWORD(template                    , KEYCXX)
 KEYWORD(this                        , KEYCXX)
 KEYWORD(throw                       , KEYCXX)
-KEYWORD(true                        , BOOLSUPPORT|KEYC2X)
+KEYWORD(true                        , BOOLSUPPORT|KEYC23)
 KEYWORD(try                         , KEYCXX)
 KEYWORD(typename                    , KEYCXX)
 KEYWORD(typeid                      , KEYCXX)
@@ -382,24 +385,24 @@ C99_KEYWORD(inline                      , KEYCXX|KEYGNU)
 
 
 // C++11 keywords
-CXX11_KEYWORD(alignas               , KEYC2X)
+CXX11_KEYWORD(alignas               , KEYC23)
 // alignof and _Alignof return the required ABI alignment
-CXX11_UNARY_EXPR_OR_TYPE_TRAIT(alignof, AlignOf, KEYC2X)
+CXX11_UNARY_EXPR_OR_TYPE_TRAIT(alignof, AlignOf, KEYC23)
 CXX11_KEYWORD(char16_t              , KEYNOMS18)
 CXX11_KEYWORD(char32_t              , KEYNOMS18)
 CXX11_KEYWORD(constexpr             , 0)
 CXX11_KEYWORD(decltype              , 0)
 CXX11_KEYWORD(noexcept              , 0)
-CXX11_KEYWORD(nullptr               , KEYC2X)
-CXX11_KEYWORD(static_assert         , KEYMSCOMPAT|KEYC2X)
-CXX11_KEYWORD(thread_local          , KEYC2X)
+CXX11_KEYWORD(nullptr               , KEYC23)
+CXX11_KEYWORD(static_assert         , KEYMSCOMPAT|KEYC23)
+CXX11_KEYWORD(thread_local          , KEYC23)
 
-// C++20 / coroutines TS keywords
+// C++20 / coroutines keywords
 COROUTINES_KEYWORD(co_await)
 COROUTINES_KEYWORD(co_return)
 COROUTINES_KEYWORD(co_yield)
 
-// C++ modules TS keywords
+// C++20 keywords
 MODULES_KEYWORD(module)
 MODULES_KEYWORD(import)
 
@@ -415,14 +418,14 @@ KEYWORD(char8_t                     , CHAR8SUPPORT)
 // C11 Extension
 KEYWORD(_Float16                    , KEYALL)
 
-// C2x keywords
-C2X_KEYWORD(typeof                  , KEYGNU)
-C2X_KEYWORD(typeof_unqual           , 0)
+// C23 keywords
+C23_KEYWORD(typeof                  , KEYGNU)
+C23_KEYWORD(typeof_unqual           , 0)
 
 // ISO/IEC JTC1 SC22 WG14 N1169 Extension
-KEYWORD(_Accum                      , KEYNOCXX)
-KEYWORD(_Fract                      , KEYNOCXX)
-KEYWORD(_Sat                        , KEYNOCXX)
+KEYWORD(_Accum                      , KEYALL)
+KEYWORD(_Fract                      , KEYALL)
+KEYWORD(_Sat                        , KEYALL)
 
 // GNU Extensions (in impl-reserved namespace)
 KEYWORD(_Decimal32                  , KEYALL)
@@ -436,7 +439,9 @@ KEYWORD(__attribute                 , KEYALL)
 KEYWORD(__builtin_choose_expr       , KEYALL)
 KEYWORD(__builtin_offsetof          , KEYALL)
 KEYWORD(__builtin_FILE              , KEYALL)
+KEYWORD(__builtin_FILE_NAME         , KEYALL)
 KEYWORD(__builtin_FUNCTION          , KEYALL)
+KEYWORD(__builtin_FUNCSIG           , KEYMS)
 KEYWORD(__builtin_LINE              , KEYALL)
 KEYWORD(__builtin_COLUMN            , KEYALL)
 KEYWORD(__builtin_source_location   , KEYCXX)
@@ -518,12 +523,15 @@ TYPE_TRAIT_1(__has_unique_object_representations,
 
 // Clang-only C++ Type Traits
 TYPE_TRAIT_1(__is_trivially_relocatable, IsTriviallyRelocatable, KEYCXX)
+TYPE_TRAIT_1(__is_trivially_equality_comparable, IsTriviallyEqualityComparable, KEYCXX)
 TYPE_TRAIT_1(__is_bounded_array, IsBoundedArray, KEYCXX)
 TYPE_TRAIT_1(__is_unbounded_array, IsUnboundedArray, KEYCXX)
 TYPE_TRAIT_1(__is_nullptr, IsNullPointer, KEYCXX)
 TYPE_TRAIT_1(__is_scoped_enum, IsScopedEnum, KEYCXX)
 TYPE_TRAIT_1(__is_referenceable, IsReferenceable, KEYCXX)
+TYPE_TRAIT_1(__can_pass_in_regs, CanPassInRegs, KEYCXX)
 TYPE_TRAIT_2(__reference_binds_to_temporary, ReferenceBindsToTemporary, KEYCXX)
+TYPE_TRAIT_2(__reference_constructs_from_temporary, ReferenceConstructsFromTemporary, KEYCXX)
 
 // Embarcadero Expression Traits
 EXPRESSION_TRAIT(__is_lvalue_expr, IsLValueExpr, KEYCXX)
@@ -678,6 +686,9 @@ KEYWORD(_Nullable                , KEYALL)
 KEYWORD(_Nullable_result         , KEYALL)
 KEYWORD(_Null_unspecified        , KEYALL)
 
+// WebAssembly Type Extension
+KEYWORD(__funcref                     , KEYALL)
+
 // Microsoft extensions which should be disabled in strict conformance mode
 KEYWORD(__ptr64                       , KEYMS)
 KEYWORD(__ptr32                       , KEYMS)
@@ -741,6 +752,12 @@ KEYWORD(__builtin_bit_cast               , KEYALL)
 KEYWORD(__builtin_available              , KEYALL)
 KEYWORD(__builtin_sycl_unique_stable_name, KEYSYCL)
 
+// Keywords defined by Attr.td.
+#ifndef KEYWORD_ATTRIBUTE
+#define KEYWORD_ATTRIBUTE(X) KEYWORD(X, KEYALL)
+#endif
+#include "clang/Basic/AttrTokenKinds.inc"
+
 // Clang-specific keywords enabled only in testing.
 TESTING_KEYWORD(__unknown_anytype , KEYALL)
 
@@ -780,6 +797,17 @@ OBJC_AT_KEYWORD(synthesize)
 OBJC_AT_KEYWORD(dynamic)
 OBJC_AT_KEYWORD(import)
 OBJC_AT_KEYWORD(available)
+
+//===----------------------------------------------------------------------===//
+// Interesting identifiers.
+//===----------------------------------------------------------------------===//
+INTERESTING_IDENTIFIER(not_interesting)
+INTERESTING_IDENTIFIER(FILE)
+INTERESTING_IDENTIFIER(jmp_buf)
+INTERESTING_IDENTIFIER(sigjmp_buf)
+INTERESTING_IDENTIFIER(ucontext_t)
+INTERESTING_IDENTIFIER(float_t)
+INTERESTING_IDENTIFIER(double_t)
 
 // TODO: What to do about context-sensitive keywords like:
 //       bycopy/byref/in/inout/oneway/out?
@@ -936,6 +964,9 @@ ANNOTATION(module_end)
 // into the name of a header unit.
 ANNOTATION(header_unit)
 
+// Annotation for end of input in clang-repl.
+ANNOTATION(repl_input_end)
+
 #undef PRAGMA_ANNOTATION
 #undef ANNOTATION
 #undef TESTING_KEYWORD
@@ -957,4 +988,5 @@ ANNOTATION(header_unit)
 #undef PUNCTUATOR
 #undef TOK
 #undef C99_KEYWORD
-#undef C2X_KEYWORD
+#undef C23_KEYWORD
+#undef INTERESTING_IDENTIFIER

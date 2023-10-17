@@ -1,3 +1,6 @@
+#ifndef __TSAN_TEST_H__
+#define __TSAN_TEST_H__
+
 #include <pthread.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -73,6 +76,8 @@ unsigned long long monotonic_clock_ns() {
 const int kPCInc = 1;
 #elif defined(__sparc__) || defined(__mips__)
 const int kPCInc = 8;
+#elif defined(__riscv) && __riscv_xlen == 64
+const int kPCInc = 2;
 #else
 const int kPCInc = 4;
 #endif
@@ -133,3 +138,5 @@ void WTFAnnotateBenignRaceSized(const char *f, int l, const volatile void *mem,
 #else
 #define ASM_SYMBOL(symbol) #symbol
 #endif
+
+#endif // __TSAN_TEST_H__

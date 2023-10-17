@@ -192,4 +192,16 @@ extern "C" BF16ABIType ATTR_WEAK __truncdfbf2(double d) {
   return __truncsfbf2(static_cast<float>(d));
 }
 
+// Provide these to the CRunner with the local float16 knowledge.
+extern "C" void printF16(uint16_t bits) {
+  f16 f;
+  std::memcpy(&f, &bits, sizeof(f16));
+  std::cout << f;
+}
+extern "C" void printBF16(uint16_t bits) {
+  bf16 f;
+  std::memcpy(&f, &bits, sizeof(bf16));
+  std::cout << f;
+}
+
 #endif // MLIR_FLOAT16_DEFINE_FUNCTIONS

@@ -82,7 +82,7 @@ def B_CompoundAttrA : TestAttr<"CompoundA"> {
 // Check that AttributeSelfTypeParameter is handled properly.
 // DEF-LABEL: struct CompoundAAttrStorage
 // DEF: CompoundAAttrStorage(
-// DEF-SAME: inner(inner)
+// DEF-SAME: inner(std::move(inner))
 
 // DEF: bool operator==(const KeyTy &tblgenKey) const {
 // DEF-NEXT: return
@@ -94,7 +94,7 @@ def B_CompoundAttrA : TestAttr<"CompoundA"> {
 
 // DEF: static CompoundAAttrStorage *construct
 // DEF: return new (allocator.allocate<CompoundAAttrStorage>())
-// DEF-SAME: CompoundAAttrStorage(widthOfSomething, exampleTdType, apFloat, dims, inner);
+// DEF-SAME: CompoundAAttrStorage(std::move(widthOfSomething), std::move(exampleTdType), std::move(apFloat), std::move(dims), std::move(inner));
 
 // DEF: ::mlir::Type CompoundAAttr::getInner() const {
 // DEF-NEXT: return getImpl()->inner;

@@ -10,6 +10,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/Pass/Pass.h"
 #include "gtest/gtest.h"
 
@@ -68,19 +69,20 @@ TEST(PassManagerTest, OpSpecificAnalysis) {
   }
 
   // Instantiate and run our pass.
-  PassManager pm(&context);
+  auto pm = PassManager::on<ModuleOp>(&context);
   pm.addNestedPass<func::FuncOp>(std::make_unique<AnnotateFunctionPass>());
   LogicalResult result = pm.run(module.get());
   EXPECT_TRUE(succeeded(result));
 
   // Verify that each function got annotated with expected attributes.
   for (func::FuncOp func : module->getOps<func::FuncOp>()) {
-    ASSERT_TRUE(func->getAttr("isFunc").isa<BoolAttr>());
-    EXPECT_TRUE(func->getAttr("isFunc").cast<BoolAttr>().getValue());
+    ASSERT_TRUE(isa<BoolAttr>(func->getDiscardableAttr("isFunc")));
+    EXPECT_TRUE(cast<BoolAttr>(func->getDiscardableAttr("isFunc")).getValue());
 
     bool isSecret = func.getName() == "secret";
-    ASSERT_TRUE(func->getAttr("isSecret").isa<BoolAttr>());
-    EXPECT_EQ(func->getAttr("isSecret").cast<BoolAttr>().getValue(), isSecret);
+    ASSERT_TRUE(isa<BoolAttr>(func->getDiscardableAttr("isSecret")));
+    EXPECT_EQ(cast<BoolAttr>(func->getDiscardableAttr("isSecret")).getValue(),
+              isSecret);
   }
 }
 
@@ -123,7 +125,7 @@ TEST(PassManagerTest, InvalidPass) {
   });
 
   // Instantiate and run our pass.
-  PassManager pm(&context);
+  auto pm = PassManager::on<ModuleOp>(&context);
   pm.nest("invalid_op").addPass(std::make_unique<InvalidPass>());
   LogicalResult result = pm.run(module.get());
   EXPECT_TRUE(failed(result));
@@ -138,7 +140,45 @@ TEST(PassManagerTest, InvalidPass) {
   EXPECT_TRUE(succeeded(result));
 
   // Check that adding the pass at the top-level triggers a fatal error.
-  ASSERT_DEATH(pm.addPass(std::make_unique<InvalidPass>()), "");
+  ASSERT_DEATH(pm.addPass(std::make_unique<InvalidPass>()),
+               "Can't add pass 'Invalid Pass' restricted to 'invalid_op' on a "
+               "PassManager intended to run on 'builtin.module', did you "
+               "intend to nest?");
+}
+
+/// Simple pass to annotate a func::FuncOp with the results of analysis.
+struct InitializeCheckingPass
+    : public PassWrapper<InitializeCheckingPass, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(InitializeCheckingPass)
+  LogicalResult initialize(MLIRContext *ctx) final {
+    initialized = true;
+    return success();
+  }
+  bool initialized = false;
+
+  void runOnOperation() override {
+    if (!initialized) {
+      getOperation()->emitError() << "Pass isn't initialized!";
+      signalPassFailure();
+    }
+  }
+};
+
+TEST(PassManagerTest, PassInitialization) {
+  MLIRContext context;
+  context.allowUnregisteredDialects();
+
+  // Create a module
+  OwningOpRef<ModuleOp> module(ModuleOp::create(UnknownLoc::get(&context)));
+
+  // Instantiate and run our pass.
+  auto pm = PassManager::on<ModuleOp>(&context);
+  pm.addPass(std::make_unique<InitializeCheckingPass>());
+  EXPECT_TRUE(succeeded(pm.run(module.get())));
+
+  // Adding a second copy of the pass, we should also initialize it!
+  pm.addPass(std::make_unique<InitializeCheckingPass>());
+  EXPECT_TRUE(succeeded(pm.run(module.get())));
 }
 
 } // namespace

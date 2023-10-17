@@ -1,3 +1,4 @@
+import("//llvm/include/llvm/Config/config.gni")
 import("//llvm/lib/DebugInfo/PDB/enable_dia.gni")
 import("//llvm/lib/Target/targets.gni")
 import("//llvm/lib/Target/targets_with_asm_parsers.gni")
@@ -46,8 +47,8 @@ declare_args() {
   # Enable additional checks that alter the LLVM C++ ABI.
   llvm_enable_abi_breaking_checks = llvm_enable_assertions
 
-  # Iterate unordered llvm containers in reverse.
-  llvm_enable_reverse_iteration = false
+  # Force enable statistics.
+  llvm_force_enable_stats = false
 
   # glibc is at least 2.33 which has mallinfo2.
   # TODO: remove this once nobody using the gn build is building against an old glibc.
@@ -82,6 +83,7 @@ write_cmake_config("config") {
     "ENABLE_BACKTRACES=1",
     "ENABLE_CRASH_OVERRIDES=1",
     "BACKTRACE_HEADER=execinfo.h",
+    "HAVE_BUILTIN_THREAD_POINTER=",
     "HAVE_CRASHREPORTERCLIENT_H=",
     "HAVE_DECL_FE_ALL_EXCEPT=1",
     "HAVE_DECL_FE_INEXACT=1",
@@ -96,7 +98,6 @@ write_cmake_config("config") {
     "HAVE_LIBPSAPI=",
     "HAVE_MALLCTL=",
     "HAVE_SIGNAL_H=1",
-    "HAVE_STRERROR=1",
     "HAVE_SYS_STAT_H=1",
     "HAVE_SYS_TYPES_H=1",
     "HAVE_VALGRIND_VALGRIND_H=",
@@ -139,7 +140,6 @@ write_cmake_config("config") {
     values += [
       "HAVE_FUTIMENS=1",
       "HAVE_LINK_H=1",
-      "HAVE_LSEEK64=1",
       "HAVE_MALLINFO=1",
       "HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC=1",
     ]
@@ -147,7 +147,6 @@ write_cmake_config("config") {
     values += [
       "HAVE_FUTIMENS=",
       "HAVE_LINK_H=",
-      "HAVE_LSEEK64=",
       "HAVE_MALLINFO=",
       "HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC=",
     ]
@@ -323,7 +322,6 @@ write_cmake_config("llvm-config") {
     "LLVM_ENABLE_DUMP=",
     "LLVM_ENABLE_HTTPLIB=",
     "LLVM_ENABLE_ZSTD=",
-    "LLVM_FORCE_ENABLE_STATS=",
     "LLVM_FORCE_USE_OLD_TOOLCHAIN=",
     "LLVM_HAS_ATOMICS=1",
     "LLVM_HAVE_TFLITE=",
@@ -376,12 +374,6 @@ write_cmake_config("llvm-config") {
     ]
   }
 
-  if (llvm_enable_libxar) {
-    values += [ "LLVM_HAVE_LIBXAR=1" ]
-  } else {
-    values += [ "LLVM_HAVE_LIBXAR=" ]
-  }
-
   if (llvm_enable_dia_sdk) {
     values += [ "LLVM_ENABLE_DIA_SDK=1" ]
   } else {
@@ -404,6 +396,12 @@ write_cmake_config("llvm-config") {
     values += [ "LLVM_ENABLE_CURL=1" ]
   } else {
     values += [ "LLVM_ENABLE_CURL=" ]
+  }
+
+  if (llvm_force_enable_stats) {
+    values += [ "LLVM_FORCE_ENABLE_STATS=1" ]
+  } else {
+    values += [ "LLVM_FORCE_ENABLE_STATS=" ]
   }
 }
 

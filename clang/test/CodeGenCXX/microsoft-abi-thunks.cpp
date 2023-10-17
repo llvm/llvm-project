@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -no-opaque-pointers -fno-rtti -emit-llvm %s -o - -triple=i386-pc-win32 >%t 2>&1
+// RUN: %clang_cc1 -fno-rtti -emit-llvm %s -o - -triple=i386-pc-win32 >%t 2>&1
 // RUN: FileCheck --check-prefix=MANGLING %s < %t
 // RUN: FileCheck --check-prefix=XMANGLING %s < %t
 // RUN: FileCheck --check-prefix=CODEGEN %s < %t
-// RUN: %clang_cc1 -no-opaque-pointers -fno-rtti -emit-llvm %s -o - -triple=x86_64-pc-win32 2>&1 | FileCheck --check-prefix=MANGLING-X64 %s
+// RUN: %clang_cc1 -fno-rtti -emit-llvm %s -o - -triple=x86_64-pc-win32 2>&1 | FileCheck --check-prefix=MANGLING-X64 %s
 
 void foo(void *);
 
@@ -61,15 +61,15 @@ struct C : A, B {
 
 C::C() {}  // Emits vftable and forces thunk generation.
 
-// CODEGEN-LABEL: define linkonce_odr dso_local x86_thiscallcc noundef i8* @"??_EC@@W3AEPAXI@Z"(%struct.C* noundef %this, i32 noundef %should_call_delete) {{.*}} comdat
-// CODEGEN:   getelementptr i8, i8* {{.*}}, i32 -4
+// CODEGEN-LABEL: define linkonce_odr dso_local x86_thiscallcc noundef ptr @"??_EC@@W3AEPAXI@Z"(ptr noundef %this, i32 noundef %should_call_delete) {{.*}} comdat
+// CODEGEN:   getelementptr i8, ptr {{.*}}, i32 -4
 // FIXME: should actually call _EC, not _GC.
-// CODEGEN:   call x86_thiscallcc noundef i8* @"??_GC@@UAEPAXI@Z"
+// CODEGEN:   call x86_thiscallcc noundef ptr @"??_GC@@UAEPAXI@Z"
 // CODEGEN: ret
 
-// CODEGEN-LABEL: define linkonce_odr dso_local x86_thiscallcc void @"?public_f@C@@W3AEXXZ"(%struct.C*
-// CODEGEN:   getelementptr i8, i8* {{.*}}, i32 -4
-// CODEGEN:   call x86_thiscallcc void @"?public_f@C@@UAEXXZ"(%struct.C*
+// CODEGEN-LABEL: define linkonce_odr dso_local x86_thiscallcc void @"?public_f@C@@W3AEXXZ"(ptr
+// CODEGEN:   getelementptr i8, ptr {{.*}}, i32 -4
+// CODEGEN:   call x86_thiscallcc void @"?public_f@C@@UAEXXZ"(ptr
 // CODEGEN: ret
 
 void zoo(C* obj) {
@@ -91,9 +91,9 @@ struct E : D {
 
 E::E() {}  // Emits vftable and forces thunk generation.
 
-// CODEGEN-LABEL: define weak_odr dso_local x86_thiscallcc noundef %struct.C* @"?goo@E@@QAEPAUB@@XZ"{{.*}} comdat
-// CODEGEN:   call x86_thiscallcc noundef %struct.C* @"?goo@E@@UAEPAUC@@XZ"
-// CODEGEN:   getelementptr inbounds i8, i8* {{.*}}, i32 4
+// CODEGEN-LABEL: define weak_odr dso_local x86_thiscallcc noundef ptr @"?goo@E@@QAEPAUB@@XZ"{{.*}} comdat
+// CODEGEN:   call x86_thiscallcc noundef ptr @"?goo@E@@UAEPAUC@@XZ"
+// CODEGEN:   getelementptr inbounds i8, ptr {{.*}}, i32 4
 // CODEGEN: ret
 
 struct F : virtual A, virtual B {
@@ -124,18 +124,15 @@ struct I : D {
 
 I::I() {}  // Emits vftable and forces thunk generation.
 
-// CODEGEN-LABEL: define weak_odr dso_local x86_thiscallcc noundef %struct.{{[BF]}}* @"?goo@I@@QAEPAUB@@XZ"{{.*}} comdat
-// CODEGEN: %[[ORIG_RET:.*]] = call x86_thiscallcc noundef %struct.F* @"?goo@I@@UAEPAUF@@XZ"
-// CODEGEN: %[[ORIG_RET_i8:.*]] = bitcast %struct.F* %[[ORIG_RET]] to i8*
-// CODEGEN: %[[VBPTR_i8:.*]] = getelementptr inbounds i8, i8* %[[ORIG_RET_i8]], i32 4
-// CODEGEN: %[[VBPTR:.*]] = bitcast i8* %[[VBPTR_i8]] to i32**
-// CODEGEN: %[[VBTABLE:.*]] = load i32*, i32** %[[VBPTR]]
-// CODEGEN: %[[VBASE_OFFSET_PTR:.*]] = getelementptr inbounds i32, i32* %[[VBTABLE]], i32 2
-// CODEGEN: %[[VBASE_OFFSET:.*]] = load i32, i32* %[[VBASE_OFFSET_PTR]]
-// CODEGEN: %[[RES_i8:.*]] = getelementptr inbounds i8, i8* %[[VBPTR_i8]], i32 %[[VBASE_OFFSET]]
-// CODEGEN: %[[RES:.*]] = bitcast i8* %[[RES_i8]] to %struct.F*
-// CODEGEN: phi %struct.F* {{.*}} %[[RES]]
-// CODEGEN: ret %struct.{{[BF]}}*
+// CODEGEN-LABEL: define weak_odr dso_local x86_thiscallcc noundef ptr @"?goo@I@@QAEPAUB@@XZ"{{.*}} comdat
+// CODEGEN: %[[ORIG_RET:.*]] = call x86_thiscallcc noundef ptr @"?goo@I@@UAEPAUF@@XZ"
+// CODEGEN: %[[VBPTR_i8:.*]] = getelementptr inbounds i8, ptr %[[ORIG_RET]], i32 4
+// CODEGEN: %[[VBTABLE:.*]] = load ptr, ptr %[[VBPTR_i8]]
+// CODEGEN: %[[VBASE_OFFSET_PTR:.*]] = getelementptr inbounds i32, ptr %[[VBTABLE]], i32 2
+// CODEGEN: %[[VBASE_OFFSET:.*]] = load i32, ptr %[[VBASE_OFFSET_PTR]]
+// CODEGEN: %[[RES_i8:.*]] = getelementptr inbounds i8, ptr %[[VBPTR_i8]], i32 %[[VBASE_OFFSET]]
+// CODEGEN: phi ptr {{.*}} %[[RES_i8]]
+// CODEGEN: ret ptr
 
 namespace CrashOnThunksForAttributedType {
 // We used to crash on this because the type of foo is an AttributedType, not
@@ -160,5 +157,5 @@ struct E : D {
 E::E() {}
 E e;
 // Class with internal linkage has internal linkage thunks.
-// CODEGEN: define internal x86_thiscallcc noundef %struct.C* @"?goo@E@?A0x{{[^@]*}}@@QAEPAUB@@XZ"
+// CODEGEN: define internal x86_thiscallcc noundef ptr @"?goo@E@?A0x{{[^@]*}}@@QAEPAUB@@XZ"
 }

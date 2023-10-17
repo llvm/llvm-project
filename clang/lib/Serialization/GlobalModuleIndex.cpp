@@ -25,12 +25,12 @@
 #include "llvm/Bitstream/BitstreamWriter.h"
 #include "llvm/Support/DJB.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/LockFileManager.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/OnDiskHashTable.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cstdio>
 using namespace clang;
 using namespace serialization;
@@ -89,8 +89,10 @@ public:
   static std::pair<unsigned, unsigned>
   ReadKeyDataLength(const unsigned char*& d) {
     using namespace llvm::support;
-    unsigned KeyLen = endian::readNext<uint16_t, little, unaligned>(d);
-    unsigned DataLen = endian::readNext<uint16_t, little, unaligned>(d);
+    unsigned KeyLen =
+        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(d);
+    unsigned DataLen =
+        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(d);
     return std::make_pair(KeyLen, DataLen);
   }
 
@@ -111,7 +113,8 @@ public:
 
     data_type Result;
     while (DataLen > 0) {
-      unsigned ID = endian::readNext<uint32_t, little, unaligned>(d);
+      unsigned ID =
+          endian::readNext<uint32_t, llvm::endianness::little, unaligned>(d);
       Result.push_back(ID);
       DataLen -= 4;
     }
@@ -281,15 +284,6 @@ GlobalModuleIndex::readIndex(StringRef Path) {
                         llvm::Error::success());
 }
 
-void
-GlobalModuleIndex::getKnownModules(SmallVectorImpl<ModuleFile *> &ModuleFiles) {
-  ModuleFiles.clear();
-  for (unsigned I = 0, N = Modules.size(); I != N; ++I) {
-    if (ModuleFile *MF = Modules[I].File)
-      ModuleFiles.push_back(MF);
-  }
-}
-
 void GlobalModuleIndex::getModuleDependencies(
        ModuleFile *File,
        SmallVectorImpl<ModuleFile *> &Dependencies) {
@@ -414,15 +408,15 @@ namespace {
     const PCHContainerReader &PCHContainerRdr;
 
     /// Mapping from files to module file information.
-    typedef llvm::MapVector<const FileEntry *, ModuleFileInfo> ModuleFilesMap;
+    using ModuleFilesMap = llvm::MapVector<FileEntryRef, ModuleFileInfo>;
 
     /// Information about each of the known module files.
     ModuleFilesMap ModuleFiles;
 
     /// Mapping from the imported module file to the imported
     /// information.
-    typedef std::multimap<const FileEntry *, ImportedModuleFileInfo>
-        ImportedModuleFilesMap;
+    using ImportedModuleFilesMap =
+        std::multimap<FileEntryRef, ImportedModuleFileInfo>;
 
     /// Information about each importing of a module file.
     ImportedModuleFilesMap ImportedModuleFiles;
@@ -439,9 +433,8 @@ namespace {
     void emitBlockInfoBlock(llvm::BitstreamWriter &Stream);
 
     /// Retrieve the module file information for the given file.
-    ModuleFileInfo &getModuleFileInfo(const FileEntry *File) {
-      llvm::MapVector<const FileEntry *, ModuleFileInfo>::iterator Known
-        = ModuleFiles.find(File);
+    ModuleFileInfo &getModuleFileInfo(FileEntryRef File) {
+      auto Known = ModuleFiles.find(File);
       if (Known != ModuleFiles.end())
         return Known->second;
 
@@ -457,7 +450,7 @@ namespace {
         : FileMgr(FileMgr), PCHContainerRdr(PCHContainerRdr) {}
 
     /// Load the contents of the given module file into the builder.
-    llvm::Error loadModuleFile(const FileEntry *File);
+    llvm::Error loadModuleFile(FileEntryRef File);
 
     /// Write the index to the given bitstream.
     /// \returns true if an error occurred, false otherwise.
@@ -521,14 +514,15 @@ namespace {
       // The first bit indicates whether this identifier is interesting.
       // That's all we care about.
       using namespace llvm::support;
-      unsigned RawID = endian::readNext<uint32_t, little, unaligned>(d);
+      unsigned RawID =
+          endian::readNext<uint32_t, llvm::endianness::little, unaligned>(d);
       bool IsInteresting = RawID & 0x01;
       return std::make_pair(k, IsInteresting);
     }
   };
 }
 
-llvm::Error GlobalModuleIndexBuilder::loadModuleFile(const FileEntry *File) {
+llvm::Error GlobalModuleIndexBuilder::loadModuleFile(FileEntryRef File) {
   // Open the module file.
 
   auto Buffer = FileMgr.getBufferForFile(File, /*isVolatile=*/true);
@@ -634,6 +628,9 @@ llvm::Error GlobalModuleIndexBuilder::loadModuleFile(const FileEntry *File) {
         // Skip the imported kind
         ++Idx;
 
+        // Skip if it is standard C++ module
+        ++Idx;
+
         // Skip the import location
         ++Idx;
 
@@ -659,9 +656,9 @@ llvm::Error GlobalModuleIndexBuilder::loadModuleFile(const FileEntry *File) {
         Idx += Length;
 
         // Find the imported module file.
-        auto DependsOnFile
-          = FileMgr.getFile(ImportedFile, /*OpenFile=*/false,
-                            /*CacheFailure=*/false);
+        auto DependsOnFile =
+            FileMgr.getOptionalFileRef(ImportedFile, /*OpenFile=*/false,
+                                       /*CacheFailure=*/false);
 
         if (!DependsOnFile)
           return llvm::createStringError(std::errc::bad_file_descriptor,
@@ -703,9 +700,12 @@ llvm::Error GlobalModuleIndexBuilder::loadModuleFile(const FileEntry *File) {
     }
 
     // Get Signature.
-    if (State == DiagnosticOptionsBlock && Code == SIGNATURE)
-      getModuleFileInfo(File).Signature = ASTFileSignature::create(
-          Record.begin(), Record.begin() + ASTFileSignature::size);
+    if (State == DiagnosticOptionsBlock && Code == SIGNATURE) {
+      auto Signature = ASTFileSignature::create(Blob.begin(), Blob.end());
+      assert(Signature != ASTFileSignature::createDummy() &&
+             "Dummy AST file signature not backpatched in ASTWriter.");
+      getModuleFileInfo(File).Signature = Signature;
+    }
 
     // We don't care about this record.
   }
@@ -733,7 +733,7 @@ public:
   std::pair<unsigned,unsigned>
   EmitKeyDataLength(raw_ostream& Out, key_type_ref Key, data_type_ref Data) {
     using namespace llvm::support;
-    endian::Writer LE(Out, little);
+    endian::Writer LE(Out, llvm::endianness::little);
     unsigned KeyLen = Key.size();
     unsigned DataLen = Data.size() * 4;
     LE.write<uint16_t>(KeyLen);
@@ -749,7 +749,7 @@ public:
                 unsigned DataLen) {
     using namespace llvm::support;
     for (unsigned I = 0, N = Data.size(); I != N; ++I)
-      endian::write<uint32_t>(Out, Data[I], little);
+      endian::write<uint32_t>(Out, Data[I], llvm::endianness::little);
   }
 };
 
@@ -757,14 +757,14 @@ public:
 
 bool GlobalModuleIndexBuilder::writeIndex(llvm::BitstreamWriter &Stream) {
   for (auto MapEntry : ImportedModuleFiles) {
-    auto *File = MapEntry.first;
+    auto File = MapEntry.first;
     ImportedModuleFileInfo &Info = MapEntry.second;
     if (getModuleFileInfo(File).Signature) {
       if (getModuleFileInfo(File).Signature != Info.StoredSignature)
         // Verify Signature.
         return true;
-    } else if (Info.StoredSize != File->getSize() ||
-               Info.StoredModTime != File->getModificationTime())
+    } else if (Info.StoredSize != File.getSize() ||
+               Info.StoredModTime != File.getModificationTime())
       // Verify Size and ModTime.
       return true;
   }
@@ -795,11 +795,11 @@ bool GlobalModuleIndexBuilder::writeIndex(llvm::BitstreamWriter &Stream) {
        M != MEnd; ++M) {
     Record.clear();
     Record.push_back(M->second.ID);
-    Record.push_back(M->first->getSize());
-    Record.push_back(M->first->getModificationTime());
+    Record.push_back(M->first.getSize());
+    Record.push_back(M->first.getModificationTime());
 
     // File name
-    StringRef Name(M->first->getName());
+    StringRef Name(M->first.getName());
     Record.push_back(Name.size());
     Record.append(Name.begin(), Name.end());
 
@@ -828,7 +828,7 @@ bool GlobalModuleIndexBuilder::writeIndex(llvm::BitstreamWriter &Stream) {
       using namespace llvm::support;
       llvm::raw_svector_ostream Out(IdentifierTable);
       // Make sure that no bucket is at offset 0
-      endian::write<uint32_t>(Out, 0, little);
+      endian::write<uint32_t>(Out, 0, llvm::endianness::little);
       BucketOffset = Generator.Emit(Out, Trait);
     }
 
@@ -895,7 +895,7 @@ GlobalModuleIndex::writeIndex(FileManager &FileMgr,
     }
 
     // If we can't find the module file, skip it.
-    auto ModuleFile = FileMgr.getFile(D->path());
+    auto ModuleFile = FileMgr.getOptionalFileRef(D->path());
     if (!ModuleFile)
       continue;
 
@@ -913,8 +913,10 @@ GlobalModuleIndex::writeIndex(FileManager &FileMgr,
                                      "failed writing index");
   }
 
-  return llvm::writeFileAtomically((IndexPath + "-%%%%%%%%").str(), IndexPath,
-                                   OutputBuffer);
+  return llvm::writeToOutput(IndexPath, [&OutputBuffer](llvm::raw_ostream &OS) {
+    OS << OutputBuffer;
+    return llvm::Error::success();
+  });
 }
 
 namespace {

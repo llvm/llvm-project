@@ -137,6 +137,8 @@ template <> struct ScalarEnumerationTraits<MachineJumpTableInfo::JTEntryKind> {
                 MachineJumpTableInfo::EK_GPRel32BlockAddress);
     IO.enumCase(EntryKind, "label-difference32",
                 MachineJumpTableInfo::EK_LabelDifference32);
+    IO.enumCase(EntryKind, "label-difference64",
+                MachineJumpTableInfo::EK_LabelDifference64);
     IO.enumCase(EntryKind, "inline", MachineJumpTableInfo::EK_Inline);
     IO.enumCase(EntryKind, "custom32", MachineJumpTableInfo::EK_Custom32);
   }
@@ -301,6 +303,30 @@ template <> struct MappingTraits<MachineStackObject> {
                        StringValue()); // Don't print it out when it's empty.
   }
 
+  static const bool flow = true;
+};
+
+/// Serializable representation of the MCRegister variant of
+/// MachineFunction::VariableDbgInfo.
+struct EntryValueObject {
+  StringValue EntryValueRegister;
+  StringValue DebugVar;
+  StringValue DebugExpr;
+  StringValue DebugLoc;
+  bool operator==(const EntryValueObject &Other) const {
+    return EntryValueRegister == Other.EntryValueRegister &&
+           DebugVar == Other.DebugVar && DebugExpr == Other.DebugExpr &&
+           DebugLoc == Other.DebugLoc;
+  }
+};
+
+template <> struct MappingTraits<EntryValueObject> {
+  static void mapping(yaml::IO &YamlIO, EntryValueObject &Object) {
+    YamlIO.mapRequired("entry-value-register", Object.EntryValueRegister);
+    YamlIO.mapRequired("debug-info-variable", Object.DebugVar);
+    YamlIO.mapRequired("debug-info-expression", Object.DebugExpr);
+    YamlIO.mapRequired("debug-info-location", Object.DebugLoc);
+  }
   static const bool flow = true;
 };
 
@@ -572,6 +598,7 @@ template <> struct MappingTraits<MachineJumpTable::Entry> {
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::MachineFunctionLiveIn)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::VirtualRegisterDefinition)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::MachineStackObject)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::EntryValueObject)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::FixedMachineStackObject)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::CallSiteInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::MachineConstantPoolValue)
@@ -704,6 +731,7 @@ struct MachineFunction {
   bool HasEHCatchret = false;
   bool HasEHScopes = false;
   bool HasEHFunclets = false;
+  bool IsOutlined = false;
 
   bool FailsVerification = false;
   bool TracksDebugUserValues = false;
@@ -715,6 +743,7 @@ struct MachineFunction {
   // Frame information
   MachineFrameInfo FrameInfo;
   std::vector<FixedMachineStackObject> FixedStackObjects;
+  std::vector<EntryValueObject> EntryValueObjects;
   std::vector<MachineStackObject> StackObjects;
   std::vector<MachineConstantPoolValue> Constants; /// Constant pool.
   std::unique_ptr<MachineFunctionInfo> MachineFuncInfo;
@@ -742,6 +771,7 @@ template <> struct MappingTraits<MachineFunction> {
     YamlIO.mapOptional("hasEHCatchret", MF.HasEHCatchret, false);
     YamlIO.mapOptional("hasEHScopes", MF.HasEHScopes, false);
     YamlIO.mapOptional("hasEHFunclets", MF.HasEHFunclets, false);
+    YamlIO.mapOptional("isOutlined", MF.IsOutlined, false);
     YamlIO.mapOptional("debugInstrRef", MF.UseDebugInstrRef, false);
 
     YamlIO.mapOptional("failsVerification", MF.FailsVerification, false);
@@ -758,6 +788,8 @@ template <> struct MappingTraits<MachineFunction> {
                        std::vector<FixedMachineStackObject>());
     YamlIO.mapOptional("stack", MF.StackObjects,
                        std::vector<MachineStackObject>());
+    YamlIO.mapOptional("entry_values", MF.EntryValueObjects,
+                       std::vector<EntryValueObject>());
     YamlIO.mapOptional("callSites", MF.CallSitesInfo,
                        std::vector<CallSiteInfo>());
     YamlIO.mapOptional("debugValueSubstitutions", MF.DebugValueSubstitutions,

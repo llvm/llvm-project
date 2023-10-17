@@ -1,3 +1,5 @@
+# See notes in lib/TableGen/CMakeLists.txt regarding why this library is
+# declared as it is. The same dependency rules apply.
 llvm_add_library(MLIRTblgenLib STATIC
   MlirTblgenMain.cpp
 

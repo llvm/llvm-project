@@ -34,6 +34,27 @@ LANGOPT(NoSignedZeros, 1, false)
 LANGOPT(AssociativeMath, 1, false)
 /// Allow division operations to be reassociated
 LANGOPT(ReciprocalMath, 1, false)
+/// Specify version of OpenMP standard
+LANGOPT(OpenMPVersion, 32, 0)
+/// Generate code only for OpenMP target device
+LANGOPT(OpenMPIsTargetDevice, 1, false)
+/// Generate OpenMP target code only for GPUs
+LANGOPT(OpenMPIsGPU, 1, false)
+/// Enable debugging in the OpenMP offloading device RTL
+LANGOPT(OpenMPTargetDebug, 32, 0)
+/// Assume work-shared loops do not have more iterations than participating
+/// threads.
+LANGOPT(OpenMPThreadSubscription, 1, 0)
+/// Assume distributed loops do not have more iterations than participating
+/// teams.
+LANGOPT(OpenMPTeamSubscription, 1, 0)
+/// Assume that no thread in a parallel region will modify an ICV.
+LANGOPT(OpenMPNoThreadState, 1, 0)
+/// Assume that no thread in a parallel region will encounter a parallel region
+LANGOPT(OpenMPNoNestedParallelism, 1, 0)
+
+LANGOPT(VScaleMin, 32, 0)  ///< Minimum vscale range value
+LANGOPT(VScaleMax, 32, 0)  ///< Maximum vscale range value
 
 #undef LANGOPT
 #undef ENUM_LANGOPT
