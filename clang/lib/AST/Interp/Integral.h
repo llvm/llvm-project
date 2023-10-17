@@ -121,6 +121,9 @@ public:
 
   constexpr static unsigned bitWidth() { return Bits; }
   constexpr static unsigned objectReprBits() { return Bits; }
+  constexpr static unsigned valueReprBits(const ASTContext &Ctx) {
+    return Bits;
+  }
   constexpr static unsigned valueReprBytes(const ASTContext &Ctx) {
     return Ctx.toCharUnitsFromBits(Bits).getQuantity();
   }

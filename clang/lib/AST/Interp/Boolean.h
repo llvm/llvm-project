@@ -69,6 +69,9 @@ class Boolean final {
   constexpr static unsigned bitWidth() { return 1; }
   constexpr static unsigned objectReprBits() { return 8; }
   constexpr static unsigned valueReprBytes(const ASTContext &Ctx) { return 1; }
+  constexpr static unsigned valueReprBits(const ASTContext &Ctx) {
+    return 8;
+  } // FIXME: Is this correct?
 
   bool isZero() const { return !V; }
   bool isMin() const { return isZero(); }

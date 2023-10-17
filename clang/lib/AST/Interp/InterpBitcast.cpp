@@ -71,25 +71,68 @@ static void swapBytes(std::byte *M, size_t N) {
 /// All offsets are in bits.
 struct BitTracker {
   llvm::BitVector Initialized;
+  llvm::BitVector Data_;
   std::vector<std::byte> Data;
 
   BitTracker() = default;
 
   size_t size() const {
     assert(Initialized.size() == Data.size());
+    assert(Initialized.size() == Data_.size());
     return Initialized.size();
   }
 
-  std::byte *getBytes(size_t Offset) { return Data.data() + Offset; }
-  bool allInitialized(size_t Offset, size_t Size) const {
-    for (size_t I = Offset; I != (Size + Offset); ++I) {
-      if (!Initialized[I])
-        return false;
-    }
-    return true;
+  std::byte *getBytes(size_t Offset) {
+    assert(false);
+    return Data.data() + Offset;
   }
 
+  const std::byte *getBytes(size_t BitOffset, int a) {
+    assert(BitOffset % 8 == 0);
+    return reinterpret_cast<const std::byte *>(Data_.getData().data()) +
+           (BitOffset / 8);
+  }
+
+  bool allInitialized(size_t Offset, size_t Size) const {
+    return Initialized.find_first_unset_in(Offset, Offset + Size) == -1;
+  }
+
+  void pushData(const std::byte *data, size_t BitOffset, size_t BitWidth) {
+    assert(BitOffset >= Data_.size());
+    // First, fill up the bit vector until BitOffset. The bits are all 0
+    // but we record them as indeterminate.
+    {
+      Data_.resize(BitOffset, false);
+      Initialized.resize(BitOffset, false);
+    }
+
+    size_t BitsHandled = 0;
+    // Read all full bytes first
+    for (size_t I = 0; I != BitWidth / 8; ++I) {
+      for (unsigned X = 0; X != 8; ++X) {
+        Data_.push_back((data[I] & std::byte(1 << X)) != std::byte{0});
+        Initialized.push_back(true);
+        ++BitsHandled;
+      }
+    }
+
+    // Rest of the bits.
+    assert((BitWidth - BitsHandled) < 8);
+    for (size_t I = 0, E = (BitWidth - BitsHandled); I != E; ++I) {
+      Data_.push_back((data[BitWidth / 8] & std::byte(1 << I)) != std::byte{0});
+      Initialized.push_back(true);
+      ++BitsHandled;
+    }
+  }
+
+  void pushZeroes(size_t Amount) {
+    Data_.resize(Data_.size() + Amount, false);
+    Initialized.resize(Data_.size() + Amount, true);
+  }
+
+#if 0
   std::byte *getWritableBytes(size_t Offset, size_t Size, bool InitValue) {
+    assert(false);
     assert(Offset >= Data.size());
     assert(Size > 0);
 
@@ -104,17 +147,17 @@ struct BitTracker {
 
     return Data.data() + Offset;
   }
+#endif
 
   void markUninitializedUntil(size_t Offset) {
-    assert(Offset >= Data.size());
-
-    size_t NBytes = Offset - Data.size();
-    for (size_t I = 0; I != NBytes; ++I)
-      Initialized.push_back(false);
-    Data.resize(Offset);
+    assert(Offset >= Data_.size());
+    Data_.resize(Offset, false);
+    Initialized.resize(Offset, false);
+    return;
   }
 
   void zeroUntil(size_t Offset) {
+    assert(false);
     assert(Offset >= Data.size());
 
     assert(Data.size() == Initialized.size());
@@ -330,6 +373,7 @@ bool DoBitCast(InterpState &S, CodePtr OpPC, const Pointer &P, std::byte *Buff,
 
   const Context &Ctx = S.getContext();
   const ASTContext &ASTCtx = Ctx.getASTContext();
+  bool BigEndian = ASTCtx.getTargetInfo().isBigEndian();
   uint64_t PointerSizeInBits =
       ASTCtx.getTargetInfo().getPointerWidth(LangAS::Default);
 
@@ -353,9 +397,13 @@ bool DoBitCast(InterpState &S, CodePtr OpPC, const Pointer &P, std::byte *Buff,
 
         BITCAST_TYPE_SWITCH_WITH_FLOAT(T, {
           T Val = Ptr.deref<T>();
-          std::byte Buff[sizeof(T)];
+          std::byte *Buff = (std::byte *)std::malloc(
+              ObjectReprChars.getQuantity()); //[sizeof(T)];
           Val.bitcastToMemory(Buff);
+          if (BigEndian)
+            swapBytes(Buff, ObjectReprChars.getQuantity());
           F.pushData(Buff, BitOffset, BitWidth);
+          std::free(Buff);
         });
         return true;
       });
@@ -366,6 +414,8 @@ bool DoBitCast(InterpState &S, CodePtr OpPC, const Pointer &P, std::byte *Buff,
   assert(F.Data.size() == BuffSize * 8);
   std::memcpy(Buff, F.Data.getData().data(), BuffSize);
 
+  if (BigEndian)
+    swapBytes(Buff, BuffSize);
   return Success;
 }
 
@@ -392,68 +442,87 @@ bool DoBitCastToPtr(InterpState &S, const Pointer &P, Pointer &DestPtr,
 
   const Context &Ctx = S.getContext();
   const ASTContext &ASTCtx = Ctx.getASTContext();
-  uint64_t PointerSize =
-      ASTCtx
-          .toCharUnitsFromBits(
-              ASTCtx.getTargetInfo().getPointerWidth(LangAS::Default))
-          .getQuantity();
+  uint64_t PointerSizeInBits =
+      ASTCtx.getTargetInfo().getPointerWidth(LangAS::Default);
   bool BigEndian = ASTCtx.getTargetInfo().isBigEndian();
 
   BitTracker Bytes;
   enumeratePointerFields(
       P, S.getContext(),
-      [&](const Pointer &P, PrimType T, size_t ByteOffset) -> bool {
-        ByteOffset /= 8;
+      [&](const Pointer &P, PrimType T, size_t BitOffset) -> bool {
         bool PtrInitialized = P.isInitialized();
         if (!PtrInitialized) {
-          Bytes.markUninitializedUntil(ByteOffset + primSize(T));
+          Bytes.markUninitializedUntil(BitOffset + (primSize(T) * 8));
           return true;
         }
 
         assert(P.isInitialized());
         // nullptr_t is a PT_Ptr for us, but it's still not std::is_pointer_v.
         if (T == PT_Ptr) {
-          assert(P.getType()->isNullPtrType());
-          std::byte *M = Bytes.getWritableBytes(ByteOffset, PointerSize,
-                                                /*InitValue=*/true);
-          std::memset(M, 0, PointerSize);
+          Bytes.pushZeroes(PointerSizeInBits);
           return true;
         }
         BITCAST_TYPE_SWITCH_WITH_FLOAT(T, {
           T Val = P.deref<T>();
           unsigned ObjectReprBytes =
               ASTCtx.getTypeSizeInChars(P.getType()).getQuantity();
+
+          CharUnits ObjectReprChars = ASTCtx.getTypeSizeInChars(P.getType());
+          unsigned BitWidth;
+          if (const FieldDecl *FD = P.getField(); FD && FD->isBitField())
+            BitWidth = FD->getBitWidthValue(ASTCtx);
+          else
+            BitWidth = ASTCtx.toBits(ObjectReprChars);
+
           unsigned ValueReprBytes = Val.valueReprBytes(ASTCtx);
           assert(ObjectReprBytes >= ValueReprBytes);
 
-          std::byte *Dest = Bytes.getWritableBytes(ByteOffset, ValueReprBytes,
-                                                   PtrInitialized);
-          Val.bitcastToMemory(Dest);
-          Bytes.zeroUntil(ByteOffset + ObjectReprBytes);
+          std::byte *Buff = (std::byte *)std::malloc(
+              ObjectReprChars.getQuantity()); //[sizeof(T)];
+          // std::byte Buff[sizeof(T)];
+          Val.bitcastToMemory(Buff);
 
           if (BigEndian)
-            swapBytes(Dest, ValueReprBytes);
+            swapBytes(Buff, BitWidth / 8);
+          // if (BigEndian) XXX
+          // swapBytes(Dest, ValueReprBytes);
+          Bytes.pushData(Buff, BitOffset, BitWidth);
+          std::free(Buff);
         });
         return true;
       });
 
   bool Success = enumeratePointerFields(
       DestPtr, S.getContext(),
-      [&](const Pointer &P, PrimType T, size_t ByteOffset) -> bool {
-        ByteOffset /= 8;
+      [&](const Pointer &P, PrimType T, size_t BitOffset) -> bool {
         if (T == PT_Float) {
           const QualType FloatType = P.getFieldDesc()->getType();
           const auto &Sem = ASTCtx.getFloatTypeSemantics(FloatType);
-          size_t ValueReprBytes =
-              ASTCtx.toCharUnitsFromBits(APFloat::semanticsSizeInBits(Sem))
-                  .getQuantity();
+          size_t ValueReprBits = ASTCtx.getTypeSize(FloatType);
 
-          std::byte *M = Bytes.getBytes(ByteOffset);
-
+          CharUnits ObjectReprChars = ASTCtx.getTypeSizeInChars(P.getType());
+          const std::byte *M = Bytes.getBytes(BitOffset, 1234);
+          std::byte *Buff = (std::byte *)std::malloc(
+              ObjectReprChars.getQuantity()); //[sizeof(T)];
+          std::memcpy(Buff, M, ObjectReprChars.getQuantity());
+          // Val.bitcastToMemory(Buff);
           if (BigEndian)
-            swapBytes(M, ValueReprBytes);
-          P.deref<Floating>() = Floating::bitcastFromMemory(M, Sem);
+            swapBytes(Buff, ObjectReprChars.getQuantity());
+
+          // F.pushData(Buff, BitOffset, BitWidth);
+
+          // const std::byte *M = Bytes.getBytes(BitOffset, 1234);
+          // size_t ValueReprBytes =
+          // ASTCtx.toCharUnitsFromBits(APFloat::semanticsSizeInBits(Sem))
+          //.getQuantity();
+
+          // std::byte *M = Bytes.getBytes(ByteOffset);
+
+          // if (BigEndian)
+          // swapBytes(M, ValueReprBytes);
+          P.deref<Floating>() = Floating::bitcastFromMemory(Buff, Sem);
           P.initialize();
+          std::free(Buff);
           return true;
         }
         if (T == PT_Ptr) {
@@ -467,19 +536,19 @@ bool DoBitCastToPtr(InterpState &S, const Pointer &P, Pointer &DestPtr,
         BITCAST_TYPE_SWITCH(T, {
           T &Val = P.deref<T>();
 
-          size_t ValueReprBytes = T::valueReprBytes(ASTCtx);
+          // size_t ValueReprBytes = T::valueReprBytes(ASTCtx);
+          size_t ValueReprBits = T::valueReprBits(ASTCtx);
           // Check if any of the bits we're about to read are uninitialized.
-          bool HasIndeterminateBytes =
-              !Bytes.allInitialized(ByteOffset, ValueReprBytes);
+          bool HasIndeterminateBits =
+              !Bytes.allInitialized(BitOffset, ValueReprBits);
 
-          if (HasIndeterminateBytes) {
+          if (HasIndeterminateBits) {
             // Always an error, unless the type of the field we're reading is
             // either unsigned char or std::byte.
             bool TargetIsUCharOrBytes =
-                (ValueReprBytes == 1 &&
-                 (P.getType()->isSpecificBuiltinType(BuiltinType::UChar) ||
-                  P.getType()->isSpecificBuiltinType(BuiltinType::Char_U) ||
-                  P.getType()->isStdByteType()));
+                (P.getType()->isSpecificBuiltinType(BuiltinType::UChar) ||
+                 P.getType()->isSpecificBuiltinType(BuiltinType::Char_U) ||
+                 P.getType()->isStdByteType());
 
             if (!TargetIsUCharOrBytes) {
               const Expr *E = S.Current->getExpr(OpPC);
@@ -491,12 +560,20 @@ bool DoBitCastToPtr(InterpState &S, const Pointer &P, Pointer &DestPtr,
             }
           }
 
-          std::byte *M = Bytes.getBytes(ByteOffset);
-          if (BigEndian)
-            swapBytes(M, ValueReprBytes);
-          Val = T::bitcastFromMemory(M);
+          assert(!P.getField()->isBitField());
 
-          if (!HasIndeterminateBytes)
+          std::byte *Copy = (std::byte *)std::malloc(ValueReprBits / 8);
+          const std::byte *M = Bytes.getBytes(BitOffset, 1234);
+
+          std::memcpy(Copy, M, ValueReprBits / 8);
+
+          if (BigEndian) {
+            swapBytes(Copy, ValueReprBits / 8);
+          }
+          Val = T::bitcastFromMemory(Copy);
+          std::free(Copy);
+
+          if (!HasIndeterminateBits)
             P.initialize();
         });
         return true;

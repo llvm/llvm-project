@@ -23,7 +23,6 @@
 typedef decltype(nullptr) nullptr_t;
 
 
-#if 0
 
 static_assert(sizeof(int) == 4);
 static_assert(sizeof(long long) == 8);
@@ -409,13 +408,15 @@ namespace MemberPointer {
     A a = {1, 2};
     return bit_cast<B>(a);
   }
+  /// FIXME: The following tests need the InitMap changes.
+#if 0
   constexpr char good_one = one().x[0] + one().x[2] + one().x[3];
   // ref-error@+2 {{constexpr variable 'bad_one' must be initialized by a constant expression}}
   // ref-note@+1 {{read of uninitialized object is not allowed in a constant expression}}
   constexpr char bad_one = one().x[1];
   // expected-error@-1 {{constexpr variable 'bad_one' must be initialized by a constant expression}}
   // expected-note@-2 {{read of uninitialized object is not allowed in a constant expression}}
-
+#endif
 
   constexpr A two() {
     B b = one(); // b.x[1] is indeterminate.
@@ -685,7 +686,6 @@ namespace StringLiterals {
                                           // ref-note {{initializer of 'Foo' is not a constant expression}}
 };
 
-#endif
 /// The current interpreter does not support bitcasts involving bitfields at all,
 /// so the following is mainly from comparing diagnostic output with GCC.
 namespace Bitfields {
@@ -753,4 +753,13 @@ namespace Bitfields {
                                                 // ref-note {{bit_cast involving bit-field is not yet supported}} \
                                                 // expected-error {{must be initialized by a constant expression}} \
                                                 // expected-note {{indeterminate value}}
-}
+
+
+  struct CharStruct {
+    unsigned char v;
+  };
+  constexpr CharStruct CS = __builtin_bit_cast(CharStruct, B);  // ref-error {{must be initialized by a constant expression}} \
+                                                                // ref-note {{bit_cast involving bit-field is not yet supported}} \
+                                                                // ref-note {{declared here}}
+  static_assert(CS.v == 155);} // ref-error {{not an integral constant expression}} \
+                               // ref-note {{initializer of 'CS' is not a constant expression}}
