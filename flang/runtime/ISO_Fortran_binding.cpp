@@ -125,16 +125,15 @@ RT_API_ATTRS int CFI_establish(CFI_cdesc_t *descriptor, void *base_addr,
 }
 
 RT_API_ATTRS int CFI_is_contiguous(const CFI_cdesc_t *descriptor) {
+  // See Descriptor::IsContiguous for the rationale.
   bool stridesAreContiguous{true};
   CFI_index_t bytes = descriptor->elem_len;
   for (int j{0}; j < descriptor->rank; ++j) {
-    stridesAreContiguous &= bytes == descriptor->dim[j].sm;
+    stridesAreContiguous &=
+        (bytes == descriptor->dim[j].sm) | (descriptor->dim[j].extent == 1);
     bytes *= descriptor->dim[j].extent;
   }
-  // One and zero element arrays are contiguous even if the descriptor
-  // byte strides are not perfect multiples.
-  if (stridesAreContiguous || bytes == 0 ||
-      bytes == static_cast<CFI_index_t>(descriptor->elem_len)) {
+  if (stridesAreContiguous || bytes == 0) {
     return 1;
   }
   return 0;
