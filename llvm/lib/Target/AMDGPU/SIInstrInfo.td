@@ -1582,7 +1582,7 @@ class getVOPSrc0ForVT<ValueType VT, bit IsTrue16, bit IsFake16 = 1> {
   RegisterOperand ret =
     !if(isFP,
       !if(!eq(VT.Size, 64),
-         VSrc_imm64_f64,
+         VSrc_f64,
          !if(!eq(VT.Value, f16.Value),
             !if(IsTrue16,
               !if(IsFake16, VSrcFake16_f16_Lo128, VSrcT_f16_Lo128),
@@ -1598,7 +1598,7 @@ class getVOPSrc0ForVT<ValueType VT, bit IsTrue16, bit IsFake16 = 1> {
          )
        ),
        !if(!eq(VT.Size, 64),
-          VSrc_imm64_b64,
+          VSrc_b64,
           !if(!eq(VT.Value, i16.Value),
             !if(IsTrue16,
               !if(IsFake16, VSrcFake16_b16_Lo128, VSrcT_b16_Lo128),

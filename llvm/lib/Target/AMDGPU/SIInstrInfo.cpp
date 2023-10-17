@@ -3938,8 +3938,6 @@ bool SIInstrInfo::isInlineConstant(const MachineOperand &MO,
   case AMDGPU::OPERAND_REG_INLINE_C_INT64:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
-  case AMDGPU::OPERAND_REG_IMM64_INT64:
-  case AMDGPU::OPERAND_REG_IMM64_FP64:
     return AMDGPU::isInlinableLiteral64(MO.getImm(),
                                         ST.hasInv2PiInlineImm());
   case AMDGPU::OPERAND_REG_IMM_INT16:

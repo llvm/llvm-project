@@ -1226,7 +1226,7 @@ def SSrc_b16 : RegOrB16 <"SReg_32", "OPERAND_REG_IMM">;
 def SSrc_f16 : RegOrF16 <"SReg_32", "OPERAND_REG_IMM">;
 def SSrc_b32 : RegOrB32 <"SReg_32", "OPERAND_REG_IMM">;
 def SSrc_f32 : RegOrF32 <"SReg_32", "OPERAND_REG_IMM">;
-def SSrc_b64 : RegOrB64 <"SReg_64", "OPERAND_REG_IMM64">;
+def SSrc_b64 : RegOrB64 <"SReg_64", "OPERAND_REG_IMM">;
 
 def SSrcOrLds_b32 : RegOrB32 <"SRegOrLds_32", "OPERAND_REG_IMM">;
 
@@ -1282,13 +1282,6 @@ def VSrc_f64 : RegOrF64 <"VS_64", "OPERAND_REG_IMM"> {
 }
 def VSrc_v2b32 : RegOrV2B32 <"VS_64", "OPERAND_REG_IMM">;
 def VSrc_v2f32 : RegOrV2F32 <"VS_64", "OPERAND_REG_IMM">;
-
-//  VSrc_imm64_* Operands with an SGPR, VGPR, a 32-bit immediate, or 64-bit
-//  immediate if supported by target.
-def VSrc_imm64_b64 : RegOrB64 <"VS_64", "OPERAND_REG_IMM64">;
-def VSrc_imm64_f64 : RegOrF64 <"VS_64", "OPERAND_REG_IMM64"> {
-  let DecoderMethod = "decodeOperand_VSrc_f64";
-}
 
 //===----------------------------------------------------------------------===//
 //  VSrc_*_Deferred Operands with an SGPR, VGPR or a 32-bit immediate for use

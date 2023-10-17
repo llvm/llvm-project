@@ -272,13 +272,11 @@ AMDGPUMCCodeEmitter::getLitEncoding(const MCOperand &MO,
 
   case AMDGPU::OPERAND_REG_IMM_INT64:
   case AMDGPU::OPERAND_REG_INLINE_C_INT64:
-  case AMDGPU::OPERAND_REG_IMM64_INT64:
      return getLit64Encoding(static_cast<uint64_t>(Imm), STI, false);
 
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
   case AMDGPU::OPERAND_REG_IMM_FP64:
-  case AMDGPU::OPERAND_REG_IMM64_FP64:
     return getLit64Encoding(static_cast<uint64_t>(Imm), STI, true);
 
   case AMDGPU::OPERAND_REG_IMM_INT16:
@@ -425,15 +423,8 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
       assert(STI.hasFeature(AMDGPU::Feature64BitLiterals));
       support::endian::write<uint64_t>(CB, Imm, support::endianness::little);
     } else {
-      switch (Desc.operands()[i].OperandType) {
-      default:
-        break;
-      case AMDGPU::OPERAND_REG_IMM_FP64:
-      case AMDGPU::OPERAND_REG_IMM64_FP64:
-        if (AMDGPU::isValid32BitLiteral(Imm, true))
-          Imm = Hi_32(Imm);
-        break;
-      }
+      if (Desc.operands()[i].OperandType == AMDGPU::OPERAND_REG_IMM_FP64)
+        Imm = Hi_32(Imm);
       support::endian::write<uint32_t>(CB, Imm, support::endianness::little);
     }
 

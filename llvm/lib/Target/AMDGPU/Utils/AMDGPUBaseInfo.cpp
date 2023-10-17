@@ -2590,7 +2590,6 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   case AMDGPU::OPERAND_REG_IMM_V2FP32:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP32:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
-  case AMDGPU::OPERAND_REG_IMM64_FP64:
       return true;
   default:
     return false;

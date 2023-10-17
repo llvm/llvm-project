@@ -260,7 +260,7 @@ public:
   }
 
   bool isInlinableImm(MVT type) const;
-  bool isLiteralImm(MVT type, bool Allow64Bit = false) const;
+  bool isLiteralImm(MVT type) const;
 
   bool isRegKind() const {
     return Kind == Register;
@@ -496,7 +496,7 @@ public:
   bool isSSrcB64() const {
     // TODO: Find out how SALU supports extension of 32-bit literals to 64 bits.
     // See isVSrc64().
-    return isSCSrcB64() || isLiteralImm(MVT::i64, true);
+    return isSCSrcB64() || isLiteralImm(MVT::i64);
   }
 
   bool isSSrcF32() const {
@@ -605,10 +605,6 @@ public:
     return isVCSrcF64() || isLiteralImm(MVT::i64);
   }
 
-  bool isVSrc_imm64B64() const {
-    return isVCSrcF64() || isLiteralImm(MVT::i64, true);
-  }
-
   bool isVSrcTB16() const { return isVCSrcTB16() || isLiteralImm(MVT::i16); }
 
   bool isVSrcTB16_Lo128() const {
@@ -649,10 +645,6 @@ public:
 
   bool isVSrcF64() const {
     return isVCSrcF64() || isLiteralImm(MVT::f64);
-  }
-
-  bool isVSrc_imm64F64() const {
-    return isVCSrcF64() || isLiteralImm(MVT::f64, true);
   }
 
   bool isVSrcTF16() const { return isVCSrcTF16() || isLiteralImm(MVT::f16); }
@@ -1963,8 +1955,6 @@ static const fltSemantics *getOpFltSemantics(uint8_t OperandType) {
   case AMDGPU::OPERAND_REG_INLINE_C_INT64:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
-  case AMDGPU::OPERAND_REG_IMM64_INT64:
-  case AMDGPU::OPERAND_REG_IMM64_FP64:
     return &APFloat::IEEEdouble();
   case AMDGPU::OPERAND_REG_IMM_INT16:
   case AMDGPU::OPERAND_REG_IMM_FP16:
@@ -2085,14 +2075,14 @@ bool AMDGPUOperand::isInlinableImm(MVT type) const {
     AsmParser->hasInv2PiInlineImm());
 }
 
-bool AMDGPUOperand::isLiteralImm(MVT type, bool Allow64Bit) const {
+bool AMDGPUOperand::isLiteralImm(MVT type) const {
   // Check that this immediate can be added as literal
   if (!isImmTy(ImmTyNone)) {
     return false;
   }
 
-  if (!AsmParser->getFeatureBits()[AMDGPU::Feature64BitLiterals])
-    Allow64Bit = false;
+  bool Allow64Bit = (type == MVT::i64 || type == MVT::f64) &&
+                    AsmParser->getFeatureBits()[AMDGPU::Feature64BitLiterals];
 
   if (!Imm.IsFPImm) {
     // We got int literal token.
@@ -2242,8 +2232,6 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
     case AMDGPU::OPERAND_REG_INLINE_C_INT64:
     case AMDGPU::OPERAND_REG_INLINE_C_FP64:
     case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
-    case AMDGPU::OPERAND_REG_IMM64_INT64:
-    case AMDGPU::OPERAND_REG_IMM64_FP64:
       if (AMDGPU::isInlinableLiteral64(Literal.getZExtValue(),
                                        AsmParser->hasInv2PiInlineImm())) {
         Inst.addOperand(MCOperand::createImm(Literal.getZExtValue()));
@@ -2358,8 +2346,6 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
   case AMDGPU::OPERAND_REG_INLINE_C_INT64:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
-  case AMDGPU::OPERAND_REG_IMM64_INT64:
-  case AMDGPU::OPERAND_REG_IMM64_FP64:
     if (AMDGPU::isInlinableLiteral64(Val, AsmParser->hasInv2PiInlineImm())) {
       Inst.addOperand(MCOperand::createImm(Val));
       setImmKindConst();
@@ -4732,9 +4718,17 @@ bool AMDGPUAsmParser::validateVOPLiteral(const MCInst &Inst,
 
     if (MO.isImm() && !isInlineConstant(Inst, OpIdx)) {
       uint64_t Value = static_cast<uint64_t>(MO.getImm());
-      if (AMDGPU::isSISrcFPOperand(Desc, OpIdx) &&
-          AMDGPU::getOperandSize(Desc.operands()[OpIdx]) == 8 &&
-          AMDGPU::isValid32BitLiteral(Value, true))
+      bool IsFP64 = AMDGPU::isSISrcFPOperand(Desc, OpIdx) &&
+                    AMDGPU::getOperandSize(Desc.operands()[OpIdx]) == 8;
+      bool IsValid32Op = AMDGPU::isValid32BitLiteral(Value, IsFP64);
+
+      if (!IsValid32Op && !isInt<32>(Value) && !isUInt<32>(Value) &&
+          (!getFeatureBits()[Feature64BitLiterals] || Desc.getSize() != 4)) {
+        Error(getLitLoc(Operands), "invalid operand for instruction");
+        return false;
+      }
+
+      if (IsFP64 && IsValid32Op)
         Value = Hi_32(Value);
 
       if (NumLiterals == 0 || LiteralValue != Value) {
