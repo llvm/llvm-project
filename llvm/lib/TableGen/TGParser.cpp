@@ -111,11 +111,10 @@ static void checkConcrete(Record &R) {
 
 /// Return an Init with a qualifier prefix referring
 /// to CurRec's name.
-static Init *QualifyName(Record &CurRec, MultiClass *CurMultiClass, Init *Name,
-                         StringRef Scoper) {
+static Init *QualifyName(Record &CurRec, Init *Name, bool IsMC) {
   RecordKeeper &RK = CurRec.getRecords();
-  Init *NewName = BinOpInit::getStrConcat(CurRec.getNameInit(),
-                                          StringInit::get(RK, Scoper));
+  Init *NewName = BinOpInit::getStrConcat(
+      CurRec.getNameInit(), StringInit::get(RK, IsMC ? "::" : ":"));
   NewName = BinOpInit::getStrConcat(NewName, Name);
 
   if (BinOpInit *BinOp = dyn_cast<BinOpInit>(NewName))
@@ -124,17 +123,15 @@ static Init *QualifyName(Record &CurRec, MultiClass *CurMultiClass, Init *Name,
 }
 
 /// Return the qualified version of the implicit 'NAME' template argument.
-static Init *QualifiedNameOfImplicitName(Record &Rec,
-                                         MultiClass *MC = nullptr) {
-  return QualifyName(Rec, MC, StringInit::get(Rec.getRecords(), "NAME"),
-                     MC ? "::" : ":");
+static Init *QualifiedNameOfImplicitName(Record &Rec, bool IsMC = false) {
+  return QualifyName(Rec, StringInit::get(Rec.getRecords(), "NAME"), IsMC);
 }
 
 static Init *QualifiedNameOfImplicitName(MultiClass *MC) {
-  return QualifiedNameOfImplicitName(MC->Rec, MC);
+  return QualifiedNameOfImplicitName(MC->Rec, /*IsMC=*/true);
 }
 
-Init *TGVarScope::getVar(RecordKeeper &Records, MultiClass* ParsingMultiClass,
+Init *TGVarScope::getVar(RecordKeeper &Records, MultiClass *ParsingMultiClass,
                          StringInit *Name, SMRange NameLoc,
                          bool TrackReferenceLocs) const {
   // First, we search in local variables.
@@ -142,11 +139,11 @@ Init *TGVarScope::getVar(RecordKeeper &Records, MultiClass* ParsingMultiClass,
   if (It != Vars.end())
     return It->second;
 
-  std::function<Init *(Record *, StringInit *, StringRef)> FindValueInArgs =
-      [&](Record *Rec, StringInit *Name, StringRef Scoper) -> Init * {
+  std::function<Init *(Record *, StringInit *, bool)> FindValueInArgs =
+      [&](Record *Rec, StringInit *Name, bool IsMC) -> Init * {
     if (!Rec)
       return nullptr;
-    Init *ArgName = QualifyName(*Rec, ParsingMultiClass, Name, Scoper);
+    Init *ArgName = QualifyName(*Rec, Name, IsMC);
     if (Rec->isTemplateArg(ArgName)) {
       RecordVal *RV = Rec->getValue(ArgName);
       assert(RV && "Template arg doesn't exist??");
@@ -176,7 +173,7 @@ Init *TGVarScope::getVar(RecordKeeper &Records, MultiClass* ParsingMultiClass,
 
       // The variable is a class template argument?
       if (CurRec->isClass())
-        if (auto *V = FindValueInArgs(CurRec, Name, ":"))
+        if (auto *V = FindValueInArgs(CurRec, Name, /*IsMC=*/false))
           return V;
     }
     break;
@@ -193,7 +190,7 @@ Init *TGVarScope::getVar(RecordKeeper &Records, MultiClass* ParsingMultiClass,
   case SK_MultiClass: {
     // The variable is a multiclass template argument?
     if (CurMultiClass)
-      if (auto *V = FindValueInArgs(&CurMultiClass->Rec, Name, "::"))
+      if (auto *V = FindValueInArgs(&CurMultiClass->Rec, Name, /*IsMC=*/true))
         return V;
     break;
   }
@@ -3168,8 +3165,7 @@ bool TGParser::ParseTemplateArgValueList(
                      "The name of named argument should be a valid identifier");
 
       auto *Name = cast<StringInit>(Value);
-      Init *QualifiedName =
-          QualifyName(*ArgsRec, CurMultiClass, Name, IsDefm ? "::" : ":");
+      Init *QualifiedName = QualifyName(*ArgsRec, Name, /*IsMC=*/IsDefm);
       auto *NamedArg = ArgsRec->getValue(QualifiedName);
       if (!NamedArg)
         return Error(ValueLoc,
@@ -3248,17 +3244,17 @@ Init *TGParser::ParseDeclaration(Record *CurRec,
                         RecordVal(DeclName, IdLoc, Type,
                                   HasField ? RecordVal::FK_NonconcreteOK
                                            : RecordVal::FK_Normal));
-
   } else if (CurRec) { // class template argument
-    DeclName = QualifyName(*CurRec, CurMultiClass, DeclName, ":");
-    BadField = AddValue(CurRec, IdLoc, RecordVal(DeclName, IdLoc, Type,
-                                                 RecordVal::FK_TemplateArg));
-
+    DeclName = QualifyName(*CurRec, DeclName, /*IsMC=*/false);
+    BadField =
+        AddValue(CurRec, IdLoc,
+                 RecordVal(DeclName, IdLoc, Type, RecordVal::FK_TemplateArg));
   } else { // multiclass template argument
     assert(CurMultiClass && "invalid context for template argument");
-    DeclName = QualifyName(CurMultiClass->Rec, CurMultiClass, DeclName, "::");
-    BadField = AddValue(CurRec, IdLoc, RecordVal(DeclName, IdLoc, Type,
-                                                 RecordVal::FK_TemplateArg));
+    DeclName = QualifyName(CurMultiClass->Rec, DeclName, /*IsMC=*/true);
+    BadField =
+        AddValue(CurRec, IdLoc,
+                 RecordVal(DeclName, IdLoc, Type, RecordVal::FK_TemplateArg));
   }
   if (BadField)
     return nullptr;
