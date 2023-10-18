@@ -112,8 +112,10 @@ jobs:
         with:
           password: ${{ secrets.LLVM_LIT_TEST_PYPI_API_TOKEN }}
           repository-url: https://test.pypi.org/legacy/
+          packages-dir: llvm/utils/lit/dist/
 
       - name: Upload lit to pypi.org
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.LLVM_LIT_PYPI_API_TOKEN }}
+          packages-dir: llvm/utils/lit/dist/
