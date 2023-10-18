@@ -1623,8 +1623,10 @@ SDValue SelectionDAGLegalize::ExpandFCOPYSIGN(SDNode *Node) const {
                                 SignMask);
 
   // If FABS is legal transform FCOPYSIGN(x, y) => sign(x) ? -FABS(x) : FABS(X)
+  // We don't do it in bf16 since the other path has less number of instructions
   EVT FloatVT = Mag.getValueType();
-  if (TLI.isOperationLegalOrCustom(ISD::FABS, FloatVT) &&
+  if (FloatVT != MVT::bf16 &&
+      TLI.isOperationLegalOrCustom(ISD::FABS, FloatVT) &&
       TLI.isOperationLegalOrCustom(ISD::FNEG, FloatVT)) {
     SDValue AbsValue = DAG.getNode(ISD::FABS, DL, FloatVT, Mag);
     SDValue NegValue = DAG.getNode(ISD::FNEG, DL, FloatVT, AbsValue);

@@ -555,6 +555,34 @@ multiclass F2<string OpcStr, SDNode OpNode> {
                            [(set Float32Regs:$dst, (OpNode Float32Regs:$a))]>;
 }
 
+multiclass F2_Support_Half<string OpcStr, SDNode OpNode> {
+   def bf16 :     NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$a),
+                           !strconcat(OpcStr, ".bf16 \t$dst, $a;"),
+                           [(set Int16Regs:$dst, (OpNode (bf16 Int16Regs:$a)))]>,
+                           Requires<[hasSM<80>, hasPTX<70>]>;
+   def bf16x2 :     NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$a),
+                           !strconcat(OpcStr, ".v2bf16 \t$dst, $a;"),
+                           [(set Int32Regs:$dst, (OpNode (v2bf16 Int32Regs:$a)))]>,
+                           Requires<[hasSM<80>, hasPTX<70>]>;
+   def f16_ftz : NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$a),
+                           !strconcat(OpcStr, ".ftz.f16 \t$dst, $a;"),
+                           [(set Int16Regs:$dst, (OpNode (f16 Int16Regs:$a)))]>,
+                           Requires<[hasSM<53>, hasPTX<65>, doF32FTZ]>;
+   def f16x2_ftz : NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$a),
+                           !strconcat(OpcStr, ".ftz.f16x2 \t$dst, $a;"),
+                           [(set Int32Regs:$dst, (OpNode (v2f16 Int32Regs:$a)))]>,
+                           Requires<[hasSM<53>, hasPTX<65>, doF32FTZ]>;
+   def f16 :     NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$a),
+                           !strconcat(OpcStr, ".f16 \t$dst, $a;"),
+                           [(set Int16Regs:$dst, (OpNode (f16 Int16Regs:$a)))]>,
+                           Requires<[hasSM<53>, hasPTX<65>]>;
+   def f16x2 :     NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$a),
+                           !strconcat(OpcStr, ".f16x2 \t$dst, $a;"),
+                           [(set Int32Regs:$dst, (OpNode (v2f16 Int32Regs:$a)))]>,
+                           Requires<[hasSM<53>, hasPTX<65>]>;
+
+}
+
 //===----------------------------------------------------------------------===//
 // NVPTX Instructions.
 //===----------------------------------------------------------------------===//
@@ -1139,6 +1167,9 @@ defm FMAXNAN : F3<"max.NaN", fmaximum>;
 
 defm FABS  : F2<"abs", fabs>;
 defm FNEG  : F2<"neg", fneg>;
+defm FABS_H: F2_Support_Half<"abs", fabs>;
+defm FNEG_H: F2_Support_Half<"neg", fneg>;
+
 defm FSQRT : F2<"sqrt.rn", fsqrt>;
 
 //
@@ -1936,14 +1967,14 @@ def SETP_bf16rr :
       NVPTXInst<(outs Int1Regs:$dst),
                 (ins Int16Regs:$a, Int16Regs:$b, CmpMode:$cmp),
                 "setp${cmp:base}${cmp:ftz}.bf16 \t$dst, $a, $b;",
-                []>, Requires<[hasBF16Math]>;
+                []>, Requires<[hasBF16Math, hasPTX<78>, hasSM<90>]>;
 
 def SETP_bf16x2rr :
       NVPTXInst<(outs Int1Regs:$p, Int1Regs:$q),
                 (ins Int32Regs:$a, Int32Regs:$b, CmpMode:$cmp),
                 "setp${cmp:base}${cmp:ftz}.bf16x2 \t$p|$q, $a, $b;",
                 []>,
-                Requires<[hasBF16Math]>;
+                Requires<[hasBF16Math, hasPTX<78>, hasSM<90>]>;
 
 
 // FIXME: This doesn't appear to be correct.  The "set" mnemonic has the form
@@ -1974,7 +2005,7 @@ defm SET_b64 : SET<"b64", Int64Regs, i64imm>;
 defm SET_s64 : SET<"s64", Int64Regs, i64imm>;
 defm SET_u64 : SET<"u64", Int64Regs, i64imm>;
 defm SET_f16 : SET<"f16", Int16Regs, f16imm>;
-defm SET_bf16 : SET<"bf16", Int16Regs, bf16imm>;
+defm SET_bf16 : SET<"bf16", Int16Regs, bf16imm>, Requires<[hasPTX<78>, hasSM<90>]>;
 defm SET_f32 : SET<"f32", Float32Regs, f32imm>;
 defm SET_f64 : SET<"f64", Float64Regs, f64imm>;
 
