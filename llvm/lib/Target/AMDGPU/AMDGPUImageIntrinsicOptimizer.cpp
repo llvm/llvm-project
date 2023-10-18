@@ -111,23 +111,19 @@ void addInstToMergeableList(
     // Check all arguments (DMask, VAddr, RSrc etc).
     bool AllEqual = true;
     assert(IIList.front()->arg_size() == II->arg_size());
-    for (int I = 1, E = II->arg_size(); I != E; ++I) {
+    for (int I = 1, E = II->arg_size(); AllEqual && I != E; ++I) {
       Value *ArgList = IIList.front()->getArgOperand(I);
       Value *Arg = II->getArgOperand(I);
       if (I == ImageDimIntr->VAddrEnd - 1) {
         // Check FragId group.
         auto FragIdList = cast<ConstantInt>(IIList.front()->getArgOperand(I));
         auto FragId = cast<ConstantInt>(II->getArgOperand(I));
-        if (FragIdList->getValue().udiv(4) != FragId->getValue().udiv(4)) {
+        if (FragIdList->getValue().udiv(4) != FragId->getValue().udiv(4))
           AllEqual = false;
-          break;
-        }
       } else {
         // Check all arguments except FragId.
-        if (ArgList != Arg) {
+        if (ArgList != Arg)
           AllEqual = false;
-          break;
-        }
       }
     }
     if (!AllEqual)
