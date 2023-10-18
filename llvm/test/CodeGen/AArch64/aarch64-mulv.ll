@@ -584,10 +584,11 @@ define i128 @mulv_v2i128(<2 x i128> %a) {
 ; CHECK-GI-LABEL: mulv_v2i128:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mul x9, x0, x3
-; CHECK-GI-NEXT:    umulh x8, x0, x2
+; CHECK-GI-NEXT:    mul x8, x0, x2
+; CHECK-GI-NEXT:    umulh x10, x0, x2
 ; CHECK-GI-NEXT:    madd x9, x1, x2, x9
-; CHECK-GI-NEXT:    mul x0, x0, x2
-; CHECK-GI-NEXT:    add x1, x9, x8
+; CHECK-GI-NEXT:    mov x0, x8
+; CHECK-GI-NEXT:    add x1, x9, x10
 ; CHECK-GI-NEXT:    ret
 entry:
   %arg1 = call i128 @llvm.vector.reduce.mul.v2i128(<2 x i128> %a)
