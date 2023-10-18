@@ -490,7 +490,7 @@ constexpr bool isEncodedFloor(uint64_t v) { return (v >> 60) == 0x01; }
 constexpr bool isEncodedMod(uint64_t v) { return (v >> 60) == 0x02; }
 constexpr bool isEncodedMul(uint64_t v) { return (v >> 60) == 0x03; }
 constexpr uint64_t decodeIndex(uint64_t v)  { return v & 0xfffffu; }
-constexpr uint64_t decodeCons(uint64_t v) { return (v >> 20) & 0xfffffu; }
+constexpr uint64_t decodeConst(uint64_t v) { return (v >> 20) & 0xfffffu; }
 constexpr uint64_t decodeMulc(uint64_t v) { return (v >> 20) & 0xfffffu; }
 constexpr uint64_t decodeMuli(uint64_t v) { return (v >> 40) & 0xfffffu; }
 
