@@ -55,7 +55,11 @@ static Expected<Symbol &> getELFStubTarget(LinkGraph &G, Block &B) {
   if (!E)
     return E.takeError();
   auto &GOTSym = E->getTarget();
-  if (!GOTSym.isDefined() || !isELFGOTSection(GOTSym.getBlock().getSection()))
+  if (!GOTSym.isDefined())
+    return make_error<StringError>("Stubs entry in " + G.getName() +
+                                       " does not point to GOT entry",
+                                   inconvertibleErrorCode());
+  if (!isELFGOTSection(GOTSym.getBlock().getSection()))
     return make_error<StringError>(
         "Stubs entry in " + G.getName() + ", \"" +
             GOTSym.getBlock().getSection().getName() +
