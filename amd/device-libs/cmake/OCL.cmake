@@ -48,6 +48,10 @@ set (STRIP_SUFFIX ".strip${BC_EXT}")
 set (FINAL_SUFFIX "${BC_EXT}")
 set (INSTALL_ROOT_SUFFIX "amdgcn/bitcode")
 
+if (NOT ROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_NEW STREQUAL "")
+  set(INSTALL_ROOT_SUFFIX "${ROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_NEW}/bitcode")
+endif()
+
 # Set `inc_options` to contain Clang command-line for include directories for
 # current source directory.
 macro(set_inc_options)
