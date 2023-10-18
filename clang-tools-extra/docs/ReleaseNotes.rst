@@ -246,7 +246,8 @@ Changes in existing checks
 
 - Improved :doc:`cppcoreguidelines-rvalue-reference-param-not-moved
   <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>` check
-  to ignore unused parameters when they are marked as unused.
+  to ignore unused parameters when they are marked as unused and parameters of
+  deleted functions and constructors.
 
 - Improved :doc:`llvm-namespace-comment
   <clang-tidy/checks/llvm/namespace-comment>` check to provide fixes for
