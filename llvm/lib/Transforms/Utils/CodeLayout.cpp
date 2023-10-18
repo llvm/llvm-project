@@ -741,7 +741,6 @@ private:
       return std::make_tuple(A1->Id, B1->Id) < std::make_tuple(A2->Id, B2->Id);
     };
 
-    double PrevScore = 1e9;
     while (HotChains.size() > 1) {
       ChainT *BestChainPred = nullptr;
       ChainT *BestChainSucc = nullptr;
@@ -781,15 +780,8 @@ private:
             BestGain = CurGain;
             BestChainPred = ChainPred;
             BestChainSucc = ChainSucc;
-            // Stop early when the merge is as good as the previous one.
-            if (BestGain.score() == PrevScore)
-              break;
           }
         }
-        // Since the score of merging (mostly) doesn't increase, we stop early
-        // when the newly found merge is as good as the previous one.
-        if (BestGain.score() == PrevScore)
-          break;
       }
 
       // Stop merging when there is no improvement.
@@ -797,7 +789,6 @@ private:
         break;
 
       // Merge the best pair of chains.
-      PrevScore = BestGain.score();
       mergeChains(BestChainPred, BestChainSucc, BestGain.mergeOffset(),
                   BestGain.mergeType());
     }
@@ -905,8 +896,8 @@ private:
       tryChainMerging(Offset, {MergeTypeT::X1_Y_X2, MergeTypeT::Y_X2_X1});
     }
 
+    // Try to break ChainPred in various ways and concatenate with ChainSucc.
     if (ChainPred->Nodes.size() <= ChainSplitThreshold) {
-      // Try to break ChainPred in various ways and concatenate with ChainSucc.
       for (size_t Offset = 1; Offset < ChainPred->Nodes.size(); Offset++) {
         // Do not split the chain along a fall-through jump. One of the two
         // loops above may still "break" such a jump whenever it results in a
