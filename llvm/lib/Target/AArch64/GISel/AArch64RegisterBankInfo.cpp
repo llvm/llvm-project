@@ -889,9 +889,12 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     }
     break;
-  case TargetOpcode::G_INDEXED_LOAD:
   case TargetOpcode::G_INDEXED_SEXTLOAD:
-  case TargetOpcode::G_INDEXED_ZEXTLOAD: {
+  case TargetOpcode::G_INDEXED_ZEXTLOAD:
+    // These should always be GPR.
+    OpRegBankIdx[0] = PMI_FirstGPR;
+    break;
+  case TargetOpcode::G_INDEXED_LOAD: {
     if (isLoadFromFPType(MI))
       OpRegBankIdx[0] = PMI_FirstFPR;
     break;

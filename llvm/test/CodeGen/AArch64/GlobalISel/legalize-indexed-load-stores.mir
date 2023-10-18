@@ -109,3 +109,83 @@ body: |
     $x0 = COPY %writeback
     RET_ReallyLR implicit $x0
 ...
+---
+name:            post_zextload_s8_to_s64
+body: |
+  bb.0:
+    liveins: $x0
+
+    ; CHECK-LABEL: name: post_zextload_s8_to_s64
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
+    ; CHECK-NEXT: %offset:_(s64) = G_CONSTANT i64 8
+    ; CHECK-NEXT: %dst:_(s64), %writeback:_(p0) = G_INDEXED_ZEXTLOAD %ptr, %offset(s64), 0 :: (load (s8), align 8)
+    ; CHECK-NEXT: $x0 = COPY %writeback(p0)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %ptr:_(p0) = COPY $x0
+    %offset:_(s64) = G_CONSTANT i64 8
+    %dst:_(s64), %writeback:_(p0) = G_INDEXED_ZEXTLOAD %ptr, %offset, 0 :: (load (s8), align 8)
+    $x0 = COPY %writeback
+    RET_ReallyLR implicit $x0
+...
+---
+name:            post_sextload_s8_to_s64
+body: |
+  bb.0:
+    liveins: $x0
+
+    ; CHECK-LABEL: name: post_sextload_s8_to_s64
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
+    ; CHECK-NEXT: %offset:_(s64) = G_CONSTANT i64 8
+    ; CHECK-NEXT: %dst:_(s64), %writeback:_(p0) = G_INDEXED_SEXTLOAD %ptr, %offset(s64), 0 :: (load (s8), align 8)
+    ; CHECK-NEXT: $x0 = COPY %writeback(p0)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %ptr:_(p0) = COPY $x0
+    %offset:_(s64) = G_CONSTANT i64 8
+    %dst:_(s64), %writeback:_(p0) = G_INDEXED_SEXTLOAD %ptr, %offset, 0 :: (load (s8), align 8)
+    $x0 = COPY %writeback
+    RET_ReallyLR implicit $x0
+...
+---
+name:            post_sextload_s32_to_s64
+body: |
+  bb.0:
+    liveins: $x0
+
+    ; CHECK-LABEL: name: post_sextload_s32_to_s64
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
+    ; CHECK-NEXT: %offset:_(s64) = G_CONSTANT i64 8
+    ; CHECK-NEXT: %dst:_(s64), %writeback:_(p0) = G_INDEXED_SEXTLOAD %ptr, %offset(s64), 0 :: (load (s32), align 8)
+    ; CHECK-NEXT: $x0 = COPY %writeback(p0)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %ptr:_(p0) = COPY $x0
+    %offset:_(s64) = G_CONSTANT i64 8
+    %dst:_(s64), %writeback:_(p0) = G_INDEXED_SEXTLOAD %ptr, %offset, 0 :: (load (s32), align 8)
+    $x0 = COPY %writeback
+    RET_ReallyLR implicit $x0
+...
+---
+name:            post_zextload_s32_to_s64
+body: |
+  bb.0:
+    liveins: $x0
+
+    ; CHECK-LABEL: name: post_zextload_s32_to_s64
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
+    ; CHECK-NEXT: %offset:_(s64) = G_CONSTANT i64 8
+    ; CHECK-NEXT: %dst:_(s64), %writeback:_(p0) = G_INDEXED_ZEXTLOAD %ptr, %offset(s64), 0 :: (load (s32), align 8)
+    ; CHECK-NEXT: $x0 = COPY %writeback(p0)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %ptr:_(p0) = COPY $x0
+    %offset:_(s64) = G_CONSTANT i64 8
+    %dst:_(s64), %writeback:_(p0) = G_INDEXED_ZEXTLOAD %ptr, %offset, 0 :: (load (s32), align 8)
+    $x0 = COPY %writeback
+    RET_ReallyLR implicit $x0
+...

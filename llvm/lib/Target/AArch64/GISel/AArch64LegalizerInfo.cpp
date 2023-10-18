@@ -459,7 +459,24 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalIf(IndexedLoadBasicPred)
       .unsupported();
   getActionDefinitionsBuilder({G_INDEXED_SEXTLOAD, G_INDEXED_ZEXTLOAD})
-      .unsupported(); // TODO: implement
+      .unsupportedIf(
+          atomicOrderingAtLeastOrStrongerThan(0, AtomicOrdering::Unordered))
+      .legalIf(all(typeInSet(0, {s16, s32, s64}),
+                   LegalityPredicate([=](const LegalityQuery &Q) {
+                     LLT LdTy = Q.Types[0];
+                     LLT PtrTy = Q.Types[1];
+                     LLT MemTy = Q.MMODescrs[0].MemoryTy;
+                     if (PtrTy != p0)
+                       return false;
+                     if (LdTy == s16)
+                       return MemTy == s8;
+                     if (LdTy == s32)
+                       return MemTy == s8 || MemTy == s16;
+                     if (LdTy == s64)
+                       return MemTy == s8 || MemTy == s16 || MemTy == s32;
+                     return false;
+                   })))
+      .unsupported();
 
   // Constants
   getActionDefinitionsBuilder(G_CONSTANT)

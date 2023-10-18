@@ -225,6 +225,7 @@ private:
   bool selectMOPS(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectUSMovFromExtend(MachineInstr &I, MachineRegisterInfo &MRI);
 
+  bool selectIndexedExtLoad(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectIndexedLoad(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectIndexedStore(GIndexedStore &I, MachineRegisterInfo &MRI);
 
@@ -3042,6 +3043,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     return constrainSelectedInstRegOperands(*LoadStore, TII, TRI, RBI);
   }
 
+  case TargetOpcode::G_INDEXED_ZEXTLOAD:
+  case TargetOpcode::G_INDEXED_SEXTLOAD:
+    return selectIndexedExtLoad(I, MRI);
   case TargetOpcode::G_INDEXED_LOAD:
     return selectIndexedLoad(I, MRI);
   case TargetOpcode::G_INDEXED_STORE:
@@ -5628,6 +5632,93 @@ MachineInstr *AArch64InstructionSelector::tryAdvSIMDModImmFP(
   auto Mov = Builder.buildInstr(Op, {Dst}, {}).addImm(Val);
   constrainSelectedInstRegOperands(*Mov, TII, TRI, RBI);
   return &*Mov;
+}
+
+bool AArch64InstructionSelector::selectIndexedExtLoad(
+    MachineInstr &MI, MachineRegisterInfo &MRI) {
+  auto &ExtLd = cast<GIndexedExtLoad>(MI);
+  Register Dst = ExtLd.getDstReg();
+  Register WriteBack = ExtLd.getWritebackReg();
+  Register Base = ExtLd.getBaseReg();
+  Register Offset = ExtLd.getOffsetReg();
+  LLT Ty = MRI.getType(Dst);
+  assert(Ty.getSizeInBits() <= 64); // Only for scalar GPRs.
+  unsigned MemSizeBits = ExtLd.getMMO().getMemoryType().getSizeInBits();
+  bool IsPre = ExtLd.isPre();
+  bool IsSExt = isa<GIndexedSExtLoad>(ExtLd);
+  bool InsertIntoXReg = false;
+  bool IsDst64 = Ty.getSizeInBits() == 64;
+
+  unsigned Opc = 0;
+  LLT NewLdDstTy;
+  LLT s32 = LLT::scalar(32);
+  LLT s64 = LLT::scalar(64);
+
+  if (MemSizeBits == 8) {
+    if (IsSExt) {
+      if (IsDst64)
+        Opc = IsPre ? AArch64::LDRSBXpre : AArch64::LDRSBXpost;
+      else
+        Opc = IsPre ? AArch64::LDRSBWpre : AArch64::LDRSBWpost;
+      NewLdDstTy = IsDst64 ? s64 : s32;
+    } else {
+      Opc = IsPre ? AArch64::LDRBBpre : AArch64::LDRBBpost;
+      InsertIntoXReg = IsDst64;
+      NewLdDstTy = s32;
+    }
+  } else if (MemSizeBits == 16) {
+    if (IsSExt) {
+      if (IsDst64)
+        Opc = IsPre ? AArch64::LDRSHXpre : AArch64::LDRSHXpost;
+      else
+        Opc = IsPre ? AArch64::LDRSHWpre : AArch64::LDRSHWpost;
+      NewLdDstTy = IsDst64 ? s64 : s32;
+    } else {
+      Opc = IsPre ? AArch64::LDRHHpre : AArch64::LDRHHpost;
+      InsertIntoXReg = IsDst64;
+      NewLdDstTy = s32;
+    }
+  } else if (MemSizeBits == 32) {
+    if (IsSExt) {
+      Opc = IsPre ? AArch64::LDRSWpre : AArch64::LDRSWpost;
+      NewLdDstTy = s64;
+    } else {
+      Opc = IsPre ? AArch64::LDRWpre : AArch64::LDRWpost;
+      InsertIntoXReg = IsDst64;
+      NewLdDstTy = s32;
+    }
+  } else {
+    llvm_unreachable("Unexpected size for indexed load");
+  }
+
+  if (RBI.getRegBank(Dst, MRI, TRI)->getID() == AArch64::FPRRegBankID)
+    return false; // We should be on gpr.
+
+  auto Cst = getIConstantVRegVal(Offset, MRI);
+  if (!Cst)
+    return false; // Shouldn't happen, but just in case.
+
+  auto LdMI = MIB.buildInstr(Opc, {WriteBack, NewLdDstTy}, {Base})
+                  .addImm(Cst->getSExtValue());
+  LdMI.cloneMemRefs(ExtLd);
+  constrainSelectedInstRegOperands(*LdMI, TII, TRI, RBI);
+  // Make sure to select the load with the MemTy as the dest type, and then
+  // insert into X reg if needed.
+  if (InsertIntoXReg) {
+    // Generate a SUBREG_TO_REG.
+    auto SubToReg = MIB.buildInstr(TargetOpcode::SUBREG_TO_REG, {Dst}, {})
+                        .addImm(0)
+                        .addUse(LdMI.getReg(1))
+                        .addImm(AArch64::sub_32);
+    RBI.constrainGenericRegister(SubToReg.getReg(0), AArch64::GPR64RegClass,
+                                 MRI);
+  } else {
+    auto Copy = MIB.buildCopy(Dst, LdMI.getReg(1));
+    selectCopy(*Copy, TII, MRI, TRI, RBI);
+  }
+  MI.eraseFromParent();
+
+  return true;
 }
 
 bool AArch64InstructionSelector::selectIndexedLoad(MachineInstr &MI,
