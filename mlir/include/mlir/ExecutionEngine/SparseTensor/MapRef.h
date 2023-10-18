@@ -30,23 +30,6 @@ namespace sparse_tensor {
 /// The pushforward/backward operations are fast for (1) but incur some obvious
 /// overhead for situation (2).
 ///
-/// Note that because the indices in the mappings refer to dimensions
-/// and levels (and *not* the sizes of these dimensions and levels), the
-/// 64-bit encoding gives ample room for a compact encoding of affine
-/// operations in the higher 32-bit.
-///
-/// The compact encoding is as follows:
-///
-/// | 00       |                             main index |  e.g. i
-/// | 01 floor |       constant | 32-bit for main index |  e.g. i floor c
-/// | 10 mod   |       constant | 32-bit for main index |  e.g. i mod c
-/// | 11 mul   | index/constant | 32-bit for main index |  e.g. i + 2 * ii
-///
-/// This encoding provides sufficient generality for currently supported
-/// sparse tensor types. To generalize this more, we will need to provide
-/// a broader encoding scheme for affine functions. Also, the library
-/// encoding may be replaced with pure "direct-IR" code in the future.
-///
 class MapRef final {
 public:
   MapRef(uint64_t d, uint64_t l, const uint64_t *d2l, const uint64_t *l2d);

@@ -445,27 +445,54 @@ static_assert((isUniqueDLT(DimLevelType::Dense) &&
               "isUniqueDLT definition is broken");
 
 /// Bit manipulations for affine encoding.
+///
+/// Note that because the indices in the mappings refer to dimensions
+/// and levels (and *not* the sizes of these dimensions and levels), the
+/// 64-bit encoding gives ample room for a compact encoding of affine
+/// operations in the higher bits. Pure permutations still allow for
+/// 60-bit indices. But non-permutations reserve 20-bits for the
+/// potential three components (index i, constant, index ii).
+///
+/// The compact encoding is as follows:
+///
+///  0xffffffffffffffff
+/// |0000      |                        60-bit idx|  e.g. i + 2 * ii e.g. i
+/// |0001 floor|           20-bit const|20-bit idx|  e.g. i + 2 * ii e.g. i floor c
+/// |0010 mod  |           20-bit const|20-bit idx|  e.g. i + 2 * ii e.g. i mod c
+/// |0011 mul  |20-bit idx|20-bit const|20-bit idx|  e.g. i + 2 * ii
+///
+/// This encoding provides sufficient generality for currently supported
+/// sparse tensor types. To generalize this more, we will need to provide
+/// a broader encoding scheme for affine functions. Also, the library
+/// encoding may be replaced with pure "direct-IR" code in the future.
+///
 constexpr uint64_t encodeDim(uint64_t i, uint64_t cf, uint64_t cm) {
-  assert(i <= 0xffffffffu && cf <= 0x3fffffffu && cm <= 0x3fffffffu);
-  if (cf != 0)
-    return (0x1L << 62) | (cf << 32) | i;
-  if (cm != 0)
-    return (0x2L << 62) | (cm << 32) | i;
+  if (cf != 0) {
+    assert(cf <= 0xfffff && cm == 0 && i <= 0xfffff);
+    return (0x01L << 60) | (cf << 20) | i;
+  }
+  if (cm != 0) {
+    assert(cf == 0 && cm <= 0xfffff i <= 0xfffff);
+    return (0x02L << 60) | (cm << 20) | i;
+  }
+  assert(i <= 0x0fffffffffffffffu);
   return i;
 }
 constexpr uint64_t encodeLvl(uint64_t i, uint64_t c, uint64_t ii) {
-  assert(i <= 0xffffffffu && c <= 0xffffu && ii <= 0x3fffu);
-  if (c != 0)
-    return (0x3L << 62) | (c << 32) | (ii << 48) | i;
+  if (c != 0) {
+    assert(c <= 0xfffff && ii <= 0xfffff && i <= 0xfffff);
+    return (0x03L << 60) | (c << 20) | (ii << 40) | i;
+  }
+  assert(i <= 0x0fffffffffffffffu);
   return i;
 }
-constexpr bool isEncodedFloor(uint64_t v) { return (v >> 62) == 0x01; }
-constexpr bool isEncodedMod(uint64_t v) { return (v >> 62) == 0x02; }
-constexpr bool isEncodedMul(uint64_t v) { return (v >> 62) == 0x03; }
-constexpr uint64_t decodeIndex(uint64_t v) { return v & 0xffffffffu; }
-constexpr uint64_t decodeConst(uint64_t v) { return (v >> 32) & 0x3fffffffu; }
-constexpr uint64_t decodeMulc(uint64_t v) { return (v >> 32) & 0xffffu; }
-constexpr uint64_t decodeMuli(uint64_t v) { return (v >> 48) & 0x3fffu; }
+constexpr bool isEncodedFloor(uint64_t v) { return (v >> 60) == 0x01; }
+constexpr bool isEncodedMod(uint64_t v) { return (v >> 60) == 0x02; }
+constexpr bool isEncodedMul(uint64_t v) { return (v >> 60) == 0x03; }
+constexpr uint64_t decodeIndex(uint64_t v)  { return v & 0xfffffu; }
+constexpr uint64_t decodeCons(uint64_t v) { return (v >> 20) & 0xfffffu; }
+constexpr uint64_t decodeMulc(uint64_t v) { return (v >> 20) & 0xfffffu; }
+constexpr uint64_t decodeMuli(uint64_t v) { return (v >> 40) & 0xfffffu; }
 
 } // namespace sparse_tensor
 } // namespace mlir
