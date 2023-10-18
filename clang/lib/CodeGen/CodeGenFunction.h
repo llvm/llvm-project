@@ -4326,7 +4326,6 @@ public:
   llvm::Value *EmitSVEMaskedStore(const CallExpr *,
                                   SmallVectorImpl<llvm::Value *> &Ops,
                                   unsigned BuiltinID);
-  llvm::Value *EmitTileslice(llvm::Value *Offset, llvm::Value *Base);
   llvm::Value *EmitSVEPrefetchLoad(const SVETypeFlags &TypeFlags,
                                    SmallVectorImpl<llvm::Value *> &Ops,
                                    unsigned BuiltinID);
