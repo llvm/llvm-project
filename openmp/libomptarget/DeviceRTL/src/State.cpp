@@ -46,8 +46,8 @@ namespace {
 ///{
 
 extern "C" {
-__attribute__((leaf)) void *malloc(uint64_t Size);
-__attribute__((leaf)) void free(void *Ptr);
+[[gnu::weak, gnu::leaf]] void *malloc(uint64_t Size);
+[[gnu::weak, gnu::leaf]] void free(void *Ptr);
 }
 
 ///}
