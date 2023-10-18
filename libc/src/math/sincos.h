@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_MATH_SINCOS_H
 #define LLVM_LIBC_SRC_MATH_SINCOS_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 void sincos(double x, double *sinx, double *cosx);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_SINCOS_H

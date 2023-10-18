@@ -9,7 +9,7 @@
 #include "src/math/llrint.h"
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(long long, llrint, (double x)) {
   return __builtin_llrint(x);

@@ -11,8 +11,8 @@
 
 #include "common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(double, asin, (double x)) { return internal::asin(x); }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_MATH_ACOS_H
 #define LLVM_LIBC_SRC_MATH_ACOS_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 double acos(double x);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_ACOS_H

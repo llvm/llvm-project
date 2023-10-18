@@ -11,8 +11,8 @@
 
 #include "common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(double, log10, (double x)) { return internal::log10(x); }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

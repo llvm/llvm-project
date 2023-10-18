@@ -11,8 +11,8 @@
 
 #include "common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(double, atan, (double x)) { return internal::atan(x); }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

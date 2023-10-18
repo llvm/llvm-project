@@ -9,8 +9,8 @@
 #include "src/math/lrint.h"
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(long, lrint, (double x)) { return __builtin_lrint(x); }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

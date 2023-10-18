@@ -12,10 +12,10 @@
 
 #include "common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, atan2f, (float x, float y)) {
   return internal::atan2f(x, y);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
