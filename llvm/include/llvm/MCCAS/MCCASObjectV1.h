@@ -626,8 +626,8 @@ public:
   uint64_t AddendBufferIndex = 0;
 
   MCCASReader(raw_ostream &OS, const Triple &Target, const MCSchema &Schema);
-  support::endianness getEndian() {
-    return Target.isLittleEndian() ? support::little : support::big;
+  endianness getEndian() {
+    return Target.isLittleEndian() ? endianness::little : endianness::big;
   }
 
   Expected<MCObjectProxy> getObjectProxy(cas::ObjectRef ID) {

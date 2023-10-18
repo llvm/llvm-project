@@ -132,7 +132,7 @@ Expected<IncludeTree> IncludeTree::create(
   Buffer += Kind;
 
   llvm::raw_svector_ostream BufOS(Buffer);
-  llvm::support::endian::Writer Writer(BufOS, llvm::support::little);
+  llvm::support::endian::Writer Writer(BufOS, llvm::endianness::little);
 
   for (const auto &Include : Includes) {
     assert((Include.Kind == NodeKind::Tree &&
@@ -176,7 +176,7 @@ uint32_t IncludeTree::getIncludeOffset(size_t I) const {
   StringRef Data = dataSkippingFlags();
   assert(Data.size() >= (I + 1) * sizeof(uint32_t));
   uint32_t Offset =
-      llvm::support::endian::read<uint32_t, llvm::support::little>(
+      llvm::support::endian::read<uint32_t, llvm::endianness::little>(
           Data.data() + I * (sizeof(uint32_t) + 1));
   return Offset;
 }
@@ -224,7 +224,7 @@ IncludeTree::ModuleImport::create(ObjectStore &DB, StringRef ModuleName,
 }
 
 size_t IncludeTree::FileList::getNumFilesCurrentList() const {
-  return llvm::support::endian::read<uint32_t, llvm::support::little>(
+  return llvm::support::endian::read<uint32_t, llvm::endianness::little>(
       getData().data());
 }
 
@@ -233,7 +233,7 @@ IncludeTree::FileList::getFileSize(size_t I) const {
   assert(I < getNumFilesCurrentList());
   StringRef Data = getData().drop_front(sizeof(uint32_t));
   assert(Data.size() >= (I + 1) * sizeof(FileSizeTy));
-  return llvm::support::endian::read<FileSizeTy, llvm::support::little>(
+  return llvm::support::endian::read<FileSizeTy, llvm::endianness::little>(
       Data.data() + I * sizeof(FileSizeTy));
 }
 
@@ -278,7 +278,7 @@ IncludeTree::FileList::create(ObjectStore &DB, ArrayRef<FileEntry> Files,
   Buffer.reserve(sizeof(uint32_t) + Files.size() * sizeof(FileSizeTy));
 
   llvm::raw_svector_ostream BufOS(Buffer);
-  llvm::support::endian::Writer Writer(BufOS, llvm::support::little);
+  llvm::support::endian::Writer Writer(BufOS, llvm::endianness::little);
   Writer.write(static_cast<uint32_t>(Files.size()));
 
   for (const FileEntry &Entry : Files) {
@@ -311,7 +311,7 @@ bool IncludeTree::FileList::isValid(const ObjectProxy &Node) {
   if (Data.size() < sizeof(uint32_t))
     return false;
   unsigned NumFiles =
-      llvm::support::endian::read<uint32_t, llvm::support::little>(Data.data());
+      llvm::support::endian::read<uint32_t, llvm::endianness::little>(Data.data());
   return NumFiles != 0 && NumFiles <= Base.getNumReferences() &&
          Data.size() == sizeof(uint32_t) + NumFiles * sizeof(FileSizeTy);
 }
@@ -397,7 +397,7 @@ IncludeTree::Module::create(ObjectStore &DB, StringRef ModuleName,
 
   SmallString<64> Buffer;
   llvm::raw_svector_ostream BufOS(Buffer);
-  llvm::support::endian::Writer Writer(BufOS, llvm::support::little);
+  llvm::support::endian::Writer Writer(BufOS, llvm::endianness::little);
   Writer.write(RawFlags);
 
   Buffer.append(ModuleName);
@@ -412,7 +412,7 @@ IncludeTree::Module::create(ObjectStore &DB, StringRef ModuleName,
 }
 
 uint16_t IncludeTree::Module::rawFlags() const {
-  return llvm::support::endian::read<uint16_t, llvm::support::little>(
+  return llvm::support::endian::read<uint16_t, llvm::endianness::little>(
       getData().data());
 }
 
@@ -495,7 +495,7 @@ IncludeTree::Module::ExportList::create(ObjectStore &DB,
   // Refs: export names
   SmallString<64> Buffer;
   llvm::raw_svector_ostream BufOS(Buffer);
-  llvm::support::endian::Writer Writer(BufOS, llvm::support::little);
+  llvm::support::endian::Writer Writer(BufOS, llvm::endianness::little);
   SmallVector<ObjectRef> Refs;
   llvm::SmallBitVector WildcardBits;
   for (Export E : Exports) {
@@ -536,7 +536,7 @@ IncludeTree::Module::LinkLibraryList::create(ObjectStore &DB,
   // Refs: library names
   SmallString<64> Buffer;
   llvm::raw_svector_ostream BufOS(Buffer);
-  llvm::support::endian::Writer Writer(BufOS, llvm::support::little);
+  llvm::support::endian::Writer Writer(BufOS, llvm::endianness::little);
   SmallVector<ObjectRef> Refs;
   llvm::SmallBitVector FrameworkBits;
   for (LinkLibrary L : Libraries) {

@@ -47,7 +47,7 @@ storeDepDirectives(cas::ObjectStore &CAS,
                    ArrayRef<dependency_directives_scan::Directive> Directives) {
   llvm::SmallString<1024> Buffer;
   llvm::raw_svector_ostream OS(Buffer);
-  llvm::support::endian::Writer W(OS, llvm::support::endianness::little);
+  llvm::support::endian::Writer W(OS, llvm::endianness::little);
   size_t NumTokens = 0;
   for (const auto &Directive : Directives)
     NumTokens += Directive.Tokens.size();
@@ -79,7 +79,7 @@ template <typename T> static void readle(StringRef &Slice, T &Out) {
   using namespace llvm::support::endian;
   if (Slice.size() < sizeof(T))
     llvm::report_fatal_error("buffer too small");
-  Out = read<T, llvm::support::little>(Slice.begin());
+  Out = read<T, llvm::endianness::little>(Slice.begin());
   Slice = Slice.drop_front(sizeof(T));
 }
 

@@ -233,7 +233,7 @@ mccasformats::v1::convertFourByteFormDataToULEB(ArrayRef<char> FormData,
                                                 DataWriter &Writer) {
   assert(FormData.size() == 4);
   auto Reader =
-      BinaryStreamReader(toStringRef(FormData), support::endianness::little);
+      BinaryStreamReader(toStringRef(FormData), endianness::little);
 
   uint32_t IntegerData;
   if (auto Err = Reader.readInteger(IntegerData))
@@ -327,7 +327,7 @@ mccasformats::v1::reconstructAbbrevSection(raw_ostream &OS,
     // abbreviation code itself. [...] The abbreviation code 0 is reserved for
     // null debugging information entries.
     WrittenSize += encodeULEB128(MaxDIEAbbrevCount, OS);
-    BinaryStreamReader Reader(EntryData, support::endianness::little);
+    BinaryStreamReader Reader(EntryData, endianness::little);
     // [uleb(Tag), has_children]
     uint64_t TagAsInt;
     uint8_t HasChildren;

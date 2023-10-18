@@ -197,7 +197,7 @@ TreeProxy::Builder::build(ArrayRef<NamedTreeEntry> Entries) {
   Sorted.erase(std::unique(Sorted.begin(), Sorted.end()), Sorted.end());
 
   raw_svector_ostream OS(Data);
-  support::endian::Writer Writer(OS, support::endianness::little);
+  support::endian::Writer Writer(OS, endianness::little);
   // Encode the entires in the Data. The layout of the tree schema object is:
   // * Name offset table: The offset of in the data blob for where to find the
   //   string. It has N + 1 entries and you can find the name of n-th entry at

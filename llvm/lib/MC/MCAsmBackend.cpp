@@ -79,7 +79,7 @@ std::unique_ptr<MCObjectWriter> MCAsmBackend::createCASObjectWriter(
   switch (TW->getFormat()) {
   case Triple::MachO:
     return createMachOCASWriter(cast<MCMachObjectTargetWriter>(std::move(TW)),
-                                TT, CAS, Mode, OS, Endian == support::little,
+                                TT, CAS, Mode, OS, Endian == endianness::little,
                                 CreateFromMcAssembler, SerializeObjectFile,
                                 MCOpts.ResultCallBack, CasIDOS);
   default:
