@@ -1923,14 +1923,12 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
     computeOp.setDefaultAttr(mlir::acc::ClauseDefaultValue::Present);
 
   if constexpr (!std::is_same_v<Op, mlir::acc::KernelsOp>) {
-    if (!outerCombined) {
-      if (!privatizations.empty())
-        computeOp.setPrivatizationsAttr(
-            mlir::ArrayAttr::get(builder.getContext(), privatizations));
-      if (!reductionRecipes.empty())
-        computeOp.setReductionRecipesAttr(
-            mlir::ArrayAttr::get(builder.getContext(), reductionRecipes));
-    }
+    if (!privatizations.empty())
+      computeOp.setPrivatizationsAttr(
+          mlir::ArrayAttr::get(builder.getContext(), privatizations));
+    if (!reductionRecipes.empty())
+      computeOp.setReductionRecipesAttr(
+          mlir::ArrayAttr::get(builder.getContext(), reductionRecipes));
     if (!firstPrivatizations.empty())
       computeOp.setFirstprivatizationsAttr(
           mlir::ArrayAttr::get(builder.getContext(), firstPrivatizations));
