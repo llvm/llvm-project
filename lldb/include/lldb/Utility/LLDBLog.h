@@ -13,10 +13,6 @@
 #include "llvm/ADT/BitmaskEnum.h"
 #include <cstdint>
 
-#ifdef LLDB_ENABLE_SWIFT
-#include "llvm/ADT/StringRef.h"
-#endif
-
 namespace lldb_private {
 
 enum class LLDBLog : Log::MaskType {
