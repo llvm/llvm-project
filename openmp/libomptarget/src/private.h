@@ -255,9 +255,7 @@ struct TargetMemcpyArgsTy {
 };
 
 struct TargetMemsetArgsTy {
-  /**
-   * Common attributes of a memset operation
-   */
+  // Common attributes of a memset operation
   void *Ptr;
   int C;
   size_t N;
