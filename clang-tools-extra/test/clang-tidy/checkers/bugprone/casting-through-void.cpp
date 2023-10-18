@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy %s bugprone-casting-through-void %t
 
-using T = void*;
-using CT = const void*;
+using V = void*;
+using CV = const void*;
 
 int i = 100;
 double d = 100;
@@ -12,7 +12,7 @@ void normal_test() {
   static_cast<int *>(static_cast<void *>(&d));
   // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: do not cast 'double *' to 'int *' through 'void*' [bugprone-casting-through-void]
 
-  static_cast<int *>(static_cast<T>(&d));
+  static_cast<int *>(static_cast<V>(&d));
   // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: do not cast 'double *' to 'int *' through 'void*' [bugprone-casting-through-void]
 
   static_cast<int *>(static_cast<void *>(&i));
@@ -23,7 +23,7 @@ void const_pointer_test() {
   static_cast<int *const>(static_cast<void *>(&d));
   // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: do not cast 'double *' to 'int *const' through 'void*' [bugprone-casting-through-void]
 
-  static_cast<int *const>(static_cast<T>(&d));
+  static_cast<int *const>(static_cast<V>(&d));
   // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: do not cast 'double *' to 'int *const' through 'void*' [bugprone-casting-through-void]
 
   static_cast<int *const>(static_cast<void *>(&i));
@@ -34,7 +34,7 @@ void const_test() {
   static_cast<const int *>(static_cast<const void *>(&d));
   // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: do not cast 'double *' to 'const int *' through 'void*' [bugprone-casting-through-void]
 
-  static_cast<const int *>(static_cast<const T>(&d));
+  static_cast<const int *>(static_cast<const V>(&d));
   // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: do not cast 'double *' to 'const int *' through 'void*' [bugprone-casting-through-void]
 
   static_cast<const int *>(static_cast<const void *>(&i));
@@ -43,7 +43,7 @@ void const_test() {
   static_cast<const int *>(static_cast<const void *>(&cd));
   // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: do not cast 'const double *' to 'const int *' through 'void*' [bugprone-casting-through-void]
 
-  static_cast<const int *>(static_cast<const CT>(&cd));
+  static_cast<const int *>(static_cast<const CV>(&cd));
   // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: do not cast 'const double *' to 'const int *' through 'void*' [bugprone-casting-through-void]
 
   static_cast<const int *>(static_cast<const void *>(&ci));
@@ -82,8 +82,13 @@ void c_style_cast_test() {
 struct A {
    A(void*);
 };
+using I = int *;
+using D = double *;
 void cxx_functional_cast() {
-  A(static_cast<void*>(&i));
+  A(static_cast<void*>(&d));
+  D(static_cast<void*>(&d));
+  I(static_cast<void*>(&d));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not cast 'double *' to 'I' (aka 'int *') through 'void*' [bugprone-casting-through-void]
 }
 
 void bit_cast() {
