@@ -168,6 +168,12 @@
 // RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=NOABI5
 
+// Test -mcode-object-version=3
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -mcode-object-version=3 \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ABI4
+
 // Test -mcode-object-version=4
 // RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
 // RUN:   -mcode-object-version=4 \

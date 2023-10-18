@@ -222,6 +222,14 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         getToolChain().AddCXXStdlibLibArgs(Args, CmdArgs);
       CmdArgs.push_back("-lm");
     }
+    // Additional linker set-up and flags for Fortran. This is required in order
+    // to generate executables. As Fortran runtime depends on the C runtime,
+    // these dependencies need to be listed before the C runtime below.
+    if (D.IsFlangMode()) {
+      addFortranRuntimeLibraryPath(getToolChain(), Args, CmdArgs);
+      addFortranRuntimeLibs(getToolChain(), CmdArgs);
+      CmdArgs.push_back("-lm");
+    }
     if (Args.hasArg(options::OPT_fstack_protector) ||
         Args.hasArg(options::OPT_fstack_protector_strong) ||
         Args.hasArg(options::OPT_fstack_protector_all)) {

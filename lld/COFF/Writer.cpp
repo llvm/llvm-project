@@ -212,6 +212,7 @@ private:
   void locateImportTables();
   void createExportTable();
   void mergeSections();
+  void sortECChunks();
   void removeUnusedSections();
   void assignAddresses();
   bool isInRange(uint16_t relType, uint64_t s, uint64_t p, int margin);
@@ -676,6 +677,7 @@ void Writer::run() {
     createMiscChunks();
     createExportTable();
     mergeSections();
+    sortECChunks();
     removeUnusedSections();
     finalizeAddresses();
     removeEmptySections();
@@ -1374,6 +1376,21 @@ void Writer::mergeSections() {
       continue;
     }
     to->merge(from);
+  }
+}
+
+// EC targets may have chunks of various architectures mixed together at this
+// point. Group code chunks of the same architecture together by sorting chunks
+// by their EC range type.
+void Writer::sortECChunks() {
+  if (!isArm64EC(ctx.config.machine))
+    return;
+
+  for (OutputSection *sec : ctx.outputSections) {
+    if (sec->isCodeSection())
+      llvm::stable_sort(sec->chunks, [=](const Chunk *a, const Chunk *b) {
+        return a->getArm64ECRangeType() < b->getArm64ECRangeType();
+      });
   }
 }
 

@@ -6130,6 +6130,17 @@ loadMBUFScalarOperandsFromVGPR(const SIInstrInfo &TII, MachineInstr &MI,
   unsigned MovExecOpc = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
   const auto *BoolXExecRC = TRI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID);
 
+  // Save SCC. Waterfall Loop may overwrite SCC.
+  Register SaveSCCReg;
+  bool SCCNotDead = (MBB.computeRegisterLiveness(TRI, AMDGPU::SCC, MI, 30) !=
+                     MachineBasicBlock::LQR_Dead);
+  if (SCCNotDead) {
+    SaveSCCReg = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    BuildMI(MBB, Begin, DL, TII.get(AMDGPU::S_CSELECT_B32), SaveSCCReg)
+        .addImm(1)
+        .addImm(0);
+  }
+
   Register SaveExec = MRI.createVirtualRegister(BoolXExecRC);
 
   // Save the EXEC mask
@@ -6185,8 +6196,15 @@ loadMBUFScalarOperandsFromVGPR(const SIInstrInfo &TII, MachineInstr &MI,
 
   emitLoadScalarOpsFromVGPRLoop(TII, MRI, MBB, *LoopBB, *BodyBB, DL, ScalarOps);
 
-  // Restore the EXEC mask
   MachineBasicBlock::iterator First = RemainderBB->begin();
+  // Restore SCC
+  if (SCCNotDead) {
+    BuildMI(*RemainderBB, First, DL, TII.get(AMDGPU::S_CMP_LG_U32))
+        .addReg(SaveSCCReg, RegState::Kill)
+        .addImm(0);
+  }
+
+  // Restore the EXEC mask
   BuildMI(*RemainderBB, First, DL, TII.get(MovExecOpc), Exec).addReg(SaveExec);
   return BodyBB;
 }
