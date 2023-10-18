@@ -160,63 +160,66 @@ cir::FuncOp LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(GlobalOp op) {
                                   block.begin(), std::prev(block.end()));
 
   // Register the destructor call with __cxa_atexit
+  auto &dtorRegion = op.getDtorRegion();
+  if (!dtorRegion.empty()) {
+    assert(op.getAst() &&
+           op.getAst()->getTLSKind() == clang::VarDecl::TLS_None && " TLS NYI");
+    // Create a variable that binds the atexit to this shared object.
+    builder.setInsertionPointToStart(&theModule.getBodyRegion().front());
+    auto Handle = buildRuntimeVariable(builder, "__dso_handle", op.getLoc(),
+                                       builder.getI8Type());
 
-  assert(op.getAst() && op.getAst()->getTLSKind() == clang::VarDecl::TLS_None &&
-         " TLS NYI");
-  // Create a variable that binds the atexit to this shared object.
-  builder.setInsertionPointToStart(&theModule.getBodyRegion().front());
-  auto Handle = buildRuntimeVariable(builder, "__dso_handle", op.getLoc(),
-                                     builder.getI8Type());
+    // Look for the destructor call in dtorBlock
+    auto &dtorBlock = dtorRegion.front();
+    mlir::cir::CallOp dtorCall;
+    for (auto op : reverse(dtorBlock.getOps<mlir::cir::CallOp>())) {
+      dtorCall = op;
+      break;
+    }
+    assert(dtorCall && "Expected a dtor call");
+    cir::FuncOp dtorFunc = getCalledFunction(dtorCall);
+    assert(dtorFunc &&
+           mlir::isa<ASTCXXDestructorDeclInterface>(*dtorFunc.getAst()) &&
+           "Expected a dtor call");
 
-  // Look for the destructor call in dtorBlock
-  auto &dtorBlock = op.getDtorRegion().front();
-  mlir::cir::CallOp dtorCall;
-  for (auto op : reverse(dtorBlock.getOps<mlir::cir::CallOp>())) {
-    dtorCall = op;
-    break;
+    // Create a runtime helper function:
+    //    extern "C" int __cxa_atexit(void (*f)(void *), void *p, void *d);
+    auto voidPtrTy =
+        ::mlir::cir::PointerType::get(builder.getContext(), voidTy);
+    auto voidFnTy = mlir::cir::FuncType::get({voidPtrTy}, voidTy);
+    auto voidFnPtrTy =
+        ::mlir::cir::PointerType::get(builder.getContext(), voidFnTy);
+    auto HandlePtrTy =
+        mlir::cir::PointerType::get(builder.getContext(), Handle.getSymType());
+    auto fnAtExitType = mlir::cir::FuncType::get(
+        {voidFnPtrTy, voidPtrTy, HandlePtrTy},
+        mlir::cir::VoidType::get(builder.getContext()));
+    const char *nameAtExit = "__cxa_atexit";
+    FuncOp fnAtExit =
+        buildRuntimeFunction(builder, nameAtExit, op.getLoc(), fnAtExitType);
+
+    // Replace the dtor call with a call to __cxa_atexit(&dtor, &var,
+    // &__dso_handle)
+    builder.setInsertionPointAfter(dtorCall);
+    mlir::Value args[3];
+    auto dtorPtrTy = mlir::cir::PointerType::get(builder.getContext(),
+                                                 dtorFunc.getFunctionType());
+    // dtorPtrTy
+    args[0] = builder.create<mlir::cir::GetGlobalOp>(
+        dtorCall.getLoc(), dtorPtrTy, dtorFunc.getSymName());
+    args[0] = builder.create<mlir::cir::CastOp>(
+        dtorCall.getLoc(), voidFnPtrTy, mlir::cir::CastKind::bitcast, args[0]);
+    args[1] = builder.create<mlir::cir::CastOp>(dtorCall.getLoc(), voidPtrTy,
+                                                mlir::cir::CastKind::bitcast,
+                                                dtorCall.getArgOperand(0));
+    args[2] = builder.create<mlir::cir::GetGlobalOp>(
+        Handle.getLoc(), HandlePtrTy, Handle.getSymName());
+    builder.create<mlir::cir::CallOp>(dtorCall.getLoc(), fnAtExit, args);
+    dtorCall->erase();
+    entryBB->getOperations().splice(entryBB->end(), dtorBlock.getOperations(),
+                                    dtorBlock.begin(),
+                                    std::prev(dtorBlock.end()));
   }
-  assert(dtorCall && "Expected a dtor call");
-  cir::FuncOp dtorFunc = getCalledFunction(dtorCall);
-  assert(dtorFunc &&
-         mlir::isa<ASTCXXDestructorDeclInterface>(*dtorFunc.getAst()) &&
-         "Expected a dtor call");
-
-  // Create a runtime helper function:
-  //    extern "C" int __cxa_atexit(void (*f)(void *), void *p, void *d);
-  auto voidPtrTy = ::mlir::cir::PointerType::get(builder.getContext(), voidTy);
-  auto voidFnTy = mlir::cir::FuncType::get({voidPtrTy}, voidTy);
-  auto voidFnPtrTy =
-      ::mlir::cir::PointerType::get(builder.getContext(), voidFnTy);
-  auto HandlePtrTy =
-      mlir::cir::PointerType::get(builder.getContext(), Handle.getSymType());
-  auto fnAtExitType =
-      mlir::cir::FuncType::get({voidFnPtrTy, voidPtrTy, HandlePtrTy},
-                               mlir::cir::VoidType::get(builder.getContext()));
-  const char *nameAtExit = "__cxa_atexit";
-  FuncOp fnAtExit =
-      buildRuntimeFunction(builder, nameAtExit, op.getLoc(), fnAtExitType);
-
-  // Replace the dtor call with a call to __cxa_atexit(&dtor, &var,
-  // &__dso_handle)
-  builder.setInsertionPointAfter(dtorCall);
-  mlir::Value args[3];
-  auto dtorPtrTy = mlir::cir::PointerType::get(builder.getContext(),
-                                               dtorFunc.getFunctionType());
-  // dtorPtrTy
-  args[0] = builder.create<mlir::cir::GetGlobalOp>(dtorCall.getLoc(), dtorPtrTy,
-                                                   dtorFunc.getSymName());
-  args[0] = builder.create<mlir::cir::CastOp>(
-      dtorCall.getLoc(), voidFnPtrTy, mlir::cir::CastKind::bitcast, args[0]);
-  args[1] = builder.create<mlir::cir::CastOp>(dtorCall.getLoc(), voidPtrTy,
-                                              mlir::cir::CastKind::bitcast,
-                                              dtorCall.getArgOperand(0));
-  args[2] = builder.create<mlir::cir::GetGlobalOp>(Handle.getLoc(), HandlePtrTy,
-                                                   Handle.getSymName());
-  builder.create<mlir::cir::CallOp>(dtorCall.getLoc(), fnAtExit, args);
-  dtorCall->erase();
-  entryBB->getOperations().splice(entryBB->end(), dtorBlock.getOperations(),
-                                  dtorBlock.begin(),
-                                  std::prev(dtorBlock.end()));
 
   // Replace cir.yield with cir.return
   builder.setInsertionPointToEnd(entryBB);
