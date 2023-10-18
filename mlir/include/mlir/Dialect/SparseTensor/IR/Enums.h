@@ -443,6 +443,29 @@ static_assert((isUniqueDLT(DimLevelType::Dense) &&
                !isUniqueDLT(DimLevelType::LooseCompressedNuNo)),
               "isUniqueDLT definition is broken");
 
+/// Bit manipulations for affine encoding.
+constexpr uint64_t encodeDim(uint64_t i, uint64_t cf, uint64_t cm) {
+  assert(i <= 0xffffffffu && cf <= 0x3fffffffu && cm <= 0x3fffffffu);
+  if (cf != 0)
+    return (0x1L << 62) | (cf << 32) | i;
+  if (cm != 0)
+    return (0x2L << 62) | (cm << 32) | i;
+  return i;
+}
+constexpr uint64_t encodeLvl(uint64_t i, uint64_t c, uint64_t ii) {
+  assert(i <= 0xffffffffu && c <= 0xffffu && ii <= 0xffffu);
+  if (c != 0)
+    return (0x3L << 62) | (c << 32) | (ii << 48) | i;
+  return i;
+}
+constexpr bool isEncodedFloor(uint64_t v) { return (v >> 62) == 0x01; }
+constexpr bool isEncodedMod(uint64_t v) { return (v >> 62) == 0x02; }
+constexpr bool isEncodedMul(uint64_t v) { return (v >> 62) == 0x03; }
+constexpr uint64_t decodeIndex(uint64_t v) { return v & 0xffffffffu; }
+constexpr uint64_t decodeConst(uint64_t v) { return (v >> 32) & 0x3fffffffu; }
+constexpr uint64_t decodeMulc(uint64_t v) { return (v >> 32) & 0xffffu; }
+constexpr uint64_t decodeMuli(uint64_t v) { return (v >> 48) & 0xffffu; }
+
 } // namespace sparse_tensor
 } // namespace mlir
 

@@ -675,9 +675,9 @@ Value sparse_tensor::genMapBuffers(OpBuilder &builder, Location loc,
                                    /*out*/ Value &lvl2dimBuffer) {
   const Dimension dimRank = stt.getDimRank();
   const Level lvlRank = stt.getLvlRank();
-  // For an identity mapping, the dim2lvl and lvl2dim mappings are
-  // identical as are dimSizes and lvlSizes, so buffers are reused
-  // as much as possible.
+  //  For an identity mapping, the dim2lvl and lvl2dim mappings are
+  //  identical as are dimSizes and lvlSizes, so buffers are reused
+  //  as much as possible.
   if (stt.isIdentity()) {
     assert(dimRank == lvlRank);
     SmallVector<Value> iotaValues;
@@ -688,25 +688,72 @@ Value sparse_tensor::genMapBuffers(OpBuilder &builder, Location loc,
     return dimSizesBuffer;
   }
   // Otherwise, some code needs to be generated to set up the buffers.
-  // TODO: use the lvl2dim once available and deal with non-permutations!
+  // This code deals with permutations as well as non-permutations that
+  // arise from rank changing blocking.
   const auto dimToLvl = stt.getDimToLvl();
-  assert(dimToLvl.isPermutation());
-  SmallVector<Value> dim2lvlValues(dimRank);
-  SmallVector<Value> lvl2dimValues(lvlRank);
+  SmallVector<Value> dim2lvlValues(lvlRank); // for each lvl, expr in dim vars
+  SmallVector<Value> lvl2dimValues(dimRank); // for each dim, expr in lvl vars
   SmallVector<Value> lvlSizesValues(lvlRank);
+  // Generate dim2lvl.
+  assert(lvlRank == dimToLvl.getNumResults());
   for (Level l = 0; l < lvlRank; l++) {
-    // The `d`th source variable occurs in the `l`th result position.
-    Dimension d = dimToLvl.getDimPosition(l);
-    Value lvl = constantIndex(builder, loc, l);
-    Value dim = constantIndex(builder, loc, d);
-    dim2lvlValues[d] = lvl;
-    lvl2dimValues[l] = dim;
-    if (stt.isDynamicDim(d))
-      lvlSizesValues[l] =
-          builder.create<memref::LoadOp>(loc, dimSizesBuffer, dim);
-    else
-      lvlSizesValues[l] = dimShapesValues[d];
+    AffineExpr exp = dimToLvl.getResult(l);
+    // We expect:
+    //    (1) l = d
+    //    (2) l = d / c
+    //    (3) l = d % c
+    Dimension d = 0;
+    uint64_t cf = 0, cm = 0;
+    switch (exp.getKind()) {
+    case AffineExprKind::DimId:
+      d = exp.cast<AffineDimExpr>().getPosition();
+      break;
+    case AffineExprKind::FloorDiv:
+      d = exp.cast<AffineBinaryOpExpr>()
+              .getLHS()
+              .cast<AffineDimExpr>()
+              .getPosition();
+      cf = exp.cast<AffineBinaryOpExpr>()
+               .getRHS()
+               .cast<AffineConstantExpr>()
+               .getValue();
+      break;
+    case AffineExprKind::Mod:
+      d = exp.cast<AffineBinaryOpExpr>()
+              .getLHS()
+              .cast<AffineDimExpr>()
+              .getPosition();
+      cm = exp.cast<AffineBinaryOpExpr>()
+               .getRHS()
+               .cast<AffineConstantExpr>()
+               .getValue();
+      break;
+    default:
+      llvm::report_fatal_error("unsupported dim2lvl in sparse tensor type");
+    }
+    llvm::dbgs() << "ENCODE " << d << " " << cf << " " << cm << " into "
+                 << encodeDim(d, cf, cm) << "\n";
+    dim2lvlValues[l] = constantIndex(builder, loc, encodeDim(d, cf, cm));
+    lvl2dimValues[d] = constantIndex(builder, loc, l); // FIXME, use lvlToDim
+    // Compute the level sizes.
+    //    (1) l = d        : size(d)
+    //    (2) l = d / c    : size(d) / c
+    //    (3) l = d % c    : c
+    Value lvlSz;
+    if (cm == 0) {
+      lvlSz = dimShapesValues[d];
+      if (stt.isDynamicDim(d))
+        lvlSz = builder.create<memref::LoadOp>(loc, dimSizesBuffer,
+                                               constantIndex(builder, loc, d));
+      if (cf != 0)
+        lvlSz = builder.create<arith::DivUIOp>(loc, lvlSz,
+                                               constantIndex(builder, loc, cf));
+    } else {
+      lvlSz = constantIndex(builder, loc, cm);
+    }
+    lvlSizesValues[l] = lvlSz;
   }
+  // Return buffers.
   dim2lvlBuffer = allocaBuffer(builder, loc, dim2lvlValues);
   lvl2dimBuffer = allocaBuffer(builder, loc, lvl2dimValues);
   return allocaBuffer(builder, loc, lvlSizesValues);
