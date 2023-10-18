@@ -501,15 +501,16 @@ void CIRGenVTables::buildVTTDefinition(mlir::cir::GlobalOp VTT,
     }
 
     mlir::Attribute Idxs[3] = {
-        CGM.getBuilder().getI32IntegerAttr(0),
-        CGM.getBuilder().getI32IntegerAttr(AddressPoint.VTableIndex),
-        CGM.getBuilder().getI32IntegerAttr(AddressPoint.AddressPointIndex),
+        mlir::cir::IntAttr::get(CGM.getBuilder().getSInt32Ty(), 0),
+        mlir::cir::IntAttr::get(CGM.getBuilder().getSInt32Ty(),
+                                AddressPoint.VTableIndex),
+        mlir::cir::IntAttr::get(CGM.getBuilder().getSInt32Ty(),
+                                AddressPoint.AddressPointIndex),
     };
 
-    auto Init = mlir::cir::GlobalViewAttr::get(
-        CGM.getBuilder().getUInt8PtrTy(),
-        mlir::FlatSymbolRefAttr::get(VTable.getSymNameAttr()),
-        mlir::ArrayAttr::get(CGM.getBuilder().getContext(), Idxs));
+    auto Indices = mlir::ArrayAttr::get(CGM.getBuilder().getContext(), Idxs);
+    auto Init = CGM.getBuilder().getGlobalViewAttr(
+        CGM.getBuilder().getUInt8PtrTy(), VTable, Indices);
 
     VTTComponents.push_back(Init);
   }

@@ -303,7 +303,8 @@ def TypeInfoAttr : CIR_Attr<"TypeInfo", "typeinfo", [TypedAttrInterface]> {
 
     The verifier enforces that the output type is always a `!cir.struct`,
     and that the ArrayAttr element types match the equivalent member type
-    for the resulting struct.
+    for the resulting struct, i.e, a GlobalViewAttr for symbol reference or
+    an IntAttr for flags.
 
     Example:
 

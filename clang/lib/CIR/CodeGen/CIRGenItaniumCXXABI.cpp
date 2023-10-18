@@ -27,6 +27,7 @@
 #include "clang/AST/VTableBuilder.h"
 #include "clang/Basic/Linkage.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace cir;
 using namespace clang;
@@ -825,7 +826,7 @@ class CIRGenItaniumRTTIBuilder {
   /// Build an abi::__vmi_class_type_info, used for
   /// classes with bases that do not satisfy the abi::__si_class_type_info
   /// constraints, according ti the Itanium C++ ABI, 2.9.5p5c.
-  void BuildVMIClassTypeInfo(const CXXRecordDecl *RD);
+  void BuildVMIClassTypeInfo(mlir::Location loc, const CXXRecordDecl *RD);
 
   // /// Build an abi::__pointer_type_info struct, used
   // /// for pointer types.
@@ -1437,8 +1438,149 @@ void CIRGenItaniumRTTIBuilder::BuildSIClassTypeInfo(mlir::Location loc,
   Fields.push_back(BaseTypeInfo);
 }
 
-void CIRGenItaniumRTTIBuilder::BuildVMIClassTypeInfo(const CXXRecordDecl *RD) {
-  // TODO: Implement this function.
+namespace {
+/// Contains virtual and non-virtual bases seen when traversing a class
+/// hierarchy.
+struct SeenBases {
+  llvm::SmallPtrSet<const CXXRecordDecl *, 16> NonVirtualBases;
+  llvm::SmallPtrSet<const CXXRecordDecl *, 16> VirtualBases;
+};
+} // namespace
+
+/// Compute the value of the flags member in abi::__vmi_class_type_info.
+///
+static unsigned ComputeVMIClassTypeInfoFlags(const CXXBaseSpecifier *Base,
+                                             SeenBases &Bases) {
+
+  unsigned Flags = 0;
+
+  auto *BaseDecl =
+      cast<CXXRecordDecl>(Base->getType()->castAs<RecordType>()->getDecl());
+
+  if (Base->isVirtual()) {
+    // Mark the virtual base as seen.
+    if (!Bases.VirtualBases.insert(BaseDecl).second) {
+      // If this virtual base has been seen before, then the class is diamond
+      // shaped.
+      Flags |= CIRGenItaniumRTTIBuilder::VMI_DiamondShaped;
+    } else {
+      if (Bases.NonVirtualBases.count(BaseDecl))
+        Flags |= CIRGenItaniumRTTIBuilder::VMI_NonDiamondRepeat;
+    }
+  } else {
+    // Mark the non-virtual base as seen.
+    if (!Bases.NonVirtualBases.insert(BaseDecl).second) {
+      // If this non-virtual base has been seen before, then the class has non-
+      // diamond shaped repeated inheritance.
+      Flags |= CIRGenItaniumRTTIBuilder::VMI_NonDiamondRepeat;
+    } else {
+      if (Bases.VirtualBases.count(BaseDecl))
+        Flags |= CIRGenItaniumRTTIBuilder::VMI_NonDiamondRepeat;
+    }
+  }
+
+  // Walk all bases.
+  for (const auto &I : BaseDecl->bases())
+    Flags |= ComputeVMIClassTypeInfoFlags(&I, Bases);
+
+  return Flags;
+}
+
+static unsigned ComputeVMIClassTypeInfoFlags(const CXXRecordDecl *RD) {
+  unsigned Flags = 0;
+  SeenBases Bases;
+
+  // Walk all bases.
+  for (const auto &I : RD->bases())
+    Flags |= ComputeVMIClassTypeInfoFlags(&I, Bases);
+
+  return Flags;
+}
+
+/// Build an abi::__vmi_class_type_info, used for
+/// classes with bases that do not satisfy the abi::__si_class_type_info
+/// constraints, according to the Itanium C++ ABI, 2.9.5p5c.
+void CIRGenItaniumRTTIBuilder::BuildVMIClassTypeInfo(mlir::Location loc,
+                                                     const CXXRecordDecl *RD) {
+  auto UnsignedIntLTy =
+      CGM.getTypes().ConvertType(CGM.getASTContext().UnsignedIntTy);
+  // Itanium C++ ABI 2.9.5p6c:
+  //   __flags is a word with flags describing details about the class
+  //   structure, which may be referenced by using the __flags_masks
+  //   enumeration. These flags refer to both direct and indirect bases.
+  unsigned Flags = ComputeVMIClassTypeInfoFlags(RD);
+  Fields.push_back(mlir::cir::IntAttr::get(UnsignedIntLTy, Flags));
+
+  // Itanium C++ ABI 2.9.5p6c:
+  //   __base_count is a word with the number of direct proper base class
+  //   descriptions that follow.
+  Fields.push_back(mlir::cir::IntAttr::get(UnsignedIntLTy, RD->getNumBases()));
+
+  if (!RD->getNumBases())
+    return;
+
+  // Now add the base class descriptions.
+
+  // Itanium C++ ABI 2.9.5p6c:
+  //   __base_info[] is an array of base class descriptions -- one for every
+  //   direct proper base. Each description is of the type:
+  //
+  //   struct abi::__base_class_type_info {
+  //   public:
+  //     const __class_type_info *__base_type;
+  //     long __offset_flags;
+  //
+  //     enum __offset_flags_masks {
+  //       __virtual_mask = 0x1,
+  //       __public_mask = 0x2,
+  //       __offset_shift = 8
+  //     };
+  //   };
+
+  // If we're in mingw and 'long' isn't wide enough for a pointer, use 'long
+  // long' instead of 'long' for __offset_flags. libstdc++abi uses long long on
+  // LLP64 platforms.
+  // FIXME: Consider updating libc++abi to match, and extend this logic to all
+  // LLP64 platforms.
+  QualType OffsetFlagsTy = CGM.getASTContext().LongTy;
+  const TargetInfo &TI = CGM.getASTContext().getTargetInfo();
+  if (TI.getTriple().isOSCygMing() &&
+      TI.getPointerWidth(LangAS::Default) > TI.getLongWidth())
+    OffsetFlagsTy = CGM.getASTContext().LongLongTy;
+  auto OffsetFlagsLTy = CGM.getTypes().ConvertType(OffsetFlagsTy);
+
+  for (const auto &Base : RD->bases()) {
+    // The __base_type member points to the RTTI for the base type.
+    Fields.push_back(
+        CIRGenItaniumRTTIBuilder(CXXABI, CGM).BuildTypeInfo(loc, Base.getType()));
+
+    auto *BaseDecl =
+        cast<CXXRecordDecl>(Base.getType()->castAs<RecordType>()->getDecl());
+
+    int64_t OffsetFlags = 0;
+
+    // All but the lower 8 bits of __offset_flags are a signed offset.
+    // For a non-virtual base, this is the offset in the object of the base
+    // subobject. For a virtual base, this is the offset in the virtual table of
+    // the virtual base offset for the virtual base referenced (negative).
+    CharUnits Offset;
+    if (Base.isVirtual())
+      Offset = CGM.getItaniumVTableContext().getVirtualBaseOffsetOffset(
+          RD, BaseDecl);
+    else
+      llvm_unreachable("Multi-inheritence NYI");
+
+    OffsetFlags = uint64_t(Offset.getQuantity()) << 8;
+
+    // The low-order byte of __offset_flags contains flags, as given by the
+    // masks from the enumeration __offset_flags_masks.
+    if (Base.isVirtual())
+      OffsetFlags |= BCTI_Virtual;
+    if (Base.getAccessSpecifier() == AS_public)
+      OffsetFlags |= BCTI_Public;
+
+    Fields.push_back(mlir::cir::IntAttr::get(OffsetFlagsLTy, OffsetFlags));
+  }
 }
 
 mlir::Attribute
@@ -1565,7 +1707,7 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::BuildTypeInfo(
     if (CanUseSingleInheritance(RD)) {
       BuildSIClassTypeInfo(loc, RD);
     } else {
-      BuildVMIClassTypeInfo(RD);
+      BuildVMIClassTypeInfo(loc, RD);
     }
 
     break;
