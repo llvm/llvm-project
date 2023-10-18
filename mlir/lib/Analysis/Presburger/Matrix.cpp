@@ -486,8 +486,8 @@ Fraction FracMatrix::determinant(FracMatrix* inverse) const {
       // First ensure that the diagonal
       // element is nonzero, by adding
       // a nonzero row to it.
-      for (unsigned j = i + 1; j < nRows; j++)
-        if (m(j, i) != 0) {
+      for (unsigned j = 0; j < nRows; j++)
+        if (j != i && m(j, i) != 0) {
           m.addToRow(j, i, 1);
           if (inverse)
             tempInv.addToRow(j, i, 1);
