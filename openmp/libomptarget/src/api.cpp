@@ -246,9 +246,8 @@ static int libomp_target_memset_async_task(kmp_int32 Gtid, kmp_task_t *Task) {
     return OFFLOAD_FAIL;
 
   auto *Args = reinterpret_cast<TargetMemsetArgsTy *>(Task->shareds);
-  if (!Args) {
+  if (!Args)
     return OFFLOAD_FAIL;
-  }
 
   // call omp_target_memset()
   omp_target_memset(Args->Ptr, Args->C, Args->N, Args->DeviceNum);
