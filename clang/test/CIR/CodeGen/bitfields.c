@@ -29,8 +29,8 @@ typedef struct {
 } T; 
 // CHECK: !ty_22S22 = !cir.struct<struct "S" {!u32i, !u32i, !u16i, !u32i}>
 // CHECK: !ty_22T22 = !cir.struct<struct "T" {!u8i, !u32i} #cir.record.decl.ast>
-// CHECK: !ty_22anon22 = !cir.struct<struct "anon" {!u32i} #cir.record.decl.ast>
-// CHECK: !ty_22__long22 = !cir.struct<struct "__long" {!ty_22anon22, !u32i, !cir.ptr<!u32i>}>
+// CHECK: !ty_22anon2E122 = !cir.struct<struct "anon.1" {!u32i} #cir.record.decl.ast>
+// CHECK: !ty_22__long22 = !cir.struct<struct "__long" {!ty_22anon2E122, !u32i, !cir.ptr<!u32i>}>
 
 // CHECK: cir.func {{.*@store_field}}
 // CHECK:   [[TMP0:%.*]] = cir.alloca !ty_22S22, cir.ptr <!ty_22S22>
