@@ -15,7 +15,6 @@
 #define LLVM_SUPPORT_SWAPBYTEORDER_H
 
 #include "llvm/ADT/bit.h"
-#include <cstddef>
 #include <cstdint>
 #include <type_traits>
 

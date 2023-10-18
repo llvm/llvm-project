@@ -237,6 +237,9 @@ def CmpIExtUI :
 // SelectOp
 //===----------------------------------------------------------------------===//
 
+def GetScalarOrVectorTrueAttribute :
+  NativeCodeCall<"cast<TypedAttr>(getBoolAttribute($0.getType(), true))">;
+
 // select(not(pred), a, b) => select(pred, b, a)
 def SelectNotCond :
     Pat<(SelectOp (Arith_XOrIOp $pred, (ConstantLikeMatcher APIntAttr:$ones)), $a, $b),
@@ -262,7 +265,8 @@ def SelectAndCond :
 def SelectAndNotCond :
     Pat<(SelectOp $predA, (SelectOp $predB, $y, $x), $y),
         (SelectOp (Arith_AndIOp $predA,
-                                (Arith_XOrIOp $predB, (Arith_ConstantOp ConstantAttr<I1Attr, "1">))),
+                                (Arith_XOrIOp $predB,
+                                (Arith_ConstantOp (GetScalarOrVectorTrueAttribute $predB)))),
                   $x, $y)>;
 
 // select(predA, x, select(predB, x, y)) => select(or(predA, predB), x, y)
@@ -274,7 +278,8 @@ def SelectOrCond :
 def SelectOrNotCond :
     Pat<(SelectOp $predA, $x, (SelectOp $predB, $y, $x)),
         (SelectOp (Arith_OrIOp $predA,
-                               (Arith_XOrIOp $predB, (Arith_ConstantOp ConstantAttr<I1Attr, "1">))),
+                               (Arith_XOrIOp $predB,
+                               (Arith_ConstantOp (GetScalarOrVectorTrueAttribute $predB)))),
                   $x, $y)>;
 
 //===----------------------------------------------------------------------===//

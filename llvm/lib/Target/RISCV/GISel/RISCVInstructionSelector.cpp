@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/Support/Debug.h"
@@ -65,17 +66,22 @@ private:
   bool selectSelect(MachineInstr &MI, MachineIRBuilder &MIB,
                     MachineRegisterInfo &MRI) const;
 
-  bool earlySelectShift(unsigned Opc, MachineInstr &I, MachineIRBuilder &MIB,
-                        const MachineRegisterInfo &MRI);
-
   ComplexRendererFns selectShiftMask(MachineOperand &Root) const;
   ComplexRendererFns selectAddrRegImm(MachineOperand &Root) const;
+
+  ComplexRendererFns selectSHXADDOp(MachineOperand &Root, unsigned ShAmt) const;
+  template <unsigned ShAmt>
+  ComplexRendererFns selectSHXADDOp(MachineOperand &Root) const {
+    return selectSHXADDOp(Root, ShAmt);
+  }
 
   // Custom renderers for tablegen
   void renderNegImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                     int OpIdx) const;
   void renderImmPlus1(MachineInstrBuilder &MIB, const MachineInstr &MI,
                       int OpIdx) const;
+  void renderImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                 int OpIdx) const;
 
   const RISCVSubtarget &STI;
   const RISCVInstrInfo &TII;
@@ -124,35 +130,113 @@ RISCVInstructionSelector::selectShiftMask(MachineOperand &Root) const {
 }
 
 InstructionSelector::ComplexRendererFns
+RISCVInstructionSelector::selectSHXADDOp(MachineOperand &Root,
+                                         unsigned ShAmt) const {
+  using namespace llvm::MIPatternMatch;
+  MachineFunction &MF = *Root.getParent()->getParent()->getParent();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  if (!Root.isReg())
+    return std::nullopt;
+  Register RootReg = Root.getReg();
+
+  const unsigned XLen = STI.getXLen();
+  APInt Mask, C2;
+  Register RegY;
+  std::optional<bool> LeftShift;
+  // (and (shl y, c2), mask)
+  if (mi_match(RootReg, MRI,
+               m_GAnd(m_GShl(m_Reg(RegY), m_ICst(C2)), m_ICst(Mask))))
+    LeftShift = true;
+  // (and (lshr y, c2), mask)
+  else if (mi_match(RootReg, MRI,
+                    m_GAnd(m_GLShr(m_Reg(RegY), m_ICst(C2)), m_ICst(Mask))))
+    LeftShift = false;
+
+  if (LeftShift.has_value()) {
+    if (*LeftShift)
+      Mask &= maskTrailingZeros<uint64_t>(C2.getLimitedValue());
+    else
+      Mask &= maskTrailingOnes<uint64_t>(XLen - C2.getLimitedValue());
+
+    if (Mask.isShiftedMask()) {
+      unsigned Leading = XLen - Mask.getActiveBits();
+      unsigned Trailing = Mask.countr_zero();
+      // Given (and (shl y, c2), mask) in which mask has no leading zeros and
+      // c3 trailing zeros. We can use an SRLI by c3 - c2 followed by a SHXADD.
+      if (*LeftShift && Leading == 0 && C2.ult(Trailing) && Trailing == ShAmt) {
+        Register DstReg =
+            MRI.createGenericVirtualRegister(MRI.getType(RootReg));
+        return {{[=](MachineInstrBuilder &MIB) {
+          MachineIRBuilder(*MIB.getInstr())
+              .buildInstr(RISCV::SRLI, {DstReg}, {RegY})
+              .addImm(Trailing - C2.getLimitedValue());
+          MIB.addReg(DstReg);
+        }}};
+      }
+
+      // Given (and (lshr y, c2), mask) in which mask has c2 leading zeros and
+      // c3 trailing zeros. We can use an SRLI by c2 + c3 followed by a SHXADD.
+      if (!*LeftShift && Leading == C2 && Trailing == ShAmt) {
+        Register DstReg =
+            MRI.createGenericVirtualRegister(MRI.getType(RootReg));
+        return {{[=](MachineInstrBuilder &MIB) {
+          MachineIRBuilder(*MIB.getInstr())
+              .buildInstr(RISCV::SRLI, {DstReg}, {RegY})
+              .addImm(Leading + Trailing);
+          MIB.addReg(DstReg);
+        }}};
+      }
+    }
+  }
+
+  LeftShift.reset();
+
+  // (shl (and y, mask), c2)
+  if (mi_match(RootReg, MRI,
+               m_GShl(m_OneNonDBGUse(m_GAnd(m_Reg(RegY), m_ICst(Mask))),
+                      m_ICst(C2))))
+    LeftShift = true;
+  // (lshr (and y, mask), c2)
+  else if (mi_match(RootReg, MRI,
+                    m_GLShr(m_OneNonDBGUse(m_GAnd(m_Reg(RegY), m_ICst(Mask))),
+                            m_ICst(C2))))
+    LeftShift = false;
+
+  if (LeftShift.has_value() && Mask.isShiftedMask()) {
+    unsigned Leading = XLen - Mask.getActiveBits();
+    unsigned Trailing = Mask.countr_zero();
+
+    // Given (shl (and y, mask), c2) in which mask has 32 leading zeros and
+    // c3 trailing zeros. If c1 + c3 == ShAmt, we can emit SRLIW + SHXADD.
+    bool Cond = *LeftShift && Leading == 32 && Trailing > 0 &&
+                (Trailing + C2.getLimitedValue()) == ShAmt;
+    if (!Cond)
+      // Given (lshr (and y, mask), c2) in which mask has 32 leading zeros and
+      // c3 trailing zeros. If c3 - c1 == ShAmt, we can emit SRLIW + SHXADD.
+      Cond = !*LeftShift && Leading == 32 && C2.ult(Trailing) &&
+             (Trailing - C2.getLimitedValue()) == ShAmt;
+
+    if (Cond) {
+      Register DstReg = MRI.createGenericVirtualRegister(MRI.getType(RootReg));
+      return {{[=](MachineInstrBuilder &MIB) {
+        MachineIRBuilder(*MIB.getInstr())
+            .buildInstr(RISCV::SRLIW, {DstReg}, {RegY})
+            .addImm(Trailing);
+        MIB.addReg(DstReg);
+      }}};
+    }
+  }
+
+  return std::nullopt;
+}
+
+InstructionSelector::ComplexRendererFns
 RISCVInstructionSelector::selectAddrRegImm(MachineOperand &Root) const {
   // TODO: Need to get the immediate from a G_PTR_ADD. Should this be done in
   // the combiner?
   return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Root.getReg()); },
            [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }}};
-}
-
-// Tablegen doesn't allow us to write SRLIW/SRAIW/SLLIW patterns because the
-// immediate Operand has type XLenVT. GlobalISel wants it to be i32.
-bool RISCVInstructionSelector::earlySelectShift(
-    unsigned Opc, MachineInstr &I, MachineIRBuilder &MIB,
-    const MachineRegisterInfo &MRI) {
-  if (!Subtarget->is64Bit())
-    return false;
-
-  LLT Ty = MRI.getType(I.getOperand(0).getReg());
-  if (!Ty.isScalar() || Ty.getSizeInBits() != 32)
-    return false;
-
-  std::optional<int64_t> CstVal =
-      getIConstantVRegSExtVal(I.getOperand(2).getReg(), MRI);
-  if (!CstVal || !isUInt<5>(*CstVal))
-    return false;
-
-  auto NewI = MIB.buildInstr(Opc, {I.getOperand(0).getReg()},
-                             {I.getOperand(1).getReg()})
-                  .addImm(*CstVal);
-  I.eraseFromParent();
-  return constrainSelectedInstRegOperands(*NewI, TII, TRI, RBI);
 }
 
 bool RISCVInstructionSelector::select(MachineInstr &MI) {
@@ -199,55 +283,6 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     return true;
   }
 
-  switch (Opc) {
-  case TargetOpcode::G_ADD: {
-    // Tablegen doesn't pick up the ADDIW pattern because i32 isn't a legal
-    // type for RV64 in SelectionDAG. Manually select it here.
-    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    if (Subtarget->is64Bit() && Ty.isScalar() && Ty.getSizeInBits() == 32) {
-      std::optional<int64_t> CstVal =
-          getIConstantVRegSExtVal(MI.getOperand(2).getReg(), MRI);
-      if (CstVal && isInt<12>(*CstVal)) {
-        auto NewI = MIB.buildInstr(RISCV::ADDIW, {MI.getOperand(0).getReg()},
-                                   {MI.getOperand(1).getReg()})
-                        .addImm(*CstVal);
-        MI.eraseFromParent();
-        return constrainSelectedInstRegOperands(*NewI, TII, TRI, RBI);
-      }
-    }
-    break;
-  }
-  case TargetOpcode::G_SUB: {
-    // Tablegen doesn't pick up the ADDIW pattern because i32 isn't a legal
-    // type for RV64 in SelectionDAG. Manually select it here.
-    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    if (Subtarget->is64Bit() && Ty.isScalar() && Ty.getSizeInBits() == 32) {
-      std::optional<int64_t> CstVal =
-          getIConstantVRegSExtVal(MI.getOperand(2).getReg(), MRI);
-      if (CstVal && ((isInt<12>(*CstVal) && *CstVal != -2048) || *CstVal == 2048)) {
-        auto NewI = MIB.buildInstr(RISCV::ADDIW, {MI.getOperand(0).getReg()},
-                                   {MI.getOperand(1).getReg()})
-                        .addImm(-*CstVal);
-        MI.eraseFromParent();
-        return constrainSelectedInstRegOperands(*NewI, TII, TRI, RBI);
-      }
-    }
-    break;
-  }
-  case TargetOpcode::G_ASHR:
-    if (earlySelectShift(RISCV::SRAIW, MI, MIB, MRI))
-      return true;
-    break;
-  case TargetOpcode::G_LSHR:
-    if (earlySelectShift(RISCV::SRLIW, MI, MIB, MRI))
-      return true;
-    break;
-  case TargetOpcode::G_SHL:
-    if (earlySelectShift(RISCV::SLLIW, MI, MIB, MRI))
-      return true;
-    break;
-  }
-
   if (selectImpl(MI, *CoverageInfo))
     return true;
 
@@ -268,6 +303,14 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   }
   case TargetOpcode::G_SEXT_INREG:
     return selectSExtInreg(MI, MIB);
+  case TargetOpcode::G_FRAME_INDEX: {
+    // TODO: We may want to replace this code with the SelectionDAG patterns,
+    // which fail to get imported because it uses FrameAddrRegImm, which is a
+    // ComplexPattern
+    MI.setDesc(TII.get(RISCV::ADDI));
+    MI.addOperand(MachineOperand::CreateImm(0));
+    return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+  }
   case TargetOpcode::G_SELECT:
     return selectSelect(MI, MIB, MRI);
   default:
@@ -284,7 +327,6 @@ bool RISCVInstructionSelector::replacePtrWithInt(MachineOperand &Op,
   const LLT XLenLLT = LLT::scalar(STI.getXLen());
   auto PtrToInt = MIB.buildPtrToInt(XLenLLT, PtrReg);
   MRI.setRegBank(PtrToInt.getReg(0), RBI.getRegBank(RISCV::GPRRegBankID));
-  MRI.setType(PtrReg, XLenLLT);
   Op.setReg(PtrToInt.getReg(0));
   return select(*PtrToInt);
 }
@@ -321,6 +363,15 @@ void RISCVInstructionSelector::renderImmPlus1(MachineInstrBuilder &MIB,
          "Expected G_CONSTANT");
   int64_t CstVal = MI.getOperand(1).getCImm()->getSExtValue();
   MIB.addImm(CstVal + 1);
+}
+
+void RISCVInstructionSelector::renderImm(MachineInstrBuilder &MIB,
+                                         const MachineInstr &MI,
+                                         int OpIdx) const {
+  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
+         "Expected G_CONSTANT");
+  int64_t CstVal = MI.getOperand(1).getCImm()->getSExtValue();
+  MIB.addImm(CstVal);
 }
 
 const TargetRegisterClass *RISCVInstructionSelector::getRegClassForTypeOnBank(

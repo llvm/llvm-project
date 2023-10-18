@@ -448,7 +448,7 @@ public:
 
 XCOFFObjectWriter::XCOFFObjectWriter(
     std::unique_ptr<MCXCOFFObjectTargetWriter> MOTW, raw_pwrite_stream &OS)
-    : W(OS, support::big), TargetObjectWriter(std::move(MOTW)),
+    : W(OS, llvm::endianness::big), TargetObjectWriter(std::move(MOTW)),
       Strings(StringTableBuilder::XCOFF),
       Text(".text", XCOFF::STYP_TEXT, /* IsVirtual */ false,
            CsectGroups{&ProgramCodeCsects, &ReadOnlyCsects}),

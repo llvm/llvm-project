@@ -29,7 +29,6 @@ namespace interp {
 using APInt = llvm::APInt;
 using APSInt = llvm::APSInt;
 template <unsigned Bits, bool Signed> class Integral;
-class Boolean;
 
 template <bool Signed> class IntegralAP final {
 private:
@@ -59,6 +58,9 @@ public:
   IntegralAP() : V(APSInt::getMaxValue(1024, Signed)) {}
 
   IntegralAP operator-() const { return IntegralAP(-V); }
+  IntegralAP operator-(const IntegralAP &Other) const {
+    return IntegralAP(V - Other.V);
+  }
   bool operator>(IntegralAP RHS) const { return V > RHS.V; }
   bool operator>=(IntegralAP RHS) const { return V >= RHS.V; }
   bool operator<(IntegralAP RHS) const { return V < RHS.V; }
@@ -100,10 +102,6 @@ public:
 
     assert(Copy.isSigned() == Signed);
     return IntegralAP<Signed>(Copy);
-  }
-  static IntegralAP from(const Boolean &B) {
-    assert(false);
-    return IntegralAP::zero();
   }
 
   static IntegralAP zero() {

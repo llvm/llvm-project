@@ -1421,7 +1421,7 @@ bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
   // Get a version of the index comparable to the type.
   T Index = T::from(Ptr.getIndex(), Offset.bitWidth());
   // Compute the largest index into the array.
-  unsigned MaxIndex = Ptr.getNumElems();
+  T MaxIndex = T::from(Ptr.getNumElems(), Offset.bitWidth());
 
   // Helper to report an invalid offset, computed as APSInt.
   auto InvalidOffset = [&]() {
@@ -1437,7 +1437,7 @@ bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
     return false;
   };
 
-  unsigned MaxOffset = MaxIndex - Ptr.getIndex();
+  T MaxOffset = T::from(MaxIndex - Index, Offset.bitWidth());
   if constexpr (Op == ArithOp::Add) {
     // If the new offset would be negative, bail out.
     if (Offset.isNegative() && (Offset.isMin() || -Offset > Index))
@@ -1488,11 +1488,14 @@ static inline bool IncDecPtrHelper(InterpState &S, CodePtr OpPC,
                                    const Pointer &Ptr) {
   using OneT = Integral<8, false>;
 
+  const Pointer &P = Ptr.deref<Pointer>();
+  if (!CheckNull(S, OpPC, P, CSK_ArrayIndex))
+    return false;
+
   // Get the current value on the stack.
-  S.Stk.push<Pointer>(Ptr.deref<Pointer>());
+  S.Stk.push<Pointer>(P);
 
   // Now the current Ptr again and a constant 1.
-  Pointer P = Ptr.deref<Pointer>();
   OneT One = OneT::from(1);
   if (!OffsetHelper<OneT, Op>(S, OpPC, One, P))
     return false;
