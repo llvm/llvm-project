@@ -26,21 +26,19 @@ void CastingThroughVoidCheck::registerMatchers(MatchFinder *Finder) {
           hasSourceExpression(
               explicitCastExpr(hasSourceExpression(expr(
                                    hasType(qualType().bind("source_type")))),
-                               hasDestinationType(pointsTo(voidType())))))
-          .bind("cast"),
+                               hasDestinationType(pointsTo(voidType())))
+                  .bind("cast"))),
       this);
 }
 
 void CastingThroughVoidCheck::check(const MatchFinder::MatchResult &Result) {
-  ASTContext *Context = Result.Context;
-  const auto *CE = Result.Nodes.getNodeAs<ExplicitCastExpr>("cast");
-  const auto *TT = Result.Nodes.getNodeAs<QualType>("target_type");
-  const auto *ST = Result.Nodes.getNodeAs<QualType>("source_type");
-  if (Context->hasSameType(*TT, *ST))
+  const auto TT = *Result.Nodes.getNodeAs<QualType>("target_type");
+  const auto ST = *Result.Nodes.getNodeAs<QualType>("source_type");
+  if (Result.Context->hasSameType(TT, ST))
     return;
-  diag(CE->getSourceRange().getBegin(), "do not cast %0 to %1 through void *",
-       DiagnosticIDs::Level::Warning)
-      << ST->getAsString() << TT->getAsString();
+  const auto *CE = Result.Nodes.getNodeAs<ExplicitCastExpr>("cast");
+  diag(CE->getSourceRange().getBegin(), "do not cast %0 to %1 through 'void*'")
+      << ST << TT;
 }
 
 } // namespace clang::tidy::bugprone

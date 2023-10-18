@@ -7,10 +7,10 @@ void test() {
   double d = 100;
 
   static_cast<int *>(static_cast<void *>(&d));
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: do not cast double * to int * through void * [bugprone-casting-through-void]
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: do not cast 'double *' to 'int *' through 'void*' [bugprone-casting-through-void]
 
   static_cast<int *>(static_cast<T>(&d));
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: do not cast double * to int * through void * [bugprone-casting-through-void]
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: do not cast 'double *' to 'int *' through 'void*' [bugprone-casting-through-void]
 
   static_cast<int *>(static_cast<void *>(&i));
 
