@@ -235,3 +235,51 @@ llvm.func @omp_teams_num_teams_and_thread_limit(%numTeamsLower: i32, %numTeamsUp
 // CHECK: define internal void [[OUTLINED_FN]](ptr {{.+}}, ptr {{.+}})
 // CHECK: call void @duringTeams()
 // CHECK: ret void
+
+// -----
+
+llvm.func @beforeTeams()
+llvm.func @duringTeams()
+llvm.func @afterTeams()
+
+// CHECK-LABEL: @teams_if
+// CHECK-SAME: (i1 [[ARG:.+]])
+llvm.func @teams_if(%arg : i1) {
+    // CHECK-NEXT: call void @beforeTeams()
+    llvm.call @beforeTeams() : () -> ()
+    // CHECK: [[NUM_TEAMS_UPPER:%.+]] = select i1 [[ARG]], i32 0, i32 1
+    // CHECK: [[NUM_TEAMS_LOWER:%.+]] = select i1 [[ARG]], i32 0, i32 1
+    // CHECK: call void @__kmpc_push_num_teams_51(ptr {{.+}}, i32 {{.+}}, i32 [[NUM_TEAMS_LOWER]], i32 [[NUM_TEAMS_UPPER]], i32 0)
+    // CHECK: call void {{.+}} @__kmpc_fork_teams({{.+}})
+    omp.teams if(%arg) {
+        llvm.call @duringTeams() : () -> ()
+        omp.terminator
+    }
+    // CHECK: call void @afterTeams()
+    llvm.call @afterTeams() : () -> ()
+    llvm.return
+}
+
+// -----
+
+llvm.func @beforeTeams()
+llvm.func @duringTeams()
+llvm.func @afterTeams()
+
+// CHECK-LABEL: @teams_if_with_num_teams
+// CHECK-SAME: (i1 [[CONDITION:.+]], i32 [[NUM_TEAMS_LOWER:.+]], i32 [[NUM_TEAMS_UPPER:.+]], i32 [[THREAD_LIMIT:.+]])
+llvm.func @teams_if_with_num_teams(%condition: i1, %numTeamsLower: i32, %numTeamsUpper: i32, %threadLimit: i32) {
+    // CHECK: call void @beforeTeams()
+    llvm.call @beforeTeams() : () -> ()
+    // CHECK: [[NUM_TEAMS_UPPER_NEW:%.+]] = select i1 [[CONDITION]], i32 [[NUM_TEAMS_UPPER]], i32 1
+    // CHECK: [[NUM_TEAMS_LOWER_NEW:%.+]] = select i1 [[CONDITION]], i32 [[NUM_TEAMS_LOWER]], i32 1
+    // CHECK: call void @__kmpc_push_num_teams_51(ptr {{.+}}, i32 {{.+}}, i32 [[NUM_TEAMS_LOWER_NEW]], i32 [[NUM_TEAMS_UPPER_NEW]], i32 [[THREAD_LIMIT]])
+    // CHECK: call void {{.+}} @__kmpc_fork_teams({{.+}})
+    omp.teams if(%condition) num_teams(%numTeamsLower: i32 to %numTeamsUpper: i32) thread_limit(%threadLimit: i32) {
+        llvm.call @duringTeams() : () -> ()
+        omp.terminator
+    }
+    // CHECK: call void @afterTeams()
+    llvm.call @afterTeams() : () -> ()
+    llvm.return
+}
