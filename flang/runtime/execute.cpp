@@ -43,6 +43,12 @@ static bool IsValidIntDescriptor(const Descriptor *length) {
       length->type().IsInteger() && typeCode && typeCode->second != 1;
 }
 
+static bool IsValidLogicalDescriptor(const Descriptor *wait) {
+  return wait && wait->IsAllocated() &&
+      wait->type() == TypeCode(TypeCategory::Logical, 1) &&
+      wait->rank() == 0;
+}
+
 static void FillWithSpaces(const Descriptor &value, std::size_t offset = 0) {
   if (offset < value.ElementBytes()) {
     std::memset(
