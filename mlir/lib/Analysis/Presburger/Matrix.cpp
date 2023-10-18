@@ -440,10 +440,7 @@ MPInt IntMatrix::determinant(IntMatrix* inverse) const {
 
   assert(nRows == nColumns && "determinant can only be calculated for square matrices!");
 
-  FracMatrix m(nRows, nColumns);
-  for (unsigned i = 0; i < nRows; i++)
-    for (unsigned j = 0; j < nColumns; j++)
-      m.at(i, j) = Fraction(at(i, j), 1);
+  FracMatrix m(*this);
   
   FracMatrix fracInverseM(nRows, nColumns);
   FracMatrix* fracInverse = &fracInverseM;
@@ -463,6 +460,13 @@ MPInt IntMatrix::determinant(IntMatrix* inverse) const {
 
 FracMatrix FracMatrix::identity(unsigned dimension) {
   return Matrix::identity(dimension);
+}
+
+FracMatrix::FracMatrix(IntMatrix m)
+  : FracMatrix(m.getNumRows(), m.getNumColumns()) {
+  for (unsigned i = 0; i < m.getNumRows(); i++)
+    for (unsigned j = 0; j < m.getNumColumns(); j++)
+      this->at(i, j) = Fraction(m.at(i, j), 1);
 }
 
 Fraction FracMatrix::determinant(FracMatrix* inverse) const {

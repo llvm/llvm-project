@@ -257,6 +257,8 @@ public:
   FracMatrix(Matrix<Fraction> m)
       : Matrix<Fraction>(m) {};
 
+  explicit FracMatrix(IntMatrix m);
+
   /// Return the identity matrix of the specified dimension.
   static FracMatrix identity(unsigned dimension);
 
