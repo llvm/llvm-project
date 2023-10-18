@@ -385,7 +385,7 @@ llvm::json::Value CreateThreadStopped(lldb::SBThread &thread, uint32_t stop_id);
 ///     The variable name of \a value or a default placeholder.
 const char *GetNonNullVariableName(lldb::SBValue value);
 
-/// DAP can't display two variables with the same name, so we need to
+/// VSCode can't display two variables with the same name, so we need to
 /// distinguish them by using a suffix.
 ///
 /// If the source and line information is present, we use it as the suffix.
@@ -434,7 +434,7 @@ std::string CreateUniqueVariableNameForDisplay(lldb::SBValue v,
 ///     context (e.g. locals). This can happen due to shadowed variables in
 ///     nested blocks.
 ///
-///     As DAP doesn't render two of more variables with the same name, we
+///     As VSCode doesn't render two of more variables with the same name, we
 ///     apply a suffix to distinguish duplicated variables.
 ///
 /// \param[in] custom_name
