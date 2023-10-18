@@ -410,13 +410,13 @@ public:
 
   /// Return the samples collected for function \p F.
   FunctionSamples *getSamplesFor(StringRef Fname) {
-    auto It = Profiles.find(Fname);
+    auto It = Profiles.find(FunctionId(Fname));
     if (It != Profiles.end())
       return &It->second;
 
     if (Remapper) {
       if (auto NameInProfile = Remapper->lookUpNameInProfile(Fname)) {
-        auto It = Profiles.find(*NameInProfile);
+        auto It = Profiles.find(FunctionId(*NameInProfile));
         if (It != Profiles.end())
           return &It->second;
       }
@@ -475,7 +475,7 @@ public:
 
   /// It includes all the names that have samples either in outline instance
   /// or inline instance.
-  virtual std::vector<StringRef> *getNameTable() { return nullptr; }
+  virtual std::vector<FunctionId> *getNameTable() { return nullptr; }
   virtual bool dumpSectionInfo(raw_ostream &OS = dbgs()) { return false; };
 
   /// Return whether names in the profile are all MD5 numbers.
@@ -508,10 +508,6 @@ protected:
 
   /// Memory buffer holding the profile file.
   std::unique_ptr<MemoryBuffer> Buffer;
-
-  /// Extra name buffer holding names created on demand.
-  /// This should only be needed for md5 profiles.
-  std::unordered_set<std::string> MD5NameBuffer;
 
   /// Profile summary information.
   std::unique_ptr<ProfileSummary> Summary;
@@ -596,7 +592,9 @@ public:
 
   /// It includes all the names that have samples either in outline instance
   /// or inline instance.
-  std::vector<StringRef> *getNameTable() override { return &NameTable; }
+  std::vector<FunctionId> *getNameTable() override {
+    return &NameTable;
+  }
 
 protected:
   /// Read a numeric value of type T from the profile.
@@ -638,7 +636,7 @@ protected:
   std::error_code readNameTable();
 
   /// Read a string indirectly via the name table. Optionally return the index.
-  ErrorOr<StringRef> readStringFromTable(size_t *RetIdx = nullptr);
+  ErrorOr<FunctionId> readStringFromTable(size_t *RetIdx = nullptr);
 
   /// Read a context indirectly via the CSNameTable. Optionally return the
   /// index.
@@ -655,19 +653,7 @@ protected:
   const uint8_t *End = nullptr;
 
   /// Function name table.
-  std::vector<StringRef> NameTable;
-
-  /// If MD5 is used in NameTable section, the section saves uint64_t data.
-  /// The uint64_t data has to be converted to a string and then the string
-  /// will be used to initialize StringRef in NameTable.
-  /// Note NameTable contains StringRef so it needs another buffer to own
-  /// the string data. MD5StringBuf serves as the string buffer that is
-  /// referenced by NameTable (vector of StringRef). We make sure
-  /// the lifetime of MD5StringBuf is not shorter than that of NameTable.
-  std::vector<std::string> MD5StringBuf;
-
-  /// The starting address of fixed length MD5 name table section.
-  const uint8_t *MD5NameMemStart = nullptr;
+  std::vector<FunctionId> NameTable;
 
   /// CSNameTable is used to save full context vectors. It is the backing buffer
   /// for SampleContextFrames.
