@@ -2,6 +2,9 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 target datalayout = "E-p:64:64:64-p1:32:32:32-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128"
 
+; Instcombine should be able to prove vector alignment in the
+; presence of a few mild address computation tricks.
+
 define void @test0(ptr %b, i64 %n, i64 %u, i64 %y) nounwind  {
 ; CHECK-LABEL: @test0(
 ; CHECK-NEXT:  entry:
@@ -15,8 +18,8 @@ define void @test0(ptr %b, i64 %n, i64 %u, i64 %y) nounwind  {
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[INDVAR_NEXT:%.*]], [[BB]] ], [ 20, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[J:%.*]] = mul i64 [[I]], [[V]]
-; CHECK-NEXT:    [[H:%.*]] = add i64 [[J]], [[Z]]
-; CHECK-NEXT:    [[T8:%.*]] = getelementptr double, ptr [[E]], i64 [[H]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr double, ptr [[E]], i64 [[J]]
+; CHECK-NEXT:    [[T8:%.*]] = getelementptr double, ptr [[TMP0]], i64 [[Z]]
 ; CHECK-NEXT:    store <2 x double> zeroinitializer, ptr [[T8]], align 8
 ; CHECK-NEXT:    [[INDVAR_NEXT]] = add i64 [[I]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVAR_NEXT]], [[N]]

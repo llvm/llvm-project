@@ -1558,6 +1558,11 @@ let SubtargetPredicate = isGFX11Plus in {
                                 "$simm16">;
 } // End SubtargetPredicate = isGFX11Plus
 
+let SubtargetPredicate = HasVGPRSingleUseHintInsts in {
+  def S_SINGLEUSE_VDST :
+    SOPP_Pseudo<"s_singleuse_vdst", (ins s16imm:$simm16), "$simm16">;
+} // End SubtargetPredicate = HasVGPRSingeUseHintInsts
+
 //===----------------------------------------------------------------------===//
 // SOP1 Patterns
 //===----------------------------------------------------------------------===//
@@ -2266,6 +2271,12 @@ defm S_TTRACEDATA                 : SOPP_Real_32_gfx11<0x03a>;
 defm S_TTRACEDATA_IMM             : SOPP_Real_32_gfx11<0x03b>;
 defm S_ICACHE_INV                 : SOPP_Real_32_gfx11<0x03c>;
 defm S_BARRIER                    : SOPP_Real_32_gfx11<0x03d>;
+
+//===----------------------------------------------------------------------===//
+// SOPP - GFX1150
+//===----------------------------------------------------------------------===//
+
+defm S_SINGLEUSE_VDST             : SOPP_Real_32_gfx11<0x013>;
 
 //===----------------------------------------------------------------------===//
 // SOPP - GFX6, GFX7, GFX8, GFX9, GFX10

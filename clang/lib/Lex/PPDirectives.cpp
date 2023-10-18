@@ -231,9 +231,10 @@ static bool warnByDefaultOnWrongCase(StringRef Include) {
     .Cases("assert.h", "complex.h", "ctype.h", "errno.h", "fenv.h", true)
     .Cases("float.h", "inttypes.h", "iso646.h", "limits.h", "locale.h", true)
     .Cases("math.h", "setjmp.h", "signal.h", "stdalign.h", "stdarg.h", true)
-    .Cases("stdatomic.h", "stdbool.h", "stddef.h", "stdint.h", "stdio.h", true)
-    .Cases("stdlib.h", "stdnoreturn.h", "string.h", "tgmath.h", "threads.h", true)
-    .Cases("time.h", "uchar.h", "wchar.h", "wctype.h", true)
+    .Cases("stdatomic.h", "stdbool.h", "stdckdint.h", "stddef.h", true)
+    .Cases("stdint.h", "stdio.h", "stdlib.h", "stdnoreturn.h", true)
+    .Cases("string.h", "tgmath.h", "threads.h", "time.h", "uchar.h", true)
+    .Cases("wchar.h", "wctype.h", true)
 
     // C++ headers for C library facilities
     .Cases("cassert", "ccomplex", "cctype", "cerrno", "cfenv", true)
@@ -961,7 +962,7 @@ OptionalFileEntryRef Preprocessor::LookupFile(
 
   // If the header lookup mechanism may be relative to the current inclusion
   // stack, record the parent #includes.
-  SmallVector<std::pair<const FileEntry *, DirectoryEntryRef>, 16> Includers;
+  SmallVector<std::pair<OptionalFileEntryRef, DirectoryEntryRef>, 16> Includers;
   bool BuildSystemModule = false;
   if (!FromDir && !FromFile) {
     FileID FID = getCurrentFileLexer()->getFileID();
@@ -981,7 +982,7 @@ OptionalFileEntryRef Preprocessor::LookupFile(
     // map file.
     if (!FileEnt) {
       if (FID == SourceMgr.getMainFileID() && MainFileDir) {
-        Includers.push_back(std::make_pair(nullptr, *MainFileDir));
+        Includers.push_back(std::make_pair(std::nullopt, *MainFileDir));
         BuildSystemModule = getCurrentModule()->IsSystem;
       } else if ((FileEnt = SourceMgr.getFileEntryRefForID(
                       SourceMgr.getMainFileID()))) {
@@ -1896,26 +1897,27 @@ static bool trySimplifyPath(SmallVectorImpl<StringRef> &Components,
 
 bool Preprocessor::checkModuleIsAvailable(const LangOptions &LangOpts,
                                           const TargetInfo &TargetInfo,
-                                          DiagnosticsEngine &Diags, Module *M) {
+                                          const Module &M,
+                                          DiagnosticsEngine &Diags) {
   Module::Requirement Requirement;
   Module::UnresolvedHeaderDirective MissingHeader;
   Module *ShadowingModule = nullptr;
-  if (M->isAvailable(LangOpts, TargetInfo, Requirement, MissingHeader,
-                     ShadowingModule))
+  if (M.isAvailable(LangOpts, TargetInfo, Requirement, MissingHeader,
+                    ShadowingModule))
     return false;
 
   if (MissingHeader.FileNameLoc.isValid()) {
     Diags.Report(MissingHeader.FileNameLoc, diag::err_module_header_missing)
         << MissingHeader.IsUmbrella << MissingHeader.FileName;
   } else if (ShadowingModule) {
-    Diags.Report(M->DefinitionLoc, diag::err_module_shadowed) << M->Name;
+    Diags.Report(M.DefinitionLoc, diag::err_module_shadowed) << M.Name;
     Diags.Report(ShadowingModule->DefinitionLoc,
                  diag::note_previous_definition);
   } else {
     // FIXME: Track the location at which the requirement was specified, and
     // use it here.
-    Diags.Report(M->DefinitionLoc, diag::err_module_unavailable)
-        << M->getFullModuleName() << Requirement.second << Requirement.first;
+    Diags.Report(M.DefinitionLoc, diag::err_module_unavailable)
+        << M.getFullModuleName() << Requirement.second << Requirement.first;
   }
   return true;
 }
@@ -2260,8 +2262,9 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     // unavailable, diagnose the situation and bail out.
     // FIXME: Remove this; loadModule does the same check (but produces
     // slightly worse diagnostics).
-    if (checkModuleIsAvailable(getLangOpts(), getTargetInfo(), getDiagnostics(),
-                               SuggestedModule.getModule())) {
+    if (checkModuleIsAvailable(getLangOpts(), getTargetInfo(),
+                               *SuggestedModule.getModule(),
+                               getDiagnostics())) {
       Diag(FilenameTok.getLocation(),
            diag::note_implicit_top_level_module_import_here)
           << SuggestedModule.getModule()->getTopLevelModuleName();
@@ -2325,8 +2328,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   SrcMgr::CharacteristicKind FileCharacter =
       SourceMgr.getFileCharacteristic(FilenameTok.getLocation());
   if (File)
-    FileCharacter = std::max(HeaderInfo.getFileDirFlavor(&File->getFileEntry()),
-                             FileCharacter);
+    FileCharacter = std::max(HeaderInfo.getFileDirFlavor(*File), FileCharacter);
 
   // If this is a '#import' or an import-declaration, don't re-enter the file.
   //

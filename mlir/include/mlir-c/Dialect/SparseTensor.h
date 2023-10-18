@@ -26,20 +26,20 @@ MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(SparseTensor, sparse_tensor);
 /// If updating, keep them in sync and update the static_assert in the impl
 /// file.
 enum MlirSparseTensorDimLevelType {
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_DENSE = 4,                     // 0b00001_00
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED = 8,                // 0b00010_00
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_NU = 9,             // 0b00010_01
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_NO = 10,            // 0b00010_10
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_NU_NO = 11,         // 0b00010_11
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON = 16,                // 0b00100_00
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON_NU = 17,             // 0b00100_01
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON_NO = 18,             // 0b00100_10
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON_NU_NO = 19,          // 0b00100_11
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_WITH_HI = 32,       // 0b01000_00
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_WITH_HI_NU = 33,    // 0b01000_01
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_WITH_HI_NO = 34,    // 0b01000_10
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_WITH_HI_NU_NO = 35, // 0b01000_11
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_TWO_OUT_OF_FOUR = 64,          // 0b10000_00
+  MLIR_SPARSE_TENSOR_DIM_LEVEL_DENSE = 4,                   // 0b00001_00
+  MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED = 8,              // 0b00010_00
+  MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_NU = 9,           // 0b00010_01
+  MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_NO = 10,          // 0b00010_10
+  MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_NU_NO = 11,       // 0b00010_11
+  MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON = 16,              // 0b00100_00
+  MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON_NU = 17,           // 0b00100_01
+  MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON_NO = 18,           // 0b00100_10
+  MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON_NU_NO = 19,        // 0b00100_11
+  MLIR_SPARSE_TENSOR_DIM_LEVEL_LOOSE_COMPRESSED = 32,       // 0b01000_00
+  MLIR_SPARSE_TENSOR_DIM_LEVEL_LOOSE_COMPRESSED_NU = 33,    // 0b01000_01
+  MLIR_SPARSE_TENSOR_DIM_LEVEL_LOOSE_COMPRESSED_NO = 34,    // 0b01000_10
+  MLIR_SPARSE_TENSOR_DIM_LEVEL_LOOSE_COMPRESSED_NU_NO = 35, // 0b01000_11
+  MLIR_SPARSE_TENSOR_DIM_LEVEL_TWO_OUT_OF_FOUR = 64,        // 0b10000_00
 };
 
 //===----------------------------------------------------------------------===//
@@ -51,11 +51,10 @@ MLIR_CAPI_EXPORTED bool
 mlirAttributeIsASparseTensorEncodingAttr(MlirAttribute attr);
 
 /// Creates a `sparse_tensor.encoding` attribute with the given parameters.
-/// TODO: add a version that supplied lvlToDim when it cannot be inferred
 MLIR_CAPI_EXPORTED MlirAttribute mlirSparseTensorEncodingAttrGet(
     MlirContext ctx, intptr_t lvlRank,
     enum MlirSparseTensorDimLevelType const *lvlTypes, MlirAffineMap dimToLvl,
-    int posWidth, int crdWidth);
+    MlirAffineMap lvlTodim, int posWidth, int crdWidth);
 
 /// Returns the level-rank of the `sparse_tensor.encoding` attribute.
 MLIR_CAPI_EXPORTED intptr_t

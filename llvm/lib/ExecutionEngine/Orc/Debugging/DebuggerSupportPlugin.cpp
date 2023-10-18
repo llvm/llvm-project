@@ -156,28 +156,30 @@ public:
       }
     }
 
-    std::optional<std::string> FileName;
+    std::optional<StringRef> FileName;
     if (!DebugLineSectionData.empty()) {
-      auto DWARFCtx = DWARFContext::create(DebugSectionMap, G.getPointerSize(),
-                                           G.getEndianness());
+      assert((G.getEndianness() == llvm::endianness::big ||
+              G.getEndianness() == llvm::endianness::little) &&
+             "G.getEndianness() must be either big or little");
+      auto DWARFCtx =
+          DWARFContext::create(DebugSectionMap, G.getPointerSize(),
+                               G.getEndianness() == llvm::endianness::little);
       DWARFDataExtractor DebugLineData(
-          DebugLineSectionData,
-          G.getEndianness() == support::endianness::little, G.getPointerSize());
+          DebugLineSectionData, G.getEndianness() == llvm::endianness::little,
+          G.getPointerSize());
       uint64_t Offset = 0;
       DWARFDebugLine::LineTable LineTable;
 
       // Try to parse line data. Consume error on failure.
       if (auto Err = LineTable.parse(DebugLineData, &Offset, *DWARFCtx, nullptr,
                                      consumeError)) {
-        handleAllErrors(
-          std::move(Err),
-          [&](ErrorInfoBase &EIB) {
-            LLVM_DEBUG({
-              dbgs() << "Cannot parse line table for \"" << G.getName() << "\": ";
-              EIB.log(dbgs());
-              dbgs() << "\n";
-            });
+        handleAllErrors(std::move(Err), [&](ErrorInfoBase &EIB) {
+          LLVM_DEBUG({
+            dbgs() << "Cannot parse line table for \"" << G.getName() << "\": ";
+            EIB.log(dbgs());
+            dbgs() << "\n";
           });
+        });
       } else {
         if (!LineTable.Prologue.FileNames.empty())
           FileName = *dwarf::toString(LineTable.Prologue.FileNames[0].Name);
@@ -187,7 +189,7 @@ public:
     // If no line table (or unable to use) then use graph name.
     // FIXME: There are probably other debug sections we should look in first.
     if (!FileName)
-      FileName = G.getName();
+      FileName = StringRef(G.getName());
 
     Builder.addSymbol("", MachO::N_SO, 0, 0, 0);
     Builder.addSymbol(*FileName, MachO::N_SO, 0, 0, 0);
@@ -372,7 +374,7 @@ void GDBJITDebugInfoRegistrationPlugin::modifyPassConfigForMachO(
   case Triple::aarch64:
     // Supported, continue.
     assert(LG.getPointerSize() == 8 && "Graph has incorrect pointer size");
-    assert(LG.getEndianness() == support::little &&
+    assert(LG.getEndianness() == llvm::endianness::little &&
            "Graph has incorrect endianness");
     break;
   default:
@@ -382,7 +384,7 @@ void GDBJITDebugInfoRegistrationPlugin::modifyPassConfigForMachO(
              << "MachO graph " << LG.getName()
              << "(triple = " << LG.getTargetTriple().str()
              << ", pointer size = " << LG.getPointerSize() << ", endianness = "
-             << (LG.getEndianness() == support::big ? "big" : "little")
+             << (LG.getEndianness() == llvm::endianness::big ? "big" : "little")
              << ")\n";
     });
     return;

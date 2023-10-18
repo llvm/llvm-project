@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify %s
-// RUN: %clang_cc1 -verify=ref -DCUR_INTERP %s
+// RUN: %clang_cc1 -verify=ref %s
 
 constexpr int m = 3;
 constexpr const int *foo[][5] = {
@@ -333,6 +333,26 @@ namespace IncDec {
                                    // expected-note {{in call to}} \
                                    // ref-error {{not an integral constant expression}} \
                                   // ref-note {{in call to}}
+
+  constexpr int nullptr1(bool Pre) {
+    int *a = nullptr;
+    if (Pre)
+      ++a; // ref-note {{arithmetic on null pointer}} \
+           // expected-note {{arithmetic on null pointer}}
+    else
+      a++; // ref-note {{arithmetic on null pointer}} \
+           // expected-note {{arithmetic on null pointer}}
+    return 1;
+  }
+  static_assert(nullptr1(true) == 1, ""); // ref-error {{not an integral constant expression}} \
+                                          // ref-note {{in call to}} \
+                                          // expected-error {{not an integral constant expression}} \
+                                          // expected-note {{in call to}}
+
+  static_assert(nullptr1(false) == 1, ""); // ref-error {{not an integral constant expression}} \
+                                           // ref-note {{in call to}} \
+                                           // expected-error {{not an integral constant expression}} \
+                                           // expected-note {{in call to}}
 };
 
 namespace ZeroInit {
@@ -355,7 +375,6 @@ namespace ArrayInitLoop {
   /// FIXME: The ArrayInitLoop for the decomposition initializer in g() has
   /// f(n) as its CommonExpr. We need to evaluate that exactly once and not
   /// N times as we do right now.
-#ifndef CUR_INTERP
   struct X {
       int arr[3];
   };
@@ -369,5 +388,25 @@ namespace ArrayInitLoop {
   }
   static_assert(g() == 6); // expected-error {{failed}} \
                            // expected-note {{15 == 6}}
-#endif
+}
+
+namespace StringZeroFill {
+  struct A {
+    char c[6];
+  };
+  constexpr A a = { "abc" };
+  static_assert(a.c[0] == 'a', "");
+  static_assert(a.c[1] == 'b', "");
+  static_assert(a.c[2] == 'c', "");
+  static_assert(a.c[3] == '\0', "");
+  static_assert(a.c[4] == '\0', "");
+  static_assert(a.c[5] == '\0', "");
+
+  constexpr char b[6] = "foo";
+  static_assert(b[0] == 'f', "");
+  static_assert(b[1] == 'o', "");
+  static_assert(b[2] == 'o', "");
+  static_assert(b[3] == '\0', "");
+  static_assert(b[4] == '\0', "");
+  static_assert(b[5] == '\0', "");
 }

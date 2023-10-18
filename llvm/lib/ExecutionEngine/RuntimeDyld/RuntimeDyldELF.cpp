@@ -35,7 +35,8 @@ static void or32AArch64Imm(void *L, uint64_t Imm) {
 }
 
 template <class T> static void write(bool isBE, void *P, T V) {
-  isBE ? write<T, support::big>(P, V) : write<T, support::little>(P, V);
+  isBE ? write<T, llvm::endianness::big>(P, V)
+       : write<T, llvm::endianness::little>(P, V);
 }
 
 static void write32AArch64Addr(void *L, uint64_t Imm) {

@@ -26,7 +26,8 @@ static bool isSplatZero(Type elemType, DenseElementsAttr val) {
 }
 
 /// Generates a for loop over ZA tile slices where the induction variable is
-/// the tile slice index.
+/// the tile slice index. Sets the IR Builder insertion point as the loop body.
+/// Callers of this method are responsible for restoring it if needed.
 static scf::ForOp getLoopOverTileSlices(PatternRewriter &rewriter, Location loc,
                                         Type eltType) {
   auto step = rewriter.create<arith::ConstantIndexOp>(loc, 1);
@@ -66,7 +67,7 @@ namespace {
 ///
 /// is converted to:
 ///
-///   arm_sme.tile_load ... <vertical>
+///   arm_sme.tile_load ... layout<vertical>
 struct TransferReadPermutationToArmSMELowering
     : public OpRewritePattern<vector::TransferReadOp> {
   using OpRewritePattern<vector::TransferReadOp>::OpRewritePattern;
@@ -226,8 +227,6 @@ struct ConstantOpToArmSMELowering : public OpRewritePattern<arith::ConstantOp> {
     rewriter.create<arm_sme::MoveVectorToTileSliceOp>(
         loc, tileType, constantOp1D, tile, tileSliceIndex);
 
-    rewriter.setInsertionPointAfter(forOp);
-
     rewriter.replaceOp(constantOp, tile);
 
     return success();
@@ -292,8 +291,6 @@ struct BroadcastOpToArmSMELowering
     // tile slice.
     rewriter.create<arm_sme::MoveVectorToTileSliceOp>(
         loc, tileType, broadcastOp1D, tile, tileSliceIndex);
-
-    rewriter.setInsertionPointAfter(forOp);
 
     rewriter.replaceOp(broadcastOp, tile);
 
@@ -371,8 +368,8 @@ struct SplatOpToArmSMELowering : public OpRewritePattern<vector::SplatOp> {
 ///   %alloca = memref.alloca(%svl_s, %svl_s) : memref<?x?xi32>
 ///   %arm_sme.tile_store %src, <hor>, %alloca[%c0, %c0]
 ///     : memref<?x?xi32>, vector<[4]x[4]xi32>
-///   %transposed_src = arm_sme.tile_load %alloca[%c0, %c0], <vertical>
-///     : memref<?x?xi32>, vector<[4]x[4]xi32>
+///   %transposed_src = arm_sme.tile_load %alloca[%c0, %c0]
+///     layout<vertical> : memref<?x?xi32>, vector<[4]x[4]xi32>
 ///
 /// NOTE: Tranposing via memory is obviously expensive, the current intention
 /// is to avoid the transpose if possible, this is therefore intended as a
@@ -434,9 +431,8 @@ struct TransposeOpToArmSMELowering
 
 void mlir::populateVectorToArmSMEPatterns(RewritePatternSet &patterns,
                                           MLIRContext &ctx) {
-  patterns.add<TransferReadPermutationToArmSMELowering,
-               TransferWriteToArmSMELowering, VectorLoadToArmSMELowering,
-               VectorStoreToArmSMELowering, ConstantOpToArmSMELowering,
-               BroadcastOpToArmSMELowering, SplatOpToArmSMELowering,
-               TransposeOpToArmSMELowering>(&ctx);
+  patterns.add<BroadcastOpToArmSMELowering, ConstantOpToArmSMELowering,
+               SplatOpToArmSMELowering, TransferReadPermutationToArmSMELowering,
+               TransferWriteToArmSMELowering, TransposeOpToArmSMELowering,
+               VectorLoadToArmSMELowering, VectorStoreToArmSMELowering>(&ctx);
 }

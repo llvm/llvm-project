@@ -799,13 +799,17 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
           }
         }
       }
-      // ub = baseLb + extent - 1
       if (!ubound) {
-        mlir::Value ext =
-            fir::factory::readExtent(builder, loc, dataExv, dimension);
-        mlir::Value lbExt =
-            builder.create<mlir::arith::AddIOp>(loc, ext, baseLb);
-        ubound = builder.create<mlir::arith::SubIOp>(loc, lbExt, one);
+        extent = fir::factory::readExtent(builder, loc, dataExv, dimension);
+        if (defaultLb) {
+          // ub = extent - 1
+          ubound = builder.create<mlir::arith::SubIOp>(loc, extent, one);
+        } else {
+          // ub = baseLb + extent - 1
+          mlir::Value lbExt =
+              builder.create<mlir::arith::AddIOp>(loc, extent, baseLb);
+          ubound = builder.create<mlir::arith::SubIOp>(loc, lbExt, one);
+        }
       }
       mlir::Value bound = builder.create<BoundsOp>(
           loc, boundTy, lbound, ubound, extent, stride, strideInBytes, baseLb);
@@ -875,8 +879,17 @@ mlir::Value gatherDataOperandAddrAndBounds(
                       builder, operandLocation, converter, compExv, baseAddr);
                 asFortran << (*expr).AsFortran();
 
+                if (auto loadOp = mlir::dyn_cast_or_null<fir::LoadOp>(
+                        baseAddr.getDefiningOp())) {
+                  if (fir::isAllocatableType(loadOp.getType()) ||
+                      fir::isPointerType(loadOp.getType()))
+                    baseAddr = builder.create<fir::BoxAddrOp>(operandLocation,
+                                                              baseAddr);
+                }
+
                 // If the component is an allocatable or pointer the result of
-                // genExprAddr will be the result of a fir.box_addr operation.
+                // genExprAddr will be the result of a fir.box_addr operation or
+                // a fir.box_addr has been inserted just before.
                 // Retrieve the box so we handle it like other descriptor.
                 if (auto boxAddrOp = mlir::dyn_cast_or_null<fir::BoxAddrOp>(
                         baseAddr.getDefiningOp())) {

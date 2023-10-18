@@ -8375,7 +8375,7 @@ bool ARMTargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
   unsigned EltSize = VT.getScalarSizeInBits();
   if (EltSize >= 32 ||
       ShuffleVectorSDNode::isSplatMask(&M[0], VT) ||
-      ShuffleVectorInst::isIdentityMask(M) ||
+      ShuffleVectorInst::isIdentityMask(M, M.size()) ||
       isVREVMask(M, VT, 64) ||
       isVREVMask(M, VT, 32) ||
       isVREVMask(M, VT, 16))
@@ -9082,6 +9082,8 @@ static SDValue LowerCONCAT_VECTORS_i1(SDValue Op, SelectionDAG &DAG,
     EVT Op1VT = V1.getValueType();
     EVT Op2VT = V2.getValueType();
     assert(Op1VT == Op2VT && "Operand types don't match!");
+    assert((Op1VT == MVT::v2i1 || Op1VT == MVT::v4i1 || Op1VT == MVT::v8i1) &&
+           "Unexpected i1 concat operations!");
     EVT VT = Op1VT.getDoubleNumVectorElementsVT(*DAG.getContext());
 
     SDValue NewV1 = PromoteMVEPredVector(dl, V1, Op1VT, DAG);
@@ -9103,9 +9105,14 @@ static SDValue LowerCONCAT_VECTORS_i1(SDValue Op, SelectionDAG &DAG,
     auto ExtractInto = [&DAG, &dl](SDValue NewV, SDValue ConVec, unsigned &j) {
       EVT NewVT = NewV.getValueType();
       EVT ConcatVT = ConVec.getValueType();
+      unsigned ExtScale = 1;
+      if (NewVT == MVT::v2f64) {
+        NewV = DAG.getNode(ARMISD::VECTOR_REG_CAST, dl, MVT::v4i32, NewV);
+        ExtScale = 2;
+      }
       for (unsigned i = 0, e = NewVT.getVectorNumElements(); i < e; i++, j++) {
         SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i32, NewV,
-                                  DAG.getIntPtrConstant(i, dl));
+                                  DAG.getIntPtrConstant(i * ExtScale, dl));
         ConVec = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, ConcatVT, ConVec, Elt,
                              DAG.getConstant(j, dl, MVT::i32));
       }
@@ -9116,14 +9123,7 @@ static SDValue LowerCONCAT_VECTORS_i1(SDValue Op, SelectionDAG &DAG,
     ConVec = ExtractInto(NewV2, ConVec, j);
 
     // Now return the result of comparing the subvector with zero, which will
-    // generate a real predicate, i.e. v4i1, v8i1 or v16i1. For a v2i1 we
-    // convert to a v4i1 compare to fill in the two halves of the i64 as i32s.
-    if (VT == MVT::v2i1) {
-      SDValue BC = DAG.getNode(ARMISD::VECTOR_REG_CAST, dl, MVT::v4i32, ConVec);
-      SDValue Cmp = DAG.getNode(ARMISD::VCMPZ, dl, MVT::v4i1, BC,
-                                DAG.getConstant(ARMCC::NE, dl, MVT::i32));
-      return DAG.getNode(ARMISD::PREDICATE_CAST, dl, MVT::v2i1, Cmp);
-    }
+    // generate a real predicate, i.e. v4i1, v8i1 or v16i1.
     return DAG.getNode(ARMISD::VCMPZ, dl, VT, ConVec,
                        DAG.getConstant(ARMCC::NE, dl, MVT::i32));
   };
@@ -9875,7 +9875,7 @@ SDValue ARMTargetLowering::LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const {
 
     ArgListEntry Entry;
     Entry.Node = SRet;
-    Entry.Ty = RetTy->getPointerTo();
+    Entry.Ty = PointerType::getUnqual(RetTy->getContext());
     Entry.IsSExt = false;
     Entry.IsZExt = false;
     Entry.IsSRet = true;
@@ -21632,13 +21632,6 @@ bool ARMTargetLowering::lowerInterleavedLoad(
     // to something legal.
     VecTy = FixedVectorType::get(VecTy->getElementType(),
                                  VecTy->getNumElements() / NumLoads);
-
-    // We will compute the pointer operand of each load from the original base
-    // address using GEPs. Cast the base address to a pointer to the scalar
-    // element type.
-    BaseAddr = Builder.CreateBitCast(
-        BaseAddr,
-        VecTy->getElementType()->getPointerTo(LI->getPointerAddressSpace()));
   }
 
   assert(isTypeLegal(EVT::getEVT(VecTy)) && "Illegal vldN vector type!");

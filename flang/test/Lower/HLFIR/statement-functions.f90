@@ -33,3 +33,17 @@ end subroutine
 ! CHECK:  %[[VAL_18:.*]]:2 = hlfir.declare %[[VAL_13]]#0 typeparams %[[VAL_17]] {uniq_name = "_QFchar_testFstmt_funcEchar_stmt_func_dummy_arg"} : (!fir.ref<!fir.char<1,?>>, i32) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 ! CHECK:  %[[VAL_19:.*]] = arith.constant 10 : i64
 ! CHECK:  %[[VAL_20:.*]] = hlfir.set_length %[[VAL_18]]#0 len %[[VAL_19]] : (!fir.boxchar<1>, i64) -> !hlfir.expr<!fir.char<1,10>>
+
+subroutine char_test2(c)
+  character(10) :: c
+  character(5) :: c_stmt_func
+  character(*), parameter :: padding = "padding"
+  character(len(c_stmt_func)+len(padding)) :: stmt_func
+  stmt_func(c_stmt_func) = c_stmt_func // padding
+  call test(stmt_func(c))
+end subroutine
+! CHECK-LABEL:  func.func @_QPchar_test2(
+! CHECK:    %[[C:.*]]:2 = hlfir.declare %1 typeparams %c10 {uniq_name = "_QFchar_test2Ec"} : (!fir.ref<!fir.char<1,10>>, index) -> (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<1,10>>)
+! CHECK:    %[[CAST:.*]] = fir.convert %[[C]]#0 : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<!fir.char<1,5>>
+! CHECK:    %[[C_STMT_FUNC:.*]]:2 = hlfir.declare %[[CAST]] typeparams %c5{{.*}} {uniq_name = "_QFchar_test2Fstmt_funcEc_stmt_func"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
+! CHECK:    hlfir.concat %[[C_STMT_FUNC]]#0, %{{.*}} len %{{.*}} : (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,7>>, index) -> !hlfir.expr<!fir.char<1,12>>

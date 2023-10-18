@@ -9,6 +9,18 @@
 #define TYPE_FP16 uint16_t
 #endif
 
+// TODO: Switch to using fp_lib.h once QUAD_PRECISION is available on x86_64.
+#if __LDBL_MANT_DIG__ == 113 ||                                                \
+    ((__LDBL_MANT_DIG__ == 64) && defined(__x86_64__) &&                       \
+     (defined(__FLOAT128__) || defined(__SIZEOF_FLOAT128__)))
+#if __LDBL_MANT_DIG__ == 113
+#define TYPE_FP128 long double
+#else
+#define TYPE_FP128 __float128
+#endif
+#define TEST_COMPILER_RT_HAS_FLOAT128
+#endif
+
 enum EXPECTED_RESULT {
     LESS_0, LESS_EQUAL_0, EQUAL_0, GREATER_0, GREATER_EQUAL_0, NEQUAL_0
 };
@@ -38,11 +50,10 @@ static inline double fromRep64(uint64_t x)
     return ret;
 }
 
-#if __LDBL_MANT_DIG__ == 113
-static inline long double fromRep128(uint64_t hi, uint64_t lo)
-{
+#ifdef TEST_COMPILER_RT_HAS_FLOAT128
+static inline TYPE_FP128 fromRep128(uint64_t hi, uint64_t lo) {
     __uint128_t x = ((__uint128_t)hi << 64) + lo;
-    long double ret;
+    TYPE_FP128 ret;
     memcpy(&ret, &x, 16);
     return ret;
 }
@@ -73,9 +84,8 @@ static inline uint64_t toRep64(double x)
     return ret;
 }
 
-#if __LDBL_MANT_DIG__ == 113
-static inline __uint128_t toRep128(long double x)
-{
+#ifdef TEST_COMPILER_RT_HAS_FLOAT128
+static inline __uint128_t toRep128(TYPE_FP128 x) {
     __uint128_t ret;
     memcpy(&ret, &x, 16);
     return ret;
@@ -136,25 +146,23 @@ static inline int compareResultD(double result,
     return 1;
 }
 
-#if __LDBL_MANT_DIG__ == 113
+#ifdef TEST_COMPILER_RT_HAS_FLOAT128
 // return 0 if equal
 // use two 64-bit integers instead of one 128-bit integer
 // because 128-bit integer constant can't be assigned directly
-static inline int compareResultLD(long double result,
-                                  uint64_t expectedHi,
-                                  uint64_t expectedLo)
-{
+static inline int compareResultF128(TYPE_FP128 result, uint64_t expectedHi,
+                                    uint64_t expectedLo) {
     __uint128_t rep = toRep128(result);
     uint64_t hi = rep >> 64;
     uint64_t lo = rep;
 
-    if (hi == expectedHi && lo == expectedLo){
+    if (hi == expectedHi && lo == expectedLo) {
         return 0;
     }
     // test other possible NaN representation(signal NaN)
-    else if (expectedHi == 0x7fff800000000000UL && expectedLo == 0x0UL){
+    else if (expectedHi == 0x7fff800000000000UL && expectedLo == 0x0UL) {
         if ((hi & 0x7fff000000000000UL) == 0x7fff000000000000UL &&
-            ((hi & 0xffffffffffffUL) > 0 || lo > 0)){
+            ((hi & 0xffffffffffffUL) > 0 || lo > 0)) {
             return 0;
         }
     }
@@ -232,9 +240,45 @@ static inline double makeQNaN64(void)
     return fromRep64(0x7ff8000000000000UL);
 }
 
-#if __LDBL_MANT_DIG__ == 113
-static inline long double makeQNaN128(void)
-{
+#if __LDBL_MANT_DIG__ == 64 && defined(__x86_64__)
+static inline long double F80FromRep128(uint64_t hi, uint64_t lo) {
+    __uint128_t x = ((__uint128_t)hi << 64) + lo;
+    long double ret;
+    memcpy(&ret, &x, 16);
+    return ret;
+}
+
+static inline __uint128_t F80ToRep128(long double x) {
+    __uint128_t ret;
+    memcpy(&ret, &x, 16);
+    return ret;
+}
+
+static inline int compareResultF80(long double result, uint64_t expectedHi,
+                                   uint64_t expectedLo) {
+    __uint128_t rep = F80ToRep128(result);
+    // F80 occupies the lower 80 bits of __uint128_t.
+    uint64_t hi = (rep >> 64) & ((1UL << (80 - 64)) - 1);
+    uint64_t lo = rep;
+    return !(hi == expectedHi && lo == expectedLo);
+}
+
+static inline long double makeQNaN80(void) {
+    return F80FromRep128(0x7fffUL, 0xc000000000000000UL);
+}
+
+static inline long double makeNaN80(uint64_t rand) {
+    return F80FromRep128(0x7fffUL,
+                         0x8000000000000000 | (rand & 0x3fffffffffffffff));
+}
+
+static inline long double makeInf80(void) {
+    return F80FromRep128(0x7fffUL, 0x8000000000000000UL);
+}
+#endif
+
+#ifdef TEST_COMPILER_RT_HAS_FLOAT128
+static inline TYPE_FP128 makeQNaN128(void) {
     return fromRep128(0x7fff800000000000UL, 0x0UL);
 }
 #endif
@@ -254,9 +298,8 @@ static inline double makeNaN64(uint64_t rand)
     return fromRep64(0x7ff0000000000000UL | (rand & 0xfffffffffffffUL));
 }
 
-#if __LDBL_MANT_DIG__ == 113
-static inline long double makeNaN128(uint64_t rand)
-{
+#ifdef TEST_COMPILER_RT_HAS_FLOAT128
+static inline TYPE_FP128 makeNaN128(uint64_t rand) {
     return fromRep128(0x7fff000000000000UL | (rand & 0xffffffffffffUL), 0x0UL);
 }
 #endif
@@ -286,14 +329,12 @@ static inline double makeNegativeInf64(void)
     return fromRep64(0xfff0000000000000UL);
 }
 
-#if __LDBL_MANT_DIG__ == 113
-static inline long double makeInf128(void)
-{
+#ifdef TEST_COMPILER_RT_HAS_FLOAT128
+static inline TYPE_FP128 makeInf128(void) {
     return fromRep128(0x7fff000000000000UL, 0x0UL);
 }
 
-static inline long double makeNegativeInf128(void)
-{
+static inline TYPE_FP128 makeNegativeInf128(void) {
     return fromRep128(0xffff000000000000UL, 0x0UL);
 }
 #endif

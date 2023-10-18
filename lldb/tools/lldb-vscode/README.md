@@ -1,18 +1,20 @@
 
 # Table of Contents
 
-- [Introduction](#Introduction)
-- [Installation](#Installation-Visual-Studio-Code)
+- [Table of Contents](#table-of-contents)
+- [Introduction](#introduction)
+- [Installation for Visual Studio Code](#installation-for-visual-studio-code)
 - [Configurations](#configurations)
-	- [Launch Configuration Settings](#launch-configuration-settings)
-	- [Attach Configuration Settings](#attach-configuration-settings)
-	- [Example configurations](#example-configurations)
-		- [Launching](#launching)
-		- [Attach to process using process ID](#attach-using-pid)
-		- [Attach to process by name](#attach-by-name)
-		- [Loading a core file](#loading-a-core-file)
-- [Custom Debugger Commands](#custom-debugger-commands)
-  - [startDebugging](#startDebugging)
+  - [Launch Configuration Settings](#launch-configuration-settings)
+  - [Attaching Settings](#attaching-settings)
+  - [Example configurations](#example-configurations)
+    - [Launching](#launching)
+    - [Attach using PID](#attach-using-pid)
+    - [Attach by Name](#attach-by-name)
+    - [Loading a Core File](#loading-a-core-file)
+- [Custom debugger commands](#custom-debugger-commands)
+  - [startDebugging](#startdebugging)
+  - [repl-mode](#repl-mode)
 
 # Introduction
 
@@ -24,52 +26,57 @@ get a full featured debugger with a well defined protocol.
 
 # Installation for Visual Studio Code
 
-Installing the plug-in involves creating a directory in the `~/.vscode/extensions` folder and copying the package.json file that is in the same directory as this
-documentation into it, and copying to symlinking a lldb-vscode binary into
-the `bin` directory inside the plug-in directory.
+Installing the plug-in involves creating a directory in any location outside of
+`~/.vscode/extensions`. For example, `~/vscode-lldb` is a valid one. You'll also
+need a subfolder `bin`, e.g. `~/vscode-lldb/bin`. Then copy the `package.json`
+file that is in the same directory as this documentation into it, and symlink
+the `lldb-vscode` binary into the `bin` directory inside the plug-in directory.
 
-If you want to make a stand alone plug-in that you can send to others on unix systems:
+Finally, on VS Code, execute the command
+`Developer: Install Extension from Location` and pick the folder you just
+created, which would be `~/vscode-lldb` following the example above.
 
-```
-$ mkdir -p ~/.vscode/extensions/llvm-org.lldb-vscode-0.1.0/bin
-$ cp package.json ~/.vscode/extensions/llvm-org.lldb-vscode-0.1.0
-$ cd ~/.vscode/extensions/llvm-org.lldb-vscode-0.1.0/bin
-$ cp /path/to/a/built/lldb-vscode .
-$ cp /path/to/a/built/liblldb.so .
-```
+If you want to make a stand alone plug-in that you can send to others on UNIX
+systems:
 
-It is important to note that the directory `~/.vscode/extensions` works for users logged in locally to the machine. If you are remoting into the box using Visual Studio Code's Remote plugins (SSH, WSL, Docker) it will look for extensions on `~/.vscode-server/extensions` only and you will not see your just installed lldb-vscode plug-in. If you want this plugin to be visible to remoting users, you will need to either repeat the process above for the `~/.vscode-server` folder or create a symbolic link from it to `~/.vscode/extensions`:
-
-```
-$ cd ~/.vscode-server/extensions
-$ ln -s ~/.vscode/extensions/llvm-org.lldb-vscode-0.1.0  llvm-org.lldb-vscode-0.1.0
-```
-
-If you want to make a stand alone plug-in that you can send to others on macOS systems:
-
-```
-$ mkdir -p ~/.vscode/extensions/llvm-org.lldb-vscode-0.1.0/bin
-$ cp package.json ~/.vscode/extensions/llvm-org.lldb-vscode-0.1.0
-$ cd ~/.vscode/extensions/llvm-org.lldb-vscode-0.1.0/bin
-$ cp /path/to/a/built/lldb-vscode .
-$ rsync -av /path/to/a/built/LLDB.framework LLDB.framework
+```bash
+mkdir -p ~/llvm-org.lldb-vscode-0.1.0/bin
+cp package.json ~/llvm-org.lldb-vscode-0.1.0
+cd ~/llvm-org.lldb-vscode-0.1.0/bin
+cp /path/to/a/built/lldb-vscode .
+cp /path/to/a/built/liblldb.so .
 ```
 
-You might need to create additional directories for the `liblldb.so` or `LLDB.framework` inside or next to the `bin` folder depending on how the [rpath](https://en.wikipedia.org/wiki/Rpath) is set in your `lldb-vscode` binary. By default the `Debug` builds of LLDB usually includes
-the current executable directory in the rpath, so these steps should work for most people.
+If you want to make a stand alone plug-in that you can send to others on macOS
+systems:
 
-To create a plug-in that symlinks into your `lldb-vscode` in your build directory:
-
+```bash
+mkdir -p ~/llvm-org.lldb-vscode-0.1.0/bin
+cp package.json ~/llvm-org.lldb-vscode-0.1.0
+cd ~/llvm-org.lldb-vscode-0.1.0/bin
+cp /path/to/a/built/lldb-vscode .
+rsync -av /path/to/a/built/LLDB.framework LLDB.framework
 ```
-$ mkdir -p ~/.vscode/extensions/llvm-org.lldb-vscode-0.1.0/bin
-$ cp package.json ~/.vscode/extensions/llvm-org.lldb-vscode-0.1.0
-$ cd ~/.vscode/extensions/llvm-org.lldb-vscode-0.1.0/bin
-$ ln -s /path/to/a/built/lldb-vscode
+
+You might need to create additional directories for the `liblldb.so` or
+`LLDB.framework` inside or next to the `bin` folder depending on how the
+[rpath](https://en.wikipedia.org/wiki/Rpath) is set in your `lldb-vscode`
+binary. By default the `Debug` builds of LLDB usually includes
+the current executable directory in the rpath, so these steps should work for
+most people.
+
+To create a plug-in that symlinks into your `lldb-vscode` in your build
+directory:
+
+```bash
+mkdir -p ~/llvm-org.lldb-vscode-0.1.0/bin
+cp package.json ~/llvm-org.lldb-vscode-0.1.0
+cd ~/llvm-org.lldb-vscode-0.1.0/bin
+ln -s /path/to/a/built/lldb-vscode
 ```
 
-This is handy if you want to debug and develope the `lldb-vscode` executable when adding features or fixing bugs.
-
-
+This is handy if you want to debug and develope the `lldb-vscode` executable
+when adding features or fixing bugs.
 
 # Configurations
 
@@ -126,7 +133,6 @@ The JSON configuration file can contain the following `lldb-vscode` specific lau
 |**exitCommands**   |[string]| | LLDB commands executed when the program exits. Commands and command output will be sent to the debugger console when they are executed.
 |**terminateCommands** |[string]| | LLDB commands executed when the debugging session ends. Commands and command output will be sent to the debugger console when they are executed.
 |**attachCommands** |[string]| | LLDB commands that will be executed after **preRunCommands** which take place of the code that normally does the attach. The commands can create a new target and attach or launch it however desired. This allows custom launch and attach configurations. Core files can use `target create --core /path/to/core` to attach to core files.
-
 
 ## Example configurations
 
@@ -191,7 +197,6 @@ to be launched you can add the "waitFor" key value pair:
 This will work as long as the architecture, vendor and OS supports waiting
 for processes. Currently MacOS is the only platform that supports this.
 
-
 ### Loading a Core File
 
 This loads the coredump file `/cores/123.core` associated with the program
@@ -204,6 +209,38 @@ This loads the coredump file `/cores/123.core` associated with the program
   "request": "attach",
   "coreFile": "/cores/123.core",
   "program": "/tmp/a.out"
+}
+```
+
+### Connect to a Debug Server on the Current Machine
+
+This connects to a debug server (e.g. `lldb-server`, `gdbserver`) on
+the current machine, that is debugging the program `/tmp/a.out` and listening
+locally on port `2345`.
+
+```javascript
+{
+  "name": "Local Debug Server",
+  "type": "lldb-vscode",
+  "request": "attach",
+  "program": "/tmp/a.out",
+  "attachCommands": ["gdb-remote 2345"],
+}
+```
+
+### Connect to a Debug Server on Another Machine
+
+This connects to a debug server running on another machine with hostname
+`hostnmame`. Which is debugging the program `/tmp/a.out` and listening on
+port `5678` of that other machine.
+
+```javascript
+{
+  "name": "Remote Debug Server",
+  "type": "lldb-vscode",
+  "request": "attach",
+  "program": "/tmp/a.out",
+  "attachCommands": ["gdb-remote hostname:5678"],
 }
 ```
 
@@ -242,12 +279,12 @@ This will launch a server and then request a child debug session for a client.
 Inspect or adjust the behavior of lldb-vscode repl evaluation requests. The
 supported modes are `variable`, `command` and `auto`.
 
-*  `variable` - Variable mode expressions are evaluated in the context of the
+- `variable` - Variable mode expressions are evaluated in the context of the
    current frame. Use a `\`` prefix on the command to run an lldb command.
-*  `command` - Command mode expressions are evaluated as lldb commands, as a
+- `command` - Command mode expressions are evaluated as lldb commands, as a
    result, values printed by lldb are always stringified representations of the
    expression output.
-*  `auto` - Auto mode will attempt to infer if the expression represents an lldb
+- `auto` - Auto mode will attempt to infer if the expression represents an lldb
    command or a variable expression. A heuristic is used to infer if the input
    represents a variable or a command. Use a `\`` prefix to ensure an expression
    is evaluated as a command.
