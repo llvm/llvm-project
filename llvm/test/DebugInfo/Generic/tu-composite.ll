@@ -1,4 +1,4 @@
-; RUN: %llc_dwarf -mtriple=x86_64-unknown-linux-gnu -filetype=obj -O0 < %s > %t
+; RUN: %llc_dwarf -filetype=obj -O0 < %s > %t
 ; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s
 ; CHECK: [[TYPE:.*]]: DW_TAG_structure_type
 ; Make sure we correctly handle containing type of a struct being a type identifier.
