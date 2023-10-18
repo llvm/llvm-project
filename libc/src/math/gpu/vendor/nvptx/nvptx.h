@@ -35,8 +35,11 @@ LIBC_INLINE double cosh(double x) { return __nv_cosh(x); }
 LIBC_INLINE float coshf(float x) { return __nv_coshf(x); }
 LIBC_INLINE double erf(double x) { return __nv_erf(x); }
 LIBC_INLINE float erff(float x) { return __nv_erff(x); }
+LIBC_INLINE double exp(double x) { return __nv_exp(x); }
 LIBC_INLINE float expf(float x) { return __nv_expf(x); }
+LIBC_INLINE double exp2(double x) { return __nv_exp2(x); }
 LIBC_INLINE float exp2f(float x) { return __nv_exp2f(x); }
+LIBC_INLINE double exp10(double x) { return __nv_exp10(x); }
 LIBC_INLINE float exp10f(float x) { return __nv_exp10f(x); }
 LIBC_INLINE double expm1(double x) { return __nv_expm1(x); }
 LIBC_INLINE float expm1f(float x) { return __nv_expm1f(x); }
@@ -48,11 +51,18 @@ LIBC_INLINE int ilogb(double x) { return __nv_ilogb(x); }
 LIBC_INLINE int ilogbf(float x) { return __nv_ilogbf(x); }
 LIBC_INLINE double ldexp(double x, int i) { return __nv_ldexp(x, i); }
 LIBC_INLINE float ldexpf(float x, int i) { return __nv_ldexpf(x, i); }
+LIBC_INLINE long long llrint(double x) { return __nv_llrint(x); }
+LIBC_INLINE long long llrintf(float x) { return __nv_llrintf(x); }
 LIBC_INLINE double log10(double x) { return __nv_log10(x); }
+LIBC_INLINE float log10f(float x) { return __nv_log10f(x); }
 LIBC_INLINE double log1p(double x) { return __nv_log1p(x); }
 LIBC_INLINE float log1pf(float x) { return __nv_log1pf(x); }
 LIBC_INLINE double log2(double x) { return __nv_log2(x); }
+LIBC_INLINE float log2f(float x) { return __nv_log2f(x); }
 LIBC_INLINE double log(double x) { return __nv_log(x); }
+LIBC_INLINE float logf(float x) { return __nv_logf(x); }
+LIBC_INLINE long lrint(double x) { return __nv_lrint(x); }
+LIBC_INLINE long lrintf(float x) { return __nv_lrintf(x); }
 LIBC_INLINE double nextafter(double x, double y) {
   return __nv_nextafter(x, y);
 }

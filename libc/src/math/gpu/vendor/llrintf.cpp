@@ -1,4 +1,4 @@
-//===-- Implementation of the GPU log10f function -------------------------===//
+//===-- Implementation of the llrintf function for GPU --------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/log10f.h"
+#include "src/math/llrintf.h"
 #include "src/__support/common.h"
+
+#include "common.h"
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(float, log10f, (float x)) { return __builtin_log10f(x); }
+LLVM_LIBC_FUNCTION(long long, llrintf, (float x)) {
+  return internal::llrintf(x);
+}
 
 } // namespace LIBC_NAMESPACE

@@ -1,4 +1,4 @@
-//===-- Implementation of the GPU sinhf function --------------------------===//
+//===-- Implementation of the GPU log2f function --------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/sinhf.h"
+#include "src/math/log2f.h"
 #include "src/__support/common.h"
+
+#include "common.h"
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(float, sinhf, (float x)) { return __builtin_sinhf(x); }
+LLVM_LIBC_FUNCTION(float, log2f, (float x)) { return internal::log2f(x); }
 
 } // namespace LIBC_NAMESPACE

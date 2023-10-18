@@ -1,4 +1,4 @@
-//===-- Implementation of the GPU tanf function ---------------------------===//
+//===-- Implementation of the GPU logf function ---------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/tanf.h"
+#include "src/math/logf.h"
 #include "src/__support/common.h"
+
+#include "common.h"
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(float, tanf, (float x)) { return __builtin_tanf(x); }
+LLVM_LIBC_FUNCTION(float, logf, (float x)) { return internal::logf(x); }
 
 } // namespace LIBC_NAMESPACE
