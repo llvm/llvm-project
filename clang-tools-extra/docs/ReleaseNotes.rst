@@ -236,6 +236,11 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/pro-bounds-constant-array-index>` check
   to perform checks on derived classes of  ``std::array``.
 
+- Improved :doc:`cppcoreguidelines-pro-type-const-cast
+  <clang-tidy/checks/cppcoreguidelines/pro-type-const-cast>` check to ignore
+  casts to ``const`` type (controlled by `StrictMode` option) and casts in
+  implicitly invoked code.
+
 - Improved :doc:`cppcoreguidelines-pro-type-member-init
   <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check to ignore
   dependent delegate constructors.
