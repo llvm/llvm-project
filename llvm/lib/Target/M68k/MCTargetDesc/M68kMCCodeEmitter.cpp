@@ -204,7 +204,7 @@ void M68kMCCodeEmitter::encodeInstruction(const MCInst &MI,
                                           SmallVectorImpl<MCFixup> &Fixups,
                                           const MCSubtargetInfo &STI) const {
   LLVM_DEBUG(dbgs() << "EncodeInstruction: " << MCII.getName(MI.getOpcode())
-                    << "(" << Opcode << ")\n");
+                    << "(" << MI.getOpcode() << ")\n");
   (void)MCII;
 
   // Try using the new method first.
