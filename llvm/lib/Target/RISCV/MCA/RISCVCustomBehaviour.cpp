@@ -17,6 +17,8 @@
 #include "TargetInfo/RISCVTargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Debug.h"
+#include <numeric>
+#include <set>
 
 #define DEBUG_TYPE "llvm-mca-riscv-custombehaviour"
 
@@ -185,6 +187,109 @@ RISCVInstrumentManager::createInstruments(const MCInst &Inst) {
   return SmallVector<UniqueInstrument>();
 }
 
+/// Return EMUL = (EEW / SEW) * LMUL
+inline static std::pair<unsigned, bool>
+getEMULEqualsEEWDivSEWTimesLMUL(unsigned EEW, unsigned SEW,
+                                RISCVII::VLMUL VLMUL) {
+  // Calculate (EEW/SEW)*LMUL preserving fractions less than 1. Use GCD
+  // to put fraction in simplest form.
+  auto [LMUL, Fractional] = RISCVVType::decodeVLMUL(VLMUL);
+  unsigned Num = EEW, Denom = SEW;
+  int GCD =
+      Fractional ? std::gcd(Num, Denom * LMUL) : std::gcd(Num * LMUL, Denom);
+  Num = Fractional ? Num / GCD : Num * LMUL / GCD;
+  Denom = Fractional ? Denom * LMUL / GCD : Denom / GCD;
+  return std::make_pair(Num > Denom ? Num : Denom, Denom > Num);
+}
+
+static std::pair<uint8_t, uint8_t>
+getEEWAndEMULForUnitStrideLoadStore(unsigned Opcode, uint8_t LMUL,
+                                    uint8_t SEW) {
+  uint8_t EEW;
+  switch (Opcode) {
+  case RISCV::VLM_V:
+  case RISCV::VSM_V:
+  case RISCV::VLE8_V:
+  case RISCV::VSE8_V:
+    EEW = 8;
+    break;
+  case RISCV::VLE16_V:
+  case RISCV::VSE16_V:
+    EEW = 16;
+    break;
+  case RISCV::VLE32_V:
+  case RISCV::VSE32_V:
+    EEW = 32;
+    break;
+  case RISCV::VLE64_V:
+  case RISCV::VSE64_V:
+    EEW = 64;
+    break;
+  default:
+    llvm_unreachable("Opcode is not a vector unit stride load nor store");
+  }
+
+  RISCVII::VLMUL VLMUL;
+  switch (LMUL) {
+  case 0b000:
+    VLMUL = RISCVII::LMUL_1;
+    break;
+  case 0b001:
+    VLMUL = RISCVII::LMUL_2;
+    break;
+  case 0b010:
+    VLMUL = RISCVII::LMUL_4;
+    break;
+  case 0b011:
+    VLMUL = RISCVII::LMUL_8;
+    break;
+  case 0b111:
+    VLMUL = RISCVII::LMUL_F2;
+    break;
+  case 0b110:
+    VLMUL = RISCVII::LMUL_F4;
+    break;
+  case 0b101:
+    VLMUL = RISCVII::LMUL_F8;
+    break;
+  case RISCVII::LMUL_RESERVED:
+    llvm_unreachable("LMUL cannot be LMUL_RESERVED");
+  }
+
+  auto [EMULPart, Fractional] =
+      getEMULEqualsEEWDivSEWTimesLMUL(EEW, SEW, VLMUL);
+  assert(RISCVVType::isValidLMUL(EMULPart, Fractional) &&
+         "Unexpected EEW from instruction used with LMUL and SEW");
+
+  uint8_t EMUL;
+  switch (RISCVVType::encodeLMUL(EMULPart, Fractional)) {
+  case RISCVII::LMUL_1:
+    EMUL = 0b000;
+    break;
+  case RISCVII::LMUL_2:
+    EMUL = 0b001;
+    break;
+  case RISCVII::LMUL_4:
+    EMUL = 0b010;
+    break;
+  case RISCVII::LMUL_8:
+    EMUL = 0b011;
+    break;
+  case RISCVII::LMUL_F2:
+    EMUL = 0b111;
+    break;
+  case RISCVII::LMUL_F4:
+    EMUL = 0b110;
+    break;
+  case RISCVII::LMUL_F8:
+    EMUL = 0b101;
+    break;
+  case RISCVII::LMUL_RESERVED:
+    llvm_unreachable("Cannot create instrument for LMUL_RESERVED");
+  }
+  return std::make_pair(EEW, EMUL);
+}
+
 unsigned RISCVInstrumentManager::getSchedClassID(
     const MCInstrInfo &MCII, const MCInst &MCI,
     const llvm::SmallVector<Instrument *> &IVec) const {
@@ -214,12 +319,22 @@ unsigned RISCVInstrumentManager::getSchedClassID(
   // or (Opcode, LMUL, SEW) if SEW instrument is active, and depends on LMUL
   // and SEW, or (Opcode, LMUL, 0) if does not depend on SEW.
   uint8_t SEW = SI ? SI->getSEW() : 0;
-  // Check if it depends on LMUL and SEW
-  const RISCVVInversePseudosTable::PseudoInfo *RVV =
-      RISCVVInversePseudosTable::getBaseInfo(Opcode, LMUL, SEW);
-  // Check if it depends only on LMUL
-  if (!RVV)
-    RVV = RISCVVInversePseudosTable::getBaseInfo(Opcode, LMUL, 0);
+
+  const RISCVVInversePseudosTable::PseudoInfo *RVV = nullptr;
+  if (Opcode == RISCV::VLM_V || Opcode == RISCV::VSM_V ||
+      Opcode == RISCV::VLE8_V || Opcode == RISCV::VSE8_V ||
+      Opcode == RISCV::VLE16_V || Opcode == RISCV::VSE16_V ||
+      Opcode == RISCV::VLE32_V || Opcode == RISCV::VSE32_V ||
+      Opcode == RISCV::VLE64_V || Opcode == RISCV::VSE64_V) {
+    auto [EEW, EMUL] = getEEWAndEMULForUnitStrideLoadStore(Opcode, LMUL, SEW);
+    RVV = RISCVVInversePseudosTable::getBaseInfo(Opcode, EMUL, EEW);
+  } else {
+    // Check if it depends on LMUL and SEW
+    RVV = RISCVVInversePseudosTable::getBaseInfo(Opcode, LMUL, SEW);
+    // Check if it depends only on LMUL
+    if (!RVV)
+      RVV = RISCVVInversePseudosTable::getBaseInfo(Opcode, LMUL, 0);
+  }
 
   // Not a RVV instr
   if (!RVV) {
