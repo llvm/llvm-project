@@ -84,6 +84,8 @@ configure_file("source/source1.s" "source/source1.s" COPYONLY)
 configure_file("source/source1.hip" "source/source1.hip" COPYONLY)
 configure_file("source/source2.hip" "source/source2.hip" COPYONLY)
 configure_file("source/name-expression.hip" "source/name-expression.hip" COPYONLY)
+configure_file("source/rocm56slice.b" "source/rocm56slice.b" COPYONLY)
+configure_file("source/rocm57slice.b" "source/rocm57slice.b" COPYONLY)
 
 configure_file("source/square.hip" "source/square.hip" COPYONLY)
 configure_file("source/double.hip" "source/double.hip" COPYONLY)
@@ -177,6 +179,7 @@ add_comgr_test(mangled_names_test c)
 add_comgr_test(multithread_test cpp)
 add_comgr_test(name_expression_map_test c)
 add_comgr_test(nested_kernel_test c)
+add_comgr_test(map_elf_virtual_address_test c)
 
 # Test : Compile HIP tests only if HIP-Clang is installed.
 if (DEFINED HIP_COMPILER AND "${HIP_COMPILER}" STREQUAL "clang")

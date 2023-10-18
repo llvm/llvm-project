@@ -79,6 +79,10 @@ New APIs
     name expression). These calls assume that names of interest have been
     enclosed the HIP runtime using a stub attribute containg the following
     string in the name: "__amdgcn_name_expr".
+- amd\_comgr\_map\_elf\_virtual\_address\_to\_code\_object\_offset() (v2.7)
+    - For a given executable and ELF virtual address, return a code object
+    offset. This API will benifet the ROCm debugger and profilier
+
 
 Deprecated APIs
 ---------------

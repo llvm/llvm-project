@@ -216,6 +216,12 @@ extern "C" {
  */
 #define AMD_COMGR_VERSION_2_6
 
+/**
+ * The function was introduced or changed in version 2.7 of the interface
+ * and has the symbol version string of ``"@amd_comgr_NAME@_2.7"``.
+ */
+#define AMD_COMGR_VERSION_2_7
+
 /** @} */
 
 /**
@@ -2543,6 +2549,57 @@ amd_comgr_lookup_code_object(
     amd_comgr_data_t data,
     amd_comgr_code_object_info_t *info_list,
     size_t info_list_size) AMD_COMGR_VERSION_2_3;
+
+/**
+ * @ brief Given a code object and an ELF virtual address, map the ELF virtual
+ * address to a code object offset. Also, determine if the ELF virtual address
+ * maps to an offset in a data region that is defined by the ELF file, but that
+ * does not occupy bytes in the ELF file. This is typically true of offsets that
+ * that refer to runtime or heap allocated memory. For ELF files with defined
+ * sections, these data regions are referred to as NOBITS or .bss sections.
+ *
+ * @param[in] data The data object to be inspected for the given ELF virtual
+ * address. This should be of kind AMD_COMGR_DATA_KIND_EXECUTABLE.
+ *
+ * @param[in] elf_virtual_address The address used to calculate the code object
+ * offset.
+ *
+ * @param[out] code_object_offset The code object offset returned to the caller
+ * based on the given ELF virtual address.
+ *
+ * @param[out] slice_size For nobits regions: the size in bytes, starting from
+ * the provided virtual address up to the end of the segment. In this case, the
+ * slice size represents the number of contiguous unreadable addresses following
+ * the provided address.
+
+ * For bits regions: the size in bytes, starting from the provided virtual
+ * address up to either the end of the segment, or the start of a NOBITS region.
+ * In this case, slice size represents the number of contiguous readable
+ * addresses following the provided address.
+ *
+ * @param[out] nobits Set to true if the code object offset points to a location
+ * in a data region that does not occupy bytes in the ELF file, as described
+ * above.
+ *
+ * @retval ::AMD_COMGR_STATUS_SUCCESS The function has been executed
+ * successfully.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR The provided code object has an invalid
+ * header due to a mismatch in magic, class, data, version, abi, type, or
+ * machine.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT @p data is not of
+ * kind AMD_COMGR_DATA_KIND_EXECUTABLE or invalid, or that the provided @p
+ * elf_virtual_address is not within the ranges covered by the object's
+ * load-type program headers.
+ */
+amd_comgr_status_t AMD_COMGR_API
+amd_comgr_map_elf_virtual_address_to_code_object_offset(
+    amd_comgr_data_t data,
+    uint64_t elf_virtual_address,
+    uint64_t *code_object_offset,
+    uint64_t *slice_size,
+    bool *nobits) AMD_COMGR_VERSION_2_7;
 
 /** @} */
 

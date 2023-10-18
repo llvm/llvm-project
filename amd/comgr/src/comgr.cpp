@@ -2230,3 +2230,81 @@ amd_comgr_status_t AMD_COMGR_API
 
   return metadata::lookUpCodeObject(DataP, QueryList, QueryListSize);
 }
+
+amd_comgr_status_t AMD_COMGR_API
+// NOLINTNEXTLINE(readability-identifier-naming)
+amd_comgr_map_elf_virtual_address_to_code_object_offset(amd_comgr_data_t Data,
+                                       uint64_t ElfVirtualAddress,
+                                       uint64_t *CodeObjectOffset,
+                                       uint64_t *SliceSize,
+                                       bool *Nobits) {
+
+  DataObject *DataP = DataObject::convert(Data);
+  if (!DataP || !DataP->Data ||
+      (DataP->DataKind != AMD_COMGR_DATA_KIND_EXECUTABLE)) {
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
+  // Create ELF Object file
+  auto ELFFileOrError = llvm::object::ELF64LEFile::create(
+    StringRef(DataP->Data, DataP->Size));
+  if (!ELFFileOrError) {
+    llvm::logAllUnhandledErrors(ELFFileOrError.takeError(),
+                                llvm::errs(), "ELFObj creation error: ");
+    return AMD_COMGR_STATUS_ERROR;
+  }
+  auto ELFFile = std::move(ELFFileOrError.get());
+
+  // Error check the ELF file
+  auto ELFHeader = ELFFile.getHeader();
+  if (!ELFHeader.checkMagic())
+    return AMD_COMGR_STATUS_ERROR;
+
+  if (ELFHeader.e_ident[llvm::ELF::EI_CLASS] != llvm::ELF::ELFCLASS64 ||
+      ELFHeader.e_ident[llvm::ELF::EI_DATA] != llvm::ELF::ELFDATA2LSB ||
+      ELFHeader.e_ident[llvm::ELF::EI_VERSION] != llvm::ELF::EV_CURRENT ||
+      ELFHeader.e_ident[llvm::ELF::EI_OSABI] != llvm::ELF::ELFOSABI_AMDGPU_HSA)
+    return AMD_COMGR_STATUS_ERROR;
+
+  if (ELFHeader.e_ident[llvm::ELF::EI_ABIVERSION] !=
+      llvm::ELF::ELFABIVERSION_AMDGPU_HSA_V4 &&
+      ELFHeader.e_ident[llvm::ELF::EI_ABIVERSION] !=
+      llvm::ELF::ELFABIVERSION_AMDGPU_HSA_V5)
+    return AMD_COMGR_STATUS_ERROR;
+
+  if (ELFHeader.e_type != llvm::ELF::ET_DYN ||
+      ELFHeader.e_machine != llvm::ELF::EM_AMDGPU ||
+      ELFHeader.e_phoff == 0)
+    return AMD_COMGR_STATUS_ERROR;
+
+  // Access program headers
+  auto ProgHeadersOrError = ELFFile.program_headers();
+  if (!ProgHeadersOrError) {
+    llvm::logAllUnhandledErrors(ProgHeadersOrError.takeError(),
+                                llvm::errs(), "ProgHeaders creation error: ");
+    return AMD_COMGR_STATUS_ERROR;
+  }
+  auto ProgHeaders = std::move(ProgHeadersOrError.get());
+
+  for (auto phdr : ProgHeaders) {
+
+    // Check if ELF virtual address defined in this header
+    if (phdr.p_type == llvm::ELF::PT_LOAD &&
+        ElfVirtualAddress >= phdr.p_vaddr &&
+        ElfVirtualAddress < phdr.p_vaddr + phdr.p_memsz) {
+
+      *CodeObjectOffset = ElfVirtualAddress - phdr.p_vaddr + phdr.p_offset;
+      *Nobits = ElfVirtualAddress - phdr.p_vaddr >= phdr.p_filesz;
+
+      if (*Nobits) // end of segment to relative address difference
+        *SliceSize = phdr.p_filesz - (ElfVirtualAddress - phdr.p_vaddr);
+      else // end of valid memory to relative address difference
+        *SliceSize = phdr.p_memsz - (ElfVirtualAddress - phdr.p_vaddr);
+
+      return AMD_COMGR_STATUS_SUCCESS;
+    }
+  }
+
+  // If the provided ELF virtual address is not mapped to an offset
+  return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+}
