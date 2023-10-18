@@ -622,7 +622,7 @@ inline bool LocalAddressSpace::findUnwindSections(pint_t targetAddr,
   // Try to find the unwind info using `dl_find_object`
   dl_find_object findResult;
   // _dl_find_object should fully initialize this struct, but we zero it to
-  // be safe in case this is not true (and to keep MSan quite).
+  // be safe in case this is not true (and to keep MSan quiet).
   memset(&findResult, 0, sizeof(findResult));
   if (dlFindObject && dlFindObject((void *)targetAddr, &findResult) == 0) {
     if (findResult.dlfo_eh_frame == nullptr) {
