@@ -8,4 +8,4 @@
 
 // Make sure we can generate no tests at all
 
-// RUN: cd .
+// RUN: :
