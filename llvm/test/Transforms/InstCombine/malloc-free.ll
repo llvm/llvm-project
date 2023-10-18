@@ -26,6 +26,15 @@ define i32 @dead_aligned_alloc(i32 %size, i32 %alignment, i8 %value) {
   ret i32 0
 }
 
+define i1 @aligned_alloc_only_pointe(i32 %size, i32 %alignment, i8 %value) {
+; CHECK-LABEL: @aligned_alloc_only_pointe(
+; CHECK-NEXT:    ret i1 true
+;
+  %aligned_allocation = tail call ptr @aligned_alloc(i32 %alignment, i32 %size)
+  %cmp = icmp ne ptr %aligned_allocation, null
+  ret i1 %cmp
+}
+
 declare noalias ptr @calloc(i32, i32) nounwind allockind("alloc,zeroed") allocsize(0,1) "alloc-family"="malloc"
 declare noalias ptr @malloc(i32) allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc"
 declare noalias ptr @aligned_alloc(i32, i32) allockind("alloc,uninitialized,aligned") allocsize(1) "alloc-family"="malloc"
