@@ -27,7 +27,8 @@ void CastingThroughVoidCheck::registerMatchers(MatchFinder *Finder) {
               explicitCastExpr(hasSourceExpression(expr(
                                    hasType(qualType().bind("source_type")))),
                                hasDestinationType(pointsTo(voidType())))
-                  .bind("cast"))),
+                  .bind("cast")),
+          unless(builtinBitCastExpr())),
       this);
 }
 

@@ -128,8 +128,8 @@ New checks
 - New :doc:`bugprone-casting-through-void
   <clang-tidy/checks/bugprone/casting-through-void>` check.
 
-  Detects usage of ``static_cast`` pointer to the other pointer throght
-  ``static_cast`` to ``void *`` in C++ code.
+  Detects usage of cast pointer to the other pointer throght cast to
+  ``void *`` in C/C++ code.
 
 - New :doc:`bugprone-compare-pointer-to-member-virtual-function
   <clang-tidy/checks/bugprone/compare-pointer-to-member-virtual-function>` check.

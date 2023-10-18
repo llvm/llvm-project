@@ -87,5 +87,5 @@ void cxx_functional_cast() {
 }
 
 void bit_cast() {
-  __builtin_bit_cast(int *, static_cast<void *>(&i));
+  __builtin_bit_cast(int *, static_cast<void *>(&d));
 }
