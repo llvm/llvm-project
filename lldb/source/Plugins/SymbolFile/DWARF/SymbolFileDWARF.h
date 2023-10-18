@@ -67,7 +67,7 @@ class SymbolFileDWARFDebugMap;
 class SymbolFileDWARFDwo;
 class SymbolFileDWARFDwp;
 
-#define DIE_IS_BEING_PARSED ((Type *)1)
+#define DIE_IS_BEING_PARSED ((lldb_private::Type *)1)
 
 class SymbolFileDWARF : public SymbolFileCommon {
   /// LLVM RTTI support.
