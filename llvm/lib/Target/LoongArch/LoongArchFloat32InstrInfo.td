@@ -128,8 +128,8 @@ def PseudoLD_CFR : Pseudo<(outs CFR:$ccd),
                           (ins GPR:$rj, grlenimm:$imm)>;
 
 // SET_CFR_{FALSE,TRUE}
-// These instructions are defined in order to avoid expensive check error when
-// expanding `PseudoCopyCFR` instruction.
+// These instructions are defined in order to avoid expensive check error if
+// regular instruction patterns are used.
 // fcmp.caf.s $dst, $fa0, $fa0
 def SET_CFR_FALSE : SET_CFR<0x0c100000, "fcmp.caf.s">;
 // fcmp.cueq.s $dst, $fa0, $fa0
