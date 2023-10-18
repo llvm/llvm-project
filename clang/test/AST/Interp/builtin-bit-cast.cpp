@@ -761,5 +761,41 @@ namespace Bitfields {
   constexpr CharStruct CS = __builtin_bit_cast(CharStruct, B);  // ref-error {{must be initialized by a constant expression}} \
                                                                 // ref-note {{bit_cast involving bit-field is not yet supported}} \
                                                                 // ref-note {{declared here}}
-  static_assert(CS.v == 155);} // ref-error {{not an integral constant expression}} \
-                               // ref-note {{initializer of 'CS' is not a constant expression}}
+  static_assert(CS.v == 155); // ref-error {{not an integral constant expression}} \
+                              // ref-note {{initializer of 'CS' is not a constant expression}}
+
+
+  struct I3 {
+    int a;
+    int b : 10;
+    int c;
+  };
+
+  struct I32 {
+    int a;
+    int b;
+    int c;
+  };
+
+  constexpr I3 i3 {5, 10, 15};
+  constexpr I32 i32 = __builtin_bit_cast(I32, i3); // ref-error {{must be initialized by a constant expression}} \
+                                                   // ref-note {{bit_cast involving bit-field is not yet supported}} \
+                                                   // expected-error {{must be initialized by a constant expression}} \
+                                                   // expected-note {{indeterminate value can only initialize an object of type 'unsigned char'}}
+
+  struct I33 {
+    int a;
+    unsigned char b;
+    int c;
+  };
+
+  constexpr I33 i33 = __builtin_bit_cast(I33, i3); // ref-error {{must be initialized by a constant expression}} \
+                                                   // ref-note {{bit_cast involving bit-field is not yet supported}} \
+                                                   // ref-note 3{{declared here}}
+  static_assert(i33.a == 5, ""); // ref-error {{not an integral constant expression}} \
+                                 // ref-note {{initializer of 'i33' is not a constant expression}}
+  static_assert(i33.b == 10, ""); // ref-error {{not an integral constant expression}} \
+                                  // ref-note {{initializer of 'i33' is not a constant expression}}
+  static_assert(i33.c == 15, ""); // ref-error {{not an integral constant expression}} \
+                                  // ref-note {{initializer of 'i33' is not a constant expression}}
+}
