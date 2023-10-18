@@ -20,9 +20,9 @@ you must do so without allowing the coroutine to suspend in the meantime.
 Following types are considered as hostile:
 
  - Scoped-lockable types: A scoped-lockable object persisting across a suspension
- point is problematic as the lock held by this object could be unlocked by a
- different thread. This would be undefined behaviour.
- This includes all types annotated with the ``scoped_lockable`` attribute.
+   point is problematic as the lock held by this object could be unlocked by a
+   different thread. This would be undefined behaviour.
+   This includes all types annotated with the ``scoped_lockable`` attribute.
 
  - Types belonging to a configurable denylist.
 
