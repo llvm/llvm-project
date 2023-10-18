@@ -30,8 +30,7 @@
 // in this shared library, so that they can be overridden by programs
 // that define non-weak copies of the functions.
 
-_LIBCPP_WEAK
-void* operator new(std::size_t size) _THROW_BAD_ALLOC {
+static void* operator_new_impl(std::size_t size) noexcept {
   if (size == 0)
     size = 1;
   void* p;
@@ -42,12 +41,18 @@ void* operator new(std::size_t size) _THROW_BAD_ALLOC {
     if (nh)
       nh();
     else
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-      throw std::bad_alloc();
-#else
       break;
-#endif
   }
+  return p;
+}
+
+_LIBCPP_WEAK
+void* operator new(std::size_t size) _THROW_BAD_ALLOC {
+  void* p = operator_new_impl(size);
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+  if (p == nullptr)
+    throw std::bad_alloc();
+#endif
   return p;
 }
 
@@ -102,8 +107,7 @@ void operator delete[](void* ptr, size_t) noexcept { ::operator delete[](ptr); }
 
 #if !defined(_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION)
 
-_LIBCPP_WEAK
-void* operator new(std::size_t size, std::align_val_t alignment) _THROW_BAD_ALLOC {
+static void* operator_new_aligned_impl(std::size_t size, std::align_val_t alignment) noexcept {
   if (size == 0)
     size = 1;
   if (static_cast<size_t>(alignment) < sizeof(void*))
@@ -112,22 +116,24 @@ void* operator new(std::size_t size, std::align_val_t alignment) _THROW_BAD_ALLO
   // Try allocating memory. If allocation fails and there is a new_handler,
   // call it to try free up memory, and try again until it succeeds, or until
   // the new_handler decides to terminate.
-  //
-  // If allocation fails and there is no new_handler, we throw bad_alloc
-  // (or return nullptr if exceptions are disabled).
   void* p;
   while ((p = std::__libcpp_aligned_alloc(static_cast<std::size_t>(alignment), size)) == nullptr) {
     std::new_handler nh = std::get_new_handler();
     if (nh)
       nh();
-    else {
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-      throw std::bad_alloc();
-#  else
+    else
       break;
-#  endif
-    }
   }
+  return p;
+}
+
+_LIBCPP_WEAK
+void* operator new(std::size_t size, std::align_val_t alignment) _THROW_BAD_ALLOC {
+  void* p = operator_new_aligned_impl(size, alignment);
+#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+  if (p == nullptr)
+    throw std::bad_alloc();
+#  endif
   return p;
 }
 
