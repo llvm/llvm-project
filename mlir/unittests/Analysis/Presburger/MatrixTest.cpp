@@ -257,28 +257,33 @@ TEST(MatrixTest, inverse) {
       2, 2,
       {{Fraction(0, 1), Fraction(1, 7)}, {Fraction(1, 1), Fraction(-2, 7)}});
 
-  FracMatrix inv = *(mat.inverse());
+  FracMatrix invM(2, 2);
+  FracMatrix* inv = &invM;
+  mat.determinant(inv);
 
   for (unsigned row = 0; row < 2; row++)
     for (unsigned col = 0; col < 2; col++)
-      EXPECT_EQ(inv(row, col), inverse(row, col));
+      EXPECT_EQ(inv->at(row, col), inverse(row, col));
   
   mat = makeFracMatrix(
       2, 2,
       {{Fraction(0, 1), Fraction(1, 1)}, {Fraction(0, 1), Fraction(2, 1)}});
+  Fraction det = mat.determinant(inv);
   
-  EXPECT_FALSE(mat.inverse());
+  EXPECT_EQ(det, Fraction(0, 1));
 }
 
 TEST(MatrixTest, intInverse) {
   IntMatrix mat = makeIntMatrix(2, 2, {{2, 1}, {7, 0}});
   IntMatrix inverse = makeIntMatrix(2, 2, {{0, -1}, {-7, 2}});
 
-  IntMatrix inv = *(mat.integerInverse());
+  IntMatrix invM(2, 2);
+  IntMatrix* inv = &invM;
+  mat.determinant(inv);
 
   for (unsigned i = 0; i < 2u; i++)
     for (unsigned j = 0; j < 2u; j++)
-      EXPECT_EQ(inv(i, j), inverse(i, j));
+      EXPECT_EQ(inv->at(i, j), inverse(i, j));
 
   mat = makeIntMatrix(
       4, 4, {{4, 14, 11, 3}, {13, 5, 14, 12}, {13, 9, 7, 14}, {2, 3, 12, 7}});
@@ -288,14 +293,16 @@ TEST(MatrixTest, intInverse) {
                            {210, 735, -855, 360},
                            {-715, -1409, 1401, 1482}});
 
-  inv = *(mat.integerInverse());
+  mat.determinant(inv);
 
   for (unsigned i = 0; i < 2u; i++)
     for (unsigned j = 0; j < 2u; j++)
-      EXPECT_EQ(inv(i, j), inverse(i, j));
+      EXPECT_EQ(inv->at(i, j), inverse(i, j));
 
   mat = makeIntMatrix(
       2, 2, {{0, 0}, {1, 2}});
+
+  MPInt det = mat.determinant(inv);
   
-  EXPECT_FALSE(mat.integerInverse());
+  EXPECT_EQ(det, 0);
 }

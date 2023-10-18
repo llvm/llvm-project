@@ -236,16 +236,14 @@ public:
   /// Returns the GCD of the columns of the specified row.
   MPInt normalizeRow(unsigned row);
 
-  // Return the integer inverse of the matrix.
+  // Compute the determinant of the matrix (cubic time).
+  // Stores the integer inverse of the matrix in the pointer
+  // passed. The pointer is unchanged if the inverse
+  // does not exist.
   // For a matrix M, the integer inverse is the matrix M' such that
   // M • M' = M' • M = det(M) • I.
-  // If M is singular or not square, std::nullopt is returned.
-  std::optional<IntMatrix> integerInverse() const;
-
-  // Compute the determinant of the matrix by converting it to row echelon
-  // form and then taking the product of the diagonal.
   // Assumes that the matrix is square.
-  MPInt determinant() const;
+  MPInt determinant(IntMatrix* inverse = NULL) const;
 };
 
 // An inherited class for rational matrices, with no new data attributes.
@@ -262,13 +260,12 @@ public:
   /// Return the identity matrix of the specified dimension.
   static FracMatrix identity(unsigned dimension);
 
-  // Return the inverse of the matrix.
-  // If it is singular or not square, std::nullopt is returned.
-  std::optional<FracMatrix> inverse() const;
-
   // Compute the determinant of the matrix (cubic time).
+  // Stores the inverse of the matrix in the pointer
+  // passed. The pointer is unchanged if the inverse
+  // does not exist.
   // Assumes that the matrix is square.
-  Fraction determinant() const;
+  Fraction determinant(FracMatrix* inverse = NULL) const;
 };
 
 } // namespace presburger

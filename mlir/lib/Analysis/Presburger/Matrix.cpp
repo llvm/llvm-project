@@ -434,7 +434,7 @@ MPInt IntMatrix::normalizeRow(unsigned row) {
   return normalizeRow(row, getNumColumns());
 }
 
-MPInt IntMatrix::determinant() const {
+MPInt IntMatrix::determinant(IntMatrix* inverse) const {
   unsigned nRows = getNumRows();
   unsigned nColumns = getNumColumns();
 
@@ -445,132 +445,94 @@ MPInt IntMatrix::determinant() const {
     for (unsigned j = 0; j < nColumns; j++)
       m.at(i, j) = Fraction(at(i, j), 1);
   
-  Fraction det = m.determinant();
+  FracMatrix fracInverseM(nRows, nColumns);
+  FracMatrix* fracInverse = &fracInverseM;
+  Fraction detF = m.determinant(fracInverse);
 
-  return det.getAsInteger();
-}
+  MPInt detM = detF.getAsInteger();
 
-std::optional<IntMatrix> IntMatrix::integerInverse() const {
-  unsigned nRows = getNumRows();
-  unsigned nColumns = getNumColumns();
+  if (detM != 0) {
+    *inverse = IntMatrix(nRows, nColumns);
+    for (unsigned i = 0; i < nRows; i++)
+      for (unsigned j = 0; j < nColumns; j++)
+        inverse->at(i, j) = (fracInverse->at(i, j) * detF).getAsInteger();
+  }
 
-  // First, find the normal inverse by treating it
-  // as a real matrix.
-  Fraction det = Fraction(determinant(), 1);
-  FracMatrix newMat(nRows, nColumns);
-  for (unsigned i = 0; i < nRows; i++)
-    for (unsigned j = 0; j < nColumns; j++)
-      newMat(i, j) = Fraction(at(i, j), 1);
-
-  std::optional<FracMatrix> fracInverse = newMat.inverse();
-
-  if (!fracInverse)
-    return {};
-
-  // Then, if the inverse exists, scale it by the
-  // determinant and convert to integers.
-  IntMatrix intInverse(nRows, nColumns);
-  for (unsigned i = 0; i < nRows; i++)
-    for (unsigned j = 0; j < nColumns; j++)
-      intInverse(i, j) = ((*fracInverse)(i, j) * det).getAsInteger();
-
-  return intInverse;
+  return detM;
 }
 
 FracMatrix FracMatrix::identity(unsigned dimension) {
   return Matrix::identity(dimension);
 }
 
-Fraction FracMatrix::determinant() const {
+Fraction FracMatrix::determinant(FracMatrix* inverse) const {
   unsigned nRows = getNumRows();
   unsigned nColumns = getNumColumns();
 
   assert(nRows == nColumns && "determinant can only be calculated for square matrices!");
 
   FracMatrix m(*this);
+  FracMatrix tempInv(nRows, nColumns);
+  if (inverse) tempInv = FracMatrix::identity(nRows);
 
   Fraction a, b;
   // For each row in the matrix,
   for (unsigned i = 0; i < nRows; i++) {
+    if (m(i, i) == 0)
+    // First ensure that the diagonal
+    // element is nonzero, by adding
+    // a nonzero row to it.
+      for (unsigned j = i + 1; j < nRows; j++)
+        if (m(j, i) != 0) {
+          m.addToRow(j, i, 1);
+          if (inverse) tempInv.addToRow(j, i, 1);
+          break;
+        }
 
     b = m.at(i, i);
     if (b == 0)
-      continue;
+        return 0;
     
+    if (inverse) {
+      for (unsigned j = 0; j < i; j++) {
+        if (m.at(j, i) == 0)
+          continue;
+        a = m.at(j, i);
+        // Set element (j, i) to zero
+        // by subtracting the ith row,
+        // appropriately scaled.
+        m.addToRow(i, j, -a / b);
+        tempInv.addToRow(i, j, -a / b);
+      }
+    }
+
     // Set all elements below the
     // diagonal to zero.
     for (unsigned j = i+1; j < nRows; j++) {
-      if (i == j || m.at(j, i) == 0)
+      if (m.at(j, i) == 0)
         continue;
       a = m.at(j, i);
       // Set element (j, i) to zero
       // by subtracting the ith row,
       // appropriately scaled.
       m.addToRow(i, j, -a / b);
-    }
-  }
-
-  Fraction determinant = 1;
-  for (unsigned i = 0; i < nRows; i++)
-    determinant *= m.at(i, i);
-  
-  return determinant;
-}
-
-std::optional<FracMatrix> FracMatrix::inverse() const {
-  // We use Gaussian elimination on the rows of [M | I]
-  // to find the integer inverse. We proceed left-to-right,
-  // top-to-bottom.
-
-  unsigned nRows = getNumRows();
-  unsigned nColumns = getNumColumns();
-
-  if (nRows != nColumns) return {};
-
-  // We treat the augmented matrix [M | I]
-  // as two separate matrices, M and I.
-  FracMatrix modified = *this;
-  FracMatrix inverse = FracMatrix::identity(nRows);
-
-  Fraction a, b;
-  // For each row in the matrix,
-  for (unsigned i = 0; i < nRows; i++) {
-    if (modified(i, i) == 0)
-    // First ensure that the diagonal
-    // element is nonzero, by adding
-    // a nonzero row to it.
-      for (unsigned j = i + 1; j < nRows; j++)
-        if (modified(j, i) != 0) {
-          modified.addToRow(j, i, 1);
-          inverse.addToRow(j, i, 1);
-          break;
-        }
-
-    b = modified(i, i);
-    // If it is still zero, the matrix is singular.
-    if (b == 0)
-      return {};
-    
-    for (unsigned j = 0; j < nRows; j++) {
-      if (i == j || modified(j, i) == 0)
-        continue;
-      a = modified(j, i);
-      // Rj -> Rj - (a/b)Ri
-      // Otherwise set element (j, i) to zero
-      // by subtracting the ith row,
-      // appropriately scaled.
-      modified.addToRow(i, j, -a / b);
-      inverse.addToRow(i, j, -a / b);
+      if (inverse) tempInv.addToRow(i, j, -a / b);
     }
   }
 
   // Now only diagonal elements are nonzero, but they are
   // not necessarily 1. We normalise them.
   for (unsigned i = 0; i < nRows; i++) {
-    a = modified(i, i);
+    a = m(i, i);
     for (unsigned j = 0; j < nRows; j++)
-      inverse(i, j) = inverse(i, j) / a;
+      tempInv.at(i, j) = tempInv.at(i, j) / a;
   }
 
-  return inverse;
+  *inverse = tempInv;
+
+  Fraction determinant = 1;
+  for (unsigned i = 0; i < nRows; i++)
+    determinant *= m.at(i, i);
+  
+  return determinant;
 }
