@@ -240,6 +240,11 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check to ignore
   dependent delegate constructors.
 
+- Improved :doc:`cppcoreguidelines-pro-type-static-cast-downcast
+  <clang-tidy/checks/cppcoreguidelines/pro-type-static-cast-downcast>` check to
+  disregard casts on non-polymorphic types when the `StrictMode` option is set
+  to `false`.
+
 - Improved :doc:`cppcoreguidelines-pro-type-vararg
   <clang-tidy/checks/cppcoreguidelines/pro-type-vararg>` check to ignore
   false-positives in unevaluated context (e.g., ``decltype``, ``sizeof``, ...).
