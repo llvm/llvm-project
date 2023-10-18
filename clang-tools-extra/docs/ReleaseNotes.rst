@@ -122,6 +122,10 @@ Improvements to clang-tidy
   if any :program:`clang-tidy` subprocess exits with a non-zero code or if
   exporting fixes fails.
 
+- Improved :program:`run-clang-tidy.py` script. It now accepts a directory
+  as a value for `-export-fixes` to export individual yaml files for each
+  compilation unit.
+
 New checks
 ^^^^^^^^^^
 
