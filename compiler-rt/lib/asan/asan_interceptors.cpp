@@ -251,7 +251,7 @@ INTERCEPTOR(int, pthread_create, void *thread, void *attr,
 
   u32 current_tid = GetCurrentTidOrInvalid();
 
-  __sanitizer_sigset_t sigset;
+  __sanitizer_sigset_t sigset = {};
 #    if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD || \
         SANITIZER_SOLARIS
   ScopedBlockSignals block(&sigset);
