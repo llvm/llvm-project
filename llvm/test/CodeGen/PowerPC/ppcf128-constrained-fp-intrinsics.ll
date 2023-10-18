@@ -1297,10 +1297,10 @@ define i32 @test_fptoui_ppc_i32_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE-NEXT:    lis 3, -32768
 ; PC64LE-NEXT:    fcmpo 0, 1, 0
 ; PC64LE-NEXT:    crand 20, 2, 4
-; PC64LE-NEXT:    crandc 21, 0, 2
-; PC64LE-NEXT:    cror 20, 21, 20
-; PC64LE-NEXT:    isel 30, 0, 3, 20
-; PC64LE-NEXT:    bc 12, 20, .LBB31_2
+; PC64LE-NEXT:    crandc 24, 0, 2
+; PC64LE-NEXT:    cror 28, 24, 20
+; PC64LE-NEXT:    isel 30, 0, 3, 28
+; PC64LE-NEXT:    bc 12, 28, .LBB31_2
 ; PC64LE-NEXT:  # %bb.1: # %entry
 ; PC64LE-NEXT:    fmr 3, 0
 ; PC64LE-NEXT:  .LBB31_2: # %entry
@@ -1334,10 +1334,10 @@ define i32 @test_fptoui_ppc_i32_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE9-NEXT:    lis 3, -32768
 ; PC64LE9-NEXT:    fcmpo 0, 1, 0
 ; PC64LE9-NEXT:    crand 20, 2, 4
-; PC64LE9-NEXT:    crandc 21, 0, 2
-; PC64LE9-NEXT:    cror 20, 21, 20
-; PC64LE9-NEXT:    isel 30, 0, 3, 20
-; PC64LE9-NEXT:    bc 12, 20, .LBB31_2
+; PC64LE9-NEXT:    crandc 24, 0, 2
+; PC64LE9-NEXT:    cror 28, 24, 20
+; PC64LE9-NEXT:    isel 30, 0, 3, 28
+; PC64LE9-NEXT:    bc 12, 28, .LBB31_2
 ; PC64LE9-NEXT:  # %bb.1: # %entry
 ; PC64LE9-NEXT:    fmr 3, 0
 ; PC64LE9-NEXT:  .LBB31_2: # %entry
@@ -1370,10 +1370,10 @@ define i32 @test_fptoui_ppc_i32_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64-NEXT:    addis 3, 2, .LCPI31_1@toc@ha
 ; PC64-NEXT:    lfs 4, .LCPI31_1@toc@l(3)
 ; PC64-NEXT:    fcmpo 0, 1, 0
-; PC64-NEXT:    crandc 21, 0, 2
+; PC64-NEXT:    crandc 24, 0, 2
 ; PC64-NEXT:    fcmpo 1, 2, 4
 ; PC64-NEXT:    crand 20, 2, 4
-; PC64-NEXT:    cror 8, 21, 20
+; PC64-NEXT:    cror 8, 24, 20
 ; PC64-NEXT:    fmr 3, 4
 ; PC64-NEXT:    bc 12, 8, .LBB31_2
 ; PC64-NEXT:  # %bb.1: # %entry

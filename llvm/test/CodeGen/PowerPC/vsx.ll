@@ -2136,8 +2136,8 @@ define <2 x i1> @test67(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-NEXT:    isellt r5, r4, r3
 ; CHECK-NEXT:    std r5, -8(r1)
 ; CHECK-NEXT:    ld r5, -32(r1)
-; CHECK-NEXT:    cmpld r6, r5
-; CHECK-NEXT:    isellt r3, r4, r3
+; CHECK-NEXT:    cmpld cr1, r6, r5
+; CHECK-NEXT:    isel r3, r4, r3, 4*cr1+lt
 ; CHECK-NEXT:    std r3, -16(r1)
 ; CHECK-NEXT:    addi r3, r1, -16
 ; CHECK-NEXT:    lxvd2x v2, 0, r3
@@ -2158,8 +2158,8 @@ define <2 x i1> @test67(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-REG-NEXT:    isellt r5, r4, r3
 ; CHECK-REG-NEXT:    std r5, -8(r1)
 ; CHECK-REG-NEXT:    ld r5, -32(r1)
-; CHECK-REG-NEXT:    cmpld r6, r5
-; CHECK-REG-NEXT:    isellt r3, r4, r3
+; CHECK-REG-NEXT:    cmpld cr1, r6, r5
+; CHECK-REG-NEXT:    isel r3, r4, r3, 4*cr1+lt
 ; CHECK-REG-NEXT:    std r3, -16(r1)
 ; CHECK-REG-NEXT:    addi r3, r1, -16
 ; CHECK-REG-NEXT:    lxvd2x v2, 0, r3

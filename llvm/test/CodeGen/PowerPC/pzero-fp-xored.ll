@@ -66,8 +66,8 @@ define signext i32 @t3(ppc_fp128 %x) local_unnamed_addr #0 {
 ; CHECK-NEXT:    fcmpu 0, 2, 0
 ; CHECK-NEXT:    fcmpu 1, 1, 0
 ; CHECK-NEXT:    crand 20, 6, 1
-; CHECK-NEXT:    cror 20, 5, 20
-; CHECK-NEXT:    isel 3, 4, 3, 20
+; CHECK-NEXT:    cror 24, 5, 20
+; CHECK-NEXT:    isel 3, 4, 3, 24
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-NVSXALT-LABEL: t3:
@@ -79,8 +79,8 @@ define signext i32 @t3(ppc_fp128 %x) local_unnamed_addr #0 {
 ; CHECK-NVSXALT-NEXT:    fcmpu 0, 2, 0
 ; CHECK-NVSXALT-NEXT:    fcmpu 1, 1, 0
 ; CHECK-NVSXALT-NEXT:    crand 20, 6, 1
-; CHECK-NVSXALT-NEXT:    cror 20, 5, 20
-; CHECK-NVSXALT-NEXT:    isel 3, 4, 3, 20
+; CHECK-NVSXALT-NEXT:    cror 24, 5, 20
+; CHECK-NVSXALT-NEXT:    isel 3, 4, 3, 24
 ; CHECK-NVSXALT-NEXT:    blr
 entry:
   %cmp = fcmp ogt ppc_fp128 %x, 0xM00000000000000000000000000000000

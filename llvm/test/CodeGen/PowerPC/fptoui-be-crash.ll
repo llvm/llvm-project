@@ -9,6 +9,7 @@ define dso_local void @calc_buffer() local_unnamed_addr #0 {
 ; CHECK-NEXT:    rldicl r6, r3, 63, 1
 ; CHECK-NEXT:    clrldi r7, r3, 63
 ; CHECK-NEXT:    clrldi r4, r3, 53
+; CHECK-NEXT:    cmpdi cr5, r3, 0
 ; CHECK-NEXT:    addi r5, r5, 1
 ; CHECK-NEXT:    or r7, r7, r6
 ; CHECK-NEXT:    cmpldi r5, 1
@@ -33,10 +34,9 @@ define dso_local void @calc_buffer() local_unnamed_addr #0 {
 ; CHECK-NEXT:    ori r5, r7, 0
 ; CHECK-NEXT:    b .LBB0_4
 ; CHECK-NEXT:  .LBB0_4:
-; CHECK-NEXT:    cmpdi r3, 0
 ; CHECK-NEXT:    std r4, -32(r1)
 ; CHECK-NEXT:    std r5, -24(r1)
-; CHECK-NEXT:    bc 12, lt, .LBB0_6
+; CHECK-NEXT:    bc 12, 4*cr5+lt, .LBB0_6
 ; CHECK-NEXT:  # %bb.5:
 ; CHECK-NEXT:    lfd f0, -32(r1)
 ; CHECK-NEXT:    fcfid f0, f0

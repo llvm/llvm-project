@@ -753,8 +753,8 @@ define signext i32 @spill_reduce_succ(ptr %input1, ptr %input2, ptr %output, i64
 ; CHECK-NEXT:    iselgt r7, r6, r7
 ; CHECK-NEXT:    addi r8, r7, -1
 ; CHECK-NEXT:    clrldi r6, r7, 63
-; CHECK-NEXT:    cmpldi r8, 3
-; CHECK-NEXT:    blt cr0, .LBB7_4
+; CHECK-NEXT:    cmpldi cr1, r8, 3
+; CHECK-NEXT:    blt cr1, .LBB7_4
 ; CHECK-NEXT:  # %bb.2: # %for.body.preheader.new
 ; CHECK-NEXT:    ld r14, -168(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    mulli r24, r30, 24

@@ -422,13 +422,13 @@ define i1 @isclass_00d_double(double %x) nounwind {
 ; CHECK-NEXT:    mffprd 3, 1
 ; CHECK-NEXT:    xststdcdp 0, 1, 127
 ; CHECK-NEXT:    xststdcdp 1, 1, 64
+; CHECK-NEXT:    xststdcdp 7, 1, 16
 ; CHECK-NEXT:    rldicl 3, 3, 32, 32
 ; CHECK-NEXT:    crandc 20, 0, 2
 ; CHECK-NEXT:    andis. 3, 3, 8
 ; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:    crand 21, 6, 2
-; CHECK-NEXT:    xststdcdp 0, 1, 16
-; CHECK-NEXT:    cror 21, 2, 21
+; CHECK-NEXT:    crand 24, 6, 2
+; CHECK-NEXT:    cror 21, 30, 24
 ; CHECK-NEXT:    crnor 20, 21, 20
 ; CHECK-NEXT:    isel 3, 0, 3, 20
 ; CHECK-NEXT:    blr
@@ -440,11 +440,11 @@ define i1 @isclass_1c0_float(float %x) nounwind {
 ; CHECK-LABEL: isclass_1c0_float:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xststdcsp 0, 1, 127
+; CHECK-NEXT:    xststdcsp 1, 1, 10
 ; CHECK-NEXT:    li 3, 1
 ; CHECK-NEXT:    crnor 20, 0, 2
-; CHECK-NEXT:    xststdcsp 0, 1, 10
-; CHECK-NEXT:    crnor 20, 2, 20
-; CHECK-NEXT:    isel 3, 0, 3, 20
+; CHECK-NEXT:    crnor 24, 6, 20
+; CHECK-NEXT:    isel 3, 0, 3, 24
 ; CHECK-NEXT:    blr
   %1 = call i1 @llvm.is.fpclass.f32(float %x, i32 448)
   ret i1 %1

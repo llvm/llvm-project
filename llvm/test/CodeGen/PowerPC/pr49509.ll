@@ -40,9 +40,9 @@ define void @test() {
 ; CHECK-NEXT:  .LBB0_6: # %bb66
 ; CHECK-NEXT:    addi 3, 7, 0
 ; CHECK-NEXT:  .LBB0_7: # %bb66
-; CHECK-NEXT:    cror 20, 22, 2
+; CHECK-NEXT:    cror 24, 22, 2
 ; CHECK-NEXT:    stw 3, 0(3)
-; CHECK-NEXT:    bc 12, 20, .LBB0_9
+; CHECK-NEXT:    bc 12, 24, .LBB0_9
 ; CHECK-NEXT:  # %bb.8: # %bb66
 ; CHECK-NEXT:    ori 3, 6, 0
 ; CHECK-NEXT:    b .LBB0_10

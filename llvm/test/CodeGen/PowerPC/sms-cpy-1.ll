@@ -15,8 +15,8 @@ define void @print_res() nounwind {
 ; CHECK-NEXT:    li 3, 3
 ; CHECK-NEXT:    isellt 3, 4, 3
 ; CHECK-NEXT:    li 4, 1
-; CHECK-NEXT:    cmpldi 3, 1
-; CHECK-NEXT:    iselgt 3, 3, 4
+; CHECK-NEXT:    cmpldi 1, 3, 1
+; CHECK-NEXT:    isel 3, 3, 4, 5
 ; CHECK-NEXT:    li 4, 0
 ; CHECK-NEXT:    mtctr 3
 ; CHECK-NEXT:    stdu 1, -128(1)

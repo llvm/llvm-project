@@ -189,11 +189,11 @@ define i64 @f4_sle_0(i64 %x) {
 ; CHECK-32:       # %bb.0:
 ; CHECK-32-NEXT:    cmplwi r3, 0
 ; CHECK-32-NEXT:    cmpwi cr1, r3, 0
+; CHECK-32-NEXT:    cmpwi cr6, r4, 0
 ; CHECK-32-NEXT:    crandc 4*cr5+lt, 4*cr1+lt, eq
-; CHECK-32-NEXT:    cmpwi cr1, r4, 0
 ; CHECK-32-NEXT:    subfic r5, r4, 0
-; CHECK-32-NEXT:    crand 4*cr5+gt, eq, 4*cr1+eq
-; CHECK-32-NEXT:    cror 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; CHECK-32-NEXT:    crand 4*cr7+lt, eq, 4*cr6+eq
+; CHECK-32-NEXT:    cror 4*cr5+lt, 4*cr7+lt, 4*cr5+lt
 ; CHECK-32-NEXT:    subfze r6, r3
 ; CHECK-32-NEXT:    bclr 12, 4*cr5+lt, 0
 ; CHECK-32-NEXT:  # %bb.1:

@@ -106,15 +106,15 @@ define float @fooul(float %X) #0 {
 ; PPC64-NEXT:    rldicl 5, 5, 53, 11
 ; PPC64-NEXT:    std 4, -32(1)
 ; PPC64-NEXT:    rldicl 4, 5, 11, 1
-; PPC64-NEXT:    cmpldi 7, 1
-; PPC64-NEXT:    bc 12, 1, .LBB2_6
+; PPC64-NEXT:    cmpldi 1, 7, 1
+; PPC64-NEXT:    bc 12, 5, .LBB2_6
 ; PPC64-NEXT:  # %bb.5: # %entry
 ; PPC64-NEXT:    ori 4, 6, 0
 ; PPC64-NEXT:    b .LBB2_6
 ; PPC64-NEXT:  .LBB2_6: # %entry
-; PPC64-NEXT:    cmpdi 3, 0
+; PPC64-NEXT:    cmpdi 5, 3, 0
 ; PPC64-NEXT:    std 4, -24(1)
-; PPC64-NEXT:    bc 12, 0, .LBB2_8
+; PPC64-NEXT:    bc 12, 20, .LBB2_8
 ; PPC64-NEXT:  # %bb.7: # %entry
 ; PPC64-NEXT:    lfd 0, -32(1)
 ; PPC64-NEXT:    fcfid 0, 0

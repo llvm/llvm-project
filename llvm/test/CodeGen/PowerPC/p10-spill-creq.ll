@@ -114,21 +114,21 @@ define dso_local double @P10_Spill_CR_EQ(ptr %arg) local_unnamed_addr #0 {
 ; CHECK-NEXT:    lwz r9, -4(r1)
 ; CHECK-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, 4*cr7+eq
 ; CHECK-NEXT:    crandc 4*cr7+eq, 4*cr7+un, 4*cr2+eq
-; CHECK-NEXT:    crandc 4*cr5+lt, 4*cr5+lt, 4*cr6+eq
+; CHECK-NEXT:    crandc 4*cr6+eq, 4*cr5+lt, 4*cr6+eq
 ; CHECK-NEXT:    setbc r7, 4*cr6+un
 ; CHECK-NEXT:    setbc r8, 4*cr5+un
 ; CHECK-NEXT:    lwz r12, 8(r1)
 ; CHECK-NEXT:    xxlxor f2, f2, f2
 ; CHECK-NEXT:    isel r3, r3, r5, 4*cr5+gt
 ; CHECK-NEXT:    setbc r5, 4*cr7+gt
-; CHECK-NEXT:    crnor 4*cr5+gt, 4*cr6+gt, 4*cr5+gt
-; CHECK-NEXT:    crnor 4*cr6+gt, 4*cr7+lt, 4*cr7+eq
-; CHECK-NEXT:    crnor 4*cr5+lt, 4*cr6+lt, 4*cr5+lt
+; CHECK-NEXT:    crnor 4*cr1+lt, 4*cr6+gt, 4*cr5+gt
+; CHECK-NEXT:    crnor lt, 4*cr7+lt, 4*cr7+eq
+; CHECK-NEXT:    crnor 4*cr5+lt, 4*cr6+lt, 4*cr6+eq
 ; CHECK-NEXT:    add r5, r7, r5
 ; CHECK-NEXT:    add r5, r8, r5
-; CHECK-NEXT:    isel r3, 0, r3, 4*cr5+gt
+; CHECK-NEXT:    isel r3, 0, r3, 4*cr1+lt
 ; CHECK-NEXT:    isel r4, 0, r4, 4*cr5+lt
-; CHECK-NEXT:    isel r6, 0, r6, 4*cr6+gt
+; CHECK-NEXT:    isellt r6, 0, r6
 ; CHECK-NEXT:    mtocrf 128, r9
 ; CHECK-NEXT:    mtfprd f0, r5
 ; CHECK-NEXT:    isel r4, 0, r4, 4*cr5+eq

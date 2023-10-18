@@ -620,10 +620,10 @@ define zeroext i32 @ppcq_to_u32(ppc_fp128 %m) #0 {
 ; P8-NEXT:    lis r3, -32768
 ; P8-NEXT:    fcmpo cr0, f1, f0
 ; P8-NEXT:    crand 4*cr5+lt, eq, 4*cr1+lt
-; P8-NEXT:    crandc 4*cr5+gt, lt, eq
-; P8-NEXT:    cror 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
-; P8-NEXT:    isel r30, 0, r3, 4*cr5+lt
-; P8-NEXT:    bc 12, 4*cr5+lt, .LBB13_2
+; P8-NEXT:    crandc 4*cr6+lt, lt, eq
+; P8-NEXT:    cror 4*cr7+lt, 4*cr6+lt, 4*cr5+lt
+; P8-NEXT:    isel r30, 0, r3, 4*cr7+lt
+; P8-NEXT:    bc 12, 4*cr7+lt, .LBB13_2
 ; P8-NEXT:  # %bb.1: # %entry
 ; P8-NEXT:    fmr f3, f0
 ; P8-NEXT:  .LBB13_2: # %entry
@@ -661,10 +661,10 @@ define zeroext i32 @ppcq_to_u32(ppc_fp128 %m) #0 {
 ; P9-NEXT:    lis r3, -32768
 ; P9-NEXT:    fcmpo cr0, f1, f0
 ; P9-NEXT:    crand 4*cr5+lt, eq, 4*cr1+lt
-; P9-NEXT:    crandc 4*cr5+gt, lt, eq
-; P9-NEXT:    cror 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
-; P9-NEXT:    isel r30, 0, r3, 4*cr5+lt
-; P9-NEXT:    bc 12, 4*cr5+lt, .LBB13_2
+; P9-NEXT:    crandc 4*cr6+lt, lt, eq
+; P9-NEXT:    cror 4*cr7+lt, 4*cr6+lt, 4*cr5+lt
+; P9-NEXT:    isel r30, 0, r3, 4*cr7+lt
+; P9-NEXT:    bc 12, 4*cr7+lt, .LBB13_2
 ; P9-NEXT:  # %bb.1: # %entry
 ; P9-NEXT:    fmr f3, f0
 ; P9-NEXT:  .LBB13_2: # %entry
@@ -703,9 +703,9 @@ define zeroext i32 @ppcq_to_u32(ppc_fp128 %m) #0 {
 ; NOVSX-NEXT:    fcmpo cr0, f1, f0
 ; NOVSX-NEXT:    fcmpo cr1, f2, f4
 ; NOVSX-NEXT:    fmr f3, f4
-; NOVSX-NEXT:    crandc 4*cr5+gt, lt, eq
+; NOVSX-NEXT:    crandc 4*cr6+lt, lt, eq
 ; NOVSX-NEXT:    crand 4*cr5+lt, eq, 4*cr1+lt
-; NOVSX-NEXT:    cror 4*cr2+lt, 4*cr5+gt, 4*cr5+lt
+; NOVSX-NEXT:    cror 4*cr2+lt, 4*cr6+lt, 4*cr5+lt
 ; NOVSX-NEXT:    bc 12, 4*cr2+lt, .LBB13_2
 ; NOVSX-NEXT:  # %bb.1: # %entry
 ; NOVSX-NEXT:    fmr f3, f0

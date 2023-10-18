@@ -666,10 +666,11 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
     }
     llvm::copy_if(llvm::make_range(Order.begin(), Order.end()),
                   std::back_inserter(Hints), [&](MCPhysReg Reg) {
-                    // if (TRI->regsOverlap(Reg, PPC::CR2) ||
-                    //     TRI->regsOverlap(Reg, PPC::CR3) ||
-                    //     TRI->regsOverlap(Reg, PPC::CR4))
-                    //   return false;
+                    // Be conservative not to use callee saved CRs.
+                    if (TRI->regsOverlap(Reg, PPC::CR2) ||
+                        TRI->regsOverlap(Reg, PPC::CR3) ||
+                        TRI->regsOverlap(Reg, PPC::CR4))
+                      return false;
                     return llvm::all_of(TRI->superregs_inclusive(Reg),
                                         [&](MCPhysReg SR) {
                                           return !ModifiedRegisters.count(SR);

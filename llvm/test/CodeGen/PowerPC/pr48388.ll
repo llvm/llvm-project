@@ -8,13 +8,13 @@ define i64 @julia_div_i64(i64 %0, i64 %1) local_unnamed_addr #0 {
 ; CHECK-NEXT:    divd r5, r3, r4
 ; CHECK-NEXT:    lis r6, -1592
 ; CHECK-NEXT:    cmpdi r3, 0
+; CHECK-NEXT:    cmpdi cr1, r4, 0
 ; CHECK-NEXT:    ori r7, r6, 21321
 ; CHECK-NEXT:    ori r6, r6, 65519
 ; CHECK-NEXT:    rldic r7, r7, 4, 17
 ; CHECK-NEXT:    rldic r6, r6, 4, 17
 ; CHECK-NEXT:    iselgt r8, r6, r7
-; CHECK-NEXT:    cmpdi r4, 0
-; CHECK-NEXT:    iselgt r6, r6, r7
+; CHECK-NEXT:    isel r6, r6, r7, 4*cr1+gt
 ; CHECK-NEXT:    xor r6, r8, r6
 ; CHECK-NEXT:    cntlzd r6, r6
 ; CHECK-NEXT:    rldicl r6, r6, 58, 63

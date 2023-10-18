@@ -5687,14 +5687,14 @@ define dso_local i64 @atommax8(ptr nocapture noundef %ptr, i64 noundef %val) loc
 ; AIX32-NEXT:    cmplw 5, 30
 ; AIX32-NEXT:    cmpw 1, 5, 30
 ; AIX32-NEXT:    li 7, 5
-; AIX32-NEXT:    li 8, 5
+; AIX32-NEXT:    cmplw 6, 4, 31
 ; AIX32-NEXT:    stw 5, 56(1)
 ; AIX32-NEXT:    mr 3, 29
 ; AIX32-NEXT:    crandc 20, 5, 2
-; AIX32-NEXT:    cmplw 1, 4, 31
-; AIX32-NEXT:    crand 21, 2, 5
+; AIX32-NEXT:    crand 28, 2, 25
+; AIX32-NEXT:    li 8, 5
 ; AIX32-NEXT:    stw 4, 60(1)
-; AIX32-NEXT:    cror 20, 21, 20
+; AIX32-NEXT:    cror 20, 28, 20
 ; AIX32-NEXT:    isel 5, 5, 30, 20
 ; AIX32-NEXT:    isel 6, 4, 31, 20
 ; AIX32-NEXT:    mr 4, 28
@@ -5708,15 +5708,15 @@ define dso_local i64 @atommax8(ptr nocapture noundef %ptr, i64 noundef %val) loc
 ; AIX32-NEXT:    cmplw 5, 30
 ; AIX32-NEXT:    cmpw 1, 5, 30
 ; AIX32-NEXT:    li 3, 55
+; AIX32-NEXT:    cmplw 6, 4, 31
+; AIX32-NEXT:    lwz 31, 76(1) # 4-byte Folded Reload
 ; AIX32-NEXT:    lwz 30, 72(1) # 4-byte Folded Reload
 ; AIX32-NEXT:    lwz 29, 68(1) # 4-byte Folded Reload
 ; AIX32-NEXT:    lwz 28, 64(1) # 4-byte Folded Reload
 ; AIX32-NEXT:    crandc 20, 5, 2
-; AIX32-NEXT:    cmplw 1, 4, 31
+; AIX32-NEXT:    crand 28, 2, 25
 ; AIX32-NEXT:    li 4, 66
-; AIX32-NEXT:    lwz 31, 76(1) # 4-byte Folded Reload
-; AIX32-NEXT:    crand 21, 2, 5
-; AIX32-NEXT:    cror 20, 21, 20
+; AIX32-NEXT:    cror 20, 28, 20
 ; AIX32-NEXT:    isel 4, 4, 3, 20
 ; AIX32-NEXT:    li 3, 0
 ; AIX32-NEXT:    addi 1, 1, 80
