@@ -1497,13 +1497,14 @@ private:
   /// should be executed. Notice we use the post action mechanism to codify the
   /// asynchronous operation.
   static bool asyncActionCallback(hsa_signal_value_t Value, void *Args) {
+    // This thread is outside the stream mutex. Make sure the thread sees the
+    // changes on the slot.
+    std::atomic_thread_fence(std::memory_order_acquire);
+
     StreamSlotTy *Slot = reinterpret_cast<StreamSlotTy *>(Args);
     assert(Slot && "Invalid slot");
     assert(Slot->Signal && "Invalid signal");
 
-    // This thread is outside the stream mutex. Make sure the thread sees the
-    // changes on the slot.
-    std::atomic_thread_fence(std::memory_order_acquire);
 
     // Peform the operation.
     if (auto Err = Slot->performAction())
