@@ -101,10 +101,10 @@ static bool tileDividesIterationDomain(Range loopRange) {
 /// `tileSize`, i.e., `min(tileSize, range.end() - iv)`.
 static OpFoldResult getBoundedTileSize(OpBuilder &b, Location loc,
                                        Range loopRange, Value iv,
-                                       Value tileSize) {
+                                       OpFoldResult tileSize) {
   std::optional<int64_t> ts = getConstantIntValue(tileSize);
   if (ts && ts.value() == 1)
-    return getAsOpFoldResult(tileSize);
+    return tileSize;
 
   if (tileDividesIterationDomain(
           Range{loopRange.offset, loopRange.size, tileSize}))
@@ -130,12 +130,7 @@ static Operation *cloneOpAndUpdateDestinationArgs(RewriterBase &rewriter,
   Operation *clonedOp = rewriter.clone(*op);
   if (auto destinationStyleOp =
           dyn_cast<DestinationStyleOpInterface>(clonedOp)) {
-    // Note that this is assuming that
-    auto [start, end] = destinationStyleOp.getDpsInitsPositionRange();
-    assert((end - start == newDestArgs.size()) &&
-           "expected as many new destination args as number of inits of the "
-           "operation");
-    clonedOp->setOperands(start, end - start, newDestArgs);
+    destinationStyleOp.getDpsInitsMutable().assign(newDestArgs);
   }
   return clonedOp;
 }

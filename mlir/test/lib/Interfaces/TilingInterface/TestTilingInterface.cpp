@@ -580,7 +580,17 @@ void TestTilingInterfacePass::addTestPatterns(MLIRContext *context,
     return;
   }
   if (testTilingForAll) {
+    // 1. Tiling M and N dims of `linalg.matmul` on tensors.
     addPatternForTilingUsingForall(context, patterns, "simple_gemm", {10, 20});
+    // 2. Tiling 3D parallel generic op which implements a transpose.
+    addPatternForTilingUsingForall(context, patterns,
+                                   "parallel_generic_transpose", {10, 0, 20});
+    // 3. Tiling 2D conv op.
+    addPatternForTilingUsingForall(context, patterns, "simple_conv",
+                                   {0, 0, 0, 0, 10, 20, 30});
+    // 4. Tiling a simple op with `linalg.index` inside.
+    addPatternForTilingUsingForall(context, patterns, "indexed_semantics",
+                                   {10, 20});
     return;
   }
   if (testTileConsumerAndFuseProducer) {
