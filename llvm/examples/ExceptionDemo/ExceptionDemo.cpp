@@ -1556,8 +1556,7 @@ static void runExceptionThrow(llvm::orc::LLJIT *JIT, std::string function,
   // Find test's function pointer
   OurExceptionThrowFunctType functPtr =
       reinterpret_cast<OurExceptionThrowFunctType>(reinterpret_cast<uintptr_t>(
-          ExitOnErr(JIT->lookup(function))
-              .getValue()));
+          ExitOnErr(JIT->lookup(function)).getValue()));
 
   try {
     // Run test
