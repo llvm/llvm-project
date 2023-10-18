@@ -128,8 +128,7 @@ New checks
 - New :doc:`bugprone-casting-through-void
   <clang-tidy/checks/bugprone/casting-through-void>` check.
 
-  Detects usage of cast pointer to the other pointer throght cast to
-  ``void *`` in C/C++ code.
+  Detects unsafe or redundant two-step casting operations involving ``void*``.
 
 - New :doc:`bugprone-compare-pointer-to-member-virtual-function
   <clang-tidy/checks/bugprone/compare-pointer-to-member-virtual-function>` check.

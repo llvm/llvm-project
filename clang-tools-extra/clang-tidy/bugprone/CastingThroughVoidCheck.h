@@ -13,8 +13,7 @@
 
 namespace clang::tidy::bugprone {
 
-/// A check detects usage of cast pointer to the other pointer throght cast to
-/// ``void *`` in C/C++ code.
+/// A check detects unsafe or redundant two-step casting operations involving ``void*``.
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/casting-through-void.html
 class CastingThroughVoidCheck : public ClangTidyCheck {
