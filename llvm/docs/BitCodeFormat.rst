@@ -1093,6 +1093,7 @@ The integer codes are mapped to well-known attributes as follows.
 * code 85: ``skipprofile``
 * code 86: ``memory``
 * code 87: ``nofpclass``
+* code 88: ``optdebug``
 
 .. note::
   The ``allocsize`` attribute has a special encoding for its arguments. Its two
