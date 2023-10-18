@@ -44,12 +44,16 @@ Expected<object::SectionRef> getInstrProfSection(const object::ObjectFile &Obj,
   // linker to sort these sections between "$A" and "$Z". The linker removes the
   // dollar and everything after it in the final binary. Do the same to match.
   Triple::ObjectFormatType ObjFormat = Obj.getTripleObjectFormat();
+  auto StripSuffix = [ObjFormat](StringRef N) {
+    return ObjFormat == Triple::COFF ? N.split('$').first : N;
+  };
   std::string ExpectedSectionName =
       getInstrProfSectionName(IPSK, ObjFormat,
                               /*AddSegmentInfo=*/false);
+  ExpectedSectionName = StripSuffix(ExpectedSectionName);
   for (auto &Section : Obj.sections())
     if (auto SectionName = Section.getName())
-      if (SectionName.get() == ExpectedSectionName) {
+      if (StripSuffix(*SectionName) == ExpectedSectionName) {
         // There will be extra profile name and data sections in COFF used for
         // runtime to detect start/stop of those sections, skipping them.
         // (details at compiler-rt/lib/profile/InstrProfilingPlatformWindows.c)
