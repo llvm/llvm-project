@@ -13744,6 +13744,10 @@ static SDValue performBUILD_VECTORCombine(SDNode *N, SelectionDAG &DAG,
   SmallVector<SDValue> RHSOps;
   for (SDValue Op : N->ops()) {
     if (Op.isUndef()) {
+      // We can't form a divide or remainder from undef.
+      if (!DAG.isSafeToSpeculativelyExecute(Opcode))
+        return SDValue();
+
       LHSOps.push_back(Op);
       RHSOps.push_back(Op);
       continue;
