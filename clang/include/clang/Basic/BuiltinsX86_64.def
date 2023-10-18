@@ -104,6 +104,9 @@ TARGET_BUILTIN(__builtin_ia32_clui, "v", "n", "uintr")
 TARGET_BUILTIN(__builtin_ia32_stui, "v", "n", "uintr")
 TARGET_BUILTIN(__builtin_ia32_testui, "Uc", "n", "uintr")
 TARGET_BUILTIN(__builtin_ia32_senduipi, "vUWi", "n", "uintr")
+// USERMSR
+TARGET_BUILTIN(__builtin_ia32_urdmsr, "ULLiULLi", "n", "usermsr")
+TARGET_BUILTIN(__builtin_ia32_uwrmsr, "vULLiULLi", "n", "usermsr")
 
 // AMX internal builtin
 TARGET_BUILTIN(__builtin_ia32_tile_loadconfig_internal, "vvC*", "n", "amx-tile")
