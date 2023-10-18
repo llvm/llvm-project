@@ -70,20 +70,6 @@ SymbolizableObjectFile::create(const object::ObjectFile *Obj,
         return std::move(E);
   }
 
-  std::vector<SymbolDesc> &SS = res->Symbols;
-  // Sort by (Addr,Size,Name). If several SymbolDescs share the same Addr,
-  // pick the one with the largest Size. This helps us avoid symbols with no
-  // size information (Size=0).
-  llvm::stable_sort(SS);
-  auto I = SS.begin(), E = SS.end(), J = SS.begin();
-  while (I != E) {
-    auto OI = I;
-    while (++I != E && OI->Addr == I->Addr) {
-    }
-    *J++ = I[-1];
-  }
-  SS.erase(J, SS.end());
-
   return std::move(res);
 }
 
@@ -134,7 +120,10 @@ Error SymbolizableObjectFile::addCoffExportSymbols(
     uint32_t NextOffset = I != E ? I->Offset : Export.Offset + 1;
     uint64_t SymbolStart = ImageBase + Export.Offset;
     uint64_t SymbolSize = NextOffset - Export.Offset;
-    Symbols.push_back({SymbolStart, SymbolSize, Export.Name, 0});
+    // If the SymbolStart exists, use the one with the large Size.
+    // This helps us avoid symbols with no size information (Size = 0).
+    if (!Symbols.count(SymbolStart) || SymbolSize >= Symbols[SymbolStart].Size)
+      Symbols[SymbolStart] = {SymbolSize, Export.Name, 0};
   }
   return Error::success();
 }
@@ -215,7 +204,14 @@ Error SymbolizableObjectFile::addSymbol(const SymbolRef &Symbol,
 
   if (Obj.isELF() && ELFSymbolRef(Symbol).getBinding() != ELF::STB_LOCAL)
     ELFSymIdx = 0;
-  Symbols.push_back({SymbolAddress, SymbolSize, SymbolName, ELFSymIdx});
+
+  // If the SymbolAddress exists, use the one with the large Size.
+  // This helps us avoid symbols with no size information (Size = 0).
+  if (!Symbols.count(SymbolAddress) ||
+      SymbolSize >= Symbols[SymbolAddress].Size) {
+    Symbols[SymbolAddress] = {SymbolSize, SymbolName, ELFSymIdx};
+  }
+
   return Error::success();
 }
 
@@ -234,26 +230,25 @@ uint64_t SymbolizableObjectFile::getModulePreferredBase() const {
 bool SymbolizableObjectFile::getNameFromSymbolTable(
     uint64_t Address, std::string &Name, uint64_t &Addr, uint64_t &Size,
     std::string &FileName) const {
-  SymbolDesc SD{Address, UINT64_C(-1), StringRef(), 0};
-  auto SymbolIterator = llvm::upper_bound(Symbols, SD);
+  auto SymbolIterator = Symbols.upper_bound(Address);
   if (SymbolIterator == Symbols.begin())
     return false;
   --SymbolIterator;
-  if (SymbolIterator->Size != 0 &&
-      SymbolIterator->Addr + SymbolIterator->Size <= Address)
-    return false;
-  Name = SymbolIterator->Name.str();
-  Addr = SymbolIterator->Addr;
-  Size = SymbolIterator->Size;
 
-  if (SymbolIterator->ELFLocalSymIdx != 0) {
+  auto &SD = SymbolIterator->second;
+  if (SD.Size != 0 && SymbolIterator->first + SD.Size <= Address)
+    return false;
+  Name = SD.Name.str();
+  Addr = SymbolIterator->first;
+  Size = SD.Size;
+
+  if (SD.ELFLocalSymIdx != 0) {
     // If this is an ELF local symbol, find the STT_FILE symbol preceding
     // SymbolIterator to get the filename. The ELF spec requires the STT_FILE
     // symbol (if present) precedes the other STB_LOCAL symbols for the file.
     assert(Module->isELF());
-    auto It = llvm::upper_bound(
-        FileSymbols,
-        std::make_pair(SymbolIterator->ELFLocalSymIdx, StringRef()));
+    auto It = llvm::upper_bound(FileSymbols,
+                                std::make_pair(SD.ELFLocalSymIdx, StringRef()));
     if (It != FileSymbols.begin())
       FileName = It[-1].second.str();
   }

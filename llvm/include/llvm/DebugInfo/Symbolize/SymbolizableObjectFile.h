@@ -17,6 +17,7 @@
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <string>
 #include <utility>
@@ -73,7 +74,6 @@ private:
   bool UntagAddresses;
 
   struct SymbolDesc {
-    uint64_t Addr;
     // If size is 0, assume that symbol occupies the whole memory range up to
     // the following symbol.
     uint64_t Size;
@@ -82,12 +82,8 @@ private:
     // Non-zero if this is an ELF local symbol. See the comment in
     // getNameFromSymbolTable.
     uint32_t ELFLocalSymIdx;
-
-    bool operator<(const SymbolDesc &RHS) const {
-      return Addr != RHS.Addr ? Addr < RHS.Addr : Size < RHS.Size;
-    }
   };
-  std::vector<SymbolDesc> Symbols;
+  std::map<uint64_t, SymbolDesc> Symbols;
   // (index, filename) pairs of ELF STT_FILE symbols.
   std::vector<std::pair<uint32_t, StringRef>> FileSymbols;
 
