@@ -38,7 +38,7 @@ bool Operator::hasPoisonGeneratingFlags() const {
     return GEP->isInBounds() || GEP->getInRangeIndex() != std::nullopt;
   }
   case Instruction::ZExt:
-    if (auto *NNI = dyn_cast<NonNegInstruction>(this))
+    if (auto *NNI = dyn_cast<PossiblyNonNegInst>(this))
       return NNI->hasNonNeg();
     return false;
   default:

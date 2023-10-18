@@ -693,7 +693,7 @@ public:
 };
 
 /// Instruction that can have a nneg flag (only zext).
-class NonNegInstruction : public CastInst {
+class PossiblyNonNegInst : public CastInst {
 public:
   enum { NonNeg = (1 << 0) };
 

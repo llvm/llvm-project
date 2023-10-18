@@ -172,9 +172,9 @@ void Instruction::setIsExact(bool b) {
 }
 
 void Instruction::setNonNeg(bool b) {
-  assert(isa<NonNegInstruction>(this) && "Must be zext");
-  SubclassOptionalData = (SubclassOptionalData & ~NonNegInstruction::NonNeg) |
-                         (b * NonNegInstruction::NonNeg);
+  assert(isa<PossiblyNonNegInst>(this) && "Must be zext");
+  SubclassOptionalData = (SubclassOptionalData & ~PossiblyNonNegInst::NonNeg) |
+                         (b * PossiblyNonNegInst::NonNeg);
 }
 
 bool Instruction::hasNoUnsignedWrap() const {
@@ -186,8 +186,8 @@ bool Instruction::hasNoSignedWrap() const {
 }
 
 bool Instruction::hasNonNeg() const {
-  assert(isa<NonNegInstruction>(this) && "Must be zext");
-  return (SubclassOptionalData & NonNegInstruction::NonNeg) != 0;
+  assert(isa<PossiblyNonNegInst>(this) && "Must be zext");
+  return (SubclassOptionalData & PossiblyNonNegInst::NonNeg) != 0;
 }
 
 bool Instruction::hasPoisonGeneratingFlags() const {
@@ -395,8 +395,8 @@ void Instruction::copyIRFlags(const Value *V, bool IncludeWrapFlags) {
     if (auto *DestGEP = dyn_cast<GetElementPtrInst>(this))
       DestGEP->setIsInBounds(SrcGEP->isInBounds() || DestGEP->isInBounds());
 
-  if (auto *NNI = dyn_cast<NonNegInstruction>(V))
-    if (isa<NonNegInstruction>(this))
+  if (auto *NNI = dyn_cast<PossiblyNonNegInst>(V))
+    if (isa<PossiblyNonNegInst>(this))
       setNonNeg(NNI->hasNonNeg());
 }
 
@@ -424,8 +424,8 @@ void Instruction::andIRFlags(const Value *V) {
     if (auto *DestGEP = dyn_cast<GetElementPtrInst>(this))
       DestGEP->setIsInBounds(SrcGEP->isInBounds() && DestGEP->isInBounds());
 
-  if (auto *NNI = dyn_cast<NonNegInstruction>(V))
-    if (isa<NonNegInstruction>(this))
+  if (auto *NNI = dyn_cast<PossiblyNonNegInst>(V))
+    if (isa<PossiblyNonNegInst>(this))
       setNonNeg(hasNonNeg() && NNI->hasNonNeg());
 }
 

@@ -1550,9 +1550,9 @@ static uint64_t getOptimizationFlags(const Value *V) {
       Flags |= bitc::AllowContract;
     if (FPMO->hasApproxFunc())
       Flags |= bitc::ApproxFunc;
-  } else if (const auto *NNI = dyn_cast<NonNegInstruction>(V)) {
+  } else if (const auto *NNI = dyn_cast<PossiblyNonNegInst>(V)) {
     if (NNI->hasNonNeg())
-      Flags |= 1 << bitc::NNI_NON_NEG;
+      Flags |= 1 << bitc::PNNI_NON_NEG;
   }
 
   return Flags;

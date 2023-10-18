@@ -4893,13 +4893,12 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         }
       } else {
         auto CastOp = (Instruction::CastOps)Opc;
-
         if (!CastInst::castIsValid(CastOp, Op, ResTy))
           return error("Invalid cast");
         I = CastInst::Create(CastOp, Op, ResTy);
       }
-      if (OpNum < Record.size() && isa<NonNegInstruction>(I) &&
-          (Record[OpNum] & (1 << bitc::NNI_NON_NEG)))
+      if (OpNum < Record.size() && isa<PossiblyNonNegInst>(I) &&
+          (Record[OpNum] & (1 << bitc::PNNI_NON_NEG)))
         I->setNonNeg(true);
       InstructionList.push_back(I);
       break;

@@ -6386,11 +6386,10 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
   case lltok::kw_zext: {
     bool NonNeg = EatIfPresent(lltok::kw_nneg);
     bool Res = parseCast(Inst, PFS, KeywordVal);
+    if (Res != 0)
+      return Res;
     if (NonNeg)
       Inst->setNonNeg();
-    if (Res != 0) {
-      return Res;
-    }
     return 0;
   }
   case lltok::kw_trunc:
