@@ -77,7 +77,7 @@ void ManualDWARFIndex::Index() {
   const uint64_t total_progress = units_to_index.size() * 2 + 8;
   Progress progress(
       llvm::formatv("Manually indexing DWARF for {0}", module_desc.GetData()),
-      total_progress);
+      Progress::ProgressReportType::eAggregateProgressReport, total_progress);
 
   std::vector<IndexSet> sets(units_to_index.size());
 
