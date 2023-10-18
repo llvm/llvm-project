@@ -610,11 +610,11 @@ bool CheckDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR) {
   return false;
 }
 
-bool CheckBitcast(InterpState &S, CodePtr OpPC, unsigned IndeterminateBits,
+bool CheckBitcast(InterpState &S, CodePtr OpPC, bool HasIndeterminateBits,
                   bool TargetIsUCharOrByte) {
 
   // This is always fine.
-  if (IndeterminateBits == 0)
+  if (!HasIndeterminateBits)
     return true;
 
   // Indeterminate bits can only be bitcast to unsigned char or std::byte.

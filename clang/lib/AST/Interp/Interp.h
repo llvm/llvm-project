@@ -187,7 +187,7 @@ bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
 /// Checks why the given DeclRefExpr is invalid.
 bool CheckDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR);
 
-bool CheckBitcast(InterpState &S, CodePtr OpPC, unsigned IndeterminateBits,
+bool CheckBitcast(InterpState &S, CodePtr OpPC, bool HasIndeterminateBits,
                   bool TargetIsUCharOrByte);
 
 /// Interpreter entry point.
@@ -205,7 +205,7 @@ bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
 /// actions of a __builtin_bit_cast expression when the target type
 /// is primitive.
 bool DoBitCast(InterpState &S, CodePtr OpPC, const Pointer &P, std::byte *Buff,
-               size_t BuffSize, unsigned &IndeterminateBits);
+               size_t BuffSize, bool &HasIndeterminateBits);
 
 /// Perform a bitcast of all fields of P into the fields of DestPtr.
 /// This performs the actions of a __builtin_bit_cast expression when
@@ -1582,12 +1582,12 @@ bool BitCast(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte) {
 
   size_t BuffSize = ToT::valueReprBytes(S.getCtx());
   std::vector<std::byte> Buff(BuffSize);
-  unsigned IndeterminateBits = 0;
+  bool HasIndeterminateBits = false;
 
-  if (!DoBitCast(S, OpPC, FromPtr, Buff.data(), BuffSize, IndeterminateBits))
+  if (!DoBitCast(S, OpPC, FromPtr, Buff.data(), BuffSize, HasIndeterminateBits))
     return false;
 
-  if (!CheckBitcast(S, OpPC, IndeterminateBits, TargetIsUCharOrByte))
+  if (!CheckBitcast(S, OpPC, HasIndeterminateBits, TargetIsUCharOrByte))
     return false;
 
   S.Stk.push<ToT>(ToT::bitcastFromMemory(Buff.data()));
@@ -1600,12 +1600,14 @@ inline bool BitCastFP(InterpState &S, CodePtr OpPC,
   const Pointer &FromPtr = S.Stk.pop<Pointer>();
 
   std::vector<std::byte> Buff(TargetSize);
-  unsigned IndeterminateBits = 0;
+  bool HasIndeterminateBits = false;
 
-  if (!DoBitCast(S, OpPC, FromPtr, Buff.data(), TargetSize, IndeterminateBits))
+  if (!DoBitCast(S, OpPC, FromPtr, Buff.data(), TargetSize,
+                 HasIndeterminateBits))
     return false;
 
-  if (!CheckBitcast(S, OpPC, IndeterminateBits, /*TargetIsUCharOrByte=*/false))
+  if (!CheckBitcast(S, OpPC, HasIndeterminateBits,
+                    /*TargetIsUCharOrByte=*/false))
     return false;
 
   S.Stk.push<Floating>(Floating::bitcastFromMemory(Buff.data(), *Sem));
