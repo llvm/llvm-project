@@ -835,7 +835,7 @@ SmallVector<unsigned> mlir::sparse_tensor::getBlockSize(AffineMap dimToLvl) {
             binOp.getRHS().dyn_cast<AffineConstantExpr>().getValue());
       }
     } else {
-      blockSize.push_back(1);
+      blockSize.push_back(0);
     }
   }
   return blockSize;
