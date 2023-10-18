@@ -527,6 +527,26 @@ class CIRScopeOpLowering
   }
 };
 
+struct CIRBrCondOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::BrCondOp> {
+  using mlir::OpConversionPattern<mlir::cir::BrCondOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::BrCondOp brOp, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+
+    auto condition = adaptor.getCond();
+    auto i1Condition = rewriter.create<mlir::arith::TruncIOp>(
+        brOp.getLoc(), rewriter.getI1Type(), condition);
+    rewriter.replaceOpWithNewOp<mlir::cf::CondBranchOp>(
+        brOp, i1Condition.getResult(), brOp.getDestTrue(),
+        adaptor.getDestOperandsTrue(), brOp.getDestFalse(),
+        adaptor.getDestOperandsFalse());
+
+    return mlir::success();
+  }
+};
+
 void populateCIRToMLIRConversionPatterns(mlir::RewritePatternSet &patterns,
                                          mlir::TypeConverter &converter) {
   patterns.add<CIRReturnLowering, CIRBrOpLowering>(patterns.getContext());
@@ -534,7 +554,8 @@ void populateCIRToMLIRConversionPatterns(mlir::RewritePatternSet &patterns,
   patterns.add<CIRCmpOpLowering, CIRCallLowering, CIRUnaryOpLowering,
                CIRBinOpLowering, CIRLoadLowering, CIRConstantLowering,
                CIRStoreLowering, CIRAllocaLowering, CIRFuncLowering,
-               CIRScopeOpLowering>(converter, patterns.getContext());
+               CIRScopeOpLowering, CIRBrCondOpLowering>(converter,
+                                                        patterns.getContext());
 }
 
 static mlir::TypeConverter prepareTypeConverter() {
