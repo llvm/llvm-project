@@ -83,7 +83,7 @@ public:
   enum CodeObjectVersionKind {
     COV_None,
     COV_2 = 200, // Unsupported.
-    COV_3 = 300, // Unsupported.
+    COV_3 = 300,
     COV_4 = 400,
     COV_5 = 500,
   };
