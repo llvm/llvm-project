@@ -17,7 +17,9 @@
 // Stack histories are currently not recorded on x86.
 // XFAIL: target=x86_64{{.*}}
 
+#include <stdint.h>
 #include <stdlib.h>
+
 // At least -O1 is needed for this function to not have a stack frame on
 // AArch64.
 void USE(void *x) { // pretend_to_do_something(void *x)
