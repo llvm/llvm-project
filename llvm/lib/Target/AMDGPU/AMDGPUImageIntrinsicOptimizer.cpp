@@ -118,12 +118,10 @@ void addInstToMergeableList(
         // Check FragId group.
         auto FragIdList = cast<ConstantInt>(IIList.front()->getArgOperand(I));
         auto FragId = cast<ConstantInt>(II->getArgOperand(I));
-        if (FragIdList->getValue().udiv(4) != FragId->getValue().udiv(4))
-          AllEqual = false;
+        AllEqual = FragIdList->getValue().udiv(4) == FragId->getValue().udiv(4);
       } else {
         // Check all arguments except FragId.
-        if (ArgList != Arg)
-          AllEqual = false;
+        AllEqual = ArgList == Arg;
       }
     }
     if (!AllEqual)
