@@ -86,6 +86,9 @@ private:
   /// Returns true if profile counter update register promotion is enabled.
   bool isCounterPromotionEnabled() const;
 
+  /// Return true if profile sampling is enabled.
+  bool isSamplingEnabled() const;
+
   /// Count the number of instrumented value sites for the function.
   void computeNumValueSiteCounts(InstrProfValueProfileInst *Ins);
 
@@ -108,6 +111,9 @@ private:
   /// Compute the address of the counter value that this profiling instruction
   /// acts on.
   Value *getCounterAddress(InstrProfInstBase *I);
+
+  /// Lower the incremental instructions under profile sampling predicates.
+  void doSampling(Instruction *I);
 
   /// Get the region counters for an increment, creating them if necessary.
   ///

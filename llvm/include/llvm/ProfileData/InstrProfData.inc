@@ -676,6 +676,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_PROFILE_RUNTIME_VAR __llvm_profile_runtime
 #define INSTR_PROF_PROFILE_COUNTER_BIAS_VAR __llvm_profile_counter_bias
 #define INSTR_PROF_PROFILE_SET_TIMESTAMP __llvm_profile_set_timestamp
+#define INSTR_PROF_PROFILE_SAMPLING_VAR __llvm_profile_sampling
 
 /* The variable that holds the name of the profile data
  * specified via command line. */

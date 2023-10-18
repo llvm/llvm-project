@@ -116,11 +116,17 @@ struct InstrProfOptions {
   // Use BFI to guide register promotion
   bool UseBFIInPromotion = false;
 
+  // Use sampling to reduce the profile instrumentation runtime overhead.
+  bool Sampling = false;
+
   // Name of the profile file to use as output
   std::string InstrProfileOutput;
 
   InstrProfOptions() = default;
 };
+
+// Create the variable for profile sampling.
+void createProfileSamplingVar(Module &M);
 
 // Options for sanitizer coverage instrumentation.
 struct SanitizerCoverageOptions {

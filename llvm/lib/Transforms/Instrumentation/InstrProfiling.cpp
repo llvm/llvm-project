@@ -36,6 +36,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/InitializePasses.h"
@@ -48,6 +49,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 #include <algorithm>
@@ -148,6 +150,16 @@ cl::opt<bool> SkipRetExitBlock(
     "skip-ret-exit-block", cl::init(true),
     cl::desc("Suppress counter promotion if exit blocks contain ret."));
 
+static cl::opt<bool>
+    SampledInstrument("sampled-instr", cl::ZeroOrMore, cl::init(false),
+                      cl::desc("Do PGO instrumentation sampling"));
+
+static cl::opt<unsigned> SampledInstrumentDuration(
+    "sampled-instr-duration",
+    cl::desc("Set the sample rate for profile instrumentation, with a value "
+             "range 0 to 65535. We will record this number of samples for "
+             "every 65536 count updates"),
+    cl::init(200));
 ///
 /// A helper class to promote one counter RMW operation in the loop
 /// into register update.
@@ -412,27 +424,88 @@ PreservedAnalyses InstrProfiling::run(Module &M, ModuleAnalysisManager &AM) {
   return PreservedAnalyses::none();
 }
 
+// Perform instrumentation sampling.
+// We transform:
+//   Increment_Instruction;
+// to:
+//   if (__llvm_profile_sampling__ <= SampleDuration) {
+//     Increment_Instruction;
+//   }
+//   __llvm_profile_sampling__ += 1;
+//
+// "__llvm_profile_sampling__" is a thread-local global shared by all PGO
+// instrumentation variables (value-instrumentation and edge instrumentation).
+// It has a unsigned short type and will wrapper around when overflow.
+//
+// Note that, the code snippet after the transformation can still be
+// counter promoted. But I don't see a reason for that because the
+// counter updated should be sparse. That's the reason we disable
+// counter promotion by default when sampling is enabled.
+// This can be overwritten by the internal option.
+//
+void InstrProfiling::doSampling(Instruction *I) {
+  if (!isSamplingEnabled())
+    return;
+  int SampleDuration = SampledInstrumentDuration.getValue();
+  unsigned WrapToZeroValue = USHRT_MAX + 1;
+  assert(SampleDuration < USHRT_MAX);
+  auto *Int16Ty = Type::getInt16Ty(M->getContext());
+  auto *CountVar =
+      M->getGlobalVariable(INSTR_PROF_QUOTE(INSTR_PROF_PROFILE_SAMPLING_VAR));
+  assert(CountVar && "CountVar not set properly");
+  IRBuilder<> CondBuilder(I);
+  auto *LoadCountVar = CondBuilder.CreateLoad(Int16Ty, CountVar);
+  auto *DurationCond = CondBuilder.CreateICmpULE(
+      LoadCountVar, CondBuilder.getInt16(SampleDuration));
+  MDBuilder MDB(I->getContext());
+  MDNode *BranchWeight =
+      MDB.createBranchWeights(SampleDuration, WrapToZeroValue - SampleDuration);
+  Instruction *ThenTerm = SplitBlockAndInsertIfThen(
+      DurationCond, I, /* Unreacheable */ false, BranchWeight);
+  IRBuilder<> IncBuilder(I);
+  auto *NewVal = IncBuilder.CreateAdd(LoadCountVar, IncBuilder.getInt16(1));
+  IncBuilder.CreateStore(NewVal, CountVar);
+  I->moveBefore(ThenTerm);
+}
+
 bool InstrProfiling::lowerIntrinsics(Function *F) {
   bool MadeChange = false;
   PromotionCandidates.clear();
+  SmallVector<InstrProfInstBase *, 8> InstrProfInsts;
+
   for (BasicBlock &BB : *F) {
     for (Instruction &Instr : llvm::make_early_inc_range(BB)) {
-      if (auto *IPIS = dyn_cast<InstrProfIncrementInstStep>(&Instr)) {
-        lowerIncrement(IPIS);
-        MadeChange = true;
-      } else if (auto *IPI = dyn_cast<InstrProfIncrementInst>(&Instr)) {
-        lowerIncrement(IPI);
-        MadeChange = true;
-      } else if (auto *IPC = dyn_cast<InstrProfTimestampInst>(&Instr)) {
-        lowerTimestamp(IPC);
-        MadeChange = true;
-      } else if (auto *IPC = dyn_cast<InstrProfCoverInst>(&Instr)) {
-        lowerCover(IPC);
-        MadeChange = true;
-      } else if (auto *IPVP = dyn_cast<InstrProfValueProfileInst>(&Instr)) {
-        lowerValueProfileInst(IPVP);
-        MadeChange = true;
+      if (auto *IP = dyn_cast<InstrProfInstBase>(&Instr)) {
+        InstrProfInsts.push_back(IP);
       }
+    }
+  }
+
+  for (auto *IP : InstrProfInsts) {
+    if (auto *IPIS = dyn_cast<InstrProfIncrementInstStep>(IP)) {
+      doSampling(IP);
+      lowerIncrement(IPIS);
+      MadeChange = true;
+    } else if (auto *IPI = dyn_cast<InstrProfIncrementInst>(IP)) {
+      doSampling(IP);
+      lowerIncrement(IPI);
+      MadeChange = true;
+    } else if (auto *IPC = dyn_cast<InstrProfTimestampInst>(IP)) {
+      doSampling(IP);
+      lowerTimestamp(IPC);
+      MadeChange = true;
+    } else if (auto *IPC = dyn_cast<InstrProfCoverInst>(IP)) {
+      doSampling(IP);
+      lowerCover(IPC);
+      MadeChange = true;
+    } else if (auto *IPVP = dyn_cast<InstrProfValueProfileInst>(IP)) {
+      doSampling(IP);
+      lowerValueProfileInst(IPVP);
+      MadeChange = true;
+    } else {
+      LLVM_DEBUG(dbgs() << "Invalid InstroProf intrinsic: " << *IP << "\n");
+      // ?? Seeing "call void @llvm.memcpy.p0.p0.i64..." here ??
+      // llvm_unreachable("Invalid InstroProf intrinsic");
     }
   }
 
@@ -453,6 +526,12 @@ bool InstrProfiling::isRuntimeCounterRelocationEnabled() const {
 
   // Fuchsia uses runtime counter relocation by default.
   return TT.isOSFuchsia();
+}
+
+bool InstrProfiling::isSamplingEnabled() const {
+  if (SampledInstrument.getNumOccurrences() > 0)
+    return SampledInstrument;
+  return Options.Sampling;
 }
 
 bool InstrProfiling::isCounterPromotionEnabled() const {
@@ -534,6 +613,9 @@ bool InstrProfiling::run(
   bool NeedsRuntimeHook = needsRuntimeHookUnconditionally(TT);
   if (NeedsRuntimeHook)
     MadeChange = emitRuntimeHook();
+
+  if (!IsCS && isSamplingEnabled())
+    createProfileSamplingVar(M);
 
   bool ContainsProfiling = containsProfilingIntrinsics(M);
   GlobalVariable *CoverageNamesVar =
@@ -1372,3 +1454,22 @@ void InstrProfiling::emitInitialization() {
 
   appendToGlobalCtors(*M, F, 0);
 }
+
+namespace llvm {
+// Create the variable for profile sampling.
+void createProfileSamplingVar(Module &M) {
+  const StringRef VarName(INSTR_PROF_QUOTE(INSTR_PROF_PROFILE_SAMPLING_VAR));
+  Type *IntTy16 = Type::getInt16Ty(M.getContext());
+  auto SamplingVar = new GlobalVariable(
+      M, IntTy16, false, GlobalValue::WeakAnyLinkage,
+      Constant::getIntegerValue(IntTy16, APInt(16, 0)), VarName);
+  SamplingVar->setVisibility(GlobalValue::DefaultVisibility);
+  SamplingVar->setThreadLocal(true);
+  Triple TT(M.getTargetTriple());
+  if (TT.supportsCOMDAT()) {
+    SamplingVar->setLinkage(GlobalValue::ExternalLinkage);
+    SamplingVar->setComdat(M.getOrInsertComdat(VarName));
+  }
+  appendToCompilerUsed(M, SamplingVar);
+}
+} // namespace llvm
