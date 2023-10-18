@@ -237,6 +237,10 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/pro-type-vararg>` check to ignore
   false-positives in unevaluated context (e.g., ``decltype``, ``sizeof``, ...).
 
+- Improved :doc:`cppcoreguidelines-rvalue-reference-param-not-moved
+  <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>` check
+  to ignore unused parameters when they are marked as unused.
+
 - Improved :doc:`llvm-namespace-comment
   <clang-tidy/checks/llvm/namespace-comment>` check to provide fixes for
   ``inline`` namespaces in the same format as :program:`clang-format`.
