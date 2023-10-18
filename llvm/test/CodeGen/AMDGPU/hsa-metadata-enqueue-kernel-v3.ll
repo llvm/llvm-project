@@ -142,7 +142,7 @@ define amdgpu_kernel void @test_no_default_queue(i8 %a) #3
 
 ; CHECK:  amdhsa.version:
 ; CHECK-NEXT: - 1
-; CHECK-NEXT: - 1
+; CHECK-NEXT: - 0
 ; CHECK-NOT:  amdhsa.printf:
 
 attributes #0 = { optnone noinline "amdgpu-no-default-queue" "amdgpu-no-completion-action" "amdgpu-implicitarg-num-bytes"="48" }
@@ -151,7 +151,7 @@ attributes #2 = { optnone noinline "amdgpu-no-completion-action" "amdgpu-implici
 attributes #3 = { optnone noinline "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="48" }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 300}
 
 !1 = !{i32 0}
 !2 = !{!"none"}
