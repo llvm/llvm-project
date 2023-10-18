@@ -57,16 +57,14 @@ constexpr bool test() {
   //
   // See https://github.com/llvm/llvm-project/issues/68552 and the linked PR.
   {
-#if !defined(TEST_COMPILER_CLANG) || TEST_CLANG_VER >= 1600
-    static constexpr auto f1 = [] -> std::expected<std::optional<int>, long> { return 0; };
+    auto f1 = [] -> std::expected<std::optional<int>, long> { return 0; };
 
-    static constexpr auto f2 = [] -> std::expected<std::optional<int>, int> {
+    auto f2 = [&f1] -> std::expected<std::optional<int>, int> {
       return f1().transform_error([](auto) { return 0; });
     };
 
     auto e = f2();
     assert(e.has_value());
-#endif
   }
   {
     const std::expected<TailClobberer<0>, bool> e = {};
