@@ -25,8 +25,7 @@ static int testRoundtripEncoding(MlirContext ctx) {
   // clang-format off
   const char *originalAsm =
     "#sparse_tensor.encoding<{ "
-    "lvlTypes = [ \"dense\", \"compressed\", \"compressed\"], "
-    "dimToLvl = affine_map<(d0, d1)[s0] -> (s0, d0, d1)>, "
+    "map = [s0](d0, d1) -> (s0 : dense, d0 : compressed, d1 : compressed), "
     "posWidth = 32, crdWidth = 64 }>";
   // clang-format on
   MlirAttribute originalAttr =
@@ -41,6 +40,8 @@ static int testRoundtripEncoding(MlirContext ctx) {
   // CHECK: level_type: 4
   // CHECK: level_type: 8
   // CHECK: level_type: 8
+  MlirAffineMap lvlToDim =
+      mlirSparseTensorEncodingAttrGetLvlToDim(originalAttr);
   int lvlRank = mlirSparseTensorEncodingGetLvlRank(originalAttr);
   enum MlirSparseTensorDimLevelType *lvlTypes =
       malloc(sizeof(enum MlirSparseTensorDimLevelType) * lvlRank);
@@ -54,9 +55,8 @@ static int testRoundtripEncoding(MlirContext ctx) {
   // CHECK: crdWidth: 64
   int crdWidth = mlirSparseTensorEncodingAttrGetCrdWidth(originalAttr);
   fprintf(stderr, "crdWidth: %d\n", crdWidth);
-  // TODO: lvlToDim
   MlirAttribute newAttr = mlirSparseTensorEncodingAttrGet(
-      ctx, lvlRank, lvlTypes, dimToLvl, posWidth, crdWidth);
+      ctx, lvlRank, lvlTypes, dimToLvl, lvlToDim, posWidth, crdWidth);
   mlirAttributeDump(newAttr); // For debugging filecheck output.
   // CHECK: equal: 1
   fprintf(stderr, "equal: %d\n", mlirAttributeEqual(originalAttr, newAttr));

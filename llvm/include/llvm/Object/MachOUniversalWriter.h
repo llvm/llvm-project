@@ -97,9 +97,14 @@ public:
   }
 };
 
-Error writeUniversalBinary(ArrayRef<Slice> Slices, StringRef OutputFileName);
+enum class FatHeaderType { FatHeader, Fat64Header };
 
-Error writeUniversalBinaryToStream(ArrayRef<Slice> Slices, raw_ostream &Out);
+Error writeUniversalBinary(ArrayRef<Slice> Slices, StringRef OutputFileName,
+                           FatHeaderType FatHeader = FatHeaderType::FatHeader);
+
+Error writeUniversalBinaryToStream(
+    ArrayRef<Slice> Slices, raw_ostream &Out,
+    FatHeaderType FatHeader = FatHeaderType::FatHeader);
 
 } // end namespace object
 

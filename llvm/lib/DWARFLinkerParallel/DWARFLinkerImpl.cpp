@@ -64,12 +64,12 @@ Error DWARFLinkerImpl::link() {
 
   dwarf::FormParams GlobalFormat = {GlobalData.getOptions().TargetDWARFVersion,
                                     0, dwarf::DwarfFormat::DWARF32};
-  support::endianness GlobalEndianness = support::endian::system_endianness();
+  llvm::endianness GlobalEndianness = llvm::endianness::native;
 
   if (TheDwarfEmitter) {
     GlobalEndianness = TheDwarfEmitter->getTargetTriple().isLittleEndian()
-                           ? support::endianness::little
-                           : support::endianness::big;
+                           ? llvm::endianness::little
+                           : llvm::endianness::big;
   }
 
   for (std::unique_ptr<LinkContext> &Context : ObjectContexts) {

@@ -1,4 +1,4 @@
-; REQUIRES: aarch64
+; REQUIRES: x86
 ; RUN: rm -rf %t; split-file %s %t
 
 ;; Test that a weak symbol in a direct .o file wins over

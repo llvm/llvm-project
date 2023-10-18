@@ -2085,6 +2085,10 @@ bool hasVOPD(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureVOPD);
 }
 
+bool hasDPPSrc1SGPR(const MCSubtargetInfo &STI) {
+  return STI.hasFeature(AMDGPU::FeatureDPPSrc1SGPR);
+}
+
 unsigned hasKernargPreload(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureKernargPreload);
 }
@@ -2513,6 +2517,13 @@ bool isFoldableLiteralV216(int32_t Literal, bool HasInv2Pi) {
   if (!(Literal & 0xffff))
     return true;
   return Lo16 == Hi16;
+}
+
+bool isValid32BitLiteral(uint64_t Val, bool IsFP64) {
+  if (IsFP64)
+    return !(Val & 0xffffffffu);
+
+  return isUInt<32>(Val) || isInt<32>(Val);
 }
 
 bool isArgPassedInSGPR(const Argument *A) {

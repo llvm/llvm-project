@@ -1664,6 +1664,23 @@ cc_library(
 )
 
 cc_library(
+    name = "HipStdPar",
+    srcs = glob([
+        "lib/Transforms/HipStdPar/*.cpp",
+        "lib/Transforms/HipStdPar/*.h",
+    ]),
+    hdrs = ["include/llvm/Transforms/HipStdPar/HipStdPar.h"],
+    copts = llvm_copts,
+    deps = [
+        ":Analysis",
+        ":Core",
+        ":Support",
+        ":TargetParser",
+        ":TransformUtils",
+    ],
+)
+
+cc_library(
     name = "Coroutines",
     srcs = glob([
         "lib/Transforms/Coroutines/*.cpp",
@@ -2502,22 +2519,23 @@ cc_library(
         ":AggressiveInstCombine",
         ":Analysis",
         ":CodeGen",
+        ":common_transforms",
+        ":config",
         ":Core",
         ":Coroutines",
-        ":IPO",
-        ":IRPrinter",
+        ":HipStdPar",
         ":InstCombine",
         ":Instrumentation",
+        ":IPO",
+        ":IRPrinter",
         ":MLPolicies",
         ":ObjCARC",
+        ":pass_registry_def",
         ":Scalar",
         ":Support",
         ":Target",
         ":TransformUtils",
         ":Vectorize",
-        ":common_transforms",
-        ":config",
-        ":pass_registry_def",
     ],
 )
 
@@ -2745,6 +2763,27 @@ cc_library(
         ":config",
     ],
 )
+
+cc_library(
+    name = "OrcDebugging",
+    srcs = glob([
+        "lib/ExecutionEngine/Orc/Debugging/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/llvm/ExecutionEngine/Orc/Debugging/*.h",
+    ]),
+    copts = llvm_copts,
+    deps = [
+        ":BinaryFormat",
+        ":DebugInfo",
+        ":OrcShared",
+        ":OrcJIT",
+        ":JITLink",
+        ":Support",
+        ":TargetParser",
+    ],
+)
+
 
 cc_library(
     name = "OrcTargetProcess",
@@ -3181,6 +3220,7 @@ cc_binary(
         ":Object",
         ":OrcJIT",
         ":OrcTargetProcess",
+        ":OrcDebugging",
         ":Support",
         ":TargetParser",
         ":config",
@@ -3734,6 +3774,7 @@ cc_binary(
         ":MCDisassembler",
         ":MCJIT",
         ":Object",
+        ":OrcDebugging",
         ":OrcJIT",
         ":OrcShared",
         ":OrcTargetProcess",

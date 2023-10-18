@@ -333,6 +333,12 @@ bool isUnlimitedPolymorphicType(mlir::Type ty);
 /// Return true iff `ty` is the type of an assumed type.
 bool isAssumedType(mlir::Type ty);
 
+/// Return true iff `ty` is the type of an assumed shape array.
+bool isAssumedShape(mlir::Type ty);
+
+/// Return true iff `ty` is the type of an allocatable array.
+bool isAllocatableOrPointerArray(mlir::Type ty);
+
 /// Return true iff `boxTy` wraps a record type or an unlimited polymorphic
 /// entity. Polymorphic entities with intrinsic type spec do not have addendum
 inline bool boxHasAddendum(fir::BaseBoxType boxTy) {
@@ -348,6 +354,10 @@ mlir::Type unwrapInnerType(mlir::Type ty);
 
 /// Return true iff `ty` is a RecordType with members that are allocatable.
 bool isRecordWithAllocatableMember(mlir::Type ty);
+
+/// Return true iff `ty` is a scalar/array of RecordType
+/// with members that are descriptors.
+bool isRecordWithDescriptorMember(mlir::Type ty);
 
 /// Return true iff `ty` is a RecordType with type parameters.
 inline bool isRecordWithTypeParameters(mlir::Type ty) {

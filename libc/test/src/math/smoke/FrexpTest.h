@@ -93,4 +93,4 @@ public:
   using LlvmLibcFrexpTest = FrexpTest<T>;                                      \
   TEST_F(LlvmLibcFrexpTest, SpecialNumbers) { testSpecialNumbers(&func); }     \
   TEST_F(LlvmLibcFrexpTest, PowersOfTwo) { testPowersOfTwo(&func); }           \
-  TEST_F(LlvmLibcFrexpTest, SomeIntegers) { testSomeIntegers(&func); }\
+  TEST_F(LlvmLibcFrexpTest, SomeIntegers) { testSomeIntegers(&func); }

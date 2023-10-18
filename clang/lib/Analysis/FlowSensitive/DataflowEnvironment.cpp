@@ -448,12 +448,24 @@ Environment::Environment(DataflowAnalysisContext &DACtx,
   if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(&DeclCtx)) {
     auto *Parent = MethodDecl->getParent();
     assert(Parent != nullptr);
-    if (Parent->isLambda())
-      MethodDecl = dyn_cast<CXXMethodDecl>(Parent->getDeclContext());
 
-    // FIXME: Initialize the ThisPointeeLoc of lambdas too.
-    if (MethodDecl && !MethodDecl->isStatic()) {
-      QualType ThisPointeeType = MethodDecl->getThisObjectType();
+    if (Parent->isLambda()) {
+      for (auto Capture : Parent->captures()) {
+        if (Capture.capturesVariable()) {
+          const auto *VarDecl = Capture.getCapturedVar();
+          assert(VarDecl != nullptr);
+          setStorageLocation(*VarDecl, createObject(*VarDecl, nullptr));
+        } else if (Capture.capturesThis()) {
+          const auto *SurroundingMethodDecl =
+              cast<CXXMethodDecl>(DeclCtx.getNonClosureAncestor());
+          QualType ThisPointeeType =
+              SurroundingMethodDecl->getFunctionObjectParameterType();
+          ThisPointeeLoc =
+              &cast<RecordValue>(createValue(ThisPointeeType))->getLoc();
+        }
+      }
+    } else if (MethodDecl->isImplicitObjectMemberFunction()) {
+      QualType ThisPointeeType = MethodDecl->getFunctionObjectParameterType();
       ThisPointeeLoc =
           &cast<RecordValue>(createValue(ThisPointeeType))->getLoc();
     }
@@ -673,7 +685,7 @@ StorageLocation &Environment::createStorageLocation(QualType Type) {
   return DACtx->createStorageLocation(Type);
 }
 
-StorageLocation &Environment::createStorageLocation(const VarDecl &D) {
+StorageLocation &Environment::createStorageLocation(const ValueDecl &D) {
   // Evaluated declarations are always assigned the same storage locations to
   // ensure that the environment stabilizes across loop iterations. Storage
   // locations for evaluated declarations are stored in the analysis context.
@@ -885,7 +897,7 @@ Environment::createLocAndMaybeValue(QualType Ty,
   return Loc;
 }
 
-StorageLocation &Environment::createObjectInternal(const VarDecl *D,
+StorageLocation &Environment::createObjectInternal(const ValueDecl *D,
                                                    QualType Ty,
                                                    const Expr *InitExpr) {
   if (Ty->isReferenceType()) {

@@ -84,7 +84,6 @@ libcxx/include/__algorithm/swap_ranges.h
 libcxx/include/__algorithm/transform.h
 libcxx/include/__algorithm/uniform_random_bit_generator_adaptor.h
 libcxx/include/__algorithm/unwrap_iter.h
-libcxx/include/__algorithm/unwrap_range.h
 libcxx/include/any
 libcxx/include/array
 libcxx/include/__atomic/atomic_base.h
@@ -292,7 +291,6 @@ libcxx/include/__iterator/unreachable_sentinel.h
 libcxx/include/__iterator/wrap_iter.h
 libcxx/include/latch
 libcxx/include/limits
-libcxx/include/limits.h
 libcxx/include/list
 libcxx/include/__locale
 libcxx/include/locale
@@ -420,7 +418,6 @@ libcxx/include/regex
 libcxx/include/scoped_allocator
 libcxx/include/semaphore
 libcxx/include/set
-libcxx/include/setjmp.h
 libcxx/include/span
 libcxx/include/__split_buffer
 libcxx/include/sstream
@@ -524,12 +521,10 @@ libcxx/src/include/ryu/ryu.h
 libcxx/src/include/sso_allocator.h
 libcxx/src/ios.cpp
 libcxx/src/iostream.cpp
-libcxx/src/legacy_debug_handler.cpp
 libcxx/src/locale.cpp
 libcxx/src/memory.cpp
 libcxx/src/mutex.cpp
 libcxx/src/mutex_destructor.cpp
-libcxx/src/new.cpp
 libcxx/src/optional.cpp
 libcxx/src/pstl/libdispatch.cpp
 libcxx/src/random.cpp
@@ -1135,7 +1130,6 @@ libcxx/test/std/algorithms/alg.nonmodifying/alg.all_of/ranges.all_of.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.any_of/any_of.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.any_of/ranges.any_of.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.count/count_if.pass.cpp
-libcxx/test/std/algorithms/alg.nonmodifying/alg.count/count.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.count/pstl.count_if.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.count/pstl.count.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.count/ranges.count_if.pass.cpp
@@ -2729,7 +2723,6 @@ libcxx/test/std/depr/depr.c.headers/inttypes_h.compile.pass.cpp
 libcxx/test/std/depr/depr.c.headers/limits_h.compile.pass.cpp
 libcxx/test/std/depr/depr.c.headers/locale_h.compile.pass.cpp
 libcxx/test/std/depr/depr.c.headers/math_h.pass.cpp
-libcxx/test/std/depr/depr.c.headers/setjmp_h.compile.pass.cpp
 libcxx/test/std/depr/depr.c.headers/signal_h.compile.pass.cpp
 libcxx/test/std/depr/depr.c.headers/stdarg_h.compile.pass.cpp
 libcxx/test/std/depr/depr.c.headers/stdbool_h.compile.pass.cpp
@@ -3550,7 +3543,6 @@ libcxx/test/std/iterators/iterator.primitives/std.iterator.tags/forward_iterator
 libcxx/test/std/iterators/iterator.primitives/std.iterator.tags/input_iterator_tag.pass.cpp
 libcxx/test/std/iterators/iterator.primitives/std.iterator.tags/output_iterator_tag.pass.cpp
 libcxx/test/std/iterators/iterator.primitives/std.iterator.tags/random_access_iterator_tag.pass.cpp
-libcxx/test/std/iterators/iterator.range/begin-end.pass.cpp
 libcxx/test/std/iterators/iterator.requirements/alg.req.ind.copy/indirectly_copyable.compile.pass.cpp
 libcxx/test/std/iterators/iterator.requirements/alg.req.ind.copy/indirectly_copyable_storable.compile.pass.cpp
 libcxx/test/std/iterators/iterator.requirements/alg.req.ind.copy/indirectly_copyable_storable.subsumption.compile.pass.cpp
@@ -3901,7 +3893,6 @@ libcxx/test/std/language.support/support.general/nothing_to_do.pass.cpp
 libcxx/test/std/language.support/support.initlist/include_cxx03.pass.cpp
 libcxx/test/std/language.support/support.initlist/support.initlist.access/access.pass.cpp
 libcxx/test/std/language.support/support.initlist/support.initlist.cons/default.pass.cpp
-libcxx/test/std/language.support/support.initlist/support.initlist.range/begin_end.pass.cpp
 libcxx/test/std/language.support/support.initlist/types.pass.cpp
 libcxx/test/std/language.support/support.limits/c.limits/cfloat.pass.cpp
 libcxx/test/std/language.support/support.limits/c.limits/climits.pass.cpp
@@ -3947,7 +3938,6 @@ libcxx/test/std/language.support/support.rtti/bad.typeid/bad_typeid.pass.cpp
 libcxx/test/std/language.support/support.rtti/type.info/type_info.equal.pass.cpp
 libcxx/test/std/language.support/support.rtti/type.info/type_info_hash.pass.cpp
 libcxx/test/std/language.support/support.rtti/type.info/type_info.pass.cpp
-libcxx/test/std/language.support/support.runtime/csetjmp.pass.cpp
 libcxx/test/std/language.support/support.runtime/csignal.pass.cpp
 libcxx/test/std/language.support/support.runtime/cstdarg.pass.cpp
 libcxx/test/std/language.support/support.runtime/cstdbool.pass.cpp
@@ -5271,7 +5261,6 @@ libcxx/test/std/ranges/range.adaptors/range.lazy.split/range.lazy.split.inner/ba
 libcxx/test/std/ranges/range.adaptors/range.lazy.split/range.lazy.split.inner/ctor.default.pass.cpp
 libcxx/test/std/ranges/range.adaptors/range.lazy.split/range.lazy.split.inner/ctor.outer_iterator.pass.cpp
 libcxx/test/std/ranges/range.adaptors/range.lazy.split/range.lazy.split.inner/equal.pass.cpp
-libcxx/test/std/ranges/range.adaptors/range.lazy.split/range.lazy.split.inner/increment.pass.cpp
 libcxx/test/std/ranges/range.adaptors/range.lazy.split/range.lazy.split.inner/iter_move.pass.cpp
 libcxx/test/std/ranges/range.adaptors/range.lazy.split/range.lazy.split.inner/iter_swap.pass.cpp
 libcxx/test/std/ranges/range.adaptors/range.lazy.split/range.lazy.split.inner/types.compile.pass.cpp
@@ -5281,11 +5270,8 @@ libcxx/test/std/ranges/range.adaptors/range.lazy.split/range.lazy.split.outer/ct
 libcxx/test/std/ranges/range.adaptors/range.lazy.split/range.lazy.split.outer/equal.pass.cpp
 libcxx/test/std/ranges/range.adaptors/range.lazy.split/range.lazy.split.outer/types.compile.pass.cpp
 libcxx/test/std/ranges/range.adaptors/range.lazy.split/range.lazy.split.outer.value/ctor.default.pass.cpp
-libcxx/test/std/ranges/range.adaptors/range.lazy.split/range.lazy.split.outer.value/view_interface.pass.cpp
 libcxx/test/std/ranges/range.adaptors/range.lazy.split/types.h
-libcxx/test/std/ranges/range.adaptors/range.lazy.split/view_interface.pass.cpp
 libcxx/test/std/ranges/range.adaptors/range.reverse/adaptor.pass.cpp
-libcxx/test/std/ranges/range.adaptors/range.reverse/base.pass.cpp
 libcxx/test/std/ranges/range.adaptors/range.reverse/begin.pass.cpp
 libcxx/test/std/ranges/range.adaptors/range.reverse/borrowing.compile.pass.cpp
 libcxx/test/std/ranges/range.adaptors/range.reverse/ctad.compile.pass.cpp
@@ -5306,7 +5292,6 @@ libcxx/test/std/ranges/range.adaptors/range.take/ctad.compile.pass.cpp
 libcxx/test/std/ranges/range.adaptors/range.take/ctor.default.pass.cpp
 libcxx/test/std/ranges/range.adaptors/range.take/range_concept_conformance.compile.pass.cpp
 libcxx/test/std/ranges/range.adaptors/range.take/sentinel/ctor.pass.cpp
-libcxx/test/std/ranges/range.adaptors/range.take/sentinel/eq.pass.cpp
 libcxx/test/std/ranges/range.adaptors/range.take/size.pass.cpp
 libcxx/test/std/ranges/range.adaptors/range.take/types.h
 libcxx/test/std/ranges/range.adaptors/range.take.while/adaptor.pass.cpp
@@ -5363,7 +5348,6 @@ libcxx/test/std/ranges/range.factories/range.iota.view/iterator/ctor.value.pass.
 libcxx/test/std/ranges/range.factories/range.iota.view/iterator/decrement.pass.cpp
 libcxx/test/std/ranges/range.factories/range.iota.view/iterator/increment.pass.cpp
 libcxx/test/std/ranges/range.factories/range.iota.view/iterator/member_typedefs.compile.pass.cpp
-libcxx/test/std/ranges/range.factories/range.iota.view/iterator/minus.pass.cpp
 libcxx/test/std/ranges/range.factories/range.iota.view/iterator/star.pass.cpp
 libcxx/test/std/ranges/range.factories/range.iota.view/iterator/subscript.pass.cpp
 libcxx/test/std/ranges/range.factories/range.iota.view/range_concept_conformance.compile.pass.cpp
@@ -5618,9 +5602,6 @@ libcxx/test/std/thread/futures/futures.errors/equivalent_int_error_condition.pas
 libcxx/test/std/thread/futures/futures.errors/future_category.pass.cpp
 libcxx/test/std/thread/futures/futures.errors/make_error_code.pass.cpp
 libcxx/test/std/thread/futures/futures.errors/make_error_condition.pass.cpp
-libcxx/test/std/thread/futures/futures.future_error/code.pass.cpp
-libcxx/test/std/thread/futures/futures.future_error/types.pass.cpp
-libcxx/test/std/thread/futures/futures.future_error/what.pass.cpp
 libcxx/test/std/thread/futures/futures.overview/future_errc.pass.cpp
 libcxx/test/std/thread/futures/futures.overview/future_status.pass.cpp
 libcxx/test/std/thread/futures/futures.overview/is_error_code_enum_future_errc.pass.cpp
@@ -6520,7 +6501,6 @@ libcxx/test/std/utilities/memory/allocator.traits/allocator.traits.types/void_po
 libcxx/test/std/utilities/memory/allocator.traits/allocator_type.pass.cpp
 libcxx/test/std/utilities/memory/allocator.traits/rebind_traits.pass.cpp
 libcxx/test/std/utilities/memory/allocator.traits/value_type.pass.cpp
-libcxx/test/std/utilities/memory/allocator.uses/allocator.uses.construction/uses_allocator_construction_args.pass.cpp
 libcxx/test/std/utilities/memory/allocator.uses/allocator.uses.trait/uses_allocator.pass.cpp
 libcxx/test/std/utilities/memory/c.malloc/nothing_to_do.pass.cpp
 libcxx/test/std/utilities/memory/default.allocator/allocator.ctor.pass.cpp

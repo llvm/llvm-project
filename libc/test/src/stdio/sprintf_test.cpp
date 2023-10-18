@@ -748,6 +748,9 @@ TEST_F(LlvmLibcSPrintfTest, FloatHexExpConv) {
   written = LIBC_NAMESPACE::sprintf(buff, "%.5a", nan);
   ASSERT_STREQ_LEN(written, buff, "nan");
 
+  written = LIBC_NAMESPACE::sprintf(buff, "%La", 0.0L);
+  ASSERT_STREQ_LEN(written, buff, "0x0p+0");
+
   written = LIBC_NAMESPACE::sprintf(buff, "%.1La", 0.1L);
 #if defined(SPECIAL_X86_LONG_DOUBLE)
   ASSERT_STREQ_LEN(written, buff, "0xc.dp-7");
@@ -2433,6 +2436,9 @@ TEST_F(LlvmLibcSPrintfTest, FloatAutoConv) {
   written = LIBC_NAMESPACE::sprintf(buff, "%g", 9999999000000.00);
   ASSERT_STREQ_LEN(written, buff, "1e+13");
 
+  written = LIBC_NAMESPACE::sprintf(buff, "%g", 0xa.aaaaaaaaaaaaaabp-7);
+  ASSERT_STREQ_LEN(written, buff, "0.0833333");
+
   // Simple Subnormal Tests.
 
   written = LIBC_NAMESPACE::sprintf(buff, "%g", 0x1.0p-1027);
@@ -2457,8 +2463,15 @@ TEST_F(LlvmLibcSPrintfTest, FloatAutoConv) {
 
   // Length Modifier Tests.
 
+#if defined(SPECIAL_X86_LONG_DOUBLE)
+
   written = LIBC_NAMESPACE::sprintf(buff, "%Lg", 0xf.fffffffffffffffp+16380L);
   ASSERT_STREQ_LEN(written, buff, "1.18973e+4932");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%Lg", 0xa.aaaaaaaaaaaaaabp-7L);
+  ASSERT_STREQ_LEN(written, buff, "0.0833333");
+
+#endif // SPECIAL_X86_LONG_DOUBLE
 
   // TODO: Uncomment the below tests after long double support is added
   /*
@@ -2756,6 +2769,15 @@ TEST_F(LlvmLibcSPrintfTest, FloatAutoConv) {
 
   written = LIBC_NAMESPACE::sprintf(buff, "%.10g", 0x1.0p-1074);
   ASSERT_STREQ_LEN(written, buff, "4.940656458e-324");
+
+#if defined(SPECIAL_X86_LONG_DOUBLE)
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%.60Lg", 0xa.aaaaaaaaaaaaaabp-7L);
+  ASSERT_STREQ_LEN(
+      written, buff,
+      "0.0833333333333333333355920878593448009041821933351457118988037");
+
+#endif // SPECIAL_X86_LONG_DOUBLE
 
   // Long double precision tests.
   // These are currently commented out because they require long double support

@@ -57,7 +57,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <map>
 #include <utility>
 #include <vector>
 
@@ -139,7 +138,7 @@ namespace {
     DenseSet<Register> RegsToClearKillFlags;
 
     using AllSuccsCache =
-        std::map<MachineBasicBlock *, SmallVector<MachineBasicBlock *, 4>>;
+        DenseMap<MachineBasicBlock *, SmallVector<MachineBasicBlock *, 4>>;
 
     /// DBG_VALUE pointer and flag. The flag is true if this DBG_VALUE is
     /// post-dominated by another DBG_VALUE of the same variable location.
@@ -160,14 +159,15 @@ namespace {
     /// current block.
     DenseSet<DebugVariable> SeenDbgVars;
 
-    std::map<std::pair<MachineBasicBlock *, MachineBasicBlock *>, bool>
+    DenseMap<std::pair<MachineBasicBlock *, MachineBasicBlock *>, bool>
         HasStoreCache;
-    std::map<std::pair<MachineBasicBlock *, MachineBasicBlock *>,
-             std::vector<MachineInstr *>>
+
+    DenseMap<std::pair<MachineBasicBlock *, MachineBasicBlock *>,
+             SmallVector<MachineInstr *>>
         StoreInstrCache;
 
     /// Cached BB's register pressure.
-    std::map<const MachineBasicBlock *, std::vector<unsigned>>
+    DenseMap<const MachineBasicBlock *, std::vector<unsigned>>
         CachedRegisterPressure;
 
     bool EnableSinkAndFold;
@@ -300,7 +300,8 @@ static bool blockPrologueInterferes(const MachineBasicBlock *BB,
       if (!Reg)
         continue;
       if (MO.isUse()) {
-        if (Reg.isPhysical() && MRI && MRI->isConstantPhysReg(Reg))
+        if (Reg.isPhysical() &&
+            (TII->isIgnorableUse(MO) || (MRI && MRI->isConstantPhysReg(Reg))))
           continue;
         if (PI->modifiesRegister(Reg, TRI))
           return true;
@@ -461,7 +462,7 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
       }
 
       if (UseInst.getParent() != MI.getParent()) {
-        // If the register class of the register we are replacingis a superset
+        // If the register class of the register we are replacing is a superset
         // of any of the register classes of the operands of the materialized
         // instruction don't consider that live range extended.
         const TargetRegisterClass *RCS = MRI->getRegClass(Reg);
@@ -527,44 +528,52 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
         if (U.getInt())
           continue;
         MachineInstr *NewDbgMI = SinkDst->getMF()->CloneMachineInstr(DbgMI);
-        NewDbgMI->getOperand(0).setReg(DstReg);
         SinkMBB.insertAfter(InsertPt, NewDbgMI);
+        for (auto &SrcMO : DbgMI->getDebugOperandsForReg(DefReg)) {
+          auto &DstMO = NewDbgMI->getOperand(SrcMO.getOperandNo());
+          DstMO.setReg(DstReg);
+        }
       }
     } else {
       // Fold instruction into the addressing mode of a memory instruction.
       New = TII->emitLdStWithAddr(*SinkDst, MaybeAM);
     }
     LLVM_DEBUG(dbgs() << "yielding"; New->dump());
+    // Clear the StoreInstrCache, since we may invalidate it by erasing.
+    if (SinkDst->mayStore() && !SinkDst->hasOrderedMemoryRef())
+      StoreInstrCache.clear();
     SinkDst->eraseFromParent();
   }
 
-  MI.eraseFromParent();
-
-  // Collect instructions that need to be deleted (COPYs). We cannot delete them
-  // while traversing register uses.
-  SmallVector<MachineInstr *> CleanupInstrs;
+  // Collect operands that need to be cleaned up because the registers no longer
+  // exist (in COPYs and debug instructions). We cannot delete instructions or
+  // clear operands while traversing register uses.
+  SmallVector<MachineOperand *> Cleanup;
   Worklist.push_back(DefReg);
   while (!Worklist.empty()) {
     Register Reg = Worklist.pop_back_val();
-
     for (MachineOperand &MO : MRI->use_operands(Reg)) {
       MachineInstr *U = MO.getParent();
       assert((U->isCopy() || U->isDebugInstr()) &&
              "Only debug uses and copies must remain");
-      if (U->isCopy()) {
+      if (U->isCopy())
         Worklist.push_back(U->getOperand(0).getReg());
-        CleanupInstrs.push_back(U);
-      } else {
-        MO.setReg(0);
-        MO.setSubReg(0);
-      }
+      Cleanup.push_back(&MO);
     }
   }
 
-  // Delete the dead COPYs.
-  for (MachineInstr *Del : CleanupInstrs)
-    Del->eraseFromParent();
+  // Delete the dead COPYs and clear operands in debug instructions
+  for (MachineOperand *MO : Cleanup) {
+    MachineInstr *I = MO->getParent();
+    if (I->isCopy()) {
+      I->eraseFromParent();
+    } else {
+      MO->setReg(0);
+      MO->setSubReg(0);
+    }
+  }
 
+  MI.eraseFromParent();
   return true;
 }
 
@@ -729,6 +738,7 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
 
         MadeChange = true;
         ++NumSplit;
+        CI->splitCriticalEdge(Pair.first, Pair.second, NewSucc);
       } else
         LLVM_DEBUG(dbgs() << " *** Not legal to break critical edge\n");
     }
@@ -1245,24 +1255,19 @@ MachineSinking::FindSuccToSinkTo(MachineInstr &MI, MachineBasicBlock *MBB,
   if (MBB == SuccToSinkTo)
     return nullptr;
 
-  if (!SuccToSinkTo)
-    return nullptr;
-
   // It's not safe to sink instructions to EH landing pad. Control flow into
   // landing pad is implicitly defined.
-  if (SuccToSinkTo->isEHPad())
+  if (SuccToSinkTo && SuccToSinkTo->isEHPad())
     return nullptr;
 
   // It ought to be okay to sink instructions into an INLINEASM_BR target, but
   // only if we make sure that MI occurs _before_ an INLINEASM_BR instruction in
   // the source block (which this code does not yet do). So for now, forbid
   // doing so.
-  if (SuccToSinkTo->isInlineAsmBrIndirectTarget())
+  if (SuccToSinkTo && SuccToSinkTo->isInlineAsmBrIndirectTarget())
     return nullptr;
 
-  MachineBasicBlock::const_iterator InsertPos =
-      SuccToSinkTo->SkipPHIsAndLabels(SuccToSinkTo->begin());
-  if (blockPrologueInterferes(SuccToSinkTo, InsertPos, MI, TRI, TII, MRI))
+  if (SuccToSinkTo && !TII->isSafeToSink(MI, SuccToSinkTo, CI))
     return nullptr;
 
   return SuccToSinkTo;
@@ -1425,11 +1430,11 @@ bool MachineSinking::hasStoreBetween(MachineBasicBlock *From,
 
   // Does these two blocks pair be queried before and have a definite cached
   // result?
-  if (HasStoreCache.find(BlockPair) != HasStoreCache.end())
-    return HasStoreCache[BlockPair];
+  if (auto It = HasStoreCache.find(BlockPair); It != HasStoreCache.end())
+    return It->second;
 
-  if (StoreInstrCache.find(BlockPair) != StoreInstrCache.end())
-    return llvm::any_of(StoreInstrCache[BlockPair], [&](MachineInstr *I) {
+  if (auto It = StoreInstrCache.find(BlockPair); It != StoreInstrCache.end())
+    return llvm::any_of(It->second, [&](MachineInstr *I) {
       return I->mayAlias(AA, MI, false);
     });
 

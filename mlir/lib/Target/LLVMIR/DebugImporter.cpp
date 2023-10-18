@@ -24,13 +24,17 @@ using namespace mlir::LLVM;
 using namespace mlir::LLVM::detail;
 
 Location DebugImporter::translateFuncLocation(llvm::Function *func) {
-  if (!func->getSubprogram())
+  llvm::DISubprogram *subprogram = func->getSubprogram();
+  if (!subprogram)
     return UnknownLoc::get(context);
 
   // Add a fused location to link the subprogram information.
-  StringAttr name = StringAttr::get(context, func->getSubprogram()->getName());
+  StringAttr funcName = StringAttr::get(context, subprogram->getName());
+  StringAttr fileName = StringAttr::get(context, subprogram->getFilename());
   return FusedLocWith<DISubprogramAttr>::get(
-      {NameLoc::get(name)}, translate(func->getSubprogram()), context);
+      {NameLoc::get(funcName),
+       FileLineColLoc::get(fileName, subprogram->getLine(), /*column=*/0)},
+      translate(subprogram), context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -159,10 +163,15 @@ DISubrangeAttr DebugImporter::translateImpl(llvm::DISubrange *node) {
                               constInt->getSExtValue());
     return IntegerAttr();
   };
-  return DISubrangeAttr::get(context, getIntegerAttrOrNull(node->getCount()),
-                             getIntegerAttrOrNull(node->getLowerBound()),
-                             getIntegerAttrOrNull(node->getUpperBound()),
-                             getIntegerAttrOrNull(node->getStride()));
+  IntegerAttr count = getIntegerAttrOrNull(node->getCount());
+  IntegerAttr upperBound = getIntegerAttrOrNull(node->getUpperBound());
+  // Either count or the upper bound needs to be present. Otherwise, the
+  // metadata is invalid. The conversion might fail due to unsupported DI nodes.
+  if (!count && !upperBound)
+    return {};
+  return DISubrangeAttr::get(
+      context, count, getIntegerAttrOrNull(node->getLowerBound()), upperBound,
+      getIntegerAttrOrNull(node->getStride()));
 }
 
 DISubroutineTypeAttr

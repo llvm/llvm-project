@@ -613,11 +613,11 @@ static int64_t getLargestKnownDivisor(AffineExpr e, ArrayRef<Value> operands) {
   // LoopLikeOpInterface.
   if (AffineForOp forOp = getForInductionVarOwner(operand)) {
     if (forOp.hasConstantLowerBound() && forOp.getConstantLowerBound() == 0) {
-      operandDivisor = forOp.getStep();
+      operandDivisor = forOp.getStepAsInt();
     } else {
       uint64_t lbLargestKnownDivisor =
           forOp.getLowerBoundMap().getLargestKnownDivisorOfMapExprs();
-      operandDivisor = std::gcd(lbLargestKnownDivisor, forOp.getStep());
+      operandDivisor = std::gcd(lbLargestKnownDivisor, forOp.getStepAsInt());
     }
   }
   return operandDivisor;
@@ -695,7 +695,7 @@ static std::optional<int64_t> getUpperBound(Value iv) {
   if (forOp.hasConstantLowerBound()) {
     return forOp.getConstantUpperBound() - 1 -
            (forOp.getConstantUpperBound() - forOp.getConstantLowerBound() - 1) %
-               forOp.getStep();
+               forOp.getStepAsInt();
   }
   return forOp.getConstantUpperBound() - 1;
 }
@@ -1897,19 +1897,28 @@ void AffineForOp::build(OpBuilder &builder, OperationState &result,
          "upper bound operand count does not match the affine map");
   assert(step > 0 && "step has to be a positive integer constant");
 
+  // Set variadic segment sizes.
+  result.addAttribute(
+      getOperandSegmentSizeAttr(),
+      builder.getDenseI32ArrayAttr({static_cast<int32_t>(lbOperands.size()),
+                                    static_cast<int32_t>(ubOperands.size()),
+                                    static_cast<int32_t>(iterArgs.size())}));
+
   for (Value val : iterArgs)
     result.addTypes(val.getType());
 
   // Add an attribute for the step.
-  result.addAttribute(getStepAttrStrName(),
+  result.addAttribute(getStepAttrName(result.name),
                       builder.getIntegerAttr(builder.getIndexType(), step));
 
   // Add the lower bound.
-  result.addAttribute(getLowerBoundAttrStrName(), AffineMapAttr::get(lbMap));
+  result.addAttribute(getLowerBoundMapAttrName(result.name),
+                      AffineMapAttr::get(lbMap));
   result.addOperands(lbOperands);
 
   // Add the upper bound.
-  result.addAttribute(getUpperBoundAttrStrName(), AffineMapAttr::get(ubMap));
+  result.addAttribute(getUpperBoundMapAttrName(result.name),
+                      AffineMapAttr::get(ubMap));
   result.addOperands(ubOperands);
 
   result.addOperands(iterArgs);
@@ -1991,8 +2000,9 @@ static ParseResult parseBound(bool isLower, OperationState &result,
       failed(p.parseOptionalKeyword(isLower ? "max" : "min"));
 
   auto &builder = p.getBuilder();
-  auto boundAttrStrName = isLower ? AffineForOp::getLowerBoundAttrStrName()
-                                  : AffineForOp::getUpperBoundAttrStrName();
+  auto boundAttrStrName =
+      isLower ? AffineForOp::getLowerBoundMapAttrName(result.name)
+              : AffineForOp::getUpperBoundMapAttrName(result.name);
 
   // Parse ssa-id as identity map.
   SmallVector<OpAsmParser::UnresolvedOperand, 1> boundOpInfos;
@@ -2083,21 +2093,27 @@ ParseResult AffineForOp::parse(OpAsmParser &parser, OperationState &result) {
     return failure();
 
   // Parse loop bounds.
-  if (parseBound(/*isLower=*/true, result, parser) ||
-      parser.parseKeyword("to", " between bounds") ||
-      parseBound(/*isLower=*/false, result, parser))
+  int64_t numOperands = result.operands.size();
+  if (parseBound(/*isLower=*/true, result, parser))
     return failure();
+  int64_t numLbOperands = result.operands.size() - numOperands;
+  if (parser.parseKeyword("to", " between bounds"))
+    return failure();
+  numOperands = result.operands.size();
+  if (parseBound(/*isLower=*/false, result, parser))
+    return failure();
+  int64_t numUbOperands = result.operands.size() - numOperands;
 
   // Parse the optional loop step, we default to 1 if one is not present.
   if (parser.parseOptionalKeyword("step")) {
     result.addAttribute(
-        AffineForOp::getStepAttrStrName(),
+        getStepAttrName(result.name),
         builder.getIntegerAttr(builder.getIndexType(), /*value=*/1));
   } else {
     SMLoc stepLoc = parser.getCurrentLocation();
     IntegerAttr stepAttr;
     if (parser.parseAttribute(stepAttr, builder.getIndexType(),
-                              AffineForOp::getStepAttrStrName().data(),
+                              getStepAttrName(result.name).data(),
                               result.attributes))
       return failure();
 
@@ -2129,6 +2145,12 @@ ParseResult AffineForOp::parse(OpAsmParser &parser, OperationState &result) {
         return failure();
     }
   }
+
+  result.addAttribute(
+      getOperandSegmentSizeAttr(),
+      builder.getDenseI32ArrayAttr({static_cast<int32_t>(numLbOperands),
+                                    static_cast<int32_t>(numUbOperands),
+                                    static_cast<int32_t>(operands.size())}));
 
   // Parse the body region.
   Region *body = result.addRegion();
@@ -2193,6 +2215,10 @@ unsigned AffineForOp::getNumIterOperands() {
   return getNumOperands() - lbMap.getNumInputs() - ubMap.getNumInputs();
 }
 
+ValueRange AffineForOp::getYieldedValues() {
+  return cast<AffineYieldOp>(getBody()->getTerminator()).getOperands();
+}
+
 void AffineForOp::print(OpAsmPrinter &p) {
   p << ' ';
   p.printRegionArgument(getBody()->getArgument(0), /*argAttrs=*/{},
@@ -2202,8 +2228,8 @@ void AffineForOp::print(OpAsmPrinter &p) {
   p << " to ";
   printBound(getUpperBoundMapAttr(), getUpperBoundOperands(), "min", p);
 
-  if (getStep() != 1)
-    p << " step " << getStep();
+  if (getStepAsInt() != 1)
+    p << " step " << getStepAsInt();
 
   bool printBlockTerminators = false;
   if (getNumIterOperands() > 0) {
@@ -2221,10 +2247,12 @@ void AffineForOp::print(OpAsmPrinter &p) {
   p << ' ';
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
                 printBlockTerminators);
-  p.printOptionalAttrDict((*this)->getAttrs(),
-                          /*elidedAttrs=*/{getLowerBoundAttrStrName(),
-                                           getUpperBoundAttrStrName(),
-                                           getStepAttrStrName()});
+  p.printOptionalAttrDict(
+      (*this)->getAttrs(),
+      /*elidedAttrs=*/{getLowerBoundMapAttrName(getOperation()->getName()),
+                       getUpperBoundMapAttrName(getOperation()->getName()),
+                       getStepAttrName(getOperation()->getName()),
+                       getOperandSegmentSizeAttr()});
 }
 
 /// Fold the constant bounds of a loop.
@@ -2307,7 +2335,7 @@ static LogicalResult canonicalizeLoopBounds(AffineForOp forOp) {
 namespace {
 /// Returns constant trip count in trivial cases.
 static std::optional<uint64_t> getTrivialConstantTripCount(AffineForOp forOp) {
-  int64_t step = forOp.getStep();
+  int64_t step = forOp.getStepAsInt();
   if (!forOp.hasConstantBounds() || step <= 0)
     return std::nullopt;
   int64_t lb = forOp.getConstantLowerBound();
@@ -2438,61 +2466,25 @@ LogicalResult AffineForOp::fold(FoldAdaptor adaptor,
 }
 
 AffineBound AffineForOp::getLowerBound() {
-  auto lbMap = getLowerBoundMap();
-  return AffineBound(AffineForOp(*this), 0, lbMap.getNumInputs(), lbMap);
+  return AffineBound(*this, getLowerBoundOperands(), getLowerBoundMap());
 }
 
 AffineBound AffineForOp::getUpperBound() {
-  auto lbMap = getLowerBoundMap();
-  auto ubMap = getUpperBoundMap();
-  return AffineBound(AffineForOp(*this), lbMap.getNumInputs(),
-                     lbMap.getNumInputs() + ubMap.getNumInputs(), ubMap);
+  return AffineBound(*this, getUpperBoundOperands(), getUpperBoundMap());
 }
 
 void AffineForOp::setLowerBound(ValueRange lbOperands, AffineMap map) {
   assert(lbOperands.size() == map.getNumInputs());
   assert(map.getNumResults() >= 1 && "bound map has at least one result");
-
-  SmallVector<Value, 4> newOperands(lbOperands.begin(), lbOperands.end());
-
-  auto ubOperands = getUpperBoundOperands();
-  newOperands.append(ubOperands.begin(), ubOperands.end());
-  auto iterOperands = getInits();
-  newOperands.append(iterOperands.begin(), iterOperands.end());
-  (*this)->setOperands(newOperands);
-
-  (*this)->setAttr(getLowerBoundAttrStrName(), AffineMapAttr::get(map));
+  getLowerBoundOperandsMutable().assign(lbOperands);
+  setLowerBoundMap(map);
 }
 
 void AffineForOp::setUpperBound(ValueRange ubOperands, AffineMap map) {
   assert(ubOperands.size() == map.getNumInputs());
   assert(map.getNumResults() >= 1 && "bound map has at least one result");
-
-  SmallVector<Value, 4> newOperands(getLowerBoundOperands());
-  newOperands.append(ubOperands.begin(), ubOperands.end());
-  auto iterOperands = getInits();
-  newOperands.append(iterOperands.begin(), iterOperands.end());
-  (*this)->setOperands(newOperands);
-
-  (*this)->setAttr(getUpperBoundAttrStrName(), AffineMapAttr::get(map));
-}
-
-void AffineForOp::setLowerBoundMap(AffineMap map) {
-  auto lbMap = getLowerBoundMap();
-  assert(lbMap.getNumDims() == map.getNumDims() &&
-         lbMap.getNumSymbols() == map.getNumSymbols());
-  assert(map.getNumResults() >= 1 && "bound map has at least one result");
-  (void)lbMap;
-  (*this)->setAttr(getLowerBoundAttrStrName(), AffineMapAttr::get(map));
-}
-
-void AffineForOp::setUpperBoundMap(AffineMap map) {
-  auto ubMap = getUpperBoundMap();
-  assert(ubMap.getNumDims() == map.getNumDims() &&
-         ubMap.getNumSymbols() == map.getNumSymbols());
-  assert(map.getNumResults() >= 1 && "bound map has at least one result");
-  (void)ubMap;
-  (*this)->setAttr(getUpperBoundAttrStrName(), AffineMapAttr::get(map));
+  getUpperBoundOperandsMutable().assign(ubOperands);
+  setUpperBoundMap(map);
 }
 
 bool AffineForOp::hasConstantLowerBound() {
@@ -2519,19 +2511,9 @@ void AffineForOp::setConstantUpperBound(int64_t value) {
   setUpperBound({}, AffineMap::getConstantMap(value, getContext()));
 }
 
-AffineForOp::operand_range AffineForOp::getLowerBoundOperands() {
-  return {operand_begin(), operand_begin() + getLowerBoundMap().getNumInputs()};
-}
-
-AffineForOp::operand_range AffineForOp::getUpperBoundOperands() {
-  return {operand_begin() + getLowerBoundMap().getNumInputs(),
-          operand_begin() + getLowerBoundMap().getNumInputs() +
-              getUpperBoundMap().getNumInputs()};
-}
-
 AffineForOp::operand_range AffineForOp::getControlOperands() {
-  return {operand_begin(), operand_begin() + getLowerBoundMap().getNumInputs() +
-                               getUpperBoundMap().getNumInputs()};
+  return {operand_begin(), operand_begin() + getLowerBoundOperands().size() +
+                               getUpperBoundOperands().size()};
 }
 
 bool AffineForOp::matchingBoundOperandList() {
@@ -2565,7 +2547,7 @@ std::optional<OpFoldResult> AffineForOp::getSingleLowerBound() {
 
 std::optional<OpFoldResult> AffineForOp::getSingleStep() {
   OpBuilder b(getContext());
-  return OpFoldResult(b.getI64IntegerAttr(getStep()));
+  return OpFoldResult(b.getI64IntegerAttr(getStepAsInt()));
 }
 
 std::optional<OpFoldResult> AffineForOp::getSingleUpperBound() {
@@ -2586,7 +2568,7 @@ FailureOr<LoopLikeOpInterface> AffineForOp::replaceWithAdditionalYields(
   inits.append(newInitOperands.begin(), newInitOperands.end());
   AffineForOp newLoop = rewriter.create<AffineForOp>(
       getLoc(), getLowerBoundOperands(), getLowerBoundMap(),
-      getUpperBoundOperands(), getUpperBoundMap(), getStep(), inits);
+      getUpperBoundOperands(), getUpperBoundMap(), getStepAsInt(), inits);
 
   // Generate the new yield values and append them to the scf.yield operation.
   auto yieldOp = cast<AffineYieldOp>(getBody()->getTerminator());
@@ -2633,8 +2615,8 @@ Speculation::Speculatability AffineForOp::getSpeculatability() {
   //
   // For Step != 1, the loop may not terminate.  We can add more smarts here if
   // needed.
-  return getStep() == 1 ? Speculation::RecursivelySpeculatable
-                        : Speculation::NotSpeculatable;
+  return getStepAsInt() == 1 ? Speculation::RecursivelySpeculatable
+                             : Speculation::NotSpeculatable;
 }
 
 /// Returns true if the provided value is the induction variable of a
@@ -3937,6 +3919,49 @@ void AffineParallelOp::setSteps(ArrayRef<int64_t> newSteps) {
   setStepsAttr(getBodyBuilder().getI64ArrayAttr(newSteps));
 }
 
+// check whether resultType match op or not in affine.parallel
+static bool isResultTypeMatchAtomicRMWKind(Type resultType,
+                                           arith::AtomicRMWKind op) {
+  switch (op) {
+  case arith::AtomicRMWKind::addf:
+    return isa<FloatType>(resultType);
+  case arith::AtomicRMWKind::addi:
+    return isa<IntegerType>(resultType);
+  case arith::AtomicRMWKind::assign:
+    return true;
+  case arith::AtomicRMWKind::mulf:
+    return isa<FloatType>(resultType);
+  case arith::AtomicRMWKind::muli:
+    return isa<IntegerType>(resultType);
+  case arith::AtomicRMWKind::maximumf:
+    return isa<FloatType>(resultType);
+  case arith::AtomicRMWKind::minimumf:
+    return isa<FloatType>(resultType);
+  case arith::AtomicRMWKind::maxs: {
+    auto intType = llvm::dyn_cast<IntegerType>(resultType);
+    return intType && intType.isSigned();
+  }
+  case arith::AtomicRMWKind::mins: {
+    auto intType = llvm::dyn_cast<IntegerType>(resultType);
+    return intType && intType.isSigned();
+  }
+  case arith::AtomicRMWKind::maxu: {
+    auto intType = llvm::dyn_cast<IntegerType>(resultType);
+    return intType && intType.isUnsigned();
+  }
+  case arith::AtomicRMWKind::minu: {
+    auto intType = llvm::dyn_cast<IntegerType>(resultType);
+    return intType && intType.isUnsigned();
+  }
+  case arith::AtomicRMWKind::ori:
+    return isa<IntegerType>(resultType);
+  case arith::AtomicRMWKind::andi:
+    return isa<IntegerType>(resultType);
+  default:
+    return false;
+  }
+}
+
 LogicalResult AffineParallelOp::verify() {
   auto numDims = getNumDims();
   if (getLowerBoundsGroups().getNumElements() != numDims ||
@@ -3968,11 +3993,16 @@ LogicalResult AffineParallelOp::verify() {
   if (getReductions().size() != getNumResults())
     return emitOpError("a reduction must be specified for each output");
 
-  // Verify reduction  ops are all valid
-  for (Attribute attr : getReductions()) {
+  // Verify reduction ops are all valid and each result type matches reduction
+  // ops
+  for (auto it : llvm::enumerate((getReductions()))) {
+    Attribute attr = it.value();
     auto intAttr = llvm::dyn_cast<IntegerAttr>(attr);
     if (!intAttr || !arith::symbolizeAtomicRMWKind(intAttr.getInt()))
       return emitOpError("invalid reduction attribute");
+    auto kind = arith::symbolizeAtomicRMWKind(intAttr.getInt()).value();
+    if (!isResultTypeMatchAtomicRMWKind(getResult(it.index()).getType(), kind))
+      return emitOpError("result type cannot match reduction attribute");
   }
 
   // Verify that the bound operands are valid dimension/symbols.
