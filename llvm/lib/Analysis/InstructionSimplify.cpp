@@ -3103,6 +3103,23 @@ static Value *simplifyICmpWithConstant(CmpInst::Predicate Pred, Value *LHS,
   return nullptr;
 }
 
+static bool existOrChain(const Value *From, const Value *To) {
+  const Value *LVal;
+  const Value *RVal;
+  SmallVector<const Value *, 10> WorkList;
+  WorkList.push_back(From);
+  while (!WorkList.empty() && WorkList.size() < 16) {
+    From = WorkList.pop_back_val();
+    if (match(From, m_Or(m_Value(LVal), m_Value(RVal)))) {
+      if (LVal == To || RVal == To)
+        return true;
+      WorkList.push_back(LVal);
+      WorkList.push_back(RVal);
+    }
+  }
+  return false;
+}
+
 static Value *simplifyICmpWithBinOpOnLHS(CmpInst::Predicate Pred,
                                          BinaryOperator *LBO, Value *RHS,
                                          const SimplifyQuery &Q,
@@ -3184,11 +3201,7 @@ static Value *simplifyICmpWithBinOpOnLHS(CmpInst::Predicate Pred,
   const Value *RHS0;
   if (match(LBO, m_LShr(m_Value(RHS0), m_Value())) ||
       match(LBO, m_UDiv(m_Value(RHS0), m_Value()))) {
-    const Value *RHS1;
-    const Value *RHS2;
-    // TODO: We can handle multiple and instructions.
-    if (RHS0 == RHS || (match(RHS, m_Or(m_Value(RHS1), m_Value(RHS2))) &&
-                        (RHS1 == RHS0 || RHS2 == RHS0))) {
+    if (RHS0 == RHS || existOrChain(RHS, RHS0)) {
       // icmp pred (X op Y), X
       if (Pred == ICmpInst::ICMP_UGT) {
         return getFalse(ITy);
