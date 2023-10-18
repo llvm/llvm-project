@@ -691,7 +691,7 @@ public:
 
     // Determine what the initial value needs to be for the max pool op.
     TypedAttr initialAttr;
-    if (resultETy.isF32())
+    if (resultETy.isF32() || resultETy.isBF16() || resultETy.isF16())
       initialAttr = rewriter.getFloatAttr(
           resultETy, APFloat::getLargest(
                          cast<FloatType>(resultETy).getFloatSemantics(), true));
