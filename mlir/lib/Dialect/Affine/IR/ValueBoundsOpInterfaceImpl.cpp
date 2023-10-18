@@ -103,8 +103,8 @@ void mlir::affine::registerValueBoundsOpInterfaceExternalModels(
   });
 }
 
-FailureOr<bool> mlir::affine::fullyComposeAndCheckIfEqual(Value value1,
-                                                          Value value2) {
+FailureOr<int64_t>
+mlir::affine::fullyComposeAndComputeConstantDelta(Value value1, Value value2) {
   assert(value1.getType().isIndex() && "expected index type");
   assert(value2.getType().isIndex() && "expected index type");
 
@@ -123,9 +123,6 @@ FailureOr<bool> mlir::affine::fullyComposeAndCheckIfEqual(Value value1,
   ValueDimList valueDims;
   for (Value v : mapOperands)
     valueDims.push_back({v, std::nullopt});
-  FailureOr<int64_t> bound = ValueBoundsConstraintSet::computeConstantBound(
+  return ValueBoundsConstraintSet::computeConstantBound(
       presburger::BoundType::EQ, map, valueDims);
-  if (failed(bound))
-    return failure();
-  return *bound == 0;
 }

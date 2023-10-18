@@ -2226,9 +2226,6 @@ bool UnwrappedLineParser::tryToParseLambda() {
     // followed by an `a->b` expression, such as:
     // ([obj func:arg] + a->b)
     // Otherwise the code below would parse as a lambda.
-    //
-    // FIXME: This heuristic is incorrect for C++20 generic lambdas with
-    // explicit template lists: []<bool b = true && false>(U &&u){}
     case tok::plus:
     case tok::minus:
     case tok::exclaim:
@@ -2268,6 +2265,11 @@ bool UnwrappedLineParser::tryToParseLambda() {
       parseRequiresClause(RequiresToken);
       break;
     }
+    case tok::equal:
+      if (!InTemplateParameterList)
+        return true;
+      nextToken();
+      break;
     default:
       return true;
     }

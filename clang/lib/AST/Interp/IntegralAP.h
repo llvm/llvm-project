@@ -29,7 +29,6 @@ namespace interp {
 using APInt = llvm::APInt;
 using APSInt = llvm::APSInt;
 template <unsigned Bits, bool Signed> class Integral;
-class Boolean;
 
 template <bool Signed> class IntegralAP final {
 private:
@@ -103,10 +102,6 @@ public:
 
     assert(Copy.isSigned() == Signed);
     return IntegralAP<Signed>(Copy);
-  }
-  static IntegralAP from(const Boolean &B) {
-    assert(false);
-    return IntegralAP::zero();
   }
 
   static IntegralAP zero() {

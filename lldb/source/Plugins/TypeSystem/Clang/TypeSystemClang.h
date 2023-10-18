@@ -219,6 +219,9 @@ public:
 
   static clang::DeclContext *GetDeclContextForType(const CompilerType &type);
 
+  CompilerDeclContext
+  GetCompilerDeclContextForType(const CompilerType &type) override;
+
   uint32_t GetPointerByteSize() override;
 
   clang::TranslationUnitDecl *GetTranslationUnitDecl() {
@@ -514,7 +517,7 @@ public:
                                               size_t bit_size);
 
   // TypeSystem methods
-  DWARFASTParser *GetDWARFParser() override;
+  plugin::dwarf::DWARFASTParser *GetDWARFParser() override;
   PDBASTParser *GetPDBParser() override;
   npdb::PdbAstBuilder *GetNativePDBParser() override;
 

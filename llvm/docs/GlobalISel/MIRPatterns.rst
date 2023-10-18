@@ -257,8 +257,8 @@ Common Pattern #3: Emitting a Constant Value
 When an immediate operand appears in an 'apply' pattern, the behavior
 depends on whether it's typed or not.
 
-* If the immediate is typed, a ``G_CONSTANT`` is implicitly emitted
-  (= a register operand is added to the instruction).
+* If the immediate is typed, ``MachineIRBuilder::buildConstant`` is used
+  to create a ``G_CONSTANT``. A ``G_BUILD_VECTOR`` will be used for vectors.
 * If the immediate is untyped, a simple immediate is added
   (``MachineInstrBuilder::addImm``).
 

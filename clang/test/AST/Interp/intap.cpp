@@ -42,6 +42,9 @@ namespace i128 {
                                          // ref-note {{outside the range}}
   constexpr int128_t Two = (int128_t)1 << 1ul;
   static_assert(Two == 2, "");
+  static_assert(Two, "");
+  constexpr bool CastedToBool = Two;
+  static_assert(CastedToBool, "");
 
   constexpr uint128_t AllOnes = ~static_cast<uint128_t>(0);
   static_assert(AllOnes == UINT128_MAX, "");

@@ -9,6 +9,7 @@
 #include "clang/Index/USRGeneration.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
 #include "clang/Basic/FileManager.h"
@@ -368,14 +369,14 @@ void USRGenerator::VisitTemplateTemplateParmDecl(
 }
 
 void USRGenerator::VisitNamespaceDecl(const NamespaceDecl *D) {
+  if (IgnoreResults)
+    return;
+  VisitDeclContext(D->getDeclContext());
   if (D->isAnonymousNamespace()) {
     Out << "@aN";
     return;
   }
-
-  VisitDeclContext(D->getDeclContext());
-  if (!IgnoreResults)
-    Out << "@N@" << D->getName();
+  Out << "@N@" << D->getName();
 }
 
 void USRGenerator::VisitFunctionTemplateDecl(const FunctionTemplateDecl *D) {

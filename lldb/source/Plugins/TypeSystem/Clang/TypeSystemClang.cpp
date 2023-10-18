@@ -86,6 +86,7 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
+using namespace lldb_private::plugin::dwarf;
 using namespace clang;
 using llvm::StringSwitch;
 
@@ -2634,6 +2635,13 @@ TypeSystemClang::GetCXXRecordDeclAccess(const clang::CXXRecordDecl *object) {
 clang::DeclContext *
 TypeSystemClang::GetDeclContextForType(const CompilerType &type) {
   return GetDeclContextForType(ClangUtil::GetQualType(type));
+}
+
+CompilerDeclContext
+TypeSystemClang::GetCompilerDeclContextForType(const CompilerType &type) {
+  if (auto *decl_context = GetDeclContextForType(type))
+    return CreateDeclContext(decl_context);
+  return CompilerDeclContext();
 }
 
 /// Aggressively desugar the provided type, skipping past various kinds of
