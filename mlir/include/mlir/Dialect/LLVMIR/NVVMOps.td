@@ -1194,7 +1194,8 @@ def NVVM_StMatrixOp: NVVM_PTXBuilder_Op<"stmatrix">,
   let description = [{
     Collectively store one or more matrices across all threads in a warp to the
     location indicated by the address operand $ptr in shared memory.
-    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html)
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#warp-level-matrix-store-instruction-stmatrix)
   }];
   
   let assemblyFormat = "$ptr `,` $sources attr-dict `:` type(operands)";
