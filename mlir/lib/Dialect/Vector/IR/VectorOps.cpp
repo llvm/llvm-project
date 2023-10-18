@@ -1983,6 +1983,66 @@ public:
   }
 };
 
+// Pattern to rewrite a ExtractOp(CreateMask) -> CreateMask.
+class ExtractOpFromCreateMask final : public OpRewritePattern<ExtractOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ExtractOp extractOp,
+                                PatternRewriter &rewriter) const override {
+    auto createMaskOp =
+        extractOp.getVector().getDefiningOp<vector::CreateMaskOp>();
+    if (!createMaskOp)
+      return failure();
+
+    ArrayRef<int64_t> position = extractOp.getStaticPosition();
+    auto maskOperands = createMaskOp.getOperands();
+    VectorType maskType = createMaskOp.getVectorType();
+    VectorType::Builder newMaskType(maskType);
+
+    bool allFalse = false;
+    bool containsUnknownDims = false;
+    for (auto [i, pos] : llvm::enumerate(position)) {
+      newMaskType.dropDim(0);
+      Value operand = maskOperands[i];
+      auto constantOp = operand.getDefiningOp<arith::ConstantOp>();
+      if (!constantOp) {
+        // Bounds of this dim unknown.
+        containsUnknownDims = true;
+        continue;
+      }
+
+      int64_t createMaskBound =
+          llvm::cast<IntegerAttr>(constantOp.getValue()).getInt();
+      if (pos == ShapedType::kDynamic) {
+        // Extractions must be in-bounds. So if the corresponding `create_mask`
+        // size is 0 or the size of the dim, we know this dim is false or true.
+        if (createMaskBound == 0)
+          allFalse = true;
+        else if (createMaskBound < maskType.getDimSize(i))
+          // Unknown if this dim is within the true or false region.
+          containsUnknownDims = true;
+      } else {
+        // If any position is outside the range from the `create_mask`, then the
+        // extracted mask will be all false.
+        allFalse |= pos >= createMaskBound;
+      }
+    }
+
+    if (allFalse) {
+      rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+          extractOp, DenseElementsAttr::get(VectorType(newMaskType), false));
+    } else if (!containsUnknownDims) {
+      rewriter.replaceOpWithNewOp<vector::CreateMaskOp>(
+          extractOp, VectorType(newMaskType),
+          maskOperands.drop_front(position.size()));
+    } else {
+      return failure();
+    }
+    return success();
+  }
+};
+
 // Folds extract(shape_cast(..)) into shape_cast when the total element count
 // does not change.
 LogicalResult foldExtractFromShapeCastToShapeCast(ExtractOp extractOp,
@@ -2009,7 +2069,7 @@ LogicalResult foldExtractFromShapeCastToShapeCast(ExtractOp extractOp,
 void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
   results.add<ExtractOpSplatConstantFolder, ExtractOpNonSplatConstantFolder,
-              ExtractOpFromBroadcast>(context);
+              ExtractOpFromBroadcast, ExtractOpFromCreateMask>(context);
   results.add(foldExtractFromShapeCastToShapeCast);
 }
 
