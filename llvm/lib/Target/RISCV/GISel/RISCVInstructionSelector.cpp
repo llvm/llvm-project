@@ -175,8 +175,8 @@ RISCVInstructionSelector::selectSHXADDOp(MachineOperand &Root,
         }}};
       }
 
-      // Given (and (lshr y, c2), mask) in which mask has c2 leading zeros and c3
-      // trailing zeros. We can use an SRLI by c2 + c3 followed by a SHXADD.
+      // Given (and (lshr y, c2), mask) in which mask has c2 leading zeros and
+      // c3 trailing zeros. We can use an SRLI by c2 + c3 followed by a SHXADD.
       if (!*LeftShift && Leading == C2 && Trailing == ShAmt) {
         Register DstReg =
             MRI.createGenericVirtualRegister(MRI.getType(RootReg));
@@ -218,8 +218,7 @@ RISCVInstructionSelector::selectSHXADDOp(MachineOperand &Root,
              (Trailing - C2.getLimitedValue()) == ShAmt;
 
     if (Cond) {
-      Register DstReg =
-          MRI.createGenericVirtualRegister(MRI.getType(RootReg));
+      Register DstReg = MRI.createGenericVirtualRegister(MRI.getType(RootReg));
       return {{[=](MachineInstrBuilder &MIB) {
         MachineIRBuilder(*MIB.getInstr())
             .buildInstr(RISCV::SRLIW, {DstReg}, {RegY})
