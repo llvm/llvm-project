@@ -161,7 +161,7 @@
 // RUN:            -fmodule-file=%t/not.pcm \
 // RUN:            %s 2>&1 | FileCheck --check-prefix=CHECK-BAD-FILE %s
 //
-// CHECK-BAD-FILE: fatal error: file '{{.*}}not.pcm' is not a valid precompiled module file: 'file too small to contain AST file magic'
+// CHECK-BAD-FILE: fatal error: file '{{.*}}not.pcm' is not a valid precompiled module file: file too small to contain AST file magic
 
 // RUN: not %clang_cc1 -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
 // RUN:            -fmodule-file=%t/nonexistent.pcm \

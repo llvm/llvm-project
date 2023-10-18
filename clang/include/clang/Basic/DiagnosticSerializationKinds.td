@@ -62,7 +62,7 @@ def err_ast_file_out_of_date : Error<
   "%select{PCH|module|AST}0 file '%1' is out of date and "
   "needs to be rebuilt%select{|: %3}2">, DefaultFatal;
 def err_ast_file_invalid : Error<
-  "file '%1' is not a valid precompiled %select{PCH|module|AST}0 file: '%2'">, DefaultFatal;
+  "file '%1' is not a valid precompiled %select{PCH|module|AST}0 file: %2">, DefaultFatal;
 def note_module_file_imported_by : Note<
   "imported by %select{|module '%2' in }1'%0'">;
 def err_module_file_not_module : Error<
