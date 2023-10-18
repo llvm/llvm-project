@@ -657,6 +657,12 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
         if (!MO.isReg() || !MO.getReg() || !MO.getReg().isVirtual() ||
             !MO.isDef() || !VRM->hasPhys(MO.getReg()))
           continue;
+        // FIXME: If PhysReg interferes with VirtReg, we should avoid using
+        // PhysReg as hint to avoid potential split. Current
+        // getRegAllocationHints doesn't interface LiveInterval, so the
+        // interference check is not viable. In the other side, CRs don't live
+        // cross multiple BBs in common cases, so checking interference might
+        // help rare seen cases.
         MCPhysReg PhysReg = VRM->getPhys(MO.getReg());
         llvm::copy_if(
             TRI->superregs_inclusive(PhysReg),
