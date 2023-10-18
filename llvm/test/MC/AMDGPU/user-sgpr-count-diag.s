@@ -1,4 +1,4 @@
-// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple amdgcn-amd-amdhsa -mcpu=gfx90a %s 2>&1 >/dev/null | FileCheck -check-prefix=ERR %s
+// RUN: not llvm-mc --amdhsa-code-object-version=3 -triple amdgcn-amd-amdhsa -mcpu=gfx90a %s 2>&1 >/dev/null | FileCheck -check-prefix=ERR %s
 
 .amdhsa_kernel implied_count_too_low_0
   .amdhsa_user_sgpr_count 0
