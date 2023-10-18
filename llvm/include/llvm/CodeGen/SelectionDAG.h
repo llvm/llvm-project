@@ -1947,10 +1947,10 @@ public:
   SDValue FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL, EVT VT,
                                  ArrayRef<SDValue> Ops);
 
-  /// Fold floating-point operations with 2 operands when both operands are
-  /// constants and/or undefined.
+  /// Fold floating-point operations when all operands are constants and/or
+  /// undefined.
   SDValue foldConstantFPMath(unsigned Opcode, const SDLoc &DL, EVT VT,
-                             SDValue N1, SDValue N2);
+                             ArrayRef<SDValue> Ops);
 
   /// Constant fold a setcc to true or false.
   SDValue FoldSetCC(EVT VT, SDValue N1, SDValue N2, ISD::CondCode Cond,

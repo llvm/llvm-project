@@ -61,7 +61,8 @@
 // -------------------
 // prototype: return (arg, arg, ...)
 //
-// 2,3,4: array of default vectors
+// 2,3,4: array of vectors
+// .: indicator for multi-vector modifier that will follow (e.g. 2.x)
 // v: void
 // x: vector of signed integers
 // u: vector of unsigned integers

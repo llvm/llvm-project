@@ -1934,11 +1934,12 @@ public:
   /// \param NumTeamsUpper Upper bound on the number of teams.
   /// \param ThreadLimit on the number of threads that may participate in a
   ///        contention group created by each team.
-  InsertPointTy createTeams(const LocationDescription &Loc,
-                            BodyGenCallbackTy BodyGenCB,
-                            Value *NumTeamsLower = nullptr,
-                            Value *NumTeamsUpper = nullptr,
-                            Value *ThreadLimit = nullptr);
+  /// \param IfExpr is the integer argument value of the if condition on the
+  ///        teams clause.
+  InsertPointTy
+  createTeams(const LocationDescription &Loc, BodyGenCallbackTy BodyGenCB,
+              Value *NumTeamsLower = nullptr, Value *NumTeamsUpper = nullptr,
+              Value *ThreadLimit = nullptr, Value *IfExpr = nullptr);
 
   /// Generate conditional branch and relevant BasicBlocks through which private
   /// threads copy the 'copyin' variables from Master copy to threadprivate
