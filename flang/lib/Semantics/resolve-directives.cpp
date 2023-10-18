@@ -254,9 +254,6 @@ private:
       Symbol::Flag::AccCopyIn, Symbol::Flag::AccCopyOut,
       Symbol::Flag::AccDelete, Symbol::Flag::AccPresent};
 
-  Symbol::Flags accFlagsRequireNewSymbol{Symbol::Flag::AccPrivate,
-      Symbol::Flag::AccFirstPrivate, Symbol::Flag::AccReduction};
-
   Symbol::Flags accDataMvtFlags{
       Symbol::Flag::AccDevice, Symbol::Flag::AccHost, Symbol::Flag::AccSelf};
 
@@ -266,7 +263,7 @@ private:
       Symbol::Flag::AccDevicePtr, Symbol::Flag::AccDeviceResident,
       Symbol::Flag::AccLink, Symbol::Flag::AccPresent};
 
-  void PrivatizeAssociatedLoopIndex(const parser::OpenACCLoopConstruct &);
+  void CheckAssociatedLoopIndex(const parser::OpenACCLoopConstruct &);
   void ResolveAccObjectList(const parser::AccObjectList &, Symbol::Flag);
   void ResolveAccObject(const parser::AccObject &, Symbol::Flag);
   Symbol *ResolveAcc(const parser::Name &, Symbol::Flag, Scope &);
@@ -877,7 +874,7 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCLoopConstruct &x) {
   }
   ClearDataSharingAttributeObjects();
   SetContextAssociatedLoopLevel(GetAssociatedLoopLevelFromClauses(clauseList));
-  PrivatizeAssociatedLoopIndex(x);
+  CheckAssociatedLoopIndex(x);
   return true;
 }
 
@@ -1141,13 +1138,12 @@ std::int64_t AccAttributeVisitor::GetAssociatedLoopLevelFromClauses(
   return 1; // default is outermost loop
 }
 
-void AccAttributeVisitor::PrivatizeAssociatedLoopIndex(
+void AccAttributeVisitor::CheckAssociatedLoopIndex(
     const parser::OpenACCLoopConstruct &x) {
   std::int64_t level{GetContext().associatedLoopLevel};
-  if (level <= 0) { // collpase value was negative or 0
+  if (level <= 0) { // collapse value was negative or 0
     return;
   }
-  Symbol::Flag ivDSA{Symbol::Flag::AccPrivate};
 
   const auto getNextDoConstruct =
       [this](const parser::Block &block) -> const parser::DoConstruct * {
@@ -1166,16 +1162,8 @@ void AccAttributeVisitor::PrivatizeAssociatedLoopIndex(
 
   const auto &outer{std::get<std::optional<parser::DoConstruct>>(x.t)};
   for (const parser::DoConstruct *loop{&*outer}; loop && level > 0; --level) {
-    // go through all the nested do-loops and resolve index variables
-    const parser::Name *iv{GetLoopIndex(*loop)};
-    if (iv) {
-      if (auto *symbol{ResolveAcc(*iv, ivDSA, currScope())}) {
-        symbol->set(Symbol::Flag::AccPreDetermined);
-        iv->symbol = symbol; // adjust the symbol within region
-        AddToContextObjectWithDSA(*symbol, ivDSA);
-      }
-    }
-
+    // Go through all nested loops to ensure index variable exists.
+    GetLoopIndex(*loop);
     const auto &block{std::get<parser::Block>(loop->t)};
     loop = getNextDoConstruct(block);
   }
@@ -1328,20 +1316,12 @@ void AccAttributeVisitor::ResolveAccObject(
 
 Symbol *AccAttributeVisitor::ResolveAcc(
     const parser::Name &name, Symbol::Flag accFlag, Scope &scope) {
-  if (accFlagsRequireNewSymbol.test(accFlag)) {
-    return DeclarePrivateAccessEntity(name, accFlag, scope);
-  } else {
-    return DeclareOrMarkOtherAccessEntity(name, accFlag);
-  }
+  return DeclareOrMarkOtherAccessEntity(name, accFlag);
 }
 
 Symbol *AccAttributeVisitor::ResolveAcc(
     Symbol &symbol, Symbol::Flag accFlag, Scope &scope) {
-  if (accFlagsRequireNewSymbol.test(accFlag)) {
-    return DeclarePrivateAccessEntity(symbol, accFlag, scope);
-  } else {
-    return DeclareOrMarkOtherAccessEntity(symbol, accFlag);
-  }
+  return DeclareOrMarkOtherAccessEntity(symbol, accFlag);
 }
 
 Symbol *AccAttributeVisitor::DeclareOrMarkOtherAccessEntity(
@@ -1374,11 +1354,6 @@ static bool WithMultipleAppearancesAccException(
 void AccAttributeVisitor::CheckMultipleAppearances(
     const parser::Name &name, const Symbol &symbol, Symbol::Flag accFlag) {
   const auto *target{&symbol};
-  if (accFlagsRequireNewSymbol.test(accFlag)) {
-    if (const auto *details{symbol.detailsIf<HostAssocDetails>()}) {
-      target = &details->symbol();
-    }
-  }
   if (HasDataSharingAttributeObject(*target) &&
       !WithMultipleAppearancesAccException(symbol, accFlag)) {
     context_.Say(name.source,
