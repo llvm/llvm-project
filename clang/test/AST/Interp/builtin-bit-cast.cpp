@@ -31,8 +31,23 @@ template <class To, class From>
 constexpr To bit_cast(const From &from) {
   static_assert(sizeof(To) == sizeof(From));
   return __builtin_bit_cast(To, from); // ref-note 2{{indeterminate value can only initialize}} \
-                                       // expected-note 2{{indeterminate value can only initialize}}
+                                       // expected-note 2{{indeterminate value can only initialize}} \
+                                       // ref-note {{subexpression not valid}}
 }
+
+
+/// Current interpreter does not support this.
+/// https://github.com/llvm/llvm-project/issues/63686
+constexpr int FromString = bit_cast<int>("abc"); // ref-error {{must be initialized by a constant expression}} \
+                                                 // ref-note {{in call to}} \
+                                                 // ref-note {{declared here}}
+#if LITTLE_END
+static_assert(FromString == 6513249); // ref-error {{is not an integral constant expression}} \
+                                      // ref-note {{initializer of 'FromString' is not a constant expression}}
+#else
+static_assert(FromString == 1633837824); // ref-error {{is not an integral constant expression}} \
+                                         // ref-note {{initializer of 'FromString' is not a constant expression}}
+#endif
 
 template <class Intermediate, class Init>
 constexpr bool round_trip(const Init &init) {
