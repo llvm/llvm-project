@@ -9,11 +9,11 @@ body:             |
 
     ; GCN-LABEL: name: no_fold_fp_64bit_literal_sgpr
     ; GCN: [[DEF:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
-    ; GCN-NEXT: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 1311768467750121200
-    ; GCN-NEXT: [[V_ADD_F64_e64_:%[0-9]+]]:vreg_64 = V_ADD_F64_e64 0, [[S_MOV_B64_]], 0, [[DEF]], 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 1311768467750121200
+    ; GCN-NEXT: [[V_ADD_F64_e64_:%[0-9]+]]:vreg_64 = V_ADD_F64_e64 0, [[S_MOV_B]], 0, [[DEF]], 0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: SI_RETURN_TO_EPILOG [[V_ADD_F64_e64_]]
     %0:vreg_64 = IMPLICIT_DEF
-    %1:sreg_64 = S_MOV_B64 1311768467750121200
+    %1:sreg_64 = S_MOV_B64_IMM_PSEUDO 1311768467750121200
     %2:vreg_64 = V_ADD_F64_e64 0, %1, 0, %0, 0, 0, implicit $mode, implicit $exec
     SI_RETURN_TO_EPILOG %2
 ...
@@ -46,7 +46,7 @@ body:             |
     ; GCN-NEXT: [[V_ADD_F64_e64_:%[0-9]+]]:vreg_64 = V_ADD_F64_e64 0, 4636737291354636288, 0, [[DEF]], 0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: SI_RETURN_TO_EPILOG [[V_ADD_F64_e64_]]
     %0:vreg_64 = IMPLICIT_DEF
-    %1:sreg_64 = S_MOV_B64 4636737291354636288
+    %1:sreg_64 = S_MOV_B64_IMM_PSEUDO 4636737291354636288
     %2:vreg_64 = V_ADD_F64_e64 0, %1, 0, %0, 0, 0, implicit $mode, implicit $exec
     SI_RETURN_TO_EPILOG %2
 ...
@@ -59,11 +59,11 @@ body:             |
 
     ; GCN-LABEL: name: no_fold_int_64bit_literal_sgpr
     ; GCN: [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-    ; GCN-NEXT: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 1311768467750121200
-    ; GCN-NEXT: [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[DEF]], [[S_MOV_B64_]], implicit-def $scc
+    ; GCN-NEXT: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 1311768467750121200
+    ; GCN-NEXT: [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[DEF]], [[S_MOV_B]], implicit-def $scc
     ; GCN-NEXT: SI_RETURN_TO_EPILOG [[S_AND_B64_]]
     %0:sreg_64 = IMPLICIT_DEF
-    %1:sreg_64 = S_MOV_B64 1311768467750121200
+    %1:sreg_64 = S_MOV_B64_IMM_PSEUDO 1311768467750121200
     %2:sreg_64 = S_AND_B64 %0, %1, implicit-def $scc
     SI_RETURN_TO_EPILOG %2
 ...
