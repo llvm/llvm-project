@@ -23623,7 +23623,7 @@ bool AArch64TargetLowering::isIndexingLegal(MachineInstr &MI, Register Base,
   // HACK
   if (IsPre)
     return false; // Until we implement.
-  
+
   auto CstOffset = getIConstantVRegVal(Offset, MRI);
   if (!CstOffset || CstOffset->isZero())
     return false;

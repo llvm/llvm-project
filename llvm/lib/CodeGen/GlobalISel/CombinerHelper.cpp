@@ -954,8 +954,7 @@ static Type *getTypeForLLT(LLT Ty, LLVMContext &C) {
 
 /// Return true if 'MI' is a load or a store that may be fold it's address
 /// operand into the load / store addressing mode.
-static bool canFoldInAddressingMode(GLoadStore *MI,
-                                    const TargetLowering &TLI,
+static bool canFoldInAddressingMode(GLoadStore *MI, const TargetLowering &TLI,
                                     MachineRegisterInfo &MRI) {
   TargetLowering::AddrMode AM;
   auto *MF = MI->getMF();
@@ -995,7 +994,7 @@ unsigned getIndexedOpc(unsigned LdStOpc) {
 } // namespace
 
 bool CombinerHelper::isIndexedLoadStoreLegal(GLoadStore &LdSt) const {
-    // Check for legality.
+  // Check for legality.
   LLT PtrTy = MRI.getType(LdSt.getPointerReg());
   LLT Ty = MRI.getType(LdSt.getReg(0));
   LLT MemTy = LdSt.getMMO().getMemoryType();
