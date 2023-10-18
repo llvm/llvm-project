@@ -1015,17 +1015,10 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       break;
     // If the mask has 32 trailing ones, use SRLIW.
     if (TrailingOnes == 32) {
-      if (Subtarget->is64Bit()) {
-        SDNode *SRLIW =
-            CurDAG->getMachineNode(RISCV::SRLIW, DL, VT, N0->getOperand(0),
-                                   CurDAG->getTargetConstant(ShAmt, DL, VT));
-        ReplaceNode(Node, SRLIW);
-      } else {
-        SDNode *SRLI =
-            CurDAG->getMachineNode(RISCV::SRLI, DL, VT, N0->getOperand(0),
-                                   CurDAG->getTargetConstant(ShAmt, DL, VT));
-        ReplaceNode(Node, SRLI);
-      }
+      SDNode *SRLI = CurDAG->getMachineNode(
+          Subtarget->is64Bit() ? RISCV::SRLIW : RISCV::SRLI, DL, VT,
+          N0->getOperand(0), CurDAG->getTargetConstant(ShAmt, DL, VT));
+      ReplaceNode(Node, SRLI);
       return;
     }
 
