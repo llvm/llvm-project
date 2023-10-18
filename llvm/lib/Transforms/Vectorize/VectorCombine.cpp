@@ -826,6 +826,10 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
   Value *EVL = VPI.getArgOperand(3);
   const DataLayout &DL = VPI.getModule()->getDataLayout();
 
+  // If the VP op might introduce UB or poison, we can scalarize it provided
+  // that we know the EVL > 0: If the EVL is zero, then the original VP op
+  // becomes a no-op and thus won't be UB, so make sure we don't introduce UB by
+  // scalarizing it.
   bool SafeToSpeculate;
   if (ScalarIntrID)
     SafeToSpeculate = Intrinsic::getAttributes(I.getContext(), *ScalarIntrID)
