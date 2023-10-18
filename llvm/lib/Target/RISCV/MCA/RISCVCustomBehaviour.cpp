@@ -229,64 +229,14 @@ getEEWAndEMULForUnitStrideLoadStore(unsigned Opcode, uint8_t LMUL,
     llvm_unreachable("Opcode is not a vector unit stride load nor store");
   }
 
-  RISCVII::VLMUL VLMUL;
-  switch (LMUL) {
-  case 0b000:
-    VLMUL = RISCVII::LMUL_1;
-    break;
-  case 0b001:
-    VLMUL = RISCVII::LMUL_2;
-    break;
-  case 0b010:
-    VLMUL = RISCVII::LMUL_4;
-    break;
-  case 0b011:
-    VLMUL = RISCVII::LMUL_8;
-    break;
-  case 0b111:
-    VLMUL = RISCVII::LMUL_F2;
-    break;
-  case 0b110:
-    VLMUL = RISCVII::LMUL_F4;
-    break;
-  case 0b101:
-    VLMUL = RISCVII::LMUL_F8;
-    break;
-  case RISCVII::LMUL_RESERVED:
-    llvm_unreachable("LMUL cannot be LMUL_RESERVED");
-  }
-
+  RISCVII::VLMUL VLMUL = static_cast<RISCVII::VLMUL>(LMUL);
   auto [EMULPart, Fractional] =
       getEMULEqualsEEWDivSEWTimesLMUL(EEW, SEW, VLMUL);
   assert(RISCVVType::isValidLMUL(EMULPart, Fractional) &&
          "Unexpected EEW from instruction used with LMUL and SEW");
 
-  uint8_t EMUL;
-  switch (RISCVVType::encodeLMUL(EMULPart, Fractional)) {
-  case RISCVII::LMUL_1:
-    EMUL = 0b000;
-    break;
-  case RISCVII::LMUL_2:
-    EMUL = 0b001;
-    break;
-  case RISCVII::LMUL_4:
-    EMUL = 0b010;
-    break;
-  case RISCVII::LMUL_8:
-    EMUL = 0b011;
-    break;
-  case RISCVII::LMUL_F2:
-    EMUL = 0b111;
-    break;
-  case RISCVII::LMUL_F4:
-    EMUL = 0b110;
-    break;
-  case RISCVII::LMUL_F8:
-    EMUL = 0b101;
-    break;
-  case RISCVII::LMUL_RESERVED:
-    llvm_unreachable("Cannot create instrument for LMUL_RESERVED");
-  }
+  uint8_t EMUL =
+      static_cast<RISCVII::VLMUL>(RISCVVType::encodeLMUL(EMULPart, Fractional));
   return std::make_pair(EEW, EMUL);
 }
 
