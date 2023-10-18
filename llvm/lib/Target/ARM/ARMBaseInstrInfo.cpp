@@ -6735,6 +6735,16 @@ MachineBasicBlock::iterator ARMBaseInstrInfo::insertOutlinedCall(
   return CallPt;
 }
 
+void ARMBaseInstrInfo::buildClearRegister(Register DstReg,
+                                          MachineBasicBlock &MBB,
+                                          MachineBasicBlock::iterator Iter,
+                                          DebugLoc &DL,
+                                          bool AllowSideEffects) const {
+  unsigned Opc = Subtarget.isThumb2() ? ARM::t2MOVi32imm : ARM::MOVi32imm;
+  BuildMI(MBB, Iter, DL, get(Opc), DstReg)
+      .addImm(0);
+}
+
 bool ARMBaseInstrInfo::shouldOutlineFromFunctionByDefault(
     MachineFunction &MF) const {
   return Subtarget.isMClass() && MF.getFunction().hasMinSize();
