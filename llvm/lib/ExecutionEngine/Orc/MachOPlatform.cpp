@@ -1502,10 +1502,9 @@ Error MachOPlatform::MachOPlatformPlugin::populateObjCRuntimeObject(
               // We own the definition of __objc_image_info; write the final
               // merged flags value.
               auto Content = Sym->getBlock().getMutableContent(G);
-              assert(
-                  Content.size() == sizeof(uint32_t) * 2 &&
+              assert(Content.size() == 8 &&
                   "__objc_image_info size should have been verified already");
-              memcpy(&Content[sizeof(uint32_t)], &Flags, sizeof(uint32_t));
+              support::endian::write32(&Content[4], *Flags, G.getEndianness());
             }
             break;
           }
