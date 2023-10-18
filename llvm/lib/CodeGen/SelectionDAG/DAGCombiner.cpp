@@ -495,6 +495,7 @@ namespace {
     SDValue visitFSUB(SDNode *N);
     SDValue visitFMUL(SDNode *N);
     template <class MatchContextClass> SDValue visitFMA(SDNode *N);
+    SDValue visitFMAD(SDNode *N);
     SDValue visitFDIV(SDNode *N);
     SDValue visitFREM(SDNode *N);
     SDValue visitFSQRT(SDNode *N);
@@ -2000,6 +2001,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::FSUB:               return visitFSUB(N);
   case ISD::FMUL:               return visitFMUL(N);
   case ISD::FMA:                return visitFMA<EmptyMatchContext>(N);
+  case ISD::FMAD:               return visitFMAD(N);
   case ISD::FDIV:               return visitFDIV(N);
   case ISD::FREM:               return visitFREM(N);
   case ISD::FSQRT:              return visitFSQRT(N);
@@ -16749,6 +16751,21 @@ template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
     if (SDValue Neg = TLI.getCheaperNegatedExpression(
             SDValue(N, 0), DAG, LegalOperations, ForCodeSize))
       return matcher.getNode(ISD::FNEG, DL, VT, Neg);
+  return SDValue();
+}
+
+SDValue DAGCombiner::visitFMAD(SDNode *N) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  SDValue N2 = N->getOperand(2);
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  // Constant fold FMAD.
+  if (isa<ConstantFPSDNode>(N0) && isa<ConstantFPSDNode>(N1) &&
+      isa<ConstantFPSDNode>(N2))
+    return DAG.getNode(ISD::FMAD, DL, VT, N0, N1, N2);
+
   return SDValue();
 }
 
