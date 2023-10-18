@@ -210,8 +210,7 @@ public:
             unsigned reservedColumns = 0)
       : Matrix<MPInt>(rows, columns, reservedRows, reservedColumns){};
 
-  IntMatrix(Matrix<MPInt> m)
-      : Matrix<MPInt>(m) {};
+  IntMatrix(Matrix<MPInt> m) : Matrix<MPInt>(m){};
 
   /// Return the identity matrix of the specified dimension.
   static IntMatrix identity(unsigned dimension);
@@ -242,7 +241,7 @@ public:
   // For a matrix M, the integer inverse is the matrix M' such that
   // M x M' = M'  M = det(M) x I.
   // Assert-fails if the matrix is not square.
-  MPInt determinant(IntMatrix* inverse = nullptr) const;
+  MPInt determinant(IntMatrix *inverse = nullptr) const;
 };
 
 // An inherited class for rational matrices, with no new data attributes.
@@ -253,8 +252,7 @@ public:
              unsigned reservedColumns = 0)
       : Matrix<Fraction>(rows, columns, reservedRows, reservedColumns){};
 
-  FracMatrix(Matrix<Fraction> m)
-      : Matrix<Fraction>(m) {};
+  FracMatrix(Matrix<Fraction> m) : Matrix<Fraction>(m){};
 
   explicit FracMatrix(IntMatrix m);
 
@@ -266,7 +264,7 @@ public:
   // passed (if any). The pointer is unchanged if the inverse
   // does not exist, which happens iff det = 0.
   // Assert-fails if the matrix is not square.
-  Fraction determinant(FracMatrix* inverse = NULL) const;
+  Fraction determinant(FracMatrix *inverse = NULL) const;
 };
 
 } // namespace presburger
