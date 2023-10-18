@@ -16,7 +16,8 @@
 namespace clang {
 namespace driver {
 namespace tools {
-/// dragonfly -- Directly call GNU Binutils assembler and linker
+
+/// Directly call GNU Binutils assembler and linker
 namespace dragonfly {
 class LLVM_LIBRARY_VISIBILITY Assembler : public Tool {
 public:
