@@ -5586,6 +5586,14 @@ int llvm::isAArch64FrameOffsetLegal(const MachineInstr &MI,
   switch (MI.getOpcode()) {
   default:
     break;
+  case AArch64::LD1Rv1d:
+  case AArch64::LD1Rv2s:
+  case AArch64::LD1Rv2d:
+  case AArch64::LD1Rv4h:
+  case AArch64::LD1Rv4s:
+  case AArch64::LD1Rv8b:
+  case AArch64::LD1Rv8h:
+  case AArch64::LD1Rv16b:
   case AArch64::LD1Twov2d:
   case AArch64::LD1Threev2d:
   case AArch64::LD1Fourv2d:
