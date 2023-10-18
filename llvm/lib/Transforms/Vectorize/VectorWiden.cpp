@@ -24,7 +24,6 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/ConstantRange.h"
-#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
@@ -60,8 +59,8 @@ class VectorWiden {
 public:
   using InstrList = SmallVector<Instruction *, 2>;
   using ValueList = SmallVector<Value *, 2>;
-  VectorWiden(Function &F, const TargetTransformInfo &TTI, DominatorTree &DT)
-      : F(F), Builder(F.getContext()), TTI(TTI), DT(DT) {}
+  VectorWiden(Function &F, const TargetTransformInfo &TTI)
+      : F(F), Builder(F.getContext()), TTI(TTI) {}
 
   bool run();
 
@@ -69,7 +68,6 @@ private:
   Function &F;
   IRBuilder<> Builder;
   const TargetTransformInfo &TTI;
-  DominatorTree &DT;
   TargetLibraryInfo *TLI;
 
   DenseSet<Instruction *> DeletedInstructions;
@@ -102,10 +100,17 @@ void VectorWiden::widenCastInst(ArrayRef<Instruction *> IL) {
   auto *OrigType = cast<VectorType>(I->getOperand(0)->getType());
   auto *RetType = VectorType::getDoubleElementsVectorType(RetOrigType);
   auto *OpType = VectorType::getDoubleElementsVectorType(OrigType);
+
+  bool isBitCast = I->getOpcode() == Instruction::BitCast;
   unsigned Offset =
       dyn_cast<ScalableVectorType>(OrigType)
           ? (cast<ScalableVectorType>(OrigType))->getMinNumElements()
           : (cast<FixedVectorType>(OrigType))->getNumElements();
+  unsigned BitCastOffsetExtract =
+      (dyn_cast<ScalableVectorType>(RetType)
+           ? (cast<ScalableVectorType>(RetType))->getMinNumElements()
+           : (cast<FixedVectorType>(RetType))->getNumElements()) /
+      2;
   Value *WideVec = UndefValue::get(OpType);
   Builder.SetInsertPoint(I);
   Function *InsertIntr = llvm::Intrinsic::getDeclaration(
@@ -116,6 +121,7 @@ void VectorWiden::widenCastInst(ArrayRef<Instruction *> IL) {
       InsertIntr, {Insert1, I1->getOperand(0), Builder.getInt64(Offset)});
   Value *ResCast = Builder.CreateCast(Instruction::CastOps(I->getOpcode()),
                                       Insert2, RetType);
+
   Function *ExtractIntr = llvm::Intrinsic::getDeclaration(
       F.getParent(), Intrinsic::vector_extract, {RetOrigType, RetType});
   if (!I->users().empty()) {
@@ -124,9 +130,10 @@ void VectorWiden::widenCastInst(ArrayRef<Instruction *> IL) {
     I->replaceAllUsesWith(Res);
   }
   if (!I1->users().empty()) {
-    Value *Res2 =
-        Builder.CreateCall(ExtractIntr, {ResCast, Builder.getInt64(Offset)});
-    I1->replaceAllUsesWith(Res2);
+    Value *Res = Builder.CreateCall(
+        ExtractIntr,
+        {ResCast, Builder.getInt64(isBitCast ? BitCastOffsetExtract : Offset)});
+    I1->replaceAllUsesWith(Res);
   }
 }
 
@@ -173,9 +180,9 @@ void VectorWiden::widenBinaryOperator(ArrayRef<Instruction *> IL) {
     I->replaceAllUsesWith(Res);
   }
   if (!I1->users().empty()) {
-    Value *Res2 =
+    Value *Res =
         Builder.CreateCall(ExtractIntr, {ResBinOp, Builder.getInt64(0)});
-    I1->replaceAllUsesWith(Res2);
+    I1->replaceAllUsesWith(Res);
   }
 }
 
@@ -197,8 +204,9 @@ bool VectorWiden::canWidenNode(ArrayRef<Instruction *> IL,
           (IL[X]->getOperand(0)->getType() !=
            IL[Y]->getOperand(0)->getType()) ||
           // Ignore if disatance between two are too apart.
-          (abs(std::distance(IL[Y]->getIterator(), IL[X]->getIterator())) >
-           MaxInstDistance) ||
+          (IL[Y]->comesBefore(IL[X]) &&
+           abs(std::distance(IL[Y]->getIterator(), IL[X]->getIterator())) >
+               MaxInstDistance) ||
           (IL[X]->getOperand(0) == IL[Y] ||
            (IL[X]->getNumOperands() > 1 && IL[X]->getOperand(1) == IL[Y])))
         return false;
@@ -380,9 +388,8 @@ bool VectorWiden::run() {
 PreservedAnalyses VectorWidenPass::run(Function &F,
                                        FunctionAnalysisManager &FAM) {
   TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(F);
-  DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
 
-  VectorWiden VecWiden(F, TTI, DT);
+  VectorWiden VecWiden(F, TTI);
 
   if (!VecWiden.run())
     return PreservedAnalyses::all();
