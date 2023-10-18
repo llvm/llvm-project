@@ -17,8 +17,6 @@
 #include "TargetInfo/RISCVTargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Debug.h"
-#include <numeric>
-#include <set>
 
 #define DEBUG_TYPE "llvm-mca-riscv-custombehaviour"
 
@@ -188,18 +186,29 @@ RISCVInstrumentManager::createInstruments(const MCInst &Inst) {
 }
 
 /// Return EMUL = (EEW / SEW) * LMUL
-inline static std::pair<unsigned, bool>
+inline static RISCVII::VLMUL
 getEMULEqualsEEWDivSEWTimesLMUL(unsigned EEW, unsigned SEW,
                                 RISCVII::VLMUL VLMUL) {
-  // Calculate (EEW/SEW)*LMUL preserving fractions less than 1. Use GCD
-  // to put fraction in simplest form.
-  auto [LMUL, Fractional] = RISCVVType::decodeVLMUL(VLMUL);
-  unsigned Num = EEW, Denom = SEW;
-  int GCD =
-      Fractional ? std::gcd(Num, Denom * LMUL) : std::gcd(Num * LMUL, Denom);
-  Num = Fractional ? Num / GCD : Num * LMUL / GCD;
-  Denom = Fractional ? Denom * LMUL / GCD : Denom / GCD;
-  return std::make_pair(Num > Denom ? Num : Denom, Denom > Num);
+  bool IsScaleFrac = EEW < SEW;
+  unsigned Scale = IsScaleFrac ? SEW / EEW : EEW / SEW;
+  auto [LMUL, IsLMULFrac] = RISCVVType::decodeVLMUL(VLMUL);
+
+  unsigned EMUL;
+  bool EMULFrac;
+  if ((IsScaleFrac && IsLMULFrac) || (!IsScaleFrac && !IsLMULFrac)) {
+    EMUL = LMUL * Scale;
+    EMULFrac = IsLMULFrac;
+  } else if (Scale > LMUL) {
+    EMUL = Scale / LMUL;
+    EMULFrac = IsScaleFrac;
+  } else {
+    EMUL = LMUL / Scale;
+    EMULFrac = IsLMULFrac;
+  }
+  if (EMUL == 1)
+    EMULFrac = false;
+
+  return RISCVVType::encodeLMUL(EMUL, EMULFrac);
 }
 
 static std::pair<uint8_t, uint8_t>
@@ -230,13 +239,8 @@ getEEWAndEMULForUnitStrideLoadStore(unsigned Opcode, uint8_t LMUL,
   }
 
   RISCVII::VLMUL VLMUL = static_cast<RISCVII::VLMUL>(LMUL);
-  auto [EMULPart, Fractional] =
-      getEMULEqualsEEWDivSEWTimesLMUL(EEW, SEW, VLMUL);
-  assert(RISCVVType::isValidLMUL(EMULPart, Fractional) &&
-         "Unexpected EEW from instruction used with LMUL and SEW");
-
-  uint8_t EMUL =
-      static_cast<RISCVII::VLMUL>(RISCVVType::encodeLMUL(EMULPart, Fractional));
+  uint8_t EMUL = static_cast<RISCVII::VLMUL>(
+      getEMULEqualsEEWDivSEWTimesLMUL(EEW, SEW, VLMUL));
   return std::make_pair(EEW, EMUL);
 }
 
