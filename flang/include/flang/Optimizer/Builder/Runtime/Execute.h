@@ -22,11 +22,13 @@ namespace fir::runtime {
 
 /// Generate a call to the ExecuteCommandLine runtime function which implements
 /// the GET_EXECUTE_ARGUMENT intrinsic.
-/// \p value, \p length and \p errmsg must be fir.box that can be absent (but
-/// not null mlir values). The status value is returned.
+/// \p wait, \p exitstat, \p cmdstat and \p cmdmsg must be fir.box that can be 
+/// absent (but not null mlir values). The status exitstat and cmdstat are
+/// returned, along with the message cmdmsg.
 mlir::Value genExecuteCommandLine(fir::FirOpBuilder &, mlir::Location,
-                                  mlir::Value number, mlir::Value value,
-                                  mlir::Value length, mlir::Value errmsg);
+                                  mlir::Value command, mlir::Value wait,
+                                  mlir::Value exitstat, mlir::Value cmdstat,
+                                  mlir::Value cmdmsg);
 
 } // namespace fir::runtime
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_EXECUTE_H
