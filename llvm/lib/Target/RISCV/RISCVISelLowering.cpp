@@ -2965,9 +2965,6 @@ static SDValue lowerVectorXRINT(SDValue Op, SelectionDAG &DAG,
     Src = convertToScalableVector(ContainerVT, Src, DAG, Subtarget);
   }
 
-  // Freeze the source since we are increasing the number of uses.
-  Src = DAG.getFreeze(Src);
-
   auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
   SDValue Truncated =
       DAG.getNode(RISCVISD::VFCVT_X_F_VL, DL, ContainerVT, Src, Mask, VL);
