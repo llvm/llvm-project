@@ -3170,6 +3170,7 @@ bool SIInstrInfo::isFoldableCopy(const MachineInstr &MI) {
   case AMDGPU::V_MOV_B64_e64:
   case AMDGPU::S_MOV_B32:
   case AMDGPU::S_MOV_B64:
+  case AMDGPU::S_MOV_B64_IMM_PSEUDO:
   case AMDGPU::COPY:
   case AMDGPU::WWM_COPY:
   case AMDGPU::V_ACCVGPR_WRITE_B32_e64:
@@ -5490,6 +5491,18 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
     return true;
   }
 
+  if (MO->isImm()) {
+    uint64_t Imm = MO->getImm();
+    bool Is64BitFPOp = OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_FP64;
+    bool Is64BitOp = Is64BitFPOp ||
+                     OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_INT64 ||
+                     OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_V2INT32 ||
+                     OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_V2FP32;
+    if (Is64BitOp && !AMDGPU::isValid32BitLiteral(Imm, Is64BitFPOp) &&
+        !AMDGPU::isInlinableLiteral64(Imm, ST.hasInv2PiInlineImm()))
+      return false;
+  }
+
   // Handle non-register types that are treated like immediates.
   assert(MO->isImm() || MO->isTargetIndex() || MO->isFI() || MO->isGlobal());
 
@@ -6079,6 +6092,17 @@ loadMBUFScalarOperandsFromVGPR(const SIInstrInfo &TII, MachineInstr &MI,
   unsigned MovExecOpc = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
   const auto *BoolXExecRC = TRI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID);
 
+  // Save SCC. Waterfall Loop may overwrite SCC.
+  Register SaveSCCReg;
+  bool SCCNotDead = (MBB.computeRegisterLiveness(TRI, AMDGPU::SCC, MI, 30) !=
+                     MachineBasicBlock::LQR_Dead);
+  if (SCCNotDead) {
+    SaveSCCReg = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    BuildMI(MBB, Begin, DL, TII.get(AMDGPU::S_CSELECT_B32), SaveSCCReg)
+        .addImm(1)
+        .addImm(0);
+  }
+
   Register SaveExec = MRI.createVirtualRegister(BoolXExecRC);
 
   // Save the EXEC mask
@@ -6134,8 +6158,15 @@ loadMBUFScalarOperandsFromVGPR(const SIInstrInfo &TII, MachineInstr &MI,
 
   emitLoadScalarOpsFromVGPRLoop(TII, MRI, MBB, *LoopBB, *BodyBB, DL, ScalarOps);
 
-  // Restore the EXEC mask
   MachineBasicBlock::iterator First = RemainderBB->begin();
+  // Restore SCC
+  if (SCCNotDead) {
+    BuildMI(*RemainderBB, First, DL, TII.get(AMDGPU::S_CMP_LG_U32))
+        .addReg(SaveSCCReg, RegState::Kill)
+        .addImm(0);
+  }
+
+  // Restore the EXEC mask
   BuildMI(*RemainderBB, First, DL, TII.get(MovExecOpc), Exec).addReg(SaveExec);
   return BodyBB;
 }
