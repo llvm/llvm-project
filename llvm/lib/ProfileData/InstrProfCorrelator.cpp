@@ -206,8 +206,8 @@ InstrProfCorrelatorImpl<IntPtrT>::get(
   if (Obj.isELF() || Obj.isCOFF())
     return std::make_unique<BinaryInstrProfCorrelator<IntPtrT>>(std::move(Ctx));
   return make_error<InstrProfError>(
-        instrprof_error::unable_to_correlate_profile,
-        "unsupported binary format (only ELF and COFF are supported)");
+      instrprof_error::unable_to_correlate_profile,
+      "unsupported binary format (only ELF and COFF are supported)");
 }
 
 template <class IntPtrT>

@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// This file defines InstrProfCorrelator used to generate PGO/coverage profiles 
+// This file defines InstrProfCorrelator used to generate PGO/coverage profiles
 // from raw profile data and debug info/binary file.
 //===----------------------------------------------------------------------===//
 

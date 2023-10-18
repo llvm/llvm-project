@@ -199,9 +199,10 @@ OPTIONS
  option to correlate the raw profile.
 
 .. option:: --binary-file=<path>
-Specify the executable that contains profile data and profile name sections for 
-the raw profile. When ``-profile-correlate=binary`` was used for 
-instrumentation, use this option to correlate the raw profile.
+
+ Specify the executable that contains profile data and profile name sections for
+ the raw profile. When ``-profile-correlate=binary`` was used for
+ instrumentation, use this option to correlate the raw profile.
 
 .. option:: --temporal-profile-trace-reservoir-size
 
