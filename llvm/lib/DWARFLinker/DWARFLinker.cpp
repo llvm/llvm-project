@@ -2658,12 +2658,12 @@ Error DWARFLinker::link() {
       continue;
     }
 
-    // In a first phase, just read in the debug info and load all clang modules.
+    // Clone all the clang modules with requires extracting the DIE units. We
+    // don't need the full debug info until the Analyze phase.
     OptContext.CompileUnits.reserve(
         OptContext.File.Dwarf->getNumCompileUnits());
-
     for (const auto &CU : OptContext.File.Dwarf->compile_units()) {
-      auto CUDie = CU->getUnitDIE(false);
+      auto CUDie = CU->getUnitDIE(/*ExtractUnitDIEOnly=*/true);
       if (Options.Verbose) {
         outs() << "Input compilation unit:";
         DIDumpOptions DumpOpts;
@@ -2704,9 +2704,9 @@ Error DWARFLinker::link() {
       return;
 
     for (const auto &CU : Context.File.Dwarf->compile_units()) {
-      // The !isClangModuleRef condition effectively skips over fully resolved
-      // skeleton units.
-      auto CUDie = CU->getUnitDIE();
+      // Previously we only extracted the unit DIEs. We need the full debug info
+      // now.
+      auto CUDie = CU->getUnitDIE(/*ExtractUnitDIEOnly=*/false);
       std::string PCMFile = getPCMFile(CUDie, Options.ObjectPrefixMap);
 
       if (!CUDie || LLVM_UNLIKELY(Options.Update) ||
