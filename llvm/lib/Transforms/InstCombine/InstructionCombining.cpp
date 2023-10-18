@@ -2430,6 +2430,30 @@ static bool isAllocSiteRemovable(Instruction *AI,
         unsigned OtherIndex = (ICI->getOperand(0) == PI) ? 1 : 0;
         if (!isNeverEqualToUnescapedAlloc(ICI->getOperand(OtherIndex), TLI, AI))
           return false;
+        // Do not fold compares to aligned_alloc calls, as they may have to
+        // return null in case the required alignment cannot be satisfied,
+        // unless we can prove that both alignment and size are valid.
+        if ((getAllocFnKind(AI) & AllocFnKind::Aligned) !=
+            AllocFnKind::Unknown) {
+          auto *CB = cast<CallBase>(AI);
+          Function &F = *CB->getCalledFunction();
+          LibFunc TheLibFunc;
+
+          // Check if alignment and size of a call to aligned_alloc is valid,
+          // that is alignment is a power-of-2 and the size is a multiple of the
+          // alignment.
+          auto AlignmentAndSizeKnownValid = [](CallBase *CB) {
+            const APInt *Alignment;
+            const APInt *Size;
+            return match(CB->getArgOperand(0), m_APInt(Alignment)) &&
+                   match(CB->getArgOperand(1), m_APInt(Size)) &&
+                   Alignment->isPowerOf2() && Size->urem(*Alignment).isZero();
+          };
+          if (TLI.getLibFunc(F, TheLibFunc) && TLI.has(TheLibFunc) &&
+              TheLibFunc == LibFunc_aligned_alloc &&
+              !AlignmentAndSizeKnownValid(CB))
+            return false;
+        }
         Users.emplace_back(I);
         continue;
       }

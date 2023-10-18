@@ -272,7 +272,7 @@ getAllocationSize(const Value *V, const TargetLibraryInfo *TLI) {
   return Result;
 }
 
-static AllocFnKind getAllocFnKind(const Value *V) {
+AllocFnKind llvm::getAllocFnKind(const Value *V) {
   if (const auto *CB = dyn_cast<CallBase>(V)) {
     Attribute Attr = CB->getFnAttr(Attribute::AllocKind);
     if (Attr.isValid())
