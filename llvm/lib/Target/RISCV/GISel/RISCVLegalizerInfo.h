@@ -25,6 +25,9 @@ public:
   RISCVLegalizerInfo(const RISCVSubtarget &ST);
 
   bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI) const override;
+
+private:
+  const RISCVSubtarget *ST;
 };
 } // end namespace llvm
 #endif

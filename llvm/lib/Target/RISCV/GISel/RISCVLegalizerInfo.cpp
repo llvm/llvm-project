@@ -13,6 +13,7 @@
 #include "RISCVLegalizerInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -20,7 +21,7 @@
 
 using namespace llvm;
 
-RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
+RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) : ST(&ST) {
   const unsigned XLen = ST.getXLen();
   const LLT XLenLLT = LLT::scalar(XLen);
   const LLT DoubleXLenLLT = LLT::scalar(2 * XLen);
@@ -28,6 +29,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
   const LLT s8 = LLT::scalar(8);
   const LLT s16 = LLT::scalar(16);
   const LLT s32 = LLT::scalar(32);
+
+  const TargetMachine &TM = ST.getTargetLowering()->getTargetMachine();
 
   using namespace TargetOpcode;
 
@@ -131,8 +134,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
       .widenScalarToNextPow2(0)
       .clampScalar(0, XLenLLT, XLenLLT);
 
-  getActionDefinitionsBuilder(G_GLOBAL_VALUE)
-      .legalFor({p0});
+  if (TM.getCodeModel() == CodeModel::Small)
+    getActionDefinitionsBuilder(G_GLOBAL_VALUE).custom();
+  else
+    getActionDefinitionsBuilder(G_GLOBAL_VALUE).legalFor({p0});
 
   if (ST.hasStdExtM() || ST.hasStdExtZmmul()) {
     getActionDefinitionsBuilder(G_MUL)
@@ -176,10 +181,34 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
 
 bool RISCVLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
                                         MachineInstr &MI) const {
+  MachineIRBuilder &MIB = Helper.MIRBuilder;
+
   switch (MI.getOpcode()) {
   default:
     // No idea what to do.
     return false;
+  case TargetOpcode::G_GLOBAL_VALUE: {
+    Register DstReg = MI.getOperand(0).getReg();
+    MachineOperand &GlobalOp = MI.getOperand(1);
+    const GlobalValue *GV = GlobalOp.getGlobal();
+    auto &TM = ST->getTargetLowering()->getTargetMachine();
+    int64_t Offset = GlobalOp.getOffset();
+
+    switch (TM.getCodeModel()) {
+    case CodeModel::Small: {
+      auto AddrHi = MIB.buildInstr(RISCV::G_RISCV_HI, {LLT::pointer(0, 64)}, {})
+                        .addGlobalAddress(GV, Offset, RISCVII::MO_HI);
+
+      MIB.buildInstr(RISCV::G_RISCV_ADD_LO, {DstReg}, {AddrHi})
+                      .addGlobalAddress(GV, Offset, RISCVII::MO_LO);
+
+      MI.eraseFromParent();
+      return true;
+    }
+    default:
+      llvm_unreachable("Code model not handled!");
+    }
+  }
   case TargetOpcode::G_SEXT_INREG: {
     // Source size of 32 is sext.w.
     int64_t SizeInBits = MI.getOperand(2).getImm();

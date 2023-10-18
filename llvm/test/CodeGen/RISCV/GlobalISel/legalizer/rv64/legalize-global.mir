@@ -23,8 +23,9 @@ machineFunctionInfo:
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: test_global
-    ; CHECK: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var
-    ; CHECK-NEXT: $x10 = COPY [[GV]](p0)
+    ; CHECK: [[RISCV_HI:%[0-9]+]]:_(p0) = G_RISCV_HI target-flags(riscv-hi) @var
+    ; CHECK-NEXT: [[RISCV_ADD_LO:%[0-9]+]]:_(p0) = G_RISCV_ADD_LO [[RISCV_HI]](p0), target-flags(riscv-lo) @var
+    ; CHECK-NEXT: $x10 = COPY [[RISCV_ADD_LO]](p0)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(p0) = G_GLOBAL_VALUE @var
     $x10 = COPY %0(p0)
