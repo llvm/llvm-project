@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: 32-bit-pointer
+// REQUIRES: large_tests
 
 // Test that tellp() does not break the stringstream after INT_MAX, due to use
 // of pbump() that accept int.
