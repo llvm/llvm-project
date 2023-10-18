@@ -7,21 +7,21 @@ declare void @effect(i32 zeroext)
 ; RUN: echo 'f foo' >> %t1
 ; RUN: echo 'p 0 3 5' >> %t1
 ; RUN: echo 'c 0 3.1 5.1 1 2 3 4 5' >> %t1
-; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -basic-block-sections=%t1 | FileCheck %s --check-prefixes=PATH1,FOOSECTIONS,FOOCLONE
+; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -enable-basic-block-path-cloning -basic-block-sections=%t1 | FileCheck %s --check-prefixes=PATH1,FOOSECTIONS,FOOCLONE
 ; RUN: echo 'v1' > %t2
 ; RUN: echo 'f foo' >> %t2
 ; RUN: echo 'p 0 3 5' >> %t2
 ; RUN: echo 'p 1 3 4 5' >> %t2
 ; RUN: echo 'c 0 3.1 5.1' >> %t2
 ; RUN: echo 'c 1 3.2 4.1 5.2 2 3 4 5' >> %t2
-; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -basic-block-sections=%t2 | FileCheck %s --check-prefixes=PATH2,FOOSECTIONS,FOOCLONE
+; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -enable-basic-block-path-cloning -basic-block-sections=%t2 | FileCheck %s --check-prefixes=PATH2,FOOSECTIONS,FOOCLONE
 
 ;; Test failed application of path cloning.
 ; RUN: echo 'v1' > %t3
 ; RUN: echo 'f foo' >> %t3
 ; RUN: echo 'p 0 2 3' >> %t3
 ; RUN: echo 'c 0 2.1 3.1 1' >> %t3
-; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -basic-block-sections=%t3 2> %t3.err | FileCheck %s --check-prefixes=FOONOCLONE,FOOSECTIONS
+; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -enable-basic-block-path-cloning -basic-block-sections=%t3 2> %t3.err | FileCheck %s --check-prefixes=FOONOCLONE,FOOSECTIONS
 ; RUN: FileCheck %s --check-prefixes=PATH3-WARN < %t3.err
 ;; Test that valid clonings are applied correctly, even if invalid clonings exist.
 ; RUN: echo 'v1' > %t3_1
@@ -29,13 +29,13 @@ declare void @effect(i32 zeroext)
 ; RUN: echo 'p 0 2 3' >> %t3_1
 ; RUN: echo 'p 0 1 3' >> %t3_1
 ; RUN: echo 'c 0 1.1 3.2 2.1 3.1 1' >> %t3_1
-; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -basic-block-sections=%t3_1 2> %t3_1.err | FileCheck %s --check-prefixes=PATH3_1,FOONOCLONE,FOOSECTIONS
+; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -enable-basic-block-path-cloning -basic-block-sections=%t3_1 2> %t3_1.err | FileCheck %s --check-prefixes=PATH3_1,FOONOCLONE,FOOSECTIONS
 ; RUN: FileCheck %s --check-prefixes=PATH3-WARN < %t3_1.err
 ; RUN: echo 'v1' > %t4
 ; RUN: echo 'f foo' >> %t4
 ; RUN: echo 'p 0 100' >> %t4
 ; RUN: echo 'c 0 100.1 1' >> %t4
-; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -basic-block-sections=%t4 2> %t4.err | FileCheck %s --check-prefixes=FOONOCLONE,FOOSECTIONS
+; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -enable-basic-block-path-cloning -basic-block-sections=%t4 2> %t4.err | FileCheck %s --check-prefixes=FOONOCLONE,FOOSECTIONS
 ; RUN: FileCheck %s --check-prefixes=PATH4-WARN < %t4.err
 
 define void @foo(i1 %a, i1 %b, i1 %c, i1 %d) {
@@ -129,20 +129,20 @@ cold:
 ; RUN: echo 'f bar' >> %t5
 ; RUN: echo 'p 0 1' >> %t5
 ; RUN: echo 'c 0 1.1 2 1' >> %t5
-; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -basic-block-sections=%t5 | FileCheck %s --check-prefixes=PATH5,BARSECTIONS
+; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -enable-basic-block-path-cloning -basic-block-sections=%t5 | FileCheck %s --check-prefixes=PATH5,BARSECTIONS
 
 ;; Test failed application of path cloning for paths with indirect branches.
 ; RUN: echo 'v1' > %t6
 ; RUN: echo 'f bar' >> %t6
 ; RUN: echo 'p 0 1 2' >> %t6
 ; RUN: echo 'c 0 1.1 2.1 1' >> %t6
-; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -basic-block-sections=%t6 2> %t6.err | FileCheck %s --check-prefixes=BARNOCLONE,BARSECTIONS
+; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -enable-basic-block-path-cloning -basic-block-sections=%t6 2> %t6.err | FileCheck %s --check-prefixes=BARNOCLONE,BARSECTIONS
 ; RUN: FileCheck %s --check-prefixes=PATH-INDIR-WARN < %t6.err
 ; RUN: echo 'v1' > %t7
 ; RUN: echo 'f bar' >> %t7
 ; RUN: echo 'p 1 2' >> %t7
 ; RUN: echo 'c 0 1 2.1' >> %t7
-; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -basic-block-sections=%t7 2> %t7.err | FileCheck %s --check-prefixes=BARNOCLONE,BARSECTIONS
+; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -enable-basic-block-path-cloning -basic-block-sections=%t7 2> %t7.err | FileCheck %s --check-prefixes=BARNOCLONE,BARSECTIONS
 ; RUN: FileCheck %s --check-prefixes=PATH-INDIR-WARN < %t7.err
 
 

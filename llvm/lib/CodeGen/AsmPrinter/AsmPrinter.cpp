@@ -1372,7 +1372,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
     if (BBAddrMapVersion > 1) {
       OutStreamer->AddComment("BB id");
       // Emit the BB ID for this basic block.
-      OutStreamer->emitULEB128IntValue(*MBB.getBBID());
+      OutStreamer->emitULEB128IntValue(MBB.getBBID()->BaseID);
     }
     // Emit the basic block offset relative to the end of the previous block.
     // This is zero unless the block is padded due to alignment.
@@ -1955,7 +1955,7 @@ void AsmPrinter::emitFunctionBody() {
       const double MBBRelFreq = MBFI.getBlockFreqRelativeToEntryBlock(&MBB);
       const double AbsMBBFreq = MBBRelFreq * EntryCount;
       *MBBProfileDumpFileOutput.get()
-          << MF->getName() << "," << MBB.getBBID() << "," << AbsMBBFreq << "\n";
+          << MF->getName() << "," << MBB.getBBID()->BaseID << "," << AbsMBBFreq << "\n";
     }
   }
 }
