@@ -98,7 +98,7 @@ struct AbbrevEntryWriter : DataWriter {
 
 struct AbbrevEntryReader {
   AbbrevEntryReader(StringRef Data)
-      : DataStream(Data, support::endianness::little) {}
+      : DataStream(Data, endianness::little) {}
   Expected<dwarf::Tag> readTag();
   Expected<bool> readHasChildren();
 

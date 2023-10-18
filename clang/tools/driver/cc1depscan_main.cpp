@@ -284,7 +284,7 @@ makeDepscanDaemonKey(StringRef Mode, const DepscanSharing &Sharing) {
     // Using same hash size as the module cache hash.
     auto Hash = Hasher.final<sizeof(uint64_t)>();
     uint64_t HashVal =
-        llvm::support::endian::read<uint64_t, llvm::support::native>(
+        llvm::support::endian::read<uint64_t, llvm::endianness::native>(
             Hash.data());
     return toString(llvm::APInt(64, HashVal), 36, /*Signed=*/false);
   };

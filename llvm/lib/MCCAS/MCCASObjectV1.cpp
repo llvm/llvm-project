@@ -121,7 +121,7 @@ struct CUInfo {
   uint16_t DwarfVersion;
 };
 static Expected<CUInfo> getAndSetDebugAbbrevOffsetAndSkip(
-    MutableArrayRef<char> CUData, support::endianness Endian,
+    MutableArrayRef<char> CUData, endianness Endian,
     std::optional<uint32_t> NewOffset = std::nullopt);
 Expected<cas::ObjectProxy>
 MCSchema::createFromMCAssemblerImpl(MachOCASWriter &ObjectWriter,
@@ -505,7 +505,7 @@ static Error materializeDebugInfoOpt(MCCASReader &Reader,
                           StringRef FormData, bool) {
     if (Form == dwarf::Form::DW_FORM_ref4_cas ||
         Form == dwarf::Form::DW_FORM_strp_cas) {
-      auto Reader = BinaryStreamReader(FormData, support::endianness::little);
+      auto Reader = BinaryStreamReader(FormData, endianness::little);
       uint64_t Data64;
       if (auto Err = Reader.readULEB128(Data64))
         handleAllErrors(std::move(Err));
@@ -1064,9 +1064,9 @@ materializeDebugLineSection(MCCASReader &Reader,
       auto Data = DistinctRef->getData();
       DistinctData.append(Data.begin(), Data.end());
       auto Endian = Reader.getEndian();
-      assert((Endian == support::big || Endian == support::little) &&
+      assert((Endian == endianness::big || Endian == endianness::little) &&
              "Endian must be either big or little");
-      DWARFDataExtractor LineTableDataReader(Data, Endian == support::little,
+      DWARFDataExtractor LineTableDataReader(Data, Endian == endianness::little,
                                              8);
       auto Prologue = parseLineTableHeaderAndSkip(LineTableDataReader);
       if (!Prologue)
@@ -1088,11 +1088,11 @@ materializeDebugLineSection(MCCASReader &Reader,
       uint64_t LineTableOffset = 0;
       while (LineTableOffset < Data.size()) {
         auto Endian = Reader.getEndian();
-        assert((Endian == support::big || Endian == support::little) &&
+        assert((Endian == endianness::big || Endian == endianness::little) &&
                "Endian must be either big or little");
         auto Sizes = getOpcodeAndOperandSize(
             toStringRef(DistinctData), Data, DistinctOffset, LineTableOffset,
-            Endian == support::little, OpcodeBase);
+            Endian == endianness::little, OpcodeBase);
         if (!Sizes)
           return Sizes.takeError();
         // Copy opcode and operand, only in the case of DW_LNS_set_file, the
@@ -1347,7 +1347,7 @@ Expected<uint64_t> MCFillFragmentRef::materialize(MCCASReader &Reader,
   char Data[MaxChunkSize];
   for (unsigned I = 0; I != ValueSize; ++I) {
     unsigned Index =
-        Reader.getEndian() == support::little ? I : (ValueSize - I - 1);
+        Reader.getEndian() == endianness::little ? I : (ValueSize - I - 1);
     Data[I] = uint8_t(Value >> (Index * 8));
   }
   for (unsigned I = ValueSize; I < MaxChunkSize; ++I)
@@ -1603,8 +1603,8 @@ static Error writeAlignFragment(MCCASBuilder &Builder,
                                    Twine(Count) + " bytes");
     return Error::success();
   }
-  auto Endian = Builder.ObjectWriter.Target.isLittleEndian() ? support::little
-                                                             : support::big;
+  auto Endian = Builder.ObjectWriter.Target.isLittleEndian() ? endianness::little
+                                                             : endianness::big;
   for (uint64_t I = 0; I != Count; ++I) {
     switch (AF.getValueSize()) {
     default:
@@ -1743,7 +1743,7 @@ mccasformats::v1::getSizeFromDwarfHeaderAndSkip(BinaryStreamReader &Reader) {
 /// does not account for the header size.
 static Expected<CUInfo>
 getAndSetDebugAbbrevOffsetAndSkip(MutableArrayRef<char> CUData,
-                                  support::endianness Endian,
+                                  endianness Endian,
                                   std::optional<uint32_t> NewOffset) {
   BinaryStreamReader Reader(toStringRef(CUData), Endian);
   Expected<size_t> Size = getSizeFromDwarfHeader(Reader);
@@ -2068,7 +2068,7 @@ Error MCCASBuilder::splitDebugInfoAndAbbrevSections() {
 
   InMemoryCASDWARFObject CASObj(*FullAbbrevData, *FullStringOffsetsData,
                                 Asm.getBackend().Endian ==
-                                    support::endianness::little);
+                                    endianness::little);
   auto DWARFObj = std::make_unique<InMemoryCASDWARFObject>(CASObj);
   auto DWARFContextHolder = std::make_unique<DWARFContext>(std::move(DWARFObj));
   auto *DWARFCtx = DWARFContextHolder.get();
@@ -2094,10 +2094,10 @@ inline void copyData(SmallVector<char, 0> &Data, StringRef DebugLineStrRef,
 Expected<uint64_t>
 MCCASBuilder::createOptimizedLineSection(StringRef DebugLineStrRef) {
   auto Endian = Asm.getBackend().Endian;
-  assert((Endian == support::big || Endian == support::little) &&
+  assert((Endian == endianness::big || Endian == endianness::little) &&
          "Endian must be either big or little");
   DWARFDataExtractor LineTableDataReader(DebugLineStrRef,
-                                         Endian == support::little, 8);
+                                         Endian == endianness::little, 8);
   auto Prologue = parseLineTableHeaderAndSkip(LineTableDataReader);
   if (!Prologue)
     return Prologue.takeError();
@@ -2842,7 +2842,7 @@ MCCASReader::reconstructSection(SmallVectorImpl<char> &SectionBuffer,
     if (PrevOffset == RelocationOffsetInSection)
       continue;
     auto RelocationSize =
-        getRelocationSize(Reloc, getEndian() == support::little);
+        getRelocationSize(Reloc, getEndian() == endianness::little);
     /// NumOfBytesToReloc: This denotes the number of bytes needed to be copied
     /// into the \p SectionBuffer before we copy the next addend.
     auto NumOfBytesToReloc = RelocationOffsetInSection - SectionBuffer.size();
@@ -3202,7 +3202,7 @@ Error DIEVisitor::visitDIERef(BinaryStreamReader &DataReader,
 
 Error DIEVisitor::visitDIERef(DIEDataRef StartDIERef) {
   StringRef DIEData = StartDIERef.getData();
-  BinaryStreamReader DataReader(DIEData, support::endianness::little);
+  BinaryStreamReader DataReader(DIEData, endianness::little);
 
   Expected<uint64_t> MaybeAbbrevIdx = readAbbrevIdx(DistinctReader);
   if (!MaybeAbbrevIdx)
@@ -3241,7 +3241,7 @@ Error mccasformats::v1::visitDebugInfo(
     return LoadedTopRef.takeError();
 
   StringRef DistinctData = LoadedTopRef->DistinctData.getData();
-  BinaryStreamReader DistinctReader(DistinctData, support::endianness::little);
+  BinaryStreamReader DistinctReader(DistinctData, endianness::little);
   ArrayRef<char> HeaderData;
 
   auto BeginOffset = DistinctReader.getOffset();
