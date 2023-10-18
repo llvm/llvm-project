@@ -183,12 +183,12 @@ void DataAggregator::start() {
 
   launchPerfProcess("process events",
                     MMapEventsPPI,
-                    "script --show-mmap-events",
+                    "script --show-mmap-events --no-itrace",
                     /*Wait = */false);
 
   launchPerfProcess("task events",
                     TaskEventsPPI,
-                    "script --show-task-events",
+                    "script --show-task-events --no-itrace",
                     /*Wait = */false);
 }
 
