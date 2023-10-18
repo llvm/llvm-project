@@ -15,6 +15,14 @@
 #include <cstdint>
 #include <optional>
 
+namespace mlir::transform {
+class TransformDialect;
+using TransformDialectResourceBlobHandle =
+    mlir::DialectResourceBlobHandle<TransformDialect>;
+} // namespace mlir::transform
+
 #include "mlir/Dialect/Transform/IR/TransformDialectEnums.h.inc"
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/Transform/IR/TransformDialectAttrDefs.h.inc"
 
 #endif // MLIR_DIALECT_TRANSFORM_IR_TRANSFORMATTRS_H

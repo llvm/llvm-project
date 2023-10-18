@@ -113,7 +113,7 @@ LogicalResult transform::detail::parseTransformModuleFromFile(
 ModuleOp transform::detail::getPreloadedTransformModule(MLIRContext *context) {
   auto preloadedLibraryRange =
       context->getOrLoadDialect<transform::TransformDialect>()
-          ->getLibraryModules();
+          ->libraryManager.getLibraryModules();
   if (!preloadedLibraryRange.empty())
     return *preloadedLibraryRange.begin();
   return ModuleOp();

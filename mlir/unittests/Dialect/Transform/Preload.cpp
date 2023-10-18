@@ -67,7 +67,9 @@ TEST(Preload, ContextPreloadConstructedLibrary) {
   OwningOpRef<ModuleOp> transformLibrary =
       parseSourceString<ModuleOp>(library, parserConfig, "<transform-library>");
   EXPECT_TRUE(transformLibrary) << "failed to parse transform module";
-  dialect->registerLibraryModule(std::move(transformLibrary));
+  LogicalResult result = dialect->libraryManager.registerLibraryModule(
+      "<main>", std::move(transformLibrary));
+  EXPECT_TRUE(succeeded(result));
 
   ModuleOp retrievedTransformLibrary =
       transform::detail::getPreloadedTransformModule(&context);

@@ -15,6 +15,7 @@
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/Mutex.h"
 #include <optional>
 
 namespace mlir {
@@ -66,8 +67,50 @@ protected:
       : TransformDialectDataBase(TypeID::get<DerivedTy>(), ctx) {}
 };
 
-#ifndef NDEBUG
 namespace detail {
+/// A thread-safe storage object for modules containing libraries of transform
+/// dialect symbols.
+class TransformLibraryManager {
+public:
+  /// Returns a list of modules stored in the the manager. The list itself is
+  /// copied to avoid concurrent modifications.
+  SmallVector<ModuleOp, 2> getLibraryModules() const;
+
+  /// Get a named transform symbol from the library with the given key.
+  Operation *getRegisteredTransform(StringRef key, StringAttr symbol) const;
+
+  /// Get a list of "key, filename" pairs for libraries stored in the manager,
+  /// useful for roundtripping.
+  SmallVector<std::pair<std::string, std::string>, 2>
+  getOrderedLibraryNames() const;
+
+  /// Transfer the library module to the manager and associate it with the
+  /// provided key. Optionally record the source filename.
+  LogicalResult registerLibraryModule(StringRef key,
+                                      OwningOpRef<ModuleOp> &&library,
+                                      StringRef filename = "");
+
+private:
+  /// Mutex guarding the manager content as it may be accessed from passes
+  /// concurrently.
+  mutable llvm::sys::SmartRWMutex<true> mutex;
+
+  /// Library modules registered.
+  llvm::StringMap<size_t> libraryModulePositions;
+
+  /// Keep a sorted list too for iteration.
+  SmallVector<OwningOpRef<ModuleOp>, 2> orderedOwningLibraryModules;
+
+  /// Keep list of external files used for printing again.
+  SmallVector<std::pair<std::string, std::string>, 2> orderedLibraryNames;
+
+  /// Precomputed symbol tables.
+  SmallVector<SymbolTable> orderedSymbolTables;
+};
+
+class TransformOpAsmInterface;
+
+#ifndef NDEBUG
 /// Asserts that the operations provided as template arguments implement the
 /// TransformOpInterface and MemoryEffectsOpInterface. This must be a dynamic
 /// assertion since interface implementations may be registered at runtime.
@@ -78,8 +121,8 @@ void checkImplementsTransformOpInterface(StringRef name, MLIRContext *context);
 /// interface implementations may be registered at runtime.
 void checkImplementsTransformHandleTypeInterface(TypeID typeID,
                                                  MLIRContext *context);
-} // namespace detail
 #endif // NDEBUG
+} // namespace detail
 } // namespace transform
 } // namespace mlir
 

@@ -160,9 +160,8 @@ public:
     options = options.enableExpensiveChecks(enableExpensiveChecks);
     if (failed(transform::detail::interpreterBaseRunOnOperationImpl(
             getOperation(), getArgument(), getSharedTransformModule(),
-            getTransformLibraryModule(), extraMapping, options,
-            transformFileName, transformLibraryPaths, debugPayloadRootTag,
-            debugTransformRootTag, getBinaryName())))
+            extraMapping, options, transformFileName, transformLibraryPaths,
+            debugPayloadRootTag, debugTransformRootTag, getBinaryName())))
       return signalPassFailure();
   }
 

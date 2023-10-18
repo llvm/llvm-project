@@ -268,10 +268,12 @@ static void performOptionalDebugActions(
     transform->removeAttr(kTransformDialectTagAttrName);
 }
 
+const static llvm::StringLiteral kDefaultLibraryName =
+    "__transform_interpreter_parsed_library";
+
 LogicalResult transform::detail::interpreterBaseRunOnOperationImpl(
     Operation *target, StringRef passName,
     const std::shared_ptr<OwningOpRef<ModuleOp>> &sharedTransformModule,
-    const std::shared_ptr<OwningOpRef<ModuleOp>> &transformLibraryModule,
     const RaggedArray<MappedValue> &extraMappings,
     const TransformOptions &options,
     const Pass::Option<std::string> &transformFileName,
@@ -281,10 +283,21 @@ LogicalResult transform::detail::interpreterBaseRunOnOperationImpl(
     StringRef binaryName) {
   bool hasSharedTransformModule =
       sharedTransformModule && *sharedTransformModule;
-  bool hasTransformLibraryModule =
-      transformLibraryModule && *transformLibraryModule;
+  auto *dialect =
+      target->getContext()->getLoadedDialect<transform::TransformDialect>();
+  const transform::detail::TransformLibraryManager &libMgr =
+      dialect->libraryManager;
+  SmallVector<ModuleOp, 2> libraries = libMgr.getLibraryModules();
+  bool hasTransformLibraryModule = !libraries.empty();
   assert((!hasSharedTransformModule || !hasTransformLibraryModule) &&
          "at most one of shared or library transform module can be set");
+  if (libraries.size() > 1) {
+    InFlightDiagnostic diag =
+        emitError(libraries[1]->getLoc())
+        << "more than one library module not currently supported";
+    diag.attachNote(libraries[0].getLoc()) << "first library";
+    return diag;
+  }
 
   // Step 1
   // ------
@@ -337,7 +350,7 @@ LogicalResult transform::detail::interpreterBaseRunOnOperationImpl(
     }
     if (failed(detail::mergeSymbolsInto(
             SymbolTable::getNearestSymbolTable(transformRoot),
-            transformLibraryModule->get()->clone())))
+            libraries[0]->clone())))
       return emitError(transformRoot->getLoc(),
                        "failed to merge library symbols into transform root");
   }
@@ -361,7 +374,6 @@ LogicalResult transform::detail::interpreterBaseInitializeImpl(
     MLIRContext *context, StringRef transformFileName,
     ArrayRef<std::string> transformLibraryPaths,
     std::shared_ptr<OwningOpRef<ModuleOp>> &sharedTransformModule,
-    std::shared_ptr<OwningOpRef<ModuleOp>> &transformLibraryModule,
     function_ref<std::optional<LogicalResult>(OpBuilder &, Location)>
         moduleBuilder) {
   auto unknownLoc = UnknownLoc::get(context);
@@ -435,8 +447,8 @@ LogicalResult transform::detail::interpreterBaseInitializeImpl(
     }
   }
 
-  // Use parsed libaries to resolve symbols in shared transform module or return
-  // as separate library module.
+  // Use parsed libraries to resolve symbols in shared transform module or
+  // return as separate library module.
   if (sharedTransformModule && *sharedTransformModule) {
     if (failed(detail::mergeSymbolsInto(sharedTransformModule->get(),
                                         std::move(mergedParsedLibraries))))
@@ -444,8 +456,12 @@ LogicalResult transform::detail::interpreterBaseInitializeImpl(
              << "failed to merge symbols from library files "
                 "into shared transform module";
   } else {
-    transformLibraryModule = std::make_shared<OwningOpRef<ModuleOp>>(
-        std::move(mergedParsedLibraries));
+    // TODO: we should list libraries as resources instead of pass options.
+    transform::detail::TransformLibraryManager &libMgr =
+        context->getLoadedDialect<transform::TransformDialect>()
+            ->libraryManager;
+    return libMgr.registerLibraryModule(kDefaultLibraryName,
+                                        std::move(mergedParsedLibraries));
   }
   return success();
 }

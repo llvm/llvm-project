@@ -21,6 +21,12 @@ mlir_tablegen(TransformDialectEnums.cpp.inc -gen-enum-defs)
 add_public_tablegen_target(MLIRTransformDialectEnumIncGen)
 add_dependencies(mlir-headers MLIRTransformDialectEnumIncGen)
 
+set(LLVM_TARGET_DEFINITIONS TransformAttrs.td)
+mlir_tablegen(TransformDialectAttrDefs.h.inc -gen-attrdef-decls)
+mlir_tablegen(TransformDialectAttrDefs.cpp.inc -gen-attrdef-defs)
+add_public_tablegen_target(MLIRTransformDialectAttrDefsIncGen)
+add_dependencies(mlir-headers MLIRTransformDialectAttrDefsIncGen)
+
 add_mlir_dialect(TransformOps transform)
 add_mlir_doc(TransformOps TransformOps Dialects/ -gen-op-doc -dialect=transform)
 

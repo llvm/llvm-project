@@ -12,7 +12,15 @@
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/DialectResourceBlobManager.h"
+#include "mlir/IR/OpImplementation.h"
+#include "mlir/Parser/Parser.h"
 #include "llvm/ADT/SCCIterator.h"
+#include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/RWMutex.h"
+#include "llvm/Support/SourceMgr.h"
 
 using namespace mlir;
 
@@ -57,6 +65,150 @@ void transform::detail::checkImplementsTransformHandleTypeInterface(
 }
 #endif // NDEBUG
 
+/// A handle used to reference external elements instances.
+using TransformDialectResourceBlobHandle =
+    mlir::DialectResourceBlobHandle<mlir::transform::TransformDialect>;
+
+struct TransformResourceBlobManagerInterface
+    : public ResourceBlobManagerDialectInterfaceBase<
+          TransformDialectResourceBlobHandle> {
+  using ResourceBlobManagerDialectInterfaceBase<
+      TransformDialectResourceBlobHandle>::
+      ResourceBlobManagerDialectInterfaceBase;
+};
+
+//===----------------------------------------------------------------------===//
+// TransformOpAsmInterface
+//===----------------------------------------------------------------------===//
+
+class mlir::transform::detail::TransformOpAsmInterface
+    : public OpAsmDialectInterface {
+public:
+  using OpAsmDialectInterface::OpAsmDialectInterface;
+  TransformOpAsmInterface(Dialect *dialect,
+                          TransformResourceBlobManagerInterface &mgr)
+      : OpAsmDialectInterface(dialect), blobManager(mgr),
+        dialect(*static_cast<transform::TransformDialect *>(dialect)) {}
+
+  //===------------------------------------------------------------------===//
+  // Resources
+  //===------------------------------------------------------------------===//
+
+  std::string
+  getResourceKey(const AsmDialectResourceHandle &handle) const override {
+    return cast<TransformDialectResourceBlobHandle>(handle).getKey().str();
+  }
+
+  FailureOr<AsmDialectResourceHandle>
+  declareResource(StringRef key) const final {
+    return blobManager.insert(key);
+  }
+
+  LogicalResult parseResource(AsmParsedResourceEntry &entry) const final {
+    // If its a string, then treat it as a filename.
+    // TODO: Could be extended for blob resources where the file is encoded.
+    if (entry.getKind() != AsmResourceEntryKind::String)
+      return failure();
+
+    FailureOr<std::string> name = entry.parseAsString();
+    if (failed(name))
+      return failure();
+
+    auto fileOr = llvm::MemoryBuffer::getFile(*name);
+    if (!fileOr) {
+      return entry.emitError()
+             << "failed to load resource: " << fileOr.getError().message();
+    }
+
+    // Parse the module in the source file.
+    llvm::SourceMgr sourceMgr;
+    sourceMgr.AddNewSourceBuffer(std::move(fileOr.get()), llvm::SMLoc());
+    auto transformModule = OwningOpRef<ModuleOp>(
+        parseSourceFile<ModuleOp>(sourceMgr, getContext()));
+    if (!transformModule)
+      return entry.emitError() << "failed to parse Transform module";
+
+    return dialect.libraryManager.registerLibraryModule(
+        entry.getKey(), std::move(transformModule), *name);
+  }
+
+  void
+  buildResources(Operation *op,
+                 const SetVector<AsmDialectResourceHandle> &referencedResources,
+                 AsmResourceBuilder &provider) const final {
+    // Only print for top-level libraries, print without considering what is
+    // referenced to capture state.
+    if (op->getParentOp() == nullptr) {
+      // On top-level op print libraries additionally.
+      for (auto &&[key, filename] :
+           dialect.libraryManager.getOrderedLibraryNames())
+        provider.buildString(key, filename);
+    }
+  }
+
+private:
+  /// The blob manager for the dialect.
+  TransformResourceBlobManagerInterface &blobManager;
+
+  /// Back reference to the dialect to which the interface is attached.
+  TransformDialect &dialect;
+};
+
+//===----------------------------------------------------------------------===//
+// TransformLibraryManager
+//===----------------------------------------------------------------------===//
+
+SmallVector<ModuleOp, 2>
+transform::detail::TransformLibraryManager::getLibraryModules() const {
+  llvm::sys::SmartScopedReader<true> lock(mutex);
+  return llvm::to_vector<2>(llvm::map_range(
+      orderedOwningLibraryModules,
+      [](const OwningOpRef<ModuleOp> &owning) { return owning.get(); }));
+}
+
+SmallVector<std::pair<std::string, std::string>, 2>
+transform::detail::TransformLibraryManager::getOrderedLibraryNames() const {
+  llvm::sys::SmartScopedReader<true> lock(mutex);
+  return orderedLibraryNames;
+}
+
+Operation *transform::detail::TransformLibraryManager::getRegisteredTransform(
+    StringRef key, StringAttr symbolName) const {
+  llvm::sys::SmartScopedReader<true> lock(mutex);
+  auto it = libraryModulePositions.find(key);
+  if (it == libraryModulePositions.end())
+    return nullptr;
+
+  return orderedSymbolTables[it->second].lookup(symbolName);
+}
+
+LogicalResult transform::detail::TransformLibraryManager::registerLibraryModule(
+    StringRef key, OwningOpRef<ModuleOp> &&library, StringRef filename) {
+  llvm::sys::SmartScopedWriter<true> lock(mutex);
+  size_t position = orderedOwningLibraryModules.size();
+  orderedOwningLibraryModules.push_back(std::move(library));
+  ModuleOp nonOwning = orderedOwningLibraryModules.back().get();
+  if (!libraryModulePositions.insert({key, position}).second) {
+    // InFlightDiagnostic diag = emitError(nonOwning->getLoc())
+    //                           << "module for key '" << key
+    //                           << "' already registered";
+    orderedOwningLibraryModules.pop_back();
+    // return diag;
+    return success();
+  }
+
+  orderedLibraryNames.push_back({key.str(), filename.str()});
+  orderedSymbolTables.emplace_back(nonOwning.getOperation());
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// TransformDialect
+//===----------------------------------------------------------------------===//
+
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/Transform/IR/TransformDialectAttrDefs.cpp.inc"
+
 void transform::TransformDialect::initialize() {
   // Using the checked versions to enable the same assertions as for the ops
   // from extensions.
@@ -64,7 +216,32 @@ void transform::TransformDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/Transform/IR/TransformOps.cpp.inc"
       >();
+  addAttributes<
+#define GET_ATTRDEF_LIST
+#include "mlir/Dialect/Transform/IR/TransformDialectAttrDefs.cpp.inc"
+      >();
   initializeTypes();
+
+  auto &blobInterface = addInterface<TransformResourceBlobManagerInterface>();
+  addInterface<detail::TransformOpAsmInterface>(blobInterface);
+}
+
+Attribute transform::TransformDialect::parseAttribute(DialectAsmParser &parser,
+                                                      Type type) const {
+  // Parse the kind keyword first.
+  StringRef attrKind;
+  Attribute attr;
+  OptionalParseResult result =
+      generatedAttributeParser(parser, &attrKind, type, attr);
+  if (result.has_value())
+    return attr;
+  return {};
+}
+
+void transform::TransformDialect::printAttribute(
+    Attribute attr, DialectAsmPrinter &printer) const {
+  if (succeeded(generatedAttributePrinter(attr, printer)))
+    return;
 }
 
 Type transform::TransformDialect::parseType(DialectAsmParser &parser) const {

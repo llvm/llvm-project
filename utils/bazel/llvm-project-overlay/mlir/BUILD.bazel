@@ -11270,6 +11270,7 @@ cc_library(
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":LoopLikeInterface",
+        ":Parser",
         ":Pass",
         ":Rewrite",
         ":SideEffectInterfaces",
