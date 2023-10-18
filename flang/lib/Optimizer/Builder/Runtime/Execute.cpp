@@ -34,7 +34,7 @@ mlir::Value fir::runtime::genExecuteCommandLine(
   mlir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
   mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
   mlir::Value sourceLine =
-      fir::factory::locationToLineNo(builder, loc, runtimeFuncTy.getInput(6));
+      fir::factory::locationToLineNo(builder, loc, runtimeFuncTy.getInput(5));
   llvm::SmallVector<mlir::Value> args =
       fir::runtime::createArguments(builder, loc, runtimeFuncTy, command, wait,
                                     exitstat, cmdstat, cmdmsg, sourceFile,
