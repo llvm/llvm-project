@@ -1048,6 +1048,9 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
     case CC_PreserveAll:
       OS << " __attribute__((preserve_all))";
       break;
+    case CC_M68kRTD:
+      OS << " __attribute__((m68k_rtd))";
+      break;
     }
   }
 
@@ -1890,6 +1893,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
 
   case attr::PreserveAll:
     OS << "preserve_all";
+    break;
+  case attr::M68kRTD:
+    OS << "m68k_rtd";
     break;
   case attr::NoDeref:
     OS << "noderef";

@@ -12037,6 +12037,10 @@ CallingConv ASTContext::getDefaultCallingConvention(bool IsVariadic,
       if (!IsVariadic)
         return CC_X86RegCall;
       break;
+    case LangOptions::DCC_RtdCall:
+      if (!IsVariadic)
+        return CC_M68kRTD;
+      break;
     }
   }
   return Target->getDefaultCallingConv();
