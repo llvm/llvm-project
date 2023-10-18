@@ -1,5 +1,20 @@
 // REQUIRES: amdgpu-registered-target
 
+// Check bundle ID for code object v3.
+
+// RUN: not %clang -### --target=x86_64-linux-gnu \
+// RUN:   -mcode-object-version=3 \
+// RUN:   --offload-arch=gfx906 --rocm-path=%S/Inputs/rocm \
+// RUN:   %s 2>&1 | FileCheck -check-prefix=V3 %s
+
+// RUN: not %clang -### --target=x86_64-linux-gnu \
+// RUN:   -mcode-object-version=4 -mcode-object-version=3 \
+// RUN:   --offload-arch=gfx906 --rocm-path=%S/Inputs/rocm \
+// RUN:   %s 2>&1 | FileCheck -check-prefix=V3 %s
+
+// V3: "-mcode-object-version=3"
+// V3: "-mllvm" "--amdhsa-code-object-version=3"
+// V3: "-targets=host-x86_64-unknown-linux,hip-amdgcn-amd-amdhsa--gfx906"
 
 // Check bundle ID for code object version 4.
 
@@ -46,13 +61,6 @@
 // RUN:   %s 2>&1 | FileCheck -check-prefix=INVALID_2 %s
 // INVALID_2: error: invalid integral value '2' in '-mcode-object-version=2'
 // INVALID_2-NOT: error: invalid integral value
-
-// RUN: not %clang -### --target=x86_64-linux-gnu \
-// RUN:   -mcode-object-version=3 \
-// RUN:   --offload-arch=gfx906 --rocm-path=%S/Inputs/rocm \
-// RUN:   %s 2>&1 | FileCheck -check-prefix=INVALID_3 %s
-// INVALID_3: error: invalid integral value '3' in '-mcode-object-version=3'
-// INVALID_3-NOT: error: invalid integral value
 
 // Check LLVM code object version option --amdhsa-code-object-version
 // is passed to -cc1 and -cc1as, and -mcode-object-version is passed
