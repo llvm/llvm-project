@@ -2100,8 +2100,12 @@ public:
                                   MachineBasicBlock::iterator Iter,
                                   DebugLoc &DL,
                                   bool AllowSideEffects = true) const {
+#if 0
+    // FIXME: This should exist once all platforms that use stack protectors
+    // implements it.
     llvm_unreachable(
         "Target didn't implement TargetInstrInfo::buildClearRegister!");
+#endif
   }
 
   /// Return true if the function can safely be outlined from.
