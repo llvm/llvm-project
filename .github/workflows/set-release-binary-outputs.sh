@@ -8,21 +8,9 @@ if [ -z "$GITHUB_OUTPUT" ]; then
   echo "Writing output variables to $GITHUB_OUTPUT"
 fi
 
-github_user=$1
-tag=$2
-upload=$3
-
-if [[ "$github_user" != "tstellar" && "$github_user" != "tru" ]]; then
-  echo "ERROR: User not allowed: $github_user"
-  exit 1
-fi
-pattern='^llvmorg-[0-9]\+\.[0-9]\+\.[0-9]\+\(-rc[0-9]\+\)\?$'
-echo "$tag" | grep -e $pattern
-if [ $? != 0 ]; then
-  echo "ERROR: Tag '$tag' doesn't match pattern: $pattern"
-  exit 1
-fi
-release_version=`echo "$tag" | sed 's/llvmorg-//g'`
+release_version=$1
+upload=$2
+tag="llvmorg-$release_version"
 release=`echo "$release_version" | sed 's/-.*//g'`
 build_dir=`echo "$release_version" | sed 's,^[^-]\+,final,' | sed 's,[^-]\+-rc\(.\+\),rc\1,'`
 rc_flags=`echo "$release_version" | sed 's,^[^-]\+,-final,' | sed 's,[^-]\+-rc\(.\+\),-rc \1 -test-asserts,' | sed 's,--,-,'`
