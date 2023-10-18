@@ -1797,6 +1797,7 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["avxvnniint16"] = HasLeaf7Subleaf1 && ((EDX >> 10) & 1) && HasAVXSave;
   Features["prefetchi"]  = HasLeaf7Subleaf1 && ((EDX >> 14) & 1);
   Features["usermsr"]  = HasLeaf7Subleaf1 && ((EDX >> 15) & 1);
+  Features["avx10.1-256"] = HasLeaf7Subleaf1 && ((EDX >> 19) & 1);
 
   bool HasLeafD = MaxLevel >= 0xd &&
                   !getX86CpuIDAndInfoEx(0xd, 0x1, &EAX, &EBX, &ECX, &EDX);
@@ -1814,6 +1815,11 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   bool HasLeaf19 =
       MaxLevel >= 0x19 && !getX86CpuIDAndInfo(0x19, &EAX, &EBX, &ECX, &EDX);
   Features["widekl"] = HasLeaf7 && HasLeaf19 && ((EBX >> 2) & 1);
+
+  bool HasLeaf24 =
+      MaxLevel >= 0x24 && !getX86CpuIDAndInfo(0x24, &EAX, &EBX, &ECX, &EDX);
+  Features["avx10.1-512"] =
+      Features["avx10.1-256"] && HasLeaf24 && ((EBX >> 18) & 1);
 
   return true;
 }
