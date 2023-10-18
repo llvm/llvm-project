@@ -69,22 +69,26 @@ using PrimaryAllocator = PrimaryAllocatorASVT<LocalAddressSpaceView>;
 # if SANITIZER_FUCHSIA || defined(__powerpc64__)
 const uptr kAllocatorSpace = ~(uptr)0;
 const uptr kAllocatorSize  =  0x40000000000ULL;  // 4T.
+using LSanSizeClassMap = DefaultSizeClassMap;
 #  elif SANITIZER_RISCV64
 const uptr kAllocatorSpace = ~(uptr)0;
 const uptr kAllocatorSize = 0x2000000000ULL;  // 128G.
+using LSanSizeClassMap = DefaultSizeClassMap;
 #  elif SANITIZER_APPLE
 const uptr kAllocatorSpace = 0x600000000000ULL;
 const uptr kAllocatorSize  = 0x40000000000ULL;  // 4T.
+using LSanSizeClassMap = DefaultSizeClassMap;
 #  else
 const uptr kAllocatorSpace = 0x500000000000ULL;
 const uptr kAllocatorSize = 0x40000000000ULL;  // 4T.
+using LSanSizeClassMap = DefaultSizeClassMap;
 #  endif
 template <typename AddressSpaceViewTy>
 struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
   static const uptr kSpaceBeg = kAllocatorSpace;
   static const uptr kSpaceSize = kAllocatorSize;
   static const uptr kMetadataSize = sizeof(ChunkMetadata);
-  typedef DefaultSizeClassMap SizeClassMap;
+  using SizeClassMap = LSanSizeClassMap;
   typedef NoOpMapUnmapCallback MapUnmapCallback;
   static const uptr kFlags = 0;
   using AddressSpaceView = AddressSpaceViewTy;
