@@ -63,8 +63,11 @@ int main(int, char**)
         assert(obj == true);
         {
             bool lockfree = obj.is_lock_free();
+            (void)lockfree;
+#if TEST_STD_VER >= 17
             if (std::atomic<bool>::is_always_lock_free)
                 assert(lockfree);
+#endif
         }
         obj.store(false);
         assert(obj == false);
@@ -117,8 +120,11 @@ int main(int, char**)
         assert(obj == true);
         {
             bool lockfree = obj.is_lock_free();
+            (void)lockfree;
+#if TEST_STD_VER >= 17
             if (std::atomic<bool>::is_always_lock_free)
                 assert(lockfree);
+#endif
         }
         obj.store(false);
         assert(obj == false);
@@ -171,8 +177,11 @@ int main(int, char**)
         assert(obj == true);
         {
             bool lockfree = obj.is_lock_free();
+            (void)lockfree;
+#if TEST_STD_VER >= 17
             if (std::atomic_bool::is_always_lock_free)
                 assert(lockfree);
+#endif
         }
         obj.store(false);
         assert(obj == false);

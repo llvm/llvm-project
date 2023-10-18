@@ -100,8 +100,11 @@ do_test()
     assert(obj == T(0));
     {
         bool lockfree = obj.is_lock_free();
+        (void)lockfree;
+#if TEST_STD_VER >= 17
         if (A::is_always_lock_free)
             assert(lockfree);
+#endif
     }
     obj.store(T(0));
     assert(obj == T(0));
