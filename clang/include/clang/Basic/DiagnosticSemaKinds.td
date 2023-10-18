@@ -2765,10 +2765,14 @@ def err_constexpr_tag : Error<
   "cannot be marked %sub{select_constexpr_spec_kind}1">;
 def err_constexpr_dtor : Error<
   "destructor cannot be declared %sub{select_constexpr_spec_kind}0">;
-def err_constexpr_dtor_subobject : Error<
-  "destructor cannot be declared %sub{select_constexpr_spec_kind}0 because "
+def ext_constexpr_dtor_subobject : ExtWarn<
+  "destructor cannot be declared %sub{select_constexpr_spec_kind}0 before C++23 because "
   "%select{data member %2|base class %3}1 does not have a "
-  "constexpr destructor">;
+  "constexpr destructor">, InGroup<CXX23>, DefaultError;
+def warn_cxx23_compat_constexpr_dtor_subobject : ExtWarn<
+  "%sub{select_constexpr_spec_kind}0 destructor is incompatible with C++ standards before C++23 because "
+  "%select{data member %2|base class %3}1 does not have a "
+  "constexpr destructor">, InGroup<CXXPre23Compat>, DefaultIgnore;
 def note_constexpr_dtor_subobject : Note<
   "%select{data member %1|base class %2}0 declared here">;
 def err_constexpr_wrong_decl_kind : Error<
@@ -2800,11 +2804,14 @@ def note_non_literal_incomplete : Note<
 def note_non_literal_virtual_base : Note<"%select{struct|interface|class}0 "
   "with virtual base %plural{1:class|:classes}1 is not a literal type">;
 def note_constexpr_virtual_base_here : Note<"virtual base class declared here">;
-def err_constexpr_non_literal_return : Error<
-  "%select{constexpr|consteval}0 function's return type %1 is not a literal type">;
-def err_constexpr_non_literal_param : Error<
-  "%select{constexpr|consteval}2 %select{function|constructor}1's %ordinal0 parameter type %3 is "
-  "not a literal type">;
+def ext_constexpr_non_literal_return : ExtWarn<
+  "%select{constexpr|consteval}0 function with non-literal return type %1 is a C++23 extension">, InGroup<CXX23>, DefaultError;
+def warn_cxx23_compat_constexpr_non_literal_return : Warning<
+  "%select{constexpr|consteval}0 function with non-literal return type %1 is incompatible with C++ standards before C++23">, InGroup<CXXPre23Compat>, DefaultIgnore;
+def ext_constexpr_non_literal_param : ExtWarn<
+  "%select{constexpr|consteval}2 %select{function|constructor}1 with %ordinal0 non-literal parameter type %3 is a C++23 extension">, InGroup<CXX23>, DefaultError;
+def warn_cxx23_compat_constexpr_non_literal_param : Warning<
+  "%select{constexpr|consteval}2 %select{function|constructor}1 with %ordinal0 non-literal parameter type %3 is not compatible with C++ standards before C++23">, InGroup<CXXPre23Compat>, DefaultIgnore;
 def err_constexpr_body_invalid_stmt : Error<
   "statement not allowed in %select{constexpr|consteval}1 %select{function|constructor}0">;
 def ext_constexpr_body_invalid_stmt : ExtWarn<
@@ -2865,8 +2872,11 @@ def warn_cxx17_compat_constexpr_local_var_no_init : Warning<
   "is incompatible with C++ standards before C++20">,
   InGroup<CXXPre20Compat>, DefaultIgnore;
 def ext_constexpr_function_never_constant_expr : ExtWarn<
-  "%select{constexpr|consteval}1 %select{function|constructor}0 never produces a "
-  "constant expression">, InGroup<DiagGroup<"invalid-constexpr">>, DefaultError;
+  "%select{constexpr|consteval}1 %select{function|constructor}0 that never produces a "
+  "constant expression is a C++23 extension">, InGroup<DiagGroup<"invalid-constexpr">>, DefaultError;
+def warn_cxx23_compat_constexpr_function_never_constant_expr : Warning<
+  "%select{constexpr|consteval}1 %select{function|constructor}0 that never produces a "
+  "constant expression is incompatible with C++ standards before C++23">, InGroup<CXXPre23Compat>, DefaultIgnore;
 def err_attr_cond_never_constant_expr : Error<
   "%0 attribute expression never produces a constant expression">;
 def err_diagnose_if_invalid_diagnostic_type : Error<
@@ -9539,14 +9549,14 @@ def err_defaulted_special_member_copy_const_param : Error<
 def err_defaulted_copy_assign_not_ref : Error<
   "the parameter for an explicitly-defaulted copy assignment operator must be an "
   "lvalue reference type">;
-def err_incorrect_defaulted_constexpr : Error<
-  "defaulted definition of %sub{select_special_member_kind}0 "
-  "is not constexpr">;
+def ext_incorrect_defaulted_constexpr : ExtWarn<
+  "defaulted definition of %sub{select_special_member_kind}0 that marked %select{constexpr|consteval}1 "
+  "but never produces a constant expression is a C++23 extension">, InGroup<CXX23>, DefaultError;
+def warn_cxx23_compat_incorrect_defaulted_constexpr : Warning<
+  "defaulted definition of %sub{select_special_member_kind}0 that marked %select{constexpr|consteval}1 "
+  "but never produces a constant expression is incompatible with C++ standards before C++23">, InGroup<CXXPre23Compat>, DefaultIgnore;
 def err_incorrect_defaulted_constexpr_with_vb: Error<
   "%sub{select_special_member_kind}0 cannot be 'constexpr' in a class with virtual base class">;
-def err_incorrect_defaulted_consteval : Error<
-  "defaulted declaration of %sub{select_special_member_kind}0 "
-  "cannot be consteval because implicit definition is not constexpr">;
 def warn_defaulted_method_deleted : Warning<
   "explicitly defaulted %sub{select_special_member_kind}0 is implicitly "
   "deleted">, InGroup<DefaultedFunctionDeleted>;

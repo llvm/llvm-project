@@ -153,16 +153,16 @@ namespace dr1460 { // dr1460: 3.5
   namespace Defaulted {
     union A { constexpr A() = default; };
     union B { int n; constexpr B() = default; };
-    // cxx11-17-error@-1 {{defaulted definition of default constructor is not constexpr}}
+    // cxx11-17-error@-1 {{defaulted definition of default constructor that marked constexpr but never produces a constant expression is a C++23 extension}}
     union C { int n = 0; constexpr C() = default; };
     struct D { union {}; constexpr D() = default; };
     // expected-error@-1 {{declaration does not declare anything}}
     struct E { union { int n; }; constexpr E() = default; };
-    // cxx11-17-error@-1 {{defaulted definition of default constructor is not constexpr}}
+    // cxx11-17-error@-1 {{defaulted definition of default constructor that marked constexpr but never produces a constant expression is a C++23 extension}}
     struct F { union { int n = 0; }; constexpr F() = default; };
 
     struct G { union { int n = 0; }; union { int m; }; constexpr G() = default; };
-    // cxx11-17-error@-1 {{defaulted definition of default constructor is not constexpr}}
+    // cxx11-17-error@-1 {{defaulted definition of default constructor that marked constexpr but never produces a constant expression is a C++23 extension}}
     struct H {
       union {
         int n = 0;

@@ -1273,8 +1273,8 @@ namespace PR11595 {
   struct B { B(); A& x; };
   static_assert(B().x == 3, "");  // expected-error {{constant expression}} expected-note {{non-literal type 'B' cannot be used in a constant expression}}
 
-  constexpr bool f(int k) { // expected-error {{constexpr function never produces a constant expression}}
-    return B().x == k; // expected-note {{non-literal type 'B' cannot be used in a constant expression}}
+  constexpr bool f(int k) { // cxx11_20-error {{constexpr function that never produces a constant expression}}
+    return B().x == k; // cxx11_20-note {{non-literal type 'B' cannot be used in a constant expression}}
   }
 }
 
@@ -1326,8 +1326,8 @@ namespace ExternConstexpr {
   constexpr int g() { return q; } // expected-note {{outside its lifetime}}
   constexpr int q = g(); // expected-error {{constant expression}} expected-note {{in call}}
 
-  extern int r; // expected-note {{here}}
-  constexpr int h() { return r; } // expected-error {{never produces a constant}} expected-note {{read of non-const}}
+  extern int r; // cxx11_20-note {{here}}
+  constexpr int h() { return r; } // cxx11_20-error {{never produces a constant}} cxx11_20-note {{read of non-const}}
 
   struct S { int n; };
   extern const S s;
@@ -1767,7 +1767,7 @@ namespace TLS {
 }
 
 namespace Void {
-  constexpr void f() { return; } // cxx11-error{{constexpr function's return type 'void' is not a literal type}}
+  constexpr void f() { return; } // cxx11-error{{constexpr function with non-literal return type 'void' is a C++23 extension}}
 
   void assert_failed(const char *msg, const char *file, int line); // expected-note {{declared here}}
 #define ASSERT(expr) ((expr) ? static_cast<void>(0) : assert_failed(#expr, __FILE__, __LINE__))
@@ -1906,9 +1906,9 @@ namespace StmtExpr {
     });
   }
   static_assert(g(123) == 15129, "");
-  constexpr int h() { // expected-error {{never produces a constant}}
+  constexpr int h() { // cxx11_20-error {{never produces a constant}}
     return ({ // expected-warning {{extension}}
-      return 0; // expected-note {{not supported}}
+      return 0; // cxx11_20-note {{not supported}}
       1;
     });
   }
@@ -2093,8 +2093,8 @@ namespace ZeroSizeTypes {
   // expected-note@-2 {{subtraction of pointers to type 'int[0]' of zero size}}
 
   int arr[5][0];
-  constexpr int f() { // expected-error {{never produces a constant expression}}
-    return &arr[3] - &arr[0]; // expected-note {{subtraction of pointers to type 'int[0]' of zero size}}
+  constexpr int f() { // cxx11_20-error {{never produces a constant expression}}
+    return &arr[3] - &arr[0]; // cxx11_20-note {{subtraction of pointers to type 'int[0]' of zero size}}
   }
 }
 
@@ -2118,8 +2118,8 @@ namespace NeverConstantTwoWays {
   // If we see something non-constant but foldable followed by something
   // non-constant and not foldable, we want the first diagnostic, not the
   // second.
-  constexpr int f(int n) { // expected-error {{never produces a constant expression}}
-    return (int *)(long)&n == &n ? // expected-note {{reinterpret_cast}}
+  constexpr int f(int n) { // cxx11_20-error {{never produces a constant expression}}
+    return (int *)(long)&n == &n ? // cxx11_20-note {{reinterpret_cast}}
         1 / 0 : // expected-warning {{division by zero}}
         0;
   }
@@ -2316,10 +2316,11 @@ namespace InheritedCtor {
 namespace PR28366 {
 namespace ns1 {
 
-void f(char c) { //expected-note2{{declared here}}
+void f(char c) { //expected-note{{declared here}}
+  //cxx11_20-note@-1{{declared here}}
   struct X {
-    static constexpr char f() { //expected-error{{never produces a constant expression}}
-      return c; //expected-error{{reference to local}} expected-note{{function parameter}}
+    static constexpr char f() { // cxx11_20-error {{never produces a constant expression}}
+      return c; //expected-error{{reference to local}} cxx11_20-note{{function parameter}}
     }
   };
   int I = X::f();

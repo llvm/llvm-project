@@ -54,7 +54,7 @@ struct C {
 
 struct D {
   C c;
-  consteval D() = default; // expected-error {{cannot be consteval}}
+  consteval D() = default; // expected-error {{marked consteval but never produces a constant expression}}
   consteval ~D() = default; // expected-error {{destructor cannot be declared consteval}}
 };
 
@@ -884,7 +884,7 @@ void func() {
   S<Baz, 3> s7;
 }
 
-consteval int aConstevalFunction() { // expected-error {{consteval function never produces a constant expression}}
+consteval int aConstevalFunction() { // expected-error {{consteval function that never produces a constant expression}}
   // Defaulted default constructors are implicitly consteval.
   S<Bar, 1> s1;
 

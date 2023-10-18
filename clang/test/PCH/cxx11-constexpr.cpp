@@ -33,7 +33,7 @@ constexpr T plus_seven(T other) {
 #else
 
 static_assert(D(4).k == 9, "");
-constexpr int f(C c) { return 0; } // expected-error {{not a literal type}}
+constexpr int f(C c) { return 0; } // expected-error {{non-literal parameter type}}
 // expected-note@16 {{not an aggregate and has no constexpr constructors}}
 constexpr B b; // expected-error {{constant expression}} expected-note {{non-constexpr}}
                // expected-note@12 {{here}}

@@ -303,7 +303,7 @@ struct constructible_from_sizeless {
 void with_default(svint8_t = svint8_t());
 
 #if __cplusplus >= 201103L
-constexpr int ce_taking_int8(svint8_t) { return 1; } // expected-error {{constexpr function's 1st parameter type 'svint8_t' (aka '__SVInt8_t') is not a literal type}}
+constexpr int ce_taking_int8(svint8_t) { return 1; } // expected-error {{constexpr function with 1st non-literal parameter type 'svint8_t' (aka '__SVInt8_t') is a C++23 extension}}
 #endif
 
 #if __cplusplus < 201703L

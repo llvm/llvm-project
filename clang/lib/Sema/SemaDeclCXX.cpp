@@ -1722,12 +1722,19 @@ static bool CheckConstexprDestructorSubobjects(Sema &SemaRef,
       return true;
 
     if (Kind == Sema::CheckConstexprKind::Diagnose) {
-      SemaRef.Diag(DD->getLocation(), diag::err_constexpr_dtor_subobject)
+      SemaRef.Diag(DD->getLocation(),
+                   SemaRef.getLangOpts().CPlusPlus23
+                       ? diag::warn_cxx23_compat_constexpr_dtor_subobject
+                       : diag::ext_constexpr_dtor_subobject)
           << static_cast<int>(DD->getConstexprKind()) << !FD
           << (FD ? FD->getDeclName() : DeclarationName()) << T;
       SemaRef.Diag(Loc, diag::note_constexpr_dtor_subobject)
           << !FD << (FD ? FD->getDeclName() : DeclarationName()) << T;
     }
+
+    if (SemaRef.getLangOpts().CPlusPlus23)
+      return true;
+
     return false;
   };
 
@@ -1754,11 +1761,17 @@ static bool CheckConstexprParameterTypes(Sema &SemaRef,
     const ParmVarDecl *PD = FD->getParamDecl(ArgIndex);
     assert(PD && "null in a parameter list");
     SourceLocation ParamLoc = PD->getLocation();
-    if (CheckLiteralType(SemaRef, Kind, ParamLoc, *i,
-                         diag::err_constexpr_non_literal_param, ArgIndex + 1,
-                         PD->getSourceRange(), isa<CXXConstructorDecl>(FD),
-                         FD->isConsteval()))
+    if (CheckLiteralType(
+            SemaRef, Kind, ParamLoc, *i,
+            SemaRef.getLangOpts().CPlusPlus23
+                ? diag::warn_cxx23_compat_constexpr_non_literal_param
+                : diag::ext_constexpr_non_literal_param,
+            ArgIndex + 1, PD->getSourceRange(), isa<CXXConstructorDecl>(FD),
+            FD->isConsteval())) {
+      if (SemaRef.getLangOpts().CPlusPlus23)
+        return true;
       return false;
+    }
   }
   return true;
 }
@@ -1767,10 +1780,16 @@ static bool CheckConstexprParameterTypes(Sema &SemaRef,
 /// true. If not, produce a suitable diagnostic and return false.
 static bool CheckConstexprReturnType(Sema &SemaRef, const FunctionDecl *FD,
                                      Sema::CheckConstexprKind Kind) {
-  if (CheckLiteralType(SemaRef, Kind, FD->getLocation(), FD->getReturnType(),
-                       diag::err_constexpr_non_literal_return,
-                       FD->isConsteval()))
+  if (CheckLiteralType(
+          SemaRef, Kind, FD->getLocation(), FD->getReturnType(),
+          SemaRef.getLangOpts().CPlusPlus23
+              ? diag::warn_cxx23_compat_constexpr_non_literal_return
+              : diag::ext_constexpr_non_literal_return,
+          FD->isConsteval())) {
+    if (SemaRef.getLangOpts().CPlusPlus23)
+      return true;
     return false;
+  }
   return true;
 }
 
@@ -2458,8 +2477,11 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
   SmallVector<PartialDiagnosticAt, 8> Diags;
   if (Kind == Sema::CheckConstexprKind::Diagnose &&
       !Expr::isPotentialConstantExpr(Dcl, Diags)) {
-    SemaRef.Diag(Dcl->getLocation(),
-                 diag::ext_constexpr_function_never_constant_expr)
+    SemaRef.Diag(
+        Dcl->getLocation(),
+        SemaRef.getLangOpts().CPlusPlus23
+            ? diag::warn_cxx23_compat_constexpr_function_never_constant_expr
+            : diag::ext_constexpr_function_never_constant_expr)
         << isa<CXXConstructorDecl>(Dcl) << Dcl->isConsteval()
         << Dcl->getNameInfo().getSourceRange();
     for (size_t I = 0, N = Diags.size(); I != N; ++I)
@@ -7852,13 +7874,15 @@ bool Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
           for (const auto &I : RD->vbases())
             Diag(I.getBeginLoc(), diag::note_constexpr_virtual_base_here);
         } else {
-          Diag(MD->getBeginLoc(), MD->isConsteval()
-                                      ? diag::err_incorrect_defaulted_consteval
-                                      : diag::err_incorrect_defaulted_constexpr)
-              << CSM;
+          Diag(MD->getBeginLoc(),
+               getLangOpts().CPlusPlus23
+                   ? diag::warn_cxx23_compat_incorrect_defaulted_constexpr
+                   : diag::ext_incorrect_defaulted_constexpr)
+              << CSM << MD->isConsteval();
         }
     // FIXME: Explain why the special member can't be constexpr.
-    HadError = true;
+    if (!getLangOpts().CPlusPlus23)
+      HadError = true;
   }
 
   if (First) {

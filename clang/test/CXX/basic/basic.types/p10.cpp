@@ -8,7 +8,7 @@ struct NonLiteral { NonLiteral(); };
 // [C++1y] - void
 constexpr void f() {}
 #ifndef CXX1Y
-// expected-error@-2 {{'void' is not a literal type}}
+// expected-error@-2 {{constexpr function with non-literal return type 'void' is a C++23 extension}}
 #endif
 
 // - a scalar type
@@ -40,12 +40,12 @@ constexpr ClassTemp<int> classtemplate2[] = {};
 struct UserProvDtor {
   ~UserProvDtor(); // expected-note {{has a user-provided destructor}}
 };
-constexpr int f(UserProvDtor) { return 0; } // expected-error {{'UserProvDtor' is not a literal type}}
+constexpr int f(UserProvDtor) { return 0; } // expected-error {{non-literal parameter type 'UserProvDtor'}}
 struct NonTrivDtor {
   constexpr NonTrivDtor();
   virtual ~NonTrivDtor() = default; // expected-note {{has a non-trivial destructor}} expected-note {{because it is virtual}}
 };
-constexpr int f(NonTrivDtor) { return 0; } // expected-error {{'NonTrivDtor' is not a literal type}}
+constexpr int f(NonTrivDtor) { return 0; } // expected-error {{non-literal parameter type 'NonTrivDtor'}}
 struct NonTrivDtorBase {
   ~NonTrivDtorBase();
 };
@@ -53,7 +53,7 @@ template<typename T>
 struct DerivedFromNonTrivDtor : T { // expected-note {{'DerivedFromNonTrivDtor<NonTrivDtorBase>' is not literal because it has base class 'NonTrivDtorBase' of non-literal type}}
   constexpr DerivedFromNonTrivDtor();
 };
-constexpr int f(DerivedFromNonTrivDtor<NonTrivDtorBase>) { return 0; } // expected-error {{constexpr function's 1st parameter type 'DerivedFromNonTrivDtor<NonTrivDtorBase>' is not a literal type}}
+constexpr int f(DerivedFromNonTrivDtor<NonTrivDtorBase>) { return 0; } // expected-error {{constexpr function with 1st non-literal parameter type 'DerivedFromNonTrivDtor<NonTrivDtorBase>' is a C++23 extension}}
 struct TrivDtor {
   constexpr TrivDtor();
 };
@@ -77,11 +77,11 @@ struct CtorTemplate {
 struct CopyCtorOnly { // expected-note {{'CopyCtorOnly' is not literal because it is not an aggregate and has no constexpr constructors other than copy or move constructors}}
   constexpr CopyCtorOnly(CopyCtorOnly&);
 };
-constexpr int f(CopyCtorOnly) { return 0; } // expected-error {{'CopyCtorOnly' is not a literal type}}
+constexpr int f(CopyCtorOnly) { return 0; } // expected-error {{non-literal parameter type 'CopyCtorOnly'}}
 struct MoveCtorOnly { // expected-note {{no constexpr constructors other than copy or move constructors}}
   constexpr MoveCtorOnly(MoveCtorOnly&&);
 };
-constexpr int f(MoveCtorOnly) { return 0; } // expected-error {{'MoveCtorOnly' is not a literal type}}
+constexpr int f(MoveCtorOnly) { return 0; } // expected-error {{non-literal parameter type 'MoveCtorOnly'}}
 template<typename T>
 struct CtorArg {
   constexpr CtorArg(T);
@@ -97,7 +97,7 @@ struct Derived : HasVBase {
 template<typename T> struct DerivedFromVBase : T { // expected-note {{struct with virtual base class is not a literal type}}
   constexpr DerivedFromVBase();
 };
-constexpr int f(DerivedFromVBase<HasVBase>) {} // expected-error {{constexpr function's 1st parameter type 'DerivedFromVBase<HasVBase>' is not a literal type}}
+constexpr int f(DerivedFromVBase<HasVBase>) {} // expected-error {{constexpr function with 1st non-literal parameter type 'DerivedFromVBase<HasVBase>' is a C++23 extension}}
 template<typename T> constexpr DerivedFromVBase<T>::DerivedFromVBase() : T() {}
 constexpr int nVBase = (DerivedFromVBase<HasVBase>(), 0); // expected-error {{constant expression}} expected-note {{cannot construct object of type 'DerivedFromVBase<HasVBase>' with virtual base class in a constant expression}}
 
@@ -105,12 +105,12 @@ constexpr int nVBase = (DerivedFromVBase<HasVBase>(), 0); // expected-error {{co
 struct NonLitMember {
   S s; // expected-note {{has data member 's' of non-literal type 'S'}}
 };
-constexpr int f(NonLitMember) {} // expected-error {{1st parameter type 'NonLitMember' is not a literal type}}
+constexpr int f(NonLitMember) {} // expected-error {{1st non-literal parameter type 'NonLitMember' is a C++23 extension}}
 struct NonLitBase :
   S { // expected-note {{base class 'S' of non-literal type}}
   constexpr NonLitBase();
 };
-constexpr int f(NonLitBase) { return 0; } // expected-error {{'NonLitBase' is not a literal type}}
+constexpr int f(NonLitBase) { return 0; } // expected-error {{non-literal parameter type 'NonLitBase'}}
 struct LitMemBase : Agg {
   Agg agg;
 };
@@ -120,7 +120,7 @@ struct MemberType {
   constexpr MemberType();
 };
 constexpr int f(MemberType<int>) { return 0; }
-constexpr int f(MemberType<NonLiteral>) { return 0; } // expected-error {{not a literal type}}
+constexpr int f(MemberType<NonLiteral>) { return 0; } // expected-error {{non-literal parameter type}}
 
 // - an array of literal type [C++1y] other than an array of runtime bound
 struct ArrGood {
@@ -134,7 +134,7 @@ constexpr int f(ArrGood) { return 0; }
 struct ArrBad {
   S s[3]; // expected-note {{data member 's' of non-literal type 'S[3]'}}
 };
-constexpr int f(ArrBad) { return 0; } // expected-error {{1st parameter type 'ArrBad' is not a literal type}}
+constexpr int f(ArrBad) { return 0; } // expected-error {{1st non-literal parameter type 'ArrBad'}}
 
 constexpr int arb(int n) { // expected-note {{declared here}}
   int a[n]; // expected-error {{variable of non-literal type 'int[n]' cannot be defined in a constexpr function}} \
@@ -159,7 +159,7 @@ namespace inherited_ctor {
     D(int);
     using C::C;
   };
-  constexpr int f(D) { return 0; } // expected-error {{not a literal type}}
+  constexpr int f(D) { return 0; } // expected-error {{non-literal parameter type}}
 
   // This one is a bit odd: F inherits E's default constructor, which is
   // constexpr. Because F has a constructor of its own, it doesn't declare a
@@ -178,7 +178,7 @@ namespace inherited_ctor {
   struct H : G { // expected-note {{because}}
     using G::G;
   };
-  constexpr int f(H) { return 0; } // expected-error {{not a literal type}}
+  constexpr int f(H) { return 0; } // expected-error {{non-literal parameter type}}
 
   struct J;
   struct I { constexpr I(const J&); };

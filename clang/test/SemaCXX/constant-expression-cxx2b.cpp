@@ -10,35 +10,41 @@ struct Constexpr{};
 
 #if __cplusplus > 202002L
 
-constexpr int f(int n) {  // expected-error {{constexpr function never produces a constant expression}}
+constexpr int f(int n) {  // cxx2a-error {{constexpr function that never produces a constant expression}} \
+                          // cxx23-warning {{constexpr function that never produces a constant expression is incompatible with C++ standards before C++23}}
   static const int m = n; // expected-note {{control flows through the definition of a static variable}} \
                           // cxx23-warning {{definition of a static variable in a constexpr function is incompatible with C++ standards before C++23}}
   return m;
 }
-constexpr int g(int n) {        // expected-error {{constexpr function never produces a constant expression}}
+constexpr int g(int n) {        // cxx2a-error {{constexpr function that never produces a constant expression}} \
+                                // cxx23-warning {{constexpr function that never produces a constant expression is incompatible with C++ standards before C++23}}
   thread_local const int m = n; // expected-note {{control flows through the definition of a thread_local variable}} \
                                 // cxx23-warning {{definition of a thread_local variable in a constexpr function is incompatible with C++ standards before C++23}}
   return m;
 }
 
-constexpr int c_thread_local(int n) { // expected-error {{constexpr function never produces a constant expression}}
+constexpr int c_thread_local(int n) { // cxx2a-error {{constexpr function that never produces a constant expression}} \
+                                      // cxx23-warning {{constexpr function that never produces a constant expression is incompatible with C++ standards before C++23}}
   static _Thread_local int m = 0;     // expected-note {{control flows through the definition of a thread_local variable}} \
                                       // cxx23-warning {{definition of a static variable in a constexpr function is incompatible with C++ standards before C++23}}
   return m;
 }
 
-constexpr int gnu_thread_local(int n) { // expected-error {{constexpr function never produces a constant expression}}
+constexpr int gnu_thread_local(int n) { // cxx2a-error {{constexpr function that never produces a constant expression}} \
+                                        // cxx23-warning {{constexpr function that never produces a constant expression is incompatible with C++ standards before C++23}}
   static __thread int m = 0;            // expected-note {{control flows through the definition of a thread_local variable}} \
                                         // cxx23-warning {{definition of a static variable in a constexpr function is incompatible with C++ standards before C++23}}
   return m;
 }
 
-constexpr int h(int n) {  // expected-error {{constexpr function never produces a constant expression}}
+constexpr int h(int n) {  // cxx2a-error {{constexpr function that never produces a constant expression}} \
+                          // cxx23-warning {{constexpr function that never produces a constant expression is incompatible with C++ standards before C++23}}
   static const int m = n; // expected-note {{control flows through the definition of a static variable}} \
                           // cxx23-warning {{definition of a static variable in a constexpr function is incompatible with C++ standards before C++23}}
   return &m - &m;
 }
-constexpr int i(int n) {        // expected-error {{constexpr function never produces a constant expression}}
+constexpr int i(int n) {        // cxx2a-error {{constexpr function that never produces a constant expression}} \
+                                // cxx23-warning {{constexpr function that never produces a constant expression is incompatible with C++ standards before C++23}}
   thread_local const int m = n; // expected-note {{control flows through the definition of a thread_local variable}} \
                                  // cxx23-warning {{definition of a thread_local variable in a constexpr function is incompatible with C++ standards before C++23}}
   return &m - &m;

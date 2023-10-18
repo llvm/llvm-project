@@ -41,7 +41,7 @@ void test_builtin_vectorelements() {
 #if defined(__ARM_FEATURE_SVE)
 #include <arm_sve.h>
 
-consteval int consteval_elements() { // expected-error {{consteval function never produces a constant expression}}
+consteval int consteval_elements() { // expected-error {{consteval function that never produces a constant expression}}
   return __builtin_vectorelements(svuint64_t); // expected-note {{cannot determine number of elements for sizeless vectors in a constant expression}}  // expected-note {{cannot determine number of elements for sizeless vectors in a constant expression}} // expected-note {{cannot determine number of elements for sizeless vectors in a constant expression}}
 }
 

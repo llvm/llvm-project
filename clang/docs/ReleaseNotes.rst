@@ -165,6 +165,8 @@ C++23 Feature Support
 - Added a separate warning to warn the use of attributes on lambdas as a C++23 extension
   in previous language versions: ``-Wc++23-lambda-attributes``.
 
+- Implemented `P2448R2: Relaxing some constexpr restrictions <https://wg21.link/P2448R2>`_.
+
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 

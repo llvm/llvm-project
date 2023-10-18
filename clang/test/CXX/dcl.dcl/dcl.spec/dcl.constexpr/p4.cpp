@@ -24,8 +24,8 @@ struct Literal {
 // shall be a literal type.
 struct S {
   constexpr S(int, N::C) {}
-  constexpr S(int, NonLiteral, N::C) {} // expected-error {{constexpr constructor's 2nd parameter type 'NonLiteral' is not a literal type}}
-  constexpr S(int, NonLiteral = 42) {} // expected-error {{constexpr constructor's 2nd parameter type 'NonLiteral' is not a literal type}}
+  constexpr S(int, NonLiteral, N::C) {} // expected-error {{constexpr constructor with 2nd non-literal parameter type 'NonLiteral' is a C++23 extension}}
+  constexpr S(int, NonLiteral = 42) {} // expected-error {{constexpr constructor with 2nd non-literal parameter type 'NonLiteral' is a C++23 extension}}
 
   // In addition, either its function-body shall be = delete or = default
   constexpr S() = default;
@@ -242,15 +242,15 @@ constexpr int f(enable_shared_from_this<int>);
 
 // - every constructor involved in initializing non-static data members and base
 //   class sub-objects shall be a constexpr constructor.
-// This will no longer be the case once we support P2448R2
+// This is the case before C++23.
 struct ConstexprBaseMemberCtors : Literal {
   Literal l;
 
   constexpr ConstexprBaseMemberCtors() : Literal(), l() {} // ok
-  constexpr ConstexprBaseMemberCtors(char) : // expected-error {{constexpr constructor never produces a constant expression}}
+  constexpr ConstexprBaseMemberCtors(char) : // expected-error {{constexpr constructor that never produces a constant expression is a C++23 extension}}
     Literal(0), // expected-note {{non-constexpr constructor}}
     l() {}
-  constexpr ConstexprBaseMemberCtors(double) : Literal(), // expected-error {{constexpr constructor never produces a constant expression}}
+  constexpr ConstexprBaseMemberCtors(double) : Literal(), // expected-error {{constexpr constructor that never produces a constant expression is a C++23 extension}}
     l(0) // expected-note {{non-constexpr constructor}}
   {}
 };
@@ -272,7 +272,7 @@ struct X {
 
 union XU1 { int a; constexpr XU1() = default; };
 #ifndef CXX2A
-// expected-error@-2{{not constexpr}}
+// expected-error@-2{{marked constexpr but never produces a constant expression}}
 #endif
 union XU2 { int a = 1; constexpr XU2() = default; };
 
@@ -282,7 +282,7 @@ struct XU3 {
   };
   constexpr XU3() = default;
 #ifndef CXX2A
-  // expected-error@-2{{not constexpr}}
+  // expected-error@-2{{marked constexpr but never produces a constant expression}}
 #endif
 };
 struct XU4 {
@@ -306,7 +306,7 @@ static_assert(XU4().a == 1, "");
 int kGlobal; // expected-note {{here}}
 struct Z {
   constexpr Z(int a) : n(a) {}
-  constexpr Z() : n(kGlobal) {} // expected-error {{constexpr constructor never produces a constant expression}} expected-note {{read of non-const}}
+  constexpr Z() : n(kGlobal) {} // expected-error {{constexpr constructor that never produces a constant expression is a C++23 extension}} expected-note {{read of non-const}}
   int n;
 };
 
@@ -333,7 +333,7 @@ namespace CtorLookup {
     constexpr B(B&);
   };
   constexpr B::B(const B&) = default;
-  constexpr B::B(B&) = default; // expected-error {{not constexpr}}
+  constexpr B::B(B&) = default; // expected-error {{marked constexpr but never produces a constant expression}}
 
   struct C {
     A a;
@@ -342,7 +342,7 @@ namespace CtorLookup {
     constexpr C(C&);
   };
   constexpr C::C(const C&) = default;
-  constexpr C::C(C&) = default; // expected-error {{not constexpr}}
+  constexpr C::C(C&) = default; // expected-error {{marked constexpr but never produces a constant expression}}
 }
 
 namespace PR14503 {

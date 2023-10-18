@@ -125,7 +125,7 @@ namespace Mutable {
     mutable A a;
   };
   struct C {
-    constexpr C(const C &) = default; // expected-error {{not constexpr}}
+    constexpr C(const C &) = default; // expected-error {{marked constexpr but never produces a constant expression}}
     A a;
   };
 }

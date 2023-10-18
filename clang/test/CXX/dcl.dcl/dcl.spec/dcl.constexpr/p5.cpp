@@ -30,7 +30,7 @@ static_assert(g4() == 5, "");
 
 constexpr int f(bool b)
   { return b ? throw 0 : 0; } // ok
-constexpr int f() { return throw 0, 0; } // expected-error {{constexpr function never produces a constant expression}} expected-note {{subexpression}}
+constexpr int f() { return throw 0, 0; } // expected-error {{constexpr function that never produces a constant expression is a C++23 extension}} expected-note {{subexpression}}
 
 struct B {
   constexpr B(int x) : i(0) { }
@@ -40,14 +40,14 @@ struct B {
 int global; // expected-note {{declared here}}
 
 struct D : B {
-  constexpr D() : B(global) { } // expected-error {{constexpr constructor never produces a constant expression}} expected-note {{read of non-const}}
+  constexpr D() : B(global) { } // expected-error {{constexpr constructor that never produces a constant expression}} expected-note {{read of non-const}}
 };
 
 }
 
 namespace PotentialConstant {
 
-constexpr int Comma(int n) { return // expected-error {{constexpr function never produces a constant expression}}
+constexpr int Comma(int n) { return // expected-error {{constexpr function that never produces a constant expression}}
   (void)(n * 2),
   throw 0, // expected-note {{subexpression}}
   0;

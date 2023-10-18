@@ -64,5 +64,5 @@ namespace TemplateVBase {
     constexpr T3() {}
   };
   constexpr T3<Literal> g3() { return {}; } // ok
-  constexpr T3<VirtBase> g4() { return {}; } // expected-error {{not a literal type}}
+  constexpr T3<VirtBase> g4() { return {}; } // expected-error {{non-literal return type}}
 }

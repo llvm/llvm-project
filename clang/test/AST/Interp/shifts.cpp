@@ -7,10 +7,10 @@
 
 
 namespace shifts {
-  constexpr void test() { // ref-error {{constexpr function never produces a constant expression}} \
-                          // ref-cxx17-error {{constexpr function never produces a constant expression}} \
-                          // expected-error {{constexpr function never produces a constant expression}} \
-                          // cxx17-error {{constexpr function never produces a constant expression}} \
+  constexpr void test() { // ref-error {{constexpr function that never produces a constant expression}} \
+                          // ref-cxx17-error {{constexpr function that never produces a constant expression}} \
+                          // expected-error {{constexpr function that never produces a constant expression}} \
+                          // cxx17-error {{constexpr function that never produces a constant expression}} \
 
     char c; // cxx17-warning {{uninitialized variable}} \
             // ref-cxx17-warning {{uninitialized variable}}
