@@ -65,6 +65,7 @@
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Debuginfod/Debuginfod.h"
 
 #include <memory>
 #include <mutex>
@@ -4187,7 +4188,8 @@ TargetProperties::TargetProperties(Target *target)
         ePropertyInheritTCC, [this] { InheritTCCValueChangedCallback(); });
     m_collection_sp->SetValueChangedCallback(
         ePropertyDisableSTDIO, [this] { DisableSTDIOValueChangedCallback(); });
-
+    m_collection_sp->SetValueChangedCallback(
+        ePropertyDebugInfoDURLs, [this] { DebugInfoDURLsChangedCallback(); });
     m_collection_sp->SetValueChangedCallback(
         ePropertySaveObjectsDir, [this] { CheckJITObjectsDir(); });
     m_experimental_properties_up =
@@ -4898,6 +4900,21 @@ void TargetProperties::SetDebugUtilityExpression(bool debug) {
   const uint32_t idx = ePropertyDebugUtilityExpression;
   SetPropertyAtIndex(idx, debug);
 }
+
+Args TargetProperties::GetDebugInfoDURLs() const {
+  Args urls;
+  m_collection_sp->GetPropertyAtIndexAsArgs(ePropertyDebugInfoDURLs, urls);
+  return urls;
+}
+
+void TargetProperties::DebugInfoDURLsChangedCallback() {
+  Args urls = GetDebugInfoDURLs();
+  llvm::SmallVector<llvm::StringRef> dbginfod_urls;
+  std::transform(urls.begin(), urls.end(), dbginfod_urls.end(),
+                 [](const auto &obj) { return obj.ref(); });
+  llvm::setDefaultDebuginfodUrls(dbginfod_urls);
+}
+
 
 // Target::TargetEventData
 

@@ -47,6 +47,10 @@ namespace llvm {
 
 using llvm::object::BuildIDRef;
 
+SmallVector<StringRef> DebuginfodUrls;
+
+bool DebuginfodUrlsSet = false;
+
 static std::string uniqueKey(llvm::StringRef S) {
   return utostr(xxh3_64bits(S));
 }
@@ -62,13 +66,23 @@ bool canUseDebuginfod() {
 }
 
 SmallVector<StringRef> getDefaultDebuginfodUrls() {
-  const char *DebuginfodUrlsEnv = std::getenv("DEBUGINFOD_URLS");
-  if (DebuginfodUrlsEnv == nullptr)
-    return SmallVector<StringRef>();
-
-  SmallVector<StringRef> DebuginfodUrls;
-  StringRef(DebuginfodUrlsEnv).split(DebuginfodUrls, " ");
+  if (!DebuginfodUrlsSet) {
+    // Only read from the environment variable if the user hasn't already
+    // set the value
+    const char *DebuginfodUrlsEnv = std::getenv("DEBUGINFOD_URLS");
+    if (DebuginfodUrlsEnv != nullptr) {
+      StringRef(DebuginfodUrlsEnv).split(DebuginfodUrls, " ", -1, false);
+    }
+    DebuginfodUrlsSet = true;
+  }
   return DebuginfodUrls;
+}
+
+// Override the default debuginfod URL list.
+void setDefaultDebuginfodUrls(SmallVector<StringRef> URLs) {
+  DebuginfodUrls.clear();
+  DebuginfodUrls.insert(DebuginfodUrls.begin(), URLs.begin(), URLs.end());
+  DebuginfodUrlsSet = true;
 }
 
 /// Finds a default local file caching directory for the debuginfod client,

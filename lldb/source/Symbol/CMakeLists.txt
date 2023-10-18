@@ -38,6 +38,7 @@ add_lldb_library(lldbSymbol NO_PLUGIN_DEPENDENCIES
     lldbHost
     lldbTarget
     lldbUtility
+    LLVMDebuginfod
 
   LINK_COMPONENTS
     Support

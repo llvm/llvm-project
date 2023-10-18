@@ -4,7 +4,7 @@ let Definition = "modulelist" in {
   def EnableExternalLookup: Property<"enable-external-lookup", "Boolean">,
     Global,
     DefaultTrue,
-    Desc<"Control the use of external tools and repositories to locate symbol files. Directories listed in target.debug-file-search-paths and directory of the executable are always checked first for separate debug info files. Then depending on this setting: On macOS, Spotlight would be also used to locate a matching .dSYM bundle based on the UUID of the executable. On NetBSD, directory /usr/libdata/debug would be also searched. On platforms other than NetBSD directory /usr/lib/debug would be also searched.">;
+    Desc<"Control the use of external tools and repositories to locate symbol files. Directories listed in target.debug-file-search-paths and directory of the executable are always checked first for separate debug info files. Then depending on this setting: On macOS, Spotlight would be also used to locate a matching .dSYM bundle based on the UUID of the executable. On NetBSD, directory /usr/libdata/debug would be also searched. On platforms other than NetBSD directory /usr/lib/debug would be also searched. If all other methods fail, and the DEBUGINFOD_URLS environment variable is specified, the Debuginfod protocol is used to acquire symbols from a compatible Debuginfod service.">;
   def EnableBackgroundLookup: Property<"enable-background-lookup", "Boolean">,
     Global,
     DefaultFalse,
