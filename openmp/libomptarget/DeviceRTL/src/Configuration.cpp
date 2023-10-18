@@ -27,8 +27,9 @@ using namespace ompx;
 
 // This variable should be visibile to the plugin so we override the default
 // hidden visibility.
-DeviceEnvironmentTy CONSTANT(__omp_rtl_device_environment)
-    __attribute__((used, retain, weak, visibility("protected")));
+[[gnu::used, gnu::retain, gnu::weak,
+  gnu::visibility("protected")]] DeviceEnvironmentTy
+    CONSTANT(__omp_rtl_device_environment);
 
 uint32_t config::getDebugKind() {
   return __omp_rtl_debug_kind & __omp_rtl_device_environment.DebugKind;
