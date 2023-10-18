@@ -277,6 +277,8 @@ public:
   ComplexPairTy EmitBinDiv(const BinOpInfo &Op);
   ComplexPairTy EmitAlgebraicDiv(llvm::Value *A, llvm::Value *B, llvm::Value *C,
                                  llvm::Value *D);
+  ComplexPairTy EmitRangeReductionDiv(llvm::Value *A, llvm::Value *B,
+                                      llvm::Value *C, llvm::Value *D);
 
   ComplexPairTy EmitComplexBinOpLibCall(StringRef LibCallName,
                                         const BinOpInfo &Op);
@@ -867,8 +869,31 @@ ComplexPairTy ComplexExprEmitter::EmitAlgebraicDiv(llvm::Value *LHSr,
                                                    llvm::Value *LHSi,
                                                    llvm::Value *RHSr,
                                                    llvm::Value *RHSi) {
+  // (a+ib) / (c+id) = ((ac+bd)/(cc+dd)) + i((bc-ad)/(cc+dd))
   llvm::Value *DSTr, *DSTi;
   llvm::Value *AC = Builder.CreateFMul(LHSr, RHSr); // a*c 
+  llvm::Value *BD = Builder.CreateFMul(LHSi, RHSi); // b*d
+  llvm::Value *ACpBD = Builder.CreateFAdd(AC, BD);  // ac+bd
+
+  llvm::Value *CC = Builder.CreateFMul(RHSr, RHSr); // c*c
+  llvm::Value *DD = Builder.CreateFMul(RHSi, RHSi); // d*d
+  llvm::Value *CCpDD = Builder.CreateFAdd(CC, DD);  // cc+dd
+
+  llvm::Value *BC = Builder.CreateFMul(LHSi, RHSr); // b*c
+  llvm::Value *AD = Builder.CreateFMul(LHSr, RHSi); // a*d
+  llvm::Value *BCmAD = Builder.CreateFSub(BC, AD);  // bc-ad
+
+  DSTr = Builder.CreateFDiv(ACpBD, CCpDD);
+  DSTi = Builder.CreateFDiv(BCmAD, CCpDD);
+  return ComplexPairTy(DSTr, DSTi);
+}
+
+ComplexPairTy ComplexExprEmitter::EmitRangeReductionDiv(llvm::Value *LHSr,
+                                                        llvm::Value *LHSi,
+                                                        llvm::Value *RHSr,
+                                                        llvm::Value *RHSi) {
+  llvm::Value *DSTr, *DSTi;
+  llvm::Value *AC = Builder.CreateFMul(LHSr, RHSr); // a*c
   llvm::Value *BD = Builder.CreateFMul(LHSi, RHSi); // b*d
   llvm::Value *ACpBD = Builder.CreateFAdd(AC, BD);  // ac+bd
 
@@ -894,7 +919,9 @@ ComplexPairTy ComplexExprEmitter::EmitBinDiv(const BinOpInfo &Op) {
   llvm::Value *DSTr, *DSTi;
   if (LHSr->getType()->isFloatingPointTy()) {
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, Op.FPFeatures);
-    if (RHSi && (Op.FPFeatures.getCxLimitedRange() ||
+    if (RHSi && CGF.getLangOpts().CxFortranRules) {
+      return EmitRangeReductionDiv(LHSr, LHSi, RHSr, RHSi);
+    } else if (RHSi && (Op.FPFeatures.getCxLimitedRange() ||
                  CGF.getLangOpts().CxLimitedRange)) {
       if (!LHSi)
         LHSi = llvm::Constant::getNullValue(RHSi->getType());

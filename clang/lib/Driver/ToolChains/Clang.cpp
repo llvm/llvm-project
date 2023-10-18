@@ -2807,21 +2807,42 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   bool StrictFPModel = false;
   StringRef Float16ExcessPrecision = "";
   StringRef BFloat16ExcessPrecision = "";
+  StringRef CxLimitedRange = "NoCxLimiteRange";
+  StringRef CxFortranRules = "NoCxFortranRules";
+  StringRef Range = "";
 
   if (const Arg *A = Args.getLastArg(options::OPT_flimited_precision_EQ)) {
     CmdArgs.push_back("-mlimit-float-precision");
     CmdArgs.push_back(A->getValue());
   }
-  if (const Arg *A = Args.getLastArg(options::OPT_fcx_limited_range))
-    CmdArgs.push_back("-fcx-limited-range");
-  if (const Arg *A = Args.getLastArg(options::OPT_fno_cx_limited_range))
-    CmdArgs.push_back("-fno-cx-limited-range");
 
   for (const Arg *A : Args) {
     auto optID = A->getOption().getID();
     bool PreciseFPModel = false;
     switch (optID) {
     default:
+      break;
+    case options::OPT_fcx_limited_range: {
+      if (Range == "")
+        Range = "CxLimitedRange";
+      else
+        D.Diag(clang::diag::err_drv_incompatible_options)
+            << "fcx-limited-range" << Range;
+      break;
+    }
+    case options::OPT_fno_cx_limited_range:
+      Range = "NoCxLimitedRange";
+      break;
+    case options::OPT_fcx_fortran_rules: {
+      if (Range == "")
+        Range = "CxFortranRules";
+      else
+        D.Diag(clang::diag::err_drv_incompatible_options)
+            << "fcx-fortan-rules" << Range;
+      break;
+    }
+    case options::OPT_fno_cx_fortran_rules:
+      CxFortranRules = "NoCxFortranRules";
       break;
     case options::OPT_ffp_model_EQ: {
       // If -ffp-model= is seen, reset to fno-fast-math
@@ -3244,6 +3265,15 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   if (Args.hasFlag(options::OPT_fno_strict_float_cast_overflow,
                    options::OPT_fstrict_float_cast_overflow, false))
     CmdArgs.push_back("-fno-strict-float-cast-overflow");
+
+   if (const Arg *A = Args.getLastArg(options::OPT_fcx_limited_range))
+        CmdArgs.push_back("-fcx-limited-range");
+   if (const Arg *A = Args.getLastArg(options::OPT_fcx_fortran_rules))
+     CmdArgs.push_back("-fcx-fortran-rules");
+   if (const Arg *A = Args.getLastArg(options::OPT_fno_cx_limited_range))
+     CmdArgs.push_back("-fno-cx-limited-range");
+   if (const Arg *A = Args.getLastArg(options::OPT_fno_cx_fortran_rules))
+     CmdArgs.push_back("-fno-cx-fortran-rules");
 }
 
 static void RenderAnalyzerOptions(const ArgList &Args, ArgStringList &CmdArgs,
