@@ -448,7 +448,7 @@ MPInt IntMatrix::determinant(IntMatrix* inverse) const {
   *inverse = IntMatrix(nRows, nColumns);
   for (unsigned i = 0; i < nRows; i++)
     for (unsigned j = 0; j < nColumns; j++)
-      inverse->at(i, j) = (fracInverse.at(i, j) * Fraction(detM, 1)).getAsInteger();
+      inverse->at(i, j) = (fracInverse.at(i, j) * detM).getAsInteger();
 
   return detM;
 }
@@ -461,7 +461,7 @@ FracMatrix::FracMatrix(IntMatrix m)
   : FracMatrix(m.getNumRows(), m.getNumColumns()) {
   for (unsigned i = 0; i < m.getNumRows(); i++)
     for (unsigned j = 0; j < m.getNumColumns(); j++)
-      this->at(i, j) = Fraction(m.at(i, j), 1);
+      this->at(i, j) = m.at(i, j);
 }
 
 Fraction FracMatrix::determinant(FracMatrix* inverse) const {
