@@ -60,7 +60,7 @@ std::string CIRGenTypes::getRecordTypeName(const clang::RecordDecl *recordDecl,
     else
       typedefNameDecl->printName(outStream);
   } else {
-    outStream << "anon";
+    outStream << Builder.getUniqueAnonRecordName();
   }
 
   if (!suffix.empty())

@@ -7,13 +7,13 @@ typedef union { yolo y; struct { int *lifecnt; int genpad; }; } yolm2;
 typedef union { yolo y; struct { bool life; int genpad; }; } yolm3;
 
 // CHECK-DAG: !ty_22U23A3ADummy22 = !cir.struct<struct "U2::Dummy" {!s16i, f32} #cir.record.decl.ast>
-// CHECK-DAG: !ty_22anon221 = !cir.struct<struct "anon" {!cir.bool, !s32i} #cir.record.decl.ast>
+// CHECK-DAG: !ty_22anon2E522 = !cir.struct<struct "anon.5" {!cir.bool, !s32i} #cir.record.decl.ast>
 // CHECK-DAG: !ty_22yolo22 = !cir.struct<struct "yolo" {!s32i} #cir.record.decl.ast>
-// CHECK-DAG: !ty_22anon222 = !cir.struct<struct "anon" {!cir.ptr<!s32i>, !s32i} #cir.record.decl.ast>
+// CHECK-DAG: !ty_22anon2E322 = !cir.struct<struct "anon.3" {!cir.ptr<!s32i>, !s32i} #cir.record.decl.ast>
 
-// CHECK-DAG: !ty_22yolm22 = !cir.struct<union "yolm" {!ty_22yolo22, !ty_22anon22}>
-// CHECK-DAG: !ty_22yolm322 = !cir.struct<union "yolm3" {!ty_22yolo22, !ty_22anon221}>
-// CHECK-DAG: !ty_22yolm222 = !cir.struct<union "yolm2" {!ty_22yolo22, !ty_22anon222}>
+// CHECK-DAG: !ty_22yolm22 = !cir.struct<union "yolm" {!ty_22yolo22, !ty_22anon2E122}>
+// CHECK-DAG: !ty_22yolm322 = !cir.struct<union "yolm3" {!ty_22yolo22, !ty_22anon2E522}>
+// CHECK-DAG: !ty_22yolm222 = !cir.struct<union "yolm2" {!ty_22yolo22, !ty_22anon2E322}>
 
 // Should generate a union type with all members preserved.
 union U {

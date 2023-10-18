@@ -32,6 +32,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <optional>
@@ -48,10 +49,17 @@ class CIRGenBuilderTy : public mlir::OpBuilder {
   llvm::RoundingMode DefaultConstrainedRounding = llvm::RoundingMode::Dynamic;
 
   llvm::StringMap<unsigned> GlobalsVersioning;
+  llvm::StringSet<> anonRecordNames;
 
 public:
   CIRGenBuilderTy(mlir::MLIRContext &C, const CIRGenTypeCache &tc)
       : mlir::OpBuilder(&C), typeCache(tc) {}
+
+  std::string getUniqueAnonRecordName() {
+    std::string name = "anon." + std::to_string(anonRecordNames.size());
+    anonRecordNames.insert(name);
+    return name;
+  }
 
   //
   // Floating point specific helpers
