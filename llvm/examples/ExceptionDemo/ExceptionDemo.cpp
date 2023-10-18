@@ -1585,7 +1585,6 @@ static void runExceptionThrow(llvm::orc::LLJIT *JIT, std::string function,
 // End test functions
 //
 
-
 /// This initialization routine creates type info globals and
 /// adds external function declarations to module.
 /// @param numTypeInfos number of linear type info associated type info types
