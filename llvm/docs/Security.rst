@@ -221,7 +221,7 @@ security-sensitive). This requires a rationale, and buy-in from the LLVM
 community as for any RFC. In some cases, parts of the codebase could be handled
 as security-sensitive but need significant work to get to the stage where that's
 manageable. The LLVM community will need to decide whether it wants to invest in
-making these parts of the code secure-able, and maintain these security
+making these parts of the code securable, and maintain these security
 properties over time. In all cases the LLVM Security Group should be consulted,
 since they'll be responding to security issues filed against these parts of the
 codebase.
