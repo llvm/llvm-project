@@ -1013,7 +1013,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     unsigned TrailingOnes = llvm::countr_one(Mask);
     if (ShAmt >= TrailingOnes)
       break;
-    // If the mask has 32 trailing ones, use SRLIW.
+    // If the mask has 32 trailing ones, use SRLI on RV32 or SRLIW on RV64.
     if (TrailingOnes == 32) {
       SDNode *SRLI = CurDAG->getMachineNode(
           Subtarget->is64Bit() ? RISCV::SRLIW : RISCV::SRLI, DL, VT,
