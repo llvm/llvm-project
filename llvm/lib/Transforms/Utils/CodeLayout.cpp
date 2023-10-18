@@ -1025,10 +1025,6 @@ public:
     // Merge pairs of chains while improving the objective.
     mergeChainPairs();
 
-    LLVM_DEBUG(dbgs() << "Cache-directed function sorting reduced the number"
-                      << " of chains from " << NumNodes << " to "
-                      << HotChains.size() << "\n");
-
     // Collect nodes from all the chains.
     return concatChains();
   }
@@ -1074,7 +1070,6 @@ private:
 
     // Initialize chains.
     AllChains.reserve(NumNodes);
-    HotChains.reserve(NumNodes);
     for (NodeT &Node : AllNodes) {
       // Adjust execution counts.
       Node.ExecutionCount = std::max(Node.ExecutionCount, Node.inCount());
@@ -1082,8 +1077,6 @@ private:
       // Create chain.
       AllChains.emplace_back(Node.Index, &Node);
       Node.CurChain = &AllChains.back();
-      if (Node.ExecutionCount > 0)
-        HotChains.push_back(&AllChains.back());
     }
 
     // Initialize chain edges.
@@ -1116,8 +1109,12 @@ private:
     std::set<ChainEdge *, decltype(GainComparator)> Queue(GainComparator);
 
     // Insert the edges into the queue.
-    for (ChainT *ChainPred : HotChains) {
-      for (const auto &[_, Edge] : ChainPred->Edges) {
+    [[maybe_unused]] size_t NumActiveChains = 0;
+    for (NodeT &Node : AllNodes) {
+      if (Node.ExecutionCount == 0)
+        continue;
+      ++NumActiveChains;
+      for (const auto &[_, Edge] : Node.CurChain->Edges) {
         // Ignore self-edges.
         if (Edge->isSelfEdge())
           continue;
@@ -1152,6 +1149,7 @@ private:
       MergeGainT BestGain = BestEdge->getMergeGain();
       mergeChains(BestSrcChain, BestDstChain, BestGain.mergeOffset(),
                   BestGain.mergeType());
+      --NumActiveChains;
 
       // Insert newly created edges into the queue.
       for (const auto &[_, Edge] : BestSrcChain->Edges) {
@@ -1167,6 +1165,10 @@ private:
           Queue.insert(Edge);
       }
     }
+
+    LLVM_DEBUG(dbgs() << "Cache-directed function sorting reduced the number"
+                      << " of chains from " << NumNodes << " to "
+                      << NumActiveChains << "\n");
   }
 
   /// Compute the gain of merging two chains.
@@ -1301,9 +1303,6 @@ private:
     // Merge the edges.
     Into->mergeEdges(From);
     From->clear();
-
-    // Remove the chain from the list of active chains.
-    llvm::erase_value(HotChains, From);
   }
 
   /// Concatenate all chains into the final order.
@@ -1369,9 +1368,6 @@ private:
 
   /// All edges between the chains.
   std::vector<ChainEdge> AllEdges;
-
-  /// Active chains. The vector gets updated at runtime when chains are merged.
-  std::vector<ChainT *> HotChains;
 
   /// The total number of samples in the graph.
   uint64_t TotalSamples{0};
