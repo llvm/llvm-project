@@ -6,6 +6,8 @@ using Type = typename A::NestedType; // expected-error {{type 'float' cannot be 
 template <typename T>
 void Func() {
   using MyType = Type<T>(); // expected-note {{in instantiation of template type alias 'Type' requested here}}
+  // This is a function declaration, not a variable declaration!
+  // After substitution, we do not have a valid function type, and used to crash.
   MyType var;
 }
 

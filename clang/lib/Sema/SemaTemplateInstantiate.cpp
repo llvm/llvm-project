@@ -2662,8 +2662,8 @@ TypeSourceInfo *Sema::SubstFunctionDeclType(TypeSourceInfo *T,
   } else {
     Result = Instantiator.TransformType(TLB, TL);
   }
-  // When clang goes into recovery mode, it might substitute
-  // the incorrect function type with a primitive (e.g., int).
+  // When there are errors resolving types, clang may use IntTy as a fallback,
+  // breaking our assumption that function declarations have function types.
   if (Result.isNull() || !Result->isFunctionType())
     return nullptr;
 
