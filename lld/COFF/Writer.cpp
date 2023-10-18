@@ -1403,11 +1403,7 @@ void Writer::assignAddresses() {
 
     // If /FUNCTIONPADMIN is used, functions are padded in order to create a
     // hotpatchable image.
-    const bool isCodeSection =
-        (sec->header.Characteristics & IMAGE_SCN_CNT_CODE) &&
-        (sec->header.Characteristics & IMAGE_SCN_MEM_READ) &&
-        (sec->header.Characteristics & IMAGE_SCN_MEM_EXECUTE);
-    uint32_t padding = isCodeSection ? config->functionPadMin : 0;
+    uint32_t padding = sec->isCodeSection() ? config->functionPadMin : 0;
 
     for (Chunk *c : sec->chunks) {
       if (padding && c->isHotPatchable())

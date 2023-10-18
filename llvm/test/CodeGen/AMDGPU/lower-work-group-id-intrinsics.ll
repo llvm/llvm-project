@@ -68,18 +68,15 @@ define amdgpu_cs void @caller() {
 ; GFX9-SDAG-NEXT:    s_getpc_b64 s[8:9]
 ; GFX9-SDAG-NEXT:    s_mov_b32 s8, s0
 ; GFX9-SDAG-NEXT:    s_load_dwordx4 s[8:11], s[8:9], 0x10
+; GFX9-SDAG-NEXT:    s_mov_b32 s5, callee@abs32@hi
+; GFX9-SDAG-NEXT:    s_mov_b32 s4, callee@abs32@lo
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, ttmp9
 ; GFX9-SDAG-NEXT:    s_mov_b32 s32, 0
 ; GFX9-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    s_add_u32 s8, s8, s0
 ; GFX9-SDAG-NEXT:    s_addc_u32 s9, s9, 0
-; GFX9-SDAG-NEXT:    s_getpc_b64 s[0:1]
-; GFX9-SDAG-NEXT:    s_add_u32 s0, s0, callee@gotpcrel32@lo+4
-; GFX9-SDAG-NEXT:    s_addc_u32 s1, s1, callee@gotpcrel32@hi+12
-; GFX9-SDAG-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
 ; GFX9-SDAG-NEXT:    s_mov_b64 s[0:1], s[8:9]
 ; GFX9-SDAG-NEXT:    s_mov_b64 s[2:3], s[10:11]
-; GFX9-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GFX9-SDAG-NEXT:    s_endpgm
 ;
@@ -88,42 +85,33 @@ define amdgpu_cs void @caller() {
 ; GFX9-GISEL-NEXT:    s_getpc_b64 s[8:9]
 ; GFX9-GISEL-NEXT:    s_mov_b32 s8, s0
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[8:9], 0x10
+; GFX9-GISEL-NEXT:    s_mov_b32 s4, callee@abs32@lo
+; GFX9-GISEL-NEXT:    s_mov_b32 s5, callee@abs32@hi
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, ttmp9
 ; GFX9-GISEL-NEXT:    s_mov_b32 s32, 0
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    s_add_u32 s8, s8, s0
 ; GFX9-GISEL-NEXT:    s_addc_u32 s9, s9, 0
-; GFX9-GISEL-NEXT:    s_getpc_b64 s[0:1]
-; GFX9-GISEL-NEXT:    s_add_u32 s0, s0, callee@gotpcrel32@lo+4
-; GFX9-GISEL-NEXT:    s_addc_u32 s1, s1, callee@gotpcrel32@hi+12
-; GFX9-GISEL-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
 ; GFX9-GISEL-NEXT:    s_mov_b64 s[0:1], s[8:9]
 ; GFX9-GISEL-NEXT:    s_mov_b64 s[2:3], s[10:11]
-; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GFX9-GISEL-NEXT:    s_endpgm
 ;
 ; GFX12-SDAG-LABEL: caller:
 ; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    s_getpc_b64 s[0:1]
-; GFX12-SDAG-NEXT:    s_add_co_u32 s0, s0, callee@gotpcrel32@lo+4
-; GFX12-SDAG-NEXT:    s_add_co_ci_u32 s1, s1, callee@gotpcrel32@hi+12
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, ttmp9
-; GFX12-SDAG-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-SDAG-NEXT:    s_mov_b32 s1, callee@abs32@hi
+; GFX12-SDAG-NEXT:    s_mov_b32 s0, callee@abs32@lo
 ; GFX12-SDAG-NEXT:    s_mov_b32 s32, 0
-; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: caller:
 ; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_getpc_b64 s[0:1]
-; GFX12-GISEL-NEXT:    s_add_co_u32 s0, s0, callee@gotpcrel32@lo+4
-; GFX12-GISEL-NEXT:    s_add_co_ci_u32 s1, s1, callee@gotpcrel32@hi+12
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, ttmp9
-; GFX12-GISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-GISEL-NEXT:    s_mov_b32 s0, callee@abs32@lo
+; GFX12-GISEL-NEXT:    s_mov_b32 s1, callee@abs32@hi
 ; GFX12-GISEL-NEXT:    s_mov_b32 s32, 0
-; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX12-GISEL-NEXT:    s_endpgm
   %idx = call i32 @llvm.amdgcn.workgroup.id.x()

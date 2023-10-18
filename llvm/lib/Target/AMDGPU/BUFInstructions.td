@@ -1128,10 +1128,16 @@ defm BUFFER_ATOMIC_DEC_X2 : MUBUF_Pseudo_Atomics <
   "buffer_atomic_dec_x2", VReg_64, i64
 >;
 
-let SubtargetPredicate = HasGFX10_BEncoding in
-defm BUFFER_ATOMIC_CSUB : MUBUF_Pseudo_Atomics_RTN <
-  "buffer_atomic_csub", VGPR_32, i32, int_amdgcn_global_atomic_csub
->;
+let SubtargetPredicate = HasGFX10_BEncoding in {
+  defm BUFFER_ATOMIC_CSUB : MUBUF_Pseudo_Atomics_RTN <
+    "buffer_atomic_csub", VGPR_32, i32, int_amdgcn_global_atomic_csub
+  >;
+
+  let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
+    defm BUFFER_ATOMIC_CSUB : MUBUF_Pseudo_Atomics_NO_RTN <
+      "buffer_atomic_csub", VGPR_32, i32
+    >;
+}
 
 let SubtargetPredicate = isGFX8GFX9 in {
 def BUFFER_STORE_LDS_DWORD : MUBUF_Pseudo_Store_Lds <"buffer_store_lds_dword">;
@@ -1718,6 +1724,9 @@ defm : SIBufferAtomicPat<"SIbuffer_atomic_or", i64, "BUFFER_ATOMIC_OR_X2">;
 defm : SIBufferAtomicPat<"SIbuffer_atomic_xor", i64, "BUFFER_ATOMIC_XOR_X2">;
 defm : SIBufferAtomicPat<"SIbuffer_atomic_inc", i64, "BUFFER_ATOMIC_INC_X2">;
 defm : SIBufferAtomicPat<"SIbuffer_atomic_dec", i64, "BUFFER_ATOMIC_DEC_X2">;
+
+let SubtargetPredicate = HasAtomicCSubNoRtnInsts in
+defm : SIBufferAtomicPat<"SIbuffer_atomic_csub", i32, "BUFFER_ATOMIC_CSUB", ["noret"]>;
 
 let SubtargetPredicate = isGFX12Plus in {
   defm : SIBufferAtomicPat_Common<"SIbuffer_atomic_cond_sub_u32", i32, "BUFFER_ATOMIC_COND_SUB_U32_VBUFFER">;
@@ -2570,14 +2579,6 @@ multiclass MUBUF_Real_Atomic_gfx11_gfx12_Renamed_gfx12_Renamed<bits<8> op, strin
   def : Mnem_gfx12<gfx11_name, gfx12_name>;
 }
 
-multiclass MUBUF_Real_Atomic_gfx11_gfx12_Renamed_gfx12_Renamed_Rtn<bits<8> op, string gfx12_name, string gfx11_name> :
-  MUBUF_Real_Atomic_gfx11_Renamed_impl<op, 1, gfx11_name>,
-  MUBUF_Real_Atomic_gfx12_Renamed_impl<op, 1, gfx12_name> {
-  def : Mnem_gfx11<NAME, gfx11_name>;
-  def : Mnem_gfx12<NAME, gfx12_name>;
-  def : Mnem_gfx12<gfx11_name, gfx12_name>;
-}
-
 let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" in {
 def BUFFER_GL0_INV_gfx11          : MUBUF_Real_gfx11<0x02B, BUFFER_GL0_INV>;
 def BUFFER_GL1_INV_gfx11          : MUBUF_Real_gfx11<0x02C, BUFFER_GL1_INV>;
@@ -2638,7 +2639,8 @@ defm BUFFER_ATOMIC_CMPSWAP        : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x034,
 defm BUFFER_ATOMIC_CMPSWAP_X2     : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x042, "buffer_atomic_cmpswap_b64">;
 defm BUFFER_ATOMIC_FCMPSWAP       : MUBUF_Real_Atomic_gfx11_Renamed<0x050, "buffer_atomic_cmpswap_f32">;
 defm BUFFER_ATOMIC_COND_SUB_U32   : MUBUF_Real_Atomic_gfx12<0x050>;
-defm BUFFER_ATOMIC_CSUB           : MUBUF_Real_Atomic_gfx11_gfx12_Renamed_gfx12_Renamed_Rtn<0x037, "buffer_atomic_sub_clamp_u32", "buffer_atomic_csub_u32">;
+defm BUFFER_ATOMIC_CSUB           : MUBUF_Real_Atomic_gfx11_gfx12_Renamed_gfx12_Renamed<0x037, "buffer_atomic_sub_clamp_u32", "buffer_atomic_csub_u32">;
+def : Mnem_gfx11_gfx12<"buffer_atomic_csub", "buffer_atomic_csub_u32">;
 defm BUFFER_ATOMIC_DEC            : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x040, "buffer_atomic_dec_u32">;
 defm BUFFER_ATOMIC_DEC_X2         : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x04D, "buffer_atomic_dec_u64">;
 defm BUFFER_ATOMIC_INC            : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x03F, "buffer_atomic_inc_u32">;
@@ -2911,7 +2913,7 @@ defm BUFFER_ATOMIC_FCMPSWAP_X2 : MUBUF_Real_Atomics_gfx6_gfx7_gfx10<0x05e>;
 defm BUFFER_ATOMIC_FMIN_X2     : MUBUF_Real_Atomics_gfx6_gfx7_gfx10<0x05f>;
 defm BUFFER_ATOMIC_FMAX_X2     : MUBUF_Real_Atomics_gfx6_gfx7_gfx10<0x060>;
 
-defm BUFFER_ATOMIC_CSUB       : MUBUF_Real_Atomics_RTN_gfx10<0x034>;
+defm BUFFER_ATOMIC_CSUB       : MUBUF_Real_Atomics_gfx10<0x034>;
 
 defm BUFFER_WBINVL1_SC        : MUBUF_Real_gfx6<0x070>;
 defm BUFFER_WBINVL1_VOL       : MUBUF_Real_gfx7<0x070>;

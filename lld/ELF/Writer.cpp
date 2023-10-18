@@ -251,6 +251,71 @@ void elf::addReservedSymbols() {
   ElfSym::edata2 = add("_edata", -1);
 }
 
+static void demoteDefined(Defined &sym, DenseMap<SectionBase *, size_t> &map) {
+  if (map.empty())
+    for (auto [i, sec] : llvm::enumerate(sym.file->getSections()))
+      map.try_emplace(sec, i);
+  // Change WEAK to GLOBAL so that if a scanned relocation references sym,
+  // maybeReportUndefined will report an error.
+  uint8_t binding = sym.isWeak() ? uint8_t(STB_GLOBAL) : sym.binding;
+  Undefined(sym.file, sym.getName(), binding, sym.stOther, sym.type,
+            /*discardedSecIdx=*/map.lookup(sym.section))
+      .overwrite(sym);
+}
+
+// If all references to a DSO happen to be weak, the DSO is not added to
+// DT_NEEDED. If that happens, replace ShardSymbol with Undefined to avoid
+// dangling references to an unneeded DSO. Use a weak binding to avoid
+// --no-allow-shlib-undefined diagnostics. Similarly, demote lazy symbols.
+//
+// In addition, demote symbols defined in discarded sections, so that
+// references to /DISCARD/ discarded symbols will lead to errors.
+static void demoteSymbolsAndComputeIsPreemptible() {
+  llvm::TimeTraceScope timeScope("Demote symbols");
+  DenseMap<InputFile *, DenseMap<SectionBase *, size_t>> sectionIndexMap;
+  for (Symbol *sym : symtab.getSymbols()) {
+    if (auto *d = dyn_cast<Defined>(sym)) {
+      if (d->section && !d->section->isLive())
+        demoteDefined(*d, sectionIndexMap[d->file]);
+    } else {
+      auto *s = dyn_cast<SharedSymbol>(sym);
+      if (sym->isLazy() || (s && !cast<SharedFile>(s->file)->isNeeded)) {
+        uint8_t binding = sym->isLazy() ? sym->binding : uint8_t(STB_WEAK);
+        Undefined(nullptr, sym->getName(), binding, sym->stOther, sym->type)
+            .overwrite(*sym);
+        sym->versionId = VER_NDX_GLOBAL;
+      }
+    }
+
+    if (config->hasDynSymTab)
+      sym->isPreemptible = computeIsPreemptible(*sym);
+  }
+}
+
+static void demoteLocalSymbolsInDiscardedSections() {
+  llvm::TimeTraceScope timeScope("Demote local symbols");
+  parallelForEach(ctx.objectFiles, [&](ELFFileBase *file) {
+    DenseMap<SectionBase *, size_t> sectionIndexMap;
+    for (Symbol *sym : file->getLocalSymbols()) {
+      Defined *d = dyn_cast<Defined>(sym);
+      if (d && d->section && !d->section->isLive())
+        demoteDefined(*d, sectionIndexMap);
+    }
+  });
+}
+
+// Fully static executables don't support MTE globals at this point in time, as
+// we currently rely on:
+//   - A dynamic loader to process relocations, and
+//   - Dynamic entries.
+// This restriction could be removed in future by re-using some of the ideas
+// that ifuncs use in fully static executables.
+bool elf::canHaveMemtagGlobals() {
+  return config->emachine == EM_AARCH64 &&
+         config->androidMemtagMode != ELF::NT_MEMTAG_LEVEL_NONE &&
+         (config->relocatable || config->shared || needsInterpSection());
+}
+
 static OutputSection *findSection(StringRef name, unsigned partition = 1) {
   for (SectionCommand *cmd : script->sectionCommands)
     if (auto *osd = dyn_cast<OutputDesc>(cmd))
@@ -345,11 +410,7 @@ template <class ELFT> void elf::createSyntheticSections() {
         std::make_unique<SymbolTableSection<ELFT>>(*part.dynStrTab);
     part.dynamic = std::make_unique<DynamicSection<ELFT>>();
 
-    if (config->emachine == EM_AARCH64 &&
-        config->androidMemtagMode != ELF::NT_MEMTAG_LEVEL_NONE) {
-      if (!config->relocatable && !config->shared && !needsInterpSection())
-        error("--android-memtag-mode is incompatible with fully-static "
-              "executables (-static)");
+    if (canHaveMemtagGlobals()) {
       part.memtagAndroidNote = std::make_unique<MemtagAndroidNote>();
       add(*part.memtagAndroidNote);
       part.memtagDescriptors = std::make_unique<MemtagDescriptors>();
@@ -1927,13 +1988,15 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       for (Partition &part : partitions)
         finalizeSynthetic(part.ehFrame.get());
     }
-
-    if (config->hasDynSymTab) {
-      parallelForEach(symtab.getSymbols(), [](Symbol *sym) {
-        sym->isPreemptible = computeIsPreemptible(*sym);
-      });
-    }
   }
+
+  demoteSymbolsAndComputeIsPreemptible();
+  // Also demote local symbols defined relative to discarded input sections so
+  // that relocations referencing them will lead to errors. To avoid unneeded
+  // work, we only do this when /DISCARD/ is seen, but this demotation also
+  // applies to --gc-sections discarded sections.
+  if (script->seenDiscard)
+    demoteLocalSymbolsInDiscardedSections();
 
   // Change values of linker-script-defined symbols from placeholders (assigned
   // by declareSymbols) to actual definitions.

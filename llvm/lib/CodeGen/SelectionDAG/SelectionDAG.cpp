@@ -161,8 +161,13 @@ bool ISD::isConstantSplatVector(const SDNode *N, APInt &SplatVal) {
   unsigned SplatBitSize;
   bool HasUndefs;
   unsigned EltSize = N->getValueType(0).getVectorElementType().getSizeInBits();
+  // Endianness does not matter here. We are checking for a splat given the
+  // element size of the vector, and if we find such a splat for little endian
+  // layout, then that should be valid also for big endian (as the full vector
+  // size is known to be a multiple of the element size).
+  const bool IsBigEndian = false;
   return BV->isConstantSplat(SplatVal, SplatUndef, SplatBitSize, HasUndefs,
-                             EltSize) &&
+                             EltSize, IsBigEndian) &&
          EltSize == SplatBitSize;
 }
 
@@ -6231,7 +6236,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
 
   // Handle binops special cases.
   if (NumOps == 2) {
-    if (SDValue CFP = foldConstantFPMath(Opcode, DL, VT, Ops[0], Ops[1]))
+    if (SDValue CFP = foldConstantFPMath(Opcode, DL, VT, Ops))
       return CFP;
 
     if (auto *C1 = dyn_cast<ConstantSDNode>(Ops[0])) {
@@ -6424,11 +6429,17 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
 }
 
 SDValue SelectionDAG::foldConstantFPMath(unsigned Opcode, const SDLoc &DL,
-                                         EVT VT, SDValue N1, SDValue N2) {
+                                         EVT VT, ArrayRef<SDValue> Ops) {
+  // TODO: Add support for unary/ternary fp opcodes.
+  if (Ops.size() != 2)
+    return SDValue();
+
   // TODO: We don't do any constant folding for strict FP opcodes here, but we
   //       should. That will require dealing with a potentially non-default
   //       rounding mode, checking the "opStatus" return value from the APFloat
   //       math calculations, and possibly other variations.
+  SDValue N1 = Ops[0];
+  SDValue N2 = Ops[1];
   ConstantFPSDNode *N1CFP = isConstOrConstSplatFP(N1, /*AllowUndefs*/ false);
   ConstantFPSDNode *N2CFP = isConstOrConstSplatFP(N2, /*AllowUndefs*/ false);
   if (N1CFP && N2CFP) {
@@ -7064,7 +7075,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
          "Operand is DELETED_NODE!");
   // Perform various simplifications.
   switch (Opcode) {
-  case ISD::FMA: {
+  case ISD::FMA:
+  case ISD::FMAD: {
     assert(VT.isFloatingPoint() && "This operator only applies to FP types!");
     assert(N1.getValueType() == VT && N2.getValueType() == VT &&
            N3.getValueType() == VT && "FMA types must match!");
@@ -7075,7 +7087,11 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       APFloat  V1 = N1CFP->getValueAPF();
       const APFloat &V2 = N2CFP->getValueAPF();
       const APFloat &V3 = N3CFP->getValueAPF();
-      V1.fusedMultiplyAdd(V2, V3, APFloat::rmNearestTiesToEven);
+      if (Opcode == ISD::FMAD) {
+        V1.multiply(V2, APFloat::rmNearestTiesToEven);
+        V1.add(V3, APFloat::rmNearestTiesToEven);
+      } else
+        V1.fusedMultiplyAdd(V2, V3, APFloat::rmNearestTiesToEven);
       return getConstantFP(V1, DL, VT);
     }
     break;
@@ -10778,7 +10794,7 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
     switch (N.getOpcode()) {
     default:
       break;
-    case ISD::ADD:
+    case ISD::ADD: {
       SDValue N0 = N.getOperand(0);
       SDValue N1 = N.getOperand(1);
       if (!isa<ConstantSDNode>(N0) && isa<ConstantSDNode>(N1)) {
@@ -10819,6 +10835,41 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
                    N0.getNode()->dumprFull(this);
                    dbgs() << " into " << *DIExpr << '\n');
       }
+      break;
+    }
+    case ISD::TRUNCATE: {
+      SDValue N0 = N.getOperand(0);
+      TypeSize FromSize = N0.getValueSizeInBits();
+      TypeSize ToSize = N.getValueSizeInBits(0);
+
+      DIExpression *DbgExpression = DV->getExpression();
+      auto ExtOps = DIExpression::getExtOps(FromSize, ToSize, false);
+      auto NewLocOps = DV->copyLocationOps();
+      bool Changed = false;
+      for (size_t i = 0; i < NewLocOps.size(); ++i) {
+        if (NewLocOps[i].getKind() != SDDbgOperand::SDNODE ||
+            NewLocOps[i].getSDNode() != &N)
+          continue;
+
+        NewLocOps[i] = SDDbgOperand::fromNode(N0.getNode(), N0.getResNo());
+        DbgExpression = DIExpression::appendOpsToArg(DbgExpression, ExtOps, i);
+        Changed = true;
+      }
+      assert(Changed && "Salvage target doesn't use N");
+      (void)Changed;
+
+      SDDbgValue *Clone =
+          getDbgValueList(DV->getVariable(), DbgExpression, NewLocOps,
+                          DV->getAdditionalDependencies(), DV->isIndirect(),
+                          DV->getDebugLoc(), DV->getOrder(), DV->isVariadic());
+
+      ClonedDVs.push_back(Clone);
+      DV->setIsInvalidated();
+      DV->setIsEmitted();
+      LLVM_DEBUG(dbgs() << "SALVAGE: Rewriting"; N0.getNode()->dumprFull(this);
+                 dbgs() << " into " << *DbgExpression << '\n');
+      break;
+    }
     }
   }
 
@@ -12322,6 +12373,10 @@ bool BuildVectorSDNode::isConstantSplat(APInt &SplatValue, APInt &SplatUndef,
 
   // FIXME: This does not work for vectors with elements less than 8 bits.
   while (VecWidth > 8) {
+    // If we can't split in half, stop here.
+    if (VecWidth & 1)
+      break;
+
     unsigned HalfSize = VecWidth / 2;
     APInt HighValue = SplatValue.extractBits(HalfSize, HalfSize);
     APInt LowValue = SplatValue.extractBits(HalfSize, 0);
@@ -12338,6 +12393,12 @@ bool BuildVectorSDNode::isConstantSplat(APInt &SplatValue, APInt &SplatUndef,
 
     VecWidth = HalfSize;
   }
+
+  // FIXME: The loop above only tries to split in halves. But if the input
+  // vector for example is <3 x i16> it wouldn't be able to detect a
+  // SplatBitSize of 16. No idea if that is a design flaw currently limiting
+  // optimizations. I guess that back in the days when this helper was created
+  // vectors normally was power-of-2 sized.
 
   SplatBitSize = VecWidth;
   return true;

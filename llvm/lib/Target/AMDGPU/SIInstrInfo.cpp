@@ -172,6 +172,48 @@ bool SIInstrInfo::isIgnorableUse(const MachineOperand &MO) const {
          isVALU(*MO.getParent()) && !resultDependsOnExec(*MO.getParent());
 }
 
+bool SIInstrInfo::isSafeToSink(MachineInstr &MI,
+                               MachineBasicBlock *SuccToSinkTo,
+                               MachineCycleInfo *CI) const {
+  // Allow sinking if MI edits lane mask (divergent i1 in sgpr).
+  if (MI.getOpcode() == AMDGPU::SI_IF_BREAK)
+    return true;
+
+  MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  // Check if sinking of MI would create temporal divergent use.
+  for (auto Op : MI.uses()) {
+    if (Op.isReg() && Op.getReg().isVirtual() &&
+        RI.isSGPRClass(MRI.getRegClass(Op.getReg()))) {
+      MachineInstr *SgprDef = MRI.getVRegDef(Op.getReg());
+
+      // SgprDef defined inside cycle
+      MachineCycle *FromCycle = CI->getCycle(SgprDef->getParent());
+      if (FromCycle == nullptr)
+        continue;
+
+      MachineCycle *ToCycle = CI->getCycle(SuccToSinkTo);
+      // Check if there is a FromCycle that contains SgprDef's basic block but
+      // does not contain SuccToSinkTo and also has divergent exit condition.
+      while (FromCycle && !FromCycle->contains(ToCycle)) {
+        // After structurize-cfg, there should be exactly one cycle exit.
+        SmallVector<MachineBasicBlock *, 1> ExitBlocks;
+        FromCycle->getExitBlocks(ExitBlocks);
+        assert(ExitBlocks.size() == 1);
+        assert(ExitBlocks[0]->getSinglePredecessor());
+
+        // FromCycle has divergent exit condition.
+        if (hasDivergentBranch(ExitBlocks[0]->getSinglePredecessor())) {
+          return false;
+        }
+
+        FromCycle = FromCycle->getParentCycle();
+      }
+    }
+  }
+
+  return true;
+}
+
 bool SIInstrInfo::areLoadsFromSameBasePtr(SDNode *Load0, SDNode *Load1,
                                           int64_t &Offset0,
                                           int64_t &Offset1) const {
@@ -3174,11 +3216,10 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
   switch (DefMI.getOpcode()) {
   default:
     return false;
+  case AMDGPU::V_MOV_B64_e32:
   case AMDGPU::S_MOV_B64:
-    // TODO: We could fold 64-bit immediates, but this get complicated
-    // when there are sub-registers.
-    return false;
-
+  case AMDGPU::V_MOV_B64_PSEUDO:
+  case AMDGPU::S_MOV_B64_IMM_PSEUDO:
   case AMDGPU::V_MOV_B32_e32:
   case AMDGPU::S_MOV_B32:
   case AMDGPU::V_ACCVGPR_WRITE_B32_e64:
@@ -3191,19 +3232,45 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
   if (!ImmOp->isImm())
     return false;
 
+  auto getImmFor = [ImmOp](const MachineOperand &UseOp) -> int64_t {
+    int64_t Imm = ImmOp->getImm();
+    switch (UseOp.getSubReg()) {
+    default:
+      return Imm;
+    case AMDGPU::sub0:
+      return Lo_32(Imm);
+    case AMDGPU::sub1:
+      return Hi_32(Imm);
+    case AMDGPU::lo16:
+      return APInt(16, Imm).getSExtValue();
+    case AMDGPU::hi16:
+      return APInt(32, Imm).ashr(16).getSExtValue();
+    case AMDGPU::sub1_lo16:
+      return APInt(16, Hi_32(Imm)).getSExtValue();
+    case AMDGPU::sub1_hi16:
+      return APInt(32, Hi_32(Imm)).ashr(16).getSExtValue();
+    }
+  };
+
+  assert(!DefMI.getOperand(0).getSubReg() && "Expected SSA form");
+
   unsigned Opc = UseMI.getOpcode();
   if (Opc == AMDGPU::COPY) {
-    Register DstReg = UseMI.getOperand(0).getReg();
-    bool Is16Bit = getOpSize(UseMI, 0) == 2;
-    bool isVGPRCopy = RI.isVGPR(*MRI, DstReg);
-    unsigned NewOpc = isVGPRCopy ? AMDGPU::V_MOV_B32_e32 : AMDGPU::S_MOV_B32;
-    APInt Imm(32, ImmOp->getImm());
+    assert(!UseMI.getOperand(0).getSubReg() && "Expected SSA form");
 
-    if (UseMI.getOperand(1).getSubReg() == AMDGPU::hi16)
-      Imm = Imm.ashr(16);
+    Register DstReg = UseMI.getOperand(0).getReg();
+    unsigned OpSize = getOpSize(UseMI, 0);
+    bool Is16Bit = OpSize == 2;
+    bool Is64Bit = OpSize == 8;
+    bool isVGPRCopy = RI.isVGPR(*MRI, DstReg);
+    unsigned NewOpc = isVGPRCopy ? Is64Bit ? AMDGPU::V_MOV_B64_PSEUDO
+                                           : AMDGPU::V_MOV_B32_e32
+                                 : Is64Bit ? AMDGPU::S_MOV_B64_IMM_PSEUDO
+                                           : AMDGPU::S_MOV_B32;
+    APInt Imm(Is64Bit ? 64 : 32, getImmFor(UseMI.getOperand(1)));
 
     if (RI.isAGPR(*MRI, DstReg)) {
-      if (!isInlineConstant(Imm))
+      if (Is64Bit || !isInlineConstant(Imm))
         return false;
       NewOpc = AMDGPU::V_ACCVGPR_WRITE_B32_e64;
     }
@@ -3288,7 +3355,7 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       if (NewOpc == AMDGPU::V_FMAMK_F16_t16)
         return false;
 
-      const int64_t Imm = ImmOp->getImm();
+      const int64_t Imm = getImmFor(RegSrc == Src1 ? *Src0 : *Src1);
 
       // FIXME: This would be a lot easier if we could return a new instruction
       // instead of having to modify in place.
@@ -3372,8 +3439,6 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       if (NewOpc == AMDGPU::V_FMAAK_F16_t16)
         return false;
 
-      const int64_t Imm = ImmOp->getImm();
-
       // FIXME: This would be a lot easier if we could return a new instruction
       // instead of having to modify in place.
 
@@ -3384,7 +3449,7 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
             AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2));
 
       // ChangingToImmediate adds Src2 back to the instruction.
-      Src2->ChangeToImmediate(Imm);
+      Src2->ChangeToImmediate(getImmFor(*Src2));
 
       // These come before src2.
       removeModOperands(UseMI);

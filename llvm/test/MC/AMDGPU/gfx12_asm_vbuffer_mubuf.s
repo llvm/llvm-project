@@ -3121,7 +3121,7 @@ buffer_atomic_cmpswap_b64 v[5:8], off, s[8:11], s3 offset:8388607 glc slc dlc
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 offset:8388607
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction must use th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
 
 buffer_atomic_sub_clamp_u32 v255, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
 // GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0xff,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
@@ -3130,7 +3130,7 @@ buffer_atomic_sub_clamp_u32 v255, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_R
 // GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0xff,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
 
 buffer_atomic_sub_clamp_u32 v255, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction must use th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0xff,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
 
 buffer_atomic_sub_clamp_u32 v255, off, s[8:11], s3 offset:8388607 glc
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
@@ -3142,7 +3142,7 @@ buffer_atomic_sub_clamp_u32 v5, off, s[12:15], s3 offset:8388607 th:TH_ATOMIC_RT
 // GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0x05,0x18,0x94,0x00,0x00,0xff,0xff,0x7f]
 
 buffer_atomic_sub_clamp_u32 v5, off, s[12:15], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction must use th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0x05,0x18,0xe8,0x00,0x00,0xff,0xff,0x7f]
 
 buffer_atomic_sub_clamp_u32 v5, off, s[12:15], s3 offset:8388607 glc
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
@@ -3154,7 +3154,7 @@ buffer_atomic_sub_clamp_u32 v5, off, s[96:99], s3 offset:8388607 th:TH_ATOMIC_RT
 // GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0x05,0xc0,0x94,0x00,0x00,0xff,0xff,0x7f]
 
 buffer_atomic_sub_clamp_u32 v5, off, s[96:99], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction must use th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0x05,0xc0,0xe8,0x00,0x00,0xff,0xff,0x7f]
 
 buffer_atomic_sub_clamp_u32 v5, off, s[96:99], s3 offset:8388607 glc
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
@@ -3166,7 +3166,7 @@ buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s101 offset:8388607 th:TH_ATOMIC_R
 // GFX12: encoding: [0x65,0xc0,0x0d,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
 
 buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s101 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction must use th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x65,0xc0,0x0d,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
 
 buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s101 offset:8388607 glc
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
@@ -3178,7 +3178,7 @@ buffer_atomic_sub_clamp_u32 v5, off, s[8:11], m0 offset:8388607 th:TH_ATOMIC_RT_
 // GFX12: encoding: [0x7d,0xc0,0x0d,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
 
 buffer_atomic_sub_clamp_u32 v5, off, s[8:11], m0 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction must use th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x7d,0xc0,0x0d,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
 
 buffer_atomic_sub_clamp_u32 v5, off, s[8:11], m0 offset:8388607 glc
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
@@ -3238,7 +3238,7 @@ buffer_atomic_sub_clamp_u32 v5, v0, s[8:11], s3 idxen offset:8388607 th:TH_ATOMI
 // GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0x05,0x10,0x94,0x80,0x00,0xff,0xff,0x7f]
 
 buffer_atomic_sub_clamp_u32 v5, v0, s[8:11], s3 idxen offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction must use th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0x05,0x10,0xe8,0x80,0x00,0xff,0xff,0x7f]
 
 buffer_atomic_sub_clamp_u32 v5, v0, s[8:11], s3 idxen offset:8388607 glc
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
@@ -3250,7 +3250,7 @@ buffer_atomic_sub_clamp_u32 v5, v0, s[8:11], s3 offen offset:8388607 th:TH_ATOMI
 // GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0x05,0x10,0x94,0x40,0x00,0xff,0xff,0x7f]
 
 buffer_atomic_sub_clamp_u32 v5, v0, s[8:11], s3 offen offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction must use th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0x05,0x10,0xe8,0x40,0x00,0xff,0xff,0x7f]
 
 buffer_atomic_sub_clamp_u32 v5, v0, s[8:11], s3 offen offset:8388607 glc
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
@@ -3262,7 +3262,7 @@ buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 th:TH_ATOMIC_RT_RETURN scope:SC
 // GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0x05,0x10,0x94,0x00,0x00,0x00,0x00,0x00]
 
 buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction must use th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0x05,0x10,0xe8,0x00,0x00,0x00,0x00,0x00
 
 buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 glc
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
@@ -3274,7 +3274,7 @@ buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 offset:0 th:TH_ATOMIC_RT_RETURN
 // GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0x05,0x10,0x94,0x00,0x00,0x00,0x00,0x00]
 
 buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 offset:0 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction must use th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0x05,0x10,0xe8,0x00,0x00,0x00,0x00,0x00]
 
 buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 offset:0 glc
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
@@ -3286,7 +3286,7 @@ buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 offset:7 th:TH_ATOMIC_RT_RETURN
 // GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0x05,0x10,0x94,0x00,0x00,0x07,0x00,0x00]
 
 buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 offset:7 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction must use th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0x05,0x10,0xe8,0x00,0x00,0x07,0x00,0x00]
 
 buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 offset:7 glc
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
@@ -3298,7 +3298,7 @@ buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_
 // GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
 
 buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction must use th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
 
 buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 offset:8388607 glc
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction

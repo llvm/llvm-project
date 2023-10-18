@@ -545,6 +545,30 @@ Extensions to the C++23 modules ``std`` and ``std.compat``
 Like other major implementations, libc++ provides C++23 modules ``std`` and
 ``std.compat`` in C++20 as an extension"
 
+Constant-initialized std::string
+--------------------------------
+
+As an implementation-specific optimization, ``std::basic_string`` (``std::string``,
+``std::wstring``, etc.) may either store the string data directly in the object, or else store a
+pointer to heap-allocated memory, depending on the length of the string.
+
+As of C++20, the constructors are now declared ``constexpr``, which permits strings to be used
+during constant-evaluation time. In libc++, as in other common implementations, it is also possible
+to constant-initialize a string object (e.g. via declaring a variable with ``constinit`` or
+``constexpr``), but, only if the string is short enough to not require a heap allocation. Reliance
+upon this should be discouraged in portable code, as the allowed length differs based on the
+standard-library implementation and also based on whether the platform uses 32-bit or 64-bit
+pointers.
+
+.. code-block:: cpp
+
+  // Non-portable: 11-char string works on 64-bit libc++, but not on 32-bit.
+  constinit std::string x = "hello world";
+
+  // Prefer to use string_view, or remove constinit/constexpr from the variable definition:
+  constinit std::string_view x = "hello world";
+  std::string_view y = "hello world";
+
 .. _turning-off-asan:
 
 Turning off ASan annotation in containers

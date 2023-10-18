@@ -10,10 +10,6 @@
 # GFX11: [[@LINE+1]]:1: warning: invalid instruction encoding
 0x34,0x12,0x93,0xbf
 
-# this is buffer_atomic_csub_u32 v5, off, s[8:11], s3 offset:4095. Invalid without glc
-# GFX11: [[@LINE+1]]:1: warning: invalid instruction encoding
-0xff,0x0f,0xdc,0xe0,0x00,0x05,0x02,0x03
-
 # this is s_waitcnt_vscnt exec_hi, 0x1234, which valid on gfx11, but not on gfx12
 # GFX12: [[@LINE+1]]:1: warning: invalid instruction encoding
 0x34,0x12,0x7f,0xbc

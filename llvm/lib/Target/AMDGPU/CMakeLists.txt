@@ -77,6 +77,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUMacroFusion.cpp
   AMDGPUMCInstLower.cpp
   AMDGPUIGroupLP.cpp
+  AMDGPUInsertSingleUseVDST.cpp
   AMDGPULowerVGPREncoding.cpp
   AMDGPUMIRFormatter.cpp
   AMDGPUOpenCLEnqueuedBlockLowering.cpp
@@ -177,6 +178,7 @@ add_llvm_target(AMDGPUCodeGen
   CodeGenTypes
   Core
   GlobalISel
+  HipStdPar
   IPO
   MC
   MIRParser

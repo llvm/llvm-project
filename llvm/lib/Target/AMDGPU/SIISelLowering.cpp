@@ -785,6 +785,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   // extract of relevant bits.
   setOperationAction(ISD::GET_FPMODE, MVT::i32, Legal);
 
+  setOperationAction(ISD::MUL, MVT::i1, Promote);
+
   setTargetDAGCombine({ISD::ADD,
                        ISD::UADDO_CARRY,
                        ISD::SUB,
@@ -5919,6 +5921,9 @@ bool SITargetLowering::shouldEmitFixup(const GlobalValue *GV) const {
 }
 
 bool SITargetLowering::shouldEmitGOTReloc(const GlobalValue *GV) const {
+  if (Subtarget->isAmdPalOS() || Subtarget->isMesa3DOS())
+    return false;
+
   // FIXME: Either avoid relying on address space here or change the default
   // address space for functions to avoid the explicit check.
   return (GV->getValueType()->isFunctionTy() ||
@@ -6256,11 +6261,6 @@ SDValue SITargetLowering::lowerTRAP(SDValue Op, SelectionDAG &DAG) const {
   if (!Subtarget->isTrapHandlerEnabled() ||
       Subtarget->getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA)
     return lowerTrapEndpgm(Op, DAG);
-
-  const Module *M = DAG.getMachineFunction().getFunction().getParent();
-  unsigned CodeObjectVersion = AMDGPU::getCodeObjectVersion(*M);
-  if (CodeObjectVersion <= AMDGPU::AMDHSA_COV3)
-    return lowerTrapHsaQueuePtr(Op, DAG);
 
   return Subtarget->supportsGetDoorbellID() ? lowerTrapHsa(Op, DAG) :
          lowerTrapHsaQueuePtr(Op, DAG);
@@ -6996,9 +6996,22 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
     return DAG.getNode(AMDGPUISD::LDS, DL, MVT::i32, GA);
   }
 
+  if (Subtarget->isAmdPalOS() || Subtarget->isMesa3DOS()) {
+    SDValue AddrLo = DAG.getTargetGlobalAddress(
+        GV, DL, MVT::i32, GSD->getOffset(), SIInstrInfo::MO_ABS32_LO);
+    AddrLo = {DAG.getMachineNode(AMDGPU::S_MOV_B32, DL, MVT::i32, AddrLo), 0};
+
+    SDValue AddrHi = DAG.getTargetGlobalAddress(
+        GV, DL, MVT::i32, GSD->getOffset(), SIInstrInfo::MO_ABS32_HI);
+    AddrHi = {DAG.getMachineNode(AMDGPU::S_MOV_B32, DL, MVT::i32, AddrHi), 0};
+
+    return DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, AddrLo, AddrHi);
+  }
+
   if (shouldEmitFixup(GV))
     return buildPCRelGlobalAddress(DAG, GV, DL, GSD->getOffset(), PtrVT);
-  else if (shouldEmitPCReloc(GV))
+
+  if (shouldEmitPCReloc(GV))
     return buildPCRelGlobalAddress(DAG, GV, DL, GSD->getOffset(), PtrVT,
                                    SIInstrInfo::MO_REL32);
 
@@ -10100,8 +10113,8 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
     }
   }
 
-  // For f16 require arcp only.
-  // For f32 require afn+arcp.
+  // For f16 require afn or arcp.
+  // For f32 require afn.
   if (!AllowInaccurateRcp && (VT != MVT::f16 || !Flags.hasAllowReciprocal()))
     return SDValue();
 
@@ -11405,7 +11418,7 @@ calculateSrcByte(const SDValue Op, uint64_t DestByte, uint64_t SrcIndex = 0,
   }
 
   default: {
-    if (auto A = dyn_cast<AtomicSDNode>(Op) || Op->isMemIntrinsic()) {
+    if (isa<AtomicSDNode>(Op) || Op->isMemIntrinsic()) {
       // If this causes us to throw away signedness info, then fail.
       if (IsSigned)
         return std::nullopt;
