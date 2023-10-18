@@ -188,10 +188,15 @@ bool RISCVLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     // No idea what to do.
     return false;
   case TargetOpcode::G_GLOBAL_VALUE: {
+    auto &TM = ST->getTargetLowering()->getTargetMachine();
+
+    // FIXME: Handle position independent code.
+    if (TM.isPositionIndependent())
+      return false;
+
     Register DstReg = MI.getOperand(0).getReg();
     MachineOperand &GlobalOp = MI.getOperand(1);
     const GlobalValue *GV = GlobalOp.getGlobal();
-    auto &TM = ST->getTargetLowering()->getTargetMachine();
     int64_t Offset = GlobalOp.getOffset();
 
     switch (TM.getCodeModel()) {
