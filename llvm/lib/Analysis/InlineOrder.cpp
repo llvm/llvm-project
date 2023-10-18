@@ -255,11 +255,10 @@ public:
     assert(size() > 0);
     adjust();
 
-    CallBase *CB = Heap.front();
+    std::pop_heap(Heap.begin(), Heap.end(), isLess);
+    CallBase *CB = Heap.pop_back_val();
     T Result = std::make_pair(CB, InlineHistoryMap[CB]);
     InlineHistoryMap.erase(CB);
-    std::pop_heap(Heap.begin(), Heap.end(), isLess);
-    Heap.pop_back();
     return Result;
   }
 
