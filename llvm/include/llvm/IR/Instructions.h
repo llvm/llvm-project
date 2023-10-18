@@ -3661,7 +3661,7 @@ public:
 
   /// Delegate the call to the underlying SwitchInst::eraseFromParent() and mark
   /// this object to not touch the underlying SwitchInst in destructor.
-  SymbolTableList<Instruction>::iterator eraseFromParent();
+  Instruction::InstListType::iterator eraseFromParent();
 
   void setSuccessorWeight(unsigned idx, CaseWeightOpt W);
   CaseWeightOpt getSuccessorWeight(unsigned idx);

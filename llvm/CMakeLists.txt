@@ -647,6 +647,9 @@ option(LLVM_USE_OPROFILE
 option(LLVM_EXTERNALIZE_DEBUGINFO
   "Generate dSYM files and strip executables and libraries (Darwin Only)" OFF)
 
+option(LLVM_EXPERIMENTAL_DEBUGINFO_ITERATORS
+  "Add extra Booleans to ilist_iterators to communicate facts for debug-info" OFF)
+
 set(LLVM_CODESIGNING_IDENTITY "" CACHE STRING
   "Sign executables and dylibs with the given identity or skip if empty (Darwin Only)")
 
