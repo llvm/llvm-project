@@ -186,32 +186,31 @@ RISCVInstructionSelector::selectSHXADDOp(MachineOperand &Root,
                             m_ICst(C2))))
     LeftShift = false;
 
-  if (LeftShift.has_value())
-    if (Mask.isShiftedMask()) {
-      unsigned Leading = XLen - Mask.getActiveBits();
-      unsigned Trailing = Mask.countr_zero();
+  if (LeftShift.has_value() && Mask.isShiftedMask()) {
+    unsigned Leading = XLen - Mask.getActiveBits();
+    unsigned Trailing = Mask.countr_zero();
 
-      // Given (shl (and y, mask), c2) in which mask has 32 leading zeros and
-      // c3 trailing zeros. If c1 + c3 == ShAmt, we can emit SRLIW + SHXADD.
-      bool Cond = *LeftShift && Leading == 32 && Trailing > 0 &&
-                  (Trailing + C2.getLimitedValue()) == ShAmt;
-      if (!Cond)
-        // Given (lshr (and y, mask), c2) in which mask has 32 leading zeros and
-        // c3 trailing zeros. If c3 - c1 == ShAmt, we can emit SRLIW + SHXADD.
-        Cond = !*LeftShift && Leading == 32 && C2.ult(Trailing) &&
-               (Trailing - C2.getLimitedValue()) == ShAmt;
+    // Given (shl (and y, mask), c2) in which mask has 32 leading zeros and
+    // c3 trailing zeros. If c1 + c3 == ShAmt, we can emit SRLIW + SHXADD.
+    bool Cond = *LeftShift && Leading == 32 && Trailing > 0 &&
+                (Trailing + C2.getLimitedValue()) == ShAmt;
+    if (!Cond)
+      // Given (lshr (and y, mask), c2) in which mask has 32 leading zeros and
+      // c3 trailing zeros. If c3 - c1 == ShAmt, we can emit SRLIW + SHXADD.
+      Cond = !*LeftShift && Leading == 32 && C2.ult(Trailing) &&
+             (Trailing - C2.getLimitedValue()) == ShAmt;
 
-      if (Cond) {
-        Register DstReg =
-            MRI.createGenericVirtualRegister(MRI.getType(RootReg));
-        return {{[=](MachineInstrBuilder &MIB) {
-          MachineIRBuilder(*MIB.getInstr())
-              .buildInstr(RISCV::SRLIW, {DstReg}, {RegY})
-              .addImm(Trailing);
-          MIB.addReg(DstReg);
-        }}};
-      }
+    if (Cond) {
+      Register DstReg =
+          MRI.createGenericVirtualRegister(MRI.getType(RootReg));
+      return {{[=](MachineInstrBuilder &MIB) {
+        MachineIRBuilder(*MIB.getInstr())
+            .buildInstr(RISCV::SRLIW, {DstReg}, {RegY})
+            .addImm(Trailing);
+        MIB.addReg(DstReg);
+      }}};
     }
+  }
 
   return std::nullopt;
 }
