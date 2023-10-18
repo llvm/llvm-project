@@ -2144,7 +2144,6 @@ bool tools::GetSDLFromOffloadArchive(
       Lib = Lib.drop_front(2);
     for (auto LPath : LibraryPaths) {
       ArchiveOfBundles.clear();
-      SmallVector<std::string, 2> AOBFileNames;
       auto LibFile =
           (Lib.startswith(":") ? Lib.drop_front()
                                : IsMSVC ? Lib + Ext : "lib" + Lib + Ext)
