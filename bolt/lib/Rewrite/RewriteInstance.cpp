@@ -272,20 +272,21 @@ extern const char *BoltRevision;
 MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
                                    const MCInstrAnalysis *Analysis,
                                    const MCInstrInfo *Info,
-                                   const MCRegisterInfo *RegInfo) {
+                                   const MCRegisterInfo *RegInfo,
+                                   const MCSubtargetInfo *STI) {
 #ifdef X86_AVAILABLE
   if (Arch == Triple::x86_64)
-    return createX86MCPlusBuilder(Analysis, Info, RegInfo);
+    return createX86MCPlusBuilder(Analysis, Info, RegInfo, STI);
 #endif
 
 #ifdef AARCH64_AVAILABLE
   if (Arch == Triple::aarch64)
-    return createAArch64MCPlusBuilder(Analysis, Info, RegInfo);
+    return createAArch64MCPlusBuilder(Analysis, Info, RegInfo, STI);
 #endif
 
 #ifdef RISCV_AVAILABLE
   if (Arch == Triple::riscv64)
-    return createRISCVMCPlusBuilder(Analysis, Info, RegInfo);
+    return createRISCVMCPlusBuilder(Analysis, Info, RegInfo, STI);
 #endif
 
   llvm_unreachable("architecture unsupported by MCPlusBuilder");
@@ -348,8 +349,9 @@ RewriteInstance::RewriteInstance(ELFObjectFileBase *File, const int Argc,
     return;
   }
   BC = std::move(BCOrErr.get());
-  BC->initializeTarget(std::unique_ptr<MCPlusBuilder>(createMCPlusBuilder(
-      BC->TheTriple->getArch(), BC->MIA.get(), BC->MII.get(), BC->MRI.get())));
+  BC->initializeTarget(std::unique_ptr<MCPlusBuilder>(
+      createMCPlusBuilder(BC->TheTriple->getArch(), BC->MIA.get(),
+                          BC->MII.get(), BC->MRI.get(), BC->STI.get())));
 
   BAT = std::make_unique<BoltAddressTranslation>();
 
@@ -408,8 +410,9 @@ static bool checkOffsets(const typename ELFT::Phdr &Phdr,
     return true;
 
   // Only non-empty sections can be at the end of a segment.
-  uint64_t SectionSize = Sec.sh_size ? Sec.sh_size : 1;
-  AddressRange SectionAddressRange(Sec.sh_offset, Sec.sh_offset + SectionSize);
+  uint64_t SectionSize = Sec.sh_size ? Sec.sh_size : 1ull;
+  AddressRange SectionAddressRange((uint64_t)Sec.sh_offset,
+                                   Sec.sh_offset + SectionSize);
   AddressRange SegmentAddressRange(Phdr.p_offset,
                                    Phdr.p_offset + Phdr.p_filesz);
   if (SegmentAddressRange.contains(SectionAddressRange))
@@ -425,8 +428,9 @@ template <class ELFT>
 static bool checkVMA(const typename ELFT::Phdr &Phdr,
                      const typename ELFT::Shdr &Sec, bool &Overlap) {
   // Only non-empty sections can be at the end of a segment.
-  uint64_t SectionSize = Sec.sh_size ? Sec.sh_size : 1;
-  AddressRange SectionAddressRange(Sec.sh_addr, Sec.sh_addr + SectionSize);
+  uint64_t SectionSize = Sec.sh_size ? Sec.sh_size : 1ull;
+  AddressRange SectionAddressRange((uint64_t)Sec.sh_addr,
+                                   Sec.sh_addr + SectionSize);
   AddressRange SegmentAddressRange(Phdr.p_vaddr, Phdr.p_vaddr + Phdr.p_memsz);
 
   if (SegmentAddressRange.contains(SectionAddressRange))
@@ -2332,7 +2336,8 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
     if (BC->isX86())
       return;
 
-    // The non-got related TLS relocations on AArch64 also could be skipped.
+    // The non-got related TLS relocations on AArch64 and RISC-V also could be
+    // skipped.
     if (!Relocation::isGOT(RType))
       return;
   }
@@ -2394,9 +2399,13 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
   }
 
   MCSymbol *ReferencedSymbol = nullptr;
-  if (!IsSectionRelocation)
+  if (!IsSectionRelocation) {
     if (BinaryData *BD = BC->getBinaryDataByName(SymbolName))
       ReferencedSymbol = BD->getSymbol();
+    else if (BC->isGOTSymbol(SymbolName))
+      if (BinaryData *BD = BC->getGOTSymbol())
+        ReferencedSymbol = BD->getSymbol();
+  }
 
   ErrorOr<BinarySection &> ReferencedSection{std::errc::bad_address};
   symbol_iterator SymbolIter = Rel.getSymbol();
@@ -2537,7 +2546,17 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
     // Adjust the point of reference to a code location inside a function.
     if (ReferencedBF->containsAddress(Address, /*UseMaxSize = */ true)) {
       RefFunctionOffset = Address - ReferencedBF->getAddress();
-      if (RefFunctionOffset) {
+      if (Relocation::isInstructionReference(RType)) {
+        // Instruction labels are created while disassembling so we just leave
+        // the symbol empty for now. Since the extracted value is typically
+        // unrelated to the referenced symbol (e.g., %pcrel_lo in RISC-V
+        // references an instruction but the patched value references the low
+        // bits of a data address), we set the extracted value to the symbol
+        // address in order to be able to correctly reconstruct the reference
+        // later.
+        ReferencedSymbol = nullptr;
+        ExtractedValue = Address;
+      } else if (RefFunctionOffset) {
         if (ContainingBF && ContainingBF != ReferencedBF) {
           ReferencedSymbol =
               ReferencedBF->addEntryPointAtOffset(RefFunctionOffset);
@@ -4568,15 +4587,12 @@ void RewriteInstance::updateELFSymbolTable(
     }
   }
 
-  assert((!NumHotTextSymsUpdated || NumHotTextSymsUpdated == 2) &&
-         "either none or both __hot_start/__hot_end symbols were expected");
-  assert((!NumHotDataSymsUpdated || NumHotDataSymsUpdated == 2) &&
-         "either none or both __hot_data_start/__hot_data_end symbols were "
-         "expected");
+  auto AddSymbol = [&](const StringRef &Name, uint64_t Address) {
+    if (!Address)
+      return;
 
-  auto addSymbol = [&](const std::string &Name) {
     ELFSymTy Symbol;
-    Symbol.st_value = getNewValueForSymbol(Name);
+    Symbol.st_value = Address;
     Symbol.st_shndx = ELF::SHN_ABS;
     Symbol.st_name = AddToStrTab(Name);
     Symbol.st_size = 0;
@@ -4589,14 +4605,30 @@ void RewriteInstance::updateELFSymbolTable(
     Symbols.emplace_back(Symbol);
   };
 
+  // Add runtime library start and fini address symbols
+  if (RuntimeLibrary *RtLibrary = BC->getRuntimeLibrary()) {
+    AddSymbol("__bolt_runtime_start", RtLibrary->getRuntimeStartAddress());
+    AddSymbol("__bolt_runtime_fini", RtLibrary->getRuntimeFiniAddress());
+  }
+
+  assert((!NumHotTextSymsUpdated || NumHotTextSymsUpdated == 2) &&
+         "either none or both __hot_start/__hot_end symbols were expected");
+  assert((!NumHotDataSymsUpdated || NumHotDataSymsUpdated == 2) &&
+         "either none or both __hot_data_start/__hot_data_end symbols were "
+         "expected");
+
+  auto AddEmittedSymbol = [&](const StringRef &Name) {
+    AddSymbol(Name, getNewValueForSymbol(Name));
+  };
+
   if (opts::HotText && !NumHotTextSymsUpdated) {
-    addSymbol("__hot_start");
-    addSymbol("__hot_end");
+    AddEmittedSymbol("__hot_start");
+    AddEmittedSymbol("__hot_end");
   }
 
   if (opts::HotData && !NumHotDataSymsUpdated) {
-    addSymbol("__hot_data_start");
-    addSymbol("__hot_data_end");
+    AddEmittedSymbol("__hot_data_start");
+    AddEmittedSymbol("__hot_data_end");
   }
 
   // Put local symbols at the beginning.
@@ -4720,9 +4752,11 @@ void RewriteInstance::patchELFAllocatableRelrSection(
   const uint8_t PSize = BC->AsmInfo->getCodePointerSize();
   const uint64_t MaxDelta = ((CHAR_BIT * DynamicRelrEntrySize) - 1) * PSize;
 
-  auto FixAddend = [&](const BinarySection &Section, const Relocation &Rel) {
+  auto FixAddend = [&](const BinarySection &Section, const Relocation &Rel,
+                       uint64_t FileOffset) {
     // Fix relocation symbol value in place if no static relocation found
-    // on the same address
+    // on the same address. We won't check the BF relocations here since it
+    // is rare case and no optimization is required.
     if (Section.getRelocationAt(Rel.Offset))
       return;
 
@@ -4731,11 +4765,6 @@ void RewriteInstance::patchELFAllocatableRelrSection(
     if (!Addend)
       return;
 
-    uint64_t FileOffset = Section.getOutputFileOffset();
-    if (!FileOffset)
-      FileOffset = Section.getInputFileOffset();
-
-    FileOffset += Rel.Offset;
     OS.pwrite(reinterpret_cast<const char *>(&Addend), PSize, FileOffset);
   };
 
@@ -4757,7 +4786,7 @@ void RewriteInstance::patchELFAllocatableRelrSection(
       RelOffset = RelOffset == 0 ? SectionAddress + Rel.Offset : RelOffset;
       assert((RelOffset & 1) == 0 && "Wrong relocation offset");
       RelOffsets.emplace(RelOffset);
-      FixAddend(Section, Rel);
+      FixAddend(Section, Rel, RelOffset);
     }
   }
 

@@ -1404,9 +1404,9 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
     CheckDI(Node, "invalid retained nodes list", &N, RawNode);
     for (Metadata *Op : Node->operands()) {
       CheckDI(Op && (isa<DILocalVariable>(Op) || isa<DILabel>(Op) ||
-                     isa<DIImportedEntity>(Op) || isa<DIType>(Op)),
-              "invalid retained nodes, expected DILocalVariable, DILabel, "
-              "DIImportedEntity or DIType",
+                     isa<DIImportedEntity>(Op)),
+              "invalid retained nodes, expected DILocalVariable, DILabel or "
+              "DIImportedEntity",
               &N, Node, Op);
     }
   }
@@ -6318,6 +6318,20 @@ void Verifier::visitDbgIntrinsic(StringRef Kind, DbgVariableIntrinsic &DII) {
   CheckDI(isType(Var->getRawType()), "invalid type ref", Var,
           Var->getRawType());
   verifyFnArgs(DII);
+
+  if (auto *Declare = dyn_cast<DbgDeclareInst>(&DII)) {
+    if (auto *Alloca = dyn_cast_or_null<AllocaInst>(Declare->getAddress())) {
+      DIExpression *Expr = Declare->getExpression();
+      std::optional<uint64_t> FragSize = Declare->getFragmentSizeInBits();
+      std::optional<TypeSize> AllocSize = Alloca->getAllocationSizeInBits(DL);
+      if (FragSize && AllocSize && !AllocSize->isScalable() &&
+          !Expr->isComplex()) {
+        CheckDI(*FragSize <= AllocSize->getFixedValue(),
+                "llvm.dbg.declare has larger fragment size than alloca size ",
+                &DII);
+      }
+    }
+  }
 }
 
 void Verifier::visitDbgLabelIntrinsic(StringRef Kind, DbgLabelInst &DLI) {

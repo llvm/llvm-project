@@ -661,6 +661,8 @@ std::optional<Symbol *> ObjFile::createDefined(
     if (prevailing) {
       SectionChunk *c = readSection(sectionNumber, def, getName());
       sparseChunks[sectionNumber] = c;
+      if (!c)
+        return nullptr;
       c->sym = cast<DefinedRegular>(leader);
       c->selection = selection;
       cast<DefinedRegular>(leader)->data = &c->repl;
@@ -707,7 +709,7 @@ void ObjFile::initializeFlags() {
 
   DebugSubsectionArray subsections;
 
-  BinaryStreamReader reader(data, support::little);
+  BinaryStreamReader reader(data, llvm::endianness::little);
   ExitOnError exitOnErr;
   exitOnErr(reader.readArray(subsections, data.size()));
 
@@ -773,7 +775,7 @@ void ObjFile::initializeDependencies() {
   // Get the first type record. It will indicate if this object uses a type
   // server (/Zi) or a PCH file (/Yu).
   CVTypeArray types;
-  BinaryStreamReader reader(data, support::little);
+  BinaryStreamReader reader(data, llvm::endianness::little);
   cantFail(reader.readArray(types, reader.getLength()));
   CVTypeArray::Iterator firstType = types.begin();
   if (firstType == types.end())

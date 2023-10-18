@@ -52,7 +52,7 @@ memcmp         |check|
 memcpy         |check|
 memmove        |check|
 mempcpy        |check|
-memrchr        |check|
+memrchr
 memset         |check|
 stpcpy         |check|
 stpncpy        |check|

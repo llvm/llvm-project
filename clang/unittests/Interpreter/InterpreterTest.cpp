@@ -191,9 +191,7 @@ static std::string MangleName(NamedDecl *ND) {
 }
 
 static bool HostSupportsJit() {
-  auto J = llvm::orc::LLJITBuilder()
-             .setEnableDebuggerSupport(true)
-             .create();
+  auto J = llvm::orc::LLJITBuilder().create();
   if (J)
     return true;
   LLVMConsumeError(llvm::wrap(J.takeError()));

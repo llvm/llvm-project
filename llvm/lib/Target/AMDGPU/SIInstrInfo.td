@@ -210,6 +210,7 @@ defm SIbuffer_atomic_or : SDBufferAtomicNoRet;
 defm SIbuffer_atomic_xor : SDBufferAtomicNoRet;
 defm SIbuffer_atomic_inc : SDBufferAtomicNoRet;
 defm SIbuffer_atomic_dec : SDBufferAtomicNoRet;
+defm SIbuffer_atomic_csub : SDBufferAtomicNoRet;
 defm SIbuffer_atomic_fadd : SDBufferAtomicNoRet;
 defm SIbuffer_atomic_fmin : SDBufferAtomicNoRet;
 defm SIbuffer_atomic_fmax : SDBufferAtomicNoRet;
@@ -2296,7 +2297,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field RegisterClass Src1DPP = getVregSrcForVT<Src1VT>.ret;
   field RegisterClass Src2DPP = getVregSrcForVT<Src2VT>.ret;
   field RegisterOperand Src0VOP3DPP = VGPRSrc_32;
-  field RegisterOperand Src1VOP3DPP = VRegSrc_32;
+  field RegisterOperand Src1VOP3DPP = getVOP3DPPSrcForVT<Src1VT>.ret;
   field RegisterOperand Src2VOP3DPP = getVOP3DPPSrcForVT<Src2VT>.ret;
   field RegisterOperand Src0SDWA = getSDWASrcForVT<Src0VT>.ret;
   field RegisterOperand Src1SDWA = getSDWASrcForVT<Src0VT>.ret;

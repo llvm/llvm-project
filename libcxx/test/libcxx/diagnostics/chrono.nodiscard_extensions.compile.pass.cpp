@@ -9,7 +9,7 @@
 // Check that format functions aren't marked [[nodiscard]] when
 // _LIBCPP_DISBALE_NODISCARD_EXT is defined
 
-// UNSUPPORTED: c++03, c++11, c++14 ,c++17
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-filesystem, no-localization, no-tzdb
 
 // XFAIL: libcpp-has-no-incomplete-tzdb

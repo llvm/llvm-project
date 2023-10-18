@@ -194,7 +194,7 @@ TEST(LlvmLibcBitsetTest, SetRangeTest) {
   // Check setting exactly one unit
   bitset.set_range(0, 63);
   for (size_t j = 0; j < 256; ++j)
-    EXPECT_EQ(bitset.test(j), (j >= 0 && j <= 63));
+    EXPECT_EQ(bitset.test(j), j <= 63);
   bitset.reset();
 
   // Check ranges across unit boundaries work.

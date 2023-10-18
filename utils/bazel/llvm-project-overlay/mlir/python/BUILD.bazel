@@ -83,6 +83,50 @@ filegroup(
 )
 
 ##---------------------------------------------------------------------------##
+# Affine dialect.
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "AffineOpsPyTdFiles",
+    srcs = [
+        "mlir/dialects/AffineOps.td",
+    ],
+    deps = [
+        "//mlir:AffineOpsTdFiles",
+        "//mlir:FunctionInterfacesTdFiles",
+        "//mlir:OpBaseTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "AffineOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=affine",
+            ],
+            "mlir/dialects/_affine_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/AffineOps.td",
+    deps = [
+        ":AffineOpsPyTdFiles",
+    ],
+)
+
+filegroup(
+    name = "AffineOpsPyFiles",
+    srcs = [
+        "mlir/dialects/_affine_ops_ext.py",
+        "mlir/dialects/affine.py",
+        ":AffineOpsPyGen",
+    ],
+)
+
+
+##---------------------------------------------------------------------------##
 # Builtin dialect.
 ##---------------------------------------------------------------------------##
 
@@ -1210,6 +1254,25 @@ gentbl_filegroup(
 )
 
 gentbl_filegroup(
+    name = "NVGPUTransformOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=transform",
+                "-dialect-extension=nvgpu_transform",
+            ],
+            "mlir/dialects/_nvgpu_transform_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/NVGPUTransformOps.td",
+    deps = [
+        "//mlir:NVGPUTransformOpsTdFiles",
+    ],
+)
+
+gentbl_filegroup(
     name = "PDLTransformOpsPyGen",
     tbl_outs = [
         (
@@ -1327,6 +1390,7 @@ filegroup(
         ":GPUTransformOpsPyGen",
         ":LoopTransformOpsPyGen",
         ":MemRefTransformOpsPyGen",
+        ":NVGPUTransformOpsPyGen",
         ":PDLTransformOpsPyGen",
         ":SparseTensorTransformOpsPyGen",
         ":StructureTransformEnumPyGen",

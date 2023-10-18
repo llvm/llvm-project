@@ -12,11 +12,14 @@
 // extended bits aren't consumed or because the input was already sign extended
 // by an earlier instruction.
 //
-// Then it removes the -w suffix from addw, slliw and mulw instructions
-// whenever all users are dependent only on the lower word of the result of the
-// instruction. We do this only for addw, slliw, and mulw because the -w forms
-// are less compressible: c.add and c.slli have a larger register encoding than
-// their w counterparts, and there's no compressible version of mulw.
+// Then it removes the -w suffix from opw instructions whenever all users are
+// dependent only on the lower word of the result of the instruction.
+// The cases handled are:
+// * addw because c.add has a larger register encoding than c.addw.
+// * addiw because it helps reduce test differences between RV32 and RV64
+//   w/o being a pessimization.
+// * mulw because c.mulw doesn't exist but c.mul does (w/ zcb)
+// * slliw because c.slliw doesn't exist and c.slli does
 //
 //===---------------------------------------------------------------------===//
 
@@ -88,7 +91,7 @@ static bool vectorPseudoHasAllNBitUsers(const MachineOperand &UserOp,
     return false;
 
   const MCInstrDesc &MCID = MI.getDesc();
-  const uint64_t TSFlags = MI.getDesc().TSFlags;
+  const uint64_t TSFlags = MCID.TSFlags;
   if (!RISCVII::hasSEWOp(TSFlags))
     return false;
   assert(RISCVII::hasVLOp(TSFlags));
@@ -97,120 +100,9 @@ static bool vectorPseudoHasAllNBitUsers(const MachineOperand &UserOp,
   if (UserOp.getOperandNo() == RISCVII::getVLOpNum(MCID))
     return false;
 
-  // TODO: Handle Zvbb instructions
-  switch (PseudoInfo->BaseInstr) {
-  default:
-    return false;
-
-  // 11.6. Vector Single-Width Shift Instructions
-  case RISCV::VSLL_VX:
-  case RISCV::VSRL_VX:
-  case RISCV::VSRA_VX:
-  // 12.4. Vector Single-Width Scaling Shift Instructions
-  case RISCV::VSSRL_VX:
-  case RISCV::VSSRA_VX:
-    // Only the low lg2(SEW) bits of the shift-amount value are used.
-    if (Bits < Log2SEW)
-      return false;
-    break;
-
-  // 11.7 Vector Narrowing Integer Right Shift Instructions
-  case RISCV::VNSRL_WX:
-  case RISCV::VNSRA_WX:
-  // 12.5. Vector Narrowing Fixed-Point Clip Instructions
-  case RISCV::VNCLIPU_WX:
-  case RISCV::VNCLIP_WX:
-    // Only the low lg2(2*SEW) bits of the shift-amount value are used.
-    if (Bits < Log2SEW + 1)
-      return false;
-    break;
-
-  // 11.1. Vector Single-Width Integer Add and Subtract
-  case RISCV::VADD_VX:
-  case RISCV::VSUB_VX:
-  case RISCV::VRSUB_VX:
-  // 11.2. Vector Widening Integer Add/Subtract
-  case RISCV::VWADDU_VX:
-  case RISCV::VWSUBU_VX:
-  case RISCV::VWADD_VX:
-  case RISCV::VWSUB_VX:
-  case RISCV::VWADDU_WX:
-  case RISCV::VWSUBU_WX:
-  case RISCV::VWADD_WX:
-  case RISCV::VWSUB_WX:
-  // 11.4. Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
-  case RISCV::VADC_VXM:
-  case RISCV::VADC_VIM:
-  case RISCV::VMADC_VXM:
-  case RISCV::VMADC_VIM:
-  case RISCV::VMADC_VX:
-  case RISCV::VSBC_VXM:
-  case RISCV::VMSBC_VXM:
-  case RISCV::VMSBC_VX:
-  // 11.5 Vector Bitwise Logical Instructions
-  case RISCV::VAND_VX:
-  case RISCV::VOR_VX:
-  case RISCV::VXOR_VX:
-  // 11.8. Vector Integer Compare Instructions
-  case RISCV::VMSEQ_VX:
-  case RISCV::VMSNE_VX:
-  case RISCV::VMSLTU_VX:
-  case RISCV::VMSLT_VX:
-  case RISCV::VMSLEU_VX:
-  case RISCV::VMSLE_VX:
-  case RISCV::VMSGTU_VX:
-  case RISCV::VMSGT_VX:
-  // 11.9. Vector Integer Min/Max Instructions
-  case RISCV::VMINU_VX:
-  case RISCV::VMIN_VX:
-  case RISCV::VMAXU_VX:
-  case RISCV::VMAX_VX:
-  // 11.10. Vector Single-Width Integer Multiply Instructions
-  case RISCV::VMUL_VX:
-  case RISCV::VMULH_VX:
-  case RISCV::VMULHU_VX:
-  case RISCV::VMULHSU_VX:
-  // 11.11. Vector Integer Divide Instructions
-  case RISCV::VDIVU_VX:
-  case RISCV::VDIV_VX:
-  case RISCV::VREMU_VX:
-  case RISCV::VREM_VX:
-  // 11.12. Vector Widening Integer Multiply Instructions
-  case RISCV::VWMUL_VX:
-  case RISCV::VWMULU_VX:
-  case RISCV::VWMULSU_VX:
-  // 11.13. Vector Single-Width Integer Multiply-Add Instructions
-  case RISCV::VMACC_VX:
-  case RISCV::VNMSAC_VX:
-  case RISCV::VMADD_VX:
-  case RISCV::VNMSUB_VX:
-  // 11.14. Vector Widening Integer Multiply-Add Instructions
-  case RISCV::VWMACCU_VX:
-  case RISCV::VWMACC_VX:
-  case RISCV::VWMACCSU_VX:
-  case RISCV::VWMACCUS_VX:
-  // 11.15. Vector Integer Merge Instructions
-  case RISCV::VMERGE_VXM:
-  // 11.16. Vector Integer Move Instructions
-  case RISCV::VMV_V_X:
-  // 12.1. Vector Single-Width Saturating Add and Subtract
-  case RISCV::VSADDU_VX:
-  case RISCV::VSADD_VX:
-  case RISCV::VSSUBU_VX:
-  case RISCV::VSSUB_VX:
-  // 12.2. Vector Single-Width Averaging Add and Subtract
-  case RISCV::VAADDU_VX:
-  case RISCV::VAADD_VX:
-  case RISCV::VASUBU_VX:
-  case RISCV::VASUB_VX:
-  // 12.3. Vector Single-Width Fractional Multiply with Rounding and Saturation
-  case RISCV::VSMUL_VX:
-  // 16.1. Integer Scalar Move Instructions
-  case RISCV::VMV_S_X:
-    if (Bits < (1 << Log2SEW))
-      return false;
-  }
-  return true;
+  auto NumDemandedBits =
+      RISCV::getVectorLowDemandedScalarBits(PseudoInfo->BaseInstr, Log2SEW);
+  return NumDemandedBits && Bits >= *NumDemandedBits;
 }
 
 // Checks if all users only demand the lower \p OrigBits of the original
@@ -772,6 +664,7 @@ bool RISCVOptWInstrs::stripWSuffixes(MachineFunction &MF,
       default:
         continue;
       case RISCV::ADDW:  Opc = RISCV::ADD;  break;
+      case RISCV::ADDIW: Opc = RISCV::ADDI; break;
       case RISCV::MULW:  Opc = RISCV::MUL;  break;
       case RISCV::SLLIW: Opc = RISCV::SLLI; break;
       }

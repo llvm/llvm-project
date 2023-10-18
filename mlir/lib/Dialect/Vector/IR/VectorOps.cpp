@@ -1244,6 +1244,14 @@ bool ExtractOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
 }
 
 LogicalResult vector::ExtractOp::verify() {
+  // Note: This check must come before getMixedPosition() to prevent a crash.
+  auto dynamicMarkersCount =
+      llvm::count_if(getStaticPosition(), ShapedType::isDynamic);
+  if (static_cast<size_t>(dynamicMarkersCount) != getDynamicPosition().size())
+    return emitOpError(
+        "mismatch between dynamic and static positions (kDynamic marker but no "
+        "corresponding dynamic position) -- this can only happen due to an "
+        "incorrect fold/rewrite");
   auto position = getMixedPosition();
   if (position.size() > static_cast<unsigned>(getSourceVectorType().getRank()))
     return emitOpError(
@@ -1285,6 +1293,9 @@ static LogicalResult foldExtractOpFromExtractChain(ExtractOp extractOp) {
   globalPosition.append(extrPos.rbegin(), extrPos.rend());
   while (ExtractOp nextOp = currentOp.getVector().getDefiningOp<ExtractOp>()) {
     currentOp = nextOp;
+    // TODO: Canonicalization for dynamic position not implemented yet.
+    if (currentOp.hasDynamicPosition())
+      return failure();
     ArrayRef<int64_t> extrPos = currentOp.getStaticPosition();
     globalPosition.append(extrPos.rbegin(), extrPos.rend());
   }
@@ -1361,9 +1372,9 @@ private:
   /// ```
   /// %ins = vector.insert %source, %vest[1]: vector<3x4> into vector<2x3x4x5>
   /// // extractPosition == [1, 2, 3]
-  /// %ext = vector.extract %ins[1, 0]: vector<3x4x5>
+  /// %ext = vector.extract %ins[1, 0]: vector<5> from vector<3x4x5>
   /// // can fold to vector.extract %source[0, 3]
-  /// %ext = vector.extract %source[3]: vector<5x6>
+  /// %ext = vector.extract %source[3]: vector<6> from vector<5x6>
   /// ```
   /// To traverse through %source, we need to set the leading dims to 0 and
   /// drop the extra leading dims.

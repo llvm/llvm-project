@@ -28,5 +28,4 @@ bb4:                                              ; preds = %bb1
 ; NUMBER-NEXT: Running pass 2 LCSSAPass
 ; NUMBER-NEXT: Running pass 3 IndVarSimplifyPass
 ; NUMBER-NEXT: Running pass 4 LoopDeletionPass
-; NUMBER-NEXT: Running pass 5 VerifierPass
-; NUMBER-NEXT: Running pass 6 PrintModulePass
+; NUMBER-NOT: Running pass

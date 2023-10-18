@@ -353,7 +353,7 @@ std::error_code SampleProfileWriterExtBinaryBase::writeNameTable() {
   // retrieve the name using the name index without having to read the
   // whole name table.
   encodeULEB128(NameTable.size(), OS);
-  support::endian::Writer Writer(OS, support::little);
+  support::endian::Writer Writer(OS, llvm::endianness::little);
   for (auto N : V)
     Writer.write(hashFuncName(N));
   return sampleprof_error::success;
@@ -394,7 +394,7 @@ std::error_code SampleProfileWriterExtBinaryBase::writeCSNameTableSection() {
 
   auto &OS = *OutputStream;
   encodeULEB128(OrderedContexts.size(), OS);
-  support::endian::Writer Writer(OS, support::little);
+  support::endian::Writer Writer(OS, llvm::endianness::little);
   for (auto Context : OrderedContexts) {
     auto Frames = Context.getContextFrames();
     encodeULEB128(Frames.size(), OS);
@@ -741,7 +741,7 @@ void SampleProfileWriterExtBinaryBase::setToCompressSection(SecType Type) {
 }
 
 void SampleProfileWriterExtBinaryBase::allocSecHdrTable() {
-  support::endian::Writer Writer(*OutputStream, support::little);
+  support::endian::Writer Writer(*OutputStream, llvm::endianness::little);
 
   Writer.write(static_cast<uint64_t>(SectionHdrLayout.size()));
   SecHdrTableOffset = OutputStream->tell();
@@ -771,7 +771,8 @@ std::error_code SampleProfileWriterExtBinaryBase::writeSecHdrTable() {
   // but it needs to be read before SecLBRProfile (the order in
   // SectionHdrLayout). So we use IndexMap above to switch the order.
   support::endian::SeekableWriter Writer(
-      static_cast<raw_pwrite_stream &>(*OutputStream), support::little);
+      static_cast<raw_pwrite_stream &>(*OutputStream),
+      llvm::endianness::little);
   for (uint32_t LayoutIdx = 0; LayoutIdx < SectionHdrLayout.size();
        LayoutIdx++) {
     assert(IndexMap[LayoutIdx] < SecHdrTable.size() &&

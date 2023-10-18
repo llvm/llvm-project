@@ -184,6 +184,24 @@ void GenericCycleInfo<ContextT>::moveTopLevelCycleToNewParent(CycleT *NewParent,
       It.second = NewParent;
 }
 
+template <typename ContextT>
+void GenericCycleInfo<ContextT>::addBlockToCycle(BlockT *Block, CycleT *Cycle) {
+  // FixMe: Appending NewBlock is fine as a set of blocks in a cycle. When
+  // printing, cycle NewBlock is at the end of list but it should be in the
+  // middle to represent actual traversal of a cycle.
+  Cycle->appendBlock(Block);
+  BlockMap.try_emplace(Block, Cycle);
+
+  CycleT *ParentCycle = Cycle->getParentCycle();
+  while (ParentCycle) {
+    Cycle = ParentCycle;
+    Cycle->appendBlock(Block);
+    ParentCycle = Cycle->getParentCycle();
+  }
+
+  BlockMapTopLevel.try_emplace(Block, Cycle);
+}
+
 /// \brief Main function of the cycle info computations.
 template <typename ContextT>
 void GenericCycleInfoCompute<ContextT>::run(BlockT *EntryBlock) {
@@ -363,6 +381,19 @@ void GenericCycleInfo<ContextT>::compute(FunctionT &F) {
   assert(validateTree());
 }
 
+template <typename ContextT>
+void GenericCycleInfo<ContextT>::splitCriticalEdge(BlockT *Pred, BlockT *Succ,
+                                                   BlockT *NewBlock) {
+  // Edge Pred-Succ is replaced by edges Pred-NewBlock and NewBlock-Succ, all
+  // cycles that had blocks Pred and Succ also get NewBlock.
+  CycleT *Cycle = getSmallestCommonCycle(getCycle(Pred), getCycle(Succ));
+  if (!Cycle)
+    return;
+
+  addBlockToCycle(NewBlock, Cycle);
+  assert(validateTree());
+}
+
 /// \brief Find the innermost cycle containing a given block.
 ///
 /// \returns the innermost cycle containing \p Block or nullptr if
@@ -371,6 +402,35 @@ template <typename ContextT>
 auto GenericCycleInfo<ContextT>::getCycle(const BlockT *Block) const
     -> CycleT * {
   return BlockMap.lookup(Block);
+}
+
+/// \brief Find the innermost cycle containing both given cycles.
+///
+/// \returns the innermost cycle containing both \p A and \p B
+///          or nullptr if there is no such cycle.
+template <typename ContextT>
+auto GenericCycleInfo<ContextT>::getSmallestCommonCycle(CycleT *A,
+                                                        CycleT *B) const
+    -> CycleT * {
+  if (!A || !B)
+    return nullptr;
+
+  // If cycles A and B have different depth replace them with parent cycle
+  // until they have the same depth.
+  while (A->getDepth() > B->getDepth())
+    A = A->getParentCycle();
+  while (B->getDepth() > A->getDepth())
+    B = B->getParentCycle();
+
+  // Cycles A and B are at same depth but may be disjoint, replace them with
+  // parent cycles until we find cycle that contains both or we run out of
+  // parent cycles.
+  while (A != B) {
+    A = A->getParentCycle();
+    B = B->getParentCycle();
+  }
+
+  return A;
 }
 
 /// \brief get the depth for the cycle which containing a given block.

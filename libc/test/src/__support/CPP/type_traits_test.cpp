@@ -157,7 +157,7 @@ struct A {
 
 struct B : public A {
   virtual ~B() {}
-  virtual void apply() { state = B_APPLY_CALLED; }
+  virtual void apply() override { state = B_APPLY_CALLED; }
 };
 
 void free_function() {}

@@ -631,6 +631,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
 
   const char *PluginOptPrefix = IsOSAIX ? "-bplugin_opt:" : "-plugin-opt=";
   const char *ExtraDash = IsOSAIX ? "-" : "";
+  const char *ParallelismOpt = IsOSAIX ? "-threads=" : "jobs=";
 
   // Note, this solution is far from perfect, better to encode it into IR
   // metadata, but this may not be worth it, since it looks like aranges is on
@@ -690,8 +691,8 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
 
   StringRef Parallelism = getLTOParallelism(Args, D);
   if (!Parallelism.empty())
-    CmdArgs.push_back(
-        Args.MakeArgString(Twine(PluginOptPrefix) + "jobs=" + Parallelism));
+    CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) +
+                                         ParallelismOpt + Parallelism));
 
   // If an explicit debugger tuning argument appeared, pass it along.
   if (Arg *A =
@@ -869,6 +870,26 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
                          /*IsLTO=*/true, PluginOptPrefix);
 }
 
+/// Adds the '-lcgpu' and '-lmgpu' libraries to the compilation to include the
+/// LLVM C library for GPUs.
+static void addOpenMPDeviceLibC(const ToolChain &TC, const ArgList &Args,
+                                ArgStringList &CmdArgs) {
+  if (Args.hasArg(options::OPT_nogpulib) || Args.hasArg(options::OPT_nolibc))
+    return;
+
+  // Check the resource directory for the LLVM libc GPU declarations. If it's
+  // found we can assume that LLVM was built with support for the GPU libc.
+  SmallString<256> LibCDecls(TC.getDriver().ResourceDir);
+  llvm::sys::path::append(LibCDecls, "include", "llvm_libc_wrappers",
+                          "llvm-libc-decls");
+  bool HasLibC = llvm::sys::fs::exists(LibCDecls) &&
+                 llvm::sys::fs::is_directory(LibCDecls);
+  if (Args.hasFlag(options::OPT_gpulibc, options::OPT_nogpulibc, HasLibC)) {
+    CmdArgs.push_back("-lcgpu");
+    CmdArgs.push_back("-lmgpu");
+  }
+}
+
 void tools::addOpenMPRuntimeLibraryPath(const ToolChain &TC,
                                         const ArgList &Args,
                                         ArgStringList &CmdArgs) {
@@ -882,11 +903,8 @@ void tools::addOpenMPRuntimeLibraryPath(const ToolChain &TC,
 
 void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
                                  ArgStringList &CmdArgs) {
-  // Enable -frtlib-add-rpath by default for the case of VE.
-  const bool IsVE = TC.getTriple().isVE();
-  bool DefaultValue = IsVE;
   if (!Args.hasFlag(options::OPT_frtlib_add_rpath,
-                    options::OPT_fno_rtlib_add_rpath, DefaultValue))
+                    options::OPT_fno_rtlib_add_rpath, false))
     return;
 
   for (const auto &CandidateRPath : TC.getArchSpecificLibPaths()) {
@@ -938,6 +956,9 @@ bool tools::addOpenMPRuntime(ArgStringList &CmdArgs, const ToolChain &TC,
 
   if (IsOffloadingHost && !Args.hasArg(options::OPT_nogpulib))
     CmdArgs.push_back("-lomptarget.devicertl");
+
+  if (IsOffloadingHost)
+    addOpenMPDeviceLibC(TC, Args, CmdArgs);
 
   addArchSpecificRPath(TC, Args, CmdArgs);
   addOpenMPRuntimeLibraryPath(TC, Args, CmdArgs);

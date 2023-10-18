@@ -44,6 +44,10 @@ public:
   template <class _Up, enable_if_t<__can_broadcast_v<value_type, __remove_cvref_t<_Up>>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI simd(_Up&& __v) noexcept : __s_(_Impl::__broadcast(static_cast<value_type>(__v))) {}
 
+  // generator constructor
+  template <class _Generator, enable_if_t<__can_generate_v<value_type, _Generator, size()>, int> = 0>
+  explicit _LIBCPP_HIDE_FROM_ABI simd(_Generator&& __g) : __s_(_Impl::__generate(std::forward<_Generator>(__g))) {}
+
   // scalar access [simd.subscr]
   // Add operator[] temporarily to test braodcast. Add test for it in later patch.
   _LIBCPP_HIDE_FROM_ABI value_type operator[](size_t __i) const { return __s_.__get(__i); }

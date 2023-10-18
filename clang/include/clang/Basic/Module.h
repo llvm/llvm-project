@@ -358,6 +358,10 @@ public:
   /// to a regular (public) module map.
   unsigned ModuleMapIsPrivate : 1;
 
+  /// Whether this C++20 named modules doesn't need an initializer.
+  /// This is only meaningful for C++20 modules.
+  unsigned NamedModuleHasInit : 1;
+
   /// Describes the visibility of the various names within a
   /// particular module.
   enum NameVisibilityKind {
@@ -587,9 +591,16 @@ public:
     return Kind == ModuleInterfaceUnit || isModulePartition();
   }
 
+  /// Is this a C++20 named module unit.
+  bool isNamedModuleUnit() const {
+    return isInterfaceOrPartition() || isModuleImplementation();
+  }
+
   bool isModuleInterfaceUnit() const {
     return Kind == ModuleInterfaceUnit || Kind == ModulePartitionInterface;
   }
+
+  bool isNamedModuleInterfaceHasInit() const { return NamedModuleHasInit; }
 
   /// Get the primary module interface name from a partition.
   StringRef getPrimaryModuleInterfaceName() const {
@@ -720,13 +731,13 @@ public:
   /// one.
   ///
   /// \returns The GMF sub-module if found, or NULL otherwise.
-  Module *getGlobalModuleFragment() { return findSubmodule("<global>"); }
+  Module *getGlobalModuleFragment() const;
 
   /// Get the Private Module Fragment (sub-module) for this module, it there is
   /// one.
   ///
   /// \returns The PMF sub-module if found, or NULL otherwise.
-  Module *getPrivateModuleFragment() { return findSubmodule("<private>"); }
+  Module *getPrivateModuleFragment() const;
 
   /// Determine whether the specified module would be visible to
   /// a lookup at the end of this module.

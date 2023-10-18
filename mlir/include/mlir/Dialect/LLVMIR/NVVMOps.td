@@ -17,6 +17,7 @@ include "mlir/IR/EnumAttr.td"
 include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.td"
 
 def LLVM_i8Ptr_global : LLVM_IntPtrBase<8, 1>;
 def LLVM_i8Ptr_shared : LLVM_IntPtrBase<8, 3>;
@@ -80,135 +81,6 @@ class NVVM_Op<string mnemonic, list<Trait> traits = []> :
 class NVVM_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
     : AttrDef<NVVM_Dialect, attrName, traits> {
   let mnemonic = attrMnemonic;
-}
-
-//===----------------------------------------------------------------------===//
-// Basic PTX Builder Interface
-//===----------------------------------------------------------------------===//
-
-// https://docs.nvidia.com/cuda/inline-ptx-assembly/index.html#parameters
-def Read : I32EnumAttrCase<"Read", 0, "read">;
-def Write : I32EnumAttrCase<"Write", 2, "write">;
-def ReadWrite : I32EnumAttrCase<"ReadWrite", 1, "readwrite">;
-
-def PTXRegisterMod : I32EnumAttr<"PTXRegisterMod", 
-  "Register read/write modifier to build cosntraint string for PTX inline",
-  [Read, Write, ReadWrite]> {
-  let cppNamespace = "::mlir::NVVM";
-}
-
-
-def BasicPtxBuilderOpInterface : OpInterface<"BasicPtxBuilderInterface"> {
-  let description = [{
-    Interface to generate inline assembly with PTX for basic operations. 
-
-    Interface is used in `convert-nvvm-to-llvm` pass that lowers Ops supports 
-    this interface to inline assembly Op. Interface has several methods and 
-    they are used for this lowering. 
-
-    `getPtx` method returns PTX code. 
-
-    `hasSideEffect` is used to set whether the op has any side effect on the 
-    memory.
-
-    `hasIntrinsic` returns whether the operation has intrinsic support in LLVM. 
-    This is useful for the Ops that don't have intrinsic support for each case.
-
-    `getAsmValues` returns arguments to pass PTX code. The order of arguments 
-    is started from the results and they are used as write, followed by the 
-    operands and attributes.
-
-    Example:
-    If we have following Op definition that returns PTX code by `getPtx`. 
-    
-    ```tablegen
-      def NVVM_MyOp : NVVM_Op<"myop",
-          [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,  
-        Results<(outs LLVM_Type:$res)>,
-        Arguments<(ins LLVM_i64ptr_any:$op1, I32:$op2)> {
-        ...
-        let extraClassDefinition = [{
-          std::string $cppClass::getPtx() { 
-            return std::string("my.ptx.code %0, %1, %2;"); 
-          }
-      } ];
-    ```
-
-    The NVVM Op will look like below:
-    ```mlir
-      %0 = my.ptx.code %1, %2 : !llvm.ptr, i32 -> i32
-    ```
-
-    The `convert-nvvm-to-llvm` Pass generates the PTX code below. The order of 
-    arguments are kept the same. The read and write modifiers are set based on
-    the input and result types.
-    ```mlir
-      %0 = llvm.inline_asm has_side_effects asm_dialect = att "my.ptx.code %0, %1, %2;", "=r,l,r" %arg0, %arg1 : (!llvm.ptr, i32) -> i32
-    ```
-
-  }];
-  let methods = [
-    InterfaceMethod<
-        /*desc=*/[{
-          Returns whether the operation has intrinsic support in LLVM.
-        }],
-        /*retType=*/"bool",
-        /*methodName=*/"hasIntrinsic",
-        /*args=*/(ins),
-        /*methodBody=*/"",
-        /*defaultImplementation=*/"return false;"
-      >,
-    InterfaceMethod<
-        /*desc=*/[{ Return whether the operation has memory side effects. }],
-        /*retType=*/"bool",
-        /*methodName=*/"hasSideEffect",
-        /*args=*/(ins),
-        /*methodBody=*/"",
-        /*defaultImplementation=*/"return true;"
-      >,
-    InterfaceMethod<
-        /*desc=*/[{ Returns PTX code. }],
-        /*retType=*/"std::string",
-        /*methodName=*/"getPtx"
-      >,
-    InterfaceMethod<
-        /*desc=*/[{Generate constant value.}],
-        /*retType=*/"::mlir::Value",
-        /*methodName=*/"makeConstantI32",
-        /*args=*/(ins "::mlir::RewriterBase &":$rewriter, "int" : $val),
-        /*methodBody=*/"",
-        /*defaultImpl=*/ [{
-            mlir::Operation* op = $_op;
-            return rewriter.create<LLVM::ConstantOp>(
-              op->getLoc(), rewriter.getIntegerType(32), val);
-        }]
-     >,
-     InterfaceMethod<
-         /*desc=*/[{ 
-            Returns arguments to pass PTX code.
-            The order of arguments is started from the results and they are 
-            used as write, followed by the operands and attributes.
-          }],
-         /*retType=*/"void",
-         /*methodName=*/"getAsmValues",
-         /*args=*/(ins "::mlir::RewriterBase &":$rewriter, 
-         "llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>>&" : $asmValues),
-         /*methodBody=*/"",
-         /*defaultImpl=*/ [{         
-           mlir::Operation* op = $_op;
-           for (auto val : op->getResults()) 
-            asmValues.push_back({val, mlir::NVVM::PTXRegisterMod::Write});
-           for (auto val : op->getOperands()) 
-            asmValues.push_back({val, mlir::NVVM::PTXRegisterMod::Read});
-           for (auto attr : op->getAttrs()) {
-            if (auto intAttr = dyn_cast<mlir::IntegerAttr>(attr.getValue())) {
-             Value val = makeConstantI32(rewriter, intAttr.getInt());
-             asmValues.push_back({val ,mlir::NVVM::PTXRegisterMod::Read});
-             }
-           }
-         }]
-       >
-  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -573,6 +445,26 @@ def NVVM_SyncWarpOp :
   let assemblyFormat = "$mask attr-dict `:` type($mask)";
 }
 
+
+def NVVM_ElectSyncOp : NVVM_Op<"elect.sync", 
+                  [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>
+{  
+  let results = (outs I1:$pred);
+  let assemblyFormat = "attr-dict `->` type(results)";  
+  let extraClassDefinition = [{        
+    std::string $cppClass::getPtx() { 
+      return std::string(
+        "{                                  \n"
+        ".reg .u32 rx;                      \n"
+        ".reg .pred px;                     \n"
+        " mov.u32 %0, 0;                    \n"
+        "    elect.sync rx | px, 0xFFFFFFFF;\n"
+        "@px mov.u32 %0, 1;                 \n"
+        "}\n"
+      ); 
+    }
+  }];
+}
 
 def LoadCacheModifierCA : I32EnumAttrCase<"CA", 0, "ca">;
 def LoadCacheModifierCG : I32EnumAttrCase<"CG", 1, "cg">;

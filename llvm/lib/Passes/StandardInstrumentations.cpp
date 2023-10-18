@@ -18,6 +18,7 @@
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/CodeGen/StableHashing.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
@@ -33,6 +34,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/Signals.h"
@@ -119,6 +121,13 @@ static cl::opt<unsigned>
     PrintAtPassNumber("print-at-pass-number", cl::init(0), cl::Hidden,
                 cl::desc("Print IR at pass with this number as "
                          "reported by print-passes-names"));
+
+static cl::opt<std::string> IRDumpDirectory(
+    "ir-dump-directory",
+    cl::desc("If specified, IR printed using the "
+             "-print-[before|after]{-all} options will be dumped into "
+             "files in this directory rather than written to stderr"),
+    cl::Hidden, cl::value_desc("filename"));
 
 namespace {
 
@@ -286,7 +295,8 @@ void unwrapAndPrint(raw_ostream &OS, Any IR) {
 bool isIgnored(StringRef PassID) {
   return isSpecialPass(PassID,
                        {"PassManager", "PassAdaptor", "AnalysisManagerProxy",
-                        "DevirtSCCRepeatedPass", "ModuleInlinerWrapperPass"});
+                        "DevirtSCCRepeatedPass", "ModuleInlinerWrapperPass",
+                        "VerifierPass", "PrintModulePass"});
 }
 
 std::string makeHTMLReady(StringRef SR) {
@@ -681,25 +691,112 @@ bool IRComparer<T>::generateFunctionData(IRDataT<T> &Data, const Function &F) {
 }
 
 PrintIRInstrumentation::~PrintIRInstrumentation() {
-  assert(ModuleDescStack.empty() && "ModuleDescStack is not empty at exit");
+  assert(PassRunDescriptorStack.empty() &&
+         "PassRunDescriptorStack is not empty at exit");
 }
 
-void PrintIRInstrumentation::pushModuleDesc(StringRef PassID, Any IR) {
+static SmallString<32> getIRFileDisplayName(Any IR) {
+  SmallString<32> Result;
+  raw_svector_ostream ResultStream(Result);
   const Module *M = unwrapModule(IR);
-  ModuleDescStack.emplace_back(M, getIRName(IR), PassID);
+  stable_hash NameHash = stable_hash_combine_string(M->getName());
+  unsigned int MaxHashWidth = sizeof(stable_hash) * 8 / 4;
+  write_hex(ResultStream, NameHash, HexPrintStyle::Lower, MaxHashWidth);
+  if (llvm::any_cast<const Module *>(&IR)) {
+    ResultStream << "-module";
+  } else if (const Function **F = llvm::any_cast<const Function *>(&IR)) {
+    ResultStream << "-function-";
+    stable_hash FunctionNameHash = stable_hash_combine_string((*F)->getName());
+    write_hex(ResultStream, FunctionNameHash, HexPrintStyle::Lower,
+              MaxHashWidth);
+  } else if (const LazyCallGraph::SCC **C =
+                 llvm::any_cast<const LazyCallGraph::SCC *>(&IR)) {
+    ResultStream << "-scc-";
+    stable_hash SCCNameHash = stable_hash_combine_string((*C)->getName());
+    write_hex(ResultStream, SCCNameHash, HexPrintStyle::Lower, MaxHashWidth);
+  } else if (const Loop **L = llvm::any_cast<const Loop *>(&IR)) {
+    ResultStream << "-loop-";
+    stable_hash LoopNameHash = stable_hash_combine_string((*L)->getName());
+    write_hex(ResultStream, LoopNameHash, HexPrintStyle::Lower, MaxHashWidth);
+  } else {
+    llvm_unreachable("Unknown wrapped IR type");
+  }
+  return Result;
 }
 
-PrintIRInstrumentation::PrintModuleDesc
-PrintIRInstrumentation::popModuleDesc(StringRef PassID) {
-  assert(!ModuleDescStack.empty() && "empty ModuleDescStack");
-  PrintModuleDesc ModuleDesc = ModuleDescStack.pop_back_val();
-  assert(std::get<2>(ModuleDesc).equals(PassID) && "malformed ModuleDescStack");
-  return ModuleDesc;
+std::string PrintIRInstrumentation::fetchDumpFilename(StringRef PassName,
+                                                      Any IR) {
+  const StringRef RootDirectory = IRDumpDirectory;
+  assert(!RootDirectory.empty() &&
+         "The flag -ir-dump-directory must be passed to dump IR to files");
+  SmallString<128> ResultPath;
+  ResultPath += RootDirectory;
+  SmallString<64> Filename;
+  raw_svector_ostream FilenameStream(Filename);
+  FilenameStream << CurrentPassNumber;
+  FilenameStream << "-";
+  FilenameStream << getIRFileDisplayName(IR);
+  FilenameStream << "-";
+  FilenameStream << PassName;
+  sys::path::append(ResultPath, Filename);
+  return std::string(ResultPath);
+}
+
+enum class IRDumpFileSuffixType {
+  Before,
+  After,
+  Invalidated,
+};
+
+static StringRef getFileSuffix(IRDumpFileSuffixType Type) {
+  static constexpr std::array FileSuffixes = {"-before.ll", "-after.ll",
+                                              "-invalidated.ll"};
+  return FileSuffixes[static_cast<size_t>(Type)];
+}
+
+void PrintIRInstrumentation::pushPassRunDescriptor(
+    StringRef PassID, Any IR, std::string &DumpIRFilename) {
+  const Module *M = unwrapModule(IR);
+  PassRunDescriptorStack.emplace_back(
+      PassRunDescriptor(M, DumpIRFilename, getIRName(IR), PassID));
+}
+
+PrintIRInstrumentation::PassRunDescriptor
+PrintIRInstrumentation::popPassRunDescriptor(StringRef PassID) {
+  assert(!PassRunDescriptorStack.empty() && "empty PassRunDescriptorStack");
+  PassRunDescriptor Descriptor = PassRunDescriptorStack.pop_back_val();
+  assert(Descriptor.PassID.equals(PassID) &&
+         "malformed PassRunDescriptorStack");
+  return Descriptor;
+}
+
+// Callers are responsible for closing the returned file descriptor
+static int prepareDumpIRFileDescriptor(const StringRef DumpIRFilename) {
+  std::error_code EC;
+  auto ParentPath = llvm::sys::path::parent_path(DumpIRFilename);
+  if (!ParentPath.empty()) {
+    std::error_code EC = llvm::sys::fs::create_directories(ParentPath);
+    if (EC)
+      report_fatal_error(Twine("Failed to create directory ") + ParentPath +
+                         " to support -ir-dump-directory: " + EC.message());
+  }
+  int Result = 0;
+  EC = sys::fs::openFile(DumpIRFilename, Result, sys::fs::CD_OpenAlways,
+                         sys::fs::FA_Write, sys::fs::OF_None);
+  if (EC)
+    report_fatal_error(Twine("Failed to open ") + DumpIRFilename +
+                       " to support -ir-dump-directory: " + EC.message());
+  return Result;
 }
 
 void PrintIRInstrumentation::printBeforePass(StringRef PassID, Any IR) {
   if (isIgnored(PassID))
     return;
+
+  std::string DumpIRFilename;
+  if (!IRDumpDirectory.empty() &&
+      (shouldPrintBeforePass(PassID) || shouldPrintAfterPass(PassID)))
+    DumpIRFilename = fetchDumpFilename(PassID, IR);
 
   // Saving Module for AfterPassInvalidated operations.
   // Note: here we rely on a fact that we do not change modules while
@@ -707,7 +804,7 @@ void PrintIRInstrumentation::printBeforePass(StringRef PassID, Any IR) {
   // for all print operations that has not happen yet.
   if (shouldPrintPassNumbers() || shouldPrintAtPassNumber() ||
       shouldPrintAfterPass(PassID))
-    pushModuleDesc(PassID, IR);
+    pushPassRunDescriptor(PassID, IR, DumpIRFilename);
 
   if (!shouldPrintIR(IR))
     return;
@@ -720,9 +817,20 @@ void PrintIRInstrumentation::printBeforePass(StringRef PassID, Any IR) {
   if (!shouldPrintBeforePass(PassID))
     return;
 
-  dbgs() << "*** IR Dump Before " << PassID << " on " << getIRName(IR)
-         << " ***\n";
-  unwrapAndPrint(dbgs(), IR);
+  auto WriteIRToStream = [&](raw_ostream &Stream) {
+    Stream << "; *** IR Dump Before " << PassID << " on " << getIRName(IR)
+           << " ***\n";
+    unwrapAndPrint(Stream, IR);
+  };
+
+  if (!DumpIRFilename.empty()) {
+    DumpIRFilename += getFileSuffix(IRDumpFileSuffixType::Before);
+    llvm::raw_fd_ostream DumpIRFileStream{
+        prepareDumpIRFileDescriptor(DumpIRFilename), /* shouldClose */ true};
+    WriteIRToStream(DumpIRFileStream);
+  } else {
+    WriteIRToStream(dbgs());
+  }
 }
 
 void PrintIRInstrumentation::printAfterPass(StringRef PassID, Any IR) {
@@ -733,21 +841,33 @@ void PrintIRInstrumentation::printAfterPass(StringRef PassID, Any IR) {
       !shouldPrintAtPassNumber())
     return;
 
-  const Module *M;
-  std::string IRName;
-  StringRef StoredPassID;
-  std::tie(M, IRName, StoredPassID) = popModuleDesc(PassID);
+  auto [M, DumpIRFilename, IRName, StoredPassID] = popPassRunDescriptor(PassID);
   assert(StoredPassID == PassID && "mismatched PassID");
 
   if (!shouldPrintIR(IR) || !shouldPrintAfterPass(PassID))
     return;
 
-  dbgs() << "*** IR Dump "
-         << (shouldPrintAtPassNumber()
-                 ? StringRef(formatv("At {0}-{1}", CurrentPassNumber, PassID))
-                 : StringRef(formatv("After {0}", PassID)))
-         << " on " << IRName << " ***\n";
-  unwrapAndPrint(dbgs(), IR);
+  auto WriteIRToStream = [&](raw_ostream &Stream, const StringRef IRName) {
+    Stream << "; *** IR Dump "
+           << (shouldPrintAtPassNumber()
+                   ? StringRef(formatv("At {0}-{1}", CurrentPassNumber, PassID))
+                   : StringRef(formatv("After {0}", PassID)))
+           << " on " << IRName << " ***\n";
+    unwrapAndPrint(Stream, IR);
+  };
+
+  if (!IRDumpDirectory.empty()) {
+    assert(!DumpIRFilename.empty() && "DumpIRFilename must not be empty and "
+                                      "should be set in printBeforePass");
+    const std::string DumpIRFilenameWithSuffix =
+        DumpIRFilename + getFileSuffix(IRDumpFileSuffixType::After).str();
+    llvm::raw_fd_ostream DumpIRFileStream{
+        prepareDumpIRFileDescriptor(DumpIRFilenameWithSuffix),
+        /* shouldClose */ true};
+    WriteIRToStream(DumpIRFileStream, IRName);
+  } else {
+    WriteIRToStream(dbgs(), IRName);
+  }
 }
 
 void PrintIRInstrumentation::printAfterPassInvalidated(StringRef PassID) {
@@ -758,25 +878,38 @@ void PrintIRInstrumentation::printAfterPassInvalidated(StringRef PassID) {
       !shouldPrintAtPassNumber())
     return;
 
-  const Module *M;
-  std::string IRName;
-  StringRef StoredPassID;
-  std::tie(M, IRName, StoredPassID) = popModuleDesc(PassID);
+  auto [M, DumpIRFilename, IRName, StoredPassID] = popPassRunDescriptor(PassID);
   assert(StoredPassID == PassID && "mismatched PassID");
   // Additional filtering (e.g. -filter-print-func) can lead to module
   // printing being skipped.
   if (!M || !shouldPrintAfterPass(PassID))
     return;
 
-  SmallString<20> Banner;
-  if (shouldPrintAtPassNumber())
-    Banner = formatv("*** IR Dump At {0}-{1} on {2} (invalidated) ***",
-                     CurrentPassNumber, PassID, IRName);
-  else 
-    Banner = formatv("*** IR Dump After {0} on {1} (invalidated) ***", 
-                     PassID, IRName);
-  dbgs() << Banner << "\n";
-  printIR(dbgs(), M);
+  auto WriteIRToStream = [&](raw_ostream &Stream, const Module *M,
+                             const StringRef IRName) {
+    SmallString<20> Banner;
+    if (shouldPrintAtPassNumber())
+      Banner = formatv("; *** IR Dump At {0}-{1} on {2} (invalidated) ***",
+                       CurrentPassNumber, PassID, IRName);
+    else
+      Banner = formatv("; *** IR Dump After {0} on {1} (invalidated) ***",
+                       PassID, IRName);
+    Stream << Banner << "\n";
+    printIR(Stream, M);
+  };
+
+  if (!IRDumpDirectory.empty()) {
+    assert(!DumpIRFilename.empty() && "DumpIRFilename must not be empty and "
+                                      "should be set in printBeforePass");
+    const std::string DumpIRFilenameWithSuffix =
+        DumpIRFilename + getFileSuffix(IRDumpFileSuffixType::Invalidated).str();
+    llvm::raw_fd_ostream DumpIRFileStream{
+        prepareDumpIRFileDescriptor(DumpIRFilenameWithSuffix),
+        /* shouldClose */ true};
+    WriteIRToStream(DumpIRFileStream, M, IRName);
+  } else {
+    WriteIRToStream(dbgs(), M, IRName);
+  }
 }
 
 bool PrintIRInstrumentation::shouldPrintBeforePass(StringRef PassID) {

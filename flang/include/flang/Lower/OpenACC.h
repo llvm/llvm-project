@@ -90,10 +90,10 @@ createOrGetReductionRecipe(fir::FirOpBuilder &, llvm::StringRef, mlir::Location,
 
 /// Get a acc.firstprivate.recipe op for the given type or create it if it does
 /// not exist yet.
-mlir::acc::FirstprivateRecipeOp createOrGetFirstprivateRecipe(mlir::OpBuilder &,
-                                                              llvm::StringRef,
-                                                              mlir::Location,
-                                                              mlir::Type);
+mlir::acc::FirstprivateRecipeOp
+createOrGetFirstprivateRecipe(mlir::OpBuilder &, llvm::StringRef,
+                              mlir::Location, mlir::Type,
+                              llvm::SmallVector<mlir::Value> &);
 
 void attachDeclarePostAllocAction(AbstractConverter &, fir::FirOpBuilder &,
                                   const Fortran::semantics::Symbol &);

@@ -250,6 +250,21 @@ void AMDGPUAsmPrinter::emitFunctionBodyEnd() {
   Streamer.popSection();
 }
 
+void AMDGPUAsmPrinter::emitImplicitDef(const MachineInstr *MI) const {
+  Register RegNo = MI->getOperand(0).getReg();
+
+  SmallString<128> Str;
+  raw_svector_ostream OS(Str);
+  OS << "implicit-def: "
+     << printReg(RegNo, MF->getSubtarget().getRegisterInfo());
+
+  if (MI->getAsmPrinterFlags() & AMDGPU::SGPR_SPILL)
+    OS << " : SGPR spill to VGPR lane";
+
+  OutStreamer->AddComment(OS.str());
+  OutStreamer->addBlankLine();
+}
+
 void AMDGPUAsmPrinter::emitFunctionEntryLabel() {
   if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
     AsmPrinter::emitFunctionEntryLabel();

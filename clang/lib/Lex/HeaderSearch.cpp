@@ -862,7 +862,7 @@ diagnoseFrameworkInclude(DiagnosticsEngine &Diags, SourceLocation IncludeLoc,
 OptionalFileEntryRef HeaderSearch::LookupFile(
     StringRef Filename, SourceLocation IncludeLoc, bool isAngled,
     ConstSearchDirIterator FromDir, ConstSearchDirIterator *CurDirArg,
-    ArrayRef<std::pair<const FileEntry *, DirectoryEntryRef>> Includers,
+    ArrayRef<std::pair<OptionalFileEntryRef, DirectoryEntryRef>> Includers,
     SmallVectorImpl<char> *SearchPath, SmallVectorImpl<char> *RelativePath,
     Module *RequestingModule, ModuleMap::KnownHeader *SuggestedModule,
     bool *IsMapped, bool *IsFrameworkFound, bool SkipCache,
@@ -913,7 +913,7 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
     SmallString<1024> TmpDir;
     bool First = true;
     for (const auto &IncluderAndDir : Includers) {
-      const FileEntry *Includer = IncluderAndDir.first;
+      OptionalFileEntryRef Includer = IncluderAndDir.first;
 
       // Concatenate the requested file onto the directory.
       TmpDir = IncluderAndDir.second.getName();
@@ -927,7 +927,7 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
       // from a module build. We should treat this as a system header if we're
       // building a [system] module.
       bool IncluderIsSystemHeader =
-          Includer ? getFileInfo(Includer).DirInfo != SrcMgr::C_User :
+          Includer ? getFileInfo(*Includer).DirInfo != SrcMgr::C_User :
           BuildSystemModule;
       if (OptionalFileEntryRef FE = getFileAndSuggestModule(
               TmpDir, IncludeLoc, IncluderAndDir.second, IncluderIsSystemHeader,
@@ -943,12 +943,12 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
         // Note that we only use one of FromHFI/ToHFI at once, due to potential
         // reallocation of the underlying vector potentially making the first
         // reference binding dangling.
-        HeaderFileInfo &FromHFI = getFileInfo(Includer);
+        HeaderFileInfo &FromHFI = getFileInfo(*Includer);
         unsigned DirInfo = FromHFI.DirInfo;
         bool IndexHeaderMapHeader = FromHFI.IndexHeaderMapHeader;
         StringRef Framework = FromHFI.Framework;
 
-        HeaderFileInfo &ToHFI = getFileInfo(&FE->getFileEntry());
+        HeaderFileInfo &ToHFI = getFileInfo(*FE);
         ToHFI.DirInfo = DirInfo;
         ToHFI.IndexHeaderMapHeader = IndexHeaderMapHeader;
         ToHFI.Framework = Framework;
@@ -1071,11 +1071,10 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
 
     CurDir = It;
 
-    const auto FE = &File->getFileEntry();
-    IncludeNames[FE] = Filename;
+    IncludeNames[*File] = Filename;
 
     // This file is a system header or C++ unfriendly if the dir is.
-    HeaderFileInfo &HFI = getFileInfo(FE);
+    HeaderFileInfo &HFI = getFileInfo(*File);
     HFI.DirInfo = CurDir->getDirCharacteristic();
 
     // If the directory characteristic is User but this framework was
@@ -1134,7 +1133,7 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
   // "Foo" is the name of the framework in which the including header was found.
   if (!Includers.empty() && Includers.front().first && !isAngled &&
       !Filename.contains('/')) {
-    HeaderFileInfo &IncludingHFI = getFileInfo(Includers.front().first);
+    HeaderFileInfo &IncludingHFI = getFileInfo(*Includers.front().first);
     if (IncludingHFI.IndexHeaderMapHeader) {
       SmallString<128> ScratchFilename;
       ScratchFilename += IncludingHFI.Framework;
@@ -1272,7 +1271,7 @@ OptionalFileEntryRef HeaderSearch::LookupSubframeworkHeader(
   // getFileInfo could resize the vector and we don't want to rely on order
   // of evaluation.
   unsigned DirInfo = getFileInfo(ContextFileEnt).DirInfo;
-  getFileInfo(&File->getFileEntry()).DirInfo = DirInfo;
+  getFileInfo(*File).DirInfo = DirInfo;
 
   FrameworkName.pop_back(); // remove the trailing '/'
   if (!findUsableModuleForFrameworkHeader(*File, FrameworkName,
@@ -1313,11 +1312,11 @@ static void mergeHeaderFileInfo(HeaderFileInfo &HFI,
 
 /// getFileInfo - Return the HeaderFileInfo structure for the specified
 /// FileEntry.
-HeaderFileInfo &HeaderSearch::getFileInfo(const FileEntry *FE) {
-  if (FE->getUID() >= FileInfo.size())
-    FileInfo.resize(FE->getUID() + 1);
+HeaderFileInfo &HeaderSearch::getFileInfo(FileEntryRef FE) {
+  if (FE.getUID() >= FileInfo.size())
+    FileInfo.resize(FE.getUID() + 1);
 
-  HeaderFileInfo *HFI = &FileInfo[FE->getUID()];
+  HeaderFileInfo *HFI = &FileInfo[FE.getUID()];
   // FIXME: Use a generation count to check whether this is really up to date.
   if (ExternalSource && !HFI->Resolved) {
     auto ExternalHFI = ExternalSource->GetHeaderFileInfo(FE);
@@ -1336,19 +1335,18 @@ HeaderFileInfo &HeaderSearch::getFileInfo(const FileEntry *FE) {
 }
 
 const HeaderFileInfo *
-HeaderSearch::getExistingFileInfo(const FileEntry *FE,
-                                  bool WantExternal) const {
+HeaderSearch::getExistingFileInfo(FileEntryRef FE, bool WantExternal) const {
   // If we have an external source, ensure we have the latest information.
   // FIXME: Use a generation count to check whether this is really up to date.
   HeaderFileInfo *HFI;
   if (ExternalSource) {
-    if (FE->getUID() >= FileInfo.size()) {
+    if (FE.getUID() >= FileInfo.size()) {
       if (!WantExternal)
         return nullptr;
-      FileInfo.resize(FE->getUID() + 1);
+      FileInfo.resize(FE.getUID() + 1);
     }
 
-    HFI = &FileInfo[FE->getUID()];
+    HFI = &FileInfo[FE.getUID()];
     if (!WantExternal && (!HFI->IsValid || HFI->External))
       return nullptr;
     if (!HFI->Resolved) {
@@ -1359,10 +1357,10 @@ HeaderSearch::getExistingFileInfo(const FileEntry *FE,
           mergeHeaderFileInfo(*HFI, ExternalHFI);
       }
     }
-  } else if (FE->getUID() >= FileInfo.size()) {
+  } else if (FE.getUID() >= FileInfo.size()) {
     return nullptr;
   } else {
-    HFI = &FileInfo[FE->getUID()];
+    HFI = &FileInfo[FE.getUID()];
   }
 
   if (!HFI->IsValid || (HFI->External && !WantExternal))
@@ -1371,7 +1369,7 @@ HeaderSearch::getExistingFileInfo(const FileEntry *FE,
   return HFI;
 }
 
-bool HeaderSearch::isFileMultipleIncludeGuarded(const FileEntry *File) const {
+bool HeaderSearch::isFileMultipleIncludeGuarded(FileEntryRef File) const {
   // Check if we've entered this file and found an include guard or #pragma
   // once. Note that we dor't check for #import, because that's not a property
   // of the file itself.
@@ -1381,7 +1379,7 @@ bool HeaderSearch::isFileMultipleIncludeGuarded(const FileEntry *File) const {
   return false;
 }
 
-void HeaderSearch::MarkFileModuleHeader(const FileEntry *FE,
+void HeaderSearch::MarkFileModuleHeader(FileEntryRef FE,
                                         ModuleMap::ModuleHeaderRole Role,
                                         bool isCompilingModuleHeader) {
   bool isModularHeader = ModuleMap::isModular(Role);
@@ -1401,7 +1399,7 @@ void HeaderSearch::MarkFileModuleHeader(const FileEntry *FE,
 }
 
 bool HeaderSearch::ShouldEnterIncludeFile(Preprocessor &PP,
-                                          const FileEntry *File, bool isImport,
+                                          FileEntryRef File, bool isImport,
                                           bool ModulesEnabled, Module *M,
                                           bool &IsFirstIncludeOfFile) {
   ++NumIncluded; // Count # of attempted #includes.
@@ -1576,7 +1574,7 @@ HeaderSearch::findAllModulesForHeader(FileEntryRef File) const {
 }
 
 ArrayRef<ModuleMap::KnownHeader>
-HeaderSearch::findResolvedModulesForHeader(const FileEntry *File) const {
+HeaderSearch::findResolvedModulesForHeader(FileEntryRef File) const {
   if (ExternalSource) {
     // Make sure the external source has handled header info about this file,
     // which includes whether the file is part of a module.

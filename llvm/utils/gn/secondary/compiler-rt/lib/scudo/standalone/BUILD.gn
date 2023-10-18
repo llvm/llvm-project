@@ -10,6 +10,7 @@ source_set("sources") {
   configs += [ "//llvm/utils/gn/build:crt_code" ]
   cflags = scudo_cflags
   sources = [
+    "allocator_common.h",
     "allocator_config.h",
     "atomic_helpers.h",
     "bytemap.h",
@@ -50,6 +51,8 @@ source_set("sources") {
     "release.h",
     "report.cpp",
     "report.h",
+    "report_linux.cpp",
+    "report_linux.h",
     "secondary.h",
     "size_class_map.h",
     "stack_depot.h",

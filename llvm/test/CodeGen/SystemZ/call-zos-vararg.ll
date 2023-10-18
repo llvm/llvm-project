@@ -1,88 +1,149 @@
 ; Test passing variable argument lists in 64-bit calls on z/OS.
 ; RUN: llc < %s -mtriple=s390x-ibm-zos -mcpu=z10 | FileCheck %s
 ; RUN: llc < %s -mtriple=s390x-ibm-zos -mcpu=z14 | FileCheck %s -check-prefix=ARCH12
-; CHECK-LABEL: call_vararg_double0
-; CHECK:       llihf 3, 1074118262
-; CHECK-NEXT:  oilf  3, 3367254360
-; CHECK:       lghi  1, 1
-; CHECK:       lghi  2, 2
+; CHECK-LABEL: call_vararg_double0:
+; CHECK:         stmg 6, 7, 1872(4)
+; CHECK-NEXT:    aghi 4, -192
+; CHECK-NEXT:    lg 6, 8(5)
+; CHECK-NEXT:    lg 5, 0(5)
+; CHECK-NEXT:    llihf 3, 1074118262
+; CHECK-NEXT:    oilf 3, 3367254360
+; CHECK-NEXT:    lghi 1, 1
+; CHECK-NEXT:    lghi 2, 2
+; CHECK-NEXT:    basr 7, 6
+; CHECK-NEXT:    bcr 0, 0
+; CHECK-NEXT:    lg 7, 2072(4)
+; CHECK-NEXT:    aghi 4, 192
+; CHECK-NEXT:    b 2(7)
 define i64 @call_vararg_double0() {
 entry:
   %retval = call i64 (i64, i64, ...) @pass_vararg0(i64 1, i64 2, double 2.718000e+00)
   ret i64 %retval
 }
 
-; CHECK-LABEL:  call_vararg_double1
-; CHECK:        llihf 0, 1074118262
-; CHECK-NEXT:   oilf  0, 3367254360
-; CHECK:        llihf 3, 1074340036
-; CHECK-NEXT:   oilf  3, 2611340116
-; CHECK:        lghi  1, 1
-; CHECK:        lghi  2, 2
-; CHECK:        stg 0, 2200(4)
+; CHECK-LABEL: call_vararg_double1:
+; CHECK:         stmg 6, 7, 1872(4)
+; CHECK-NEXT:    aghi 4, -192
+; CHECK-NEXT:    llihf 0, 1074118262
+; CHECK-NEXT:    oilf 0, 3367254360
+; CHECK-NEXT:    lg 6, 8(5)
+; CHECK-NEXT:    lg 5, 0(5)
+; CHECK-NEXT:    llihf 3, 1074340036
+; CHECK-NEXT:    oilf 3, 2611340116
+; CHECK-NEXT:    lghi 1, 1
+; CHECK-NEXT:    lghi 2, 2
+; CHECK-NEXT:    stg 0, 2200(4)
+; CHECK-NEXT:    basr 7, 6
+; CHECK-NEXT:    bcr 0, 0
+; CHECK-NEXT:    lg 7, 2072(4)
+; CHECK-NEXT:    aghi 4, 192
+; CHECK-NEXT:    b 2(7)
 define i64 @call_vararg_double1() {
 entry:
   %retval = call i64 (i64, i64, ...) @pass_vararg0(i64 1, i64 2, double 3.141000e+00, double 2.718000e+00)
   ret i64 %retval
 }
 
-; CHECK-LABEL: call_vararg_double2
-; CHECK-NOT:   llihf 0
-; CHECK-NOT:   oilf 0
-; CHECK:       llihf 2, 1074118262
-; CHECK-NEXT:  oilf  2, 3367254360
-; CHECK:       lghi  1, 8200
+; CHECK-LABEL: call_vararg_double2:
+; CHECK:         stmg 6, 7, 1872(4)
+; CHECK-NEXT:    aghi 4, -192
+; CHECK-NEXT:    lg 6, 24(5)
+; CHECK-NEXT:    lg 5, 16(5)
+; CHECK-NEXT:    llihf 2, 1074118262
+; CHECK-NEXT:    oilf 2, 3367254360
+; CHECK-NEXT:    lghi 1, 8200
+; CHECK-NEXT:    basr 7, 6
+; CHECK-NEXT:    bcr 0, 0
+; CHECK-NEXT:    lg 7, 2072(4)
+; CHECK-NEXT:    aghi 4, 192
+; CHECK-NEXT:    b 2(7)
 define i64 @call_vararg_double2() {
 entry:
   %retval = call i64 (i64, ...) @pass_vararg2(i64 8200, double 2.718000e+00)
   ret i64 %retval
 }
 
-; CHECK-LABEL: call_vararg_double3
-; CHECK:       llihf   0, 1072703839
-; CHECK-NEXT:  oilf    0, 2861204133
-; CHECK:       llihf   1, 1074118262
-; CHECK-NEXT:  oilf    1, 3367254360
-; CHECK:       llihf   2, 1074340036
-; CHECK-NEXT:  oilf    2, 2611340116
-; CHECK:       llihf   3, 1073127358
-; CHECK-NEXT:  oilf    3, 1992864825
-; CHECK:       stg     0, 2200(4)
+; CHECK-LABEL: call_vararg_double3:
+; CHECK:         stmg 6, 7, 1872(4)
+; CHECK-NEXT:    aghi 4, -192
+; CHECK-NEXT:    llihf 0, 1072703839
+; CHECK-NEXT:    oilf 0, 2861204133
+; CHECK-NEXT:    lg 6, 40(5)
+; CHECK-NEXT:    lg 5, 32(5)
+; CHECK-NEXT:    llihf 1, 1074118262
+; CHECK-NEXT:    oilf 1, 3367254360
+; CHECK-NEXT:    llihf 2, 1074340036
+; CHECK-NEXT:    oilf 2, 2611340116
+; CHECK-NEXT:    llihf 3, 1073127358
+; CHECK-NEXT:    oilf 3, 1992864825
+; CHECK-NEXT:    stg 0, 2200(4)
+; CHECK-NEXT:    basr 7, 6
+; CHECK-NEXT:    bcr 0, 0
+; CHECK-NEXT:    lg 7, 2072(4)
+; CHECK-NEXT:    aghi 4, 192
+; CHECK-NEXT:    b 2(7)
 define i64 @call_vararg_double3() {
 entry:
   %retval = call i64 (...) @pass_vararg3(double 2.718000e+00, double 3.141000e+00, double 1.414000e+00, double 1.010101e+00)
   ret i64 %retval
 }
 
-; CHECK-LABEL: call_vararg_both0
-; CHECK:       lgr   2, 1
-; CHECK:       lgdr  1, 0
+; CHECK-LABEL: call_vararg_both0:
+; CHECK:         stmg 6, 7, 1872(4)
+; CHECK-NEXT:    aghi 4, -192
+; CHECK-NEXT:    lg 6, 40(5)
+; CHECK-NEXT:    lg 5, 32(5)
+; CHECK-NEXT:    lgr 2, 1
+; CHECK-NEXT:    lgdr 1, 0
+; CHECK-NEXT:    basr 7, 6
+; CHECK-NEXT:    bcr 0, 0
+; CHECK-NEXT:    lg 7, 2072(4)
+; CHECK-NEXT:    aghi 4, 192
+; CHECK-NEXT:    b 2(7)
 define i64 @call_vararg_both0(i64 %arg0, double %arg1) {
   %retval  = call i64(...) @pass_vararg3(double %arg1, i64 %arg0)
   ret i64 %retval
 }
 
-; CHECK-LABEL: call_vararg_long_double0
-; CHECK:       larl  1, @CPI5_0
-; CHECK-NEXT:  ld    0, 0(1)
-; CHECK-NEXT:  ld    2, 8(1)
-; CHECK:       lgdr  3, 0
-; CHECK:       lghi  1, 1
-; CHECK:       lghi  2, 2
-; CHECK:       std   0, 2192(4)
-; CHECK-NEXT:  std   2, 2200(4)
+; CHECK-LABEL: call_vararg_long_double0:
+; CHECK:         stmg 6, 7, 1872(4)
+; CHECK-NEXT:    aghi 4, -192
+; CHECK-NEXT:    larl 1, @CPI5_0
+; CHECK-NEXT:    ld 0, 0(1)
+; CHECK-NEXT:    ld 2, 8(1)
+; CHECK-NEXT:    lg 6, 8(5)
+; CHECK-NEXT:    lg 5, 0(5)
+; CHECK-NEXT:    lgdr 3, 0
+; CHECK-NEXT:    lghi 1, 1
+; CHECK-NEXT:    lghi 2, 2
+; CHECK-NEXT:    std 0, 2192(4)
+; CHECK-NEXT:    std 2, 2200(4)
+; CHECK-NEXT:    basr 7, 6
+; CHECK-NEXT:    bcr 0, 0
+; CHECK-NEXT:    lg 7, 2072(4)
+; CHECK-NEXT:    aghi 4, 192
+; CHECK-NEXT:    b 2(7)
 define i64 @call_vararg_long_double0() {
 entry:
   %retval = call i64 (i64, i64, ...) @pass_vararg0(i64 1, i64 2, fp128 0xLE0FC1518450562CD4000921FB5444261)
   ret i64 %retval
 }
 
-; CHECK-LABEL: call_vararg_long_double1
-; CHECK:       lgdr  3, 0
-; CHECK:       lghi  1, 1
-; CHECK:       lghi  2, 2
-; CHECK:       std   0, 2192(4)
-; CHECK-NEXT:  std   2, 2200(4)
+; CHECK-LABEL: call_vararg_long_double1:
+; CHECK:         stmg 6, 7, 1872(4)
+; CHECK-NEXT:    aghi 4, -192
+; CHECK-NEXT:    lg 6, 8(5)
+; CHECK-NEXT:    lg 5, 0(5)
+; CHECK-NEXT:    lgdr 3, 0
+; CHECK-NEXT:    lghi 1, 1
+; CHECK-NEXT:    lghi 2, 2
+; CHECK-NEXT:    std 0, 2192(4)
+; CHECK-NEXT:    std 2, 2200(4)
+; CHECK-NEXT:    basr 7, 6
+; CHECK-NEXT:    bcr 0, 0
+; CHECK-NEXT:    lg 7, 2072(4)
+; CHECK-NEXT:    aghi 4, 192
+; CHECK-NEXT:    b 2(7)
 define i64 @call_vararg_long_double1(fp128 %arg0) {
 entry:
   %retval = call i64 (i64, i64, ...) @pass_vararg0(i64 1, i64 2, fp128 %arg0)
@@ -90,22 +151,41 @@ entry:
 }
 
 ; CHECK-LABEL: call_vararg_long_double2
-; CHECK:      std   4, 2208(4)
-; CHECK-NEXT: std   6, 2216(4)
-; CHECK:      lgdr  3, 0
-; CHECK:      lghi  1, 1
-; CHECK:      lghi  2, 2
-; CHECK:      std   0, 2192(4)
-; CHECK-NEXT: std   2, 2200(4)
+; CHECK-LABEL: call_vararg_long_double2:
+; CHECK:         stmg 6, 7, 1872(4)
+; CHECK-NEXT:    aghi 4, -192
+; CHECK-NEXT:    std 4, 2208(4)
+; CHECK-NEXT:    std 6, 2216(4)
+; CHECK-NEXT:    lg 6, 8(5)
+; CHECK-NEXT:    lg 5, 0(5)
+; CHECK-NEXT:    lgdr 3, 0
+; CHECK-NEXT:    lghi 1, 1
+; CHECK-NEXT:    lghi 2, 2
+; CHECK-NEXT:    std 0, 2192(4)
+; CHECK-NEXT:    std 2, 2200(4)
+; CHECK-NEXT:    basr 7, 6
+; CHECK-NEXT:    bcr 0, 0
+; CHECK-NEXT:    lg 7, 2072(4)
+; CHECK-NEXT:    aghi 4, 192
+; CHECK-NEXT:    b 2(7)
 define i64 @call_vararg_long_double2(fp128 %arg0, fp128 %arg1) {
 entry:
   %retval = call i64 (i64, i64, ...) @pass_vararg0(i64 1, i64 2, fp128 %arg0, fp128 %arg1)
   ret i64 %retval
 }
 
-; CHECK-LABEL: call_vararg_long_double3
-; CHECK:       lgdr 3, 2
-; CHECK-NEXT:  lgdr 2, 0
+; CHECK-LABEL: call_vararg_long_double3:
+; CHECK:         stmg 6, 7, 1872(4)
+; CHECK-NEXT:    aghi 4, -192
+; CHECK-NEXT:    lg 6, 40(5)
+; CHECK-NEXT:    lg 5, 32(5)
+; CHECK-NEXT:    lgdr 3, 2
+; CHECK-NEXT:    lgdr 2, 0
+; CHECK-NEXT:    basr 7, 6
+; CHECK-NEXT:    bcr 0, 0
+; CHECK-NEXT:    lg 7, 2072(4)
+; CHECK-NEXT:    aghi 4, 192
+; CHECK-NEXT:    b 2(7)
 define i64 @call_vararg_long_double3(fp128 %arg0) {
 entry:
   %retval = call i64 (...) @pass_vararg3(fp128 %arg0)
@@ -173,38 +253,58 @@ define void @call_vec_double_vararg_straddle(<2 x double> %v) {
   ret void
 }
 
-; CHECK-LABEL: call_vararg_integral0
-; Since arguments 0, 1, and 2 are already in the correct
-; registers, we should have no loads of any sort into
-; GPRs 1, 2, and 3.
-; CHECK-NOT: lg  1
-; CHECK-NOT: lgr  1
-; CHECK-NOT: lg  2
-; CHECK-NOT: lgr  2
-; CHECK-NOT: lg  3
-; CHECK-NOT: lgr  3
+; CHECK-LABEL: call_vararg_integral0:
+; CHECK:         stmg 6, 7, 1872(4)
+; CHECK-NEXT:    aghi 4, -192
+; CHECK-NEXT:    lg 0, 2392(4)
+; CHECK-NEXT:    lg 6, 40(5)
+; CHECK-NEXT:    lg 5, 32(5)
+; CHECK-NEXT:    stg 0, 2200(4)
+; CHECK-NEXT:    basr 7, 6
+; CHECK-NEXT:    bcr 0, 0
+; CHECK-NEXT:    lg 7, 2072(4)
+; CHECK-NEXT:    aghi 4, 192
+; CHECK-NEXT:    b 2(7)
 define i64 @call_vararg_integral0(i32 signext %arg0, i16 signext %arg1, i64 signext %arg2, i8 signext %arg3) {
 entry:
   %retval = call i64(...) @pass_vararg3(i32 signext %arg0, i16 signext %arg1, i64 signext %arg2, i8 signext %arg3)
   ret i64 %retval
 }
 
-; CHECK-LABEL: call_vararg_float0
-; CHECK:       lghi  1, 1
-; CHECK:       llihf 2, 1073692672
+; CHECK-LABEL: call_vararg_float0:
+; CHECK:         stmg 6, 7, 1872(4)
+; CHECK-NEXT:    aghi 4, -192
+; CHECK-NEXT:    lg 6, 24(5)
+; CHECK-NEXT:    lg 5, 16(5)
+; CHECK-NEXT:    lghi 1, 1
+; CHECK-NEXT:    llihf 2, 1073692672
+; CHECK-NEXT:    basr 7, 6
+; CHECK-NEXT:    bcr 0, 0
+; CHECK-NEXT:    lg 7, 2072(4)
+; CHECK-NEXT:    aghi 4, 192
+; CHECK-NEXT:    b 2(7)
 define i64 @call_vararg_float0() {
 entry:
   %retval = call i64 (i64, ...) @pass_vararg2(i64 1, float 1.953125)
   ret i64 %retval
 }
 
-; CHECK-LABEL: call_vararg_float1
-; CHECK:       larl  1, @CPI17_0
-; CHECK:       le  0, 0(1)
-; CHECK:       llihf 0, 1073692672
-; CHECK:       llihh 2, 16384
-; CHECK:       llihh 3, 16392
-; CHECK:       stg  0, 2200(4)
+; CHECK-LABEL: call_vararg_float1:
+; CHECK:         stmg 6, 7, 1872(4)
+; CHECK-NEXT:    aghi 4, -192
+; CHECK-NEXT:    lg 6, 72(5)
+; CHECK-NEXT:    lg 5, 64(5)
+; CHECK-NEXT:    larl 1, @CPI17_0
+; CHECK-NEXT:    le 0, 0(1)
+; CHECK-NEXT:    llihf 0, 1073692672
+; CHECK-NEXT:    llihh 2, 16384
+; CHECK-NEXT:    llihh 3, 16392
+; CHECK-NEXT:    stg 0, 2200(4)
+; CHECK-NEXT:    basr 7, 6
+; CHECK-NEXT:    bcr 0, 0
+; CHECK-NEXT:    lg 7, 2072(4)
+; CHECK-NEXT:    aghi 4, 192
+; CHECK-NEXT:    b 2(7)
 define i64 @call_vararg_float1() {
 entry:
   %retval = call i64 (float, ...) @pass_vararg4(float 1.0, float 2.0, float 3.0, float 1.953125)
@@ -224,9 +324,16 @@ entry:
 ; }
 ;
 ; CHECK-LABEL: pass_vararg:
-; CHECK: aghi    4, -160
-; CHECK: la      0, 2208(4)
-; CHECK: stg     0, 2200(4)
+; CHECK:         stmg 6, 7, 1904(4)
+; CHECK-NEXT:    aghi 4, -160
+; CHECK-NEXT:    stg 2, 2344(4)
+; CHECK-NEXT:    stg 3, 2352(4)
+; CHECK-NEXT:    la 0, 2352(4)
+; CHECK-NEXT:    stg 0, 2200(4)
+; CHECK-NEXT:    lg 3, 2344(4)
+; CHECK-NEXT:    lg 7, 2072(4)
+; CHECK-NEXT:    aghi 4, 160
+; CHECK-NEXT:    b 2(7)
 define hidden i64 @pass_vararg(i64 %x, ...) {
 entry:
   %va = alloca ptr, align 8

@@ -23,6 +23,13 @@ def TosaLayerwiseConstantFoldPass : Pass<"tosa-layerwise-constant-fold", "func::
   }];
 
   let constructor = "createTosaLayerwiseConstantFoldPass()";
+
+  let options = [
+      Option<"aggressiveReduceConstant", "aggressive-reduce-constant", "bool",
+             /*default=*/"false",
+             "Always perform the reduce constant optimization"
+             "May add more tosa.const but would reduce runtime calculations">,
+   ];
 }
 
 def TosaInferShapes : Pass<"tosa-infer-shapes", "func::FuncOp"> {

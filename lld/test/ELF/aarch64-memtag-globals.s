@@ -73,10 +73,33 @@ Symbols:
 # RUN:   %t1.o %t2.o -o %t1.so 2>&1 | FileCheck %s --check-prefix=CHECK-DYNRELOC
 # CHECK-DYNRELOC: --apply-dynamic-relocs cannot be used with MTE globals
 
-## And ensure that fully-static executables are banned.
-# RUN: not ld.lld --static --android-memtag-mode=sync \
-# RUN:   %t1.o %t2.o -o %t1.so 2>&1 | FileCheck %s --check-prefix=CHECK-NOSTATIC
-# CHECK-NOSTATIC: --android-memtag-mode is incompatible with fully-static executables (-static)
+## Ensure that fully statically linked executables just simply drop the MTE
+## globals stuff: special relocations, data in the place to be relocated,
+## dynamic entries, etc.
+# RUN: llvm-mc --filetype=obj -triple=aarch64-none-linux-android \
+# RUN:   %t/input_3.s -o %t3.o
+# RUN: ld.lld -static --android-memtag-mode=sync %t1.o %t2.o %t3.o -o %t.static.so
+# RUN: llvm-readelf -s --section-headers --relocs --memtag %t.static.so | \
+# RUN:   FileCheck %s --check-prefix=CHECK-STATIC
+# CHECK-STATIC-NOT: .memtag.globals.static
+# CHECK-STATIC-NOT: DT_AARCH64_MEMTAG_
+
+# CHECK-STATIC:      There are no relocations in this file
+# CHECK-STATIC:      Memtag Dynamic Entries:
+# CHECK-STATIC-NEXT: < none found >
+
+# RUN: llvm-objdump -tDz %t.static.so | FileCheck %s --check-prefix=CHECK-STATIC-SPECIAL-RELOCS
+# CHECK-STATIC-SPECIAL-RELOCS:      [[#%x,HIDDEN_GLOBAL_ADDR:]] {{.*}} .bss {{0*}}10 hidden_global
+# CHECK-STATIC-SPECIAL-RELOCS:      <pointer_to_hidden_global_end>:
+# CHECK-STATIC-SPECIAL-RELOCS-NEXT:   .word 0x{{0*}}[[#HIDDEN_GLOBAL_ADDR + 12]]
+# CHECK-STATIC-SPECIAL-RELOCS-NEXT:   .word 0x00000000
+# CHECK-STATIC-SPECIAL-RELOCS-NEXT:   .word 0x00000000
+# CHECK-STATIC-SPECIAL-RELOCS-NEXT:   .word 0x00000000
+# CHECK-STATIC-SPECIAL-RELOCS:      <pointer_past_hidden_global_end>:
+# CHECK-STATIC-SPECIAL-RELOCS-NEXT:   .word 0x{{0*}}[[#HIDDEN_GLOBAL_ADDR + 16]]
+# CHECK-STATIC-SPECIAL-RELOCS-NEXT:   .word 0x00000000
+# CHECK-STATIC-SPECIAL-RELOCS-NEXT:   .word 0x00000000
+# CHECK-STATIC-SPECIAL-RELOCS-NEXT:   .word 0x00000000
 
 # CHECK:     Symbol table '.dynsym' contains
 # CHECK-DAG: [[#%x,GLOBAL:]] 32 OBJECT GLOBAL DEFAULT [[#]] global{{$}}
