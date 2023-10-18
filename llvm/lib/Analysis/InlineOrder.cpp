@@ -223,10 +223,12 @@ class PriorityInlineOrder : public InlineOrder<std::pair<CallBase *, int>> {
   // pushed right back into the heap. For simplicity, those cases where
   // the desirability of a call site increases are ignored here.
   void adjust() {
-    while (updateAndCheckDecreased(Heap.front())) {
-      std::pop_heap(Heap.begin(), Heap.end(), isLess);
+    std::pop_heap(Heap.begin(), Heap.end(), isLess);
+    while (updateAndCheckDecreased(Heap.back())) {
       std::push_heap(Heap.begin(), Heap.end(), isLess);
+      std::pop_heap(Heap.begin(), Heap.end(), isLess);
     }
+    std::push_heap(Heap.begin(), Heap.end(), isLess);
   }
 
 public:
