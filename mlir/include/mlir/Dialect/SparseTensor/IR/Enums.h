@@ -456,10 +456,10 @@ static_assert((isUniqueDLT(DimLevelType::Dense) &&
 /// The compact encoding is as follows:
 ///
 ///  0xffffffffffffffff
-/// |0000      |                        60-bit idx|  e.g. i + 2 * ii e.g. i
-/// |0001 floor|           20-bit const|20-bit idx|  e.g. i + 2 * ii e.g. i floor c
-/// |0010 mod  |           20-bit const|20-bit idx|  e.g. i + 2 * ii e.g. i mod c
-/// |0011 mul  |20-bit idx|20-bit const|20-bit idx|  e.g. i + 2 * ii
+/// |0000      |                        60-bit idx| e.g. i
+/// |0001 floor|           20-bit const|20-bit idx| e.g. i floor c
+/// |0010 mod  |           20-bit const|20-bit idx| e.g. i mod c
+/// |0011 mul  |20-bit idx|20-bit const|20-bit idx| e.g. i + c * ii
 ///
 /// This encoding provides sufficient generality for currently supported
 /// sparse tensor types. To generalize this more, we will need to provide
@@ -472,7 +472,7 @@ constexpr uint64_t encodeDim(uint64_t i, uint64_t cf, uint64_t cm) {
     return (0x01L << 60) | (cf << 20) | i;
   }
   if (cm != 0) {
-    assert(cf == 0 && cm <= 0xfffff i <= 0xfffff);
+    assert(cm <= 0xfffff && i <= 0xfffff);
     return (0x02L << 60) | (cm << 20) | i;
   }
   assert(i <= 0x0fffffffffffffffu);
