@@ -1534,6 +1534,7 @@ def warn_omp51_compat_attributes : Warning<
   "standards before OpenMP 5.1">,
   InGroup<OpenMPPre51Compat>, DefaultIgnore;
 def err_omp_expected_colon : Error<"missing ':' in %0">;
+def err_omp_missing_comma : Error< "missing ',' after %0">;
 def err_omp_expected_context_selector
     : Error<"expected valid context selector in %0">;
 def err_omp_requires_out_inout_depend_type : Error<
