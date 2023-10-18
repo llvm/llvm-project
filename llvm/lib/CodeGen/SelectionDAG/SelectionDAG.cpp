@@ -9880,14 +9880,14 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
            VTList.VTs[0] == Ops[1].getValueType() &&
            "Binary operator types must match!");
     // Constant fold.
-    ConstantSDNode* LHS = dyn_cast<ConstantSDNode>(Ops[0]);
-    ConstantSDNode* RHS = dyn_cast<ConstantSDNode>(Ops[1]);
-    if(LHS && RHS) {
+    ConstantSDNode *LHS = dyn_cast<ConstantSDNode>(Ops[0]);
+    ConstantSDNode *RHS = dyn_cast<ConstantSDNode>(Ops[1]);
+    if (LHS && RHS) {
       unsigned Width = VTList.VTs[0].getScalarSizeInBits();
       unsigned OutWidth = Width * 2;
       APInt Val = LHS->getAPIntValue();
       APInt Mul = RHS->getAPIntValue();
-      if(Opcode == ISD::SMUL_LOHI) {
+      if (Opcode == ISD::SMUL_LOHI) {
         Val = Val.sext(OutWidth);
         Mul = Mul.sext(OutWidth);
       } else {
@@ -9896,7 +9896,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
       }
       Val *= Mul;
 
-      SDValue Hi = getConstant(Val.getHiBits(Width).trunc(Width), DL, VTList.VTs[0]);
+      SDValue Hi =
+          getConstant(Val.getHiBits(Width).trunc(Width), DL, VTList.VTs[0]);
       SDValue Lo = getConstant(Val.trunc(Width), DL, VTList.VTs[0]);
       return getNode(ISD::MERGE_VALUES, DL, VTList, {Lo, Hi}, Flags);
     }
