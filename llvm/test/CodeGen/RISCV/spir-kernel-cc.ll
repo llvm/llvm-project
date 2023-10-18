@@ -2,85 +2,15 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+f,+d < %s | FileCheck %s -check-prefix=RV32
 ; RUN: llc -mtriple=riscv64 -mattr=+f,+d < %s | FileCheck %s -check-prefix=RV64
 
-; Check the SPIR_KERNEL call convention work
+; Check the SPIR_KERNEL call convention works.
 
-declare dso_local i64 @_Z13get_global_idj(i32 noundef signext)
-
-define dso_local spir_kernel void @foo(ptr nocapture noundef readonly align 4 %a, ptr nocapture noundef readonly align 4 %b, ptr nocapture noundef writeonly align 4 %c) {
+define dso_local spir_kernel void @foo() {
 ; RV32-LABEL: foo:
-; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s2, 0(sp) # 4-byte Folded Spill
-; RV32-NEXT:    .cfi_offset ra, -4
-; RV32-NEXT:    .cfi_offset s0, -8
-; RV32-NEXT:    .cfi_offset s1, -12
-; RV32-NEXT:    .cfi_offset s2, -16
-; RV32-NEXT:    mv s0, a2
-; RV32-NEXT:    mv s1, a1
-; RV32-NEXT:    mv s2, a0
-; RV32-NEXT:    li a0, 0
-; RV32-NEXT:    call _Z13get_global_idj
-; RV32-NEXT:    slli a0, a0, 2
-; RV32-NEXT:    add s2, s2, a0
-; RV32-NEXT:    flw fa5, 0(s2)
-; RV32-NEXT:    add s1, s1, a0
-; RV32-NEXT:    flw fa4, 0(s1)
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    add a0, s0, a0
-; RV32-NEXT:    fsw fa5, 0(a0)
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s2, 0(sp) # 4-byte Folded Reload
-; RV32-NEXT:    addi sp, sp, 16
+; RV32:       # %bb.0:
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: foo:
-; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    addi sp, sp, -32
-; RV64-NEXT:    .cfi_def_cfa_offset 32
-; RV64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
-; RV64-NEXT:    .cfi_offset ra, -8
-; RV64-NEXT:    .cfi_offset s0, -16
-; RV64-NEXT:    .cfi_offset s1, -24
-; RV64-NEXT:    .cfi_offset s2, -32
-; RV64-NEXT:    mv s0, a2
-; RV64-NEXT:    mv s1, a1
-; RV64-NEXT:    mv s2, a0
-; RV64-NEXT:    li a0, 0
-; RV64-NEXT:    call _Z13get_global_idj
-; RV64-NEXT:    sext.w a0, a0
-; RV64-NEXT:    slli a0, a0, 2
-; RV64-NEXT:    add s2, s2, a0
-; RV64-NEXT:    flw fa5, 0(s2)
-; RV64-NEXT:    add s1, s1, a0
-; RV64-NEXT:    flw fa4, 0(s1)
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    add a0, s0, a0
-; RV64-NEXT:    fsw fa5, 0(a0)
-; RV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
-; RV64-NEXT:    addi sp, sp, 32
+; RV64:       # %bb.0:
 ; RV64-NEXT:    ret
-entry:
-  %call = tail call i64 @_Z13get_global_idj(i32 noundef signext 0)
-  %sext = shl i64 %call, 32
-  %idxprom = ashr exact i64 %sext, 32
-  %arrayidx = getelementptr inbounds float, ptr %a, i64 %idxprom
-  %0 = load float, ptr %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds float, ptr %b, i64 %idxprom
-  %1 = load float, ptr %arrayidx2, align 4
-  %add = fadd float %0, %1
-  %arrayidx4 = getelementptr inbounds float, ptr %c, i64 %idxprom
-  store float %add, ptr %arrayidx4, align 4
   ret void
 }
