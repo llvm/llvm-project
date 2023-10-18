@@ -68,6 +68,7 @@ public:
   uint64_t GetLLDBIndexCacheExpirationDays();
   FileSpec GetLLDBIndexCachePath() const;
   bool SetLLDBIndexCachePath(const FileSpec &path);
+  FileSpec GetLocateDwoScriptPath() const;
 
   bool GetLoadSymbolOnDemand();
 

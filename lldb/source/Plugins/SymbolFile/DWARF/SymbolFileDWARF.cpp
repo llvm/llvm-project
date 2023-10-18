@@ -1742,20 +1742,37 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
   if (std::shared_ptr<SymbolFileDWARFDwo> dwp_sp = GetDwpSymbolFile())
     return dwp_sp;
 
-  FileSpec dwo_file(dwo_name);
-  FileSystem::Instance().Resolve(dwo_file);
-  bool found = false;
+  const char *comp_dir =
+      cu_die.GetAttributeValueAsString(dwarf_cu, DW_AT_comp_dir, nullptr);
+
+  // Try locating the dwo via the callback first.
+  FileSpec dwo_file;
+  SymbolFile::LocateDwoCallback locate_dwo_callback =
+      SymbolFile::GetLocateDwoCallback();
+  if (locate_dwo_callback) {
+    const FileSpec &objfile_spec = m_objfile_sp->GetFileSpec();
+    Status error = locate_dwo_callback(objfile_spec, dwo_name, comp_dir,
+                                       dwarf_cu->GetDWOId().value(), dwo_file);
+    if (error.Fail()) {
+      GetObjectFile()->GetModule()->ReportWarning(
+          "locate DWO callback failed with error: {0}",
+          error.AsCString("unknown error"));
+    }
+  }
+  bool found = dwo_file && FileSystem::Instance().Exists(dwo_file);
+
+  if (!found) {
+    dwo_file = FileSpec(dwo_name);
+    FileSystem::Instance().Resolve(dwo_file);
+    // It's relative, e.g. "foo.dwo", but we just to happen to be right next to
+    // it. Or it's absolute.
+    found = FileSystem::Instance().Exists(dwo_file);
+  }
 
   const FileSpecList &debug_file_search_paths =
       Target::GetDefaultDebugFileSearchPaths();
   size_t num_search_paths = debug_file_search_paths.GetSize();
 
-  // It's relative, e.g. "foo.dwo", but we just to happen to be right next to
-  // it. Or it's absolute.
-  found = FileSystem::Instance().Exists(dwo_file);
-
-  const char *comp_dir =
-      cu_die.GetAttributeValueAsString(dwarf_cu, DW_AT_comp_dir, nullptr);
   if (!found) {
     // It could be a relative path that also uses DW_AT_COMP_DIR.
     if (comp_dir) {

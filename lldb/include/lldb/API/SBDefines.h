@@ -139,6 +139,13 @@ typedef void (*SBDebuggerDestroyCallback)(lldb::user_id_t debugger_id,
 typedef SBError (*SBPlatformLocateModuleCallback)(
     void *baton, const SBModuleSpec &module_spec, SBFileSpec &module_file_spec,
     SBFileSpec &symbol_file_spec);
+
+typedef SBError (*SBModuleLocateDwoCallback)(void *baton,
+                                             const SBFileSpec &objfile_spec,
+                                             const char *dwo_name,
+                                             const char *comp_dir,
+                                             const int64_t dwo_id,
+                                             SBFileSpec &located_dwo_file_spec);
 }
 
 #endif // LLDB_API_SBDEFINES_H

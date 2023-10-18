@@ -77,6 +77,15 @@ public:
 
   static SymbolFile *FindPlugin(lldb::ObjectFileSP objfile_sp);
 
+  typedef std::function<Status(
+      const FileSpec &objfile_spec, const char *dwo_name, const char *comp_dir,
+      const uint64_t dwo_id, FileSpec &located_dwo_file_spec)>
+      LocateDwoCallback;
+
+  static void SetLocateDwoCallback(LocateDwoCallback callback);
+
+  static LocateDwoCallback GetLocateDwoCallback();
+
   // Constructors and Destructors
   SymbolFile() = default;
 
@@ -475,6 +484,8 @@ protected:
 private:
   SymbolFile(const SymbolFile &) = delete;
   const SymbolFile &operator=(const SymbolFile &) = delete;
+
+  static LocateDwoCallback LOCATE_DWO_CALLBACK;
 };
 
 /// Containing protected virtual methods for child classes to override.

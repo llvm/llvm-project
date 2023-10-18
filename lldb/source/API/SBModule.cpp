@@ -677,3 +677,30 @@ void SBModule::GarbageCollectAllocatedModules() {
   const bool mandatory = false;
   ModuleList::RemoveOrphanSharedModules(mandatory);
 }
+
+void SBModule::SetLocateDwoCallback(lldb::SBModuleLocateDwoCallback callback,
+                                    void *baton) {
+  LLDB_INSTRUMENT();
+
+  if (!callback) {
+    SymbolFile::SetLocateDwoCallback(nullptr);
+    return;
+  }
+
+  // Wraps around the `callback` call to convert the SB* classes to their
+  // private counterparts.
+  SymbolFile::SetLocateDwoCallback(
+      [callback, baton](const FileSpec &objfile_spec, const char *dwo_name,
+                        const char *comp_dir, const uint64_t dwo_id,
+                        FileSpec &located_dwo_file_spec) {
+        SBFileSpec located_dwo_file_spec_sb;
+        SBError error = callback(baton, SBFileSpec(objfile_spec), dwo_name,
+                                 comp_dir, dwo_id, located_dwo_file_spec_sb);
+
+        if (error.Success()) {
+          located_dwo_file_spec = located_dwo_file_spec_sb.ref();
+        }
+
+        return error.ref();
+      });
+}

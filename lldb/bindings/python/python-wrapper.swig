@@ -1168,4 +1168,58 @@ static SBError LLDBSwigPythonCallLocateModuleCallback(
 
   return *sb_error_ptr;
 }
+
+// `comp_dir` is allowed to be NULL. All other arguments must be valid values.
+static SBError LLDBSwigPythonCallLocateDwoCallback(
+    void *baton, const SBFileSpec &objfile_spec_sb,
+    const char *dwo_name, const char *comp_dir, const int64_t dwo_id, SBFileSpec &located_dwo_file_spec_sb) {
+  SWIG_Python_Thread_Block swig_thread_block;
+
+  PyErr_Cleaner py_err_cleaner(true);
+  if (dwo_name == NULL) {
+    return SBError("`dwo_name` is NULL. Expected a valid string.");
+  }
+  PythonString dwo_name_arg(dwo_name);
+  PythonObject comp_dir_arg(PyRefType::Borrowed, Py_None);
+  if (comp_dir != NULL) {
+    comp_dir_arg = PythonString(comp_dir);
+  }
+  PythonObject dwo_id_arg = PythonInteger(dwo_id);
+  PythonObject objfile_spec_arg = SWIGBridge::ToSWIGWrapper(
+      std::make_unique<SBFileSpec>(objfile_spec_sb));
+  PythonObject located_dwo_file_spec_arg = SWIGBridge::ToSWIGWrapper(
+      std::make_unique<SBFileSpec>(located_dwo_file_spec_sb));
+
+  PythonCallable callable =
+      Retain<PythonCallable>(reinterpret_cast<PyObject *>(baton));
+  if (!callable.IsValid()) {
+    return SBError("The callback callable is not valid.");
+  }
+
+  PythonObject result = callable(objfile_spec_arg,
+                                 dwo_name_arg,
+                                 comp_dir_arg,
+                                 dwo_id_arg,
+                                 located_dwo_file_spec_arg);
+
+  if (!result.IsAllocated())
+    return SBError("No result.");
+  lldb::SBError *sb_error_ptr = nullptr;
+  if (SWIG_ConvertPtr(result.get(), (void **)&sb_error_ptr,
+                      SWIGTYPE_p_lldb__SBError, 0) == -1) {
+    return SBError("Result is not SBError.");
+  }
+
+  if (sb_error_ptr->Success()) {
+    lldb::SBFileSpec *located_dwo_file_spec_ptr = nullptr;
+    if (SWIG_ConvertPtr(located_dwo_file_spec_arg.get(),
+                        (void **)&located_dwo_file_spec_ptr,
+                        SWIGTYPE_p_lldb__SBFileSpec, 0) == -1)
+      return SBError("located_dwo_file_spec is not SBFileSpec.");
+
+    located_dwo_file_spec_sb = *located_dwo_file_spec_ptr;
+  }
+
+  return *sb_error_ptr;
+}
 %}

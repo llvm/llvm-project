@@ -91,6 +91,7 @@ protected:
   friend class SBValue;
   friend class SBValueList;
   friend class SBWatchpoint;
+  friend class SBModule;
 
   friend class lldb_private::ScriptInterpreter;
   friend class lldb_private::python::SWIGBridge;
