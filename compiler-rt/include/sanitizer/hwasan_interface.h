@@ -18,82 +18,90 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-  // Libc hook for program startup in statically linked executables.
-  // Initializes enough of the runtime to run instrumented code. This function
-  // should only be called in statically linked executables because it modifies
-  // the GOT, which won't work in regular binaries because RELRO will already
-  // have been applied by the time the function is called. This also means that
-  // the function should be called before libc applies RELRO.
-  // Does not call libc unless there is an error.
-  // Can be called multiple times.
-  void __hwasan_init_static(void);
+// Libc hook for program startup in statically linked executables.
+// Initializes enough of the runtime to run instrumented code. This function
+// should only be called in statically linked executables because it modifies
+// the GOT, which won't work in regular binaries because RELRO will already
+// have been applied by the time the function is called. This also means that
+// the function should be called before libc applies RELRO.
+// Does not call libc unless there is an error.
+// Can be called multiple times.
+void __sanitizer_cdecl __hwasan_init_static(void);
 
-  // This function may be optionally provided by user and should return
-  // a string containing HWASan runtime options. See asan_flags.h for details.
-  const char* __hwasan_default_options(void);
+// This function may be optionally provided by user and should return
+// a string containing HWASan runtime options. See asan_flags.h for details.
+const char *__sanitizer_cdecl __hwasan_default_options(void);
 
-  void __hwasan_enable_allocator_tagging(void);
-  void __hwasan_disable_allocator_tagging(void);
+void __sanitizer_cdecl __hwasan_enable_allocator_tagging(void);
+void __sanitizer_cdecl __hwasan_disable_allocator_tagging(void);
 
-  // Mark region of memory with the given tag. Both address and size need to be
-  // 16-byte aligned.
-  void __hwasan_tag_memory(const volatile void *p, unsigned char tag,
-                           size_t size);
+// Mark region of memory with the given tag. Both address and size need to be
+// 16-byte aligned.
+void __sanitizer_cdecl __hwasan_tag_memory(const volatile void *p,
+                                           unsigned char tag, size_t size);
 
-  /// Set pointer tag. Previous tag is lost.
-  void *__hwasan_tag_pointer(const volatile void *p, unsigned char tag);
+/// Set pointer tag. Previous tag is lost.
+void *__sanitizer_cdecl __hwasan_tag_pointer(const volatile void *p,
+                                             unsigned char tag);
 
-  // Set memory tag from the current SP address to the given address to zero.
-  // This is meant to annotate longjmp and other non-local jumps.
-  // This function needs to know the (almost) exact destination frame address;
-  // clearing shadow for the entire thread stack like __asan_handle_no_return
-  // does would cause false reports.
-  void __hwasan_handle_longjmp(const void *sp_dst);
+// Set memory tag from the current SP address to the given address to zero.
+// This is meant to annotate longjmp and other non-local jumps.
+// This function needs to know the (almost) exact destination frame address;
+// clearing shadow for the entire thread stack like __asan_handle_no_return
+// does would cause false reports.
+void __sanitizer_cdecl __hwasan_handle_longjmp(const void *sp_dst);
 
-  // Set memory tag for the part of the current thread stack below sp_dst to
-  // zero. Call this in vfork() before returning in the parent process.
-  void __hwasan_handle_vfork(const void *sp_dst);
+// Set memory tag for the part of the current thread stack below sp_dst to
+// zero. Call this in vfork() before returning in the parent process.
+void __sanitizer_cdecl __hwasan_handle_vfork(const void *sp_dst);
 
-  // Libc hook for thread creation. Should be called in the child thread before
-  // any instrumented code.
-  void __hwasan_thread_enter();
+// Libc hook for thread creation. Should be called in the child thread before
+// any instrumented code.
+void __sanitizer_cdecl __hwasan_thread_enter();
 
-  // Libc hook for thread destruction. No instrumented code should run after
-  // this call.
-  void __hwasan_thread_exit();
+// Libc hook for thread destruction. No instrumented code should run after
+// this call.
+void __sanitizer_cdecl __hwasan_thread_exit();
 
-  // Print shadow and origin for the memory range to stderr in a human-readable
-  // format.
-  void __hwasan_print_shadow(const volatile void *x, size_t size);
+// Print shadow and origin for the memory range to stderr in a human-readable
+// format.
+void __sanitizer_cdecl __hwasan_print_shadow(const volatile void *x,
+                                             size_t size);
 
-  // Print one-line report about the memory usage of the current process.
-  void __hwasan_print_memory_usage();
+// Print one-line report about the memory usage of the current process.
+void __sanitizer_cdecl __hwasan_print_memory_usage();
 
-  /* Returns the offset of the first byte in the memory range that can not be
-   * accessed through the pointer in x, or -1 if the whole range is good. */
-  intptr_t __hwasan_test_shadow(const volatile void *x, size_t size);
+/* Returns the offset of the first byte in the memory range that can not be
+ * accessed through the pointer in x, or -1 if the whole range is good. */
+intptr_t __sanitizer_cdecl __hwasan_test_shadow(const volatile void *x,
+                                                size_t size);
 
-  /* Sets the callback function to be called during HWASan error reporting. */
-  void __hwasan_set_error_report_callback(void (*callback)(const char *));
+/* Sets the callback function to be called during HWASan error reporting. */
+void __sanitizer_cdecl
+__hwasan_set_error_report_callback(void (*callback)(const char *));
 
-  int __sanitizer_posix_memalign(void **memptr, size_t alignment, size_t size);
-  void * __sanitizer_memalign(size_t alignment, size_t size);
-  void * __sanitizer_aligned_alloc(size_t alignment, size_t size);
-  void * __sanitizer___libc_memalign(size_t alignment, size_t size);
-  void * __sanitizer_valloc(size_t size);
-  void * __sanitizer_pvalloc(size_t size);
-  void __sanitizer_free(void *ptr);
-  void __sanitizer_cfree(void *ptr);
-  size_t __sanitizer_malloc_usable_size(const void *ptr);
-  struct mallinfo __sanitizer_mallinfo();
-  int __sanitizer_mallopt(int cmd, int value);
-  void __sanitizer_malloc_stats(void);
-  void * __sanitizer_calloc(size_t nmemb, size_t size);
-  void * __sanitizer_realloc(void *ptr, size_t size);
-  void * __sanitizer_reallocarray(void *ptr, size_t nmemb, size_t size);
-  void * __sanitizer_malloc(size_t size);
+int __sanitizer_cdecl __sanitizer_posix_memalign(void **memptr,
+                                                 size_t alignment, size_t size);
+void *__sanitizer_cdecl __sanitizer_memalign(size_t alignment, size_t size);
+void *__sanitizer_cdecl __sanitizer_aligned_alloc(size_t alignment,
+                                                  size_t size);
+void *__sanitizer_cdecl __sanitizer___libc_memalign(size_t alignment,
+                                                    size_t size);
+void *__sanitizer_cdecl __sanitizer_valloc(size_t size);
+void *__sanitizer_cdecl __sanitizer_pvalloc(size_t size);
+void __sanitizer_cdecl __sanitizer_free(void *ptr);
+void __sanitizer_cdecl __sanitizer_cfree(void *ptr);
+size_t __sanitizer_cdecl __sanitizer_malloc_usable_size(const void *ptr);
+struct mallinfo __sanitizer_cdecl __sanitizer_mallinfo();
+int __sanitizer_cdecl __sanitizer_mallopt(int cmd, int value);
+void __sanitizer_cdecl __sanitizer_malloc_stats(void);
+void *__sanitizer_cdecl __sanitizer_calloc(size_t nmemb, size_t size);
+void *__sanitizer_cdecl __sanitizer_realloc(void *ptr, size_t size);
+void *__sanitizer_cdecl __sanitizer_reallocarray(void *ptr, size_t nmemb,
+                                                 size_t size);
+void *__sanitizer_cdecl __sanitizer_malloc(size_t size);
 #ifdef __cplusplus
-}  // extern "C"
+} // extern "C"
 #endif
 
-#endif  // SANITIZER_HWASAN_INTERFACE_H
+#endif // SANITIZER_HWASAN_INTERFACE_H
