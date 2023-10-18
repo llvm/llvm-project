@@ -1739,14 +1739,14 @@ define amdgpu_kernel void @unknown_addrspace_kernarg(ptr addrspace(12345) %ptr) 
 ; CHECK-NEXT: - '2:1:8:%g\n'
 ; CHECK:  amdhsa.version:
 ; CHECK-NEXT: - 1
-; CHECK-NEXT: - 1
+; CHECK-NEXT: - 0
 
 attributes #0 = { optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56" }
 attributes #1 = { optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56" "runtime-handle"="__test_block_invoke_kernel_runtime_handle" }
 attributes #2 = { optnone noinline "amdgpu-implicitarg-num-bytes"="56" }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 300}
 
 !llvm.printf.fmts = !{!100, !101}
 

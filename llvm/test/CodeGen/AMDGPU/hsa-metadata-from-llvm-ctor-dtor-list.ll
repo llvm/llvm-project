@@ -39,4 +39,4 @@ define internal void @bar.5() {
 ; PARSER: AMDGPU HSA Metadata Parser Test: PASS
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 300}

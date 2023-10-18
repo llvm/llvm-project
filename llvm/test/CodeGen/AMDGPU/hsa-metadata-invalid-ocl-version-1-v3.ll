@@ -5,10 +5,9 @@
 ; CHECK: ---
 ; CHECK: amdhsa.version:
 ; CHECK-NEXT: - 1
-; CHECK-NEXT: - 1
+; CHECK-NEXT: - 0
 ; CHECK: ...
 
-!opencl.ocl.version = !{!0}
-!llvm.module.flags = !{!1}
-!0 = !{i32 1}
-!1 = !{i32 1, !"amdgpu_code_object_version", i32 400}
+!opencl.ocl.version = !{}
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 300}
