@@ -3362,7 +3362,7 @@ ExprResult Sema::BuildCXXFunctionalCastExpr(TypeSourceInfo *CastTypeInfo,
   assert(LPLoc.isValid() && "List-initialization shouldn't get here.");
   CastOperation Op(*this, Type, CastExpr);
   Op.DestRange = CastTypeInfo->getTypeLoc().getSourceRange();
-  Op.OpRange = SourceRange(Op.DestRange.getBegin(), CastExpr->getEndLoc());
+  Op.OpRange = SourceRange(Op.DestRange.getBegin(), RPLoc);
 
   Op.CheckCXXCStyleCast(/*FunctionalCast=*/true, /*ListInit=*/false);
   if (Op.SrcExpr.isInvalid())

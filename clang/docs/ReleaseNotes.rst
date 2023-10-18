@@ -379,6 +379,25 @@ Improvements to Clang's diagnostics
   can sometimes lead to worse ordering.
 
 
+- When describing a warning/error in a function-style type conversion Clang underlines only until
+  the end of the expression we convert from. Now Clang underlines until the closing parenthesis.
+
+  Before:
+
+  .. code-block:: text
+
+    warning: cast from 'long (*)(const int &)' to 'decltype(fun_ptr)' (aka 'long (*)(int &)') converts to incompatible function type [-Wcast-function-type-strict]
+    24 | return decltype(fun_ptr)( f_ptr /*comment*/);
+       |        ^~~~~~~~~~~~~~~~~~~~~~~~
+
+  After:
+
+  .. code-block:: text
+
+    warning: cast from 'long (*)(const int &)' to 'decltype(fun_ptr)' (aka 'long (*)(int &)') converts to incompatible function type [-Wcast-function-type-strict]
+    24 | return decltype(fun_ptr)( f_ptr /*comment*/);
+       |        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 Bug Fixes in This Version
 -------------------------
 - Fixed an issue where a class template specialization whose declaration is
