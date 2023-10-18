@@ -164,6 +164,25 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   preISelLower(MI, MIB, MRI);
   const unsigned Opc = MI.getOpcode();
 
+  switch(Opc) {
+  case RISCV::G_RISCV_ADD_LO: {
+    Register DstReg = MI.getOperand(0).getReg();
+    const LLT XLenLLT = LLT::scalar(STI.getXLen());
+    RBI.constrainGenericRegister(DstReg, RISCV::GPRRegClass, MRI);
+    MI.setDesc(TII.get(RISCV::ADDI));
+    MRI.setType(DstReg, XLenLLT);
+    return true;
+  }
+  case RISCV::G_RISCV_HI: {
+    Register DstReg = MI.getOperand(0).getReg();
+    const LLT XLenLLT = LLT::scalar(STI.getXLen());
+    RBI.constrainGenericRegister(DstReg, RISCV::GPRRegClass, MRI);
+    MI.setDesc(TII.get(RISCV::LUI));
+    MRI.setType(DstReg, XLenLLT);
+    return true;
+  }
+  }
+
   if (!isPreISelGenericOpcode(Opc) || Opc == TargetOpcode::G_PHI) {
     if (Opc == TargetOpcode::PHI || Opc == TargetOpcode::G_PHI) {
       const Register DefReg = MI.getOperand(0).getReg();
@@ -247,6 +266,8 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
       return true;
     break;
   }
+
+  errs() << "HERE\n";
 
   if (selectImpl(MI, *CoverageInfo))
     return true;
