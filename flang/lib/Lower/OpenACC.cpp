@@ -1854,9 +1854,10 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
     } else if (const auto *privateClause =
                    std::get_if<Fortran::parser::AccClause::Private>(
                        &clause.u)) {
-      genPrivatizations<mlir::acc::PrivateRecipeOp>(
-          privateClause->v, converter, semanticsContext, stmtCtx,
-          privateOperands, privatizations);
+      if (!outerCombined)
+        genPrivatizations<mlir::acc::PrivateRecipeOp>(
+            privateClause->v, converter, semanticsContext, stmtCtx,
+            privateOperands, privatizations);
     } else if (const auto *firstprivateClause =
                    std::get_if<Fortran::parser::AccClause::Firstprivate>(
                        &clause.u)) {
@@ -1866,8 +1867,9 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
     } else if (const auto *reductionClause =
                    std::get_if<Fortran::parser::AccClause::Reduction>(
                        &clause.u)) {
-      genReductions(reductionClause->v, converter, semanticsContext, stmtCtx,
-                    reductionOperands, reductionRecipes);
+      if (!outerCombined)
+        genReductions(reductionClause->v, converter, semanticsContext, stmtCtx,
+                      reductionOperands, reductionRecipes);
     } else if (const auto *defaultClause =
                    std::get_if<Fortran::parser::AccClause::Default>(
                        &clause.u)) {
