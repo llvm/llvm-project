@@ -34,7 +34,12 @@ void CastingThroughVoidCheck::registerMatchers(MatchFinder *Finder) {
 void CastingThroughVoidCheck::check(const MatchFinder::MatchResult &Result) {
   const auto TT = *Result.Nodes.getNodeAs<QualType>("target_type");
   const auto ST = *Result.Nodes.getNodeAs<QualType>("source_type");
-  if (Result.Context->hasSameType(TT, ST))
+  if (Result.Context->hasSameType(TT->getUnqualifiedDesugaredType(),
+                                  ST->getUnqualifiedDesugaredType()))
+    return;
+  if (Result.Context->hasSameType(
+          TT->getPointeeType()->getUnqualifiedDesugaredType(),
+          ST->getPointeeType()->getUnqualifiedDesugaredType()))
     return;
   const auto *CE = Result.Nodes.getNodeAs<ExplicitCastExpr>("cast");
   diag(CE->getSourceRange().getBegin(), "do not cast %0 to %1 through 'void*'")
