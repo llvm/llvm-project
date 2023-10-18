@@ -13356,6 +13356,7 @@ public:
     CTCK_Unknown,       /// Unknown context
     CTCK_InitGlobalVar, /// Function called during global variable
                         /// initialization
+    CTCK_Constraint,    /// Function called for constraint checking
   };
 
   /// Define the current global CUDA host/device context where a function may be
@@ -13363,13 +13364,17 @@ public:
   struct CUDATargetContext {
     CUDAFunctionTarget Target = CFT_HostDevice;
     CUDATargetContextKind Kind = CTCK_Unknown;
-    Decl *D = nullptr;
+    const Decl *D = nullptr;
+    const Expr *E = nullptr;
+    /// Whether should override the current function.
+    bool shouldOverride(const Decl *D) const;
   } CurCUDATargetCtx;
 
   struct CUDATargetContextRAII {
     Sema &S;
     CUDATargetContext SavedCtx;
-    CUDATargetContextRAII(Sema &S_, CUDATargetContextKind K, Decl *D);
+    CUDATargetContextRAII(Sema &S_, CUDATargetContextKind K, const Decl *D,
+                          const Expr *E = nullptr);
     ~CUDATargetContextRAII() { S.CurCUDATargetCtx = SavedCtx; }
   };
 
