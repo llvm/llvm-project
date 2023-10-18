@@ -435,25 +435,20 @@ MPInt IntMatrix::normalizeRow(unsigned row) {
 }
 
 MPInt IntMatrix::determinant(IntMatrix* inverse) const {
-  unsigned nRows = getNumRows();
-  unsigned nColumns = getNumColumns();
-
   assert(nRows == nColumns && "determinant can only be calculated for square matrices!");
 
   FracMatrix m(*this);
   
-  FracMatrix fracInverseM(nRows, nColumns);
-  FracMatrix* fracInverse = &fracInverseM;
-  Fraction detF = m.determinant(fracInverse);
+  FracMatrix fracInverse(nRows, nColumns);
+  MPInt detM = m.determinant(&fracInverse).getAsInteger();
 
-  MPInt detM = detF.getAsInteger();
+  if (detM == 0)
+    return MPInt(0);
 
-  if (detM != 0) {
-    *inverse = IntMatrix(nRows, nColumns);
-    for (unsigned i = 0; i < nRows; i++)
-      for (unsigned j = 0; j < nColumns; j++)
-        inverse->at(i, j) = (fracInverse->at(i, j) * detF).getAsInteger();
-  }
+  *inverse = IntMatrix(nRows, nColumns);
+  for (unsigned i = 0; i < nRows; i++)
+    for (unsigned j = 0; j < nColumns; j++)
+      inverse->at(i, j) = (fracInverse.at(i, j) * Fraction(detM, 1)).getAsInteger();
 
   return detM;
 }
@@ -470,26 +465,32 @@ FracMatrix::FracMatrix(IntMatrix m)
 }
 
 Fraction FracMatrix::determinant(FracMatrix* inverse) const {
-  unsigned nRows = getNumRows();
-  unsigned nColumns = getNumColumns();
-
   assert(nRows == nColumns && "determinant can only be calculated for square matrices!");
 
   FracMatrix m(*this);
   FracMatrix tempInv(nRows, nColumns);
-  if (inverse) tempInv = FracMatrix::identity(nRows);
+  if (inverse)
+    tempInv = FracMatrix::identity(nRows);
 
   Fraction a, b;
-  // For each row in the matrix,
+  // Make the matrix into upper triangular form using
+  // gaussian elimination with row operations.
+  // If inverse is required, we apply more operations
+  // to turn the matrix into diagonal form. We apply
+  // the same operations to the inverse matrix,
+  // which is initially identity.
+  // Either way, the product of the diagonal elements
+  // is then the determinant.
   for (unsigned i = 0; i < nRows; i++) {
     if (m(i, i) == 0)
-    // First ensure that the diagonal
-    // element is nonzero, by adding
-    // a nonzero row to it.
+      // First ensure that the diagonal
+      // element is nonzero, by adding
+      // a nonzero row to it.
       for (unsigned j = i + 1; j < nRows; j++)
         if (m(j, i) != 0) {
           m.addToRow(j, i, 1);
-          if (inverse) tempInv.addToRow(j, i, 1);
+          if (inverse)
+            tempInv.addToRow(j, i, 1);
           break;
         }
 
@@ -497,6 +498,8 @@ Fraction FracMatrix::determinant(FracMatrix* inverse) const {
     if (b == 0)
         return 0;
     
+    // Set all elements above the
+    // diagonal to zero.
     if (inverse) {
       for (unsigned j = 0; j < i; j++) {
         if (m.at(j, i) == 0)
@@ -520,17 +523,16 @@ Fraction FracMatrix::determinant(FracMatrix* inverse) const {
       // by subtracting the ith row,
       // appropriately scaled.
       m.addToRow(i, j, -a / b);
-      if (inverse) tempInv.addToRow(i, j, -a / b);
+      if (inverse)
+        tempInv.addToRow(i, j, -a / b);
     }
   }
 
   // Now only diagonal elements are nonzero, but they are
   // not necessarily 1. We normalise them.
-  for (unsigned i = 0; i < nRows; i++) {
-    a = m(i, i);
+  for (unsigned i = 0; i < nRows; i++)
     for (unsigned j = 0; j < nRows; j++)
-      tempInv.at(i, j) = tempInv.at(i, j) / a;
-  }
+      tempInv.at(i, j) = tempInv.at(i, j) / m(i, i);
 
   *inverse = tempInv;
 

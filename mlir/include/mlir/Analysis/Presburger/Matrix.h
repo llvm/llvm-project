@@ -36,7 +36,6 @@ namespace presburger {
 /// This class only works for the types MPInt and Fraction, since the method
 /// implementations are in the Matrix.cpp file. Only these two types have
 /// been explicitly instantiated there.
-/// assume that the matrix is square.
 template <typename T>
 class Matrix {
   static_assert(std::is_same_v<T, MPInt> || std::is_same_v<T, Fraction>,
@@ -190,7 +189,7 @@ public:
   /// invariants satisfied.
   bool hasConsistentState() const;
 
-private:
+protected:
   /// The current number of rows, columns, and reserved columns. The underlying
   /// data vector is viewed as an nRows x nReservedColumns matrix, of which the
   /// first nColumns columns are currently in use, and the remaining are
@@ -238,12 +237,12 @@ public:
 
   // Compute the determinant of the matrix (cubic time).
   // Stores the integer inverse of the matrix in the pointer
-  // passed. The pointer is unchanged if the inverse
-  // does not exist.
+  // passed (if any). The pointer is unchanged if the inverse
+  // does not exist, which happens iff det = 0.
   // For a matrix M, the integer inverse is the matrix M' such that
-  // M • M' = M' • M = det(M) • I.
-  // Assumes that the matrix is square.
-  MPInt determinant(IntMatrix* inverse = NULL) const;
+  // M x M' = M'  M = det(M) x I.
+  // Assert-fails if the matrix is not square.
+  MPInt determinant(IntMatrix* inverse = nullptr) const;
 };
 
 // An inherited class for rational matrices, with no new data attributes.
@@ -264,9 +263,9 @@ public:
 
   // Compute the determinant of the matrix (cubic time).
   // Stores the inverse of the matrix in the pointer
-  // passed. The pointer is unchanged if the inverse
-  // does not exist.
-  // Assumes that the matrix is square.
+  // passed (if any). The pointer is unchanged if the inverse
+  // does not exist, which happens iff det = 0.
+  // Assert-fails if the matrix is not square.
   Fraction determinant(FracMatrix* inverse = NULL) const;
 };
 
