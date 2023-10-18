@@ -9994,7 +9994,7 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
                                                   const CallExpr *E) {
   llvm::Type *Ty = ConvertType(E->getType());
   if (BuiltinID >= SVE::BI__builtin_sve_reinterpret_s8_s8 &&
-      BuiltinID <= SVE::BI__builtin_sve_reinterpret_f64_f64) {
+      BuiltinID <= SVE::BI__builtin_sve_reinterpret_f64_f64_x4) {
     Value *Val = EmitScalarExpr(E->getArg(0));
     return EmitSVEReinterpret(Val, Ty);
   }
