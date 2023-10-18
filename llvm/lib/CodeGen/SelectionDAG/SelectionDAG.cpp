@@ -9896,7 +9896,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
       }
       Val *= Mul;
 
-      SDValue Hi = getConstant(Val.extractBits(32, 32), DL, VTList.VTs[0]);
+      SDValue Hi = getConstant(Val.extractBits(Width, Width), DL, VTList.VTs[0]);
       SDValue Lo = getConstant(Val.trunc(Width), DL, VTList.VTs[0]);
       return getNode(ISD::MERGE_VALUES, DL, VTList, {Lo, Hi}, Flags);
     }
