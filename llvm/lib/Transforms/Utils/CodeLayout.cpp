@@ -1109,7 +1109,7 @@ private:
     std::set<ChainEdge *, decltype(GainComparator)> Queue(GainComparator);
 
     // Insert the edges into the queue.
-    size_t NumActiveChains = 0;
+    [[maybe_unused]] size_t NumActiveChains = 0;
     for (NodeT &Node : AllNodes) {
       if (Node.ExecutionCount == 0)
         continue;
