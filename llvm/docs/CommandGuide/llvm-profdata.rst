@@ -195,8 +195,13 @@ OPTIONS
 .. option:: --debug-info=<path>
 
  Specify the executable or ``.dSYM`` that contains debug info for the raw profile.
- When ``-debug-info-correlate`` was used for instrumentation, use this option
- to correlate the raw profile.
+ When ``-profile-correlate=debug-info`` was used for instrumentation, use this
+ option to correlate the raw profile.
+
+.. option:: --binary-file=<path>
+Specify the executable that contains profile data and profile name sections for 
+the raw profile. When ``-profile-correlate=binary`` was used for 
+instrumentation, use this option to correlate the raw profile.
 
 .. option:: --temporal-profile-trace-reservoir-size
 
@@ -346,8 +351,8 @@ OPTIONS
 .. option:: --debug-info=<path>
 
  Specify the executable or ``.dSYM`` that contains debug info for the raw profile.
- When ``-debug-info-correlate`` was used for instrumentation, use this option
- to show the correlated functions from the raw profile.
+ When ``-profile-correlate=debug-info`` was used for instrumentation, use this 
+ option to show the correlated functions from the raw profile.
 
 .. option:: --covered
 

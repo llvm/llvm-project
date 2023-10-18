@@ -413,7 +413,7 @@ static void writeInstrProfile(StringRef OutputFilename,
 
 static void
 mergeInstrProfile(const WeightedFileVector &Inputs, StringRef DebugInfoFilename,
-                  StringRef ObjectFilename, SymbolRemapper *Remapper,
+                  StringRef BinaryFilename, SymbolRemapper *Remapper,
                   StringRef OutputFilename, ProfileFormat OutputFormat,
                   uint64_t TraceReservoirSize, uint64_t MaxTraceLength,
                   int MaxDbgCorrelationWarnings, bool OutputSparse,
@@ -426,12 +426,12 @@ mergeInstrProfile(const WeightedFileVector &Inputs, StringRef DebugInfoFilename,
     exitWithError("unknown format is specified");
 
   std::unique_ptr<InstrProfCorrelator> Correlator;
-  if (!DebugInfoFilename.empty() || !ObjectFilename.empty()) {
+  if (!DebugInfoFilename.empty() || !BinaryFilename.empty()) {
     InstrProfCorrelator::ProfCorrelatorKind Kind =
         DebugInfoFilename.empty() ? InstrProfCorrelator::BINARY
                                   : InstrProfCorrelator::DEBUG_INFO;
     StringRef FileName =
-        DebugInfoFilename.empty() ? ObjectFilename : DebugInfoFilename;
+        DebugInfoFilename.empty() ? BinaryFilename : DebugInfoFilename;
     if (auto Err =
             InstrProfCorrelator::get(FileName, Kind).moveInto(Correlator))
       exitWithError(std::move(Err), FileName);
@@ -1285,9 +1285,9 @@ static int merge_main(int argc, const char *argv[]) {
   cl::opt<std::string> DebugInfoFilename(
       "debug-info", cl::init(""),
       cl::desc("Use the provided debug info to correlate the raw profile."));
-  cl::opt<std::string> ObjectFilename(
-      "object-file", cl::init(""),
-      cl::desc("Read and extract profile metadata from object file and show "
+  cl::opt<std::string> BinaryFilename(
+      "binary-file", cl::init(""),
+      cl::desc("Read and extract profile metadata from binary file and show "
                "the functions it found."));
   cl::opt<unsigned> MaxDbgCorrelationWarnings(
       "max-debug-info-correlation-warnings",
@@ -1314,8 +1314,8 @@ static int merge_main(int argc, const char *argv[]) {
                "(default: 10000)"));
 
   cl::ParseCommandLineOptions(argc, argv, "LLVM profile data merger\n");
-  if (!DebugInfoFilename.empty() && !ObjectFilename.empty()) {
-    exitWithError("Expected only one of -debug-info, -object-file");
+  if (!DebugInfoFilename.empty() && !BinaryFilename.empty()) {
+    exitWithError("Expected only one of -debug-info, -binary-file");
   }
 
   WeightedFileVector WeightedInputs;
@@ -1355,7 +1355,7 @@ static int merge_main(int argc, const char *argv[]) {
   }
 
   if (ProfileKind == instr)
-    mergeInstrProfile(WeightedInputs, DebugInfoFilename, ObjectFilename,
+    mergeInstrProfile(WeightedInputs, DebugInfoFilename, BinaryFilename,
                       Remapper.get(), OutputFilename, OutputFormat,
                       TemporalProfTraceReservoirSize,
                       TemporalProfMaxTraceLength, MaxDbgCorrelationWarnings,
