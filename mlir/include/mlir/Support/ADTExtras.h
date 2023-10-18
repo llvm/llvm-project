@@ -9,6 +9,7 @@
 #ifndef MLIR_SUPPORT_ADTEXTRAS_H
 #define MLIR_SUPPORT_ADTEXTRAS_H
 
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 
