@@ -42,6 +42,9 @@ namespace i128 {
                                          // ref-note {{outside the range}}
   constexpr int128_t Two = (int128_t)1 << 1ul;
   static_assert(Two == 2, "");
+  static_assert(Two, "");
+  constexpr bool CastedToBool = Two;
+  static_assert(CastedToBool, "");
 
   constexpr uint128_t AllOnes = ~static_cast<uint128_t>(0);
   static_assert(AllOnes == UINT128_MAX, "");
@@ -90,4 +93,14 @@ namespace i128 {
                                            // expected-error {{must be initialized by a constant expression}} \
                                            // expected-note {{is outside the range of representable values of type}}
 }
+
+namespace AddSubOffset {
+  constexpr __int128 A = 1;
+  constexpr int arr[] = {1,2,3};
+  constexpr const int *P = arr + A;
+  static_assert(*P == 2, "");
+  constexpr const int *P2 = P - A;
+  static_assert(*P2 == 1,"");
+}
+
 #endif

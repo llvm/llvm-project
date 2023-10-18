@@ -3543,6 +3543,7 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State,
 
   // Forget the original basic block.
   PSE.getSE()->forgetLoop(OrigLoop);
+  PSE.getSE()->forgetBlockAndLoopDispositions();
 
   // After vectorization, the exit blocks of the original loop will have
   // additional predecessors. Invalidate SCEVs for the exit phis in case SE
@@ -3791,8 +3792,6 @@ void InnerLoopVectorizer::fixReduction(VPReductionPHIRecipe *PhiR,
     State.setDebugLocFrom(I->getDebugLoc());
 
   VPValue *LoopExitInstDef = PhiR->getBackedgeValue();
-  // This is the vector-clone of the value that leaves the loop.
-  Type *VecTy = State.get(LoopExitInstDef, 0)->getType();
 
   // Before each round, move the insertion point right between
   // the PHIs and the values we are going to write.
@@ -3804,10 +3803,6 @@ void InnerLoopVectorizer::fixReduction(VPReductionPHIRecipe *PhiR,
   State.setDebugLocFrom(LoopExitInst->getDebugLoc());
 
   Type *PhiTy = OrigPhi->getType();
-
-  VPBasicBlock *LatchVPBB =
-      PhiR->getParent()->getEnclosingLoopRegion()->getExitingBasicBlock();
-  BasicBlock *VectorLoopLatch = State.CFG.VPBB2IRBB[LatchVPBB];
   // If tail is folded by masking, the vector value to leave the loop should be
   // a Select choosing between the vectorized LoopExitInst and vectorized Phi,
   // instead of the former. For an inloop reduction the reduction will already
@@ -3833,23 +3828,12 @@ void InnerLoopVectorizer::fixReduction(VPReductionPHIRecipe *PhiR,
   // then extend the loop exit value to enable InstCombine to evaluate the
   // entire expression in the smaller type.
   if (VF.isVector() && PhiTy != RdxDesc.getRecurrenceType()) {
-    assert(!PhiR->isInLoop() && "Unexpected truncated inloop reduction!");
-    Type *RdxVecTy = VectorType::get(RdxDesc.getRecurrenceType(), VF);
-    Builder.SetInsertPoint(VectorLoopLatch->getTerminator());
-    for (unsigned Part = 0; Part < UF; ++Part) {
-      Value *Trunc = Builder.CreateTrunc(RdxParts[Part], RdxVecTy);
-      Value *Extnd = RdxDesc.isSigned() ? Builder.CreateSExt(Trunc, VecTy)
-                                        : Builder.CreateZExt(Trunc, VecTy);
-      for (User *U : llvm::make_early_inc_range(RdxParts[Part]->users()))
-        if (U != Trunc) {
-          U->replaceUsesOfWith(RdxParts[Part], Extnd);
-          RdxParts[Part] = Extnd;
-        }
-    }
     Builder.SetInsertPoint(LoopMiddleBlock,
                            LoopMiddleBlock->getFirstInsertionPt());
-    for (unsigned Part = 0; Part < UF; ++Part)
+    Type *RdxVecTy = VectorType::get(RdxDesc.getRecurrenceType(), VF);
+    for (unsigned Part = 0; Part < UF; ++Part) {
       RdxParts[Part] = Builder.CreateTrunc(RdxParts[Part], RdxVecTy);
+    }
   }
 
   // Reduce all of the unrolled parts into a single vector.
@@ -8918,8 +8902,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   // ---------------------------------------------------------------------------
 
   // Adjust the recipes for any inloop reductions.
-  adjustRecipesForReductions(cast<VPBasicBlock>(TopRegion->getExiting()), Plan,
-                             RecipeBuilder, Range.Start);
+  adjustRecipesForReductions(LatchVPBB, Plan, RecipeBuilder, Range.Start);
 
   // Interleave memory: for each Interleave Group we marked earlier as relevant
   // for this VPlan, replace the Recipes widening its memory instructions with a
@@ -9155,18 +9138,19 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       PreviousLink = RedRecipe;
     }
   }
-
-  // If tail is folded by masking, introduce selects between the phi
-  // and the live-out instruction of each reduction, at the beginning of the
-  // dedicated latch block.
-  if (CM.foldTailByMasking()) {
     Builder.setInsertPoint(&*LatchVPBB->begin());
     for (VPRecipeBase &R :
          Plan->getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
-      VPReductionPHIRecipe *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
-      if (!PhiR || PhiR->isInLoop())
-        continue;
-      const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
+    VPReductionPHIRecipe *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
+    if (!PhiR || PhiR->isInLoop())
+      continue;
+
+    const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
+    auto *Result = PhiR->getBackedgeValue()->getDefiningRecipe();
+    // If tail is folded by masking, introduce selects between the phi
+    // and the live-out instruction of each reduction, at the beginning of the
+    // dedicated latch block.
+    if (CM.foldTailByMasking()) {
       VPValue *Cond =
           RecipeBuilder.createBlockInMask(OrigLoop->getHeader(), *Plan);
       VPValue *Red = PhiR->getBackedgeValue();
@@ -9174,16 +9158,35 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
              "reduction recipe must be defined before latch");
       FastMathFlags FMFs = RdxDesc.getFastMathFlags();
       Type *PhiTy = PhiR->getOperand(0)->getLiveInIRValue()->getType();
-      auto *Select =
+      Result =
           PhiTy->isFloatingPointTy()
               ? new VPInstruction(Instruction::Select, {Cond, Red, PhiR}, FMFs)
               : new VPInstruction(Instruction::Select, {Cond, Red, PhiR});
-      Select->insertBefore(&*Builder.getInsertPoint());
+      Result->insertBefore(&*Builder.getInsertPoint());
       if (PreferPredicatedReductionSelect ||
           TTI.preferPredicatedReductionSelect(
               PhiR->getRecurrenceDescriptor().getOpcode(), PhiTy,
               TargetTransformInfo::ReductionFlags()))
-        PhiR->setOperand(1, Select);
+        PhiR->setOperand(1, Result->getVPSingleValue());
+    }
+    // If the vector reduction can be performed in a smaller type, we truncate
+    // then extend the loop exit value to enable InstCombine to evaluate the
+    // entire expression in the smaller type.
+    Type *PhiTy = PhiR->getStartValue()->getLiveInIRValue()->getType();
+    if (PhiTy != RdxDesc.getRecurrenceType()) {
+      assert(!PhiR->isInLoop() && "Unexpected truncated inloop reduction!");
+      Type *RdxTy = RdxDesc.getRecurrenceType();
+      auto *Trunc = new VPWidenCastRecipe(Instruction::Trunc,
+                                          Result->getVPSingleValue(), RdxTy);
+      auto *Extnd =
+          RdxDesc.isSigned()
+              ? new VPWidenCastRecipe(Instruction::SExt, Trunc, PhiTy)
+              : new VPWidenCastRecipe(Instruction::ZExt, Trunc, PhiTy);
+
+      Trunc->insertAfter(Result);
+      Extnd->insertAfter(Trunc);
+      Result->getVPSingleValue()->replaceAllUsesWith(Extnd);
+      Trunc->setOperand(0, Result->getVPSingleValue());
     }
   }
 
@@ -10340,8 +10343,14 @@ LoopVectorizeResult LoopVectorizePass::runImpl(
 
     Changed |= CFGChanged |= processLoop(L);
 
-    if (Changed)
+    if (Changed) {
       LAIs->clear();
+
+#ifndef NDEBUG
+      if (VerifySCEV)
+        SE->verify();
+#endif
+    }
   }
 
   // Process each loop nest in the function.
@@ -10389,10 +10398,6 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
       PA.preserve<LoopAnalysis>();
       PA.preserve<DominatorTreeAnalysis>();
       PA.preserve<ScalarEvolutionAnalysis>();
-
-#ifdef EXPENSIVE_CHECKS
-      SE.verify();
-#endif
     }
 
     if (Result.MadeCFGChange) {

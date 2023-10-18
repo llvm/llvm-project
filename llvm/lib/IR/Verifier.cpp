@@ -2118,6 +2118,17 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
 
     Check(!Attrs.hasFnAttr(Attribute::MinSize),
           "Attributes 'minsize and optnone' are incompatible!", V);
+
+    Check(!Attrs.hasFnAttr(Attribute::OptimizeForDebugging),
+          "Attributes 'optdebug and optnone' are incompatible!", V);
+  }
+
+  if (Attrs.hasFnAttr(Attribute::OptimizeForDebugging)) {
+    Check(!Attrs.hasFnAttr(Attribute::OptimizeForSize),
+          "Attributes 'optsize and optdebug' are incompatible!", V);
+
+    Check(!Attrs.hasFnAttr(Attribute::MinSize),
+          "Attributes 'minsize and optdebug' are incompatible!", V);
   }
 
   if (Attrs.hasFnAttr("aarch64_pstate_sm_enabled")) {
@@ -6318,20 +6329,6 @@ void Verifier::visitDbgIntrinsic(StringRef Kind, DbgVariableIntrinsic &DII) {
   CheckDI(isType(Var->getRawType()), "invalid type ref", Var,
           Var->getRawType());
   verifyFnArgs(DII);
-
-  if (auto *Declare = dyn_cast<DbgDeclareInst>(&DII)) {
-    if (auto *Alloca = dyn_cast_or_null<AllocaInst>(Declare->getAddress())) {
-      DIExpression *Expr = Declare->getExpression();
-      std::optional<uint64_t> FragSize = Declare->getFragmentSizeInBits();
-      std::optional<TypeSize> AllocSize = Alloca->getAllocationSizeInBits(DL);
-      if (FragSize && AllocSize && !AllocSize->isScalable() &&
-          !Expr->isComplex()) {
-        CheckDI(*FragSize <= AllocSize->getFixedValue(),
-                "llvm.dbg.declare has larger fragment size than alloca size ",
-                &DII);
-      }
-    }
-  }
 }
 
 void Verifier::visitDbgLabelIntrinsic(StringRef Kind, DbgLabelInst &DLI) {

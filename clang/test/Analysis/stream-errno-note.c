@@ -1,8 +1,8 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core \
 // RUN:   -analyzer-checker=alpha.unix.Stream \
 // RUN:   -analyzer-checker=alpha.unix.Errno \
-// RUN:   -analyzer-checker=alpha.unix.StdCLibraryFunctions \
-// RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:ModelPOSIX=true \
+// RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true \
 // RUN:   -analyzer-output text -verify %s
 
 #include "Inputs/system-header-simulator.h"

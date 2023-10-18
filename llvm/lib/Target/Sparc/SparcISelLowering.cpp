@@ -2604,9 +2604,8 @@ static SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG,
   if (LHS.getValueType().isInteger()) {
     // On V9 processors running in 64-bit mode, if CC compares two `i64`s
     // and the RHS is zero we might be able to use a specialized branch.
-    const ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS);
-    if (is64Bit && isV9 && LHS.getValueType() == MVT::i64 && RHSC &&
-        RHSC->isZero() && !ISD::isUnsignedIntSetCC(CC))
+    if (is64Bit && isV9 && LHS.getValueType() == MVT::i64 &&
+        isNullConstant(RHS) && !ISD::isUnsignedIntSetCC(CC))
       return DAG.getNode(SPISD::BR_REG, dl, MVT::Other, Chain, Dest,
                          DAG.getConstant(intCondCCodeToRcond(CC), dl, MVT::i32),
                          LHS);

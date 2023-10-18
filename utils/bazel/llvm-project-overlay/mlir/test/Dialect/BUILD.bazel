@@ -36,6 +36,7 @@ package(default_visibility = ["//visibility:public"])
             "Transform/*-symbol-decl-dir.mlir",
             "Transform/*-symbol-decl-invalid.mlir",
             "Transform/Library/*.mlir",
+            "Transform/preload-library.mlir",
             "Transform/test-interpreter-library/*.mlir",
             "Transform/test-repro-dump.mlir",
         ],
