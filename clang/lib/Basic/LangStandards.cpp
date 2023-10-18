@@ -10,8 +10,48 @@
 #include "clang/Config/config.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/TargetParser/Triple.h"
 using namespace clang;
+
+const char *clang::languageToString(Language L) {
+  // I would like to make this function and the definition of Language
+  // in the .h file simply expand the contents of a .def file.
+  // However, in the .h the members of the enum have doxygen annotations
+  // and/or comments which would be lost.
+  switch (L) {
+  case Language::Unknown:
+    return "Unknown";
+  case Language::Asm:
+    return "Asm";
+  case Language::LLVM_IR:
+    return "LLVM_IR";
+  case Language::C:
+    return "C";
+  case Language::CXX:
+    return "CXX";
+  case Language::ObjC:
+    return "ObjC";
+  case Language::ObjCXX:
+    return "ObjCXX";
+  case Language::OpenCL:
+    return "OpenCL";
+  case Language::OpenCLCXX:
+    return "OpenCLCXX";
+  case Language::CUDA:
+    return "CUDA";
+  case Language::RenderScript:
+    return "RenderScript";
+  case Language::HIP:
+    return "HIP";
+  case Language::HLSL:
+    return "HLSL";
+  }
+
+  std::string msg = llvm::formatv(
+      "Unknown value ({0}) passed to languageToString", (unsigned int)L);
+  llvm_unreachable(msg.c_str());
+}
 
 #define LANGSTANDARD(id, name, lang, desc, features)                           \
   static const LangStandard Lang_##id = {name, desc, features, Language::lang};

@@ -43,6 +43,7 @@ enum class Language : uint8_t {
   HLSL,
   ///@}
 };
+const char *languageToString(Language L);
 
 enum LangFeatures {
   LineComment = (1 << 0),
