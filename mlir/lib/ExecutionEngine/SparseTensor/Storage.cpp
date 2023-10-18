@@ -24,8 +24,8 @@ SparseTensorStorageBase::SparseTensorStorageBase( // NOLINT
     : dimSizes(dimSizes, dimSizes + dimRank),
       lvlSizes(lvlSizes, lvlSizes + lvlRank),
       lvlTypes(lvlTypes, lvlTypes + lvlRank),
-      dim2lvlVec(dim2lvl, dim2lvl + dimRank),
-      lvl2dimVec(lvl2dim, lvl2dim + lvlRank),
+      dim2lvlVec(dim2lvl, dim2lvl + lvlRank),
+      lvl2dimVec(lvl2dim, lvl2dim + dimRank),
       map(dimRank, lvlRank, dim2lvlVec.data(), lvl2dimVec.data()) {
   assert(dimSizes && lvlSizes && lvlTypes && dim2lvl && lvl2dim);
   // Validate dim-indexed parameters.
