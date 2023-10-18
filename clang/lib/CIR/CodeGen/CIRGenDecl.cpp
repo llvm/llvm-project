@@ -726,10 +726,12 @@ void CIRGenFunction::buildDecl(const Decl &D) {
     llvm_unreachable("Declaration should not be in declstmts!");
   case Decl::Record:    // struct/union/class X;
   case Decl::CXXRecord: // struct/union/class X; [C++]
-    llvm_unreachable("NYI");
+    if (auto *DI = getDebugInfo())
+      llvm_unreachable("NYI");
     return;
   case Decl::Enum: // enum X;
-    llvm_unreachable("NYI");
+    if (auto *DI = getDebugInfo())
+      llvm_unreachable("NYI");
     return;
   case Decl::Function:     // void X();
   case Decl::EnumConstant: // enum ? { X = ? }
