@@ -565,6 +565,148 @@ define i1 @lshr7(i32 %X, i32 %Y) {
   ret i1 %C
 }
 
+define i1 @or_lshr1(i32 %X, i32 %Y, i32 %Z) {
+; CHECK-LABEL: @or_lshr1(
+; CHECK-NEXT:    [[A:%.*]] = lshr i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = or i32 [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[B]], [[A]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %A = lshr i32 %X, %Y
+  %B = or i32 %X, %Z
+  %C = icmp ult i32 %B, %A
+  ret i1 %C
+}
+
+define i1 @or_lshr2(i32 %X, i32 %Y, i32 %Z) {
+; CHECK-LABEL: @or_lshr2(
+; CHECK-NEXT:    [[A:%.*]] = lshr i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = or i32 [[Y]], [[Z:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[B]], [[A]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %A = lshr i32 %X, %Y
+  %B = or i32 %Y, %Z
+  %C = icmp ult i32 %B, %A
+  ret i1 %C
+}
+
+define i1 @or_lshr3(i32 %X, i32 %Y, i32 %Z, i32 %Z1) {
+; CHECK-LABEL: @or_lshr3(
+; CHECK-NEXT:    [[A:%.*]] = lshr i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B0:%.*]] = or i32 [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = or i32 [[B0]], [[Z1:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[B]], [[A]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %A = lshr i32 %X, %Y
+  %B0 = or i32 %X, %Z
+  %B = or i32 %B0, %Z1
+  %C = icmp ult i32 %B, %A
+  ret i1 %C
+}
+
+define i1 @or_lshr4(i32 %X, i32 %Y, i32 %Z, i32 %Z1) {
+; CHECK-LABEL: @or_lshr4(
+; CHECK-NEXT:    [[A:%.*]] = lshr i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B0:%.*]] = or i32 [[Y]], [[Z:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = or i32 [[B0]], [[Z1:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[B]], [[A]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %A = lshr i32 %X, %Y
+  %B0 = or i32 %Y, %Z
+  %B = or i32 %B0, %Z1
+  %C = icmp ult i32 %B, %A
+  ret i1 %C
+}
+
+define i1 @or_lshr5(i32 %X, i32 %Y, i32 %Z, i32 %Z1) {
+; CHECK-LABEL: @or_lshr5(
+; CHECK-NEXT:    [[A:%.*]] = lshr i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B0:%.*]] = or i32 [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = and i32 [[B0]], [[Z1:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[B]], [[A]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %A = lshr i32 %X, %Y
+  %B0 = or i32 %X, %Z
+  %B = and i32 %B0, %Z1
+  %C = icmp ult i32 %B, %A
+  ret i1 %C
+}
+
+define i1 @or_udiv1(i32 %X, i32 %Y, i32 %Z) {
+; CHECK-LABEL: @or_udiv1(
+; CHECK-NEXT:    [[A:%.*]] = udiv i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = or i32 [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[B]], [[A]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %A = udiv i32 %X, %Y
+  %B = or i32 %X, %Z
+  %C = icmp ult i32 %B, %A
+  ret i1 %C
+}
+
+define i1 @or_udiv2(i32 %X, i32 %Y, i32 %Z) {
+; CHECK-LABEL: @or_udiv2(
+; CHECK-NEXT:    [[A:%.*]] = udiv i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = or i32 [[Y]], [[Z:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[B]], [[A]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %A = udiv i32 %X, %Y
+  %B = or i32 %Y, %Z
+  %C = icmp ult i32 %B, %A
+  ret i1 %C
+}
+
+define i1 @or_udiv3(i32 %X, i32 %Y, i32 %Z, i32 %Z1) {
+; CHECK-LABEL: @or_udiv3(
+; CHECK-NEXT:    [[A:%.*]] = udiv i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B0:%.*]] = or i32 [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = or i32 [[B0]], [[Z1:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[B]], [[A]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %A = udiv i32 %X, %Y
+  %B0 = or i32 %X, %Z
+  %B = or i32 %B0, %Z1
+  %C = icmp ult i32 %B, %A
+  ret i1 %C
+}
+
+define i1 @or_udiv4(i32 %X, i32 %Y, i32 %Z, i32 %Z1) {
+; CHECK-LABEL: @or_udiv4(
+; CHECK-NEXT:    [[A:%.*]] = udiv i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B0:%.*]] = or i32 [[Y]], [[Z:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = or i32 [[B0]], [[Z1:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[B]], [[A]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %A = udiv i32 %X, %Y
+  %B0 = or i32 %Y, %Z
+  %B = or i32 %B0, %Z1
+  %C = icmp ult i32 %B, %A
+  ret i1 %C
+}
+
+define i1 @or_udiv5(i32 %X, i32 %Y, i32 %Z, i32 %Z1) {
+; CHECK-LABEL: @or_udiv5(
+; CHECK-NEXT:    [[A:%.*]] = udiv i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B0:%.*]] = or i32 [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = and i32 [[B0]], [[Z1:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[B]], [[A]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %A = udiv i32 %X, %Y
+  %B0 = or i32 %X, %Z
+  %B = and i32 %B0, %Z1
+  %C = icmp ult i32 %B, %A
+  ret i1 %C
+}
+
 define i1 @lshr_nonzero_eq(i32 %x) {
 ; CHECK-LABEL: @lshr_nonzero_eq(
 ; CHECK-NEXT:    [[X_NE_0:%.*]] = icmp ne i32 [[X:%.*]], 0
