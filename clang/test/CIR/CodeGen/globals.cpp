@@ -5,6 +5,7 @@ int a = 3;
 const int b = 4; // unless used wont be generated
 
 unsigned long int c = 2;
+int d = a;
 float y = 3.4;
 double w = 4.3;
 char x = '3';
@@ -32,7 +33,15 @@ int use_func() { return func<int>(); }
 // CHECK: module {{.*}} {
 // CHECK-NEXT: cir.global external @a = #cir.int<3> : !s32i
 // CHECK-NEXT: cir.global external @c = #cir.int<2> : !u64i
-// CHECK-NEXT: cir.global external @y = 3.400000e+00 : f32
+// CHECK-NEXT: cir.global external @d = #cir.int<0> : !s32i
+
+// CHECK-NEXT: cir.func internal private @__cxx_global_var_init()
+// CHECK-NEXT:   [[TMP0:%.*]] = cir.get_global @d : cir.ptr <!s32i>
+// CHECK-NEXT:   [[TMP1:%.*]] = cir.get_global @a : cir.ptr <!s32i>
+// CHECK-NEXT:   [[TMP2:%.*]] = cir.load [[TMP1]] : cir.ptr <!s32i>, !s32i
+// CHECK-NEXT:   cir.store [[TMP2]], [[TMP0]] : !s32i, cir.ptr <!s32i>
+
+//      CHECK: cir.global external @y = 3.400000e+00 : f32
 // CHECK-NEXT: cir.global external @w = 4.300000e+00 : f64
 // CHECK-NEXT: cir.global external @x = #cir.int<51> : !s8i
 // CHECK-NEXT: cir.global external @rgb = #cir.const_array<[#cir.int<0> : !u8i, #cir.int<233> : !u8i, #cir.int<33> : !u8i]> : !cir.array<!u8i x 3>

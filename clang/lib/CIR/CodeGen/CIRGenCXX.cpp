@@ -45,7 +45,8 @@ static void buildDeclInit(CIRGenFunction &CGF, const VarDecl *D,
                                       AggValueSlot::DoesNotOverlap));
     return;
   case TEK_Scalar:
-    llvm_unreachable("scalar evaluation NYI");
+    CGF.buildScalarInit(Init, CGF.getLoc(D->getLocation()), lv, false);
+    return;
   case TEK_Complex:
     llvm_unreachable("complext evaluation NYI");
   }
