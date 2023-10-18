@@ -42,10 +42,7 @@ public:
   ///
   /// \see lldb_private::TypeSystemClang::GetType(clang::QualType)
   CompilerType(lldb::TypeSystemWP type_system,
-               lldb::opaque_compiler_type_t type)
-    : m_type_system(type_system), m_type(type) {
-    assert(Verify() && "verification failed");
-  }
+               lldb::opaque_compiler_type_t type);
 
   /// This is a minimal wrapper of a TypeSystem shared pointer as
   /// returned by CompilerType which conventien dyn_cast support.
@@ -88,10 +85,8 @@ public:
     lldb::TypeSystemSP GetSharedPointer() const { return m_typesystem_sp; }
   };
 
-  CompilerType(TypeSystemSPWrapper type_system, lldb::opaque_compiler_type_t type)
-    : m_type_system(type_system.GetSharedPointer()), m_type(type) {
-    assert(Verify() && "verification failed");
-  }
+  CompilerType(TypeSystemSPWrapper type_system,
+               lldb::opaque_compiler_type_t type);
 
   CompilerType(const CompilerType &rhs)
       : m_type_system(rhs.m_type_system), m_type(rhs.m_type) {}
