@@ -66,6 +66,13 @@ def ShiftMaskGI :
     GIComplexOperandMatcher<s32, "selectShiftMask">,
     GIComplexPatternEquiv<shiftMaskXLen>;
 
+def gi_sh1add_op : GIComplexOperandMatcher<s32, "selectSHXADDOp<1>">,
+                   GIComplexPatternEquiv<sh1add_op>;
+def gi_sh2add_op : GIComplexOperandMatcher<s32, "selectSHXADDOp<2>">,
+                   GIComplexPatternEquiv<sh2add_op>;
+def gi_sh3add_op : GIComplexOperandMatcher<s32, "selectSHXADDOp<3>">,
+                   GIComplexPatternEquiv<sh3add_op>;
+
 // FIXME: Canonicalize (sub X, C) -> (add X, -C) earlier.
 def : Pat<(XLenVT (sub GPR:$rs1, simm12Plus1:$imm)),
           (ADDI GPR:$rs1, (NegImm simm12Plus1:$imm))>;
