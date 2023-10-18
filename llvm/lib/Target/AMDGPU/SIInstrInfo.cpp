@@ -5490,6 +5490,18 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
     return true;
   }
 
+  if (MO->isImm()) {
+    uint64_t Imm = MO->getImm();
+    bool Is64BitFPOp = OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_FP64;
+    bool Is64BitOp = Is64BitFPOp ||
+                     OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_INT64 ||
+                     OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_V2INT32 ||
+                     OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_V2FP32;
+    if (Is64BitOp && !AMDGPU::isValid32BitLiteral(Imm, Is64BitFPOp) &&
+        !AMDGPU::isInlinableLiteral64(Imm, ST.hasInv2PiInlineImm()))
+      return false;
+  }
+
   // Handle non-register types that are treated like immediates.
   assert(MO->isImm() || MO->isTargetIndex() || MO->isFI() || MO->isGlobal());
 
