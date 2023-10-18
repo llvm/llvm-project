@@ -7,7 +7,6 @@
 define i24 @aext(i32 %0) {
 ; RV32I-LABEL: aext:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a0, a0, 0
 ; RV32I-NEXT:    srli a0, a0, 8
 ; RV32I-NEXT:    ret
 ;
