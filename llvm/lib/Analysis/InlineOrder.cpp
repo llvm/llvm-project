@@ -218,10 +218,10 @@ class PriorityInlineOrder : public InlineOrder<std::pair<CallBase *, int>> {
   // A call site could become less desirable for inlining because of the size
   // growth from prior inlining into the callee. This method is used to lazily
   // update the desirability of a call site if it's decreasing. It is only
-  // called on pop() or front(), not every time the desirability changes. When
-  // the desirability of the front call site decreases, an updated one would be
-  // pushed right back into the heap. For simplicity, those cases where
-  // the desirability of a call site increases are ignored here.
+  // called on pop(), not every time the desirability changes. When the
+  // desirability of the front call site decreases, an updated one would be
+  // pushed right back into the heap. For simplicity, those cases where the
+  // desirability of a call site increases are ignored here.
   void adjust() {
     std::pop_heap(Heap.begin(), Heap.end(), isLess);
     while (updateAndCheckDecreased(Heap.back())) {
