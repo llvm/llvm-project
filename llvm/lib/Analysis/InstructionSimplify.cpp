@@ -3174,16 +3174,29 @@ static Value *simplifyICmpWithBinOpOnLHS(CmpInst::Predicate Pred,
   }
 
   // x >>u y <=u x --> true.
+  // x >>u y <=u x | z --> true.
   // x >>u y >u  x --> false.
+  // x >>u y >u  x | z --> false.
   // x udiv y <=u x --> true.
+  // x udiv y <=u x | z --> true.
   // x udiv y >u  x --> false.
-  if (match(LBO, m_LShr(m_Specific(RHS), m_Value())) ||
-      match(LBO, m_UDiv(m_Specific(RHS), m_Value()))) {
-    // icmp pred (X op Y), X
-    if (Pred == ICmpInst::ICMP_UGT)
-      return getFalse(ITy);
-    if (Pred == ICmpInst::ICMP_ULE)
-      return getTrue(ITy);
+  // x udiv y >u  x | z --> false.
+  const Value *RHS0;
+  if (match(LBO, m_LShr(m_Value(RHS0), m_Value())) ||
+      match(LBO, m_UDiv(m_Value(RHS0), m_Value()))) {
+    const Value *RHS1;
+    const Value *RHS2;
+    // TODO: We can handle multiple and instructions.
+    if (RHS0 == RHS || (match(RHS, m_Or(m_Value(RHS1), m_Value(RHS2))) &&
+                        (RHS1 == RHS0 || RHS2 == RHS0))) {
+      // icmp pred (X op Y), X
+      if (Pred == ICmpInst::ICMP_UGT) {
+        return getFalse(ITy);
+      }
+      if (Pred == ICmpInst::ICMP_ULE) {
+        return getTrue(ITy);
+      }
+    }
   }
 
   // If x is nonzero:

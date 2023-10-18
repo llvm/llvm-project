@@ -567,10 +567,7 @@ define i1 @lshr7(i32 %X, i32 %Y) {
 
 define i1 @or_lshr1(i32 %X, i32 %Y, i32 %Z) {
 ; CHECK-LABEL: @or_lshr1(
-; CHECK-NEXT:    [[A:%.*]] = lshr i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = or i32 [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[B]], [[A]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 false
 ;
   %A = lshr i32 %X, %Y
   %B = or i32 %X, %Z
@@ -638,10 +635,7 @@ define i1 @or_lshr5(i32 %X, i32 %Y, i32 %Z, i32 %Z1) {
 
 define i1 @or_udiv1(i32 %X, i32 %Y, i32 %Z) {
 ; CHECK-LABEL: @or_udiv1(
-; CHECK-NEXT:    [[A:%.*]] = udiv i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = or i32 [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[B]], [[A]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 false
 ;
   %A = udiv i32 %X, %Y
   %B = or i32 %X, %Z
