@@ -235,6 +235,19 @@ AffineMap AffineMap::getPermutationMap(ArrayRef<unsigned> permutation,
   return permutationMap;
 }
 
+AffineMap AffineMap::getMultiDimMapWithTargets(unsigned numDims,
+                                               ArrayRef<int64_t> targets,
+                                               MLIRContext *context) {
+  AffineMap result =
+      AffineMap::get(/*dimCount=*/numDims, /*symbolCount=*/0, context);
+  int64_t pos = 0;
+  for (int64_t t : targets) {
+    result = result.insertResult(getAffineDimExpr(t, context), pos);
+    pos += 1;
+  }
+  return result;
+}
+
 template <typename AffineExprContainer>
 static SmallVector<AffineMap, 4>
 inferFromExprList(ArrayRef<AffineExprContainer> exprsList) {

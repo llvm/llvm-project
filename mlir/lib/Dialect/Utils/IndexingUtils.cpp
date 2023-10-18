@@ -259,6 +259,19 @@ SmallVector<int64_t> mlir::getI64SubArray(ArrayAttr arrayAttr,
   return res;
 }
 
+SmallVector<SmallVector<int32_t>>
+mlir::getArrayOfI32Array(ArrayAttr arrayAttr) {
+  SmallVector<SmallVector<int32_t>> arrayOfI32Array;
+  for (auto attr : arrayAttr) {
+    arrayOfI32Array.push_back(llvm::to_vector(
+        llvm::map_range(llvm::cast<ArrayAttr>(attr), [&](Attribute intAttr) {
+          return static_cast<int32_t>(
+              llvm::cast<IntegerAttr>(intAttr).getInt());
+        })));
+  }
+  return arrayOfI32Array;
+}
+
 // TODO: do we have any common utily for this?
 static MLIRContext *getContext(OpFoldResult val) {
   assert(val && "Invalid value");
