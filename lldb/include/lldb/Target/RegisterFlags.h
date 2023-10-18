@@ -24,9 +24,9 @@ public:
       assert(m_start <= m_end && "Start bit must be <= end bit.");
     }
 
-    /// Construct a single bit field.
-    Field(std::string name, unsigned bit)
-        : m_name(std::move(name)), m_start(bit), m_end(bit) {}
+    /// Construct a field that occupies a single bit.
+    Field(std::string name, unsigned bit_position)
+        : m_name(std::move(name)), m_start(bit_position), m_end(bit_position) {}
 
     /// Get size of the field in bits. Will always be at least 1.
     unsigned GetSizeInBits() const { return m_end - m_start + 1; }
