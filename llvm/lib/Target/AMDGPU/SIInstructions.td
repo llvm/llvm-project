@@ -151,6 +151,7 @@ def S_MOV_B64_IMM_PSEUDO : SPseudoInstSI <(outs SReg_64:$sdst),
   let SchedRW = [WriteSALU, Write64Bit];
   let Size = 16; // Needs maximum 2 s_mov_b32 instructions 8 byte long each.
   let Uses = [];
+  let UseNamedOperandTable = 1;
 }
 
 // Pseudoinstruction for @llvm.amdgcn.wqm. It is turned into a copy after the
@@ -3572,8 +3573,8 @@ def G_AMDGPU_ATOMIC_FMIN : G_ATOMICRMW_OP;
 def G_AMDGPU_ATOMIC_FMAX : G_ATOMICRMW_OP;
 }
 
-class BufferAtomicGenericInstruction<bit NoRtn = 0> : AMDGPUGenericInstruction {
-  let OutOperandList = !if(NoRtn, (outs), (outs type0:$dst));
+class BufferAtomicGenericInstruction : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$vdata, type1:$rsrc, type2:$vindex, type2:$voffset,
                            type2:$soffset, untyped_imm_0:$offset,
                            untyped_imm_0:$cachepolicy, untyped_imm_0:$idxen);

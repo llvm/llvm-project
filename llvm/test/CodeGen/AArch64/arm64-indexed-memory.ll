@@ -1127,3 +1127,268 @@ define ptr @postidx_clobber(ptr %addr) nounwind noinline ssp {
  %newaddr = getelementptr i64, ptr %addr, i32 1
  ret ptr %newaddr
 }
+
+define ptr @preidx32_sb(ptr %src, ptr %out) {
+; CHECK64-LABEL: preidx32_sb:
+; CHECK64:       ; %bb.0:
+; CHECK64-NEXT:    ldrsb w8, [x0, #1]!
+; CHECK64-NEXT:    str w8, [x1]
+; CHECK64-NEXT:    ret
+;
+; GISEL-LABEL: preidx32_sb:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    add x8, x0, #1
+; GISEL-NEXT:    ldrsb w9, [x0, #1]
+; GISEL-NEXT:    mov x0, x8
+; GISEL-NEXT:    str w9, [x1]
+; GISEL-NEXT:    ret
+;
+; CHECK32-LABEL: preidx32_sb:
+; CHECK32:       ; %bb.0:
+; CHECK32-NEXT:    ldrsb w8, [x0, #1]!
+; CHECK32-NEXT:    str w8, [x1]
+; CHECK32-NEXT:    ret
+  %ptr = getelementptr inbounds i8, ptr %src, i64 1
+  %tmp = load i8, ptr %ptr, align 1
+  %sext = sext i8 %tmp to i32
+  store i32 %sext, ptr %out, align 4
+  ret ptr %ptr
+}
+
+define ptr @preidx32_sh(ptr %src, ptr %out) {
+; CHECK64-LABEL: preidx32_sh:
+; CHECK64:       ; %bb.0:
+; CHECK64-NEXT:    ldrsh w8, [x0, #2]!
+; CHECK64-NEXT:    str w8, [x1]
+; CHECK64-NEXT:    ret
+;
+; GISEL-LABEL: preidx32_sh:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    add x8, x0, #2
+; GISEL-NEXT:    ldrsh w9, [x0, #2]
+; GISEL-NEXT:    mov x0, x8
+; GISEL-NEXT:    str w9, [x1]
+; GISEL-NEXT:    ret
+;
+; CHECK32-LABEL: preidx32_sh:
+; CHECK32:       ; %bb.0:
+; CHECK32-NEXT:    ldrsh w8, [x0, #2]!
+; CHECK32-NEXT:    str w8, [x1]
+; CHECK32-NEXT:    ret
+  %ptr = getelementptr inbounds i16, ptr %src, i64 1
+  %tmp = load i16, ptr %ptr, align 2
+  %sext = sext i16 %tmp to i32
+  store i32 %sext, ptr %out, align 4
+  ret ptr %ptr
+}
+
+define ptr @preidx64_sb(ptr %src, ptr %out) {
+; CHECK64-LABEL: preidx64_sb:
+; CHECK64:       ; %bb.0:
+; CHECK64-NEXT:    ldrsb x8, [x0, #1]!
+; CHECK64-NEXT:    str x8, [x1]
+; CHECK64-NEXT:    ret
+;
+; GISEL-LABEL: preidx64_sb:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    add x8, x0, #1
+; GISEL-NEXT:    ldrsb x9, [x0, #1]
+; GISEL-NEXT:    mov x0, x8
+; GISEL-NEXT:    str x9, [x1]
+; GISEL-NEXT:    ret
+;
+; CHECK32-LABEL: preidx64_sb:
+; CHECK32:       ; %bb.0:
+; CHECK32-NEXT:    ldrsb x8, [x0, #1]!
+; CHECK32-NEXT:    str x8, [x1]
+; CHECK32-NEXT:    ret
+  %ptr = getelementptr inbounds i8, ptr %src, i64 1
+  %tmp = load i8, ptr %ptr, align 1
+  %sext = sext i8 %tmp to i64
+  store i64 %sext, ptr %out, align 8
+  ret ptr %ptr
+}
+
+define ptr @preidx64_sh(ptr %src, ptr %out) {
+; CHECK64-LABEL: preidx64_sh:
+; CHECK64:       ; %bb.0:
+; CHECK64-NEXT:    ldrsh x8, [x0, #2]!
+; CHECK64-NEXT:    str x8, [x1]
+; CHECK64-NEXT:    ret
+;
+; GISEL-LABEL: preidx64_sh:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    add x8, x0, #2
+; GISEL-NEXT:    ldrsh x9, [x0, #2]
+; GISEL-NEXT:    mov x0, x8
+; GISEL-NEXT:    str x9, [x1]
+; GISEL-NEXT:    ret
+;
+; CHECK32-LABEL: preidx64_sh:
+; CHECK32:       ; %bb.0:
+; CHECK32-NEXT:    ldrsh x8, [x0, #2]!
+; CHECK32-NEXT:    str x8, [x1]
+; CHECK32-NEXT:    ret
+  %ptr = getelementptr inbounds i16, ptr %src, i64 1
+  %tmp = load i16, ptr %ptr, align 2
+  %sext = sext i16 %tmp to i64
+  store i64 %sext, ptr %out, align 8
+  ret ptr %ptr
+}
+
+define ptr @preidx64_sw(ptr %src, ptr %out) {
+; CHECK64-LABEL: preidx64_sw:
+; CHECK64:       ; %bb.0:
+; CHECK64-NEXT:    ldrsw x8, [x0, #4]!
+; CHECK64-NEXT:    str x8, [x1]
+; CHECK64-NEXT:    ret
+;
+; GISEL-LABEL: preidx64_sw:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    add x8, x0, #4
+; GISEL-NEXT:    ldrsw x9, [x0, #4]
+; GISEL-NEXT:    mov x0, x8
+; GISEL-NEXT:    str x9, [x1]
+; GISEL-NEXT:    ret
+;
+; CHECK32-LABEL: preidx64_sw:
+; CHECK32:       ; %bb.0:
+; CHECK32-NEXT:    ldrsw x8, [x0, #4]!
+; CHECK32-NEXT:    str x8, [x1]
+; CHECK32-NEXT:    ret
+  %ptr = getelementptr inbounds i32, ptr %src, i64 1
+  %tmp = load i32, ptr %ptr, align 2
+  %sext = sext i32 %tmp to i64
+  store i64 %sext, ptr %out, align 8
+  ret ptr %ptr
+}
+
+define ptr @postidx32_sb(ptr %src, ptr %out) {
+; CHECK64-LABEL: postidx32_sb:
+; CHECK64:       ; %bb.0:
+; CHECK64-NEXT:    ldrsb w8, [x0], #1
+; CHECK64-NEXT:    str w8, [x1]
+; CHECK64-NEXT:    ret
+;
+; GISEL-LABEL: postidx32_sb:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    ldrsb w8, [x0]
+; GISEL-NEXT:    add x0, x0, #1
+; GISEL-NEXT:    str w8, [x1]
+; GISEL-NEXT:    ret
+;
+; CHECK32-LABEL: postidx32_sb:
+; CHECK32:       ; %bb.0:
+; CHECK32-NEXT:    ldrsb w8, [x0], #1
+; CHECK32-NEXT:    str w8, [x1]
+; CHECK32-NEXT:    ret
+  %tmp = load i8, ptr %src, align 1
+  %ptr = getelementptr inbounds i8, ptr %src, i64 1
+  %sext = sext i8 %tmp to i32
+  store i32 %sext, ptr %out, align 4
+  ret ptr %ptr
+}
+
+define ptr @postidx32_sh(ptr %src, ptr %out) {
+; CHECK64-LABEL: postidx32_sh:
+; CHECK64:       ; %bb.0:
+; CHECK64-NEXT:    ldrsh w8, [x0], #2
+; CHECK64-NEXT:    str w8, [x1]
+; CHECK64-NEXT:    ret
+;
+; GISEL-LABEL: postidx32_sh:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    ldrsh w8, [x0]
+; GISEL-NEXT:    add x0, x0, #2
+; GISEL-NEXT:    str w8, [x1]
+; GISEL-NEXT:    ret
+;
+; CHECK32-LABEL: postidx32_sh:
+; CHECK32:       ; %bb.0:
+; CHECK32-NEXT:    ldrsh w8, [x0], #2
+; CHECK32-NEXT:    str w8, [x1]
+; CHECK32-NEXT:    ret
+  %tmp = load i16, ptr %src, align 2
+  %ptr = getelementptr inbounds i16, ptr %src, i64 1
+  %sext = sext i16 %tmp to i32
+  store i32 %sext, ptr %out, align 4
+  ret ptr %ptr
+}
+
+define ptr @postidx64_sb(ptr %src, ptr %out) {
+; CHECK64-LABEL: postidx64_sb:
+; CHECK64:       ; %bb.0:
+; CHECK64-NEXT:    ldrsb x8, [x0], #1
+; CHECK64-NEXT:    str x8, [x1]
+; CHECK64-NEXT:    ret
+;
+; GISEL-LABEL: postidx64_sb:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    ldrsb x8, [x0]
+; GISEL-NEXT:    add x0, x0, #1
+; GISEL-NEXT:    str x8, [x1]
+; GISEL-NEXT:    ret
+;
+; CHECK32-LABEL: postidx64_sb:
+; CHECK32:       ; %bb.0:
+; CHECK32-NEXT:    ldrsb x8, [x0], #1
+; CHECK32-NEXT:    str x8, [x1]
+; CHECK32-NEXT:    ret
+  %tmp = load i8, ptr %src, align 1
+  %ptr = getelementptr inbounds i8, ptr %src, i64 1
+  %sext = sext i8 %tmp to i64
+  store i64 %sext, ptr %out, align 8
+  ret ptr %ptr
+}
+
+define ptr @postidx64_sh(ptr %src, ptr %out) {
+; CHECK64-LABEL: postidx64_sh:
+; CHECK64:       ; %bb.0:
+; CHECK64-NEXT:    ldrsh x8, [x0], #2
+; CHECK64-NEXT:    str x8, [x1]
+; CHECK64-NEXT:    ret
+;
+; GISEL-LABEL: postidx64_sh:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    ldrsh x8, [x0]
+; GISEL-NEXT:    add x0, x0, #2
+; GISEL-NEXT:    str x8, [x1]
+; GISEL-NEXT:    ret
+;
+; CHECK32-LABEL: postidx64_sh:
+; CHECK32:       ; %bb.0:
+; CHECK32-NEXT:    ldrsh x8, [x0], #2
+; CHECK32-NEXT:    str x8, [x1]
+; CHECK32-NEXT:    ret
+  %tmp = load i16, ptr %src, align 2
+  %ptr = getelementptr inbounds i16, ptr %src, i64 1
+  %sext = sext i16 %tmp to i64
+  store i64 %sext, ptr %out, align 8
+  ret ptr %ptr
+}
+
+define ptr @postidx64_sw(ptr %src, ptr %out) {
+; CHECK64-LABEL: postidx64_sw:
+; CHECK64:       ; %bb.0:
+; CHECK64-NEXT:    ldrsw x8, [x0], #4
+; CHECK64-NEXT:    str x8, [x1]
+; CHECK64-NEXT:    ret
+;
+; GISEL-LABEL: postidx64_sw:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    ldrsw x8, [x0]
+; GISEL-NEXT:    add x0, x0, #4
+; GISEL-NEXT:    str x8, [x1]
+; GISEL-NEXT:    ret
+;
+; CHECK32-LABEL: postidx64_sw:
+; CHECK32:       ; %bb.0:
+; CHECK32-NEXT:    ldrsw x8, [x0], #4
+; CHECK32-NEXT:    str x8, [x1]
+; CHECK32-NEXT:    ret
+  %tmp = load i32, ptr %src, align 4
+  %ptr = getelementptr inbounds i32, ptr %src, i64 1
+  %sext = sext i32 %tmp to i64
+  store i64 %sext, ptr %out, align 8
+  ret ptr %ptr
+}

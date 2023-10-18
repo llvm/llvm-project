@@ -764,6 +764,12 @@
 // AVX10_1_512: #define __AVX512F__ 1
 // AVX10_1_512: #define __EVEX512__ 1
 
+// RUN: %clang -target i686-unknown-linux-gnu -march=atom -musermsr -x c -E -dM -o - %s | FileCheck  -check-prefix=USERMSR %s
+// USERMSR: #define __USERMSR__ 1
+
+// RUN: %clang -target i686-unknown-linux-gnu -march=atom -mno-usermsr -x c -E -dM -o - %s | FileCheck  -check-prefix=NO-USERMSR %s
+// NO-USERMSR-NOT: #define __USERMSR__ 1
+
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mcrc32 -x c -E -dM -o - %s | FileCheck -check-prefix=CRC32 %s
 
 // CRC32: #define __CRC32__ 1

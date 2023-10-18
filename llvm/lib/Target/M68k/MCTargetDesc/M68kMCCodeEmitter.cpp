@@ -203,10 +203,9 @@ void M68kMCCodeEmitter::encodeInstruction(const MCInst &MI,
                                           SmallVectorImpl<char> &CB,
                                           SmallVectorImpl<MCFixup> &Fixups,
                                           const MCSubtargetInfo &STI) const {
-  unsigned Opcode = MI.getOpcode();
-
-  LLVM_DEBUG(dbgs() << "EncodeInstruction: " << MCII.getName(Opcode) << "("
-                    << Opcode << ")\n");
+  LLVM_DEBUG(dbgs() << "EncodeInstruction: " << MCII.getName(MI.getOpcode())
+                    << "(" << MI.getOpcode() << ")\n");
+  (void)MCII;
 
   // Try using the new method first.
   APInt EncodedInst(16, 0U);

@@ -4685,9 +4685,9 @@ defm amdgpu_ieee : BoolOption<"m", "amdgpu-ieee",
 def mcode_object_version_EQ : Joined<["-"], "mcode-object-version=">, Group<m_Group>,
   HelpText<"Specify code object ABI version. Defaults to 4. (AMDGPU only)">,
   Visibility<[ClangOption, CC1Option]>,
-  Values<"none,3,4,5">,
+  Values<"none,4,5">,
   NormalizedValuesScope<"TargetOptions">,
-  NormalizedValues<["COV_None", "COV_3", "COV_4", "COV_5"]>,
+  NormalizedValues<["COV_None", "COV_4", "COV_5"]>,
   MarshallingInfoEnum<TargetOpts<"CodeObjectVersion">, "COV_4">;
 
 defm cumode : SimpleMFlag<"cumode",
@@ -5913,6 +5913,8 @@ def mtsxldtrk : Flag<["-"], "mtsxldtrk">, Group<m_x86_Features_Group>;
 def mno_tsxldtrk : Flag<["-"], "mno-tsxldtrk">, Group<m_x86_Features_Group>;
 def muintr : Flag<["-"], "muintr">, Group<m_x86_Features_Group>;
 def mno_uintr : Flag<["-"], "mno-uintr">, Group<m_x86_Features_Group>;
+def musermsr : Flag<["-"], "musermsr">, Group<m_x86_Features_Group>;
+def mno_usermsr : Flag<["-"], "mno-usermsr">, Group<m_x86_Features_Group>;
 def mvaes : Flag<["-"], "mvaes">, Group<m_x86_Features_Group>;
 def mno_vaes : Flag<["-"], "mno-vaes">, Group<m_x86_Features_Group>;
 def mvpclmulqdq : Flag<["-"], "mvpclmulqdq">, Group<m_x86_Features_Group>;

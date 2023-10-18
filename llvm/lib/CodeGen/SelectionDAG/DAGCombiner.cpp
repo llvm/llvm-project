@@ -495,6 +495,7 @@ namespace {
     SDValue visitFSUB(SDNode *N);
     SDValue visitFMUL(SDNode *N);
     template <class MatchContextClass> SDValue visitFMA(SDNode *N);
+    SDValue visitFMAD(SDNode *N);
     SDValue visitFDIV(SDNode *N);
     SDValue visitFREM(SDNode *N);
     SDValue visitFSQRT(SDNode *N);
@@ -2000,6 +2001,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::FSUB:               return visitFSUB(N);
   case ISD::FMUL:               return visitFMUL(N);
   case ISD::FMA:                return visitFMA<EmptyMatchContext>(N);
+  case ISD::FMAD:               return visitFMAD(N);
   case ISD::FDIV:               return visitFDIV(N);
   case ISD::FREM:               return visitFREM(N);
   case ISD::FSQRT:              return visitFSQRT(N);
@@ -7076,12 +7078,23 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
             N1, /*AllowUndef=*/false, /*AllowTruncation=*/true)) {
       Constant = C->getAPIntValue();
     } else if (BuildVectorSDNode *Vector = dyn_cast<BuildVectorSDNode>(N1)) {
+      unsigned EltBitWidth = Vector->getValueType(0).getScalarSizeInBits();
       APInt SplatValue, SplatUndef;
       unsigned SplatBitSize;
       bool HasAnyUndefs;
-      bool IsSplat = Vector->isConstantSplat(SplatValue, SplatUndef,
-                                             SplatBitSize, HasAnyUndefs);
-      if (IsSplat) {
+      // Endianness should not matter here. Code below makes sure that we only
+      // use the result if the SplatBitSize is a multiple of the vector element
+      // size. And after that we AND all element sized parts of the splat
+      // together. So the end result should be the same regardless of in which
+      // order we do those operations.
+      const bool IsBigEndian = false;
+      bool IsSplat =
+          Vector->isConstantSplat(SplatValue, SplatUndef, SplatBitSize,
+                                  HasAnyUndefs, EltBitWidth, IsBigEndian);
+
+      // Make sure that variable 'Constant' is only set if 'SplatBitSize' is a
+      // multiple of 'BitWidth'. Otherwise, we could propagate a wrong value.
+      if (IsSplat && (SplatBitSize % EltBitWidth) == 0) {
         // Undef bits can contribute to a possible optimisation if set, so
         // set them.
         SplatValue |= SplatUndef;
@@ -7090,23 +7103,9 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
         // the first vector value and FF for the rest, repeating. We need a mask
         // that will apply equally to all members of the vector, so AND all the
         // lanes of the constant together.
-        unsigned EltBitWidth = Vector->getValueType(0).getScalarSizeInBits();
-
-        // If the splat value has been compressed to a bitlength lower
-        // than the size of the vector lane, we need to re-expand it to
-        // the lane size.
-        if (EltBitWidth > SplatBitSize)
-          for (SplatValue = SplatValue.zextOrTrunc(EltBitWidth);
-               SplatBitSize < EltBitWidth; SplatBitSize = SplatBitSize * 2)
-            SplatValue |= SplatValue.shl(SplatBitSize);
-
-        // Make sure that variable 'Constant' is only set if 'SplatBitSize' is a
-        // multiple of 'BitWidth'. Otherwise, we could propagate a wrong value.
-        if ((SplatBitSize % EltBitWidth) == 0) {
-          Constant = APInt::getAllOnes(EltBitWidth);
-          for (unsigned i = 0, n = (SplatBitSize / EltBitWidth); i < n; ++i)
-            Constant &= SplatValue.extractBits(EltBitWidth, i * EltBitWidth);
-        }
+        Constant = APInt::getAllOnes(EltBitWidth);
+        for (unsigned i = 0, n = (SplatBitSize / EltBitWidth); i < n; ++i)
+          Constant &= SplatValue.extractBits(EltBitWidth, i * EltBitWidth);
       }
     }
 
@@ -12444,27 +12443,127 @@ SDValue DAGCombiner::visitSETCC(SDNode *N) {
 
   ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
   EVT VT = N->getValueType(0);
+  SDValue N0 = N->getOperand(0), N1 = N->getOperand(1);
 
-  SDValue Combined = SimplifySetCC(VT, N->getOperand(0), N->getOperand(1), Cond,
-                                   SDLoc(N), !PreferSetCC);
+  SDValue Combined = SimplifySetCC(VT, N0, N1, Cond, SDLoc(N), !PreferSetCC);
 
-  if (!Combined)
-    return SDValue();
+  if (Combined) {
+    // If we prefer to have a setcc, and we don't, we'll try our best to
+    // recreate one using rebuildSetCC.
+    if (PreferSetCC && Combined.getOpcode() != ISD::SETCC) {
+      SDValue NewSetCC = rebuildSetCC(Combined);
 
-  // If we prefer to have a setcc, and we don't, we'll try our best to
-  // recreate one using rebuildSetCC.
-  if (PreferSetCC && Combined.getOpcode() != ISD::SETCC) {
-    SDValue NewSetCC = rebuildSetCC(Combined);
+      // We don't have anything interesting to combine to.
+      if (NewSetCC.getNode() == N)
+        return SDValue();
 
-    // We don't have anything interesting to combine to.
-    if (NewSetCC.getNode() == N)
-      return SDValue();
-
-    if (NewSetCC)
-      return NewSetCC;
+      if (NewSetCC)
+        return NewSetCC;
+    }
+    return Combined;
   }
 
-  return Combined;
+  // Optimize
+  //    1) (icmp eq/ne (and X, C0), (shift X, C1))
+  // or
+  //    2) (icmp eq/ne X, (rotate X, C1))
+  // If C0 is a mask or shifted mask and the shift amt (C1) isolates the
+  // remaining bits (i.e something like `(x64 & UINT32_MAX) == (x64 >> 32)`)
+  // Then:
+  // If C1 is a power of 2, then the rotate and shift+and versions are
+  // equivilent, so we can interchange them depending on target preference.
+  // Otherwise, if we have the shift+and version we can interchange srl/shl
+  // which inturn affects the constant C0. We can use this to get better
+  // constants again determined by target preference.
+  if (Cond == ISD::SETNE || Cond == ISD::SETEQ) {
+    auto IsAndWithShift = [](SDValue A, SDValue B) {
+      return A.getOpcode() == ISD::AND &&
+             (B.getOpcode() == ISD::SRL || B.getOpcode() == ISD::SHL) &&
+             A.getOperand(0) == B.getOperand(0);
+    };
+    auto IsRotateWithOp = [](SDValue A, SDValue B) {
+      return (B.getOpcode() == ISD::ROTL || B.getOpcode() == ISD::ROTR) &&
+             B.getOperand(0) == A;
+    };
+    SDValue AndOrOp = SDValue(), ShiftOrRotate = SDValue();
+    bool IsRotate = false;
+
+    // Find either shift+and or rotate pattern.
+    if (IsAndWithShift(N0, N1)) {
+      AndOrOp = N0;
+      ShiftOrRotate = N1;
+    } else if (IsAndWithShift(N1, N0)) {
+      AndOrOp = N1;
+      ShiftOrRotate = N0;
+    } else if (IsRotateWithOp(N0, N1)) {
+      IsRotate = true;
+      AndOrOp = N0;
+      ShiftOrRotate = N1;
+    } else if (IsRotateWithOp(N1, N0)) {
+      IsRotate = true;
+      AndOrOp = N1;
+      ShiftOrRotate = N0;
+    }
+
+    if (AndOrOp && ShiftOrRotate && ShiftOrRotate.hasOneUse() &&
+        (IsRotate || AndOrOp.hasOneUse())) {
+      EVT OpVT = N0.getValueType();
+      // Get constant shift/rotate amount and possibly mask (if its shift+and
+      // variant).
+      auto GetAPIntValue = [](SDValue Op) -> std::optional<APInt> {
+        ConstantSDNode *CNode = isConstOrConstSplat(Op, /*AllowUndefs*/ false,
+                                                    /*AllowTrunc*/ false);
+        if (CNode == nullptr)
+          return std::nullopt;
+        return CNode->getAPIntValue();
+      };
+      std::optional<APInt> AndCMask =
+          IsRotate ? std::nullopt : GetAPIntValue(AndOrOp.getOperand(1));
+      std::optional<APInt> ShiftCAmt =
+          GetAPIntValue(ShiftOrRotate.getOperand(1));
+      unsigned NumBits = OpVT.getScalarSizeInBits();
+
+      // We found constants.
+      if (ShiftCAmt && (IsRotate || AndCMask) && ShiftCAmt->ult(NumBits)) {
+        unsigned ShiftOpc = ShiftOrRotate.getOpcode();
+        // Check that the constants meet the constraints.
+        bool CanTransform =
+            IsRotate ||
+            (*ShiftCAmt == (~*AndCMask).popcount() && ShiftOpc == ISD::SHL
+                 ? (~*AndCMask).isMask()
+                 : AndCMask->isMask());
+
+        // See if target prefers another shift/rotate opcode.
+        unsigned NewShiftOpc = TLI.preferedOpcodeForCmpEqPiecesOfOperand(
+            OpVT, ShiftOpc, ShiftCAmt->isPowerOf2(), *ShiftCAmt, AndCMask);
+        // Transform is valid and we have a new preference.
+        if (CanTransform && NewShiftOpc != ShiftOpc) {
+          SDLoc DL(N);
+          SDValue NewShiftOrRotate =
+              DAG.getNode(NewShiftOpc, DL, OpVT, ShiftOrRotate.getOperand(0),
+                          ShiftOrRotate.getOperand(1));
+          SDValue NewAndOrOp = SDValue();
+
+          if (NewShiftOpc == ISD::SHL || NewShiftOpc == ISD::SRL) {
+            APInt NewMask =
+                NewShiftOpc == ISD::SHL
+                    ? APInt::getHighBitsSet(NumBits,
+                                            NumBits - ShiftCAmt->getZExtValue())
+                    : APInt::getLowBitsSet(NumBits,
+                                           NumBits - ShiftCAmt->getZExtValue());
+            NewAndOrOp =
+                DAG.getNode(ISD::AND, DL, OpVT, ShiftOrRotate.getOperand(0),
+                            DAG.getConstant(NewMask, DL, OpVT));
+          } else {
+            NewAndOrOp = ShiftOrRotate.getOperand(0);
+          }
+
+          return DAG.getSetCC(DL, VT, NewAndOrOp, NewShiftOrRotate, Cond);
+        }
+      }
+    }
+  }
+  return SDValue();
 }
 
 SDValue DAGCombiner::visitSETCCCARRY(SDNode *N) {
@@ -16752,6 +16851,21 @@ template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
     if (SDValue Neg = TLI.getCheaperNegatedExpression(
             SDValue(N, 0), DAG, LegalOperations, ForCodeSize))
       return matcher.getNode(ISD::FNEG, DL, VT, Neg);
+  return SDValue();
+}
+
+SDValue DAGCombiner::visitFMAD(SDNode *N) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  SDValue N2 = N->getOperand(2);
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  // Constant fold FMAD.
+  if (isa<ConstantFPSDNode>(N0) && isa<ConstantFPSDNode>(N1) &&
+      isa<ConstantFPSDNode>(N2))
+    return DAG.getNode(ISD::FMAD, DL, VT, N0, N1, N2);
+
   return SDValue();
 }
 

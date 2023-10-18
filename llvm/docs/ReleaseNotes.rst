@@ -133,6 +133,7 @@ Changes to the X86 Backend
   benefits external projects such as Rust which aim to be binary compatible
   with C, but also fixes code generation where LLVM already assumed that the
   type matched and called into libgcc helper functions.
+* Support ISA of ``USER_MSR``.
 * Support ISA of ``AVX10.1-256`` and ``AVX10.1-512``.
 
 Changes to the OCaml bindings

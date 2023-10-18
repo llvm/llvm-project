@@ -53,7 +53,7 @@ public:
     FileSystem::Initialize();
     HostInfo::Initialize();
     ObjectFilePECOFF::Initialize();
-    SymbolFileDWARF::Initialize();
+    plugin::dwarf::SymbolFileDWARF::Initialize();
     TypeSystemClang::Initialize();
     SymbolFilePDB::Initialize();
 
@@ -64,7 +64,7 @@ public:
   void TearDown() override {
     SymbolFilePDB::Terminate();
     TypeSystemClang::Initialize();
-    SymbolFileDWARF::Terminate();
+    plugin::dwarf::SymbolFileDWARF::Terminate();
     ObjectFilePECOFF::Terminate();
     HostInfo::Terminate();
     FileSystem::Terminate();

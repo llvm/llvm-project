@@ -194,6 +194,14 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   }
   case TargetOpcode::G_SEXT_INREG:
     return selectSExtInreg(MI, MIB);
+  case TargetOpcode::G_FRAME_INDEX: {
+    // TODO: We may want to replace this code with the SelectionDAG patterns,
+    // which fail to get imported because it uses FrameAddrRegImm, which is a
+    // ComplexPattern
+    MI.setDesc(TII.get(RISCV::ADDI));
+    MI.addOperand(MachineOperand::CreateImm(0));
+    return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+  }
   case TargetOpcode::G_SELECT:
     return selectSelect(MI, MIB, MRI);
   default:
@@ -210,7 +218,6 @@ bool RISCVInstructionSelector::replacePtrWithInt(MachineOperand &Op,
   const LLT XLenLLT = LLT::scalar(STI.getXLen());
   auto PtrToInt = MIB.buildPtrToInt(XLenLLT, PtrReg);
   MRI.setRegBank(PtrToInt.getReg(0), RBI.getRegBank(RISCV::GPRRegBankID));
-  MRI.setType(PtrReg, XLenLLT);
   Op.setReg(PtrToInt.getReg(0));
   return select(*PtrToInt);
 }
