@@ -104,7 +104,7 @@ jobs:
         run: |
           cd llvm/utils/lit
           # Remove 'dev' suffix from lit version.
-          sed -i "s/ + 'dev'//g" lit/__init__.py
+          sed -i 's/ + "dev"//g' lit/__init__.py
           python3 setup.py sdist
 
       - name: Upload lit to test.pypi.org
