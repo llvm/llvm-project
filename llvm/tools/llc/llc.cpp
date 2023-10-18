@@ -622,12 +622,6 @@ static int compileModule(char **argv, LLVMContext &Context) {
         exit(1);
       }
 
-      // On AIX, setting the relocation model to anything other than PIC is
-      // considered a user error.
-      if (TheTriple.isOSAIX() && RM && *RM != Reloc::PIC_)
-        reportError("invalid relocation model, AIX only supports PIC",
-                    InputFilename);
-
       InitializeOptions(TheTriple);
       Target = std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
           TheTriple.getTriple(), CPUStr, FeaturesStr, Options, RM, CM, OLvl));
@@ -668,14 +662,6 @@ static int compileModule(char **argv, LLVMContext &Context) {
         TargetRegistry::lookupTarget(codegen::getMArch(), TheTriple, Error);
     if (!TheTarget) {
       WithColor::error(errs(), argv[0]) << Error;
-      return 1;
-    }
-
-    // On AIX, setting the relocation model to anything other than PIC is
-    // considered a user error.
-    if (TheTriple.isOSAIX() && RM && *RM != Reloc::PIC_) {
-      WithColor::error(errs(), argv[0])
-          << "invalid relocation model, AIX only supports PIC.\n";
       return 1;
     }
 
