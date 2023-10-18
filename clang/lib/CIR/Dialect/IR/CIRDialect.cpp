@@ -53,7 +53,10 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
 
   AliasResult getAlias(Type type, raw_ostream &os) const final {
     if (auto structType = type.dyn_cast<StructType>()) {
-      os << "ty_" << structType.getTypeName();
+      // TODO(cir): generate unique alias names for anonymous records.
+      if (!structType.getName())
+        return AliasResult::NoAlias;
+      os << "ty_" << structType.getName();
       return AliasResult::OverridableAlias;
     }
     if (auto intType = type.dyn_cast<IntType>()) {

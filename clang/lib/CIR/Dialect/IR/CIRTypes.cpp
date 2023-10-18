@@ -107,7 +107,6 @@ Type StructType::getLargestMember(const ::mlir::DataLayout &dataLayout) const {
 Type StructType::parse(mlir::AsmParser &parser) {
   const auto loc = parser.getCurrentLocation();
   llvm::SmallVector<mlir::Type> members;
-  mlir::StringAttr id;
   bool body = false;
   bool packed = false;
   mlir::cir::ASTRecordDeclAttr ast = nullptr;
@@ -129,8 +128,8 @@ Type StructType::parse(mlir::AsmParser &parser) {
     return {};
   }
 
-  if (parser.parseAttribute(id))
-    return {};
+  mlir::StringAttr name;
+  parser.parseOptionalAttribute(name);
 
   if (parser.parseOptionalKeyword("packed").succeeded())
     packed = true;
@@ -155,7 +154,7 @@ Type StructType::parse(mlir::AsmParser &parser) {
   if (parser.parseGreater())
     return {};
 
-  return StructType::get(parser.getContext(), members, id, body, packed, kind,
+  return StructType::get(parser.getContext(), members, name, body, packed, kind,
                          std::nullopt);
 }
 
@@ -174,7 +173,8 @@ void StructType::print(mlir::AsmPrinter &printer) const {
     break;
   }
 
-  printer << getTypeName() << " ";
+  if (getName())
+    printer << getName() << " ";
 
   if (getPacked())
     printer << "packed ";

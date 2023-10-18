@@ -1,0 +1,10 @@
+// RUN: cir-opt %s -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
+
+!s32i = !cir.int<s, 32>
+module {
+  // CHECK: cir.func @shouldNotUseAliasWithAnonStruct(%arg0: !cir.struct<struct {!s32i}>)
+  cir.func @shouldNotUseAliasWithAnonStruct(%arg0 : !cir.struct<struct {!s32i}>) {
+    cir.return
+  }
+}
