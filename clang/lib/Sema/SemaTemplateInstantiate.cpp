@@ -2649,7 +2649,9 @@ TypeSourceInfo *Sema::SubstFunctionDeclType(TypeSourceInfo *T,
   } else {
     Result = Instantiator.TransformType(TLB, TL);
   }
-  if (Result.isNull())
+  // When clang goes into recovery mode, it substitutes the incorrect function
+  // type with a primitive (e.g., int).
+  if (Result.isNull() || !Result->isFunctionType())
     return nullptr;
 
   return TLB.getTypeSourceInfo(Context, Result);
