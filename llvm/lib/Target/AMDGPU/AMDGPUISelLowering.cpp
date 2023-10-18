@@ -5041,6 +5041,19 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
     return performAssertSZExtCombine(N, DCI);
   case ISD::INTRINSIC_WO_CHAIN:
     return performIntrinsicWOChainCombine(N, DCI);
+  case AMDGPUISD::FMAD_FTZ: {
+    SDValue N0 = N->getOperand(0);
+    SDValue N1 = N->getOperand(1);
+    SDValue N2 = N->getOperand(2);
+    EVT VT = N->getValueType(0);
+
+    // FMAD_FTZ is a FMAD, but flushing to zero is allowed (not required).
+    // if all operands are constant we can just constant-fold it like a FMAD.
+    if (isa<ConstantFPSDNode>(N0) && isa<ConstantFPSDNode>(N1) &&
+        isa<ConstantFPSDNode>(N2))
+      return DAG.getNode(ISD::FMAD, DL, VT, {N0, N1, N2});
+    break;
+  }
   }
   return SDValue();
 }
