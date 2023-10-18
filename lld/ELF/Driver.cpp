@@ -2248,24 +2248,6 @@ static void replaceCommonSymbols() {
   }
 }
 
-// If all references to a DSO happen to be weak, the DSO is not added to
-// DT_NEEDED. If that happens, replace ShardSymbol with Undefined to avoid
-// dangling references to an unneeded DSO. Use a weak binding to avoid
-// --no-allow-shlib-undefined diagnostics. Similarly, demote lazy symbols.
-static void demoteSharedAndLazySymbols() {
-  llvm::TimeTraceScope timeScope("Demote shared and lazy symbols");
-  for (Symbol *sym : symtab.getSymbols()) {
-    auto *s = dyn_cast<SharedSymbol>(sym);
-    if (!(s && !cast<SharedFile>(s->file)->isNeeded) && !sym->isLazy())
-      continue;
-
-    uint8_t binding = sym->isLazy() ? sym->binding : uint8_t(STB_WEAK);
-    Undefined(nullptr, sym->getName(), binding, sym->stOther, sym->type)
-        .overwrite(*sym);
-    sym->versionId = VER_NDX_GLOBAL;
-  }
-}
-
 // The section referred to by `s` is considered address-significant. Set the
 // keepUnique flag on the section if appropriate.
 static void markAddrsig(Symbol *s) {
@@ -3023,7 +3005,6 @@ void LinkerDriver::link(opt::InputArgList &args) {
 
   // Garbage collection and removal of shared symbols from unused shared objects.
   invokeELFT(markLive,);
-  demoteSharedAndLazySymbols();
 
   // Make copies of any input sections that need to be copied into each
   // partition.
