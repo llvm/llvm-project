@@ -491,11 +491,19 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
   SmallVector<StackEntry, 8> LBraceStack;
   assert(Tok->is(tok::l_brace));
   do {
-    // Get next non-comment token.
-    FormatToken *NextTok;
-    do {
-      NextTok = Tokens->getNextToken();
-    } while (NextTok->is(tok::comment));
+    // Get next non-comment, non-preprocessor token.
+    FormatToken *NextTok = Tokens->getNextToken();
+    while (NextTok->is(tok::comment) ||
+           (NextTok->is(tok::hash) && isOnNewLine(*NextTok))) {
+      while (NextTok->is(tok::comment))
+        NextTok = Tokens->getNextToken();
+      while (NextTok->is(tok::hash) && isOnNewLine(*NextTok)) {
+        ScopedMacroState MacroState(*Line, Tokens, NextTok);
+        do {
+          NextTok = Tokens->getNextToken();
+        } while (NextTok->isNot(tok::eof));
+      }
+    }
 
     switch (Tok->Tok.getKind()) {
     case tok::l_brace:
@@ -611,12 +619,9 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
       if (Tok->isNot(TT_StatementMacro))
         break;
       [[fallthrough]];
-    case tok::kw_if:
-      if (PrevTok->is(tok::hash))
-        break;
-      [[fallthrough]];
     case tok::at:
     case tok::semi:
+    case tok::kw_if:
     case tok::kw_while:
     case tok::kw_for:
     case tok::kw_switch:

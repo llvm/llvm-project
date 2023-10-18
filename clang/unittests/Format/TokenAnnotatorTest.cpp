@@ -2134,6 +2134,7 @@ TEST_F(TokenAnnotatorTest, UnderstandConstructors) {
   EXPECT_TOKEN(Tokens[11], tok::l_paren, TT_Unknown);
   EXPECT_TOKEN(Tokens[12], tok::r_paren, TT_Unknown);
   EXPECT_TOKEN(Tokens[13], tok::l_brace, TT_FunctionLBrace);
+  EXPECT_BRACE_KIND(Tokens[13], BK_Block);
 
   Tokens = annotate("Class::Class() : BaseClass{}, Member{} {}");
   ASSERT_EQ(Tokens.size(), 16u) << Tokens;
@@ -2146,6 +2147,20 @@ TEST_F(TokenAnnotatorTest, UnderstandConstructors) {
   EXPECT_TOKEN(Tokens[11], tok::l_brace, TT_Unknown);
   EXPECT_TOKEN(Tokens[12], tok::r_brace, TT_Unknown);
   EXPECT_TOKEN(Tokens[13], tok::l_brace, TT_FunctionLBrace);
+  EXPECT_BRACE_KIND(Tokens[13], BK_Block);
+
+  Tokens = annotate("class Class {\n"
+                    "  Class() : BaseClass() {\n"
+                    "#if 0\n"
+                    "    // comment\n"
+                    "#endif\n"
+                    "  }\n"
+                    "  Class f();\n"
+                    "}");
+  ASSERT_EQ(Tokens.size(), 25u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::colon, TT_CtorInitializerColon);
+  EXPECT_TOKEN(Tokens[10], tok::l_brace, TT_FunctionLBrace);
+  EXPECT_BRACE_KIND(Tokens[10], BK_Block);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsConditionParens) {
