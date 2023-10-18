@@ -1773,7 +1773,7 @@ CommandInterpreter::PreprocessToken(std::string &expr_str) {
 
       StreamString value_strm;
       const bool show_type = false;
-      scalar.GetValue(&value_strm, show_type);
+      scalar.GetValue(value_strm, show_type);
       size_t value_string_size = value_strm.GetSize();
       if (value_string_size) {
         expr_str = value_strm.GetData();
