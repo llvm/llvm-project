@@ -108,7 +108,7 @@ def CIR_StructType : CIR_Type<"Struct", "struct",
 
   let parameters = (ins
     ArrayRefParameter<"mlir::Type", "members">:$members,
-    "mlir::StringAttr":$typeName,
+    "mlir::StringAttr":$name,
     "bool":$body,
     "bool":$packed,
     "mlir::cir::StructType::RecordKind":$kind,
@@ -138,7 +138,7 @@ def CIR_StructType : CIR_Type<"Struct", "struct",
     bool isPadded(const ::mlir::DataLayout &dataLayout) const;
 
     std::string getPrefixedName() {
-      const auto name = getTypeName().getValue().str();
+      const auto name = getName().getValue().str();
       switch (getKind()) {
       case RecordKind::Class:
         return "class." + name;
