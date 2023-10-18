@@ -34,6 +34,7 @@
  include "mlir/Dialect/Linalg/IR/LinalgBase.td"
  include "mlir/Dialect/Partition/IR/PartitionBase.td"
  include "mlir/Interfaces/SideEffectInterfaces.td"
+ include "mlir/Dialect/Partition/IR/PartitionAttrDefs.td"
 
  // Base class.
  class Partition_Op<string mnemonic, list<Trait> traits = []>

@@ -6,6 +6,7 @@ add_mlir_dialect_library(MLIRPartition
 
    DEPENDS
    MLIRPartitionOpsIncGen
+   MLIRPartitionAttrDefsIncGen
 
    LINK_LIBS PUBLIC
    MLIRDialect

@@ -7,6 +7,7 @@
  //===----------------------------------------------------------------------===//
 
  #include "mlir/Dialect/Partition/IR/Partition.h"
+ #include "mlir/Dialect/Partition/IR/PartitionAttrDefs.h.inc"
 
  #include "mlir/IR/Builders.h"
  #include "mlir/IR/OpImplementation.h"
@@ -15,6 +16,10 @@
  using namespace mlir::partition;
 
  void PartitionDialect::initialize() {
+   addAttributes<
+ #define GET_ATTRDEF_LIST
+ #include "mlir/Dialect/Partition/IR/PartitionAttrDefs.cpp.inc"
+      >();
    addOperations<
  #define GET_OP_LIST
  #include "mlir/Dialect/Partition/IR/PartitionOps.cpp.inc"
@@ -24,3 +29,4 @@
  #define GET_OP_CLASSES
  #include "mlir/Dialect/Partition/IR/PartitionOps.cpp.inc"
  #include "mlir/Dialect/Partition/IR/PartitionOpsDialect.cpp.inc"
+ #include "mlir/Dialect/Partition/IR/PartitionAttrDefs.cpp.inc"

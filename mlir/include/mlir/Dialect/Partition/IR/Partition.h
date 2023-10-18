@@ -19,5 +19,6 @@
  #include "mlir/Dialect/Partition/IR/PartitionOps.h.inc"
 
  #include "mlir/Dialect/Partition/IR/PartitionOpsDialect.h.inc"
+ #include "mlir/Dialect/Partition/IR/PartitionAttrDefs.h.inc"
 
  #endif // MLIR_DIALECT_PARTITION_IR_PARTITION_H_

@@ -24,6 +24,8 @@
      either by generating calls into a runtime support library
      or by further lowering the primitives into actual code.
    }];
+   let useDefaultAttributePrinterParser = 1;
+   let useDefaultTypePrinterParser = 1;
  }
 
  #endif // PARTITION_BASE
