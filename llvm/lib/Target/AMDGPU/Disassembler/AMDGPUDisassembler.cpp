@@ -277,6 +277,7 @@ DECODE_OPERAND_SRC_REG_OR_IMM_DEFERRED_9(VS_32_Lo128, OPW16, 16)
 DECODE_OPERAND_SRC_REG_OR_IMM_DEFERRED_9(VS_32, OPW16, 16)
 DECODE_OPERAND_SRC_REG_OR_IMM_DEFERRED_9(VS_32, OPW32, 32)
 DECODE_OPERAND_SRC_REG_OR_IMM_DEFERRED_9(SReg_32, OPW32, 32)
+DECODE_OPERAND_SRC_REG_OR_IMM_DEFERRED_9(VS_64, OPW64, 64)
 
 static DecodeStatus DecodeVGPR_16RegisterClass(MCInst &Inst, unsigned Imm,
                                                uint64_t /*Addr*/,
@@ -338,6 +339,13 @@ static DecodeStatus decodeOperand_KImmFP(MCInst &Inst, unsigned Imm,
                                          const MCDisassembler *Decoder) {
   const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
   return addOperand(Inst, DAsm->decodeMandatoryLiteralConstant(Imm));
+}
+
+static DecodeStatus decodeOperand_KImmFP64(MCInst &Inst, uint64_t Imm,
+                                         uint64_t Addr,
+                                         const MCDisassembler *Decoder) {
+  const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
+  return addOperand(Inst, DAsm->decodeMandatoryLiteral64Constant(Imm));
 }
 
 static DecodeStatus decodeOperandVOPDDstY(MCInst &Inst, unsigned Val,
@@ -774,6 +782,20 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       break;
 
     Res = tryDecodeInst(DecoderTableWMMAGFX1264, MI, QW, Address, CS);
+    if (Res)
+      break;
+
+    if (Bytes.size() < 4) break;
+
+    if (STI.hasFeature(AMDGPU::Feature64BitLiterals)) {
+      const DecoderUInt128 DecW = DecoderUInt128(QW, eatBytes<uint32_t>(Bytes));
+      // Return 8 bytes for a potential literal.
+      Bytes = Bytes_.slice(4, MaxInstBytesNum - 4);
+
+      Res = tryDecodeInst(DecoderTableGFX12_1096, MI, DecW, Address, CS);
+      if (Res)
+        break;
+    }
   } while (false);
 
   if (Res && AMDGPU::isMAC(MI.getOpcode())) {
@@ -1335,8 +1357,10 @@ DecodeStatus AMDGPUDisassembler::convertFMAanyK(MCInst &MI,
     auto &Op = MI.getOperand(I);
     auto OpType = Desc.operands()[I].OperandType;
     bool IsDeferredOp = (OpType == AMDGPU::OPERAND_REG_IMM_FP32_DEFERRED ||
-                         OpType == AMDGPU::OPERAND_REG_IMM_FP16_DEFERRED);
-    if (Op.isImm() && Op.getImm() == AMDGPU::EncValues::LITERAL_CONST &&
+                         OpType == AMDGPU::OPERAND_REG_IMM_FP16_DEFERRED ||
+                         OpType == AMDGPU::OPERAND_REG_IMM_FP64_DEFERRED);
+    if (Op.isImm() && (Op.getImm() == AMDGPU::EncValues::LITERAL_CONST ||
+                       Op.getImm() == AMDGPU::EncValues::LITERAL64_CONST) &&
         IsDeferredOp)
       Op.setImm(Literal);
   }
@@ -1443,6 +1467,17 @@ AMDGPUDisassembler::decodeMandatoryLiteralConstant(unsigned Val) const {
   HasLiteral = true;
   Literal = Val;
   return MCOperand::createImm(Literal);
+}
+
+MCOperand
+AMDGPUDisassembler::decodeMandatoryLiteral64Constant(uint64_t Val) const {
+  if (HasLiteral) {
+    if (Literal64 != Val)
+      return errOperand(Val, "More than one unique literal is illegal");
+  }
+  HasLiteral = true;
+  Literal = Literal64 = Val;
+  return MCOperand::createImm(Literal64);
 }
 
 MCOperand AMDGPUDisassembler::decodeLiteralConstant(bool ExtendFP64) const {

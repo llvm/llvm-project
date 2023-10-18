@@ -87,7 +87,7 @@ private:
                                const MCSubtargetInfo &STI) const;
 
   /// Encode an fp or int literal.
-  std::optional<uint32_t> getLitEncoding(const MCOperand &MO,
+  std::optional<uint64_t> getLitEncoding(const MCOperand &MO,
                                          const MCOperandInfo &OpInfo,
                                          const MCSubtargetInfo &STI) const;
 
@@ -234,7 +234,7 @@ static uint32_t getLit64Encoding(uint64_t Val, const MCSubtargetInfo &STI,
   return 255;
 }
 
-std::optional<uint32_t>
+std::optional<uint64_t>
 AMDGPUMCCodeEmitter::getLitEncoding(const MCOperand &MO,
                                     const MCOperandInfo &OpInfo,
                                     const MCSubtargetInfo &STI) const {
@@ -309,7 +309,14 @@ AMDGPUMCCodeEmitter::getLitEncoding(const MCOperand &MO,
   }
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_KIMM16:
+  case AMDGPU::OPERAND_KIMM64:
     return MO.getImm();
+
+  case AMDGPU::OPERAND_REG_IMM_FP64_DEFERRED: {
+    auto Enc = getLit64Encoding(static_cast<uint64_t>(Imm), STI, true);
+    return Enc == 255 ? 254 : Enc;
+  }
+
   default:
     llvm_unreachable("invalid operand size");
   }

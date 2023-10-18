@@ -193,7 +193,7 @@ enum ClassFlags : unsigned {
 
 namespace AMDGPU {
 enum OperandType : unsigned {
-  /// Operands with register or 32-bit immediate
+  /// Operands with register, 32-bit, or 64-bit immediate
   OPERAND_REG_IMM_INT32 = MCOI::OPERAND_FIRST_TARGET,
   OPERAND_REG_IMM_INT64,
   OPERAND_REG_IMM_INT16,
@@ -202,6 +202,7 @@ enum OperandType : unsigned {
   OPERAND_REG_IMM_FP16,
   OPERAND_REG_IMM_FP16_DEFERRED,
   OPERAND_REG_IMM_FP32_DEFERRED,
+  OPERAND_REG_IMM_FP64_DEFERRED,
   OPERAND_REG_IMM_V2FP16,
   OPERAND_REG_IMM_V2INT16,
   OPERAND_REG_IMM_V2INT32,
@@ -225,6 +226,7 @@ enum OperandType : unsigned {
   /// Operand with 32-bit immediate that uses the constant bus.
   OPERAND_KIMM32,
   OPERAND_KIMM16,
+  OPERAND_KIMM64,
 
   /// Operands with an AccVGPR register or inline constant
   OPERAND_REG_INLINE_AC_INT16,
@@ -256,7 +258,7 @@ enum OperandType : unsigned {
   OPERAND_SRC_LAST = OPERAND_REG_INLINE_C_LAST,
 
   OPERAND_KIMM_FIRST = OPERAND_KIMM32,
-  OPERAND_KIMM_LAST = OPERAND_KIMM16
+  OPERAND_KIMM_LAST = OPERAND_KIMM64
 
 };
 }

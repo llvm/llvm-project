@@ -1195,6 +1195,12 @@ def KImmFP32 : KImmFPOperand<i32>;
 // constant bus.
 def KImmFP16 : KImmFPOperand<i16>;
 
+// 64-bit VALU immediate operand that uses the constant bus.
+def KImmFP64 : KImmFPOperand<i64> {
+  let DecoderMethod = "decodeOperand_KImmFP64";
+  let PrintMethod = "printFP64ImmOperand";
+}
+
 class FPInputModsMatchClass <int opSize> : AsmOperandClass {
   let Name = "RegOrImmWithFP"#opSize#"InputMods";
   let ParserMethod = "parseRegOrImmWithFPInputMods";

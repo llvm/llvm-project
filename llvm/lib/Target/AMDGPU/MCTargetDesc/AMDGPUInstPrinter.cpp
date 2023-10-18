@@ -87,6 +87,17 @@ void AMDGPUInstPrinter::printU32ImmOperand(const MCInst *MI, unsigned OpNo,
   O << formatHex(MI->getOperand(OpNo).getImm() & 0xffffffff);
 }
 
+void AMDGPUInstPrinter::printFP64ImmOperand(const MCInst *MI, unsigned OpNo,
+                                            const MCSubtargetInfo &STI,
+                                            raw_ostream &O) {
+  // KIMM64
+  uint64_t Imm = MI->getOperand(OpNo).getImm();
+  if (Hi_32(Imm))
+    O << formatHex(Lo_32(Imm) ? Imm : Imm >> 32);
+  else
+    O << "lit64(" << formatHex(Imm) << ')';
+}
+
 void AMDGPUInstPrinter::printGlobalSReg32(const MCInst *MI, unsigned OpNo,
                                           const MCSubtargetInfo &STI,
                                           raw_ostream &O) {
@@ -801,6 +812,7 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
     case AMDGPU::OPERAND_REG_IMM_FP64:
     case AMDGPU::OPERAND_REG_INLINE_C_FP64:
     case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
+    case AMDGPU::OPERAND_REG_IMM_FP64_DEFERRED:
       printImmediate64(Op.getImm(), STI, O, true);
       break;
     case AMDGPU::OPERAND_REG_INLINE_C_INT16:

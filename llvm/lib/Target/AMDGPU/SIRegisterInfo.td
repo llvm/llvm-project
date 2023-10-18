@@ -1217,6 +1217,10 @@ class RegOrF16_Lo128_Deferred <string RegisterClass,
                      !subst("_f16_Lo128_Deferred", "F16_Lo128", NAME),
                      "_Deferred_Imm16">;
 
+class RegOrF64_Deferred <string RegisterClass, string OperandTypePrefix>
+  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_FP64_DEFERRED",
+                     !subst("_f64_Deferred", "F64", NAME), "_Deferred_Imm64">;
+
 //===----------------------------------------------------------------------===//
 //  SSrc_* Operands with an SGPR, a 32-bit immediate, or 64-bit immediate
 //  if supported by target.
@@ -1290,6 +1294,7 @@ def VSrc_v2f32 : RegOrV2F32 <"VS_64", "OPERAND_REG_IMM">;
 
 def VSrc_f16_Deferred : RegOrF16_Deferred<"VS_32", "OPERAND_REG_IMM">;
 def VSrc_f32_Deferred : RegOrF32_Deferred<"VS_32", "OPERAND_REG_IMM">;
+def VSrc_f64_Deferred : RegOrF64_Deferred<"VS_64", "OPERAND_REG_IMM">;
 
 def VSrcFake16_f16_Lo128_Deferred : RegOrF16_Lo128_Deferred<"VS_32_Lo128",
                                                             "OPERAND_REG_IMM">;
