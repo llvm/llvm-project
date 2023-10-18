@@ -152,23 +152,24 @@ public:
         return _VSTD::addressof(__x);
     }
 
-    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY _LIBCPP_DEPRECATED_IN_CXX17
-    _Tp* allocate(size_t __n, const void*) {
+    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_INLINE_VISIBILITY _LIBCPP_DEPRECATED_IN_CXX17
+        _Tp*
+        allocate(size_t __n, const void*) {
         return allocate(__n);
     }
 
-    _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_INLINE_VISIBILITY size_type max_size() const _NOEXCEPT {
+    _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_INLINE_VISIBILITY size_type
+    max_size() const _NOEXCEPT {
         return size_type(~0) / sizeof(_Tp);
     }
 
     template <class _Up, class... _Args>
-    _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_INLINE_VISIBILITY
-    void construct(_Up* __p, _Args&&... __args) {
+    _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_INLINE_VISIBILITY void
+    construct(_Up* __p, _Args&&... __args) {
         ::new ((void*)__p) _Up(_VSTD::forward<_Args>(__args)...);
     }
 
-    _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_INLINE_VISIBILITY
-    void destroy(pointer __p) {
+    _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_INLINE_VISIBILITY void destroy(pointer __p) {
         __p->~_Tp();
     }
 #endif
