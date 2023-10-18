@@ -7993,6 +7993,29 @@ enum SpecialRegisterAccessKind {
   Write,
 };
 
+static Value *EmitAMDGCNBallotForExec(CodeGenFunction &CGF, const CallExpr *E,
+                                      llvm::Type *RegisterType,
+                                      llvm::Type *ValueType, bool isExecHi) {
+  CodeGen::CGBuilderTy &Builder = CGF.Builder;
+  CodeGen::CodeGenModule &CGM = CGF.CGM;
+
+  llvm::Type *ResultType = CGF.ConvertType(E->getType());
+  llvm::Value *Call;
+  Function *F;
+  if (isExecHi) {
+    F = CGM.getIntrinsic(Intrinsic::amdgcn_ballot, {RegisterType});
+    Call = Builder.CreateCall(F, {Builder.getInt1(true)});
+    Value *C1 = llvm::ConstantInt::get(ValueType, 32);
+    Value *Rt2 = Builder.CreateLShr(Call, C1);
+    Value *Rt3 = Builder.CreateTruncOrBitCast(Rt2, CGF.Int32Ty);
+    return Rt3;
+  } else {
+    F = CGM.getIntrinsic(Intrinsic::amdgcn_ballot, {ResultType});
+    Call = Builder.CreateCall(F, {Builder.getInt1(true)});
+    return Call;
+  }
+}
+
 // Generates the IR for the read/write special register builtin,
 // ValueType is the type of the value that is to be written or read,
 // RegisterType is the type of the register being written to or read from.
@@ -17780,21 +17803,12 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     llvm::Function *F = CGM.getIntrinsic(IID, {ArgTy});
     return Builder.CreateCall(F, {Addr, Val, ZeroI32, ZeroI32, ZeroI1});
   }
-  case AMDGPU::BI__builtin_amdgcn_read_exec: {
-    CallInst *CI = cast<CallInst>(
-      EmitSpecialRegisterBuiltin(*this, E, Int64Ty, Int64Ty, NormalRead, "exec"));
-    CI->setConvergent();
-    return CI;
-  }
+  case AMDGPU::BI__builtin_amdgcn_read_exec:
+    return EmitAMDGCNBallotForExec(*this, E, Int64Ty, Int64Ty, false);
   case AMDGPU::BI__builtin_amdgcn_read_exec_lo:
-  case AMDGPU::BI__builtin_amdgcn_read_exec_hi: {
-    StringRef RegName = BuiltinID == AMDGPU::BI__builtin_amdgcn_read_exec_lo ?
-      "exec_lo" : "exec_hi";
-    CallInst *CI = cast<CallInst>(
-      EmitSpecialRegisterBuiltin(*this, E, Int32Ty, Int32Ty, NormalRead, RegName));
-    CI->setConvergent();
-    return CI;
-  }
+    return EmitAMDGCNBallotForExec(*this, E, Int32Ty, Int32Ty, false);
+  case AMDGPU::BI__builtin_amdgcn_read_exec_hi:
+    return EmitAMDGCNBallotForExec(*this, E, Int64Ty, Int64Ty, true);
   case AMDGPU::BI__builtin_amdgcn_image_bvh_intersect_ray:
   case AMDGPU::BI__builtin_amdgcn_image_bvh_intersect_ray_h:
   case AMDGPU::BI__builtin_amdgcn_image_bvh_intersect_ray_l:
