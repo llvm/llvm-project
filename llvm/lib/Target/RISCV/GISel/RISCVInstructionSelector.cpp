@@ -231,6 +231,7 @@ RISCVInstructionSelector::selectSHXADDOp(MachineOperand &Root,
   return std::nullopt;
 }
 
+InstructionSelector::ComplexRendererFns
 RISCVInstructionSelector::selectAddrRegImm(MachineOperand &Root) const {
   // TODO: Need to get the immediate from a G_PTR_ADD. Should this be done in
   // the combiner?
