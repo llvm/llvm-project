@@ -664,7 +664,7 @@ tgtok::TokKind TGLexer::prepIsDirective() const {
           // It looks like TableGen does not support '\r' as the actual
           // carriage return, e.g. getNextChar() treats a single '\r'
           // as '\n'.  So we do the same here.
-          NextChar == '\r')
+          NextChar == '\r' || NextChar == '\0')
         return Kind;
 
       // Allow comments after some directives, e.g.:
