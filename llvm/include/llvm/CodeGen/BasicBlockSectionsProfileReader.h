@@ -103,10 +103,11 @@ public:
   // means unique basic block sections are desired for all basic blocks of the
   // function.
   std::pair<bool, SmallVector<BBClusterInfo>>
-    getClusterInfoForFunction(StringRef FuncName) const;
- 
+  getClusterInfoForFunction(StringRef FuncName) const;
+
   // Returns the path clonings for the given function.
-  SmallVector<SmallVector<unsigned>> getClonePathsForFunction(StringRef FuncName) const;
+  SmallVector<SmallVector<unsigned>>
+  getClonePathsForFunction(StringRef FuncName) const;
 
   // Initializes the FunctionNameToDIFilename map for the current module and
   // then reads the profile for the matching functions.

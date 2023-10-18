@@ -102,7 +102,7 @@ static cl::opt<bool> BBSectionsDetectSourceDrift(
 namespace {
 
 class BasicBlockSections : public MachineFunctionPass {
- public:
+public:
   static char ID;
 
   BasicBlockSectionsProfileReader *BBSectionsProfileReader = nullptr;
@@ -180,9 +180,9 @@ updateBranches(MachineFunction &MF,
 // FuncClusterInfo represents the cluster information for basic blocks. It
 // maps from BBID of basic blocks to their cluster information. If this is
 // empty, it means unique sections for all basic blocks in the function.
-static void assignSections(
-    MachineFunction &MF,
-    const DenseMap<UniqueBBID, BBClusterInfo> &FuncClusterInfo) {
+static void
+assignSections(MachineFunction &MF,
+               const DenseMap<UniqueBBID, BBClusterInfo> &FuncClusterInfo) {
   assert(MF.hasBBSections() && "BB Sections is not set for function.");
   // This variable stores the section ID of the cluster containing eh_pads (if
   // all eh_pads are one cluster). If more than one cluster contain eh_pads, we
@@ -312,7 +312,7 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
             .getClusterInfoForFunction(MF.getName());
     if (!HasProfile)
       return false;
-    for (auto &BBClusterInfo: ClusterInfo) {
+    for (auto &BBClusterInfo : ClusterInfo) {
       FuncClusterInfo.try_emplace(BBClusterInfo.BBID, BBClusterInfo);
     }
   }

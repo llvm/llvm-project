@@ -1955,7 +1955,8 @@ void AsmPrinter::emitFunctionBody() {
       const double MBBRelFreq = MBFI.getBlockFreqRelativeToEntryBlock(&MBB);
       const double AbsMBBFreq = MBBRelFreq * EntryCount;
       *MBBProfileDumpFileOutput.get()
-          << MF->getName() << "," << MBB.getBBID()->BaseID << "," << AbsMBBFreq << "\n";
+          << MF->getName() << "," << MBB.getBBID()->BaseID << "," << AbsMBBFreq
+          << "\n";
     }
   }
 }

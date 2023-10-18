@@ -52,7 +52,7 @@ BasicBlockSectionsProfileReader::parseUniqueBBID(StringRef S) const {
     return createProfileParseError(Twine("unable to parse clone id: '") +
                                    Parts[1] + "': unsigned integer expected");
   return UniqueBBID{static_cast<unsigned>(BaseBBID),
-                     static_cast<unsigned>(CloneID)};
+                    static_cast<unsigned>(CloneID)};
 }
 
 bool BasicBlockSectionsProfileReader::isFunctionHot(StringRef FuncName) const {
@@ -68,7 +68,9 @@ BasicBlockSectionsProfileReader::getClusterInfoForFunction(
              : std::pair(false, SmallVector<BBClusterInfo>());
 }
 
-SmallVector<SmallVector<unsigned>> BasicBlockSectionsProfileReader::getClonePathsForFunction(StringRef FuncName) const {
+SmallVector<SmallVector<unsigned>>
+BasicBlockSectionsProfileReader::getClonePathsForFunction(
+    StringRef FuncName) const {
   return ProgramPathAndClusterInfo.lookup(getAliasName(FuncName)).ClonePaths;
 }
 
@@ -291,8 +293,8 @@ Error BasicBlockSectionsProfileReader::ReadV0Profile() {
 
         FI->second.ClusterInfo.emplace_back(
             BBClusterInfo({{static_cast<unsigned>(BBID), 0},
-                                        CurrentCluster,
-                                        CurrentPosition++}));
+                           CurrentCluster,
+                           CurrentPosition++}));
       }
       CurrentCluster++;
     } else {

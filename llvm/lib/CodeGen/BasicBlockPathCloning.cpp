@@ -9,21 +9,27 @@
 // BasicBlockPathCloning implementation.
 //
 // The purpose of this pass is to clone basic block paths based on information
-// provided by the -fbasic-block-sections=list option. 
+// provided by the -fbasic-block-sections=list option.
 // Please refer to BasicBlockSectionsProfileReader.cpp to see a path cloning
 // example.
 //
 // ====================
 // This pass clones the machine basic blocks alongs the given paths and sets up
-// the CFG. It assigns BBIDs to the cloned blocks so that the `BasicBlockSections` pass can correctly map the cluster information to the blocks.
-// The cloned block's BBID will have the same BaseID as the original block, but will get a unique non-zero CloneID (original blocks all have zero CloneIDs).
-// This pass applies a path cloning if it satisfies the following conditions:
+// the CFG. It assigns BBIDs to the cloned blocks so that the
+// `BasicBlockSections` pass can correctly map the cluster information to the
+// blocks. The cloned block's BBID will have the same BaseID as the original
+// block, but will get a unique non-zero CloneID (original blocks all have zero
+// CloneIDs). This pass applies a path cloning if it satisfies the following
+// conditions:
 //   1. All BBIDs in the path should be mapped to existing blocks.
-//   2. Each two consecutive BBIDs in the path must have a successor relationship in the CFG.
-//   3. The path should not include a block with indirect branches, except for the last block.
-// If a path does not satisfy all three conditions, it will be rejected, but the CloneIDs for its
-// (supposed to be cloned) blocks will be bypassed to make sure that the `BasicBlockSections` pass can map cluster info
-// correctly to the actually-cloned blocks.
+//   2. Each two consecutive BBIDs in the path must have a successor
+//   relationship in the CFG.
+//   3. The path should not include a block with indirect branches, except for
+//   the last block.
+// If a path does not satisfy all three conditions, it will be rejected, but the
+// CloneIDs for its (supposed to be cloned) blocks will be bypassed to make sure
+// that the `BasicBlockSections` pass can map cluster info correctly to the
+// actually-cloned blocks.
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SmallVector.h"
@@ -44,14 +50,17 @@ using namespace llvm;
 
 namespace {
 
-// Clones the given block and assigns the given `CloneID` to its BBID. Copies the instructions into the new block and sets up its successors.
-MachineBasicBlock *CloneMachineBasicBlock(MachineBasicBlock &OrigBB, unsigned CloneID) {
+// Clones the given block and assigns the given `CloneID` to its BBID. Copies
+// the instructions into the new block and sets up its successors.
+MachineBasicBlock *CloneMachineBasicBlock(MachineBasicBlock &OrigBB,
+                                          unsigned CloneID) {
   auto &MF = *OrigBB.getParent();
   auto TII = MF.getSubtarget().getInstrInfo();
   // Create the clone block and set its BBID based on the original block.
-  MachineBasicBlock *CloneBB = MF.CreateMachineBasicBlock(OrigBB.getBasicBlock(), UniqueBBID{OrigBB.getBBID()->BaseID, CloneID});
+  MachineBasicBlock *CloneBB = MF.CreateMachineBasicBlock(
+      OrigBB.getBasicBlock(), UniqueBBID{OrigBB.getBBID()->BaseID, CloneID});
   MF.push_back(CloneBB);
- 
+
   // Copy the instructions.
   for (auto &I : OrigBB.instrs())
     CloneBB->push_back(MF.CloneMachineInstr(&I));
@@ -72,8 +81,8 @@ MachineBasicBlock *CloneMachineBasicBlock(MachineBasicBlock &OrigBB, unsigned Cl
 
 // Returns if we can legally apply all clonings specified in `ClonePaths`.
 bool IsValidCloning(const MachineFunction &MF,
-               const DenseMap<unsigned, MachineBasicBlock *> &BBIDToBlock,
-               const SmallVector<unsigned> &ClonePath) {
+                    const DenseMap<unsigned, MachineBasicBlock *> &BBIDToBlock,
+                    const SmallVector<unsigned> &ClonePath) {
   const MachineBasicBlock *PrevBB = nullptr;
   for (size_t I = 0; I < ClonePath.size(); ++I) {
     unsigned BBID = ClonePath[I];
@@ -108,10 +117,10 @@ bool IsValidCloning(const MachineFunction &MF,
 
 // Applies all clonings specified in `ClonePaths` to `MF`. Returns true
 // if any clonings have been applied.
-bool
-ApplyCloning(MachineFunction &MF,
-             const SmallVector<SmallVector<unsigned>> &ClonePaths) {
-  if (ClonePaths.empty()) return false;
+bool ApplyCloning(MachineFunction &MF,
+                  const SmallVector<SmallVector<unsigned>> &ClonePaths) {
+  if (ClonePaths.empty())
+    return false;
   bool AnyPathsCloned = false;
   // Map from the final BB IDs to the `MachineBasicBlock`s.
   DenseMap<unsigned, MachineBasicBlock *> BBIDToBlock;
@@ -140,12 +149,15 @@ ApplyCloning(MachineFunction &MF,
         PrevBB = OrigBB;
         continue;
       }
-      MachineBasicBlock *CloneBB = CloneMachineBasicBlock(*OrigBB, ++NClonesForBBID[BBID]);
+      MachineBasicBlock *CloneBB =
+          CloneMachineBasicBlock(*OrigBB, ++NClonesForBBID[BBID]);
 
       for (auto &LiveOut : PrevBB->liveouts())
-       CloneBB->addLiveIn(LiveOut);
+        CloneBB->addLiveIn(LiveOut);
 
-      // Set up the previous block in the path to jump to the clone. This also transfers the successor/predecessor relationship between PrevBB and OrigBB to between PrevBB and CloneBB.
+      // Set up the previous block in the path to jump to the clone. This also
+      // transfers the successor/predecessor relationship between PrevBB and
+      // OrigBB to between PrevBB and CloneBB.
       PrevBB->ReplaceUsesOfBlockWith(OrigBB, CloneBB);
       PrevBB = CloneBB;
     }
@@ -155,10 +167,9 @@ ApplyCloning(MachineFunction &MF,
 }
 } // end anonymous namespace
 
-
 namespace llvm {
 class BasicBlockPathCloning : public MachineFunctionPass {
- public:
+public:
   static char ID;
 
   BasicBlockSectionsProfileReader *BBSectionsProfileReader = nullptr;
@@ -168,7 +179,7 @@ class BasicBlockPathCloning : public MachineFunctionPass {
   }
 
   StringRef getPassName() const override {
-    return "Basic Block Sections Analysis";
+    return "Basic Block Path Cloning";
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
@@ -178,28 +189,27 @@ class BasicBlockPathCloning : public MachineFunctionPass {
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
 
-} // end anonymous namespace
+} // namespace llvm
 
 char BasicBlockPathCloning::ID = 0;
 INITIALIZE_PASS_BEGIN(
     BasicBlockPathCloning, "bb-path-cloning",
-    "Prepares for basic block sections, by splitting functions "
-    "into clusters of basic blocks.",
+    "Applies path clonings for the -basic-block-sections=list option",
     false, false)
 INITIALIZE_PASS_DEPENDENCY(BasicBlockSectionsProfileReader)
 INITIALIZE_PASS_END(BasicBlockPathCloning, "bb-path-cloning",
-                    "Prepares for basic block sections, by splitting functions "
-                    "into clusters of basic blocks.",
+    "Applies path clonings for the -basic-block-sections=list option",
                     false, false)
 
 bool BasicBlockPathCloning::runOnMachineFunction(MachineFunction &MF) {
   auto BBSectionsType = MF.getTarget().getBBSectionsType();
   assert(BBSectionsType == BasicBlockSection::List &&
          "BB Sections list not enabled!");
-  if (hasInstrProfHashMismatch(MF)) return false;
+  if (hasInstrProfHashMismatch(MF))
+    return false;
 
   return ApplyCloning(MF, getAnalysis<BasicBlockSectionsProfileReader>()
-            .getClonePathsForFunction(MF.getName()));
+                              .getClonePathsForFunction(MF.getName()));
 }
 
 void BasicBlockPathCloning::getAnalysisUsage(AnalysisUsage &AU) const {

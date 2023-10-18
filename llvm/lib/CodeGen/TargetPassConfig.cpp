@@ -257,8 +257,9 @@ static cl::opt<bool>
 
 /// Enable basic block path cloning with basic-block-sections.
 static cl::opt<bool> EnableBasicBlockPathCloning(
-		"enable-basic-block-path-cloning", cl::Hidden,
-		cl::desc("Applies basic cloning clonings specified in the basic block sections profile."));
+    "enable-basic-block-path-cloning", cl::Hidden,
+    cl::desc("Applies basic cloning clonings specified in the basic block "
+             "sections profile."));
 
 /// Allow standard passes to be disabled by command line options. This supports
 /// simple binary flags that either suppress the pass or do nothing.

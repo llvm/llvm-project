@@ -1007,7 +1007,9 @@ public:
   /// CreateMachineBasicBlock - Allocate a new MachineBasicBlock. Use this
   /// instead of `new MachineBasicBlock'. Sets `MachineBasicBlock::BBID` if
   /// basic-block-sections is enabled for the function.
-  MachineBasicBlock *CreateMachineBasicBlock(const BasicBlock *BB = nullptr, std::optional<UniqueBBID> BBID = std::nullopt);
+  MachineBasicBlock *
+  CreateMachineBasicBlock(const BasicBlock *BB = nullptr,
+                          std::optional<UniqueBBID> BBID = std::nullopt);
 
   /// DeleteMachineBasicBlock - Delete the given MachineBasicBlock.
   void deleteMachineBasicBlock(MachineBasicBlock *MBB);
