@@ -11,6 +11,7 @@
 
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
+#include "mlir/Support/ADTExtras.h"
 
 namespace llvm {
 class BitVector;
@@ -190,60 +191,6 @@ public:
 #include "mlir/IR/BuiltinTypes.h.inc"
 
 namespace mlir {
-
-//===----------------------------------------------------------------------===//
-// CopyOnWriteArrayRef<T>
-//===----------------------------------------------------------------------===//
-
-// A wrapper around an ArrayRef<T> that copies to a SmallVector<T> on
-// modification. This is for use in the mlir::<Type>::Builders.
-template <typename T>
-class CopyOnWriteArrayRef {
-public:
-  CopyOnWriteArrayRef(ArrayRef<T> array) : nonOwning(array){};
-
-  CopyOnWriteArrayRef &operator=(ArrayRef<T> array) {
-    nonOwning = array;
-    owningStorage = {};
-    return *this;
-  }
-
-  void insert(size_t index, T value) {
-    SmallVector<T> &vector = ensureCopy();
-    vector.insert(vector.begin() + index, value);
-  }
-
-  void erase(size_t index) {
-    SmallVector<T> &vector = ensureCopy();
-    vector.erase(vector.begin() + index);
-  }
-
-  void set(size_t index, T value) { ensureCopy()[index] = value; }
-
-  size_t size() const { return ArrayRef<T>(*this).size(); }
-
-  bool empty() const { return ArrayRef<T>(*this).empty(); }
-
-  operator ArrayRef<T>() const {
-    return nonOwning.empty() ? ArrayRef<T>(owningStorage) : nonOwning;
-  }
-
-private:
-  SmallVector<T> &ensureCopy() {
-    // Empty non-owning storage signals the array has been copied to the owning
-    // storage (or both are empty). Note: `nonOwning` should never reference
-    // `owningStorage`. This can lead to dangling references if the
-    // CopyOnWriteArrayRef<T> is copied.
-    if (!nonOwning.empty()) {
-      owningStorage = SmallVector<T>(nonOwning);
-      nonOwning = {};
-    }
-    return owningStorage;
-  }
-
-  ArrayRef<T> nonOwning;
-  SmallVector<T> owningStorage;
-};
 
 //===----------------------------------------------------------------------===//
 // MemRefType

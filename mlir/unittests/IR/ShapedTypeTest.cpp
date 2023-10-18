@@ -199,9 +199,9 @@ TEST(ShapedTypeTest, RankedTensorTypeBuilder) {
   {
     // Drop some dims.
     RankedTensorType dropFrontTwoDims =
-        RankedTensorType::Builder(tensorType).dropDim(0).dropDim(0);
+        RankedTensorType::Builder(tensorType).dropDim(0).dropDim(1).dropDim(0);
     ASSERT_EQ(tensorType.getElementType(), dropFrontTwoDims.getElementType());
-    ASSERT_EQ(tensorType.getShape().drop_front(2), dropFrontTwoDims.getShape());
+    ASSERT_EQ(dropFrontTwoDims.getShape(), ArrayRef<int64_t>({16, 32}));
   }
 
   {
