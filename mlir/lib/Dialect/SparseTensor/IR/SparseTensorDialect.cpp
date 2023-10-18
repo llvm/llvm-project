@@ -694,12 +694,10 @@ SparseTensorEncodingAttr::verify(function_ref<InFlightDiagnostic()> emitError,
              << dimToLvl.getNumResults() << " != " << lvlRank;
     auto inferRes = inferLvlToDim(dimToLvl, dimToLvl.getContext());
     // Symbols can't be inferred but are acceptable.
-    if (!inferRes && dimToLvl.getNumSymbols() == 0) {
+    if (!inferRes && dimToLvl.getNumSymbols() == 0)
       return emitError() << "failed to infer lvlToDim from dimToLvl";
-    }
-    if (lvlToDim && (inferRes != lvlToDim)) {
+    if (lvlToDim && (inferRes != lvlToDim))
       return emitError() << "expected lvlToDim to be an inverse of dimToLvl";
-    }
     if (dimRank > lvlRank)
       return emitError() << "unexpected dimToLvl mapping from " << dimRank
                          << " to " << lvlRank;
