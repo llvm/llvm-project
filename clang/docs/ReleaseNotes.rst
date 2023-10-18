@@ -520,6 +520,10 @@ Bug Fixes to C++ Support
   with non-type template parameters of reference type. Fixes:
   (`#65153 <https://github.com/llvm/llvm-project/issues/65153>`_)
 
+- Clang now properly compares constraints on an out of line class template
+  declaration definition. Fixes:
+  (`#61763 <https://github.com/llvm/llvm-project/issues/61763>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
