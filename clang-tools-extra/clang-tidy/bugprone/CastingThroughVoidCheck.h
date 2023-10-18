@@ -13,7 +13,7 @@
 
 namespace clang::tidy::bugprone {
 
-/// A check detects unsafe or redundant two-step casting operations involving ``void*``.
+/// Detects unsafe or redundant two-step casting operations involving ``void*``.
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/casting-through-void.html
 class CastingThroughVoidCheck : public ClangTidyCheck {

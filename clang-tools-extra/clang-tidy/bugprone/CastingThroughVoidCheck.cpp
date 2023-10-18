@@ -21,30 +21,26 @@ namespace clang::tidy::bugprone {
 void CastingThroughVoidCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       explicitCastExpr(
-          hasDestinationType(qualType(pointsTo(qualType(unless(voidType()))))
-                                 .bind("target_type")),
+          hasDestinationType(
+              qualType(unless(hasCanonicalType(pointsTo(voidType()))))
+                  .bind("target_type")),
           hasSourceExpression(
-              explicitCastExpr(hasSourceExpression(expr(
-                                   hasType(qualType().bind("source_type")))),
-                               hasDestinationType(pointsTo(voidType())))
-                  .bind("cast")),
-          unless(builtinBitCastExpr())),
+              explicitCastExpr(
+                  hasSourceExpression(
+                      expr(hasType(qualType().bind("source_type")))),
+                  hasDestinationType(
+                      qualType(pointsTo(voidType())).bind("void_type")))
+                  .bind("cast"))),
       this);
 }
 
 void CastingThroughVoidCheck::check(const MatchFinder::MatchResult &Result) {
   const auto TT = *Result.Nodes.getNodeAs<QualType>("target_type");
   const auto ST = *Result.Nodes.getNodeAs<QualType>("source_type");
-  if (Result.Context->hasSameType(TT->getUnqualifiedDesugaredType(),
-                                  ST->getUnqualifiedDesugaredType()))
-    return;
-  if (Result.Context->hasSameType(
-          TT->getPointeeType()->getUnqualifiedDesugaredType(),
-          ST->getPointeeType()->getUnqualifiedDesugaredType()))
-    return;
+  const auto VT = *Result.Nodes.getNodeAs<QualType>("void_type");
   const auto *CE = Result.Nodes.getNodeAs<ExplicitCastExpr>("cast");
-  diag(CE->getSourceRange().getBegin(), "do not cast %0 to %1 through 'void*'")
-      << ST << TT;
+  diag(CE->getSourceRange().getBegin(), "do not cast %0 to %1 through %2")
+      << ST << TT << VT;
 }
 
 } // namespace clang::tidy::bugprone

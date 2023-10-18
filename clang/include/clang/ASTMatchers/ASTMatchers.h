@@ -2732,16 +2732,6 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, CastExpr> castExpr;
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, CXXFunctionalCastExpr>
     cxxFunctionalCastExpr;
 
-/// Matches a builtin bit cast expression.
-///
-/// Example: Matches __builtin_bit_cast(double, i) in
-/// \code
-///   int64_t i = 100;
-///   double d = __builtin_bit_cast(double, i);
-/// \endcode
-extern const internal::VariadicDynCastAllOfMatcher<Stmt, BuiltinBitCastExpr>
-    builtinBitCastExpr;
-
 /// Matches functional cast expressions having N != 1 arguments
 ///
 /// Example: Matches Foo(bar, bar)
