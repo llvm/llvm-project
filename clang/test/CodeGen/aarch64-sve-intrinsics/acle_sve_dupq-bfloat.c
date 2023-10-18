@@ -20,7 +20,7 @@
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.dupq.lane.nxv8bf16(<vscale x 8 x bfloat> [[DATA:%.*]], i64 [[INDEX:%.*]])
 // CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z21test_svdupq_lane_bf16u14__SVBFloat16_tm(
+// CPP-CHECK-LABEL: @_Z21test_svdupq_lane_bf16u14__SVBfloat16_tm(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.dupq.lane.nxv8bf16(<vscale x 8 x bfloat> [[DATA:%.*]], i64 [[INDEX:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]

@@ -54,7 +54,7 @@ void test_svmopa_za32_u8(svbool_t pn, svbool_t pm, svuint8_t zn, svuint8_t zm) {
 // CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.mopa.wide.nxv8bf16(i32 0, <vscale x 8 x i1> [[TMP0]], <vscale x 8 x i1> [[TMP1]], <vscale x 8 x bfloat> [[ZN]], <vscale x 8 x bfloat> [[ZM]])
 // CHECK-C-NEXT:    ret void
 //
-// CHECK-CXX-LABEL: define dso_local void @_Z21test_svmopa_za32_bf16u10__SVBool_tu10__SVBool_tu14__SVBFloat16_tu14__SVBFloat16_t(
+// CHECK-CXX-LABEL: define dso_local void @_Z21test_svmopa_za32_bf16u10__SVBool_tu10__SVBool_tu14__SVBfloat16_tu14__SVBfloat16_t(
 // CHECK-CXX-SAME: <vscale x 16 x i1> [[PN:%.*]], <vscale x 16 x i1> [[PM:%.*]], <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
 // CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PN]])
