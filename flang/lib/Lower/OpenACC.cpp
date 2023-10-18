@@ -1854,9 +1854,10 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
     } else if (const auto *privateClause =
                    std::get_if<Fortran::parser::AccClause::Private>(
                        &clause.u)) {
-      genPrivatizations<mlir::acc::PrivateRecipeOp>(
-          privateClause->v, converter, semanticsContext, stmtCtx,
-          privateOperands, privatizations);
+      if (!outerCombined)
+        genPrivatizations<mlir::acc::PrivateRecipeOp>(
+            privateClause->v, converter, semanticsContext, stmtCtx,
+            privateOperands, privatizations);
     } else if (const auto *firstprivateClause =
                    std::get_if<Fortran::parser::AccClause::Firstprivate>(
                        &clause.u)) {
@@ -1866,8 +1867,9 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
     } else if (const auto *reductionClause =
                    std::get_if<Fortran::parser::AccClause::Reduction>(
                        &clause.u)) {
-      genReductions(reductionClause->v, converter, semanticsContext, stmtCtx,
-                    reductionOperands, reductionRecipes);
+      if (!outerCombined)
+        genReductions(reductionClause->v, converter, semanticsContext, stmtCtx,
+                      reductionOperands, reductionRecipes);
     } else if (const auto *defaultClause =
                    std::get_if<Fortran::parser::AccClause::Default>(
                        &clause.u)) {
@@ -1921,12 +1923,14 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
     computeOp.setDefaultAttr(mlir::acc::ClauseDefaultValue::Present);
 
   if constexpr (!std::is_same_v<Op, mlir::acc::KernelsOp>) {
-    if (!privatizations.empty())
-      computeOp.setPrivatizationsAttr(
-          mlir::ArrayAttr::get(builder.getContext(), privatizations));
-    if (!reductionRecipes.empty())
-      computeOp.setReductionRecipesAttr(
-          mlir::ArrayAttr::get(builder.getContext(), reductionRecipes));
+    if (!outerCombined) {
+      if (!privatizations.empty())
+        computeOp.setPrivatizationsAttr(
+            mlir::ArrayAttr::get(builder.getContext(), privatizations));
+      if (!reductionRecipes.empty())
+        computeOp.setReductionRecipesAttr(
+            mlir::ArrayAttr::get(builder.getContext(), reductionRecipes));
+    }
     if (!firstPrivatizations.empty())
       computeOp.setFirstprivatizationsAttr(
           mlir::ArrayAttr::get(builder.getContext(), firstPrivatizations));
