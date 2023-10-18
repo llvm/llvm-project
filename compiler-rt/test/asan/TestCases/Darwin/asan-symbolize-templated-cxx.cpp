@@ -28,7 +28,7 @@ IntW *a;
 
 template <class T>
 void writeToA(T new_value) {
-  // CHECK: heap-use-after-free
+  // CHECK: heap-use-after-free bar
   // NOTE: atos seems to emit the `void` return type here for some reason.
   // CHECK: #{{[0-9]+}} 0x{{.+}} in {{(void +)?}}writeToA<IntWrapper<void{{ *}}(int)>{{ *}}>(IntWrapper<void{{ *}}(int)>) asan-symbolize-templated-cxx.cpp:[[@LINE+1]]
   *a = new_value;

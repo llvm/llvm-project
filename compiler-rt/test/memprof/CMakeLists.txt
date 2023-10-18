@@ -36,14 +36,16 @@ foreach(arch ${MEMPROF_TEST_ARCH})
     )
   list(APPEND MEMPROF_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME})
 
-  string(TOLOWER "-${arch}-${OS_NAME}-dynamic" MEMPROF_TEST_CONFIG_SUFFIX)
-  set(MEMPROF_TEST_DYNAMIC True)
-  set(CONFIG_NAME ${ARCH_UPPER_CASE}${OS_NAME}DynamicConfig)
-  configure_lit_site_cfg(
-    ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
-    ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg.py)
-  list(APPEND MEMPROF_DYNAMIC_TESTSUITES
-    ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME})
+  if(COMPILER_RT_MEMPROF_HAS_STATIC_RUNTIME)
+    string(TOLOWER "-${arch}-${OS_NAME}-dynamic" MEMPROF_TEST_CONFIG_SUFFIX)
+    set(MEMPROF_TEST_DYNAMIC True)
+    set(CONFIG_NAME ${ARCH_UPPER_CASE}${OS_NAME}DynamicConfig)
+    configure_lit_site_cfg(
+      ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
+      ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg.py)
+    list(APPEND MEMPROF_DYNAMIC_TESTSUITES
+      ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME})
+  endif()
 endforeach()
 
 add_lit_testsuite(check-memprof "Running the MemProfiler tests"
@@ -51,10 +53,12 @@ add_lit_testsuite(check-memprof "Running the MemProfiler tests"
   DEPENDS ${MEMPROF_TEST_DEPS})
 set_target_properties(check-memprof PROPERTIES FOLDER "Compiler-RT Misc")
 
-add_lit_testsuite(check-memprof-dynamic
-	"Running the MemProfiler tests with dynamic runtime"
-  ${MEMPROF_DYNAMIC_TESTSUITES}
-  ${exclude_from_check_all.g}
-  DEPENDS ${MEMPROF_DYNAMIC_TEST_DEPS})
-set_target_properties(check-memprof-dynamic
-  PROPERTIES FOLDER "Compiler-RT Misc")
+if(COMPILER_RT_MEMPROF_HAS_STATIC_RUNTIME)
+  add_lit_testsuite(check-memprof-dynamic
+    "Running the MemProfiler tests with dynamic runtime"
+    ${MEMPROF_DYNAMIC_TESTSUITES}
+    ${exclude_from_check_all.g}
+    DEPENDS ${MEMPROF_DYNAMIC_TEST_DEPS})
+  set_target_properties(check-memprof-dynamic
+    PROPERTIES FOLDER "Compiler-RT Misc")
+endif()

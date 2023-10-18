@@ -18,7 +18,9 @@
 #include "memprof_stack.h"
 #include "memprof_stats.h"
 #include "sanitizer_common/sanitizer_libc.h"
+#if SANITIZER_POSIX
 #include "sanitizer_common/sanitizer_posix.h"
+#endif
 
 namespace __memprof {
 

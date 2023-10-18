@@ -112,6 +112,10 @@ int memprof_posix_memalign(void **memptr, uptr alignment, uptr size,
                            BufferedStackTrace *stack);
 uptr memprof_malloc_usable_size(const void *ptr, uptr pc, uptr bp);
 
+uptr memprof_mz_size(const void *ptr);
+void memprof_mz_force_lock();
+void memprof_mz_force_unlock();
+
 void PrintInternalAllocatorStats();
 
 } // namespace __memprof
