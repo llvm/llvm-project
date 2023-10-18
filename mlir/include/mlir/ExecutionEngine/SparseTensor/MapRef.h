@@ -56,7 +56,8 @@ public:
   //
 
   // Map from dimRank in to lvlRank out.
-  template <typename T> inline void pushforward(const T *in, T *out) const {
+  template <typename T>
+  inline void pushforward(const T *in, T *out) const {
     if (isPermutation) {
       for (uint64_t l = 0; l < lvlRank; l++) {
         out[l] = in[dim2lvl[l]];
@@ -79,7 +80,8 @@ public:
   //
 
   // Map from lvlRank in to dimRank out.
-  template <typename T> inline void pushbackward(const T *in, T *out) const {
+  template <typename T>
+  inline void pushbackward(const T *in, T *out) const {
     if (isPermutation) {
       for (uint64_t d = 0; d < dimRank; d++)
         out[d] = in[lvl2dim[d]];

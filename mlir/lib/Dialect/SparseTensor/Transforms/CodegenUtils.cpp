@@ -731,8 +731,6 @@ Value sparse_tensor::genMapBuffers(OpBuilder &builder, Location loc,
     default:
       llvm::report_fatal_error("unsupported dim2lvl in sparse tensor type");
     }
-    llvm::dbgs() << "ENCODE " << d << " " << cf << " " << cm << " into "
-                 << encodeDim(d, cf, cm) << "\n";
     dim2lvlValues[l] = constantIndex(builder, loc, encodeDim(d, cf, cm));
     lvl2dimValues[d] = constantIndex(builder, loc, l); // FIXME, use lvlToDim
     // Compute the level sizes.
