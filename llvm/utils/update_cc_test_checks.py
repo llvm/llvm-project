@@ -173,7 +173,7 @@ def config():
     )
     parser.add_argument("--llvm-bin", help="llvm $prefix/bin path")
     parser.add_argument(
-        "--clang", help='"clang" executable, defaults to $llvm_bin/clang'
+        "--cc", "--clang", help='"clang" executable, defaults to $llvm_bin/clang'
     )
     parser.add_argument(
         "--clang-args",
