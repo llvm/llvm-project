@@ -177,7 +177,7 @@ benchmarks. CMake can print a list of them:
 - `TEST_SUITE_FORTRAN`
 
   Activate that Fortran tests. This is a work in progress. More information can be
-  found in the [Flang documentation](https://flang.llvm.org/docs/html/FortranLLVMTestSuite.html)
+  found in the [Flang documentation](https://flang.llvm.org/docs/FortranLLVMTestSuite.html)
 
 - `TEST_SUITE_RUN_UNDER`
 
