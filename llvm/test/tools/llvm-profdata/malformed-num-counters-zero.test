@@ -35,11 +35,24 @@ RUN: printf '\1\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\4\0\1\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+
+// Make a copy for another test.
+RUN: cp %t.profraw %t1.profraw
+
 // Make NumCounters = 0 so that we get "number of counters is zero" error message
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 
 RUN: printf '\023\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\3\0foo\0\0\0' >> %t.profraw
 
-RUN: not llvm-profdata show %t.profraw 2>&1 | FileCheck %s
-CHECK: malformed instrumentation profile data: number of counters is zero
+RUN: not llvm-profdata show %t.profraw 2>&1 | FileCheck %s --check-prefix=ZERO
+ZERO: malformed instrumentation profile data: number of counters is zero
+
+// Test a counter value greater than 2^56.
+RUN: printf '\1\0\0\0\0\0\0\0' >> %t1.profraw
+
+RUN: printf '\0\0\0\0\0\0\0\1' >> %t1.profraw
+RUN: printf '\3\0foo\0\0\0' >> %t1.profraw
+
+RUN: not llvm-profdata show %t1.profraw 2>&1 | FileCheck %s --check-prefix=MAX
+MAX: malformed instrumentation profile data: counter value 72057594037927936 is greater than 72057594037927935

@@ -38,6 +38,9 @@
 
 using namespace llvm;
 
+// Maxium counter value 2^56.
+static uint64_t MaxCounterValue = 0xffffffffffffff;
+
 // Extracts the variant information from the top 32 bits in the version and
 // returns an enum specifying the variants present.
 static InstrProfKind getProfileKindFromVersion(uint64_t Version) {
@@ -676,8 +679,14 @@ Error RawInstrProfReader<IntPtrT>::readRawCounts(
       // A value of zero signifies the block is covered.
       Record.Counts.push_back(*Ptr == 0 ? 1 : 0);
     } else {
-      const auto *CounterValue = reinterpret_cast<const uint64_t *>(Ptr);
-      Record.Counts.push_back(swap(*CounterValue));
+      uint64_t CounterValue = swap(*reinterpret_cast<const uint64_t *>(Ptr));
+      if (CounterValue > MaxCounterValue)
+        return error(instrprof_error::malformed,
+                     ("counter value " + Twine(CounterValue) +
+                      " is greater than " + Twine(MaxCounterValue))
+                         .str());
+
+      Record.Counts.push_back(CounterValue);
     }
   }
 
