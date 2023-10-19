@@ -422,7 +422,9 @@ SparseTensorEncodingAttr::translateCrds(OpBuilder &builder, Location loc,
   if (!getImpl())
     return crds;
 
-  SmallVector<Type> retType(getDimRank(), builder.getIndexType());
+  SmallVector<Type> retType(
+      dir == CrdTransDirectionKind::lvl2dim ? getDimRank() : getLvlRank(),
+      builder.getIndexType());
   auto transOp = builder.create<CrdTranslateOp>(loc, retType, crds, dir, *this);
   return transOp.getOutCrds();
 }
