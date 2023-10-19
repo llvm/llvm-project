@@ -20,3 +20,114 @@ body:             |
     PseudoRET implicit $x10
 
 ...
+---
+name:            p0_s16
+body:             |
+  bb.0:
+    liveins: $x10
+
+    ; CHECK-LABEL: name: p0_s16
+    ; CHECK: liveins: $x10
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[AND]](s32)
+    ; CHECK-NEXT: $x10 = COPY [[INTTOPTR]](p0)
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    %1:_(s32) = COPY $x10
+    %0:_(s16) = G_TRUNC %1(s32)
+    %2:_(p0) = G_INTTOPTR %0(s16)
+    $x10 = COPY %2(p0)
+    PseudoRET implicit $x10
+
+...
+---
+name:            p0_s8
+body:             |
+  bb.0:
+    liveins: $x10
+
+    ; CHECK-LABEL: name: p0_s8
+    ; CHECK: liveins: $x10
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[AND]](s32)
+    ; CHECK-NEXT: $x10 = COPY [[INTTOPTR]](p0)
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    %1:_(s32) = COPY $x10
+    %0:_(s8) = G_TRUNC %1(s32)
+    %2:_(p0) = G_INTTOPTR %0(s8)
+    $x10 = COPY %2(p0)
+    PseudoRET implicit $x10
+
+...
+---
+name:            p0_s1
+body:             |
+  bb.0:
+    liveins: $x10
+
+    ; CHECK-LABEL: name: p0_s1
+    ; CHECK: liveins: $x10
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[AND]](s32)
+    ; CHECK-NEXT: $x10 = COPY [[INTTOPTR]](p0)
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    %1:_(s32) = COPY $x10
+    %0:_(s1) = G_TRUNC %1(s32)
+    %2:_(p0) = G_INTTOPTR %0(s1)
+    $x10 = COPY %2(p0)
+    PseudoRET implicit $x10
+
+...
+---
+name:            p0_s64
+body:             |
+  bb.0:
+    liveins: $x10, $x11
+
+    ; CHECK-LABEL: name: p0_s64
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[COPY]](s32)
+    ; CHECK-NEXT: $x10 = COPY [[INTTOPTR]](p0)
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    %1:_(s32) = COPY $x10
+    %2:_(s32) = COPY $x11
+    %0:_(s64) = G_MERGE_VALUES %1(s32), %2(s32)
+    %3:_(p0) = G_INTTOPTR %0(s64)
+    $x10 = COPY %3(p0)
+    PseudoRET implicit $x10
+
+...
+---
+name:            p0_s44
+body:             |
+  bb.0:
+    liveins: $x10, $x11
+
+    ; CHECK-LABEL: name: p0_s44
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[AND]](s32)
+    ; CHECK-NEXT: $x10 = COPY [[INTTOPTR]](p0)
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    %1:_(s32) = COPY $x10
+    %2:_(s32) = COPY $x11
+    %3:_(s64) = G_MERGE_VALUES %1(s32), %2(s32)
+    %0:_(s44) = G_TRUNC %3(s64)
+    %4:_(p0) = G_INTTOPTR %0(s44)
+    $x10 = COPY %4(p0)
+    PseudoRET implicit $x10
+
+...

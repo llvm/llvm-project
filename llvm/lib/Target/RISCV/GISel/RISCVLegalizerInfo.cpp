@@ -123,15 +123,14 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
       .legalFor({{p0, XLenLLT}});
 
   getActionDefinitionsBuilder(G_PTRTOINT)
-      .legalFor({XLenLLT, p0})
+      .legalFor({{XLenLLT, p0}})
       .widenScalarToNextPow2(0, XLen)
       .clampScalar(0, XLenLLT, XLenLLT);
 
   getActionDefinitionsBuilder(G_INTTOPTR)
-      .unsupportedIf([&](const LegalityQuery &Query) {
-        return Query.Types[0].getSizeInBits() != Query.Types[1].getSizeInBits();
-      })
-      .legalFor({p0, XLenLLT});
+      .legalFor({{p0, XLenLLT}})
+      .widenScalarToNextPow2(1, XLen)
+      .clampScalar(1, XLenLLT, XLenLLT);
 
   getActionDefinitionsBuilder(G_BRCOND)
       .legalFor({XLenLLT})
