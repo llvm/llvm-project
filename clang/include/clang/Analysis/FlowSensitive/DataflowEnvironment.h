@@ -473,9 +473,8 @@ public:
 
   /// Returns a symbolic boolean value that models a boolean literal equal to
   /// `Value`
-  AtomicBoolValue &getBoolLiteralValue(bool Value) const {
-    return cast<AtomicBoolValue>(
-        arena().makeBoolValue(arena().makeLiteral(Value)));
+  BoolValue &getBoolLiteralValue(bool Value) const {
+    return arena().makeBoolValue(arena().makeLiteral(Value));
   }
 
   /// Returns an atomic boolean value.
