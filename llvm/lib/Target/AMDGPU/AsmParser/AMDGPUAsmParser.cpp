@@ -1577,9 +1577,11 @@ public:
   bool isNamedOperandModifier(const AsmToken &Token, const AsmToken &NextToken) const;
   bool isOpcodeModifierWithVal(const AsmToken &Token, const AsmToken &NextToken) const;
   bool parseSP3NegModifier();
-  ParseStatus parseImm(OperandVector &Operands, bool HasSP3AbsModifier = false);
+  ParseStatus parseImm(OperandVector &Operands, bool HasSP3AbsModifier = false,
+                       bool HasLit = false);
   ParseStatus parseReg(OperandVector &Operands);
-  ParseStatus parseRegOrImm(OperandVector &Operands, bool HasSP3AbsMod = false);
+  ParseStatus parseRegOrImm(OperandVector &Operands, bool HasSP3AbsMod = false,
+                            bool HasLit = false);
   ParseStatus parseRegOrImmWithFPInputMods(OperandVector &Operands,
                                            bool AllowImm = true);
   ParseStatus parseRegOrImmWithIntInputMods(OperandVector &Operands,
@@ -2904,12 +2906,25 @@ AMDGPUAsmParser::parseRegister(bool RestoreOnFailure) {
 }
 
 ParseStatus AMDGPUAsmParser::parseImm(OperandVector &Operands,
-                                      bool HasSP3AbsModifier) {
+                                      bool HasSP3AbsModifier, bool HasLit) {
   // TODO: add syntactic sugar for 1/(2*PI)
 
   if (isRegister())
     return ParseStatus::NoMatch;
   assert(!isModifier());
+
+  if (!HasLit) {
+    HasLit = trySkipId("lit");
+    if (HasLit) {
+      if (!skipToken(AsmToken::LParen, "expected left paren after lit"))
+        return ParseStatus::Failure;
+      ParseStatus S = parseImm(Operands, HasSP3AbsModifier, HasLit);
+      if (S.isSuccess() &&
+          !skipToken(AsmToken::RParen, "expected closing parentheses"))
+        return ParseStatus::Failure;
+      return S;
+    }
+  }
 
   const auto& Tok = getToken();
   const auto& NextTok = peekToken();
@@ -2922,6 +2937,9 @@ ParseStatus AMDGPUAsmParser::parseImm(OperandVector &Operands,
     IsReal = true;
     Negate = true;
   }
+
+  AMDGPUOperand::Modifiers Mods;
+  Mods.Lit = HasLit;
 
   if (IsReal) {
     // Floating-point expressions are not supported.
@@ -2941,6 +2959,8 @@ ParseStatus AMDGPUAsmParser::parseImm(OperandVector &Operands,
     Operands.push_back(
       AMDGPUOperand::CreateImm(this, RealVal.bitcastToAPInt().getZExtValue(), S,
                                AMDGPUOperand::ImmTyNone, true));
+    AMDGPUOperand &Op = static_cast<AMDGPUOperand &>(*Operands.back());
+    Op.setModifiers(Mods);
 
     return ParseStatus::Success;
 
@@ -2967,7 +2987,11 @@ ParseStatus AMDGPUAsmParser::parseImm(OperandVector &Operands,
 
     if (Expr->evaluateAsAbsolute(IntVal)) {
       Operands.push_back(AMDGPUOperand::CreateImm(this, IntVal, S));
+      AMDGPUOperand &Op = static_cast<AMDGPUOperand &>(*Operands.back());
+      Op.setModifiers(Mods);
     } else {
+      if (HasLit)
+        return ParseStatus::NoMatch;
       Operands.push_back(AMDGPUOperand::CreateExpr(this, Expr, S));
     }
 
@@ -2990,20 +3014,20 @@ ParseStatus AMDGPUAsmParser::parseReg(OperandVector &Operands) {
 }
 
 ParseStatus AMDGPUAsmParser::parseRegOrImm(OperandVector &Operands,
-                                           bool HasSP3AbsMod) {
+                                           bool HasSP3AbsMod, bool HasLit) {
   ParseStatus Res = parseReg(Operands);
   if (!Res.isNoMatch())
     return Res;
   if (isModifier())
     return ParseStatus::NoMatch;
-  return parseImm(Operands, HasSP3AbsMod);
+  return parseImm(Operands, HasSP3AbsMod, HasLit);
 }
 
 bool
 AMDGPUAsmParser::isNamedOperandModifier(const AsmToken &Token, const AsmToken &NextToken) const {
   if (Token.is(AsmToken::Identifier) && NextToken.is(AsmToken::LParen)) {
     const auto &str = Token.getString();
-    return str == "abs" || str == "neg" || str == "sext" || str == "lit";
+    return str == "abs" || str == "neg" || str == "sext";
   }
   return false;
 }
@@ -3123,7 +3147,7 @@ AMDGPUAsmParser::parseRegOrImmWithFPInputMods(OperandVector &Operands,
 
   ParseStatus Res;
   if (AllowImm) {
-    Res = parseRegOrImm(Operands, SP3Abs);
+    Res = parseRegOrImm(Operands, SP3Abs, Lit);
   } else {
     Res = parseReg(Operands);
   }
