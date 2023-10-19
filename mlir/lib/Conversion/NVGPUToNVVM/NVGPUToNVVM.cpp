@@ -830,11 +830,11 @@ struct NVGPUMBarrierInitLowering
                                    adaptor.getMbarId(), rewriter);
     Value count = truncToI32(b, adaptor.getCount());
     if (isMbarrierShared(mbarrierType)) {
-      rewriter.replaceOpWithNewOp<NVVM::MBarrierInitSharedOp>(op, barrier,
-                                                              count, Value());
+      rewriter.replaceOpWithNewOp<NVVM::MBarrierInitSharedOp>(
+          op, barrier, count, adaptor.getPredicate());
     } else {
       rewriter.replaceOpWithNewOp<NVVM::MBarrierInitOp>(op, barrier, count,
-                                                        Value());
+                                                        adaptor.getPredicate());
     }
     return success();
   }
@@ -929,12 +929,12 @@ struct NVGPUMBarrierArriveExpectTxLowering
 
     if (isMbarrierShared(op.getBarriers().getType())) {
       rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveExpectTxSharedOp>(
-          op, barrier, txcount, Value());
+          op, barrier, txcount, adaptor.getPredicate());
       return success();
     }
 
     rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveExpectTxOp>(
-        op, barrier, txcount, Value());
+        op, barrier, txcount, adaptor.getPredicate());
     return success();
   }
 };
@@ -985,7 +985,8 @@ struct NVGPUTmaAsyncLoadOpLowering
     }
 
     rewriter.replaceOpWithNewOp<NVVM::CpAsyncBulkTensorGlobalToSharedClusterOp>(
-        op, dest, adaptor.getTensorMapDescriptor(), barrier, coords, Value());
+        op, dest, adaptor.getTensorMapDescriptor(), barrier, coords,
+        adaptor.getPredicate());
     return success();
   }
 };
