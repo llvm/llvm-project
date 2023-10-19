@@ -86,6 +86,7 @@ inline void registerAllPasses() {
   // Dialect pipelines
   bufferization::registerBufferizationPipelines();
   sparse_tensor::registerSparseTensorPipelines();
+  tosa::registerTosaToLinalgPipelines();
 }
 
 } // namespace mlir
