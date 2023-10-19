@@ -74,6 +74,10 @@ class SPIRVEmitIntrinsics
   void processInstrAfterVisit(Instruction *I);
   void insertAssignPtrTypeIntrs(Instruction *I);
   void insertAssignTypeIntrs(Instruction *I);
+
+  DenseSet<Instruction *> PtrCastInstrs;
+  void insertPtrCastInstr(Instruction *I);
+
   void processGlobalValue(GlobalVariable &GV);
 
 public:
@@ -255,7 +259,19 @@ Instruction *SPIRVEmitIntrinsics::visitGetElementPtrInst(GetElementPtrInst &I) {
 }
 
 Instruction *SPIRVEmitIntrinsics::visitBitCastInst(BitCastInst &I) {
-  SmallVector<Type *, 2> Types = {I.getType(), I.getOperand(0)->getType()};
+  Value *Source = I.getOperand(0);
+
+  // SPIR-V, contrary to LLVM 17+ IR, supports bitcasts between pointers of
+  // varying element types. In case of IR coming from older versions of LLVM
+  // such bitcasts do not provide sufficient information, should be just skipped
+  // here, and handled in insertPtrCastInstr.
+  if (I.getType()->isPointerTy()) {
+    I.replaceAllUsesWith(Source);
+    I.eraseFromParent();
+    return &I;
+  }
+
+  SmallVector<Type *, 2> Types = {I.getType(), Source->getType()};
   SmallVector<Value *> Args(I.op_begin(), I.op_end());
   auto *NewI = IRB->CreateIntrinsic(Intrinsic::spv_bitcast, {Types}, {Args});
   std::string InstName = I.hasName() ? I.getName().str() : "";
@@ -263,6 +279,85 @@ Instruction *SPIRVEmitIntrinsics::visitBitCastInst(BitCastInst &I) {
   I.eraseFromParent();
   NewI->setName(InstName);
   return NewI;
+}
+
+void SPIRVEmitIntrinsics::insertPtrCastInstr(Instruction *I) {
+  Value *Pointer;
+  Type *ExpectedElementType;
+  unsigned OperandToReplace;
+  if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
+    Pointer = SI->getPointerOperand();
+    ExpectedElementType = SI->getValueOperand()->getType();
+    OperandToReplace = 1;
+  } else if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
+    Pointer = LI->getPointerOperand();
+    ExpectedElementType = LI->getType();
+    OperandToReplace = 0;
+  } else if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(I)) {
+    Pointer = GEPI->getPointerOperand();
+    ExpectedElementType = GEPI->getSourceElementType();
+    OperandToReplace = 0;
+  } else {
+    return;
+  }
+
+  // If Pointer is the result of nop BitCastInst (ptr -> ptr), use the source
+  // pointer instead. The BitCastInst should be later removed when visited.
+  if (BitCastInst *BC = dyn_cast<BitCastInst>(Pointer))
+    Pointer = BC->getOperand(0);
+
+  // Do not emit spv_ptrcast if Pointer is a GlobalValue of expected type.
+  GlobalValue *GV = dyn_cast<GlobalValue>(Pointer);
+  if (GV && GV->getValueType() == ExpectedElementType)
+    return;
+
+  setInsertPointSkippingPhis(*IRB, I);
+  Constant *ExpectedElementTypeConst =
+      Constant::getNullValue(ExpectedElementType);
+  ConstantAsMetadata *CM =
+      ValueAsMetadata::getConstant(ExpectedElementTypeConst);
+  MDTuple *TyMD = MDNode::get(F->getContext(), CM);
+  MetadataAsValue *VMD = MetadataAsValue::get(F->getContext(), TyMD);
+  unsigned AddressSpace = Pointer->getType()->getPointerAddressSpace();
+  bool FirstPtrCastOrAssignPtrType = true;
+
+  // Do not emit new spv_ptrcast if equivalent one already exists or when
+  // spv_assign_ptr_type already targets this pointer with the same element
+  // type.
+  for (auto User : Pointer->users()) {
+    if (auto *II = dyn_cast<IntrinsicInst>(User)) {
+      if ((II->getIntrinsicID() != Intrinsic::spv_assign_ptr_type &&
+           II->getIntrinsicID() != Intrinsic::spv_ptrcast) ||
+          II->getOperand(0) != Pointer)
+        continue;
+
+      FirstPtrCastOrAssignPtrType = false;
+      if (II->getOperand(1) == VMD &&
+          dyn_cast<ConstantInt>(II->getOperand(2))->getSExtValue() ==
+              AddressSpace)
+        return;
+    }
+  }
+
+  // Do not emit spv_ptrcast if it would cast to the default pointer element
+  // type (i8) of the same address space.
+  if (ExpectedElementType->isIntegerTy(8))
+    return;
+
+  // If this would be the first spv_ptrcast and there is no spv_assign_ptr_type
+  // for this pointer before, do not emit spv_ptrcast but emit
+  // spv_assign_ptr_type instead.
+  if (FirstPtrCastOrAssignPtrType && isa<Instruction>(Pointer)) {
+    buildIntrWithMD(Intrinsic::spv_assign_ptr_type, {Pointer->getType()},
+                    ExpectedElementTypeConst, Pointer,
+                    {IRB->getInt32(AddressSpace)});
+  } else {
+    SmallVector<Type *, 2> Types = {Pointer->getType(), Pointer->getType()};
+    SmallVector<Value *, 2> Args = {Pointer, VMD, IRB->getInt32(AddressSpace)};
+    auto *PtrCastI =
+        IRB->CreateIntrinsic(Intrinsic::spv_ptrcast, {Types}, Args);
+    I->setOperand(OperandToReplace, PtrCastI);
+  }
 }
 
 Instruction *SPIRVEmitIntrinsics::visitInsertElementInst(InsertElementInst &I) {
@@ -522,6 +617,7 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   for (auto &I : Worklist) {
     insertAssignPtrTypeIntrs(I);
     insertAssignTypeIntrs(I);
+    insertPtrCastInstr(I);
   }
 
   for (auto *I : Worklist) {
@@ -529,7 +625,8 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     if (!I->getType()->isVoidTy() || isa<StoreInst>(I))
       IRB->SetInsertPoint(I->getNextNode());
     I = visit(*I);
-    processInstrAfterVisit(I);
+    if (I->getParent())
+      processInstrAfterVisit(I);
   }
   return true;
 }
