@@ -14,9 +14,11 @@ on:
       - 'main'
     paths:
       - 'llvm/docs/**'
+      - 'clang/docs/**'
   pull_request:
     paths:
       - 'llvm/docs/**'
+      - 'clang/docs/**'
 
 jobs:
   check-docs-build:
@@ -39,10 +41,23 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y cmake ninja-build
-      - name: Build docs
+      - name: Get subprojects that have doc changes
+        id: docs-changed-subprojects
+        uses: tj-actions/changed-files@v39
+        with:
+          files_yaml: |
+            llvm:
+              - 'llvm/docs/**'
+            clang:
+              - 'clang/docs/**'
+      - name: Build LLVM docs
+        if: steps.docs-changed-subprojects.outputs.llvm_any_changed == 'true'
         run: |
-          mkdir build
-          cd build
-          cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_SPHINX=ON -DSPHINX_OUTPUT_HTML=ON -DSPHINX_OUTPUT_MAN=ON ../llvm
-          TZ=UTC ninja docs-llvm-html docs-llvm-man
+          cmake -B llvm-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_SPHINX=ON -DSPHINX_OUTPUT_HTML=ON -DSPHINX_OUTPUT_MAN=ON ./llvm
+          TZ=UTC ninja -C llvm-build docs-llvm-html docs-llvm-man
+      - name: Build Clang docs
+        if: steps.docs-changed-subprojects.outputs.clang_any_changed == 'true'
+        run: |
+          cmake -B clang-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_ENABLE_SPHINX=ON -DSPHINX_OUTPUT_HTML=ON -DSPHINX_OUTPUT_MAN=ON ./llvm
+          TZ=UTC ninja -C clang-build docs-clang-html docs-clang-man
 

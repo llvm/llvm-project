@@ -3358,6 +3358,9 @@ void Fortran::lower::genOpenACCConstruct(
           [&](const Fortran::parser::OpenACCAtomicConstruct &atomicConstruct) {
             genACC(converter, eval, atomicConstruct);
           },
+          [&](const Fortran::parser::OpenACCEndConstruct &) {
+            // No op
+          },
       },
       accConstruct.u);
 }
