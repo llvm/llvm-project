@@ -4,7 +4,7 @@
 // DEFINE: %{compile} = mlir-opt %s \
 // DEFINE:   --sparse-compiler="enable-gpu-libgen gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71 gpu-format=%gpu_compilation_format
 // DEFINE: %{run} = \
-// DEFINE:   TENSOR0="%mlir_src_dir/test/Integration/data/test.mtx" \
+// DEFINE:   env TENSOR0="%mlir_src_dir/test/Integration/data/test.mtx" \
 // DEFINE:   mlir-cpu-runner \
 // DEFINE:   --shared-libs=%mlir_cuda_runtime \
 // DEFINE:   --shared-libs=%mlir_c_runner_utils \
