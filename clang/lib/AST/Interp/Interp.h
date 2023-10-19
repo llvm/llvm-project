@@ -1688,6 +1688,16 @@ bool Zero(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+static inline bool ZeroIntAP(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
+  S.Stk.push<IntegralAP<false>>(IntegralAP<false>::zero(BitWidth));
+  return true;
+}
+
+static inline bool ZeroIntAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
+  S.Stk.push<IntegralAP<true>>(IntegralAP<true>::zero(BitWidth));
+  return true;
+}
+
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 inline bool Null(InterpState &S, CodePtr OpPC) {
   S.Stk.push<T>();
