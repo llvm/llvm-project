@@ -293,9 +293,8 @@ Type SparseTensorEncodingAttr::getCrdType() const {
 SparseTensorEncodingAttr
 SparseTensorEncodingAttr::withDimToLvl(AffineMap dimToLvl) const {
   assert(getImpl() && "Uninitialized SparseTensorEncodingAttr");
-  // TODO: infer lvlToDim
   return SparseTensorEncodingAttr::get(getContext(), getLvlTypes(), dimToLvl,
-                                       /*lvlToDim*/ AffineMap(), getPosWidth(),
+                                       getLvlToDim(), getPosWidth(),
                                        getCrdWidth());
 }
 
@@ -583,7 +582,8 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
 #undef RETURN_ON_FAIL
 
   // Construct struct-like storage for attribute.
-  AffineMap lvlToDim; // TODO: infer
+  // TODO: Fetch lvlToDim if user provides one
+  AffineMap lvlToDim = inferLvlToDim(dimToLvl, parser.getContext());
   return parser.getChecked<SparseTensorEncodingAttr>(
       parser.getContext(), lvlTypes, dimToLvl, lvlToDim, posWidth, crdWidth,
       dimSlices);
@@ -749,6 +749,75 @@ mlir::sparse_tensor::getSparseTensorEncoding(Type type) {
   return nullptr;
 }
 
+AffineMap mlir::sparse_tensor::inferLvlToDim(AffineMap dimToLvl,
+                                             MLIRContext *context) {
+  auto map = static_cast<AffineMap>(dimToLvl);
+  AffineMap lvlToDim;
+  // Return an empty lvlToDim when inference is not successful.
+  if (!map || map.getNumSymbols() != 0) {
+    lvlToDim = AffineMap();
+  } else if (map.isPermutation()) {
+    lvlToDim = inversePermutation(map);
+  } else {
+    // TODO: check if it's block sparsity
+    lvlToDim = inverseBlockSparsity(map, context);
+  }
+  return lvlToDim;
+}
+
+AffineMap mlir::sparse_tensor::inverseBlockSparsity(AffineMap dimToLvl,
+                                                    MLIRContext *context) {
+  SmallVector<AffineExpr> lvlExprs;
+  auto numLvls = dimToLvl.getNumResults();
+  lvlExprs.reserve(numLvls);
+  // lvlExprComponents stores information of the floordiv and mod operations
+  // applied to the same dimension, so as to build the lvlToDim map.
+  std::map<unsigned, SmallVector<AffineExpr, 3>> lvlExprComponents;
+  for (unsigned i = 0, n = numLvls; i < n; i++) {
+    auto result = dimToLvl.getResult(i);
+    if (auto binOp = result.dyn_cast<AffineBinaryOpExpr>()) {
+      if (result.getKind() == AffineExprKind::FloorDiv) {
+        // Position of the dimension in dimToLvl.
+        auto pos = binOp.getLHS().dyn_cast<AffineDimExpr>().getPosition();
+        assert(lvlExprComponents.find(pos) == lvlExprComponents.end() &&
+               "expected only one floordiv for each dimension");
+        SmallVector<AffineExpr, 3> components;
+        // Level variable for floordiv.
+        components.push_back(getAffineDimExpr(i, context));
+        // Multiplier.
+        components.push_back(binOp.getRHS());
+        // Map key is the position of the dimension.
+        lvlExprComponents[pos] = components;
+      } else if (result.getKind() == AffineExprKind::Mod) {
+        auto pos = binOp.getLHS().dyn_cast<AffineDimExpr>().getPosition();
+        assert(lvlExprComponents.find(pos) != lvlExprComponents.end() &&
+               "expected floordiv before mod");
+        // Add level variable for mod to the same vector
+        // of the corresponding floordiv.
+        lvlExprComponents[pos].push_back(getAffineDimExpr(i, context));
+      } else {
+        assert(false && "expected floordiv or mod");
+      }
+    } else {
+      lvlExprs.push_back(getAffineDimExpr(i, context));
+    }
+  }
+  // Build lvlExprs from lvlExprComponents.
+  // For example, for il = i floordiv 2 and ii = i mod 2, the components
+  // would be [il, 2, ii]. It could be used to build the AffineExpr
+  // i = il * 2 + ii in lvlToDim.
+  for (auto &components : lvlExprComponents) {
+    assert(components.second.size() == 3 &&
+           "expected 3 components to build lvlExprs");
+    auto mulOp = getAffineBinaryOpExpr(
+        AffineExprKind::Mul, components.second[0], components.second[1]);
+    auto addOp =
+        getAffineBinaryOpExpr(AffineExprKind::Add, mulOp, components.second[2]);
+    lvlExprs.push_back(addOp);
+  }
+  return dimToLvl.get(dimToLvl.getNumResults(), 0, lvlExprs, context);
+}
+
 bool mlir::sparse_tensor::isCOOType(SparseTensorEncodingAttr enc,
                                     Level startLvl, bool isUnique) {
   if (!enc ||
@@ -811,7 +880,7 @@ RankedTensorType sparse_tensor::getCOOFromTypeWithOrdering(RankedTensorType rtt,
   // default value.
   unsigned posWidth = src.getPosWidth();
   unsigned crdWidth = src.getCrdWidth();
-  AffineMap invPerm; // TODO
+  AffineMap invPerm = src.getLvlToDim();
   auto enc = SparseTensorEncodingAttr::get(src.getContext(), lvlTypes, lvlPerm,
                                            invPerm, posWidth, crdWidth);
   return RankedTensorType::get(src.getDimShape(), src.getElementType(), enc);
@@ -1065,18 +1134,18 @@ OpFoldResult ConvertOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
-bool ConvertOp::directConvertable() {
+bool ConvertOp::needsExtraSort() {
   SparseTensorType srcStt = getSparseTensorType(getSource());
   SparseTensorType dstStt = getSparseTensorType(getDest());
 
-  // We can always directly convert to unordered sparse tensor or dense tensor
-  // since dense tensor support random access.
+  // We do not need an extra sort when returning unordered sparse tensors or
+  // dense tensor since dense tensor support random access.
   if (dstStt.isAllDense() || !dstStt.isAllOrdered())
-    return true;
+    return false;
 
   if (srcStt.isAllOrdered() && dstStt.isAllOrdered() &&
       srcStt.hasSameDimToLvl(dstStt)) {
-    return true;
+    return false;
   }
 
   // Source and dest tensors are ordered in different ways. We only do direct
@@ -1086,9 +1155,9 @@ bool ConvertOp::directConvertable() {
   // performance.
   if (auto constOp = getSource().getDefiningOp<arith::ConstantOp>())
     if (isa<SparseElementsAttr>(constOp.getValue()))
-      return true;
+      return false;
 
-  return false;
+  return true;
 }
 
 LogicalResult ToPositionsOp::verify() {
@@ -1246,6 +1315,23 @@ LogicalResult UnaryOp::verify() {
         verifyNumBlockArgs(this, absent, "absent", TypeRange{}, outputType))
   }
   return success();
+}
+
+bool ConcatenateOp::needsExtraSort() {
+  SparseTensorType dstStt = getSparseTensorType(*this);
+  if (dstStt.isAllDense() || !dstStt.isAllOrdered())
+    return false;
+
+  bool allSameOrdered = llvm::all_of(getInputs(), [dstStt](Value op) {
+    return getSparseTensorType(op).hasSameDimToLvl(dstStt);
+  });
+  // TODO: When conDim != 0, as long as conDim corresponding to the first level
+  // in all input/output buffers, and all input/output buffers have the same
+  // dimToLvl, the tmp COO buffer is still unnecessary (e.g, concatenate
+  // CSC matrices along column).
+  bool directLowerable =
+      allSameOrdered && getDimension() == 0 && dstStt.isIdentity();
+  return !directLowerable;
 }
 
 LogicalResult ConcatenateOp::verify() {

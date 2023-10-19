@@ -27,6 +27,29 @@ entry:
   ret ptr %1
 }
 
+; Check the caller's frame address.
+define ptr @fpcaller() #0 {
+entry:
+; CHECK-LABEL: fpcaller:
+; CHECK: lghi %r2, 152
+; CHECK: ag   %r2, 152(%r15)
+; CHECK: br   %r14
+  %0 = tail call ptr @llvm.frameaddress(i32 1)
+  ret ptr %0
+}
+
+; Check the caller's caller's frame address.
+define ptr @fpcallercaller() #0 {
+entry:
+; CHECK-LABEL: fpcallercaller:
+; CHECK: lg   %r1, 152(%r15)
+; CHECK: lghi %r2, 152
+; CHECK: ag   %r2, 152(%r1)
+; CHECK: br   %r14
+  %0 = tail call ptr @llvm.frameaddress(i32 2)
+  ret ptr %0
+}
+
 ; Without back chain
 
 attributes #1 = { nounwind "packed-stack" }

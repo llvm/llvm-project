@@ -129,7 +129,8 @@ extern "C" {
       assert(ptr && "Received nullptr for SparseTensorCOO object");            \
       auto &coo = *static_cast<SparseTensorCOO<V> *>(ptr);                     \
       return SparseTensorStorage<P, C, V>::newFromCOO(                         \
-          dimRank, dimSizes, lvlRank, lvlTypes, dim2lvl, lvl2dim, coo);        \
+          dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes, dim2lvl, lvl2dim,    \
+          coo);                                                                \
     }                                                                          \
     case Action::kFromReader: {                                                \
       assert(ptr && "Received nullptr for SparseTensorReader object");         \
@@ -140,7 +141,7 @@ extern "C" {
     case Action::kToCOO: {                                                     \
       assert(ptr && "Received nullptr for SparseTensorStorage object");        \
       auto &tensor = *static_cast<SparseTensorStorage<P, C, V> *>(ptr);        \
-      return tensor.toCOO(lvlRank, lvlSizes, dimRank, dim2lvl, lvl2dim);       \
+      return tensor.toCOO();                                                   \
     }                                                                          \
     case Action::kPack: {                                                      \
       assert(ptr && "Received nullptr for SparseTensorStorage object");        \
@@ -184,8 +185,8 @@ void *_mlir_ciface_newSparseTensor( // NOLINT
   const uint64_t dimRank = MEMREF_GET_USIZE(dimSizesRef);
   const uint64_t lvlRank = MEMREF_GET_USIZE(lvlSizesRef);
   ASSERT_USIZE_EQ(lvlTypesRef, lvlRank);
-  ASSERT_USIZE_EQ(dim2lvlRef, dimRank);
-  ASSERT_USIZE_EQ(lvl2dimRef, lvlRank);
+  ASSERT_USIZE_EQ(dim2lvlRef, lvlRank);
+  ASSERT_USIZE_EQ(lvl2dimRef, dimRank);
   const index_type *dimSizes = MEMREF_GET_PAYLOAD(dimSizesRef);
   const index_type *lvlSizes = MEMREF_GET_PAYLOAD(lvlSizesRef);
   const DimLevelType *lvlTypes = MEMREF_GET_PAYLOAD(lvlTypesRef);
@@ -422,10 +423,10 @@ void _mlir_ciface_getSparseTensorReaderDimSizes(
     ASSERT_NO_STRIDE(cref);                                                    \
     ASSERT_NO_STRIDE(vref);                                                    \
     const uint64_t dimRank = reader.getRank();                                 \
-    const uint64_t lvlRank = MEMREF_GET_USIZE(lvl2dimRef);                     \
+    const uint64_t lvlRank = MEMREF_GET_USIZE(dim2lvlRef);                     \
     const uint64_t cSize = MEMREF_GET_USIZE(cref);                             \
     const uint64_t vSize = MEMREF_GET_USIZE(vref);                             \
-    ASSERT_USIZE_EQ(dim2lvlRef, dimRank);                                      \
+    ASSERT_USIZE_EQ(lvl2dimRef, dimRank);                                      \
     assert(cSize >= lvlRank * vSize);                                          \
     assert(vSize >= reader.getNSE() && "Not enough space in buffers");         \
     (void)dimRank;                                                             \

@@ -619,6 +619,15 @@ constexpr FeatureBitset ImpliedFeaturesWIDEKL = FeatureKL;
 // AVXVNNI Features
 constexpr FeatureBitset ImpliedFeaturesAVXVNNI = FeatureAVX2;
 
+// AVX10 Features
+constexpr FeatureBitset ImpliedFeaturesAVX10_1 =
+    FeatureAVX512CD | FeatureAVX512VBMI | FeatureAVX512IFMA |
+    FeatureAVX512VNNI | FeatureAVX512BF16 | FeatureAVX512VPOPCNTDQ |
+    FeatureAVX512VBMI2 | FeatureAVX512BITALG | FeatureVAES | FeatureVPCLMULQDQ |
+    FeatureAVX512FP16;
+constexpr FeatureBitset ImpliedFeaturesAVX10_1_512 =
+    FeatureAVX10_1 | FeatureEVEX512;
+
 constexpr FeatureInfo FeatureInfos[X86::CPU_FEATURE_MAX] = {
 #define X86_FEATURE(ENUM, STR) {{"+" STR}, ImpliedFeatures##ENUM},
 #include "llvm/TargetParser/X86TargetParser.def"

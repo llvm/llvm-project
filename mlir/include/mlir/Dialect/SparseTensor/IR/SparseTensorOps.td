@@ -12,6 +12,7 @@
 include "mlir/Dialect/SparseTensor/IR/SparseTensorAttrDefs.td"
 include "mlir/Dialect/SparseTensor/IR/SparseTensorBase.td"
 include "mlir/Dialect/SparseTensor/IR/SparseTensorTypes.td"
+include "mlir/Dialect/SparseTensor/IR/SparseTensorInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
@@ -153,7 +154,7 @@ def SparseTensor_DisassembleOp : SparseTensor_Op<"disassemble", [Pure, SameVaria
 }
 
 def SparseTensor_ConvertOp : SparseTensor_Op<"convert",
-  [Pure]>,
+  [Pure, StageWithSortSparseOpInterface]>,
     Arguments<(ins AnyTensor:$source)>,
     Results<(outs AnyTensor:$dest)> {
   string summary = "Converts between different tensor types";
@@ -197,9 +198,9 @@ def SparseTensor_ConvertOp : SparseTensor_Op<"convert",
   }];
 
   let extraClassDeclaration = [{
-     // Whether the convert can be done by a single step (either a sort or a foreach),
-     // or it would require a tmp buffer (sort, then foreach).
-     bool directConvertable();
+     // Whether the convert can be done by a single step or it would require
+     // an extra sort. Inherited from StageWithSortSparseOpInterface.
+     bool needsExtraSort();
   }];
 
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
@@ -334,7 +335,8 @@ def SparseTensor_NumberOfEntriesOp : SparseTensor_Op<"number_of_entries", [Pure]
   let assemblyFormat = "$tensor attr-dict `:` type($tensor)";
 }
 
-def SparseTensor_ConcatenateOp : SparseTensor_Op<"concatenate", [Pure]>,
+def SparseTensor_ConcatenateOp : SparseTensor_Op<"concatenate",
+                                 [Pure, StageWithSortSparseOpInterface]>,
     Arguments<(ins Variadic<AnyRankedTensor>:$inputs, DimensionAttr:$dimension)>,
     Results<(outs AnyRankedTensor:$result)> {
 
@@ -356,6 +358,12 @@ def SparseTensor_ConcatenateOp : SparseTensor_Op<"concatenate", [Pure]>,
        : tensor<64x64xf64, #CSR>, tensor<64x64xf64, #CSR> to tensor<128x64xf64, #CSR>
      ```
    }];
+
+  let extraClassDeclaration = [{
+     // Whether the concatenate can be done by a single step or it would require
+     // an extra sort. Inherited from StageWithSortSparseOpInterface.
+     bool needsExtraSort();
+  }];
 
   let assemblyFormat = "$inputs attr-dict `:` type($inputs) `to` type($result)";
   let hasVerifier = 1;
@@ -438,10 +446,13 @@ def SparseTensor_StorageSpecifierInitOp : SparseTensor_Op<"storage_specifier.ini
     Example:
 
     ```mlir
-    #CSR = #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ]}>
+    #CSR = #sparse_tensor.encoding<{
+      map = (i, j) -> (i : dense, j : compressed)
+    }>
     #CSR_SLICE = #sparse_tensor.encoding<{
-      dimLevelType = [ "dense", "compressed" ],
-      slice = [ (1, 4, 1), (1, 4, 2) ]
+      map = (d0 : #sparse_tensor<slice(1, 4, 1)>,
+             d1 : #sparse_tensor<slice(1, 4, 2)>) ->
+            (d0 : dense, d1 : compressed)
     }>
 
     %0 = sparse_tensor.storage_specifier.init :  !sparse_tensor.storage_specifier<#CSR>
@@ -1252,8 +1263,7 @@ def SparseTensor_ForeachOp : SparseTensor_Op<"foreach",
      For example:
      ```mlir
      #COL_MAJOR = #sparse_tensor.encoding<{
-       dimLevelType = [ "compressed", "compressed" ],
-       dimOrdering = affine_map<(i,j) -> (j,i)>
+       map = (d0, d1) -> (d1 : compressed, d0 : compressed)
      }>
 
      // foreach on a column-major sparse tensor
@@ -1263,7 +1273,7 @@ def SparseTensor_ForeachOp : SparseTensor_Op<"foreach",
      }
 
      #ROW_MAJOR = #sparse_tensor.encoding<{
-       dimLevelType = [ "compressed", "compressed" ],
+       map = (d0, d1) -> (d0 : compressed, d1 : compressed)
      }>
 
      // foreach on a row-major sparse tensor
