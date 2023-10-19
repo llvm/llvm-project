@@ -24,6 +24,18 @@ struct WebAssemblyStackTaggingPass : public FunctionPass {
   WebAssemblyStackTaggingPass() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &) override;
+private:
+#if 0
+  bool const UseStackSafety = false;
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addRequired<StackSafetyGlobalInfoWrapperPass>();
+#if 0
+    if (MergeInit)
+      AU.addRequired<AAResultsWrapperPass>();
+#endif
+  }
+#endif
 }; // end of struct Hello
 
 }
@@ -31,8 +43,11 @@ struct WebAssemblyStackTaggingPass : public FunctionPass {
 bool WebAssemblyStackTaggingPass::runOnFunction(Function & Fn) {
   if (!Fn.hasFnAttribute(Attribute::SanitizeMemTag))
     return false;
+#if 0
   SSI = &getAnalysis<StackSafetyGlobalInfoWrapperPass>().getResult();
   return true;
+#endif
+  return false;
 }
 
 char WebAssemblyStackTaggingPass::ID = 0;
