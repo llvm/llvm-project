@@ -107,3 +107,12 @@ void test_cntp(svcount_t c) {
   svcntp_c14(c, 3); // expected-error {{argument should be a multiple of 2}}
 }
 
+void test_svdot_lane_2way(svint32_t s32, svuint32_t u32, svint16_t s16, svuint16_t u16,
+                          svfloat32_t f32, svfloat16_t f16) {
+  svdot_lane_s32_s16_s16(s32, s16, s16, 1); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+  svdot_lane_u32_u16_u16(u32, u16, u16, 1); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+  svdot_lane_f32_f16_f16(f32, f16, f16, 1); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+  svdot_lane_s32_s16_s16(s32, s16, s16, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+  svdot_lane_u32_u16_u16(u32, u16, u16, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+  svdot_lane_f32_f16_f16(f32, f16, f16, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+}
