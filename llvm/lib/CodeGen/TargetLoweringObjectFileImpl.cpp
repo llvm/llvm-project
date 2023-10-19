@@ -763,6 +763,25 @@ calcUniqueIDUpdateFlagsAndSize(const GlobalObject *GO, StringRef SectionName,
   return NextUniqueID++;
 }
 
+static std::tuple<StringRef, bool, unsigned>
+getGlobalObjectInfo(const GlobalObject *GO, const TargetMachine &TM) {
+  StringRef Group = "";
+  bool IsComdat = false;
+  unsigned Flags = 0;
+  if (const Comdat *C = getELFComdat(GO)) {
+    Flags |= ELF::SHF_GROUP;
+    Group = C->getName();
+    IsComdat = C->getSelectionKind() == Comdat::Any;
+  }
+  if (auto *GV = dyn_cast<GlobalVariable>(GO)) {
+    if (TM.isLargeData(GV)) {
+      assert(TM.getTargetTriple().getArch() == Triple::x86_64);
+      Flags |= ELF::SHF_X86_64_LARGE;
+    }
+  }
+  return {Group, IsComdat, Flags};
+}
+
 static MCSection *selectExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM,
     MCContext &Ctx, Mangler &Mang, unsigned &NextUniqueID,
@@ -793,8 +812,6 @@ static MCSection *selectExplicitSectionGlobal(
   // Infer section flags from the section name if we can.
   Kind = getELFKindForNamedSection(SectionName, Kind);
 
-  StringRef Group = "";
-  bool IsComdat = false;
   unsigned Flags = getELFSectionFlags(Kind);
   if (SectionName == ".swift1_autolink_entries")
     Flags |= ELF::SHF_EXCLUDE;
@@ -803,6 +820,8 @@ static MCSection *selectExplicitSectionGlobal(
     IsComdat = C->getSelectionKind() == Comdat::Any;
     Flags |= ELF::SHF_GROUP;
   }
+  auto [Group, IsComdat, ExtraFlags] = getGlobalObjectInfo(GO, TM);
+  Flags |= ExtraFlags;
 
   unsigned EntrySize = getEntrySizeForKind(Kind);
   const unsigned UniqueID = calcUniqueIDUpdateFlagsAndSize(
@@ -850,19 +869,8 @@ static MCSectionELF *selectELFSectionForGlobal(
     const TargetMachine &TM, bool EmitUniqueSection, unsigned Flags,
     unsigned *NextUniqueID, const MCSymbolELF *AssociatedSymbol) {
 
-  StringRef Group = "";
-  bool IsComdat = false;
-  if (const Comdat *C = getELFComdat(GO)) {
-    Flags |= ELF::SHF_GROUP;
-    Group = C->getName();
-    IsComdat = C->getSelectionKind() == Comdat::Any;
-  }
-  if (auto *GV = dyn_cast<GlobalVariable>(GO)) {
-    if (TM.isLargeData(GV)) {
-      assert(TM.getTargetTriple().getArch() == Triple::x86_64);
-      Flags |= ELF::SHF_X86_64_LARGE;
-    }
-  }
+  auto [Group, IsComdat, ExtraFlags] = getGlobalObjectInfo(GO, TM);
+  Flags |= ExtraFlags;
 
   // Get the section entry size based on the kind.
   unsigned EntrySize = getEntrySizeForKind(Kind);
