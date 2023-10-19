@@ -427,26 +427,27 @@ struct TransposeOpToArmSMELowering
   }
 };
 
-/// Lowers a masked `vector.outerproduct` to `arm_sme.outerproduct`.
-/// The 2-D mask of the `vector.outerproduct` (if from a `vector.create_mask`)
-/// is decomposed into two 1-D masks for the operands.
+/// Conversion pattern for vector.outerproduct.
 ///
-///  BEFORE:
-///  ```mlir
-///  %mask = vector.create_mask %dimA, %dimB : vector<[4]x[4]xi1>
-///  %result = vector.mask %mask {
-///               vector.outerproduct %vecA, %vecB
-///                : vector<[4]xf32>, vector<[4]xf32>
-///            } : vector<[4]x[4]xi1> -> vector<[4]x[4]xf32>
-///  ```
+/// If the vector.outerproduct is masked (and the mask from a
+/// vector.create_mask), then the mask is decomposed into two 1-D masks for the
+/// operands.
 ///
-///  AFTER:
-///  ```mlir
-///  %maskA = vector.create_mask %dimA : vector<[4]xi1>
-///  %maskB = vector.create_mask %dimB : vector<[4]xi1>
-///  %result = arm_sme.outerproduct %vecA, %vecB masks(%maskA, %maskB)
-///              : vector<[4]xf32>, vector<[4]xf32>, vector<[4]x[4]xf32>
-///  ```
+/// Example:
+///
+///   %mask = vector.create_mask %dimA, %dimB : vector<[4]x[4]xi1>
+///   %result = vector.mask %mask {
+///                vector.outerproduct %vecA, %vecB
+///                 : vector<[4]xf32>, vector<[4]xf32>
+///             } : vector<[4]x[4]xi1> -> vector<[4]x[4]xf32>
+///
+/// is converted to:
+///
+///    %maskA = vector.create_mask %dimA : vector<[4]xi1>
+///    %maskB = vector.create_mask %dimB : vector<[4]xi1>
+///    %result = arm_sme.outerproduct %vecA, %vecB masks(%maskA, %maskB)
+///                : vector<[4]xf32>, vector<[4]xf32>, vector<[4]x[4]xf32>
+///
 struct VectorOuterProductToArmSMELowering
     : public OpRewritePattern<vector::OuterProductOp> {
 
