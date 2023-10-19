@@ -41,18 +41,19 @@ code bases.
   This breaks code in C++20 which was previously accepted in C++17. Eg:
   ```
   struct P {};
-  template<class S> bool operator==(const P&, const S &);
+  template<class S> bool operator==(const P&, const S&);
 
   struct A : public P {};
   struct B : public P {};
-  // This equality is now ambiguous in C++20.
-  bool check(A a, B b) { return a == b; } 
+
+  bool ambiguous(A a, B b) { return a == b; } // This equality is now ambiguous in C++20.
+
+  template<class S> bool operator!=(const P&, const S&);
+  bool fine(A a, B b) { return a == b; } // Ok. Found a matching operator!=.
   ```
   To reduce widespread breakages, as an extension, clang would accept this with a
   `-Wambiguous-reversed-operator` warning.
   Fixes `GH <https://github.com/llvm/llvm-project/issues/53954>`_.
-
-
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------

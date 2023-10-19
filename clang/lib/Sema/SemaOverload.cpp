@@ -10282,10 +10282,10 @@ bool clang::isBetterOverloadCandidate(
         // Work around large-scale breakage caused by considering reversed
         // forms of operator== in C++20:
         //
-        // When comparing a function against a reversed function with the same
-        // parameter types, if we have a better conversion for one argument and
-        // a worse conversion for the other, the implicit conversion sequences
-        // are treated as being equally good.
+        // When comparing a function against a reversed function, if we have a
+        // better conversion for one argument and a worse conversion for the
+        // other, the implicit conversion sequences are treated as being equally
+        // good.
         //
         // This prevents a comparison function from being considered ambiguous
         // with a reversed form that is written in the same way.

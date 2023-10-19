@@ -367,6 +367,10 @@ bool operator==(const P&, const S &); // expected-note {{candidate}} \
 struct A : public P {};
 struct B : public P {};
 bool check(A a, B b) { return a == b; } // expected-warning {{use of overloaded operator '==' (with operand types 'A' and 'B') to be ambiguous}}
+
+template<class S>
+bool operator!=(const P&, const S &);
+bool fine(A a, B b) { return a == b; } // Ok. Found a matching operator!=.
 }
 }
 
