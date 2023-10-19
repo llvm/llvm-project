@@ -3369,7 +3369,7 @@ Sema::TemplateDeductionResult Sema::SubstituteExplicitTemplateArguments(
         SubstExceptionSpec(Function->getLocation(), EPI.ExceptionSpec,
                            ExceptionStorage,
                            getTemplateInstantiationArgs(
-                               FunctionTemplate, /*Final=*/true,
+                               FunctionTemplate, nullptr, /*Final=*/true,
                                /*Innermost=*/SugaredExplicitArgumentList,
                                /*RelativeToPrimary=*/false,
                                /*Pattern=*/nullptr,
