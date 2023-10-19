@@ -63,6 +63,7 @@ public:
   void Enter(const parser::OpenACCCacheConstruct &);
   void Leave(const parser::OpenACCCacheConstruct &);
   void Enter(const parser::AccAtomicUpdate &);
+  void Enter(const parser::OpenACCEndConstruct &);
 
   // Clauses
   void Leave(const parser::AccClauseList &);

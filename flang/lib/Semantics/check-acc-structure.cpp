@@ -673,6 +673,10 @@ void AccStructureChecker::Enter(const parser::AccClause::If &x) {
       GetContext().clauseSource, "Must have LOGICAL or INTEGER type"_err_en_US);
 }
 
+void AccStructureChecker::Enter(const parser::OpenACCEndConstruct &x) {
+  context_.Say(x.source, "Misplaced OpenACC end directive"_warn_en_US);
+}
+
 void AccStructureChecker::Enter(const parser::Module &) {
   declareSymbols.clear();
 }
