@@ -502,10 +502,27 @@ class VIMAGE_NoSampler_gfx12<mimgopc op, string opcode,
                     #!if(BaseOpcode.HasD16, "$d16", "");
 }
 
+class VSAMPLE_Sampler_gfx12<mimgopc op, string opcode, RegisterClass DataRC,
+                            int num_addrs, RegisterClass Addr3RC = VGPR_32,
+                            string dns="">
+  : VSAMPLE_gfx12<op.GFX12, (outs DataRC:$vdata), num_addrs, dns, Addr3RC> {
+  let InOperandList = !con(AddrIns,
+                           (ins SReg_256:$rsrc),
+                           !if(BaseOpcode.Sampler, (ins SReg_128:$samp), (ins)),
+                           (ins DMask:$dmask, Dim:$dim, UNorm:$unorm,
+                                CPol:$cpol, R128A16:$r128, A16:$a16, TFE:$tfe,
+                                LWE:$lwe),
+                           !if(BaseOpcode.HasD16, (ins D16:$d16), (ins)));
+  let AsmString = opcode#" $vdata, "#AddrAsm#", $rsrc"
+                    #!if(BaseOpcode.Sampler, ", $samp", "")
+                    #"$dmask$dim$unorm$cpol$r128$a16$tfe$lwe"
+                    #!if(BaseOpcode.HasD16, "$d16", "");
+}
+
 multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
-                                             RegisterClass dst_rc,
-                                             bit enableDisasm,
-                                             bit ExtendedImageInst = 1> {
+                                      RegisterClass dst_rc, bit enableDisasm,
+                                      bit ExtendedImageInst = 1,
+                                      bit isVSample = 0> {
   let VAddrDwords = 1 in {
     let ssamp = 0 in {
       if op.HAS_GFX10M then {
@@ -523,8 +540,14 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
       }
     }
     if op.HAS_GFX12 then {
-      def _V1_gfx12 : VIMAGE_NoSampler_gfx12<op, asm, dst_rc, 1,
-                                             !if(enableDisasm, "GFX12", "")>;
+      if isVSample then {
+        let samp = 0 in
+          def _V1_gfx12 : VSAMPLE_Sampler_gfx12<op, asm, dst_rc, 1>;
+      }
+      else {
+        def _V1_gfx12 : VIMAGE_NoSampler_gfx12<op, asm, dst_rc, 1,
+                                               !if(enableDisasm, "GFX12", "")>;
+      }
     }
   }
   let VAddrDwords = 2 in {
@@ -542,7 +565,13 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
       }
     }
     if op.HAS_GFX12 then {
-      def _V2_gfx12 : VIMAGE_NoSampler_gfx12<op, asm, dst_rc, 2>;
+      if isVSample then {
+        let samp = 0 in
+          def _V2_gfx12 : VSAMPLE_Sampler_gfx12<op, asm, dst_rc, 2>;
+      }
+      else {
+        def _V2_gfx12 : VIMAGE_NoSampler_gfx12<op, asm, dst_rc, 2>;
+      }
     }
   }
   let VAddrDwords = 3 in {
@@ -560,7 +589,13 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
       }
     }
     if op.HAS_GFX12 then {
-      def _V3_gfx12 : VIMAGE_NoSampler_gfx12<op, asm, dst_rc, 3>;
+      if isVSample then {
+        let samp = 0 in
+          def _V3_gfx12 : VSAMPLE_Sampler_gfx12<op, asm, dst_rc, 3>;
+      }
+      else {
+        def _V3_gfx12 : VIMAGE_NoSampler_gfx12<op, asm, dst_rc, 3>;
+      }
     }
   }
   let VAddrDwords = 4 in {
@@ -580,8 +615,15 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
       }
     }
     if op.HAS_GFX12 then {
-      def _V4_gfx12 : VIMAGE_NoSampler_gfx12<op, asm, dst_rc, 4,
-                                             !if(enableDisasm, "GFX12", "")>;
+      if isVSample then {
+        let samp = 0 in
+          def _V4_gfx12 : VSAMPLE_Sampler_gfx12<op, asm, dst_rc, 4, VGPR_32,
+                                                !if(enableDisasm, "GFX12", "")>;
+      }
+      else {
+        def _V4_gfx12 : VIMAGE_NoSampler_gfx12<op, asm, dst_rc, 4,
+                                               !if(enableDisasm, "GFX12", "")>;
+      }
     }
   }
 }
@@ -1137,21 +1179,6 @@ class MIMG_Sampler_nsa_gfx11<mimgopc op, string opcode,
                     #!if(BaseOpcode.HasD16, "$d16", "");
 }
 
-class VSAMPLE_Sampler_gfx12<mimgopc op, string opcode,
-                            RegisterClass DataRC,
-                            int num_addrs, RegisterClass Addr3RC,
-                            string dns="">
-  : VSAMPLE_gfx12<op.GFX11, (outs DataRC:$vdata), num_addrs, dns, Addr3RC> {
-  let InOperandList = !con(AddrIns,
-                           (ins SReg_256:$rsrc, SReg_128:$samp, DMask:$dmask,
-                                Dim:$dim, UNorm:$unorm, CPol:$cpol,
-                                R128A16:$r128, A16:$a16, TFE:$tfe, LWE:$lwe),
-                           !if(BaseOpcode.HasD16, (ins D16:$d16), (ins)));
-  let AsmString = opcode#" $vdata, "#AddrAsm#", $rsrc, $samp$dmask$dim$unorm"
-                    #"$cpol$r128$a16$tfe$lwe"
-                    #!if(BaseOpcode.HasD16, "$d16", "");
-}
-
 class MIMGAddrSize<int dw, bit enable_disasm, int AddrDW = dw> {
   int NumWords = dw;
 
@@ -1496,13 +1523,13 @@ multiclass MIMG_MSAA_Load <mimgopc op, string asm> {
   let BaseOpcode = !cast<MIMGBaseOpcode>(NAME),
     Gather4 = 1, hasPostISelHook = 0, mayLoad = 1 in {
     let VDataDwords = 2 in
-    defm _V2 : MIMG_NoSampler_Src_Helper<op, asm, VReg_64, 0>; /* packed D16 */
+    defm _V2 : MIMG_NoSampler_Src_Helper<op, asm, VReg_64, 0, 0, 1>; /* packed D16 */
     let VDataDwords = 3 in
-    defm _V3 : MIMG_NoSampler_Src_Helper<op, asm, VReg_96, 0>; /* packed D16 + tfe */
+    defm _V3 : MIMG_NoSampler_Src_Helper<op, asm, VReg_96, 0, 0, 1>; /* packed D16 + tfe */
     let VDataDwords = 4 in
-    defm _V4 : MIMG_NoSampler_Src_Helper<op, asm, VReg_128, 1>;
+    defm _V4 : MIMG_NoSampler_Src_Helper<op, asm, VReg_128, 1, 0, 1>;
     let VDataDwords = 5 in
-    defm _V5 : MIMG_NoSampler_Src_Helper<op, asm, VReg_160, 0>;
+    defm _V5 : MIMG_NoSampler_Src_Helper<op, asm, VReg_160, 0, 0, 1>;
   }
 }
 
