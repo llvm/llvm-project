@@ -2530,6 +2530,9 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     return {ImportAction::None};
   }
 
+  if (isAngled && isInNamedModule())
+    Diag(FilenameTok, diag::warn_pp_include_angled_in_module_purview);
+
   // Look up the file, create a File ID for it.
   SourceLocation IncludePos = FilenameTok.getLocation();
   // If the filename string was the result of macro expansions, set the include
