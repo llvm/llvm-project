@@ -1,4 +1,4 @@
-//===-- Implementation of the GPU sinhf function --------------------------===//
+//===-- Implementation header for tgamma ------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/sinhf.h"
-#include "src/__support/common.h"
+#ifndef LLVM_LIBC_SRC_MATH_TGAMMA_H
+#define LLVM_LIBC_SRC_MATH_TGAMMA_H
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(float, sinhf, (float x)) { return __builtin_sinhf(x); }
+double tgamma(double x);
 
 } // namespace LIBC_NAMESPACE
+
+#endif // LLVM_LIBC_SRC_MATH_TGAMMA_H
