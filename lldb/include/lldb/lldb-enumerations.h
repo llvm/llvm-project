@@ -527,6 +527,7 @@ enum InstrumentationRuntimeType {
   eInstrumentationRuntimeTypeUndefinedBehaviorSanitizer = 0x0002,
   eInstrumentationRuntimeTypeMainThreadChecker = 0x0003,
   eInstrumentationRuntimeTypeSwiftRuntimeReporting = 0x0004,
+  eInstrumentationRuntimeTypeLibsanitizersAsan = 0x0005,
   eNumInstrumentationRuntimeTypes
 };
 
