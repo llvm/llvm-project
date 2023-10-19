@@ -44,14 +44,19 @@ def _getSuitableClangTidy(cfg):
 
 
 def _getAndroidDeviceApi(cfg):
-    return int(programOutput(cfg, r"""
-        #include <android/api-level.h>
-        #include <stdio.h>
-        int main() {
-            printf("%d\n", android_get_device_api_level());
-            return 0;
-        }
-    """))
+    return int(
+        programOutput(
+            cfg,
+            r"""
+                #include <android/api-level.h>
+                #include <stdio.h>
+                int main() {
+                    printf("%d\n", android_get_device_api_level());
+                    return 0;
+                }
+            """,
+        )
+    )
 
 
 DEFAULT_FEATURES = [
