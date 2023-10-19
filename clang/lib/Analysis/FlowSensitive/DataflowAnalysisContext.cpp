@@ -160,15 +160,6 @@ bool DataflowAnalysisContext::flowConditionImplies(Atom Token,
   return isUnsatisfiable(std::move(Constraints));
 }
 
-bool DataflowAnalysisContext::flowConditionIsTautology(Atom Token) {
-  // Returns true if and only if we cannot prove that the flow condition can
-  // ever be false.
-  llvm::SetVector<const Formula *> Constraints;
-  Constraints.insert(&arena().makeNot(arena().makeAtomRef(Token)));
-  addTransitiveFlowConditionConstraints(Token, Constraints);
-  return isUnsatisfiable(std::move(Constraints));
-}
-
 bool DataflowAnalysisContext::equivalentFormulas(const Formula &Val1,
                                                  const Formula &Val2) {
   llvm::SetVector<const Formula *> Constraints;
