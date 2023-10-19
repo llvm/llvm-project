@@ -61,8 +61,7 @@ LogicalResult transform::detail::expandPathsToMLIRFiles(
          it != itEnd && !ec; it.increment(ec)) {
       const std::string &fileName = it->path();
 
-      if (it->type() != llvm::sys::fs::file_type::regular_file &&
-          it->type() != llvm::sys::fs::file_type::symlink_file) {
+      if (it->type() != llvm::sys::fs::file_type::regular_file) {
         LLVM_DEBUG(DBGS() << "  Skipping non-regular file '" << fileName
                           << "'\n");
         continue;
