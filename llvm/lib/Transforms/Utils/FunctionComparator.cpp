@@ -160,10 +160,23 @@ int FunctionComparator::cmpAttrs(const AttributeList L,
 int FunctionComparator::cmpMetadata(const Metadata *L,
                                     const Metadata *R) const {
   // TODO: the following routine coerce the metadata contents into constants
-  // before comparison.
+  // or MDStrings before comparison.
   // It ignores any other cases, so that the metadata nodes are considered
   // equal even though this is not correct.
   // We should structurally compare the metadata nodes to be perfect here.
+
+  auto *MDStringL = dyn_cast<MDString>(L);
+  auto *MDStringR = dyn_cast<MDString>(R);
+  if (MDStringL && MDStringR) {
+    if (MDStringL == MDStringR)
+      return 0;
+    return MDStringL->getString().compare(MDStringR->getString());
+  }
+  if (MDStringR)
+    return -1;
+  if (MDStringL)
+    return 1;
+
   auto *CL = dyn_cast<ConstantAsMetadata>(L);
   auto *CR = dyn_cast<ConstantAsMetadata>(R);
   if (CL == CR)
@@ -818,6 +831,21 @@ int FunctionComparator::cmpValues(const Value *L, const Value *R) const {
   if (ConstL)
     return 1;
   if (ConstR)
+    return -1;
+
+  const MetadataAsValue *MetadataValueL = dyn_cast<MetadataAsValue>(L);
+  const MetadataAsValue *MetadataValueR = dyn_cast<MetadataAsValue>(R);
+  if (MetadataValueL && MetadataValueR) {
+    if (MetadataValueL == MetadataValueR)
+      return 0;
+
+    return cmpMetadata(MetadataValueL->getMetadata(),
+                       MetadataValueR->getMetadata());
+  }
+
+  if (MetadataValueL)
+    return 1;
+  if (MetadataValueR)
     return -1;
 
   const InlineAsm *InlineAsmL = dyn_cast<InlineAsm>(L);
