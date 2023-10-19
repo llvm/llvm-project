@@ -54,14 +54,23 @@ function(add_math_entrypoint_object name)
   )
 endfunction()
 
+add_math_entrypoint_object(acos)
 add_math_entrypoint_object(acosf)
+add_math_entrypoint_object(acosh)
 add_math_entrypoint_object(acoshf)
 
+add_math_entrypoint_object(asin)
 add_math_entrypoint_object(asinf)
+add_math_entrypoint_object(asinh)
 add_math_entrypoint_object(asinhf)
 
+add_math_entrypoint_object(atan)
 add_math_entrypoint_object(atanf)
 
+add_math_entrypoint_object(atan2)
+add_math_entrypoint_object(atan2f)
+
+add_math_entrypoint_object(atanh)
 add_math_entrypoint_object(atanhf)
 
 add_math_entrypoint_object(ceil)
@@ -77,6 +86,7 @@ add_math_entrypoint_object(cosf)
 add_math_entrypoint_object(cosh)
 add_math_entrypoint_object(coshf)
 
+add_math_entrypoint_object(erf)
 add_math_entrypoint_object(erff)
 
 add_math_entrypoint_object(exp)
@@ -199,6 +209,7 @@ add_math_entrypoint_object(scalbn)
 add_math_entrypoint_object(scalbnf)
 add_math_entrypoint_object(scalbnl)
 
+add_math_entrypoint_object(sincos)
 add_math_entrypoint_object(sincosf)
 
 add_math_entrypoint_object(sin)
@@ -216,6 +227,9 @@ add_math_entrypoint_object(tanf)
 
 add_math_entrypoint_object(tanh)
 add_math_entrypoint_object(tanhf)
+
+add_math_entrypoint_object(tgamma)
+add_math_entrypoint_object(tgammaf)
 
 add_math_entrypoint_object(trunc)
 add_math_entrypoint_object(truncf)

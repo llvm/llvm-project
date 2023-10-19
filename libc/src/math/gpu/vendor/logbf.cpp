@@ -1,4 +1,4 @@
-//===-- Implementation of the llround function for GPU --------------------===//
+//===-- Implementation of the GPU logbf function --------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/llround.h"
+#include "src/math/logbf.h"
 #include "src/__support/common.h"
 
 #include "common.h"
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(long long, llround, (double x)) {
-  return internal::llround(x);
-}
+LLVM_LIBC_FUNCTION(float, logbf, (float x)) { return internal::logbf(x); }
 
 } // namespace LIBC_NAMESPACE
