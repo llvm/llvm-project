@@ -13717,7 +13717,7 @@ static SDValue performSELECTCombine(SDNode *N, SelectionDAG &DAG,
   return tryFoldSelectIntoOp(N, DAG, FalseVal, TrueVal, /*Swapped*/true);
 }
 
-/// IF we have a build_vector where each lane is binop X, C, where C
+/// If we have a build_vector where each lane is binop X, C, where C
 /// is a constant (but not necessarily the same constant on all lanes),
 /// form binop (build_vector x1, x2, ...), (build_vector c1, c2, c3, ..).
 /// We assume that materializing a constant build vector will be no more
@@ -13762,6 +13762,10 @@ static SDValue performBUILD_VECTORCombine(SDNode *N, SelectionDAG &DAG,
     LHSOps.push_back(Op.getOperand(0));
     if (!isa<ConstantSDNode>(Op.getOperand(1)) &&
         !isa<ConstantFPSDNode>(Op.getOperand(1)))
+      return SDValue();
+    // FIXME: Return failure if the RHS type doesn't match the LHS. Shifts may
+    // have different LHS and RHS types.
+    if (Op.getOperand(0).getValueType() != Op.getOperand(1).getValueType())
       return SDValue();
     RHSOps.push_back(Op.getOperand(1));
   }
