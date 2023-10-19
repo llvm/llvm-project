@@ -608,8 +608,8 @@ protected:
       //  will track the load location of the library.
       size_t num_modules_specified = m_options.m_modules.GetSize();
       if (num_modules_specified == 1) {
-        const FileSpec *file_spec =
-            m_options.m_modules.GetFileSpecPointerAtIndex(0);
+        const FileSpec &file_spec =
+            m_options.m_modules.GetFileSpecAtIndex(0);
         bp_sp = target.CreateAddressInModuleBreakpoint(
             m_options.m_load_addr, internal, file_spec, m_options.m_hardware);
       } else if (num_modules_specified == 0) {
