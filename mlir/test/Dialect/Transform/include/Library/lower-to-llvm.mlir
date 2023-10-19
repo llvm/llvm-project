@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s
+// No need to check anything else than parsing here, this is being used by another test as data.
 
 /// Schedule to lower to LLVM.
 module @lower_module_to_llvm attributes { transform.with_named_sequence } {
