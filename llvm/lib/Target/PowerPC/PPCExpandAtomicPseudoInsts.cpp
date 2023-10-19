@@ -367,7 +367,6 @@ bool PPCExpandAtomicPseudo::expandAtomicRMWMinMax128(
   Register RB = MI.getOperand(3).getReg();
   Register OpLo = MI.getOperand(4).getReg();
   Register OpHi = MI.getOperand(5).getReg();
-  MachineBasicBlock *CurrentMBB = LoopMBB;
   unsigned CmpOp, CmpFailPred, CmpSuccPred;
   switch (MI.getOpcode()) {
   default:
@@ -394,6 +393,7 @@ bool PPCExpandAtomicPseudo::expandAtomicRMWMinMax128(
     break;
   }
 
+  MachineBasicBlock *CurrentMBB = LoopMBB;
   BuildMI(CurrentMBB, DL, LL, Old).addReg(RA).addReg(RB);
   BuildMI(CurrentMBB, DL, TII->get(CmpOp), PPC::CR0)
       .addReg(OldHi)
