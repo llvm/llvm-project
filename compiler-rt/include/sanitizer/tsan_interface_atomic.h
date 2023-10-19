@@ -13,6 +13,8 @@
 #ifndef TSAN_INTERFACE_ATOMIC_H
 #define TSAN_INTERFACE_ATOMIC_H
 
+#include <sanitizer/common_interface_defs.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
