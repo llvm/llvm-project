@@ -205,6 +205,9 @@ Changes to LLDB
   for formatters to quickly find directly nested type when it's known
   where to search for it, avoiding more expensive global search via
   ``SBTarget::FindFirstType``.
+* ``lldb-vscode`` was renamed to ``lldb-dap`` and and its installation
+  instructions have been updated to reflect this. The underlying functionality
+  remains unchanged.
 
 Changes to Sanitizers
 ---------------------
