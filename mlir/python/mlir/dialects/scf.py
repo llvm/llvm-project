@@ -20,11 +20,8 @@ except ImportError as e:
 from typing import Optional, Sequence, Union
 
 
-_ForOp = ForOp
-
-
 @_ods_cext.register_operation(_Dialect, replace=True)
-class ForOp(_ForOp):
+class ForOp(ForOp):
     """Specialization for the SCF for op class."""
 
     def __init__(
@@ -50,17 +47,8 @@ class ForOp(_ForOp):
         iter_args = _get_op_results_or_values(iter_args)
 
         results = [arg.type for arg in iter_args]
-        super(_ForOp, self).__init__(
-            self.build_generic(
-                regions=1,
-                results=results,
-                operands=[
-                    _get_op_result_or_value(o) for o in [lower_bound, upper_bound, step]
-                ]
-                + list(iter_args),
-                loc=loc,
-                ip=ip,
-            )
+        super().__init__(
+            results, lower_bound, upper_bound, step, iter_args, loc=loc, ip=ip
         )
         self.regions[0].blocks.append(self.operands[0].type, *results)
 
@@ -83,28 +71,23 @@ class ForOp(_ForOp):
         return self.body.arguments[1:]
 
 
-_IfOp = IfOp
-
-
 @_ods_cext.register_operation(_Dialect, replace=True)
-class IfOp(_IfOp):
+class IfOp(IfOp):
     """Specialization for the SCF if op class."""
 
-    def __init__(self, cond, results_=[], *, hasElse=False, loc=None, ip=None):
+    def __init__(self, cond, results_=None, *, hasElse=False, loc=None, ip=None):
         """Creates an SCF `if` operation.
 
         - `cond` is a MLIR value of 'i1' type to determine which regions of code will be executed.
         - `hasElse` determines whether the if operation has the else branch.
         """
+        if results_ is None:
+            results_ = []
         operands = []
         operands.append(cond)
         results = []
         results.extend(results_)
-        super(_IfOp, self).__init__(
-            self.build_generic(
-                regions=2, results=results, operands=operands, loc=loc, ip=ip
-            )
-        )
+        super().__init__(results, cond)
         self.regions[0].blocks.append(*[])
         if hasElse:
             self.regions[1].blocks.append(*[])
