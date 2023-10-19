@@ -11591,7 +11591,7 @@ static SDValue combineSelectAndUse(SDNode *N, SDValue Slct, SDValue OtherOp,
         N->getOpcode() != ISD::AND)
       return SDValue();
 
-    // Maybe harmful when condition code has multip use.
+    // Maybe harmful when condition code has multiple use.
     if (Slct.getOpcode() == ISD::SELECT && !Slct.getOperand(0).hasOneUse())
       return SDValue();
 
