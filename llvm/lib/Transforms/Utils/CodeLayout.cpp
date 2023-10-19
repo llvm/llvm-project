@@ -62,12 +62,6 @@ cl::opt<bool> ApplyExtTspWithoutProfile(
     "ext-tsp-apply-without-profile",
     cl::desc("Whether to apply ext-tsp placement for instances w/o profile"),
     cl::init(true), cl::Hidden);
-
-namespace codelayout {
-cl::opt<unsigned>
-    CDMaxChainSize("cdsort-max-chain-size", cl::Hidden, cl::init(128),
-                   cl::desc("The maximum size of a chain to create"));
-}
 } // namespace llvm
 
 // Algorithm-specific params for Ext-TSP. The values are tuned for the best
@@ -128,6 +122,10 @@ static cl::opt<unsigned> CacheEntries("cds-cache-entries", cl::ReallyHidden,
 
 static cl::opt<unsigned> CacheSize("cds-cache-size", cl::ReallyHidden,
                                    cl::desc("The size of a line in the cache"));
+
+static cl::opt<unsigned>
+    CDMaxChainSize("cdsort-max-chain-size", cl::ReallyHidden,
+                   cl::desc("The maximum size of a chain to create"));
 
 static cl::opt<double> DistancePower(
     "cds-distance-power", cl::ReallyHidden,
@@ -1163,7 +1161,7 @@ private:
         if (Edge->isSelfEdge())
           continue;
         if (Edge->srcChain()->numBlocks() + Edge->dstChain()->numBlocks() >
-            CDMaxChainSize)
+            Config.MaxChainSize)
           continue;
 
         // Compute the gain of merging the two chains.
@@ -1461,6 +1459,8 @@ std::vector<uint64_t> codelayout::computeCacheDirectedLayout(
     Config.CacheEntries = CacheEntries;
   if (CacheSize.getNumOccurrences() > 0)
     Config.CacheSize = CacheSize;
+  if (CDMaxChainSize.getNumOccurrences() > 0)
+    Config.MaxChainSize = CDMaxChainSize;
   if (DistancePower.getNumOccurrences() > 0)
     Config.DistancePower = DistancePower;
   if (FrequencyScale.getNumOccurrences() > 0)
