@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -test-cf-assert \
 // RUN:     -convert-func-to-llvm | \
-// RUN: mlir-cpu-runner -e main -entry-point-result=void | \
+// RUN: mlir-cpu-runner -e main -entry-point-result=void -shared-libs=%mlir_runner_utils | \
 // RUN: FileCheck %s
 
 func.func @main() {

@@ -60,7 +60,7 @@ void mlir::LLVM::createPrintStrCall(OpBuilder &builder, Location loc,
   Value gep = builder.create<LLVM::GEPOp>(
       loc, typeConverter.getPointerType(builder.getI8Type()), arrayTy, msgAddr,
       indices);
-  Operation *printer = LLVM::lookupOrCreatePrintStrFn(
+  Operation *printer = LLVM::lookupOrCreatePrintCStringFn(
       moduleOp, typeConverter.useOpaquePointers());
   builder.create<LLVM::CallOp>(loc, TypeRange(), SymbolRefAttr::get(printer),
                                gep);

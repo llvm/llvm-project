@@ -1069,12 +1069,12 @@ func.func @vector_print_scalar_f64(%arg0: f64) {
 // -----
 
 // CHECK-LABEL: module {
-// CHECK: llvm.func @puts(!llvm.ptr)
-// CHECK: llvm.mlir.global private constant @[[GLOBAL_STR:.*]](dense<[72, 101, 108, 108, 111, 44, 32, 87, 111, 114, 108, 100, 33, 0]> : tensor<14xi8>) {addr_space = 0 : i32} : !llvm.array<14 x i8>
+// CHECK: llvm.func @printCString(!llvm.ptr)
+// CHECK: llvm.mlir.global private constant @[[GLOBAL_STR:.*]]({{.*}})
 // CHECK: @vector_print_string
 //       CHECK-NEXT: %[[GLOBAL_ADDR:.*]] = llvm.mlir.addressof @[[GLOBAL_STR]] : !llvm.ptr
-//       CHECK-NEXT: %[[STR_PTR:.*]] = llvm.getelementptr %[[GLOBAL_ADDR]][0] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<14 x i8>
-//       CHECK-NEXT: llvm.call @puts(%[[STR_PTR]]) : (!llvm.ptr) -> ()
+//       CHECK-NEXT: %[[STR_PTR:.*]] = llvm.getelementptr %[[GLOBAL_ADDR]][0] : (!llvm.ptr) -> !llvm.ptr
+//       CHECK-NEXT: llvm.call @printCString(%[[STR_PTR]]) : (!llvm.ptr) -> ()
 func.func @vector_print_string() {
   vector.print str "Hello, World!"
   return
