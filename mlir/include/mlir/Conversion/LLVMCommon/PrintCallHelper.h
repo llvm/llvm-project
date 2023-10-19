@@ -22,7 +22,8 @@ namespace LLVM {
 /// Generate IR that prints the given string to stdout.
 void createPrintStrCall(OpBuilder &builder, Location loc, ModuleOp moduleOp,
                         StringRef symbolName, StringRef string,
-                        const LLVMTypeConverter &typeConverter);
+                        const LLVMTypeConverter &typeConverter,
+                        bool addNewline = true);
 } // namespace LLVM
 
 } // namespace mlir

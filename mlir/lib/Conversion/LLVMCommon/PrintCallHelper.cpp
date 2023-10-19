@@ -30,7 +30,8 @@ static std::string ensureSymbolNameIsUnique(ModuleOp moduleOp,
 void mlir::LLVM::createPrintStrCall(OpBuilder &builder, Location loc,
                                     ModuleOp moduleOp, StringRef symbolName,
                                     StringRef string,
-                                    const LLVMTypeConverter &typeConverter) {
+                                    const LLVMTypeConverter &typeConverter,
+                                    bool addNewline) {
   auto ip = builder.saveInsertionPoint();
   builder.setInsertionPointToStart(moduleOp.getBody());
   MLIRContext *ctx = builder.getContext();
@@ -38,7 +39,9 @@ void mlir::LLVM::createPrintStrCall(OpBuilder &builder, Location loc,
   // Create a zero-terminated byte representation and allocate global symbol.
   SmallVector<uint8_t> elementVals;
   elementVals.append(string.begin(), string.end());
-  elementVals.push_back(0);
+  if (addNewline)
+    elementVals.push_back('\n');
+  elementVals.push_back('\0');
   auto dataAttrType = RankedTensorType::get(
       {static_cast<int64_t>(elementVals.size())}, builder.getI8Type());
   auto dataAttr =
