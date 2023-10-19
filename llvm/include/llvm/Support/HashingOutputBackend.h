@@ -27,7 +27,7 @@ private:
   SmallVector<char> Buffer;
   raw_svector_ostream OS;
 
-  using HashBuilderT = HashBuilder<HasherT, support::endianness::native>;
+  using HashBuilderT = HashBuilder<HasherT, endianness::native>;
   HashBuilderT Builder;
 
   void write_impl(const char *Ptr, size_t Size) override {
