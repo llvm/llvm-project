@@ -128,6 +128,8 @@ public:
 
   void clearMaxPressure() { MaxPressure.clear(); }
 
+  GCNRegPressure getPressure() const { return CurPressure; }
+
   // returns MaxPressure, resetting it
   decltype(MaxPressure) moveMaxPressure() {
     auto Res = MaxPressure;
@@ -276,6 +278,21 @@ Printable print(const GCNRPTracker::LiveRegSet &LiveRegs,
 Printable reportMismatch(const GCNRPTracker::LiveRegSet &LISLR,
                          const GCNRPTracker::LiveRegSet &TrackedL,
                          const TargetRegisterInfo *TRI);
+
+struct GCNRegPressurePrinter : public MachineFunctionPass {
+  static char ID;
+
+public:
+  GCNRegPressurePrinter() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<LiveIntervals>();
+    AU.setPreservesAll();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+};
 
 } // end namespace llvm
 

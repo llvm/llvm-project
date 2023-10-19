@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "GCNRegPressure.h"
+#include "AMDGPU.h"
 #include "llvm/CodeGen/RegisterPressure.h"
 
 using namespace llvm;
@@ -487,3 +488,64 @@ LLVM_DUMP_METHOD
 void GCNRegPressure::dump() const { dbgs() << print(*this); }
 
 #endif
+
+char llvm::GCNRegPressurePrinter::ID = 0;
+char &llvm::GCNRegPressurePrinterID = GCNRegPressurePrinter::ID;
+
+INITIALIZE_PASS(GCNRegPressurePrinter, "amdgpu-print-rp", "", true, true)
+
+bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
+  const LiveIntervals &LIS = getAnalysis<LiveIntervals>();
+  GCNUpwardRPTracker RPT(LIS);
+
+  auto &OS = dbgs();
+
+  OS << "---\nname: " << MF.getName() << "\nbody:             |\n";
+
+  SmallVector<GCNRegPressure, 16> RPAtInstr;
+  SmallVector<GCNRegPressure, 16> RPAfterInstr;
+
+  for (auto &MBB : MF) {
+    if (MBB.empty())
+      continue;
+
+    RPAtInstr.clear();
+    RPAfterInstr.clear();
+
+    RPAtInstr.reserve(MBB.size());
+    RPAfterInstr.reserve(MBB.size() + 1);
+
+    RPT.reset(MBB.instr_back());
+    RPAfterInstr.push_back(RPT.getPressure());
+    for (auto &MI : reverse(MBB)) {
+      RPT.recede(MI);
+      RPAtInstr.push_back(RPT.moveMaxPressure());
+      RPAfterInstr.push_back(RPT.getPressure());
+    }
+
+    auto printRP = [&](const GCNRegPressure &RP) {
+      // Leading spaces are important for YAML syntax here
+      OS << "    " << format("%-5d", RP.getSGPRNum()) << ' '
+         << format("%-5d", RP.getVGPRNum(false));
+    };
+
+    MBB.printName(OS);
+    OS << ":\n";
+    OS << "    SGPR   VGPR\n";
+    unsigned I = RPAfterInstr.size() - 1;
+    printRP(RPAfterInstr[I]);
+    OS << '\n';
+    for (auto &MI : MBB) {
+      printRP(RPAtInstr[--I]);
+      OS << "  ";
+      MI.print(OS);
+      printRP(RPAfterInstr[I]);
+      OS << '\n';
+    }
+  }
+  OS << "...\n";
+  return false;
+}

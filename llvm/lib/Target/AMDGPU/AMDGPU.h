@@ -191,6 +191,9 @@ extern char &AMDGPUImageIntrinsicOptimizerID;
 void initializeAMDGPUPerfHintAnalysisPass(PassRegistry &);
 extern char &AMDGPUPerfHintAnalysisID;
 
+void initializeGCNRegPressurePrinterPass(PassRegistry &);
+extern char &GCNRegPressurePrinterID;
+
 // Passes common to R600 and SI
 FunctionPass *createAMDGPUPromoteAlloca();
 void initializeAMDGPUPromoteAllocaPass(PassRegistry&);
