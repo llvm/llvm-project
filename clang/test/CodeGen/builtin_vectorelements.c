@@ -1,10 +1,17 @@
-// RUN: %clang_cc1 -O1 -triple aarch64 -target-feature +neon %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK,NEON %s
-// RUN: %clang_cc1 -O1 -triple aarch64 -target-feature +sve  %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK,SVE  %s
-// RUN: %clang_cc1 -O1 -triple riscv64 -target-feature +v    %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK,RISCV  %s
+// RUN: %clang_cc1 -O1 -triple x86_64                        %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK       %s
 
-// Note that this does not make sense to check for x86 SIMD types, because
-// __m128i, __m256i, and __m512i do not specify the element type. There are no
-// "logical" number of elements in them.
+// REQUIRES: target=aarch64-{{.*}}
+// RUN: %clang_cc1 -O1 -triple aarch64 -target-feature +neon %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK,NEON  %s
+
+// REQUIRES: target=aarch64-{{.*}}
+// RUN: %clang_cc1 -O1 -triple aarch64 -target-feature +sve  %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK,SVE   %s
+
+// REQUIRES: target=riscv64{{.*}}
+// RUN: %clang_cc1 -O1 -triple riscv64 -target-feature +v    %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK,RISCV %s
+
+/// Note that this does not make sense to check for x86 SIMD types, because
+/// __m128i, __m256i, and __m512i do not specify the element type. There are no
+/// "logical" number of elements in them.
 
 typedef int int1 __attribute__((vector_size(4)));
 typedef int int4 __attribute__((vector_size(16)));
@@ -55,7 +62,6 @@ int test_builtin_vectorelements_multiply_constant() {
   // CHECK: ret i32 32
   return __builtin_vectorelements(int16) * 2;
 }
-
 
 #if defined(__ARM_NEON)
 #include <arm_neon.h>
