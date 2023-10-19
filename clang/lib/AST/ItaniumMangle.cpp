@@ -5138,6 +5138,14 @@ recurse:
       Diags.Report(DiagID);
       return;
     }
+    case UETT_VectorElements: {
+      DiagnosticsEngine &Diags = Context.getDiags();
+      unsigned DiagID = Diags.getCustomDiagID(
+          DiagnosticsEngine::Error,
+          "cannot yet mangle __builtin_vectorelements expression");
+      Diags.Report(DiagID);
+      return;
+    }
     }
     break;
   }

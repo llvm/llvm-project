@@ -620,6 +620,14 @@ Let ``T`` be one of the following types:
 
 For scalar types, consider the operation applied to a vector with a single element.
 
+*Vector Size*
+To determine the number of elements in a vector, use ``__builtin_vectorelements()``.
+For fixed-sized vectors, e.g., defined via ``__attribute__((vector_size(N)))`` or ARM
+NEON's vector types (e.g., ``uint16x8_t``), this returns the constant number of
+elements at compile-time. For scalable vectors, e.g., SVE or RISC-V V, the number of
+elements is not known at compile-time and is determined at runtime. This builtin can
+be used, e.g., to increment the loop-counter in vector-type agnostic loops.
+
 *Elementwise Builtins*
 
 Each builtin returns a vector equivalent to applying the specified operation
