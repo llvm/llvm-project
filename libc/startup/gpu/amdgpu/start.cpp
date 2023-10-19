@@ -19,7 +19,7 @@ namespace LIBC_NAMESPACE {
 // real time. However, the frequency of this clock varies between cards and can
 // only be obtained via the driver. The loader will set this so we can use it.
 extern "C" [[gnu::visibility("protected")]] uint64_t
-    [[clang::address_space(4)]] LIBC_NAMESPACE_clock_freq = 0;
+    [[clang::address_space(4)]] __llvm_libc_clock_freq = 0;
 
 extern "C" uintptr_t __init_array_start[];
 extern "C" uintptr_t __init_array_end[];
