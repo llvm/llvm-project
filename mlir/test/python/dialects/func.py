@@ -84,6 +84,9 @@ def testFunctionCalls():
     qux = func.FuncOp("qux", ([], [F32Type.get()]))
     qux.sym_visibility = StringAttr.get("private")
 
+    con = func.ConstantOp(qux.type, qux.sym_name.value)
+    assert con.type == qux.type
+
     with InsertionPoint(func.FuncOp("caller", ([], [])).add_entry_block()):
         func.CallOp(foo, [])
         func.CallOp([IndexType.get()], "bar", [])
@@ -94,6 +97,7 @@ def testFunctionCalls():
 # CHECK: func private @foo()
 # CHECK: func private @bar() -> index
 # CHECK: func private @qux() -> f32
+# CHECK: %f = func.constant @qux : () -> f32
 # CHECK: func @caller() {
 # CHECK:   call @foo() : () -> ()
 # CHECK:   %0 = call @bar() : () -> index
