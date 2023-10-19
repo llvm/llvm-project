@@ -45,6 +45,24 @@ C/C++ Language Potentially Breaking Changes
   -xc++-header``) is now ``.pch`` instead of ``.gch``.
 - ``-include a.h`` probing ``a.h.gch`` is deprecated. Change the extension name
   to ``.pch`` or use ``-include-pch a.h.gch``.
+- Fixed a bug that caused ``__has_cpp_attribute`` and ``__has_c_attribute``
+  return incorrect values for some C++-11-style attributes. Below is a complete
+  list of behavior changes.
+
+  .. csv-table::
+    :header: Test, Old value, New value
+
+    ``__has_cpp_attribute(unused)``,                    201603, 0
+    ``__has_cpp_attribute(gnu::unused)``,               201603, 1
+    ``__has_c_attribute(unused)``,                      202106, 0
+    ``__has_cpp_attribute(clang::fallthrough)``,        201603, 1
+    ``__has_cpp_attribute(gnu::fallthrough)``,          201603, 1
+    ``__has_c_attribute(gnu::fallthrough)``,            201910, 1
+    ``__has_cpp_attribute(warn_unused_result)``,        201907, 0
+    ``__has_cpp_attribute(clang::warn_unused_result)``, 201907, 1
+    ``__has_cpp_attribute(gnu::warn_unused_result)``,   201907, 1
+    ``__has_c_attribute(warn_unused_result)``,          202003, 0
+    ``__has_c_attribute(gnu::warn_unused_result)``,     202003, 1
 
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
@@ -70,6 +88,17 @@ C++ Specific Potentially Breaking Changes
   (`#48216 <https://github.com/llvm/llvm-project/issues/48216>`_),
   (`#49884 <https://github.com/llvm/llvm-project/issues/49884>`_), and
   (`#61273 <https://github.com/llvm/llvm-project/issues/61273>`_)
+
+- The `ClassScopeFunctionSpecializationDecl` AST node has been removed.
+  Dependent class scope explicit function template specializations now use
+  `DependentFunctionTemplateSpecializationInfo` to store candidate primary
+  templates and explicit template arguments. This should not impact users of
+  Clang as a compiler, but it may break assumptions in Clang-based tools
+  iterating over the AST.
+
+- The warning `-Wenum-constexpr-conversion` is now also enabled by default on
+  system headers and macros. It will be turned into a hard (non-downgradable)
+  error in the next Clang release.
 
 ABI Changes in This Version
 ---------------------------
@@ -147,6 +176,9 @@ C23 Feature Support
 - Clang now supports `requires c23` for module maps.
 - Clang now supports ``N3007 Type inference for object definitions``.
 
+- Clang now supports ``<stdckdint.h>`` which defines several macros for performing
+  checked integer arithmetic.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
@@ -165,6 +197,9 @@ New Compiler Flags
   the preprocessed text to the output. This can greatly reduce the size of the
   preprocessed output, which can be helpful when trying to reduce a test case.
 
+* ``-Wbitfield-conversion`` was added to detect assignments of integral
+  types to a bitfield that may change the value.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -176,6 +211,10 @@ Modified Compiler Flags
 * ``-frewrite-includes`` now guards the original #include directives with
   ``__CLANG_REWRITTEN_INCLUDES``, and ``__CLANG_REWRITTEN_SYSTEM_INCLUDES`` as
   appropriate.
+* Introducing a new default calling convention for ``-fdefault-calling-conv``:
+  ``rtdcall``. This new default CC only works for M68k and will use the new
+  ``m68k_rtdcc`` CC on every functions that are not variadic. The ``-mrtd``
+  driver/frontend flag has the same effect when targeting M68k.
 
 Removed Compiler Flags
 -------------------------
@@ -278,6 +317,8 @@ Improvements to Clang's diagnostics
     source:1:24: note: expression evaluates to ''\n' (0x0A, 10) == U'🌍' (0x1F30D, 127757)'
     1 | static_assert("A\n"[1] == U'🌍');
       |               ~~~~~~~~~^~~~~~~~
+- Clang now always diagnoses when using non-standard layout types in ``offsetof`` .
+  (`#64619: <https://github.com/llvm/llvm-project/issues/64619>`_)
 
 Bug Fixes in This Version
 -------------------------
@@ -353,6 +394,15 @@ Bug Fixes in This Version
   Fixes (`#67690 <https://github.com/llvm/llvm-project/issues/67690>`_)
 - Fixes a ``clang-17`` regression where ``LLVM_UNREACHABLE_OPTIMIZE=OFF``
   cannot be used with ``Release`` mode builds. (`#68237 <https://github.com/llvm/llvm-project/issues/68237>`_).
+- Fix crash in evaluating ``constexpr`` value for invalid template function.
+  Fixes (`#68542 <https://github.com/llvm/llvm-project/issues/68542>`_)
+- Fixed an issue when a shift count larger than ``__INT64_MAX__``, in a right
+  shift operation, could result in missing warnings about
+  ``shift count >= width of type`` or internal compiler error.
+- Fixed an issue with computing the common type for the LHS and RHS of a `?:`
+  operator in C. No longer issuing a confusing diagnostic along the lines of
+  "incompatible operand types ('foo' and 'foo')" with extensions such as matrix
+  types. Fixes (`#69008 <https://github.com/llvm/llvm-project/issues/69008>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -469,6 +519,14 @@ Bug Fixes to C++ Support
   rather than prefer the non-templated constructor as specified in
   [standard.group]p3.
 
+- Fixed a crash caused by incorrect handling of dependence on variable templates
+  with non-type template parameters of reference type. Fixes:
+  (`#65153 <https://github.com/llvm/llvm-project/issues/65153>`_)
+
+- Clang now properly compares constraints on an out of line class template
+  declaration definition. Fixes:
+  (`#61763 <https://github.com/llvm/llvm-project/issues/61763>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
@@ -477,6 +535,8 @@ Bug Fixes to AST Handling
   computed RecordLayout is incorrect if fields are not completely imported and
   should not be cached.
   `Issue 64170 <https://github.com/llvm/llvm-project/issues/64170>`_
+- Fixed ``hasAnyBase`` not binding nodes in its submatcher.
+  (`#65421 <https://github.com/llvm/llvm-project/issues/65421>`_)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -507,6 +567,10 @@ X86 Support
 
 - Added option ``-m[no-]evex512`` to disable ZMM and 64-bit mask instructions
   for AVX512 features.
+- Support ISA of ``USER_MSR``.
+  * Support intrinsic of ``_urdmsr``.
+  * Support intrinsic of ``_uwrmsr``.
+- Support ISA of ``AVX10.1``.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -615,6 +679,8 @@ Static Analyzer
 - Added a new checker ``core.BitwiseShift`` which reports situations where
   bitwise shift operators produce undefined behavior (because some operand is
   negative or too large).
+- Move checker ``alpha.unix.StdCLibraryFunctions`` out of the ``alpha`` package
+  to ``unix.StdCLibraryFunctions``.
 
 - Fix false positive in mutation check when using pointer to member function.
   (`#66204: <https://github.com/llvm/llvm-project/issues/66204>`_).

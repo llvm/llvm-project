@@ -129,6 +129,13 @@ Changes to the Windows Target
 Changes to the X86 Backend
 --------------------------
 
+* The ``i128`` type now matches GCC and clang's ``__int128`` type. This mainly
+  benefits external projects such as Rust which aim to be binary compatible
+  with C, but also fixes code generation where LLVM already assumed that the
+  type matched and called into libgcc helper functions.
+* Support ISA of ``USER_MSR``.
+* Support ISA of ``AVX10.1-256`` and ``AVX10.1-512``.
+
 Changes to the OCaml bindings
 -----------------------------
 
@@ -186,6 +193,10 @@ Changes to LLDB
 
 * Methods in SBHostOS related to threads have had their implementations
   removed. These methods will return a value indicating failure.
+* ``SBType::FindDirectNestedType`` function is added. It's useful
+  for formatters to quickly find directly nested type when it's known
+  where to search for it, avoiding more expensive global search via
+  ``SBTarget::FindFirstType``.
 
 Changes to Sanitizers
 ---------------------

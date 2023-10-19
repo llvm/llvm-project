@@ -183,8 +183,8 @@ private:
   uint64_t writeObject(const ArrayRef<uint8_t> Data);
 
   template <typename T> uint64_t writeInt(const T &Value) {
-    support::detail::packed_endian_specific_integral<T, support::little,
-                                                     support::unaligned>
+    support::detail::packed_endian_specific_integral<
+        T, llvm::endianness::little, support::unaligned>
         Object(Value);
     return writeObject(Object);
   }

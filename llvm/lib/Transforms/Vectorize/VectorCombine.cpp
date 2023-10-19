@@ -101,7 +101,7 @@ private:
                        Instruction &I);
   bool foldExtractExtract(Instruction &I);
   bool foldInsExtFNeg(Instruction &I);
-  bool foldBitcastShuf(Instruction &I);
+  bool foldBitcastShuffle(Instruction &I);
   bool scalarizeBinopOrCmp(Instruction &I);
   bool scalarizeVPIntrinsic(Instruction &I);
   bool foldExtractedCmps(Instruction &I);
@@ -679,7 +679,7 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
 /// If this is a bitcast of a shuffle, try to bitcast the source vector to the
 /// destination type followed by shuffle. This can enable further transforms by
 /// moving bitcasts or shuffles together.
-bool VectorCombine::foldBitcastShuf(Instruction &I) {
+bool VectorCombine::foldBitcastShuffle(Instruction &I) {
   Value *V;
   ArrayRef<int> Mask;
   if (!match(&I, m_BitCast(
@@ -1473,11 +1473,11 @@ bool VectorCombine::foldShuffleFromReductions(Instruction &I) {
   bool UsesSecondVec =
       any_of(ConcatMask, [&](int M) { return M >= NumInputElts; });
   InstructionCost OldCost = TTI.getShuffleCost(
-      UsesSecondVec ? TTI::SK_PermuteTwoSrc : TTI::SK_PermuteSingleSrc, VecType,
-      Shuffle->getShuffleMask());
+      UsesSecondVec ? TTI::SK_PermuteTwoSrc : TTI::SK_PermuteSingleSrc,
+      UsesSecondVec ? VecType : ShuffleInputType, Shuffle->getShuffleMask());
   InstructionCost NewCost = TTI.getShuffleCost(
-      UsesSecondVec ? TTI::SK_PermuteTwoSrc : TTI::SK_PermuteSingleSrc, VecType,
-      ConcatMask);
+      UsesSecondVec ? TTI::SK_PermuteTwoSrc : TTI::SK_PermuteSingleSrc,
+      UsesSecondVec ? VecType : ShuffleInputType, ConcatMask);
 
   LLVM_DEBUG(dbgs() << "Found a reduction feeding from a shuffle: " << *Shuffle
                     << "\n");
@@ -1880,7 +1880,7 @@ bool VectorCombine::run() {
         MadeChange |= foldSelectShuffle(I);
         break;
       case Instruction::BitCast:
-        MadeChange |= foldBitcastShuf(I);
+        MadeChange |= foldBitcastShuffle(I);
         break;
       }
     } else {

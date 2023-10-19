@@ -7,7 +7,8 @@ try:
 except ImportError as e:
     raise RuntimeError("Error loading imports from extension module") from e
 
-from typing import Any, Optional, Sequence, Union
+from typing import Optional, Sequence, Union
+
 from ._ods_common import (
     get_op_result_or_value as _get_op_result_or_value,
     get_op_results_or_values as _get_op_results_or_values,
@@ -25,7 +26,7 @@ class ForOp:
         iter_args: Optional[Union[Operation, OpView, Sequence[Value]]] = None,
         *,
         loc=None,
-        ip=None
+        ip=None,
     ):
         """Creates an SCF `for` operation.
 

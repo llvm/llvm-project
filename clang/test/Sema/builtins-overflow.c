@@ -14,11 +14,11 @@ void test(void) {
   __builtin_add_overflow();  // expected-error {{too few arguments to function call, expected 3, have 0}}
   __builtin_add_overflow(1, 1, 1, 1);  // expected-error {{too many arguments to function call, expected 3, have 4}}
 
-  __builtin_add_overflow(c, 1, &r);  // expected-error {{operand argument to overflow builtin must be an integer ('const char *' invalid)}}
-  __builtin_add_overflow(1, c, &r);  // expected-error {{operand argument to overflow builtin must be an integer ('const char *' invalid)}}
-  __builtin_add_overflow(1, 1, 3);  // expected-error {{result argument to overflow builtin must be a pointer to a non-const integer ('int' invalid)}}
-  __builtin_add_overflow(1, 1, &f);  // expected-error {{result argument to overflow builtin must be a pointer to a non-const integer ('float *' invalid)}}
-  __builtin_add_overflow(1, 1, &q);  // expected-error {{result argument to overflow builtin must be a pointer to a non-const integer ('const unsigned int *' invalid)}}
+  __builtin_add_overflow(c, 1, &r);  // expected-error {{operand argument to overflow builtin must be an integer type ('const char *' invalid)}}
+  __builtin_add_overflow(1, c, &r);  // expected-error {{operand argument to overflow builtin must be an integer type ('const char *' invalid)}}
+  __builtin_add_overflow(1, 1, 3);  // expected-error {{result argument to overflow builtin must be a pointer to a non-const integer type ('int' invalid)}}
+  __builtin_add_overflow(1, 1, &f);  // expected-error {{result argument to overflow builtin must be a pointer to a non-const integer type ('float *' invalid)}}
+  __builtin_add_overflow(1, 1, &q);  // expected-error {{result argument to overflow builtin must be a pointer to a non-const integer type ('const unsigned int *' invalid)}}
 
   {
     _BitInt(128) x = 1;

@@ -5,7 +5,7 @@
 ; RUN: %if ptxas %{                                                           \
 ; RUN:   llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_90 -asm-verbose=false \
 ; RUN:          -O0 -disable-post-ra -frame-pointer=all -verify-machineinstrs \
-; RUN:   | %ptxas-verify -arch=sm_53                                          \
+; RUN:   | %ptxas-verify -arch=sm_90                                          \
 ; RUN: %}
 ; ## No support for i16x2 instructions
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_53 -asm-verbose=false \

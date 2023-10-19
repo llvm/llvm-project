@@ -750,6 +750,26 @@
 // AVXVNNIINT16NOAVX2-NOT: #define __AVX2__ 1
 // AVXVNNIINT16NOAVX2-NOT: #define __AVXVNNIINT16__ 1
 
+// RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavx10.1 -x c -E -dM -o - %s | FileCheck  -check-prefix=AVX10_1_256 %s
+// RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavx10.1-256 -x c -E -dM -o - %s | FileCheck  -check-prefix=AVX10_1_256 %s
+// RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavx10.1-256 -mno-avx512f -x c -E -dM -o - %s | FileCheck  -check-prefix=AVX10_1_256 %s
+// AVX10_1_256: #define __AVX10_1__ 1
+// AVX10_1_256: #define __AVX512F__ 1
+// AVX10_1_256-NOT: __EVEX512__
+
+// RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavx10.1-512 -x c -E -dM -o - %s | FileCheck  -check-prefix=AVX10_1_512 %s
+// RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavx10.1-512 -mno-avx512f -x c -E -dM -o - %s | FileCheck  -check-prefix=AVX10_1_512 %s
+// RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavx10.1-512 -mno-evex512 -x c -E -dM -o - %s | FileCheck  -check-prefix=AVX10_1_512 %s
+// AVX10_1_512: #define __AVX10_1__ 1
+// AVX10_1_512: #define __AVX512F__ 1
+// AVX10_1_512: #define __EVEX512__ 1
+
+// RUN: %clang -target i686-unknown-linux-gnu -march=atom -musermsr -x c -E -dM -o - %s | FileCheck  -check-prefix=USERMSR %s
+// USERMSR: #define __USERMSR__ 1
+
+// RUN: %clang -target i686-unknown-linux-gnu -march=atom -mno-usermsr -x c -E -dM -o - %s | FileCheck  -check-prefix=NO-USERMSR %s
+// NO-USERMSR-NOT: #define __USERMSR__ 1
+
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mcrc32 -x c -E -dM -o - %s | FileCheck -check-prefix=CRC32 %s
 
 // CRC32: #define __CRC32__ 1

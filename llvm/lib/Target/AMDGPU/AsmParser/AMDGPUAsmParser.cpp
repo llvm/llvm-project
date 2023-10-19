@@ -75,6 +75,7 @@ public:
     bool Abs = false;
     bool Neg = false;
     bool Sext = false;
+    bool Lit = false;
 
     bool hasFPModifiers() const { return Abs || Neg; }
     bool hasIntModifiers() const { return Sext; }
@@ -355,25 +356,20 @@ public:
     return isImm() && Imm.Type == ImmT;
   }
 
+  template <ImmTy Ty> bool isImmTy() const { return isImmTy(Ty); }
+
   bool isImmLiteral() const { return isImmTy(ImmTyNone); }
 
   bool isImmModifier() const {
     return isImm() && Imm.Type != ImmTyNone;
   }
 
-  bool isClampSI() const { return isImmTy(ImmTyClampSI); }
   bool isOModSI() const { return isImmTy(ImmTyOModSI); }
   bool isDMask() const { return isImmTy(ImmTyDMask); }
   bool isDim() const { return isImmTy(ImmTyDim); }
-  bool isUNorm() const { return isImmTy(ImmTyUNorm); }
-  bool isDA() const { return isImmTy(ImmTyDA); }
   bool isR128A16() const { return isImmTy(ImmTyR128A16); }
-  bool isA16() const { return isImmTy(ImmTyA16); }
-  bool isLWE() const { return isImmTy(ImmTyLWE); }
   bool isOff() const { return isImmTy(ImmTyOff); }
   bool isExpTgt() const { return isImmTy(ImmTyExpTgt); }
-  bool isExpVM() const { return isImmTy(ImmTyExpVM); }
-  bool isExpCompr() const { return isImmTy(ImmTyExpCompr); }
   bool isOffen() const { return isImmTy(ImmTyOffen); }
   bool isIdxen() const { return isImmTy(ImmTyIdxen); }
   bool isAddr64() const { return isImmTy(ImmTyAddr64); }
@@ -386,7 +382,6 @@ public:
   bool isLDS() const { return isImmTy(ImmTyLDS); }
   bool isCPol() const { return isImmTy(ImmTyCPol); }
   bool isTFE() const { return isImmTy(ImmTyTFE); }
-  bool isD16() const { return isImmTy(ImmTyD16); }
   bool isFORMAT() const { return isImmTy(ImmTyFORMAT) && isUInt<7>(getImm()); }
   bool isDppBankMask() const { return isImmTy(ImmTyDppBankMask); }
   bool isDppRowMask() const { return isImmTy(ImmTyDppRowMask); }
@@ -403,7 +398,6 @@ public:
   bool isOpSelHi() const { return isImmTy(ImmTyOpSelHi); }
   bool isNegLo() const { return isImmTy(ImmTyNegLo); }
   bool isNegHi() const { return isImmTy(ImmTyNegHi); }
-  bool isHigh() const { return isImmTy(ImmTyHigh); }
 
   bool isRegOrImm() const {
     return isReg() || isImm();
@@ -2140,9 +2134,10 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
           const_cast<AMDGPUAsmParser *>(AsmParser)->Warning(Inst.getLoc(),
           "Can't encode literal as exact 64-bit floating-point operand. "
           "Low 32-bits will be set to zero");
+          Val &= 0xffffffff00000000u;
         }
 
-        Inst.addOperand(MCOperand::createImm(Literal.lshr(32).getZExtValue()));
+        Inst.addOperand(MCOperand::createImm(Val));
         setImmKindLiteral();
         return;
       }
@@ -2241,7 +2236,10 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
       return;
     }
 
-    Inst.addOperand(MCOperand::createImm(Lo_32(Val)));
+    Val = AMDGPU::isSISrcFPOperand(InstDesc, OpNum) ? (uint64_t)Val << 32
+                                                    : Lo_32(Val);
+
+    Inst.addOperand(MCOperand::createImm(Val));
     setImmKindLiteral();
     return;
 
@@ -3005,7 +3003,7 @@ bool
 AMDGPUAsmParser::isNamedOperandModifier(const AsmToken &Token, const AsmToken &NextToken) const {
   if (Token.is(AsmToken::Identifier) && NextToken.is(AsmToken::LParen)) {
     const auto &str = Token.getString();
-    return str == "abs" || str == "neg" || str == "sext";
+    return str == "abs" || str == "neg" || str == "sext" || str == "lit";
   }
   return false;
 }
@@ -3094,6 +3092,7 @@ AMDGPUAsmParser::parseRegOrImmWithFPInputMods(OperandVector &Operands,
                                               bool AllowImm) {
   bool Neg, SP3Neg;
   bool Abs, SP3Abs;
+  bool Lit;
   SMLoc Loc;
 
   // Disable ambiguous constructs like '--1' etc. Should use neg(-1) instead.
@@ -3113,6 +3112,10 @@ AMDGPUAsmParser::parseRegOrImmWithFPInputMods(OperandVector &Operands,
   if (Abs && !skipToken(AsmToken::LParen, "expected left paren after abs"))
     return ParseStatus::Failure;
 
+  Lit = trySkipId("lit");
+  if (Lit && !skipToken(AsmToken::LParen, "expected left paren after lit"))
+    return ParseStatus::Failure;
+
   Loc = getLoc();
   SP3Abs = trySkipToken(AsmToken::Pipe);
   if (Abs && SP3Abs)
@@ -3125,7 +3128,10 @@ AMDGPUAsmParser::parseRegOrImmWithFPInputMods(OperandVector &Operands,
     Res = parseReg(Operands);
   }
   if (!Res.isSuccess())
-    return (SP3Neg || Neg || SP3Abs || Abs) ? ParseStatus::Failure : Res;
+    return (SP3Neg || Neg || SP3Abs || Abs || Lit) ? ParseStatus::Failure : Res;
+
+  if (Lit && !Operands.back()->isImm())
+    Error(Loc, "expected immediate with lit modifier");
 
   if (SP3Abs && !skipToken(AsmToken::Pipe, "expected vertical bar"))
     return ParseStatus::Failure;
@@ -3133,12 +3139,15 @@ AMDGPUAsmParser::parseRegOrImmWithFPInputMods(OperandVector &Operands,
     return ParseStatus::Failure;
   if (Neg && !skipToken(AsmToken::RParen, "expected closing parentheses"))
     return ParseStatus::Failure;
+  if (Lit && !skipToken(AsmToken::RParen, "expected closing parentheses"))
+    return ParseStatus::Failure;
 
   AMDGPUOperand::Modifiers Mods;
   Mods.Abs = Abs || SP3Abs;
   Mods.Neg = Neg || SP3Neg;
+  Mods.Lit = Lit;
 
-  if (Mods.hasFPModifiers()) {
+  if (Mods.hasFPModifiers() || Lit) {
     AMDGPUOperand &Op = static_cast<AMDGPUOperand &>(*Operands.back());
     if (Op.isExpr())
       return Error(Op.getStartLoc(), "expected an absolute expression");
@@ -4297,7 +4306,19 @@ bool AMDGPUAsmParser::validateVOPLiteral(const MCInst &Inst,
       continue;
 
     if (MO.isImm() && !isInlineConstant(Inst, OpIdx)) {
-      uint32_t Value = static_cast<uint32_t>(MO.getImm());
+      uint64_t Value = static_cast<uint64_t>(MO.getImm());
+      bool IsFP64 = AMDGPU::isSISrcFPOperand(Desc, OpIdx) &&
+                    AMDGPU::getOperandSize(Desc.operands()[OpIdx]) == 8;
+      bool IsValid32Op = AMDGPU::isValid32BitLiteral(Value, IsFP64);
+
+      if (!IsValid32Op && !isInt<32>(Value) && !isUInt<32>(Value)) {
+        Error(getLitLoc(Operands), "invalid operand for instruction");
+        return false;
+      }
+
+      if (IsFP64 && IsValid32Op)
+        Value = Hi_32(Value);
+
       if (NumLiterals == 0 || LiteralValue != Value) {
         LiteralValue = Value;
         ++NumLiterals;

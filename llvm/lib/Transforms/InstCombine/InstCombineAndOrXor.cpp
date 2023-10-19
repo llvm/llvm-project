@@ -2250,6 +2250,14 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     return SelectInst::Create(Cmp, ConstantInt::getNullValue(Ty), Y);
   }
 
+  // Canonicalize:
+  // (X +/- Y) & Y --> ~X & Y when Y is a power of 2.
+  if (match(&I, m_c_And(m_Value(Y), m_OneUse(m_CombineOr(
+                                        m_c_Add(m_Value(X), m_Deferred(Y)),
+                                        m_Sub(m_Value(X), m_Deferred(Y)))))) &&
+      isKnownToBeAPowerOfTwo(Y, /*OrZero*/ true, /*Depth*/ 0, &I))
+    return BinaryOperator::CreateAnd(Builder.CreateNot(X), Y);
+
   const APInt *C;
   if (match(Op1, m_APInt(C))) {
     const APInt *XorC;
@@ -2833,7 +2841,6 @@ static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC,
       return nullptr;
 
     FShiftArgs = {ShVal0, ShVal1, ShAmt};
-
   } else if (isa<ZExtInst>(Or0) || isa<ZExtInst>(Or1)) {
     // If there are two 'or' instructions concat variables in opposite order,
     // the latter one can be safely convert to fshl.

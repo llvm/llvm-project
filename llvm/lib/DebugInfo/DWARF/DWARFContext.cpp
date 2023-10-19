@@ -89,9 +89,12 @@ void fixupIndexV4(DWARFContext &C, DWARFUnitIndex &Index) {
     DWARFDataExtractor Data(DObj, S, C.isLittleEndian(), 0);
     while (Data.isValidOffset(Offset)) {
       DWARFUnitHeader Header;
-      if (!Header.extract(C, Data, &Offset, DWARFSectionKind::DW_SECT_INFO)) {
+      if (Error ExtractionErr = Header.extract(
+              C, Data, &Offset, DWARFSectionKind::DW_SECT_INFO)) {
         logAllUnhandledErrors(
-            createError("Failed to parse CU header in DWP file"), errs());
+            createError("Failed to parse CU header in DWP file: " +
+                        toString(std::move(ExtractionErr))),
+            errs());
         Map.clear();
         break;
       }
@@ -149,9 +152,12 @@ void fixupIndexV5(DWARFContext &C, DWARFUnitIndex &Index) {
     uint64_t Offset = 0;
     while (Data.isValidOffset(Offset)) {
       DWARFUnitHeader Header;
-      if (!Header.extract(C, Data, &Offset, DWARFSectionKind::DW_SECT_INFO)) {
+      if (Error ExtractionErr = Header.extract(
+              C, Data, &Offset, DWARFSectionKind::DW_SECT_INFO)) {
         logAllUnhandledErrors(
-            createError("Failed to parse unit header in DWP file"), errs());
+            createError("Failed to parse CU header in DWP file: " +
+                        toString(std::move(ExtractionErr))),
+            errs());
         break;
       }
       bool CU = Header.getUnitType() == DW_UT_split_compile;
@@ -575,12 +581,19 @@ public:
 
     auto S = std::make_shared<DWOFile>();
     S->File = std::move(Obj.get());
-    S->Context = DWARFContext::create(*S->File.getBinary(),
-                                      DWARFContext::ProcessDebugRelocations::Ignore);
+    // Allow multi-threaded access if there is a .dwp file as the CU index and
+    // TU index might be accessed from multiple threads.
+    bool ThreadSafe = isThreadSafe();
+    S->Context = DWARFContext::create(
+        *S->File.getBinary(), DWARFContext::ProcessDebugRelocations::Ignore,
+        nullptr, "", WithColor::defaultErrorHandler,
+        WithColor::defaultWarningHandler, ThreadSafe);
     *Entry = S;
     auto *Ctxt = S->Context.get();
     return std::shared_ptr<DWARFContext>(std::move(S), Ctxt);
   }
+
+  bool isThreadSafe() const override { return false; }
 
   const DenseMap<uint64_t, DWARFTypeUnit *> &getNormalTypeUnitMap() {
     if (!NormalTypeUnits) {
@@ -717,6 +730,9 @@ public:
     std::unique_lock<std::recursive_mutex> LockGuard(Mutex);
     return ThreadUnsafeDWARFContextState::getDWOContext(AbsolutePath);
   }
+
+  bool isThreadSafe() const override { return true; }
+
   const DenseMap<uint64_t, DWARFTypeUnit *> &
   getTypeUnitMap(bool IsDWO) override {
     std::unique_lock<std::recursive_mutex> LockGuard(Mutex);

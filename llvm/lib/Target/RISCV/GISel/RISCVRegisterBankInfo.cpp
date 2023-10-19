@@ -67,17 +67,25 @@ RISCVRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
   default:
     llvm_unreachable("Register class not supported");
   case RISCV::GPRRegClassID:
+  case RISCV::GPRF16RegClassID:
+  case RISCV::GPRF32RegClassID:
   case RISCV::GPRNoX0RegClassID:
   case RISCV::GPRNoX0X2RegClassID:
-  case RISCV::GPRTCRegClassID:
-  case RISCV::GPRCRegClassID:
-  case RISCV::GPRC_and_GPRTCRegClassID:
-  case RISCV::GPRC_and_SR07RegClassID:
-  case RISCV::GPRX0RegClassID:
   case RISCV::GPRJALRRegClassID:
-  case RISCV::SPRegClassID:
+  case RISCV::GPRTCRegClassID:
+  case RISCV::GPRC_and_GPRTCRegClassID:
+  case RISCV::GPRCRegClassID:
+  case RISCV::GPRC_and_SR07RegClassID:
   case RISCV::SR07RegClassID:
+  case RISCV::SPRegClassID:
+  case RISCV::GPRX0RegClassID:
     return getRegBank(RISCV::GPRRegBankID);
+  case RISCV::FPR64RegClassID:
+  case RISCV::FPR16RegClassID:
+  case RISCV::FPR32RegClassID:
+  case RISCV::FPR64CRegClassID:
+  case RISCV::FPR32CRegClassID:
+    return getRegBank(RISCV::FPRRegBankID);
   }
 }
 
@@ -127,6 +135,7 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_STORE:
     break;
   case TargetOpcode::G_CONSTANT:
+  case TargetOpcode::G_FRAME_INDEX:
   case TargetOpcode::G_GLOBAL_VALUE:
   case TargetOpcode::G_BRCOND:
     OperandsMapping = getOperandsMapping({GPRValueMapping, nullptr});
