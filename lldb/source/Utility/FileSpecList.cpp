@@ -140,12 +140,6 @@ const FileSpec &FileSpecList::GetFileSpecAtIndex(size_t idx) const {
   return g_empty_file_spec;
 }
 
-const FileSpec *FileSpecList::GetFileSpecPointerAtIndex(size_t idx) const {
-  if (idx < m_files.size())
-    return &m_files[idx];
-  return nullptr;
-}
-
 // Return the size in bytes that this object takes in memory. This returns the
 // size in bytes of this object's member variables and any FileSpec objects its
 // member variables contain, the result doesn't not include the string values
