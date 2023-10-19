@@ -16,11 +16,9 @@
 #include <errno.h>
 #include <stdint.h>
 
-using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
+using LlvmLibcAsinfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
-DECLARE_SPECIAL_CONSTANTS(float)
-
-TEST(LlvmLibcAsinfTest, SpecialNumbers) {
+TEST_F(LlvmLibcAsinfTest, SpecialNumbers) {
   libc_errno = 0;
 
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::asinf(aNaN));
