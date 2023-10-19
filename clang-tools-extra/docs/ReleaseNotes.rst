@@ -163,6 +163,13 @@ New checks
   Flags coroutines that suspend while a lock guard is in scope at the
   suspension point.
 
+- New :doc:`misc-coroutine-hostile-raii
+  <clang-tidy/checks/misc/coroutine-hostile-raii>` check.
+
+  Detects when objects of certain hostile RAII types persists across suspension
+  points in a coroutine. Such hostile types include scoped-lockable types and
+  types belonging to a configurable denylist.
+
 - New :doc:`modernize-use-constraints
   <clang-tidy/checks/modernize/use-constraints>` check.
 
@@ -237,6 +244,10 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/pro-type-vararg>` check to ignore
   false-positives in unevaluated context (e.g., ``decltype``, ``sizeof``, ...).
 
+- Improved :doc:`cppcoreguidelines-rvalue-reference-param-not-moved
+  <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>` check
+  to ignore unused parameters when they are marked as unused.
+
 - Improved :doc:`llvm-namespace-comment
   <clang-tidy/checks/llvm/namespace-comment>` check to provide fixes for
   ``inline`` namespaces in the same format as :program:`clang-format`.
@@ -267,7 +278,8 @@ Changes in existing checks
 
 - Improved :doc:`modernize-loop-convert
   <clang-tidy/checks/modernize/loop-convert>` to support for-loops with
-  iterators initialized by free functions like ``begin``, ``end``, or ``size``.
+  iterators initialized by free functions like ``begin``, ``end``, or ``size``
+  and avoid crash for array of dependent array.
 
 - Improved :doc:`modernize-return-braced-init-list
   <clang-tidy/checks/modernize/return-braced-init-list>` check to ignore

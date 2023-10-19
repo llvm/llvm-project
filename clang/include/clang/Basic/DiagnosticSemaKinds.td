@@ -3864,7 +3864,7 @@ def warn_fun_requires_negative_cap : Warning<
   "calling function %0 requires negative capability '%1'">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
 
-// Thread safety warnings on pass by reference
+// Thread safety warnings on pass/return by reference
 def warn_guarded_pass_by_reference : Warning<
   "passing variable %1 by reference requires holding %0 "
   "%select{'%2'|'%2' exclusively}3">,
@@ -3873,6 +3873,14 @@ def warn_pt_guarded_pass_by_reference : Warning<
   "passing the value that %1 points to by reference requires holding %0 "
   "%select{'%2'|'%2' exclusively}3">,
   InGroup<ThreadSafetyReference>, DefaultIgnore;
+def warn_guarded_return_by_reference : Warning<
+  "returning variable %1 by reference requires holding %0 "
+  "%select{'%2'|'%2' exclusively}3">,
+  InGroup<ThreadSafetyReferenceReturn>, DefaultIgnore;
+def warn_pt_guarded_return_by_reference : Warning<
+  "returning the value that %1 points to by reference requires holding %0 "
+  "%select{'%2'|'%2' exclusively}3">,
+  InGroup<ThreadSafetyReferenceReturn>, DefaultIgnore;
 
 // Imprecise thread safety warnings
 def warn_variable_requires_lock : Warning<
@@ -6171,6 +6179,9 @@ def warn_signed_bitfield_enum_conversion : Warning<
   "signed bit-field %0 needs an extra bit to represent the largest positive "
   "enumerators of %1">,
   InGroup<BitFieldEnumConversion>, DefaultIgnore;
+def warn_bitfield_too_small_for_integral_type : Warning<
+  "conversion from %2 (%3 bits) to bit-field %0 (%1 bits) may change value">,
+  InGroup<BitFieldConversion>, DefaultIgnore;
 def note_change_bitfield_sign : Note<
   "consider making the bitfield type %select{unsigned|signed}0">;
 
@@ -6388,6 +6399,17 @@ def warn_variable_sized_ivar_visibility : Warning<
 def warn_superclass_variable_sized_type_not_at_end : Warning<
   "field %0 can overwrite instance variable %1 with variable sized type %2"
   " in superclass %3">, InGroup<ObjCFlexibleArray>;
+
+def err_counted_by_attr_not_on_flexible_array_member : Error<
+  "'counted_by' only applies to flexible array members">;
+def err_counted_by_attr_refers_to_flexible_array : Error<
+  "'counted_by' cannot refer to the flexible array %0">;
+def err_counted_by_must_be_in_structure : Error<
+  "field %0 in 'counted_by' not inside structure">;
+def err_flexible_array_counted_by_attr_field_not_integer : Error<
+  "field %0 in 'counted_by' must be a non-boolean integer type">;
+def note_flexible_array_counted_by_attr_field : Note<
+  "field %0 declared here">;
 
 let CategoryName = "ARC Semantic Issue" in {
 
@@ -8679,10 +8701,13 @@ def warn_atomic_implicit_seq_cst : Warning<
   InGroup<DiagGroup<"atomic-implicit-seq-cst">>, DefaultIgnore;
 
 def err_overflow_builtin_must_be_int : Error<
-  "operand argument to overflow builtin must be an integer (%0 invalid)">;
+  "operand argument to %select{overflow builtin|checked integer operation}0 "
+  "must be an integer type %select{|other than plain 'char', 'bool', bit-precise, "
+  "or an enumeration }0(%1 invalid)">;
 def err_overflow_builtin_must_be_ptr_int : Error<
-  "result argument to overflow builtin must be a pointer "
-  "to a non-const integer (%0 invalid)">;
+  "result argument to %select{overflow builtin|checked integer operation}0 "
+  "must be a pointer to a non-const integer type %select{|other than plain 'char', "
+  "'bool', bit-precise, or an enumeration }0(%1 invalid)">;
 def err_overflow_builtin_bit_int_max_size : Error<
   "__builtin_mul_overflow does not support 'signed _BitInt' operands of more "
   "than %0 bits">;
@@ -10144,8 +10169,8 @@ def err_shufflevector_argument_too_large : Error<
 
 def err_convertvector_non_vector : Error<
   "first argument to __builtin_convertvector must be a vector">;
-def err_convertvector_non_vector_type : Error<
-  "second argument to __builtin_convertvector must be a vector type">;
+def err_builtin_non_vector_type : Error<
+  "%0 argument to %1 must be of vector type">;
 def err_convertvector_incompatible_vector : Error<
   "first two arguments to __builtin_convertvector must have the same number of elements">;
 

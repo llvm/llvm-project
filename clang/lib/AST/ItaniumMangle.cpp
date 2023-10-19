@@ -3429,6 +3429,7 @@ StringRef CXXNameMangler::getCallingConvQualifierName(CallingConv CC) {
   case CC_OpenCLKernel:
   case CC_PreserveMost:
   case CC_PreserveAll:
+  case CC_M68kRTD:
     // FIXME: we should be mangling all of the above.
     return "";
 
@@ -5123,6 +5124,14 @@ recurse:
       unsigned DiagID = Diags.getCustomDiagID(
           DiagnosticsEngine::Error,
           "cannot yet mangle __builtin_omp_required_simd_align expression");
+      Diags.Report(DiagID);
+      return;
+    }
+    case UETT_VectorElements: {
+      DiagnosticsEngine &Diags = Context.getDiags();
+      unsigned DiagID = Diags.getCustomDiagID(
+          DiagnosticsEngine::Error,
+          "cannot yet mangle __builtin_vectorelements expression");
       Diags.Report(DiagID);
       return;
     }

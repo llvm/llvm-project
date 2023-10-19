@@ -66,6 +66,11 @@ using namespace clang;
 using namespace CodeGen;
 using namespace llvm;
 
+static llvm::cl::opt<bool> ClSanitizeAlignmentBuiltin(
+    "sanitize-alignment-builtin", llvm::cl::Hidden,
+    llvm::cl::desc("Instrument builtin functions for -fsanitize=alignment"),
+    llvm::cl::init(true));
+
 static void initializeAlloca(CodeGenFunction &CGF, AllocaInst *AI, Value *Size,
                              Align AlignmentInBytes) {
   ConstantInt *Byte;
@@ -850,6 +855,57 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
 
       return EmitLoadOfScalar(DIter->second, /*Volatile=*/false,
                               getContext().getSizeType(), E->getBeginLoc());
+    }
+  }
+
+  if (IsDynamic) {
+    LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
+        getLangOpts().getStrictFlexArraysLevel();
+    const Expr *Base = E->IgnoreParenImpCasts();
+
+    if (FieldDecl *FD = FindCountedByField(Base, StrictFlexArraysLevel)) {
+      const auto *ME = dyn_cast<MemberExpr>(Base);
+      llvm::Value *ObjectSize = nullptr;
+
+      if (!ME) {
+        const auto *DRE = dyn_cast<DeclRefExpr>(Base);
+        ValueDecl *VD = nullptr;
+
+        ObjectSize = ConstantInt::get(
+            ResType,
+            getContext().getTypeSize(DRE->getType()->getPointeeType()) / 8,
+            true);
+
+        if (auto *RD = DRE->getType()->getPointeeType()->getAsRecordDecl())
+          VD = RD->getLastField();
+
+        Expr *ICE = ImplicitCastExpr::Create(
+            getContext(), DRE->getType(), CK_LValueToRValue,
+            const_cast<Expr *>(cast<Expr>(DRE)), nullptr, VK_PRValue,
+            FPOptionsOverride());
+        ME = MemberExpr::CreateImplicit(getContext(), ICE, true, VD,
+                                        VD->getType(), VK_LValue, OK_Ordinary);
+      }
+
+      // At this point, we know that \p ME is a flexible array member.
+      const auto *ArrayTy = getContext().getAsArrayType(ME->getType());
+      unsigned Size = getContext().getTypeSize(ArrayTy->getElementType());
+
+      llvm::Value *CountField =
+          EmitAnyExprToTemp(MemberExpr::CreateImplicit(
+                                getContext(), const_cast<Expr *>(ME->getBase()),
+                                ME->isArrow(), FD, FD->getType(), VK_LValue,
+                                OK_Ordinary))
+              .getScalarVal();
+
+      llvm::Value *Mul = Builder.CreateMul(
+          CountField, llvm::ConstantInt::get(CountField->getType(), Size / 8));
+      Mul = Builder.CreateZExtOrTrunc(Mul, ResType);
+
+      if (ObjectSize)
+        return Builder.CreateAdd(ObjectSize, Mul);
+
+      return Mul;
     }
   }
 
@@ -2276,6 +2332,19 @@ static Value *tryUseTestFPKind(CodeGenFunction &CGF, unsigned BuiltinID,
   return nullptr;
 }
 
+static RValue EmitHipStdParUnsupportedBuiltin(CodeGenFunction *CGF,
+                                              const FunctionDecl *FD) {
+  auto Name = FD->getNameAsString() + "__hipstdpar_unsupported";
+  auto FnTy = CGF->CGM.getTypes().GetFunctionType(FD);
+  auto UBF = CGF->CGM.getModule().getOrInsertFunction(Name, FnTy);
+
+  SmallVector<Value *, 16> Args;
+  for (auto &&FormalTy : FnTy->params())
+    Args.push_back(llvm::PoisonValue::get(FormalTy));
+
+  return RValue::get(CGF->Builder.CreateCall(UBF, Args));
+}
+
 RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                         const CallExpr *E,
                                         ReturnValueSlot ReturnValue) {
@@ -2737,7 +2806,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     EmitNonNullArgCheck(RValue::get(Val), Arg->getType(), Arg->getExprLoc(), FD,
                         ParmNum);
 
-    if (SanOpts.has(SanitizerKind::Alignment)) {
+    if (SanOpts.has(SanitizerKind::Alignment) && ClSanitizeAlignmentBuiltin) {
       SanitizerSet SkippedChecks;
       SkippedChecks.set(SanitizerKind::All);
       SkippedChecks.clear(SanitizerKind::Alignment);
@@ -5714,6 +5783,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm_unreachable("Bad evaluation kind in EmitBuiltinExpr");
   }
 
+  if (getLangOpts().HIPStdPar && getLangOpts().CUDAIsDevice)
+    return EmitHipStdParUnsupportedBuiltin(this, FD);
+
   ErrorUnsupported(E, "builtin function");
 
   // Unknown builtin, for now just dump it out and return undef.
@@ -5724,6 +5796,16 @@ static Value *EmitTargetArchBuiltinExpr(CodeGenFunction *CGF,
                                         unsigned BuiltinID, const CallExpr *E,
                                         ReturnValueSlot ReturnValue,
                                         llvm::Triple::ArchType Arch) {
+  // When compiling in HipStdPar mode we have to be conservative in rejecting
+  // target specific features in the FE, and defer the possible error to the
+  // AcceleratorCodeSelection pass, wherein iff an unsupported target builtin is
+  // referenced by an accelerator executable function, we emit an error.
+  // Returning nullptr here leads to the builtin being handled in
+  // EmitStdParUnsupportedBuiltin.
+  if (CGF->getLangOpts().HIPStdPar && CGF->getLangOpts().CUDAIsDevice &&
+      Arch != CGF->getTarget().getTriple().getArch())
+    return nullptr;
+
   switch (Arch) {
   case llvm::Triple::arm:
   case llvm::Triple::armeb:
@@ -9617,11 +9699,6 @@ Value *CodeGenFunction::EmitSVEMaskedStore(const CallExpr *E,
   return Store;
 }
 
-Value *CodeGenFunction::EmitTileslice(Value *Offset, Value *Base) {
-  llvm::Value *CastOffset = Builder.CreateIntCast(Offset, Int32Ty, false);
-  return Builder.CreateAdd(Base, CastOffset, "tileslice");
-}
-
 Value *CodeGenFunction::EmitSMELd1St1(const SVETypeFlags &TypeFlags,
                                       SmallVectorImpl<Value *> &Ops,
                                       unsigned IntID) {
@@ -9680,13 +9757,13 @@ Value *CodeGenFunction::EmitSMELdrStr(const SVETypeFlags &TypeFlags,
   if (Ops.size() == 3) {
     Function *Cntsb = CGM.getIntrinsic(Intrinsic::aarch64_sme_cntsb);
     llvm::Value *CntsbCall = Builder.CreateCall(Cntsb, {}, "svlb");
-    llvm::Value *MulVL = Builder.CreateMul(
-        CntsbCall,
-        Builder.getInt64(cast<llvm::ConstantInt>(Ops[2])->getZExtValue()),
-        "mulvl");
+
+    llvm::Value *VecNum = Ops[2];
+    llvm::Value *MulVL = Builder.CreateMul(CntsbCall, VecNum, "mulvl");
 
     Ops[1] = Builder.CreateGEP(Int8Ty, Ops[1], MulVL);
-    Ops[0] = EmitTileslice(Ops[0], Ops[2]);
+    Ops[0] = Builder.CreateAdd(
+        Ops[0], Builder.CreateIntCast(VecNum, Int32Ty, true), "tileslice");
     Ops.erase(&Ops[2]);
   }
   Function *F = CGM.getIntrinsic(IntID, {});
@@ -9777,6 +9854,41 @@ Value *CodeGenFunction::EmitSVETupleCreate(const SVETypeFlags &TypeFlags,
     Value *Idx = ConstantInt::get(CGM.Int64Ty, I * MinElts);
     Call = Builder.CreateInsertVector(Ty, Call, Ops[I], Idx);
   }
+
+  return Call;
+}
+
+Value *CodeGenFunction::FormSVEBuiltinResult(Value *Call) {
+  // Multi-vector results should be broken up into a single (wide) result
+  // vector.
+  auto *StructTy = dyn_cast<StructType>(Call->getType());
+  if (!StructTy)
+    return Call;
+
+  auto *VTy = dyn_cast<ScalableVectorType>(StructTy->getTypeAtIndex(0U));
+  if (!VTy)
+    return Call;
+  unsigned N = StructTy->getNumElements();
+
+  // We may need to emit a cast to a svbool_t
+  bool IsPredTy = VTy->getElementType()->isIntegerTy(1);
+  unsigned MinElts = IsPredTy ? 16 : VTy->getMinNumElements();
+
+  ScalableVectorType *WideVTy =
+      ScalableVectorType::get(VTy->getElementType(), MinElts * N);
+  Value *Ret = llvm::PoisonValue::get(WideVTy);
+  for (unsigned I = 0; I < N; ++I) {
+    Value *SRet = Builder.CreateExtractValue(Call, I);
+    assert(SRet->getType() == VTy && "Unexpected type for result value");
+    Value *Idx = ConstantInt::get(CGM.Int64Ty, I * MinElts);
+
+    if (IsPredTy)
+      SRet = EmitSVEPredicateCast(
+          SRet, ScalableVectorType::get(Builder.getInt1Ty(), 16));
+
+    Ret = Builder.CreateInsertVector(WideVTy, Ret, SRet, Idx);
+  }
+  Call = Ret;
 
   return Call;
 }
@@ -9894,13 +10006,39 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
       if (PredTy->getScalarType()->isIntegerTy(1))
         Call = EmitSVEPredicateCast(Call, cast<llvm::ScalableVectorType>(Ty));
 
-    return Call;
+    return FormSVEBuiltinResult(Call);
   }
 
   switch (BuiltinID) {
   default:
     return nullptr;
+  case SVE::BI__builtin_sve_svpsel_lane_b8:
+  case SVE::BI__builtin_sve_svpsel_lane_b16:
+  case SVE::BI__builtin_sve_svpsel_lane_b32:
+  case SVE::BI__builtin_sve_svpsel_lane_b64:
+  case SVE::BI__builtin_sve_svpsel_lane_c8:
+  case SVE::BI__builtin_sve_svpsel_lane_c16:
+  case SVE::BI__builtin_sve_svpsel_lane_c32:
+  case SVE::BI__builtin_sve_svpsel_lane_c64: {
+    bool IsSVCount = isa<TargetExtType>(Ops[0]->getType());
+    assert(((!IsSVCount || cast<TargetExtType>(Ops[0]->getType())->getName() ==
+                               "aarch64.svcount")) &&
+           "Unexpected TargetExtType");
+    auto SVCountTy =
+        llvm::TargetExtType::get(getLLVMContext(), "aarch64.svcount");
+    Function *CastFromSVCountF =
+        CGM.getIntrinsic(Intrinsic::aarch64_sve_convert_to_svbool, SVCountTy);
+    Function *CastToSVCountF =
+        CGM.getIntrinsic(Intrinsic::aarch64_sve_convert_from_svbool, SVCountTy);
 
+    auto OverloadedTy = getSVEType(SVETypeFlags(Builtin->TypeModifier));
+    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_sve_psel, OverloadedTy);
+    llvm::Value *Ops0 =
+        IsSVCount ? Builder.CreateCall(CastFromSVCountF, Ops[0]) : Ops[0];
+    llvm::Value *Ops1 = EmitSVEPredicateCast(Ops[1], OverloadedTy);
+    llvm::Value *PSel = Builder.CreateCall(F, {Ops0, Ops1, Ops[2]});
+    return IsSVCount ? Builder.CreateCall(CastToSVCountF, PSel) : PSel;
+  }
   case SVE::BI__builtin_sve_svmov_b_z: {
     // svmov_b_z(pg, op) <=> svand_b_z(pg, op, op)
     SVETypeFlags TypeFlags(Builtin->TypeModifier);
@@ -10021,6 +10159,13 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
 
   case SVE::BI__builtin_sve_svpfalse_b:
     return ConstantInt::getFalse(Ty);
+
+  case SVE::BI__builtin_sve_svpfalse_c: {
+    auto SVBoolTy = ScalableVectorType::get(Builder.getInt1Ty(), 16);
+    Function *CastToSVCountF =
+        CGM.getIntrinsic(Intrinsic::aarch64_sve_convert_from_svbool, Ty);
+    return Builder.CreateCall(CastToSVCountF, ConstantInt::getFalse(SVBoolTy));
+  }
 
   case SVE::BI__builtin_sve_svlen_bf16:
   case SVE::BI__builtin_sve_svlen_f16:
@@ -10840,6 +10985,15 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     if (BuiltinID == AArch64::BI_CountOneBits64)
       Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
     return Result;
+  }
+
+  if (BuiltinID == AArch64::BI__prefetch) {
+    Value *Address = EmitScalarExpr(E->getArg(0));
+    Value *RW = llvm::ConstantInt::get(Int32Ty, 0);
+    Value *Locality = ConstantInt::get(Int32Ty, 3);
+    Value *Data = llvm::ConstantInt::get(Int32Ty, 1);
+    Function *F = CGM.getIntrinsic(Intrinsic::prefetch, Address->getType());
+    return Builder.CreateCall(F, {Address, RW, Locality, Data});
   }
 
   // Handle MSVC intrinsics before argument evaluation to prevent double

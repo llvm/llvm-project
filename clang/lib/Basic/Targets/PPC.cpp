@@ -753,6 +753,8 @@ void PPCTargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
   }
 }
 
+// Make sure that registers are added in the correct array index which should be
+// the DWARF number for PPC registers.
 const char *const PPCTargetInfo::GCCRegNames[] = {
     "r0",  "r1",     "r2",   "r3",      "r4",      "r5",  "r6",  "r7",  "r8",
     "r9",  "r10",    "r11",  "r12",     "r13",     "r14", "r15", "r16", "r17",
@@ -807,6 +809,7 @@ ArrayRef<TargetInfo::GCCRegAlias> PPCTargetInfo::getGCCRegAliases() const {
 // PPC ELFABIv2 DWARF Definition "Table 2.26. Mappings of Common Registers".
 // vs0 ~ vs31 is mapping to 32 - 63,
 // vs32 ~ vs63 is mapping to 77 - 108.
+// And this mapping applies to all OSes which run on powerpc.
 const TargetInfo::AddlRegName GCCAddlRegNames[] = {
     // Table of additional register names to use in user input.
     {{"vs0"}, 32},   {{"vs1"}, 33},   {{"vs2"}, 34},   {{"vs3"}, 35},
@@ -828,10 +831,7 @@ const TargetInfo::AddlRegName GCCAddlRegNames[] = {
 };
 
 ArrayRef<TargetInfo::AddlRegName> PPCTargetInfo::getGCCAddlRegNames() const {
-  if (ABI == "elfv2")
-    return llvm::ArrayRef(GCCAddlRegNames);
-  else
-    return TargetInfo::getGCCAddlRegNames();
+  return llvm::ArrayRef(GCCAddlRegNames);
 }
 
 static constexpr llvm::StringLiteral ValidCPUNames[] = {

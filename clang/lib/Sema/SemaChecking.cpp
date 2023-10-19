@@ -370,6 +370,32 @@ static bool SemaBuiltinOverflow(Sema &S, CallExpr *TheCall,
   if (checkArgCount(S, TheCall, 3))
     return true;
 
+  std::pair<unsigned, const char *> Builtins[] = {
+    { Builtin::BI__builtin_add_overflow, "ckd_add" },
+    { Builtin::BI__builtin_sub_overflow, "ckd_sub" },
+    { Builtin::BI__builtin_mul_overflow, "ckd_mul" },
+  };
+
+  bool CkdOperation = llvm::any_of(Builtins, [&](const std::pair<unsigned,
+    const char *> &P) {
+    return BuiltinID == P.first && TheCall->getExprLoc().isMacroID() &&
+         Lexer::getImmediateMacroName(TheCall->getExprLoc(),
+         S.getSourceManager(), S.getLangOpts()) == P.second;
+  });
+
+  auto ValidCkdIntType = [](QualType QT) {
+    // A valid checked integer type is an integer type other than a plain char,
+    // bool, a bit-precise type, or an enumeration type.
+    if (const auto *BT = QT.getCanonicalType()->getAs<BuiltinType>())
+      return (BT->getKind() >= BuiltinType::Short &&
+           BT->getKind() <= BuiltinType::Int128) || (
+           BT->getKind() >= BuiltinType::UShort &&
+           BT->getKind() <= BuiltinType::UInt128) ||
+           BT->getKind() == BuiltinType::UChar ||
+           BT->getKind() == BuiltinType::SChar;
+    return false;
+  };
+
   // First two arguments should be integers.
   for (unsigned I = 0; I < 2; ++I) {
     ExprResult Arg = S.DefaultFunctionArrayLvalueConversion(TheCall->getArg(I));
@@ -377,9 +403,10 @@ static bool SemaBuiltinOverflow(Sema &S, CallExpr *TheCall,
     TheCall->setArg(I, Arg.get());
 
     QualType Ty = Arg.get()->getType();
-    if (!Ty->isIntegerType()) {
+    bool IsValid = CkdOperation ? ValidCkdIntType(Ty) : Ty->isIntegerType();
+    if (!IsValid) {
       S.Diag(Arg.get()->getBeginLoc(), diag::err_overflow_builtin_must_be_int)
-          << Ty << Arg.get()->getSourceRange();
+          << CkdOperation << Ty << Arg.get()->getSourceRange();
       return true;
     }
   }
@@ -396,10 +423,11 @@ static bool SemaBuiltinOverflow(Sema &S, CallExpr *TheCall,
     const auto *PtrTy = Ty->getAs<PointerType>();
     if (!PtrTy ||
         !PtrTy->getPointeeType()->isIntegerType() ||
+        (!ValidCkdIntType(PtrTy->getPointeeType()) && CkdOperation) ||
         PtrTy->getPointeeType().isConstQualified()) {
       S.Diag(Arg.get()->getBeginLoc(),
              diag::err_overflow_builtin_must_be_ptr_int)
-        << Ty << Arg.get()->getSourceRange();
+        << CkdOperation << Ty << Arg.get()->getSourceRange();
       return true;
     }
   }
@@ -3090,6 +3118,11 @@ bool Sema::CheckSVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       break;
     case SVETypeFlags::ImmCheck0_255:
       if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 0, 255))
+        HasError = true;
+      break;
+    case SVETypeFlags::ImmCheck2_4_Mul2:
+      if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 2, 4) ||
+          SemaBuiltinConstantArgMultiple(TheCall, ArgNum, 2))
         HasError = true;
       break;
     }
@@ -6047,7 +6080,7 @@ bool Sema::CheckX86BuiltinTileDuplicate(CallExpr *TheCall,
     if (SemaBuiltinConstantArg(TheCall, ArgNum, Result))
       return true;
     int ArgExtValue = Result.getExtValue();
-    assert((ArgExtValue >= TileRegLow || ArgExtValue <= TileRegHigh) &&
+    assert((ArgExtValue >= TileRegLow && ArgExtValue <= TileRegHigh) &&
            "Incorrect tile register num.");
     if (ArgValues.test(ArgExtValue))
       return Diag(TheCall->getBeginLoc(),
@@ -8719,8 +8752,9 @@ ExprResult Sema::SemaConvertVectorExpr(Expr *E, TypeSourceInfo *TInfo,
                           diag::err_convertvector_non_vector)
                      << E->getSourceRange());
   if (!DstTy->isVectorType() && !DstTy->isDependentType())
-    return ExprError(Diag(BuiltinLoc,
-                          diag::err_convertvector_non_vector_type));
+    return ExprError(Diag(BuiltinLoc, diag::err_builtin_non_vector_type)
+                     << "second"
+                     << "__builtin_convertvector");
 
   if (!SrcTy->isDependentType() && !DstTy->isDependentType()) {
     unsigned SrcElts = SrcTy->castAs<VectorType>()->getNumElements();
@@ -14298,6 +14332,18 @@ static bool AnalyzeBitFieldAssignment(Sema &S, FieldDecl *Bitfield, Expr *Init,
         S.Diag(WidthExpr->getExprLoc(), diag::note_widen_bitfield)
             << BitsNeeded << ED << WidthExpr->getSourceRange();
       }
+    } else if (OriginalInit->getType()->isIntegralType(S.Context)) {
+      IntRange LikelySourceRange =
+          GetExprRange(S.Context, Init, S.isConstantEvaluatedContext(),
+                       /*Approximate=*/true);
+
+      if (LikelySourceRange.Width > FieldWidth) {
+        Expr *WidthExpr = Bitfield->getBitWidth();
+        S.Diag(InitLoc, diag::warn_bitfield_too_small_for_integral_type)
+            << Bitfield << FieldWidth << OriginalInit->getType()
+            << LikelySourceRange.Width;
+        S.Diag(WidthExpr->getExprLoc(), diag::note_declared_at);
+      }
     }
 
     return false;
@@ -15195,7 +15241,6 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
 
   if (LikelySourceRange.Width > TargetRange.Width) {
     // If the source is a constant, use a default-on diagnostic.
-    // TODO: this should happen for bitfield stores, too.
     Expr::EvalResult Result;
     if (E->EvaluateAsInt(Result, S.Context, Expr::SE_AllowSideEffects,
                          S.isConstantEvaluatedContext())) {

@@ -653,13 +653,20 @@ static bool canCreateThunkFor(Function *F) {
   // Don't merge tiny functions using a thunk, since it can just end up
   // making the function larger.
   if (F->size() == 1) {
-    if (F->front().size() <= 2) {
+    if (F->front().sizeWithoutDebug() < 2) {
       LLVM_DEBUG(dbgs() << "canCreateThunkFor: " << F->getName()
                         << " is too small to bother creating a thunk for\n");
       return false;
     }
   }
   return true;
+}
+
+/// Copy metadata from one function to another.
+static void copyMetadataIfPresent(Function *From, Function *To, StringRef Key) {
+  if (MDNode *MD = From->getMetadata(Key)) {
+    To->setMetadata(Key, MD);
+  }
 }
 
 // Replace G with a simple tail call to bitcast(F). Also (unless
@@ -740,6 +747,9 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
   } else {
     NewG->copyAttributesFrom(G);
     NewG->takeName(G);
+    // Ensure CFI type metadata is propagated to the new function.
+    copyMetadataIfPresent(G, NewG, "type");
+    copyMetadataIfPresent(G, NewG, "kcfi_type");
     removeUsers(G);
     G->replaceAllUsesWith(NewG);
     G->eraseFromParent();
@@ -815,6 +825,9 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
                                       F->getAddressSpace(), "", F->getParent());
     NewF->copyAttributesFrom(F);
     NewF->takeName(F);
+    // Ensure CFI type metadata is propagated to the new function.
+    copyMetadataIfPresent(F, NewF, "type");
+    copyMetadataIfPresent(F, NewF, "kcfi_type");
     removeUsers(F);
     F->replaceAllUsesWith(NewF);
 
