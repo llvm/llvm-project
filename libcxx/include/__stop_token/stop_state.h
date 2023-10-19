@@ -181,17 +181,6 @@ public:
   }
 
   _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool __add_callback(__stop_callback_base* __cb) noexcept {
-    // If it is already stop_requested. Do not try to request it again.
-    const auto __give_up_trying_to_lock_condition = [__cb](__state_t __state) {
-      if ((__state & __stop_requested_bit) != 0) {
-        // already stop requested, synchronously run the callback and no need to lock the list again
-        __cb->__invoke();
-        return true;
-      }
-      // no stop source. no need to lock the list to add the callback as it can never be invoked
-      return (__state >> __stop_source_counter_shift) == 0;
-    };
-
     __callback_list_lock __cb_list_lock(__mutex_);
     auto __state = __state_.load(std::memory_order_acquire);
     if ((__state & __stop_requested_bit) != 0) {
