@@ -12,7 +12,7 @@
 
 #include <__availability>
 #include <__config>
-#include <__stop_token/atomic_unique_lock.h>
+#include <__mutex/mutex.h>
 #include <__stop_token/intrusive_list_view.h>
 #include <__thread/id.h>
 #include <atomic>
@@ -37,10 +37,51 @@ struct __stop_callback_base : __intrusive_node_base<__stop_callback_base> {
   bool* __destroyed_        = nullptr;
 };
 
+// stop_token needs to lock with noexcept. mutex::lock can throw.
+// wrap it with a while loop and catch all exceptions
+class __nothrow_mutex_lock {
+  std::mutex& __mutex_;
+  bool __is_locked_;
+
+public:
+  _LIBCPP_HIDE_FROM_ABI explicit __nothrow_mutex_lock(std::mutex& __mutex) noexcept
+      : __mutex_(__mutex), __is_locked_(true) {
+    __lock();
+  }
+
+  __nothrow_mutex_lock(const __nothrow_mutex_lock&)            = delete;
+  __nothrow_mutex_lock(__nothrow_mutex_lock&&)                 = delete;
+  __nothrow_mutex_lock& operator=(const __nothrow_mutex_lock&) = delete;
+  __nothrow_mutex_lock& operator=(__nothrow_mutex_lock&&)      = delete;
+
+  _LIBCPP_HIDE_FROM_ABI ~__nothrow_mutex_lock() {
+    if (__is_locked_) {
+      __unlock();
+    }
+  }
+
+  _LIBCPP_HIDE_FROM_ABI bool __owns_lock() const noexcept { return __is_locked_; }
+
+  _LIBCPP_HIDE_FROM_ABI void __lock() noexcept {
+    while (true) {
+      try {
+        __mutex_.lock();
+        break;
+      } catch (...) {
+      }
+    }
+    __is_locked_ = true;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI void __unlock() noexcept {
+    __mutex_.unlock(); // throws nothing
+    __is_locked_ = false;
+  }
+};
+
 class __stop_state {
   static constexpr uint32_t __stop_requested_bit        = 1;
-  static constexpr uint32_t __callback_list_locked_bit  = 1 << 1;
-  static constexpr uint32_t __stop_source_counter_shift = 2;
+  static constexpr uint32_t __stop_source_counter_shift = 1;
 
   // The "stop_source counter" is not used for lifetime reference counting.
   // When the number of stop_source reaches 0, the remaining stop_tokens's
@@ -49,9 +90,10 @@ class __stop_state {
   // The "callback list locked" bit implements the atomic_unique_lock to
   // guard the operations on the callback list
   //
-  //       31 - 2          |  1                   |    0           |
-  //  stop_source counter  | callback list locked | stop_requested |
+  //       31 - 1          |    0           |
+  //  stop_source counter  | stop_requested |
   atomic<uint32_t> __state_ = 0;
+  std::mutex __mutex_;
 
   // Reference count for stop_token + stop_callback + stop_source
   // When the counter reaches zero, the state is destroyed
@@ -59,7 +101,7 @@ class __stop_state {
   atomic<uint32_t> __ref_count_ = 0;
 
   using __state_t            = uint32_t;
-  using __callback_list_lock = __atomic_unique_lock<__state_t, __callback_list_locked_bit>;
+  using __callback_list_lock = __nothrow_mutex_lock;
   using __callback_list      = __intrusive_list_view<__stop_callback_base>;
 
   __callback_list __callback_list_;
@@ -101,8 +143,9 @@ public:
   }
 
   _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool __request_stop() noexcept {
-    auto __cb_list_lock = __try_lock_for_request_stop();
-    if (!__cb_list_lock.__owns_lock()) {
+    __callback_list_lock __cb_list_lock(__mutex_);
+    auto __old = __state_.fetch_or(__stop_requested_bit, std::memory_order_release);
+    if ((__old & __stop_requested_bit) == __stop_requested_bit) {
       return false;
     }
     __requesting_thread_ = this_thread::get_id();
@@ -149,9 +192,15 @@ public:
       return (__state >> __stop_source_counter_shift) == 0;
     };
 
-    __callback_list_lock __cb_list_lock(__state_, __give_up_trying_to_lock_condition);
+    __callback_list_lock __cb_list_lock(__mutex_);
+    auto __state = __state_.load(std::memory_order_acquire);
+    if ((__state & __stop_requested_bit) != 0) {
+      // already stop requested, synchronously run the callback and no need to lock the list again
+      __cb->__invoke();
+      return false;
+    }
 
-    if (!__cb_list_lock.__owns_lock()) {
+    if ((__state >> __stop_source_counter_shift) == 0) {
       return false;
     }
 
@@ -165,7 +214,7 @@ public:
 
   // called by the destructor of stop_callback
   _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void __remove_callback(__stop_callback_base* __cb) noexcept {
-    __callback_list_lock __cb_list_lock(__state_);
+    __callback_list_lock __cb_list_lock(__mutex_);
 
     // under below condition, the request_stop call just popped __cb from the list and could execute it now
     bool __potentially_executing_now = __cb->__prev_ == nullptr && !__callback_list_.__is_head(__cb);
@@ -189,30 +238,6 @@ public:
     } else {
       __callback_list_.__remove(__cb);
     }
-  }
-
-private:
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI __callback_list_lock __try_lock_for_request_stop() noexcept {
-    // If it is already stop_requested, do not try to request stop or lock the list again.
-    const auto __lock_fail_condition = [](__state_t __state) { return (__state & __stop_requested_bit) != 0; };
-
-    // set locked and requested bit at the same time
-    const auto __after_lock_state = [](__state_t __state) {
-      return __state | __callback_list_locked_bit | __stop_requested_bit;
-    };
-
-    // acq because [thread.stoptoken.intro] Registration of a callback synchronizes with the invocation of that
-    //     callback. We are going to invoke the callback after getting the lock, acquire so that we can see the
-    //     registration of a callback (and other writes that happens-before the add_callback)
-    //     Note: the rel (unlock) in the add_callback syncs with this acq
-    // rel because [thread.stoptoken.intro] A call to request_stop that returns true synchronizes with a call
-    //     to stop_requested on an associated stop_token or stop_source object that returns true.
-    //     We need to make sure that all writes (including user code) before request_stop will be made visible
-    //     to the threads that waiting for `stop_requested == true`
-    //     Note: this rel syncs with the acq in `stop_requested`
-    const auto __locked_ordering = std::memory_order_acq_rel;
-
-    return __callback_list_lock(__state_, __lock_fail_condition, __after_lock_state, __locked_ordering);
   }
 
   template <class _Tp>
