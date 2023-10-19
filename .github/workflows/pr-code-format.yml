@@ -1,10 +1,19 @@
 name: "Check code formatting"
-on: pull_request_target
+
+on:
+  pull_request_target:
+    paths:
+      - '**/*.cpp'
+      - '**/*.c'
+      - '**/*.h'
+      - '**/*.inc'
+
 permissions:
   pull-requests: write
 
 jobs:
-  code_formatter:
+  cpp_code_formatter:
+    name: "Check C++ Formatting"
     runs-on: ubuntu-latest
     steps:
       - name: Fetch LLVM sources
