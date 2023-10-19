@@ -341,6 +341,9 @@ private:
   /// Start address of binary id length and data pairs.
   const uint8_t *BinaryIdsStart;
 
+  // Maxium counter value 2^56.
+  static const uint64_t MaxCounterValue = (1ULL << 56);
+
 public:
   RawInstrProfReader(std::unique_ptr<MemoryBuffer> DataBuffer,
                      const InstrProfCorrelator *Correlator)

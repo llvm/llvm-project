@@ -27,6 +27,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/WithColor.h"
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -37,9 +38,6 @@
 #include <vector>
 
 using namespace llvm;
-
-// Maxium counter value 2^56.
-static uint64_t MaxCounterValue = 0xffffffffffffff;
 
 // Extracts the variant information from the top 32 bits in the version and
 // returns an enum specifying the variants present.
@@ -681,10 +679,8 @@ Error RawInstrProfReader<IntPtrT>::readRawCounts(
     } else {
       uint64_t CounterValue = swap(*reinterpret_cast<const uint64_t *>(Ptr));
       if (CounterValue > MaxCounterValue)
-        return error(instrprof_error::malformed,
-                     ("counter value " + Twine(CounterValue) +
-                      " is greater than " + Twine(MaxCounterValue))
-                         .str());
+        WithColor::warning() << "counter value " + Twine(CounterValue) +
+                                    " suggests corrupted profile data";
 
       Record.Counts.push_back(CounterValue);
     }

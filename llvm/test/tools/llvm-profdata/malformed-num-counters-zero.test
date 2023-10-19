@@ -51,8 +51,8 @@ ZERO: malformed instrumentation profile data: number of counters is zero
 // Test a counter value greater than 2^56.
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t1.profraw
 
-RUN: printf '\0\0\0\0\0\0\0\1' >> %t1.profraw
+RUN: printf '\1\0\0\0\0\0\0\1' >> %t1.profraw
 RUN: printf '\3\0foo\0\0\0' >> %t1.profraw
 
-RUN: not llvm-profdata show %t1.profraw 2>&1 | FileCheck %s --check-prefix=MAX
-MAX: malformed instrumentation profile data: counter value 72057594037927936 is greater than 72057594037927935
+RUN: llvm-profdata show %t1.profraw 2>&1 | FileCheck %s --check-prefix=MAX
+MAX: warning: counter value 72057594037927937 suggests corrupted profile data
