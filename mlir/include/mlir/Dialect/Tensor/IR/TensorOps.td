@@ -1168,16 +1168,17 @@ def Tensor_PadOp : Tensor_Op<"pad", [
 
     * source: the "base" tensor on which to pad.
     * low: A list contains the padding along the start of each
-           dimension, i.e `low`.
+           dimension, i.e., how many padded values are prepended
+           to the beginning of the tensor in each dimension.
     * high: A list contains the padding along the end of each
-            dimension, i.e. `high`.
+            dimension, i.e., how many padded values are appended
+            to the end of the tensor in each dimension.
     * nofold: indicates that the operation should not be folded when source and
               result types are equal.
 
-    The result tensor dimensions are `low` + `dim` + `high` along that
-    dimension. The number of elements of `low` and `high` must match
-    the rank of the input tensor. They can be either a constant or a
-    dynamic value.
+    The result tensor dimensions are `low[i]` + `dim[i]` + `high[i]` for each
+    dimension `i`. The number of elements of `low` and `high` must match the
+    rank of the input tensor. They can be either a constant or a dynamic value.
 
     The region of the `tensor.pad` operation returns the value to use
     for the padding. The arguments of the region represent the index
@@ -1189,7 +1190,21 @@ def Tensor_PadOp : Tensor_Op<"pad", [
     if the source type and the padded type have the same static shape. This can
     be used, e.g., for packing or promotion to faster memory.
 
-    Example 1:
+    Example 1: add 3 zeros to the beginning and 5 zeros to the end of a 1D
+    tensor.
+
+    ```mlir
+      %arg0 = ... : tensor<10xi32>
+      %c0_i32 = arith.constant 0 : i32
+      %padded = tensor.pad %arg0 low[3] high[5] {
+      ^bb0(%arg1: index):
+        tensor.yield %c0_i32 : i32
+      } : tensor<10xi32> to tensor<18xi32>
+    ```
+
+    Example 2: add 1 value to the beginning of dimension 0, 2 values to the end
+    of dimension 0, 2 values to the start of dimension 1, and 3 values to the
+    end of dimension 1.
 
     ```mlir
       %pad_value = ... : f32
@@ -1199,7 +1214,7 @@ def Tensor_PadOp : Tensor_Op<"pad", [
       } : tensor<?x?xf32> to tensor<?x?xf32>
     ```
 
-    Example 2:
+    Example 3:
 
     ```mlir
       %pad_value = ... : f32
@@ -1209,7 +1224,7 @@ def Tensor_PadOp : Tensor_Op<"pad", [
       } : tensor<1x2x2x?xf32> to tensor<6x?x?x?xf32>
     ```
 
-    Example 3:
+    Example 4:
 
     ```mlir
       %pad_value = ... : f32
@@ -1219,10 +1234,11 @@ def Tensor_PadOp : Tensor_Op<"pad", [
       } : tensor<2x3xf32> to tensor<?x?xf32>
     ```
 
-    Example 4:
+    Example 5: Force a padded value to be always exist with `nofold`, even
+    though the padding config specifies that no new elements will be added to
+    the tensor.
 
     ```mlir
-      // Force a padded value to be always exist with `nofold`.
       %pad_value = ... : f32
       %0 = tensor.pad %arg0 nofold low[0, 0] high[0, 0] {
       ^bb0(%arg1: index, %arg2: index):
