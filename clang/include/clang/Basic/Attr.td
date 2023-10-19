@@ -109,7 +109,7 @@ def NonBitField : SubsetSubject<Field,
 
 def BitField : SubsetSubject<Field,
                              [{S->isBitField()}],
-                             "bit-field non-static data members">;
+                             "bit-field data members">;
 
 def NonStaticCXXMethod : SubsetSubject<CXXMethod,
                                        [{!S->isStatic()}],
@@ -4269,9 +4269,9 @@ def CountedBy : InheritableAttr {
   }];
 }
 
-def DebugInfoType: InheritableAttr {
-  let Spellings = [Clang<"debug_info_type">];
+def PreferredType: InheritableAttr {
+  let Spellings = [Clang<"preferred_type">];
   let Subjects = SubjectList<[BitField], ErrorDiag>;
   let Args = [TypeArgument<"Type", 1>];
-  let Documentation = [DebugInfoTypeDocumentation];
+  let Documentation = [PreferredTypeDocumentation];
 }

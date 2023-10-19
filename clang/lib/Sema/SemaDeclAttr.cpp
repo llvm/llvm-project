@@ -5910,28 +5910,36 @@ static void handleBuiltinAliasAttr(Sema &S, Decl *D,
   D->addAttr(::new (S.Context) BuiltinAliasAttr(S.Context, AL, Ident));
 }
 
-static void handleDebugInfoTypeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+static void handlePreferredTypeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!AL.hasParsedType()) {
     S.Diag(AL.getLoc(), diag::err_attribute_wrong_number_arguments) << AL << 1;
     return;
   }
 
   TypeSourceInfo *ParmTSI = nullptr;
-  QualType type = S.GetTypeFromParser(AL.getTypeArg(), &ParmTSI);
+  QualType QT = S.GetTypeFromParser(AL.getTypeArg(), &ParmTSI);
   assert(ParmTSI && "no type source info for attribute argument");
 
-  if (type->isEnumeralType()) {
-    QualType BitfieldType = llvm::cast<FieldDecl>(D)->getType();
+  if (QT->isEnumeralType()) {
+    QualType BitfieldType = cast<FieldDecl>(D)->getType()->getCanonicalTypeUnqualified();
     QualType EnumUnderlyingType =
-        type->getAs<EnumType>()->getDecl()->getIntegerType();
+        QT->getAs<EnumType>()->getDecl()->getIntegerType()->getCanonicalTypeUnqualified();
     if (EnumUnderlyingType != BitfieldType) {
       S.Diag(AL.getLoc(), diag::warn_attribute_underlying_type_mismatch)
-          << EnumUnderlyingType << type << BitfieldType;
+          << EnumUnderlyingType << QT << BitfieldType;
+      return;
+    }
+  }
+  else if (QT->isBooleanType()) {
+    unsigned BitfieldWidth = cast<FieldDecl>(D)->getBitWidthValue(S.getASTContext());
+    if (BitfieldWidth != 1) {
+      S.Diag(cast<FieldDecl>(D)->getBitWidth()->getExprLoc(),
+             diag::warn_attribute_bool_bitfield_width) << BitfieldWidth;
       return;
     }
   }
 
-  D->addAttr(::new (S.Context) DebugInfoTypeAttr(S.Context, AL, ParmTSI));
+  D->addAttr(::new (S.Context) PreferredTypeAttr(S.Context, AL, ParmTSI));
 }
 
 //===----------------------------------------------------------------------===//
@@ -9653,8 +9661,8 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     handleBuiltinAliasAttr(S, D, AL);
     break;
 
-  case ParsedAttr::AT_DebugInfoType:
-    handleDebugInfoTypeAttr(S, D, AL);
+  case ParsedAttr::AT_PreferredType:
+    handlePreferredTypeAttr(S, D, AL);
     break;
 
   case ParsedAttr::AT_UsingIfExists:

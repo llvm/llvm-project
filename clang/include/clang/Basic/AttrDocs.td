@@ -7219,15 +7219,28 @@ its underlying representation to be a WebAssembly ``funcref``.
   }];
 }
 
-def DebugInfoTypeDocumentation : Documentation {
+def PreferredTypeDocumentation : Documentation {
   let Category = DocCatField;
   let Content = [{
-This attribute allows to alter type of a bitfield in debug information.
-Such a need might arise when bitfield is intended to store an enumeration value,
-but has to be specified as having enumeration's underlying type, in order to
-facilitate compiler optimizations. But this also causes underlying type to be
-emitted in debug information, making it hard for debuggers to map bitfield's
-value back to enumeration. This attribute helps with this.
+This attribute allows adjusting the type of a bit-field in debug information.
+This can be helpful when a bit-field is intended to store an enumeration value,
+but has to be specified as having the enumeration's underlying type in order to
+facilitate compiler optimizations or bit-field packing behavior. Normally, the
+underlying type is what is emitted in debug information, which can make it hard
+for debuggers to know to map a bit-field's value back to a particular enumeration.
+
+.. code-block:: c++
+
+    enum Colors { Red, Green, Blue };
+
+    struct S {
+      [[clang::preferred_type(Colors)]] unsigned ColorVal : 2;
+      [[clang::preferred_type(bool)]] unsigned UseAlternateColorSpace : 1;
+    } s = { Green, false };
+
+Without the attribute, a debugger is likely to display the value `1` for `ColorVal`
+and `0` for `UseAlternateColorSpace`. With the attribute, the debugger may now
+display `Green` and `false` instead.
   }];
 }
 
