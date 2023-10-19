@@ -5054,7 +5054,7 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
     ConstantFPSDNode *N2CFP = dyn_cast<ConstantFPSDNode>(N2);
     if (N0CFP && N1CFP && N2CFP) {
       const auto FTZ = [](const APFloat &V) {
-        if(V.isDenormal()) {
+        if (V.isDenormal()) {
           APFloat Zero(V.getSemantics(), 0);
           return V.isNegative() ? -Zero : Zero;
         }
