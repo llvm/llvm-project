@@ -7183,7 +7183,8 @@ GetNthTemplateArgument(const clang::ClassTemplateSpecializationDecl *decl,
   // (including the ones preceding the parameter pack).
   const auto &pack = args[last_idx];
   const size_t pack_idx = idx - last_idx;
-  assert(pack_idx < pack.pack_size() && "parameter pack index out-of-bounds");
+  if (pack_idx >= pack.pack_size())
+    return nullptr;
   return &pack.pack_elements()[pack_idx];
 }
 
