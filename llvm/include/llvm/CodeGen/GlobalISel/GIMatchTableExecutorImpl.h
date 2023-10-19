@@ -1094,6 +1094,24 @@ bool GIMatchTableExecutor::executeMatchTable(
                              << "], " << Imm << ")\n");
       break;
     }
+
+    case GIR_AddCImm: {
+      int64_t InsnID = MatchTable[CurrentIdx++];
+      int64_t TypeID = MatchTable[CurrentIdx++];
+      int64_t Imm = MatchTable[CurrentIdx++];
+      assert(OutMIs[InsnID] && "Attempted to add to undefined instruction");
+
+      unsigned Width = ExecInfo.TypeObjects[TypeID].getScalarSizeInBits();
+      LLVMContext &Ctx = MF->getFunction().getContext();
+      OutMIs[InsnID].addCImm(
+          ConstantInt::get(IntegerType::get(Ctx, Width), Imm, /*signed*/ true));
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx << ": GIR_AddCImm(OutMIs[" << InsnID
+                             << "], TypeID=" << TypeID << ", Imm=" << Imm
+                             << ")\n");
+      break;
+    }
+
     case GIR_ComplexRenderer: {
       int64_t InsnID = MatchTable[CurrentIdx++];
       int64_t RendererID = MatchTable[CurrentIdx++];

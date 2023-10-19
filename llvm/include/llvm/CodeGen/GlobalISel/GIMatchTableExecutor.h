@@ -362,6 +362,12 @@ enum {
   /// - Imm - The immediate to add
   GIR_AddImm,
 
+  /// Add an CImm to the specified instruction
+  /// - InsnID - Instruction ID to modify
+  /// - Ty - Type of the constant immediate.
+  /// - Imm - The immediate to add
+  GIR_AddCImm,
+
   /// Render complex operands to the specified instruction
   /// - InsnID - Instruction ID to modify
   /// - RendererID - The renderer to call
