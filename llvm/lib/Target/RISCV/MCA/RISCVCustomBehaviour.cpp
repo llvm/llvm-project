@@ -185,34 +185,8 @@ RISCVInstrumentManager::createInstruments(const MCInst &Inst) {
   return SmallVector<UniqueInstrument>();
 }
 
-/// Return EMUL = (EEW / SEW) * LMUL
-inline static RISCVII::VLMUL
-getEMULEqualsEEWDivSEWTimesLMUL(unsigned EEW, unsigned SEW,
-                                RISCVII::VLMUL VLMUL) {
-  bool IsScaleFrac = EEW < SEW;
-  unsigned Scale = IsScaleFrac ? SEW / EEW : EEW / SEW;
-  auto [LMUL, IsLMULFrac] = RISCVVType::decodeVLMUL(VLMUL);
-
-  unsigned EMUL;
-  bool EMULFrac;
-  if ((IsScaleFrac && IsLMULFrac) || (!IsScaleFrac && !IsLMULFrac)) {
-    EMUL = LMUL * Scale;
-    EMULFrac = IsLMULFrac;
-  } else if (Scale > LMUL) {
-    EMUL = Scale / LMUL;
-    EMULFrac = IsScaleFrac;
-  } else {
-    EMUL = LMUL / Scale;
-    EMULFrac = IsLMULFrac;
-  }
-  if (EMUL == 1)
-    EMULFrac = false;
-
-  return RISCVVType::encodeLMUL(EMUL, EMULFrac);
-}
-
 static std::pair<uint8_t, uint8_t>
-getEEWAndEMULForUnitStrideLoadStore(unsigned Opcode, uint8_t LMUL,
+getEEWAndEMULForUnitStrideLoadStore(unsigned Opcode, RISCVII::VLMUL LMUL,
                                     uint8_t SEW) {
   uint8_t EEW;
   switch (Opcode) {
@@ -238,9 +212,8 @@ getEEWAndEMULForUnitStrideLoadStore(unsigned Opcode, uint8_t LMUL,
     llvm_unreachable("Opcode is not a vector unit stride load nor store");
   }
 
-  RISCVII::VLMUL VLMUL = static_cast<RISCVII::VLMUL>(LMUL);
-  uint8_t EMUL = static_cast<RISCVII::VLMUL>(
-      getEMULEqualsEEWDivSEWTimesLMUL(EEW, SEW, VLMUL));
+  uint8_t EMUL =
+      static_cast<uint8_t>(RISCVVType::getSameRatioLMUL(SEW, LMUL, EEW));
   return std::make_pair(EEW, EMUL);
 }
 
@@ -280,7 +253,9 @@ unsigned RISCVInstrumentManager::getSchedClassID(
       Opcode == RISCV::VLE16_V || Opcode == RISCV::VSE16_V ||
       Opcode == RISCV::VLE32_V || Opcode == RISCV::VSE32_V ||
       Opcode == RISCV::VLE64_V || Opcode == RISCV::VSE64_V) {
-    auto [EEW, EMUL] = getEEWAndEMULForUnitStrideLoadStore(Opcode, LMUL, SEW);
+
+    RISCVII::VLMUL VLMUL = static_cast<RISCVII::VLMUL>(LMUL);
+    auto [EEW, EMUL] = getEEWAndEMULForUnitStrideLoadStore(Opcode, VLMUL, SEW);
     RVV = RISCVVInversePseudosTable::getBaseInfo(Opcode, EMUL, EEW);
   } else {
     // Check if it depends on LMUL and SEW
