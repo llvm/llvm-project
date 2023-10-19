@@ -976,34 +976,24 @@ define <4 x i32> @saddo_v4i24(<4 x i24> %a0, <4 x i24> %a1, <4 x i24>* %p2) noun
 define <4 x i32> @saddo_v4i1(<4 x i1> %a0, <4 x i1> %a1, <4 x i1>* %p2) nounwind {
 ; SSE-LABEL: saddo_v4i1:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pslld $31, %xmm1
-; SSE-NEXT:    psrad $31, %xmm1
+; SSE-NEXT:    movdqa %xmm0, %xmm2
+; SSE-NEXT:    pxor %xmm1, %xmm2
+; SSE-NEXT:    pslld $31, %xmm2
+; SSE-NEXT:    movmskps %xmm2, %eax
+; SSE-NEXT:    pand %xmm1, %xmm0
 ; SSE-NEXT:    pslld $31, %xmm0
 ; SSE-NEXT:    psrad $31, %xmm0
-; SSE-NEXT:    paddd %xmm1, %xmm0
-; SSE-NEXT:    movdqa %xmm0, %xmm1
-; SSE-NEXT:    pslld $31, %xmm1
-; SSE-NEXT:    movmskps %xmm1, %eax
-; SSE-NEXT:    psrad $31, %xmm1
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm0
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE-NEXT:    pxor %xmm1, %xmm0
 ; SSE-NEXT:    movb %al, (%rdi)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: saddo_v4i1:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpslld $31, %xmm1, %xmm1
-; AVX-NEXT:    vpsrad $31, %xmm1, %xmm1
+; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm2
+; AVX-NEXT:    vpslld $31, %xmm2, %xmm2
+; AVX-NEXT:    vmovmskps %xmm2, %eax
+; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpslld $31, %xmm0, %xmm0
 ; AVX-NEXT:    vpsrad $31, %xmm0, %xmm0
-; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpslld $31, %xmm0, %xmm1
-; AVX-NEXT:    vpsrad $31, %xmm1, %xmm2
-; AVX-NEXT:    vpcmpeqd %xmm0, %xmm2, %xmm0
-; AVX-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vpxor %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vmovmskps %xmm1, %eax
 ; AVX-NEXT:    movb %al, (%rdi)
 ; AVX-NEXT:    retq
 ;
@@ -1011,11 +1001,10 @@ define <4 x i32> @saddo_v4i1(<4 x i1> %a0, <4 x i1> %a1, <4 x i1>* %p2) nounwind
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpslld $31, %xmm0, %xmm0
 ; AVX512-NEXT:    vptestmd %xmm0, %xmm0, %k0
-; AVX512-NEXT:    vpslld $31, %xmm1, %xmm1
-; AVX512-NEXT:    vptestmd %xmm1, %xmm1, %k1
+; AVX512-NEXT:    vpslld $31, %xmm1, %xmm0
+; AVX512-NEXT:    vptestmd %xmm0, %xmm0, %k1
 ; AVX512-NEXT:    kxorw %k1, %k0, %k2
-; AVX512-NEXT:    vptestnmd %xmm0, %xmm0, %k0 {%k2}
-; AVX512-NEXT:    kxorw %k0, %k1, %k1
+; AVX512-NEXT:    kandw %k1, %k0, %k1
 ; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    kshiftlw $12, %k2, %k0

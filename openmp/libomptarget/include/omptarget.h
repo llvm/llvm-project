@@ -315,6 +315,7 @@ int omp_target_memcpy_rect(void *Dst, const void *Src, size_t ElementSize,
                            const size_t *DstDimensions,
                            const size_t *SrcDimensions, int DstDevice,
                            int SrcDevice);
+void *omp_target_memset(void *Ptr, int C, size_t N, int DeviceNum);
 int omp_target_associate_ptr(const void *HostPtr, const void *DevicePtr,
                              size_t Size, size_t DeviceOffset, int DeviceNum);
 int omp_target_disassociate_ptr(const void *HostPtr, int DeviceNum);

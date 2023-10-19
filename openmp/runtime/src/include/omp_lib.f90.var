@@ -672,6 +672,28 @@
             integer (omp_depend_kind), optional :: depobj_list(*)
           end function omp_target_memcpy_rect_async
 
+          function omp_target_memset(ptr, val, count, device_num) bind(c)
+            use, intrinsic :: iso_c_binding, only : c_ptr, c_int, c_size_t
+            type(c_ptr) :: omp_target_memset
+            type(c_ptr), value :: ptr
+            integer(c_int), value :: val
+            integer(c_size_t), value :: count
+            integer(c_int), value :: device_num
+          end function
+
+          function omp_target_memset_async(ptr, val, count, device_num, &
+                                           depobj_count, depobj_list) bind(c)
+            use, intrinsic :: iso_c_binding, only : c_ptr, c_int, c_size_t
+            use omp_lib_kinds
+            type(c_ptr) :: omp_target_memset_async
+            type(c_ptr), value :: ptr
+            integer(c_int), value :: val
+            integer(c_size_t), value :: count
+            integer(c_int), value :: device_num
+            integer(c_int), value :: depobj_count
+            integer(omp_depend_kind), optional :: depobj_list(*)
+          end function
+
           function omp_target_associate_ptr(host_ptr, device_ptr, size,        &
               device_offset, device_num) bind(c)
             use omp_lib_kinds

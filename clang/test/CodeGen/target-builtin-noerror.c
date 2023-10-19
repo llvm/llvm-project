@@ -111,6 +111,11 @@ void verifycpustrings(void) {
   (void)__builtin_cpu_is("graniterapids");
   (void)__builtin_cpu_is("emeraldrapids");
   (void)__builtin_cpu_is("graniterapids-d");
+  (void)__builtin_cpu_is("arrowlake");
+  (void)__builtin_cpu_is("arrowlake-s");
+  (void)__builtin_cpu_is("lunarlake");
+  (void)__builtin_cpu_is("clearwaterforest");
+  (void)__builtin_cpu_is("pantherlake");
   (void)__builtin_cpu_is("haswell");
   (void)__builtin_cpu_is("icelake-client");
   (void)__builtin_cpu_is("icelake-server");

@@ -22,6 +22,12 @@ int __attribute__((target("arch=grandridge"))) foo(void) {return 17;}
 int __attribute__((target("arch=graniterapids"))) foo(void) {return 18;}
 int __attribute__((target("arch=emeraldrapids"))) foo(void) {return 19;}
 int __attribute__((target("arch=graniterapids-d"))) foo(void) {return 20;}
+int __attribute__((target("arch=arrowlake"))) foo(void) {return 21;}
+int __attribute__((target("arch=arrowlake-s"))) foo(void) {return 22;}
+int __attribute__((target("arch=lunarlake"))) foo(void) {return 23;}
+int __attribute__((target("arch=gracemont"))) foo(void) {return 24;}
+int __attribute__((target("arch=pantherlake"))) foo(void) {return 25;}
+int __attribute__((target("arch=clearwaterforest"))) foo(void) {return 26;}
 int __attribute__((target("default"))) foo(void) { return 2; }
 
 int bar(void) {
@@ -178,6 +184,18 @@ void calls_pr50025c(void) { pr50025c(); }
 // LINUX: ret i32 19
 // LINUX: define{{.*}} i32 @foo.arch_graniterapids-d()
 // LINUX: ret i32 20
+// LINUX: define{{.*}} i32 @foo.arch_arrowlake()
+// LINUX: ret i32 21
+// LINUX: define{{.*}} i32 @foo.arch_arrowlake-s()
+// LINUX: ret i32 22
+// LINUX: define{{.*}} i32 @foo.arch_lunarlake()
+// LINUX: ret i32 23
+// LINUX: define{{.*}} i32 @foo.arch_gracemont()
+// LINUX: ret i32 24
+// LINUX: define{{.*}} i32 @foo.arch_pantherlake()
+// LINUX: ret i32 25
+// LINUX: define{{.*}} i32 @foo.arch_clearwaterforest()
+// LINUX: ret i32 26
 // LINUX: define{{.*}} i32 @foo()
 // LINUX: ret i32 2
 // LINUX: define{{.*}} i32 @bar()
@@ -223,6 +241,18 @@ void calls_pr50025c(void) { pr50025c(); }
 // WINDOWS: ret i32 19
 // WINDOWS: define dso_local i32 @foo.arch_graniterapids-d()
 // WINDOWS: ret i32 20
+// WINDOWS: define dso_local i32 @foo.arch_arrowlake()
+// WINDOWS: ret i32 21
+// WINDOWS: define dso_local i32 @foo.arch_arrowlake-s()
+// WINDOWS: ret i32 22
+// WINDOWS: define dso_local i32 @foo.arch_lunarlake()
+// WINDOWS: ret i32 23
+// WINDOWS: define dso_local i32 @foo.arch_gracemont()
+// WINDOWS: ret i32 24
+// WINDOWS: define dso_local i32 @foo.arch_pantherlake()
+// WINDOWS: ret i32 25
+// WINDOWS: define dso_local i32 @foo.arch_clearwaterforest()
+// WINDOWS: ret i32 26
 // WINDOWS: define dso_local i32 @foo()
 // WINDOWS: ret i32 2
 // WINDOWS: define dso_local i32 @bar()
