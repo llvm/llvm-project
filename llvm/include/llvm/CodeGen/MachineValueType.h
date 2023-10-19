@@ -33,7 +33,7 @@ namespace llvm {
   /// type can be represented by an MVT.
   class MVT {
   public:
-    enum SimpleValueType : uint8_t {
+    enum SimpleValueType : uint16_t {
       // Simple value types that aren't explicitly part of this enumeration
       // are considered extended value types.
       INVALID_SIMPLE_VALUE_TYPE = 0,
@@ -48,8 +48,8 @@ namespace llvm {
 
       // This is the current maximum for LAST_VALUETYPE.
       // MVT::MAX_ALLOWED_VALUETYPE is used for asserts and to size bit vectors
-      // This value must be a multiple of 32.
-      MAX_ALLOWED_VALUETYPE = 224,
+      // This value must be a multiple of 64.
+      MAX_ALLOWED_VALUETYPE = 64 * ((VALUETYPE_SIZE + 63) / 64),
     };
 
     static_assert(FIRST_VALUETYPE > 0);

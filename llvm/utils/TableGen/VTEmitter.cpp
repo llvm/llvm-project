@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -32,13 +33,15 @@ public:
 void VTEmitter::run(raw_ostream &OS) {
   emitSourceFileHeader("ValueTypes Source Fragment", OS, Records);
 
-  std::array<const Record *, 256> VTsByNumber = {};
+  std::vector<const Record *> VTsByNumber(256);
   auto ValueTypes = Records.getAllDerivedDefinitions("ValueType");
   for (auto *VT : ValueTypes) {
     auto Number = VT->getValueAsInt("Value");
-    assert(0 <= Number && Number < (int)VTsByNumber.size() &&
-           "ValueType should be uint8_t");
     assert(!VTsByNumber[Number] && "Duplicate ValueType");
+    assert(0 <= Number && Number <= std::numeric_limits<uint16_t>::max() &&
+           "ValueType should be uint16_t");
+    if ((size_t)Number >= VTsByNumber.size())
+      VTsByNumber.resize(Number);
     VTsByNumber[Number] = VT;
   }
 
@@ -72,6 +75,7 @@ void VTEmitter::run(raw_ostream &OS) {
     bool IsFP = VT->getValueAsInt("isFP");
     bool IsVector = VT->getValueAsInt("isVector");
     bool IsScalable = VT->getValueAsInt("isScalable");
+    bool ForLegalizer = VT->getValueAsBit("ForLegalizer");
 
     UpdateVTRange("INTEGER_FIXEDLEN_VECTOR_VALUETYPE", Name,
                   IsInteger && IsVector && !IsScalable);
@@ -85,7 +89,7 @@ void VTEmitter::run(raw_ostream &OS) {
     UpdateVTRange("VECTOR_VALUETYPE", Name, IsVector);
     UpdateVTRange("INTEGER_VALUETYPE", Name, IsInteger && !IsVector);
     UpdateVTRange("FP_VALUETYPE", Name, IsFP && !IsVector);
-    UpdateVTRange("VALUETYPE", Name, Value < 224);
+    UpdateVTRange("VALUETYPE", Name, ForLegalizer);
 
     // clang-format off
     OS << "  GET_VT_ATTR("

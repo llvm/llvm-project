@@ -47,16 +47,17 @@ class CodeGenDAGPatterns;
 /// Shared pointer for TreePatternNode.
 using TreePatternNodePtr = IntrusiveRefCntPtr<TreePatternNode>;
 
-/// This represents a set of MVTs. Since the underlying type for the MVT
-/// is uint8_t, there are at most 256 values. To reduce the number of memory
+/// This represents a set of MVTs. There are at most MVT::MAX_ALLOWED_VALUETYPE
+/// MVTs and that value is kept as low as possible while allowing all needed
+/// MVTs to be contained. To reduce the number of memory
 /// allocations and deallocations, represent the set as a sequence of bits.
 /// To reduce the allocations even further, make MachineValueTypeSet own
 /// the storage and use std::array as the bit container.
 struct MachineValueTypeSet {
   static_assert(std::is_same<std::underlying_type_t<MVT::SimpleValueType>,
-                             uint8_t>::value,
-                "Change uint8_t here to the SimpleValueType's type");
-  static unsigned constexpr Capacity = std::numeric_limits<uint8_t>::max()+1;
+                             uint16_t>::value,
+                "Change uint16_t here to the SimpleValueType's type");
+  static unsigned constexpr Capacity = MVT::MAX_ALLOWED_VALUETYPE;
   using WordType = uint64_t;
   static unsigned constexpr WordWidth = CHAR_BIT*sizeof(WordType);
   static unsigned constexpr NumWords = Capacity/WordWidth;
