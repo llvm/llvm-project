@@ -2,15 +2,20 @@
 ; RUN: llc < %s -mtriple=riscv32-- -mattr=+d -verify-machineinstrs | FileCheck %s -check-prefix=RV32
 ; RUN: llc < %s -mtriple=riscv64-- -mattr=+d -verify-machineinstrs | FileCheck %s -check-prefix=RV64
 
+; Don't fold freeze(assertsext(x)) -> assertsext(freeze(x))
 define i32 @PR66603(double %x) nounwind {
 ; RV32-LABEL: PR66603:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    fcvt.w.d a0, fa0, rtz
+; RV32-NEXT:    slli a0, a0, 24
+; RV32-NEXT:    srai a0, a0, 24
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: PR66603:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    fcvt.l.d a0, fa0, rtz
+; RV64-NEXT:    slli a0, a0, 56
+; RV64-NEXT:    srai a0, a0, 56
 ; RV64-NEXT:    ret
   %as_i8 = fptosi double %x to i8
   %frozen_i8 = freeze i8 %as_i8
