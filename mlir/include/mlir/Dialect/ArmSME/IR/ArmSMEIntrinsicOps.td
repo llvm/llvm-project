@@ -38,16 +38,16 @@ class ArmSME_IntrOp<string mnemonic, list<int> overloadedOperands = [],
 
 // Zero
 def LLVM_aarch64_sme_zero : ArmSME_IntrOp<"zero">,
-                            Arguments<(ins Arg<I32, "Tile mask">)>;
+                            Arguments<(ins Arg<I32, "Tile mask">:$tile_mask)>;
 
 // MOP's
 class ArmSME_IntrMopOverloadedOp<string mnemonic>
     : ArmSME_IntrOp<mnemonic, [4]>,
-      Arguments<(ins Arg<I32, "Virtual tile ID">,
-                 Arg<MOPPredicate, "LHS predicate">,
-                 Arg<MOPPredicate, "RHS predicate">,
-                 Arg<MOPVector, "LHS vector operand">,
-                 Arg<MOPVector, "RHS vector operand">)>;
+      Arguments<(ins Arg<I32, "Virtual tile ID">:$tile_id,
+                 Arg<MOPPredicate, "LHS predicate">:$lhs_predicate,
+                 Arg<MOPPredicate, "RHS predicate">:$rhs_predicate,
+                 Arg<MOPVector, "LHS vector operand">:$lhs_operand,
+                 Arg<MOPVector, "RHS vector operand">:$rhs_operand)>;
 
 def LLVM_aarch64_sme_mopa : ArmSME_IntrMopOverloadedOp<"mopa">;
 def LLVM_aarch64_sme_mops : ArmSME_IntrMopOverloadedOp<"mops">;
@@ -65,10 +65,10 @@ def LLVM_aarch64_sme_usmops_wide : ArmSME_IntrMopOverloadedOp<"usmops.wide">;
 // Loads
 class ArmSME_IntrLoadOp<string mnemonic>
     : ArmSME_IntrOp<mnemonic>,
-      Arguments<(ins Arg<LDSTPredicate, "Vector predicate">,
-                 Arg<LLVM_AnyPointer, "Load address">,
-                 Arg<I32, "Virtual tile ID">,
-                 Arg<I32, "Tile slice">)>;
+      Arguments<(ins Arg<LDSTPredicate, "Vector predicate">:$predicate,
+                 Arg<LLVM_AnyPointer, "Load address">:$load_address,
+                 Arg<I32, "Virtual tile ID">:$tile_id,
+                 Arg<I32, "Tile slice">:$tile_slice_index)>;
 
 def LLVM_aarch64_sme_ld1b_horiz : ArmSME_IntrLoadOp<"ld1b.horiz">;
 def LLVM_aarch64_sme_ld1h_horiz : ArmSME_IntrLoadOp<"ld1h.horiz">;
@@ -84,10 +84,10 @@ def LLVM_aarch64_sme_ld1q_vert : ArmSME_IntrLoadOp<"ld1q.vert">;
 // Stores
 class ArmSME_IntrStoreOp<string mnemonic>
     : ArmSME_IntrOp<mnemonic>,
-      Arguments<(ins Arg<LDSTPredicate, "Vector predicate">,
-                 Arg<LLVM_AnyPointer, "Store address", [MemWrite]>,
-                 Arg<I32, "Virtual tile ID">,
-                 Arg<I32, "Tile slice">)>;
+      Arguments<(ins Arg<LDSTPredicate, "Vector predicate">:$predicate,
+                 Arg<LLVM_AnyPointer, "Store address", [MemWrite]>:$store_address,
+                 Arg<I32, "Virtual tile ID">:$tild_id,
+                 Arg<I32, "Tile slice">:$tile_slice_index)>;
 
 def LLVM_aarch64_sme_st1b_horiz : ArmSME_IntrStoreOp<"st1b.horiz">;
 def LLVM_aarch64_sme_st1h_horiz : ArmSME_IntrStoreOp<"st1h.horiz">;
@@ -102,28 +102,28 @@ def LLVM_aarch64_sme_st1q_vert : ArmSME_IntrStoreOp<"st1q.vert">;
 
 def LLVM_aarch64_sme_str
     : ArmSME_IntrOp<"str">,
-      Arguments<(ins Arg<I32, "Index">,
-                 Arg<LLVM_AnyPointer, "Store address", [MemWrite]>)>;
+      Arguments<(ins Arg<I32, "Index">:$index,
+                 Arg<LLVM_AnyPointer, "Store address", [MemWrite]>:$store_address)>;
 
 // Vector to tile slice
 class LLVM_aarch64_sme_write<string direction>
     : ArmSME_IntrOp<"write." # direction, /*overloadedOperands=*/[3],
-                    [AllShapesMatch<["pg", "vector"]>]>,
-      Arguments<(ins Arg<I32, "Virtual tile ID">,
-                     Arg<I32, "Tile slice">,
-                     Arg<SVEPredicate, "Vector predicate">:$pg,
+                    [AllShapesMatch<["predicate", "vector"]>]>,
+      Arguments<(ins Arg<I32, "Virtual tile ID">:$tile_id,
+                     Arg<I32, "Tile slice">:$tile_slice_index,
+                     Arg<SVEPredicate, "Vector predicate">:$predicate,
                      Arg<SVEVector, "Vector operand">:$vector)>;
 
 // Tile slice to vector
 class LLVM_aarch64_sme_read<string direction>
     : ArmSME_IntrOp<"read." # direction, /*overloadedOperands=*/[],
-                    [AllShapesMatch<["vector", "pg", "res"]>,
+                    [AllShapesMatch<["vector", "predicate", "res"]>,
                      AllElementTypesMatch<["vector", "res"]>],
                     /*numResults=*/1, /*overloadedResults=*/[0]>,
       Arguments<(ins Arg<SVEVector, "Vector operand">:$vector,
-                     Arg<SVEPredicate, "Vector predicate">:$pg,
-                     Arg<I32, "Virtual tile ID">,
-                     Arg<I32, "Tile slice">)>;
+                     Arg<SVEPredicate, "Vector predicate">:$predicate,
+                     Arg<I32, "Virtual tile ID">:$tile_id,
+                     Arg<I32, "Tile slice">:$tile_slice_index)>;
 
 def LLVM_aarch64_sme_write_horiz : LLVM_aarch64_sme_write<"horiz">;
 def LLVM_aarch64_sme_write_vert : LLVM_aarch64_sme_write<"vert">;
