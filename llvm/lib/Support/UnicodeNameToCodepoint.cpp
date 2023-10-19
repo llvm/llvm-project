@@ -387,8 +387,7 @@ static std::optional<char32_t> nameToCodepoint(StringRef Name, bool Strict,
     std::reverse(Buffer.begin(), Buffer.end());
     // UAX44-LM2. Ignore case, whitespace, underscore ('_'), and all medial
     // hyphens except the hyphen in U+1180 HANGUL JUNGSEONG O-E.
-    if (!Strict && Value == 0x116c &&
-        Name.find_insensitive("O-E") != StringRef::npos) {
+    if (!Strict && Value == 0x116c && Name.contains_insensitive("O-E")) {
       Buffer = "HANGUL JUNGSEONG O-E";
       Value = 0x1180;
     }
