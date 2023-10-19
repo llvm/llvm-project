@@ -9410,6 +9410,11 @@ static llvm::ScalableVectorType *getSVEVectorForElementType(llvm::Type *EltTy) {
 // the elements of the specified datatype.
 Value *CodeGenFunction::EmitSVEPredicateCast(Value *Pred,
                                              llvm::ScalableVectorType *VTy) {
+
+  if (isa<TargetExtType>(Pred->getType()) &&
+      cast<TargetExtType>(Pred->getType())->getName() == "aarch64.svcount")
+    return Pred;
+
   auto *RTy = llvm::VectorType::get(IntegerType::get(getLLVMContext(), 1), VTy);
   if (Pred->getType() == RTy)
     return Pred;
@@ -9584,12 +9589,16 @@ Value *CodeGenFunction::EmitSVEStructLoad(const SVETypeFlags &TypeFlags,
   unsigned N;
   switch (IntID) {
   case Intrinsic::aarch64_sve_ld2_sret:
+  case Intrinsic::aarch64_sve_ld1_pn_x2:
+  case Intrinsic::aarch64_sve_ldnt1_pn_x2:
     N = 2;
     break;
   case Intrinsic::aarch64_sve_ld3_sret:
     N = 3;
     break;
   case Intrinsic::aarch64_sve_ld4_sret:
+  case Intrinsic::aarch64_sve_ld1_pn_x4:
+  case Intrinsic::aarch64_sve_ldnt1_pn_x4:
     N = 4;
     break;
   default:
@@ -9625,12 +9634,16 @@ Value *CodeGenFunction::EmitSVEStructStore(const SVETypeFlags &TypeFlags,
   unsigned N;
   switch (IntID) {
   case Intrinsic::aarch64_sve_st2:
+  case Intrinsic::aarch64_sve_st1_pn_x2:
+  case Intrinsic::aarch64_sve_stnt1_pn_x2:
     N = 2;
     break;
   case Intrinsic::aarch64_sve_st3:
     N = 3;
     break;
   case Intrinsic::aarch64_sve_st4:
+  case Intrinsic::aarch64_sve_st1_pn_x4:
+  case Intrinsic::aarch64_sve_stnt1_pn_x4:
     N = 4;
     break;
   default:
