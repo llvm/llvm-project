@@ -344,7 +344,8 @@ uint32_t mapping::getNumberOfProcessorElements() {
 
 // TODO: This is a workaround for initialization coming from kernels outside of
 //       the TU. We will need to solve this more correctly in the future.
-[[gnu::weak]] int SHARED(IsSPMDMode);
+//       KEEP_ALIVE is needed for amdgpu
+[[gnu::weak]] int KEEP_ALIVE SHARED(IsSPMDMode);
 
 void mapping::init(bool IsSPMD) {
   if (mapping::isInitialThreadInLevel0(IsSPMD))
