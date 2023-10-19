@@ -303,7 +303,7 @@ public:
       uint64_t lvlRank = getLvlRank();
       uint64_t valIdx = 0;
       // Linearize the address
-      for (size_t lvl = 0; lvl < lvlRank; lvl++)
+      for (uint64_t lvl = 0; lvl < lvlRank; lvl++)
         valIdx = valIdx * getLvlSize(lvl) + lvlCoords[lvl];
       values[valIdx] = val;
       return;
@@ -338,7 +338,7 @@ public:
     values[c] = 0;
     filled[c] = false;
     // Subsequent insertions are quick.
-    for (uint64_t i = 1; i < count; ++i) {
+    for (uint64_t i = 1; i < count; i++) {
       assert(c < added[i] && "non-lexicographic insertion");
       c = added[i];
       assert(c <= expsz);
@@ -394,27 +394,27 @@ public:
 
     // In-place permutation.
     auto applyPerm = [this](std::vector<uint64_t> &perm) {
-      size_t length = perm.size();
-      size_t lvlRank = getLvlRank();
+      uint64_t length = perm.size();
+      uint64_t lvlRank = getLvlRank();
       // Cache for the current level coordinates.
       std::vector<P> lvlCrds(lvlRank);
-      for (size_t i = 0; i < length; i++) {
-        size_t current = i;
+      for (uint64_t i = 0; i < length; i++) {
+        uint64_t current = i;
         if (i != perm[current]) {
-          for (size_t l = 0; l < lvlRank; l++)
+          for (uint64_t l = 0; l < lvlRank; l++)
             lvlCrds[l] = coordinates[l][i];
           V val = values[i];
           // Deals with a permutation cycle.
           while (i != perm[current]) {
-            size_t next = perm[current];
+            uint64_t next = perm[current];
             // Swaps the level coordinates and value.
-            for (size_t l = 0; l < lvlRank; l++)
+            for (uint64_t l = 0; l < lvlRank; l++)
               coordinates[l][current] = coordinates[l][next];
             values[current] = values[next];
             perm[current] = current;
             current = next;
           }
-          for (size_t l = 0; l < lvlRank; l++)
+          for (uint64_t l = 0; l < lvlRank; l++)
             coordinates[l][current] = lvlCrds[l];
           values[current] = val;
           perm[current] = current;
@@ -557,7 +557,7 @@ private:
     const uint64_t lastLvl = lvlRank - 1;
     assert(diffLvl <= lvlRank);
     const uint64_t stop = lvlRank - diffLvl;
-    for (uint64_t i = 0; i < stop; ++i) {
+    for (uint64_t i = 0; i < stop; i++) {
       const uint64_t l = lastLvl - i;
       finalizeSegment(l, lvlCursor[l] + 1);
     }
@@ -569,7 +569,7 @@ private:
                V val) {
     const uint64_t lvlRank = getLvlRank();
     assert(diffLvl <= lvlRank);
-    for (uint64_t l = diffLvl; l < lvlRank; ++l) {
+    for (uint64_t l = diffLvl; l < lvlRank; l++) {
       const uint64_t c = lvlCoords[l];
       appendCrd(l, full, c);
       full = 0;
@@ -582,7 +582,7 @@ private:
   /// in the argument differ from those in the current cursor.
   uint64_t lexDiff(const uint64_t *lvlCoords) const {
     const uint64_t lvlRank = getLvlRank();
-    for (uint64_t l = 0; l < lvlRank; ++l) {
+    for (uint64_t l = 0; l < lvlRank; l++) {
       const auto crd = lvlCoords[l];
       const auto cur = lvlCursor[l];
       if (crd > cur || (crd == cur && !isUniqueLvl(l)) ||
@@ -705,7 +705,7 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
   // really use nnz and dense/sparse distribution.
   bool allDense = true;
   uint64_t sz = 1;
-  for (uint64_t l = 0; l < lvlRank; ++l) {
+  for (uint64_t l = 0; l < lvlRank; l++) {
     const DimLevelType dlt = lvlTypes[l]; // Avoid redundant bounds checking.
     if (isCompressedDLT(dlt)) {
       positions[l].reserve(sz + 1);
