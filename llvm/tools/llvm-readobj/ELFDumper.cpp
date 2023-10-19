@@ -5565,7 +5565,7 @@ static AMDGPUNote getAMDGPUNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
     // FIXME: Metadata Verifier only works with AMDHSA.
     //  This is an ugly workaround to avoid the verifier for other MD
     //  formats (e.g. amdpal)
-    if (MsgPackString.find("amdhsa.") != StringRef::npos) {
+    if (MsgPackString.contains("amdhsa.")) {
       AMDGPU::HSAMD::V3::MetadataVerifier Verifier(true);
       if (!Verifier.verify(MsgPackDoc.getRoot()))
         MetadataString = "Invalid AMDGPU Metadata\n";
