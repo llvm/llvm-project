@@ -1524,7 +1524,7 @@ void AsmPrinter::emitPCSections(const MachineFunction &MF) {
         const size_t OptStart = SecWithOpt.find('!'); // likely npos
         const StringRef Sec = SecWithOpt.substr(0, OptStart);
         const StringRef Opts = SecWithOpt.substr(OptStart); // likely empty
-        ConstULEB128 = Opts.find('C') != StringRef::npos;
+        ConstULEB128 = Opts.contains('C');
 #ifndef NDEBUG
         for (char O : Opts)
           assert((O == '!' || O == 'C') && "Invalid !pcsections options");
