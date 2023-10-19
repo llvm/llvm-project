@@ -395,9 +395,7 @@ bool PPCExpandAtomicPseudo::expandAtomicRMWMinMax128(
 
   MachineBasicBlock *CurrentMBB = LoopMBB;
   BuildMI(CurrentMBB, DL, LL, Old).addReg(RA).addReg(RB);
-  BuildMI(CurrentMBB, DL, TII->get(CmpOp), PPC::CR0)
-      .addReg(OldHi)
-      .addReg(OpHi);
+  BuildMI(CurrentMBB, DL, TII->get(CmpOp), PPC::CR0).addReg(OldHi).addReg(OpHi);
   BuildMI(CurrentMBB, DL, TII->get(PPC::BCC))
       .addImm(CmpSuccPred)
       .addReg(PPC::CR0)
