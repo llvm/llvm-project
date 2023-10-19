@@ -10832,10 +10832,9 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
             DV->isVariadic() || OrigLocOpsSize != NewLocOps.size();
 
         auto AdditionalDependencies = DV->getAdditionalDependencies();
-        SDDbgValue *Clone = getDbgValueList(DV->getVariable(), DIExpr,
-                                            NewLocOps, AdditionalDependencies,
-                                            DV->isIndirect(), DV->getDebugLoc(),
-                                            DV->getOrder(), IsVariadic);
+        SDDbgValue *Clone = getDbgValueList(
+            DV->getVariable(), DIExpr, NewLocOps, AdditionalDependencies,
+            DV->isIndirect(), DV->getDebugLoc(), DV->getOrder(), IsVariadic);
         ClonedDVs.push_back(Clone);
         DV->setIsInvalidated();
         DV->setIsEmitted();
