@@ -131,11 +131,6 @@ Constant *getInitialValueOfAllocation(const Value *V,
 std::optional<StringRef> getAllocationFamily(const Value *I,
                                              const TargetLibraryInfo *TLI);
 
-/// If \p V is a call of a function part of an allocation family e.g.
-/// malloc/realloc/calloc/free), return the allocation function kind the called
-/// function.
-AllocFnKind getAllocFnKind(const Value *V);
-
 //===----------------------------------------------------------------------===//
 //  Utility functions to compute size of objects.
 //
