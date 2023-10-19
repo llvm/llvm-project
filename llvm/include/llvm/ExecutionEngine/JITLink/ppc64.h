@@ -51,6 +51,7 @@ enum EdgeKind_ppc64 : Edge::Kind {
   TOCDelta16HI,
   TOCDelta16LO,
   TOCDelta16LODS,
+  RequestGOTAndTransformToDelta34,
   CallBranchDelta,
   // Need to restore r2 after the bl, suggesting the bl is followed by a nop.
   CallBranchDeltaRestoreTOC,
@@ -60,6 +61,7 @@ enum EdgeKind_ppc64 : Edge::Kind {
   RequestCallNoTOC,
   RequestTLSDescInGOTAndTransformToTOCDelta16HA,
   RequestTLSDescInGOTAndTransformToTOCDelta16LO,
+  RequestTLSDescInGOTAndTransformToDelta34,
 };
 
 enum PLTCallStubKind {
@@ -88,9 +90,9 @@ struct PLTCallStubInfo {
   SmallVector<PLTCallStubReloc, 2> Relocs;
 };
 
-template <support::endianness Endianness>
+template <llvm::endianness Endianness>
 inline PLTCallStubInfo pickStub(PLTCallStubKind StubKind) {
-  constexpr bool isLE = Endianness == support::endianness::little;
+  constexpr bool isLE = Endianness == llvm::endianness::little;
   switch (StubKind) {
   case LongBranch: {
     ArrayRef<char> Content =
@@ -139,7 +141,7 @@ inline Symbol &createAnonymousPointer(LinkGraph &G, Section &PointerSection,
   return G.addAnonymousSymbol(B, 0, G.getPointerSize(), false, false);
 }
 
-template <support::endianness Endianness>
+template <llvm::endianness Endianness>
 inline Symbol &createAnonymousPointerJumpStub(LinkGraph &G,
                                               Section &StubSection,
                                               Symbol &PointerSymbol,
@@ -152,7 +154,7 @@ inline Symbol &createAnonymousPointerJumpStub(LinkGraph &G,
   return G.addAnonymousSymbol(B, 0, StubInfo.Content.size(), true, false);
 }
 
-template <support::endianness Endianness>
+template <llvm::endianness Endianness>
 class TOCTableManager : public TableManager<TOCTableManager<Endianness>> {
 public:
   // FIXME: `llvm-jitlink -check` relies this name to be $__GOT.
@@ -170,6 +172,10 @@ public:
       // Create TOC section if TOC relocation, PLT or GOT is used.
       getOrCreateTOCSection(G);
       return false;
+    case RequestGOTAndTransformToDelta34:
+      E.setKind(ppc64::Delta34);
+      E.setTarget(createEntry(G, E.getTarget()));
+      return true;
     default:
       return false;
     }
@@ -190,13 +196,17 @@ private:
   Section *TOCSection = nullptr;
 };
 
-template <support::endianness Endianness>
+template <llvm::endianness Endianness>
 class PLTTableManager : public TableManager<PLTTableManager<Endianness>> {
 public:
   PLTTableManager(TOCTableManager<Endianness> &TOC) : TOC(TOC) {}
 
   static StringRef getSectionName() { return "$__STUBS"; }
 
+  // FIXME: One external symbol can only have one PLT stub in a object file.
+  // This is a limitation when we need different PLT stubs for the same symbol.
+  // For example, we need two different PLT stubs for `bl __tls_get_addr` and
+  // `bl __tls_get_addr@notoc`.
   bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
     bool isExternal = E.getTarget().isExternal();
     Edge::Kind K = E.getKind();
@@ -204,9 +214,11 @@ public:
       if (isExternal) {
         E.setKind(ppc64::CallBranchDeltaRestoreTOC);
         this->StubKind = LongBranchSaveR2;
+        // FIXME: We assume the addend to the external target is zero. It's
+        // quite unusual that the addend of an external target to be non-zero as
+        // if we have known the layout of the external object.
         E.setTarget(this->getEntryForTarget(G, E.getTarget()));
-        // We previously set branching to local entry. Now reverse that
-        // operation.
+        // Addend to the stub is zero.
         E.setAddend(0);
       } else
         // TODO: There are cases a local function call need a call stub.
@@ -269,21 +281,21 @@ inline static uint16_t highesta(uint64_t x) { return (x + 0x8000) >> 48; }
 // the most significant 32 bits belong to the prefix word. The prefix word is at
 // low address for both big/little endian. Byte order in each word still follows
 // its endian.
-template <support::endianness Endianness>
+template <llvm::endianness Endianness>
 inline static uint64_t readPrefixedInstruction(const char *Loc) {
-  constexpr bool isLE = Endianness == support::endianness::little;
+  constexpr bool isLE = Endianness == llvm::endianness::little;
   uint64_t Inst = support::endian::read64<Endianness>(Loc);
   return isLE ? (Inst << 32) | (Inst >> 32) : Inst;
 }
 
-template <support::endianness Endianness>
+template <llvm::endianness Endianness>
 inline static void writePrefixedInstruction(char *Loc, uint64_t Inst) {
-  constexpr bool isLE = Endianness == support::endianness::little;
+  constexpr bool isLE = Endianness == llvm::endianness::little;
   Inst = isLE ? (Inst << 32) | (Inst >> 32) : Inst;
   support::endian::write64<Endianness>(Loc, Inst);
 }
 
-template <support::endianness Endianness>
+template <llvm::endianness Endianness>
 inline Error relocateHalf16(char *FixupPtr, int64_t Value, Edge::Kind K) {
   switch (K) {
   case Delta16:
@@ -341,7 +353,7 @@ inline Error relocateHalf16(char *FixupPtr, int64_t Value, Edge::Kind K) {
 }
 
 /// Apply fixup expression for edge to block content.
-template <support::endianness Endianness>
+template <llvm::endianness Endianness>
 inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
                         const Symbol *TOCSymbol) {
   char *BlockWorkingMem = B.getAlreadyMutableContent().data();

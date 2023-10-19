@@ -3,16 +3,16 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 # LLVM libc project.
+load("@bazel_skylib//lib:selects.bzl", "selects")
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load(
     ":libc_build_rules.bzl",
     "libc_function",
     "libc_math_function",
     "libc_support_library",
 )
+load(":libc_namespace.bzl", "LIBC_NAMESPACE")
 load(":platforms.bzl", "PLATFORM_CPU_ARM64", "PLATFORM_CPU_X86_64")
-load("@bazel_skylib//lib:selects.bzl", "selects")
-load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
-load("//:vars.bzl", "LLVM_VERSION_MAJOR", "LLVM_VERSION_MINOR", "LLVM_VERSION_PATCH")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -25,7 +25,7 @@ package(
 licenses(["notice"])
 
 PRINTF_COPTS = [
-    "LIBC_COPT_PRINTF_USE_SYSTEM_FILE",
+    "LIBC_COPT_STDIO_USE_SYSTEM_FILE",
     "LIBC_COPT_PRINTF_DISABLE_INDEX_MODE",
     "LIBC_COPT_PRINTF_DISABLE_WRITE_INT",
 ]
@@ -34,8 +34,6 @@ MEMORY_COPTS = [
     # "LIBC_COPT_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE=0",
     # "LIBC_COPT_MEMCPY_X86_USE_SOFTWARE_PREFETCHING",
 ]
-
-llvm_libc_namespace = "__llvm_libc_{}_{}_{}_git".format(LLVM_VERSION_MAJOR, LLVM_VERSION_MINOR, LLVM_VERSION_PATCH)
 
 # A flag to pick which `mpfr` to use for math tests.
 # Usage: `--@llvm-project//libc:mpfr=<disable|external|system>`.
@@ -72,7 +70,7 @@ config_setting(
 # paths of the kind "../../" to other libc targets.
 cc_library(
     name = "libc_root",
-    defines = ["LIBC_NAMESPACE=" + llvm_libc_namespace],
+    defines = ["LIBC_NAMESPACE=" + LIBC_NAMESPACE],
     includes = ["."],
 )
 
@@ -289,12 +287,15 @@ libc_support_library(
         "src/__support/CPP/type_traits/add_lvalue_reference.h",
         "src/__support/CPP/type_traits/add_pointer.h",
         "src/__support/CPP/type_traits/add_rvalue_reference.h",
+        "src/__support/CPP/type_traits/always_false.h",
         "src/__support/CPP/type_traits/bool_constant.h",
         "src/__support/CPP/type_traits/conditional.h",
         "src/__support/CPP/type_traits/decay.h",
         "src/__support/CPP/type_traits/enable_if.h",
         "src/__support/CPP/type_traits/false_type.h",
         "src/__support/CPP/type_traits/integral_constant.h",
+        "src/__support/CPP/type_traits/invoke.h",
+        "src/__support/CPP/type_traits/invoke_result.h",
         "src/__support/CPP/type_traits/is_arithmetic.h",
         "src/__support/CPP/type_traits/is_array.h",
         "src/__support/CPP/type_traits/is_base_of.h",
@@ -333,6 +334,7 @@ libc_support_library(
         "src/__support/CPP/type_traits/type_identity.h",
         "src/__support/CPP/type_traits/void_t.h",
         "src/__support/CPP/utility/declval.h",
+        "src/__support/CPP/utility/forward.h",
     ],
     deps = [
         ":__support_macros_attributes",
@@ -1271,6 +1273,22 @@ libc_math_function(
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
         ":__support_macros_optimization",
+    ],
+)
+
+libc_math_function(
+    name = "expm1",
+    additional_deps = [
+        ":__support_fputil_double_double",
+        ":__support_fputil_dyadic_float",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_rounding_mode",
+        ":__support_fputil_triple_double",
+        ":__support_macros_optimization",
+        ":common_constants",
+        ":explogxf",
     ],
 )
 
@@ -2688,7 +2706,6 @@ libc_support_library(
 
 libc_support_library(
     name = "printf_parser",
-    srcs = ["src/stdio/printf_core/parser.cpp"],
     hdrs = ["src/stdio/printf_core/parser.h"],
     defines = PRINTF_COPTS,
     deps = [
@@ -2710,7 +2727,6 @@ libc_support_library(
 # Only used for testing.
 libc_support_library(
     name = "printf_mock_parser",
-    srcs = ["src/stdio/printf_core/parser.cpp"],
     hdrs = ["src/stdio/printf_core/parser.h"],
     defines = PRINTF_COPTS + ["LIBC_COPT_MOCK_ARG_LIST"],
     deps = [

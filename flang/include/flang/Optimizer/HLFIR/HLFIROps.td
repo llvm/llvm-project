@@ -431,6 +431,33 @@ def hlfir_MaxvalOp : hlfir_Op<"maxval", [AttrSizedOperandSegments,
   let hasVerifier = 1;
 }
 
+def hlfir_MinvalOp : hlfir_Op<"minval", [AttrSizedOperandSegments,
+    DeclareOpInterfaceMethods<ArithFastMathInterface>,
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "MINVAL transformational intrinsic";
+  let description = [{
+    Minimum value(s) of an array.
+    If DIM is absent, the result is a scalar.
+    If DIM is present, the result is an array of rank n-1, where n is the rank of ARRAY.
+  }];
+
+  let arguments = (ins
+    AnyFortranArrayObject:$array,
+    Optional<AnyIntegerType>:$dim,
+    Optional<AnyFortranLogicalOrI1ArrayObject>:$mask,
+    DefaultValuedAttr<Arith_FastMathAttr,
+                      "::mlir::arith::FastMathFlags::none">:$fastmath
+  );
+
+  let results = (outs AnyFortranValue);
+
+  let assemblyFormat = [{
+    $array (`dim` $dim^)? (`mask` $mask^)? attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
 def hlfir_ProductOp : hlfir_Op<"product", [AttrSizedOperandSegments,
     DeclareOpInterfaceMethods<ArithFastMathInterface>,
     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
@@ -678,6 +705,8 @@ def hlfir_EndAssociateOp : hlfir_Op<"end_associate", [MemoryEffects<[MemFree]>]>
 
   let description = [{
     Mark the end of life of a variable associated to an expression.
+    If the expression has a derived type that may contain allocatable
+    components, the variable operand must be a Fortran entity.
   }];
 
   let arguments = (ins AnyRefOrBoxLike:$var,
@@ -688,6 +717,7 @@ def hlfir_EndAssociateOp : hlfir_Op<"end_associate", [MemoryEffects<[MemFree]>]>
   }];
 
   let builders = [OpBuilder<(ins "hlfir::AssociateOp":$associate)>];
+  let hasVerifier = 1;
 }
 
 def hlfir_AsExprOp : hlfir_Op<"as_expr",
@@ -954,6 +984,11 @@ def hlfir_DestroyOp : hlfir_Op<"destroy", [MemoryEffects<[MemFree]>]> {
     Mark the last use of an hlfir.expr. This will be the point at which the
     buffer of an hlfir.expr, if any, will be deallocated if it was heap
     allocated.
+    If "finalize" attribute is set, the hlfir.expr value will be finalized
+    before the deallocation. Note that this implies that the hlfir.expr
+    is placed into a memory buffer, so that the library runtime
+    can be called on it. The element type of the hlfir.expr must be
+    derived type in this case.
     It is not required to create an hlfir.destroy operation for and hlfir.expr
     created inside an hlfir.elemental and returned in the hlfir.yield_element.
     The last use of such expression is implicit and an hlfir.destroy could
@@ -968,9 +1003,22 @@ def hlfir_DestroyOp : hlfir_Op<"destroy", [MemoryEffects<[MemFree]>]> {
     in bufferization instead.
   }];
 
-  let arguments = (ins hlfir_ExprType:$expr);
+  let arguments = (ins
+    hlfir_ExprType:$expr,
+    UnitAttr:$finalize
+  );
 
-  let assemblyFormat = "$expr attr-dict `:` qualified(type($expr))";
+  let assemblyFormat = [{
+    $expr (`finalize` $finalize^)? attr-dict `:` qualified(type($expr))
+  }];
+
+  let extraClassDeclaration = [{
+    bool mustFinalizeExpr() {
+      return getFinalize();
+    }
+  }];
+
+  let hasVerifier = 1;
 }
 
 def hlfir_CopyInOp : hlfir_Op<"copy_in", [MemoryEffects<[MemAlloc]>]> {

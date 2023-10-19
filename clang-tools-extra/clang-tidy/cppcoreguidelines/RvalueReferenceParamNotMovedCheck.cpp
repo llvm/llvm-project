@@ -84,6 +84,9 @@ void RvalueReferenceParamNotMovedCheck::check(
   if (IgnoreUnnamedParams && Param->getName().empty())
     return;
 
+  if (!Param->isUsed() && Param->hasAttr<UnusedAttr>())
+    return;
+
   const auto *Function = dyn_cast<FunctionDecl>(Param->getDeclContext());
   if (!Function)
     return;

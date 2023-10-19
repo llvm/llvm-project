@@ -27,53 +27,53 @@ ret.block:
   ret void
 }
 
-; ITERS1:  @funcspec.arg = internal constant i32 0
-; ITERS1:  @funcspec.arg.1 = internal constant i32 6
-; ITERS1:  @funcspec.arg.3 = internal constant i32 1
-; ITERS1:  @funcspec.arg.4 = internal constant i32 5
+; ITERS1:  @specialized.arg.1 = internal constant i32 0
+; ITERS1:  @specialized.arg.2 = internal constant i32 6
+; ITERS1:  @specialized.arg.3 = internal constant i32 1
+; ITERS1:  @specialized.arg.4 = internal constant i32 5
 
-; ITERS2:  @funcspec.arg = internal constant i32 0
-; ITERS2:  @funcspec.arg.1 = internal constant i32 6
-; ITERS2:  @funcspec.arg.3 = internal constant i32 1
-; ITERS2:  @funcspec.arg.4 = internal constant i32 5
-; ITERS2:  @funcspec.arg.6 = internal constant i32 2
-; ITERS2:  @funcspec.arg.7 = internal constant i32 4
+; ITERS2:  @specialized.arg.1 = internal constant i32 0
+; ITERS2:  @specialized.arg.2 = internal constant i32 6
+; ITERS2:  @specialized.arg.3 = internal constant i32 1
+; ITERS2:  @specialized.arg.4 = internal constant i32 5
+; ITERS2:  @specialized.arg.5 = internal constant i32 2
+; ITERS2:  @specialized.arg.6 = internal constant i32 4
 
-; ITERS3:  @funcspec.arg = internal constant i32 0
-; ITERS3:  @funcspec.arg.1 = internal constant i32 6
-; ITERS3:  @funcspec.arg.3 = internal constant i32 1
-; ITERS3:  @funcspec.arg.4 = internal constant i32 5
-; ITERS3:  @funcspec.arg.6 = internal constant i32 2
-; ITERS3:  @funcspec.arg.7 = internal constant i32 4
-; ITERS3:  @funcspec.arg.9 = internal constant i32 3
-; ITERS3:  @funcspec.arg.10 = internal constant i32 3
+; ITERS3:  @specialized.arg.1 = internal constant i32 0
+; ITERS3:  @specialized.arg.2 = internal constant i32 6
+; ITERS3:  @specialized.arg.3 = internal constant i32 1
+; ITERS3:  @specialized.arg.4 = internal constant i32 5
+; ITERS3:  @specialized.arg.5 = internal constant i32 2
+; ITERS3:  @specialized.arg.6 = internal constant i32 4
+; ITERS3:  @specialized.arg.7 = internal constant i32 3
+; ITERS3:  @specialized.arg.8 = internal constant i32 3
 
-; ITERS4:  @funcspec.arg = internal constant i32 0
-; ITERS4:  @funcspec.arg.1 = internal constant i32 6
-; ITERS4:  @funcspec.arg.3 = internal constant i32 1
-; ITERS4:  @funcspec.arg.4 = internal constant i32 5
-; ITERS4:  @funcspec.arg.6 = internal constant i32 2
-; ITERS4:  @funcspec.arg.7 = internal constant i32 4
-; ITERS4:  @funcspec.arg.9 = internal constant i32 3
-; ITERS4:  @funcspec.arg.10 = internal constant i32 3
+; ITERS4:  @specialized.arg.1 = internal constant i32 0
+; ITERS4:  @specialized.arg.2 = internal constant i32 6
+; ITERS4:  @specialized.arg.3 = internal constant i32 1
+; ITERS4:  @specialized.arg.4 = internal constant i32 5
+; ITERS4:  @specialized.arg.5 = internal constant i32 2
+; ITERS4:  @specialized.arg.6 = internal constant i32 4
+; ITERS4:  @specialized.arg.7 = internal constant i32 3
+; ITERS4:  @specialized.arg.8 = internal constant i32 3
 
 define i32 @main() {
 ; ITERS1-LABEL: @main(
 ; ITERS1-NEXT:    call void @print_val(i32 0, i32 6)
-; ITERS1-NEXT:    call void @recursiveFunc(ptr nonnull @funcspec.arg.3, i32 1, ptr nonnull @funcspec.arg.4)
+; ITERS1-NEXT:    call void @recursiveFunc(ptr nonnull @specialized.arg.3, i32 1, ptr nonnull @specialized.arg.4)
 ; ITERS1-NEXT:    ret i32 0
 ;
 ; ITERS2-LABEL: @main(
 ; ITERS2-NEXT:    call void @print_val(i32 0, i32 6)
 ; ITERS2-NEXT:    call void @print_val(i32 1, i32 5)
-; ITERS2-NEXT:    call void @recursiveFunc(ptr nonnull @funcspec.arg.6, i32 1, ptr nonnull @funcspec.arg.7)
+; ITERS2-NEXT:    call void @recursiveFunc(ptr nonnull @specialized.arg.5, i32 1, ptr nonnull @specialized.arg.6)
 ; ITERS2-NEXT:    ret i32 0
 ;
 ; ITERS3-LABEL: @main(
 ; ITERS3-NEXT:    call void @print_val(i32 0, i32 6)
 ; ITERS3-NEXT:    call void @print_val(i32 1, i32 5)
 ; ITERS3-NEXT:    call void @print_val(i32 2, i32 4)
-; ITERS3-NEXT:    call void @recursiveFunc(ptr nonnull @funcspec.arg.9, i32 1, ptr nonnull @funcspec.arg.10)
+; ITERS3-NEXT:    call void @recursiveFunc(ptr nonnull @specialized.arg.7, i32 1, ptr nonnull @specialized.arg.8)
 ; ITERS3-NEXT:    ret i32 0
 ;
 ; ITERS4-LABEL: @main(

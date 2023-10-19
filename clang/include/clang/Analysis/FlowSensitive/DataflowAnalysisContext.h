@@ -98,7 +98,7 @@ public:
   StorageLocation &createStorageLocation(QualType Type);
 
   /// Returns a stable storage location for `D`.
-  StorageLocation &getStableStorageLocation(const VarDecl &D);
+  StorageLocation &getStableStorageLocation(const ValueDecl &D);
 
   /// Returns a stable storage location for `E`.
   StorageLocation &getStableStorageLocation(const Expr &E);
@@ -107,6 +107,15 @@ public:
   /// `PointeeType` that are canonically equivalent will return the same result.
   /// A null `PointeeType` can be used for the pointee of `std::nullptr_t`.
   PointerValue &getOrCreateNullPointerValue(QualType PointeeType);
+
+  /// Adds `Constraint` to current and future flow conditions in this context.
+  ///
+  /// Invariants must contain only flow-insensitive information, i.e. facts that
+  /// are true on all paths through the program.
+  /// Information can be added eagerly (when analysis begins), or lazily (e.g.
+  /// when values are first used). The analysis must be careful that the same
+  /// information is added regardless of which order blocks are analyzed in.
+  void addInvariant(const Formula &Constraint);
 
   /// Adds `Constraint` to the flow condition identified by `Token`.
   void addFlowConditionConstraint(Atom Token, const Formula &Constraint);
@@ -174,12 +183,11 @@ private:
   void addModeledFields(const FieldSet &Fields);
 
   /// Adds all constraints of the flow condition identified by `Token` and all
-  /// of its transitive dependencies to `Constraints`. `VisitedTokens` is used
-  /// to track tokens of flow conditions that were already visited by recursive
-  /// calls.
-  void addTransitiveFlowConditionConstraints(
-      Atom Token, llvm::SetVector<const Formula *> &Constraints,
-      llvm::DenseSet<Atom> &VisitedTokens);
+  /// of its transitive dependencies to `Constraints`.
+  void
+  addTransitiveFlowConditionConstraints(Atom Token,
+                                        llvm::SetVector<const Formula *> &Out);
+
 
   /// Returns true if the solver is able to prove that there is no satisfying
   /// assignment for `Constraints`
@@ -224,6 +232,7 @@ private:
   // dependencies is stored in the `FlowConditionDeps` map.
   llvm::DenseMap<Atom, llvm::DenseSet<Atom>> FlowConditionDeps;
   llvm::DenseMap<Atom, const Formula *> FlowConditionConstraints;
+  const Formula *Invariant = nullptr;
 
   llvm::DenseMap<const FunctionDecl *, ControlFlowContext> FunctionContexts;
 

@@ -76,6 +76,12 @@ set(BENCHMARK_LIBCXX_INSTALL ${CMAKE_CURRENT_BINARY_DIR}/benchmark-libcxx)
 set(BENCHMARK_NATIVE_INSTALL ${CMAKE_CURRENT_BINARY_DIR}/benchmark-native)
 
 add_library(               cxx-benchmarks-flags INTERFACE)
+
+# TODO(cmake): remove. This is a workaround to prevent older versions of GCC
+# from failing the configure step because they don't support C++23.
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "13.0")
+  return()
+endif()
 #TODO(cmake): remove the `add_compile_options`. Currently we have to explicitly
 # pass the `std:c++latest` flag on Windows to work around an issue where
 # requesting `cxx_std_23` results in an error -- somehow CMake fails to
@@ -83,9 +89,14 @@ add_library(               cxx-benchmarks-flags INTERFACE)
 # version that MSVC flags support is C++20.
 if (MSVC)
   add_compile_options(/std:c++latest)
+# ibm-clang does not recognize the cxx_std_23 flag, so use this as a temporary
+# workaround on AIX as well.
+elseif (${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  add_compile_options(-std=c++23)
 else()
   target_compile_features( cxx-benchmarks-flags INTERFACE cxx_std_23)
 endif()
+
 target_compile_options(    cxx-benchmarks-flags INTERFACE -fsized-deallocation -nostdinc++)
 target_include_directories(cxx-benchmarks-flags INTERFACE "${LIBCXX_GENERATED_INCLUDE_DIR}"
                                                 INTERFACE "${BENCHMARK_LIBCXX_INSTALL}/include"
@@ -111,7 +122,7 @@ endif()
 add_library(           cxx-benchmarks-flags-libcxx INTERFACE)
 target_link_libraries( cxx-benchmarks-flags-libcxx INTERFACE cxx-benchmarks-flags)
 target_compile_options(cxx-benchmarks-flags-libcxx INTERFACE ${SANITIZER_FLAGS} -Wno-user-defined-literals -Wno-suggest-override)
-target_link_options(   cxx-benchmarks-flags-libcxx INTERFACE -nodefaultlibs "-L${BENCHMARK_LIBCXX_INSTALL}/lib" "-L${BENCHMARK_LIBCXX_INSTALL}/lib64" ${SANITIZER_FLAGS})
+target_link_options(   cxx-benchmarks-flags-libcxx INTERFACE -nostdlib++ "-L${BENCHMARK_LIBCXX_INSTALL}/lib" "-L${BENCHMARK_LIBCXX_INSTALL}/lib64" ${SANITIZER_FLAGS})
 
 set(libcxx_benchmark_targets)
 
@@ -162,6 +173,7 @@ endfunction()
 #==============================================================================
 set(BENCHMARK_TESTS
     algorithms.partition_point.bench.cpp
+    algorithms/count.bench.cpp
     algorithms/equal.bench.cpp
     algorithms/find.bench.cpp
     algorithms/lower_bound.bench.cpp
@@ -172,6 +184,7 @@ set(BENCHMARK_TESTS
     algorithms/pop_heap.bench.cpp
     algorithms/pstl.stable_sort.bench.cpp
     algorithms/push_heap.bench.cpp
+    algorithms/ranges_ends_with.bench.cpp
     algorithms/ranges_make_heap.bench.cpp
     algorithms/ranges_make_heap_then_sort_heap.bench.cpp
     algorithms/ranges_pop_heap.bench.cpp
@@ -200,6 +213,7 @@ set(BENCHMARK_TESTS
     map.bench.cpp
     monotonic_buffer.bench.cpp
     ordered_set.bench.cpp
+    stop_token.bench.cpp
     std_format_spec_string_unicode.bench.cpp
     string.bench.cpp
     stringstream.bench.cpp

@@ -1161,74 +1161,35 @@ mlir::FunctionType fir::DispatchOp::getFunctionType() {
 }
 
 //===----------------------------------------------------------------------===//
-// DispatchTableOp
+// TypeInfoOp
 //===----------------------------------------------------------------------===//
 
-mlir::ParseResult fir::DispatchTableOp::parse(mlir::OpAsmParser &parser,
-                                              mlir::OperationState &result) {
-  // Parse the name as a symbol reference attribute.
-  mlir::StringAttr nameAttr;
-  if (parser.parseSymbolName(nameAttr, mlir::SymbolTable::getSymbolAttrName(),
-                             result.attributes))
-    return mlir::failure();
-
-  if (!failed(parser.parseOptionalKeyword(getExtendsKeyword()))) {
-    mlir::StringAttr parent;
-    if (parser.parseLParen() ||
-        parser.parseAttribute(parent, getParentAttrNameStr(),
-                              result.attributes) ||
-        parser.parseRParen())
-      return mlir::failure();
-  }
-
-  // Parse the optional table body.
-  mlir::Region *body = result.addRegion();
-  mlir::OptionalParseResult parseResult = parser.parseOptionalRegion(*body);
-  if (parseResult.has_value() && failed(*parseResult))
-    return mlir::failure();
-
-  fir::DispatchTableOp::ensureTerminator(*body, parser.getBuilder(),
-                                         result.location);
-  return mlir::success();
-}
-
-void fir::DispatchTableOp::print(mlir::OpAsmPrinter &p) {
-  p << ' ';
-  p.printSymbolName(getSymName());
-  if (getParent())
-    p << ' ' << getExtendsKeyword() << '('
-      << (*this)->getAttr(getParentAttrNameStr()) << ')';
-
-  mlir::Region &body = getOperation()->getRegion(0);
-  if (!body.empty()) {
-    p << ' ';
-    p.printRegion(body, /*printEntryBlockArgs=*/false,
-                  /*printBlockTerminators=*/false);
-  }
-}
-
-mlir::LogicalResult fir::DispatchTableOp::verify() {
-  if (getRegion().empty())
-    return mlir::success();
-  for (auto &op : getBlock())
-    if (!mlir::isa<fir::DTEntryOp, fir::FirEndOp>(op))
-      return op.emitOpError("dispatch table must contain dt_entry");
-  return mlir::success();
-}
-
-void fir::DispatchTableOp::build(mlir::OpBuilder &builder,
-                                 mlir::OperationState &result,
-                                 llvm::StringRef name, mlir::Type type,
-                                 llvm::StringRef parent,
-                                 llvm::ArrayRef<mlir::NamedAttribute> attrs) {
+void fir::TypeInfoOp::build(mlir::OpBuilder &builder,
+                            mlir::OperationState &result, fir::RecordType type,
+                            fir::RecordType parentType,
+                            llvm::ArrayRef<mlir::NamedAttribute> attrs) {
   result.addRegion();
   result.addAttribute(mlir::SymbolTable::getSymbolAttrName(),
-                      builder.getStringAttr(name));
-  if (!parent.empty())
-    result.addAttribute(getParentAttrNameStr(), builder.getStringAttr(parent));
-  // result.addAttribute(getSymbolAttrNameStr(),
-  //                     mlir::SymbolRefAttr::get(builder.getContext(), name));
+                      builder.getStringAttr(type.getName()));
+  result.addAttribute(getTypeAttrName(result.name), mlir::TypeAttr::get(type));
+  if (parentType)
+    result.addAttribute(getParentTypeAttrName(result.name),
+                        mlir::TypeAttr::get(parentType));
   result.addAttributes(attrs);
+}
+
+mlir::LogicalResult fir::TypeInfoOp::verify() {
+  if (!getDispatchTable().empty())
+    for (auto &op : getDispatchTable().front().without_terminator())
+      if (!mlir::isa<fir::DTEntryOp>(op))
+        return op.emitOpError("dispatch table must contain dt_entry");
+
+  if (!mlir::isa<fir::RecordType>(getType()))
+    return emitOpError("type must be a fir.type");
+
+  if (getParentType() && !mlir::isa<fir::RecordType>(*getParentType()))
+    return emitOpError("parent_type must be a fir.type");
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1947,7 +1908,9 @@ void fir::IterWhileOp::print(mlir::OpAsmPrinter &p) {
                 /*printBlockTerminators=*/true);
 }
 
-mlir::Region &fir::IterWhileOp::getLoopBody() { return getRegion(); }
+llvm::SmallVector<mlir::Region *> fir::IterWhileOp::getLoopRegions() {
+  return {&getRegion()};
+}
 
 mlir::BlockArgument fir::IterWhileOp::iterArgToBlockArg(mlir::Value iterArg) {
   for (auto i : llvm::enumerate(getInitArgs()))
@@ -1968,6 +1931,12 @@ mlir::Value fir::IterWhileOp::blockArgToSourceOp(unsigned blockArgNum) {
   if (blockArgNum > 0 && blockArgNum <= getInitArgs().size())
     return getInitArgs()[blockArgNum - 1];
   return {};
+}
+
+mlir::ValueRange fir::IterWhileOp::getYieldedValues() {
+  auto *term = getRegion().front().getTerminator();
+  return getFinalValue() ? term->getOperands().drop_front()
+                         : term->getOperands();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2014,8 +1983,18 @@ void fir::LoadOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
     mlir::emitError(result.location, "not a memory reference type");
     return;
   }
+  build(builder, result, eleTy, refVal);
+}
+
+void fir::LoadOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
+                        mlir::Type resTy, mlir::Value refVal) {
+
+  if (!refVal) {
+    mlir::emitError(result.location, "LoadOp has null argument");
+    return;
+  }
   result.addOperands(refVal);
-  result.addTypes(eleTy);
+  result.addTypes(resTy);
 }
 
 mlir::ParseResult fir::LoadOp::getElementOf(mlir::Type &ele, mlir::Type ref) {
@@ -2234,7 +2213,9 @@ void fir::DoLoopOp::print(mlir::OpAsmPrinter &p) {
                 printBlockTerminators);
 }
 
-mlir::Region &fir::DoLoopOp::getLoopBody() { return getRegion(); }
+llvm::SmallVector<mlir::Region *> fir::DoLoopOp::getLoopRegions() {
+  return {&getRegion()};
+}
 
 /// Translate a value passed as an iter_arg to the corresponding block
 /// argument in the body of the loop.
@@ -2261,6 +2242,12 @@ mlir::Value fir::DoLoopOp::blockArgToSourceOp(unsigned blockArgNum) {
   if (blockArgNum > 0 && blockArgNum <= getInitArgs().size())
     return getInitArgs()[blockArgNum - 1];
   return {};
+}
+
+mlir::ValueRange fir::DoLoopOp::getYieldedValues() {
+  auto *term = getRegion().front().getTerminator();
+  return getFinalValue() ? term->getOperands().drop_front()
+                         : term->getOperands();
 }
 
 //===----------------------------------------------------------------------===//
@@ -3282,6 +3269,11 @@ mlir::LogicalResult fir::StoreOp::verify() {
   if (fir::isa_unknown_size_box(getValue().getType()))
     return emitOpError("cannot store !fir.box of unknown rank or type");
   return mlir::success();
+}
+
+void fir::StoreOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
+                         mlir::Value value, mlir::Value memref) {
+  build(builder, result, value, memref, {});
 }
 
 //===----------------------------------------------------------------------===//

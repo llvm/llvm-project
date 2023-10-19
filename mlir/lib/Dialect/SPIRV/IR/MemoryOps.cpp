@@ -10,12 +10,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 
 #include "SPIRVOpUtils.h"
 #include "SPIRVParsingUtils.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
+#include "mlir/IR/Diagnostics.h"
 
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Casting.h"
 
 using namespace mlir::spirv::AttrNames;
 
@@ -730,19 +734,49 @@ LogicalResult VariableOp::verify() {
                          "constant or spirv.GlobalVariable op");
   }
 
-  // TODO: generate these strings using ODS.
-  auto *op = getOperation();
-  auto descriptorSetName = llvm::convertToSnakeFromCamelCase(
-      stringifyDecoration(spirv::Decoration::DescriptorSet));
-  auto bindingName = llvm::convertToSnakeFromCamelCase(
-      stringifyDecoration(spirv::Decoration::Binding));
-  auto builtInName = llvm::convertToSnakeFromCamelCase(
-      stringifyDecoration(spirv::Decoration::BuiltIn));
+  auto getDecorationAttr = [op = getOperation()](spirv::Decoration decoration) {
+    return op->getAttr(
+        llvm::convertToSnakeFromCamelCase(stringifyDecoration(decoration)));
+  };
 
-  for (const auto &attr : {descriptorSetName, bindingName, builtInName}) {
-    if (op->getAttr(attr))
+  // TODO: generate these strings using ODS.
+  for (auto decoration :
+       {spirv::Decoration::DescriptorSet, spirv::Decoration::Binding,
+        spirv::Decoration::BuiltIn}) {
+    if (auto attr = getDecorationAttr(decoration))
       return emitOpError("cannot have '")
-             << attr << "' attribute (only allowed in spirv.GlobalVariable)";
+             << llvm::convertToSnakeFromCamelCase(
+                    stringifyDecoration(decoration))
+             << "' attribute (only allowed in spirv.GlobalVariable)";
+  }
+
+  // From SPV_KHR_physical_storage_buffer:
+  // > If an OpVariable's pointee type is a pointer (or array of pointers) in
+  // > PhysicalStorageBuffer storage class, then the variable must be decorated
+  // > with exactly one of AliasedPointer or RestrictPointer.
+  auto pointeePtrType = dyn_cast<spirv::PointerType>(getPointeeType());
+  if (!pointeePtrType) {
+    if (auto pointeeArrayType = dyn_cast<spirv::ArrayType>(getPointeeType())) {
+      pointeePtrType =
+          dyn_cast<spirv::PointerType>(pointeeArrayType.getElementType());
+    }
+  }
+
+  if (pointeePtrType && pointeePtrType.getStorageClass() ==
+                            spirv::StorageClass::PhysicalStorageBuffer) {
+    bool hasAliasedPtr =
+        getDecorationAttr(spirv::Decoration::AliasedPointer) != nullptr;
+    bool hasRestrictPtr =
+        getDecorationAttr(spirv::Decoration::RestrictPointer) != nullptr;
+
+    if (!hasAliasedPtr && !hasRestrictPtr)
+      return emitOpError() << " with physical buffer pointer must be decorated "
+                              "either 'AliasedPointer' or 'RestrictPointer'";
+
+    if (hasAliasedPtr && hasRestrictPtr)
+      return emitOpError()
+             << " with physical buffer pointer must have exactly one "
+                "aliasing decoration";
   }
 
   return success();

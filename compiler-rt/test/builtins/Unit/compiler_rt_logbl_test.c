@@ -6,7 +6,7 @@
 #include "fp_lib.h"
 #include "int_lib.h"
 
-#if defined(CRT_HAS_128BIT) && defined(CRT_LDBL_128BIT)
+#if defined(CRT_HAS_TF_MODE)
 
 int test__compiler_rt_logbl(fp_t x) {
 #if defined(__ve__)
@@ -42,7 +42,7 @@ double cases[] = {
 #endif
 
 int main() {
-#if defined(CRT_HAS_128BIT) && defined(CRT_LDBL_128BIT)
+#if defined(CRT_HAS_TF_MODE)
   const unsigned N = sizeof(cases) / sizeof(cases[0]);
   unsigned i;
   for (i = 0; i < N; ++i) {

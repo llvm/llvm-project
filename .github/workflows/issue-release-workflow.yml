@@ -55,9 +55,9 @@ jobs:
 
       - name: Backport Commits
         run: |
-          printf "$COMMENT_BODY" |
+          printf "%s" "$COMMENT_BODY" |
           ./llvm/utils/git/github-automation.py \
-          --repo $GITHUB_REPOSITORY \
+          --repo "$GITHUB_REPOSITORY" \
           --token ${{ secrets.RELEASE_WORKFLOW_PUSH_SECRET }} \
           release-workflow \
           --issue-number ${{ github.event.issue.number }} \
@@ -70,7 +70,7 @@ jobs:
     if: >-
       (github.repository == 'llvm/llvm-project') &&
       !startswith(github.event.comment.body, '<!--IGNORE-->') &&
-      contains(github.event.comment.body, '/branch')
+      contains(github.event.comment.body, '/branch ')
 
     steps:
       - name: Fetch LLVM sources
@@ -84,9 +84,9 @@ jobs:
 
       - name: Create Pull Request
         run: |
-          printf "$COMMENT_BODY" |
+          printf "%s" "$COMMENT_BODY" |
           ./llvm/utils/git/github-automation.py \
-          --repo $GITHUB_REPOSITORY \
+          --repo "$GITHUB_REPOSITORY" \
           --token ${{ secrets.RELEASE_WORKFLOW_PUSH_SECRET }} \
           release-workflow \
           --issue-number ${{ github.event.issue.number }} \

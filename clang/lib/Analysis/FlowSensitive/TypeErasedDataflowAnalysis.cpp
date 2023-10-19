@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <algorithm>
-#include <memory>
 #include <optional>
 #include <system_error>
 #include <utility>
@@ -33,8 +32,8 @@
 #include "clang/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 
@@ -53,19 +52,14 @@ static int blockIndexInPredecessor(const CFGBlock &Pred,
   return BlockPos - Pred.succ_begin();
 }
 
-static bool isLoopHead(const CFGBlock &B) {
-  if (const auto *T = B.getTerminatorStmt())
-    switch (T->getStmtClass()) {
-      case Stmt::WhileStmtClass:
-      case Stmt::DoStmtClass:
-      case Stmt::ForStmtClass:
-      case Stmt::CXXForRangeStmtClass:
-        return true;
-      default:
-        return false;
-    }
-
-  return false;
+// A "backedge" node is a block introduced in the CFG exclusively to indicate a
+// loop backedge. They are exactly identified by the presence of a non-null
+// pointer to the entry block of the loop condition. Note that this is not
+// necessarily the block with the loop statement as terminator, because
+// short-circuit operators will result in multiple blocks encoding the loop
+// condition, only one of which will contain the loop statement as terminator.
+static bool isBackedgeNode(const CFGBlock &B) {
+  return B.getLoopTarget() != nullptr;
 }
 
 namespace {
@@ -439,19 +433,17 @@ static void builtinTransfer(const CFGElement &Elt,
   case CFGElement::Initializer:
     builtinTransferInitializer(Elt.castAs<CFGInitializer>(), State);
     break;
+  case CFGElement::LifetimeEnds:
+    // Removing declarations when their lifetime ends serves two purposes:
+    // - Eliminate unnecessary clutter from `Environment::DeclToLoc`
+    // - Allow us to assert that, when joining two `Environment`s, the two
+    //   `DeclToLoc` maps never contain entries that map the same declaration to
+    //   different storage locations.
+    if (const ValueDecl *VD = Elt.castAs<CFGLifetimeEnds>().getVarDecl())
+      State.Env.removeDecl(*VD);
+    break;
   default:
-    // FIXME: Evaluate other kinds of `CFGElement`, including:
-    // - When encountering `CFGLifetimeEnds`, remove the declaration from
-    //   `Environment::DeclToLoc`. This would serve two purposes:
-    //   a) Eliminate unnecessary clutter from `Environment::DeclToLoc`
-    //   b) Allow us to implement an assertion that, when joining two
-    //      `Environments`, the two `DeclToLoc` maps never contain entries that
-    //      map the same declaration to different storage locations.
-    //   Unfortunately, however, we can't currently process `CFGLifetimeEnds`
-    //   because the corresponding CFG option `AddLifetime` is incompatible with
-    //   the option 'AddImplicitDtors`, which we already use. We will first
-    //   need to modify the CFG implementation to make these two options
-    //   compatible before we can process `CFGLifetimeEnds`.
+    // FIXME: Evaluate other kinds of `CFGElement`
     break;
   }
 }
@@ -469,7 +461,7 @@ transferCFGBlock(const CFGBlock &Block, AnalysisContext &AC,
                  std::function<void(const CFGElement &,
                                     const TypeErasedDataflowAnalysisState &)>
                      PostVisitCFG = nullptr) {
-  AC.Log.enterBlock(Block);
+  AC.Log.enterBlock(Block, PostVisitCFG != nullptr);
   auto State = computeBlockInputState(Block, AC);
   AC.Log.recordState(State);
   int ElementIdx = 1;
@@ -504,14 +496,15 @@ runTypeErasedDataflowAnalysis(
         PostVisitCFG) {
   PrettyStackTraceAnalysis CrashInfo(CFCtx, "runTypeErasedDataflowAnalysis");
 
-  PostOrderCFGView POV(&CFCtx.getCFG());
-  ForwardDataflowWorklist Worklist(CFCtx.getCFG(), &POV);
+  const clang::CFG &CFG = CFCtx.getCFG();
+  PostOrderCFGView POV(&CFG);
+  ForwardDataflowWorklist Worklist(CFG, &POV);
 
   std::vector<std::optional<TypeErasedDataflowAnalysisState>> BlockStates(
-      CFCtx.getCFG().size());
+      CFG.size());
 
   // The entry basic block doesn't contain statements so it can be skipped.
-  const CFGBlock &Entry = CFCtx.getCFG().getEntry();
+  const CFGBlock &Entry = CFG.getEntry();
   BlockStates[Entry.getBlockID()] = {Analysis.typeErasedInitialElement(),
                                      InitEnv.fork()};
   Worklist.enqueueSuccessors(&Entry);
@@ -555,7 +548,7 @@ runTypeErasedDataflowAnalysis(
         llvm::errs() << "Old Env:\n";
         OldBlockState->Env.dump();
       });
-      if (isLoopHead(*Block)) {
+      if (isBackedgeNode(*Block)) {
         LatticeJoinEffect Effect1 = Analysis.widenTypeErased(
             NewBlockState.Lattice, OldBlockState->Lattice);
         LatticeJoinEffect Effect2 =

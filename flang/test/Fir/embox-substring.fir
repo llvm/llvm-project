@@ -30,7 +30,7 @@ func.func private @dump(!fir.box<!fir.array<2x!fir.char<1>>>)
 // CHECK-SAME:                                  %[[VAL_1:.*]]: i64) {
 // CHECK:           %[[VAL_5:.*]] = llvm.mlir.constant(1 : index) : i64
 // CHECK:           llvm.getelementptr
-// CHECK:           %[[VAL_28:.*]] = llvm.mlir.null : !llvm.ptr<i8>
+// CHECK:           %[[VAL_28:.*]] = llvm.mlir.zero : !llvm.ptr<i8>
 // CHECK:           %[[VAL_29:.*]] = llvm.getelementptr %[[VAL_28]][1] : (!llvm.ptr<i8>) -> !llvm.ptr<i8>
 // CHECK:           %[[VAL_30:.*]] = llvm.ptrtoint %[[VAL_29]] : !llvm.ptr<i8> to i64
 // CHECK:           %[[VAL_31:.*]] = llvm.mul %[[VAL_30]], %[[VAL_1]]  : i64

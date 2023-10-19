@@ -215,6 +215,7 @@ class DependencyScanningFilesystemLocalCache {
 public:
   /// Returns entry associated with the filename or nullptr if none is found.
   const CachedFileSystemEntry *findEntryByFilename(StringRef Filename) const {
+    assert(llvm::sys::path::is_absolute_gnu(Filename));
     auto It = Cache.find(Filename);
     return It == Cache.end() ? nullptr : It->getValue();
   }
@@ -224,6 +225,7 @@ public:
   const CachedFileSystemEntry &
   insertEntryForFilename(StringRef Filename,
                          const CachedFileSystemEntry &Entry) {
+    assert(llvm::sys::path::is_absolute_gnu(Filename));
     const auto *InsertedEntry = Cache.insert({Filename, &Entry}).first->second;
     assert(InsertedEntry == &Entry && "entry already present");
     return *InsertedEntry;
@@ -282,12 +284,13 @@ class DependencyScanningWorkerFilesystem : public llvm::vfs::ProxyFileSystem {
 public:
   DependencyScanningWorkerFilesystem(
       DependencyScanningFilesystemSharedCache &SharedCache,
-      IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
-      : ProxyFileSystem(std::move(FS)), SharedCache(SharedCache) {}
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
 
   llvm::ErrorOr<llvm::vfs::Status> status(const Twine &Path) override;
   llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
   openFileForRead(const Twine &Path) override;
+
+  std::error_code setCurrentWorkingDirectory(const Twine &Path) override;
 
   /// Returns entry for the given filename.
   ///
@@ -304,8 +307,11 @@ private:
   /// For a filename that's not yet associated with any entry in the caches,
   /// uses the underlying filesystem to either look up the entry based in the
   /// shared cache indexed by unique ID, or creates new entry from scratch.
+  /// \p FilenameForLookup will always be an absolute path, and different than
+  /// \p OriginalFilename if \p OriginalFilename is relative.
   llvm::ErrorOr<const CachedFileSystemEntry &>
-  computeAndStoreResult(StringRef Filename);
+  computeAndStoreResult(StringRef OriginalFilename,
+                        StringRef FilenameForLookup);
 
   /// Scan for preprocessor directives for the given entry if necessary and
   /// returns a wrapper object with reference semantics.
@@ -388,6 +394,12 @@ private:
   /// The local cache is used by the worker thread to cache file system queries
   /// locally instead of querying the global cache every time.
   DependencyScanningFilesystemLocalCache LocalCache;
+
+  /// The working directory to use for making relative paths absolute before
+  /// using them for cache lookups.
+  llvm::ErrorOr<std::string> WorkingDirForCacheLookup;
+
+  void updateWorkingDirForCacheLookup();
 };
 
 } // end namespace dependencies

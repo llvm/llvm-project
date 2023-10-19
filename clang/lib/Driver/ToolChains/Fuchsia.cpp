@@ -133,8 +133,7 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  Args.AddAllArgs(CmdArgs, options::OPT_L);
-  Args.AddAllArgs(CmdArgs, options::OPT_u);
+  Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_u});
 
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
@@ -257,8 +256,8 @@ Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
 
   auto FilePaths = [&](const Multilib &M) -> std::vector<std::string> {
     std::vector<std::string> FP;
-    for (const std::string &Path : getStdlibPaths()) {
-      SmallString<128> P(Path);
+    if (std::optional<std::string> Path = getStdlibPath()) {
+      SmallString<128> P(*Path);
       llvm::sys::path::append(P, M.gccSuffix());
       FP.push_back(std::string(P.str()));
     }

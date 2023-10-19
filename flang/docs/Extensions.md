@@ -8,9 +8,10 @@
 
 # Fortran Extensions supported by Flang
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
 As a general principle, this compiler will accept by default and
@@ -99,7 +100,9 @@ end
 * `<>` as synonym for `.NE.` and `/=`
 * `$` and `@` as legal characters in names
 * Initialization in type declaration statements using `/values/`
-* Saved integer, logical and real scalars are zero initialized.
+* Saved variables without explicit or default initializers are zero initialized.
+* In a saved entity of a type with a default initializer, components without default
+  values are zero initialized.
 * Kind specification with `*`, e.g. `REAL*4`
 * `DOUBLE COMPLEX` as a synonym for `COMPLEX(KIND(0.D0))` --
   but not when spelled `TYPE(DOUBLECOMPLEX)`.
@@ -298,6 +301,8 @@ end
 * Unrestricted `INTRINSIC` functions are accepted for use in
   `PROCEDURE` statements in generic interfaces, as in some other
   compilers.
+* A `NULL()` pointer is treated as an unallocated allocatable
+  when associated with an `INTENT(IN)` allocatable dummy argument.
 
 ### Extensions supported when enabled by options
 
@@ -428,6 +433,9 @@ end
 * Since Fortran 90, INCLUDE lines have been allowed to have
   a numeric kind parameter prefix on the file name.  No other
   Fortran compiler supports them that I can find.
+* A `SEQUENCE` derived type is required (F'2023 C745) to have
+  at least one component.  No compiler enforces this constraint;
+  this compiler emits a warning.
 
 ## Behavior in cases where the standard is ambiguous or indefinite
 
@@ -605,6 +613,21 @@ end module
   associated objects and do not elicit errors about improper redeclarations
   of implicitly typed entities.
 
+* Standard Fortran allows forward references to derived types, which
+  can lead to ambiguity when combined with host association.
+  Some Fortran compilers resolve the type name to the host type,
+  others to the forward-referenced local type; this compiler diagnoses
+  an error.
+```
+module m
+  type ambiguous; integer n; end type
+ contains
+  subroutine s
+    type(ambiguous), pointer :: ptr
+    type ambiguous; real a; end type
+  end
+end
+```
 
 ## De Facto Standard Features
 

@@ -298,6 +298,9 @@ public:
   /// Getter for the State
   MachineIRBuilderState &getState() { return State; }
 
+  /// Setter for the State
+  void setState(const MachineIRBuilderState &NewState) { State = NewState; }
+
   /// Getter for the basic block we currently build.
   const MachineBasicBlock &getMBB() const {
     assert(State.MBB && "MachineBasicBlock is not set");
@@ -363,6 +366,8 @@ public:
   void setChangeObserver(GISelChangeObserver &Observer) {
     State.Observer = &Observer;
   }
+
+  GISelChangeObserver *getObserver() { return State.Observer; }
 
   void stopObservingChanges() { State.Observer = nullptr; }
 
@@ -488,7 +493,8 @@ public:
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildPtrAdd(const DstOp &Res, const SrcOp &Op0,
-                                  const SrcOp &Op1);
+                                  const SrcOp &Op1,
+                                  std::optional<unsigned> Flags = std::nullopt);
 
   /// Materialize and insert \p Res = G_PTR_ADD \p Op0, (G_CONSTANT \p Value)
   ///

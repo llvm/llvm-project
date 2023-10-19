@@ -110,6 +110,7 @@ set(files
   __algorithm/ranges_copy_n.h
   __algorithm/ranges_count.h
   __algorithm/ranges_count_if.h
+  __algorithm/ranges_ends_with.h
   __algorithm/ranges_equal.h
   __algorithm/ranges_equal_range.h
   __algorithm/ranges_fill.h
@@ -677,6 +678,7 @@ set(files
   __system_error/system_error.h
   __thread/formatter.h
   __thread/id.h
+  __thread/jthread.h
   __thread/poll_with_backoff.h
   __thread/this_thread.h
   __thread/thread.h
@@ -836,6 +838,7 @@ set(files
   __utility/cmp.h
   __utility/convert_to_integral.h
   __utility/declval.h
+  __utility/empty.h
   __utility/exception_guard.h
   __utility/exchange.h
   __utility/forward.h
@@ -849,7 +852,6 @@ set(files
   __utility/priority_tag.h
   __utility/rel_ops.h
   __utility/swap.h
-  __utility/terminate_on_exception.h
   __utility/to_underlying.h
   __utility/unreachable.h
   __variant/monostate.h
@@ -952,7 +954,6 @@ set(files
   latch
   libcxx.imp
   limits
-  limits.h
   list
   locale
   locale.h
@@ -976,7 +977,6 @@ set(files
   scoped_allocator
   semaphore
   set
-  setjmp.h
   shared_mutex
   source_location
   span

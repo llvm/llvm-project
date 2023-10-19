@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mtriple=amdgcn-unknown-amdhsa < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn -mtriple=amdgcn-unknown-unknown < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn-unknown-amdhsa < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn-unknown-unknown < %s | FileCheck %s
 
 ; and can be eliminated
 ; CHECK-LABEL: {{^}}test_workitem_id_x_known_max_range:

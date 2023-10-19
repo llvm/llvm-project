@@ -99,18 +99,17 @@ define double @maxnum_f64_nnan(double %x, double %y) nounwind {
 ; R32-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
 ; R32-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; R32-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; R32-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
 ; R32-NEXT:    mv s1, a3
 ; R32-NEXT:    mv s2, a2
 ; R32-NEXT:    mv s0, a1
-; R32-NEXT:    mv s4, a0
+; R32-NEXT:    mv s3, a0
 ; R32-NEXT:    call __gtdf2@plt
-; R32-NEXT:    mv s3, s4
-; R32-NEXT:    bgtz a0, .LBB3_2
+; R32-NEXT:    mv a1, a0
+; R32-NEXT:    mv a0, s3
+; R32-NEXT:    bgtz a1, .LBB3_2
 ; R32-NEXT:  # %bb.1:
 ; R32-NEXT:    mv s3, s2
 ; R32-NEXT:  .LBB3_2:
-; R32-NEXT:    mv a0, s4
 ; R32-NEXT:    mv a1, s0
 ; R32-NEXT:    mv a2, s2
 ; R32-NEXT:    mv a3, s1
@@ -126,7 +125,6 @@ define double @maxnum_f64_nnan(double %x, double %y) nounwind {
 ; R32-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
 ; R32-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; R32-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; R32-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
 ; R32-NEXT:    addi sp, sp, 32
 ; R32-NEXT:    ret
 ;
@@ -250,18 +248,17 @@ define double @minnum_f64_fast(double %x, double %y) nounwind {
 ; R32-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
 ; R32-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; R32-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; R32-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
 ; R32-NEXT:    mv s1, a3
 ; R32-NEXT:    mv s2, a2
 ; R32-NEXT:    mv s0, a1
-; R32-NEXT:    mv s4, a0
+; R32-NEXT:    mv s3, a0
 ; R32-NEXT:    call __ltdf2@plt
-; R32-NEXT:    mv s3, s4
-; R32-NEXT:    bltz a0, .LBB7_2
+; R32-NEXT:    mv a1, a0
+; R32-NEXT:    mv a0, s3
+; R32-NEXT:    bltz a1, .LBB7_2
 ; R32-NEXT:  # %bb.1:
 ; R32-NEXT:    mv s3, s2
 ; R32-NEXT:  .LBB7_2:
-; R32-NEXT:    mv a0, s4
 ; R32-NEXT:    mv a1, s0
 ; R32-NEXT:    mv a2, s2
 ; R32-NEXT:    mv a3, s1
@@ -277,7 +274,6 @@ define double @minnum_f64_fast(double %x, double %y) nounwind {
 ; R32-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
 ; R32-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; R32-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; R32-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
 ; R32-NEXT:    addi sp, sp, 32
 ; R32-NEXT:    ret
 ;

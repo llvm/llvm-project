@@ -40,7 +40,15 @@ cl::list<SPIRV::Extension::Extension> Extensions(
         clEnumValN(SPIRV::Extension::SPV_KHR_no_integer_wrap_decoration,
                    "SPV_KHR_no_integer_wrap_decoration",
                    "Adds decorations to indicate that a given instruction does "
-                   "not cause integer wrapping")));
+                   "not cause integer wrapping"),
+        clEnumValN(SPIRV::Extension::SPV_KHR_expect_assume,
+                   "SPV_KHR_expect_assume",
+                   "Provides additional information to a compiler, similar to "
+                   "the llvm.assume and llvm.expect intrinsics."),
+        clEnumValN(SPIRV::Extension::SPV_KHR_bit_instructions,
+                   "SPV_KHR_bit_instructions",
+                   "This enables bit instructions to be used by SPIR-V modules "
+                   "without requiring the Shader capability")));
 
 // Compare version numbers, but allow 0 to mean unspecified.
 static bool isAtLeastVer(uint32_t Target, uint32_t VerToCompareTo) {

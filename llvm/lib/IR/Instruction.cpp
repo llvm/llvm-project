@@ -80,7 +80,7 @@ void Instruction::removeFromParent() {
   getParent()->getInstList().remove(getIterator());
 }
 
-iplist<Instruction>::iterator Instruction::eraseFromParent() {
+BasicBlock::iterator Instruction::eraseFromParent() {
   return getParent()->getInstList().erase(getIterator());
 }
 
@@ -114,8 +114,7 @@ void Instruction::moveAfter(Instruction *MovePos) {
   moveBefore(*MovePos->getParent(), ++MovePos->getIterator());
 }
 
-void Instruction::moveBefore(BasicBlock &BB,
-                             SymbolTableList<Instruction>::iterator I) {
+void Instruction::moveBefore(BasicBlock &BB, InstListType::iterator I) {
   assert(I == BB.end() || I->getParent() == &BB);
   BB.splice(I, getParent(), getIterator());
 }
@@ -887,7 +886,8 @@ Instruction::getPrevNonDebugInstruction(bool SkipPseudoOp) const {
 
 const DebugLoc &Instruction::getStableDebugLoc() const {
   if (isa<DbgInfoIntrinsic>(this))
-    return getNextNonDebugInstruction()->getDebugLoc();
+    if (const Instruction *Next = getNextNonDebugInstruction())
+      return Next->getDebugLoc();
   return getDebugLoc();
 }
 

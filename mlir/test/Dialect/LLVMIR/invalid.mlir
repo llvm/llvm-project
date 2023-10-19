@@ -306,7 +306,7 @@ func.func @call_non_llvm() {
 // -----
 
 func.func @call_non_llvm_arg(%arg0 : tensor<*xi32>) {
-  // expected-error@+1 {{'llvm.call' op operand #0 must be LLVM dialect-compatible type}}
+  // expected-error@+1 {{'llvm.call' op operand #0 must be variadic of LLVM dialect-compatible type}}
   "llvm.call"(%arg0) : (tensor<*xi32>) -> ()
   llvm.return
 }
@@ -545,9 +545,9 @@ func.func @invalid_vector_type_5(%a : vector<4xf32>, %idx : i32) -> vector<4xf32
 
 // -----
 
-func.func @null_non_llvm_type() {
-  // expected-error@+1 {{'llvm.mlir.null' op result #0 must be LLVM pointer type, but got 'i32'}}
-  llvm.mlir.null : i32
+func.func @zero_non_llvm_type() {
+  // expected-error@+1 {{'llvm.mlir.zero' op result #0 must be LLVM dialect-compatible type, but got 'tensor<4xi32>'}}
+  llvm.mlir.zero : tensor<4xi32>
 }
 
 // -----
@@ -1336,16 +1336,18 @@ func.func @invalid_target_ext_atomic(%arg0 : !llvm.ptr) {
 
 // -----
 
-func.func @invalid_target_ext_constant() {
+func.func @invalid_target_ext_constant_unsupported() {
   // expected-error@+1 {{target extension type does not support zero-initializer}}
-  %0 = llvm.mlir.constant(0 : index) : !llvm.target<"invalid_constant">
+  %0 = llvm.mlir.zero : !llvm.target<"invalid_constant">
+  llvm.return
 }
 
 // -----
 
 func.func @invalid_target_ext_constant() {
-  // expected-error@+1 {{only zero-initializer allowed for target extension types}}
-  %0 = llvm.mlir.constant(42 : index) : !llvm.target<"spirv.Event">
+  // expected-error@+1 {{does not support target extension type.}}
+  %0 = llvm.mlir.constant(0 : index) : !llvm.target<"spirv.Event">
+  llvm.return
 }
 
 // -----
@@ -1408,4 +1410,24 @@ func.func @invalid_zext_target_type(%arg: i32)  {
 func.func @invalid_zext_target_type_two(%arg: vector<1xi32>)  {
   // expected-error@+1 {{input type is a vector but output type is an integer}}
   %0 = llvm.zext %arg : vector<1xi32> to i64
+}
+
+// -----
+
+llvm.func @variadic(...)
+
+llvm.func @invalid_variadic_call(%arg: i32)  {
+  // expected-error@+1 {{missing callee type attribute for vararg call}}
+  "llvm.call"(%arg) <{callee = @variadic}> : (i32) -> ()
+  llvm.return
+}
+
+// -----
+
+llvm.func @variadic(...)
+
+llvm.func @invalid_variadic_call(%arg: i32)  {
+  // expected-error@+1 {{missing callee type attribute for vararg call}}
+  "llvm.call"(%arg) <{callee = @variadic}> : (i32) -> ()
+  llvm.return
 }

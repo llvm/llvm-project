@@ -114,6 +114,7 @@ bool IsConstantExprHelper<INVARIANT>::operator()(
   // LBOUND, UBOUND, and SIZE with truly constant DIM= arguments will have
   // been rewritten into DescriptorInquiry operations.
   if (const auto *intrinsic{std::get_if<SpecificIntrinsic>(&call.proc().u)}) {
+    const characteristics::Procedure &proc{intrinsic->characteristics.value()};
     if (intrinsic->name == "kind" ||
         intrinsic->name == IntrinsicProcTable::InvalidName ||
         call.arguments().empty() || !call.arguments()[0]) {
@@ -129,6 +130,16 @@ bool IsConstantExprHelper<INVARIANT>::operator()(
     } else if (intrinsic->name == "shape" || intrinsic->name == "size") {
       auto shape{GetShape(call.arguments()[0]->UnwrapExpr())};
       return shape && IsConstantExprShape(*shape);
+    } else if (proc.IsPure()) {
+      for (const auto &arg : call.arguments()) {
+        if (!arg) {
+          return false;
+        } else if (const auto *expr{arg->UnwrapExpr()};
+                   !expr || !(*this)(*expr)) {
+          return false;
+        }
+      }
+      return true;
     }
     // TODO: STORAGE_SIZE
   }
@@ -810,8 +821,13 @@ public:
     if (x.base().Rank() == 0) {
       return (*this)(x.GetLastSymbol());
     } else {
-      // TODO could be true if base contiguous and this is only component, or
-      // if base has only one element?
+      if (Result baseIsContiguous{(*this)(x.base())}) {
+        if (!*baseIsContiguous) {
+          return false;
+        }
+        // TODO could be true if base contiguous and this is only component, or
+        // if base has only one element?
+      }
       return std::nullopt;
     }
   }

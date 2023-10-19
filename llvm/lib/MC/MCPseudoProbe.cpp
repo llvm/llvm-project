@@ -10,6 +10,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/PseudoProbe.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFragment.h"
@@ -209,9 +210,18 @@ void MCPseudoProbeInlineTree::emit(MCObjectStreamer *MCOS,
 
 void MCPseudoProbeSections::emit(MCObjectStreamer *MCOS) {
   MCContext &Ctx = MCOS->getContext();
-  for (auto &ProbeSec : MCProbeDivisions) {
-    const auto *FuncSym = ProbeSec.first;
-    const auto &Root = ProbeSec.second;
+  SmallVector<std::pair<MCSymbol *, MCPseudoProbeInlineTree *>> Vec;
+  Vec.reserve(MCProbeDivisions.size());
+  for (auto &ProbeSec : MCProbeDivisions)
+    Vec.emplace_back(ProbeSec.first, &ProbeSec.second);
+  for (auto I : llvm::enumerate(MCOS->getAssembler()))
+    I.value().setOrdinal(I.index());
+  llvm::sort(Vec, [](auto A, auto B) {
+    return A.first->getSection().getOrdinal() <
+           B.first->getSection().getOrdinal();
+  });
+  for (auto [FuncSym, RootPtr] : Vec) {
+    const auto &Root = *RootPtr;
     if (auto *S = Ctx.getObjectFileInfo()->getPseudoProbeSection(
             FuncSym->getSection())) {
       // Switch to the .pseudoprobe section or a comdat group.
@@ -333,7 +343,7 @@ template <typename T> ErrorOr<T> MCPseudoProbeDecoder::readUnencodedNumber() {
   if (Data + sizeof(T) > End) {
     return std::error_code();
   }
-  T Val = endian::readNext<T, little, unaligned>(Data);
+  T Val = endian::readNext<T, llvm::endianness::little, unaligned>(Data);
   return ErrorOr<T>(Val);
 }
 
@@ -562,9 +572,8 @@ void MCPseudoProbeDecoder::printProbeForAddress(raw_ostream &OS,
 }
 
 void MCPseudoProbeDecoder::printProbesForAllAddresses(raw_ostream &OS) {
-  std::vector<uint64_t> Addresses;
-  for (auto Entry : Address2ProbesMap)
-    Addresses.push_back(Entry.first);
+  auto Entries = make_first_range(Address2ProbesMap);
+  SmallVector<uint64_t, 0> Addresses(Entries.begin(), Entries.end());
   llvm::sort(Addresses);
   for (auto K : Addresses) {
     OS << "Address:\t";

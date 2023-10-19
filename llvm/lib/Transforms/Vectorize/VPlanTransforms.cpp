@@ -16,6 +16,7 @@
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -799,15 +800,208 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
   }
 }
 
+/// Returns true is \p V is constant one.
+static bool isConstantOne(VPValue *V) {
+  if (!V->isLiveIn())
+    return false;
+  auto *C = dyn_cast<ConstantInt>(V->getLiveInIRValue());
+  return C && C->isOne();
+}
+
+/// Returns the llvm::Instruction opcode for \p R.
+static unsigned getOpcodeForRecipe(VPRecipeBase &R) {
+  if (auto *WidenR = dyn_cast<VPWidenRecipe>(&R))
+    return WidenR->getUnderlyingInstr()->getOpcode();
+  if (auto *RepR = dyn_cast<VPReplicateRecipe>(&R))
+    return RepR->getUnderlyingInstr()->getOpcode();
+  if (auto *VPI = dyn_cast<VPInstruction>(&R))
+    return VPI->getOpcode();
+  return 0;
+}
+
+/// Try to simplify recipe \p R.
+static void simplifyRecipe(VPRecipeBase &R) {
+  unsigned Opcode = getOpcodeForRecipe(R);
+  if (Opcode == Instruction::Mul) {
+    VPValue *A = R.getOperand(0);
+    VPValue *B = R.getOperand(1);
+    if (isConstantOne(A))
+      return R.getVPSingleValue()->replaceAllUsesWith(B);
+    if (isConstantOne(B))
+      return R.getVPSingleValue()->replaceAllUsesWith(A);
+  }
+}
+
+/// Try to simplify the recipes in \p Plan.
+static void simplifyRecipes(VPlan &Plan) {
+  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
+      Plan.getEntry());
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      simplifyRecipe(R);
+    }
+  }
+}
+
 void VPlanTransforms::optimize(VPlan &Plan, ScalarEvolution &SE) {
   removeRedundantCanonicalIVs(Plan);
   removeRedundantInductionCasts(Plan);
 
   optimizeInductions(Plan, SE);
+  simplifyRecipes(Plan);
   removeDeadRecipes(Plan);
 
   createAndOptimizeReplicateRegions(Plan);
 
   removeRedundantExpandSCEVRecipes(Plan);
   mergeBlocksIntoPredecessors(Plan);
+}
+
+// Add a VPActiveLaneMaskPHIRecipe and related recipes to \p Plan and replace
+// the loop terminator with a branch-on-cond recipe with the negated
+// active-lane-mask as operand. Note that this turns the loop into an
+// uncountable one. Only the existing terminator is replaced, all other existing
+// recipes/users remain unchanged, except for poison-generating flags being
+// dropped from the canonical IV increment. Return the created
+// VPActiveLaneMaskPHIRecipe.
+//
+// The function uses the following definitions:
+//
+//  %TripCount = DataWithControlFlowWithoutRuntimeCheck ?
+//    calculate-trip-count-minus-VF (original TC) : original TC
+//  %IncrementValue = DataWithControlFlowWithoutRuntimeCheck ?
+//     CanonicalIVPhi : CanonicalIVIncrement
+//  %StartV is the canonical induction start value.
+//
+// The function adds the following recipes:
+//
+// vector.ph:
+//   %TripCount = calculate-trip-count-minus-VF (original TC)
+//       [if DataWithControlFlowWithoutRuntimeCheck]
+//   %EntryInc = canonical-iv-increment-for-part %StartV
+//   %EntryALM = active-lane-mask %EntryInc, %TripCount
+//
+// vector.body:
+//   ...
+//   %P = active-lane-mask-phi [ %EntryALM, %vector.ph ], [ %ALM, %vector.body ]
+//   ...
+//   %InLoopInc = canonical-iv-increment-for-part %IncrementValue
+//   %ALM = active-lane-mask %InLoopInc, TripCount
+//   %Negated = Not %ALM
+//   branch-on-cond %Negated
+//
+static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
+    VPlan &Plan, bool DataAndControlFlowWithoutRuntimeCheck) {
+  VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
+  VPBasicBlock *EB = TopRegion->getExitingBasicBlock();
+  auto *CanonicalIVPHI = Plan.getCanonicalIV();
+  VPValue *StartV = CanonicalIVPHI->getStartValue();
+
+  auto *CanonicalIVIncrement =
+      cast<VPInstruction>(CanonicalIVPHI->getBackedgeValue());
+  // TODO: Check if dropping the flags is needed if
+  // !DataAndControlFlowWithoutRuntimeCheck.
+  CanonicalIVIncrement->dropPoisonGeneratingFlags();
+  DebugLoc DL = CanonicalIVIncrement->getDebugLoc();
+  // We can't use StartV directly in the ActiveLaneMask VPInstruction, since
+  // we have to take unrolling into account. Each part needs to start at
+  //   Part * VF
+  auto *VecPreheader = cast<VPBasicBlock>(TopRegion->getSinglePredecessor());
+  VPBuilder Builder(VecPreheader);
+
+  // Create the ActiveLaneMask instruction using the correct start values.
+  VPValue *TC = Plan.getTripCount();
+
+  VPValue *TripCount, *IncrementValue;
+  if (!DataAndControlFlowWithoutRuntimeCheck) {
+    // When the loop is guarded by a runtime overflow check for the loop
+    // induction variable increment by VF, we can increment the value before
+    // the get.active.lane mask and use the unmodified tripcount.
+    IncrementValue = CanonicalIVIncrement;
+    TripCount = TC;
+  } else {
+    // When avoiding a runtime check, the active.lane.mask inside the loop
+    // uses a modified trip count and the induction variable increment is
+    // done after the active.lane.mask intrinsic is called.
+    IncrementValue = CanonicalIVPHI;
+    TripCount = Builder.createNaryOp(VPInstruction::CalculateTripCountMinusVF,
+                                     {TC}, DL);
+  }
+  auto *EntryIncrement = Builder.createOverflowingOp(
+      VPInstruction::CanonicalIVIncrementForPart, {StartV}, {false, false}, DL,
+      "index.part.next");
+
+  // Create the active lane mask instruction in the VPlan preheader.
+  auto *EntryALM =
+      Builder.createNaryOp(VPInstruction::ActiveLaneMask, {EntryIncrement, TC},
+                           DL, "active.lane.mask.entry");
+
+  // Now create the ActiveLaneMaskPhi recipe in the main loop using the
+  // preheader ActiveLaneMask instruction.
+  auto LaneMaskPhi = new VPActiveLaneMaskPHIRecipe(EntryALM, DebugLoc());
+  LaneMaskPhi->insertAfter(CanonicalIVPHI);
+
+  // Create the active lane mask for the next iteration of the loop before the
+  // original terminator.
+  VPRecipeBase *OriginalTerminator = EB->getTerminator();
+  Builder.setInsertPoint(OriginalTerminator);
+  auto *InLoopIncrement =
+      Builder.createOverflowingOp(VPInstruction::CanonicalIVIncrementForPart,
+                                  {IncrementValue}, {false, false}, DL);
+  auto *ALM = Builder.createNaryOp(VPInstruction::ActiveLaneMask,
+                                   {InLoopIncrement, TripCount}, DL,
+                                   "active.lane.mask.next");
+  LaneMaskPhi->addOperand(ALM);
+
+  // Replace the original terminator with BranchOnCond. We have to invert the
+  // mask here because a true condition means jumping to the exit block.
+  auto *NotMask = Builder.createNot(ALM, DL);
+  Builder.createNaryOp(VPInstruction::BranchOnCond, {NotMask}, DL);
+  OriginalTerminator->eraseFromParent();
+  return LaneMaskPhi;
+}
+
+void VPlanTransforms::addActiveLaneMask(
+    VPlan &Plan, bool UseActiveLaneMaskForControlFlow,
+    bool DataAndControlFlowWithoutRuntimeCheck) {
+  assert((!DataAndControlFlowWithoutRuntimeCheck ||
+          UseActiveLaneMaskForControlFlow) &&
+         "DataAndControlFlowWithoutRuntimeCheck implies "
+         "UseActiveLaneMaskForControlFlow");
+
+  auto FoundWidenCanonicalIVUser =
+      find_if(Plan.getCanonicalIV()->users(),
+              [](VPUser *U) { return isa<VPWidenCanonicalIVRecipe>(U); });
+  assert(FoundWidenCanonicalIVUser &&
+         "Must have widened canonical IV when tail folding!");
+  auto *WideCanonicalIV =
+      cast<VPWidenCanonicalIVRecipe>(*FoundWidenCanonicalIVUser);
+  VPRecipeBase *LaneMask;
+  if (UseActiveLaneMaskForControlFlow) {
+    LaneMask = addVPLaneMaskPhiAndUpdateExitBranch(
+        Plan, DataAndControlFlowWithoutRuntimeCheck);
+  } else {
+    LaneMask = new VPInstruction(VPInstruction::ActiveLaneMask,
+                                 {WideCanonicalIV, Plan.getTripCount()},
+                                 nullptr, "active.lane.mask");
+    LaneMask->insertAfter(WideCanonicalIV);
+  }
+
+  // Walk users of WideCanonicalIV and replace all compares of the form
+  // (ICMP_ULE, WideCanonicalIV, backedge-taken-count) with an
+  // active-lane-mask.
+  VPValue *BTC = Plan.getOrCreateBackedgeTakenCount();
+  for (VPUser *U : SmallVector<VPUser *>(WideCanonicalIV->users())) {
+    auto *CompareToReplace = dyn_cast<VPInstruction>(U);
+    if (!CompareToReplace ||
+        CompareToReplace->getOpcode() != Instruction::ICmp ||
+        CompareToReplace->getPredicate() != CmpInst::ICMP_ULE ||
+        CompareToReplace->getOperand(1) != BTC)
+      continue;
+
+    assert(CompareToReplace->getOperand(0) == WideCanonicalIV &&
+           "WidenCanonicalIV must be the first operand of the compare");
+    CompareToReplace->replaceAllUsesWith(LaneMask->getVPSingleValue());
+    CompareToReplace->eraseFromParent();
+  }
 }

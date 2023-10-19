@@ -74,7 +74,7 @@ cleanup:                                          ; preds = %resume, %coro.begin
   br label %suspend
 
 suspend:                                          ; preds = %cleanup, %coro.begin
-  %2 = call i1 @llvm.coro.end(ptr %hdl, i1 false)
+  %2 = call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
   ret ptr %hdl
 }
 
@@ -104,7 +104,7 @@ declare i1 @llvm.coro.alloc(token) #4
 declare ptr @llvm.coro.begin(token, ptr writeonly) #4
 
 ; Function Attrs: nounwind
-declare i1 @llvm.coro.end(ptr, i1) #4
+declare i1 @llvm.coro.end(ptr, i1, token) #4
 
 declare noalias ptr @malloc(i32)
 

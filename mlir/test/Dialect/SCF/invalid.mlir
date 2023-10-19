@@ -83,6 +83,45 @@ func.func @loop_for_single_index_argument(%arg0: index) {
 
 // -----
 
+func.func @not_enough_loop_results(%arg0: index, %init: f32) {
+  // expected-error @below{{mismatch in number of loop-carried values and defined values}}
+  "scf.for"(%arg0, %arg0, %arg0, %init) (
+    {
+    ^bb0(%i0 : index, %iter: f32):
+      scf.yield %iter : f32
+    }
+  ) : (index, index, index, f32) -> ()
+  return
+}
+
+// -----
+
+func.func @too_many_iter_args(%arg0: index, %init: f32) {
+  // expected-error @below{{different number of inits and region iter_args: 1 != 2}}
+  %x = "scf.for"(%arg0, %arg0, %arg0, %init) (
+    {
+    ^bb0(%i0 : index, %iter: f32, %iter2: f32):
+      scf.yield %iter, %iter : f32, f32
+    }
+  ) : (index, index, index, f32) -> (f32)
+  return
+}
+
+// -----
+
+func.func @too_few_yielded_values(%arg0: index, %init: f32) {
+  // expected-error @below{{different number of region iter_args and yielded values: 2 != 1}}
+  %x, %x2 = "scf.for"(%arg0, %arg0, %arg0, %init, %init) (
+    {
+    ^bb0(%i0 : index, %iter: f32, %iter2: f32):
+      scf.yield %iter : f32
+    }
+  ) : (index, index, index, f32, f32) -> (f32, f32)
+  return
+}
+
+// -----
+
 func.func @loop_if_not_i1(%arg0: index) {
   // expected-error@+1 {{operand #0 must be 1-bit signless integer}}
   "scf.if"(%arg0) ({}, {}) : (index) -> ()
@@ -409,7 +448,8 @@ func.func @std_for_operands_mismatch_3(%arg0 : index, %arg1 : index, %arg2 : ind
 func.func @std_for_operands_mismatch_4(%arg0 : index, %arg1 : index, %arg2 : index) {
   %s0 = arith.constant 0.0 : f32
   %t0 = arith.constant 1.0 : f32
-  // expected-error @+1 {{along control flow edge from Region #0 to Region #0: source type #1 'i32' should match input type #1 'f32'}}
+  // expected-error @below {{1-th region iter_arg and 1-th yielded value have different type: 'f32' != 'i32'}}
+  // expected-error @below {{along control flow edge from Region #0 to Region #0: source type #1 'i32' should match input type #1 'f32'}}
   %result1:2 = scf.for %i0 = %arg0 to %arg1 step %arg2
                     iter_args(%si = %s0, %ti = %t0) -> (f32, f32) {
     %sn = arith.addf %si, %si : f32
@@ -418,7 +458,6 @@ func.func @std_for_operands_mismatch_4(%arg0 : index, %arg1 : index, %arg2 : ind
   }
   return
 }
-
 
 // -----
 

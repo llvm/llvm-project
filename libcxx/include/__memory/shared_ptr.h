@@ -285,23 +285,23 @@ template <class _Tp, class _Alloc>
 struct __shared_ptr_emplace
     : __shared_weak_count
 {
-    template<class ..._Args>
+    template <class... _Args, class _Allocator = _Alloc, __enable_if_t<is_same<typename _Allocator::value_type, __for_overwrite_tag>::value, int> = 0>
+    _LIBCPP_HIDE_FROM_ABI
+    explicit __shared_ptr_emplace(_Alloc __a, _Args&& ...)
+        : __storage_(_VSTD::move(__a))
+    {
+        static_assert(sizeof...(_Args) == 0, "No argument should be provided to the control block when using _for_overwrite");
+        ::new ((void*)__get_elem()) _Tp;
+    }
+
+    template <class... _Args, class _Allocator = _Alloc, __enable_if_t<!is_same<typename _Allocator::value_type, __for_overwrite_tag>::value, int> = 0>
     _LIBCPP_HIDE_FROM_ABI
     explicit __shared_ptr_emplace(_Alloc __a, _Args&& ...__args)
         : __storage_(_VSTD::move(__a))
     {
-#if _LIBCPP_STD_VER >= 20
-        if constexpr (is_same_v<typename _Alloc::value_type, __for_overwrite_tag>) {
-            static_assert(sizeof...(_Args) == 0, "No argument should be provided to the control block when using _for_overwrite");
-            ::new ((void*)__get_elem()) _Tp;
-        } else {
-            using _TpAlloc = typename __allocator_traits_rebind<_Alloc, _Tp>::type;
-            _TpAlloc __tmp(*__get_alloc());
-            allocator_traits<_TpAlloc>::construct(__tmp, __get_elem(), _VSTD::forward<_Args>(__args)...);
-        }
-#else
-        ::new ((void*)__get_elem()) _Tp(_VSTD::forward<_Args>(__args)...);
-#endif
+        using _TpAlloc = typename __allocator_traits_rebind<_Alloc, _Tp>::type;
+        _TpAlloc __tmp(*__get_alloc());
+        allocator_traits<_TpAlloc>::construct(__tmp, __get_elem(), _VSTD::forward<_Args>(__args)...);
     }
 
     _LIBCPP_HIDE_FROM_ABI
@@ -311,18 +311,20 @@ struct __shared_ptr_emplace
     _Tp* __get_elem() _NOEXCEPT { return __storage_.__get_elem(); }
 
 private:
-    _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared() _NOEXCEPT override {
-#if _LIBCPP_STD_VER >= 20
-        if constexpr (is_same_v<typename _Alloc::value_type, __for_overwrite_tag>) {
-            __get_elem()->~_Tp();
-        } else {
-            using _TpAlloc = typename __allocator_traits_rebind<_Alloc, _Tp>::type;
-            _TpAlloc __tmp(*__get_alloc());
-            allocator_traits<_TpAlloc>::destroy(__tmp, __get_elem());
-        }
-#else
+    template <class _Allocator = _Alloc, __enable_if_t<is_same<typename _Allocator::value_type, __for_overwrite_tag>::value, int> = 0>
+    _LIBCPP_HIDE_FROM_ABI void __on_zero_shared_impl() _NOEXCEPT {
         __get_elem()->~_Tp();
-#endif
+    }
+
+    template <class _Allocator = _Alloc, __enable_if_t<!is_same<typename _Allocator::value_type, __for_overwrite_tag>::value, int> = 0>
+    _LIBCPP_HIDE_FROM_ABI void __on_zero_shared_impl() _NOEXCEPT {
+        using _TpAlloc = typename __allocator_traits_rebind<_Allocator, _Tp>::type;
+        _TpAlloc __tmp(*__get_alloc());
+        allocator_traits<_TpAlloc>::destroy(__tmp, __get_elem());
+    }
+
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared() _NOEXCEPT override {
+        __on_zero_shared_impl();
     }
 
     _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared_weak() _NOEXCEPT override {
@@ -1135,7 +1137,8 @@ private:
         __alloc_.~_Alloc();
         size_t __size = __unbounded_array_control_block::__bytes_for(__count_);
         _AlignedStorage* __storage = reinterpret_cast<_AlignedStorage*>(this);
-        allocator_traits<_StorageAlloc>::deallocate(__tmp, _PointerTraits::pointer_to(*__storage), __size);
+        allocator_traits<_StorageAlloc>::deallocate(
+            __tmp, _PointerTraits::pointer_to(*__storage), __size / sizeof(_AlignedStorage));
     }
 
     _LIBCPP_NO_UNIQUE_ADDRESS _Alloc __alloc_;
@@ -1218,7 +1221,7 @@ private:
 
         _ControlBlockAlloc __tmp(__alloc_);
         __alloc_.~_Alloc();
-        allocator_traits<_ControlBlockAlloc>::deallocate(__tmp, _PointerTraits::pointer_to(*this), sizeof(*this));
+        allocator_traits<_ControlBlockAlloc>::deallocate(__tmp, _PointerTraits::pointer_to(*this), 1);
     }
 
     _LIBCPP_NO_UNIQUE_ADDRESS _Alloc __alloc_;
@@ -1725,11 +1728,11 @@ template<class _Yp, __enable_if_t<__compatible_with<_Yp, _Tp>::value, int> >
 inline
 weak_ptr<_Tp>::weak_ptr(weak_ptr<_Yp> const& __r)
          _NOEXCEPT
-    : __ptr_(__r.__ptr_),
-      __cntrl_(__r.__cntrl_)
+    : __ptr_(nullptr),
+      __cntrl_(nullptr)
 {
-    if (__cntrl_)
-        __cntrl_->__add_weak();
+    shared_ptr<_Yp> __s = __r.lock();
+    *this = weak_ptr<_Tp>(__s);
 }
 
 template<class _Tp>
@@ -1747,11 +1750,12 @@ template<class _Yp, __enable_if_t<__compatible_with<_Yp, _Tp>::value, int> >
 inline
 weak_ptr<_Tp>::weak_ptr(weak_ptr<_Yp>&& __r)
          _NOEXCEPT
-    : __ptr_(__r.__ptr_),
-      __cntrl_(__r.__cntrl_)
+    : __ptr_(nullptr),
+      __cntrl_(nullptr)
 {
-    __r.__ptr_ = nullptr;
-    __r.__cntrl_ = nullptr;
+    shared_ptr<_Yp> __s = __r.lock();
+    *this = weak_ptr<_Tp>(__s);
+    __r.reset();
 }
 
 template<class _Tp>

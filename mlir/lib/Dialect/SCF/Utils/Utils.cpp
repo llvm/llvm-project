@@ -38,77 +38,9 @@ struct LoopParams {
 };
 } // namespace
 
-scf::ForOp
-mlir::replaceLoopWithNewYields(OpBuilder &builder, scf::ForOp loop,
-                               ValueRange newIterOperands,
-                               const NewYieldValueFn &newYieldValuesFn,
-                               bool replaceIterOperandsUsesInLoop) {
-  // Create a new loop before the existing one, with the extra operands.
-  OpBuilder::InsertionGuard g(builder);
-  builder.setInsertionPoint(loop);
-  auto operands = llvm::to_vector(loop.getIterOperands());
-  operands.append(newIterOperands.begin(), newIterOperands.end());
-  scf::ForOp newLoop = builder.create<scf::ForOp>(
-      loop.getLoc(), loop.getLowerBound(), loop.getUpperBound(), loop.getStep(),
-      operands, [](OpBuilder &, Location, Value, ValueRange) {});
-
-  Block *loopBody = loop.getBody();
-  Block *newLoopBody = newLoop.getBody();
-
-  // Move the body of the original loop to the new loop.
-  newLoopBody->getOperations().splice(newLoopBody->end(),
-                                      loopBody->getOperations());
-
-  // Generate the new yield values to use by using the callback and append the
-  // yield values to the scf.yield operation.
-  auto yield = cast<scf::YieldOp>(newLoopBody->getTerminator());
-  ArrayRef<BlockArgument> newBBArgs =
-      newLoopBody->getArguments().take_back(newIterOperands.size());
-  {
-    OpBuilder::InsertionGuard g(builder);
-    builder.setInsertionPoint(yield);
-    SmallVector<Value> newYieldedValues =
-        newYieldValuesFn(builder, loop.getLoc(), newBBArgs);
-    assert(newIterOperands.size() == newYieldedValues.size() &&
-           "expected as many new yield values as new iter operands");
-    yield.getResultsMutable().append(newYieldedValues);
-  }
-
-  // Remap the BlockArguments from the original loop to the new loop
-  // BlockArguments.
-  ArrayRef<BlockArgument> bbArgs = loopBody->getArguments();
-  for (auto it :
-       llvm::zip(bbArgs, newLoopBody->getArguments().take_front(bbArgs.size())))
-    std::get<0>(it).replaceAllUsesWith(std::get<1>(it));
-
-  if (replaceIterOperandsUsesInLoop) {
-    // Replace all uses of `newIterOperands` with the corresponding basic block
-    // arguments.
-    for (auto it : llvm::zip(newIterOperands, newBBArgs)) {
-      std::get<0>(it).replaceUsesWithIf(std::get<1>(it), [&](OpOperand &use) {
-        Operation *user = use.getOwner();
-        return newLoop->isProperAncestor(user);
-      });
-    }
-  }
-
-  // Replace all uses of the original loop with corresponding values from the
-  // new loop.
-  loop.replaceAllUsesWith(
-      newLoop.getResults().take_front(loop.getNumResults()));
-
-  // Add a fake yield to the original loop body that just returns the
-  // BlockArguments corresponding to the iter_args. This makes it a no-op loop.
-  // The loop is dead. The caller is expected to erase it.
-  builder.setInsertionPointToEnd(loopBody);
-  builder.create<scf::YieldOp>(loop->getLoc(), loop.getRegionIterArgs());
-
-  return newLoop;
-}
-
 SmallVector<scf::ForOp> mlir::replaceLoopNestWithNewYields(
-    OpBuilder &builder, ArrayRef<scf::ForOp> loopNest,
-    ValueRange newIterOperands, const NewYieldValueFn &newYieldValueFn,
+    RewriterBase &rewriter, MutableArrayRef<scf::ForOp> loopNest,
+    ValueRange newIterOperands, const NewYieldValuesFn &newYieldValuesFn,
     bool replaceIterOperandsUsesInLoop) {
   if (loopNest.empty())
     return {};
@@ -146,31 +78,32 @@ SmallVector<scf::ForOp> mlir::replaceLoopNestWithNewYields(
   // }
   // ```
   //
-  // The inner most loop is handled using the `replaceLoopWithNewYields`
+  // The inner most loop is handled using the `replaceWithAdditionalYields`
   // that works on a single loop.
   if (loopNest.size() == 1) {
-    auto innerMostLoop = replaceLoopWithNewYields(
-        builder, loopNest.back(), newIterOperands, newYieldValueFn,
-        replaceIterOperandsUsesInLoop);
+    auto innerMostLoop =
+        cast<scf::ForOp>(*loopNest.back().replaceWithAdditionalYields(
+            rewriter, newIterOperands, replaceIterOperandsUsesInLoop,
+            newYieldValuesFn));
     return {innerMostLoop};
   }
   // The outer loops are modified by calling this method recursively
   // - The return value of the inner loop is the value yielded by this loop.
   // - The region iter args of this loop are the init_args for the inner loop.
   SmallVector<scf::ForOp> newLoopNest;
-  NewYieldValueFn fn =
+  NewYieldValuesFn fn =
       [&](OpBuilder &innerBuilder, Location loc,
           ArrayRef<BlockArgument> innerNewBBArgs) -> SmallVector<Value> {
-    newLoopNest = replaceLoopNestWithNewYields(builder, loopNest.drop_front(),
-                                               innerNewBBArgs, newYieldValueFn,
+    newLoopNest = replaceLoopNestWithNewYields(rewriter, loopNest.drop_front(),
+                                               innerNewBBArgs, newYieldValuesFn,
                                                replaceIterOperandsUsesInLoop);
     return llvm::to_vector(llvm::map_range(
         newLoopNest.front().getResults().take_back(innerNewBBArgs.size()),
         [](OpResult r) -> Value { return r; }));
   };
   scf::ForOp outerMostLoop =
-      replaceLoopWithNewYields(builder, loopNest.front(), newIterOperands, fn,
-                               replaceIterOperandsUsesInLoop);
+      cast<scf::ForOp>(*loopNest.front().replaceWithAdditionalYields(
+          rewriter, newIterOperands, replaceIterOperandsUsesInLoop, fn));
   newLoopNest.insert(newLoopNest.begin(), outerMostLoop);
   return newLoopNest;
 }
@@ -458,7 +391,6 @@ LogicalResult mlir::loopUnrollByFactor(
 
     int64_t tripCountEvenMultiple = tripCount - (tripCount % unrollFactor);
     int64_t upperBoundUnrolledCst = lbCst + tripCountEvenMultiple * stepCst;
-    assert(upperBoundUnrolledCst <= ubCst);
     int64_t stepUnrolledCst = stepCst * unrollFactor;
 
     // Create constant for 'upperBoundUnrolled' and set epilogue loop flag.
@@ -515,7 +447,7 @@ LogicalResult mlir::loopUnrollByFactor(
       std::get<0>(e).replaceAllUsesWith(std::get<1>(e));
     }
     epilogueForOp->setOperands(epilogueForOp.getNumControlOperands(),
-                               epilogueForOp.getNumIterOperands(), results);
+                               epilogueForOp.getInitArgs().size(), results);
     (void)epilogueForOp.promoteIfSingleIteration(rewriter);
   }
 
@@ -1006,9 +938,9 @@ scf::ForallOp mlir::fuseIndependentSiblingForallLoops(scf::ForallOp target,
 
   // Append everything except the terminator into the fused operation.
   rewriter.setInsertionPointToStart(fusedLoop.getBody());
-  for (Operation &op : target.getLoopBody().begin()->without_terminator())
+  for (Operation &op : target.getBody()->without_terminator())
     rewriter.clone(op, fusedMapping);
-  for (Operation &op : source.getLoopBody().begin()->without_terminator())
+  for (Operation &op : source.getBody()->without_terminator())
     rewriter.clone(op, fusedMapping);
 
   // Fuse the old terminator in_parallel ops into the new one.

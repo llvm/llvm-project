@@ -20,7 +20,7 @@ subroutine assoc()
     type(t1), pointer :: t1ptr(:)
   end type t2
 
-  contains
+ contains
   integer function intFunc(x)
     integer, intent(in) :: x
     intFunc = x
@@ -47,6 +47,17 @@ subroutine assoc()
   subroutine subrCannotBeCalledfromImplicit(i)
     integer :: i(:)
   end subroutine subrCannotBeCalledfromImplicit
+
+  function objPtrFunc(x)
+    integer, target :: x
+    integer, pointer :: objPtrFunc
+    objPtrFunc => x
+  end
+
+  function procPtrFunc
+    procedure(intFunc), pointer :: procPtrFunc
+    procPtrFunc => intFunc
+  end
 
   subroutine test(assumedRank)
     real, pointer, intent(in out) :: assumedRank(..)
@@ -116,16 +127,16 @@ subroutine assoc()
     lVar = associated(null(), null(intPointerVar1)) !OK
     !PORTABILITY: POINTER= argument of ASSOCIATED() should be a pointer
     lVar = associated(null(intPointerVar1), null()) !OK
-    !ERROR: POINTER= argument of ASSOCIATED() must be a POINTER
+    !ERROR: POINTER= argument of ASSOCIATED() must be a pointer
     lVar = associated(intVar)
-    !ERROR: POINTER= argument of ASSOCIATED() must be a POINTER
+    !ERROR: POINTER= argument of ASSOCIATED() must be a pointer
     lVar = associated(intVar, intVar)
-    !ERROR: POINTER= argument of ASSOCIATED() must be a POINTER
+    !ERROR: POINTER= argument of ASSOCIATED() must be a pointer
     lVar = associated(intAllocVar)
-    !ERROR: Arguments of ASSOCIATED() must be a POINTER and an optional valid target
+    !ERROR: Arguments of ASSOCIATED() must be a pointer and an optional valid target
     lVar = associated(intPointerVar1, targetRealVar)
     lVar = associated(intPointerVar1, targetIntVar1) !OK
-    !ERROR: Arguments of ASSOCIATED() must be a POINTER and an optional valid target
+    !ERROR: Arguments of ASSOCIATED() must be a pointer and an optional valid target
     lVar = associated(intPointerVar1, targetIntVar2)
     lVar = associated(intPointerVar1) !OK
     lVar = associated(intPointerVar1, intPointerVar2) !OK
@@ -157,9 +168,29 @@ subroutine assoc()
     intProcPointer1 => null(intProcPointer2) ! ok
     lvar = associated(intProcPointer1, null(intProcPointer2)) ! ok
     intProcPointer1 =>null() ! ok
-    lvar = associated(intProcPointer1, null()) ! ok
+    lvar = associated(intProcPointer1, null())
     intPointerVar1 => null(intPointerVar1) ! ok
     lvar = associated (intPointerVar1, null(intPointerVar1)) ! ok
+
+    ! Functions (other than NULL) returning pointers
+    lVar = associated(objPtrFunc(targetIntVar1)) ! ok
+    !PORTABILITY: POINTER= argument of ASSOCIATED() should be a pointer
+    lVar = associated(objPtrFunc(targetIntVar1), targetIntVar1) ! ok
+    !PORTABILITY: POINTER= argument of ASSOCIATED() should be a pointer
+    lVar = associated(objPtrFunc(targetIntVar1), objPtrFunc(targetIntVar1)) ! ok
+    lVar = associated(procPtrFunc()) ! ok
+    lVar = associated(procPtrFunc(), intFunc) ! ok
+    lVar = associated(procPtrFunc(), procPtrFunc()) ! ok
+    !ERROR: POINTER= argument 'objptrfunc(targetintvar1)' is an object pointer but the TARGET= argument 'intfunc' is not a variable
+    !PORTABILITY: POINTER= argument of ASSOCIATED() should be a pointer
+    lVar = associated(objPtrFunc(targetIntVar1), intFunc)
+    !ERROR: POINTER= argument 'objptrfunc(targetintvar1)' is an object pointer but the TARGET= argument 'procptrfunc()' is not a variable
+    !PORTABILITY: POINTER= argument of ASSOCIATED() should be a pointer
+    lVar = associated(objPtrFunc(targetIntVar1), procPtrFunc())
+    !ERROR: POINTER= argument 'procptrfunc()' is a procedure pointer but the TARGET= argument 'objptrfunc(targetintvar1)' is not a procedure or procedure pointer
+    lVar = associated(procPtrFunc(), objPtrFunc(targetIntVar1))
+    !ERROR: POINTER= argument 'procptrfunc()' is a procedure pointer but the TARGET= argument 'targetintvar1' is not a procedure or procedure pointer
+    lVar = associated(procPtrFunc(), targetIntVar1)
 
     !ERROR: In assignment to procedure pointer 'intprocpointer1', the target is not a procedure or procedure pointer
     intprocPointer1 => intVar
@@ -180,7 +211,7 @@ subroutine assoc()
     lvar = associated (intProcPointer1, targetIntVar1)
     !ERROR: Procedure pointer 'intprocpointer1' associated with result of reference to function 'null' that is an incompatible procedure pointer: function results have distinct types: INTEGER(4) vs REAL(4)
     intProcPointer1 => null(mold=realProcPointer1)
-    !WARNING: Procedure pointer 'intprocpointer1' associated with result of reference to function 'null()' that is an incompatible procedure pointer: function results have distinct types: INTEGER(4) vs REAL(4)
+    !WARNING: Procedure pointer 'intprocpointer1' associated with result of reference to function 'null(mold=realprocpointer1)' that is an incompatible procedure pointer: function results have distinct types: INTEGER(4) vs REAL(4)
     lvar = associated(intProcPointer1, null(mold=realProcPointer1))
     !ERROR: PURE procedure pointer 'purefuncpointer' may not be associated with non-PURE procedure designator 'intproc'
     pureFuncPointer => intProc

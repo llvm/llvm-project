@@ -98,12 +98,12 @@ static bool parseShowColorsArgs(const llvm::opt::ArgList &args,
 /// Extracts the optimisation level from \a args.
 static unsigned getOptimizationLevel(llvm::opt::ArgList &args,
                                      clang::DiagnosticsEngine &diags) {
-  unsigned defaultOpt = llvm::CodeGenOpt::None;
+  unsigned defaultOpt = 0;
 
   if (llvm::opt::Arg *a =
           args.getLastArg(clang::driver::options::OPT_O_Group)) {
     if (a->getOption().matches(clang::driver::options::OPT_O0))
-      return llvm::CodeGenOpt::None;
+      return 0;
 
     assert(a->getOption().matches(clang::driver::options::OPT_O));
 
@@ -213,6 +213,11 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (args.hasFlag(clang::driver::options::OPT_floop_versioning,
                    clang::driver::options::OPT_fno_loop_versioning, false))
     opts.LoopVersioning = 1;
+
+  opts.AliasAnalysis =
+      args.hasFlag(clang::driver::options::OPT_falias_analysis,
+                   clang::driver::options::OPT_fno_alias_analysis,
+                   /*default=*/false);
 
   for (auto *a : args.filtered(clang::driver::options::OPT_fpass_plugin_EQ))
     opts.LLVMPassPlugins.push_back(a->getValue());
@@ -986,6 +991,41 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
   return true;
 }
 
+/// Parses vscale range options and populates the CompilerInvocation
+/// accordingly.
+/// Returns false if new errors are generated.
+///
+/// \param [out] invoc Stores the processed arguments
+/// \param [in] args The compiler invocation arguments to parse
+/// \param [out] diags DiagnosticsEngine to report erros with
+static bool parseVScaleArgs(CompilerInvocation &invoc, llvm::opt::ArgList &args,
+                            clang::DiagnosticsEngine &diags) {
+  LangOptions &opts = invoc.getLangOpts();
+  if (const auto arg =
+          args.getLastArg(clang::driver::options::OPT_mvscale_min_EQ)) {
+    llvm::StringRef argValue = llvm::StringRef(arg->getValue());
+    unsigned VScaleMin;
+    if (argValue.getAsInteger(/*Radix=*/10, VScaleMin)) {
+      diags.Report(clang::diag::err_drv_unsupported_option_argument)
+          << arg->getSpelling() << argValue;
+      return false;
+    }
+    opts.VScaleMin = VScaleMin;
+  }
+  if (const auto arg =
+          args.getLastArg(clang::driver::options::OPT_mvscale_max_EQ)) {
+    llvm::StringRef argValue = llvm::StringRef(arg->getValue());
+    unsigned VScaleMax;
+    if (argValue.getAsInteger(/*Radix=w*/ 10, VScaleMax)) {
+      diags.Report(clang::diag::err_drv_unsupported_option_argument)
+          << arg->getSpelling() << argValue;
+      return false;
+    }
+    opts.VScaleMax = VScaleMax;
+  }
+  return true;
+}
+
 bool CompilerInvocation::createFromArgs(
     CompilerInvocation &res, llvm::ArrayRef<const char *> commandLineArgs,
     clang::DiagnosticsEngine &diags, const char *argv0) {
@@ -1078,6 +1118,8 @@ bool CompilerInvocation::createFromArgs(
       args.getAllArgValues(clang::driver::options::OPT_mmlir);
 
   success &= parseFloatingPointArgs(res, args, diags);
+
+  success &= parseVScaleArgs(res, args, diags);
 
   // Set the string to be used as the return value of the COMPILER_OPTIONS
   // intrinsic of iso_fortran_env. This is either passed in from the parent

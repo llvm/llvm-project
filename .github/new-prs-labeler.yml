@@ -40,15 +40,6 @@ lld:
 llvm-lit:
   - llvm/utils/lit/**/*
 
-mlir:afine:
-  - mlir/**/Affine/**/*
-
-mlir:python:
-  - mlir/python/**/*
-
-mlir:vectorops:
-  - mlir/**/Vector/**/*
-
 PGO:
   - llvm/lib/Transforms/Instrumentation/CGProfile.cpp
   - llvm/lib/Transforms/Instrumentation/ControlHeightReduction.cpp
@@ -90,6 +81,10 @@ compiler-rt:sanitizer:
   - compiler-rt/lib/scudo/**
   - compiler-rt/test/scudo/**
 
+compiler-rt:scudo:
+  - compiler-rt/lib/scudo/**
+  - compiler-rt/test/scudo/**
+
 xray:
   - llvm/tools/llvm-xray/**
   - compiler-rt/*/xray/**
@@ -110,16 +105,26 @@ mlir:
   - mlir/**
 
 mlir:core:
-  - mlir/**/Support/**
-  - mlir/**/Parser/**
-  - mlir/**/IR/**
-  - mlir/**/Bytecode/**
-  - mlir/**/AsmParser/**
-  - mlir/**/Pass/**
-  - mlir/**/tools/**
-  - mlir/**/Reducer/**
-  - mlir/**/Transforms/**
-  - mlir/**/Debug/**
+  - mlir/include/mlir/Support/**
+  - mlir/lib/Support/**
+  - mlir/include/mlir/Parser/**
+  - mlir/lib/Parser/**
+  - mlir/include/mlir/IR/**
+  - mlir/lib/IR/**
+  - mlir/include/mlir/Bytecode/**
+  - mlir/lib/Bytecode/**
+  - mlir/include/mlir/AsmParser/**
+  - mlir/lib/AsmParser/**
+  - mlir/include/mlir/Pass/**
+  - mlir/lib/Pass/**
+  - mlir/include/mlir/Tools/**
+  - mlir/lib/Tools/**
+  - mlir/include/mlir/Reducer/**
+  - mlir/lib/Reducer/**
+  - mlir/include/mlir/Transforms/**
+  - mlir/lib/Transforms/**
+  - mlir/include/mlir/Debug/**
+  - mlir/lib/Debug/**
   - mlir/tools/**
 
 mlir:ods:
@@ -172,6 +177,7 @@ mlir:dlti:
 
 mlir:emitc:
   - mlir/**/EmitC/**
+  - mlir/lib/Target/Cpp/**
 
 mlir:func:
   - mlir/**/Func/**
@@ -183,7 +189,8 @@ mlir:index:
   - mlir/**/Index/**
 
 mlir:llvm:
-  - mlir/**/LLVM/**
+  - mlir/**/LLVM*
+  - mlir/**/LLVM*/**
 
 mlir:linalg:
   - mlir/**/*linalg/**
@@ -220,6 +227,11 @@ mlir:scf:
 
 mlir:spirv:
   - mlir/**/SPIRV/**
+  - mlir/**/SPIRVTo*/**
+  - mlir/**/*ToSPIRV/**
+  - mlir/tools/mlir-spirv-cpu-runner/**
+  - mlir/tools/mlir-vulkan-runner/**
+  - mlir/tools/mlir-tblgen/SPIRVUtilsGen.cpp
 
 mlir:shape:
   - mlir/**/Shape/**
@@ -241,6 +253,15 @@ mlir:vector:
 
 mlir:execution-engine:
   - mlir/**/ExecutionEngine/**
+
+mlir:presburger:
+  - mlir/**/*Presburger*/**
+
+mlir:python:
+  - mlir/python/**/*
+
+mlir:vectorops:
+  - mlir/**/Vector/**/*
 
 coroutines:
   - clang/docs/DebuggingCoroutines.rst
@@ -288,12 +309,11 @@ tools:llvm-mca:
   - llvm/include/llvm/MCA/**
   - llvm/lib/MCA/**
 
-vectorizers:
-  - llvm/lib/Transforms/Vectorize/**
-  - llvm/include/llvm/Transforms/Vectorize/**
-
 clang:
-  - clang/**
+  - any:
+    - clang/**
+    - '!clang/**/Format/**'
+    - '!clang/tools/clang-format/**'
 
 testing-tools:
   - llvm/include/llvm/FileCheck/**
@@ -313,20 +333,30 @@ testing-tools:
   - llvm/utils/update*_test_checks.py
 
 debuginfo:
-  - llvm/include/llvm/DebugInfo/**
-  - llvm/lib/DebugInfo/**
-  - llvm/tools/dsymutil/**
-  - llvm/tools/llvm-debuginfo-analyzer/**
-  - llvm/tools/llvm-dwarfdump/**
-  - llvm/tools/llvm-dwarfutil/**
-  - llvm/tools/llvm-dwp/**
-  - llvm/tools/llvm-gsymutil/**
-  - llvm/tools/llvm-pdbutil/**
-  - llvm/tools/llvm-debuginfod/**
-  - llvm/tools/llvm-debuginfod-find/**
-  - llvm/lib/CodeGen/AsmPrinter/**
-  - clang/lib/CodeGen/CGDebugInfo.cpp
+  - clang/lib/CodeGen/CGDebugInfo.*
   - llvm/include/llvm/BinaryFormat/Dwarf.*
+  - llvm/include/llvm/CodeGen/*Debug*.*
+  - llvm/include/llvm/DebugInfo/**
+  - llvm/include/llvm/Debuginfod/**
+  - llvm/include/llvm/Frontend/Debug/**
+  - llvm/include/llvm/IR/Debug*.*
+  - llvm/include/llvm/Object/*Debug*.*
+  - llvm/include/llvm/ObjectYAML/*Debug*.*
+  - llvm/include/llvm/Transforms/Utils/*Debug*.*
+  - llvm/include/llvm-c/DebugInfo.h
+  - llvm/lib/BinaryFormat/Dwarf.cpp
+  - llvm/lib/CodeGen/AsmPrinter/*Debug*.*
+  - llvm/lib/CodeGen/AsmPrinter/Dwarf*.*
+  - llvm/lib/CodeGen/AsmPrinter/DIE*.*
+  - llvm/lib/CodeGen/LiveDebugValues/**
+  - llvm/lib/CodeGen/*Debug*.*
+  - llvm/lib/CodeGen/DwarfEHPrepare.cpp
+  - llvm/lib/DebugInfo/**
+  - llvm/lib/Debuginfod/**
+  - llvm/lib/DWARFLinkerParallel/**
+  - llvm/lib/IR/Debug*.cpp
+  - llvm/lib/MC/MCDwarf.cpp
+  - llvm/lib/Transforms/Utils/*Debug*.*
   - llvm/test/DebugInfo/**
   - llvm/test/tools/dsymutil/**
   - llvm/test/tools/llvm-debuginfo-analyzer/**
@@ -337,11 +367,23 @@ debuginfo:
   - llvm/test/tools/llvm-dwp/**
   - llvm/test/tools/llvm-gsymutil/**
   - llvm/test/tools/llvm-pdbuti/**
-  - llvm/lib/IR/Debug*.cpp
-  - llvm/include/llvm/IR/Debug*.h
+  - llvm/tools/dsymutil/**
+  - llvm/tools/llvm-debuginfo-analyzer/**
+  - llvm/tools/llvm-debuginfod/**
+  - llvm/tools/llvm-debuginfod-find/**
+  - llvm/tools/llvm-dwarfdump/**
+  - llvm/tools/llvm-dwarfutil/**
+  - llvm/tools/llvm-dwp/**
+  - llvm/tools/llvm-gsymutil/**
+  - llvm/tools/llvm-pdbutil/**
 
 github:workflow:
   - .github/workflows/**
+
+cmake:
+  - cmake/**
+  - llvm/cmake/**
+  - runtimes/**
 
 flang:driver:
   - flang/tools/flang-driver/**
@@ -362,15 +404,12 @@ backend:m68k:
 
 libc++:
   - libcxx/**
-  - runtimes/**
 
 libc++abi:
   - libcxxabi/**
-  - runtimes/**
 
 libunwind:
   - libunwind/**
-  - runtimes/**
 
 objectyaml:
   - llvm/include/llvm/ObjectYAML/**
@@ -476,14 +515,25 @@ llvm:ir:
   - llvm/lib/IR/**
   - llvm/include/llvm/IR/**
   - llvm/docs/LangRef.rst
+  - llvm/unittests/IR/**
 
 llvm:analysis:
   - llvm/lib/Analysis/**
   - llvm/include/llvm/Analysis/**
+  - llvm/test/Analysis/**
+  - llvm/unittests/Analysis/**
+
+llvm:adt:
+  - llvm/**/ADT/*
+
+llvm:support:
+  - llvm/**/Support/**
 
 llvm:transforms:
   - llvm/lib/Transforms/**
   - llvm/include/llvm/Transforms/**
+  - llvm/test/Transforms/**
+  - llvm/unittests/Transforms/**
 
 clangd:
   - clang-tools-extra/clangd/**
@@ -516,12 +566,19 @@ llvm:SelectionDAG:
   - llvm/include/llvm/CodeGen/ISDOpcodes.h
 
 backend:DirectX:
-  - llvm/lib/Target/DirectX/**
-  - llvm/test/CodeGen/DirectX/**
-  - llvm/tools/dxil-dis
-  - llvm/test/tools/dxil-dis
-  - clang/lib/Basic/Targets/DirectX*
-  - llvm/include/llvm/IR/IntrinsicsDirectX.td
+  - '**/*DirectX*'
+  - '**/*DXIL*'
+  - '**/*dxil*'
+  - '**/*DirectX*/**'
+  - '**/*DXIL*/**'
+  - '**/*dxil*/**'
+
+backend:SPIR-V:
+  - clang/lib/Driver/ToolChains/SPIRV.*
+  - llvm/lib/Target/SPIRV/**
+  - llvm/test/CodeGen/SPIRV/**
+  - llvm/test/Frontend/HLSL/**
+  - llvm/docs/SPIRVUsage.rst
 
 mlgo:
   - llvm/lib/Analysis/ML*
@@ -575,9 +632,6 @@ llvm:regalloc:
   - llvm/include/PBQPRAConstraint.h
   - llvm/include/llvm/CodeGen/Spiller.h
   - llvm/**/*RegAlloc
-
-mlir:presburger:
-  - mlir/**/*Presburger
 
 lldb:
   - lldb/**
@@ -707,3 +761,68 @@ backend:X86:
   - llvm/include/llvm/TargetParser/X86*
   - llvm/lib/TargetParser/X86*
   - llvm/utils/TableGen/X86*
+
+third-party:unittests:
+  - third-party/unittests/**
+
+llvm:binary-utilities:
+  - llvm/docs/CommandGuide/llvm-*
+  - llvm/include/llvm/BinaryFormat/**
+  - llvm/include/llvm/DebugInfo/Symbolize/**
+  - llvm/include/llvm/ObjCopy/**
+  - llvm/include/llvm/Object/**
+  - llvm/lib/BinaryFormat/**
+  - llvm/lib/DebugInfo/Symbolize/**
+  - llvm/lib/ObjCopy/**
+  - llvm/lib/Object/**
+  - llvm/test/Object/**
+  - llvm/test/tools/llvm-ar/**
+  - llvm/test/tools/llvm-cxxfilt/**
+  - llvm/test/tools/llvm-nm/**
+  - llvm/test/tools/llvm-objcopy/**
+  - llvm/test/tools/llvm-objdump/**
+  - llvm/test/tools/llvm-readobj/**
+  - llvm/test/tools/llvm-size/**
+  - llvm/test/tools/llvm-strings/**
+  - llvm/test/tools/llvm-symbolizer/**
+  - llvm/tools/llvm-ar/**
+  - llvm/tools/llvm-cxxfilt/**
+  - llvm/tools/llvm-nm/**
+  - llvm/tools/llvm-objcopy/**
+  - llvm/tools/llvm-objdump/**
+  - llvm/tools/llvm-readobj/**
+  - llvm/tools/llvm-size/**
+  - llvm/tools/llvm-strings/**
+  - llvm/tools/llvm-symbolizer/**
+
+clang:openmp:
+  - clang/include/clang/Basic/OpenMP*
+  - clang/include/clang/AST/OpenMPClause.h
+  - clang/include/clang/AST/DeclOpenMP.h
+  - clang/include/clang/AST/ExprOpenMP.h
+  - clang/include/clang/AST/StmtOpenMP.h
+  - clang/lib/AST/DeclOpenMP.cpp
+  - clang/lib/AST/OpenMPClause.cpp
+  - clang/lib/AST/StmtOpenMP.cpp
+  - clang/lib/Headers/openmp_wrappers/**
+  - clang/lib/Parse/ParseOpenMP.cpp
+  - clang/lib/Basic/OpenMPKinds.cpp
+  - clang/lib/Driver/ToolChains/AMDGPUOpenMP.cpp
+  - clang/lib/Driver/ToolChains/AMDGPUOpenMP.h
+  - clang/lib/CodeGen/CgStmtOpenMP.cpp
+  - clang/lib/CodeGen/CGOpenMP*
+  - clang/lib/Sema/SemaOpenMP.cpp
+  - clang/test/OpenMP/**
+  - clang/test/AST/ast-dump-openmp-*
+  - llvm/lib/Frontend/OpenMP/**
+  - llvm/lib/Transforms/IPO/OpenMPOpt.cpp
+  - llvm/include/llvm/Frontend/OpenMP/**
+  - llvm/include/llvm/Transforms/IPO/OpenMPOpt.h
+  - llvm/unittests/Frontend/OpenMP*
+  - llvm/test/Transforms/OpenMP/**
+
+openmp:libomp:
+  - any: ['openmp/**', '!openmp/libomptarget/**']
+
+openmp:libomptarget:
+  - any: ['openmp/**', '!openmp/runtime/**']

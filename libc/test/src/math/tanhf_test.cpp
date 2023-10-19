@@ -17,32 +17,30 @@
 #include <errno.h>
 #include <stdint.h>
 
-using FPBits = __llvm_libc::fputil::FPBits<float>;
+using LlvmLibcTanhfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-DECLARE_SPECIAL_CONSTANTS(float)
-
-TEST(LlvmLibcTanhfTest, SpecialNumbers) {
+TEST_F(LlvmLibcTanhfTest, SpecialNumbers) {
   libc_errno = 0;
 
-  EXPECT_FP_EQ(aNaN, __llvm_libc::tanhf(aNaN));
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::tanhf(aNaN));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(0.0f, __llvm_libc::tanhf(0.0f));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::tanhf(0.0f));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(-0.0f, __llvm_libc::tanhf(-0.0f));
+  EXPECT_FP_EQ(-0.0f, LIBC_NAMESPACE::tanhf(-0.0f));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(1.0f, __llvm_libc::tanhf(inf));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::tanhf(inf));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(-1.0f, __llvm_libc::tanhf(neg_inf));
+  EXPECT_FP_EQ(-1.0f, LIBC_NAMESPACE::tanhf(neg_inf));
   EXPECT_MATH_ERRNO(0);
 }
 
-TEST(LlvmLibcTanhfTest, InFloatRange) {
+TEST_F(LlvmLibcTanhfTest, InFloatRange) {
   constexpr uint32_t COUNT = 100'001;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
@@ -50,11 +48,11 @@ TEST(LlvmLibcTanhfTest, InFloatRange) {
     if (isnan(x) || isinf(x))
       continue;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Tanh, x,
-                                   __llvm_libc::tanhf(x), 0.5);
+                                   LIBC_NAMESPACE::tanhf(x), 0.5);
   }
 }
 
-TEST(LlvmLibcTanhfTest, ExceptionalValues) {
+TEST_F(LlvmLibcTanhfTest, ExceptionalValues) {
   constexpr int N = 4;
   constexpr uint32_t INPUTS[N] = {
       0x0040'0000,
@@ -66,8 +64,8 @@ TEST(LlvmLibcTanhfTest, ExceptionalValues) {
   for (int i = 0; i < N; ++i) {
     float x = float(FPBits(INPUTS[i]));
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Tanh, x,
-                                   __llvm_libc::tanhf(x), 0.5);
+                                   LIBC_NAMESPACE::tanhf(x), 0.5);
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Tanh, -x,
-                                   __llvm_libc::tanhf(-x), 0.5);
+                                   LIBC_NAMESPACE::tanhf(-x), 0.5);
   }
 }

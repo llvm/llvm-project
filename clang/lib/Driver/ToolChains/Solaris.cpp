@@ -161,11 +161,10 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     Args.ClaimAllArgs(options::OPT_rdynamic);
   }
 
+  assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {
     CmdArgs.push_back("-o");
     CmdArgs.push_back(Output.getFilename());
-  } else {
-    assert(Output.isNothing() && "Invalid output.");
   }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
@@ -210,7 +209,7 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   getToolChain().AddFilePathLibArgs(Args, CmdArgs);
 
-  Args.AddAllArgs(CmdArgs,
+  Args.addAllArgs(CmdArgs,
                   {options::OPT_L, options::OPT_T_Group, options::OPT_r});
 
   bool NeedsSanitizerDeps = addSanitizerRuntimes(getToolChain(), Args, CmdArgs);
@@ -221,6 +220,14 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (D.CCCIsCXX()) {
       if (getToolChain().ShouldLinkCXXStdlib(Args))
         getToolChain().AddCXXStdlibLibArgs(Args, CmdArgs);
+      CmdArgs.push_back("-lm");
+    }
+    // Additional linker set-up and flags for Fortran. This is required in order
+    // to generate executables. As Fortran runtime depends on the C runtime,
+    // these dependencies need to be listed before the C runtime below.
+    if (D.IsFlangMode()) {
+      addFortranRuntimeLibraryPath(getToolChain(), Args, CmdArgs);
+      addFortranRuntimeLibs(getToolChain(), CmdArgs);
       CmdArgs.push_back("-lm");
     }
     if (Args.hasArg(options::OPT_fstack_protector) ||

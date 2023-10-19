@@ -13,7 +13,6 @@
 #include "llvm/CodeGen/AccelTable.h"
 #include "DwarfCompileUnit.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/AsmPrinter.h"
@@ -213,7 +212,7 @@ class Dwarf5AccelTableWriter : public AccelTableWriter {
 
   Header Header;
   DenseMap<uint32_t, SmallVector<AttributeEncoding, 2>> Abbreviations;
-  ArrayRef<MCSymbol *> CompUnits;
+  ArrayRef<std::variant<MCSymbol *, uint64_t>> CompUnits;
   llvm::function_ref<unsigned(const DataT &)> getCUIndexForEntry;
   MCSymbol *ContributionEnd = nullptr;
   MCSymbol *AbbrevStart = Asm->createTempSymbol("names_abbrev_start");
@@ -235,7 +234,7 @@ class Dwarf5AccelTableWriter : public AccelTableWriter {
 public:
   Dwarf5AccelTableWriter(
       AsmPrinter *Asm, const AccelTableBase &Contents,
-      ArrayRef<MCSymbol *> CompUnits,
+      ArrayRef<std::variant<MCSymbol *, uint64_t>> CompUnits,
       llvm::function_ref<unsigned(const DataT &)> GetCUIndexForEntry);
 
   void emit();
@@ -419,7 +418,10 @@ template <typename DataT>
 void Dwarf5AccelTableWriter<DataT>::emitCUList() const {
   for (const auto &CU : enumerate(CompUnits)) {
     Asm->OutStreamer->AddComment("Compilation unit " + Twine(CU.index()));
-    Asm->emitDwarfSymbolReference(CU.value());
+    if (std::holds_alternative<MCSymbol *>(CU.value()))
+      Asm->emitDwarfSymbolReference(std::get<MCSymbol *>(CU.value()));
+    else
+      Asm->emitDwarfLengthOrOffset(std::get<uint64_t>(CU.value()));
   }
 }
 
@@ -508,7 +510,7 @@ template <typename DataT> void Dwarf5AccelTableWriter<DataT>::emitData() const {
 template <typename DataT>
 Dwarf5AccelTableWriter<DataT>::Dwarf5AccelTableWriter(
     AsmPrinter *Asm, const AccelTableBase &Contents,
-    ArrayRef<MCSymbol *> CompUnits,
+    ArrayRef<std::variant<MCSymbol *, uint64_t>> CompUnits,
     llvm::function_ref<unsigned(const DataT &)> getCUIndexForEntry)
     : AccelTableWriter(Asm, Contents, false),
       Header(CompUnits.size(), Contents.getBucketCount(),
@@ -545,7 +547,7 @@ void llvm::emitAppleAccelTableImpl(AsmPrinter *Asm, AccelTableBase &Contents,
 void llvm::emitDWARF5AccelTable(
     AsmPrinter *Asm, AccelTable<DWARF5AccelTableData> &Contents,
     const DwarfDebug &DD, ArrayRef<std::unique_ptr<DwarfCompileUnit>> CUs) {
-  std::vector<MCSymbol *> CompUnits;
+  std::vector<std::variant<MCSymbol *, uint64_t>> CompUnits;
   SmallVector<unsigned, 1> CUIndex(CUs.size());
   int Count = 0;
   for (const auto &CU : enumerate(CUs)) {
@@ -581,7 +583,7 @@ void llvm::emitDWARF5AccelTable(
 
 void llvm::emitDWARF5AccelTable(
     AsmPrinter *Asm, AccelTable<DWARF5AccelTableStaticData> &Contents,
-    ArrayRef<MCSymbol *> CUs,
+    ArrayRef<std::variant<MCSymbol *, uint64_t>> CUs,
     llvm::function_ref<unsigned(const DWARF5AccelTableStaticData &)>
         getCUIndexForEntry) {
   Contents.finalize(Asm, "names");

@@ -8,6 +8,7 @@
 
 #include "llvm/TargetParser/TargetParser.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -1010,6 +1011,35 @@ TEST(TargetParserTest, getARMCPUForArch) {
   }
 }
 
+TEST(TargetParserTest, ARMPrintSupportedExtensions) {
+  std::string expected = "All available -march extensions for ARM\n\n"
+                         "    Name                Description\n"
+                         "    crc                 This is a long dummy description\n"
+                         "    crypto\n"
+                         "    sha2\n";
+
+  StringMap<StringRef> DummyMap;
+  DummyMap["crc"] = "This is a long dummy description";
+
+  outs().flush();
+  testing::internal::CaptureStdout();
+  ARM::PrintSupportedExtensions(DummyMap);
+  outs().flush();
+  std::string captured = testing::internal::GetCapturedStdout();
+
+  // Check that the start of the output is as expected.
+  EXPECT_EQ(0ULL, captured.find(expected));
+
+  // Should not include "none" or "invalid".
+  EXPECT_EQ(std::string::npos, captured.find("none"));
+  EXPECT_EQ(std::string::npos, captured.find("invalid"));
+  // Should not include anything that lacks a feature name. Checking a few here
+  // but not all as if one is hidden correctly the rest should be.
+  EXPECT_EQ(std::string::npos, captured.find("simd"));
+  EXPECT_EQ(std::string::npos, captured.find("maverick"));
+  EXPECT_EQ(std::string::npos, captured.find("xscale"));
+}
+
 class AArch64CPUTestFixture
     : public ::testing::TestWithParam<
           ARMCPUTestParams<AArch64::ExtensionBitset>> {};
@@ -1909,11 +1939,17 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
 
 TEST(TargetParserTest, AArch64PrintSupportedExtensions) {
   std::string expected = "All available -march extensions for AArch64\n\n"
-                         "\taes\n\tb16b16\n\tbf16";
+                         "    Name                Description\n"
+                         "    aes                 This is a long dummy description\n"
+                         "    b16b16\n"
+                         "    bf16\n";
+
+  StringMap<StringRef> DummyMap;
+  DummyMap["aes"] = "This is a long dummy description";
 
   outs().flush();
   testing::internal::CaptureStdout();
-  AArch64::PrintSupportedExtensions();
+  AArch64::PrintSupportedExtensions(DummyMap);
   outs().flush();
   std::string captured = testing::internal::GetCapturedStdout();
 

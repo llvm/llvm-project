@@ -117,7 +117,7 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, i32 %in) {
 ; FLAT_SCR_OPT-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s2
 ; FLAT_SCR_OPT-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s3
 ; FLAT_SCR_OPT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; FLAT_SCR_OPT-NEXT:    ; implicit-def: $vgpr0
+; FLAT_SCR_OPT-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
 ; FLAT_SCR_OPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; FLAT_SCR_OPT-NEXT:    v_writelane_b32 v0, s2, 0
 ; FLAT_SCR_OPT-NEXT:    v_writelane_b32 v0, s3, 1
@@ -230,6 +230,8 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, i32 %in) {
 ; FLAT_SCR_OPT-NEXT:    s_waitcnt vmcnt(0)
 ; FLAT_SCR_OPT-NEXT:    v_readlane_b32 s0, v1, 0
 ; FLAT_SCR_OPT-NEXT:    v_readlane_b32 s1, v1, 1
+; FLAT_SCR_OPT-NEXT:    s_or_saveexec_b32 s105, -1
+; FLAT_SCR_OPT-NEXT:    s_mov_b32 exec_lo, s105
 ; FLAT_SCR_OPT-NEXT:    v_mov_b32_e32 v2, 0
 ; FLAT_SCR_OPT-NEXT:    ; kill: killed $vgpr1
 ; FLAT_SCR_OPT-NEXT:    global_store_dword v2, v0, s[0:1]
@@ -238,7 +240,7 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, i32 %in) {
 ; FLAT_SCR_ARCH-LABEL: test:
 ; FLAT_SCR_ARCH:       ; %bb.0:
 ; FLAT_SCR_ARCH-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; FLAT_SCR_ARCH-NEXT:    ; implicit-def: $vgpr0
+; FLAT_SCR_ARCH-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
 ; FLAT_SCR_ARCH-NEXT:    s_waitcnt lgkmcnt(0)
 ; FLAT_SCR_ARCH-NEXT:    v_writelane_b32 v0, s2, 0
 ; FLAT_SCR_ARCH-NEXT:    v_writelane_b32 v0, s3, 1
@@ -351,6 +353,8 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, i32 %in) {
 ; FLAT_SCR_ARCH-NEXT:    s_waitcnt vmcnt(0)
 ; FLAT_SCR_ARCH-NEXT:    v_readlane_b32 s0, v1, 0
 ; FLAT_SCR_ARCH-NEXT:    v_readlane_b32 s1, v1, 1
+; FLAT_SCR_ARCH-NEXT:    s_or_saveexec_b32 s105, -1
+; FLAT_SCR_ARCH-NEXT:    s_mov_b32 exec_lo, s105
 ; FLAT_SCR_ARCH-NEXT:    v_mov_b32_e32 v2, 0
 ; FLAT_SCR_ARCH-NEXT:    ; kill: killed $vgpr1
 ; FLAT_SCR_ARCH-NEXT:    global_store_dword v2, v0, s[0:1]

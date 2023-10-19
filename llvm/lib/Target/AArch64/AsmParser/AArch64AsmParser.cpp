@@ -1232,6 +1232,8 @@ public:
     case AArch64::PPRRegClassID:
     case AArch64::PPR_3bRegClassID:
     case AArch64::PPR_p8to15RegClassID:
+    case AArch64::PNRRegClassID:
+    case AArch64::PNR_p8to15RegClassID:
       RK = RegKind::SVEPredicateAsCounter;
       break;
     default:
@@ -1252,6 +1254,9 @@ public:
       break;
     case AArch64::PPRRegClassID:
     case AArch64::PPR_3bRegClassID:
+    case AArch64::PPR_p8to15RegClassID:
+    case AArch64::PNRRegClassID:
+    case AArch64::PNR_p8to15RegClassID:
       RK = RegKind::SVEPredicateVector;
       break;
     default:
@@ -1734,6 +1739,12 @@ public:
       llvm_unreachable("Unsupported width");
     }
     Inst.addOperand(MCOperand::createReg(AArch64::Z0 + getReg() - Base));
+  }
+
+  void addPNRasPPRRegOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(
+        MCOperand::createReg((getReg() - AArch64::PN0) + AArch64::P0));
   }
 
   void addVectorReg64Operands(MCInst &Inst, unsigned N) const {
@@ -2700,22 +2711,22 @@ static unsigned matchSVEPredicateVectorRegName(StringRef Name) {
 
 static unsigned matchSVEPredicateAsCounterRegName(StringRef Name) {
   return StringSwitch<unsigned>(Name.lower())
-      .Case("pn0", AArch64::P0)
-      .Case("pn1", AArch64::P1)
-      .Case("pn2", AArch64::P2)
-      .Case("pn3", AArch64::P3)
-      .Case("pn4", AArch64::P4)
-      .Case("pn5", AArch64::P5)
-      .Case("pn6", AArch64::P6)
-      .Case("pn7", AArch64::P7)
-      .Case("pn8", AArch64::P8)
-      .Case("pn9", AArch64::P9)
-      .Case("pn10", AArch64::P10)
-      .Case("pn11", AArch64::P11)
-      .Case("pn12", AArch64::P12)
-      .Case("pn13", AArch64::P13)
-      .Case("pn14", AArch64::P14)
-      .Case("pn15", AArch64::P15)
+      .Case("pn0", AArch64::PN0)
+      .Case("pn1", AArch64::PN1)
+      .Case("pn2", AArch64::PN2)
+      .Case("pn3", AArch64::PN3)
+      .Case("pn4", AArch64::PN4)
+      .Case("pn5", AArch64::PN5)
+      .Case("pn6", AArch64::PN6)
+      .Case("pn7", AArch64::PN7)
+      .Case("pn8", AArch64::PN8)
+      .Case("pn9", AArch64::PN9)
+      .Case("pn10", AArch64::PN10)
+      .Case("pn11", AArch64::PN11)
+      .Case("pn12", AArch64::PN12)
+      .Case("pn13", AArch64::PN13)
+      .Case("pn14", AArch64::PN14)
+      .Case("pn15", AArch64::PN15)
       .Default(0);
 }
 
@@ -4526,6 +4537,8 @@ ParseStatus AArch64AsmParser::tryParseZTOperand(OperandVector &Operands) {
 
   // Check if register is followed by an index
   if (parseOptionalToken(AsmToken::LBrac)) {
+    Operands.push_back(
+        AArch64Operand::CreateToken("[", getLoc(), getContext()));
     const MCExpr *ImmVal;
     if (getParser().parseExpression(ImmVal))
       return ParseStatus::NoMatch;
@@ -4538,6 +4551,8 @@ ParseStatus AArch64AsmParser::tryParseZTOperand(OperandVector &Operands) {
     Operands.push_back(AArch64Operand::CreateImm(
         MCConstantExpr::create(MCE->getValue(), getContext()), StartLoc,
         getLoc(), getContext()));
+    Operands.push_back(
+        AArch64Operand::CreateToken("]", getLoc(), getContext()));
   }
 
   return ParseStatus::Success;
@@ -7473,7 +7488,7 @@ bool AArch64AsmParser::parseAuthExpr(const MCExpr *&Res, SMLoc &EndLoc) {
   // Look for '_sym@AUTH' ...
   if (Tok.is(AsmToken::Identifier) && Tok.getIdentifier().endswith("@AUTH")) {
     StringRef SymName = Tok.getIdentifier().drop_back(strlen("@AUTH"));
-    if (SymName.find('@') != StringRef::npos)
+    if (SymName.contains('@'))
       return TokError(
           "combination of @AUTH with other modifiers not supported");
     Res = MCSymbolRefExpr::create(Ctx.getOrCreateSymbol(SymName), Ctx);

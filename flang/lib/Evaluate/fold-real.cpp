@@ -43,6 +43,96 @@ static Expr<T> FoldTransformationalBessel(
   return Expr<T>{std::move(funcRef)};
 }
 
+// NORM2
+template <int KIND> class Norm2Accumulator {
+  using T = Type<TypeCategory::Real, KIND>;
+
+public:
+  Norm2Accumulator(
+      const Constant<T> &array, const Constant<T> &maxAbs, Rounding rounding)
+      : array_{array}, maxAbs_{maxAbs}, rounding_{rounding} {};
+  void operator()(Scalar<T> &element, const ConstantSubscripts &at) {
+    // Kahan summation of scaled elements:
+    // Naively,
+    //   NORM2(A(:)) = SQRT(SUM(A(:)**2))
+    // For any T > 0, we have mathematically
+    //   SQRT(SUM(A(:)**2))
+    //     = SQRT(T**2 * (SUM(A(:)**2) / T**2))
+    //     = SQRT(T**2 * SUM(A(:)**2 / T**2))
+    //     = SQRT(T**2 * SUM((A(:)/T)**2))
+    //     = SQRT(T**2) * SQRT(SUM((A(:)/T)**2))
+    //     = T * SQRT(SUM((A(:)/T)**2))
+    // By letting T = MAXVAL(ABS(A)), we ensure that
+    // ALL(ABS(A(:)/T) <= 1), so ALL((A(:)/T)**2 <= 1), and the SUM will
+    // not overflow unless absolutely necessary.
+    auto scale{maxAbs_.At(maxAbsAt_)};
+    if (scale.IsZero()) {
+      // Maximum value is zero, and so will the result be.
+      // Avoid division by zero below.
+      element = scale;
+    } else {
+      auto item{array_.At(at)};
+      auto scaled{item.Divide(scale).value};
+      auto square{scaled.Multiply(scaled).value};
+      auto next{square.Add(correction_, rounding_)};
+      overflow_ |= next.flags.test(RealFlag::Overflow);
+      auto sum{element.Add(next.value, rounding_)};
+      overflow_ |= sum.flags.test(RealFlag::Overflow);
+      correction_ = sum.value.Subtract(element, rounding_)
+                        .value.Subtract(next.value, rounding_)
+                        .value;
+      element = sum.value;
+    }
+  }
+  bool overflow() const { return overflow_; }
+  void Done(Scalar<T> &result) {
+    // result+correction == SUM((data(:)/maxAbs)**2)
+    // result = maxAbs * SQRT(result+correction)
+    auto corrected{result.Add(correction_, rounding_)};
+    overflow_ |= corrected.flags.test(RealFlag::Overflow);
+    correction_ = Scalar<T>{};
+    auto root{corrected.value.SQRT().value};
+    auto product{root.Multiply(maxAbs_.At(maxAbsAt_))};
+    maxAbs_.IncrementSubscripts(maxAbsAt_);
+    overflow_ |= product.flags.test(RealFlag::Overflow);
+    result = product.value;
+  }
+
+private:
+  const Constant<T> &array_;
+  const Constant<T> &maxAbs_;
+  const Rounding rounding_;
+  bool overflow_{false};
+  Scalar<T> correction_{};
+  ConstantSubscripts maxAbsAt_{maxAbs_.lbounds()};
+};
+
+template <int KIND>
+static Expr<Type<TypeCategory::Real, KIND>> FoldNorm2(FoldingContext &context,
+    FunctionRef<Type<TypeCategory::Real, KIND>> &&funcRef) {
+  using T = Type<TypeCategory::Real, KIND>;
+  using Element = typename Constant<T>::Element;
+  std::optional<int> dim;
+  const Element identity{};
+  if (std::optional<Constant<T>> array{
+          ProcessReductionArgs<T>(context, funcRef.arguments(), dim, identity,
+              /*X=*/0, /*DIM=*/1)}) {
+    MaxvalMinvalAccumulator<T, /*ABS=*/true> maxAbsAccumulator{
+        RelationalOperator::GT, context, *array};
+    Constant<T> maxAbs{
+        DoReduction<T>(*array, dim, identity, maxAbsAccumulator)};
+    Norm2Accumulator norm2Accumulator{
+        *array, maxAbs, context.targetCharacteristics().roundingMode()};
+    Constant<T> result{DoReduction<T>(*array, dim, identity, norm2Accumulator)};
+    if (norm2Accumulator.overflow()) {
+      context.messages().Say(
+          "NORM2() of REAL(%d) data overflowed"_warn_en_US, KIND);
+    }
+    return Expr<T>{std::move(result)};
+  }
+  return Expr<T>{std::move(funcRef)};
+}
+
 template <int KIND>
 Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     FoldingContext &context,
@@ -238,6 +328,8 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
           },
           sExpr->u);
     }
+  } else if (name == "norm2") {
+    return FoldNorm2<T::kind>(context, std::move(funcRef));
   } else if (name == "product") {
     auto one{Scalar<T>::FromInteger(value::Integer<8>{1}).value};
     return FoldProduct<T>(context, std::move(funcRef), one);
@@ -354,7 +446,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
           return result.value;
         }));
   }
-  // TODO: dot_product, matmul, norm2
+  // TODO: matmul
   return Expr<T>{std::move(funcRef)};
 }
 

@@ -31,8 +31,6 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/Intrinsics.h"
 
-using namespace llvm;
-
 #define Check(C, ...)                                                          \
   do {                                                                         \
     if (!(C)) {                                                                \
@@ -49,6 +47,7 @@ using namespace llvm;
     }                                                                          \
   } while (false)
 
+namespace llvm {
 static bool isConvergenceControlIntrinsic(unsigned IntrinsicID) {
   switch (IntrinsicID) {
   default:
@@ -60,7 +59,6 @@ static bool isConvergenceControlIntrinsic(unsigned IntrinsicID) {
   }
 }
 
-namespace llvm {
 template <class ContextT> void GenericConvergenceVerifier<ContextT>::clear() {
   Tokens.clear();
   CI.clear();
@@ -68,15 +66,15 @@ template <class ContextT> void GenericConvergenceVerifier<ContextT>::clear() {
 }
 
 template <class ContextT>
+void GenericConvergenceVerifier<ContextT>::visit(const BlockT &BB) {
+  SeenFirstConvOp = false;
+}
+
+template <class ContextT>
 void GenericConvergenceVerifier<ContextT>::visit(const InstructionT &I) {
   auto ID = ContextT::getIntrinsicID(I);
   auto *TokenDef = findAndCheckConvergenceTokenUsed(I);
   bool IsCtrlIntrinsic = true;
-
-  // If this is the first instruction in the block, then we have not seen a
-  // convergent op yet.
-  if (!I.getPrevNode())
-    SeenFirstConvOp = false;
 
   switch (ID) {
   case Intrinsic::experimental_convergence_entry:

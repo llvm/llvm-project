@@ -165,8 +165,7 @@ define void @tail_dup_no_succ(i32 %tag) {
 ; CHECK-NEXT:    .cfi_offset r30, -16
 ; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stdu 1, -48(1)
-; CHECK-NEXT:    mr 30, 3
-; CHECK-NEXT:    andi. 3, 3, 1
+; CHECK-NEXT:    andi. 4, 3, 1
 ; CHECK-NEXT:    std 0, 64(1)
 ; CHECK-NEXT:    bc 12, 1, .LBB2_3
 ; CHECK-NEXT:  .LBB2_1: # %v
@@ -181,18 +180,20 @@ define void @tail_dup_no_succ(i32 %tag) {
 ; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB2_3: # %bb
-; CHECK-NEXT:    andi. 3, 30, 2
+; CHECK-NEXT:    andi. 4, 3, 2
 ; CHECK-NEXT:    bne 0, .LBB2_5
 ; CHECK-NEXT:  # %bb.4: # %succ
-; CHECK-NEXT:    andi. 3, 30, 4
+; CHECK-NEXT:    andi. 3, 3, 4
 ; CHECK-NEXT:    beq 0, .LBB2_2
 ; CHECK-NEXT:    b .LBB2_1
 ; CHECK-NEXT:  .LBB2_5: # %c
+; CHECK-NEXT:    mr 30, 3
 ; CHECK-NEXT:    bl c
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    bl c
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    andi. 3, 30, 4
+; CHECK-NEXT:    mr 3, 30
+; CHECK-NEXT:    andi. 3, 3, 4
 ; CHECK-NEXT:    beq 0, .LBB2_2
 ; CHECK-NEXT:    b .LBB2_1
 entry:

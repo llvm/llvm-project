@@ -127,6 +127,9 @@ InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
     // Power of 2 is a shift. Negated power of 2 is a shift and a negate.
     if (Imm.isPowerOf2() || Imm.isNegatedPowerOf2())
       return TTI::TCC_Free;
+    // One more or less than a power of 2 can use SLLI+ADD/SUB.
+    if ((Imm + 1).isPowerOf2() || (Imm - 1).isPowerOf2())
+      return TTI::TCC_Free;
     // FIXME: There is no MULI instruction.
     Takes12BitImm = true;
     break;
@@ -319,7 +322,10 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
           LT.second.getVectorElementType().getSizeInBits() ==
               Tp->getElementType()->getPrimitiveSizeInBits() &&
           LT.second.getVectorNumElements() <
-              cast<FixedVectorType>(Tp)->getNumElements()) {
+              cast<FixedVectorType>(Tp)->getNumElements() &&
+          divideCeil(Mask.size(),
+                     cast<FixedVectorType>(Tp)->getNumElements()) ==
+              static_cast<unsigned>(*LT.first.getValue())) {
         unsigned NumRegs = *LT.first.getValue();
         unsigned VF = cast<FixedVectorType>(Tp)->getNumElements();
         unsigned SubVF = PowerOf2Ceil(VF / NumRegs);
@@ -495,7 +501,7 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
     InstructionCost Cost = MemCost;
     for (unsigned Index : Indices) {
       FixedVectorType *SubVecTy =
-          FixedVectorType::get(FVTy->getElementType(), VF);
+          FixedVectorType::get(FVTy->getElementType(), VF * Factor);
       auto Mask = createStrideMask(Index, Factor, VF);
       InstructionCost ShuffleCost =
           getShuffleCost(TTI::ShuffleKind::SK_PermuteSingleSrc, SubVecTy, Mask,
@@ -662,6 +668,31 @@ static const CostTblEntry VectorIntrinsicCostTable[]{
     {Intrinsic::rint, MVT::nxv2f64, 7},
     {Intrinsic::rint, MVT::nxv4f64, 7},
     {Intrinsic::rint, MVT::nxv8f64, 7},
+    {Intrinsic::lrint, MVT::v2i32, 1},
+    {Intrinsic::lrint, MVT::v4i32, 1},
+    {Intrinsic::lrint, MVT::v8i32, 1},
+    {Intrinsic::lrint, MVT::v16i32, 1},
+    {Intrinsic::lrint, MVT::nxv1i32, 1},
+    {Intrinsic::lrint, MVT::nxv2i32, 1},
+    {Intrinsic::lrint, MVT::nxv4i32, 1},
+    {Intrinsic::lrint, MVT::nxv8i32, 1},
+    {Intrinsic::lrint, MVT::nxv16i32, 1},
+    {Intrinsic::lrint, MVT::v2i64, 1},
+    {Intrinsic::lrint, MVT::v4i64, 1},
+    {Intrinsic::lrint, MVT::v8i64, 1},
+    {Intrinsic::lrint, MVT::v16i64, 1},
+    {Intrinsic::lrint, MVT::nxv1i64, 1},
+    {Intrinsic::lrint, MVT::nxv2i64, 1},
+    {Intrinsic::lrint, MVT::nxv4i64, 1},
+    {Intrinsic::lrint, MVT::nxv8i64, 1},
+    {Intrinsic::llrint, MVT::v2i64, 1},
+    {Intrinsic::llrint, MVT::v4i64, 1},
+    {Intrinsic::llrint, MVT::v8i64, 1},
+    {Intrinsic::llrint, MVT::v16i64, 1},
+    {Intrinsic::llrint, MVT::nxv1i64, 1},
+    {Intrinsic::llrint, MVT::nxv2i64, 1},
+    {Intrinsic::llrint, MVT::nxv4i64, 1},
+    {Intrinsic::llrint, MVT::nxv8i64, 1},
     {Intrinsic::nearbyint, MVT::v2f32, 9},
     {Intrinsic::nearbyint, MVT::v4f32, 9},
     {Intrinsic::nearbyint, MVT::v8f32, 9},
@@ -1045,6 +1076,8 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::floor:
   case Intrinsic::trunc:
   case Intrinsic::rint:
+  case Intrinsic::lrint:
+  case Intrinsic::llrint:
   case Intrinsic::round:
   case Intrinsic::roundeven: {
     // These all use the same code.
@@ -1071,6 +1104,12 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::sqrt: {
     auto LT = getTypeLegalizationCost(RetTy);
     if (ST->hasVInstructions() && LT.second.isVector())
+      return LT.first;
+    break;
+  }
+  case Intrinsic::ctpop: {
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (ST->hasVInstructions() && ST->hasStdExtZvbb() && LT.second.isVector())
       return LT.first;
     break;
   }
@@ -1437,6 +1476,15 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
   return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I);
 }
 
+InstructionCost RISCVTTIImpl::getCFInstrCost(unsigned Opcode,
+                                             TTI::TargetCostKind CostKind,
+                                             const Instruction *I) {
+  if (CostKind != TTI::TCK_RecipThroughput)
+    return Opcode == Instruction::PHI ? 0 : 1;
+  // Branches are assumed to be predicted.
+  return 0;
+}
+
 InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                                  TTI::TargetCostKind CostKind,
                                                  unsigned Index, Value *Op0,
@@ -1451,8 +1499,26 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Val);
 
   // This type is legalized to a scalar type.
-  if (!LT.second.isVector())
-    return 0;
+  if (!LT.second.isVector()) {
+    auto *FixedVecTy = cast<FixedVectorType>(Val);
+    // If Index is a known constant, cost is zero.
+    if (Index != -1U)
+      return 0;
+    // Extract/InsertElement with non-constant index is very costly when
+    // scalarized; estimate cost of loads/stores sequence via the stack:
+    // ExtractElement cost: store vector to stack, load scalar;
+    // InsertElement cost: store vector to stack, store scalar, load vector.
+    Type *ElemTy = FixedVecTy->getElementType();
+    auto NumElems = FixedVecTy->getNumElements();
+    auto Align = DL.getPrefTypeAlign(ElemTy);
+    InstructionCost LoadCost =
+        getMemoryOpCost(Instruction::Load, ElemTy, Align, 0, CostKind);
+    InstructionCost StoreCost =
+        getMemoryOpCost(Instruction::Store, ElemTy, Align, 0, CostKind);
+    return Opcode == Instruction::ExtractElement
+               ? StoreCost * NumElems + LoadCost
+               : (StoreCost + LoadCost) * NumElems + StoreCost;
+  }
 
   // For unsupported scalable vector.
   if (LT.second.isScalableVector() && !LT.first.isValid())

@@ -156,6 +156,8 @@ bool Input::preflightKey(const char *Key, bool Required, bool, bool &UseDefault,
   if (!CurrentNode) {
     if (Required)
       EC = make_error_code(errc::invalid_argument);
+    else
+      UseDefault = true;
     return false;
   }
 

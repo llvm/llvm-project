@@ -57,14 +57,14 @@ void GpuModuleToBinaryPass::getDependentDialects(
 
 void GpuModuleToBinaryPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
-  int targetFormat = llvm::StringSwitch<int>(compilationTarget)
-                         .Cases("offloading", "llvm", TargetOptions::offload)
-                         .Cases("assembly", "isa", TargetOptions::assembly)
-                         .Cases("binary", "bin", TargetOptions::binary)
-                         .Cases("fatbinary", "fatbin", TargetOptions::fatbinary)
-                         .Case("binOrFatbin", TargetOptions::binOrFatbin)
-                         .Default(-1);
-  if (targetFormat == -1)
+  auto targetFormat =
+      llvm::StringSwitch<std::optional<CompilationTarget>>(compilationTarget)
+          .Cases("offloading", "llvm", CompilationTarget::Offload)
+          .Cases("assembly", "isa", CompilationTarget::Assembly)
+          .Cases("binary", "bin", CompilationTarget::Binary)
+          .Cases("fatbinary", "fatbin", CompilationTarget::Fatbin)
+          .Default(std::nullopt);
+  if (!targetFormat)
     getOperation()->emitError() << "Invalid format specified.";
 
   // Lazy symbol table builder callback.
@@ -82,10 +82,8 @@ void GpuModuleToBinaryPass::runOnOperation() {
     return &parentTable.value();
   };
 
-  TargetOptions targetOptions(
-      toolkitPath, linkFiles, cmdOptions,
-      static_cast<TargetOptions::CompilationTarget>(targetFormat),
-      lazyTableBuilder);
+  TargetOptions targetOptions(toolkitPath, linkFiles, cmdOptions, *targetFormat,
+                              lazyTableBuilder);
   if (failed(transformGpuModulesToBinaries(
           getOperation(),
           offloadingHandler ? dyn_cast<OffloadingLLVMTranslationAttrInterface>(
@@ -107,17 +105,19 @@ LogicalResult moduleSerializer(GPUModuleOp op,
     auto target = dyn_cast<gpu::TargetAttrInterface>(targetAttr);
     assert(target &&
            "Target attribute doesn't implements `TargetAttrInterface`.");
-    std::optional<SmallVector<char, 0>> object =
+    std::optional<SmallVector<char, 0>> serializedModule =
         target.serializeToObject(op, targetOptions);
-
-    if (!object) {
+    if (!serializedModule) {
       op.emitError("An error happened while serializing the module.");
       return failure();
     }
 
-    objects.push_back(builder.getAttr<gpu::ObjectAttr>(
-        target,
-        builder.getStringAttr(StringRef(object->data(), object->size()))));
+    Attribute object = target.createObject(*serializedModule, targetOptions);
+    if (!object) {
+      op.emitError("An error happened while creating the object.");
+      return failure();
+    }
+    objects.push_back(object);
   }
   builder.setInsertionPointAfter(op);
   builder.create<gpu::BinaryOp>(op.getLoc(), op.getName(), handler,

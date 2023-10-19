@@ -11,6 +11,7 @@
 #include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
+#include "llvm/ADT/StringRef.h"
 #include <vector>
 
 namespace clang::dataflow {
@@ -19,7 +20,9 @@ namespace clang::dataflow {
 /// For example, `Value`, `StorageLocation`, `Atom`, and `Formula`.
 class Arena {
 public:
-  Arena() : True(makeAtom()), False(makeAtom()) {}
+  Arena()
+      : True(Formula::create(Alloc, Formula::Literal, {}, 1)),
+        False(Formula::create(Alloc, Formula::Literal, {}, 0)) {}
   Arena(const Arena &) = delete;
   Arena &operator=(const Arena &) = delete;
 
@@ -105,9 +108,11 @@ public:
   const Formula &makeAtomRef(Atom A);
 
   /// Returns a formula for a literal true/false.
-  const Formula &makeLiteral(bool Value) {
-    return makeAtomRef(Value ? True : False);
-  }
+  const Formula &makeLiteral(bool Value) { return Value ? True : False; }
+
+  // Parses a formula from its textual representation.
+  // This may refer to atoms that were not produced by makeAtom() yet!
+  llvm::Expected<const Formula &> parseFormula(llvm::StringRef);
 
   /// Returns a new atomic boolean variable, distinct from any other.
   Atom makeAtom() { return static_cast<Atom>(NextAtom++); };
@@ -139,7 +144,7 @@ private:
   llvm::DenseMap<const Formula *, BoolValue *> FormulaValues;
   unsigned NextAtom = 0;
 
-  Atom True, False;
+  const Formula &True, &False;
 };
 
 } // namespace clang::dataflow

@@ -55,10 +55,10 @@ Attribute MyPropStruct::asAttribute(MLIRContext *ctx) const {
 }
 LogicalResult
 MyPropStruct::setFromAttr(MyPropStruct &prop, Attribute attr,
-                          function_ref<InFlightDiagnostic &()> getDiag) {
+                          function_ref<InFlightDiagnostic()> emitError) {
   StringAttr strAttr = dyn_cast<StringAttr>(attr);
   if (!strAttr) {
-    getDiag() << "Expect StringAttr but got " << attr;
+    emitError() << "Expect StringAttr but got " << attr;
     return failure();
   }
   prop.content = strAttr.getValue();
@@ -108,7 +108,7 @@ static void writeToMlirBytecode(::mlir::DialectBytecodeWriter &writer,
 
 static LogicalResult
 setPropertiesFromAttribute(PropertiesWithCustomPrint &prop, Attribute attr,
-                           function_ref<InFlightDiagnostic &()> getDiag);
+                           function_ref<InFlightDiagnostic()> emitError);
 static DictionaryAttr
 getPropertiesAsAttribute(MLIRContext *ctx,
                          const PropertiesWithCustomPrint &prop);
@@ -119,7 +119,7 @@ static ParseResult customParseProperties(OpAsmParser &parser,
                                          PropertiesWithCustomPrint &prop);
 static LogicalResult
 setPropertiesFromAttribute(VersionedProperties &prop, Attribute attr,
-                           function_ref<InFlightDiagnostic &()> getDiag);
+                           function_ref<InFlightDiagnostic()> emitError);
 static DictionaryAttr getPropertiesAsAttribute(MLIRContext *ctx,
                                                const VersionedProperties &prop);
 static llvm::hash_code computeHash(const VersionedProperties &prop);
@@ -998,7 +998,7 @@ void LoopBlockOp::getSuccessorRegions(
 
 OperandRange LoopBlockOp::getEntrySuccessorOperands(RegionBranchPoint point) {
   assert(point == getBody());
-  return getInitMutable();
+  return MutableOperandRange(getInitMutable());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1138,20 +1138,20 @@ OpFoldResult ManualCppOpWithFold::fold(ArrayRef<Attribute> attributes) {
 
 static LogicalResult
 setPropertiesFromAttribute(PropertiesWithCustomPrint &prop, Attribute attr,
-                           function_ref<InFlightDiagnostic &()> getDiag) {
+                           function_ref<InFlightDiagnostic()> emitError) {
   DictionaryAttr dict = dyn_cast<DictionaryAttr>(attr);
   if (!dict) {
-    getDiag() << "expected DictionaryAttr to set TestProperties";
+    emitError() << "expected DictionaryAttr to set TestProperties";
     return failure();
   }
   auto label = dict.getAs<mlir::StringAttr>("label");
   if (!label) {
-    getDiag() << "expected StringAttr for key `label`";
+    emitError() << "expected StringAttr for key `label`";
     return failure();
   }
   auto valueAttr = dict.getAs<IntegerAttr>("value");
   if (!valueAttr) {
-    getDiag() << "expected IntegerAttr for key `value`";
+    emitError() << "expected IntegerAttr for key `value`";
     return failure();
   }
 
@@ -1187,20 +1187,20 @@ static ParseResult customParseProperties(OpAsmParser &parser,
 }
 static LogicalResult
 setPropertiesFromAttribute(VersionedProperties &prop, Attribute attr,
-                           function_ref<InFlightDiagnostic &()> getDiag) {
+                           function_ref<InFlightDiagnostic()> emitError) {
   DictionaryAttr dict = dyn_cast<DictionaryAttr>(attr);
   if (!dict) {
-    getDiag() << "expected DictionaryAttr to set VersionedProperties";
+    emitError() << "expected DictionaryAttr to set VersionedProperties";
     return failure();
   }
   auto value1Attr = dict.getAs<IntegerAttr>("value1");
   if (!value1Attr) {
-    getDiag() << "expected IntegerAttr for key `value1`";
+    emitError() << "expected IntegerAttr for key `value1`";
     return failure();
   }
   auto value2Attr = dict.getAs<IntegerAttr>("value2");
   if (!value2Attr) {
-    getDiag() << "expected IntegerAttr for key `value2`";
+    emitError() << "expected IntegerAttr for key `value2`";
     return failure();
   }
 
@@ -1313,6 +1313,16 @@ void TestStoreWithARegion::getSuccessorRegions(
     regions.emplace_back(&getBody(), getBody().front().getArguments());
   else
     regions.emplace_back();
+}
+
+void TestStoreWithALoopRegion::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  // Both the operation itself and the region may be branching into the body or
+  // back into the operation itself. It is possible for the operation not to
+  // enter the body.
+  regions.emplace_back(
+      RegionSuccessor(&getBody(), getBody().front().getArguments()));
+  regions.emplace_back();
 }
 
 LogicalResult

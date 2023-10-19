@@ -472,27 +472,29 @@ define void @vst3_v16i16(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    vmov.u16 r0, q3[3]
 ; CHECK-NEXT:    vins.f16 s4, s14
 ; CHECK-NEXT:    vmov.16 q0[2], r0
-; CHECK-NEXT:    vmov.f32 s18, s31
+; CHECK-NEXT:    vins.f16 s26, s8
 ; CHECK-NEXT:    vmov.f32 s2, s4
 ; CHECK-NEXT:    vmovx.f16 s4, s29
-; CHECK-NEXT:    vmovx.f16 s0, s5
 ; CHECK-NEXT:    vins.f16 s1, s4
 ; CHECK-NEXT:    vmovx.f16 s4, s6
-; CHECK-NEXT:    vins.f16 s29, s0
+; CHECK-NEXT:    vmovx.f16 s0, s5
 ; CHECK-NEXT:    vins.f16 s30, s4
-; CHECK-NEXT:    vldrw.u32 q1, [sp, #32] @ 16-byte Reload
-; CHECK-NEXT:    vmov.f32 s25, s28
-; CHECK-NEXT:    vins.f16 s26, s8
+; CHECK-NEXT:    vldrw.u32 q1, [sp] @ 16-byte Reload
+; CHECK-NEXT:    vins.f16 s29, s0
 ; CHECK-NEXT:    vmov.f32 s0, s29
-; CHECK-NEXT:    vmov.u16 r0, q1[3]
-; CHECK-NEXT:    vmov.f32 s3, s30
-; CHECK-NEXT:    vldrw.u32 q7, [sp] @ 16-byte Reload
 ; CHECK-NEXT:    vins.f16 s22, s11
-; CHECK-NEXT:    vstrw.32 q6, [r1, #48]
-; CHECK-NEXT:    vmov.f32 s8, s30
+; CHECK-NEXT:    vmov.f32 s3, s30
+; CHECK-NEXT:    vstrw.32 q5, [r1]
+; CHECK-NEXT:    vmov.f32 s29, s5
 ; CHECK-NEXT:    vstrw.32 q0, [r1, #64]
+; CHECK-NEXT:    vmov.f32 s30, s6
+; CHECK-NEXT:    vmov.f32 s8, s6
+; CHECK-NEXT:    vldrw.u32 q1, [sp, #32] @ 16-byte Reload
+; CHECK-NEXT:    vmov.f32 s18, s31
+; CHECK-NEXT:    vmov.u16 r0, q1[3]
 ; CHECK-NEXT:    vins.f16 s8, s6
 ; CHECK-NEXT:    vmov.16 q1[2], r0
+; CHECK-NEXT:    vmov.f32 s25, s28
 ; CHECK-NEXT:    vmov.f32 s6, s8
 ; CHECK-NEXT:    vmovx.f16 s8, s9
 ; CHECK-NEXT:    vmovx.f16 s4, s29
@@ -502,10 +504,10 @@ define void @vst3_v16i16(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    vins.f16 s10, s8
 ; CHECK-NEXT:    vmov.f32 s4, s9
 ; CHECK-NEXT:    vmov.f32 s7, s10
-; CHECK-NEXT:    vstrw.32 q4, [r1, #80]
+; CHECK-NEXT:    vstrw.32 q6, [r1, #48]
 ; CHECK-NEXT:    vstrw.32 q1, [r1, #16]
 ; CHECK-NEXT:    vldrw.u32 q1, [sp, #16] @ 16-byte Reload
-; CHECK-NEXT:    vstrw.32 q5, [r1]
+; CHECK-NEXT:    vstrw.32 q4, [r1, #80]
 ; CHECK-NEXT:    vstrw.32 q1, [r1, #32]
 ; CHECK-NEXT:    add sp, #48
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}

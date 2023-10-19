@@ -23,6 +23,7 @@
 ; BFI_AFTER: - inner_loop_exit: {{.*}} count = 1000
 ; BFI_AFTER: - outer_loop_exit: {{.*}} count = 1
 
+; IR-LABEL: define void @func0
 ; IR: inner_loop_body:
 ; IR:   br i1 %cmp1, label %inner_loop_body, label %inner_loop_exit, !prof [[PROF_FUNC0_0:![0-9]+]]
 ; IR: inner_loop_exit:
@@ -74,6 +75,7 @@ outer_loop_exit:
 ; BFI_AFTER: - loop_header.loop_exit_crit_edge: {{.*}} count = 1024
 ; BFI_AFTER: - loop_exit: {{.*}} count = 1024
 
+; IR-LABEL: define void @func1
 ; IR: entry:
 ; IR:   br i1 %cmp1, label %loop_body.lr.ph, label %loop_exit, !prof [[PROF_FUNC1_0:![0-9]+]]
 
@@ -114,6 +116,7 @@ loop_exit:
 ; - loop_header.loop_exit_crit_edge: {{.*}} count = 32
 ; - loop_exit: {{.*}} count = 1024
 
+; IR-LABEL: define void @func2
 ; IR: entry:
 ; IR:   br i1 %cmp1, label %loop_exit, label %loop_body.lr.ph, !prof [[PROF_FUNC2_0:![0-9]+]]
 
@@ -141,12 +144,103 @@ loop_exit:
   ret void
 }
 
+; BFI_BEFORE-LABEL: block-frequency-info: func3_zero_branch_weight
+; BFI_BEFORE: - entry: {{.*}} count = 1024
+; BFI_BEFORE: - loop_header: {{.*}} count = 2199023255296
+; BFI_BEFORE: - loop_body: {{.*}} count = 2199023254272
+; BFI_BEFORE: - loop_exit: {{.*}} count = 1024
+
+; BFI_AFTER-LABEL: block-frequency-info: func3_zero_branch_weight
+; BFI_AFTER: - entry: {{.*}} count = 1024
+; BFI_AFTER: - loop_body.lr.ph: {{.*}} count = 1024
+; BFI_AFTER: - loop_body: {{.*}} count = 2199023255296
+; BFI_AFTER: - loop_header.loop_exit_crit_edge: {{.*}} count = 1024
+; BFI_AFTER: - loop_exit: {{.*}} count = 1024
+
+; IR-LABEL: define void @func3_zero_branch_weight
+; IR: entry:
+; IR:   br i1 %cmp1, label %loop_exit, label %loop_body.lr.ph, !prof [[PROF_FUNC3_0:![0-9]+]]
+
+; IR: loop_body:
+; IR:   br i1 %cmp, label %loop_header.loop_exit_crit_edge, label %loop_body, !prof [[PROF_FUNC3_0]]
+
+define void @func3_zero_branch_weight(i32 %n) !prof !3 {
+entry:
+  br label %loop_header
+
+loop_header:
+  %i = phi i32 [0, %entry], [%i_inc, %loop_body]
+  %cmp = icmp slt i32 %i, %n
+  br i1 %cmp, label %loop_exit, label %loop_body, !prof !6
+
+loop_body:
+  store volatile i32 %i, ptr @g, align 4
+  %i_inc = add i32 %i, 1
+  br label %loop_header
+
+loop_exit:
+  ret void
+}
+
+; IR-LABEL: define void @func4_zero_branch_weight
+; IR: entry:
+; IR:   br i1 %cmp1, label %loop_exit, label %loop_body.lr.ph, !prof [[PROF_FUNC4_0:![0-9]+]]
+
+; IR: loop_body:
+; IR:   br i1 %cmp, label %loop_header.loop_exit_crit_edge, label %loop_body, !prof [[PROF_FUNC4_0]]
+
+define void @func4_zero_branch_weight(i32 %n) !prof !3 {
+entry:
+  br label %loop_header
+
+loop_header:
+  %i = phi i32 [0, %entry], [%i_inc, %loop_body]
+  %cmp = icmp slt i32 %i, %n
+  br i1 %cmp, label %loop_exit, label %loop_body, !prof !7
+
+loop_body:
+  store volatile i32 %i, ptr @g, align 4
+  %i_inc = add i32 %i, 1
+  br label %loop_header
+
+loop_exit:
+  ret void
+}
+
+; IR-LABEL: define void @func5_zero_branch_weight
+; IR: entry:
+; IR:   br i1 %cmp1, label %loop_exit, label %loop_body.lr.ph, !prof [[PROF_FUNC5_0:![0-9]+]]
+
+; IR: loop_body:
+; IR:   br i1 %cmp, label %loop_header.loop_exit_crit_edge, label %loop_body, !prof [[PROF_FUNC5_0]]
+
+define void @func5_zero_branch_weight(i32 %n) !prof !3 {
+entry:
+  br label %loop_header
+
+loop_header:
+  %i = phi i32 [0, %entry], [%i_inc, %loop_body]
+  %cmp = icmp slt i32 %i, %n
+  br i1 %cmp, label %loop_exit, label %loop_body, !prof !8
+
+loop_body:
+  store volatile i32 %i, ptr @g, align 4
+  %i_inc = add i32 %i, 1
+  br label %loop_header
+
+loop_exit:
+  ret void
+}
+
 !0 = !{!"function_entry_count", i64 1}
 !1 = !{!"branch_weights", i32 1000, i32 1}
 !2 = !{!"branch_weights", i32 3000, i32 1000}
 !3 = !{!"function_entry_count", i64 1024}
 !4 = !{!"branch_weights", i32 40, i32 2}
 !5 = !{!"branch_weights", i32 10240, i32 320}
+!6 = !{!"branch_weights", i32 0, i32 1}
+!7 = !{!"branch_weights", i32 1, i32 0}
+!8 = !{!"branch_weights", i32 0, i32 0}
 
 ; IR: [[PROF_FUNC0_0]] = !{!"branch_weights", i32 2000, i32 1000}
 ; IR: [[PROF_FUNC0_1]] = !{!"branch_weights", i32 999, i32 1}
@@ -154,3 +248,6 @@ loop_exit:
 ; IR: [[PROF_FUNC1_1]] = !{!"branch_weights", i32 2433, i32 127}
 ; IR: [[PROF_FUNC2_0]] = !{!"branch_weights", i32 9920, i32 320}
 ; IR: [[PROF_FUNC2_1]] = !{!"branch_weights", i32 320, i32 0}
+; IR: [[PROF_FUNC3_0]] = !{!"branch_weights", i32 0, i32 1}
+; IR: [[PROF_FUNC4_0]] = !{!"branch_weights", i32 1, i32 0}
+; IR: [[PROF_FUNC5_0]] = !{!"branch_weights", i32 0, i32 0}

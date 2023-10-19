@@ -81,18 +81,19 @@ public:
   bool operator!=(const TypeAndShape &that) const { return !(*this == that); }
 
   static std::optional<TypeAndShape> Characterize(
-      const semantics::Symbol &, FoldingContext &, bool invariantOnly = false);
+      const semantics::Symbol &, FoldingContext &, bool invariantOnly = true);
   static std::optional<TypeAndShape> Characterize(
       const semantics::DeclTypeSpec &, FoldingContext &,
-      bool invariantOnly = false);
+      bool invariantOnly = true);
   static std::optional<TypeAndShape> Characterize(
-      const ActualArgument &, FoldingContext &, bool invariantOnly = false);
+      const ActualArgument &, FoldingContext &, bool invariantOnly = true);
 
-  // General case for Expr<T>, ActualArgument, &c.
+  // General case for Expr<T>, &c.
   template <typename A>
   static std::optional<TypeAndShape> Characterize(
-      const A &x, FoldingContext &context, bool invariantOnly = false) {
-    if (const auto *symbol{UnwrapWholeSymbolOrComponentDataRef(x)}) {
+      const A &x, FoldingContext &context, bool invariantOnly = true) {
+    const auto *symbol{UnwrapWholeSymbolOrComponentDataRef(x)};
+    if (symbol && !symbol->owner().IsDerivedType()) { // Whole variable
       if (auto result{Characterize(*symbol, context, invariantOnly)}) {
         return result;
       }
@@ -106,6 +107,9 @@ public:
           }
         }
       }
+      if (symbol) { // component
+        result.AcquireAttrs(*symbol);
+      }
       return std::move(result.Rewrite(context));
     }
     return std::nullopt;
@@ -116,15 +120,21 @@ public:
   static std::optional<TypeAndShape> Characterize(
       const Designator<Type<TypeCategory::Character, KIND>> &x,
       FoldingContext &context, bool invariantOnly = true) {
-    if (const auto *symbol{UnwrapWholeSymbolOrComponentDataRef(x)}) {
+    const auto *symbol{UnwrapWholeSymbolOrComponentDataRef(x)};
+    if (symbol && !symbol->owner().IsDerivedType()) { // Whole variable
       if (auto result{Characterize(*symbol, context, invariantOnly)}) {
         return result;
       }
     }
     if (auto type{x.GetType()}) {
       TypeAndShape result{*type, GetShape(context, x, invariantOnly)};
-      if (auto length{x.LEN()}) {
-        result.set_LEN(std::move(*length));
+      if (type->category() == TypeCategory::Character) {
+        if (auto length{x.LEN()}) {
+          result.set_LEN(std::move(*length));
+        }
+      }
+      if (symbol) { // component
+        result.AcquireAttrs(*symbol);
       }
       return std::move(result.Rewrite(context));
     }
@@ -133,7 +143,7 @@ public:
 
   template <typename A>
   static std::optional<TypeAndShape> Characterize(const std::optional<A> &x,
-      FoldingContext &context, bool invariantOnly = false) {
+      FoldingContext &context, bool invariantOnly = true) {
     if (x) {
       return Characterize(*x, context, invariantOnly);
     } else {
@@ -142,7 +152,7 @@ public:
   }
   template <typename A>
   static std::optional<TypeAndShape> Characterize(
-      A *ptr, FoldingContext &context, bool invariantOnly = false) {
+      A *ptr, FoldingContext &context, bool invariantOnly = true) {
     if (ptr) {
       return Characterize(std::as_const(*ptr), context, invariantOnly);
     } else {
@@ -184,8 +194,6 @@ private:
   static std::optional<TypeAndShape> Characterize(
       const semantics::AssocEntityDetails &, FoldingContext &,
       bool invariantOnly = true);
-  static std::optional<TypeAndShape> Characterize(
-      const semantics::ProcEntityDetails &, FoldingContext &);
   void AcquireAttrs(const semantics::Symbol &);
   void AcquireLEN();
   void AcquireLEN(const semantics::Symbol &);
@@ -349,6 +357,8 @@ struct Procedure {
       const ProcedureDesignator &, FoldingContext &);
   static std::optional<Procedure> Characterize(
       const ProcedureRef &, FoldingContext &);
+  static std::optional<Procedure> Characterize(
+      const Expr<SomeType> &, FoldingContext &);
   // Characterizes the procedure being referenced, deducing dummy argument
   // types from actual arguments in the case of an implicit interface.
   static std::optional<Procedure> FromActuals(

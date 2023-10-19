@@ -1,0 +1,63 @@
+# LLVM Documentation CI
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+name: "Test documentation build"
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - 'main'
+    paths:
+      - 'llvm/docs/**'
+      - 'clang/docs/**'
+  pull_request:
+    paths:
+      - 'llvm/docs/**'
+      - 'clang/docs/**'
+
+jobs:
+  check-docs-build:
+    name: "Test documentation build"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch LLVM sources
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Setup Python env
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: 'llvm/docs/requirements.txt'
+      - name: Install python dependencies
+        run: pip install -r llvm/docs/requirements.txt
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build
+      - name: Get subprojects that have doc changes
+        id: docs-changed-subprojects
+        uses: tj-actions/changed-files@v39
+        with:
+          files_yaml: |
+            llvm:
+              - 'llvm/docs/**'
+            clang:
+              - 'clang/docs/**'
+      - name: Build LLVM docs
+        if: steps.docs-changed-subprojects.outputs.llvm_any_changed == 'true'
+        run: |
+          cmake -B llvm-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_SPHINX=ON -DSPHINX_OUTPUT_HTML=ON -DSPHINX_OUTPUT_MAN=ON ./llvm
+          TZ=UTC ninja -C llvm-build docs-llvm-html docs-llvm-man
+      - name: Build Clang docs
+        if: steps.docs-changed-subprojects.outputs.clang_any_changed == 'true'
+        run: |
+          cmake -B clang-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_ENABLE_SPHINX=ON -DSPHINX_OUTPUT_HTML=ON -DSPHINX_OUTPUT_MAN=ON ./llvm
+          TZ=UTC ninja -C clang-build docs-clang-html docs-clang-man
+

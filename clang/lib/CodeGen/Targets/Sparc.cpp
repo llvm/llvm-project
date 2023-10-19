@@ -286,7 +286,7 @@ Address SparcV9ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   CGBuilderTy &Builder = CGF.Builder;
   Address Addr = Address(Builder.CreateLoad(VAListAddr, "ap.cur"),
                          getVAListElementType(CGF), SlotSize);
-  llvm::Type *ArgPtrTy = llvm::PointerType::getUnqual(ArgTy);
+  llvm::Type *ArgPtrTy = CGF.UnqualPtrTy;
 
   auto TypeInfo = getContext().getTypeInfoInChars(Ty);
 

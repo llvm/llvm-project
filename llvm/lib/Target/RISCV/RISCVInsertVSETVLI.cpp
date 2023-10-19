@@ -1592,22 +1592,6 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF)
     doLocalPostpass(MBB);
 
-  // Once we're fully done rewriting all the instructions, do a final pass
-  // through to check for VSETVLIs which write to an unused destination.
-  // For the non X0, X0 variant, we can replace the destination register
-  // with X0 to reduce register pressure.  This is really a generic
-  // optimization which can be applied to any dead def (TODO: generalize).
-  for (MachineBasicBlock &MBB : MF) {
-    for (MachineInstr &MI : MBB) {
-      if (MI.getOpcode() == RISCV::PseudoVSETVLI ||
-          MI.getOpcode() == RISCV::PseudoVSETIVLI) {
-        Register VRegDef = MI.getOperand(0).getReg();
-        if (VRegDef != RISCV::X0 && MRI->use_nodbg_empty(VRegDef))
-          MI.getOperand(0).setReg(RISCV::X0);
-      }
-    }
-  }
-
   // Insert PseudoReadVL after VLEFF/VLSEGFF and replace it with the vl output
   // of VLEFF/VLSEGFF.
   for (MachineBasicBlock &MBB : MF)

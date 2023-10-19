@@ -443,9 +443,16 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
     if (!II)
       return false;
 
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::experimental_guard: {
+      // Guards on true are operationally no-ops.  In the future we can
+      // consider more sophisticated tradeoffs for guards considering potential
+      // for check widening, but for now we keep things simple.
+      auto *Cond = dyn_cast<ConstantInt>(II->getArgOperand(0));
+      return Cond && Cond->isOne();
+    }
     // TODO: These intrinsics are not safe to remove, because this may remove
     // a well-defined trap.
-    switch (II->getIntrinsicID()) {
     case Intrinsic::wasm_trunc_signed:
     case Intrinsic::wasm_trunc_unsigned:
     case Intrinsic::ptrauth_auth:
@@ -484,13 +491,9 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
       return false;
     }
 
-    // Assumptions are dead if their condition is trivially true.  Guards on
-    // true are operationally no-ops.  In the future we can consider more
-    // sophisticated tradeoffs for guards considering potential for check
-    // widening, but for now we keep things simple.
-    if ((II->getIntrinsicID() == Intrinsic::assume &&
-         isAssumeWithEmptyBundle(cast<AssumeInst>(*II))) ||
-        II->getIntrinsicID() == Intrinsic::experimental_guard) {
+    // Assumptions are dead if their condition is trivially true.
+    if (II->getIntrinsicID() == Intrinsic::assume &&
+        isAssumeWithEmptyBundle(cast<AssumeInst>(*II))) {
       if (ConstantInt *Cond = dyn_cast<ConstantInt>(II->getArgOperand(0)))
         return !Cond->isZero();
 
@@ -1247,7 +1250,9 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
   return true;
 }
 
-static bool EliminateDuplicatePHINodesNaiveImpl(BasicBlock *BB) {
+static bool
+EliminateDuplicatePHINodesNaiveImpl(BasicBlock *BB,
+                                    SmallPtrSetImpl<PHINode *> &ToRemove) {
   // This implementation doesn't currently consider undef operands
   // specially. Theoretically, two phis which are identical except for
   // one having an undef where the other doesn't could be collapsed.
@@ -1263,12 +1268,14 @@ static bool EliminateDuplicatePHINodesNaiveImpl(BasicBlock *BB) {
     // Note that we only look in the upper square's triangle,
     // we already checked that the lower triangle PHI's aren't identical.
     for (auto J = I; PHINode *DuplicatePN = dyn_cast<PHINode>(J); ++J) {
+      if (ToRemove.contains(DuplicatePN))
+        continue;
       if (!DuplicatePN->isIdenticalToWhenDefined(PN))
         continue;
       // A duplicate. Replace this PHI with the base PHI.
       ++NumPHICSEs;
       DuplicatePN->replaceAllUsesWith(PN);
-      DuplicatePN->eraseFromParent();
+      ToRemove.insert(DuplicatePN);
       Changed = true;
 
       // The RAUW can change PHIs that we already visited.
@@ -1279,7 +1286,9 @@ static bool EliminateDuplicatePHINodesNaiveImpl(BasicBlock *BB) {
   return Changed;
 }
 
-static bool EliminateDuplicatePHINodesSetBasedImpl(BasicBlock *BB) {
+static bool
+EliminateDuplicatePHINodesSetBasedImpl(BasicBlock *BB,
+                                       SmallPtrSetImpl<PHINode *> &ToRemove) {
   // This implementation doesn't currently consider undef operands
   // specially. Theoretically, two phis which are identical except for
   // one having an undef where the other doesn't could be collapsed.
@@ -1343,12 +1352,14 @@ static bool EliminateDuplicatePHINodesSetBasedImpl(BasicBlock *BB) {
   // Examine each PHI.
   bool Changed = false;
   for (auto I = BB->begin(); PHINode *PN = dyn_cast<PHINode>(I++);) {
+    if (ToRemove.contains(PN))
+      continue;
     auto Inserted = PHISet.insert(PN);
     if (!Inserted.second) {
       // A duplicate. Replace this PHI with its duplicate.
       ++NumPHICSEs;
       PN->replaceAllUsesWith(*Inserted.first);
-      PN->eraseFromParent();
+      ToRemove.insert(PN);
       Changed = true;
 
       // The RAUW can change PHIs that we already visited. Start over from the
@@ -1361,25 +1372,27 @@ static bool EliminateDuplicatePHINodesSetBasedImpl(BasicBlock *BB) {
   return Changed;
 }
 
-bool llvm::EliminateDuplicatePHINodes(BasicBlock *BB) {
+bool llvm::EliminateDuplicatePHINodes(BasicBlock *BB,
+                                      SmallPtrSetImpl<PHINode *> &ToRemove) {
   if (
 #ifndef NDEBUG
       !PHICSEDebugHash &&
 #endif
       hasNItemsOrLess(BB->phis(), PHICSENumPHISmallSize))
-    return EliminateDuplicatePHINodesNaiveImpl(BB);
-  return EliminateDuplicatePHINodesSetBasedImpl(BB);
+    return EliminateDuplicatePHINodesNaiveImpl(BB, ToRemove);
+  return EliminateDuplicatePHINodesSetBasedImpl(BB, ToRemove);
 }
 
-/// If the specified pointer points to an object that we control, try to modify
-/// the object's alignment to PrefAlign. Returns a minimum known alignment of
-/// the value after the operation, which may be lower than PrefAlign.
-///
-/// Increating value alignment isn't often possible though. If alignment is
-/// important, a more reliable approach is to simply align all global variables
-/// and allocation instructions to their preferred alignment from the beginning.
-static Align tryEnforceAlignment(Value *V, Align PrefAlign,
-                                 const DataLayout &DL) {
+bool llvm::EliminateDuplicatePHINodes(BasicBlock *BB) {
+  SmallPtrSet<PHINode *, 8> ToRemove;
+  bool Changed = EliminateDuplicatePHINodes(BB, ToRemove);
+  for (PHINode *PN : ToRemove)
+    PN->eraseFromParent();
+  return Changed;
+}
+
+Align llvm::tryEnforceAlignment(Value *V, Align PrefAlign,
+                                const DataLayout &DL) {
   V = V->stripPointerCasts();
 
   if (AllocaInst *AI = dyn_cast<AllocaInst>(V)) {

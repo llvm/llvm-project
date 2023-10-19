@@ -196,14 +196,14 @@ void MachineIRBuilder::validateShiftOp(const LLT Res, const LLT Op0,
   assert((Res == Op0) && "type mismatch");
 }
 
-MachineInstrBuilder MachineIRBuilder::buildPtrAdd(const DstOp &Res,
-                                                  const SrcOp &Op0,
-                                                  const SrcOp &Op1) {
+MachineInstrBuilder
+MachineIRBuilder::buildPtrAdd(const DstOp &Res, const SrcOp &Op0,
+                              const SrcOp &Op1, std::optional<unsigned> Flags) {
   assert(Res.getLLTTy(*getMRI()).getScalarType().isPointer() &&
          Res.getLLTTy(*getMRI()) == Op0.getLLTTy(*getMRI()) && "type mismatch");
   assert(Op1.getLLTTy(*getMRI()).getScalarType().isScalar() && "invalid offset type");
 
-  return buildInstr(TargetOpcode::G_PTR_ADD, {Res}, {Op0, Op1});
+  return buildInstr(TargetOpcode::G_PTR_ADD, {Res}, {Op0, Op1}, Flags);
 }
 
 std::optional<MachineInstrBuilder>

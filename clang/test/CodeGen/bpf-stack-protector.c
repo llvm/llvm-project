@@ -1,16 +1,16 @@
 // REQUIRES: bpf-registered-target
 
-// RUN %clang -target bpf -S -emit-llvm -o - %s -fno-stack-protector 2>&1 \
-// RUN        | FileCheck -check-prefix=OFF -check-prefix=COMMON %s
+// RUN: %clang -target bpf -S -emit-llvm -o - %s -fno-stack-protector 2>&1 \
+// RUN:        | FileCheck -check-prefix=OFF -check-prefix=COMMON %s
 
 // RUN: %clang -target bpf -S -emit-llvm -o - %s -fstack-protector 2>&1 \
-// RUN:        | FileCheck -check-prefix=ON -check-prefix=COMMON %s
+// RUN:        | FileCheck -check-prefix=ON -check-prefix=COMMON -check-prefix=WARNING %s
 
 // RUN: %clang -target bpf -S -emit-llvm -o - %s -fstack-protector-all 2>&1 \
-// RUN:        | FileCheck -check-prefix=ALL -check-prefix=COMMON %s
+// RUN:        | FileCheck -check-prefix=ALL -check-prefix=COMMON -check-prefix=WARNING %s
 
 // RUN: %clang -target bpf -S -emit-llvm -o - %s -fstack-protector-strong 2>&1 \
-// RUN:        | FileCheck -check-prefix=STRONG -check-prefix=COMMON %s
+// RUN:        | FileCheck -check-prefix=STRONG -check-prefix=COMMON -check-prefix=WARNING %s
 
 typedef __SIZE_TYPE__ size_t;
 
@@ -22,7 +22,7 @@ char *strcpy(char *s1, const char *s2);
 //          ON: warning: ignoring '-fstack-protector'
 //         ALL: warning: ignoring '-fstack-protector-all'
 //      STRONG: warning: ignoring '-fstack-protector-strong'
-// COMMON-SAME: option as it is not currently supported for target 'bpf'
+// WARNING-SAME: option as it is not currently supported for target 'bpf'
 
 // COMMON: define {{.*}}void @test1(ptr noundef %{{[0-9a-z]+}}) #[[A:.*]] {
 void test1(const char *msg) {

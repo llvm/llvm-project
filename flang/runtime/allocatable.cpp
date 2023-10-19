@@ -130,17 +130,7 @@ void RTNAME(AllocatableApplyMold)(
     // 9.7.1.3 Return so the error can be emitted by AllocatableAllocate.
     return;
   }
-  descriptor = mold;
-  descriptor.set_base_addr(nullptr);
-  descriptor.raw().attribute = CFI_attribute_allocatable;
-  descriptor.raw().rank = rank;
-  if (auto *descAddendum{descriptor.Addendum()}) {
-    if (const auto *moldAddendum{mold.Addendum()}) {
-      if (const auto *derived{moldAddendum->derivedType()}) {
-        descAddendum->set_derivedType(derived);
-      }
-    }
-  }
+  descriptor.ApplyMold(mold, rank);
 }
 
 int RTNAME(AllocatableAllocate)(Descriptor &descriptor, bool hasStat,
@@ -168,9 +158,6 @@ int RTNAME(AllocatableAllocate)(Descriptor &descriptor, bool hasStat,
 int RTNAME(AllocatableAllocateSource)(Descriptor &alloc,
     const Descriptor &source, bool hasStat, const Descriptor *errMsg,
     const char *sourceFile, int sourceLine) {
-  if (alloc.Elements() == 0) {
-    return StatOk;
-  }
   int stat{RTNAME(AllocatableAllocate)(
       alloc, hasStat, errMsg, sourceFile, sourceLine)};
   if (stat == StatOk) {
@@ -201,14 +188,15 @@ int RTNAME(AllocatableDeallocatePolymorphic)(Descriptor &descriptor,
   int stat{RTNAME(AllocatableDeallocate)(
       descriptor, hasStat, errMsg, sourceFile, sourceLine)};
   if (stat == StatOk) {
-    DescriptorAddendum *addendum{descriptor.Addendum()};
-    if (addendum) {
+    if (DescriptorAddendum * addendum{descriptor.Addendum()}) {
       addendum->set_derivedType(derivedType);
+      descriptor.raw().type = derivedType ? CFI_type_struct : CFI_type_other;
     } else {
       // Unlimited polymorphic descriptors initialized with
       // AllocatableInitIntrinsic do not have an addendum. Make sure the
       // derivedType is null in that case.
       INTERNAL_CHECK(!derivedType);
+      descriptor.raw().type = CFI_type_other;
     }
   }
   return stat;

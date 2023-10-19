@@ -926,6 +926,14 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
         NewFn = nullptr;
         return true;
       }
+
+      if (Name.startswith("ldexp.")) {
+        // Target specific intrinsic became redundant
+        NewFn = Intrinsic::getDeclaration(
+          F->getParent(), Intrinsic::ldexp,
+          {F->getReturnType(), F->getArg(1)->getType()});
+        return true;
+      }
     }
 
     break;
@@ -943,6 +951,12 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
                                         F->arg_begin()->getType());
       return true;
     }
+    if (Name.equals("coro.end") && F->arg_size() == 2) {
+      rename(F);
+      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::coro_end);
+      return true;
+    }
+
     break;
   }
   case 'd':
@@ -2839,9 +2853,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       auto *VecTy = cast<FixedVectorType>(CI->getType());
       Type *EltTy = VecTy->getElementType();
       unsigned EltNum = VecTy->getNumElements();
-      Value *Cast = Builder.CreateBitCast(CI->getArgOperand(0),
-                                          EltTy->getPointerTo());
-      Value *Load = Builder.CreateLoad(EltTy, Cast);
+      Value *Load = Builder.CreateLoad(EltTy, CI->getArgOperand(0));
       Type *I32Ty = Type::getInt32Ty(C);
       Rep = PoisonValue::get(VecTy);
       for (unsigned I = 0; I < EltNum; ++I)
@@ -4199,6 +4211,13 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     break;
   }
 
+  case Intrinsic::coro_end: {
+    SmallVector<Value *, 3> Args(CI->args());
+    Args.push_back(ConstantTokenNone::get(CI->getContext()));
+    NewCall = Builder.CreateCall(NewFn, Args);
+    break;
+  }
+
   case Intrinsic::vector_extract: {
     StringRef Name = F->getName();
     Name = Name.substr(5); // Strip llvm
@@ -5182,11 +5201,27 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
   // If the datalayout matches the expected format, add pointer size address
   // spaces to the datalayout.
   std::string AddrSpaces = "-p270:32:32-p271:32:32-p272:64:64";
-  if (!DL.contains(AddrSpaces)) {
+  if (StringRef Ref = Res; !Ref.contains(AddrSpaces)) {
     SmallVector<StringRef, 4> Groups;
     Regex R("(e-m:[a-z](-p:32:32)?)(-[if]64:.*$)");
-    if (R.match(DL, &Groups))
+    if (R.match(Res, &Groups))
       Res = (Groups[1] + AddrSpaces + Groups[3]).str();
+  }
+
+  // i128 values need to be 16-byte-aligned. LLVM already called into libgcc
+  // for i128 operations prior to this being reflected in the data layout, and
+  // clang mostly produced LLVM IR that already aligned i128 to 16 byte
+  // boundaries, so although this is a breaking change, the upgrade is expected
+  // to fix more IR than it breaks.
+  // Intel MCU is an exception and uses 4-byte-alignment.
+  if (!T.isOSIAMCU()) {
+    std::string I128 = "-i128:128";
+    if (StringRef Ref = Res; !Ref.contains(I128)) {
+      SmallVector<StringRef, 4> Groups;
+      Regex R("^(e(-[mpi][^-]*)*)((-[^mpi][^-]*)*)$");
+      if (R.match(Res, &Groups))
+        Res = (Groups[1] + I128 + Groups[3]).str();
+    }
   }
 
   // For 32-bit MSVC targets, raise the alignment of f80 values to 16 bytes.

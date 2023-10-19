@@ -33,7 +33,7 @@ constexpr StringRef TOCSymbolAliasIdent = "__TOC__";
 constexpr uint64_t ELFTOCBaseOffset = 0x8000;
 constexpr StringRef ELFTLSInfoSectionName = "$__TLSINFO";
 
-template <support::endianness Endianness>
+template <llvm::endianness Endianness>
 class TLSInfoTableManager_ELF_ppc64
     : public TableManager<TLSInfoTableManager_ELF_ppc64<Endianness>> {
 public:
@@ -43,17 +43,22 @@ public:
 
   bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
     Edge::Kind K = E.getKind();
-    if (K == ppc64::RequestTLSDescInGOTAndTransformToTOCDelta16HA) {
+    switch (K) {
+    case ppc64::RequestTLSDescInGOTAndTransformToTOCDelta16HA:
       E.setKind(ppc64::TOCDelta16HA);
       E.setTarget(this->getEntryForTarget(G, E.getTarget()));
       return true;
-    }
-    if (K == ppc64::RequestTLSDescInGOTAndTransformToTOCDelta16LO) {
+    case ppc64::RequestTLSDescInGOTAndTransformToTOCDelta16LO:
       E.setKind(ppc64::TOCDelta16LO);
       E.setTarget(this->getEntryForTarget(G, E.getTarget()));
       return true;
+    case ppc64::RequestTLSDescInGOTAndTransformToDelta34:
+      E.setKind(ppc64::Delta34);
+      E.setTarget(this->getEntryForTarget(G, E.getTarget()));
+      return true;
+    default:
+      return false;
     }
-    return false;
   }
 
   Symbol &createEntry(LinkGraph &G, Symbol &Target) {
@@ -84,19 +89,19 @@ private:
 
 template <>
 const uint8_t TLSInfoTableManager_ELF_ppc64<
-    support::endianness::little>::TLSInfoEntryContent[16] = {
+    llvm::endianness::little>::TLSInfoEntryContent[16] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /*pthread key */
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00  /*data address*/
 };
 
 template <>
 const uint8_t TLSInfoTableManager_ELF_ppc64<
-    support::endianness::big>::TLSInfoEntryContent[16] = {
+    llvm::endianness::big>::TLSInfoEntryContent[16] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /*pthread key */
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00  /*data address*/
 };
 
-template <support::endianness Endianness>
+template <llvm::endianness Endianness>
 Symbol &createELFGOTHeader(LinkGraph &G,
                            ppc64::TOCTableManager<Endianness> &TOC) {
   Symbol *TOCSymbol = nullptr;
@@ -122,7 +127,7 @@ Symbol &createELFGOTHeader(LinkGraph &G,
 }
 
 // Register preexisting GOT entries with TOC table manager.
-template <support::endianness Endianness>
+template <llvm::endianness Endianness>
 inline void
 registerExistingGOTEntries(LinkGraph &G,
                            ppc64::TOCTableManager<Endianness> &TOC) {
@@ -140,7 +145,7 @@ registerExistingGOTEntries(LinkGraph &G,
   }
 }
 
-template <support::endianness Endianness>
+template <llvm::endianness Endianness>
 Error buildTables_ELF_ppc64(LinkGraph &G) {
   LLVM_DEBUG(dbgs() << "Visiting edges in graph:\n");
   ppc64::TOCTableManager<Endianness> TOC;
@@ -189,7 +194,7 @@ Error buildTables_ELF_ppc64(LinkGraph &G) {
 
 namespace llvm::jitlink {
 
-template <support::endianness Endianness>
+template <llvm::endianness Endianness>
 class ELFLinkGraphBuilder_ppc64
     : public ELFLinkGraphBuilder<object::ELFType<Endianness, true>> {
 private:
@@ -233,6 +238,14 @@ private:
       return Error::success();
     if (ELFReloc == ELF::R_PPC64_TLSLD)
       return make_error<StringError>("Local-dynamic TLS model is not supported",
+                                     inconvertibleErrorCode());
+
+    if (ELFReloc == ELF::R_PPC64_PCREL_OPT)
+      // TODO: Support PCREL optimization, now ignore it.
+      return Error::success();
+
+    if (ELFReloc == ELF::R_PPC64_TPREL34)
+      return make_error<StringError>("Local-exec TLS model is not supported",
                                      inconvertibleErrorCode());
 
     auto ObjSymbol = Base::Obj.getRelocationSymbol(Rel, Base::SymTabSec);
@@ -346,9 +359,13 @@ private:
       break;
     case ELF::R_PPC64_REL24:
       Kind = ppc64::RequestCall;
-      assert(Addend == 0 && "Addend is expected to be 0 for a function call");
-      // We assume branching to local entry, will reverse the addend if not.
-      Addend = ELF::decodePPC64LocalEntryOffset((*ObjSymbol)->st_other);
+      // Determining a target is external or not is deferred in PostPrunePass.
+      // We assume branching to local entry by default, since in PostPrunePass,
+      // we don't have any context to determine LocalEntryOffset. If it finally
+      // turns out to be an external call, we'll have a stub for the external
+      // target, the target of this edge will be the stub and its addend will be
+      // set 0.
+      Addend += ELF::decodePPC64LocalEntryOffset((*ObjSymbol)->st_other);
       break;
     case ELF::R_PPC64_REL64:
       Kind = ppc64::Delta64;
@@ -356,11 +373,17 @@ private:
     case ELF::R_PPC64_PCREL34:
       Kind = ppc64::Delta34;
       break;
+    case ELF::R_PPC64_GOT_PCREL34:
+      Kind = ppc64::RequestGOTAndTransformToDelta34;
+      break;
     case ELF::R_PPC64_GOT_TLSGD16_HA:
       Kind = ppc64::RequestTLSDescInGOTAndTransformToTOCDelta16HA;
       break;
     case ELF::R_PPC64_GOT_TLSGD16_LO:
       Kind = ppc64::RequestTLSDescInGOTAndTransformToTOCDelta16LO;
+      break;
+    case ELF::R_PPC64_GOT_TLSGD_PCREL34:
+      Kind = ppc64::RequestTLSDescInGOTAndTransformToDelta34;
       break;
     }
 
@@ -377,7 +400,7 @@ public:
                                   FileName, ppc64::getEdgeKindName) {}
 };
 
-template <support::endianness Endianness>
+template <llvm::endianness Endianness>
 class ELFJITLinker_ppc64 : public JITLinker<ELFJITLinker_ppc64<Endianness>> {
   using JITLinkerBase = JITLinker<ELFJITLinker_ppc64<Endianness>>;
   friend JITLinkerBase;
@@ -439,7 +462,7 @@ private:
   }
 };
 
-template <support::endianness Endianness>
+template <llvm::endianness Endianness>
 Expected<std::unique_ptr<LinkGraph>>
 createLinkGraphFromELFObject_ppc64(MemoryBufferRef ObjectBuffer) {
   LLVM_DEBUG({
@@ -463,7 +486,7 @@ createLinkGraphFromELFObject_ppc64(MemoryBufferRef ObjectBuffer) {
       .buildGraph();
 }
 
-template <support::endianness Endianness>
+template <llvm::endianness Endianness>
 void link_ELF_ppc64(std::unique_ptr<LinkGraph> G,
                     std::unique_ptr<JITLinkContext> Ctx) {
   PassConfiguration Config;
@@ -496,26 +519,26 @@ void link_ELF_ppc64(std::unique_ptr<LinkGraph> G,
 
 Expected<std::unique_ptr<LinkGraph>>
 createLinkGraphFromELFObject_ppc64(MemoryBufferRef ObjectBuffer) {
-  return createLinkGraphFromELFObject_ppc64<support::big>(
+  return createLinkGraphFromELFObject_ppc64<llvm::endianness::big>(
       std::move(ObjectBuffer));
 }
 
 Expected<std::unique_ptr<LinkGraph>>
 createLinkGraphFromELFObject_ppc64le(MemoryBufferRef ObjectBuffer) {
-  return createLinkGraphFromELFObject_ppc64<support::little>(
+  return createLinkGraphFromELFObject_ppc64<llvm::endianness::little>(
       std::move(ObjectBuffer));
 }
 
 /// jit-link the given object buffer, which must be a ELF ppc64 object file.
 void link_ELF_ppc64(std::unique_ptr<LinkGraph> G,
                     std::unique_ptr<JITLinkContext> Ctx) {
-  return link_ELF_ppc64<support::big>(std::move(G), std::move(Ctx));
+  return link_ELF_ppc64<llvm::endianness::big>(std::move(G), std::move(Ctx));
 }
 
 /// jit-link the given object buffer, which must be a ELF ppc64le object file.
 void link_ELF_ppc64le(std::unique_ptr<LinkGraph> G,
                       std::unique_ptr<JITLinkContext> Ctx) {
-  return link_ELF_ppc64<support::little>(std::move(G), std::move(Ctx));
+  return link_ELF_ppc64<llvm::endianness::little>(std::move(G), std::move(Ctx));
 }
 
 } // end namespace llvm::jitlink

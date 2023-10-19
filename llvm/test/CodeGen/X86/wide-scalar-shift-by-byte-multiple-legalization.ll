@@ -1316,24 +1316,24 @@ define void @shl_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X86-SSE2-NEXT:    pushl %esi
 ; X86-SSE2-NEXT:    subl $72, %esp
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-SSE2-NEXT:    movl (%edx), %ecx
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-SSE2-NEXT:    movl (%edi), %ecx
 ; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-SSE2-NEXT:    movl 4(%edx), %ecx
+; X86-SSE2-NEXT:    movl 4(%edi), %ecx
 ; X86-SSE2-NEXT:    movl %ecx, (%esp) # 4-byte Spill
-; X86-SSE2-NEXT:    movl 8(%edx), %edi
-; X86-SSE2-NEXT:    movl 12(%edx), %ebx
-; X86-SSE2-NEXT:    movl 16(%edx), %ebp
+; X86-SSE2-NEXT:    movl 8(%edi), %esi
+; X86-SSE2-NEXT:    movl 12(%edi), %ebx
+; X86-SSE2-NEXT:    movl 16(%edi), %ebp
 ; X86-SSE2-NEXT:    movzbl (%eax), %eax
-; X86-SSE2-NEXT:    movl 20(%edx), %esi
-; X86-SSE2-NEXT:    movl 24(%edx), %ecx
-; X86-SSE2-NEXT:    movl 28(%edx), %edx
-; X86-SSE2-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    movl 20(%edi), %edx
+; X86-SSE2-NEXT:    movl 24(%edi), %ecx
+; X86-SSE2-NEXT:    movl 28(%edi), %edi
+; X86-SSE2-NEXT:    movl %edi, {{[0-9]+}}(%esp)
 ; X86-SSE2-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-SSE2-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; X86-SSE2-NEXT:    movl %ebp, {{[0-9]+}}(%esp)
 ; X86-SSE2-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
-; X86-SSE2-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; X86-SSE2-NEXT:    movl (%esp), %ecx # 4-byte Reload
 ; X86-SSE2-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
@@ -1348,20 +1348,20 @@ define void @shl_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X86-SSE2-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; X86-SSE2-NEXT:    andb $31, %al
 ; X86-SSE2-NEXT:    negb %al
-; X86-SSE2-NEXT:    movsbl %al, %eax
-; X86-SSE2-NEXT:    movl 40(%esp,%eax), %ecx
-; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-SSE2-NEXT:    movl 44(%esp,%eax), %ecx
-; X86-SSE2-NEXT:    movl %ecx, (%esp) # 4-byte Spill
-; X86-SSE2-NEXT:    movl 52(%esp,%eax), %esi
-; X86-SSE2-NEXT:    movl 48(%esp,%eax), %edi
-; X86-SSE2-NEXT:    movl 60(%esp,%eax), %ebx
-; X86-SSE2-NEXT:    movl 56(%esp,%eax), %ebp
-; X86-SSE2-NEXT:    movl 68(%esp,%eax), %edx
-; X86-SSE2-NEXT:    movl 64(%esp,%eax), %ecx
+; X86-SSE2-NEXT:    movsbl %al, %edx
+; X86-SSE2-NEXT:    movl 40(%esp,%edx), %eax
+; X86-SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-SSE2-NEXT:    movl 44(%esp,%edx), %eax
+; X86-SSE2-NEXT:    movl %eax, (%esp) # 4-byte Spill
+; X86-SSE2-NEXT:    movl 52(%esp,%edx), %esi
+; X86-SSE2-NEXT:    movl 48(%esp,%edx), %edi
+; X86-SSE2-NEXT:    movl 60(%esp,%edx), %ebx
+; X86-SSE2-NEXT:    movl 56(%esp,%edx), %ebp
+; X86-SSE2-NEXT:    movl 68(%esp,%edx), %ecx
+; X86-SSE2-NEXT:    movl 64(%esp,%edx), %edx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movl %ecx, 24(%eax)
-; X86-SSE2-NEXT:    movl %edx, 28(%eax)
+; X86-SSE2-NEXT:    movl %edx, 24(%eax)
+; X86-SSE2-NEXT:    movl %ecx, 28(%eax)
 ; X86-SSE2-NEXT:    movl %ebp, 16(%eax)
 ; X86-SSE2-NEXT:    movl %ebx, 20(%eax)
 ; X86-SSE2-NEXT:    movl %edi, 8(%eax)

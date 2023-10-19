@@ -89,6 +89,7 @@ protected:
 using HlfirSumLowering = HlfirReductionIntrinsic<hlfir::SumOp, true>;
 using HlfirProductLowering = HlfirReductionIntrinsic<hlfir::ProductOp, true>;
 using HlfirMaxvalLowering = HlfirReductionIntrinsic<hlfir::MaxvalOp, true>;
+using HlfirMinvalLowering = HlfirReductionIntrinsic<hlfir::MinvalOp, true>;
 using HlfirAnyLowering = HlfirReductionIntrinsic<hlfir::AnyOp, false>;
 using HlfirAllLowering = HlfirReductionIntrinsic<hlfir::AllOp, false>;
 
@@ -151,7 +152,7 @@ mlir::Value HlfirTransformationalIntrinsic::loadBoxAddress(
   if (!arg)
     return mlir::Value{};
 
-  hlfir::Entity actual = arg->getOriginalActual();
+  hlfir::Entity actual = arg->getActual(loc, builder);
 
   if (!arg->handleDynamicOptional()) {
     if (actual.isMutableBox()) {
@@ -192,7 +193,7 @@ llvm::SmallVector<mlir::Value> HlfirTransformationalIntrinsic::getOperandVector(
       operands.emplace_back();
       continue;
     }
-    hlfir::Entity actual = arg->getOriginalActual();
+    hlfir::Entity actual = arg->getActual(loc, builder);
     mlir::Value valArg;
 
     if (!argLowering) {
@@ -329,6 +330,9 @@ std::optional<hlfir::EntityWithAttributes> Fortran::lower::lowerHlfirIntrinsic(
     const Fortran::lower::PreparedActualArguments &loweredActuals,
     const fir::IntrinsicArgumentLoweringRules *argLowering,
     mlir::Type stmtResultType) {
+  // If the result is of a derived type that may need finalization,
+  // we have to use DestroyOp with 'finalize' attribute for the result
+  // of the intrinsic operation.
   if (name == "sum")
     return HlfirSumLowering{builder, loc}.lower(loweredActuals, argLowering,
                                                 stmtResultType);
@@ -347,6 +351,7 @@ std::optional<hlfir::EntityWithAttributes> Fortran::lower::lowerHlfirIntrinsic(
   if (name == "dot_product")
     return HlfirDotProductLowering{builder, loc}.lower(
         loweredActuals, argLowering, stmtResultType);
+  // FIXME: the result may need finalization.
   if (name == "transpose")
     return HlfirTransposeLowering{builder, loc}.lower(
         loweredActuals, argLowering, stmtResultType);
@@ -355,6 +360,9 @@ std::optional<hlfir::EntityWithAttributes> Fortran::lower::lowerHlfirIntrinsic(
                                                   stmtResultType);
   if (name == "maxval")
     return HlfirMaxvalLowering{builder, loc}.lower(loweredActuals, argLowering,
+                                                   stmtResultType);
+  if (name == "minval")
+    return HlfirMinvalLowering{builder, loc}.lower(loweredActuals, argLowering,
                                                    stmtResultType);
   if (mlir::isa<fir::CharacterType>(stmtResultType)) {
     if (name == "min")

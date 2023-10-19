@@ -11,9 +11,10 @@
 
 #include <limits.h>
 
-using __llvm_libc::cpp::is_same_v;
+using LIBC_NAMESPACE::cpp::is_same_v;
 
-template <typename ReturnT> struct AtoTest : public __llvm_libc::testing::Test {
+template <typename ReturnT>
+struct AtoTest : public LIBC_NAMESPACE::testing::Test {
   using FunctionT = ReturnT (*)(const char *);
 
   void validNumbers(FunctionT func) {

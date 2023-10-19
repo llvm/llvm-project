@@ -3108,13 +3108,10 @@ bool CombineRuleBuilder::emitCodeGenInstructionApplyImmOperand(
   }
 
   unsigned TempRegID = M.allocateTempRegID();
-  auto ActIt = M.insertAction<BuildMIAction>(
-      M.actions_begin(), M.allocateOutputInsnID(), &getGConstant());
-  // Ensure MakeTempReg occurs before the BuildMI of th G_CONSTANT.
-  M.insertAction<MakeTempRegisterAction>(ActIt, LLT, TempRegID);
-  auto &ConstantMI = *static_cast<BuildMIAction *>(ActIt->get());
-  ConstantMI.addRenderer<TempRegRenderer>(TempRegID);
-  ConstantMI.addRenderer<ImmRenderer>(O.getImmValue(), LLT);
+  // Ensure MakeTempReg & the BuildConstantAction occur at the beginning.
+  auto InsertIt =
+      M.insertAction<MakeTempRegisterAction>(M.actions_begin(), LLT, TempRegID);
+  M.insertAction<BuildConstantAction>(++InsertIt, TempRegID, O.getImmValue());
   DstMI.addRenderer<TempRegRenderer>(TempRegID);
   return true;
 }
@@ -3310,6 +3307,10 @@ class GICombinerEmitter final : public GlobalISelMatchTableExecutorEmitter {
   // combine rule used to disable/enable it.
   std::vector<std::pair<unsigned, std::string>> AllCombineRules;
 
+  // Keep track of all rules we've seen so far to ensure we don't process
+  // the same rule twice.
+  StringSet<> RulesSeen;
+
   MatchTable buildMatchTable(MutableArrayRef<RuleMatcher> Rules);
 
   void emitRuleConfigImpl(raw_ostream &OS);
@@ -3465,15 +3466,15 @@ void GICombinerEmitter::emitAdditionalImpl(raw_ostream &OS) {
      << "  const TargetSubtargetInfo &ST = MF.getSubtarget();\n"
      << "  const PredicateBitset AvailableFeatures = "
         "getAvailableFeatures();\n"
-     << "  NewMIVector OutMIs;\n"
+     << "  B.setInstrAndDebugLoc(I);\n"
      << "  State.MIs.clear();\n"
      << "  State.MIs.push_back(&I);\n"
      << "  " << MatchDataInfo::StructName << " = "
      << MatchDataInfo::StructTypeName << "();\n\n"
-     << "  if (executeMatchTable(*this, OutMIs, State, ExecInfo"
+     << "  if (executeMatchTable(*this, State, ExecInfo, B"
      << ", getMatchTable(), *ST.getInstrInfo(), MRI, "
         "*MRI.getTargetRegisterInfo(), *ST.getRegBankInfo(), AvailableFeatures"
-     << ", /*CoverageInfo*/ nullptr, &Observer)) {\n"
+     << ", /*CoverageInfo*/ nullptr)) {\n"
      << "    return true;\n"
      << "  }\n\n"
      << "  return false;\n"
@@ -3627,31 +3628,44 @@ void GICombinerEmitter::gatherRules(
     std::vector<RuleMatcher> &ActiveRules,
     const std::vector<Record *> &&RulesAndGroups) {
   for (Record *Rec : RulesAndGroups) {
-    if (Rec->isValueUnset("Rules")) {
-      AllCombineRules.emplace_back(NextRuleID, Rec->getName().str());
-      CombineRuleBuilder CRB(Target, SubtargetFeatures, *Rec, NextRuleID++,
-                             ActiveRules);
-
-      if (!CRB.parseAll()) {
-        assert(ErrorsPrinted && "Parsing failed without errors!");
-        continue;
-      }
-
-      if (StopAfterParse) {
-        CRB.print(outs());
-        continue;
-      }
-
-      if (!CRB.emitRuleMatchers()) {
-        assert(ErrorsPrinted && "Emission failed without errors!");
-        continue;
-      }
-    } else
+    if (!Rec->isValueUnset("Rules")) {
       gatherRules(ActiveRules, Rec->getValueAsListOfDefs("Rules"));
+      continue;
+    }
+
+    StringRef RuleName = Rec->getName();
+    if (!RulesSeen.insert(RuleName).second) {
+      PrintWarning(Rec->getLoc(),
+                   "skipping rule '" + Rec->getName() +
+                       "' because it has already been processed");
+      continue;
+    }
+
+    AllCombineRules.emplace_back(NextRuleID, Rec->getName().str());
+    CombineRuleBuilder CRB(Target, SubtargetFeatures, *Rec, NextRuleID++,
+                           ActiveRules);
+
+    if (!CRB.parseAll()) {
+      assert(ErrorsPrinted && "Parsing failed without errors!");
+      continue;
+    }
+
+    if (StopAfterParse) {
+      CRB.print(outs());
+      continue;
+    }
+
+    if (!CRB.emitRuleMatchers()) {
+      assert(ErrorsPrinted && "Emission failed without errors!");
+      continue;
+    }
   }
 }
 
 void GICombinerEmitter::run(raw_ostream &OS) {
+  InstructionOpcodeMatcher::initOpcodeValuesMap(Target);
+  LLTOperandMatcher::initTypeIDValuesMap();
+
   Records.startTimer("Gather rules");
   std::vector<RuleMatcher> Rules;
   gatherRules(Rules, Combiner->getValueAsListOfDefs("Rules"));
@@ -3665,6 +3679,16 @@ void GICombinerEmitter::run(raw_ostream &OS) {
   unsigned MaxTemporaries = 0;
   for (const auto &Rule : Rules)
     MaxTemporaries = std::max(MaxTemporaries, Rule.countRendererFns());
+
+  llvm::stable_sort(Rules, [&](const RuleMatcher &A, const RuleMatcher &B) {
+    if (A.isHigherPriorityThan(B)) {
+      assert(!B.isHigherPriorityThan(A) && "Cannot be more important "
+                                           "and less important at "
+                                           "the same time");
+      return true;
+    }
+    return false;
+  });
 
   const MatchTable Table = buildMatchTable(Rules);
 

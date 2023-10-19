@@ -714,3 +714,12 @@ void foo() {
   // CHECK-NEXT: ConstantExpr
   // CHECK-NEXT: value: Int 2
 }
+
+void GH48527() {
+  auto a = []()__attribute__((b(({ return 0; })))){}; // expected-warning {{unknown attribute 'b' ignored}}
+}
+
+void GH67492() {
+  constexpr auto test = 42;
+  auto lambda = (test, []() noexcept(true) {});
+}

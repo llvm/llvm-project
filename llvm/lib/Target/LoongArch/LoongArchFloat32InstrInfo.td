@@ -126,6 +126,23 @@ def PseudoST_CFR : Pseudo<(outs),
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 def PseudoLD_CFR : Pseudo<(outs CFR:$ccd),
                           (ins GPR:$rj, grlenimm:$imm)>;
+
+// SET_CFR_{FALSE,TRUE}
+// These instructions are defined in order to avoid expensive check error if
+// regular instruction patterns are used.
+// fcmp.caf.s $dst, $fa0, $fa0
+def SET_CFR_FALSE : SET_CFR<0x0c100000, "fcmp.caf.s">;
+// fcmp.cueq.s $dst, $fa0, $fa0
+def SET_CFR_TRUE  : SET_CFR<0x0c160000, "fcmp.cueq.s">;
+
+// Pseudo instruction for copying CFRs.
+def PseudoCopyCFR : Pseudo<(outs CFR:$dst), (ins CFR:$src)> {
+  let mayLoad = 0;
+  let mayStore = 0;
+  let hasSideEffects = 0;
+  let Size = 12;
+}
+
 } // Predicates = [HasBasicF]
 
 //===----------------------------------------------------------------------===//
@@ -153,10 +170,11 @@ def : PatFprFpr<fminnum_ieee, FMIN_S, FPR32>;
 def : PatFpr<fneg, FNEG_S, FPR32>;
 def : PatFpr<fabs, FABS_S, FPR32>;
 def : PatFpr<fsqrt, FSQRT_S, FPR32>;
-
 def : Pat<(fdiv fpimm1, (fsqrt FPR32:$fj)), (FRSQRT_S FPR32:$fj)>;
-
 def : Pat<(fcanonicalize FPR32:$fj), (FMAX_S $fj, $fj)>;
+def : Pat<(is_fpclass FPR32:$fj, (i32 timm:$mask)),
+          (SLTU R0, (ANDI (MOVFR2GR_S (FCLASS_S FPR32:$fj)),
+                          (to_fclass_mask timm:$mask)))>;
 
 /// Setcc
 

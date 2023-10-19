@@ -25,9 +25,26 @@
 #  define _LIBCPP_CLANG_VER (__clang_major__ * 100 + __clang_minor__)
 #elif defined(__GNUC__)
 #  define _LIBCPP_COMPILER_GCC
+#  define _LIBCPP_GCC_VER (__GNUC__ * 100 + __GNUC_MINOR__)
 #endif
 
 #ifdef __cplusplus
+
+// Warn if a compiler version is used that is not supported anymore
+// LLVM RELEASE Update the minimum compiler versions
+#  if defined(_LIBCPP_CLANG_VER)
+#    if _LIBCPP_CLANG_VER < 1500
+#      warning "Libc++ only supports Clang 15 and later"
+#    endif
+#  elif defined(_LIBCPP_APPLE_CLANG_VER)
+#    if _LIBCPP_APPLE_CLANG_VER < 1500
+#      warning "Libc++ only supports AppleClang 15 and later"
+#    endif
+#  elif defined(_LIBCPP_GCC_VER)
+#    if _LIBCPP_GCC_VER < 1300
+#      warning "Libc++ only supports GCC 13 and later"
+#    endif
+#  endif
 
 // The attributes supported by clang are documented at https://clang.llvm.org/docs/AttributeReference.html
 
@@ -150,6 +167,11 @@
 // The implementation moved to the header, but we still export the symbols from
 // the dylib for backwards compatibility.
 #    define _LIBCPP_ABI_DO_NOT_EXPORT_TO_CHARS_BASE_10
+// Save memory by providing the allocator more freedom to allocate the most
+// efficient size class by dropping the alignment requirements for std::string's
+// pointer from 16 to 8. This changes the output of std::string::max_size,
+// which makes it ABI breaking
+#    define _LIBCPP_ABI_STRING_8_BYTE_ALIGNMENT
 #  elif _LIBCPP_ABI_VERSION == 1
 #    if !(defined(_LIBCPP_OBJECT_FORMAT_COFF) || defined(_LIBCPP_OBJECT_FORMAT_XCOFF))
 // Enable compiling copies of now inline methods into the dylib to support
@@ -176,11 +198,6 @@
 #  endif
 
 #  if defined(_LIBCPP_BUILDING_LIBRARY) || _LIBCPP_ABI_VERSION >= 2
-// Enable additional explicit instantiations of iostreams components. This
-// reduces the number of weak definitions generated in programs that use
-// iostreams by providing a single strong definition in the shared library.
-#    define _LIBCPP_ABI_ENABLE_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1
-
 // Define a key function for `bad_function_call` in the library, to centralize
 // its vtable and typeinfo to libc++ rather than having all other libraries
 // using that class define their own copies.
@@ -202,28 +219,33 @@
 
 // HARDENING {
 
-// TODO(hardening): remove this in LLVM 19.
+// TODO(hardening): deprecate this in LLVM 19.
 // This is for backward compatibility -- make enabling `_LIBCPP_ENABLE_ASSERTIONS` (which predates hardening modes)
-// equivalent to setting the hardened mode.
+// equivalent to setting the safe mode.
 #  ifdef _LIBCPP_ENABLE_ASSERTIONS
-#    warning "_LIBCPP_ENABLE_ASSERTIONS is deprecated, please use _LIBCPP_ENABLE_HARDENED_MODE instead."
 #    if _LIBCPP_ENABLE_ASSERTIONS != 0 && _LIBCPP_ENABLE_ASSERTIONS != 1
 #      error "_LIBCPP_ENABLE_ASSERTIONS must be set to 0 or 1"
 #    endif
 #    if _LIBCPP_ENABLE_ASSERTIONS
-#      define _LIBCPP_ENABLE_HARDENED_MODE 1
+#      define _LIBCPP_ENABLE_SAFE_MODE 1
 #    endif
 #  endif
 
 // Enables the hardened mode which consists of all checks intended to be used in production. Hardened mode prioritizes
 // security-critical checks that can be done with relatively little overhead in constant time. Mutually exclusive with
-// `_LIBCPP_ENABLE_DEBUG_MODE`.
+// `_LIBCPP_ENABLE_SAFE_MODE` and `_LIBCPP_ENABLE_DEBUG_MODE`.
 //
 // #define _LIBCPP_ENABLE_HARDENED_MODE 1
 
+// Enables the safe mode which extends the hardened mode with checks that are relatively cheap and prevent common types
+// of errors but are not security-critical. Mutually exclusive with `_LIBCPP_ENABLE_HARDENED_MODE` and
+// `_LIBCPP_ENABLE_DEBUG_MODE`.
+//
+// #define _LIBCPP_ENABLE_SAFE_MODE 1
+
 // Enables the debug mode which contains all the checks from the hardened mode and additionally more expensive checks
 // that may affect the complexity of algorithms. The debug mode is intended to be used for testing, not in production.
-// Mutually exclusive with `_LIBCPP_ENABLE_HARDENED_MODE`.
+// Mutually exclusive with `_LIBCPP_ENABLE_HARDENED_MODE` and `_LIBCPP_ENABLE_SAFE_MODE`.
 //
 // #define _LIBCPP_ENABLE_DEBUG_MODE 1
 
@@ -258,6 +280,13 @@
 #    error "_LIBCPP_ENABLE_HARDENED_MODE must be set to 0 or 1."
 #  endif
 
+#  ifndef _LIBCPP_ENABLE_SAFE_MODE
+#    define _LIBCPP_ENABLE_SAFE_MODE _LIBCPP_ENABLE_SAFE_MODE_DEFAULT
+#  endif
+#  if _LIBCPP_ENABLE_SAFE_MODE != 0 && _LIBCPP_ENABLE_SAFE_MODE != 1
+#    error "_LIBCPP_ENABLE_SAFE_MODE must be set to 0 or 1."
+#  endif
+
 #  ifndef _LIBCPP_ENABLE_DEBUG_MODE
 #    define _LIBCPP_ENABLE_DEBUG_MODE _LIBCPP_ENABLE_DEBUG_MODE_DEFAULT
 #  endif
@@ -265,13 +294,16 @@
 #    error "_LIBCPP_ENABLE_DEBUG_MODE must be set to 0 or 1."
 #  endif
 
-#  if _LIBCPP_ENABLE_HARDENED_MODE && _LIBCPP_ENABLE_DEBUG_MODE
-#    error "Only one of _LIBCPP_ENABLE_HARDENED_MODE and _LIBCPP_ENABLE_DEBUG_MODE can be enabled."
+#  if (_LIBCPP_ENABLE_HARDENED_MODE && _LIBCPP_ENABLE_SAFE_MODE) ||                                                    \
+      (_LIBCPP_ENABLE_HARDENED_MODE && _LIBCPP_ENABLE_DEBUG_MODE) ||                                                   \
+      (_LIBCPP_ENABLE_SAFE_MODE && _LIBCPP_ENABLE_DEBUG_MODE)
+#    error                                                                                                             \
+        "Only one of _LIBCPP_ENABLE_HARDENED_MODE, _LIBCPP_ENABLE_SAFE_MODE and _LIBCPP_ENABLE_DEBUG_MODE can be enabled."
 #  endif
 
+// clang-format off
 // Hardened mode checks.
 
-// clang-format off
 #  if _LIBCPP_ENABLE_HARDENED_MODE
 
 // Enabled checks.
@@ -284,6 +316,19 @@
 #    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)     _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                 _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)            _LIBCPP_ASSUME(expression)
+
+// Safe mode checks.
+
+#  elif _LIBCPP_ENABLE_SAFE_MODE
+
+// Enabled checks.
+#    define _LIBCPP_ASSERT_VALID_INPUT_RANGE(expression, message)        _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)     _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)   _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)     _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)            _LIBCPP_ASSERT(expression, message)
+// Disabled checks.
+#    define _LIBCPP_ASSERT_INTERNAL(expression, message)                 _LIBCPP_ASSUME(expression)
 
 // Debug mode checks.
 

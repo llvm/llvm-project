@@ -17,28 +17,27 @@
 // DEFINE: %{env} =
 //--------------------------------------------------------------------------------------------------
 
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false s2s-strategy=2
+// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false
 
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with vectorization.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false s2s-strategy=2 vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
+// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with VLA vectorization.
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
 #Tensor1 = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed_nu", "singleton_nu", "singleton" ]
+  map = (d0, d1, d2) -> (d0 : compressed(nonunique), d1 : singleton(nonunique), d2 : singleton)
 }>
 
 #Tensor2 = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed", "dense" ]
+  map = (d0, d1, d2) -> (d0 : dense, d1 : compressed, d2 : dense)
 }>
 
 #Tensor3 = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "dense", "compressed" ],
-  dimToLvl = affine_map<(i,j,k) -> (i,k,j)>
+  map = (d0, d1, d2) -> (d0 : dense, d2 : dense, d1 : compressed)
 }>
 
 module {

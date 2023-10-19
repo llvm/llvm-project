@@ -448,10 +448,6 @@ module std_inttypes_h [system] {
   export *
 }
 // <iso646.h> provided by compiler.
-module std_limits_h [system] {
-  header "limits.h"
-  export *
-}
 module std_locale_h [system] {
   header "locale.h"
   export *
@@ -460,10 +456,7 @@ module std_math_h [system] {
   header "math.h"
   export *
 }
-module std_setjmp_h [system] {
-  header "setjmp.h"
-  export *
-}
+// <setjmp.h> provided by C library.
 // <signal.h> provided by C library.
 // FIXME: <stdalign.h> is missing.
 // <stdarg.h> provided by compiler.
@@ -1789,6 +1782,10 @@ module std_private_system_error_system_error    [system] { header "__system_erro
 
 module std_private_thread_formatter            [system] { header "__thread/formatter.h" }
 module std_private_thread_id                   [system] { header "__thread/id.h" }
+module std_private_thread_jthread              [system] {
+  header "__thread/jthread.h"
+  export *
+}
 module std_private_thread_poll_with_backoff    [system] { header "__thread/poll_with_backoff.h" }
 module std_private_thread_this_thread          [system] { header "__thread/this_thread.h" }
 module std_private_thread_thread               [system] {
@@ -2049,6 +2046,7 @@ module std_private_utility_cmp                    [system] {
 }
 module std_private_utility_convert_to_integral    [system] { header "__utility/convert_to_integral.h" }
 module std_private_utility_declval                [system] { header "__utility/declval.h" }
+module std_private_utility_empty                  [system] { header "__utility/empty.h" }
 module std_private_utility_exception_guard        [system] { header "__utility/exception_guard.h" }
 module std_private_utility_exchange               [system] { header "__utility/exchange.h" }
 module std_private_utility_forward                [system] { header "__utility/forward.h" }
@@ -2084,7 +2082,6 @@ module std_private_utility_swap                   [system] {
   header "__utility/swap.h"
   export std_private_type_traits_is_swappable
 }
-module std_private_utility_terminate_on_exception [system] { header "__utility/terminate_on_exception.h" }
 module std_private_utility_to_underlying          [system] { header "__utility/to_underlying.h" }
 module std_private_utility_unreachable            [system] { header "__utility/unreachable.h" }
 

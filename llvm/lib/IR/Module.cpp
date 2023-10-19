@@ -631,6 +631,23 @@ void Module::setCodeModel(CodeModel::Model CL) {
   addModuleFlag(ModFlagBehavior::Error, "Code Model", CL);
 }
 
+std::optional<uint64_t> Module::getLargeDataThreshold() const {
+  auto *Val =
+      cast_or_null<ConstantAsMetadata>(getModuleFlag("Large Data Threshold"));
+
+  if (!Val)
+    return std::nullopt;
+
+  return cast<ConstantInt>(Val->getValue())->getZExtValue();
+}
+
+void Module::setLargeDataThreshold(uint64_t Threshold) {
+  // Since the large data threshold goes along with the code model, the merge
+  // behavior is the same.
+  addModuleFlag(ModFlagBehavior::Error, "Large Data Threshold",
+                ConstantInt::get(Type::getInt64Ty(Context), Threshold));
+}
+
 void Module::setProfileSummary(Metadata *M, ProfileSummary::Kind Kind) {
   if (Kind == ProfileSummary::PSK_CSInstr)
     setModuleFlag(ModFlagBehavior::Error, "CSProfileSummary", M);

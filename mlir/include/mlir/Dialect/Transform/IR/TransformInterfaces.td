@@ -335,6 +335,23 @@ def ConversionPatternDescriptorOpInterface
     >,
     InterfaceMethod<
       /*desc=*/[{
+        Populate the ConversionTarget using the final TypeConverter. The default
+        implementation is to do nothing. Overriding this method can be useful
+        in order to setup the ConversionTarget for structural type conversions.
+        In such a situation, an op's legality depends on using the TypeConverter
+        to determine whether the op's operand and result types are legal
+        (defined as converting to themselves).
+
+      }],
+      /*returnType=*/"void",
+      /*name=*/"populateConversionTargetRules",
+      /*arguments=*/(ins "const ::mlir::TypeConverter &":$typeConverter,
+                         "::mlir::ConversionTarget &":$conversionTarget),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/"return;"
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
         Return the type converter to be used with this pattern set. If no
         type converter is specified, the default type converter of the enclosing
         "apply_conversion_patterns" op is used.

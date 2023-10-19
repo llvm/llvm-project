@@ -118,7 +118,7 @@ define i32 @f10(i64 %src, i64 %index) {
 ; to use LLH if possible.
 define void @f11(ptr %ptr) {
 ; CHECK-LABEL: f11:
-; CHECK: llh {{%r[0-9]+}}, 186(%r15)
+; CHECK: llh {{%r[0-9]+}}, 178(%r15)
 ; CHECK: br %r14
   %val0 = load volatile i32, ptr %ptr
   %val1 = load volatile i32, ptr %ptr

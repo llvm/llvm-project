@@ -35,6 +35,20 @@ namespace dataflow {
 static constexpr int MaxCompositeValueDepth = 3;
 static constexpr int MaxCompositeValueSize = 1000;
 
+/// Returns whether all declarations that `DeclToLoc1` and `DeclToLoc2` have in
+/// common map to the same storage location in both maps.
+bool declToLocConsistent(
+    const llvm::DenseMap<const ValueDecl *, StorageLocation *> &DeclToLoc1,
+    const llvm::DenseMap<const ValueDecl *, StorageLocation *> &DeclToLoc2) {
+  for (auto &Entry : DeclToLoc1) {
+    auto It = DeclToLoc2.find(Entry.first);
+    if (It != DeclToLoc2.end() && Entry.second != It->second)
+      return false;
+  }
+
+  return true;
+}
+
 /// Returns a map consisting of key-value entries that are present in both maps.
 template <typename K, typename V>
 llvm::DenseMap<K, V> intersectDenseMaps(const llvm::DenseMap<K, V> &Map1,
@@ -288,6 +302,18 @@ static void insertIfFunction(const Decl &D,
     Funcs.insert(FD);
 }
 
+static MemberExpr *getMemberForAccessor(const CXXMemberCallExpr &C) {
+  if (!C.getMethodDecl())
+    return nullptr;
+  auto *Body = dyn_cast_or_null<CompoundStmt>(C.getMethodDecl()->getBody());
+  if (!Body || Body->size() != 1)
+    return nullptr;
+  if (auto *RS = dyn_cast<ReturnStmt>(*Body->body_begin()))
+    if (auto *Return = RS->getRetValue())
+      return dyn_cast<MemberExpr>(Return->IgnoreParenImpCasts());
+  return nullptr;
+}
+
 static void
 getFieldsGlobalsAndFuncs(const Decl &D, FieldSet &Fields,
                          llvm::DenseSet<const VarDecl *> &Vars,
@@ -324,6 +350,12 @@ getFieldsGlobalsAndFuncs(const Stmt &S, FieldSet &Fields,
   } else if (auto *E = dyn_cast<DeclRefExpr>(&S)) {
     insertIfGlobal(*E->getDecl(), Vars);
     insertIfFunction(*E->getDecl(), Funcs);
+  } else if (const auto *C = dyn_cast<CXXMemberCallExpr>(&S)) {
+    // If this is a method that returns a member variable but does nothing else,
+    // model the field of the return value.
+    if (MemberExpr *E = getMemberForAccessor(*C))
+      if (const auto *FD = dyn_cast<FieldDecl>(E->getMemberDecl()))
+        Fields.insert(FD);
   } else if (auto *E = dyn_cast<MemberExpr>(&S)) {
     // FIXME: should we be using `E->getFoundDecl()`?
     const ValueDecl *VD = E->getMemberDecl();
@@ -416,12 +448,24 @@ Environment::Environment(DataflowAnalysisContext &DACtx,
   if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(&DeclCtx)) {
     auto *Parent = MethodDecl->getParent();
     assert(Parent != nullptr);
-    if (Parent->isLambda())
-      MethodDecl = dyn_cast<CXXMethodDecl>(Parent->getDeclContext());
 
-    // FIXME: Initialize the ThisPointeeLoc of lambdas too.
-    if (MethodDecl && !MethodDecl->isStatic()) {
-      QualType ThisPointeeType = MethodDecl->getThisObjectType();
+    if (Parent->isLambda()) {
+      for (auto Capture : Parent->captures()) {
+        if (Capture.capturesVariable()) {
+          const auto *VarDecl = Capture.getCapturedVar();
+          assert(VarDecl != nullptr);
+          setStorageLocation(*VarDecl, createObject(*VarDecl, nullptr));
+        } else if (Capture.capturesThis()) {
+          const auto *SurroundingMethodDecl =
+              cast<CXXMethodDecl>(DeclCtx.getNonClosureAncestor());
+          QualType ThisPointeeType =
+              SurroundingMethodDecl->getFunctionObjectParameterType();
+          ThisPointeeLoc =
+              &cast<RecordValue>(createValue(ThisPointeeType))->getLoc();
+        }
+      }
+    } else if (MethodDecl->isImplicitObjectMemberFunction()) {
+      QualType ThisPointeeType = MethodDecl->getFunctionObjectParameterType();
       ThisPointeeLoc =
           &cast<RecordValue>(createValue(ThisPointeeType))->getLoc();
     }
@@ -618,10 +662,7 @@ Environment Environment::join(const Environment &EnvA, const Environment &EnvB,
   else
     JoinedEnv.ReturnLoc = nullptr;
 
-  // FIXME: Once we're able to remove declarations from `DeclToLoc` when their
-  // lifetime ends, add an assertion that there aren't any entries in
-  // `DeclToLoc` and `Other.DeclToLoc` that map the same declaration to
-  // different storage locations.
+  assert(declToLocConsistent(EnvA.DeclToLoc, EnvB.DeclToLoc));
   JoinedEnv.DeclToLoc = intersectDenseMaps(EnvA.DeclToLoc, EnvB.DeclToLoc);
 
   JoinedEnv.ExprToLoc = intersectDenseMaps(EnvA.ExprToLoc, EnvB.ExprToLoc);
@@ -644,7 +685,7 @@ StorageLocation &Environment::createStorageLocation(QualType Type) {
   return DACtx->createStorageLocation(Type);
 }
 
-StorageLocation &Environment::createStorageLocation(const VarDecl &D) {
+StorageLocation &Environment::createStorageLocation(const ValueDecl &D) {
   // Evaluated declarations are always assigned the same storage locations to
   // ensure that the environment stabilizes across loop iterations. Storage
   // locations for evaluated declarations are stored in the analysis context.
@@ -671,6 +712,11 @@ StorageLocation *Environment::getStorageLocation(const ValueDecl &D) const {
   StorageLocation *Loc = It->second;
 
   return Loc;
+}
+
+void Environment::removeDecl(const ValueDecl &D) {
+  assert(DeclToLoc.contains(&D));
+  DeclToLoc.erase(&D);
 }
 
 void Environment::setStorageLocation(const Expr &E, StorageLocation &Loc) {
@@ -851,7 +897,7 @@ Environment::createLocAndMaybeValue(QualType Ty,
   return Loc;
 }
 
-StorageLocation &Environment::createObjectInternal(const VarDecl *D,
+StorageLocation &Environment::createObjectInternal(const ValueDecl *D,
                                                    QualType Ty,
                                                    const Expr *InitExpr) {
   if (Ty->isReferenceType()) {

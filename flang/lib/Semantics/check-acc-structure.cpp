@@ -331,6 +331,23 @@ void AccStructureChecker::Leave(const parser::OpenACCAtomicConstruct &x) {
   dirContext_.pop_back();
 }
 
+void AccStructureChecker::Enter(const parser::AccAtomicUpdate &x) {
+  const parser::AssignmentStmt &assignment{
+      std::get<parser::Statement<parser::AssignmentStmt>>(x.t).statement};
+  const auto &var{std::get<parser::Variable>(assignment.t)};
+  const auto &expr{std::get<parser::Expr>(assignment.t)};
+  const auto *rhs{GetExpr(context_, expr)};
+  const auto *lhs{GetExpr(context_, var)};
+  if (lhs && rhs) {
+    if (lhs->Rank() != 0)
+      context_.Say(expr.source,
+          "LHS of atomic update statement must be scalar"_err_en_US);
+    if (rhs->Rank() != 0)
+      context_.Say(var.GetSource(),
+          "RHS of atomic update statement must be scalar"_err_en_US);
+  }
+}
+
 void AccStructureChecker::Enter(const parser::OpenACCCacheConstruct &x) {
   const auto &verbatim = std::get<parser::Verbatim>(x.t);
   PushContextAndClauseSets(verbatim.source, llvm::acc::Directive::ACCD_cache);
@@ -359,7 +376,6 @@ CHECK_SIMPLE_CLAUSE(DeviceNum, ACCC_device_num)
 CHECK_SIMPLE_CLAUSE(Finalize, ACCC_finalize)
 CHECK_SIMPLE_CLAUSE(Firstprivate, ACCC_firstprivate)
 CHECK_SIMPLE_CLAUSE(Host, ACCC_host)
-CHECK_SIMPLE_CLAUSE(If, ACCC_if)
 CHECK_SIMPLE_CLAUSE(IfPresent, ACCC_if_present)
 CHECK_SIMPLE_CLAUSE(Independent, ACCC_independent)
 CHECK_SIMPLE_CLAUSE(NoCreate, ACCC_no_create)
@@ -641,6 +657,24 @@ void AccStructureChecker::Enter(const parser::AccClause::DeviceResident &x) {
 void AccStructureChecker::Enter(const parser::AccClause::Link &x) {
   CheckAllowed(llvm::acc::Clause::ACCC_link);
   CheckMultipleOccurrenceInDeclare(x.v, llvm::acc::Clause::ACCC_link);
+}
+
+void AccStructureChecker::Enter(const parser::AccClause::If &x) {
+  CheckAllowed(llvm::acc::Clause::ACCC_if);
+  if (const auto *expr{GetExpr(x.v)}) {
+    if (auto type{expr->GetType()}) {
+      if (type->category() == TypeCategory::Integer ||
+          type->category() == TypeCategory::Logical) {
+        return; // LOGICAL and INTEGER type supported for the if clause.
+      }
+    }
+  }
+  context_.Say(
+      GetContext().clauseSource, "Must have LOGICAL or INTEGER type"_err_en_US);
+}
+
+void AccStructureChecker::Enter(const parser::OpenACCEndConstruct &x) {
+  context_.Say(x.source, "Misplaced OpenACC end directive"_warn_en_US);
 }
 
 void AccStructureChecker::Enter(const parser::Module &) {

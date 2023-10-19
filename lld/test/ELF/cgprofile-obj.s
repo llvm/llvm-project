@@ -3,8 +3,11 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld -e A %t.o -o %t
 # RUN: llvm-nm --no-sort %t | FileCheck %s
-# RUN: ld.lld --no-call-graph-profile-sort -e A %t.o -o %t
+# RUN: ld.lld --call-graph-profile-sort=none -e A %t.o -o %t
 # RUN: llvm-nm --no-sort %t | FileCheck %s --check-prefix=NO-CG
+## --no-call-graph-profile-sort is an alias for --call-graph-profile-sort=none.
+# RUN: ld.lld --no-call-graph-profile-sort -e A %t.o -o %t1
+# RUN: cmp %t %t1
 
     .section    .text.D,"ax",@progbits
 D:

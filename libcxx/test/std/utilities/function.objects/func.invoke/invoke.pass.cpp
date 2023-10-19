@@ -346,6 +346,75 @@ void noexcept_test() {
     }
 }
 
+// LWG3655: The INVOKE operation and union types
+void union_tests() {
+    union Union {
+        int x;
+        int f() { return 42; }
+        int g() const { return 52; }
+    };
+
+    // With a data member
+    {
+        auto get = []() -> Union { return Union{.x = 3}; };
+        int result = std::invoke(&Union::x, get());
+        assert(result == 3);
+    }
+    {
+        auto get = []() -> Union const { return Union{.x = 3}; };
+        int result = std::invoke(&Union::x, get());
+        assert(result == 3);
+    }
+    {
+        Union u{3};
+        int& result = std::invoke(&Union::x, u);
+        assert(&result == &u.x);
+    }
+    {
+        Union const u{3};
+        int const& result = std::invoke(&Union::x, u);
+        assert(&result == &u.x);
+    }
+
+    // With a pointer to a member function
+    {
+        auto get = []() -> Union { return Union{.x = 3}; };
+        int result = std::invoke(&Union::f, get());
+        assert(result == 42);
+    }
+    {
+        Union u{3};
+        int result = std::invoke(&Union::f, u);
+        assert(result == 42);
+    }
+    {
+        // constness mismatch
+        static_assert(!std::is_invocable_v<int (Union::*)(), Union const>);
+        static_assert(!std::is_invocable_v<int (Union::*)(), Union const&>);
+    }
+
+    {
+        auto get = []() -> Union { return Union{.x = 3}; };
+        int result = std::invoke(&Union::g, get());
+        assert(result == 52);
+    }
+    {
+        auto get = []() -> Union const { return Union{.x = 3}; };
+        int result = std::invoke(&Union::g, get());
+        assert(result == 52);
+    }
+    {
+        Union u{3};
+        int result = std::invoke(&Union::g, u);
+        assert(result == 52);
+    }
+    {
+        Union const u{3};
+        int result = std::invoke(&Union::g, u);
+        assert(result == 52);
+    }
+}
+
 int main(int, char**) {
     bullet_one_two_tests();
     bullet_three_four_tests();

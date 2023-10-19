@@ -36,7 +36,7 @@ subroutine test()
 
   !ERROR: References to the procedure 'bar' require an explicit interface
   !WARNING: If the procedure's interface were explicit, this reference would be in error
-  !BECAUSE: Actual argument associated with procedure pointer dummy argument 'a_pointer=' must be a POINTER unless INTENT(IN)
+  !BECAUSE: Actual argument associated with procedure pointer dummy argument 'a_pointer=' must be a pointer unless INTENT(IN)
   call bar(sin)
 
   !ERROR: References to the procedure 'baz' require an explicit interface

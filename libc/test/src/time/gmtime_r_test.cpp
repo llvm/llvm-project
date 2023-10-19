@@ -11,7 +11,7 @@
 #include "test/UnitTest/Test.h"
 #include "test/src/time/TmMatcher.h"
 
-using __llvm_libc::time_utils::TimeConstants;
+using LIBC_NAMESPACE::time_utils::TimeConstants;
 
 // gmtime and gmtime_r share the same code and thus didn't repeat all the tests
 // from gmtime. Added couple of validation tests.
@@ -21,7 +21,7 @@ TEST(LlvmLibcGmTimeR, EndOf32BitEpochYear) {
   time_t seconds = 0x7FFFFFFF;
   struct tm tm_data;
   struct tm *tm_data_ptr;
-  tm_data_ptr = __llvm_libc::gmtime_r(&seconds, &tm_data);
+  tm_data_ptr = LIBC_NAMESPACE::gmtime_r(&seconds, &tm_data);
   EXPECT_TM_EQ((tm{7,  // sec
                    14, // min
                    3,  // hr
@@ -42,7 +42,7 @@ TEST(LlvmLibcGmTimeR, Max64BitYear) {
   time_t seconds = 67767976202043050;
   struct tm tm_data;
   struct tm *tm_data_ptr;
-  tm_data_ptr = __llvm_libc::gmtime_r(&seconds, &tm_data);
+  tm_data_ptr = LIBC_NAMESPACE::gmtime_r(&seconds, &tm_data);
   EXPECT_TM_EQ((tm{50, // sec
                    50, // min
                    12, // hr

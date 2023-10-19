@@ -55,6 +55,8 @@ function(add_header target_name)
     ${target_name}
     HDRS
       ${dest_file}
+    DEPENDS
+      ${copied_hdr_target}
   )
   set_target_properties(
     ${fq_target_name}
@@ -84,7 +86,7 @@ function(add_gen_header target_name)
   get_fq_target_name(${target_name} fq_target_name)
   if(NOT LLVM_LIBC_FULL_BUILD)
     # We don't want to use generated headers if we are doing a non-full-build.
-    add_custom_target(${fq_target_name})
+    add_library(${fq_target_name} INTERFACE)
     return()
   endif()
   if(NOT ADD_GEN_HDR_DEF_FILE)
@@ -176,6 +178,11 @@ function(add_gen_header target_name)
     HDRS
       ${out_file}
   )
+
+  # We add the dependencies separately and not list under add_header_library's
+  # DEPENDS option above. This is because, deps of add_header_library are
+  # used with target_link_libraries.
+  add_dependencies(${fq_target_name} ${generated_hdr_target})
 
   set_target_properties(
     ${fq_target_name}

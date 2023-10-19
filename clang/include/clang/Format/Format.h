@@ -2062,19 +2062,19 @@ struct FormatStyle {
   ///        "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
   /// \endcode
   ///
-  /// In C#, Java, and JavaScript:
+  /// In C# and Java:
   /// \code
   ///    true:
-  ///    var x = "veryVeryVeryVeryVeryVe" +
-  ///            "ryVeryVeryVeryVeryVery" +
-  ///            "VeryLongString";
+  ///    string x = "veryVeryVeryVeryVeryVe" +
+  ///               "ryVeryVeryVeryVeryVery" +
+  ///               "VeryLongString";
   ///
   ///    false:
-  ///    var x =
+  ///    string x =
   ///        "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
   /// \endcode
   ///
-  /// C# and JavaScript interpolated strings are not broken.
+  /// C# interpolated strings are not broken.
   ///
   /// In Verilog:
   /// \code
@@ -2879,8 +2879,8 @@ struct FormatStyle {
     ///        });
     /// \endcode
     LBI_Signature,
-    /// Align lambda body relative to the indentation level of the outer scope
-    /// the lambda signature resides in.
+    /// For statements within block scope, align lambda body relative to the
+    /// indentation level of the outer scope the lambda signature resides in.
     /// \code
     ///    someMethod(
     ///        [](SomeReallyLongLambdaSignatureArgument foo) {

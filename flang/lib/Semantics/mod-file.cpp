@@ -244,6 +244,14 @@ bool ModFileWriter::PutComponents(const Symbol &typeSymbol) {
   }
 }
 
+// Return the symbol's attributes that should be written
+// into the mod file.
+static Attrs getSymbolAttrsToWrite(const Symbol &symbol) {
+  // Is SAVE attribute is implicit, it should be omitted
+  // to not violate F202x C862 for a common block member.
+  return symbol.attrs() & ~(symbol.implicitAttrs() & Attrs{Attr::SAVE});
+}
+
 static llvm::raw_ostream &PutGenericName(
     llvm::raw_ostream &os, const Symbol &symbol) {
   if (IsGenericDefinedOp(symbol)) {
@@ -314,7 +322,7 @@ void ModFileWriter::PutSymbol(
             }
             decls_ << '\n';
             if (symbol.attrs().test(Attr::BIND_C)) {
-              PutAttrs(decls_, symbol.attrs(), x.bindName(),
+              PutAttrs(decls_, getSymbolAttrsToWrite(symbol), x.bindName(),
                   x.isExplicitBindName(), ""s);
               decls_ << "::/" << symbol.name() << "/\n";
             }
@@ -723,7 +731,7 @@ void ModFileWriter::PutObjectEntity(
   }
   PutEntity(
       os, symbol, [&]() { PutType(os, DEREF(symbol.GetType())); },
-      symbol.attrs());
+      getSymbolAttrsToWrite(symbol));
   PutShape(os, details.shape(), '(', ')');
   PutShape(os, details.coshape(), '[', ']');
   PutInit(os, symbol, details.init(), details.unanalyzedPDTComponentInit());
@@ -758,6 +766,15 @@ void ModFileWriter::PutObjectEntity(
   if (auto attr{details.cudaDataAttr()}) {
     PutLower(os << "attributes(", common::EnumToString(*attr))
         << ") " << symbol.name() << '\n';
+  }
+  if (symbol.test(Fortran::semantics::Symbol::Flag::CrayPointer)) {
+    if (!symbol.owner().crayPointers().empty()) {
+      for (const auto &[pointee, pointer] : symbol.owner().crayPointers()) {
+        if (pointer == symbol) {
+          os << "pointer(" << symbol.name() << "," << pointee << ")\n";
+        }
+      }
+    }
   }
 }
 
@@ -1166,30 +1183,49 @@ Scope *ModFileReader::Read(const SourceName &name,
   }
   Scope &topScope{isIntrinsic.value_or(false) ? context_.intrinsicModulesScope()
                                               : context_.globalScope()};
-  if (!ancestor) {
+  Symbol *moduleSymbol{nullptr};
+  if (!ancestor) { // module, not submodule
     parentScope = &topScope;
+    auto pair{parentScope->try_emplace(name, UnknownDetails{})};
+    if (!pair.second) {
+      return nullptr;
+    }
+    moduleSymbol = &*pair.first->second;
+    moduleSymbol->set(Symbol::Flag::ModFile);
   } else if (std::optional<SourceName> parent{GetSubmoduleParent(parseTree)}) {
+    // submodule with submodule parent
     parentScope = Read(*parent, false /*not intrinsic*/, ancestor, silent);
   } else {
+    // submodule with module parent
     parentScope = ancestor;
   }
-  auto pair{parentScope->try_emplace(name, UnknownDetails{})};
-  if (!pair.second) {
-    return nullptr;
-  }
   // Process declarations from the module file
-  Symbol &modSymbol{*pair.first->second};
-  modSymbol.set(Symbol::Flag::ModFile);
   bool wasInModuleFile{context_.foldingContext().inModuleFile()};
   context_.foldingContext().set_inModuleFile(true);
   ResolveNames(context_, parseTree, topScope);
   context_.foldingContext().set_inModuleFile(wasInModuleFile);
-  CHECK(modSymbol.has<ModuleDetails>());
-  CHECK(modSymbol.test(Symbol::Flag::ModFile));
-  if (isIntrinsic.value_or(false)) {
-    modSymbol.attrs().set(Attr::INTRINSIC);
+  if (!moduleSymbol) {
+    // Submodule symbols' storage are owned by their parents' scopes,
+    // but their names are not in their parents' dictionaries -- we
+    // don't want to report bogus errors about clashes between submodule
+    // names and other objects in the parent scopes.
+    if (Scope * submoduleScope{ancestor->FindSubmodule(name)}) {
+      moduleSymbol = submoduleScope->symbol();
+      if (moduleSymbol) {
+        moduleSymbol->set(Symbol::Flag::ModFile);
+      }
+    }
   }
-  return modSymbol.scope();
+  if (moduleSymbol) {
+    CHECK(moduleSymbol->has<ModuleDetails>());
+    CHECK(moduleSymbol->test(Symbol::Flag::ModFile));
+    if (isIntrinsic.value_or(false)) {
+      moduleSymbol->attrs().set(Attr::INTRINSIC);
+    }
+    return moduleSymbol->scope();
+  } else {
+    return nullptr;
+  }
 }
 
 parser::Message &ModFileReader::Say(const SourceName &name,

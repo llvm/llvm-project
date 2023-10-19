@@ -102,19 +102,6 @@ Improvements and New Features
   Anything that does not rely on having an actual filesystem available will now work, such as ``std::filesystem::path``,
   ``std::filesystem::perms`` and similar classes.
 
-- The library now provides a hardened mode under which common cases of library undefined behavior will be turned into
-  a reliable program termination. Vendors can configure whether the hardened mode is enabled by default with the
-  ``LIBCXX_HARDENING_MODE`` variable at CMake configuration time. Users can control whether the hardened mode is
-  enabled on a per translation unit basis using the ``-D_LIBCPP_ENABLE_HARDENED_MODE=1`` macro. See
-  ``libcxx/docs/Hardening.rst`` for more details.
-
-- The library now provides a debug mode which is a superset of the hardened mode, additionally enabling more expensive
-  checks that are not suitable to be used in production. This replaces the legacy debug mode that was removed in this
-  release. Unlike the legacy debug mode, this doesn't affect the ABI and doesn't require locking. Vendors can configure
-  whether the debug mode is enabled by default with the ``LIBCXX_HARDENING_MODE`` variable at CMake configuration time.
-  Users can control whether the debug mode is enabled on a per translation unit basis using the
-  ``-D_LIBCPP_ENABLE_DEBUG_MODE=1`` macro. See ``libcxx/docs/Hardening.rst`` for more details.
-
 - ASan container annotations have been extended to cover all allocators in ``std::vector``.
 
 - ASan annotations have been added to the ``std::deque`` container, to detect container overflows.

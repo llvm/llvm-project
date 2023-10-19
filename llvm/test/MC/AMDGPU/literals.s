@@ -889,3 +889,49 @@ v_pk_add_f16 v255, private_base, private_limit
 // NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOGFX9: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand (violates constant bus restrictions)
 v_pk_add_f16 v255, vccz, execz
+
+//---------------------------------------------------------------------------//
+// check dummy lit() syntax for sp3 compatibility.
+//---------------------------------------------------------------------------//
+
+// SICI: v_sqrt_f32_e32 v2, 0x7b                 ; encoding: [0xff,0x66,0x04,0x7e,0x7b,0x00,0x00,0x00]
+// GFX89: v_sqrt_f32_e32 v2, 0x7b                 ; encoding: [0xff,0x4e,0x04,0x7e,0x7b,0x00,0x00,0x00]
+v_sqrt_f32 v2, lit(123)
+
+// SICI: v_sqrt_f32_e32 v2, 0x7b                 ; encoding: [0xff,0x66,0x04,0x7e,0x7b,0x00,0x00,0x00]
+// GFX89: v_sqrt_f32_e32 v2, 0x7b                 ; encoding: [0xff,0x4e,0x04,0x7e,0x7b,0x00,0x00,0x00]
+v_sqrt_f32 v2, abs(lit(123))
+
+// SICI: v_sqrt_f32_e32 v2, 0x42f60000           ; encoding: [0xff,0x66,0x04,0x7e,0x00,0x00,0xf6,0x42
+// GFX89: v_sqrt_f32_e32 v2, 0x42f60000           ; encoding: [0xff,0x4e,0x04,0x7e,0x00,0x00,0xf6,0x42]
+v_sqrt_f32 v2, lit(123.0)
+
+// SICI: v_sqrt_f64_e32 v[2:3], 0x405ec000       ; encoding: [0xff,0x68,0x04,0x7e,0x00,0xc0,0x5e,0x40]
+// GFX89: v_sqrt_f64_e32 v[2:3], 0x405ec000       ; encoding: [0xff,0x50,0x04,0x7e,0x00,0xc0,0x5e,0x40]
+v_sqrt_f64 v[2:3], lit(123.0)
+
+// SICI: v_sqrt_f64_e32 v[2:3], 0x7b             ; encoding: [0xff,0x68,0x04,0x7e,0x7b,0x00,0x00,0x00]
+// GFX89: v_sqrt_f64_e32 v[2:3], 0x7b             ; encoding: [0xff,0x50,0x04,0x7e,0x7b,0x00,0x00,0x00]
+v_sqrt_f64 v[2:3], lit(123)
+
+// NOSICI: :[[@LINE+2]]:{{[0-9]+}}: error: expected left paren after lit
+// NOGFX89: :[[@LINE+1]]:{{[0-9]+}}: error: expected left paren after lit
+v_sqrt_f32 v2, lit 123.0
+
+// NOSICI: :[[@LINE+2]]:{{[0-9]+}}: error: expected closing parentheses
+// NOGFX89: :[[@LINE+1]]:{{[0-9]+}}: error: expected closing parentheses
+v_sqrt_f32 v2, lit(123.0
+
+// NOSICI: :[[@LINE+2]]:{{[0-9]+}}: error: expected immediate with lit modifier
+// NOGFX89: :[[@LINE+1]]:{{[0-9]+}}: error: expected immediate with lit modifier
+v_sqrt_f32 v2, lit(v1)
+
+// Make sure lit() is accepted on operands without modifiers.
+
+// SICI: v_madak_f32 v4, 0x7e8, v8, 0x7e8        ; encoding: [0xff,0x10,0x08,0x42,0xe8,0x07,0x00,0x00]
+// GFX89: v_madak_f32 v4, 0x7e8, v8, 0x7e8        ; encoding: [0xff,0x10,0x08,0x30,0xe8,0x07,0x00,0x00]
+v_madak_f32 v4, lit(0x7e8), v8, lit(0x7e8)
+
+// NOSICI: :[[@LINE+2]]:{{[0-9]+}}: error: not a valid operand.
+// NOGFX89: :[[@LINE+1]]:{{[0-9]+}}: error: not a valid operand.
+v_madak_f32 v4, lit(lit(0x7e8)), v8, lit(0x7e8)

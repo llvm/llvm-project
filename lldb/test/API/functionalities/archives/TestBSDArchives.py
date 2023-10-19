@@ -123,6 +123,7 @@ class BSDArchivesTestCase(TestBase):
         self.check_frame_variable_errors(thread, error_strings)
 
     @skipIfRemote
+    @skipIf(compiler="clang", compiler_version=["<", "12.0"])
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24527.  Makefile.rules doesn't know how to build static libs on Windows",

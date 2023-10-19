@@ -9,6 +9,7 @@ algorithm initializer_list
 algorithm iosfwd
 algorithm limits
 algorithm new
+algorithm optional
 algorithm ratio
 algorithm version
 any cstddef
@@ -118,8 +119,11 @@ complex stdexcept
 complex version
 concepts cstddef
 concepts version
+condition_variable atomic
 condition_variable cerrno
 condition_variable cstddef
+condition_variable cstdint
+condition_variable cstring
 condition_variable ctime
 condition_variable iosfwd
 condition_variable limits
@@ -230,8 +234,6 @@ format tuple
 format version
 forward_list compare
 forward_list cstddef
-forward_list cstdint
-forward_list cstring
 forward_list initializer_list
 forward_list limits
 forward_list new
@@ -431,6 +433,7 @@ numeric execution
 numeric initializer_list
 numeric limits
 numeric new
+numeric optional
 numeric ratio
 numeric version
 optional compare
@@ -584,9 +587,9 @@ stop_token cstddef
 stop_token cstdint
 stop_token cstring
 stop_token ctime
+stop_token iosfwd
 stop_token limits
 stop_token ratio
-stop_token thread
 stop_token version
 streambuf cstdint
 streambuf ios
@@ -629,6 +632,7 @@ system_error stdexcept
 system_error string
 system_error version
 thread array
+thread atomic
 thread cerrno
 thread compare
 thread cstddef

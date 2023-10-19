@@ -329,6 +329,11 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   // Otherwise run the default passes.
   mlir::PassManager pm(mlirModule->getName(),
                        mlir::OpPassManager::Nesting::Implicit);
+  if (enableOpenMP)
+    // WARNING: This pipeline must be run immediately after the lowering to
+    // ensure that the FIR is correct with respect to OpenMP operations/
+    // attributes.
+    fir::createOpenMPFIRPassPipeline(pm, enableOpenMPDevice);
   pm.enableVerifier(/*verifyPasses=*/true);
   (void)mlir::applyPassManagerCLOptions(pm);
   if (passPipeline.hasAnyOccurrences()) {
@@ -363,7 +368,8 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
     pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
 
     // Add O2 optimizer pass pipeline.
-    fir::createDefaultFIROptimizerPassPipeline(pm, llvm::OptimizationLevel::O2);
+    fir::createDefaultFIROptimizerPassPipeline(
+        pm, MLIRToLLVMPassPipelineConfig(llvm::OptimizationLevel::O2));
   }
 
   if (mlir::succeeded(pm.run(mlirModule))) {

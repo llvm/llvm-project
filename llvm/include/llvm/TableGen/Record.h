@@ -845,7 +845,8 @@ public:
     SIZE,
     EMPTY,
     GETDAGOP,
-    LOG2
+    LOG2,
+    REPR
   };
 
 private:
@@ -911,7 +912,6 @@ public:
     LISTREMOVE,
     LISTELEM,
     LISTSLICE,
-    RANGE,
     RANGEC,
     STRCONCAT,
     INTERLEAVE,
@@ -988,6 +988,7 @@ public:
     FILTER,
     IF,
     DAG,
+    RANGE,
     SUBSTR,
     FIND,
     SETDAGARG,
@@ -1640,6 +1641,15 @@ public:
         : Loc(Loc), Condition(Condition), Message(Message) {}
   };
 
+  struct DumpInfo {
+    SMLoc Loc;
+    Init *Message;
+
+    // User-defined constructor to support std::make_unique(). It can be
+    // removed in C++20 when braced initialization is supported.
+    DumpInfo(SMLoc Loc, Init *Message) : Loc(Loc), Message(Message) {}
+  };
+
 private:
   Init *Name;
   // Location where record was instantiated, followed by the location of
@@ -1651,6 +1661,7 @@ private:
   SmallVector<Init *, 0> TemplateArgs;
   SmallVector<RecordVal, 0> Values;
   SmallVector<AssertionInfo, 0> Assertions;
+  SmallVector<DumpInfo, 0> Dumps;
 
   // All superclasses in the inheritance forest in post-order (yes, it
   // must be a forest; diamond-shaped inheritance is not allowed).
@@ -1741,6 +1752,7 @@ public:
   ArrayRef<RecordVal> getValues() const { return Values; }
 
   ArrayRef<AssertionInfo> getAssertions() const { return Assertions; }
+  ArrayRef<DumpInfo> getDumps() const { return Dumps; }
 
   ArrayRef<std::pair<Record *, SMRange>>  getSuperClasses() const {
     return SuperClasses;
@@ -1801,11 +1813,18 @@ public:
     Assertions.push_back(AssertionInfo(Loc, Condition, Message));
   }
 
+  void addDump(SMLoc Loc, Init *Message) {
+    Dumps.push_back(DumpInfo(Loc, Message));
+  }
+
   void appendAssertions(const Record *Rec) {
     Assertions.append(Rec->Assertions);
   }
 
+  void appendDumps(const Record *Rec) { Dumps.append(Rec->Dumps); }
+
   void checkRecordAssertions();
+  void emitRecordDumps();
   void checkUnusedTemplateArgs();
 
   bool isSubClassOf(const Record *R) const {

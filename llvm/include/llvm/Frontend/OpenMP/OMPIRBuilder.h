@@ -89,10 +89,6 @@ public:
   /// Flag for specifying if the compilation is done for an accelerator.
   std::optional<bool> IsGPU;
 
-  /// Flag for specifying weather a requires unified_shared_memory
-  /// directive is present or not.
-  std::optional<bool> HasRequiresUnifiedSharedMemory;
-
   // Flag for specifying if offloading is mandatory.
   std::optional<bool> OpenMPOffloadMandatory;
 
@@ -101,13 +97,13 @@ public:
   /// Separator used between all of the rest consecutive parts of s name
   std::optional<StringRef> Separator;
 
-  OpenMPIRBuilderConfig() {}
+  OpenMPIRBuilderConfig();
   OpenMPIRBuilderConfig(bool IsTargetDevice, bool IsGPU,
+                        bool OpenMPOffloadMandatory,
+                        bool HasRequiresReverseOffload,
+                        bool HasRequiresUnifiedAddress,
                         bool HasRequiresUnifiedSharedMemory,
-                        bool OpenMPOffloadMandatory)
-      : IsTargetDevice(IsTargetDevice), IsGPU(IsGPU),
-        HasRequiresUnifiedSharedMemory(HasRequiresUnifiedSharedMemory),
-        OpenMPOffloadMandatory(OpenMPOffloadMandatory) {}
+                        bool HasRequiresDynamicAllocators);
 
   // Getters functions that assert if the required values are not present.
   bool isTargetDevice() const {
@@ -120,17 +116,22 @@ public:
     return *IsGPU;
   }
 
-  bool hasRequiresUnifiedSharedMemory() const {
-    assert(HasRequiresUnifiedSharedMemory.has_value() &&
-           "HasUnifiedSharedMemory is not set");
-    return *HasRequiresUnifiedSharedMemory;
-  }
-
   bool openMPOffloadMandatory() const {
     assert(OpenMPOffloadMandatory.has_value() &&
            "OpenMPOffloadMandatory is not set");
     return *OpenMPOffloadMandatory;
   }
+
+  bool hasRequiresFlags() const { return RequiresFlags; }
+  bool hasRequiresReverseOffload() const;
+  bool hasRequiresUnifiedAddress() const;
+  bool hasRequiresUnifiedSharedMemory() const;
+  bool hasRequiresDynamicAllocators() const;
+
+  /// Returns requires directive clauses as flags compatible with those expected
+  /// by libomptarget.
+  int64_t getRequiresFlags() const;
+
   // Returns the FirstSeparator if set, otherwise use the default separator
   // depending on isGPU
   StringRef firstSeparator() const {
@@ -153,11 +154,18 @@ public:
 
   void setIsTargetDevice(bool Value) { IsTargetDevice = Value; }
   void setIsGPU(bool Value) { IsGPU = Value; }
-  void setHasRequiresUnifiedSharedMemory(bool Value) {
-    HasRequiresUnifiedSharedMemory = Value;
-  }
+  void setOpenMPOffloadMandatory(bool Value) { OpenMPOffloadMandatory = Value; }
   void setFirstSeparator(StringRef FS) { FirstSeparator = FS; }
   void setSeparator(StringRef S) { Separator = S; }
+
+  void setHasRequiresReverseOffload(bool Value);
+  void setHasRequiresUnifiedAddress(bool Value);
+  void setHasRequiresUnifiedSharedMemory(bool Value);
+  void setHasRequiresDynamicAllocators(bool Value);
+
+private:
+  /// Flags for specifying which requires directive clauses are present.
+  int64_t RequiresFlags;
 };
 
 /// Data structure to contain the information needed to uniquely identify
@@ -442,14 +450,9 @@ public:
 
   /// Initialize the internal state, this will put structures types and
   /// potentially other helpers into the underlying module. Must be called
-  /// before any other method and only once! This internal state includes
-  /// Types used in the OpenMPIRBuilder generated from OMPKinds.def as well
-  /// as loading offload metadata for device from the OpenMP host IR file
-  /// passed in as the HostFilePath argument.
-  /// \param HostFilePath The path to the host IR file, used to load in
-  /// offload metadata for the device, allowing host and device to
-  /// maintain the same metadata mapping.
-  void initialize(StringRef HostFilePath = {});
+  /// before any other method and only once! This internal state includes types
+  /// used in the OpenMPIRBuilder generated from OMPKinds.def.
+  void initialize();
 
   void setConfig(OpenMPIRBuilderConfig C) { Config = C; }
 
@@ -873,6 +876,30 @@ public:
       std::function<Constant *()> GlobalInitializer,
       std::function<GlobalValue::LinkageTypes()> VariableLinkage,
       Type *LlvmPtrTy, Constant *Addr);
+
+  /// Get the offset of the OMP_MAP_MEMBER_OF field.
+  unsigned getFlagMemberOffset();
+
+  /// Get OMP_MAP_MEMBER_OF flag with extra bits reserved based on
+  /// the position given.
+  /// \param Position - A value indicating the position of the parent
+  /// of the member in the kernel argument structure, often retrieved
+  /// by the parents position in the combined information vectors used
+  /// to generate the structure itself. Multiple children (member's of)
+  /// with the same parent will use the same returned member flag.
+  omp::OpenMPOffloadMappingFlags getMemberOfFlag(unsigned Position);
+
+  /// Given an initial flag set, this function modifies it to contain
+  /// the passed in MemberOfFlag generated from the getMemberOfFlag
+  /// function. The results are dependent on the existing flag bits
+  /// set in the original flag set.
+  /// \param Flags - The original set of flags to be modified with the
+  /// passed in MemberOfFlag.
+  /// \param MemberOfFlag - A modified OMP_MAP_MEMBER_OF flag, adjusted
+  /// slightly based on the getMemberOfFlag which adjusts the flag bits
+  /// based on the members position in its parent.
+  void setCorrectMemberOfFlag(omp::OpenMPOffloadMappingFlags &Flags,
+                              omp::OpenMPOffloadMappingFlags MemberOfFlag);
 
 private:
   /// Modifies the canonical loop to be a statically-scheduled workshare loop.
@@ -1886,6 +1913,23 @@ public:
                               BodyGenCallbackTy BodyGenCB,
                               FinalizeCallbackTy FiniCB);
 
+  /// Generator for `#omp teams`
+  ///
+  /// \param Loc The location where the teams construct was encountered.
+  /// \param BodyGenCB Callback that will generate the region code.
+  /// \param NumTeamsLower Lower bound on number of teams. If this is nullptr,
+  ///        it is as if lower bound is specified as equal to upperbound. If
+  ///        this is non-null, then upperbound must also be non-null.
+  /// \param NumTeamsUpper Upper bound on the number of teams.
+  /// \param ThreadLimit on the number of threads that may participate in a
+  ///        contention group created by each team.
+  /// \param IfExpr is the integer argument value of the if condition on the
+  ///        teams clause.
+  InsertPointTy
+  createTeams(const LocationDescription &Loc, BodyGenCallbackTy BodyGenCB,
+              Value *NumTeamsLower = nullptr, Value *NumTeamsUpper = nullptr,
+              Value *ThreadLimit = nullptr, Value *IfExpr = nullptr);
+
   /// Generate conditional branch and relevant BasicBlocks through which private
   /// threads copy the 'copyin' variables from Master copy to threadprivate
   /// copies.
@@ -2132,6 +2176,10 @@ public:
   using TargetBodyGenCallbackTy = function_ref<InsertPointTy(
       InsertPointTy AllocaIP, InsertPointTy CodeGenIP)>;
 
+  using TargetGenArgAccessorsCallbackTy = function_ref<InsertPointTy(
+      Argument &Arg, Value *Input, Value *&RetVal, InsertPointTy AllocaIP,
+      InsertPointTy CodeGenIP)>;
+
   /// Generator for '#omp target'
   ///
   /// \param Loc where the target data construct was encountered.
@@ -2143,6 +2191,8 @@ public:
   /// \param Inputs The input values to the region that will be passed.
   /// as arguments to the outlined function.
   /// \param BodyGenCB Callback that will generate the region code.
+  /// \param ArgAccessorFuncCB Callback that will generate accessors
+  /// instructions for passed in target arguments where neccessary
   InsertPointTy createTarget(const LocationDescription &Loc,
                              OpenMPIRBuilder::InsertPointTy AllocaIP,
                              OpenMPIRBuilder::InsertPointTy CodeGenIP,
@@ -2150,7 +2200,8 @@ public:
                              int32_t NumThreads,
                              SmallVectorImpl<Value *> &Inputs,
                              GenMapInfoCallbackTy GenMapInfoCB,
-                             TargetBodyGenCallbackTy BodyGenCB);
+                             TargetBodyGenCallbackTy BodyGenCB,
+                             TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB);
 
   /// Returns __kmpc_for_static_init_* runtime function for the specified
   /// size \a IVSize and sign \a IVSigned. Will create a distribute call
@@ -2512,6 +2563,15 @@ public:
   /// loaded from bitcode file, i.e, different from OpenMPIRBuilder::M module.
   void loadOffloadInfoMetadata(Module &M);
 
+  /// Loads all the offload entries information from the host IR
+  /// metadata read from the file passed in as the HostFilePath argument. This
+  /// function is only meant to be used with device code generation.
+  ///
+  /// \param HostFilePath The path to the host IR file,
+  /// used to load in offload metadata for the device, allowing host and device
+  /// to maintain the same metadata mapping.
+  void loadOffloadInfoMetadata(StringRef HostFilePath);
+
   /// Gets (if variable with the given name already exist) or creates
   /// internal global variable with the specified Name. The created variable has
   /// linkage CommonLinkage by default and is initialized by null value.
@@ -2520,6 +2580,16 @@ public:
   /// \param Name Name of the variable.
   GlobalVariable *getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
                                               unsigned AddressSpace = 0);
+
+  /// Create a global function to register OpenMP requires flags into the
+  /// runtime, according to the `Config`.
+  ///
+  /// This function should be added to the list of constructors of the
+  /// compilation unit in order to be called before other OpenMP runtime
+  /// functions.
+  ///
+  /// \param Name  Name of the created function.
+  Function *createRegisterRequires(StringRef Name);
 };
 
 /// Class to represented the control flow structure of an OpenMP canonical loop.
