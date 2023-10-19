@@ -4184,8 +4184,9 @@ LoongArchTargetLowering::shouldExpandAtomicCmpXchgInIR(
 Value *LoongArchTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
     IRBuilderBase &Builder, AtomicCmpXchgInst *CI, Value *AlignedAddr,
     Value *CmpVal, Value *NewVal, Value *Mask, AtomicOrdering Ord) const {
-  Value *Ordering =
-      Builder.getIntN(Subtarget.getGRLen(), static_cast<uint64_t>(Ord));
+  AtomicOrdering FailOrd = CI->getFailureOrdering();
+  Value *FailureOrdering =
+      Builder.getIntN(Subtarget.getGRLen(), static_cast<uint64_t>(FailOrd));
 
   // TODO: Support cmpxchg on LA32.
   Intrinsic::ID CmpXchgIntrID = Intrinsic::loongarch_masked_cmpxchg_i64;
@@ -4196,7 +4197,7 @@ Value *LoongArchTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
   Function *MaskedCmpXchg =
       Intrinsic::getDeclaration(CI->getModule(), CmpXchgIntrID, Tys);
   Value *Result = Builder.CreateCall(
-      MaskedCmpXchg, {AlignedAddr, CmpVal, NewVal, Mask, Ordering});
+      MaskedCmpXchg, {AlignedAddr, CmpVal, NewVal, Mask, FailureOrdering});
   Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
   return Result;
 }
