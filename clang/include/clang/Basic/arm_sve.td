@@ -1952,6 +1952,13 @@ def SVSTNT1B_VNUM_X4 : MInst<"svstnt1_vnum[_{2}_x4]", "v}pl4", "cUc", [IsStructS
 def SVSTNT1H_VNUM_X4 : MInst<"svstnt1_vnum[_{2}_x4]", "v}pl4", "sUshb", [IsStructStore], MemEltTyDefault, "aarch64_sve_stnt1_pn_x4">;
 def SVSTNT1W_VNUM_X4 : MInst<"svstnt1_vnum[_{2}_x4]", "v}pl4", "iUif", [IsStructStore], MemEltTyDefault, "aarch64_sve_stnt1_pn_x4">;
 def SVSTNT1D_VNUM_X4 : MInst<"svstnt1_vnum[_{2}_x4]", "v}pl4", "lUld", [IsStructStore], MemEltTyDefault, "aarch64_sve_stnt1_pn_x4">;
+
+def SVDOT_X2_S : SInst<"svdot[_{d}_{2}_{3}]", "ddhh", "i",  MergeNone, "aarch64_sve_sdot_x2", [], []>;
+def SVDOT_X2_U : SInst<"svdot[_{d}_{2}_{3}]", "ddhh", "Ui", MergeNone, "aarch64_sve_udot_x2", [], []>;
+def SVDOT_X2_F : SInst<"svdot[_{d}_{2}_{3}]", "ddhh", "f",  MergeNone, "aarch64_sve_fdot_x2", [], []>;
+def SVDOT_LANE_X2_S : SInst<"svdot_lane[_{d}_{2}_{3}]", "ddhhi", "i",  MergeNone, "aarch64_sve_sdot_lane_x2", [], [ImmCheck<3, ImmCheck0_3>]>;
+def SVDOT_LANE_X2_U : SInst<"svdot_lane[_{d}_{2}_{3}]", "ddhhi", "Ui", MergeNone, "aarch64_sve_udot_lane_x2", [], [ImmCheck<3, ImmCheck0_3>]>;
+def SVDOT_LANE_X2_F : SInst<"svdot_lane[_{d}_{2}_{3}]", "ddhhi", "f",  MergeNone, "aarch64_sve_fdot_lane_x2", [], [ImmCheck<3, ImmCheck0_3>]>;
 }
 
 let TargetGuard = "sve2p1" in {
