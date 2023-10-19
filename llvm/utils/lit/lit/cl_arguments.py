@@ -119,10 +119,16 @@ def parse_args():
 
     execution_group = parser.add_argument_group("Test Execution")
     execution_group.add_argument(
-        "--disable-gtest-sharding",
-        dest="disableGTestSharding",
-        help="Disable sharding for GoogleTest format",
+        "--gtest-sharding",
+        help="Enable sharding for GoogleTest format",
         action="store_true",
+        default=True,
+    )
+    execution_group.add_argument(
+        "--no-gtest-sharding",
+        dest="gtest_sharding",
+        help="Disable sharding for GoogleTest format",
+        action="store_false",
     )
     execution_group.add_argument(
         "--path",
