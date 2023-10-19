@@ -1268,16 +1268,23 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     CmdArgs.push_back("--export-dynamic-symbol=__cfi_check");
 
   if (SanArgs.hasMemTag()) {
-    if (!TC.getTriple().isAndroid()) {
+    if (TC.getTriple().isWasm())
+    {
+      
+    }
+    else if (TC.getTriple().isAndroid()) {
+      CmdArgs.push_back(
+          Args.MakeArgString("--android-memtag-mode=" + SanArgs.getMemtagMode()));
+      if (SanArgs.hasMemtagHeap())
+        CmdArgs.push_back("--android-memtag-heap");
+      if (SanArgs.hasMemtagStack())
+        CmdArgs.push_back("--android-memtag-stack");
+    }
+    else
+    {
       TC.getDriver().Diag(diag::err_drv_unsupported_opt_for_target)
           << "-fsanitize=memtag*" << TC.getTriple().str();
     }
-    CmdArgs.push_back(
-        Args.MakeArgString("--android-memtag-mode=" + SanArgs.getMemtagMode()));
-    if (SanArgs.hasMemtagHeap())
-      CmdArgs.push_back("--android-memtag-heap");
-    if (SanArgs.hasMemtagStack())
-      CmdArgs.push_back("--android-memtag-stack");
   }
 
   return !StaticRuntimes.empty() || !NonWholeStaticRuntimes.empty();
