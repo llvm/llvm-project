@@ -307,18 +307,19 @@ MemCmpExpansion::LoadPair MemCmpExpansion::getLoadPair(Type *LoadSizeType,
   if (!Rhs)
     Rhs = Builder.CreateAlignedLoad(LoadSizeType, RhsSource, RhsAlign);
 
-  // Swap bytes if required.
-  if (NeedsBSwap) {
-    Function *Bswap = Intrinsic::getDeclaration(CI->getModule(),
-                                                Intrinsic::bswap, LoadSizeType);
-    Lhs = Builder.CreateCall(Bswap, Lhs);
-    Rhs = Builder.CreateCall(Bswap, Rhs);
-  }
-
   // Zero extend if required.
   if (CmpSizeType != nullptr && CmpSizeType != LoadSizeType) {
     Lhs = Builder.CreateZExt(Lhs, CmpSizeType);
     Rhs = Builder.CreateZExt(Rhs, CmpSizeType);
+  }
+
+  // Swap bytes if required.
+  if (NeedsBSwap) {
+    Type *BSwapType = CmpSizeType ? CmpSizeType : LoadSizeType;
+    Function *Bswap = Intrinsic::getDeclaration(CI->getModule(),
+                                                Intrinsic::bswap, BSwapType);
+    Lhs = Builder.CreateCall(Bswap, Lhs);
+    Rhs = Builder.CreateCall(Bswap, Rhs);
   }
   return {Lhs, Rhs};
 }
@@ -694,10 +695,10 @@ Value *MemCmpExpansion::getMemCmpExpansion() {
 ///  %17 = getelementptr i32, i32* %15, i32 2
 ///  %18 = load i32, i32* %16
 ///  %19 = load i32, i32* %17
-///  %20 = call i32 @llvm.bswap.i32(i32 %18)
-///  %21 = call i32 @llvm.bswap.i32(i32 %19)
-///  %22 = zext i32 %20 to i64
-///  %23 = zext i32 %21 to i64
+///  %20 = zext i32 %18 to i64
+///  %21 = zext i32 %19 to i64
+///  %22 = call i64 @llvm.bswap.i64(i64 %20)
+///  %23 = call i64 @llvm.bswap.i64(i64 %21)
 ///  %24 = sub i64 %22, %23
 ///  %25 = icmp ne i64 %24, 0
 ///  br i1 %25, label %res_block, label %loadbb2
@@ -710,10 +711,10 @@ Value *MemCmpExpansion::getMemCmpExpansion() {
 ///  %31 = getelementptr i16, i16* %29, i16 6
 ///  %32 = load i16, i16* %30
 ///  %33 = load i16, i16* %31
-///  %34 = call i16 @llvm.bswap.i16(i16 %32)
-///  %35 = call i16 @llvm.bswap.i16(i16 %33)
-///  %36 = zext i16 %34 to i64
-///  %37 = zext i16 %35 to i64
+///  %34 = zext i16 %32 to i64
+///  %35 = zext i16 %33 to i64
+///  %36 = call i64 @llvm.bswap.i64(i16 %34)
+///  %37 = call i64 @llvm.bswap.i64(i16 %35)
 ///  %38 = sub i64 %36, %37
 ///  %39 = icmp ne i64 %38, 0
 ///  br i1 %39, label %res_block, label %loadbb3

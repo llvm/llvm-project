@@ -43,14 +43,12 @@ define i1 @length0_lt(ptr %X, ptr %Y) nounwind {
 define i32 @length2(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length2:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl (%eax), %eax
 ; X86-NEXT:    movzwl (%ecx), %ecx
-; X86-NEXT:    movzwl (%eax), %edx
-; X86-NEXT:    rolw $8, %cx
-; X86-NEXT:    rolw $8, %dx
-; X86-NEXT:    movzwl %cx, %eax
-; X86-NEXT:    movzwl %dx, %ecx
+; X86-NEXT:    bswapl %eax
+; X86-NEXT:    bswapl %ecx
 ; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    retl
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i32 2) nounwind
@@ -62,9 +60,8 @@ define i32 @length2_const(ptr %X, ptr %Y) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzwl (%eax), %eax
-; X86-NEXT:    rolw $8, %ax
-; X86-NEXT:    movzwl %ax, %eax
-; X86-NEXT:    addl $-12594, %eax # imm = 0xCECE
+; X86-NEXT:    bswapl %eax
+; X86-NEXT:    addl $-825360384, %eax # imm = 0xCECE0000
 ; X86-NEXT:    retl
   %m = tail call i32 @memcmp(ptr %X, ptr getelementptr inbounds ([513 x i8], ptr @.str, i32 0, i32 1), i32 2) nounwind
   ret i32 %m
@@ -75,9 +72,8 @@ define i1 @length2_gt_const(ptr %X, ptr %Y) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzwl (%eax), %eax
-; X86-NEXT:    rolw $8, %ax
-; X86-NEXT:    movzwl %ax, %eax
-; X86-NEXT:    addl $-12594, %eax # imm = 0xCECE
+; X86-NEXT:    bswapl %eax
+; X86-NEXT:    addl $-825360384, %eax # imm = 0xCECE0000
 ; X86-NEXT:    testl %eax, %eax
 ; X86-NEXT:    setg %al
 ; X86-NEXT:    retl
@@ -103,14 +99,12 @@ define i1 @length2_eq(ptr %X, ptr %Y) nounwind {
 define i1 @length2_lt(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length2_lt:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl (%eax), %eax
 ; X86-NEXT:    movzwl (%ecx), %ecx
-; X86-NEXT:    movzwl (%eax), %edx
-; X86-NEXT:    rolw $8, %cx
-; X86-NEXT:    rolw $8, %dx
-; X86-NEXT:    movzwl %cx, %eax
-; X86-NEXT:    movzwl %dx, %ecx
+; X86-NEXT:    bswapl %eax
+; X86-NEXT:    bswapl %ecx
 ; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    shrl $31, %eax
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
@@ -127,10 +121,8 @@ define i1 @length2_gt(ptr %X, ptr %Y) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movzwl (%ecx), %ecx
 ; X86-NEXT:    movzwl (%eax), %eax
-; X86-NEXT:    rolw $8, %cx
-; X86-NEXT:    rolw $8, %ax
-; X86-NEXT:    movzwl %cx, %ecx
-; X86-NEXT:    movzwl %ax, %eax
+; X86-NEXT:    bswapl %ecx
+; X86-NEXT:    bswapl %eax
 ; X86-NEXT:    subl %eax, %ecx
 ; X86-NEXT:    testl %ecx, %ecx
 ; X86-NEXT:    setg %al

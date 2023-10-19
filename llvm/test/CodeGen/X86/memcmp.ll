@@ -51,10 +51,8 @@ define i32 @length2(ptr %X, ptr %Y) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzwl (%rdi), %eax
 ; X64-NEXT:    movzwl (%rsi), %ecx
-; X64-NEXT:    rolw $8, %ax
-; X64-NEXT:    rolw $8, %cx
-; X64-NEXT:    movzwl %ax, %eax
-; X64-NEXT:    movzwl %cx, %ecx
+; X64-NEXT:    bswapl %eax
+; X64-NEXT:    bswapl %ecx
 ; X64-NEXT:    subl %ecx, %eax
 ; X64-NEXT:    retq
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 2) nounwind
@@ -65,9 +63,8 @@ define i32 @length2_const(ptr %X, ptr %Y) nounwind {
 ; X64-LABEL: length2_const:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzwl (%rdi), %eax
-; X64-NEXT:    rolw $8, %ax
-; X64-NEXT:    movzwl %ax, %eax
-; X64-NEXT:    addl $-12594, %eax # imm = 0xCECE
+; X64-NEXT:    bswapl %eax
+; X64-NEXT:    addl $-825360384, %eax # imm = 0xCECE0000
 ; X64-NEXT:    retq
   %m = tail call i32 @memcmp(ptr %X, ptr getelementptr inbounds ([513 x i8], ptr @.str, i32 0, i32 1), i64 2) nounwind
   ret i32 %m
@@ -77,9 +74,8 @@ define i1 @length2_gt_const(ptr %X, ptr %Y) nounwind {
 ; X64-LABEL: length2_gt_const:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzwl (%rdi), %eax
-; X64-NEXT:    rolw $8, %ax
-; X64-NEXT:    movzwl %ax, %eax
-; X64-NEXT:    addl $-12594, %eax # imm = 0xCECE
+; X64-NEXT:    bswapl %eax
+; X64-NEXT:    addl $-825360384, %eax # imm = 0xCECE0000
 ; X64-NEXT:    testl %eax, %eax
 ; X64-NEXT:    setg %al
 ; X64-NEXT:    retq
@@ -105,10 +101,8 @@ define i1 @length2_lt(ptr %X, ptr %Y) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzwl (%rdi), %eax
 ; X64-NEXT:    movzwl (%rsi), %ecx
-; X64-NEXT:    rolw $8, %ax
-; X64-NEXT:    rolw $8, %cx
-; X64-NEXT:    movzwl %ax, %eax
-; X64-NEXT:    movzwl %cx, %ecx
+; X64-NEXT:    bswapl %eax
+; X64-NEXT:    bswapl %ecx
 ; X64-NEXT:    subl %ecx, %eax
 ; X64-NEXT:    shrl $31, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
@@ -123,10 +117,8 @@ define i1 @length2_gt(ptr %X, ptr %Y) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzwl (%rdi), %eax
 ; X64-NEXT:    movzwl (%rsi), %ecx
-; X64-NEXT:    rolw $8, %ax
-; X64-NEXT:    rolw $8, %cx
-; X64-NEXT:    movzwl %ax, %eax
-; X64-NEXT:    movzwl %cx, %ecx
+; X64-NEXT:    bswapl %eax
+; X64-NEXT:    bswapl %ecx
 ; X64-NEXT:    subl %ecx, %eax
 ; X64-NEXT:    testl %eax, %eax
 ; X64-NEXT:    setg %al
@@ -537,8 +529,8 @@ define i32 @length12(ptr %X, ptr %Y) nounwind {
 ; X64-NEXT:  # %bb.1: # %loadbb1
 ; X64-NEXT:    movl 8(%rdi), %ecx
 ; X64-NEXT:    movl 8(%rsi), %edx
-; X64-NEXT:    bswapl %ecx
-; X64-NEXT:    bswapl %edx
+; X64-NEXT:    bswapq %rcx
+; X64-NEXT:    bswapq %rdx
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpq %rdx, %rcx
 ; X64-NEXT:    je .LBB31_3

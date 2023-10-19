@@ -13,14 +13,12 @@ declare dso_local i32 @bcmp(ptr, ptr, i32)
 define i32 @length2(ptr %X, ptr %Y) nounwind !prof !14 {
 ; X86-LABEL: length2:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl (%eax), %eax
 ; X86-NEXT:    movzwl (%ecx), %ecx
-; X86-NEXT:    movzwl (%eax), %edx
-; X86-NEXT:    rolw $8, %cx
-; X86-NEXT:    rolw $8, %dx
-; X86-NEXT:    movzwl %cx, %eax
-; X86-NEXT:    movzwl %dx, %ecx
+; X86-NEXT:    bswapl %eax
+; X86-NEXT:    bswapl %ecx
 ; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    retl
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i32 2) nounwind
