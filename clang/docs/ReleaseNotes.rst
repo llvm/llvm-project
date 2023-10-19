@@ -571,6 +571,7 @@ X86 Support
   * Support intrinsic of ``_urdmsr``.
   * Support intrinsic of ``_uwrmsr``.
 - Support ISA of ``AVX10.1``.
+- ``-march=pantherlake`` and ``-march=clearwaterforest`` are now supported.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
