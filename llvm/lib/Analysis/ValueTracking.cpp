@@ -2666,15 +2666,21 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
 
       // The condition of the select dominates the true/false arm. Check if the
       // condition implies that a given arm is non-zero.
-      Value *X;
+      Value *X, *Y;
       CmpInst::Predicate Pred;
-      if (!match(I->getOperand(0), m_c_ICmp(Pred, m_Specific(Op), m_Value(X))))
+      if (!match(I->getOperand(0), m_ICmp(Pred, m_Value(X), m_Value(Y))))
+        return false;
+      if (Y == Op) {
+        Pred = ICmpInst::getSwappedPredicate(Pred);
+        std::swap(X, Y);
+      }
+      if (X != Op)
         return false;
 
       if (!IsTrueArm)
         Pred = ICmpInst::getInversePredicate(Pred);
 
-      return cmpExcludesZero(Pred, X);
+      return cmpExcludesZero(Pred, Y);
     };
 
     if (SelectArmIsNonZero(/* IsTrueArm */ true) &&
@@ -2696,18 +2702,25 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
       RecQ.CxtI = PN->getIncomingBlock(U)->getTerminator();
       // Check if the branch on the phi excludes zero.
       ICmpInst::Predicate Pred;
-      Value *X;
+      Value *X, *Y;
       BasicBlock *TrueSucc, *FalseSucc;
       if (match(RecQ.CxtI,
-                m_Br(m_c_ICmp(Pred, m_Specific(U.get()), m_Value(X)),
+                m_Br(m_ICmp(Pred, m_Value(X), m_Value(Y)),
                      m_BasicBlock(TrueSucc), m_BasicBlock(FalseSucc)))) {
         // Check for cases of duplicate successors.
         if ((TrueSucc == PN->getParent()) != (FalseSucc == PN->getParent())) {
           // If we're using the false successor, invert the predicate.
-          if (FalseSucc == PN->getParent())
-            Pred = CmpInst::getInversePredicate(Pred);
-          if (cmpExcludesZero(Pred, X))
-            return true;
+
+          if (Y == U.get()) {
+            Pred = ICmpInst::getSwappedPredicate(Pred);
+            std::swap(X, Y);
+          }
+          if (X == U.get()) {
+            if (FalseSucc == PN->getParent())
+              Pred = CmpInst::getInversePredicate(Pred);
+            if (cmpExcludesZero(Pred, Y))
+              return true;
+          }
         }
       }
       // Finally recurse on the edge and check it directly.
