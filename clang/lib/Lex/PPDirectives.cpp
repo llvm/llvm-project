@@ -2531,7 +2531,8 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   }
 
   if (isAngled && isInNamedModule())
-    Diag(FilenameTok, diag::warn_pp_include_angled_in_module_purview);
+    Diag(FilenameTok, diag::warn_pp_include_angled_in_module_purview)
+      << getNamedModuleName();
 
   // Look up the file, create a File ID for it.
   SourceLocation IncludePos = FilenameTok.getLocation();

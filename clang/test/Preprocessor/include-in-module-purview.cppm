@@ -31,13 +31,13 @@ export module a;
 #include "a.h"
 #include "b.h"
 
-// CHECK: a.cppm:9:10: warning: '#include <filename>' in the module purview appears to be erroneous;
-// CHECK: a.cppm:10:10: warning: '#include <filename>' in the module purview appears to be erroneous;
-// CHECK: a.cppm:11:10: warning: '#include <filename>' in the module purview appears to be erroneous;
+// CHECK: a.cppm:9:10: warning: '#include <filename>' attaches the declarations to the named module 'a'
+// CHECK: a.cppm:10:10: warning: '#include <filename>' attaches the declarations to the named module 'a'
+// CHECK: a.cppm:11:10: warning: '#include <filename>' attaches the declarations to the named module 'a'
 // CHECK: In file included from {{.*}}/a.cppm:11
-// CHECK-NEXT: b.h:1:10: warning: '#include <filename>' in the module purview appears to be erroneous;
+// CHECK-NEXT: b.h:1:10: warning: '#include <filename>' attaches the declarations to the named module 'a'
 // CHECK: In file included from {{.*}}/a.cppm:13
-// CHECK-NEXT: b.h:1:10: warning: '#include <filename>' in the module purview appears to be erroneous;
+// CHECK-NEXT: b.h:1:10: warning: '#include <filename>' attaches the declarations to the named module 'a'
 
 module :private;
 #include <stddef.h>
@@ -46,13 +46,13 @@ module :private;
 #include "a.h"
 #include "b.h"
 
-// CHECK: a.cppm:24:10: warning: '#include <filename>' in the module purview appears to be erroneous;
-// CHECK: a.cppm:25:10: warning: '#include <filename>' in the module purview appears to be erroneous;
-// CHECK: a.cppm:26:10: warning: '#include <filename>' in the module purview appears to be erroneous;
+// CHECK: a.cppm:24:10: warning: '#include <filename>' attaches the declarations to the named module 'a'
+// CHECK: a.cppm:25:10: warning: '#include <filename>' attaches the declarations to the named module 'a'
+// CHECK: a.cppm:26:10: warning: '#include <filename>' attaches the declarations to the named module 'a'
 // CHECK: In file included from {{.*}}/a.cppm:26
-// CHECK-NEXT: b.h:1:10: warning: '#include <filename>' in the module purview appears to be erroneous;
+// CHECK-NEXT: b.h:1:10: warning: '#include <filename>' attaches the declarations to the named module 'a'
 // CHECK: In file included from {{.*}}/a.cppm:28
-// CHECK-NEXT: b.h:1:10: warning: '#include <filename>' in the module purview appears to be erroneous;
+// CHECK-NEXT: b.h:1:10: warning: '#include <filename>' attaches the declarations to the named module 'a'
 
 // We should have catched all warnings.
 // CHECK: 10 warnings generated.

@@ -923,8 +923,9 @@ def err_header_import_not_header_unit : Error<
   "header file %0 (aka '%1') cannot be imported because "
   "it is not known to be a header unit">;
 def warn_pp_include_angled_in_module_purview : Warning<
-  "'#include <filename>' in the module purview appears to be erroneous; "
-  "consider moving that directive before the module declaration">,
+  "'#include <filename>' attaches the declarations to the named module '%0'"
+  ", which is not usually intended; consider moving that directive before "
+  "the module declaration">,
   InGroup<DiagGroup<"include-angled-in-module-purview">>;
 
 def warn_header_guard : Warning<
