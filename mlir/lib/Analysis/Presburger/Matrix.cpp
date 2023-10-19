@@ -487,7 +487,7 @@ Fraction FracMatrix::determinant(FracMatrix* inverse) const {
       // element is nonzero, by adding
       // a nonzero row to it.
       for (unsigned j = i+1; j < nRows; j++)
-        if (j != i && m(j, i) != 0) {
+        if (m(j, i) != 0) {
           m.swapRows(j, i);
           if (inverse)
             tempInv.swapRows(j, i);
