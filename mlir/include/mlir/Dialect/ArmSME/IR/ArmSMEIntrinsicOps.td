@@ -46,8 +46,8 @@ class ArmSME_IntrMopOverloadedOp<string mnemonic>
       Arguments<(ins Arg<I32, "Virtual tile ID">:$tile_id,
                  Arg<MOPPredicate, "LHS predicate">:$lhs_predicate,
                  Arg<MOPPredicate, "RHS predicate">:$rhs_predicate,
-                 Arg<MOPVector, "LHS vector operand">:$lhs_operand,
-                 Arg<MOPVector, "RHS vector operand">:$rhs_operand)>;
+                 Arg<MOPVector, "LHS vector operand">:$lhs_vector,
+                 Arg<MOPVector, "RHS vector operand">:$rhs_vector)>;
 
 def LLVM_aarch64_sme_mopa : ArmSME_IntrMopOverloadedOp<"mopa">;
 def LLVM_aarch64_sme_mops : ArmSME_IntrMopOverloadedOp<"mops">;
