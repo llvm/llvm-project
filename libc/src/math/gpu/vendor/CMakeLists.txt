@@ -30,11 +30,33 @@ endif()
 list(APPEND bitcode_link_flags "-Wno-linker-warnings")
 
 add_entrypoint_object(
+  acos
+  SRCS
+    acos.cpp
+  HDRS
+    ../../acos.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
   acosf
   SRCS
     acosf.cpp
   HDRS
     ../../acosf.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  acosh
+  SRCS
+    acosh.cpp
+  HDRS
+    ../../acosh.h
   COMPILE_OPTIONS
     ${bitcode_link_flags}
     -O2
@@ -52,6 +74,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  asin
+  SRCS
+    asin.cpp
+  HDRS
+    ../../asin.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
   asinf
   SRCS
     asinf.cpp
@@ -63,11 +96,22 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  asinhf
+  asinh
   SRCS
-    asinhf.cpp
+    asinh.cpp
   HDRS
-    ../../asinhf.h
+    ../../asinh.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  atan
+  SRCS
+    atan.cpp
+  HDRS
+    ../../atan.h
   COMPILE_OPTIONS
     ${bitcode_link_flags}
     -O2
@@ -79,6 +123,39 @@ add_entrypoint_object(
     atanf.cpp
   HDRS
     ../../atanf.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  atan2
+  SRCS
+    atan2.cpp
+  HDRS
+    ../../atan2.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  atan2f
+  SRCS
+    atan2f.cpp
+  HDRS
+    ../../atan2f.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  atanh
+  SRCS
+    atanh.cpp
+  HDRS
+    ../../atanh.h
   COMPILE_OPTIONS
     ${bitcode_link_flags}
     -O2
@@ -140,11 +217,66 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  erf
+  SRCS
+    erf.cpp
+  HDRS
+    ../../erf.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  erff
+  SRCS
+    erff.cpp
+  HDRS
+    ../../erff.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  exp
+  SRCS
+    exp.cpp
+  HDRS
+    ../../exp.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  exp10
+  SRCS
+    exp10.cpp
+  HDRS
+    ../../exp10.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
   exp10f
   SRCS
     exp10f.cpp
   HDRS
     ../../exp10f.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  exp2
+  SRCS
+    exp2.cpp
+  HDRS
+    ../../exp2.h
   COMPILE_OPTIONS
     ${bitcode_link_flags}
     -O2
@@ -167,6 +299,17 @@ add_entrypoint_object(
     expf.cpp
   HDRS
     ../../expf.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  expm1
+  SRCS
+    expm1.cpp
+  HDRS
+    ../../expm1.h
   COMPILE_OPTIONS
     ${bitcode_link_flags}
     -O2
@@ -250,6 +393,94 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  log10
+  SRCS
+    log10.cpp
+  HDRS
+    ../../log10.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  log10f
+  SRCS
+    log10f.cpp
+  HDRS
+    ../../log10f.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  log2
+  SRCS
+    log2.cpp
+  HDRS
+    ../../log2.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  log2f
+  SRCS
+    log2f.cpp
+  HDRS
+    ../../log2f.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  log
+  SRCS
+    log.cpp
+  HDRS
+    ../../log.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  logf
+  SRCS
+    logf.cpp
+  HDRS
+    ../../logf.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  lrint
+  SRCS
+    lrint.cpp
+  HDRS
+    ../../lrint.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  lrintf
+  SRCS
+    lrintf.cpp
+  HDRS
+    ../../lrintf.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
   ldexp
   SRCS
     ldexp.cpp
@@ -266,6 +497,28 @@ add_entrypoint_object(
     ldexpf.cpp
   HDRS
     ../../ldexpf.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  log1p
+  SRCS
+    log1p.cpp
+  HDRS
+    ../../log1p.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  log1pf
+  SRCS
+    log1pf.cpp
+  HDRS
+    ../../log1pf.h
   COMPILE_OPTIONS
     ${bitcode_link_flags}
     -O2
@@ -310,29 +563,6 @@ add_entrypoint_object(
     remquof.cpp
   HDRS
     ../../remquof.h
-  COMPILE_OPTIONS
-    ${bitcode_link_flags}
-    -O2
-)
-
-
-add_entrypoint_object(
-  llround
-  SRCS
-    llround.cpp
-  HDRS
-    ../../llround.h
-  COMPILE_OPTIONS
-    ${bitcode_link_flags}
-    -O2
-)
-
-add_entrypoint_object(
-  llroundf
-  SRCS
-    llroundf.cpp
-  HDRS
-    ../../llroundf.h
   COMPILE_OPTIONS
     ${bitcode_link_flags}
     -O2
@@ -510,6 +740,28 @@ add_entrypoint_object(
     tanhf.cpp
   HDRS
     ../../tanhf.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  tgamma
+  SRCS
+    tgamma.cpp
+  HDRS
+    ../../tgamma.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  tgammaf
+  SRCS
+    tgammaf.cpp
+  HDRS
+    ../../tgammaf.h
   COMPILE_OPTIONS
     ${bitcode_link_flags}
     -O2
