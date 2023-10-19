@@ -62,6 +62,13 @@ static_assert(!HasSortHeapR<UncheckedRange<const int*>>); // Doesn't satisfy `so
 template <std::size_t N, class T, class Iter>
 constexpr void verify_sorted(const std::array<T, N>& sorted, Iter last, std::array<T, N> expected) {
   assert(sorted == expected);
+  assert(last == sorted.end());
+  assert(std::is_sorted(sorted.begin(), sorted.end()));
+}
+
+template <std::size_t N, class T, class Iter>
+constexpr void verify_sorted_iterator(const std::array<T, N>& sorted, Iter last, std::array<T, N> expected) {
+  assert(sorted == expected);
   assert(base(last) == sorted.data() + sorted.size());
   assert(std::is_sorted(sorted.begin(), sorted.end()));
 }
@@ -76,7 +83,7 @@ constexpr void test_one(const std::array<int, N> input, std::array<int, N> expec
     auto e = Sent(Iter(sorted.data() + sorted.size()));
 
     std::same_as<Iter> decltype(auto) last = std::ranges::sort_heap(b, e);
-    verify_sorted(sorted, last, expected);
+    verify_sorted_iterator(sorted, last, expected);
   }
 
   { // (range) overload.
@@ -86,7 +93,7 @@ constexpr void test_one(const std::array<int, N> input, std::array<int, N> expec
     auto range = std::ranges::subrange(b, e);
 
     std::same_as<Iter> decltype(auto) last = std::ranges::sort_heap(range);
-    verify_sorted(sorted, last, expected);
+    verify_sorted_iterator(sorted, last, expected);
   }
 }
 
@@ -131,14 +138,14 @@ constexpr bool test() {
       auto in = input;
       auto last = std::ranges::sort_heap(in.begin(), in.end(), comp);
       assert(in == expected);
-      assert(last == in.data() + in.size());
+      assert(last == in.end());
     }
 
     {
       auto in = input;
       auto last = std::ranges::sort_heap(in, comp);
       assert(in == expected);
-      assert(last == in.data() + in.size());
+      assert(last == in.end());
     }
   }
 

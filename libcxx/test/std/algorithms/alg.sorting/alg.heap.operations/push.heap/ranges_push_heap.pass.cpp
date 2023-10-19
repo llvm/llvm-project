@@ -61,6 +61,13 @@ static_assert(!HasPushHeapR<UncheckedRange<const int*>>); // Doesn't satisfy `so
 template <std::size_t N, class T, class Iter>
 constexpr void verify_heap(const std::array<T, N>& heapified, Iter last, std::array<T, N> expected) {
   assert(heapified == expected);
+  assert(last == heapified.end());
+  assert(std::is_heap(heapified.begin(), heapified.end()));
+}
+
+template <std::size_t N, class T, class Iter>
+constexpr void verify_heap_iterator(const std::array<T, N>& heapified, Iter last, std::array<T, N> expected) {
+  assert(heapified == expected);
   assert(base(last) == heapified.data() + heapified.size());
   assert(std::is_heap(heapified.begin(), heapified.end()));
 }
@@ -77,7 +84,7 @@ constexpr void test_one(const std::array<int, N> input, std::array<int, N> expec
     auto e = Sent(Iter(heapified.data() + heapified.size()));
 
     std::same_as<Iter> decltype(auto) last = std::ranges::push_heap(b, e);
-    verify_heap(heapified, last, expected);
+    verify_heap_iterator(heapified, last, expected);
   }
 
   { // (range) overload.
@@ -87,7 +94,7 @@ constexpr void test_one(const std::array<int, N> input, std::array<int, N> expec
     auto range = std::ranges::subrange(b, e);
 
     std::same_as<Iter> decltype(auto) last = std::ranges::push_heap(range);
-    verify_heap(heapified, last, expected);
+    verify_heap_iterator(heapified, last, expected);
   }
 }
 
