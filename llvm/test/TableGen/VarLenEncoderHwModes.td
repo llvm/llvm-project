@@ -77,22 +77,34 @@ def baz : VarLenInst {
   >;
 }
 
-// CHECK:   static const uint64_t InstBits_ModeA[] = {
-// CHECK:         UINT64_C(3),        // bar
-// CHECK:         UINT64_C(1),        // foo
+// CHECK:     static const uint64_t InstBits_ModeA[] = {
+// CHECK:       UINT64_C(3),        // bar
+// CHECK:       UINT64_C(1),        // foo
 
-// CHECK:   static const uint64_t InstBits_ModeB[] = {
-// CHECK:         UINT64_C(3),        // bar
-// CHECK:         UINT64_C(4),        // baz
-// CHECK:         UINT64_C(2),        // foo
+// CHECK:     static const uint64_t InstBits_ModeB[] = {
+// CHECK:       UINT64_C(3),        // bar
+// CHECK:       UINT64_C(4),        // baz
+// CHECK:       UINT64_C(2),        // foo
+
+// CHECK:     auto getInstBits_ModeA =
+// CHECK:       Idx = Index_ModeA
+
+// CHECK:     auto getInstBits_ModeB =
+// CHECK:       Idx = Index_ModeB
 
 // CHECK:     case ::bar: {
-// CHECK-NOT:      switch (Mode) {
+// CHECK-NOT:   switch (Mode) {
+// CHECK:       Inst = getInstBits_ModeA
 
 // CHECK:     case ::foo: {
-// CHECK:      switch (Mode) {
+// CHECK:       switch (Mode) {
+// CHECK:       case 1: {
+// CHECK:       Inst = getInstBits_ModeA
+// CHECK:       case 2: {
+// CHECK:       Inst = getInstBits_ModeB
 
 // CHECK:     case ::baz: {
-// CHECK:      case 1: {
-// CHECK:      llvm_unreachable("Undefined encoding in this mode");
-// CHECK:      case 2: {
+// CHECK:       case 1: {
+// CHECK:       llvm_unreachable("Undefined encoding in this mode");
+// CHECK:       case 2: {
+// CHECK:       Inst = getInstBits_ModeB
