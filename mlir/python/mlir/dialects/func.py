@@ -26,9 +26,6 @@ RESULT_ATTRIBUTE_NAME = "res_attrs"
 class ConstantOp(ConstantOp):
     """Specialization for the constant op class."""
 
-    def __init__(self, result: Type, value: Attribute, *, loc=None, ip=None):
-        super().__init__(result, value, loc=loc, ip=ip)
-
     @property
     def type(self):
         return self.results[0].type
