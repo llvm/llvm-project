@@ -195,6 +195,7 @@ static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
     {"zaamo", {0, 2}},
     {"zacas", {1, 0}},
     {"zalrsc", {0, 2}},
+    {"zalasr", {1, 0}},
 
     {"zcmop", {0, 2}},
 

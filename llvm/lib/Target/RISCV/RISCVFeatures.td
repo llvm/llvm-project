@@ -797,6 +797,13 @@ def FeatureStdExtSvpbmt
     : SubtargetFeature<"svpbmt", "HasStdExtSvpbmt", "true",
                        "'Svpbmt' (Page-Based Memory Types)">;
 
+def FeatureStdExtZalasr
+    : SubtargetFeature<"experimental-zalasr", "HasStdExtZalasr", "true",
+                       "'Zalasr' (Load-Acquire and Store-Release Instructions)">;
+def HasStdExtZalasr : Predicate<"Subtarget->hasStdExtZalasr()">,
+                               AssemblerPredicate<(all_of FeatureStdExtZalasr),
+                               "'Zalasr' (Load-Acquire and Store-Release Instructions)">;
+
 //===----------------------------------------------------------------------===//
 // Vendor extensions
 //===----------------------------------------------------------------------===//
