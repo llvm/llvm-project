@@ -1,3 +1,6 @@
+// RUN: %clang_cc1 -triple x86_64                       -std=c++20 -fsyntax-only -verify -disable-llvm-passes %s
+
+// REQUIRES: target=aarch64-{{.*}}
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sve -std=c++20 -fsyntax-only -verify -disable-llvm-passes %s
 
 template <typename T>
