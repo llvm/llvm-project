@@ -134,6 +134,27 @@ LLDBMemoryReader::getSymbolAddress(const std::string &name) {
   return swift::remote::RemoteAddress(load_addr);
 }
 
+static std::unique_ptr<swift::SwiftObjectFileFormat>
+GetSwiftObjectFileFormat(llvm::Triple::ObjectFormatType obj_format_type) {
+  std::unique_ptr<swift::SwiftObjectFileFormat> obj_file_format;
+  switch (obj_format_type) {
+  case llvm::Triple::MachO:
+    obj_file_format = std::make_unique<swift::SwiftObjectFileFormatMachO>();
+    break;
+  case llvm::Triple::ELF:
+    obj_file_format = std::make_unique<swift::SwiftObjectFileFormatELF>();
+    break;
+  case llvm::Triple::COFF:
+    obj_file_format = std::make_unique<swift::SwiftObjectFileFormatCOFF>();
+    break;
+  default:
+    LLDB_LOG(GetLog(LLDBLog::Types), "Could not determine swift reflection "
+                                     "section names for object format type");
+    break;
+  }
+  return obj_file_format;
+}
+
 llvm::Optional<swift::remote::RemoteAbsolutePointer>
 LLDBMemoryReader::resolvePointerAsSymbol(swift::remote::RemoteAddress address) {
   // If an address has a symbol, that symbol provides additional useful data to
@@ -161,8 +182,18 @@ LLDBMemoryReader::resolvePointerAsSymbol(swift::remote::RemoteAddress address) {
       return {};
   }
 
-  if (!addr.GetSection()->CanContainSwiftReflectionData())
-    return {};
+  if (auto section_sp = addr.GetSection()) {
+    if (auto *obj_file = section_sp->GetObjectFile()) {
+      auto obj_file_format_type =
+          obj_file->GetArchitecture().GetTriple().getObjectFormat();
+      if (auto swift_obj_file_format =
+              GetSwiftObjectFileFormat(obj_file_format_type)) {
+        if (!swift_obj_file_format->sectionContainsReflectionData(
+                section_sp->GetName().GetStringRef()))
+          return {};
+      }
+    }
+  }
 
   if (auto *symbol = addr.CalculateSymbolContextSymbol()) {
     auto mangledName = symbol->GetMangled().GetMangledName().GetStringRef();
