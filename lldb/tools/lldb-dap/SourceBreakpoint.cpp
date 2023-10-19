@@ -1,0 +1,33 @@
+//===-- SourceBreakpoint.cpp ------------------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "SourceBreakpoint.h"
+#include "DAP.h"
+
+namespace lldb_dap {
+
+SourceBreakpoint::SourceBreakpoint(const llvm::json::Object &obj)
+    : BreakpointBase(obj), line(GetUnsigned(obj, "line", 0)),
+      column(GetUnsigned(obj, "column", 0)) {}
+
+void SourceBreakpoint::SetBreakpoint(const llvm::StringRef source_path) {
+  lldb::SBFileSpecList module_list;
+  bp = g_dap.target.BreakpointCreateByLocation(source_path.str().c_str(), line,
+                                               column, 0, module_list);
+  // See comments in BreakpointBase::GetBreakpointLabel() for details of why
+  // we add a label to our breakpoints.
+  bp.AddName(GetBreakpointLabel());
+  if (!condition.empty())
+    SetCondition();
+  if (!hitCondition.empty())
+    SetHitCondition();
+  if (!logMessage.empty())
+    SetLogMessage();
+}
+
+} // namespace lldb_dap

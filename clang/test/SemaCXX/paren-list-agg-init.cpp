@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -verify -std=c++20 %s -fsyntax-only
+// RUN: %clang_cc1 -verify -std=c++20 %s -fsyntax-only -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -verify=expected,beforecxx20 -Wc++20-extensions -std=c++20 %s -fsyntax-only -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -verify=expected,beforecxx20 -Wc++20-extensions -std=c++20 %s -fsyntax-only
 
 struct A { // expected-note 4{{candidate constructor}}

@@ -182,6 +182,12 @@ C23 Feature Support
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
+* Clang now has a ``__builtin_vectorelements()`` function that determines the number of elements in a vector.
+  For fixed-sized vectors, e.g., defined via ``__attribute__((vector_size(N)))`` or ARM NEON's vector types
+  (e.g., ``uint16x8_t``), this returns the constant number of elements at compile-time.
+  For scalable vectors, e.g., SVE or RISC-V V, the number of elements is not known at compile-time and is
+  determined at runtime.
+
 New Compiler Flags
 ------------------
 
@@ -403,6 +409,9 @@ Bug Fixes in This Version
   operator in C. No longer issuing a confusing diagnostic along the lines of
   "incompatible operand types ('foo' and 'foo')" with extensions such as matrix
   types. Fixes (`#69008 <https://github.com/llvm/llvm-project/issues/69008>`_)
+- Clang no longer permits using the `_BitInt` types as an underlying type for an
+  enumeration as specified in the C23 Standard.
+  Fixes (`#69619 <https://github.com/llvm/llvm-project/issues/69619>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -570,6 +579,8 @@ X86 Support
 - Support ISA of ``USER_MSR``.
   * Support intrinsic of ``_urdmsr``.
   * Support intrinsic of ``_uwrmsr``.
+- Support ISA of ``AVX10.1``.
+- ``-march=pantherlake`` and ``-march=clearwaterforest`` are now supported.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^

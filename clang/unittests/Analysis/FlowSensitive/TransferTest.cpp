@@ -3230,14 +3230,14 @@ TEST(TransferTest, AssignFromBoolLiteral) {
         ASSERT_THAT(FooDecl, NotNull());
 
         const auto *FooVal =
-            dyn_cast_or_null<AtomicBoolValue>(Env.getValue(*FooDecl));
+            dyn_cast_or_null<BoolValue>(Env.getValue(*FooDecl));
         ASSERT_THAT(FooVal, NotNull());
 
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
         const auto *BarVal =
-            dyn_cast_or_null<AtomicBoolValue>(Env.getValue(*BarDecl));
+            dyn_cast_or_null<BoolValue>(Env.getValue(*BarDecl));
         ASSERT_THAT(BarVal, NotNull());
 
         EXPECT_EQ(FooVal, &Env.getBoolLiteralValue(true));
@@ -3415,7 +3415,7 @@ TEST(TransferTest, AssignFromBoolNegation) {
         ASSERT_THAT(FooDecl, NotNull());
 
         const auto *FooVal =
-            dyn_cast_or_null<AtomicBoolValue>(Env.getValue(*FooDecl));
+            dyn_cast_or_null<BoolValue>(Env.getValue(*FooDecl));
         ASSERT_THAT(FooVal, NotNull());
 
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");

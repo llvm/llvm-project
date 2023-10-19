@@ -47,6 +47,10 @@
 #include <tuple>
 #include <utility>
 
+#ifdef __SSE4_2__
+#include <nmmintrin.h>
+#endif
+
 using namespace clang;
 
 //===----------------------------------------------------------------------===//
@@ -1847,19 +1851,47 @@ bool Lexer::LexUnicodeIdentifierStart(Token &Result, uint32_t C,
   return true;
 }
 
+static const char *
+fastParseASCIIIdentifier(const char *CurPtr,
+                         [[maybe_unused]] const char *BufferEnd) {
+#ifdef __SSE4_2__
+  alignas(16) static constexpr char AsciiIdentifierRange[16] = {
+      '_', '_', 'A', 'Z', 'a', 'z', '0', '9',
+  };
+  constexpr ssize_t BytesPerRegister = 16;
+
+  __m128i AsciiIdentifierRangeV =
+      _mm_load_si128((const __m128i *)AsciiIdentifierRange);
+
+  while (LLVM_LIKELY(BufferEnd - CurPtr >= BytesPerRegister)) {
+    __m128i Cv = _mm_loadu_si128((const __m128i *)(CurPtr));
+
+    int Consumed = _mm_cmpistri(AsciiIdentifierRangeV, Cv,
+                                _SIDD_LEAST_SIGNIFICANT | _SIDD_CMP_RANGES |
+                                    _SIDD_UBYTE_OPS | _SIDD_NEGATIVE_POLARITY);
+    CurPtr += Consumed;
+    if (Consumed == BytesPerRegister)
+      continue;
+    return CurPtr;
+  }
+#endif
+
+  unsigned char C = *CurPtr;
+  while (isAsciiIdentifierContinue(C))
+    C = *++CurPtr;
+  return CurPtr;
+}
+
 bool Lexer::LexIdentifierContinue(Token &Result, const char *CurPtr) {
   // Match [_A-Za-z0-9]*, we have already matched an identifier start.
+
   while (true) {
-    unsigned char C = *CurPtr;
-    // Fast path.
-    if (isAsciiIdentifierContinue(C)) {
-      ++CurPtr;
-      continue;
-    }
+
+    CurPtr = fastParseASCIIIdentifier(CurPtr, BufferEnd);
 
     unsigned Size;
     // Slow path: handle trigraph, unicode codepoints, UCNs.
-    C = getCharAndSize(CurPtr, Size);
+    unsigned char C = getCharAndSize(CurPtr, Size);
     if (isAsciiIdentifierContinue(C)) {
       CurPtr = ConsumeChar(CurPtr, Size, Result);
       continue;
