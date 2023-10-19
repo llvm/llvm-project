@@ -43,8 +43,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Target/TargetMachine.h"
-#include <optional>
-#include <sstream>
 
 using namespace llvm;
 
@@ -66,20 +64,23 @@ MachineBasicBlock *CloneMachineBasicBlock(MachineBasicBlock &OrigBB,
     CloneBB->push_back(MF.CloneMachineInstr(&I));
 
   // Add the successors of the original block as the new block's successors.
-  // We set the predecessor later.
+  // We set the predecessor after returning from this call.
   for (auto SI = OrigBB.succ_begin(), SE = OrigBB.succ_end(); SI != SE; ++SI)
     CloneBB->copySuccessor(&OrigBB, SI);
 
   if (auto FT = OrigBB.getFallThrough(/*JumpToFallThrough=*/false)) {
     // The original block has an implicit fall through.
     // Insert an explicit unconditional jump from the cloned block to the
-    // fallthrough block.
+    // fallthrough block. Technically, this is only needed for the last block
+    // of the path, but we do it for all clones for consistency.
     TII->insertUnconditionalBranch(*CloneBB, FT, CloneBB->findBranchDebugLoc());
   }
   return CloneBB;
 }
 
-// Returns if we can legally apply all clonings specified in `ClonePaths`.
+// Returns if we can legally apply the cloning represented by `ClonePath`.
+// `BBIDToBlock` contains the original basic blocks in function `MF` keyed by
+// their `BBID::BaseID`.
 bool IsValidCloning(const MachineFunction &MF,
                     const DenseMap<unsigned, MachineBasicBlock *> &BBIDToBlock,
                     const SmallVector<unsigned> &ClonePath) {
@@ -141,8 +142,10 @@ bool ApplyCloning(MachineFunction &MF,
     for (unsigned BBID : ClonePath) {
       MachineBasicBlock *OrigBB = BBIDToBlock.at(BBID);
       if (PrevBB == nullptr) {
+        // The first block in the path is not cloned. We only need to make it
+        // branch to the next cloned block in the path. Here, we make its
+        // fallthrough explicit so we can change it later.
         if (auto FT = OrigBB->getFallThrough(/*JumpToFallThrough=*/false)) {
-          // Make fallthroughs explicit since we may change the layout.
           TII->insertUnconditionalBranch(*OrigBB, FT,
                                          OrigBB->findBranchDebugLoc());
         }
@@ -152,13 +155,16 @@ bool ApplyCloning(MachineFunction &MF,
       MachineBasicBlock *CloneBB =
           CloneMachineBasicBlock(*OrigBB, ++NClonesForBBID[BBID]);
 
+      // Set up the previous block in the path to jump to the clone. This also
+      // transfers the successor/predecessor relationship of PrevBB and OrigBB
+      // to that of PrevBB and CloneBB.
+      PrevBB->ReplaceUsesOfBlockWith(OrigBB, CloneBB);
+
+      // CloneBB has a single predecessor. Therefore, its livein is the liveout
+      // of the predecessor block.
       for (auto &LiveOut : PrevBB->liveouts())
         CloneBB->addLiveIn(LiveOut);
 
-      // Set up the previous block in the path to jump to the clone. This also
-      // transfers the successor/predecessor relationship between PrevBB and
-      // OrigBB to between PrevBB and CloneBB.
-      PrevBB->ReplaceUsesOfBlockWith(OrigBB, CloneBB);
       PrevBB = CloneBB;
     }
     AnyPathsCloned = true;
@@ -201,8 +207,7 @@ INITIALIZE_PASS_END(
     false)
 
 bool BasicBlockPathCloning::runOnMachineFunction(MachineFunction &MF) {
-  auto BBSectionsType = MF.getTarget().getBBSectionsType();
-  assert(BBSectionsType == BasicBlockSection::List &&
+  assert(MF.getTarget().getBBSectionsType() == BasicBlockSection::List &&
          "BB Sections list not enabled!");
   if (hasInstrProfHashMismatch(MF))
     return false;

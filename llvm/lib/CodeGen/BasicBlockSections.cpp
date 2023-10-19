@@ -77,10 +77,8 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/WithColor.h"
 #include "llvm/Target/TargetMachine.h"
 #include <optional>
-#include <sstream>
 
 using namespace llvm;
 
