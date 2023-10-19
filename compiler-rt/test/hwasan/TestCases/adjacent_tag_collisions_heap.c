@@ -16,16 +16,24 @@ void check_collisions_on_heap(size_t size) {
   void *b = malloc(size);
   void *c = malloc(size);
 
-  // Confirm that no object can access adjacent objects
-  assert(__hwasan_test_shadow(a, size + 1) != -1);
-  assert(__hwasan_test_shadow(b, size + 1) != -1);
-  assert(__hwasan_test_shadow(c, size + 1) != -1);
+  // Confirm that no pointer can access right adjacent objects
+  assert(__hwasan_test_shadow(a, size + 1) == size);
+  assert(__hwasan_test_shadow(b, size + 1) == size);
+  assert(__hwasan_test_shadow(c, size + 1) == size);
 
-  // Confirm that freeing an object does not increase bounds of objects
+  // Confirm that no pointer can access left adjacent objects
+  assert(__hwasan_test_shadow(a - 1, 1) == 0);
+  assert(__hwasan_test_shadow(b - 1, 1) == 0);
+  assert(__hwasan_test_shadow(c - 1, 1) == 0);
+
+  // Confirm that freeing an object does not increase bounds of adjacent objects and sets accessible bounds of freed pointer to zero
   free(b);
-  assert(__hwasan_test_shadow(a, size + 1) != -1);
-  assert(__hwasan_test_shadow(b, size + 1) != -1);
-  assert(__hwasan_test_shadow(c, size + 1) != -1);
+  assert(__hwasan_test_shadow(a, size + 1) == size);
+  assert(__hwasan_test_shadow(b, size + 1) == 0);
+  assert(__hwasan_test_shadow(c, size + 1) == size);
+  assert(__hwasan_test_shadow(a - 1, 1) == 0);
+  assert(__hwasan_test_shadow(b - 1, 1) == 0);
+  assert(__hwasan_test_shadow(c - 1, 1) == 0);
 
   free(a);
   free(c);
