@@ -129,7 +129,7 @@ define void @cmpxchg_i8_acquire_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; LA64-NEXT:    beqz $a5, .LBB4_1
 ; LA64-NEXT:    b .LBB4_4
 ; LA64-NEXT:  .LBB4_3:
-; LA64-NEXT:    dbar 20
+; LA64-NEXT:    dbar 1792
 ; LA64-NEXT:  .LBB4_4:
 ; LA64-NEXT:    ret
   %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val acquire monotonic
@@ -162,7 +162,7 @@ define void @cmpxchg_i16_acquire_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; LA64-NEXT:    beqz $a5, .LBB5_1
 ; LA64-NEXT:    b .LBB5_4
 ; LA64-NEXT:  .LBB5_3:
-; LA64-NEXT:    dbar 20
+; LA64-NEXT:    dbar 1792
 ; LA64-NEXT:  .LBB5_4:
 ; LA64-NEXT:    ret
   %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val acquire monotonic
@@ -181,7 +181,7 @@ define void @cmpxchg_i32_acquire_monotonic(ptr %ptr, i32 %cmp, i32 %val) nounwin
 ; LA64-NEXT:    beqz $a4, .LBB6_1
 ; LA64-NEXT:    b .LBB6_4
 ; LA64-NEXT:  .LBB6_3:
-; LA64-NEXT:    dbar 20
+; LA64-NEXT:    dbar 1792
 ; LA64-NEXT:  .LBB6_4:
 ; LA64-NEXT:    ret
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val acquire monotonic
@@ -200,7 +200,7 @@ define void @cmpxchg_i64_acquire_monotonic(ptr %ptr, i64 %cmp, i64 %val) nounwin
 ; LA64-NEXT:    beqz $a4, .LBB7_1
 ; LA64-NEXT:    b .LBB7_4
 ; LA64-NEXT:  .LBB7_3:
-; LA64-NEXT:    dbar 20
+; LA64-NEXT:    dbar 1792
 ; LA64-NEXT:  .LBB7_4:
 ; LA64-NEXT:    ret
   %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val acquire monotonic
