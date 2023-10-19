@@ -1283,16 +1283,8 @@ output. It is intended for debugging purpose.
 
 * At top level, the message is printed immediately.
 
-* In a record definition, the message is saved and all messages are
-  printed after the record is completely built.
-
-* In a class definition, the messages are saved and inherited by all
-  the subclasses and records that inherit from the class. The messages
-  are then printed when the records are completely built.
-
-* In a multiclass definition, the messages are saved with the other
-  components of the multiclass and then printed each time the
-  multiclass is instantiated with ``defm``.
+* Within a record/class/multiclass, `dump` gets evaluated at each
+  instantiation point of the containing record.
 
 .. productionlist::
    Dump: "dump"  `string` ";"
