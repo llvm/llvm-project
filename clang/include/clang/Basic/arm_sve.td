@@ -1880,6 +1880,78 @@ def SVWHILELO_COUNT  : SInst<"svwhilelo_{d}",  "}nni", "QcQsQiQl", MergeNone, "a
 def SVWHILELS_COUNT  : SInst<"svwhilels_{d}",  "}nni", "QcQsQiQl", MergeNone, "aarch64_sve_whilels_{d}", [IsOverloadNone], [ImmCheck<2, ImmCheck2_4_Mul2>]>;
 def SVWHILEHI_COUNT  : SInst<"svwhilehi_{d}",  "}nni", "QcQsQiQl", MergeNone, "aarch64_sve_whilehi_{d}", [IsOverloadNone], [ImmCheck<2, ImmCheck2_4_Mul2>]>;
 def SVWHILEHS_COUNT  : SInst<"svwhilehs_{d}",  "}nni", "QcQsQiQl", MergeNone, "aarch64_sve_whilehs_{d}", [IsOverloadNone], [ImmCheck<2, ImmCheck2_4_Mul2>]>;
+
+def SVLD1B_X2 : MInst<"svld1[_{2}]_x2", "2}c", "cUc", [IsStructLoad], MemEltTyDefault, "aarch64_sve_ld1_pn_x2">;
+def SVLD1H_X2 : MInst<"svld1[_{2}]_x2", "2}c", "sUshb", [IsStructLoad], MemEltTyDefault, "aarch64_sve_ld1_pn_x2">;
+def SVLD1W_X2 : MInst<"svld1[_{2}]_x2", "2}c", "iUif", [IsStructLoad], MemEltTyDefault, "aarch64_sve_ld1_pn_x2">;
+def SVLD1D_X2 : MInst<"svld1[_{2}]_x2", "2}c", "lUld", [IsStructLoad], MemEltTyDefault, "aarch64_sve_ld1_pn_x2">;
+def SVLD1B_X4 : MInst<"svld1[_{2}]_x4", "4}c", "cUc", [IsStructLoad], MemEltTyDefault, "aarch64_sve_ld1_pn_x4">;
+def SVLD1H_X4 : MInst<"svld1[_{2}]_x4", "4}c", "sUshb", [IsStructLoad], MemEltTyDefault, "aarch64_sve_ld1_pn_x4">;
+def SVLD1W_X4 : MInst<"svld1[_{2}]_x4", "4}c", "iUif", [IsStructLoad], MemEltTyDefault, "aarch64_sve_ld1_pn_x4">;
+def SVLD1D_X4 : MInst<"svld1[_{2}]_x4", "4}c", "lUld", [IsStructLoad], MemEltTyDefault, "aarch64_sve_ld1_pn_x4">;
+
+def SVLDNT1B_X2 : MInst<"svldnt1[_{2}]_x2", "2}c", "cUc", [IsStructLoad], MemEltTyDefault, "aarch64_sve_ldnt1_pn_x2">;
+def SVLDNT1H_X2 : MInst<"svldnt1[_{2}]_x2", "2}c", "sUshb", [IsStructLoad], MemEltTyDefault, "aarch64_sve_ldnt1_pn_x2">;
+def SVLDNT1W_X2 : MInst<"svldnt1[_{2}]_x2", "2}c", "iUif", [IsStructLoad], MemEltTyDefault, "aarch64_sve_ldnt1_pn_x2">;
+def SVLDNT1D_X2 : MInst<"svldnt1[_{2}]_x2", "2}c", "lUld", [IsStructLoad], MemEltTyDefault, "aarch64_sve_ldnt1_pn_x2">;
+def SVLDNT1B_X4 : MInst<"svldnt1[_{2}]_x4", "4}c", "cUc", [IsStructLoad], MemEltTyDefault, "aarch64_sve_ldnt1_pn_x4">;
+def SVLDNT1H_X4 : MInst<"svldnt1[_{2}]_x4", "4}c", "sUshb", [IsStructLoad], MemEltTyDefault, "aarch64_sve_ldnt1_pn_x4">;
+def SVLDNT1W_X4 : MInst<"svldnt1[_{2}]_x4", "4}c", "iUif", [IsStructLoad], MemEltTyDefault, "aarch64_sve_ldnt1_pn_x4">;
+def SVLDNT1D_X4 : MInst<"svldnt1[_{2}]_x4", "4}c", "lUld", [IsStructLoad], MemEltTyDefault, "aarch64_sve_ldnt1_pn_x4">;
+
+def SVLD1B_VNUM_X2 : MInst<"svld1_vnum[_{2}]_x2", "2}cl", "cUc", [IsStructLoad], MemEltTyDefault, "aarch64_sve_ld1_pn_x2">;
+def SVLD1H_VNUM_X2 : MInst<"svld1_vnum[_{2}]_x2", "2}cl", "sUshb", [IsStructLoad], MemEltTyDefault, "aarch64_sve_ld1_pn_x2">;
+def SVLD1W_VNUM_X2 : MInst<"svld1_vnum[_{2}]_x2", "2}cl", "iUif", [IsStructLoad], MemEltTyDefault, "aarch64_sve_ld1_pn_x2">;
+def SVLD1D_VNUM_X2 : MInst<"svld1_vnum[_{2}]_x2", "2}cl", "lUld", [IsStructLoad], MemEltTyDefault, "aarch64_sve_ld1_pn_x2">;
+def SVLD1B_VNUM_X4 : MInst<"svld1_vnum[_{2}]_x4", "4}cl", "cUc", [IsStructLoad], MemEltTyDefault, "aarch64_sve_ld1_pn_x4">;
+def SVLD1H_VNUM_X4 : MInst<"svld1_vnum[_{2}]_x4", "4}cl", "sUshb", [IsStructLoad], MemEltTyDefault, "aarch64_sve_ld1_pn_x4">;
+def SVLD1W_VNUM_X4 : MInst<"svld1_vnum[_{2}]_x4", "4}cl", "iUif", [IsStructLoad], MemEltTyDefault, "aarch64_sve_ld1_pn_x4">;
+def SVLD1D_VNUM_X4 : MInst<"svld1_vnum[_{2}]_x4", "4}cl", "lUld", [IsStructLoad], MemEltTyDefault, "aarch64_sve_ld1_pn_x4">;
+
+def SVLDNT1B_VNUM_X2 : MInst<"svldnt1_vnum[_{2}]_x2", "2}cl", "cUc", [IsStructLoad], MemEltTyDefault, "aarch64_sve_ldnt1_pn_x2">;
+def SVLDNT1H_VNUM_X2 : MInst<"svldnt1_vnum[_{2}]_x2", "2}cl", "sUshb", [IsStructLoad], MemEltTyDefault, "aarch64_sve_ldnt1_pn_x2">;
+def SVLDNT1W_VNUM_X2 : MInst<"svldnt1_vnum[_{2}]_x2", "2}cl", "iUif", [IsStructLoad], MemEltTyDefault, "aarch64_sve_ldnt1_pn_x2">;
+def SVLDNT1D_VNUM_X2 : MInst<"svldnt1_vnum[_{2}]_x2", "2}cl", "lUld", [IsStructLoad], MemEltTyDefault, "aarch64_sve_ldnt1_pn_x2">;
+def SVLDNT1B_VNUM_X4 : MInst<"svldnt1_vnum[_{2}]_x4", "4}cl", "cUc", [IsStructLoad], MemEltTyDefault, "aarch64_sve_ldnt1_pn_x4">;
+def SVLDNT1H_VNUM_X4 : MInst<"svldnt1_vnum[_{2}]_x4", "4}cl", "sUshb", [IsStructLoad], MemEltTyDefault, "aarch64_sve_ldnt1_pn_x4">;
+def SVLDNT1W_VNUM_X4 : MInst<"svldnt1_vnum[_{2}]_x4", "4}cl", "iUif", [IsStructLoad], MemEltTyDefault, "aarch64_sve_ldnt1_pn_x4">;
+def SVLDNT1D_VNUM_X4 : MInst<"svldnt1_vnum[_{2}]_x4", "4}cl", "lUld", [IsStructLoad], MemEltTyDefault, "aarch64_sve_ldnt1_pn_x4">;
+
+def SVST1B_X2 : MInst<"svst1[_{2}_x2]", "v}p2", "cUc", [IsStructStore], MemEltTyDefault, "aarch64_sve_st1_pn_x2">;
+def SVST1H_X2 : MInst<"svst1[_{2}_x2]", "v}p2", "sUshb", [IsStructStore], MemEltTyDefault, "aarch64_sve_st1_pn_x2">;
+def SVST1W_X2 : MInst<"svst1[_{2}_x2]", "v}p2", "iUif", [IsStructStore], MemEltTyDefault, "aarch64_sve_st1_pn_x2">;
+def SVST1D_X2 : MInst<"svst1[_{2}_x2]", "v}p2", "lUld", [IsStructStore], MemEltTyDefault, "aarch64_sve_st1_pn_x2">;
+def SVST1B_X4 : MInst<"svst1[_{2}_x4]", "v}p4", "cUc", [IsStructStore], MemEltTyDefault, "aarch64_sve_st1_pn_x4">;
+def SVST1H_X4 : MInst<"svst1[_{2}_x4]", "v}p4", "sUshb", [IsStructStore], MemEltTyDefault, "aarch64_sve_st1_pn_x4">;
+def SVST1W_X4 : MInst<"svst1[_{2}_x4]", "v}p4", "iUif", [IsStructStore], MemEltTyDefault, "aarch64_sve_st1_pn_x4">;
+def SVST1D_X4 : MInst<"svst1[_{2}_x4]", "v}p4", "lUld", [IsStructStore], MemEltTyDefault, "aarch64_sve_st1_pn_x4">;
+
+def SVST1B_VNUM_X2 : MInst<"svst1_vnum[_{2}_x2]", "v}pl2", "cUc", [IsStructStore], MemEltTyDefault, "aarch64_sve_st1_pn_x2">;
+def SVST1H_VNUM_X2 : MInst<"svst1_vnum[_{2}_x2]", "v}pl2", "sUshb", [IsStructStore], MemEltTyDefault, "aarch64_sve_st1_pn_x2">;
+def SVST1W_VNUM_X2 : MInst<"svst1_vnum[_{2}_x2]", "v}pl2", "iUif", [IsStructStore], MemEltTyDefault, "aarch64_sve_st1_pn_x2">;
+def SVST1D_VNUM_X2 : MInst<"svst1_vnum[_{2}_x2]", "v}pl2", "lUld", [IsStructStore], MemEltTyDefault, "aarch64_sve_st1_pn_x2">;
+def SVST1B_VNUM_X4 : MInst<"svst1_vnum[_{2}_x4]", "v}pl4", "cUc", [IsStructStore], MemEltTyDefault, "aarch64_sve_st1_pn_x4">;
+def SVST1H_VNUM_X4 : MInst<"svst1_vnum[_{2}_x4]", "v}pl4", "sUshb", [IsStructStore], MemEltTyDefault, "aarch64_sve_st1_pn_x4">;
+def SVST1W_VNUM_X4 : MInst<"svst1_vnum[_{2}_x4]", "v}pl4", "iUif", [IsStructStore], MemEltTyDefault, "aarch64_sve_st1_pn_x4">;
+def SVST1D_VNUM_X4 : MInst<"svst1_vnum[_{2}_x4]", "v}pl4", "lUld", [IsStructStore], MemEltTyDefault, "aarch64_sve_st1_pn_x4">;
+
+def SVSTNT1B_X2 : MInst<"svstnt1[_{2}_x2]", "v}p2", "cUc", [IsStructStore], MemEltTyDefault, "aarch64_sve_stnt1_pn_x2">;
+def SVSTNT1H_X2 : MInst<"svstnt1[_{2}_x2]", "v}p2", "sUshb", [IsStructStore], MemEltTyDefault, "aarch64_sve_stnt1_pn_x2">;
+def SVSTNT1W_X2 : MInst<"svstnt1[_{2}_x2]", "v}p2", "iUif", [IsStructStore], MemEltTyDefault, "aarch64_sve_stnt1_pn_x2">;
+def SVSTNT1D_X2 : MInst<"svstnt1[_{2}_x2]", "v}p2", "lUld", [IsStructStore], MemEltTyDefault, "aarch64_sve_stnt1_pn_x2">;
+def SVSTNT1B_X4 : MInst<"svstnt1[_{2}_x4]", "v}p4", "cUc", [IsStructStore], MemEltTyDefault, "aarch64_sve_stnt1_pn_x4">;
+def SVSTNT1H_X4 : MInst<"svstnt1[_{2}_x4]", "v}p4", "sUshb", [IsStructStore], MemEltTyDefault, "aarch64_sve_stnt1_pn_x4">;
+def SVSTNT1W_X4 : MInst<"svstnt1[_{2}_x4]", "v}p4", "iUif", [IsStructStore], MemEltTyDefault, "aarch64_sve_stnt1_pn_x4">;
+def SVSTNT1D_X4 : MInst<"svstnt1[_{2}_x4]", "v}p4", "lUld", [IsStructStore], MemEltTyDefault, "aarch64_sve_stnt1_pn_x4">;
+
+def SVSTNT1B_VNUM_X2 : MInst<"svstnt1_vnum[_{2}_x2]", "v}pl2", "cUc", [IsStructStore], MemEltTyDefault, "aarch64_sve_stnt1_pn_x2">;
+def SVSTNT1H_VNUM_X2 : MInst<"svstnt1_vnum[_{2}_x2]", "v}pl2", "sUshb", [IsStructStore], MemEltTyDefault, "aarch64_sve_stnt1_pn_x2">;
+def SVSTNT1W_VNUM_X2 : MInst<"svstnt1_vnum[_{2}_x2]", "v}pl2", "iUif", [IsStructStore], MemEltTyDefault, "aarch64_sve_stnt1_pn_x2">;
+def SVSTNT1D_VNUM_X2 : MInst<"svstnt1_vnum[_{2}_x2]", "v}pl2", "lUld", [IsStructStore], MemEltTyDefault, "aarch64_sve_stnt1_pn_x2">;
+def SVSTNT1B_VNUM_X4 : MInst<"svstnt1_vnum[_{2}_x4]", "v}pl4", "cUc", [IsStructStore], MemEltTyDefault, "aarch64_sve_stnt1_pn_x4">;
+def SVSTNT1H_VNUM_X4 : MInst<"svstnt1_vnum[_{2}_x4]", "v}pl4", "sUshb", [IsStructStore], MemEltTyDefault, "aarch64_sve_stnt1_pn_x4">;
+def SVSTNT1W_VNUM_X4 : MInst<"svstnt1_vnum[_{2}_x4]", "v}pl4", "iUif", [IsStructStore], MemEltTyDefault, "aarch64_sve_stnt1_pn_x4">;
+def SVSTNT1D_VNUM_X4 : MInst<"svstnt1_vnum[_{2}_x4]", "v}pl4", "lUld", [IsStructStore], MemEltTyDefault, "aarch64_sve_stnt1_pn_x4">;
 }
 
 let TargetGuard = "sve2p1" in {
