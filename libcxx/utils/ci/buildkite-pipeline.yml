@@ -26,31 +26,12 @@ env:
     # LLVM POST-BRANCH bump version
     # LLVM POST-BRANCH add compiler test for ToT - 1, e.g. "Clang 17"
     # LLVM RELEASE bump remove compiler ToT - 3, e.g. "Clang 15"
-    LLVM_STABLE_VERSION: "17" # Used for tooling, update after the RELEASE.
     LLVM_HEAD_VERSION: "18"   # Used compiler, update POST-BRANCH.
     GCC_STABLE_VERSION: "13"
 steps:
   #
   # Light pre-commit tests for things like forgetting to update generated files.
   #
-  - label: "Generated output"
-    command: "libcxx/utils/ci/run-buildbot check-generated-output"
-    artifact_paths:
-      - "**/generated_output.patch"
-      - "**/generated_output.status"
-    env:
-        CC: "clang-${LLVM_HEAD_VERSION}"
-        CXX: "clang++-${LLVM_HEAD_VERSION}"
-        CLANG_FORMAT: "/usr/bin/clang-format-${LLVM_STABLE_VERSION}"
-    agents:
-      queue: "libcxx-builders"
-      os: "linux"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-    timeout_in_minutes: 120
-
   - label: "Documentation"
     command: "libcxx/utils/ci/run-buildbot documentation"
     artifact_paths:
