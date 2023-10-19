@@ -891,7 +891,7 @@ Error ResourceFileWriter::visitIconOrCursorResource(const RCResource *Base) {
   if (!File)
     return File.takeError();
 
-  BinaryStreamReader Reader((*File)->getBuffer(), support::little);
+  BinaryStreamReader Reader((*File)->getBuffer(), llvm::endianness::little);
 
   // Read the file headers.
   //   - At the beginning, ICONDIR/NEWHEADER header.

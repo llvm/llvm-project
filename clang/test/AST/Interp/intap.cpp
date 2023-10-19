@@ -3,6 +3,31 @@
 // RUN: %clang_cc1 -std=c++11 -fms-extensions -verify=ref %s
 // RUN: %clang_cc1 -std=c++20 -fms-extensions -verify=ref %s
 
+
+using MaxBitInt = _BitInt(128);
+
+constexpr _BitInt(2) A = 0;
+constexpr _BitInt(2) B = A + 1;
+constexpr _BitInt(2) C = B + 1; // expected-warning {{from 2 to -2}} \
+                                // ref-warning {{from 2 to -2}}
+static_assert(C == -2, "");
+
+
+constexpr MaxBitInt A_ = 0;
+constexpr MaxBitInt B_ = A_ + 1;
+static_assert(B_ == 1, "");
+
+constexpr MaxBitInt BitIntZero{};
+static_assert(BitIntZero == 0, "");
+constexpr unsigned _BitInt(128) UBitIntZero{};
+static_assert(UBitIntZero == 0, "");
+
+constexpr _BitInt(2) BitIntZero2{};
+static_assert(BitIntZero2 == 0, "");
+constexpr unsigned _BitInt(1) UBitIntZero1{};
+static_assert(UBitIntZero1 == 0, "");
+
+
 #ifdef __SIZEOF_INT128__
 namespace i128 {
   typedef __int128 int128_t;
@@ -27,9 +52,17 @@ namespace i128 {
                                          // ref-note {{outside the range}}
   constexpr int128_t Two = (int128_t)1 << 1ul;
   static_assert(Two == 2, "");
+  static_assert(Two, "");
+  constexpr bool CastedToBool = Two;
+  static_assert(CastedToBool, "");
 
   constexpr uint128_t AllOnes = ~static_cast<uint128_t>(0);
   static_assert(AllOnes == UINT128_MAX, "");
+
+  constexpr uint128_t i128Zero{};
+  static_assert(i128Zero == 0, "");
+  constexpr uint128_t ui128Zero{};
+  static_assert(ui128Zero == 0, "");
 
 #if __cplusplus >= 201402L
   template <typename T>
@@ -76,9 +109,13 @@ namespace i128 {
                                            // expected-note {{is outside the range of representable values of type}}
 }
 
-#else
-/// No int128 support, so no expected directives.
+namespace AddSubOffset {
+  constexpr __int128 A = 1;
+  constexpr int arr[] = {1,2,3};
+  constexpr const int *P = arr + A;
+  static_assert(*P == 2, "");
+  constexpr const int *P2 = P - A;
+  static_assert(*P2 == 1,"");
+}
 
-// expected-no-diagnostics
-// ref-no-diagnostics
 #endif

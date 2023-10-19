@@ -17,10 +17,11 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Target/Statistics.h"
 
+namespace lldb_private::plugin {
+namespace dwarf {
 class DWARFDeclContext;
 class DWARFDIE;
 
-namespace lldb_private {
 class DWARFIndex {
 public:
   DWARFIndex(Module &module) : m_module(module) {}
@@ -102,6 +103,7 @@ protected:
 
   void ReportInvalidDIERef(DIERef ref, llvm::StringRef name) const;
 };
-} // namespace lldb_private
+} // namespace dwarf
+} // namespace lldb_private::plugin
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFINDEX_H

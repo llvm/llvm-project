@@ -31,6 +31,7 @@
 // NOTE: Client code will need to include "mlir/ExecutionEngine/Float16bits.h"
 // if they want to use the `MLIR_SPARSETENSOR_FOREVERY_V` macro.
 
+#include <cassert>
 #include <cinttypes>
 #include <complex>
 #include <optional>
@@ -143,14 +144,12 @@ constexpr bool isComplexPrimaryType(PrimaryType valTy) {
 /// The actions performed by @newSparseTensor.
 enum class Action : uint32_t {
   kEmpty = 0,
-  // newSparseTensor no longer handles `kFromFile=1`, so we leave this
-  // number reserved to help catch any code that still needs updating.
+  kEmptyForward = 1,
   kFromCOO = 2,
-  kSparseToSparse = 3,
-  kEmptyCOO = 4,
+  kFromReader = 4,
   kToCOO = 5,
-  kToIterator = 6,
   kPack = 7,
+  kSortCOOInPlace = 8,
 };
 
 /// This enum defines all the sparse representations supportable by
@@ -444,6 +443,56 @@ static_assert((isUniqueDLT(DimLevelType::Dense) &&
                isUniqueDLT(DimLevelType::LooseCompressedNo) &&
                !isUniqueDLT(DimLevelType::LooseCompressedNuNo)),
               "isUniqueDLT definition is broken");
+
+/// Bit manipulations for affine encoding.
+///
+/// Note that because the indices in the mappings refer to dimensions
+/// and levels (and *not* the sizes of these dimensions and levels), the
+/// 64-bit encoding gives ample room for a compact encoding of affine
+/// operations in the higher bits. Pure permutations still allow for
+/// 60-bit indices. But non-permutations reserve 20-bits for the
+/// potential three components (index i, constant, index ii).
+///
+/// The compact encoding is as follows:
+///
+///  0xffffffffffffffff
+/// |0000      |                        60-bit idx| e.g. i
+/// |0001 floor|           20-bit const|20-bit idx| e.g. i floor c
+/// |0010 mod  |           20-bit const|20-bit idx| e.g. i mod c
+/// |0011 mul  |20-bit idx|20-bit const|20-bit idx| e.g. i + c * ii
+///
+/// This encoding provides sufficient generality for currently supported
+/// sparse tensor types. To generalize this more, we will need to provide
+/// a broader encoding scheme for affine functions. Also, the library
+/// encoding may be replaced with pure "direct-IR" code in the future.
+///
+constexpr uint64_t encodeDim(uint64_t i, uint64_t cf, uint64_t cm) {
+  if (cf != 0) {
+    assert(cf <= 0xfffff && cm == 0 && i <= 0xfffff);
+    return (0x01L << 60) | (cf << 20) | i;
+  }
+  if (cm != 0) {
+    assert(cm <= 0xfffff && i <= 0xfffff);
+    return (0x02L << 60) | (cm << 20) | i;
+  }
+  assert(i <= 0x0fffffffffffffffu);
+  return i;
+}
+constexpr uint64_t encodeLvl(uint64_t i, uint64_t c, uint64_t ii) {
+  if (c != 0) {
+    assert(c <= 0xfffff && ii <= 0xfffff && i <= 0xfffff);
+    return (0x03L << 60) | (c << 20) | (ii << 40) | i;
+  }
+  assert(i <= 0x0fffffffffffffffu);
+  return i;
+}
+constexpr bool isEncodedFloor(uint64_t v) { return (v >> 60) == 0x01; }
+constexpr bool isEncodedMod(uint64_t v) { return (v >> 60) == 0x02; }
+constexpr bool isEncodedMul(uint64_t v) { return (v >> 60) == 0x03; }
+constexpr uint64_t decodeIndex(uint64_t v) { return v & 0xfffffu; }
+constexpr uint64_t decodeConst(uint64_t v) { return (v >> 20) & 0xfffffu; }
+constexpr uint64_t decodeMulc(uint64_t v) { return (v >> 20) & 0xfffffu; }
+constexpr uint64_t decodeMuli(uint64_t v) { return (v >> 40) & 0xfffffu; }
 
 } // namespace sparse_tensor
 } // namespace mlir

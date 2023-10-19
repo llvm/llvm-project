@@ -17,6 +17,7 @@ set(core_files
   __stdarg_va_list.h
   stdatomic.h
   stdbool.h
+  stdckdint.h
   stddef.h
   __stddef_max_align_t.h
   __stddef_null.h
@@ -224,6 +225,7 @@ set(x86_files
   tmmintrin.h
   tsxldtrkintrin.h
   uintrintrin.h
+  usermsrintrin.h
   vaesintrin.h
   vpclmulqdqintrin.h
   waitpkgintrin.h

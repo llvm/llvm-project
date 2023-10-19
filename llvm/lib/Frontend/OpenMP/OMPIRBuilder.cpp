@@ -5733,7 +5733,9 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
 
 OpenMPIRBuilder::InsertPointTy
 OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
-                             BodyGenCallbackTy BodyGenCB) {
+                             BodyGenCallbackTy BodyGenCB, Value *NumTeamsLower,
+                             Value *NumTeamsUpper, Value *ThreadLimit,
+                             Value *IfExpr) {
   if (!updateToLocation(Loc))
     return InsertPointTy();
 
@@ -5771,6 +5773,42 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
   BasicBlock *AllocaBB =
       splitBB(Builder, /*CreateBranch=*/true, "teams.alloca");
 
+  // Push num_teams
+  if (NumTeamsLower || NumTeamsUpper || ThreadLimit || IfExpr) {
+    assert((NumTeamsLower == nullptr || NumTeamsUpper != nullptr) &&
+           "if lowerbound is non-null, then upperbound must also be non-null "
+           "for bounds on num_teams");
+
+    if (NumTeamsUpper == nullptr)
+      NumTeamsUpper = Builder.getInt32(0);
+
+    if (NumTeamsLower == nullptr)
+      NumTeamsLower = NumTeamsUpper;
+
+    if (IfExpr) {
+      assert(IfExpr->getType()->isIntegerTy() &&
+             "argument to if clause must be an integer value");
+
+      // upper = ifexpr ? upper : 1
+      if (IfExpr->getType() != Int1)
+        IfExpr = Builder.CreateICmpNE(IfExpr,
+                                      ConstantInt::get(IfExpr->getType(), 0));
+      NumTeamsUpper = Builder.CreateSelect(
+          IfExpr, NumTeamsUpper, Builder.getInt32(1), "numTeamsUpper");
+
+      // lower = ifexpr ? lower : 1
+      NumTeamsLower = Builder.CreateSelect(
+          IfExpr, NumTeamsLower, Builder.getInt32(1), "numTeamsLower");
+    }
+
+    if (ThreadLimit == nullptr)
+      ThreadLimit = Builder.getInt32(0);
+
+    Value *ThreadNum = getOrCreateThreadID(Ident);
+    Builder.CreateCall(
+        getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_push_num_teams_51),
+        {Ident, ThreadNum, NumTeamsLower, NumTeamsUpper, ThreadLimit});
+  }
   // Generate the body of teams.
   InsertPointTy AllocaIP(AllocaBB, AllocaBB->begin());
   InsertPointTy CodeGenIP(BodyBB, BodyBB->begin());

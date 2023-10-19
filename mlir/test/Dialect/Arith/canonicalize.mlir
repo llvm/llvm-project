@@ -182,6 +182,18 @@ func.func @selAndNotCond(%arg0: i1, %arg1: i1, %arg2 : i32, %arg3 : i32) -> i32 
   return %res : i32
 }
 
+// CHECK-LABEL: @selAndNotCondVec
+//       CHECK-NEXT: %[[one:.+]] = arith.constant dense<true> : vector<4xi1>
+//       CHECK-NEXT: %[[not:.+]] = arith.xori %arg0, %[[one]]
+//       CHECK-NEXT: %[[and:.+]] = arith.andi %arg1, %[[not]]
+//       CHECK-NEXT: %[[res:.+]] = arith.select %[[and]], %arg3, %arg2
+//       CHECK-NEXT: return %[[res]]
+func.func @selAndNotCondVec(%arg0: vector<4xi1>, %arg1: vector<4xi1>, %arg2 : vector<4xi32>, %arg3 : vector<4xi32>) -> vector<4xi32> {
+  %sel = arith.select %arg0, %arg2, %arg3 : vector<4xi1>, vector<4xi32>
+  %res = arith.select %arg1, %sel, %arg2 : vector<4xi1>, vector<4xi32>
+  return %res : vector<4xi32>
+}
+
 // CHECK-LABEL: @selOrCond
 //       CHECK-NEXT: %[[or:.+]] = arith.ori %arg1, %arg0
 //       CHECK-NEXT: %[[res:.+]] = arith.select %[[or]], %arg2, %arg3
@@ -202,6 +214,18 @@ func.func @selOrNotCond(%arg0: i1, %arg1: i1, %arg2 : i32, %arg3 : i32) -> i32 {
   %sel = arith.select %arg0, %arg2, %arg3 : i32
   %res = arith.select %arg1, %arg3, %sel : i32
   return %res : i32
+}
+
+// CHECK-LABEL: @selOrNotCondVec
+//       CHECK-NEXT: %[[one:.+]] = arith.constant dense<true> : vector<4xi1>
+//       CHECK-NEXT: %[[not:.+]] = arith.xori %arg0, %[[one]]
+//       CHECK-NEXT: %[[or:.+]] = arith.ori %arg1, %[[not]]
+//       CHECK-NEXT: %[[res:.+]] = arith.select %[[or]], %arg3, %arg2
+//       CHECK-NEXT: return %[[res]]
+func.func @selOrNotCondVec(%arg0: vector<4xi1>, %arg1: vector<4xi1>, %arg2 : vector<4xi32>, %arg3 : vector<4xi32>) -> vector<4xi32> {
+  %sel = arith.select %arg0, %arg2, %arg3 : vector<4xi1>, vector<4xi32>
+  %res = arith.select %arg1, %arg3, %sel : vector<4xi1>, vector<4xi32>
+  return %res : vector<4xi32>
 }
 
 // Test case: Folding of comparisons with equal operands.
@@ -983,6 +1007,18 @@ func.func @tripleMulIMulII32(%arg0: i32) -> i32 {
   %mul1 = arith.muli %arg0, %c_n3 : i32
   %mul2 = arith.muli %mul1, %c7 : i32
   return %mul2 : i32
+}
+
+// CHECK-LABEL: @tripleMulLargeInt
+//       CHECK:   %[[cres:.+]] = arith.constant 3618502788666131213697322783095070105623107215331596699973092056135872020482 : i256
+//       CHECK:   %[[addi:.+]] = arith.addi %arg0, %[[cres]] : i256
+//       CHECK:   return %[[addi]]
+func.func @tripleMulLargeInt(%arg0: i256) -> i256 {
+  %0 = arith.constant 3618502788666131213697322783095070105623107215331596699973092056135872020481 : i256
+  %1 = arith.constant 1 : i256
+  %2 = arith.addi %arg0, %0 : i256
+  %3 = arith.addi %2, %1 : i256
+  return %3 : i256
 }
 
 // CHECK-LABEL: @addiMuliToSubiRhsI32

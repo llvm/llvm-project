@@ -2889,7 +2889,7 @@ CheckDeducedArgumentConstraints(Sema &S, TemplateDeclT *Template,
                                   CanonicalDeducedArgs};
 
   MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
-      Template, /*Final=*/false,
+      Template, Template->getDeclContext(), /*Final=*/false,
       /*InnerMost=*/NeedsReplacement ? nullptr : &DeducedTAL,
       /*RelativeToPrimary=*/true, /*Pattern=*/
       nullptr, /*ForConstraintInstantiation=*/true);

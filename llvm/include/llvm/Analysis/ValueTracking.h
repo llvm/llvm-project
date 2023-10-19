@@ -17,6 +17,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/SimplifyQuery.h"
+#include "llvm/Analysis/WithCache.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/FMF.h"
@@ -90,6 +91,12 @@ KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
                            const DominatorTree *DT = nullptr,
                            bool UseInstrInfo = true);
 
+KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
+                           unsigned Depth, const SimplifyQuery &Q);
+
+KnownBits computeKnownBits(const Value *V, unsigned Depth,
+                           const SimplifyQuery &Q);
+
 /// Compute known bits from the range metadata.
 /// \p KnownZero the set of bits that are known to be zero
 /// \p KnownOne the set of bits that are known to be one
@@ -107,7 +114,8 @@ KnownBits analyzeKnownBitsFromAndXorOr(
     bool UseInstrInfo = true);
 
 /// Return true if LHS and RHS have no common bits set.
-bool haveNoCommonBitsSet(const Value *LHS, const Value *RHS,
+bool haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
+                         const WithCache<const Value *> &RHSCache,
                          const SimplifyQuery &SQ);
 
 /// Return true if the given value is known to have exactly one bit set when
@@ -239,10 +247,6 @@ struct KnownFPClass {
   /// std::nullopt if the sign bit is unknown, true if the sign bit is
   /// definitely set or false if the sign bit is definitely unset.
   std::optional<bool> SignBit;
-
-  bool operator==(KnownFPClass Other) const {
-    return KnownFPClasses == Other.KnownFPClasses && SignBit == Other.SignBit;
-  }
 
   /// Return true if it's known this can never be one of the mask entries.
   bool isKnownNever(FPClassTest Mask) const {
@@ -851,9 +855,12 @@ OverflowResult computeOverflowForUnsignedMul(const Value *LHS, const Value *RHS,
                                              const SimplifyQuery &SQ);
 OverflowResult computeOverflowForSignedMul(const Value *LHS, const Value *RHS,
                                            const SimplifyQuery &SQ);
-OverflowResult computeOverflowForUnsignedAdd(const Value *LHS, const Value *RHS,
-                                             const SimplifyQuery &SQ);
-OverflowResult computeOverflowForSignedAdd(const Value *LHS, const Value *RHS,
+OverflowResult
+computeOverflowForUnsignedAdd(const WithCache<const Value *> &LHS,
+                              const WithCache<const Value *> &RHS,
+                              const SimplifyQuery &SQ);
+OverflowResult computeOverflowForSignedAdd(const WithCache<const Value *> &LHS,
+                                           const WithCache<const Value *> &RHS,
                                            const SimplifyQuery &SQ);
 /// This version also leverages the sign bit of Add if known.
 OverflowResult computeOverflowForSignedAdd(const AddOperator *Add,
