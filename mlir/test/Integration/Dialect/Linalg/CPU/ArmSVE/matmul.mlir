@@ -4,15 +4,6 @@
 // RUN: %mcr_aarch64_cmd -e=entry -entry-point-result=void --march=aarch64 --mattr="+sve" -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils | \
 // RUN: FileCheck %s
 
-func.func @printTestEnd() {
-  %0 = llvm.mlir.addressof @str_sve_end : !llvm.ptr<array<24 x i8>>
-  %1 = llvm.mlir.constant(0 : index) : i64
-  %2 = llvm.getelementptr %0[%1, %1]
-    : (!llvm.ptr<array<24 x i8>>, i64, i64) -> !llvm.ptr<i8>
-  llvm.call @printCString(%2) : (!llvm.ptr<i8>) -> ()
-  return
-}
-
 func.func @entry() {
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
@@ -45,7 +36,7 @@ func.func @entry() {
   call @printMemrefF32(%xf) : (tensor<*xf32>) -> ()
 
   // CHECK: SVE: END OF TEST OUTPUT
-  func.call @printTestEnd() : () -> ()
+  vector.print str "SVE: END OF TEST OUTPUT"
 
   return
 }
@@ -72,6 +63,4 @@ transform.sequence failures(propagate) {
   } : !transform.op<"func.func">
 }
 
-llvm.func @printCString(!llvm.ptr<i8>)
 func.func private @printMemrefF32(%ptr : tensor<*xf32>)
-llvm.mlir.global internal constant @str_sve_end("SVE: END OF TEST OUTPUT\0A")
