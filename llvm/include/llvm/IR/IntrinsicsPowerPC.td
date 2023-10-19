@@ -1927,6 +1927,11 @@ let TargetPrefix = "ppc" in {
   def int_ppc_atomicrmw_or_i128   : AtomicRMW128Intrinsic;
   def int_ppc_atomicrmw_xor_i128  : AtomicRMW128Intrinsic;
   def int_ppc_atomicrmw_nand_i128 : AtomicRMW128Intrinsic;
+  def int_ppc_atomicrmw_max_i128  : AtomicRMW128Intrinsic;
+  def int_ppc_atomicrmw_umax_i128 : AtomicRMW128Intrinsic;
+  def int_ppc_atomicrmw_min_i128  : AtomicRMW128Intrinsic;
+  def int_ppc_atomicrmw_umin_i128 : AtomicRMW128Intrinsic;
+
   def int_ppc_cmpxchg_i128 : Intrinsic<[llvm_i64_ty, llvm_i64_ty],
                                        [llvm_ptr_ty,
                                         llvm_i64_ty, llvm_i64_ty,

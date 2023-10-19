@@ -46,6 +46,8 @@ private:
                           MachineBasicBlock::iterator &NMBBI);
   bool expandAtomicCmpSwap128(MachineBasicBlock &MBB, MachineInstr &MI,
                               MachineBasicBlock::iterator &NMBBI);
+  bool expandAtomicRMWMinMax128(MachineBasicBlock &MBB, MachineInstr &MI,
+                                MachineBasicBlock::iterator &NMBBI);
 };
 
 static void PairedCopy(const PPCInstrInfo *TII, MachineBasicBlock &MBB,
@@ -111,6 +113,11 @@ bool PPCExpandAtomicPseudo::expandMI(MachineBasicBlock &MBB, MachineInstr &MI,
     MI.eraseFromParent();
     return true;
   }
+  case PPC::ATOMIC_LOAD_MIN_I128:
+  case PPC::ATOMIC_LOAD_UMIN_I128:
+  case PPC::ATOMIC_LOAD_MAX_I128:
+  case PPC::ATOMIC_LOAD_UMAX_I128:
+    return expandAtomicRMWMinMax128(MBB, MI, NMBBI);
   default:
     return false;
   }
@@ -288,6 +295,144 @@ bool PPCExpandAtomicPseudo::expandAtomicCmpSwap128(
 
   recomputeLiveIns(*LoopCmpMBB);
   recomputeLiveIns(*CmpSuccMBB);
+  recomputeLiveIns(*ExitMBB);
+  NMBBI = MBB.end();
+  MI.eraseFromParent();
+  return true;
+}
+
+bool PPCExpandAtomicPseudo::expandAtomicRMWMinMax128(
+    MachineBasicBlock &MBB, MachineInstr &MI,
+    MachineBasicBlock::iterator &NMBBI) {
+  const MCInstrDesc &LL = TII->get(PPC::LQARX);
+  const MCInstrDesc &SC = TII->get(PPC::STQCX);
+  DebugLoc DL = MI.getDebugLoc();
+  MachineFunction *MF = MBB.getParent();
+  // For min/max operations, control flow is kinda like:
+  // MBB:
+  //   ...
+  // LoopMBB:
+  //   lqarx old, ptr
+  //   cmpd old.hi, op.hi
+  //   bgt ExitMBB
+  // CmpHiFailMBB:
+  //   blt StoreMBB
+  // CmpLoMBB:
+  //   cmpld old.lo, op.lo
+  //   bgt ExitMBB
+  // CmpLoFailMBB:
+  //   beq ExitMBB
+  // StoreMBB:
+  //   BUILD_QUADWROD tmp, op.lo, op.hi
+  //   stqcx. tmp, ptr
+  //   bne LoopMBB
+  // ExitMBB:
+  //   ...
+  const BasicBlock *BB = MBB.getBasicBlock();
+  // Create layout of control flow.
+  MachineFunction::iterator MFI = ++MBB.getIterator();
+  MachineBasicBlock *LoopMBB = MF->CreateMachineBasicBlock(BB);
+  MachineBasicBlock *CmpHiFailMBB = MF->CreateMachineBasicBlock(BB);
+  MachineBasicBlock *CmpLoMBB = MF->CreateMachineBasicBlock(BB);
+  MachineBasicBlock *CmpLoFailMBB = MF->CreateMachineBasicBlock(BB);
+  MachineBasicBlock *StoreMBB = MF->CreateMachineBasicBlock(BB);
+  MachineBasicBlock *ExitMBB = MF->CreateMachineBasicBlock(BB);
+  MF->insert(MFI, LoopMBB);
+  MF->insert(MFI, CmpHiFailMBB);
+  MF->insert(MFI, CmpLoMBB);
+  MF->insert(MFI, CmpLoFailMBB);
+  MF->insert(MFI, StoreMBB);
+  MF->insert(MFI, ExitMBB);
+  ExitMBB->splice(ExitMBB->begin(), &MBB, std::next(MI.getIterator()),
+                  MBB.end());
+  ExitMBB->transferSuccessorsAndUpdatePHIs(&MBB);
+  MBB.addSuccessor(LoopMBB);
+  LoopMBB->addSuccessor(ExitMBB);
+  LoopMBB->addSuccessor(CmpHiFailMBB);
+  CmpHiFailMBB->addSuccessor(CmpLoMBB);
+  CmpHiFailMBB->addSuccessor(StoreMBB);
+  CmpLoMBB->addSuccessor(ExitMBB);
+  CmpLoMBB->addSuccessor(CmpLoFailMBB);
+  CmpLoFailMBB->addSuccessor(ExitMBB);
+  CmpLoFailMBB->addSuccessor(StoreMBB);
+  StoreMBB->addSuccessor(LoopMBB);
+  StoreMBB->addSuccessor(ExitMBB);
+  Register Old = MI.getOperand(0).getReg();
+  Register OldHi = TRI->getSubReg(Old, PPC::sub_gp8_x0);
+  Register OldLo = TRI->getSubReg(Old, PPC::sub_gp8_x1);
+  Register Scratch = MI.getOperand(1).getReg();
+  Register ScratchHi = TRI->getSubReg(Scratch, PPC::sub_gp8_x0);
+  Register ScratchLo = TRI->getSubReg(Scratch, PPC::sub_gp8_x1);
+  Register RA = MI.getOperand(2).getReg();
+  Register RB = MI.getOperand(3).getReg();
+  Register OpLo = MI.getOperand(4).getReg();
+  Register OpHi = MI.getOperand(5).getReg();
+  MachineBasicBlock *CurrentMBB = LoopMBB;
+  unsigned CmpOp, CmpFailPred, CmpSuccPred;
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Unhandled atomic min/max operation");
+  case PPC::ATOMIC_LOAD_MAX_I128:
+    CmpOp = PPC::CMPD;
+    CmpSuccPred = PPC::PRED_GT;
+    CmpFailPred = PPC::PRED_LT;
+    break;
+  case PPC::ATOMIC_LOAD_UMAX_I128:
+    CmpOp = PPC::CMPLD;
+    CmpSuccPred = PPC::PRED_GT;
+    CmpFailPred = PPC::PRED_LT;
+    break;
+  case PPC::ATOMIC_LOAD_MIN_I128:
+    CmpOp = PPC::CMPD;
+    CmpSuccPred = PPC::PRED_LT;
+    CmpFailPred = PPC::PRED_GT;
+    break;
+  case PPC::ATOMIC_LOAD_UMIN_I128:
+    CmpOp = PPC::CMPLD;
+    CmpSuccPred = PPC::PRED_LT;
+    CmpFailPred = PPC::PRED_GT;
+    break;
+  }
+
+  BuildMI(CurrentMBB, DL, LL, Old).addReg(RA).addReg(RB);
+  BuildMI(CurrentMBB, DL, TII->get(CmpOp), PPC::CR0)
+      .addReg(OldHi)
+      .addReg(OpHi);
+  BuildMI(CurrentMBB, DL, TII->get(PPC::BCC))
+      .addImm(CmpSuccPred)
+      .addReg(PPC::CR0)
+      .addMBB(ExitMBB);
+  CurrentMBB = CmpHiFailMBB;
+  BuildMI(CurrentMBB, DL, TII->get(PPC::BCC))
+      .addImm(CmpFailPred)
+      .addReg(PPC::CR0)
+      .addMBB(StoreMBB);
+  CurrentMBB = CmpLoMBB;
+  BuildMI(CurrentMBB, DL, TII->get(PPC::CMPLD), PPC::CR0)
+      .addReg(OldLo)
+      .addReg(OpLo);
+  BuildMI(CurrentMBB, DL, TII->get(PPC::BCC))
+      .addImm(CmpSuccPred)
+      .addReg(PPC::CR0)
+      .addMBB(ExitMBB);
+  CurrentMBB = CmpLoFailMBB;
+  BuildMI(CurrentMBB, DL, TII->get(PPC::BCC))
+      .addImm(PPC::PRED_EQ)
+      .addReg(PPC::CR0)
+      .addMBB(ExitMBB);
+  CurrentMBB = StoreMBB;
+  PairedCopy(TII, *CurrentMBB, CurrentMBB->end(), DL, ScratchHi, ScratchLo,
+             OpHi, OpLo);
+  BuildMI(CurrentMBB, DL, SC).addReg(Scratch).addReg(RA).addReg(RB);
+  BuildMI(CurrentMBB, DL, TII->get(PPC::BCC))
+      .addImm(PPC::PRED_NE)
+      .addReg(PPC::CR0)
+      .addMBB(LoopMBB);
+  recomputeLiveIns(*LoopMBB);
+  recomputeLiveIns(*CmpHiFailMBB);
+  recomputeLiveIns(*CmpLoMBB);
+  recomputeLiveIns(*CmpLoFailMBB);
+  recomputeLiveIns(*StoreMBB);
   recomputeLiveIns(*ExitMBB);
   NMBBI = MBB.end();
   MI.eraseFromParent();

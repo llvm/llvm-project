@@ -393,6 +393,11 @@ def ATOMIC_CMP_SWAP_I128 : PPCPostRAExpPseudo<
                               (ins memrr:$ptr, g8rc:$cmp_lo, g8rc:$cmp_hi,
                                    g8rc:$new_lo, g8rc:$new_hi),
                               "#ATOMIC_CMP_SWAP_I128", []>;
+
+def ATOMIC_LOAD_MAX_I128  : AtomicRMW128<"#ATOMIC_LOAD_MAX_I128">;
+def ATOMIC_LOAD_UMAX_I128 : AtomicRMW128<"#ATOMIC_LOAD_UMAX_I128">;
+def ATOMIC_LOAD_MIN_I128  : AtomicRMW128<"#ATOMIC_LOAD_MIN_I128">;
+def ATOMIC_LOAD_UMIN_I128 : AtomicRMW128<"#ATOMIC_LOAD_UMIN_I128">;
 }
 
 class PatAtomicRMWI128<SDPatternOperator OpNode, AtomicRMW128 Inst> :
@@ -410,6 +415,10 @@ def : PatAtomicRMWI128<int_ppc_atomicrmw_and_i128,  ATOMIC_LOAD_AND_I128>;
 def : PatAtomicRMWI128<int_ppc_atomicrmw_nand_i128, ATOMIC_LOAD_NAND_I128>;
 def : PatAtomicRMWI128<int_ppc_atomicrmw_or_i128,   ATOMIC_LOAD_OR_I128>;
 def : PatAtomicRMWI128<int_ppc_atomicrmw_xchg_i128, ATOMIC_SWAP_I128>;
+def : PatAtomicRMWI128<int_ppc_atomicrmw_max_i128,  ATOMIC_LOAD_MAX_I128>;
+def : PatAtomicRMWI128<int_ppc_atomicrmw_umax_i128, ATOMIC_LOAD_UMAX_I128>;
+def : PatAtomicRMWI128<int_ppc_atomicrmw_min_i128,  ATOMIC_LOAD_MIN_I128>;
+def : PatAtomicRMWI128<int_ppc_atomicrmw_umin_i128, ATOMIC_LOAD_UMIN_I128>;
 def : Pat<(int_ppc_cmpxchg_i128 ForceXForm:$ptr,
                                 i64:$cmp_lo,
                                 i64:$cmp_hi,
