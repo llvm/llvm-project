@@ -39,27 +39,45 @@ CHECK:.debug_abbrev contents:
 CHECK-NEXT: Abbrev table for offset: 0x00000000
 
 CHECK: .debug_info contents:
-CHECK: 0x00000000: Compile Unit: length = 0x00000061, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08 
+CHECK: 0x00000000: Compile Unit: length = 0x0000004a, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08 
+CHECK: DW_AT_producer [DW_FORM_strx]     (indexed (00000000) string = "Apple clang version 14.0.3 (clang-1403.0.22.14.1)")
+CHECK: DW_AT_name [DW_FORM_strx] (indexed (00000001) string = "a.cpp")
+CHECK: DW_AT_LLVM_sysroot [DW_FORM_strx] (indexed (00000002) string = "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk")
+CHECK: DW_AT_APPLE_sdk [DW_FORM_strx]    (indexed (00000003) string = "MacOSX.sdk")
+CHECK: DW_AT_str_offsets_base [DW_FORM_sec_offset]       (0x00000008)
+CHECK: DW_AT_comp_dir [DW_FORM_strx]     (indexed (00000004) string = "/Users/shubham/Development/test109275485")
 CHECK: DW_AT_ranges [DW_FORM_sec_offset] (0x[[RANGELIST_OFFSET:[0-9a-f]+]]
 CHECK-NEXT:                  [0x[[RANGELIST_OFFSET_START:[0-9a-f]+]], 0x[[RANGELIST_OFFSET_END:[0-9a-f]+]]))
 CHECK-NEXT: DW_AT_addr_base [DW_FORM_sec_offset]      (0x00000008)
-CHECK: 0x00000037:   DW_TAG_subprogram [2] * (0x0000000c)
+CHECK: 0x0000002c:   DW_TAG_subprogram [2] * (0x0000000c)
 CHECK-NEXT:  DW_AT_low_pc [DW_FORM_addrx]     (indexed (00000000) address = 0x[[#%.16x,LOCLIST_LOWPC:]])
-CHECK: 0x0000004d:     DW_TAG_formal_parameter [3]   (0x00000037)
+CHECK: DW_AT_linkage_name [DW_FORM_strx]       (indexed (00000005) string = "_Z4foo2i")
+CHECK: DW_AT_name [DW_FORM_strx]       (indexed (00000006) string = "foo2")
+CHECK: 0x0000003c:     DW_TAG_formal_parameter [3]   (0x0000002c)
 CHECK-NEXT:                   DW_AT_location [DW_FORM_sec_offset]   (0x[[LOCLIST_OFFSET:[0-9a-f]+]]: 
 CHECK-NEXT:                      [0x[[#%.16x,LOCLIST_PAIR_START:]], 0x[[#%.16x,LOCLIST_PAIR_END:]]): [[LOCLIST_EXPR:.*]]
 CHECK-NEXT:                      [0x[[#%.16x,LOCLIST_PAIR_START2:]], 0x[[#%.16x,LOCLIST_PAIR_END2:]]): [[LOCLIST_EXPR2:.*]])
+CHECK: DW_AT_name [DW_FORM_strx]     (indexed (00000007) string = "a")
 
-CHECK: 0x00000065: Compile Unit: length = 0x00000072, format = DWARF32, version = 0x0004, abbr_offset = 0x0000, addr_size = 0x08 
+CHECK: 0x0000004e: Compile Unit: length = 0x00000072, format = DWARF32, version = 0x0004, abbr_offset = 0x0000, addr_size = 0x08 
+CHECK: DW_AT_producer [DW_FORM_strp]     ( .debug_str[0x00000001] = "Apple clang version 14.0.3 (clang-1403.0.22.14.1)")
+CHECK: DW_AT_name [DW_FORM_strp] ( .debug_str[0x000000e0] = "b.cpp")
+CHECK: DW_AT_LLVM_sysroot [DW_FORM_strp] ( .debug_str[0x00000039] = "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk")
+CHECK: DW_AT_APPLE_sdk [DW_FORM_strp]    ( .debug_str[0x00000098] = "MacOSX.sdk")
+CHECK-NOT: DW_AT_str_offsets_base
+CHECK: DW_AT_comp_dir [DW_FORM_strp]     ( .debug_str[0x000000a3] = "/Users/shubham/Development/test109275485")
 CHECK:              DW_AT_low_pc [DW_FORM_addr]       (0x[[#%.16x,RANGE_LOWPC:]])
 CHECK-NEXT:              DW_AT_ranges [DW_FORM_sec_offset] (0x00000000
 CHECK-NEXT:                 [0x[[#%.16x,RANGE_START:]], 0x[[#%.16x,RANGE_END:]]))
-CHECK: 0x00000097:   DW_TAG_subprogram [6] * (0x00000070)
+CHECK: 0x00000080:   DW_TAG_subprogram [6] * (0x00000059)
 CHECK-NEXT:                DW_AT_low_pc [DW_FORM_addr]     (0x[[#%.16x,LOC_LOWPC:]])
-CHECK: 0x000000b4:     DW_TAG_formal_parameter [3]   (0x00000097)
+CHECK: DW_AT_linkage_name [DW_FORM_strp]       ( .debug_str[0x000000e6] = "_Z3bari")
+CHECK: DW_AT_name [DW_FORM_strp]       ( .debug_str[0x000000ee] = "bar")
+CHECK: 0x0000009d:     DW_TAG_formal_parameter [7]   (0x00000080)
 CHECK-NEXT:                  DW_AT_location [DW_FORM_sec_offset]   (0x[[LOC_OFFSET:[0-9a-f]+]]: 
 CHECK-NEXT:                     [0x[[#%.16x,LOC_PAIR_START:]], 0x[[#%.16x,LOC_PAIR_END:]]): [[LOC_EXPR:.*]]
 CHECK-NEXT:                     [0x[[#%.16x,LOC_PAIR_START2:]], 0x[[#%.16x,LOC_PAIR_END2:]]): [[LOC_EXPR2:.*]])
+CHECK: DW_AT_name [DW_FORM_strp]     ( .debug_str[0x000000f2] = "x")
 
 CHECK: .debug_loc contents:
 CHECK-NEXT: 0x[[LOC_OFFSET]]:
@@ -137,6 +155,21 @@ CHECK-NEXT:        mod_time: 0x00000000
 CHECK-NEXT:          length: 0x00000000
 
 CHECK: .debug_str contents:
+CHECK-NEXT: 0x00000000: ""
+CHECK-NEXT: 0x00000001: "Apple clang version 14.0.3 (clang-1403.0.22.14.1)"
+CHECK-NEXT: 0x00000033: "a.cpp"
+CHECK-NEXT: 0x00000039: "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk"
+CHECK-NEXT: 0x00000098: "MacOSX.sdk"
+CHECK-NEXT: 0x000000a3: "/Users/shubham/Development/test109275485"
+CHECK-NEXT: 0x000000cc: "_Z4foo2i"
+CHECK-NEXT: 0x000000d5: "foo2"
+CHECK-NEXT: 0x000000da: "a"
+CHECK-NEXT: 0x000000dc: "int"
+CHECK-NEXT: 0x000000e0: "b.cpp"
+CHECK-NEXT: 0x000000e6: "_Z3bari"
+CHECK-NEXT: 0x000000ee: "bar"
+CHECK-NEXT: 0x000000f2: "x"
+CHECK-NEXT: 0x000000f4: "y"
 
 CHECK: .debug_line_str contents:
 CHECK-NEXT: 0x00000000: "/Users/shubham/Development/test109275485"
@@ -146,9 +179,23 @@ CHECK: .debug_ranges contents:
 CHECK-NEXT: 00000000 [[#sub(RANGE_START,RANGE_LOWPC)]] [[#sub(RANGE_END,RANGE_LOWPC)]]
 
 CHECK: .debug_rnglists contents:
-CHECK-NEXT: 0x00000000: range list header: length = 0x00000013, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+CHECK-NEXT: 0x00000000: range list header: length = 0x0000000e, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
 CHECK-NEXT: ranges:
-CHECK-NEXT: [[RANGELIST_OFFSET]]: [DW_RLE_start_length]: {{.*}}[0x[[RANGELIST_OFFSET_START]], 0x[[RANGELIST_OFFSET_END]])
+CHECK-NEXT: [[RANGELIST_OFFSET]]: [DW_RLE_base_addressx]:  0x0000000000000000
+CHECK-NEXT: 0x0000000e: [DW_RLE_offset_pair  ]: {{.*}}[0x[[RANGELIST_OFFSET_START]], 0x[[RANGELIST_OFFSET_END]])
+CHECK-NEXT: 0x00000011: [DW_RLE_end_of_list  ]
+
+CHECK: .debug_str_offsets contents:
+CHECK-NEXT: 0x00000000: Contribution size = 40, Format = DWARF32, Version = 5
+CHECK-NEXT: 0x00000008: 00000001 "Apple clang version 14.0.3 (clang-1403.0.22.14.1)"
+CHECK-NEXT: 0x0000000c: 00000033 "a.cpp"
+CHECK-NEXT: 0x00000010: 00000039 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk"
+CHECK-NEXT: 0x00000014: 00000098 "MacOSX.sdk"
+CHECK-NEXT: 0x00000018: 000000a3 "/Users/shubham/Development/test109275485"
+CHECK-NEXT: 0x0000001c: 000000cc "_Z4foo2i"
+CHECK-NEXT: 0x00000020: 000000d5 "foo2"
+CHECK-NEXT: 0x00000024: 000000da "a"
+CHECK-NEXT: 0x00000028: 000000dc "int"
 
 CHECK: .debug_names contents:
 CHECK-NEXT: Name Index @ 0x0 {

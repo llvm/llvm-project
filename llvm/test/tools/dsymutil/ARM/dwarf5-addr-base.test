@@ -46,36 +46,36 @@
 
 
 RUN: rm -rf %t.dir && mkdir -p %t.dir
-RUN: dsymutil -y %p/dummy-debug-map-amr64.map -oso-prepend-path=%p/../Inputs/DWARF5-addr_base -o %t.dir/dwarf5-addr_base.dSYM
-RUN: llvm-dwarfdump %t.dir/dwarf5-addr_base.dSYM -a --verbose | FileCheck %s
+RUN: dsymutil -y %p/dummy-debug-map-amr64.map -oso-prepend-path=%p/../Inputs/DWARF5-addr-base-str-off-base -o %t.dir/dwarf5-addr-base.dSYM
+RUN: llvm-dwarfdump %t.dir/dwarf5-addr-base.dSYM -a --verbose | FileCheck %s
 
-RUN: dsymutil --update -y %p/dummy-debug-map-amr64.map -oso-prepend-path=%p/../Inputs/DWARF5-addr_base -o %t.dir/dwarf5-addr_base.dSYM
-RUN: llvm-dwarfdump %t.dir/dwarf5-addr_base.dSYM -a --verbose | FileCheck %s --check-prefix=UPD
+RUN: dsymutil --update -y %p/dummy-debug-map-amr64.map -oso-prepend-path=%p/../Inputs/DWARF5-addr-base-str-off-base -o %t.dir/dwarf5-addr-base.dSYM
+RUN: llvm-dwarfdump %t.dir/dwarf5-addr-base.dSYM -a --verbose | FileCheck %s --check-prefix=UPD
 
 CHECK: .debug_info contents:
-CHECK-NEXT: 0x00000000: Compile Unit: length = 0x00000061, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x00000065)
+CHECK-NEXT: 0x00000000: Compile Unit: length = 0x0000004a, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08
 
 CHECK: 0x0000000c: DW_TAG_compile_unit [1] *
 CHECK:               DW_AT_addr_base [DW_FORM_sec_offset]      (0x00000008)
 
-CHECK: 0x00000037:   DW_TAG_subprogram [2] * (0x0000000c)
+CHECK: 0x0000002c:   DW_TAG_subprogram [2] * (0x0000000c)
 CHECK-NEXT:                DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000000) address = 0x[[ADDR1:[0-9a-f]+]])
 
 
-CHECK: 0x00000065: Compile Unit: length = 0x00000061, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x000000ca)
+CHECK: 0x0000004e: Compile Unit: length = 0x0000004a, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08
 
-CHECK: 0x00000071: DW_TAG_compile_unit [1] *
+CHECK: 0x0000005a: DW_TAG_compile_unit [1] *
 CHECK:              DW_AT_addr_base [DW_FORM_sec_offset]      (0x00000018)
 
-CHECK: 0x0000009c:   DW_TAG_subprogram [2] * (0x00000071)
+CHECK: 0x0000007a:   DW_TAG_subprogram [2] * (0x0000005a)
 CHECK-NEXT:                 DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000000) address = 0x[[ADDR2:[0-9a-f]+]])
 
-CHECK: 0x000000ca: Compile Unit: length = 0x0000005a, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x00000128)
+CHECK: 0x0000009c: Compile Unit: length = 0x00000043, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08
 
-CHECK: 0x000000d6: DW_TAG_compile_unit [5] *
+CHECK: 0x000000a8: DW_TAG_compile_unit [5] *
 CHECK: DW_AT_addr_base [DW_FORM_sec_offset]      (0x00000028)
 
-CHECK: 0x000000fa:   DW_TAG_subprogram [2] * (0x000000d6)
+CHECK: 0x000000c1:   DW_TAG_subprogram [2] * (0x000000a8)
 CHECK-NEXT:                 DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000000) address = 0x[[ADDR3:[0-9a-f]+]])
 
 CHECK: .debug_addr contents:
@@ -93,44 +93,44 @@ CHECK-NEXT: 0x[[ADDR3]]
 CHECK-NEXT: ]
 
 UPD: .debug_info contents:
-UPD-NEXT: 0x00000000: Compile Unit: length = 0x000000aa, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x000000ae)
+UPD-NEXT: 0x00000000: Compile Unit: length = 0x00000081, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08
 
 UPD: 0x0000000c: DW_TAG_compile_unit [1] *
 UPD:               DW_AT_addr_base [DW_FORM_sec_offset]      (0x00000008)
 
-UPD: 0x0000003c:   DW_TAG_subprogram [2]   (0x0000000c)
+UPD: 0x00000031:   DW_TAG_subprogram [2]   (0x0000000c)
 UPD-NEXT:                DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000000) address = 0x0000000000000018)
 
-UPD: 0x0000004e:   DW_TAG_subprogram [3] * (0x0000000c)
+UPD: 0x0000003d:   DW_TAG_subprogram [3] * (0x0000000c)
 UPD-NEXT:                 DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000001) address = 0x0000000000000000)
 
-UPD: 0x00000071:   DW_TAG_subprogram [3] * (0x0000000c)
+UPD: 0x00000057:   DW_TAG_subprogram [3] * (0x0000000c)
 UPD-NEXT:                 DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000002) address = 0x0000000000000008)
 
-UPD: 0x00000094:   DW_TAG_subprogram [5]   (0x0000000c)
+UPD: 0x00000071:   DW_TAG_subprogram [5]   (0x0000000c)
 UPD-NEXT:                 DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000003) address = 0x0000000000000010)
 
 
-UPD: 0x000000ae: Compile Unit: length = 0x00000098, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x0000014a)
+UPD: 0x00000085: Compile Unit: length = 0x00000072, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08
 
-UPD: 0x000000ba: DW_TAG_compile_unit [1] *
+UPD: 0x00000091: DW_TAG_compile_unit [1] *
 UPD:              DW_AT_addr_base [DW_FORM_sec_offset]      (0x00000008)
 
-UPD: 0x000000ea:   DW_TAG_subprogram [2]   (0x000000ba)
+UPD: 0x000000b6:   DW_TAG_subprogram [2]   (0x00000091)
 UPD-NEXT:                 DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000000) address = 0x0000000000000018)
 
-UPD: 0x000000fc:   DW_TAG_subprogram [3] * (0x000000ba)
+UPD: 0x000000c2:   DW_TAG_subprogram [3] * (0x00000091)
 UPD-NEXT:                 DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000001) address = 0x0000000000000000)
 
-UPD: 0x0000011f:   DW_TAG_subprogram [3] * (0x000000ba)
+UPD: 0x000000dc:   DW_TAG_subprogram [3] * (0x00000091)
 UPD-NEXT:                 DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000002) address = 0x0000000000000008)
 
-UPD: 0x0000014a: Compile Unit: length = 0x0000005b, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x000001a9)
+UPD: 0x000000fb: Compile Unit: length = 0x00000044, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08
 
-UPD: 0x00000156: DW_TAG_compile_unit [7] *
+UPD: 0x00000107: DW_TAG_compile_unit [7] *
 UPD: DW_AT_addr_base [DW_FORM_sec_offset]      (0x00000008)
 
-UPD: 0x0000017e:   DW_TAG_subprogram [3] * (0x00000156)
+UPD: 0x00000124:   DW_TAG_subprogram [3] * (0x00000107)
 UPD-NEXT:                 DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000000) address = 0x0000000000000018)
 
 UPD: .debug_addr contents:

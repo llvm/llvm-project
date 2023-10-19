@@ -19,33 +19,34 @@
 #CHECK: No errors.
 
 #DWARF-CHECK: DW_TAG_compile_unit
-#DWARF-CHECK:   DW_AT_name [DW_FORM_strp]  {{.*}}     "CU1"
+#DWARF-CHECK:   DW_AT_name [DW_FORM_strx]  {{.*}}     "CU1"
 #DWARF-CHECK:   DW_AT_low_pc [DW_FORM_addrx]      (indexed (00000000) address = 0x0000000000001130)
 #DWARF-CHECK:   DW_AT_ranges [DW_FORM_sec_offset] (0x[[CURANGE_OFF:[0-9a-f]*]]
 #DWARF-CHECK:   [0x0000000000001130, 0x0000000000001170))
+#DWARF-CHECK:   DW_AT_str_offsets_base [DW_FORM_sec_offset]       (0x00000008)
 #DWARF-CHECK:   DW_TAG_subprogram
-#DWARF-CHECK:     DW_AT_name  [DW_FORM_strp] {{.*}}   "foo1"
+#DWARF-CHECK:     DW_AT_name  [DW_FORM_strx] {{.*}}   "foo1"
 #DWARF-CHECK:     DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000000) address = 0x0000000000001130)
 #DWARF-CHECK:     DW_AT_high_pc [DW_FORM_data8]   (0x0000000000000010)
 #DWARF-CHECK:     DW_TAG_lexical_block
 #DWARF-CHECK:       DW_AT_ranges [DW_FORM_sec_offset]     (0x[[F1RANGE_OFF:[0-9a-f]*]]
 #DWARF-CHECK:       [0x0000000000001130, 0x0000000000001140))
 #DWARF-CHECK:   DW_TAG_subprogram
-#DWARF-CHECK:     DW_AT_name  [DW_FORM_strp] {{.*}}   "foo2"
+#DWARF-CHECK:     DW_AT_name  [DW_FORM_strx] {{.*}}   "foo2"
 #DWARF-CHECK:     DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000001) address = 0x0000000000001140)
 #DWARF-CHECK:     DW_AT_high_pc [DW_FORM_data8]   (0x0000000000000010)
 #DWARF-CHECK:     DW_TAG_lexical_block
 #DWARF-CHECK:       DW_AT_ranges [DW_FORM_sec_offset]     (0x[[F2RANGE_OFF:[0-9a-f]*]]
 #DWARF-CHECK:            [0x0000000000001140, 0x0000000000001150))
 #DWARF-CHECK:   DW_TAG_subprogram
-#DWARF-CHECK:     DW_AT_name  [DW_FORM_strp] {{.*}}   "foo3"
+#DWARF-CHECK:     DW_AT_name  [DW_FORM_strx] {{.*}}   "foo3"
 #DWARF-CHECK:     DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000002) address = 0x0000000000001150)
 #DWARF-CHECK:     DW_AT_high_pc [DW_FORM_data8]   (0x0000000000000010)
 #DWARF-CHECK:     DW_TAG_lexical_block
 #DWARF-CHECK:       DW_AT_ranges [DW_FORM_sec_offset]     (0x[[F3RANGE_OFF:[0-9a-f]*]]
 #DWARF-CHECK:          [0x0000000000001150, 0x0000000000001160))
 #DWARF-CHECK:   DW_TAG_subprogram
-#DWARF-CHECK:     DW_AT_name  [DW_FORM_strp] {{.*}}   "foo4"
+#DWARF-CHECK:     DW_AT_name  [DW_FORM_strx] {{.*}}   "foo4"
 #DWARF-CHECK:     DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000003) address = 0x0000000000001160)
 #DWARF-CHECK:     DW_AT_high_pc [DW_FORM_data8]   (0x0000000000000010)
 #DWARF-CHECK:     DW_TAG_lexical_block
@@ -63,18 +64,23 @@
 #DWARF-CHECK: 0x0000000000001160
 #DWARF-CHECK: ]
 #DWARF-CHECK: .debug_rnglists contents:
-#DWARF-CHECK: 0x00000000: range list header: length = 0x0000003f, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+#DWARF-CHECK: 0x00000000: range list header: length = 0x00000026, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
 #DWARF-CHECK: ranges:
-#DWARF-CHECK: 0x[[F1RANGE_OFF]]: [DW_RLE_start_length]:  0x0000000000001130, 0x0000000000000010 => [0x0000000000001130, 0x0000000000001140)
-#DWARF-CHECK: {{.*}} [DW_RLE_end_of_list ]
-#DWARF-CHECK: 0x[[F2RANGE_OFF]]: [DW_RLE_start_length]:  0x0000000000001140, 0x0000000000000010 => [0x0000000000001140, 0x0000000000001150)
-#DWARF-CHECK: {{.*}} [DW_RLE_end_of_list ]
-#DWARF-CHECK: 0x[[F3RANGE_OFF]]: [DW_RLE_start_length]:  0x0000000000001150, 0x0000000000000010 => [0x0000000000001150, 0x0000000000001160)
-#DWARF-CHECK: {{.*}} [DW_RLE_end_of_list ]
-#DWARF-CHECK: 0x[[F4RANGE_OFF]]: [DW_RLE_start_length]:  0x0000000000001160, 0x0000000000000010 => [0x0000000000001160, 0x0000000000001170)
-#DWARF-CHECK: {{.*}} [DW_RLE_end_of_list ]
-#DWARF-CHECK: 0x[[CURANGE_OFF]]: [DW_RLE_start_length]:  0x0000000000001130, 0x0000000000000040 => [0x0000000000001130, 0x0000000000001170)
-#DWARF-CHECK: {{.*}} [DW_RLE_end_of_list ]
+#DWARF-CHECK: 0x[[F1RANGE_OFF]]: [DW_RLE_base_addressx]:  0x0000000000000000
+#DWARF-CHECK: {{.}}: [DW_RLE_offset_pair  ]:  0x0000000000000000, 0x0000000000000010 => [0x0000000000001130, 0x0000000000001140)
+#DWARF-CHECK: {{.}}: [DW_RLE_end_of_list  ]
+#DWARF-CHECK: 0x[[F2RANGE_OFF]]: [DW_RLE_base_addressx]:  0x0000000000000001
+#DWARF-CHECK: {{.}}: [DW_RLE_offset_pair  ]:  0x0000000000000000, 0x0000000000000010 => [0x0000000000001140, 0x0000000000001150)
+#DWARF-CHECK: {{.}}: [DW_RLE_end_of_list  ]
+#DWARF-CHECK: 0x[[F3RANGE_OFF]]: [DW_RLE_base_addressx]:  0x0000000000000002
+#DWARF-CHECK: {{.}}: [DW_RLE_offset_pair  ]:  0x0000000000000000, 0x0000000000000010 => [0x0000000000001150, 0x0000000000001160)
+#DWARF-CHECK: {{.}}: [DW_RLE_end_of_list  ]
+#DWARF-CHECK: 0x[[F4RANGE_OFF]]: [DW_RLE_base_addressx]:  0x0000000000000003
+#DWARF-CHECK: {{.}}: [DW_RLE_offset_pair  ]:  0x0000000000000000, 0x0000000000000010 => [0x0000000000001160, 0x0000000000001170)
+#DWARF-CHECK: {{.}}: [DW_RLE_end_of_list  ]
+#DWARF-CHECK 0x[[CURANGE_OFF]]: [DW_RLE_base_addressx]:  0x0000000000000000
+#DWARF-CHECK: {{.}}: [DW_RLE_offset_pair  ]:  0x0000000000000000, 0x0000000000000040 => [0x0000000000001130, 0x0000000000001170)
+#DWARF-CHECK: {{.}}: [DW_RLE_end_of_list  ]
 
 #UPD-DWARF-CHECK: DW_TAG_compile_unit
 #UPD-DWARF-CHECK:   DW_AT_name {{.*}}"CU1"
