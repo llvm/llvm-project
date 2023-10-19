@@ -3,19 +3,19 @@ import("//llvm/utils/gn/build/write_cmake_config.gni")
 import("//llvm/version.gni")
 
 tablegen("Options") {
-  visibility = [ ":lldb-vscode" ]
+  visibility = [ ":lldb-dap" ]
   args = [ "-gen-opt-parser-defs" ]
 }
 
 if (host_os == "mac") {
   write_cmake_config("write_info_plist") {
-    input = "lldb-vscode-Info.plist.in"
-    output = "$target_gen_dir/lldb-vscode-Info.plist"
+    input = "lldb-dap-Info.plist.in"
+    output = "$target_gen_dir/lldb-dap-Info.plist"
     values = [ "LLDB_VERSION=$llvm_version" ]
   }
 }
 
-executable("lldb-vscode") {
+executable("lldb-dap") {
   configs += [ "//llvm/utils/gn/build:lldb_code" ]
   deps = [
     ":Options",
