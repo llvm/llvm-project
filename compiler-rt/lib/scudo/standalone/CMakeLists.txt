@@ -62,6 +62,9 @@ set(SCUDO_HEADERS
   bytemap.h
   checksum.h
   chunk.h
+  condition_variable.h
+  condition_variable_base.h
+  condition_variable_linux.h
   combined.h
   common.h
   flags_parser.h
@@ -104,6 +107,7 @@ set(SCUDO_HEADERS
 set(SCUDO_SOURCES
   checksum.cpp
   common.cpp
+  condition_variable_linux.cpp
   crc32_hw.cpp
   flags_parser.cpp
   flags.cpp
