@@ -33,8 +33,3 @@
 #error "__STDC_VERSION_STDINT_H__ not defined"
 // expected-error@-1 {{"__STDC_VERSION_STDINT_H__ not defined"}}
 #endif
-
-#include <stdckdint.h>
-#ifndef __STDC_VERSION_STDCKDINT_H__
-#error "__STDC_VERSION_STDCKDINT_H__ not defined"
-#endif

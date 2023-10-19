@@ -177,7 +177,7 @@ C23 Feature Support
 - Clang now supports ``N3007 Type inference for object definitions``.
 
 - Clang now supports ``<stdckdint.h>`` which defines several macros for performing
-  checked integer arithmetic.
+  checked integer arithmetic. And it is also exposed in pre-C23 modes.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
