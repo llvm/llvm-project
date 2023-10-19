@@ -104,8 +104,7 @@ bool SIShrinkInstructions::foldImmediates(MachineInstr &MI,
         bool ConstantFolded = false;
 
         if (TII->isOperandLegal(MI, Src0Idx, &MovSrc)) {
-          if (MovSrc.isImm() &&
-              (isInt<32>(MovSrc.getImm()) || isUInt<32>(MovSrc.getImm()))) {
+          if (MovSrc.isImm()) {
             Src0.ChangeToImmediate(MovSrc.getImm());
             ConstantFolded = true;
           } else if (MovSrc.isFI()) {
