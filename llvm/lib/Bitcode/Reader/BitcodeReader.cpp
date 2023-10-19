@@ -2646,7 +2646,7 @@ Expected<Value *> BitcodeReader::recordValue(SmallVectorImpl<uint64_t> &Record,
   Value *V = ValueList[ValueID];
 
   StringRef NameStr(ValueName.data(), ValueName.size());
-  if (NameStr.find_first_of(0) != StringRef::npos)
+  if (NameStr.contains(0))
     return error("Invalid value name");
   V->setName(NameStr);
   auto *GO = dyn_cast<GlobalObject>(V);
