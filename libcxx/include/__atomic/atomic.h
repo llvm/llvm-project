@@ -23,6 +23,7 @@
 #include <__utility/forward.h>
 #include <cstddef>
 #include <cstdio>
+#include <cstring>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -166,10 +167,11 @@ struct atomic<_Tp> : __atomic_base<_Tp> {
         _Tp __new = __operation(__old, __operand);
 
         if constexpr (std::is_same_v<_Tp, long double>) {
-          while (!__self.compare_exchange_strong(__old, __new, __m, memory_order_relaxed)) {
+          while (!__self.compare_exchange_weak(__old, __new, __m, memory_order_relaxed)) {
             // https://github.com/llvm/llvm-project/issues/47978
             // clang bug: __old is not updated on failure for atomic<long double>::compare_exchange_strong
-            __old = __self.load(memory_order_relaxed);
+            _Tp __atomic_value = __self.load(memory_order_relaxed);
+            std::memcpy(&__old, &__atomic_value, sizeof(_Tp));
             __new = __operation(__old, __operand);
           }
         } else {
