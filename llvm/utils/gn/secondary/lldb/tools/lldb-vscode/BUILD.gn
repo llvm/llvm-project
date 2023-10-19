@@ -50,8 +50,6 @@ executable("lldb-vscode") {
     "ProgressEvent.cpp",
     "RunInTerminal.cpp",
     "SourceBreakpoint.cpp",
-    "VSCode.cpp",
     "lldb-dap.cpp",
-    "lldb-vscode.cpp",
   ]
 }
