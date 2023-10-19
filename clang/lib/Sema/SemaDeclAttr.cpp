@@ -5921,20 +5921,24 @@ static void handlePreferredTypeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   assert(ParmTSI && "no type source info for attribute argument");
 
   if (QT->isEnumeralType()) {
-    QualType BitfieldType = cast<FieldDecl>(D)->getType()->getCanonicalTypeUnqualified();
-    QualType EnumUnderlyingType =
-        QT->getAs<EnumType>()->getDecl()->getIntegerType()->getCanonicalTypeUnqualified();
+    QualType BitfieldType =
+        cast<FieldDecl>(D)->getType()->getCanonicalTypeUnqualified();
+    QualType EnumUnderlyingType = QT->getAs<EnumType>()
+                                      ->getDecl()
+                                      ->getIntegerType()
+                                      ->getCanonicalTypeUnqualified();
     if (EnumUnderlyingType != BitfieldType) {
       S.Diag(AL.getLoc(), diag::warn_attribute_underlying_type_mismatch)
           << EnumUnderlyingType << QT << BitfieldType;
       return;
     }
-  }
-  else if (QT->isBooleanType()) {
-    unsigned BitfieldWidth = cast<FieldDecl>(D)->getBitWidthValue(S.getASTContext());
+  } else if (QT->isBooleanType()) {
+    unsigned BitfieldWidth =
+        cast<FieldDecl>(D)->getBitWidthValue(S.getASTContext());
     if (BitfieldWidth != 1) {
       S.Diag(cast<FieldDecl>(D)->getBitWidth()->getExprLoc(),
-             diag::warn_attribute_bool_bitfield_width) << BitfieldWidth;
+             diag::warn_attribute_bool_bitfield_width)
+          << BitfieldWidth;
       return;
     }
   }
