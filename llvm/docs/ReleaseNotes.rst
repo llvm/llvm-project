@@ -135,6 +135,7 @@ Changes to the X86 Backend
   type matched and called into libgcc helper functions.
 * Support ISA of ``USER_MSR``.
 * Support ISA of ``AVX10.1-256`` and ``AVX10.1-512``.
+* ``-mcpu=pantherlake`` and ``-mcpu=clearwaterforest`` are now supported.
 
 Changes to the OCaml bindings
 -----------------------------
