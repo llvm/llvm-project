@@ -316,8 +316,8 @@ MemCmpExpansion::LoadPair MemCmpExpansion::getLoadPair(Type *LoadSizeType,
   // Swap bytes if required.
   if (NeedsBSwap) {
     Type *BSwapType = CmpSizeType ? CmpSizeType : LoadSizeType;
-    Function *Bswap = Intrinsic::getDeclaration(CI->getModule(),
-                                                Intrinsic::bswap, BSwapType);
+    Function *Bswap =
+        Intrinsic::getDeclaration(CI->getModule(), Intrinsic::bswap, BSwapType);
     Lhs = Builder.CreateCall(Bswap, Lhs);
     Rhs = Builder.CreateCall(Bswap, Rhs);
   }
