@@ -21,6 +21,10 @@
 
 /* C23 7.20.1 Defines several macros for performing checked integer arithmetic*/
 
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+#define __STDC_VERSION_STDCKDINT_H__ 202311L
+#endif
+
 // Both A and B shall be any integer type other than "plain" char, bool, a bit-
 // precise integer type, or an enumerated type, and they need not be the same.
 
