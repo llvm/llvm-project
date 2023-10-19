@@ -594,12 +594,6 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeStruct(const StructType *Ty,
 SPIRVType *SPIRVGlobalRegistry::getOrCreateSpecialType(
     const Type *Ty, MachineIRBuilder &MIRBuilder,
     SPIRV::AccessQualifier::AccessQualifier AccQual) {
-  // Some OpenCL and SPIRV builtins like image2d_t are passed in as
-  // pointers, but should be treated as custom types like OpTypeImage.
-  if (auto PType = dyn_cast<PointerType>(Ty)) {
-    assert(!PType->isOpaque());
-    Ty = PType->getNonOpaquePointerElementType();
-  }
   assert(isSpecialOpaqueType(Ty) && "Not a special opaque builtin type");
   return SPIRV::lowerBuiltinType(Ty, AccQual, MIRBuilder, this);
 }
@@ -755,13 +749,10 @@ SPIRVType *SPIRVGlobalRegistry::restOfCreateSPIRVType(
       !isSpecialOpaqueType(Ty)) {
     if (!Ty->isPointerTy())
       DT.add(Ty, &MIRBuilder.getMF(), getSPIRVTypeID(SpirvType));
-    else if (Ty->isOpaquePointerTy())
+    else
       DT.add(Type::getInt8Ty(MIRBuilder.getMF().getFunction().getContext()),
              Ty->getPointerAddressSpace(), &MIRBuilder.getMF(),
              getSPIRVTypeID(SpirvType));
-    else
-      DT.add(Ty->getNonOpaquePointerElementType(), Ty->getPointerAddressSpace(),
-             &MIRBuilder.getMF(), getSPIRVTypeID(SpirvType));
   }
 
   return SpirvType;
