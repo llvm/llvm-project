@@ -5928,7 +5928,8 @@ static void handlePreferredTypeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
                                       ->getIntegerType()
                                       ->getCanonicalTypeUnqualified();
     if (EnumUnderlyingType != BitfieldType) {
-      S.Diag(AL.getLoc(), diag::warn_attribute_underlying_type_mismatch)
+      S.Diag(ParmTSI->getTypeLoc().getBeginLoc(),
+             diag::warn_attribute_underlying_type_mismatch)
           << EnumUnderlyingType << QT << BitfieldType;
       return;
     }
