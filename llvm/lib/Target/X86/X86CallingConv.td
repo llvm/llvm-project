@@ -25,7 +25,7 @@ class CCIfNotSubtarget<string F, CCAction A>
 
 /// CCIfRegCallv4 - Match if RegCall ABIv4 is respected.
 class CCIfRegCallv4<CCAction A>
-    : CCIf<"State.getMachineFunction().getFunction().getParent()->getModuleFlag(\"RegCallv4\")!=nullptr || State.getMachineFunction().getFunction().hasFnAttribute("regcall4")",
+    : CCIf<"State.getMachineFunction().getFunction().getParent()->getModuleFlag(\"RegCallv4\")!=nullptr || State.getMachineFunction().getFunction().hasFnAttribute(\"regcall4\")",
            A>;
 
 /// CCIfIsVarArgOnWin - Match if isVarArg on Windows 32bits.
