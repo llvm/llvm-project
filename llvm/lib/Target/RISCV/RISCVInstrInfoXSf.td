@@ -416,6 +416,18 @@ multiclass VPatVC_X<string intrinsic_suffix, string instruction_suffix,
                      "PseudoVC_V_" # instruction_suffix # "_" # vti.LMul.MX,
                      vti.Vector, XLenVT, type, vti.Log2SEW,
                      payload5, kind>;
+  // Add another patterns for float type return value.
+  if !ne(vti.SEW, 8) then {
+    defvar fti = !cast<VTypeInfo>("VF"#vti.SEW#vti.LMul.MX);
+    def : VPatVC_V_OP3<"int_riscv_sf_vc_v_" # intrinsic_suffix # "_se",
+                       "PseudoVC_V_" # instruction_suffix # "_SE_" # vti.LMul.MX,
+                       fti.Vector, XLenVT, type, vti.Log2SEW,
+                       payload5, kind>;
+    def : VPatVC_V_OP3<"int_riscv_sf_vc_v_" # intrinsic_suffix,
+                       "PseudoVC_V_" # instruction_suffix # "_" # vti.LMul.MX,
+                       fti.Vector, XLenVT, type, vti.Log2SEW,
+                       payload5, kind>;
+  }
 }
 
 multiclass VPatVC_XV<string intrinsic_suffix, string instruction_suffix,
@@ -433,6 +445,18 @@ multiclass VPatVC_XV<string intrinsic_suffix, string instruction_suffix,
                      "PseudoVC_V_" # instruction_suffix # "_" # vti.LMul.MX,
                      vti.Vector, vti.Vector, type, vti.Log2SEW,
                      vti.RegClass, kind, op1_kind>;
+  // Add another patterns for float type return value.
+  if !ne(vti.SEW, 8) then {
+    defvar fti = !cast<VTypeInfo>("VF"#vti.SEW#vti.LMul.MX);
+    def : VPatVC_V_OP3<"int_riscv_sf_vc_v_" # intrinsic_suffix # "_se",
+                       "PseudoVC_V_" # instruction_suffix # "_SE_" # vti.LMul.MX,
+                       fti.Vector, vti.Vector, type, vti.Log2SEW,
+                       vti.RegClass, kind, op1_kind>;
+    def : VPatVC_V_OP3<"int_riscv_sf_vc_v_" # intrinsic_suffix,
+                       "PseudoVC_V_" # instruction_suffix # "_" # vti.LMul.MX,
+                       fti.Vector, vti.Vector, type, vti.Log2SEW,
+                       vti.RegClass, kind, op1_kind>;
+  }
 }
 
 multiclass VPatVC_XVV<string intrinsic_suffix, string instruction_suffix,
@@ -450,6 +474,18 @@ multiclass VPatVC_XVV<string intrinsic_suffix, string instruction_suffix,
                      "PseudoVC_V_" # instruction_suffix # "_" # vti.LMul.MX,
                      wti.Vector, wti.Vector, vti.Vector, type, vti.Log2SEW,
                      wti.RegClass, vti.RegClass, kind, op1_kind>;
+  // Add another patterns for float type return value.
+  if !ne(wti.SEW, 8) then {
+    defvar wfti = !cast<VTypeInfo>("VF"#wti.SEW#wti.LMul.MX);
+    def : VPatVC_V_OP4<"int_riscv_sf_vc_v_" # intrinsic_suffix # "_se",
+                       "PseudoVC_V_" # instruction_suffix # "_SE_" # vti.LMul.MX,
+                       wfti.Vector, wti.Vector, vti.Vector, type, vti.Log2SEW,
+                       wti.RegClass, vti.RegClass, kind, op1_kind>;
+    def : VPatVC_V_OP4<"int_riscv_sf_vc_v_" # intrinsic_suffix,
+                       "PseudoVC_V_" # instruction_suffix # "_" # vti.LMul.MX,
+                       wfti.Vector, wti.Vector, vti.Vector, type, vti.Log2SEW,
+                       wti.RegClass, vti.RegClass, kind, op1_kind>;
+  }
 }
 
 class GetFTypeInfo<int Sew> {
@@ -466,7 +502,7 @@ class GetFTypeInfo<int Sew> {
 }
 
 let Predicates = [HasVendorXSfvcp] in {
-  foreach vti = AllVectors in {
+  foreach vti = AllIntegerVectors in {
     defm : VPatVC_X<"x", "X", vti, XLenVT, GPR>;
     defm : VPatVC_X<"i", "I", vti, XLenVT, tsimm5>;
     defm : VPatVC_XV<"xv", "XV", vti, XLenVT, GPR>;
@@ -484,7 +520,7 @@ let Predicates = [HasVendorXSfvcp] in {
                         finfo.ScalarRegClass, payload1>;
     }
   }
-  foreach VtiToWti = !listconcat(AllWidenableIntVectors, AllWidenableFloatVectors) in {
+  foreach VtiToWti = AllWidenableIntVectors in {
     defvar vti = VtiToWti.Vti;
     defvar wti = VtiToWti.Wti;
     defvar iinfo = GetIntVTypeInfo<vti>.Vti;
