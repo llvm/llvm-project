@@ -1161,8 +1161,8 @@ bool ConvertOp::needsExtraSort() {
 }
 
 LogicalResult CrdTranslateOp::verify() {
-  size_t inRank = getOracle().getLvlRank();
-  size_t outRank = getOracle().getDimRank();
+  uint64_t inRank = getOracle().getLvlRank();
+  uint64_t outRank = getOracle().getDimRank();
 
   if (getDirection() == CrdTransDirectionKind::dim2lvl)
     std::swap(inRank, outRank);
