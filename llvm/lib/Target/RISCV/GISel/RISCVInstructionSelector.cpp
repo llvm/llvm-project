@@ -180,6 +180,7 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   switch (Opc) {
   case TargetOpcode::G_ANYEXT:
   case TargetOpcode::G_PTRTOINT:
+  case TargetOpcode::G_INTTOPTR:
   case TargetOpcode::G_TRUNC:
     return selectCopy(MI, MRI);
   case TargetOpcode::G_CONSTANT:
