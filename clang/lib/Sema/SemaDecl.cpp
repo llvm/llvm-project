@@ -16748,10 +16748,8 @@ bool Sema::CheckEnumUnderlyingType(TypeSourceInfo *TI) {
     if (BT->isInteger())
       return false;
 
-  if (T->isBitIntType())
-    return false;
-
-  return Diag(UnderlyingLoc, diag::err_enum_invalid_underlying) << T;
+  return Diag(UnderlyingLoc, diag::err_enum_invalid_underlying)
+         << T << T->isBitIntType();
 }
 
 /// Check whether this is a valid redeclaration of a previous enumeration.
