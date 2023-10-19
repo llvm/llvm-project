@@ -14,7 +14,8 @@ using namespace clang;
 namespace {
 
 // Check to ensure that bitfield initializers are visited.
-class BitfieldInitializerVisitor : public ExpectedLocationVisitor<BitfieldInitializerVisitor> {
+class BitfieldInitializerVisitor
+    : public ExpectedLocationVisitor<BitfieldInitializerVisitor> {
 public:
   bool VisitIntegerLiteral(IntegerLiteral *IL) {
     Match(std::to_string(IL->getValue().getSExtValue()), IL->getLocation());
@@ -24,11 +25,10 @@ public:
 
 TEST(RecursiveASTVisitor, BitfieldInitializerIsVisited) {
   BitfieldInitializerVisitor Visitor;
-  Visitor.ExpectMatch("123", 2, 15); 
-  EXPECT_TRUE(Visitor.runOver(
-    "struct S {\n"
-    "  int x : 8 = 123;\n"
-    "};\n"));
+  Visitor.ExpectMatch("123", 2, 15);
+  EXPECT_TRUE(Visitor.runOver("struct S {\n"
+                              "  int x : 8 = 123;\n"
+                              "};\n"));
 }
 
 } // end anonymous namespace
