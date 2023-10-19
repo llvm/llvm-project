@@ -570,6 +570,7 @@ X86 Support
 - Support ISA of ``USER_MSR``.
   * Support intrinsic of ``_urdmsr``.
   * Support intrinsic of ``_uwrmsr``.
+- Support ISA of ``AVX10.1``.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
