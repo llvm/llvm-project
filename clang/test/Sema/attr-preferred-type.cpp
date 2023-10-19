@@ -2,10 +2,10 @@
 
 struct A {
   enum E : unsigned {};
+  enum E2 : int {};
   [[clang::preferred_type(E)]] unsigned b : 2;
   [[clang::preferred_type(E)]] int b2 : 2;
-  // expected-warning@-1 {{underlying type 'unsigned int' of enumeration 'E' doesn't match bit-field type 'int'}}
-  [[clang::preferred_type(E)]] const unsigned b3 : 2;
+  [[clang::preferred_type(E2)]] const unsigned b3 : 2;
   [[clang::preferred_type(bool)]] unsigned b4 : 1;
   [[clang::preferred_type(bool)]] unsigned b5 : 2;
   // expected-warning@-1 {{bit-field that holds a boolean value should have width of 1 instead of 2}}
