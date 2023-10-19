@@ -46,7 +46,7 @@ extern _LIBCXXABI_FUNC_VIS void *
 __cxa_allocate_exception(size_t thrown_size) throw();
 extern _LIBCXXABI_FUNC_VIS void
 __cxa_free_exception(void *thrown_exception) throw();
-// This function is an llvm extension
+// This function is an LLVM extension, which mirros the same extension in libsupc++ and libcxxrt
 extern _LIBCXXABI_FUNC_VIS __cxa_exception*
 __cxa_init_primary_exception(void* object, std::type_info* tinfo, void(_LIBCXXABI_DTOR_FUNC* dest)(void*)) throw();
 
