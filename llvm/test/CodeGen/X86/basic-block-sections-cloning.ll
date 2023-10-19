@@ -8,6 +8,7 @@ declare void @effect(i32 zeroext)
 ; RUN: echo 'p 0 3 5' >> %t1
 ; RUN: echo 'c 0 3.1 5.1 1 2 3 4 5' >> %t1
 ; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -enable-basic-block-path-cloning -basic-block-sections=%t1 | FileCheck %s --check-prefixes=PATH1,FOOSECTIONS,FOOCLONE
+; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -enable-basic-block-path-cloning -basic-block-sections=%t1 -stop-after=bb-path-cloning | FileCheck %s --check-prefix=PATH1MIR
 ; RUN: echo 'v1' > %t2
 ; RUN: echo 'f foo' >> %t2
 ; RUN: echo 'p 0 3 5' >> %t2
@@ -15,6 +16,7 @@ declare void @effect(i32 zeroext)
 ; RUN: echo 'c 0 3.1 5.1' >> %t2
 ; RUN: echo 'c 1 3.2 4.1 5.2 2 3 4 5' >> %t2
 ; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -enable-basic-block-path-cloning -basic-block-sections=%t2 | FileCheck %s --check-prefixes=PATH2,FOOSECTIONS,FOOCLONE
+; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -enable-basic-block-path-cloning -basic-block-sections=%t2 -stop-after=bb-path-cloning | FileCheck %s --check-prefix=PATH2MIR
 
 ;; Test failed application of path cloning.
 ; RUN: echo 'v1' > %t3
@@ -66,6 +68,14 @@ cold:
   call void @effect(i32 6)                     ; preds = %b4
   ret void
 }
+
+; PATH1MIR:    bb.7.b3 (bb_id 3 1):
+; PATH1MIR     bb.8.b5 (bb_id 5 1):
+; PATH2MIR:    bb.7.b3 (bb_id 3 1):
+; PATH2MIR:    bb.8.b5 (bb_id 5 1):
+; PATH2MIR:    bb.9.b3 (bb_id 3 2):
+; PATH2MIR:    bb.10.b4 (bb_id 4 1):
+; PATH2MIR:    bb.11.b5 (bb_id 5 2):
 
 ; FOOSECTIONS:   .section    .text.foo,"ax",@progbits
 ; FOOSECTIONS: foo:

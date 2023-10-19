@@ -178,9 +178,7 @@ public:
     initializeBasicBlockPathCloningPass(*PassRegistry::getPassRegistry());
   }
 
-  StringRef getPassName() const override {
-    return "Basic Block Path Cloning";
-  }
+  StringRef getPassName() const override { return "Basic Block Path Cloning"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
@@ -194,12 +192,13 @@ public:
 char BasicBlockPathCloning::ID = 0;
 INITIALIZE_PASS_BEGIN(
     BasicBlockPathCloning, "bb-path-cloning",
-    "Applies path clonings for the -basic-block-sections=list option",
-    false, false)
+    "Applies path clonings for the -basic-block-sections=list option", false,
+    false)
 INITIALIZE_PASS_DEPENDENCY(BasicBlockSectionsProfileReader)
-INITIALIZE_PASS_END(BasicBlockPathCloning, "bb-path-cloning",
-    "Applies path clonings for the -basic-block-sections=list option",
-                    false, false)
+INITIALIZE_PASS_END(
+    BasicBlockPathCloning, "bb-path-cloning",
+    "Applies path clonings for the -basic-block-sections=list option", false,
+    false)
 
 bool BasicBlockPathCloning::runOnMachineFunction(MachineFunction &MF) {
   auto BBSectionsType = MF.getTarget().getBBSectionsType();

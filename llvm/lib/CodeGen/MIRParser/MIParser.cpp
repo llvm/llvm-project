@@ -674,9 +674,9 @@ bool MIParser::parseBBID(std::optional<UniqueBBID> &BBID) {
   if (getUnsigned(BaseID))
     return error("Unknown BB ID");
   lex();
-  if (Token.is(MIToken::dot)) {
+  if (Token.is(MIToken::IntegerLiteral)) {
     if (getUnsigned(CloneID))
-      return error("Uknown clone ID");
+      return error("Unknown Clone ID");
     lex();
   }
   BBID = {BaseID, CloneID};

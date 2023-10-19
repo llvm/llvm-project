@@ -53,7 +53,7 @@ exit:
 ; Check that if we pass -mbb-profile-dump but don't set -basic-block-sections,
 ; we get an appropriate error message
 
-; RUN: not llc -mtriple=x86_64-linux-unknown -o /dev/null -mbb-profile-dump=- %s 2>&1 | FileCheck --check-prefix=NO-SECTIONS %s
+; RUN: not --crash llc -mtriple=x86_64-linux-unknown -o /dev/null -mbb-profile-dump=- %s 2>&1 | FileCheck --check-prefix=NO-SECTIONS %s
 
 ; NO-SECTIONS: <unknown>:0: error: Unable to find BB labels for MBB profile dump. -mbb-profile-dump must be called with -basic-block-sections=labels
 

@@ -569,7 +569,7 @@ void MachineBasicBlock::printName(raw_ostream &os, unsigned printNameFlags,
       os << (hasAttributes ? ", " : " (");
       os << "bb_id " << getBBID()->BaseID;
       if (getBBID()->CloneID != 0)
-        os << "." << getBBID()->CloneID;
+        os << " " << getBBID()->CloneID;
       hasAttributes = true;
     }
     if (CallFrameSize != 0) {
