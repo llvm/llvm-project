@@ -3889,7 +3889,7 @@ void SwiftASTContext::ValidateSectionModules(
     // object to stay in-sync with the total progress reporting.
     progress.Increment(++completion);
     if (!GetModule(module_info, error))
-      module.ReportWarning("unable to load swift module \"%s\" (%s)",
+      module.ReportWarning("unable to load swift module \"{0}\" ({1})",
                            module_name.c_str(), error.AsCString());
   }
 }
