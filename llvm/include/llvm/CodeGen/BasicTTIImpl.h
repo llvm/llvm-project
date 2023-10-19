@@ -1739,15 +1739,6 @@ public:
                "types");
         ArrayRef<Type *> NewTys = ArrayRef(ICA.getArgTypes()).drop_back(2);
 
-        // FIXME: it looks like non-vp reductions are costed using the
-        // Intrinsic::not_intrinsic opcode in the cost model. In the future,
-        // they should use the correct intrinsic opcode. The approach for
-        // costing VPIntrinsics is to cost them as their non-vp counterpart so
-        // we use Intrinsic::not_intrinsic below, however this must change when
-        // non-vp reductions use the correct ID.
-        if (VPReductionIntrinsic::isVPReduction(ICA.getID()))
-          FID = std::make_optional<Intrinsic::ID>(Intrinsic::not_intrinsic);
-
         // VPReduction intrinsics have a start value argument that their non-vp
         // counterparts do not have, except for the fadd and fmul non-vp
         // counterpart.
