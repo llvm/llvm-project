@@ -37,6 +37,22 @@ These changes are ones which we think may surprise users when upgrading to
 Clang |release| because of the opportunity they pose for disruption to existing
 code bases.
 
+- Fix a bug in reversed argument for templated operators.
+  This breaks code in C++20 which was previously accepted in C++17. Eg:
+  ```
+  struct P {};
+  template<class S> bool operator==(const P&, const S &);
+
+  struct A : public P {};
+  struct B : public P {};
+  // This equality is now ambiguous in C++20.
+  bool check(A a, B b) { return a == b; } 
+  ```
+  To reduce widespread breakages, as an extension, clang would accept this with a
+  `-Wambiguous-reversed-operator` warning.
+  Fixes `GH <https://github.com/llvm/llvm-project/issues/53954>`_.
+
+
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -117,8 +133,6 @@ C++ Language Changes
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
-- Fix a bug in conversion sequence of arguments to a function with reversed parameter order.
-  Fixes `GH <https://github.com/llvm/llvm-project/issues/53954>`_.
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
