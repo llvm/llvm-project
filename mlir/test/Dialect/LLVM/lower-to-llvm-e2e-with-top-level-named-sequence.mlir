@@ -3,7 +3,7 @@
 // RUN: mlir-opt %s -test-lower-to-llvm -cse | FileCheck %s
 
 // RUN: mlir-opt %s \
-// RUN:   -transform-preload-library=transform-library-paths=%p/../Transform/Library/lower-to-llvm.mlir \
+// RUN:   -transform-preload-library=transform-library-paths=%p/../Transform/include/Library/lower-to-llvm.mlir \
 // RUN:   -transform-interpreter="entry-point=entry_point" \
 // RUN:   -test-transform-dialect-erase-schedule \
 // RUN:   -cse \
