@@ -524,47 +524,6 @@ LogicalResult ReductionOp::verify() {
   return success();
 }
 
-ParseResult ReductionOp::parse(OpAsmParser &parser, OperationState &result) {
-  SmallVector<OpAsmParser::UnresolvedOperand, 2> operandsInfo;
-  Type redType;
-  Type resType;
-  CombiningKindAttr kindAttr;
-  arith::FastMathFlagsAttr fastMathAttr;
-  if (parser.parseCustomAttributeWithFallback(kindAttr, Type{}, "kind",
-                                              result.attributes) ||
-      parser.parseComma() || parser.parseOperandList(operandsInfo) ||
-      (succeeded(parser.parseOptionalKeyword("fastmath")) &&
-       parser.parseCustomAttributeWithFallback(fastMathAttr, Type{}, "fastmath",
-                                               result.attributes)) ||
-      parser.parseColonType(redType) ||
-      parser.parseKeywordType("into", resType) ||
-      (!operandsInfo.empty() &&
-       parser.resolveOperand(operandsInfo[0], redType, result.operands)) ||
-      (operandsInfo.size() > 1 &&
-       parser.resolveOperand(operandsInfo[1], resType, result.operands)) ||
-      parser.addTypeToList(resType, result.types))
-    return failure();
-  if (operandsInfo.empty() || operandsInfo.size() > 2)
-    return parser.emitError(parser.getNameLoc(),
-                            "unsupported number of operands");
-  return success();
-}
-
-void ReductionOp::print(OpAsmPrinter &p) {
-  p << " ";
-  getKindAttr().print(p);
-  p << ", " << getVector();
-  if (getAcc())
-    p << ", " << getAcc();
-
-  if (getFastmathAttr() &&
-      getFastmathAttr().getValue() != arith::FastMathFlags::none) {
-    p << ' ' << getFastmathAttrName().getValue();
-    p.printStrippedAttrOrType(getFastmathAttr());
-  }
-  p << " : " << getVector().getType() << " into " << getDest().getType();
-}
-
 // MaskableOpInterface methods.
 
 /// Returns the mask type expected by this operation.
