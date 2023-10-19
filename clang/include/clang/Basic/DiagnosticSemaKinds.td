@@ -2613,7 +2613,7 @@ def err_final_function_overridden : Error<
 
 // C++11 scoped enumerations
 def err_enum_invalid_underlying : Error<
-  "non-integral type %0 is an invalid underlying type">;
+  "%select{non-integral type %0|%0}1 is an invalid underlying type">;
 def err_enumerator_too_large : Error<
   "enumerator value is not representable in the underlying type %0">;
 def ext_enumerator_too_large : Extension<
