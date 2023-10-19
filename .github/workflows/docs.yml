@@ -53,15 +53,11 @@ jobs:
       - name: Build LLVM docs
         if: steps.docs-changed-subprojects.outputs.llvm_any_changed == 'true'
         run: |
-          mkdir llvm-build
-          cd llvm-build
-          cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_SPHINX=ON -DSPHINX_OUTPUT_HTML=ON -DSPHINX_OUTPUT_MAN=ON ../llvm
-          TZ=UTC ninja docs-llvm-html docs-llvm-man
+          cmake -B llvm-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_SPHINX=ON -DSPHINX_OUTPUT_HTML=ON -DSPHINX_OUTPUT_MAN=ON ./llvm
+          TZ=UTC ninja -C llvm-build docs-llvm-html docs-llvm-man
       - name: Build Clang docs
         if: steps.docs-changed-subprojects.outputs.clang_any_changed == 'true'
         run: |
-          mkdir clang-build
-          cd clang-build
-          cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_ENABLE_SPHINX=ON -DSPHINX_OUTPUT_HTML=ON -DSPHINX_OUTPUT_MAN=ON ../llvm
-          TZ=UTC ninja docs-clang-html docs-clang-man
+          cmake -B clang-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_ENABLE_SPHINX=ON -DSPHINX_OUTPUT_HTML=ON -DSPHINX_OUTPUT_MAN=ON ./llvm
+          TZ=UTC ninja -C clang-build docs-clang-html docs-clang-man
 
