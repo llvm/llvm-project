@@ -1665,9 +1665,9 @@ bool ByteCodeExprGen<Emitter>::visitZeroInitializer(PrimType T, QualType QT,
   case PT_Uint64:
     return this->emitZeroUint64(E);
   case PT_IntAP:
+    return this->emitZeroIntAP(Ctx.getBitWidth(QT), E);
   case PT_IntAPS:
-    assert(false);
-    return false;
+    return this->emitZeroIntAPS(Ctx.getBitWidth(QT), E);
   case PT_Ptr:
     return this->emitNullPtr(E);
   case PT_FnPtr:

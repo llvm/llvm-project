@@ -17,6 +17,16 @@ constexpr MaxBitInt A_ = 0;
 constexpr MaxBitInt B_ = A_ + 1;
 static_assert(B_ == 1, "");
 
+constexpr MaxBitInt BitIntZero{};
+static_assert(BitIntZero == 0, "");
+constexpr unsigned _BitInt(128) UBitIntZero{};
+static_assert(UBitIntZero == 0, "");
+
+constexpr _BitInt(2) BitIntZero2{};
+static_assert(BitIntZero2 == 0, "");
+constexpr unsigned _BitInt(1) UBitIntZero1{};
+static_assert(UBitIntZero1 == 0, "");
+
 
 #ifdef __SIZEOF_INT128__
 namespace i128 {
@@ -48,6 +58,11 @@ namespace i128 {
 
   constexpr uint128_t AllOnes = ~static_cast<uint128_t>(0);
   static_assert(AllOnes == UINT128_MAX, "");
+
+  constexpr uint128_t i128Zero{};
+  static_assert(i128Zero == 0, "");
+  constexpr uint128_t ui128Zero{};
+  static_assert(ui128Zero == 0, "");
 
 #if __cplusplus >= 201402L
   template <typename T>
