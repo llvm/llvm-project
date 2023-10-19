@@ -43,20 +43,39 @@ class raw_ostream;
   /// SlotIndex & SlotIndexes classes for the public interface to this
   /// information.
   class IndexListEntry : public ilist_node<IndexListEntry> {
-    MachineInstr *mi;
+#if NDEBUG
+    // Disable poison checks such that setPoison will do nothing and isPoisoned
+    // will return false.
+    static constexpr unsigned PoisonBits = 0;
+    static constexpr unsigned PoisonVal = 0;
+#else
+    static constexpr unsigned PoisonBits = 1;
+    static constexpr unsigned PoisonVal = 1;
+#endif
+
+    PointerIntPair<MachineInstr *, PoisonBits, unsigned> mi;
     unsigned index;
 
   public:
-    IndexListEntry(MachineInstr *mi, unsigned index) : mi(mi), index(index) {}
+    IndexListEntry(MachineInstr *mi, unsigned index) : mi(mi, 0), index(index) {
+    }
 
-    MachineInstr* getInstr() const { return mi; }
+    MachineInstr* getInstr() const { return mi.getPointer(); }
     void setInstr(MachineInstr *mi) {
-      this->mi = mi;
+      this->mi.setPointer(mi);
     }
 
     unsigned getIndex() const { return index; }
     void setIndex(unsigned index) {
       this->index = index;
+    }
+
+    void setPoison() {
+      mi.setInt(PoisonVal);
+    }
+
+    bool isPoisoned() const {
+      return mi.getInt();
     }
   };
 
@@ -284,6 +303,10 @@ class raw_ostream;
     /// index's slot, but for the previous instruction.
     SlotIndex getPrevIndex() const {
       return SlotIndex(&*--listEntry()->getIterator(), getSlot());
+    }
+
+    bool isPoisoned() const {
+      return listEntry()->isPoisoned();
     }
   };
 
