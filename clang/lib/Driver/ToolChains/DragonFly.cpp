@@ -56,7 +56,8 @@ void dragonfly::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                      const InputInfoList &Inputs,
                                      const ArgList &Args,
                                      const char *LinkingOutput) const {
-  const Driver &D = getToolChain().getDriver();
+  const auto &ToolChain = static_cast<const DragonFly &>(getToolChain());
+  const Driver &D = ToolChain.getDriver();
   ArgStringList CmdArgs;
 
   if (!D.SysRoot.empty())
@@ -115,20 +116,23 @@ void dragonfly::Linker::ConstructJob(Compilation &C, const JobAction &JA,
           Args.MakeArgString(getToolChain().GetFilePath("crtbegin.o")));
   }
 
-  Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group});
+  Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
+                            options::OPT_s, options::OPT_t, options::OPT_r});
+  ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs,
                    options::OPT_r)) {
-    SmallString<128> Dir(D.SysRoot);
-    llvm::sys::path::append(Dir, "/usr/lib/gcc80");
-    CmdArgs.push_back(Args.MakeArgString("-L" + Dir));
-
     if (!Args.hasArg(options::OPT_static)) {
       CmdArgs.push_back("-rpath");
       CmdArgs.push_back("/usr/lib/gcc80");
     }
+
+    // Use the static OpenMP runtime with -static-openmp
+    bool StaticOpenMP = Args.hasArg(options::OPT_static_openmp) &&
+                        !Args.hasArg(options::OPT_static);
+    addOpenMPRuntime(CmdArgs, ToolChain, Args, StaticOpenMP);
 
     if (D.CCCIsCXX()) {
       if (getToolChain().ShouldLinkCXXStdlib(Args))
