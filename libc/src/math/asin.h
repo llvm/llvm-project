@@ -1,4 +1,4 @@
-//===-- C standard library header features.h ------------------------------===//
+//===-- Implementation header for asin --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_FEATURES_H
-#define LLVM_LIBC_FEATURES_H
+#ifndef LLVM_LIBC_SRC_MATH_ASIN_H
+#define LLVM_LIBC_SRC_MATH_ASIN_H
 
-#include <__llvm-libc-common.h>
-#include <llvm-libc-macros/features-macros.h>
+namespace LIBC_NAMESPACE {
 
-%%public_api()
+double asin(double x);
 
-#endif // LLVM_LIBC_FEATURES_H
+} // namespace LIBC_NAMESPACE
+
+#endif // LLVM_LIBC_SRC_MATH_ASIN_H

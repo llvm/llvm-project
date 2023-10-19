@@ -1,4 +1,4 @@
-//===-- C standard library header features.h ------------------------------===//
+//===-- Implementation of the GPU lround function -------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_FEATURES_H
-#define LLVM_LIBC_FEATURES_H
+#include "src/math/lround.h"
+#include "src/__support/common.h"
 
-#include <__llvm-libc-common.h>
-#include <llvm-libc-macros/features-macros.h>
+namespace LIBC_NAMESPACE {
 
-%%public_api()
+LLVM_LIBC_FUNCTION(long, lround, (double x)) { return __builtin_lround(x); }
 
-#endif // LLVM_LIBC_FEATURES_H
+} // namespace LIBC_NAMESPACE

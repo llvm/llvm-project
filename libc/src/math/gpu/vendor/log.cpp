@@ -1,4 +1,4 @@
-//===-- C standard library header features.h ------------------------------===//
+//===-- Implementation of the GPU log function ----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_FEATURES_H
-#define LLVM_LIBC_FEATURES_H
+#include "src/math/log.h"
+#include "src/__support/common.h"
 
-#include <__llvm-libc-common.h>
-#include <llvm-libc-macros/features-macros.h>
+#include "common.h"
 
-%%public_api()
+namespace LIBC_NAMESPACE {
 
-#endif // LLVM_LIBC_FEATURES_H
+LLVM_LIBC_FUNCTION(double, log, (double x)) { return internal::log(x); }
+
+} // namespace LIBC_NAMESPACE
