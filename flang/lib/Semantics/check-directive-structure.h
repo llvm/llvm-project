@@ -459,7 +459,7 @@ void DirectiveStructureChecker<D, C, PC, ClauseEnumSize>::CheckAllowed(
       !GetContext().requiredClauses.test(clause)) {
     if (warnInsteadOfError)
       context_.Say(GetContext().clauseSource,
-          "%s clause is not allowed on the %s directive and will be ignored"_warn_en_US,
+          "%s clause is not allowed on the %s directive and will be ignored"_port_en_US,
           parser::ToUpperCaseLetters(getClauseName(clause).str()),
           parser::ToUpperCaseLetters(GetContext().directiveSource.ToString()));
     else
