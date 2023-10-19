@@ -168,6 +168,12 @@ a project, pass the appropriate CFLAGS, CXXFLAG​S and LDFLAGS for example -
 
    export CFLAGS="-flto -fuse-ld=lld" CXXFLAGS="-flto -fuse-ld=lld" LDFLAGS="-Wl,-plugin-opt=save-temps"
 
+On Windows, you should use lld-link as the linker.
+
+.. code-block:: bash
+
+   export CFLAGS="-flto -fuse-ld=lld-link" CXXFLAGS="-flto -fuse-ld=lld-link" LDFLAGS="-Wl,-plugin-opt=save-temps"
+
 This will generate four intermediate bytecode files:
 
 1. a.out.0.0.preopt.bc      (Before any link-time optimizations (LTO) are applied)
