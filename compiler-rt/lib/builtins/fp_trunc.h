@@ -36,13 +36,7 @@ static const int srcSigFracBits = 52;
 static const int srcExpBits = 11;
 
 #elif defined SRC_QUAD
-// TODO: use fp_lib.h once QUAD_PRECISION is available on x86_64.
-#if __LDBL_MANT_DIG__ == 113
-typedef long double src_t;
-#elif defined(__x86_64__) &&                                                   \
-    (defined(__FLOAT128__) || defined(__SIZEOF_FLOAT128__))
-typedef __float128 src_t;
-#endif
+typedef tf_float src_t;
 typedef __uint128_t src_rep_t;
 #define SRC_REP_C (__uint128_t)
 static const int srcBits = sizeof(src_t) * CHAR_BIT;

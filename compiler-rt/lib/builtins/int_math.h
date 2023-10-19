@@ -65,6 +65,11 @@
 #define crt_copysign(x, y) __builtin_copysign((x), (y))
 #define crt_copysignf(x, y) __builtin_copysignf((x), (y))
 #define crt_copysignl(x, y) __builtin_copysignl((x), (y))
+#if __has_builtin(__builtin_copysignf128)
+#define crt_copysignf128(x, y) __builtin_copysignf128((x), (y))
+#elif __has_builtin(__builtin_copysignq) || (defined(__GNUC__) && __GNUC__ >= 7)
+#define crt_copysignf128(x, y) __builtin_copysignq((x), (y))
+#endif
 #endif
 
 #if defined(_MSC_VER) && !defined(__clang__)
@@ -75,6 +80,11 @@
 #define crt_fabs(x) __builtin_fabs((x))
 #define crt_fabsf(x) __builtin_fabsf((x))
 #define crt_fabsl(x) __builtin_fabsl((x))
+#if __has_builtin(__builtin_fabsf128)
+#define crt_fabsf128(x) __builtin_fabsf128((x))
+#elif __has_builtin(__builtin_fabsq) || (defined(__GNUC__) && __GNUC__ >= 7)
+#define crt_fabsf128(x) __builtin_fabsq((x))
+#endif
 #endif
 
 #if defined(_MSC_VER) && !defined(__clang__)

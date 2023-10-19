@@ -137,49 +137,54 @@ si_int __ucmpti2(tu_int a, tu_int b);
 di_int __fixsfdi(      float a);
 di_int __fixdfdi(     double a);
 di_int __fixxfdi(long double a);
+di_int __fixtfdi(   tf_float a);
 
 ti_int __fixsfti(      float a);
 ti_int __fixdfti(     double a);
 ti_int __fixxfti(long double a);
-uint64_t __fixtfdi(long double input);  // ppc only, doesn't match documentation
+ti_int __fixtfti(   tf_float a);
 
 su_int __fixunssfsi(      float a);
 su_int __fixunsdfsi(     double a);
 su_int __fixunsxfsi(long double a);
+su_int __fixunstfsi(   tf_float a);
 
 du_int __fixunssfdi(      float a);
 du_int __fixunsdfdi(     double a);
 du_int __fixunsxfdi(long double a);
+du_int __fixunstfdi(   tf_float a);
 
 tu_int __fixunssfti(      float a);
 tu_int __fixunsdfti(     double a);
 tu_int __fixunsxfti(long double a);
-uint64_t __fixunstfdi(long double input);  // ppc only
+tu_int __fixunstfti(   tf_float a);
 
 float       __floatdisf(di_int a);
 double      __floatdidf(di_int a);
 long double __floatdixf(di_int a);
-long double __floatditf(int64_t a);        // ppc only
+tf_float    __floatditf(int64_t a);
 
 float       __floattisf(ti_int a);
 double      __floattidf(ti_int a);
 long double __floattixf(ti_int a);
+tf_float    __floattitf(ti_int a);
 
 float       __floatundisf(du_int a);
 double      __floatundidf(du_int a);
 long double __floatundixf(du_int a);
-long double __floatunditf(uint64_t a);     // ppc only
+tf_float    __floatunditf(du_int a);
 
 float       __floatuntisf(tu_int a);
 double      __floatuntidf(tu_int a);
 long double __floatuntixf(tu_int a);
+tf_float    __floatuntixf(tu_int a);
 
 //  Floating point raised to integer power
 
 float       __powisf2(      float a, int b);  // a ^ b
 double      __powidf2(     double a, int b);  // a ^ b
 long double __powixf2(long double a, int b);  // a ^ b
-long double __powitf2(long double a, int b);  // ppc only, a ^ b
+tf_float    __powitf2(   tf_float a, int b);  // a ^ b
 
 //  Complex arithmetic
 
@@ -189,8 +194,7 @@ long double __powitf2(long double a, int b);  // ppc only, a ^ b
      double _Complex __muldc3(double a, double b, double c, double d);
 long double _Complex __mulxc3(long double a, long double b,
                               long double c, long double d);
-long double _Complex __multc3(long double a, long double b,
-                              long double c, long double d); // ppc only
+   tf_float _Complex __multc3(tf_float a, tf_float b, tf_float c, tf_float d);
 
 //  (a + ib) / (c + id)
 
@@ -198,8 +202,7 @@ long double _Complex __multc3(long double a, long double b,
      double _Complex __divdc3(double a, double b, double c, double d);
 long double _Complex __divxc3(long double a, long double b,
                               long double c, long double d);
-long double _Complex __divtc3(long double a, long double b,
-                              long double c, long double d);  // ppc only
+   tf_float _Complex __divtc3(tf_float a, tf_float b, tf_float c, tf_float d);
 
 
 //         Runtime support

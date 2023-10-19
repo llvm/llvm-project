@@ -53,7 +53,7 @@ typedef uint64_t dst_rep_t;
 static const int dstSigBits = 52;
 
 #elif defined DST_QUAD
-typedef long double dst_t;
+typedef tf_float dst_t;
 typedef __uint128_t dst_rep_t;
 #define DST_REP_C (__uint128_t)
 static const int dstSigBits = 112;

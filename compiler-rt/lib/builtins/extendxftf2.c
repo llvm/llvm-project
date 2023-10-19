@@ -9,14 +9,15 @@
 // Assumption: long double is a IEEE 80 bit floating point type padded to 128
 // bits.
 
-// TODO: use fp_lib.h once QUAD_PRECISION is available on x86_64.
-#if __LDBL_MANT_DIG__ == 64 && defined(__x86_64__) &&                          \
-    (defined(__FLOAT128__) || defined(__SIZEOF_FLOAT128__))
+#define QUAD_PRECISION
+#include "fp_lib.h"
+
+#if defined(CRT_HAS_TF_MODE) && __LDBL_MANT_DIG__ == 64 && defined(__x86_64__)
 #define SRC_80
 #define DST_QUAD
 #include "fp_extend_impl.inc"
 
-COMPILER_RT_ABI __float128 __extendxftf2(long double a) {
+COMPILER_RT_ABI tf_float __extendxftf2(long double a) {
   return __extendXfYf2__(a);
 }
 

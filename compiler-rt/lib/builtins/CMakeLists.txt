@@ -187,8 +187,6 @@ set(BF16_SOURCES
     truncsfbf2.c
 )
 
-# TODO: Several "tf" files (and divtc3.c, but not multc3.c) are in
-# GENERIC_SOURCES instead of here.
 set(GENERIC_TF_SOURCES
   addtf3.c
   comparetf2.c
