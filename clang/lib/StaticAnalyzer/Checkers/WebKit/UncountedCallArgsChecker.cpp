@@ -149,7 +149,7 @@ public:
 
     auto name = safeGetName(Callee);
     if (name == "adoptRef" || name == "getPtr" || name == "WeakPtr" ||
-        name == "makeWeakPtr" || name == "downcast" || name == "bitwise_cast" ||
+        name == "dynamicDowncast" || name == "downcast" || name == "bitwise_cast" ||
         name == "is" || name == "equal" || name == "hash" ||
         name == "isType"
         // FIXME: Most/all of these should be implemented via attributes.
