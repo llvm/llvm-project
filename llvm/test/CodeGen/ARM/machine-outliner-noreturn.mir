@@ -37,9 +37,9 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $lr, $r0, $r1, $r2, $r3, $r4
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   early-clobber $sp = frame-setup t2STR_PRE killed $lr, $sp, -8, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   early-clobber $sp = t2STR_PRE killed $lr, $sp, -8, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION_0, implicit-def $lr, implicit $sp, implicit-def $lr, implicit-def $sp, implicit-def $r1, implicit $noreg, implicit $sp
-  ; CHECK-NEXT:   $lr, $sp = frame-destroy t2LDR_POST $sp, 8, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   $lr, $sp = t2LDR_POST $sp, 8, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   tCMPi8 killed renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK-NEXT:   t2STRDi8 killed $r2, killed $r3, $sp, 16, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 327689 /* reguse:GPR */, killed renamable $lr
