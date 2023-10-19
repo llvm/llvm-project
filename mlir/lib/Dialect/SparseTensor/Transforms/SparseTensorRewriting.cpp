@@ -1023,7 +1023,7 @@ struct DirectConvertRewriter : public OpRewritePattern<ConvertOp> {
           // Enters the loop, update the SSA value for insertion chain.
           dstBuf.val = reduc.front();
 
-          ValueRange lcvs = dstStt.getEncoding().translateCrds(
+          ValueRange lcvs = dstStt.translateCrds(
               builder, loc, dcvs, CrdTransDirectionKind::dim2lvl);
 
           if (!skipZeroCheck) {
@@ -1120,10 +1120,9 @@ public:
     Block *srcBlock = op.getBody();
 
     // Remap coordinates.
-    ValueRange dimCrds =
+    SmallVector<Value> args =
         enc.translateCrds(rewriter, loc, lcvs, CrdTransDirectionKind::lvl2dim);
 
-    SmallVector<Value> args(dimCrds.begin(), dimCrds.end());
     // Remap value.
     args.push_back(val);
     // Remap reduction variables.
