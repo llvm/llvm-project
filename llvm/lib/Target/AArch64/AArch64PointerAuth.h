@@ -71,6 +71,18 @@ enum class AuthCheckMethod {
   ///   b.ne break_block
   /// ```
   XPACHint,
+  /// Check by comparing the authenticated value with an XPAC-ed one (handles
+  /// arbitrary register and key combination, requires FEAT_PAuth).
+  ///
+  /// This method modifies control flow and inserts the following checker:
+  ///
+  /// ```
+  ///   mov Xtmp, Xn
+  ///   xpac(i|d) Xtmp
+  ///   cmp Xtmp, Xn
+  ///   b.ne break_block
+  /// ```
+  XPAC,
 };
 
 #define AUTH_CHECK_METHOD_CL_VALUES_COMMON                                     \
@@ -82,10 +94,17 @@ enum class AuthCheckMethod {
                  "high-bits-notbi",                                            \
                  "Compare bits 62 and 61 of address (TBI should be disabled)")
 
+/// The methods applicable to LR register authenticated using IA or IB key.
 #define AUTH_CHECK_METHOD_CL_VALUES_LR                                         \
       AUTH_CHECK_METHOD_CL_VALUES_COMMON,                                      \
       clEnumValN(AArch64PAuth::AuthCheckMethod::XPACHint, "xpac-hint",         \
                  "Compare with the result of XPACLRI")
+
+/// The methods applicable to any register authenticated using any key.
+#define AUTH_CHECK_METHOD_CL_VALUES_GENERIC                                    \
+      AUTH_CHECK_METHOD_CL_VALUES_COMMON,                                      \
+      clEnumValN(AArch64PAuth::AuthCheckMethod::XPAC, "xpac",                  \
+                 "Compare with the result of XPAC (needs FEAT_PAuth)")
 
 /// Explicitly checks that pointer authentication succeeded.
 ///

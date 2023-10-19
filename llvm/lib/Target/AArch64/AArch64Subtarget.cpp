@@ -77,6 +77,12 @@ static cl::opt<AArch64PAuth::AuthCheckMethod>
                                         "to authenticated LR during tail call"),
                                cl::values(AUTH_CHECK_METHOD_CL_VALUES_LR));
 
+static cl::opt<AArch64PAuth::AuthCheckMethod> PAuthIntrinsicCheckMethod(
+    "aarch64-intrinsic-check-method", cl::Hidden,
+    cl::desc("Override the variant of check performed by ptrauth_auth "
+             "intrinsic"),
+    cl::values(AUTH_CHECK_METHOD_CL_VALUES_GENERIC));
+
 static cl::opt<unsigned> AArch64MinimumJumpTableEntries(
     "aarch64-min-jump-table-entries", cl::init(13), cl::Hidden,
     cl::desc("Set minimum number of entries to use a jump table on AArch64"));
@@ -543,4 +549,40 @@ AArch64Subtarget::getAuthenticatedLRCheckMethod() const {
 
 bool AArch64Subtarget::enableMachinePipeliner() const {
   return getSchedModel().hasInstrSchedModel();
+}
+
+// Various int_ptrauth_* intrinsics may need to check the authenticated pointer
+// to prevent introducing an oracle. The decision on the particular method to
+// use to check the pointer may depend on whether the target CPU is known to
+// support FEAT_FPAC, the desired security/performance trade-off, etc.
+AArch64PAuth::AuthCheckMethod
+AArch64Subtarget::getPAuthIntrinsicCheckMethod(Intrinsic::ID IntrinsicId,
+                                               AArch64PACKey::ID KeyId) const {
+  using namespace AArch64PAuth;
+
+  bool UseIKey =
+      KeyId == AArch64PACKey::ID::IA || KeyId == AArch64PACKey::ID::IB;
+  AuthCheckMethod Method = AuthCheckMethod::None;
+  cl::opt<AuthCheckMethod> *OverrideOpt = nullptr;
+
+  switch (IntrinsicId) {
+  case Intrinsic::ptrauth_auth:
+    if (!hasPAuth()) {
+      // If generating Armv8.2-compatible code, only I-keys can be used in
+      // authentication.
+      assert(UseIKey && "Authenticating using D-keys without FEAT_PAuth");
+      Method = AuthCheckMethod::None;
+    } else {
+      // DummyLoad should be the fastest method but breaks execute-only code.
+      Method = UseIKey ? AuthCheckMethod::XPAC : AuthCheckMethod::DummyLoad;
+    }
+    OverrideOpt = &PAuthIntrinsicCheckMethod;
+    break;
+  }
+
+  assert(OverrideOpt && "Unhandled intrinsic");
+  if (OverrideOpt->getNumOccurrences())
+    return OverrideOpt->getValue();
+
+  return Method;
 }

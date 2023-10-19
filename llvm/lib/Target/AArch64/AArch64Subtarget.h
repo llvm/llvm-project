@@ -450,6 +450,12 @@ public:
   /// Choose a method of checking LR before performing a tail call.
   AArch64PAuth::AuthCheckMethod getAuthenticatedLRCheckMethod() const;
 
+  /// Choose a method of checking the authenticated pointer when lowering
+  /// the PAuth intrinsic.
+  AArch64PAuth::AuthCheckMethod
+  getPAuthIntrinsicCheckMethod(Intrinsic::ID IntrinsicId,
+                               AArch64PACKey::ID KeyId) const;
+
   const PseudoSourceValue *getAddressCheckPSV() const {
     return AddressCheckPSV.get();
   }
