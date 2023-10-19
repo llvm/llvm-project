@@ -313,6 +313,9 @@ bool TGParser::AddSubClass(Record *CurRec, SubClassReference &SubClass) {
   // Copy the subclass record's assertions to the new record.
   CurRec->appendAssertions(SC);
 
+  // Copy the subclass record's dumps to the new record.
+  CurRec->appendDumps(SC);
+
   Init *Name;
   if (CurRec->isClass())
     Name = VarInit::get(QualifiedNameOfImplicitName(*CurRec),
@@ -376,7 +379,7 @@ bool TGParser::AddSubMultiClass(MultiClass *CurMC,
 
 /// Add a record, foreach loop, or assertion to the current context.
 bool TGParser::addEntry(RecordsEntry E) {
-  assert((!!E.Rec + !!E.Loop + !!E.Assertion) == 1 &&
+  assert((!!E.Rec + !!E.Loop + !!E.Assertion + !!E.Dump) == 1 &&
          "RecordsEntry has invalid number of items");
 
   // If we are parsing a loop, add it to the loop's entries.
@@ -401,6 +404,11 @@ bool TGParser::addEntry(RecordsEntry E) {
   // If it is an assertion, then it's a top-level one, so check it.
   if (E.Assertion) {
     CheckAssert(E.Assertion->Loc, E.Assertion->Condition, E.Assertion->Message);
+    return false;
+  }
+
+  if (E.Dump) {
+    dumpMessage(E.Dump->Loc, E.Dump->Message);
     return false;
   }
 
@@ -498,6 +506,18 @@ bool TGParser::resolve(const std::vector<RecordsEntry> &Source,
       else
         CheckAssert(E.Assertion->Loc, Condition, Message);
 
+    } else if (E.Dump) {
+      MapResolver R;
+      for (const auto &S : Substs)
+        R.set(S.first, S.second);
+      Init *Message = E.Dump->Message->resolveReferences(R);
+
+      if (Dest)
+        Dest->push_back(
+            std::make_unique<Record::DumpInfo>(E.Dump->Loc, Message));
+      else
+        dumpMessage(E.Dump->Loc, Message);
+
     } else {
       auto Rec = std::make_unique<Record>(*E.Rec);
       if (Loc)
@@ -544,6 +564,9 @@ bool TGParser::addDefOne(std::unique_ptr<Record> Rec) {
 
   // Check the assertions.
   Rec->checkRecordAssertions();
+
+  // Run the dumps.
+  Rec->emitRecordDumps();
 
   // If ObjectBody has template arguments, it's an error.
   assert(Rec->getTemplateArgs().empty() && "How'd this get template args?");
@@ -3405,6 +3428,7 @@ bool TGParser::ParseTemplateArgList(Record *CurRec) {
 ///   BodyItem ::= Declaration ';'
 ///   BodyItem ::= LET ID OptionalBitList '=' Value ';'
 ///   BodyItem ::= Defvar
+///   BodyItem ::= Dump
 ///   BodyItem ::= Assert
 ///
 bool TGParser::ParseBodyItem(Record *CurRec) {
@@ -3413,6 +3437,9 @@ bool TGParser::ParseBodyItem(Record *CurRec) {
 
   if (Lex.getCode() == tgtok::Defvar)
     return ParseDefvar(CurRec);
+
+  if (Lex.getCode() == tgtok::Dump)
+    return ParseDump(nullptr, CurRec);
 
   if (Lex.getCode() != tgtok::Let) {
     if (!ParseDeclaration(CurRec, false))
@@ -3508,6 +3535,10 @@ bool TGParser::ApplyLetStack(RecordsEntry &Entry) {
 
   // Let bindings are not applied to assertions.
   if (Entry.Assertion)
+    return false;
+
+  // Let bindings are not applied to dumps.
+  if (Entry.Dump)
     return false;
 
   for (auto &E : Entry.Loop->Entries) {
@@ -4090,13 +4121,14 @@ bool TGParser::ParseMultiClass() {
     while (Lex.getCode() != tgtok::r_brace) {
       switch (Lex.getCode()) {
       default:
-        return TokError("expected 'assert', 'def', 'defm', 'defvar', "
+        return TokError("expected 'assert', 'def', 'defm', 'defvar', 'dump', "
                         "'foreach', 'if', or 'let' in multiclass body");
 
       case tgtok::Assert:
       case tgtok::Def:
       case tgtok::Defm:
       case tgtok::Defvar:
+      case tgtok::Dump:
       case tgtok::Foreach:
       case tgtok::If:
       case tgtok::Let:
@@ -4240,15 +4272,18 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
 ///   Object ::= Defset
 ///   Object ::= Defvar
 ///   Object ::= Assert
+///   Object ::= Dump
 bool TGParser::ParseObject(MultiClass *MC) {
   switch (Lex.getCode()) {
   default:
     return TokError(
-               "Expected assert, class, def, defm, defset, foreach, if, or let");
+        "Expected assert, class, def, defm, defset, dump, foreach, if, or let");
   case tgtok::Assert:  return ParseAssert(MC);
   case tgtok::Def:     return ParseDef(MC);
   case tgtok::Defm:    return ParseDefm(MC);
   case tgtok::Defvar:  return ParseDefvar();
+  case tgtok::Dump:
+    return ParseDump(MC);
   case tgtok::Foreach: return ParseForeach(MC);
   case tgtok::If:      return ParseIf(MC);
   case tgtok::Let:     return ParseTopLevelLet(MC);
@@ -4359,3 +4394,30 @@ LLVM_DUMP_METHOD void MultiClass::dump() const {
     E.dump();
 }
 #endif
+
+bool TGParser::ParseDump(MultiClass *CurMultiClass, Record *CurRec) {
+  // Location of the `dump` statement.
+  SMLoc Loc = Lex.getLoc();
+  assert(Lex.getCode() == tgtok::Dump && "Unknown tok");
+  Lex.Lex(); // eat the operation
+
+  Init *Message = ParseValue(CurRec);
+  if (!Message)
+    return true;
+
+  // Allow to use dump directly on `defvar` and `def`, by wrapping
+  // them with a `!repl`.
+  if (isa<DefInit>(Message))
+    Message = UnOpInit::get(UnOpInit::REPR, Message, StringRecTy::get(Records))
+                  ->Fold(CurRec);
+
+  if (!consume(tgtok::semi))
+    return TokError("expected ';'");
+
+  if (CurRec)
+    CurRec->addDump(Loc, Message);
+  else
+    addEntry(std::make_unique<Record::DumpInfo>(Loc, Message));
+
+  return false;
+}
