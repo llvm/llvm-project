@@ -527,14 +527,21 @@ def SparseTensor_SetStorageSpecifierOp : SparseTensor_Op<"storage_specifier.set"
 def SparseTensor_CrdTranslateOp : SparseTensor_Op<"crd_translate", [Pure]>,
     Arguments<(ins Variadic<Index>:$in_crds,
                    SparseTensorCrdTransDirectionAttr:$direction,
-                   SparseTensorEncodingAttr:$oracle)>,
+                   SparseTensorEncodingAttr:$encoder)>,
     Results<(outs Variadic<Index>:$out_crds)> {
   string summary = "Performs coordinate translation between level and dimension coordinate space.";
   string description = [{
     Performs coordinate translation between level and dimension coordinate space according
-    to the provided affine maps.
+    to the affine maps defined by $encoding.
+
+    Example:
+
+    ```mlir
+    %l0, %l1, %l2, %l3 = sparse_tensor.crd_translate dim_to_lvl [%d0, %d1] as #BSR
+                       : index, index, index, index
+    ```
   }];
-  let assemblyFormat = "$direction `[` $in_crds `]` `as` $oracle attr-dict `:` type($out_crds)";
+  let assemblyFormat = "$direction `[` $in_crds `]` `as` $encoder attr-dict `:` type($out_crds)";
   let hasVerifier = 1;
   let hasFolder = 1;
 }

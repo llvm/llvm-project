@@ -546,7 +546,7 @@ def SparseTensorSortKindAttr
 // Sparse Tensor Coordinate Translation Direction Attribute.
 //===----------------------------------------------------------------------===//
 
-// The C++ enum for sparse tensor sort kind.
+// The C++ enum for sparse tensor coordinate translation direction enum.
 def SparseTensorCrdTransDirectionEnum
     : I32EnumAttr<"CrdTransDirectionKind", "sparse tensor coordinate translation direction", [
         I32EnumAttrCase<"dim2lvl", 0, "dim_to_lvl">,
@@ -556,7 +556,7 @@ def SparseTensorCrdTransDirectionEnum
   let cppNamespace = SparseTensor_Dialect.cppNamespace;
 }
 
-// Define the enum sparse tensor sort kind attribute.
+// The C++ enum for sparse tensor coordinate translation direction attribute.
 def SparseTensorCrdTransDirectionAttr
     : EnumAttr<SparseTensor_Dialect, SparseTensorCrdTransDirectionEnum,
                "CrdTransDirection"> {

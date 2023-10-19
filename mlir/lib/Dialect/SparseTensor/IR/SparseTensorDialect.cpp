@@ -1161,8 +1161,8 @@ bool ConvertOp::needsExtraSort() {
 }
 
 LogicalResult CrdTranslateOp::verify() {
-  uint64_t inRank = getOracle().getLvlRank();
-  uint64_t outRank = getOracle().getDimRank();
+  uint64_t inRank = getEncoder().getLvlRank();
+  uint64_t outRank = getEncoder().getDimRank();
 
   if (getDirection() == CrdTransDirectionKind::dim2lvl)
     std::swap(inRank, outRank);
@@ -1175,10 +1175,10 @@ LogicalResult CrdTranslateOp::verify() {
 
 LogicalResult CrdTranslateOp::fold(FoldAdaptor adaptor,
                                    SmallVectorImpl<OpFoldResult> &results) {
-  if (getOracle().isPermutation()) {
+  if (getEncoder().isPermutation()) {
     AffineMap perm = getDirection() == CrdTransDirectionKind::dim2lvl
-                         ? getOracle().getDimToLvl()
-                         : getOracle().getLvlToDim();
+                         ? getEncoder().getDimToLvl()
+                         : getEncoder().getLvlToDim();
     for (AffineExpr exp : perm.getResults())
       results.push_back(getInCrds()[exp.cast<AffineDimExpr>().getPosition()]);
     return success();
@@ -1193,12 +1193,13 @@ LogicalResult CrdTranslateOp::fold(FoldAdaptor adaptor,
     return failure();
 
   bool oppositeDir = def.getDirection() != getDirection();
-  bool sameOracle = def.getOracle().getDimToLvl() == getOracle().getDimToLvl();
+  bool sameOracle =
+      def.getEncoder().getDimToLvl() == getEncoder().getDimToLvl();
   bool sameCount = def.getNumResults() == getInCrds().size();
   if (!oppositeDir || !sameOracle || !sameCount)
     return failure();
 
-  // The definition produce the coordinate in the same order as the input
+  // The definition produces the coordinates in the same order as the input
   // coordinates.
   bool sameOrder = llvm::all_of(llvm::zip_equal(def.getOutCrds(), getInCrds()),
                                 [](auto valuePair) {
