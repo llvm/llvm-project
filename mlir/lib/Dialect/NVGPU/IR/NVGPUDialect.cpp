@@ -347,12 +347,6 @@ LogicalResult TmaAsyncLoadOp::verify() {
   if (getCoordinates().size() > 5) {
     return emitError() << "Maximum 5 coordinates are supported.";
   }
-  if (getCoordinates().size() != size_t(dstMemref.getRank())) {
-    return emitError() << "Destination memref rank is "
-                       << size_t(dstMemref.getRank()) << " but there are  "
-                       << getCoordinates().size()
-                       << " coordinates. They must match.";
-  }
   return success();
 }
 
