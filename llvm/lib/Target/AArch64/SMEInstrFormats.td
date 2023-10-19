@@ -794,7 +794,7 @@ multiclass sme_spill<string opcodestr> {
                   (!cast<Instruction>(NAME) MatrixOp:$ZAt,
                    MatrixIndexGPR32Op12_15:$Rv, sme_elm_idx0_15:$imm4, GPR64sp:$Rn, 0), 1>;
   // base
-  def : Pat<(int_aarch64_sme_str MatrixIndexGPR32Op12_15:$idx, sme_elm_idx0_15:$imm, GPR64sp:$base),
+  def : Pat<(int_aarch64_sme_str MatrixIndexGPR32Op12_15:$idx, GPR64sp:$base, sme_elm_idx0_15:$imm),
             (!cast<Instruction>(NAME) ZA, $idx, $imm, $base, 0)>;
 }
 
@@ -813,7 +813,7 @@ multiclass sme_fill<string opcodestr> {
     let mayLoad = 1;
   }
   // base
-  def : Pat<(int_aarch64_sme_ldr MatrixIndexGPR32Op12_15:$idx, sme_elm_idx0_15:$imm, GPR64sp:$base),
+  def : Pat<(int_aarch64_sme_ldr MatrixIndexGPR32Op12_15:$idx, GPR64sp:$base, sme_elm_idx0_15:$imm),
             (!cast<Instruction>(NAME # _PSEUDO) $idx, $imm, $base)>;
 }
 

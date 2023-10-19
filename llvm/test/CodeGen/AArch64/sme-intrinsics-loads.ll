@@ -252,26 +252,8 @@ define void @ldr(ptr %ptr) {
 ; CHECK-NEXT:    mov w12, wzr
 ; CHECK-NEXT:    ldr za[w12, 0], [x0]
 ; CHECK-NEXT:    ret
-  call void @llvm.aarch64.sme.ldr(i32 0, i32 0, ptr %ptr)
+  call void @llvm.aarch64.sme.ldr(i32 0, ptr %ptr, i32 0)
   ret void;
-}
-
-define void @ldr_vnum(i32 %tile_slice, ptr %ptr, i64 %vnum) {
-; CHECK-LABEL: ldr_vnum:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    rdsvl x8, #1
-; CHECK-NEXT:    add w12, w2, w0
-; CHECK-NEXT:    madd x8, x8, x2, x1
-; CHECK-NEXT:    ldr za[w12, 0], [x8]
-; CHECK-NEXT:    ret
-entry:
-  %svlb = tail call i64 @llvm.aarch64.sme.cntsb()
-  %mulvl = mul i64 %svlb, %vnum
-  %0 = getelementptr i8, ptr %ptr, i64 %mulvl
-  %1 = trunc i64 %vnum to i32
-  %2 = add i32 %1, %tile_slice
-  tail call void @llvm.aarch64.sme.ldr(i32 %2, i32 0, ptr %0)
-  ret void
 }
 
 define void @ldr_with_off_15(ptr %ptr) {
@@ -282,7 +264,7 @@ define void @ldr_with_off_15(ptr %ptr) {
 ; CHECK-NEXT:    ldr za[w12, 0], [x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr i8, ptr %ptr, i64 15
-  call void @llvm.aarch64.sme.ldr(i32 15, i32 0, ptr %base)
+  call void @llvm.aarch64.sme.ldr(i32 15, ptr %base, i32 0)
   ret void;
 }
 
@@ -296,7 +278,7 @@ define void @ldr_with_off_15mulvl(ptr %ptr) {
   %vscale = call i64 @llvm.vscale.i64()
   %mulvl = mul i64 %vscale, 240
   %base = getelementptr i8, ptr %ptr, i64 %mulvl
-  call void @llvm.aarch64.sme.ldr(i32 15, i32 0, ptr %base)
+  call void @llvm.aarch64.sme.ldr(i32 15, ptr %base, i32 0)
   ret void;
 }
 
@@ -310,7 +292,42 @@ define void @ldr_with_off_16mulvl(ptr %ptr) {
   %vscale = call i64 @llvm.vscale.i64()
   %mulvl = mul i64 %vscale, 256
   %base = getelementptr i8, ptr %ptr, i64 %mulvl
-  call void @llvm.aarch64.sme.ldr(i32 16, i32 0, ptr %base)
+  call void @llvm.aarch64.sme.ldr(i32 16, ptr %base, i32 0)
+  ret void;
+}
+
+define void @ldr_with_off_var(ptr %base, i32 %off) {
+; CHECK-LABEL: ldr_with_off_var:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdsvl x8, #1
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    mov w12, #16 // =0x10
+; CHECK-NEXT:    madd x8, x8, x1, x0
+; CHECK-NEXT:    ldr za[w12, 0], [x8]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.sme.ldr(i32 16, ptr %base, i32 %off)
+  ret void;
+}
+
+define void @ldr_with_off_15imm(ptr %base) {
+; CHECK-LABEL: ldr_with_off_15imm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w12, #16 // =0x10
+; CHECK-NEXT:    ldr za[w12, 15], [x0, #15, mul vl]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.sme.ldr(i32 16, ptr %base, i32 15)
+  ret void;
+}
+
+define void @ldr_with_off_16imm(ptr %base) {
+; CHECK-LABEL: ldr_with_off_16imm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdsvl x8, #1
+; CHECK-NEXT:    mov w12, #16 // =0x10
+; CHECK-NEXT:    madd x8, x8, x12, x0
+; CHECK-NEXT:    ldr za[w12, 0], [x8]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.sme.ldr(i32 16, ptr %base, i32 16)
   ret void;
 }
 
@@ -320,13 +337,13 @@ define void @test_ld1_sink_tile0_offset_operand(<vscale x 4 x i1> %pg, ptr %src,
 ; CHECK-LABEL: test_ld1_sink_tile0_offset_operand:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov w12, w1
-; CHECK-NEXT:  .LBB15_1: // %for.body
+; CHECK-NEXT:  .LBB17_1: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld1w {za0h.s[w12, 0]}, p0/z, [x0]
 ; CHECK-NEXT:    subs w2, w2, #1
 ; CHECK-NEXT:    ld1w {za0h.s[w12, 1]}, p0/z, [x0]
 ; CHECK-NEXT:    ld1w {za0h.s[w12, 2]}, p0/z, [x0]
-; CHECK-NEXT:    b.ne .LBB15_1
+; CHECK-NEXT:    b.ne .LBB17_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    ret
 entry:
@@ -359,6 +376,5 @@ declare void @llvm.aarch64.sme.ld1w.vert(<vscale x 4 x i1>, ptr, i32, i32)
 declare void @llvm.aarch64.sme.ld1d.vert(<vscale x 2 x i1>, ptr, i32, i32)
 declare void @llvm.aarch64.sme.ld1q.vert(<vscale x 1 x i1>, ptr, i32, i32)
 
-declare void @llvm.aarch64.sme.ldr(i32, i32, ptr)
+declare void @llvm.aarch64.sme.ldr(i32, ptr, i32)
 declare i64 @llvm.vscale.i64()
-declare i64 @llvm.aarch64.sme.cntsb()
