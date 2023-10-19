@@ -2444,11 +2444,10 @@ static bool isAllocSiteRemovable(Instruction *AI,
                  match(CB->getArgOperand(1), m_APInt(Size)) &&
                  Alignment->isPowerOf2() && Size->urem(*Alignment).isZero();
         };
-        auto *CB = cast<CallBase>(AI);
-        Function &F = *CB->getCalledFunction();
+        auto *CB = dyn_cast<CallBase>(AI);
         LibFunc TheLibFunc;
-        if (TLI.getLibFunc(F, TheLibFunc) && TLI.has(TheLibFunc) &&
-            TheLibFunc == LibFunc_aligned_alloc &&
+        if (CB && TLI.getLibFunc(*CB->getCalledFunction(), TheLibFunc) &&
+            TLI.has(TheLibFunc) && TheLibFunc == LibFunc_aligned_alloc &&
             !AlignmentAndSizeKnownValid(CB))
           return false;
         Users.emplace_back(I);
