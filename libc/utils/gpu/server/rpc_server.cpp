@@ -101,6 +101,22 @@ private:
       });
       break;
     }
+    case RPC_READ_FGETS: {
+      uint64_t sizes[lane_size] = {0};
+      void *data[lane_size] = {nullptr};
+      port->recv([&](rpc::Buffer *buffer, uint32_t id) {
+        data[id] = new char[buffer->data[0]];
+        const char *str =
+            fgets(reinterpret_cast<char *>(data[id]), buffer->data[0],
+                  file::to_stream(buffer->data[1]));
+        sizes[id] = !str ? 0 : std::strlen(str) + 1;
+      });
+      port->send_n(data, sizes);
+      for (uint32_t id = 0; id < lane_size; ++id)
+        if (data[id])
+          delete[] reinterpret_cast<uint8_t *>(data[id]);
+      break;
+    }
     case RPC_OPEN_FILE: {
       uint64_t sizes[lane_size] = {0};
       void *paths[lane_size] = {nullptr};
