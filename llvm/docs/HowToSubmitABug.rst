@@ -158,30 +158,34 @@ the "foo.bc" file and the option that llc crashes with.
 LTO bugs
 ---------------------------
 
-If you find a bug that crashes llvm in LTO phase (by using -flto option),
-compile your source file to a .bc file by passing
-"``-flto -fuse-ld=lld -Wl,-plugin-opt=save-temps``"
-to clang (in addition to the options you already pass). If you are building
-a project, pass the appropriate CFLAGS, CXXFLAG​S and LDFLAGS for example -
+If you encounter a bug that leads to crashes in the LLVM LTO phase when using
+the `-flto` option, follow these steps to diagnose and report the issue:
+
+Compile your source file to a .bc (Bitcode) file with the following flags,
+in addition to your existing compilation options:
 
 .. code-block:: bash
 
    export CFLAGS="-flto -fuse-ld=lld" CXXFLAGS="-flto -fuse-ld=lld" LDFLAGS="-Wl,-plugin-opt=save-temps"
 
-On Windows, you should use lld-link as the linker.
+These flags enable LTO and save temporary files generated during compilation
+for later analysis.
+
+On Windows, you should use lld-link as the linker. Adjust your compilation 
+flags as follows:
 
 .. code-block:: bash
 
    export CFLAGS="-flto -fuse-ld=lld-link" CXXFLAGS="-flto -fuse-ld=lld-link" LDFLAGS="-Wl,-plugin-opt=save-temps"
 
-This will generate four intermediate bytecode files:
+Using the specified flags will generate four intermediate bytecode files:
 
-1. a.out.0.0.preopt.bc      (Before any link-time optimizations (LTO) are applied)
-2. a.out.0.2.internalize.bc (After initial optimizations applied)
-3. a.out.0.4.opt.bc         (After the more extensive set of optimizations has been applied)
-4. a.out.0.5.precodegen.bc  (After LTO but before it's translated into machine code)
+#. a.out.0.0.preopt.bc (Before any link-time optimizations (LTO) are applied)
+#. a.out.0.2.internalize.bc (After initial optimizations are applied)
+#. a.out.0.4.opt.bc (After an extensive set of optimizations)
+#. a.out.0.5.precodegen.bc (After LTO but before translating into machine code)
 
-Once you have these, one of the following commands should fail:
+Execute one of the following commands to identify the source of the problem:
 
 #. ``opt "-passes=lto<O3>" a.out.0.0.preopt.bc``
 #. ``opt "-passes=lto<O3>" a.out.0.2.internalize.bc``
@@ -192,13 +196,15 @@ If one of these do crash, you should be able to reduce
 this with :program:`llvm-reduce`
 command line (use the bc file corresponding to the command above that failed):
 
-#. ``llvm-reduce --test llvm-reduce.sh a.out.0.2.internalize.bc``
+.. code-block:: bash
 
-An example of ``llvm-reduce.sh`` script
+   llvm-reduce --test reduce.sh a.out.0.2.internalize.bc
+
+Example of reduce.sh Script
 
 .. code-block:: bash
 
-   $ cat llvm-reduce.sh
+   $ cat reduce.sh
    #!/usr/bin/env bash
 
    $HOME/llvm/llvm-project/build/bin/opt "-passes=lto<O3>" $1 -o temp.bc  2>&1 | tee err.log
