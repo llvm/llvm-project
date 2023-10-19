@@ -663,10 +663,13 @@ SourceManager::createExpansionLocImpl(const ExpansionInfo &Info,
     return SourceLocation::getMacroLoc(LoadedOffset);
   }
   LocalSLocEntryTable.push_back(SLocEntry::get(NextLocalOffset, Info));
-  // FIXME: Produce a proper diagnostic for this case.
-  assert(NextLocalOffset + Length + 1 > NextLocalOffset &&
-         NextLocalOffset + Length + 1 <= CurrentLoadedOffset &&
-         "Ran out of source locations!");
+  if (NextLocalOffset + Length + 1 <= NextLocalOffset ||
+      NextLocalOffset + Length + 1 > CurrentLoadedOffset) {
+    Diag.Report(Info.getExpansionLocStart(), diag::err_expansions_too_large);
+    Diag.Report(Info.getExpansionLocStart(), diag::remark_sloc_usage);
+    noteSLocAddressSpaceUsage(Diag);
+    return SourceLocation();
+  }
   // See createFileID for that +1.
   NextLocalOffset += Length + 1;
   return SourceLocation::getMacroLoc(NextLocalOffset - (Length + 1));

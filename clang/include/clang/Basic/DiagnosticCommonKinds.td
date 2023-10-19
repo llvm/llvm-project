@@ -356,6 +356,8 @@ def err_file_modified : Error<
   "file '%0' modified since it was first processed">, DefaultFatal;
 def err_file_too_large : Error<
   "sorry, unsupported: file '%0' is too large for Clang to process">;
+def err_expansions_too_large : Error<
+  "sorry, the translation unit is too large: ran out of source locations while processing a macro expansion">, DefaultFatal;
 def err_include_too_large : Error<
   "sorry, this include generates a translation unit too large for"
   " Clang to process.">, DefaultFatal;
