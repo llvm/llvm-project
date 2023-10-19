@@ -2997,24 +2997,26 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return replaceOperand(CI, 0, InsertTuple);
     }
 
-    auto *DstTy = dyn_cast<FixedVectorType>(ReturnType);
-    auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType());
+    auto *DstTy = dyn_cast<VectorType>(ReturnType);
+    auto *VecTy = dyn_cast<VectorType>(Vec->getType());
 
-    // Only canonicalize if the destination vector and Vec are fixed
-    // vectors.
     if (DstTy && VecTy) {
-      unsigned DstNumElts = DstTy->getNumElements();
-      unsigned VecNumElts = VecTy->getNumElements();
+      auto DstEltCnt = DstTy->getElementCount();
       unsigned IdxN = cast<ConstantInt>(Idx)->getZExtValue();
 
       // Extracting the entirety of Vec is a nop.
-      if (VecNumElts == DstNumElts) {
+      if (DstEltCnt == VecTy->getElementCount()) {
         replaceInstUsesWith(CI, Vec);
         return eraseInstFromFunction(CI);
       }
 
+      // Only canonicalize to shufflevector if the destination vector and
+      // Vec are fixed vectors.
+      if (dyn_cast<ScalableVectorType>(VecTy) || DstEltCnt.isScalable())
+        break;
+
       SmallVector<int, 8> Mask;
-      for (unsigned i = 0; i != DstNumElts; ++i)
+      for (unsigned i = 0; i != DstEltCnt.getKnownMinValue(); ++i)
         Mask.push_back(IdxN + i);
 
       Value *Shuffle = Builder.CreateShuffleVector(Vec, Mask);
