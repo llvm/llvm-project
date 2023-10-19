@@ -1,7 +1,14 @@
 name: "Labelling new pull requests"
 on:
-  workflow_run:
-    workflows: ["PR Receive"]
+  # It's safe to use pull_request_target here, because we aren't checking out
+  # code from the pull request branch.
+  # See https://securitylab.github.com/research/github-actions-preventing-pwn-requests/
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - ready_for_review
+      - synchronize
 
 jobs:
   automate-prs-labels:
@@ -9,48 +16,18 @@ jobs:
       contents: read
       pull-requests: write
     runs-on: ubuntu-latest
+    # Ignore PRs with more than 10 commits.  Pull requests with a lot of
+    # commits tend to be accidents usually when someone made a mistake while trying
+    # to rebase.  We want to ignore these pull requests to avoid excessive
+    # notifications.
     if: >
       github.repository == 'llvm/llvm-project' &&
-      github.event.workflow_run.event == 'pull_request_target' &&
-      github.event.workflow_run.conclusion == 'success'
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.commits < 10
     steps:
-      # From: https://securitylab.github.com/research/github-actions-preventing-pwn-requests/
-      # Updated version here: https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#using-data-from-the-triggering-workflow
-      - name: Debug
-        run: |
-          echo "Event: ${{ github.event.workflow_run.event }} Conclusion: ${{ github.event.workflow_run.conclusion }}"
-      - name: 'Download artifact'
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
-               owner: context.repo.owner,
-               repo: context.repo.repo,
-               run_id: context.payload.workflow_run.id
-            });
-            const matchArtifact = artifacts.data.artifacts.find((artifact) =>
-              artifact.name === 'pr'
-            );
-            const download = await github.rest.actions.downloadArtifact({
-               owner: context.repo.owner,
-               repo: context.repo.repo,
-               artifact_id: matchArtifact.id,
-               archive_format: 'zip'
-            });
-            const { writeFileSync } = require('node:fs');
-            writeFileSync('${{ github.workspace }}/pr.zip', Buffer.from(download.data));
-
-      - run: unzip pr.zip
-
-      - name: "Get PR Number"
-        id: vars
-        run:
-          echo "pr-number=$(cat NR)" >> "$GITHUB_OUTPUT"
-
       - uses: actions/labeler@v4
         with:
           configuration-path: .github/new-prs-labeler.yml
           # workaround for https://github.com/actions/labeler/issues/112
           sync-labels: ''
           repo-token: ${{ secrets.ISSUE_SUBSCRIBER_TOKEN }}
-          pr-number: ${{ steps.vars.outputs.pr-number }}
