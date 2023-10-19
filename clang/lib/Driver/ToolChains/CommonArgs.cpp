@@ -2043,8 +2043,9 @@ void tools::addX86AlignBranchArgs(const Driver &D, const ArgList &Args,
 ///
 static bool SDLSearch(const Driver &D, const llvm::opt::ArgList &DriverArgs,
                       llvm::opt::ArgStringList &CC1Args,
-                      SmallVector<std::string, 8> LibraryPaths, std::string Lib,
-                      StringRef Arch, StringRef Target, bool isBitCodeSDL) {
+                      const SmallVectorImpl<std::string> &LibraryPaths,
+                      StringRef Lib, StringRef Arch, StringRef Target,
+                      bool isBitCodeSDL) {
   SmallVector<std::string, 12> SDLs;
 
   std::string LibDeviceLoc = "/libdevice";
@@ -2121,8 +2122,9 @@ static bool SDLSearch(const Driver &D, const llvm::opt::ArgList &DriverArgs,
 static bool GetSDLFromOffloadArchive(
     Compilation &C, const Driver &D, const Tool &T, const JobAction &JA,
     const InputInfoList &Inputs, const llvm::opt::ArgList &DriverArgs,
-    llvm::opt::ArgStringList &CC1Args, SmallVector<std::string, 8> LibraryPaths,
-    StringRef Lib, StringRef Arch, StringRef Target, bool isBitCodeSDL) {
+    llvm::opt::ArgStringList &CC1Args,
+    const SmallVectorImpl<std::string> &LibraryPaths, StringRef Lib,
+    StringRef Arch, StringRef Target, bool isBitCodeSDL) {
 
   // We don't support bitcode archive bundles for nvptx
   if (isBitCodeSDL && Arch.contains("nvptx"))
