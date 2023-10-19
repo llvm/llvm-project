@@ -701,8 +701,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::UMUL_LOHI, MVT::i64, Expand);
 
   // We have some custom DAG combine patterns for these nodes
-  setTargetDAGCombine({ISD::ADD, ISD::AND, ISD::FADD, ISD::MUL, ISD::SHL,
-                       ISD::SREM, ISD::UREM, ISD::EXTRACT_VECTOR_ELT,
+  setTargetDAGCombine({ISD::ADD, ISD::AND, ISD::EXTRACT_VECTOR_ELT, ISD::FADD,
+                       ISD::LOAD, ISD::MUL, ISD::SHL, ISD::SREM, ISD::UREM,
                        ISD::VSELECT});
 
   // setcc for f16x2 and bf16x2 needs special handling to prevent
@@ -5479,6 +5479,45 @@ static SDValue PerformVSELECTCombine(SDNode *N,
   return DCI.DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v4i8, E);
 }
 
+static SDValue PerformLOADCombine(SDNode *N,
+                                  TargetLowering::DAGCombinerInfo &DCI) {
+  SelectionDAG &DAG = DCI.DAG;
+  LoadSDNode *LD = cast<LoadSDNode>(N);
+
+  // Lower a v16i8 load into a LoadV4 operation with i32 results instead of
+  // letting ReplaceLoadVector split it into smaller loads during legalization.
+  // This is done at dag-combine1 time, so that vector operations with i8
+  // elements can be optimised away instead of being needlessly split during
+  // legalization, which involves storing to the stack and loading it back.
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::v16i8)
+    return SDValue();
+
+  SDLoc DL(N);
+
+  // Create a v4i32 vector load operation, effectively <4 x v4i8>.
+  unsigned Opc = NVPTXISD::LoadV4;
+  EVT NewVT = MVT::v4i32;
+  EVT EltVT = NewVT.getVectorElementType();
+  unsigned NumElts = NewVT.getVectorNumElements();
+  EVT RetVTs[] = {EltVT, EltVT, EltVT, EltVT, MVT::Other};
+  SDVTList RetVTList = DAG.getVTList(RetVTs);
+  SmallVector<SDValue, 8> Ops(N->ops());
+  Ops.push_back(DAG.getIntPtrConstant(LD->getExtensionType(), DL));
+  SDValue NewLoad = DAG.getMemIntrinsicNode(Opc, DL, RetVTList, Ops, NewVT,
+                                            LD->getMemOperand());
+  SDValue NewChain = NewLoad.getValue(NumElts);
+
+  // Create a vector of the same type returned by the original load.
+  SmallVector<SDValue, 4> Elts;
+  for (unsigned i = 0; i < NumElts; i++)
+    Elts.push_back(NewLoad.getValue(i));
+  return DCI.DAG.getMergeValues(
+      {DCI.DAG.getBitcast(VT, DCI.DAG.getBuildVector(NewVT, DL, Elts)),
+       NewChain},
+      DL);
+}
+
 SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   CodeGenOptLevel OptLevel = getTargetMachine().getOptLevel();
@@ -5498,6 +5537,8 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
       return PerformREMCombine(N, DCI, OptLevel);
     case ISD::SETCC:
       return PerformSETCCCombine(N, DCI);
+    case ISD::LOAD:
+      return PerformLOADCombine(N, DCI);
     case NVPTXISD::StoreRetval:
     case NVPTXISD::StoreRetvalV2:
     case NVPTXISD::StoreRetvalV4:
