@@ -360,7 +360,7 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
      ``gfx90a``                  ``amdgcn``   dGPU  - sramecc         - Absolute      - *rocm-amdhsa* *TBA*
                                                     - tgsplit           flat
                                                     - xnack             scratch                       .. TODO::
-                                                                      - Packed
+                                                    - kernarg preload - Packed
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
@@ -381,21 +381,21 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
      ``gfx940``                  ``amdgcn``   dGPU  - sramecc         - Architected                   *TBA*
                                                     - tgsplit           flat
                                                     - xnack             scratch                       .. TODO::
-                                                                      - Packed
+                                                    - kernarg preload - Packed
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
      ``gfx941``                  ``amdgcn``   dGPU  - sramecc         - Architected                   *TBA*
                                                     - tgsplit           flat
                                                     - xnack             scratch                       .. TODO::
-                                                                      - Packed
+                                                    - kernarg preload - Packed
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
      ``gfx942``                  ``amdgcn``   dGPU  - sramecc         - Architected                   *TBA*
                                                     - tgsplit           flat
                                                     - xnack             scratch                       .. TODO::
-                                                                      - Packed
+                                                    - kernarg preload - Packed
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
@@ -4375,12 +4375,24 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      dynamically sized stack.
                                                      This is only set in code
                                                      object v5 and later.
-     463:460 1 bit                                   Reserved, must be 0.
-     464     1 bit   RESERVED_464                    Deprecated, must be 0.
-     467:465 3 bits                                  Reserved, must be 0.
-     468     1 bit   RESERVED_468                    Deprecated, must be 0.
-     469:471 3 bits                                  Reserved, must be 0.
-     511:472 5 bytes                                 Reserved, must be 0.
+     463:460 4 bits                                  Reserved, must be 0.
+     470:464 7 bits  KERNARG_PRELOAD_SPEC_LENGTH     GFX6-GFX9
+                                                       - Reserved, must be 0.
+                                                     GFX90A, GFX940
+                                                       - The number of dwords from
+                                                         the kernarg segment to preload
+                                                         into User SGPRs before kernel
+                                                         execution. (see
+                                                         :ref:`amdgpu-amdhsa-kernarg-preload`).
+     479:471 9 bits  KERNARG_PRELOAD_SPEC_OFFSET     GFX6-GFX9
+                                                       - Reserved, must be 0.
+                                                     GFX90A, GFX940
+                                                       - An offset in dwords into the
+                                                         kernarg segment to begin
+                                                         preloading data into User
+                                                         SGPRs. (see
+                                                         :ref:`amdgpu-amdhsa-kernarg-preload`).
+     511:480 4 bytes                                 Reserved, must be 0.
      512     **Total size 64 bytes.**
      ======= ====================================================================
 
@@ -5002,7 +5014,7 @@ for enabled registers are dense starting at SGPR0: the first enabled register is
 SGPR0, the next enabled register is SGPR1 etc.; disabled registers do not have
 an SGPR number.
 
-The initial SGPRs comprise up to 16 User SRGPs that are set by CP and apply to
+The initial SGPRs comprise up to 16 User SGPRs that are set by CP and apply to
 all wavefronts of the grid. It is possible to specify more than 16 User SGPRs
 using the ``enable_sgpr_*`` bit fields, in which case only the first 16 are
 actually initialized. These are then immediately followed by the System SGPRs
@@ -5045,6 +5057,9 @@ SGPR register initial state is defined in
      then       Flat Scratch Init          2      See
                 (enable_sgpr_flat_scratch         :ref:`amdgpu-amdhsa-kernel-prolog-flat-scratch`.
                 _init)
+     then       Preloaded Kernargs         N/A    See
+                (kernarg_preload_spec             :ref:`amdgpu-amdhsa-kernarg-preload`.
+                _length)
      then       Private Segment Size       1      The 32-bit byte size of a
                 (enable_sgpr_private              single work-item's memory
                 _segment_size)                    allocation. This is the
@@ -5176,6 +5191,31 @@ following properties:
 * ptr64: 1
 * MTYPE set to support memory coherence that matches the runtime (such as CC for
   APU and NC for dGPU).
+
+.. _amdgpu-amdhsa-kernarg-preload:
+
+Preloaded Kernel Arguments
+++++++++++++++++++++++++++
+
+On hardware that supports this feature, kernel arguments can be preloaded into
+User SGPRs, up to the maximum number of User SGPRs available. The allocation of
+Preload SGPRs occurs directly after the last enabled non-kernarg preload User
+SGPR. (See :ref:`amdgpu-amdhsa-initial-kernel-execution-state`)
+
+The data preloaded is copied from the kernarg segment, the amount of data is
+determined by the value specified in the kernarg_preload_spec_length field of
+the kernel descriptor. This data is then loaded into consecutive User SGPRs. The
+number of SGPRs receiving preloaded kernarg data corresponds with the value
+given by kernarg_preload_spec_length. The preloading starts at the dword offset
+within the kernarg segment, which is specified by the
+kernarg_preload_spec_offset field.
+
+If the kernarg_preload_spec_length is non-zero, the CP firmware will append an
+additional 256 bytes to the kernel_code_entry_byte_offset. This addition
+facilitates the incorporation of a prologue to the kernel entry to handle cases
+where code designed for kernarg preloading is executed on hardware equipped with
+incompatible firmware. If hardware has compatible firmware the 256 bytes at the
+start of the kernel entry will be skipped.
 
 .. _amdgpu-amdhsa-kernel-prolog:
 
@@ -15352,6 +15392,10 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx11-table`.
      ``.amdhsa_exception_int_div_zero``                       0                   GFX6-GFX11   Controls ENABLE_EXCEPTION_INT_DIVIDE_BY_ZERO in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx11-table`.
+     ``.amdhsa_user_sgpr_kernarg_preload_length``             0                   GFX90A,      Controls KERNARG_PRELOAD_SPEC_LENGTH in
+                                                                                  GFX940       :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+     ``.amdhsa_user_sgpr_kernarg_preload_offset``             0                   GFX90A,      Controls KERNARG_PRELOAD_SPEC_OFFSET in
+                                                                                  GFX940       :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ======================================================== =================== ============ ===================
 
 .amdgpu_metadata
