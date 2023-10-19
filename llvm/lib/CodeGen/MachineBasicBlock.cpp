@@ -1111,21 +1111,18 @@ public:
 
   ~SlotIndexUpdateDelegate() {
     MF.resetDelegate(this);
-    if (Indexes) {
-      for (auto MI : Insertions)
-        Indexes->insertMachineInstrInMaps(*MI);
-    }
+    for (auto MI : Insertions)
+      Indexes->insertMachineInstrInMaps(*MI);
   }
 
   void MF_HandleInsertion(MachineInstr &MI) override {
     // This is called before MI is inserted into block so defer index update.
-    Insertions.insert(&MI);
+    if (Indexes)
+      Insertions.insert(&MI);
   }
 
   void MF_HandleRemoval(MachineInstr &MI) override {
-    if (Insertions.count(&MI))
-      Insertions.remove(&MI);
-    else if (Indexes)
+    if (Indexes && !Insertions.remove(&MI))
       Indexes->removeMachineInstrFromMaps(MI);
   }
 };
