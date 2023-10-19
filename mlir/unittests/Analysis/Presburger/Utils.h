@@ -53,6 +53,26 @@ inline FracMatrix makeFracMatrix(unsigned numRow, unsigned numColumns,
   return results;
 }
 
+inline void EXPECT_EQ_INT_MATRIX(IntMatrix a, IntMatrix b)
+{
+  EXPECT_EQ(a.getNumRows(), b.getNumRows());
+  EXPECT_EQ(a.getNumColumns(), b.getNumColumns());
+
+  for (unsigned row = 0; row < a.getNumRows(); row++)
+    for (unsigned col = 0; col < a.getNumColumns(); col++)
+      EXPECT_EQ(a(row, col), b(row, col));
+}
+
+inline void EXPECT_EQ_FRAC_MATRIX(FracMatrix a, FracMatrix b)
+{
+  EXPECT_EQ(a.getNumRows(), b.getNumRows());
+  EXPECT_EQ(a.getNumColumns(), b.getNumColumns());
+
+  for (unsigned row = 0; row < a.getNumRows(); row++)
+    for (unsigned col = 0; col < a.getNumColumns(); col++)
+      EXPECT_EQ(a(row, col), b(row, col));
+}
+
 /// lhs and rhs represent non-negative integers or positive infinity. The
 /// infinity case corresponds to when the Optional is empty.
 inline bool infinityOrUInt64LE(std::optional<MPInt> lhs,

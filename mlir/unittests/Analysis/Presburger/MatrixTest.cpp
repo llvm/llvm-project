@@ -262,9 +262,7 @@ TEST(MatrixTest, inverse) {
   FracMatrix inv(2, 2);
   mat.determinant(&inv);
 
-  for (unsigned row = 0; row < 2; row++)
-    for (unsigned col = 0; col < 2; col++)
-      EXPECT_EQ(inv(row, col), inverse(row, col));
+  EXPECT_EQ_FRAC_MATRIX(inv, inverse);
   
   mat = makeFracMatrix(
       2, 2,
@@ -286,9 +284,7 @@ TEST(MatrixTest, inverse) {
        {Fraction(2, 3),  Fraction(-1, 6), Fraction(0)}});
 
   mat.determinant(&inv);
-  for (unsigned row = 0; row < 3; row++)
-    for (unsigned col = 0; col < 3; col++)
-      EXPECT_EQ(inv(row, col), inverse(row, col));
+  EXPECT_EQ_FRAC_MATRIX(inv, inverse);
 
   mat = makeFracMatrix(0, 0, {});
   mat.determinant(&inv);
@@ -301,9 +297,7 @@ TEST(MatrixTest, intInverse) {
   IntMatrix inv(2, 2);
   mat.determinant(&inv);
 
-  for (unsigned i = 0; i < 2u; i++)
-    for (unsigned j = 0; j < 2u; j++)
-      EXPECT_EQ(inv(i, j), inverse(i, j));
+  EXPECT_EQ_INT_MATRIX(inv, inverse);
 
   mat = makeIntMatrix(
       4, 4,
@@ -319,9 +313,7 @@ TEST(MatrixTest, intInverse) {
 
   mat.determinant(&inv);
 
-  for (unsigned i = 0; i < 2u; i++)
-    for (unsigned j = 0; j < 2u; j++)
-      EXPECT_EQ(inv(i, j), inverse(i, j));
+  EXPECT_EQ_INT_MATRIX(inv, inverse);
 
   mat = makeIntMatrix(
       2, 2, {{0, 0}, {1, 2}});
