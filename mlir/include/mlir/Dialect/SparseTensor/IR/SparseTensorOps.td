@@ -521,6 +521,25 @@ def SparseTensor_SetStorageSpecifierOp : SparseTensor_Op<"storage_specifier.set"
 }
 
 //===----------------------------------------------------------------------===//
+// Sparse Tensor Coordinate Translation Operation.
+//===----------------------------------------------------------------------===//
+
+def SparseTensor_CrdTranslateOp : SparseTensor_Op<"crd_translate", [Pure]>,
+    Arguments<(ins Variadic<Index>:$in_crds,
+                   SparseTensorCrdTransDirectionAttr:$direction,
+                   SparseTensorEncodingAttr:$oracle)>,
+    Results<(outs Variadic<Index>:$out_crds)> {
+  string summary = "Performs coordinate translation between level and dimension coordinate space.";
+  string description = [{
+    Performs coordinate translation between level and dimension coordinate space according
+    to the provided affine maps.
+  }];
+  let assemblyFormat = "$direction `[` $in_crds `]` `as` $oracle attr-dict `:` type($out_crds)";
+  let hasVerifier = 1;
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // Sparse Tensor Management Operations. These operations are "impure" in the
 // sense that some behavior is defined by side-effects. These operations provide
 // a bridge between "sparsification" on one hand and a support library or actual

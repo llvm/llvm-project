@@ -1160,6 +1160,60 @@ bool ConvertOp::needsExtraSort() {
   return true;
 }
 
+LogicalResult CrdTranslateOp::verify() {
+  size_t inRank = getOracle().getLvlRank();
+  size_t outRank = getOracle().getDimRank();
+
+  if (getDirection() == CrdTransDirectionKind::dim2lvl)
+    std::swap(inRank, outRank);
+
+  if (inRank != getInCrds().size() || outRank != getOutCrds().size())
+    return emitError("Coordinate rank mismatch with encoding");
+
+  return success();
+}
+
+LogicalResult CrdTranslateOp::fold(FoldAdaptor adaptor,
+                                   SmallVectorImpl<OpFoldResult> &results) {
+  if (getOracle().isPermutation()) {
+    AffineMap perm = getDirection() == CrdTransDirectionKind::dim2lvl
+                         ? getOracle().getDimToLvl()
+                         : getOracle().getLvlToDim();
+    for (AffineExpr exp : perm.getResults())
+      results.push_back(getInCrds()[exp.cast<AffineDimExpr>().getPosition()]);
+    return success();
+  }
+
+  // Fuse dim2lvl/lvl2dim pairs.
+  auto def = getInCrds()[0].getDefiningOp<CrdTranslateOp>();
+  bool sameDef = def && llvm::all_of(getInCrds(), [def](Value v) {
+                   return v.getDefiningOp() == def;
+                 });
+  if (!sameDef)
+    return failure();
+
+  bool oppositeDir = def.getDirection() != getDirection();
+  bool sameOracle = def.getOracle().getDimToLvl() == getOracle().getDimToLvl();
+  bool sameCount = def.getNumResults() == getInCrds().size();
+  if (!oppositeDir || !sameOracle || !sameCount)
+    return failure();
+
+  // The definition produce the coordinate in the same order as the input
+  // coordinates.
+  bool sameOrder = llvm::all_of(llvm::zip_equal(def.getOutCrds(), getInCrds()),
+                                [](auto valuePair) {
+                                  auto [lhs, rhs] = valuePair;
+                                  return lhs == rhs;
+                                });
+
+  if (!sameOrder)
+    return failure();
+  // l1 = dim2lvl (lvl2dim l0)
+  // ==> l0
+  results.append(def.getInCrds().begin(), def.getInCrds().end());
+  return success();
+}
+
 LogicalResult ToPositionsOp::verify() {
   auto e = getSparseTensorEncoding(getTensor().getType());
   if (failed(lvlIsInBounds(getLevel(), getTensor())))
