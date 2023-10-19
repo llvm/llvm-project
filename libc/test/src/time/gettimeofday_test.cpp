@@ -20,12 +20,12 @@ TEST(LlvmLibcGettimeofday, SmokeTest) {
   void *tz = nullptr;
   timeval tv;
 
-  int sleep_times[2] = {200, 1000};
+  suseconds_t sleep_times[2] = {200, 1000};
   for (int i = 0; i < 2; i++) {
     int ret = LIBC_NAMESPACE::gettimeofday(&tv, tz);
     ASSERT_EQ(ret, 0);
 
-    int sleep_time = sleep_times[i];
+    suseconds_t sleep_time = sleep_times[i];
     // Sleep for {sleep_time} microsceconds.
     timespec tim = {0, sleep_time * 1000};
     timespec tim2 = {0, 0};
@@ -36,6 +36,6 @@ TEST(LlvmLibcGettimeofday, SmokeTest) {
     timeval tv1;
     ret = LIBC_NAMESPACE::gettimeofday(&tv1, tz);
     ASSERT_EQ(ret, 0);
-    ASSERT_GE(tv1.tv_usec - tv.tv_usec, static_cast<suseconds_t>(sleep_time));
+    ASSERT_GE(tv1.tv_usec - tv.tv_usec, sleep_time);
   }
 }
