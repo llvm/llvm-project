@@ -22,6 +22,8 @@
 #include "string_utils.h"
 #include "thread_annotations.h"
 
+#include "condition_variable.h"
+
 namespace scudo {
 
 // SizeClassAllocator64 is an allocator tuned for 64-bit address space.
@@ -48,6 +50,8 @@ template <typename Config> class SizeClassAllocator64 {
 public:
   typedef typename Config::Primary::CompactPtrT CompactPtrT;
   typedef typename Config::Primary::SizeClassMap SizeClassMap;
+  typedef typename ConditionVariableState<
+      typename Config::Primary>::ConditionVariableT ConditionVariableT;
   static const uptr CompactPtrScale = Config::Primary::CompactPtrScale;
   static const uptr RegionSizeLog = Config::Primary::RegionSizeLog;
   static const uptr GroupSizeLog = Config::Primary::GroupSizeLog;
@@ -69,6 +73,10 @@ public:
   }
 
   static bool canAllocate(uptr Size) { return Size <= SizeClassMap::MaxSize; }
+
+  static bool conditionVariableEnabled() {
+    return ConditionVariableState<typename Config::Primary>::enabled();
+  }
 
   void init(s32 ReleaseToOsInterval) NO_THREAD_SAFETY_ANALYSIS {
     DCHECK(isAligned(reinterpret_cast<uptr>(this), alignof(ThisT)));
@@ -124,6 +132,7 @@ public:
 
     for (uptr I = 0; I < NumClasses; I++) {
       RegionInfo *Region = getRegionInfo(I);
+
       // The actual start of a region is offset by a random number of pages
       // when PrimaryEnableRandomOffset is set.
       Region->RegionBeg = (PrimaryBase + (I << RegionSizeLog)) +
@@ -144,6 +153,11 @@ public:
       CHECK(Region->MemMapInfo.MemMap.isAllocated());
     }
     shuffle(RegionInfoArray, NumClasses, &Seed);
+
+    // The binding should be done after region shuffling so that it won't bind
+    // the FLLock from the wrong region.
+    for (uptr I = 0; I < NumClasses; I++)
+      getRegionInfo(I)->FLLockCV.bindTestOnly(getRegionInfo(I)->FLLock);
 
     setOption(Option::ReleaseInterval, static_cast<sptr>(ReleaseToOsInterval));
   }
@@ -236,26 +250,26 @@ public:
     bool ReportRegionExhausted = false;
     TransferBatchT *B = nullptr;
 
-    while (true) {
-      // When two threads compete for `Region->MMLock`, we only want one of them
-      // does the populateFreeListAndPopBatch(). To avoid both of them doing
-      // that, always check the freelist before mapping new pages.
-      //
-      // TODO(chiahungduan): Use a condition variable so that we don't need to
-      // hold `Region->MMLock` here.
-      ScopedLock ML(Region->MMLock);
-      {
-        ScopedLock FL(Region->FLLock);
-        B = popBatchImpl(C, ClassId, Region);
-        if (LIKELY(B))
-          return B;
-      }
+    if (conditionVariableEnabled()) {
+      B = popBatchWithCV(C, ClassId, Region, ReportRegionExhausted);
+    } else {
+      while (true) {
+        // When two threads compete for `Region->MMLock`, we only want one of
+        // them to call populateFreeListAndPopBatch(). To avoid both of them
+        // doing that, always check the freelist before mapping new pages.
+        ScopedLock ML(Region->MMLock);
+        {
+          ScopedLock FL(Region->FLLock);
+          if ((B = popBatchImpl(C, ClassId, Region)))
+            break;
+        }
 
-      const bool RegionIsExhausted = Region->Exhausted;
-      if (!RegionIsExhausted)
-        B = populateFreeListAndPopBatch(C, ClassId, Region);
-      ReportRegionExhausted = !RegionIsExhausted && Region->Exhausted;
-      break;
+        const bool RegionIsExhausted = Region->Exhausted;
+        if (!RegionIsExhausted)
+          B = populateFreeListAndPopBatch(C, ClassId, Region);
+        ReportRegionExhausted = !RegionIsExhausted && Region->Exhausted;
+        break;
+      }
     }
 
     if (UNLIKELY(ReportRegionExhausted)) {
@@ -280,6 +294,8 @@ public:
     if (ClassId == SizeClassMap::BatchClassId) {
       ScopedLock L(Region->FLLock);
       pushBatchClassBlocks(Region, Array, Size);
+      if (conditionVariableEnabled())
+        Region->FLLockCV.notifyAll(Region->FLLock);
       return;
     }
 
@@ -306,6 +322,8 @@ public:
     {
       ScopedLock L(Region->FLLock);
       pushBlocksImpl(C, ClassId, Region, Array, Size, SameGroup);
+      if (conditionVariableEnabled())
+        Region->FLLockCV.notifyAll(Region->FLLock);
     }
   }
 
@@ -538,6 +556,7 @@ private:
   struct UnpaddedRegionInfo {
     // Mutex for operations on freelist
     HybridMutex FLLock;
+    ConditionVariableT FLLockCV GUARDED_BY(FLLock);
     // Mutex for memmap operations
     HybridMutex MMLock ACQUIRED_BEFORE(FLLock);
     // `RegionBeg` is initialized before thread creation and won't be changed.
@@ -549,6 +568,7 @@ private:
     uptr TryReleaseThreshold GUARDED_BY(MMLock) = 0;
     ReleaseToOsInfo ReleaseInfo GUARDED_BY(MMLock) = {};
     bool Exhausted GUARDED_BY(MMLock) = false;
+    bool isPopulatingFreeList GUARDED_BY(FLLock) = false;
   };
   struct RegionInfo : UnpaddedRegionInfo {
     char Padding[SCUDO_CACHE_LINE_SIZE -
@@ -829,6 +849,76 @@ private:
     }
 
     InsertBlocks(Cur, Array + Size - Count, Count);
+  }
+
+  TransferBatchT *popBatchWithCV(CacheT *C, uptr ClassId, RegionInfo *Region,
+                                 bool &ReportRegionExhausted) {
+    TransferBatchT *B = nullptr;
+
+    while (true) {
+      // We only expect one thread doing the freelist refillment and other
+      // threads will be waiting for either the completion of the
+      // `populateFreeListAndPopBatch()` or `pushBlocks()` called by other
+      // threads.
+      bool PopulateFreeList = false;
+      {
+        ScopedLock FL(Region->FLLock);
+        if (!Region->isPopulatingFreeList) {
+          Region->isPopulatingFreeList = true;
+          PopulateFreeList = true;
+        }
+      }
+
+      if (PopulateFreeList) {
+        ScopedLock ML(Region->MMLock);
+
+        const bool RegionIsExhausted = Region->Exhausted;
+        if (!RegionIsExhausted)
+          B = populateFreeListAndPopBatch(C, ClassId, Region);
+        ReportRegionExhausted = !RegionIsExhausted && Region->Exhausted;
+
+        {
+          // Before reacquiring the `FLLock`, the freelist may be used up again
+          // and some threads are waiting for the freelist refillment by the
+          // current thread. It's important to set
+          // `Region->isPopulatingFreeList` to false so the threads about to
+          // sleep will notice the status change.
+          ScopedLock FL(Region->FLLock);
+          Region->isPopulatingFreeList = false;
+          Region->FLLockCV.notifyAll(Region->FLLock);
+        }
+
+        break;
+      }
+
+      // At here, there are two preconditions to be met before waiting,
+      //   1. The freelist is empty.
+      //   2. Region->isPopulatingFreeList == true, i.e, someone is still doing
+      //   `populateFreeListAndPopBatch()`.
+      //
+      // Note that it has the chance that freelist is empty but
+      // Region->isPopulatingFreeList == false because all the new populated
+      // blocks were used up right after the refillment. Therefore, we have to
+      // check if someone is still populating the freelist.
+      ScopedLock FL(Region->FLLock);
+      if (LIKELY(B = popBatchImpl(C, ClassId, Region)))
+        break;
+
+      if (!Region->isPopulatingFreeList)
+        continue;
+
+      // Now the freelist is empty and someone's doing the refillment. We will
+      // wait until anyone refills the freelist or someone finishes doing
+      // `populateFreeListAndPopBatch()`. The refillment can be done by
+      // `populateFreeListAndPopBatch()`, `pushBlocks()`,
+      // `pushBatchClassBlocks()` and `mergeGroupsToReleaseBack()`.
+      Region->FLLockCV.wait(Region->FLLock);
+
+      if (LIKELY(B = popBatchImpl(C, ClassId, Region)))
+        break;
+    }
+
+    return B;
   }
 
   // Pop one TransferBatch from a BatchGroup. The BatchGroup with the smallest
@@ -1521,6 +1611,8 @@ private:
         if (UNLIKELY(Idx + NeededSlots > MaxUnusedSize)) {
           ScopedLock L(BatchClassRegion->FLLock);
           pushBatchClassBlocks(BatchClassRegion, Blocks, Idx);
+          if (conditionVariableEnabled())
+            BatchClassRegion->FLLockCV.notifyAll(BatchClassRegion->FLLock);
           Idx = 0;
         }
         Blocks[Idx++] =
@@ -1556,6 +1648,8 @@ private:
     if (Idx != 0) {
       ScopedLock L(BatchClassRegion->FLLock);
       pushBatchClassBlocks(BatchClassRegion, Blocks, Idx);
+      if (conditionVariableEnabled())
+        BatchClassRegion->FLLockCV.notifyAll(BatchClassRegion->FLLock);
     }
 
     if (SCUDO_DEBUG) {
@@ -1565,6 +1659,9 @@ private:
         CHECK_LT(Prev->CompactPtrGroupBase, Cur->CompactPtrGroupBase);
       }
     }
+
+    if (conditionVariableEnabled())
+      Region->FLLockCV.notifyAll(Region->FLLock);
   }
 
   // TODO: `PrimaryBase` can be obtained from ReservedMemory. This needs to be
