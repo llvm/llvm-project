@@ -532,7 +532,7 @@ def SparseTensor_CrdTranslateOp : SparseTensor_Op<"crd_translate", [Pure]>,
   string summary = "Performs coordinate translation between level and dimension coordinate space.";
   string description = [{
     Performs coordinate translation between level and dimension coordinate space according
-    to the affine maps defined by $encoding.
+    to the affine maps defined by $encoder.
 
     Example:
 
