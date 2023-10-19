@@ -374,6 +374,8 @@ public:
     return (Version & VARIANT_MASK_DBG_CORRELATE) != 0;
   }
 
+  bool useCorrelate() const { return useDebugInfoCorrelate(); }
+
   bool hasSingleByteCoverage() const override {
     return (Version & VARIANT_MASK_BYTE_COVERAGE) != 0;
   }

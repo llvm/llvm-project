@@ -259,6 +259,9 @@ uint64_t __llvm_profile_get_magic(void);
 /*! \brief Get the version of the file format. */
 uint64_t __llvm_profile_get_version(void);
 
+/*! \brief If the binary is compiled with profile correlation. */
+int hasCorrelation();
+
 /*! \brief Get the number of entries in the profile data section. */
 uint64_t __llvm_profile_get_num_data(const __llvm_profile_data *Begin,
                                      const __llvm_profile_data *End);
@@ -275,6 +278,9 @@ uint64_t __llvm_profile_get_num_counters(const char *Begin, const char *End);
 
 /*! \brief Get the size of the profile counters section in bytes. */
 uint64_t __llvm_profile_get_counters_size(const char *Begin, const char *End);
+
+/*! \brief Get the size of the profile name section in bytes. */
+uint64_t __llvm_profile_get_name_size(const char *Begin, const char *End);
 
 /* ! \brief Given the sizes of the data and counter information, return the
  * number of padding bytes before and after the counters, and after the names,
