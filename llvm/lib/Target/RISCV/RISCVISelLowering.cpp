@@ -11584,8 +11584,23 @@ static SDValue combineSelectAndUse(SDNode *N, SDValue Slct, SDValue OtherOp,
   if (VT.isVector())
     return SDValue();
 
-  if (!Subtarget.hasShortForwardBranchOpt() ||
-      (Slct.getOpcode() != ISD::SELECT &&
+  if (!Subtarget.hasShortForwardBranchOpt()) {
+    // (select cond, x, (and x, c)) has custom lowering with Zicond.
+    if ((!Subtarget.hasStdExtZicond() &&
+         !Subtarget.hasVendorXVentanaCondOps()) ||
+        N->getOpcode() != ISD::AND)
+      return SDValue();
+
+    // Maybe harmful when condition code has multiple use.
+    if (Slct.getOpcode() == ISD::SELECT && !Slct.getOperand(0).hasOneUse())
+      return SDValue();
+
+    // Maybe harmful when VT is wider than XLen.
+    if (VT.getSizeInBits() > Subtarget.getXLen())
+      return SDValue();
+  }
+
+  if ((Slct.getOpcode() != ISD::SELECT &&
        Slct.getOpcode() != RISCVISD::SELECT_CC) ||
       !Slct.hasOneUse())
     return SDValue();
