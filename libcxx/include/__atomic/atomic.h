@@ -20,6 +20,7 @@
 #include <__type_traits/is_function.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/remove_pointer.h>
+#include <__type_traits/remove_const.h>
 #include <__utility/forward.h>
 #include <cstddef>
 #include <cstdio>
@@ -170,8 +171,8 @@ struct atomic<_Tp> : __atomic_base<_Tp> {
           while (!__self.compare_exchange_weak(__old, __new, __m, memory_order_relaxed)) {
             // https://github.com/llvm/llvm-project/issues/47978
             // clang bug: __old is not updated on failure for atomic<long double>::compare_exchange_strong
-            _Tp __atomic_value = __self.load(memory_order_relaxed);
-            std::memcpy(&__old, &__atomic_value, sizeof(_Tp));
+            using __ptr_type = __remove_const_t<decltype(__self.__a_.__a_value)>*;
+            std::memcpy(&__old, const_cast<__ptr_type>(std::addressof(__self.__a_.__a_value)), sizeof(_Tp));
             __new = __operation(__old, __operand);
           }
         } else {
