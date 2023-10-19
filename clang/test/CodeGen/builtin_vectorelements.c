@@ -1,12 +1,12 @@
 // RUN: %clang_cc1 -O1 -triple x86_64                        %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK       %s
 
-// REQUIRES: target=aarch64-{{.*}}
+// REQUIRES: aarch64-registered-target
 // RUN: %clang_cc1 -O1 -triple aarch64 -target-feature +neon %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK,NEON  %s
 
-// REQUIRES: target=aarch64-{{.*}}
+// REQUIRES: aarch64-registered-target
 // RUN: %clang_cc1 -O1 -triple aarch64 -target-feature +sve  %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK,SVE   %s
 
-// REQUIRES: target=riscv64{{.*}}
+// REQUIRES: riscv-registered-target
 // RUN: %clang_cc1 -O1 -triple riscv64 -target-feature +v    %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK,RISCV %s
 
 /// Note that this does not make sense to check for x86 SIMD types, because
