@@ -18,7 +18,7 @@ namespace cpp = LIBC_NAMESPACE::cpp;
 TEST(LlvmLibcGettimeofday, SmokeTest) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   void *tz = nullptr;
-  struct timeval tv;
+  timeval tv;
 
   int sleep_times[2] = {200, 1000};
   for (int i = 0; i < 2; i++) {
@@ -27,15 +27,15 @@ TEST(LlvmLibcGettimeofday, SmokeTest) {
 
     int sleep_time = sleep_times[i];
     // Sleep for {sleep_time} microsceconds.
-    struct timespec tim = {0, sleep_time * 1000};
-    struct timespec tim2 = {0, 0};
+    timespec tim = {0, sleep_time * 1000};
+    timespec tim2 = {0, 0};
     ret = LIBC_NAMESPACE::nanosleep(&tim, &tim2);
 
     // Call gettimeofday again and verify that it is more {sleep_time}
     // microscecods.
-    struct timeval tv1;
+    timeval tv1;
     ret = LIBC_NAMESPACE::gettimeofday(&tv1, tz);
     ASSERT_EQ(ret, 0);
-    ASSERT_GE(tv1.tv_usec - tv.tv_usec, sleep_time);
+    ASSERT_GE(tv1.tv_usec - tv.tv_usec, static_cast<suseconds_t>(sleep_time));
   }
 }
