@@ -3560,7 +3560,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
 bool AArch64InstructionSelector::selectAndRestoreState(MachineInstr &I) {
   MachineIRBuilderState OldMIBState = MIB.getState();
   bool Success = select(I);
-  MIB.getState() = std::move(OldMIBState);
+  MIB.setState(OldMIBState);
   return Success;
 }
 
