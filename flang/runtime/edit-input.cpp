@@ -125,7 +125,7 @@ static bool EditBOZInput(
   return CheckCompleteListDirectedField(io, edit);
 }
 
-static inline char32_t GetDecimalPoint(const DataEdit &edit) {
+static inline char32_t GetRadixPointChar(const DataEdit &edit) {
   return edit.modes.editingFlags & decimalComma ? char32_t{','} : char32_t{'.'};
 }
 
@@ -229,17 +229,22 @@ bool EditIntegerInput(
 
 // Parses a REAL input number from the input source as a normalized
 // fraction into a supplied buffer -- there's an optional '-', a
-// decimal point, and at least one digit.  The adjusted exponent value
-// is returned in a reference argument.  The returned value is the number
-// of characters that (should) have been written to the buffer -- this can
-// be larger than the buffer size and can indicate overflow.  Replaces
-// blanks with zeroes if appropriate.
-static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
-    const DataEdit &edit, int &exponent) {
+// decimal point when the input is not hexadecimal, and at least one
+// digit.  Replaces blanks with zeroes where appropriate.
+struct ScannedRealInput {
+  // Number of characters that (should) have been written to the
+  // buffer -- this can be larger than the buffer size, which
+  // indicates buffer overflow.  Zero indicates an error.
+  int got{0};
+  int exponent{0}; // adjusted as necessary; binary if isHexadecimal
+  bool isHexadecimal{false}; // 0X...
+};
+static ScannedRealInput ScanRealInput(
+    char *buffer, int bufferSize, IoStatementState &io, const DataEdit &edit) {
   std::optional<int> remaining;
   std::optional<char32_t> next;
   int got{0};
-  std::optional<int> decimalPoint;
+  std::optional<int> radixPointOffset;
   auto Put{[&](char ch) -> void {
     if (got < bufferSize) {
       buffer[got] = ch;
@@ -251,6 +256,7 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
     Put('-');
   }
   bool bzMode{(edit.modes.editingFlags & blankZero) != 0};
+  int exponent{0};
   if (!next || (!bzMode && *next == ' ')) {
     if (!edit.IsListDirected() && !io.GetConnectionState().IsAtEOF()) {
       // An empty/blank field means zero when not list-directed.
@@ -259,10 +265,11 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
       // required to pass FCVS.
       Put('0');
     }
-    return got;
+    return {got, exponent, false};
   }
-  char32_t decimal{GetDecimalPoint(edit)};
+  char32_t radixPointChar{GetRadixPointChar(edit)};
   char32_t first{*next >= 'a' && *next <= 'z' ? *next + 'A' - 'a' : *next};
+  bool isHexadecimal{false};
   if (first == 'N' || first == 'I') {
     // NaN or infinity - convert to upper case
     // Subtle: a blank field of digits could be followed by 'E' or 'D',
@@ -283,7 +290,7 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
         if (depth == 0) {
           break;
         } else if (!next) {
-          return 0; // error
+          return {}; // error
         } else if (*next == '(') {
           ++depth;
         } else if (*next == ')') {
@@ -292,34 +299,51 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
         Put(*next);
       }
     }
-    exponent = 0;
-  } else if (first == decimal || (first >= '0' && first <= '9') ||
+  } else if (first == radixPointChar || (first >= '0' && first <= '9') ||
       (bzMode && (first == ' ' || first == '\t')) || first == 'E' ||
       first == 'D' || first == 'Q') {
-    Put('.'); // input field is normalized to a fraction
+    if (first == '0') {
+      next = io.NextInField(remaining, edit);
+      if (next && (*next == 'x' || *next == 'X')) { // 0X...
+        isHexadecimal = true;
+        next = io.NextInField(remaining, edit);
+      } else {
+        Put('0');
+      }
+    }
+    // input field is normalized to a fraction
+    if (!isHexadecimal) {
+      Put('.');
+    }
     auto start{got};
     for (; next; next = io.NextInField(remaining, edit)) {
       char32_t ch{*next};
       if (ch == ' ' || ch == '\t') {
-        if (bzMode) {
+        if (isHexadecimal) {
+          return {}; // error
+        } else if (bzMode) {
           ch = '0'; // BZ mode - treat blank as if it were zero
         } else {
-          continue;
+          continue; // ignore blank in fixed field
         }
       }
-      if (ch == '0' && got == start && !decimalPoint) {
-        // omit leading zeroes before the decimal
+      if (ch == '0' && got == start && !radixPointOffset) {
+        // omit leading zeroes before the radix point
       } else if (ch >= '0' && ch <= '9') {
         Put(ch);
-      } else if (ch == decimal && !decimalPoint) {
-        // the decimal point is *not* copied to the buffer
-        decimalPoint = got - start; // # of digits before the decimal point
+      } else if (ch == radixPointChar && !radixPointOffset) {
+        // The radix point character is *not* copied to the buffer.
+        radixPointOffset = got - start; // # of digits before the radix point
+      } else if (isHexadecimal && ch >= 'A' && ch <= 'F') {
+        Put(ch);
+      } else if (isHexadecimal && ch >= 'a' && ch <= 'f') {
+        Put(ch - 'a' + 'A'); // normalize to capitals
       } else {
         break;
       }
     }
     if (got == start) {
-      // Nothing but zeroes and maybe a decimal point.  F'2018 requires
+      // Nothing but zeroes and maybe a radix point.  F'2018 requires
       // at least one digit, but F'77 did not, and a bare "." shows up in
       // the FCVS suite.
       Put('0'); // emit at least one digit
@@ -328,17 +352,22 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
     auto nextBeforeExponent{next};
     auto startExponent{io.GetConnectionState().positionInRecord};
     bool hasGoodExponent{false};
-    if (next &&
-        (*next == 'e' || *next == 'E' || *next == 'd' || *next == 'D' ||
-            *next == 'q' || *next == 'Q')) {
-      // Optional exponent letter.  Blanks are allowed between the
-      // optional exponent letter and the exponent value.
-      io.SkipSpaces(remaining);
-      next = io.NextInField(remaining, edit);
+    if (next) {
+      if (isHexadecimal) {
+        if (*next == 'p' || *next == 'P') {
+          next = io.NextInField(remaining, edit);
+        } else {
+          // The binary exponent is not optional in the standard.
+          return {}; // error
+        }
+      } else if (*next == 'e' || *next == 'E' || *next == 'd' || *next == 'D' ||
+          *next == 'q' || *next == 'Q') {
+        // Optional exponent letter.  Blanks are allowed between the
+        // optional exponent letter and the exponent value.
+        io.SkipSpaces(remaining);
+        next = io.NextInField(remaining, edit);
+      }
     }
-    // The default exponent is -kP, but the scale factor doesn't affect
-    // an explicit exponent.
-    exponent = -edit.modes.scale;
     if (next &&
         (*next == '-' || *next == '+' || (*next >= '0' && *next <= '9') ||
             *next == ' ' || *next == '\t')) {
@@ -346,14 +375,16 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
       if (negExpo || *next == '+') {
         next = io.NextInField(remaining, edit);
       }
-      for (exponent = 0; next; next = io.NextInField(remaining, edit)) {
+      for (; next; next = io.NextInField(remaining, edit)) {
         if (*next >= '0' && *next <= '9') {
           hasGoodExponent = true;
           if (exponent < 10000) {
             exponent = 10 * exponent + *next - '0';
           }
         } else if (*next == ' ' || *next == '\t') {
-          if (bzMode) {
+          if (isHexadecimal) {
+            break;
+          } else if (bzMode) {
             hasGoodExponent = true;
             exponent = 10 * exponent;
           }
@@ -366,23 +397,29 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
       }
     }
     if (!hasGoodExponent) {
+      if (isHexadecimal) {
+        return {}; // error
+      }
       // There isn't a good exponent; do not consume it.
       next = nextBeforeExponent;
       io.HandleAbsolutePosition(startExponent);
+      // The default exponent is -kP, but the scale factor doesn't affect
+      // an explicit exponent.
+      exponent = -edit.modes.scale;
     }
-    if (decimalPoint) {
-      exponent += *decimalPoint;
+    // Adjust exponent by number of digits before the radix point.
+    if (isHexadecimal) {
+      // Exponents for hexadecimal input are binary.
+      exponent += radixPointOffset.value_or(got - start) * 4;
+    } else if (radixPointOffset) {
+      exponent += *radixPointOffset;
     } else {
-      // When no decimal point (or comma) appears in the value, the 'd'
+      // When no redix point (or comma) appears in the value, the 'd'
       // part of the edit descriptor must be interpreted as the number of
       // digits in the value to be interpreted as being to the *right* of
-      // the assumed decimal point (13.7.2.3.2)
+      // the assumed radix point (13.7.2.3.2)
       exponent += got - start - edit.digits.value_or(0);
     }
-  } else {
-    // TODO: hex FP input
-    exponent = 0;
-    return 0;
   }
   // Consume the trailing ')' of a list-directed or NAMELIST complex
   // input value.
@@ -403,10 +440,10 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
       next = io.NextInField(remaining, edit);
     }
     if (next) {
-      return 0; // error: unused nonblank character in fixed-width field
+      return {}; // error: unused nonblank character in fixed-width field
     }
   }
-  return got;
+  return {got, exponent, isHexadecimal};
 }
 
 static void RaiseFPExceptions(decimal::ConversionResultFlags flags) {
@@ -433,7 +470,7 @@ static void RaiseFPExceptions(decimal::ConversionResultFlags flags) {
 // converter without modification, this fast path for real input
 // saves time by avoiding memory copies and reformatting of the exponent.
 template <int PRECISION>
-static bool TryFastPathRealInput(
+static bool TryFastPathRealDecimalInput(
     IoStatementState &io, const DataEdit &edit, void *n) {
   if (edit.modes.editingFlags & (blankZero | decimalComma)) {
     return false;
@@ -504,10 +541,103 @@ static bool TryFastPathRealInput(
   return true;
 }
 
+template <int binaryPrecision>
+decimal::ConversionToBinaryResult<binaryPrecision> ConvertHexadecimal(
+    const char *&p, enum decimal::FortranRounding rounding, int expo) {
+  using RealType = decimal::BinaryFloatingPointNumber<binaryPrecision>;
+  using RawType = typename RealType::RawType;
+  bool isNegative{*p == '-'};
+  constexpr RawType one{1};
+  RawType signBit{0};
+  if (isNegative) {
+    ++p;
+    signBit = one << (RealType::bits - 1);
+  }
+  RawType fraction{0};
+  // Adjust the incoming binary P+/- exponent to shift the radix point
+  // to below the LSB and add in the bias.
+  expo += binaryPrecision - 1 + RealType::exponentBias;
+  // Input the fraction.
+  int roundingBit{0};
+  int guardBit{0};
+  for (; *p; ++p) {
+    fraction <<= 4;
+    expo -= 4;
+    if (*p >= '0' && *p <= '9') {
+      fraction |= *p - '0';
+    } else if (*p >= 'A' && *p <= 'F') {
+      fraction |= *p - 'A' + 10; // data were normalized to capitals
+    } else {
+      break;
+    }
+    while (fraction >> binaryPrecision) {
+      guardBit |= roundingBit;
+      roundingBit = (int)fraction & 1;
+      fraction >>= 1;
+      ++expo;
+    }
+  }
+  if (fraction) {
+    // Boost biased expo if too small
+    while (expo < 1) {
+      guardBit |= roundingBit;
+      roundingBit = (int)fraction & 1;
+      fraction >>= 1;
+      ++expo;
+    }
+    // Normalize
+    while (expo > 1 && !(fraction >> (binaryPrecision - 1))) {
+      fraction <<= 1;
+      --expo;
+    }
+    // Rounding
+    bool increase{false};
+    switch (rounding) {
+    case decimal::RoundNearest: // RN & RP
+      increase = roundingBit && (guardBit | ((int)fraction & 1));
+      break;
+    case decimal::RoundUp: // RU
+      increase = !isNegative && (roundingBit | guardBit);
+      break;
+    case decimal::RoundDown: // RD
+      increase = isNegative && (roundingBit | guardBit);
+      break;
+    case decimal::RoundToZero: // RZ
+      break;
+    case decimal::RoundCompatible: // RC
+      increase = roundingBit != 0;
+      break;
+    }
+    if (increase) {
+      ++fraction;
+      if (fraction >> binaryPrecision) {
+        fraction >>= 1;
+        ++expo;
+      }
+    }
+  }
+  // Package & return result
+  constexpr RawType significandMask{(one << RealType::significandBits) - 1};
+  if (!fraction) {
+    expo = 0;
+  } else if (expo == 1 && !(fraction >> (binaryPrecision - 1))) {
+    expo = 0; // subnormal
+  } else if (expo >= RealType::maxExponent) {
+    expo = RealType::maxExponent; // +/-Inf
+    fraction = 0;
+  } else {
+    fraction &= significandMask; // remove explicit normalization unless x87
+  }
+  return decimal::ConversionToBinaryResult<binaryPrecision>{
+      RealType{static_cast<RawType>(signBit |
+          static_cast<RawType>(expo) << RealType::significandBits | fraction)},
+      (roundingBit | guardBit) ? decimal::Inexact : decimal::Exact};
+}
+
 template <int KIND>
 bool EditCommonRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
   constexpr int binaryPrecision{common::PrecisionOfRealKind(KIND)};
-  if (TryFastPathRealInput<binaryPrecision>(io, edit, n)) {
+  if (TryFastPathRealDecimalInput<binaryPrecision>(io, edit, n)) {
     return CheckCompleteListDirectedField(io, edit);
   }
   // Fast path wasn't available or didn't work; go the more general route
@@ -515,8 +645,8 @@ bool EditCommonRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
       common::MaxDecimalConversionDigits(binaryPrecision)};
   static constexpr int bufferSize{maxDigits + 18};
   char buffer[bufferSize];
-  int exponent{0};
-  int got{ScanRealInput(buffer, maxDigits + 2, io, edit, exponent)};
+  auto scanned{ScanRealInput(buffer, maxDigits + 2, io, edit)};
+  int got{scanned.got};
   if (got >= maxDigits + 2) {
     io.GetIoErrorHandler().Crash("EditCommonRealInput: buffer was too small");
     return false;
@@ -529,48 +659,55 @@ bool EditCommonRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
         static_cast<int>(connection.currentRecordNumber));
     return false;
   }
-  bool hadExtra{got > maxDigits};
-  if (exponent != 0) {
-    buffer[got++] = 'e';
-    if (exponent < 0) {
-      buffer[got++] = '-';
-      exponent = -exponent;
-    }
-    if (exponent > 9999) {
-      exponent = 9999; // will convert to +/-Inf
-    }
-    if (exponent > 999) {
-      int dig{exponent / 1000};
-      buffer[got++] = '0' + dig;
-      int rest{exponent - 1000 * dig};
-      dig = rest / 100;
-      buffer[got++] = '0' + dig;
-      rest -= 100 * dig;
-      dig = rest / 10;
-      buffer[got++] = '0' + dig;
-      buffer[got++] = '0' + (rest - 10 * dig);
-    } else if (exponent > 99) {
-      int dig{exponent / 100};
-      buffer[got++] = '0' + dig;
-      int rest{exponent - 100 * dig};
-      dig = rest / 10;
-      buffer[got++] = '0' + dig;
-      buffer[got++] = '0' + (rest - 10 * dig);
-    } else if (exponent > 9) {
-      int dig{exponent / 10};
-      buffer[got++] = '0' + dig;
-      buffer[got++] = '0' + (exponent - 10 * dig);
-    } else {
-      buffer[got++] = '0' + exponent;
-    }
-  }
-  buffer[got] = '\0';
+  decimal::ConversionToBinaryResult<binaryPrecision> converted;
   const char *p{buffer};
-  decimal::ConversionToBinaryResult<binaryPrecision> converted{
-      decimal::ConvertToBinary<binaryPrecision>(p, edit.modes.round)};
-  if (hadExtra) {
-    converted.flags = static_cast<enum decimal::ConversionResultFlags>(
-        converted.flags | decimal::Inexact);
+  if (scanned.isHexadecimal) {
+    buffer[got] = '\0';
+    converted = ConvertHexadecimal<binaryPrecision>(
+        p, edit.modes.round, scanned.exponent);
+  } else {
+    bool hadExtra{got > maxDigits};
+    int exponent{scanned.exponent};
+    if (exponent != 0) {
+      buffer[got++] = 'e';
+      if (exponent < 0) {
+        buffer[got++] = '-';
+        exponent = -exponent;
+      }
+      if (exponent > 9999) {
+        exponent = 9999; // will convert to +/-Inf
+      }
+      if (exponent > 999) {
+        int dig{exponent / 1000};
+        buffer[got++] = '0' + dig;
+        int rest{exponent - 1000 * dig};
+        dig = rest / 100;
+        buffer[got++] = '0' + dig;
+        rest -= 100 * dig;
+        dig = rest / 10;
+        buffer[got++] = '0' + dig;
+        buffer[got++] = '0' + (rest - 10 * dig);
+      } else if (exponent > 99) {
+        int dig{exponent / 100};
+        buffer[got++] = '0' + dig;
+        int rest{exponent - 100 * dig};
+        dig = rest / 10;
+        buffer[got++] = '0' + dig;
+        buffer[got++] = '0' + (rest - 10 * dig);
+      } else if (exponent > 9) {
+        int dig{exponent / 10};
+        buffer[got++] = '0' + dig;
+        buffer[got++] = '0' + (exponent - 10 * dig);
+      } else {
+        buffer[got++] = '0' + exponent;
+      }
+    }
+    buffer[got] = '\0';
+    converted = decimal::ConvertToBinary<binaryPrecision>(p, edit.modes.round);
+    if (hadExtra) {
+      converted.flags = static_cast<enum decimal::ConversionResultFlags>(
+          converted.flags | decimal::Inexact);
+    }
   }
   if (*p) { // unprocessed junk after value
     const auto &connection{io.GetConnectionState()};

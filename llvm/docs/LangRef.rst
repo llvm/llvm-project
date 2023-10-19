@@ -309,7 +309,7 @@ added in the future:
     prototype of all callees to exactly match the prototype of the
     function definition. Furthermore the inliner doesn't consider such function
     calls for inlining.
-"``cc 10``" - GHC convention
+"``ghccc``" - GHC convention
     This calling convention has been implemented specifically for use by
     the `Glasgow Haskell Compiler (GHC) <http://www.haskell.org/ghc>`_.
     It passes everything in registers, going to extremes to achieve this
@@ -1872,6 +1872,8 @@ example:
     passes make choices that keep the code size of this function as small
     as possible and perform optimizations that may sacrifice runtime
     performance in order to minimize the size of the generated code.
+    This attribute is incompatible with the ``optdebug`` and ``optnone``
+    attributes.
 ``naked``
     This attribute disables prologue / epilogue emission for the
     function. This can have very system-specific consequences.
@@ -2024,6 +2026,12 @@ example:
    Note: Comparing address of a global variable to ``null`` may still
    evaluate to false because of a limitation in querying this attribute inside
    constant expressions.
+``optdebug``
+    This attribute suggests that optimization passes and code generator passes
+    should make choices that try to preserve debug info without significantly
+    degrading runtime performance.
+    This attribute is incompatible with the ``minsize``, ``optsize``, and
+    ``optnone`` attributes.
 ``optforfuzzing``
     This attribute indicates that this function should be optimized
     for maximum fuzzing signal.
@@ -2033,7 +2041,7 @@ example:
     Code generation defaults to the "fast" instruction selector.
     This attribute cannot be used together with the ``alwaysinline``
     attribute; this attribute is also incompatible
-    with the ``minsize`` attribute and the ``optsize`` attribute.
+    with the ``minsize``, ``optsize``, and ``optdebug`` attributes.
 
     This attribute requires the ``noinline`` attribute to be specified on
     the function as well, so the function is never inlined into any caller.
@@ -2044,6 +2052,8 @@ example:
     passes make choices that keep the code size of this function low,
     and otherwise do optimizations specifically to reduce code size as
     long as they do not significantly impact runtime performance.
+    This attribute is incompatible with the ``optdebug`` and ``optnone``
+    attributes.
 ``"patchable-function"``
     This attribute tells the code generator that the code
     generated for this function needs to follow certain conventions that
@@ -3888,7 +3898,7 @@ integer to memory.
 
 A bitcast from a vector type to a scalar integer type will see the elements
 being packed together (without padding). The order in which elements are
-inserted in the integer depends on endianess. For little endian element zero
+inserted in the integer depends on endianness. For little endian element zero
 is put in the least significant bits of the integer, and for big endian
 element zero is put in the most significant bits.
 
@@ -5282,7 +5292,6 @@ X86:
 - ``O``: An immediate integer between 0 and 127.
 - ``e``: An immediate 32-bit signed integer.
 - ``Z``: An immediate 32-bit unsigned integer.
-- ``o``, ``v``: Treated the same as ``m``, at the moment.
 - ``q``: An 8, 16, 32, or 64-bit register which can be accessed as an 8-bit
   ``l`` integer register. On X86-32, this is the ``a``, ``b``, ``c``, and ``d``
   registers, and on X86-64, it is all of the integer registers.
@@ -5293,10 +5302,13 @@ X86:
   existed since i386, and can be accessed without the REX prefix.
 - ``f``: A 32, 64, or 80-bit '387 FPU stack pseudo-register.
 - ``y``: A 64-bit MMX register, if MMX is enabled.
-- ``x``: If SSE is enabled: a 32 or 64-bit scalar operand, or 128-bit vector
+- ``v``: If SSE is enabled: a 32 or 64-bit scalar operand, or 128-bit vector
   operand in a SSE register. If AVX is also enabled, can also be a 256-bit
   vector operand in an AVX register. If AVX-512 is also enabled, can also be a
-  512-bit vector operand in an AVX512 register, Otherwise, an error.
+  512-bit vector operand in an AVX512 register. Otherwise, an error.
+- ``x``: The same as ``v``, except that when AVX-512 is enabled, the ``x`` code
+  only allocates into the first 16 AVX-512 registers, while the ``v`` code
+  allocates into any of the 32 AVX-512 registers.
 - ``Y``: The same as ``x``, if *SSE2* is enabled, otherwise an error.
 - ``A``: Special case: allocates EAX first, then EDX, for a single operand (in
   32-bit mode, a 64-bit integer operand will get split into two registers). It
@@ -11677,7 +11689,7 @@ To convert pointers to other types, use the :ref:`inttoptr <i_inttoptr>`
 or :ref:`ptrtoint <i_ptrtoint>` instructions first.
 
 There is a caveat for bitcasts involving vector types in relation to
-endianess. For example ``bitcast <2 x i8> <value> to i16`` puts element zero
+endianness. For example ``bitcast <2 x i8> <value> to i16`` puts element zero
 of the vector in the least significant bits of the i16 for little-endian while
 element zero ends up in the most significant bits for big-endian.
 
@@ -11686,9 +11698,9 @@ Example:
 
 .. code-block:: text
 
-      %X = bitcast i8 255 to i8          ; yields i8 :-1
-      %Y = bitcast i32* %x to i16*       ; yields i16*:%x
-      %Z = bitcast <2 x i32> %V to i64;  ; yields i64: %V (depends on endianess)
+      %X = bitcast i8 255 to i8         ; yields i8 :-1
+      %Y = bitcast i32* %x to i16*      ; yields i16*:%x
+      %Z = bitcast <2 x i32> %V to i64; ; yields i64: %V (depends on endianness)
       %Z = bitcast <2 x i32*> %V to <2 x i64*> ; yields <2 x i64*>
 
 .. _i_addrspacecast:

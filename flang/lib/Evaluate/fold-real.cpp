@@ -52,15 +52,28 @@ public:
       const Constant<T> &array, const Constant<T> &maxAbs, Rounding rounding)
       : array_{array}, maxAbs_{maxAbs}, rounding_{rounding} {};
   void operator()(Scalar<T> &element, const ConstantSubscripts &at) {
-    // Kahan summation of scaled elements
+    // Kahan summation of scaled elements:
+    // Naively,
+    //   NORM2(A(:)) = SQRT(SUM(A(:)**2))
+    // For any T > 0, we have mathematically
+    //   SQRT(SUM(A(:)**2))
+    //     = SQRT(T**2 * (SUM(A(:)**2) / T**2))
+    //     = SQRT(T**2 * SUM(A(:)**2 / T**2))
+    //     = SQRT(T**2 * SUM((A(:)/T)**2))
+    //     = SQRT(T**2) * SQRT(SUM((A(:)/T)**2))
+    //     = T * SQRT(SUM((A(:)/T)**2))
+    // By letting T = MAXVAL(ABS(A)), we ensure that
+    // ALL(ABS(A(:)/T) <= 1), so ALL((A(:)/T)**2 <= 1), and the SUM will
+    // not overflow unless absolutely necessary.
     auto scale{maxAbs_.At(maxAbsAt_)};
     if (scale.IsZero()) {
-      // If maxAbs is zero, so are all elements, and result
+      // Maximum value is zero, and so will the result be.
+      // Avoid division by zero below.
       element = scale;
     } else {
       auto item{array_.At(at)};
       auto scaled{item.Divide(scale).value};
-      auto square{item.Multiply(scaled).value};
+      auto square{scaled.Multiply(scaled).value};
       auto next{square.Add(correction_, rounding_)};
       overflow_ |= next.flags.test(RealFlag::Overflow);
       auto sum{element.Add(next.value, rounding_)};
@@ -73,13 +86,16 @@ public:
   }
   bool overflow() const { return overflow_; }
   void Done(Scalar<T> &result) {
+    // result+correction == SUM((data(:)/maxAbs)**2)
+    // result = maxAbs * SQRT(result+correction)
     auto corrected{result.Add(correction_, rounding_)};
     overflow_ |= corrected.flags.test(RealFlag::Overflow);
     correction_ = Scalar<T>{};
-    auto rescaled{corrected.value.Multiply(maxAbs_.At(maxAbsAt_))};
+    auto root{corrected.value.SQRT().value};
+    auto product{root.Multiply(maxAbs_.At(maxAbsAt_))};
     maxAbs_.IncrementSubscripts(maxAbsAt_);
-    overflow_ |= rescaled.flags.test(RealFlag::Overflow);
-    result = rescaled.value.SQRT().value;
+    overflow_ |= product.flags.test(RealFlag::Overflow);
+    result = product.value;
   }
 
 private:

@@ -68,9 +68,6 @@ struct ValidationOptions {
   }
 };
 
-std::unique_ptr<Pass> createTosaValidationPass(
-    ValidationOptions const &options = ValidationOptions());
-
 #define GEN_PASS_REGISTRATION
 #include "mlir/Dialect/Tosa/Transforms/Passes.h.inc"
 

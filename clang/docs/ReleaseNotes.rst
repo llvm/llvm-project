@@ -176,6 +176,9 @@ C23 Feature Support
 - Clang now supports `requires c23` for module maps.
 - Clang now supports ``N3007 Type inference for object definitions``.
 
+- Clang now supports ``<stdckdint.h>`` which defines several macros for performing
+  checked integer arithmetic.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
@@ -193,6 +196,9 @@ New Compiler Flags
   preserving ``#include`` directives for "system" headers instead of copying
   the preprocessed text to the output. This can greatly reduce the size of the
   preprocessed output, which can be helpful when trying to reduce a test case.
+
+* ``-Wbitfield-conversion`` was added to detect assignments of integral
+  types to a bitfield that may change the value.
 
 Deprecated Compiler Flags
 -------------------------
@@ -513,6 +519,14 @@ Bug Fixes to C++ Support
   rather than prefer the non-templated constructor as specified in
   [standard.group]p3.
 
+- Fixed a crash caused by incorrect handling of dependence on variable templates
+  with non-type template parameters of reference type. Fixes:
+  (`#65153 <https://github.com/llvm/llvm-project/issues/65153>`_)
+
+- Clang now properly compares constraints on an out of line class template
+  declaration definition. Fixes:
+  (`#61763 <https://github.com/llvm/llvm-project/issues/61763>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
@@ -521,6 +535,8 @@ Bug Fixes to AST Handling
   computed RecordLayout is incorrect if fields are not completely imported and
   should not be cached.
   `Issue 64170 <https://github.com/llvm/llvm-project/issues/64170>`_
+- Fixed ``hasAnyBase`` not binding nodes in its submatcher.
+  (`#65421 <https://github.com/llvm/llvm-project/issues/65421>`_)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -554,6 +570,7 @@ X86 Support
 - Support ISA of ``USER_MSR``.
   * Support intrinsic of ``_urdmsr``.
   * Support intrinsic of ``_uwrmsr``.
+- Support ISA of ``AVX10.1``.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -662,6 +679,8 @@ Static Analyzer
 - Added a new checker ``core.BitwiseShift`` which reports situations where
   bitwise shift operators produce undefined behavior (because some operand is
   negative or too large).
+- Move checker ``alpha.unix.StdCLibraryFunctions`` out of the ``alpha`` package
+  to ``unix.StdCLibraryFunctions``.
 
 - Fix false positive in mutation check when using pointer to member function.
   (`#66204: <https://github.com/llvm/llvm-project/issues/66204>`_).
