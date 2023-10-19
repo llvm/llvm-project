@@ -136,7 +136,6 @@ INITIALIZE_PASS_END(PHIElimination, DEBUG_TYPE,
 
 void PHIElimination::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addUsedIfAvailable<LiveVariables>();
-  AU.addUsedIfAvailable<LiveIntervals>();
   AU.addPreserved<LiveVariables>();
   AU.addPreserved<SlotIndexes>();
   AU.addPreserved<LiveIntervals>();

@@ -1312,10 +1312,8 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
         }
       } else if (!isLiveOut && !isLastMBB) {
         LI.removeSegment(StartIndex, EndIndex);
-        for (auto &SR : LI.subranges()) {
-          if (SR.overlaps(StartIndex, EndIndex))
-            SR.removeSegment(StartIndex, EndIndex);
-        }
+        for (auto &SR : LI.subranges())
+          SR.removeSegment(StartIndex, EndIndex);
       }
     }
 
