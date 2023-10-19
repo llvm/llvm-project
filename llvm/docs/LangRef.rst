@@ -26980,9 +26980,9 @@ implies that the mask is extended with 1 bits to the pointer type size.
 
 Both the returned pointer(s) and the first argument are based on the same
 underlying object (for more information on the *based on* terminology see
-:ref:`the pointer aliasing rules <pointeraliasing>`). If the bitwidth of the
-mask argument does not match the pointer size of the target, the mask is
-zero-extended or truncated accordingly.
+:ref:`the pointer aliasing rules <pointeraliasing>`).
+
+The intrinsic only captures the pointer argument through the return value.
 
 .. _int_threadlocal_address:
 
