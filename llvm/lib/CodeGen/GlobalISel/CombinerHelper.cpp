@@ -963,8 +963,7 @@ static bool canFoldInAddressingMode(GLoadStore *MI, const TargetLowering &TLI,
     return false;
 
   AM.HasBaseReg = true;
-  auto CstOff = getIConstantVRegVal(Addr->getOffsetReg(), MRI);
-  if (CstOff)
+  if (auto CstOff = getIConstantVRegVal(Addr->getOffsetReg(), MRI))
     AM.BaseOffs = CstOff->getSExtValue(); // [reg +/- imm]
   else
     AM.Scale = 1; // [reg +/- reg]
@@ -976,8 +975,7 @@ static bool canFoldInAddressingMode(GLoadStore *MI, const TargetLowering &TLI,
       MI->getMMO().getAddrSpace());
 }
 
-namespace {
-unsigned getIndexedOpc(unsigned LdStOpc) {
+static unsigned getIndexedOpc(unsigned LdStOpc) {
   switch (LdStOpc) {
   case TargetOpcode::G_LOAD:
     return TargetOpcode::G_INDEXED_LOAD;
@@ -991,7 +989,6 @@ unsigned getIndexedOpc(unsigned LdStOpc) {
     llvm_unreachable("Unexpected opcode");
   }
 }
-} // namespace
 
 bool CombinerHelper::isIndexedLoadStoreLegal(GLoadStore &LdSt) const {
   // Check for legality.
@@ -1024,8 +1021,7 @@ bool CombinerHelper::findPostIndexCandidate(GLoadStore &LdSt, Register &Addr,
   // G_STORE %val(s64), %baseptr(p0)
   // %offset:_(s64) = G_CONSTANT i64 -256
   // %new_addr:_(p0) = G_PTR_ADD %baseptr, %offset(s64)
-  auto &MF = *LdSt.getParent()->getParent();
-  const auto &TLI = *MF.getSubtarget().getTargetLowering();
+  const auto &TLI = getTargetLowering();
 
   Register Ptr = LdSt.getPointerReg();
   // If the store is the only use, don't bother.
@@ -1065,6 +1061,7 @@ bool CombinerHelper::findPostIndexCandidate(GLoadStore &LdSt, Register &Addr,
 
     // Make sure the offset calculation is before the potentially indexed op.
     MachineInstr *OffsetDef = MRI.getVRegDef(Offset);
+    RematOffset = false;
     if (!dominates(*OffsetDef, LdSt)) {
       // If the offset however is just a G_CONSTANT, we can always just
       // rematerialize it where we need it.
@@ -1080,12 +1077,10 @@ bool CombinerHelper::findPostIndexCandidate(GLoadStore &LdSt, Register &Addr,
       // If the user is a later load/store that can be post-indexed, then don't
       // combine this one.
       auto *BasePtrLdSt = dyn_cast<GLoadStore>(&BasePtrUse);
-      if (BasePtrLdSt && BasePtrLdSt != &LdSt) {
-        if (dominates(LdSt, *BasePtrLdSt)) {
-          if (isIndexedLoadStoreLegal(*BasePtrLdSt))
-            return false;
-        }
-      }
+      if (BasePtrLdSt && BasePtrLdSt != &LdSt &&
+          dominates(LdSt, *BasePtrLdSt) &&
+          isIndexedLoadStoreLegal(*BasePtrLdSt))
+        return false;
 
       // Now we're looking for the key G_PTR_ADD instruction, which contains
       // the offset add that we want to fold.
@@ -1097,10 +1092,9 @@ bool CombinerHelper::findPostIndexCandidate(GLoadStore &LdSt, Register &Addr,
           if (BaseUseUse.getParent() != LdSt.getParent())
             return false;
 
-          if (auto *UseUseLdSt = dyn_cast<GLoadStore>(&BaseUseUse)) {
+          if (auto *UseUseLdSt = dyn_cast<GLoadStore>(&BaseUseUse))
             if (canFoldInAddressingMode(UseUseLdSt, TLI, MRI))
               return false;
-          }
         }
         if (!dominates(LdSt, BasePtrUse))
           return false; // All use must be dominated by the load/store.

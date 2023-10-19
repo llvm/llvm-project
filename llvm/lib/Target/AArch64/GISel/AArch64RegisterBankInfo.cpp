@@ -607,10 +607,8 @@ bool AArch64RegisterBankInfo::onlyDefinesFP(const MachineInstr &MI,
 
 bool AArch64RegisterBankInfo::isLoadFromFPType(const MachineInstr &MI) const {
   // GMemOperation because we also want to match indexed loads.
-  auto *Load = dyn_cast<GMemOperation>(&MI);
-
-  const auto &MMO = Load->getMMO();
-  const Value *LdVal = MMO.getValue();
+  auto *MemOp = cast<GMemOperation>(&MI);
+  const Value *LdVal = MemOp->getMMO().getValue();
   if (!LdVal)
     return false;
 
