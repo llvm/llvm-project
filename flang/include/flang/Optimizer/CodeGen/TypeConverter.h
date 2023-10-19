@@ -101,7 +101,7 @@ public:
   }
 
   template <typename A> mlir::Type convertPointerLike(A &ty) const {
-    return mlir::LLVM::LLVMPointerType::get(ty.getContext());
+    return mlir::LLVM::LLVMPointerType::get(ty.getContext(), addressSpace);
   }
 
   // convert a front-end kind value to either a std or LLVM IR dialect type
@@ -127,6 +127,7 @@ private:
   KindMapping kindMapping;
   std::unique_ptr<CodeGenSpecifics> specifics;
   std::unique_ptr<TBAABuilder> tbaaBuilder;
+  unsigned addressSpace;
 };
 
 } // namespace fir

@@ -35,7 +35,13 @@ LLVMTypeConverter::LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA,
                                       getTargetTriple(module),
                                       getKindMapping(module), dl)),
       tbaaBuilder(std::make_unique<TBAABuilder>(module->getContext(), applyTBAA,
-                                                forceUnifiedTBAATree)) {
+                                                forceUnifiedTBAATree)),
+      addressSpace(0) {
+  // Get default alloca address space for the current target
+  if (mlir::Attribute addrSpace =
+          mlir::DataLayout(module).getAllocaMemorySpace())
+    addressSpace = addrSpace.cast<mlir::IntegerAttr>().getUInt();
+
   LLVM_DEBUG(llvm::dbgs() << "FIR type converter\n");
 
   // Each conversion should return a value of type mlir::Type.
