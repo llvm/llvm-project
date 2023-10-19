@@ -39,6 +39,7 @@ executable("lldb-vscode") {
 
   sources = [
     "BreakpointBase.cpp",
+    "DAP.cpp",
     "ExceptionBreakpoint.cpp",
     "FifoFiles.cpp",
     "FunctionBreakpoint.cpp",
@@ -50,6 +51,7 @@ executable("lldb-vscode") {
     "RunInTerminal.cpp",
     "SourceBreakpoint.cpp",
     "VSCode.cpp",
+    "lldb-dap.cpp",
     "lldb-vscode.cpp",
   ]
 }
