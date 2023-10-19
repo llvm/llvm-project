@@ -29,6 +29,6 @@ TEST(RISCVBaseInfo, CheckSameRatioLMUL) {
             RISCVVType::getSameRatioLMUL(8, RISCVII::LMUL_F2, 16));
   // Bigger fractional LMUL.
   EXPECT_EQ(RISCVII::LMUL_F2,
-            RISCVVType::getSameRatioLMUL(8, RISCVII::LMUL_F2, 16));
+            RISCVVType::getSameRatioLMUL(8, RISCVII::LMUL_F4, 16));
 }
 } // namespace
