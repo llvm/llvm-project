@@ -153,8 +153,6 @@ Please run this, then file a bug with the instructions and reduced .bc file
 that bugpoint emits.  If something goes wrong with bugpoint, please submit
 the "foo.bc" file and the option that llc crashes with.
 
-​.. _lto-crash:
-
 LTO bugs
 ---------------------------
 
