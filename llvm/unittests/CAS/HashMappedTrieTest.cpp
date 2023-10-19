@@ -40,7 +40,7 @@ TEST(HashMappedTrieTest, TrieStructure) {
 
   // Use the number itself as hash to test the pathological case.
   auto hash = [](NumType Num) {
-    NumType HashN = llvm::support::endian::byte_swap(Num, llvm::support::big);
+    NumType HashN = llvm::support::endian::byte_swap(Num, llvm::endianness::big);
     HashType Hash;
     memcpy(&Hash[0], &HashN, sizeof(HashType));
     return Hash;
@@ -122,7 +122,7 @@ TEST(HashMappedTrieTest, TrieStructureSmallFinalSubtrie) {
 
   // Use the number itself as hash to test the pathological case.
   auto hash = [](NumType Num) {
-    NumType HashN = llvm::support::endian::byte_swap(Num, llvm::support::big);
+    NumType HashN = llvm::support::endian::byte_swap(Num, llvm::endianness::big);
     HashType Hash;
     memcpy(&Hash[0], &HashN, sizeof(HashType));
     return Hash;
@@ -207,7 +207,7 @@ TEST(HashMappedTrieTest, TrieDestructionLoop) {
 
   // Use the number itself in big-endian order as the hash.
   auto hash = [](NumT Num) {
-    NumT HashN = llvm::support::endian::byte_swap(Num, llvm::support::big);
+    NumT HashN = llvm::support::endian::byte_swap(Num, llvm::endianness::big);
     HashT Hash;
     memcpy(&Hash[0], &HashN, sizeof(HashT));
     return Hash;
