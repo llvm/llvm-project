@@ -435,7 +435,7 @@ static bool isAdmissibleBSR(SparseTensorType &aTp) {
       aTp.isDenseLvl(2) && aTp.isDenseLvl(3) && isAdmissibleMetaData(aTp)) {
     // CuSparse only supports "square" blocks currently.
     SmallVector<unsigned> dims = getBlockSize(aTp.getDimToLvl());
-    assert (dims.size() == 2);
+    assert(dims.size() == 2);
     return dims[0] = dims[1] && dims[0] > 1;
   }
   return false;

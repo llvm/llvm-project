@@ -167,7 +167,7 @@ module {
     // Print the result for verification. Note that the "spy" determines what
     // dot products are sampled, but the original contents are added back to
     // the result (which is why the block sparse version has actual results
-    // the the original zero positions).
+    // in the original zero positions).
     //
     // CHECK:      ( 5, 10, 24, 19, 53, 42, 55, 56 )
     // CHECK-NEXT: ( 5, 10, 8, 19, 24, 24, 40, 53, 42, 55, 56, 64 )
