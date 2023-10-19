@@ -541,7 +541,8 @@ void AccStructureChecker::Enter(const parser::AccClause::Gang &g) {
 void AccStructureChecker::Enter(const parser::AccClause::NumGangs &n) {
   CheckAllowed(llvm::acc::Clause::ACCC_num_gangs,
       /*warnInsteadOfError=*/GetContext().directive ==
-          llvm::acc::Directive::ACCD_serial);
+              llvm::acc::Directive::ACCD_serial ||
+          GetContext().directive == llvm::acc::Directive::ACCD_serial_loop);
 
   if (n.v.size() > 3)
     context_.Say(GetContext().clauseSource,
@@ -551,13 +552,15 @@ void AccStructureChecker::Enter(const parser::AccClause::NumGangs &n) {
 void AccStructureChecker::Enter(const parser::AccClause::NumWorkers &n) {
   CheckAllowed(llvm::acc::Clause::ACCC_num_workers,
       /*warnInsteadOfError=*/GetContext().directive ==
-          llvm::acc::Directive::ACCD_serial);
+              llvm::acc::Directive::ACCD_serial ||
+          GetContext().directive == llvm::acc::Directive::ACCD_serial_loop);
 }
 
 void AccStructureChecker::Enter(const parser::AccClause::VectorLength &n) {
   CheckAllowed(llvm::acc::Clause::ACCC_vector_length,
       /*warnInsteadOfError=*/GetContext().directive ==
-          llvm::acc::Directive::ACCD_serial);
+              llvm::acc::Directive::ACCD_serial ||
+          GetContext().directive == llvm::acc::Directive::ACCD_serial_loop);
 }
 
 void AccStructureChecker::Enter(const parser::AccClause::Reduction &reduction) {
