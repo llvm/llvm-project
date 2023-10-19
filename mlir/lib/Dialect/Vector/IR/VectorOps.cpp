@@ -100,6 +100,20 @@ static MaskFormat getMaskFormat(Value mask) {
       return MaskFormat::AllTrue;
     if (allFalse)
       return MaskFormat::AllFalse;
+  } else if (auto m = mask.getDefiningOp<CreateMaskOp>()) {
+    // Finds all-false create_masks. An all-true create_mask requires all
+    // dims to be constants, so that'll be folded to a constant_mask, then
+    // detected in the constant_mask case.
+    auto maskOperands = m.getOperands();
+    for (Value operand : maskOperands) {
+      if (auto constantOp = operand.getDefiningOp<arith::ConstantOp>()) {
+        int64_t dimSize =
+            llvm::cast<IntegerAttr>(constantOp.getValue()).getInt();
+        if (dimSize <= 0)
+          return MaskFormat::AllFalse;
+      }
+    }
+    return MaskFormat::Unknown;
   }
   return MaskFormat::Unknown;
 }
@@ -1995,16 +2009,23 @@ public:
     if (!createMaskOp)
       return failure();
 
-    ArrayRef<int64_t> position = extractOp.getStaticPosition();
-    auto maskOperands = createMaskOp.getOperands();
-    VectorType maskType = createMaskOp.getVectorType();
-    VectorType::Builder newMaskType(maskType);
+    VectorType extractedMaskType =
+        llvm::dyn_cast<VectorType>(extractOp.getResult().getType());
 
-    bool allFalse = false;
+    if (!extractedMaskType)
+      return failure();
+
+    auto maskOperands = createMaskOp.getOperands();
+    ArrayRef<int64_t> extractOpPos = extractOp.getStaticPosition();
+    VectorType maskType = createMaskOp.getVectorType();
+
     bool containsUnknownDims = false;
-    for (auto [i, pos] : llvm::enumerate(position)) {
-      newMaskType.dropDim(0);
-      Value operand = maskOperands[i];
+    bool allFalse = getMaskFormat(createMaskOp) == MaskFormat::AllFalse;
+
+    for (size_t dimIdx = 0; !allFalse && dimIdx < extractOpPos.size();
+         dimIdx++) {
+      int64_t pos = extractOpPos[dimIdx];
+      Value operand = maskOperands[dimIdx];
       auto constantOp = operand.getDefiningOp<arith::ConstantOp>();
       if (!constantOp) {
         // Bounds of this dim unknown.
@@ -2014,28 +2035,26 @@ public:
 
       int64_t createMaskBound =
           llvm::cast<IntegerAttr>(constantOp.getValue()).getInt();
-      if (pos == ShapedType::kDynamic) {
-        // Extractions must be in-bounds. So if the corresponding `create_mask`
-        // size is 0 or the size of the dim, we know this dim is false or true.
-        if (createMaskBound == 0)
-          allFalse = true;
-        else if (createMaskBound < maskType.getDimSize(i))
-          // Unknown if this dim is within the true or false region.
-          containsUnknownDims = true;
-      } else {
+
+      if (pos != ShapedType::kDynamic) {
         // If any position is outside the range from the `create_mask`, then the
-        // extracted mask will be all false.
+        // extracted mask will be all-false.
         allFalse |= pos >= createMaskBound;
+      } else if (createMaskBound < maskType.getDimSize(dimIdx)) {
+        // This dim is not all-true and since this is a dynamic index we don't
+        // know if the extraction is within the true or false region.
+        // Note: Zero dims have already handled via getMaskFormat().
+        containsUnknownDims = true;
       }
     }
 
     if (allFalse) {
       rewriter.replaceOpWithNewOp<arith::ConstantOp>(
-          extractOp, DenseElementsAttr::get(VectorType(newMaskType), false));
+          extractOp, DenseElementsAttr::get(extractedMaskType, false));
     } else if (!containsUnknownDims) {
       rewriter.replaceOpWithNewOp<vector::CreateMaskOp>(
-          extractOp, VectorType(newMaskType),
-          maskOperands.drop_front(position.size()));
+          extractOp, extractedMaskType,
+          maskOperands.drop_front(extractOpPos.size()));
     } else {
       return failure();
     }
