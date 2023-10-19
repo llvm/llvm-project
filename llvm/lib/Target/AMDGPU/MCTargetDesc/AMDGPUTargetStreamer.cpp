@@ -455,7 +455,7 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
   if (IVersion.Major >= 9)
     PRINT_FIELD(OS, ".amdhsa_fp16_overflow", KD,
                 compute_pgm_rsrc1,
-                amdhsa::COMPUTE_PGM_RSRC1_FP16_OVFL);
+                amdhsa::COMPUTE_PGM_RSRC1_GFX9_PLUS_FP16_OVFL);
   if (AMDGPU::isGFX90A(STI))
     PRINT_FIELD(OS, ".amdhsa_tg_split", KD,
                 compute_pgm_rsrc3,
@@ -463,13 +463,13 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
   if (IVersion.Major >= 10) {
     PRINT_FIELD(OS, ".amdhsa_workgroup_processor_mode", KD,
                 compute_pgm_rsrc1,
-                amdhsa::COMPUTE_PGM_RSRC1_WGP_MODE);
+                amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE);
     PRINT_FIELD(OS, ".amdhsa_memory_ordered", KD,
                 compute_pgm_rsrc1,
-                amdhsa::COMPUTE_PGM_RSRC1_MEM_ORDERED);
+                amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_MEM_ORDERED);
     PRINT_FIELD(OS, ".amdhsa_forward_progress", KD,
                 compute_pgm_rsrc1,
-                amdhsa::COMPUTE_PGM_RSRC1_FWD_PROGRESS);
+                amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_FWD_PROGRESS);
     PRINT_FIELD(OS, ".amdhsa_shared_vgpr_count", KD, compute_pgm_rsrc3,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX10_PLUS_SHARED_VGPR_COUNT);
   }
