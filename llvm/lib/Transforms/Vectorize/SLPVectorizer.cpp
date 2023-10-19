@@ -553,8 +553,8 @@ static std::optional<unsigned> getExtractIndex(Instruction *E) {
 /// successful, the matched scalars are replaced by poison values in \p VL for
 /// future analysis.
 static std::optional<TTI::ShuffleKind>
-tryToGatherExtractElements(SmallVectorImpl<Value *> &VL,
-                           SmallVectorImpl<int> &Mask) {
+tryToGatherSingleRegisterExtractElements(MutableArrayRef<Value *> VL,
+                                         SmallVectorImpl<int> &Mask) {
   // Scan list of gathered scalars for extractelements that can be represented
   // as shuffles.
   MapVector<Value *, SmallVector<int>> VectorOpToIdx;
@@ -641,7 +641,7 @@ tryToGatherExtractElements(SmallVectorImpl<Value *> &VL,
   if (!Res) {
     // TODO: try to check other subsets if possible.
     // Restore the original VL if attempt was not successful.
-    VL.swap(SavedVL);
+    copy(SavedVL, VL.begin());
     return std::nullopt;
   }
   // Restore unused scalars from mask, if some of the extractelements were not
@@ -7616,7 +7616,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     std::optional<TargetTransformInfo::ShuffleKind> GatherShuffle;
     SmallVector<const TreeEntry *> Entries;
     // Check for gathered extracts.
-    ExtractShuffle = tryToGatherExtractElements(GatheredScalars, ExtractMask);
+    ExtractShuffle = tryToGatherSingleRegisterExtractElements(GatheredScalars, ExtractMask);
     SmallVector<Value *> IgnoredVals;
     if (UserIgnoreList)
       IgnoredVals.assign(UserIgnoreList->begin(), UserIgnoreList->end());
@@ -9036,41 +9036,46 @@ BoUpSLP::isGatherShuffledEntry(const TreeEntry *TE, ArrayRef<Value *> VL,
          "Expected only single user of the gather node.");
   // TODO: currently checking only for Scalars in the tree entry, need to count
   // reused elements too for better cost estimation.
-  Instruction &UserInst =
-      getLastInstructionInBundle(TE->UserTreeIndices.front().UserTE);
-  BasicBlock *ParentBB = nullptr;
+  const EdgeInfo &TEUseEI = TE->UserTreeIndices.front();
+  const Instruction *TEInsertPt = &getLastInstructionInBundle(TEUseEI.UserTE);
+  const BasicBlock *TEInsertBlock = nullptr;
   // Main node of PHI entries keeps the correct order of operands/incoming
   // blocks.
-  if (auto *PHI =
-          dyn_cast<PHINode>(TE->UserTreeIndices.front().UserTE->getMainOp())) {
-    ParentBB = PHI->getIncomingBlock(TE->UserTreeIndices.front().EdgeIdx);
+  if (auto *PHI = dyn_cast<PHINode>(TEUseEI.UserTE->getMainOp())) {
+    TEInsertBlock = PHI->getIncomingBlock(TEUseEI.EdgeIdx);
+    TEInsertPt = TEInsertBlock->getTerminator();
   } else {
-    ParentBB = UserInst.getParent();
+    TEInsertBlock = TEInsertPt->getParent();
   }
-  auto *NodeUI = DT->getNode(ParentBB);
+  auto *NodeUI = DT->getNode(TEInsertBlock);
   assert(NodeUI && "Should only process reachable instructions");
   SmallPtrSet<Value *, 4> GatheredScalars(VL.begin(), VL.end());
-  auto CheckOrdering = [&](Instruction *LastEI) {
-    // Check if the user node of the TE comes after user node of EntryPtr,
-    // otherwise EntryPtr depends on TE.
-    // Gather nodes usually are not scheduled and inserted before their first
-    // user node. So, instead of checking dependency between the gather nodes
-    // themselves, we check the dependency between their user nodes.
-    // If one user node comes before the second one, we cannot use the second
-    // gather node as the source vector for the first gather node, because in
-    // the list of instructions it will be emitted later.
-    auto *EntryParent = LastEI->getParent();
-    auto *NodeEUI = DT->getNode(EntryParent);
+  auto CheckOrdering = [&](const Instruction *InsertPt) {
+    // Argument InsertPt is an instruction where vector code for some other
+    // tree entry (one that shares one or more scalars with TE) is going to be
+    // generated. This lambda returns true if insertion point of vector code
+    // for the TE dominates that point (otherwise dependency is the other way
+    // around). The other node is not limited to be of a gather kind. Gather
+    // nodes are not scheduled and their vector code is inserted before their
+    // first user. If user is PHI, that is supposed to be at the end of a
+    // predecessor block. Otherwise it is the last instruction among scalars of
+    // the user node. So, instead of checking dependency between instructions
+    // themselves, we check dependency between their insertion points for vector
+    // code (since each scalar instruction ends up as a lane of a vector
+    // instruction).
+    const BasicBlock *InsertBlock = InsertPt->getParent();
+    auto *NodeEUI = DT->getNode(InsertBlock);
     if (!NodeEUI)
       return false;
     assert((NodeUI == NodeEUI) ==
                (NodeUI->getDFSNumIn() == NodeEUI->getDFSNumIn()) &&
            "Different nodes should have different DFS numbers");
     // Check the order of the gather nodes users.
-    if (UserInst.getParent() != EntryParent &&
+    if (TEInsertPt->getParent() != InsertBlock &&
         (DT->dominates(NodeUI, NodeEUI) || !DT->dominates(NodeEUI, NodeUI)))
       return false;
-    if (UserInst.getParent() == EntryParent && UserInst.comesBefore(LastEI))
+    if (TEInsertPt->getParent() == InsertBlock &&
+        TEInsertPt->comesBefore(InsertPt))
       return false;
     return true;
   };
@@ -9095,49 +9100,36 @@ BoUpSLP::isGatherShuffledEntry(const TreeEntry *TE, ArrayRef<Value *> VL,
                     [&](Value *V) { return GatheredScalars.contains(V); }) &&
              "Must contain at least single gathered value.");
       assert(TEPtr->UserTreeIndices.size() == 1 &&
-             "Expected only single user of the gather node.");
-      PHINode *EntryPHI =
-          dyn_cast<PHINode>(TEPtr->UserTreeIndices.front().UserTE->getMainOp());
-      Instruction *EntryUserInst =
-          EntryPHI ? nullptr
-                   : &getLastInstructionInBundle(
-                         TEPtr->UserTreeIndices.front().UserTE);
-      if (&UserInst == EntryUserInst) {
-        assert(!EntryPHI && "Unexpected phi node entry.");
-        // If 2 gathers are operands of the same entry, compare operands
-        // indices, use the earlier one as the base.
-        if (TE->UserTreeIndices.front().UserTE ==
-                TEPtr->UserTreeIndices.front().UserTE &&
-            TE->UserTreeIndices.front().EdgeIdx <
-                TEPtr->UserTreeIndices.front().EdgeIdx)
+             "Expected only single user of a gather node.");
+      const EdgeInfo &UseEI = TEPtr->UserTreeIndices.front();
+
+      PHINode *UserPHI = dyn_cast<PHINode>(UseEI.UserTE->getMainOp());
+      const Instruction *InsertPt =
+          UserPHI ? UserPHI->getIncomingBlock(UseEI.EdgeIdx)->getTerminator()
+                  : &getLastInstructionInBundle(UseEI.UserTE);
+      if (TEInsertPt == InsertPt) {
+        // If 2 gathers are operands of the same entry (regardless of wether
+        // user is PHI or else), compare operands indices, use the earlier one
+        // as the base.
+        if (TEUseEI.UserTE == UseEI.UserTE && TEUseEI.EdgeIdx < UseEI.EdgeIdx)
           continue;
         // If the user instruction is used for some reason in different
         // vectorized nodes - make it depend on index.
-        if (TE->UserTreeIndices.front().UserTE !=
-                TEPtr->UserTreeIndices.front().UserTE &&
-            TE->Idx < TEPtr->Idx)
+        if (TEUseEI.UserTE != UseEI.UserTE && TE->Idx < TEPtr->Idx)
           continue;
       }
-      // Check if the user node of the TE comes after user node of EntryPtr,
-      // otherwise EntryPtr depends on TE.
-      auto *EntryI =
-          EntryPHI
-              ? EntryPHI
-                    ->getIncomingBlock(TEPtr->UserTreeIndices.front().EdgeIdx)
-                    ->getTerminator()
-              : EntryUserInst;
-      if ((ParentBB != EntryI->getParent() ||
-           TE->UserTreeIndices.front().EdgeIdx <
-               TEPtr->UserTreeIndices.front().EdgeIdx ||
-           TE->UserTreeIndices.front().UserTE !=
-               TEPtr->UserTreeIndices.front().UserTE) &&
-          !CheckOrdering(EntryI))
+
+      // Check if the user node of the TE comes after user node of TEPtr,
+      // otherwise TEPtr depends on TE.
+      if ((TEInsertBlock != InsertPt->getParent() ||
+           TEUseEI.EdgeIdx < UseEI.EdgeIdx || TEUseEI.UserTE != UseEI.UserTE) &&
+          !CheckOrdering(InsertPt))
         continue;
       VToTEs.insert(TEPtr);
     }
     if (const TreeEntry *VTE = getTreeEntry(V)) {
-      Instruction &EntryUserInst = getLastInstructionInBundle(VTE);
-      if (&EntryUserInst == &UserInst || !CheckOrdering(&EntryUserInst))
+      Instruction &LastBundleInst = getLastInstructionInBundle(VTE);
+      if (&LastBundleInst == TEInsertPt || !CheckOrdering(&LastBundleInst))
         continue;
       VToTEs.insert(VTE);
     }
@@ -10139,7 +10131,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
   inversePermutation(E->ReorderIndices, ReorderMask);
   if (!ReorderMask.empty())
     reorderScalars(GatheredScalars, ReorderMask);
-  auto FindReusedSplat = [&](SmallVectorImpl<int> &Mask) {
+  auto FindReusedSplat = [&](MutableArrayRef<int> Mask) {
     if (!isSplat(E->Scalars) || none_of(E->Scalars, [](Value *V) {
           return isa<UndefValue>(V) && !isa<PoisonValue>(V);
         }))
@@ -10174,7 +10166,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
   Type *ScalarTy = GatheredScalars.front()->getType();
   if (!all_of(GatheredScalars, UndefValue::classof)) {
     // Check for gathered extracts.
-    ExtractShuffle = tryToGatherExtractElements(GatheredScalars, ExtractMask);
+    ExtractShuffle =
+        tryToGatherSingleRegisterExtractElements(GatheredScalars, ExtractMask);
     SmallVector<Value *> IgnoredVals;
     if (UserIgnoreList)
       IgnoredVals.assign(UserIgnoreList->begin(), UserIgnoreList->end());

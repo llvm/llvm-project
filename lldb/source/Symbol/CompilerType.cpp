@@ -951,6 +951,18 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
   return false;
 }
 
+CompilerType::CompilerType(CompilerType::TypeSystemSPWrapper type_system,
+                           lldb::opaque_compiler_type_t type)
+    : m_type_system(type_system.GetSharedPointer()), m_type(type) {
+  assert(Verify() && "verification failed");
+}
+
+CompilerType::CompilerType(lldb::TypeSystemWP type_system,
+                           lldb::opaque_compiler_type_t type)
+    : m_type_system(type_system), m_type(type) {
+  assert(Verify() && "verification failed");
+}
+
 #ifndef NDEBUG
 bool CompilerType::Verify() const {
   if (!IsValid())

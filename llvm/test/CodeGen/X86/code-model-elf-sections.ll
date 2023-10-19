@@ -17,6 +17,7 @@
 ; RUN: llvm-readelf -S %t | FileCheck %s --check-prefix=SMALL-DS
 
 ; SMALL: .data {{.*}} WA {{.*}}
+; SMALL: foo {{.*}} WA {{.*}}
 ; SMALL: .bss {{.*}} WA {{.*}}
 ; SMALL: .rodata {{.*}} A {{.*}}
 ; SMALL: .data.rel.ro {{.*}} WA {{.*}}
@@ -24,6 +25,7 @@
 ; SMALL: .tdata {{.*}} WAT {{.*}}
 
 ; SMALL-DS: .data.data {{.*}} WA {{.*}}
+; SMALL-DS: foo {{.*}} WA {{.*}}
 ; SMALL-DS: .bss.bss {{.*}} WA {{.*}}
 ; SMALL-DS: .rodata.rodata {{.*}} A {{.*}}
 ; SMALL-DS: .data.rel.ro.relro {{.*}} WA {{.*}}
@@ -31,6 +33,7 @@
 ; SMALL-DS: .tdata.tdata {{.*}} WAT {{.*}}
 
 ; LARGE: .ldata {{.*}} WAl {{.*}}
+; LARGE: foo {{.*}} WAl {{.*}}
 ; LARGE: .lbss {{.*}} WAl {{.*}}
 ; LARGE: .lrodata {{.*}} Al {{.*}}
 ; LARGE: .ldata.rel.ro {{.*}} WAl {{.*}}
@@ -38,6 +41,7 @@
 ; LARGE: .tdata {{.*}} WAT {{.*}}
 
 ; LARGE-DS: .ldata.data {{.*}} WAl {{.*}}
+; LARGE-DS: foo {{.*}} WAl {{.*}}
 ; LARGE-DS: .lbss.bss {{.*}} WAl {{.*}}
 ; LARGE-DS: .lrodata.rodata {{.*}} Al {{.*}}
 ; LARGE-DS: .ldata.rel.ro.relro {{.*}} WAl {{.*}}
@@ -48,6 +52,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64--linux"
 
 @data = internal global [10 x i64] [i64 1, i64 2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0]
+@data_with_explicit_section = internal global [10 x i64] [i64 1, i64 2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0], section "foo"
 @bss = internal global [10 x i64] zeroinitializer
 @rodata = internal constant [10 x i64] zeroinitializer
 @relro = internal constant [10 x ptr] [ptr @func, ptr @func, ptr @func, ptr @func, ptr @func, ptr @func, ptr @func, ptr @func, ptr @func, ptr @func]

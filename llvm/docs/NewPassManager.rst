@@ -17,6 +17,8 @@ Just Tell Me How To Run The Default Optimization Pipeline With The New Pass Mana
 .. code-block:: c++
 
   // Create the analysis managers.
+  // These must be declared in this order so that they are destroyed in the
+  // correct order due to inter-analysis-manager references.
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
