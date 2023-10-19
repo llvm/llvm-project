@@ -105,7 +105,7 @@ entry:
 define void @t10(ptr %f, i32 %g) nounwind {
 entry:
 ; CHECK: t10
-; CHECK: str r1, [r0]
+; CHECK: str r1, [sp]
   %f.addr = alloca ptr, align 4
   store ptr %f, ptr %f.addr, align 4
   call void asm "str $1, $0", "=*Q,r"(ptr elementtype(ptr) %f.addr, i32 %g) nounwind

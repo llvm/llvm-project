@@ -5880,12 +5880,20 @@ bool ARMDAGToDAGISel::SelectInlineAsmMemoryOperand(
   case InlineAsm::ConstraintCode::Us:
   case InlineAsm::ConstraintCode::Ut:
   case InlineAsm::ConstraintCode::Uv:
-  case InlineAsm::ConstraintCode::Uy:
+  case InlineAsm::ConstraintCode::Uy: {
+    SDValue Base, OffImm;
+    if (Op.getOpcode() == ISD::FrameIndex &&
+        SelectAddrModeImm12(Op, Base, OffImm)) {
+      OutOps.push_back(Base);
+      OutOps.push_back(OffImm);
+      return false;
+    }
     // Require the address to be in a register.  That is safe for all ARM
     // variants and it is hard to do anything much smarter without knowing
     // how the operand is used.
     OutOps.push_back(Op);
     return false;
+  }
   }
   return true;
 }

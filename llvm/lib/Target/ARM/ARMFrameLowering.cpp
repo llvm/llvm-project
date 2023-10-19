@@ -2097,7 +2097,7 @@ static unsigned estimateRSStackSizeLimit(MachineFunction &MF,
   unsigned Limit = (1 << 12) - 1;
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
-      if (MI.isDebugInstr())
+      if (MI.isDebugInstr() || MI.isInlineAsm())
         continue;
       for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
         if (!MI.getOperand(i).isFI())

@@ -2649,9 +2649,16 @@ bool llvm::rewriteARMFrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
   unsigned AddrMode = (Desc.TSFlags & ARMII::AddrModeMask);
   bool isSub = false;
 
-  // Memory operands in inline assembly always use AddrMode2.
-  if (Opcode == ARM::INLINEASM || Opcode == ARM::INLINEASM_BR)
-    AddrMode = ARMII::AddrMode2;
+  // Memory operands in inline assembly use AddrMode_i12 for frame indices
+  // otherwise AddrMode2 is used.
+  if (MI.isInlineAsm()) {
+    assert(FrameRegIdx && "FrameRegIdx should not be first operand");
+    const MachineOperand &MD = MI.getOperand(FrameRegIdx - 1);
+    assert(MD.isImm() && "unexpected operand");
+    InlineAsm::Flag F(MD.getImm());
+    AddrMode = F.getNumOperandRegisters() == 2 ? ARMII::AddrMode_i12
+                                               : ARMII::AddrMode2;
+  }
 
   if (Opcode == ARM::ADDri) {
     Offset += MI.getOperand(FrameRegIdx+1).getImm();
