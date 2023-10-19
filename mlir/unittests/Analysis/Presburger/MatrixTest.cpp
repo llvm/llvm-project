@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/Presburger/Matrix.h"
-#include "mlir/Analysis/Presburger/Fraction.h"
 #include "./Utils.h"
+#include "mlir/Analysis/Presburger/Fraction.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -210,7 +210,8 @@ TEST(MatrixTest, computeHermiteNormalForm) {
   {
     // Hermite form of a unimodular matrix is the identity matrix.
     IntMatrix mat = makeIntMatrix(3, 3, {{2, 3, 6}, {3, 2, 3}, {17, 11, 16}});
-    IntMatrix hermiteForm = makeIntMatrix(3, 3, {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}});
+    IntMatrix hermiteForm =
+        makeIntMatrix(3, 3, {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}});
     checkHermiteNormalForm(mat, hermiteForm);
   }
 
@@ -241,47 +242,39 @@ TEST(MatrixTest, computeHermiteNormalForm) {
   }
 
   {
-    IntMatrix mat =
-        makeIntMatrix(3, 5, {{0, 2, 0, 7, 1}, {-1, 0, 0, -3, 0}, {0, 4, 1, 0, 8}});
-    IntMatrix hermiteForm =
-        makeIntMatrix(3, 5, {{1, 0, 0, 0, 0}, {0, 1, 0, 0, 0}, {0, 0, 1, 0, 0}});
+    IntMatrix mat = makeIntMatrix(
+        3, 5, {{0, 2, 0, 7, 1}, {-1, 0, 0, -3, 0}, {0, 4, 1, 0, 8}});
+    IntMatrix hermiteForm = makeIntMatrix(
+        3, 5, {{1, 0, 0, 0, 0}, {0, 1, 0, 0, 0}, {0, 0, 1, 0, 0}});
     checkHermiteNormalForm(mat, hermiteForm);
   }
 }
 
 TEST(MatrixTest, inverse) {
   FracMatrix mat = makeFracMatrix(
-      2, 2,
-      {{Fraction(2), Fraction(1)},
-       {Fraction(7), Fraction(0)}});
+      2, 2, {{Fraction(2), Fraction(1)}, {Fraction(7), Fraction(0)}});
   FracMatrix inverse = makeFracMatrix(
-      2, 2,
-      {{Fraction(0), Fraction(1, 7)},
-       {Fraction(1), Fraction(-2, 7)}});
+      2, 2, {{Fraction(0), Fraction(1, 7)}, {Fraction(1), Fraction(-2, 7)}});
 
   FracMatrix inv(2, 2);
   mat.determinant(&inv);
 
   EXPECT_EQ_FRAC_MATRIX(inv, inverse);
-  
-  mat = makeFracMatrix(
-      2, 2,
-      {{Fraction(0), Fraction(1)},
-       {Fraction(0), Fraction(2)}});
-  Fraction det = mat.determinant(nullptr);
-  
-  EXPECT_EQ(det, Fraction(0));
 
   mat = makeFracMatrix(
-      3, 3,
-      {{Fraction(1), Fraction(2), Fraction(3)},
-       {Fraction(4), Fraction(8), Fraction(6)},
-       {Fraction(7), Fraction(8), Fraction(6)}});
-  inverse = makeFracMatrix(
-      3, 3,
-      {{Fraction(0),     Fraction(-1, 3), Fraction(1, 3)},
-       {Fraction(-1, 2), Fraction(5, 12), Fraction(-1, 6)},
-       {Fraction(2, 3),  Fraction(-1, 6), Fraction(0)}});
+      2, 2, {{Fraction(0), Fraction(1)}, {Fraction(0), Fraction(2)}});
+  Fraction det = mat.determinant(nullptr);
+
+  EXPECT_EQ(det, Fraction(0));
+
+  mat = makeFracMatrix(3, 3,
+                       {{Fraction(1), Fraction(2), Fraction(3)},
+                        {Fraction(4), Fraction(8), Fraction(6)},
+                        {Fraction(7), Fraction(8), Fraction(6)}});
+  inverse = makeFracMatrix(3, 3,
+                           {{Fraction(0), Fraction(-1, 3), Fraction(1, 3)},
+                            {Fraction(-1, 2), Fraction(5, 12), Fraction(-1, 6)},
+                            {Fraction(2, 3), Fraction(-1, 6), Fraction(0)}});
 
   mat.determinant(&inv);
   EXPECT_EQ_FRAC_MATRIX(inv, inverse);
@@ -300,25 +293,20 @@ TEST(MatrixTest, intInverse) {
   EXPECT_EQ_INT_MATRIX(inv, inverse);
 
   mat = makeIntMatrix(
-      4, 4,
-      {{4,  14, 11, 3},
-       {13, 5,  14, 12},
-       {13, 9,  7,  14},
-       {2,  3,  12, 7}});
+      4, 4, {{4, 14, 11, 3}, {13, 5, 14, 12}, {13, 9, 7, 14}, {2, 3, 12, 7}});
   inverse = makeIntMatrix(4, 4,
-                          {{155, 1636,   -579, -1713},
-                           {725, -743,   537,  -111},
-                           {210, 735,    -855, 360},
+                          {{155, 1636, -579, -1713},
+                           {725, -743, 537, -111},
+                           {210, 735, -855, 360},
                            {-715, -1409, 1401, 1482}});
 
   mat.determinant(&inv);
 
   EXPECT_EQ_INT_MATRIX(inv, inverse);
 
-  mat = makeIntMatrix(
-      2, 2, {{0, 0}, {1, 2}});
+  mat = makeIntMatrix(2, 2, {{0, 0}, {1, 2}});
 
   MPInt det = mat.determinant(&inv);
-  
+
   EXPECT_EQ(det, 0);
 }

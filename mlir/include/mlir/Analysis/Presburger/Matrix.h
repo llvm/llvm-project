@@ -210,7 +210,7 @@ public:
             unsigned reservedColumns = 0)
       : Matrix<MPInt>(rows, columns, reservedRows, reservedColumns){};
 
-  IntMatrix(Matrix<MPInt> m) : Matrix<MPInt>(m){};
+  IntMatrix(Matrix<MPInt> m) : Matrix<MPInt>(std::move(m)){};
 
   /// Return the identity matrix of the specified dimension.
   static IntMatrix identity(unsigned dimension);
@@ -252,7 +252,7 @@ public:
              unsigned reservedColumns = 0)
       : Matrix<Fraction>(rows, columns, reservedRows, reservedColumns){};
 
-  FracMatrix(Matrix<Fraction> m) : Matrix<Fraction>(m){};
+  FracMatrix(Matrix<Fraction> m) : Matrix<Fraction>(std::move(m)){};
 
   explicit FracMatrix(IntMatrix m);
 
@@ -264,7 +264,7 @@ public:
   // passed (if any). The pointer is unchanged if the inverse
   // does not exist, which happens iff det = 0.
   // Assert-fails if the matrix is not square.
-  Fraction determinant(FracMatrix *inverse = NULL) const;
+  Fraction determinant(FracMatrix *inverse = nullptr) const;
 };
 
 } // namespace presburger

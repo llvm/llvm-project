@@ -434,11 +434,12 @@ MPInt IntMatrix::normalizeRow(unsigned row) {
   return normalizeRow(row, getNumColumns());
 }
 
-MPInt IntMatrix::determinant(IntMatrix* inverse) const {
-  assert(nRows == nColumns && "determinant can only be calculated for square matrices!");
+MPInt IntMatrix::determinant(IntMatrix *inverse) const {
+  assert(nRows == nColumns &&
+         "determinant can only be calculated for square matrices!");
 
   FracMatrix m(*this);
-  
+
   FracMatrix fracInverse(nRows, nColumns);
   MPInt detM = m.determinant(&fracInverse).getAsInteger();
 
@@ -458,14 +459,15 @@ FracMatrix FracMatrix::identity(unsigned dimension) {
 }
 
 FracMatrix::FracMatrix(IntMatrix m)
-  : FracMatrix(m.getNumRows(), m.getNumColumns()) {
+    : FracMatrix(m.getNumRows(), m.getNumColumns()) {
   for (unsigned i = 0; i < m.getNumRows(); i++)
     for (unsigned j = 0; j < m.getNumColumns(); j++)
       this->at(i, j) = m.at(i, j);
 }
 
-Fraction FracMatrix::determinant(FracMatrix* inverse) const {
-  assert(nRows == nColumns && "determinant can only be calculated for square matrices!");
+Fraction FracMatrix::determinant(FracMatrix *inverse) const {
+  assert(nRows == nColumns &&
+         "determinant can only be calculated for square matrices!");
 
   FracMatrix m(*this);
   FracMatrix tempInv(nRows, nColumns);
@@ -486,7 +488,7 @@ Fraction FracMatrix::determinant(FracMatrix* inverse) const {
       // First ensure that the diagonal
       // element is nonzero, by swapping
       // it with a nonzero row.
-      for (unsigned j = i+1; j < nRows; j++)
+      for (unsigned j = i + 1; j < nRows; j++)
         if (m(j, i) != 0) {
           m.swapRows(j, i);
           if (inverse)
@@ -496,8 +498,8 @@ Fraction FracMatrix::determinant(FracMatrix* inverse) const {
 
     b = m.at(i, i);
     if (b == 0)
-        return 0;
-    
+      return 0;
+
     // Set all elements above the
     // diagonal to zero.
     if (inverse) {
@@ -515,7 +517,7 @@ Fraction FracMatrix::determinant(FracMatrix* inverse) const {
 
     // Set all elements below the
     // diagonal to zero.
-    for (unsigned j = i+1; j < nRows; j++) {
+    for (unsigned j = i + 1; j < nRows; j++) {
       if (m.at(j, i) == 0)
         continue;
       a = m.at(j, i);
@@ -537,12 +539,12 @@ Fraction FracMatrix::determinant(FracMatrix* inverse) const {
       for (unsigned j = 0; j < nRows; j++)
         tempInv.at(i, j) = tempInv.at(i, j) / m(i, i);
 
-    *inverse = tempInv;
+    *inverse = std::move(tempInv);
   }
 
   Fraction determinant = 1;
   for (unsigned i = 0; i < nRows; i++)
     determinant *= m.at(i, i);
-  
+
   return determinant;
 }
