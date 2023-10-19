@@ -132,6 +132,8 @@ class TestRecursiveType
 public:
   using Base::Base;
 
+  static constexpr ::mlir::StringRef getTypeName() { return "test.recursive"; }
+
   static TestRecursiveType get(::mlir::MLIRContext *ctx,
                                ::llvm::StringRef name) {
     return Base::get(ctx, name);

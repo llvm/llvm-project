@@ -168,6 +168,10 @@ std::optional<StringRef> AttrOrTypeDef::getMnemonic() const {
   return def->getValueAsOptionalString("mnemonic");
 }
 
+StringRef AttrOrTypeDef::getTypeName() const {
+  return def->getValueAsString("typeName");
+}
+
 bool AttrOrTypeDef::hasCustomAssemblyFormat() const {
   return def->getValueAsBit("hasCustomAssemblyFormat");
 }

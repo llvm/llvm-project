@@ -184,6 +184,9 @@ public:
   /// supposed to auto-generate them.
   std::optional<StringRef> getMnemonic() const;
 
+  /// Get the type name.
+  StringRef getTypeName() const;
+
   /// Returns if the attribute or type has a custom assembly format implemented
   /// in C++. Corresponds to the `hasCustomAssemblyFormat` field.
   bool hasCustomAssemblyFormat() const;

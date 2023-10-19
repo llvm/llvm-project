@@ -87,6 +87,8 @@ private:
   /// Emit top-level declarations: using declarations and any extra class
   /// declarations.
   void emitTopLevelDeclarations();
+  /// Emit the function that returns the type or attribute name.
+  void emitName();
   /// Emit attribute or type builders.
   void emitBuilders();
   /// Emit a verifier for the def.
@@ -180,6 +182,9 @@ DefGen::DefGen(const AttrOrTypeDef &def)
   // Emit builders for defs with parameters
   if (storageCls)
     emitBuilders();
+  // Emit the type name.
+  if (valueType == "Type")
+    emitName();
   // Emit the verifier.
   if (storageCls && def.genVerifyDecl())
     emitVerifier();
@@ -262,6 +267,12 @@ void DefGen::emitTopLevelDeclarations() {
   std::string extraDef = formatExtraDefinitions(def);
   defCls.declare<ExtraClassDeclaration>(std::move(extraDecl),
                                         std::move(extraDef));
+}
+
+void DefGen::emitName() {
+  auto *mnemonic = defCls.addStaticMethod<Method::Constexpr>(
+      "::llvm::StringLiteral", "getTypeName");
+  mnemonic->body().indent() << strfmt("return \"{0}\";", def.getTypeName());
 }
 
 void DefGen::emitBuilders() {

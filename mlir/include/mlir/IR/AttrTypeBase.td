@@ -289,6 +289,9 @@ class TypeDef<Dialect dialect, string name, list<Trait> traits = [],
   // Make it possible to use such type as parameters for other types.
   string cppType = dialect.cppNamespace # "::" # cppClassName;
 
+  // The unique type name.
+  string typeName = dialect.name # "." # mnemonic;
+
   // A constant builder provided when the type has no parameters.
   let builderCall = !if(!empty(parameters),
                            "$_builder.getType<" # dialect.cppNamespace #
