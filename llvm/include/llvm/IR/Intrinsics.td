@@ -1697,7 +1697,7 @@ def int_experimental_deoptimize : Intrinsic<[llvm_any_ty], [llvm_vararg_ty],
                                             [Throws]>;
 
 // Support for speculative runtime guards
-def int_experimental_guard : DefaultAttrsIntrinsic<[], [llvm_i1_ty, llvm_vararg_ty],
+def int_experimental_guard : Intrinsic<[], [llvm_i1_ty, llvm_vararg_ty],
                                        [Throws]>;
 
 // Supports widenable conditions for guards represented as explicit branches.
