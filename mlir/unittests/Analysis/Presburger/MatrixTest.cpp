@@ -252,10 +252,12 @@ TEST(MatrixTest, computeHermiteNormalForm) {
 TEST(MatrixTest, inverse) {
   FracMatrix mat = makeFracMatrix(
       2, 2,
-      {{Fraction(2, 1), Fraction(1, 1)}, {Fraction(7, 1), Fraction(0, 1)}});
+      {{Fraction(2), Fraction(1)},
+       {Fraction(7), Fraction(0)}});
   FracMatrix inverse = makeFracMatrix(
       2, 2,
-      {{Fraction(0, 1), Fraction(1, 7)}, {Fraction(1, 1), Fraction(-2, 7)}});
+      {{Fraction(0), Fraction(1, 7)},
+       {Fraction(1), Fraction(-2, 7)}});
 
   FracMatrix inv(2, 2);
   mat.determinant(&inv);
@@ -266,58 +268,65 @@ TEST(MatrixTest, inverse) {
   
   mat = makeFracMatrix(
       2, 2,
-      {{Fraction(0, 1), Fraction(1, 1)}, {Fraction(0, 1), Fraction(2, 1)}});
-  Fraction det = mat.determinant(&inv);
+      {{Fraction(0), Fraction(1)},
+       {Fraction(0), Fraction(2)}});
+  Fraction det = mat.determinant(nullptr);
   
-  EXPECT_EQ(det, Fraction(0, 1));
+  EXPECT_EQ(det, Fraction(0));
 
   mat = makeFracMatrix(
       3, 3,
-      {{Fraction(1, 1), Fraction(2, 1), Fraction(3, 1)},
-       {Fraction(4, 1), Fraction(8, 1), Fraction(6, 1)},
-       {Fraction(7, 1), Fraction(8, 1), Fraction(6, 1)}});
+      {{Fraction(1), Fraction(2), Fraction(3)},
+       {Fraction(4), Fraction(8), Fraction(6)},
+       {Fraction(7), Fraction(8), Fraction(6)}});
   inverse = makeFracMatrix(
       3, 3,
-      {{Fraction(0, 1), Fraction(-1, 3), Fraction(1, 3)},
+      {{Fraction(0),     Fraction(-1, 3), Fraction(1, 3)},
        {Fraction(-1, 2), Fraction(5, 12), Fraction(-1, 6)},
-       {Fraction(2, 3), Fraction(-1, 6), Fraction(0, 1)}});
+       {Fraction(2, 3),  Fraction(-1, 6), Fraction(0)}});
 
   mat.determinant(&inv);
   for (unsigned row = 0; row < 3; row++)
     for (unsigned col = 0; col < 3; col++)
       EXPECT_EQ(inv(row, col), inverse(row, col));
+
+  mat = makeFracMatrix(0, 0, {});
+  mat.determinant(&inv);
 }
 
 TEST(MatrixTest, intInverse) {
   IntMatrix mat = makeIntMatrix(2, 2, {{2, 1}, {7, 0}});
   IntMatrix inverse = makeIntMatrix(2, 2, {{0, -1}, {-7, 2}});
 
-  IntMatrix invM(2, 2);
-  IntMatrix* inv = &invM;
-  mat.determinant(inv);
+  IntMatrix inv(2, 2);
+  mat.determinant(&inv);
 
   for (unsigned i = 0; i < 2u; i++)
     for (unsigned j = 0; j < 2u; j++)
-      EXPECT_EQ(inv->at(i, j), inverse(i, j));
+      EXPECT_EQ(inv(i, j), inverse(i, j));
 
   mat = makeIntMatrix(
-      4, 4, {{4, 14, 11, 3}, {13, 5, 14, 12}, {13, 9, 7, 14}, {2, 3, 12, 7}});
+      4, 4,
+      {{4,  14, 11, 3},
+       {13, 5,  14, 12},
+       {13, 9,  7,  14},
+       {2,  3,  12, 7}});
   inverse = makeIntMatrix(4, 4,
-                          {{155, 1636, -579, -1713},
-                           {725, -743, 537, -111},
-                           {210, 735, -855, 360},
+                          {{155, 1636,   -579, -1713},
+                           {725, -743,   537,  -111},
+                           {210, 735,    -855, 360},
                            {-715, -1409, 1401, 1482}});
 
-  mat.determinant(inv);
+  mat.determinant(&inv);
 
   for (unsigned i = 0; i < 2u; i++)
     for (unsigned j = 0; j < 2u; j++)
-      EXPECT_EQ(inv->at(i, j), inverse(i, j));
+      EXPECT_EQ(inv(i, j), inverse(i, j));
 
   mat = makeIntMatrix(
       2, 2, {{0, 0}, {1, 2}});
 
-  MPInt det = mat.determinant(inv);
+  MPInt det = mat.determinant(&inv);
   
   EXPECT_EQ(det, 0);
 }

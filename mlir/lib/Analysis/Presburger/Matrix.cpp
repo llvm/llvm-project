@@ -484,8 +484,8 @@ Fraction FracMatrix::determinant(FracMatrix* inverse) const {
   for (unsigned i = 0; i < nRows; i++) {
     if (m(i, i) == 0)
       // First ensure that the diagonal
-      // element is nonzero, by adding
-      // a nonzero row to it.
+      // element is nonzero, by swapping
+      // it with a nonzero row.
       for (unsigned j = i+1; j < nRows; j++)
         if (m(j, i) != 0) {
           m.swapRows(j, i);
@@ -528,13 +528,17 @@ Fraction FracMatrix::determinant(FracMatrix* inverse) const {
     }
   }
 
-  // Now only diagonal elements are nonzero, but they are
-  // not necessarily 1. We normalise them.
-  for (unsigned i = 0; i < nRows; i++)
-    for (unsigned j = 0; j < nRows; j++)
-      tempInv.at(i, j) = tempInv.at(i, j) / m(i, i);
+  // Now only diagonal elements of m are nonzero, but they are
+  // not necessarily 1. To get the true inverse, we should
+  // normalize them and apply the same scale to the inverse matrix.
+  // For efficiency we skip scaling m and just scale tempInv appropriately.
+  if (inverse) {
+    for (unsigned i = 0; i < nRows; i++)
+      for (unsigned j = 0; j < nRows; j++)
+        tempInv.at(i, j) = tempInv.at(i, j) / m(i, i);
 
-  *inverse = tempInv;
+    *inverse = tempInv;
+  }
 
   Fraction determinant = 1;
   for (unsigned i = 0; i < nRows; i++)
