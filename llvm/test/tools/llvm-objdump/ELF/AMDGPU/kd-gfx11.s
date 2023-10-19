@@ -1,4 +1,4 @@
-;; Test disassembly for gfx10 kernel descriptor.
+;; Test disassembly for gfx11 kernel descriptor.
 
 ; RUN: rm -rf %t && split-file %s %t && cd %t
 
