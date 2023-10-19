@@ -32,16 +32,14 @@ static __inline dst_t __floatXiYf__(src_t a) {
     //  P = bit dstMantDig-1 bits to the right of 1
     //  Q = bit dstMantDig bits to the right of 1
     //  R = "or" of all bits to the right of Q
-    switch (sd) {
-    case dstMantDig + 1:
+    if (sd == dstMantDig + 1) {
       a <<= 1;
-      break;
-    case dstMantDig + 2:
-      break;
-    default:
+    } else if (sd == dstMantDig + 2) {
+      // Do nothing.
+    } else {
       a = ((usrc_t)a >> (sd - (dstMantDig + 2))) |
           ((a & ((usrc_t)(-1) >> ((srcBits + dstMantDig + 2) - sd))) != 0);
-    };
+    }
     // finish:
     a |= (a & 4) != 0; // Or P into R
     ++a;               // round - this step may add a significant bit

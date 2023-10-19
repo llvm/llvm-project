@@ -3221,6 +3221,7 @@ bool SIInstrInfo::isFoldableCopy(const MachineInstr &MI) {
   case AMDGPU::V_MOV_B64_e64:
   case AMDGPU::S_MOV_B32:
   case AMDGPU::S_MOV_B64:
+  case AMDGPU::S_MOV_B64_IMM_PSEUDO:
   case AMDGPU::COPY:
   case AMDGPU::WWM_COPY:
   case AMDGPU::V_ACCVGPR_WRITE_B32_e64:
@@ -5539,6 +5540,18 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
         RI.isSGPRReg(MRI, MO->getReg()))
       return false;
     return true;
+  }
+
+  if (MO->isImm()) {
+    uint64_t Imm = MO->getImm();
+    bool Is64BitFPOp = OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_FP64;
+    bool Is64BitOp = Is64BitFPOp ||
+                     OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_INT64 ||
+                     OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_V2INT32 ||
+                     OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_V2FP32;
+    if (Is64BitOp && !AMDGPU::isValid32BitLiteral(Imm, Is64BitFPOp) &&
+        !AMDGPU::isInlinableLiteral64(Imm, ST.hasInv2PiInlineImm()))
+      return false;
   }
 
   // Handle non-register types that are treated like immediates.

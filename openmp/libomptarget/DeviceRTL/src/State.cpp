@@ -35,7 +35,7 @@ void internal_free(void *Ptr);
 constexpr const uint32_t Alignment = 16;
 
 /// External symbol to access dynamic shared memory.
-extern unsigned char DynamicSharedBuffer[] __attribute__((aligned(Alignment)));
+[[gnu::aligned(Alignment)]] extern unsigned char DynamicSharedBuffer[];
 #pragma omp allocate(DynamicSharedBuffer) allocator(omp_pteam_mem_alloc)
 
 /// The kernel environment passed to the init method by the compiler.
@@ -57,6 +57,11 @@ __attribute__((noinline)) extern "C" uint64_t __ockl_dm_alloc(uint64_t bufsz);
 __attribute__((noinline)) extern "C" void __ockl_dm_dealloc(uint64_t ptr);
 extern "C" size_t __ockl_get_local_size(uint32_t dim);
 extern "C" size_t __ockl_get_num_groups(uint32_t dim);
+
+extern "C" {
+[[gnu::weak, gnu::leaf]] void *malloc(uint64_t Size);
+[[gnu::weak, gnu::leaf]] void free(void *Ptr);
+}
 
 #pragma omp begin declare variant match(device = {arch(amdgcn)})
 extern "C" {
@@ -130,10 +135,8 @@ private:
   }
 
   /// The actual storage, shared among all warps.
-  unsigned char Data[state::SharedScratchpadSize]
-      __attribute__((aligned(Alignment)));
-  unsigned char Usage[mapping::MaxThreadsPerTeam]
-      __attribute__((aligned(Alignment)));
+  [[gnu::aligned(Alignment)]] unsigned char Data[state::SharedScratchpadSize];
+  [[gnu::aligned(Alignment)]] unsigned char Usage[mapping::MaxThreadsPerTeam];
 };
 
 static_assert(state::SharedScratchpadSize / mapping::MaxThreadsPerTeam <= 256,
@@ -452,11 +455,11 @@ int omp_is_initial_device(void) { return 0; }
 }
 
 extern "C" {
-__attribute__((noinline)) void *__kmpc_alloc_shared(uint64_t Bytes) {
+[[clang::noinline]] void *__kmpc_alloc_shared(uint64_t Bytes) {
   return memory::allocShared(Bytes, "Frontend alloc shared");
 }
 
-__attribute__((noinline)) void __kmpc_free_shared(void *Ptr, uint64_t Bytes) {
+[[clang::noinline]] void __kmpc_free_shared(void *Ptr, uint64_t Bytes) {
   memory::freeShared(Ptr, Bytes, "Frontend free shared");
 }
 

@@ -19,8 +19,7 @@
 
 using namespace ompx;
 
-namespace _OMP {
-extern "C" __attribute__((weak)) int IsSPMDMode;
+extern "C" [[gnu::weak]] int IsSPMDMode;
 
 /// Helper to keep code alive without introducing a performance penalty.
 extern "C" __attribute__((weak, optnone, cold, used, retain)) void
@@ -31,7 +30,6 @@ __keep_alive() {
   __kmpc_barrier_simple_spmd(nullptr, IsSPMDMode);
   __kmpc_barrier_simple_generic(nullptr, IsSPMDMode);
 }
-} // namespace _OMP
 
 namespace impl {
 

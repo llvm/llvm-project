@@ -255,6 +255,9 @@ New Compiler Flags
   the preprocessed text to the output. This can greatly reduce the size of the
   preprocessed output, which can be helpful when trying to reduce a test case.
 
+* ``-Wbitfield-conversion`` was added to detect assignments of integral
+  types to a bitfield that may change the value.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -577,6 +580,10 @@ Bug Fixes to C++ Support
 - Fixed a crash caused by incorrect handling of dependence on variable templates
   with non-type template parameters of reference type. Fixes:
   (`#65153 <https://github.com/llvm/llvm-project/issues/65153>`_)
+
+- Clang now properly compares constraints on an out of line class template
+  declaration definition. Fixes:
+  (`#61763 <https://github.com/llvm/llvm-project/issues/61763>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

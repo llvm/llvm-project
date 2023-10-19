@@ -553,8 +553,8 @@ static std::optional<unsigned> getExtractIndex(Instruction *E) {
 /// successful, the matched scalars are replaced by poison values in \p VL for
 /// future analysis.
 static std::optional<TTI::ShuffleKind>
-tryToGatherExtractElements(SmallVectorImpl<Value *> &VL,
-                           SmallVectorImpl<int> &Mask) {
+tryToGatherSingleRegisterExtractElements(MutableArrayRef<Value *> VL,
+                                         SmallVectorImpl<int> &Mask) {
   // Scan list of gathered scalars for extractelements that can be represented
   // as shuffles.
   MapVector<Value *, SmallVector<int>> VectorOpToIdx;
@@ -641,7 +641,7 @@ tryToGatherExtractElements(SmallVectorImpl<Value *> &VL,
   if (!Res) {
     // TODO: try to check other subsets if possible.
     // Restore the original VL if attempt was not successful.
-    VL.swap(SavedVL);
+    copy(SavedVL, VL.begin());
     return std::nullopt;
   }
   // Restore unused scalars from mask, if some of the extractelements were not
@@ -7616,7 +7616,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     std::optional<TargetTransformInfo::ShuffleKind> GatherShuffle;
     SmallVector<const TreeEntry *> Entries;
     // Check for gathered extracts.
-    ExtractShuffle = tryToGatherExtractElements(GatheredScalars, ExtractMask);
+    ExtractShuffle = tryToGatherSingleRegisterExtractElements(GatheredScalars, ExtractMask);
     SmallVector<Value *> IgnoredVals;
     if (UserIgnoreList)
       IgnoredVals.assign(UserIgnoreList->begin(), UserIgnoreList->end());
@@ -9045,6 +9045,7 @@ BoUpSLP::isGatherShuffledEntry(const TreeEntry *TE, ArrayRef<Value *> VL,
   // blocks.
   if (auto *PHI = dyn_cast<PHINode>(TEUseEI.UserTE->getMainOp())) {
     TEInsertBlock = PHI->getIncomingBlock(TEUseEI.EdgeIdx);
+    TEInsertPt = TEInsertBlock->getTerminator();
   } else {
     TEInsertBlock = TEInsertPt->getParent();
   }
@@ -9108,9 +9109,10 @@ BoUpSLP::isGatherShuffledEntry(const TreeEntry *TE, ArrayRef<Value *> VL,
       const Instruction *InsertPt =
           UserPHI ? UserPHI->getIncomingBlock(UseEI.EdgeIdx)->getTerminator()
                   : &getLastInstructionInBundle(UseEI.UserTE);
-      if (!UserPHI && TEInsertPt == InsertPt) {
-        // If 2 gathers are operands of the same non-PHI entry,
-        // compare operands indices, use the earlier one as the base.
+      if (TEInsertPt == InsertPt) {
+        // If 2 gathers are operands of the same entry (regardless of wether
+        // user is PHI or else), compare operands indices, use the earlier one
+        // as the base.
         if (TEUseEI.UserTE == UseEI.UserTE && TEUseEI.EdgeIdx < UseEI.EdgeIdx)
           continue;
         // If the user instruction is used for some reason in different
@@ -10131,7 +10133,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
   inversePermutation(E->ReorderIndices, ReorderMask);
   if (!ReorderMask.empty())
     reorderScalars(GatheredScalars, ReorderMask);
-  auto FindReusedSplat = [&](SmallVectorImpl<int> &Mask) {
+  auto FindReusedSplat = [&](MutableArrayRef<int> Mask) {
     if (!isSplat(E->Scalars) || none_of(E->Scalars, [](Value *V) {
           return isa<UndefValue>(V) && !isa<PoisonValue>(V);
         }))
@@ -10166,7 +10168,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
   Type *ScalarTy = GatheredScalars.front()->getType();
   if (!all_of(GatheredScalars, UndefValue::classof)) {
     // Check for gathered extracts.
-    ExtractShuffle = tryToGatherExtractElements(GatheredScalars, ExtractMask);
+    ExtractShuffle =
+        tryToGatherSingleRegisterExtractElements(GatheredScalars, ExtractMask);
     SmallVector<Value *> IgnoredVals;
     if (UserIgnoreList)
       IgnoredVals.assign(UserIgnoreList->begin(), UserIgnoreList->end());

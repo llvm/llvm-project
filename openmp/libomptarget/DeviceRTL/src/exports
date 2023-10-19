@@ -12,6 +12,8 @@ _ZN4ompx*
 __keep_alive
 IsSPMDMode
 
+malloc
+free
 memcmp
 printf
 __assert_fail

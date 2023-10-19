@@ -683,13 +683,12 @@ void __kmpc_barrier(IdentTy *Loc, int32_t TId) {
   impl::namedBarrier();
 }
 
-__attribute__((noinline)) void __kmpc_barrier_simple_spmd(IdentTy *Loc,
-                                                          int32_t TId) {
+[[clang::noinline]] void __kmpc_barrier_simple_spmd(IdentTy *Loc, int32_t TId) {
   synchronize::threadsAligned(atomic::OrderingTy::seq_cst);
 }
 
-__attribute__((noinline)) void __kmpc_barrier_simple_generic(IdentTy *Loc,
-                                                             int32_t TId) {
+[[clang::noinline]] void __kmpc_barrier_simple_generic(IdentTy *Loc,
+                                                       int32_t TId) {
   synchronize::threads(atomic::OrderingTy::seq_cst);
 }
 

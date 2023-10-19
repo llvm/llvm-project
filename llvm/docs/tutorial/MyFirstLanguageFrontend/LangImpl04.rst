@@ -94,14 +94,6 @@ use, in the form of "passes".
 LLVM Optimization Passes
 ========================
 
-.. warning::
-
-   Due to the transition to the new PassManager infrastructure this tutorial
-   is based on ``llvm::legacy::FunctionPassManager`` which can be found in
-   `LegacyPassManager.h <https://llvm.org/doxygen/classllvm_1_1legacy_1_1FunctionPassManager.html>`_.
-   For the purpose of the this tutorial the above should be used until
-   the pass manager transition is complete.
-
 LLVM provides many optimization passes, which do many different sorts of
 things and have different tradeoffs. Unlike other systems, LLVM doesn't
 hold to the mistaken notion that one set of optimizations is right for
@@ -127,43 +119,92 @@ in. If we wanted to make a "static Kaleidoscope compiler", we would use
 exactly the code we have now, except that we would defer running the
 optimizer until the entire file has been parsed.
 
+In addition to the distinction between function and module passes, passes can be
+divided into transform and analysis passes. Transform passes mutate the IR, and
+analysis passes compute information that other passes can use. In order to add
+a transform pass, all analysis passes it depends upon must be registered in
+advance.
+
 In order to get per-function optimizations going, we need to set up a
 `FunctionPassManager <../../WritingAnLLVMPass.html#what-passmanager-doesr>`_ to hold
 and organize the LLVM optimizations that we want to run. Once we have
 that, we can add a set of optimizations to run. We'll need a new
 FunctionPassManager for each module that we want to optimize, so we'll
-write a function to create and initialize both the module and pass manager
-for us:
+add to a function created in the previous chapter (``InitializeModule()``):
 
 .. code-block:: c++
 
-    void InitializeModuleAndPassManager(void) {
+    void InitializeModuleAndManagers(void) {
       // Open a new context and module.
-      TheModule = std::make_unique<Module>("my cool jit", *TheContext);
+      TheContext = std::make_unique<LLVMContext>();
+      TheModule = std::make_unique<Module>("KaleidoscopeJIT", *TheContext);
+      TheModule->setDataLayout(TheJIT->getDataLayout());
 
-      // Create a new pass manager attached to it.
-      TheFPM = std::make_unique<legacy::FunctionPassManager>(TheModule.get());
+      // Create a new builder for the module.
+      Builder = std::make_unique<IRBuilder<>>(*TheContext);
 
+      // Create new pass and analysis managers.
+      TheFPM = std::make_unique<FunctionPassManager>();
+      TheFAM = std::make_unique<FunctionAnalysisManager>();
+      TheMAM = std::make_unique<ModuleAnalysisManager>();
+      ThePIC = std::make_unique<PassInstrumentationCallbacks>();
+      TheSI = std::make_unique<StandardInstrumentations>(*TheContext,
+                                                        /*DebugLogging*/ true);
+      TheSI->registerCallbacks(*ThePIC, TheMAM.get());
+      ...
+
+After initializing the global module ``TheModule`` and the FunctionPassManager,
+we need to initialize other parts of the framework. The FunctionAnalysisManager
+and ModuleAnalysisManager allow us to add analysis passes that run across the
+function and the whole module, respectively. PassInstrumentationCallbacks
+and StandardInstrumentations are required for the pass instrumentation
+framework, which allows developers to customize what
+happens between passes.
+
+Once these managers are set up, we use a series of "addPass" calls to add a
+bunch of LLVM transform passes:
+
+.. code-block:: c++
+
+      // Add transform passes.
       // Do simple "peephole" optimizations and bit-twiddling optzns.
-      TheFPM->add(createInstructionCombiningPass());
+      TheFPM->addPass(InstCombinePass());
       // Reassociate expressions.
-      TheFPM->add(createReassociatePass());
+      TheFPM->addPass(ReassociatePass());
       // Eliminate Common SubExpressions.
-      TheFPM->add(createGVNPass());
+      TheFPM->addPass(GVNPass());
       // Simplify the control flow graph (deleting unreachable blocks, etc).
-      TheFPM->add(createCFGSimplificationPass());
-
-      TheFPM->doInitialization();
-    }
-
-This code initializes the global module ``TheModule``, and the function pass
-manager ``TheFPM``, which is attached to ``TheModule``. Once the pass manager is
-set up, we use a series of "add" calls to add a bunch of LLVM passes.
+      TheFPM->addPass(SimplifyCFGPass());
 
 In this case, we choose to add four optimization passes.
 The passes we choose here are a pretty standard set
 of "cleanup" optimizations that are useful for a wide variety of code. I won't
 delve into what they do but, believe me, they are a good starting place :).
+
+Next, we register the analysis passes used by the transform passes. This is
+generally done using ``PassBuilder::register...Analyses()``, but we'll do it
+manually to make clearer what's under the hood.
+
+.. code-block:: c++
+
+      // Register analysis passes used in these transform passes.
+      TheFAM->registerPass([&] { return AAManager(); });
+      TheFAM->registerPass([&] { return AssumptionAnalysis(); });
+      TheFAM->registerPass([&] { return DominatorTreeAnalysis(); });
+      TheFAM->registerPass([&] { return LoopAnalysis(); });
+      TheFAM->registerPass([&] { return MemoryDependenceAnalysis(); });
+      TheFAM->registerPass([&] { return MemorySSAAnalysis(); });
+      TheFAM->registerPass([&] { return OptimizationRemarkEmitterAnalysis(); });
+      TheFAM->registerPass([&] {
+        return OuterAnalysisManagerProxy<ModuleAnalysisManager, Function>(*TheMAM);
+      });
+      TheFAM->registerPass(
+          [&] { return PassInstrumentationAnalysis(ThePIC.get()); });
+      TheFAM->registerPass([&] { return TargetIRAnalysis(); });
+      TheFAM->registerPass([&] { return TargetLibraryAnalysis(); });
+
+      TheMAM->registerPass([&] { return ProfileSummaryAnalysis(); });
+    }
 
 Once the PassManager is set up, we need to make use of it. We do this by
 running it after our newly created function is constructed (in
@@ -179,7 +220,7 @@ running it after our newly created function is constructed (in
         verifyFunction(*TheFunction);
 
         // Optimize the function.
-        TheFPM->run(*TheFunction);
+        TheFPM->run(*TheFunction, *TheFAM);
 
         return TheFunction;
       }
