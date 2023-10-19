@@ -66,6 +66,11 @@ using namespace clang;
 using namespace CodeGen;
 using namespace llvm;
 
+static llvm::cl::opt<bool> ClSanitizeAlignmentBuiltin(
+    "sanitize-alignment-builtin", llvm::cl::Hidden,
+    llvm::cl::desc("Instrument builtin functions for -fsanitize=alignment"),
+    llvm::cl::init(true));
+
 static void initializeAlloca(CodeGenFunction &CGF, AllocaInst *AI, Value *Size,
                              Align AlignmentInBytes) {
   ConstantInt *Byte;
@@ -2814,7 +2819,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     EmitNonNullArgCheck(RValue::get(Val), Arg->getType(), Arg->getExprLoc(), FD,
                         ParmNum);
 
-    if (SanOpts.has(SanitizerKind::Alignment)) {
+    if (SanOpts.has(SanitizerKind::Alignment) && ClSanitizeAlignmentBuiltin) {
       SanitizerSet SkippedChecks;
       SkippedChecks.set(SanitizerKind::All);
       SkippedChecks.clear(SanitizerKind::Alignment);
@@ -10020,7 +10025,33 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   switch (BuiltinID) {
   default:
     return nullptr;
+  case SVE::BI__builtin_sve_svpsel_lane_b8:
+  case SVE::BI__builtin_sve_svpsel_lane_b16:
+  case SVE::BI__builtin_sve_svpsel_lane_b32:
+  case SVE::BI__builtin_sve_svpsel_lane_b64:
+  case SVE::BI__builtin_sve_svpsel_lane_c8:
+  case SVE::BI__builtin_sve_svpsel_lane_c16:
+  case SVE::BI__builtin_sve_svpsel_lane_c32:
+  case SVE::BI__builtin_sve_svpsel_lane_c64: {
+    bool IsSVCount = isa<TargetExtType>(Ops[0]->getType());
+    assert(((!IsSVCount || cast<TargetExtType>(Ops[0]->getType())->getName() ==
+                               "aarch64.svcount")) &&
+           "Unexpected TargetExtType");
+    auto SVCountTy =
+        llvm::TargetExtType::get(getLLVMContext(), "aarch64.svcount");
+    Function *CastFromSVCountF =
+        CGM.getIntrinsic(Intrinsic::aarch64_sve_convert_to_svbool, SVCountTy);
+    Function *CastToSVCountF =
+        CGM.getIntrinsic(Intrinsic::aarch64_sve_convert_from_svbool, SVCountTy);
 
+    auto OverloadedTy = getSVEType(SVETypeFlags(Builtin->TypeModifier));
+    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_sve_psel, OverloadedTy);
+    llvm::Value *Ops0 =
+        IsSVCount ? Builder.CreateCall(CastFromSVCountF, Ops[0]) : Ops[0];
+    llvm::Value *Ops1 = EmitSVEPredicateCast(Ops[1], OverloadedTy);
+    llvm::Value *PSel = Builder.CreateCall(F, {Ops0, Ops1, Ops[2]});
+    return IsSVCount ? Builder.CreateCall(CastToSVCountF, PSel) : PSel;
+  }
   case SVE::BI__builtin_sve_svmov_b_z: {
     // svmov_b_z(pg, op) <=> svand_b_z(pg, op, op)
     SVETypeFlags TypeFlags(Builtin->TypeModifier);

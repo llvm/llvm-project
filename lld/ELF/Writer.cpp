@@ -53,7 +53,6 @@ public:
   void run();
 
 private:
-  void copyLocalSymbols();
   void addSectionSymbols();
   void sortSections();
   void resolveShfLinkOrder();
@@ -290,18 +289,6 @@ static void demoteSymbolsAndComputeIsPreemptible() {
     if (config->hasDynSymTab)
       sym->isPreemptible = computeIsPreemptible(*sym);
   }
-}
-
-static void demoteLocalSymbolsInDiscardedSections() {
-  llvm::TimeTraceScope timeScope("Demote local symbols");
-  parallelForEach(ctx.objectFiles, [&](ELFFileBase *file) {
-    DenseMap<SectionBase *, size_t> sectionIndexMap;
-    for (Symbol *sym : file->getLocalSymbols()) {
-      Defined *d = dyn_cast<Defined>(sym);
-      if (d && d->section && !d->section->isLive())
-        demoteDefined(*d, sectionIndexMap);
-    }
-  });
 }
 
 // Fully static executables don't support MTE globals at this point in time, as
@@ -598,11 +585,6 @@ template <class ELFT> void elf::createSyntheticSections() {
 
 // The main function of the writer.
 template <class ELFT> void Writer<ELFT>::run() {
-  copyLocalSymbols();
-
-  if (config->copyRelocs)
-    addSectionSymbols();
-
   // Now that we have a complete set of output sections. This function
   // completes section contents. For example, we need to add strings
   // to the string table, and add entries to .got and .plt.
@@ -751,31 +733,33 @@ bool lld::elf::includeInSymtab(const Symbol &b) {
     SectionBase *sec = d->section;
     if (!sec)
       return true;
+    assert(sec->isLive());
 
     if (auto *s = dyn_cast<MergeInputSection>(sec))
       return s->getSectionPiece(d->value).live;
-    return sec->isLive();
+    return true;
   }
   return b.used || !config->gcSections;
 }
 
-// Local symbols are not in the linker's symbol table. This function scans
-// each object file's symbol table to copy local symbols to the output.
-template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
-  if (!in.symTab)
-    return;
+// Scan local symbols to:
+//
+// - demote symbols defined relative to /DISCARD/ discarded input sections so
+//   that relocations referencing them will lead to errors.
+// - copy eligible symbols to .symTab
+static void demoteAndCopyLocalSymbols() {
   llvm::TimeTraceScope timeScope("Add local symbols");
-  if (config->copyRelocs && config->discard != DiscardPolicy::None)
-    markUsedLocalSymbols<ELFT>();
   for (ELFFileBase *file : ctx.objectFiles) {
+    DenseMap<SectionBase *, size_t> sectionIndexMap;
     for (Symbol *b : file->getLocalSymbols()) {
       assert(b->isLocal() && "should have been caught in initializeSymbols()");
       auto *dr = dyn_cast<Defined>(b);
-
-      // No reason to keep local undefined symbol in symtab.
       if (!dr)
         continue;
-      if (includeInSymtab(*b) && shouldKeepInSymtab(*dr))
+
+      if (dr->section && !dr->section->isLive())
+        demoteDefined(*dr, sectionIndexMap);
+      else if (in.symTab && includeInSymtab(*b) && shouldKeepInSymtab(*dr))
         in.symTab->addSymbol(b);
     }
   }
@@ -1991,12 +1975,13 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   }
 
   demoteSymbolsAndComputeIsPreemptible();
-  // Also demote local symbols defined relative to discarded input sections so
-  // that relocations referencing them will lead to errors. To avoid unneeded
-  // work, we only do this when /DISCARD/ is seen, but this demotation also
-  // applies to --gc-sections discarded sections.
-  if (script->seenDiscard)
-    demoteLocalSymbolsInDiscardedSections();
+
+  if (config->copyRelocs && config->discard != DiscardPolicy::None)
+    markUsedLocalSymbols<ELFT>();
+  demoteAndCopyLocalSymbols();
+
+  if (config->copyRelocs)
+    addSectionSymbols();
 
   // Change values of linker-script-defined symbols from placeholders (assigned
   // by declareSymbols) to actual definitions.

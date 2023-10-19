@@ -432,6 +432,7 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
   switch (CodeObjectVersion) {
   default:
     break;
+  case AMDGPU::AMDHSA_COV3:
   case AMDGPU::AMDHSA_COV4:
   case AMDGPU::AMDHSA_COV5:
     if (getTargetID()->isXnackSupported())

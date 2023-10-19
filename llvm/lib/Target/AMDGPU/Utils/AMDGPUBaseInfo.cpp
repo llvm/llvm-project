@@ -166,6 +166,8 @@ std::optional<uint8_t> getHsaAbiVersion(const MCSubtargetInfo *STI) {
     return std::nullopt;
 
   switch (AmdhsaCodeObjectVersion) {
+  case 3:
+    return ELF::ELFABIVERSION_AMDGPU_HSA_V3;
   case 4:
     return ELF::ELFABIVERSION_AMDGPU_HSA_V4;
   case 5:
@@ -174,6 +176,12 @@ std::optional<uint8_t> getHsaAbiVersion(const MCSubtargetInfo *STI) {
     report_fatal_error(Twine("Unsupported AMDHSA Code Object Version ") +
                        Twine(AmdhsaCodeObjectVersion));
   }
+}
+
+bool isHsaAbiVersion3(const MCSubtargetInfo *STI) {
+  if (std::optional<uint8_t> HsaAbiVer = getHsaAbiVersion(STI))
+    return *HsaAbiVer == ELF::ELFABIVERSION_AMDGPU_HSA_V3;
+  return false;
 }
 
 bool isHsaAbiVersion4(const MCSubtargetInfo *STI) {
@@ -204,6 +212,7 @@ unsigned getCodeObjectVersion(const Module &M) {
 
 unsigned getMultigridSyncArgImplicitArgPosition(unsigned CodeObjectVersion) {
   switch (CodeObjectVersion) {
+  case AMDHSA_COV3:
   case AMDHSA_COV4:
     return 48;
   case AMDHSA_COV5:
@@ -217,6 +226,7 @@ unsigned getMultigridSyncArgImplicitArgPosition(unsigned CodeObjectVersion) {
 // central TD file.
 unsigned getHostcallImplicitArgPosition(unsigned CodeObjectVersion) {
   switch (CodeObjectVersion) {
+  case AMDHSA_COV3:
   case AMDHSA_COV4:
     return 24;
   case AMDHSA_COV5:
@@ -227,6 +237,7 @@ unsigned getHostcallImplicitArgPosition(unsigned CodeObjectVersion) {
 
 unsigned getDefaultQueueImplicitArgPosition(unsigned CodeObjectVersion) {
   switch (CodeObjectVersion) {
+  case AMDHSA_COV3:
   case AMDHSA_COV4:
     return 32;
   case AMDHSA_COV5:
@@ -237,6 +248,7 @@ unsigned getDefaultQueueImplicitArgPosition(unsigned CodeObjectVersion) {
 
 unsigned getCompletionActionImplicitArgPosition(unsigned CodeObjectVersion) {
   switch (CodeObjectVersion) {
+  case AMDHSA_COV3:
   case AMDHSA_COV4:
     return 40;
   case AMDHSA_COV5:
@@ -937,6 +949,15 @@ std::string AMDGPUTargetID::toString() const {
   std::string Features;
   if (STI.getTargetTriple().getOS() == Triple::AMDHSA) {
     switch (CodeObjectVersion) {
+    case AMDGPU::AMDHSA_COV3:
+      // xnack.
+      if (isXnackOnOrAny())
+        Features += "+xnack";
+      // In code object v2 and v3, "sramecc" feature was spelled with a
+      // hyphen ("sram-ecc").
+      if (isSramEccOnOrAny())
+        Features += "+sram-ecc";
+      break;
     case AMDGPU::AMDHSA_COV4:
     case AMDGPU::AMDHSA_COV5:
       // sramecc.

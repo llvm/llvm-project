@@ -6262,6 +6262,11 @@ SDValue SITargetLowering::lowerTRAP(SDValue Op, SelectionDAG &DAG) const {
       Subtarget->getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA)
     return lowerTrapEndpgm(Op, DAG);
 
+  const Module *M = DAG.getMachineFunction().getFunction().getParent();
+  unsigned CodeObjectVersion = AMDGPU::getCodeObjectVersion(*M);
+  if (CodeObjectVersion <= AMDGPU::AMDHSA_COV3)
+    return lowerTrapHsaQueuePtr(Op, DAG);
+
   return Subtarget->supportsGetDoorbellID() ? lowerTrapHsa(Op, DAG) :
          lowerTrapHsaQueuePtr(Op, DAG);
 }
@@ -7542,7 +7547,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   Ops.push_back(DAG.getTargetConstant(DMask, DL, MVT::i32));
   if (IsGFX10Plus)
     Ops.push_back(DAG.getTargetConstant(DimInfo->Encoding, DL, MVT::i32));
-  if (!IsGFX12Plus || BaseOpcode->Sampler)
+  if (!IsGFX12Plus || BaseOpcode->Sampler || BaseOpcode->MSAA)
     Ops.push_back(Unorm);
   Ops.push_back(DAG.getTargetConstant(CPol, DL, MVT::i32));
   Ops.push_back(IsA16 &&  // r128, a16 for gfx9
@@ -7554,7 +7559,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   } else if (cast<ConstantSDNode>(TFE)->getZExtValue()) {
     report_fatal_error("TFE is not supported on this GPU");
   }
-  if (!IsGFX12Plus || BaseOpcode->Sampler)
+  if (!IsGFX12Plus || BaseOpcode->Sampler || BaseOpcode->MSAA)
     Ops.push_back(LWE); // lwe
   if (!IsGFX10Plus)
     Ops.push_back(DimInfo->DA ? True : False);

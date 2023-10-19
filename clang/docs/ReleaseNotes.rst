@@ -117,8 +117,6 @@ C++ Language Changes
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
-- Fix a bug in conversion sequence of arguments to a function with reversed parameter order.
-  Fixes `GH <https://github.com/llvm/llvm-project/issues/53954>`_.
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -198,6 +196,9 @@ New Compiler Flags
   preserving ``#include`` directives for "system" headers instead of copying
   the preprocessed text to the output. This can greatly reduce the size of the
   preprocessed output, which can be helpful when trying to reduce a test case.
+
+* ``-Wbitfield-conversion`` was added to detect assignments of integral
+  types to a bitfield that may change the value.
 
 Deprecated Compiler Flags
 -------------------------
@@ -522,6 +523,10 @@ Bug Fixes to C++ Support
   with non-type template parameters of reference type. Fixes:
   (`#65153 <https://github.com/llvm/llvm-project/issues/65153>`_)
 
+- Clang now properly compares constraints on an out of line class template
+  declaration definition. Fixes:
+  (`#61763 <https://github.com/llvm/llvm-project/issues/61763>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
@@ -565,6 +570,7 @@ X86 Support
 - Support ISA of ``USER_MSR``.
   * Support intrinsic of ``_urdmsr``.
   * Support intrinsic of ``_uwrmsr``.
+- Support ISA of ``AVX10.1``.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^

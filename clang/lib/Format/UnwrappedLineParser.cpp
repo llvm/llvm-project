@@ -1967,8 +1967,9 @@ void UnwrappedLineParser::parseStructuralElement(
         auto I = Line->Tokens.begin(), E = Line->Tokens.end();
         while (I != E && I->Tok->is(tok::comment))
           ++I;
-        while (I != E && Style.isVerilog() && I->Tok->is(tok::hash))
-          ++I;
+        if (Style.isVerilog())
+          while (I != E && I->Tok->is(tok::hash))
+            ++I;
         return I != E && (++I == E);
       };
       if (OneTokenSoFar()) {

@@ -1,21 +1,21 @@
-// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple amdgcn-amd-amdhsa -mcpu=gfx810 -mattr=+xnack -show-encoding %s 2>&1 >/dev/null | FileCheck %s -DMCPU=gfx810 --check-prefixes=GCN,GFX8,PREGFX10,NOWGP,AMDHSA
-// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+xnack -show-encoding %s 2>&1 >/dev/null | FileCheck %s --check-prefixes=GCN,GFX10PLUS,GFX10,AMDHSA
-// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple amdgcn-amd-amdhsa -mcpu=gfx1100 -show-encoding %s 2>&1 >/dev/null | FileCheck %s --check-prefixes=GCN,GFX10PLUS,GFX11,AMDHSA
-// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple amdgcn-amd-amdhsa -mcpu=gfx1200 -show-encoding %s 2>&1 >/dev/null | FileCheck %s -DMCPU=gfx1200 --check-prefixes=GCN,GFX10PLUS,GFX12,AMDHSA
-// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple amdgcn-amd- -mcpu=gfx810 -mattr=+xnack -show-encoding %s 2>&1 >/dev/null | FileCheck %s --check-prefixes=GCN,NONAMDHSA
-// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple amdgcn-amd-amdhsa -mcpu=gfx90a -mattr=+xnack -show-encoding %s 2>&1 >/dev/null | FileCheck %s -DMCPU=gfx90a --check-prefixes=GFX90A,PREGFX10,NOWGP,AMDHSA,ALL
-// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple amdgcn-amd-amdhsa -mcpu=gfx1210 -show-encoding %s 2>&1 >/dev/null | FileCheck %s -DMCPU=gfx1210 --check-prefixes=GCN,GFX10PLUS,GFX12,NOWGP,AMDHSA
+// RUN: not llvm-mc --amdhsa-code-object-version=3 -triple amdgcn-amd-amdhsa -mcpu=gfx810 -mattr=+xnack -show-encoding %s 2>&1 >/dev/null | FileCheck %s -DMCPU=gfx810 --check-prefixes=GCN,GFX8,PREGFX10,NOWGP,AMDHSA
+// RUN: not llvm-mc --amdhsa-code-object-version=3 -triple amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+xnack -show-encoding %s 2>&1 >/dev/null | FileCheck %s --check-prefixes=GCN,GFX10PLUS,GFX10,AMDHSA
+// RUN: not llvm-mc --amdhsa-code-object-version=3 -triple amdgcn-amd-amdhsa -mcpu=gfx1100 -show-encoding %s 2>&1 >/dev/null | FileCheck %s --check-prefixes=GCN,GFX10PLUS,GFX11,AMDHSA
+// RUN: not llvm-mc --amdhsa-code-object-version=3 -triple amdgcn-amd-amdhsa -mcpu=gfx1200 -show-encoding %s 2>&1 >/dev/null | FileCheck %s -DMCPU=gfx1200 --check-prefixes=GCN,GFX10PLUS,GFX12,AMDHSA
+// RUN: not llvm-mc --amdhsa-code-object-version=3 -triple amdgcn-amd- -mcpu=gfx810 -mattr=+xnack -show-encoding %s 2>&1 >/dev/null | FileCheck %s --check-prefixes=GCN,NONAMDHSA
+// RUN: not llvm-mc --amdhsa-code-object-version=3 -triple amdgcn-amd-amdhsa -mcpu=gfx90a -mattr=+xnack -show-encoding %s 2>&1 >/dev/null | FileCheck %s -DMCPU=gfx90a --check-prefixes=GFX90A,PREGFX10,NOWGP,AMDHSA,ALL
+// RUN: not llvm-mc --amdhsa-code-object-version=3 -triple amdgcn-amd-amdhsa -mcpu=gfx1210 -show-encoding %s 2>&1 >/dev/null | FileCheck %s -DMCPU=gfx1210 --check-prefixes=GCN,GFX10PLUS,GFX12,NOWGP,AMDHSA
 
 .text
 
 // GCN-LABEL: warning: test_target
 // GFX8-NOT: error:
-// GFX10: error: .amdgcn_target directive's target id amdgcn-amd-amdhsa--gfx810:xnack+ does not match the specified target id amdgcn-amd-amdhsa--gfx1010:xnack+
-// GFX11: error: .amdgcn_target directive's target id amdgcn-amd-amdhsa--gfx810:xnack+ does not match the specified target id amdgcn-amd-amdhsa--gfx1100
-// GFX12: error: .amdgcn_target directive's target id amdgcn-amd-amdhsa--gfx810:xnack+ does not match the specified target id amdgcn-amd-amdhsa--[[MCPU]]
-// NONAMDHSA: error: .amdgcn_target directive's target id amdgcn-amd-amdhsa--gfx810:xnack+ does not match the specified target id amdgcn-amd-unknown--gfx810
+// GFX10: error: .amdgcn_target directive's target id amdgcn-amd-amdhsa--gfx810+xnack does not match the specified target id amdgcn-amd-amdhsa--gfx1010+xnack
+// GFX11: error: .amdgcn_target directive's target id amdgcn-amd-amdhsa--gfx810+xnack does not match the specified target id amdgcn-amd-amdhsa--gfx1100
+// GFX12: error: .amdgcn_target directive's target id amdgcn-amd-amdhsa--gfx810+xnack does not match the specified target id amdgcn-amd-amdhsa--[[MCPU]]
+// NONAMDHSA: error: .amdgcn_target directive's target id amdgcn-amd-amdhsa--gfx810+xnack does not match the specified target id amdgcn-amd-unknown--gfx810
 .warning "test_target"
-.amdgcn_target "amdgcn-amd-amdhsa--gfx810:xnack+"
+.amdgcn_target "amdgcn-amd-amdhsa--gfx810+xnack"
 
 // GCN-LABEL: warning: test_amdhsa_kernel_no_name
 // GCN: error: unknown directive
