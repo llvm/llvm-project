@@ -1861,6 +1861,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::MSABI: OS << "ms_abi"; break;
   case attr::SysVABI: OS << "sysv_abi"; break;
   case attr::RegCall: OS << "regcall"; break;
+  case attr::RegCall4: OS << "regcall4"; break;
   case attr::Pcs: {
     OS << "pcs(";
    QualType t = T->getEquivalentType();

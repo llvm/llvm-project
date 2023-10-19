@@ -2317,6 +2317,9 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
     return;
   }
 
+  if (D->hasAttr<RegCall4Attr>())
+    B.addAttribute("regcall4");
+
   // Handle SME attributes that apply to function definitions,
   // rather than to function prototypes.
   if (D->hasAttr<ArmLocallyStreamingAttr>())

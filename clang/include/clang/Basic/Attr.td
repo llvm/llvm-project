@@ -1524,6 +1524,11 @@ def RegCall : DeclOrTypeAttr {
   let Documentation = [RegCallDocs];
 }
 
+def RegCall4 : DeclOrTypeAttr {
+  let Spellings = [GCC<"regcall4">, CustomKeyword<"__regcall4">];
+  let Documentation = [RegCallDocs];
+}
+
 def Final : InheritableAttr {
   let Spellings = [CustomKeyword<"final">, CustomKeyword<"sealed">];
   let Accessors = [Accessor<"isSpelledAsSealed", [CustomKeyword<"sealed">]>];

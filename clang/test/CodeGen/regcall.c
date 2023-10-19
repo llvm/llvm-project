@@ -9,7 +9,7 @@ void __regcall v1(int a, int b) {}
 // X86: define dso_local x86_regcallcc void @__regcall3__v1(i32 inreg noundef %a, i32 inreg noundef %b)
 // X64: define dso_local x86_regcallcc void @__regcall3__v1(i32 noundef %a, i32 noundef %b)
 
-void __attribute__((regcall)) v1b(int a, int b) {}
+void __attribute__((regcall4)) v1b(int a, int b) {}
 // X86: define dso_local x86_regcallcc void @__regcall3__v1b(i32 inreg noundef %a, i32 inreg noundef %b)
 // X64: define dso_local x86_regcallcc void @__regcall3__v1b(i32 noundef %a, i32 noundef %b)
 
