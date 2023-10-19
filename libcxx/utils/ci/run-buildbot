@@ -156,6 +156,13 @@ function generate-cmake-libcxx-win() {
           "${@}"
 }
 
+function generate-cmake-android() {
+    generate-cmake-base \
+          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
+          -DLIBCXX_CXX_ABI=libcxxabi \
+          "${@}"
+}
+
 function check-runtimes() {
     echo "+++ Running the libc++ tests"
     ${NINJA} -vC "${BUILD_DIR}" check-cxx
@@ -705,6 +712,49 @@ aix)
                    -DLIBUNWIND_TEST_CONFIG="ibm-libunwind-shared.cfg.in"
     check-abi-list
     check-runtimes
+;;
+android-ndk-*)
+    clean
+
+    ANDROID_EMU_IMG="${BUILDER#android-ndk-}"
+    . "${MONOREPO_ROOT}/libcxx/utils/ci/vendor/android/emulator-functions.sh"
+    if ! validate_emu_img "${ANDROID_EMU_IMG}"; then
+        echo "error: android-ndk suffix must be a valid emulator image (${ANDROID_EMU_IMG})" >&2
+        exit 1
+    fi
+    ARCH=$(arch_of_emu_img ${ANDROID_EMU_IMG})
+
+    # Use the Android compiler by default.
+    export CC=${CC:-/opt/android/clang/clang-current/bin/clang}
+    export CXX=${CXX:-/opt/android/clang/clang-current/bin/clang++}
+
+    # The NDK libc++_shared.so is always built against the oldest supported API
+    # level. When tests are run against a device with a newer API level, test
+    # programs can be built for any supported API level, but building for the
+    # newest API (i.e. the system image's API) is probably the most interesting.
+    PARAMS="target_triple=$(triple_of_arch ${ARCH})$(api_of_emu_img ${ANDROID_EMU_IMG})"
+    generate-cmake-android -C "${MONOREPO_ROOT}/runtimes/cmake/android/Arch-${ARCH}.cmake" \
+                           -C "${MONOREPO_ROOT}/libcxx/cmake/caches/AndroidNDK.cmake" \
+                           -DCMAKE_SYSROOT=/opt/android/ndk/sysroot \
+                           -DLIBCXX_TEST_PARAMS="${PARAMS}" \
+                           -DLIBCXXABI_TEST_PARAMS="${PARAMS}"
+    check-abi-list
+    ${NINJA} -vC "${BUILD_DIR}" install-cxx install-cxxabi
+
+    # Start the emulator and make sure we can connect to the adb server running
+    # inside of it.
+    "${MONOREPO_ROOT}/libcxx/utils/ci/vendor/android/start-emulator.sh" ${ANDROID_EMU_IMG}
+    trap "${MONOREPO_ROOT}/libcxx/utils/ci/vendor/android/stop-emulator.sh" EXIT
+    . "${MONOREPO_ROOT}/libcxx/utils/ci/vendor/android/setup-env-for-emulator.sh"
+
+    # Create adb_run early to avoid concurrent `mkdir -p` of common parent
+    # directories.
+    adb shell mkdir -p /data/local/tmp/adb_run
+    adb push "${BUILD_DIR}/lib/libc++_shared.so" /data/local/tmp/libc++/libc++_shared.so
+    echo "+++ Running the libc++ tests"
+    ${NINJA} -vC "${BUILD_DIR}" check-cxx
+    echo "+++ Running the libc++abi tests"
+    ${NINJA} -vC "${BUILD_DIR}" check-cxxabi
 ;;
 #################################################################
 # Insert vendor-specific internal configurations below.
