@@ -29,7 +29,7 @@ void OmptCallbackHandler::replay() {
 void OmptCallbackHandler::handleThreadBegin(ompt_thread_t ThreadType,
                                             ompt_data_t *ThreadData) {
   if (RecordAndReplay) {
-    recordEvent(OmptAssertEvent::ThreadBegin(ThreadType, "Thread Begin"));
+    recordEvent(OmptAssertEvent::ThreadBegin("Thread Begin", "", ThreadType));
     return;
   }
 
@@ -37,7 +37,7 @@ void OmptCallbackHandler::handleThreadBegin(ompt_thread_t ThreadType,
   if (ThreadType == ompt_thread_initial)
     return;
   for (const auto &S : Subscribers)
-    S->notify(OmptAssertEvent::ThreadBegin(ThreadType, "Thread Begin"));
+    S->notify(OmptAssertEvent::ThreadBegin("Thread Begin", "", ThreadType));
 }
 
 void OmptCallbackHandler::handleThreadEnd(ompt_data_t *ThreadData) {
@@ -51,12 +51,12 @@ void OmptCallbackHandler::handleThreadEnd(ompt_data_t *ThreadData) {
   return;
 
   if (RecordAndReplay) {
-    recordEvent(OmptAssertEvent::ThreadEnd("Thread End"));
+    recordEvent(OmptAssertEvent::ThreadEnd("Thread End", ""));
     return;
   }
 
   for (const auto &S : Subscribers)
-    S->notify(OmptAssertEvent::ThreadEnd("Thread End"));
+    S->notify(OmptAssertEvent::ThreadEnd("Thread End", ""));
 }
 
 void OmptCallbackHandler::handleTaskCreate(
@@ -64,24 +64,24 @@ void OmptCallbackHandler::handleTaskCreate(
     const ompt_frame_t *EncounteringTaskFrame, ompt_data_t *NewTaskData,
     int Flags, int HasDependences, const void *CodeptrRA) {
   if (RecordAndReplay) {
-    recordEvent(OmptAssertEvent::TaskCreate("Task Create"));
+    recordEvent(OmptAssertEvent::TaskCreate("Task Create", ""));
     return;
   }
 
   for (const auto &S : Subscribers)
-    S->notify(OmptAssertEvent::TaskCreate("Task Create"));
+    S->notify(OmptAssertEvent::TaskCreate("Task Create", ""));
 }
 
 void OmptCallbackHandler::handleTaskSchedule(ompt_data_t *PriorTaskData,
                                              ompt_task_status_t PriorTaskStatus,
                                              ompt_data_t *NextTaskData) {
   if (RecordAndReplay) {
-    recordEvent(OmptAssertEvent::TaskSchedule("Task Schedule"));
+    recordEvent(OmptAssertEvent::TaskSchedule("Task Schedule", ""));
     return;
   }
 
   for (const auto &S : Subscribers)
-    S->notify(OmptAssertEvent::TaskSchedule("Task Schedule"));
+    S->notify(OmptAssertEvent::TaskSchedule("Task Schedule", ""));
 }
 
 void OmptCallbackHandler::handleImplicitTask(ompt_scope_endpoint_t Endpoint,
@@ -90,14 +90,14 @@ void OmptCallbackHandler::handleImplicitTask(ompt_scope_endpoint_t Endpoint,
                                              unsigned int ActualParallelism,
                                              unsigned int Index, int Flags) {
   if (RecordAndReplay) {
-    recordEvent(OmptAssertEvent::ImplicitTask("Implicit Task"));
+    recordEvent(OmptAssertEvent::ImplicitTask("Implicit Task", ""));
     return;
   }
 
   return; // FIXME Is called for implicit task by main thread before test case
           // inserts asserts.
   for (const auto &S : Subscribers)
-    S->notify(OmptAssertEvent::ImplicitTask("Implicit Task"));
+    S->notify(OmptAssertEvent::ImplicitTask("Implicit Task", ""));
 }
 
 void OmptCallbackHandler::handleParallelBegin(
@@ -105,42 +105,42 @@ void OmptCallbackHandler::handleParallelBegin(
     const ompt_frame_t *EncounteringTaskFrame, ompt_data_t *ParallelData,
     unsigned int RequestedParallelism, int Flags, const void *CodeptrRA) {
   if (RecordAndReplay) {
-    recordEvent(
-        OmptAssertEvent::ParallelBegin(RequestedParallelism, "Parallel Begin"));
+    recordEvent(OmptAssertEvent::ParallelBegin("Parallel Begin", "",
+                                               RequestedParallelism));
     return;
   }
 
   for (const auto &S : Subscribers)
-    S->notify(
-        OmptAssertEvent::ParallelBegin(RequestedParallelism, "Parallel Begin"));
+    S->notify(OmptAssertEvent::ParallelBegin("Parallel Begin", "",
+                                             RequestedParallelism));
 }
 
 void OmptCallbackHandler::handleParallelEnd(ompt_data_t *ParallelData,
                                             ompt_data_t *EncounteringTaskData,
                                             int Flags, const void *CodeptrRA) {
   if (RecordAndReplay) {
-    recordEvent(OmptAssertEvent::ParallelEnd("Parallel End"));
+    recordEvent(OmptAssertEvent::ParallelEnd("Parallel End", ""));
     return;
   }
 
   for (const auto &S : Subscribers)
-    S->notify(OmptAssertEvent::ParallelEnd("Parallel End"));
+    S->notify(OmptAssertEvent::ParallelEnd("Parallel End", ""));
 }
 
 void OmptCallbackHandler::handleDeviceInitialize(
     int DeviceNum, const char *Type, ompt_device_t *Device,
     ompt_function_lookup_t LookupFn, const char *DocumentationStr) {
   if (RecordAndReplay) {
-    recordEvent(OmptAssertEvent::DeviceInitialize(DeviceNum, Type, Device,
-                                                  LookupFn, DocumentationStr,
-                                                  "Device Inititalize"));
+    recordEvent(OmptAssertEvent::DeviceInitialize("Device Inititalize", "",
+                                                  DeviceNum, Type, Device,
+                                                  LookupFn, DocumentationStr));
     return;
   }
 
   for (const auto &S : Subscribers)
-    S->notify(OmptAssertEvent::DeviceInitialize(DeviceNum, Type, Device,
-                                                LookupFn, DocumentationStr,
-                                                "Device Initialize"));
+    S->notify(OmptAssertEvent::DeviceInitialize("Device Inititalize", "",
+                                                DeviceNum, Type, Device,
+                                                LookupFn, DocumentationStr));
 }
 
 void OmptCallbackHandler::handleDeviceFinalize(int DeviceNum) {
@@ -154,12 +154,14 @@ void OmptCallbackHandler::handleDeviceFinalize(int DeviceNum) {
   // handleThreadEnd -> ompt_finalize -> handleDeviceFinalize
   return;
   if (RecordAndReplay) {
-    recordEvent(OmptAssertEvent::DeviceFinalize(DeviceNum, "Device Finalize"));
+    recordEvent(
+        OmptAssertEvent::DeviceFinalize("Device Finalize", "", DeviceNum));
     return;
   }
 
   for (const auto &S : Subscribers)
-    S->notify(OmptAssertEvent::DeviceFinalize(DeviceNum, "Device Finalize"));
+    S->notify(
+        OmptAssertEvent::DeviceFinalize("Device Finalize", "", DeviceNum));
 }
 
 void OmptCallbackHandler::handleTarget(ompt_target_t Kind,
@@ -168,14 +170,14 @@ void OmptCallbackHandler::handleTarget(ompt_target_t Kind,
                                        ompt_id_t TargetId,
                                        const void *CodeptrRA) {
   if (RecordAndReplay) {
-    recordEvent(OmptAssertEvent::Target(Kind, Endpoint, DeviceNum, TaskData,
-                                        TargetId, CodeptrRA, "Target"));
+    recordEvent(OmptAssertEvent::Target("Target", "", Kind, Endpoint, DeviceNum,
+                                        TaskData, TargetId, CodeptrRA));
     return;
   }
 
   for (const auto &S : Subscribers)
-    S->notify(OmptAssertEvent::Target(Kind, Endpoint, DeviceNum, TaskData,
-                                      TargetId, CodeptrRA, "Target"));
+    S->notify(OmptAssertEvent::Target("Target", "", Kind, Endpoint, DeviceNum,
+                                      TaskData, TargetId, CodeptrRA));
 }
 
 void OmptCallbackHandler::handleTargetEmi(ompt_target_t Kind,
@@ -185,46 +187,46 @@ void OmptCallbackHandler::handleTargetEmi(ompt_target_t Kind,
                                           ompt_data_t *TargetData,
                                           const void *CodeptrRA) {
   if (RecordAndReplay) {
-    recordEvent(OmptAssertEvent::TargetEmi(Kind, Endpoint, DeviceNum, TaskData,
-                                           TargetTaskData, TargetData,
-                                           CodeptrRA, "Target EMI"));
+    recordEvent(OmptAssertEvent::TargetEmi("Target EMI", "", Kind, Endpoint,
+                                           DeviceNum, TaskData, TargetTaskData,
+                                           TargetData, CodeptrRA));
     return;
   }
 
   for (const auto &S : Subscribers)
-    S->notify(OmptAssertEvent::TargetEmi(Kind, Endpoint, DeviceNum, TaskData,
-                                         TargetTaskData, TargetData, CodeptrRA,
-                                         "Target EMI"));
+    S->notify(OmptAssertEvent::TargetEmi("Target EMI", "", Kind, Endpoint,
+                                         DeviceNum, TaskData, TargetTaskData,
+                                         TargetData, CodeptrRA));
 }
 
 void OmptCallbackHandler::handleTargetSubmit(ompt_id_t TargetId,
                                              ompt_id_t HostOpId,
                                              unsigned int RequestedNumTeams) {
   if (RecordAndReplay) {
-    recordEvent(OmptAssertEvent::TargetSubmit(
-        TargetId, HostOpId, RequestedNumTeams, "Target Submit"));
+    recordEvent(OmptAssertEvent::TargetSubmit("Target Submit", "", TargetId,
+                                              HostOpId, RequestedNumTeams));
     return;
   }
 
   for (const auto &S : Subscribers)
-    S->notify(OmptAssertEvent::TargetSubmit(
-        TargetId, HostOpId, RequestedNumTeams, "Target Submit"));
+    S->notify(OmptAssertEvent::TargetSubmit("Target Submit", "", TargetId,
+                                            HostOpId, RequestedNumTeams));
 }
 
 void OmptCallbackHandler::handleTargetSubmitEmi(
     ompt_scope_endpoint_t Endpoint, ompt_data_t *TargetData,
     ompt_id_t *HostOpId, unsigned int RequestedNumTeams) {
   if (RecordAndReplay) {
-    recordEvent(OmptAssertEvent::TargetSubmitEmi(Endpoint, TargetData, HostOpId,
-                                                 RequestedNumTeams,
-                                                 "Target Submit EMI"));
+    recordEvent(OmptAssertEvent::TargetSubmitEmi("Target Submit EMI", "",
+                                                 Endpoint, TargetData, HostOpId,
+                                                 RequestedNumTeams));
     return;
   }
 
   for (const auto &S : Subscribers)
-    S->notify(OmptAssertEvent::TargetSubmitEmi(Endpoint, TargetData, HostOpId,
-                                               RequestedNumTeams,
-                                               "Target Submit EMI"));
+    S->notify(OmptAssertEvent::TargetSubmitEmi("Target Submit EMI", "",
+                                               Endpoint, TargetData, HostOpId,
+                                               RequestedNumTeams));
 }
 
 void OmptCallbackHandler::handleTargetDataOp(
@@ -233,15 +235,15 @@ void OmptCallbackHandler::handleTargetDataOp(
     size_t Bytes, const void *CodeptrRA) {
   if (RecordAndReplay) {
     recordEvent(OmptAssertEvent::TargetDataOp(
-        TargetId, HostOpId, OpType, SrcAddr, SrcDeviceNum, DstAddr,
-        DstDeviceNum, Bytes, CodeptrRA, "Target Data Op"));
+        "Target Data Op", "", TargetId, HostOpId, OpType, SrcAddr, SrcDeviceNum,
+        DstAddr, DstDeviceNum, Bytes, CodeptrRA));
     return;
   }
 
   for (const auto &S : Subscribers)
     S->notify(OmptAssertEvent::TargetDataOp(
-        TargetId, HostOpId, OpType, SrcAddr, SrcDeviceNum, DstAddr,
-        DstDeviceNum, Bytes, CodeptrRA, "Target Data Op"));
+        "Target Data Op", "", TargetId, HostOpId, OpType, SrcAddr, SrcDeviceNum,
+        DstAddr, DstDeviceNum, Bytes, CodeptrRA));
 }
 
 void OmptCallbackHandler::handleTargetDataOpEmi(
@@ -251,17 +253,17 @@ void OmptCallbackHandler::handleTargetDataOpEmi(
     size_t Bytes, const void *CodeptrRA) {
   if (RecordAndReplay) {
     recordEvent(OmptAssertEvent::TargetDataOpEmi(
-        Endpoint, TargetTaskData, TargetData, HostOpId, OpType, SrcAddr,
-        SrcDeviceNum, DstAddr, DstDeviceNum, Bytes, CodeptrRA,
-        "Target Data Op EMI"));
+        "Target Data Op EMI", "", Endpoint, TargetTaskData, TargetData,
+        HostOpId, OpType, SrcAddr, SrcDeviceNum, DstAddr, DstDeviceNum, Bytes,
+        CodeptrRA));
     return;
   }
 
   for (const auto &S : Subscribers)
     S->notify(OmptAssertEvent::TargetDataOpEmi(
-        Endpoint, TargetTaskData, TargetData, HostOpId, OpType, SrcAddr,
-        SrcDeviceNum, DstAddr, DstDeviceNum, Bytes, CodeptrRA,
-        "Target Data Op EMI"));
+        "Target Data Op EMI", "", Endpoint, TargetTaskData, TargetData,
+        HostOpId, OpType, SrcAddr, SrcDeviceNum, DstAddr, DstDeviceNum, Bytes,
+        CodeptrRA));
 }
 
 void OmptCallbackHandler::handleDeviceLoad(int DeviceNum, const char *Filename,
@@ -271,39 +273,39 @@ void OmptCallbackHandler::handleDeviceLoad(int DeviceNum, const char *Filename,
                                            uint64_t ModuleId) {
   if (RecordAndReplay) {
     recordEvent(OmptAssertEvent::DeviceLoad(
-        DeviceNum, Filename, OffsetInFile, VmaInFile, Bytes, HostAddr,
-        DeviceAddr, ModuleId, "Device Load"));
+        "Device Load", "", DeviceNum, Filename, OffsetInFile, VmaInFile, Bytes,
+        HostAddr, DeviceAddr, ModuleId));
     return;
   }
 
   for (const auto &S : Subscribers)
-    S->notify(OmptAssertEvent::DeviceLoad(DeviceNum, Filename, OffsetInFile,
-                                          VmaInFile, Bytes, HostAddr,
-                                          DeviceAddr, ModuleId, "Device Load"));
+    S->notify(OmptAssertEvent::DeviceLoad(
+        "Device Load", "", DeviceNum, Filename, OffsetInFile, VmaInFile, Bytes,
+        HostAddr, DeviceAddr, ModuleId));
 }
 
 void OmptCallbackHandler::handleDeviceUnload(int DeviceNum, uint64_t ModuleId) {
   if (RecordAndReplay) {
-    recordEvent(OmptAssertEvent::DeviceUnload("Device Unload"));
+    recordEvent(OmptAssertEvent::DeviceUnload("Device Unload", ""));
     return;
   }
 
   for (const auto &S : Subscribers)
-    S->notify(OmptAssertEvent::DeviceUnload("Device Unload"));
+    S->notify(OmptAssertEvent::DeviceUnload("Device Unload", ""));
 }
 
 void OmptCallbackHandler::handleBufferRequest(int DeviceNum,
                                               ompt_buffer_t **Buffer,
                                               size_t *Bytes) {
   if (RecordAndReplay) {
-    recordEvent(OmptAssertEvent::BufferRequest(DeviceNum, Buffer, Bytes,
-                                               "Buffer Request"));
+    recordEvent(OmptAssertEvent::BufferRequest("Buffer Request", "", DeviceNum,
+                                               Buffer, Bytes));
     return;
   }
 
   for (const auto &S : Subscribers)
-    S->notify(OmptAssertEvent::BufferRequest(DeviceNum, Buffer, Bytes,
-                                             "Buffer Request"));
+    S->notify(OmptAssertEvent::BufferRequest("Buffer Request", "", DeviceNum,
+                                             Buffer, Bytes));
 }
 
 void OmptCallbackHandler::handleBufferComplete(int DeviceNum,
@@ -313,23 +315,23 @@ void OmptCallbackHandler::handleBufferComplete(int DeviceNum,
                                                int BufferOwned) {
   if (RecordAndReplay) {
     recordEvent(OmptAssertEvent::BufferComplete(
-        DeviceNum, Buffer, Bytes, Begin, BufferOwned, "Buffer Complete"));
+        "Buffer Complete", "", DeviceNum, Buffer, Bytes, Begin, BufferOwned));
     return;
   }
 
   for (const auto &S : Subscribers)
-    S->notify(OmptAssertEvent::BufferComplete(DeviceNum, Buffer, Bytes, Begin,
-                                              BufferOwned, "Buffer Complete"));
+    S->notify(OmptAssertEvent::BufferComplete(
+        "Buffer Complete", "", DeviceNum, Buffer, Bytes, Begin, BufferOwned));
 }
 
 void OmptCallbackHandler::handleBufferRecord(ompt_record_ompt_t *Record) {
   if (RecordAndReplay) {
-    recordEvent(OmptAssertEvent::BufferRecord(Record, "Buffer Record"));
+    recordEvent(OmptAssertEvent::BufferRecord("Buffer Record", "", Record));
     return;
   }
 
   for (const auto &S : Subscribers)
-    S->notify(OmptAssertEvent::BufferRecord(Record, "Buffer Record"));
+    S->notify(OmptAssertEvent::BufferRecord("Buffer Record", "", Record));
 }
 
 void OmptCallbackHandler::handleWorkBegin(ompt_work_t work_type,

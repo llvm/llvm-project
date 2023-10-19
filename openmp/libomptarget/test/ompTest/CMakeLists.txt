@@ -14,6 +14,7 @@ SHARED
 ./include/OmptTester.h
 ./src/InternalEvent.cpp
 ./src/InternalEventOperators.cpp
+./src/OmptAsserter.cpp
 ./src/OmptAssertEvent.cpp
 ./src/OmptCallbackHandler.cpp
 ./src/OmptTester.cpp

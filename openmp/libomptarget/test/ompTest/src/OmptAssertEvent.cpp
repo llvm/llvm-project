@@ -3,221 +3,284 @@
 using namespace omptest;
 
 OmptAssertEvent::OmptAssertEvent(const std::string &Name,
+                                 const std::string &Group,
                                  internal::InternalEvent *IE)
-    : Name(Name), TheEvent(IE) {}
+    : Name(Name), Group(Group), TheEvent(IE) {}
 
-OmptAssertEvent OmptAssertEvent::ThreadBegin(ompt_thread_t ThreadType,
-                                             const std::string &Name) {
+OmptAssertEvent OmptAssertEvent::ThreadBegin(const std::string &Name,
+                                             const std::string &Group,
+                                             ompt_thread_t ThreadType) {
   auto EName = getName(Name);
-  return OmptAssertEvent(EName, new internal::ThreadBegin(ThreadType));
+  auto EGroup = getGroup(Group);
+  return OmptAssertEvent(EName, EGroup, new internal::ThreadBegin(ThreadType));
 }
 
-OmptAssertEvent OmptAssertEvent::ThreadEnd(const std::string &Name) {
+OmptAssertEvent OmptAssertEvent::ThreadEnd(const std::string &Name,
+                                           const std::string &Group) {
   auto EName = getName(Name);
-  return OmptAssertEvent(EName, new internal::ThreadEnd());
+  auto EGroup = getGroup(Group);
+  return OmptAssertEvent(EName, EGroup, new internal::ThreadEnd());
 }
 
-OmptAssertEvent OmptAssertEvent::ParallelBegin(int NumThreads,
-                                               const std::string &Name) {
+OmptAssertEvent OmptAssertEvent::ParallelBegin(const std::string &Name,
+                                               const std::string &Group,
+                                               int NumThreads) {
   auto EName = getName(Name);
-  return OmptAssertEvent(EName, new internal::ParallelBegin(NumThreads));
+  auto EGroup = getGroup(Group);
+  return OmptAssertEvent(EName, EGroup,
+                         new internal::ParallelBegin(NumThreads));
 }
 
-OmptAssertEvent OmptAssertEvent::ParallelEnd(const std::string &Name) {
+OmptAssertEvent OmptAssertEvent::ParallelEnd(const std::string &Name,
+                                             const std::string &Group) {
   auto EName = getName(Name);
-  return OmptAssertEvent(EName, new internal::ParallelEnd());
+  auto EGroup = getGroup(Group);
+  return OmptAssertEvent(EName, EGroup, new internal::ParallelEnd());
 }
 
-OmptAssertEvent OmptAssertEvent::TaskCreate(const std::string &Name) {
+OmptAssertEvent OmptAssertEvent::TaskCreate(const std::string &Name,
+                                            const std::string &Group) {
   auto EName = getName(Name);
-  return OmptAssertEvent(EName, new internal::TaskCreate());
+  auto EGroup = getGroup(Group);
+  return OmptAssertEvent(EName, EGroup, new internal::TaskCreate());
 }
 
-OmptAssertEvent OmptAssertEvent::TaskSchedule(const std::string &Name) {
+OmptAssertEvent OmptAssertEvent::TaskSchedule(const std::string &Name,
+                                              const std::string &Group) {
   auto EName = getName(Name);
-  return OmptAssertEvent(EName, new internal::TaskSchedule());
+  auto EGroup = getGroup(Group);
+  return OmptAssertEvent(EName, EGroup, new internal::TaskSchedule());
 }
 
-OmptAssertEvent OmptAssertEvent::ImplicitTask(const std::string &Name) {
+OmptAssertEvent OmptAssertEvent::ImplicitTask(const std::string &Name,
+                                              const std::string &Group) {
   auto EName = getName(Name);
-  return OmptAssertEvent(EName, new internal::ImplicitTask());
+  auto EGroup = getGroup(Group);
+  return OmptAssertEvent(EName, EGroup, new internal::ImplicitTask());
 }
 
-OmptAssertEvent OmptAssertEvent::Target(ompt_target_t Kind,
-                                        ompt_scope_endpoint_t Endpoint,
-                                        int DeviceNum, ompt_data_t *TaskData,
-                                        ompt_id_t TargetId,
-                                        const void *CodeptrRA,
-                                        const std::string &Name) {
+OmptAssertEvent
+OmptAssertEvent::Target(const std::string &Name, const std::string &Group,
+                        ompt_target_t Kind, ompt_scope_endpoint_t Endpoint,
+                        int DeviceNum, ompt_data_t *TaskData,
+                        ompt_id_t TargetId, const void *CodeptrRA) {
   auto EName = getName(Name);
-  return OmptAssertEvent(EName,
+  auto EGroup = getGroup(Group);
+  return OmptAssertEvent(EName, EGroup,
                          new internal::Target(Kind, Endpoint, DeviceNum,
                                               TaskData, TargetId, CodeptrRA));
 }
 
 OmptAssertEvent
-OmptAssertEvent::TargetEmi(ompt_target_t Kind, ompt_scope_endpoint_t Endpoint,
+OmptAssertEvent::TargetEmi(const std::string &Name, const std::string &Group,
+                           ompt_target_t Kind, ompt_scope_endpoint_t Endpoint,
                            int DeviceNum, ompt_data_t *TaskData,
                            ompt_data_t *TargetTaskData, ompt_data_t *TargetData,
-                           const void *CodeptrRA, const std::string &Name) {
+                           const void *CodeptrRA) {
   auto EName = getName(Name);
-  return OmptAssertEvent(
-      EName, new internal::TargetEmi(Kind, Endpoint, DeviceNum, TaskData,
-                                     TargetTaskData, TargetData, CodeptrRA));
+  auto EGroup = getGroup(Group);
+  return OmptAssertEvent(EName, EGroup,
+                         new internal::TargetEmi(Kind, Endpoint, DeviceNum,
+                                                 TaskData, TargetTaskData,
+                                                 TargetData, CodeptrRA));
 }
 
-OmptAssertEvent OmptAssertEvent::TargetDataOp(
-    ompt_id_t TargetId, ompt_id_t HostOpId, ompt_target_data_op_t OpType,
-    void *SrcAddr, int SrcDeviceNum, void *DstAddr, int DstDeviceNum,
-    size_t Bytes, const void *CodeptrRA, const std::string &Name) {
-  return OmptAssertEvent(
-      Name, new internal::TargetDataOp(TargetId, HostOpId, OpType, SrcAddr,
-                                       SrcDeviceNum, DstAddr, DstDeviceNum,
-                                       Bytes, CodeptrRA));
+OmptAssertEvent
+OmptAssertEvent::TargetDataOp(const std::string &Name, const std::string &Group,
+                              ompt_id_t TargetId, ompt_id_t HostOpId,
+                              ompt_target_data_op_t OpType, void *SrcAddr,
+                              int SrcDeviceNum, void *DstAddr, int DstDeviceNum,
+                              size_t Bytes, const void *CodeptrRA) {
+  auto EName = getName(Name);
+  auto EGroup = getGroup(Group);
+  return OmptAssertEvent(EName, EGroup,
+                         new internal::TargetDataOp(
+                             TargetId, HostOpId, OpType, SrcAddr, SrcDeviceNum,
+                             DstAddr, DstDeviceNum, Bytes, CodeptrRA));
 }
 
-OmptAssertEvent OmptAssertEvent::TargetDataOp(
-    ompt_target_data_op_t OpType, size_t Bytes, void *SrcAddr, void *DstAddr,
-    int SrcDeviceNum, int DstDeviceNum, ompt_id_t TargetId, ompt_id_t HostOpId,
-    const void *CodeptrRA, const std::string &Name) {
-  return OmptAssertEvent(
-      Name, new internal::TargetDataOp(TargetId, HostOpId, OpType, SrcAddr,
-                                       SrcDeviceNum, DstAddr, DstDeviceNum,
-                                       Bytes, CodeptrRA));
+OmptAssertEvent
+OmptAssertEvent::TargetDataOp(const std::string &Name, const std::string &Group,
+                              ompt_target_data_op_t OpType, size_t Bytes,
+                              void *SrcAddr, void *DstAddr, int SrcDeviceNum,
+                              int DstDeviceNum, ompt_id_t TargetId,
+                              ompt_id_t HostOpId, const void *CodeptrRA) {
+  auto EName = getName(Name);
+  auto EGroup = getGroup(Group);
+  return OmptAssertEvent(EName, EGroup,
+                         new internal::TargetDataOp(
+                             TargetId, HostOpId, OpType, SrcAddr, SrcDeviceNum,
+                             DstAddr, DstDeviceNum, Bytes, CodeptrRA));
 }
 
 OmptAssertEvent OmptAssertEvent::TargetDataOpEmi(
+    const std::string &Name, const std::string &Group,
     ompt_scope_endpoint_t Endpoint, ompt_data_t *TargetTaskData,
     ompt_data_t *TargetData, ompt_id_t *HostOpId, ompt_target_data_op_t OpType,
     void *SrcAddr, int SrcDeviceNum, void *DstAddr, int DstDeviceNum,
-    size_t Bytes, const void *CodeptrRA, const std::string &Name) {
+    size_t Bytes, const void *CodeptrRA) {
   auto EName = getName(Name);
-  return OmptAssertEvent(EName, new internal::TargetDataOpEmi(
-                                    Endpoint, TargetTaskData, TargetData,
+  auto EGroup = getGroup(Group);
+  return OmptAssertEvent(
+      EName, EGroup,
+      new internal::TargetDataOpEmi(Endpoint, TargetTaskData, TargetData,
                                     HostOpId, OpType, SrcAddr, SrcDeviceNum,
                                     DstAddr, DstDeviceNum, Bytes, CodeptrRA));
 }
 
 OmptAssertEvent OmptAssertEvent::TargetDataOpEmi(
+    const std::string &Name, const std::string &Group,
     ompt_target_data_op_t OpType, ompt_scope_endpoint_t Endpoint, size_t Bytes,
     void *SrcAddr, void *DstAddr, int SrcDeviceNum, int DstDeviceNum,
     ompt_data_t *TargetTaskData, ompt_data_t *TargetData, ompt_id_t *HostOpId,
-    const void *CodeptrRA, const std::string &Name) {
+    const void *CodeptrRA) {
   auto EName = getName(Name);
-  return OmptAssertEvent(EName, new internal::TargetDataOpEmi(
-                                    Endpoint, TargetTaskData, TargetData,
+  auto EGroup = getGroup(Group);
+  return OmptAssertEvent(
+      EName, EGroup,
+      new internal::TargetDataOpEmi(Endpoint, TargetTaskData, TargetData,
                                     HostOpId, OpType, SrcAddr, SrcDeviceNum,
                                     DstAddr, DstDeviceNum, Bytes, CodeptrRA));
 }
 
-OmptAssertEvent OmptAssertEvent::TargetSubmit(ompt_id_t TargetId,
-                                              ompt_id_t HostOpId,
-                                              unsigned int RequestedNumTeams,
-                                              const std::string &Name) {
-  auto EName = getName(Name);
-  return OmptAssertEvent(
-      EName, new internal::TargetSubmit(TargetId, HostOpId, RequestedNumTeams));
-}
-
-OmptAssertEvent OmptAssertEvent::TargetSubmit(unsigned int RequestedNumTeams,
+OmptAssertEvent OmptAssertEvent::TargetSubmit(const std::string &Name,
+                                              const std::string &Group,
                                               ompt_id_t TargetId,
                                               ompt_id_t HostOpId,
-                                              const std::string &Name) {
+                                              unsigned int RequestedNumTeams) {
   auto EName = getName(Name);
+  auto EGroup = getGroup(Group);
   return OmptAssertEvent(
-      EName, new internal::TargetSubmit(TargetId, HostOpId, RequestedNumTeams));
+      EName, EGroup,
+      new internal::TargetSubmit(TargetId, HostOpId, RequestedNumTeams));
 }
 
-OmptAssertEvent OmptAssertEvent::TargetSubmitEmi(ompt_scope_endpoint_t Endpoint,
-                                                 ompt_data_t *TargetData,
-                                                 ompt_id_t *HostOpId,
+OmptAssertEvent OmptAssertEvent::TargetSubmit(const std::string &Name,
+                                              const std::string &Group,
+                                              unsigned int RequestedNumTeams,
+                                              ompt_id_t TargetId,
+                                              ompt_id_t HostOpId) {
+  auto EName = getName(Name);
+  auto EGroup = getGroup(Group);
+  return OmptAssertEvent(
+      EName, EGroup,
+      new internal::TargetSubmit(TargetId, HostOpId, RequestedNumTeams));
+}
+
+OmptAssertEvent OmptAssertEvent::TargetSubmitEmi(
+    const std::string &Name, const std::string &Group,
+    ompt_scope_endpoint_t Endpoint, ompt_data_t *TargetData,
+    ompt_id_t *HostOpId, unsigned int RequestedNumTeams) {
+  auto EName = getName(Name);
+  auto EGroup = getGroup(Group);
+  return OmptAssertEvent(EName, EGroup,
+                         new internal::TargetSubmitEmi(Endpoint, TargetData,
+                                                       HostOpId,
+                                                       RequestedNumTeams));
+}
+
+OmptAssertEvent OmptAssertEvent::TargetSubmitEmi(const std::string &Name,
+                                                 const std::string &Group,
                                                  unsigned int RequestedNumTeams,
-                                                 const std::string &Name) {
-  auto EName = getName(Name);
-  return OmptAssertEvent(
-      EName, new internal::TargetSubmitEmi(Endpoint, TargetData, HostOpId,
-                                           RequestedNumTeams));
-}
-
-OmptAssertEvent OmptAssertEvent::TargetSubmitEmi(unsigned int RequestedNumTeams,
                                                  ompt_scope_endpoint_t Endpoint,
                                                  ompt_data_t *TargetData,
-                                                 ompt_id_t *HostOpId,
-                                                 const std::string &Name) {
+                                                 ompt_id_t *HostOpId) {
   auto EName = getName(Name);
-  return OmptAssertEvent(
-      EName, new internal::TargetSubmitEmi(Endpoint, TargetData, HostOpId,
-                                           RequestedNumTeams));
+  auto EGroup = getGroup(Group);
+  return OmptAssertEvent(EName, EGroup,
+                         new internal::TargetSubmitEmi(Endpoint, TargetData,
+                                                       HostOpId,
+                                                       RequestedNumTeams));
 }
 
-OmptAssertEvent OmptAssertEvent::ControlTool(std::string &Name) {
+OmptAssertEvent OmptAssertEvent::ControlTool(const std::string &Name,
+                                             const std::string &Group) {
   auto EName = getName(Name);
-  return OmptAssertEvent(EName, new internal::ControlTool());
+  auto EGroup = getGroup(Group);
+  return OmptAssertEvent(EName, EGroup, new internal::ControlTool());
 }
 
 OmptAssertEvent OmptAssertEvent::DeviceInitialize(
-    int DeviceNum, const char *Type, ompt_device_t *Device,
-    ompt_function_lookup_t LookupFn, const char *DocumentationStr,
-    const std::string &Name) {
+    const std::string &Name, const std::string &Group, int DeviceNum,
+    const char *Type, ompt_device_t *Device, ompt_function_lookup_t LookupFn,
+    const char *DocumentationStr) {
   auto EName = getName(Name);
-  return OmptAssertEvent(
-      EName, new internal::DeviceInitialize(DeviceNum, Type, Device, LookupFn,
-                                            DocumentationStr));
+  auto EGroup = getGroup(Group);
+  return OmptAssertEvent(EName, EGroup,
+                         new internal::DeviceInitialize(DeviceNum, Type, Device,
+                                                        LookupFn,
+                                                        DocumentationStr));
 }
 
-OmptAssertEvent OmptAssertEvent::DeviceFinalize(int DeviceNum,
-                                                const std::string &Name) {
+OmptAssertEvent OmptAssertEvent::DeviceFinalize(const std::string &Name,
+                                                const std::string &Group,
+                                                int DeviceNum) {
   auto EName = getName(Name);
-  return OmptAssertEvent(EName, new internal::DeviceFinalize(DeviceNum));
+  auto EGroup = getGroup(Group);
+  return OmptAssertEvent(EName, EGroup,
+                         new internal::DeviceFinalize(DeviceNum));
 }
 
-OmptAssertEvent OmptAssertEvent::DeviceLoad(int DeviceNum, const char *Filename,
-                                            int64_t OffsetInFile,
-                                            void *VmaInFile, size_t Bytes,
-                                            void *HostAddr, void *DeviceAddr,
-                                            uint64_t ModuleId,
-                                            const std::string &Name) {
+OmptAssertEvent OmptAssertEvent::DeviceLoad(
+    const std::string &Name, const std::string &Group, int DeviceNum,
+    const char *Filename, int64_t OffsetInFile, void *VmaInFile, size_t Bytes,
+    void *HostAddr, void *DeviceAddr, uint64_t ModuleId) {
   auto EName = getName(Name);
+  auto EGroup = getGroup(Group);
   return OmptAssertEvent(
-      EName,
+      EName, EGroup,
       new internal::DeviceLoad(DeviceNum, Filename, OffsetInFile, VmaInFile,
                                Bytes, HostAddr, DeviceAddr, ModuleId));
 }
 
-OmptAssertEvent OmptAssertEvent::DeviceUnload(const std::string &Name) {
+OmptAssertEvent OmptAssertEvent::DeviceUnload(const std::string &Name,
+                                              const std::string &Group) {
   auto EName = getName(Name);
-  return OmptAssertEvent(EName, new internal::DeviceUnload());
+  auto EGroup = getGroup(Group);
+  return OmptAssertEvent(EName, EGroup, new internal::DeviceUnload());
 }
 
-OmptAssertEvent OmptAssertEvent::BufferRequest(int DeviceNum,
+OmptAssertEvent OmptAssertEvent::BufferRequest(const std::string &Name,
+                                               const std::string &Group,
+                                               int DeviceNum,
                                                ompt_buffer_t **Buffer,
-                                               size_t *Bytes,
-                                               const std::string &Name) {
+                                               size_t *Bytes) {
   auto EName = getName(Name);
-  return OmptAssertEvent(EName,
+  auto EGroup = getGroup(Group);
+  return OmptAssertEvent(EName, EGroup,
                          new internal::BufferRequest(DeviceNum, Buffer, Bytes));
 }
 
 OmptAssertEvent
-OmptAssertEvent::BufferComplete(int DeviceNum, ompt_buffer_t *Buffer,
-                                size_t Bytes, ompt_buffer_cursor_t Begin,
-                                int BufferOwned, const std::string &Name) {
+OmptAssertEvent::BufferComplete(const std::string &Name,
+                                const std::string &Group, int DeviceNum,
+                                ompt_buffer_t *Buffer, size_t Bytes,
+                                ompt_buffer_cursor_t Begin, int BufferOwned) {
   auto EName = getName(Name);
-  return OmptAssertEvent(EName,
+  auto EGroup = getGroup(Group);
+  return OmptAssertEvent(EName, EGroup,
                          new internal::BufferComplete(DeviceNum, Buffer, Bytes,
                                                       Begin, BufferOwned));
 }
 
-OmptAssertEvent OmptAssertEvent::BufferRecord(ompt_record_ompt_t *Record,
-                                              const std::string &Name) {
+OmptAssertEvent OmptAssertEvent::BufferRecord(const std::string &Name,
+                                              const std::string &Group,
+                                              ompt_record_ompt_t *Record) {
   auto EName = getName(Name);
-  return OmptAssertEvent(EName, new internal::BufferRecord(Record));
+  auto EGroup = getGroup(Group);
+  return OmptAssertEvent(EName, EGroup, new internal::BufferRecord(Record));
 }
 
 std::string OmptAssertEvent::getEventName() const { return Name; }
 
+std::string OmptAssertEvent::getEventGroup() const { return Group; }
+
 internal::EventTy OmptAssertEvent::getEventType() const {
   return TheEvent->getType();
+}
+
+internal::InternalEvent *OmptAssertEvent::getEvent() const {
+  return TheEvent.get();
 }
 
 std::string OmptAssertEvent::toString(bool PrefixEventName) const {

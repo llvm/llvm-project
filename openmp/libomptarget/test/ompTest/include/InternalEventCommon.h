@@ -31,9 +31,9 @@ enum class EventTy {
   DeviceFinalize,
   DeviceLoad,
   DeviceUnload,
-  BufferRequest,  // not part of OpenMP spec, used for implementation
-  BufferComplete, // not part of OpenMP spec, used for implementation
-  BufferRecord    // not part of OpenMP spec, used for implementation
+  BufferRequest,
+  BufferComplete,
+  BufferRecord // not part of OpenMP spec, used for implementation
 };
 
 struct InternalEvent {

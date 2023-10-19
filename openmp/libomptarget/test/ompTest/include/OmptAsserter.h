@@ -5,6 +5,7 @@
 
 #include <cassert>
 #include <iostream>
+#include <map>
 #include <set>
 #include <vector>
 
@@ -18,25 +19,19 @@ public:
   virtual void notify(omptest::OmptAssertEvent &&AE) = 0;
 
   /// Control whether this asserter should be considered 'active'.
-  void setActive(bool Enabled) { Active = Enabled; }
+  void setActive(bool Enabled);
 
   /// Check if this asserter is considered 'active'.
-  bool isActive() { return Active; }
+  bool isActive();
 
   /// Check if the given event type is in the set of suppressed event types.
-  bool isSuppressedEventType(omptest::internal::EventTy EvTy) {
-    return SuppressedEvents.find(EvTy) != SuppressedEvents.end();
-  }
+  bool isSuppressedEventType(omptest::internal::EventTy EvTy);
 
   /// Remove the given event type to the set of suppressed events.
-  void permitEvent(omptest::internal::EventTy EvTy) {
-    SuppressedEvents.erase(EvTy);
-  }
+  void permitEvent(omptest::internal::EventTy EvTy);
 
   /// Add the given event type to the set of suppressed events.
-  void suppressEvent(omptest::internal::EventTy EvTy) {
-    SuppressedEvents.insert(EvTy);
-  }
+  void suppressEvent(omptest::internal::EventTy EvTy);
 
 private:
   bool Active{true};
@@ -56,19 +51,11 @@ private:
 /// Base class for asserting on OMPT events
 class OmptAsserter : public OmptListener {
 public:
-  virtual void insert(omptest::OmptAssertEvent &&AE) {
-    assert(false && "Base class 'insert' has undefined semantics.");
-  }
+  virtual void insert(omptest::OmptAssertEvent &&AE);
 
   // Called from the CallbackHandler with a corresponding AssertEvent to which
   // callback was handled.
-  void notify(omptest::OmptAssertEvent &&AE) override {
-    // Ignore notifications while inactive
-    if (!isActive() || isSuppressedEventType(AE.getEventType()))
-      return;
-
-    this->notifyImpl(std::move(AE));
-  }
+  void notify(omptest::OmptAssertEvent &&AE) override;
 
   /// Implemented in subclasses to implement what should actually be done with
   /// the notification.
@@ -76,27 +63,24 @@ public:
 
   /// Report an error for a single event
   void reportError(const omptest::OmptAssertEvent &OffendingEvent,
-                   const std::string &Message) {
-    std::cerr << "[Error] " << Message
-              << "\nOffending Event: " << OffendingEvent.getEventName()
-              << std::endl;
-  }
+                   const std::string &Message);
 
   void reportError(const omptest::OmptAssertEvent &AwaitedEvent,
                    const omptest::OmptAssertEvent &OffendingEvent,
-                   const std::string &Message) {
-    std::cerr << "[Assert Error]: Awaited event name='"
-              << AwaitedEvent.getEventName() << "' toString='"
-              << AwaitedEvent.toString() << ")\nGot: name='"
-              << OffendingEvent.getEventName() << "' toString='"
-              << OffendingEvent.toString() << "'\n"
-              << Message << std::endl;
-  }
+                   const std::string &Message);
 
-  virtual omptest::AssertState getState() { return State; }
+  virtual omptest::AssertState getState();
+
+  bool verifyEventGroups(const omptest::OmptAssertEvent &ExpectedEvent,
+                         const omptest::OmptAssertEvent &ObservedEvent);
 
 protected:
   omptest::AssertState State{omptest::AssertState::pass};
+
+  // This map stores an AssertEventGroup under the given groupname as key.
+  // Using these groups allows to verify e.g. if a given operation belongs to
+  // certain target regions -- i.e. if the group was specified.
+  std::map<std::string, omptest::AssertEventGroup> EventGroups{};
 };
 
 /// Class that can assert in a sequenced fashion, i.e., events hace to occur in
@@ -106,46 +90,12 @@ struct OmptSequencedAsserter : public OmptAsserter {
 
   /// Add the event to the in-sequence set of events that the asserter should
   /// check for.
-  void insert(omptest::OmptAssertEvent &&AE) override {
-    Events.emplace_back(std::move(AE));
-  }
+  void insert(omptest::OmptAssertEvent &&AE) override;
 
   /// Implements the asserter's actual logic
-  virtual void notifyImpl(omptest::OmptAssertEvent &&AE) override {
-    // Ignore notifications while inactive
-    if (!isActive() || isSuppressedEventType(AE.getEventType()))
-      return;
+  virtual void notifyImpl(omptest::OmptAssertEvent &&AE) override;
 
-    ++NumNotifications;
-
-    if (NextEvent >= Events.size()) {
-      reportError(AE, "[OmptSequencedAsserter] Too many events to check (" +
-                          std::to_string(NumNotifications) + "). Asserted " +
-                          std::to_string(NumAssertSuccesses) + "/" +
-                          std::to_string(Events.size()) +
-                          " events successfully.");
-      State = omptest::AssertState::fail;
-      return;
-    }
-
-    auto &E = Events[NextEvent++];
-    if (E == AE) {
-      ++NumAssertSuccesses;
-      return;
-    }
-
-    reportError(E, AE, "[OmptSequencedAsserter] The events are not equal");
-    State = omptest::AssertState::fail;
-  }
-
-  omptest::AssertState getState() override {
-    // This is called after the testcase executed.
-    // Once, reached, no more events should be in the queue
-    if (NextEvent < Events.size())
-      State = omptest::AssertState::fail;
-
-    return State;
-  }
+  omptest::AssertState getState() override;
 
   int NumAssertSuccesses{0};
   int NumNotifications{0};
@@ -155,23 +105,10 @@ struct OmptSequencedAsserter : public OmptAsserter {
 
 /// Class that asserts with set semantics, i.e., unordered
 struct OmptEventAsserter : public OmptAsserter {
-
-  void insert(omptest::OmptAssertEvent &&AE) override {
-    Events.emplace_back(std::move(AE));
-  }
+  void insert(omptest::OmptAssertEvent &&AE) override;
 
   /// Implements the asserter's logic
-  virtual void notifyImpl(omptest::OmptAssertEvent &&AE) override {
-    if (!isActive())
-      return;
-
-    for (size_t I = 0; I < Events.size(); ++I) {
-      if (Events[I] == AE) {
-        Events.erase(Events.begin() + I);
-        break;
-      }
-    }
-  }
+  virtual void notifyImpl(omptest::OmptAssertEvent &&AE) override;
 
   /// For now use vector (but do set semantics)
   std::vector<omptest::OmptAssertEvent> Events; // TODO std::unordered_set?
@@ -182,14 +119,10 @@ class OmptEventReporter : public OmptListener {
 public:
   OmptEventReporter(std::ostream &OutStream = std::cout)
       : OutStream(OutStream) {}
+
   // Called from the CallbackHandler with a corresponding AssertEvent to which
   // callback was handled.
-  void notify(omptest::OmptAssertEvent &&AE) override {
-    if (!isActive() || isSuppressedEventType(AE.getEventType()))
-      return;
-
-    OutStream << AE.toString() << std::endl;
-  }
+  void notify(omptest::OmptAssertEvent &&AE) override;
 
 private:
   std::ostream &OutStream;

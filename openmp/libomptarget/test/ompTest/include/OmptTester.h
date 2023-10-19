@@ -1,6 +1,7 @@
-#ifndef OPENMP_LIBOMPTARGET_TEST_OMPTEST_OMPTESTER_H
-#define OPENMP_LIBOMPTARGET_TEST_OMPTEST_OMPTESTER_H
+#ifndef OPENMP_LIBOMPTARGET_TEST_OMPTEST_OMPTTESTER_H
+#define OPENMP_LIBOMPTARGET_TEST_OMPTEST_OMPTTESTER_H
 
+#include "OmptAliases.h"
 #include "OmptAssertEvent.h"
 #include "OmptAsserter.h"
 #include "OmptCallbackHandler.h"
@@ -45,7 +46,7 @@ struct TestCase {
   omptest::AssertState AS;
   Error exec() {
     OmptCallbackHandler::get().subscribe(&SequenceAsserter);
-    OmptCallbackHandler::get().subscribe(&EventAsserter);
+    OmptCallbackHandler::get().subscribe(&SetAsserter);
     OmptCallbackHandler::get().subscribe(&EventReporter);
 
     Error E;
@@ -65,7 +66,7 @@ struct TestCase {
   // TODO: Should the asserter get a pointer to "their" test case? Probably, as
   // that would allow them to manipulate the Error or AssertState.
   OmptSequencedAsserter SequenceAsserter;
-  OmptEventAsserter EventAsserter;
+  OmptEventAsserter SetAsserter;
   OmptEventReporter EventReporter;
 };
 
@@ -157,27 +158,55 @@ struct Runner {
 };
 
 /// ASSERT MACROS TO BE USED BY THE USER
-#define OMPT_EVENT_ASSERT(Event, ...)
-#define OMPT_EVENT_ASSERT_DISABLE() this->EventAsserter.setActive(false);
-#define OMPT_EVENT_ASSERT_ENABLE() this->EventAsserter.setActive(true);
-#define OMPT_EVENT_REPORT_DISABLE() this->EventReporter.setActive(false);
-#define OMPT_EVENT_REPORT_ENABLE() this->EventReporter.setActive(true);
-#define OMPT_SEQ_ASSERT(Event, ...)
-#define OMPT_SEQ_ASSERT_DISABLE() this->SequenceAsserter.setActive(false);
-#define OMPT_SEQ_ASSERT_ENABLE() this->SequenceAsserter.setActive(true);
-#define OMPT_SEQ_ASSERT_NOT(Event, ...)
-#define OMPT_EVENT_SUPPRESS(Asserter, EventTy)                                 \
-  this->Asserter.suppressEvent(EventTy);
-#define OMPT_EVENT_PERMIT(Asserter, EventTy)                                   \
+
+// Not implemented yet
+#define OMPT_ASSERT_EVENT(Event, ...)
+#define OMPT_ASSERT_SEQUENCE_NOT(Event, ...)
+
+// Handle a minimum unordered set of events
+#define OMPT_ASSERT_SET_EVENT(Name, Group, EventTy, ...)                       \
+  this->SetAsserter.insert(OmptAssertEvent::EventTy(Name, Group, __VA_ARGS__));
+#define OMPT_ASSERT_SET(EventTy, ...)                                          \
+  OMPT_ASSERT_SET_EVENT("", "", EventTy, __VA_ARGS__)
+#define OMPT_ASSERT_SET_GROUP(Group, EventTy, ...)                             \
+  OMPT_ASSERT_SET_EVENT("", Group, EventTy, __VA_ARGS__)
+#define OMPT_ASSERT_SET_NAMED(Name, EventTy, ...)                              \
+  OMPT_ASSERT_SET_EVENT(Name, "", EventTy, __VA_ARGS__)
+
+// Handle an exact sequence of events
+#define OMPT_ASSERT_SEQUENCE_EVENT(Name, Group, EventTy, ...)                  \
+  this->SequenceAsserter.insert(                                               \
+      OmptAssertEvent::EventTy(Name, Group, __VA_ARGS__));
+#define OMPT_ASSERT_SEQUENCE(EventTy, ...)                                     \
+  OMPT_ASSERT_SEQUENCE_EVENT("", "", EventTy, __VA_ARGS__)
+#define OMPT_ASSERT_GROUPED_SEQUENCE(Group, EventTy, ...)                      \
+  OMPT_ASSERT_SEQUENCE_EVENT("", Group, EventTy, __VA_ARGS__)
+#define OMPT_ASSERT_NAMED_SEQUENCE(Name, EventTy, ...)                         \
+  OMPT_ASSERT_SEQUENCE_EVENT(Name, "", EventTy, __VA_ARGS__)
+
+// Enable / disable asserters entirley
+#define OMPT_ASSERTER_DISABLE(AsserterName) this->AsserterName.setActive(false);
+#define OMPT_ASSERTER_ENABLE(AsserterName) this->AsserterName.setActive(true);
+#define OMPT_ASSERT_SET_DISABLE() OMPT_ASSERTER_DISABLE(SetAsserter)
+#define OMPT_ASSERT_SET_ENABLE() OMPT_ASSERTER_ENABLE(SetAsserter)
+#define OMPT_REPORT_EVENT_DISABLE() OMPT_ASSERTER_DISABLE(EventReporter)
+#define OMPT_REPORT_EVENT_ENABLE() OMPT_ASSERTER_ENABLE(EventReporter)
+#define OMPT_ASSERT_SEQUENCE_DISABLE() OMPT_ASSERTER_DISABLE(SequenceAsserter)
+#define OMPT_ASSERT_SEQUENCE_ENABLE() OMPT_ASSERTER_ENABLE(SequenceAsserter)
+
+// Enable / disable certain event types for asserters
+#define OMPT_ASSERTER_PERMIT_EVENT(Asserter, EventTy)                          \
   this->Asserter.permitEvent(EventTy);
-#define OMPT_EVENT_SUPPRESS_EACH_LISTENER(EventTy)                             \
-  OMPT_EVENT_SUPPRESS(EventAsserter, EventTy);                                 \
-  OMPT_EVENT_SUPPRESS(EventReporter, EventTy);                                 \
-  OMPT_EVENT_SUPPRESS(SequenceAsserter, EventTy);
-#define OMPT_EVENT_PERMIT_EACH_LISTENER(EventTy)                               \
-  OMPT_EVENT_PERMIT(EventAsserter, EventTy);                                   \
-  OMPT_EVENT_PERMIT(EventReporter, EventTy);                                   \
-  OMPT_EVENT_PERMIT(SequenceAsserter, EventTy);
+#define OMPT_ASSERTER_SUPPRESS_EVENT(Asserter, EventTy)                        \
+  this->Asserter.suppressEvent(EventTy);
+#define OMPT_PERMIT_EVENT(EventTy)                                             \
+  OMPT_ASSERTER_PERMIT_EVENT(SetAsserter, EventTy);                            \
+  OMPT_ASSERTER_PERMIT_EVENT(EventReporter, EventTy);                          \
+  OMPT_ASSERTER_PERMIT_EVENT(SequenceAsserter, EventTy);
+#define OMPT_SUPPRESS_EVENT(EventTy)                                           \
+  OMPT_ASSERTER_SUPPRESS_EVENT(SetAsserter, EventTy);                          \
+  OMPT_ASSERTER_SUPPRESS_EVENT(EventReporter, EventTy);                        \
+  OMPT_ASSERTER_SUPPRESS_EVENT(SequenceAsserter, EventTy);
 
 /// MACRO TO DEFINE A TESTSUITE + TESTCASE (like GoogleTest does)
 #define OMPTTESTCASE(SuiteName, CaseName)                                      \

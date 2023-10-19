@@ -156,7 +156,7 @@ std::string internal::TargetSubmitEmi::toString() const {
 std::string internal::DeviceInitialize::toString() const {
   std::string S{"Callback Init: device_num="};
   S.append(std::to_string(DeviceNum));
-  S.append(" type=").append(Type);
+  S.append(" type=").append((Type) ? Type : "(null)");
   S.append(" device=").append(makeHexString((uint64_t)Device));
   S.append(" lookup=").append(makeHexString((uint64_t)LookupFn));
   S.append(" doc=").append(makeHexString((uint64_t)DocStr));
