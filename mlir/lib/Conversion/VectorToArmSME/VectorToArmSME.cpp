@@ -427,6 +427,80 @@ struct TransposeOpToArmSMELowering
   }
 };
 
+/// Lowers a masked `vector.outerproduct` to `arm_sme.outerproduct`.
+/// The 2-D mask of the `vector.outerproduct` (if from a `vector.create_mask`)
+/// is decomposed into two 1-D masks for the operands.
+///
+///  BEFORE:
+///  ```mlir
+///  %mask = vector.create_mask %dimA, %dimB : vector<[4]x[4]xi1>
+///  %result = vector.mask %mask {
+///               vector.outerproduct %vecA, %vecB
+///                : vector<[4]xf32>, vector<[4]xf32>
+///            } : vector<[4]x[4]xi1> -> vector<[4]x[4]xf32>
+///  ```
+///
+///  AFTER:
+///  ```mlir
+///  %maskA = vector.create_mask %dimA : vector<[4]xi1>
+///  %maskB = vector.create_mask %dimB : vector<[4]xi1>
+///  %result = arm_sme.outerproduct %vecA, %vecB masks(%maskA, %maskB)
+///              : vector<[4]xf32>, vector<[4]xf32>, vector<[4]x[4]xf32>
+///  ```
+struct VectorOuterProductToArmSMELowering
+    : public OpRewritePattern<vector::OuterProductOp> {
+
+  using OpRewritePattern<vector::OuterProductOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::OuterProductOp outerProductOp,
+                                PatternRewriter &rewriter) const override {
+    // AXPY operation not suited for SME.
+    if (!isa<VectorType>(outerProductOp.getOperandTypeRHS()))
+      return outerProductOp.emitError("AXPY operations not supported");
+
+    auto kind = outerProductOp.getKind();
+    if (kind != vector::CombiningKind::ADD)
+      return outerProductOp.emitError("unsupported kind");
+
+    Value lhsMask = {};
+    Value rhsMask = {};
+    Operation *rootOp = outerProductOp;
+    if (outerProductOp.isMasked()) {
+      auto maskingOp = outerProductOp.getMaskingOp();
+      rewriter.setInsertionPoint(maskingOp);
+      rootOp = maskingOp;
+
+      // Attempt to extract masks from vector.create_mask.
+      // TODO: Add support for other mask sources.
+      auto mask = maskingOp.getMask();
+      auto createMaskOp = mask.getDefiningOp<vector::CreateMaskOp>();
+      if (!createMaskOp)
+        return failure();
+
+      auto maskType = createMaskOp.getVectorType();
+      if (maskType.getRank() != 2)
+        return failure();
+
+      auto loc = outerProductOp.getLoc();
+
+      Value lhsMaskDim = createMaskOp.getOperand(0);
+      Value rhsMaskDim = createMaskOp.getOperand(1);
+
+      VectorType operandMaskType = VectorType::Builder(maskType).dropDim(0);
+      lhsMask = rewriter.create<vector::CreateMaskOp>(loc, operandMaskType,
+                                                      lhsMaskDim);
+      rhsMask = rewriter.create<vector::CreateMaskOp>(loc, operandMaskType,
+                                                      rhsMaskDim);
+    }
+
+    rewriter.replaceOpWithNewOp<arm_sme::OuterProductOp>(
+        rootOp, outerProductOp.getResultVectorType(), outerProductOp.getLhs(),
+        outerProductOp.getRhs(), lhsMask, rhsMask, outerProductOp.getAcc());
+
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::populateVectorToArmSMEPatterns(RewritePatternSet &patterns,
@@ -434,5 +508,6 @@ void mlir::populateVectorToArmSMEPatterns(RewritePatternSet &patterns,
   patterns.add<BroadcastOpToArmSMELowering, ConstantOpToArmSMELowering,
                SplatOpToArmSMELowering, TransferReadPermutationToArmSMELowering,
                TransferWriteToArmSMELowering, TransposeOpToArmSMELowering,
-               VectorLoadToArmSMELowering, VectorStoreToArmSMELowering>(&ctx);
+               VectorLoadToArmSMELowering, VectorStoreToArmSMELowering,
+               VectorOuterProductToArmSMELowering>(&ctx);
 }

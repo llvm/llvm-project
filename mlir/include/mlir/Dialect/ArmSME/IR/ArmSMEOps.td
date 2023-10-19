@@ -79,6 +79,23 @@ def ArmSME_TileSliceLayoutAttr : EnumAttr<ArmSME_Dialect, TileSliceLayout,
   let defaultValue = "TileSliceLayout::Horizontal";
 }
 
+def CombiningKind : I32EnumAttr<"CombiningKind", "Kind of combining function", [
+  I32EnumAttrCase<"Add", 0, "add">,
+  I32EnumAttrCase<"Sub", 1, "sub">,
+]> {
+  let cppNamespace = "::mlir::arm_sme";
+  let genSpecializedAttr = 0;
+}
+
+/// An attribute that specifies how to combine a newly produced value with the
+/// accumulator. This is similar to vector::CombiningKindAttr, but limited to
+/// the functions that are valid for SME outer products.
+def ArmSME_CombiningKindAttr : EnumAttr<ArmSME_Dialect, CombiningKind,
+                                          "kind"> {
+  let assemblyFormat = "`<` $value `>`";
+  let defaultValue = "CombiningKind::Add";
+}
+
 //===----------------------------------------------------------------------===//
 // ArmSME op definitions
 //===----------------------------------------------------------------------===//
@@ -558,6 +575,97 @@ def MoveTileSliceToVectorOp : ArmSME_Op<"move_tile_slice_to_vector", [Pure,
   let assemblyFormat = [{
       $tile `[` $tile_slice_index `]` (`layout` `` $layout^)? attr-dict
       `:` type($result) `from` type($tile)
+  }];
+}
+
+class HasMatchingMaskTypeConstraint<string operand, string maskGetter> :
+  TypesMatchWith<
+    "shape of `" # operand #  "Mask` matches `" # operand # "`",
+    operand, operand # "Mask",
+    "::llvm::cast<mlir::VectorType>($_self).cloneWith({}, IntegerType::get($_ctxt, 1))",
+    "!" # maskGetter # "() || std::equal_to<>()">;
+
+def OuterProductOp :
+  ArmSME_Op<"outerproduct", [Pure,
+    AttrSizedOperandSegments,
+    AllElementTypesMatch<["lhs", "rhs", "result"]>,
+    HasMatchingMaskTypeConstraint<"lhs", "getLhsMask">,
+    HasMatchingMaskTypeConstraint<"rhs", "getRhsMask">,
+    PredOpTrait<
+      "both `lhsMask` and `rhsMask` should be provided or neither",
+      CPred<"bool(getLhsMask()) == bool(getRhsMask())">>,
+    PredOpTrait<
+      "result type is derived from `lhs` and `rhs`",
+      CPred<
+        "getResultType() == VectorType::get({"
+          "getLhsType().getDimSize(0), getRhsType().getDimSize(0)},"
+          "getRhsType().getElementType(),"
+          "{getLhsType().getScalableDims()[0], getRhsType().getScalableDims()[0]})">>,
+    TypesMatchWith<"`result` and `acc` have the same type",
+      "result", "acc",
+      "::llvm::cast<mlir::Type>($_self)",
+      "!getAcc() || std::equal_to<>()">
+  ]>
+{
+  let summary = "Vector outerproduct with optional fused add";
+
+  let description = [{
+    This op is based on `vector.outerproduct` with the extra conditions that:
+
+    * AXPY operations are not supported
+    * The only combining functions are "add" and "sub"
+    * Masking is performed on the inputs (rather than the output)
+
+    This is meant as an intermediate op for lowering `vector.outerproduct` to
+    SME. Types are not restricted to SVE/SME vectors at this level.
+
+    Example 1: Unmasked outerproduct (without accumulator)
+    ```mlir
+    %result = arm_sme.outerproduct $lhs, $rhs
+                : vector<[4]xf32>, vector<[4]xf32>, vector<[4]x[4]xf32>
+    ```
+
+    Example 2: Unmasked outerproduct (with accumulator)
+    ```mlir
+    %result = arm_sme.outerproduct $lhs, $rhs acc($accumulator)
+                : vector<[4]xf32>, vector<[4]xf32>, vector<[4]x[4]xf32>
+    ```
+
+    Example 3: Masked outerproduct
+    ```mlir
+    %result = arm_sme.outerproduct $lhs, $rhs masks($lhsMask, $rhsMask)
+                : vector<[4]xf32>, vector<[4]xf32>, vector<[4]x[4]xf32>
+    ```
+
+    Example 4: Masked outerproduct (with accumulator)
+    ```mlir
+    %result = arm_sme.outerproduct $lhs, $rhs acc($accumulator) masks($lhsMask, $rhsMask)
+                : vector<[4]xf32>, vector<[4]xf32>, vector<[4]x[4]xf32>
+    ```
+  }];
+
+  let arguments = (ins
+    VectorOfRank<[1]>:$lhs, VectorOfRank<[1]>:$rhs,
+    Optional<VectorOfRankAndType<[1],[I1]>>:$lhsMask,
+    Optional<VectorOfRankAndType<[1],[I1]>>:$rhsMask,
+    Optional<VectorOfRank<[2]>>: $acc,
+    ArmSME_CombiningKindAttr:$kind);
+  let results = (outs VectorOfRank<[2]>:$result);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs
+    oilist(
+        `kind` `` $kind
+      | `acc` `` `(` $acc `)`
+      | `masks` `` `(` $lhsMask `,` $rhsMask `)`
+    ) attr-dict
+    `:` type($lhs) `,` type($rhs) `,` type($result)
+  }];
+
+  let extraClassDeclaration = [{
+    VectorType getLhsType() { return getLhs().getType(); }
+    VectorType getRhsType() { return getRhs().getType(); }
+    VectorType getResultType() { return getResult().getType(); }
   }];
 }
 

@@ -1161,3 +1161,56 @@ func.func @arm_sme_move_tile_slice_to_vector_ver_f64(%tile : vector<[2]x[2]xf64>
   %slice = arm_sme.move_tile_slice_to_vector %tile[%tile_slice_index] layout<vertical> : vector<[2]xf64> from vector<[2]x[2]xf64>
   return %slice : vector<[2]xf64>
 }
+
+//===----------------------------------------------------------------------===//
+// arm_sme.outerproduct
+//===----------------------------------------------------------------------===//
+
+// -----
+
+func.func @arm_sme_outproduct(%vecA: vector<[8]xi16>, %vecB: vector<[8]xi16>) -> vector<[8]x[8]xi16> {
+  // CHECK: arm_sme.outerproduct {{.*}}, {{.*}} : vector<[8]xi16>, vector<[8]xi16>, vector<[8]x[8]xi16>
+  %result = arm_sme.outerproduct %vecA, %vecB : vector<[8]xi16>, vector<[8]xi16>, vector<[8]x[8]xi16>
+  return %result : vector<[8]x[8]xi16>
+}
+
+// -----
+
+func.func @arm_sme_outproduct_with_masking(
+  %vecA: vector<3xf32>, %vecB: vector<[2]xf32>, %maskA: vector<3xi1>, %maskB: vector<[2]xi1>
+) -> vector<3x[2]xf32> {
+  // CHECK: arm_sme.outerproduct {{.*}}, {{.*}} masks({{.*}}, {{.*}}) : vector<3xf32>, vector<[2]xf32>, vector<3x[2]xf32>
+  %result = arm_sme.outerproduct %vecA, %vecB masks(%maskA, %maskB) : vector<3xf32>, vector<[2]xf32>, vector<3x[2]xf32>
+  return %result : vector<3x[2]xf32>
+}
+
+// -----
+
+func.func @arm_sme_outproduct_with_acc(
+  %vecA: vector<7xi32>, %vecB: vector<6xi32>, %acc: vector<7x6xi32>
+) -> vector<7x6xi32> {
+  // CHECK: arm_sme.outerproduct {{.*}}, {{.*}} acc({{.*}}) : vector<7xi32>, vector<6xi32>, vector<7x6xi32>
+  %result = arm_sme.outerproduct %vecA, %vecB acc(%acc) : vector<7xi32>, vector<6xi32>, vector<7x6xi32>
+  return %result : vector<7x6xi32>
+}
+
+// -----
+
+func.func @arm_sme_outproduct_with_kind(%vecA: vector<[2]xf64>, %vecB: vector<[2]xf64>) -> vector<[2]x[2]xf64>  {
+  // CHECK: arm_sme.outerproduct {{.*}}, {{.*}} kind<sub> : vector<[2]xf64>, vector<[2]xf64>, vector<[2]x[2]xf64>
+  %result = arm_sme.outerproduct %vecA, %vecB kind<sub> : vector<[2]xf64>, vector<[2]xf64>, vector<[2]x[2]xf64>
+  return %result : vector<[2]x[2]xf64>
+}
+
+// -----
+
+func.func @arm_sme_outproduct_with_everything(
+  %vecA: vector<[4]xf16>, %vecB: vector<4xf16>, %acc: vector<[4]x4xf16>,
+  %maskA: vector<[4]xi1>, %maskB: vector<4xi1>
+) -> vector<[4]x4xf16> {
+  // CHECK: arm_sme.outerproduct {{.*}}, {{.*}} kind<sub> acc({{.*}}) masks({{.*}}, {{.*}})
+  // CHECK-SAME: : vector<[4]xf16>, vector<4xf16>, vector<[4]x4xf16>
+  %result = arm_sme.outerproduct %vecA, %vecB kind<sub> acc(%acc) masks(%maskA, %maskB)
+              : vector<[4]xf16>, vector<4xf16>, vector<[4]x4xf16>
+  return %result : vector<[4]x4xf16>
+}

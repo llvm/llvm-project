@@ -150,3 +150,36 @@ func.func @arm_sme_tile_load__pad_but_no_mask(%src : memref<?x?xf64>, %pad : f64
   %tile = arm_sme.tile_load %src[%c0, %c0], %pad, : memref<?x?xf64>, vector<[2]x[2]xf64>
   return
 }
+
+//===----------------------------------------------------------------------===//
+// arm_sme.outerproduct
+//===----------------------------------------------------------------------===//
+
+// -----
+
+// expected-note@+1 {{prior use here}}
+func.func @arm_sme_outproduct__bad_mask_type(%vecA: vector<3xf32>, %vecB: vector<[2]xf32>, %maskA: vector<5xi1>, %maskB: vector<[2]xi1>)-> vector<3x[2]xf32>
+{
+  // expected-error@+1 {{use of value '%maskA' expects different type than prior uses}}
+  %0 = arm_sme.outerproduct %vecA, %vecB masks(%maskA, %maskB) : vector<3xf32>, vector<[2]xf32>, vector<3x[2]xf32>
+  return %0 : vector<3x[2]xf32>
+}
+
+// -----
+
+func.func @arm_sme_outproduct__bad_result_type(%vecA: vector<[8]xi16>, %vecB: vector<[8]xi16>) -> vector<[2]x1xi16>
+{
+  // expected-error@+1 {{op failed to verify that result type is derived from `lhs` and `rhs`}}
+  %0 = arm_sme.outerproduct %vecA, %vecB : vector<[8]xi16>, vector<[8]xi16>, vector<[2]x1xi16>
+  return %0 : vector<[2]x1xi16>
+}
+
+// -----
+
+// expected-note@+1 {{prior use here}}
+func.func @arm_sme_outproduct__bad_acc_type(%vecA: vector<7xi32>, %vecB: vector<6xi32>, %acc: vector<6x6xi32>) -> vector<7x6xi32>
+{
+  // expected-error@+1 {{use of value '%acc' expects different type than prior uses}}
+  %0 = arm_sme.outerproduct %vecA, %vecB acc(%acc) : vector<7xi32>, vector<6xi32>, vector<7x6xi32>
+  return %0 : vector<7x6xi32>
+}
