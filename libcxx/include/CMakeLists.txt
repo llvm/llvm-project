@@ -835,7 +835,6 @@ set(files
   __type_traits/underlying_type.h
   __type_traits/unwrap_ref.h
   __type_traits/void_t.h
-  __typeinfo/typeinfo.h
   __undef_macros
   __utility/as_const.h
   __utility/as_lvalue.h

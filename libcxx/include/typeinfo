@@ -57,8 +57,13 @@ public:
 */
 
 #include <__assert> // all public C++ headers provide the assertion handler
+#include <__availability>
 #include <__config>
-#include <__typeinfo/typeinfo.h>
+#include <__exception/exception.h>
+#include <__type_traits/is_constant_evaluated.h>
+#include <__verbose_abort>
+#include <cstddef>
+#include <cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -411,7 +416,6 @@ _LIBCPP_END_NAMESPACE_STD
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <cstdlib>
-#  include <exception>
 #  include <type_traits>
 #endif
 
