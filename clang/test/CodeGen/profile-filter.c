@@ -6,6 +6,9 @@
 // RUN: echo "src:%s" | sed -e 's/\\/\\\\/g' > %t-file.list
 // RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -fprofile-list=%t-file.list -emit-llvm %s -o - | FileCheck %s --check-prefix=FILE
 
+// RUN: cd %S
+// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -fprofile-list=%t-file.list -emit-llvm profile-filter.c -o - | FileCheck %s --check-prefix=FILE
+
 // RUN: echo -e "[clang]\nfun:test1\n[llvm]\nfun:test2" > %t-section.list
 // RUN: %clang_cc1 -fprofile-instrument=llvm -fprofile-list=%t-section.list -emit-llvm %s -o - | FileCheck %s --check-prefix=SECTION
 
