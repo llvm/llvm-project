@@ -401,7 +401,6 @@ public:
     serialiseString(F.getName());
     // type_idx:
     OutStreamer.emitSizeT(typeIndex(F.getFunctionType()));
-    F.getType()->dump();
     // num_blocks:
     OutStreamer.emitSizeT(F.size());
     // blocks:
