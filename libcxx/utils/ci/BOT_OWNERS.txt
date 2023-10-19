@@ -15,3 +15,8 @@ D: Armv7, Armv8, AArch64
 N: LLVM on Power
 E: powerllvm@ca.ibm.com
 D: AIX, ppc64le
+
+N: Android libc++
+E: rprichard@google.com
+H: rprichard
+D: Emulator-based x86[-64] libc++ CI testing
