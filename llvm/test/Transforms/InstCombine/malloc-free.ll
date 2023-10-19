@@ -26,9 +26,11 @@ define i32 @dead_aligned_alloc(i32 %size, i32 %alignment, i8 %value) {
   ret i32 0
 }
 
-define i1 @aligned_alloc_pointer_only_used_by_cmp(i32 %size, i32 %alignment, i8 %value) {
-; CHECK-LABEL: @aligned_alloc_pointer_only_used_by_cmp(
-; CHECK-NEXT:    ret i1 true
+define i1 @aligned_alloc_only_pointe(i32 %size, i32 %alignment, i8 %value) {
+; CHECK-LABEL: @aligned_alloc_only_pointe(
+; CHECK-NEXT:    [[ALIGNED_ALLOCATION:%.*]] = tail call ptr @aligned_alloc(i32 [[ALIGNMENT:%.*]], i32 [[SIZE:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[ALIGNED_ALLOCATION]], null
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %aligned_allocation = tail call ptr @aligned_alloc(i32 %alignment, i32 %size)
   %cmp = icmp ne ptr %aligned_allocation, null
@@ -46,7 +48,9 @@ define i1 @aligned_alloc_pointer_only_used_by_cmp_alignment_and_value_known_ok(i
 
 define i1 @aligned_alloc_pointer_only_used_by_cmp_alignment_no_power_of_2(i32 %size, i32 %alignment, i8 %value) {
 ; CHECK-LABEL: @aligned_alloc_pointer_only_used_by_cmp_alignment_no_power_of_2(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[ALIGNED_ALLOCATION:%.*]] = tail call dereferenceable_or_null(32) ptr @aligned_alloc(i32 3, i32 32)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[ALIGNED_ALLOCATION]], null
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %aligned_allocation = tail call ptr @aligned_alloc(i32 3, i32 32)
   %cmp = icmp ne ptr %aligned_allocation, null
@@ -55,7 +59,9 @@ define i1 @aligned_alloc_pointer_only_used_by_cmp_alignment_no_power_of_2(i32 %s
 
 define i1 @aligned_alloc_pointer_only_used_by_cmp_size_not_multiple_of_alignment(i32 %size, i32 %alignment, i8 %value) {
 ; CHECK-LABEL: @aligned_alloc_pointer_only_used_by_cmp_size_not_multiple_of_alignment(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[ALIGNED_ALLOCATION:%.*]] = tail call dereferenceable_or_null(31) ptr @aligned_alloc(i32 8, i32 31)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[ALIGNED_ALLOCATION]], null
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %aligned_allocation = tail call ptr @aligned_alloc(i32 8, i32 31)
   %cmp = icmp ne ptr %aligned_allocation, null
