@@ -17,6 +17,7 @@
 #include "RISCVSubtarget.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 
 using namespace llvm;
 
@@ -56,19 +57,38 @@ public:
 struct RISCVOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
   RISCVOutgoingValueHandler(MachineIRBuilder &B, MachineRegisterInfo &MRI,
                             MachineInstrBuilder MIB)
-      : OutgoingValueHandler(B, MRI), MIB(MIB) {}
-
-  MachineInstrBuilder MIB;
-
+      : OutgoingValueHandler(B, MRI), MIB(MIB),
+        Subtarget(MIRBuilder.getMF().getSubtarget<RISCVSubtarget>()) {}
   Register getStackAddress(uint64_t MemSize, int64_t Offset,
                            MachinePointerInfo &MPO,
                            ISD::ArgFlagsTy Flags) override {
-    llvm_unreachable("not implemented");
+    MachineFunction &MF = MIRBuilder.getMF();
+    LLT p0 = LLT::pointer(0, Subtarget.getXLen());
+    LLT sXLen = LLT::scalar(Subtarget.getXLen());
+
+    if (!SPReg)
+      SPReg = MIRBuilder.buildCopy(p0, Register(RISCV::X2)).getReg(0);
+
+    auto OffsetReg = MIRBuilder.buildConstant(sXLen, Offset);
+
+    auto AddrReg = MIRBuilder.buildPtrAdd(p0, SPReg, OffsetReg);
+
+    MPO = MachinePointerInfo::getStack(MF, Offset);
+    return AddrReg.getReg(0);
   }
 
   void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
                             MachinePointerInfo &MPO, CCValAssign &VA) override {
-    llvm_unreachable("not implemented");
+    MachineFunction &MF = MIRBuilder.getMF();
+    uint64_t LocMemOffset = VA.getLocMemOffset();
+
+    // TODO: Move StackAlignment to subtarget and share with FrameLowering.
+    auto MMO =
+        MF.getMachineMemOperand(MPO, MachineMemOperand::MOStore, MemTy,
+                                commonAlignment(Align(16), LocMemOffset));
+
+    Register ExtReg = extendRegister(ValVReg, VA);
+    MIRBuilder.buildStore(ExtReg, Addr, *MMO);
   }
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
@@ -77,6 +97,14 @@ struct RISCVOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
     MIRBuilder.buildCopy(PhysReg, ExtReg);
     MIB.addUse(PhysReg, RegState::Implicit);
   }
+
+private:
+  MachineInstrBuilder MIB;
+
+  // Cache the SP register vreg if we need it more than once in this call site.
+  Register SPReg;
+
+  const RISCVSubtarget &Subtarget;
 };
 
 struct RISCVIncomingValueAssigner : public CallLowering::IncomingValueAssigner {
@@ -112,17 +140,26 @@ public:
 
 struct RISCVIncomingValueHandler : public CallLowering::IncomingValueHandler {
   RISCVIncomingValueHandler(MachineIRBuilder &B, MachineRegisterInfo &MRI)
-      : IncomingValueHandler(B, MRI) {}
+      : IncomingValueHandler(B, MRI),
+        Subtarget(MIRBuilder.getMF().getSubtarget<RISCVSubtarget>()) {}
 
   Register getStackAddress(uint64_t MemSize, int64_t Offset,
                            MachinePointerInfo &MPO,
                            ISD::ArgFlagsTy Flags) override {
-    llvm_unreachable("not implemented");
+    MachineFrameInfo &MFI = MIRBuilder.getMF().getFrameInfo();
+
+    int FI = MFI.CreateFixedObject(MemSize, Offset, /*Immutable=*/true);
+    MPO = MachinePointerInfo::getFixedStack(MIRBuilder.getMF(), FI);
+    return MIRBuilder.buildFrameIndex(LLT::pointer(0, Subtarget.getXLen()), FI)
+        .getReg(0);
   }
 
   void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
                             MachinePointerInfo &MPO, CCValAssign &VA) override {
-    llvm_unreachable("not implemented");
+    MachineFunction &MF = MIRBuilder.getMF();
+    auto MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOLoad, MemTy,
+                                       inferAlignFromPtrInfo(MF, MPO));
+    MIRBuilder.buildLoad(ValVReg, Addr, *MMO);
   }
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
@@ -131,6 +168,9 @@ struct RISCVIncomingValueHandler : public CallLowering::IncomingValueHandler {
     MIRBuilder.getMBB().addLiveIn(PhysReg);
     MIRBuilder.buildCopy(ValVReg, PhysReg);
   }
+
+private:
+  const RISCVSubtarget &Subtarget;
 };
 
 struct RISCVCallReturnHandler : public RISCVIncomingValueHandler {
