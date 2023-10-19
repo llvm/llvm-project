@@ -77,10 +77,10 @@ public:
                            pybind11::object pyClass);
 
   /// Adds a concrete implementation operation class.
-  /// Raises an exception if the mapping already exists.
+  /// Raises an exception if the mapping already exists and replace == false.
   /// This is intended to be called by implementation code.
   void registerOperationImpl(const std::string &operationName,
-                             pybind11::object pyClass);
+                             pybind11::object pyClass, bool replace = false);
 
   /// Returns the custom Attribute builder for Attribute kind.
   std::optional<pybind11::function>
