@@ -78,7 +78,8 @@ public:
 
   template <typename T> static IntegralAP from(T Value, unsigned NumBits = 0) {
     assert(NumBits > 0);
-    APSInt Copy = APSInt(APInt(NumBits, static_cast<int64_t>(Value), Signed), !Signed);
+    APSInt Copy =
+        APSInt(APInt(NumBits, static_cast<uint64_t>(Value), Signed), !Signed);
 
     return IntegralAP<Signed>(Copy);
   }
@@ -97,16 +98,16 @@ public:
   template <unsigned Bits, bool InputSigned>
   static IntegralAP from(Integral<Bits, InputSigned> I, unsigned BitWidth) {
     APSInt Copy =
-        APSInt(APInt(BitWidth, static_cast<int64_t>(I), InputSigned), !Signed);
+        APSInt(APInt(BitWidth, static_cast<uint64_t>(I), InputSigned), !Signed);
     Copy.setIsSigned(Signed);
 
     assert(Copy.isSigned() == Signed);
     return IntegralAP<Signed>(Copy);
   }
 
-  static IntegralAP zero() {
-    assert(false);
-    return IntegralAP(0);
+  static IntegralAP zero(int32_t BitWidth) {
+    APSInt V = APSInt(APInt(BitWidth, 0LL, Signed), !Signed);
+    return IntegralAP(V);
   }
 
   constexpr unsigned bitWidth() const { return V.getBitWidth(); }
