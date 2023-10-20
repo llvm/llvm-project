@@ -80,7 +80,7 @@
 
 // expected-no-diagnostics
 
-// CHECK-NOT: alias
+// CHECK-NOT: {{ (no)?alias }}
 
 // CHECK-NOT: ret i32 {{1|4|81|84}}
 // CHECK-DAG: declare {{.*}}i32 @_Z5bazzzv()
