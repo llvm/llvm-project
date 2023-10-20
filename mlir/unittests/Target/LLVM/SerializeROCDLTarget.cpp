@@ -39,7 +39,7 @@ using namespace mlir;
 
 class MLIRTargetLLVMROCDL : public ::testing::Test {
 protected:
-  virtual void SetUp() {
+  void SetUp() override {
     registerBuiltinDialectTranslation(registry);
     registerLLVMDialectTranslation(registry);
     registerGPUDialectTranslation(registry);
