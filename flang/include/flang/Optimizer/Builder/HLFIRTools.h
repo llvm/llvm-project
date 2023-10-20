@@ -172,6 +172,11 @@ public:
     return varIface ? varIface.isAllocatable() : false;
   }
 
+  bool isPointer() const {
+    auto varIface = getIfVariableInterface();
+    return varIface ? varIface.isPointer() : false;
+  }
+
   // Get the entity as an mlir SSA value containing all the shape, type
   // parameters and dynamic shape information.
   mlir::Value getBase() const { return *this; }

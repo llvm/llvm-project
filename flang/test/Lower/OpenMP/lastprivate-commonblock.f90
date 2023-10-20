@@ -18,10 +18,10 @@
 !CHECK:    omp.wsloop   for  (%[[I:.*]]) : i32 = (%{{.*}}) to (%{{.*}}) inclusive step (%{{.*}}) {
 !CHECK:      %[[LAST_ITER:.*]] = arith.cmpi eq, %[[I]], %{{.*}} : i32
 !CHECK:      fir.if %[[LAST_ITER]] {
-!CHECK:        %[[PRIVATE_X_VAL:.*]] = fir.load %[[PRIVATE_X_DECL]]#1 : !fir.ref<f32>
-!CHECK:        fir.store %[[PRIVATE_X_VAL]] to %[[X_DECL]]#1 : !fir.ref<f32>
-!CHECK:        %[[PRIVATE_Y_VAL:.*]] = fir.load %[[PRIVATE_Y_DECL]]#1 : !fir.ref<f32>
-!CHECK:        fir.store %[[PRIVATE_Y_VAL]] to %[[Y_DECL]]#1 : !fir.ref<f32>
+!CHECK:        %[[PRIVATE_X_VAL:.*]] = fir.load %[[PRIVATE_X_DECL]]#0 : !fir.ref<f32>
+!CHECK:        hlfir.assign %[[PRIVATE_X_VAL]] to %[[X_DECL]]#0 temporary_lhs : f32, !fir.ref<f32>
+!CHECK:        %[[PRIVATE_Y_VAL:.*]] = fir.load %[[PRIVATE_Y_DECL]]#0 : !fir.ref<f32>
+!CHECK:        hlfir.assign %[[PRIVATE_Y_VAL]] to %[[Y_DECL]]#0 temporary_lhs : f32, !fir.ref<f32>
 !CHECK:      }
 !CHECK:      omp.yield
 !CHECK:    }
