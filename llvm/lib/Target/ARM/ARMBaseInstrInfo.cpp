@@ -6760,9 +6760,9 @@ void ARMBaseInstrInfo::buildClearRegister(Register DstReg,
   } else if (ARM::HPRRegClass.contains(DstReg)) {
     // f16 and bf16 registers.
     BuildMI(MBB, Iter, DL, get(ARM::FCONSTH), DstReg).addImm(0);
+  } else {
+    llvm_unreachable("Unsupported register class");
   }
-
-  llvm_unreachable("Unsupported register class");
 }
 
 bool ARMBaseInstrInfo::shouldOutlineFromFunctionByDefault(

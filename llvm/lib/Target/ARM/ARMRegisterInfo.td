@@ -633,4 +633,4 @@ def FPCXTRegs : RegisterClass<"ARM", [i32], 32, (add FPCXTNS)>;
 // Register categories.
 //
 
-def GeneralPurposeRegisters : RegisterCategory<[GPR]>;
+def GeneralPurposeRegisters : RegisterCategory<[GPR, tGPR]>;
