@@ -3137,6 +3137,8 @@ void UnwrappedLineParser::parseDoWhile() {
     return;
   }
 
+  FormatTok->setFinalizedType(TT_DoWhile);
+
   // If in Whitesmiths mode, the line with the while() needs to be indented
   // to the same level as the block.
   if (Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths)
