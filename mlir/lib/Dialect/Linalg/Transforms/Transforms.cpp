@@ -202,7 +202,7 @@ struct PackedOperandsDim {
 
 /// Helper struct to encode packing along all dimensions of a LinalgOp.
 struct PackedOperandsDimList {
-  void push_back(PackedOperandsDim &&packedOperandsDims) {
+  void pushBack(PackedOperandsDim &&packedOperandsDims) {
     spec.emplace_back(packedOperandsDims);
   }
   /// Return all the dims that have been packed for operand @ `operandPos`.
@@ -539,7 +539,7 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
     if (failed(maybePackedDimForEachOperand))
       return failure();
     packedOperandsDims.packedDimForEachOperand = *maybePackedDimForEachOperand;
-    listOfPackedOperandsDim.push_back(std::move(packedOperandsDims));
+    listOfPackedOperandsDim.pushBack(std::move(packedOperandsDims));
 
     LLVM_DEBUG(
         DBGS() << "++++ After pack size #" << i << ": " << packedSizes[i]
