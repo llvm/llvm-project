@@ -576,6 +576,19 @@ define i1 @ashr_ugt_0(i4 %x) {
   ret i1 %r
 }
 
+define i1 @ashr_ugt_0_multiuse(i4 %x, ptr %p) {
+; CHECK-LABEL: @ashr_ugt_0_multiuse(
+; CHECK-NEXT:    [[S:%.*]] = ashr i4 [[X:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i4 [[X]], 1
+; CHECK-NEXT:    store i4 [[S]], ptr [[P:%.*]], align 1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %s = ashr i4 %x, 1
+  %r = icmp ugt i4 %s, 0 ; 0b0000
+  store i4 %s, ptr %p
+  ret i1 %r
+}
+
 define i1 @ashr_ugt_1(i4 %x) {
 ; CHECK-LABEL: @ashr_ugt_1(
 ; CHECK-NEXT:    [[R:%.*]] = icmp ugt i4 [[X:%.*]], 3
@@ -761,6 +774,19 @@ define i1 @ashr_ult_2(i4 %x) {
 ;
   %s = ashr i4 %x, 1
   %r = icmp ult i4 %s, 2 ; 0b0010
+  ret i1 %r
+}
+
+define i1 @ashr_ult_2_multiuse(i4 %x, ptr %p) {
+; CHECK-LABEL: @ashr_ult_2_multiuse(
+; CHECK-NEXT:    [[S:%.*]] = ashr i4 [[X:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i4 [[X]], 4
+; CHECK-NEXT:    store i4 [[S]], ptr [[P:%.*]], align 1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %s = ashr i4 %x, 1
+  %r = icmp ult i4 %s, 2 ; 0b0010
+  store i4 %s, ptr %p
   ret i1 %r
 }
 
