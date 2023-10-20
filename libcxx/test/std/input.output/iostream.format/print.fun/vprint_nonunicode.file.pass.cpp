@@ -16,6 +16,9 @@
 
 // XFAIL: availability-fp_to_chars-missing
 
+// The error exception has no system error string.
+// XFAIL: LIBCXX-ANDROID-FIXME
+
 // <print>
 
 // void vprint_nonunicode(FILE* stream, string_view fmt, format_args args);
