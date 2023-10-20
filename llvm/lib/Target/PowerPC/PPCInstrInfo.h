@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_POWERPC_PPCINSTRINFO_H
 
 #include "MCTargetDesc/PPCMCTargetDesc.h"
+#include "PPC.h"
 #include "PPCRegisterInfo.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -281,6 +282,32 @@ public:
       if (Opcode == CopyOpcodes[i])
         return true;
     return false;
+  }
+
+  static bool hasPCRelFlag(unsigned TF) {
+    return TF == PPCII::MO_PCREL_FLAG || TF == PPCII::MO_GOT_TLSGD_PCREL_FLAG ||
+           TF == PPCII::MO_GOT_TLSLD_PCREL_FLAG ||
+           TF == PPCII::MO_GOT_TPREL_PCREL_FLAG ||
+           TF == PPCII::MO_TPREL_PCREL_FLAG || TF == PPCII::MO_TLS_PCREL_FLAG ||
+           TF == PPCII::MO_GOT_PCREL_FLAG;
+  }
+
+  static bool hasGOTFlag(unsigned TF) {
+    return TF == PPCII::MO_GOT_FLAG || TF == PPCII::MO_GOT_TLSGD_PCREL_FLAG ||
+           TF == PPCII::MO_GOT_TLSLD_PCREL_FLAG ||
+           TF == PPCII::MO_GOT_TPREL_PCREL_FLAG ||
+           TF == PPCII::MO_GOT_PCREL_FLAG;
+  }
+
+  static bool hasTLSFlag(unsigned TF) {
+    return TF == PPCII::MO_TLSGD_FLAG || TF == PPCII::MO_TPREL_FLAG ||
+           TF == PPCII::MO_TLSLD_FLAG || TF == PPCII::MO_TLSGDM_FLAG ||
+           TF == PPCII::MO_GOT_TLSGD_PCREL_FLAG ||
+           TF == PPCII::MO_GOT_TLSLD_PCREL_FLAG ||
+           TF == PPCII::MO_GOT_TPREL_PCREL_FLAG || TF == PPCII::MO_TPREL_LO ||
+           TF == PPCII::MO_TPREL_HA || TF == PPCII::MO_DTPREL_LO ||
+           TF == PPCII::MO_TLSLD_LO || TF == PPCII::MO_TLS ||
+           TF == PPCII::MO_TPREL_PCREL_FLAG || TF == PPCII::MO_TLS_PCREL_FLAG;
   }
 
   ScheduleHazardRecognizer *
@@ -554,9 +581,6 @@ public:
 
   ArrayRef<std::pair<unsigned, const char *>>
   getSerializableDirectMachineOperandTargetFlags() const override;
-
-  ArrayRef<std::pair<unsigned, const char *>>
-  getSerializableBitmaskMachineOperandTargetFlags() const override;
 
   // Expand VSX Memory Pseudo instruction to either a VSX or a FP instruction.
   bool expandVSXMemPseudo(MachineInstr &MI) const;

@@ -240,7 +240,7 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
         return false;
 
       // Finally return true only if the GOT flag is present.
-      return (SymbolOp.getTargetFlags() & PPCII::MO_GOT_FLAG);
+      return PPCInstrInfo::hasGOTFlag(SymbolOp.getTargetFlags());
     }
 
     bool addLinkerOpt(MachineBasicBlock &MBB, const TargetRegisterInfo *TRI) {
