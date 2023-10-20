@@ -216,6 +216,8 @@ static CallingConv getCallingConventionForDecl(const ObjCMethodDecl *D,
 
   if (D->hasAttr<RegCallAttr>())
     return CC_X86RegCall;
+  if (D->hasAttr<RegCall4Attr>())
+    return CC_X86RegCall;
 
   if (D->hasAttr<ThisCallAttr>())
     return CC_X86ThisCall;

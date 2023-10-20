@@ -2316,7 +2316,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
     F->addFnAttrs(B);
     return;
   }
-
+  
   if (D->hasAttr<RegCall4Attr>())
     B.addAttribute("regcall4");
 

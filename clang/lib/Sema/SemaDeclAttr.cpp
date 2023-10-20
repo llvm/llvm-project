@@ -5177,6 +5177,10 @@ static void handleCallConvAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   case ParsedAttr::AT_RegCall:
     D->addAttr(::new (S.Context) RegCallAttr(S.Context, AL));
     return;
+  case ParsedAttr::AT_RegCall4:
+    D->addAttr(::new (S.Context) RegCallAttr(S.Context, AL));
+    D->addAttr(::new (S.Context) RegCall4Attr(S.Context, AL));
+    return;
   case ParsedAttr::AT_Pcs: {
     PcsAttr::PCSType PCS;
     switch (CC) {
@@ -5374,6 +5378,7 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
     CC = CC_AMDGPUKernelCall;
     break;
   case ParsedAttr::AT_RegCall:
+  case ParsedAttr::AT_RegCall4:
     CC = CC_X86RegCall;
     break;
   case ParsedAttr::AT_MSABI:
@@ -9347,6 +9352,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_ThisCall:
   case ParsedAttr::AT_Pascal:
   case ParsedAttr::AT_RegCall:
+  //case ParsedAttr::AT_RegCall4:
   case ParsedAttr::AT_SwiftCall:
   case ParsedAttr::AT_SwiftAsyncCall:
   case ParsedAttr::AT_VectorCall:
@@ -9638,7 +9644,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
 
   case ParsedAttr::AT_UsingIfExists:
     handleSimpleAttribute<UsingIfExistsAttr>(S, D, AL);
-
+    break;
   case ParsedAttr::AT_RegCall4:
     handleSimpleAttribute<RegCall4Attr>(S, D, AL);
     break;

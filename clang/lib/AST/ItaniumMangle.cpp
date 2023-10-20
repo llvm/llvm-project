@@ -524,7 +524,7 @@ private:
   void mangleUnscopedTemplateName(GlobalDecl GD, const DeclContext *DC,
                                   const AbiTagList *AdditionalAbiTags);
   void mangleSourceName(const IdentifierInfo *II);
-  void mangleRegCallName(const IdentifierInfo *II);
+  void mangleRegCallName(const IdentifierInfo *II, const FunctionDecl* FD);
   void mangleDeviceStubName(const IdentifierInfo *II);
   void mangleSourceNameWithAbiTags(
       const NamedDecl *ND, const AbiTagList *AdditionalAbiTags = nullptr);
@@ -1543,7 +1543,7 @@ void CXXNameMangler::mangleUnqualifiedName(
       if (IsDeviceStub)
         mangleDeviceStubName(II);
       else if (IsRegCall)
-        mangleRegCallName(II);
+        mangleRegCallName(II, FD);
       else
         mangleSourceName(II);
 
@@ -1739,11 +1739,11 @@ void CXXNameMangler::mangleUnqualifiedName(
   }
 }
 
-void CXXNameMangler::mangleRegCallName(const IdentifierInfo *II) {
+void CXXNameMangler::mangleRegCallName(const IdentifierInfo *II, const FunctionDecl* FD) {
   // <source-name> ::= <positive length number> __regcall3__ <identifier>
   // <number> ::= [n] <non-negative decimal integer>
   // <identifier> ::= <unqualified source code identifier>
-  if (getASTContext().getLangOpts().RegCall4)
+  if (getASTContext().getLangOpts().RegCall4 || FD->hasAttr<RegCall4Attr>())
     Out << II->getLength() + sizeof("__regcall4__") - 1 << "__regcall4__"
         << II->getName();
   else
