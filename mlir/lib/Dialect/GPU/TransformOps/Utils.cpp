@@ -42,7 +42,7 @@ using namespace mlir::transform::gpu;
 #define DEBUG_TYPE "gpu-transforms"
 
 #define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
-#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
+#define LDBG(X) LLVM_DEBUG(DBGS() << (X) << "\n")
 #define DBGS_ALIAS() (llvm::dbgs() << '[' << DEBUG_TYPE_ALIAS << "] ")
 
 /// Return a flattened thread id for the workgroup with given sizes.
