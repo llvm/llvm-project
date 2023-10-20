@@ -28,13 +28,6 @@
 # CHECK-BASIC-OUT: top-level-suite :: test-one
 # CHECK-BASIC-OUT: top-level-suite :: test-two
 
-# RUN: %{lit} %{inputs}/discovery \
-# RUN:   -v > %t.out 2> %t.err
-# RUN: FileCheck --check-prefix=CHECK-PERCENTAGES-OUT < %/t.out %s
-#
-# CHECK-PERCENTAGES-OUT:  Total Discovered Tests: {{[0-9]*}}
-# CHECK-PERCENTAGES-OUT:  Passed: {{[0-9]*}} {{\([0-9]*\.[0-9]*%\)}}
-
 # Check discovery when providing the special builtin 'config_map'
 # RUN: %{python} %{inputs}/config-map-discovery/driver.py \
 # RUN:           %{inputs}/config-map-discovery/main-config/lit.cfg \
