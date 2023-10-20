@@ -406,8 +406,11 @@ public:
 
   CompilerType GetCompilerType(swift::TypeBase *swift_type);
   CompilerType GetCompilerType(ConstString mangled_name);
+  /// Import compiler_type into this context and return the swift::Type.
   swift::Type GetSwiftType(CompilerType compiler_type);
+protected:
   swift::Type GetSwiftType(lldb::opaque_compiler_type_t opaque_type);
+public:
   swift::CanType
   GetCanonicalSwiftType(lldb::opaque_compiler_type_t opaque_type);
 
