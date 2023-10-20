@@ -46,6 +46,11 @@ bool WebAssemblyStackTagging::runOnFunction(Function & Fn) {
   if (!Fn.hasFnAttribute(Attribute::SanitizeMemTag))
     return false;
   SSI = &getAnalysis<StackSafetyGlobalInfoWrapperPass>().getResult();
+#if 0
+  for (auto &I : SInfo.AllocasToInstrument) {
+    LLVM_DEBUG(dbgs() << I << "\n");
+  }
+#endif
   return true;
 }
 
