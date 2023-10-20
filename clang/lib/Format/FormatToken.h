@@ -67,6 +67,7 @@ namespace format {
   TYPE(DesignatedInitializerLSquare)                                           \
   TYPE(DesignatedInitializerPeriod)                                            \
   TYPE(DictLiteral)                                                            \
+  TYPE(DoWhile)                                                                \
   TYPE(ElseLBrace)                                                             \
   TYPE(ElseRBrace)                                                             \
   TYPE(EnumLBrace)                                                             \
