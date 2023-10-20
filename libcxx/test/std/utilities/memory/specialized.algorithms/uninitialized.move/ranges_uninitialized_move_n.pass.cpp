@@ -24,6 +24,7 @@
 
 #include "../buffer.h"
 #include "../counted.h"
+#include "../overload_compare_iterator.h"
 #include "MoveOnly.h"
 #include "test_iterators.h"
 #include "test_macros.h"
@@ -188,6 +189,37 @@ int main(int, char**) {
       Buffer<MoveOnly, 4> out;
       std::ranges::uninitialized_move_n(std::begin(a), std::size(a), std::begin(out), std::end(out));
       assert(std::ranges::equal(out, std::array<MoveOnly, 4>{1, 2, 3, 4}));
+    }
+  }
+
+  // Test with an iterator that overloads operator== and operator!= as the input and output iterators
+  {
+    using T        = int;
+    using Iterator = overload_compare_iterator<T*>;
+    const int N    = 5;
+
+    // input
+    {
+      char pool[sizeof(T) * N] = {0};
+      T* p                     = reinterpret_cast<T*>(pool);
+      T* p_end                 = reinterpret_cast<T*>(pool) + N;
+      T array[N]               = {1, 2, 3, 4, 5};
+      std::ranges::uninitialized_move_n(Iterator(array), N, p, p_end);
+      for (int i = 0; i != N; ++i) {
+        assert(array[i] == p[i]);
+      }
+    }
+
+    // output
+    {
+      char pool[sizeof(T) * N] = {0};
+      T* p                     = reinterpret_cast<T*>(pool);
+      T* p_end                 = reinterpret_cast<T*>(pool) + N;
+      T array[N]               = {1, 2, 3, 4, 5};
+      std::ranges::uninitialized_move_n(array, N, Iterator(p), Iterator(p_end));
+      for (int i = 0; i != N; ++i) {
+        assert(array[i] == p[i]);
+      }
     }
   }
 
