@@ -87,10 +87,10 @@ constexpr int f = stack_array<1025>(); // expected-error {{constexpr variable 'f
                                        //  expected-note {{in call}}
 void ohno() {
   int bar[stack_array<1024>()];
-  int foo[stack_array<1025>()]; // expected-warning {{variable length arrays in C++ are a Clang extension}} \
+  int foo[stack_array<1025>()]; // expected-warning {{variable length arrays are a C99 feature}} \
                                 // expected-note {{in call to 'stack_array<1025>()'}}
 
-  constexpr int foo[stack_array<1025>()]; // expected-warning {{variable length arrays in C++ are a Clang extension}} \
+  constexpr int foo[stack_array<1025>()]; // expected-warning {{variable length arrays are a C99 feature}} \
                                           // expected-error {{constexpr variable cannot have non-literal type 'const int[stack_array<1025>()]'}} \
                                           // expected-note {{in call to 'stack_array<1025>()'}}
 }

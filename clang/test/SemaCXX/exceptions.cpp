@@ -117,12 +117,12 @@ public:
 namespace PR6831 {
   namespace NA { struct S; }
   namespace NB { struct S; }
-
+  
   void f() {
     using namespace NA;
     using namespace NB;
     try {
-    } catch (int S) {
+    } catch (int S) { 
     }
   }
 }
@@ -276,19 +276,15 @@ void g() {
 }
 
 namespace PR28047 {
-void test1(int i) { // expected-note {{declared here}}
+void test1(int i) {
   try {
-  } catch (int(*)[i]) { // expected-error{{cannot catch variably modified type}} \
-                           expected-warning {{variable length arrays in C++ are a Clang extension}} \
-                           expected-note {{function parameter 'i' with unknown value cannot be used in a constant expression}}
+  } catch (int(*)[i]) { // expected-error{{cannot catch variably modified type}}
   }
 }
 void test2() {
-  int i; // expected-note {{declared here}}
+  int i;
   try {
-  } catch (int(*)[i]) { // expected-error{{cannot catch variably modified type}} \
-                           expected-warning {{variable length arrays in C++ are a Clang extension}} \
-                           expected-note {{read of non-const variable 'i' is not allowed in a constant expression}}
+  } catch (int(*)[i]) { // expected-error{{cannot catch variably modified type}}
   }
 }
 }

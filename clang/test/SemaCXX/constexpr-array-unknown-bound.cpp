@@ -15,14 +15,12 @@ struct A {int m[];} a;
 constexpr auto p3 = a.m; // expected-error {{constant expression}} expected-note {{without known bound}}
 constexpr auto p4 = a.m + 1; // expected-error {{constant expression}} expected-note {{without known bound}}
 
-void g(int i) {  // expected-note 2{{declared here}}
-  int arr[i]; // expected-warning {{variable length arrays in C++ are a Clang extension}} \
-                 expected-note {{function parameter 'i' with unknown value cannot be used in a constant expression}}
+void g(int i) {
+  int arr[i];
   constexpr auto *p = arr + 2; // expected-error {{constant expression}} expected-note {{without known bound}}
 
   // FIXME: Give a better diagnostic here. The issue is that computing
   // sizeof(*arr2) within the array indexing fails due to the VLA.
-  int arr2[2][i]; // expected-warning 2{{variable length arrays in C++ are a Clang extension}} \
-                     expected-note {{function parameter 'i' with unknown value cannot be used in a constant expression}}
+  int arr2[2][i];
   constexpr int m = ((void)arr2[2], 0); // expected-error {{constant expression}}
 }
