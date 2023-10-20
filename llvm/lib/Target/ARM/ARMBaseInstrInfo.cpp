@@ -6741,8 +6741,7 @@ void ARMBaseInstrInfo::buildClearRegister(Register DstReg,
                                           DebugLoc &DL,
                                           bool AllowSideEffects) const {
   unsigned Opc = Subtarget.isThumb2() ? ARM::t2MOVi32imm : ARM::MOVi32imm;
-  BuildMI(MBB, Iter, DL, get(Opc), DstReg)
-      .addImm(0);
+  BuildMI(MBB, Iter, DL, get(Opc), DstReg).addImm(0);
 }
 
 bool ARMBaseInstrInfo::shouldOutlineFromFunctionByDefault(

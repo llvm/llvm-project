@@ -364,8 +364,7 @@ public:
                      outliner::Candidate &C) const override;
 
   void buildClearRegister(Register Reg, MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator Iter,
-                          DebugLoc &DL,
+                          MachineBasicBlock::iterator Iter, DebugLoc &DL,
                           bool AllowSideEffects = true) const override;
 
   /// Enable outlining by default at -Oz.
