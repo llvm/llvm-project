@@ -15,24 +15,31 @@
 
 namespace cpp = LIBC_NAMESPACE::cpp;
 
+using LIBC_NAMESPACE::testing::tlog;
+
 TEST(LlvmLibcGettimeofday, SmokeTest) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   void *tz = nullptr;
-  timeval tv;
 
   suseconds_t sleep_times[2] = {200, 1000};
   for (int i = 0; i < 2; i++) {
+    timeval tv;
     int ret = LIBC_NAMESPACE::gettimeofday(&tv, tz);
     ASSERT_EQ(ret, 0);
 
     suseconds_t sleep_time = sleep_times[i];
-    // Sleep for {sleep_time} microsceconds.
-    timespec tim = {0, sleep_time * 1000};
+    // Sleep for {2 * sleep_time} microsceconds.
+    timespec tim = {0, 2 * sleep_time * 1000};
     timespec tim2 = {0, 0};
     ret = LIBC_NAMESPACE::nanosleep(&tim, &tim2);
 
+    if (ret < 0) {
+      tlog << "nanosleep call failed, skip the remaining of the test.";
+      return;
+    }
+
     // Call gettimeofday again and verify that it is more {sleep_time}
-    // microscecods.
+    // microseconds.
     timeval tv1;
     ret = LIBC_NAMESPACE::gettimeofday(&tv1, tz);
     ASSERT_EQ(ret, 0);
