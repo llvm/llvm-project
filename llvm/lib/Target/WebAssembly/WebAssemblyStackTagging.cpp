@@ -28,7 +28,7 @@ struct WebAssemblyStackTagging : public FunctionPass {
 
   bool runOnFunction(Function &) override;
 private:
-#if 0
+#if 1
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addRequired<StackSafetyGlobalInfoWrapperPass>();
@@ -45,11 +45,8 @@ private:
 bool WebAssemblyStackTagging::runOnFunction(Function & Fn) {
   if (!Fn.hasFnAttribute(Attribute::SanitizeMemTag))
     return false;
-#if 0
   SSI = &getAnalysis<StackSafetyGlobalInfoWrapperPass>().getResult();
   return true;
-#endif
-    return false;
 }
 
 char WebAssemblyStackTagging::ID = 0;
