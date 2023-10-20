@@ -18,13 +18,13 @@
 #define LLVM_ANALYSIS_DOMINANCEFRONTIER_H
 
 #include "llvm/ADT/GraphTraits.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/GenericDomTree.h"
 #include <cassert>
 #include <map>
-#include <set>
 #include <utility>
 
 namespace llvm {
@@ -39,7 +39,7 @@ class raw_ostream;
 template <class BlockT, bool IsPostDom>
 class DominanceFrontierBase {
 public:
-  using DomSetType = std::set<BlockT *>;                // Dom set for a bb
+  using DomSetType = SetVector<BlockT *>;               // Dom set for a bb
   using DomSetMapType = std::map<BlockT *, DomSetType>; // Dom set map
 
 protected:
