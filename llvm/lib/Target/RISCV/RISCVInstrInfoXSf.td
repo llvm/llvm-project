@@ -545,9 +545,8 @@ defset list<VTypeInfoToWide> VQMACCInfoPairs = {
   def : VTypeInfoToWide<VI8M8, VI32M8>;
 }
 
-multiclass VPatVQMACC<string intrinsic, string instruction, string kind> {
-  defm : VPatVMACC<intrinsic, instruction, kind, VQMACCInfoPairs, vint8m1_t>;
-}
+multiclass VPatVQMACC<string intrinsic, string instruction, string kind>
+    : VPatVMACC<intrinsic, instruction, kind, VQMACCInfoPairs, vint8m1_t>;
 
 let Predicates = [HasVendorXSfvcp] in {
   foreach vti = AllVectors in {
