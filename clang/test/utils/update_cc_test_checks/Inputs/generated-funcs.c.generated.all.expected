@@ -247,12 +247,12 @@ void foo(void) {
 //.
 // OMP: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 // OMP: [[META1:![0-9]+]] = !{i32 7, !"openmp", i32 51}
-// OMP: [[META2:![0-9]+]] = !{!"clang version {{.*}}"}
+// OMP: [[META2:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 // OMP: [[META3:![0-9]+]] = !{[[META4:![0-9]+]]}
 // OMP: [[META4]] = !{i64 2, i64 -1, i64 -1, i1 true}
 //.
 // NOOMP: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// NOOMP: [[META1:![0-9]+]] = !{!"clang version {{.*}}"}
+// NOOMP: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 // NOOMP: [[LOOP2]] = distinct !{[[LOOP2]], [[META3:![0-9]+]]}
 // NOOMP: [[META3]] = !{!"llvm.loop.mustprogress"}
 // NOOMP: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]]}
