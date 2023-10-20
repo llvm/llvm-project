@@ -63,7 +63,8 @@ using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
 
 DWARFASTParserClang::DWARFASTParserClang(TypeSystemClang &ast)
-    : m_ast(ast), m_die_to_decl_ctx(), m_decl_ctx_to_die() {}
+    : DWARFASTParser(Kind::DWARFASTParserClang), m_ast(ast),
+      m_die_to_decl_ctx(), m_decl_ctx_to_die() {}
 
 DWARFASTParserClang::~DWARFASTParserClang() = default;
 
