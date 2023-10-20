@@ -74,9 +74,9 @@ TEST_F(SCFLoopLikeTest, queryUnidimensionalLooplikes) {
       std::nullopt);
   checkUnidimensional(forallOp.get());
 
-  OwningOpRef<scf::ParallelOp> parallelOp =
-      b.create<scf::ParallelOp>(loc, ValueRange(lb.get()), ValueRange(ub.get()),
-                                ValueRange(step.get()), ValueRange());
+  OwningOpRef<scf::ParallelOp> parallelOp = b.create<scf::ParallelOp>(
+      loc, ValueRange(lb->getResult()), ValueRange(ub->getResult()),
+      ValueRange(step->getResult()), ValueRange());
   checkUnidimensional(parallelOp.get());
 }
 
