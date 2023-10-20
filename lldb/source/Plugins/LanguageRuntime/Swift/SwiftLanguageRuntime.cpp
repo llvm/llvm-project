@@ -12,6 +12,7 @@
 
 #include "SwiftLanguageRuntime.h"
 #include "Plugins/LanguageRuntime/Swift/LLDBMemoryReader.h"
+#include "ReflectionContextInterface.h"
 #include "SwiftLanguageRuntimeImpl.h"
 #include "SwiftMetadataCache.h"
 
@@ -233,6 +234,11 @@ public:
     assert(false && "called into swift language runtime stub");                \
   } while (0)
 
+  ThreadSafeReflectionContext GetReflectionContext() {
+    STUB_LOG();
+    return ThreadSafeReflectionContext::MakeInvalid();
+  }
+
   bool GetDynamicTypeAndAddress(ValueObject &in_value,
                                 lldb::DynamicValueType use_dynamic,
                                 TypeAndOrName &class_type_or_name,
@@ -445,7 +451,7 @@ static bool HasReflectionInfo(ObjectFile *obj_file) {
   return hasReflectionSection;
 }
 
-SwiftLanguageRuntimeImpl::ThreadSafeReflectionContext 
+ThreadSafeReflectionContext 
 SwiftLanguageRuntimeImpl::GetReflectionContext() {
   m_reflection_ctx_mutex.lock();
   SetupReflection();
@@ -2332,6 +2338,11 @@ void SwiftLanguageRuntime::Terminate() {
 #define FORWARD(METHOD, ...)                                                   \
   assert(m_impl || m_stub);                                                    \
   return m_impl ? m_impl->METHOD(__VA_ARGS__) : m_stub->METHOD(__VA_ARGS__);
+
+ThreadSafeReflectionContext
+SwiftLanguageRuntime::GetReflectionContext() {
+  FORWARD(GetReflectionContext);
+}
 
 bool SwiftLanguageRuntime::GetDynamicTypeAndAddress(
     ValueObject &in_value, lldb::DynamicValueType use_dynamic,
