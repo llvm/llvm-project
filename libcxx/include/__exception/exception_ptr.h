@@ -31,7 +31,7 @@ class _LIBCPP_EXPORTED_FROM_ABI exception_ptr {
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
 #    if !defined(_LIBCPP_HAS_NO_RTTI)
   template <class _Ep>
-  static inline void __dest_thunk(void* __x) {
+  _LIBCPP_HIDE_FROM_ABI static inline void __dest_thunk(void* __x) {
     static_cast<_Ep*>(__x)->~_Ep();
   }
 
