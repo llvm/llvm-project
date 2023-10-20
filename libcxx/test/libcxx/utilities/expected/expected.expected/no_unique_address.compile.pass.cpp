@@ -26,6 +26,13 @@ struct B : public A {
   virtual ~B() = default;
 };
 
+struct BoolWithPadding {
+  explicit operator bool() { return b; }
+
+private:
+  alignas(1024) bool b = false;
+};
+
 static_assert(sizeof(std::expected<Empty, Empty>) == sizeof(bool));
 static_assert(sizeof(std::expected<Empty, A>) == 2 * sizeof(int) + alignof(std::expected<Empty, A>));
 static_assert(sizeof(std::expected<Empty, B>) == sizeof(B) + alignof(std::expected<Empty, B>));
@@ -33,3 +40,13 @@ static_assert(sizeof(std::expected<A, Empty>) == 2 * sizeof(int) + alignof(std::
 static_assert(sizeof(std::expected<A, A>) == 2 * sizeof(int) + alignof(std::expected<A, A>));
 static_assert(sizeof(std::expected<B, Empty>) == sizeof(B) + alignof(std::expected<B, Empty>));
 static_assert(sizeof(std::expected<B, B>) == sizeof(B) + alignof(std::expected<B, B>));
+
+// Check that `expected`'s datasize is large enough for the parameter type(s).
+static_assert(sizeof(std::expected<BoolWithPadding, Empty>) ==
+              std::__libcpp_datasizeof<std::expected<BoolWithPadding, Empty>>::value);
+static_assert(sizeof(std::expected<Empty, BoolWithPadding>) ==
+              std::__libcpp_datasizeof<std::expected<Empty, BoolWithPadding>>::value);
+
+// In this case, there should be tail padding in the `expected` because `A`
+// itself does _not_ have tail padding.
+static_assert(sizeof(std::expected<A, A>) > std::__libcpp_datasizeof<std::expected<A, A>>::value);
