@@ -108,7 +108,7 @@ public:
     setCurrentType(derived);
   }
   /// Does the current type has a component with \name (does not look-up the
-  /// components of the parent if any). If there is a match, the iterator
+  /// components of the parent if any)? If there is a match, the iterator
   /// is advanced to the search result.
   bool lookup(const Fortran::parser::CharBlock &name) {
     componentIt = std::find(componentIt, componentItEnd, name);
