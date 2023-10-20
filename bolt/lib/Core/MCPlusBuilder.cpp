@@ -269,15 +269,17 @@ bool MCPlusBuilder::clearOffset(MCInst &Inst) {
 }
 
 std::optional<MCSymbol *> MCPlusBuilder::getLabel(const MCInst &Inst) const {
-  if (auto Label = tryGetAnnotationAs<MCSymbol *>(Inst, MCAnnotation::kLabel))
-    return *Label;
-  return std::nullopt;
+  std::optional<int64_t> Label =
+      getAnnotationOpValue(Inst, MCAnnotation::kLabel);
+  if (!Label)
+    return std::nullopt;
+
+  return reinterpret_cast<MCSymbol *>(*Label);
 }
 
-bool MCPlusBuilder::setLabel(MCInst &Inst, MCSymbol *Label,
-                             AllocatorIdTy AllocatorId) {
-  getOrCreateAnnotationAs<MCSymbol *>(Inst, MCAnnotation::kLabel, AllocatorId) =
-      Label;
+bool MCPlusBuilder::setLabel(MCInst &Inst, MCSymbol *Label) {
+  setAnnotationOpValue(Inst, MCAnnotation::kLabel,
+                       reinterpret_cast<int64_t>(Label));
   return true;
 }
 
