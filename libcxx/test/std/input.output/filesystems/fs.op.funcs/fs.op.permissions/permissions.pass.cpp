@@ -10,6 +10,11 @@
 // UNSUPPORTED: no-filesystem
 // UNSUPPORTED: availability-filesystem-missing
 
+// Android's fchmodat seems broken on various OS versions -- see D140183. This
+// test probably passes on new-enough phones (not the emulator).
+// XFAIL: LIBCXX-ANDROID-FIXME && target={{i686|x86_64}}-{{.+}}-android{{.*}}
+// XFAIL: LIBCXX-ANDROID-FIXME && android-device-api={{21|22}}
+
 // <filesystem>
 
 // void permissions(const path& p, perms prms,

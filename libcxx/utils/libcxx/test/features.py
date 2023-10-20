@@ -43,6 +43,22 @@ def _getSuitableClangTidy(cfg):
         return None
 
 
+def _getAndroidDeviceApi(cfg):
+    return int(
+        programOutput(
+            cfg,
+            r"""
+                #include <android/api-level.h>
+                #include <stdio.h>
+                int main() {
+                    printf("%d\n", android_get_device_api_level());
+                    return 0;
+                }
+            """,
+        )
+    )
+
+
 DEFAULT_FEATURES = [
     Feature(
         name="thread-safety",
@@ -387,6 +403,15 @@ DEFAULT_FEATURES += [
         actions=[AddCompileFlag("-DTEST_WINDOWS_DLL")],
     ),
     Feature(name="linux", when=lambda cfg: "__linux__" in compilerMacros(cfg)),
+    Feature(name="android", when=lambda cfg: "__ANDROID__" in compilerMacros(cfg)),
+    Feature(
+        name=lambda cfg: "android-device-api={}".format(_getAndroidDeviceApi(cfg)),
+        when=lambda cfg: "__ANDROID__" in compilerMacros(cfg),
+    ),
+    Feature(
+        name="LIBCXX-ANDROID-FIXME",
+        when=lambda cfg: "__ANDROID__" in compilerMacros(cfg),
+    ),
     Feature(name="netbsd", when=lambda cfg: "__NetBSD__" in compilerMacros(cfg)),
     Feature(name="freebsd", when=lambda cfg: "__FreeBSD__" in compilerMacros(cfg)),
     Feature(
