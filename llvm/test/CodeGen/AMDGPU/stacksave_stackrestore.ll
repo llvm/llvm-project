@@ -203,11 +203,12 @@ define void @func_stacksave_nonentry_block(i1 %cond) {
 ; WAVE32-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; WAVE32-O0-NEXT:    s_mov_b32 exec_lo, s4
 ; WAVE32-O0-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
-; WAVE32-O0-NEXT:    v_and_b32_e64 v0, 1, v0
-; WAVE32-O0-NEXT:    v_cmp_eq_u32_e64 s5, v0, 1
+; WAVE32-O0-NEXT:    v_mov_b32_e32 v1, v0
 ; WAVE32-O0-NEXT:    s_or_saveexec_b32 s7, -1
 ; WAVE32-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; WAVE32-O0-NEXT:    s_mov_b32 exec_lo, s7
+; WAVE32-O0-NEXT:    v_and_b32_e64 v1, 1, v1
+; WAVE32-O0-NEXT:    v_cmp_eq_u32_e64 s5, v1, 1
 ; WAVE32-O0-NEXT:    s_mov_b32 s4, exec_lo
 ; WAVE32-O0-NEXT:    s_waitcnt vmcnt(0)
 ; WAVE32-O0-NEXT:    v_writelane_b32 v0, s4, 0
@@ -244,11 +245,12 @@ define void @func_stacksave_nonentry_block(i1 %cond) {
 ; WAVE64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; WAVE64-O0-NEXT:    s_mov_b64 exec, s[4:5]
 ; WAVE64-O0-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
-; WAVE64-O0-NEXT:    v_and_b32_e64 v0, 1, v0
-; WAVE64-O0-NEXT:    v_cmp_eq_u32_e64 s[6:7], v0, 1
+; WAVE64-O0-NEXT:    v_mov_b32_e32 v1, v0
 ; WAVE64-O0-NEXT:    s_or_saveexec_b64 s[10:11], -1
 ; WAVE64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; WAVE64-O0-NEXT:    s_mov_b64 exec, s[10:11]
+; WAVE64-O0-NEXT:    v_and_b32_e64 v1, 1, v1
+; WAVE64-O0-NEXT:    v_cmp_eq_u32_e64 s[6:7], v1, 1
 ; WAVE64-O0-NEXT:    s_mov_b64 s[4:5], exec
 ; WAVE64-O0-NEXT:    s_waitcnt vmcnt(0)
 ; WAVE64-O0-NEXT:    v_writelane_b32 v0, s4, 0

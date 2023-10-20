@@ -21,12 +21,12 @@ define void @test() {
 ; CHECK-NEXT:    ; in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:  .LBB0_3: ; %bb.3
 ; CHECK-NEXT:    ; in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    ; implicit-def: $sgpr4
-; CHECK-NEXT:    v_mov_b32_e32 v0, s4
-; CHECK-NEXT:    v_readfirstlane_b32 s6, v0
 ; CHECK-NEXT:    s_or_saveexec_b64 s[10:11], -1
 ; CHECK-NEXT:    v_accvgpr_read_b32 v0, a0 ; Reload Reuse
 ; CHECK-NEXT:    s_mov_b64 exec, s[10:11]
+; CHECK-NEXT:    ; implicit-def: $sgpr4
+; CHECK-NEXT:    v_mov_b32_e32 v1, s4
+; CHECK-NEXT:    v_readfirstlane_b32 s6, v1
 ; CHECK-NEXT:    s_mov_b64 s[4:5], -1
 ; CHECK-NEXT:    s_mov_b32 s7, 0
 ; CHECK-NEXT:    s_cmp_eq_u32 s6, s7
