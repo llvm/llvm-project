@@ -24,8 +24,6 @@
 
 using namespace mlir::sparse_tensor;
 
-using SparseTensorWriter = std::ostream;
-
 extern "C" {
 
 //===----------------------------------------------------------------------===//
@@ -47,6 +45,7 @@ extern "C" {
 /// kEmpty          -               STS, empty
 /// kEmptyForward   -               STS, empty, with forwarding COO
 /// kFromCOO        COO             STS, copied from the COO source
+/// kFromReader     reader          STS, input from reader
 /// kToCOO          STS             COO, copied from the STS source
 /// kPack           buffers         STS, from level buffers
 /// kSortCOOInPlace STS             STS, sorted in place
