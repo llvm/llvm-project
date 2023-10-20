@@ -618,7 +618,18 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
       case Type::ScalableVectorTyID:
         report_fatal_error(
             "Scalable vector support not yet implemented in ExecutionEngine");
-      case Type::FixedVectorTyID:
+      case Type::ArrayTyID: {
+        auto *ArrTy = cast<ArrayType>(C->getType());
+        Type *ElemTy = ArrTy->getElementType();
+        unsigned int elemNum = ArrTy->getNumElements();
+        Result.AggregateVal.resize(elemNum);
+        if (ElemTy->isIntegerTy())
+          for (unsigned int i = 0; i < elemNum; ++i)
+            Result.AggregateVal[i].IntVal =
+                APInt(ElemTy->getPrimitiveSizeInBits(), 0);
+        break;
+      }
+      case Type::FixedVectorTyID: {
         // if the whole vector is 'undef' just reserve memory for the value.
         auto *VTy = cast<FixedVectorType>(C->getType());
         Type *ElemTy = VTy->getElementType();
@@ -629,6 +640,7 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
             Result.AggregateVal[i].IntVal =
                 APInt(ElemTy->getPrimitiveSizeInBits(), 0);
         break;
+      }
     }
     return Result;
   }
