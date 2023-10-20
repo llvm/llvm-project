@@ -9,9 +9,9 @@ cd build
 # Disabling default PIE due to:
 # https://github.com/llvm/llvm-project/issues/57085
 cmake -DCMAKE_INSTALL_PREFIX=${INST_DIR} \
-    -DLLVM_INSTALL_UTILS=On \
+    -DLLVM_INSTALL_UTILS=ON \
     -DCMAKE_BUILD_TYPE=release \
-    -DLLVM_ENABLE_ASSERTIONS=On \
+    -DLLVM_ENABLE_ASSERTIONS=ON \
     -DLLVM_ENABLE_PROJECTS="lld;clang" \
     -DCLANG_DEFAULT_PIE_ON_LINUX=OFF \
     -DBUILD_SHARED_LIBS=ON \
@@ -51,3 +51,24 @@ cmake --build build --target check-all
 #	../test-suite
 #make -j `nproc`
 #llvm-lit -v -j 1 -o results.json .
+
+# Check ykllvm builds with assertions disabled.
+#
+# In the past things like `Value::dump()` have slipped in to the repo and these
+# are not available if LLVM is built without assertions (you'd get a linker
+# error).
+rm -rf build
+mkdir build
+cd build
+cmake -DCMAKE_INSTALL_PREFIX=${INST_DIR} \
+    -DLLVM_INSTALL_UTILS=ON \
+    -DCMAKE_BUILD_TYPE=release \
+    -DLLVM_ENABLE_ASSERTIONS=OFF \
+    -DLLVM_ENABLE_PROJECTS="lld;clang" \
+    -DCLANG_DEFAULT_PIE_ON_LINUX=OFF \
+    -DBUILD_SHARED_LIBS=ON \
+    -DCMAKE_C_COMPILER=/usr/bin/clang \
+    -DCMAKE_CXX_COMPILER=/usr/bin/clang++ \
+    -GNinja \
+    ../llvm
+cmake --build .
