@@ -120,8 +120,8 @@ MLIR_CRUNNERUTILS_EXPORT void _mlir_ciface_getSparseTensorReaderDimSizes(
     StridedMemRefType<index_type, 1> *out, void *p);
 
 /// Reads the sparse tensor, stores the coordinates and values to the given
-/// memrefs of a (non-permuted) COO in AoS format. Returns a boolean to
-/// indicate whether the COO elements are sorted.
+/// memrefs of a COO in AoS format. Returns a boolean to indicate whether
+/// the COO elements are sorted.
 #define DECL_READTOBUFFERS(VNAME, V, CNAME, C)                                 \
   MLIR_CRUNNERUTILS_EXPORT bool                                                \
       _mlir_ciface_getSparseTensorReaderReadToBuffers##CNAME##VNAME(           \
