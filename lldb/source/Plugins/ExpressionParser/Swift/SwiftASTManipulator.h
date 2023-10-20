@@ -35,6 +35,7 @@ class VarDecl;
 } // namespace swift
 
 namespace lldb_private {
+class SwiftASTContextForExpressions;
 
 class SwiftASTManipulatorBase {
 public:
@@ -194,8 +195,10 @@ protected:
 
 class SwiftASTManipulator : public SwiftASTManipulatorBase {
 public:
-  SwiftASTManipulator(swift::SourceFile &source_file, bool repl,
+  SwiftASTManipulator(SwiftASTContextForExpressions &swift_ast_ctx,
+                      swift::SourceFile &source_file, bool repl,
                       lldb::BindGenericTypes bind_generic_types);
+  SwiftASTContextForExpressions &GetScratchContext() { return m_swift_ast_ctx; }
 
   void FindSpecialNames(llvm::SmallVectorImpl<swift::Identifier> &names,
                         llvm::StringRef prefix);
@@ -294,6 +297,7 @@ private:
 
   std::vector<ResultLocationInfo> m_result_info;
   llvm::StringMap<swift::TypeBase *> m_type_aliases;
+  SwiftASTContextForExpressions &m_swift_ast_ctx;
 };
 }
 
