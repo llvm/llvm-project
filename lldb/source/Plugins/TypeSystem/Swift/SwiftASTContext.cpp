@@ -211,19 +211,10 @@ CompilerType SwiftASTContext::GetCompilerType(swift::TypeBase *swift_type) {
 }
 
 swift::Type SwiftASTContext::GetSwiftType(CompilerType compiler_type) {
-  if (compiler_type.GetTypeSystem().isa_and_nonnull<SwiftASTContext>())
+  if (compiler_type.GetTypeSystem().GetSharedPointer().get() == this)
     return reinterpret_cast<swift::TypeBase *>(
         compiler_type.GetOpaqueQualType());
-
-  // FIXME: Suboptimal performance, because the ConstString is looked up again.
-  if (auto ts = compiler_type.GetTypeSystem()
-      .dyn_cast_or_null<TypeSystemSwiftTypeRef>()) {
-    ConstString mangled_name(
-        reinterpret_cast<const char *>(compiler_type.GetOpaqueQualType()));
-    if (auto *swift_ast_context = ts->GetSwiftASTContext())
-      return swift_ast_context->ReconstructType(mangled_name);
-  }
-  return {};
+  return ReconstructType(compiler_type.GetMangledTypeName());
 }
 
 swift::Type SwiftASTContext::GetSwiftType(opaque_compiler_type_t opaque_type) {
