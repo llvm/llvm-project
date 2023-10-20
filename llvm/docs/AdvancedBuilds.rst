@@ -8,6 +8,8 @@ Advanced Build Configurations
 Introduction
 ============
 
+Testing
+
 `CMake <http://www.cmake.org/>`_ is a cross-platform build-generator tool. CMake
 does not build the project, it generates the files needed by your build tool
 (GNU make, Visual Studio, etc.) for building LLVM.
