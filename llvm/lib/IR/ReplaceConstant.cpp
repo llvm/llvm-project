@@ -22,24 +22,29 @@ static bool isExpandableUser(User *U) {
   return isa<ConstantExpr>(U) || isa<ConstantAggregate>(U);
 }
 
-static Instruction *expandUser(Instruction *InsertPt, Constant *C) {
+static SmallVector<Instruction *, 4> expandUser(Instruction *InsertPt,
+                                                Constant *C) {
+  SmallVector<Instruction *, 4> NewInsts;
   if (auto *CE = dyn_cast<ConstantExpr>(C)) {
-    return CE->getAsInstruction(InsertPt);
+    NewInsts.push_back(CE->getAsInstruction(InsertPt));
   } else if (isa<ConstantStruct>(C) || isa<ConstantArray>(C)) {
     Value *V = PoisonValue::get(C->getType());
-    for (auto [Idx, Op] : enumerate(C->operands()))
+    for (auto [Idx, Op] : enumerate(C->operands())) {
       V = InsertValueInst::Create(V, Op, Idx, "", InsertPt);
-    return cast<Instruction>(V);
+      NewInsts.push_back(cast<Instruction>(V));
+    }
   } else if (isa<ConstantVector>(C)) {
     Type *IdxTy = Type::getInt32Ty(C->getContext());
     Value *V = PoisonValue::get(C->getType());
-    for (auto [Idx, Op] : enumerate(C->operands()))
+    for (auto [Idx, Op] : enumerate(C->operands())) {
       V = InsertElementInst::Create(V, Op, ConstantInt::get(IdxTy, Idx), "",
                                     InsertPt);
-    return cast<Instruction>(V);
+      NewInsts.push_back(cast<Instruction>(V));
+    }
   } else {
     llvm_unreachable("Not an expandable user");
   }
+  return NewInsts;
 }
 
 bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts) {
@@ -85,9 +90,11 @@ bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts) {
       if (auto *C = dyn_cast<Constant>(U.get())) {
         if (ExpandableUsers.contains(C)) {
           Changed = true;
-          Instruction *NI = expandUser(BI, C);
-          InstructionWorklist.insert(NI);
-          U.set(NI);
+          auto NewInsts = expandUser(BI, C);
+          for (auto *NI : NewInsts)
+            NI->setDebugLoc(BI->getDebugLoc());
+          InstructionWorklist.insert(NewInsts.begin(), NewInsts.end());
+          U.set(NewInsts.back());
         }
       }
     }
