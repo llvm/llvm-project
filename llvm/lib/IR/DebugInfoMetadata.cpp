@@ -1902,6 +1902,8 @@ DIExpression *DIExpression::appendOpsToArg(const DIExpression *Expr,
   }
 
   SmallVector<uint64_t, 8> NewOps;
+  SmallVector<uint64_t, 8> OpsToBeInserted;
+  DIExpressionOptimizer Optimizer;
   for (auto Op : Expr->expr_ops()) {
     // A DW_OP_stack_value comes at the end, but before a DW_OP_LLVM_fragment.
     if (StackValue) {
@@ -1912,10 +1914,32 @@ DIExpression *DIExpression::appendOpsToArg(const DIExpression *Expr,
         StackValue = false;
       }
     }
-    Op.appendToVector(NewOps);
-    if (Op.getOp() == dwarf::DW_OP_LLVM_arg && Op.getArg(0) == ArgNo)
-      NewOps.insert(NewOps.end(), Ops.begin(), Ops.end());
+    Op.appendToVector(OpsToBeInserted);
+    if (Op.getOp() == dwarf::DW_OP_LLVM_arg && Op.getArg(0) == ArgNo) {
+      NewOps.insert(NewOps.end(), OpsToBeInserted.begin(),
+                    OpsToBeInserted.end());
+      Optimizer.optimize(NewOps, Ops);
+      OpsToBeInserted.clear();
+      continue;
+    }
+    if (Optimizer.operatorCanBeOptimized(Op.getOp())) {
+      Optimizer.optimize(NewOps, OpsToBeInserted);
+      OpsToBeInserted.clear();
+      continue;
+    }
+    // DIExpressionOptimizer can only optimize for operations that follow the
+    // pattern {DW_OP_const(u|s), <const>, DW_OP_(plus|minus|div|mul|shr|shl)}
+    // or {DW_OP_plus_uconst, <const>}. If OpsToBeInserted >= 3, and was not
+    // optimizable, insert into NewOps
+    if (OpsToBeInserted.size() >= 3) {
+      NewOps.insert(NewOps.end(), OpsToBeInserted.begin(),
+                    OpsToBeInserted.end());
+      OpsToBeInserted.clear();
+    }
   }
+  // Insert any remaining Ops into NewOps
+  if (!OpsToBeInserted.empty())
+    NewOps.insert(NewOps.end(), OpsToBeInserted.begin(), OpsToBeInserted.end());
   if (StackValue)
     NewOps.push_back(dwarf::DW_OP_stack_value);
 
