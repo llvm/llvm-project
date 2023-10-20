@@ -1835,7 +1835,7 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
       // Mark the "old value of vgpr" input undef only if this is the first sgpr
       // spill to this specific vgpr in the first basic block.
       auto MIB = BuildMI(*SB.MBB, MI, SB.DL,
-                         SB.TII.get(AMDGPU::V_WRITELANE_B32), Spill.VGPR)
+                         SB.TII.get(AMDGPU::SI_SPILL_S32_TO_VGPR), Spill.VGPR)
                      .addReg(SubReg, getKillRegState(UseKill))
                      .addImm(Spill.Lane)
                      .addReg(Spill.VGPR);
@@ -1897,8 +1897,8 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
                 : Register(getSubReg(SB.SuperReg, SB.SplitParts[i]));
 
         MachineInstrBuilder WriteLane =
-            BuildMI(*SB.MBB, MI, SB.DL, SB.TII.get(AMDGPU::V_WRITELANE_B32),
-                    SB.TmpVGPR)
+            BuildMI(*SB.MBB, MI, SB.DL,
+                    SB.TII.get(AMDGPU::SI_SPILL_S32_TO_VGPR), SB.TmpVGPR)
                 .addReg(SubReg, SubKillState)
                 .addImm(i % PVD.PerVGPR)
                 .addReg(SB.TmpVGPR, TmpVGPRFlags);
@@ -1971,8 +1971,8 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI, int Index,
               : Register(getSubReg(SB.SuperReg, SB.SplitParts[i]));
 
       SpilledReg Spill = VGPRSpills[i];
-      auto MIB = BuildMI(*SB.MBB, MI, SB.DL, SB.TII.get(AMDGPU::V_READLANE_B32),
-                         SubReg)
+      auto MIB = BuildMI(*SB.MBB, MI, SB.DL,
+                         SB.TII.get(AMDGPU::SI_RESTORE_S32_FROM_VGPR), SubReg)
                      .addReg(Spill.VGPR)
                      .addImm(Spill.Lane);
       if (SB.NumSubRegs > 1 && i == 0)
@@ -2005,7 +2005,7 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI, int Index,
 
         bool LastSubReg = (i + 1 == e);
         auto MIB = BuildMI(*SB.MBB, MI, SB.DL,
-                           SB.TII.get(AMDGPU::V_READLANE_B32), SubReg)
+                           SB.TII.get(AMDGPU::SI_RESTORE_S32_FROM_VGPR), SubReg)
                        .addReg(SB.TmpVGPR, getKillRegState(LastSubReg))
                        .addImm(i);
         if (SB.NumSubRegs > 1 && i == 0)

@@ -48,12 +48,12 @@ body:             |
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; CHECK-NEXT:   renamable $vgpr0 = IMPLICIT_DEF
   ; CHECK-NEXT:   renamable $sgpr10 = IMPLICIT_DEF
-  ; CHECK-NEXT:   renamable $vgpr0 = V_WRITELANE_B32 killed $sgpr10, 0, killed $vgpr0
+  ; CHECK-NEXT:   renamable $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr10, 0, killed $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $sgpr10 = V_READLANE_B32 $vgpr0, 0
+  ; CHECK-NEXT:   $sgpr10 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0
   ; CHECK-NEXT:   KILL killed renamable $vgpr0
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
