@@ -5919,7 +5919,8 @@ static void handlePreferredTypeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   TypeSourceInfo *ParmTSI = nullptr;
   QualType QT = S.GetTypeFromParser(AL.getTypeArg(), &ParmTSI);
   assert(ParmTSI && "no type source info for attribute argument");
-  S.RequireCompleteType(ParmTSI->getTypeLoc().getBeginLoc(), QT, diag::err_incomplete_type);
+  S.RequireCompleteType(ParmTSI->getTypeLoc().getBeginLoc(), QT,
+                        diag::err_incomplete_type);
 
   if (QT->isEnumeralType()) {
     auto IsCorrespondingType = [&](QualType LHS, QualType RHS) {
