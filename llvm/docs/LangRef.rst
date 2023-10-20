@@ -26974,9 +26974,10 @@ where ``iPtrIdx`` is the index type size of the pointer::
     %diff = sub iPtrIdx %masked, %intptr
     %result = getelementptr i8, ptr %ptr, iPtrIdx %diff
 
-Considering this as an operation on the integer representation of the pointer,
-if the pointer index type size is smaller than the pointer type size, this
-implies that the mask is extended with 1 bits to the pointer type size.
+If the pointer index type size is smaller than the pointer type size, this
+implies that pointer bits beyond the index size are not affected by this
+intrinsic. For integral pointers, it behaves as if the mask were extended with
+1 bits to the pointer type size.
 
 Both the returned pointer(s) and the first argument are based on the same
 underlying object (for more information on the *based on* terminology see
