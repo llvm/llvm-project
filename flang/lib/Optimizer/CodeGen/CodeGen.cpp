@@ -2473,7 +2473,9 @@ struct XArrayCoorOpConversion
     // The array was not boxed, so it must be contiguous. offset is therefore an
     // element offset and the base type is kept in the GEP unless the element
     // type size is itself dynamic.
-    mlir::Type gepObjectType;
+    mlir::Type objectTy = fir::unwrapRefType(coor.getMemref().getType());
+    mlir::Type eleType = fir::unwrapSequenceType(objectTy);
+    mlir::Type gepObjectType = convertType(eleType);
     llvm::SmallVector<mlir::LLVM::GEPArg> args;
     ;
     if (coor.getSubcomponent().empty()) {
@@ -2492,17 +2494,10 @@ struct XArrayCoorOpConversion
           TODO(loc, "compute size of derived type with type parameters");
         }
       }
-      gepObjectType =
-          convertType(fir::unwrapRefType(coor.getMemref().getType()));
       args.push_back(offset);
     } else {
       // There are subcomponents.
       args.push_back(offset);
-      // Operand #0 must have a pointer type. For subcomponent slicing, we
-      // want to cast away the array type and have a plain struct type.
-      mlir::Type objectTy = fir::unwrapRefType(coor.getMemref().getType());
-      mlir::Type eleType = fir::unwrapSequenceType(objectTy);
-      gepObjectType = convertType(eleType);
       llvm::SmallVector<mlir::Value> indices = convertSubcomponentIndices(
           loc, gepObjectType,
           operands.slice(coor.subcomponentOffset(),

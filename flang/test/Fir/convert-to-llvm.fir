@@ -2121,7 +2121,7 @@ func.func @ext_array_coor4(%arg0: !fir.ref<!fir.array<100xi32>>) {
 // CHECK:         %[[DIFF1:.*]] = llvm.add %[[DIFF0]], %[[ADJ]]  : i64
 // CHECK:         %[[STRIDE:.*]] = llvm.mul %[[DIFF1]], %[[C1_1]] : i64
 // CHECK:         %[[OFFSET:.*]] = llvm.add %[[STRIDE]], %[[C0_1]]  : i64
-// CHECK:         %{{.*}} = llvm.getelementptr %[[ARG0]][%[[OFFSET]]] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<100 x i32>
+// CHECK:         %{{.*}} = llvm.getelementptr %[[ARG0]][%[[OFFSET]]] : (!llvm.ptr, i64) -> !llvm.ptr, i32
 
 // Conversion with index type shape and slice
 
