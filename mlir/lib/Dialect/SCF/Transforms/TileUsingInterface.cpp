@@ -172,8 +172,9 @@ static SmallVector<scf::ForOp> generateTileLoopNest(
         loc, offset, size, tileSize, ValueRange{},
         [&](OpBuilder &bodyBuilder, Location bodyLoc, Value iv,
             ValueRange /*iterArgs*/) {
-          sizes[loopRange.index()] = getBoundedTileSize(
-              bodyBuilder, bodyLoc, loopRange.value(), iv, tileSize);
+          sizes[loopRange.index()] =
+              getBoundedTileSize(bodyBuilder, bodyLoc, loopRange.value(), iv,
+                                 getAsOpFoldResult(tileSize));
           builder.create<scf::YieldOp>(loc);
         });
     offsets[loopRange.index()] = loop.getInductionVar();
