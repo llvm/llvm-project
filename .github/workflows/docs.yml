@@ -25,6 +25,15 @@ jobs:
     name: "Test documentation build"
     runs-on: ubuntu-latest
     steps:
+      - name: Get subprojects that have doc changes
+        id: docs-changed-subprojects
+        uses: tj-actions/changed-files@v39
+        with:
+          files_yaml: |
+            llvm:
+              - 'llvm/docs/**'
+            clang:
+              - 'clang/docs/**'
       - name: Fetch LLVM sources
         uses: actions/checkout@v4
         with:
@@ -41,15 +50,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y cmake ninja-build
-      - name: Get subprojects that have doc changes
-        id: docs-changed-subprojects
-        uses: tj-actions/changed-files@v39
-        with:
-          files_yaml: |
-            llvm:
-              - 'llvm/docs/**'
-            clang:
-              - 'clang/docs/**'
       - name: Build LLVM docs
         if: steps.docs-changed-subprojects.outputs.llvm_any_changed == 'true'
         run: |
