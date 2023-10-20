@@ -200,7 +200,7 @@ private:
   // the encoding of builtin IntegerType. We can natively parse this without
   // the use of a callback, relying on the existing builtin reader mechanism.
   void runTest1(Operation *op) {
-    auto builtin = op->getContext()->getLoadedDialect<mlir::BuiltinDialect>();
+    auto *builtin = op->getContext()->getLoadedDialect<mlir::BuiltinDialect>();
     BytecodeDialectInterface *iface =
         builtin->getRegisteredInterface<BytecodeDialectInterface>();
     BytecodeWriterConfig writeConfig;
@@ -231,7 +231,7 @@ private:
   // parsing, we use the encoding of IntegerType to intercept all i32. Then,
   // instead of creating i32s, we assemble TestI32Type and return it.
   void runTest2(Operation *op) {
-    auto builtin = op->getContext()->getLoadedDialect<mlir::BuiltinDialect>();
+    auto *builtin = op->getContext()->getLoadedDialect<mlir::BuiltinDialect>();
     BytecodeDialectInterface *iface =
         builtin->getRegisteredInterface<BytecodeDialectInterface>();
     BytecodeWriterConfig writeConfig;
@@ -259,7 +259,7 @@ private:
   // can natively parse this without the use of a callback, relying on the
   // existing builtin reader mechanism.
   void runTest3(Operation *op) {
-    auto builtin = op->getContext()->getLoadedDialect<mlir::BuiltinDialect>();
+    auto *builtin = op->getContext()->getLoadedDialect<mlir::BuiltinDialect>();
     BytecodeDialectInterface *iface =
         builtin->getRegisteredInterface<BytecodeDialectInterface>();
     auto i32Type = IntegerType::get(op->getContext(), 32,
@@ -295,7 +295,7 @@ private:
   // <2xi32>. Instead of assembling a DenseIntElementsAttr, we assemble
   // TestAttrParamsAttr and return it.
   void runTest4(Operation *op) {
-    auto builtin = op->getContext()->getLoadedDialect<mlir::BuiltinDialect>();
+    auto *builtin = op->getContext()->getLoadedDialect<mlir::BuiltinDialect>();
     BytecodeDialectInterface *iface =
         builtin->getRegisteredInterface<BytecodeDialectInterface>();
     auto i32Type = IntegerType::get(op->getContext(), 32,
@@ -330,7 +330,7 @@ private:
   // the builtin types and attributes and take full control of the encoding,
   // returning failure if any type or attribute is not part of builtin.
   void runTest5(Operation *op) {
-    auto builtin = op->getContext()->getLoadedDialect<mlir::BuiltinDialect>();
+    auto *builtin = op->getContext()->getLoadedDialect<mlir::BuiltinDialect>();
     BytecodeDialectInterface *iface =
         builtin->getRegisteredInterface<BytecodeDialectInterface>();
     BytecodeWriterConfig writeConfig;
