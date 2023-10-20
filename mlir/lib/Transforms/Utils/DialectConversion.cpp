@@ -490,7 +490,7 @@ void ArgConverter::notifyOpRemoved(Operation *op) {
           notifyOpRemoved(&nestedOp);
 
       // Check if this block was converted.
-      auto it = conversionInfo.find(&block);
+      auto *it = conversionInfo.find(&block);
       if (it == conversionInfo.end())
         continue;
 
@@ -504,7 +504,7 @@ void ArgConverter::notifyOpRemoved(Operation *op) {
 }
 
 void ArgConverter::discardRewrites(Block *block) {
-  auto it = conversionInfo.find(block);
+  auto *it = conversionInfo.find(block);
   if (it == conversionInfo.end())
     return;
   Block *origBlock = it->second.origBlock;
@@ -3402,7 +3402,7 @@ static ConversionTarget::DynamicLegalityCallbackFn composeLegalityCallbacks(
 void ConversionTarget::setLegalityCallback(
     OperationName name, const DynamicLegalityCallbackFn &callback) {
   assert(callback && "expected valid legality callback");
-  auto infoIt = legalOperations.find(name);
+  auto *infoIt = legalOperations.find(name);
   assert(infoIt != legalOperations.end() &&
          infoIt->second.action == LegalizationAction::Dynamic &&
          "expected operation to already be marked as dynamically legal");
@@ -3412,7 +3412,7 @@ void ConversionTarget::setLegalityCallback(
 
 void ConversionTarget::markOpRecursivelyLegal(
     OperationName name, const DynamicLegalityCallbackFn &callback) {
-  auto infoIt = legalOperations.find(name);
+  auto *infoIt = legalOperations.find(name);
   assert(infoIt != legalOperations.end() &&
          infoIt->second.action != LegalizationAction::Illegal &&
          "expected operation to already be marked as legal");
@@ -3441,7 +3441,7 @@ void ConversionTarget::setLegalityCallback(
 auto ConversionTarget::getOpInfo(OperationName op) const
     -> std::optional<LegalizationInfo> {
   // Check for info for this specific operation.
-  auto it = legalOperations.find(op);
+  const auto *it = legalOperations.find(op);
   if (it != legalOperations.end())
     return it->second;
   // Check for info for the parent dialect.
