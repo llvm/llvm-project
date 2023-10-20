@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++23
 
 // Template argument deduction with template template parameters.
-template<typename T, template<T> class A>
+template<typename T, template<T> class A> 
 struct X0 {
   static const unsigned value = 0;
 };
@@ -192,9 +192,8 @@ void g() {
 
 namespace test8 {
 template <class T> void foo(T);
-void test(int a) { // expected-note {{declared here}}
-    char n[a]; // expected-warning {{variable length arrays in C++ are a Clang extension}} \
-                  expected-note {{function parameter 'a' with unknown value cannot be used in a constant expression}}
+void test(int a) {
+    char n[a];
     foo(n);
 }
 } // namespace test8
@@ -311,7 +310,7 @@ int main() {
   get_helper<double>(t);
   return 0;
 }
-} // end ns2
+} // end ns2 
 }
 
 namespace multiple_deduction_different_type {

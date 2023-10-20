@@ -193,10 +193,9 @@ void test_use_template() {
 }
 
 namespace pr35555 {
-int a; // expected-note {{declared here}}
+int a;
 void b() {
-  int c[a]; // expected-warning {{variable length arrays in C++ are a Clang extension}} \
-               expected-note {{read of non-const variable 'a' is not allowed in a constant expression}}
+  int c[a];
   auto vla_used = [&c] { return c[0]; };
   auto vla_unused = [&c] {}; // expected-warning{{lambda capture 'c' is not used}}
 }
