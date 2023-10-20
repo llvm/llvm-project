@@ -1,3 +1,7 @@
+// REQUIRES: !system-darwin
+
+// The test cannot be run on Darwin because /Users will be treated as a MSVC option.
+
 // RUN: %clang_cl -### -target x86_64-pc-windows-msvc --offload-arch=sm_35 -fgpu-rdc \
 // RUN:   --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
 // RUN:   /Wall -x cuda %s 2>&1 \
