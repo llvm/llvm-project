@@ -3312,9 +3312,9 @@ void mlir::python::populateIRCore(py::module &m) {
       .def_property_readonly(
           "ref_operation",
           [](PyInsertionPoint &self) -> py::object {
-            auto ref_operation = self.getRefOperation();
-            if (ref_operation)
-              return ref_operation->getObject();
+            auto refOperation = self.getRefOperation();
+            if (refOperation)
+              return refOperation->getObject();
             return py::none();
           },
           "The reference operation before which new operations are "
