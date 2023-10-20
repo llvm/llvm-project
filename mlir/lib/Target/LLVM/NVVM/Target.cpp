@@ -328,7 +328,7 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
        "--opt-level", optLevel});
 
   bool useFatbin32 = false;
-  for (auto cArg : cmdOpts.second) {
+  for (const auto *cArg : cmdOpts.second) {
     // All `cmdOpts` are for `ptxas` except `-32` which passes `-32` to
     // `fatbinary`, indicating a 32-bit target. By default a 64-bit target is
     // assumed.
