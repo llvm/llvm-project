@@ -42,7 +42,6 @@ def _executeScriptInternal(test, litConfig, commands):
     TODO: This really should be easier to access from Lit itself
     """
     parsedCommands = parseScript(test, preamble=commands)
-    litConfig.note(f"Running command {parsedCommands}")
 
     _, tmpBase = _getTempPaths(test)
     execDir = os.path.dirname(test.getExecPath())
@@ -52,6 +51,8 @@ def _executeScriptInternal(test, litConfig, commands):
     if isinstance(res, lit.Test.Result):  # Handle failure to parse the Lit test
         res = ("", res.output, 127, None)
     (out, err, exitCode, timeoutInfo) = res
+    if exitCode != 0:
+        litConfig.note(f"Command {parsedCommands} failed with code {exitCode}: {err}")
 
     return (out, err, exitCode, timeoutInfo, parsedCommands)
 
