@@ -658,7 +658,7 @@ tileAndFuseFirstExtractUse(RewriterBase &rewriter, Diagnostic &diag,
   }
 
 #ifndef NDEBUG
-  for (auto tiledOp : tileAndFuseResult->tiledOps) {
+  for (auto *tiledOp : tileAndFuseResult->tiledOps) {
     LLVM_DEBUG(DBGS() << "tiledProducer: " << *tiledOp << "\n");
   }
 #endif
