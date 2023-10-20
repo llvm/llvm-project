@@ -86,7 +86,6 @@ View the diff from {self.name} here.
             pr.as_issue().create_comment(comment_text)
 
     def run(self, changed_files: list[str], args: argparse.Namespace) -> bool:
-        print(f"Formatter {self.name} ({self.friendly_name}):")
         diff = self.format_run(changed_files, args)
         if diff is None:
             comment_text = f"""
@@ -123,7 +122,7 @@ class ClangFormatHelper(FormatHelper):
 
     def should_be_excluded(self, path: str) -> bool:
         if path in self.libcxx_excluded_files:
-            print(f"Excluding file {path}")
+            print(f"{self.name}: Excluding file {path}")
             return True
         return False
 
@@ -151,7 +150,8 @@ class ClangFormatHelper(FormatHelper):
         ] + cpp_files
         print(f"Running: {' '.join(cf_cmd)}")
         self.cf_cmd = cf_cmd
-        proc = subprocess.run(cf_cmd, stdout=subprocess.PIPE)
+        proc = subprocess.run(cf_cmd, capture_output=True)
+        sys.stdout.write(proc.stderr.decode("utf-8"))
 
         if proc.returncode != 0:
             # formatting needed, or the command otherwise failed
@@ -194,7 +194,8 @@ class DarkerFormatHelper(FormatHelper):
         ] + py_files
         print(f"Running: {' '.join(darker_cmd)}")
         self.darker_cmd = darker_cmd
-        proc = subprocess.run(darker_cmd, stdout=subprocess.PIPE)
+        proc = subprocess.run(darker_cmd, capture_output=True)
+        sys.stdout.write(proc.stderr.decode("utf-8"))
 
         if proc.returncode != 0:
             # formatting needed, or the command otherwise failed
