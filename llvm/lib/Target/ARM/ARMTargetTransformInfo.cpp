@@ -2430,9 +2430,15 @@ ARMTTIImpl::getPreferredTailFoldingStyle(bool IVUpdateMayOverflow) const {
 void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                          TTI::UnrollingPreferences &UP,
                                          OptimizationRemarkEmitter *ORE) {
-  // Enable Upper bound unrolling universally, not dependant upon the conditions
-  // below.
-  UP.UpperBound = true;
+  // Enable Upper bound unrolling universally, providing that we do not see an
+  // active lane mask, which will be better kept as a loop to become tail
+  // predicated than to be conditionally unrolled.
+  UP.UpperBound =
+      !ST->hasMVEIntegerOps() || !any_of(*L->getHeader(), [](Instruction &I) {
+        return isa<IntrinsicInst>(I) &&
+               cast<IntrinsicInst>(I).getIntrinsicID() ==
+                   Intrinsic::get_active_lane_mask;
+      });
 
   // Only currently enable these preferences for M-Class cores.
   if (!ST->isMClass())
