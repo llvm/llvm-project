@@ -2462,6 +2462,13 @@ private:
     case MCCFIInstruction::OpDefCfaRegister:
       CFAReg = Instr.getRegister();
       CFARule = UNKNOWN;
+
+      // This shouldn't happen according to the spec but GNU binutils on RISC-V
+      // emits a DW_CFA_def_cfa_register in CIE's which leaves the offset
+      // unspecified. Both readelf and llvm-dwarfdump interpret the offset as 0
+      // in this case so let's do the same.
+      if (CFAOffset == UNKNOWN)
+        CFAOffset = 0;
       break;
     case MCCFIInstruction::OpDefCfaOffset:
       CFAOffset = Instr.getOffset();
