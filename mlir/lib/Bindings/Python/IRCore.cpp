@@ -17,12 +17,36 @@
 #include "mlir-c/Diagnostics.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
-#include "mlir/Bindings/Python/PybindAdaptors.h"
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <exception>
+#include <funcobject.h>
+#include <functional>
 #include <optional>
+#include <pybind11/attr.h>
+#include <pybind11/cast.h>
+#include <pybind11/detail/common.h>
+#include <pybind11/detail/type_caster_base.h>
+#include <pybind11/gil.h>
+#include <pybind11/pybind11.h>
+#include <pybind11/pytypes.h>
+#include <pyerrors.h>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <tuple>
 #include <utility>
+#include <vector>
 
 namespace py = pybind11;
 using namespace py::literals;
