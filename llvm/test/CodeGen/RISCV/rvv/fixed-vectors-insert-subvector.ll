@@ -14,7 +14,7 @@ define <vscale x 8 x i32> @insert_nxv8i32_v2i32_0(<vscale x 8 x i32> %vec, ptr %
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vle32.v v12, (a0)
-; CHECK-NEXT:    vsetivli zero, 2, e32, m4, tu, ma
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, tu, ma
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
   %sv = load <2 x i32>, ptr %svp
@@ -53,7 +53,7 @@ define <vscale x 8 x i32> @insert_nxv8i32_v8i32_0(<vscale x 8 x i32> %vec, ptr %
 ; LMULMAX2:       # %bb.0:
 ; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; LMULMAX2-NEXT:    vle32.v v12, (a0)
-; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m4, tu, ma
+; LMULMAX2-NEXT:    vsetvli zero, zero, e32, m4, tu, ma
 ; LMULMAX2-NEXT:    vmv.v.v v8, v12
 ; LMULMAX2-NEXT:    ret
 ;
@@ -63,7 +63,7 @@ define <vscale x 8 x i32> @insert_nxv8i32_v8i32_0(<vscale x 8 x i32> %vec, ptr %
 ; LMULMAX1-NEXT:    vle32.v v12, (a0)
 ; LMULMAX1-NEXT:    addi a0, a0, 16
 ; LMULMAX1-NEXT:    vle32.v v16, (a0)
-; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m4, tu, ma
+; LMULMAX1-NEXT:    vsetvli zero, zero, e32, m4, tu, ma
 ; LMULMAX1-NEXT:    vmv.v.v v8, v12
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e32, m4, tu, ma
 ; LMULMAX1-NEXT:    vslideup.vi v8, v16, 4
@@ -279,7 +279,7 @@ define void @insert_v4i16_v2i16_0(ptr %vp, ptr %svp) {
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vle16.v v9, (a1)
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf2, tu, ma
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, tu, ma
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
@@ -388,7 +388,7 @@ define void @insert_v8i1_v4i1_0(ptr %vp, ptr %svp) {
 ; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, tu, ma
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, tu, ma
 ; CHECK-NEXT:    vmv.v.v v9, v8
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
@@ -432,7 +432,7 @@ define <vscale x 2 x i16> @insert_nxv2i16_v2i16_0(<vscale x 2 x i16> %v, ptr %sv
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vle16.v v9, (a0)
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf2, tu, ma
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, tu, ma
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
   %sv = load <2 x i16>, ptr %svp

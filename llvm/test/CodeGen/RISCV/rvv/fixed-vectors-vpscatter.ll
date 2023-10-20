@@ -1797,7 +1797,7 @@ define void @vpscatter_baseidx_v32i32_v32f64(<32 x double> %val, ptr %base, <32 
 ; RV64-NEXT:    vs8r.v v16, (a1) # Unknown-size Folded Spill
 ; RV64-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
 ; RV64-NEXT:    vslidedown.vi v0, v24, 16
-; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; RV64-NEXT:    vsext.vf2 v16, v0
 ; RV64-NEXT:    vsll.vi v16, v16, 3
 ; RV64-NEXT:    vsext.vf2 v0, v24
@@ -1882,9 +1882,9 @@ define void @vpscatter_baseidx_sext_v32i32_v32f64(<32 x double> %val, ptr %base,
 ; RV64-NEXT:    vs8r.v v16, (a1) # Unknown-size Folded Spill
 ; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV64-NEXT:    vsext.vf2 v0, v24
-; RV64-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
+; RV64-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; RV64-NEXT:    vslidedown.vi v24, v24, 16
-; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; RV64-NEXT:    vsext.vf2 v16, v24
 ; RV64-NEXT:    vsll.vi v16, v16, 3
 ; RV64-NEXT:    li a3, 16
@@ -1969,9 +1969,9 @@ define void @vpscatter_baseidx_zext_v32i32_v32f64(<32 x double> %val, ptr %base,
 ; RV64-NEXT:    vs8r.v v16, (a1) # Unknown-size Folded Spill
 ; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV64-NEXT:    vzext.vf2 v0, v24
-; RV64-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
+; RV64-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; RV64-NEXT:    vslidedown.vi v24, v24, 16
-; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; RV64-NEXT:    vzext.vf2 v16, v24
 ; RV64-NEXT:    vsll.vi v16, v16, 3
 ; RV64-NEXT:    li a3, 16

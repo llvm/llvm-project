@@ -164,7 +164,7 @@ define <4 x i32> @interleave_v4i32_offset_2(<4 x i32> %x, <4 x i32> %y) {
 ; V128:       # %bb.0:
 ; V128-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
 ; V128-NEXT:    vslidedown.vi v10, v9, 2
-; V128-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; V128-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; V128-NEXT:    vwaddu.vv v9, v8, v10
 ; V128-NEXT:    li a0, -1
 ; V128-NEXT:    vwmaccu.vx v9, a0, v10
@@ -450,7 +450,7 @@ define <4 x i8> @unary_interleave_v4i8(<4 x i8> %x) {
 ; V128:       # %bb.0:
 ; V128-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; V128-NEXT:    vslidedown.vi v10, v8, 2
-; V128-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; V128-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
 ; V128-NEXT:    vwaddu.vv v9, v8, v10
 ; V128-NEXT:    li a0, -1
 ; V128-NEXT:    vwmaccu.vx v9, a0, v10
@@ -502,7 +502,7 @@ define <4 x i16> @unary_interleave_v4i16(<4 x i16> %x) {
 ; V128:       # %bb.0:
 ; V128-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
 ; V128-NEXT:    vslidedown.vi v10, v8, 2
-; V128-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; V128-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; V128-NEXT:    vwaddu.vv v9, v8, v10
 ; V128-NEXT:    li a0, -1
 ; V128-NEXT:    vwmaccu.vx v9, a0, v10
@@ -527,7 +527,7 @@ define <4 x i32> @unary_interleave_v4i32(<4 x i32> %x) {
 ; V128:       # %bb.0:
 ; V128-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
 ; V128-NEXT:    vslidedown.vi v10, v8, 2
-; V128-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; V128-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; V128-NEXT:    vwaddu.vv v9, v8, v10
 ; V128-NEXT:    li a0, -1
 ; V128-NEXT:    vwmaccu.vx v9, a0, v10
@@ -594,7 +594,7 @@ define <8 x i8> @unary_interleave_v8i8(<8 x i8> %x) {
 ; V128:       # %bb.0:
 ; V128-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
 ; V128-NEXT:    vslidedown.vi v10, v8, 4
-; V128-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; V128-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; V128-NEXT:    vwaddu.vv v9, v8, v10
 ; V128-NEXT:    li a0, -1
 ; V128-NEXT:    vwmaccu.vx v9, a0, v10
@@ -619,7 +619,7 @@ define <8 x i16> @unary_interleave_v8i16(<8 x i16> %x) {
 ; V128:       # %bb.0:
 ; V128-NEXT:    vsetivli zero, 4, e16, m1, ta, ma
 ; V128-NEXT:    vslidedown.vi v10, v8, 4
-; V128-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; V128-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; V128-NEXT:    vwaddu.vv v9, v10, v8
 ; V128-NEXT:    li a0, -1
 ; V128-NEXT:    vwmaccu.vx v9, a0, v8
@@ -644,7 +644,7 @@ define <8 x i32> @unary_interleave_v8i32(<8 x i32> %x) {
 ; V128:       # %bb.0:
 ; V128-NEXT:    vsetivli zero, 4, e32, m2, ta, ma
 ; V128-NEXT:    vslidedown.vi v12, v8, 4
-; V128-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; V128-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; V128-NEXT:    vwaddu.vv v10, v8, v12
 ; V128-NEXT:    li a0, -1
 ; V128-NEXT:    vwmaccu.vx v10, a0, v12

@@ -17,9 +17,9 @@ define {<3 x i32>, <3 x i32>} @load_factor2_v3(ptr %ptr) {
 ; CHECK-NEXT:    vadd.vv v9, v8, v8
 ; CHECK-NEXT:    vrgather.vv v8, v10, v9
 ; CHECK-NEXT:    vmv.v.i v0, 4
-; CHECK-NEXT:    vsetivli zero, 4, e32, m2, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v12, v10, 4
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vrgather.vi v8, v12, 0, v0.t
 ; CHECK-NEXT:    vadd.vi v11, v9, 1
 ; CHECK-NEXT:    vrgather.vv v9, v10, v11
@@ -178,7 +178,7 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV32-NEXT:    add a4, sp, a4
 ; RV32-NEXT:    addi a4, a4, 16
 ; RV32-NEXT:    vs1r.v v0, (a4) # Unknown-size Folded Spill
-; RV32-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
+; RV32-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; RV32-NEXT:    vslidedown.vi v16, v16, 16
 ; RV32-NEXT:    csrr a4, vlenb
 ; RV32-NEXT:    li a5, 45
@@ -186,7 +186,7 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV32-NEXT:    add a4, sp, a4
 ; RV32-NEXT:    addi a4, a4, 16
 ; RV32-NEXT:    vs8r.v v16, (a4) # Unknown-size Folded Spill
-; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
+; RV32-NEXT:    vsetvli zero, zero, e32, m4, ta, mu
 ; RV32-NEXT:    vrgatherei16.vv v12, v16, v8, v0.t
 ; RV32-NEXT:    csrr a4, vlenb
 ; RV32-NEXT:    li a5, 25
@@ -666,7 +666,7 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV64-NEXT:    vrgather.vi v8, v16, 4
 ; RV64-NEXT:    li a1, 128
 ; RV64-NEXT:    vmv.s.x v4, a1
-; RV64-NEXT:    vsetivli zero, 8, e64, m8, ta, ma
+; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; RV64-NEXT:    vslidedown.vi v24, v16, 8
 ; RV64-NEXT:    csrr a1, vlenb
 ; RV64-NEXT:    li a2, 19
@@ -674,7 +674,7 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV64-NEXT:    add a1, sp, a1
 ; RV64-NEXT:    addi a1, a1, 16
 ; RV64-NEXT:    vs8r.v v24, (a1) # Unknown-size Folded Spill
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
 ; RV64-NEXT:    vmv1r.v v0, v4
 ; RV64-NEXT:    csrr a1, vlenb
 ; RV64-NEXT:    slli a2, a1, 1

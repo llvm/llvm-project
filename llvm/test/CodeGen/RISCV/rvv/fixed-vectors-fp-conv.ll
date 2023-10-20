@@ -49,9 +49,9 @@ define void @fpext_v8f16_v8f32(ptr %x, ptr %y) {
 ; LMULMAX1-NEXT:    vle16.v v8, (a0)
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; LMULMAX1-NEXT:    vfwcvt.f.f.v v9, v8
-; LMULMAX1-NEXT:    vsetivli zero, 4, e16, m1, ta, ma
+; LMULMAX1-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; LMULMAX1-NEXT:    vslidedown.vi v8, v8, 4
-; LMULMAX1-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; LMULMAX1-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; LMULMAX1-NEXT:    vfwcvt.f.f.v v10, v8
 ; LMULMAX1-NEXT:    addi a0, a1, 16
 ; LMULMAX1-NEXT:    vse32.v v10, (a0)
@@ -80,7 +80,7 @@ define void @fpext_v8f16_v8f64(ptr %x, ptr %y) {
 ; LMULMAX1-NEXT:    vle16.v v8, (a0)
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
 ; LMULMAX1-NEXT:    vslidedown.vi v9, v8, 2
-; LMULMAX1-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; LMULMAX1-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; LMULMAX1-NEXT:    vfwcvt.f.f.v v10, v9
 ; LMULMAX1-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; LMULMAX1-NEXT:    vfwcvt.f.f.v v9, v10
@@ -94,9 +94,9 @@ define void @fpext_v8f16_v8f64(ptr %x, ptr %y) {
 ; LMULMAX1-NEXT:    vfwcvt.f.f.v v10, v8
 ; LMULMAX1-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; LMULMAX1-NEXT:    vfwcvt.f.f.v v12, v10
-; LMULMAX1-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
+; LMULMAX1-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; LMULMAX1-NEXT:    vslidedown.vi v8, v8, 2
-; LMULMAX1-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; LMULMAX1-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; LMULMAX1-NEXT:    vfwcvt.f.f.v v10, v8
 ; LMULMAX1-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; LMULMAX1-NEXT:    vfwcvt.f.f.v v8, v10

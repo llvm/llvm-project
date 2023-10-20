@@ -273,7 +273,7 @@ define i16 @explode_16xi16(<16 x i16> %v) {
 ; CHECK-NEXT:    vmv.x.s a4, v10
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 7
 ; CHECK-NEXT:    vmv.x.s a5, v10
-; CHECK-NEXT:    vsetivli zero, 1, e16, m2, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 8
 ; CHECK-NEXT:    vmv.x.s a6, v10
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 9
@@ -406,7 +406,7 @@ define i32 @explode_8xi32(<8 x i32> %v) {
 ; RV32-NEXT:    vmv.x.s a0, v10
 ; RV32-NEXT:    vslidedown.vi v10, v8, 3
 ; RV32-NEXT:    vmv.x.s a1, v10
-; RV32-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
+; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; RV32-NEXT:    vslidedown.vi v10, v8, 4
 ; RV32-NEXT:    vmv.x.s a2, v10
 ; RV32-NEXT:    vslidedown.vi v10, v8, 5
@@ -434,7 +434,7 @@ define i32 @explode_8xi32(<8 x i32> %v) {
 ; RV64-NEXT:    vmv.x.s a0, v10
 ; RV64-NEXT:    vslidedown.vi v10, v8, 3
 ; RV64-NEXT:    vmv.x.s a1, v10
-; RV64-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
+; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; RV64-NEXT:    vslidedown.vi v10, v8, 4
 ; RV64-NEXT:    vmv.x.s a2, v10
 ; RV64-NEXT:    vslidedown.vi v10, v8, 5
@@ -489,7 +489,7 @@ define i32 @explode_16xi32(<16 x i32> %v) {
 ; RV32-NEXT:    vmv.x.s a0, v12
 ; RV32-NEXT:    vslidedown.vi v12, v8, 3
 ; RV32-NEXT:    vmv.x.s a1, v12
-; RV32-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
+; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; RV32-NEXT:    vslidedown.vi v12, v8, 4
 ; RV32-NEXT:    vmv.x.s a2, v12
 ; RV32-NEXT:    vslidedown.vi v12, v8, 5
@@ -549,7 +549,7 @@ define i32 @explode_16xi32(<16 x i32> %v) {
 ; RV64-NEXT:    vmv.x.s a0, v12
 ; RV64-NEXT:    vslidedown.vi v12, v8, 3
 ; RV64-NEXT:    vmv.x.s a1, v12
-; RV64-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
+; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; RV64-NEXT:    vslidedown.vi v12, v8, 4
 ; RV64-NEXT:    vmv.x.s a2, v12
 ; RV64-NEXT:    vslidedown.vi v12, v8, 5

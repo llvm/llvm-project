@@ -80,7 +80,7 @@ define void @widen_4xv4i16_unaligned(ptr %x, ptr %z) {
 ; CHECK-NO-MISALIGN-NEXT:    vle8.v v12, (a2)
 ; CHECK-NO-MISALIGN-NEXT:    addi a0, a0, 24
 ; CHECK-NO-MISALIGN-NEXT:    vle8.v v14, (a0)
-; CHECK-NO-MISALIGN-NEXT:    vsetivli zero, 8, e16, m2, tu, ma
+; CHECK-NO-MISALIGN-NEXT:    vsetvli zero, zero, e16, m2, tu, ma
 ; CHECK-NO-MISALIGN-NEXT:    vslideup.vi v8, v10, 4
 ; CHECK-NO-MISALIGN-NEXT:    vsetivli zero, 12, e16, m2, tu, ma
 ; CHECK-NO-MISALIGN-NEXT:    vslideup.vi v8, v12, 8

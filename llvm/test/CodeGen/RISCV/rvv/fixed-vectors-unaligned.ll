@@ -199,7 +199,7 @@ define <2 x i64> @mgather_v2i64_align4(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i64> %
 ; RV32-SLOW-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
 ; RV32-SLOW-NEXT:    vslide1down.vx v8, v8, a1
 ; RV32-SLOW-NEXT:    vslide1down.vx v8, v8, a0
-; RV32-SLOW-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV32-SLOW-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; RV32-SLOW-NEXT:    vslideup.vi v9, v8, 1
 ; RV32-SLOW-NEXT:    vmv1r.v v8, v9
 ; RV32-SLOW-NEXT:    ret
@@ -354,7 +354,7 @@ define void @mscatter_v4i16_align1(<4 x i16> %val, <4 x ptr> %ptrs, <4 x i1> %m)
 ; RV64-SLOW-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
 ; RV64-SLOW-NEXT:    vslidedown.vi v9, v8, 1
 ; RV64-SLOW-NEXT:    vmv.x.s a1, v9
-; RV64-SLOW-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV64-SLOW-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; RV64-SLOW-NEXT:    vslidedown.vi v9, v10, 1
 ; RV64-SLOW-NEXT:    vmv.x.s a2, v9
 ; RV64-SLOW-NEXT:    srli a3, a1, 8

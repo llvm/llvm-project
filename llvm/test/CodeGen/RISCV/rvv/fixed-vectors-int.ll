@@ -783,7 +783,7 @@ define void @sdiv_v6i16(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 4
 ; CHECK-NEXT:    vslidedown.vi v11, v9, 4
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vdiv.vv v10, v11, v10
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vdiv.vv v8, v9, v8
@@ -872,7 +872,7 @@ define void @srem_v6i16(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 4
 ; CHECK-NEXT:    vslidedown.vi v11, v9, 4
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vrem.vv v10, v11, v10
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vrem.vv v8, v9, v8
@@ -961,7 +961,7 @@ define void @udiv_v6i16(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 4
 ; CHECK-NEXT:    vslidedown.vi v11, v9, 4
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vdivu.vv v10, v11, v10
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vdivu.vv v8, v9, v8
@@ -1050,7 +1050,7 @@ define void @urem_v6i16(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 4
 ; CHECK-NEXT:    vslidedown.vi v11, v9, 4
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vremu.vv v10, v11, v10
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vremu.vv v8, v9, v8
@@ -1198,9 +1198,9 @@ define void @mulhu_v6i16(ptr %x) {
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vid.v v9
 ; CHECK-NEXT:    vadd.vi v9, v9, 12
-; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 4
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vdivu.vv v9, v10, v9
 ; CHECK-NEXT:    lui a1, 45217
 ; CHECK-NEXT:    addi a1, a1, -1785
@@ -1361,9 +1361,9 @@ define void @mulhs_v6i16(ptr %x) {
 ; CHECK-NEXT:    vid.v v10
 ; CHECK-NEXT:    li a1, -14
 ; CHECK-NEXT:    vmadd.vx v10, a1, v9
-; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 4
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vdiv.vv v9, v9, v10
 ; CHECK-NEXT:    lui a1, 1020016
 ; CHECK-NEXT:    addi a1, a1, 2041

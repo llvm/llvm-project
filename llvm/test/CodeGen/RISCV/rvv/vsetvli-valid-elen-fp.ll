@@ -9,7 +9,7 @@ define void @foo(half %y, ptr %i64p) {
 ; CHECK-NO-FELEN64:       # %bb.0: # %entry
 ; CHECK-NO-FELEN64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NO-FELEN64-NEXT:    vle64.v v8, (a0)
-; CHECK-NO-FELEN64-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; CHECK-NO-FELEN64-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; CHECK-NO-FELEN64-NEXT:    vfmv.s.f v9, fa0
 ; CHECK-NO-FELEN64-NEXT:    #APP
 ; CHECK-NO-FELEN64-NEXT:    # use v8 v9

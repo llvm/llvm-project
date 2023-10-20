@@ -215,7 +215,7 @@ define <32 x double> @vfwadd_v32f32(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v16, v8, 16
 ; CHECK-NEXT:    vslidedown.vi v8, v0, 16
-; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv4r.v v24, v8
 ; CHECK-NEXT:    vfwadd.vv v8, v16, v24
 ; CHECK-NEXT:    csrr a0, vlenb
@@ -397,7 +397,7 @@ define <32 x double> @vfwadd_vf_v32f32(ptr %x, float %y) {
 ; CHECK-NEXT:    vle32.v v24, (a0)
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v0, v24, 16
-; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v16, fa0
 ; CHECK-NEXT:    vfwcvt.f.f.v v8, v16
 ; CHECK-NEXT:    vfwadd.wv v16, v8, v0

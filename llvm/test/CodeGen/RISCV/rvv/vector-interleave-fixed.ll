@@ -17,7 +17,7 @@ define <32 x i1> @vector_interleave_v32i1_v16i1(<16 x i1> %a, <16 x i1> %b) {
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 16
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vwaddu.vv v12, v8, v10
 ; CHECK-NEXT:    li a1, -1
 ; CHECK-NEXT:    vwmaccu.vx v12, a1, v10
@@ -35,7 +35,7 @@ define <32 x i1> @vector_interleave_v32i1_v16i1(<16 x i1> %a, <16 x i1> %b) {
 ; ZVBB-NEXT:    vmerge.vim v8, v8, 1, v0
 ; ZVBB-NEXT:    vsetivli zero, 16, e8, m2, ta, ma
 ; ZVBB-NEXT:    vslidedown.vi v10, v8, 16
-; ZVBB-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; ZVBB-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; ZVBB-NEXT:    vwsll.vi v12, v10, 8
 ; ZVBB-NEXT:    vwaddu.wv v12, v12, v8
 ; ZVBB-NEXT:    vsetvli zero, a0, e8, m2, ta, ma

@@ -383,7 +383,7 @@ define <32 x i64> @vwmul_v32i64(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v16, v8, 16
 ; CHECK-NEXT:    vslidedown.vi v8, v0, 16
-; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv4r.v v24, v8
 ; CHECK-NEXT:    vwmul.vv v8, v16, v24
 ; CHECK-NEXT:    csrr a0, vlenb
