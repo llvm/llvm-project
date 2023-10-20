@@ -541,9 +541,24 @@ public:
     return Type::getFloatTy(Context);
   }
 
+  /// Fetch the type representing a 32-bit decimal floating point value.
+  Type *getDecimal32Ty() {
+    return Type::getDecimal32Ty(Context);
+  }
+
   /// Fetch the type representing a 64-bit floating point value.
   Type *getDoubleTy() {
     return Type::getDoubleTy(Context);
+  }
+
+  /// Fetch the type representing a 64-bit decimal floating point value.
+  Type *getDecimal64Ty() {
+    return Type::getDecimal64Ty(Context);
+  }
+
+  /// Fetch the type representing a 128-bit decimal floating point value.
+  Type *getDecimal128Ty() {
+    return Type::getDecimal128Ty(Context);
   }
 
   /// Fetch the type representing void.

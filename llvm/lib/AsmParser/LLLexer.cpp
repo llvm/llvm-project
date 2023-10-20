@@ -816,10 +816,13 @@ lltok::Kind LLLexer::LexIdentifier() {
   TYPEKEYWORD("half",      Type::getHalfTy(Context));
   TYPEKEYWORD("bfloat",    Type::getBFloatTy(Context));
   TYPEKEYWORD("float",     Type::getFloatTy(Context));
+  TYPEKEYWORD("decimal32", Type::getDecimal32Ty(Context));
   TYPEKEYWORD("double",    Type::getDoubleTy(Context));
+  TYPEKEYWORD("decimal64", Type::getDecimal64Ty(Context));
   TYPEKEYWORD("x86_fp80",  Type::getX86_FP80Ty(Context));
   TYPEKEYWORD("fp128",     Type::getFP128Ty(Context));
   TYPEKEYWORD("ppc_fp128", Type::getPPC_FP128Ty(Context));
+  TYPEKEYWORD("decimal128", Type::getDecimal128Ty(Context));
   TYPEKEYWORD("label",     Type::getLabelTy(Context));
   TYPEKEYWORD("metadata",  Type::getMetadataTy(Context));
   TYPEKEYWORD("x86_mmx",   Type::getX86_MMXTy(Context));
@@ -984,6 +987,9 @@ lltok::Kind LLLexer::LexIdentifier() {
 ///    HexPPC128Constant 0xM[0-9A-Fa-f]+
 ///    HexHalfConstant   0xH[0-9A-Fa-f]+
 ///    HexBFloatConstant 0xR[0-9A-Fa-f]+
+///    HexDecimal32Constant 0xR[0-9A-Fa-f]+
+///    HexDecimal64Constant 0xR[0-9A-Fa-f]+
+///    HexDecimal128Constant 0xR[0-9A-Fa-f]+
 lltok::Kind LLLexer::Lex0x() {
   CurPtr = TokStart + 2;
 

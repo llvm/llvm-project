@@ -177,6 +177,10 @@ enum TypeCodes {
   TYPE_CODE_OPAQUE_POINTER = 25, // OPAQUE_POINTER: [addrspace]
 
   TYPE_CODE_TARGET_TYPE = 26, // TARGET_TYPE
+
+  TYPE_CODE_DECIMAL32 = 27,  // 32-bit decimal floating point
+  TYPE_CODE_DECIMAL64 = 28,  // 64-bit decimal floating point
+  TYPE_CODE_DECIMAL128 = 29  // 128-bit decimal floating point
 };
 
 enum OperandBundleTagCode {
