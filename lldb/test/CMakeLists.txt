@@ -114,8 +114,8 @@ if(TARGET lldb-server)
   add_lldb_test_dependency(lldb-server)
 endif()
 
-if(TARGET lldb-vscode)
-  add_lldb_test_dependency(lldb-vscode)
+if(TARGET lldb-dap)
+  add_lldb_test_dependency(lldb-dap)
 endif()
 
 if(TARGET liblldb)

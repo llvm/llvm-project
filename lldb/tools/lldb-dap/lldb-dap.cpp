@@ -95,9 +95,9 @@ static constexpr llvm::opt::OptTable::Info InfoTable[] = {
 #include "Options.inc"
 #undef OPTION
 };
-class LLDBVSCodeOptTable : public llvm::opt::GenericOptTable {
+class LLDBDAPOptTable : public llvm::opt::GenericOptTable {
 public:
-  LLDBVSCodeOptTable() : llvm::opt::GenericOptTable(InfoTable, true) {}
+  LLDBDAPOptTable() : llvm::opt::GenericOptTable(InfoTable, true) {}
 };
 
 typedef void (*RequestCallback)(const llvm::json::Object &command);
@@ -3575,9 +3575,9 @@ void RegisterRequestCallbacks() {
 
 } // anonymous namespace
 
-static void printHelp(LLDBVSCodeOptTable &table, llvm::StringRef tool_name) {
+static void printHelp(LLDBDAPOptTable &table, llvm::StringRef tool_name) {
   std::string usage_str = tool_name.str() + " options";
-  table.printHelp(llvm::outs(), usage_str.c_str(), "LLDB VSCode", false);
+  table.printHelp(llvm::outs(), usage_str.c_str(), "LLDB DAP", false);
 
   std::string examples = R"___(
 EXAMPLES:
@@ -3712,7 +3712,7 @@ int main(int argc, char *argv[]) {
   llvm::sys::fs::make_absolute(program_path);
   g_dap.debug_adaptor_path = program_path.str().str();
 
-  LLDBVSCodeOptTable T;
+  LLDBDAPOptTable T;
   unsigned MAI, MAC;
   llvm::ArrayRef<const char *> ArgsArr = llvm::ArrayRef(argv + 1, argc);
   llvm::opt::InputArgList input_args = T.ParseArgs(ArgsArr, MAI, MAC);
