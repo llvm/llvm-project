@@ -65,10 +65,10 @@ lor.end:                                          ; preds = %lor.end.critedge, %
   ret void, !dbg !53
 }
 
-; CHECK: r[[LOAD1:[0-9]+]] = *(u32 *)(r{{[0-9]+}} + 4)
-; CHECK: r[[LOAD1]] &= 65536
-; CHECK: r[[LOAD2:[0-9]+]] = *(u32 *)(r{{[0-9]+}} + 4)
-; CHECK: r[[LOAD2]] &= 32768
+; CHECK: r[[LOAD:[0-9]+]] = *(u32 *)(r{{[0-9]+}} + 4)
+; CHECK: r[[COPY:[0-9]+]] = r[[LOAD]]
+; CHECK: r[[COPY]] &= 65536
+; CHECK: r[[LOAD]] &= 32768
 
 ; Function Attrs: nounwind readnone speculatable willreturn
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
