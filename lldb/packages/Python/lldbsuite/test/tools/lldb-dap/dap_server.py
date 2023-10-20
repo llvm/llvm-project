@@ -80,7 +80,7 @@ def read_packet(f, verbose=False, trace_file=None):
         # Decode the JSON bytes into a python dictionary
         return json.loads(json_str)
 
-    raise Exception("unexpected malformed message from lldb-vscode: " + line)
+    raise Exception("unexpected malformed message from lldb-dap: " + line)
 
 
 def packet_type_is(packet, packet_type):
@@ -104,7 +104,7 @@ def read_packet_thread(vs_comm, log_file):
             packet = read_packet(vs_comm.recv, trace_file=vs_comm.trace_file)
             # `packet` will be `None` on EOF. We want to pass it down to
             # handle_recv_packet anyway so the main thread can handle unexpected
-            # termination of lldb-vscode and stop waiting for new packets.
+            # termination of lldb-dap and stop waiting for new packets.
             done = not vs_comm.handle_recv_packet(packet)
     finally:
         dump_dap_log(log_file)
@@ -1172,7 +1172,7 @@ def main():
         dest="debuggerRoot",
         default=None,
         help=(
-            "Set the working directory for lldb-vscode for any object files "
+            "Set the working directory for lldb-dap for any object files "
             "with relative paths in the Mach-o debug map."
         ),
     )
@@ -1203,7 +1203,7 @@ def main():
         action="store_true",
         dest="sourceInitFile",
         default=False,
-        help="Whether lldb-vscode should source .lldbinit file or not",
+        help="Whether lldb-dap should source .lldbinit file or not",
     )
 
     parser.add_option(
@@ -1360,7 +1360,7 @@ def main():
         print(
             "error: must either specify a path to a Visual Studio Code "
             "Debug Adaptor vscode executable path using the --vscode "
-            "option, or a port to attach to for an existing lldb-vscode "
+            "option, or a port to attach to for an existing lldb-dap "
             "using the --port option"
         )
         return
