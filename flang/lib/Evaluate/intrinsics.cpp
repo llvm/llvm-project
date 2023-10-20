@@ -1446,63 +1446,76 @@ static std::int64_t GetBuiltinKind(
 
 // Ensure that the keywords of arguments to MAX/MIN and their variants
 // are of the form A123 with no duplicates or leading zeroes.
-static bool CheckMaxMinArgument(std::optional<parser::CharBlock> keyword,
+static bool CheckMaxMinArgument(parser::CharBlock keyword,
     std::set<parser::CharBlock> &set, const char *intrinsicName,
     parser::ContextualMessages &messages) {
-  if (keyword) {
-    std::size_t j{1};
-    for (; j < keyword->size(); ++j) {
-      char ch{(*keyword)[j]};
-      if (ch < (j == 1 ? '1' : '0') || ch > '9') {
-        break;
-      }
+  std::size_t j{1};
+  for (; j < keyword.size(); ++j) {
+    char ch{(keyword)[j]};
+    if (ch < (j == 1 ? '1' : '0') || ch > '9') {
+      break;
     }
-    if (keyword->size() < 2 || (*keyword)[0] != 'a' || j < keyword->size()) {
-      messages.Say(*keyword,
-          "Argument keyword '%s=' is not known in call to '%s'"_err_en_US,
-          *keyword, intrinsicName);
-      return false;
-    }
-    auto [_, wasInserted]{set.insert(*keyword)};
-    if (!wasInserted) {
-      messages.Say(*keyword,
-          "Argument keyword '%s=' was repeated in call to '%s'"_err_en_US,
-          *keyword, intrinsicName);
-      return false;
-    }
+  }
+  if (keyword.size() < 2 || (keyword)[0] != 'a' || j < keyword.size()) {
+    messages.Say(keyword,
+        "argument keyword '%s=' is not known in call to '%s'"_err_en_US,
+        keyword, intrinsicName);
+    return false;
+  }
+  auto [_, wasInserted]{set.insert(keyword)};
+  if (!wasInserted) {
+    messages.Say(keyword,
+        "argument keyword '%s=' was repeated in call to '%s'"_err_en_US,
+        keyword, intrinsicName);
+    return false;
   }
   return true;
 }
 
-static void CheckMaxMinA1A2Argument(const ActualArguments &arguments,
-    std::set<parser::CharBlock> &set, parser::ContextualMessages &messages) {
-  parser::CharBlock kwA1{"a1", 2};
-  parser::CharBlock kwA2{"a2", 2};
-  bool missingA1{set.find(kwA1) == set.end()};
-  bool missingA2{set.find(kwA2) == set.end()};
-
-  if (arguments.size() > 1) {
-    if (arguments.at(0)->keyword()) {
-      // If the keyword is specified in the first argument, the following
-      // arguments must have the keywords.
-      if (missingA1 && missingA2) {
-        messages.Say("missing mandatory '%s=' and '%s=' arguments"_err_en_US,
-            kwA1.ToString(), kwA2.ToString());
-      } else if (missingA1 && !missingA2) {
-        messages.Say(
-            "missing mandatory '%s=' argument"_err_en_US, kwA1.ToString());
-      } else if (!missingA1 && missingA2) {
-        messages.Say(
-            "missing mandatory '%s=' argument"_err_en_US, kwA2.ToString());
-      }
-    } else if (arguments.at(1)->keyword()) {
-      // No keyword is specified in the first argument.
-      if (missingA1 && missingA2) {
-        messages.Say(
-            "missing mandatory '%s=' argument"_err_en_US, kwA2.ToString());
+// Validate the keyword, if any, and ensure that A1 and A2 are always placed in
+// first and second position in actualForDummy. A1 and A2 are special since they
+// are not optional. The rest of the arguments are not sorted, there are no
+// differences between them.
+static bool CheckAndPushMinMaxArgument(ActualArgument &arg,
+    std::vector<ActualArgument *> &actualForDummy,
+    std::set<parser::CharBlock> &set, const char *intrinsicName,
+    parser::ContextualMessages &messages) {
+  if (std::optional<parser::CharBlock> keyword{arg.keyword()}) {
+    if (!CheckMaxMinArgument(*keyword, set, intrinsicName, messages)) {
+      return false;
+    }
+    const bool isA1{*keyword == parser::CharBlock{"a1", 2}};
+    if (isA1 && !actualForDummy[0]) {
+      actualForDummy[0] = &arg;
+      return true;
+    }
+    const bool isA2{*keyword == parser::CharBlock{"a2", 2}};
+    if (isA2 && !actualForDummy[1]) {
+      actualForDummy[1] = &arg;
+      return true;
+    }
+    if (isA1 || isA2) {
+      // Note that for arguments other than a1 and a2, this error will be caught
+      // later in check-call.cpp.
+      messages.Say(*keyword,
+          "keyword argument '%s=' to intrinsic '%s' was supplied "
+          "positionally by an earlier actual argument"_err_en_US,
+          *keyword, intrinsicName);
+      return false;
+    }
+  } else {
+    if (actualForDummy.size() == 2) {
+      if (!actualForDummy[0] && !actualForDummy[1]) {
+        actualForDummy[0] = &arg;
+        return true;
+      } else if (!actualForDummy[1]) {
+        actualForDummy[1] = &arg;
+        return true;
       }
     }
   }
+  actualForDummy.push_back(&arg);
+  return true;
 }
 
 static bool CheckAtomicKind(const ActualArgument &arg,
@@ -1552,7 +1565,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   bool isMaxMin{dummyArgPatterns > 0 &&
       dummy[dummyArgPatterns - 1].optionality == Optionality::repeats};
   std::vector<ActualArgument *> actualForDummy(
-      isMaxMin ? 0 : dummyArgPatterns, nullptr);
+      isMaxMin ? 2 : dummyArgPatterns, nullptr);
   bool anyMissingActualArgument{false};
   std::set<parser::CharBlock> maxMinKeywords;
   bool anyKeyword{false};
@@ -1579,9 +1592,8 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       continue;
     }
     if (isMaxMin) {
-      if (CheckMaxMinArgument(arg->keyword(), maxMinKeywords, name, messages)) {
-        actualForDummy.push_back(&*arg);
-      } else {
+      if (!CheckAndPushMinMaxArgument(
+              *arg, actualForDummy, maxMinKeywords, name, messages)) {
         return std::nullopt;
       }
     } else {
@@ -1627,17 +1639,6 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     }
   }
 
-  if (isMaxMin) {
-    int nArgs{0};
-    // max() / max(x) is invalid
-    while ((arguments.size() + nArgs) < 2) {
-      actualForDummy.push_back(nullptr);
-      nArgs++;
-    }
-
-    CheckMaxMinA1A2Argument(arguments, maxMinKeywords, messages);
-  }
-
   std::size_t dummies{actualForDummy.size()};
 
   // Check types and kinds of the actual arguments against the intrinsic's
@@ -1659,18 +1660,8 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     if (!arg) {
       if (d.optionality == Optionality::required) {
         std::string kw{d.keyword};
-        if (isMaxMin && maxMinKeywords.size() == 1) {
-          // max(a1=x) or max(a2=x)
-          const auto kwA1{dummy[0].keyword};
-          const auto kwA2{dummy[1].keyword};
-          if (maxMinKeywords.begin()->ToString() == kwA1) {
-            messages.Say("missing mandatory 'a2=' argument"_err_en_US);
-          } else if (maxMinKeywords.begin()->ToString() == kwA2) {
-            messages.Say("missing mandatory 'a1=' argument"_err_en_US);
-          } else {
-            messages.Say(
-                "missing mandatory 'a1=' and 'a2=' arguments"_err_en_US);
-          }
+        if (isMaxMin && !actualForDummy[0] && !actualForDummy[1]) {
+          messages.Say("missing mandatory 'a1=' and 'a2=' arguments"_err_en_US);
         } else {
           messages.Say(
               "missing mandatory '%s=' argument"_err_en_US, kw.c_str());
