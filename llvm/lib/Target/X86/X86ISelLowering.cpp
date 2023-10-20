@@ -3370,6 +3370,17 @@ X86TargetLowering::preferredShiftLegalizationStrategy(
                                                             ExpansionFactor);
 }
 
+bool X86TargetLowering::isDesirableToCommuteWithShift(
+    const SDNode *N, CombineLevel Level) const {
+  assert((N->getOpcode() == ISD::SHL || N->getOpcode() == ISD::SRA ||
+          N->getOpcode() == ISD::SRL) &&
+         "Expected shift op");
+  SDValue N0 = N->getOperand(0).getOpcode() == ISD::SIGN_EXTEND
+                   ? N->getOperand(0)->getOperand(0)
+                   : N->getOperand(0);
+  return N0.hasOneUse();
+}
+
 bool X86TargetLowering::shouldSplatInsEltVarIndex(EVT VT) const {
   // Any legal vector type can be splatted more efficiently than
   // loading/spilling from memory.

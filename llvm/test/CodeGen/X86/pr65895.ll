@@ -21,10 +21,11 @@ define i32 @PR65895() {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    jmp .LBB0_2
 ; CHECK-NEXT:  .LBB0_3: # %for.end
+; CHECK-NEXT:    movzbl %al, %ecx
 ; CHECK-NEXT:    addb $-3, %al
 ; CHECK-NEXT:    movsbl %al, %eax
 ; CHECK-NEXT:    movl %eax, d(%rip)
-; CHECK-NEXT:    leal 247(%rax,%rax,2), %eax
+; CHECK-NEXT:    leal 241(%rax,%rcx,2), %eax
 ; CHECK-NEXT:    movb $1, c(%rip)
 ; CHECK-NEXT:    movsbq %al, %rax
 ; CHECK-NEXT:    movq %rax, e(%rip)

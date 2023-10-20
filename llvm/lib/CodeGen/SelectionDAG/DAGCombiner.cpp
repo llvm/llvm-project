@@ -10054,8 +10054,7 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
   // TODO: Should we limit this with isLegalAddImmediate?
   if (N0.getOpcode() == ISD::SIGN_EXTEND &&
       N0.getOperand(0).getOpcode() == ISD::ADD &&
-      N0.getOperand(0)->getFlags().hasNoSignedWrap() && N0->hasOneUse() &&
-      N0.getOperand(0)->hasOneUse() &&
+      N0.getOperand(0)->getFlags().hasNoSignedWrap() &&
       TLI.isDesirableToCommuteWithShift(N, Level)) {
     SDValue Add = N0.getOperand(0);
     SDLoc DL(N0);
