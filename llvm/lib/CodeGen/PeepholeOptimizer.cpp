@@ -1445,7 +1445,9 @@ bool PeepholeOptimizer::foldRedundantCopy(
   }
 
   MachineInstr *PrevCopy = CopyMIs.find(SrcPair)->second;
-  if (!LocalMIs.count(PrevCopy))
+  // A COPY instruction can be deleted or changed by other optimizations.
+  // Check if the previous COPY instruction is existing and still a COPY.
+  if (!LocalMIs.count(PrevCopy) || !PrevCopy->isCopy())
     return false;
 
   assert(SrcSubReg == PrevCopy->getOperand(1).getSubReg() &&
