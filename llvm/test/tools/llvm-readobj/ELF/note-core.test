@@ -240,40 +240,45 @@
 # RUN: llvm-readelf --notes %t48.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_ARM_PAC_MASK (AArch64 Pointer Authentication code masks)"
 # RUN: llvm-readobj --notes %t48.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_ARM_PAC_MASK (AArch64 Pointer Authentication code masks)"
 
+## Check ELF::NT_ARM_TAGGED_ADDR_CTRL
+# RUN: yaml2obj %s -DTYPE=0x409 -o %t49.o
+# RUN: llvm-readelf --notes %t49.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_ARM_TAGGED_ADDR_CTRL (AArch64 Tagged Address Control)"
+# RUN: llvm-readobj --notes %t49.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_ARM_TAGGED_ADDR_CTRL (AArch64 Tagged Address Control)"
+
 ## Check ELF::NT_ARM_SSVE
-# RUN: yaml2obj %s -DTYPE=0x40b -o %t49.o
-# RUN: llvm-readelf --notes %t49.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_ARM_SSVE (AArch64 Streaming SVE registers)"
-# RUN: llvm-readobj --notes %t49.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_ARM_SSVE (AArch64 Streaming SVE registers)"
+# RUN: yaml2obj %s -DTYPE=0x40b -o %t50.o
+# RUN: llvm-readelf --notes %t50.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_ARM_SSVE (AArch64 Streaming SVE registers)"
+# RUN: llvm-readobj --notes %t50.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_ARM_SSVE (AArch64 Streaming SVE registers)"
 
 ## Check ELF::NT_ARM_ZA
-# RUN: yaml2obj %s -DTYPE=0x40c -o %t50.o
-# RUN: llvm-readelf --notes %t50.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_ARM_ZA (AArch64 SME ZA registers)"
-# RUN: llvm-readobj --notes %t50.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_ARM_ZA (AArch64 SME ZA registers)"
+# RUN: yaml2obj %s -DTYPE=0x40c -o %t51.o
+# RUN: llvm-readelf --notes %t51.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_ARM_ZA (AArch64 SME ZA registers)"
+# RUN: llvm-readobj --notes %t51.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_ARM_ZA (AArch64 SME ZA registers)"
 
 ## Check ELF::NT_ARM_ZT
-# RUN: yaml2obj %s -DTYPE=0x40d -o %t51.o
-# RUN: llvm-readelf --notes %t51.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_ARM_ZT (AArch64 SME ZT registers)"
-# RUN: llvm-readobj --notes %t51.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_ARM_ZT (AArch64 SME ZT registers)"
+# RUN: yaml2obj %s -DTYPE=0x40d -o %t52.o
+# RUN: llvm-readelf --notes %t52.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_ARM_ZT (AArch64 SME ZT registers)"
+# RUN: llvm-readobj --notes %t52.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_ARM_ZT (AArch64 SME ZT registers)"
 
 ## Check ELF::NT_FILE.
-# RUN: yaml2obj %s -DTYPE=0x46494c45 -o %t52.o
-# RUN: llvm-readelf --notes %t52.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_FILE (mapped files)"
-# RUN: llvm-readobj --notes %t52.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_FILE (mapped files)"
+# RUN: yaml2obj %s -DTYPE=0x46494c45 -o %t53.o
+# RUN: llvm-readelf --notes %t53.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_FILE (mapped files)"
+# RUN: llvm-readobj --notes %t53.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_FILE (mapped files)"
 
 ## Check ELF::NT_PRXFPREG.
-# RUN: yaml2obj %s -DTYPE=0x46e62b7f -o %t53.o
-# RUN: llvm-readelf --notes %t53.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_PRXFPREG (user_xfpregs structure)"
-# RUN: llvm-readobj --notes %t53.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_PRXFPREG (user_xfpregs structure)"
+# RUN: yaml2obj %s -DTYPE=0x46e62b7f -o %t54.o
+# RUN: llvm-readelf --notes %t54.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_PRXFPREG (user_xfpregs structure)"
+# RUN: llvm-readobj --notes %t54.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_PRXFPREG (user_xfpregs structure)"
 
 ## Check ELF::NT_SIGINFO.
-# RUN: yaml2obj %s -DTYPE=0x53494749 -o %t54.o
-# RUN: llvm-readelf --notes %t54.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_SIGINFO (siginfo_t data)"
-# RUN: llvm-readobj --notes %t54.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_SIGINFO (siginfo_t data)"
+# RUN: yaml2obj %s -DTYPE=0x53494749 -o %t55.o
+# RUN: llvm-readelf --notes %t55.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_SIGINFO (siginfo_t data)"
+# RUN: llvm-readobj --notes %t55.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_SIGINFO (siginfo_t data)"
 
 ## Check an arbitrary unknown type.
-# RUN: yaml2obj %s -DTYPE=0x12345678 -o %t55.o
-# RUN: llvm-readelf --notes %t55.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="Unknown note type: (0x12345678)"
-# RUN: llvm-readobj --notes %t55.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="Unknown (0x12345678)"
+# RUN: yaml2obj %s -DTYPE=0x12345678 -o %t56.o
+# RUN: llvm-readelf --notes %t56.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="Unknown note type: (0x12345678)"
+# RUN: llvm-readobj --notes %t56.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="Unknown (0x12345678)"
 
 # CHECK-GNU:      Owner Data size  Description
 # CHECK-GNU-NEXT: CORE  0x00000000 [[DESC]]
