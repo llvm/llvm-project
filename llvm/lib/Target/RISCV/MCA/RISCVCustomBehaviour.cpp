@@ -253,7 +253,6 @@ unsigned RISCVInstrumentManager::getSchedClassID(
       Opcode == RISCV::VLE16_V || Opcode == RISCV::VSE16_V ||
       Opcode == RISCV::VLE32_V || Opcode == RISCV::VSE32_V ||
       Opcode == RISCV::VLE64_V || Opcode == RISCV::VSE64_V) {
-
     RISCVII::VLMUL VLMUL = static_cast<RISCVII::VLMUL>(LMUL);
     auto [EEW, EMUL] = getEEWAndEMULForUnitStrideLoadStore(Opcode, VLMUL, SEW);
     RVV = RISCVVInversePseudosTable::getBaseInfo(Opcode, EMUL, EEW);
