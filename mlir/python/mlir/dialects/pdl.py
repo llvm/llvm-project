@@ -22,43 +22,6 @@ from ._ods_common import (
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
-class ApplyNativeConstraintOp(ApplyNativeConstraintOp):
-    """Specialization for PDL apply native constraint op class."""
-
-    def __init__(
-        self,
-        name: Union[str, StringAttr],
-        args: Optional[Sequence[Union[OpView, Operation, Value]]] = None,
-        *,
-        loc=None,
-        ip=None,
-    ):
-        if args is None:
-            args = []
-        args = _get_values(args)
-        super().__init__(name, args, loc=loc, ip=ip)
-
-
-@_ods_cext.register_operation(_Dialect, replace=True)
-class ApplyNativeRewriteOp(ApplyNativeRewriteOp):
-    """Specialization for PDL apply native rewrite op class."""
-
-    def __init__(
-        self,
-        results: Sequence[Type],
-        name: Union[str, StringAttr],
-        args: Optional[Sequence[Union[OpView, Operation, Value]]] = None,
-        *,
-        loc=None,
-        ip=None,
-    ):
-        if args is None:
-            args = []
-        args = _get_values(args)
-        super().__init__(results, name, args, loc=loc, ip=ip)
-
-
-@_ods_cext.register_operation(_Dialect, replace=True)
 class AttributeOp(AttributeOp):
     """Specialization for PDL attribute op class."""
 
@@ -73,21 +36,6 @@ class AttributeOp(AttributeOp):
         valueType = valueType if valueType is None else _get_value(valueType)
         result = pdl.AttributeType.get()
         super().__init__(result, valueType=valueType, value=value, loc=loc, ip=ip)
-
-
-@_ods_cext.register_operation(_Dialect, replace=True)
-class EraseOp(EraseOp):
-    """Specialization for PDL erase op class."""
-
-    def __init__(
-        self,
-        operation: Optional[Union[OpView, Operation, Value]] = None,
-        *,
-        loc=None,
-        ip=None,
-    ):
-        operation = _get_value(operation)
-        super().__init__(operation, loc=loc, ip=ip)
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
@@ -214,23 +162,6 @@ class ResultOp(ResultOp):
         parent = _get_value(parent)
         result = pdl.ValueType.get()
         super().__init__(result, parent, index, loc=loc, ip=ip)
-
-
-@_ods_cext.register_operation(_Dialect, replace=True)
-class ResultsOp(ResultsOp):
-    """Specialization for PDL results op class."""
-
-    def __init__(
-        self,
-        result: Type,
-        parent: Union[OpView, Operation, Value],
-        index: Optional[Union[IntegerAttr, int]] = None,
-        *,
-        loc=None,
-        ip=None,
-    ):
-        parent = _get_value(parent)
-        super().__init__(result, parent, index=index, loc=loc, ip=ip)
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
