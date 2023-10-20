@@ -4522,6 +4522,27 @@ SDValue DAGCombiner::visitMUL(SDNode *N) {
         DAG.getNode(ISD::MUL, SDLoc(N0), VT, N0.getOperand(0), N1),
         DAG.getNode(ISD::MUL, SDLoc(N1), VT, N0.getOperand(1), N1));
 
+  // fold (mul (sext (add_nsw x, c1)), c2) -> (add (mul (sext x), c2), c1*c2)
+  if (N0.getOpcode() == ISD::SIGN_EXTEND &&
+      N0.getOperand(0).getOpcode() == ISD::ADD &&
+      N0.getOperand(0)->getFlags().hasNoSignedWrap() &&
+      DAG.isConstantIntBuildVectorOrConstantInt(N1) &&
+      DAG.isConstantIntBuildVectorOrConstantInt(
+          N0.getOperand(0).getOperand(1)) &&
+      isMulAddWithConstProfitable(N, N0.getOperand(0), N1)) {
+    SDValue Add = N0.getOperand(0);
+    SDLoc DL(N0);
+    if (SDValue ExtC = DAG.FoldConstantArithmetic(N0.getOpcode(), DL, VT,
+                                                  {Add.getOperand(1)})) {
+      if (SDValue MulC =
+              DAG.FoldConstantArithmetic(ISD::MUL, DL, VT, {ExtC, N1})) {
+        SDValue ExtX = DAG.getNode(N0.getOpcode(), DL, VT, Add.getOperand(0));
+        SDValue MulX = DAG.getNode(ISD::MUL, DL, VT, ExtX, N1);
+        return DAG.getNode(ISD::ADD, DL, VT, MulX, MulC);
+      }
+    }
+  }
+
   // Fold (mul (vscale * C0), C1) to (vscale * (C0 * C1)).
   ConstantSDNode *NC1 = isConstOrConstSplat(N1);
   if (N0.getOpcode() == ISD::VSCALE && NC1) {
@@ -19702,7 +19723,9 @@ bool DAGCombiner::isMulAddWithConstProfitable(SDNode *MulNode, SDValue AddNode,
 
     if (Use->getOpcode() == ISD::MUL) { // We have another multiply use.
       SDNode *OtherOp;
-      SDNode *MulVar = AddNode.getOperand(0).getNode();
+      SDNode *MulVar = AddNode.getOperand(0).getOpcode() == ISD::TRUNCATE
+                           ? AddNode.getOperand(0).getOperand(0).getNode()
+                           : AddNode.getOperand(0).getNode();
 
       // OtherOp is what we're multiplying against the constant.
       if (Use->getOperand(0) == ConstNode)
