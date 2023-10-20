@@ -48,13 +48,15 @@ code bases.
     struct A : public P {};
     struct B : public P {};
 
-    bool ambiguous(A a, B b) { return a == b; } // This equality is now ambiguous in C++20.
+    // This equality is now ambiguous in C++20.
+    bool ambiguous(A a, B b) { return a == b; }
 
     template<class S> bool operator!=(const P&, const S&);
-    bool fine(A a, B b) { return a == b; } // Ok. Found a matching operator!=.
+    // Ok. Found a matching operator!=.
+    bool fine(A a, B b) { return a == b; }
 
-  To reduce such widespread breakages, as an extension, Clang accepts this code with an
-  existing warning ``-Wambiguous-reversed-operator`` warning.
+  To reduce such widespread breakages, as an extension, Clang accepts this code
+  with an existing warning ``-Wambiguous-reversed-operator`` warning.
   Fixes `GH <https://github.com/llvm/llvm-project/issues/53954>`_.
 
 C/C++ Language Potentially Breaking Changes
