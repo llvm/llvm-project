@@ -165,7 +165,7 @@ class DarkerFormatHelper(FormatHelper):
     friendly_name = "Python code formatter"
 
     @property
-    def instructions(self):
+    def instructions(self) -> str:
         return " ".join(self.darker_cmd)
 
     def filter_changed_files(self, changed_files: list[str]) -> list[str]:
