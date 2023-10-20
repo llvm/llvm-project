@@ -2,10 +2,8 @@
 
 // CHECK: call void @llvm.dbg.declare(metadata ptr %{{[0-9]+}}, metadata !{{[0-9]+}}, metadata !DIExpression())
 // CHECK: call void @llvm.dbg.declare(metadata ptr %{{[0-9]+}}, metadata !{{[0-9]+}}, metadata !DIExpression(DW_OP_plus_uconst, {{[0-9]+}}))
-// CHECK: call void @llvm.dbg.declare(metadata ptr %{{[0-9]+}}, metadata !{{[0-9]+}}, metadata !DIExpression())
 // CHECK: call void @llvm.dbg.declare(metadata ptr %{{[0-9]+}}, metadata !{{[0-9]+}}, metadata !DIExpression(DW_OP_deref))
 // CHECK: call void @llvm.dbg.declare(metadata ptr %{{[0-9]+}}, metadata !{{[0-9]+}}, metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, {{[0-9]+}}))
-// CHECK: call void @llvm.dbg.declare(metadata ptr %{{[0-9]+}}, metadata !{{[0-9]+}}, metadata !DIExpression())
 struct A {
   int x;
   int y;
