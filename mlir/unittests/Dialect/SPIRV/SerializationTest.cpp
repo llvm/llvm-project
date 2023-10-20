@@ -77,7 +77,7 @@ protected:
   }
 
   // Inserts an Integer or a Vector of Integers constant of value 'val'.
-  spirv::ConstantOp AddConstInt(Type type, APInt val) {
+  spirv::ConstantOp AddConstInt(Type type, const APInt &val) {
     OpBuilder builder(module->getRegion());
     auto loc = UnknownLoc::get(&context);
 
