@@ -11189,6 +11189,42 @@ TEST_F(FormatTest, UnderstandsNewAndDelete) {
                "void delete(link p);",
                "void new (link p);\n"
                "void delete (link p);");
+
+  FormatStyle AfterPlacementOperator = getLLVMStyle();
+  AfterPlacementOperator.SpaceBeforeParens = FormatStyle::SBPO_Custom;
+  EXPECT_EQ(
+      AfterPlacementOperator.SpaceBeforeParensOptions.AfterPlacementOperator,
+      FormatStyle::SpaceBeforeParensCustom::APO_Leave);
+  verifyFormat("new (buf) int;", AfterPlacementOperator);
+  verifyFormat("new(buf) int;", AfterPlacementOperator);
+
+  AfterPlacementOperator.SpaceBeforeParensOptions.AfterPlacementOperator =
+      FormatStyle::SpaceBeforeParensCustom::APO_Never;
+  verifyFormat("struct A {\n"
+               "  int *a;\n"
+               "  A(int *p) : a(new(p) int) {\n"
+               "    new(p) int;\n"
+               "    int *b = new(p) int;\n"
+               "    int *c = new(p) int(3);\n"
+               "    delete(b);\n"
+               "  }\n"
+               "};",
+               AfterPlacementOperator);
+  verifyFormat("void operator new(void *foo) ATTRIB;", AfterPlacementOperator);
+
+  AfterPlacementOperator.SpaceBeforeParensOptions.AfterPlacementOperator =
+      FormatStyle::SpaceBeforeParensCustom::APO_Always;
+  verifyFormat("struct A {\n"
+               "  int *a;\n"
+               "  A(int *p) : a(new (p) int) {\n"
+               "    new (p) int;\n"
+               "    int *b = new (p) int;\n"
+               "    int *c = new (p) int(3);\n"
+               "    delete (b);\n"
+               "  }\n"
+               "};",
+               AfterPlacementOperator);
+  verifyFormat("void operator new(void *foo) ATTRIB;", AfterPlacementOperator);
 }
 
 TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
