@@ -2654,7 +2654,6 @@ libcxx/test/std/containers/views/mdspan/layout_left/index_operator.pass.cpp
 libcxx/test/std/containers/views/mdspan/layout_left/required_span_size.pass.cpp
 libcxx/test/std/containers/views/mdspan/layout_right/index_operator.pass.cpp
 libcxx/test/std/containers/views/mdspan/layout_right/required_span_size.pass.cpp
-libcxx/test/std/containers/views/mdspan/mdspan/CustomTestLayouts.h
 libcxx/test/std/containers/views/mdspan/mdspan/conversion.pass.cpp
 libcxx/test/std/containers/views/mdspan/mdspan/types.pass.cpp
 libcxx/test/std/containers/views/views.span/range_concept_conformance.compile.pass.cpp

@@ -913,6 +913,10 @@ Symbol *AccAttributeVisitor::ResolveFctName(const parser::Name &name) {
   Symbol *prev{currScope().FindSymbol(name.source)};
   if (!prev || (prev && prev->IsFuncResult())) {
     prev = currScope().parent().FindSymbol(name.source);
+    if (!prev) {
+      prev = &context_.globalScope().MakeSymbol(
+          name.source, Attrs{}, ProcEntityDetails{});
+    }
   }
   if (prev != name.symbol) {
     name.symbol = prev;
@@ -965,7 +969,7 @@ void AccAttributeVisitor::AddRoutineInfoToSymbol(
                      std::get_if<Fortran::parser::AccClause::Bind>(&clause.u)) {
         if (const auto *name =
                 std::get_if<Fortran::parser::Name>(&bindClause->v.u)) {
-          if (Symbol *sym = ResolveName(*name, true)) {
+          if (Symbol *sym = ResolveFctName(*name)) {
             info.set_bindName(sym->name().ToString());
           } else {
             context_.Say((*name).source,
@@ -1008,7 +1012,7 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCRoutineConstruct &x) {
 
 bool AccAttributeVisitor::Pre(const parser::AccBindClause &x) {
   if (const auto *name{std::get_if<parser::Name>(&x.u)}) {
-    if (!ResolveName(*name, true)) {
+    if (!ResolveFctName(*name)) {
       context_.Say(name->source,
           "No function or subroutine declared for '%s'"_err_en_US,
           name->source);

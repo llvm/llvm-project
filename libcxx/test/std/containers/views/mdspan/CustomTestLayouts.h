@@ -14,8 +14,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef TEST_STD_CONTAINERS_VIEWS_MDSPAN_MDSPAN_CUSTOM_TEST_LAYOUTS_H
-#define TEST_STD_CONTAINERS_VIEWS_MDSPAN_MDSPAN_CUSTOM_TEST_LAYOUTS_H
+#ifndef TEST_STD_CONTAINERS_VIEWS_MDSPAN_CUSTOM_TEST_LAYOUTS_H
+#define TEST_STD_CONTAINERS_VIEWS_MDSPAN_CUSTOM_TEST_LAYOUTS_H
 
 #include <algorithm>
 #include <array>
@@ -205,9 +205,9 @@ constexpr auto construct_mapping(layout_wrapping_integral<Wraps>, Extents exts) 
   return typename layout_wrapping_integral<Wraps>::template mapping<Extents>(exts, not_extents_constructible_tag{});
 }
 
-
 // This layout does not check convertibility of extents for its conversion ctor
 // Allows triggering mdspan's ctor static assertion on convertibility of extents
+// It also allows for negative strides and offsets via runtime arguments
 class always_convertible_layout {
 public:
   template <class Extents>
@@ -239,8 +239,10 @@ private:
 
 public:
   constexpr mapping() noexcept = delete;
-  constexpr mapping(const mapping& other) noexcept : extents_(other.extents()){};
-  constexpr mapping(const extents_type& ext) noexcept : extents_(ext){};
+  constexpr mapping(const mapping& other) noexcept
+      : extents_(other.extents_), offset_(other.offset_), scaling_(other.scaling_){};
+  constexpr mapping(const extents_type& ext, index_type offset = 0, index_type scaling = 1) noexcept
+      : extents_(ext), offset_(offset), scaling_(scaling){};
 
   template <class OtherExtents>
   constexpr mapping(const mapping<OtherExtents>& other) noexcept {
@@ -256,10 +258,14 @@ public:
     } else {
       extents_ = extents_type();
     }
+    offset_  = other.offset_;
+    scaling_ = other.scaling_;
   }
 
   constexpr mapping& operator=(const mapping& other) noexcept {
     extents_ = other.extents_;
+    offset_  = other.offset_;
+    scaling_ = other.scaling_;
     return *this;
   };
 
@@ -269,7 +275,7 @@ public:
     index_type size = 1;
     for (size_t r = 0; r < extents_type::rank(); r++)
       size *= extents_.extent(r);
-    return size;
+    return std::max(size * scaling_ + offset_, offset_);
   }
 
   template <std::integral... Indices>
@@ -277,16 +283,18 @@ public:
              (std::is_nothrow_constructible_v<index_type, Indices> && ...))
   constexpr index_type operator()(Indices... idx) const noexcept {
     std::array<index_type, extents_type::rank()> idx_a{static_cast<index_type>(static_cast<index_type>(idx))...};
-    return [&]<size_t... Pos>(std::index_sequence<Pos...>) {
-      index_type res = 0;
-      ((res = idx_a[extents_type::rank() - 1 - Pos] + extents_.extent(extents_type::rank() - 1 - Pos) * res), ...);
-      return res;
-    }(std::make_index_sequence<sizeof...(Indices)>());
+    return offset_ +
+           scaling_ * ([&]<size_t... Pos>(std::index_sequence<Pos...>) {
+             index_type res = 0;
+             ((res = idx_a[extents_type::rank() - 1 - Pos] + extents_.extent(extents_type::rank() - 1 - Pos) * res),
+              ...);
+             return res;
+           }(std::make_index_sequence<sizeof...(Indices)>()));
   }
 
-  static constexpr bool is_always_unique() noexcept { return false; }
+  static constexpr bool is_always_unique() noexcept { return true; }
   static constexpr bool is_always_exhaustive() noexcept { return true; }
-  static constexpr bool is_always_strided() noexcept { return false; }
+  static constexpr bool is_always_strided() noexcept { return true; }
 
   static constexpr bool is_unique() noexcept { return true; }
   static constexpr bool is_exhaustive() noexcept { return true; }
@@ -296,15 +304,15 @@ public:
     requires(extents_type::rank() > 0)
   {
     index_type s = 1;
-    for (rank_type i = extents_type::rank() - 1; i > r; i--)
+    for (rank_type i = 0; i < r; i++)
       s *= extents_.extent(i);
-    return s;
+    return s * scaling_;
   }
 
   template <class OtherExtents>
     requires(OtherExtents::rank() == extents_type::rank())
   friend constexpr bool operator==(const mapping& lhs, const mapping<OtherExtents>& rhs) noexcept {
-    return lhs.extents() == rhs.extents();
+    return lhs.extents() == rhs.extents() && lhs.offset_ == rhs.offset && lhs.scaling_ == rhs.scaling_;
   }
 
   friend constexpr void swap(mapping& x, mapping& y) noexcept {
@@ -320,6 +328,11 @@ public:
   }
 
 private:
+  template <class>
+  friend class mapping;
+
   extents_type extents_{};
+  index_type offset_{};
+  index_type scaling_{};
 };
-#endif                     // TEST_STD_CONTAINERS_VIEWS_MDSPAN_MDSPAN_CUSTOM_TEST_LAYOUTS_H
+#endif // TEST_STD_CONTAINERS_VIEWS_MDSPAN_CUSTOM_TEST_LAYOUTS_H

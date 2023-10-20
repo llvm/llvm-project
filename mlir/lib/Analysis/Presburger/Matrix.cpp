@@ -433,3 +433,119 @@ MPInt IntMatrix::normalizeRow(unsigned row, unsigned cols) {
 MPInt IntMatrix::normalizeRow(unsigned row) {
   return normalizeRow(row, getNumColumns());
 }
+
+MPInt IntMatrix::determinant(IntMatrix *inverse) const {
+  assert(nRows == nColumns &&
+         "determinant can only be calculated for square matrices!");
+
+  FracMatrix m(*this);
+
+  FracMatrix fracInverse(nRows, nColumns);
+  MPInt detM = m.determinant(&fracInverse).getAsInteger();
+
+  if (detM == 0)
+    return MPInt(0);
+
+  *inverse = IntMatrix(nRows, nColumns);
+  for (unsigned i = 0; i < nRows; i++)
+    for (unsigned j = 0; j < nColumns; j++)
+      inverse->at(i, j) = (fracInverse.at(i, j) * detM).getAsInteger();
+
+  return detM;
+}
+
+FracMatrix FracMatrix::identity(unsigned dimension) {
+  return Matrix::identity(dimension);
+}
+
+FracMatrix::FracMatrix(IntMatrix m)
+    : FracMatrix(m.getNumRows(), m.getNumColumns()) {
+  for (unsigned i = 0; i < m.getNumRows(); i++)
+    for (unsigned j = 0; j < m.getNumColumns(); j++)
+      this->at(i, j) = m.at(i, j);
+}
+
+Fraction FracMatrix::determinant(FracMatrix *inverse) const {
+  assert(nRows == nColumns &&
+         "determinant can only be calculated for square matrices!");
+
+  FracMatrix m(*this);
+  FracMatrix tempInv(nRows, nColumns);
+  if (inverse)
+    tempInv = FracMatrix::identity(nRows);
+
+  Fraction a, b;
+  // Make the matrix into upper triangular form using
+  // gaussian elimination with row operations.
+  // If inverse is required, we apply more operations
+  // to turn the matrix into diagonal form. We apply
+  // the same operations to the inverse matrix,
+  // which is initially identity.
+  // Either way, the product of the diagonal elements
+  // is then the determinant.
+  for (unsigned i = 0; i < nRows; i++) {
+    if (m(i, i) == 0)
+      // First ensure that the diagonal
+      // element is nonzero, by swapping
+      // it with a nonzero row.
+      for (unsigned j = i + 1; j < nRows; j++) {
+        if (m(j, i) != 0) {
+          m.swapRows(j, i);
+          if (inverse)
+            tempInv.swapRows(j, i);
+          break;
+        }
+      }
+
+    b = m.at(i, i);
+    if (b == 0)
+      return 0;
+
+    // Set all elements above the
+    // diagonal to zero.
+    if (inverse) {
+      for (unsigned j = 0; j < i; j++) {
+        if (m.at(j, i) == 0)
+          continue;
+        a = m.at(j, i);
+        // Set element (j, i) to zero
+        // by subtracting the ith row,
+        // appropriately scaled.
+        m.addToRow(i, j, -a / b);
+        tempInv.addToRow(i, j, -a / b);
+      }
+    }
+
+    // Set all elements below the
+    // diagonal to zero.
+    for (unsigned j = i + 1; j < nRows; j++) {
+      if (m.at(j, i) == 0)
+        continue;
+      a = m.at(j, i);
+      // Set element (j, i) to zero
+      // by subtracting the ith row,
+      // appropriately scaled.
+      m.addToRow(i, j, -a / b);
+      if (inverse)
+        tempInv.addToRow(i, j, -a / b);
+    }
+  }
+
+  // Now only diagonal elements of m are nonzero, but they are
+  // not necessarily 1. To get the true inverse, we should
+  // normalize them and apply the same scale to the inverse matrix.
+  // For efficiency we skip scaling m and just scale tempInv appropriately.
+  if (inverse) {
+    for (unsigned i = 0; i < nRows; i++)
+      for (unsigned j = 0; j < nRows; j++)
+        tempInv.at(i, j) = tempInv.at(i, j) / m(i, i);
+
+    *inverse = std::move(tempInv);
+  }
+
+  Fraction determinant = 1;
+  for (unsigned i = 0; i < nRows; i++)
+    determinant *= m.at(i, i);
+
+  return determinant;
+}

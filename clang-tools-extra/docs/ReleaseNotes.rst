@@ -120,10 +120,20 @@ Improvements to clang-tidy
 
 - Improved :program:`clang-tidy-diff.py` script. It now returns exit code `1`
   if any :program:`clang-tidy` subprocess exits with a non-zero code or if
-  exporting fixes fails.
+  exporting fixes fails. It now accepts a directory as a value for
+  `-export-fixes` to export individual yaml files for each compilation unit.
+
+- Improved :program:`run-clang-tidy.py` script. It now accepts a directory
+  as a value for `-export-fixes` to export individual yaml files for each
+  compilation unit.
 
 New checks
 ^^^^^^^^^^
+
+- New :doc:`bugprone-casting-through-void
+  <clang-tidy/checks/bugprone/casting-through-void>` check.
+
+  Detects unsafe or redundant two-step casting operations involving ``void*``.
 
 - New :doc:`bugprone-compare-pointer-to-member-virtual-function
   <clang-tidy/checks/bugprone/compare-pointer-to-member-virtual-function>` check.
