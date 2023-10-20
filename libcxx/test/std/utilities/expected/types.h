@@ -114,7 +114,7 @@ template <int constant>
 struct TailClobberer {
   constexpr TailClobberer() {
     if (!std::is_constant_evaluated()) {
-      std::memset(this, c, sizeof(*this));
+      std::memset(this, constant, sizeof(*this));
     }
   }
   alignas(2) bool b;
