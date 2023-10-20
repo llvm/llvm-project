@@ -504,6 +504,22 @@ struct ScalarEnumerationTraits<FormatStyle::QualifierAlignmentStyle> {
   }
 };
 
+template <>
+struct MappingTraits<
+    FormatStyle::SpaceBeforeParensCustom::AfterPlacementOperatorStyle> {
+  static void
+  mapping(IO &IO,
+          FormatStyle::SpaceBeforeParensCustom::AfterPlacementOperatorStyle
+              &Value) {
+    IO.enumCase(Value, "Always",
+                FormatStyle::SpaceBeforeParensCustom::APO_Always);
+    IO.enumCase(Value, "Never",
+                FormatStyle::SpaceBeforeParensCustom::APO_Never);
+    IO.enumCase(Value, "Leave",
+                FormatStyle::SpaceBeforeParensCustom::APO_Leave);
+  }
+};
+
 template <> struct MappingTraits<FormatStyle::RawStringFormat> {
   static void mapping(IO &IO, FormatStyle::RawStringFormat &Format) {
     IO.mapOptional("Language", Format.Language);
@@ -679,6 +695,7 @@ template <> struct MappingTraits<FormatStyle::SpaceBeforeParensCustom> {
                    Spacing.AfterFunctionDeclarationName);
     IO.mapOptional("AfterIfMacros", Spacing.AfterIfMacros);
     IO.mapOptional("AfterOverloadedOperator", Spacing.AfterOverloadedOperator);
+    IO.mapOptional("AfterPlacementOperator", Spacing.AfterPlacementOperator);
     IO.mapOptional("AfterRequiresInClause", Spacing.AfterRequiresInClause);
     IO.mapOptional("AfterRequiresInExpression",
                    Spacing.AfterRequiresInExpression);
@@ -1369,6 +1386,8 @@ static void expandPresetsSpaceBeforeParens(FormatStyle &Expanded) {
 
   switch (Expanded.SpaceBeforeParens) {
   case FormatStyle::SBPO_Never:
+    Expanded.SpaceBeforeParensOptions.AfterPlacementOperator =
+        FormatStyle::SpaceBeforeParensCustom::APO_Never;
     break;
   case FormatStyle::SBPO_ControlStatements:
     Expanded.SpaceBeforeParensOptions.AfterControlStatements = true;
