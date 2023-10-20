@@ -1038,6 +1038,26 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
   if (!RISCVII::hasVLOp(TSFlags))
     return;
 
+  // If we don't use LMUL or the SEW/LMUL ratio, then adjust LMUL so that we
+  // maintain the SEW/LMUL ratio. This allows us to eliminate VL toggles in more
+  // places.
+  DemandedFields Demanded = getDemanded(MI, MRI);
+  if (!Demanded.LMUL && !Demanded.SEWLMULRatio && Info.isValid() &&
+      PrevInfo.isValid() && !Info.isUnknown() && !PrevInfo.isUnknown() &&
+      !Info.hasSameVLMAX(PrevInfo)) {
+    unsigned SEW = Info.getSEW();
+    // Fixed point value with 3 fractional bits.
+    unsigned NewRatio = (SEW * 8) / PrevInfo.getSEWLMULRatio();
+    if (NewRatio >= 1 && NewRatio <= 64) {
+      bool Fractional = NewRatio < 8;
+      RISCVII::VLMUL NewVLMul = RISCVVType::encodeLMUL(
+          Fractional ? 8 / NewRatio : NewRatio / 8, Fractional);
+      unsigned VType = Info.encodeVTYPE();
+      Info.setVTYPE(NewVLMul, SEW, RISCVVType::isTailAgnostic(VType),
+                    RISCVVType::isMaskAgnostic(VType));
+    }
+  }
+
   // For vmv.s.x and vfmv.s.f, there are only two behaviors, VL = 0 and
   // VL > 0. We can discard the user requested AVL and just use the last
   // one if we can prove it equally zero.  This removes a vsetvli entirely
