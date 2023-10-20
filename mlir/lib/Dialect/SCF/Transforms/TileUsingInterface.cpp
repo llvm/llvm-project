@@ -767,8 +767,7 @@ mlir::scf::tileUsingSCFForallOp(RewriterBase &rewriter, TilingInterface op,
 
   // 3. Build the offsets, sizes and steps for the tile and distributed loops.
   SmallVector<OpFoldResult> lbs, ubs, steps;
-  for (auto [index, tileSize, loopRange] :
-       llvm::enumerate(tileSizeVector, loopRanges)) {
+  for (auto [tileSize, loopRange] : llvm::zip(tileSizeVector, loopRanges)) {
     if (isConstantIntValue(tileSize, 0))
       continue;
     lbs.push_back(loopRange.offset);
@@ -781,7 +780,7 @@ mlir::scf::tileUsingSCFForallOp(RewriterBase &rewriter, TilingInterface op,
   if (failed(tensor::getOrCreateDestinations(rewriter, loc, op, dest)))
     return op->emitOpError("failed to get destination tensors");
 
-  // 5. Build the device mapping attribute;
+  // 5. Build the device mapping attribute.
   std::optional<ArrayAttr> mappingAttr;
   if (!options.mappingVector.empty()) {
     mappingAttr = rewriter.getArrayAttr(ArrayRef(options.mappingVector));
@@ -796,13 +795,10 @@ mlir::scf::tileUsingSCFForallOp(RewriterBase &rewriter, TilingInterface op,
   // 7. Get the tile offset and sizes.
   rewriter.setInsertionPoint(forallOp.getTerminator());
   SmallVector<OpFoldResult> tiledOffsets, tiledSizes;
-  tiledOffsets.reserve(loopRanges.size());
-  tiledSizes.reserve(loopRanges.size());
   ValueRange ivs = forallOp.getInductionVars();
   {
     int materializedLoopNum = 0;
-    for (auto [index, tileSize, loopRange] :
-         llvm::enumerate(tileSizeVector, loopRanges)) {
+    for (auto [tileSize, loopRange] : llvm::zip(tileSizeVector, loopRanges)) {
       if (isConstantIntValue(tileSize, 0)) {
         tiledOffsets.push_back(loopRange.offset);
         tiledSizes.push_back(loopRange.size);
@@ -816,7 +812,7 @@ mlir::scf::tileUsingSCFForallOp(RewriterBase &rewriter, TilingInterface op,
   }
 
   // 8. Tile the operation. Clone the operation to allow fix up of destination
-  // operands
+  // operands.
   ArrayRef<BlockArgument> destBbArgs = forallOp.getOutputBlockArguments();
   Operation *clonedOp =
       cloneOpAndUpdateDestinationArgs(rewriter, op, destBbArgs);
@@ -824,7 +820,7 @@ mlir::scf::tileUsingSCFForallOp(RewriterBase &rewriter, TilingInterface op,
       cast<TilingInterface>(clonedOp).getTiledImplementation(
           rewriter, tiledOffsets, tiledSizes);
   if (failed(tilingResult))
-    return clonedOp->emitError("Failed to tile op: ");
+    return clonedOp->emitError("failed to tile op: ");
   rewriter.eraseOp(clonedOp);
 
   // 9. Parallel insert back into the result tensor.
@@ -836,24 +832,25 @@ mlir::scf::tileUsingSCFForallOp(RewriterBase &rewriter, TilingInterface op,
     SmallVector<OpFoldResult> resultOffsets, resultSizes;
     if (failed(op.getResultTilePosition(rewriter, index, tiledOffsets,
                                         tiledSizes, resultOffsets,
-                                        resultSizes)))
+                                        resultSizes))) {
       return op->emitOpError("output offsets couldn't be calculated");
+    }
+
     SmallVector<OpFoldResult> strides(resultSizes.size(),
                                       rewriter.getIndexAttr(1));
-
-    // 5.b. Parallel insertions are inserted at the end of the combining
+    // 9.b. Parallel insertions are inserted at the end of the combining
     // terminator.
     rewriter.setInsertionPointToEnd(forallOp.getTerminator().getBody());
     rewriter.create<tensor::ParallelInsertSliceOp>(
         loc, tiledValue, destBBArg, resultOffsets, resultSizes, strides);
   }
 
-  // 10. Return the tiling result;
+  // 10. Return the tiling result.
   return scf::SCFTilingResult{
       tilingResult->tiledOps,
       {forallOp.getOperation()},
-      llvm::to_vector(llvm::map_range(forallOp.getResults(),
-                                      [](auto val) -> Value { return val; }))};
+      llvm::map_to_vector(forallOp.getResults(),
+                          [](auto val) -> Value { return val; })};
 }
 
 //===----------------------------------------------------------------------===//

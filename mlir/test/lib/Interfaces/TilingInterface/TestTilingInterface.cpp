@@ -16,6 +16,7 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/TilingInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
@@ -443,9 +444,9 @@ struct TestTilingInterfacePass
   TestTilingInterfacePass(const TestTilingInterfacePass &pass)
       : PassWrapper(pass) {}
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<affine::AffineDialect, linalg::LinalgDialect,
-                    memref::MemRefDialect, scf::SCFDialect,
-                    tensor::TensorDialect>();
+    registry.insert<affine::AffineDialect, gpu::GPUDialect,
+                    linalg::LinalgDialect, memref::MemRefDialect,
+                    scf::SCFDialect, tensor::TensorDialect>();
     linalg::registerTilingInterfaceExternalModels(registry);
     tensor::registerTilingInterfaceExternalModels(registry);
   }
@@ -506,15 +507,16 @@ static void addPatternForTiling(MLIRContext *context,
   patterns.add<TestTileUsingSCFForOp>(context, tilingOptions, filter);
 }
 
-static void addPatternForTilingUsingForall(MLIRContext *context,
-                                           RewritePatternSet &patterns,
-                                           StringRef filterName,
-                                           ArrayRef<int64_t> tileSizes,
-                                           ArrayRef<int64_t> interchange = {}) {
+static void addPatternForTilingUsingForall(
+    MLIRContext *context, RewritePatternSet &patterns, StringRef filterName,
+    ArrayRef<int64_t> tileSizes,
+    ArrayRef<DeviceMappingAttrInterface> mapping = {},
+    ArrayRef<int64_t> interchange = {}) {
   scf::SCFTilingOptions tilingOptions;
   SmallVector<OpFoldResult> tileSizesOfr =
       getAsIndexOpFoldResult(context, tileSizes);
   tilingOptions.setTileSizes(tileSizesOfr).setInterchange(interchange);
+  tilingOptions.setMapping(mapping);
   TransformationFilter filter(StringAttr::get(context, filterName),
                               StringAttr::get(context, "tiled"));
   patterns.add<TestTileUsingSCFForallOp>(context, tilingOptions, filter);
@@ -581,7 +583,10 @@ void TestTilingInterfacePass::addTestPatterns(MLIRContext *context,
   }
   if (testTilingForAll) {
     // 1. Tiling M and N dims of `linalg.matmul` on tensors.
-    addPatternForTilingUsingForall(context, patterns, "simple_gemm", {10, 20});
+    addPatternForTilingUsingForall(
+        context, patterns, "simple_gemm", {10, 20},
+        {gpu::GPUBlockMappingAttr::get(context, gpu::MappingId::DimY),
+         gpu::GPUBlockMappingAttr::get(context, gpu::MappingId::DimX)});
     // 2. Tiling 3D parallel generic op which implements a transpose.
     addPatternForTilingUsingForall(context, patterns,
                                    "parallel_generic_transpose", {10, 0, 20});

@@ -58,8 +58,8 @@ struct SCFTilingOptions {
   /// `scf.for`)
   SmallVector<Attribute> mappingVector = {};
   SCFTilingOptions &setMapping(ArrayRef<DeviceMappingAttrInterface> mapping) {
-    mappingVector = llvm::to_vector(
-        llvm::map_range(mapping, [](auto attr) -> Attribute { return attr; }));
+    mappingVector = llvm::map_to_vector(
+        mapping, [](auto attr) -> Attribute { return attr; });
     return *this;
   }
 };
@@ -93,7 +93,7 @@ struct SCFTileAndFuseOptions {
   }
 };
 
-/// Method to tile and op that implements the `TilingInterface` using
+/// Method to tile an op that implements the `TilingInterface` using
 /// `scf.forall`.
 FailureOr<SCFTilingResult>
 tileUsingSCFForallOp(RewriterBase &rewriter, TilingInterface op,

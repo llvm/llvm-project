@@ -34,6 +34,7 @@ func.func @simple_matmul(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>,
 //      CHECK:     scf.forall.in_parallel {
 //      CHECK:       tensor.parallel_insert_slice %[[GEMM_TILE]] into %[[INIT]]
 // CHECK-SAME:           [%[[IV0]], %[[IV1]]] [%[[TS_Y]], %[[TS_X]]] [1, 1]
+//      CHECK:       mapping = [#gpu.block<y>, #gpu.block<x>]
 //      CHECK:   return %[[RESULT]]
 
 // -----
