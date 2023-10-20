@@ -176,6 +176,10 @@ public:
   /// Returns the encoding (or the null-attribute for dense-tensors).
   SparseTensorEncodingAttr getEncoding() const { return enc; }
 
+  //
+  // SparseTensorEncodingAttr delegators
+  //
+
   /// Returns true for tensors which have an encoding, and false for
   /// those which do not.  Therefore tensors with an all-dense encoding
   /// return true.
@@ -189,13 +193,19 @@ public:
   /// (This is always true for dense-tensors.)
   bool isAllOrdered() const { return enc.isAllOrdered(); }
 
-  /// Returns true if the dimToLvl mapping is the identity.
-  /// (This is always true for dense-tensors.)
-  bool isIdentity() const { return !dimToLvl; }
+  /// Translates between level / dimension coordinate space.
+  ValueRange translateCrds(OpBuilder &builder, Location loc, ValueRange crds,
+                           CrdTransDirectionKind dir) const {
+    return enc.translateCrds(builder, loc, crds, dir);
+  }
 
   /// Returns true if the dimToLvl mapping is a permutation.
   /// (This is always true for dense-tensors.)
   bool isPermutation() const { return enc.isPermutation(); }
+
+  /// Returns true if the dimToLvl mapping is the identity.
+  /// (This is always true for dense-tensors.)
+  bool isIdentity() const { return enc.isIdentity(); }
 
   /// Returns the dimToLvl mapping (or the null-map for the identity).
   /// If you intend to compare the results of this method for equality,
