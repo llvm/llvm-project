@@ -2869,15 +2869,14 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
         if (Status != HSA_STATUS_SUCCESS)
           return Status;
 
-        // TODO: This is not allowed by the standard.
-        char ISAName[Length];
-        Status = hsa_isa_get_info_alt(ISA, HSA_ISA_INFO_NAME, ISAName);
+        llvm::SmallVector<char> ISAName(Length);
+        Status = hsa_isa_get_info_alt(ISA, HSA_ISA_INFO_NAME, ISAName.begin());
         if (Status != HSA_STATUS_SUCCESS)
           return Status;
 
-        llvm::StringRef TripleTarget(ISAName);
+        llvm::StringRef TripleTarget(ISAName.begin(), Length);
         if (TripleTarget.consume_front("amdgcn-amd-amdhsa"))
-          Target = TripleTarget.ltrim('-').str();
+          Target = TripleTarget.ltrim('-').rtrim('\0').str();
         return HSA_STATUS_SUCCESS;
       });
       if (Err)
