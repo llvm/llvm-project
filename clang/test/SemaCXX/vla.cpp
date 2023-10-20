@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.14.0 -verify %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.14.0 -verify -Wno-vla %s
 
 // PR11925
 int n;

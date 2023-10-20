@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fcuda-is-device -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fcuda-is-device -fsyntax-only -verify -Wno-vla %s
 
 #include "Inputs/cuda.h"
 
