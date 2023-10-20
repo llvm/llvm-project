@@ -578,19 +578,18 @@ def MoveTileSliceToVectorOp : ArmSME_Op<"move_tile_slice_to_vector", [Pure,
   }];
 }
 
-class HasMatchingMaskTypeConstraint<string operand, string maskGetter> :
-  TypesMatchWith<
+class HasMatchingMaskTypeConstraint<string operand> :
+  OptionalTypesMatchWith<
     "shape of `" # operand #  "Mask` matches `" # operand # "`",
     operand, operand # "Mask",
-    "::llvm::cast<mlir::VectorType>($_self).cloneWith({}, IntegerType::get($_ctxt, 1))",
-    "!" # maskGetter # "() || std::equal_to<>()">;
+    "::llvm::cast<mlir::VectorType>($_self).cloneWith({}, IntegerType::get($_ctxt, 1))">;
 
 def OuterProductOp :
   ArmSME_Op<"outerproduct", [Pure,
     AttrSizedOperandSegments,
     AllElementTypesMatch<["lhs", "rhs", "result"]>,
-    HasMatchingMaskTypeConstraint<"lhs", "getLhsMask">,
-    HasMatchingMaskTypeConstraint<"rhs", "getRhsMask">,
+    HasMatchingMaskTypeConstraint<"lhs">,
+    HasMatchingMaskTypeConstraint<"rhs">,
     PredOpTrait<
       "both `lhsMask` and `rhsMask` should be provided or neither",
       CPred<"bool(getLhsMask()) == bool(getRhsMask())">>,
@@ -601,10 +600,9 @@ def OuterProductOp :
           "getLhsType().getDimSize(0), getRhsType().getDimSize(0)},"
           "getRhsType().getElementType(),"
           "{getLhsType().getScalableDims()[0], getRhsType().getScalableDims()[0]})">>,
-    TypesMatchWith<"`result` and `acc` have the same type",
+    OptionalTypesMatchWith<"`result` and `acc` have the same type",
       "result", "acc",
-      "::llvm::cast<mlir::Type>($_self)",
-      "!getAcc() || std::equal_to<>()">
+      "::llvm::cast<mlir::Type>($_self)">
   ]>
 {
   let summary = "Vector outerproduct with optional fused add";
