@@ -247,6 +247,9 @@ llvm.func @afterTeams()
 llvm.func @teams_if(%arg : i1) {
     // CHECK-NEXT: call void @beforeTeams()
     llvm.call @beforeTeams() : () -> ()
+    // If the condition is true, then the value of bounds is zero - which basically means "implementation-defined". 
+    // The runtime sees zero and sets a default value of number of teams. This behavior is according to the standard.
+    // The same is true for `thread_limit`.
     // CHECK: [[NUM_TEAMS_UPPER:%.+]] = select i1 [[ARG]], i32 0, i32 1
     // CHECK: [[NUM_TEAMS_LOWER:%.+]] = select i1 [[ARG]], i32 0, i32 1
     // CHECK: call void @__kmpc_push_num_teams_51(ptr {{.+}}, i32 {{.+}}, i32 [[NUM_TEAMS_LOWER]], i32 [[NUM_TEAMS_UPPER]], i32 0)
