@@ -78,6 +78,7 @@ bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts) {
   bool Changed = false;
   while (!InstructionWorklist.empty()) {
     Instruction *I = InstructionWorklist.pop_back_val();
+    DebugLoc Loc = I->getDebugLoc();
     for (Use &U : I->operands()) {
       auto *BI = I;
       if (auto *Phi = dyn_cast<PHINode>(I)) {
@@ -92,7 +93,7 @@ bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts) {
           Changed = true;
           auto NewInsts = expandUser(BI, C);
           for (auto *NI : NewInsts)
-            NI->setDebugLoc(BI->getDebugLoc());
+            NI->setDebugLoc(Loc);
           InstructionWorklist.insert(NewInsts.begin(), NewInsts.end());
           U.set(NewInsts.back());
         }
