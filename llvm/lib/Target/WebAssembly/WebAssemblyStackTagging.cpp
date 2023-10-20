@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "WebAssembly.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/raw_ostream.h"
@@ -15,18 +16,19 @@
 
 using namespace llvm;
 
+#define DEBUG_TYPE "wasm-stack-tagging"
+
 namespace {
 
-struct WebAssemblyStackTaggingPass : public FunctionPass {
+struct WebAssemblyStackTagging : public FunctionPass {
   static char ID;
   StackSafetyGlobalInfo const *SSI = nullptr;
   AAResults *AA = nullptr;
-  WebAssemblyStackTaggingPass() : FunctionPass(ID) {}
+  WebAssemblyStackTagging() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &) override;
 private:
 #if 0
-  bool const UseStackSafety = false;
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addRequired<StackSafetyGlobalInfoWrapperPass>();
@@ -40,30 +42,26 @@ private:
 
 }
 
-bool WebAssemblyStackTaggingPass::runOnFunction(Function & Fn) {
+bool WebAssemblyStackTagging::runOnFunction(Function & Fn) {
   if (!Fn.hasFnAttribute(Attribute::SanitizeMemTag))
     return false;
 #if 0
   SSI = &getAnalysis<StackSafetyGlobalInfoWrapperPass>().getResult();
   return true;
 #endif
-  return false;
+    return false;
 }
 
-char WebAssemblyStackTaggingPass::ID = 0;
-#if 0
-INITIALIZE_PASS_BEGIN(WebAssemblyStackTaggingPass, DEBUG_TYPE, "WebAssembly Stack Tagging",
+char WebAssemblyStackTagging::ID = 0;
+INITIALIZE_PASS_BEGIN(WebAssemblyStackTagging, DEBUG_TYPE, "WebAssembly Stack Tagging",
                       false, false)
+#if 0
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(StackSafetyGlobalInfoWrapperPass)
-INITIALIZE_PASS_END(WebAssemblyStackTaggingPass, DEBUG_TYPE, "WebAssembly Stack Tagging",
-                    false, false)
 #endif
-
-void llvm::initializeWebAssemblyStackTaggingPass(PassRegistry &) {
-
-}
+INITIALIZE_PASS_DEPENDENCY(StackSafetyGlobalInfoWrapperPass)
+INITIALIZE_PASS_END(WebAssemblyStackTagging, DEBUG_TYPE, "WebAssembly Stack Tagging",
+                    false, false)
 
 FunctionPass *llvm::createWebAssemblyStackTaggingPass() {
-  return new WebAssemblyStackTaggingPass();
+  return new WebAssemblyStackTagging();
 }
