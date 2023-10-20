@@ -165,10 +165,10 @@ static Error printBinaryIdsInternal(raw_ostream &OS,
   return Error::success();
 }
 
-Expected<std::unique_ptr<InstrProfReader>> InstrProfReader::create(
-    const Twine &Path, vfs::FileSystem &FS,
-    const InstrProfCorrelator *Correlator,
-    std::optional<std::function<void(Error)>> MaybeWarnFn) {
+Expected<std::unique_ptr<InstrProfReader>>
+InstrProfReader::create(const Twine &Path, vfs::FileSystem &FS,
+                        const InstrProfCorrelator *Correlator,
+                        std::optional<std::function<void(Error)>> MaybeWarnFn) {
   // Set up the buffer to read.
   auto BufferOrError = setupMemoryBuffer(Path, FS);
   if (Error E = BufferOrError.takeError())
