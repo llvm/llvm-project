@@ -1084,6 +1084,26 @@ static ValueLatticeElement getValueFromSimpleICmpCondition(
   return ValueLatticeElement::getRange(TrueValues.subtract(Offset));
 }
 
+static std::optional<ConstantRange>
+getRangeViaSLT(CmpInst::Predicate Pred, APInt RHS,
+               function_ref<std::optional<ConstantRange>(const APInt &)> Fn) {
+  bool Invert = false;
+  if (Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SGE) {
+    Pred = ICmpInst::getInversePredicate(Pred);
+    Invert = true;
+  }
+  if (Pred == ICmpInst::ICMP_SLE) {
+    Pred = ICmpInst::ICMP_SLT;
+    if (RHS.isMaxSignedValue())
+      return std::nullopt; // Could also return full/empty here, if we wanted.
+    ++RHS;
+  }
+  assert(Pred == ICmpInst::ICMP_SLT && "Must be signed predicate");
+  if (auto CR = Fn(RHS))
+    return Invert ? CR->inverse() : CR;
+  return std::nullopt;
+}
+
 static ValueLatticeElement getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
                                                      bool isTrueDest) {
   Value *LHS = ICI->getOperand(0);
@@ -1150,54 +1170,22 @@ static ValueLatticeElement getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
   }
 
   // Recognize:
-  // icmp sgt (ashr X, ShAmtC), C --> icmp sgt X, ((C + 1) << ShAmtC) - 1
-  // and friends.
-  // Preconditions: (C != SIGNED_MAX) &&
-  //                ((C+1) << ShAmtC != SIGNED_MIN) &&
-  //                (((C+1) << ShAmtC) >> ShAmtC) == (C+1)
+  // icmp slt (ashr X, ShAmtC), C --> icmp slt X, C << ShAmtC
+  // Preconditions: (C << ShAmtC) >> ShAmtC == C
   const APInt *ShAmtC;
   if (CmpInst::isSigned(EdgePred) &&
       match(LHS, m_AShr(m_Specific(Val), m_APInt(ShAmtC))) &&
       match(RHS, m_APInt(C))) {
-    APInt New = ((*C + 1) << *ShAmtC) - 1;
-    APInt MaxSigned = APInt::getSignedMaxValue(New.getBitWidth());
-    APInt MinSigned = APInt::getSignedMinValue(New.getBitWidth());
-    auto CheckPreConds = [&]() {
-      if (*C == MaxSigned)
-        return false;
-      APInt Shifted = (*C + 1) << *ShAmtC;
-      if (Shifted == MinSigned)
-        return false;
-      if ((Shifted.ashr(*ShAmtC)) != (*C + 1))
-        return false;
-      return true;
-    };
-    if (!CheckPreConds())
-      return ValueLatticeElement::getOverdefined();
-    APInt Lower, Upper;
-    switch (EdgePred) {
-    default:
-      llvm_unreachable("Unknown signed predicate!");
-    case ICmpInst::ICMP_SGT:
-      Lower = New + 1;
-      Upper = MaxSigned;
-      break;
-    case ICmpInst::ICMP_SLE:
-      Lower = MinSigned;
-      Upper = New + 1;
-      break;
-    case ICmpInst::ICMP_SGE:
-      Lower = New;
-      Upper = MaxSigned;
-      break;
-    case ICmpInst::ICMP_SLT:
-      Lower = MinSigned;
-      Upper = New;
-      break;
-    }
-
-    return ValueLatticeElement::getRange(
-        ConstantRange::getNonEmpty(Lower, Upper));
+    auto CR = getRangeViaSLT(
+        EdgePred, *C, [&](const APInt &RHS) -> std::optional<ConstantRange> {
+          APInt New = RHS << *ShAmtC;
+          if ((New.ashr(*ShAmtC)) != RHS)
+            return std::nullopt;
+          return ConstantRange::getNonEmpty(
+              APInt::getSignedMinValue(New.getBitWidth()), New);
+        });
+    if (CR)
+      return ValueLatticeElement::getRange(*CR);
   }
 
   return ValueLatticeElement::getOverdefined();

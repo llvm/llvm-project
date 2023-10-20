@@ -1273,7 +1273,7 @@ define void @ashr_sge(i8 %x) {
 ; CHECK-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    call void @check1(i1 true)
-; CHECK-NEXT:    [[C3:%.*]] = icmp uge i8 [[X]], 4
+; CHECK-NEXT:    [[C3:%.*]] = icmp uge i8 [[X]], 1
 ; CHECK-NEXT:    call void @check1(i1 [[C3]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       else:
@@ -1283,9 +1283,9 @@ define void @ashr_sge(i8 %x) {
   %c = icmp sge i8 %s, 0
   br i1 %c, label %if, label %else
 if:
-  %c2 = icmp sge i8 %x, 3
+  %c2 = icmp sge i8 %x, 0
   call void @check1(i1 %c2)
-  %c3 = icmp sge i8 %x, 4
+  %c3 = icmp sge i8 %x, 1
   call void @check1(i1 %c3)
   ret void
 else:
@@ -1299,7 +1299,7 @@ define void @ashr_slt(i8 %x) {
 ; CHECK-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    call void @check1(i1 true)
-; CHECK-NEXT:    [[C3:%.*]] = icmp slt i8 [[X]], 2
+; CHECK-NEXT:    [[C3:%.*]] = icmp ult i8 [[X]], -1
 ; CHECK-NEXT:    call void @check1(i1 [[C3]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       else:
@@ -1309,9 +1309,9 @@ define void @ashr_slt(i8 %x) {
   %c = icmp slt i8 %s, 0
   br i1 %c, label %if, label %else
 if:
-  %c2 = icmp slt i8 %x, 3
+  %c2 = icmp slt i8 %x, 0
   call void @check1(i1 %c2)
-  %c3 = icmp slt i8 %x, 2
+  %c3 = icmp slt i8 %x, -1
   call void @check1(i1 %c3)
   ret void
 else:
