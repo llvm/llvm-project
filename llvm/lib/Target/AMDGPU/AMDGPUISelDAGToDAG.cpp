@@ -454,23 +454,30 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
   bool IsGCN = CurDAG->getSubtarget().getTargetTriple().getArch() ==
                Triple::amdgcn;
   if (IsGCN && Subtarget->has64BitLiterals() && VT.getSizeInBits() == 64 &&
-      (CurDAG->isConstantIntBuildVectorOrConstantInt(SDValue(N, 0)) ||
-       CurDAG->isConstantFPBuildVectorOrConstantFP(SDValue(N, 0)))) {
+      CurDAG->isConstantValueOfAnyType(SDValue(N, 0))) {
     uint64_t C = 0;
+    bool AllConst = true;
     unsigned EltSize = EltVT.getSizeInBits();
     for (unsigned I = 0; I < NumVectorElts; ++I) {
+      SDValue Op = N->getOperand(I);
+      if (Op.isUndef()) {
+        AllConst = false;
+        break;
+      }
       uint64_t Val;
-      if (ConstantFPSDNode *CF = dyn_cast<ConstantFPSDNode>(N->getOperand(I))) {
+      if (ConstantFPSDNode *CF = dyn_cast<ConstantFPSDNode>(Op)) {
         Val = CF->getValueAPF().bitcastToAPInt().getZExtValue();
       } else
-        Val = N->getConstantOperandVal(I);
+        Val = cast<ConstantSDNode>(Op)->getZExtValue();
       C |= Val << (EltSize * I);
     }
-    SDValue CV = CurDAG->getTargetConstant(C, DL, MVT::i64);
-    MachineSDNode *Copy = CurDAG->getMachineNode(AMDGPU::S_MOV_B64, DL, VT, CV);
-    CurDAG->SelectNodeTo(N, AMDGPU::COPY_TO_REGCLASS, VT, SDValue(Copy, 0),
-                         RegClass);
-    return;
+    if (AllConst) {
+      SDValue CV = CurDAG->getTargetConstant(C, DL, MVT::i64);
+      auto *Copy = CurDAG->getMachineNode(AMDGPU::S_MOV_B64, DL, VT, CV);
+      CurDAG->SelectNodeTo(N, AMDGPU::COPY_TO_REGCLASS, VT, SDValue(Copy, 0),
+                           RegClass);
+      return;
+    }
   }
 
   assert(NumVectorElts <= 32 && "Vectors with more than 32 elements not "
