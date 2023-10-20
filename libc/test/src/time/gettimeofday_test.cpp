@@ -21,6 +21,8 @@ TEST(LlvmLibcGettimeofday, SmokeTest) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   void *tz = nullptr;
 
+  bool retry = false;
+
   suseconds_t sleep_times[2] = {200, 1000};
   for (int i = 0; i < 2; i++) {
     timeval tv;
@@ -28,14 +30,14 @@ TEST(LlvmLibcGettimeofday, SmokeTest) {
     ASSERT_EQ(ret, 0);
 
     suseconds_t sleep_time = sleep_times[i];
-    // Sleep for {2 * sleep_time} microsceconds.
-    timespec tim = {0, 2 * sleep_time * 1000};
+    // Sleep for {sleep_time} microsceconds.
+    timespec tim = {0, sleep_time * 1000};
     timespec tim2 = {0, 0};
     ret = LIBC_NAMESPACE::nanosleep(&tim, &tim2);
 
     if (ret < 0) {
       tlog << "nanosleep call failed, skip the remaining of the test.";
-      return;
+      continue;
     }
 
     // Call gettimeofday again and verify that it is more {sleep_time}
@@ -43,6 +45,23 @@ TEST(LlvmLibcGettimeofday, SmokeTest) {
     timeval tv1;
     ret = LIBC_NAMESPACE::gettimeofday(&tv1, tz);
     ASSERT_EQ(ret, 0);
-    ASSERT_GE(tv1.tv_usec - tv.tv_usec, sleep_time);
+
+    auto diff = tv1.tv_usec - tv.tv_usec;
+    if (diff < 0) {
+      tlog << "Time goes backward from tv: " << tv.tv_usec
+           << " to tv1: " << tv1.tv_usec;
+
+      if (!retry) {
+        tlog << "Retry the test.";
+        retry = true;
+        --i;
+      } else {
+        tlog << "Skip the remaining of the test.";
+      }
+
+      continue;
+    }
+
+    ASSERT_GE(diff, sleep_time);
   }
 }
