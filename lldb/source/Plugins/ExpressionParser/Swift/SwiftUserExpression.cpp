@@ -489,7 +489,8 @@ GetPersistentState(Target *target, ExecutionContext &exe_ctx) {
 static bool CanEvaluateExpressionWithoutBindingGenericParams(
     const llvm::SmallVectorImpl<SwiftASTManipulator::VariableInfo> &variables,
     const llvm::Optional<SwiftLanguageRuntime::GenericSignature> &generic_sig,
-    Block *block, StackFrame &stack_frame) {
+    SwiftASTContextForExpressions &scratch_ctx, Block *block,
+    StackFrame &stack_frame) {
   // First, find the compiler type of self with the generic parameters not
   // bound.
   auto self_var = SwiftExpressionParser::FindSelfVariable(block);
@@ -514,11 +515,7 @@ static bool CanEvaluateExpressionWithoutBindingGenericParams(
   if (!ts)
     return false;
 
-  auto *swift_ast_ctx = ts->GetSwiftASTContext();
-  if (!swift_ast_ctx)
-    return false;
-
-  auto swift_type = swift_ast_ctx->GetSwiftType(self_type);
+  auto swift_type = scratch_ctx.GetSwiftType(self_type);
   if (!swift_type)
     return false;
 
@@ -614,7 +611,8 @@ SwiftUserExpression::GetTextAndSetExpressionParser(
 
   if (m_options.GetBindGenericTypes() == lldb::eDontBind &&
       !CanEvaluateExpressionWithoutBindingGenericParams(
-          local_variables, m_generic_signature, sc.block, *stack_frame.get())) {
+          local_variables, m_generic_signature, *m_swift_ast_ctx, sc.block,
+          *stack_frame.get())) {
     diagnostic_manager.PutString(
         eDiagnosticSeverityError,
         "Could not evaluate the expression without binding generic types.");
