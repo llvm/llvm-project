@@ -190,9 +190,11 @@ swift::BraceStmt *SwiftASTManipulatorBase::GetUserBody() {
 }
 
 SwiftASTManipulator::SwiftASTManipulator(
+    SwiftASTContextForExpressions &swift_ast_ctx,
     swift::SourceFile &source_file, bool repl,
     lldb::BindGenericTypes bind_generic_types)
-    : SwiftASTManipulatorBase(source_file, repl, bind_generic_types) {}
+    : SwiftASTManipulatorBase(source_file, repl, bind_generic_types),
+      m_swift_ast_ctx(swift_ast_ctx) {}
 
 void SwiftASTManipulator::FindSpecialNames(
     llvm::SmallVectorImpl<swift::Identifier> &names, llvm::StringRef prefix) {
@@ -903,7 +905,7 @@ llvm::Optional<swift::Type> SwiftASTManipulator::GetSwiftTypeForVariable(
   CompilerType referent_type =
       type_system_swift->GetReferentType(variable.m_type.GetOpaqueQualType());
 
-  swift::Type swift_type = GetSwiftType(referent_type);
+  swift::Type swift_type = m_swift_ast_ctx.GetSwiftType(referent_type);
   if (!swift_type)
     return {};
 
@@ -1022,7 +1024,7 @@ bool SwiftASTManipulator::AddExternalVariables(
     auto introducer = variable.GetVarIntroducer();
     swift::SourceLoc loc;
     swift::Identifier name = variable.m_name;
-    swift::Type var_type = GetSwiftType(variable.m_type);
+    swift::Type var_type = m_swift_ast_ctx.GetSwiftType(variable.m_type);
 
     if (!var_type)
       return false;
@@ -1232,7 +1234,7 @@ SwiftASTManipulator::MakeTypealias(swift::Identifier name, CompilerType &type,
   swift::TypeAliasDecl *type_alias_decl = new (ast_context)
       swift::TypeAliasDecl(swift::SourceLoc(), swift::SourceLoc(), name,
                            swift::SourceLoc(), nullptr, decl_ctx);
-  swift::Type underlying_type = GetSwiftType(type);
+  swift::Type underlying_type = m_swift_ast_ctx.GetSwiftType(type);
   if (!underlying_type)
     return nullptr;
 
@@ -1257,12 +1259,13 @@ SwiftASTManipulator::MakeTypealias(swift::Identifier name, CompilerType &type,
     type_alias_decl->dump(ss);
     ss.flush();
 
-    log->Printf("Made type alias for %s (%p) in decl context (%p) and context "
-                "(%p):\n%s",
-                name.get(),
-                static_cast<void *>(GetSwiftType(type).getPointer()),
-                static_cast<void *>(decl_ctx),
-                static_cast<void *>(&ast_context), s.c_str());
+    log->Printf(
+        "Made type alias for %s (%p) in decl context (%p) and context "
+        "(%p):\n%s",
+        name.get(),
+        static_cast<void *>(m_swift_ast_ctx.GetSwiftType(type).getPointer()),
+        static_cast<void *>(decl_ctx), static_cast<void *>(&ast_context),
+        s.c_str());
   }
 
   if (make_private)

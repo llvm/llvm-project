@@ -89,7 +89,7 @@ SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemoteAST(
   auto *remote_ast = &GetRemoteASTContext(*scratch_ctx);
   // Check whether we've already cached this offset.
   swift::TypeBase *swift_type =
-      GetCanonicalSwiftType(instance_type).getPointer();
+      scratch_ctx->GetCanonicalSwiftType(instance_type).getPointer();
   if (swift_type == nullptr)
     return {};
 
@@ -134,7 +134,7 @@ SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemoteAST(
               "[MemberVariableOffsetResolver] resolved non-class type = %s",
               bound.GetTypeName().AsCString());
 
-          swift_type = GetCanonicalSwiftType(bound).getPointer();
+          swift_type = scratch_ctx->GetCanonicalSwiftType(bound).getPointer();
           MemberID key{swift_type, ConstString(member_name).GetCString()};
           auto it = m_member_offsets.find(key);
           if (it != m_member_offsets.end())
@@ -228,7 +228,7 @@ SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_ProtocolRemoteAST(
 
   swift::remote::RemoteAddress remote_existential(existential_address);
   auto &remote_ast = GetRemoteASTContext(*swift_ast_ctx);
-  auto swift_type = GetSwiftType(protocol_type);
+  auto swift_type = swift_ast_ctx->GetSwiftType(protocol_type);
   if (!swift_type)
     return {};
   if (use_local_buffer)
@@ -284,7 +284,7 @@ CompilerType SwiftLanguageRuntimeImpl::BindGenericTypeParametersRemoteAST(
   base_type = swift_ast_ctx->ImportType(base_type, error);
 
   if (base_type.GetTypeInfo() & lldb::eTypeIsSwift) {
-    swift::Type target_swift_type(GetSwiftType(base_type));
+    swift::Type target_swift_type(swift_ast_ctx->GetSwiftType(base_type));
     if (target_swift_type->hasArchetype())
       target_swift_type = target_swift_type->mapTypeOutOfContext().getPointer();
 
@@ -410,7 +410,7 @@ CompilerType SwiftLanguageRuntimeImpl::BindGenericTypeParametersRemoteAST(
               swift_ast_ctx->ImportType(concrete_type, import_error);
 
           if (target_concrete_type.IsValid())
-            return swift::Type(GetSwiftType(target_concrete_type));
+            return swift::Type(swift_ast_ctx->GetSwiftType(target_concrete_type));
 
           return type;
         },

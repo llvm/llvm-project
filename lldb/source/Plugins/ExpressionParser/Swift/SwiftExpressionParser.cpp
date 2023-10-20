@@ -634,7 +634,7 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
 
   Flags imported_self_type_flags(imported_self_type.GetTypeInfo());
 
-  auto swift_self_type = GetSwiftType(imported_self_type);
+  auto swift_self_type = swift_ast_context.GetSwiftType(imported_self_type);
   if (!swift_self_type) {
     LLDB_LOG(GetLog(LLDBLog::Types | LLDBLog::Expressions),
              "Couldn't get SwiftASTContext type for self type {0}.",
@@ -653,7 +653,8 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
   // If 'self' is a weak storage type, it must be an optional.  Look
   // through it and unpack the argument of "optional".
   if (swift::WeakStorageType *weak_storage_type =
-          GetSwiftType(imported_self_type)->getAs<swift::WeakStorageType>()) {
+          swift_ast_context.GetSwiftType(imported_self_type)
+              ->getAs<swift::WeakStorageType>()) {
     swift::Type referent_type = weak_storage_type->getReferentType();
     swift::BoundGenericEnumType *optional_type =
         referent_type->getAs<swift::BoundGenericEnumType>();
@@ -893,14 +894,13 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
 
   auto compiler_type = variable.GetType();
   // Add the persistent variable as a typeref compiler type.
-  if (auto swift_ast_ctx =
+  if (auto ts =
           compiler_type.GetTypeSystem().dyn_cast_or_null<SwiftASTContext>()) {
     // Add the persistent variable as a typeref compiler type, but only if
     // doesn't have archetypes (which can be the case when we're evaluating an
     // expression as generic), since we can't mangle free-standing archetypes.
-    if (!swift_ast_ctx->TypeHasArchetype(compiler_type))
-      variable.SetType(
-          swift_ast_ctx->GetTypeRefType(compiler_type.GetOpaqueQualType()));
+    if (!manipulator.GetScratchContext().TypeHasArchetype(compiler_type))
+      variable.SetType(ts->GetTypeRefType(compiler_type.GetOpaqueQualType()));
   }
 
   if (is_result || is_error) {
@@ -922,7 +922,8 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
     } else {
       CompilerType actual_type = variable.GetType();
       // Desugar '$lldb_context', etc.
-      swift::Type actual_swift_type = GetSwiftType(actual_type);
+      swift::Type actual_swift_type =
+          manipulator.GetScratchContext().GetSwiftType(actual_type);
       if (!actual_swift_type)
         return llvm::None;
 
@@ -1051,7 +1052,7 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
     }
   return SwiftExpressionParser::SILVariableInfo(
       variable.GetType(), offset, needs_init, unowned_self);
-}
+  }
 
 namespace {
 
@@ -1415,7 +1416,7 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
   std::unique_ptr<SwiftASTManipulator> code_manipulator;
   if (repl || !playground) {
     code_manipulator = std::make_unique<SwiftASTManipulator>(
-        *source_file, repl, options.GetBindGenericTypes());
+        swift_ast_context, *source_file, repl, options.GetBindGenericTypes());
 
     if (!playground) {
       code_manipulator->RewriteResult();

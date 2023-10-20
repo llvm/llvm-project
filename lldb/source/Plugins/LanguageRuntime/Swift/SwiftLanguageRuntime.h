@@ -51,11 +51,6 @@ class TypeBase;
 
 namespace lldb_private {
 
-/// Statically cast a CompilerType to a Swift type.
-swift::Type GetSwiftType(CompilerType type);
-/// Statically cast a CompilerType to a Swift type and get its canonical form.
-swift::CanType GetCanonicalSwiftType(CompilerType type);
-
 class SwiftLanguageRuntimeStub;
 class SwiftLanguageRuntimeImpl;
 

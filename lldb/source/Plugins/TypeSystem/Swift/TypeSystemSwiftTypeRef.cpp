@@ -3370,6 +3370,33 @@ CompilerType TypeSystemSwiftTypeRef::GetRawPointerType() {
   return RemangleAsType(dem, node);
 }
 
+bool TypeSystemSwiftTypeRef::IsErrorType(opaque_compiler_type_t type) {
+  auto impl = [&]() -> bool {
+    using namespace swift::Demangle;
+    Demangler dem;
+    NodePointer protocol_list = DemangleCanonicalType(dem, type);
+    if (protocol_list && protocol_list->getKind() == Node::Kind::ProtocolList)
+      for (auto type_list : *protocol_list)
+        if (type_list && type_list->getKind() == Node::Kind::TypeList)
+          for (auto type : *type_list)
+            if (type && type->getKind() == Node::Kind::Type)
+              for (auto protocol : *type)
+                if (protocol->getKind() == Node::Kind::Protocol &&
+                    protocol->getNumChildren() == 2) {
+                  auto module = protocol->getChild(0);
+                  auto identifier = protocol->getChild(1);
+                  if (module->getKind() == Node::Kind::Module &&
+                      module->getText() == swift::STDLIB_NAME &&
+                      identifier->getKind() == Node::Kind::Identifier &&
+                      identifier->getText() == "Error")
+                    return true;
+                }
+    return false;
+  };
+  VALIDATE_AND_RETURN(impl, IsErrorType, type, g_no_exe_ctx,
+                      (ReconstructType(type)), (ReconstructType(type)));
+}
+
 CompilerType TypeSystemSwiftTypeRef::GetErrorType() {
   auto impl = [&]() {
     using namespace swift::Demangle;
