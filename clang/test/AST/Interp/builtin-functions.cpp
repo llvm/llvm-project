@@ -331,3 +331,11 @@ namespace bitreverse {
   char bitreverse3[__builtin_bitreverse32(0x12345678) == 0x1E6A2C48 ? 1 : -1];
   char bitreverse4[__builtin_bitreverse64(0x0123456789ABCDEFULL) == 0xF7B3D591E6A2C480 ? 1 : -1];
 }
+
+namespace expect {
+  constexpr int a() {
+    return 12;
+  }
+  static_assert(__builtin_expect(a(),1) == 12, "");
+  static_assert(__builtin_expect_with_probability(a(), 1, 1.0) == 12, "");
+}
