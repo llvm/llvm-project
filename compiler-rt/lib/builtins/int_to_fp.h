@@ -44,7 +44,10 @@ static __inline int clzSrcT(usrc_t x) { return __clzti2(x); }
 typedef float dst_t;
 typedef uint32_t dst_rep_t;
 #define DST_REP_C UINT32_C
-static const int dstSigBits = 23;
+
+enum {
+  dstSigBits = 23,
+};
 
 #elif defined DST_DOUBLE
 typedef double dst_t;
