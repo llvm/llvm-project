@@ -221,9 +221,9 @@ deque type_traits
 deque typeinfo
 deque version
 exception cstddef
-exception cstdint
 exception cstdlib
 exception type_traits
+exception typeinfo
 exception version
 execution cstddef
 execution version
@@ -885,7 +885,6 @@ typeindex version
 typeinfo cstddef
 typeinfo cstdint
 typeinfo cstdlib
-typeinfo exception
 typeinfo type_traits
 unordered_map algorithm
 unordered_map bit
