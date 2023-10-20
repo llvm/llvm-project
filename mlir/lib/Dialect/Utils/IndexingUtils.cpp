@@ -263,12 +263,18 @@ SmallVector<SmallVector<int32_t>>
 mlir::getArrayOfI32Array(ArrayAttr arrayAttr) {
   SmallVector<SmallVector<int32_t>> arrayOfI32Array;
   for (auto attr : arrayAttr) {
-    arrayOfI32Array.push_back(llvm::to_vector(
-        llvm::map_range(llvm::cast<ArrayAttr>(attr), [&](Attribute intAttr) {
-          return static_cast<int32_t>(
-              llvm::cast<IntegerAttr>(intAttr).getInt());
-        })));
+    if (auto denseI32ArrayAttr = attr.dyn_cast<DenseI32ArrayAttr>()) {
+      arrayOfI32Array.push_back(
+          llvm::to_vector(denseI32ArrayAttr.asArrayRef()));
+    } else {
+      arrayOfI32Array.push_back(llvm::map_to_vector(
+          llvm::cast<ArrayAttr>(attr), [](Attribute intAttr) {
+            return static_cast<int32_t>(
+                llvm::cast<IntegerAttr>(intAttr).getInt());
+          }));
+    }
   }
+
   return arrayOfI32Array;
 }
 

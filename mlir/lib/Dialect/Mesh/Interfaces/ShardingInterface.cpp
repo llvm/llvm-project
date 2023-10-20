@@ -29,16 +29,6 @@ using namespace mlir::mesh;
 // common util functions
 //===----------------------------------------------------------------------===//
 
-static FailureOr<ShardingOption> getShardingOptionFromAttr(Operation *op) {
-  auto arrayAttr = op->getAttrOfType<ArrayAttr>(getShardingArrayName());
-  if (!arrayAttr)
-    return failure();
-  auto symbolRefAttr = op->getAttrOfType<SymbolRefAttr>(getMeshClusterName());
-  if (!symbolRefAttr)
-    return failure();
-  return ShardingOption(getArrayOfI32Array(arrayAttr), symbolRefAttr);
-}
-
 // This method aims to retrieve the mesh sharding attribute (MeshShardingAttr)
 // for a given operation result.
 static FailureOr<MeshShardingAttr>
@@ -96,10 +86,6 @@ getMeshShardingAttr(OpOperand &opOperand) {
 
   return failure();
 }
-
-//===----------------------------------------------------------------------===//
-// ShardingInterface::verifyShardingInterfaceImpl
-//===----------------------------------------------------------------------===//
 
 static LogicalResult
 checkOperandAffineExprRecursively(AffineExpr expr,
@@ -161,6 +147,10 @@ checkOperandAffineExpr(AffineExpr expr, unsigned numDims) {
   return positions;
 }
 
+//===----------------------------------------------------------------------===//
+// ShardingInterface::verifyShardingInterfaceImpl
+//===----------------------------------------------------------------------===//
+
 LogicalResult mesh::ShardingInterface::verifyShardingInterfaceImpl() {
   Operation *op = getOperation();
 
@@ -219,6 +209,43 @@ void mesh::ShardingInterface::printLoopTypesAndIndexingMaps(raw_ostream &os) {
 }
 
 //===----------------------------------------------------------------------===//
+// ShardingInterface::getShardingOptionFromAttr
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+constexpr StringRef getShardingArrayName() { return "sharding_array"; }
+
+constexpr StringRef getMeshClusterName() { return "mesh_cluster"; }
+
+} // namespace
+
+FailureOr<ShardingOption> mesh::ShardingInterface::getShardingOptionFromAttr() {
+  Operation *op = getOperation();
+  auto arrayAttr = op->getAttrOfType<ArrayAttr>(getShardingArrayName());
+  if (!arrayAttr)
+    return failure();
+  auto symbolRefAttr = op->getAttrOfType<SymbolRefAttr>(getMeshClusterName());
+  if (!symbolRefAttr)
+    return failure();
+  return ShardingOption(getArrayOfI32Array(arrayAttr), symbolRefAttr);
+}
+
+//===----------------------------------------------------------------------===//
+// ShardingInterface::setShardingOptionAttr
+//===----------------------------------------------------------------------===//
+
+void mesh::ShardingInterface::setShardingOptionAttr(
+    Builder &b, const ShardingOption &option) {
+  if (option.empty)
+    return;
+  Operation *op = getOperation();
+  ArrayAttr shardingArrayAttr = b.getArrayOfI32ArrayAttr(option.shardingArray);
+  op->setDiscardableAttr(getMeshClusterName(), option.cluster);
+  op->setDiscardableAttr(getShardingArrayName(), shardingArrayAttr);
+}
+
+//===----------------------------------------------------------------------===//
 // detail::defaultGetShardingOption
 //===----------------------------------------------------------------------===//
 
@@ -264,16 +291,16 @@ fillShardingOption(Operation *op, ShardingOption &shardingOption,
 
 } // namespace
 
-FailureOr<ShardingOption> mesh::detail::defaultGetShardingOption(Operation *op,
-                                                                 OpBuilder &b) {
+FailureOr<ShardingOption>
+mesh::detail::defaultGetShardingOption(Operation *op) {
 
   // 1. If a valid sharding attribute exists, use it.
+  ShardingInterface shardingOp = llvm::cast<ShardingInterface>(op);
   FailureOr<ShardingOption> shardingOptionFromAttr =
-      getShardingOptionFromAttr(op);
+      shardingOp.getShardingOptionFromAttr();
   if (succeeded(shardingOptionFromAttr))
     return shardingOptionFromAttr;
 
-  ShardingInterface shardingOp = llvm::cast<ShardingInterface>(op);
   ShardingOption shardingOption;
 
   if (failed(shardingOp.verifyShardingInterfaceImpl()))

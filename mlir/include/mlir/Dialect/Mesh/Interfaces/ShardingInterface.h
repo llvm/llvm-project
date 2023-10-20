@@ -30,17 +30,13 @@ struct ShardingOption {
   // present. Note that it is different from that an operation is not sharded.
   bool empty = false;
   ShardingOption() = default;
-  ShardingOption(const ShardingArray &shardingArray, SymbolRefAttr cluster)
-      : shardingArray(shardingArray), cluster(cluster) {}
+  ShardingOption(ShardingArray shardingArray, SymbolRefAttr cluster)
+      : shardingArray(std::move(shardingArray)), cluster(cluster) {}
 };
-
-constexpr StringRef getShardingArrayName() { return "sharding_array"; }
-
-constexpr StringRef getMeshClusterName() { return "mesh_cluster"; }
 
 namespace detail {
 
-FailureOr<ShardingOption> defaultGetShardingOption(Operation *op, OpBuilder &b);
+FailureOr<ShardingOption> defaultGetShardingOption(Operation *op);
 
 LogicalResult
 defaultAddShardingAnnotations(Operation *op, OpBuilder &b,

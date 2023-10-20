@@ -22,6 +22,17 @@ def ShardingInterface : OpInterface<"ShardingInterface"> {
       InterfaceMethod<
         /*desc=*/[{
           Returns a list of iterator types that describe the number of loops.
+          The iterator types determine how the operation tranverses its input
+          and output tensors.
+
+          Example 1: A gemm op has 3 loops, M, N and K. Their loop iterator
+          types are paralle, parallel, reduction-sum. This indicates that M and
+          N are traversed in parallel, while the K dimension is used for
+          reduction.
+
+          Example 2: A softmax op's loop iterator types are parallel and
+          invalid. The second dimension is considered as invalid because it is
+          neigher parallel nor any kind of reduction. 
         }],
         /*retType=*/"SmallVector<::mlir::mesh::IteratorType>",
         /*methodName=*/"getLoopIteratorTypes",
@@ -32,6 +43,9 @@ def ShardingInterface : OpInterface<"ShardingInterface"> {
       InterfaceMethod<
         /*desc=*/[{
           Return the indexing maps attribute within the current operation.
+          Indexing maps determine how indices in the iteration space map to
+          tensor indices. They are specified using `affine_map` in MLIR, which
+          provides an affine transformation of indices.
         }],
         /*retTy=*/"SmallVector<AffineMap>",
         /*methodName=*/"getIndexingMaps",
@@ -47,13 +61,11 @@ def ShardingInterface : OpInterface<"ShardingInterface"> {
         }],
         /*retTy=*/"FailureOr<ShardingOption>",
         /*methodName=*/"getShardingOption",
-        /*args=*/(ins
-          "OpBuilder &":$b
-        ),
+        /*args=*/(ins),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           return detail::defaultGetShardingOption(
-            $_op.getOperation(), b);
+            $_op.getOperation());
         }]
       >,
       InterfaceMethod<
@@ -80,6 +92,11 @@ def ShardingInterface : OpInterface<"ShardingInterface"> {
       LogicalResult verifyShardingInterfaceImpl();
 
       void printLoopTypesAndIndexingMaps(raw_ostream &os);
+
+      FailureOr<ShardingOption> getShardingOptionFromAttr();
+
+      void setShardingOptionAttr(Builder &b, const ShardingOption& option);
+
     }];
 }
 

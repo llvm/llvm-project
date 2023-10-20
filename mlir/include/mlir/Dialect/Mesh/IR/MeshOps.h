@@ -33,12 +33,8 @@ bool areReductionAndPartialMatch(IteratorType iType, Partial partial);
 
 template <typename T>
 void removeTrailingEmptySubArray(SmallVector<SmallVector<T>> &array) {
-  for (int64_t i = array.size() - 1; i >= 0; i--) {
-    if (array[i].empty())
-      array.pop_back();
-    else
-      break;
-  }
+  while (!array.empty() && array.back().empty())
+    array.pop_back();
 }
 
 Partial getPartialTypeFromReduction(IteratorType iType);

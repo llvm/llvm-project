@@ -67,8 +67,7 @@ LogicalResult visitOp(Operation *op, OpBuilder &builder) {
     return failure();
   }
 
-  FailureOr<ShardingOption> shardingOption =
-      shardingOp.getShardingOption(builder);
+  FailureOr<ShardingOption> shardingOption = shardingOp.getShardingOption();
   if (failed(shardingOption)) {
     op->emitOpError() << "fail to get sharding option from results.";
     return failure();
@@ -76,14 +75,7 @@ LogicalResult visitOp(Operation *op, OpBuilder &builder) {
   // sharding info is empty, return immediately
   if (shardingOption->empty)
     return success();
-
-  ArrayAttr shardingArrayAttr =
-      builder.getArrayOfI32ArrayAttr(shardingOption->shardingArray);
-  LLVM_DEBUG(DBGS() << "mesh cluster: " << shardingOption->cluster << "\n");
-  LLVM_DEBUG(DBGS() << "sharding array: " << shardingArrayAttr << "\n");
-  op->setAttr(getMeshClusterName(), shardingOption->cluster);
-  op->setAttr(getShardingArrayName(),
-              builder.getArrayOfI32ArrayAttr(shardingOption->shardingArray));
+  shardingOp.setShardingOptionAttr(builder, *shardingOption);
 
   if (failed(shardingOp.addShardingAnnotations(builder, *shardingOption))) {
     op->emitOpError() << "fail to set sharding annotations.";
@@ -112,13 +104,8 @@ struct ShardingPropagationPass
     LLVM_DEBUG(
       DBGS() << "print all the ops' iterator types and indexing maps in the "
                 "block.\n";
-      DenseSet<ShardingInterface> ops;
       for (Operation &op : block.getOperations()) {
-        if (auto shardingOp = llvm::dyn_cast<ShardingInterface>(&op)) {
-          ops.insert(shardingOp);
-        }
-      }
-      for (ShardingInterface shardingOp : ops) {
+        if (auto shardingOp = llvm::dyn_cast<ShardingInterface>(&op))
         shardingOp.printLoopTypesAndIndexingMaps(llvm::dbgs());
       }
     );

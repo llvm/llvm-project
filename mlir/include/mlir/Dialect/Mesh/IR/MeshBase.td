@@ -143,10 +143,10 @@ def MeshSharding : AttrDef<Mesh_Dialect, "MeshSharding"> {
                      "ArrayRef<SmallVector<int32_t>>":$split_axes,
                      "ArrayRef<int32_t>": $partial_axes,
                      "mesh::Partial": $partial_type), [{
-      SmallVector<DenseI32ArrayAttr> splitAxesAttr = llvm::to_vector(
-        llvm::map_range(split_axes, [&](ArrayRef<int32_t> array) {
+      SmallVector<DenseI32ArrayAttr> splitAxesAttr = llvm::map_to_vector(
+                  split_axes, [&](ArrayRef<int32_t> array) {
           return DenseI32ArrayAttr::get($_ctxt, array);
-      }));
+      });
       return $_get($_ctxt, cluster, splitAxesAttr, partial_axes,
                    partial_type);
     }]>,

@@ -139,11 +139,11 @@ func.func @matmul_on_use_shard_m_and_duplicted_k(%arg0: tensor<2x16x8xf32>, %arg
 // CHECK-LABEL: func.func @mlp_1d_weight_stationary
 func.func @mlp_1d_weight_stationary(%arg0: tensor<2x4x8xf32>, %arg1: tensor<2x8x32xf32>, %arg2: tensor<2x32x8xf32>) -> tensor<2x4x8xf32> {
   %0 = mesh.shard %arg0 to <@mesh_1d, [[], [], [0]]> : tensor<2x4x8xf32>
-  // CHECK: tosa.matmul {{.*}} {mesh_cluster = @mesh_1d, sharding_array = {{\[\[}}], [], [0 : i32]]}
+  // CHECK: tosa.matmul {{.*}} {mesh_cluster = @mesh_1d, sharding_array = [array<i32>, array<i32>, array<i32: 0>]}
   %1 = tosa.matmul %0, %arg1 : (tensor<2x4x8xf32>, tensor<2x8x32xf32>) -> tensor<2x4x32xf32>
-  // CHECK: tosa.sigmoid {{.*}} {mesh_cluster = @mesh_1d, sharding_array =  {{\[\[}}], [], [0 : i32]]}
+  // CHECK: tosa.sigmoid {{.*}} {mesh_cluster = @mesh_1d, sharding_array = [array<i32>, array<i32>, array<i32: 0>]}
   %2 = tosa.sigmoid %1 : (tensor<2x4x32xf32>) -> tensor<2x4x32xf32>
-  // CHECK: tosa.matmul {{.*}} {mesh_cluster = @mesh_1d, sharding_array =  {{\[\[}}], [], [], [0 : i32]]}
+  // CHECK: tosa.matmul {{.*}} {mesh_cluster = @mesh_1d, sharding_array = [array<i32>, array<i32>, array<i32>, array<i32: 0>]}
   %3 = tosa.matmul %2, %arg2 : (tensor<2x4x32xf32>, tensor<2x32x8xf32>) -> tensor<2x4x8xf32>
   %4 = mesh.shard %3 to <@mesh_1d, [[], [], []], partial = sum[0]> : tensor<2x4x8xf32>
   %5 = mesh.shard %4 to <@mesh_1d, [[], [], [0]]> annotate_for_users : tensor<2x4x8xf32>
@@ -154,12 +154,12 @@ func.func @mlp_1d_weight_stationary(%arg0: tensor<2x4x8xf32>, %arg1: tensor<2x8x
 // CHECK-LABEL: func.func @mlp_2d_weight_stationary
 func.func @mlp_2d_weight_stationary(%arg0: tensor<2x4x8xf32>, %arg1: tensor<2x8x32xf32>, %arg2: tensor<2x32x8xf32>) -> tensor<2x4x8xf32> {
   %0 = mesh.shard %arg0 to <@mesh_3d, [[], [], [0, 1, 2]]> : tensor<2x4x8xf32>
-  // CHECK: tosa.matmul {{.*}} {mesh_cluster = @mesh_3d, sharding_array = {{\[\[}}], [], [1 : i32, 2 : i32], [0 : i32]]}
+  // CHECK: tosa.matmul {{.*}} {mesh_cluster = @mesh_3d, sharding_array = [array<i32>, array<i32>, array<i32: 1, 2>, array<i32: 0>]}
   %1 = tosa.matmul %0, %arg1 : (tensor<2x4x8xf32>, tensor<2x8x32xf32>) -> tensor<2x4x32xf32>
   %2 = mesh.shard %1 to <@mesh_3d, [[], [], [1, 2]], partial = sum[0]> : tensor<2x4x32xf32>
-  // CHECK: tosa.sigmoid {{.*}} {mesh_cluster = @mesh_3d, sharding_array =  {{\[\[}}], [], [1 : i32, 2 : i32]]}
+  // CHECK: tosa.sigmoid {{.*}} {mesh_cluster = @mesh_3d, sharding_array = [array<i32>, array<i32>, array<i32: 1, 2>]}
   %3 = tosa.sigmoid %2 : (tensor<2x4x32xf32>) -> tensor<2x4x32xf32>
-  // CHECK: tosa.matmul {{.*}} {mesh_cluster = @mesh_3d, sharding_array =  {{\[\[}}], [], [0 : i32], [1 : i32, 2 : i32]]}
+  // CHECK: tosa.matmul {{.*}} {mesh_cluster = @mesh_3d, sharding_array = [array<i32>, array<i32>, array<i32: 0>, array<i32: 1, 2>]}
   %4 = tosa.matmul %3, %arg2 : (tensor<2x4x32xf32>, tensor<2x32x8xf32>) -> tensor<2x4x8xf32>
   %5 = mesh.shard %4 to <@mesh_3d, [[], [], [0]], partial = sum[1, 2]> : tensor<2x4x8xf32>
   %6 = mesh.shard %5 to <@mesh_3d, [[], [], [0, 1, 2]]> annotate_for_users : tensor<2x4x8xf32>

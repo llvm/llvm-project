@@ -320,7 +320,7 @@ ArrayAttr
 Builder::getArrayOfI32ArrayAttr(ArrayRef<SmallVector<int32_t>> values) {
   auto attrs =
       llvm::map_to_vector<8>(values, [this](ArrayRef<int32_t> v) -> Attribute {
-        return getI32ArrayAttr(v);
+        return getDenseI32ArrayAttr(v);
       });
   return getArrayAttr(attrs);
 }
