@@ -131,6 +131,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_NT>::enumeration(
   ECase(NT_ARM_HW_WATCH);
   ECase(NT_ARM_SVE);
   ECase(NT_ARM_PAC_MASK);
+  ECase(NT_ARM_TAGGED_ADDR_CTRL);
   ECase(NT_ARM_SSVE);
   ECase(NT_ARM_ZA);
   ECase(NT_ARM_ZT);

@@ -13439,7 +13439,7 @@ static void placeSources(ByteProvider<SDValue> &Src0,
         return IterElt.first == *BPP.first.Src;
       };
 
-      auto Match = std::find_if(Srcs.begin(), Srcs.end(), MatchesFirst);
+      auto Match = llvm::find_if(Srcs, MatchesFirst);
       if (Match != Srcs.end()) {
         Match->second = addPermMasks(FirstMask, Match->second);
         FirstGroup = I;
@@ -13452,7 +13452,7 @@ static void placeSources(ByteProvider<SDValue> &Src0,
       auto MatchesSecond = [&BPP](std::pair<SDValue, unsigned> IterElt) {
         return IterElt.first == *BPP.second.Src;
       };
-      auto Match = std::find_if(Srcs.begin(), Srcs.end(), MatchesSecond);
+      auto Match = llvm::find_if(Srcs, MatchesSecond);
       if (Match != Srcs.end()) {
         Match->second = addPermMasks(SecondMask, Match->second);
       } else
