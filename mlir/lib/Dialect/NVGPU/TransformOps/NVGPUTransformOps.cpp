@@ -40,7 +40,7 @@ using namespace mlir::transform;
 #define DEBUG_TYPE "nvgpu-transforms"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
 #define DBGSNL() (llvm::dbgs() << "\n")
-#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
+#define LDBG(X) LLVM_DEBUG(DBGS() << (X) << "\n")
 
 //===----------------------------------------------------------------------===//
 // Apply...ConversionPatternsOp
