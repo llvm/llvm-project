@@ -9,6 +9,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
@@ -45,8 +46,13 @@ private:
 bool WebAssemblyStackTagging::runOnFunction(Function & Fn) {
   if (!Fn.hasFnAttribute(Attribute::SanitizeMemTag))
     return false;
+  auto F = &Fn;
   SSI = &getAnalysis<StackSafetyGlobalInfoWrapperPass>().getResult();
-#if 0
+  memtag::StackInfoBuilder SIB(SSI);
+  for (Instruction &I : instructions(F))
+    SIB.visit(I);
+  memtag::StackInfo &SInfo = SIB.get();
+#if 1
   for (auto &I : SInfo.AllocasToInstrument) {
     LLVM_DEBUG(dbgs() << I << "\n");
   }
