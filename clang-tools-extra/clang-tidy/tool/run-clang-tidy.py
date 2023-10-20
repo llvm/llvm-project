@@ -315,6 +315,15 @@ def main():
             "parameter is a directory, the fixes of each compilation unit are "
             "stored in individual yaml files in the directory.",
         )
+    else:
+        parser.add_argument(
+            "-export-fixes",
+            metavar="directory",
+            dest="export_fixes",
+            help="A directory to store suggested fixes in, which can be applied "
+            "with clang-apply-replacements. The fixes of each compilation unit are "
+            "stored in individual yaml files in the directory.",
+        )
     parser.add_argument(
         "-j",
         type=int,
@@ -401,7 +410,12 @@ def main():
         ):
             os.makedirs(args.export_fixes)
 
-        if not os.path.isdir(args.export_fixes) and yaml:
+        if not os.path.isdir(args.export_fixes):
+            if not yaml:
+                raise RuntimeError(
+                    "Cannot combine fixes in one yaml file. Either install PyYAML or specify an output directory."
+                )
+
             combine_fixes = True
 
         if os.path.isdir(args.export_fixes):
