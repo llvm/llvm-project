@@ -252,8 +252,7 @@ void LVElement::generateName(std::string &Prefix) const {
   Prefix.append(isLined() ? lineNumberAsString(/*ShowZero=*/true) : "?");
 
   // Remove any whitespaces.
-  Prefix.erase(std::remove_if(Prefix.begin(), Prefix.end(), ::isspace),
-               Prefix.end());
+  llvm::erase_if(Prefix, ::isspace);
 }
 
 // Generate a name for unnamed elements.
