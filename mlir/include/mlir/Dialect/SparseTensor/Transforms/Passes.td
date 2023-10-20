@@ -143,6 +143,7 @@ def PostSparsificationRewrite : Pass<"post-sparsification-rewrite", "ModuleOp"> 
   }];
   let constructor = "mlir::createPostSparsificationRewritePass()";
   let dependentDialects = [
+    "affine::AffineDialect",
     "arith::ArithDialect",
     "bufferization::BufferizationDialect",
     "linalg::LinalgDialect",
