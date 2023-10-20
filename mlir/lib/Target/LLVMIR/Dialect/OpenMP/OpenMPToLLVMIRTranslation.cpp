@@ -1537,9 +1537,9 @@ convertOmpThreadprivate(Operation &opInst, llvm::IRBuilderBase &builder,
   return success();
 }
 
-int64_t getSizeInBytes(DataLayout &DL, const Type &type) {
+int64_t getSizeInBytes(DataLayout &DL, const Type &type, const Type &eleType) {
   if (isa<LLVM::LLVMPointerType>(type))
-    return DL.getTypeSize(cast<LLVM::LLVMPointerType>(type).getElementType());
+    return DL.getTypeSize(eleType);
 
   return 0;
 }
@@ -1706,8 +1706,8 @@ static void genMapInfos(llvm::IRBuilderBase &builder,
       mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM;
 
     combinedInfo.Types.emplace_back(mapFlag);
-    combinedInfo.Sizes.emplace_back(
-        builder.getInt64(getSizeInBytes(DL, mapInfoOp.getVarPtr().getType())));
+    combinedInfo.Sizes.emplace_back(builder.getInt64(getSizeInBytes(
+        DL, mapInfoOp.getVarPtr().getType(), mapInfoOp.getVarType())));
     index++;
   }
 

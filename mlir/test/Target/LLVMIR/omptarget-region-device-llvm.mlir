@@ -12,9 +12,9 @@ module attributes {omp.is_target_device = true} {
     %7 = llvm.alloca %6 x i32 {bindc_name = "c", in_type = i32, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_regionEc"} : (i64) -> !llvm.ptr<i32>
     llvm.store %1, %3 : !llvm.ptr<i32>
     llvm.store %0, %5 : !llvm.ptr<i32>
-    %map1 = omp.map_info var_ptr(%3 : !llvm.ptr<i32>)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr<i32> {name = ""}
-    %map2 = omp.map_info var_ptr(%5 : !llvm.ptr<i32>)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr<i32> {name = ""}
-    %map3 = omp.map_info var_ptr(%7 : !llvm.ptr<i32>)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr<i32> {name = ""}
+    %map1 = omp.map_info var_ptr(%3 : !llvm.ptr<i32>, i32)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr<i32> {name = ""}
+    %map2 = omp.map_info var_ptr(%5 : !llvm.ptr<i32>, i32)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr<i32> {name = ""}
+    %map3 = omp.map_info var_ptr(%7 : !llvm.ptr<i32>, i32)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr<i32> {name = ""}
     omp.target map_entries(%map1, %map2, %map3 : !llvm.ptr<i32>, !llvm.ptr<i32>, !llvm.ptr<i32>) {
       %8 = llvm.load %3 : !llvm.ptr<i32>
       %9 = llvm.load %5 : !llvm.ptr<i32>

@@ -156,6 +156,35 @@ struct AtomicReadOpConversion
   }
 };
 
+struct MapInfoOpConversion : public ConvertOpToLLVMPattern<omp::MapInfoOp> {
+  using ConvertOpToLLVMPattern<omp::MapInfoOp>::ConvertOpToLLVMPattern;
+  LogicalResult
+  matchAndRewrite(omp::MapInfoOp curOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    const TypeConverter *converter = ConvertToLLVMPattern::getTypeConverter();
+
+    SmallVector<Type> resTypes;
+    if (failed(converter->convertTypes(curOp->getResultTypes(), resTypes)))
+      return failure();
+
+    // Copy attributes of the curOp except for the typeAttr which should
+    // be converted
+    SmallVector<NamedAttribute> newAttrs;
+    for (auto attr : curOp->getAttrs()) {
+      if (auto typeAttr = dyn_cast<TypeAttr>(attr.getValue())) {
+        auto newAttr = converter->convertType(typeAttr.getValue());
+        newAttrs.emplace_back(attr.getName(), TypeAttr::get(newAttr));
+      } else {
+        newAttrs.push_back(attr);
+      }
+    }
+
+    rewriter.replaceOpWithNewOp<omp::MapInfoOp>(
+        curOp, resTypes, adaptor.getOperands(), newAttrs);
+    return success();
+  }
+};
+
 struct ReductionOpConversion : public ConvertOpToLLVMPattern<omp::ReductionOp> {
   using ConvertOpToLLVMPattern<omp::ReductionOp>::ConvertOpToLLVMPattern;
   LogicalResult
@@ -237,7 +266,7 @@ void mlir::populateOpenMPToLLVMConversionPatterns(LLVMTypeConverter &converter,
       [&](omp::DataBoundsType type) -> Type { return type; });
 
   patterns.add<
-      AtomicReadOpConversion, ReductionOpConversion,
+      AtomicReadOpConversion, MapInfoOpConversion, ReductionOpConversion,
       ReductionDeclareOpConversion, RegionOpConversion<omp::CriticalOp>,
       RegionOpConversion<omp::MasterOp>, ReductionOpConversion,
       RegionOpConversion<omp::OrderedRegionOp>,
@@ -253,8 +282,7 @@ void mlir::populateOpenMPToLLVMConversionPatterns(LLVMTypeConverter &converter,
       RegionLessOpConversion<omp::YieldOp>,
       RegionLessOpConversion<omp::EnterDataOp>,
       RegionLessOpConversion<omp::ExitDataOp>,
-      RegionLessOpWithVarOperandsConversion<omp::DataBoundsOp>,
-      RegionLessOpWithVarOperandsConversion<omp::MapInfoOp>>(converter);
+      RegionLessOpWithVarOperandsConversion<omp::DataBoundsOp>>(converter);
 }
 
 namespace {
