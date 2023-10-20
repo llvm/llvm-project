@@ -194,9 +194,8 @@ void testFunctionPointerCapture() {
 // Captured variable-length array.
 
 void testVariableLengthArrayCaptured() {
-  int n = 2;     // expected-note {{declared here}}
-  int array[n];  // expected-warning {{variable length arrays in C++ are a Clang extension}} \
-                    expected-note {{read of non-const variable 'n' is not allowed in a constant expression}}
+  int n = 2;
+  int array[n];
   array[0] = 7;
 
   int i = [&]{

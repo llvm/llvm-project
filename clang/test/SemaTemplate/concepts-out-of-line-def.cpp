@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++20 -verify %s
+// expected-no-diagnostics
 
 static constexpr int PRIMARY = 0;
 static constexpr int SPECIALIZATION_CONCEPT = 1;
@@ -226,9 +227,7 @@ namespace constrained_member_sfinae {
 
 template<int N> struct S {
   template<class T>
-  static constexpr int constrained_method() requires (sizeof(int[N * 1073741824 + 4]) == 16) { // expected-warning {{variable length arrays in C++ are a Clang extension}} \
-                                                                                                  expected-note {{value 4294967296 is outside the range of representable values of type 'int'}} \
-                                                                                                  expected-note {{while calculating associated constraint of template 'constrained_method' here}}
+  static constexpr int constrained_method() requires (sizeof(int[N * 1073741824 + 4]) == 16) {
     return CONSTRAINED_METHOD_1;
   }
 
