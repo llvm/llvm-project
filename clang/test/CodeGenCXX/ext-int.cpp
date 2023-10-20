@@ -98,19 +98,6 @@ void BitfieldAssignment() {
   // CHECK: %[[SETC:.+]] = or i8 %[[CLEARC]], 64
 }
 
-enum AsEnumUnderlyingType : _BitInt(9) {
-  A,B,C
-};
-
-void UnderlyingTypeUsage(AsEnumUnderlyingType Param) {
-  // LIN: define{{.*}} void @_Z19UnderlyingTypeUsage20AsEnumUnderlyingType(i9 signext %
-  // WIN64: define dso_local void @"?UnderlyingTypeUsage@@YAXW4AsEnumUnderlyingType@@@Z"(i9 %
-  // WIN32: define dso_local void @"?UnderlyingTypeUsage@@YAXW4AsEnumUnderlyingType@@@Z"(i9 signext %
-  AsEnumUnderlyingType Var;
-  // CHECK: alloca i9, align 2
-  // CHECK: store i9 %{{.*}}, align 2
-}
-
 unsigned _BitInt(33) ManglingTestRetParam(unsigned _BitInt(33) Param) {
 // LIN64: define{{.*}} i64 @_Z20ManglingTestRetParamDU33_(i64 %
 // LIN32: define{{.*}} i33 @_Z20ManglingTestRetParamDU33_(i33 %

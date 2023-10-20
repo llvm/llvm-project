@@ -607,6 +607,13 @@ public:
     /// foldable. If the expression is foldable, but not a constant expression,
     /// the notes will describes why it isn't a constant expression. If the
     /// expression *is* a constant expression, no notes will be produced.
+    ///
+    /// FIXME: this causes significant performance concerns and should be
+    /// refactored at some point. Not all evaluations of the constant
+    /// expression interpreter will display the given diagnostics, this means
+    /// those kinds of uses are paying the expense of generating a diagnostic
+    /// (which may include expensive operations like converting APValue objects
+    /// to a string representation).
     SmallVectorImpl<PartialDiagnosticAt> *Diag = nullptr;
 
     EvalStatus() = default;

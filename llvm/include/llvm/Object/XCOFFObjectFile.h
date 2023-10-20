@@ -783,6 +783,7 @@ public:
   const XCOFFSymbolEntry32 *getSymbol32() const {
     return reinterpret_cast<const XCOFFSymbolEntry32 *>(getRawDataRefImpl().p);
   }
+
   const XCOFFSymbolEntry64 *getSymbol64() const {
     return reinterpret_cast<const XCOFFSymbolEntry64 *>(getRawDataRefImpl().p);
   }

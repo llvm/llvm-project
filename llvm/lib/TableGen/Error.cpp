@@ -170,4 +170,11 @@ void CheckAssert(SMLoc Loc, Init *Condition, Init *Message) {
   }
 }
 
+// Dump a message to stderr.
+void dumpMessage(SMLoc Loc, Init *Message) {
+  auto *MessageInit = dyn_cast<StringInit>(Message);
+  assert(MessageInit && "no debug message to print");
+  PrintNote(Loc, MessageInit->getValue());
+}
+
 } // end namespace llvm

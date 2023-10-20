@@ -307,6 +307,9 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
                      "AffineMap":$lvlToDim,
                      "unsigned":$posWidth,
                      "unsigned":$crdWidth), [{
+      if (!lvlToDim) {
+        lvlToDim = ::mlir::sparse_tensor::inferLvlToDim(dimToLvl, $_ctxt);
+      }
       return $_get($_ctxt, lvlTypes, dimToLvl, lvlToDim, posWidth, crdWidth,
         ArrayRef<::mlir::sparse_tensor::SparseTensorDimSliceAttr>{});
     }]>
@@ -537,5 +540,27 @@ def SparseTensorSortKindAttr
     : EnumAttr<SparseTensor_Dialect, SparseTensorSortKindEnum,
                "SparseTensorSortAlgorithm"> {
 }
+
+
+//===----------------------------------------------------------------------===//
+// Sparse Tensor Coordinate Translation Direction Attribute.
+//===----------------------------------------------------------------------===//
+
+// The C++ enum for sparse tensor coordinate translation direction enum.
+def SparseTensorCrdTransDirectionEnum
+    : I32EnumAttr<"CrdTransDirectionKind", "sparse tensor coordinate translation direction", [
+        I32EnumAttrCase<"dim2lvl", 0, "dim_to_lvl">,
+        I32EnumAttrCase<"lvl2dim", 1, "lvl_to_dim">,
+      ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = SparseTensor_Dialect.cppNamespace;
+}
+
+// The C++ enum for sparse tensor coordinate translation direction attribute.
+def SparseTensorCrdTransDirectionAttr
+    : EnumAttr<SparseTensor_Dialect, SparseTensorCrdTransDirectionEnum,
+               "CrdTransDirection"> {
+}
+
 
 #endif // SPARSETENSOR_ATTRDEFS
