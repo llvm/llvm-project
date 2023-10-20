@@ -488,13 +488,14 @@ Fraction FracMatrix::determinant(FracMatrix *inverse) const {
       // First ensure that the diagonal
       // element is nonzero, by swapping
       // it with a nonzero row.
-      for (unsigned j = i + 1; j < nRows; j++)
+      for (unsigned j = i + 1; j < nRows; j++) {
         if (m(j, i) != 0) {
           m.swapRows(j, i);
           if (inverse)
             tempInv.swapRows(j, i);
           break;
         }
+      }
 
     b = m.at(i, i);
     if (b == 0)
