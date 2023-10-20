@@ -467,6 +467,9 @@ Bug Fixes in This Version
   operator in C. No longer issuing a confusing diagnostic along the lines of
   "incompatible operand types ('foo' and 'foo')" with extensions such as matrix
   types. Fixes (`#69008 <https://github.com/llvm/llvm-project/issues/69008>`_)
+- Clang no longer permits using the `_BitInt` types as an underlying type for an
+  enumeration as specified in the C23 Standard.
+  Fixes (`#69619 <https://github.com/llvm/llvm-project/issues/69619>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
