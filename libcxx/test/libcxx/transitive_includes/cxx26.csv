@@ -386,6 +386,7 @@ mdspan concepts
 mdspan cstddef
 mdspan limits
 mdspan span
+mdspan version
 memory compare
 memory cstddef
 memory cstdint
