@@ -55,13 +55,13 @@ struct SPIRVConversionOptions {
   /// values will be packed into one 32-bit value to be memory efficient.
   bool emulateLT32BitScalarTypes{true};
 
+  /// Use 64-bit integers to convert index types.
+  bool use64bitIndex{false};
+
   /// Whether to enable fast math mode during conversion. If true, various
   /// patterns would assume no NaN/infinity numbers as inputs, and thus there
   /// will be no special guards emitted to check and handle such cases.
   bool enableFastMathMode{false};
-
-  /// Use 64-bit integers when converting index types.
-  bool use64bitIndex{false};
 };
 
 /// Type conversion from builtin types to SPIR-V types for shader interface.
@@ -76,11 +76,6 @@ public:
 
   /// Gets the SPIR-V correspondence for the standard index type.
   Type getIndexType() const;
-
-  /// Gets the bitwidth of the index type when converted to SPIR-V.
-  unsigned getIndexTypeBitwidth() const {
-    return options.use64bitIndex ? 64 : 32;
-  }
 
   const spirv::TargetEnv &getTargetEnv() const { return targetEnv; }
 
