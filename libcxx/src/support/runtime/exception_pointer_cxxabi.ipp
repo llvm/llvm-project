@@ -18,13 +18,11 @@ extern "C" {
     void *__cxa_allocate_exception(size_t thrown_size);
     void __cxa_free_exception(void* thrown_exception);
 
-    __attribute__((weak)) 
-    __cxa_exception *__cxa_init_primary_exception(void *, std::type_info *, void(*)(void*));
+    __attribute__((weak)) __cxa_exception *__cxa_init_primary_exception(void *, std::type_info *, void(*)(void*));
 }
 #else
 extern "C" {
-    __attribute__((weak)) 
-    __cxa_exception *__cxa_init_primary_exception(void *, std::type_info *, void(*)(void*)) throw();
+    __attribute__((weak)) __cxa_exception *__cxa_init_primary_exception(void *, std::type_info *, void(*)(void*)) throw();
 }
 #endif
 
