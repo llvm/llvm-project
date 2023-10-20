@@ -5918,6 +5918,7 @@ static void handlePreferredTypeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   TypeSourceInfo *ParmTSI = nullptr;
   QualType QT = S.GetTypeFromParser(AL.getTypeArg(), &ParmTSI);
+  QT->getAsTagDecl()->setCompleteDefinitionRequired();
   assert(ParmTSI && "no type source info for attribute argument");
 
   if (QT->isEnumeralType()) {
