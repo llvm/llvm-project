@@ -2430,9 +2430,6 @@ void AsmPrinter::Impl::printDenseIntOrFPElementsAttr(
 
   if (ComplexType complexTy = llvm::dyn_cast<ComplexType>(elementType)) {
     Type complexElementType = complexTy.getElementType();
-    // Note: The if and else below had a common lambda function which invoked
-    // printDenseElementsAttrImpl. This lambda was hitting a bug in gcc 9.1,9.2
-    // and hence was replaced.
     if (llvm::isa<IntegerType>(complexElementType)) {
       auto valueIt = attr.value_begin<std::complex<APInt>>();
       printDenseElementsAttrImpl(attr.isSplat(), type, os, [&](unsigned index) {
