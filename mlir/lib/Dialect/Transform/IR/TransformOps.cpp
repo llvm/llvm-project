@@ -260,7 +260,7 @@ transform::AnnotateOp::apply(transform::TransformRewriter &rewriter,
     }
     attr = params[0];
   }
-  for (auto target : targets)
+  for (auto *target : targets)
     target->setAttr(getName(), attr);
   return DiagnosedSilenceableFailure::success();
 }
@@ -330,7 +330,7 @@ DiagnosedSilenceableFailure transform::ApplyDeadCodeEliminationOp::applyToOne(
   auto eraseOp = [&](Operation *op) {
     // Remove op and nested ops from the worklist.
     op->walk([&](Operation *op) {
-      auto it = llvm::find(worklist, op);
+      const auto *it = llvm::find(worklist, op);
       if (it != worklist.end())
         worklist.erase(it);
     });
@@ -666,7 +666,7 @@ void transform::ApplyToLLVMConversionPatternsOp::populatePatterns(
     TypeConverter &typeConverter, RewritePatternSet &patterns) {
   Dialect *dialect = getContext()->getLoadedDialect(getDialectName());
   assert(dialect && "expected that dialect is loaded");
-  auto iface = cast<ConvertToLLVMPatternInterface>(dialect);
+  auto *iface = cast<ConvertToLLVMPatternInterface>(dialect);
   // ConversionTarget is currently ignored because the enclosing
   // apply_conversion_patterns op sets up its own ConversionTarget.
   ConversionTarget target(*getContext());
@@ -686,7 +686,7 @@ LogicalResult transform::ApplyToLLVMConversionPatternsOp::verify() {
   if (!dialect)
     return emitOpError("unknown dialect or dialect not loaded: ")
            << getDialectName();
-  auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
+  auto *iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
   if (!iface)
     return emitOpError(
                "dialect does not implement ConvertToLLVMPatternInterface or "
