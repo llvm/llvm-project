@@ -492,17 +492,16 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
   assert(Tok->is(tok::l_brace));
   do {
     // Get next non-comment, non-preprocessor token.
-    FormatToken *NextTok = Tokens->getNextToken();
-    while (NextTok->is(tok::comment) ||
-           (NextTok->is(tok::hash) && isOnNewLine(*NextTok))) {
-      while (NextTok->is(tok::comment))
+    FormatToken *NextTok;
+    do {
+      NextTok = Tokens->getNextToken();
+    } while (NextTok->is(tok::comment));
+    while (NextTok->is(tok::hash)) {
+      NextTok = Tokens->getNextToken();
+      do {
         NextTok = Tokens->getNextToken();
-      while (NextTok->is(tok::hash) && isOnNewLine(*NextTok)) {
-        ScopedMacroState MacroState(*Line, Tokens, NextTok);
-        do {
-          NextTok = Tokens->getNextToken();
-        } while (NextTok->isNot(tok::eof));
-      }
+      } while (NextTok->is(tok::comment) ||
+               (NextTok->NewlinesBefore == 0 && NextTok->isNot(tok::eof)));
     }
 
     switch (Tok->Tok.getKind()) {
