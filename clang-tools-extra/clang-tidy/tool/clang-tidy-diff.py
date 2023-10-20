@@ -180,10 +180,12 @@ def main():
     if yaml:
         parser.add_argument(
             "-export-fixes",
-            metavar="FILE",
+            metavar="FILE_OR_DIRECTORY",
             dest="export_fixes",
-            help="Create a yaml file to store suggested fixes in, "
-            "which can be applied with clang-apply-replacements.",
+            help="A directory or a yaml file to store suggested fixes in, "
+            "which can be applied with clang-apply-replacements. If the "
+            "parameter is a directory, the fixes of each compilation unit are "
+            "stored in individual yaml files in the directory.",
         )
     parser.add_argument(
         "-extra-arg",
@@ -258,9 +260,25 @@ def main():
         max_task_count = multiprocessing.cpu_count()
     max_task_count = min(len(lines_by_file), max_task_count)
 
-    tmpdir = None
-    if yaml and args.export_fixes:
-        tmpdir = tempfile.mkdtemp()
+    combine_fixes = False
+    export_fixes_dir = None
+    delete_fixes_dir = False
+    if args.export_fixes is not None:
+        # if a directory is given, create it if it does not exist
+        if args.export_fixes.endswith(os.path.sep) and not os.path.isdir(
+            args.export_fixes
+        ):
+            os.makedirs(args.export_fixes)
+
+        if not os.path.isdir(args.export_fixes) and yaml:
+            combine_fixes = True
+
+        if os.path.isdir(args.export_fixes):
+            export_fixes_dir = args.export_fixes
+
+    if combine_fixes:
+        export_fixes_dir = tempfile.mkdtemp()
+        delete_fixes_dir = True
 
     # Tasks for clang-tidy.
     task_queue = queue.Queue(max_task_count)
@@ -302,10 +320,10 @@ def main():
         # Run clang-tidy on files containing changes.
         command = [args.clang_tidy_binary]
         command.append("-line-filter=" + line_filter_json)
-        if yaml and args.export_fixes:
+        if args.export_fixes is not None:
             # Get a temporary file. We immediately close the handle so clang-tidy can
             # overwrite it.
-            (handle, tmp_name) = tempfile.mkstemp(suffix=".yaml", dir=tmpdir)
+            (handle, tmp_name) = tempfile.mkstemp(suffix=".yaml", dir=export_fixes_dir)
             os.close(handle)
             command.append("-export-fixes=" + tmp_name)
         command.extend(common_clang_tidy_args)
@@ -324,17 +342,17 @@ def main():
     if failed_files:
         return_code = 1
 
-    if yaml and args.export_fixes:
+    if combine_fixes:
         print("Writing fixes to " + args.export_fixes + " ...")
         try:
-            merge_replacement_files(tmpdir, args.export_fixes)
+            merge_replacement_files(export_fixes_dir, args.export_fixes)
         except:
             sys.stderr.write("Error exporting fixes.\n")
             traceback.print_exc()
             return_code = 1
 
-    if tmpdir:
-        shutil.rmtree(tmpdir)
+    if delete_fixes_dir:
+        shutil.rmtree(export_fixes_dir)
     sys.exit(return_code)
 
 
