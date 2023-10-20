@@ -2306,8 +2306,14 @@ Error BitcodeReader::parseTypeTableBody() {
     case bitc::TYPE_CODE_FLOAT:     // FLOAT
       ResultTy = Type::getFloatTy(Context);
       break;
+    case bitc::TYPE_CODE_DECIMAL32: // 32-bit DFP
+      ResultTy = Type::getDecimal32Ty(Context);
+      break;
     case bitc::TYPE_CODE_DOUBLE:    // DOUBLE
       ResultTy = Type::getDoubleTy(Context);
+      break;
+    case bitc::TYPE_CODE_DECIMAL64: // 64-bit DFP
+      ResultTy = Type::getDecimal64Ty(Context);
       break;
     case bitc::TYPE_CODE_X86_FP80:  // X86_FP80
       ResultTy = Type::getX86_FP80Ty(Context);
@@ -2317,6 +2323,9 @@ Error BitcodeReader::parseTypeTableBody() {
       break;
     case bitc::TYPE_CODE_PPC_FP128: // PPC_FP128
       ResultTy = Type::getPPC_FP128Ty(Context);
+      break;
+    case bitc::TYPE_CODE_DECIMAL128: // 128-bit DFP
+      ResultTy = Type::getDecimal128Ty(Context);
       break;
     case bitc::TYPE_CODE_LABEL:     // LABEL
       ResultTy = Type::getLabelTy(Context);

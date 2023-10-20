@@ -149,10 +149,13 @@ typedef enum {
   LLVMVoidTypeKind,      /**< type with no size */
   LLVMHalfTypeKind,      /**< 16 bit floating point type */
   LLVMFloatTypeKind,     /**< 32 bit floating point type */
+  LLVMDecimal32TypeKind, /**< 32 bit decimal floating point type */
   LLVMDoubleTypeKind,    /**< 64 bit floating point type */
+  LLVMDecimal64TypeKind, /**< 64 bit decimal floating point type */
   LLVMX86_FP80TypeKind,  /**< 80 bit floating point type (X87) */
   LLVMFP128TypeKind,     /**< 128 bit floating point type (112-bit mantissa)*/
   LLVMPPC_FP128TypeKind, /**< 128 bit floating point type (two 64-bits) */
+  LLVMDecimal128TypeKind,/**< 128 bit decimal floating point type */
   LLVMLabelTypeKind,     /**< Labels */
   LLVMIntegerTypeKind,   /**< Arbitrary bit width integers */
   LLVMFunctionTypeKind,  /**< Functions */
@@ -1270,9 +1273,19 @@ LLVMTypeRef LLVMBFloatTypeInContext(LLVMContextRef C);
 LLVMTypeRef LLVMFloatTypeInContext(LLVMContextRef C);
 
 /**
+ * Obtain a 32-bit decimal floating point type from a context.
+ */
+LLVMTypeRef LLVMDecimal32TypeInContext(LLVMContextRef C);
+
+/**
  * Obtain a 64-bit floating point type from a context.
  */
 LLVMTypeRef LLVMDoubleTypeInContext(LLVMContextRef C);
+
+/**
+ * Obtain a 64-bit decimal floating point type from a context.
+ */
+LLVMTypeRef LLVMDecimal64TypeInContext(LLVMContextRef C);
 
 /**
  * Obtain a 80-bit floating point type (X87) from a context.
@@ -1291,6 +1304,11 @@ LLVMTypeRef LLVMFP128TypeInContext(LLVMContextRef C);
 LLVMTypeRef LLVMPPCFP128TypeInContext(LLVMContextRef C);
 
 /**
+ * Obtain a 128-bit decimal floating point type from a context.
+ */
+LLVMTypeRef LLVMDecimal128TypeInContext(LLVMContextRef C);
+
+/**
  * Obtain a floating point type from the global context.
  *
  * These map to the functions in this group of the same name.
@@ -1298,10 +1316,13 @@ LLVMTypeRef LLVMPPCFP128TypeInContext(LLVMContextRef C);
 LLVMTypeRef LLVMHalfType(void);
 LLVMTypeRef LLVMBFloatType(void);
 LLVMTypeRef LLVMFloatType(void);
+LLVMTypeRef LLVMDecimal32Type(void);
 LLVMTypeRef LLVMDoubleType(void);
+LLVMTypeRef LLVMDecimal64Type(void);
 LLVMTypeRef LLVMX86FP80Type(void);
 LLVMTypeRef LLVMFP128Type(void);
 LLVMTypeRef LLVMPPCFP128Type(void);
+LLVMTypeRef LLVMDecimal128Type(void);
 
 /**
  * @}

@@ -56,10 +56,13 @@ public:
     HalfTyID = 0,  ///< 16-bit floating point type
     BFloatTyID,    ///< 16-bit floating point type (7-bit significand)
     FloatTyID,     ///< 32-bit floating point type
+    Decimal32TyID, ///< 32-bit decimal floating point type
     DoubleTyID,    ///< 64-bit floating point type
+    Decimal64TyID, ///< 64-bit decimal floating point type
     X86_FP80TyID,  ///< 80-bit floating point type (X87)
     FP128TyID,     ///< 128-bit floating point type (112-bit significand)
     PPC_FP128TyID, ///< 128-bit floating point type (two 64-bits, PowerPC)
+    Decimal128TyID,///< 128-bit decimal floating point type
     VoidTyID,      ///< type with no size
     LabelTyID,     ///< Labels
     MetadataTyID,  ///< Metadata
@@ -165,6 +168,15 @@ public:
   /// Return true if this is powerpc long double.
   bool isPPC_FP128Ty() const { return getTypeID() == PPC_FP128TyID; }
 
+  /// Return true if this is 'decimal32'.
+  bool isDecimal32Ty() const { return getTypeID() == Decimal32TyID; }
+
+  /// Return true if this is 'decimal64'.
+  bool isDecimal64Ty() const { return getTypeID() == Decimal64TyID; }
+
+  /// Return true if this is 'decimal128'.
+  bool isDecimal128Ty() const { return getTypeID() == Decimal128TyID; }
+
   /// Return true if this is a well-behaved IEEE-like type, which has a IEEE
   /// compatible layout as defined by isIEEE(), and does not have unnormal
   /// values
@@ -175,6 +187,9 @@ public:
     case HalfTyID:
     case BFloatTyID:
     case FP128TyID:
+    case Decimal32TyID:
+    case Decimal64TyID:
+    case Decimal128TyID:
       return true;
     default:
       return false;
@@ -448,11 +463,14 @@ public:
   static Type *getHalfTy(LLVMContext &C);
   static Type *getBFloatTy(LLVMContext &C);
   static Type *getFloatTy(LLVMContext &C);
+  static Type *getDecimal32Ty(LLVMContext &C);
   static Type *getDoubleTy(LLVMContext &C);
+  static Type *getDecimal64Ty(LLVMContext &C);
   static Type *getMetadataTy(LLVMContext &C);
   static Type *getX86_FP80Ty(LLVMContext &C);
   static Type *getFP128Ty(LLVMContext &C);
   static Type *getPPC_FP128Ty(LLVMContext &C);
+  static Type *getDecimal128Ty(LLVMContext &C);
   static Type *getX86_MMXTy(LLVMContext &C);
   static Type *getX86_AMXTy(LLVMContext &C);
   static Type *getTokenTy(LLVMContext &C);
