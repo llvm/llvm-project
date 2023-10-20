@@ -910,6 +910,19 @@ module attributes { transform.target_tag = "start_here" } {
     return %result : tensor<10x15xf64>
   }
 
+  func.func @vecmat_simple(%lhs: tensor<20xf32>, %rhs: tensor<20x15xf32>) -> tensor<15xf64> {
+    %cst = arith.constant 0.0 : f64
+    %empty = tensor.empty() : tensor<15xf64>
+    %fill = linalg.fill ins(%cst : f64) outs(%empty : tensor<15xf64>) -> tensor<15xf64>
+    // expected-remark @below {{contraction}}
+    // expected-remark @below {{batch dims}}
+    // expected-remark @below {{m dims}}
+    // expected-remark @below {{n dims 0}}
+    // expected-remark @below {{k dims 1}}
+    %result = linalg.vecmat ins(%lhs, %rhs: tensor<20xf32>, tensor<20x15xf32>) outs(%fill: tensor<15xf64>) -> tensor<15xf64>
+    return %result : tensor<15xf64>
+  }
+
   func.func @double_batch(%lhs: tensor<40x10x50x20xf32>, %rhs: tensor<40x20x50x15xf32>) -> tensor<40x10x50x15xf32> {
     %cst = arith.constant 0.0 : f32
     %empty = tensor.empty() : tensor<40x10x50x15xf32>

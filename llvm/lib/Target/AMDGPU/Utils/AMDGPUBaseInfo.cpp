@@ -1163,10 +1163,10 @@ amdhsa::kernel_descriptor_t getDefaultAmdhsaKernelDescriptor(
                     amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32,
                     STI->getFeatureBits().test(FeatureWavefrontSize32) ? 1 : 0);
     AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                    amdhsa::COMPUTE_PGM_RSRC1_WGP_MODE,
+                    amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE,
                     STI->getFeatureBits().test(FeatureCuMode) ? 0 : 1);
     AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                    amdhsa::COMPUTE_PGM_RSRC1_MEM_ORDERED, 1);
+                    amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_MEM_ORDERED, 1);
   }
   if (AMDGPU::isGFX90A(*STI)) {
     AMDHSA_BITS_SET(KD.compute_pgm_rsrc3,

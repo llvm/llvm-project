@@ -43,11 +43,12 @@ class GlobalVariable : public GlobalObject, public ilist_node<GlobalVariable> {
   friend class SymbolTableListTraits<GlobalVariable>;
 
   AttributeSet Attrs;
-  bool isConstantGlobal : 1;                   // Is this a global constant?
-  bool isExternallyInitializedConstant : 1;    // Is this a global whose value
-                                               // can change from its initial
-                                               // value before global
-                                               // initializers are run?
+
+  // Is this a global constant?
+  bool isConstantGlobal : 1;
+  // Is this a global whose value can change from its initial value before
+  // global initializers are run?
+  bool isExternallyInitializedConstant : 1;
 
 public:
   /// GlobalVariable ctor - If a parent module is specified, the global is
