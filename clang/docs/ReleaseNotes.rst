@@ -53,8 +53,8 @@ code bases.
     template<class S> bool operator!=(const P&, const S&);
     bool fine(A a, B b) { return a == b; } // Ok. Found a matching operator!=.
 
-  To reduce widespread breakages, as an extension, clang would accept this with a
-  ``-Wambiguous-reversed-operator`` warning.
+  To reduce such widespread breakages, as an extension, Clang accepts this code with an
+  existing warning ``-Wambiguous-reversed-operator`` warning.
   Fixes `GH <https://github.com/llvm/llvm-project/issues/53954>`_.
 
 C/C++ Language Potentially Breaking Changes

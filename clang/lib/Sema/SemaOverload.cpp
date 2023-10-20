@@ -10085,15 +10085,19 @@ getImplicitObjectParamType(ASTContext &Context, const FunctionDecl *F) {
   return M->getFunctionObjectParameterReferenceType();
 }
 
-static bool allowAmbiguityWithSelf(ASTContext &Context, const FunctionDecl *F1,
-                                   const FunctionDecl *F2) {
+// As a Clang extension, allow ambiguity among F1 and F2 if they represent
+// represent the same entity.
+static bool allowAmbiguity(ASTContext &Context, const FunctionDecl *F1,
+                           const FunctionDecl *F2) {
   if (declaresSameEntity(F1, F2))
     return true;
   if (F1->isTemplateInstantiation() && F2->isTemplateInstantiation() &&
       declaresSameEntity(F1->getPrimaryTemplate(), F2->getPrimaryTemplate())) {
     return true;
   }
-
+  // TODO: It is not clear whether comparing parameters is necessary (i.e.
+  // different functions with same params). Consider removing this (as no test
+  // fail w/o it).
   auto NextParam = [&](const FunctionDecl *F, unsigned &I, bool First) {
     if (First) {
       if (std::optional<QualType> T = getImplicitObjectParamType(Context, F))
@@ -10278,7 +10282,7 @@ bool clang::isBetterOverloadCandidate(
     case ImplicitConversionSequence::Worse:
       if (Cand1.Function && Cand2.Function &&
           Cand1.isReversed() != Cand2.isReversed() &&
-          allowAmbiguityWithSelf(S.Context, Cand1.Function, Cand2.Function)) {
+          allowAmbiguity(S.Context, Cand1.Function, Cand2.Function)) {
         // Work around large-scale breakage caused by considering reversed
         // forms of operator== in C++20:
         //
@@ -14425,7 +14429,7 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
           llvm::SmallVector<FunctionDecl*, 4> AmbiguousWith;
           for (OverloadCandidate &Cand : CandidateSet) {
             if (Cand.Viable && Cand.Function && Cand.isReversed() &&
-                allowAmbiguityWithSelf(Context, Cand.Function, FnDecl)) {
+                allowAmbiguity(Context, Cand.Function, FnDecl)) {
               for (unsigned ArgIdx = 0; ArgIdx < 2; ++ArgIdx) {
                 if (CompareImplicitConversionSequences(
                         *this, OpLoc, Cand.Conversions[ArgIdx],
