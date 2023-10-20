@@ -27,7 +27,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/VirtualFileSystem.h"
-#include "llvm/Support/WithColor.h"
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -166,19 +165,22 @@ static Error printBinaryIdsInternal(raw_ostream &OS,
   return Error::success();
 }
 
-Expected<std::unique_ptr<InstrProfReader>>
-InstrProfReader::create(const Twine &Path, vfs::FileSystem &FS,
-                        const InstrProfCorrelator *Correlator) {
+Expected<std::unique_ptr<InstrProfReader>> InstrProfReader::create(
+    const Twine &Path, vfs::FileSystem &FS,
+    const InstrProfCorrelator *Correlator,
+    std::optional<std::function<void(Error)>> MaybeWarnFn) {
   // Set up the buffer to read.
   auto BufferOrError = setupMemoryBuffer(Path, FS);
   if (Error E = BufferOrError.takeError())
     return std::move(E);
-  return InstrProfReader::create(std::move(BufferOrError.get()), Correlator);
+  return InstrProfReader::create(std::move(BufferOrError.get()), Correlator,
+                                 MaybeWarnFn);
 }
 
 Expected<std::unique_ptr<InstrProfReader>>
 InstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer,
-                        const InstrProfCorrelator *Correlator) {
+                        const InstrProfCorrelator *Correlator,
+                        std::optional<std::function<void(Error)>> MaybeWarnFn) {
   if (Buffer->getBufferSize() == 0)
     return make_error<InstrProfError>(instrprof_error::empty_raw_profile);
 
@@ -187,9 +189,11 @@ InstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer,
   if (IndexedInstrProfReader::hasFormat(*Buffer))
     Result.reset(new IndexedInstrProfReader(std::move(Buffer)));
   else if (RawInstrProfReader64::hasFormat(*Buffer))
-    Result.reset(new RawInstrProfReader64(std::move(Buffer), Correlator));
+    Result.reset(
+        new RawInstrProfReader64(std::move(Buffer), Correlator, MaybeWarnFn));
   else if (RawInstrProfReader32::hasFormat(*Buffer))
-    Result.reset(new RawInstrProfReader32(std::move(Buffer), Correlator));
+    Result.reset(
+        new RawInstrProfReader32(std::move(Buffer), Correlator, MaybeWarnFn));
   else if (TextInstrProfReader::hasFormat(*Buffer))
     Result.reset(new TextInstrProfReader(std::move(Buffer)));
   else
@@ -678,9 +682,11 @@ Error RawInstrProfReader<IntPtrT>::readRawCounts(
       Record.Counts.push_back(*Ptr == 0 ? 1 : 0);
     } else {
       uint64_t CounterValue = swap(*reinterpret_cast<const uint64_t *>(Ptr));
-      if (CounterValue > MaxCounterValue)
-        WithColor::warning() << "counter value " + Twine(CounterValue) +
-                                    " suggests corrupted profile data";
+      if (CounterValue > MaxCounterValue && MaybeWarnFn)
+        (*MaybeWarnFn)(make_error<InstrProfError>(
+            instrprof_error::malformed,
+            "excessively large counter value " + Twine(CounterValue) +
+                " suggests corrupted profile data"));
 
       Record.Counts.push_back(CounterValue);
     }

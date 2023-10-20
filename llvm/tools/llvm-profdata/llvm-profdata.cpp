@@ -314,7 +314,19 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
   }
 
   auto FS = vfs::getRealFileSystem();
-  auto ReaderOrErr = InstrProfReader::create(Input.Filename, *FS, Correlator);
+  bool Reported = false;
+  auto WarnFn = [&](Error E) {
+    if (Reported) {
+      consumeError(std::move(E));
+      return;
+    }
+    Reported = true;
+    // Only show hint the first time an error occurs.
+    auto [ErrCode, Msg] = InstrProfError::take(std::move(E));
+    warn(Msg);
+  };
+  auto ReaderOrErr =
+      InstrProfReader::create(Input.Filename, *FS, Correlator, WarnFn);
   if (Error E = ReaderOrErr.takeError()) {
     // Skip the empty profiles by returning silently.
     auto [ErrCode, Msg] = InstrProfError::take(std::move(E));

@@ -54,5 +54,5 @@ RUN: printf '\1\0\0\0\0\0\0\0' >> %t1.profraw
 RUN: printf '\1\0\0\0\0\0\0\1' >> %t1.profraw
 RUN: printf '\3\0foo\0\0\0' >> %t1.profraw
 
-RUN: llvm-profdata show %t1.profraw 2>&1 | FileCheck %s --check-prefix=MAX
-MAX: warning: counter value 72057594037927937 suggests corrupted profile data
+RUN: llvm-profdata merge %t1.profraw -o %t.profdata 2>&1 | FileCheck %s --check-prefix=MAX
+MAX: warning: excessively large counter value 72057594037927937 suggests corrupted profile data
