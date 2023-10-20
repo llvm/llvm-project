@@ -1734,6 +1734,143 @@ const DIExpression *DIExpression::extractAddressClass(const DIExpression *Expr,
   return Expr;
 }
 
+SmallVector<uint64_t>
+DIExpressionOptimizer::getOperatorLocations(ArrayRef<uint64_t> Ops) {
+  SmallVector<uint64_t> OpLocs;
+  uint64_t Loc = 0;
+  DIExpressionCursor Cursor(Ops);
+
+  while (Cursor.peek()) {
+    OpLocs.push_back(Loc);
+    auto Size = Cursor.peek()->getSize();
+    Loc += Size;
+    Cursor.consume(1);
+  }
+
+  return OpLocs;
+}
+
+bool DIExpressionOptimizer::operatorIsCommutative(uint64_t Operator) {
+  return Operator == dwarf::DW_OP_mul || Operator == dwarf::DW_OP_plus;
+}
+
+bool DIExpressionOptimizer::operatorCanBeOptimized(uint64_t Operator) {
+  switch (Operator) {
+  case dwarf::DW_OP_plus:
+  case dwarf::DW_OP_plus_uconst:
+  case dwarf::DW_OP_minus:
+  case dwarf::DW_OP_mul:
+  case dwarf::DW_OP_div:
+  case dwarf::DW_OP_shl:
+  case dwarf::DW_OP_shr:
+    return true;
+  default:
+    return false;
+  }
+}
+
+void DIExpressionOptimizer::reset() {
+  NewMathOperator = 0;
+  CurrMathOperator = 0;
+  OperatorLeft = 0;
+  OperatorRight = 0;
+}
+
+void DIExpressionOptimizer::optimize(SmallVectorImpl<uint64_t> &NewOps,
+                                     ArrayRef<uint64_t> Ops) {
+
+  if (Ops.size() == 2 && Ops[0] == dwarf::DW_OP_plus_uconst) {
+    // Convert a {DW_OP_plus_uconst, <constant value>} expression to
+    // {DW_OP_constu, <constant value>, DW_OP_plus}
+    NewMathOperator = dwarf::DW_OP_plus;
+    OperandRight = Ops[1];
+    OperatorRight = dwarf::DW_OP_constu;
+  } else if (Ops.size() == 3) {
+    NewMathOperator = Ops[2];
+    OperandRight = Ops[1];
+    OperatorRight = Ops[0];
+  } else {
+    // Currently, DIExpressionOptimizer only supports arithmetic operations
+    // such as Ops = {DW_OP_constu, 1, DW_OP_mul}
+    NewOps.append(Ops.begin(), Ops.end());
+    return;
+  }
+
+  if (OperatorRight != dwarf::DW_OP_constu &&
+      OperatorRight != dwarf::DW_OP_consts) {
+    NewOps.append(Ops.begin(), Ops.end());
+    return;
+  }
+
+  uint64_t CurrOperator;
+
+  if ((NewMathOperator == dwarf::DW_OP_mul ||
+       NewMathOperator == dwarf::DW_OP_div) &&
+      OperandRight == 1) {
+    // It is a multiply or divide by 1
+    reset();
+    return;
+  }
+  if ((NewMathOperator == dwarf::DW_OP_plus ||
+       NewMathOperator == dwarf::DW_OP_minus ||
+       NewMathOperator == dwarf::DW_OP_shl ||
+       NewMathOperator == dwarf::DW_OP_shr) &&
+      OperandRight == 0) {
+    // It is a add, subtract, shift left, or shift right with 0
+    reset();
+    return;
+  }
+
+  // Get the locations of the operators in the DIExpression
+  auto OperatorLocs = getOperatorLocations(NewOps);
+
+  for (auto It = OperatorLocs.rbegin(); It != OperatorLocs.rend(); It++) {
+    // Only look at the last two operators of the DIExpression to see if the new
+    // operators can be constant folded with them.
+    if (std::distance(OperatorLocs.rbegin(), It) > 1)
+      break;
+    CurrOperator = NewOps[*It];
+    if (CurrOperator == dwarf::DW_OP_mul || CurrOperator == dwarf::DW_OP_div ||
+        CurrOperator == dwarf::DW_OP_plus ||
+        CurrOperator == dwarf::DW_OP_minus) {
+      CurrMathOperator = CurrOperator;
+      continue;
+    }
+    if (CurrOperator == dwarf::DW_OP_plus_uconst &&
+        NewMathOperator == dwarf::DW_OP_plus) {
+      NewOps[*It + 1] = OperandRight + NewOps[*It + 1];
+      reset();
+      return;
+    }
+    if (CurrOperator == dwarf::DW_OP_constu ||
+        CurrOperator == dwarf::DW_OP_consts) {
+      OperatorLeft = CurrOperator;
+      OperandLeft = NewOps[*It + 1];
+
+      if (NewMathOperator == CurrMathOperator &&
+          operatorIsCommutative(NewMathOperator)) {
+        switch (NewMathOperator) {
+        case dwarf::DW_OP_plus:
+          NewOps[*It + 1] = OperandRight + OperandLeft;
+          break;
+        case dwarf::DW_OP_mul:
+          NewOps[*It + 1] = OperandRight * OperandLeft;
+          break;
+        default:
+          llvm_unreachable("Operator is not multiplication or addition!");
+        }
+        reset();
+        return;
+      }
+      break;
+    }
+    break;
+  }
+  NewOps.append(Ops.begin(), Ops.end());
+  reset();
+  return;
+}
+
 DIExpression *DIExpression::prepend(const DIExpression *Expr, uint8_t Flags,
                                     int64_t Offset) {
   SmallVector<uint64_t, 8> Ops;

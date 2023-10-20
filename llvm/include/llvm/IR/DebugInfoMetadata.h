@@ -3073,6 +3073,48 @@ template <> struct DenseMapInfo<DIExpression::FragmentInfo> {
   static bool isEqual(const FragInfo &A, const FragInfo &B) { return A == B; }
 };
 
+class DIExpressionOptimizer {
+
+  // When looking at a DIExpression such as {DW_OP_constu, 1, DW_OP_constu, 2,
+  // DW_OP_plus} and trying to append {DW_OP_consts, 3, DW_OP_minus}
+  // NewMathOperator = DW_OP_minus
+  // OperandRight = 3
+  // OperatorRight = DW_OP_consts
+  // CurrMathOperator = DW_OP_plus
+  // OperandLeft = 2
+  // OperandLeft = DW_OP_constu
+
+  /// The math operator of the new subexpression being appended to the
+  /// DIExpression.
+  uint64_t NewMathOperator = 0;
+
+  /// The operand of the new subexpression being appended to the DIExpression.
+  uint64_t OperandRight;
+
+  /// The operator attached to OperandRight.
+  uint64_t OperatorRight = 0;
+
+  /// The math operator at the end of the current DIExpression.
+  uint64_t CurrMathOperator = 0;
+
+  /// The operand at the end of the current DIExpression at the top of the
+  /// stack.
+  uint64_t OperandLeft;
+
+  /// The operator attached to OperandLeft.
+  uint64_t OperatorLeft = 0;
+
+  bool operatorIsCommutative(uint64_t Operator);
+
+  SmallVector<uint64_t> getOperatorLocations(ArrayRef<uint64_t> Ops);
+
+  void reset();
+
+public:
+  bool operatorCanBeOptimized(uint64_t Operator);
+  void optimize(SmallVectorImpl<uint64_t> &NewOps, ArrayRef<uint64_t> Ops);
+};
+
 /// Holds a DIExpression and keeps track of how many operands have been consumed
 /// so far.
 class DIExpressionCursor {
