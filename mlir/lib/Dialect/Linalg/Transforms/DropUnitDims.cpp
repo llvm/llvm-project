@@ -457,8 +457,8 @@ LogicalResult linalg::dropUnitDims(RewriterBase &rewriter, GenericOp genericOp,
     Type operandType = operand.get().getType();
     if (auto memrefOperandType = dyn_cast_or_null<MemRefType>(operandType)) {
       return memrefOperandType.getLayout().isIdentity();
-    } else if (auto tensorOperandType =
-                   dyn_cast<RankedTensorType>(operandType)) {
+    }
+    if (auto tensorOperandType = dyn_cast<RankedTensorType>(operandType)) {
       return tensorOperandType.getEncoding() == nullptr;
     }
     return false;
