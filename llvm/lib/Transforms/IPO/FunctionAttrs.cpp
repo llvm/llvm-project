@@ -668,7 +668,8 @@ determinePointerAccessAttrs(Argument *A,
               Worklist.push_back(&UU);
       }
 
-      if (CB.doesNotAccessMemory())
+      ModRefInfo ArgMR = CB.getMemoryEffects().getModRef(IRMemLocation::ArgMem);
+      if (isNoModRef(ArgMR))
         continue;
 
       if (Function *F = CB.getCalledFunction())
@@ -683,9 +684,9 @@ determinePointerAccessAttrs(Argument *A,
       // invokes with operand bundles.
       if (CB.doesNotAccessMemory(UseIndex)) {
         /* nop */
-      } else if (CB.onlyReadsMemory() || CB.onlyReadsMemory(UseIndex)) {
+      } else if (!isModSet(ArgMR) || CB.onlyReadsMemory(UseIndex)) {
         IsRead = true;
-      } else if (CB.hasFnAttr(Attribute::WriteOnly) ||
+      } else if (!isRefSet(ArgMR) ||
                  CB.dataOperandHasImpliedAttr(UseIndex, Attribute::WriteOnly)) {
         IsWrite = true;
       } else {
