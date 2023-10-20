@@ -356,8 +356,8 @@ define <2 x i64> @fshl_select_vector(<2 x i64> %x, <2 x i64> %y, <2 x i64> %sham
 
 ; Convert 'or concat' to fshl if opposite 'or concat' exists.
 
-define i32 @fshl_concat(i8 %x, i24 %y, ptr %addr) {
-; CHECK-LABEL: @fshl_concat(
+define i32 @fshl_concat_i8_i24(i8 %x, i24 %y, ptr %addr) {
+; CHECK-LABEL: @fshl_concat_i8_i24(
 ; CHECK-NEXT:    [[ZEXT_X:%.*]] = zext i8 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[SLX:%.*]] = shl nuw i32 [[ZEXT_X]], 24
 ; CHECK-NEXT:    [[ZEXT_Y:%.*]] = zext i24 [[Y:%.*]] to i32
@@ -372,6 +372,64 @@ define i32 @fshl_concat(i8 %x, i24 %y, ptr %addr) {
   %xy = or i32 %zext.y, %slx
   store i32 %xy, ptr %addr, align 4
   %sly = shl nuw i32 %zext.y, 8
+  %yx = or i32 %zext.x, %sly
+  ret i32 %yx
+}
+
+define i32 @fshl_concat_i8_i8(i8 %x, i8 %y, ptr %addr) {
+; CHECK-LABEL: @fshl_concat_i8_i8(
+; CHECK-NEXT:    [[ZEXT_X:%.*]] = zext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[SLX:%.*]] = shl nuw nsw i32 [[ZEXT_X]], 13
+; CHECK-NEXT:    [[ZEXT_Y:%.*]] = zext i8 [[Y:%.*]] to i32
+; CHECK-NEXT:    [[XY:%.*]] = or i32 [[SLX]], [[ZEXT_Y]]
+; CHECK-NEXT:    store i32 [[XY]], ptr [[ADDR:%.*]], align 4
+; CHECK-NEXT:    [[YX:%.*]] = call i32 @llvm.fshl.i32(i32 [[XY]], i32 [[XY]], i32 19)
+; CHECK-NEXT:    ret i32 [[YX]]
+;
+  %zext.x = zext i8 %x to i32
+  %slx = shl nuw i32 %zext.x, 13
+  %zext.y = zext i8 %y to i32
+  %xy = or i32 %zext.y, %slx
+  store i32 %xy, ptr %addr, align 4
+  %sly = shl nuw i32 %zext.y, 19
+  %yx = or i32 %zext.x, %sly
+  ret i32 %yx
+}
+
+define i32 @fshl_concat_i16_i16_overlap_drop(i16 %x, i16 %y, ptr %addr) {
+; CHECK-LABEL: @fshl_concat_i16_i16_overlap_drop(
+; CHECK-NEXT:    [[ZEXT_X:%.*]] = zext i16 [[X:%.*]] to i32
+; CHECK-NEXT:    [[SLX:%.*]] = shl nuw i32 [[ZEXT_X]], 17
+; CHECK-NEXT:    [[ZEXT_Y:%.*]] = zext i16 [[Y:%.*]] to i32
+; CHECK-NEXT:    [[XY:%.*]] = or i32 [[SLX]], [[ZEXT_Y]]
+; CHECK-NEXT:    store i32 [[XY]], ptr [[ADDR:%.*]], align 4
+; CHECK-NEXT:    [[SLY:%.*]] = shl nuw nsw i32 [[ZEXT_Y]], 15
+; CHECK-NEXT:    [[YX:%.*]] = or i32 [[SLY]], [[ZEXT_X]]
+; CHECK-NEXT:    ret i32 [[YX]]
+;
+  %zext.x = zext i16 %x to i32
+  %slx = shl nuw i32 %zext.x, 17
+  %zext.y = zext i16 %y to i32
+  %xy = or i32 %zext.y, %slx
+  store i32 %xy, ptr %addr, align 4
+  %sly = shl nuw i32 %zext.y, 15
+  %yx = or i32 %zext.x, %sly
+  ret i32 %yx
+}
+
+define i32 @fshl_concat_unknown_source(i32 %zext.x, i32 %zext.y, ptr %addr) {
+; CHECK-LABEL: @fshl_concat_unknown_source(
+; CHECK-NEXT:    [[SLX:%.*]] = shl nuw i32 [[ZEXT_X:%.*]], 16
+; CHECK-NEXT:    [[XY:%.*]] = or i32 [[SLX]], [[ZEXT_Y:%.*]]
+; CHECK-NEXT:    store i32 [[XY]], ptr [[ADDR:%.*]], align 4
+; CHECK-NEXT:    [[SLY:%.*]] = shl nuw i32 [[ZEXT_Y]], 16
+; CHECK-NEXT:    [[YX:%.*]] = or i32 [[SLY]], [[ZEXT_X]]
+; CHECK-NEXT:    ret i32 [[YX]]
+;
+  %slx = shl nuw i32 %zext.x, 16
+  %xy = or i32 %zext.y, %slx
+  store i32 %xy, ptr %addr, align 4
+  %sly = shl nuw i32 %zext.y, 16
   %yx = or i32 %zext.x, %sly
   ret i32 %yx
 }

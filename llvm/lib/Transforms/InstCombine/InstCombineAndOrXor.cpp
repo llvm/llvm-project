@@ -2842,13 +2842,17 @@ static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC,
 
     FShiftArgs = {ShVal0, ShVal1, ShAmt};
   } else if (isa<ZExtInst>(Or0) || isa<ZExtInst>(Or1)) {
-    // If there are two 'or' instructions concat variables in opposite order,
-    // the latter one can be safely convert to fshl.
+    // If there are two 'or' instructions concat variables in opposite order:
     //
-    // LowHigh = or (shl (zext Low), Width - ZextHighShlAmt), (zext High)
+    // Slot1 and Slot2 are all zero bits.
+    // | Slot1 | Low | Slot2 | High |
+    // LowHigh = or (shl (zext Low), ZextLowShlAmt), (zext High)
+    // | Slot2 | High | Slot1 | Low |
     // HighLow = or (shl (zext High), ZextHighShlAmt), (zext Low)
-    // ->
-    // HighLow = fshl LowHigh, LowHigh, ZextHighShlAmt
+    //
+    // the latter 'or' can be safely convert to
+    // -> HighLow = fshl LowHigh, LowHigh, ZextHighShlAmt
+    // if ZextLowShlAmt + ZextHighShlAmt == Width.
     if (!isa<ZExtInst>(Or1))
       std::swap(Or0, Or1);
 
@@ -2864,7 +2868,9 @@ static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC,
 
     unsigned HighSize = High->getType()->getScalarSizeInBits();
     unsigned LowSize = Low->getType()->getScalarSizeInBits();
-    if (*ZextHighShlAmt != LowSize || HighSize + LowSize != Width)
+    // Make sure High does not overlap with Low and most significant bits of
+    // High aren't shifted out.
+    if (ZextHighShlAmt->ult(LowSize) || ZextHighShlAmt->ugt(Width - HighSize))
       return nullptr;
 
     for (User *U : ZextHigh->users()) {
@@ -2875,11 +2881,19 @@ static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC,
       if (!isa<ZExtInst>(Y))
         std::swap(X, Y);
 
-      if (match(X, m_Shl(m_Specific(Or1), m_SpecificInt(HighSize))) &&
-          match(Y, m_Specific(ZextHigh)) && DT.dominates(U, &Or)) {
-        FShiftArgs = {U, U, ConstantInt::get(Or0->getType(), *ZextHighShlAmt)};
-        break;
-      }
+      const APInt *ZextLowShlAmt;
+      if (!match(X, m_Shl(m_Specific(Or1), m_APInt(ZextLowShlAmt))) ||
+          !match(Y, m_Specific(ZextHigh)) || !DT.dominates(U, &Or))
+        continue;
+
+      // Make sure Low does not overlap with High and most significant bits of
+      // Low aren't shifted out and we can rotate shift LowHigh to HighLow.
+      if (ZextLowShlAmt->ult(HighSize) || ZextLowShlAmt->ugt(Width - LowSize) ||
+          *ZextLowShlAmt + *ZextHighShlAmt != Width)
+        continue;
+
+      FShiftArgs = {U, U, ConstantInt::get(Or0->getType(), *ZextHighShlAmt)};
+      break;
     }
   }
 
