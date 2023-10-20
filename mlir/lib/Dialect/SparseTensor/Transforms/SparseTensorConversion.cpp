@@ -589,23 +589,22 @@ public:
     const auto stt = getSparseTensorType(op.getTensor());
     const auto elemTp = stt.getElementType();
     const Level lvlRank = stt.getLvlRank();
-    // We need an alloca scope here as the InsertOp is always generated inside a
-    // loop, which lead to stack overflow.
-    auto allocaScope = rewriter.create<memref::AllocaScopeOp>(
-        loc, adaptor.getTensor().getType());
-    Block *scopeBlock = rewriter.createBlock(&allocaScope.getBodyRegion());
-    rewriter.setInsertionPointToStart(scopeBlock);
-
-    auto lvlCoords = genAlloca(rewriter, loc, lvlRank, rewriter.getIndexType());
-    auto vref = genAllocaScalar(rewriter, loc, elemTp);
+    Value lvlCoords, vref;
+    {
+      OpBuilder::InsertionGuard guard(rewriter);
+      auto loop = op->getParentOfType<LoopLikeOpInterface>();
+      // Hoists alloca outside the loop to avoid stack overflow.
+      rewriter.setInsertionPoint(loop);
+      lvlCoords = genAlloca(rewriter, loc, lvlRank, rewriter.getIndexType());
+      vref = genAllocaScalar(rewriter, loc, elemTp);
+    }
     storeAll(rewriter, loc, lvlCoords, adaptor.getLvlCoords());
     rewriter.create<memref::StoreOp>(loc, adaptor.getValue(), vref);
     SmallString<12> name{"lexInsert", primaryTypeFunctionSuffix(elemTp)};
     createFuncCall(rewriter, loc, name, {},
                    {adaptor.getTensor(), lvlCoords, vref}, EmitCInterface::On);
-    rewriter.create<memref::AllocaScopeReturnOp>(loc, adaptor.getTensor());
-    rewriter.setInsertionPointAfter(allocaScope);
-    rewriter.replaceOp(op, allocaScope.getResult(0));
+
+    rewriter.replaceOp(op, adaptor.getTensor());
     return success();
   }
 };
