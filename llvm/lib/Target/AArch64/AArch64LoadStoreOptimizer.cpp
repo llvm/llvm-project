@@ -997,8 +997,17 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
       //   STRWui %w0, ...
       //   USE %w1
       //   STRWui kill %w1  ; need to clear kill flag when moving STRWui upwards
-      RegOp0.setIsKill(false);
-      RegOp1.setIsKill(false);
+      for (auto It = std::next(I);
+           It != Paired && (RegOp0.isKill() || RegOp1.isKill()); ++It) {
+        auto ClearKill = [](MachineInstr &MI, MachineOperand &MOP,
+                            const TargetRegisterInfo *TRI) {
+          Register Reg = MOP.getReg();
+          if (MI.readsRegister(Reg, TRI) || MI.modifiesRegister(Reg, TRI))
+            MOP.setIsKill(false);
+        };
+        ClearKill(*It, RegOp0, TRI);
+        ClearKill(*It, RegOp1, TRI);
+      }
     } else {
       // Clear kill flags of the first stores register. Example:
       //   STRWui %w1, ...
