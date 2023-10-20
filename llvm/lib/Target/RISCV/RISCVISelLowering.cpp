@@ -731,7 +731,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          VT, Custom);
       setOperationAction({ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT}, VT,
                          Custom);
-
+      setOperationAction({ISD::LRINT, ISD::LLRINT}, VT, Custom);
       setOperationAction(
           {ISD::SADDSAT, ISD::UADDSAT, ISD::SSUBSAT, ISD::USUBSAT}, VT, Legal);
 
@@ -2948,6 +2948,31 @@ lowerFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
   RISCVFPRndMode::RoundingMode FRM = matchRoundingOp(Op.getOpcode());
   return DAG.getNode(RISCVISD::FROUND, DL, VT, Src, MaxValNode,
                      DAG.getTargetConstant(FRM, DL, Subtarget.getXLenVT()));
+}
+
+// Expand vector LRINT and LLRINT by converting to the integer domain.
+static SDValue lowerVectorXRINT(SDValue Op, SelectionDAG &DAG,
+                                const RISCVSubtarget &Subtarget) {
+  MVT VT = Op.getSimpleValueType();
+  assert(VT.isVector() && "Unexpected type");
+
+  SDLoc DL(Op);
+  SDValue Src = Op.getOperand(0);
+  MVT ContainerVT = VT;
+
+  if (VT.isFixedLengthVector()) {
+    ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
+    Src = convertToScalableVector(ContainerVT, Src, DAG, Subtarget);
+  }
+
+  auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+  SDValue Truncated =
+      DAG.getNode(RISCVISD::VFCVT_X_F_VL, DL, ContainerVT, Src, Mask, VL);
+
+  if (!VT.isFixedLengthVector())
+    return Truncated;
+
+  return convertFromScalableVector(VT, Truncated, DAG, Subtarget);
 }
 
 static SDValue
@@ -5978,6 +6003,9 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::FROUND:
   case ISD::FROUNDEVEN:
     return lowerFTRUNC_FCEIL_FFLOOR_FROUND(Op, DAG, Subtarget);
+  case ISD::LRINT:
+  case ISD::LLRINT:
+    return lowerVectorXRINT(Op, DAG, Subtarget);
   case ISD::VECREDUCE_ADD:
   case ISD::VECREDUCE_UMAX:
   case ISD::VECREDUCE_SMAX:
@@ -11584,8 +11612,23 @@ static SDValue combineSelectAndUse(SDNode *N, SDValue Slct, SDValue OtherOp,
   if (VT.isVector())
     return SDValue();
 
-  if (!Subtarget.hasShortForwardBranchOpt() ||
-      (Slct.getOpcode() != ISD::SELECT &&
+  if (!Subtarget.hasShortForwardBranchOpt()) {
+    // (select cond, x, (and x, c)) has custom lowering with Zicond.
+    if ((!Subtarget.hasStdExtZicond() &&
+         !Subtarget.hasVendorXVentanaCondOps()) ||
+        N->getOpcode() != ISD::AND)
+      return SDValue();
+
+    // Maybe harmful when condition code has multiple use.
+    if (Slct.getOpcode() == ISD::SELECT && !Slct.getOperand(0).hasOneUse())
+      return SDValue();
+
+    // Maybe harmful when VT is wider than XLen.
+    if (VT.getSizeInBits() > Subtarget.getXLen())
+      return SDValue();
+  }
+
+  if ((Slct.getOpcode() != ISD::SELECT &&
        Slct.getOpcode() != RISCVISD::SELECT_CC) ||
       !Slct.hasOneUse())
     return SDValue();
@@ -13717,7 +13760,7 @@ static SDValue performSELECTCombine(SDNode *N, SelectionDAG &DAG,
   return tryFoldSelectIntoOp(N, DAG, FalseVal, TrueVal, /*Swapped*/true);
 }
 
-/// IF we have a build_vector where each lane is binop X, C, where C
+/// If we have a build_vector where each lane is binop X, C, where C
 /// is a constant (but not necessarily the same constant on all lanes),
 /// form binop (build_vector x1, x2, ...), (build_vector c1, c2, c3, ..).
 /// We assume that materializing a constant build vector will be no more
@@ -13744,6 +13787,10 @@ static SDValue performBUILD_VECTORCombine(SDNode *N, SelectionDAG &DAG,
   SmallVector<SDValue> RHSOps;
   for (SDValue Op : N->ops()) {
     if (Op.isUndef()) {
+      // We can't form a divide or remainder from undef.
+      if (!DAG.isSafeToSpeculativelyExecute(Opcode))
+        return SDValue();
+
       LHSOps.push_back(Op);
       RHSOps.push_back(Op);
       continue;
@@ -13758,6 +13805,10 @@ static SDValue performBUILD_VECTORCombine(SDNode *N, SelectionDAG &DAG,
     LHSOps.push_back(Op.getOperand(0));
     if (!isa<ConstantSDNode>(Op.getOperand(1)) &&
         !isa<ConstantFPSDNode>(Op.getOperand(1)))
+      return SDValue();
+    // FIXME: Return failure if the RHS type doesn't match the LHS. Shifts may
+    // have different LHS and RHS types.
+    if (Op.getOperand(0).getValueType() != Op.getOperand(1).getValueType())
       return SDValue();
     RHSOps.push_back(Op.getOperand(1));
   }
@@ -14891,11 +14942,14 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
 
     // Use M1 or smaller to avoid over constraining register allocation
     const MVT M1VT = getLMUL1VT(VT);
-    if (M1VT.bitsLT(VT) && Passthru.isUndef()) {
+    if (M1VT.bitsLT(VT)) {
+      SDValue M1Passthru =
+          DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, M1VT, Passthru,
+                      DAG.getVectorIdxConstant(0, DL));
       SDValue Result =
-        DAG.getNode(N->getOpcode(), DL, M1VT, Passthru, Scalar, VL);
-      Result = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT),
-                           Result, DAG.getConstant(0, DL, XLenVT));
+          DAG.getNode(N->getOpcode(), DL, M1VT, M1Passthru, Scalar, VL);
+      Result = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, Passthru, Result,
+                           DAG.getConstant(0, DL, XLenVT));
       return Result;
     }
 
@@ -17000,6 +17054,7 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
     report_fatal_error("Unsupported calling convention");
   case CallingConv::C:
   case CallingConv::Fast:
+  case CallingConv::SPIR_KERNEL:
     break;
   case CallingConv::GHC:
     if (!Subtarget.hasStdExtFOrZfinx() || !Subtarget.hasStdExtDOrZdinx())

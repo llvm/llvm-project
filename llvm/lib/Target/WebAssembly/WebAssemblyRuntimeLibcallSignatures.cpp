@@ -191,6 +191,9 @@ struct RuntimeLibcallSignatureTable {
     Table[RTLIB::EXP2_F32] = f32_func_f32;
     Table[RTLIB::EXP2_F64] = f64_func_f64;
     Table[RTLIB::EXP2_F128] = i64_i64_func_i64_i64;
+    Table[RTLIB::EXP10_F32] = f32_func_f32;
+    Table[RTLIB::EXP10_F64] = f64_func_f64;
+    Table[RTLIB::EXP10_F128] = i64_i64_func_i64_i64;
     Table[RTLIB::SIN_F32] = f32_func_f32;
     Table[RTLIB::SIN_F64] = f64_func_f64;
     Table[RTLIB::SIN_F128] = i64_i64_func_i64_i64;

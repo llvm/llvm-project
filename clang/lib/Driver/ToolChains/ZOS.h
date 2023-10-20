@@ -16,7 +16,7 @@ namespace clang {
 namespace driver {
 namespace tools {
 
-/// zos -- Directly call system default assembler and linker.
+/// Directly call system default assembler and linker.
 namespace zos {
 
 class LLVM_LIBRARY_VISIBILITY Assembler : public Tool {

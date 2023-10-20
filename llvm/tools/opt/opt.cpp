@@ -351,7 +351,6 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "expandmemcmp",
       "loop-reduce",
       "lower-amx-type",
-      "pre-amx-config",
       "lower-amx-intrinsics",
       "polyhedral-info",
       "print-polyhedral-info",

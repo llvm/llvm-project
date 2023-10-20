@@ -1826,6 +1826,10 @@ TEST_F(TokenAnnotatorTest, UnderstandsTrailingReturnArrow) {
   ASSERT_EQ(Tokens.size(), 15u) << Tokens;
   EXPECT_TOKEN(Tokens[12], tok::arrow, TT_Unknown);
 
+  Tokens = annotate("void f() FOO(foo->bar);");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[7], tok::arrow, TT_Unknown);
+
   // Mixed
   Tokens = annotate("auto f() -> int { auto a = b()->c; }");
   ASSERT_EQ(Tokens.size(), 18u) << Tokens;
@@ -2328,6 +2332,16 @@ TEST_F(TokenAnnotatorTest, UnderstandsControlStatements) {
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_ControlStatementLBrace);
   EXPECT_TOKEN(Tokens[5], tok::r_brace, TT_ControlStatementRBrace);
+}
+
+TEST_F(TokenAnnotatorTest, UnderstandsDoWhile) {
+  auto Tokens = annotate("do { ++i; } while ( i > 5 );");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::kw_while, TT_DoWhile);
+
+  Tokens = annotate("do ++i; while ( i > 5 );");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::kw_while, TT_DoWhile);
 }
 
 } // namespace

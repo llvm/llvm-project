@@ -69,6 +69,13 @@ Changes to building LLVM
 Changes to TableGen
 -------------------
 
+* Added constructs for debugging TableGen files:
+
+  * `dump` keyword to dump messages to standard error, see
+     https://github.com/llvm/llvm-project/pull/68793.
+  * `!repr` bang operator to inspect the content of values, see
+     https://github.com/llvm/llvm-project/pull/68716.
+
 Changes to Interprocedural Optimizations
 ----------------------------------------
 
@@ -134,6 +141,8 @@ Changes to the X86 Backend
   with C, but also fixes code generation where LLVM already assumed that the
   type matched and called into libgcc helper functions.
 * Support ISA of ``USER_MSR``.
+* Support ISA of ``AVX10.1-256`` and ``AVX10.1-512``.
+* ``-mcpu=pantherlake`` and ``-mcpu=clearwaterforest`` are now supported.
 
 Changes to the OCaml bindings
 -----------------------------
@@ -196,6 +205,13 @@ Changes to LLDB
   for formatters to quickly find directly nested type when it's known
   where to search for it, avoiding more expensive global search via
   ``SBTarget::FindFirstType``.
+* ``lldb-vscode`` was renamed to ``lldb-dap`` and and its installation
+  instructions have been updated to reflect this. The underlying functionality
+  remains unchanged.
+
+* LLDB now supports debugging the Scalable Matrix Extension (SME) on AArch64
+  Linux for both running processes and core files. For details refer to the
+  `AArch64 Linux documentation <https://lldb.llvm.org/use/aarch64-linux.html>`_.
 
 Changes to Sanitizers
 ---------------------

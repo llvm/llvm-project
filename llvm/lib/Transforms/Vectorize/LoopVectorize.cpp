@@ -9173,7 +9173,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     // then extend the loop exit value to enable InstCombine to evaluate the
     // entire expression in the smaller type.
     Type *PhiTy = PhiR->getStartValue()->getLiveInIRValue()->getType();
-    if (PhiTy != RdxDesc.getRecurrenceType()) {
+    if (MinVF.isVector() && PhiTy != RdxDesc.getRecurrenceType()) {
       assert(!PhiR->isInLoop() && "Unexpected truncated inloop reduction!");
       Type *RdxTy = RdxDesc.getRecurrenceType();
       auto *Trunc = new VPWidenCastRecipe(Instruction::Trunc,

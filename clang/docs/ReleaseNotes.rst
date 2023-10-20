@@ -37,6 +37,27 @@ These changes are ones which we think may surprise users when upgrading to
 Clang |release| because of the opportunity they pose for disruption to existing
 code bases.
 
+- Fix a bug in reversed argument for templated operators.
+  This breaks code in C++20 which was previously accepted in C++17. Eg:
+
+  .. code-block:: cpp
+
+    struct P {};
+    template<class S> bool operator==(const P&, const S&);
+
+    struct A : public P {};
+    struct B : public P {};
+
+    // This equality is now ambiguous in C++20.
+    bool ambiguous(A a, B b) { return a == b; }
+
+    template<class S> bool operator!=(const P&, const S&);
+    // Ok. Found a matching operator!=.
+    bool fine(A a, B b) { return a == b; }
+
+  To reduce such widespread breakages, as an extension, Clang accepts this code
+  with an existing warning ``-Wambiguous-reversed-operator`` warning.
+  Fixes `GH <https://github.com/llvm/llvm-project/issues/53954>`_.
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -117,8 +138,6 @@ C++ Language Changes
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
-- Fix a bug in conversion sequence of arguments to a function with reversed parameter order.
-  Fixes `GH <https://github.com/llvm/llvm-project/issues/53954>`_.
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -184,6 +203,12 @@ C23 Feature Support
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
+* Clang now has a ``__builtin_vectorelements()`` function that determines the number of elements in a vector.
+  For fixed-sized vectors, e.g., defined via ``__attribute__((vector_size(N)))`` or ARM NEON's vector types
+  (e.g., ``uint16x8_t``), this returns the constant number of elements at compile-time.
+  For scalable vectors, e.g., SVE or RISC-V V, the number of elements is not known at compile-time and is
+  determined at runtime.
+
 New Compiler Flags
 ------------------
 
@@ -198,6 +223,9 @@ New Compiler Flags
   preserving ``#include`` directives for "system" headers instead of copying
   the preprocessed text to the output. This can greatly reduce the size of the
   preprocessed output, which can be helpful when trying to reduce a test case.
+
+* ``-Wbitfield-conversion`` was added to detect assignments of integral
+  types to a bitfield that may change the value.
 
 Deprecated Compiler Flags
 -------------------------
@@ -318,6 +346,11 @@ Improvements to Clang's diagnostics
       |               ~~~~~~~~~^~~~~~~~
 - Clang now always diagnoses when using non-standard layout types in ``offsetof`` .
   (`#64619: <https://github.com/llvm/llvm-project/issues/64619>`_)
+- Clang now diagnoses use of variable-length arrays in C++ by default (and
+  under ``-Wall`` in GNU++ mode). This is an extension supported by Clang and
+  GCC, but is very easy to accidentally use without realizing it's a
+  nonportable construct that has different semantics from a constant-sized
+  array. (`#62836 <https://github.com/llvm/llvm-project/issues/62836>`_)
 
 Bug Fixes in This Version
 -------------------------
@@ -402,6 +435,9 @@ Bug Fixes in This Version
   operator in C. No longer issuing a confusing diagnostic along the lines of
   "incompatible operand types ('foo' and 'foo')" with extensions such as matrix
   types. Fixes (`#69008 <https://github.com/llvm/llvm-project/issues/69008>`_)
+- Clang no longer permits using the `_BitInt` types as an underlying type for an
+  enumeration as specified in the C23 Standard.
+  Fixes (`#69619 <https://github.com/llvm/llvm-project/issues/69619>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -522,6 +558,10 @@ Bug Fixes to C++ Support
   with non-type template parameters of reference type. Fixes:
   (`#65153 <https://github.com/llvm/llvm-project/issues/65153>`_)
 
+- Clang now properly compares constraints on an out of line class template
+  declaration definition. Fixes:
+  (`#61763 <https://github.com/llvm/llvm-project/issues/61763>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
@@ -565,6 +605,8 @@ X86 Support
 - Support ISA of ``USER_MSR``.
   * Support intrinsic of ``_urdmsr``.
   * Support intrinsic of ``_uwrmsr``.
+- Support ISA of ``AVX10.1``.
+- ``-march=pantherlake`` and ``-march=clearwaterforest`` are now supported.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^

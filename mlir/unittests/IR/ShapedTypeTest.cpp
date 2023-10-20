@@ -131,4 +131,99 @@ TEST(ShapedTypeTest, CloneVector) {
             VectorType::get(vectorNewShape, vectorNewType));
 }
 
+TEST(ShapedTypeTest, VectorTypeBuilder) {
+  MLIRContext context;
+  Type f32 = FloatType::getF32(&context);
+
+  SmallVector<int64_t> shape{2, 4, 8, 9, 1};
+  SmallVector<bool> scalableDims{true, false, true, false, false};
+  VectorType vectorType = VectorType::get(shape, f32, scalableDims);
+
+  {
+    // Drop some dims.
+    VectorType dropFrontTwoDims =
+        VectorType::Builder(vectorType).dropDim(0).dropDim(0);
+    ASSERT_EQ(vectorType.getElementType(), dropFrontTwoDims.getElementType());
+    ASSERT_EQ(vectorType.getShape().drop_front(2), dropFrontTwoDims.getShape());
+    ASSERT_EQ(vectorType.getScalableDims().drop_front(2),
+              dropFrontTwoDims.getScalableDims());
+  }
+
+  {
+    // Set some dims.
+    VectorType setTwoDims =
+        VectorType::Builder(vectorType).setDim(0, 10).setDim(3, 12);
+    ASSERT_EQ(setTwoDims.getShape(), ArrayRef<int64_t>({10, 4, 8, 12, 1}));
+    ASSERT_EQ(vectorType.getElementType(), setTwoDims.getElementType());
+    ASSERT_EQ(vectorType.getScalableDims(), setTwoDims.getScalableDims());
+  }
+
+  {
+    // Test for bug from:
+    // https://github.com/llvm/llvm-project/commit/b44b3494f60296db6aca38a14cab061d9b747a0a
+    // Constructs a temporary builder, modifies it, copies it to `builder`.
+    // This used to lead to a use-after-free. Running under sanitizers will
+    // catch any issues.
+    VectorType::Builder builder = VectorType::Builder(vectorType).setDim(0, 16);
+    VectorType newVectorType = VectorType(builder);
+    ASSERT_EQ(newVectorType.getDimSize(0), 16);
+  }
+
+  {
+    // Make builder from scratch (without scalable dims) -- this use to lead to
+    // a use-after-free see: https://github.com/llvm/llvm-project/pull/68969.
+    // Running under sanitizers will catch any issues.
+    SmallVector<int64_t> shape{1, 2, 3, 4};
+    VectorType::Builder builder(shape, f32);
+    ASSERT_EQ(VectorType(builder).getShape(), ArrayRef(shape));
+  }
+
+  {
+    // Set vector shape (without scalable dims) -- this use to lead to
+    // a use-after-free see: https://github.com/llvm/llvm-project/pull/68969.
+    // Running under sanitizers will catch any issues.
+    VectorType::Builder builder(vectorType);
+    SmallVector<int64_t> newShape{2, 2};
+    builder.setShape(newShape);
+    ASSERT_EQ(VectorType(builder).getShape(), ArrayRef(newShape));
+  }
+}
+
+TEST(ShapedTypeTest, RankedTensorTypeBuilder) {
+  MLIRContext context;
+  Type f32 = FloatType::getF32(&context);
+
+  SmallVector<int64_t> shape{2, 4, 8, 16, 32};
+  RankedTensorType tensorType = RankedTensorType::get(shape, f32);
+
+  {
+    // Drop some dims.
+    RankedTensorType dropFrontTwoDims =
+        RankedTensorType::Builder(tensorType).dropDim(0).dropDim(1).dropDim(0);
+    ASSERT_EQ(tensorType.getElementType(), dropFrontTwoDims.getElementType());
+    ASSERT_EQ(dropFrontTwoDims.getShape(), ArrayRef<int64_t>({16, 32}));
+  }
+
+  {
+    // Insert some dims.
+    RankedTensorType insertTwoDims =
+        RankedTensorType::Builder(tensorType).insertDim(7, 2).insertDim(9, 3);
+    ASSERT_EQ(tensorType.getElementType(), insertTwoDims.getElementType());
+    ASSERT_EQ(insertTwoDims.getShape(),
+              ArrayRef<int64_t>({2, 4, 7, 9, 8, 16, 32}));
+  }
+
+  {
+    // Test for bug from:
+    // https://github.com/llvm/llvm-project/commit/b44b3494f60296db6aca38a14cab061d9b747a0a
+    // Constructs a temporary builder, modifies it, copies it to `builder`.
+    // This used to lead to a use-after-free. Running under sanitizers will
+    // catch any issues.
+    RankedTensorType::Builder builder =
+        RankedTensorType::Builder(tensorType).dropDim(0);
+    RankedTensorType newTensorType = RankedTensorType(builder);
+    ASSERT_EQ(tensorType.getShape().drop_front(), newTensorType.getShape());
+  }
+}
+
 } // namespace

@@ -3497,6 +3497,14 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
           Tok->setType(TT_TrailingReturnArrow);
           break;
         }
+        if (Tok->isNot(TT_TrailingAnnotation))
+          continue;
+        const auto *Next = Tok->Next;
+        if (!Next || Next->isNot(tok::l_paren))
+          continue;
+        Tok = Next->MatchingParen;
+        if (!Tok)
+          break;
       }
     }
   }
@@ -4225,6 +4233,19 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     if (Left.is(TT_IfMacro)) {
       return Style.SpaceBeforeParensOptions.AfterIfMacros ||
              spaceRequiredBeforeParens(Right);
+    }
+    if (Style.SpaceBeforeParens == FormatStyle::SBPO_Custom &&
+        Left.isOneOf(tok::kw_new, tok::kw_delete) &&
+        Right.isNot(TT_OverloadedOperatorLParen) &&
+        !(Line.MightBeFunctionDecl && Left.is(TT_FunctionDeclarationName))) {
+      if (Style.SpaceBeforeParensOptions.AfterPlacementOperator ==
+              FormatStyle::SpaceBeforeParensCustom::APO_Always ||
+          (Style.SpaceBeforeParensOptions.AfterPlacementOperator ==
+               FormatStyle::SpaceBeforeParensCustom::APO_Leave &&
+           Right.hasWhitespaceBefore())) {
+        return true;
+      }
+      return false;
     }
     if (Line.Type == LT_ObjCDecl)
       return true;

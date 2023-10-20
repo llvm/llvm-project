@@ -719,46 +719,88 @@ public:
     const Fortran::semantics::Symbol &hsym = sym.GetUltimate();
     Fortran::lower::SymbolBox hsb = lookupOneLevelUpSymbol(hsym);
     assert(hsb && "Host symbol box not found");
-    fir::ExtendedValue hexv = symBoxToExtendedValue(hsb);
 
     // 2) Fetch the copied one that will mask the original.
     Fortran::lower::SymbolBox sb = shallowLookupSymbol(sym);
     assert(sb && "Host-associated symbol box not found");
     assert(hsb.getAddr() != sb.getAddr() &&
            "Host and associated symbol boxes are the same");
-    fir::ExtendedValue exv = symBoxToExtendedValue(sb);
 
     // 3) Perform the assignment.
     mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
     if (copyAssignIP && copyAssignIP->isSet())
       builder->restoreInsertionPoint(*copyAssignIP);
     else
-      builder->setInsertionPointAfter(fir::getBase(exv).getDefiningOp());
+      builder->setInsertionPointAfter(sb.getAddr().getDefiningOp());
 
-    fir::ExtendedValue lhs, rhs;
+    Fortran::lower::SymbolBox *lhs_sb, *rhs_sb;
     if (copyAssignIP && copyAssignIP->isSet() &&
         sym.test(Fortran::semantics::Symbol::Flag::OmpLastPrivate)) {
       // lastprivate case
-      lhs = hexv;
-      rhs = exv;
+      lhs_sb = &hsb;
+      rhs_sb = &sb;
     } else {
-      lhs = exv;
-      rhs = hexv;
+      lhs_sb = &sb;
+      rhs_sb = &hsb;
     }
 
     mlir::Location loc = genLocation(sym.name());
-    mlir::Type symType = genType(sym);
 
-    if (auto seqTy = symType.dyn_cast<fir::SequenceType>()) {
-      Fortran::lower::StatementContext stmtCtx;
-      Fortran::lower::createSomeArrayAssignment(*this, lhs, rhs, localSymbols,
-                                                stmtCtx);
-      stmtCtx.finalizeAndReset();
-    } else if (hexv.getBoxOf<fir::CharBoxValue>()) {
-      fir::factory::CharacterExprHelper{*builder, loc}.createAssign(lhs, rhs);
+    if (lowerToHighLevelFIR()) {
+      hlfir::Entity lhs{lhs_sb->getAddr()};
+      hlfir::Entity rhs{rhs_sb->getAddr()};
+      // Temporary_lhs is set to true in hlfir.assign below to avoid user
+      // assignment to be used and finalization to be called on the LHS.
+      // This may or may not be correct but mimics the current behaviour
+      // without HLFIR.
+      auto copyData = [&](hlfir::Entity l, hlfir::Entity r) {
+        // Dereference RHS and load it if trivial scalar.
+        r = hlfir::loadTrivialScalar(loc, *builder, r);
+        builder->create<hlfir::AssignOp>(
+            loc, r, l,
+            /*isWholeAllocatableAssignment=*/false,
+            /*keepLhsLengthInAllocatableAssignment=*/false,
+            /*temporary_lhs=*/true);
+      };
+      if (lhs.isAllocatable()) {
+        // Deep copy allocatable if it is allocated.
+        // Note that when allocated, the RHS is already allocated with the LHS
+        // shape for copy on entry in createHostAssociateVarClone.
+        // For lastprivate, this assumes that the RHS was not reallocated in
+        // the OpenMP region.
+        lhs = hlfir::derefPointersAndAllocatables(loc, *builder, lhs);
+        mlir::Value addr = hlfir::genVariableRawAddress(loc, *builder, lhs);
+        mlir::Value isAllocated = builder->genIsNotNullAddr(loc, addr);
+        builder->genIfThen(loc, isAllocated)
+            .genThen([&]() {
+              // Copy the DATA, not the descriptors.
+              copyData(lhs, rhs);
+            })
+            .end();
+      } else if (lhs.isPointer()) {
+        // Set LHS target to the target of RHS (do not copy the RHS
+        // target data into the LHS target storage).
+        auto loadVal = builder->create<fir::LoadOp>(loc, rhs);
+        builder->create<fir::StoreOp>(loc, loadVal, lhs);
+      } else {
+        // Non ALLOCATABLE/POINTER variable. Simple DATA copy.
+        copyData(lhs, rhs);
+      }
     } else {
-      auto loadVal = builder->create<fir::LoadOp>(loc, fir::getBase(rhs));
-      builder->create<fir::StoreOp>(loc, loadVal, fir::getBase(lhs));
+      fir::ExtendedValue lhs = symBoxToExtendedValue(*lhs_sb);
+      fir::ExtendedValue rhs = symBoxToExtendedValue(*rhs_sb);
+      mlir::Type symType = genType(sym);
+      if (auto seqTy = symType.dyn_cast<fir::SequenceType>()) {
+        Fortran::lower::StatementContext stmtCtx;
+        Fortran::lower::createSomeArrayAssignment(*this, lhs, rhs, localSymbols,
+                                                  stmtCtx);
+        stmtCtx.finalizeAndReset();
+      } else if (lhs.getBoxOf<fir::CharBoxValue>()) {
+        fir::factory::CharacterExprHelper{*builder, loc}.createAssign(lhs, rhs);
+      } else {
+        auto loadVal = builder->create<fir::LoadOp>(loc, fir::getBase(rhs));
+        builder->create<fir::StoreOp>(loc, loadVal, fir::getBase(lhs));
+      }
     }
 
     if (copyAssignIP && copyAssignIP->isSet() &&

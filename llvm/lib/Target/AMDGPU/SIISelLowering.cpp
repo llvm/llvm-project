@@ -5992,6 +5992,11 @@ SDValue SITargetLowering::lowerTRAP(SDValue Op, SelectionDAG &DAG) const {
       Subtarget->getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA)
     return lowerTrapEndpgm(Op, DAG);
 
+  const Module *M = DAG.getMachineFunction().getFunction().getParent();
+  unsigned CodeObjectVersion = AMDGPU::getCodeObjectVersion(*M);
+  if (CodeObjectVersion <= AMDGPU::AMDHSA_COV3)
+    return lowerTrapHsaQueuePtr(Op, DAG);
+
   return Subtarget->supportsGetDoorbellID() ? lowerTrapHsa(Op, DAG) :
          lowerTrapHsaQueuePtr(Op, DAG);
 }
@@ -12826,7 +12831,7 @@ static void placeSources(ByteProvider<SDValue> &Src0,
         return IterElt.first == *BPP.first.Src;
       };
 
-      auto Match = std::find_if(Srcs.begin(), Srcs.end(), MatchesFirst);
+      auto Match = llvm::find_if(Srcs, MatchesFirst);
       if (Match != Srcs.end()) {
         Match->second = addPermMasks(FirstMask, Match->second);
         FirstGroup = I;
@@ -12839,7 +12844,7 @@ static void placeSources(ByteProvider<SDValue> &Src0,
       auto MatchesSecond = [&BPP](std::pair<SDValue, unsigned> IterElt) {
         return IterElt.first == *BPP.second.Src;
       };
-      auto Match = std::find_if(Srcs.begin(), Srcs.end(), MatchesSecond);
+      auto Match = llvm::find_if(Srcs, MatchesSecond);
       if (Match != Srcs.end()) {
         Match->second = addPermMasks(SecondMask, Match->second);
       } else

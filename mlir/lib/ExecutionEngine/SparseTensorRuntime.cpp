@@ -185,8 +185,8 @@ void *_mlir_ciface_newSparseTensor( // NOLINT
   const uint64_t dimRank = MEMREF_GET_USIZE(dimSizesRef);
   const uint64_t lvlRank = MEMREF_GET_USIZE(lvlSizesRef);
   ASSERT_USIZE_EQ(lvlTypesRef, lvlRank);
-  ASSERT_USIZE_EQ(dim2lvlRef, dimRank);
-  ASSERT_USIZE_EQ(lvl2dimRef, lvlRank);
+  ASSERT_USIZE_EQ(dim2lvlRef, lvlRank);
+  ASSERT_USIZE_EQ(lvl2dimRef, dimRank);
   const index_type *dimSizes = MEMREF_GET_PAYLOAD(dimSizesRef);
   const index_type *lvlSizes = MEMREF_GET_PAYLOAD(lvlSizesRef);
   const DimLevelType *lvlTypes = MEMREF_GET_PAYLOAD(lvlTypesRef);
@@ -423,10 +423,10 @@ void _mlir_ciface_getSparseTensorReaderDimSizes(
     ASSERT_NO_STRIDE(cref);                                                    \
     ASSERT_NO_STRIDE(vref);                                                    \
     const uint64_t dimRank = reader.getRank();                                 \
-    const uint64_t lvlRank = MEMREF_GET_USIZE(lvl2dimRef);                     \
+    const uint64_t lvlRank = MEMREF_GET_USIZE(dim2lvlRef);                     \
     const uint64_t cSize = MEMREF_GET_USIZE(cref);                             \
     const uint64_t vSize = MEMREF_GET_USIZE(vref);                             \
-    ASSERT_USIZE_EQ(dim2lvlRef, dimRank);                                      \
+    ASSERT_USIZE_EQ(lvl2dimRef, dimRank);                                      \
     assert(cSize >= lvlRank * vSize);                                          \
     assert(vSize >= reader.getNSE() && "Not enough space in buffers");         \
     (void)dimRank;                                                             \
@@ -449,9 +449,9 @@ void _mlir_ciface_outSparseTensorWriterMetaData(
   ASSERT_NO_STRIDE(dimSizesRef);
   assert(dimRank != 0);
   index_type *dimSizes = MEMREF_GET_PAYLOAD(dimSizesRef);
-  SparseTensorWriter &file = *static_cast<SparseTensorWriter *>(p);
+  std::ostream &file = *static_cast<std::ostream *>(p);
   file << dimRank << " " << nse << std::endl;
-  for (index_type d = 0; d < dimRank - 1; ++d)
+  for (index_type d = 0; d < dimRank - 1; d++)
     file << dimSizes[d] << " ";
   file << dimSizes[dimRank - 1] << std::endl;
 }
@@ -464,8 +464,8 @@ void _mlir_ciface_outSparseTensorWriterMetaData(
     assert(p &&vref);                                                          \
     ASSERT_NO_STRIDE(dimCoordsRef);                                            \
     const index_type *dimCoords = MEMREF_GET_PAYLOAD(dimCoordsRef);            \
-    SparseTensorWriter &file = *static_cast<SparseTensorWriter *>(p);          \
-    for (index_type d = 0; d < dimRank; ++d)                                   \
+    std::ostream &file = *static_cast<std::ostream *>(p);                      \
+    for (index_type d = 0; d < dimRank; d++)                                   \
       file << (dimCoords[d] + 1) << " ";                                       \
     V *value = MEMREF_GET_PAYLOAD(vref);                                       \
     file << *value << std::endl;                                               \
@@ -537,14 +537,14 @@ void delSparseTensorReader(void *p) {
 }
 
 void *createSparseTensorWriter(char *filename) {
-  SparseTensorWriter *file =
+  std::ostream *file =
       (filename[0] == 0) ? &std::cout : new std::ofstream(filename);
   *file << "# extended FROSTT format\n";
   return static_cast<void *>(file);
 }
 
 void delSparseTensorWriter(void *p) {
-  SparseTensorWriter *file = static_cast<SparseTensorWriter *>(p);
+  std::ostream *file = static_cast<std::ostream *>(p);
   file->flush();
   assert(file->good());
   if (file != &std::cout)

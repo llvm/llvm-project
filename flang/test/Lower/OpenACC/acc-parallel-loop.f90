@@ -483,11 +483,9 @@ subroutine acc_parallel_loop
     a(i) = b(i)
   END DO
 
-! FIR:        %[[ACC_PRIVATE_A:.*]] = acc.private varPtr(%[[A]] : !fir.ref<!fir.array<10xf32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<10xf32>> {name = "a"}
-! HLFIR:      %[[ACC_PRIVATE_A:.*]] = acc.private varPtr(%[[DECLA]]#1 : !fir.ref<!fir.array<10xf32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<10xf32>> {name = "a"}
 ! FIR:        %[[ACC_PRIVATE_B:.*]] = acc.firstprivate varPtr(%[[B]] : !fir.ref<!fir.array<10xf32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<10xf32>> {name = "b"}
 ! HLFIR:      %[[ACC_PRIVATE_B:.*]] = acc.firstprivate varPtr(%[[DECLB]]#1 : !fir.ref<!fir.array<10xf32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<10xf32>> {name = "b"}
-! CHECK:      acc.parallel firstprivate(@firstprivatization_section_ext10_ref_10xf32 -> %[[ACC_PRIVATE_B]] : !fir.ref<!fir.array<10xf32>>) private(@privatization_ref_10xf32 -> %[[ACC_PRIVATE_A]] : !fir.ref<!fir.array<10xf32>>) {
+! CHECK:      acc.parallel firstprivate(@firstprivatization_section_ext10_ref_10xf32 -> %[[ACC_PRIVATE_B]] : !fir.ref<!fir.array<10xf32>>) {
 ! FIR:        %[[ACC_PRIVATE_A:.*]] = acc.private varPtr(%[[A]] : !fir.ref<!fir.array<10xf32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<10xf32>> {name = "a"}
 ! HLFIR:      %[[ACC_PRIVATE_A:.*]] = acc.private varPtr(%[[DECLA]]#1 : !fir.ref<!fir.array<10xf32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<10xf32>> {name = "a"}
 ! CHECK:        acc.loop private(@privatization_ref_10xf32 -> %[[ACC_PRIVATE_A]] : !fir.ref<!fir.array<10xf32>>) {
@@ -772,7 +770,7 @@ subroutine acc_parallel_loop
     reduction_i = 1
   end do
 
-! CHECK:      acc.parallel reduction(@reduction_add_ref_f32 -> %{{.*}} : !fir.ref<f32>, @reduction_mul_ref_i32 -> %{{.*}} : !fir.ref<i32>) {
+! CHECK:      acc.parallel {
 ! CHECK:        acc.loop reduction(@reduction_add_ref_f32 -> %{{.*}} : !fir.ref<f32>, @reduction_mul_ref_i32 -> %{{.*}} : !fir.ref<i32>) {
 ! CHECK:          fir.do_loop
 ! CHECK:          acc.yield

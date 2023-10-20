@@ -26,15 +26,40 @@ typedef uint64_t src_t;
 typedef uint64_t usrc_t;
 static __inline int clzSrcT(usrc_t x) { return __builtin_clzll(x); }
 
+#elif defined SRC_I128
+typedef __int128_t src_t;
+typedef __uint128_t usrc_t;
+static __inline int clzSrcT(usrc_t x) { return __clzti2(x); }
+
+#elif defined SRC_U128
+typedef __uint128_t src_t;
+typedef __uint128_t usrc_t;
+static __inline int clzSrcT(usrc_t x) { return __clzti2(x); }
+
 #else
 #error Source should be a handled integer type.
 #endif
 
-#if defined DST_DOUBLE
+#if defined DST_SINGLE
+typedef float dst_t;
+typedef uint32_t dst_rep_t;
+#define DST_REP_C UINT32_C
+
+enum {
+  dstSigBits = 23,
+};
+
+#elif defined DST_DOUBLE
 typedef double dst_t;
 typedef uint64_t dst_rep_t;
 #define DST_REP_C UINT64_C
 static const int dstSigBits = 52;
+
+#elif defined DST_QUAD
+typedef long double dst_t;
+typedef __uint128_t dst_rep_t;
+#define DST_REP_C (__uint128_t)
+static const int dstSigBits = 112;
 
 #else
 #error Destination should be a handled floating point type
