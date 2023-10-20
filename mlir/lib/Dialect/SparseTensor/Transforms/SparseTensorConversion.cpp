@@ -589,6 +589,13 @@ public:
     const auto stt = getSparseTensorType(op.getTensor());
     const auto elemTp = stt.getElementType();
     const Level lvlRank = stt.getLvlRank();
+    // We need a alloc scope here as the InsertOp is always generated inside a
+    // loop, which lead to stack overflow.
+    auto allocaScope = rewriter.create<memref::AllocaScopeOp>(
+        loc, adaptor.getTensor().getType());
+    Block *scopeBlock = rewriter.createBlock(&allocaScope.getBodyRegion());
+    rewriter.setInsertionPointToStart(scopeBlock);
+
     auto lvlCoords = genAlloca(rewriter, loc, lvlRank, rewriter.getIndexType());
     auto vref = genAllocaScalar(rewriter, loc, elemTp);
     storeAll(rewriter, loc, lvlCoords, adaptor.getLvlCoords());
@@ -596,7 +603,9 @@ public:
     SmallString<12> name{"lexInsert", primaryTypeFunctionSuffix(elemTp)};
     createFuncCall(rewriter, loc, name, {},
                    {adaptor.getTensor(), lvlCoords, vref}, EmitCInterface::On);
-    rewriter.replaceOp(op, adaptor.getTensor());
+    rewriter.create<memref::AllocaScopeReturnOp>(loc, adaptor.getTensor());
+    rewriter.setInsertionPointAfter(allocaScope);
+    rewriter.replaceOp(op, allocaScope.getResult(0));
     return success();
   }
 };
