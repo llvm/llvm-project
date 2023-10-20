@@ -593,8 +593,10 @@ public:
     {
       OpBuilder::InsertionGuard guard(rewriter);
       auto loop = op->getParentOfType<LoopLikeOpInterface>();
-      // Hoists alloca outside the loop to avoid stack overflow.
-      rewriter.setInsertionPoint(loop);
+      if (loop) {
+        // Hoists alloca outside the loop to avoid stack overflow.
+        rewriter.setInsertionPoint(loop);
+      }
       lvlCoords = genAlloca(rewriter, loc, lvlRank, rewriter.getIndexType());
       vref = genAllocaScalar(rewriter, loc, elemTp);
     }
