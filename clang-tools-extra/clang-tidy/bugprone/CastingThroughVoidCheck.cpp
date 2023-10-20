@@ -39,8 +39,7 @@ void CastingThroughVoidCheck::check(const MatchFinder::MatchResult &Result) {
   const auto ST = *Result.Nodes.getNodeAs<QualType>("source_type");
   const auto VT = *Result.Nodes.getNodeAs<QualType>("void_type");
   const auto *CE = Result.Nodes.getNodeAs<ExplicitCastExpr>("cast");
-  diag(CE->getSourceRange().getBegin(), "do not cast %0 to %1 through %2")
-      << ST << TT << VT;
+  diag(CE->getExprLoc(), "do not cast %0 to %1 through %2") << ST << TT << VT;
 }
 
 } // namespace clang::tidy::bugprone
