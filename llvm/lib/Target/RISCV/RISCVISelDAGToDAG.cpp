@@ -2127,7 +2127,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     ReplaceNode(Node, Load);
     return;
   }
-  case ISD::PREFETCH:
+  case ISD::PREFETCH: {
     unsigned Locality = Node->getConstantOperandVal(3);
     if (Locality > 2)
       break;
@@ -2157,6 +2157,16 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         MMO->setFlags(MONontemporalBit1);
     }
     break;
+  }
+  case RISCVISD::FP_EXTEND_BF16: {
+    SDValue V = Node->getOperand(0);
+    // fold (fp_extend_bf16 (fp_round_bf16 op)) -> op
+    if (V.getOpcode() == RISCVISD::FP_ROUND_BF16) {
+      ReplaceUses(Node, V->getOperand(0).getNode());
+      return;
+    }
+    break;
+  }
   }
 
   // Select the default instruction.

@@ -109,11 +109,7 @@ define i32 @fneg_s(bfloat %a, bfloat %b) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
 ; CHECK-NEXT:    fadd.s fa5, fa5, fa5
-; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
 ; CHECK-NEXT:    fneg.s fa4, fa5
-; CHECK-NEXT:    fcvt.bf16.s fa4, fa4
-; CHECK-NEXT:    fcvt.s.bf16 fa4, fa4
 ; CHECK-NEXT:    feq.s a0, fa5, fa4
 ; CHECK-NEXT:    ret
   %1 = fadd bfloat %a, %a
@@ -130,8 +126,6 @@ define bfloat @fsgnjn_s(bfloat %a, bfloat %b) nounwind {
 ; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa1
 ; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fa0
 ; RV32IZFBFMIN-NEXT:    fadd.s fa5, fa4, fa5
-; RV32IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32IZFBFMIN-NEXT:    fneg.s fa5, fa5
 ; RV32IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
 ; RV32IZFBFMIN-NEXT:    fsh fa0, 8(sp)
@@ -152,8 +146,6 @@ define bfloat @fsgnjn_s(bfloat %a, bfloat %b) nounwind {
 ; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa1
 ; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fa0
 ; RV64IZFBFMIN-NEXT:    fadd.s fa5, fa4, fa5
-; RV64IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64IZFBFMIN-NEXT:    fneg.s fa5, fa5
 ; RV64IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
 ; RV64IZFBFMIN-NEXT:    fsh fa0, 0(sp)
@@ -181,11 +173,7 @@ define bfloat @fabs_s(bfloat %a, bfloat %b) nounwind {
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa1
 ; CHECK-NEXT:    fcvt.s.bf16 fa4, fa0
 ; CHECK-NEXT:    fadd.s fa5, fa4, fa5
-; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
 ; CHECK-NEXT:    fabs.s fa4, fa5
-; CHECK-NEXT:    fcvt.bf16.s fa4, fa4
-; CHECK-NEXT:    fcvt.s.bf16 fa4, fa4
 ; CHECK-NEXT:    fadd.s fa5, fa4, fa5
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    ret
@@ -244,11 +232,7 @@ define bfloat @fmsub_s(bfloat %a, bfloat %b, bfloat %c) nounwind {
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa2
 ; CHECK-NEXT:    fmv.w.x fa4, zero
 ; CHECK-NEXT:    fadd.s fa5, fa5, fa4
-; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
 ; CHECK-NEXT:    fneg.s fa5, fa5
-; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
 ; CHECK-NEXT:    fcvt.s.bf16 fa4, fa1
 ; CHECK-NEXT:    fcvt.s.bf16 fa3, fa0
 ; CHECK-NEXT:    fmadd.s fa5, fa3, fa4, fa5
@@ -266,18 +250,10 @@ define bfloat @fnmadd_s(bfloat %a, bfloat %b, bfloat %c) nounwind {
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
 ; CHECK-NEXT:    fmv.w.x fa4, zero
 ; CHECK-NEXT:    fadd.s fa5, fa5, fa4
-; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
 ; CHECK-NEXT:    fcvt.s.bf16 fa3, fa2
 ; CHECK-NEXT:    fadd.s fa4, fa3, fa4
-; CHECK-NEXT:    fcvt.bf16.s fa4, fa4
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
 ; CHECK-NEXT:    fneg.s fa5, fa5
-; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
-; CHECK-NEXT:    fcvt.s.bf16 fa4, fa4
 ; CHECK-NEXT:    fneg.s fa4, fa4
-; CHECK-NEXT:    fcvt.bf16.s fa4, fa4
-; CHECK-NEXT:    fcvt.s.bf16 fa4, fa4
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
 ; CHECK-NEXT:    fcvt.s.bf16 fa3, fa1
 ; CHECK-NEXT:    fmadd.s fa5, fa5, fa3, fa4
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
@@ -296,18 +272,10 @@ define bfloat @fnmadd_s_2(bfloat %a, bfloat %b, bfloat %c) nounwind {
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa1
 ; CHECK-NEXT:    fmv.w.x fa4, zero
 ; CHECK-NEXT:    fadd.s fa5, fa5, fa4
-; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
 ; CHECK-NEXT:    fcvt.s.bf16 fa3, fa2
 ; CHECK-NEXT:    fadd.s fa4, fa3, fa4
-; CHECK-NEXT:    fcvt.bf16.s fa4, fa4
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
 ; CHECK-NEXT:    fneg.s fa5, fa5
-; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
-; CHECK-NEXT:    fcvt.s.bf16 fa4, fa4
 ; CHECK-NEXT:    fneg.s fa4, fa4
-; CHECK-NEXT:    fcvt.bf16.s fa4, fa4
-; CHECK-NEXT:    fcvt.s.bf16 fa4, fa4
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
 ; CHECK-NEXT:    fcvt.s.bf16 fa3, fa0
 ; CHECK-NEXT:    fmadd.s fa5, fa3, fa5, fa4
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
@@ -327,8 +295,6 @@ define bfloat @fnmadd_s_3(bfloat %a, bfloat %b, bfloat %c) nounwind {
 ; CHECK-NEXT:    fcvt.s.bf16 fa4, fa1
 ; CHECK-NEXT:    fcvt.s.bf16 fa3, fa0
 ; CHECK-NEXT:    fmadd.s fa5, fa3, fa4, fa5
-; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
 ; CHECK-NEXT:    fneg.s fa5, fa5
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    ret
@@ -345,8 +311,6 @@ define bfloat @fnmadd_nsz(bfloat %a, bfloat %b, bfloat %c) nounwind {
 ; CHECK-NEXT:    fcvt.s.bf16 fa4, fa1
 ; CHECK-NEXT:    fcvt.s.bf16 fa3, fa0
 ; CHECK-NEXT:    fmadd.s fa5, fa3, fa4, fa5
-; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
 ; CHECK-NEXT:    fneg.s fa5, fa5
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    ret
@@ -361,11 +325,7 @@ define bfloat @fnmsub_s(bfloat %a, bfloat %b, bfloat %c) nounwind {
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
 ; CHECK-NEXT:    fmv.w.x fa4, zero
 ; CHECK-NEXT:    fadd.s fa5, fa5, fa4
-; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
 ; CHECK-NEXT:    fneg.s fa5, fa5
-; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
 ; CHECK-NEXT:    fcvt.s.bf16 fa4, fa2
 ; CHECK-NEXT:    fcvt.s.bf16 fa3, fa1
 ; CHECK-NEXT:    fmadd.s fa5, fa5, fa3, fa4
@@ -383,11 +343,7 @@ define bfloat @fnmsub_s_2(bfloat %a, bfloat %b, bfloat %c) nounwind {
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa1
 ; CHECK-NEXT:    fmv.w.x fa4, zero
 ; CHECK-NEXT:    fadd.s fa5, fa5, fa4
-; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
 ; CHECK-NEXT:    fneg.s fa5, fa5
-; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
 ; CHECK-NEXT:    fcvt.s.bf16 fa4, fa2
 ; CHECK-NEXT:    fcvt.s.bf16 fa3, fa0
 ; CHECK-NEXT:    fmadd.s fa5, fa3, fa5, fa4
@@ -404,11 +360,8 @@ define bfloat @fmadd_s_contract(bfloat %a, bfloat %b, bfloat %c) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa1
 ; CHECK-NEXT:    fcvt.s.bf16 fa4, fa0
-; CHECK-NEXT:    fmul.s fa5, fa4, fa5
-; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
-; CHECK-NEXT:    fcvt.s.bf16 fa4, fa2
-; CHECK-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-NEXT:    fcvt.s.bf16 fa3, fa2
+; CHECK-NEXT:    fmadd.s fa5, fa4, fa5, fa3
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    ret
   %1 = fmul contract bfloat %a, %b
@@ -422,13 +375,9 @@ define bfloat @fmsub_s_contract(bfloat %a, bfloat %b, bfloat %c) nounwind {
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa2
 ; CHECK-NEXT:    fmv.w.x fa4, zero
 ; CHECK-NEXT:    fadd.s fa5, fa5, fa4
-; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
 ; CHECK-NEXT:    fcvt.s.bf16 fa4, fa1
 ; CHECK-NEXT:    fcvt.s.bf16 fa3, fa0
 ; CHECK-NEXT:    fmul.s fa4, fa3, fa4
-; CHECK-NEXT:    fcvt.bf16.s fa4, fa4
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
-; CHECK-NEXT:    fcvt.s.bf16 fa4, fa4
 ; CHECK-NEXT:    fsub.s fa5, fa4, fa5
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    ret
@@ -444,22 +393,12 @@ define bfloat @fnmadd_s_contract(bfloat %a, bfloat %b, bfloat %c) nounwind {
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
 ; CHECK-NEXT:    fmv.w.x fa4, zero
 ; CHECK-NEXT:    fadd.s fa5, fa5, fa4
-; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
 ; CHECK-NEXT:    fcvt.s.bf16 fa3, fa1
 ; CHECK-NEXT:    fadd.s fa3, fa3, fa4
-; CHECK-NEXT:    fcvt.bf16.s fa3, fa3
 ; CHECK-NEXT:    fcvt.s.bf16 fa2, fa2
 ; CHECK-NEXT:    fadd.s fa4, fa2, fa4
-; CHECK-NEXT:    fcvt.bf16.s fa4, fa4
-; CHECK-NEXT:    fcvt.s.bf16 fa3, fa3
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
 ; CHECK-NEXT:    fmul.s fa5, fa5, fa3
-; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
 ; CHECK-NEXT:    fneg.s fa5, fa5
-; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
-; CHECK-NEXT:    fcvt.s.bf16 fa4, fa4
 ; CHECK-NEXT:    fsub.s fa5, fa5, fa4
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    ret
@@ -478,17 +417,10 @@ define bfloat @fnmsub_s_contract(bfloat %a, bfloat %b, bfloat %c) nounwind {
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
 ; CHECK-NEXT:    fmv.w.x fa4, zero
 ; CHECK-NEXT:    fadd.s fa5, fa5, fa4
-; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
 ; CHECK-NEXT:    fcvt.s.bf16 fa3, fa1
 ; CHECK-NEXT:    fadd.s fa4, fa3, fa4
-; CHECK-NEXT:    fcvt.bf16.s fa4, fa4
-; CHECK-NEXT:    fcvt.s.bf16 fa4, fa4
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
-; CHECK-NEXT:    fmul.s fa5, fa5, fa4
-; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
-; CHECK-NEXT:    fcvt.s.bf16 fa4, fa2
-; CHECK-NEXT:    fsub.s fa5, fa4, fa5
+; CHECK-NEXT:    fcvt.s.bf16 fa3, fa2
+; CHECK-NEXT:    fnmsub.s fa5, fa5, fa4, fa3
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    ret
   %a_ = fadd bfloat 0.0, %a ; avoid negation using xor
