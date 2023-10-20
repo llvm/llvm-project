@@ -116,7 +116,7 @@ CSKYTargetLowering::CSKYTargetLowering(const TargetMachine &TM,
   setLibcallName(RTLIB::MUL_I128, nullptr);
   setLibcallName(RTLIB::MULO_I64, nullptr);
   setLibcallName(RTLIB::MULO_I128, nullptr);
-      
+
   // Float
 
   ISD::CondCode FPCCToExtend[] = {
