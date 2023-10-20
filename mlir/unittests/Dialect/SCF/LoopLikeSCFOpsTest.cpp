@@ -5,9 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-//
-//===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -85,7 +82,8 @@ TEST_F(SCFLoopLikeTest, queryMultidimensionalLooplikes) {
       ArrayRef<OpFoldResult>({step, step}), ValueRange(), std::nullopt);
   checkMultidimensional(forallOp);
 
-  auto parallelOp = b.create<scf::ParallelOp>(
-      loc, ValueRange({lb, lb}), ValueRange({ub, ub}), ValueRange({step, step}), ValueRange());
+  auto parallelOp =
+      b.create<scf::ParallelOp>(loc, ValueRange({lb, lb}), ValueRange({ub, ub}),
+                                ValueRange({step, step}), ValueRange());
   checkMultidimensional(parallelOp);
 }
