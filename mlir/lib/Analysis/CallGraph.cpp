@@ -133,7 +133,7 @@ CallGraphNode *CallGraph::getOrAddNode(Region *region,
 /// Lookup a call graph node for the given region, or nullptr if none is
 /// registered.
 CallGraphNode *CallGraph::lookupNode(Region *region) const {
-  auto it = nodes.find(region);
+  const auto *it = nodes.find(region);
   return it == nodes.end() ? nullptr : it->second.get();
 }
 
