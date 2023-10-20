@@ -133,7 +133,6 @@ namespace ValidButUnsupported {
     int arr[&f<X> ? 1 : 2];
 #if __cplusplus < 201103L
     // expected-warning@-2 {{folded to constant}}
-    // expected-warning@-3 {{variable length arrays in C++ are a Clang extension}}
 #endif
   } C; // expected-note {{by this typedef}}
 }

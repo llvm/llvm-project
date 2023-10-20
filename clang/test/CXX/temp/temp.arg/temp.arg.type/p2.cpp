@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -Wvla %s
+// RUN: %clang_cc1 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
@@ -19,17 +19,13 @@ enum {e};
 // expected-note@-2 {{unnamed type used in template argument was declared here}}
 #endif
 
-void test_f0(int n) { // #here
+void test_f0(int n) {
   int i = f0(0, e);
 #if __cplusplus <= 199711L
   // expected-warning@-2 {{template argument uses unnamed type}}
 #endif
 
-  int vla[n]; // expected-warning {{variable length arrays in C++ are a Clang extension}}
-#if __cplusplus > 199711L
-  // expected-note@-2 {{function parameter 'n' with unknown value cannot be used in a constant expression}}
-  // expected-note@#here {{declared here}}
-#endif
+  int vla[n];
   f0(0, vla); // expected-error{{no matching function for call to 'f0'}}
 }
 
