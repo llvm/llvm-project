@@ -146,19 +146,15 @@ static inline dst_rep_t construct_dst_rep(dst_rep_t sign, dst_rep_t exp, dst_rep
 // from the representation of floating-point data as integer values follow.
 
 static inline src_rep_t srcToRep(src_t x) {
-  const union {
-    src_t f;
-    src_rep_t i;
-  } rep = {.f = x};
-  return rep.i;
+  src_rep_t rep;
+  __builtin_memcpy_inline(&rep, &x, sizeof(rep));
+  return rep;
 }
 
 static inline dst_t dstFromRep(dst_rep_t x) {
-  const union {
-    dst_t f;
-    dst_rep_t i;
-  } rep = {.i = x};
-  return rep.f;
+  dst_t dst;
+  __builtin_memcpy_inline(&dst, &x, sizeof(dst));
+  return dst;
 }
 
 #endif // FP_TRUNC_HEADER
