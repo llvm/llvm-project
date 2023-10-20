@@ -61,19 +61,22 @@ computeOffset(ProgramStateRef State, SValBuilder &SVB, SVal Location) {
     return SVB.evalBinOpNN(State, Op, L, R, T).getAs<NonLoc>();
   };
 
-  const auto *Region = dyn_cast_or_null<SubRegion>(Location.getAsRegion());
-  // This is initialized to nullopt instead of 0 becasue we want to discard the
-  // situations when there are no ElementRegion layers.
-  std::optional<NonLoc> Offset = std::nullopt;
+  const SubRegion *OwnerRegion = nullptr;
+  std::optional<NonLoc> Offset = SVB.makeZeroArrayIndex();
 
-  while (const auto *ERegion = dyn_cast_or_null<ElementRegion>(Region)) {
-    const auto Index = ERegion->getIndex().getAs<NonLoc>();
+  const ElementRegion *CurRegion =
+    dyn_cast_or_null<ElementRegion>(Location.getAsRegion());
+
+  while (CurRegion) {
+    const auto Index = CurRegion->getIndex().getAs<NonLoc>();
     if (!Index)
       return std::nullopt;
 
-    QualType ElemType = ERegion->getElementType();
+    QualType ElemType = CurRegion->getElementType();
 
-    // Paranoia: getTypeSizeInChars() doesn't handle incomplete types.
+    // FIXME: The following early return was presumably added to safeguard the
+    // getTypeSizeInChars() call (which doesn't accept an incomplete type), but
+    // it seems that `ElemType` cannot be incomplete at this point.
     if (ElemType->isIncompleteType())
       return std::nullopt;
 
@@ -84,22 +87,19 @@ computeOffset(ProgramStateRef State, SValBuilder &SVB, SVal Location) {
     if (!Delta)
       return std::nullopt;
 
-    if (!Offset) {
-      // Store Delta as the first non-nullopt Offset value.
-      Offset = Delta;
-    } else {
-      // Update the previous offset with Offset += Delta.
-      Offset = EvalBinOp(BO_Add, *Offset, *Delta);
-      if (!Offset)
-        return std::nullopt;
-    }
+    // Perform Offset += Delta.
+    Offset = EvalBinOp(BO_Add, *Offset, *Delta);
+    if (!Offset)
+      return std::nullopt;
 
-    // Continute the offset calculations with the SuperRegion.
-    Region = ERegion->getSuperRegion()->getAs<SubRegion>();
+    OwnerRegion = CurRegion->getSuperRegion()->getAs<SubRegion>();
+    // When this is just another ElementRegion layer, we need to continue the
+    // offset calculations:
+    CurRegion = dyn_cast_or_null<ElementRegion>(OwnerRegion);
   }
 
-  if (Region && Offset)
-    return std::make_pair(Region, *Offset);
+  if (OwnerRegion)
+    return std::make_pair(OwnerRegion, *Offset);
 
   return std::nullopt;
 }
