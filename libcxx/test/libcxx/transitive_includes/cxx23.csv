@@ -152,8 +152,8 @@ deque stdexcept
 deque tuple
 deque version
 exception cstddef
-exception cstdint
 exception cstdlib
+exception typeinfo
 exception version
 execution cstddef
 execution version
