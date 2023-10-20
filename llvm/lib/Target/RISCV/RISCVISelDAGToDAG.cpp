@@ -2459,12 +2459,6 @@ bool RISCVDAGToDAGISel::SelectAddrRegImmLsb00000(SDValue Addr, SDValue &Base,
   SDLoc DL(Addr);
   MVT VT = Addr.getSimpleValueType();
 
-  if (Addr.getOpcode() == RISCVISD::ADD_LO) {
-    Base = Addr;
-    Offset = CurDAG->getTargetConstant(0, DL, VT);
-    return true;
-  }
-
   if (CurDAG->isBaseWithConstantOffset(Addr)) {
     int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
     if (isInt<12>(CVal)) {
