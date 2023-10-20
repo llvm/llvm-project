@@ -479,7 +479,7 @@ define amdgpu_kernel void @livevariables_update_missed_block(ptr addrspace(1) %s
   ; SI-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE killed [[V_ADD_CO_U32_e64_]], %subreg.sub0, killed [[V_ADDC_U32_e64_]], %subreg.sub1
   ; SI-NEXT:   [[GLOBAL_LOAD_UBYTE:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_UBYTE killed [[REG_SEQUENCE]], 0, 0, implicit $exec :: (load (s8) from %ir.i10, addrspace 1)
   ; SI-NEXT:   [[V_MOV_B:%[0-9]+]]:vreg_64 = V_MOV_B64_PSEUDO 0, implicit $exec
-  ; SI-NEXT:   GLOBAL_STORE_BYTE killed [[V_MOV_B]], killed [[GLOBAL_LOAD_UBYTE]], 0, 0, implicit $exec :: (store (s8) into `ptr addrspace(1) null`, addrspace 1)
+  ; SI-NEXT:   GLOBAL_STORE_BYTE killed [[V_MOV_B]], killed [[GLOBAL_LOAD_UBYTE]], 0, 0, implicit $exec :: (store (s8) into `ptr addrspace(1) null`, align 4294967296, addrspace 1)
   ; SI-NEXT:   S_BRANCH %bb.7
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.2.if.then9:
@@ -496,7 +496,7 @@ define amdgpu_kernel void @livevariables_update_missed_block(ptr addrspace(1) %s
   ; SI-NEXT:   successors: %bb.6(0x80000000)
   ; SI-NEXT: {{  $}}
   ; SI-NEXT:   [[V_MOV_B1:%[0-9]+]]:vreg_64 = V_MOV_B64_PSEUDO 0, implicit $exec
-  ; SI-NEXT:   [[GLOBAL_LOAD_UBYTE1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_UBYTE killed [[V_MOV_B1]], 0, 0, implicit $exec :: ("amdgpu-noclobber" load (s8) from `ptr addrspace(1) null`, addrspace 1)
+  ; SI-NEXT:   [[GLOBAL_LOAD_UBYTE1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_UBYTE killed [[V_MOV_B1]], 0, 0, implicit $exec :: ("amdgpu-noclobber" load (s8) from `ptr addrspace(1) null`, align 4294967296, addrspace 1)
   ; SI-NEXT:   S_BRANCH %bb.6
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.5.Flow:
@@ -511,7 +511,7 @@ define amdgpu_kernel void @livevariables_update_missed_block(ptr addrspace(1) %s
   ; SI-NEXT: {{  $}}
   ; SI-NEXT:   [[PHI1:%[0-9]+]]:vgpr_32 = PHI undef %36:vgpr_32, %bb.3, [[GLOBAL_LOAD_UBYTE1]], %bb.4
   ; SI-NEXT:   [[V_MOV_B2:%[0-9]+]]:vreg_64 = V_MOV_B64_PSEUDO 0, implicit $exec
-  ; SI-NEXT:   GLOBAL_STORE_BYTE killed [[V_MOV_B2]], killed [[PHI1]], 0, 0, implicit $exec :: (store (s8) into `ptr addrspace(1) null`, addrspace 1)
+  ; SI-NEXT:   GLOBAL_STORE_BYTE killed [[V_MOV_B2]], killed [[PHI1]], 0, 0, implicit $exec :: (store (s8) into `ptr addrspace(1) null`, align 4294967296, addrspace 1)
   ; SI-NEXT:   S_BRANCH %bb.5
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.7.UnifiedReturnBlock:

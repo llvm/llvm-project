@@ -16,47 +16,18 @@ define void @issue63986(i64 %0, i64 %idxprom) {
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_mov_b32_e32 v9, s7
 ; CHECK-NEXT:    v_mov_b32_e32 v8, s6
-; CHECK-NEXT:    flat_load_ubyte v10, v[8:9] offset:5
-; CHECK-NEXT:    flat_load_ubyte v11, v[8:9] offset:6
-; CHECK-NEXT:    flat_load_ubyte v12, v[8:9] offset:7
-; CHECK-NEXT:    flat_load_ubyte v13, v[8:9] offset:3
-; CHECK-NEXT:    flat_load_ubyte v14, v[8:9] offset:2
-; CHECK-NEXT:    flat_load_ubyte v15, v[8:9] offset:1
-; CHECK-NEXT:    flat_load_ubyte v16, v[8:9]
-; CHECK-NEXT:    flat_load_ubyte v17, v[8:9] offset:4
-; CHECK-NEXT:    flat_load_ubyte v18, v[8:9] offset:13
-; CHECK-NEXT:    flat_load_ubyte v19, v[8:9] offset:14
-; CHECK-NEXT:    flat_load_ubyte v20, v[8:9] offset:15
-; CHECK-NEXT:    flat_load_ubyte v21, v[8:9] offset:11
-; CHECK-NEXT:    flat_load_ubyte v22, v[8:9] offset:10
-; CHECK-NEXT:    flat_load_ubyte v23, v[8:9] offset:9
-; CHECK-NEXT:    flat_load_ubyte v24, v[8:9] offset:8
-; CHECK-NEXT:    flat_load_ubyte v25, v[8:9] offset:12
+; CHECK-NEXT:    flat_load_dwordx4 v[8:11], v[8:9]
 ; CHECK-NEXT:    s_add_u32 s4, s4, 1
 ; CHECK-NEXT:    s_addc_u32 s5, s5, 0
-; CHECK-NEXT:    v_add_co_u32_e32 v8, vcc, s6, v6
+; CHECK-NEXT:    v_mov_b32_e32 v13, s7
+; CHECK-NEXT:    v_add_co_u32_e32 v12, vcc, s6, v6
 ; CHECK-NEXT:    v_cmp_ge_u64_e64 s[8:9], s[4:5], 2
-; CHECK-NEXT:    v_addc_co_u32_e32 v9, vcc, v9, v7, vcc
+; CHECK-NEXT:    v_addc_co_u32_e32 v13, vcc, v13, v7, vcc
 ; CHECK-NEXT:    s_add_u32 s6, s6, 16
 ; CHECK-NEXT:    s_addc_u32 s7, s7, 0
 ; CHECK-NEXT:    s_and_b64 vcc, exec, s[8:9]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_store_byte v[8:9], v13 offset:3
-; CHECK-NEXT:    flat_store_byte v[8:9], v14 offset:2
-; CHECK-NEXT:    flat_store_byte v[8:9], v15 offset:1
-; CHECK-NEXT:    flat_store_byte v[8:9], v16
-; CHECK-NEXT:    flat_store_byte v[8:9], v12 offset:7
-; CHECK-NEXT:    flat_store_byte v[8:9], v11 offset:6
-; CHECK-NEXT:    flat_store_byte v[8:9], v10 offset:5
-; CHECK-NEXT:    flat_store_byte v[8:9], v17 offset:4
-; CHECK-NEXT:    flat_store_byte v[8:9], v21 offset:11
-; CHECK-NEXT:    flat_store_byte v[8:9], v22 offset:10
-; CHECK-NEXT:    flat_store_byte v[8:9], v23 offset:9
-; CHECK-NEXT:    flat_store_byte v[8:9], v24 offset:8
-; CHECK-NEXT:    flat_store_byte v[8:9], v20 offset:15
-; CHECK-NEXT:    flat_store_byte v[8:9], v19 offset:14
-; CHECK-NEXT:    flat_store_byte v[8:9], v18 offset:13
-; CHECK-NEXT:    flat_store_byte v[8:9], v25 offset:12
+; CHECK-NEXT:    flat_store_dwordx4 v[12:13], v[8:11]
 ; CHECK-NEXT:    s_cbranch_vccz .LBB0_2
 ; CHECK-NEXT:  ; %bb.3: ; %loop-memcpy-residual-header
 ; CHECK-NEXT:    s_and_b32 s4, 32, 15
@@ -127,47 +98,18 @@ define void @issue63986(i64 %0, i64 %idxprom) {
 ; CHECK-NEXT:    ; => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    v_mov_b32_e32 v10, s10
 ; CHECK-NEXT:    v_mov_b32_e32 v11, s11
-; CHECK-NEXT:    flat_load_ubyte v12, v[10:11] offset:5
-; CHECK-NEXT:    flat_load_ubyte v13, v[10:11] offset:6
-; CHECK-NEXT:    flat_load_ubyte v14, v[10:11] offset:7
-; CHECK-NEXT:    flat_load_ubyte v15, v[10:11] offset:3
-; CHECK-NEXT:    flat_load_ubyte v16, v[10:11] offset:2
-; CHECK-NEXT:    flat_load_ubyte v17, v[10:11] offset:1
-; CHECK-NEXT:    flat_load_ubyte v18, v[10:11]
-; CHECK-NEXT:    flat_load_ubyte v19, v[10:11] offset:4
-; CHECK-NEXT:    flat_load_ubyte v20, v[10:11] offset:13
-; CHECK-NEXT:    flat_load_ubyte v21, v[10:11] offset:14
-; CHECK-NEXT:    flat_load_ubyte v22, v[10:11] offset:15
-; CHECK-NEXT:    flat_load_ubyte v23, v[10:11] offset:11
-; CHECK-NEXT:    flat_load_ubyte v24, v[10:11] offset:10
-; CHECK-NEXT:    flat_load_ubyte v25, v[10:11] offset:9
-; CHECK-NEXT:    flat_load_ubyte v26, v[10:11] offset:8
-; CHECK-NEXT:    flat_load_ubyte v27, v[10:11] offset:12
+; CHECK-NEXT:    flat_load_dwordx4 v[10:13], v[10:11]
+; CHECK-NEXT:    v_mov_b32_e32 v15, s11
 ; CHECK-NEXT:    s_add_u32 s14, s14, 1
-; CHECK-NEXT:    v_add_co_u32_e32 v10, vcc, s10, v2
-; CHECK-NEXT:    v_addc_co_u32_e32 v11, vcc, v11, v3, vcc
+; CHECK-NEXT:    v_add_co_u32_e32 v14, vcc, s10, v2
+; CHECK-NEXT:    v_addc_co_u32_e32 v15, vcc, v15, v3, vcc
 ; CHECK-NEXT:    s_addc_u32 s15, s15, 0
 ; CHECK-NEXT:    s_add_u32 s10, s10, 16
 ; CHECK-NEXT:    v_cmp_ge_u64_e32 vcc, s[14:15], v[4:5]
 ; CHECK-NEXT:    s_addc_u32 s11, s11, 0
 ; CHECK-NEXT:    s_or_b64 s[12:13], vcc, s[12:13]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_store_byte v[10:11], v15 offset:3
-; CHECK-NEXT:    flat_store_byte v[10:11], v16 offset:2
-; CHECK-NEXT:    flat_store_byte v[10:11], v17 offset:1
-; CHECK-NEXT:    flat_store_byte v[10:11], v18
-; CHECK-NEXT:    flat_store_byte v[10:11], v14 offset:7
-; CHECK-NEXT:    flat_store_byte v[10:11], v13 offset:6
-; CHECK-NEXT:    flat_store_byte v[10:11], v12 offset:5
-; CHECK-NEXT:    flat_store_byte v[10:11], v19 offset:4
-; CHECK-NEXT:    flat_store_byte v[10:11], v23 offset:11
-; CHECK-NEXT:    flat_store_byte v[10:11], v24 offset:10
-; CHECK-NEXT:    flat_store_byte v[10:11], v25 offset:9
-; CHECK-NEXT:    flat_store_byte v[10:11], v26 offset:8
-; CHECK-NEXT:    flat_store_byte v[10:11], v22 offset:15
-; CHECK-NEXT:    flat_store_byte v[10:11], v21 offset:14
-; CHECK-NEXT:    flat_store_byte v[10:11], v20 offset:13
-; CHECK-NEXT:    flat_store_byte v[10:11], v27 offset:12
+; CHECK-NEXT:    flat_store_dwordx4 v[14:15], v[10:13]
 ; CHECK-NEXT:    s_andn2_b64 exec, exec, s[12:13]
 ; CHECK-NEXT:    s_cbranch_execnz .LBB0_14
 ; CHECK-NEXT:  .LBB0_15: ; %Flow20
@@ -251,22 +193,14 @@ define void @issue63986_reduced_expanded(i64 %idxprom) {
 ; CHECK-NEXT:  .LBB1_8: ; %post-loop-memcpy-expansion
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    s_and_b64 vcc, exec, 0
-; CHECK-NEXT:    flat_store_byte v[0:1], v2 offset:3
-; CHECK-NEXT:    flat_store_byte v[0:1], v2 offset:2
-; CHECK-NEXT:    flat_store_byte v[0:1], v2 offset:1
-; CHECK-NEXT:    flat_store_byte v[0:1], v2
-; CHECK-NEXT:    flat_store_byte v[0:1], v2 offset:7
-; CHECK-NEXT:    flat_store_byte v[0:1], v2 offset:6
-; CHECK-NEXT:    flat_store_byte v[0:1], v2 offset:5
-; CHECK-NEXT:    flat_store_byte v[0:1], v2 offset:4
-; CHECK-NEXT:    flat_store_byte v[0:1], v2 offset:11
-; CHECK-NEXT:    flat_store_byte v[0:1], v2 offset:10
-; CHECK-NEXT:    flat_store_byte v[0:1], v2 offset:9
-; CHECK-NEXT:    flat_store_byte v[0:1], v2 offset:8
-; CHECK-NEXT:    flat_store_byte v[0:1], v2 offset:15
-; CHECK-NEXT:    flat_store_byte v[0:1], v2 offset:14
-; CHECK-NEXT:    flat_store_byte v[0:1], v2 offset:13
-; CHECK-NEXT:    flat_store_byte v[0:1], v2 offset:12
+; CHECK-NEXT:    flat_store_short v[0:1], v2 offset:2
+; CHECK-NEXT:    flat_store_short v[0:1], v2
+; CHECK-NEXT:    flat_store_short v[0:1], v2 offset:6
+; CHECK-NEXT:    flat_store_short v[0:1], v2 offset:4
+; CHECK-NEXT:    flat_store_short v[0:1], v2 offset:10
+; CHECK-NEXT:    flat_store_short v[0:1], v2 offset:8
+; CHECK-NEXT:    flat_store_short v[0:1], v2 offset:14
+; CHECK-NEXT:    flat_store_short v[0:1], v2 offset:12
 ; CHECK-NEXT:  .LBB1_9: ; %loop-memcpy-expansion2
 ; CHECK-NEXT:    s_mov_b64 vcc, vcc
 ; CHECK-NEXT:    s_cbranch_vccz .LBB1_9

@@ -953,7 +953,7 @@ define void @void_func_sret_struct_i8_i32(ptr addrspace(5) sret({ i8, i32 }) %ar
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p1) :: (volatile load (s32) from `ptr addrspace(1) undef`, addrspace 1)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = nuw G_PTR_ADD [[COPY]], [[C]](s32)
-  ; CHECK-NEXT:   G_STORE [[LOAD]](s8), [[COPY]](p5) :: (store (s8) into %ir.arg0, addrspace 5)
+  ; CHECK-NEXT:   G_STORE [[LOAD]](s8), [[COPY]](p5) :: (store (s8) into %ir.arg0, align 4, addrspace 5)
   ; CHECK-NEXT:   G_STORE [[LOAD1]](s32), [[PTR_ADD]](p5) :: (store (s32) into %ir.gep1, addrspace 5)
   ; CHECK-NEXT:   SI_RETURN
   %val0 = load volatile i8, ptr addrspace(1) undef
