@@ -139,9 +139,7 @@ body:             |
     ; CHECK: liveins: $x10, $x11
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[AND]](s64)
+    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[COPY]](s64)
     ; CHECK-NEXT: $x10 = COPY [[INTTOPTR]](p0)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %1:_(s64) = COPY $x10
