@@ -81,8 +81,8 @@ TransformOpInterface findTransformEntryPoint(
 //       function to clone (or move) `other` in order to improve efficiency.
 //       This might primarily make sense if we can also prune the symbols that
 //       are merged to a subset (such as those that are actually used).
-LogicalResult mergeSymbolsInto(Operation *target,
-                               OwningOpRef<Operation *> other);
+InFlightDiagnostic mergeSymbolsInto(Operation *target,
+                                    OwningOpRef<Operation *> other);
 } // namespace detail
 
 /// Standalone util to apply the named sequence `entryPoint` to the payload.

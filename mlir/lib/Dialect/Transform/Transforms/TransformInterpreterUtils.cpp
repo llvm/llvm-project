@@ -196,8 +196,8 @@ static bool canMergeInto(FunctionOpInterface func1, FunctionOpInterface func2) {
 /// Merge `func1` into `func2`. The two ops must be inside the same parent op
 /// and mergable according to `canMergeInto`. The function erases `func1` such
 /// that only `func2` exists when the function returns.
-static LogicalResult mergeInto(FunctionOpInterface func1,
-                               FunctionOpInterface func2) {
+static InFlightDiagnostic mergeInto(FunctionOpInterface func1,
+                                    FunctionOpInterface func2) {
   assert(canMergeInto(func1, func2));
   assert(func1->getParentOp() == func2->getParentOp() &&
          "expected func1 and func2 to be in the same parent op");
@@ -240,10 +240,10 @@ static LogicalResult mergeInto(FunctionOpInterface func1,
   assert(func1.isExternal());
   func1->erase();
 
-  return success();
+  return InFlightDiagnostic();
 }
 
-LogicalResult
+InFlightDiagnostic
 transform::detail::mergeSymbolsInto(Operation *target,
                                     OwningOpRef<Operation *> other) {
   assert(target->hasTrait<OpTrait::SymbolTable>() &&
@@ -300,7 +300,7 @@ transform::detail::mergeSymbolsInto(Operation *target,
       auto renameToUnique =
           [&](SymbolOpInterface op, SymbolOpInterface otherOp,
               SymbolTable &symbolTable,
-              SymbolTable &otherSymbolTable) -> LogicalResult {
+              SymbolTable &otherSymbolTable) -> InFlightDiagnostic {
         LLVM_DEBUG(llvm::dbgs() << ", renaming\n");
         FailureOr<StringAttr> maybeNewName =
             symbolTable.renameToUnique(op, {&otherSymbolTable});
@@ -312,19 +312,21 @@ transform::detail::mergeSymbolsInto(Operation *target,
         }
         LLVM_DEBUG(DBGS() << "      renamed to @" << maybeNewName->getValue()
                           << "\n");
-        return success();
+        return InFlightDiagnostic();
       };
 
       if (symbolOp.isPrivate()) {
-        if (failed(renameToUnique(symbolOp, collidingOp, *symbolTable,
-                                  *otherSymbolTable)))
-          return failure();
+        InFlightDiagnostic diag = renameToUnique(
+            symbolOp, collidingOp, *symbolTable, *otherSymbolTable);
+        if (failed(diag))
+          return diag;
         continue;
       }
       if (collidingOp.isPrivate()) {
-        if (failed(renameToUnique(collidingOp, symbolOp, *otherSymbolTable,
-                                  *symbolTable)))
-          return failure();
+        InFlightDiagnostic diag = renameToUnique(
+            collidingOp, symbolOp, *otherSymbolTable, *symbolTable);
+        if (failed(diag))
+          return diag;
         continue;
       }
       LLVM_DEBUG(llvm::dbgs() << ", emitting error\n");
@@ -393,8 +395,10 @@ transform::detail::mergeSymbolsInto(Operation *target,
       assert(targetSymbolTable.lookup(funcOp.getName()) == collidingFuncOp);
 
       // Do the actual merging.
-      if (failed(mergeInto(funcOp, collidingFuncOp))) {
-        return failure();
+      {
+        InFlightDiagnostic diag = mergeInto(funcOp, collidingFuncOp);
+        if (failed(diag))
+          return diag;
       }
     }
   }
@@ -404,7 +408,7 @@ transform::detail::mergeSymbolsInto(Operation *target,
            << "failed to verify target op after merging symbols";
 
   LLVM_DEBUG(DBGS() << "done merging ops\n");
-  return success();
+  return InFlightDiagnostic();
 }
 
 LogicalResult transform::applyTransformNamedSequence(

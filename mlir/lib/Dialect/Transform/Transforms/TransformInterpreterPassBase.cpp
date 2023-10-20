@@ -335,11 +335,14 @@ LogicalResult transform::detail::interpreterBaseRunOnOperationImpl(
       diag.attachNote(target->getLoc()) << "pass anchor op";
       return diag;
     }
-    if (failed(detail::mergeSymbolsInto(
-            SymbolTable::getNearestSymbolTable(transformRoot),
-            transformLibraryModule->get()->clone())))
-      return emitError(transformRoot->getLoc(),
-                       "failed to merge library symbols into transform root");
+    InFlightDiagnostic diag = detail::mergeSymbolsInto(
+        SymbolTable::getNearestSymbolTable(transformRoot),
+        transformLibraryModule->get()->clone());
+    if (failed(diag)) {
+      diag.attachNote(transformRoot->getLoc())
+          << "failed to merge library symbols into transform root";
+      return diag;
+    }
   }
 
   // Step 4
