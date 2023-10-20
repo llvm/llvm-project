@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ReflectionContextInterface.h"
 #include "SwiftLanguageRuntimeImpl.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -25,7 +26,7 @@ namespace {
 /// 32-bit or 64-bit pointers, with and without ObjC interoperability.
 template <typename ReflectionContext>
 class TargetReflectionContext
-    : public SwiftLanguageRuntimeImpl::ReflectionContextInterface {
+    : public ReflectionContextInterface {
   ReflectionContext m_reflection_ctx;
   swift::reflection::TypeConverter m_type_converter;
 
@@ -142,10 +143,9 @@ public:
     return m_reflection_ctx.getBuilder().lookupSuperclass(tr);
   }
 
-  bool ForEachSuperClassType(
-      swift::remote::TypeInfoProvider *tip, lldb::addr_t pointer,
-      std::function<bool(SwiftLanguageRuntimeImpl::SuperClassType)> fn)
-      override {
+  bool ForEachSuperClassType(swift::remote::TypeInfoProvider *tip,
+                             lldb::addr_t pointer,
+                             std::function<bool(SuperClassType)> fn) override {
     // Guard against faulty self-referential metadata.
     unsigned limit = 256;
     auto md_ptr = m_reflection_ctx.readMetadataFromInstance(pointer);
@@ -239,8 +239,8 @@ public:
 } // namespace
 
 namespace lldb_private {
-std::unique_ptr<SwiftLanguageRuntimeImpl::ReflectionContextInterface>
-SwiftLanguageRuntimeImpl::ReflectionContextInterface::CreateReflectionContext(
+std::unique_ptr<ReflectionContextInterface>
+ReflectionContextInterface::CreateReflectionContext(
     uint8_t ptr_size, std::shared_ptr<swift::remote::MemoryReader> reader,
     bool ObjCInterop, SwiftMetadataCache *swift_metadata_cache) {
   using ReflectionContext32ObjCInterop =
