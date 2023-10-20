@@ -497,17 +497,10 @@ enum { VM_PROT_READ = 0x1, VM_PROT_WRITE = 0x2, VM_PROT_EXECUTE = 0x4 };
 
 // Values for platform field in build_version_command.
 enum PlatformType {
-  PLATFORM_UNKNOWN = 0,
-  PLATFORM_MACOS = 1,
-  PLATFORM_IOS = 2,
-  PLATFORM_TVOS = 3,
-  PLATFORM_WATCHOS = 4,
-  PLATFORM_BRIDGEOS = 5,
-  PLATFORM_MACCATALYST = 6,
-  PLATFORM_IOSSIMULATOR = 7,
-  PLATFORM_TVOSSIMULATOR = 8,
-  PLATFORM_WATCHOSSIMULATOR = 9,
-  PLATFORM_DRIVERKIT = 10,
+#define PLATFORM(platform, id, name, build_name, target, tapi_target,          \
+                 marketing)                                                    \
+  PLATFORM_##platform = id,
+#include "MachO.def"
 };
 
 // Values for tools enum in build_tool_version.
