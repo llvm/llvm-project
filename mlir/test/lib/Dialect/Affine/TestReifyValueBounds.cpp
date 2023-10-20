@@ -56,7 +56,7 @@ private:
 
 } // namespace
 
-FailureOr<BoundType> parseBoundType(std::string type) {
+FailureOr<BoundType> parseBoundType(const std::string &type) {
   if (type == "EQ")
     return BoundType::EQ;
   if (type == "LB")
