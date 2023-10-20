@@ -387,7 +387,14 @@ GlobalValue *GlobalDCEPass::TargetFromConditionalUsedIfLive(MDNode *M) {
   bool AllDependenciesAlive = Dependencies.empty() ? false : true;
   bool AnyDependencyAlive = false;
   for (auto *Dep : Dependencies) {
-    bool Live = AliveGlobals.count(Dep) != 0;
+    GlobalObject *GlobalObjectDep = dyn_cast<GlobalObject>(Dep);
+    bool Live;
+    // For the purposes of llvm.used.conditional based stripping,
+    // consider all dependencies that are declarations to be live.
+    if (GlobalObjectDep && GlobalObjectDep->isDeclaration())
+      Live = true;
+    else
+      Live = AliveGlobals.count(Dep) != 0;
     if (Live)
       AnyDependencyAlive = true;
     else
