@@ -143,10 +143,6 @@ Type *VPTypeAnalysis::inferType(const VPReplicateRecipe *R) {
     return inferType(R->getOperand(0));
   case Instruction::Load:
     return cast<LoadInst>(R->getUnderlyingInstr())->getType();
-  case Instruction::Store:
-    return cast<StoreInst>(R->getUnderlyingInstr())
-        ->getValueOperand()
-        ->getType();
   default:
     llvm_unreachable("Unhandled instruction");
   }
