@@ -32,7 +32,7 @@ using namespace mlir;
 
 class MLIRTargetLLVM : public ::testing::Test {
 protected:
-  virtual void SetUp() {
+  void SetUp() override {
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
   }
