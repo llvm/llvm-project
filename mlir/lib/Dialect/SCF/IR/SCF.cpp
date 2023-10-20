@@ -2936,6 +2936,30 @@ void ParallelOp::print(OpAsmPrinter &p) {
 
 SmallVector<Region *> ParallelOp::getLoopRegions() { return {&getRegion()}; }
 
+std::optional<Value> ParallelOp::getSingleInductionVar() {
+  if (getNumLoops() != 1)
+    return std::nullopt;
+  return getBody()->getArgument(0);
+}
+
+std::optional<OpFoldResult> ParallelOp::getSingleLowerBound() {
+  if (getNumLoops() != 1)
+    return std::nullopt;
+  return getLowerBound()[0];
+}
+
+std::optional<OpFoldResult> ParallelOp::getSingleUpperBound() {
+  if (getNumLoops() != 1)
+    return std::nullopt;
+  return getUpperBound()[0];
+}
+
+std::optional<OpFoldResult> ParallelOp::getSingleStep() {
+  if (getNumLoops() != 1)
+    return std::nullopt;
+  return getStep()[0];
+}
+
 ParallelOp mlir::scf::getParallelForInductionVarOwner(Value val) {
   auto ivArg = llvm::dyn_cast<BlockArgument>(val);
   if (!ivArg)
