@@ -164,13 +164,27 @@ struct RISCVIncomingValueHandler : public CallLowering::IncomingValueHandler {
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
                         CCValAssign VA) override {
-    // Copy argument received in physical register to desired VReg.
-    MIRBuilder.getMBB().addLiveIn(PhysReg);
-    MIRBuilder.buildCopy(ValVReg, PhysReg);
+    markPhysRegUsed(PhysReg);
+    IncomingValueHandler::assignValueToReg(ValVReg, PhysReg, VA);
   }
+
+  /// How the physical register gets marked varies between formal
+  /// parameters (it's a basic-block live-in), and a call instruction
+  /// (it's an implicit-def of the BL).
+  virtual void markPhysRegUsed(MCRegister PhysReg) = 0;
 
 private:
   const RISCVSubtarget &Subtarget;
+};
+
+struct RISCVFormalArgHandler : public RISCVIncomingValueHandler {
+  RISCVFormalArgHandler(MachineIRBuilder &B, MachineRegisterInfo &MRI)
+      : RISCVIncomingValueHandler(B, MRI) {}
+
+  void markPhysRegUsed(MCRegister PhysReg) override {
+    MIRBuilder.getMRI()->addLiveIn(PhysReg);
+    MIRBuilder.getMBB().addLiveIn(PhysReg);
+  }
 };
 
 struct RISCVCallReturnHandler : public RISCVIncomingValueHandler {
@@ -178,14 +192,11 @@ struct RISCVCallReturnHandler : public RISCVIncomingValueHandler {
                          MachineInstrBuilder &MIB)
       : RISCVIncomingValueHandler(B, MRI), MIB(MIB) {}
 
-  MachineInstrBuilder MIB;
-
-  void assignValueToReg(Register ValVReg, Register PhysReg,
-                        CCValAssign VA) override {
-    // Copy argument received in physical register to desired VReg.
+  void markPhysRegUsed(MCRegister PhysReg) override {
     MIB.addDef(PhysReg, RegState::Implicit);
-    MIRBuilder.buildCopy(ValVReg, PhysReg);
   }
+
+  MachineInstrBuilder MIB;
 };
 
 } // namespace
@@ -312,7 +323,7 @@ bool RISCVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   RISCVIncomingValueAssigner Assigner(
       CC == CallingConv::Fast ? RISCV::CC_RISCV_FastCC : RISCV::CC_RISCV,
       /*IsRet=*/false);
-  RISCVIncomingValueHandler Handler(MIRBuilder, MF.getRegInfo());
+  RISCVFormalArgHandler Handler(MIRBuilder, MF.getRegInfo());
 
   return determineAndHandleAssignments(Handler, Assigner, SplitArgInfos,
                                        MIRBuilder, CC, F.isVarArg());
