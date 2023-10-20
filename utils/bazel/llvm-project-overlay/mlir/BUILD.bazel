@@ -7350,6 +7350,7 @@ cc_library(
         ":FuncDialect",
         ":FuncToSPIRV",
         ":IR",
+        ":IndexToSPIRV",
         ":MemRefToSPIRV",
         ":Pass",
         ":SCFDialect",
@@ -9759,6 +9760,31 @@ cc_library(
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":Pass",
+        ":Support",
+        ":Transforms",
+        "//llvm:Core",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "IndexToSPIRV",
+    srcs = glob([
+        "lib/Conversion/IndexToSPIRV/*.cpp",
+        "lib/Conversion/IndexToSPIRV/*.h",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/IndexToSPIRV/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ConversionPassIncGen",
+        ":IR",
+        ":IndexDialect",
+        ":Pass",
+        ":SPIRVCommonConversion",
+        ":SPIRVConversion",
+        ":SPIRVDialect",
         ":Support",
         ":Transforms",
         "//llvm:Core",
