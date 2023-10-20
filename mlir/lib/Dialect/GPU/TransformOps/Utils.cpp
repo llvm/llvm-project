@@ -55,9 +55,9 @@ static Value buildLinearId(RewriterBase &rewriter, Location loc,
              llvm::dbgs() << "\n");
   assert(originalBasisOfr.size() == 3 && "expected 3 sizes");
   IndexType indexType = rewriter.getIndexType();
-  AffineExpr tx, ty, tz, BDX, BDY;
+  AffineExpr tx, ty, tz, bdx, bdy;
   bindDims(rewriter.getContext(), tx, ty, tz);
-  bindSymbols(rewriter.getContext(), BDX, BDY);
+  bindSymbols(rewriter.getContext(), bdx, bdy);
   SmallVector<OpFoldResult> vals{
       rewriter.create<ThreadOrBlockIdOp>(loc, indexType, Dimension::x)
           .getResult(),
@@ -67,7 +67,7 @@ static Value buildLinearId(RewriterBase &rewriter, Location loc,
           .getResult(),
       originalBasisOfr[0], originalBasisOfr[1]};
   OpFoldResult ofr = affine::makeComposedFoldedAffineApply(
-      rewriter, loc, tx + ty * BDX + tz * BDX * BDY, vals);
+      rewriter, loc, tx + ty * bdx + tz * bdx * bdy, vals);
   return getValueOrCreateConstantIndexOp(rewriter, loc, ofr);
 }
 
