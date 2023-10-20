@@ -746,6 +746,7 @@ private:
                    const VSETVLIInfo &CurInfo) const;
   bool needVSETVLIPHI(const VSETVLIInfo &Require,
                       const MachineBasicBlock &MBB) const;
+  bool mayChangeVL(const VSETVLIInfo &Info, const VSETVLIInfo &PrevInfo) const;
   void insertVSETVLI(MachineBasicBlock &MBB, MachineInstr &MI,
                      const VSETVLIInfo &Info, const VSETVLIInfo &PrevInfo);
   void insertVSETVLI(MachineBasicBlock &MBB,
@@ -859,41 +860,47 @@ static VSETVLIInfo getInfoForVSETVLI(const MachineInstr &MI) {
   return NewInfo;
 }
 
+/// Return true if a vsetvli instruction to change from PrevInfo
+/// to Info might change the VL register.  If this returns false,
+/// the vsetvli can use the X0, X0 form.
+bool RISCVInsertVSETVLI::mayChangeVL(const VSETVLIInfo &Info,
+                                     const VSETVLIInfo &PrevInfo) const {
+  if (!PrevInfo.isValid() || PrevInfo.isUnknown())
+    return true;
+
+  // If the AVL is the same and the SEW+LMUL gives the same VLMAX, VL
+  // can not change.
+  if (Info.hasSameAVL(PrevInfo) && Info.hasSameVLMAX(PrevInfo))
+    return false;
+
+  // If our AVL is a virtual register, it might be defined by a VSET(I)VLI. If
+  // it has the same VLMAX we want and the last VL/VTYPE we observed is the
+  // same, then VL can not change.
+  if (Info.hasSameVLMAX(PrevInfo) && Info.hasAVLReg() &&
+      Info.getAVLReg().isVirtual()) {
+    if (MachineInstr *DefMI = MRI->getVRegDef(Info.getAVLReg());
+        DefMI && isVectorConfigInstr(*DefMI)) {
+      VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI);
+      if (DefInfo.hasSameAVL(PrevInfo) && DefInfo.hasSameVLMAX(PrevInfo))
+        return false;
+    }
+  }
+  return true;
+}
+
 void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
                      MachineBasicBlock::iterator InsertPt, DebugLoc DL,
                      const VSETVLIInfo &Info, const VSETVLIInfo &PrevInfo) {
 
-  if (PrevInfo.isValid() && !PrevInfo.isUnknown()) {
-    // Use X0, X0 form if the AVL is the same and the SEW+LMUL gives the same
-    // VLMAX.
-    if (Info.hasSameAVL(PrevInfo) && Info.hasSameVLMAX(PrevInfo)) {
-      BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoVSETVLIX0))
-          .addReg(RISCV::X0, RegState::Define | RegState::Dead)
-          .addReg(RISCV::X0, RegState::Kill)
-          .addImm(Info.encodeVTYPE())
-          .addReg(RISCV::VL, RegState::Implicit);
-      return;
-    }
-
-    // If our AVL is a virtual register, it might be defined by a VSET(I)VLI. If
-    // it has the same VLMAX we want and the last VL/VTYPE we observed is the
-    // same, we can use the X0, X0 form.
-    if (Info.hasSameVLMAX(PrevInfo) && Info.hasAVLReg() &&
-        Info.getAVLReg().isVirtual()) {
-      if (MachineInstr *DefMI = MRI->getVRegDef(Info.getAVLReg())) {
-        if (isVectorConfigInstr(*DefMI)) {
-          VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI);
-          if (DefInfo.hasSameAVL(PrevInfo) && DefInfo.hasSameVLMAX(PrevInfo)) {
-            BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoVSETVLIX0))
-                .addReg(RISCV::X0, RegState::Define | RegState::Dead)
-                .addReg(RISCV::X0, RegState::Kill)
-                .addImm(Info.encodeVTYPE())
-                .addReg(RISCV::VL, RegState::Implicit);
-            return;
-          }
-        }
-      }
-    }
+  // Use X0, X0 form if VL can't change.  Changing only VTYPE is generally
+  // cheaper than changing VL.
+  if (!mayChangeVL(Info, PrevInfo)) {
+    BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoVSETVLIX0))
+        .addReg(RISCV::X0, RegState::Define | RegState::Dead)
+        .addReg(RISCV::X0, RegState::Kill)
+        .addImm(Info.encodeVTYPE())
+        .addReg(RISCV::VL, RegState::Implicit);
+    return;
   }
 
   if (Info.hasAVLImm()) {
