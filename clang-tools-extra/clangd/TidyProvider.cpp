@@ -323,5 +323,17 @@ bool isRegisteredTidyCheck(llvm::StringRef Check) {
 
   return AllChecks.contains(Check);
 }
+
+std::optional<bool> isFastTidyCheck(llvm::StringRef Check) {
+  static auto &Fast = *new llvm::StringMap<bool>{
+#define FAST(CHECK, TIME) {#CHECK,true},
+#define SLOW(CHECK, TIME) {#CHECK,false},
+#include "TidyFastChecks.inc"
+  };
+  if (auto It = Fast.find(Check); It != Fast.end())
+    return It->second;
+  return std::nullopt;
+}
+
 } // namespace clangd
 } // namespace clang

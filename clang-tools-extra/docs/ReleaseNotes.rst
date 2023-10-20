@@ -130,6 +130,11 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-casting-through-void
+  <clang-tidy/checks/bugprone/casting-through-void>` check.
+
+  Detects unsafe or redundant two-step casting operations involving ``void*``.
+
 - New :doc:`bugprone-compare-pointer-to-member-virtual-function
   <clang-tidy/checks/bugprone/compare-pointer-to-member-virtual-function>` check.
 
@@ -280,6 +285,10 @@ Changes in existing checks
 - Improved :doc:`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` check to ignore
   false-positives in unevaluated context (e.g., ``decltype``).
+
+- Improved :doc:`modernize-avoid-bind
+  <clang-tidy/checks/modernize/avoid-bind>` check to
+  not emit a ``return`` for fixes when the function returns ``void``.
 
 - Improved :doc:`modernize-loop-convert
   <clang-tidy/checks/modernize/loop-convert>` to support for-loops with
