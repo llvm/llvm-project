@@ -664,7 +664,7 @@ bool SimplifyIndvar::replaceFloatIVWithIntegerIV(Instruction *UseInst) {
     MaskBits = SE->getSignedRange(IV).getMinSignedBits();
   else
     MaskBits = SE->getUnsignedRange(IV).getActiveBits();
-  unsigned DestNumSigBits = UseInst->getType()->getFPMantissaWidth();
+  int DestNumSigBits = UseInst->getType()->getFPMantissaWidth();
   if (MaskBits <= DestNumSigBits) {
     for (User *U : UseInst->users()) {
       // Match for fptosi/fptoui of sitofp and with same type.
