@@ -1240,6 +1240,110 @@ define <2 x i1> @non_const_range_minmax_vec(<2 x i8> %a, <2 x i8> %b) {
   ret <2 x i1> %cmp1
 }
 
+define void @ashr_sgt(i8 %x) {
+; CHECK-LABEL: @ashr_sgt(
+; CHECK-NEXT:    [[S:%.*]] = ashr i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i8 [[S]], 1
+; CHECK-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @check1(i1 true)
+; CHECK-NEXT:    [[C3:%.*]] = icmp ugt i8 [[X]], 8
+; CHECK-NEXT:    call void @check1(i1 [[C3]])
+; CHECK-NEXT:    ret void
+; CHECK:       else:
+; CHECK-NEXT:    ret void
+;
+  %s = ashr i8 %x, 2
+  %c = icmp sgt i8 %s, 1
+  br i1 %c, label %if, label %else
+if:
+  %c2 = icmp sgt i8 %x, 7
+  call void @check1(i1 %c2)
+  %c3 = icmp sgt i8 %x, 8
+  call void @check1(i1 %c3)
+  ret void
+else:
+  ret void
+}
+
+define void @ashr_sge(i8 %x) {
+; CHECK-LABEL: @ashr_sge(
+; CHECK-NEXT:    [[S:%.*]] = ashr i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[C:%.*]] = icmp sge i8 [[S]], 1
+; CHECK-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @check1(i1 true)
+; CHECK-NEXT:    [[C3:%.*]] = icmp uge i8 [[X]], 5
+; CHECK-NEXT:    call void @check1(i1 [[C3]])
+; CHECK-NEXT:    ret void
+; CHECK:       else:
+; CHECK-NEXT:    ret void
+;
+  %s = ashr i8 %x, 2
+  %c = icmp sge i8 %s, 1
+  br i1 %c, label %if, label %else
+if:
+  %c2 = icmp sge i8 %x, 4
+  call void @check1(i1 %c2)
+  %c3 = icmp sge i8 %x, 5
+  call void @check1(i1 %c3)
+  ret void
+else:
+  ret void
+}
+
+define void @ashr_slt(i8 %x) {
+; CHECK-LABEL: @ashr_slt(
+; CHECK-NEXT:    [[S:%.*]] = ashr i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[S]], 1
+; CHECK-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @check1(i1 true)
+; CHECK-NEXT:    [[C3:%.*]] = icmp slt i8 [[X]], 3
+; CHECK-NEXT:    call void @check1(i1 [[C3]])
+; CHECK-NEXT:    ret void
+; CHECK:       else:
+; CHECK-NEXT:    ret void
+;
+  %s = ashr i8 %x, 2
+  %c = icmp slt i8 %s, 1
+  br i1 %c, label %if, label %else
+if:
+  %c2 = icmp slt i8 %x, 4
+  call void @check1(i1 %c2)
+  %c3 = icmp slt i8 %x, 3
+  call void @check1(i1 %c3)
+  ret void
+else:
+  ret void
+}
+
+define void @ashr_sle(i8 %x) {
+; CHECK-LABEL: @ashr_sle(
+; CHECK-NEXT:    [[S:%.*]] = ashr i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[C:%.*]] = icmp sle i8 [[S]], 1
+; CHECK-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @check1(i1 true)
+; CHECK-NEXT:    [[C3:%.*]] = icmp sle i8 [[X]], 6
+; CHECK-NEXT:    call void @check1(i1 [[C3]])
+; CHECK-NEXT:    ret void
+; CHECK:       else:
+; CHECK-NEXT:    ret void
+;
+  %s = ashr i8 %x, 2
+  %c = icmp sle i8 %s, 1
+  br i1 %c, label %if, label %else
+if:
+  %c2 = icmp sle i8 %x, 7
+  call void @check1(i1 %c2)
+  %c3 = icmp sle i8 %x, 6
+  call void @check1(i1 %c3)
+  ret void
+else:
+  ret void
+}
+
 declare i8 @llvm.umin.i8(i8, i8)
 declare i8 @llvm.umax.i8(i8, i8)
 declare <2 x i8> @llvm.umin.v2i8(<2 x i8>, <2 x i8>)
