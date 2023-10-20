@@ -24,6 +24,7 @@ jobs:
   check-docs-build:
     name: "Test documentation build"
     runs-on: ubuntu-latest
+    if: github.repository == 'llvm/llvm-project'
     steps:
       - name: Fetch LLVM sources
         uses: actions/checkout@v4
