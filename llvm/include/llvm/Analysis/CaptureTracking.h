@@ -83,7 +83,7 @@ namespace llvm {
   Instruction *
   FindEarliestCapture(const Value *V, Function &F, bool ReturnCaptures,
                       bool StoreCaptures, const DominatorTree &DT,
-                      const SmallPtrSetImpl<const Value *> &EphValues,
+                      const SmallPtrSetImpl<const Value *> *EphValues = nullptr,
                       unsigned MaxUsesToExplore = 0);
 
   /// This callback is used in conjunction with PointerMayBeCaptured. In
