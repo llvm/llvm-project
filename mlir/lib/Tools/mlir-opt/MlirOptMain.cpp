@@ -54,14 +54,14 @@ using namespace llvm;
 namespace {
 class BytecodeVersionParser : public cl::parser<std::optional<int64_t>> {
 public:
-  BytecodeVersionParser(cl::Option &O)
-      : cl::parser<std::optional<int64_t>>(O) {}
+  BytecodeVersionParser(cl::Option &o)
+      : cl::parser<std::optional<int64_t>>(o) {}
 
-  bool parse(cl::Option &O, StringRef /*argName*/, StringRef arg,
+  bool parse(cl::Option &o, StringRef /*argName*/, StringRef arg,
              std::optional<int64_t> &v) {
     long long w;
     if (getAsSignedInteger(arg, 10, w))
-      return O.error("Invalid argument '" + arg +
+      return o.error("Invalid argument '" + arg +
                      "', only integer is supported.");
     v = w;
     return false;
