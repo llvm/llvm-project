@@ -3922,18 +3922,6 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
   }
 
   if (getLangOpts().CPlusPlus) {
-    // C++1z [over.load]p2
-    //   Certain function declarations cannot be overloaded:
-    //     -- Function declarations that differ only in the return type,
-    //        the exception specification, or both cannot be overloaded.
-
-    // Check the exception specifications match. This may recompute the type of
-    // both Old and New if it resolved exception specifications, so grab the
-    // types again after this. Because this updates the type, we do this before
-    // any of the other checks below, which may update the "de facto" NewQType
-    // but do not necessarily update the type of New.
-    if (CheckEquivalentExceptionSpec(Old, New))
-      return true;
     OldQType = Context.getCanonicalType(Old->getType());
     NewQType = Context.getCanonicalType(New->getType());
 
@@ -4054,6 +4042,19 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
         return true;
       }
     }
+
+    // C++1z [over.load]p2
+    //   Certain function declarations cannot be overloaded:
+    //     -- Function declarations that differ only in the return type,
+    //        the exception specification, or both cannot be overloaded.
+
+    // Check the exception specifications match. This may recompute the type of
+    // both Old and New if it resolved exception specifications, so grab the
+    // types again after this. Because this updates the type, we do this before
+    // any of the other checks below, which may update the "de facto" NewQType
+    // but do not necessarily update the type of New.
+    if (CheckEquivalentExceptionSpec(Old, New))
+      return true;
 
     // C++11 [dcl.attr.noreturn]p1:
     //   The first declaration of a function shall specify the noreturn

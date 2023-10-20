@@ -325,6 +325,9 @@ Improvements to Clang's diagnostics
       |               ~~~~~~~~~^~~~~~~~
 - Clang now always diagnoses when using non-standard layout types in ``offsetof`` .
   (`#64619: <https://github.com/llvm/llvm-project/issues/64619>`_)
+- Clang now diagnoses redefined defaulted constructor when redefined
+  defaulted constructor with different exception specs.
+  (`#69094: <https://github.com/llvm/llvm-project/issues/69094>`_)
 
 Bug Fixes in This Version
 -------------------------
