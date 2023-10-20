@@ -3156,9 +3156,6 @@ def warn_unsupported_branch_protection_spec : Warning<
 def warn_attribute_underlying_type_mismatch : Warning<
   "underlying type %0 of enumeration %1 doesn't match bit-field type %2">,
   InGroup<BitFieldType>;
-def warn_attribute_bool_bitfield_width : Warning<
-  "bit-field that holds a boolean value should have width of 1 instead of %0">,
-  InGroup<BitFieldWidth>;
 
 def warn_unsupported_target_attribute
     : Warning<"%select{unsupported|duplicate|unknown}0%select{| CPU|"

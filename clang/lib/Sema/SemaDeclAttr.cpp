@@ -5941,15 +5941,6 @@ static void handlePreferredTypeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
           << EnumUnderlyingType << QT << BitfieldType;
       return;
     }
-  } else if (QT->isBooleanType()) {
-    unsigned BitfieldWidth =
-        cast<FieldDecl>(D)->getBitWidthValue(S.getASTContext());
-    if (BitfieldWidth != 1) {
-      S.Diag(cast<FieldDecl>(D)->getBitWidth()->getExprLoc(),
-             diag::warn_attribute_bool_bitfield_width)
-          << BitfieldWidth;
-      return;
-    }
   }
 
   D->addAttr(::new (S.Context) PreferredTypeAttr(S.Context, AL, ParmTSI));

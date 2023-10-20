@@ -8,7 +8,6 @@ struct A {
   [[clang::preferred_type(E2)]] const unsigned b3 : 2;
   [[clang::preferred_type(bool)]] unsigned b4 : 1;
   [[clang::preferred_type(bool)]] unsigned b5 : 2;
-  // expected-warning@-1 {{bit-field that holds a boolean value should have width of 1 instead of 2}}
   [[clang::preferred_type()]] unsigned b6 : 2;
   // expected-error@-1 {{'preferred_type' attribute takes one argument}}
   [[clang::preferred_type]] unsigned b7 : 2;
