@@ -25,9 +25,19 @@ jobs:
     name: "Test documentation build"
     runs-on: ubuntu-latest
     steps:
-      # Get changed files before we do a checkout to force the action to use
-      # the GH API to look for changed files and avoid an expensive partial
-      # fetch operation.
+      # Fetch all the commits in a pull request so that the
+      # docs-changed-subprojects step won't pull them in itself in an extremely
+      # slow manner.
+      - name: Fetch LLVM sources (PR)
+        if: ${{ github.event_name == 'pull_request' }} 
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: ${{ github.event.pull_request.commits }}
+      - name: Fetch LLVM sources (push)
+        if: ${{ github.event_name == 'push' }}
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
       - name: Get subprojects that have doc changes
         id: docs-changed-subprojects
         uses: tj-actions/changed-files@v39
@@ -37,10 +47,6 @@ jobs:
               - 'llvm/docs/**'
             clang:
               - 'clang/docs/**'
-      - name: Fetch LLVM sources
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
       - name: Setup Python env
         uses: actions/setup-python@v4
         with:
