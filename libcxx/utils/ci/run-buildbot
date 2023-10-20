@@ -738,7 +738,6 @@ android-ndk-*)
                            -DCMAKE_SYSROOT=/opt/android/ndk/sysroot \
                            -DLIBCXX_TEST_PARAMS="${PARAMS}" \
                            -DLIBCXXABI_TEST_PARAMS="${PARAMS}"
-    check-abi-list
     ${NINJA} -vC "${BUILD_DIR}" install-cxx install-cxxabi
 
     # Start the emulator and make sure we can connect to the adb server running
