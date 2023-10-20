@@ -29,7 +29,7 @@ public:
 private:
   LogicalResult buildGlobalMap(ModuleOp op);
 
-  void ProcessBlock(Block &block, llvm::DenseSet<SymbolRefAttr> &symbolLoad,
+  void processBlock(Block &block, llvm::DenseSet<SymbolRefAttr> &symbolLoad,
                     llvm::DenseSet<SymbolRefAttr> &symbolStore);
 
   llvm::DenseMap<SymbolRefAttr, llvm::DenseSet<SymbolRefAttr>> loadSymbolsMap;
@@ -122,7 +122,7 @@ LogicalResult MLProgramPipelineGlobals::buildGlobalMap(ModuleOp module) {
 
 // Process each operation in the block deleting unneeded loads / stores,
 // recursing on subblocks and checking function calls.
-void MLProgramPipelineGlobals::ProcessBlock(
+void MLProgramPipelineGlobals::processBlock(
     Block &block, llvm::DenseSet<SymbolRefAttr> &symbolLoad,
     llvm::DenseSet<SymbolRefAttr> &symbolStore) {
 
@@ -184,7 +184,7 @@ void MLProgramPipelineGlobals::ProcessBlock(
     llvm::DenseSet<SymbolRefAttr> opSymbolStore;
     for (auto &region : op.getRegions()) {
       for (auto &block : region) {
-        ProcessBlock(block, opSymbolLoad, opSymbolStore);
+        processBlock(block, opSymbolLoad, opSymbolStore);
       }
     }
 
@@ -217,7 +217,7 @@ void MLProgramPipelineGlobals::runOnOperation() {
       for (auto &block : region.getBlocks()) {
         llvm::DenseSet<SymbolRefAttr> symbolsLoaded;
         llvm::DenseSet<SymbolRefAttr> symbolsStored;
-        ProcessBlock(block, symbolsLoaded, symbolsStored);
+        processBlock(block, symbolsLoaded, symbolsStored);
       }
     }
   }
