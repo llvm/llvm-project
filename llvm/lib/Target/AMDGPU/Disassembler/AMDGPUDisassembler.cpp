@@ -1982,16 +1982,23 @@ MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
   if (FourByteBuffer & COMPUTE_PGM_RSRC1_CDBG_USER)
     return MCDisassembler::Fail;
 
-  PRINT_DIRECTIVE(".amdhsa_fp16_overflow", COMPUTE_PGM_RSRC1_FP16_OVFL);
+  if (isGFX9Plus())
+    PRINT_DIRECTIVE(".amdhsa_fp16_overflow", COMPUTE_PGM_RSRC1_GFX9_PLUS_FP16_OVFL);
 
-  if (FourByteBuffer & COMPUTE_PGM_RSRC1_RESERVED0)
+  if (!isGFX9Plus())
+    if (FourByteBuffer & COMPUTE_PGM_RSRC1_GFX6_GFX8_RESERVED0)
+      return MCDisassembler::Fail;
+  if (FourByteBuffer & COMPUTE_PGM_RSRC1_RESERVED1)
     return MCDisassembler::Fail;
+  if (!isGFX10Plus())
+    if (FourByteBuffer & COMPUTE_PGM_RSRC1_GFX6_GFX9_RESERVED2)
+      return MCDisassembler::Fail;
 
   if (isGFX10Plus()) {
     PRINT_DIRECTIVE(".amdhsa_workgroup_processor_mode",
-                    COMPUTE_PGM_RSRC1_WGP_MODE);
-    PRINT_DIRECTIVE(".amdhsa_memory_ordered", COMPUTE_PGM_RSRC1_MEM_ORDERED);
-    PRINT_DIRECTIVE(".amdhsa_forward_progress", COMPUTE_PGM_RSRC1_FWD_PROGRESS);
+                    COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE);
+    PRINT_DIRECTIVE(".amdhsa_memory_ordered", COMPUTE_PGM_RSRC1_GFX10_PLUS_MEM_ORDERED);
+    PRINT_DIRECTIVE(".amdhsa_forward_progress", COMPUTE_PGM_RSRC1_GFX10_PLUS_FWD_PROGRESS);
   }
 
   if (isGFX12Plus())
@@ -2070,23 +2077,39 @@ MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC3(
     if (FourByteBuffer & COMPUTE_PGM_RSRC3_GFX90A_RESERVED1)
       return MCDisassembler::Fail;
   } else if (isGFX10Plus()) {
-    if (!EnableWavefrontSize32 || !*EnableWavefrontSize32) {
-      PRINT_DIRECTIVE(".amdhsa_shared_vgpr_count",
-                      COMPUTE_PGM_RSRC3_GFX10_PLUS_SHARED_VGPR_COUNT);
-    } else {
-      PRINT_PSEUDO_DIRECTIVE_COMMENT(
-          "SHARED_VGPR_COUNT", COMPUTE_PGM_RSRC3_GFX10_PLUS_SHARED_VGPR_COUNT);
+    if (!isGFX12Plus()) {
+      if (!EnableWavefrontSize32 || !*EnableWavefrontSize32) {
+        PRINT_DIRECTIVE(".amdhsa_shared_vgpr_count",
+                        COMPUTE_PGM_RSRC3_GFX10_GFX11_SHARED_VGPR_COUNT);
+      } else {
+        PRINT_PSEUDO_DIRECTIVE_COMMENT(
+            "SHARED_VGPR_COUNT",
+            COMPUTE_PGM_RSRC3_GFX10_GFX11_SHARED_VGPR_COUNT);
+      }
     }
-    PRINT_PSEUDO_DIRECTIVE_COMMENT("INST_PREF_SIZE",
-                                   COMPUTE_PGM_RSRC3_GFX10_PLUS_INST_PREF_SIZE);
-    PRINT_PSEUDO_DIRECTIVE_COMMENT("TRAP_ON_START",
-                                   COMPUTE_PGM_RSRC3_GFX10_PLUS_TRAP_ON_START);
-    PRINT_PSEUDO_DIRECTIVE_COMMENT("TRAP_ON_END",
-                                   COMPUTE_PGM_RSRC3_GFX10_PLUS_TRAP_ON_END);
-    if (FourByteBuffer & COMPUTE_PGM_RSRC3_GFX10_PLUS_RESERVED0)
+
+    if (isGFX11Plus()) {
+      PRINT_PSEUDO_DIRECTIVE_COMMENT("INST_PREF_SIZE",
+                                     COMPUTE_PGM_RSRC3_GFX11_PLUS_INST_PREF_SIZE);
+      PRINT_PSEUDO_DIRECTIVE_COMMENT("TRAP_ON_START",
+                                     COMPUTE_PGM_RSRC3_GFX11_PLUS_TRAP_ON_START);
+      PRINT_PSEUDO_DIRECTIVE_COMMENT("TRAP_ON_END",
+                                     COMPUTE_PGM_RSRC3_GFX11_PLUS_TRAP_ON_END);
+    } else {
+      if (FourByteBuffer & COMPUTE_PGM_RSRC3_GFX10_RESERVED0)
+        return MCDisassembler::Fail;
+    }
+
+    if (FourByteBuffer & COMPUTE_PGM_RSRC3_GFX10_PLUS_RESERVED1)
       return MCDisassembler::Fail;
-    PRINT_PSEUDO_DIRECTIVE_COMMENT("IMAGE_OP",
-                                   COMPUTE_PGM_RSRC3_GFX10_PLUS_TRAP_ON_START);
+
+    if (isGFX11Plus()) {
+      PRINT_PSEUDO_DIRECTIVE_COMMENT("IMAGE_OP",
+                                     COMPUTE_PGM_RSRC3_GFX11_PLUS_TRAP_ON_START);
+    } else {
+      if (FourByteBuffer & COMPUTE_PGM_RSRC3_GFX10_RESERVED2)
+        return MCDisassembler::Fail;
+    }
   } else if (FourByteBuffer) {
     return MCDisassembler::Fail;
   }

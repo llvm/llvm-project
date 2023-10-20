@@ -1169,7 +1169,7 @@ func.func @reduce_unsupported_attr(%arg0: vector<16xf32>) -> i32 {
 // -----
 
 func.func @reduce_unsupported_third_argument(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
-  // expected-error@+1 {{'vector.reduction' unsupported number of operands}}
+  // expected-error@+1 {{expected ':'}}
   %0 = vector.reduction <add>, %arg0, %arg1, %arg1 : vector<16xf32> into f32
 }
 

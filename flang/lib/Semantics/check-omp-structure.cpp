@@ -1879,9 +1879,6 @@ void OmpStructureChecker::CheckAtomicMemoryOrderClause(
   if (rightHandClauseList) {
     checkForValidMemoryOrderClause(rightHandClauseList);
   }
-  if (numMemoryOrderClause == 0) {
-    atomicDirectiveDefaultOrderFound_ = true;
-  }
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPAtomicConstruct &x) {
@@ -3219,16 +3216,7 @@ void OmpStructureChecker::Enter(
 void OmpStructureChecker::CheckAllowedRequiresClause(llvmOmpClause clause) {
   CheckAllowed(clause);
 
-  if (clause == llvm::omp::Clause::OMPC_atomic_default_mem_order) {
-    // Check that it does not appear after an atomic operation without memory
-    // order
-    if (atomicDirectiveDefaultOrderFound_) {
-      context_.Say(GetContext().clauseSource,
-          "REQUIRES directive with '%s' clause found lexically after atomic "
-          "operation without a memory order clause"_err_en_US,
-          parser::ToUpperCaseLetters(getClauseName(clause).str()));
-    }
-  } else {
+  if (clause != llvm::omp::Clause::OMPC_atomic_default_mem_order) {
     // Check that it does not appear after a device construct
     if (deviceConstructFound_) {
       context_.Say(GetContext().clauseSource,

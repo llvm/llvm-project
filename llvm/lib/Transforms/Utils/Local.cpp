@@ -443,9 +443,16 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
     if (!II)
       return false;
 
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::experimental_guard: {
+      // Guards on true are operationally no-ops.  In the future we can
+      // consider more sophisticated tradeoffs for guards considering potential
+      // for check widening, but for now we keep things simple.
+      auto *Cond = dyn_cast<ConstantInt>(II->getArgOperand(0));
+      return Cond && Cond->isOne();
+    }
     // TODO: These intrinsics are not safe to remove, because this may remove
     // a well-defined trap.
-    switch (II->getIntrinsicID()) {
     case Intrinsic::wasm_trunc_signed:
     case Intrinsic::wasm_trunc_unsigned:
     case Intrinsic::ptrauth_auth:
@@ -484,13 +491,9 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
       return false;
     }
 
-    // Assumptions are dead if their condition is trivially true.  Guards on
-    // true are operationally no-ops.  In the future we can consider more
-    // sophisticated tradeoffs for guards considering potential for check
-    // widening, but for now we keep things simple.
-    if ((II->getIntrinsicID() == Intrinsic::assume &&
-         isAssumeWithEmptyBundle(cast<AssumeInst>(*II))) ||
-        II->getIntrinsicID() == Intrinsic::experimental_guard) {
+    // Assumptions are dead if their condition is trivially true.
+    if (II->getIntrinsicID() == Intrinsic::assume &&
+        isAssumeWithEmptyBundle(cast<AssumeInst>(*II))) {
       if (ConstantInt *Cond = dyn_cast<ConstantInt>(II->getArgOperand(0)))
         return !Cond->isZero();
 
