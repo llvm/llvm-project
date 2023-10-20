@@ -156,9 +156,3 @@ size_t FileSpecList::MemorySize() const {
 
 // Return the number of files in the file spec list.
 size_t FileSpecList::GetSize() const { return m_files.size(); }
-
-size_t FileSpecList::GetFilesMatchingPartialPath(const char *path,
-                                                 bool dir_okay,
-                                                 FileSpecList &matches) {
-  return 0;
-}

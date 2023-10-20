@@ -2264,6 +2264,10 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
         return true;
     }
 
+    if (match(U, m_IDiv(m_Value(), m_Specific(V))) &&
+        isValidAssumeForContext(cast<Instruction>(U), CtxI, DT))
+      return true;
+
     // Consider only compare instructions uniquely controlling a branch
     Value *RHS;
     CmpInst::Predicate Pred;

@@ -200,9 +200,6 @@ public:
     return false;
   }
 
-  static size_t GetFilesMatchingPartialPath(const char *path, bool dir_okay,
-                                            FileSpecList &matches);
-
   const_iterator begin() const { return m_files.begin(); }
   const_iterator end() const { return m_files.end(); }
 
