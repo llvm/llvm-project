@@ -628,3 +628,9 @@ def DQuadSpc : RegisterClass<"ARM", [v4i64], 64, (add Tuples3DSpc)>;
 
 // FP context payload
 def FPCXTRegs : RegisterClass<"ARM", [i32], 32, (add FPCXTNS)>;
+
+//===----------------------------------------------------------------------===//
+// Register categories.
+//
+
+def GeneralPurposeRegisters : RegisterCategory<[GPR]>;
