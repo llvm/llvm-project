@@ -645,28 +645,6 @@ def ConvertIndexToLLVMPass : Pass<"convert-index-to-llvm"> {
 }
 
 //===----------------------------------------------------------------------===//
-// ConvertIndexToSPIRVPass
-//===----------------------------------------------------------------------===//
-
-def ConvertIndexToSPIRVPass : Pass<"convert-index-to-spirv"> {
-  let summary = "Lower the `index` dialect to the `spirv` dialect.";
-  let description = [{
-    This pass lowers Index dialect operations to SPIR-V dialect operations.
-    Operation conversions are 1-to-1 except for the exotic divides: `ceildivs`,
-    `ceildivu`, and `floordivs`. The index bitwidth will be 32 or 64 as
-    specified by use-64bit-index.
-  }];
-
-  let dependentDialects = ["::mlir::spirv::SPIRVDialect"];
-
-  let options = [
-    Option<"use64bitIndex", "use-64bit-index",
-           "bool", /*default=*/"false",
-           "Use 64-bit integers to convert index types">
-  ];
-}
-
-//===----------------------------------------------------------------------===//
 // LinalgToStandard
 //===----------------------------------------------------------------------===//
 
