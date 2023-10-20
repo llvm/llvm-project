@@ -589,7 +589,7 @@ public:
     const auto stt = getSparseTensorType(op.getTensor());
     const auto elemTp = stt.getElementType();
     const Level lvlRank = stt.getLvlRank();
-    // We need a alloc scope here as the InsertOp is always generated inside a
+    // We need an alloca scope here as the InsertOp is always generated inside a
     // loop, which lead to stack overflow.
     auto allocaScope = rewriter.create<memref::AllocaScopeOp>(
         loc, adaptor.getTensor().getType());
