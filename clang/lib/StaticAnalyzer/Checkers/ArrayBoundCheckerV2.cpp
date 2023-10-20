@@ -65,7 +65,7 @@ computeOffset(ProgramStateRef State, SValBuilder &SVB, SVal Location) {
   std::optional<NonLoc> Offset = SVB.makeZeroArrayIndex();
 
   const ElementRegion *CurRegion =
-    dyn_cast_or_null<ElementRegion>(Location.getAsRegion());
+      dyn_cast_or_null<ElementRegion>(Location.getAsRegion());
 
   while (CurRegion) {
     const auto Index = CurRegion->getIndex().getAs<NonLoc>();
