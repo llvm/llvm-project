@@ -36,10 +36,8 @@ class FormatHelper:
     ) -> str | None:
         raise NotImplementedError()
 
-    def pr_comment_text(self, diff: str) -> str:
+    def pr_comment_text_for_diff(self, diff: str) -> str:
         return f"""
-{self.comment_tag}
-
 :warning: {self.friendly_name}, {self.name} found issues in your code. :warning:
 
 <details>
@@ -73,39 +71,41 @@ View the diff from {self.name} here.
                 return comment
         return None
 
-    def update_pr(self, diff: str, args: argparse.Namespace) -> None:
+    def update_pr(
+        self, comment_text: str, args: argparse.Namespace, create_new: bool
+    ) -> None:
         repo = github.Github(args.token).get_repo(args.repo)
         pr = repo.get_issue(args.issue_number).as_pull_request()
 
-        existing_comment = self.find_comment(pr)
-        pr_text = self.pr_comment_text(diff)
-
-        if existing_comment:
-            existing_comment.edit(pr_text)
-        else:
-            pr.as_issue().create_comment(pr_text)
-
-    def update_pr_success(self, args: argparse.Namespace) -> None:
-        repo = github.Github(args.token).get_repo(args.repo)
-        pr = repo.get_issue(args.issue_number).as_pull_request()
+        comment_text = self.comment_tag + "\n\n" + comment_text
 
         existing_comment = self.find_comment(pr)
         if existing_comment:
-            existing_comment.edit(
-                f"""
-{self.comment_tag}
-:white_check_mark: With the latest revision this PR passed the {self.friendly_name}.
-"""
-            )
+            existing_comment.edit(comment_text)
+        elif create_new:
+            pr.as_issue().create_comment(comment_text)
 
     def run(self, changed_files: list[str], args: argparse.Namespace) -> bool:
+        print(f"Formatter {self.name} ({self.friendly_name}):")
         diff = self.format_run(changed_files, args)
-        if diff:
-            self.update_pr(diff, args)
+        if diff is None:
+            comment_text = f"""
+:white_check_mark: With the latest revision this PR passed the {self.friendly_name}.
+"""
+            self.update_pr(comment_text, args, create_new=False)
+            return True
+        elif len(diff) > 0:
+            comment_text = self.pr_comment_text_for_diff(diff)
+            self.update_pr(comment_text, args, create_new=True)
             return False
         else:
-            self.update_pr_success(args)
-            return True
+            # The formatter failed but didn't output a diff (e.g. some sort of
+            # infrastructure failure).
+            comment_text = f"""
+:warning: The {self.friendly_name} failed without printing a diff. Check the logs for stderr output. :warning:
+"""
+            self.update_pr(comment_text, args, create_new=False)
+            return False
 
 
 class ClangFormatHelper(FormatHelper):
@@ -151,13 +151,15 @@ class ClangFormatHelper(FormatHelper):
         ] + cpp_files
         print(f"Running: {' '.join(cf_cmd)}")
         self.cf_cmd = cf_cmd
-        proc = subprocess.run(cf_cmd, capture_output=True)
+        proc = subprocess.run(cf_cmd, stdout=subprocess.PIPE)
 
-        # formatting needed
-        if proc.returncode == 1:
+        if proc.returncode != 0:
+            # formatting needed, or the command otherwise failed
+            print(f"error: {self.name} exited with code {proc.returncode}")
             return proc.stdout.decode("utf-8")
-
-        return None
+        else:
+            sys.stdout.write(proc.stdout.decode("utf-8"))
+            return None
 
 
 class DarkerFormatHelper(FormatHelper):
@@ -192,13 +194,15 @@ class DarkerFormatHelper(FormatHelper):
         ] + py_files
         print(f"Running: {' '.join(darker_cmd)}")
         self.darker_cmd = darker_cmd
-        proc = subprocess.run(darker_cmd, capture_output=True)
+        proc = subprocess.run(darker_cmd, stdout=subprocess.PIPE)
 
-        # formatting needed
-        if proc.returncode == 1:
+        if proc.returncode != 0:
+            # formatting needed, or the command otherwise failed
+            print(f"error: {self.name} exited with code {proc.returncode}")
             return proc.stdout.decode("utf-8")
-
-        return None
+        else:
+            sys.stdout.write(proc.stdout.decode("utf-8"))
+            return None
 
 
 ALL_FORMATTERS = (DarkerFormatHelper(), ClangFormatHelper())
@@ -236,9 +240,11 @@ if __name__ == "__main__":
     if args.changed_files:
         changed_files = args.changed_files.split(",")
 
-    exit_code = 0
+    failed_formatters = []
     for fmt in ALL_FORMATTERS:
         if not fmt.run(changed_files, args):
-            exit_code = 1
+            failed_formatters.append(fmt.name)
 
-    sys.exit(exit_code)
+    if len(failed_formatters) > 0:
+        print(f"error: some formatters failed: {' '.join(failed_formatters)}")
+        sys.exit(1)
