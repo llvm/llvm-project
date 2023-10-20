@@ -62,7 +62,7 @@ subroutine test3()
 end subroutine test3
 ! CHECK-LABEL:   func.func @_QPtest3() {
 ! CHECK-DAG:       %[[VAL_10:.*]] = fir.call @_FortranADestroy(%[[VAL_9:.*]]) fastmath<contract> : (!fir.box<none>) -> none
-! CHECK-DAG:       %[[VAL_9]] = fir.convert %{{.*}} : (!fir.box<!fir.type<_QMtypesTt3{x:!fir.box<!fir.heap<f32>>}>>) -> !fir.box<none>
+! CHECK-DAG:       %[[VAL_9]] = fir.convert %{{.*}} : (!fir.box<!fir.type<_QMtypesTt3{t1:!fir.type<_QMtypesTt1{x:!fir.box<!fir.heap<f32>>}>}>>) -> !fir.box<none>
 
 subroutine test3b()
   use types
@@ -72,7 +72,7 @@ subroutine test3b()
 end subroutine test3b
 ! CHECK-LABEL:   func.func @_QPtest3b() {
 ! CHECK-DAG:       %[[VAL_11:.*]] = fir.call @_FortranADestroy(%[[VAL_10:.*]]) fastmath<contract> : (!fir.box<none>) -> none
-! CHECK-DAG:       %[[VAL_10]] = fir.convert %{{.*}} : (!fir.box<!fir.type<_QMtypesTt3{x:!fir.box<!fir.heap<f32>>}>>) -> !fir.box<none>
+! CHECK-DAG:       %[[VAL_10]] = fir.convert %{{.*}} : (!fir.box<!fir.type<_QMtypesTt3{t1:!fir.type<_QMtypesTt1{x:!fir.box<!fir.heap<f32>>}>}>>) -> !fir.box<none>
 
 subroutine test4()
   use types
@@ -80,7 +80,7 @@ subroutine test4()
 end subroutine test4
 ! CHECK-LABEL:   func.func @_QPtest4() {
 ! CHECK-DAG:       %[[VAL_10:.*]] = fir.call @_FortranADestroy(%[[VAL_9:.*]]) fastmath<contract> : (!fir.box<none>) -> none
-! CHECK-DAG:       %[[VAL_9]] = fir.convert %{{.*}} : (!fir.box<!fir.type<_QMtypesTt4{x:!fir.box<!fir.heap<f32>>}>>) -> !fir.box<none>
+! CHECK-DAG:       %[[VAL_9]] = fir.convert %{{.*}} : (!fir.box<!fir.type<_QMtypesTt4{t3:!fir.type<_QMtypesTt3{t1:!fir.type<_QMtypesTt1{x:!fir.box<!fir.heap<f32>>}>}>}>>) -> !fir.box<none>
 
 subroutine test4b()
   use types
@@ -90,7 +90,7 @@ subroutine test4b()
 end subroutine test4b
 ! CHECK-LABEL:   func.func @_QPtest4b() {
 ! CHECK-DAG:       %[[VAL_11:.*]] = fir.call @_FortranADestroy(%[[VAL_10:.*]]) fastmath<contract> : (!fir.box<none>) -> none
-! CHECK-DAG:       %[[VAL_10]] = fir.convert %{{.*}} : (!fir.box<!fir.type<_QMtypesTt4{x:!fir.box<!fir.heap<f32>>}>>) -> !fir.box<none>
+! CHECK-DAG:       %[[VAL_10]] = fir.convert %{{.*}} : (!fir.box<!fir.type<_QMtypesTt4{t3:!fir.type<_QMtypesTt3{t1:!fir.type<_QMtypesTt1{x:!fir.box<!fir.heap<f32>>}>}>}>>) -> !fir.box<none>
 
 subroutine test5()
   use types
@@ -98,7 +98,7 @@ subroutine test5()
 end subroutine test5
 ! CHECK-LABEL:   func.func @_QPtest5() {
 ! CHECK-DAG:       %[[VAL_10:.*]] = fir.call @_FortranADestroy(%[[VAL_9:.*]]) fastmath<contract> : (!fir.box<none>) -> none
-! CHECK-DAG:       %[[VAL_9]] = fir.convert %{{.*}} : (!fir.box<!fir.type<_QMtypesTt5{x:!fir.type<_QMtypesTt1{x:!fir.box<!fir.heap<f32>>}>}>>) -> !fir.box<none>
+! CHECK-DAG:       %[[VAL_9]] = fir.convert %{{.*}} : (!fir.box<!fir.type<_QMtypesTt5{t2:!fir.type<_QMtypesTt2{x:!fir.type<_QMtypesTt1{x:!fir.box<!fir.heap<f32>>}>}>}>>) -> !fir.box<none>
 
 subroutine test5b()
   use types
@@ -108,4 +108,4 @@ subroutine test5b()
 end subroutine test5b
 ! CHECK-LABEL:   func.func @_QPtest5b() {
 ! CHECK-DAG:       %[[VAL_11:.*]] = fir.call @_FortranADestroy(%[[VAL_10:.*]]) fastmath<contract> : (!fir.box<none>) -> none
-! CHECK-DAG:       %[[VAL_10]] = fir.convert %{{.*}} : (!fir.box<!fir.type<_QMtypesTt5{x:!fir.type<_QMtypesTt1{x:!fir.box<!fir.heap<f32>>}>}>>) -> !fir.box<none>
+! CHECK-DAG:       %[[VAL_10]] = fir.convert %{{.*}} : (!fir.box<!fir.type<_QMtypesTt5{t2:!fir.type<_QMtypesTt2{x:!fir.type<_QMtypesTt1{x:!fir.box<!fir.heap<f32>>}>}>}>>) -> !fir.box<none>
