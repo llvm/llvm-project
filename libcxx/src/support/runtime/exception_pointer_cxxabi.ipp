@@ -51,6 +51,7 @@ exception_ptr& exception_ptr::operator=(const exception_ptr& other) noexcept
 }
 
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#    if !defined(_LIBCPP_HAS_NO_RTTI)
 void *exception_ptr::__init_native_exception(size_t size, type_info *tinfo, void (*dest)(void *)) noexcept
 {
     if (__cxa_init_primary_exception != nullptr) {
@@ -75,6 +76,7 @@ exception_ptr exception_ptr::__from_native_exception_pointer(void *__e) noexcept
 
     return ptr;
 }
+#    endif
 #  endif
 
 nested_exception::nested_exception() noexcept
