@@ -17,6 +17,7 @@
 #include <cassert>
 
 #include "test_macros.h"
+#include "../overload_compare_iterator.h"
 
 struct B
 {
@@ -83,6 +84,35 @@ int main(int, char**)
         assert(arr[i].i_ == i);
         assert(  p[i].i_ == i);
     }
+    }
+
+    // Test with an iterator that overloads operator== and operator!= as the input and output iterators
+    {
+        using T = int;
+        using Iterator = overload_compare_iterator<T*>;
+        const int N = 5;
+
+        // input
+        {
+            char pool[sizeof(T) * N] = {0};
+            T* p = reinterpret_cast<T*>(pool);
+            T array[N] = {1, 2, 3, 4, 5};
+            std::uninitialized_copy_n(Iterator(array), N, p);
+            for (int i = 0; i != N; ++i) {
+                assert(array[i] == p[i]);
+            }
+        }
+
+        // output
+        {
+            char pool[sizeof(T) * N] = {0};
+            T* p = reinterpret_cast<T*>(pool);
+            T array[N] = {1, 2, 3, 4, 5};
+            std::uninitialized_copy_n(array, N, Iterator(p));
+            for (int i = 0; i != N; ++i) {
+                assert(array[i] == p[i]);
+            }
+        }
     }
 
   return 0;
