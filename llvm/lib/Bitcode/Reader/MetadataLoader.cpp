@@ -1501,7 +1501,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_BASIC_TYPE: {
-    if (Record.size() < 6 || Record.size() > 7)
+    if (Record.size() < 6 || Record.size() > 8)
       return error("Invalid record");
 
     IsDistinct = Record[0];
@@ -1512,7 +1512,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     MetadataList.assignValue(
         GET_OR_DISTINCT(DIBasicType,
                         (Context, Record[1], getMDString(Record[2]), Record[3],
-                         Record[4], Record[5], Flags)),
+                         Record[4], Record[5], Record[7], Flags)), 
         NextMetadataNo);
     NextMetadataNo++;
     break;
@@ -1570,7 +1570,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_COMPOSITE_TYPE: {
-    if (Record.size() < 16 || Record.size() > 22)
+    if (Record.size() < 16 || Record.size() > 23)
       return error("Invalid record");
 
     // If we have a UUID and this is not a forward declaration, lookup the
@@ -1588,6 +1588,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       return error("Alignment value is too large");
     uint32_t AlignInBits = Record[8];
     uint64_t OffsetInBits = 0;
+    uint32_t NumExtraInhabitants = Record[22];
     DINode::DIFlags Flags = static_cast<DINode::DIFlags>(Record[10]);
     Metadata *Elements = nullptr;
     unsigned RuntimeLang = Record[12];
@@ -1647,9 +1648,9 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     if (Identifier)
       CT = DICompositeType::buildODRType(
           Context, *Identifier, Tag, Name, File, Line, Scope, BaseType,
-          SizeInBits, AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang,
-          VTableHolder, TemplateParams, Discriminator, DataLocation, Associated,
-          Allocated, Rank, Annotations);
+          SizeInBits, AlignInBits, OffsetInBits, NumExtraInhabitants, Flags,
+          Elements, RuntimeLang, VTableHolder, TemplateParams, Discriminator,
+          DataLocation, Associated, Allocated, Rank, Annotations);
 
     // Create a node if we didn't get a lazy ODR type.
     if (!CT)
@@ -1658,7 +1659,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
                             SizeInBits, AlignInBits, OffsetInBits, Flags,
                             Elements, RuntimeLang, VTableHolder, TemplateParams,
                             Identifier, Discriminator, DataLocation, Associated,
-                            Allocated, Rank, Annotations));
+                            Allocated, Rank, Annotations, NumExtraInhabitants));
     if (!IsNotUsedInTypeRef && Identifier)
       MetadataList.addTypeRef(*Identifier, *cast<DICompositeType>(CT));
 
