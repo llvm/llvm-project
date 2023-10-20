@@ -32,7 +32,7 @@ namespace detail {
 /// Each entry in `paths` may either be a regular file, in which case it ends up
 /// in the result list, or a directory, in which case all (regular) `.mlir`
 /// files in that directory are added. Any other file types lead to a failure.
-LogicalResult expandPathsToMLIRFiles(ArrayRef<std::string> &paths,
+LogicalResult expandPathsToMLIRFiles(ArrayRef<std::string> paths,
                                      MLIRContext *context,
                                      SmallVectorImpl<std::string> &fileNames);
 

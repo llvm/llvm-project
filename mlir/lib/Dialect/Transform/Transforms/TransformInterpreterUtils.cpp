@@ -39,7 +39,7 @@ using namespace mlir;
 /// in the result list, or a directory, in which case all (regular) `.mlir`
 /// files in that directory are added. Any other file types lead to a failure.
 LogicalResult transform::detail::expandPathsToMLIRFiles(
-    ArrayRef<std::string> &paths, MLIRContext *context,
+    ArrayRef<std::string> paths, MLIRContext *context,
     SmallVectorImpl<std::string> &fileNames) {
   for (const std::string &path : paths) {
     auto loc = FileLineColLoc::get(context, path, 0, 0);
@@ -90,12 +90,6 @@ LogicalResult transform::detail::expandPathsToMLIRFiles(
 LogicalResult transform::detail::parseTransformModuleFromFile(
     MLIRContext *context, llvm::StringRef transformFileName,
     OwningOpRef<ModuleOp> &transformModule) {
-  if (transformFileName.empty()) {
-    LLVM_DEBUG(
-        DBGS() << "no transform file name specified, assuming the transform "
-                  "module is embedded in the IR next to the top-level\n");
-    return success();
-  }
   // Parse transformFileName content into a ModuleOp.
   std::string errorMessage;
   auto memoryBuffer = mlir::openInputFile(transformFileName, &errorMessage);
@@ -173,7 +167,6 @@ LogicalResult transform::detail::assembleTransformLibraryFromPaths(
   {
     mergedParsedLibraries.get()->setAttr("transform.with_named_sequence",
                                          UnitAttr::get(context));
-    IRRewriter rewriter(context);
     // TODO: extend `mergeSymbolsInto` to support multiple `other` modules.
     for (OwningOpRef<ModuleOp> &parsedLibrary : parsedLibraries) {
       if (failed(transform::detail::mergeSymbolsInto(
