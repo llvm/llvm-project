@@ -605,7 +605,6 @@ public:
     SmallString<12> name{"lexInsert", primaryTypeFunctionSuffix(elemTp)};
     createFuncCall(rewriter, loc, name, {},
                    {adaptor.getTensor(), lvlCoords, vref}, EmitCInterface::On);
-
     rewriter.replaceOp(op, adaptor.getTensor());
     return success();
   }
