@@ -14136,7 +14136,9 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
                                                      SDNode *Node) const {
   const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
 
-  MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+  MachineFunction *MF = MI.getParent()->getParent();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  SIMachineFunctionInfo *Info = MF->getInfo<SIMachineFunctionInfo>();
 
   if (TII->isVOP3(MI.getOpcode())) {
     // Make sure constant bus requirements are respected.
@@ -14147,9 +14149,14 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
     // use between vgpr and agpr as agpr tuples tend to be big.
     if (!MI.getDesc().operands().empty()) {
       unsigned Opc = MI.getOpcode();
+      bool NoAGPRs = !Info->mayNeedAGPRs();
+      SmallVector<int> Opnds;
+      Opnds.push_back(AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0));
+      Opnds.push_back(AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1));
+      if (NoAGPRs)
+        Opnds.push_back(AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2));
       const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
-      for (auto I : { AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0),
-                      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1) }) {
+      for (auto I : Opnds) {
         if (I == -1)
           break;
         MachineOperand &Op = MI.getOperand(I);
@@ -14169,18 +14176,19 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
         MRI.setRegClass(Op.getReg(), NewRC);
       }
 
-      // Resolve the rest of AV operands to AGPRs.
-      if (auto *Src2 = TII->getNamedOperand(MI, AMDGPU::OpName::src2)) {
-        if (Src2->isReg() && Src2->getReg().isVirtual()) {
-          auto *RC = TRI->getRegClassForReg(MRI, Src2->getReg());
-          if (TRI->isVectorSuperClass(RC)) {
-            auto *NewRC = TRI->getEquivalentAGPRClass(RC);
-            MRI.setRegClass(Src2->getReg(), NewRC);
-            if (Src2->isTied())
-              MRI.setRegClass(MI.getOperand(0).getReg(), NewRC);
+      if (!NoAGPRs)
+        // Resolve the rest of AV operands to AGPRs.
+        if (auto *Src2 = TII->getNamedOperand(MI, AMDGPU::OpName::src2)) {
+          if (Src2->isReg() && Src2->getReg().isVirtual()) {
+            auto *RC = TRI->getRegClassForReg(MRI, Src2->getReg());
+            if (TRI->isVectorSuperClass(RC)) {
+              auto *NewRC = TRI->getEquivalentAGPRClass(RC);
+              MRI.setRegClass(Src2->getReg(), NewRC);
+              if (Src2->isTied())
+                MRI.setRegClass(MI.getOperand(0).getReg(), NewRC);
+            }
           }
         }
-      }
     }
 
     return;
