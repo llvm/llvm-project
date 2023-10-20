@@ -169,7 +169,7 @@ namespace transform {
 namespace gpu {
 
 GpuIdBuilder::GpuIdBuilder(MLIRContext *ctx, bool useLinearMapping,
-                           MappingIdBuilderFnType fn)
+                           const MappingIdBuilderFnType &fn)
     : mappingAttributes(), idBuilder() {
   if (useLinearMapping) {
     for (uint64_t d = static_cast<uint64_t>(MappingId::LinearDim0),
