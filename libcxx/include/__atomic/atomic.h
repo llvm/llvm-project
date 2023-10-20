@@ -19,8 +19,8 @@
 #include <__type_traits/is_floating_point.h>
 #include <__type_traits/is_function.h>
 #include <__type_traits/is_same.h>
-#include <__type_traits/remove_pointer.h>
 #include <__type_traits/remove_const.h>
+#include <__type_traits/remove_pointer.h>
 #include <__utility/forward.h>
 #include <cstddef>
 #include <cstdio>

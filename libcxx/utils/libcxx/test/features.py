@@ -117,7 +117,7 @@ DEFAULT_FEATURES = [
             """
             int main(int, char**) { return 0; }
           """,
-            ["-latomic"]
+            ["-latomic"],
         ),
     ),
     Feature(
