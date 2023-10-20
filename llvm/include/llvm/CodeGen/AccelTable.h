@@ -176,6 +176,7 @@ public:
   uint32_t getBucketCount() const { return BucketCount; }
   uint32_t getUniqueHashCount() const { return UniqueHashCount; }
   uint32_t getUniqueNameCount() const { return Entries.size(); }
+  StringEntries &getEntries() { return Entries; }
 
 #ifndef NDEBUG
   void print(raw_ostream &OS) const;
@@ -259,13 +260,17 @@ public:
 #endif
 
   uint64_t getDieOffset() const {
-    if (const DIE *const *TDie = std::get_if<const DIE *>(&OffsetVal))
-      return (*TDie)->getOffset();
+    assert(std::holds_alternative<uint64_t>(OffsetVal) &&
+           "Accessing DIE Offset before normalizing.");
     return std::get<uint64_t>(OffsetVal);
   }
   unsigned getDieTag() const { return Tag; }
   unsigned getUnitID() const { return UnitID; }
-  void normalizeDIEToOffset() { OffsetVal = getDieOffset(); }
+  void normalizeDIEToOffset() {
+    assert(std::holds_alternative<const DIE *>(OffsetVal) &&
+           "Accessing offset after normalizing.");
+    OffsetVal = std::get<const DIE *>(OffsetVal)->getOffset();
+  }
 
 protected:
   std::variant<const DIE *, uint64_t> OffsetVal;

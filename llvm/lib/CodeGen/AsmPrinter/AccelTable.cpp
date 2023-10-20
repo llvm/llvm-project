@@ -219,10 +219,6 @@ class Dwarf5AccelTableWriter : public AccelTableWriter {
   MCSymbol *AbbrevEnd = Asm->createTempSymbol("names_abbrev_end");
   MCSymbol *EntryPool = Asm->createTempSymbol("names_entries");
 
-  /// Iterates over all the entries and if it contains a DIE replaces it with an
-  /// offset.
-  void normalizeOffsets();
-
   DenseSet<uint32_t> getUniqueTags() const;
 
   // Right now, we emit uniform attributes for all tags.
@@ -399,16 +395,6 @@ void Dwarf5AccelTableWriter<DataT>::Header::emit(Dwarf5AccelTableWriter &Ctx) {
 }
 
 template <typename DataT>
-void Dwarf5AccelTableWriter<DataT>::normalizeOffsets() {
-  for (auto &Bucket : Contents.getBuckets()) {
-    for (auto *Hash : Bucket) {
-      for (auto *Value : Hash->Values) {
-        static_cast<DataT *>(Value)->normalizeDIEToOffset();
-      }
-    }
-  }
-}
-template <typename DataT>
 DenseSet<uint32_t> Dwarf5AccelTableWriter<DataT>::getUniqueTags() const {
   DenseSet<uint32_t> UniqueTags;
   for (auto &Bucket : Contents.getBuckets()) {
@@ -537,7 +523,6 @@ Dwarf5AccelTableWriter<DataT>::Dwarf5AccelTableWriter(
       Header(CompUnits.size(), Contents.getBucketCount(),
              Contents.getUniqueNameCount()),
       CompUnits(CompUnits), getCUIndexForEntry(std::move(getCUIndexForEntry)) {
-  normalizeOffsets();
   DenseSet<uint32_t> UniqueTags = getUniqueTags();
   SmallVector<AttributeEncoding, 2> UniformAttributes = getUniformAttributes();
 

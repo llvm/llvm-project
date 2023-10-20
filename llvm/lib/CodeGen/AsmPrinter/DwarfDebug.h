@@ -542,6 +542,10 @@ private:
 
   void finishSubprogramDefinitions();
 
+  /// Finalizes DWARF acceleration tables.
+  /// Currently it converts DIE entries to offsets in .debu_names entry.
+  void finalizeAccelerationTables();
+
   /// Finish off debug information after all functions have been
   /// processed.
   void finalizeModuleInfo();

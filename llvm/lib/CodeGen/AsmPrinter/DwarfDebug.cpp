@@ -1246,6 +1246,14 @@ void DwarfDebug::finishSubprogramDefinitions() {
   }
 }
 
+void DwarfDebug::finalizeAccelerationTables() {
+  for (auto &Entry : AccelDebugNames.getEntries()) {
+    for (AccelTableData *Value : Entry.second.Values) {
+      static_cast<DWARF5AccelTableData *>(Value)->normalizeDIEToOffset();
+    }
+  }
+}
+
 void DwarfDebug::finalizeModuleInfo() {
   const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
 
@@ -1389,6 +1397,10 @@ void DwarfDebug::finalizeModuleInfo() {
   InfoHolder.computeSizeAndOffsets();
   if (useSplitDwarf())
     SkeletonHolder.computeSizeAndOffsets();
+
+  // Now that offsets are computed, can replace DIEs in debug_names Entry with
+  // an actual offset.
+  finalizeAccelerationTables();
 }
 
 // Emit all Dwarf sections that should come after the content.
