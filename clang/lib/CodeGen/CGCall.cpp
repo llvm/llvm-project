@@ -3447,9 +3447,9 @@ static llvm::Value *tryRemoveRetainOfSelf(CodeGenFunction &CGF,
   const VarDecl *self = method->getSelfDecl();
   if (!self->getType().isConstQualified()) return nullptr;
 
-  // Look for a retain call. Note: stripPointerCasts looks through returned arg
-  // functions, which would cause us to miss the retain.
-  llvm::CallInst *retainCall = dyn_cast<llvm::CallInst>(result);
+  // Look for a retain call.
+  llvm::CallInst *retainCall =
+    dyn_cast<llvm::CallInst>(result->stripPointerCasts());
   if (!retainCall || retainCall->getCalledOperand() !=
                          CGF.CGM.getObjCEntrypoints().objc_retain)
     return nullptr;

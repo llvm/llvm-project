@@ -66,15 +66,20 @@ void stmt_expr() {
   })));
 }
 
-void vla(bool b) {
+void vla(bool b) { // expected-note 5{{declared here}}
   static_assert(noexcept(static_cast<int(*)[true ? 41 : 42]>(0)), "");
   // FIXME: This can't actually throw, but we conservatively assume any VLA
   // type can throw for now.
-  static_assert(!noexcept(static_cast<int(*)[b ? 41 : 42]>(0)), "");
-  static_assert(!noexcept(static_cast<int(*)[b ? throw : 42]>(0)), "");
-  static_assert(!noexcept(reinterpret_cast<int(*)[b ? throw : 42]>(0)), "");
-  static_assert(!noexcept((int(*)[b ? throw : 42])0), "");
-  static_assert(!noexcept((int(*)[b ? throw : 42]){0}), "");
+  static_assert(!noexcept(static_cast<int(*)[b ? 41 : 42]>(0)), "");         // expected-warning {{variable length arrays in C++ are a Clang extension}} \
+                                                                                expected-note {{function parameter 'b' with unknown value cannot be used in a constant expression}}
+  static_assert(!noexcept(static_cast<int(*)[b ? throw : 42]>(0)), "");      // expected-warning {{variable length arrays in C++ are a Clang extension}} \
+                                                                                expected-note {{function parameter 'b' with unknown value cannot be used in a constant expression}}
+  static_assert(!noexcept(reinterpret_cast<int(*)[b ? throw : 42]>(0)), ""); // expected-warning {{variable length arrays in C++ are a Clang extension}} \
+                                                                                expected-note {{function parameter 'b' with unknown value cannot be used in a constant expression}}
+  static_assert(!noexcept((int(*)[b ? throw : 42])0), "");                   // expected-warning {{variable length arrays in C++ are a Clang extension}} \
+                                                                                expected-note {{function parameter 'b' with unknown value cannot be used in a constant expression}}
+  static_assert(!noexcept((int(*)[b ? throw : 42]){0}), "");                 // expected-warning {{variable length arrays in C++ are a Clang extension}} \
+                                                                                expected-note {{function parameter 'b' with unknown value cannot be used in a constant expression}}
 }
 
 struct pr_44514 {
