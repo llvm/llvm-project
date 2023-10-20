@@ -312,10 +312,18 @@ LogicalResult tosa::AvgPool2dOp::verify() {
 LogicalResult tosa::ClampOp::verify() {
   mlir::Type inputETy =
       llvm::cast<ShapedType>(getInput().getType()).getElementType();
+  if (auto quantType =
+          llvm::dyn_cast<mlir::quant::UniformQuantizedType>(inputETy)) {
+    inputETy = quantType.getStorageType();
+  }
   mlir::Type maxFpType = getMaxFpAttr().getType();
   mlir::Type minFpType = getMinFpAttr().getType();
   mlir::Type outputETy =
       llvm::cast<ShapedType>(getOutput().getType()).getElementType();
+  if (auto quantType =
+          llvm::dyn_cast<mlir::quant::UniformQuantizedType>(outputETy)) {
+    outputETy = quantType.getStorageType();
+  }
   unsigned dataTypeBitWidth = inputETy.getIntOrFloatBitWidth();
 
   if (inputETy != outputETy)
@@ -1101,7 +1109,7 @@ LogicalResult tosa::ScatterOp::inferReturnTypeComponents(
 static LogicalResult ReduceInferReturnTypes(
     ShapeAdaptor operandShape, Type inputType, IntegerAttr axis,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
-  if (!operandShape.hasRank()) {
+  if (!operandShape.hasRank() || operandShape.getRank() == 0) {
     inferredReturnShapes.push_back(ShapedTypeComponents(inputType));
     return success();
   }

@@ -4234,6 +4234,19 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
       return Style.SpaceBeforeParensOptions.AfterIfMacros ||
              spaceRequiredBeforeParens(Right);
     }
+    if (Style.SpaceBeforeParens == FormatStyle::SBPO_Custom &&
+        Left.isOneOf(tok::kw_new, tok::kw_delete) &&
+        Right.isNot(TT_OverloadedOperatorLParen) &&
+        !(Line.MightBeFunctionDecl && Left.is(TT_FunctionDeclarationName))) {
+      if (Style.SpaceBeforeParensOptions.AfterPlacementOperator ==
+              FormatStyle::SpaceBeforeParensCustom::APO_Always ||
+          (Style.SpaceBeforeParensOptions.AfterPlacementOperator ==
+               FormatStyle::SpaceBeforeParensCustom::APO_Leave &&
+           Right.hasWhitespaceBefore())) {
+        return true;
+      }
+      return false;
+    }
     if (Line.Type == LT_ObjCDecl)
       return true;
     if (Left.is(tok::semi))

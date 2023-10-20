@@ -10,6 +10,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/OwningOpRef.h"
 #include "gtest/gtest.h"
 
 using namespace mlir;
@@ -55,35 +56,50 @@ protected:
 };
 
 TEST_F(SCFLoopLikeTest, queryUnidimensionalLooplikes) {
-  Value lb = b.create<arith::ConstantIndexOp>(loc, 0);
-  Value ub = b.create<arith::ConstantIndexOp>(loc, 10);
-  Value step = b.create<arith::ConstantIndexOp>(loc, 2);
+  OwningOpRef<arith::ConstantIndexOp> lb =
+      b.create<arith::ConstantIndexOp>(loc, 0);
+  OwningOpRef<arith::ConstantIndexOp> ub =
+      b.create<arith::ConstantIndexOp>(loc, 10);
+  OwningOpRef<arith::ConstantIndexOp> step =
+      b.create<arith::ConstantIndexOp>(loc, 2);
 
-  auto forOp = b.create<scf::ForOp>(loc, lb, ub, step);
-  checkUnidimensional(forOp);
+  OwningOpRef<scf::ForOp> forOp =
+      b.create<scf::ForOp>(loc, lb.get(), ub.get(), step.get());
+  checkUnidimensional(forOp.get());
 
-  auto forallOp = b.create<scf::ForallOp>(
-      loc, ArrayRef<OpFoldResult>(lb), ArrayRef<OpFoldResult>(ub),
-      ArrayRef<OpFoldResult>(step), ValueRange(), std::nullopt);
-  checkUnidimensional(forallOp);
+  OwningOpRef<scf::ForallOp> forallOp = b.create<scf::ForallOp>(
+      loc, ArrayRef<OpFoldResult>(static_cast<Value>(lb.get())),
+      ArrayRef<OpFoldResult>(static_cast<Value>(ub.get())),
+      ArrayRef<OpFoldResult>(static_cast<Value>(step.get())), ValueRange(),
+      std::nullopt);
+  checkUnidimensional(forallOp.get());
 
-  auto parallelOp = b.create<scf::ParallelOp>(
-      loc, ValueRange(lb), ValueRange(ub), ValueRange(step), ValueRange());
-  checkUnidimensional(parallelOp);
+  OwningOpRef<scf::ParallelOp> parallelOp =
+      b.create<scf::ParallelOp>(loc, ValueRange(lb.get()), ValueRange(ub.get()),
+                                ValueRange(step.get()), ValueRange());
+  checkUnidimensional(parallelOp.get());
 }
 
 TEST_F(SCFLoopLikeTest, queryMultidimensionalLooplikes) {
-  Value lb = b.create<arith::ConstantIndexOp>(loc, 0);
-  Value ub = b.create<arith::ConstantIndexOp>(loc, 10);
-  Value step = b.create<arith::ConstantIndexOp>(loc, 2);
+  OwningOpRef<arith::ConstantIndexOp> lb =
+      b.create<arith::ConstantIndexOp>(loc, 0);
+  OwningOpRef<arith::ConstantIndexOp> ub =
+      b.create<arith::ConstantIndexOp>(loc, 10);
+  OwningOpRef<arith::ConstantIndexOp> step =
+      b.create<arith::ConstantIndexOp>(loc, 2);
+  auto lbValue = static_cast<Value>(lb.get());
+  auto ubValue = static_cast<Value>(ub.get());
+  auto stepValue = static_cast<Value>(step.get());
 
-  auto forallOp = b.create<scf::ForallOp>(
-      loc, ArrayRef<OpFoldResult>({lb, lb}), ArrayRef<OpFoldResult>({ub, ub}),
-      ArrayRef<OpFoldResult>({step, step}), ValueRange(), std::nullopt);
-  checkMultidimensional(forallOp);
+  OwningOpRef<scf::ForallOp> forallOp =
+      b.create<scf::ForallOp>(loc, ArrayRef<OpFoldResult>({lbValue, lbValue}),
+                              ArrayRef<OpFoldResult>({ubValue, ubValue}),
+                              ArrayRef<OpFoldResult>({stepValue, stepValue}),
+                              ValueRange(), std::nullopt);
+  checkMultidimensional(forallOp.get());
 
-  auto parallelOp =
-      b.create<scf::ParallelOp>(loc, ValueRange({lb, lb}), ValueRange({ub, ub}),
-                                ValueRange({step, step}), ValueRange());
-  checkMultidimensional(parallelOp);
+  OwningOpRef<scf::ParallelOp> parallelOp = b.create<scf::ParallelOp>(
+      loc, ValueRange({lbValue, lbValue}), ValueRange({ubValue, ubValue}),
+      ValueRange({stepValue, stepValue}), ValueRange());
+  checkMultidimensional(parallelOp.get());
 }
