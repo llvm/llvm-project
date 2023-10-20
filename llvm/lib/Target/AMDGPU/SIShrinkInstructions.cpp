@@ -425,6 +425,10 @@ void SIShrinkInstructions::shrinkMadFma(MachineInstr &MI) const {
       NewOpcode = ST->hasTrue16BitInsts() ? AMDGPU::V_FMAAK_F16_t16
                                           : AMDGPU::V_FMAAK_F16;
       break;
+    case AMDGPU::V_FMA_F64_e64:
+      if (ST->hasFmaakFmamkF64Insts())
+        NewOpcode = AMDGPU::V_FMAAK_F64;
+      break;
     }
   }
 
@@ -453,6 +457,10 @@ void SIShrinkInstructions::shrinkMadFma(MachineInstr &MI) const {
     case AMDGPU::V_FMA_F16_gfx9_e64:
       NewOpcode = ST->hasTrue16BitInsts() ? AMDGPU::V_FMAMK_F16_t16
                                           : AMDGPU::V_FMAMK_F16;
+      break;
+    case AMDGPU::V_FMA_F64_e64:
+      if (ST->hasFmaakFmamkF64Insts())
+        NewOpcode = AMDGPU::V_FMAMK_F64;
       break;
     }
   }
@@ -894,7 +902,9 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
           MI.getOpcode() == AMDGPU::V_FMA_F32_e64 ||
           MI.getOpcode() == AMDGPU::V_MAD_F16_e64 ||
           MI.getOpcode() == AMDGPU::V_FMA_F16_e64 ||
-          MI.getOpcode() == AMDGPU::V_FMA_F16_gfx9_e64) {
+          MI.getOpcode() == AMDGPU::V_FMA_F16_gfx9_e64 ||
+          (MI.getOpcode() == AMDGPU::V_FMA_F64_e64 &&
+           ST->hasFmaakFmamkF64Insts())) {
         shrinkMadFma(MI);
         continue;
       }
