@@ -89,6 +89,34 @@ _LIBCPP_HIDE_FROM_ABI void __throw_bad_expected_access(_Arg&& __arg) {
 #  endif
 }
 
+template <size_t __Padding>
+struct __expected_padding {
+  using type = char[__Padding];
+};
+
+template <>
+struct __expected_padding<0> {
+  using type = struct {};
+};
+
+template <class _Union>
+_LIBCPP_HIDE_FROM_ABI constexpr size_t __expected_calculate_padding() {
+  struct __calc_expected {
+    _LIBCPP_NO_UNIQUE_ADDRESS _Union __union_;
+    bool __has_val_;
+  };
+
+  size_t __datasize = __libcpp_datasizeof<__calc_expected>::value;
+  return sizeof(_Union) < __datasize ? 0 : sizeof(_Union) - __datasize;
+}
+
+// An object of this type must be the last member of the `expected` class to
+// ensure `expected`'s datasize is large enough to fit the parameter type(s).
+// It should be value-initialized so it is safe to copy when `expected`'s
+// copy operators are invoked.
+template <typename _Union>
+using __expected_padding_t = __expected_padding<__expected_calculate_padding<_Union>()>::type;
+
 template <class _Tp, class _Err>
 class expected {
   static_assert(!is_reference_v<_Tp> && !is_function_v<_Tp> && !is_same_v<remove_cv_t<_Tp>, in_place_t> &&
@@ -913,17 +941,9 @@ private:
     _LIBCPP_NO_UNIQUE_ADDRESS _ErrorType __unex_;
   };
 
-  _LIBCPP_HIDE_FROM_ABI static constexpr auto __calculate_padding() {
-    struct __calc_expected {
-      _LIBCPP_NO_UNIQUE_ADDRESS __union_t<_Tp, _Err> __union_;
-      bool __has_val_;
-    };
-    return sizeof(__calc_expected) - __libcpp_datasizeof<__calc_expected>::value;
-  }
-
   _LIBCPP_NO_UNIQUE_ADDRESS __union_t<_Tp, _Err> __union_;
-  bool __has_val_;
-  char __padding_[__calculate_padding()]{};
+  _LIBCPP_NO_UNIQUE_ADDRESS bool __has_val_;
+  _LIBCPP_NO_UNIQUE_ADDRESS __expected_padding_t<__union_t<_Tp, _Err>> __padding_{};
 };
 
 template <class _Tp, class _Err>
@@ -1514,17 +1534,9 @@ private:
     _LIBCPP_NO_UNIQUE_ADDRESS _ErrorType __unex_;
   };
 
-  _LIBCPP_HIDE_FROM_ABI static constexpr auto __calculate_padding() {
-    struct __calc_expected {
-      _LIBCPP_NO_UNIQUE_ADDRESS __union_t<_Err> __union_;
-      bool __has_val_;
-    };
-    return sizeof(__calc_expected) - __libcpp_datasizeof<__calc_expected>::value;
-  }
-
   _LIBCPP_NO_UNIQUE_ADDRESS __union_t<_Err> __union_;
-  bool __has_val_;
-  char __padding_[__calculate_padding()]{};
+  _LIBCPP_NO_UNIQUE_ADDRESS bool __has_val_;
+  _LIBCPP_NO_UNIQUE_ADDRESS __expected_padding_t<__union_t<_Err>> __padding_{};
 };
 
 _LIBCPP_END_NAMESPACE_STD
