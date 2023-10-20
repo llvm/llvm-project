@@ -791,7 +791,8 @@ def IfOp : SCF_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
 def ParallelOp : SCF_Op<"parallel",
     [AutomaticAllocationScope,
      AttrSizedOperandSegments,
-     DeclareOpInterfaceMethods<LoopLikeOpInterface>,
+     DeclareOpInterfaceMethods<LoopLikeOpInterface, ["getSingleInductionVar",
+          "getSingleLowerBound", "getSingleUpperBound", "getSingleStep"]>,
      RecursiveMemoryEffects,
      DeclareOpInterfaceMethods<RegionBranchOpInterface>,
      SingleBlockImplicitTerminator<"scf::YieldOp">]> {
