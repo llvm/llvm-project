@@ -89,8 +89,8 @@ RenameOccurrences::createSourceReplacements(RefactoringRuleContext &Context) {
 
 Expected<QualifiedRenameRule>
 QualifiedRenameRule::initiate(RefactoringRuleContext &Context,
-                              std::string OldQualifiedName,
-                              std::string NewQualifiedName) {
+                              const std::string &OldQualifiedName,
+                              std::string &&NewQualifiedName) {
   const NamedDecl *ND =
       getNamedDeclFor(Context.getASTContext(), OldQualifiedName);
   if (!ND)
