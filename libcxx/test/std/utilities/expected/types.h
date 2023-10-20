@@ -110,7 +110,7 @@ struct TrackedMove {
 // the case where the "has value" flag is an overlapping subobject correctly.
 //
 // See https://github.com/llvm/llvm-project/issues/68552 for details.
-template <int c>
+template <int constant>
 struct TailClobberer {
   constexpr TailClobberer() {
     if (!std::is_constant_evaluated()) {
