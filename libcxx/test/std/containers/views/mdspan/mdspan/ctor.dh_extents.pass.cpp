@@ -31,7 +31,7 @@
 #include "test_macros.h"
 
 #include "../MinimalElementType.h"
-#include "CustomTestLayouts.h"
+#include "../CustomTestLayouts.h"
 #include "CustomTestAccessors.h"
 
 template <bool mec, bool ac, class H, class M, class A>
