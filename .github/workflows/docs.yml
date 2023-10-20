@@ -25,6 +25,9 @@ jobs:
     name: "Test documentation build"
     runs-on: ubuntu-latest
     steps:
+      # Get changed files before we do a checkout to force the action to use
+      # the GH API to look for changed files and avoid an expensive partial
+      # fetch operation.
       - name: Get subprojects that have doc changes
         id: docs-changed-subprojects
         uses: tj-actions/changed-files@v39
