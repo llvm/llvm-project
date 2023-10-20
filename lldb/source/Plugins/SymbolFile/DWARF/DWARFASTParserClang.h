@@ -218,6 +218,10 @@ protected:
   // module.
   lldb::ModuleSP GetModuleForType(const DWARFDIE &die);
 
+  static bool classof(const DWARFASTParser *Parser) {
+    return Parser->GetKind() == Kind::DWARFASTParserClang;
+  }
+
 private:
   struct FieldInfo {
     uint64_t bit_size = 0;
