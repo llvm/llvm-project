@@ -3120,6 +3120,81 @@ TEST_F(DIExpressionTest, get) {
   EXPECT_EQ(N0WithPrependedOps, N2);
 }
 
+TEST_F(DIExpressionTest, optimize) {
+  // Test appending a {dwarf::DW_OP_constu, <const>, DW_OP_plus} to a DW_OP_plus
+  // expression
+  uint64_t Ops[] = {dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_constu, 2,
+                    dwarf::DW_OP_plus};
+  auto *Expr = DIExpression::get(Context, Ops);
+  uint64_t AppendOps[] = {dwarf::DW_OP_constu, 3, dwarf::DW_OP_plus};
+  auto *AppendExpr = DIExpression::append(Expr, AppendOps);
+  uint64_t OpsRes[] = {dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_constu, 5,
+                       dwarf::DW_OP_plus};
+  auto *ResExpr = DIExpression::get(Context, OpsRes);
+  EXPECT_EQ(ResExpr, AppendExpr);
+
+  // Test appending a {dwarf::DW_OP_plus_uconst, <const>} to a DW_OP_plus
+  // expression
+  uint64_t PlusUConstOps[] = {dwarf::DW_OP_plus_uconst, 3};
+  AppendExpr = DIExpression::append(Expr, PlusUConstOps);
+  EXPECT_EQ(ResExpr, AppendExpr);
+
+  // Test appending a {dwarf::DW_OP_constu, 0, DW_OP_plus} to an expression
+  AppendOps[1] = 0;
+  AppendExpr = DIExpression::append(Expr, AppendOps);
+  OpsRes[3] = Ops[3];
+  ResExpr = DIExpression::get(Context, OpsRes);
+  EXPECT_EQ(ResExpr, AppendExpr);
+
+  // Test appending a {dwarf::DW_OP_constu, 0, DW_OP_minus} to an expression
+  AppendOps[2] = dwarf::DW_OP_minus;
+  AppendExpr = DIExpression::append(Expr, AppendOps);
+  OpsRes[3] = Ops[3];
+  ResExpr = DIExpression::get(Context, OpsRes);
+  EXPECT_EQ(ResExpr, AppendExpr);
+
+  // Test appending a {dwarf::DW_OP_constu, 0, DW_OP_shl} to an expression
+  AppendOps[2] = dwarf::DW_OP_shl;
+  AppendExpr = DIExpression::append(Expr, AppendOps);
+  OpsRes[3] = Ops[3];
+  ResExpr = DIExpression::get(Context, OpsRes);
+  EXPECT_EQ(ResExpr, AppendExpr);
+
+  // Test appending a {dwarf::DW_OP_constu, 0, DW_OP_shr} to an expression
+  AppendOps[2] = dwarf::DW_OP_shr;
+  AppendExpr = DIExpression::append(Expr, AppendOps);
+  OpsRes[3] = Ops[3];
+  ResExpr = DIExpression::get(Context, OpsRes);
+  EXPECT_EQ(ResExpr, AppendExpr);
+
+  // Test appending a {dwarf::DW_OP_constu, <const>, DW_OP_mul} to a DW_OP_mul
+  // expression
+  Ops[4] = dwarf::DW_OP_mul;
+  Expr = DIExpression::get(Context, Ops);
+  AppendOps[1] = 3;
+  AppendOps[2] = dwarf::DW_OP_mul;
+  AppendExpr = DIExpression::append(Expr, AppendOps);
+  OpsRes[3] = 6;
+  OpsRes[4] = dwarf::DW_OP_mul;
+  ResExpr = DIExpression::get(Context, OpsRes);
+  EXPECT_EQ(ResExpr, AppendExpr);
+
+  // Test appending a {dwarf::DW_OP_constu, 1, DW_OP_mul} to an expression
+  AppendOps[1] = 1;
+  AppendExpr = DIExpression::append(Expr, AppendOps);
+  OpsRes[3] = Ops[3];
+  ResExpr = DIExpression::get(Context, OpsRes);
+  EXPECT_EQ(ResExpr, AppendExpr);
+
+  // Test appending a {dwarf::DW_OP_constu, 1, DW_OP_div} to an expression
+  AppendOps[1] = 1;
+  AppendOps[2] = dwarf::DW_OP_div;
+  AppendExpr = DIExpression::append(Expr, AppendOps);
+  OpsRes[3] = Ops[3];
+  ResExpr = DIExpression::get(Context, OpsRes);
+  EXPECT_EQ(ResExpr, AppendExpr);
+}
+
 TEST_F(DIExpressionTest, isValid) {
 #define EXPECT_VALID(...)                                                      \
   do {                                                                         \

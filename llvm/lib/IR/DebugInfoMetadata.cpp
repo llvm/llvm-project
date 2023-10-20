@@ -1983,19 +1983,19 @@ DIExpression *DIExpression::append(const DIExpression *Expr,
 
   // Copy Expr's current op list.
   SmallVector<uint64_t, 16> NewOps;
+  DIExpressionOptimizer Optimizer;
   for (auto Op : Expr->expr_ops()) {
     // Append new opcodes before DW_OP_{stack_value, LLVM_fragment}.
     if (Op.getOp() == dwarf::DW_OP_stack_value ||
         Op.getOp() == dwarf::DW_OP_LLVM_fragment) {
-      NewOps.append(Ops.begin(), Ops.end());
+      Optimizer.optimize(NewOps, Ops);
 
       // Ensure that the new opcodes are only appended once.
       Ops = std::nullopt;
     }
     Op.appendToVector(NewOps);
   }
-
-  NewOps.append(Ops.begin(), Ops.end());
+  Optimizer.optimize(NewOps, Ops);
   auto *result = DIExpression::get(Expr->getContext(), NewOps);
   assert(result->isValid() && "concatenated expression is not valid");
   return result;
