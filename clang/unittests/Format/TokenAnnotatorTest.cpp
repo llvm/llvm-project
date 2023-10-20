@@ -2334,6 +2334,16 @@ TEST_F(TokenAnnotatorTest, UnderstandsControlStatements) {
   EXPECT_TOKEN(Tokens[5], tok::r_brace, TT_ControlStatementRBrace);
 }
 
+TEST_F(TokenAnnotatorTest, UnderstandsDoWhile) {
+  auto Tokens = annotate("do { ++i; } while ( i > 5 );");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::kw_while, TT_DoWhile);
+
+  Tokens = annotate("do ++i; while ( i > 5 );");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::kw_while, TT_DoWhile);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang
