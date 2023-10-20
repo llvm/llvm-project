@@ -229,12 +229,6 @@ buffer_wbinvl1
 flat_atomic_csub v1, v[0:1], v2 offset:64 th:TH_ATOMIC_RETURN
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid instruction
 
-flat_atomic_csub_u32 v[0:1], v2 offset:64
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand
-
-flat_atomic_sub_clamp_u32 v[0:1], v2 offset:64
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand
-
 ds_add_f32 v255, v255 offset:4 gds
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: gds modifier is not supported on this GPU
 

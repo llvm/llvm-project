@@ -8,7 +8,7 @@
 // RUN: %clang --target=i686-pc-openbsd -pg -pthread -### %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PG %s
 // CHECK-PG: "-cc1" "-triple" "i686-pc-openbsd"
-// CHECK-PG: ld{{.*}}" "-e" "__start" "--eh-frame-hdr" "-Bdynamic" "-dynamic-linker" "{{.*}}ld.so" "-nopie" "-o" "a.out" "{{.*}}gcrt0.o" "{{.*}}crtbegin.o" "{{.*}}.o" "-lcompiler_rt" "-lpthread_p" "-lc_p" "-lcompiler_rt" "{{.*}}crtend.o"
+// CHECK-PG: ld{{.*}}" "-e" "__start" "--eh-frame-hdr" "-dynamic-linker" "{{.*}}ld.so" "-nopie" "-o" "a.out" "{{.*}}gcrt0.o" "{{.*}}crtbegin.o" "{{.*}}.o" "-lcompiler_rt" "-lpthread_p" "-lc_p" "-lcompiler_rt" "{{.*}}crtend.o"
 
 // Check CPU type for i386
 // RUN: %clang --target=i386-unknown-openbsd -### -c %s 2>&1 \
@@ -34,18 +34,19 @@
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64-LD %s
 // RUN: %clang --target=mips64el-unknown-openbsd -### %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64EL-LD %s
-// CHECK-LD-R:     "-r"
+// CHECK-LD-R-NOT: "-e"
 // CHECK-LD-R-NOT: "-dynamic-linker"
 // CHECK-LD-R-NOT: "-l
 // CHECK-LD-R-NOT: crt{{[^./\\]+}}.o
+// CHECK-LD-R:     "-r"
 // CHECK-LD-S: "-cc1" "-triple" "i686-pc-openbsd"
-// CHECK-LD-S: ld{{.*}}" "-e" "__start" "--eh-frame-hdr" "-Bdynamic" "-dynamic-linker" "{{.*}}ld.so" "-o" "a.out" "{{.*}}crt0.o" "{{.*}}crtbegin.o" "-L{{.*}}" "-s" "{{.*}}.o" "-lcompiler_rt" "-lc" "-lcompiler_rt" "{{.*}}crtend.o"
+// CHECK-LD-S: ld{{.*}}" "-e" "__start" "--eh-frame-hdr" "-dynamic-linker" "{{.*}}ld.so" "-o" "a.out" "{{.*}}crt0.o" "{{.*}}crtbegin.o" "-L{{.*}}" "-s" "{{.*}}.o" "-lcompiler_rt" "-lc" "-lcompiler_rt" "{{.*}}crtend.o"
 // CHECK-LD-T: "-cc1" "-triple" "i686-pc-openbsd"
-// CHECK-LD-T: ld{{.*}}" "-e" "__start" "--eh-frame-hdr" "-Bdynamic" "-dynamic-linker" "{{.*}}ld.so" "-o" "a.out" "{{.*}}crt0.o" "{{.*}}crtbegin.o" "-L{{.*}}" "-t" "{{.*}}.o" "-lcompiler_rt" "-lc" "-lcompiler_rt" "{{.*}}crtend.o"
+// CHECK-LD-T: ld{{.*}}" "-e" "__start" "--eh-frame-hdr" "-dynamic-linker" "{{.*}}ld.so" "-o" "a.out" "{{.*}}crt0.o" "{{.*}}crtbegin.o" "-L{{.*}}" "-t" "{{.*}}.o" "-lcompiler_rt" "-lc" "-lcompiler_rt" "{{.*}}crtend.o"
 // CHECK-MIPS64-LD: "-cc1" "-triple" "mips64-unknown-openbsd"
-// CHECK-MIPS64-LD: ld{{.*}}" "-EB" "-e" "__start" "--eh-frame-hdr" "-Bdynamic" "-dynamic-linker" "{{.*}}ld.so" "-o" "a.out" "{{.*}}crt0.o" "{{.*}}crtbegin.o" "-L{{.*}}" "{{.*}}.o" "-lcompiler_rt" "-lc" "-lcompiler_rt" "{{.*}}crtend.o"
+// CHECK-MIPS64-LD: ld{{.*}}" "-EB" "-e" "__start" "--eh-frame-hdr" "-dynamic-linker" "{{.*}}ld.so" "-o" "a.out" "{{.*}}crt0.o" "{{.*}}crtbegin.o" "-L{{.*}}" "{{.*}}.o" "-lcompiler_rt" "-lc" "-lcompiler_rt" "{{.*}}crtend.o"
 // CHECK-MIPS64EL-LD: "-cc1" "-triple" "mips64el-unknown-openbsd"
-// CHECK-MIPS64EL-LD: ld{{.*}}" "-EL" "-e" "__start" "--eh-frame-hdr" "-Bdynamic" "-dynamic-linker" "{{.*}}ld.so" "-o" "a.out" "{{.*}}crt0.o" "{{.*}}crtbegin.o" "-L{{.*}}" "{{.*}}.o" "-lcompiler_rt" "-lc" "-lcompiler_rt" "{{.*}}crtend.o"
+// CHECK-MIPS64EL-LD: ld{{.*}}" "-EL" "-e" "__start" "--eh-frame-hdr" "-dynamic-linker" "{{.*}}ld.so" "-o" "a.out" "{{.*}}crt0.o" "{{.*}}crtbegin.o" "-L{{.*}}" "{{.*}}.o" "-lcompiler_rt" "-lc" "-lcompiler_rt" "{{.*}}crtend.o"
 
 // Check that --sysroot is passed to the linker
 // RUN: %clang --target=i686-pc-openbsd -### %s 2>&1 \

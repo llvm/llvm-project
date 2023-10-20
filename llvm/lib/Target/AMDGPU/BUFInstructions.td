@@ -1129,14 +1129,9 @@ defm BUFFER_ATOMIC_DEC_X2 : MUBUF_Pseudo_Atomics <
 >;
 
 let SubtargetPredicate = HasGFX10_BEncoding in {
-  defm BUFFER_ATOMIC_CSUB : MUBUF_Pseudo_Atomics_RTN <
+  defm BUFFER_ATOMIC_CSUB : MUBUF_Pseudo_Atomics <
     "buffer_atomic_csub", VGPR_32, i32, int_amdgcn_global_atomic_csub
   >;
-
-  let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
-    defm BUFFER_ATOMIC_CSUB : MUBUF_Pseudo_Atomics_NO_RTN <
-      "buffer_atomic_csub", VGPR_32, i32
-    >;
 }
 
 let SubtargetPredicate = isGFX8GFX9 in {
@@ -1729,7 +1724,11 @@ let SubtargetPredicate = HasAtomicCSubNoRtnInsts in
 defm : SIBufferAtomicPat<"SIbuffer_atomic_csub", i32, "BUFFER_ATOMIC_CSUB", ["noret"]>;
 
 let SubtargetPredicate = isGFX12Plus in {
-  defm : SIBufferAtomicPat_Common<"SIbuffer_atomic_cond_sub_u32", i32, "BUFFER_ATOMIC_COND_SUB_U32_VBUFFER">;
+  defm : SIBufferAtomicPat_Common<"SIbuffer_atomic_cond_sub_u32", i32, "BUFFER_ATOMIC_COND_SUB_U32_VBUFFER", ["ret"]>;
+
+  let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
+  defm : SIBufferAtomicPat_Common<"SIbuffer_atomic_cond_sub_u32", i32, "BUFFER_ATOMIC_COND_SUB_U32_VBUFFER", ["noret"]>;
+
   defm : SIBufferAtomicPat_Common<"SIbuffer_atomic_fadd_bf16", v2i16, "BUFFER_ATOMIC_PK_ADD_BF16_VBUFFER">;
 }
 
