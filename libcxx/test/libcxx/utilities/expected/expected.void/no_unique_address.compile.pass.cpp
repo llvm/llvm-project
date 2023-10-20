@@ -13,6 +13,7 @@
 // test [[no_unique_address]] is applied to the union
 
 #include <expected>
+#include <memory>
 
 struct Empty {};
 
