@@ -5119,7 +5119,9 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
   if (Left.IsUnterminatedLiteral)
     return true;
   if (Right.is(tok::lessless) && Right.Next && Left.is(tok::string_literal) &&
-      Right.Next->is(tok::string_literal)) {
+      Right.Next->is(tok::string_literal) &&
+      (Style.BreakBeforeBinaryOperators == FormatStyle::BOS_All ||
+       Style.BreakBeforeBinaryOperators == FormatStyle::BOS_NonAssignment)) {
     return true;
   }
   if (Right.is(TT_RequiresClause)) {
