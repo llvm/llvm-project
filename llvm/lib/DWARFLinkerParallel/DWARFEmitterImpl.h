@@ -87,7 +87,7 @@ public:
   uint64_t getDebugInfoSectionSize() const { return DebugInfoSectionSize; }
 
   /// Emits .debug_names section according to the specified \p Table.
-  void emitDebugNames(AccelTable<DWARF5AccelTableStaticData> &Table,
+  void emitDebugNames(DWARF5AccelTable &Table,
                       DebugNamesUnitsOffsets &CUOffsets,
                       CompUnitIDToIdx &UnitIDToIdxMap);
 

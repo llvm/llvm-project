@@ -1246,7 +1246,10 @@ void DwarfDebug::finishSubprogramDefinitions() {
   }
 }
 
-void DwarfDebug::finalizeAccelerationTables() {
+/// Finalizes DWARF acceleration tables.
+/// Currently it converts DIE entries to offsets in .debu_names entry.
+static void
+finalizeDWARF5AccelerationTables(DWARF5AccelTable &AccelDebugNames) {
   for (auto &Entry : AccelDebugNames.getEntries()) {
     for (AccelTableData *Value : Entry.second.Values) {
       static_cast<DWARF5AccelTableData *>(Value)->normalizeDIEToOffset();
@@ -1400,7 +1403,7 @@ void DwarfDebug::finalizeModuleInfo() {
 
   // Now that offsets are computed, can replace DIEs in debug_names Entry with
   // an actual offset.
-  finalizeAccelerationTables();
+  finalizeDWARF5AccelerationTables(AccelDebugNames);
 }
 
 // Emit all Dwarf sections that should come after the content.

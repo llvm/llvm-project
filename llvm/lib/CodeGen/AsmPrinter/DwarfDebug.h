@@ -496,7 +496,7 @@ private:
   AddressPool AddrPool;
 
   /// Accelerator tables.
-  AccelTable<DWARF5AccelTableData> AccelDebugNames;
+  DWARF5AccelTable AccelDebugNames;
   AccelTable<AppleAccelTableOffsetData> AccelNames;
   AccelTable<AppleAccelTableOffsetData> AccelObjC;
   AccelTable<AppleAccelTableOffsetData> AccelNamespace;
@@ -541,10 +541,6 @@ private:
   void finishEntityDefinitions();
 
   void finishSubprogramDefinitions();
-
-  /// Finalizes DWARF acceleration tables.
-  /// Currently it converts DIE entries to offsets in .debu_names entry.
-  void finalizeAccelerationTables();
 
   /// Finish off debug information after all functions have been
   /// processed.
