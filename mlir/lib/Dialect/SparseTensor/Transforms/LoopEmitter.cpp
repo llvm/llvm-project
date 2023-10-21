@@ -422,10 +422,19 @@ void LoopEmitter::initializeLoopEmit(
     // FIXME: the definition of `lvlRank` looks more like a dim-rank;
     // but the variable is used as a level everywhere below, which
     // suggests there may be some dim/lvl confusion going on here.
-    const Level lvlRank = rtp.getRank();
+    auto stt = getSparseTensorType(tensor);
+    const Level lvlRank = stt.getLvlRank();
     const auto shape = rtp.getShape();
     const auto enc = getSparseTensorEncoding(rtp);
     const Level cooStart = enc ? getCOOStart(enc) : lvlRank;
+
+    SmallVector<Value> dimSz;
+    for (Dimension d = 0; d < stt.getDimRank(); d++)
+      dimSz.push_back(linalg::createOrFoldDimOp(builder, loc, tensor, d));
+
+    ValueRange lvlSzs =
+        enc.translateCrds(builder, loc, dimSz, CrdTransDirectionKind::dim2lvl);
+
     // Scan all levels of current tensor.
     for (Level l = 0; l < lvlRank; l++) {
       // This should be called only once at beginning.
@@ -447,13 +456,8 @@ void LoopEmitter::initializeLoopEmit(
         assert(isDenseDLT(lvlTp));
       }
 
-      // FIXME: `toOrigDim` is deprecated.  For now this relies on the
-      // 1:1 mapping between levels and dimensions, since nowhere else
-      // in the code supports non-permutations yet either.
-      Value lvlSz = mlir::linalg::createOrFoldDimOp(builder, loc, tensor,
-                                                    toOrigDim(enc, l));
       // Find upper bound in current dimension.
-      highs[t][l] = lvlSizes[t][l] = lvlSz;
+      highs[t][l] = lvlSizes[t][l] = lvlSzs[l];
       if (isSparseSlices[t]) {
         sliceOffsets[t][l] = genSliceOffset(builder, loc, tensors[t], l);
         sliceStrides[t][l] = genSliceStride(builder, loc, tensors[t], l);
