@@ -22,7 +22,7 @@ extern "C" {
 }
 #else
 extern "C" {
-    __attribute__((weak)) __cxa_exception *__cxa_init_primary_exception(void *, std::type_info *, void(*)(void*)) throw();
+    __attribute__((weak)) __cxa_exception *__cxa_init_primary_exception(void *, std::type_info *, void(_LIBCXXABI_DTOR_FUNC*)(void*)) throw();
 }
 #endif
 
