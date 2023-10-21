@@ -1069,7 +1069,6 @@ public:
     Value input = op.getTensor();
     SmallVector<Value> reduc = op.getInitArgs();
     const auto stt = getSparseTensorType(input);
-    const Dimension dimRank = stt.getDimRank();
     const Level lvlRank = stt.getLvlRank();
 
     // Special-case: for each over a sparse constant uses its own rewriting
@@ -1103,6 +1102,7 @@ public:
     SmallVector<Value> lcvs = loopEmitter.getLoopIVs();
     if (op.getOrder()) {
       // FIXME: There is some dim/lvl confusion here since `dimRank != lvlRank`
+      const Dimension dimRank = stt.getDimRank();
       SmallVector<Value> dcvs = lcvs; // keep a copy
       for (Dimension d = 0; d < dimRank; d++) {
         auto l = op.getOrder()->getDimPosition(d);
@@ -1143,7 +1143,7 @@ public:
                                  args);
     }
 
-    for (Dimension d = 0; d < dimRank; d++) {
+    for (Level l = 0; l < lvlRank; l++) {
       // Link the reduction chain. Note that loop emitter update the reducValue
       // in place.
       loopEmitter.exitCurrentLoop(rewriter, loc, reducValue);
