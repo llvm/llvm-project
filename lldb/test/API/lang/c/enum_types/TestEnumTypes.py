@@ -22,12 +22,12 @@ class EnumTypesTestCase(TestBase):
             self, "// Breakpoint for bitfield", lldb.SBFileSpec("main.c")
         )
 
-        self.expect("fr var a", DATA_TYPES_DISPLAYED_CORRECTLY, patterns=[" = A$"])
-        self.expect("fr var b", DATA_TYPES_DISPLAYED_CORRECTLY, patterns=[" = B$"])
-        self.expect("fr var c", DATA_TYPES_DISPLAYED_CORRECTLY, patterns=[" = C$"])
-        self.expect("fr var ab", DATA_TYPES_DISPLAYED_CORRECTLY, patterns=[" = AB$"])
+        self.expect("fr var a", DATA_TYPES_DISPLAYED_CORRECTLY, patterns=[" = A\\(1\\)$"])
+        self.expect("fr var b", DATA_TYPES_DISPLAYED_CORRECTLY, patterns=[" = B\\(2\\)$"])
+        self.expect("fr var c", DATA_TYPES_DISPLAYED_CORRECTLY, patterns=[" = C\\(4\\)$"])
+        self.expect("fr var ab", DATA_TYPES_DISPLAYED_CORRECTLY, patterns=[" = AB\\(3\\)$"])
         self.expect("fr var ac", DATA_TYPES_DISPLAYED_CORRECTLY, patterns=[" = A | C$"])
-        self.expect("fr var all", DATA_TYPES_DISPLAYED_CORRECTLY, patterns=[" = ALL$"])
+        self.expect("fr var all", DATA_TYPES_DISPLAYED_CORRECTLY, patterns=[" = ALL\\(7\\)$"])
         # Test that an enum that doesn't match the heuristic we use in
         # TypeSystemClang::DumpEnumValue, gets printed as a raw integer.
         self.expect("fr var omega", DATA_TYPES_DISPLAYED_CORRECTLY, patterns=[" = 7$"])

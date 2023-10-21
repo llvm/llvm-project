@@ -8550,7 +8550,7 @@ static bool DumpEnumValue(const clang::QualType &qual_type, Stream &s,
     ++num_enumerators;
     if (val == enum_svalue) {
       // Found an exact match, that's all we need to do.
-      s.PutCString(enumerator->getNameAsString());
+      s.Printf("%s(%" PRIi64 ")", enumerator->getNameAsString().c_str(), enum_svalue);
       return true;
     }
   }

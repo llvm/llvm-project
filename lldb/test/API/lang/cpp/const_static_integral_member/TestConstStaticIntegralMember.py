@@ -57,12 +57,12 @@ class TestCase(TestBase):
         self.expect_expr("A::wchar_min == wchar_min", result_value="true")
 
         # Test an unscoped enum.
-        self.expect_expr("A::enum_val", result_value="enum_case2")
+        self.expect_expr("A::enum_val", result_value="enum_case2(2)")
         # Test an unscoped enum with bool as the underlying type.
-        self.expect_expr("A::enum_bool_val", result_value="enum_bool_case1")
+        self.expect_expr("A::enum_bool_val", result_value="enum_bool_case1(0)")
 
         # Test a scoped enum.
-        self.expect_expr("A::scoped_enum_val", result_value="scoped_enum_case2")
+        self.expect_expr("A::scoped_enum_val", result_value="scoped_enum_case2(2)")
         # Test an scoped enum with a value that isn't an enumerator.
         self.expect_expr(
             "A::not_enumerator_scoped_enum_val", result_value="scoped_enum_case1 | 0x4"
@@ -74,9 +74,9 @@ class TestCase(TestBase):
         )
 
         # Test an enum with fixed underlying type.
-        self.expect_expr("A::scoped_char_enum_val", result_value="case2")
-        self.expect_expr("A::scoped_ll_enum_val_neg", result_value="case0")
-        self.expect_expr("A::scoped_ll_enum_val", result_value="case2")
+        self.expect_expr("A::scoped_char_enum_val", result_value="case2(2)")
+        self.expect_expr("A::scoped_ll_enum_val_neg", result_value="case0(-9223372036854775808)")
+        self.expect_expr("A::scoped_ll_enum_val", result_value="case2(9223372036854775807)")
 
         # Test taking address.
         if lldbplatformutil.getPlatform() == "windows":
@@ -126,15 +126,15 @@ class TestCase(TestBase):
 
         # Test `constexpr static`.
         self.expect_expr("ClassWithConstexprs::member", result_value="2")
-        self.expect_expr("ClassWithConstexprs::enum_val", result_value="enum_case2")
+        self.expect_expr("ClassWithConstexprs::enum_val", result_value="enum_case2(2)")
         self.expect_expr(
-            "ClassWithConstexprs::scoped_enum_val", result_value="scoped_enum_case2"
+            "ClassWithConstexprs::scoped_enum_val", result_value="scoped_enum_case2(2)"
         )
 
         # Test an aliased enum with fixed underlying type.
         self.expect_expr(
-            "ClassWithEnumAlias::enum_alias", result_value="scoped_enum_case2"
+            "ClassWithEnumAlias::enum_alias", result_value="scoped_enum_case2(2)"
         )
         self.expect_expr(
-            "ClassWithEnumAlias::enum_alias_alias", result_value="scoped_enum_case1"
+            "ClassWithEnumAlias::enum_alias_alias", result_value="scoped_enum_case1(1)"
         )
