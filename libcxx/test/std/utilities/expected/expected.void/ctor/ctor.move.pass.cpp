@@ -76,6 +76,15 @@ constexpr bool test() {
     assert(e2.error() == 5);
     assert(!e1.has_value());
   }
+
+  // move TailClobbererNonTrivialMove as error
+  {
+    std::expected<void, TailClobbererNonTrivialMove<1>> e1(std::unexpect);
+    auto e2 = std::move(e1);
+    assert(!e2.has_value());
+    assert(!e1.has_value());
+  }
+
   return true;
 }
 

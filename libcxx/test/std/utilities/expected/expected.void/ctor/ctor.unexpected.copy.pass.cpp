@@ -27,6 +27,7 @@
 
 #include "MoveOnly.h"
 #include "test_macros.h"
+#include "../../types.h"
 
 // Test Constraints
 static_assert(std::is_constructible_v<std::expected<void, int>, const std::unexpected<int>&>);
@@ -60,6 +61,7 @@ constexpr void testUnexpected() {
 constexpr bool test() {
   testUnexpected<int>();
   testUnexpected<MyInt>();
+  testUnexpected<TailClobberer<1>>();
   return true;
 }
 

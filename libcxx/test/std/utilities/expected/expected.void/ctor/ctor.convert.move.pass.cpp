@@ -34,6 +34,7 @@
 
 #include "MoveOnly.h"
 #include "test_macros.h"
+#include "../../types.h"
 
 // Test Constraints:
 template <class T1, class Err1, class T2, class Err2>
@@ -96,6 +97,14 @@ constexpr bool test() {
     assert(e2.error().data.get() == 5);
     assert(!e1.has_value());
     assert(e1.error().get() == 0);
+  }
+
+  // convert TailClobberer
+  {
+    std::expected<void, TailClobbererNonTrivialMove<1>> e1;
+    std::expected<void, TailClobberer<1>> e2 = std::move(e1);
+    assert(!e2.has_value());
+    assert(!e1.has_value());
   }
 
   return true;

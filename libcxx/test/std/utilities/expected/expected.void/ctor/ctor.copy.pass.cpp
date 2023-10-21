@@ -62,6 +62,14 @@ constexpr bool test() {
     assert(!e2.has_value());
     assert(e2.error() == 5);
   }
+
+  // copy TailClobberer as error
+  {
+    const std::expected<void, TailClobberer<1>> e1(std::unexpect);
+    auto e2 = e1;
+    assert(!e2.has_value());
+  }
+
   return true;
 }
 
