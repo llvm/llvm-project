@@ -15,24 +15,31 @@ on:
     paths:
       - 'llvm/docs/**'
       - 'clang/docs/**'
+      - 'clang-tools-extra/docs/**'
+      - 'lldb/docs/**'
   pull_request:
     paths:
       - 'llvm/docs/**'
       - 'clang/docs/**'
+      - 'clang-tools-extra/docs/**'
+      - 'lldb/docs/**'
 
 jobs:
   check-docs-build:
     name: "Test documentation build"
     runs-on: ubuntu-latest
     steps:
-      # Fetch all the commits in a pull request so that the
+      # Fetch all the commits in a pull request + 1 so that the
       # docs-changed-subprojects step won't pull them in itself in an extremely
       # slow manner.
-      - name: Fetch LLVM sources (PR)
+      - name: Calculate number of commits to fetch (PR)
         if: ${{ github.event_name == 'pull_request' }} 
+        run: echo "PR_FETCH_DEPTH=$(( ${{ github.event.pull_request.commits }} + 1 ))" >> "${GITHUB_ENV}"
+      - name: Fetch LLVM sources (PR)
+        if: ${{ github.event_name == 'pull_request' }}
         uses: actions/checkout@v4
         with:
-          fetch-depth: ${{ github.event.pull_request.commits }}
+          fetch-depth: ${{ env.PR_FETCH_DEPTH }}
       - name: Fetch LLVM sources (push)
         if: ${{ github.event_name == 'push' }}
         uses: actions/checkout@v4
@@ -47,6 +54,10 @@ jobs:
               - 'llvm/docs/**'
             clang:
               - 'clang/docs/**'
+            clang-tools-extra:
+              - 'clang-tools-extra/docs/**'
+            lldb:
+              - 'lldb/docs/**'
       - name: Setup Python env
         uses: actions/setup-python@v4
         with:
@@ -58,7 +69,8 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build
+          # swig and graphviz are lldb specific dependencies
+          sudo apt-get install -y cmake ninja-build swig graphviz
       - name: Build LLVM docs
         if: steps.docs-changed-subprojects.outputs.llvm_any_changed == 'true'
         run: |
@@ -69,4 +81,14 @@ jobs:
         run: |
           cmake -B clang-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_ENABLE_SPHINX=ON ./llvm
           TZ=UTC ninja -C clang-build docs-clang-html docs-clang-man
+      - name: Build clang-tools-extra docs
+        if: steps.docs-changed-subprojects.outputs.clang-tools-extra_any_changed == 'true'
+        run: |
+          cmake -B clang-tools-extra-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra" -DLLVM_ENABLE_SPHINX=ON ./llvm
+          TZ=UTC ninja -C clang-tools-extra-build docs-clang-tools-html docs-clang-tools-man
+      - name: Build LLDB docs
+        if: steps.docs-changed-subprojects.outputs.lldb_any_changed == 'true'
+        run: |
+          cmake -B lldb-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang;lldb" -DLLVM_ENABLE_SPHINX=ON ./llvm
+          TZ=UTC ninja -C lldb-build docs-lldb-html docs-lldb-man
 
