@@ -29,14 +29,17 @@ jobs:
     name: "Test documentation build"
     runs-on: ubuntu-latest
     steps:
-      # Fetch all the commits in a pull request so that the
+      # Fetch all the commits in a pull request + 1 so that the
       # docs-changed-subprojects step won't pull them in itself in an extremely
       # slow manner.
-      - name: Fetch LLVM sources (PR)
+      - name: Calculate number of commits to fetch (PR)
         if: ${{ github.event_name == 'pull_request' }} 
+        run: echo "PR_FETCH_DEPTH=$(( ${{ github.event.pull_request.commits }} + 1 ))" >> "${GITHUB_ENV}"
+      - name: Fetch LLVM sources (PR)
+        if: ${{ github.event_name == 'pull_request' }}
         uses: actions/checkout@v4
         with:
-          fetch-depth: ${{ github.event.pull_request.commits }}
+          fetch-depth: ${{ env.PR_FETCH_DEPTH }}
       - name: Fetch LLVM sources (push)
         if: ${{ github.event_name == 'push' }}
         uses: actions/checkout@v4
