@@ -44,7 +44,7 @@ Non-comprehensive list of changes in this release
 
 * Added a new IRNormalizer pass which aims to transform LLVM modules into
   a canonical form by reordering and renaming instructions while preserving the
-  same semantics. The canonicalizer makes it easier to spot semantic differences
+  same semantics. The normalizer makes it easier to spot semantic differences
   when diffing two modules which have undergone different passes.
 
 Update on required toolchains to build LLVM

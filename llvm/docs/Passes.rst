@@ -544,15 +544,15 @@ An interprocedural variant of :ref:`Sparse Conditional Constant Propagation
 <passes-sccp>`.
 
 ``ir-normalizer``: Transforms IR into a canonical form that's easier to diff
---------------------------------------------------------
+----------------------------------------------------------------------------
 
 This pass aims to transform LLVM Modules into a canonical form by reordering and
-renaming instructions while preserving the same semantics. The canonicalizer makes
-it easier to spot semantic differences while diffing two modules which have undergone
-two different passes.
+renaming instructions while preserving the same semantics. The normalizer makes
+it easier to spot semantic differences while diffing two modules which have
+undergone two different passes.
 
-``-jump-threading``: Jump Threading
------------------------------------
+``jump-threading``: Jump Threading
+----------------------------------
 
 Jump threading tries to find distinct threads of control flow running through a
 basic block.  This pass looks at blocks that have multiple predecessors and

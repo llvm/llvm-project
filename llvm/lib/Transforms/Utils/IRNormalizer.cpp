@@ -1,4 +1,4 @@
-//===--------------- IRNormalizer.cpp - IR Canonicalizer ---------------===//
+//===--------------- IRNormalizer.cpp - IR Normalizer ---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -40,7 +40,7 @@ namespace {
 /// IRNormalizer aims to transform LLVM IR into canonical form.
 class IRNormalizer {
 public:
-  /// \name Canonicalizer flags.
+  /// \name Normalizer flags.
   /// @{
   /// Preserves original order of instructions.
   static cl::opt<bool> PreserveOrder;
@@ -106,7 +106,7 @@ cl::opt<bool> IRNormalizer::ReorderOperands(
 
 /// Entry method to the IRNormalizer.
 ///
-/// \param M Module to canonicalize.
+/// \param M Module to normalize.
 bool IRNormalizer::runOnFunction(Function &F) {
   nameFunctionArguments(F);
   nameBasicBlocks(F);
