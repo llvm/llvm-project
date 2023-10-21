@@ -167,7 +167,7 @@ void *SharedMemorySmartStackTy::push(uint64_t Bytes) {
     return Ptr;
   }
 
-  if (config::isDebugMode(config::DebugKind::CommonIssues))
+  if (config::isDebugMode(DeviceDebugKind::CommonIssues))
     PRINT("Shared memory stack full, fallback to dynamic allocation of global "
           "memory will negatively impact performance.\n");
   void *GlobalMemory = memory::allocGlobal(
@@ -202,7 +202,7 @@ void memory::freeShared(void *Ptr, uint64_t Bytes, const char *Reason) {
 
 void *memory::allocGlobal(uint64_t Bytes, const char *Reason) {
   void *Ptr = malloc(Bytes);
-  if (config::isDebugMode(config::DebugKind::CommonIssues) && Ptr == nullptr)
+  if (config::isDebugMode(DeviceDebugKind::CommonIssues) && Ptr == nullptr)
     PRINT("nullptr returned by malloc!\n");
   return Ptr;
 }

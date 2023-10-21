@@ -635,6 +635,11 @@ size_t PyMlirContext::clearLiveOperations() {
   return numInvalidated;
 }
 
+void PyMlirContext::setOperationInvalid(MlirOperation op) {
+  if (liveOperations.contains(op.ptr))
+    liveOperations[op.ptr].second->setInvalid();
+}
+
 size_t PyMlirContext::getLiveModuleCount() { return liveModules.size(); }
 
 pybind11::object PyMlirContext::contextEnter() {

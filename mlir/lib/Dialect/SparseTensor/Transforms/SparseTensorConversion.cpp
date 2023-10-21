@@ -589,8 +589,17 @@ public:
     const auto stt = getSparseTensorType(op.getTensor());
     const auto elemTp = stt.getElementType();
     const Level lvlRank = stt.getLvlRank();
-    auto lvlCoords = genAlloca(rewriter, loc, lvlRank, rewriter.getIndexType());
-    auto vref = genAllocaScalar(rewriter, loc, elemTp);
+    Value lvlCoords, vref;
+    {
+      OpBuilder::InsertionGuard guard(rewriter);
+      auto loop = op->getParentOfType<LoopLikeOpInterface>();
+      if (loop) {
+        // Hoists alloca outside the loop to avoid stack overflow.
+        rewriter.setInsertionPoint(loop);
+      }
+      lvlCoords = genAlloca(rewriter, loc, lvlRank, rewriter.getIndexType());
+      vref = genAllocaScalar(rewriter, loc, elemTp);
+    }
     storeAll(rewriter, loc, lvlCoords, adaptor.getLvlCoords());
     rewriter.create<memref::StoreOp>(loc, adaptor.getValue(), vref);
     SmallString<12> name{"lexInsert", primaryTypeFunctionSuffix(elemTp)};

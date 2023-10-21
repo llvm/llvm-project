@@ -29,7 +29,7 @@ void __assert_fail_internal(const char *expr, const char *msg, const char *file,
 #if !defined(OMPTARGET_DEBUG) || (OMPTARGET_DEBUG != 0)
 #define ASSERT(expr, msg)                                                      \
   {                                                                            \
-    if (config::isDebugMode(config::DebugKind::Assertion) && !(expr))          \
+    if (config::isDebugMode(DeviceDebugKind::Assertion) && !(expr))            \
       __assert_fail_internal(#expr, msg, __FILE__, __LINE__,                   \
                              __PRETTY_FUNCTION__);                             \
     else                                                                       \
