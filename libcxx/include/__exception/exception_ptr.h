@@ -15,6 +15,7 @@
 #include <__type_traits/decay.h>
 #include <cstddef>
 #include <cstdlib>
+#include <new>
 #include <typeinfo>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
