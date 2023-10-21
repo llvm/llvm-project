@@ -23,9 +23,18 @@ class CPP11EnumTypesTestCase(TestBase):
             substrs=["Case1", "Case2", "Case3"],
         )
         # Test each case in the enum.
-        self.expect("expr var1_" + suffix, patterns=[f"\\({enum_name}\\) \\$\\d+ = Case1\\(-?\\d+\\)"])
-        self.expect("expr var2_" + suffix, patterns=[f"\\({enum_name}\\) \\$\\d+ = Case2\\(-?\\d+\\)"])
-        self.expect("expr var3_" + suffix, patterns=[f"\\({enum_name}\\) \\$\\d+ = Case3\\(-?\\d+\\)"])
+        self.expect(
+            "expr var1_" + suffix,
+            patterns=[f"\\({enum_name}\\) \\$\\d+ = Case1\\(-?\\d+\\)"],
+        )
+        self.expect(
+            "expr var2_" + suffix,
+            patterns=[f"\\({enum_name}\\) \\$\\d+ = Case2\\(-?\\d+\\)"],
+        )
+        self.expect(
+            "expr var3_" + suffix,
+            patterns=[f"\\({enum_name}\\) \\$\\d+ = Case3\\(-?\\d+\\)"],
+        )
 
         if unsigned:
             self.expect_expr(

@@ -32,7 +32,15 @@ class TestRustEnumStructs(TestBase):
             self.target().FindFirstGlobalVariable("CLIKE_U32_B").GetValue(),
         ]
         self.assertEqual(
-            all_values, ["A(2)", "B(10)", "VariantA(0)", "VariantC(2)", "VariantA(1)", "VariantB(2)"]
+            all_values,
+            [
+                "A(2)",
+                "B(10)",
+                "VariantA(0)",
+                "VariantC(2)",
+                "VariantA(1)",
+                "VariantB(2)",
+            ],
         )
 
     def test_enum_with_tuples_has_all_variants(self):

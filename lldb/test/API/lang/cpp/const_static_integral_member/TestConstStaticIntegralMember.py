@@ -75,8 +75,12 @@ class TestCase(TestBase):
 
         # Test an enum with fixed underlying type.
         self.expect_expr("A::scoped_char_enum_val", result_value="case2(2)")
-        self.expect_expr("A::scoped_ll_enum_val_neg", result_value="case0(-9223372036854775808)")
-        self.expect_expr("A::scoped_ll_enum_val", result_value="case2(9223372036854775807)")
+        self.expect_expr(
+            "A::scoped_ll_enum_val_neg", result_value="case0(-9223372036854775808)"
+        )
+        self.expect_expr(
+            "A::scoped_ll_enum_val", result_value="case2(9223372036854775807)"
+        )
 
         # Test taking address.
         if lldbplatformutil.getPlatform() == "windows":
