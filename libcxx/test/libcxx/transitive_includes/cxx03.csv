@@ -538,7 +538,6 @@ mutex typeinfo
 mutex version
 new cstddef
 new cstdlib
-new exception
 new type_traits
 new version
 numbers concepts
