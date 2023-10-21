@@ -3853,7 +3853,7 @@ LangOptions getFormattingLangOpts(const FormatStyle &Style) {
 const char *StyleOptionHelpDescription =
     "Set coding style. <string> can be:\n"
     "1. A preset: LLVM, GNU, Google, Chromium, Microsoft,\n"
-    "   Mozilla, WebKit, clang-format.\n"
+    "   Mozilla, WebKit.\n"
     "2. 'file' to load style configuration from a\n"
     "   .clang-format file in one of the parent directories\n"
     "   of the source file (for stdin, see --assume-filename).\n"
