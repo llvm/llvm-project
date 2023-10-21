@@ -1375,9 +1375,13 @@ def dsym_dir : JoinedOrSeparate<["-"], "dsym-dir">,
 def dumpdir : Separate<["-"], "dumpdir">, Visibility<[ClangOption, CC1Option]>,
   MetaVarName<"<dumppfx>">,
   HelpText<"Use <dumpfpx> as a prefix to form auxiliary and dump file names">;
-def dumpmachine : Flag<["-"], "dumpmachine">;
+def dumpmachine : Flag<["-"], "dumpmachine">,
+  Visibility<[ClangOption, FlangOption]>,
+  HelpText<"Display the compiler's target processor">;
+def dumpversion : Flag<["-"], "dumpversion">,
+  Visibility<[ClangOption, FlangOption]>,
+  HelpText<"Display the version of the compiler">;
 def dumpspecs : Flag<["-"], "dumpspecs">, Flags<[Unsupported]>;
-def dumpversion : Flag<["-"], "dumpversion">;
 def dylib__file : Separate<["-"], "dylib_file">;
 def dylinker__install__name : JoinedOrSeparate<["-"], "dylinker_install_name">;
 def dylinker : Flag<["-"], "dylinker">;
