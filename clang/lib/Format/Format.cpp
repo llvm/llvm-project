@@ -834,8 +834,8 @@ template <> struct MappingTraits<FormatStyle> {
 
     StringRef BasedOnStyle;
     if (IO.outputting()) {
-      StringRef Styles[] = {"LLVM",   "Google", "Chromium", "Mozilla",
-                            "WebKit", "GNU",    "Microsoft"};
+      StringRef Styles[] = {"LLVM",   "Google", "Chromium",  "Mozilla",
+                            "WebKit", "GNU",    "Microsoft", "clang-format"};
       for (StringRef StyleName : Styles) {
         FormatStyle PredefinedStyle;
         if (getPredefinedStyle(StyleName, Style.Language, &PredefinedStyle) &&
@@ -1915,6 +1915,16 @@ FormatStyle getMicrosoftStyle(FormatStyle::LanguageKind Language) {
   return Style;
 }
 
+FormatStyle getClangFormatStyle() {
+  FormatStyle Style = getLLVMStyle();
+  Style.InsertBraces = true;
+  Style.InsertNewlineAtEOF = true;
+  Style.LineEnding = FormatStyle::LE_LF;
+  Style.RemoveBracesLLVM = true;
+  Style.RemoveParentheses = FormatStyle::RPS_ReturnStatement;
+  return Style;
+}
+
 FormatStyle getNoStyle() {
   FormatStyle NoStyle = getLLVMStyle();
   NoStyle.DisableFormat = true;
@@ -1939,6 +1949,8 @@ bool getPredefinedStyle(StringRef Name, FormatStyle::LanguageKind Language,
     *Style = getGNUStyle();
   else if (Name.equals_insensitive("microsoft"))
     *Style = getMicrosoftStyle(Language);
+  else if (Name.equals_insensitive("clang-format"))
+    *Style = getClangFormatStyle();
   else if (Name.equals_insensitive("none"))
     *Style = getNoStyle();
   else if (Name.equals_insensitive("inheritparentconfig"))
@@ -3841,7 +3853,7 @@ LangOptions getFormattingLangOpts(const FormatStyle &Style) {
 const char *StyleOptionHelpDescription =
     "Set coding style. <string> can be:\n"
     "1. A preset: LLVM, GNU, Google, Chromium, Microsoft,\n"
-    "   Mozilla, WebKit.\n"
+    "   Mozilla, WebKit, clang-format.\n"
     "2. 'file' to load style configuration from a\n"
     "   .clang-format file in one of the parent directories\n"
     "   of the source file (for stdin, see --assume-filename).\n"
