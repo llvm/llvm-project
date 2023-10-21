@@ -6,11 +6,7 @@ define i1 @f(i32 %a) {
 ; CHECK-LABEL: define i1 @f(
 ; CHECK-SAME: i32 [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A]], 0
-; CHECK-NEXT:    [[B:%.*]] = trunc i32 [[A]] to i16
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i16 [[B]], 2
-; CHECK-NEXT:    [[AND9:%.*]] = and i1 [[CMP]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[AND9]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %cmp = icmp eq i32 %a, 0
@@ -24,11 +20,9 @@ define i1 @g(i32 %a) {
 ; CHECK-LABEL: define i1 @g(
 ; CHECK-SAME: i32 [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A]], 3
 ; CHECK-NEXT:    [[B:%.*]] = trunc i32 [[A]] to i16
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i16 [[B]], 2
-; CHECK-NEXT:    [[OR9:%.*]] = or i1 [[CMP]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[OR9]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
 entry:
   %cmp = icmp eq i32 %a, 3
@@ -45,10 +39,7 @@ define i1 @fold_trunc(i32 %a) {
 ; CHECK-SAME: i32 [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[A]], 2
-; CHECK-NEXT:    [[B:%.*]] = trunc i32 [[A]] to i16
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i16 [[B]], 2
-; CHECK-NEXT:    [[AND9:%.*]] = or i1 [[CMP]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[AND9]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
   %cmp = icmp ugt i32 %a, 2
