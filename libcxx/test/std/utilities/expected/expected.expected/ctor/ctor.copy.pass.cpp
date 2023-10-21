@@ -30,6 +30,7 @@
 #include <utility>
 
 #include "test_macros.h"
+#include "../../types.h"
 
 struct NonCopyable {
   NonCopyable(const NonCopyable&) = delete;
@@ -93,6 +94,21 @@ constexpr bool test() {
     assert(!e2.has_value());
     assert(e2.error() == 5);
   }
+
+  // copy TailClobberer as value
+  {
+    const std::expected<TailClobberer<0>, bool> e1;
+    auto e2 = e1;
+    assert(e2.has_value());
+  }
+
+  // copy TailClobberer as error
+  {
+    const std::expected<bool, TailClobberer<1>> e1(std::unexpect);
+    auto e2 = e1;
+    assert(!e2.has_value());
+  }
+
   return true;
 }
 

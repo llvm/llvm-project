@@ -22,6 +22,7 @@
 #include <type_traits>
 
 #include "test_macros.h"
+#include "../../types.h"
 
 struct NoDedefaultCtor {
   NoDedefaultCtor() = delete;
@@ -45,6 +46,7 @@ constexpr void testDefaultCtor() {
 
 template <class T>
 constexpr void testTypes() {
+  testDefaultCtor<T, bool>();
   testDefaultCtor<T, int>();
   testDefaultCtor<T, NoDedefaultCtor>();
 }
@@ -52,6 +54,7 @@ constexpr void testTypes() {
 constexpr bool test() {
   testTypes<int>();
   testTypes<MyInt>();
+  testTypes<TailClobberer<0>>();
   return true;
 }
 

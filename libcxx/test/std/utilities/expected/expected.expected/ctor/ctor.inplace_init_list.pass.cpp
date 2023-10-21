@@ -28,6 +28,7 @@
 
 #include "MoveOnly.h"
 #include "test_macros.h"
+#include "../../types.h"
 
 // Test Constraints:
 static_assert(
@@ -88,6 +89,12 @@ constexpr bool test() {
     assert(&std::get<1>(e.value().tuple_) == &j);
     assert(std::get<2>(e.value().tuple_) == 7);
     assert(m.get() == 0);
+  }
+
+  // TailClobberer
+  {
+    std::expected<TailClobberer<0>, bool> e(std::in_place, {1, 2, 3});
+    assert(e.has_value());
   }
 
   return true;

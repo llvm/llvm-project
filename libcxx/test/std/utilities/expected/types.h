@@ -112,13 +112,35 @@ struct TrackedMove {
 // See https://github.com/llvm/llvm-project/issues/68552 for details.
 template <int constant>
 struct TailClobberer {
-  constexpr TailClobberer() {
+  constexpr TailClobberer() noexcept {
     if (!std::is_constant_evaluated()) {
       std::memset(this, constant, sizeof(*this));
     }
+    // Always set `b` itself to `false` so that the comparison works.
+    b = false;
   }
+  constexpr TailClobberer(const TailClobberer&) : TailClobberer() {}
+  constexpr TailClobberer(TailClobberer&&) = default;
+  // Converts from `int`/`std::initializer_list<int>, used in some tests.
+  constexpr TailClobberer(int) : TailClobberer() {}
+  constexpr TailClobberer(std::initializer_list<int>) noexcept : TailClobberer() {}
+
+  friend constexpr bool operator==(const TailClobberer&, const TailClobberer&) = default;
+
+private:
   alignas(2) bool b;
 };
+static_assert(!std::is_trivially_copy_constructible_v<TailClobberer<0>>);
+static_assert(std::is_trivially_move_constructible_v<TailClobberer<0>>);
+
+template <int constant>
+struct TailClobbererNonTrivialMove : TailClobberer<constant> {
+  using TailClobberer<constant>::TailClobberer;
+  constexpr TailClobbererNonTrivialMove(TailClobbererNonTrivialMove&&) noexcept : TailClobberer<constant>() {}
+};
+static_assert(!std::is_trivially_copy_constructible_v<TailClobbererNonTrivialMove<0>>);
+static_assert(std::is_move_constructible_v<TailClobbererNonTrivialMove<0>>);
+static_assert(!std::is_trivially_move_constructible_v<TailClobbererNonTrivialMove<0>>);
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
 struct Except {};
