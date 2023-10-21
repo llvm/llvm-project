@@ -286,9 +286,13 @@ TokenBuffer::spelledForExpandedToken(const syntax::Token *Expanded) const {
   });
   // Our token could only be produced by the previous mapping.
   if (It == File.Mappings.begin()) {
-    // No previous mapping, no need to modify offsets.
-    return {&File.SpelledTokens[ExpandedIndex - File.BeginExpanded],
-            /*Mapping=*/nullptr};
+    const auto offset = ExpandedIndex - File.BeginExpanded;
+    // Bounds check so parsing an unclosed parenthesis, brackets or braces do
+    // not result in UB.
+    if (offset >= File.SpelledTokens.size()) {
+      return {nullptr, nullptr};
+    }
+    return {&File.SpelledTokens[offset], /*Mapping=*/nullptr};
   }
   --It; // 'It' now points to last mapping that started before our token.
 
@@ -298,9 +302,12 @@ TokenBuffer::spelledForExpandedToken(const syntax::Token *Expanded) const {
 
   // Not part of the mapping, use the index from previous mapping to compute the
   // corresponding spelled token.
-  return {
-      &File.SpelledTokens[It->EndSpelled + (ExpandedIndex - It->EndExpanded)],
-      /*Mapping=*/nullptr};
+  const auto offset = It->EndSpelled + (ExpandedIndex - It->EndExpanded);
+  // This index can also result in UB when parsing unclosed tokens.
+  if (offset >= File.SpelledTokens.size()) {
+    return {nullptr, nullptr};
+  }
+  return {&File.SpelledTokens[offset], /*Mapping=*/nullptr};
 }
 
 const TokenBuffer::Mapping *
@@ -409,6 +416,12 @@ TokenBuffer::spelledForExpanded(llvm::ArrayRef<syntax::Token> Expanded) const {
   const syntax::Token *Last = &Expanded.back();
   auto [FirstSpelled, FirstMapping] = spelledForExpandedToken(First);
   auto [LastSpelled, LastMapping] = spelledForExpandedToken(Last);
+
+  // If there was an unclosed token, FirstSpelled or LastSpelled is null and the
+  // operation shouldn't continue.
+  if (FirstSpelled == nullptr || LastSpelled == nullptr) {
+    return std::nullopt;
+  };
 
   FileID FID = SourceMgr->getFileID(FirstSpelled->location());
   // FIXME: Handle multi-file changes by trying to map onto a common root.

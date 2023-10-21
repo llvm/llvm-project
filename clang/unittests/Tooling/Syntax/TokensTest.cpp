@@ -585,6 +585,17 @@ TEST_F(TokenCollectorTest, DelayedParsing) {
   EXPECT_THAT(collectAndDump(Code), StartsWith(ExpectedTokens));
 }
 
+TEST_F(TokenCollectorTest, UnclosedToken) {
+  llvm::StringLiteral Code = R"cpp(
+    int main() {
+    // this should not result in a segfault or UB.
+  )cpp";
+  std::string ExpectedTokens =
+      "expanded tokens:\n  int main ( ) {\nfile './input.cpp'\n  spelled "
+      "tokens:\n    int main ( ) {\n  no mappings.\n";
+  EXPECT_THAT(collectAndDump(Code), StartsWith(ExpectedTokens));
+}
+
 TEST_F(TokenCollectorTest, MultiFile) {
   addFile("./foo.h", R"cpp(
     #define ADD(X, Y) X+Y
