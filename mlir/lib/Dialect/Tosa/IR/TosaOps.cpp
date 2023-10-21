@@ -1117,7 +1117,8 @@ static LogicalResult ReduceInferReturnTypes(
   SmallVector<int64_t> outputShape;
   operandShape.getDims(outputShape);
   int64_t axisVal = axis.getValue().getSExtValue();
-  outputShape[axisVal] = 1;
+  if (axisVal < operandShape.getRank())
+    outputShape[axisVal] = 1;
   inferredReturnShapes.push_back(ShapedTypeComponents(outputShape, inputType));
   return success();
 }
