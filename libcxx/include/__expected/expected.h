@@ -950,8 +950,8 @@ private:
     template <class, class>
     friend class expected;
 
-    [[no_unique_address]] __union_t<_Tp, _Err> __union_;
-    [[no_unique_address]] bool __has_val_;
+    _LIBCPP_NO_UNIQUE_ADDRESS __union_t<_Tp, _Err> __union_;
+    _LIBCPP_NO_UNIQUE_ADDRESS bool __has_val_;
   };
 
   __expected_repr __repr_;
