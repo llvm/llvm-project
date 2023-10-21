@@ -118,7 +118,7 @@ Expected<std::unique_ptr<BinaryContext>>
 BinaryContext::createBinaryContext(const ObjectFile *File, bool IsPIC,
                                    std::unique_ptr<DWARFContext> DwCtx) {
   StringRef ArchName = "";
-  StringRef FeaturesStr = "";
+  std::string FeaturesStr = "";
   switch (File->getArch()) {
   case llvm::Triple::x86_64:
     ArchName = "x86-64";
@@ -128,11 +128,20 @@ BinaryContext::createBinaryContext(const ObjectFile *File, bool IsPIC,
     ArchName = "aarch64";
     FeaturesStr = "+all";
     break;
-  case llvm::Triple::riscv64:
+  case llvm::Triple::riscv64: {
     ArchName = "riscv64";
-    // RV64GC
-    FeaturesStr = "+m,+a,+f,+d,+zicsr,+zifencei,+c,+relax";
+    Expected<SubtargetFeatures> Features = File->getFeatures();
+
+    if (auto E = Features.takeError())
+      return E;
+
+    // We rely on relaxation for some transformations (e.g., promoting all calls
+    // to PseudoCALL and then making JITLink relax them). Since the relax
+    // feature is not stored in the object file, we manually enable it.
+    Features->AddFeature("relax");
+    FeaturesStr = Features->getString();
     break;
+  }
   default:
     return createStringError(std::errc::not_supported,
                              "BOLT-ERROR: Unrecognized machine in ELF file");

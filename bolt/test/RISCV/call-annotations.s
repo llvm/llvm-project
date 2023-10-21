@@ -1,12 +1,13 @@
 /// Test that annotations are properly carried over to fixed calls.
 /// Note that --enable-bat is used to force offsets to be kept.
 
-// RUN: llvm-mc -triple riscv64 -filetype obj -o %t.o %s
+// RUN: llvm-mc -triple riscv64 -mattr=+c -filetype obj -o %t.o %s
 // RUN: ld.lld --emit-relocs -o %t %t.o
 // RUN: llvm-bolt --enable-bat --print-cfg --print-fix-riscv-calls \
 // RUN:     -o /dev/null %t | FileCheck %s
 
   .text
+  .option norvc
   .global f
   .p2align 1
 f:
