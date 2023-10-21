@@ -407,23 +407,14 @@ private:
 
   /// Generate a message for BugReporterVisitor if the stored symbol is
   /// marked as interesting by the actual bug report.
-  // FIXME: Use lambda instead.
-  struct NoteFn {
-    const BugType *BT_ResourceLeak;
-    SymbolRef StreamSym;
-    std::string Message;
-
-    std::string operator()(PathSensitiveBugReport &BR) const {
-      if (BR.isInteresting(StreamSym) && &BR.getBugType() == BT_ResourceLeak)
-        return Message;
-
-      return "";
-    }
-  };
-
   const NoteTag *constructNoteTag(CheckerContext &C, SymbolRef StreamSym,
                                   const std::string &Message) const {
-    return C.getNoteTag(NoteFn{&BT_ResourceLeak, StreamSym, Message});
+    return C.getNoteTag([this, StreamSym,
+                         Message](PathSensitiveBugReport &BR) -> std::string {
+      if (BR.isInteresting(StreamSym) && &BR.getBugType() == &BT_ResourceLeak)
+        return Message;
+      return "";
+    });
   }
 
   const NoteTag *constructSetEofNoteTag(CheckerContext &C,
