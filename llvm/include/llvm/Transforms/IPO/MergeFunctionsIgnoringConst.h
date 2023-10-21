@@ -24,8 +24,13 @@ class Module;
 /// Merge functions that differ by constants.
 class MergeFuncIgnoringConstPass
     : public PassInfoMixin<MergeFuncIgnoringConstPass> {
+  bool ptrAuthEnabled = false;
+  unsigned ptrAuthKey = 0;
+  std::string mergeFuncSuffix = ".Tm";
 public:
   MergeFuncIgnoringConstPass() {}
+  MergeFuncIgnoringConstPass(bool ptrAuthEnabled, unsigned ptrAuthKey, std::string suffix)
+      : ptrAuthEnabled(ptrAuthEnabled), ptrAuthKey(ptrAuthKey), mergeFuncSuffix(suffix) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 

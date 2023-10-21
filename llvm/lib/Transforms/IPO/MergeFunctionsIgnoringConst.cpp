@@ -11,8 +11,6 @@
 // merging identical functions, it merges functions which only differ by a few
 // constants in certain instructions.
 // This is copied from Swift's implementation.
-// TODO: We should generalize this pass and share it with Swift's
-// implementation.
 //
 // This pass should run after LLVM's MergeFunctions pass, because it works best
 // if there are no _identical_ functions in the module.
@@ -186,11 +184,9 @@ namespace {
 ///
 class MergeFuncIgnoringConstImpl { // : public ModulePass {
 public:
-  MergeFuncIgnoringConstImpl() : FnTree(FunctionNodeCmp(&GlobalNumbers)) {}
-
-  MergeFuncIgnoringConstImpl(bool ptrAuthEnabled, unsigned ptrAuthKey)
+  MergeFuncIgnoringConstImpl(bool ptrAuthEnabled, unsigned ptrAuthKey, std::string suffix)
       : FnTree(FunctionNodeCmp(&GlobalNumbers)), ptrAuthOptionsSet(true),
-        ptrAuthEnabled(ptrAuthEnabled), ptrAuthKey(ptrAuthKey) {}
+        ptrAuthEnabled(ptrAuthEnabled), ptrAuthKey(ptrAuthKey), mergeFuncSuffix(suffix) {}
 
   bool runImpl(Module &M);
 
@@ -376,8 +372,6 @@ private:
   using ParamInfos = SmallVector<ParamInfo, 16>;
 
   Module *module = nullptr;
-  ModuleSummaryIndex *ExportSummary;
-  const ModuleSummaryIndex *ImportSummary;
 
   GlobalNumberState GlobalNumbers;
 
@@ -404,6 +398,8 @@ private:
 
   /// The key for pointer authentication.
   unsigned ptrAuthKey = 0;
+
+  std::string mergeFuncSuffix = ".Tm";
 
   FunctionEntry *getEntry(Function *F) const { return FuncEntries.lookup(F); }
 
@@ -485,38 +481,8 @@ private:
                             const ParamInfos &Params, unsigned FuncIdx);
 };
 
-#if 0
-class MergeFuncIgnoringConst : public ModulePass {
-public:
-  static char ID;
-  /// True if the architecture has pointer authentication enabled.
-  bool ptrAuthEnabled = false;
-
-  /// The key for pointer authentication.
-  unsigned ptrAuthKey = 0;
-  ModuleSummaryIndex *ExportSummary;
-  const ModuleSummaryIndex *ImportSummary;
-
-  MergeFuncIgnoringConst() : ModulePass(ID) {
-    initializeMergeFuncIgnoringConstPass(*llvm::PassRegistry::getPassRegistry());
-  }
-  MergeFuncIgnoringConst(bool ptrAuthEnabled, unsigned ptrAuthKey)
-      : ModulePass(ID), ptrAuthEnabled(ptrAuthEnabled), ptrAuthKey(ptrAuthKey) {
-    initializeMergeFuncIgnoringConstPass(*llvm::PassRegistry::getPassRegistry());
-  }
-  bool runOnModule(Module &M) override;
-};
-#endif
-
 } // end anonymous namespace
 
-#if 0
-char MergeFuncIgnoringConst::ID = 0;
-INITIALIZE_PASS_BEGIN(MergeFuncIgnoringConst, "merge-func-ignoring-const",
-                      "merge function pass ignoring const", false, false)
-INITIALIZE_PASS_END(MergeFuncIgnoringConst, "merge-func-ignoring-const",
-                    "merge function pass ignoring const", false, false)
-#endif
 bool MergeFuncIgnoringConstImpl::doSanityCheck(
     std::vector<WeakTrackingVH> &Worklist) {
   if (const unsigned Max = NumFunctionsIgnoringConstForSanityCheck) {
@@ -693,13 +659,6 @@ bool isEligibleFunction(Function *F) {
 
   return true;
 }
-
-static bool runInternal(Module &M) {
-  return MergeFuncIgnoringConstImpl().runImpl(M);
-}
-
-// bool MergeFuncIgnoringConst::runOnModule(Module &M) { return runInternal(M);
-// }
 
 bool MergeFuncIgnoringConstImpl::runImpl(Module &M) {
   if (IgnoringConstMergeThreshold == 0)
@@ -1120,7 +1079,7 @@ void MergeFuncIgnoringConstImpl::mergeWithParams(const FunctionInfos &FInfos,
 
   // Create the new function.
   Function *NewFunction = Function::Create(funcType, FirstF->getLinkage(),
-                                           FirstF->getName() + ".Tm");
+                                           FirstF->getName() + mergeFuncSuffix);
   if (auto *SP = FirstF->getSubprogram())
     NewFunction->setSubprogram(SP);
   NewFunction->copyAttributesFrom(FirstF);
@@ -1324,6 +1283,30 @@ void MergeFuncIgnoringConstImpl::writeThunk(Function *ToFunc, Function *Thunk,
   ++NumThunksWrittenIgnoringConst;
 }
 
+static llvm::AttributeList
+fixUpTypesInByValAndStructRetAttributes(llvm::FunctionType *fnType,
+                                        llvm::AttributeList attrList) {
+  auto &context = fnType->getContext();
+  if (!context.supportsTypedPointers())
+    return attrList;
+
+  for (unsigned i = 0; i < fnType->getNumParams(); ++i) {
+    auto paramTy = fnType->getParamType(i);
+    auto attrListIndex = llvm::AttributeList::FirstArgIndex + i;
+    if (attrList.hasParamAttr(i, llvm::Attribute::StructRet) &&
+        paramTy->getNonOpaquePointerElementType() != attrList.getParamStructRetType(i))
+      attrList = attrList.replaceAttributeTypeAtIndex(
+          context, attrListIndex, llvm::Attribute::StructRet,
+          paramTy->getNonOpaquePointerElementType());
+    if (attrList.hasParamAttr(i, llvm::Attribute::ByVal) &&
+        paramTy->getNonOpaquePointerElementType() != attrList.getParamByValType(i))
+      attrList = attrList.replaceAttributeTypeAtIndex(
+          context, attrListIndex, llvm::Attribute::ByVal,
+          paramTy->getNonOpaquePointerElementType());
+  }
+  return attrList;
+}
+
 /// Replace direct callers of Old with New. Also add parameters to the call to
 /// \p New, which are defined by the FuncIdx's value in \p Params.
 bool MergeFuncIgnoringConstImpl::replaceDirectCallers(Function *Old,
@@ -1407,8 +1390,11 @@ bool MergeFuncIgnoringConstImpl::replaceDirectCallers(Function *Old,
     NewCI->setCallingConv(CI->getCallingConv());
     // Don't transfer attributes from the function to the callee. Function
     // attributes typically aren't relevant to the calling convention or ABI.
-    NewCI->setAttributes(AttributeList::get(Context, /*FnAttrs=*/AttributeSet(),
-                                            NewPAL.getRetAttrs(), NewArgAttrs));
+    auto newAttrList = AttributeList::get(Context, /*FnAttrs=*/AttributeSet(),
+                                            NewPAL.getRetAttrs(),
+                                            NewArgAttrs);
+    newAttrList = fixUpTypesInByValAndStructRetAttributes(FType, newAttrList);
+    NewCI->setAttributes(newAttrList);
     if (IgnoreMusttailFunction && CI->isMustTailCall()) {
       // replace a callsite with musttail.
       llvm::errs() << "callsite has musttail in newF " << New->getName()
@@ -1424,7 +1410,7 @@ bool MergeFuncIgnoringConstImpl::replaceDirectCallers(Function *Old,
 
 PreservedAnalyses MergeFuncIgnoringConstPass::run(Module &M,
                                                   ModuleAnalysisManager &MAM) {
-  if (runInternal(M))
+  if (MergeFuncIgnoringConstImpl(ptrAuthEnabled, ptrAuthKey, mergeFuncSuffix).runImpl(M))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
 }
