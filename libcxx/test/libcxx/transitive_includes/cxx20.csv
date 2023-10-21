@@ -228,6 +228,7 @@ deque typeinfo
 deque version
 exception cstddef
 exception cstdlib
+exception new
 exception type_traits
 exception typeinfo
 exception version
