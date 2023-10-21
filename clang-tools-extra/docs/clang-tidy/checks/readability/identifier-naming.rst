@@ -2526,41 +2526,41 @@ Otherwise the case of this character denotes scope.
 The following table is the default mapping table of Hungarian Notation which
 maps Decl to its prefix string. You can also have your own style in config file.
 
-================= ============== ====================== ============== =========== ==============
-Primitive Types                                                        Microsoft data types
----------------------------------------------------------------------- --------------------------
-    Type          Prefix         Type                   Prefix         Type        Prefix
-================= ============== ====================== ============== =========== ==============
-int8_t            i8             signed int             si             BOOL        b
-int16_t           i16            signed short           ss             BOOLEAN     b
-int32_t           i32            signed short int       ssi            BYTE        by
-int64_t           i64            signed long long int   slli           CHAR        c
-uint8_t           u8             signed long long       sll            UCHAR       uc
-uint16_t          u16            signed long int        sli            SHORT       s
-uint32_t          u32            signed long            sl             USHORT      us
-uint64_t          u64            signed                 s              WORD        w
-char8_t           c8             unsigned long long int ulli           DWORD       dw
-char16_t          c16            unsigned long long     ull            DWORD32     dw32
-char32_t          c32            unsigned long int      uli            DWORD64     dw64
-float             f              unsigned long          ul             LONG        l
-double            d              unsigned short int     usi            ULONG       ul
-char              c              unsigned short         us             ULONG32     ul32
-bool              b              unsigned int           ui             ULONG64     ul64
-_Bool             b              unsigned char          uc             ULONGLONG   ull
-int               i              unsigned               u              HANDLE      h
-size_t            n              long long int          lli            INT         i
-short             s              long double            ld             INT8        i8
-signed            i              long long              ll             INT16       i16
-unsigned          u              long int               li             INT32       i32
-long              l              long                   l              INT64       i64
-long long         ll             ptrdiff_t              p              UINT        ui
-unsigned long     ul             void                   *none*         UINT8       u8
-long double       ld                                                   UINT16      u16
-ptrdiff_t         p                                                    UINT32      u32
-wchar_t           wc                                                   UINT64      u64
-short int         si                                                   PVOID       p
+================= ============== ====================== ============== ============== ==============
+Primitive Type                                                         Microsoft Type
+----------------- -------------- ---------------------- -------------- -------------- --------------
+    Type          Prefix         Type                   Prefix         Type           Prefix
+================= ============== ====================== ============== ============== ==============
+int8_t            i8             signed int             si             BOOL           b
+int16_t           i16            signed short           ss             BOOLEAN        b
+int32_t           i32            signed short int       ssi            BYTE           by
+int64_t           i64            signed long long int   slli           CHAR           c
+uint8_t           u8             signed long long       sll            UCHAR          uc
+uint16_t          u16            signed long int        sli            SHORT          s
+uint32_t          u32            signed long            sl             USHORT         us
+uint64_t          u64            signed                 s              WORD           w
+char8_t           c8             unsigned long long int ulli           DWORD          dw
+char16_t          c16            unsigned long long     ull            DWORD32        dw32
+char32_t          c32            unsigned long int      uli            DWORD64        dw64
+float             f              unsigned long          ul             LONG           l
+double            d              unsigned short int     usi            ULONG          ul
+char              c              unsigned short         us             ULONG32        ul32
+bool              b              unsigned int           ui             ULONG64        ul64
+_Bool             b              unsigned char          uc             ULONGLONG      ull
+int               i              unsigned               u              HANDLE         h
+size_t            n              long long int          lli            INT            i
+short             s              long double            ld             INT8           i8
+signed            i              long long              ll             INT16          i16
+unsigned          u              long int               li             INT32          i32
+long              l              long                   l              INT64          i64
+long long         ll             ptrdiff_t              p              UINT           ui
+unsigned long     ul             void                   *none*         UINT8          u8
+long double       ld                                                   UINT16         u16
+ptrdiff_t         p                                                    UINT32         u32
+wchar_t           wc                                                   UINT64         u64
+short int         si                                                   PVOID          p
 short             s
-================= ============== ====================== ============== =========== ==============
+================= ============== ====================== ============== ============== ==============
 
 **There are more trivial options for Hungarian Notation:**
 
