@@ -269,6 +269,11 @@ if(LLVM_LIBC_ENABLE_LINTING)
   endif()
 endif()
 
+if(LIBC_TARGET_ARCHITECTURE STREQUAL "hexagon")
+    add_compile_options(-mlong-calls)
+endif()
+
+
 option(LLVM_LIBC_INCLUDE_SCUDO "Include the SCUDO standalone as the allocator for LLVM libc" OFF)
 if(LLVM_LIBC_INCLUDE_SCUDO)
   if (NOT ("compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS OR "compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES))

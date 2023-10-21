@@ -212,7 +212,7 @@ function(create_libc_unittest fq_target_name)
   if(NOT LIBC_UNITTEST_NO_RUN_POSTBUILD)
     add_custom_target(
       ${fq_target_name}
-      COMMAND ${fq_build_target_name}
+      COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} ${fq_build_target_name}
       COMMENT "Running unit test ${fq_target_name}"
     )
   endif()
@@ -538,9 +538,12 @@ function(add_integration_test test_name)
 
   if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
     target_link_options(${fq_build_target_name} PRIVATE -nostdlib -static)
+  elseif(LIBC_TARGET_ARCHITECTURE_IS_HEXAGON)
+    target_link_options(${fq_build_target_name} PRIVATE -nostdlib -static -lclang_rt.builtins-hexagon)
   else()
     target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib++ -static)
   endif()
+
   target_link_libraries(
     ${fq_build_target_name}
     # The NVIDIA 'nvlink' linker does not currently support static libraries.
@@ -571,7 +574,7 @@ function(add_integration_test test_name)
       $<TARGET_FILE:${fq_build_target_name}> ${INTEGRATION_TEST_ARGS})
   add_custom_target(
     ${fq_target_name}
-    COMMAND ${test_cmd}
+    COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} ${test_cmd}
     COMMAND_EXPAND_LISTS
     COMMENT "Running integration test ${fq_target_name}"
   )
@@ -737,7 +740,7 @@ function(add_libc_hermetic_test test_name)
       $<TARGET_FILE:${fq_build_target_name}> ${HERMETIC_TEST_ARGS})
   add_custom_target(
     ${fq_target_name}
-    COMMAND ${test_cmd}
+    COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} ${test_cmd}
     COMMAND_EXPAND_LISTS
     COMMENT "Running hermetic test ${fq_target_name}"
     ${LIBC_HERMETIC_TEST_JOB_POOL}
