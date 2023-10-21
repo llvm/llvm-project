@@ -73,7 +73,6 @@ DEFINE_C_API_STRUCT(MlirValue, const void);
 ///
 /// A named attribute is essentially a (name, attribute) pair where the name is
 /// a string.
-
 struct MlirNamedAttribute {
   MlirIdentifier name;
   MlirAttribute attribute;
@@ -698,6 +697,24 @@ MLIR_CAPI_EXPORTED void mlirOperationMoveAfter(MlirOperation op,
 /// ownership is transferred to the block of the other operation.
 MLIR_CAPI_EXPORTED void mlirOperationMoveBefore(MlirOperation op,
                                                 MlirOperation other);
+
+/// Traversal order for operation walk.
+typedef enum MlirWalkOrder {
+  MlirWalkPreOrder,
+  MlirWalkPostOrder
+} MlirWalkOrder;
+
+/// Operation walker type. The handler is passed an (opaque) reference to an
+/// operation a pointer to a `userData`.
+typedef void (*MlirOperationWalkCallback)(MlirOperation, void *userData);
+
+/// Walks operation `op` in `walkOrder` and calls `callback` on that operation.
+/// `*userData` is passed to the callback as well and can be used to tunnel some
+/// some context or other data into the callback.
+MLIR_CAPI_EXPORTED
+void mlirOperationWalk(MlirOperation op, MlirOperationWalkCallback callback,
+                       void *userData, MlirWalkOrder walkOrder);
+
 //===----------------------------------------------------------------------===//
 // Region API.
 //===----------------------------------------------------------------------===//
