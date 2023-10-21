@@ -18,7 +18,6 @@
 #include <__memory/addressof.h>
 #include <__memory/construct_at.h>
 #include <__type_traits/conjunction.h>
-#include <__type_traits/datasizeof.h>
 #include <__type_traits/disjunction.h>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_assignable.h>
