@@ -1098,6 +1098,53 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    with the fifth i32 operand. The i1 sixth operand is used to clamp
                                                    the output. The i1s preceding the vector operands decide the signedness.
 
+  llvm.amdgcn.sched_barrier                        Controls the types of instructions that may be allowed to cross the intrinsic
+                                                   during instruction scheduling. The parameter is a mask for the instruction types
+                                                   that can cross the intrinsic.
+
+                                                   - 0x0000: No instructions may be scheduled across sched_barrier.
+                                                   - 0x0001: All, non-memory, non-side-effect producing instructions may be
+                                                     scheduled across sched_barrier, *i.e.* allow ALU instructions to pass.
+                                                   - 0x0002: VALU instructions may be scheduled across sched_barrier.
+                                                   - 0x0004: SALU instructions may be scheduled across sched_barrier.
+                                                   - 0x0008: MFMA/WMMA instructions may be scheduled across sched_barrier.
+                                                   - 0x0010: All VMEM instructions may be scheduled across sched_barrier.
+                                                   - 0x0020: VMEM read instructions may be scheduled across sched_barrier.
+                                                   - 0x0040: VMEM write instructions may be scheduled across sched_barrier.
+                                                   - 0x0080: All DS instructions may be scheduled across sched_barrier.
+                                                   - 0x0100: All DS read instructions may be scheduled accoss sched_barrier.
+                                                   - 0x0200: All DS write instructions may be scheduled across sched_barrier.
+
+  llvm.amdgcn.sched_group_barrier                  Creates schedule groups with specific properties to create custom scheduling
+                                                   pipelines. The ordering between groups is enforced by the instruction scheduler.
+                                                   The intrinsic applies to the code that preceeds the intrinsic. The intrinsic
+                                                   takes three values that control the behavior of the schedule groups.
+
+                                                   - Mask : Classify instruction groups using the llvm.amdgcn.sched_barrier mask values.
+                                                   - Size : The number of instructions that are in the group.
+                                                   - SyncID : Order is enforced between groups with matching values.
+
+                                                   Combining multiple sched_group_barrier intrinsics enables an ordering of specific
+                                                   instruction types during instruction scheduling. For example, the following enforces
+                                                   a sequence of 1 VMEM read, followed by 1 VALU instruction, followed by 5 MFMA
+                                                   instructions.
+
+                                                   |  ``// 1 VMEM read``
+                                                   |  ``__builtin_amdgcn_sched_group_barrier(32, 1, 0)``
+                                                   |  ``// 1 VALU``
+                                                   |  ``__builtin_amdgcn_sched_group_barrier(2, 1, 0)``
+                                                   |  ``// 5 MFMA``
+                                                   |  ``__builtin_amdgcn_sched_group_barrier(8, 5, 0)``
+
+  llvm.amdgcn.iglp_opt                             An **experimental** intrinsic for instruction group level parallelism. The intrinsic
+                                                   implements predefined intruction scheduling orderings. The intrinsic applies to the
+                                                   code that appears after the intrinsic. The intrinsic takes a value that specifies the
+                                                   strategy.  The compiler implements two strategies.
+
+                                                   0. Interleave DS and MFMA instructions for small GEMM kernels.
+                                                   1. Interleave DS and MFMA instructions for single wave small GEMM kernels.
+
+                                                   The iglp_opt strategy implementations are subject to change.
 
   ==============================================   ==========================================================
 
