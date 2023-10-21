@@ -404,6 +404,7 @@ arm::FloatABI arm::getDefaultFloatABI(const llvm::Triple &Triple) {
     }
     break;
 
+  case llvm::Triple::Haiku:
   case llvm::Triple::OpenBSD:
     return FloatABI::SoftFP;
 
@@ -626,6 +627,11 @@ llvm::ARM::FPUKind arm::getARMTargetFeatures(const Driver &D,
     if (!llvm::ARM::getFPUFeatures(FPUKind, Features))
       D.Diag(clang::diag::err_drv_clang_unsupported)
           << std::string("-mfpu=") + AndroidFPU;
+  } else if (ArchArgFPUKind != llvm::ARM::FK_INVALID ||
+             CPUArgFPUKind != llvm::ARM::FK_INVALID) {
+    FPUKind =
+        CPUArgFPUKind != llvm::ARM::FK_INVALID ? CPUArgFPUKind : ArchArgFPUKind;
+    (void)llvm::ARM::getFPUFeatures(FPUKind, Features);
   } else {
     if (!ForAS) {
       std::string CPU = arm::getARMTargetCPU(CPUName, ArchName, Triple);

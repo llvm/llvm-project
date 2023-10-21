@@ -408,14 +408,54 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $x11
     ; RV32I-NEXT: [[PTR_ADD:%[0-9]+]]:gprb(p0) = G_PTR_ADD [[COPY]], [[COPY1]](s32)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[PTR_ADD]](p0)
-    ; RV32I-NEXT: $x10 = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: $x10 = COPY [[PTR_ADD]](p0)
     ; RV32I-NEXT: PseudoRET implicit $x10
     %0:_(p0) = COPY $x10
     %1:_(s32) = COPY $x11
     %2:_(p0) = G_PTR_ADD %0, %1(s32)
-    %3:_(p0) = COPY %2(p0)
-    $x10 = COPY %3(p0)
+    $x10 = COPY %2(p0)
+    PseudoRET implicit $x10
+
+...
+---
+name:            ptrtoint
+legalized:       true
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10
+
+    ; RV32I-LABEL: name: ptrtoint
+    ; RV32I: liveins: $x10
+    ; RV32I-NEXT: {{  $}}
+    ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
+    ; RV32I-NEXT: [[PTRTOINT:%[0-9]+]]:gprb(s32) = G_PTRTOINT [[COPY]](p0)
+    ; RV32I-NEXT: $x10 = COPY [[PTRTOINT]](s32)
+    ; RV32I-NEXT: PseudoRET implicit $x10
+    %0:_(p0) = COPY $x10
+    %1:_(s32) = G_PTRTOINT %0(p0)
+    $x10 = COPY %1(s32)
+    PseudoRET implicit $x10
+
+...
+---
+name:            inttoprt
+legalized:       true
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10
+
+    ; RV32I-LABEL: name: inttoprt
+    ; RV32I: liveins: $x10
+    ; RV32I-NEXT: {{  $}}
+    ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(s32) = COPY $x10
+    ; RV32I-NEXT: [[INTTOPTR:%[0-9]+]]:gprb(p0) = G_INTTOPTR [[COPY]](s32)
+    ; RV32I-NEXT: $x10 = COPY [[INTTOPTR]](p0)
+    ; RV32I-NEXT: PseudoRET implicit $x10
+    %0:_(s32) = COPY $x10
+    %1:_(p0) = G_INTTOPTR %0(s32)
+    $x10 = COPY %1(p0)
     PseudoRET implicit $x10
 
 ...

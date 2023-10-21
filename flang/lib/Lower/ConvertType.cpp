@@ -376,31 +376,56 @@ struct TypeBuilderImpl {
       return genVectorType(tySpec);
     }
 
+    const Fortran::semantics::Scope &derivedScope = DEREF(tySpec.GetScope());
+
     auto rec = fir::RecordType::get(context, converter.mangleName(tySpec));
     // Maintain the stack of types for recursive references.
     derivedTypeInConstruction.emplace_back(typeSymbol, rec);
 
     // Gather the record type fields.
     // (1) The data components.
-    for (const auto &component :
-         Fortran::semantics::OrderedComponentIterator(tySpec)) {
-      // Lowering is assuming non deferred component lower bounds are always 1.
-      // Catch any situations where this is not true for now.
-      if (!converter.getLoweringOptions().getLowerToHighLevelFIR() &&
-          componentHasNonDefaultLowerBounds(component))
-        TODO(converter.genLocation(component.name()),
-             "derived type components with non default lower bounds");
-      if (IsProcedure(component))
-        TODO(converter.genLocation(component.name()), "procedure components");
-      mlir::Type ty = genSymbolType(component);
-      // Do not add the parent component (component of the parents are
-      // added and should be sufficient, the parent component would
-      // duplicate the fields). Note that genSymbolType must be called above on
-      // it so that the dispatch table for the parent type still gets emitted
-      // as needed.
-      if (component.test(Fortran::semantics::Symbol::Flag::ParentComp))
-        continue;
-      cs.emplace_back(converter.getRecordTypeFieldName(component), ty);
+    if (converter.getLoweringOptions().getLowerToHighLevelFIR()) {
+      // In HLFIR the parent component is the first fir.type component.
+      for (const auto &componentName :
+           typeSymbol.get<Fortran::semantics::DerivedTypeDetails>()
+               .componentNames()) {
+        auto scopeIter = derivedScope.find(componentName);
+        assert(scopeIter != derivedScope.cend() &&
+               "failed to find derived type component symbol");
+        const Fortran::semantics::Symbol &component = scopeIter->second.get();
+        if (IsProcedure(component))
+          TODO(converter.genLocation(component.name()), "procedure components");
+        mlir::Type ty = genSymbolType(component);
+        cs.emplace_back(converter.getRecordTypeFieldName(component), ty);
+      }
+    } else {
+      for (const auto &component :
+           Fortran::semantics::OrderedComponentIterator(tySpec)) {
+        // In the lowering to FIR the parent component does not appear in the
+        // fir.type and its components are inlined at the beginning of the
+        // fir.type<>.
+        // FIXME: this strategy leads to bugs because padding should be inserted
+        // after the component of the parents so that the next components do not
+        // end-up in the parent storage if the sum of the parent's component
+        // storage size is not a multiple of the parent type storage alignment.
+
+        // Lowering is assuming non deferred component lower bounds are
+        // always 1. Catch any situations where this is not true for now.
+        if (componentHasNonDefaultLowerBounds(component))
+          TODO(converter.genLocation(component.name()),
+               "derived type components with non default lower bounds");
+        if (IsProcedure(component))
+          TODO(converter.genLocation(component.name()), "procedure components");
+        mlir::Type ty = genSymbolType(component);
+        // Do not add the parent component (component of the parents are
+        // added and should be sufficient, the parent component would
+        // duplicate the fields). Note that genSymbolType must be called above
+        // on it so that the dispatch table for the parent type still gets
+        // emitted as needed.
+        if (component.test(Fortran::semantics::Symbol::Flag::ParentComp))
+          continue;
+        cs.emplace_back(converter.getRecordTypeFieldName(component), ty);
+      }
     }
 
     mlir::Location loc = converter.genLocation(typeSymbol.name());
@@ -426,14 +451,10 @@ struct TypeBuilderImpl {
     }
     LLVM_DEBUG(llvm::dbgs() << "derived type: " << rec << '\n');
 
-    converter.registerDispatchTableInfo(loc, &tySpec);
-
     // Generate the type descriptor object if any
-    if (const Fortran::semantics::Scope *derivedScope =
-            tySpec.scope() ? tySpec.scope() : tySpec.typeSymbol().scope())
-      if (const Fortran::semantics::Symbol *typeInfoSym =
-              derivedScope->runtimeDerivedTypeDescription())
-        converter.registerRuntimeTypeInfo(loc, *typeInfoSym);
+    if (const Fortran::semantics::Symbol *typeInfoSym =
+            derivedScope.runtimeDerivedTypeDescription())
+      converter.registerTypeInfo(loc, *typeInfoSym, tySpec, rec);
     return rec;
   }
 
@@ -596,6 +617,25 @@ mlir::Type Fortran::lower::TypeBuilder<T>::genType(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::evaluate::FunctionRef<T> &funcRef) {
   return TypeBuilderImpl{converter}.genExprType(funcRef);
+}
+
+const Fortran::semantics::DerivedTypeSpec &
+Fortran::lower::ComponentReverseIterator::advanceToParentType() {
+  const Fortran::semantics::Scope *scope = currentParentType->GetScope();
+  auto parentComp =
+      DEREF(scope).find(currentTypeDetails->GetParentComponentName().value());
+  assert(parentComp != scope->cend() && "failed to get parent component");
+  setCurrentType(parentComp->second->GetType()->derivedTypeSpec());
+  return *currentParentType;
+}
+
+void Fortran::lower::ComponentReverseIterator::setCurrentType(
+    const Fortran::semantics::DerivedTypeSpec &derived) {
+  currentParentType = &derived;
+  currentTypeDetails = &currentParentType->typeSymbol()
+                            .get<Fortran::semantics::DerivedTypeDetails>();
+  componentIt = currentTypeDetails->componentNames().crbegin();
+  componentItEnd = currentTypeDetails->componentNames().crend();
 }
 
 using namespace Fortran::evaluate;

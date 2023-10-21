@@ -71,7 +71,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86Target() {
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeX86LowerAMXIntrinsicsLegacyPassPass(PR);
   initializeX86LowerAMXTypeLegacyPassPass(PR);
-  initializeX86PreAMXConfigPassPass(PR);
   initializeX86PreTileConfigPass(PR);
   initializeGlobalISel(PR);
   initializeWinEHStatePassPass(PR);
@@ -130,12 +129,14 @@ static std::string computeDataLayout(const Triple &TT) {
   Ret += "-p270:32:32-p271:32:32-p272:64:64";
 
   // Some ABIs align 64 bit integers and doubles to 64 bits, others to 32.
+  // 128 bit integers are not specified in the 32-bit ABIs but are used
+  // internally for lowering f128, so we match the alignment to that.
   if (TT.isArch64Bit() || TT.isOSWindows() || TT.isOSNaCl())
-    Ret += "-i64:64";
+    Ret += "-i64:64-i128:128";
   else if (TT.isOSIAMCU())
     Ret += "-i64:32-f64:32";
   else
-    Ret += "-f64:32:64";
+    Ret += "-i128:128-f64:32:64";
 
   // Some ABIs align long double to 128 bits, others to 32.
   if (TT.isOSNaCl() || TT.isOSIAMCU())

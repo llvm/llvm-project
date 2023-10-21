@@ -24,7 +24,7 @@ using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 // There is no function named "syscall" in llvm-libc, we instead use a macro to
 // set up the arguments properly. We still need to specify the namespace though
 // because the macro generates a call to the actual internal function
-// (LIBC_NAMESPACE_syscall) which is inside the namespace.
+// (__llvm_libc_syscall) which is inside the namespace.
 TEST(LlvmLibcSyscallTest, TrivialCall) {
   libc_errno = 0;
 

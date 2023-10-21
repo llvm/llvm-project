@@ -10622,6 +10622,12 @@ TEST_F(FormatTest, WrapsAtNestedNameSpecifiers) {
   verifyFormat("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa::\n"
                "    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
                "        .aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa();");
+
+  verifyFormat(
+      "LongClassNameToShowTheIssue::AndAnotherLongClassNameToShowTheIssue::\n"
+      "    AndAnotherLongClassNameToShowTheIssue() {}\n"
+      "LongClassNameToShowTheIssue::AndAnotherLongClassNameToShowTheIssue::\n"
+      "    ~AndAnotherLongClassNameToShowTheIssue() {}");
 }
 
 TEST_F(FormatTest, UnderstandsTemplateParameters) {
@@ -11183,6 +11189,42 @@ TEST_F(FormatTest, UnderstandsNewAndDelete) {
                "void delete(link p);",
                "void new (link p);\n"
                "void delete (link p);");
+
+  FormatStyle AfterPlacementOperator = getLLVMStyle();
+  AfterPlacementOperator.SpaceBeforeParens = FormatStyle::SBPO_Custom;
+  EXPECT_EQ(
+      AfterPlacementOperator.SpaceBeforeParensOptions.AfterPlacementOperator,
+      FormatStyle::SpaceBeforeParensCustom::APO_Leave);
+  verifyFormat("new (buf) int;", AfterPlacementOperator);
+  verifyFormat("new(buf) int;", AfterPlacementOperator);
+
+  AfterPlacementOperator.SpaceBeforeParensOptions.AfterPlacementOperator =
+      FormatStyle::SpaceBeforeParensCustom::APO_Never;
+  verifyFormat("struct A {\n"
+               "  int *a;\n"
+               "  A(int *p) : a(new(p) int) {\n"
+               "    new(p) int;\n"
+               "    int *b = new(p) int;\n"
+               "    int *c = new(p) int(3);\n"
+               "    delete(b);\n"
+               "  }\n"
+               "};",
+               AfterPlacementOperator);
+  verifyFormat("void operator new(void *foo) ATTRIB;", AfterPlacementOperator);
+
+  AfterPlacementOperator.SpaceBeforeParensOptions.AfterPlacementOperator =
+      FormatStyle::SpaceBeforeParensCustom::APO_Always;
+  verifyFormat("struct A {\n"
+               "  int *a;\n"
+               "  A(int *p) : a(new (p) int) {\n"
+               "    new (p) int;\n"
+               "    int *b = new (p) int;\n"
+               "    int *c = new (p) int(3);\n"
+               "    delete (b);\n"
+               "  }\n"
+               "};",
+               AfterPlacementOperator);
+  verifyFormat("void operator new(void *foo) ATTRIB;", AfterPlacementOperator);
 }
 
 TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
@@ -11668,6 +11710,9 @@ TEST_F(FormatTest, UnderstandsAttributes) {
   verifyFormat("vector<SomeType __attr1 *const> v;", CustomAttrs);
   verifyFormat("vector<SomeType __attr1 *__attr2> v;", CustomAttrs);
   verifyFormat("vector<SomeType __attr1 *no_underscore_attr> v;", CustomAttrs);
+  verifyFormat("__attr1 ::qualified_type f();", CustomAttrs);
+  verifyFormat("__attr1() ::qualified_type f();", CustomAttrs);
+  verifyFormat("__attr1(nodebug) ::qualified_type f();", CustomAttrs);
 
   // Check that these are not parsed as function declarations:
   CustomAttrs.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_None;
@@ -16339,7 +16384,7 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
 
   verifyFormat("int f();", SpaceFuncDef);
   verifyFormat("void f (int a, T b) {}", SpaceFuncDef);
-  verifyFormat("A::A () : a(1) {}", SpaceFuncDef);
+  verifyFormat("A::A() : a(1) {}", SpaceFuncDef);
   verifyFormat("void f() __attribute__((asdf));", SpaceFuncDef);
   verifyFormat("#define A(x) x", SpaceFuncDef);
   verifyFormat("#define A (x) x", SpaceFuncDef);
@@ -16364,7 +16409,7 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
   // verifyFormat("T A::operator() () {}", SpaceFuncDef);
   verifyFormat("auto lambda = [] () { return 0; };", SpaceFuncDef);
   verifyFormat("int x = int(y);", SpaceFuncDef);
-  verifyFormat("M (std::size_t R, std::size_t C) : C(C), data(R) {}",
+  verifyFormat("M(std::size_t R, std::size_t C) : C(C), data(R) {}",
                SpaceFuncDef);
 
   FormatStyle SpaceIfMacros = getLLVMStyle();

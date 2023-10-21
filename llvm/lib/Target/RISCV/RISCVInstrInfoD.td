@@ -397,12 +397,12 @@ foreach Ext = DExts in {
 
 // Match non-signaling FEQ_D
 foreach Ext = DExts in {
-  defm : PatSetCC_m<any_fsetcc,    SETEQ,  FEQ_D,            Ext, f64>;
-  defm : PatSetCC_m<any_fsetcc,    SETOEQ, FEQ_D,            Ext, f64>;
-  defm : PatSetCC_m<strict_fsetcc, SETLT,  PseudoQuietFLT_D, Ext, f64>;
-  defm : PatSetCC_m<strict_fsetcc, SETOLT, PseudoQuietFLT_D, Ext, f64>;
-  defm : PatSetCC_m<strict_fsetcc, SETLE,  PseudoQuietFLE_D, Ext, f64>;
-  defm : PatSetCC_m<strict_fsetcc, SETOLE, PseudoQuietFLE_D, Ext, f64>;
+  defm : PatSetCC_m<any_fsetcc,    SETEQ,  FEQ_D,            Ext>;
+  defm : PatSetCC_m<any_fsetcc,    SETOEQ, FEQ_D,            Ext>;
+  defm : PatSetCC_m<strict_fsetcc, SETLT,  PseudoQuietFLT_D, Ext>;
+  defm : PatSetCC_m<strict_fsetcc, SETOLT, PseudoQuietFLT_D, Ext>;
+  defm : PatSetCC_m<strict_fsetcc, SETLE,  PseudoQuietFLE_D, Ext>;
+  defm : PatSetCC_m<strict_fsetcc, SETOLE, PseudoQuietFLE_D, Ext>;
 }
 
 let Predicates = [HasStdExtD] in {

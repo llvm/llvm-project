@@ -904,6 +904,8 @@ def HasAVX       : Predicate<"Subtarget->hasAVX()">;
 def HasAVX2      : Predicate<"Subtarget->hasAVX2()">;
 def HasAVX1Only  : Predicate<"Subtarget->hasAVX() && !Subtarget->hasAVX2()">;
 def HasEVEX512   : Predicate<"Subtarget->hasEVEX512()">;
+def HasAVX10_1   : Predicate<"Subtarget->hasAVX10_1()">;
+def HasAVX10_1_512 : Predicate<"Subtarget->hasAVX10_1_512()">;
 def HasAVX512    : Predicate<"Subtarget->hasAVX512()">;
 def UseAVX       : Predicate<"Subtarget->hasAVX() && !Subtarget->hasAVX512()">;
 def UseAVX2      : Predicate<"Subtarget->hasAVX2() && !Subtarget->hasAVX512()">;
@@ -1017,6 +1019,7 @@ def HasAMXBF16   : Predicate<"Subtarget->hasAMXBF16()">;
 def HasAMXINT8   : Predicate<"Subtarget->hasAMXINT8()">;
 def HasAMXCOMPLEX : Predicate<"Subtarget->hasAMXCOMPLEX()">;
 def HasUINTR     : Predicate<"Subtarget->hasUINTR()">;
+def HasUSERMSR   : Predicate<"Subtarget->hasUSERMSR()">;
 def HasCRC32     : Predicate<"Subtarget->hasCRC32()">;
 
 def HasX86_64    : Predicate<"Subtarget->hasX86_64()">;

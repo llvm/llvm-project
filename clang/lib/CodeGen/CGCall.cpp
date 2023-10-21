@@ -72,6 +72,7 @@ unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
   case CC_PreserveAll: return llvm::CallingConv::PreserveAll;
   case CC_Swift: return llvm::CallingConv::Swift;
   case CC_SwiftAsync: return llvm::CallingConv::SwiftTail;
+  case CC_M68kRTD: return llvm::CallingConv::M68k_RTD;
   }
 }
 
@@ -251,6 +252,9 @@ static CallingConv getCallingConventionForDecl(const ObjCMethodDecl *D,
 
   if (D->hasAttr<PreserveAllAttr>())
     return CC_PreserveAll;
+
+  if (D->hasAttr<M68kRTDAttr>())
+    return CC_M68kRTD;
 
   return CC_C;
 }
@@ -3443,9 +3447,9 @@ static llvm::Value *tryRemoveRetainOfSelf(CodeGenFunction &CGF,
   const VarDecl *self = method->getSelfDecl();
   if (!self->getType().isConstQualified()) return nullptr;
 
-  // Look for a retain call. Note: stripPointerCasts looks through returned arg
-  // functions, which would cause us to miss the retain.
-  llvm::CallInst *retainCall = dyn_cast<llvm::CallInst>(result);
+  // Look for a retain call.
+  llvm::CallInst *retainCall =
+    dyn_cast<llvm::CallInst>(result->stripPointerCasts());
   if (!retainCall || retainCall->getCalledOperand() !=
                          CGF.CGM.getObjCEntrypoints().objc_retain)
     return nullptr;

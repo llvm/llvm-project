@@ -15,6 +15,7 @@
 
 using namespace lldb;
 using namespace lldb_private;
+using namespace lldb_private::plugin::dwarf;
 
 // Constructor
 DWARFDebugAranges::DWARFDebugAranges() : m_aranges() {}

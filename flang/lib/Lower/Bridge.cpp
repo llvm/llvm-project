@@ -137,34 +137,41 @@ struct ConstructContext {
   Fortran::lower::StatementContext &stmtCtx; // construct exit code
 };
 
-/// Helper class to generate the runtime type info global data. This data
-/// is required to describe the derived type to the runtime so that it can
-/// operate over it. It must be ensured this data will be generated for every
-/// derived type lowered in the current translated unit. However, this data
+/// Helper class to generate the runtime type info global data and the
+/// fir.type_info operations that contain the dipatch tables (if any).
+/// The type info global data is required to describe the derived type to the
+/// runtime so that it can operate over it.
+/// It must be ensured these operations will be generated for every derived type
+/// lowered in the current translated unit. However, these operations
 /// cannot be generated before FuncOp have been created for functions since the
 /// initializers may take their address (e.g for type bound procedures). This
-/// class allows registering all the required runtime type info while it is not
-/// possible to create globals, and to generate this data after function
-/// lowering.
-class RuntimeTypeInfoConverter {
+/// class allows registering all the required type info while it is not
+/// possible to create GlobalOp/TypeInfoOp, and to generate this data afte
+/// function lowering.
+class TypeInfoConverter {
   /// Store the location and symbols of derived type info to be generated.
   /// The location of the derived type instantiation is also stored because
-  /// runtime type descriptor symbol are compiler generated and cannot be mapped
-  /// to user code on their own.
-  struct TypeInfoSymbol {
+  /// runtime type descriptor symbols are compiler generated and cannot be
+  /// mapped to user code on their own.
+  struct TypeInfo {
     Fortran::semantics::SymbolRef symbol;
+    const Fortran::semantics::DerivedTypeSpec &typeSpec;
+    fir::RecordType type;
     mlir::Location loc;
   };
 
 public:
-  void registerTypeInfoSymbol(Fortran::lower::AbstractConverter &converter,
-                              mlir::Location loc,
-                              Fortran::semantics::SymbolRef typeInfoSym) {
+  void registerTypeInfo(Fortran::lower::AbstractConverter &converter,
+                        mlir::Location loc,
+                        Fortran::semantics::SymbolRef typeInfoSym,
+                        const Fortran::semantics::DerivedTypeSpec &typeSpec,
+                        fir::RecordType type) {
     if (seen.contains(typeInfoSym))
       return;
     seen.insert(typeInfoSym);
     if (!skipRegistration) {
-      registeredTypeInfoSymbols.emplace_back(TypeInfoSymbol{typeInfoSym, loc});
+      registeredTypeInfo.emplace_back(
+          TypeInfo{typeInfoSym, typeSpec, type, loc});
       return;
     }
     // Once the registration is closed, symbols cannot be added to the
@@ -172,67 +179,59 @@ public:
     // However, after registration is closed, it is safe to directly generate
     // the globals because all FuncOps whose addresses may be required by the
     // initializers have been generated.
-    Fortran::lower::createRuntimeTypeInfoGlobal(converter, loc,
-                                                typeInfoSym.get());
+    createTypeInfoOpAndGlobal(converter,
+                              TypeInfo{typeInfoSym, typeSpec, type, loc});
   }
 
-  void createTypeInfoGlobals(Fortran::lower::AbstractConverter &converter) {
+  void createTypeInfo(Fortran::lower::AbstractConverter &converter) {
     skipRegistration = true;
-    for (const TypeInfoSymbol &info : registeredTypeInfoSymbols)
-      Fortran::lower::createRuntimeTypeInfoGlobal(converter, info.loc,
-                                                  info.symbol.get());
-    registeredTypeInfoSymbols.clear();
+    for (const TypeInfo &info : registeredTypeInfo)
+      createTypeInfoOpAndGlobal(converter, info);
+    registeredTypeInfo.clear();
   }
 
 private:
-  /// Store the runtime type descriptors that will be required for the
-  /// derived type that have been converted to FIR derived types.
-  llvm::SmallVector<TypeInfoSymbol> registeredTypeInfoSymbols;
-  /// Create derived type runtime info global immediately without storing the
-  /// symbol in registeredTypeInfoSymbols.
-  bool skipRegistration = false;
-  /// Track symbols symbols processed during and after the registration
-  /// to avoid infinite loops between type conversions and global variable
-  /// creation.
-  llvm::SmallSetVector<Fortran::semantics::SymbolRef, 32> seen;
-};
-
-class DispatchTableConverter {
-  struct DispatchTableInfo {
-    const Fortran::semantics::DerivedTypeSpec *typeSpec;
-    mlir::Location loc;
-  };
-
-public:
-  void registerTypeSpec(Fortran::lower::AbstractConverter &converter,
-                        mlir::Location loc,
-                        const Fortran::semantics::DerivedTypeSpec *typeSpec) {
-    assert(typeSpec && "type spec is null");
-    std::string dtName = converter.mangleName(*typeSpec);
-    if (seen.contains(dtName) || dtName.find("__fortran") != std::string::npos)
-      return;
-    seen.insert(dtName);
-    registeredDispatchTableInfo.emplace_back(DispatchTableInfo{typeSpec, loc});
+  void createTypeInfoOpAndGlobal(Fortran::lower::AbstractConverter &converter,
+                                 const TypeInfo &info) {
+    Fortran::lower::createRuntimeTypeInfoGlobal(converter, info.loc,
+                                                info.symbol.get());
+    createTypeInfoOp(converter, info);
   }
 
-  void createDispatchTableOps(Fortran::lower::AbstractConverter &converter) {
-    for (const DispatchTableInfo &info : registeredDispatchTableInfo) {
-      std::string dtName = converter.mangleName(*info.typeSpec);
-      const Fortran::semantics::DerivedTypeSpec *parent =
-          Fortran::evaluate::GetParentTypeSpec(*info.typeSpec);
-      fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-      fir::DispatchTableOp dt = builder.createDispatchTableOp(
-          info.loc, dtName, parent ? converter.mangleName(*parent) : "");
-      auto insertPt = builder.saveInsertionPoint();
-      const Fortran::semantics::Scope *scope = info.typeSpec->scope();
-      if (!scope)
-        scope = info.typeSpec->typeSymbol().scope();
-      Fortran::semantics::SymbolVector bindings =
-          Fortran::semantics::CollectBindings(*scope);
+  void createTypeInfoOp(Fortran::lower::AbstractConverter &converter,
+                        const TypeInfo &info) {
+    fir::RecordType parentType{};
+    if (const Fortran::semantics::DerivedTypeSpec *parent =
+            Fortran::evaluate::GetParentTypeSpec(info.typeSpec))
+      parentType = mlir::cast<fir::RecordType>(converter.genType(*parent));
 
-      if (!bindings.empty())
-        builder.createBlock(&dt.getRegion());
+    fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+    mlir::ModuleOp module = builder.getModule();
+    fir::TypeInfoOp dt =
+        module.lookupSymbol<fir::TypeInfoOp>(info.type.getName());
+    if (dt)
+      return; // Already created.
+    auto insertPt = builder.saveInsertionPoint();
+    builder.setInsertionPoint(module.getBody(), module.getBody()->end());
+    dt = builder.create<fir::TypeInfoOp>(info.loc, info.type, parentType);
 
+    if (!info.typeSpec.HasDefaultInitialization(/*ignoreAllocatable=*/false,
+                                                /*ignorePointer=*/false))
+      dt->setAttr(dt.getNoInitAttrName(), builder.getUnitAttr());
+    if (!info.typeSpec.HasDestruction())
+      dt->setAttr(dt.getNoDestroyAttrName(), builder.getUnitAttr());
+    if (!Fortran::semantics::MayRequireFinalization(info.typeSpec))
+      dt->setAttr(dt.getNoFinalAttrName(), builder.getUnitAttr());
+
+    const Fortran::semantics::Scope *scope = info.typeSpec.scope();
+    if (!scope)
+      scope = info.typeSpec.typeSymbol().scope();
+    assert(scope && "failed to find type scope");
+
+    Fortran::semantics::SymbolVector bindings =
+        Fortran::semantics::CollectBindings(*scope);
+    if (!bindings.empty()) {
+      builder.createBlock(&dt.getDispatchTable());
       for (const Fortran::semantics::SymbolRef &binding : bindings) {
         const auto &details =
             binding.get().get<Fortran::semantics::ProcBindingDetails>();
@@ -244,20 +243,21 @@ public:
             info.loc, mlir::StringAttr::get(builder.getContext(), tbpName),
             mlir::SymbolRefAttr::get(builder.getContext(), bindingName));
       }
-      if (!bindings.empty())
-        builder.create<fir::FirEndOp>(info.loc);
-      builder.restoreInsertionPoint(insertPt);
+      builder.create<fir::FirEndOp>(info.loc);
     }
-    registeredDispatchTableInfo.clear();
+    builder.restoreInsertionPoint(insertPt);
   }
 
-private:
-  /// Store the semantic DerivedTypeSpec that will be required to generate the
-  /// dispatch table.
-  llvm::SmallVector<DispatchTableInfo> registeredDispatchTableInfo;
-
-  /// Track processed type specs to avoid multiple creation.
-  llvm::StringSet<> seen;
+  /// Store the front-end data that will be required to generate the type info
+  /// for the derived types that have been converted to fir.type<>.
+  llvm::SmallVector<TypeInfo> registeredTypeInfo;
+  /// Create derived type info immediately without storing the
+  /// symbol in registeredTypeInfo.
+  bool skipRegistration = false;
+  /// Track symbols symbols processed during and after the registration
+  /// to avoid infinite loops between type conversions and global variable
+  /// creation.
+  llvm::SmallSetVector<Fortran::semantics::SymbolRef, 32> seen;
 };
 
 using IncrementLoopNestInfo = llvm::SmallVector<IncrementLoopInfo, 8>;
@@ -334,13 +334,10 @@ public:
 
     /// Once all the code has been translated, create runtime type info
     /// global data structure for the derived types that have been
-    /// processed.
+    /// processed as well as the fir.type_info operations with the
+    /// dispatch tables.
     createGlobalOutsideOfFunctionLowering(
-        [&]() { runtimeTypeInfoConverter.createTypeInfoGlobals(*this); });
-
-    /// Create the dispatch tables for derived types.
-    createGlobalOutsideOfFunctionLowering(
-        [&]() { dispatchTableConverter.createDispatchTableOps(*this); });
+        [&]() { typeInfoConverter.createTypeInfo(*this); });
 
     // Create the list of any environment defaults for the runtime to set. The
     // runtime default list is only created if there is a main program to ensure
@@ -722,46 +719,88 @@ public:
     const Fortran::semantics::Symbol &hsym = sym.GetUltimate();
     Fortran::lower::SymbolBox hsb = lookupOneLevelUpSymbol(hsym);
     assert(hsb && "Host symbol box not found");
-    fir::ExtendedValue hexv = symBoxToExtendedValue(hsb);
 
     // 2) Fetch the copied one that will mask the original.
     Fortran::lower::SymbolBox sb = shallowLookupSymbol(sym);
     assert(sb && "Host-associated symbol box not found");
     assert(hsb.getAddr() != sb.getAddr() &&
            "Host and associated symbol boxes are the same");
-    fir::ExtendedValue exv = symBoxToExtendedValue(sb);
 
     // 3) Perform the assignment.
     mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
     if (copyAssignIP && copyAssignIP->isSet())
       builder->restoreInsertionPoint(*copyAssignIP);
     else
-      builder->setInsertionPointAfter(fir::getBase(exv).getDefiningOp());
+      builder->setInsertionPointAfter(sb.getAddr().getDefiningOp());
 
-    fir::ExtendedValue lhs, rhs;
+    Fortran::lower::SymbolBox *lhs_sb, *rhs_sb;
     if (copyAssignIP && copyAssignIP->isSet() &&
         sym.test(Fortran::semantics::Symbol::Flag::OmpLastPrivate)) {
       // lastprivate case
-      lhs = hexv;
-      rhs = exv;
+      lhs_sb = &hsb;
+      rhs_sb = &sb;
     } else {
-      lhs = exv;
-      rhs = hexv;
+      lhs_sb = &sb;
+      rhs_sb = &hsb;
     }
 
     mlir::Location loc = genLocation(sym.name());
-    mlir::Type symType = genType(sym);
 
-    if (auto seqTy = symType.dyn_cast<fir::SequenceType>()) {
-      Fortran::lower::StatementContext stmtCtx;
-      Fortran::lower::createSomeArrayAssignment(*this, lhs, rhs, localSymbols,
-                                                stmtCtx);
-      stmtCtx.finalizeAndReset();
-    } else if (hexv.getBoxOf<fir::CharBoxValue>()) {
-      fir::factory::CharacterExprHelper{*builder, loc}.createAssign(lhs, rhs);
+    if (lowerToHighLevelFIR()) {
+      hlfir::Entity lhs{lhs_sb->getAddr()};
+      hlfir::Entity rhs{rhs_sb->getAddr()};
+      // Temporary_lhs is set to true in hlfir.assign below to avoid user
+      // assignment to be used and finalization to be called on the LHS.
+      // This may or may not be correct but mimics the current behaviour
+      // without HLFIR.
+      auto copyData = [&](hlfir::Entity l, hlfir::Entity r) {
+        // Dereference RHS and load it if trivial scalar.
+        r = hlfir::loadTrivialScalar(loc, *builder, r);
+        builder->create<hlfir::AssignOp>(
+            loc, r, l,
+            /*isWholeAllocatableAssignment=*/false,
+            /*keepLhsLengthInAllocatableAssignment=*/false,
+            /*temporary_lhs=*/true);
+      };
+      if (lhs.isAllocatable()) {
+        // Deep copy allocatable if it is allocated.
+        // Note that when allocated, the RHS is already allocated with the LHS
+        // shape for copy on entry in createHostAssociateVarClone.
+        // For lastprivate, this assumes that the RHS was not reallocated in
+        // the OpenMP region.
+        lhs = hlfir::derefPointersAndAllocatables(loc, *builder, lhs);
+        mlir::Value addr = hlfir::genVariableRawAddress(loc, *builder, lhs);
+        mlir::Value isAllocated = builder->genIsNotNullAddr(loc, addr);
+        builder->genIfThen(loc, isAllocated)
+            .genThen([&]() {
+              // Copy the DATA, not the descriptors.
+              copyData(lhs, rhs);
+            })
+            .end();
+      } else if (lhs.isPointer()) {
+        // Set LHS target to the target of RHS (do not copy the RHS
+        // target data into the LHS target storage).
+        auto loadVal = builder->create<fir::LoadOp>(loc, rhs);
+        builder->create<fir::StoreOp>(loc, loadVal, lhs);
+      } else {
+        // Non ALLOCATABLE/POINTER variable. Simple DATA copy.
+        copyData(lhs, rhs);
+      }
     } else {
-      auto loadVal = builder->create<fir::LoadOp>(loc, fir::getBase(rhs));
-      builder->create<fir::StoreOp>(loc, loadVal, fir::getBase(lhs));
+      fir::ExtendedValue lhs = symBoxToExtendedValue(*lhs_sb);
+      fir::ExtendedValue rhs = symBoxToExtendedValue(*rhs_sb);
+      mlir::Type symType = genType(sym);
+      if (auto seqTy = symType.dyn_cast<fir::SequenceType>()) {
+        Fortran::lower::StatementContext stmtCtx;
+        Fortran::lower::createSomeArrayAssignment(*this, lhs, rhs, localSymbols,
+                                                  stmtCtx);
+        stmtCtx.finalizeAndReset();
+      } else if (lhs.getBoxOf<fir::CharBoxValue>()) {
+        fir::factory::CharacterExprHelper{*builder, loc}.createAssign(lhs, rhs);
+      } else {
+        auto loadVal = builder->create<fir::LoadOp>(loc, fir::getBase(rhs));
+        builder->create<fir::StoreOp>(loc, loadVal, fir::getBase(lhs));
+      }
     }
 
     if (copyAssignIP && copyAssignIP->isSet() &&
@@ -875,16 +914,11 @@ public:
     hostAssocTuple = val;
   }
 
-  void registerRuntimeTypeInfo(
-      mlir::Location loc,
-      Fortran::lower::SymbolRef typeInfoSym) override final {
-    runtimeTypeInfoConverter.registerTypeInfoSymbol(*this, loc, typeInfoSym);
-  }
-
-  void registerDispatchTableInfo(
-      mlir::Location loc,
-      const Fortran::semantics::DerivedTypeSpec *typeSpec) override final {
-    dispatchTableConverter.registerTypeSpec(*this, loc, typeSpec);
+  void registerTypeInfo(mlir::Location loc,
+                        Fortran::lower::SymbolRef typeInfoSym,
+                        const Fortran::semantics::DerivedTypeSpec &typeSpec,
+                        fir::RecordType type) override final {
+    typeInfoConverter.registerTypeInfo(*this, loc, typeInfoSym, typeSpec, type);
   }
 
   llvm::StringRef
@@ -2618,8 +2652,12 @@ private:
         scopeBlockIdMap.try_emplace(&scope, ++blockId);
         Fortran::lower::AggregateStoreMap storeMap;
         for (const Fortran::lower::pft::Variable &var :
-             Fortran::lower::pft::getScopeVariableList(scope))
-          instantiateVar(var, storeMap);
+             Fortran::lower::pft::getScopeVariableList(scope)) {
+          // Do no instantiate again variables from the block host
+          // that appears in specification of block variables.
+          if (!var.hasSymbol() || !lookupSymbol(var.getSymbol()))
+            instantiateVar(var, storeMap);
+        }
       } else if (e.getIf<Fortran::parser::EndBlockStmt>()) {
         if (eval.lowerAsUnstructured())
           maybeStartBlock(e.block);
@@ -2633,35 +2671,35 @@ private:
   }
 
   void genFIR(const Fortran::parser::ChangeTeamConstruct &construct) {
-    TODO(toLocation(), "ChangeTeamConstruct implementation");
+    TODO(toLocation(), "coarray: ChangeTeamConstruct");
   }
   void genFIR(const Fortran::parser::ChangeTeamStmt &stmt) {
-    TODO(toLocation(), "ChangeTeamStmt implementation");
+    TODO(toLocation(), "coarray: ChangeTeamStmt");
   }
   void genFIR(const Fortran::parser::EndChangeTeamStmt &stmt) {
-    TODO(toLocation(), "EndChangeTeamStmt implementation");
+    TODO(toLocation(), "coarray: EndChangeTeamStmt");
   }
 
   void genFIR(const Fortran::parser::CriticalConstruct &criticalConstruct) {
     setCurrentPositionAt(criticalConstruct);
-    TODO(toLocation(), "CriticalConstruct implementation");
+    TODO(toLocation(), "coarray: CriticalConstruct");
   }
   void genFIR(const Fortran::parser::CriticalStmt &) {
-    TODO(toLocation(), "CriticalStmt implementation");
+    TODO(toLocation(), "coarray: CriticalStmt");
   }
   void genFIR(const Fortran::parser::EndCriticalStmt &) {
-    TODO(toLocation(), "EndCriticalStmt implementation");
+    TODO(toLocation(), "coarray: EndCriticalStmt");
   }
 
   void genFIR(const Fortran::parser::SelectRankConstruct &selectRankConstruct) {
     setCurrentPositionAt(selectRankConstruct);
-    TODO(toLocation(), "SelectRankConstruct implementation");
+    TODO(toLocation(), "coarray: SelectRankConstruct");
   }
   void genFIR(const Fortran::parser::SelectRankStmt &) {
-    TODO(toLocation(), "SelectRankStmt implementation");
+    TODO(toLocation(), "coarray: SelectRankStmt");
   }
   void genFIR(const Fortran::parser::SelectRankCaseStmt &) {
-    TODO(toLocation(), "SelectRankCaseStmt implementation");
+    TODO(toLocation(), "coarray: SelectRankCaseStmt");
   }
 
   void genFIR(const Fortran::parser::SelectTypeConstruct &selectTypeConstruct) {
@@ -4811,8 +4849,7 @@ private:
   Fortran::lower::pft::Evaluation *evalPtr = nullptr;
   Fortran::lower::SymMap localSymbols;
   Fortran::parser::CharBlock currentPosition;
-  RuntimeTypeInfoConverter runtimeTypeInfoConverter;
-  DispatchTableConverter dispatchTableConverter;
+  TypeInfoConverter typeInfoConverter;
 
   // Stack to manage object deallocation and finalization at construct exits.
   llvm::SmallVector<ConstructContext> activeConstructStack;

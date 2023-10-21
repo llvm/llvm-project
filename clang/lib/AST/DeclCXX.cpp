@@ -686,7 +686,7 @@ bool CXXRecordDecl::lambdaIsDefaultConstructibleAndAssignable() const {
   // C++17 [expr.prim.lambda]p21:
   //   The closure type associated with a lambda-expression has no default
   //   constructor and a deleted copy assignment operator.
-  if (getLambdaCaptureDefault() != LCD_None || capture_size() != 0)
+  if (!isCapturelessLambda())
     return false;
   return getASTContext().getLangOpts().CPlusPlus20;
 }
@@ -1484,7 +1484,8 @@ void CXXRecordDecl::setCaptures(ASTContext &Context,
     if (Captures[I].isExplicit())
       ++Data.NumExplicitCaptures;
 
-    *ToCapture++ = Captures[I];
+    new (ToCapture) LambdaCapture(Captures[I]);
+    ToCapture++;
   }
 
   if (!lambdaIsDefaultConstructibleAndAssignable())

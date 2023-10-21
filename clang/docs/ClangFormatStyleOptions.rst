@@ -5224,6 +5224,33 @@ the configuration (without a prefix: ``Auto``).
        void operator++ (int a);        vs.    void operator++(int a);
        object.operator++ (10);                object.operator++(10);
 
+  * ``AfterPlacementOperatorStyle AfterPlacementOperator`` :versionbadge:`clang-format 18`
+
+    Defines in which cases to put a space between ``new/delete`` operators
+    and opening parentheses.
+
+    Possible values:
+
+    * ``APO_Never`` (in configuration: ``Never``)
+      Remove space after ``new/delete`` operators and before ``(``.
+
+      .. code-block:: c++
+
+         new(buf) T;
+         delete(buf) T;
+
+    * ``APO_Always`` (in configuration: ``Always``)
+      Always add space after ``new/delete`` operators and before ``(``.
+
+      .. code-block:: c++
+
+         new (buf) T;
+         delete (buf) T;
+
+    * ``APO_Leave`` (in configuration: ``Leave``)
+      Leave placement ``new/delete`` expressions as they are.
+
+
   * ``bool AfterRequiresInClause`` If ``true``, put space between requires keyword in a requires clause and
     opening parentheses, if there is one.
 
@@ -5730,7 +5757,7 @@ Examples
 ========
 
 A style similar to the `Linux Kernel style
-<https://www.kernel.org/doc/Documentation/CodingStyle>`_:
+<https://www.kernel.org/doc/html/latest/process/coding-style.html>`_:
 
 .. code-block:: yaml
 

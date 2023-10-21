@@ -14,6 +14,8 @@
 #include "mlir/Dialect/Transform/Transforms/TransformInterpreterPassBase.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/IR/TransformOps.h"
+#include "mlir/Dialect/Transform/Transforms/TransformInterpreterUtils.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/IR/Visitors.h"
@@ -50,42 +52,15 @@ constexpr static llvm::StringLiteral kTransformDialectTagPayloadRootValue =
 constexpr static llvm::StringLiteral
     kTransformDialectTagTransformContainerValue = "transform_container";
 
-/// Utility to parse the content of a `transformFileName` MLIR file containing
-/// a transform dialect specification.
-static LogicalResult
-parseTransformModuleFromFile(MLIRContext *context,
-                             llvm::StringRef transformFileName,
-                             OwningOpRef<ModuleOp> &transformModule) {
-  if (transformFileName.empty()) {
-    LLVM_DEBUG(
-        DBGS() << "no transform file name specified, assuming the transform "
-                  "module is embedded in the IR next to the top-level\n");
-    return success();
-  }
-  // Parse transformFileName content into a ModuleOp.
-  std::string errorMessage;
-  auto memoryBuffer = mlir::openInputFile(transformFileName, &errorMessage);
-  if (!memoryBuffer) {
-    return emitError(FileLineColLoc::get(
-               StringAttr::get(context, transformFileName), 0, 0))
-           << "failed to open transform file: " << errorMessage;
-  }
-  // Tell sourceMgr about this buffer, the parser will pick it up.
-  llvm::SourceMgr sourceMgr;
-  sourceMgr.AddNewSourceBuffer(std::move(memoryBuffer), llvm::SMLoc());
-  transformModule =
-      OwningOpRef<ModuleOp>(parseSourceFile<ModuleOp>(sourceMgr, context));
-  return success();
-}
-
 /// Finds the single top-level transform operation with `root` as ancestor.
 /// Reports an error if there is more than one such operation and returns the
 /// first one found. Reports an error returns nullptr if no such operation
 /// found.
-static Operation *findTopLevelTransform(Operation *root,
-                                        StringRef filenameOption) {
+static Operation *
+findTopLevelTransform(Operation *root, StringRef filenameOption,
+                      mlir::transform::TransformOptions options) {
   ::mlir::transform::TransformOpInterface topLevelTransform = nullptr;
-  WalkResult walkResult = root->walk<WalkOrder::PreOrder>(
+  root->walk<WalkOrder::PreOrder>(
       [&](::mlir::transform::TransformOpInterface transformOp) {
         if (!transformOp
                  ->hasTrait<transform::PossibleTopLevelTransformOpTrait>())
@@ -94,14 +69,15 @@ static Operation *findTopLevelTransform(Operation *root,
           topLevelTransform = transformOp;
           return WalkResult::skip();
         }
-        auto diag = transformOp.emitError()
-                    << "more than one top-level transform op";
-        diag.attachNote(topLevelTransform.getLoc())
-            << "previous top-level transform op";
-        return WalkResult::interrupt();
+        if (options.getEnforceSingleToplevelTransformOp()) {
+          auto diag = transformOp.emitError()
+                      << "more than one top-level transform op";
+          diag.attachNote(topLevelTransform.getLoc())
+              << "previous top-level transform op";
+          return WalkResult::interrupt();
+        }
+        return WalkResult::skip();
       });
-  if (walkResult.wasInterrupted())
-    return nullptr;
   if (!topLevelTransform) {
     auto diag = root->emitError()
                 << "could not find a nested top-level transform op";
@@ -161,17 +137,9 @@ static llvm::raw_ostream &
 printReproCall(llvm::raw_ostream &os, StringRef rootOpName, StringRef passName,
                const Pass::Option<std::string> &debugPayloadRootTag,
                const Pass::Option<std::string> &debugTransformRootTag,
-               const Pass::Option<std::string> &transformLibraryFileName,
                StringRef binaryName) {
-  std::string transformLibraryOption = "";
-  if (!transformLibraryFileName.empty()) {
-    transformLibraryOption =
-        llvm::formatv(" {0}={1}", transformLibraryFileName.getArgStr(),
-                      transformLibraryFileName.getValue())
-            .str();
-  }
   os << llvm::formatv(
-      "{7} --pass-pipeline=\"{0}({1}{{{2}={3} {4}={5}{6}})\"", rootOpName,
+      "{6} --pass-pipeline=\"{0}({1}{{{2}={3} {4}={5}})\"", rootOpName,
       passName, debugPayloadRootTag.getArgStr(),
       debugPayloadRootTag.empty()
           ? StringRef(kTransformDialectTagPayloadRootValue)
@@ -180,14 +148,15 @@ printReproCall(llvm::raw_ostream &os, StringRef rootOpName, StringRef passName,
       debugTransformRootTag.empty()
           ? StringRef(kTransformDialectTagTransformContainerValue)
           : debugTransformRootTag,
-      transformLibraryOption, binaryName);
+      binaryName);
   return os;
 }
 
 /// Prints the module rooted at `root` to `os` and appends
 /// `transformContainer` if it is not nested in `root`.
-llvm::raw_ostream &printModuleForRepro(llvm::raw_ostream &os, Operation *root,
-                                       Operation *transform) {
+static llvm::raw_ostream &printModuleForRepro(llvm::raw_ostream &os,
+                                              Operation *root,
+                                              Operation *transform) {
   root->print(os);
   if (!root->isAncestor(transform))
     transform->print(os);
@@ -196,12 +165,13 @@ llvm::raw_ostream &printModuleForRepro(llvm::raw_ostream &os, Operation *root,
 
 /// Saves the payload and the transform IR into a temporary file and reports
 /// the file name to `os`.
-void saveReproToTempFile(
-    llvm::raw_ostream &os, Operation *target, Operation *transform,
-    StringRef passName, const Pass::Option<std::string> &debugPayloadRootTag,
-    const Pass::Option<std::string> &debugTransformRootTag,
-    const Pass::Option<std::string> &transformLibraryFileName,
-    StringRef binaryName) {
+[[maybe_unused]] static void
+saveReproToTempFile(llvm::raw_ostream &os, Operation *target,
+                    Operation *transform, StringRef passName,
+                    const Pass::Option<std::string> &debugPayloadRootTag,
+                    const Pass::Option<std::string> &debugTransformRootTag,
+                    const Pass::ListOption<std::string> &transformLibraryPaths,
+                    StringRef binaryName) {
   using llvm::sys::fs::TempFile;
   Operation *root = getRootOperation(target);
 
@@ -226,8 +196,7 @@ void saveReproToTempFile(
 
   os << "=== Transform Interpreter Repro ===\n";
   printReproCall(os, root->getName().getStringRef(), passName,
-                 debugPayloadRootTag, debugTransformRootTag,
-                 transformLibraryFileName, binaryName)
+                 debugPayloadRootTag, debugTransformRootTag, binaryName)
       << " " << filename << "\n";
   os << "===================================\n";
 }
@@ -238,7 +207,7 @@ static void performOptionalDebugActions(
     Operation *target, Operation *transform, StringRef passName,
     const Pass::Option<std::string> &debugPayloadRootTag,
     const Pass::Option<std::string> &debugTransformRootTag,
-    const Pass::Option<std::string> &transformLibraryFileName,
+    const Pass::ListOption<std::string> &transformLibraryPaths,
     StringRef binaryName) {
   MLIRContext *context = target->getContext();
 
@@ -281,8 +250,7 @@ static void performOptionalDebugActions(
     llvm::dbgs() << "=== Transform Interpreter Repro ===\n";
     printReproCall(llvm::dbgs() << "cat <<EOF | ",
                    root->getName().getStringRef(), passName,
-                   debugPayloadRootTag, debugTransformRootTag,
-                   transformLibraryFileName, binaryName)
+                   debugPayloadRootTag, debugTransformRootTag, binaryName)
         << "\n";
     printModuleForRepro(llvm::dbgs(), root, transform);
     llvm::dbgs() << "\nEOF\n";
@@ -292,7 +260,7 @@ static void performOptionalDebugActions(
   DEBUG_WITH_TYPE(DEBUG_TYPE_DUMP_FILE, {
     saveReproToTempFile(llvm::dbgs(), target, transform, passName,
                         debugPayloadRootTag, debugTransformRootTag,
-                        transformLibraryFileName, binaryName);
+                        transformLibraryPaths, binaryName);
   });
 
   // Remove temporary attributes if they were set.
@@ -302,91 +270,23 @@ static void performOptionalDebugActions(
     transform->removeAttr(kTransformDialectTagAttrName);
 }
 
-/// Replaces external symbols in `block` with their (non-external) definitions
-/// from the given module.
-static LogicalResult defineDeclaredSymbols(Block &block, ModuleOp definitions) {
-  MLIRContext &ctx = *definitions->getContext();
-  auto consumedName =
-      StringAttr::get(&ctx, transform::TransformDialect::kArgConsumedAttrName);
-  auto readOnlyName =
-      StringAttr::get(&ctx, transform::TransformDialect::kArgReadOnlyAttrName);
-
-  for (Operation &op : llvm::make_early_inc_range(block)) {
-    LLVM_DEBUG(DBGS() << op << "\n");
-    auto symbol = dyn_cast<SymbolOpInterface>(op);
-    if (!symbol)
-      continue;
-    if (symbol->getNumRegions() == 1 && !symbol->getRegion(0).empty())
-      continue;
-
-    LLVM_DEBUG(DBGS() << "looking for definition of symbol "
-                      << symbol.getNameAttr() << ":");
-    SymbolTable symbolTable(definitions);
-    Operation *externalSymbol = symbolTable.lookup(symbol.getNameAttr());
-    if (!externalSymbol || externalSymbol->getNumRegions() != 1 ||
-        externalSymbol->getRegion(0).empty()) {
-      LLVM_DEBUG(llvm::dbgs() << "not found\n");
-      continue;
-    }
-
-    auto symbolFunc = dyn_cast<FunctionOpInterface>(op);
-    auto externalSymbolFunc = dyn_cast<FunctionOpInterface>(externalSymbol);
-    if (!symbolFunc || !externalSymbolFunc) {
-      LLVM_DEBUG(llvm::dbgs() << "cannot compare types\n");
-      continue;
-    }
-
-    LLVM_DEBUG(llvm::dbgs() << "found @" << externalSymbol << "\n");
-    if (symbolFunc.getFunctionType() != externalSymbolFunc.getFunctionType()) {
-      return symbolFunc.emitError()
-             << "external definition has a mismatching signature ("
-             << externalSymbolFunc.getFunctionType() << ")";
-    }
-
-    for (unsigned i = 0, e = symbolFunc.getNumArguments(); i < e; ++i) {
-      bool isExternalConsumed =
-          externalSymbolFunc.getArgAttr(i, consumedName) != nullptr;
-      bool isExternalReadonly =
-          externalSymbolFunc.getArgAttr(i, readOnlyName) != nullptr;
-      bool isConsumed = symbolFunc.getArgAttr(i, consumedName) != nullptr;
-      bool isReadonly = symbolFunc.getArgAttr(i, readOnlyName) != nullptr;
-      if (!isExternalConsumed && !isExternalReadonly) {
-        if (isConsumed)
-          externalSymbolFunc.setArgAttr(i, consumedName, UnitAttr::get(&ctx));
-        else if (isReadonly)
-          externalSymbolFunc.setArgAttr(i, readOnlyName, UnitAttr::get(&ctx));
-        continue;
-      }
-
-      if ((isExternalConsumed && !isConsumed) ||
-          (isExternalReadonly && !isReadonly)) {
-        return symbolFunc.emitError()
-               << "external definition has mismatching consumption annotations "
-                  "for argument #"
-               << i;
-      }
-    }
-
-    OpBuilder builder(&op);
-    builder.setInsertionPoint(&op);
-    builder.clone(*externalSymbol);
-    symbol->erase();
-  }
-
-  return success();
-}
-
 LogicalResult transform::detail::interpreterBaseRunOnOperationImpl(
     Operation *target, StringRef passName,
     const std::shared_ptr<OwningOpRef<ModuleOp>> &sharedTransformModule,
-    const std::shared_ptr<OwningOpRef<ModuleOp>> &libraryModule,
+    const std::shared_ptr<OwningOpRef<ModuleOp>> &transformLibraryModule,
     const RaggedArray<MappedValue> &extraMappings,
     const TransformOptions &options,
     const Pass::Option<std::string> &transformFileName,
-    const Pass::Option<std::string> &transformLibraryFileName,
+    const Pass::ListOption<std::string> &transformLibraryPaths,
     const Pass::Option<std::string> &debugPayloadRootTag,
     const Pass::Option<std::string> &debugTransformRootTag,
     StringRef binaryName) {
+  bool hasSharedTransformModule =
+      sharedTransformModule && *sharedTransformModule;
+  bool hasTransformLibraryModule =
+      transformLibraryModule && *transformLibraryModule;
+  assert((!hasSharedTransformModule || !hasTransformLibraryModule) &&
+         "at most one of shared or library transform module can be set");
 
   // Step 1
   // ------
@@ -407,13 +307,12 @@ LogicalResult transform::detail::interpreterBaseRunOnOperationImpl(
   // transform is embedded in the payload IR. If debugTransformRootTag was
   // passed, then we are in user-specified selection of the transforming IR.
   // This corresponds to REPL debug mode.
-  bool sharedTransform = (sharedTransformModule && *sharedTransformModule);
   Operation *transformContainer =
-      sharedTransform ? sharedTransformModule->get() : target;
+      hasSharedTransformModule ? sharedTransformModule->get() : target;
   Operation *transformRoot =
       debugTransformRootTag.empty()
           ? findTopLevelTransform(transformContainer,
-                                  transformFileName.getArgStr())
+                                  transformFileName.getArgStr(), options)
           : findOpWithTag(transformContainer, kTransformDialectTagAttrName,
                           debugTransformRootTag);
   if (!transformRoot)
@@ -430,7 +329,7 @@ LogicalResult transform::detail::interpreterBaseRunOnOperationImpl(
   // Copy external defintions for symbols if provided. Be aware of potential
   // concurrent execution (normally, the error shouldn't be triggered unless the
   // transform IR modifies itself in a pass, which is also forbidden elsewhere).
-  if (!sharedTransform && libraryModule && *libraryModule) {
+  if (hasTransformLibraryModule) {
     if (!target->isProperAncestor(transformRoot)) {
       InFlightDiagnostic diag =
           transformRoot->emitError()
@@ -438,9 +337,11 @@ LogicalResult transform::detail::interpreterBaseRunOnOperationImpl(
       diag.attachNote(target->getLoc()) << "pass anchor op";
       return diag;
     }
-    if (failed(defineDeclaredSymbols(*transformRoot->getBlock(),
-                                     libraryModule->get())))
-      return failure();
+    if (failed(detail::mergeSymbolsInto(
+            SymbolTable::getNearestSymbolTable(transformRoot),
+            transformLibraryModule->get()->clone())))
+      return emitError(transformRoot->getLoc(),
+                       "failed to merge library symbols into transform root");
   }
 
   // Step 4
@@ -449,7 +350,7 @@ LogicalResult transform::detail::interpreterBaseRunOnOperationImpl(
   // repro to stderr and/or a file.
   performOptionalDebugActions(target, transformRoot, passName,
                               debugPayloadRootTag, debugTransformRootTag,
-                              transformLibraryFileName, binaryName);
+                              transformLibraryPaths, binaryName);
 
   // Step 5
   // ------
@@ -460,51 +361,93 @@ LogicalResult transform::detail::interpreterBaseRunOnOperationImpl(
 
 LogicalResult transform::detail::interpreterBaseInitializeImpl(
     MLIRContext *context, StringRef transformFileName,
-    StringRef transformLibraryFileName,
-    std::shared_ptr<OwningOpRef<ModuleOp>> &module,
-    std::shared_ptr<OwningOpRef<ModuleOp>> &libraryModule,
+    ArrayRef<std::string> transformLibraryPaths,
+    std::shared_ptr<OwningOpRef<ModuleOp>> &sharedTransformModule,
+    std::shared_ptr<OwningOpRef<ModuleOp>> &transformLibraryModule,
     function_ref<std::optional<LogicalResult>(OpBuilder &, Location)>
         moduleBuilder) {
-  OwningOpRef<ModuleOp> parsed;
-  if (failed(parseTransformModuleFromFile(context, transformFileName, parsed)))
-    return failure();
-  if (parsed && failed(mlir::verify(*parsed)))
+  auto unknownLoc = UnknownLoc::get(context);
+
+  // Parse module from file.
+  OwningOpRef<ModuleOp> moduleFromFile;
+  {
+    auto loc = FileLineColLoc::get(context, transformFileName, 0, 0);
+    if (failed(detail::parseTransformModuleFromFile(context, transformFileName,
+                                                    moduleFromFile)))
+      return emitError(loc) << "failed to parse transform module";
+    if (moduleFromFile && failed(mlir::verify(*moduleFromFile)))
+      return emitError(loc) << "failed to verify transform module";
+  }
+
+  // Assemble list of library files.
+  SmallVector<std::string> libraryFileNames;
+  if (failed(expandPathsToMLIRFiles(transformLibraryPaths, context,
+                                    libraryFileNames)))
     return failure();
 
-  OwningOpRef<ModuleOp> parsedLibrary;
-  if (failed(parseTransformModuleFromFile(context, transformLibraryFileName,
-                                          parsedLibrary)))
-    return failure();
-  if (parsedLibrary && failed(mlir::verify(*parsedLibrary)))
-    return failure();
+  // Parse modules from library files.
+  SmallVector<OwningOpRef<ModuleOp>> parsedLibraries;
+  for (const std::string &libraryFileName : libraryFileNames) {
+    OwningOpRef<ModuleOp> parsedLibrary;
+    auto loc = FileLineColLoc::get(context, libraryFileName, 0, 0);
+    if (failed(detail::parseTransformModuleFromFile(context, libraryFileName,
+                                                    parsedLibrary)))
+      return emitError(loc) << "failed to parse transform library module";
+    if (parsedLibrary && failed(mlir::verify(*parsedLibrary)))
+      return emitError(loc) << "failed to verify transform library module";
+    parsedLibraries.push_back(std::move(parsedLibrary));
+  }
 
-  if (parsed) {
-    module = std::make_shared<OwningOpRef<ModuleOp>>(std::move(parsed));
+  // Build shared transform module.
+  if (moduleFromFile) {
+    sharedTransformModule =
+        std::make_shared<OwningOpRef<ModuleOp>>(std::move(moduleFromFile));
   } else if (moduleBuilder) {
-    // TODO: better location story.
-    auto location = UnknownLoc::get(context);
+    auto loc = FileLineColLoc::get(context, "<shared-transform-module>", 0, 0);
     auto localModule = std::make_shared<OwningOpRef<ModuleOp>>(
-        ModuleOp::create(location, "__transform"));
+        ModuleOp::create(unknownLoc, "__transform"));
 
     OpBuilder b(context);
     b.setInsertionPointToEnd(localModule->get().getBody());
-    if (std::optional<LogicalResult> result = moduleBuilder(b, location)) {
+    if (std::optional<LogicalResult> result = moduleBuilder(b, loc)) {
       if (failed(*result))
-        return failure();
-      module = std::move(localModule);
+        return (*localModule)->emitError()
+               << "failed to create shared transform module";
+      sharedTransformModule = std::move(localModule);
     }
   }
 
-  if (!parsedLibrary || !*parsedLibrary)
+  if (parsedLibraries.empty())
     return success();
 
-  if (module && *module) {
-    if (failed(defineDeclaredSymbols(*module->get().getBody(),
-                                     parsedLibrary.get())))
-      return failure();
+  // Merge parsed libraries into one module.
+  auto loc = FileLineColLoc::get(context, "<shared-library-module>", 0, 0);
+  OwningOpRef<ModuleOp> mergedParsedLibraries =
+      ModuleOp::create(loc, "__transform");
+  {
+    mergedParsedLibraries.get()->setAttr("transform.with_named_sequence",
+                                         UnitAttr::get(context));
+    IRRewriter rewriter(context);
+    // TODO: extend `mergeSymbolsInto` to support multiple `other` modules.
+    for (OwningOpRef<ModuleOp> &parsedLibrary : parsedLibraries) {
+      if (failed(detail::mergeSymbolsInto(mergedParsedLibraries.get(),
+                                          std::move(parsedLibrary))))
+        return mergedParsedLibraries->emitError()
+               << "failed to verify merged transform module";
+    }
+  }
+
+  // Use parsed libaries to resolve symbols in shared transform module or return
+  // as separate library module.
+  if (sharedTransformModule && *sharedTransformModule) {
+    if (failed(detail::mergeSymbolsInto(sharedTransformModule->get(),
+                                        std::move(mergedParsedLibraries))))
+      return (*sharedTransformModule)->emitError()
+             << "failed to merge symbols from library files "
+                "into shared transform module";
   } else {
-    libraryModule =
-        std::make_shared<OwningOpRef<ModuleOp>>(std::move(parsedLibrary));
+    transformLibraryModule = std::make_shared<OwningOpRef<ModuleOp>>(
+        std::move(mergedParsedLibraries));
   }
   return success();
 }

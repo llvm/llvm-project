@@ -322,7 +322,10 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
           LT.second.getVectorElementType().getSizeInBits() ==
               Tp->getElementType()->getPrimitiveSizeInBits() &&
           LT.second.getVectorNumElements() <
-              cast<FixedVectorType>(Tp)->getNumElements()) {
+              cast<FixedVectorType>(Tp)->getNumElements() &&
+          divideCeil(Mask.size(),
+                     cast<FixedVectorType>(Tp)->getNumElements()) ==
+              static_cast<unsigned>(*LT.first.getValue())) {
         unsigned NumRegs = *LT.first.getValue();
         unsigned VF = cast<FixedVectorType>(Tp)->getNumElements();
         unsigned SubVF = PowerOf2Ceil(VF / NumRegs);
@@ -498,7 +501,7 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
     InstructionCost Cost = MemCost;
     for (unsigned Index : Indices) {
       FixedVectorType *SubVecTy =
-          FixedVectorType::get(FVTy->getElementType(), VF);
+          FixedVectorType::get(FVTy->getElementType(), VF * Factor);
       auto Mask = createStrideMask(Index, Factor, VF);
       InstructionCost ShuffleCost =
           getShuffleCost(TTI::ShuffleKind::SK_PermuteSingleSrc, SubVecTy, Mask,
@@ -665,6 +668,31 @@ static const CostTblEntry VectorIntrinsicCostTable[]{
     {Intrinsic::rint, MVT::nxv2f64, 7},
     {Intrinsic::rint, MVT::nxv4f64, 7},
     {Intrinsic::rint, MVT::nxv8f64, 7},
+    {Intrinsic::lrint, MVT::v2i32, 1},
+    {Intrinsic::lrint, MVT::v4i32, 1},
+    {Intrinsic::lrint, MVT::v8i32, 1},
+    {Intrinsic::lrint, MVT::v16i32, 1},
+    {Intrinsic::lrint, MVT::nxv1i32, 1},
+    {Intrinsic::lrint, MVT::nxv2i32, 1},
+    {Intrinsic::lrint, MVT::nxv4i32, 1},
+    {Intrinsic::lrint, MVT::nxv8i32, 1},
+    {Intrinsic::lrint, MVT::nxv16i32, 1},
+    {Intrinsic::lrint, MVT::v2i64, 1},
+    {Intrinsic::lrint, MVT::v4i64, 1},
+    {Intrinsic::lrint, MVT::v8i64, 1},
+    {Intrinsic::lrint, MVT::v16i64, 1},
+    {Intrinsic::lrint, MVT::nxv1i64, 1},
+    {Intrinsic::lrint, MVT::nxv2i64, 1},
+    {Intrinsic::lrint, MVT::nxv4i64, 1},
+    {Intrinsic::lrint, MVT::nxv8i64, 1},
+    {Intrinsic::llrint, MVT::v2i64, 1},
+    {Intrinsic::llrint, MVT::v4i64, 1},
+    {Intrinsic::llrint, MVT::v8i64, 1},
+    {Intrinsic::llrint, MVT::v16i64, 1},
+    {Intrinsic::llrint, MVT::nxv1i64, 1},
+    {Intrinsic::llrint, MVT::nxv2i64, 1},
+    {Intrinsic::llrint, MVT::nxv4i64, 1},
+    {Intrinsic::llrint, MVT::nxv8i64, 1},
     {Intrinsic::nearbyint, MVT::v2f32, 9},
     {Intrinsic::nearbyint, MVT::v4f32, 9},
     {Intrinsic::nearbyint, MVT::v8f32, 9},
@@ -1048,6 +1076,8 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::floor:
   case Intrinsic::trunc:
   case Intrinsic::rint:
+  case Intrinsic::lrint:
+  case Intrinsic::llrint:
   case Intrinsic::round:
   case Intrinsic::roundeven: {
     // These all use the same code.

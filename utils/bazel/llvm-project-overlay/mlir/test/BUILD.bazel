@@ -3,9 +3,9 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("//llvm:lit_test.bzl", "package_path")
 load("//mlir:build_defs.bzl", "if_cuda_available")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
-load("//llvm:lit_test.bzl", "package_path")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -144,7 +144,6 @@ gentbl_cc_library(
         ":TestOpTdFiles",
     ],
 )
-
 
 gentbl_cc_library(
     name = "TestOpsIncGen",
@@ -468,6 +467,7 @@ cc_library(
         "//mlir:AffineDialect",
         "//mlir:ArithDialect",
         "//mlir:FuncDialect",
+        "//mlir:GPUDialect",
         "//mlir:IR",
         "//mlir:LinalgDialect",
         "//mlir:LinalgTransforms",
@@ -664,6 +664,7 @@ cc_library(
         "//mlir:MemRefToLLVM",
         "//mlir:MemRefTransforms",
         "//mlir:NVGPUToNVVM",
+        "//mlir:NVVMToLLVM",
         "//mlir:NVVMToLLVMIRTranslation",
         "//mlir:Pass",
         "//mlir:ROCDLToLLVMIRTranslation",

@@ -536,7 +536,7 @@ bool DynamicLoaderFreeBSDKernel::ParseKmods(Address linker_files_head_addr) {
     return false;
   LLDB_LOGF(
       log,
-      "Kmod-changed breakpoint hit, there are %lu kernel modules currently.\n",
+      "Kmod-changed breakpoint hit, there are %zu kernel modules currently.\n",
       linker_files_list.size());
 
   ModuleList &modules = m_process->GetTarget().GetImages();

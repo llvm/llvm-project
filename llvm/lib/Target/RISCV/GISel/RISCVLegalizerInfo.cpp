@@ -122,6 +122,14 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
   getActionDefinitionsBuilder(G_PTR_ADD)
       .legalFor({{p0, XLenLLT}});
 
+  getActionDefinitionsBuilder(G_PTRTOINT)
+      .legalFor({{XLenLLT, p0}})
+      .clampScalar(0, XLenLLT, XLenLLT);
+
+  getActionDefinitionsBuilder(G_INTTOPTR)
+      .legalFor({{p0, XLenLLT}})
+      .clampScalar(1, XLenLLT, XLenLLT);
+
   getActionDefinitionsBuilder(G_BRCOND)
       .legalFor({XLenLLT})
       .minScalar(0, XLenLLT);
@@ -145,6 +153,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
         .legalFor({XLenLLT})
         .lower();
     // clang-format on
+
+    getActionDefinitionsBuilder({G_SMULO, G_UMULO})
+        .minScalar(0, XLenLLT)
+        .lower();
   } else {
     getActionDefinitionsBuilder(G_MUL)
         .libcallFor({XLenLLT, DoubleXLenLLT})
@@ -152,6 +164,20 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
         .clampScalar(0, XLenLLT, DoubleXLenLLT);
 
     getActionDefinitionsBuilder({G_SMULH, G_UMULH}).lowerFor({XLenLLT});
+
+    getActionDefinitionsBuilder({G_SMULO, G_UMULO})
+        .minScalar(0, XLenLLT)
+        // Widen XLenLLT to DoubleXLenLLT so we can use a single libcall to get
+        // the low bits for the mul result and high bits to do the overflow
+        // check.
+        .widenScalarIf(
+            [=](const LegalityQuery &Query) {
+              return Query.Types[0] == XLenLLT;
+            },
+            [=](const LegalityQuery &Query) {
+              return std::make_pair(0, DoubleXLenLLT);
+            })
+        .lower();
   }
 
   if (ST.hasStdExtM()) {
@@ -168,6 +194,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
   }
 
   getActionDefinitionsBuilder(G_ABS).lower();
+  getActionDefinitionsBuilder({G_UMAX, G_UMIN, G_SMAX, G_SMIN}).lower();
+
+  getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({p0});
 
   getLegacyLegalizerInfo().computeTables();
 }

@@ -102,6 +102,11 @@ private:
   // An early selection function that runs before the selectImpl() call.
   bool earlySelect(MachineInstr &I);
 
+  /// Save state that is shared between select calls, call select on \p I and
+  /// then restore the saved state. This can be used to recursively call select
+  /// within a select call.
+  bool selectAndRestoreState(MachineInstr &I);
+
   // Do some preprocessing of G_PHIs before we begin selection.
   void processPHIs(MachineFunction &MF);
 
@@ -2251,7 +2256,7 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
     // Before selecting a DUP instruction, check if it is better selected as a
     // MOV or load from a constant pool.
     Register Src = I.getOperand(1).getReg();
-    auto ValAndVReg = getIConstantVRegValWithLookThrough(Src, MRI);
+    auto ValAndVReg = getAnyConstantVRegValWithLookThrough(Src, MRI);
     if (!ValAndVReg)
       return false;
     LLVMContext &Ctx = MF.getFunction().getContext();
@@ -3552,6 +3557,13 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   return false;
 }
 
+bool AArch64InstructionSelector::selectAndRestoreState(MachineInstr &I) {
+  MachineIRBuilderState OldMIBState = MIB.getState();
+  bool Success = select(I);
+  MIB.setState(OldMIBState);
+  return Success;
+}
+
 bool AArch64InstructionSelector::selectReduction(MachineInstr &I,
                                                  MachineRegisterInfo &MRI) {
   Register VecReg = I.getOperand(1).getReg();
@@ -4749,11 +4761,17 @@ MachineInstr *AArch64InstructionSelector::emitCarryIn(MachineInstr &I,
   // emit a carry generating instruction. E.g. for G_UADDE/G_USUBE sequences
   // generated during legalization of wide add/sub. This optimization depends on
   // these sequences not being interrupted by other instructions.
+  // We have to select the previous instruction before the carry-using
+  // instruction is deleted by the calling function, otherwise the previous
+  // instruction might become dead and would get deleted.
   MachineInstr *SrcMI = MRI->getVRegDef(CarryReg);
   if (SrcMI == I.getPrevNode()) {
     if (auto *CarrySrcMI = dyn_cast<GAddSubCarryOut>(SrcMI)) {
       bool ProducesNegatedCarry = CarrySrcMI->isSub();
-      if (NeedsNegatedCarry == ProducesNegatedCarry && CarrySrcMI->isUnsigned())
+      if (NeedsNegatedCarry == ProducesNegatedCarry &&
+          CarrySrcMI->isUnsigned() &&
+          CarrySrcMI->getCarryOutReg() == CarryReg &&
+          selectAndRestoreState(*SrcMI))
         return nullptr;
     }
   }
@@ -5600,8 +5618,7 @@ MachineInstr *AArch64InstructionSelector::tryAdvSIMDModImmFP(
   if (DstSize == 128) {
     if (Bits.getHiBits(64) != Bits.getLoBits(64))
       return nullptr;
-    // Need to deal with 4f32
-    Op = AArch64::FMOVv2f64_ns;
+    Op = AArch64::FMOVv4f32_ns;
     IsWide = true;
   } else {
     Op = AArch64::FMOVv2f32_ns;
@@ -5610,9 +5627,10 @@ MachineInstr *AArch64InstructionSelector::tryAdvSIMDModImmFP(
   uint64_t Val = Bits.zextOrTrunc(64).getZExtValue();
 
   if (AArch64_AM::isAdvSIMDModImmType11(Val)) {
-    Val = AArch64_AM::encodeAdvSIMDModImmType7(Val);
+    Val = AArch64_AM::encodeAdvSIMDModImmType11(Val);
   } else if (IsWide && AArch64_AM::isAdvSIMDModImmType12(Val)) {
     Val = AArch64_AM::encodeAdvSIMDModImmType12(Val);
+    Op = AArch64::FMOVv2f64_ns;
   } else
     return nullptr;
 

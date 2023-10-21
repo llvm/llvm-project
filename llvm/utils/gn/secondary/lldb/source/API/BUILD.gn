@@ -78,6 +78,7 @@ target(liblldb_type, "liblldb") {
     "SBPlatform.cpp",
     "SBProcess.cpp",
     "SBProcessInfo.cpp",
+    "SBProcessInfoList.cpp",
     "SBQueue.cpp",
     "SBQueueItem.cpp",
     "SBReproducer.cpp",

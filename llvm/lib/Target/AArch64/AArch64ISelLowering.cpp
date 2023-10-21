@@ -31,6 +31,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -6321,10 +6322,13 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
   case CallingConv::Swift:
   case CallingConv::SwiftTail:
   case CallingConv::Tail:
-    if (Subtarget->isTargetWindows() && IsVarArg) {
-      if (Subtarget->isWindowsArm64EC())
-        return CC_AArch64_Arm64EC_VarArg;
-      return CC_AArch64_Win64_VarArg;
+    if (Subtarget->isTargetWindows()) {
+      if (IsVarArg) {
+        if (Subtarget->isWindowsArm64EC())
+          return CC_AArch64_Arm64EC_VarArg;
+        return CC_AArch64_Win64_VarArg;
+      }
+      return CC_AArch64_Win64PCS;
     }
     if (!Subtarget->isTargetDarwin())
       return CC_AArch64_AAPCS;
@@ -6338,7 +6342,7 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
          return CC_AArch64_Arm64EC_VarArg;
        return CC_AArch64_Win64_VarArg;
      }
-     return CC_AArch64_AAPCS;
+     return CC_AArch64_Win64PCS;
    case CallingConv::CFGuard_Check:
      return CC_AArch64_Win64_CFGuard_Check;
    case CallingConv::AArch64_VectorCall:
@@ -6381,6 +6385,17 @@ AArch64TargetLowering::allocateLazySaveBuffer(SDValue &Chain, const SDLoc &DL,
       TPIDR2Obj,
       DAG.getTargetLoweringInfo().getFrameIndexTy(DAG.getDataLayout()));
   Chain = DAG.getStore(Chain, DL, Buffer, Ptr, MPI);
+
+  // Set the reserved bytes (10-15) to zero
+  EVT PtrTy = Ptr.getValueType();
+  SDValue ReservedPtr =
+      DAG.getNode(ISD::ADD, DL, PtrTy, Ptr, DAG.getConstant(10, DL, PtrTy));
+  Chain = DAG.getStore(Chain, DL, DAG.getConstant(0, DL, MVT::i16), ReservedPtr,
+                       MPI);
+  ReservedPtr =
+      DAG.getNode(ISD::ADD, DL, PtrTy, Ptr, DAG.getConstant(12, DL, PtrTy));
+  Chain = DAG.getStore(Chain, DL, DAG.getConstant(0, DL, MVT::i32), ReservedPtr,
+                       MPI);
 
   return TPIDR2Obj;
 }
@@ -7362,15 +7377,27 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   else if (auto *ES = dyn_cast<ExternalSymbolSDNode>(CLI.Callee))
     CalleeAttrs = SMEAttrs(ES->getSymbol());
 
+  auto DescribeCallsite =
+      [&](OptimizationRemarkAnalysis &R) -> OptimizationRemarkAnalysis & {
+    R << "call from '" << ore::NV("Caller", MF.getName()) << "' to '";
+    if (auto *ES = dyn_cast<ExternalSymbolSDNode>(CLI.Callee))
+      R << ore::NV("Callee", ES->getSymbol());
+    else if (CLI.CB && CLI.CB->getCalledFunction())
+      R << ore::NV("Callee", CLI.CB->getCalledFunction()->getName());
+    else
+      R << "unknown callee";
+    R << "'";
+    return R;
+  };
+
   bool RequiresLazySave = CallerAttrs.requiresLazySave(CalleeAttrs);
   if (RequiresLazySave) {
     SDValue NumZaSaveSlices;
     if (!CalleeAttrs.preservesZA()) {
       // Set up a lazy save mechanism by storing the runtime live slices
-      // (worst-case SVL*SVL) to the TPIDR2 stack object.
-      SDValue SVL = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
-                                DAG.getConstant(1, DL, MVT::i32));
-      NumZaSaveSlices = DAG.getNode(ISD::MUL, DL, MVT::i64, SVL, SVL);
+      // (worst-case SVL) to the TPIDR2 stack object.
+      NumZaSaveSlices = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
+                                    DAG.getConstant(1, DL, MVT::i32));
     } else if (CalleeAttrs.preservesZA()) {
       NumZaSaveSlices = DAG.getConstant(0, DL, MVT::i64);
     }
@@ -7388,13 +7415,38 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
         ISD::INTRINSIC_VOID, DL, MVT::Other, Chain,
         DAG.getConstant(Intrinsic::aarch64_sme_set_tpidr2, DL, MVT::i32),
         TPIDR2ObjAddr);
+    OptimizationRemarkEmitter ORE(&MF.getFunction());
+    ORE.emit([&]() {
+      auto R = CLI.CB ? OptimizationRemarkAnalysis("sme", "SMELazySaveZA",
+                                                   CLI.CB)
+                      : OptimizationRemarkAnalysis("sme", "SMELazySaveZA",
+                                                   &MF.getFunction());
+      DescribeCallsite(R) << " sets up a lazy save for ZA";
+      if (CalleeAttrs.preservesZA())
+        R << ", but callee preserves ZA, so we request 0 slices to be saved";
+      else
+        R << ", and we request that all slices be saved";
+      R << ore::setExtraArgs()
+        << ore::NV("CalleePreservesZA", CalleeAttrs.preservesZA());
+      return R;
+    });
   }
 
   SDValue PStateSM;
   std::optional<bool> RequiresSMChange =
       CallerAttrs.requiresSMChange(CalleeAttrs);
-  if (RequiresSMChange)
+  if (RequiresSMChange) {
     PStateSM = getPStateSM(DAG, Chain, CallerAttrs, DL, MVT::i64);
+    OptimizationRemarkEmitter ORE(&MF.getFunction());
+    ORE.emit([&]() {
+      auto R = CLI.CB ? OptimizationRemarkAnalysis("sme", "SMETransition",
+                                                   CLI.CB)
+                      : OptimizationRemarkAnalysis("sme", "SMETransition",
+                                                   &MF.getFunction());
+      DescribeCallsite(R) << " requires a streaming mode transition";
+      return R;
+    });
+  }
 
   // Adjust the stack pointer for the new arguments...
   // These operations are automatically eliminated by the prolog/epilog pass
@@ -11813,7 +11865,7 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
 
   if (((VT.getVectorNumElements() == 8 && VT.getScalarSizeInBits() == 16) ||
        (VT.getVectorNumElements() == 16 && VT.getScalarSizeInBits() == 8)) &&
-      ShuffleVectorInst::isReverseMask(ShuffleMask)) {
+      ShuffleVectorInst::isReverseMask(ShuffleMask, ShuffleMask.size())) {
     SDValue Rev = DAG.getNode(AArch64ISD::REV64, dl, VT, V1);
     return DAG.getNode(AArch64ISD::EXT, dl, VT, Rev, Rev,
                        DAG.getConstant(8, dl, MVT::i32));
@@ -14379,6 +14431,31 @@ static bool areOperandsOfVmullHighP64(Value *Op1, Value *Op2) {
   return isOperandOfVmullHighP64(Op1) && isOperandOfVmullHighP64(Op2);
 }
 
+static bool shouldSinkVectorOfPtrs(Value *Ptrs, SmallVectorImpl<Use *> &Ops) {
+  // Restrict ourselves to the form CodeGenPrepare typically constructs.
+  auto *GEP = dyn_cast<GetElementPtrInst>(Ptrs);
+  if (!GEP || GEP->getNumOperands() != 2)
+    return false;
+
+  Value *Base = GEP->getOperand(0);
+  Value *Offsets = GEP->getOperand(1);
+
+  // We only care about scalar_base+vector_offsets.
+  if (Base->getType()->isVectorTy() || !Offsets->getType()->isVectorTy())
+    return false;
+
+  // Sink extends that would allow us to use 32-bit offset vectors.
+  if (isa<SExtInst>(Offsets) || isa<ZExtInst>(Offsets)) {
+    auto *OffsetsInst = cast<Instruction>(Offsets);
+    if (OffsetsInst->getType()->getScalarSizeInBits() > 32 &&
+        OffsetsInst->getOperand(0)->getType()->getScalarSizeInBits() <= 32)
+      Ops.push_back(&GEP->getOperandUse(1));
+  }
+
+  // Sink the GEP.
+  return true;
+}
+
 /// Check if sinking \p I's operands to I's basic block is profitable, because
 /// the operands can be folded into a target instruction, e.g.
 /// shufflevectors extracts and/or sext/zext can be folded into (u,s)subl(2).
@@ -14478,6 +14555,16 @@ bool AArch64TargetLowering::shouldSinkOperands(
                                      II->getArgOperand(1)))
         return false;
       Ops.push_back(&II->getArgOperandUse(0));
+      Ops.push_back(&II->getArgOperandUse(1));
+      return true;
+    case Intrinsic::masked_gather:
+      if (!shouldSinkVectorOfPtrs(II->getArgOperand(0), Ops))
+        return false;
+      Ops.push_back(&II->getArgOperandUse(0));
+      return true;
+    case Intrinsic::masked_scatter:
+      if (!shouldSinkVectorOfPtrs(II->getArgOperand(1), Ops))
+        return false;
       Ops.push_back(&II->getArgOperandUse(1));
       return true;
     default:
@@ -19013,9 +19100,14 @@ static SDValue tryCombineShiftImm(unsigned IID, SDNode *N, SelectionDAG &DAG) {
   case Intrinsic::aarch64_neon_sshl:
   case Intrinsic::aarch64_neon_ushl:
     // For positive shift amounts we can use SHL, as ushl/sshl perform a regular
-    // left shift for positive shift amounts. Below, we only replace the current
-    // node with VSHL, if this condition is met.
-    Opcode = AArch64ISD::VSHL;
+    // left shift for positive shift amounts. For negative shifts we can use a
+    // VASHR/VLSHR as appropiate.
+    if (ShiftAmount < 0) {
+      Opcode = IID == Intrinsic::aarch64_neon_sshl ? AArch64ISD::VASHR
+                                                   : AArch64ISD::VLSHR;
+      ShiftAmount = -ShiftAmount;
+    } else
+      Opcode = AArch64ISD::VSHL;
     IsRightShift = false;
     break;
   }
@@ -25837,7 +25929,8 @@ static SDValue GenerateFixedLengthSVETBL(SDValue Op, SDValue Op1, SDValue Op2,
   SDLoc DL(Op);
   unsigned MinSVESize = Subtarget.getMinSVEVectorSizeInBits();
   unsigned MaxSVESize = Subtarget.getMaxSVEVectorSizeInBits();
-  bool IsSingleOp = ShuffleVectorInst::isSingleSourceMask(ShuffleMask);
+  bool IsSingleOp =
+      ShuffleVectorInst::isSingleSourceMask(ShuffleMask, ShuffleMask.size());
 
   // Ignore two operands if no SVE2 or all index numbers couldn't
   // be represented.
@@ -26021,7 +26114,8 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
   unsigned MinSVESize = Subtarget->getMinSVEVectorSizeInBits();
   unsigned MaxSVESize = Subtarget->getMaxSVEVectorSizeInBits();
   if (MinSVESize == MaxSVESize && MaxSVESize == VT.getSizeInBits()) {
-    if (ShuffleVectorInst::isReverseMask(ShuffleMask) && Op2.isUndef()) {
+    if (ShuffleVectorInst::isReverseMask(ShuffleMask, ShuffleMask.size()) &&
+        Op2.isUndef()) {
       Op = DAG.getNode(ISD::VECTOR_REVERSE, DL, ContainerVT, Op1);
       return convertFromScalableVector(DAG, VT, Op);
     }

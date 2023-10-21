@@ -152,7 +152,7 @@ mlir::Value HlfirTransformationalIntrinsic::loadBoxAddress(
   if (!arg)
     return mlir::Value{};
 
-  hlfir::Entity actual = arg->getOriginalActual();
+  hlfir::Entity actual = arg->getActual(loc, builder);
 
   if (!arg->handleDynamicOptional()) {
     if (actual.isMutableBox()) {
@@ -193,7 +193,7 @@ llvm::SmallVector<mlir::Value> HlfirTransformationalIntrinsic::getOperandVector(
       operands.emplace_back();
       continue;
     }
-    hlfir::Entity actual = arg->getOriginalActual();
+    hlfir::Entity actual = arg->getActual(loc, builder);
     mlir::Value valArg;
 
     if (!argLowering) {

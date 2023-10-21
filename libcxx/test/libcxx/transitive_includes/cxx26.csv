@@ -9,6 +9,7 @@ algorithm initializer_list
 algorithm iosfwd
 algorithm limits
 algorithm new
+algorithm optional
 algorithm ratio
 algorithm version
 any cstddef
@@ -385,6 +386,7 @@ mdspan concepts
 mdspan cstddef
 mdspan limits
 mdspan span
+mdspan version
 memory compare
 memory cstddef
 memory cstdint
@@ -432,6 +434,7 @@ numeric execution
 numeric initializer_list
 numeric limits
 numeric new
+numeric optional
 numeric ratio
 numeric version
 optional compare

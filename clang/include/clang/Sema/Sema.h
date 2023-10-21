@@ -1062,20 +1062,6 @@ public:
     }
   };
 
-  /// Whether the AST is currently being rebuilt to correct immediate
-  /// invocations. Immediate invocation candidates and references to consteval
-  /// functions aren't tracked when this is set.
-  bool RebuildingImmediateInvocation = false;
-
-  /// Used to change context to isConstantEvaluated without pushing a heavy
-  /// ExpressionEvaluationContextRecord object.
-  bool isConstantEvaluatedOverride;
-
-  bool isConstantEvaluated() const {
-    return ExprEvalContexts.back().isConstantEvaluated() ||
-           isConstantEvaluatedOverride;
-  }
-
   /// RAII object to handle the state changes required to synthesize
   /// a function body.
   class SynthesizedFunctionScope {
@@ -1360,6 +1346,11 @@ public:
     bool InImmediateEscalatingFunctionContext;
 
     bool IsCurrentlyCheckingDefaultArgumentOrInitializer = false;
+
+    // We are in a constant context, but we also allow
+    // non constant expressions, for example for array bounds (which may be
+    // VLAs).
+    bool InConditionallyConstantEvaluateContext = false;
 
     // When evaluating immediate functions in the initializer of a default
     // argument or default member initializer, this is the declaration whose
@@ -3818,17 +3809,6 @@ public:
   // the purposes of [temp.friend] p9.
   bool FriendConstraintsDependOnEnclosingTemplate(const FunctionDecl *FD);
 
-  // Calculates whether two constraint expressions are equal irrespective of a
-  // difference in 'depth'. This takes a pair of optional 'NamedDecl's 'Old' and
-  // 'New', which are the "source" of the constraint, since this is necessary
-  // for figuring out the relative 'depth' of the constraint. The depth of the
-  // 'primary template' and the 'instantiated from' templates aren't necessarily
-  // the same, such as a case when one is a 'friend' defined in a class.
-  bool AreConstraintExpressionsEqual(const NamedDecl *Old,
-                                     const Expr *OldConstr,
-                                     const NamedDecl *New,
-                                     const Expr *NewConstr);
-
   enum class AllowedExplicit {
     /// Allow no explicit functions to be used.
     None,
@@ -4804,6 +4784,8 @@ public:
   bool CheckAlwaysInlineAttr(const Stmt *OrigSt, const Stmt *CurSt,
                              const AttributeCommonInfo &A);
 
+  bool CheckCountedByAttr(Scope *Scope, const FieldDecl *FD);
+
   /// Adjust the calling convention of a method to be the ABI default if it
   /// wasn't specified explicitly.  This handles method types formed from
   /// function type typedefs and typename template arguments.
@@ -5647,6 +5629,7 @@ public:
                       CorrectionCandidateCallback &CCC,
                       TemplateArgumentListInfo *ExplicitTemplateArgs = nullptr,
                       ArrayRef<Expr *> Args = std::nullopt,
+                      DeclContext *LookupCtx = nullptr,
                       TypoExpr **Out = nullptr);
 
   DeclResult LookupIvarInObjCMethod(LookupResult &Lookup, Scope *S,
@@ -8458,9 +8441,9 @@ public:
                                          SourceLocation PrevPtOfInstantiation,
                                          bool &SuppressNew);
 
-  bool CheckDependentFunctionTemplateSpecialization(FunctionDecl *FD,
-                    const TemplateArgumentListInfo &ExplicitTemplateArgs,
-                                                    LookupResult &Previous);
+  bool CheckDependentFunctionTemplateSpecialization(
+      FunctionDecl *FD, const TemplateArgumentListInfo *ExplicitTemplateArgs,
+      LookupResult &Previous);
 
   bool CheckFunctionTemplateSpecialization(
       FunctionDecl *FD, TemplateArgumentListInfo *ExplicitTemplateArgs,
@@ -8621,8 +8604,48 @@ public:
     TPL_TemplateParamsEquivalent,
   };
 
+  // A struct to represent the 'new' declaration, which is either itself just
+  // the named decl, or the important information we need about it in order to
+  // do constraint comparisons.
+  class TemplateCompareNewDeclInfo {
+    const NamedDecl *ND = nullptr;
+    const DeclContext *DC = nullptr;
+    const DeclContext *LexicalDC = nullptr;
+    SourceLocation Loc;
+
+  public:
+    TemplateCompareNewDeclInfo(const NamedDecl *ND) : ND(ND) {}
+    TemplateCompareNewDeclInfo(const DeclContext *DeclCtx,
+                               const DeclContext *LexicalDeclCtx,
+                               SourceLocation Loc)
+
+        : DC(DeclCtx), LexicalDC(LexicalDeclCtx), Loc(Loc) {
+      assert(DC && LexicalDC &&
+             "Constructor only for cases where we have the information to put "
+             "in here");
+    }
+
+    // If this was constructed with no information, we cannot do substitution
+    // for constraint comparison, so make sure we can check that.
+    bool isInvalid() const { return !ND && !DC; }
+
+    const NamedDecl *getDecl() const { return ND; }
+
+    bool ContainsDecl(const NamedDecl *ND) const { return this->ND == ND; }
+
+    const DeclContext *getLexicalDeclContext() const {
+      return ND ? ND->getLexicalDeclContext() : LexicalDC;
+    }
+
+    const DeclContext *getDeclContext() const {
+      return ND ? ND->getDeclContext() : DC;
+    }
+
+    SourceLocation getLocation() const { return ND ? ND->getLocation() : Loc; }
+  };
+
   bool TemplateParameterListsAreEqual(
-      const NamedDecl *NewInstFrom, TemplateParameterList *New,
+      const TemplateCompareNewDeclInfo &NewInstFrom, TemplateParameterList *New,
       const NamedDecl *OldInstFrom, TemplateParameterList *Old, bool Complain,
       TemplateParameterListEqualKind Kind,
       SourceLocation TemplateArgLoc = SourceLocation());
@@ -8634,6 +8657,17 @@ public:
     return TemplateParameterListsAreEqual(nullptr, New, nullptr, Old, Complain,
                                           Kind, TemplateArgLoc);
   }
+
+  // Calculates whether two constraint expressions are equal irrespective of a
+  // difference in 'depth'. This takes a pair of optional 'NamedDecl's 'Old' and
+  // 'New', which are the "source" of the constraint, since this is necessary
+  // for figuring out the relative 'depth' of the constraint. The depth of the
+  // 'primary template' and the 'instantiated from' templates aren't necessarily
+  // the same, such as a case when one is a 'friend' defined in a class.
+  bool AreConstraintExpressionsEqual(const NamedDecl *Old,
+                                     const Expr *OldConstr,
+                                     const TemplateCompareNewDeclInfo &New,
+                                     const Expr *NewConstr);
 
   bool CheckTemplateDeclScope(Scope *S, TemplateParameterList *TemplateParams);
 
@@ -9374,13 +9408,12 @@ public:
   // C++ Template Instantiation
   //
 
-  MultiLevelTemplateArgumentList
-  getTemplateInstantiationArgs(const NamedDecl *D, bool Final = false,
-                               const TemplateArgumentList *Innermost = nullptr,
-                               bool RelativeToPrimary = false,
-                               const FunctionDecl *Pattern = nullptr,
-                               bool ForConstraintInstantiation = false,
-                               bool SkipForSpecialization = false);
+  MultiLevelTemplateArgumentList getTemplateInstantiationArgs(
+      const NamedDecl *D, const DeclContext *DC = nullptr, bool Final = false,
+      const TemplateArgumentList *Innermost = nullptr,
+      bool RelativeToPrimary = false, const FunctionDecl *Pattern = nullptr,
+      bool ForConstraintInstantiation = false,
+      bool SkipForSpecialization = false);
 
   /// A context in which code is being synthesized (where a source location
   /// alone is not sufficient to identify the context). This covers template
@@ -9876,30 +9909,44 @@ public:
   /// diagnostics that will be suppressed.
   std::optional<sema::TemplateDeductionInfo *> isSFINAEContext() const;
 
+  /// Whether the AST is currently being rebuilt to correct immediate
+  /// invocations. Immediate invocation candidates and references to consteval
+  /// functions aren't tracked when this is set.
+  bool RebuildingImmediateInvocation = false;
+
+  /// Used to change context to isConstantEvaluated without pushing a heavy
+  /// ExpressionEvaluationContextRecord object.
+  bool isConstantEvaluatedOverride = false;
+
+  const ExpressionEvaluationContextRecord &currentEvaluationContext() const {
+    assert(!ExprEvalContexts.empty() &&
+           "Must be in an expression evaluation context");
+    return ExprEvalContexts.back();
+  };
+
+  bool isConstantEvaluatedContext() const {
+    return currentEvaluationContext().isConstantEvaluated() ||
+           isConstantEvaluatedOverride;
+  }
+
+  bool isAlwaysConstantEvaluatedContext() const {
+    const ExpressionEvaluationContextRecord &Ctx = currentEvaluationContext();
+    return (Ctx.isConstantEvaluated() || isConstantEvaluatedOverride) &&
+           !Ctx.InConditionallyConstantEvaluateContext;
+  }
+
   /// Determines whether we are currently in a context that
   /// is not evaluated as per C++ [expr] p5.
   bool isUnevaluatedContext() const {
-    assert(!ExprEvalContexts.empty() &&
-           "Must be in an expression evaluation context");
-    return ExprEvalContexts.back().isUnevaluated();
-  }
-
-  bool isConstantEvaluatedContext() const {
-    assert(!ExprEvalContexts.empty() &&
-           "Must be in an expression evaluation context");
-    return ExprEvalContexts.back().isConstantEvaluated();
+    return currentEvaluationContext().isUnevaluated();
   }
 
   bool isImmediateFunctionContext() const {
-    assert(!ExprEvalContexts.empty() &&
-           "Must be in an expression evaluation context");
-    return ExprEvalContexts.back().isImmediateFunctionContext();
+    return currentEvaluationContext().isImmediateFunctionContext();
   }
 
   bool isCheckingDefaultArgumentOrInitializer() const {
-    assert(!ExprEvalContexts.empty() &&
-           "Must be in an expression evaluation context");
-    const ExpressionEvaluationContextRecord &Ctx = ExprEvalContexts.back();
+    const ExpressionEvaluationContextRecord &Ctx = currentEvaluationContext();
     return (Ctx.Context ==
             ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed) ||
            Ctx.IsCurrentlyCheckingDefaultArgumentOrInitializer;
@@ -12478,6 +12525,10 @@ public:
                                          SourceLocation StartLoc,
                                          SourceLocation LParenLoc,
                                          SourceLocation EndLoc);
+
+  /// Called on a well-formed 'ompx_bare' clause.
+  OMPClause *ActOnOpenMPXBareClause(SourceLocation StartLoc,
+                                    SourceLocation EndLoc);
 
   /// The kind of conversion being performed.
   enum CheckedConversionKind {

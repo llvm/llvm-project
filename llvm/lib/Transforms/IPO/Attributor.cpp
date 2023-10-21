@@ -260,7 +260,8 @@ AA::getInitialValueForObj(Attributor &A, const AbstractAttribute &QueryingAA,
     if (!Initializer)
       return nullptr;
   } else {
-    if (!GV->hasLocalLinkage() && !(GV->isConstant() && GV->hasInitializer()))
+    if (!GV->hasLocalLinkage() &&
+        (GV->isInterposable() || !(GV->isConstant() && GV->hasInitializer())))
       return nullptr;
     if (!GV->hasInitializer())
       return UndefValue::get(&Ty);

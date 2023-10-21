@@ -15,8 +15,8 @@
 #ifndef MLIR_ANALYSIS_PRESBURGER_MATRIX_H
 #define MLIR_ANALYSIS_PRESBURGER_MATRIX_H
 
-#include "mlir/Support/LLVM.h"
 #include "mlir/Analysis/Presburger/Fraction.h"
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -36,9 +36,11 @@ namespace presburger {
 /// This class only works for the types MPInt and Fraction, since the method
 /// implementations are in the Matrix.cpp file. Only these two types have
 /// been explicitly instantiated there.
-template<typename T>
+template <typename T>
 class Matrix {
-static_assert(std::is_same_v<T,MPInt> || std::is_same_v<T,Fraction>, "T must be MPInt or Fraction.");
+  static_assert(std::is_same_v<T, MPInt> || std::is_same_v<T, Fraction>,
+                "T must be MPInt or Fraction.");
+
 public:
   Matrix() = delete;
 
@@ -69,9 +71,7 @@ public:
 
   T &operator()(unsigned row, unsigned column) { return at(row, column); }
 
-  T operator()(unsigned row, unsigned column) const {
-    return at(row, column);
-  }
+  T operator()(unsigned row, unsigned column) const { return at(row, column); }
 
   /// Swap the given columns.
   void swapColumns(unsigned column, unsigned otherColumn);
@@ -189,7 +189,7 @@ public:
   /// invariants satisfied.
   bool hasConsistentState() const;
 
-private:
+protected:
   /// The current number of rows, columns, and reserved columns. The underlying
   /// data vector is viewed as an nRows x nReservedColumns matrix, of which the
   /// first nColumns columns are currently in use, and the remaining are
@@ -204,21 +204,14 @@ private:
 // An inherited class for integer matrices, with no new data attributes.
 // This is only used for the matrix-related methods which apply only
 // to integers (hermite normal form computation and row normalisation).
-class IntMatrix : public Matrix<MPInt>
-{
+class IntMatrix : public Matrix<MPInt> {
 public:
   IntMatrix(unsigned rows, unsigned columns, unsigned reservedRows = 0,
-            unsigned reservedColumns = 0) :
-    Matrix<MPInt>(rows, columns, reservedRows, reservedColumns) {};
+            unsigned reservedColumns = 0)
+      : Matrix<MPInt>(rows, columns, reservedRows, reservedColumns){};
 
-  IntMatrix(Matrix<MPInt> m) :
-    Matrix<MPInt>(m.getNumRows(), m.getNumColumns(), m.getNumReservedRows(), m.getNumReservedColumns())
-  {
-    for (unsigned i = 0; i < m.getNumRows(); i++)
-      for (unsigned j = 0; j < m.getNumColumns(); j++)
-        at(i, j) = m(i, j);
-  };
-  
+  IntMatrix(Matrix<MPInt> m) : Matrix<MPInt>(std::move(m)){};
+
   /// Return the identity matrix of the specified dimension.
   static IntMatrix identity(unsigned dimension);
 
@@ -241,6 +234,37 @@ public:
   /// Returns the GCD of the columns of the specified row.
   MPInt normalizeRow(unsigned row);
 
+  // Compute the determinant of the matrix (cubic time).
+  // Stores the integer inverse of the matrix in the pointer
+  // passed (if any). The pointer is unchanged if the inverse
+  // does not exist, which happens iff det = 0.
+  // For a matrix M, the integer inverse is the matrix M' such that
+  // M x M' = M'  M = det(M) x I.
+  // Assert-fails if the matrix is not square.
+  MPInt determinant(IntMatrix *inverse = nullptr) const;
+};
+
+// An inherited class for rational matrices, with no new data attributes.
+// This class is for functionality that only applies to matrices of fractions.
+class FracMatrix : public Matrix<Fraction> {
+public:
+  FracMatrix(unsigned rows, unsigned columns, unsigned reservedRows = 0,
+             unsigned reservedColumns = 0)
+      : Matrix<Fraction>(rows, columns, reservedRows, reservedColumns){};
+
+  FracMatrix(Matrix<Fraction> m) : Matrix<Fraction>(std::move(m)){};
+
+  explicit FracMatrix(IntMatrix m);
+
+  /// Return the identity matrix of the specified dimension.
+  static FracMatrix identity(unsigned dimension);
+
+  // Compute the determinant of the matrix (cubic time).
+  // Stores the inverse of the matrix in the pointer
+  // passed (if any). The pointer is unchanged if the inverse
+  // does not exist, which happens iff det = 0.
+  // Assert-fails if the matrix is not square.
+  Fraction determinant(FracMatrix *inverse = nullptr) const;
 };
 
 } // namespace presburger

@@ -268,6 +268,9 @@ public:
   /// Return which operand this is in the OpOperand list of the Operation.
   unsigned getOperandNumber();
 
+  /// Set the current value being used by this operand.
+  void assign(Value value) { set(value); }
+
 private:
   /// Keep the constructor private and accessible to the OperandStorage class
   /// only to avoid hard-to-debug typo/programming mistakes.
@@ -602,7 +605,6 @@ struct CastInfo<
     /// Return a constant true instead of a dynamic true when casting to self or
     /// up the hierarchy.
     if constexpr (std::is_base_of_v<To, From>) {
-      (void)ty;
       return true;
     } else {
       return To::classof(ty);

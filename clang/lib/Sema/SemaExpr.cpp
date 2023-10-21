@@ -35,6 +35,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Basic/TypeTraits.h"
 #include "clang/Lex/LiteralSupport.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/AnalysisBasedWarnings.h"
@@ -2458,7 +2459,8 @@ bool Sema::DiagnoseDependentMemberLookup(const LookupResult &R) {
 bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
                                CorrectionCandidateCallback &CCC,
                                TemplateArgumentListInfo *ExplicitTemplateArgs,
-                               ArrayRef<Expr *> Args, TypoExpr **Out) {
+                               ArrayRef<Expr *> Args, DeclContext *LookupCtx,
+                               TypoExpr **Out) {
   DeclarationName Name = R.getLookupName();
 
   unsigned diagnostic = diag::err_undeclared_var_use;
@@ -2474,7 +2476,8 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
   // unqualified lookup.  This is useful when (for example) the
   // original lookup would not have found something because it was a
   // dependent name.
-  DeclContext *DC = SS.isEmpty() ? CurContext : nullptr;
+  DeclContext *DC =
+      LookupCtx ? LookupCtx : (SS.isEmpty() ? CurContext : nullptr);
   while (DC) {
     if (isa<CXXRecordDecl>(DC)) {
       LookupQualifiedName(R, DC);
@@ -2517,12 +2520,12 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
           emitEmptyLookupTypoDiagnostic(TC, *this, SS, Name, TypoLoc, Args,
                                         diagnostic, diagnostic_suggest);
         },
-        nullptr, CTK_ErrorRecovery);
+        nullptr, CTK_ErrorRecovery, LookupCtx);
     if (*Out)
       return true;
-  } else if (S &&
-             (Corrected = CorrectTypo(R.getLookupNameInfo(), R.getLookupKind(),
-                                      S, &SS, CCC, CTK_ErrorRecovery))) {
+  } else if (S && (Corrected =
+                       CorrectTypo(R.getLookupNameInfo(), R.getLookupKind(), S,
+                                   &SS, CCC, CTK_ErrorRecovery, LookupCtx))) {
     std::string CorrectedStr(Corrected.getAsString(getLangOpts()));
     bool DroppedSpecifier =
         Corrected.WillReplaceSpecifier() && Name.getAsString() == CorrectedStr;
@@ -2812,7 +2815,7 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
     // a template name, but we happen to have always already looked up the name
     // before we get here if it must be a template name.
     if (DiagnoseEmptyLookup(S, SS, R, CCC ? *CCC : DefaultValidator, nullptr,
-                            std::nullopt, &TE)) {
+                            std::nullopt, nullptr, &TE)) {
       if (TE && KeywordReplacement) {
         auto &State = getTypoExprState(TE);
         auto BestTC = State.Consumer->getNextCorrection();
@@ -4351,6 +4354,18 @@ static bool CheckVecStepTraitOperandType(Sema &S, QualType T,
   return false;
 }
 
+static bool CheckVectorElementsTraitOperandType(Sema &S, QualType T,
+                                                SourceLocation Loc,
+                                                SourceRange ArgRange) {
+  // builtin_vectorelements supports both fixed-sized and scalable vectors.
+  if (!T->isVectorType() && !T->isSizelessVectorType())
+    return S.Diag(Loc, diag::err_builtin_non_vector_type)
+           << ""
+           << "__builtin_vectorelements" << T << ArgRange;
+
+  return false;
+}
+
 static bool CheckExtensionTraitOperandType(Sema &S, QualType T,
                                            SourceLocation Loc,
                                            SourceRange ArgRange,
@@ -4451,6 +4466,10 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(Expr *E,
   if (ExprKind == UETT_VecStep)
     return CheckVecStepTraitOperandType(*this, ExprTy, E->getExprLoc(),
                                         E->getSourceRange());
+
+  if (ExprKind == UETT_VectorElements)
+    return CheckVectorElementsTraitOperandType(*this, ExprTy, E->getExprLoc(),
+                                               E->getSourceRange());
 
   // Explicitly list some types as extensions.
   if (!CheckExtensionTraitOperandType(*this, ExprTy, E->getExprLoc(),
@@ -4743,6 +4762,10 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(QualType ExprType,
   if (ExprKind == UETT_VecStep)
     return CheckVecStepTraitOperandType(*this, ExprType, OpLoc, ExprRange);
 
+  if (ExprKind == UETT_VectorElements)
+    return CheckVectorElementsTraitOperandType(*this, ExprType, OpLoc,
+                                               ExprRange);
+
   // Explicitly list some types as extensions.
   if (!CheckExtensionTraitOperandType(*this, ExprType, OpLoc, ExprRange,
                                       ExprKind))
@@ -4849,6 +4872,8 @@ Sema::CreateUnaryExprOrTypeTraitExpr(Expr *E, SourceLocation OpLoc,
   } else if (E->refersToBitField()) {  // C99 6.5.3.4p1.
     Diag(E->getExprLoc(), diag::err_sizeof_alignof_typeof_bitfield) << 0;
     isInvalid = true;
+  } else if (ExprKind == UETT_VectorElements) {
+    isInvalid = CheckUnaryExprOrTypeTraitOperand(E, UETT_VectorElements);
   } else {
     isInvalid = CheckUnaryExprOrTypeTraitOperand(E, UETT_SizeOf);
   }
@@ -9184,7 +9209,7 @@ QualType Sema::CheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
   if (checkCondition(*this, Cond.get(), QuestionLoc))
     return QualType();
 
-  // Now check the two expressions.
+  // Handle vectors.
   if (LHS.get()->getType()->isVectorType() ||
       RHS.get()->getType()->isVectorType())
     return CheckVectorOperands(LHS, RHS, QuestionLoc, /*isCompAssign*/ false,
@@ -9240,11 +9265,6 @@ QualType Sema::CheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
     RHS = ImpCastExprToType(RHS.get(), ResTy, PrepareScalarCast(RHS, ResTy));
 
     return ResTy;
-  }
-
-  // And if they're both bfloat (which isn't arithmetic), that's fine too.
-  if (LHSTy->isBFloat16Type() && RHSTy->isBFloat16Type()) {
-    return Context.getCommonSugaredType(LHSTy, RHSTy);
   }
 
   // If both operands are the same structure or union type, the result is that
@@ -9318,16 +9338,16 @@ QualType Sema::CheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
       /*IsIntFirstExpr=*/false))
     return LHSTy;
 
-  // Allow ?: operations in which both operands have the same
-  // built-in sizeless type.
-  if (LHSTy->isSizelessBuiltinType() && Context.hasSameType(LHSTy, RHSTy))
-    return Context.getCommonSugaredType(LHSTy, RHSTy);
-
   // Emit a better diagnostic if one of the expressions is a null pointer
   // constant and the other is not a pointer type. In this case, the user most
   // likely forgot to take the address of the other expression.
   if (DiagnoseConditionalForNull(LHS.get(), RHS.get(), QuestionLoc))
     return QualType();
+
+  // Finally, if the LHS and RHS types are canonically the same type, we can
+  // use the common sugared type.
+  if (Context.hasSameType(LHSTy, RHSTy))
+    return Context.getCommonSugaredType(LHSTy, RHSTy);
 
   // Otherwise, the operands are not compatible.
   Diag(QuestionLoc, diag::err_typecheck_cond_incompatible_operands)
@@ -16796,12 +16816,11 @@ ExprResult Sema::BuildBuiltinOffsetOf(SourceLocation BuiltinLoc,
         LangOpts.CPlusPlus11? diag::ext_offsetof_non_standardlayout_type
                             : diag::ext_offsetof_non_pod_type;
 
-      if (!IsSafe && !DidWarnAboutNonPOD &&
-          DiagRuntimeBehavior(BuiltinLoc, nullptr,
-                              PDiag(DiagID)
-                              << SourceRange(Components[0].LocStart, OC.LocEnd)
-                              << CurrentType))
+      if (!IsSafe && !DidWarnAboutNonPOD && !isUnevaluatedContext()) {
+        Diag(BuiltinLoc, DiagID)
+            << SourceRange(Components[0].LocStart, OC.LocEnd) << CurrentType;
         DidWarnAboutNonPOD = true;
+      }
     }
 
     // Look for the field.
@@ -18312,7 +18331,7 @@ void Sema::MarkExpressionAsImmediateEscalating(Expr *E) {
 
 ExprResult Sema::CheckForImmediateInvocation(ExprResult E, FunctionDecl *Decl) {
   if (isUnevaluatedContext() || !E.isUsable() || !Decl ||
-      !Decl->isImmediateFunction() || isConstantEvaluated() ||
+      !Decl->isImmediateFunction() || isAlwaysConstantEvaluatedContext() ||
       isCheckingDefaultArgumentOrInitializer() ||
       RebuildingImmediateInvocation || isImmediateFunctionContext())
     return E;
@@ -18409,6 +18428,8 @@ static void EvaluateAndDiagnoseImmediateInvocation(
 
     assert(FD && FD->isImmediateFunction() &&
            "could not find an immediate function in this expression");
+    if (FD->isInvalidDecl())
+      return;
     SemaRef.Diag(CE->getBeginLoc(), diag::err_invalid_consteval_call)
         << FD << FD->isConsteval();
     if (auto Context =
@@ -18468,7 +18489,10 @@ static void RemoveNestedImmediateInvocation(
       DRSet.erase(cast<DeclRefExpr>(E->getCallee()->IgnoreImplicit()));
       return Base::TransformCXXOperatorCallExpr(E);
     }
-    /// Base::TransformInitializer skip ConstantExpr so we need to visit them
+    /// Base::TransformUserDefinedLiteral doesn't preserve the
+    /// UserDefinedLiteral node.
+    ExprResult TransformUserDefinedLiteral(UserDefinedLiteral *E) { return E; }
+    /// Base::TransformInitializer skips ConstantExpr so we need to visit them
     /// here.
     ExprResult TransformInitializer(Expr *Init, bool NotCopyInit) {
       if (!Init)
@@ -20733,7 +20757,7 @@ void Sema::MarkDeclRefReferenced(DeclRefExpr *E, const Expr *Base) {
       OdrUse = false;
 
   if (auto *FD = dyn_cast<FunctionDecl>(E->getDecl())) {
-    if (!isUnevaluatedContext() && !isConstantEvaluated() &&
+    if (!isUnevaluatedContext() && !isConstantEvaluatedContext() &&
         !isImmediateFunctionContext() &&
         !isCheckingDefaultArgumentOrInitializer() &&
         FD->isImmediateFunction() && !RebuildingImmediateInvocation &&
