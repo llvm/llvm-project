@@ -401,8 +401,7 @@ define dso_local void @kernel3(i32 %C) norecurse "kernel" {
 ; TUNIT-NEXT:    [[I:%.*]] = icmp eq i32 [[C]], 42
 ; TUNIT-NEXT:    br i1 [[I]], label [[T:%.*]], label [[F:%.*]]
 ; TUNIT:       t:
-; TUNIT-NEXT:    [[L:%.*]] = load i32, ptr addrspace(3) @AS3OneKernelAtATime, align 4
-; TUNIT-NEXT:    call void @use(i32 noundef [[L]], i32 noundef [[L]], i32 noundef [[L]]) #[[ATTR7]]
+; TUNIT-NEXT:    call void @use(i32 noundef 42, i32 noundef 42, i32 noundef 42) #[[ATTR7]]
 ; TUNIT-NEXT:    ret void
 ; TUNIT:       f:
 ; TUNIT-NEXT:    ret void
@@ -413,8 +412,7 @@ define dso_local void @kernel3(i32 %C) norecurse "kernel" {
 ; CGSCC-NEXT:    [[I:%.*]] = icmp eq i32 [[C]], 42
 ; CGSCC-NEXT:    br i1 [[I]], label [[T:%.*]], label [[F:%.*]]
 ; CGSCC:       t:
-; CGSCC-NEXT:    [[L:%.*]] = load i32, ptr addrspace(3) @AS3OneKernelAtATime, align 4
-; CGSCC-NEXT:    call void @use(i32 noundef [[L]], i32 noundef [[L]], i32 noundef [[L]]) #[[ATTR4]]
+; CGSCC-NEXT:    call void @use(i32 noundef 42, i32 noundef 42, i32 noundef 42) #[[ATTR4]]
 ; CGSCC-NEXT:    ret void
 ; CGSCC:       f:
 ; CGSCC-NEXT:    ret void
