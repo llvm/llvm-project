@@ -813,7 +813,7 @@ private:
   template <class _ValueType, class _ErrorType>
   union __union_t {
     template <class... _Args>
-    _LIBCPP_HIDE_FROM_ABI constexpr explicit __union_t(std::in_place_t, _Args&&... __args)
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __union_t(in_place_t, _Args&&... __args)
         : __val_(std::forward<_Args>(__args)...) {}
 
     template <class... _Args>
