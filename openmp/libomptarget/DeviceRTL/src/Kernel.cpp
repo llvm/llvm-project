@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Allocator.h"
 #include "Debug.h"
 #include "Environment.h"
 #include "Interface.h"
@@ -30,6 +31,7 @@ static void inititializeRuntime(bool IsSPMD,
   synchronize::init(IsSPMD);
   mapping::init(IsSPMD);
   state::init(IsSPMD, KernelEnvironment);
+  allocator::init(IsSPMD, KernelEnvironment);
 }
 
 /// Simple generic state machine for worker threads.
