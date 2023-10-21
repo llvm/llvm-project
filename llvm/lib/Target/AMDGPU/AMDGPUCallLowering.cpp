@@ -32,7 +32,7 @@ namespace {
 
 /// Wrapper around extendRegister to ensure we extend to a full 32-bit register.
 static Register extendRegisterMin32(CallLowering::ValueHandler &Handler,
-                                    Register ValVReg, CCValAssign &VA) {
+                                    Register ValVReg, const CCValAssign &VA) {
   if (VA.getLocVT().getSizeInBits() < 32) {
     // 16-bit types are reported as legal for 32-bit registers. We need to
     // extend and do a 32-bit copy to avoid the verifier complaining about it.
@@ -56,7 +56,8 @@ struct AMDGPUOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
   }
 
   void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
-                            MachinePointerInfo &MPO, CCValAssign &VA) override {
+                            const MachinePointerInfo &MPO,
+                            const CCValAssign &VA) override {
     llvm_unreachable("not implemented");
   }
 
@@ -137,7 +138,8 @@ struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
   }
 
   void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
-                            MachinePointerInfo &MPO, CCValAssign &VA) override {
+                            const MachinePointerInfo &MPO,
+                            const CCValAssign &VA) override {
     MachineFunction &MF = MIRBuilder.getMF();
 
     auto MMO = MF.getMachineMemOperand(
@@ -236,7 +238,8 @@ struct AMDGPUOutgoingArgHandler : public AMDGPUOutgoingValueHandler {
   }
 
   void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
-                            MachinePointerInfo &MPO, CCValAssign &VA) override {
+                            const MachinePointerInfo &MPO,
+                            const CCValAssign &VA) override {
     MachineFunction &MF = MIRBuilder.getMF();
     uint64_t LocMemOffset = VA.getLocMemOffset();
     const auto &ST = MF.getSubtarget<GCNSubtarget>();
@@ -249,7 +252,8 @@ struct AMDGPUOutgoingArgHandler : public AMDGPUOutgoingValueHandler {
 
   void assignValueToAddress(const CallLowering::ArgInfo &Arg,
                             unsigned ValRegIndex, Register Addr, LLT MemTy,
-                            MachinePointerInfo &MPO, CCValAssign &VA) override {
+                            const MachinePointerInfo &MPO,
+                            const CCValAssign &VA) override {
     Register ValVReg = VA.getLocInfo() != CCValAssign::LocInfo::FPExt
                            ? extendRegister(Arg.Regs[ValRegIndex], VA)
                            : Arg.Regs[ValRegIndex];
