@@ -122,15 +122,29 @@ struct RISCVOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
                           MRI.createGenericVirtualRegister(LLT::scalar(32))};
     MIRBuilder.buildUnmerge(NewRegs, Arg.Regs[0]);
 
-    if (Thunk) {
-      *Thunk = [=]() {
-        assignValueToReg(NewRegs[0], VALo.getLocReg(), VALo);
+    if (VAHi.isMemLoc()) {
+      LLT MemTy(VAHi.getLocVT());
+
+      MachinePointerInfo MPO;
+      Register StackAddr = getStackAddress(
+          MemTy.getSizeInBytes(), VAHi.getLocMemOffset(), MPO, Arg.Flags[0]);
+
+      assignValueToAddress(NewRegs[1], StackAddr, MemTy, MPO,
+                           const_cast<CCValAssign &>(VAHi));
+    }
+
+    auto assignFunc = [=]() {
+      assignValueToReg(NewRegs[0], VALo.getLocReg(), VALo);
+      if (VAHi.isRegLoc())
         assignValueToReg(NewRegs[1], VAHi.getLocReg(), VAHi);
-      };
+    };
+
+    if (Thunk) {
+      *Thunk = assignFunc;
       return 1;
     }
-    assignValueToReg(NewRegs[0], VALo.getLocReg(), VALo);
-    assignValueToReg(NewRegs[1], VAHi.getLocReg(), VAHi);
+
+    assignFunc();
     return 1;
   }
 
@@ -207,7 +221,7 @@ struct RISCVIncomingValueHandler : public CallLowering::IncomingValueHandler {
 
   unsigned assignCustomValue(CallLowering::ArgInfo &Arg,
                              ArrayRef<CCValAssign> VAs,
-                             std::function<void()> *Thunk = nullptr) override {
+                             std::function<void()> *Thunk) override {
     assert(VAs.size() >= 2 && "Expected at least 2 VAs.");
     const CCValAssign &VALo = VAs[0];
     const CCValAssign &VAHi = VAs[1];
@@ -223,8 +237,20 @@ struct RISCVIncomingValueHandler : public CallLowering::IncomingValueHandler {
     Register NewRegs[] = {MRI.createGenericVirtualRegister(LLT::scalar(32)),
                           MRI.createGenericVirtualRegister(LLT::scalar(32))};
 
+    if (VAHi.isMemLoc()) {
+      LLT MemTy(VAHi.getLocVT());
+
+      MachinePointerInfo MPO;
+      Register StackAddr = getStackAddress(
+          MemTy.getSizeInBytes(), VAHi.getLocMemOffset(), MPO, Arg.Flags[0]);
+
+      assignValueToAddress(NewRegs[1], StackAddr, MemTy, MPO,
+                           const_cast<CCValAssign &>(VAHi));
+    }
+
     assignValueToReg(NewRegs[0], VALo.getLocReg(), VALo);
-    assignValueToReg(NewRegs[1], VAHi.getLocReg(), VAHi);
+    if (VAHi.isRegLoc())
+      assignValueToReg(NewRegs[1], VAHi.getLocReg(), VAHi);
 
     MIRBuilder.buildMergeLikeInstr(Arg.Regs[0], NewRegs);
 
