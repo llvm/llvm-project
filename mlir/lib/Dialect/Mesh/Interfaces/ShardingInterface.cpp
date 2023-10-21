@@ -209,43 +209,6 @@ void mesh::ShardingInterface::printLoopTypesAndIndexingMaps(raw_ostream &os) {
 }
 
 //===----------------------------------------------------------------------===//
-// ShardingInterface::getShardingOptionFromAttr
-//===----------------------------------------------------------------------===//
-
-namespace {
-
-constexpr StringRef getShardingArrayName() { return "sharding_array"; }
-
-constexpr StringRef getMeshClusterName() { return "mesh_cluster"; }
-
-} // namespace
-
-FailureOr<ShardingOption> mesh::ShardingInterface::getShardingOptionFromAttr() {
-  Operation *op = getOperation();
-  auto arrayAttr = op->getAttrOfType<ArrayAttr>(getShardingArrayName());
-  if (!arrayAttr)
-    return failure();
-  auto symbolRefAttr = op->getAttrOfType<SymbolRefAttr>(getMeshClusterName());
-  if (!symbolRefAttr)
-    return failure();
-  return ShardingOption(getArrayOfI32Array(arrayAttr), symbolRefAttr);
-}
-
-//===----------------------------------------------------------------------===//
-// ShardingInterface::setShardingOptionAttr
-//===----------------------------------------------------------------------===//
-
-void mesh::ShardingInterface::setShardingOptionAttr(
-    Builder &b, const ShardingOption &option) {
-  if (option.empty)
-    return;
-  Operation *op = getOperation();
-  ArrayAttr shardingArrayAttr = b.getArrayOfI32ArrayAttr(option.shardingArray);
-  op->setDiscardableAttr(getMeshClusterName(), option.cluster);
-  op->setDiscardableAttr(getShardingArrayName(), shardingArrayAttr);
-}
-
-//===----------------------------------------------------------------------===//
 // detail::defaultGetShardingOption
 //===----------------------------------------------------------------------===//
 
@@ -295,14 +258,7 @@ fillShardingOption(Operation *op, ShardingOption &shardingOption,
 
 FailureOr<ShardingOption>
 mesh::detail::defaultGetShardingOption(Operation *op) {
-
-  // 1. If a valid sharding attribute exists, use it.
   ShardingInterface shardingOp = llvm::cast<ShardingInterface>(op);
-  FailureOr<ShardingOption> shardingOptionFromAttr =
-      shardingOp.getShardingOptionFromAttr();
-  if (succeeded(shardingOptionFromAttr))
-    return shardingOptionFromAttr;
-
   ShardingOption shardingOption;
 
   if (failed(shardingOp.verifyShardingInterfaceImpl()))
@@ -316,7 +272,7 @@ mesh::detail::defaultGetShardingOption(Operation *op) {
   llvm::SmallSet<unsigned, 4> visitedLoopIndices;
   bool anyShardingInResultsOrOperands = false;
 
-  // 2. Fill sharding option based on op results
+  // 1. Fill sharding option based on op results
   for (OpResult result : op->getResults()) {
     AffineMap map = maps[numOperands + result.getResultNumber()];
     FailureOr<MeshShardingAttr> shardAttr = getMeshShardingAttr(result, true);
@@ -355,7 +311,7 @@ mesh::detail::defaultGetShardingOption(Operation *op) {
     }
   }
 
-  // 3. Fill sharding option based on operands
+  // 2. Fill sharding option based on operands
   for (OpOperand &opOperand : op->getOpOperands()) {
     FailureOr<std::pair<bool, MeshShardingAttr>> maybeShardAttr =
         getMeshShardingAttr(opOperand);
@@ -413,7 +369,7 @@ mesh::detail::defaultGetShardingOption(Operation *op) {
     }
   }
 
-  // 4. Finalize sharding option
+  // 3. Finalize sharding option
   if (!partialMeshAxes.empty()) {
     bool anyNonEmptyReductionLoop = llvm::any_of(
         llvm::enumerate(shardingOption.shardingArray), [&](auto it) {

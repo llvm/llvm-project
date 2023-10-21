@@ -92,11 +92,6 @@ def ShardingInterface : OpInterface<"ShardingInterface"> {
       LogicalResult verifyShardingInterfaceImpl();
 
       void printLoopTypesAndIndexingMaps(raw_ostream &os);
-
-      FailureOr<ShardingOption> getShardingOptionFromAttr();
-
-      void setShardingOptionAttr(Builder &b, const ShardingOption& option);
-
     }];
 }
 

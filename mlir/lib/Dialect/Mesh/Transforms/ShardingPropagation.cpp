@@ -57,7 +57,6 @@ LogicalResult visitOp(Operation *op, OpBuilder &builder) {
   // sharding info is empty, return immediately
   if (shardingOption->empty)
     return success();
-  shardingOp.setShardingOptionAttr(builder, *shardingOption);
 
   if (failed(shardingOp.addShardingAnnotations(builder, *shardingOption))) {
     op->emitOpError() << "fail to set sharding annotations.";
