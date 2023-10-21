@@ -341,3 +341,55 @@ define double @fdiv_pow_powi_negative_variable(double %x, i32 %y) {
   %div = fdiv reassoc nnan double %p1, %x
   ret double %div
 }
+
+; Fold Powi(x,C1)/Powi(x,C2) to Powi(x,C1-C2) when (C1-C2) isn't wraparound
+define double @fdiv_powi_powi(double %x) {
+; CHECK-LABEL: @fdiv_powi_powi(
+; CHECK-NEXT:    [[DIV:%.*]] = fmul reassoc nnan double [[X:%.*]], [[X]]
+; CHECK-NEXT:    ret double [[DIV]]
+;
+  %p1 = call double @llvm.powi.f64.i32(double %x, i32 5)
+  %p2 = call double @llvm.powi.f64.i32(double %x, i32 3)
+  %div = fdiv reassoc nnan double %p1, %p2
+  ret double %div
+}
+
+; Negative test: (C1-C2) is wraparound
+define double @fdiv_powi_powi_wraparound(double %x) {
+; CHECK-LABEL: @fdiv_powi_powi_wraparound(
+; CHECK-NEXT:    [[P1:%.*]] = call double @llvm.powi.f64.i32(double [[X:%.*]], i32 3)
+; CHECK-NEXT:    [[P2:%.*]] = call double @llvm.powi.f64.i32(double [[X]], i32 5)
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc nnan double [[P1]], [[P2]]
+; CHECK-NEXT:    ret double [[DIV]]
+;
+  %p1 = call double @llvm.powi.f64.i32(double %x, i32 3)
+  %p2 = call double @llvm.powi.f64.i32(double %x, i32 5)
+  %div = fdiv reassoc nnan double %p1, %p2
+  ret double %div
+}
+
+define double @fdiv_powi_powi_missing_reassoc(double %x) {
+; CHECK-LABEL: @fdiv_powi_powi_missing_reassoc(
+; CHECK-NEXT:    [[P1:%.*]] = call double @llvm.powi.f64.i32(double [[X:%.*]], i32 15)
+; CHECK-NEXT:    [[P2:%.*]] = call double @llvm.powi.f64.i32(double [[X]], i32 3)
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan double [[P1]], [[P2]]
+; CHECK-NEXT:    ret double [[DIV]]
+;
+  %p1 = call double @llvm.powi.f64.i32(double %x, i32 15)
+  %p2 = call double @llvm.powi.f64.i32(double %x, i32 3)
+  %div = fdiv nnan double %p1, %p2
+  ret double %div
+}
+
+define double @fdiv_powi_powi_missing_nnan(double %x) {
+; CHECK-LABEL: @fdiv_powi_powi_missing_nnan(
+; CHECK-NEXT:    [[P1:%.*]] = call double @llvm.powi.f64.i32(double [[X:%.*]], i32 15)
+; CHECK-NEXT:    [[P2:%.*]] = call double @llvm.powi.f64.i32(double [[X]], i32 3)
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc double [[P1]], [[P2]]
+; CHECK-NEXT:    ret double [[DIV]]
+;
+  %p1 = call double @llvm.powi.f64.i32(double %x, i32 15)
+  %p2 = call double @llvm.powi.f64.i32(double %x, i32 3)
+  %div = fdiv reassoc double %p1, %p2
+  ret double %div
+}

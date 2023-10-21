@@ -1795,6 +1795,24 @@ Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
     return replaceInstUsesWith(I, Pow);
   }
 
+  // Powi(x,C1)/Powi(x,C2) --> Powi(x,C1-C2)
+  // This is legal when (C1-C2) isn't wraparound, in which case reassoc and nnan
+  // are required.
+  ConstantInt *C1, *C2;
+  if (I.hasAllowReassoc() && I.hasNoNaNs() &&
+      match(Op0, m_OneUse(m_Intrinsic<Intrinsic::powi>(m_Value(X),
+                                                       m_ConstantInt(C1)))) &&
+      match(Op1, m_OneUse(m_Intrinsic<Intrinsic::powi>(m_Specific(X),
+                                                       m_ConstantInt(C2))))) {
+    auto *DiffC = cast<ConstantInt>(Builder.CreateSub(C1, C2));
+    if (!DiffC->isNegative()) {
+      Type *Types[] = {X->getType(), DiffC->getType()};
+      Value *Pow =
+          Builder.CreateIntrinsic(Intrinsic::powi, Types, {X, DiffC}, &I);
+      return replaceInstUsesWith(I, Pow);
+    }
+  }
+
   return nullptr;
 }
 
