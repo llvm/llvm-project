@@ -599,7 +599,7 @@ void transferAssignment(const CXXOperatorCallExpr *E, BoolValue &HasValueVal,
                         LatticeTransferState &State) {
   assert(E->getNumArgs() > 0);
 
-  if (auto *Loc = cast<RecordStorageLocation>(
+  if (auto *Loc = cast_or_null<RecordStorageLocation>(
           State.Env.getStorageLocation(*E->getArg(0)))) {
     createOptionalValue(*Loc, HasValueVal, State.Env);
 
