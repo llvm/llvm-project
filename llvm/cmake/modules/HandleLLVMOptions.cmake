@@ -111,8 +111,13 @@ if( LLVM_ENABLE_ASSERTIONS )
   endif()
   # Enable assertions in libstdc++.
   add_compile_definitions(_GLIBCXX_ASSERTIONS)
-  # Enable the hardened mode in libc++.
-  add_compile_definitions(_LIBCPP_ENABLE_HARDENED_MODE)
+  # Cautiously enable the safe hardened mode in libc++.
+  if((DEFINED LIBCXX_HARDENING_MODE) AND
+     (NOT LIBCXX_HARDENING_MODE STREQUAL "safe"))
+    message(WARNING "LLVM_ENABLE_ASSERTIONS implies LIBCXX_HARDENING_MODE \"safe\" but is overriden from command line with value \"${LIBCXX_HARDENING_MODE}\".")
+  else()
+    set(LIBCXX_HARDENING_MODE "safe")
+  endif()
 endif()
 
 if(LLVM_ENABLE_EXPENSIVE_CHECKS)
