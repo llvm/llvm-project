@@ -180,11 +180,6 @@ static cl::opt<unsigned> MaxSwitchCasesPerResult(
     "max-switch-cases-per-result", cl::Hidden, cl::init(16),
     cl::desc("Limit cases to analyze when converting a switch to select"));
 
-static cl::opt<unsigned> CondBranchToCondBranchWeightRatio(
-    "simplifycfg-cbranch-to-cbranch-weight-ratio", cl::Hidden, cl::init(10000),
-    cl::desc("Don't merge conditional branches if the branch probability from "
-             "the first to second is below of the reciprocal of this value"));
-
 STATISTIC(NumBitMaps, "Number of switch instructions turned into bitmaps");
 STATISTIC(NumLinearMaps,
           "Number of switch instructions turned into linear mapping");
@@ -4354,11 +4349,14 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
 
   // If predecessor's branch probability to BB is too low don't merge branches.
   SmallVector<uint32_t, 2> PredWeights;
-  if (extractBranchWeights(*PBI, PredWeights)) {
-    auto BIWeight = PredWeights[PBIOp ^ 1];
-    auto CommonWeight = PredWeights[PBIOp];
-    if (BIWeight &&
-        (CommonWeight / BIWeight > CondBranchToCondBranchWeightRatio))
+  if (extractBranchWeights(*PBI, PredWeights) &&
+      (PredWeights[0] + PredWeights[1]) != 0) {
+
+    BranchProbability CommonDestProb = BranchProbability::getBranchProbability(
+        PredWeights[PBIOp], PredWeights[0] + PredWeights[1]);
+
+    BranchProbability Likely = TTI.getPredictableBranchThreshold();
+    if (CommonDestProb >= Likely)
       return false;
   }
 
