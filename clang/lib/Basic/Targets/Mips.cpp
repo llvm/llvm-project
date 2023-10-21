@@ -149,6 +149,10 @@ void MipsTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("_MIPS_FPSET", Twine(32));
   else
     Builder.defineMacro("_MIPS_FPSET", Twine(16));
+  if (NoOddSpreg)
+    Builder.defineMacro("_MIPS_SPFPSET", Twine(16));
+  else
+    Builder.defineMacro("_MIPS_SPFPSET", Twine(32));
 
   if (IsMips16)
     Builder.defineMacro("__mips16", Twine(1));
