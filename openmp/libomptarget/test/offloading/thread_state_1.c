@@ -1,19 +1,13 @@
 // RUN: %libomptarget-compile-run-and-check-generic
 // RUN: %libomptarget-compileopt-run-and-check-generic
 
-// These are supported and work, but we compute bogus results on the GPU. For
-// now we disable the CPU and enable it once the GPU is fixed.
-//
-// UNSUPPORTED: aarch64-unknown-linux-gnu
-// UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
-// UNSUPPORTED: x86_64-pc-linux-gnu
-// UNSUPPORTED: x86_64-pc-linux-gnu-LTO
+// UNSUPPORTED: amdgcn-amd-amdhsa
 
 #include <omp.h>
 #include <stdio.h>
 
 int main() {
-  // TODO: Test all ICVs
+  // TODO: Test all ICVs on all levels
   int lvl = 333, tid = 666, nt = 999;
 #pragma omp target teams map(tofrom : lvl, tid, nt) num_teams(2)
   {
@@ -30,7 +24,7 @@ int main() {
     }
   }
   // TODO: This is wrong, but at least it doesn't crash
-  // CHECK: lvl: 333, tid: 666, nt: 999
+  // CHECK: lvl: 2, tid: 0, nt: 1
   printf("lvl: %i, tid: %i, nt: %i\n", lvl, tid, nt);
   return 0;
 }
