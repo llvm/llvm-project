@@ -24,7 +24,6 @@ def ShardingPropagation : Pass<"sharding-propagation", "mlir::func::FuncOp"> {
     operation, and the operations themselves are added with sharding option
     attributes.
   }];
-  let constructor = "mlir::mesh::createShardingPropagationPass()";
   let dependentDialects = [
     "mesh::MeshDialect"
   ];

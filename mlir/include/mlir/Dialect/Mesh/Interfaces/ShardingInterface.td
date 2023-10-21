@@ -22,17 +22,17 @@ def ShardingInterface : OpInterface<"ShardingInterface"> {
       InterfaceMethod<
         /*desc=*/[{
           Returns a list of iterator types that describe the number of loops.
-          The iterator types determine how the operation tranverses its input
-          and output tensors.
+          The iterator types determine how the operation traverses its input and
+          output tensors.
 
           Example 1: A gemm op has 3 loops, M, N and K. Their loop iterator
-          types are paralle, parallel, reduction-sum. This indicates that M and
+          types are parallel, parallel, reduction-sum. This indicates that M and
           N are traversed in parallel, while the K dimension is used for
           reduction.
 
           Example 2: A softmax op's loop iterator types are parallel and
           invalid. The second dimension is considered as invalid because it is
-          neigher parallel nor any kind of reduction. 
+          neither parallel nor any kind of reduction. 
         }],
         /*retType=*/"SmallVector<::mlir::mesh::IteratorType>",
         /*methodName=*/"getLoopIteratorTypes",

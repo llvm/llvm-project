@@ -26,8 +26,6 @@ namespace mesh {
 #define GEN_PASS_DECL
 #include "mlir/Dialect/Mesh/Transforms/Passes.h.inc"
 
-std::unique_ptr<OperationPass<func::FuncOp>> createShardingPropagationPass();
-
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//

@@ -42,9 +42,10 @@ getMeshShardingAttr(OpResult result, bool useOperandSharding) {
   });
 
   if (anyShardedForDef) {
-    assert(val.hasOneUse() &&
-           "expected to has exact one use if it has a use of mesh.shard "
-           "without unit attr annotate_for_users");
+    // expected to have exact one use if it has a use of `mesh.shard` without
+    // unit attr annotate_for_users
+    if (!val.hasOneUse())
+      return failure();
     auto shardOp = llvm::cast<mesh::ShardOp>(*val.getUsers().begin());
     return shardOp.getShard();
   } else if (useOperandSharding) {
@@ -80,9 +81,8 @@ getMeshShardingAttr(OpResult result, bool useOperandSharding) {
 static FailureOr<std::pair<bool, MeshShardingAttr>>
 getMeshShardingAttr(OpOperand &opOperand) {
   Value val = opOperand.get();
-  if (ShardOp shardOp = val.getDefiningOp<ShardOp>()) {
+  if (ShardOp shardOp = val.getDefiningOp<ShardOp>())
     return std::make_pair(shardOp.getAnnotateForUsers(), shardOp.getShard());
-  }
 
   return failure();
 }
@@ -264,21 +264,23 @@ fillShardingOption(Operation *op, ShardingOption &shardingOption,
       return success();
     else
       return op->emitOpError()
-             << "sharding option confilicts on loop iterator " << loopIdx;
+             << "sharding option conflicts on loop iterator " << loopIdx;
   }
   for (size_t i = 0; i < shardingOption.shardingArray.size(); ++i) {
-    if (i != loopIdx) {
-      for (int32_t axis : meshAxes)
-        if (std::find(shardingOption.shardingArray[i].begin(),
-                      shardingOption.shardingArray[i].end(),
-                      axis) != shardingOption.shardingArray[i].end()) {
-          if (ignoreIfConflicted)
-            return success();
-          else
-            return op->emitOpError()
-                   << "sharding option confilicts because of mesh axis " << axis
-                   << " duplicates";
-        }
+    if (i == loopIdx)
+      continue;
+
+    for (int32_t axis : meshAxes) {
+      if (std::find(shardingOption.shardingArray[i].begin(),
+                    shardingOption.shardingArray[i].end(),
+                    axis) != shardingOption.shardingArray[i].end()) {
+        if (ignoreIfConflicted)
+          return success();
+        else
+          return op->emitOpError()
+                 << "sharding option conflicts because mesh axes " << axis
+                 << " duplicate";
+      }
     }
   }
   if (cluster)
@@ -367,7 +369,7 @@ mesh::detail::defaultGetShardingOption(Operation *op) {
     unsigned numDims = map.getNumDims();
 
     // Handle the split axes, and partial axes don't need to be handled because
-    // they only affect the definig op of the operand
+    // they only affect the defining op of the operand
     //
     // TODO: Change to process the operands with single loop index first and
     // then the operands with multiple loop indices

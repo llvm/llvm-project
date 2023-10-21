@@ -34,24 +34,6 @@ namespace {
 // Utilities
 //===----------------------------------------------------------------------===//
 
-static std::vector<Operation *> getOperationsVector(Block &block) {
-  std::vector<Operation *> res;
-  for (auto it = block.begin(); it != block.end(); ++it) {
-    Operation *op = &*it;
-    res.push_back(op);
-  }
-  return res;
-}
-
-static std::vector<Operation *> getReversedOperationsVector(Block &block) {
-  std::vector<Operation *> res;
-  for (auto it = block.rbegin(); it != block.rend(); ++it) {
-    Operation *op = &*it;
-    res.push_back(op);
-  }
-  return res;
-}
-
 // For each operation that implements the ShardingInterface, infer the sharding
 // option of the operation from its operands and/or results using the
 // `getShardingOption` method. If the inferred sharding option is not empty, add
@@ -85,10 +67,10 @@ LogicalResult visitOp(Operation *op, OpBuilder &builder) {
 }
 
 //===----------------------------------------------------------------------===//
-// ShardingPropagationPass
+// ShardingPropagation
 //===----------------------------------------------------------------------===//
-struct ShardingPropagationPass
-    : public mesh::impl::ShardingPropagationBase<ShardingPropagationPass> {
+struct ShardingPropagation
+    : public mesh::impl::ShardingPropagationBase<ShardingPropagation> {
   void runOnOperation() override {
     func::FuncOp funcOp = getOperation();
     MLIRContext *ctx = funcOp.getContext();
@@ -112,31 +94,18 @@ struct ShardingPropagationPass
     // clang-format on
 
     // 1. propagate in reversed order
-    {
-      std::vector<Operation *> curOps = getReversedOperationsVector(block);
-      for (Operation *op : curOps) {
-        if (failed(visitOp(op, builder)))
-          return signalPassFailure();
-      }
-    }
+    for (Operation &op : llvm::make_early_inc_range(llvm::reverse(block)))
+      if (failed(visitOp(&op, builder)))
+        return signalPassFailure();
 
     LLVM_DEBUG(DBGS() << "After reversed order propagation:\n"
                       << funcOp << "\n");
 
     // 2. propagate in original order
-    {
-      std::vector<Operation *> curOps = getOperationsVector(block);
-      for (Operation *op : curOps) {
-        if (failed(visitOp(op, builder)))
-          return signalPassFailure();
-      }
-    }
+    for (Operation &op : llvm::make_early_inc_range(block))
+      if (failed(visitOp(&op, builder)))
+        return signalPassFailure();
   }
 };
 
 } // namespace
-
-std::unique_ptr<OperationPass<func::FuncOp>>
-mlir::mesh::createShardingPropagationPass() {
-  return std::make_unique<ShardingPropagationPass>();
-}

@@ -26,8 +26,9 @@ struct ShardingOption {
   // mesh axes the i-th loop will be sharded on.
   ShardingArray shardingArray;
   SymbolRefAttr cluster;
-  // `empty` is true indicates that no sharding infomation can be inferred at
-  // present. Note that it is different from that an operation is not sharded.
+  // `empty` being true indicates that no sharding information can be inferred
+  // at present. Note that it is different from the case where an operation is
+  // not sharded.
   bool empty = false;
   ShardingOption() = default;
   ShardingOption(ShardingArray shardingArray, SymbolRefAttr cluster)
