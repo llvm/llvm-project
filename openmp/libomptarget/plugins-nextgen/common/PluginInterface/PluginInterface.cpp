@@ -10,6 +10,7 @@
 
 #include "PluginInterface.h"
 #include "Debug.h"
+#include "Environment.h"
 #include "GlobalHandler.h"
 #include "JIT.h"
 #include "elf_common.h"
@@ -687,7 +688,7 @@ Error GenericDeviceTy::setupDeviceEnvironment(GenericPluginTy &Plugin,
     return CallTablePairOrErr.takeError();
 
   DeviceEnvironmentTy DeviceEnvironment;
-  DeviceEnvironment.DebugKind = OMPX_DebugKind;
+  DeviceEnvironment.DeviceDebugKind = OMPX_DebugKind;
   DeviceEnvironment.NumDevices = Plugin.getNumDevices();
   // TODO: The device ID used here is not the real device ID used by OpenMP.
   DeviceEnvironment.DeviceNum = DeviceId;

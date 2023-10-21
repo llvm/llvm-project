@@ -25,8 +25,15 @@ using IdentTy = ident_t;
 
 #include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 
+enum class DeviceDebugKind : uint32_t {
+  Assertion = 1U << 0,
+  FunctionTracing = 1U << 1,
+  CommonIssues = 1U << 2,
+  AllocationTracker = 1U << 3,
+};
+
 struct DeviceEnvironmentTy {
-  uint32_t DebugKind;
+  uint32_t DeviceDebugKind;
   uint32_t NumDevices;
   uint32_t DeviceNum;
   uint32_t DynamicMemSize;
