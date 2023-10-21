@@ -847,11 +847,6 @@ RankedTensorType sparse_tensor::getCOOFromTypeWithOrdering(RankedTensorType rtt,
                                                            AffineMap lvlPerm,
                                                            bool ordered) {
   const SparseTensorType src(rtt);
-  // TODO: This assertion is to match the behavior from before we merged
-  // dimOrdering and higherOrdering into dimToLvl.  However, there's no
-  // in-principle reason to require this.  (wrengr has a commit in the
-  // wings to fix this.)
-  assert(src.isPermutation());
   const Level lvlRank = src.getLvlRank();
   SmallVector<DimLevelType> lvlTypes;
   lvlTypes.reserve(lvlRank);
