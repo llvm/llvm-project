@@ -60,6 +60,10 @@ This document describes the available MLIR passes and their contracts.
 
 [include "MemRefPasses.md"]
 
+## 'ml\_program' Dialect Passes
+
+[include "MLProgramPasses.md"]
+
 ## 'nvgpu' Dialect Passes
 
 [include "NVGPUPasses.md"]
