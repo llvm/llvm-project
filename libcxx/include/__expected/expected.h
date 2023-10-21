@@ -838,7 +838,7 @@ private:
       requires(is_trivially_destructible_v<_ValueType> && is_trivially_destructible_v<_ErrorType>)
     = default;
 
-    // the __expected_repr's destructor handles this
+    // __repr's destructor handles this
     _LIBCPP_HIDE_FROM_ABI constexpr ~__union_t() {}
 
     _ValueType __val_;
@@ -885,7 +885,7 @@ private:
       requires(is_trivially_destructible_v<_ValueType> && is_trivially_destructible_v<_ErrorType>)
     = default;
 
-    // the __expected_repr's destructor handles this
+    // __repr's destructor handles this
     _LIBCPP_HIDE_FROM_ABI constexpr ~__union_t()
       requires(!is_trivially_destructible_v<_ValueType> || !is_trivially_destructible_v<_ErrorType>)
     {}
@@ -894,49 +894,49 @@ private:
     _LIBCPP_NO_UNIQUE_ADDRESS _ErrorType __unex_;
   };
 
-  struct __expected_repr {
-    _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_repr() = delete;
+  struct __repr {
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __repr() = delete;
 
     template <class... _Args>
-    _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_repr(in_place_t __tag, _Args&&... __args)
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __repr(in_place_t __tag, _Args&&... __args)
         : __union_(__tag, std::forward<_Args>(__args)...), __has_val_(true) {}
 
     template <class... _Args>
-    _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_repr(unexpect_t __tag, _Args&&... __args)
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __repr(unexpect_t __tag, _Args&&... __args)
         : __union_(__tag, std::forward<_Args>(__args)...), __has_val_(false) {}
 
     template <class... _Args>
-    _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_repr(
-        std::__expected_construct_in_place_from_invoke_tag __tag, _Args&&... __args)
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __repr(std::__expected_construct_in_place_from_invoke_tag __tag,
+                                                    _Args&&... __args)
         : __union_(__tag, std::forward<_Args>(__args)...), __has_val_(true) {}
 
     template <class... _Args>
-    _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_repr(
-        std::__expected_construct_unexpected_from_invoke_tag __tag, _Args&&... __args)
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __repr(std::__expected_construct_unexpected_from_invoke_tag __tag,
+                                                    _Args&&... __args)
         : __union_(__tag, std::forward<_Args>(__args)...), __has_val_(false) {}
 
     template <class... _Args>
-    _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_repr(bool __has_val, _Args&&... __args)
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __repr(bool __has_val, _Args&&... __args)
         : __union_(__has_val, std::forward<_Args>(__args)...), __has_val_(__has_val) {}
 
-    _LIBCPP_HIDE_FROM_ABI constexpr __expected_repr(const __expected_repr&) = delete;
-    _LIBCPP_HIDE_FROM_ABI constexpr __expected_repr(const __expected_repr&)
+    _LIBCPP_HIDE_FROM_ABI constexpr __repr(const __repr&) = delete;
+    _LIBCPP_HIDE_FROM_ABI constexpr __repr(const __repr&)
       requires(is_copy_constructible_v<_Tp> && is_copy_constructible_v<_Err> &&
                is_trivially_copy_constructible_v<_Tp> && is_trivially_copy_constructible_v<_Err>)
     = default;
-    _LIBCPP_HIDE_FROM_ABI constexpr __expected_repr(__expected_repr&&) = delete;
-    _LIBCPP_HIDE_FROM_ABI constexpr __expected_repr(__expected_repr&&)
+    _LIBCPP_HIDE_FROM_ABI constexpr __repr(__repr&&) = delete;
+    _LIBCPP_HIDE_FROM_ABI constexpr __repr(__repr&&)
       requires(is_move_constructible_v<_Tp> && is_move_constructible_v<_Err> &&
                is_trivially_move_constructible_v<_Tp> && is_trivially_move_constructible_v<_Err>)
     = default;
 
-    _LIBCPP_HIDE_FROM_ABI constexpr __expected_repr& operator=(const __expected_repr&) = delete;
+    _LIBCPP_HIDE_FROM_ABI constexpr __repr& operator=(const __repr&) = delete;
 
-    _LIBCPP_HIDE_FROM_ABI constexpr ~__expected_repr()
+    _LIBCPP_HIDE_FROM_ABI constexpr ~__repr()
       requires(is_trivially_destructible_v<_Tp> && is_trivially_destructible_v<_Err>)
     = default;
 
-    _LIBCPP_HIDE_FROM_ABI constexpr ~__expected_repr()
+    _LIBCPP_HIDE_FROM_ABI constexpr ~__repr()
       requires(!is_trivially_destructible_v<_Tp> || !is_trivially_destructible_v<_Err>)
     {
       if (__has_val_) {
@@ -954,7 +954,7 @@ private:
     _LIBCPP_NO_UNIQUE_ADDRESS bool __has_val_;
   };
 
-  __expected_repr __repr_;
+  __repr __repr_;
 };
 
 template <class _Tp, class _Err>
@@ -1495,7 +1495,7 @@ private:
       requires(is_trivially_destructible_v<_ErrorType>)
     = default;
 
-    // the __expected_repr's destructor handles this
+    // __repr's destructor handles this
     _LIBCPP_HIDE_FROM_ABI constexpr ~__union_t() {}
 
     __empty_t __empty_;
@@ -1534,7 +1534,7 @@ private:
       requires(is_trivially_destructible_v<_ErrorType>)
     = default;
 
-    // the __expected_repr's destructor handles this
+    // __repr's destructor handles this
     _LIBCPP_HIDE_FROM_ABI constexpr ~__union_t()
       requires(!is_trivially_destructible_v<_ErrorType>)
     {}
@@ -1543,40 +1543,40 @@ private:
     _LIBCPP_NO_UNIQUE_ADDRESS _ErrorType __unex_;
   };
 
-  struct __expected_repr {
-    _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_repr() = delete;
+  struct __repr {
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __repr() = delete;
 
-    _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_repr(in_place_t) : __union_(), __has_val_(true) {}
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __repr(in_place_t) : __union_(), __has_val_(true) {}
 
     template <class... _Args>
-    _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_repr(unexpect_t __tag, _Args&&... __args)
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __repr(unexpect_t __tag, _Args&&... __args)
         : __union_(__tag, std::forward<_Args>(__args)...), __has_val_(false) {}
 
     template <class... _Args>
-    _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_repr(
-        std::__expected_construct_unexpected_from_invoke_tag __tag, _Args&&... __args)
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __repr(std::__expected_construct_unexpected_from_invoke_tag __tag,
+                                                    _Args&&... __args)
         : __union_(__tag, std::forward<_Args>(__args)...), __has_val_(false) {}
 
     template <class... _Args>
-    _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_repr(bool __has_val, _Args&&... __args)
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __repr(bool __has_val, _Args&&... __args)
         : __union_(__has_val, std::forward<_Args>(__args)...), __has_val_(__has_val) {}
 
-    _LIBCPP_HIDE_FROM_ABI constexpr __expected_repr(const __expected_repr&) = delete;
-    _LIBCPP_HIDE_FROM_ABI constexpr __expected_repr(const __expected_repr&)
+    _LIBCPP_HIDE_FROM_ABI constexpr __repr(const __repr&) = delete;
+    _LIBCPP_HIDE_FROM_ABI constexpr __repr(const __repr&)
       requires(is_copy_constructible_v<_Err> && is_trivially_copy_constructible_v<_Err>)
     = default;
-    _LIBCPP_HIDE_FROM_ABI constexpr __expected_repr(__expected_repr&&) = delete;
-    _LIBCPP_HIDE_FROM_ABI constexpr __expected_repr(__expected_repr&&)
+    _LIBCPP_HIDE_FROM_ABI constexpr __repr(__repr&&) = delete;
+    _LIBCPP_HIDE_FROM_ABI constexpr __repr(__repr&&)
       requires(is_move_constructible_v<_Err> && is_trivially_move_constructible_v<_Err>)
     = default;
 
-    _LIBCPP_HIDE_FROM_ABI constexpr __expected_repr& operator=(const __expected_repr&) = delete;
+    _LIBCPP_HIDE_FROM_ABI constexpr __repr& operator=(const __repr&) = delete;
 
-    _LIBCPP_HIDE_FROM_ABI constexpr ~__expected_repr()
+    _LIBCPP_HIDE_FROM_ABI constexpr ~__repr()
       requires(is_trivially_destructible_v<_Err>)
     = default;
 
-    _LIBCPP_HIDE_FROM_ABI constexpr ~__expected_repr()
+    _LIBCPP_HIDE_FROM_ABI constexpr ~__repr()
       requires(!is_trivially_destructible_v<_Err>)
     {
       if (!__has_val_) {
@@ -1592,7 +1592,7 @@ private:
     _LIBCPP_NO_UNIQUE_ADDRESS bool __has_val_;
   };
 
-  __expected_repr __repr_;
+  __repr __repr_;
 };
 
 _LIBCPP_END_NAMESPACE_STD
