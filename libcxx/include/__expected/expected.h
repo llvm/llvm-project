@@ -843,7 +843,7 @@ private:
       requires(is_trivially_destructible_v<_ValueType> && is_trivially_destructible_v<_ErrorType>)
     = default;
 
-    // the expected's destructor handles this
+    // the __expected_repr's destructor handles this
     _LIBCPP_HIDE_FROM_ABI constexpr ~__union_t() {}
 
     _ValueType __val_;
@@ -890,7 +890,7 @@ private:
       requires(is_trivially_destructible_v<_ValueType> && is_trivially_destructible_v<_ErrorType>)
     = default;
 
-    // the expected's destructor handles this
+    // the __expected_repr's destructor handles this
     _LIBCPP_HIDE_FROM_ABI constexpr ~__union_t()
       requires(!is_trivially_destructible_v<_ValueType> || !is_trivially_destructible_v<_ErrorType>)
     {}
@@ -952,7 +952,7 @@ private:
     }
 
   private:
-    template <class _Up, class _OtherErr>
+    template <class, class>
     friend class expected;
 
     [[no_unique_address]] __union_t<_Tp, _Err> __union_;
@@ -960,12 +960,6 @@ private:
   };
 
   __expected_repr __repr_;
-};
-
-template <class _Union>
-struct __expected_repr {
-  [[no_unique_address]] _Union __union_;
-  [[no_unique_address]] bool __has_val_;
 };
 
 template <class _Tp, class _Err>
@@ -996,7 +990,7 @@ public:
   using rebind = expected<_Up, error_type>;
 
   // [expected.void.ctor], constructors
-  _LIBCPP_HIDE_FROM_ABI constexpr expected() noexcept : __repr_{.__union_{}, .__has_val_ = true} {}
+  _LIBCPP_HIDE_FROM_ABI constexpr expected() noexcept : __repr_(std::in_place) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr expected(const expected&) = delete;
 
@@ -1007,7 +1001,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr expected(const expected& __rhs) noexcept(
       is_nothrow_copy_constructible_v<_Err>) // strengthened
     requires(is_copy_constructible_v<_Err> && !is_trivially_copy_constructible_v<_Err>)
-      : __repr_{.__union_{__rhs.__repr_.__has_val_, __rhs.__repr_.__union_}, .__has_val_ = __rhs.__repr_.__has_val_} {}
+      : __repr_(__rhs.__repr_.__has_val_, __rhs.__repr_.__union_) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr expected(expected&&)
     requires(is_move_constructible_v<_Err> && is_trivially_move_constructible_v<_Err>)
@@ -1015,78 +1009,82 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr expected(expected&& __rhs) noexcept(is_nothrow_move_constructible_v<_Err>)
     requires(is_move_constructible_v<_Err> && !is_trivially_move_constructible_v<_Err>)
-      : __repr_{.__union_{__rhs.__repr_.__has_val_, std::move(__rhs.__repr_.__union_)},
-                .__has_val_ = __rhs.__repr_.__has_val_} {}
+      : __repr_(__rhs.__repr_.__has_val_, std::move(__rhs.__repr_.__union_)) {}
 
   template <class _Up, class _OtherErr>
     requires __can_convert<_Up, _OtherErr, const _OtherErr&>::value
   _LIBCPP_HIDE_FROM_ABI constexpr explicit(!is_convertible_v<const _OtherErr&, _Err>)
       expected(const expected<_Up, _OtherErr>& __rhs) noexcept(
           is_nothrow_constructible_v<_Err, const _OtherErr&>) // strengthened
-      : __repr_{.__union_{__rhs.__repr_.__has_val_, __rhs.__repr_.__union_}, .__has_val_ = __rhs.__repr_.__has_val_} {}
+      : __repr_(__rhs.__repr_.__has_val_, __rhs.__repr_.__union_) {}
 
   template <class _Up, class _OtherErr>
     requires __can_convert<_Up, _OtherErr, _OtherErr>::value
   _LIBCPP_HIDE_FROM_ABI constexpr explicit(!is_convertible_v<_OtherErr, _Err>)
       expected(expected<_Up, _OtherErr>&& __rhs) noexcept(is_nothrow_constructible_v<_Err, _OtherErr>) // strengthened
-      : __repr_{.__union_{__rhs.__repr_.__has_val_, std::move(__rhs.__repr_.__union_)},
-                .__has_val_ = __rhs.__repr_.__has_val_} {}
+      : __repr_(__rhs.__repr_.__has_val_, std::move(__rhs.__repr_.__union_)) {}
 
   template <class _OtherErr>
     requires is_constructible_v<_Err, const _OtherErr&>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit(!is_convertible_v<const _OtherErr&, _Err>) expected(
       const unexpected<_OtherErr>& __unex) noexcept(is_nothrow_constructible_v<_Err, const _OtherErr&>) // strengthened
-      : __repr_{.__union_{std::unexpect, __unex.error()}, .__has_val_ = false} {}
+      : __repr_(std::unexpect, __unex.error()) {}
 
   template <class _OtherErr>
     requires is_constructible_v<_Err, _OtherErr>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit(!is_convertible_v<_OtherErr, _Err>)
       expected(unexpected<_OtherErr>&& __unex) noexcept(is_nothrow_constructible_v<_Err, _OtherErr>) // strengthened
-      : __repr_{.__union_{std::unexpect, std::move(__unex.error())}, .__has_val_ = false} {}
+      : __repr_(std::unexpect, std::move(__unex.error())) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit expected(in_place_t) noexcept : __repr_{.__union_{}, .__has_val_ = true} {}
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit expected(in_place_t) noexcept : __repr_(std::in_place) {}
 
   template <class... _Args>
     requires is_constructible_v<_Err, _Args...>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit expected(unexpect_t, _Args&&... __args) noexcept(
       is_nothrow_constructible_v<_Err, _Args...>) // strengthened
-      : __repr_{.__union_{std::unexpect, std::forward<_Args>(__args)...}, .__has_val_ = false} {}
+      : __repr_(std::unexpect, std::forward<_Args>(__args)...) {}
 
   template <class _Up, class... _Args>
     requires is_constructible_v< _Err, initializer_list<_Up>&, _Args... >
   _LIBCPP_HIDE_FROM_ABI constexpr explicit expected(unexpect_t, initializer_list<_Up> __il, _Args&&... __args) noexcept(
       is_nothrow_constructible_v<_Err, initializer_list<_Up>&, _Args...>) // strengthened
-      : __repr_{.__union_{std::unexpect, __il, std::forward<_Args>(__args)...}, .__has_val_ = false} {}
+      : __repr_(std::unexpect, __il, std::forward<_Args>(__args)...) {}
 
 private:
   template <class _Func>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit expected(__expected_construct_in_place_from_invoke_tag, _Func&& __f)
-      : __repr_{.__union_{}, .__has_val_ = true} {
+      : __repr_(std::in_place) {
     std::invoke(std::forward<_Func>(__f));
   }
 
   template <class _Func, class... _Args>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit expected(
       __expected_construct_unexpected_from_invoke_tag __tag, _Func&& __f, _Args&&... __args)
-      : __repr_{.__union_{__tag, std::forward<_Func>(__f), std::forward<_Args>(__args)...}, .__has_val_ = false} {}
+      : __repr_(__tag, std::forward<_Func>(__f), std::forward<_Args>(__args)...) {}
 
 public:
   // [expected.void.dtor], destructor
 
-  _LIBCPP_HIDE_FROM_ABI constexpr ~expected()
-    requires is_trivially_destructible_v<_Err>
-  = default;
+  _LIBCPP_HIDE_FROM_ABI constexpr ~expected() = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr ~expected()
-    requires(!is_trivially_destructible_v<_Err>)
-  {
-    if (!__repr_.__has_val_) {
-      std::destroy_at(std::addressof(__repr_.__union_.__unex_));
-    }
+private:
+  // precondition: has_value()
+  template <class... _Args>
+  _LIBCPP_HIDE_FROM_ABI constexpr void __reinit_expected(std::unexpect_t, _Args&&... __args) {
+    std::destroy_at(&__repr_);
+    auto __trans = std::__make_exception_guard([&] { std::construct_at(&__repr_, std::in_place); });
+    std::construct_at(&__repr_, std::unexpect, std::forward<_Args>(__args)...);
+    __trans.__complete();
   }
 
-  // [expected.void.assign], assignment
+  // precondition: !has_value()
+  _LIBCPP_HIDE_FROM_ABI constexpr void __reinit_expected(std::in_place_t) {
+    std::destroy_at(&__repr_);
+    std::construct_at(&__repr_, std::in_place);
+  }
 
+public:
+  // [expected.void.assign], assignment
   _LIBCPP_HIDE_FROM_ABI constexpr expected& operator=(const expected&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI constexpr expected& operator=(const expected& __rhs) noexcept(
@@ -1095,13 +1093,11 @@ public:
   {
     if (__repr_.__has_val_) {
       if (!__rhs.__repr_.__has_val_) {
-        std::construct_at(std::addressof(__repr_.__union_.__unex_), __rhs.__repr_.__union_.__unex_);
-        __repr_.__has_val_ = false;
+        __reinit_expected(std::unexpect, __rhs.__repr_.__union_.__unex_);
       }
     } else {
       if (__rhs.__repr_.__has_val_) {
-        std::destroy_at(std::addressof(__repr_.__union_.__unex_));
-        __repr_.__has_val_ = true;
+        __reinit_expected(std::in_place);
       } else {
         __repr_.__union_.__unex_ = __rhs.__repr_.__union_.__unex_;
       }
@@ -1117,13 +1113,11 @@ public:
   {
     if (__repr_.__has_val_) {
       if (!__rhs.__repr_.__has_val_) {
-        std::construct_at(std::addressof(__repr_.__union_.__unex_), std::move(__rhs.__repr_.__union_.__unex_));
-        __repr_.__has_val_ = false;
+        __reinit_expected(std::unexpect, std::move(__rhs.__repr_.__union_.__unex_));
       }
     } else {
       if (__rhs.__repr_.__has_val_) {
-        std::destroy_at(std::addressof(__repr_.__union_.__unex_));
-        __repr_.__has_val_ = true;
+        __reinit_expected(std::in_place);
       } else {
         __repr_.__union_.__unex_ = std::move(__rhs.__repr_.__union_.__unex_);
       }
@@ -1135,8 +1129,7 @@ public:
     requires(is_constructible_v<_Err, const _OtherErr&> && is_assignable_v<_Err&, const _OtherErr&>)
   _LIBCPP_HIDE_FROM_ABI constexpr expected& operator=(const unexpected<_OtherErr>& __un) {
     if (__repr_.__has_val_) {
-      std::construct_at(std::addressof(__repr_.__union_.__unex_), __un.error());
-      __repr_.__has_val_ = false;
+      __reinit_expected(std::unexpect, __un.error());
     } else {
       __repr_.__union_.__unex_ = __un.error();
     }
@@ -1147,8 +1140,7 @@ public:
     requires(is_constructible_v<_Err, _OtherErr> && is_assignable_v<_Err&, _OtherErr>)
   _LIBCPP_HIDE_FROM_ABI constexpr expected& operator=(unexpected<_OtherErr>&& __un) {
     if (__repr_.__has_val_) {
-      std::construct_at(std::addressof(__repr_.__union_.__unex_), std::move(__un.error()));
-      __repr_.__has_val_ = false;
+      __reinit_expected(std::unexpect, std::move(__un.error()));
     } else {
       __repr_.__union_.__unex_ = std::move(__un.error());
     }
@@ -1157,8 +1149,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr void emplace() noexcept {
     if (!__repr_.__has_val_) {
-      std::destroy_at(std::addressof(__repr_.__union_.__unex_));
-      __repr_.__has_val_ = true;
+      __reinit_expected(std::in_place);
     }
   }
 
@@ -1167,12 +1158,11 @@ public:
   swap(expected& __rhs) noexcept(is_nothrow_move_constructible_v<_Err>&& is_nothrow_swappable_v<_Err>)
     requires(is_swappable_v<_Err> && is_move_constructible_v<_Err>)
   {
-    auto __swap_val_unex_impl = [&](expected& __with_val, expected& __with_err) {
-      std::construct_at(
-          std::addressof(__with_val.__repr_.__union_.__unex_), std::move(__with_err.__repr_.__union_.__unex_));
-      std::destroy_at(std::addressof(__with_err.__repr_.__union_.__unex_));
-      __with_val.__repr_.__has_val_ = false;
-      __with_err.__repr_.__has_val_ = true;
+    auto __swap_val_unex_impl = [](expected& __with_val, expected& __with_err) {
+      // May throw, but will re-engage `__with_val` in that case.
+      __with_val.__reinit_expected(std::unexpect, std::move(__with_err.__repr_.__union_.__unex_));
+      // Will not throw.
+      __with_err.__reinit_expected(std::in_place);
     };
 
     if (__repr_.__has_val_) {
@@ -1516,7 +1506,7 @@ private:
       requires(is_trivially_destructible_v<_ErrorType>)
     = default;
 
-    // the expected's destructor handles this
+    // the __expected_repr's destructor handles this
     _LIBCPP_HIDE_FROM_ABI constexpr ~__union_t() {}
 
     __empty_t __empty_;
@@ -1555,7 +1545,7 @@ private:
       requires(is_trivially_destructible_v<_ErrorType>)
     = default;
 
-    // the expected's destructor handles this
+    // the __expected_repr's destructor handles this
     _LIBCPP_HIDE_FROM_ABI constexpr ~__union_t()
       requires(!is_trivially_destructible_v<_ErrorType>)
     {}
@@ -1564,7 +1554,56 @@ private:
     _LIBCPP_NO_UNIQUE_ADDRESS _ErrorType __unex_;
   };
 
-  __expected_repr<__union_t<_Err>> __repr_;
+  struct __expected_repr {
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_repr() = delete;
+
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_repr(std::in_place_t) : __union_(), __has_val_(true) {}
+
+    template <class... _Args>
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_repr(std::unexpect_t __tag, _Args&&... __args)
+        : __union_(__tag, std::forward<_Args>(__args)...), __has_val_(false) {}
+
+    template <class... _Args>
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_repr(
+        std::__expected_construct_unexpected_from_invoke_tag __tag, _Args&&... __args)
+        : __union_(__tag, std::forward<_Args>(__args)...), __has_val_(false) {}
+
+    template <class... _Args>
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_repr(bool __has_val, _Args&&... __args)
+        : __union_(__has_val, std::forward<_Args>(__args)...), __has_val_(__has_val) {}
+
+    _LIBCPP_HIDE_FROM_ABI constexpr __expected_repr(const __expected_repr&) = delete;
+    _LIBCPP_HIDE_FROM_ABI constexpr __expected_repr(const __expected_repr&)
+      requires(is_copy_constructible_v<_Err> && is_trivially_copy_constructible_v<_Err>)
+    = default;
+    _LIBCPP_HIDE_FROM_ABI constexpr __expected_repr(__expected_repr&&) = delete;
+    _LIBCPP_HIDE_FROM_ABI constexpr __expected_repr(__expected_repr&&)
+      requires(is_move_constructible_v<_Err> && is_trivially_move_constructible_v<_Err>)
+    = default;
+
+    _LIBCPP_HIDE_FROM_ABI constexpr __expected_repr& operator=(const __expected_repr&) = delete;
+
+    _LIBCPP_HIDE_FROM_ABI constexpr ~__expected_repr()
+      requires(is_trivially_destructible_v<_Err>)
+    = default;
+
+    _LIBCPP_HIDE_FROM_ABI constexpr ~__expected_repr()
+      requires(!is_trivially_destructible_v<_Err>)
+    {
+      if (!__has_val_) {
+        std::destroy_at(std::addressof(__union_.__unex_));
+      }
+    }
+
+  private:
+    template <class, class>
+    friend class expected;
+
+    [[no_unique_address]] __union_t<_Err> __union_;
+    [[no_unique_address]] bool __has_val_;
+  };
+
+  __expected_repr __repr_;
 };
 
 _LIBCPP_END_NAMESPACE_STD
