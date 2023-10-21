@@ -123,6 +123,6 @@ jobs:
       - name: Build LLD docs
         if: steps.docs-changed-subprojects.outputs.lld_any_changed == 'true'
         run: |
-          cmake -B lld-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="lld" -DLLVM_ENABLE_SPHINX=ON -DSPHINX_OUTPUT_HTML=ON ./llvm
+          cmake -B lld-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="lld" -DLLVM_ENABLE_SPHINX=ON ./llvm
           TZ=UTC ninja -C lld-build docs-lld-html
 
