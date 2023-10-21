@@ -411,17 +411,19 @@ def ForallOp : SCF_Op<"forall", [
         tensor<?x?xT> to tensor<?x?xT>
       %sC = tensor.extract_slice %o1[h((%thread_id_1, %thread_id_2))]:
         tensor<?x?xT> to tensor<?x?xT>
-      %sD = matmul ins(%sA, %sB) outs(%sC)
+      %sD = linalg.matmul
+        ins(%sA, %sB : tensor<?x?xT>, tensor<?x?xT>)
+        outs(%sC : tensor<?x?xT>)
 
       %spointwise = subtensor %o2[i((%thread_id_1, %thread_id_2))]:
         tensor<?xT> to tensor<?xT>
-      %sE = add ins(%spointwise) outs(%sD)
+      %sE = linalg.add ins(%spointwise : tensor<?xT>) outs(%sD : tensor<?xT>)
 
       scf.forall.in_parallel {
-        scf.forall.parallel_insert_slice %sD into %o1[h((%thread_id_1, %thread_id_2))]:
+        tensor.parallel_insert_slice %sD into %o1[h((%thread_id_1, %thread_id_2))]:
           tensor<?x?xT> into tensor<?x?xT>
 
-        scf.forall.parallel_insert_slice %spointwise into %o2[i((%thread_id_1, %thread_id_2))]:
+        tensor.parallel_insert_slice %spointwise into %o2[i((%thread_id_1, %thread_id_2))]:
           tensor<?xT> into tensor<?xT>
       }
     }
@@ -449,10 +451,12 @@ def ForallOp : SCF_Op<"forall", [
       %sC = tensor.extract_slice %o[%i, %j][%tileSize1, %tileSize2][1, 1]
         : tensor<?x?xT> to tensor<?x?xT>
 
-      %add = map {"arith.addf"} ins(%sA, %sB) outs(%sC)
+      %add = linalg.map {"arith.addf"}
+        ins(%sA, %sB : tensor<?x?xT>, tensor<?x?xT>)
+        outs(%sC : tensor<?x?xT>)
 
       scf.forall.in_parallel {
-        scf.forall.parallel_insert_slice %add into
+        tensor.parallel_insert_slice %add into
           %o[%i, %j][%tileSize1, %tileSize2][1, 1]
           : tensor<?x?xT> into tensor<?x?xT>
       }
