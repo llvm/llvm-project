@@ -493,7 +493,10 @@ public:
   }
 
   uint16_t getMinFunctionAlignment() const override {
-    return STI->getFeatureBits()[RISCV::FeatureStdExtC] ? 2 : 4;
+    if (STI->hasFeature(RISCV::FeatureStdExtC) ||
+        STI->hasFeature(RISCV::FeatureStdExtZca))
+      return 2;
+    return 4;
   }
 };
 
