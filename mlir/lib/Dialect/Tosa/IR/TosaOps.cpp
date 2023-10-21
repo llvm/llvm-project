@@ -1109,16 +1109,15 @@ LogicalResult tosa::ScatterOp::inferReturnTypeComponents(
 static LogicalResult ReduceInferReturnTypes(
     ShapeAdaptor operandShape, Type inputType, IntegerAttr axis,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
-  if (!operandShape.hasRank() || operandShape.getRank() == 0) {
+  int64_t axisVal = axis.getValue().getSExtValue();
+  if (!operandShape.hasRank() || operandShape.getRank() <= axisVal) {
     inferredReturnShapes.push_back(ShapedTypeComponents(inputType));
     return success();
   }
 
   SmallVector<int64_t> outputShape;
   operandShape.getDims(outputShape);
-  int64_t axisVal = axis.getValue().getSExtValue();
-  if (axisVal < operandShape.getRank())
-    outputShape[axisVal] = 1;
+  outputShape[axisVal] = 1;
   inferredReturnShapes.push_back(ShapedTypeComponents(outputShape, inputType));
   return success();
 }
