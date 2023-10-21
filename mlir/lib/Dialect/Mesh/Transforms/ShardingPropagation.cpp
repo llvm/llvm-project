@@ -81,16 +81,14 @@ struct ShardingPropagation
     }
     Block &block = region.front();
 
-    // clang-format off
     LLVM_DEBUG(
-      DBGS() << "print all the ops' iterator types and indexing maps in the "
-                "block.\n";
-      for (Operation &op : block.getOperations()) {
-        if (auto shardingOp = llvm::dyn_cast<ShardingInterface>(&op))
-        shardingOp.printLoopTypesAndIndexingMaps(llvm::dbgs());
-      }
-    );
-    // clang-format on
+        DBGS() << "print all the ops' iterator types and indexing maps in the "
+                  "block.\n";
+        for (Operation &op
+             : block.getOperations()) {
+          if (auto shardingOp = llvm::dyn_cast<ShardingInterface>(&op))
+            shardingOp.printLoopTypesAndIndexingMaps(llvm::dbgs());
+        });
 
     // 1. propagate in reversed order
     for (Operation &op : llvm::make_early_inc_range(llvm::reverse(block)))
