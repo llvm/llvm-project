@@ -223,7 +223,7 @@ unsigned RISCVInstrumentManager::getSchedClassID(
   unsigned short Opcode = MCI.getOpcode();
   unsigned SchedClassID = MCII.get(Opcode).getSchedClass();
 
-  // Unpack all possible RISCV instruments from IVec.
+  // Unpack all possible RISC-V instruments from IVec.
   RISCVLMULInstrument *LI = nullptr;
   RISCVSEWInstrument *SI = nullptr;
   for (auto &I : IVec) {
