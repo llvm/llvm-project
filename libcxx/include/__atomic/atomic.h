@@ -21,6 +21,7 @@
 #include <__type_traits/is_same.h>
 #include <__type_traits/remove_const.h>
 #include <__type_traits/remove_pointer.h>
+#include <__type_traits/remove_volatile.h>
 #include <__utility/forward.h>
 #include <cstddef>
 #include <cstdio>
@@ -174,11 +175,11 @@ struct atomic<_Tp> : __atomic_base<_Tp> {
 
             // this workaround works (as in the old value can be updated with fp80's 58 bit padding),
             // but memcpy on long double is not thread safe
-            // using __ptr_type = __remove_const_t<decltype(__self.__a_.__a_value)>*;
+            // using __ptr_type = __remove_volatile_t<__remove_const_t<decltype(__self.__a_.__a_value)>>*;
             // std::memcpy(&__old, const_cast<__ptr_type>(std::addressof(__self.__a_.__a_value)), sizeof(_Tp));
 
             // try another one
-            std::memcpy(&__old, &(static_cast<const long double&>(__self.load(memory_order_relaxed))), sizeof(_Tp));
+            std::__cxx_atomic_load_inplace(std::addressof(__self.__a_), &__old, memory_order_relaxed);
 
             __new = __operation(__old, __operand);
           }
