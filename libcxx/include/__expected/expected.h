@@ -1051,12 +1051,6 @@ public:
       : __repr_(std::unexpect, __il, std::forward<_Args>(__args)...) {}
 
 private:
-  template <class _Func>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit expected(__expected_construct_in_place_from_invoke_tag, _Func&& __f)
-      : __repr_(std::in_place) {
-    std::invoke(std::forward<_Func>(__f));
-  }
-
   template <class _Func, class... _Args>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit expected(
       __expected_construct_unexpected_from_invoke_tag __tag, _Func&& __f, _Args&&... __args)
