@@ -101,7 +101,7 @@ private:
                        Instruction &I);
   bool foldExtractExtract(Instruction &I);
   bool foldInsExtFNeg(Instruction &I);
-  bool foldBitcastShuf(Instruction &I);
+  bool foldBitcastShuffle(Instruction &I);
   bool scalarizeBinopOrCmp(Instruction &I);
   bool scalarizeVPIntrinsic(Instruction &I);
   bool foldExtractedCmps(Instruction &I);
@@ -679,7 +679,7 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
 /// If this is a bitcast of a shuffle, try to bitcast the source vector to the
 /// destination type followed by shuffle. This can enable further transforms by
 /// moving bitcasts or shuffles together.
-bool VectorCombine::foldBitcastShuf(Instruction &I) {
+bool VectorCombine::foldBitcastShuffle(Instruction &I) {
   Value *V;
   ArrayRef<int> Mask;
   if (!match(&I, m_BitCast(
@@ -689,35 +689,43 @@ bool VectorCombine::foldBitcastShuf(Instruction &I) {
   // 1) Do not fold bitcast shuffle for scalable type. First, shuffle cost for
   // scalable type is unknown; Second, we cannot reason if the narrowed shuffle
   // mask for scalable type is a splat or not.
-  // 2) Disallow non-vector casts and length-changing shuffles.
+  // 2) Disallow non-vector casts.
   // TODO: We could allow any shuffle.
+  auto *DestTy = dyn_cast<FixedVectorType>(I.getType());
   auto *SrcTy = dyn_cast<FixedVectorType>(V->getType());
-  if (!SrcTy || I.getOperand(0)->getType() != SrcTy)
+  if (!DestTy || !SrcTy)
     return false;
 
-  auto *DestTy = cast<FixedVectorType>(I.getType());
-  unsigned DestNumElts = DestTy->getNumElements();
-  unsigned SrcNumElts = SrcTy->getNumElements();
+  unsigned DestEltSize = DestTy->getScalarSizeInBits();
+  unsigned SrcEltSize = SrcTy->getScalarSizeInBits();
+  if (SrcTy->getPrimitiveSizeInBits() % DestEltSize != 0)
+    return false;
+
   SmallVector<int, 16> NewMask;
-  if (SrcNumElts <= DestNumElts) {
+  if (DestEltSize <= SrcEltSize) {
     // The bitcast is from wide to narrow/equal elements. The shuffle mask can
     // always be expanded to the equivalent form choosing narrower elements.
-    assert(DestNumElts % SrcNumElts == 0 && "Unexpected shuffle mask");
-    unsigned ScaleFactor = DestNumElts / SrcNumElts;
+    assert(SrcEltSize % DestEltSize == 0 && "Unexpected shuffle mask");
+    unsigned ScaleFactor = SrcEltSize / DestEltSize;
     narrowShuffleMaskElts(ScaleFactor, Mask, NewMask);
   } else {
     // The bitcast is from narrow elements to wide elements. The shuffle mask
     // must choose consecutive elements to allow casting first.
-    assert(SrcNumElts % DestNumElts == 0 && "Unexpected shuffle mask");
-    unsigned ScaleFactor = SrcNumElts / DestNumElts;
+    assert(DestEltSize % SrcEltSize == 0 && "Unexpected shuffle mask");
+    unsigned ScaleFactor = DestEltSize / SrcEltSize;
     if (!widenShuffleMaskElts(ScaleFactor, Mask, NewMask))
       return false;
   }
 
+  // Bitcast the shuffle src - keep its original width but using the destination
+  // scalar type.
+  unsigned NumSrcElts = SrcTy->getPrimitiveSizeInBits() / DestEltSize;
+  auto *ShuffleTy = FixedVectorType::get(DestTy->getScalarType(), NumSrcElts);
+
   // The new shuffle must not cost more than the old shuffle. The bitcast is
   // moved ahead of the shuffle, so assume that it has the same cost as before.
   InstructionCost DestCost = TTI.getShuffleCost(
-      TargetTransformInfo::SK_PermuteSingleSrc, DestTy, NewMask);
+      TargetTransformInfo::SK_PermuteSingleSrc, ShuffleTy, NewMask);
   InstructionCost SrcCost =
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, SrcTy, Mask);
   if (DestCost > SrcCost || !DestCost.isValid())
@@ -725,7 +733,7 @@ bool VectorCombine::foldBitcastShuf(Instruction &I) {
 
   // bitcast (shuf V, MaskC) --> shuf (bitcast V), MaskC'
   ++NumShufOfBitcast;
-  Value *CastV = Builder.CreateBitCast(V, DestTy);
+  Value *CastV = Builder.CreateBitCast(V, ShuffleTy);
   Value *Shuf = Builder.CreateShuffleVector(CastV, NewMask);
   replaceValue(I, *Shuf);
   return true;
@@ -817,23 +825,32 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
   ElementCount EC = cast<VectorType>(Op0->getType())->getElementCount();
   Value *EVL = VPI.getArgOperand(3);
   const DataLayout &DL = VPI.getModule()->getDataLayout();
-  bool MustHaveNonZeroVL =
-      IntrID == Intrinsic::vp_sdiv || IntrID == Intrinsic::vp_udiv ||
-      IntrID == Intrinsic::vp_srem || IntrID == Intrinsic::vp_urem;
 
-  if (!MustHaveNonZeroVL || isKnownNonZero(EVL, DL, 0, &AC, &VPI, &DT)) {
-    Value *ScalarOp0 = getSplatValue(Op0);
-    Value *ScalarOp1 = getSplatValue(Op1);
-    Value *ScalarVal =
-        ScalarIntrID
-            ? Builder.CreateIntrinsic(VecTy->getScalarType(), *ScalarIntrID,
-                                      {ScalarOp0, ScalarOp1})
-            : Builder.CreateBinOp((Instruction::BinaryOps)(*FunctionalOpcode),
-                                  ScalarOp0, ScalarOp1);
-    replaceValue(VPI, *Builder.CreateVectorSplat(EC, ScalarVal));
-    return true;
-  }
-  return false;
+  // If the VP op might introduce UB or poison, we can scalarize it provided
+  // that we know the EVL > 0: If the EVL is zero, then the original VP op
+  // becomes a no-op and thus won't be UB, so make sure we don't introduce UB by
+  // scalarizing it.
+  bool SafeToSpeculate;
+  if (ScalarIntrID)
+    SafeToSpeculate = Intrinsic::getAttributes(I.getContext(), *ScalarIntrID)
+                          .hasFnAttr(Attribute::AttrKind::Speculatable);
+  else
+    SafeToSpeculate = isSafeToSpeculativelyExecuteWithOpcode(
+        *FunctionalOpcode, &VPI, nullptr, &AC, &DT);
+  if (!SafeToSpeculate && !isKnownNonZero(EVL, DL, 0, &AC, &VPI, &DT))
+    return false;
+
+  Value *ScalarOp0 = getSplatValue(Op0);
+  Value *ScalarOp1 = getSplatValue(Op1);
+  Value *ScalarVal =
+      ScalarIntrID
+          ? Builder.CreateIntrinsic(VecTy->getScalarType(), *ScalarIntrID,
+                                    {ScalarOp0, ScalarOp1})
+          : Builder.CreateBinOp((Instruction::BinaryOps)(*FunctionalOpcode),
+                                ScalarOp0, ScalarOp1);
+
+  replaceValue(VPI, *Builder.CreateVectorSplat(EC, ScalarVal));
+  return true;
 }
 
 /// Match a vector binop or compare instruction with at least one inserted
@@ -1465,11 +1482,11 @@ bool VectorCombine::foldShuffleFromReductions(Instruction &I) {
   bool UsesSecondVec =
       any_of(ConcatMask, [&](int M) { return M >= NumInputElts; });
   InstructionCost OldCost = TTI.getShuffleCost(
-      UsesSecondVec ? TTI::SK_PermuteTwoSrc : TTI::SK_PermuteSingleSrc, VecType,
-      Shuffle->getShuffleMask());
+      UsesSecondVec ? TTI::SK_PermuteTwoSrc : TTI::SK_PermuteSingleSrc,
+      UsesSecondVec ? VecType : ShuffleInputType, Shuffle->getShuffleMask());
   InstructionCost NewCost = TTI.getShuffleCost(
-      UsesSecondVec ? TTI::SK_PermuteTwoSrc : TTI::SK_PermuteSingleSrc, VecType,
-      ConcatMask);
+      UsesSecondVec ? TTI::SK_PermuteTwoSrc : TTI::SK_PermuteSingleSrc,
+      UsesSecondVec ? VecType : ShuffleInputType, ConcatMask);
 
   LLVM_DEBUG(dbgs() << "Found a reduction feeding from a shuffle: " << *Shuffle
                     << "\n");
@@ -1872,7 +1889,7 @@ bool VectorCombine::run() {
         MadeChange |= foldSelectShuffle(I);
         break;
       case Instruction::BitCast:
-        MadeChange |= foldBitcastShuf(I);
+        MadeChange |= foldBitcastShuffle(I);
         break;
       }
     } else {

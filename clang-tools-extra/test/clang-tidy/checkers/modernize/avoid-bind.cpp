@@ -45,6 +45,7 @@ struct D {
   void operator()(int x, int y) const {}
 
   void MemberFunction(int x) {}
+  int MemberFunctionWithReturn(int x) {}
 
   static D *create();
 };
@@ -162,11 +163,11 @@ struct TestCaptureByValueStruct {
     // those here.
     auto FFF = boost::bind(UseF, f);
     // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer a lambda to boost::bind [modernize-avoid-bind]
-    // CHECK-FIXES: auto FFF = [f] { return UseF(f); };
+    // CHECK-FIXES: auto FFF = [f] { UseF(f); };
 
     auto GGG = boost::bind(UseF, MemberStruct);
     // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer a lambda to boost::bind [modernize-avoid-bind]
-    // CHECK-FIXES: auto GGG = [this] { return UseF(MemberStruct); };
+    // CHECK-FIXES: auto GGG = [this] { UseF(MemberStruct); };
 
     auto HHH = std::bind(add, MemberStructWithData._member, 1);
     // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer a lambda to std::bind
@@ -227,34 +228,34 @@ void testFunctionObjects() {
   D *e = nullptr;
   auto AAA = std::bind(d, 1, 2);
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: prefer a lambda to std::bind
-  // CHECK-FIXES: auto AAA = [d] { return d(1, 2); }
+  // CHECK-FIXES: auto AAA = [d] { d(1, 2); }
 
   auto BBB = std::bind(*e, 1, 2);
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: prefer a lambda to std::bind
-  // CHECK-FIXES: auto BBB = [e] { return (*e)(1, 2); }
+  // CHECK-FIXES: auto BBB = [e] { (*e)(1, 2); }
 
   auto CCC = std::bind(D{}, 1, 2);
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: prefer a lambda to std::bind
-  // CHECK-FIXES: auto CCC = [] { return D{}(1, 2); }
+  // CHECK-FIXES: auto CCC = [] { D{}(1, 2); }
 
   auto DDD = std::bind(D(), 1, 2);
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: prefer a lambda to std::bind
-  // CHECK-FIXES: auto DDD = [] { return D()(1, 2); }
+  // CHECK-FIXES: auto DDD = [] { D()(1, 2); }
 
   auto EEE = std::bind(*D::create(), 1, 2);
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: prefer a lambda to std::bind
-  // CHECK-FIXES: auto EEE = [Func = *D::create()] { return Func(1, 2); };
+  // CHECK-FIXES: auto EEE = [Func = *D::create()] { Func(1, 2); };
 
   auto FFF = std::bind(G(), 1);
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: prefer a lambda to std::bind
   // Templated function call operators may be used
-  // CHECK-FIXES: auto FFF = [] { return G()(1); };
+  // CHECK-FIXES: auto FFF = [] { G()(1); };
 
   int CTorArg = 42;
   auto GGG = std::bind(G(CTorArg), 1);
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: prefer a lambda to std::bind
   // Function objects with constructor arguments should be captured
-  // CHECK-FIXES: auto GGG = [Func = G(CTorArg)] { return Func(1); };
+  // CHECK-FIXES: auto GGG = [Func = G(CTorArg)] { Func(1); };
 }
 
 template <typename T>
@@ -262,7 +263,7 @@ void testMemberFnOfClassTemplate(T) {
   auto HHH = std::bind(H<T>(), 42);
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: prefer a lambda to std::bind
   // Ensure function class template arguments are preserved
-  // CHECK-FIXES: auto HHH = [] { return H<T>()(42); };
+  // CHECK-FIXES: auto HHH = [] { H<T>()(42); };
 }
 
 template void testMemberFnOfClassTemplate(int);
@@ -335,11 +336,12 @@ void testCapturedSubexpressions() {
   auto CCC = std::bind(sub, std::ref(*p), _1);
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: prefer a lambda to std::bind
   // Expressions returning references are captured
-  // CHECK-FIXES: auto CCC = [&capture0 = *p](auto && PH1) { return sub(capture0, std::forward<decltype(PH1)>(PH1)); };
+  // CHECK-FIXES: auto CCC = [&capture0 = *p](auto && PH1) { sub(capture0, std::forward<decltype(PH1)>(PH1)); };
 }
 
 struct E {
   void MemberFunction(int x) {}
+  int MemberFunctionWithReturn(int x) {}
 
   void testMemberFunctions() {
     D *d;
@@ -360,6 +362,23 @@ struct E {
     auto DDD = std::bind(&D::MemberFunction, _1, 1);
     // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer a lambda to std::bind
     // CHECK-FIXES: auto DDD = [](auto && PH1) { PH1->MemberFunction(1); };
+
+    auto EEE = std::bind(&D::MemberFunctionWithReturn, d, 1);
+    // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer a lambda to std::bind
+    // CHECK-FIXES: auto EEE = [d] { return d->MemberFunctionWithReturn(1); };
+
+    auto FFF = std::bind(&D::MemberFunctionWithReturn, &dd, 1);
+    // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer a lambda to std::bind
+    // CHECK-FIXES: auto FFF = [ObjectPtr = &dd] { return ObjectPtr->MemberFunctionWithReturn(1); };
+
+    auto GGG = std::bind(&E::MemberFunctionWithReturn, this, 1);
+    // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer a lambda to std::bind
+    // CHECK-FIXES: auto GGG = [this] { return MemberFunctionWithReturn(1); };
+
+    // Test what happens when the object pointer is itself a placeholder.
+    auto HHH = std::bind(&D::MemberFunctionWithReturn, _1, 1);
+    // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer a lambda to std::bind
+    // CHECK-FIXES: auto HHH = [](auto && PH1) { return PH1->MemberFunctionWithReturn(1); };
   }
 };
 
@@ -368,5 +387,5 @@ void testStdFunction(Thing *t) {
   if (t)
     cb.Reset(std::bind(UseThing, t));
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: prefer a lambda to std::bind
-  // CHECK-FIXES: cb.Reset([t] { return UseThing(t); });
+  // CHECK-FIXES: cb.Reset([t] { UseThing(t); });
 }

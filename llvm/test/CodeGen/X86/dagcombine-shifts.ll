@@ -146,7 +146,7 @@ define i64 @fun7(i8 zeroext %v) {
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    sarb $4, %dil
 ; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    shll $4, %eax
+; X64-NEXT:    shlq $4, %rax
 ; X64-NEXT:    retq
 entry:
   %shr = ashr i8 %v, 4
@@ -166,7 +166,9 @@ define i64 @fun8(i16 zeroext %v) {
 ; X64-LABEL: fun8:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movswl %di, %eax
-; X64-NEXT:    andl $1048560, %eax # imm = 0xFFFF0
+; X64-NEXT:    shrl $4, %eax
+; X64-NEXT:    movzwl %ax, %eax
+; X64-NEXT:    shlq $4, %rax
 ; X64-NEXT:    retq
 entry:
   %shr = ashr i16 %v, 4
@@ -215,12 +217,11 @@ define i64 @fun10(i8 zeroext %v) {
 ;
 ; X64-LABEL: fun10:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    shrb $4, %al
-; X64-NEXT:    movzbl %al, %eax
-; X64-NEXT:    andl $-16, %edi
-; X64-NEXT:    orq %rdi, %rax
+; X64-NEXT:    shrb $4, %dil
+; X64-NEXT:    movzbl %dil, %ecx
+; X64-NEXT:    movq %rcx, %rax
+; X64-NEXT:    shlq $4, %rax
+; X64-NEXT:    orq %rcx, %rax
 ; X64-NEXT:    retq
 entry:
   %shr = lshr i8 %v, 4
@@ -244,9 +245,9 @@ define i64 @fun11(i16 zeroext %v) {
 ; X64-LABEL: fun11:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    shrl $4, %eax
-; X64-NEXT:    andl $-16, %edi
+; X64-NEXT:    shrl $4, %edi
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    shlq $4, %rax
 ; X64-NEXT:    addq %rdi, %rax
 ; X64-NEXT:    retq
 entry:
@@ -272,9 +273,9 @@ define i64 @fun12(i32 zeroext %v) {
 ; X64-LABEL: fun12:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    shrl $4, %eax
-; X64-NEXT:    andl $-16, %edi
+; X64-NEXT:    shrl $4, %edi
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    shlq $4, %rax
 ; X64-NEXT:    addq %rdi, %rax
 ; X64-NEXT:    retq
 entry:

@@ -94,7 +94,7 @@ define i64 @sum_2_at_with_int_conversion(ptr %A, ptr %B, i64 %N) {
 ; CHECK-NEXT:    [[SUM_NEXT]] = add i64 [[ADD]], [[LV_I9]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[IV]], [[N]]
-; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi i64 [ [[SUM_NEXT_PEEL]], [[AT_WITH_INT_CONVERSION_EXIT11_PEEL:%.*]] ], [ [[SUM_NEXT]], [[AT_WITH_INT_CONVERSION_EXIT11]] ]
 ; CHECK-NEXT:    ret i64 [[SUM_NEXT_LCSSA]]

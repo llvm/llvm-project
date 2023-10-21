@@ -9,4 +9,6 @@ add_llvm_tool(llvm-readtapi
   DiffEngine.cpp
   )
 
-add_llvm_tool_symlink(readtapi llvm-readtapi)
+if(LLVM_INSTALL_BINUTILS_SYMLINKS)
+  add_llvm_tool_symlink(readtapi llvm-readtapi)
+endif()

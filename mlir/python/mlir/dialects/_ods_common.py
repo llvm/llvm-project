@@ -9,70 +9,12 @@ from typing import Sequence as _Sequence, Union as _Union
 
 __all__ = [
     "equally_sized_accessor",
-    "extend_opview_class",
     "get_default_loc_context",
     "get_op_result_or_value",
     "get_op_results_or_values",
+    "get_op_result_or_op_results",
     "segmented_accessor",
 ]
-
-
-def extend_opview_class(ext_module):
-    """Decorator to extend an OpView class from an extension module.
-
-    Extension modules can expose various entry-points:
-      Stand-alone class with the same name as a parent OpView class (i.e.
-      "ReturnOp"). A name-based match is attempted first before falling back
-      to a below mechanism.
-
-      def select_opview_mixin(parent_opview_cls):
-        If defined, allows an appropriate mixin class to be selected dynamically
-        based on the parent OpView class. Should return NotImplemented if a
-        decision is not made.
-
-    Args:
-      ext_module: A module from which to locate extensions. Can be None if not
-        available.
-
-    Returns:
-      A decorator that takes an OpView subclass and further extends it as
-      needed.
-    """
-
-    def class_decorator(parent_opview_cls: type):
-        if ext_module is None:
-            return parent_opview_cls
-        mixin_cls = NotImplemented
-        # First try to resolve by name.
-        try:
-            mixin_cls = getattr(ext_module, parent_opview_cls.__name__)
-        except AttributeError:
-            # Fall back to a select_opview_mixin hook.
-            try:
-                select_mixin = getattr(ext_module, "select_opview_mixin")
-            except AttributeError:
-                pass
-            else:
-                mixin_cls = select_mixin(parent_opview_cls)
-
-        if mixin_cls is NotImplemented or mixin_cls is None:
-            return parent_opview_cls
-
-        # Have a mixin_cls. Create an appropriate subclass.
-        try:
-
-            class LocalOpView(mixin_cls, parent_opview_cls):
-                pass
-
-        except TypeError as e:
-            raise TypeError(
-                f"Could not mixin {mixin_cls} into {parent_opview_cls}"
-            ) from e
-        LocalOpView.__name__ = parent_opview_cls.__name__
-        LocalOpView.__qualname__ = parent_opview_cls.__qualname__
-        return LocalOpView
-
-    return class_decorator
 
 
 def segmented_accessor(elements, raw_segments, idx):
@@ -167,3 +109,17 @@ def get_op_results_or_values(
         return arg.results
     else:
         return [get_op_result_or_value(element) for element in arg]
+
+
+def get_op_result_or_op_results(
+    op: _Union[_cext.ir.OpView, _cext.ir.Operation],
+) -> _Union[_cext.ir.Operation, _cext.ir.OpResult, _Sequence[_cext.ir.OpResult]]:
+    if isinstance(op, _cext.ir.OpView):
+        op = op.operation
+    return (
+        list(get_op_results_or_values(op))
+        if len(op.results) > 1
+        else get_op_result_or_value(op)
+        if len(op.results) > 0
+        else op
+    )

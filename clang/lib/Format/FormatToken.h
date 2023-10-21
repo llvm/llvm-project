@@ -42,6 +42,7 @@ namespace format {
   TYPE(CaseLabelColon)                                                         \
   TYPE(CastRParen)                                                             \
   TYPE(ClassLBrace)                                                            \
+  TYPE(ClassRBrace)                                                            \
   /* ternary ?: expression */                                                  \
   TYPE(ConditionalExpr)                                                        \
   /* the condition in an if statement */                                       \
@@ -51,6 +52,7 @@ namespace format {
   TYPE(ConflictStart)                                                          \
   /* l_brace of if/for/while */                                                \
   TYPE(ControlStatementLBrace)                                                 \
+  TYPE(ControlStatementRBrace)                                                 \
   TYPE(CppCastLParen)                                                          \
   TYPE(CSharpGenericTypeConstraint)                                            \
   TYPE(CSharpGenericTypeConstraintColon)                                       \
@@ -65,8 +67,11 @@ namespace format {
   TYPE(DesignatedInitializerLSquare)                                           \
   TYPE(DesignatedInitializerPeriod)                                            \
   TYPE(DictLiteral)                                                            \
+  TYPE(DoWhile)                                                                \
   TYPE(ElseLBrace)                                                             \
+  TYPE(ElseRBrace)                                                             \
   TYPE(EnumLBrace)                                                             \
+  TYPE(EnumRBrace)                                                             \
   TYPE(FatArrow)                                                               \
   TYPE(ForEachMacro)                                                           \
   TYPE(FunctionAnnotationRParen)                                               \
@@ -125,6 +130,7 @@ namespace format {
   TYPE(PureVirtualSpecifier)                                                   \
   TYPE(RangeBasedForLoopColon)                                                 \
   TYPE(RecordLBrace)                                                           \
+  TYPE(RecordRBrace)                                                           \
   TYPE(RegexLiteral)                                                           \
   TYPE(RequiresClause)                                                         \
   TYPE(RequiresClauseInARequiresExpression)                                    \
@@ -141,6 +147,7 @@ namespace format {
    * braces need to be added to split it. Not used for other languages. */     \
   TYPE(StringInConcatenation)                                                  \
   TYPE(StructLBrace)                                                           \
+  TYPE(StructRBrace)                                                           \
   TYPE(StructuredBindingLSquare)                                               \
   TYPE(TemplateCloser)                                                         \
   TYPE(TemplateOpener)                                                         \
@@ -153,6 +160,7 @@ namespace format {
   TYPE(TypenameMacro)                                                          \
   TYPE(UnaryOperator)                                                          \
   TYPE(UnionLBrace)                                                            \
+  TYPE(UnionRBrace)                                                            \
   TYPE(UntouchableMacroFunc)                                                   \
   /* Like in 'assign x = 0, y = 1;' . */                                       \
   TYPE(VerilogAssignComma)                                                     \

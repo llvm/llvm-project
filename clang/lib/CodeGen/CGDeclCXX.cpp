@@ -675,7 +675,7 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
     AllImports.insert(M);
   // Ones that we import in the global module fragment or the private module
   // fragment.
-  llvm::for_each(Primary->submodules(), [&AllImports](Module *SubM) {
+  for (Module *SubM : Primary->submodules()) {
     assert((SubM->isGlobalModule() || SubM->isPrivateModule()) &&
            "The sub modules of C++20 module unit should only be global module "
            "fragments or private module framents.");
@@ -684,7 +684,7 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
            "not allowed to export import modules.");
     for (Module *M : SubM->Imports)
       AllImports.insert(M);
-  });
+  }
 
   SmallVector<llvm::Function *, 8> ModuleInits;
   for (Module *M : AllImports) {

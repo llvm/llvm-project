@@ -1043,12 +1043,13 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
 
   // Since we're changing the parameter to the callsite, we need to make sure
   // that what would be the new parameter dominates the callsite.
+  bool NeedMoveGEP = false;
   if (!DT->dominates(cpyDest, C)) {
     // Support moving a constant index GEP before the call.
     auto *GEP = dyn_cast<GetElementPtrInst>(cpyDest);
     if (GEP && GEP->hasAllConstantIndices() &&
         DT->dominates(GEP->getPointerOperand(), C))
-      GEP->moveBefore(C);
+      NeedMoveGEP = true;
     else
       return false;
   }
@@ -1067,29 +1068,19 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
 
   // We can't create address space casts here because we don't know if they're
   // safe for the target.
-  if (cpySrc->getType()->getPointerAddressSpace() !=
-      cpyDest->getType()->getPointerAddressSpace())
+  if (cpySrc->getType() != cpyDest->getType())
     return false;
   for (unsigned ArgI = 0; ArgI < C->arg_size(); ++ArgI)
     if (C->getArgOperand(ArgI)->stripPointerCasts() == cpySrc &&
-        cpySrc->getType()->getPointerAddressSpace() !=
-            C->getArgOperand(ArgI)->getType()->getPointerAddressSpace())
+        cpySrc->getType() != C->getArgOperand(ArgI)->getType())
       return false;
 
   // All the checks have passed, so do the transformation.
   bool changedArgument = false;
   for (unsigned ArgI = 0; ArgI < C->arg_size(); ++ArgI)
     if (C->getArgOperand(ArgI)->stripPointerCasts() == cpySrc) {
-      Value *Dest = cpySrc->getType() == cpyDest->getType() ?  cpyDest
-        : CastInst::CreatePointerCast(cpyDest, cpySrc->getType(),
-                                      cpyDest->getName(), C);
       changedArgument = true;
-      if (C->getArgOperand(ArgI)->getType() == Dest->getType())
-        C->setArgOperand(ArgI, Dest);
-      else
-        C->setArgOperand(ArgI, CastInst::CreatePointerCast(
-                                   Dest, C->getArgOperand(ArgI)->getType(),
-                                   Dest->getName(), C));
+      C->setArgOperand(ArgI, cpyDest);
     }
 
   if (!changedArgument)
@@ -1099,6 +1090,11 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   if (!isDestSufficientlyAligned) {
     assert(isa<AllocaInst>(cpyDest) && "Can only increase alloca alignment!");
     cast<AllocaInst>(cpyDest)->setAlignment(srcAlign);
+  }
+
+  if (NeedMoveGEP) {
+    auto *GEP = dyn_cast<GetElementPtrInst>(cpyDest);
+    GEP->moveBefore(C);
   }
 
   if (SkippedLifetimeStart) {
@@ -1849,9 +1845,8 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
                                  DT) < *ByValAlign)
     return false;
 
-  // The address space of the memcpy source must match the byval argument
-  if (MDep->getSource()->getType()->getPointerAddressSpace() !=
-      ByValArg->getType()->getPointerAddressSpace())
+  // The type of the memcpy source must match the byval argument
+  if (MDep->getSource()->getType() != ByValArg->getType())
     return false;
 
   // Verify that the copied-from memory doesn't change in between the memcpy and
@@ -1925,9 +1920,8 @@ bool MemCpyOptPass::processImmutArgument(CallBase &CB, unsigned ArgNo) {
   if (!MDep || MDep->isVolatile() || AI != MDep->getDest())
     return false;
 
-  // The address space of the memcpy source must match the immut argument
-  if (MDep->getSource()->getType()->getPointerAddressSpace() !=
-      ImmutArg->getType()->getPointerAddressSpace())
+  // The type of the memcpy source must match the immut argument
+  if (MDep->getSource()->getType() != ImmutArg->getType())
     return false;
 
   // 2-1. The length of the memcpy must be equal to the size of the alloca.

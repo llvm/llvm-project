@@ -68,7 +68,9 @@ using namespace llvm::opt;
 static void CheckPreprocessingOptions(const Driver &D, const ArgList &Args) {
   if (Arg *A = Args.getLastArg(clang::driver::options::OPT_C, options::OPT_CC,
                                options::OPT_fminimize_whitespace,
-                               options::OPT_fno_minimize_whitespace)) {
+                               options::OPT_fno_minimize_whitespace,
+                               options::OPT_fkeep_system_includes,
+                               options::OPT_fno_keep_system_includes)) {
     if (!Args.hasArg(options::OPT_E) && !Args.hasArg(options::OPT__SLASH_P) &&
         !Args.hasArg(options::OPT__SLASH_EP) && !D.CCCIsCPP()) {
       D.Diag(clang::diag::err_drv_argument_only_allowed_with)
@@ -1320,7 +1322,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     A->render(Args, CmdArgs);
   }
 
-  Args.AddAllArgs(CmdArgs,
+  Args.addAllArgs(CmdArgs,
                   {options::OPT_D, options::OPT_U, options::OPT_I_Group,
                    options::OPT_F, options::OPT_index_header_map});
 
@@ -5150,9 +5152,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   const bool IsAssertBuild = true;
 #endif
 
-  // Disable the verification pass in -asserts builds.
-  if (!IsAssertBuild)
+  // Disable the verification pass in asserts builds unless otherwise specified.
+  if (Args.hasFlag(options::OPT_fno_verify_intermediate_code,
+                   options::OPT_fverify_intermediate_code, !IsAssertBuild)) {
     CmdArgs.push_back("-disable-llvm-verifier");
+  }
 
   // Discard value names in assert builds unless otherwise specified.
   if (Args.hasFlag(options::OPT_fdiscard_value_names,
@@ -5240,11 +5244,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
     auto findMacroDefinition = [&](const std::string &Macro) {
       auto MacroDefs = Args.getAllArgValues(options::OPT_D);
-      return std::find_if(MacroDefs.begin(), MacroDefs.end(),
-                          [&](const std::string &M) {
-                            return M == Macro ||
-                                   M.find(Macro + '=') != std::string::npos;
-                          }) != MacroDefs.end();
+      return llvm::any_of(MacroDefs, [&](const std::string &M) {
+        return M == Macro || M.find(Macro + '=') != std::string::npos;
+      });
     };
 
     // _UNIX03_WITHDRAWN is required for libcxx & porting.
@@ -5462,8 +5464,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  if (Args.hasFlag(options::OPT_mrtd, options::OPT_mno_rtd, false))
-    CmdArgs.push_back("-fdefault-calling-conv=stdcall");
+  if (Args.hasFlag(options::OPT_mrtd, options::OPT_mno_rtd, false)) {
+    if (Triple.getArch() == llvm::Triple::m68k)
+      CmdArgs.push_back("-fdefault-calling-conv=rtdcall");
+    else
+      CmdArgs.push_back("-fdefault-calling-conv=stdcall");
+  }
 
   if (Args.hasArg(options::OPT_fenable_matrix)) {
     // enable-matrix is needed by both the LangOpts and by LLVM.
@@ -6715,9 +6721,19 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                    options::OPT_fno_minimize_whitespace, false)) {
     types::ID InputType = Inputs[0].getType();
     if (!isDerivedFromC(InputType))
-      D.Diag(diag::err_drv_minws_unsupported_input_type)
-          << types::getTypeName(InputType);
+      D.Diag(diag::err_drv_opt_unsupported_input_type)
+          << "-fminimize-whitespace" << types::getTypeName(InputType);
     CmdArgs.push_back("-fminimize-whitespace");
+  }
+
+  // -fno-keep-system-includes is default.
+  if (Args.hasFlag(options::OPT_fkeep_system_includes,
+                   options::OPT_fno_keep_system_includes, false)) {
+    types::ID InputType = Inputs[0].getType();
+    if (!isDerivedFromC(InputType))
+      D.Diag(diag::err_drv_opt_unsupported_input_type)
+          << "-fkeep-system-includes" << types::getTypeName(InputType);
+    CmdArgs.push_back("-fkeep-system-includes");
   }
 
   // -fms-extensions=0 is default.

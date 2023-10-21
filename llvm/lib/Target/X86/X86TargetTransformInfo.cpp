@@ -1481,6 +1481,10 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   if (Kind == TTI::SK_Broadcast)
     LT.first = 1;
 
+  // Treat <X x bfloat> shuffles as <X x half>.
+  if (LT.second.isVector() && LT.second.getScalarType() == MVT::bf16)
+    LT.second = LT.second.changeVectorElementType(MVT::f16);
+
   // Subvector extractions are free if they start at the beginning of a
   // vector and cheap if the subvectors are aligned.
   if (Kind == TTI::SK_ExtractSubvector && LT.second.isVector()) {

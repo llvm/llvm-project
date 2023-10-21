@@ -40,8 +40,8 @@
 
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 
-#include <random>
 #include <optional>
+#include <random>
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
@@ -1182,8 +1182,8 @@ checkPreBufferizationAssumptions(Operation *op, const DominanceInfo &domInfo,
     // not handled in the analysis.
     if (auto toTensorOp = dyn_cast<ToTensorOp>(op.getOperation())) {
       if (!toTensorOp.getRestrict() && !toTensorOp->getUses().empty()) {
-        op->emitError("to_tensor ops without `restrict` are not supported by "
-                      "One-Shot Analysis");
+        op->emitOpError("to_tensor ops without `restrict` are not supported by "
+                        "One-Shot Analysis");
         return WalkResult::interrupt();
       }
     }
@@ -1195,8 +1195,19 @@ checkPreBufferizationAssumptions(Operation *op, const DominanceInfo &domInfo,
                 /*checkConsistencyOnly=*/true)) {
           // This error can happen if certain "mustBufferizeInPlace" interface
           // methods are implemented incorrectly, such that the IR already has
-          // a RaW conflict before making any bufferization decisions.
-          op->emitError("input IR has RaW conflict");
+          // a RaW conflict before making any bufferization decisions. It can
+          // also happen if the bufferization.materialize_in_destination is used
+          // in such a way that a RaW conflict is not avoidable.
+          op->emitOpError("not bufferizable under the given constraints: "
+                          "cannot avoid RaW conflict");
+          return WalkResult::interrupt();
+        }
+
+        if (state.isInPlace(opOperand) &&
+            wouldCreateWriteToNonWritableBuffer(
+                opOperand, state, /*checkConsistencyOnly=*/true)) {
+          op->emitOpError("not bufferizable under the given constraints: would "
+                          "write to read-only buffer");
           return WalkResult::interrupt();
         }
       }
@@ -1323,6 +1334,5 @@ bufferization::runOneShotBufferize(Operation *op,
   }
   if (options.testAnalysisOnly)
     return success();
-  return bufferizeOp(op, options, /*copyBeforeWrite=*/options.copyBeforeWrite,
-                     /*opFilter=*/nullptr, statistics);
+  return bufferizeOp(op, options, statistics);
 }

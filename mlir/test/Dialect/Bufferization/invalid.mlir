@@ -66,10 +66,51 @@ func.func @invalid_writable_on_op() {
 
 // -----
 
-// expected-note @below{{prior use here}}
 func.func @invalid_materialize_in_destination(%arg0: tensor<?xf32>, %arg1: tensor<5xf32>) {
-  // expected-error @below{{expects different type than prior uses: 'tensor<?xf32>' vs 'tensor<5xf32>'}}
-  bufferization.materialize_in_destination %arg0 in %arg1 : tensor<?xf32>
+  // expected-error @below{{failed to verify that all of {source, dest} have same shape}}
+  bufferization.materialize_in_destination %arg0 in %arg1 : (tensor<?xf32>, tensor<5xf32>) -> tensor<5xf32>
+}
+
+// -----
+
+func.func @invalid_materialize_in_destination_dest_type(%arg0: tensor<5xf32>, %arg1: vector<5xf32>) {
+  // expected-error @below{{'dest' must be a tensor or a memref}}
+  bufferization.materialize_in_destination %arg0 in %arg1 : (tensor<5xf32>, vector<5xf32>) -> ()
+}
+
+// -----
+
+func.func @invalid_materialize_in_destination_result(%arg0: tensor<?xf32>, %arg1: memref<?xf32>) {
+  // expected-error @below{{memref 'dest' implies zero results}}
+  bufferization.materialize_in_destination %arg0 in restrict %arg1 : (tensor<?xf32>, memref<?xf32>) -> (tensor<?xf32>)
+}
+
+// -----
+
+func.func @invalid_materialize_in_destination_result_missing(%arg0: tensor<?xf32>, %arg1: tensor<?xf32>) {
+  // expected-error @below{{tensor 'dest' implies exactly one tensor result}}
+  bufferization.materialize_in_destination %arg0 in %arg1 : (tensor<?xf32>, tensor<?xf32>) -> ()
+}
+
+// -----
+
+func.func @invalid_materialize_in_destination_restrict(%arg0: tensor<?xf32>, %arg1: tensor<?xf32>) {
+  // expected-error @below{{'restrict' is valid only for memref destinations}}
+  bufferization.materialize_in_destination %arg0 in restrict %arg1 : (tensor<?xf32>, tensor<?xf32>) -> (tensor<?xf32>)
+}
+
+// -----
+
+func.func @invalid_materialize_in_destination_restrict(%arg0: tensor<?xf32>, %arg1: tensor<?xf32>) {
+  // expected-error @below{{'writable' must be specified if and only if the destination is of memref type}}
+  bufferization.materialize_in_destination %arg0 in writable %arg1 : (tensor<?xf32>, tensor<?xf32>) -> (tensor<?xf32>)
+}
+
+// -----
+
+func.func @invalid_materialize_in_destination_result_shape(%arg0: tensor<?xf32>, %arg1: tensor<?xf32>) {
+  // expected-error @below{{result and 'dest' types must match}}
+  bufferization.materialize_in_destination %arg0 in %arg1 : (tensor<?xf32>, tensor<?xf32>) -> (tensor<6xf32>)
 }
 
 // -----

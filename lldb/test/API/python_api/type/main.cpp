@@ -21,7 +21,12 @@ public:
     } my_type_is_nameless;
     struct name {
       int x;
+      enum E : int {} e;
+      enum E2 {} e2;
     } my_type_is_named;
+    enum E : unsigned char {} e;
+    union U {
+    } u;
     Task(int i, Task *n):
         id(i),
         next(n),

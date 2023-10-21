@@ -507,7 +507,7 @@ func.func @sparse_compression(%tensor: tensor<8x8xf64, #CSR>,
   return %1 : tensor<8x8xf64, #CSR>
 }
 
-// CHECK-LABEL: func.func private @_insert_dense_compressed_no_8_8_f64_0_0(
+// CHECK-LABEL: func.func private @_insert_dense_compressed_nonordered_8_8_f64_0_0(
 //  CHECK-SAME: %[[A1:.*0]]: memref<?xindex>,
 //  CHECK-SAME: %[[A2:.*1]]: memref<?xindex>,
 //  CHECK-SAME: %[[A3:.*2]]: memref<?xf64>,
@@ -533,7 +533,7 @@ func.func @sparse_compression(%tensor: tensor<8x8xf64, #CSR>,
 //       CHECK:     %[[A13:.*]]:4 = scf.for %[[A14:.*]] = %[[A11]] to %[[A7]] step %[[A12]] iter_args(%[[A15:.*]] = %[[A0]], %[[A16:.*]] = %[[A1]], %[[A17:.*]] = %[[A2]], %[[A18:.*]] = %[[A3]]) -> (memref<?xindex>, memref<?xindex>, memref<?xf64>, !sparse_tensor.storage_specifier
 //       CHECK:       %[[A19:.*]] = memref.load %[[A6]]{{\[}}%[[A14]]] : memref<?xindex>
 //       CHECK:       %[[A20:.*]] = memref.load %[[A4]]{{\[}}%[[A19]]] : memref<?xf64>
-//       CHECK:       %[[A21:.*]]:4 = func.call @_insert_dense_compressed_no_8_8_f64_0_0(%[[A15]], %[[A16]], %[[A17]], %[[A18]], %[[A8]], %[[A19]], %[[A20]]) : (memref<?xindex>, memref<?xindex>, memref<?xf64>, !sparse_tensor.storage_specifier
+//       CHECK:       %[[A21:.*]]:4 = func.call @_insert_dense_compressed_nonordered_8_8_f64_0_0(%[[A15]], %[[A16]], %[[A17]], %[[A18]], %[[A8]], %[[A19]], %[[A20]]) : (memref<?xindex>, memref<?xindex>, memref<?xf64>, !sparse_tensor.storage_specifier
 //       CHECK:       memref.store %[[A10]], %[[A4]]{{\[}}%[[A19]]] : memref<?xf64>
 //       CHECK:       memref.store %[[A9]], %[[A5]]{{\[}}%[[A19]]] : memref<?xi1>
 //       CHECK:       scf.yield %[[A21]]#0, %[[A21]]#1, %[[A21]]#2, %[[A21]]#3 : memref<?xindex>, memref<?xindex>, memref<?xf64>, !sparse_tensor.storage_specifier
@@ -611,7 +611,7 @@ func.func @sparse_insert_typed(%arg0: tensor<128xf64, #SparseVector>, %arg1: ind
   return %1 : tensor<128xf64, #SparseVector>
 }
 
-// CHECK-LABEL: func.func private @_insert_compressed_nu_singleton_5_6_f64_0_0(
+// CHECK-LABEL: func.func private @_insert_compressed_nonunique_singleton_5_6_f64_0_0(
 //  CHECK-SAME: %[[A1:.*0]]: memref<?xindex>,
 //  CHECK-SAME: %[[A2:.*1]]: memref<?xindex>,
 //  CHECK-SAME: %[[A3:.*2]]: memref<?xf64>,
@@ -627,7 +627,7 @@ func.func @sparse_insert_typed(%arg0: tensor<128xf64, #SparseVector>, %arg1: ind
 //  CHECK-SAME: %[[A3:.*3]]: !sparse_tensor.storage_specifier
 //  CHECK-SAME: %[[A4:.*4]]: index,
 //  CHECK-SAME: %[[A5:.*5]]: f64)
-//       CHECK: %[[R:.*]]:4 = call @_insert_compressed_nu_singleton_5_6_f64_0_0(%[[A0]], %[[A1]], %[[A2]], %[[A3]], %[[A4]], %[[A4]], %[[A5]])
+//       CHECK: %[[R:.*]]:4 = call @_insert_compressed_nonunique_singleton_5_6_f64_0_0(%[[A0]], %[[A1]], %[[A2]], %[[A3]], %[[A4]], %[[A4]], %[[A5]])
 //       CHECK: return %[[R]]#0, %[[R]]#1, %[[R]]#2, %[[R]]#3
 func.func @sparse_insert_coo(%arg0: tensor<5x6xf64, #Coo>, %arg1: index, %arg2: f64) -> tensor<5x6xf64, #Coo> {
   %0 = sparse_tensor.insert %arg2 into %arg0[%arg1, %arg1] : tensor<5x6xf64, #Coo>
@@ -665,90 +665,94 @@ func.func @sparse_convert_element_type(%arg0: tensor<32xf32, #SparseVector>) -> 
 
 // CHECK-LABEL: func.func @sparse_new_coo(
 // CHECK-SAME:  %[[A0:.*]]: !llvm.ptr<i8>) -> (memref<?xindex>, memref<?xindex>, memref<?xf32>, !sparse_tensor.storage_specifier<#sparse_tensor.encoding<{{{.*}}}>>) {
-//   CHECK-DAG: %[[A1:.*]] = arith.constant false
-//   CHECK-DAG: %[[A2:.*]] = arith.constant 1 : index
-//   CHECK-DAG: %[[A3:.*]] = arith.constant 0 : index
-//   CHECK-DAG: %[[A4:.*]] = arith.constant 2 : index
-//   CHECK-DAG: %[[C2:.*]] = arith.constant 2 : i32
-//       CHECK: %[[D0:.*]] = memref.alloca() : memref<2xindex>
-//       CHECK: %[[D1:.*]] = memref.cast %[[D0]] : memref<2xindex> to memref<?xindex>
-//       CHECK: memref.store %[[A3]], %[[D0]][%[[A3]]] : memref<2xindex
-//       CHECK: memref.store %[[A3]], %[[D0]][%[[A2]]] : memref<2xindex>
-//       CHECK: %[[A5:.*]] = call @createCheckedSparseTensorReader(%[[A0]], %[[D1]], %[[C2]])
-//       CHECK: %[[D2:.*]] = call @getSparseTensorReaderDimSizes(%0) : (!llvm.ptr<i8>) -> memref<?xindex>
-//       CHECK: %[[A8:.*]] = memref.load %[[D2]]{{\[}}%[[A3]]] : memref<?xindex>
-//       CHECK: %[[A9:.*]] = memref.load %[[D2]]{{\[}}%[[A2]]] : memref<?xindex>
-//       CHECK: %[[A10:.*]] = call @getSparseTensorReaderNSE(%[[A5]])
-//       CHECK: %[[A11:.*]] = arith.muli %[[A10]], %[[A4]] : index
-//       CHECK: %[[A12:.*]] = memref.alloc() : memref<2xindex>
-//       CHECK: %[[A13:.*]] = memref.cast %[[A12]] : memref<2xindex> to memref<?xindex>
-//       CHECK: %[[A14:.*]] = memref.alloc(%[[A11]]) : memref<?xindex>
-//       CHECK: %[[A15:.*]] = memref.alloc(%[[A10]]) : memref<?xf32>
-//       CHECK: %[[A16:.*]] = sparse_tensor.storage_specifier.init : !sparse_tensor.storage_specifier<#sparse_tensor.encoding<{{{.*}}}>>
-//       CHECK: %[[A18:.*]] = sparse_tensor.storage_specifier.set %[[A16]]  lvl_sz at 0 with %[[A8]]
-//       CHECK: %[[A19:.*]] = sparse_tensor.storage_specifier.get %[[A18]]  pos_mem_sz at 0
-//       CHECK: %[[A21:.*]], %[[A22:.*]] = sparse_tensor.push_back %[[A19]], %[[A13]], %[[A3]]
-//       CHECK: %[[A24:.*]] = sparse_tensor.storage_specifier.set %[[A18]]  pos_mem_sz at 0 with %[[A22]]
-//       CHECK: %[[A26:.*]] = sparse_tensor.storage_specifier.set %[[A24]]  lvl_sz at 1 with %[[A9]]
-//       CHECK: %[[A27:.*]], %[[A28:.*]] = sparse_tensor.push_back %[[A22]], %[[A21]], %[[A3]], %[[A2]]
-//       CHECK: %[[A30:.*]] = sparse_tensor.storage_specifier.set %[[A26]]  pos_mem_sz at 0 with %[[A28]]
-//       CHECK: %[[A31:.*]] = memref.alloca() : memref<2xindex>
-//       CHECK: %[[A32:.*]] = memref.cast %[[A31]] : memref<2xindex> to memref<?xindex>
-//       CHECK: memref.store %[[A3]], %[[A31]]{{\[}}%[[A3]]] : memref<2xindex>
-//       CHECK: memref.store %[[A2]], %[[A31]]{{\[}}%[[A2]]] : memref<2xindex>
-//       CHECK: %[[A33:.*]] = call @getSparseTensorReaderReadToBuffers0F32(%[[A5]], %[[A32]], %[[A14]], %[[A15]])
-//       CHECK: %[[A34:.*]] = arith.cmpi eq, %[[A33]], %[[A1]] : i1
-//       CHECK: scf.if %[[A34]] {
-//       CHECK:   sparse_tensor.sort  hybrid_quick_sort %[[A10]], %[[A14]] jointly %[[A15]] {ny = 0 : index, perm_map = #{{.*}}} : memref<?xindex> jointly memref<?xf32>
-//       CHECK: }
-//       CHECK: memref.store %[[A10]], %[[A27]]{{\[}}%[[A2]]] : memref<?xindex>
-//       CHECK: %[[A36:.*]] = sparse_tensor.storage_specifier.set %[[A30]]  crd_mem_sz at 0 with %[[A11]]
-//       CHECK: %[[A38:.*]] = sparse_tensor.storage_specifier.set %[[A36]]  val_mem_sz with %[[A10]]
-//       CHECK: call @delSparseTensorReader(%[[A5]]) : (!llvm.ptr<i8>) -> ()
-//       CHECK: return %[[A27]], %[[A14]], %[[A15]], %[[A38]]
+// CHECK-DAG:   %[[VAL_1:.*]] = arith.constant false
+// CHECK-DAG:   %[[VAL_2:.*]] = arith.constant 2 : i32
+// CHECK-DAG:   %[[VAL_3:.*]] = arith.constant 1 : index
+// CHECK-DAG:   %[[VAL_4:.*]] = arith.constant 0 : index
+// CHECK-DAG:   %[[VAL_5:.*]] = arith.constant 2 : index
+// CHECK:       %[[VAL_6:.*]] = memref.alloca() : memref<2xindex>
+// CHECK:       %[[VAL_7:.*]] = memref.cast %[[VAL_6]] : memref<2xindex> to memref<?xindex>
+// CHECK:       memref.store %[[VAL_4]], %[[VAL_6]]{{\[}}%[[VAL_4]]] : memref<2xindex>
+// CHECK:       memref.store %[[VAL_4]], %[[VAL_6]]{{\[}}%[[VAL_3]]] : memref<2xindex>
+// CHECK:       %[[VAL_8:.*]] = call @createCheckedSparseTensorReader(%[[A0]], %[[VAL_7]], %[[VAL_2]]) : (!llvm.ptr<i8>, memref<?xindex>, i32) -> !llvm.ptr<i8>
+// CHECK:       %[[VAL_9:.*]] = call @getSparseTensorReaderDimSizes(%[[VAL_8]]) : (!llvm.ptr<i8>) -> memref<?xindex>
+// CHECK:       %[[VAL_10:.*]] = call @getSparseTensorReaderNSE(%[[VAL_8]]) : (!llvm.ptr<i8>) -> index
+// CHECK:       %[[VAL_11:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_4]]] : memref<?xindex>
+// CHECK:       %[[VAL_12:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_3]]] : memref<?xindex>
+// CHECK:       %[[VAL_13:.*]] = arith.muli %[[VAL_10]], %[[VAL_5]] : index
+// CHECK:       %[[VAL_14:.*]] = memref.alloc() : memref<2xindex>
+// CHECK:       %[[VAL_15:.*]] = memref.cast %[[VAL_14]] : memref<2xindex> to memref<?xindex>
+// CHECK:       %[[VAL_16:.*]] = memref.alloc(%[[VAL_13]]) : memref<?xindex>
+// CHECK:       %[[VAL_17:.*]] = memref.alloc(%[[VAL_10]]) : memref<?xf32>
+// CHECK:       %[[VAL_18:.*]] = sparse_tensor.storage_specifier.init
+// CHECK:       %[[VAL_19:.*]] = sparse_tensor.storage_specifier.set %[[VAL_18]]  lvl_sz at 0 with %[[VAL_11]]
+// CHECK:       %[[VAL_20:.*]] = sparse_tensor.storage_specifier.get %[[VAL_19]]  pos_mem_sz at 0
+// CHECK:       %[[VAL_21:.*]], %[[VAL_22:.*]] = sparse_tensor.push_back %[[VAL_20]], %[[VAL_15]], %[[VAL_4]]
+// CHECK:       %[[VAL_23:.*]] = sparse_tensor.storage_specifier.set %[[VAL_19]]  pos_mem_sz at 0 with %[[VAL_22]]
+// CHECK:       %[[VAL_24:.*]] = sparse_tensor.storage_specifier.set %[[VAL_23]]  lvl_sz at 1 with %[[VAL_12]]
+// CHECK:       %[[VAL_25:.*]], %[[VAL_26:.*]] = sparse_tensor.push_back %[[VAL_22]], %[[VAL_21]], %[[VAL_4]], %[[VAL_3]]
+// CHECK:       %[[VAL_27:.*]] = sparse_tensor.storage_specifier.set %[[VAL_24]]  pos_mem_sz at 0 with %[[VAL_26]]
+// CHECK:       %[[VAL_28:.*]] = memref.alloca() : memref<2xindex>
+// CHECK:       %[[VAL_29:.*]] = memref.cast %[[VAL_28]] : memref<2xindex> to memref<?xindex>
+// CHECK:       memref.store %[[VAL_4]], %[[VAL_28]]{{\[}}%[[VAL_4]]] : memref<2xindex>
+// CHECK:       memref.store %[[VAL_3]], %[[VAL_28]]{{\[}}%[[VAL_3]]] : memref<2xindex>
+// CHECK:       %[[VAL_30:.*]] = call @getSparseTensorReaderReadToBuffers0F32(%[[VAL_8]], %[[VAL_29]], %[[VAL_29]], %[[VAL_16]], %[[VAL_17]]) : (!llvm.ptr<i8>, memref<?xindex>, memref<?xindex>, memref<?xindex>, memref<?xf32>) -> i1
+// CHECK:       %[[VAL_31:.*]] = arith.cmpi eq, %[[VAL_30]], %[[VAL_1]] : i1
+// CHECK:       scf.if %[[VAL_31]] {
+// CHECK:         sparse_tensor.sort hybrid_quick_sort %[[VAL_10]], %[[VAL_16]] jointly %[[VAL_17]]
+// CHECK:       }
+// CHECK:       memref.store %[[VAL_10]], %[[VAL_25]]{{\[}}%[[VAL_3]]] : memref<?xindex>
+// CHECK:       %[[VAL_32:.*]] = sparse_tensor.storage_specifier.set %[[VAL_27]]  crd_mem_sz at 0 with %[[VAL_13]]
+// CHECK:       %[[VAL_33:.*]] = sparse_tensor.storage_specifier.set %[[VAL_32]]  val_mem_sz with %[[VAL_10]]
+// CHECK:       call @delSparseTensorReader(%[[VAL_8]]) : (!llvm.ptr<i8>) -> ()
+// CHECK:       return %[[VAL_25]], %[[VAL_16]], %[[VAL_17]], %[[VAL_33]]
 func.func @sparse_new_coo(%arg0: !llvm.ptr<i8>) -> tensor<?x?xf32, #Coo> {
   %0 = sparse_tensor.new %arg0 : !llvm.ptr<i8> to tensor<?x?xf32, #Coo>
   return %0 : tensor<?x?xf32, #Coo>
 }
 
 // CHECK-LABEL: func.func @sparse_new_coo_permute_no(
-//  CHECK-SAME: %[[A0:.*]]: !llvm.ptr<i8>) -> (memref<?xindex>, memref<?xindex>, memref<?xf32>, !sparse_tensor.storage_specifier<#sparse_tensor.encoding<{{{.*}}}>>) {
-//   CHECK-DAG: %[[A1:.*]] = arith.constant 1 : index
-//   CHECK-DAG: %[[A2:.*]] = arith.constant 0 : index
-//   CHECK-DAG: %[[A3:.*]] = arith.constant 2 : index
-//   CHECK-DAG: %[[C2:.*]] = arith.constant 2 : i32
-//       CHECK: %[[D0:.*]] = memref.alloca() : memref<2xindex>
-//       CHECK: %[[D1:.*]] = memref.cast %[[D0]] : memref<2xindex> to memref<?xindex>
-//       CHECK: memref.store %[[A2]], %[[D0]][%[[A2]]] : memref<2xindex
-//       CHECK: memref.store %[[A2]], %[[D0]][%[[A1]]] : memref<2xindex>
-//       CHECK: %[[A4:.*]] = call @createCheckedSparseTensorReader(%[[A0]], %[[D1]], %[[C2]])
-//       CHECK: %[[D2:.*]] = call @getSparseTensorReaderDimSizes(%0) : (!llvm.ptr<i8>) -> memref<?xindex>
-//       CHECK: %[[A7:.*]] = memref.load %[[D2]]{{\[}}%[[A2]]] : memref<?xindex>
-//       CHECK: %[[A8:.*]] = memref.load %[[D2]]{{\[}}%[[A1]]] : memref<?xindex>
-//       CHECK: %[[A9:.*]] = call @getSparseTensorReaderNSE(%[[A4]])
-//       CHECK: %[[A10:.*]] = arith.muli %[[A9]], %[[A3]] : index
-//       CHECK: %[[A11:.*]] = memref.alloc() : memref<2xindex>
-//       CHECK: %[[A12:.*]] = memref.cast %[[A11]] : memref<2xindex> to memref<?xindex>
-//       CHECK: %[[A13:.*]] = memref.alloc(%[[A10]]) : memref<?xindex>
-//       CHECK: %[[A14:.*]] = memref.alloc(%[[A9]]) : memref<?xf32>
-//       CHECK: %[[A15:.*]] = sparse_tensor.storage_specifier.init : !sparse_tensor.storage_specifier<#sparse_tensor.encoding<{{{.*}}}>>
-//       CHECK: %[[A17:.*]] = sparse_tensor.storage_specifier.set %[[A15]]  lvl_sz at 0 with %[[A8]]
-//       CHECK: %[[A18:.*]] = sparse_tensor.storage_specifier.get %[[A17]]  pos_mem_sz at 0
-//       CHECK: %[[A20:.*]], %[[A21:.*]] = sparse_tensor.push_back %[[A18]], %[[A12]], %[[A2]]
-//       CHECK: %[[A23:.*]] = sparse_tensor.storage_specifier.set %[[A17]]  pos_mem_sz at 0 with %[[A21]]
-//       CHECK: %[[A25:.*]] = sparse_tensor.storage_specifier.set %[[A23]]  lvl_sz at 1 with %[[A7]]
-//       CHECK: %[[A26:.*]], %[[A27:.*]] = sparse_tensor.push_back %[[A21]], %[[A20]], %[[A2]], %[[A1]]
-//       CHECK: %[[A29:.*]] = sparse_tensor.storage_specifier.set %[[A25]]  pos_mem_sz at 0 with %[[A27]]
-//       CHECK: %[[A30:.*]] = memref.alloca() : memref<2xindex>
-//       CHECK: %[[A31:.*]] = memref.cast %[[A30]] : memref<2xindex> to memref<?xindex>
-//       CHECK: memref.store %[[A1]], %[[A30]]{{\[}}%[[A2]]] : memref<2xindex>
-//       CHECK: memref.store %[[A2]], %[[A30]]{{\[}}%[[A1]]] : memref<2xindex>
-//       CHECK: %[[A32:.*]] = call @getSparseTensorReaderReadToBuffers0F32(%[[A4]], %[[A31]], %[[A13]], %[[A14]])
-//       CHECK: memref.store %[[A9]], %[[A26]]{{\[}}%[[A1]]] : memref<?xindex>
-//       CHECK: %[[A34:.*]] = sparse_tensor.storage_specifier.set %[[A29]]  crd_mem_sz at 0 with %[[A10]]
-//       CHECK: %[[A36:.*]] = sparse_tensor.storage_specifier.set %[[A34]]  val_mem_sz with %[[A9]]
-//       CHECK: call @delSparseTensorReader(%[[A4]]) : (!llvm.ptr<i8>) -> ()
-//       CHECK: return %[[A26]], %[[A13]], %[[A14]], %[[A36]]
+// CHECK-SAME:  %[[A0:.*]]: !llvm.ptr<i8>) -> (memref<?xindex>, memref<?xindex>, memref<?xf32>, !sparse_tensor.storage_specifier<#sparse_tensor.encoding<{{{.*}}}>>) {
+// CHECK-DAG:   %[[VAL_1:.*]] = arith.constant 2 : i32
+// CHECK-DAG:   %[[VAL_2:.*]] = arith.constant 1 : index
+// CHECK-DAG:   %[[VAL_3:.*]] = arith.constant 0 : index
+// CHECK-DAG:   %[[VAL_4:.*]] = arith.constant 2 : index
+// CHECK:       %[[VAL_5:.*]] = memref.alloca() : memref<2xindex>
+// CHECK:       %[[VAL_6:.*]] = memref.cast %[[VAL_5]] : memref<2xindex> to memref<?xindex>
+// CHECK:       memref.store %[[VAL_3]], %[[VAL_5]]{{\[}}%[[VAL_3]]] : memref<2xindex>
+// CHECK:       memref.store %[[VAL_3]], %[[VAL_5]]{{\[}}%[[VAL_2]]] : memref<2xindex>
+// CHECK:       %[[VAL_7:.*]] = call @createCheckedSparseTensorReader(%[[A0]], %[[VAL_6]], %[[VAL_1]]) : (!llvm.ptr<i8>, memref<?xindex>, i32) -> !llvm.ptr<i8>
+// CHECK:       %[[VAL_8:.*]] = call @getSparseTensorReaderDimSizes(%[[VAL_7]]) : (!llvm.ptr<i8>) -> memref<?xindex>
+// CHECK:       %[[VAL_9:.*]] = call @getSparseTensorReaderNSE(%[[VAL_7]]) : (!llvm.ptr<i8>) -> index
+// CHECK:       %[[VAL_10:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_3]]] : memref<?xindex>
+// CHECK:       %[[VAL_11:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_2]]] : memref<?xindex>
+// CHECK:       %[[VAL_12:.*]] = arith.muli %[[VAL_9]], %[[VAL_4]] : index
+// CHECK:       %[[VAL_13:.*]] = memref.alloc() : memref<2xindex>
+// CHECK:       %[[VAL_14:.*]] = memref.cast %[[VAL_13]] : memref<2xindex> to memref<?xindex>
+// CHECK:       %[[VAL_15:.*]] = memref.alloc(%[[VAL_12]]) : memref<?xindex>
+// CHECK:       %[[VAL_16:.*]] = memref.alloc(%[[VAL_9]]) : memref<?xf32>
+// CHECK:       %[[VAL_17:.*]] = sparse_tensor.storage_specifier.init
+// CHECK:       %[[VAL_18:.*]] = sparse_tensor.storage_specifier.set %[[VAL_17]]  lvl_sz at 0 with %[[VAL_11]]
+// CHECK:       %[[VAL_19:.*]] = sparse_tensor.storage_specifier.get %[[VAL_18]]  pos_mem_sz at 0
+// CHECK:       %[[VAL_20:.*]], %[[VAL_21:.*]] = sparse_tensor.push_back %[[VAL_19]], %[[VAL_14]], %[[VAL_3]]
+// CHECK:       %[[VAL_22:.*]] = sparse_tensor.storage_specifier.set %[[VAL_18]]  pos_mem_sz at 0 with %[[VAL_21]]
+// CHECK:       %[[VAL_23:.*]] = sparse_tensor.storage_specifier.set %[[VAL_22]]  lvl_sz at 1 with %[[VAL_10]]
+// CHECK:       %[[VAL_24:.*]], %[[VAL_25:.*]] = sparse_tensor.push_back %[[VAL_21]], %[[VAL_20]], %[[VAL_3]], %[[VAL_2]]
+// CHECK:       %[[VAL_26:.*]] = sparse_tensor.storage_specifier.set %[[VAL_23]]  pos_mem_sz at 0 with %[[VAL_25]]
+// CHECK:       %[[VAL_27:.*]] = memref.alloca() : memref<2xindex>
+// CHECK:       %[[VAL_28:.*]] = memref.cast %[[VAL_27]] : memref<2xindex> to memref<?xindex>
+// CHECK:       memref.store %[[VAL_2]], %[[VAL_27]]{{\[}}%[[VAL_3]]] : memref<2xindex>
+// CHECK:       memref.store %[[VAL_3]], %[[VAL_27]]{{\[}}%[[VAL_2]]] : memref<2xindex>
+// CHECK:       %[[VAL_29:.*]] = memref.alloca() : memref<2xindex>
+// CHECK:       %[[VAL_30:.*]] = memref.cast %[[VAL_29]] : memref<2xindex> to memref<?xindex>
+// CHECK:       memref.store %[[VAL_2]], %[[VAL_29]]{{\[}}%[[VAL_3]]] : memref<2xindex>
+// CHECK:       memref.store %[[VAL_3]], %[[VAL_29]]{{\[}}%[[VAL_2]]] : memref<2xindex>
+// CHECK:       %[[VAL_31:.*]] = call @getSparseTensorReaderReadToBuffers0F32(%[[VAL_7]], %[[VAL_28]], %[[VAL_30]], %[[VAL_15]], %[[VAL_16]]) : (!llvm.ptr<i8>, memref<?xindex>, memref<?xindex>, memref<?xindex>, memref<?xf32>) -> i1
+// CHECK:       memref.store %[[VAL_9]], %[[VAL_24]]{{\[}}%[[VAL_2]]] : memref<?xindex>
+// CHECK:       %[[VAL_32:.*]] = sparse_tensor.storage_specifier.set %[[VAL_26]]  crd_mem_sz at 0 with %[[VAL_12]]
+// CHECK:       %[[VAL_33:.*]] = sparse_tensor.storage_specifier.set %[[VAL_32]]  val_mem_sz with %[[VAL_9]]
+// CHECK:       call @delSparseTensorReader(%[[VAL_7]]) : (!llvm.ptr<i8>) -> ()
+// CHECK:       return %[[VAL_24]], %[[VAL_15]], %[[VAL_16]], %[[VAL_33]]
 func.func @sparse_new_coo_permute_no(%arg0: !llvm.ptr<i8>) -> tensor<?x?xf32, #CooPNo> {
   %0 = sparse_tensor.new %arg0 : !llvm.ptr<i8> to tensor<?x?xf32, #CooPNo>
   return %0 : tensor<?x?xf32, #CooPNo>

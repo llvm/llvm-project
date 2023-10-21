@@ -83,6 +83,49 @@ filegroup(
 )
 
 ##---------------------------------------------------------------------------##
+# Affine dialect.
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "AffineOpsPyTdFiles",
+    srcs = [
+        "mlir/dialects/AffineOps.td",
+    ],
+    deps = [
+        "//mlir:AffineOpsTdFiles",
+        "//mlir:FunctionInterfacesTdFiles",
+        "//mlir:OpBaseTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "AffineOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=affine",
+            ],
+            "mlir/dialects/_affine_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/AffineOps.td",
+    deps = [
+        ":AffineOpsPyTdFiles",
+    ],
+)
+
+filegroup(
+    name = "AffineOpsPyFiles",
+    srcs = [
+        "mlir/dialects/affine.py",
+        ":AffineOpsPyGen",
+    ],
+)
+
+
+##---------------------------------------------------------------------------##
 # Builtin dialect.
 ##---------------------------------------------------------------------------##
 
@@ -119,7 +162,6 @@ gentbl_filegroup(
 filegroup(
     name = "BuiltinOpsPyFiles",
     srcs = [
-        "mlir/dialects/_builtin_ops_ext.py",
         "mlir/dialects/builtin.py",
         ":BuiltinOpsPyGen",
     ],
@@ -216,7 +258,6 @@ gentbl_filegroup(
 filegroup(
     name = "LinalgOpsPyFiles",
     srcs = [
-        "mlir/dialects/_linalg_ops_ext.py",
         ":LinalgOpsPyGen",
     ],
 )
@@ -317,7 +358,6 @@ gentbl_filegroup(
 filegroup(
     name = "ArithOpsPyFiles",
     srcs = [
-        "mlir/dialects/_arith_ops_ext.py",
         "mlir/dialects/arith.py",
         ":ArithOpsPyGen",
     ],
@@ -380,7 +420,6 @@ gentbl_filegroup(
 filegroup(
     name = "BufferizationOpsPyFiles",
     srcs = [
-        "mlir/dialects/_bufferization_ops_ext.py",
         "mlir/dialects/bufferization.py",
         ":BufferizationEnumPyGen",
         ":BufferizationOpsPyGen",
@@ -506,7 +545,6 @@ gentbl_filegroup(
 filegroup(
     name = "MemRefOpsPyFiles",
     srcs = [
-        "mlir/dialects/_memref_ops_ext.py",
         "mlir/dialects/memref.py",
         ":MemRefOpsPyGen",
     ],
@@ -538,7 +576,6 @@ gentbl_filegroup(
 filegroup(
     name = "MLProgramOpsPyFiles",
     srcs = [
-        "mlir/dialects/_ml_program_ops_ext.py",
         "mlir/dialects/ml_program.py",
         ":MLProgramOpsPyGen",
     ],
@@ -608,7 +645,6 @@ filegroup(
 filegroup(
     name = "PDLPyFiles",
     srcs = [
-        "mlir/dialects/_pdl_ops_ext.py",
         "mlir/dialects/pdl.py",
         ":PDLPyGen",
     ],
@@ -823,7 +859,6 @@ gentbl_filegroup(
 filegroup(
     name = "SCFPyFiles",
     srcs = [
-        "mlir/dialects/_scf_ops_ext.py",
         "mlir/dialects/scf.py",
         ":SCFPyGen",
     ],
@@ -896,7 +931,6 @@ gentbl_filegroup(
 filegroup(
     name = "FuncPyFiles",
     srcs = [
-        "mlir/dialects/_func_ops_ext.py",
         "mlir/dialects/func.py",
         ":FuncPyGen",
     ],
@@ -996,7 +1030,6 @@ gentbl_filegroup(
 filegroup(
     name = "TensorOpsPyFiles",
     srcs = [
-        "mlir/dialects/_tensor_ops_ext.py",
         "mlir/dialects/tensor.py",
         ":TensorOpsPyGen",
     ],
@@ -1334,14 +1367,6 @@ gentbl_filegroup(
 filegroup(
     name = "TransformOpsPyFiles",
     srcs = [
-        "mlir/dialects/_bufferization_transform_ops_ext.py",
-        "mlir/dialects/_gpu_transform_ops_ext.py",
-        "mlir/dialects/_loop_transform_ops_ext.py",
-        "mlir/dialects/_memref_transform_ops_ext.py",
-        "mlir/dialects/_structured_transform_ops_ext.py",
-        "mlir/dialects/_tensor_transform_ops_ext.py",
-        "mlir/dialects/_transform_ops_ext.py",
-        "mlir/dialects/_transform_pdl_extension_ops_ext.py",
         ":BufferizationTransformOpsPyGen",
         ":GPUTransformOpsPyGen",
         ":LoopTransformOpsPyGen",

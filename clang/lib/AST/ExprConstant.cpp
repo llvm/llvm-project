@@ -3357,6 +3357,9 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
     return false;
   }
 
+  if (E->isValueDependent())
+    return false;
+
   // Dig out the initializer, and use the declaration which it's attached to.
   // FIXME: We should eventually check whether the variable has a reachable
   // initializing declaration.
@@ -8367,7 +8370,13 @@ bool LValueExprEvaluator::VisitVarDecl(const Expr *E, const VarDecl *VD) {
 
     if (auto *FD = Info.CurrentCall->LambdaCaptureFields.lookup(VD)) {
       // Start with 'Result' referring to the complete closure object...
-      Result = *Info.CurrentCall->This;
+      if (auto *MD = cast<CXXMethodDecl>(Info.CurrentCall->Callee);
+          MD->isExplicitObjectMemberFunction()) {
+        APValue *RefValue =
+            Info.getParamSlot(Info.CurrentCall->Arguments, MD->getParamDecl(0));
+        Result.setFrom(Info.Ctx, *RefValue);
+      } else
+        Result = *Info.CurrentCall->This;
       // ... then update it to refer to the field of the closure object
       // that represents the capture.
       if (!HandleLValueMember(Info, E, Result, FD))
@@ -13586,6 +13595,20 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
                     Info.Ctx.getOpenMPDefaultSimdAlign(E->getArgumentType()))
             .getQuantity(),
         E);
+  case UETT_VectorElements: {
+    QualType Ty = E->getTypeOfArgument();
+    // If the vector has a fixed size, we can determine the number of elements
+    // at compile time.
+    if (Ty->isVectorType())
+      return Success(Ty->castAs<VectorType>()->getNumElements(), E);
+
+    assert(Ty->isSizelessVectorType());
+    if (Info.InConstantContext)
+      Info.CCEDiag(E, diag::note_constexpr_non_const_vectorelements)
+          << E->getSourceRange();
+
+    return false;
+  }
   }
 
   llvm_unreachable("unknown expr/type trait");
@@ -15316,6 +15339,17 @@ static bool FastEvaluateAsRValue(const Expr *Exp, Expr::EvalResult &Result,
     Result.Val = APValue(APSInt(APInt(1, L->getValue())));
     IsConst = true;
     return true;
+  }
+
+  if (const auto *CE = dyn_cast<ConstantExpr>(Exp)) {
+    if (CE->hasAPValueResult()) {
+      Result.Val = CE->getAPValueResult();
+      IsConst = true;
+      return true;
+    }
+
+    // The SubExpr is usually just an IntegerLiteral.
+    return FastEvaluateAsRValue(CE->getSubExpr(), Result, Ctx, IsConst);
   }
 
   // This case should be rare, but we need to check it before we check on

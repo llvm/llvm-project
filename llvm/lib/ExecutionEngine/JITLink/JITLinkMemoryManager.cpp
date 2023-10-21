@@ -155,8 +155,8 @@ void SimpleSegmentAlloc::Create(JITLinkMemoryManager &MemMgr,
       "__---.finalize", "__R--.finalize", "__-W-.finalize", "__RW-.finalize",
       "__--X.finalize", "__R-X.finalize", "__-WX.finalize", "__RWX.finalize"};
 
-  auto G =
-      std::make_unique<LinkGraph>("", Triple(), 0, support::native, nullptr);
+  auto G = std::make_unique<LinkGraph>("", Triple(), 0,
+                                       llvm::endianness::native, nullptr);
   orc::AllocGroupSmallMap<Block *> ContentBlocks;
 
   orc::ExecutorAddr NextAddr(0x100000);

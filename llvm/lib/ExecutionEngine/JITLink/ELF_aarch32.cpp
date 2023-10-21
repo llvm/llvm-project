@@ -114,7 +114,7 @@ private:
   }
 };
 
-template <support::endianness DataEndianness>
+template <llvm::endianness DataEndianness>
 class ELFLinkGraphBuilder_aarch32
     : public ELFLinkGraphBuilder<ELFType<DataEndianness, false>> {
 private:
@@ -265,7 +265,7 @@ createLinkGraphFromELFObject_aarch32(MemoryBufferRef ObjectBuffer) {
   case Triple::arm:
   case Triple::thumb: {
     auto &ELFFile = cast<ELFObjectFile<ELF32LE>>(**ELFObj).getELFFile();
-    return ELFLinkGraphBuilder_aarch32<support::little>(
+    return ELFLinkGraphBuilder_aarch32<llvm::endianness::little>(
                (*ELFObj)->getFileName(), ELFFile, TT, std::move(*Features),
                ArmCfg)
         .buildGraph();
@@ -273,7 +273,7 @@ createLinkGraphFromELFObject_aarch32(MemoryBufferRef ObjectBuffer) {
   case Triple::armeb:
   case Triple::thumbeb: {
     auto &ELFFile = cast<ELFObjectFile<ELF32BE>>(**ELFObj).getELFFile();
-    return ELFLinkGraphBuilder_aarch32<support::big>(
+    return ELFLinkGraphBuilder_aarch32<llvm::endianness::big>(
                (*ELFObj)->getFileName(), ELFFile, TT, std::move(*Features),
                ArmCfg)
         .buildGraph();

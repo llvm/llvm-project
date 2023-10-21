@@ -1623,7 +1623,7 @@ bool HeaderSearch::findUsableModuleForHeader(
     ModuleMap::KnownHeader *SuggestedModule, bool IsSystemHeaderDir) {
   if (needModuleLookup(RequestingModule, SuggestedModule)) {
     // If there is a module that corresponds to this header, suggest it.
-    hasModuleMap(File.getName(), Root, IsSystemHeaderDir);
+    hasModuleMap(File.getNameAsRequested(), Root, IsSystemHeaderDir);
     return suggestModule(*this, File, RequestingModule, SuggestedModule);
   }
   return true;

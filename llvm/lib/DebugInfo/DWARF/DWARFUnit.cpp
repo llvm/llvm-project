@@ -81,8 +81,11 @@ void DWARFUnitVector::addUnitsImpl(
       if (!Data.isValidOffset(Offset))
         return nullptr;
       DWARFUnitHeader Header;
-      if (!Header.extract(Context, Data, &Offset, SectionKind))
+      if (Error ExtractErr =
+              Header.extract(Context, Data, &Offset, SectionKind)) {
+        Context.getWarningHandler()(std::move(ExtractErr));
         return nullptr;
+      }
       if (!IndexEntry && IsDWO) {
         const DWARFUnitIndex &Index = getDWARFUnitIndex(
             Context, Header.isTypeUnit() ? DW_SECT_EXT_TYPES : DW_SECT_INFO);
@@ -244,10 +247,10 @@ Expected<uint64_t> DWARFUnit::getStringOffsetSectionItem(uint32_t Index) const {
   return DA.getRelocatedValue(ItemSize, &Offset);
 }
 
-bool DWARFUnitHeader::extract(DWARFContext &Context,
-                              const DWARFDataExtractor &debug_info,
-                              uint64_t *offset_ptr,
-                              DWARFSectionKind SectionKind) {
+Error DWARFUnitHeader::extract(DWARFContext &Context,
+                               const DWARFDataExtractor &debug_info,
+                               uint64_t *offset_ptr,
+                               DWARFSectionKind SectionKind) {
   Offset = *offset_ptr;
   Error Err = Error::success();
   IndexEntry = nullptr;
@@ -277,72 +280,58 @@ bool DWARFUnitHeader::extract(DWARFContext &Context,
   } else if (UnitType == DW_UT_split_compile || UnitType == DW_UT_skeleton)
     DWOId = debug_info.getU64(offset_ptr, &Err);
 
-  if (Err) {
-    Context.getWarningHandler()(joinErrors(
+  if (Err)
+    return joinErrors(
         createStringError(
             errc::invalid_argument,
             "DWARF unit at 0x%8.8" PRIx64 " cannot be parsed:", Offset),
-        std::move(Err)));
-    return false;
-  }
+        std::move(Err));
 
   // Header fields all parsed, capture the size of this unit header.
   assert(*offset_ptr - Offset <= 255 && "unexpected header size");
   Size = uint8_t(*offset_ptr - Offset);
   uint64_t NextCUOffset = Offset + getUnitLengthFieldByteSize() + getLength();
 
-  if (!debug_info.isValidOffset(getNextUnitOffset() - 1)) {
-    Context.getWarningHandler()(
-        createStringError(errc::invalid_argument,
-                          "DWARF unit from offset 0x%8.8" PRIx64 " incl. "
-                          "to offset  0x%8.8" PRIx64 " excl. "
-                          "extends past section size 0x%8.8zx",
-                          Offset, NextCUOffset, debug_info.size()));
-    return false;
-  }
+  if (!debug_info.isValidOffset(getNextUnitOffset() - 1))
+    return createStringError(errc::invalid_argument,
+                             "DWARF unit from offset 0x%8.8" PRIx64 " incl. "
+                             "to offset  0x%8.8" PRIx64 " excl. "
+                             "extends past section size 0x%8.8zx",
+                             Offset, NextCUOffset, debug_info.size());
 
-  if (!DWARFContext::isSupportedVersion(getVersion())) {
-    Context.getWarningHandler()(createStringError(
+  if (!DWARFContext::isSupportedVersion(getVersion()))
+    return createStringError(
         errc::invalid_argument,
         "DWARF unit at offset 0x%8.8" PRIx64 " "
         "has unsupported version %" PRIu16 ", supported are 2-%u",
-        Offset, getVersion(), DWARFContext::getMaxSupportedVersion()));
-    return false;
-  }
+        Offset, getVersion(), DWARFContext::getMaxSupportedVersion());
 
   // Type offset is unit-relative; should be after the header and before
   // the end of the current unit.
-  if (isTypeUnit() && TypeOffset < Size) {
-    Context.getWarningHandler()(
-        createStringError(errc::invalid_argument,
-                          "DWARF type unit at offset "
-                          "0x%8.8" PRIx64 " "
-                          "has its relocated type_offset 0x%8.8" PRIx64 " "
-                          "pointing inside the header",
-                          Offset, Offset + TypeOffset));
-    return false;
-  }
-  if (isTypeUnit() &&
-      TypeOffset >= getUnitLengthFieldByteSize() + getLength()) {
-    Context.getWarningHandler()(createStringError(
+  if (isTypeUnit() && TypeOffset < Size)
+    return createStringError(errc::invalid_argument,
+                             "DWARF type unit at offset "
+                             "0x%8.8" PRIx64 " "
+                             "has its relocated type_offset 0x%8.8" PRIx64 " "
+                             "pointing inside the header",
+                             Offset, Offset + TypeOffset);
+
+  if (isTypeUnit() && TypeOffset >= getUnitLengthFieldByteSize() + getLength())
+    return createStringError(
         errc::invalid_argument,
         "DWARF type unit from offset 0x%8.8" PRIx64 " incl. "
         "to offset 0x%8.8" PRIx64 " excl. has its "
         "relocated type_offset 0x%8.8" PRIx64 " pointing past the unit end",
-        Offset, NextCUOffset, Offset + TypeOffset));
-    return false;
-  }
+        Offset, NextCUOffset, Offset + TypeOffset);
 
   if (Error SizeErr = DWARFContext::checkAddressSizeSupported(
           getAddressByteSize(), errc::invalid_argument,
-          "DWARF unit at offset 0x%8.8" PRIx64, Offset)) {
-    Context.getWarningHandler()(std::move(SizeErr));
-    return false;
-  }
+          "DWARF unit at offset 0x%8.8" PRIx64, Offset))
+    return SizeErr;
 
   // Keep track of the highest DWARF version we encounter across all units.
   Context.setMaxVersionIfGreater(getVersion());
-  return true;
+  return Error::success();
 }
 
 bool DWARFUnitHeader::applyIndexEntry(const DWARFUnitIndex::Entry *Entry) {
@@ -784,7 +773,7 @@ void DWARFUnit::updateVariableDieMap(DWARFDie Die) {
 
   for (const DWARFLocationExpression &Location : *Locations) {
     uint8_t AddressSize = getAddressByteSize();
-    DataExtractor Data(Location.Expr, /*IsLittleEndian=*/true, AddressSize);
+    DataExtractor Data(Location.Expr, isLittleEndian(), AddressSize);
     DWARFExpression Expr(Data, AddressSize);
     auto It = Expr.begin();
     if (It == Expr.end())

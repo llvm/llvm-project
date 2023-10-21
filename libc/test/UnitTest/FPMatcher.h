@@ -59,6 +59,16 @@ template <TestCond C, typename T> FPMatcher<T, C> getMatcher(T expectedValue) {
   return FPMatcher<T, C>(expectedValue);
 }
 
+template <typename T> struct FPTest : public Test {
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
+  using UIntType = typename FPBits::UIntType;
+  static constexpr T zero = T(FPBits::zero());
+  static constexpr T neg_zero = T(FPBits::neg_zero());
+  static constexpr T aNaN = T(FPBits::build_quiet_nan(1));
+  static constexpr T inf = T(FPBits::inf());
+  static constexpr T neg_inf = T(FPBits::neg_inf());
+};
+
 } // namespace testing
 } // namespace LIBC_NAMESPACE
 
@@ -156,17 +166,21 @@ template <TestCond C, typename T> FPMatcher<T, C> getMatcher(T expectedValue) {
   do {                                                                         \
     using namespace LIBC_NAMESPACE::fputil::testing;                           \
     ForceRoundingMode __r1(RoundingMode::Nearest);                             \
-    if (__r1.success)                                                          \
+    if (__r1.success) {                                                        \
       EXPECT_FP_EQ((expected), (actual));                                      \
+    }                                                                          \
     ForceRoundingMode __r2(RoundingMode::Upward);                              \
-    if (__r2.success)                                                          \
+    if (__r2.success) {                                                        \
       EXPECT_FP_EQ((expected), (actual));                                      \
+    }                                                                          \
     ForceRoundingMode __r3(RoundingMode::Downward);                            \
-    if (__r3.success)                                                          \
+    if (__r3.success) {                                                        \
       EXPECT_FP_EQ((expected), (actual));                                      \
+    }                                                                          \
     ForceRoundingMode __r4(RoundingMode::TowardZero);                          \
-    if (__r4.success)                                                          \
+    if (__r4.success) {                                                        \
       EXPECT_FP_EQ((expected), (actual));                                      \
+    }                                                                          \
   } while (0)
 
 #endif // LLVM_LIBC_UTILS_UNITTEST_FPMATCHER_H

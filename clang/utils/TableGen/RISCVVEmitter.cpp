@@ -290,7 +290,7 @@ unsigned SemaSignatureTable::getIndex(ArrayRef<PrototypeDescriptor> Signature) {
     return 0;
 
   // Checking Signature already in table or not.
-  if (Signature.size() < SignatureTable.size()) {
+  if (Signature.size() <= SignatureTable.size()) {
     size_t Bound = SignatureTable.size() - Signature.size() + 1;
     for (size_t Index = 0; Index < Bound; ++Index) {
       if (equal(Signature.begin(), Signature.end(),
@@ -656,6 +656,8 @@ void RVVEmitter::createRVVIntrinsics(
                                   .Case("RV64", RVV_REQ_RV64)
                                   .Case("ZvfhminOrZvfh", RVV_REQ_ZvfhminOrZvfh)
                                   .Case("Xsfvcp", RVV_REQ_Xsfvcp)
+                                  .Case("Xsfvqmaccdod", RVV_REQ_Xsfvqmaccdod)
+                                  .Case("Xsfvqmaccqoq", RVV_REQ_Xsfvqmaccqoq)
                                   .Case("Zvbb", RVV_REQ_Zvbb)
                                   .Case("Zvbc", RVV_REQ_Zvbc)
                                   .Case("Zvkb", RVV_REQ_Zvkb)

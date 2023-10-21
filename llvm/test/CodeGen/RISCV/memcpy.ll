@@ -167,7 +167,7 @@ define void @t2(ptr nocapture %C) nounwind {
 ; RV64-FAST-NEXT:    ld a2, %lo(.L.str2)(a1)
 ; RV64-FAST-NEXT:    sd a2, 0(a0)
 ; RV64-FAST-NEXT:    lui a2, 1156
-; RV64-FAST-NEXT:    addiw a2, a2, 332
+; RV64-FAST-NEXT:    addi a2, a2, 332
 ; RV64-FAST-NEXT:    addi a1, a1, %lo(.L.str2)
 ; RV64-FAST-NEXT:    ld a3, 24(a1)
 ; RV64-FAST-NEXT:    ld a4, 16(a1)
@@ -332,10 +332,10 @@ define void @t5(ptr nocapture %C) nounwind {
 ; RV64-FAST-LABEL: t5:
 ; RV64-FAST:       # %bb.0: # %entry
 ; RV64-FAST-NEXT:    lui a1, 1349
-; RV64-FAST-NEXT:    addiw a1, a1, 857
+; RV64-FAST-NEXT:    addi a1, a1, 857
 ; RV64-FAST-NEXT:    sw a1, 3(a0)
 ; RV64-FAST-NEXT:    lui a1, 365861
-; RV64-FAST-NEXT:    addiw a1, a1, -1980
+; RV64-FAST-NEXT:    addi a1, a1, -1980
 ; RV64-FAST-NEXT:    sw a1, 0(a0)
 ; RV64-FAST-NEXT:    ret
 entry:
