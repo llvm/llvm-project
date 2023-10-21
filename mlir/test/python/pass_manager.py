@@ -4,6 +4,8 @@ import gc, sys
 from mlir.ir import *
 from mlir.passmanager import *
 from mlir.dialects.func import FuncOp
+from mlir.dialects.builtin import ModuleOp
+
 
 # Log everything to stderr and flush so that we have a unified stream to match
 # errors/info emitted by MLIR to stderr.
@@ -32,6 +34,7 @@ def testCapsule():
 
 
 run(testCapsule)
+
 
 # CHECK-LABEL: TEST: testConstruct
 @run
@@ -68,6 +71,7 @@ def testParseSuccess():
 
 run(testParseSuccess)
 
+
 # Verify successful round-trip.
 # CHECK-LABEL: TEST: testParseSpacedPipeline
 def testParseSpacedPipeline():
@@ -83,6 +87,7 @@ def testParseSpacedPipeline():
 
 
 run(testParseSpacedPipeline)
+
 
 # Verify failure on unregistered pass.
 # CHECK-LABEL: TEST: testParseFail
@@ -101,6 +106,7 @@ def testParseFail():
 
 
 run(testParseFail)
+
 
 # Check that adding to a pass manager works
 # CHECK-LABEL: TEST: testAdd
@@ -147,6 +153,7 @@ def testRunPipeline():
 # CHECK: func.return        , 1
 run(testRunPipeline)
 
+
 # CHECK-LABEL: TEST: testRunPipelineError
 @run
 def testRunPipelineError():
@@ -162,4 +169,94 @@ def testRunPipelineError():
             # CHECK:   error: "-":1:1: 'test.op' op trying to schedule a pass on an unregistered operation
             # CHECK:    note: "-":1:1: see current operation: "test.op"() : () -> ()
             # CHECK: >
-            print(f"Exception: <{e}>")
+            log(f"Exception: <{e}>")
+
+
+# CHECK-LABEL: TEST: testPostPassOpInvalidation
+@run
+def testPostPassOpInvalidation():
+    with Context() as ctx:
+        module = ModuleOp.parse(
+            """
+          module {
+            arith.constant 10
+            func.func @foo() {
+              arith.constant 10
+              return
+            }
+          }
+        """
+        )
+
+        # CHECK: invalidate_ops=False
+        log("invalidate_ops=False")
+
+        outer_const_op = module.body.operations[0]
+        # CHECK: %[[VAL0:.*]] = arith.constant 10 : i64
+        log(outer_const_op)
+
+        func_op = module.body.operations[1]
+        # CHECK: func.func @[[FOO:.*]]() {
+        # CHECK:   %[[VAL1:.*]] = arith.constant 10 : i64
+        # CHECK:   return
+        # CHECK: }
+        log(func_op)
+
+        inner_const_op = func_op.body.blocks[0].operations[0]
+        # CHECK: %[[VAL1]] = arith.constant 10 : i64
+        log(inner_const_op)
+
+        PassManager.parse("builtin.module(canonicalize)").run(
+            module, invalidate_ops=False
+        )
+        # CHECK: func.func @foo() {
+        # CHECK:   return
+        # CHECK: }
+        log(func_op)
+
+        # CHECK: func.func @foo() {
+        # CHECK:   return
+        # CHECK: }
+        log(module)
+
+        # CHECK: invalidate_ops=True
+        log("invalidate_ops=True")
+
+        module = ModuleOp.parse(
+            """
+          module {
+            arith.constant 10
+            func.func @foo() {
+              arith.constant 10
+              return
+            }
+          }
+        """
+        )
+        outer_const_op = module.body.operations[0]
+        func_op = module.body.operations[1]
+        inner_const_op = func_op.body.blocks[0].operations[0]
+
+        PassManager.parse("builtin.module(canonicalize)").run(module)
+        try:
+            log(func_op)
+        except RuntimeError as e:
+            # CHECK: the operation has been invalidated
+            log(e)
+
+        try:
+            log(outer_const_op)
+        except RuntimeError as e:
+            # CHECK: the operation has been invalidated
+            log(e)
+
+        try:
+            log(inner_const_op)
+        except RuntimeError as e:
+            # CHECK: the operation has been invalidated
+            log(e)
+
+        # CHECK: func.func @foo() {
+        # CHECK:   return
+        # CHECK: }
+        log(module)
