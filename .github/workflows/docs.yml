@@ -15,10 +15,12 @@ on:
     paths:
       - 'llvm/docs/**'
       - 'clang/docs/**'
+      - 'clang-tools-extra/docs/**'
   pull_request:
     paths:
       - 'llvm/docs/**'
       - 'clang/docs/**'
+      - 'clang-tools-extra/docs/**'
 
 jobs:
   check-docs-build:
@@ -47,6 +49,8 @@ jobs:
               - 'llvm/docs/**'
             clang:
               - 'clang/docs/**'
+            clang-tools-extra:
+              - 'clang-tools-extra/docs/**'
       - name: Setup Python env
         uses: actions/setup-python@v4
         with:
@@ -69,4 +73,9 @@ jobs:
         run: |
           cmake -B clang-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_ENABLE_SPHINX=ON ./llvm
           TZ=UTC ninja -C clang-build docs-clang-html docs-clang-man
+      - name: Build clang-tools-extra docs
+        if: steps.docs-changed-subprojects.outputs.clang-tools-extra_any_changed == 'true'
+        run: |
+          cmake -B clang-tools-extra-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra" -DLLVM_ENABLE_SPHINX=ON ./llvm
+          TZ=UTC ninja -C clang-tools-extra-build docs-clang-tools-html docs-clang-tools-man
 
