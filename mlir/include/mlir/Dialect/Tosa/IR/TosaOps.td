@@ -48,6 +48,8 @@ def Tosa_ArgMaxOp : Tosa_InferShapedTypeOp<"argmax"> {
   let results = (outs
     Tosa_Tensor: $output
   );
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -378,8 +380,8 @@ def Tosa_ClampOp : Tosa_ElementwiseOp<"clamp"> {
     Tosa_Tensor:$input,
     I64Attr:$min_int,
     I64Attr:$max_int,
-    F32Attr:$min_fp,
-    F32Attr:$max_fp
+    Tosa_FloatAttr:$min_fp,
+    Tosa_FloatAttr:$max_fp
   );
 
   let results = (outs
@@ -387,6 +389,7 @@ def Tosa_ClampOp : Tosa_ElementwiseOp<"clamp"> {
   );
 
   let hasCanonicalizer = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

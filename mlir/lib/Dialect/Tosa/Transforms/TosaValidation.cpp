@@ -14,6 +14,9 @@
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "mlir/Dialect/Tosa/Transforms/PassesEnums.cpp.inc"
 
+#include <string>
+#include <unordered_map>
+
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/IR/Builders.h"
@@ -36,43 +39,43 @@ using namespace mlir::tosa;
 namespace {
 
 static LogicalResult checkConstantOperandPad(Operation *op) {
-  if (auto pad_op = dyn_cast<tosa::PadOp>(op)) {
+  if (auto padOp = dyn_cast<tosa::PadOp>(op)) {
     DenseElementsAttr paddings;
-    if (!matchPattern(pad_op.getPadding(), m_Constant(&paddings)))
+    if (!matchPattern(padOp.getPadding(), m_Constant(&paddings)))
       return op->emitOpError("padding of pad is not constant");
 
-    DenseElementsAttr pad_const;
-    // Assume this op is zero-padding if pad_const is not presented.
-    if (pad_op.getPadConst() &&
-        !matchPattern(pad_op.getPadConst(), m_Constant(&pad_const)))
+    DenseElementsAttr padConst;
+    // Assume this op is zero-padding if padConst is not presented.
+    if (padOp.getPadConst() &&
+        !matchPattern(padOp.getPadConst(), m_Constant(&padConst)))
       return op->emitOpError("pad_const of pad is not constant");
   }
   return success();
 }
 
 static LogicalResult checkConstantOperandTranspose(Operation *op) {
-  if (auto transpose_op = dyn_cast<tosa::TransposeOp>(op)) {
+  if (auto transposeOp = dyn_cast<tosa::TransposeOp>(op)) {
     DenseElementsAttr perms;
-    if (!matchPattern(transpose_op.getPerms(), m_Constant(&perms)))
+    if (!matchPattern(transposeOp.getPerms(), m_Constant(&perms)))
       return op->emitOpError("perms of transpose is not constant");
   }
   return success();
 }
 
 static LogicalResult checkConstantOperandFullyConnected(Operation *op) {
-  if (auto fc_op = dyn_cast<tosa::FullyConnectedOp>(op)) {
+  if (auto fcOp = dyn_cast<tosa::FullyConnectedOp>(op)) {
     DenseElementsAttr weight;
-    if (!matchPattern(fc_op.getWeight(), m_Constant(&weight)))
+    if (!matchPattern(fcOp.getWeight(), m_Constant(&weight)))
       return op->emitOpError("weight of fully_connected is not constant");
 
     DenseElementsAttr bias;
-    if (!matchPattern(fc_op.getBias(), m_Constant(&bias)))
+    if (!matchPattern(fcOp.getBias(), m_Constant(&bias)))
       return op->emitOpError("bias of fully_connected is not constant");
   }
   return success();
 }
 
-struct tosa_level_t {
+struct TosaLevel {
   int32_t MAX_RANK = 0;
   int32_t MAX_KERNEL = 0;
   int32_t MAX_STRIDE = 0;
@@ -80,14 +83,14 @@ struct tosa_level_t {
 
   // @todo: MAX_LOG2_SIZE value and checks
 
-  bool operator==(const tosa_level_t &rhs) {
+  bool operator==(const TosaLevel &rhs) {
     return MAX_RANK == rhs.MAX_RANK && MAX_KERNEL == rhs.MAX_KERNEL &&
            MAX_STRIDE == rhs.MAX_STRIDE && MAX_SCALE == rhs.MAX_SCALE;
   }
 };
 
-static constexpr tosa_level_t TOSA_LEVEL_EIGHTK = {6, 8192, 8192, 256};
-static constexpr tosa_level_t TOSA_LEVEL_NONE = {0, 0, 0, 0};
+static constexpr TosaLevel TOSA_LEVEL_EIGHTK = {6, 8192, 8192, 256};
+static constexpr TosaLevel TOSA_LEVEL_NONE = {0, 0, 0, 0};
 
 //===----------------------------------------------------------------------===//
 // TOSA Validation Pass.
@@ -96,15 +99,16 @@ static constexpr tosa_level_t TOSA_LEVEL_NONE = {0, 0, 0, 0};
 struct TosaValidation : public tosa::impl::TosaValidationBase<TosaValidation> {
 public:
   explicit TosaValidation() { populateConstantOperandChecks(); }
-  explicit TosaValidation(const ValidationOptions &options) : TosaValidation() {
+  explicit TosaValidation(const TosaValidationOptions &options)
+      : TosaValidation() {
     this->profile = options.profile;
-    this->StrictOperationSpecAlignment = options.strictOperationSpecAlignment;
+    this->StrictOperationSpecAlignment = options.StrictOperationSpecAlignment;
     this->level = options.level;
   }
-  void runOnOperation() override;
+  void runOnOperation() final;
 
   LogicalResult applyConstantOperandCheck(Operation *op) {
-    for (auto &checker : const_checkers) {
+    for (auto &checker : constCheckers) {
       if (failed(checker(op)))
         return failure();
     }
@@ -113,49 +117,51 @@ public:
 
   LogicalResult applyLevelCheck(Operation *op);
 
+  // check variable read/write data types against variable declarations
+  LogicalResult applyVariableCheck(Operation *op);
+
 private:
   void populateConstantOperandChecks() {
-    const_checkers.emplace_back(checkConstantOperandPad);
-    const_checkers.emplace_back(checkConstantOperandTranspose);
-    const_checkers.emplace_back(checkConstantOperandFullyConnected);
+    constCheckers.emplace_back(checkConstantOperandPad);
+    constCheckers.emplace_back(checkConstantOperandTranspose);
+    constCheckers.emplace_back(checkConstantOperandFullyConnected);
   }
 
   bool levelCheckKernel(Operation *op, int32_t v,
-                        const std::string &check_desc) {
-    if (v > tosa_level.MAX_KERNEL) {
-      op->emitOpError() << "failed level check: " << check_desc;
+                        const std::string &checkDesc) {
+    if (v > tosaLevel.MAX_KERNEL) {
+      op->emitOpError() << "failed level check: " << checkDesc;
       return false;
     }
     return true;
   }
 
   bool levelCheckStride(Operation *op, int32_t v,
-                        const std::string &check_desc) {
-    if (v > tosa_level.MAX_STRIDE) {
-      op->emitOpError() << "failed level check: " << check_desc;
+                        const std::string &checkDesc) {
+    if (v > tosaLevel.MAX_STRIDE) {
+      op->emitOpError() << "failed level check: " << checkDesc;
       return false;
     }
     return true;
   }
 
-  bool levelCheckScale(Operation *op, int32_t v,
-                       const std::string &check_desc) {
-    if (v > tosa_level.MAX_SCALE) {
-      op->emitOpError() << "failed level check: " << check_desc;
+  bool levelCheckScale(Operation *op, int32_t v, const std::string &checkDesc) {
+    if (v > tosaLevel.MAX_SCALE) {
+      op->emitOpError() << "failed level check: " << checkDesc;
       return false;
     }
     return true;
   }
 
   bool levelCheckRank(Operation *op, const Value &v,
-                      const std::string &check_desc) {
+                      const std::string &checkDesc) {
     if (ShapedType type = dyn_cast<ShapedType>(v.getType())) {
       if (!type.hasRank()) {
         op->emitOpError() << "failed level check: unranked tensor";
         return false;
       }
-      if (type.getRank() > tosa_level.MAX_RANK) {
-        op->emitOpError() << "failed level check: " << check_desc;
+      if (type.getRank() > tosaLevel.MAX_RANK) {
+        op->emitOpError() << "failed level check: " << checkDesc;
         return false;
       }
     }
@@ -179,8 +185,8 @@ private:
   }
 
   bool levelCheckRanks(Operation *op) {
-#define CHECK_RANKS_FOR(tosa_op)                                               \
-  if (!levelCheckRanksFor<tosa_op##Op>(op))                                    \
+#define CHECK_RANKS_FOR(tosaOp)                                                \
+  if (!levelCheckRanksFor<tosaOp##Op>(op))                                     \
     return false;
 
     // tensor operators:
@@ -254,18 +260,18 @@ private:
   // Pool Op: level check kernel/stride/pad values
   template <typename T>
   bool levelCheckPool(Operation *op) {
-    if (auto pool_op = dyn_cast<T>(op)) {
-      for (auto k : pool_op.getKernel()) {
+    if (auto poolOp = dyn_cast<T>(op)) {
+      for (auto k : poolOp.getKernel()) {
         if (!levelCheckKernel(op, k, "kernel <= MAX_KERNEL")) {
           return false;
         }
       }
-      for (auto s : pool_op.getStride()) {
+      for (auto s : poolOp.getStride()) {
         if (!levelCheckStride(op, s, "stride <= MAX_STRIDE")) {
           return false;
         }
       }
-      for (auto p : pool_op.getPad()) {
+      for (auto p : poolOp.getPad()) {
         if (!levelCheckKernel(op, p, "pad <= MAX_KERNEL")) {
           return false;
         }
@@ -277,27 +283,27 @@ private:
   // Conv Op: level check dilation/stride/pad values
   template <typename T>
   bool levelCheckConv(Operation *op) {
-    if (auto conv_op = dyn_cast<T>(op)) {
+    if (auto convOp = dyn_cast<T>(op)) {
 
-      for (auto k : conv_op.getDilation()) {
+      for (auto k : convOp.getDilation()) {
         if (!levelCheckKernel(op, k, "dilation <= MAX_KERNEL")) {
           return false;
         }
       }
-      for (auto p : conv_op.getPad()) {
+      for (auto p : convOp.getPad()) {
         if (!levelCheckKernel(op, p, "pad <= MAX_KERNEL")) {
           return false;
         }
       }
-      for (auto s : conv_op.getStride()) {
+      for (auto s : convOp.getStride()) {
         if (!levelCheckStride(op, s, "stride <= MAX_STRIDE")) {
           return false;
         }
       }
-      auto dilation = conv_op.getDilation();
-      if (ShapedType weight_type =
+      auto dilation = convOp.getDilation();
+      if (ShapedType weightType =
               dyn_cast<ShapedType>(op->getOperand(1).getType())) {
-        auto shape = weight_type.getShape();
+        auto shape = weightType.getShape();
         if (isa<tosa::Conv2DOp>(op)) {
           assert(shape.size() == 4);
           assert(dilation.size() == 2);
@@ -351,9 +357,9 @@ private:
   // TransposeConv2d op: level check kH/kW, outpad, and stride
   bool levelCheckTransposeConv2d(Operation *op) {
     if (auto transpose = dyn_cast<tosa::TransposeConv2DOp>(op)) {
-      if (ShapedType filter_type =
+      if (ShapedType filterType =
               transpose.getFilter().getType().dyn_cast<ShapedType>()) {
-        auto shape = filter_type.getShape();
+        auto shape = filterType.getShape();
         assert(shape.size() == 4);
         // level check kernel sizes for kH and KW
         if (!levelCheckKernel(op, shape[1], "KH <= MAX_KERNEL") ||
@@ -379,13 +385,13 @@ private:
   bool levelCheckResize(Operation *op) {
     if (auto resize = dyn_cast<tosa::ResizeOp>(op)) {
       auto scale = resize.getScale();
-      int16_t scale_y_n = scale[0];
-      int16_t scale_y_d = scale[1];
-      int16_t scale_x_n = scale[2];
-      int16_t scale_x_d = scale[3];
-      if (!levelCheckScale(op, scale_y_n / scale_y_d,
+      int16_t scaleYN = scale[0];
+      int16_t scaleYD = scale[1];
+      int16_t scaleXN = scale[2];
+      int16_t scaleXD = scale[3];
+      if (!levelCheckScale(op, scaleYN / scaleYD,
                            "scale_y_n/scale_y_d <= MAX_SCALE") ||
-          !levelCheckScale(op, scale_x_n / scale_x_d,
+          !levelCheckScale(op, scaleXN / scaleXD,
                            "scale_x_n/scale_x_d <= MAX_SCALE")) {
         return false;
       }
@@ -396,18 +402,22 @@ private:
   // configure profile and level values from pass options profileName and
   // levelName
   void configLevelAndProfile() {
-    tosa_level = TOSA_LEVEL_NONE;
+    tosaLevel = TOSA_LEVEL_NONE;
     if (level == TosaLevelEnum::EightK) {
-      tosa_level = TOSA_LEVEL_EIGHTK;
+      tosaLevel = TOSA_LEVEL_EIGHTK;
     }
   }
 
-  SmallVector<std::function<LogicalResult(Operation *)>> const_checkers;
-  tosa_level_t tosa_level;
+  bool CheckVariable(Operation *op);
+  bool CheckVariableReadOrWrite(Operation *op);
+
+  SmallVector<std::function<LogicalResult(Operation *)>> constCheckers;
+  TosaLevel tosaLevel;
+  DenseMap<StringAttr, mlir::Type> variablesMap;
 };
 
 LogicalResult TosaValidation::applyLevelCheck(Operation *op) {
-  if (tosa_level == TOSA_LEVEL_NONE) {
+  if (tosaLevel == TOSA_LEVEL_NONE) {
     // no need to do level checks
     return success();
   }
@@ -431,6 +441,69 @@ LogicalResult TosaValidation::applyLevelCheck(Operation *op) {
   return success();
 }
 
+inline bool CompatibleTypes(const mlir::Type &type,
+                            const mlir::Type &declaredType) {
+  // for now, simply use type equality comparison
+  return type == declaredType;
+}
+
+bool TosaValidation::CheckVariable(Operation *op) {
+  if (isa<mlir::tosa::VariableOp>(op)) {
+    auto nameAttr = cast<mlir::StringAttr>(op->getAttr("name"));
+
+    if (variablesMap.count(nameAttr)) {
+      op->emitOpError() << "name has already been declared";
+      return false;
+    }
+
+    auto typeAttr = cast<mlir::TypeAttr>(op->getAttr("type"));
+    mlir::Type type = typeAttr.getValue();
+
+    variablesMap[nameAttr] = type;
+  }
+
+  return true;
+}
+
+bool TosaValidation::CheckVariableReadOrWrite(Operation *op) {
+  if (isa<mlir::tosa::VariableReadOp>(op) ||
+      isa<mlir::tosa::VariableWriteOp>(op)) {
+    auto nameAttr = cast<mlir::StringAttr>(op->getAttr("name"));
+
+    if (!variablesMap.count(nameAttr)) {
+      op->emitOpError() << "name has not been declared";
+      return false;
+    }
+
+    auto varType = variablesMap[nameAttr];
+
+    for (auto v : op->getOperands()) {
+      auto type = v.getType();
+      if (!CompatibleTypes(type, varType)) {
+        op->emitOpError() << "operand type does not equal variable type";
+        return false;
+      }
+    }
+
+    for (auto v : op->getResults()) {
+      auto type = v.getType();
+      if (!CompatibleTypes(type, varType)) {
+        op->emitOpError() << "result type does not equal variable type";
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+LogicalResult TosaValidation::applyVariableCheck(Operation *op) {
+  if (!CheckVariable(op) || !CheckVariableReadOrWrite(op)) {
+    return failure();
+  }
+  return success();
+}
+
 void TosaValidation::runOnOperation() {
   configLevelAndProfile();
   getOperation().walk([&](Operation *op) {
@@ -444,18 +517,18 @@ void TosaValidation::runOnOperation() {
       }
     }
 
-    // Some uses of TOSA rely on the constant operands of particular operations.
+    // Some uses of TOSA rely on the constant operands of particular
+    // operations.
     if (StrictOperationSpecAlignment && failed(applyConstantOperandCheck(op)))
       signalPassFailure();
 
     // do level checks
     if (failed(applyLevelCheck(op)))
       signalPassFailure();
+
+    // do variable type checks
+    if (failed(applyVariableCheck(op)))
+      signalPassFailure();
   });
 }
 } // namespace
-
-std::unique_ptr<Pass>
-mlir::tosa::createTosaValidationPass(ValidationOptions const &options) {
-  return std::make_unique<TosaValidation>(options);
-}

@@ -508,6 +508,7 @@ set(files
   __mdspan/extents.h
   __mdspan/layout_left.h
   __mdspan/layout_right.h
+  __mdspan/layout_stride.h
   __mdspan/mdspan.h
   __memory/addressof.h
   __memory/align.h
@@ -954,7 +955,6 @@ set(files
   latch
   libcxx.imp
   limits
-  limits.h
   list
   locale
   locale.h
@@ -978,7 +978,6 @@ set(files
   scoped_allocator
   semaphore
   set
-  setjmp.h
   shared_mutex
   source_location
   span

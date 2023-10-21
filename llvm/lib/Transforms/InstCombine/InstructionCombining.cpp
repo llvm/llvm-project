@@ -2430,6 +2430,26 @@ static bool isAllocSiteRemovable(Instruction *AI,
         unsigned OtherIndex = (ICI->getOperand(0) == PI) ? 1 : 0;
         if (!isNeverEqualToUnescapedAlloc(ICI->getOperand(OtherIndex), TLI, AI))
           return false;
+
+        // Do not fold compares to aligned_alloc calls, as they may have to
+        // return null in case the required alignment cannot be satisfied,
+        // unless we can prove that both alignment and size are valid.
+        auto AlignmentAndSizeKnownValid = [](CallBase *CB) {
+          // Check if alignment and size of a call to aligned_alloc is valid,
+          // that is alignment is a power-of-2 and the size is a multiple of the
+          // alignment.
+          const APInt *Alignment;
+          const APInt *Size;
+          return match(CB->getArgOperand(0), m_APInt(Alignment)) &&
+                 match(CB->getArgOperand(1), m_APInt(Size)) &&
+                 Alignment->isPowerOf2() && Size->urem(*Alignment).isZero();
+        };
+        auto *CB = dyn_cast<CallBase>(AI);
+        LibFunc TheLibFunc;
+        if (CB && TLI.getLibFunc(*CB->getCalledFunction(), TheLibFunc) &&
+            TLI.has(TheLibFunc) && TheLibFunc == LibFunc_aligned_alloc &&
+            !AlignmentAndSizeKnownValid(CB))
+          return false;
         Users.emplace_back(I);
         continue;
       }
@@ -2748,22 +2768,8 @@ Instruction *InstCombinerImpl::visitFree(CallInst &FI, Value *Op) {
 }
 
 Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
-  Value *RetVal = RI.getReturnValue();
-  if (!RetVal || !AttributeFuncs::isNoFPClassCompatibleType(RetVal->getType()))
-    return nullptr;
-
-  Function *F = RI.getFunction();
-  FPClassTest ReturnClass = F->getAttributes().getRetNoFPClass();
-  if (ReturnClass == fcNone)
-    return nullptr;
-
-  KnownFPClass KnownClass;
-  Value *Simplified =
-      SimplifyDemandedUseFPClass(RetVal, ~ReturnClass, KnownClass, 0, &RI);
-  if (!Simplified)
-    return nullptr;
-
-  return ReturnInst::Create(RI.getContext(), Simplified);
+  // Nothing for now.
+  return nullptr;
 }
 
 // WARNING: keep in sync with SimplifyCFGOpt::simplifyUnreachable()!

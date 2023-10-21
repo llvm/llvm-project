@@ -1,10 +1,10 @@
 // RUN: mlir-opt -canonicalize="test-convergence" %s | FileCheck %s
 
 // CHECK-LABEL: @argmax_nofold
-func.func @argmax_nofold(%arg0: tensor<?x1xf32>) -> tensor<?x1xf32> {
+func.func @argmax_nofold(%arg0: tensor<?x1xf32>) -> tensor<?x1xi32> {
   // CHECK: tosa.argmax
-  %0 = tosa.argmax %arg0 {axis = 0 : i32}: (tensor<?x1xf32>) -> tensor<?x1xf32>
-  return %0 : tensor<?x1xf32>
+  %0 = tosa.argmax %arg0 {axis = 0 : i32}: (tensor<?x1xf32>) -> tensor<?x1xi32>
+  return %0 : tensor<?x1xi32>
 }
 
 // CHECK-LABEL: @add_bcast_zero_int
@@ -590,4 +590,16 @@ func.func @fold_abs_abs(%arg0: tensor<?x1xf32>) -> tensor<?x1xf32> {
   %0 = tosa.abs %arg0 : (tensor<?x1xf32>) -> tensor<?x1xf32>
   %1 = tosa.abs %0 : (tensor<?x1xf32>) -> tensor<?x1xf32>
   return %1 : tensor<?x1xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @fold_reduce_rank_zero
+func.func nested @fold_reduce_rank_zero() {
+  // CHECK-NOT: tosa.reduce_min
+  // CHECK-NOT: tosa.reverse
+  %0 = tensor.empty() : tensor<i32>
+  %1 = tosa.reduce_min %0 {axis = 0 : i32} : (tensor<i32>) -> tensor<1x10xi32>
+  %2 = tosa.reverse %0 {axis = 0 : i32} : (tensor<i32>) -> tensor<1x10xi32>
+  return
 }

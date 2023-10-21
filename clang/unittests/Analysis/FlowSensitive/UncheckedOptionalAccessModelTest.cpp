@@ -1280,6 +1280,12 @@ protected:
     ExpectDiagnosticsFor(SourceCode, ast_matchers::hasName("target"));
   }
 
+  void ExpectDiagnosticsForLambda(std::string SourceCode) {
+    ExpectDiagnosticsFor(
+        SourceCode, ast_matchers::hasDeclContext(
+                        ast_matchers::cxxRecordDecl(ast_matchers::isLambda())));
+  }
+
   template <typename FuncDeclMatcher>
   void ExpectDiagnosticsFor(std::string SourceCode,
                             FuncDeclMatcher FuncMatcher) {
@@ -2121,6 +2127,24 @@ TEST_P(UncheckedOptionalAccessTest, OptionalSwap) {
       opt1.value();
 
       opt2.value(); // [[unsafe]]
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, OptionalReturnedFromFuntionCall) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+    
+    struct S {
+      $ns::$optional<float> x;
+    } s;
+    S getOptional() {
+      return s;
+    }
+
+    void target() {
+      getOptional().x = 0;
     }
   )");
 }
@@ -3211,6 +3235,137 @@ TEST_P(UncheckedOptionalAccessTest, Bitfield) {
       Dst d;
       if (v.has_value())
         d.n = v.value();
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, LambdaParam) {
+  ExpectDiagnosticsForLambda(R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      []($ns::$optional<int> opt) {
+        if (opt.has_value()) {
+          opt.value();
+        } else {
+          opt.value(); // [[unsafe]]
+        }
+      }(Make<$ns::$optional<int>>());
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, LambdaCaptureByCopy) {
+  ExpectDiagnosticsForLambda(R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target($ns::$optional<int> opt) {
+      [opt]() {
+        if (opt.has_value()) {
+          opt.value();
+        } else {
+          opt.value(); // [[unsafe]]
+        }
+      }();
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, LambdaCaptureByReference) {
+  ExpectDiagnosticsForLambda(R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target($ns::$optional<int> opt) {
+      [&opt]() {
+        if (opt.has_value()) {
+          opt.value();
+        } else {
+          opt.value(); // [[unsafe]]
+        }
+      }();
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, LambdaCaptureWithInitializer) {
+  ExpectDiagnosticsForLambda(R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target($ns::$optional<int> opt) {
+      [opt2=opt]() {
+        if (opt2.has_value()) {
+          opt2.value();
+        } else {
+          opt2.value(); // [[unsafe]]
+        }
+      }();
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, LambdaCaptureByCopyImplicit) {
+  ExpectDiagnosticsForLambda(R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target($ns::$optional<int> opt) {
+      [=]() {
+        if (opt.has_value()) {
+          opt.value();
+        } else {
+          opt.value(); // [[unsafe]]
+        }
+      }();
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, LambdaCaptureByReferenceImplicit) {
+  ExpectDiagnosticsForLambda(R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target($ns::$optional<int> opt) {
+      [&]() {
+        if (opt.has_value()) {
+          opt.value();
+        } else {
+          opt.value(); // [[unsafe]]
+        }
+      }();
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, LambdaCaptureThis) {
+  ExpectDiagnosticsForLambda(R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct Foo {
+      $ns::$optional<int> opt;
+
+      void target() {
+        [this]() {
+          if (opt.has_value()) {
+            opt.value();
+          } else {
+            opt.value(); // [[unsafe]]
+          }
+        }();
+      }
+    };
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, LambdaCaptureStateNotPropagated) {
+  // We can't propagate information from the surrounding context.
+  ExpectDiagnosticsForLambda(R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target($ns::$optional<int> opt) {
+      if (opt.has_value()) {
+        [&opt]() {
+          opt.value(); // [[unsafe]]
+        }();
+      }
     }
   )");
 }

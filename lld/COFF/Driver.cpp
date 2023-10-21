@@ -1210,7 +1210,7 @@ static void readCallGraphsFromObjectFiles(COFFLinkerContext &ctx) {
       ArrayRef<uint8_t> contents;
       cantFail(
           obj->getCOFFObj()->getSectionContents(obj->callgraphSec, contents));
-      BinaryStreamReader reader(contents, support::little);
+      BinaryStreamReader reader(contents, llvm::endianness::little);
       while (!reader.empty()) {
         uint32_t fromIndex, toIndex;
         uint64_t count;
@@ -2028,6 +2028,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   config->stdcallFixup =
       args.hasFlag(OPT_stdcall_fixup, OPT_stdcall_fixup_no, config->mingw);
   config->warnStdcallFixup = !args.hasArg(OPT_stdcall_fixup);
+  config->allowDuplicateWeak =
+      args.hasFlag(OPT_lld_allow_duplicate_weak,
+                   OPT_lld_allow_duplicate_weak_no, config->mingw);
 
   if (args.hasFlag(OPT_inferasanlibs, OPT_inferasanlibs_no, false))
     warn("ignoring '/inferasanlibs', this flag is not supported");
@@ -2181,7 +2184,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       args.hasFlag(OPT_highentropyva, OPT_highentropyva_no, true);
 
   if (!config->dynamicBase &&
-      (config->machine == ARMNT || config->machine == ARM64))
+      (config->machine == ARMNT || isAnyArm64(config->machine)))
     error("/dynamicbase:no is not compatible with " +
           machineToStr(config->machine));
 

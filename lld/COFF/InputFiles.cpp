@@ -81,7 +81,7 @@ static void checkAndSetWeakAlias(COFFLinkerContext &ctx, InputFile *f,
       // of another symbol emitted near the weak symbol.
       // Just use the definition from the first object file that defined
       // this weak symbol.
-      if (ctx.config.mingw)
+      if (ctx.config.allowDuplicateWeak)
         return;
       ctx.symtab.reportDuplicate(source, f);
     }
@@ -709,7 +709,7 @@ void ObjFile::initializeFlags() {
 
   DebugSubsectionArray subsections;
 
-  BinaryStreamReader reader(data, support::little);
+  BinaryStreamReader reader(data, llvm::endianness::little);
   ExitOnError exitOnErr;
   exitOnErr(reader.readArray(subsections, data.size()));
 
@@ -775,7 +775,7 @@ void ObjFile::initializeDependencies() {
   // Get the first type record. It will indicate if this object uses a type
   // server (/Zi) or a PCH file (/Yu).
   CVTypeArray types;
-  BinaryStreamReader reader(data, support::little);
+  BinaryStreamReader reader(data, llvm::endianness::little);
   cantFail(reader.readArray(types, reader.getLength()));
   CVTypeArray::Iterator firstType = types.begin();
   if (firstType == types.end())

@@ -42,7 +42,7 @@
 #include <mdspan>
 
 #include "check_assertion.h"
-#include "../../../../../std/containers/views/mdspan/mdspan/CustomTestLayouts.h"
+#include "../../../../../std/containers/views/mdspan/CustomTestLayouts.h"
 
 // We use a funky mapping in this test that doesn't check the dynamic/static extents mismatch itself
 int main(int, char**) {

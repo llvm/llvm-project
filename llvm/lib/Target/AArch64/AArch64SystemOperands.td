@@ -743,6 +743,7 @@ def : ROSysReg<"ID_AA64AFR1_EL1",     0b11, 0b000, 0b0000, 0b0101, 0b101>;
 def : ROSysReg<"ID_AA64ISAR0_EL1",    0b11, 0b000, 0b0000, 0b0110, 0b000>;
 def : ROSysReg<"ID_AA64ISAR1_EL1",    0b11, 0b000, 0b0000, 0b0110, 0b001>;
 def : ROSysReg<"ID_AA64ISAR2_EL1",    0b11, 0b000, 0b0000, 0b0110, 0b010>;
+def : ROSysReg<"ID_AA64ISAR3_EL1",    0b11, 0b000, 0b0000, 0b0110, 0b011>;
 def : ROSysReg<"ID_AA64MMFR0_EL1",    0b11, 0b000, 0b0000, 0b0111, 0b000>;
 def : ROSysReg<"ID_AA64MMFR1_EL1",    0b11, 0b000, 0b0000, 0b0111, 0b001>;
 def : ROSysReg<"ID_AA64MMFR2_EL1",    0b11, 0b000, 0b0000, 0b0111, 0b010>;
@@ -1927,3 +1928,12 @@ def : RWSysReg<"PFAR_EL2",          0b11, 0b100, 0b0110, 0b0000, 0b101>;
 // v9.4a Exception-based event profiling (FEAT_EBEP)
 //                                  Op0   Op1    CRn     CRm     Op2
 def : RWSysReg<"PM",                0b11, 0b000, 0b0100, 0b0011, 0b001>;
+
+// 2023 ISA Extension
+// AArch64 Floating-point Mode Register controls behaviors of the FP8
+// instructions (FEAT_FPMR)
+let Requires = [{ {AArch64::FeatureFPMR} }] in {
+//                                 Op0   Op1    CRn     CRm     Op2
+def : ROSysReg<"ID_AA64FPFR0_EL1", 0b11, 0b000, 0b0000, 0b0100, 0b111>;
+def : RWSysReg<"FPMR",             0b11, 0b011, 0b0100, 0b0100, 0b010>;
+}

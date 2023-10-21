@@ -255,6 +255,59 @@ TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_ADD) {
 }
 
 // Piggy-backing on the AArch64 tests to verify SelectionDAG::computeKnownBits.
+TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_UADDO_CARRY) {
+  SDLoc Loc;
+  auto IntVT = EVT::getIntegerVT(Context, 8);
+  auto UnknownOp = DAG->getRegister(0, IntVT);
+  auto Mask_Zero = DAG->getConstant(0x28, Loc, IntVT);
+  auto Mask_One = DAG->getConstant(0x20, Loc, IntVT);
+  auto N0 = DAG->getNode(ISD::AND, Loc, IntVT, Mask_Zero, UnknownOp);
+  N0 = DAG->getNode(ISD::OR, Loc, IntVT, Mask_One, N0);
+  auto N1 = DAG->getConstant(0x65, Loc, IntVT);
+
+  KnownBits Known;
+
+  auto UnknownBorrow = DAG->getRegister(1, IntVT);
+  auto OpUnknownBorrow =
+      DAG->getNode(ISD::UADDO_CARRY, Loc, IntVT, N0, N1, UnknownBorrow);
+  // N0 = 0010?000
+  // N1 = 01100101
+  // B  =        ?
+  //  =>
+  // Known.Zero = 01110000 (0x70)
+  // Known.One  = 10000100 (0x84)
+  Known = DAG->computeKnownBits(OpUnknownBorrow);
+  EXPECT_EQ(Known.Zero, APInt(8, 0x70));
+  EXPECT_EQ(Known.One, APInt(8, 0x84));
+
+  auto ZeroBorrow = DAG->getConstant(0x0, Loc, IntVT);
+  auto OpZeroBorrow =
+      DAG->getNode(ISD::UADDO_CARRY, Loc, IntVT, N0, N1, ZeroBorrow);
+  // N0 = 0010?000
+  // N1 = 01100101
+  // B  =        0
+  //  =>
+  // Known.Zero = 01110010 (0x72)
+  // Known.One  = 10000101 (0x85)
+  Known = DAG->computeKnownBits(OpZeroBorrow);
+  EXPECT_EQ(Known.Zero, APInt(8, 0x72));
+  EXPECT_EQ(Known.One, APInt(8, 0x85));
+
+  auto OneBorrow = DAG->getConstant(0x1, Loc, IntVT);
+  auto OpOneBorrow =
+      DAG->getNode(ISD::UADDO_CARRY, Loc, IntVT, N0, N1, OneBorrow);
+  // N0 = 0010?000
+  // N1 = 01100101
+  // B  =        1
+  //  =>
+  // Known.Zero = 01110001 (0x71)
+  // Known.One  = 10000110 (0x86)
+  Known = DAG->computeKnownBits(OpOneBorrow);
+  EXPECT_EQ(Known.Zero, APInt(8, 0x71));
+  EXPECT_EQ(Known.One, APInt(8, 0x86));
+}
+
+// Piggy-backing on the AArch64 tests to verify SelectionDAG::computeKnownBits.
 TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_SUB) {
   SDLoc Loc;
   auto IntVT = EVT::getIntegerVT(Context, 8);
@@ -271,6 +324,60 @@ TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_SUB) {
   KnownBits Known = DAG->computeKnownBits(Op);
   EXPECT_EQ(Known.Zero, APInt(8, 0x80));
   EXPECT_EQ(Known.One, APInt(8, 0x1));
+}
+
+// Piggy-backing on the AArch64 tests to verify SelectionDAG::computeKnownBits.
+TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_USUBO_CARRY) {
+  SDLoc Loc;
+  auto IntVT = EVT::getIntegerVT(Context, 8);
+  auto N0 = DAG->getConstant(0x5a, Loc, IntVT);
+  auto UnknownOp = DAG->getRegister(0, IntVT);         // ????????
+  auto Mask1_Zero = DAG->getConstant(0x8, Loc, IntVT); // 00001000
+  auto Mask1_One = DAG->getConstant(0x20, Loc, IntVT); // 00100000
+  // N1 = (???????? & 00001000) | 00100000 = 0010?000
+  auto N1 = DAG->getNode(ISD::AND, Loc, IntVT, Mask1_Zero, UnknownOp);
+  N1 = DAG->getNode(ISD::OR, Loc, IntVT, Mask1_One, N1);
+
+  KnownBits Known;
+
+  auto UnknownBorrow = DAG->getRegister(1, IntVT);
+  auto OpUnknownBorrow =
+      DAG->getNode(ISD::USUBO_CARRY, Loc, IntVT, N0, N1, UnknownBorrow);
+  // N0 = 01011010
+  // N1 = 0010?000
+  // B  =        ?
+  //  =>
+  // Known.Zero = 11000100 (0xc4)
+  // Known.One  = 00110000 (0x30)
+  Known = DAG->computeKnownBits(OpUnknownBorrow);
+  EXPECT_EQ(Known.Zero, APInt(8, 0xc4));
+  EXPECT_EQ(Known.One, APInt(8, 0x30));
+
+  auto ZeroBorrow = DAG->getConstant(0x0, Loc, IntVT);
+  auto OpZeroBorrow =
+      DAG->getNode(ISD::USUBO_CARRY, Loc, IntVT, N0, N1, ZeroBorrow);
+  // N0 = 01011010
+  // N1 = 0010?000
+  // B  =        0
+  //  =>
+  // Known.Zero = 11000101 (0xc5)
+  // Known.One  = 00110010 (0x32)
+  Known = DAG->computeKnownBits(OpZeroBorrow);
+  EXPECT_EQ(Known.Zero, APInt(8, 0xc5));
+  EXPECT_EQ(Known.One, APInt(8, 0x32));
+
+  auto OneBorrow = DAG->getConstant(0x1, Loc, IntVT);
+  auto OpOneBorrow =
+      DAG->getNode(ISD::USUBO_CARRY, Loc, IntVT, N0, N1, OneBorrow);
+  // N0 = 01011010
+  // N1 = 0010?000
+  // B  =        1
+  //  =>
+  // Known.Zero = 11000110 (0xc6)
+  // Known.One  = 00110001 (0x31)
+  Known = DAG->computeKnownBits(OpOneBorrow);
+  EXPECT_EQ(Known.Zero, APInt(8, 0xc6));
+  EXPECT_EQ(Known.One, APInt(8, 0x31));
 }
 
 TEST_F(AArch64SelectionDAGTest, isSplatValue_Fixed_BUILD_VECTOR) {

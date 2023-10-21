@@ -366,26 +366,51 @@ StringRef ARM::getArchExtFeature(StringRef ArchExt) {
 }
 
 static ARM::FPUKind findDoublePrecisionFPU(ARM::FPUKind InputFPUKind) {
+  if (InputFPUKind == ARM::FK_INVALID || InputFPUKind == ARM::FK_NONE)
+    return ARM::FK_INVALID;
+
   const ARM::FPUName &InputFPU = ARM::FPUNames[InputFPUKind];
 
   // If the input FPU already supports double-precision, then there
   // isn't any different FPU we can return here.
-  //
-  // The current available FPURestriction values are None (no
-  // restriction), D16 (only 16 d-regs) and SP_D16 (16 d-regs
-  // and single precision only); there's no value representing
-  // SP restriction without D16. So this test just means 'is it
-  // SP only?'.
-  if (InputFPU.Restriction != ARM::FPURestriction::SP_D16)
-    return ARM::FK_INVALID;
+  if (ARM::isDoublePrecision(InputFPU.Restriction))
+    return InputFPUKind;
 
   // Otherwise, look for an FPU entry with all the same fields, except
-  // that SP_D16 has been replaced with just D16, representing adding
-  // double precision and not changing anything else.
+  // that it supports double precision.
   for (const ARM::FPUName &CandidateFPU : ARM::FPUNames) {
     if (CandidateFPU.FPUVer == InputFPU.FPUVer &&
         CandidateFPU.NeonSupport == InputFPU.NeonSupport &&
-        CandidateFPU.Restriction == ARM::FPURestriction::D16) {
+        ARM::has32Regs(CandidateFPU.Restriction) ==
+            ARM::has32Regs(InputFPU.Restriction) &&
+        ARM::isDoublePrecision(CandidateFPU.Restriction)) {
+      return CandidateFPU.ID;
+    }
+  }
+
+  // nothing found
+  return ARM::FK_INVALID;
+}
+
+static ARM::FPUKind findSinglePrecisionFPU(ARM::FPUKind InputFPUKind) {
+  if (InputFPUKind == ARM::FK_INVALID || InputFPUKind == ARM::FK_NONE)
+    return ARM::FK_INVALID;
+
+  const ARM::FPUName &InputFPU = ARM::FPUNames[InputFPUKind];
+
+  // If the input FPU already is single-precision only, then there
+  // isn't any different FPU we can return here.
+  if (!ARM::isDoublePrecision(InputFPU.Restriction))
+    return InputFPUKind;
+
+  // Otherwise, look for an FPU entry with all the same fields, except
+  // that it does not support double precision.
+  for (const ARM::FPUName &CandidateFPU : ARM::FPUNames) {
+    if (CandidateFPU.FPUVer == InputFPU.FPUVer &&
+        CandidateFPU.NeonSupport == InputFPU.NeonSupport &&
+        ARM::has32Regs(CandidateFPU.Restriction) ==
+            ARM::has32Regs(InputFPU.Restriction) &&
+        !ARM::isDoublePrecision(CandidateFPU.Restriction)) {
       return CandidateFPU.ID;
     }
   }
@@ -420,20 +445,35 @@ bool ARM::appendArchExtFeatures(StringRef CPU, ARM::ArchKind AK,
     CPU = "generic";
 
   if (ArchExt == "fp" || ArchExt == "fp.dp") {
+    const ARM::FPUKind DefaultFPU = getDefaultFPU(CPU, AK);
     ARM::FPUKind FPUKind;
     if (ArchExt == "fp.dp") {
+      const bool IsDP = ArgFPUKind != ARM::FK_INVALID &&
+                        ArgFPUKind != ARM::FK_NONE &&
+                        isDoublePrecision(getFPURestriction(ArgFPUKind));
       if (Negated) {
-        Features.push_back("-fp64");
-        return true;
+        /* If there is no FPU selected yet, we still need to set ArgFPUKind, as
+         * leaving it as FK_INVALID, would cause default FPU to be selected
+         * later and that could be double precision one. */
+        if (ArgFPUKind != ARM::FK_INVALID && !IsDP)
+          return true;
+        FPUKind = findSinglePrecisionFPU(DefaultFPU);
+        if (FPUKind == ARM::FK_INVALID)
+          FPUKind = ARM::FK_NONE;
+      } else {
+        if (IsDP)
+          return true;
+        FPUKind = findDoublePrecisionFPU(DefaultFPU);
+        if (FPUKind == ARM::FK_INVALID)
+          return false;
       }
-      FPUKind = findDoublePrecisionFPU(getDefaultFPU(CPU, AK));
     } else if (Negated) {
       FPUKind = ARM::FK_NONE;
     } else {
-      FPUKind = getDefaultFPU(CPU, AK);
+      FPUKind = DefaultFPU;
     }
     ArgFPUKind = FPUKind;
-    return ARM::getFPUFeatures(FPUKind, Features);
+    return true;
   }
   return StartingNumFeatures != Features.size();
 }
@@ -526,7 +566,8 @@ StringRef ARM::computeDefaultTargetABI(const Triple &TT, StringRef CPU) {
   default:
     if (TT.isOSNetBSD())
       return "apcs-gnu";
-    if (TT.isOSFreeBSD() || TT.isOSOpenBSD() || TT.isOHOSFamily())
+    if (TT.isOSFreeBSD() || TT.isOSOpenBSD() || TT.isOSHaiku() ||
+        TT.isOHOSFamily())
       return "aapcs-linux";
     return "aapcs";
   }
@@ -542,6 +583,7 @@ StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
   case llvm::Triple::FreeBSD:
   case llvm::Triple::NetBSD:
   case llvm::Triple::OpenBSD:
+  case llvm::Triple::Haiku:
     if (!MArch.empty() && MArch == "v6")
       return "arm1176jzf-s";
     if (!MArch.empty() && MArch == "v7")
@@ -574,6 +616,8 @@ StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
   // If no specific architecture version is requested, return the minimum CPU
   // required by the OS and environment.
   switch (Triple.getOS()) {
+  case llvm::Triple::Haiku:
+    return "arm1176jzf-s";
   case llvm::Triple::NetBSD:
     switch (Triple.getEnvironment()) {
     case llvm::Triple::EABI:

@@ -302,7 +302,7 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
     Constant *C1;
     if ((match(Op0, m_OneUse(m_Add(m_Value(X), m_ImmConstant(C1))))) ||
         (match(Op0, m_OneUse(m_Or(m_Value(X), m_ImmConstant(C1)))) &&
-         haveNoCommonBitsSet(X, C1, DL, &AC, &I, &DT))) {
+         haveNoCommonBitsSet(X, C1, SQ.getWithInstruction(&I)))) {
       // C1*MulC simplifies to a tidier constant.
       Value *NewC = Builder.CreateMul(C1, MulC);
       auto *BOp0 = cast<BinaryOperator>(Op0);
@@ -923,8 +923,7 @@ static bool isMultiple(const APInt &C1, const APInt &C2, APInt &Quotient,
   return Remainder.isMinValue();
 }
 
-static Instruction *foldIDivShl(BinaryOperator &I,
-                                InstCombiner::BuilderTy &Builder) {
+static Value *foldIDivShl(BinaryOperator &I, InstCombiner::BuilderTy &Builder) {
   assert((I.getOpcode() == Instruction::SDiv ||
           I.getOpcode() == Instruction::UDiv) &&
          "Expected integer divide");
@@ -933,7 +932,6 @@ static Instruction *foldIDivShl(BinaryOperator &I,
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   Type *Ty = I.getType();
 
-  Instruction *Ret = nullptr;
   Value *X, *Y, *Z;
 
   // With appropriate no-wrap constraints, remove a common factor in the
@@ -948,12 +946,12 @@ static Instruction *foldIDivShl(BinaryOperator &I,
 
     // (X * Y) u/ (X << Z) --> Y u>> Z
     if (!IsSigned && HasNUW)
-      Ret = BinaryOperator::CreateLShr(Y, Z);
+      return Builder.CreateLShr(Y, Z, "", I.isExact());
 
     // (X * Y) s/ (X << Z) --> Y s/ (1 << Z)
     if (IsSigned && HasNSW && (Op0->hasOneUse() || Op1->hasOneUse())) {
       Value *Shl = Builder.CreateShl(ConstantInt::get(Ty, 1), Z);
-      Ret = BinaryOperator::CreateSDiv(Y, Shl);
+      return Builder.CreateSDiv(Y, Shl, "", I.isExact());
     }
   }
 
@@ -971,20 +969,38 @@ static Instruction *foldIDivShl(BinaryOperator &I,
         ((Shl0->hasNoUnsignedWrap() && Shl1->hasNoUnsignedWrap()) ||
          (Shl0->hasNoUnsignedWrap() && Shl0->hasNoSignedWrap() &&
           Shl1->hasNoSignedWrap())))
-      Ret = BinaryOperator::CreateUDiv(X, Y);
+      return Builder.CreateUDiv(X, Y, "", I.isExact());
 
     // For signed div, we need 'nsw' on both shifts + 'nuw' on the divisor.
     // (X << Z) / (Y << Z) --> X / Y
     if (IsSigned && Shl0->hasNoSignedWrap() && Shl1->hasNoSignedWrap() &&
         Shl1->hasNoUnsignedWrap())
-      Ret = BinaryOperator::CreateSDiv(X, Y);
+      return Builder.CreateSDiv(X, Y, "", I.isExact());
   }
 
-  if (!Ret)
-    return nullptr;
+  // If X << Y and X << Z does not overflow, then:
+  // (X << Y) / (X << Z) -> (1 << Y) / (1 << Z) -> 1 << Y >> Z
+  if (match(Op0, m_Shl(m_Value(X), m_Value(Y))) &&
+      match(Op1, m_Shl(m_Specific(X), m_Value(Z)))) {
+    auto *Shl0 = cast<OverflowingBinaryOperator>(Op0);
+    auto *Shl1 = cast<OverflowingBinaryOperator>(Op1);
 
-  Ret->setIsExact(I.isExact());
-  return Ret;
+    if (IsSigned ? (Shl0->hasNoSignedWrap() && Shl1->hasNoSignedWrap())
+                 : (Shl0->hasNoUnsignedWrap() && Shl1->hasNoUnsignedWrap())) {
+      Constant *One = ConstantInt::get(X->getType(), 1);
+      // Only preserve the nsw flag if dividend has nsw
+      // or divisor has nsw and operator is sdiv.
+      Value *Dividend = Builder.CreateShl(
+          One, Y, "shl.dividend",
+          /*HasNUW*/ true,
+          /*HasNSW*/
+          IsSigned ? (Shl0->hasNoUnsignedWrap() || Shl1->hasNoUnsignedWrap())
+                   : Shl0->hasNoSignedWrap());
+      return Builder.CreateLShr(Dividend, Z, "", I.isExact());
+    }
+  }
+
+  return nullptr;
 }
 
 /// This function implements the transforms common to both integer division
@@ -1161,8 +1177,8 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
       return NewDiv;
     }
 
-  if (Instruction *R = foldIDivShl(I, Builder))
-    return R;
+  if (Value *R = foldIDivShl(I, Builder))
+    return replaceInstUsesWith(I, R);
 
   // With the appropriate no-wrap constraint, remove a multiply by the divisor
   // after peeking through another divide:
@@ -1761,6 +1777,21 @@ Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
     Value *Y1 =
         Builder.CreateFAddFMF(Y, ConstantFP::get(I.getType(), -1.0), &I);
     Value *Pow = Builder.CreateBinaryIntrinsic(Intrinsic::pow, Op1, Y1, &I);
+    return replaceInstUsesWith(I, Pow);
+  }
+
+  // powi(X, Y) / X --> powi(X, Y-1)
+  // This is legal when (Y - 1) can't wraparound, in which case reassoc and nnan
+  // are required.
+  // TODO: Multi-use may be also better off creating Powi(x,y-1)
+  if (I.hasAllowReassoc() && I.hasNoNaNs() &&
+      match(Op0, m_OneUse(m_Intrinsic<Intrinsic::powi>(m_Specific(Op1),
+                                                       m_Value(Y)))) &&
+      willNotOverflowSignedSub(Y, ConstantInt::get(Y->getType(), 1), I)) {
+    Constant *NegOne = ConstantInt::getAllOnesValue(Y->getType());
+    Value *Y1 = Builder.CreateAdd(Y, NegOne);
+    Type *Types[] = {Op1->getType(), Y1->getType()};
+    Value *Pow = Builder.CreateIntrinsic(Intrinsic::powi, Types, {Op1, Y1}, &I);
     return replaceInstUsesWith(I, Pow);
   }
 

@@ -3160,11 +3160,18 @@ static_assert(!__is_trivially_equality_comparable(float), "");
 static_assert(!__is_trivially_equality_comparable(double), "");
 static_assert(!__is_trivially_equality_comparable(long double), "");
 
-struct TriviallyEqualityComparableNoDefaultedComparator {
+struct NonTriviallyEqualityComparableNoComparator {
   int i;
   int j;
 };
-static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableNoDefaultedComparator), "");
+static_assert(!__is_trivially_equality_comparable(NonTriviallyEqualityComparableNoComparator), "");
+
+struct NonTriviallyEqualityComparableNonDefaultedComparator {
+  int i;
+  int j;
+  bool operator==(const NonTriviallyEqualityComparableNonDefaultedComparator&);
+};
+static_assert(!__is_trivially_equality_comparable(NonTriviallyEqualityComparableNonDefaultedComparator), "");
 
 #if __cplusplus >= 202002L
 
@@ -3177,7 +3184,7 @@ struct TriviallyEqualityComparable {
 
   bool operator==(const TriviallyEqualityComparable&) const = default;
 };
-static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparable), "");
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparable));
 
 struct TriviallyEqualityComparableContainsArray {
   int a[4];
@@ -3192,6 +3199,17 @@ struct TriviallyEqualityComparableContainsMultiDimensionArray {
   bool operator==(const TriviallyEqualityComparableContainsMultiDimensionArray&) const = default;
 };
 static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContainsMultiDimensionArray));
+
+auto GetNonCapturingLambda() { return [](){ return 42; }; }
+
+struct TriviallyEqualityComparableContainsLambda {
+  [[no_unique_address]] decltype(GetNonCapturingLambda()) l;
+  int i;
+
+  bool operator==(const TriviallyEqualityComparableContainsLambda&) const = default;
+};
+static_assert(!__is_trivially_equality_comparable(decltype(GetNonCapturingLambda()))); // padding
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContainsLambda));
 
 struct TriviallyEqualityComparableNonTriviallyCopyable {
   TriviallyEqualityComparableNonTriviallyCopyable(const TriviallyEqualityComparableNonTriviallyCopyable&);
@@ -3984,12 +4002,6 @@ enum class UnscopedInt128 : __int128 {};
 enum class ScopedInt128 : __int128 {};
 enum class UnscopedUInt128 : unsigned __int128 {};
 enum class ScopedUInt128 : unsigned __int128 {};
-enum UnscopedBit : unsigned _BitInt(1) {};
-enum ScopedBit : unsigned _BitInt(1) {};
-enum UnscopedIrregular : _BitInt(21) {};
-enum UnscopedUIrregular : unsigned _BitInt(21) {};
-enum class ScopedIrregular : _BitInt(21) {};
-enum class ScopedUIrregular : unsigned _BitInt(21) {};
 
 void make_signed() {
   check_make_signed<char, signed char>();
@@ -4032,11 +4044,6 @@ void make_signed() {
   check_make_signed<UnscopedUInt128, __int128>();
   check_make_signed<ScopedUInt128, __int128>();
 
-  check_make_signed<UnscopedIrregular, _BitInt(21)>();
-  check_make_signed<UnscopedUIrregular, _BitInt(21)>();
-  check_make_signed<ScopedIrregular, _BitInt(21)>();
-  check_make_signed<ScopedUIrregular, _BitInt(21)>();
-
   { using ExpectedError = __make_signed(bool); }
   // expected-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given 'bool'}}
   { using ExpectedError = __make_signed(UnscopedBool); }
@@ -4045,10 +4052,6 @@ void make_signed() {
   // expected-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given 'ScopedBool' whose underlying type is 'bool'}}
   { using ExpectedError = __make_signed(unsigned _BitInt(1)); }
   // expected-error@*:*{{'make_signed' is only compatible with non-_BitInt(1) integers and enum types, but was given 'unsigned _BitInt(1)'}}
-  { using ExpectedError = __make_signed(UnscopedBit); }
-  // expected-error@*:*{{'make_signed' is only compatible with non-_BitInt(1) integers and enum types, but was given 'UnscopedBit' whose underlying type is 'unsigned _BitInt(1)'}}
-  { using ExpectedError = __make_signed(ScopedBit); }
-  // expected-error@*:*{{'make_signed' is only compatible with non-_BitInt(1) integers and enum types, but was given 'ScopedBit' whose underlying type is 'unsigned _BitInt(1)'}}
   { using ExpectedError = __make_signed(int[]); }
   // expected-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given 'int[]'}}
   { using ExpectedError = __make_signed(int[5]); }
@@ -4129,11 +4132,6 @@ void make_unsigned() {
   check_make_unsigned<UnscopedUInt128, unsigned __int128>();
   check_make_unsigned<ScopedUInt128, unsigned __int128>();
 
-  check_make_unsigned<UnscopedIrregular, unsigned _BitInt(21)>();
-  check_make_unsigned<UnscopedUIrregular, unsigned _BitInt(21)>();
-  check_make_unsigned<ScopedIrregular, unsigned _BitInt(21)>();
-  check_make_unsigned<ScopedUIrregular, unsigned _BitInt(21)>();
-
   { using ExpectedError = __make_unsigned(bool); }
   // expected-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given 'bool'}}
   { using ExpectedError = __make_unsigned(UnscopedBool); }
@@ -4142,10 +4140,6 @@ void make_unsigned() {
   // expected-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given 'ScopedBool' whose underlying type is 'bool'}}
   { using ExpectedError = __make_unsigned(unsigned _BitInt(1)); }
   // expected-error@*:*{{'make_unsigned' is only compatible with non-_BitInt(1) integers and enum types, but was given 'unsigned _BitInt(1)'}}
-  { using ExpectedError = __make_unsigned(UnscopedBit); }
-  // expected-error@*:*{{'make_unsigned' is only compatible with non-_BitInt(1) integers and enum types, but was given 'UnscopedBit'}}
-  { using ExpectedError = __make_unsigned(ScopedBit); }
-  // expected-error@*:*{{'make_unsigned' is only compatible with non-_BitInt(1) integers and enum types, but was given 'ScopedBit'}}
   { using ExpectedError = __make_unsigned(int[]); }
   // expected-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given 'int[]'}}
   { using ExpectedError = __make_unsigned(int[5]); }

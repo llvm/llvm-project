@@ -143,6 +143,7 @@ def PostSparsificationRewrite : Pass<"post-sparsification-rewrite", "ModuleOp"> 
   }];
   let constructor = "mlir::createPostSparsificationRewritePass()";
   let dependentDialects = [
+    "affine::AffineDialect",
     "arith::ArithDialect",
     "bufferization::BufferizationDialect",
     "linalg::LinalgDialect",
@@ -200,10 +201,6 @@ def SparseTensorConversionPass : Pass<"sparse-tensor-conversion", "ModuleOp"> {
     "memref::MemRefDialect",
     "scf::SCFDialect",
     "sparse_tensor::SparseTensorDialect",
-  ];
-  let options = [
-    Option<"sparseToSparse", "s2s-strategy", "int32_t", "0",
-           "Set the strategy for sparse-to-sparse conversion">,
   ];
 }
 

@@ -101,10 +101,10 @@ static bool tileDividesIterationDomain(Range loopRange) {
 /// `tileSize`, i.e., `min(tileSize, range.end() - iv)`.
 static OpFoldResult getBoundedTileSize(OpBuilder &b, Location loc,
                                        Range loopRange, Value iv,
-                                       Value tileSize) {
+                                       OpFoldResult tileSize) {
   std::optional<int64_t> ts = getConstantIntValue(tileSize);
   if (ts && ts.value() == 1)
-    return getAsOpFoldResult(tileSize);
+    return tileSize;
 
   if (tileDividesIterationDomain(
           Range{loopRange.offset, loopRange.size, tileSize}))
@@ -120,6 +120,19 @@ static OpFoldResult getBoundedTileSize(OpBuilder &b, Location loc,
   Value size = getValueOrCreateConstantIndexOp(b, loc, loopRange.size);
   return affine::makeComposedFoldedAffineMin(
       b, loc, minMap, SmallVector<OpFoldResult>{iv, tileSize, size});
+}
+
+/// Clones the operation and updates the destination if the operation
+/// implements the `DestinationStyleOpInterface`.
+static Operation *cloneOpAndUpdateDestinationArgs(RewriterBase &rewriter,
+                                                  Operation *op,
+                                                  ValueRange newDestArgs) {
+  Operation *clonedOp = rewriter.clone(*op);
+  if (auto destinationStyleOp =
+          dyn_cast<DestinationStyleOpInterface>(clonedOp)) {
+    destinationStyleOp.getDpsInitsMutable().assign(newDestArgs);
+  }
+  return clonedOp;
 }
 
 /// Generate an empty loop nest that represents the tiled loop nest shell.
@@ -159,8 +172,9 @@ static SmallVector<scf::ForOp> generateTileLoopNest(
         loc, offset, size, tileSize, ValueRange{},
         [&](OpBuilder &bodyBuilder, Location bodyLoc, Value iv,
             ValueRange /*iterArgs*/) {
-          sizes[loopRange.index()] = getBoundedTileSize(
-              bodyBuilder, bodyLoc, loopRange.value(), iv, tileSize);
+          sizes[loopRange.index()] =
+              getBoundedTileSize(bodyBuilder, bodyLoc, loopRange.value(), iv,
+                                 getAsOpFoldResult(tileSize));
           builder.create<scf::YieldOp>(loc);
         });
     offsets[loopRange.index()] = loop.getInductionVar();
@@ -726,6 +740,118 @@ mlir::scf::tileConsumerAndFuseProducerGreedilyUsingSCFForOp(
   }
   return scf::SCFTileAndFuseResult{fusedProducers, tiledAndFusedOps,
                                    getAsOperations(forLoops), replacements};
+}
+
+//===----------------------------------------------------------------------===//
+// tileUsingSCFForAllOp implementation.
+//===----------------------------------------------------------------------===//
+
+FailureOr<scf::SCFTilingResult>
+mlir::scf::tileUsingSCFForallOp(RewriterBase &rewriter, TilingInterface op,
+                                const scf::SCFTilingOptions &options) {
+  Location loc = op->getLoc();
+  OpBuilder::InsertionGuard g(rewriter);
+
+  // 1. Get the range of loops that are represented by the operation.
+  SmallVector<Range> loopRanges = op.getIterationDomain(rewriter);
+  if (loopRanges.empty())
+    return op->emitOpError("expected non-empty loop ranges");
+  auto hasStrideOne = [](Range r) { return !isConstantIntValue(r.stride, 1); };
+  if (llvm::any_of(loopRanges, hasStrideOne))
+    return op->emitOpError("only stride-1 supported atm");
+
+  // 2. Get the tile sizes. If tile size is 0, it is not tiled and distributed.
+  // To make it easier, pad the tile sizes to loopRanges.size with value 0.
+  SmallVector<OpFoldResult> tileSizeVector =
+      options.tileSizeComputationFunction(rewriter, op);
+  tileSizeVector.resize(loopRanges.size(), rewriter.getIndexAttr(0));
+
+  // 3. Build the offsets, sizes and steps for the tile and distributed loops.
+  SmallVector<OpFoldResult> lbs, ubs, steps;
+  for (auto [tileSize, loopRange] : llvm::zip(tileSizeVector, loopRanges)) {
+    if (isConstantIntValue(tileSize, 0))
+      continue;
+    lbs.push_back(loopRange.offset);
+    ubs.push_back(loopRange.size);
+    steps.push_back(tileSize);
+  }
+
+  // 4. Gather destination tensors.
+  SmallVector<Value> dest;
+  if (failed(tensor::getOrCreateDestinations(rewriter, loc, op, dest)))
+    return op->emitOpError("failed to get destination tensors");
+
+  // 5. Build the device mapping attribute.
+  std::optional<ArrayAttr> mappingAttr;
+  if (!options.mappingVector.empty()) {
+    mappingAttr = rewriter.getArrayAttr(ArrayRef(options.mappingVector));
+  }
+
+  // 6. Create the ForallOp. We don't use the lambda body-builder
+  // version because we require the use of RewriterBase in the body, so we
+  // manually move the insertion point to the body below.
+  auto forallOp =
+      rewriter.create<scf::ForallOp>(loc, lbs, ubs, steps, dest, mappingAttr);
+
+  // 7. Get the tile offset and sizes.
+  rewriter.setInsertionPoint(forallOp.getTerminator());
+  SmallVector<OpFoldResult> tiledOffsets, tiledSizes;
+  ValueRange ivs = forallOp.getInductionVars();
+  {
+    int materializedLoopNum = 0;
+    for (auto [tileSize, loopRange] : llvm::zip(tileSizeVector, loopRanges)) {
+      if (isConstantIntValue(tileSize, 0)) {
+        tiledOffsets.push_back(loopRange.offset);
+        tiledSizes.push_back(loopRange.size);
+        continue;
+      }
+      Value iv = ivs[materializedLoopNum++];
+      tiledOffsets.push_back(iv);
+      tiledSizes.push_back(
+          getBoundedTileSize(rewriter, loc, loopRange, iv, tileSize));
+    }
+  }
+
+  // 8. Tile the operation. Clone the operation to allow fix up of destination
+  // operands.
+  ArrayRef<BlockArgument> destBbArgs = forallOp.getOutputBlockArguments();
+  Operation *clonedOp =
+      cloneOpAndUpdateDestinationArgs(rewriter, op, destBbArgs);
+  FailureOr<TilingResult> tilingResult =
+      cast<TilingInterface>(clonedOp).getTiledImplementation(
+          rewriter, tiledOffsets, tiledSizes);
+  if (failed(tilingResult))
+    return clonedOp->emitError("failed to tile op: ");
+  rewriter.eraseOp(clonedOp);
+
+  // 9. Parallel insert back into the result tensor.
+  for (auto [index, tiledValue, destBBArg] :
+       llvm::enumerate(tilingResult->tiledValues, destBbArgs)) {
+    // 9.a. Partial subset information is inserted just before the terminator.
+    rewriter.setInsertionPoint(forallOp.getTerminator());
+
+    SmallVector<OpFoldResult> resultOffsets, resultSizes;
+    if (failed(op.getResultTilePosition(rewriter, index, tiledOffsets,
+                                        tiledSizes, resultOffsets,
+                                        resultSizes))) {
+      return op->emitOpError("output offsets couldn't be calculated");
+    }
+
+    SmallVector<OpFoldResult> strides(resultSizes.size(),
+                                      rewriter.getIndexAttr(1));
+    // 9.b. Parallel insertions are inserted at the end of the combining
+    // terminator.
+    rewriter.setInsertionPointToEnd(forallOp.getTerminator().getBody());
+    rewriter.create<tensor::ParallelInsertSliceOp>(
+        loc, tiledValue, destBBArg, resultOffsets, resultSizes, strides);
+  }
+
+  // 10. Return the tiling result.
+  return scf::SCFTilingResult{
+      tilingResult->tiledOps,
+      {forallOp.getOperation()},
+      llvm::map_to_vector(forallOp.getResults(),
+                          [](auto val) -> Value { return val; })};
 }
 
 //===----------------------------------------------------------------------===//
