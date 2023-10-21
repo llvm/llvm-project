@@ -1521,6 +1521,121 @@ define i1 @isFloat(i64 %0) {
   ret i1 %5
 }
 
+; tests from PR69123
+define i1 @or_slt_eq_masked(i32 %a) {
+; CHECK-LABEL: @or_slt_eq_masked(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[A]], 2147483647
+; CHECK-NEXT:    [[TOBOOL2_NOT:%.*]] = icmp eq i32 [[AND1]], 0
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP]], [[TOBOOL2_NOT]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %cmp = icmp slt i32 %a, 0
+  %and1 = and i32 %a, 2147483647
+  %tobool2.not = icmp eq i32 %and1, 0
+  %or = or i1 %cmp, %tobool2.not
+  ret i1 %or
+}
+
+define i1 @and_sgt_ne_masked(i32 %d) {
+; CHECK-LABEL: @and_sgt_ne_masked(
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp sgt i32 [[D:%.*]], -1
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[D]], 2147483647
+; CHECK-NEXT:    [[TOBOOL2:%.*]] = icmp ne i32 [[AND1]], 0
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[TOBOOL_NOT]], [[TOBOOL2]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %tobool.not = icmp sgt i32 %d, -1
+  %and1 = and i32 %d, 2147483647
+  %tobool2 = icmp ne i32 %and1, 0
+  %and = and i1 %tobool.not, %tobool2
+  ret i1 %and
+}
+
+define i1 @or_slt_ne_masked(i32 %a) {
+; CHECK-LABEL: @or_slt_ne_masked(
+; CHECK-NEXT:    [[OR:%.*]] = icmp ne i32 [[A:%.*]], 0
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %cmp = icmp slt i32 %a, 0
+  %and1 = and i32 %a, 2147483647
+  %tobool2.not = icmp ne i32 %and1, 0
+  %or = or i1 %cmp, %tobool2.not
+  ret i1 %or
+}
+
+define i1 @and_sgt_eq_masked(i32 %d) {
+; CHECK-LABEL: @and_sgt_eq_masked(
+; CHECK-NEXT:    [[AND:%.*]] = icmp eq i32 [[D:%.*]], 0
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %tobool.not = icmp sgt i32 %d, -1
+  %and1 = and i32 %d, 2147483647
+  %tobool2 = icmp eq i32 %and1, 0
+  %and = and i1 %tobool.not, %tobool2
+  ret i1 %and
+}
+
+define i1 @or_slt_eq_masked2(i32 %a) {
+; CHECK-LABEL: @or_slt_eq_masked2(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A:%.*]], 8
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[A]], -9
+; CHECK-NEXT:    [[TOBOOL2_NOT:%.*]] = icmp eq i32 [[AND1]], 0
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP]], [[TOBOOL2_NOT]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %cmp = icmp slt i32 %a, 8
+  %and1 = and i32 %a, -9
+  %tobool2.not = icmp eq i32 %and1, 0
+  %or = or i1 %cmp, %tobool2.not
+  ret i1 %or
+}
+
+define i1 @or_slt_eq_masked_nofold_invalid_mask(i32 %a) {
+; CHECK-LABEL: @or_slt_eq_masked_nofold_invalid_mask(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[A]], 2147483646
+; CHECK-NEXT:    [[TOBOOL2_NOT:%.*]] = icmp eq i32 [[AND1]], 0
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP]], [[TOBOOL2_NOT]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %cmp = icmp slt i32 %a, 0
+  %and1 = and i32 %a, 2147483646
+  %tobool2.not = icmp eq i32 %and1, 0
+  %or = or i1 %cmp, %tobool2.not
+  ret i1 %or
+}
+
+define i1 @or_slt_eq_masked_nofold_unmergeable_ranges(i32 %a) {
+; CHECK-LABEL: @or_slt_eq_masked_nofold_unmergeable_ranges(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[A]], 2147483647
+; CHECK-NEXT:    [[TOBOOL2_NOT:%.*]] = icmp eq i32 [[AND1]], 0
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP]], [[TOBOOL2_NOT]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %cmp = icmp slt i32 %a, -1
+  %and1 = and i32 %a, 2147483647
+  %tobool2.not = icmp eq i32 %and1, 0
+  %or = or i1 %cmp, %tobool2.not
+  ret i1 %or
+}
+
+define i1 @and_sgt_ne_masked_nofold_unmergeable_ranges(i32 %d) {
+; CHECK-LABEL: @and_sgt_ne_masked_nofold_unmergeable_ranges(
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp sgt i32 [[D:%.*]], -2
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[D]], 2147483647
+; CHECK-NEXT:    [[TOBOOL2:%.*]] = icmp ne i32 [[AND1]], 0
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[TOBOOL_NOT]], [[TOBOOL2]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %tobool.not = icmp sgt i32 %d, -2
+  %and1 = and i32 %d, 2147483647
+  %tobool2 = icmp ne i32 %and1, 0
+  %and = and i1 %tobool.not, %tobool2
+  ret i1 %and
+}
+
 !0 = !{i32 1, i32 6}
 !1 = !{i32 0, i32 6}
 !2 = !{i8 0, i8 1}
