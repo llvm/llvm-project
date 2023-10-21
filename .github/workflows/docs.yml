@@ -25,10 +25,28 @@ jobs:
     name: "Test documentation build"
     runs-on: ubuntu-latest
     steps:
-      - name: Fetch LLVM sources
+      # Fetch all the commits in a pull request so that the
+      # docs-changed-subprojects step won't pull them in itself in an extremely
+      # slow manner.
+      - name: Fetch LLVM sources (PR)
+        if: ${{ github.event_name == 'pull_request' }} 
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: ${{ github.event.pull_request.commits }}
+      - name: Fetch LLVM sources (push)
+        if: ${{ github.event_name == 'push' }}
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
+      - name: Get subprojects that have doc changes
+        id: docs-changed-subprojects
+        uses: tj-actions/changed-files@v39
+        with:
+          files_yaml: |
+            llvm:
+              - 'llvm/docs/**'
+            clang:
+              - 'clang/docs/**'
       - name: Setup Python env
         uses: actions/setup-python@v4
         with:
@@ -41,15 +59,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y cmake ninja-build
-      - name: Get subprojects that have doc changes
-        id: docs-changed-subprojects
-        uses: tj-actions/changed-files@v39
-        with:
-          files_yaml: |
-            llvm:
-              - 'llvm/docs/**'
-            clang:
-              - 'clang/docs/**'
       - name: Build LLVM docs
         if: steps.docs-changed-subprojects.outputs.llvm_any_changed == 'true'
         run: |
