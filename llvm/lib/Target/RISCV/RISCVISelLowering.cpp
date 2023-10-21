@@ -8000,18 +8000,15 @@ static void getVCIXOperands(SDValue &Op, SelectionDAG &DAG,
       DAG.getMachineFunction().getSubtarget<RISCVSubtarget>();
   for (const SDValue &V : Op->op_values()) {
     EVT ValType = V.getValueType();
-    if (ValType.isFixedLengthVector()) {
-      MVT OpContainerVT = getContainerForFixedLengthVector(
-          DAG, V.getSimpleValueType(), Subtarget);
-      Ops.push_back(convertToScalableVector(OpContainerVT, V, DAG, Subtarget));
-      continue;
-    }
-
     if (ValType.isScalableVector() && ValType.isFloatingPoint()) {
       MVT InterimIVT =
           MVT::getVectorVT(MVT::getIntegerVT(ValType.getScalarSizeInBits()),
                            ValType.getVectorElementCount());
       Ops.push_back(DAG.getNode(ISD::BITCAST, DL, InterimIVT, V));
+    } else if (ValType.isFixedLengthVector()) {
+      MVT OpContainerVT = getContainerForFixedLengthVector(
+          DAG, V.getSimpleValueType(), Subtarget);
+      Ops.push_back(convertToScalableVector(OpContainerVT, V, DAG, Subtarget));
     } else
       Ops.push_back(V);
   }
