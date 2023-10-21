@@ -8,11 +8,13 @@ target triple = "amdgcn-amd-amdhsa"
 @ReachableKernel = internal addrspace(3) global i32 3, align 4
 @UnreachableKernel = internal addrspace(3) global i32 42, align 4
 @ReachableKernelAS0 = internal global i32 7, align 4
+@AS3OneKernelAtATime = internal addrspace(3) global i32 42, align 4
 
 ;.
 ; CHECK: @[[REACHABLEKERNEL:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 3, align 4
 ; CHECK: @[[UNREACHABLEKERNEL:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 42, align 4
 ; CHECK: @[[REACHABLEKERNELAS0:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 7, align 4
+; CHECK: @[[AS3ONEKERNELATATIME:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 42, align 4
 ; CHECK: @[[REACHABLENONKERNEL:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 0, align 4
 ; CHECK: @[[UNREACHABLENONKERNEL:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 0, align 4
 ;.
@@ -351,6 +353,79 @@ define internal void @level2all_late(ptr %addr) {
 entry:
   store i32 1, ptr addrspacecast (ptr addrspace(3) @UnreachableNonKernel to ptr), align 4
   store i32 5, ptr %addr, align 4
+  ret void
+}
+
+define dso_local void @kernel2(i32 %C) norecurse "kernel" {
+; TUNIT: Function Attrs: norecurse nosync nounwind
+; TUNIT-LABEL: define {{[^@]+}}@kernel2
+; TUNIT-SAME: (i32 [[C:%.*]]) #[[ATTR0]] {
+; TUNIT-NEXT:    [[I:%.*]] = icmp eq i32 [[C]], 42
+; TUNIT-NEXT:    br i1 [[I]], label [[T:%.*]], label [[F:%.*]]
+; TUNIT:       t:
+; TUNIT-NEXT:    store i32 333, ptr addrspace(3) @AS3OneKernelAtATime, align 4
+; TUNIT-NEXT:    br label [[F]]
+; TUNIT:       f:
+; TUNIT-NEXT:    [[L:%.*]] = load i32, ptr addrspace(3) @AS3OneKernelAtATime, align 4
+; TUNIT-NEXT:    call void @use(i32 noundef [[L]], i32 noundef [[L]], i32 noundef [[L]]) #[[ATTR7]]
+; TUNIT-NEXT:    ret void
+;
+; CGSCC: Function Attrs: norecurse nosync nounwind
+; CGSCC-LABEL: define {{[^@]+}}@kernel2
+; CGSCC-SAME: (i32 [[C:%.*]]) #[[ATTR0]] {
+; CGSCC-NEXT:    [[I:%.*]] = icmp eq i32 [[C]], 42
+; CGSCC-NEXT:    br i1 [[I]], label [[T:%.*]], label [[F:%.*]]
+; CGSCC:       t:
+; CGSCC-NEXT:    store i32 333, ptr addrspace(3) @AS3OneKernelAtATime, align 4
+; CGSCC-NEXT:    br label [[F]]
+; CGSCC:       f:
+; CGSCC-NEXT:    [[L:%.*]] = load i32, ptr addrspace(3) @AS3OneKernelAtATime, align 4
+; CGSCC-NEXT:    call void @use(i32 noundef [[L]], i32 noundef [[L]], i32 noundef [[L]]) #[[ATTR4]]
+; CGSCC-NEXT:    ret void
+;
+  %i = icmp eq i32 %C, 42
+  br i1 %i, label %t, label %f
+t:
+  store i32 333, ptr addrspace(3) @AS3OneKernelAtATime
+  br label %f
+f:
+  %l = load i32, ptr addrspace(3) @AS3OneKernelAtATime
+  call void @use(i32 %l,i32 %l, i32 %l)
+  ret void
+}
+
+define dso_local void @kernel3(i32 %C) norecurse "kernel" {
+; TUNIT: Function Attrs: norecurse nosync nounwind
+; TUNIT-LABEL: define {{[^@]+}}@kernel3
+; TUNIT-SAME: (i32 [[C:%.*]]) #[[ATTR0]] {
+; TUNIT-NEXT:    [[I:%.*]] = icmp eq i32 [[C]], 42
+; TUNIT-NEXT:    br i1 [[I]], label [[T:%.*]], label [[F:%.*]]
+; TUNIT:       t:
+; TUNIT-NEXT:    [[L:%.*]] = load i32, ptr addrspace(3) @AS3OneKernelAtATime, align 4
+; TUNIT-NEXT:    call void @use(i32 noundef [[L]], i32 noundef [[L]], i32 noundef [[L]]) #[[ATTR7]]
+; TUNIT-NEXT:    ret void
+; TUNIT:       f:
+; TUNIT-NEXT:    ret void
+;
+; CGSCC: Function Attrs: norecurse nosync nounwind
+; CGSCC-LABEL: define {{[^@]+}}@kernel3
+; CGSCC-SAME: (i32 [[C:%.*]]) #[[ATTR0]] {
+; CGSCC-NEXT:    [[I:%.*]] = icmp eq i32 [[C]], 42
+; CGSCC-NEXT:    br i1 [[I]], label [[T:%.*]], label [[F:%.*]]
+; CGSCC:       t:
+; CGSCC-NEXT:    [[L:%.*]] = load i32, ptr addrspace(3) @AS3OneKernelAtATime, align 4
+; CGSCC-NEXT:    call void @use(i32 noundef [[L]], i32 noundef [[L]], i32 noundef [[L]]) #[[ATTR4]]
+; CGSCC-NEXT:    ret void
+; CGSCC:       f:
+; CGSCC-NEXT:    ret void
+;
+  %i = icmp eq i32 %C, 42
+  br i1 %i, label %t, label %f
+t:
+  %l = load i32, ptr addrspace(3) @AS3OneKernelAtATime
+  call void @use(i32 %l,i32 %l, i32 %l)
+  ret void
+f:
   ret void
 }
 
