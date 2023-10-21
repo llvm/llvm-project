@@ -6236,4 +6236,48 @@ TEST(TransferTest, LambdaCaptureThis) {
       });
 }
 
+TEST(TransferTest, DifferentReferenceLocInJoin) {
+  // This test triggers a case where the storage location for a reference-type
+  // variable is different for two states being joined. We used to believe this
+  // could not happen and therefore had an assertion disallowing this; this test
+  // exists to demonstrate that we can handle this condition without a failing
+  // assertion. See also the discussion here:
+  // https://discourse.llvm.org/t/70086/6
+  std::string Code = R"(
+    namespace std {
+      template <class T> struct initializer_list {
+        const T* begin();
+        const T* end();
+      };
+    }
+
+    void target(char* p, char* end) {
+      while (p != end) {
+        if (*p == ' ') {
+          p++;
+          continue;
+        }
+
+        auto && range = {1, 2};
+        for (auto b = range.begin(), e = range.end(); b != e; ++b) {
+        }
+        (void)0;
+        // [[p]]
+      }
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        // Joining environments with different storage locations for the same
+        // declaration results in the declaration being removed from the joined
+        // environment.
+        const ValueDecl *VD = findValueDecl(ASTCtx, "range");
+        ASSERT_EQ(Env.getStorageLocation(*VD), nullptr);
+      });
+}
+
 } // namespace
