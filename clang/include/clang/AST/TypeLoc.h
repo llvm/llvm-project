@@ -243,7 +243,7 @@ private:
 
 inline TypeSourceInfo::TypeSourceInfo(QualType ty, size_t DataSize) : Ty(ty) {
   // Init data attached to the object. See getTypeLoc.
-  memset(this + 1, 0, DataSize);
+  memset(static_cast<void *>(this + 1), 0, DataSize);
 }
 
 /// Return the TypeLoc for a type source info.
