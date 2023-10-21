@@ -121,6 +121,7 @@ void registerTestMemRefStrideCalculation();
 void registerTestNextAccessPass();
 void registerTestOneToNTypeConversionPass();
 void registerTestOpaqueLoc();
+void registerTestOwnershipBasedBufferDeallocationPass();
 void registerTestPadFusion();
 void registerTestPDLByteCodePass();
 void registerTestPDLLPasses();
@@ -241,6 +242,7 @@ void registerTestPasses() {
   mlir::test::registerTestNextAccessPass();
   mlir::test::registerTestOneToNTypeConversionPass();
   mlir::test::registerTestOpaqueLoc();
+  mlir::test::registerTestOwnershipBasedBufferDeallocationPass();
   mlir::test::registerTestPadFusion();
   mlir::test::registerTestPDLByteCodePass();
   mlir::test::registerTestPDLLPasses();

@@ -66,7 +66,7 @@ class DeallocOpConversion
 
     rewriter.replaceOpWithNewOp<scf::IfOp>(
         op, adaptor.getConditions()[0], [&](OpBuilder &builder, Location loc) {
-          builder.create<memref::DeallocOp>(loc, adaptor.getMemrefs()[0]);
+          options.buildDeallocOp(builder, loc, adaptor.getMemrefs()[0]);
           builder.create<scf::YieldOp>(loc);
         });
     return success();
@@ -133,7 +133,7 @@ class DeallocOpConversion
 
     rewriter.create<scf::IfOp>(
         op.getLoc(), shouldDealloc, [&](OpBuilder &builder, Location loc) {
-          builder.create<memref::DeallocOp>(loc, adaptor.getMemrefs()[0]);
+          options.buildDeallocOp(builder, loc, adaptor.getMemrefs()[0]);
           builder.create<scf::YieldOp>(loc);
         });
 
@@ -232,13 +232,13 @@ class DeallocOpConversion
     // Without storing them to memrefs, we could not use for-loops but only a
     // completely unrolled version of it, potentially leading to code-size
     // blow-up.
-    Value toDeallocMemref = rewriter.create<memref::AllocOp>(
+    Value toDeallocMemref = rewriter.create<memref::AllocaOp>(
         op.getLoc(), MemRefType::get({(int64_t)adaptor.getMemrefs().size()},
                                      rewriter.getIndexType()));
-    Value conditionMemref = rewriter.create<memref::AllocOp>(
+    Value conditionMemref = rewriter.create<memref::AllocaOp>(
         op.getLoc(), MemRefType::get({(int64_t)adaptor.getConditions().size()},
                                      rewriter.getI1Type()));
-    Value toRetainMemref = rewriter.create<memref::AllocOp>(
+    Value toRetainMemref = rewriter.create<memref::AllocaOp>(
         op.getLoc(), MemRefType::get({(int64_t)adaptor.getRetained().size()},
                                      rewriter.getIndexType()));
 
@@ -285,10 +285,10 @@ class DeallocOpConversion
         MemRefType::get({ShapedType::kDynamic}, rewriter.getIndexType()),
         toRetainMemref);
 
-    Value deallocCondsMemref = rewriter.create<memref::AllocOp>(
+    Value deallocCondsMemref = rewriter.create<memref::AllocaOp>(
         op.getLoc(), MemRefType::get({(int64_t)adaptor.getMemrefs().size()},
                                      rewriter.getI1Type()));
-    Value retainCondsMemref = rewriter.create<memref::AllocOp>(
+    Value retainCondsMemref = rewriter.create<memref::AllocaOp>(
         op.getLoc(), MemRefType::get({(int64_t)adaptor.getRetained().size()},
                                      rewriter.getI1Type()));
 
@@ -313,7 +313,7 @@ class DeallocOpConversion
           op.getLoc(), deallocCondsMemref, idxValue);
       rewriter.create<scf::IfOp>(
           op.getLoc(), shouldDealloc, [&](OpBuilder &builder, Location loc) {
-            builder.create<memref::DeallocOp>(loc, adaptor.getMemrefs()[i]);
+            options.buildDeallocOp(builder, loc, adaptor.getMemrefs()[i]);
             builder.create<scf::YieldOp>(loc);
           });
     }
@@ -326,22 +326,15 @@ class DeallocOpConversion
       replacements.push_back(ownership);
     }
 
-    // Deallocate above allocated memrefs again to avoid memory leaks.
-    // Deallocation will not be run on code after this stage.
-    rewriter.create<memref::DeallocOp>(op.getLoc(), toDeallocMemref);
-    rewriter.create<memref::DeallocOp>(op.getLoc(), toRetainMemref);
-    rewriter.create<memref::DeallocOp>(op.getLoc(), conditionMemref);
-    rewriter.create<memref::DeallocOp>(op.getLoc(), deallocCondsMemref);
-    rewriter.create<memref::DeallocOp>(op.getLoc(), retainCondsMemref);
-
     rewriter.replaceOp(op, replacements);
     return success();
   }
 
 public:
-  DeallocOpConversion(MLIRContext *context, func::FuncOp deallocHelperFunc)
+  DeallocOpConversion(MLIRContext *context, func::FuncOp deallocHelperFunc,
+                      const bufferization::LowerDeallocationOptions &options)
       : OpConversionPattern<bufferization::DeallocOp>(context),
-        deallocHelperFunc(deallocHelperFunc) {}
+        deallocHelperFunc(deallocHelperFunc), options(options) {}
 
   LogicalResult
   matchAndRewrite(bufferization::DeallocOp op, OpAdaptor adaptor,
@@ -371,6 +364,7 @@ public:
 
 private:
   func::FuncOp deallocHelperFunc;
+  const bufferization::LowerDeallocationOptions options;
 };
 } // namespace
 
@@ -378,6 +372,13 @@ namespace {
 struct LowerDeallocationsPass
     : public bufferization::impl::LowerDeallocationsBase<
           LowerDeallocationsPass> {
+  LowerDeallocationsPass() = default;
+  LowerDeallocationsPass(const LowerDeallocationsPass &other)
+      : LowerDeallocationsPass(other.options) {}
+  explicit LowerDeallocationsPass(
+      const bufferization::LowerDeallocationOptions &options)
+      : options(options) {}
+
   void runOnOperation() override {
     if (!isa<ModuleOp, FunctionOpInterface>(getOperation())) {
       emitError(getOperation()->getLoc(),
@@ -404,8 +405,8 @@ struct LowerDeallocationsPass
     }
 
     RewritePatternSet patterns(&getContext());
-    bufferization::populateBufferizationDeallocLoweringPattern(patterns,
-                                                               helperFuncOp);
+    bufferization::populateBufferizationDeallocLoweringPattern(
+        patterns, helperFuncOp, options);
 
     ConversionTarget target(getContext());
     target.addLegalDialect<memref::MemRefDialect, arith::ArithDialect,
@@ -416,6 +417,8 @@ struct LowerDeallocationsPass
                                       std::move(patterns))))
       signalPassFailure();
   }
+
+  const bufferization::LowerDeallocationOptions options;
 };
 } // namespace
 
@@ -536,10 +539,13 @@ func::FuncOp mlir::bufferization::buildDeallocationLibraryFunction(
 }
 
 void mlir::bufferization::populateBufferizationDeallocLoweringPattern(
-    RewritePatternSet &patterns, func::FuncOp deallocLibraryFunc) {
-  patterns.add<DeallocOpConversion>(patterns.getContext(), deallocLibraryFunc);
+    RewritePatternSet &patterns, func::FuncOp deallocLibraryFunc,
+    const LowerDeallocationOptions &options) {
+  patterns.add<DeallocOpConversion>(patterns.getContext(), deallocLibraryFunc,
+                                    options);
 }
 
-std::unique_ptr<Pass> mlir::bufferization::createLowerDeallocationsPass() {
-  return std::make_unique<LowerDeallocationsPass>();
+std::unique_ptr<Pass> mlir::bufferization::createLowerDeallocationsPass(
+    const LowerDeallocationOptions &options) {
+  return std::make_unique<LowerDeallocationsPass>(options);
 }

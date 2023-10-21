@@ -1,6 +1,7 @@
 #ifndef MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_PASSES_H
 #define MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_PASSES_H
 
+#include "mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
@@ -17,6 +18,16 @@ class FuncOp;
 namespace bufferization {
 struct OneShotBufferizationOptions;
 
+/// Options for the LowerDeallocation pass and rewrite patterns.
+struct LowerDeallocationOptions {
+  /// Given a MemRef value, build the operation(s) necessary to properly
+  /// deallocate the value.
+  std::function<void(OpBuilder &, Location, Value)> buildDeallocOp =
+      [](OpBuilder &builder, Location loc, Value memref) {
+        builder.create<memref::DeallocOp>(loc, memref);
+      };
+};
+
 //===----------------------------------------------------------------------===//
 // Passes
 //===----------------------------------------------------------------------===//
@@ -31,7 +42,7 @@ std::unique_ptr<Pass> createBufferDeallocationPass();
 /// Creates an instance of the OwnershipBasedBufferDeallocation pass to free all
 /// allocated buffers.
 std::unique_ptr<Pass> createOwnershipBasedBufferDeallocationPass(
-    bool privateFuncDynamicOwnership = false);
+    const DeallocationOptions &options = DeallocationOptions());
 
 /// Creates a pass that optimizes `bufferization.dealloc` operations. For
 /// example, it reduces the number of alias checks needed at runtime using
@@ -40,12 +51,14 @@ std::unique_ptr<Pass> createBufferDeallocationSimplificationPass();
 
 /// Creates an instance of the LowerDeallocations pass to lower
 /// `bufferization.dealloc` operations to the `memref` dialect.
-std::unique_ptr<Pass> createLowerDeallocationsPass();
+std::unique_ptr<Pass> createLowerDeallocationsPass(
+    const LowerDeallocationOptions &options = LowerDeallocationOptions());
 
 /// Adds the conversion pattern of the `bufferization.dealloc` operation to the
 /// given pattern set for use in other transformation passes.
 void populateBufferizationDeallocLoweringPattern(
-    RewritePatternSet &patterns, func::FuncOp deallocLibraryFunc);
+    RewritePatternSet &patterns, func::FuncOp deallocLibraryFunc,
+    const LowerDeallocationOptions &options = LowerDeallocationOptions());
 
 /// Construct the library function needed for the fully generic
 /// `bufferization.dealloc` lowering implemented in the LowerDeallocations pass.
@@ -134,8 +147,9 @@ func::FuncOp buildDeallocationLibraryFunction(OpBuilder &builder, Location loc,
 LogicalResult deallocateBuffers(Operation *op);
 
 /// Run ownership basedbuffer deallocation.
-LogicalResult deallocateBuffersOwnershipBased(FunctionOpInterface op,
-                                              bool privateFuncDynamicOwnership);
+LogicalResult deallocateBuffersOwnershipBased(
+    FunctionOpInterface op,
+    const DeallocationOptions &options = DeallocationOptions());
 
 /// Creates a pass that moves allocations upwards to reduce the number of
 /// required copies that are inserted during the BufferDeallocation pass.

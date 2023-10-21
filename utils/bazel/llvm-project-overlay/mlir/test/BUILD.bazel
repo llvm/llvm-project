@@ -844,10 +844,15 @@ cc_library(
     defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
     includes = ["lib/Dialect/Test"],
     deps = [
+        "//mlir:ArithDialect",
         "//mlir:BufferizationDialect",
         "//mlir:BufferizationTransforms",
+        "//mlir:FuncDialect",
+        "//mlir:GPUDialect",
         "//mlir:IR",
         "//mlir:Pass",
+        "//mlir:SCFDialect",
+        "//mlir:Transforms",
     ],
 )
 

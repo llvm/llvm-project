@@ -72,9 +72,9 @@ func.func @conversion_dealloc_multiple_memrefs_and_retained(%arg0: memref<2xf32>
 // CHECK-SAME: ([[ARG0:%.+]]: memref<2xf32>, [[ARG1:%.+]]: memref<5xf32>,
 // CHECK-SAME: [[ARG2:%.+]]: memref<1xf32>, [[ARG3:%.+]]: i1, [[ARG4:%.+]]: i1,
 // CHECK-SAME: [[ARG5:%.+]]: memref<2xf32>)
-//      CHECK: [[TO_DEALLOC_MR:%.+]] = memref.alloc() : memref<2xindex>
-//      CHECK: [[CONDS:%.+]] = memref.alloc() : memref<2xi1>
-//      CHECK: [[TO_RETAIN_MR:%.+]] = memref.alloc() : memref<2xindex>
+//      CHECK: [[TO_DEALLOC_MR:%.+]] = memref.alloca() : memref<2xindex>
+//      CHECK: [[CONDS:%.+]] = memref.alloca() : memref<2xi1>
+//      CHECK: [[TO_RETAIN_MR:%.+]] = memref.alloca() : memref<2xindex>
 //  CHECK-DAG: [[V0:%.+]] = memref.extract_aligned_pointer_as_index [[ARG0]]
 //  CHECK-DAG: [[C0:%.+]] = arith.constant 0 : index
 //  CHECK-DAG: memref.store [[V0]], [[TO_DEALLOC_MR]][[[C0]]]
@@ -94,8 +94,8 @@ func.func @conversion_dealloc_multiple_memrefs_and_retained(%arg0: memref<2xf32>
 //  CHECK-DAG: [[CAST_DEALLOC:%.+]] = memref.cast [[TO_DEALLOC_MR]] : memref<2xindex> to memref<?xindex>
 //  CHECK-DAG: [[CAST_CONDS:%.+]] = memref.cast [[CONDS]] : memref<2xi1> to memref<?xi1>
 //  CHECK-DAG: [[CAST_RETAIN:%.+]] = memref.cast [[TO_RETAIN_MR]] : memref<2xindex> to memref<?xindex>
-//      CHECK: [[DEALLOC_CONDS:%.+]] = memref.alloc() : memref<2xi1>
-//      CHECK: [[RETAIN_CONDS:%.+]] = memref.alloc() : memref<2xi1>
+//      CHECK: [[DEALLOC_CONDS:%.+]] = memref.alloca() : memref<2xi1>
+//      CHECK: [[RETAIN_CONDS:%.+]] = memref.alloca() : memref<2xi1>
 //      CHECK: [[CAST_DEALLOC_CONDS:%.+]] = memref.cast [[DEALLOC_CONDS]] : memref<2xi1> to memref<?xi1>
 //      CHECK: [[CAST_RETAIN_CONDS:%.+]] = memref.cast [[RETAIN_CONDS]] : memref<2xi1> to memref<?xi1>
 //      CHECK: call @dealloc_helper([[CAST_DEALLOC]], [[CAST_RETAIN]], [[CAST_CONDS]], [[CAST_DEALLOC_CONDS]], [[CAST_RETAIN_CONDS]])
@@ -113,11 +113,6 @@ func.func @conversion_dealloc_multiple_memrefs_and_retained(%arg0: memref<2xf32>
 //      CHECK: [[OWNERSHIP0:%.+]] = memref.load [[RETAIN_CONDS]][[[C0]]]
 //      CHECK: [[C1:%.+]] = arith.constant 1 : index
 //      CHECK: [[OWNERSHIP1:%.+]] = memref.load [[RETAIN_CONDS]][[[C1]]]
-//      CHECK: memref.dealloc [[TO_DEALLOC_MR]]
-//      CHECK: memref.dealloc [[TO_RETAIN_MR]]
-//      CHECK: memref.dealloc [[CONDS]]
-//      CHECK: memref.dealloc [[DEALLOC_CONDS]]
-//      CHECK: memref.dealloc [[RETAIN_CONDS]]
 //      CHECK: return [[OWNERSHIP0]], [[OWNERSHIP1]]
 
 //      CHECK: func private @dealloc_helper
