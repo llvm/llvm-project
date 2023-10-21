@@ -2,6 +2,8 @@
 Clang-Rename
 ============
 
+This is just a test
+
 .. contents::
 
 See also:
