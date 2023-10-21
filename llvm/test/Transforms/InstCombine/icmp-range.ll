@@ -1524,10 +1524,7 @@ define i1 @isFloat(i64 %0) {
 ; tests from PR69123
 define i1 @or_slt_eq_masked(i32 %a) {
 ; CHECK-LABEL: @or_slt_eq_masked(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A:%.*]], 0
-; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[A]], 2147483647
-; CHECK-NEXT:    [[TOBOOL2_NOT:%.*]] = icmp eq i32 [[AND1]], 0
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP]], [[TOBOOL2_NOT]]
+; CHECK-NEXT:    [[OR:%.*]] = icmp slt i32 [[A:%.*]], 1
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %cmp = icmp slt i32 %a, 0
@@ -1539,10 +1536,7 @@ define i1 @or_slt_eq_masked(i32 %a) {
 
 define i1 @and_sgt_ne_masked(i32 %d) {
 ; CHECK-LABEL: @and_sgt_ne_masked(
-; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp sgt i32 [[D:%.*]], -1
-; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[D]], 2147483647
-; CHECK-NEXT:    [[TOBOOL2:%.*]] = icmp ne i32 [[AND1]], 0
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[TOBOOL_NOT]], [[TOBOOL2]]
+; CHECK-NEXT:    [[AND:%.*]] = icmp sgt i32 [[D:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %tobool.not = icmp sgt i32 %d, -1
@@ -1578,10 +1572,7 @@ define i1 @and_sgt_eq_masked(i32 %d) {
 
 define i1 @or_slt_eq_masked2(i32 %a) {
 ; CHECK-LABEL: @or_slt_eq_masked2(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A:%.*]], 8
-; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[A]], -9
-; CHECK-NEXT:    [[TOBOOL2_NOT:%.*]] = icmp eq i32 [[AND1]], 0
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP]], [[TOBOOL2_NOT]]
+; CHECK-NEXT:    [[OR:%.*]] = icmp slt i32 [[A:%.*]], 9
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %cmp = icmp slt i32 %a, 8
