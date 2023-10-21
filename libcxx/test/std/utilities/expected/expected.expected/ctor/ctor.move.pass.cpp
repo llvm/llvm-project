@@ -119,6 +119,7 @@ constexpr bool test() {
     std::expected<TailClobbererNonTrivialMove<0>, bool> e1;
     auto e2 = std::move(e1);
     assert(e2.has_value());
+    assert(e1.has_value());
   }
 
   // move TailClobbererNonTrivialMove as error
@@ -126,6 +127,7 @@ constexpr bool test() {
     std::expected<bool, TailClobbererNonTrivialMove<1>> e1(std::unexpect);
     auto e2 = std::move(e1);
     assert(!e2.has_value());
+    assert(!e1.has_value());
   }
 
   return true;
