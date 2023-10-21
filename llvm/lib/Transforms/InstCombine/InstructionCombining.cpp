@@ -2335,6 +2335,25 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       return GetElementPtrInst::Create(GEP.getResultElementType(), NewPtr,
                                        Idx2);
     }
+
+    Value *SIdx;
+    ConstantInt *C;
+    auto ZextIntrinsic = dyn_cast<ZExtInst>(GEP.getOperand(1));
+    if (match(GEP.getOperand(1), m_OneUse(m_ZExt(m_Value(SIdx)))) &&
+        match(ZextIntrinsic->getOperand(0),
+              m_OneUse(m_Add(m_Value(Idx1), m_ConstantInt(C))))) {
+      // %add = add i32 %idx1, C
+      // %zidx = zext i32 %add to i64
+      // %gep = getelementptr i32, i32* %ptr, i64 %zidx
+      // as :
+      // %zidx = zext i32 %idx1 to i64
+      // %newptr = getelementptr i32, i32* %ptr, i64 %zidx
+      // %newgep = getelementptr i32, i32* %newptr, i64 C
+      auto ZIdx1 = Builder.CreateZExt(Idx1, GEP.getOperand(1)->getType());
+      auto *NewPtr = Builder.CreateGEP(GEP.getResultElementType(),
+                                       GEP.getPointerOperand(), ZIdx1);
+      return GetElementPtrInst::Create(GEP.getResultElementType(), NewPtr, C);
+    }
   }
 
   if (!GEP.isInBounds()) {
