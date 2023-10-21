@@ -131,6 +131,10 @@ N: Benjamin Kramer
 E: benny.kra@gmail.com
 D: DWARF Parser
 
+N: Sundeep Kushwaha
+E: sundeepk@quicinc.com
+D: Hexagon Backend
+
 N: Florian Hahn
 E: flo@fhahn.com
 D: Loop Vectorizer
@@ -171,10 +175,6 @@ D: AArch64 backend, misc ARM backend
 N: Diego Novillo
 E: dnovillo@google.com
 D: SampleProfile and related parts of ProfileData
-
-N: Krzysztof Parzyszek
-E: kparzysz@quicinc.com
-D: Hexagon Backend
 
 N: Nigel Perks
 E: nigelp@xmos.com

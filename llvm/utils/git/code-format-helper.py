@@ -20,14 +20,21 @@ from github import IssueComment, PullRequest
 
 class FormatHelper:
     COMMENT_TAG = "<!--LLVM CODE FORMAT COMMENT: {fmt}-->"
-    name = "unknown"
+    name: str
+    friendly_name: str
 
     @property
     def comment_tag(self) -> str:
         return self.COMMENT_TAG.replace("fmt", self.name)
 
-    def format_run(self, changed_files: [str], args: argparse.Namespace) -> str | None:
-        pass
+    @property
+    def instructions(self) -> str:
+        raise NotImplementedError()
+
+    def format_run(
+        self, changed_files: list[str], args: argparse.Namespace
+    ) -> str | None:
+        raise NotImplementedError()
 
     def pr_comment_text(self, diff: str) -> str:
         return f"""
@@ -66,7 +73,7 @@ View the diff from {self.name} here.
                 return comment
         return None
 
-    def update_pr(self, diff: str, args: argparse.Namespace):
+    def update_pr(self, diff: str, args: argparse.Namespace) -> None:
         repo = github.Github(args.token).get_repo(args.repo)
         pr = repo.get_issue(args.issue_number).as_pull_request()
 
@@ -78,7 +85,7 @@ View the diff from {self.name} here.
         else:
             pr.as_issue().create_comment(pr_text)
 
-    def update_pr_success(self, args: argparse.Namespace):
+    def update_pr_success(self, args: argparse.Namespace) -> None:
         repo = github.Github(args.token).get_repo(args.repo)
         pr = repo.get_issue(args.issue_number).as_pull_request()
 
@@ -91,7 +98,7 @@ View the diff from {self.name} here.
 """
             )
 
-    def run(self, changed_files: [str], args: argparse.Namespace):
+    def run(self, changed_files: list[str], args: argparse.Namespace) -> bool:
         diff = self.format_run(changed_files, args)
         if diff:
             self.update_pr(diff, args)
@@ -106,11 +113,11 @@ class ClangFormatHelper(FormatHelper):
     friendly_name = "C/C++ code formatter"
 
     @property
-    def instructions(self):
+    def instructions(self) -> str:
         return " ".join(self.cf_cmd)
 
     @cached_property
-    def libcxx_excluded_files(self):
+    def libcxx_excluded_files(self) -> list[str]:
         with open("libcxx/utils/data/ignore_format.txt", "r") as ifd:
             return [excl.strip() for excl in ifd.readlines()]
 
@@ -120,7 +127,7 @@ class ClangFormatHelper(FormatHelper):
             return True
         return False
 
-    def filter_changed_files(self, changed_files: [str]) -> [str]:
+    def filter_changed_files(self, changed_files: list[str]) -> list[str]:
         filtered_files = []
         for path in changed_files:
             _, ext = os.path.splitext(path)
@@ -129,10 +136,12 @@ class ClangFormatHelper(FormatHelper):
                     filtered_files.append(path)
         return filtered_files
 
-    def format_run(self, changed_files: [str], args: argparse.Namespace) -> str | None:
+    def format_run(
+        self, changed_files: list[str], args: argparse.Namespace
+    ) -> str | None:
         cpp_files = self.filter_changed_files(changed_files)
         if not cpp_files:
-            return
+            return None
         cf_cmd = [
             "git-clang-format",
             "--diff",
@@ -156,10 +165,10 @@ class DarkerFormatHelper(FormatHelper):
     friendly_name = "Python code formatter"
 
     @property
-    def instructions(self):
+    def instructions(self) -> str:
         return " ".join(self.darker_cmd)
 
-    def filter_changed_files(self, changed_files: [str]) -> [str]:
+    def filter_changed_files(self, changed_files: list[str]) -> list[str]:
         filtered_files = []
         for path in changed_files:
             name, ext = os.path.splitext(path)
@@ -168,10 +177,12 @@ class DarkerFormatHelper(FormatHelper):
 
         return filtered_files
 
-    def format_run(self, changed_files: [str], args: argparse.Namespace) -> str | None:
+    def format_run(
+        self, changed_files: list[str], args: argparse.Namespace
+    ) -> str | None:
         py_files = self.filter_changed_files(changed_files)
         if not py_files:
-            return
+            return None
         darker_cmd = [
             "darker",
             "--check",

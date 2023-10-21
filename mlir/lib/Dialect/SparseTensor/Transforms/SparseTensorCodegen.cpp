@@ -478,9 +478,7 @@ public:
       std::replace_if(
           lvlType.begin(), lvlType.end(),
           [](char c) { return c == '(' || c == ','; }, '_');
-      lvlType.erase(std::remove_if(lvlType.begin(), lvlType.end(),
-                                   [](char c) { return c == ')' || c == ' '; }),
-                    lvlType.end());
+      llvm::erase_if(lvlType, [](char c) { return c == ')' || c == ' '; });
       nameOstream << lvlType << "_";
     }
     // Static dim sizes are used in the generated code while dynamic sizes are

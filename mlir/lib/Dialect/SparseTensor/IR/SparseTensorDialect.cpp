@@ -415,26 +415,18 @@ SparseTensorEncodingAttr::getStaticLvlSliceStride(Level lvl) const {
   return getStaticDimSliceStride(toOrigDim(*this, lvl));
 }
 
-const static DimLevelType validDLTs[] = {DimLevelType::Dense,
-                                         DimLevelType::TwoOutOfFour,
-                                         DimLevelType::Compressed,
-                                         DimLevelType::CompressedNu,
-                                         DimLevelType::CompressedNo,
-                                         DimLevelType::CompressedNuNo,
-                                         DimLevelType::Singleton,
-                                         DimLevelType::SingletonNu,
-                                         DimLevelType::SingletonNo,
-                                         DimLevelType::SingletonNuNo,
-                                         DimLevelType::LooseCompressed,
-                                         DimLevelType::LooseCompressedNu,
-                                         DimLevelType::LooseCompressedNo,
-                                         DimLevelType::LooseCompressedNuNo};
+ValueRange
+SparseTensorEncodingAttr::translateCrds(OpBuilder &builder, Location loc,
+                                        ValueRange crds,
+                                        CrdTransDirectionKind dir) const {
+  if (!getImpl())
+    return crds;
 
-static std::optional<DimLevelType> parseDLT(StringRef str) {
-  for (DimLevelType dlt : validDLTs)
-    if (str == toMLIRString(dlt))
-      return dlt;
-  return std::nullopt;
+  SmallVector<Type> retType(
+      dir == CrdTransDirectionKind::lvl2dim ? getDimRank() : getLvlRank(),
+      builder.getIndexType());
+  auto transOp = builder.create<CrdTranslateOp>(loc, retType, crds, dir, *this);
+  return transOp.getOutCrds();
 }
 
 Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
@@ -459,8 +451,7 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
   unsigned posWidth = 0;
   unsigned crdWidth = 0;
   StringRef attrName;
-  SmallVector<StringRef, 6> keys = {"lvlTypes", "dimToLvl",  "posWidth",
-                                    "crdWidth", "dimSlices", "map"};
+  SmallVector<StringRef, 3> keys = {"map", "posWidth", "crdWidth"};
   while (succeeded(parser.parseOptionalKeyword(&attrName))) {
     // Detect admissible keyword.
     auto *it = find(keys, attrName);
@@ -473,81 +464,16 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
     RETURN_ON_FAIL(parser.parseEqual())
     // Dispatch on keyword.
     switch (keyWordIndex) {
-    case 0: { // lvlTypes
-      Attribute attr;
-      RETURN_ON_FAIL(parser.parseAttribute(attr));
-      auto arrayAttr = llvm::dyn_cast<ArrayAttr>(attr);
-      ERROR_IF(!arrayAttr, "expected an array for lvlTypes")
-      for (auto i : arrayAttr) {
-        auto strAttr = llvm::dyn_cast<StringAttr>(i);
-        ERROR_IF(!strAttr, "expected a string value in lvlTypes")
-        auto strVal = strAttr.getValue();
-        if (auto optDLT = parseDLT(strVal)) {
-          lvlTypes.push_back(optDLT.value());
-        } else {
-          parser.emitError(parser.getNameLoc(), "unexpected level-type: ")
-              << strVal;
-          return {};
-        }
-      }
-      break;
-    }
-    case 1: { // dimToLvl
-      Attribute attr;
-      RETURN_ON_FAIL(parser.parseAttribute(attr))
-      auto affineAttr = llvm::dyn_cast<AffineMapAttr>(attr);
-      ERROR_IF(!affineAttr, "expected an affine map for dimToLvl")
-      dimToLvl = affineAttr.getValue();
-      break;
-    }
-    case 2: { // posWidth
-      Attribute attr;
-      RETURN_ON_FAIL(parser.parseAttribute(attr))
-      auto intAttr = llvm::dyn_cast<IntegerAttr>(attr);
-      ERROR_IF(!intAttr, "expected an integral position bitwidth")
-      posWidth = intAttr.getInt();
-      break;
-    }
-    case 3: { // crdWidth
-      Attribute attr;
-      RETURN_ON_FAIL(parser.parseAttribute(attr))
-      auto intAttr = llvm::dyn_cast<IntegerAttr>(attr);
-      ERROR_IF(!intAttr, "expected an integral index bitwidth")
-      crdWidth = intAttr.getInt();
-      break;
-    }
-    case 4: { // dimSlices
-      RETURN_ON_FAIL(parser.parseLSquare())
-      // Dispatches to DimSliceAttr to skip mnemonic
-      bool finished = false;
-      while (auto attr = SparseTensorDimSliceAttr::parse(parser, nullptr)) {
-        auto sliceAttr = llvm::cast<SparseTensorDimSliceAttr>(attr);
-        dimSlices.push_back(sliceAttr);
-        if (parser.parseOptionalComma().failed()) {
-          finished = true;
-          break;
-        }
-      }
-      // Wrong when parsing slices
-      if (!finished)
-        return {};
-      RETURN_ON_FAIL(parser.parseRSquare())
-      break;
-    }
-    case 5: { // map (new STEA surface syntax)
+    case 0: { // map
       ir_detail::DimLvlMapParser cParser(parser);
       auto res = cParser.parseDimLvlMap();
       RETURN_ON_FAIL(res);
-      // TODO: use DimLvlMap directly as storage representation, rather
-      // than converting things over.
       const auto &dlm = *res;
 
-      ERROR_IF(!lvlTypes.empty(), "Cannot mix `lvlTypes` with `map`")
       const Level lvlRank = dlm.getLvlRank();
       for (Level lvl = 0; lvl < lvlRank; lvl++)
         lvlTypes.push_back(dlm.getLvlType(lvl));
 
-      ERROR_IF(!dimSlices.empty(), "Cannot mix `dimSlices` with `map`")
       const Dimension dimRank = dlm.getDimRank();
       for (Dimension dim = 0; dim < dimRank; dim++)
         dimSlices.push_back(dlm.getDimSlice(dim));
@@ -567,9 +493,24 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
         dimSlices.clear();
       }
 
-      ERROR_IF(dimToLvl, "Cannot mix `dimToLvl` with `map`")
       dimToLvl = dlm.getDimToLvlMap(parser.getContext());
       lvlToDim = dlm.getLvlToDimMap(parser.getContext());
+      break;
+    }
+    case 1: { // posWidth
+      Attribute attr;
+      RETURN_ON_FAIL(parser.parseAttribute(attr))
+      auto intAttr = llvm::dyn_cast<IntegerAttr>(attr);
+      ERROR_IF(!intAttr, "expected an integral position bitwidth")
+      posWidth = intAttr.getInt();
+      break;
+    }
+    case 2: { // crdWidth
+      Attribute attr;
+      RETURN_ON_FAIL(parser.parseAttribute(attr))
+      auto intAttr = llvm::dyn_cast<IntegerAttr>(attr);
+      ERROR_IF(!intAttr, "expected an integral index bitwidth")
+      crdWidth = intAttr.getInt();
       break;
     }
     } // switch
@@ -906,11 +847,6 @@ RankedTensorType sparse_tensor::getCOOFromTypeWithOrdering(RankedTensorType rtt,
                                                            AffineMap lvlPerm,
                                                            bool ordered) {
   const SparseTensorType src(rtt);
-  // TODO: This assertion is to match the behavior from before we merged
-  // dimOrdering and higherOrdering into dimToLvl.  However, there's no
-  // in-principle reason to require this.  (wrengr has a commit in the
-  // wings to fix this.)
-  assert(src.isPermutation());
   const Level lvlRank = src.getLvlRank();
   SmallVector<DimLevelType> lvlTypes;
   lvlTypes.reserve(lvlRank);
@@ -1211,6 +1147,65 @@ bool ConvertOp::needsExtraSort() {
       return false;
 
   return true;
+}
+
+LogicalResult CrdTranslateOp::verify() {
+  uint64_t inRank = getEncoder().getLvlRank();
+  uint64_t outRank = getEncoder().getDimRank();
+
+  if (getDirection() == CrdTransDirectionKind::dim2lvl)
+    std::swap(inRank, outRank);
+
+  if (inRank != getInCrds().size() || outRank != getOutCrds().size())
+    return emitError("Coordinate rank mismatch with encoding");
+
+  return success();
+}
+
+LogicalResult CrdTranslateOp::fold(FoldAdaptor adaptor,
+                                   SmallVectorImpl<OpFoldResult> &results) {
+  if (getEncoder().isIdentity()) {
+    results.assign(getInCrds().begin(), getInCrds().end());
+    return success();
+  }
+  if (getEncoder().isPermutation()) {
+    AffineMap perm = getDirection() == CrdTransDirectionKind::dim2lvl
+                         ? getEncoder().getDimToLvl()
+                         : getEncoder().getLvlToDim();
+    for (AffineExpr exp : perm.getResults())
+      results.push_back(getInCrds()[exp.cast<AffineDimExpr>().getPosition()]);
+    return success();
+  }
+
+  // Fuse dim2lvl/lvl2dim pairs.
+  auto def = getInCrds()[0].getDefiningOp<CrdTranslateOp>();
+  bool sameDef = def && llvm::all_of(getInCrds(), [def](Value v) {
+                   return v.getDefiningOp() == def;
+                 });
+  if (!sameDef)
+    return failure();
+
+  bool oppositeDir = def.getDirection() != getDirection();
+  bool sameOracle =
+      def.getEncoder().getDimToLvl() == getEncoder().getDimToLvl();
+  bool sameCount = def.getNumResults() == getInCrds().size();
+  if (!oppositeDir || !sameOracle || !sameCount)
+    return failure();
+
+  // The definition produces the coordinates in the same order as the input
+  // coordinates.
+  bool sameOrder = llvm::all_of(llvm::zip_equal(def.getOutCrds(), getInCrds()),
+                                [](auto valuePair) {
+                                  auto [lhs, rhs] = valuePair;
+                                  return lhs == rhs;
+                                });
+
+  if (!sameOrder)
+    return failure();
+  // l1 = dim2lvl (lvl2dim l0)
+  // ==> l0
+  results.append(def.getInCrds().begin(), def.getInCrds().end());
+  return success();
 }
 
 LogicalResult ToPositionsOp::verify() {

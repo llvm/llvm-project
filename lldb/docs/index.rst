@@ -125,6 +125,7 @@ interesting areas to contribute to lldb.
    use/qemu-testing
    use/intel_pt
    use/ondemand
+   use/aarch64-linux
    use/troubleshooting
    use/links
    Man Page <man/lldb>

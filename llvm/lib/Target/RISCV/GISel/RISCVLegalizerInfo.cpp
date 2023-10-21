@@ -122,6 +122,14 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
   getActionDefinitionsBuilder(G_PTR_ADD)
       .legalFor({{p0, XLenLLT}});
 
+  getActionDefinitionsBuilder(G_PTRTOINT)
+      .legalFor({{XLenLLT, p0}})
+      .clampScalar(0, XLenLLT, XLenLLT);
+
+  getActionDefinitionsBuilder(G_INTTOPTR)
+      .legalFor({{p0, XLenLLT}})
+      .clampScalar(1, XLenLLT, XLenLLT);
+
   getActionDefinitionsBuilder(G_BRCOND)
       .legalFor({XLenLLT})
       .minScalar(0, XLenLLT);

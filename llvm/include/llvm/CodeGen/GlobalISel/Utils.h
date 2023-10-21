@@ -171,11 +171,13 @@ void reportGISelWarning(MachineFunction &MF, const TargetPassConfig &TPC,
 
 /// If \p VReg is defined by a G_CONSTANT, return the corresponding value.
 std::optional<APInt> getIConstantVRegVal(Register VReg,
-                                         const MachineRegisterInfo &MRI);
+                                         const MachineRegisterInfo &MRI,
+                                         bool LookThroughInstrs = false);
 
 /// If \p VReg is defined by a G_CONSTANT fits in int64_t returns it.
 std::optional<int64_t> getIConstantVRegSExtVal(Register VReg,
-                                               const MachineRegisterInfo &MRI);
+                                               const MachineRegisterInfo &MRI,
+                                               bool LookThroughInstrs = false);
 
 /// Simple struct used to hold a constant integer value and a virtual
 /// register.
