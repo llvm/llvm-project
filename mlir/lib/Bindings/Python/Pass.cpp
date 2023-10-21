@@ -13,6 +13,7 @@
 #include "mlir-c/Pass.h"
 
 namespace py = pybind11;
+using namespace py::literals;
 using namespace mlir;
 using namespace mlir::python;
 
@@ -63,8 +64,7 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
                  mlirStringRefCreate(anchorOp.data(), anchorOp.size()));
              return new PyPassManager(passManager);
            }),
-           py::arg("anchor_op") = py::str("any"),
-           py::arg("context") = py::none(),
+           "anchor_op"_a = py::str("any"), "context"_a = py::none(),
            "Create a new PassManager for the current (or provided) Context.")
       .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR,
                              &PyPassManager::getCapsule)
@@ -82,7 +82,7 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
           [](PyPassManager &passManager, bool enable) {
             mlirPassManagerEnableVerifier(passManager.get(), enable);
           },
-          py::arg("enable"), "Enable / disable verify-each.")
+          "enable"_a, "Enable / disable verify-each.")
       .def_static(
           "parse",
           [](const std::string &pipeline, DefaultingPyMlirContext context) {
@@ -96,7 +96,7 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
               throw py::value_error(std::string(errorMsg.join()));
             return new PyPassManager(passManager);
           },
-          py::arg("pipeline"), py::arg("context") = py::none(),
+          "pipeline"_a, "context"_a = py::none(),
           "Parse a textual pass-pipeline and return a top-level PassManager "
           "that can be applied on a Module. Throw a ValueError if the pipeline "
           "can't be parsed")
@@ -111,12 +111,35 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
             if (mlirLogicalResultIsFailure(status))
               throw py::value_error(std::string(errorMsg.join()));
           },
-          py::arg("pipeline"),
+          "pipeline"_a,
           "Add textual pipeline elements to the pass manager. Throws a "
           "ValueError if the pipeline can't be parsed.")
       .def(
           "run",
-          [](PyPassManager &passManager, PyOperationBase &op) {
+          [](PyPassManager &passManager, PyOperationBase &op,
+             bool invalidateOps) {
+            if (invalidateOps) {
+              typedef struct {
+                PyOperation &rootOp;
+                bool rootSeen;
+              } callBackData;
+              callBackData data{op.getOperation(), false};
+              // Mark all ops below the op that the passmanager will be rooted
+              // at (but not op itself - note the preorder) as invalid.
+              MlirOperationWalkCallback invalidatingCallback =
+                  [](MlirOperation op, void *userData) {
+                    callBackData *data = static_cast<callBackData *>(userData);
+                    if (LLVM_LIKELY(data->rootSeen))
+                      data->rootOp.getOperation()
+                          .getContext()
+                          ->setOperationInvalid(op);
+                    else
+                      data->rootSeen = true;
+                  };
+              mlirOperationWalk(op.getOperation(), invalidatingCallback,
+                                static_cast<void *>(&data), MlirWalkPreOrder);
+            }
+            // Actually run the pass manager.
             PyMlirContext::ErrorCapture errors(op.getOperation().getContext());
             MlirLogicalResult status = mlirPassManagerRunOnOp(
                 passManager.get(), op.getOperation().get());
@@ -124,7 +147,7 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
               throw MLIRError("Failure while executing pass pipeline",
                               errors.take());
           },
-          py::arg("operation"),
+          "operation"_a, "invalidate_ops"_a = true,
           "Run the pass manager on the provided operation, raising an "
           "MLIRError on failure.")
       .def(
