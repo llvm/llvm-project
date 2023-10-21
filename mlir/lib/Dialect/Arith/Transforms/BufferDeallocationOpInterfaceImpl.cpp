@@ -53,10 +53,11 @@ struct SelectOpInterface
     return op; // nothing to do
   }
 
-  std::pair<Value, Value>
-  materializeUniqueOwnershipForMemref(Operation *op, DeallocationState &state,
-                                      const DeallocationOptions &options,
-                                      OpBuilder &builder, Value value) const {
+  Value materializeUniqueOwnershipForMemref(Operation *op,
+                                            DeallocationState &state,
+                                            const DeallocationOptions &options,
+                                            OpBuilder &builder,
+                                            Value value) const {
     auto selectOp = cast<arith::SelectOp>(op);
     assert(value == selectOp.getResult() &&
            "Value not defined by this operation");
@@ -64,14 +65,14 @@ struct SelectOpInterface
     Block *block = value.getParentBlock();
     if (!state.getOwnership(selectOp.getTrueValue(), block).isUnique() ||
         !state.getOwnership(selectOp.getFalseValue(), block).isUnique())
-      return state.getMemrefWithUniqueOwnership(builder, value,
+      return state.getMemrefWithUniqueOwnership(options, builder, value,
                                                 value.getParentBlock());
 
     Value ownership = builder.create<arith::SelectOp>(
         op->getLoc(), selectOp.getCondition(),
         state.getOwnership(selectOp.getTrueValue(), block).getIndicator(),
         state.getOwnership(selectOp.getFalseValue(), block).getIndicator());
-    return {selectOp.getResult(), ownership};
+    return ownership;
   }
 };
 

@@ -10,6 +10,8 @@
 #define MLIR_DIALECT_BUFFERIZATION_IR_BUFFERDEALLOCATIONOPINTERFACE_H_
 
 #include "mlir/Analysis/Liveness.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Support/LLVM.h"
@@ -92,10 +94,65 @@ private:
 
 /// Options for BufferDeallocationOpInterface-based buffer deallocation.
 struct DeallocationOptions {
+  using DetectionFn = std::function<bool(Operation *)>;
+  using ReplaceDeallocFn = std::function<FailureOr<ValueRange>(Operation *)>;
+
   // A pass option indicating whether private functions should be modified to
   // pass the ownership of MemRef values instead of adhering to the function
   // boundary ABI.
-  bool privateFuncDynamicOwnership = false;
+  bool privateFuncDynamicOwnership = true;
+
+  /// Inserts `cf.assert` operations to verify the function boundary ABI at
+  /// runtime. Currently, it is only checked that the ownership of returned
+  /// MemRefs is 'true'. This makes sure that ownership is yielded and the
+  /// returned MemRef does not originate from the same allocation as a function
+  /// argument. TODO: check that returned MemRefs don't alias each other.
+  /// If it can be determined statically that the ABI is not adhered
+  /// to, an error will already be emitted at compile time. This cannot be
+  /// changed with this option.
+  bool verifyFunctionBoundaryABI = true;
+
+  /// Given an allocation side-effect on the passed operation, determine whether
+  /// this allocation operation is of relevance (i.e., should assign ownership
+  /// to the allocated value). If it is determined to not be relevant,
+  /// ownership will be set to 'false', i.e., it will be leaked. This is useful
+  /// to support deallocation of multiple different kinds of allocation ops.
+  DetectionFn isRelevantAllocOp = [](Operation *op) {
+    return isa<memref::MemRefDialect, bufferization::BufferizationDialect>(
+        op->getDialect());
+  };
+
+  /// Given a free side-effect on the passed operation, determine whether this
+  /// deallocation operation is of relevance (i.e., should be removed if the
+  /// `removeExistingDeallocations` option is enabled or otherwise an error
+  /// should be emitted because existing deallocation operations are not
+  /// supported without that flag). If it is determined to not be relevant,
+  /// the operation will be ignored. This is useful to support deallocation of
+  /// multiple different kinds of allocation ops where deallocations for some of
+  /// them are already present in the IR.
+  DetectionFn isRelevantDeallocOp = [](Operation *op) {
+    return isa<memref::MemRefDialect, bufferization::BufferizationDialect>(
+        op->getDialect());
+  };
+
+  /// When enabled, remove deallocation operations determined to be relevant
+  /// according to `isRelevantDeallocOp`. If the operation has result values,
+  /// `getDeallocReplacement` will be called to determine the SSA values that
+  /// should be used as replacements.
+  bool removeExistingDeallocations = false;
+
+  /// Provides SSA values for deallocation operations when
+  /// `removeExistingDeallocations` is enabled. May return a failure when the
+  /// given deallocation operation is not supported (e.g., because no
+  /// replacement for a result value can be determined). A failure will directly
+  /// lead to a failure emitted by the deallocation pass.
+  ReplaceDeallocFn getDeallocReplacement =
+      [](Operation *op) -> FailureOr<ValueRange> {
+    if (isa<memref::DeallocOp>(op))
+      return ValueRange{};
+    // ReallocOp has to be expanded before running the dealloc pass.
+    return failure();
+  };
 };
 
 /// This class collects all the state that we need to perform the buffer
@@ -138,12 +195,12 @@ public:
   void getLiveMemrefsIn(Block *block, SmallVectorImpl<Value> &memrefs);
 
   /// Given an SSA value of MemRef type, this function queries the ownership and
-  /// if it is not already in the 'Unique' state, potentially inserts IR to get
-  /// a new SSA value, returned as the first element of the pair, which has
-  /// 'Unique' ownership and can be used instead of the passed Value with the
-  /// the ownership indicator returned as the second element of the pair.
-  std::pair<Value, Value>
-  getMemrefWithUniqueOwnership(OpBuilder &builder, Value memref, Block *block);
+  /// if it is not already in the 'Unique' state, potentially inserts IR to
+  /// determine the ownership (which might involve expensive aliasing checks at
+  /// runtime).
+  Value getMemrefWithUniqueOwnership(const DeallocationOptions &options,
+                                     OpBuilder &builder, Value memref,
+                                     Block *block);
 
   /// Given two basic blocks and the values passed via block arguments to the
   /// destination block, compute the list of MemRefs that have to be retained in
