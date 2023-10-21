@@ -98,7 +98,7 @@ class TestCase(TestBase):
                 ValueCheck(name="name", summary='"steph"'),
             ],
         )
-        self.assertEqual(str(valobj), '(User) *pointer = (id = 30, name = "steph")')
+        self.assertEqual(str(valobj), '(User) *pointer = {\n  id = 30\n  name = "steph"\n}')
 
         valobj = self.expect_var_path(
             "up_non_empty_deleter",

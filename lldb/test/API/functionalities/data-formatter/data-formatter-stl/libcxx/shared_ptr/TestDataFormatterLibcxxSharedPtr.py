@@ -86,7 +86,7 @@ class TestCase(TestBase):
                 ValueCheck(name="name", summary='"steph"'),
             ],
         )
-        self.assertEqual(str(valobj), '(User) *__ptr_ = (id = 30, name = "steph")')
+        self.assertEqual(str(valobj), '(User) *__ptr_ = {\n  id = 30\n  name = "steph"\n}')
 
         self.expect_var_path("sp_user->id", type="int", value="30")
         self.expect_var_path("sp_user->name", type="std::string", summary='"steph"')

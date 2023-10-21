@@ -261,6 +261,21 @@ SyntheticChildrenFrontEnd *
 LibcxxStdRangesRefViewSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                                lldb::ValueObjectSP);
 
+SyntheticChildrenFrontEnd *
+LibcxxStdStringSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                        lldb::ValueObjectSP);
+
+SyntheticChildrenFrontEnd *
+LibcxxStdWStringSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                         lldb::ValueObjectSP);
+
+SyntheticChildrenFrontEnd *
+LibcxxStdU16StringSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                           lldb::ValueObjectSP);
+
+SyntheticChildrenFrontEnd *
+LibcxxStdU32StringSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                           lldb::ValueObjectSP);
 } // namespace formatters
 } // namespace lldb_private
 
