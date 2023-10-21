@@ -2252,6 +2252,7 @@ int testOperationWalk(MlirContext ctx) {
   // CHECK: i don't love you: func.return
   mlirOperationWalk(mlirModuleGetOperation(module), walkCallBack,
                     (void *)(&data), MlirWalkPreOrder);
+  mlirModuleDestroy(module);
   return 0;
 }
 
