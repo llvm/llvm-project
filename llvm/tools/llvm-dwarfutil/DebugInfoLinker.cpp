@@ -15,7 +15,6 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/Object/ObjectFile.h"
-#include "llvm/Support/Endian.h"
 #include <memory>
 #include <vector>
 
