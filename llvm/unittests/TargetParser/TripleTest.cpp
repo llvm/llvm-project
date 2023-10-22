@@ -2302,6 +2302,9 @@ TEST(TripleTest, NormalizeWindows) {
             Triple::normalize("i686-pc-windows-elf-elf"));
 
   EXPECT_TRUE(Triple("x86_64-pc-win32").isWindowsMSVCEnvironment());
+
+  EXPECT_TRUE(Triple(Triple::normalize("mipsel-windows-msvccoff")).isOSBinFormatCOFF());
+  EXPECT_TRUE(Triple(Triple::normalize("mipsel-windows-msvc")).isOSBinFormatCOFF());
 }
 
 TEST(TripleTest, NormalizeAndroid) {
