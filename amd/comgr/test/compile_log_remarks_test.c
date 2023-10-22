@@ -108,7 +108,7 @@ int main(int argc, char *argv[]) {
              AMD_COMGR_DATA_KIND_SOURCE, 1);
 
   checkLogs("AMD_COMGR_ACTION_CODEGEN_BC_TO_ASSEMBLY", DataSetAsm,
-            "remark: <unknown>:0:0: 8 stack bytes in function "
+            "remark: <unknown>:0:0: 8 stack bytes in function 'f' "
             "[-Rpass-analysis=prologepilog]");
 
   Status = amd_comgr_destroy_data_set(DataSetCl);
