@@ -1833,6 +1833,7 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/pstl_generate.h>
 #include <__algorithm/pstl_is_partitioned.h>
 #include <__algorithm/pstl_merge.h>
+#include <__algorithm/pstl_move.h>
 #include <__algorithm/pstl_replace.h>
 #include <__algorithm/pstl_sort.h>
 #include <__algorithm/pstl_stable_sort.h>
