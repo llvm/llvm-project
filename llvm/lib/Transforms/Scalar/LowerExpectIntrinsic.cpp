@@ -415,29 +415,3 @@ PreservedAnalyses LowerExpectIntrinsicPass::run(Function &F,
 
   return PreservedAnalyses::all();
 }
-
-namespace {
-/// Legacy pass for lowering expect intrinsics out of the IR.
-///
-/// When this pass is run over a function it uses expect intrinsics which feed
-/// branches and switches to provide branch weight metadata for those
-/// terminators. It then removes the expect intrinsics from the IR so the rest
-/// of the optimizer can ignore them.
-class LowerExpectIntrinsic : public FunctionPass {
-public:
-  static char ID;
-  LowerExpectIntrinsic() : FunctionPass(ID) {
-    initializeLowerExpectIntrinsicPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override { return lowerExpectIntrinsic(F); }
-};
-} // namespace
-
-char LowerExpectIntrinsic::ID = 0;
-INITIALIZE_PASS(LowerExpectIntrinsic, "lower-expect",
-                "Lower 'expect' Intrinsics", false, false)
-
-FunctionPass *llvm::createLowerExpectIntrinsicPass() {
-  return new LowerExpectIntrinsic();
-}
