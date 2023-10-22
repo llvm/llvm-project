@@ -306,7 +306,6 @@ Improvements to Clang's diagnostics
 - Clang now displays an improved diagnostic and a note when a defaulted special
   member is marked ``constexpr`` in a class with a virtual base class
   (`#64843: <https://github.com/llvm/llvm-project/issues/64843>`_).
-<<<<<<< ours
 - ``-Wfixed-enum-extension`` and ``-Wmicrosoft-fixed-enum`` diagnostics are no longer
   emitted when building as C23, since C23 standardizes support for enums with a
   fixed underlying type.
