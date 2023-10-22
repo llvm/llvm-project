@@ -1512,6 +1512,61 @@ Instruction *InstCombinerImpl::foldICmpTruncConstant(ICmpInst &Cmp,
   return nullptr;
 }
 
+/// Fold icmp (trunc X), (trunc Y).
+/// Fold icmp (trunc X), (zext Y).
+Instruction *
+InstCombinerImpl::foldICmpTruncWithTruncOrExt(ICmpInst &Cmp,
+                                              const SimplifyQuery &Q) {
+  if (Cmp.isSigned())
+    return nullptr;
+
+  Value *X, *Y;
+  ICmpInst::Predicate Pred;
+  bool YIsZext = false;
+  // Try to match icmp (trunc X), (trunc Y)
+  if (match(&Cmp, m_ICmp(Pred, m_Trunc(m_Value(X)), m_Trunc(m_Value(Y))))) {
+    if (X->getType() != Y->getType() &&
+        (!Cmp.getOperand(0)->hasOneUse() || !Cmp.getOperand(1)->hasOneUse()))
+      return nullptr;
+    if (!isDesirableIntType(X->getType()->getScalarSizeInBits()) &&
+        isDesirableIntType(Y->getType()->getScalarSizeInBits())) {
+      std::swap(X, Y);
+      Pred = Cmp.getSwappedPredicate(Pred);
+    }
+  }
+  // Try to match icmp (trunc X), (zext Y)
+  else if (match(&Cmp, m_c_ICmp(Pred, m_Trunc(m_Value(X)),
+                                m_OneUse(m_ZExt(m_Value(Y))))))
+
+    YIsZext = true;
+  else
+    return nullptr;
+
+  Type *TruncTy = Cmp.getOperand(0)->getType();
+  unsigned TruncBits = TruncTy->getScalarSizeInBits();
+
+  // If this transform will end up changing from desirable types -> undesirable
+  // types skip it.
+  if (isDesirableIntType(TruncBits) &&
+      !isDesirableIntType(X->getType()->getScalarSizeInBits()))
+    return nullptr;
+
+  // Check if the trunc is unneeded.
+  KnownBits KnownX = llvm::computeKnownBits(X, /*Depth*/ 0, Q);
+  if (KnownX.countMaxActiveBits() > TruncBits)
+    return nullptr;
+
+  if (!YIsZext) {
+    // If Y is also a trunc, make sure it is unneeded.
+    KnownBits KnownY = llvm::computeKnownBits(Y, /*Depth*/ 0, Q);
+    if (KnownY.countMaxActiveBits() > TruncBits)
+      return nullptr;
+  }
+
+  Value *NewY = Builder.CreateZExtOrTrunc(Y, X->getType());
+  return new ICmpInst(Pred, X, NewY);
+}
+
 /// Fold icmp (xor X, Y), C.
 Instruction *InstCombinerImpl::foldICmpXorConstant(ICmpInst &Cmp,
                                                    BinaryOperator *Xor,
@@ -6877,6 +6932,9 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     return Res;
 
   if (Instruction *Res = foldICmpUsingKnownBits(I))
+    return Res;
+
+  if (Instruction *Res = foldICmpTruncWithTruncOrExt(I, Q))
     return Res;
 
   // Test if the ICmpInst instruction is used exclusively by a select as
