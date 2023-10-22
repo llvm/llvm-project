@@ -12,6 +12,8 @@
 #include "Debug.h"
 #include "Environment.h"
 #include "Interface.h"
+#include "LibC.h"
+#include "Mapping.h"
 #include "Synchronization.h"
 #include "Types.h"
 #include "Utils.h"
@@ -295,14 +297,15 @@ void state::enterDataEnvironment(IdentTy *Ident) {
          "Thread state modified while explicitly disabled!");
 
   unsigned TId = mapping::getThreadIdInBlock();
-  ThreadStateTy *NewThreadState =
-      static_cast<ThreadStateTy *>(__kmpc_alloc_shared(sizeof(ThreadStateTy)));
+  ThreadStateTy *NewThreadState = static_cast<ThreadStateTy *>(
+      memory::allocGlobal(sizeof(ThreadStateTy), "ThreadStates alloc"));
 #ifdef FIXME // breaks snap_red nested_par3 nest_call_par2
   uintptr_t *ThreadStatesBitsPtr = reinterpret_cast<uintptr_t *>(&ThreadStates);
   if (!atomic::load(ThreadStatesBitsPtr, atomic::seq_cst)) {
     uint32_t Bytes = sizeof(ThreadStates[0]) * mapping::getMaxTeamThreads();
     void *ThreadStatesPtr =
         memory::allocGlobal(Bytes, "Thread state array allocation");
+    memset(ThreadStatesPtr, '0', Bytes);
     if (!atomic::cas(ThreadStatesBitsPtr, uintptr_t(0),
                      reinterpret_cast<uintptr_t>(ThreadStatesPtr),
                      atomic::seq_cst, atomic::seq_cst))
@@ -330,7 +333,7 @@ void state::resetStateForThread(uint32_t TId) {
     return;
 
   ThreadStateTy *PreviousThreadState = ThreadStates[TId]->PreviousThreadState;
-  __kmpc_free_shared(ThreadStates[TId], sizeof(ThreadStateTy));
+  memory::freeGlobal(ThreadStates[TId], "ThreadStates dealloc");
   ThreadStates[TId] = PreviousThreadState;
 }
 
