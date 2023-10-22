@@ -39,3 +39,7 @@ Sections:
 
 # BSS: Contents of section .bss:
 # BSS-NEXT: <skipping contents of bss section at [12c8, 12cc)>
+
+# RUN: yaml2obj %p/Inputs/COFF/mipsel.yaml | llvm-objdump -s - | FileCheck %s --check-prefix=COFF-R4000
+
+# COFF-R4000: <stdin>:     file format coff-r4000

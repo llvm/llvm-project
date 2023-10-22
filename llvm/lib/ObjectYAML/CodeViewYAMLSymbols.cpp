@@ -171,6 +171,9 @@ void ScalarEnumerationTraits<RegisterId>::enumeration(IO &io, RegisterId &Reg) {
   case COFF::IMAGE_FILE_MACHINE_ARM64X:
     CpuType = CPUType::ARM64;
     break;
+  case COFF::IMAGE_FILE_MACHINE_R4000:
+    CpuType = CPUType::MIPSIII;
+    break;
   }
 
   if (CpuType)

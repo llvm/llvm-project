@@ -1,0 +1,8 @@
+!COFF
+header: !Header
+  Machine: IMAGE_FILE_MACHINE_R4000 # (0x166)
+  Characteristics: [ IMAGE_FILE_DEBUG_STRIPPED ]
+
+sections:
+
+symbols:
