@@ -1,7 +1,6 @@
 algorithm climits
 algorithm cstddef
 algorithm cstdint
-algorithm cstdio
 algorithm cstring
 algorithm ctime
 algorithm cwchar
@@ -31,7 +30,6 @@ array stdexcept
 array version
 atomic cstddef
 atomic cstdint
-atomic cstdio
 atomic cstdlib
 atomic cstring
 atomic ctime
@@ -76,7 +74,6 @@ chrono compare
 chrono cstddef
 chrono cstdint
 chrono ctime
-chrono forward_list
 chrono initializer_list
 chrono limits
 chrono locale
@@ -121,7 +118,6 @@ condition_variable atomic
 condition_variable cerrno
 condition_variable cstddef
 condition_variable cstdint
-condition_variable cstdio
 condition_variable cstring
 condition_variable ctime
 condition_variable limits
@@ -291,7 +287,6 @@ ios cerrno
 ios clocale
 ios cstddef
 ios cstdint
-ios cstdio
 ios cstdlib
 ios cstring
 ios ctime
@@ -412,7 +407,6 @@ numbers version
 numeric climits
 numeric cstddef
 numeric cstdint
-numeric cstdio
 numeric cstring
 numeric ctime
 numeric execution
@@ -564,7 +558,6 @@ stack version
 stop_token atomic
 stop_token cstddef
 stop_token cstdint
-stop_token cstdio
 stop_token cstring
 stop_token ctime
 stop_token limits

@@ -53,7 +53,6 @@ atomic cmath
 atomic compare
 atomic cstddef
 atomic cstdint
-atomic cstdio
 atomic cstdlib
 atomic cstring
 atomic ctime
@@ -820,7 +819,6 @@ stdexcept iosfwd
 stop_token atomic
 stop_token cstddef
 stop_token cstdint
-stop_token cstdio
 stop_token cstring
 stop_token ctime
 stop_token iosfwd

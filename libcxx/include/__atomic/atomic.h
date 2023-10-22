@@ -24,7 +24,6 @@
 #include <__type_traits/remove_volatile.h>
 #include <__utility/forward.h>
 #include <cstddef>
-#include <cstdio>
 #include <cstring>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
