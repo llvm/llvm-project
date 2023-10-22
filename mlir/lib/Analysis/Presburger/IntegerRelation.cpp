@@ -2316,14 +2316,14 @@ bool IntegerRelation::removeDuplicateConstraints() {
     --ineqs;
   }
 
-  // Check the neg form of each inequality, need an extra space to store it.
-  inequalities.appendExtraRow();
-  bool negChanged = false;
+  // Check the neg form of each inequality, need an extra vector to store it.
+  SmallVector<MPInt> negIneq(cols - 1);
   for (unsigned k = 0; k < ineqs; ++k) {
-    inequalities.copyRow(k, ineqs);
-    inequalities.negateRow(ineqs);
-    row = getInequality(ineqs).drop_back();
-    if (!hashTable.contains(row))
+    row = getInequality(k).drop_back();
+    negIneq.assign(row.begin(), row.end());
+    for (MPInt &ele : negIneq)
+      ele = -ele;
+    if (!hashTable.contains(negIneq))
       continue;
 
     // For cases where the neg is the same as other inequalities, check that the
@@ -2335,23 +2335,17 @@ bool IntegerRelation::removeDuplicateConstraints() {
 
     // A sum of constant terms equal to zero combines two inequalities into one
     // equation, less than zero means the set is empty.
-    negChanged = true;
     changed = true;
     if (k < l)
       std::swap(l, k);
     if (sum == 0) {
       addEquality(getInequality(k));
-      removeInequality(ineqs);
       removeInequality(k);
       removeInequality(l);
     } else
       *this = getEmpty(getSpace());
     break;
   }
-
-  // Need to remove the extra space requested.
-  if (!negChanged)
-    removeInequality(ineqs);
 
   return changed;
 }
