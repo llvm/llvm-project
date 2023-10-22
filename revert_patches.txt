@@ -5,6 +5,9 @@ Johannes: breakage
 Revert "[OpenMP] Disable early vectorization of loads/stores in the runtime " 
   asserts in  snap and MI-Teams
 
+Revert "[OpenMP] Basic BumpAllocator for (AMD)GPUs (#69806) "
+  breaks flang-272343 flang-272343-3 flang-305553
+
 Nicole and Saiyed:
 Revert " [OpenMP][DeviceRTL][AMDGPU] Support code object version 5"
 
