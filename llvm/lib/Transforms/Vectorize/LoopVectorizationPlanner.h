@@ -354,7 +354,7 @@ public:
   executePlan(ElementCount VF, unsigned UF, VPlan &BestPlan,
               InnerLoopVectorizer &LB, DominatorTree *DT,
               bool IsEpilogueVectorization,
-              DenseMap<const SCEV *, Value *> *ExpandedSCEVs = nullptr);
+              const DenseMap<const SCEV *, Value *> *ExpandedSCEVs = nullptr);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void printPlans(raw_ostream &O);
