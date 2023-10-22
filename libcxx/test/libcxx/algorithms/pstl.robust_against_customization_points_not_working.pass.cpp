@@ -172,6 +172,15 @@ optional<__empty> __pstl_fill_n(TestBackend, ForwardIterator, Size, Func) {
   return __empty{};
 }
 
+bool pstl_move_called = false;
+
+template <class, class ForwardIterator, class Size, class Func>
+ForwardIterator __pstl_move(TestBackend, ForwardIterator, Size, Func) {
+  assert(!pstl_move_called);
+  pstl_move_called = true;
+  return 0;
+}
+
 bool pstl_is_partitioned_called = false;
 
 template <class, class ForwardIterator, class Func>
@@ -352,7 +361,9 @@ int main(int, char**) {
   (void)std::generate_n(TestPolicy{}, std::begin(a), std::size(a), pred);
   assert(std::pstl_generate_n_called);
   (void)std::is_partitioned(TestPolicy{}, std::begin(a), std::end(a), pred);
-  assert(std::pstl_generate_n_called);
+  assert(std::pstl_is_partitioned_called);
+  (void)std::move(TestPolicy{}, std::begin(a), std::end(a), std::begin(a));
+  assert(std::pstl_move_called);
   (void)std::replace(TestPolicy{}, std::begin(a), std::end(a), 0, 0);
   assert(std::pstl_replace_called);
   (void)std::replace_if(TestPolicy{}, std::begin(a), std::end(a), pred, 0);
