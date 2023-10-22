@@ -21,7 +21,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AliasSetTracker.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"

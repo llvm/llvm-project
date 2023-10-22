@@ -24,7 +24,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist_iterator.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/InstructionSimplify.h"
