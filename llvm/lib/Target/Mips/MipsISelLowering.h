@@ -487,6 +487,33 @@ class TargetRegisterClass;
           DAG.getNode(MipsISD::GPRel, DL, DAG.getVTList(Ty), GPRel));
     }
 
+    // This method creates the following nodes, which are necessary for
+    // loading a dllimported symbol:
+    //
+    // (lw (add (shl(%high(sym), 16), %low(sym)))
+    template <class NodeTy>
+    SDValue getDllimportSymbol(NodeTy *N, const SDLoc &DL, EVT Ty,
+                               SelectionDAG &DAG) const {
+      SDValue Hi =
+          getTargetNode(N, Ty, DAG, MipsII::MO_ABS_HI | MipsII::MO_DLLIMPORT);
+      SDValue Lo =
+          getTargetNode(N, Ty, DAG, MipsII::MO_ABS_LO | MipsII::MO_DLLIMPORT);
+      return DAG.getNode(ISD::ADD, DL, Ty, DAG.getNode(MipsISD::Lo, DL, Ty, Lo),
+                         DAG.getNode(MipsISD::Hi, DL, Ty, Hi));
+    }
+
+    // This method creates the following nodes, which are necessary for
+    // loading a dllimported global variable:
+    //
+    // (lw (lw (add (shl(%high(sym), 16), %low(sym))))
+    template <class NodeTy>
+    SDValue getDllimportVariable(NodeTy *N, const SDLoc &DL, EVT Ty,
+                                 SelectionDAG &DAG, SDValue Chain,
+                                 const MachinePointerInfo &PtrInfo) const {
+      return DAG.getLoad(Ty, DL, Chain, getDllimportSymbol(N, DL, Ty, DAG),
+                         PtrInfo);
+    }
+
     /// This function fills Ops, which is the list of operands that will later
     /// be used when a function call node is created. It also generates
     /// copyToReg nodes to set up argument registers.
