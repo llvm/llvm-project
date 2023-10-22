@@ -1336,12 +1336,7 @@ define i1 @ne_21_wrong_pred2(i32 %x, i32 %y) {
 
 define i1 @eq_optimized_highbits_cmp(i32 %x, i32 %y) {
 ; CHECK-LABEL: @eq_optimized_highbits_cmp(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[CMP_HI:%.*]] = icmp ult i32 [[XOR]], 33554432
-; CHECK-NEXT:    [[TX:%.*]] = trunc i32 [[X]] to i25
-; CHECK-NEXT:    [[TY:%.*]] = trunc i32 [[Y]] to i25
-; CHECK-NEXT:    [[CMP_LO:%.*]] = icmp eq i25 [[TX]], [[TY]]
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMP_HI]], [[CMP_LO]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %xor = xor i32 %y, %x
@@ -1393,12 +1388,7 @@ define i1 @eq_optimized_highbits_cmp_fail_not_pow2(i32 %x, i32 %y) {
 
 define i1 @ne_optimized_highbits_cmp(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ne_optimized_highbits_cmp(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[CMP_HI:%.*]] = icmp ugt i32 [[XOR]], 16777215
-; CHECK-NEXT:    [[TX:%.*]] = trunc i32 [[X]] to i24
-; CHECK-NEXT:    [[TY:%.*]] = trunc i32 [[Y]] to i24
-; CHECK-NEXT:    [[CMP_LO:%.*]] = icmp ne i24 [[TX]], [[TY]]
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMP_HI]], [[CMP_LO]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %xor = xor i32 %y, %x
