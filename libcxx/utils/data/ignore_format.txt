@@ -525,7 +525,6 @@ libcxx/src/locale.cpp
 libcxx/src/memory.cpp
 libcxx/src/mutex.cpp
 libcxx/src/mutex_destructor.cpp
-libcxx/src/new.cpp
 libcxx/src/optional.cpp
 libcxx/src/pstl/libdispatch.cpp
 libcxx/src/random.cpp
@@ -2655,7 +2654,6 @@ libcxx/test/std/containers/views/mdspan/layout_left/index_operator.pass.cpp
 libcxx/test/std/containers/views/mdspan/layout_left/required_span_size.pass.cpp
 libcxx/test/std/containers/views/mdspan/layout_right/index_operator.pass.cpp
 libcxx/test/std/containers/views/mdspan/layout_right/required_span_size.pass.cpp
-libcxx/test/std/containers/views/mdspan/mdspan/CustomTestLayouts.h
 libcxx/test/std/containers/views/mdspan/mdspan/conversion.pass.cpp
 libcxx/test/std/containers/views/mdspan/mdspan/types.pass.cpp
 libcxx/test/std/containers/views/views.span/range_concept_conformance.compile.pass.cpp
@@ -3478,10 +3476,8 @@ libcxx/test/std/input.output/string.streams/ostringstream/ostringstream.cons/str
 libcxx/test/std/input.output/string.streams/ostringstream/ostringstream.members/str.pass.cpp
 libcxx/test/std/input.output/string.streams/ostringstream/types.pass.cpp
 libcxx/test/std/input.output/string.streams/stringbuf/stringbuf.assign/member_swap.pass.cpp
-libcxx/test/std/input.output/string.streams/stringbuf/stringbuf.assign/move.pass.cpp
 libcxx/test/std/input.output/string.streams/stringbuf/stringbuf.assign/nonmember_swap.pass.cpp
 libcxx/test/std/input.output/string.streams/stringbuf/stringbuf.cons/default.pass.cpp
-libcxx/test/std/input.output/string.streams/stringbuf/stringbuf.cons/move.pass.cpp
 libcxx/test/std/input.output/string.streams/stringbuf/stringbuf.cons/string.pass.cpp
 libcxx/test/std/input.output/string.streams/stringbuf/stringbuf.members/str.pass.cpp
 libcxx/test/std/input.output/string.streams/stringbuf/stringbuf.virtuals/overflow.pass.cpp
@@ -7301,4 +7297,6 @@ libcxx/utils/ci/Dockerfile
 libcxx/utils/ci/macos-ci-setup
 libcxx/utils/ci/run-buildbot
 libcxx/utils/ci/run-buildbot-container
+libcxx/utils/ci/vendor/android/Dockerfile
+libcxx/utils/ci/vendor/android/run-buildbot-container
 libcxx/utils/libcxx-lit

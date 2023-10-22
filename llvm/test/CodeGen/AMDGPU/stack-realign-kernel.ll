@@ -317,4 +317,4 @@ attributes #1 = { nounwind "stackrealign" }
 attributes #2 = { nounwind alignstack=128 }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 300}

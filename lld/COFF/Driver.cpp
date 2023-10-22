@@ -1588,13 +1588,25 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   {
     llvm::TimeTraceScope timeScope2("Search paths");
     searchPaths.emplace_back("");
-    // Prefer the Clang provided builtins over the ones bundled with MSVC.
-    addClangLibSearchPaths(argsArr[0]);
+    if (!config->mingw) {
+      // Prefer the Clang provided builtins over the ones bundled with MSVC.
+      // In MinGW mode, the compiler driver passes the necessary libpath
+      // options explicitly.
+      addClangLibSearchPaths(argsArr[0]);
+    }
     for (auto *arg : args.filtered(OPT_libpath))
       searchPaths.push_back(arg->getValue());
-    detectWinSysRoot(args);
-    if (!args.hasArg(OPT_lldignoreenv) && !args.hasArg(OPT_winsysroot))
-      addLibSearchPaths();
+    if (!config->mingw) {
+      // Don't automatically deduce the lib path from the environment or MSVC
+      // installations when operating in mingw mode. (This also makes LLD ignore
+      // winsysroot and vctoolsdir arguments.)
+      detectWinSysRoot(args);
+      if (!args.hasArg(OPT_lldignoreenv) && !args.hasArg(OPT_winsysroot))
+        addLibSearchPaths();
+    } else {
+      if (args.hasArg(OPT_vctoolsdir, OPT_winsysroot))
+        warn("ignoring /vctoolsdir or /winsysroot flags in MinGW mode");
+    }
   }
 
   // Handle /ignore
@@ -2028,6 +2040,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   config->stdcallFixup =
       args.hasFlag(OPT_stdcall_fixup, OPT_stdcall_fixup_no, config->mingw);
   config->warnStdcallFixup = !args.hasArg(OPT_stdcall_fixup);
+  config->allowDuplicateWeak =
+      args.hasFlag(OPT_lld_allow_duplicate_weak,
+                   OPT_lld_allow_duplicate_weak_no, config->mingw);
 
   if (args.hasFlag(OPT_inferasanlibs, OPT_inferasanlibs_no, false))
     warn("ignoring '/inferasanlibs', this flag is not supported");

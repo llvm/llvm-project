@@ -555,8 +555,9 @@ set(aarch64_SOURCES
   aarch64/fp_mode.c
 )
 
-if(COMPILER_RT_HAS_ASM_SME)
+if(COMPILER_RT_HAS_ASM_SME AND (COMPILER_RT_HAS_AUXV OR COMPILER_RT_BAREMETAL_BUILD))
   list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-abi-init.c)
+  message(STATUS "AArch64 SME ABI routines enabled")
 else()
   message(STATUS "AArch64 SME ABI routines disabled")
 endif()

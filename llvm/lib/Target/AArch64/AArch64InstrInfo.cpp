@@ -9134,14 +9134,14 @@ bool AArch64InstrInfo::shouldOutlineFromFunctionByDefault(
 
 void AArch64InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator Iter,
-                                          DebugLoc &DL) const {
+                                          DebugLoc &DL,
+                                          bool AllowSideEffects) const {
   const MachineFunction &MF = *MBB.getParent();
   const AArch64Subtarget &STI = MF.getSubtarget<AArch64Subtarget>();
   const AArch64RegisterInfo &TRI = *STI.getRegisterInfo();
 
   if (TRI.isGeneralPurposeRegister(MF, Reg)) {
-    BuildMI(MBB, Iter, DL, get(AArch64::MOVi64imm), Reg)
-      .addImm(0);
+    BuildMI(MBB, Iter, DL, get(AArch64::MOVZXi), Reg).addImm(0).addImm(0);
   } else if (STI.hasSVE()) {
     BuildMI(MBB, Iter, DL, get(AArch64::DUP_ZI_D), Reg)
       .addImm(0)

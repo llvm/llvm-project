@@ -137,6 +137,18 @@ def err_half_const_requires_fp16 : Error<
 // C99 variable-length arrays
 def ext_vla : Extension<"variable length arrays are a C99 feature">,
   InGroup<VLAExtension>;
+// In C++ language modes, we warn by default as an extension, while in GNU++
+// language modes, we warn as an extension but add the warning group to -Wall.
+def ext_vla_cxx : ExtWarn<
+  "variable length arrays in C++ are a Clang extension">,
+  InGroup<VLAExtension>;
+def ext_vla_cxx_in_gnu_mode : Extension<ext_vla_cxx.Summary>,
+  InGroup<VLAExtension>;
+def ext_vla_cxx_static_assert : ExtWarn<
+  "variable length arrays in C++ are a Clang extension; did you mean to use "
+  "'static_assert'?">, InGroup<VLAUseStaticAssert>;
+def ext_vla_cxx_in_gnu_mode_static_assert : Extension<
+  ext_vla_cxx_static_assert.Summary>, InGroup<VLAUseStaticAssert>;
 def warn_vla_used : Warning<"variable length array used">,
   InGroup<VLA>, DefaultIgnore;
 def err_vla_in_sfinae : Error<
@@ -2613,7 +2625,7 @@ def err_final_function_overridden : Error<
 
 // C++11 scoped enumerations
 def err_enum_invalid_underlying : Error<
-  "non-integral type %0 is an invalid underlying type">;
+  "%select{non-integral type %0|%0}1 is an invalid underlying type">;
 def err_enumerator_too_large : Error<
   "enumerator value is not representable in the underlying type %0">;
 def ext_enumerator_too_large : Extension<
@@ -3864,7 +3876,7 @@ def warn_fun_requires_negative_cap : Warning<
   "calling function %0 requires negative capability '%1'">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
 
-// Thread safety warnings on pass by reference
+// Thread safety warnings on pass/return by reference
 def warn_guarded_pass_by_reference : Warning<
   "passing variable %1 by reference requires holding %0 "
   "%select{'%2'|'%2' exclusively}3">,
@@ -3873,6 +3885,14 @@ def warn_pt_guarded_pass_by_reference : Warning<
   "passing the value that %1 points to by reference requires holding %0 "
   "%select{'%2'|'%2' exclusively}3">,
   InGroup<ThreadSafetyReference>, DefaultIgnore;
+def warn_guarded_return_by_reference : Warning<
+  "returning variable %1 by reference requires holding %0 "
+  "%select{'%2'|'%2' exclusively}3">,
+  InGroup<ThreadSafetyReferenceReturn>, DefaultIgnore;
+def warn_pt_guarded_return_by_reference : Warning<
+  "returning the value that %1 points to by reference requires holding %0 "
+  "%select{'%2'|'%2' exclusively}3">,
+  InGroup<ThreadSafetyReferenceReturn>, DefaultIgnore;
 
 // Imprecise thread safety warnings
 def warn_variable_requires_lock : Warning<
@@ -6171,6 +6191,9 @@ def warn_signed_bitfield_enum_conversion : Warning<
   "signed bit-field %0 needs an extra bit to represent the largest positive "
   "enumerators of %1">,
   InGroup<BitFieldEnumConversion>, DefaultIgnore;
+def warn_bitfield_too_small_for_integral_type : Warning<
+  "conversion from %2 (%3 bits) to bit-field %0 (%1 bits) may change value">,
+  InGroup<BitFieldConversion>, DefaultIgnore;
 def note_change_bitfield_sign : Note<
   "consider making the bitfield type %select{unsigned|signed}0">;
 
@@ -10158,8 +10181,8 @@ def err_shufflevector_argument_too_large : Error<
 
 def err_convertvector_non_vector : Error<
   "first argument to __builtin_convertvector must be a vector">;
-def err_convertvector_non_vector_type : Error<
-  "second argument to __builtin_convertvector must be a vector type">;
+def err_builtin_non_vector_type : Error<
+  "%0 argument to %1 must be of vector type">;
 def err_convertvector_incompatible_vector : Error<
   "first two arguments to __builtin_convertvector must have the same number of elements">;
 

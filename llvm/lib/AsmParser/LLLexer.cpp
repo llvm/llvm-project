@@ -279,7 +279,7 @@ lltok::Kind LLLexer::LexDollar() {
       if (CurChar == '"') {
         StrVal.assign(TokStart + 2, CurPtr - 1);
         UnEscapeLexed(StrVal);
-        if (StringRef(StrVal).find_first_of(0) != StringRef::npos) {
+        if (StringRef(StrVal).contains(0)) {
           Error("Null bytes are not allowed in names");
           return lltok::Error;
         }
@@ -362,7 +362,7 @@ lltok::Kind LLLexer::LexVar(lltok::Kind Var, lltok::Kind VarID) {
       if (CurChar == '"') {
         StrVal.assign(TokStart+2, CurPtr-1);
         UnEscapeLexed(StrVal);
-        if (StringRef(StrVal).find_first_of(0) != StringRef::npos) {
+        if (StringRef(StrVal).contains(0)) {
           Error("Null bytes are not allowed in names");
           return lltok::Error;
         }
@@ -397,7 +397,7 @@ lltok::Kind LLLexer::LexQuote() {
 
   if (CurPtr[0] == ':') {
     ++CurPtr;
-    if (StringRef(StrVal).find_first_of(0) != StringRef::npos) {
+    if (StringRef(StrVal).contains(0)) {
       Error("Null bytes are not allowed in names");
       kind = lltok::Error;
     } else {

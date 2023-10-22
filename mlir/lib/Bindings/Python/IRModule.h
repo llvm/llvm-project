@@ -209,6 +209,11 @@ public:
   /// place.
   size_t clearLiveOperations();
 
+  /// Sets an operation invalid. This is useful for when some non-bindings
+  /// code destroys the operation and the bindings need to made aware. For
+  /// example, in the case when pass manager is run.
+  void setOperationInvalid(MlirOperation op);
+
   /// Gets the count of live modules associated with this context.
   /// Used for testing.
   size_t getLiveModuleCount();
@@ -833,6 +838,7 @@ public:
                    const pybind11::object &excTb);
 
   PyBlock &getBlock() { return block; }
+  std::optional<PyOperationRef> &getRefOperation() { return refOperation; }
 
 private:
   // Trampoline constructor that avoids null initializing members while

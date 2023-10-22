@@ -2093,12 +2093,19 @@ public:
         "Target didn't implement TargetInstrInfo::insertOutlinedCall!");
   }
 
-  /// Insert an architecture-specific instruction to clear a register.
+  /// Insert an architecture-specific instruction to clear a register. If you
+  /// need to avoid sideeffects (e.g. avoid XOR on x86, which sets EFLAGS), set
+  /// \p AllowSideEffects to \p false.
   virtual void buildClearRegister(Register Reg, MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator Iter,
-                                  DebugLoc &DL) const {
+                                  DebugLoc &DL,
+                                  bool AllowSideEffects = true) const {
+#if 0
+    // FIXME: This should exist once all platforms that use stack protectors
+    // implements it.
     llvm_unreachable(
         "Target didn't implement TargetInstrInfo::buildClearRegister!");
+#endif
   }
 
   /// Return true if the function can safely be outlined from.

@@ -2295,7 +2295,7 @@ void tools::AddStaticDeviceLibs(Compilation *C, const Tool *T,
   static const StringRef HostOnlyArchives[] = {
       "omp", "cudart", "m", "gcc", "gcc_s", "pthread", "hip_hcc"};
   for (auto SDLName : DriverArgs.getAllArgValues(options::OPT_l)) {
-    if (!HostOnlyArchives->contains(SDLName)) {
+    if (!llvm::is_contained(HostOnlyArchives, SDLName)) {
       SDLNames.insert(std::string("-l") + SDLName);
     }
   }
@@ -2338,7 +2338,7 @@ getAMDGPUCodeObjectArgument(const Driver &D, const llvm::opt::ArgList &Args) {
 
 void tools::checkAMDGPUCodeObjectVersion(const Driver &D,
                                          const llvm::opt::ArgList &Args) {
-  const unsigned MinCodeObjVer = 4;
+  const unsigned MinCodeObjVer = 3;
   const unsigned MaxCodeObjVer = 5;
 
   if (auto *CodeObjArg = getAMDGPUCodeObjectArgument(D, Args)) {

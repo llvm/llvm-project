@@ -13,6 +13,7 @@
 #include "CodegenUtils.h"
 #include "LoopEmitter.h"
 
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
@@ -829,47 +830,62 @@ public:
   }
 };
 
+// A trivial wrapper to help generate different operations for dense/sparse
+// tensors.
 struct TensorLike {
   TensorLike(OpBuilder &builder, Location loc, RankedTensorType rtt,
-             ValueRange sizes)
-      : isSparse(rtt.getEncoding() != nullptr) {
+             ValueRange sizes) {
     SmallVector<Value> dynSzs;
     getDynamicSizes(rtt, sizes, dynSzs);
 
-    if (isSparse)
-      val = builder.create<AllocTensorOp>(loc, rtt, dynSzs);
-    else
-      val = allocDenseTensor(builder, loc, rtt, sizes);
-  };
-
-  void insertOrStore(OpBuilder &builder, Location loc, Value v,
-                     ValueRange crds) {
-    if (isSparse)
-      val = builder.create<InsertOp>(loc, v, val, crds);
-    else
-      builder.create<memref::StoreOp>(loc, v, val, crds);
+    val = builder.create<AllocTensorOp>(loc, rtt, dynSzs);
+    if (!isSparse()) {
+      Value c0 = constantZero(builder, loc, rtt.getElementType());
+      val = builder.create<linalg::FillOp>(loc, c0, val).getResult(0);
+    }
   }
 
-  Value getSSA() const {
-    // We don't need to maintain the SSA chain for a memref value.
-    return isSparse ? val : nullptr;
+  void insert(OpBuilder &builder, Location loc, Value v, ValueRange crds) {
+    // TODO: Unify these two.
+    if (isSparse())
+      val = builder.create<sparse_tensor::InsertOp>(loc, v, val, crds);
+    else
+      val = builder.create<tensor::InsertOp>(loc, v, val, crds);
   }
 
   Value finalize(OpBuilder &builder, Location loc, RankedTensorType rtp) const {
-    if (isSparse)
+    if (isSparse())
       return builder.create<LoadOp>(loc, val, true);
-    return builder.create<bufferization::ToTensorOp>(loc, rtp, val);
+    return val;
   }
 
-  void updateSSA(Value v) {
-    // Dense memref is a non-SSA value.
-    assert(isSparse);
-    val = v;
+  bool isSparse() const {
+    return getSparseTensorEncoding(val.getType()) != nullptr;
   }
 
-private:
-  bool isSparse;
-  Value val; // either a memref (for dense tensor) or a sparse tensor.
+  Value val;
+};
+
+struct CrdTranslateRewriter : public OpRewritePattern<CrdTranslateOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(CrdTranslateOp op,
+                                PatternRewriter &rewriter) const override {
+    AffineMap map = op.getDirection() == CrdTransDirectionKind::dim2lvl
+                        ? op.getEncoder().getDimToLvl()
+                        : op.getEncoder().getLvlToDim();
+    SmallVector<Value> outCrds;
+    for (AffineExpr result : map.getResults()) {
+      // TODO: we should probably expand the affine map to IR using our own
+      // rules, since affine.apply assume signed value, while the cooridinates
+      // we provided must always be signless.
+      Value trans = rewriter.create<affine::AffineApplyOp>(
+          op.getLoc(), AffineMap::get(map.getNumDims(), 0, result),
+          op.getInCrds());
+      outCrds.push_back(trans);
+    }
+    rewriter.replaceOp(op, outCrds);
+    return success();
+  }
 };
 
 struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
@@ -901,14 +917,14 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
 
     TensorLike dstBuf(rewriter, loc, dstTp.getRankedTensorType(), sizes);
     Value offset = constantIndex(rewriter, loc, 0);
-    Value iterArg = dstBuf.getSSA();
+    Value iterArg = dstBuf.val;
 
     ForeachOp foreachOp;
     for (Value input : op.getInputs()) {
       // Builds a for op for each input tensor to append new values into the
       // output tensor.
       foreachOp = rewriter.create<ForeachOp>(
-          loc, input, iterArg ? ValueRange{iterArg} : ValueRange{},
+          loc, input, iterArg,
           [&](OpBuilder &builder, Location loc, ValueRange dcvs, Value v,
               ValueRange reduc) {
             SmallVector<Value> dstLcvs(dstTp.getLvlRank());
@@ -920,32 +936,26 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
               // FIXME: `toStoredDim` is deprecated
               dstLcvs[toStoredDim(dstTp.getEncoding(), d)] = crd;
             }
-
-            if (!reduc.empty())
-              dstBuf.updateSSA(reduc.front());
-
+            // Enters foreach, updates the SSA chain.
+            dstBuf.val = reduc.front();
             if (!dstTp.isAllDense()) {
               Value cond = genIsNonzero(builder, loc, v);
               auto ifOp = builder.create<scf::IfOp>(loc, reduc.getTypes(), cond,
                                                     /*else*/ true);
               builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-              builder.create<scf::YieldOp>(loc, dstBuf.getSSA());
+              builder.create<scf::YieldOp>(loc, dstBuf.val);
 
               builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-              dstBuf.insertOrStore(builder, loc, v, dstLcvs);
-              builder.create<scf::YieldOp>(loc, dstBuf.getSSA());
+              dstBuf.insert(builder, loc, v, dstLcvs);
+              builder.create<scf::YieldOp>(loc, dstBuf.val);
 
               // Exits the ifOp, update the sparse tensor SSA value.
               builder.setInsertionPointAfter(ifOp);
-              assert(!reduc.empty());
-              dstBuf.updateSSA(ifOp.getResult(0));
+              dstBuf.val = ifOp.getResult(0);
             } else {
-              dstBuf.insertOrStore(builder, loc, v, dstLcvs);
+              dstBuf.insert(builder, loc, v, dstLcvs);
             }
-            if (reduc.empty())
-              builder.create<sparse_tensor::YieldOp>(loc);
-            else
-              builder.create<sparse_tensor::YieldOp>(loc, dstBuf.getSSA());
+            builder.create<sparse_tensor::YieldOp>(loc, dstBuf.val);
           });
       // Accumulates the offset. Note that only static-shaped inputs are allowed
       // by concatenate op verifier, which saves us from computing the offset
@@ -955,15 +965,11 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
       offset = rewriter.create<arith::AddIOp>(
           loc, offset, constantIndex(rewriter, loc, *sh));
 
-      if (!foreachOp.getResults().empty()) {
-        iterArg = foreachOp.getResult(0);
-        dstBuf.updateSSA(iterArg);
-      }
+      iterArg = foreachOp.getResult(0);
+      dstBuf.val = iterArg;
     }
 
-    if (!foreachOp.getResults().empty())
-      dstBuf.updateSSA(iterArg);
-
+    dstBuf.val = iterArg;
     Value ret = dstBuf.finalize(rewriter, loc, dstTp.getRankedTensorType());
     rewriter.replaceOp(op, ret);
     return success();
@@ -1010,52 +1016,40 @@ struct DirectConvertRewriter : public OpRewritePattern<ConvertOp> {
     ValueRange vs;
     TensorLike dstBuf(rewriter, loc, dstStt.getRankedTensorType(), sizes);
 
-    Value iterArg = dstBuf.getSSA();
     auto foreachOp = rewriter.create<ForeachOp>(
-        loc, src, iterArg ? ValueRange{iterArg} : ValueRange{}, foreachOrder,
+        loc, src, dstBuf.val, foreachOrder,
         [&](OpBuilder &builder, Location loc, ValueRange dcvs, Value v,
             ValueRange reduc) {
           // Enters the loop, update the SSA value for insertion chain.
-          if (!reduc.empty())
-            dstBuf.updateSSA(reduc.front());
+          dstBuf.val = reduc.front();
 
-          const Dimension dimRank = dstStt.getDimRank();
-          const Level lvlRank = dstStt.getLvlRank();
-          SmallVector<Value> lcvs(lvlRank);
-          for (Dimension d = 0; d < dimRank; d++) {
-            // FIXME: `toStoredDim` is deprecated
-            lcvs[toStoredDim(dstStt.getEncoding(), d)] = dcvs[d];
-          }
+          ValueRange lcvs = dstStt.translateCrds(
+              builder, loc, dcvs, CrdTransDirectionKind::dim2lvl);
 
           if (!skipZeroCheck) {
-            assert(!reduc.empty());
             Value cond = genIsNonzero(builder, loc, v);
             auto ifOp = builder.create<scf::IfOp>(loc, reduc.getTypes(), cond,
                                                   /*else*/ true);
             builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-            builder.create<scf::YieldOp>(loc, dstBuf.getSSA());
+            builder.create<scf::YieldOp>(loc, dstBuf.val);
 
             builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-            dstBuf.insertOrStore(builder, loc, v, lcvs);
-            builder.create<scf::YieldOp>(loc, dstBuf.getSSA());
+            dstBuf.insert(builder, loc, v, lcvs);
+            builder.create<scf::YieldOp>(loc, dstBuf.val);
 
             // Exits the ifOp, update the sparse tensor SSA value.
             builder.setInsertionPointAfter(ifOp);
-            dstBuf.updateSSA(ifOp.getResult(0));
+            dstBuf.val = ifOp.getResult(0);
           } else {
-            dstBuf.insertOrStore(builder, loc, v, lcvs);
+            dstBuf.insert(builder, loc, v, lcvs);
           }
-          if (reduc.empty())
-            builder.create<sparse_tensor::YieldOp>(loc);
-          else
-            builder.create<sparse_tensor::YieldOp>(loc, dstBuf.getSSA());
+          builder.create<sparse_tensor::YieldOp>(loc, dstBuf.val);
         });
 
     rewriter.setInsertionPointAfter(foreachOp);
 
     // Exits the for loop, links the SSA chain.
-    if (!foreachOp.getResults().empty())
-      dstBuf.updateSSA(foreachOp.getResult(0));
+    dstBuf.val = foreachOp.getResult(0);
 
     Value ret = dstBuf.finalize(rewriter, loc, dstStt.getRankedTensorType());
     rewriter.replaceOp(op, ret);
@@ -1075,7 +1069,6 @@ public:
     Value input = op.getTensor();
     SmallVector<Value> reduc = op.getInitArgs();
     const auto stt = getSparseTensorType(input);
-    const Dimension dimRank = stt.getDimRank();
     const Level lvlRank = stt.getLvlRank();
 
     // Special-case: for each over a sparse constant uses its own rewriting
@@ -1109,6 +1102,7 @@ public:
     SmallVector<Value> lcvs = loopEmitter.getLoopIVs();
     if (op.getOrder()) {
       // FIXME: There is some dim/lvl confusion here since `dimRank != lvlRank`
+      const Dimension dimRank = stt.getDimRank();
       SmallVector<Value> dcvs = lcvs; // keep a copy
       for (Dimension d = 0; d < dimRank; d++) {
         auto l = op.getOrder()->getDimPosition(d);
@@ -1126,12 +1120,9 @@ public:
     Block *srcBlock = op.getBody();
 
     // Remap coordinates.
-    SmallVector<Value> args;
-    for (Dimension d = 0; d < dimRank; d++) {
-      // FIXME: `toStoredDim` is deprecated
-      Value dimCrd = lcvs[toStoredDim(enc, d)];
-      args.push_back(dimCrd);
-    }
+    SmallVector<Value> args =
+        enc.translateCrds(rewriter, loc, lcvs, CrdTransDirectionKind::lvl2dim);
+
     // Remap value.
     args.push_back(val);
     // Remap reduction variables.
@@ -1152,7 +1143,7 @@ public:
                                  args);
     }
 
-    for (Dimension d = 0; d < dimRank; d++) {
+    for (Level l = 0; l < lvlRank; l++) {
       // Link the reduction chain. Note that loop emitter update the reducValue
       // in place.
       loopEmitter.exitCurrentLoop(rewriter, loc, reducValue);
@@ -1274,7 +1265,8 @@ void mlir::populatePostSparsificationRewriting(RewritePatternSet &patterns,
                                                bool enableRT,
                                                bool enableForeach,
                                                bool enableConvert) {
-  patterns.add<ConcatenateRewriter, ReshapeRewriter<tensor::ExpandShapeOp>,
+  patterns.add<ConcatenateRewriter, CrdTranslateRewriter,
+               ReshapeRewriter<tensor::ExpandShapeOp>,
                ReshapeRewriter<tensor::CollapseShapeOp>,
                Sparse2SparseReshapeRewriter<tensor::ExpandShapeOp>,
                Sparse2SparseReshapeRewriter<tensor::CollapseShapeOp>,
