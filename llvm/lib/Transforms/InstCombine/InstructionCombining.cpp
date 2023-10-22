@@ -984,6 +984,18 @@ Value *InstCombinerImpl::tryFactorizationFolds(BinaryOperator &I) {
               tryFactorization(I, SQ, Builder, RHSOpcode, LHS, Ident, C, D))
         return V;
 
+  // The instruction has the form "(A * B) op (C op D)".  Try to factorize
+  // common term for "(A * B) op C op D".
+  if (Op0 && Op1 && LHSOpcode == Instruction::Mul && isa<Constant>(D) &&
+      LHS->hasOneUse() && RHS->hasOneUse() && TopLevelOpcode == RHSOpcode &&
+      Instruction::isCommutative(RHSOpcode))
+    if (Value *Ident = getIdentityValue(LHSOpcode, C))
+      if (Value *V =
+              tryFactorization(I, SQ, Builder, LHSOpcode, A, B, C, Ident)) {
+        Value *New = Builder.CreateBinOp(RHSOpcode, V, D);
+        return New;
+      }
+
   return nullptr;
 }
 
@@ -997,10 +1009,32 @@ Value *InstCombinerImpl::foldUsingDistributiveLaws(BinaryOperator &I) {
   BinaryOperator *Op0 = dyn_cast<BinaryOperator>(LHS);
   BinaryOperator *Op1 = dyn_cast<BinaryOperator>(RHS);
   Instruction::BinaryOps TopLevelOpcode = I.getOpcode();
+  Value *A, *B, *C, *D;
+  Instruction::BinaryOps LHSOpcode, RHSOpcode;
 
   // Factorization.
   if (Value *R = tryFactorizationFolds(I))
     return R;
+
+  if (Op0)
+    LHSOpcode = getBinOpsForFactorization(TopLevelOpcode, Op0, A, B);
+  if (Op1)
+    RHSOpcode = getBinOpsForFactorization(TopLevelOpcode, Op1, C, D);
+
+  // The instruction has the form "(A op' B) op' (C * D)". See if expanding it
+  // out to "(C * D) op' (A op' B)" results in simplifications.
+  if (Op0 && Op1 && RHSOpcode == Instruction::Mul && A == C &&
+      LHSOpcode == TopLevelOpcode &&
+      rightDistributesOverLeft(TopLevelOpcode, RHSOpcode)) {
+    bool InnerCommutative = Instruction::isCommutative(TopLevelOpcode);
+    if (isa<Constant>(B) && isa<Constant>(D) && InnerCommutative) {
+      // They do! Return "RHS op' LHS".
+      ++NumExpand;
+      Value *New = Builder.CreateBinOp(TopLevelOpcode, RHS, LHS);
+      New->takeName(&I);
+      return New;
+    }
+  }
 
   // Expansion.
   if (Op0 && rightDistributesOverLeft(Op0->getOpcode(), TopLevelOpcode)) {

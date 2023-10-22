@@ -1060,10 +1060,9 @@ define i32 @test_chr_10(ptr %i, ptr %j) !prof !14 {
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[TMP8:%.*]] = phi i32 [ [[TMP3]], [[BB0]] ], [ [[TMP5]], [[BB2_NONCHR]] ], [ [[TMP5]], [[BB1_NONCHR]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i32 [[TMP8]], 42
-; CHECK-NEXT:    [[TMP10:%.*]] = add i32 [[TMP8]], -99
-; CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[TMP9]], [[TMP10]]
-; CHECK-NEXT:    ret i32 [[TMP11]]
+; CHECK-NEXT:    [[TMP9:%.*]] = mul i32 [[TMP8]], 43
+; CHECK-NEXT:    [[TMP10:%.*]] = add i32 [[TMP9]], -99
+; CHECK-NEXT:    ret i32 [[TMP10]]
 ;
 entry:
   %0 = load i32, ptr %i
