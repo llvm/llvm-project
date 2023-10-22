@@ -22,4 +22,4 @@
 # RUN: echo '%{_foo_bar_}'
 # CHECK:# | ok at [[#@LINE - 2]]
 
-# CHECK: Passed: 1
+# CHECK: Passed: 1 {{\([0-9]*.[0-9]*%\)}}
