@@ -3543,7 +3543,10 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State,
 
   // Forget the original basic block.
   PSE.getSE()->forgetLoop(OrigLoop);
-  PSE.getSE()->forgetBlockAndLoopDispositions();
+  // Now the scalar loop doesn't dominate any of the loop exits.
+  for (auto *Block : OrigLoop->getBlocks())
+    for (auto &Inst : *Block)
+      PSE.getSE()->forgetValue(&Inst);
 
   // After vectorization, the exit blocks of the original loop will have
   // additional predecessors. Invalidate SCEVs for the exit phis in case SE
