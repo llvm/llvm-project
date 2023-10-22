@@ -24,29 +24,24 @@ namespace clang::ento::tagged_union_modeling {
 // The implementation of all these functions can be found in the file
 // StdVariantChecker.cpp under the same directory as this file.
 
-// Returns the CallEvent representing the caller of the function
-// It is needed because the CallEvent class does not contain enough information
-// to tell who called it. Checker context is needed.
-CallEventRef<> getCaller(const CallEvent &Call, CheckerContext &C);
 bool isCopyConstructorCall(const CallEvent &Call);
 bool isCopyAssignmentCall(const CallEvent &Call);
 bool isMoveAssignmentCall(const CallEvent &Call);
 bool isMoveConstructorCall(const CallEvent &Call);
 bool isStdType(const Type *Type, const std::string &TypeName);
 bool isStdVariant(const Type *Type);
-bool calledFromSystemHeader(const CallEvent &Call, CheckerContext &C);
 
 // When invalidating regions, we also have to follow that by invalidating the
 // corresponding custom data in the program state.
 template <class TypeMap>
 ProgramStateRef
-removeInformationStoredForDeadInstances(const CallEvent *Call,
+removeInformationStoredForDeadInstances(const CallEvent &Call,
                                         ProgramStateRef State,
                                         ArrayRef<const MemRegion *> Regions) {
   // If we do not know anything about the call we shall not continue.
   // If the call is happens within a system header it is implementation detail.
   // We should not take it into consideration.
-  if (!Call || Call->isInSystemHeader())
+  if (Call.isInSystemHeader())
     return State;
 
   for (const MemRegion *Region : Regions)

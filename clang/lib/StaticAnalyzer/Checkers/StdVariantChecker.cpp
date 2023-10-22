@@ -29,22 +29,7 @@ using namespace tagged_union_modeling;
 
 REGISTER_MAP_WITH_PROGRAMSTATE(VariantHeldTypeMap, const MemRegion *, QualType)
 
-namespace clang {
-namespace ento {
-namespace tagged_union_modeling {
-
-CallEventRef<> getCaller(const CallEvent &Call, const ProgramStateRef &State) {
-  const auto *CallLocationContext = Call.getLocationContext();
-  if (!CallLocationContext || CallLocationContext->inTopFrame())
-    return nullptr;
-
-  const auto *CallStackFrameContext = CallLocationContext->getStackFrame();
-  if (!CallStackFrameContext)
-    return nullptr;
-
-  CallEventManager &CEMgr = State->getStateManager().getCallEventManager();
-  return CEMgr.getCaller(CallStackFrameContext, State);
-}
+namespace clang::ento::tagged_union_modeling {
 
 const CXXConstructorDecl *
 getConstructorDeclarationForCall(const CallEvent &Call) {
@@ -102,21 +87,7 @@ bool isStdVariant(const Type *Type) {
   return isStdType(Type, llvm::StringLiteral("variant"));
 }
 
-bool calledFromSystemHeader(const CallEvent &Call,
-                            const ProgramStateRef &State) {
-  if (CallEventRef<> Caller = getCaller(Call, State))
-    return Caller->isInSystemHeader();
-
-  return false;
-}
-
-bool calledFromSystemHeader(const CallEvent &Call, CheckerContext &C) {
-  return calledFromSystemHeader(Call, C.getState());
-}
-
-} // end of namespace tagged_union_modeling
-} // end of namespace ento
-} // end of namespace clang
+} // end of namespace clang::ento::tagged_union_modeling
 
 static std::optional<ArrayRef<TemplateArgument>>
 getTemplateArgsFromVariant(const Type *VariantType) {
@@ -171,14 +142,17 @@ public:
                                      ArrayRef<const MemRegion *> Regions,
                                      const LocationContext *,
                                      const CallEvent *Call) const {
+    if (!Call)
+      return State;
+
     return removeInformationStoredForDeadInstances<VariantHeldTypeMap>(
-        Call, State, Regions);
+        *Call, State, Regions);
   }
 
   bool evalCall(const CallEvent &Call, CheckerContext &C) const {
     // Check if the call was not made from a system header. If it was then
     // we do an early return because it is part of the implementation.
-    if (calledFromSystemHeader(Call, C))
+    if (Call.calledFromSystemHeader())
       return false;
 
     if (StdGet.matches(Call))

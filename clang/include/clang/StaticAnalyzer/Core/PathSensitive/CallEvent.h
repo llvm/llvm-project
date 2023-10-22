@@ -455,6 +455,14 @@ public:
   /// If the call returns a C++ record type then the region of its return value
   /// can be retrieved from its construction context.
   std::optional<SVal> getReturnValueUnderConstruction() const;
+  
+  // Returns the CallEvent representing the caller of this function
+  const CallEventRef<> getCaller() const;
+
+  // Returns true if the function was called from a standard library function.
+  // If not or could not get the caller (it may be a top level function)
+  // returns false.
+  bool calledFromSystemHeader() const;
 
   // Iterator access to formal parameters and their types.
 private:
