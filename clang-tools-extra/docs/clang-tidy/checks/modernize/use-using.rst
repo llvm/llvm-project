@@ -31,9 +31,7 @@ After:
 The checker ignores `typedef` within `extern "C" { ... }` blocks.
 
 .. code-block:: c++
-
   extern "C" {
-
     typedef int InExternC; // Left intact.
   }
 

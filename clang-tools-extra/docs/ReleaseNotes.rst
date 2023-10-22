@@ -283,10 +283,7 @@ Changes in existing checks
 
 - Improved :doc:`modernize-use-using
   <clang-tidy/checks/modernize/use-using>` check to fix function pointer and
-  forward declared ``typedef`` correctly.
-
-- Improved :doc:`modernize-use-using
-  <clang-tidy/checks/modernize/use-using>` by ignoring ``typedef`` declaration in
+  forward declared ``typedef`` correctly. Ignore ``typedef`` declaration in
   ``extern "C"`` scope.
 
 - Improved :doc:`performance-faster-string-find
@@ -327,7 +324,6 @@ Changes in existing checks
 - Improved :doc:`readability-static-accessed-through-instance
   <clang-tidy/checks/readability/static-accessed-through-instance>` check to
   identify calls to static member functions with out-of-class inline definitions.
-
 
 
 Removed checks
