@@ -15,6 +15,7 @@ class SOP_Pseudo<string opName, dag outs, dag ins, string asmOps,
 
   let isPseudo = 1;
   let isCodeGenOnly = 1;
+  let Size = 4;
 
   string Mnemonic = opName;
   string AsmOperands = asmOps;
@@ -36,7 +37,6 @@ class SOP1_Pseudo <string opName, dag outs, dag ins,
   let SALU = 1;
   let SOP1 = 1;
   let SchedRW = [WriteSALU];
-  let Size = 4;
   let UseNamedOperandTable = 1;
 
   bits<1> has_src0 = 1;
@@ -455,7 +455,6 @@ class SOP2_Pseudo<string opName, dag outs, dag ins,
   // let sdst = xxx in {
   // for multiclasses that include both real and pseudo instructions.
   // field bits<7> sdst = 0;
-  // let Size = 4; // Do we need size here?
 }
 
 class SOP2_Real<SOP_Pseudo ps, string real_name = ps.Mnemonic> :
