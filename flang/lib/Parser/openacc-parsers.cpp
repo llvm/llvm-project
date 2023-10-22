@@ -150,11 +150,12 @@ TYPE_PARSER(sourced(construct<AccLoopDirective>(
 TYPE_PARSER(construct<AccBeginLoopDirective>(
     sourced(Parser<AccLoopDirective>{}), Parser<AccClauseList>{}))
 
-TYPE_PARSER(construct<AccEndLoop>(startAccLine >> "END LOOP"_tok))
+TYPE_PARSER(construct<AccEndLoop>("END LOOP"_tok))
 
 TYPE_PARSER(construct<OpenACCLoopConstruct>(
     sourced(Parser<AccBeginLoopDirective>{} / endAccLine),
-    maybe(Parser<DoConstruct>{}), maybe(Parser<AccEndLoop>{} / endAccLine)))
+    maybe(Parser<DoConstruct>{}),
+    maybe(startAccLine >> Parser<AccEndLoop>{} / endAccLine)))
 
 // 2.15.1 Routine directive
 TYPE_PARSER(sourced(construct<OpenACCRoutineConstruct>(verbatim("ROUTINE"_tok),
@@ -227,22 +228,29 @@ TYPE_PARSER(construct<OpenACCStandaloneConstruct>(
 TYPE_PARSER(construct<OpenACCStandaloneDeclarativeConstruct>(
     sourced(Parser<AccDeclarativeDirective>{}), Parser<AccClauseList>{}))
 
-TYPE_PARSER(
-    startAccLine >> first(sourced(construct<OpenACCDeclarativeConstruct>(
-                              Parser<OpenACCStandaloneDeclarativeConstruct>{})),
-                        sourced(construct<OpenACCDeclarativeConstruct>(
-                            Parser<OpenACCRoutineConstruct>{}))))
+TYPE_PARSER(startAccLine >>
+    withMessage("expected OpenACC directive"_err_en_US,
+        first(sourced(construct<OpenACCDeclarativeConstruct>(
+                  Parser<OpenACCStandaloneDeclarativeConstruct>{})),
+            sourced(construct<OpenACCDeclarativeConstruct>(
+                Parser<OpenACCRoutineConstruct>{})))))
+
+TYPE_PARSER(sourced(construct<OpenACCEndConstruct>(
+    "END"_tok >> "LOOP"_tok >> pure(llvm::acc::Directive::ACCD_loop))))
 
 // OpenACC constructs
 TYPE_CONTEXT_PARSER("OpenACC construct"_en_US,
     startAccLine >>
-        first(construct<OpenACCConstruct>(Parser<OpenACCBlockConstruct>{}),
-            construct<OpenACCConstruct>(Parser<OpenACCCombinedConstruct>{}),
-            construct<OpenACCConstruct>(Parser<OpenACCLoopConstruct>{}),
-            construct<OpenACCConstruct>(Parser<OpenACCStandaloneConstruct>{}),
-            construct<OpenACCConstruct>(Parser<OpenACCCacheConstruct>{}),
-            construct<OpenACCConstruct>(Parser<OpenACCWaitConstruct>{}),
-            construct<OpenACCConstruct>(Parser<OpenACCAtomicConstruct>{})))
+        withMessage("expected OpenACC directive"_err_en_US,
+            first(construct<OpenACCConstruct>(Parser<OpenACCBlockConstruct>{}),
+                construct<OpenACCConstruct>(Parser<OpenACCCombinedConstruct>{}),
+                construct<OpenACCConstruct>(Parser<OpenACCLoopConstruct>{}),
+                construct<OpenACCConstruct>(
+                    Parser<OpenACCStandaloneConstruct>{}),
+                construct<OpenACCConstruct>(Parser<OpenACCCacheConstruct>{}),
+                construct<OpenACCConstruct>(Parser<OpenACCWaitConstruct>{}),
+                construct<OpenACCConstruct>(Parser<OpenACCAtomicConstruct>{}),
+                construct<OpenACCConstruct>(Parser<OpenACCEndConstruct>{}))))
 
 TYPE_PARSER(startAccLine >>
     sourced(construct<AccEndCombinedDirective>(sourced("END"_tok >>

@@ -147,6 +147,49 @@ Operation *TosaDialect::materializeConstant(OpBuilder &builder, Attribute value,
 }
 
 //===----------------------------------------------------------------------===//
+// Parsers and printers
+//===----------------------------------------------------------------------===//
+
+ParseResult mlir::tosa::parseTypeOrAttr(OpAsmParser &parser, TypeAttr &typeAttr,
+                                        Attribute &attr) {
+  if (succeeded(parser.parseOptionalEqual())) {
+    if (failed(parser.parseAttribute(attr))) {
+      return parser.emitError(parser.getCurrentLocation())
+             << "expected attribute";
+    }
+    if (auto typedAttr = attr.dyn_cast<TypedAttr>()) {
+      typeAttr = TypeAttr::get(typedAttr.getType());
+    }
+    return success();
+  }
+
+  Type type;
+  if (failed(parser.parseColonType(type))) {
+    return parser.emitError(parser.getCurrentLocation()) << "expected type";
+  }
+  typeAttr = TypeAttr::get(type);
+
+  return success();
+}
+
+void mlir::tosa::printTypeOrAttr(OpAsmPrinter &p, Operation *op, TypeAttr type,
+                                 Attribute attr) {
+  bool needsSpace = false;
+  auto typedAttr = attr.dyn_cast_or_null<TypedAttr>();
+  if (!typedAttr || typedAttr.getType() != type.getValue()) {
+    p << ": ";
+    p.printAttribute(type);
+    needsSpace = true; // subsequent attr value needs a space separator
+  }
+  if (attr) {
+    if (needsSpace)
+      p << ' ';
+    p << "= ";
+    p.printAttribute(attr);
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // TOSA Operator Verifiers.
 //===----------------------------------------------------------------------===//
 
@@ -211,6 +254,21 @@ template <typename T> static LogicalResult verifyConvOp(T op) {
   return success();
 }
 
+LogicalResult tosa::ArgMaxOp::verify() {
+  // Ensure output is of 32-bit integer
+  const auto resultETy = llvm::cast<ShapedType>(getType()).getElementType();
+  if (!resultETy.isIntOrIndex())
+    return emitOpError("result tensor is not of integer type");
+
+  // Ensure axis is within the tensor rank
+  const auto inputType = llvm::cast<ShapedType>(getInput().getType());
+  const int64_t axis = getAxisAttr().getInt();
+  if (inputType.hasRank() && ((axis < 0) || axis >= inputType.getRank()))
+    return emitOpError("specified axis is outside the rank of the tensor");
+
+  return success();
+}
+
 LogicalResult tosa::AvgPool2dOp::verify() {
   auto inputType = llvm::cast<ShapedType>(getInput().getType());
   if (hasZeroDimension(inputType))
@@ -232,21 +290,57 @@ LogicalResult tosa::AvgPool2dOp::verify() {
   if (llvm::isa<IntegerType>(inputETy) && !accType.isInteger(32))
     return emitOpError("accumulator type for integer tensor is not i32");
 
-  if ((inputETy.isBF16() || inputETy.isF16()) &&
-      !(accType.isF16() || accType.isF32()))
-    return emitOpError("accumulator type for f16/bf16 tensor is not f16/f32");
+  if (inputETy.isF16() && !(accType.isF16() || accType.isF32()))
+    return emitOpError("accumulator type for f16 tensor is not f16/f32");
+
+  if (inputETy.isBF16() && !accType.isF32())
+    return emitOpError("accumulator type for bf16 tensor is not f32");
 
   if (inputETy.isF32() && !accType.isF32())
     return emitOpError("accumulator type for f32 tensor is not f32");
 
-  if (inputETy.isF32() && resultETy.isF32())
-    return success();
-  if (inputETy.isInteger(8) && resultETy.isInteger(8))
-    return success();
-  if (inputETy.isInteger(16) && resultETy.isInteger(16))
+  if ((inputETy.isF32() && resultETy.isF32()) ||
+      (inputETy.isF16() && resultETy.isF16()) ||
+      (inputETy.isBF16() && resultETy.isBF16()) ||
+      (inputETy.isInteger(8) && resultETy.isInteger(8)) ||
+      (inputETy.isInteger(16) && resultETy.isInteger(16)))
     return success();
 
   return emitOpError("input/output element types are incompatible.");
+}
+
+LogicalResult tosa::ClampOp::verify() {
+  mlir::Type inputETy =
+      llvm::cast<ShapedType>(getInput().getType()).getElementType();
+  if (auto quantType =
+          llvm::dyn_cast<mlir::quant::UniformQuantizedType>(inputETy)) {
+    inputETy = quantType.getStorageType();
+  }
+  mlir::Type maxFpType = getMaxFpAttr().getType();
+  mlir::Type minFpType = getMinFpAttr().getType();
+  mlir::Type outputETy =
+      llvm::cast<ShapedType>(getOutput().getType()).getElementType();
+  if (auto quantType =
+          llvm::dyn_cast<mlir::quant::UniformQuantizedType>(outputETy)) {
+    outputETy = quantType.getStorageType();
+  }
+  unsigned dataTypeBitWidth = inputETy.getIntOrFloatBitWidth();
+
+  if (inputETy != outputETy)
+    return emitOpError("input/output element types are incompatible.");
+
+  // if input datatype is float, check that the two min/max_fp attributes share
+  // the same type and that their type is either the same of the input's
+  // datatype, or a float type whose bitwidth > input datatype bitwidth
+  if (!inputETy.isInteger(dataTypeBitWidth)) {
+    if (((maxFpType != minFpType) ||
+         (maxFpType != inputETy && maxFpType.getIntOrFloatBitWidth() <=
+                                       inputETy.getIntOrFloatBitWidth())))
+      return emitOpError("min/max attributes types are incompatible with "
+                         "input/output element types.");
+  }
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1015,7 +1109,7 @@ LogicalResult tosa::ScatterOp::inferReturnTypeComponents(
 static LogicalResult ReduceInferReturnTypes(
     ShapeAdaptor operandShape, Type inputType, IntegerAttr axis,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
-  if (!operandShape.hasRank()) {
+  if (!operandShape.hasRank() || operandShape.getRank() == 0) {
     inferredReturnShapes.push_back(ShapedTypeComponents(inputType));
     return success();
   }

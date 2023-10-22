@@ -98,7 +98,7 @@ public:
   StorageLocation &createStorageLocation(QualType Type);
 
   /// Returns a stable storage location for `D`.
-  StorageLocation &getStableStorageLocation(const VarDecl &D);
+  StorageLocation &getStableStorageLocation(const ValueDecl &D);
 
   /// Returns a stable storage location for `E`.
   StorageLocation &getStableStorageLocation(const Expr &E);

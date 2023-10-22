@@ -1064,5 +1064,44 @@ namespace ParenInit {
   };
 
   constexpr B b(A(1),2);
+
+
+  struct O {
+    int &&j;
+  };
+
+  /// Not constexpr!
+  O o1(0);
+  constinit O o2(0); // ref-error {{variable does not have a constant initializer}} \
+                     // ref-note {{required by 'constinit' specifier}} \
+                     // ref-note {{reference to temporary is not a constant expression}} \
+                     // ref-note {{temporary created here}} \
+                     // expected-error {{variable does not have a constant initializer}} \
+                     // expected-note {{required by 'constinit' specifier}} \
+                     // expected-note {{reference to temporary is not a constant expression}} \
+                     // expected-note {{temporary created here}}
 }
 #endif
+
+namespace DelegatingConstructors {
+  struct S {
+    int a;
+    constexpr S() : S(10) {}
+    constexpr S(int a) : a(a) {}
+  };
+  constexpr S s = {};
+  static_assert(s.a == 10, "");
+
+  struct B {
+    int a;
+    int b;
+
+    constexpr B(int a) : a(a), b(a + 2) {}
+  };
+  struct A : B {
+    constexpr A() : B(10) {};
+  };
+  constexpr A d4 = {};
+  static_assert(d4.a == 10, "");
+  static_assert(d4.b == 12, "");
+}

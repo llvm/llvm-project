@@ -1388,9 +1388,15 @@ static Value getCollapsedOpOperand(Location loc, GenericOp genericOp,
     return operand;
 
   // Insert a reshape to collapse the dimensions.
-  auto reshapeOp = builder.create<tensor::CollapseShapeOp>(
-      loc, operand, operandReassociation);
-  return reshapeOp.getResult();
+  if (isa<MemRefType>(operand.getType())) {
+    return builder
+        .create<memref::CollapseShapeOp>(loc, operand, operandReassociation)
+        .getResult();
+  } else {
+    return builder
+        .create<tensor::CollapseShapeOp>(loc, operand, operandReassociation)
+        .getResult();
+  }
 }
 
 /// Modify the `linalg.index` operations in the original generic op, to its
@@ -1443,6 +1449,19 @@ FailureOr<SmallVector<Value>> mlir::linalg::collapseGenericOpIterationDims(
         return foldedDims.size() <= 1;
       }))
     return failure();
+
+  bool hasBufferSemantics = genericOp.hasBufferSemantics();
+  if (hasBufferSemantics &&
+      !llvm::all_of(genericOp->getOperands(), [&](Value operand) -> bool {
+        MemRefType memRefToCollapse = dyn_cast<MemRefType>(operand.getType());
+        if (!memRefToCollapse)
+          return true;
+
+        return memref::CollapseShapeOp::isGuaranteedCollapsible(
+            memRefToCollapse, foldedIterationDims);
+      }))
+    return rewriter.notifyMatchFailure(genericOp,
+                                       "memref is not guaranteed collapsible");
 
   CollapsingInfo collapsingInfo;
   if (failed(collapsingInfo.initialize(genericOp.getNumLoops(),
@@ -1499,7 +1518,10 @@ FailureOr<SmallVector<Value>> mlir::linalg::collapseGenericOpIterationDims(
     Value newOutput = getCollapsedOpOperand(loc, genericOp, &output,
                                             collapsingInfo, rewriter);
     outputOperands.push_back(newOutput);
-    resultTypes.push_back(newOutput.getType());
+    // If the op has "buffer semantics", then the init operands are ranked
+    // memrefs and the op has no results.
+    if (!hasBufferSemantics)
+      resultTypes.push_back(newOutput.getType());
   }
 
   // Create the generic op.
@@ -1538,9 +1560,15 @@ FailureOr<SmallVector<Value>> mlir::linalg::collapseGenericOpIterationDims(
           genericOp.getIndexingMapMatchingResult(originalResult.value());
       SmallVector<ReassociationIndices> reassociation =
           getOperandReassociation(indexingMap, collapsingInfo);
-      Value result = rewriter.create<tensor::ExpandShapeOp>(
-          loc, originalResultType, collapsedOpResult, reassociation);
-      results.push_back(result);
+      if (isa<MemRefType>(collapsedOpResult.getType())) {
+        Value result = rewriter.create<memref::ExpandShapeOp>(
+            loc, originalResultType, collapsedOpResult, reassociation);
+        results.push_back(result);
+      } else {
+        Value result = rewriter.create<tensor::ExpandShapeOp>(
+            loc, originalResultType, collapsedOpResult, reassociation);
+        results.push_back(result);
+      }
     } else {
       results.push_back(collapsedOpResult);
     }

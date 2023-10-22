@@ -117,8 +117,7 @@ define void @inner_add_rec_decreasing(i32 noundef %len) {
 ; CHECK-NEXT:    [[CMP2_NOT:%.*]] = icmp eq i32 [[K_0]], 0
 ; CHECK-NEXT:    br i1 [[CMP2_NOT]], label [[OUTER_LATCH]], label [[INNER_LATCH]]
 ; CHECK:       inner.latch:
-; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ult i32 [[K_0]], [[LEN]]
-; CHECK-NEXT:    call void @use(i1 [[CMP_NOT_I]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[K_DEC]] = add i32 [[K_0]], -1
 ; CHECK-NEXT:    br label [[INNER_HEADER]]
 ; CHECK:       outer.latch:

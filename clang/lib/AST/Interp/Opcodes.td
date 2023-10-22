@@ -72,6 +72,11 @@ def IntegerTypeClass : TypeClass {
                Uint32, Sint64, Uint64, IntAP, IntAPS];
 }
 
+def FixedSizeIntegralTypeClass : TypeClass {
+  let Types = [Sint8, Uint8, Sint16, Uint16, Sint32,
+               Uint32, Sint64, Uint64, Bool];
+}
+
 def NumberTypeClass : TypeClass {
   let Types = !listconcat(IntegerTypeClass.Types, [Float]);
 }
@@ -243,8 +248,16 @@ def ConstBool : ConstOpcode<Bool, ArgBool>;
 
 // [] -> [Integer]
 def Zero : Opcode {
-  let Types = [AluTypeClass];
+  let Types = [FixedSizeIntegralTypeClass];
   let HasGroup = 1;
+}
+
+def ZeroIntAP : Opcode {
+  let Args = [ArgUint32];
+}
+
+def ZeroIntAPS : Opcode {
+  let Args = [ArgUint32];
 }
 
 // [] -> [Pointer]
@@ -564,7 +577,7 @@ def FromCastTypeClass : TypeClass {
 }
 
 def ToCastTypeClass : TypeClass {
-  let Types = [Uint8, Sint8, Uint16, Sint16, Uint32, Sint32, Uint64, Sint64, Bool, IntAP, IntAPS];
+  let Types = [Uint8, Sint8, Uint16, Sint16, Uint32, Sint32, Uint64, Sint64, Bool];
 }
 
 def Cast: Opcode {
@@ -577,6 +590,22 @@ def CastFP : Opcode {
   let Args = [ArgFltSemantics, ArgRoundingMode];
 }
 
+def FixedSizeIntegralTypes : TypeClass {
+  let Types = [Uint8, Sint8, Uint16, Sint16, Uint32, Sint32, Uint64, Sint64, Bool];
+}
+
+def CastAP : Opcode {
+  let Types = [AluTypeClass];
+  let Args = [ArgUint32];
+  let HasGroup = 1;
+}
+
+def CastAPS : Opcode {
+  let Types = [AluTypeClass];
+  let Args = [ArgUint32];
+  let HasGroup = 1;
+}
+
 // Cast an integer to a floating type
 def CastIntegralFloating : Opcode {
   let Types = [AluTypeClass];
@@ -586,9 +615,19 @@ def CastIntegralFloating : Opcode {
 
 // Cast a floating to an integer type
 def CastFloatingIntegral : Opcode {
-  let Types = [AluTypeClass];
+  let Types = [FixedSizeIntegralTypes];
   let Args = [];
   let HasGroup = 1;
+}
+
+def CastFloatingIntegralAP : Opcode {
+  let Types = [];
+  let Args = [ArgUint32];
+}
+
+def CastFloatingIntegralAPS : Opcode {
+  let Types = [];
+  let Args = [ArgUint32];
 }
 
 def CastPointerIntegral : Opcode {

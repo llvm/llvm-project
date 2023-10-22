@@ -219,7 +219,7 @@ bool EarliestEscapeInfo::isNotCapturedBeforeOrAt(const Value *Object,
     return true;
 
   return I != Iter.first->second &&
-         !isPotentiallyReachable(Iter.first->second, I, nullptr, &DT, &LI);
+         !isPotentiallyReachable(Iter.first->second, I, nullptr, &DT, LI);
 }
 
 void EarliestEscapeInfo::removeInstruction(Instruction *I) {
@@ -662,6 +662,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
         if (Decomposed.VarIndices[i].Val.V == LE.Val.V &&
             Decomposed.VarIndices[i].Val.hasSameCastsAs(LE.Val)) {
           Scale += Decomposed.VarIndices[i].Scale;
+          LE.IsNSW = false; // We cannot guarantee nsw for the merge.
           Decomposed.VarIndices.erase(Decomposed.VarIndices.begin() + i);
           break;
         }

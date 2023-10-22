@@ -104,11 +104,11 @@ set(MLIR_TEST_DEPENDS
   mlir-pdll-lsp-server
   mlir-opt
   mlir-pdll
+  mlir-query
   mlir-reduce
   mlir-tblgen
   mlir-translate
   tblgen-lsp-server
-  tblgen-to-irdl
   )
 
 # The native target may not be enabled, in this case we won't

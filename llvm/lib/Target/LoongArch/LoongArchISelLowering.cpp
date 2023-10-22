@@ -154,6 +154,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setLibcallName(RTLIB::MUL_I128, nullptr);
   }
 
+  setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Custom);
+
   static const ISD::CondCode FPCCToExpand[] = {
       ISD::SETOGT, ISD::SETOGE, ISD::SETUGT, ISD::SETUGE,
       ISD::SETGE,  ISD::SETNE,  ISD::SETGT};
@@ -269,6 +271,8 @@ bool LoongArchTargetLowering::isOffsetFoldingLegal(
 SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
                                                 SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
+  case ISD::ATOMIC_FENCE:
+    return lowerATOMIC_FENCE(Op, DAG);
   case ISD::EH_DWARF_CFA:
     return lowerEH_DWARF_CFA(Op, DAG);
   case ISD::GlobalAddress:
@@ -311,6 +315,22 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerWRITE_REGISTER(Op, DAG);
   }
   return SDValue();
+}
+
+SDValue LoongArchTargetLowering::lowerATOMIC_FENCE(SDValue Op,
+                                                   SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SyncScope::ID FenceSSID =
+      static_cast<SyncScope::ID>(Op.getConstantOperandVal(2));
+
+  // singlethread fences only synchronize with signal handlers on the same
+  // thread and thus only need to preserve instruction order, not actually
+  // enforce memory ordering.
+  if (FenceSSID == SyncScope::SingleThread)
+    // MEMBARRIER is a compiler barrier; it codegens to a no-op.
+    return DAG.getNode(ISD::MEMBARRIER, DL, MVT::Other, Op.getOperand(0));
+
+  return Op;
 }
 
 SDValue LoongArchTargetLowering::lowerWRITE_REGISTER(SDValue Op,
@@ -4164,8 +4184,9 @@ LoongArchTargetLowering::shouldExpandAtomicCmpXchgInIR(
 Value *LoongArchTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
     IRBuilderBase &Builder, AtomicCmpXchgInst *CI, Value *AlignedAddr,
     Value *CmpVal, Value *NewVal, Value *Mask, AtomicOrdering Ord) const {
-  Value *Ordering =
-      Builder.getIntN(Subtarget.getGRLen(), static_cast<uint64_t>(Ord));
+  AtomicOrdering FailOrd = CI->getFailureOrdering();
+  Value *FailureOrdering =
+      Builder.getIntN(Subtarget.getGRLen(), static_cast<uint64_t>(FailOrd));
 
   // TODO: Support cmpxchg on LA32.
   Intrinsic::ID CmpXchgIntrID = Intrinsic::loongarch_masked_cmpxchg_i64;
@@ -4176,7 +4197,7 @@ Value *LoongArchTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
   Function *MaskedCmpXchg =
       Intrinsic::getDeclaration(CI->getModule(), CmpXchgIntrID, Tys);
   Value *Result = Builder.CreateCall(
-      MaskedCmpXchg, {AlignedAddr, CmpVal, NewVal, Mask, Ordering});
+      MaskedCmpXchg, {AlignedAddr, CmpVal, NewVal, Mask, FailureOrdering});
   Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
   return Result;
 }

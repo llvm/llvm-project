@@ -88,10 +88,10 @@ define void @vld4(ptr nocapture readonly %pSrc, ptr noalias nocapture %pDst, i32
 ; CHECK-NEXT:  .LBB2_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld4 { v0.4s, v1.4s, v2.4s, v3.4s }, [x0], #64
-; CHECK-NEXT:    fmul v4.4s, v0.4s, v0.4s
 ; CHECK-NEXT:    add x9, x1, x8
 ; CHECK-NEXT:    add x8, x8, #32
 ; CHECK-NEXT:    cmp x8, #2, lsl #12 // =8192
+; CHECK-NEXT:    fmul v4.4s, v0.4s, v0.4s
 ; CHECK-NEXT:    fmla v4.4s, v1.4s, v1.4s
 ; CHECK-NEXT:    fmul v5.4s, v2.4s, v2.4s
 ; CHECK-NEXT:    fmla v5.4s, v3.4s, v3.4s
@@ -257,10 +257,10 @@ define void @vld4_multiuse(ptr nocapture readonly %pSrc, ptr noalias nocapture %
 ; CHECK-NEXT:  .LBB6_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld4 { v0.4s, v1.4s, v2.4s, v3.4s }, [x0], #64
-; CHECK-NEXT:    fmul v4.4s, v0.4s, v0.4s
 ; CHECK-NEXT:    add x9, x1, x8
 ; CHECK-NEXT:    add x8, x8, #32
 ; CHECK-NEXT:    cmp x8, #2, lsl #12 // =8192
+; CHECK-NEXT:    fmul v4.4s, v0.4s, v0.4s
 ; CHECK-NEXT:    fmla v4.4s, v1.4s, v1.4s
 ; CHECK-NEXT:    fmul v5.4s, v2.4s, v2.4s
 ; CHECK-NEXT:    fmla v5.4s, v3.4s, v3.4s

@@ -62,11 +62,11 @@ fir::ExtendedValue Fortran::lower::convertProcedureDesignator(
       std::tie(funcPtr, funcPtrResultLength) =
           fir::factory::extractCharacterProcedureTuple(builder, loc, funcPtr);
   } else {
-    std::string name = converter.mangleName(*symbol);
     mlir::func::FuncOp func =
-        Fortran::lower::getOrDeclareFunction(name, proc, converter);
-    funcPtr = builder.create<fir::AddrOfOp>(loc, func.getFunctionType(),
-                                            builder.getSymbolRefAttr(name));
+        Fortran::lower::getOrDeclareFunction(proc, converter);
+    mlir::SymbolRefAttr nameAttr = builder.getSymbolRefAttr(func.getSymName());
+    funcPtr =
+        builder.create<fir::AddrOfOp>(loc, func.getFunctionType(), nameAttr);
   }
   if (Fortran::lower::mustPassLengthWithDummyProcedure(proc, converter)) {
     // The result length, if available here, must be propagated along the

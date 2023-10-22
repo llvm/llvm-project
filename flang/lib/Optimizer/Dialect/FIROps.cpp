@@ -1933,6 +1933,12 @@ mlir::Value fir::IterWhileOp::blockArgToSourceOp(unsigned blockArgNum) {
   return {};
 }
 
+mlir::ValueRange fir::IterWhileOp::getYieldedValues() {
+  auto *term = getRegion().front().getTerminator();
+  return getFinalValue() ? term->getOperands().drop_front()
+                         : term->getOperands();
+}
+
 //===----------------------------------------------------------------------===//
 // LenParamIndexOp
 //===----------------------------------------------------------------------===//
@@ -1977,8 +1983,18 @@ void fir::LoadOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
     mlir::emitError(result.location, "not a memory reference type");
     return;
   }
+  build(builder, result, eleTy, refVal);
+}
+
+void fir::LoadOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
+                        mlir::Type resTy, mlir::Value refVal) {
+
+  if (!refVal) {
+    mlir::emitError(result.location, "LoadOp has null argument");
+    return;
+  }
   result.addOperands(refVal);
-  result.addTypes(eleTy);
+  result.addTypes(resTy);
 }
 
 mlir::ParseResult fir::LoadOp::getElementOf(mlir::Type &ele, mlir::Type ref) {
@@ -2226,6 +2242,12 @@ mlir::Value fir::DoLoopOp::blockArgToSourceOp(unsigned blockArgNum) {
   if (blockArgNum > 0 && blockArgNum <= getInitArgs().size())
     return getInitArgs()[blockArgNum - 1];
   return {};
+}
+
+mlir::ValueRange fir::DoLoopOp::getYieldedValues() {
+  auto *term = getRegion().front().getTerminator();
+  return getFinalValue() ? term->getOperands().drop_front()
+                         : term->getOperands();
 }
 
 //===----------------------------------------------------------------------===//
@@ -3247,6 +3269,11 @@ mlir::LogicalResult fir::StoreOp::verify() {
   if (fir::isa_unknown_size_box(getValue().getType()))
     return emitOpError("cannot store !fir.box of unknown rank or type");
   return mlir::success();
+}
+
+void fir::StoreOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
+                         mlir::Value value, mlir::Value memref) {
+  build(builder, result, value, memref, {});
 }
 
 //===----------------------------------------------------------------------===//

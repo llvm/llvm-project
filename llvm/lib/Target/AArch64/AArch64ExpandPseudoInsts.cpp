@@ -171,6 +171,7 @@ bool AArch64ExpandPseudo::expandMOVImm(MachineBasicBlock &MBB,
       }
       break;
     case AArch64::ANDXri:
+    case AArch64::EORXri:
       if (I->Op1 == 0) {
         MIBS.push_back(BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(I->Opcode))
                            .add(MI.getOperand(0))

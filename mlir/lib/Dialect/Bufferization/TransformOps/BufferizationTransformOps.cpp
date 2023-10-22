@@ -117,17 +117,10 @@ void transform::EliminateEmptyTensorsOp::getEffects(
 DiagnosedSilenceableFailure transform::EliminateEmptyTensorsOp::apply(
     transform::TransformRewriter &rewriter, TransformResults &transformResults,
     TransformState &state) {
-  OneShotBufferizationOptions options;
-  options.allowReturnAllocsFromLoops = true;
-
   for (Operation *target : state.getPayloadOps(getTarget())) {
-    OneShotAnalysisState state(target, options);
-    if (failed(analyzeOp(target, state)))
+    if (failed(bufferization::eliminateEmptyTensors(rewriter, target)))
       return mlir::emitSilenceableFailure(target->getLoc())
-             << "failed to analyze op";
-    if (failed(bufferization::eliminateEmptyTensors(rewriter, target, state)))
-      return mlir::emitSilenceableFailure(target->getLoc())
-             << "failed to eliminate insert_slice anchored tensor.empty ops";
+             << "empty tensor elimination failed";
   }
   return DiagnosedSilenceableFailure::success();
 }

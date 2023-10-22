@@ -360,11 +360,43 @@ MemoryDependenceResults::getInvariantGroupPointerDependency(LoadInst *LI,
   return MemDepResult::getNonLocal();
 }
 
+// Check if SI that may alias with MemLoc can be safely skipped. This is
+// possible in case if SI can only must alias or no alias with MemLoc (no
+// partial overlapping possible) and it writes the same value that MemLoc
+// contains now (it was loaded before this store and was not modified in
+// between).
+static bool canSkipClobberingStore(const StoreInst *SI,
+                                   const MemoryLocation &MemLoc,
+                                   Align MemLocAlign, BatchAAResults &BatchAA,
+                                   unsigned ScanLimit) {
+  if (!MemLoc.Size.hasValue())
+    return false;
+  if (MemoryLocation::get(SI).Size != MemLoc.Size)
+    return false;
+  if (std::min(MemLocAlign, SI->getAlign()).value() < MemLoc.Size.getValue())
+    return false;
+
+  auto *LI = dyn_cast<LoadInst>(SI->getValueOperand());
+  if (!LI || LI->getParent() != SI->getParent())
+    return false;
+  if (BatchAA.alias(MemoryLocation::get(LI), MemLoc) != AliasResult::MustAlias)
+    return false;
+  unsigned NumVisitedInsts = 0;
+  for (const Instruction *I = LI; I != SI; I = I->getNextNonDebugInstruction())
+    if (++NumVisitedInsts > ScanLimit ||
+        isModSet(BatchAA.getModRefInfo(I, MemLoc)))
+      return false;
+
+  return true;
+}
+
 MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
     const MemoryLocation &MemLoc, bool isLoad, BasicBlock::iterator ScanIt,
     BasicBlock *BB, Instruction *QueryInst, unsigned *Limit,
     BatchAAResults &BatchAA) {
   bool isInvariantLoad = false;
+  Align MemLocAlign =
+      MemLoc.Ptr->getPointerAlignment(BB->getModule()->getDataLayout());
 
   unsigned DefaultLimit = getDefaultBlockScanLimit();
   if (!Limit)
@@ -402,11 +434,12 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
   // do want to respect mustalias results since defs are useful for value
   // forwarding, but any mayalias write can be assumed to be noalias.
   // Arguably, this logic should be pushed inside AliasAnalysis itself.
-  if (isLoad && QueryInst) {
-    LoadInst *LI = dyn_cast<LoadInst>(QueryInst);
-    if (LI && LI->hasMetadata(LLVMContext::MD_invariant_load))
-      isInvariantLoad = true;
-  }
+  if (isLoad && QueryInst)
+    if (LoadInst *LI = dyn_cast<LoadInst>(QueryInst)) {
+      if (LI->hasMetadata(LLVMContext::MD_invariant_load))
+        isInvariantLoad = true;
+      MemLocAlign = LI->getAlign();
+    }
 
   // True for volatile instruction.
   // For Load/Store return true if atomic ordering is stronger than AO,
@@ -576,6 +609,8 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
       if (R == AliasResult::MustAlias)
         return MemDepResult::getDef(Inst);
       if (isInvariantLoad)
+        continue;
+      if (canSkipClobberingStore(SI, MemLoc, MemLocAlign, BatchAA, *Limit))
         continue;
       return MemDepResult::getClobber(Inst);
     }

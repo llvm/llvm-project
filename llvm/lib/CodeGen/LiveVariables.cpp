@@ -601,7 +601,6 @@ bool LiveVariables::runOnMachineFunction(MachineFunction &mf) {
   PhysRegDef.assign(NumRegs, nullptr);
   PhysRegUse.assign(NumRegs, nullptr);
   PHIVarInfo.resize(MF->getNumBlockIDs());
-  PHIJoins.clear();
 
   // FIXME: LiveIntervals will be updated to remove its dependence on
   // LiveVariables to improve compilation time and eliminate bizarre pass

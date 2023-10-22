@@ -149,18 +149,40 @@ class UImmAsmOperand<int width, string suffix = "">
     : ImmAsmOperand<"U", width, suffix> {
 }
 
+class RISCVOp<ValueType vt = XLenVT> : Operand<vt> {
+  let OperandNamespace = "RISCVOp";
+}
+
+class RISCVUImmOp<int bitsNum> : RISCVOp {
+  let ParserMatchClass = UImmAsmOperand<bitsNum>;
+  let DecoderMethod = "decodeUImmOperand<" # bitsNum # ">";
+  let OperandType = "OPERAND_UIMM" # bitsNum;
+}
+
+class RISCVUImmLeafOp<int bitsNum> :
+  RISCVUImmOp<bitsNum>, ImmLeaf<XLenVT, "return isUInt<" # bitsNum # ">(Imm);">;
+
+class RISCVSImmOp<int bitsNum> : RISCVOp {
+  let ParserMatchClass = SImmAsmOperand<bitsNum>;
+  let EncoderMethod = "getImmOpValue";
+  let DecoderMethod = "decodeSImmOperand<" # bitsNum # ">";
+  let OperandType = "OPERAND_SIMM" # bitsNum;
+}
+
+class RISCVSImmLeafOp<int bitsNum> :
+  RISCVSImmOp<bitsNum>, ImmLeaf<XLenVT, "return isInt<" # bitsNum # ">(Imm);">;
+
 def FenceArg : AsmOperandClass {
   let Name = "FenceArg";
   let RenderMethod = "addFenceArgOperands";
   let ParserMethod = "parseFenceArg";
 }
 
-def fencearg : Operand<XLenVT> {
+def fencearg : RISCVOp {
   let ParserMatchClass = FenceArg;
   let PrintMethod = "printFenceArg";
   let DecoderMethod = "decodeUImmOperand<4>";
   let OperandType = "OPERAND_UIMM4";
-  let OperandNamespace = "RISCVOp";
 }
 
 def UImmLog2XLenAsmOperand : AsmOperandClass {
@@ -169,7 +191,7 @@ def UImmLog2XLenAsmOperand : AsmOperandClass {
   let DiagnosticType = "InvalidUImmLog2XLen";
 }
 
-def uimmlog2xlen : Operand<XLenVT>, ImmLeaf<XLenVT, [{
+def uimmlog2xlen : RISCVOp, ImmLeaf<XLenVT, [{
   if (Subtarget->is64Bit())
     return isUInt<6>(Imm);
   return isUInt<5>(Imm);
@@ -186,48 +208,6 @@ def uimmlog2xlen : Operand<XLenVT>, ImmLeaf<XLenVT, [{
     return isUInt<5>(Imm);
   }];
   let OperandType = "OPERAND_UIMMLOG2XLEN";
-  let OperandNamespace = "RISCVOp";
-}
-
-def uimm1 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isUInt<1>(Imm);}]> {
-  let ParserMatchClass = UImmAsmOperand<1>;
-  let DecoderMethod = "decodeUImmOperand<1>";
-  let OperandType = "OPERAND_UIMM1";
-  let OperandNamespace = "RISCVOp";
-}
-
-def uimm2 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isUInt<2>(Imm);}]> {
-  let ParserMatchClass = UImmAsmOperand<2>;
-  let DecoderMethod = "decodeUImmOperand<2>";
-  let OperandType = "OPERAND_UIMM2";
-  let OperandNamespace = "RISCVOp";
-  let MCOperandPredicate = [{
-    int64_t Imm;
-    if (!MCOp.evaluateAsConstantImm(Imm))
-      return false;
-    return isUInt<2>(Imm);
-  }];
-}
-
-def uimm3 : Operand<XLenVT> {
-  let ParserMatchClass = UImmAsmOperand<3>;
-  let DecoderMethod = "decodeUImmOperand<3>";
-  let OperandType = "OPERAND_UIMM3";
-  let OperandNamespace = "RISCVOp";
-}
-
-def uimm4 : Operand<XLenVT> {
-  let ParserMatchClass = UImmAsmOperand<4>;
-  let DecoderMethod = "decodeUImmOperand<4>";
-  let OperandType = "OPERAND_UIMM4";
-  let OperandNamespace = "RISCVOp";
-}
-
-def uimm5 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isUInt<5>(Imm);}]> {
-  let ParserMatchClass = UImmAsmOperand<5>;
-  let DecoderMethod = "decodeUImmOperand<5>";
-  let OperandType = "OPERAND_UIMM5";
-  let OperandNamespace = "RISCVOp";
 }
 
 def InsnDirectiveOpcode : AsmOperandClass {
@@ -237,46 +217,31 @@ def InsnDirectiveOpcode : AsmOperandClass {
   let PredicateMethod = "isImm";
 }
 
-def uimm6 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isUInt<6>(Imm);}]> {
-  let ParserMatchClass = UImmAsmOperand<6>;
-  let DecoderMethod = "decodeUImmOperand<6>";
-  let OperandType = "OPERAND_UIMM6";
-  let OperandNamespace = "RISCVOp";
+def uimm1 : RISCVUImmLeafOp<1>;
+def uimm2 : RISCVUImmLeafOp<2> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return isUInt<2>(Imm);
+  }];
 }
-
-def uimm7_opcode : Operand<XLenVT> {
+def uimm3 : RISCVUImmOp<3>;
+def uimm4 : RISCVUImmOp<4>;
+def uimm5 : RISCVUImmLeafOp<5>;
+def uimm6 : RISCVUImmLeafOp<6>;
+def uimm7_opcode : RISCVUImmOp<7> {
   let ParserMatchClass = InsnDirectiveOpcode;
-  let DecoderMethod = "decodeUImmOperand<7>";
-  let OperandType = "OPERAND_UIMM7";
-  let OperandNamespace = "RISCVOp";
 }
-
-def uimm7 : Operand<XLenVT> {
-  let ParserMatchClass = UImmAsmOperand<7>;
-  let DecoderMethod = "decodeUImmOperand<7>";
-  let OperandType = "OPERAND_UIMM7";
-  let OperandNamespace = "RISCVOp";
-}
-
-def uimm8 : Operand<XLenVT> {
-  let ParserMatchClass = UImmAsmOperand<8>;
-  let DecoderMethod = "decodeUImmOperand<8>";
-  let OperandType = "OPERAND_UIMM8";
-  let OperandNamespace = "RISCVOp";
-}
-
-def simm12 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isInt<12>(Imm);}]> {
-  let ParserMatchClass = SImmAsmOperand<12>;
-  let EncoderMethod = "getImmOpValue";
-  let DecoderMethod = "decodeSImmOperand<12>";
+def uimm7 : RISCVUImmOp<7>;
+def uimm8 : RISCVUImmOp<8>;
+def simm12 : RISCVSImmLeafOp<12> {
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
       return isInt<12>(Imm);
     return MCOp.isBareSymbolRef();
   }];
-  let OperandType = "OPERAND_SIMM12";
-  let OperandNamespace = "RISCVOp";
 }
 
 // A 12-bit signed immediate which cannot fit in 6-bit signed immediate,
@@ -299,11 +264,10 @@ def simm13_lsb0 : Operand<OtherVT> {
   let OperandType = "OPERAND_PCREL";
 }
 
-class UImm20Operand : Operand<XLenVT> {
+class UImm20Operand : RISCVOp {
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeUImmOperand<20>";
   let OperandType = "OPERAND_UIMM20";
-  let OperandNamespace = "RISCVOp";
 }
 
 class UImm20OperandMaybeSym : UImm20Operand {
@@ -405,12 +369,11 @@ def CSRSystemRegister : AsmOperandClass {
   let DiagnosticType = "InvalidCSRSystemRegister";
 }
 
-def csr_sysreg : Operand<XLenVT> {
+def csr_sysreg : RISCVOp {
   let ParserMatchClass = CSRSystemRegister;
   let PrintMethod = "printCSRSystemRegister";
   let DecoderMethod = "decodeUImmOperand<12>";
   let OperandType = "OPERAND_UIMM12";
-  let OperandNamespace = "RISCVOp";
 }
 
 // A parameterized register class alternative to i32imm/i64imm from Target.td.

@@ -25,9 +25,11 @@
 
 using namespace llvm;
 
+namespace llvm {
 extern cl::opt<bool> EnableDetailedFunctionProperties;
 extern cl::opt<bool> BigBasicBlockInstructionThreshold;
 extern cl::opt<bool> MediumBasicBlockInstrutionThreshold;
+} // namespace llvm
 
 namespace {
 

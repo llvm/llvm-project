@@ -104,11 +104,13 @@ static cl::opt<std::string> MemProfImportSummary(
     cl::desc("Import summary to use for testing the ThinLTO backend via opt"),
     cl::Hidden);
 
+namespace llvm {
 // Indicate we are linking with an allocator that supports hot/cold operator
 // new interfaces.
 cl::opt<bool> SupportsHotColdNew(
     "supports-hot-cold-new", cl::init(false), cl::Hidden,
     cl::desc("Linking with hot/cold operator new interfaces"));
+} // namespace llvm
 
 namespace {
 /// CRTP base for graphs built from either IR or ThinLTO summary index.
@@ -791,11 +793,10 @@ CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::
     eraseCalleeEdge(const ContextEdge *Edge) {
-  auto EI =
-      std::find_if(CalleeEdges.begin(), CalleeEdges.end(),
-                   [Edge](const std::shared_ptr<ContextEdge> &CalleeEdge) {
-                     return CalleeEdge.get() == Edge;
-                   });
+  auto EI = llvm::find_if(
+      CalleeEdges, [Edge](const std::shared_ptr<ContextEdge> &CalleeEdge) {
+        return CalleeEdge.get() == Edge;
+      });
   assert(EI != CalleeEdges.end());
   CalleeEdges.erase(EI);
 }
@@ -803,11 +804,10 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::
     eraseCallerEdge(const ContextEdge *Edge) {
-  auto EI =
-      std::find_if(CallerEdges.begin(), CallerEdges.end(),
-                   [Edge](const std::shared_ptr<ContextEdge> &CallerEdge) {
-                     return CallerEdge.get() == Edge;
-                   });
+  auto EI = llvm::find_if(
+      CallerEdges, [Edge](const std::shared_ptr<ContextEdge> &CallerEdge) {
+        return CallerEdge.get() == Edge;
+      });
   assert(EI != CallerEdges.end());
   CallerEdges.erase(EI);
 }

@@ -77,7 +77,7 @@ public:
 
   llvm::hash_code hash_value() const;
 
-  template <typename HasherT, llvm::support::endianness Endianness>
+  template <typename HasherT, llvm::endianness Endianness>
   friend void addHash(llvm::HashBuilder<HasherT, Endianness> &HBuilder,
                       const SanitizerMask &SM) {
     HBuilder.addRange(&SM.maskLoToHigh[0], &SM.maskLoToHigh[kNumElem]);
@@ -169,6 +169,8 @@ struct SanitizerSet {
     assert(K.isPowerOf2() && "Has to be a single sanitizer.");
     Mask = Value ? (Mask | K) : (Mask & ~K);
   }
+
+  void set(SanitizerMask K) { Mask = K; }
 
   /// Disable the sanitizers specified in \p K.
   void clear(SanitizerMask K = SanitizerKind::All) { Mask &= ~K; }

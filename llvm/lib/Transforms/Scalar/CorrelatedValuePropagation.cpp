@@ -470,17 +470,17 @@ static bool processBinOp(BinaryOperator *BinOp, LazyValueInfo *LVI);
 // because it is negation-invariant.
 static bool processAbsIntrinsic(IntrinsicInst *II, LazyValueInfo *LVI) {
   Value *X = II->getArgOperand(0);
-  bool IsIntMinPoison = cast<ConstantInt>(II->getArgOperand(1))->isOne();
-
   Type *Ty = X->getType();
-  Constant *IntMin =
-      ConstantInt::get(Ty, APInt::getSignedMinValue(Ty->getScalarSizeInBits()));
-  LazyValueInfo::Tristate Result;
+  if (!Ty->isIntegerTy())
+    return false;
+
+  bool IsIntMinPoison = cast<ConstantInt>(II->getArgOperand(1))->isOne();
+  APInt IntMin = APInt::getSignedMinValue(Ty->getScalarSizeInBits());
+  ConstantRange Range = LVI->getConstantRangeAtUse(
+      II->getOperandUse(0), /*UndefAllowed*/ IsIntMinPoison);
 
   // Is X in [0, IntMin]?  NOTE: INT_MIN is fine!
-  Result = LVI->getPredicateAt(CmpInst::Predicate::ICMP_ULE, X, IntMin, II,
-                               /*UseBlockValue=*/true);
-  if (Result == LazyValueInfo::True) {
+  if (Range.icmp(CmpInst::ICMP_ULE, IntMin)) {
     ++NumAbs;
     II->replaceAllUsesWith(X);
     II->eraseFromParent();
@@ -488,40 +488,30 @@ static bool processAbsIntrinsic(IntrinsicInst *II, LazyValueInfo *LVI) {
   }
 
   // Is X in [IntMin, 0]?  NOTE: INT_MIN is fine!
-  Constant *Zero = ConstantInt::getNullValue(Ty);
-  Result = LVI->getPredicateAt(CmpInst::Predicate::ICMP_SLE, X, Zero, II,
-                               /*UseBlockValue=*/true);
-  assert(Result != LazyValueInfo::False && "Should have been handled already.");
+  if (Range.getSignedMax().isNonPositive()) {
+    IRBuilder<> B(II);
+    Value *NegX = B.CreateNeg(X, II->getName(), /*HasNUW=*/false,
+                              /*HasNSW=*/IsIntMinPoison);
+    ++NumAbs;
+    II->replaceAllUsesWith(NegX);
+    II->eraseFromParent();
 
-  if (Result == LazyValueInfo::Unknown) {
-    // Argument's range crosses zero.
-    bool Changed = false;
-    if (!IsIntMinPoison) {
-      // Can we at least tell that the argument is never INT_MIN?
-      Result = LVI->getPredicateAt(CmpInst::Predicate::ICMP_NE, X, IntMin, II,
-                                   /*UseBlockValue=*/true);
-      if (Result == LazyValueInfo::True) {
-        ++NumNSW;
-        ++NumSubNSW;
-        II->setArgOperand(1, ConstantInt::getTrue(II->getContext()));
-        Changed = true;
-      }
-    }
-    return Changed;
+    // See if we can infer some no-wrap flags.
+    if (auto *BO = dyn_cast<BinaryOperator>(NegX))
+      processBinOp(BO, LVI);
+
+    return true;
   }
 
-  IRBuilder<> B(II);
-  Value *NegX = B.CreateNeg(X, II->getName(), /*HasNUW=*/false,
-                            /*HasNSW=*/IsIntMinPoison);
-  ++NumAbs;
-  II->replaceAllUsesWith(NegX);
-  II->eraseFromParent();
-
-  // See if we can infer some no-wrap flags.
-  if (auto *BO = dyn_cast<BinaryOperator>(NegX))
-    processBinOp(BO, LVI);
-
-  return true;
+  // Argument's range crosses zero.
+  // Can we at least tell that the argument is never INT_MIN?
+  if (!IsIntMinPoison && !Range.contains(IntMin)) {
+    ++NumNSW;
+    ++NumSubNSW;
+    II->setArgOperand(1, ConstantInt::getTrue(II->getContext()));
+    return true;
+  }
+  return false;
 }
 
 // See if this min/max intrinsic always picks it's one specific operand.

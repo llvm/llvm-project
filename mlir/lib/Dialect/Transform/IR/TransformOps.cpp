@@ -1761,8 +1761,20 @@ DiagnosedSilenceableFailure
 transform::NamedSequenceOp::apply(transform::TransformRewriter &rewriter,
                                   transform::TransformResults &results,
                                   transform::TransformState &state) {
-  // Nothing to do here.
-  return DiagnosedSilenceableFailure::success();
+  if (isExternal())
+    return emitDefiniteFailure() << "unresolved external named sequence";
+
+  // Map the entry block argument to the list of operations.
+  // Note: this is the same implementation as PossibleTopLevelTransformOp but
+  // without attaching the interface / trait since that is tailored to a
+  // dangling top-level op that does not get "called".
+  auto scope = state.make_region_scope(getBody());
+  if (failed(detail::mapPossibleTopLevelTransformOpBlockArguments(
+          state, this->getOperation(), getBody())))
+    return DiagnosedSilenceableFailure::definiteFailure();
+
+  return applySequenceBlock(getBody().front(),
+                            FailurePropagationMode::Propagate, state, results);
 }
 
 void transform::NamedSequenceOp::getEffects(
@@ -1996,7 +2008,7 @@ void transform::SplitHandleOp::getEffects(
 
 LogicalResult transform::SplitHandleOp::verify() {
   if (getOverflowResult().has_value() &&
-      !(*getOverflowResult() >= 0 && *getOverflowResult() < getNumResults()))
+      !(*getOverflowResult() < getNumResults()))
     return emitOpError("overflow_result is not a valid result index");
   return success();
 }

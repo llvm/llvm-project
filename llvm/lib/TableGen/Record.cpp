@@ -797,6 +797,25 @@ void UnOpInit::Profile(FoldingSetNodeID &ID) const {
 Init *UnOpInit::Fold(Record *CurRec, bool IsFinal) const {
   RecordKeeper &RK = getRecordKeeper();
   switch (getOpcode()) {
+  case REPR:
+    if (LHS->isConcrete()) {
+      // If it is a Record, print the full content.
+      if (const auto *Def = dyn_cast<DefInit>(LHS)) {
+        std::string S;
+        raw_string_ostream OS(S);
+        OS << *Def->getDef();
+        OS.flush();
+        return StringInit::get(RK, S);
+      } else {
+        // Otherwise, print the value of the variable.
+        //
+        // NOTE: we could recursively !repr the elements of a list,
+        // but that could produce a lot of output when printing a
+        // defset.
+        return StringInit::get(RK, LHS->getAsString());
+      }
+    }
+    break;
   case TOLOWER:
     if (StringInit *LHSs = dyn_cast<StringInit>(LHS))
       return StringInit::get(RK, LHSs->getValue().lower());
@@ -957,6 +976,9 @@ std::string UnOpInit::getAsString() const {
   case EMPTY: Result = "!empty"; break;
   case GETDAGOP: Result = "!getdagop"; break;
   case LOG2 : Result = "!logtwo"; break;
+  case REPR:
+    Result = "!repr";
+    break;
   case TOLOWER:
     Result = "!tolower";
     break;
@@ -2253,6 +2275,9 @@ DefInit *VarDefInit::instantiate() {
     // Copy assertions from class to instance.
     NewRec->appendAssertions(Class);
 
+    // Copy dumps from class to instance.
+    NewRec->appendDumps(Class);
+
     // Substitute and resolve template arguments
     ArrayRef<Init *> TArgs = Class->getTemplateArgs();
     MapResolver R(NewRec);
@@ -2286,6 +2311,9 @@ DefInit *VarDefInit::instantiate() {
 
     // Check the assertions.
     NewRec->checkRecordAssertions();
+
+    // Check the assertions.
+    NewRec->emitRecordDumps();
 
     Def = DefInit::get(NewRec);
   }
@@ -2844,6 +2872,11 @@ void Record::resolveReferences(Resolver &R, const RecordVal *SkipVal) {
     Value = Assertion.Message->resolveReferences(R);
     Assertion.Message = Value;
   }
+  // Resolve the dump expressions.
+  for (auto &Dump : Dumps) {
+    Init *Value = Dump.Message->resolveReferences(R);
+    Dump.Message = Value;
+  }
 }
 
 void Record::resolveReferences(Init *NewName) {
@@ -3097,6 +3130,16 @@ void Record::checkRecordAssertions() {
     Init *Condition = Assertion.Condition->resolveReferences(R);
     Init *Message = Assertion.Message->resolveReferences(R);
     CheckAssert(Assertion.Loc, Condition, Message);
+  }
+}
+
+void Record::emitRecordDumps() {
+  RecordResolver R(*this);
+  R.setFinal(true);
+
+  for (const auto &Dump : getDumps()) {
+    Init *Message = Dump.Message->resolveReferences(R);
+    dumpMessage(Dump.Loc, Message);
   }
 }
 

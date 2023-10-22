@@ -22,8 +22,7 @@ define i32 @nsis_BZ2_bzDecompress(ptr %pos.i, i1 %cmp661.not3117.i, i1 %exitcond
 ; CHECK-NEXT:    // in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    mov x9, xzr
 ; CHECK-NEXT:    ldrb w9, [x9]
-; CHECK-NEXT:    add x9, x0, x9
-; CHECK-NEXT:    strb wzr, [x9]
+; CHECK-NEXT:    strb wzr, [x0, x9]
 ; CHECK-NEXT:    b .LBB0_1
 ; CHECK-NEXT:  .LBB0_4: // %for.end677.i
 ; CHECK-NEXT:    mov w0, wzr

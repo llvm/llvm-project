@@ -31,6 +31,33 @@ class RISCVMCPlusBuilder : public MCPlusBuilder {
 public:
   using MCPlusBuilder::MCPlusBuilder;
 
+  bool equals(const MCTargetExpr &A, const MCTargetExpr &B,
+              CompFuncTy Comp) const override {
+    const auto &RISCVExprA = cast<RISCVMCExpr>(A);
+    const auto &RISCVExprB = cast<RISCVMCExpr>(B);
+    if (RISCVExprA.getKind() != RISCVExprB.getKind())
+      return false;
+
+    return MCPlusBuilder::equals(*RISCVExprA.getSubExpr(),
+                                 *RISCVExprB.getSubExpr(), Comp);
+  }
+
+  void getCalleeSavedRegs(BitVector &Regs) const override {
+    Regs |= getAliases(RISCV::X2);
+    Regs |= getAliases(RISCV::X8);
+    Regs |= getAliases(RISCV::X9);
+    Regs |= getAliases(RISCV::X18);
+    Regs |= getAliases(RISCV::X19);
+    Regs |= getAliases(RISCV::X20);
+    Regs |= getAliases(RISCV::X21);
+    Regs |= getAliases(RISCV::X22);
+    Regs |= getAliases(RISCV::X23);
+    Regs |= getAliases(RISCV::X24);
+    Regs |= getAliases(RISCV::X25);
+    Regs |= getAliases(RISCV::X26);
+    Regs |= getAliases(RISCV::X27);
+  }
+
   bool shouldRecordCodeRelocation(uint64_t RelType) const override {
     switch (RelType) {
     case ELF::R_RISCV_JAL:
@@ -292,6 +319,7 @@ public:
     default:
       return false;
     case RISCV::C_J:
+    case TargetOpcode::EH_LABEL:
       OpNum = 0;
       return true;
     case RISCV::AUIPC:

@@ -194,9 +194,6 @@ public:
   /// Match (and (load x), mask) -> zextload x
   bool matchCombineLoadWithAndMask(MachineInstr &MI, BuildFnTy &MatchInfo);
 
-  /// Combine \p MI into a pre-indexed or post-indexed load/store operation if
-  /// legal and the surrounding code makes it useful.
-  bool tryCombineIndexedLoadStore(MachineInstr &MI);
   bool matchCombineIndexedLoadStore(MachineInstr &MI, IndexedLoadStoreMatchInfo &MatchInfo);
   void applyCombineIndexedLoadStore(MachineInstr &MI, IndexedLoadStoreMatchInfo &MatchInfo);
 
@@ -378,7 +375,6 @@ public:
 
   /// Transform anyext(trunc(x)) to x.
   bool matchCombineAnyExtTrunc(MachineInstr &MI, Register &Reg);
-  void applyCombineAnyExtTrunc(MachineInstr &MI, Register &Reg);
 
   /// Transform zext(trunc(x)) to x.
   bool matchCombineZextTrunc(MachineInstr &MI, Register &Reg);
