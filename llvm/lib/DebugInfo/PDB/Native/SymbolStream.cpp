@@ -9,7 +9,6 @@
 #include "llvm/DebugInfo/PDB/Native/SymbolStream.h"
 
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
-#include "llvm/Support/Endian.h"
 
 using namespace llvm;
 using namespace llvm::msf;
