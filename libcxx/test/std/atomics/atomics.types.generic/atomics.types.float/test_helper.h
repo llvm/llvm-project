@@ -37,8 +37,8 @@ void test_seq_cst(StoreOp store_op, LoadOp load_op) {
     MaybeVolatile<std::atomic<T>> x(old_value);
     MaybeVolatile<std::atomic<T>> y(old_value);
 
-    std::atomic_bool x_update_first(false);
-    std::atomic_bool y_update_first(false);
+    std::atomic_bool x_updated_first(false);
+    std::atomic_bool y_updated_first(false);
 
     auto t1 = support::make_test_thread([&] { store_op(x, old_value, new_value); });
 
@@ -49,7 +49,7 @@ void test_seq_cst(StoreOp store_op, LoadOp load_op) {
         std::this_thread::yield();
       }
       if (!approximately_equals(load_op(y), new_value)) {
-        x_update_first.store(true, std::memory_order_relaxed);
+        x_updated_first.store(true, std::memory_order_relaxed);
       }
     });
 
@@ -58,7 +58,7 @@ void test_seq_cst(StoreOp store_op, LoadOp load_op) {
         std::this_thread::yield();
       }
       if (!approximately_equals(load_op(x), new_value)) {
-        y_update_first.store(true, std::memory_order_relaxed);
+        y_updated_first.store(true, std::memory_order_relaxed);
       }
     });
 
@@ -67,7 +67,7 @@ void test_seq_cst(StoreOp store_op, LoadOp load_op) {
     t3.join();
     t4.join();
     // thread 3 and thread 4 cannot see different orders of storing x and y
-    assert(!(x_update_first && y_update_first));
+    assert(!(x_updated_first && y_updated_first));
   }
 #else
   (void)store_op;

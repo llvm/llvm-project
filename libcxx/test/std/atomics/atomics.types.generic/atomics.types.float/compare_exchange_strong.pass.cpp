@@ -220,7 +220,9 @@ int main(int, char**) {
   test<float>();
   test<double>();
   // https://github.com/llvm/llvm-project/issues/47978
-  //test<long double>();
+#ifndef TEST_COMPILER_CLANG
+  test<long double>();
+#endif
 
   return 0;
 }

@@ -147,57 +147,53 @@ template <class _Tp>
   requires is_floating_point_v<_Tp>
 struct atomic<_Tp> : __atomic_base<_Tp> {
   private:
-    // The builtin __cxx_atomic_fetch_add errors during compilation for
-    // long double on some platforms with fp80 type.
-    // There is no way on the libc++ side to test whether it is
-    // ok to use the builtin for a certain type.
-    // Therefore, we do not use the builtin here
-    // For more details, see
-    // lib/Sema/SemaChecking.cpp function IsAllowedValueType
-    // LLVM Parser does not allow atomicrmw with x86_fp80 type.
-    // if (ValType->isSpecificBuiltinType(BuiltinType::LongDouble) &&
-    //    &Context.getTargetInfo().getLongDoubleFormat() ==
-    //        &llvm::APFloat::x87DoubleExtended())
-    // For more info
-    // https://github.com/llvm/llvm-project/issues/68602
-    // https://reviews.llvm.org/D53965
+    template <class _This, class _Operation, class _BuiltinOp>
+    _LIBCPP_HIDE_FROM_ABI static _Tp
+    __rmw_op(_This&& __self, _Tp __operand, memory_order __m, _Operation __operation, _BuiltinOp __builtin_op) {
+        // The builtin __cxx_atomic_fetch_add errors during compilation for
+        // long double on platforms with fp80 format.
+        // For more details, see
+        // lib/Sema/SemaChecking.cpp function IsAllowedValueType
+        // LLVM Parser does not allow atomicrmw with x86_fp80 type.
+        // if (ValType->isSpecificBuiltinType(BuiltinType::LongDouble) &&
+        //    &Context.getTargetInfo().getLongDoubleFormat() ==
+        //        &llvm::APFloat::x87DoubleExtended())
+        // For more info
+        // https://github.com/llvm/llvm-project/issues/68602
+        // https://reviews.llvm.org/D53965
+        //
+        // Only x87-fp80 long double has 64-bit mantissa
+        if constexpr (__LDBL_MANT_DIG__ == 64 && std::is_same_v<_Tp, long double>) {
+          _Tp __old = __self.load(memory_order_relaxed);
+          _Tp __new = __operation(__old, __operand);
 
-    template <class _This, class _Operation>
-    _LIBCPP_HIDE_FROM_ABI static _Tp __rmw_op(_This&& __self, _Tp __operand, memory_order __m, _Operation __operation) {
-        _Tp __old = __self.load(memory_order_relaxed);
-        _Tp __new = __operation(__old, __operand);
-
-        if constexpr (std::is_same_v<_Tp, long double>) {
           while (!__self.compare_exchange_weak(__old, __new, __m, memory_order_relaxed)) {
             // https://github.com/llvm/llvm-project/issues/47978
-            // clang bug: __old is not updated on failure for atomic<long double>::compare_exchange_strong
-
-            // this workaround works (as in the old value can be updated with fp80's 58 bit padding),
-            // but memcpy on long double is not thread safe
-            // using __ptr_type = __remove_volatile_t<__remove_const_t<decltype(__self.__a_.__a_value)>>*;
-            // std::memcpy(&__old, const_cast<__ptr_type>(std::addressof(__self.__a_.__a_value)), sizeof(_Tp));
-
-            // try another one
+            // clang bug: __old is not updated on failure for atomic<long double>::compare_exchange_weak
+            // Note __old = __self.load(memory_order_relaxed) will not work
             std::__cxx_atomic_load_inplace(std::addressof(__self.__a_), &__old, memory_order_relaxed);
-
             __new = __operation(__old, __operand);
           }
+          return __old;
         } else {
-          while (!__self.compare_exchange_weak(__old, __new, __m, memory_order_relaxed)) {
-            __new = __operation(__old, __operand);
-          }
+          return __builtin_op(std::addressof(std::forward<_This>(__self).__a_), __operand, __m);
         }
-        return __old;
     }
 
     template <class _This>
     _LIBCPP_HIDE_FROM_ABI static _Tp __fetch_add(_This&& __self, _Tp __operand, memory_order __m) {
-        return __rmw_op(std::forward<_This>(__self), __operand, __m, std::plus<>{});
+        auto __builtin_op = [](auto __a, auto __operand, auto __order) {
+          return std::__cxx_atomic_fetch_add(__a, __operand, __order);
+        };
+        return __rmw_op(std::forward<_This>(__self), __operand, __m, std::plus<>{}, __builtin_op);
     }
 
     template <class _This>
     _LIBCPP_HIDE_FROM_ABI static _Tp __fetch_sub(_This&& __self, _Tp __operand, memory_order __m) {
-        return __rmw_op(std::forward<_This>(__self), __operand, __m, std::minus<>{});
+        auto __builtin_op = [](auto __a, auto __operand, auto __order) {
+          return std::__cxx_atomic_fetch_sub(__a, __operand, __order);
+        };
+        return __rmw_op(std::forward<_This>(__self), __operand, __m, std::minus<>{}, __builtin_op);
     }
 
   public:

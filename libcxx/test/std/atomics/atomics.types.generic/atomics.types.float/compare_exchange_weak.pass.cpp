@@ -74,14 +74,6 @@ void testBasic(MemoryOrder... memory_order) {
   }
 }
 
-// https://github.com/llvm/llvm-project/issues/47978
-template <class A, class T>
-void workaroundClangBug(A& atomic, T& expected) {
-  if constexpr (std::same_as<T, long double>) {
-    expected = atomic.load(std::memory_order::relaxed);
-  }
-}
-
 template <class T, template <class> class MaybeVolatile = std::type_identity_t>
 void test_impl() {
   testBasic<T, MaybeVolatile>();
@@ -93,7 +85,6 @@ void test_impl() {
     auto store = [](MaybeVolatile<std::atomic<T>>& x, T old_val, T new_val) {
       // could fail spuriously, so put it in a loop
       while (!x.compare_exchange_weak(old_val, new_val, std::memory_order::release, std::memory_order_relaxed)) {
-        workaroundClangBug(x, old_val);
       }
     };
 
@@ -103,7 +94,6 @@ void test_impl() {
     auto store_one_arg = [](MaybeVolatile<std::atomic<T>>& x, T old_val, T new_val) {
       // could fail spuriously, so put it in a loop
       while (!x.compare_exchange_weak(old_val, new_val, std::memory_order::release)) {
-        workaroundClangBug(x, old_val);
       }
     };
     test_acquire_release<T, MaybeVolatile>(store_one_arg, load);
@@ -115,7 +105,6 @@ void test_impl() {
     auto load  = [](MaybeVolatile<std::atomic<T>>& x) {
       auto val = x.load(std::memory_order::relaxed);
       while (!x.compare_exchange_weak(val, val, std::memory_order::acquire, std::memory_order_relaxed)) {
-        workaroundClangBug(x, val);
       }
       return val;
     };
@@ -124,7 +113,6 @@ void test_impl() {
     auto load_one_arg = [](MaybeVolatile<std::atomic<T>>& x) {
       auto val = x.load(std::memory_order::relaxed);
       while (!x.compare_exchange_weak(val, val, std::memory_order::acquire)) {
-        workaroundClangBug(x, val);
       }
       return val;
     };
@@ -136,13 +124,11 @@ void test_impl() {
     auto store = [](MaybeVolatile<std::atomic<T>>& x, T old_val, T new_val) {
       // could fail spuriously, so put it in a loop
       while (!x.compare_exchange_weak(old_val, new_val, std::memory_order::acq_rel, std::memory_order_relaxed)) {
-        workaroundClangBug(x, old_val);
       }
     };
     auto load = [](MaybeVolatile<std::atomic<T>>& x) {
       auto val = x.load(std::memory_order::relaxed);
       while (!x.compare_exchange_weak(val, val, std::memory_order::acq_rel, std::memory_order_relaxed)) {
-        workaroundClangBug(x, val);
       }
       return val;
     };
@@ -151,13 +137,11 @@ void test_impl() {
     auto store_one_arg = [](MaybeVolatile<std::atomic<T>>& x, T old_val, T new_val) {
       // could fail spuriously, so put it in a loop
       while (!x.compare_exchange_weak(old_val, new_val, std::memory_order::acq_rel)) {
-        workaroundClangBug(x, old_val);
       }
     };
     auto load_one_arg = [](MaybeVolatile<std::atomic<T>>& x) {
       auto val = x.load(std::memory_order::relaxed);
       while (!x.compare_exchange_weak(val, val, std::memory_order::acq_rel)) {
-        workaroundClangBug(x, val);
       }
       return val;
     };
@@ -169,13 +153,11 @@ void test_impl() {
     auto store = [](MaybeVolatile<std::atomic<T>>& x, T old_val, T new_val) {
       // could fail spuriously, so put it in a loop
       while (!x.compare_exchange_weak(old_val, new_val, std::memory_order::seq_cst, std::memory_order_relaxed)) {
-        workaroundClangBug(x, old_val);
       }
     };
     auto load = [](MaybeVolatile<std::atomic<T>>& x) {
       auto val = x.load(std::memory_order::relaxed);
       while (!x.compare_exchange_weak(val, val, std::memory_order::seq_cst, std::memory_order_relaxed)) {
-        workaroundClangBug(x, val);
       }
       return val;
     };
@@ -184,13 +166,11 @@ void test_impl() {
     auto store_one_arg = [](MaybeVolatile<std::atomic<T>>& x, T old_val, T new_val) {
       // could fail spuriously, so put it in a loop
       while (!x.compare_exchange_weak(old_val, new_val, std::memory_order::seq_cst, std::memory_order_relaxed)) {
-        workaroundClangBug(x, old_val);
       }
     };
     auto load_one_arg = [](MaybeVolatile<std::atomic<T>>& x) {
       auto val = x.load(std::memory_order::relaxed);
       while (!x.compare_exchange_weak(val, val, std::memory_order::seq_cst, std::memory_order_relaxed)) {
-        workaroundClangBug(x, val);
       }
       return val;
     };
@@ -254,7 +234,11 @@ void test() {
 int main(int, char**) {
   test<float>();
   test<double>();
+
+// https://github.com/llvm/llvm-project/issues/47978
+#ifndef TEST_COMPILER_CLANG
   test<long double>();
+#endif
 
   return 0;
 }
