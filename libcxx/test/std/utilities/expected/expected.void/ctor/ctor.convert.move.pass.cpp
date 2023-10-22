@@ -101,7 +101,7 @@ constexpr bool test() {
 
   // convert TailClobberer
   {
-    std::expected<void, TailClobbererNonTrivialMove<1>> e1;
+    std::expected<void, TailClobbererNonTrivialMove<1>> e1(std::unexpect);
     std::expected<void, TailClobberer<1>> e2 = std::move(e1);
     assert(!e2.has_value());
     assert(!e1.has_value());

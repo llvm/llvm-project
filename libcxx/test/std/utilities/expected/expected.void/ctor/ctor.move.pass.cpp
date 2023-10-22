@@ -25,6 +25,7 @@
 #include <utility>
 
 #include "test_macros.h"
+#include "../../types.h"
 
 struct NonMovable {
   NonMovable(NonMovable&&) = delete;
