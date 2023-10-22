@@ -97,6 +97,8 @@ struct HoverInfo {
   std::optional<uint64_t> Offset;
   /// Contains the padding following a field within the enclosing class.
   std::optional<uint64_t> Padding;
+  /// Contains the alignment of fields and types where it's interesting.
+  std::optional<uint64_t> Align;
   // Set when symbol is inside function call. Contains information extracted
   // from the callee definition about the argument this is passed as.
   std::optional<Param> CalleeArgInfo;
