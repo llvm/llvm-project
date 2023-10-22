@@ -151,7 +151,8 @@ void Dex::buildIndex() {
   // Build RevRefs
   for (const auto &[ID, RefList] : Refs)
     for (const auto &R : RefList)
-      if ((R.Kind & RefKind::Call) != RefKind::Unknown)
+      if ((R.Kind & ContainedRefsRequest::SupportedRefKinds) !=
+          RefKind::Unknown)
         RevRefs.emplace_back(R, ID);
   // Sort by container ID so we can use binary search for lookup.
   llvm::sort(RevRefs, [](const RevRef &A, const RevRef &B) {
@@ -339,20 +340,18 @@ Dex::lookupRevRefs(const SymbolID &Container) const {
   return {ItPair.first, ItPair.second};
 }
 
-bool Dex::refersTo(
-    const RefsRequest &Req,
-    llvm::function_ref<void(const RefersToResult &)> Callback) const {
+bool Dex::containedRefs(
+    const ContainedRefsRequest &Req,
+    llvm::function_ref<void(const ContainedRefsResult &)> Callback) const {
   trace::Span Tracer("Dex reversed refs");
   uint32_t Remaining = Req.Limit.value_or(std::numeric_limits<uint32_t>::max());
-  for (const auto &ID : Req.IDs)
-    for (const auto &Rev : lookupRevRefs(ID)) {
-      if (!static_cast<int>(Req.Filter & Rev.ref().Kind))
-        continue;
-      if (Remaining == 0)
-        return true; // More refs were available.
-      --Remaining;
-      Callback(Rev.refersToResult());
-    }
+  for (const auto &Rev : lookupRevRefs(Req.ID)) {
+    // RevRefs are already filtered to ContainedRefsRequest::SupportedRefKinds
+    if (Remaining == 0)
+      return true; // More refs were available.
+    --Remaining;
+    Callback(Rev.containedRefsResult());
+  }
   return false; // We reported all refs.
 }
 
