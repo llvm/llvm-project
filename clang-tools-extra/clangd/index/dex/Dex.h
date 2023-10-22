@@ -85,9 +85,9 @@ public:
   bool refs(const RefsRequest &Req,
             llvm::function_ref<void(const Ref &)> Callback) const override;
 
-  bool refersTo(
-      const RefsRequest &Req,
-      llvm::function_ref<void(const RefersToResult &)> Callback) const override;
+  bool containedRefs(const ContainedRefsRequest &Req,
+                     llvm::function_ref<void(const ContainedRefsResult &)>
+                         Callback) const override;
 
   void relations(const RelationsRequest &Req,
                  llvm::function_ref<void(const SymbolID &, const Symbol &)>
@@ -107,7 +107,7 @@ private:
     RevRef(const Ref &Reference, SymbolID Target)
         : Reference(&Reference), Target(Target) {}
     const Ref &ref() const { return *Reference; }
-    RefersToResult refersToResult() const {
+    ContainedRefsResult containedRefsResult() const {
       return {ref().Location, ref().Kind, Target};
     }
   };

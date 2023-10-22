@@ -1702,9 +1702,9 @@ public:
     return false;
   }
 
-  bool
-  refersTo(const RefsRequest &,
-           llvm::function_ref<void(const RefersToResult &)>) const override {
+  bool containedRefs(
+      const ContainedRefsRequest &,
+      llvm::function_ref<void(const ContainedRefsResult &)>) const override {
     return false;
   }
 

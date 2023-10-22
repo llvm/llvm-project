@@ -77,6 +77,19 @@ struct RefsRequest {
   bool WantContainer = false;
 };
 
+struct ContainedRefsRequest {
+  /// Note that RefKind::Call just restricts the matched SymbolKind to
+  /// functions, not the form of the reference (e.g. address-of-function,
+  /// which can indicate an indirect call, should still be caught).
+  static const RefKind SupportedRefKinds = RefKind::Call;
+
+  SymbolID ID;
+  /// If set, limit the number of refers returned from the index. The index may
+  /// choose to return less than this, e.g. it tries to avoid returning stale
+  /// results.
+  std::optional<uint32_t> Limit;
+};
+
 struct RelationsRequest {
   llvm::DenseSet<SymbolID> Subjects;
   RelationKind Predicate;
@@ -84,7 +97,7 @@ struct RelationsRequest {
   std::optional<uint32_t> Limit;
 };
 
-struct RefersToResult {
+struct ContainedRefsResult {
   /// The source location where the symbol is named.
   SymbolLocation Location;
   RefKind Kind = RefKind::Unknown;
@@ -156,9 +169,9 @@ public:
   /// The returned result must be deep-copied if it's used outside Callback.
   ///
   /// Returns true if there will be more results (limited by Req.Limit);
-  virtual bool
-  refersTo(const RefsRequest &Req,
-           llvm::function_ref<void(const RefersToResult &)> Callback) const = 0;
+  virtual bool containedRefs(
+      const ContainedRefsRequest &Req,
+      llvm::function_ref<void(const ContainedRefsResult &)> Callback) const = 0;
 
   /// Finds all relations (S, P, O) stored in the index such that S is among
   /// Req.Subjects and P is Req.Predicate, and invokes \p Callback for (S, O) in
@@ -194,9 +207,9 @@ public:
               llvm::function_ref<void(const Symbol &)>) const override;
   bool refs(const RefsRequest &,
             llvm::function_ref<void(const Ref &)>) const override;
-  bool
-  refersTo(const RefsRequest &,
-           llvm::function_ref<void(const RefersToResult &)>) const override;
+  bool containedRefs(
+      const ContainedRefsRequest &,
+      llvm::function_ref<void(const ContainedRefsResult &)>) const override;
   void relations(const RelationsRequest &,
                  llvm::function_ref<void(const SymbolID &, const Symbol &)>)
       const override;

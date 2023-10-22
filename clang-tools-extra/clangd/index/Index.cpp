@@ -66,10 +66,10 @@ bool SwapIndex::refs(const RefsRequest &R,
                      llvm::function_ref<void(const Ref &)> CB) const {
   return snapshot()->refs(R, CB);
 }
-bool SwapIndex::refersTo(
-    const RefsRequest &R,
-    llvm::function_ref<void(const RefersToResult &)> CB) const {
-  return snapshot()->refersTo(R, CB);
+bool SwapIndex::containedRefs(
+    const ContainedRefsRequest &R,
+    llvm::function_ref<void(const ContainedRefsResult &)> CB) const {
+  return snapshot()->containedRefs(R, CB);
 }
 void SwapIndex::relations(
     const RelationsRequest &R,

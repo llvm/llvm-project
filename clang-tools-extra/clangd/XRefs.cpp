@@ -2317,12 +2317,8 @@ outgoingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
     return Results;
   }
   // In this function, we find outgoing calls based on the index only.
-  RefsRequest Request;
-  Request.IDs.insert(*ID);
-  // Note that RefKind::Call just restricts the matched SymbolKind to
-  // functions, not the form of the reference (e.g. address-of-function,
-  // which can indicate an indirect call, should still be caught).
-  Request.Filter = RefKind::Call;
+  ContainedRefsRequest Request;
+  Request.ID = *ID;
   // Initially store the ranges in a map keyed by SymbolID of the callee.
   // This allows us to group different calls to the same function
   // into the same CallHierarchyOutgoingCall.
@@ -2330,7 +2326,7 @@ outgoingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
   // We can populate the ranges based on a refs request only. As we do so, we
   // also accumulate the callee IDs into a lookup request.
   LookupRequest CallsOutLookup;
-  Index->refersTo(Request, [&](const auto &R) {
+  Index->containedRefs(Request, [&](const auto &R) {
     auto Loc = indexToLSPLocation(R.Location, Item.uri.file());
     if (!Loc) {
       elog("outgoingCalls failed to convert location: {0}", Loc.takeError());
