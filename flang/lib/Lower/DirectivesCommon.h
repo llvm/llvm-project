@@ -204,76 +204,62 @@ static inline void genOmpAccAtomicUpdateStatement(
   // Generate `omp.atomic.update` operation for atomic assignment statements
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::Location currentLocation = converter.getCurrentLocation();
-
-  const auto *varDesignator =
-      std::get_if<Fortran::common::Indirection<Fortran::parser::Designator>>(
-          &assignmentStmtVariable.u);
-  assert(varDesignator && "Variable designator for atomic update assignment "
-                          "statement does not exist");
-  const Fortran::parser::Name *name =
-      Fortran::semantics::getDesignatorNameIfDataRef(varDesignator->value());
-  if (!name)
-    TODO(converter.getCurrentLocation(),
-         "Array references as atomic update variable");
-  assert(name && name->symbol &&
-         "No symbol attached to atomic update variable");
-  if (Fortran::semantics::IsAllocatableOrPointer(name->symbol->GetUltimate()))
-    converter.bindSymbol(*name->symbol, lhsAddr);
-
-  //  Lowering is in two steps :
-  //  subroutine sb
-  //    integer :: a, b
-  //    !$omp atomic update
-  //      a = a + b
-  //  end subroutine
-  //
-  //  1. Lower to scf.execute_region_op
-  //
-  //  func.func @_QPsb() {
-  //    %0 = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFsbEa"}
-  //    %1 = fir.alloca i32 {bindc_name = "b", uniq_name = "_QFsbEb"}
-  //    %2 = scf.execute_region -> i32 {
-  //      %3 = fir.load %0 : !fir.ref<i32>
-  //      %4 = fir.load %1 : !fir.ref<i32>
-  //      %5 = arith.addi %3, %4 : i32
-  //      scf.yield %5 : i32
-  //    }
-  //    return
-  //  }
-  auto tempOp =
-      firOpBuilder.create<mlir::scf::ExecuteRegionOp>(currentLocation, varType);
-  firOpBuilder.createBlock(&tempOp.getRegion());
-  mlir::Block &block = tempOp.getRegion().back();
-  firOpBuilder.setInsertionPointToEnd(&block);
   Fortran::lower::StatementContext stmtCtx;
-  mlir::Value rhsExpr = fir::getBase(converter.genExprValue(
-      *Fortran::semantics::GetExpr(assignmentStmtExpr), stmtCtx));
-  mlir::Value convertResult =
-      firOpBuilder.createConvert(currentLocation, varType, rhsExpr);
-  // Insert the terminator: YieldOp.
-  firOpBuilder.create<mlir::scf::YieldOp>(currentLocation, convertResult);
-  firOpBuilder.setInsertionPointToStart(&block);
+  mlir::Value convertRhs = nullptr;
 
-  //  2. Create the omp.atomic.update Operation using the Operations in the
-  //     temporary scf.execute_region Operation.
-  //
-  //  func.func @_QPsb() {
-  //    %0 = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFsbEa"}
-  //    %1 = fir.alloca i32 {bindc_name = "b", uniq_name = "_QFsbEb"}
-  //    %2 = fir.load %1 : !fir.ref<i32>
-  //    omp.atomic.update   %0 : !fir.ref<i32> {
-  //    ^bb0(%arg0: i32):
-  //      %3 = fir.load %1 : !fir.ref<i32>
-  //      %4 = arith.addi %arg0, %3 : i32
-  //      omp.yield(%3 : i32)
-  //    }
-  //    return
-  //  }
-  mlir::Value updateVar = converter.getSymbolAddress(*name->symbol);
-  if (auto decl = updateVar.getDefiningOp<hlfir::DeclareOp>())
-    updateVar = decl.getBase();
-
-  firOpBuilder.setInsertionPointAfter(tempOp);
+  auto lowerExpression = [&](const auto &intrinsicBinaryExpr) {
+    const auto &variableName{assignmentStmtVariable.GetSource().ToString()};
+    const auto &exprLeft{std::get<0>(intrinsicBinaryExpr.t)};
+    if (exprLeft.value().source.ToString() == variableName) {
+      // Update statement is of form `x = x op expr`
+      const auto &exprToLower{std::get<1>(intrinsicBinaryExpr.t)};
+      mlir::Value rhsExpr = fir::getBase(converter.genExprValue(
+          *Fortran::semantics::GetExpr(exprToLower), stmtCtx));
+      convertRhs =
+          firOpBuilder.createConvert(currentLocation, varType, rhsExpr);
+    } else {
+      // Update statement is of form `x = expr op x`
+      const auto &exprToLower{std::get<0>(intrinsicBinaryExpr.t)};
+      mlir::Value rhsExpr = fir::getBase(converter.genExprValue(
+          *Fortran::semantics::GetExpr(exprToLower), stmtCtx));
+      convertRhs =
+          firOpBuilder.createConvert(currentLocation, varType, rhsExpr);
+    }
+  };
+  Fortran::common::visit(
+      Fortran::common::visitors{
+          [&](const common::Indirection<parser::FunctionReference> &x) {
+            TODO(converter.getCurrentLocation(),
+                 "Not yet implemented: intrinsic procedure in atomic update "
+                 "expressions");
+          },
+          [&](const Fortran::parser::Expr::Add &intrinsicBinaryExpr) {
+            lowerExpression(intrinsicBinaryExpr);
+          },
+          [&](const Fortran::parser::Expr::Subtract &intrinsicBinaryExpr) {
+            lowerExpression(intrinsicBinaryExpr);
+          },
+          [&](const Fortran::parser::Expr::Multiply &intrinsicBinaryExpr) {
+            lowerExpression(intrinsicBinaryExpr);
+          },
+          [&](const Fortran::parser::Expr::Divide &intrinsicBinaryExpr) {
+            lowerExpression(intrinsicBinaryExpr);
+          },
+          [&](const Fortran::parser::Expr::AND &intrinsicBinaryExpr) {
+            lowerExpression(intrinsicBinaryExpr);
+          },
+          [&](const Fortran::parser::Expr::OR &intrinsicBinaryExpr) {
+            lowerExpression(intrinsicBinaryExpr);
+          },
+          [&](const Fortran::parser::Expr::EQV &intrinsicBinaryExpr) {
+            lowerExpression(intrinsicBinaryExpr);
+          },
+          [&](const Fortran::parser::Expr::NEQV &intrinsicBinaryExpr) {
+            lowerExpression(intrinsicBinaryExpr);
+          },
+          [&](const auto &) {},
+      },
+      assignmentStmtExpr.u);
 
   mlir::Operation *atomicUpdateOp = nullptr;
   if constexpr (std::is_same<AtomicListT,
@@ -289,10 +275,10 @@ static inline void genOmpAccAtomicUpdateStatement(
       genOmpAtomicHintAndMemoryOrderClauses(converter, *rightHandClauseList,
                                             hint, memoryOrder);
     atomicUpdateOp = firOpBuilder.create<mlir::omp::AtomicUpdateOp>(
-        currentLocation, updateVar, hint, memoryOrder);
+        currentLocation, lhsAddr, hint, memoryOrder);
   } else {
     atomicUpdateOp = firOpBuilder.create<mlir::acc::AtomicUpdateOp>(
-        currentLocation, updateVar);
+        currentLocation, lhsAddr);
   }
 
   llvm::SmallVector<mlir::Type> varTys = {varType};
@@ -301,38 +287,36 @@ static inline void genOmpAccAtomicUpdateStatement(
   mlir::Value val =
       fir::getBase(atomicUpdateOp->getRegion(0).front().getArgument(0));
 
-  llvm::SmallVector<mlir::Operation *> ops;
-  for (mlir::Operation &op : tempOp.getRegion().getOps())
-    ops.push_back(&op);
-
-  // SCF Yield is converted to OMP Yield. All other operations are copied
-  for (mlir::Operation *op : ops) {
-    if (auto y = mlir::dyn_cast<mlir::scf::YieldOp>(op)) {
-      firOpBuilder.setInsertionPointToEnd(
-          &atomicUpdateOp->getRegion(0).front());
-      if constexpr (std::is_same<AtomicListT,
-                                 Fortran::parser::OmpAtomicClauseList>()) {
-        firOpBuilder.create<mlir::omp::YieldOp>(currentLocation,
-                                                y.getResults());
-      } else {
-        firOpBuilder.create<mlir::acc::YieldOp>(currentLocation,
-                                                y.getResults());
-      }
-      op->erase();
-    } else {
-      op->remove();
-      atomicUpdateOp->getRegion(0).front().push_back(op);
-    }
+  mlir::Value op = nullptr;
+  if (std::get_if<Fortran::parser::Expr::Add>(&assignmentStmtExpr.u)) {
+    op = firOpBuilder.create<mlir::arith::AddIOp>(currentLocation, val,
+                                                  convertRhs);
+  } else if (std::get_if<Fortran::parser::Expr::Subtract>(
+                 &assignmentStmtExpr.u)) {
+    op = firOpBuilder.create<mlir::arith::SubIOp>(currentLocation, val,
+                                                  convertRhs);
+  } else if (std::get_if<Fortran::parser::Expr::Multiply>(
+                 &assignmentStmtExpr.u)) {
+    op = firOpBuilder.create<mlir::arith::MulIOp>(currentLocation, val,
+                                                  convertRhs);
+  } else if (std::get_if<Fortran::parser::Expr::Divide>(
+                 &assignmentStmtExpr.u)) {
+    op = firOpBuilder.create<mlir::arith::DivUIOp>(currentLocation, val,
+                                                   convertRhs);
+  } else if (std::get_if<Fortran::parser::Expr::AND>(&assignmentStmtExpr.u)) {
+    op = firOpBuilder.create<mlir::arith::AndIOp>(currentLocation, val,
+                                                  convertRhs);
+  } else if (std::get_if<Fortran::parser::Expr::OR>(&assignmentStmtExpr.u)) {
+    op = firOpBuilder.create<mlir::arith::OrIOp>(currentLocation, val,
+                                                 convertRhs);
+  } else if (std::get_if<Fortran::parser::Expr::EQV>(&assignmentStmtExpr.u)) {
+    op = firOpBuilder.create<mlir::arith::CmpIOp>(
+        currentLocation, mlir::arith::CmpIPredicate::eq, val, convertRhs);
+  } else if (std::get_if<Fortran::parser::Expr::NEQV>(&assignmentStmtExpr.u)) {
+    op = firOpBuilder.create<mlir::arith::CmpIOp>(
+        currentLocation, mlir::arith::CmpIPredicate::ne, val, convertRhs);
   }
-
-  // Remove the load and replace all uses of load with the block argument
-  for (mlir::Operation &op : atomicUpdateOp->getRegion(0).getOps()) {
-    fir::LoadOp y = mlir::dyn_cast<fir::LoadOp>(&op);
-    if (y && y.getMemref() == updateVar)
-      y.getRes().replaceAllUsesWith(val);
-  }
-
-  tempOp.erase();
+  firOpBuilder.create<mlir::omp::YieldOp>(currentLocation, op);
 }
 
 /// Processes an atomic construct with write clause.
