@@ -352,7 +352,12 @@ LnoR2Fix:
   std   0,  PPC64_OFFS_CR(3)
   mfxer 0
   std   0,  PPC64_OFFS_XER(3)
+#if defined(_AIX)
+  // LR value saved from the register is not used, initialize it to 0.
+  li    0,  0
+#else
   mflr  0
+#endif
   std   0,  PPC64_OFFS_LR(3)
   mfctr 0
   std   0,  PPC64_OFFS_CTR(3)
@@ -565,8 +570,8 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   // is called from a different module. Save the original TOC register
   // in the context if this is the case.
   mflr    4
-  lwz     4,   0(4)     // Get the instruction at the return address.
-  xoris   0,  4, 0x8041 // Is it reloading the TOC register "ld 2,40(1)"?
+  lwz     4,  0(4)      // Get the instruction at the return address.
+  xoris   0,  4, 0x8041 // Is it reloading the TOC register "lwz 2,20(1)"?
   cmplwi  0,  0x14
   bne     0,  LnoR2Fix  // No need to fix up r2 if it is not.
   lwz     2,  20(1)     // Use the saved TOC register in the stack.
@@ -610,6 +615,11 @@ LnoR2Fix:
   // save CR registers
   mfcr    0
   stw     0, 136(3)
+#if defined(_AIX)
+  // LR value from the register is not used, initialize it to 0.
+  li      0, 0
+  stw     0, 144(3)
+#endif
   // save CTR register
   mfctr   0
   stw     0, 148(3)

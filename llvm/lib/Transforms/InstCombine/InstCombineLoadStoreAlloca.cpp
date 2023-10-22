@@ -36,10 +36,12 @@ static cl::opt<unsigned> MaxCopiedFromConstantUsers(
     cl::desc("Maximum users to visit in copy from constant transform"),
     cl::Hidden);
 
+namespace llvm {
 cl::opt<bool> EnableInferAlignmentPass(
     "enable-infer-alignment-pass", cl::init(true), cl::Hidden, cl::ZeroOrMore,
     cl::desc("Enable the InferAlignment pass, disabling alignment inference in "
              "InstCombine"));
+}
 
 /// isOnlyCopiedFromConstantMemory - Recursively walk the uses of a (derived)
 /// pointer to an alloca.  Ignore any reads of the pointer, return false if we

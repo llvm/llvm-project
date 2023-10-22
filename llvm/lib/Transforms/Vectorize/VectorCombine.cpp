@@ -101,7 +101,7 @@ private:
                        Instruction &I);
   bool foldExtractExtract(Instruction &I);
   bool foldInsExtFNeg(Instruction &I);
-  bool foldBitcastShuf(Instruction &I);
+  bool foldBitcastShuffle(Instruction &I);
   bool scalarizeBinopOrCmp(Instruction &I);
   bool scalarizeVPIntrinsic(Instruction &I);
   bool foldExtractedCmps(Instruction &I);
@@ -679,7 +679,7 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
 /// If this is a bitcast of a shuffle, try to bitcast the source vector to the
 /// destination type followed by shuffle. This can enable further transforms by
 /// moving bitcasts or shuffles together.
-bool VectorCombine::foldBitcastShuf(Instruction &I) {
+bool VectorCombine::foldBitcastShuffle(Instruction &I) {
   Value *V;
   ArrayRef<int> Mask;
   if (!match(&I, m_BitCast(
@@ -825,23 +825,32 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
   ElementCount EC = cast<VectorType>(Op0->getType())->getElementCount();
   Value *EVL = VPI.getArgOperand(3);
   const DataLayout &DL = VPI.getModule()->getDataLayout();
-  bool MustHaveNonZeroVL =
-      IntrID == Intrinsic::vp_sdiv || IntrID == Intrinsic::vp_udiv ||
-      IntrID == Intrinsic::vp_srem || IntrID == Intrinsic::vp_urem;
 
-  if (!MustHaveNonZeroVL || isKnownNonZero(EVL, DL, 0, &AC, &VPI, &DT)) {
-    Value *ScalarOp0 = getSplatValue(Op0);
-    Value *ScalarOp1 = getSplatValue(Op1);
-    Value *ScalarVal =
-        ScalarIntrID
-            ? Builder.CreateIntrinsic(VecTy->getScalarType(), *ScalarIntrID,
-                                      {ScalarOp0, ScalarOp1})
-            : Builder.CreateBinOp((Instruction::BinaryOps)(*FunctionalOpcode),
-                                  ScalarOp0, ScalarOp1);
-    replaceValue(VPI, *Builder.CreateVectorSplat(EC, ScalarVal));
-    return true;
-  }
-  return false;
+  // If the VP op might introduce UB or poison, we can scalarize it provided
+  // that we know the EVL > 0: If the EVL is zero, then the original VP op
+  // becomes a no-op and thus won't be UB, so make sure we don't introduce UB by
+  // scalarizing it.
+  bool SafeToSpeculate;
+  if (ScalarIntrID)
+    SafeToSpeculate = Intrinsic::getAttributes(I.getContext(), *ScalarIntrID)
+                          .hasFnAttr(Attribute::AttrKind::Speculatable);
+  else
+    SafeToSpeculate = isSafeToSpeculativelyExecuteWithOpcode(
+        *FunctionalOpcode, &VPI, nullptr, &AC, &DT);
+  if (!SafeToSpeculate && !isKnownNonZero(EVL, DL, 0, &AC, &VPI, &DT))
+    return false;
+
+  Value *ScalarOp0 = getSplatValue(Op0);
+  Value *ScalarOp1 = getSplatValue(Op1);
+  Value *ScalarVal =
+      ScalarIntrID
+          ? Builder.CreateIntrinsic(VecTy->getScalarType(), *ScalarIntrID,
+                                    {ScalarOp0, ScalarOp1})
+          : Builder.CreateBinOp((Instruction::BinaryOps)(*FunctionalOpcode),
+                                ScalarOp0, ScalarOp1);
+
+  replaceValue(VPI, *Builder.CreateVectorSplat(EC, ScalarVal));
+  return true;
 }
 
 /// Match a vector binop or compare instruction with at least one inserted
@@ -1473,11 +1482,11 @@ bool VectorCombine::foldShuffleFromReductions(Instruction &I) {
   bool UsesSecondVec =
       any_of(ConcatMask, [&](int M) { return M >= NumInputElts; });
   InstructionCost OldCost = TTI.getShuffleCost(
-      UsesSecondVec ? TTI::SK_PermuteTwoSrc : TTI::SK_PermuteSingleSrc, VecType,
-      Shuffle->getShuffleMask());
+      UsesSecondVec ? TTI::SK_PermuteTwoSrc : TTI::SK_PermuteSingleSrc,
+      UsesSecondVec ? VecType : ShuffleInputType, Shuffle->getShuffleMask());
   InstructionCost NewCost = TTI.getShuffleCost(
-      UsesSecondVec ? TTI::SK_PermuteTwoSrc : TTI::SK_PermuteSingleSrc, VecType,
-      ConcatMask);
+      UsesSecondVec ? TTI::SK_PermuteTwoSrc : TTI::SK_PermuteSingleSrc,
+      UsesSecondVec ? VecType : ShuffleInputType, ConcatMask);
 
   LLVM_DEBUG(dbgs() << "Found a reduction feeding from a shuffle: " << *Shuffle
                     << "\n");
@@ -1880,7 +1889,7 @@ bool VectorCombine::run() {
         MadeChange |= foldSelectShuffle(I);
         break;
       case Instruction::BitCast:
-        MadeChange |= foldBitcastShuf(I);
+        MadeChange |= foldBitcastShuffle(I);
         break;
       }
     } else {

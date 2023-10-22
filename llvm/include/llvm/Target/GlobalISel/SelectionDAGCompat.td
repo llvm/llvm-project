@@ -116,6 +116,10 @@ def : GINodeEquiv<G_INTRINSIC, intrinsic_wo_chain> {
   let IfConvergent = G_INTRINSIC_CONVERGENT;
 }
 
+def : GINodeEquiv<G_GET_FPMODE, get_fpmode>;
+def : GINodeEquiv<G_SET_FPMODE, set_fpmode>;
+def : GINodeEquiv<G_RESET_FPMODE, reset_fpmode>;
+
 // ISD::INTRINSIC_VOID can also be handled with G_INTRINSIC_W_SIDE_EFFECTS.
 let IfConvergent = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS in {
   def : GINodeEquiv<G_INTRINSIC_W_SIDE_EFFECTS, intrinsic_void>;

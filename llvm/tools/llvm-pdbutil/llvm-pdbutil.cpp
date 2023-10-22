@@ -1415,7 +1415,7 @@ static void exportStream() {
   SourceStream = File.createIndexedStream(Index);
   auto OutFile = ExitOnErr(
       FileOutputBuffer::create(OutFileName, SourceStream->getLength()));
-  FileBufferByteStream DestStream(std::move(OutFile), llvm::support::little);
+  FileBufferByteStream DestStream(std::move(OutFile), llvm::endianness::little);
   BinaryStreamWriter Writer(DestStream);
   ExitOnErr(Writer.writeStreamRef(*SourceStream));
   ExitOnErr(DestStream.commit());

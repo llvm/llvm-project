@@ -5211,6 +5211,9 @@ static void handleCallConvAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   case ParsedAttr::AT_PreserveAll:
     D->addAttr(::new (S.Context) PreserveAllAttr(S.Context, AL));
     return;
+  case ParsedAttr::AT_M68kRTD:
+    D->addAttr(::new (S.Context) M68kRTDAttr(S.Context, AL));
+    return;
   default:
     llvm_unreachable("unexpected attribute kind");
   }
@@ -5407,6 +5410,9 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
     break;
   case ParsedAttr::AT_PreserveAll:
     CC = CC_PreserveAll;
+    break;
+  case ParsedAttr::AT_M68kRTD:
+    CC = CC_M68kRTD;
     break;
   default: llvm_unreachable("unexpected attribute kind");
   }
@@ -8375,79 +8381,37 @@ static void handleCountedByAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(CBA);
 }
 
-namespace {
-
-// Callback to only accept typo corrections that are for field members of
-// the given struct or union.
-class FieldDeclValidatorCCC final : public CorrectionCandidateCallback {
-public:
-  explicit FieldDeclValidatorCCC(const RecordDecl *RD) : Record(RD) {}
-
-  bool ValidateCandidate(const TypoCorrection &candidate) override {
-    FieldDecl *FD = candidate.getCorrectionDeclAs<FieldDecl>();
-    return FD && FD->getDeclContext()->getRedeclContext()->Equals(Record);
-  }
-
-  std::unique_ptr<CorrectionCandidateCallback> clone() override {
-    return std::make_unique<FieldDeclValidatorCCC>(*this);
-  }
-
-private:
-  const RecordDecl *Record;
-};
-
-} // end anonymous namespace
-
 bool Sema::CheckCountedByAttr(Scope *S, const FieldDecl *FD) {
-  const RecordDecl *RD = FD->getParent();
   const auto *CBA = FD->getAttr<CountedByAttr>();
   const IdentifierInfo *FieldName = CBA->getCountedByField();
+  DeclarationNameInfo NameInfo(FieldName,
+                               CBA->getCountedByFieldLoc().getBegin());
 
-  auto Pred = [&](const Decl *D) {
-    if (const auto *Field = dyn_cast<FieldDecl>(D))
-      return Field->getName() == FieldName->getName();
-    return false;
-  };
-  const FieldDecl *Field = RD->findFieldIf(Pred);
+  LookupResult MemResult(*this, NameInfo, Sema::LookupMemberName);
+  LookupName(MemResult, S);
 
-  if (!Field) {
+  if (MemResult.empty()) {
     // The "counted_by" field needs to exist within the struct.
-    DeclarationNameInfo NameInfo(FieldName,
-                                 CBA->getCountedByFieldLoc().getBegin());
-    LookupResult Result(*this, NameInfo, Sema::LookupOrdinaryName);
+    LookupResult OrdResult(*this, NameInfo, Sema::LookupOrdinaryName);
+    LookupName(OrdResult, S);
 
-    LookupName(Result, S);
-    if (Result.getResultKind() == LookupResult::Found) {
-      SourceRange SR = CBA->getCountedByFieldLoc();
-      Diag(SR.getBegin(),
-           diag::err_flexible_array_counted_by_attr_field_not_found_in_struct)
-          << CBA->getCountedByField() << SR;
+    if (!OrdResult.empty()) {
+      SourceRange SR = FD->getLocation();
+      Diag(SR.getBegin(), diag::err_counted_by_must_be_in_structure)
+          << FieldName << SR;
 
-      SR = Result.getAsSingle<NamedDecl>()->getSourceRange();
-      Diag(SR.getBegin(), diag::note_var_declared_here)
-          << Result.getAsSingle<NamedDecl>() << SR;
-    } else {
-      SourceRange SR = CBA->getCountedByFieldLoc();
-      FieldDeclValidatorCCC CCC(RD);
-
-      if (TypoCorrection Corrected =
-              CorrectTypo(NameInfo, Sema::LookupMemberName, /*Scope=*/nullptr,
-                          /*SS=*/nullptr, CCC, Sema::CTK_ErrorRecovery,
-                          const_cast<RecordDecl *>(RD))) {
-        diagnoseTypo(
-            Corrected,
-            PDiag(
-                diag::
-                    err_flexible_array_counted_by_attr_field_not_found_suggest)
-                << FieldName);
-      } else {
-        Diag(SR.getBegin(),
-             diag::err_flexible_array_counted_by_attr_field_not_found)
-            << CBA->getCountedByField() << SR;
+      if (auto *ND = OrdResult.getAsSingle<NamedDecl>()) {
+        SR = ND->getLocation();
+        Diag(SR.getBegin(), diag::note_flexible_array_counted_by_attr_field)
+            << ND << SR;
       }
+      return true;
     }
 
-    return true;
+    CXXScopeSpec SS;
+    DeclFilterCCC<FieldDecl> Filter(FieldName);
+    return DiagnoseEmptyLookup(S, SS, MemResult, Filter, nullptr, std::nullopt,
+                               const_cast<DeclContext *>(FD->getDeclContext()));
   }
 
   LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
@@ -8457,33 +8421,33 @@ bool Sema::CheckCountedByAttr(Scope *S, const FieldDecl *FD) {
                                        StrictFlexArraysLevel, true)) {
     // The "counted_by" attribute must be on a flexible array member.
     SourceRange SR = FD->getLocation();
-    Diag(SR.getBegin(),
-         diag::err_counted_by_attr_not_on_flexible_array_member)
+    Diag(SR.getBegin(), diag::err_counted_by_attr_not_on_flexible_array_member)
         << SR;
     return true;
   }
 
-  if (Field->hasAttr<CountedByAttr>()) {
-    // The "counted_by" field can't point to the flexible array member.
-    SourceRange SR = CBA->getCountedByFieldLoc();
-    Diag(SR.getBegin(),
-         diag::err_flexible_array_counted_by_attr_refers_to_self)
-        << CBA->getCountedByField() << SR;
-    return true;
-  }
+  if (const FieldDecl *Field = MemResult.getAsSingle<FieldDecl>()) {
+    if (Field->hasAttr<CountedByAttr>()) {
+      // The "counted_by" field can't point to the flexible array member.
+      SourceRange SR = CBA->getCountedByFieldLoc();
+      Diag(SR.getBegin(), diag::err_counted_by_attr_refers_to_flexible_array)
+          << CBA->getCountedByField() << SR;
+      return true;
+    }
 
-  if (!Field->getType()->isIntegerType() ||
-      Field->getType()->isBooleanType()) {
-    // The "counted_by" field must have an integer type.
-    SourceRange SR = Field->getLocation();
-    Diag(SR.getBegin(),
-         diag::err_flexible_array_counted_by_attr_field_not_integer)
-        << Field << SR;
+    if (!Field->getType()->isIntegerType() ||
+        Field->getType()->isBooleanType()) {
+      // The "counted_by" field must have an integer type.
+      SourceRange SR = CBA->getCountedByFieldLoc();
+      Diag(SR.getBegin(),
+           diag::err_flexible_array_counted_by_attr_field_not_integer)
+          << CBA->getCountedByField() << SR;
 
-    SR = CBA->getCountedByFieldLoc();
-    Diag(SR.getBegin(), diag::note_flexible_array_counted_by_attr_field)
-        << CBA->getCountedByField() << SR;
-    return true;
+      SR = Field->getLocation();
+      Diag(SR.getBegin(), diag::note_flexible_array_counted_by_attr_field)
+          << Field << SR;
+      return true;
+    }
   }
 
   return false;
@@ -9395,6 +9359,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_AArch64VectorPcs:
   case ParsedAttr::AT_AArch64SVEPcs:
   case ParsedAttr::AT_AMDGPUKernelCall:
+  case ParsedAttr::AT_M68kRTD:
     handleCallConvAttr(S, D, AL);
     break;
   case ParsedAttr::AT_Suppress:

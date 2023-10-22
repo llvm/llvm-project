@@ -21,21 +21,21 @@
 
 // gtest utilities and macros rely on using a single type. So wrap both the
 // hasher type and endianness.
-template <typename _HasherT, llvm::support::endianness _Endianness>
+template <typename _HasherT, llvm::endianness _Endianness>
 struct HasherTAndEndianness {
   using HasherT = _HasherT;
-  static constexpr llvm::support::endianness Endianness = _Endianness;
+  static constexpr llvm::endianness Endianness = _Endianness;
 };
-using HasherTAndEndiannessToTest =
-    ::testing::Types<HasherTAndEndianness<llvm::MD5, llvm::support::big>,
-                     HasherTAndEndianness<llvm::MD5, llvm::support::little>,
-                     HasherTAndEndianness<llvm::MD5, llvm::support::native>,
-                     HasherTAndEndianness<llvm::SHA1, llvm::support::big>,
-                     HasherTAndEndianness<llvm::SHA1, llvm::support::little>,
-                     HasherTAndEndianness<llvm::SHA1, llvm::support::native>,
-                     HasherTAndEndianness<llvm::SHA256, llvm::support::big>,
-                     HasherTAndEndianness<llvm::SHA256, llvm::support::little>,
-                     HasherTAndEndianness<llvm::SHA256, llvm::support::native>>;
+using HasherTAndEndiannessToTest = ::testing::Types<
+    HasherTAndEndianness<llvm::MD5, llvm::endianness::big>,
+    HasherTAndEndianness<llvm::MD5, llvm::endianness::little>,
+    HasherTAndEndianness<llvm::MD5, llvm::endianness::native>,
+    HasherTAndEndianness<llvm::SHA1, llvm::endianness::big>,
+    HasherTAndEndianness<llvm::SHA1, llvm::endianness::little>,
+    HasherTAndEndianness<llvm::SHA1, llvm::endianness::native>,
+    HasherTAndEndianness<llvm::SHA256, llvm::endianness::big>,
+    HasherTAndEndianness<llvm::SHA256, llvm::endianness::little>,
+    HasherTAndEndianness<llvm::SHA256, llvm::endianness::native>>;
 template <typename HasherT> class HashBuilderTest : public testing::Test {};
 TYPED_TEST_SUITE(HashBuilderTest, HasherTAndEndiannessToTest, );
 
@@ -124,7 +124,7 @@ struct SimpleStruct {
   int I;
 };
 
-template <typename HasherT, llvm::support::endianness Endianness>
+template <typename HasherT, llvm::endianness Endianness>
 void addHash(llvm::HashBuilder<HasherT, Endianness> &HBuilder,
              const SimpleStruct &Value) {
   HBuilder.add(Value.C);
@@ -138,7 +138,7 @@ struct StructWithoutCopyOrMove {
   StructWithoutCopyOrMove(const StructWithoutCopyOrMove &) = delete;
   StructWithoutCopyOrMove &operator=(const StructWithoutCopyOrMove &) = delete;
 
-  template <typename HasherT, llvm::support::endianness Endianness>
+  template <typename HasherT, llvm::endianness Endianness>
   friend void addHash(llvm::HashBuilder<HasherT, Endianness> &HBuilder,
                       const StructWithoutCopyOrMove &Value) {
     HBuilder.add(Value.I);
@@ -153,7 +153,7 @@ struct /* __attribute__((packed)) */ StructWithFastHash {
 
   // If possible, we want to hash both `I` and `C` in a single `update`
   // call for performance concerns.
-  template <typename HasherT, llvm::support::endianness Endianness>
+  template <typename HasherT, llvm::endianness Endianness>
   friend void addHash(llvm::HashBuilder<HasherT, Endianness> &HBuilder,
                       const StructWithFastHash &Value) {
     if (Endianness == llvm::endianness::native) {
@@ -177,7 +177,7 @@ public:
     for (size_t I = 0; I != Size; ++I)
       Elements[I] = I;
   }
-  template <typename HasherT, llvm::support::endianness Endianness>
+  template <typename HasherT, llvm::endianness Endianness>
   friend void addHash(llvm::HashBuilder<HasherT, Endianness> &HBuilder,
                       const CustomContainer &Value) {
     if (Endianness == llvm::endianness::native) {
@@ -325,13 +325,11 @@ TEST(CustomHasher, CustomHasher) {
   };
 
   {
-    llvm::HashBuilder<SumHash, llvm::support::endianness::little> HBuilder(0,
-                                                                           1);
+    llvm::HashBuilder<SumHash, llvm::endianness::little> HBuilder(0, 1);
     EXPECT_EQ(HBuilder.add(0x02, 0x03, 0x400).getHasher().Hash, 0xa);
   }
   {
-    llvm::HashBuilder<SumHash, llvm::support::endianness::little> HBuilder(2,
-                                                                           3);
+    llvm::HashBuilder<SumHash, llvm::endianness::little> HBuilder(2, 3);
     EXPECT_EQ(HBuilder.add("ab", 'c').getHasher().Hash,
               static_cast<uint8_t>(/*seeds*/ 2 + 3 + /*range size*/ 2 +
                                    /*characters*/ 'a' + 'b' + 'c'));

@@ -41,6 +41,7 @@ struct RecordsEntry {
   std::unique_ptr<Record> Rec;
   std::unique_ptr<ForeachLoop> Loop;
   std::unique_ptr<Record::AssertionInfo> Assertion;
+  std::unique_ptr<Record::DumpInfo> Dump;
 
   void dump() const;
 
@@ -49,6 +50,8 @@ struct RecordsEntry {
   RecordsEntry(std::unique_ptr<ForeachLoop> Loop) : Loop(std::move(Loop)) {}
   RecordsEntry(std::unique_ptr<Record::AssertionInfo> Assertion)
       : Assertion(std::move(Assertion)) {}
+  RecordsEntry(std::unique_ptr<Record::DumpInfo> Dump)
+      : Dump(std::move(Dump)) {}
 };
 
 /// ForeachLoop - Record the iteration state associated with a for loop.
@@ -262,6 +265,7 @@ private:  // Parser methods.
   bool ParseDef(MultiClass *CurMultiClass);
   bool ParseDefset();
   bool ParseDefvar(Record *CurRec = nullptr);
+  bool ParseDump(MultiClass *CurMultiClass, Record *CurRec = nullptr);
   bool ParseForeach(MultiClass *CurMultiClass);
   bool ParseIf(MultiClass *CurMultiClass);
   bool ParseIfBody(MultiClass *CurMultiClass, StringRef Kind);

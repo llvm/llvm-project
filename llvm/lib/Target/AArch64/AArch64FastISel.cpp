@@ -341,7 +341,11 @@ CCAssignFn *AArch64FastISel::CCAssignFnForCall(CallingConv::ID CC) const {
     return CC_AArch64_GHC;
   if (CC == CallingConv::CFGuard_Check)
     return CC_AArch64_Win64_CFGuard_Check;
-  return Subtarget->isTargetDarwin() ? CC_AArch64_DarwinPCS : CC_AArch64_AAPCS;
+  if (Subtarget->isTargetDarwin())
+    return CC_AArch64_DarwinPCS;
+  if (Subtarget->isTargetWindows())
+    return CC_AArch64_Win64PCS;
+  return CC_AArch64_AAPCS;
 }
 
 unsigned AArch64FastISel::fastMaterializeAlloca(const AllocaInst *AI) {

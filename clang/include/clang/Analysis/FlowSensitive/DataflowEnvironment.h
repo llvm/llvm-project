@@ -242,7 +242,7 @@ public:
   /// Creates a storage location for `D`. Does not assign the returned storage
   /// location to `D` in the environment. Does not assign a value to the
   /// returned storage location in the environment.
-  StorageLocation &createStorageLocation(const VarDecl &D);
+  StorageLocation &createStorageLocation(const ValueDecl &D);
 
   /// Creates a storage location for `E`. Does not assign the returned storage
   /// location to `E` in the environment. Does not assign a value to the
@@ -408,7 +408,7 @@ public:
   /// this value. Otherwise, initializes the object with a value created using
   /// `createValue()`.  Uses the storage location returned by
   /// `DataflowAnalysisContext::getStableStorageLocation(D)`.
-  StorageLocation &createObject(const VarDecl &D, const Expr *InitExpr) {
+  StorageLocation &createObject(const ValueDecl &D, const Expr *InitExpr) {
     return createObjectInternal(&D, D.getType(), InitExpr);
   }
 
@@ -473,9 +473,8 @@ public:
 
   /// Returns a symbolic boolean value that models a boolean literal equal to
   /// `Value`
-  AtomicBoolValue &getBoolLiteralValue(bool Value) const {
-    return cast<AtomicBoolValue>(
-        arena().makeBoolValue(arena().makeLiteral(Value)));
+  BoolValue &getBoolLiteralValue(bool Value) const {
+    return arena().makeBoolValue(arena().makeLiteral(Value));
   }
 
   /// Returns an atomic boolean value.
@@ -614,7 +613,7 @@ private:
 
   /// Shared implementation of `createObject()` overloads.
   /// `D` and `InitExpr` may be null.
-  StorageLocation &createObjectInternal(const VarDecl *D, QualType Ty,
+  StorageLocation &createObjectInternal(const ValueDecl *D, QualType Ty,
                                         const Expr *InitExpr);
 
   /// Shared implementation of `pushCall` overloads. Note that unlike

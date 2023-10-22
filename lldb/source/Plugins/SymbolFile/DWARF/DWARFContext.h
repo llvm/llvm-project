@@ -16,7 +16,8 @@
 #include <memory>
 #include <optional>
 
-namespace lldb_private {
+namespace lldb_private::plugin {
+namespace dwarf {
 class DWARFContext {
 private:
   SectionList *m_main_section_list;
@@ -78,6 +79,7 @@ public:
 
   llvm::DWARFContext &GetAsLLVM();
 };
-} // namespace lldb_private
+} // namespace dwarf
+} // namespace lldb_private::plugin
 
 #endif

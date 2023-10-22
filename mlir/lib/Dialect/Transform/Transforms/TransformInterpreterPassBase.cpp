@@ -56,10 +56,11 @@ constexpr static llvm::StringLiteral
 /// Reports an error if there is more than one such operation and returns the
 /// first one found. Reports an error returns nullptr if no such operation
 /// found.
-static Operation *findTopLevelTransform(Operation *root,
-                                        StringRef filenameOption) {
+static Operation *
+findTopLevelTransform(Operation *root, StringRef filenameOption,
+                      mlir::transform::TransformOptions options) {
   ::mlir::transform::TransformOpInterface topLevelTransform = nullptr;
-  WalkResult walkResult = root->walk<WalkOrder::PreOrder>(
+  root->walk<WalkOrder::PreOrder>(
       [&](::mlir::transform::TransformOpInterface transformOp) {
         if (!transformOp
                  ->hasTrait<transform::PossibleTopLevelTransformOpTrait>())
@@ -68,14 +69,15 @@ static Operation *findTopLevelTransform(Operation *root,
           topLevelTransform = transformOp;
           return WalkResult::skip();
         }
-        auto diag = transformOp.emitError()
-                    << "more than one top-level transform op";
-        diag.attachNote(topLevelTransform.getLoc())
-            << "previous top-level transform op";
-        return WalkResult::interrupt();
+        if (options.getEnforceSingleToplevelTransformOp()) {
+          auto diag = transformOp.emitError()
+                      << "more than one top-level transform op";
+          diag.attachNote(topLevelTransform.getLoc())
+              << "previous top-level transform op";
+          return WalkResult::interrupt();
+        }
+        return WalkResult::skip();
       });
-  if (walkResult.wasInterrupted())
-    return nullptr;
   if (!topLevelTransform) {
     auto diag = root->emitError()
                 << "could not find a nested top-level transform op";
@@ -310,7 +312,7 @@ LogicalResult transform::detail::interpreterBaseRunOnOperationImpl(
   Operation *transformRoot =
       debugTransformRootTag.empty()
           ? findTopLevelTransform(transformContainer,
-                                  transformFileName.getArgStr())
+                                  transformFileName.getArgStr(), options)
           : findOpWithTag(transformContainer, kTransformDialectTagAttrName,
                           debugTransformRootTag);
   if (!transformRoot)
@@ -355,59 +357,6 @@ LogicalResult transform::detail::interpreterBaseRunOnOperationImpl(
   // Apply the transform to the IR
   return applyTransforms(payloadRoot, cast<TransformOpInterface>(transformRoot),
                          extraMappings, options);
-}
-
-/// Expands the given list of `paths` to a list of `.mlir` files.
-///
-/// Each entry in `paths` may either be a regular file, in which case it ends up
-/// in the result list, or a directory, in which case all (regular) `.mlir`
-/// files in that directory are added. Any other file types lead to a failure.
-static LogicalResult
-expandPathsToMLIRFiles(ArrayRef<std::string> &paths, MLIRContext *const context,
-                       SmallVectorImpl<std::string> &fileNames) {
-  for (const std::string &path : paths) {
-    auto loc = FileLineColLoc::get(context, path, 0, 0);
-
-    if (llvm::sys::fs::is_regular_file(path)) {
-      LLVM_DEBUG(DBGS() << "Adding '" << path << "' to list of files\n");
-      fileNames.push_back(path);
-      continue;
-    }
-
-    if (!llvm::sys::fs::is_directory(path)) {
-      return emitError(loc)
-             << "'" << path << "' is neither a file nor a directory";
-    }
-
-    LLVM_DEBUG(DBGS() << "Looking for files in '" << path << "':\n");
-
-    std::error_code ec;
-    for (llvm::sys::fs::directory_iterator it(path, ec), itEnd;
-         it != itEnd && !ec; it.increment(ec)) {
-      const std::string &fileName = it->path();
-
-      if (it->type() != llvm::sys::fs::file_type::regular_file) {
-        LLVM_DEBUG(DBGS() << "  Skipping non-regular file '" << fileName
-                          << "'\n");
-        continue;
-      }
-
-      if (!StringRef(fileName).endswith(".mlir")) {
-        LLVM_DEBUG(DBGS() << "  Skipping '" << fileName
-                          << "' because it does not end with '.mlir'\n");
-        continue;
-      }
-
-      LLVM_DEBUG(DBGS() << "  Adding '" << fileName << "' to list of files\n");
-      fileNames.push_back(fileName);
-    }
-
-    if (ec)
-      return emitError(loc) << "error while opening files in '" << path
-                            << "': " << ec.message();
-  }
-
-  return success();
 }
 
 LogicalResult transform::detail::interpreterBaseInitializeImpl(
