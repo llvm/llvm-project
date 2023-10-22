@@ -28,6 +28,7 @@ COFF::MachineTypes llvm::getMachineType(StringRef S) {
       .Case("arm64", COFF::IMAGE_FILE_MACHINE_ARM64)
       .Case("arm64ec", COFF::IMAGE_FILE_MACHINE_ARM64EC)
       .Case("arm64x", COFF::IMAGE_FILE_MACHINE_ARM64X)
+      .Case("mips", COFF::IMAGE_FILE_MACHINE_R4000)
       .Default(COFF::IMAGE_FILE_MACHINE_UNKNOWN);
 }
 
