@@ -631,18 +631,11 @@ void MCAsmStreamer::emitVersionMin(MCVersionMinType Type, unsigned Major,
 
 static const char *getPlatformName(MachO::PlatformType Type) {
   switch (Type) {
-  case MachO::PLATFORM_UNKNOWN: /* silence warning*/
-    break;
-  case MachO::PLATFORM_MACOS:            return "macos";
-  case MachO::PLATFORM_IOS:              return "ios";
-  case MachO::PLATFORM_TVOS:             return "tvos";
-  case MachO::PLATFORM_WATCHOS:          return "watchos";
-  case MachO::PLATFORM_BRIDGEOS:         return "bridgeos";
-  case MachO::PLATFORM_MACCATALYST:      return "macCatalyst";
-  case MachO::PLATFORM_IOSSIMULATOR:     return "iossimulator";
-  case MachO::PLATFORM_TVOSSIMULATOR:    return "tvossimulator";
-  case MachO::PLATFORM_WATCHOSSIMULATOR: return "watchossimulator";
-  case MachO::PLATFORM_DRIVERKIT:        return "driverkit";
+#define PLATFORM(platform, id, name, build_name, target, tapi_target,          \
+                 marketing)                                                    \
+  case MachO::PLATFORM_##platform:                                             \
+    return #build_name;
+#include "llvm/BinaryFormat/MachO.def"
   }
   llvm_unreachable("Invalid Mach-O platform type");
 }
