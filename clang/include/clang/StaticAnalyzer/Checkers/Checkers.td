@@ -320,7 +320,7 @@ def C11LockChecker : Checker<"C11Lock">,
 
 def StdVariantChecker : Checker<"StdVariant">,
   HelpText<"Check for bad type access for std::variant.">,
-  Documentation<Documented>;
+  Documentation<HasDocumentation>;
 
 } // end "alpha.core"
 
