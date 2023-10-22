@@ -262,8 +262,7 @@ define double @different_types_powi(double %x, i32 %y, i64 %z) {
 
 define double @fdiv_pow_powi(double %x) {
 ; CHECK-LABEL: @fdiv_pow_powi(
-; CHECK-NEXT:    [[P1:%.*]] = call double @llvm.powi.f64.i32(double [[X:%.*]], i32 3)
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc nnan double [[P1]], [[X]]
+; CHECK-NEXT:    [[DIV:%.*]] = fmul reassoc nnan double [[X:%.*]], [[X]]
 ; CHECK-NEXT:    ret double [[DIV]]
 ;
   %p1 = call double @llvm.powi.f64.i32(double %x, i32 3)
@@ -273,8 +272,7 @@ define double @fdiv_pow_powi(double %x) {
 
 define float @fdiv_powf_powi(float %x) {
 ; CHECK-LABEL: @fdiv_powf_powi(
-; CHECK-NEXT:    [[P1:%.*]] = call float @llvm.powi.f32.i32(float [[X:%.*]], i32 100)
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc nnan float [[P1]], [[X]]
+; CHECK-NEXT:    [[DIV:%.*]] = call reassoc nnan float @llvm.powi.f32.i32(float [[X:%.*]], i32 99)
 ; CHECK-NEXT:    ret float [[DIV]]
 ;
   %p1 = call float @llvm.powi.f32.i32(float %x, i32 100)
