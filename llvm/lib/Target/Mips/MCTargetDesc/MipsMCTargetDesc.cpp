@@ -45,6 +45,13 @@ using namespace llvm;
 #define GET_REGINFO_MC_DESC
 #include "MipsGenRegisterInfo.inc"
 
+namespace {
+class MipsWinCOFFTargetStreamer : public MipsTargetStreamer {
+public:
+  MipsWinCOFFTargetStreamer(MCStreamer &S) : MipsTargetStreamer(S) {}
+};
+} // end namespace
+
 /// Select the Mips CPU for the given triple and cpu name.
 StringRef MIPS_MC::selectMipsCPU(const Triple &TT, StringRef CPU) {
   if (CPU.empty() || CPU == "generic") {
@@ -84,7 +91,14 @@ static MCSubtargetInfo *createMipsMCSubtargetInfo(const Triple &TT,
 static MCAsmInfo *createMipsMCAsmInfo(const MCRegisterInfo &MRI,
                                       const Triple &TT,
                                       const MCTargetOptions &Options) {
-  MCAsmInfo *MAI = new MipsELFMCAsmInfo(TT, Options);
+  MCAsmInfo *MAI;
+
+  if (TT.isWindowsMSVCEnvironment())
+    MAI = new MipsCOFFMCAsmInfoMicrosoft();
+  else if (TT.isOSWindows())
+    MAI = new MipsCOFFMCAsmInfoGNU();
+  else
+    MAI = new MipsELFMCAsmInfo(TT, Options);
 
   unsigned SP = MRI.getDwarfRegNum(Mips::SP, true);
   MCCFIInstruction Inst = MCCFIInstruction::createDefCfaRegister(nullptr, SP);
@@ -127,6 +141,8 @@ static MCTargetStreamer *createMipsNullTargetStreamer(MCStreamer &S) {
 
 static MCTargetStreamer *
 createMipsObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
+  if (STI.getTargetTriple().isOSBinFormatCOFF())
+    return new MipsWinCOFFTargetStreamer(S);
   return new MipsTargetELFStreamer(S, STI);
 }
 
@@ -185,6 +201,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTargetMC() {
 
     TargetRegistry::RegisterNullTargetStreamer(*T,
                                                createMipsNullTargetStreamer);
+
+    TargetRegistry::RegisterCOFFStreamer(*T, createMipsWinCOFFStreamer);
 
     // Register the MC subtarget info.
     TargetRegistry::RegisterMCSubtargetInfo(*T, createMipsMCSubtargetInfo);

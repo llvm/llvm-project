@@ -51,3 +51,25 @@ MipsELFMCAsmInfo::MipsELFMCAsmInfo(const Triple &TheTriple,
   DwarfRegNumForCFI = true;
   HasMipsExpressions = true;
 }
+
+void MipsCOFFMCAsmInfoMicrosoft::anchor() { }
+
+MipsCOFFMCAsmInfoMicrosoft::MipsCOFFMCAsmInfoMicrosoft() {
+  WinEHEncodingType = WinEH::EncodingType::Itanium;
+  CommentString = ";";
+
+  ExceptionsType = ExceptionHandling::WinEH;
+
+  AllowAtInName = true;
+}
+
+void MipsCOFFMCAsmInfoGNU::anchor() { }
+
+MipsCOFFMCAsmInfoGNU::MipsCOFFMCAsmInfoGNU() {
+  HasSingleParameterDotFile = true;
+  WinEHEncodingType = WinEH::EncodingType::Itanium;
+
+  ExceptionsType = ExceptionHandling::WinEH;
+
+  AllowAtInName = true;
+}
