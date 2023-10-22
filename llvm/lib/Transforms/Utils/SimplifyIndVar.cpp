@@ -659,11 +659,11 @@ bool SimplifyIndvar::replaceFloatIVWithIntegerIV(Instruction *UseInst) {
   Instruction *IVOperand = cast<Instruction>(UseInst->getOperand(0));
   // Get the symbolic expression for this instruction.
   const SCEV *IV = SE->getSCEV(IVOperand);
-  unsigned MaskBits;
+  int MaskBits;
   if (UseInst->getOpcode() == CastInst::SIToFP)
-    MaskBits = SE->getSignedRange(IV).getMinSignedBits();
+    MaskBits = (int)SE->getSignedRange(IV).getMinSignedBits();
   else
-    MaskBits = SE->getUnsignedRange(IV).getActiveBits();
+    MaskBits = (int)SE->getUnsignedRange(IV).getActiveBits();
   int DestNumSigBits = UseInst->getType()->getFPMantissaWidth();
   if (MaskBits <= DestNumSigBits) {
     for (User *U : UseInst->users()) {
