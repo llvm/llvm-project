@@ -298,8 +298,8 @@ Changes in existing checks
   ignore false-positive for ``if constexpr`` in lambda expression.
 
 - Improved :doc:`readability-const-params-in-decls
-  <clang-tidy/checks/readability/const-params-in-decls>` place the hint check under
-  the const token instead of the beginning of parameter declaration.
+  <clang-tidy/checks/readability/const-params-in-decls>` diagnositics to
+  highlight the const location
 
 - Improved :doc:`readability-container-size-empty
   <clang-tidy/checks/readability/container-size-empty>` check to
