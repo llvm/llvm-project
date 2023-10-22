@@ -123,6 +123,10 @@ static cl::opt<unsigned> CacheEntries("cds-cache-entries", cl::ReallyHidden,
 static cl::opt<unsigned> CacheSize("cds-cache-size", cl::ReallyHidden,
                                    cl::desc("The size of a line in the cache"));
 
+static cl::opt<unsigned>
+    CDMaxChainSize("cdsort-max-chain-size", cl::ReallyHidden,
+                   cl::desc("The maximum size of a chain to create"));
+
 static cl::opt<double> DistancePower(
     "cds-distance-power", cl::ReallyHidden,
     cl::desc("The power exponent for the distance-based locality"));
@@ -1156,6 +1160,9 @@ private:
         // Ignore loop edges.
         if (Edge->isSelfEdge())
           continue;
+        if (Edge->srcChain()->numBlocks() + Edge->dstChain()->numBlocks() >
+            Config.MaxChainSize)
+          continue;
 
         // Compute the gain of merging the two chains.
         MergeGainT Gain = getBestMergeGain(Edge);
@@ -1452,6 +1459,8 @@ std::vector<uint64_t> codelayout::computeCacheDirectedLayout(
     Config.CacheEntries = CacheEntries;
   if (CacheSize.getNumOccurrences() > 0)
     Config.CacheSize = CacheSize;
+  if (CDMaxChainSize.getNumOccurrences() > 0)
+    Config.MaxChainSize = CDMaxChainSize;
   if (DistancePower.getNumOccurrences() > 0)
     Config.DistancePower = DistancePower;
   if (FrequencyScale.getNumOccurrences() > 0)
