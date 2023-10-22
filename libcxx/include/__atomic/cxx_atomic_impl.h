@@ -131,13 +131,13 @@ _Tp __cxx_atomic_load(const volatile __cxx_atomic_base_impl<_Tp>* __a,
 template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI void
 __cxx_atomic_load_inplace(const volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp* __dst, memory_order __order) {
-  __atomic_load(std::addressof(__a->__a_value), std::addressof(__dst), __to_gcc_order(__order));
+  __atomic_load(std::addressof(__a->__a_value), __dst, __to_gcc_order(__order));
 }
 
 template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI void
 __cxx_atomic_load_inplace(const __cxx_atomic_base_impl<_Tp>* __a, _Tp* __dst, memory_order __order) {
-  __atomic_load(std::addressof(__a->__a_value), std::addressof(__dst), __to_gcc_order(__order));
+  __atomic_load(std::addressof(__a->__a_value), __dst, __to_gcc_order(__order));
 }
 
 template <typename _Tp>
