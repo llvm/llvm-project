@@ -4205,7 +4205,7 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
       return OutOfDate;
     }
 
-    llvm::SmallPtrSet<FileEntryRef, 1> AdditionalStoredMaps;
+    ModuleMap::AdditionalModMapsSet AdditionalStoredMaps;
     for (unsigned I = 0, N = Record[Idx++]; I < N; ++I) {
       // FIXME: we should use input files rather than storing names.
       std::string Filename = ReadPath(F, Record, Idx);
