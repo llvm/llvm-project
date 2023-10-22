@@ -376,13 +376,17 @@ bool fine(A a, B b) { return a == b; } // Ok. Found a matching operator!=.
 
 
 namespace ADL_GH68901{
+namespace test1 {
 namespace A {
 struct S {};
 bool operator==(S, int); // expected-note {{no known conversion from 'int' to 'S' for 1st argument}}
+bool a = 0 == A::S(); // Ok. Operator!= not visible.
 bool operator!=(S, int);
 } // namespace A
 bool a = 0 == A::S(); // expected-error {{invalid operands to binary expression ('int' and 'A::S')}}
+} // namespace test1
 
+namespace test2 {
 namespace B {
 struct Derived {};
 struct Base : Derived {};
@@ -391,23 +395,20 @@ bool operator==(Derived& a, Base& b);
 bool operator!=(Derived& a, Base& b);
 }  // namespace B
 
-void foo() {
-  // B::Base{} == B::Base{};
+bool foo() {
   B::Base a,b;
-  bool v = a == b;
+  return a == b;
 }
+} // namespace test2
 
+
+namespace template_ {
 namespace ns {
-template <class T>
-struct A {
-};
+template <class T> struct A {};
+template <class T> struct B : A<T> {};
 
-template <class T>
-struct B : A<T> {
-};
-
-template <class T> bool operator == (B<T>, A<T>); // expected-note {{candidate template ignored: could not match 'B' against 'A'}}
-template <class T> bool operator != (B<T>, A<T>);
+template <class T> bool operator==(B<T>, A<T>); // expected-note {{candidate template ignored: could not match 'B' against 'A'}}
+template <class T> bool operator!=(B<T>, A<T>);
 }
 
 void test() {
@@ -415,7 +416,31 @@ void test() {
     ns::B<int> b;
     a == b; // expected-error {{invalid operands to binary expression}}
 }
+} // namespace test3
 
+namespace using_not_eq {
+namespace A {
+struct S {};
+namespace B {
+bool operator!=(S, int);
+}
+bool operator==(S, int); // expected-note {{candidate}}
+using B::operator!=;
+}  // namespace A
+bool a = 0 == A::S();  // expected-error {{invalid operands to binary expression}}
+} // namespace reversed_lookup_not_like_ADL
+
+namespace using_eqeq {
+namespace A {
+struct S {};
+namespace B {
+bool operator==(S, int); // expected-note {{candidate}}
+bool operator!=(S, int);
+}
+using B::operator==;
+}  // namespace A
+bool a = 0 == A::S();  // expected-error {{invalid operands to binary expression}}
+}
 
 } //namespace ADL_GH68901
 

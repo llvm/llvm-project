@@ -964,7 +964,7 @@ static bool shouldAddReversedEqEq(Sema &S, SourceLocation OpLoc,
     auto *NotEqFD = Op->getAsFunction();
     if (auto *UD = dyn_cast<UsingShadowDecl>(Op))
       NotEqFD = UD->getUnderlyingDecl()->getAsFunction();
-    if (FunctionsCorrespond(S.Context, EqFD, NotEqFD) &&
+    if (FunctionsCorrespond(S.Context, EqFD, NotEqFD) && S.isVisible(NotEqFD) &&
         declaresSameEntity(cast<Decl>(EqFD->getEnclosingNamespaceContext()),
                            cast<Decl>(Op->getLexicalDeclContext())))
       return false;
