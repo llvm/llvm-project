@@ -2,6 +2,7 @@
 ; RUN: opt -passes=instcombine -S < %s | FileCheck %s
 
 declare double @llvm.powi.f64.i32(double, i32)
+declare float @llvm.powi.f32.i32(float, i32)
 declare double @llvm.powi.f64.i64(double, i64)
 declare double @llvm.fabs.f64(double)
 declare double @llvm.copysign.f64(double, double)
@@ -257,4 +258,88 @@ define double @different_types_powi(double %x, i32 %y, i64 %z) {
   %p2 = tail call double @llvm.powi.f64.i64(double %x, i64 %z)
   %mul = fmul reassoc double %p2, %p1
   ret double %mul
+}
+
+define double @fdiv_pow_powi(double %x) {
+; CHECK-LABEL: @fdiv_pow_powi(
+; CHECK-NEXT:    [[P1:%.*]] = call double @llvm.powi.f64.i32(double [[X:%.*]], i32 3)
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc nnan double [[P1]], [[X]]
+; CHECK-NEXT:    ret double [[DIV]]
+;
+  %p1 = call double @llvm.powi.f64.i32(double %x, i32 3)
+  %div = fdiv reassoc nnan double %p1, %x
+  ret double %div
+}
+
+define float @fdiv_powf_powi(float %x) {
+; CHECK-LABEL: @fdiv_powf_powi(
+; CHECK-NEXT:    [[P1:%.*]] = call float @llvm.powi.f32.i32(float [[X:%.*]], i32 100)
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc nnan float [[P1]], [[X]]
+; CHECK-NEXT:    ret float [[DIV]]
+;
+  %p1 = call float @llvm.powi.f32.i32(float %x, i32 100)
+  %div = fdiv reassoc nnan float %p1, %x
+  ret float %div
+}
+
+; TODO: Multi-use may be also better off creating Powi(x,y-1) then creating
+; (mul, Powi(x,y-1),x) to replace the Powi(x,y).
+define double @fdiv_pow_powi_multi_use(double %x) {
+; CHECK-LABEL: @fdiv_pow_powi_multi_use(
+; CHECK-NEXT:    [[P1:%.*]] = call double @llvm.powi.f64.i32(double [[X:%.*]], i32 3)
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc nnan double [[P1]], [[X]]
+; CHECK-NEXT:    tail call void @use(double [[P1]])
+; CHECK-NEXT:    ret double [[DIV]]
+;
+  %p1 = call double @llvm.powi.f64.i32(double %x, i32 3)
+  %div = fdiv reassoc nnan double %p1, %x
+  tail call void @use(double %p1)
+  ret double %div
+}
+
+; Negative test: Miss part of the fmf flag for the fdiv instruction
+define float @fdiv_powf_powi_missing_reassoc(float %x) {
+; CHECK-LABEL: @fdiv_powf_powi_missing_reassoc(
+; CHECK-NEXT:    [[P1:%.*]] = call float @llvm.powi.f32.i32(float [[X:%.*]], i32 100)
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan float [[P1]], [[X]]
+; CHECK-NEXT:    ret float [[DIV]]
+;
+  %p1 = call float @llvm.powi.f32.i32(float %x, i32 100)
+  %div = fdiv nnan float %p1, %x
+  ret float %div
+}
+
+define float @fdiv_powf_powi_missing_nnan(float %x) {
+; CHECK-LABEL: @fdiv_powf_powi_missing_nnan(
+; CHECK-NEXT:    [[P1:%.*]] = call float @llvm.powi.f32.i32(float [[X:%.*]], i32 100)
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc float [[P1]], [[X]]
+; CHECK-NEXT:    ret float [[DIV]]
+;
+  %p1 = call float @llvm.powi.f32.i32(float %x, i32 100)
+  %div = fdiv reassoc float %p1, %x
+  ret float %div
+}
+
+; Negative test: Illegal because (Y - 1) wraparound
+define double @fdiv_pow_powi_negative(double %x) {
+; CHECK-LABEL: @fdiv_pow_powi_negative(
+; CHECK-NEXT:    [[P1:%.*]] = call double @llvm.powi.f64.i32(double [[X:%.*]], i32 -2147483648)
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc nnan double [[P1]], [[X]]
+; CHECK-NEXT:    ret double [[DIV]]
+;
+  %p1 = call double @llvm.powi.f64.i32(double %x, i32 -2147483648) ; INT_MIN
+  %div = fdiv reassoc nnan double %p1, %x
+  ret double %div
+}
+
+; Negative test: The 2nd powi argument is a variable
+define double @fdiv_pow_powi_negative_variable(double %x, i32 %y) {
+; CHECK-LABEL: @fdiv_pow_powi_negative_variable(
+; CHECK-NEXT:    [[P1:%.*]] = call double @llvm.powi.f64.i32(double [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc nnan double [[P1]], [[X]]
+; CHECK-NEXT:    ret double [[DIV]]
+;
+  %p1 = call double @llvm.powi.f64.i32(double %x, i32 %y)
+  %div = fdiv reassoc nnan double %p1, %x
+  ret double %div
 }
