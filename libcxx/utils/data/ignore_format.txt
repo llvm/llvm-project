@@ -10,7 +10,6 @@ libcxx/include/__algorithm/fill.h
 libcxx/include/__algorithm/fill_n.h
 libcxx/include/__algorithm/find_end.h
 libcxx/include/__algorithm/find_first_of.h
-libcxx/include/__algorithm/for_each.h
 libcxx/include/__algorithm/for_each_n.h
 libcxx/include/__algorithm/generate.h
 libcxx/include/__algorithm/generate_n.h
@@ -1139,7 +1138,6 @@ libcxx/test/std/algorithms/alg.nonmodifying/alg.find/ranges.find.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.foreach/for_each_n.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.foreach/ranges.for_each_n.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.foreach/ranges.for_each.pass.cpp
-libcxx/test/std/algorithms/alg.nonmodifying/alg.foreach/test.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.is_permutation/is_permutation.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.is_permutation/is_permutation_pred.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.is_permutation/ranges.is_permutation.pass.cpp
