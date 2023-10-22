@@ -56,6 +56,15 @@ namespace ScalarTypes {
   };
   static_assert(getScalar<E>() == First, "");
   /// FIXME: Member pointers.
+
+#if __cplusplus >= 201402L
+  constexpr void Void(int n) {
+    void(n + 1);
+    void();
+  }
+  constexpr int void_test = (Void(0), 1);
+  static_assert(void_test == 1, "");
+#endif
 }
 
 namespace IntegralCasts {
