@@ -36,7 +36,7 @@ Section,Description,Assignee,Complete
 | `[alg.min.max] <https://wg21.link/alg.min.max>`_,std::min_element,Nikolas Klauser,|Not Started|
 | `[alg.min.max] <https://wg21.link/alg.min.max>`_,std::minmax_element,Nikolas Klauser,|Not Started|
 | `[mismatch] <https://wg21.link/mismatch>`_,std::mismatch,Nikolas Klauser,|Not Started|
-| `[alg.move] <https://wg21.link/alg.move>`_,std::move,Nikolas Klauser,|In Progress|
+| `[alg.move] <https://wg21.link/alg.move>`_,std::move,Nikolas Klauser,|Complete|
 | `[alg.none.of] <https://wg21.link/alg.none.of>`_,std::none_of,Nikolas Klauser,|Complete|
 | `[alg.nth.element] <https://wg21.link/alg.nth.element>`_,std::nth_element,Nikolas Klauser,|Not Started|
 | `[alg.sort] <https://wg21.link/alg.sort>`_,std::partial_sort,Nikolas Klauser,|Not Started|
