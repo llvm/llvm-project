@@ -960,18 +960,13 @@ static bool shouldAddReversedEqEq(Sema &S, SourceLocation OpLoc,
     return true;
   }
   // Otherwise the search scope is the namespace scope of which F is a member.
-  LookupResult NonMembers(S, NotEqOp, OpLoc,
-                          Sema::LookupNameKind::LookupOperatorName);
-  S.LookupName(NonMembers,
-               S.getScopeForContext(EqFD->getEnclosingNamespaceContext()));
-  NonMembers.suppressAccessDiagnostics();
-  for (NamedDecl *Op : NonMembers) {
-    auto *FD = Op->getAsFunction();
-    if(auto* UD = dyn_cast<UsingShadowDecl>(Op))
-      FD = UD->getUnderlyingDecl()->getAsFunction();
-    if (FunctionsCorrespond(S.Context, EqFD, FD) &&
-        declaresSameEntity(cast<Decl>(EqFD->getDeclContext()),
-                           cast<Decl>(Op->getDeclContext())))
+  for (NamedDecl *Op : EqFD->getEnclosingNamespaceContext()->lookup(NotEqOp)) {
+    auto *NotEqFD = Op->getAsFunction();
+    if (auto *UD = dyn_cast<UsingShadowDecl>(Op))
+      NotEqFD = UD->getUnderlyingDecl()->getAsFunction();
+    if (FunctionsCorrespond(S.Context, EqFD, NotEqFD) &&
+        declaresSameEntity(cast<Decl>(EqFD->getEnclosingNamespaceContext()),
+                           cast<Decl>(Op->getLexicalDeclContext())))
       return false;
   }
   return true;

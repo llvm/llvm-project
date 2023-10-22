@@ -85,6 +85,10 @@ C/C++ Language Potentially Breaking Changes
     ``__has_c_attribute(warn_unused_result)``,          202003, 0
     ``__has_c_attribute(gnu::warn_unused_result)``,     202003, 1
 
+- Fixed a bug in finding matching `operator!=` while adding reversed `operator==` as
+  outlined in "The Equality Operator You Are Looking For" (`P2468 <http://wg21.link/p2468r2>`_).
+  Fixes (`#68901: <https://github.com/llvm/llvm-project/issues/68901>`_).
+
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 - The name mangling rules for function templates has been changed to take into

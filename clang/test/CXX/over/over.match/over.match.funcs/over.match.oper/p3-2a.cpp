@@ -374,6 +374,84 @@ bool fine(A a, B b) { return a == b; } // Ok. Found a matching operator!=.
 }
 }
 
+
+namespace ADL_GH68901{
+namespace A {
+struct S {};
+bool operator==(S, int); // expected-note {{no known conversion from 'int' to 'S' for 1st argument}}
+bool operator!=(S, int);
+} // namespace A
+bool a = 0 == A::S(); // expected-error {{invalid operands to binary expression ('int' and 'A::S')}}
+
+namespace B {
+struct Derived {};
+struct Base : Derived {};
+
+bool operator==(Derived& a, Base& b);
+bool operator!=(Derived& a, Base& b);
+}  // namespace B
+
+void foo() {
+  // B::Base{} == B::Base{};
+  B::Base a,b;
+  bool v = a == b;
+}
+
+namespace ns {
+template <class T>
+struct A {
+};
+
+template <class T>
+struct B : A<T> {
+};
+
+template <class T> bool operator == (B<T>, A<T>); // expected-note {{candidate template ignored: could not match 'B' against 'A'}}
+template <class T> bool operator != (B<T>, A<T>);
+}
+
+void test() {
+    ns::A<int> a;
+    ns::B<int> b;
+    a == b; // expected-error {{invalid operands to binary expression}}
+}
+
+
+} //namespace ADL_GH68901
+
+namespace function_scope_operator_eqeq {
+// For non-members, we always lookup for matching operator!= in the namespace scope of
+// operator== (and not in the scope of operator==).
+struct X { operator int(); };
+namespace test1{
+bool h(X x) {
+  bool operator==(X, int); // expected-note {{reversed}}
+  return x == x; // expected-warning {{ambiguous}}
+}
+
+bool g(X x) {
+  bool operator==(X, int); // expected-note {{reversed}}
+  bool operator!=(X, int);
+  return x == x;  // expected-warning {{ambiguous}}
+}
+} // namespace test1
+
+namespace test2 {
+bool operator!=(X, int);
+
+bool h(X x) {
+  bool operator==(X, int);
+  return x == x;
+}
+
+bool i(X x) {
+  bool operator==(X, int);
+  bool operator!=(X, int);
+  return x == x;
+}
+} // namespace test2
+} // namespace function_scope_operator_eqeq
+
 namespace non_member_template_2 {
 struct P {};
 template<class S>
