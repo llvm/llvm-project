@@ -602,25 +602,23 @@ bool RISCVOptWInstrs::removeSExtWInstrs(MachineFunction &MF,
 
   bool MadeChange = false;
   for (MachineBasicBlock &MBB : MF) {
-    for (auto I = MBB.begin(), IE = MBB.end(); I != IE;) {
-      MachineInstr *MI = &*I++;
-
+    for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
       // We're looking for the sext.w pattern ADDIW rd, rs1, 0.
-      if (!RISCV::isSEXT_W(*MI))
+      if (!RISCV::isSEXT_W(MI))
         continue;
 
-      Register SrcReg = MI->getOperand(1).getReg();
+      Register SrcReg = MI.getOperand(1).getReg();
 
       SmallPtrSet<MachineInstr *, 4> FixableDefs;
 
       // If all users only use the lower bits, this sext.w is redundant.
       // Or if all definitions reaching MI sign-extend their output,
       // then sext.w is redundant.
-      if (!hasAllWUsers(*MI, ST, MRI) &&
+      if (!hasAllWUsers(MI, ST, MRI) &&
           !isSignExtendedW(SrcReg, ST, MRI, FixableDefs))
         continue;
 
-      Register DstReg = MI->getOperand(0).getReg();
+      Register DstReg = MI.getOperand(0).getReg();
       if (!MRI.constrainRegClass(SrcReg, MRI.getRegClass(DstReg)))
         continue;
 
@@ -638,7 +636,7 @@ bool RISCVOptWInstrs::removeSExtWInstrs(MachineFunction &MF,
       LLVM_DEBUG(dbgs() << "Removing redundant sign-extension\n");
       MRI.replaceRegWith(DstReg, SrcReg);
       MRI.clearKillFlags(SrcReg);
-      MI->eraseFromParent();
+      MI.eraseFromParent();
       ++NumRemovedSExtW;
       MadeChange = true;
     }
@@ -656,9 +654,7 @@ bool RISCVOptWInstrs::stripWSuffixes(MachineFunction &MF,
 
   bool MadeChange = false;
   for (MachineBasicBlock &MBB : MF) {
-    for (auto I = MBB.begin(), IE = MBB.end(); I != IE; ++I) {
-      MachineInstr &MI = *I;
-
+    for (MachineInstr &MI : MBB) {
       unsigned Opc;
       switch (MI.getOpcode()) {
       default:
