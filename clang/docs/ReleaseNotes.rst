@@ -306,6 +306,7 @@ Improvements to Clang's diagnostics
 - Clang now displays an improved diagnostic and a note when a defaulted special
   member is marked ``constexpr`` in a class with a virtual base class
   (`#64843: <https://github.com/llvm/llvm-project/issues/64843>`_).
+<<<<<<< ours
 - ``-Wfixed-enum-extension`` and ``-Wmicrosoft-fixed-enum`` diagnostics are no longer
   emitted when building as C23, since C23 standardizes support for enums with a
   fixed underlying type.
@@ -346,6 +347,11 @@ Improvements to Clang's diagnostics
       |               ~~~~~~~~~^~~~~~~~
 - Clang now always diagnoses when using non-standard layout types in ``offsetof`` .
   (`#64619: <https://github.com/llvm/llvm-project/issues/64619>`_)
+- Clang now diagnoses use of variable-length arrays in C++ by default (and
+  under ``-Wall`` in GNU++ mode). This is an extension supported by Clang and
+  GCC, but is very easy to accidentally use without realizing it's a
+  nonportable construct that has different semantics from a constant-sized
+  array. (`#62836 <https://github.com/llvm/llvm-project/issues/62836>`_)
 
 Bug Fixes in This Version
 -------------------------
