@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_LIB_STATICANALYZER_CHECKER_VARIANTLIKETYPEMODELING_H
-#define LLVM_CLANG_LIB_STATICANALYZER_CHECKER_VARIANTLIKETYPEMODELING_H
+#ifndef LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_TAGGEDUNIONMODELING_H
+#define LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_TAGGEDUNIONMODELING_H
 
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -19,12 +19,14 @@
 #include "llvm/ADT/FoldingSet.h"
 #include <numeric>
 
-namespace clang {
-namespace ento {
-namespace tagged_union_modeling {
+namespace clang::ento::tagged_union_modeling {
 
 // The implementation of all these functions can be found in the file
 // StdVariantChecker.cpp under the same directory as this file.
+
+// Returns the CallEvent representing the caller of the function
+// It is needed because the CallEvent class does not contain enough information
+// to tell who called it. Checker context is needed.
 CallEventRef<> getCaller(const CallEvent &Call, CheckerContext &C);
 bool isCopyConstructorCall(const CallEvent &Call);
 bool isCopyAssignmentCall(const CallEvent &Call);
@@ -97,8 +99,6 @@ void handleConstructorAndAssignment(const CallEvent &Call, CheckerContext &C,
   C.addTransition(State);
 }
 
-} // namespace tagged_union_modeling
-} // namespace ento
-} // namespace clang
+} // namespace clang::ento::tagged_union_modeling
 
-#endif // LLVM_CLANG_LIB_STATICANALYZER_CHECKER_VARIANTLIKETYPEMODELING_H
+#endif // LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_TAGGEDUNIONMODELING_H

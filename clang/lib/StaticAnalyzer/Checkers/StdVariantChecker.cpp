@@ -33,9 +33,6 @@ namespace clang {
 namespace ento {
 namespace tagged_union_modeling {
 
-// Returns the CallEvent representing the caller of the function
-// It is needed because the CallEvent class does not contain enough information
-// to tell who called it. Checker context is needed.
 CallEventRef<> getCaller(const CallEvent &Call, const ProgramStateRef &State) {
   const auto *CallLocationContext = Call.getLocationContext();
   if (!CallLocationContext || CallLocationContext->inTopFrame())
