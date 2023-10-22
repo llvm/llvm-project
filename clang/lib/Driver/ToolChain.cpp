@@ -345,10 +345,11 @@ static const DriverSuffix *parseDriverSuffix(StringRef ProgName, size_t &Pos) {
   // added via -target as implicit first argument.
   const DriverSuffix *DS = FindDriverSuffix(ProgName, Pos);
 
-  if (!DS && ProgName.endswith(".exe")) {
-    // Try again after stripping the executable suffix:
+  if (!DS) {
+    // Try again after stripping the file extension suffix:
     // clang++.exe -> clang++
-    ProgName = ProgName.drop_back(StringRef(".exe").size());
+    // cl.bat -> cl
+    ProgName = ProgName.slice(0, ProgName.find('.'));
     DS = FindDriverSuffix(ProgName, Pos);
   }
 

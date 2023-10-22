@@ -509,6 +509,18 @@ TEST(ToolChainTest, GetTargetAndMode) {
   EXPECT_TRUE(Res.ModeSuffix == "clang-dxc");
   EXPECT_STREQ(Res.DriverMode, "--driver-mode=dxc");
   EXPECT_FALSE(Res.TargetIsValid);
+
+  Res = ToolChain::getTargetAndModeFromProgramName("cl.exe");
+  EXPECT_TRUE(Res.TargetPrefix.empty());
+  EXPECT_TRUE(Res.ModeSuffix == "cl");
+  EXPECT_STREQ(Res.DriverMode, "--driver-mode=cl");
+  EXPECT_FALSE(Res.TargetIsValid);
+
+  Res = ToolChain::getTargetAndModeFromProgramName("cl.bat");
+  EXPECT_TRUE(Res.TargetPrefix.empty());
+  EXPECT_TRUE(Res.ModeSuffix == "cl");
+  EXPECT_STREQ(Res.DriverMode, "--driver-mode=cl");
+  EXPECT_FALSE(Res.TargetIsValid);
 }
 
 TEST(ToolChainTest, CommandOutput) {
