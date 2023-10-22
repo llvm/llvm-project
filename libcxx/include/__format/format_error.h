@@ -32,8 +32,12 @@ public:
       : runtime_error(__s) {}
   _LIBCPP_HIDE_FROM_ABI format_error(const format_error&) = default;
   _LIBCPP_HIDE_FROM_ABI format_error& operator=(const format_error&) = default;
+#ifdef _LIBCPP_AVAILABILITY_HAS_NO_FORMAT_EXPLICIT_INSTANTIATIONS
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL
   ~format_error() noexcept override = default;
+#else
+  ~format_error() noexcept override;
+#endif
 };
 _LIBCPP_DIAGNOSTIC_POP
 

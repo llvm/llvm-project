@@ -397,18 +397,30 @@ requires(output_iterator<_OutIt, const _CharT&>) _LIBCPP_HIDE_FROM_ABI _OutIt
 // https://reviews.llvm.org/D110499#inline-1180704
 // TODO FMT Evaluate whether we want to file a Clang bug report regarding this.
 template <output_iterator<const char&> _OutIt>
-_LIBCPP_ALWAYS_INLINE _LIBCPP_HIDE_FROM_ABI _OutIt
+_LIBCPP_ALWAYS_INLINE _OutIt
 vformat_to(_OutIt __out_it, string_view __fmt, format_args __args) {
   return _VSTD::__vformat_to(_VSTD::move(__out_it), __fmt, __args);
 }
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 template <output_iterator<const wchar_t&> _OutIt>
-_LIBCPP_ALWAYS_INLINE _LIBCPP_HIDE_FROM_ABI _OutIt
+_LIBCPP_ALWAYS_INLINE _OutIt
 vformat_to(_OutIt __out_it, wstring_view __fmt, wformat_args __args) {
   return _VSTD::__vformat_to(_VSTD::move(__out_it), __fmt, __args);
 }
 #endif
+
+#ifndef _LIBCPP_AVAILABILITY_HAS_NO_FORMAT_EXPLICIT_INSTANTIATIONS
+
+extern template _LIBCPP_EXPORTED_FROM_ABI back_insert_iterator<string>
+    vformat_to<back_insert_iterator<string>>(back_insert_iterator<string>, string_view, format_args);
+
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+extern template _LIBCPP_EXPORTED_FROM_ABI back_insert_iterator<wstring>
+    vformat_to<back_insert_iterator<wstring>>(back_insert_iterator<wstring>, wstring_view, wformat_args);
+#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+
+#endif // _LIBCPP_AVAILABILITY_HAS_NO_FORMAT_EXPLICIT_INSTANTIATIONS
 
 template <output_iterator<const char&> _OutIt, class... _Args>
 _LIBCPP_ALWAYS_INLINE _LIBCPP_HIDE_FROM_ABI _OutIt

@@ -17,6 +17,7 @@ set(LIBCXX_SOURCES
   filesystem/filesystem_error.cpp
   filesystem/path_parser.h
   filesystem/path.cpp
+  format.cpp
   functional.cpp
   future.cpp
   hash.cpp

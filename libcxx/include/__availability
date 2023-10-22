@@ -150,6 +150,10 @@
 #  define _LIBCPP_AVAILABILITY_HAS_NO_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1
 #endif
 
+// Enable extern instantiations for <format> functions. This significantly reduces the amount of code generated in every
+// TU that uses most of the <format> and <print> utilities.
+// #  define _LIBCPP_AVAILABILITY_HAS_NO_FORMAT_EXPLICIT_INSTANTIATIONS
+
 #elif defined(__APPLE__)
 
 #  if (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 50000)
@@ -247,6 +251,12 @@
       (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 80000)
 #    define _LIBCPP_AVAILABILITY_HAS_NO_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1
 #  endif
+
+// TODO: Replace this with the correct conditions once Apple ships a dylib with the <format> functions
+#  if 1
+#    define _LIBCPP_AVAILABILITY_HAS_NO_FORMAT_EXPLICIT_INSTANTIATIONS
+#  endif
+
 #else
 
 // ...New vendors can add availability markup here...
