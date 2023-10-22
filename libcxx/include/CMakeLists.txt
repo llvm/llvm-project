@@ -94,6 +94,7 @@ set(files
   __algorithm/pstl_generate.h
   __algorithm/pstl_is_partitioned.h
   __algorithm/pstl_merge.h
+  __algorithm/pstl_move.h
   __algorithm/pstl_replace.h
   __algorithm/pstl_sort.h
   __algorithm/pstl_stable_sort.h
