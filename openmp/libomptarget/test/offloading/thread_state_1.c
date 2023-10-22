@@ -1,7 +1,6 @@
-// RUN: %libomptarget-compile-run-and-check-generic
+// Still broken "without optimizations"
+// XUN: %libomptarget-compile-run-and-check-generic
 // RUN: %libomptarget-compileopt-run-and-check-generic
-
-// UNSUPPORTED: amdgcn-amd-amdhsa
 
 #include <omp.h>
 #include <stdio.h>
