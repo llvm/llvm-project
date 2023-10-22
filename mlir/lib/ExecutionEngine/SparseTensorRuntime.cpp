@@ -96,7 +96,7 @@ static inline void aliasIntoMemref(DataSizeT size, T *data,
                                    StridedMemRefType<T, 1> &ref) {
   ref.basePtr = ref.data = data;
   ref.offset = 0;
-  using MemrefSizeT = typename std::remove_reference_t<decltype(ref.sizes[0])>;
+  using MemrefSizeT = std::remove_reference_t<decltype(ref.sizes[0])>;
   ref.sizes[0] = detail::checkOverflowCast<MemrefSizeT>(size);
   ref.strides[0] = 1;
 }
