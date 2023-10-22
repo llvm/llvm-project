@@ -16,7 +16,6 @@
 #include "llvm/ExecutionEngine/JITLink/TableManager.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/Object/ELFObjectFile.h"
-#include "llvm/Support/Endian.h"
 
 #include "DefineExternalSectionStartAndEndSymbols.h"
 #include "EHFrameSupportImpl.h"
