@@ -303,7 +303,7 @@ the trampolines that can be used by `BoxedProcedure` pass.
 
 * Each trampoline invocation implies two indirect accesses with this approach.
 
-### Option #1: Fortran runtime support
+### Fortran runtime support
 
 The following APIs are suggested:
 
@@ -386,13 +386,6 @@ area is all used.
     llvm.call @_FortranAFreeTrampoline(%handle) : (!llvm.ptr<i8>) -> ()
 ```
 
-
-### Option #2: LLVM/compiler-rt support
-
-It may be beneficial for projects besides Flang to use the alternative trampolines
-implementation, so does it sound reasonable to actually put the support
-into LLVM/compiler-rt?
-
 ### Implementation options
 
 We may try to reuse [libffi](https://github.com/libffi/libffi) implementation for __static trampolines__:
@@ -413,3 +406,6 @@ having to support the only Fortran/C interoperable calling convention,
 the implementation may reduce the trampoline overhead. For example,
 it may avoid saving/restoring the scratch registers used by the trampoline code,
 and just clobber some of them according to the particular ABI.
+
+At this point, the recommended approach is to implement the trampoline
+support in Flang runtime.
