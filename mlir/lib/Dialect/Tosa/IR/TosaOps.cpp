@@ -97,18 +97,30 @@ struct TosaDialectBytecodeInterface : public BytecodeDialectInterface {
   }
 
   void writeVersion(DialectBytecodeWriter &writer) const final {
-    // TODO: Populate.
+    // This is currently not being written currently to allow readers to update
+    // first.
+#if 0
+    // TODO: This could be refined to not just pick current version.
+    auto version = TosaDialectVersion();
+    writer.writeVarInt(version.dialectVersion);
+#endif
   }
 
   std::unique_ptr<DialectVersion>
   readVersion(DialectBytecodeReader &reader) const final {
-    // TODO: Populate
-    reader.emitError("Dialect does not support versioning");
-    return nullptr;
+    uint64_t dialectVersion;
+    if (failed(reader.readVarInt(dialectVersion)))
+      return nullptr;
+    auto version = std::make_unique<TosaDialectVersion>();
+    version->dialectVersion = dialectVersion;
+    return version;
   }
 
   LogicalResult upgradeFromVersion(Operation *topLevelOp,
-                                   const DialectVersion &version_) const final {
+                                   const DialectVersion &version) const final {
+    const auto &tosaVersion = static_cast<const TosaDialectVersion &>(version);
+    // No upgrades currently defined.
+    (void)tosaVersion;
     return success();
   }
 };
