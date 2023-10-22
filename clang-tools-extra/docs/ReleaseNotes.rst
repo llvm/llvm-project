@@ -219,6 +219,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/reserved-identifier>` check, so that it does not
   warn on macros starting with underscore and lowercase letter.
 
+- Improved :doc:`bugprone-unchecked-optional-access
+  <clang-tidy/checks/bugprone/unchecked-optional-access>` check, so that it does
+  not crash during handling of optional values.
+
 - Improved :doc:`bugprone-undefined-memory-manipulation
   <clang-tidy/checks/bugprone/undefined-memory-manipulation>` check to support
   fixed-size arrays of non-trivial types.
@@ -285,6 +289,10 @@ Changes in existing checks
 - Improved :doc:`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` check to ignore
   false-positives in unevaluated context (e.g., ``decltype``).
+
+- Improved :doc:`modernize-avoid-bind
+  <clang-tidy/checks/modernize/avoid-bind>` check to
+  not emit a ``return`` for fixes when the function returns ``void``.
 
 - Improved :doc:`modernize-loop-convert
   <clang-tidy/checks/modernize/loop-convert>` to support for-loops with
