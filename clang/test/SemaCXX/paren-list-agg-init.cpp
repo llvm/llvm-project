@@ -92,7 +92,7 @@ T Construct(Args... args) {
   // beforecxx20-warning@-1 {{aggregate initialization of type 'A' from a parenthesized list of values is a C++20 extension}}
 }
 
-void foo(int n) { // expected-note {{declared here}}
+void foo(int n) {
   A a1(1954, 9, 21);
   // expected-error@-1 {{excess elements in struct initializer}}
   A a2(2.1);
@@ -175,9 +175,8 @@ void foo(int n) { // expected-note {{declared here}}
   int arr5[2](1, 2);
   // beforecxx20-warning@-1 {{aggregate initialization of type 'int[2]' from a parenthesized list of values is a C++20 extension}}
 
-  int arr6[n](1, 2, 3); // expected-warning {{variable length arrays in C++ are a Clang extension}} \
-                           expected-note {{function parameter 'n' with unknown value cannot be used in a constant expression}} \
-                           expected-error {{variable-sized object may not be initialized}}
+  int arr6[n](1, 2, 3);
+  // expected-error@-1 {{variable-sized object may not be initialized}}
 
   I i(1, 2);
   // expected-error@-1 {{no matching constructor for initialization of 'I'}}

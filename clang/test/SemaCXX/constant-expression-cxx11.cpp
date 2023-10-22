@@ -11,7 +11,7 @@ static_assert(false, "test"); // expected-error {{test}}
 
 }
 
-int array[(long)(char *)0]; // expected-warning {{variable length arrays in C++ are a Clang extension}} \
+int array[(long)(char *)0]; // expected-warning {{variable length arrays are a C99 feature}} \
                             // expected-warning {{variable length array folded to constant array as an extension}} \
                             // expected-note {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}}
 
@@ -185,7 +185,7 @@ namespace FunctionCast {
   constexpr int f() { return 1; }
   typedef double (*DoubleFn)();
   typedef int (*IntFn)();
-  int a[(int)DoubleFn(f)()]; // expected-error {{variable length array}} expected-warning{{Clang extension}}
+  int a[(int)DoubleFn(f)()]; // expected-error {{variable length array}} expected-warning{{C99 feature}}
   int b[(int)IntFn(f)()];    // ok
 }
 
@@ -1606,7 +1606,7 @@ namespace RecursiveOpaqueExpr {
 namespace VLASizeof {
 
   void f(int k) { // expected-note {{here}}
-    int arr[k]; // expected-warning {{Clang extension}} expected-note {{function parameter 'k'}}
+    int arr[k]; // expected-warning {{C99}} expected-note {{function parameter 'k'}}
     constexpr int n = 1 +
         sizeof(arr) // expected-error {{constant expression}}
         * 3;

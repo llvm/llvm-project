@@ -105,7 +105,6 @@ CHECK-NEXT:  -Wswitch
 CHECK-NEXT:  -Wswitch-bool
 CHECK-NEXT:  -Wmisleading-indentation
 CHECK-NEXT:  -Wpacked-non-pod
-CHECK-NEXT:  -Wvla-extension
-CHECK-NEXT:    -Wvla-extension-static-assert
+
 
 CHECK-NOT:-W

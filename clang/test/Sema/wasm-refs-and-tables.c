@@ -87,7 +87,7 @@ __externref_t func(__externref_t ref) {
   static __externref_t(*lt4)[0];  // expected-error {{cannot form a pointer to a WebAssembly table}}
   // conly-error@+2 {{cannot use WebAssembly table as a function parameter}}
   // cpp-error@+1 {{no matching function for call to 'illegal_argument_1'}}
-  illegal_argument_1(table);
+  illegal_argument_1(table);      
   varargs(1, table);              // expected-error {{cannot use WebAssembly table as a function parameter}}
   table == 1;                     // expected-error {{invalid operands to binary expression ('__attribute__((address_space(1))) __externref_t[0]' and 'int')}}
   1 >= table;                     // expected-error {{invalid operands to binary expression ('int' and '__attribute__((address_space(1))) __externref_t[0]')}}
@@ -97,7 +97,7 @@ __externref_t func(__externref_t ref) {
   1 && table;                     // expected-error {{invalid operands to binary expression ('int' and '__attribute__((address_space(1))) __externref_t[0]')}}
   table || 1;                     // expected-error {{invalid operands to binary expression ('__attribute__((address_space(1))) __externref_t[0]' and 'int')}}
   1 ? table : table;              // expected-error {{cannot use a WebAssembly table within a branch of a conditional expression}}
-  table ? : other_table;          // expected-error {{cannot use a WebAssembly table within a branch of a conditional expression}}
+  table ? : other_table;          // expected-error {{cannot use a WebAssembly table within a branch of a conditional expression}}  
   (void *)table;                  // expected-error {{cannot cast from a WebAssembly table}}
   void *u;
   u = table;                      // expected-error {{cannot assign a WebAssembly table}}
@@ -108,11 +108,9 @@ __externref_t func(__externref_t ref) {
   table[0];                       // expected-error {{cannot subscript a WebAssembly table}}
   table[0] = ref;                 // expected-error {{cannot subscript a WebAssembly table}}
 
-  int i = 0;                      // cpp-note {{declared here}}
-  __externref_t oh_no_vlas[i];    // expected-error {{WebAssembly table cannot be declared within a function}} \
-                                     cpp-warning {{variable length arrays in C++ are a Clang extension}} \
-                                     cpp-note {{read of non-const variable 'i' is not allowed in a constant expression}}
-
+  int i = 0;
+  __externref_t oh_no_vlas[i];    // expected-error {{WebAssembly table cannot be declared within a function}}
+  
   return ref;
 }
 

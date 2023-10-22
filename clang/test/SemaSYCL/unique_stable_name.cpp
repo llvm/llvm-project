@@ -173,8 +173,7 @@ void f() {
   // an unevaluated context because the use within a VLA extent forces
   // evaluation.
   int j = 55;
-  __builtin_sycl_unique_stable_name(int[++j]); // expected-warning {{variable length arrays in C++ are a Clang extension}} \
-                                                  expected-note {{a constant expression cannot modify an object that is visible outside that expression}}
+  __builtin_sycl_unique_stable_name(int[++j]); // no warning expected
 }
 
 template <typename T>

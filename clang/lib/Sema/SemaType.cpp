@@ -2568,24 +2568,6 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
     return QualType();
   }
 
-  auto IsStaticAssertLike = [](const Expr *ArraySize, ASTContext &Context) {
-    // If the array size expression is a conditional expression whose branches
-    // are both integer constant expressions, one negative and one positive,
-    // then it's assumed to be like an old-style static assertion. e.g.,
-    //   int old_style_assert[expr ? 1 : -1];
-    // We will accept any integer constant expressions instead of assuming the
-    // values 1 and -1 are always used.
-    if (const auto *CondExpr = dyn_cast_if_present<ConditionalOperator>(
-            ArraySize->IgnoreParenImpCasts())) {
-      std::optional<llvm::APSInt> LHS =
-          CondExpr->getLHS()->getIntegerConstantExpr(Context);
-      std::optional<llvm::APSInt> RHS =
-          CondExpr->getRHS()->getIntegerConstantExpr(Context);
-      return LHS && RHS && LHS->isNegative() != RHS->isNegative();
-    }
-    return false;
-  };
-
   // VLAs always produce at least a -Wvla diagnostic, sometimes an error.
   unsigned VLADiag;
   bool VLAIsError;
@@ -2602,15 +2584,6 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
   } else if (getLangOpts().OpenMP && isInOpenMPTaskUntiedContext()) {
     VLADiag = diag::err_openmp_vla_in_task_untied;
     VLAIsError = true;
-  } else if (getLangOpts().CPlusPlus) {
-    if (getLangOpts().CPlusPlus11 && IsStaticAssertLike(ArraySize, Context))
-      VLADiag = getLangOpts().GNUMode
-                    ? diag::ext_vla_cxx_in_gnu_mode_static_assert
-                    : diag::ext_vla_cxx_static_assert;
-    else
-      VLADiag = getLangOpts().GNUMode ? diag::ext_vla_cxx_in_gnu_mode
-                                      : diag::ext_vla_cxx;
-    VLAIsError = false;
   } else {
     VLADiag = diag::ext_vla;
     VLAIsError = false;
