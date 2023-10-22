@@ -60,8 +60,6 @@ constexpr bool test() {
 
 void testException() {
 #ifndef TEST_HAS_NO_EXCEPTIONS
-  struct Except {};
-
   struct Throwing {
     Throwing() { throw Except{}; };
   };
