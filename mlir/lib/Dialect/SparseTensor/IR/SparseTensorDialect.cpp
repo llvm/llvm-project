@@ -415,6 +415,20 @@ SparseTensorEncodingAttr::getStaticLvlSliceStride(Level lvl) const {
   return getStaticDimSliceStride(toOrigDim(*this, lvl));
 }
 
+ValueRange
+SparseTensorEncodingAttr::translateCrds(OpBuilder &builder, Location loc,
+                                        ValueRange crds,
+                                        CrdTransDirectionKind dir) const {
+  if (!getImpl())
+    return crds;
+
+  SmallVector<Type> retType(
+      dir == CrdTransDirectionKind::lvl2dim ? getDimRank() : getLvlRank(),
+      builder.getIndexType());
+  auto transOp = builder.create<CrdTranslateOp>(loc, retType, crds, dir, *this);
+  return transOp.getOutCrds();
+}
+
 Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
 #define RETURN_ON_FAIL(stmt)                                                   \
   if (failed(stmt)) {                                                          \
@@ -1155,6 +1169,10 @@ LogicalResult CrdTranslateOp::verify() {
 
 LogicalResult CrdTranslateOp::fold(FoldAdaptor adaptor,
                                    SmallVectorImpl<OpFoldResult> &results) {
+  if (getEncoder().isIdentity()) {
+    results.assign(getInCrds().begin(), getInCrds().end());
+    return success();
+  }
   if (getEncoder().isPermutation()) {
     AffineMap perm = getDirection() == CrdTransDirectionKind::dim2lvl
                          ? getEncoder().getDimToLvl()
