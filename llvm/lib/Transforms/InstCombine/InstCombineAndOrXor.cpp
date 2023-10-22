@@ -1337,34 +1337,41 @@ Value *InstCombinerImpl::foldAndOrOfICmpsUsingRanges(ICmpInst *ICmp1,
 /// Decompose icmp into intersection or union of ranges.
 static bool decomposeICmpIntoRangeSet(SmallVectorImpl<ConstantRange> &Set,
                                       ICmpInst *ICmp, Value *X, bool IsAnd) {
-  // icmp eq/ne (X & mask), 0
+  // Handle "icmp eq/ne (X & mask), 0", where mask is an inverted power of 2.
   ICmpInst::Predicate Pred;
   const APInt *Mask;
   if (match(ICmp,
             m_ICmp(Pred, m_And(m_Specific(X), m_APInt(Mask)), m_Zero())) &&
-      ICmp->isEquality()) {
-    if (Mask->popcount() == Mask->getBitWidth() - 1) {
-      auto Zero = APInt::getZero(Mask->getBitWidth());
-      auto Val = ~*Mask;
-      if (IsAnd) {
-        if (Pred == ICmpInst::ICMP_EQ) {
-          Set.push_back(ConstantRange(Zero, Val + 1));
-          Set.push_back(ConstantRange(Val, APInt(Mask->getBitWidth(), 1)));
-        } else {
-          Set.push_back(ConstantRange(Zero).inverse());
-          Set.push_back(ConstantRange(Val).inverse());
-        }
+      ICmp->isEquality() && (Mask->popcount() == Mask->getBitWidth() - 1)) {
+    auto Zero = APInt::getZero(Mask->getBitWidth());
+    auto Val = ~*Mask;
+    if (IsAnd) {
+      if (Pred == ICmpInst::ICMP_EQ) {
+        // icmp eq (X & mask), 0
+        // X in {0, Val} --> X in [0, Val] and X in [Val, 0] (upper-wrapped)
+        Set.push_back(ConstantRange(Zero, Val + 1));
+        Set.push_back(ConstantRange(Val, APInt(Mask->getBitWidth(), 1)));
       } else {
-        if (Pred == ICmpInst::ICMP_EQ) {
-          Set.push_back(Val);
-          Set.push_back(Zero);
-        } else {
-          Set.push_back(ConstantRange(APInt(Mask->getBitWidth(), 1), Val));
-          Set.push_back(ConstantRange(Val + 1, Zero));
-        }
+        // icmp ne (X & mask), 0
+        // X not in {0, Val} --> X not in {0} and X not in {Val}
+        Set.push_back(ConstantRange(Zero).inverse());
+        Set.push_back(ConstantRange(Val).inverse());
       }
-      return true;
+    } else {
+      if (Pred == ICmpInst::ICMP_EQ) {
+        // icmp eq (X & mask), 0
+        // X in {0, Val} --> X in {0} or X in {Val}
+        Set.push_back(Val);
+        Set.push_back(Zero);
+      } else {
+        // icmp ne (X & mask), 0
+        // X not in {0, Val} --> X in [1, Val) or X not in [Val + 1, 0)
+        // (upper-wrapped)
+        Set.push_back(ConstantRange(APInt(Mask->getBitWidth(), 1), Val));
+        Set.push_back(ConstantRange(Val + 1, Zero));
+      }
     }
+    return true;
   }
 
   return false;
@@ -1399,30 +1406,44 @@ foldAndOrOfICmpsUsingDecomposedRanges(ICmpInst *ICmp1, ICmpInst *ICmp2,
   } else
     return nullptr;
 
+  // Try to merge ranges into single range.
+  // Since we may fail to merge ranges due to the order of merging, we cannot do
+  // merge in order (counterexample: [0, 1), [2, 3), [1, 2)) or in sorted order
+  // (due to wrapped ranges). Instead, we try to merge ranges in O(N^2) until we
+  // succeed in merging into single range or we cannot merge anymore.
+
+  // Ranges which cannot be merged with each other. We maintain this list to
+  // avoid redundant checks.
+  SmallVector<ConstantRange, 3> UnmergeableRanges;
   while (true) {
     bool Merged = false;
-    for (unsigned I = 0; I < Ranges.size(); ++I) {
-      auto &CR = Ranges[I];
-      for (unsigned J = I + 1; J < Ranges.size(); ++J) {
-        if (auto NewCR = IsAnd ? CR.exactIntersectWith(Ranges[J])
-                               : CR.exactUnionWith(Ranges[J])) {
+
+    if (!Ranges.empty()) {
+      auto &CR = Ranges.back();
+      for (unsigned I = 0; I < UnmergeableRanges.size(); ++I) {
+        if (auto NewCR = IsAnd ? CR.exactIntersectWith(UnmergeableRanges[I])
+                               : CR.exactUnionWith(UnmergeableRanges[I])) {
           CR = *NewCR;
-          Ranges.erase(Ranges.begin() + J);
+          UnmergeableRanges.erase(UnmergeableRanges.begin() + I);
           Merged = true;
         }
       }
+      if (!Merged) {
+        UnmergeableRanges.push_back(CR);
+        Ranges.pop_back();
+      }
     }
 
-    if (Ranges.size() == 1)
-      break;
-
-    if (!Merged)
+    if (Ranges.empty()) {
+      if (UnmergeableRanges.size() == 1)
+        break;
       return nullptr;
+    }
   }
 
   ICmpInst::Predicate NewPred;
   APInt NewRHS, NewOffset;
-  Ranges[0].getEquivalentICmp(NewPred, NewRHS, NewOffset);
+  UnmergeableRanges.front().getEquivalentICmp(NewPred, NewRHS, NewOffset);
   // Similar to foldAndOrOfICmpsUsingRanges, we don't check hasOneUse here.
   if (NewOffset != 0)
     X = Builder.CreateAdd(X, ConstantInt::get(X->getType(), NewOffset));
