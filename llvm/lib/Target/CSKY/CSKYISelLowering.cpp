@@ -116,6 +116,18 @@ CSKYTargetLowering::CSKYTargetLowering(const TargetMachine &TM,
   setLibcallName(RTLIB::MUL_I128, nullptr);
   setLibcallName(RTLIB::MULO_I64, nullptr);
   setLibcallName(RTLIB::MULO_I128, nullptr);
+  setLibcallName(SINTTOFP_I128_F16, nullptr);
+  setLibcallName(SINTTOFP_I128_F32, nullptr);
+  setLibcallName(SINTTOFP_I128_F64, nullptr);
+  setLibcallName(SINTTOFP_I128_F80, nullptr);
+  setLibcallName(SINTTOFP_I128_F128, nullptr);
+  setLibcallName(SINTTOFP_I128_PPCF128, nullptr);
+  setLibcallName(UINTTOFP_I128_F16, nullptr);
+  setLibcallName(UINTTOFP_I128_F32, nullptr);
+  setLibcallName(UINTTOFP_I128_F64, nullptr);
+  setLibcallName(UINTTOFP_I128_F80, nullptr);
+  setLibcallName(UINTTOFP_I128_F128, nullptr);
+  setLibcallName(UINTTOFP_I128_PPCF128, nullptr);
 
   // Float
 
