@@ -76,6 +76,7 @@ MachineTypes getEmulation(StringRef S) {
       .Case("arm", IMAGE_FILE_MACHINE_ARMNT)
       .Case("arm64", IMAGE_FILE_MACHINE_ARM64)
       .Case("arm64ec", IMAGE_FILE_MACHINE_ARM64EC)
+      .Case("mipsel", IMAGE_FILE_MACHINE_R4000)
       .Default(IMAGE_FILE_MACHINE_UNKNOWN);
 }
 
