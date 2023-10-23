@@ -3105,9 +3105,7 @@ def BITCONVERT_32_F2I : F_BITCONVERT<"32", f32, i32>;
 def BITCONVERT_64_I2F : F_BITCONVERT<"64", i64, f64>;
 def BITCONVERT_64_F2I : F_BITCONVERT<"64", f64, i64>;
 
-foreach vt = [v2f16, v2bf16, v2i16] in {
-def: Pat<(vt (bitconvert (i32 UInt32Const:$a))),
-         (IMOVB32ri UInt32Const:$a)>;
+foreach vt = [v2f16, v2bf16, v2i16, v4i8] in {
 def: Pat<(vt (bitconvert (f32 Float32Regs:$a))),
          (BITCONVERT_32_F2I Float32Regs:$a)>;
 def: Pat<(f32 (bitconvert (vt Int32Regs:$a))),
@@ -3123,6 +3121,8 @@ def: Pat<(i16 (bitconvert (vt Int16Regs:$a))),
 }
 
 foreach ta = [v2f16, v2bf16, v2i16, v4i8, i32] in {
+  def: Pat<(ta (bitconvert (i32 UInt32Const:$a))),
+           (IMOVB32ri UInt32Const:$a)>;
   foreach tb = [v2f16, v2bf16, v2i16, v4i8, i32] in {
     if !ne(ta, tb) then {
       def: Pat<(ta (bitconvert (tb Int32Regs:$a))),
