@@ -13,10 +13,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/RISCVMatInt.h"
 #include "RISCV.h"
 #include "RISCVInstrInfo.h"
 #include "RISCVTargetMachine.h"
-#include "MCTargetDesc/RISCVMatInt.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 
@@ -154,4 +154,3 @@ FunctionPass *createRISCVPostRAExpandPseudoPass() {
 }
 
 } // end of namespace llvm
-

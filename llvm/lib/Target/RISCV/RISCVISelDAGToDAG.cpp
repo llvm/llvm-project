@@ -203,8 +203,10 @@ static SDValue selectImm(SelectionDAG *CurDAG, const SDLoc &DL, const MVT VT,
 
   // Use a rematerializable pseudo instruction for short sequences if enabled.
   if (Seq.size() == 2 && UsePseudoMovImm)
-    return SDValue(CurDAG->getMachineNode(RISCV::PseudoMovImm, DL, VT,
-                                          CurDAG->getTargetConstant(Imm, DL, VT)), 0);
+    return SDValue(
+        CurDAG->getMachineNode(RISCV::PseudoMovImm, DL, VT,
+                               CurDAG->getTargetConstant(Imm, DL, VT)),
+        0);
 
   // See if we can create this constant as (ADD (SLLI X, C), X) where X is at
   // worst an LUI+ADDIW. This will require an extra register, but avoids a
