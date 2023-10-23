@@ -1000,6 +1000,9 @@ void CodeGenModule::Release() {
     getModule().addModuleFlag(llvm::Module::Error, "Product Id",
                               llvm::MDString::get(VMContext, ProductId));
 
+    getModule().addModuleFlag(llvm::Module::Error, "TranslationTime",
+                              static_cast<uint64_t>(std::time(nullptr)));
+
     getModule().addModuleFlag(
         llvm::Module::Error, "zos_le_char_mode",
         llvm::MDString::get(VMContext, Context.getLangOpts().ASCIICharMode

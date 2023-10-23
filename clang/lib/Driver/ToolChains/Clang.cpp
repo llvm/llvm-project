@@ -2295,14 +2295,6 @@ void Clang::AddSystemZTargetArgs(const llvm::Triple &Triple,
     CmdArgs.push_back("-mfloat-abi");
     CmdArgs.push_back("soft");
   }
-
-  if (Triple.isOSzOS()) {
-    CmdArgs.push_back("-mllvm");
-    CmdArgs.push_back(
-        Args.MakeArgString(llvm::Twine("-translation-time=")
-                               .concat(llvm::Twine(std::time(nullptr)))
-                               .str()));
-  }
 }
 
 void Clang::AddX86TargetArgs(const ArgList &Args,

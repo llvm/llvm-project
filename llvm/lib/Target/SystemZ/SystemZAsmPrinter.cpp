@@ -28,17 +28,11 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Chrono.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertEBCDIC.h"
 #include "llvm/Support/FormatProviders.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace llvm;
-
-cl::opt<uint64_t> TranslationTime(
-    "translation-time",
-    cl::desc("sets the time of compilation in seconds since epoch"),
-    cl::init(0));
 
 // Return an RI instruction like MI with opcode Opcode, but with the
 // GR64 register operands turned into GR32s.
@@ -1057,11 +1051,21 @@ static uint32_t getProductPatch(Module &M) {
   return LLVM_VERSION_PATCH;
 }
 
+static time_t getTranslationTime(Module &M) {
+  std::time_t Time = 0;
+  if (auto *Val = cast_or_null<ConstantAsMetadata>(
+          M.getModuleFlag("TranslationTime"))) {
+    long SecondsSinceEpoch = cast<ConstantInt>(Val->getValue())->getSExtValue();
+    Time = static_cast<time_t>(SecondsSinceEpoch);
+  }
+  return Time;
+}
+
 void SystemZAsmPrinter::emitIDRLSection(Module &M) {
   OutStreamer->pushSection();
   OutStreamer->switchSection(getObjFileLowering().getIDRLSection());
   constexpr unsigned IDRLDataLength = 30;
-  std::time_t Time = TranslationTime;
+  std::time_t Time = getTranslationTime(M);
 
   uint32_t ProductVersion = getProductVersion(M);
   uint32_t ProductRelease = getProductRelease(M);
@@ -1390,7 +1394,7 @@ void SystemZAsmPrinter::emitPPA2(Module &M) {
   PPA2Sym = OutContext.createTempSymbol("PPA2", false);
   MCSymbol *DateVersionSym = OutContext.createTempSymbol("DVS", false);
 
-  std::time_t Time = TranslationTime;
+  std::time_t Time = getTranslationTime(M);
   SmallString<15> CompilationTime; // 14 + null
   raw_svector_ostream O(CompilationTime);
   O << formatv("{0:%Y%m%d%H%M%S}", llvm::sys::toUtcTime(Time));
