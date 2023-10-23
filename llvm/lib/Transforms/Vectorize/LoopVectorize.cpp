@@ -5745,8 +5745,12 @@ LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
   }
 
   // If trip count is known or estimated compile time constant, limit the
-  // interleave count to be less than the trip count divided by VF, provided it
-  // is at least 1.
+  // interleave count to be less than the trip count divided by VF * 2,
+  // provided VF is at least 1 and the trip count is not an exact multiple of
+  // VF, such that the vector loop runs at least twice to make interleaving seem
+  // profitable when there is an epilogue loop present. When
+  // InterleaveSmallLoopScalarReduction is true or trip count is an exact
+  // multiple of VF, we allow interleaving even when the vector loop runs once.
   //
   // For scalable vectors we can't know if interleaving is beneficial. It may
   // not be beneficial for small loops if none of the lanes in the second vector
@@ -5755,10 +5759,15 @@ LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
   // the InterleaveCount as if vscale is '1', although if some information about
   // the vector is known (e.g. min vector size), we can make a better decision.
   if (BestKnownTC) {
-    MaxInterleaveCount =
-        std::min(*BestKnownTC / VF.getKnownMinValue(), MaxInterleaveCount);
-    // Make sure MaxInterleaveCount is greater than 0.
-    MaxInterleaveCount = std::max(1u, MaxInterleaveCount);
+    if (InterleaveSmallLoopScalarReduction ||
+        (*BestKnownTC % VF.getKnownMinValue() == 0))
+      MaxInterleaveCount =
+          std::min(*BestKnownTC / VF.getKnownMinValue(), MaxInterleaveCount);
+    else
+      MaxInterleaveCount = std::min(*BestKnownTC / (VF.getKnownMinValue() * 2),
+                                    MaxInterleaveCount);
+    // Make sure MaxInterleaveCount is greater than 0 & a power of 2.
+    MaxInterleaveCount = llvm::bit_floor(std::max(1u, MaxInterleaveCount));
   }
 
   assert(MaxInterleaveCount > 0 &&
