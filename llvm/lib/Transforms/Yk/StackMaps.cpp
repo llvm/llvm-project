@@ -91,7 +91,7 @@ public:
         // Insert the stackmap call after (not before) the call instruction, so
         // the offset of the stackmap entry will record the instruction after
         // the call, which is where we want to continue after deoptimisation.
-        Bldr.SetInsertPoint(I->getNextNonDebugInstruction());
+        Bldr.SetInsertPoint(I->getNextNode());
       }
       Bldr.CreateCall(SMFunc->getFunctionType(), SMFunc,
                       ArrayRef<Value *>(Args));
