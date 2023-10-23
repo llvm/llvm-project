@@ -741,7 +741,7 @@ void VPWidenRecipe::execute(VPTransformState &State) {
   } // end of switch.
 
 #if !defined(NDEBUG)
-  // Verify that VPlan type infererrence results agree with the type of the
+  // Verify that VPlan type inference results agree with the type of the
   // generated values.
   VPTypeAnalysis A(State.Builder.GetInsertBlock()->getContext());
   for (unsigned Part = 0; Part < State.UF; ++Part) {
