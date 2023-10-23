@@ -1,5 +1,5 @@
 buildDir := "build"
-# alias pt := build all
+alias pt := partTensorTest
 build target:
     ninja -C {{buildDir}} {{target}}
 run_test target: (build target)

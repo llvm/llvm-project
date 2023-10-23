@@ -6,6 +6,7 @@ set(LLVM_OPTIONAL_SOURCES
   CRunnerUtils.cpp
   CudaRuntimeWrappers.cpp
   SparseTensorRuntime.cpp
+  PartTensorRuntime.cpp
   ExecutionEngine.cpp
   Float16bits.cpp
   RocmRuntimeWrappers.cpp
@@ -139,6 +140,7 @@ if(LLVM_ENABLE_PIC)
     SHARED
     CRunnerUtils.cpp
     SparseTensorRuntime.cpp
+    PartTensorRuntime.cpp
 
     EXCLUDE_FROM_LIBMLIR
 
