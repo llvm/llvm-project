@@ -15,6 +15,7 @@
 #include <__mutex/mutex.h>
 #include <__stop_token/intrusive_list_view.h>
 #include <__thread/id.h>
+#include <__threading_support>
 #include <atomic>
 #include <cstdint>
 
@@ -63,12 +64,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI bool __owns_lock() const noexcept { return __is_locked_; }
 
   _LIBCPP_HIDE_FROM_ABI void __lock() noexcept {
-    while (true) {
-      try {
-        __mutex_.lock();
-        break;
-      } catch (...) {
-      }
+    int __ec = __libcpp_mutex_lock(__mutex_.native_handle());
+    while (__ec != 0) {
+      __ec = __libcpp_mutex_lock(__mutex_.native_handle());
     }
     __is_locked_ = true;
   }
