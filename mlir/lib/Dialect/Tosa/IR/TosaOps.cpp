@@ -1168,27 +1168,38 @@ static LogicalResult verifyReduceOp(T op) {
   }
   if (inputType.hasRank()) {
     int64_t inputRank = inputType.getRank();
-    // We allow for a special case where the input shape has rank 0 and axis is
-    // also 0.
+    // We allow for a special case where the input/output shape has rank 0 and
+    // axis is also 0.
     if (reduceAxis >= inputRank && !(reduceAxis == 0 && inputRank == 0)) {
       op.emitOpError("expect input tensor rank (")
-          << inputType.getRank() << ") to be larger than reduce axis ("
-          << reduceAxis << ")";
+          << inputRank << ") to be larger than reduce axis (" << reduceAxis
+          << ")";
       return failure();
     }
   }
   if (outputType.hasRank()) {
-    if (reduceAxis >= outputType.getRank()) {
-      op.emitOpError("expect output tensor rank (")
-          << outputType.getRank() << ") to be larger than reduce axis ("
-          << reduceAxis << ")";
+    int64_t outputRank = outputType.getRank();
+    if (inputType.hasRank() && outputRank != inputType.getRank()) {
+      op.emitOpError(
+          "expect output tensor rank to be equal to input tensor rank");
       return failure();
     }
-    auto outputShape = outputType.getShape();
-    if (!outputType.isDynamicDim(reduceAxis) && outputShape[reduceAxis] != 1) {
-      op.emitOpError("expect reduced dimension size to be 1, got ")
-          << outputShape[reduceAxis];
+    if (reduceAxis >= outputRank && !(reduceAxis == 0 && outputRank == 0)) {
+      op.emitOpError("expect output tensor rank (")
+          << outputRank << ") to be larger than reduce axis (" << reduceAxis
+          << ")";
       return failure();
+    }
+    // We can only verify the reduced dimension size to be 1 if this is not the
+    // special case of output rank == 0.
+    if (outputRank != 0) {
+      auto outputShape = outputType.getShape();
+      if (!outputType.isDynamicDim(reduceAxis) &&
+          outputShape[reduceAxis] != 1) {
+        op.emitOpError("expect reduced dimension size to be 1, got ")
+            << outputShape[reduceAxis];
+        return failure();
+      }
     }
   }
   return success();
