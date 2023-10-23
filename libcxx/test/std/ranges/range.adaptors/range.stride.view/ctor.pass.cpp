@@ -18,13 +18,13 @@
 
 constexpr bool test_no_default_ctor() {
   // There is no default ctor for stride_view.
-  static_assert(!std::is_default_constructible_v<std::ranges::stride_view<BidirView>>);
+  static_assert(!std::is_default_constructible_v<std::ranges::stride_view<BidirArrayView<int>>>);
   return true;
 }
 
 constexpr bool test_no_implicit_ctor() {
   // Test that the stride_view can only be explicitly constructed.
-  static_assert(!test_convertible<std::ranges::stride_view<ForwardView>, ForwardView, int>());
+  static_assert(!test_convertible<std::ranges::stride_view<ForwardArrayView<int>>, ForwardArrayView<int>, int>());
   return true;
 }
 
