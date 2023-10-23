@@ -57,6 +57,9 @@ def as_i64imm : SDNodeXForm<imm, [{
 def gi_as_i64imm : GICustomOperandRenderer<"renderImm">,
   GISDNodeXFormEquiv<as_i64imm>;
 
+def gi_trailing_zero : GICustomOperandRenderer<"renderTrailingZeros">,
+  GISDNodeXFormEquiv<TrailingZeros>;
+
 // FIXME: This is labelled as handling 's32', however the ComplexPattern it
 // refers to handles both i32 and i64 based on the HwMode. Currently this LLT
 // parameter appears to be ignored so this pattern works for both, however we
@@ -72,6 +75,13 @@ def gi_sh2add_op : GIComplexOperandMatcher<s32, "selectSHXADDOp<2>">,
                    GIComplexPatternEquiv<sh2add_op>;
 def gi_sh3add_op : GIComplexOperandMatcher<s32, "selectSHXADDOp<3>">,
                    GIComplexPatternEquiv<sh3add_op>;
+
+def gi_sh1add_uw_op : GIComplexOperandMatcher<s32, "selectSHXADD_UWOp<1>">,
+                      GIComplexPatternEquiv<sh1add_uw_op>;
+def gi_sh2add_uw_op : GIComplexOperandMatcher<s32, "selectSHXADD_UWOp<2>">,
+                      GIComplexPatternEquiv<sh2add_uw_op>;
+def gi_sh3add_uw_op : GIComplexOperandMatcher<s32, "selectSHXADD_UWOp<3>">,
+                      GIComplexPatternEquiv<sh3add_uw_op>;
 
 // FIXME: Canonicalize (sub X, C) -> (add X, -C) earlier.
 def : Pat<(XLenVT (sub GPR:$rs1, simm12Plus1:$imm)),
