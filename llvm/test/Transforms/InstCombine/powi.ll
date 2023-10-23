@@ -341,3 +341,52 @@ define double @fdiv_pow_powi_negative_variable(double %x, i32 %y) {
   %div = fdiv reassoc nnan double %p1, %x
   ret double %div
 }
+
+; powi(X, Y) * X --> powi(X, Y+1)
+define double @powi_fmul_powi_x(double noundef %x) {
+; CHECK-LABEL: @powi_fmul_powi_x(
+; CHECK-NEXT:    [[MUL:%.*]] = call reassoc double @llvm.powi.f64.i32(double [[X:%.*]], i32 4)
+; CHECK-NEXT:    ret double [[MUL]]
+;
+  %p1 = tail call double @llvm.powi.f64.i32(double %x, i32 3)
+  %mul = fmul reassoc double %p1, %x
+  ret double %mul
+}
+
+; Negative test: Multi-use
+define double @powi_fmul_powi_x_multi_use(double noundef %x) {
+; CHECK-LABEL: @powi_fmul_powi_x_multi_use(
+; CHECK-NEXT:    [[P1:%.*]] = tail call double @llvm.powi.f64.i32(double [[X:%.*]], i32 3)
+; CHECK-NEXT:    tail call void @use(double [[P1]])
+; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc double [[P1]], [[X]]
+; CHECK-NEXT:    ret double [[MUL]]
+;
+  %p1 = tail call double @llvm.powi.f64.i32(double %x, i32 3)
+  tail call void @use(double %p1)
+  %mul = fmul reassoc double %p1, %x
+  ret double %mul
+}
+
+; Negative test: Miss fmf flag
+define double @powi_fmul_powi_x_missing_reassoc(double noundef %x) {
+; CHECK-LABEL: @powi_fmul_powi_x_missing_reassoc(
+; CHECK-NEXT:    [[P1:%.*]] = tail call double @llvm.powi.f64.i32(double [[X:%.*]], i32 3)
+; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[P1]], [[X]]
+; CHECK-NEXT:    ret double [[MUL]]
+;
+  %p1 = tail call double @llvm.powi.f64.i32(double %x, i32 3)
+  %mul = fmul double %p1, %x
+  ret double %mul
+}
+
+; Negative test: overflow
+define double @powi_fmul_powi_x_overflow(double noundef %x) {
+; CHECK-LABEL: @powi_fmul_powi_x_overflow(
+; CHECK-NEXT:    [[P1:%.*]] = tail call double @llvm.powi.f64.i32(double [[X:%.*]], i32 2147483647)
+; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc double [[P1]], [[X]]
+; CHECK-NEXT:    ret double [[MUL]]
+;
+  %p1 = tail call double @llvm.powi.f64.i32(double %x, i32 2147483647) ; INT_MAX
+  %mul = fmul reassoc double %p1, %x
+  ret double %mul
+}

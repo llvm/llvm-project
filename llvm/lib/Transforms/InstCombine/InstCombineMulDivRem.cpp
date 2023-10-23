@@ -683,6 +683,18 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
     return replaceInstUsesWith(I, Pow);
   }
 
+  // powi(X, Y) * X --> powi(X, Y+1)
+  // X * powi(X, Y) --> powi(X, Y+1)
+  if (match(&I, m_c_FMul(m_OneUse(m_Intrinsic<Intrinsic::powi>(m_Value(X),
+                                                               m_Value(Y))),
+                         m_Deferred(X))) &&
+      willNotOverflowSignedAdd(Y, ConstantInt::get(Y->getType(), 1), I)) {
+    auto *Y1 = Builder.CreateAdd(Y, ConstantInt::get(Y->getType(), 1));
+    auto *NewPow = Builder.CreateIntrinsic(
+        Intrinsic::powi, {X->getType(), Y1->getType()}, {X, Y1}, &I);
+    return replaceInstUsesWith(I, NewPow);
+  }
+
   if (I.isOnlyUserOfAnyOperand()) {
     // pow(X, Y) * pow(X, Z) -> pow(X, Y + Z)
     if (match(Op0, m_Intrinsic<Intrinsic::pow>(m_Value(X), m_Value(Y))) &&
