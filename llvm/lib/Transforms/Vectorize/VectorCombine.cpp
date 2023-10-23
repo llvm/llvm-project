@@ -1143,7 +1143,7 @@ static ScalarizationResult canScalarizeAccess(VectorType *VecTy, Value *Idx,
                                               const DominatorTree &DT) {
   // We do checks for both fixed vector types and scalable vector types.
   // This is the number of elements of fixed vector types,
-  // or the minium number of elements of scalable vector types.
+  // or the minimum number of elements of scalable vector types.
   uint64_t NumElements = VecTy->getElementCount().getKnownMinValue();
 
   if (auto *C = dyn_cast<ConstantInt>(Idx)) {
