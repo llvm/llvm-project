@@ -752,14 +752,14 @@ private:
           // Ignore loop edges.
           if (Edge->isSelfEdge())
             continue;
-          // Stop early if the combined chain violates the maximum allowed size.
+          // Skip the merge if the combined chain violates the maximum specified
+          // size.
           if (ChainPred->numBlocks() + ChainSucc->numBlocks() >= MaxChainSize)
             continue;
           // Don't merge the chains if they have vastly different densities.
-          // We stop early if the ratio between the densities exceeds
-          // MaxMergeDensityRatio. Smaller values of the option result in
-          // fewer merges (hence, more chains), which in turn typically yields
-          // smaller size of the hot code section.
+          // Skip the merge if the ratio between the densities exceeds
+          // MaxMergeDensityRatio. Smaller values of the option result in fewer
+          // merges, and hence, more chains.
           auto [minDensity, maxDensity] =
               std::minmax(ChainPred->density(), ChainSucc->density());
           assert(minDensity > 0.0 && maxDensity > 0.0 &&
@@ -768,7 +768,7 @@ private:
           if (Ratio > MaxMergeDensityRatio)
             continue;
 
-          // Compute the gain of merging the two chains
+          // Compute the gain of merging the two chains.
           MergeGainT CurGain = getBestMergeGain(ChainPred, ChainSucc, Edge);
           if (CurGain.score() <= EPS)
             continue;
