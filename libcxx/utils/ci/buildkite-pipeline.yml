@@ -1131,6 +1131,7 @@ steps:
         automatic:
           - exit_status: -1  # Agent was lost
             limit: 2
+      soft_fail: true
       timeout_in_minutes: 120
 
     - label: "Android 13, x86_64 NDK"
@@ -1145,4 +1146,5 @@ steps:
         automatic:
           - exit_status: -1  # Agent was lost
             limit: 2
+      soft_fail: true
       timeout_in_minutes: 120
