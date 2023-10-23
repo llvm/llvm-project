@@ -665,10 +665,12 @@ SourceManager::createExpansionLocImpl(const ExpansionInfo &Info,
   LocalSLocEntryTable.push_back(SLocEntry::get(NextLocalOffset, Info));
   if (NextLocalOffset + Length + 1 <= NextLocalOffset ||
       NextLocalOffset + Length + 1 > CurrentLoadedOffset) {
-    Diag.Report(Info.getExpansionLocStart(), diag::err_expansions_too_large);
-    Diag.Report(Info.getExpansionLocStart(), diag::remark_sloc_usage);
-    noteSLocAddressSpaceUsage(Diag);
-    return SourceLocation();
+    Diag.Report(Info.getSpellingLoc(), diag::err_expansions_too_large);
+    // FIXME: call `noteSLocAddressSpaceUsage` to report details to users.
+    // Currently, the call runs indefinitely, so we would first need to fix it.
+    // FIXME: return an error instead of crashing. Returning invalid source
+    // locations causes compiler to run indefinitely.
+    llvm::report_fatal_error("ran out of source locations");
   }
   // See createFileID for that +1.
   NextLocalOffset += Length + 1;
