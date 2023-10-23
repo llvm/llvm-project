@@ -1,4 +1,6 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 <%s | FileCheck %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 <%s | FileCheck %s --check-prefix=CHECK
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 <%s | FileCheck %s --check-prefix=CHECK
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 -mattr=+dynamic-vgpr <%s | FileCheck %s --check-prefixes=CHECK,DVGPR
 
 ; CHECK-LABEL: {{^}}_amdgpu_cs_main:
 ; CHECK: ; NumSgprs: 4
@@ -8,6 +10,7 @@
 ; CHECK-NEXT: amdpal.pipelines:
 ; CHECK-NEXT:   - .api:            Vulkan
 ; CHECK-NEXT:     .compute_registers:
+; DVGPR-NEXT:       .dynamic_vgpr_en:   true
 ; CHECK-NEXT:       .tg_size_en:     true
 ; CHECK-NEXT:       .tgid_x_en:      false
 ; CHECK-NEXT:       .tgid_y_en:      false
