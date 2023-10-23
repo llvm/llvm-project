@@ -46,9 +46,8 @@ define i32 @test_store_before_capture(ptr %p) {
 ; CHECK-NEXT:    store i32 123, ptr [[A]], align 4
 ; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr [[P]], align 8
 ; CHECK-NEXT:    store i32 42, ptr [[P2]], align 4
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    call void @capture(ptr [[A]])
-; CHECK-NEXT:    ret i32 [[V]]
+; CHECK-NEXT:    ret i32 123
 ;
   %a = alloca i32
   store i32 123, ptr %a
