@@ -1155,7 +1155,8 @@ REDUCE_SHAPE_INFER(tosa::ReduceSumOp)
 COMPATIBLE_RETURN_TYPES(tosa::ConcatOp)
 #undef COMPATIBLE_RETURN_TYPES
 
-template <typename T> static LogicalResult verifyReduceOp(T op) {
+template <typename T>
+static LogicalResult verifyReduceOp(T op) {
   // All TOSA reduce Ops have input, output and axis.
   TensorType inputType = op.getInput().getType();
   TensorType outputType = op.getOutput().getType();
@@ -1165,11 +1166,16 @@ template <typename T> static LogicalResult verifyReduceOp(T op) {
     op.emitOpError("reduce axis must not be negative");
     return failure();
   }
-  if (inputType.hasRank() && reduceAxis >= inputType.getRank()) {
-    op.emitOpError("expect input tensor rank (")
-        << inputType.getRank() << ") to be larger than reduce axis ("
-        << reduceAxis << ")";
-    return failure();
+  if (inputType.hasRank()) {
+    int64_t inputRank = inputType.getRank();
+    // We allow for a special case where the input shape has rank 0 and axis is
+    // also 0.
+    if (reduceAxis >= inputRank && !(reduceAxis == 0 && inputRank == 0)) {
+      op.emitOpError("expect input tensor rank (")
+          << inputType.getRank() << ") to be larger than reduce axis ("
+          << reduceAxis << ")";
+      return failure();
+    }
   }
   if (outputType.hasRank()) {
     if (reduceAxis >= outputType.getRank()) {
