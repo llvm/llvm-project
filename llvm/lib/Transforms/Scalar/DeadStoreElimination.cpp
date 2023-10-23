@@ -205,16 +205,17 @@ static bool isShortenableAtTheBeginning(Instruction *I) {
   return isa<AnyMemSetInst>(I);
 }
 
-static uint64_t getPointerSize(const Value *V, const DataLayout &DL,
-                               const TargetLibraryInfo &TLI,
-                               const Function *F) {
+static std::optional<uint64_t> getPointerSize(const Value *V,
+                                              const DataLayout &DL,
+                                              const TargetLibraryInfo &TLI,
+                                              const Function *F) {
   uint64_t Size;
   ObjectSizeOpts Opts;
   Opts.NullIsUnknownSize = NullPointerIsDefined(F);
 
   if (getObjectSize(V, Size, DL, &TLI, Opts))
     return Size;
-  return MemoryLocation::UnknownSize;
+  return std::nullopt;
 }
 
 namespace {
@@ -865,7 +866,7 @@ struct DSEState {
   DSEState(Function &F, AliasAnalysis &AA, MemorySSA &MSSA, DominatorTree &DT,
            PostDominatorTree &PDT, AssumptionCache &AC,
            const TargetLibraryInfo &TLI, const LoopInfo &LI)
-      : F(F), AA(AA), EI(DT, LI, EphValues), BatchAA(AA, &EI), MSSA(MSSA),
+      : F(F), AA(AA), EI(DT, &LI, &EphValues), BatchAA(AA, &EI), MSSA(MSSA),
         DT(DT), PDT(PDT), TLI(TLI), DL(F.getParent()->getDataLayout()), LI(LI) {
     // Collect blocks with throwing instructions not modeled in MemorySSA and
     // alloc-like objects.
@@ -951,9 +952,9 @@ struct DSEState {
     // case the size/offset of the dead store does not matter.
     if (DeadUndObj == KillingUndObj && KillingLocSize.isPrecise() &&
         isIdentifiedObject(KillingUndObj)) {
-      uint64_t KillingUndObjSize = getPointerSize(KillingUndObj, DL, TLI, &F);
-      if (KillingUndObjSize != MemoryLocation::UnknownSize &&
-          KillingUndObjSize == KillingLocSize.getValue())
+      std::optional<uint64_t> KillingUndObjSize =
+          getPointerSize(KillingUndObj, DL, TLI, &F);
+      if (KillingUndObjSize && *KillingUndObjSize == KillingLocSize.getValue())
         return OW_Complete;
     }
 

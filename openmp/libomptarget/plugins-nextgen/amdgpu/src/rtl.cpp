@@ -2529,10 +2529,16 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Plugin::success();
   }
   Error getDeviceHeapSize(uint64_t &Value) override {
-    Value = 0;
+    Value = DeviceMemoryPoolSize;
     return Plugin::success();
   }
-  Error setDeviceHeapSize(uint64_t Value) override { return Plugin::success(); }
+  Error setDeviceHeapSize(uint64_t Value) override {
+    for (DeviceImageTy *Image : LoadedImages)
+      if (auto Err = setupDeviceMemoryPool(Plugin::get(), *Image, Value))
+        return Err;
+    DeviceMemoryPoolSize = Value;
+    return Plugin::success();
+  }
 
   /// AMDGPU-specific function to get device attributes.
   template <typename Ty> Error getDeviceAttr(uint32_t Kind, Ty &Value) {
@@ -2625,6 +2631,9 @@ private:
 
   /// Reference to the host device.
   AMDHostDeviceTy &HostDevice;
+
+  /// The current size of the global device memory pool (managed by us).
+  uint64_t DeviceMemoryPoolSize = 1L << 29L /* 512MB */;
 };
 
 Error AMDGPUDeviceImageTy::loadExecutable(const AMDGPUDeviceTy &Device) {
@@ -2869,15 +2878,14 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
         if (Status != HSA_STATUS_SUCCESS)
           return Status;
 
-        // TODO: This is not allowed by the standard.
-        char ISAName[Length];
-        Status = hsa_isa_get_info_alt(ISA, HSA_ISA_INFO_NAME, ISAName);
+        llvm::SmallVector<char> ISAName(Length);
+        Status = hsa_isa_get_info_alt(ISA, HSA_ISA_INFO_NAME, ISAName.begin());
         if (Status != HSA_STATUS_SUCCESS)
           return Status;
 
-        llvm::StringRef TripleTarget(ISAName);
+        llvm::StringRef TripleTarget(ISAName.begin(), Length);
         if (TripleTarget.consume_front("amdgcn-amd-amdhsa"))
-          Target = TripleTarget.ltrim('-').str();
+          Target = TripleTarget.ltrim('-').rtrim('\0').str();
         return HSA_STATUS_SUCCESS;
       });
       if (Err)

@@ -504,6 +504,22 @@ struct ScalarEnumerationTraits<FormatStyle::QualifierAlignmentStyle> {
   }
 };
 
+template <>
+struct MappingTraits<
+    FormatStyle::SpaceBeforeParensCustom::AfterPlacementOperatorStyle> {
+  static void
+  mapping(IO &IO,
+          FormatStyle::SpaceBeforeParensCustom::AfterPlacementOperatorStyle
+              &Value) {
+    IO.enumCase(Value, "Always",
+                FormatStyle::SpaceBeforeParensCustom::APO_Always);
+    IO.enumCase(Value, "Never",
+                FormatStyle::SpaceBeforeParensCustom::APO_Never);
+    IO.enumCase(Value, "Leave",
+                FormatStyle::SpaceBeforeParensCustom::APO_Leave);
+  }
+};
+
 template <> struct MappingTraits<FormatStyle::RawStringFormat> {
   static void mapping(IO &IO, FormatStyle::RawStringFormat &Format) {
     IO.mapOptional("Language", Format.Language);
@@ -679,6 +695,7 @@ template <> struct MappingTraits<FormatStyle::SpaceBeforeParensCustom> {
                    Spacing.AfterFunctionDeclarationName);
     IO.mapOptional("AfterIfMacros", Spacing.AfterIfMacros);
     IO.mapOptional("AfterOverloadedOperator", Spacing.AfterOverloadedOperator);
+    IO.mapOptional("AfterPlacementOperator", Spacing.AfterPlacementOperator);
     IO.mapOptional("AfterRequiresInClause", Spacing.AfterRequiresInClause);
     IO.mapOptional("AfterRequiresInExpression",
                    Spacing.AfterRequiresInExpression);
@@ -817,8 +834,8 @@ template <> struct MappingTraits<FormatStyle> {
 
     StringRef BasedOnStyle;
     if (IO.outputting()) {
-      StringRef Styles[] = {"LLVM",   "Google", "Chromium", "Mozilla",
-                            "WebKit", "GNU",    "Microsoft"};
+      StringRef Styles[] = {"LLVM",   "Google", "Chromium",  "Mozilla",
+                            "WebKit", "GNU",    "Microsoft", "clang-format"};
       for (StringRef StyleName : Styles) {
         FormatStyle PredefinedStyle;
         if (getPredefinedStyle(StyleName, Style.Language, &PredefinedStyle) &&
@@ -1369,6 +1386,8 @@ static void expandPresetsSpaceBeforeParens(FormatStyle &Expanded) {
 
   switch (Expanded.SpaceBeforeParens) {
   case FormatStyle::SBPO_Never:
+    Expanded.SpaceBeforeParensOptions.AfterPlacementOperator =
+        FormatStyle::SpaceBeforeParensCustom::APO_Never;
     break;
   case FormatStyle::SBPO_ControlStatements:
     Expanded.SpaceBeforeParensOptions.AfterControlStatements = true;
@@ -1896,6 +1915,16 @@ FormatStyle getMicrosoftStyle(FormatStyle::LanguageKind Language) {
   return Style;
 }
 
+FormatStyle getClangFormatStyle() {
+  FormatStyle Style = getLLVMStyle();
+  Style.InsertBraces = true;
+  Style.InsertNewlineAtEOF = true;
+  Style.LineEnding = FormatStyle::LE_LF;
+  Style.RemoveBracesLLVM = true;
+  Style.RemoveParentheses = FormatStyle::RPS_ReturnStatement;
+  return Style;
+}
+
 FormatStyle getNoStyle() {
   FormatStyle NoStyle = getLLVMStyle();
   NoStyle.DisableFormat = true;
@@ -1920,6 +1949,8 @@ bool getPredefinedStyle(StringRef Name, FormatStyle::LanguageKind Language,
     *Style = getGNUStyle();
   else if (Name.equals_insensitive("microsoft"))
     *Style = getMicrosoftStyle(Language);
+  else if (Name.equals_insensitive("clang-format"))
+    *Style = getClangFormatStyle();
   else if (Name.equals_insensitive("none"))
     *Style = getNoStyle();
   else if (Name.equals_insensitive("inheritparentconfig"))

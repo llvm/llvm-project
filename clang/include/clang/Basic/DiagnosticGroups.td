@@ -847,7 +847,9 @@ def OverridingMethodMismatch : DiagGroup<"overriding-method-mismatch">;
 def VariadicMacros : DiagGroup<"variadic-macros">;
 def VectorConversion : DiagGroup<"vector-conversion">;      // clang specific
 def VexingParse : DiagGroup<"vexing-parse">;
-def VLAExtension : DiagGroup<"vla-extension">;
+def VLAUseStaticAssert : DiagGroup<"vla-extension-static-assert">;
+def VLACxxExtension : DiagGroup<"vla-cxx-extension", [VLAUseStaticAssert]>;
+def VLAExtension : DiagGroup<"vla-extension", [VLACxxExtension]>;
 def VLA : DiagGroup<"vla", [VLAExtension]>;
 def VolatileRegisterVar : DiagGroup<"volatile-register-var">;
 def Visibility : DiagGroup<"visibility">;
@@ -1064,7 +1066,9 @@ def Most : DiagGroup<"most", [
 def ThreadSafetyAttributes : DiagGroup<"thread-safety-attributes">;
 def ThreadSafetyAnalysis   : DiagGroup<"thread-safety-analysis">;
 def ThreadSafetyPrecise    : DiagGroup<"thread-safety-precise">;
-def ThreadSafetyReference  : DiagGroup<"thread-safety-reference">;
+def ThreadSafetyReferenceReturn  : DiagGroup<"thread-safety-reference-return">;
+def ThreadSafetyReference  : DiagGroup<"thread-safety-reference",
+                                             [ThreadSafetyReferenceReturn]>;
 def ThreadSafetyNegative   : DiagGroup<"thread-safety-negative">;
 def ThreadSafety : DiagGroup<"thread-safety",
                              [ThreadSafetyAttributes,
@@ -1081,7 +1085,8 @@ def Consumed       : DiagGroup<"consumed">;
 // warning should be active _only_ when -Wall is passed in, mark it as
 // DefaultIgnore in addition to putting it here.
 def All : DiagGroup<"all", [Most, Parentheses, Switch, SwitchBool,
-                            MisleadingIndentation, PackedNonPod]>;
+                            MisleadingIndentation, PackedNonPod,
+                            VLACxxExtension]>;
 
 // Warnings that should be in clang-cl /w4.
 def : DiagGroup<"CL4", [All, Extra]>;

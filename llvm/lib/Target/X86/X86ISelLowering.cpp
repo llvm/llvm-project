@@ -3257,6 +3257,72 @@ bool X86TargetLowering::
   return NewShiftOpcode == ISD::SHL;
 }
 
+unsigned X86TargetLowering::preferedOpcodeForCmpEqPiecesOfOperand(
+    EVT VT, unsigned ShiftOpc, bool MayTransformRotate,
+    const APInt &ShiftOrRotateAmt, const std::optional<APInt> &AndMask) const {
+  if (!VT.isInteger())
+    return ShiftOpc;
+
+  bool PreferRotate = false;
+  if (VT.isVector()) {
+    // For vectors, if we have rotate instruction support, then its definetly
+    // best. Otherwise its not clear what the best so just don't make changed.
+    PreferRotate = Subtarget.hasAVX512() && (VT.getScalarType() == MVT::i32 ||
+                                             VT.getScalarType() == MVT::i64);
+  } else {
+    // For scalar, if we have bmi prefer rotate for rorx. Otherwise prefer
+    // rotate unless we have a zext mask+shr.
+    PreferRotate = Subtarget.hasBMI2();
+    if (!PreferRotate) {
+      unsigned MaskBits =
+          VT.getScalarSizeInBits() - ShiftOrRotateAmt.getZExtValue();
+      PreferRotate = (MaskBits != 8) && (MaskBits != 16) && (MaskBits != 32);
+    }
+  }
+
+  if (ShiftOpc == ISD::SHL || ShiftOpc == ISD::SRL) {
+    assert(AndMask.has_value() && "Null andmask when querying about shift+and");
+
+    if (PreferRotate && MayTransformRotate)
+      return ISD::ROTL;
+
+    // If vector we don't really get much benefit swapping around constants.
+    // Maybe we could check if the DAG has the flipped node already in the
+    // future.
+    if (VT.isVector())
+      return ShiftOpc;
+
+    // See if the beneficial to swap shift type.
+    if (ShiftOpc == ISD::SHL) {
+      // If the current setup has imm64 mask, then inverse will have
+      // at least imm32 mask (or be zext i32 -> i64).
+      if (VT == MVT::i64)
+        return AndMask->getSignificantBits() > 32 ? ISD::SRL : ShiftOpc;
+
+      // We can only benefit if req at least 7-bit for the mask. We
+      // don't want to replace shl of 1,2,3 as they can be implemented
+      // with lea/add.
+      return ShiftOrRotateAmt.uge(7) ? ISD::SRL : ShiftOpc;
+    }
+
+    if (VT == MVT::i64)
+      // Keep exactly 32-bit imm64, this is zext i32 -> i64 which is
+      // extremely efficient.
+      return AndMask->getSignificantBits() > 33 ? ISD::SHL : ShiftOpc;
+
+    // Keep small shifts as shl so we can generate add/lea.
+    return ShiftOrRotateAmt.ult(7) ? ISD::SHL : ShiftOpc;
+  }
+
+  // We prefer rotate for vectors of if we won't get a zext mask with SRL
+  // (PreferRotate will be set in the latter case).
+  if (PreferRotate || VT.isVector())
+    return ShiftOpc;
+
+  // Non-vector type and we have a zext mask with SRL.
+  return ISD::SRL;
+}
+
 bool X86TargetLowering::preferScalarizeSplat(SDNode *N) const {
   return N->getOpcode() != ISD::FP_EXTEND;
 }
@@ -56919,7 +56985,15 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       case MVT::v8f16:
         if (!Subtarget.hasFP16())
           break;
-        [[fallthrough]];
+        if (VConstraint)
+          return std::make_pair(0U, &X86::VR128XRegClass);
+        return std::make_pair(0U, &X86::VR128RegClass);
+      case MVT::v8bf16:
+        if (!Subtarget.hasBF16() || !Subtarget.hasVLX())
+          break;
+        if (VConstraint)
+          return std::make_pair(0U, &X86::VR128XRegClass);
+        return std::make_pair(0U, &X86::VR128RegClass);
       case MVT::f128:
       case MVT::v16i8:
       case MVT::v8i16:
@@ -56934,7 +57008,15 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       case MVT::v16f16:
         if (!Subtarget.hasFP16())
           break;
-        [[fallthrough]];
+        if (VConstraint)
+          return std::make_pair(0U, &X86::VR256XRegClass);
+        return std::make_pair(0U, &X86::VR256RegClass);
+      case MVT::v16bf16:
+        if (!Subtarget.hasBF16() || !Subtarget.hasVLX())
+          break;
+        if (VConstraint)
+          return std::make_pair(0U, &X86::VR256XRegClass);
+        return std::make_pair(0U, &X86::VR256RegClass);
       case MVT::v32i8:
       case MVT::v16i16:
       case MVT::v8i32:
@@ -56949,7 +57031,15 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       case MVT::v32f16:
         if (!Subtarget.hasFP16())
           break;
-        [[fallthrough]];
+        if (VConstraint)
+          return std::make_pair(0U, &X86::VR512RegClass);
+        return std::make_pair(0U, &X86::VR512_0_15RegClass);
+      case MVT::v32bf16:
+        if (!Subtarget.hasBF16())
+          break;
+        if (VConstraint)
+          return std::make_pair(0U, &X86::VR512RegClass);
+        return std::make_pair(0U, &X86::VR512_0_15RegClass);
       case MVT::v64i8:
       case MVT::v32i16:
       case MVT::v8f64:
@@ -56992,7 +57082,11 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       case MVT::v8f16:
         if (!Subtarget.hasFP16())
           break;
-        [[fallthrough]];
+        return std::make_pair(X86::XMM0, &X86::VR128RegClass);
+      case MVT::v8bf16:
+        if (!Subtarget.hasBF16() || !Subtarget.hasVLX())
+          break;
+        return std::make_pair(X86::XMM0, &X86::VR128RegClass);
       case MVT::f128:
       case MVT::v16i8:
       case MVT::v8i16:
@@ -57005,7 +57099,11 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       case MVT::v16f16:
         if (!Subtarget.hasFP16())
           break;
-        [[fallthrough]];
+        return std::make_pair(X86::YMM0, &X86::VR256RegClass);
+      case MVT::v16bf16:
+        if (!Subtarget.hasBF16() || !Subtarget.hasVLX())
+          break;
+        return std::make_pair(X86::YMM0, &X86::VR256RegClass);
       case MVT::v32i8:
       case MVT::v16i16:
       case MVT::v8i32:
@@ -57018,7 +57116,11 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       case MVT::v32f16:
         if (!Subtarget.hasFP16())
           break;
-        [[fallthrough]];
+        return std::make_pair(X86::ZMM0, &X86::VR512_0_15RegClass);
+      case MVT::v32bf16:
+        if (!Subtarget.hasBF16())
+          break;
+        return std::make_pair(X86::ZMM0, &X86::VR512_0_15RegClass);
       case MVT::v64i8:
       case MVT::v32i16:
       case MVT::v8f64:

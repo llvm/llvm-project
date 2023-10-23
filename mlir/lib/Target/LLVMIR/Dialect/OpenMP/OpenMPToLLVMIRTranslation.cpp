@@ -666,7 +666,7 @@ convertOmpTeams(omp::TeamsOp op, llvm::IRBuilderBase &builder,
                 LLVM::ModuleTranslation &moduleTranslation) {
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
   LogicalResult bodyGenStatus = success();
-  if (op.getIfExpr() || !op.getAllocatorsVars().empty() || op.getReductions())
+  if (!op.getAllocatorsVars().empty() || op.getReductions())
     return op.emitError("unhandled clauses for translation to LLVM IR");
 
   auto bodyCB = [&](InsertPointTy allocaIP, InsertPointTy codegenIP) {
@@ -689,9 +689,13 @@ convertOmpTeams(omp::TeamsOp op, llvm::IRBuilderBase &builder,
   if (Value threadLimitVar = op.getThreadLimit())
     threadLimit = moduleTranslation.lookupValue(threadLimitVar);
 
+  llvm::Value *ifExpr = nullptr;
+  if (Value ifExprVar = op.getIfExpr())
+    ifExpr = moduleTranslation.lookupValue(ifExprVar);
+
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createTeams(
-      ompLoc, bodyCB, numTeamsLower, numTeamsUpper, threadLimit));
+      ompLoc, bodyCB, numTeamsLower, numTeamsUpper, threadLimit, ifExpr));
   return bodyGenStatus;
 }
 
@@ -2042,13 +2046,13 @@ createDeviceArgumentAccessor(llvm::Argument &arg, llvm::Value *input,
                                : llvm::Type::getInt64Ty(builder.getContext()),
                            ompBuilder.M.getDataLayout().getAllocaAddrSpace());
   llvm::Value *addrAscast =
-      builder.CreatePointerBitCastOrAddrSpaceCast(addr, input->getType());
+      arg.getType()->isPointerTy()
+          ? builder.CreatePointerBitCastOrAddrSpaceCast(addr, input->getType())
+          : addr;
+
   builder.CreateStore(&arg, addrAscast);
-
   builder.restoreIP(codeGenIP);
-
   retVal = builder.CreateLoad(arg.getType(), addrAscast);
-
   return builder.saveIP();
 }
 

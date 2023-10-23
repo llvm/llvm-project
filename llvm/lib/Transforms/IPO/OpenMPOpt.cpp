@@ -733,6 +733,7 @@ struct KernelInfoState : AbstractState {
     SPMDCompatibilityTracker.indicatePessimisticFixpoint();
     ReachedKnownParallelRegions.indicatePessimisticFixpoint();
     ReachedUnknownParallelRegions.indicatePessimisticFixpoint();
+    NestedParallelism = true;
     return ChangeStatus::CHANGED;
   }
 
@@ -761,6 +762,8 @@ struct KernelInfoState : AbstractState {
     if (ReachingKernelEntries != RHS.ReachingKernelEntries)
       return false;
     if (ParallelLevels != RHS.ParallelLevels)
+      return false;
+    if (NestedParallelism != RHS.NestedParallelism)
       return false;
     return true;
   }
@@ -3580,7 +3583,8 @@ struct AAKernelInfo : public StateWrapper<KernelInfoState, AbstractAttribute> {
            ", #ParLevels: " +
            (ParallelLevels.isValidState()
                 ? std::to_string(ParallelLevels.size())
-                : "<invalid>");
+                : "<invalid>") +
+           ", NestedPar: " + (NestedParallelism ? "yes" : "no");
   }
 
   /// Create an abstract attribute biew for the position \p IRP.

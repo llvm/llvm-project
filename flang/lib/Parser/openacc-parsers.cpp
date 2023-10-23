@@ -235,6 +235,9 @@ TYPE_PARSER(startAccLine >>
             sourced(construct<OpenACCDeclarativeConstruct>(
                 Parser<OpenACCRoutineConstruct>{})))))
 
+TYPE_PARSER(sourced(construct<OpenACCEndConstruct>(
+    "END"_tok >> "LOOP"_tok >> pure(llvm::acc::Directive::ACCD_loop))))
+
 // OpenACC constructs
 TYPE_CONTEXT_PARSER("OpenACC construct"_en_US,
     startAccLine >>
@@ -246,7 +249,8 @@ TYPE_CONTEXT_PARSER("OpenACC construct"_en_US,
                     Parser<OpenACCStandaloneConstruct>{}),
                 construct<OpenACCConstruct>(Parser<OpenACCCacheConstruct>{}),
                 construct<OpenACCConstruct>(Parser<OpenACCWaitConstruct>{}),
-                construct<OpenACCConstruct>(Parser<OpenACCAtomicConstruct>{}))))
+                construct<OpenACCConstruct>(Parser<OpenACCAtomicConstruct>{}),
+                construct<OpenACCConstruct>(Parser<OpenACCEndConstruct>{}))))
 
 TYPE_PARSER(startAccLine >>
     sourced(construct<AccEndCombinedDirective>(sourced("END"_tok >>

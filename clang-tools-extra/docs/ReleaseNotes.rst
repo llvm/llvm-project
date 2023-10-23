@@ -120,10 +120,20 @@ Improvements to clang-tidy
 
 - Improved :program:`clang-tidy-diff.py` script. It now returns exit code `1`
   if any :program:`clang-tidy` subprocess exits with a non-zero code or if
-  exporting fixes fails.
+  exporting fixes fails. It now accepts a directory as a value for
+  `-export-fixes` to export individual yaml files for each compilation unit.
+
+- Improved :program:`run-clang-tidy.py` script. It now accepts a directory
+  as a value for `-export-fixes` to export individual yaml files for each
+  compilation unit.
 
 New checks
 ^^^^^^^^^^
+
+- New :doc:`bugprone-casting-through-void
+  <clang-tidy/checks/bugprone/casting-through-void>` check.
+
+  Detects unsafe or redundant two-step casting operations involving ``void*``.
 
 - New :doc:`bugprone-compare-pointer-to-member-virtual-function
   <clang-tidy/checks/bugprone/compare-pointer-to-member-virtual-function>` check.
@@ -163,6 +173,13 @@ New checks
   Flags coroutines that suspend while a lock guard is in scope at the
   suspension point.
 
+- New :doc:`misc-coroutine-hostile-raii
+  <clang-tidy/checks/misc/coroutine-hostile-raii>` check.
+
+  Detects when objects of certain hostile RAII types persists across suspension
+  points in a coroutine. Such hostile types include scoped-lockable types and
+  types belonging to a configurable denylist.
+
 - New :doc:`modernize-use-constraints
   <clang-tidy/checks/modernize/use-constraints>` check.
 
@@ -201,6 +218,10 @@ Changes in existing checks
 - Improved :doc:`bugprone-reserved-identifier
   <clang-tidy/checks/bugprone/reserved-identifier>` check, so that it does not
   warn on macros starting with underscore and lowercase letter.
+
+- Improved :doc:`bugprone-unchecked-optional-access
+  <clang-tidy/checks/bugprone/unchecked-optional-access>` check, so that it does
+  not crash during handling of optional values.
 
 - Improved :doc:`bugprone-undefined-memory-manipulation
   <clang-tidy/checks/bugprone/undefined-memory-manipulation>` check to support
@@ -268,6 +289,10 @@ Changes in existing checks
 - Improved :doc:`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` check to ignore
   false-positives in unevaluated context (e.g., ``decltype``).
+
+- Improved :doc:`modernize-avoid-bind
+  <clang-tidy/checks/modernize/avoid-bind>` check to
+  not emit a ``return`` for fixes when the function returns ``void``.
 
 - Improved :doc:`modernize-loop-convert
   <clang-tidy/checks/modernize/loop-convert>` to support for-loops with

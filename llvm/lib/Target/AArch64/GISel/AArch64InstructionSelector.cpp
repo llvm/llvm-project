@@ -102,6 +102,11 @@ private:
   // An early selection function that runs before the selectImpl() call.
   bool earlySelect(MachineInstr &I);
 
+  /// Save state that is shared between select calls, call select on \p I and
+  /// then restore the saved state. This can be used to recursively call select
+  /// within a select call.
+  bool selectAndRestoreState(MachineInstr &I);
+
   // Do some preprocessing of G_PHIs before we begin selection.
   void processPHIs(MachineFunction &MF);
 
@@ -3552,6 +3557,13 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   return false;
 }
 
+bool AArch64InstructionSelector::selectAndRestoreState(MachineInstr &I) {
+  MachineIRBuilderState OldMIBState = MIB.getState();
+  bool Success = select(I);
+  MIB.setState(OldMIBState);
+  return Success;
+}
+
 bool AArch64InstructionSelector::selectReduction(MachineInstr &I,
                                                  MachineRegisterInfo &MRI) {
   Register VecReg = I.getOperand(1).getReg();
@@ -4749,11 +4761,17 @@ MachineInstr *AArch64InstructionSelector::emitCarryIn(MachineInstr &I,
   // emit a carry generating instruction. E.g. for G_UADDE/G_USUBE sequences
   // generated during legalization of wide add/sub. This optimization depends on
   // these sequences not being interrupted by other instructions.
+  // We have to select the previous instruction before the carry-using
+  // instruction is deleted by the calling function, otherwise the previous
+  // instruction might become dead and would get deleted.
   MachineInstr *SrcMI = MRI->getVRegDef(CarryReg);
   if (SrcMI == I.getPrevNode()) {
     if (auto *CarrySrcMI = dyn_cast<GAddSubCarryOut>(SrcMI)) {
       bool ProducesNegatedCarry = CarrySrcMI->isSub();
-      if (NeedsNegatedCarry == ProducesNegatedCarry && CarrySrcMI->isUnsigned())
+      if (NeedsNegatedCarry == ProducesNegatedCarry &&
+          CarrySrcMI->isUnsigned() &&
+          CarrySrcMI->getCarryOutReg() == CarryReg &&
+          selectAndRestoreState(*SrcMI))
         return nullptr;
     }
   }

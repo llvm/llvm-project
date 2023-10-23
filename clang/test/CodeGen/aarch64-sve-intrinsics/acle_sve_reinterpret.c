@@ -367,6 +367,7 @@ svint32_t test_svreinterpret_s32_s16(svint16_t op)
   return SVE_ACLE_FUNC(svreinterpret_s32,_s16,,)(op);
 }
 
+//
 // CHECK-LABEL: @test_svreinterpret_s32_s32(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[OP:%.*]]
@@ -498,7 +499,6 @@ svint32_t test_svreinterpret_s32_f64(svfloat64_t op)
   return SVE_ACLE_FUNC(svreinterpret_s32,_f64,,)(op);
 }
 
-//
 // CHECK-LABEL: @test_svreinterpret_s64_s8(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x i8> [[OP:%.*]] to <vscale x 2 x i64>

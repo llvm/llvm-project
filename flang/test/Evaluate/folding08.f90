@@ -146,4 +146,10 @@ module m
     logical, parameter :: test_ubpa4_dim = ubound((pa4), 1) == 5 .and. &
          ubound((pa4), 2) == 4
   end
+  subroutine test5_max_ubound
+    ! Test maximum ubound value
+    integer(8), parameter :: I64_MAX = INT(z'7fffffffffffffff', kind=8)
+    integer, parameter :: a5(I64_MAX - 2 : I64_MAX) = [1, 2, 3]
+    logical, parameter :: test_uba5 = ubound(a5, 1, kind=8) == I64_MAX
+  end subroutine
 end

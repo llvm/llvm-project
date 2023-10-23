@@ -74,8 +74,8 @@ CSPreInliner::CSPreInliner(SampleContextTracker &Tracker,
     ProfileInlineLimitMax = 50000;
 }
 
-std::vector<StringRef> CSPreInliner::buildTopDownOrder() {
-  std::vector<StringRef> Order;
+std::vector<FunctionId> CSPreInliner::buildTopDownOrder() {
+  std::vector<FunctionId> Order;
   // Trim cold edges to get a more stable call graph. This allows for a more
   // stable top-down order which in turns helps the stablity of the generated
   // profile from run to run.
@@ -129,7 +129,7 @@ bool CSPreInliner::getInlineCandidates(ProfiledCandidateQueue &CQueue,
     LineLocation Callsite = CalleeNode->getCallSiteLoc();
     if (auto CallTargets = CallerSamples->findCallTargetMapAt(Callsite)) {
       SampleRecord::CallTargetMap &TargetCounts = CallTargets.get();
-      auto It = TargetCounts.find(CalleeSamples->getName());
+      auto It = TargetCounts.find(CalleeSamples->getFunction());
       if (It != TargetCounts.end())
         CallsiteCount = It->second;
     }
@@ -196,7 +196,7 @@ bool CSPreInliner::shouldInline(ProfiledInlineCandidate &Candidate) {
   return (Candidate.SizeCost < SampleThreshold);
 }
 
-void CSPreInliner::processFunction(const StringRef Name) {
+void CSPreInliner::processFunction(const FunctionId Name) {
   FunctionSamples *FSamples = ContextTracker.getBaseSamplesFor(Name);
   if (!FSamples)
     return;
@@ -297,7 +297,7 @@ void CSPreInliner::run() {
   // It also helps better compress context profile to control profile
   // size, as we now only need context profile for functions going to
   // be inlined.
-  for (StringRef FuncName : buildTopDownOrder()) {
+  for (FunctionId FuncName : buildTopDownOrder()) {
     processFunction(FuncName);
   }
 
