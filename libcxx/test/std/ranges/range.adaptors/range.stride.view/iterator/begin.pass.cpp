@@ -21,8 +21,8 @@ constexpr bool iterator_concept_test() {
   {
     int arr[] = {1, 2, 3};
     // Iterator of stride over random access view should have random access concept.
-    auto rav = RandomAccessView(arr, arr + 3);
-    auto str = std::ranges::stride_view<RandomAccessView>(rav, 1);
+    auto rav = RandomAccessArrayView<int>(arr, arr + 3);
+    auto str = std::ranges::stride_view<RandomAccessArrayView<int>>(rav, 1);
     static_assert(std::random_access_iterator<decltype(rav.begin())>);
     static_assert(std::random_access_iterator<decltype(str.begin())>);
   }
@@ -30,8 +30,8 @@ constexpr bool iterator_concept_test() {
   {
     int arr[] = {1, 2, 3};
     // Iterator of stride over bidirectional view should have bidirectional view concept.
-    auto rav = BidirView(arr, arr + 3);
-    auto str = std::ranges::stride_view<BidirView>(rav, 1);
+    auto rav = BidirArrayView<int>(arr, arr + 3);
+    auto str = std::ranges::stride_view<BidirArrayView<int>>(rav, 1);
     static_assert(std::bidirectional_iterator<decltype(rav.begin())>);
     static_assert(std::bidirectional_iterator<decltype(str.begin())>);
     static_assert(!std::random_access_iterator<decltype(rav.begin())>);
@@ -41,8 +41,8 @@ constexpr bool iterator_concept_test() {
   {
     int arr[] = {1, 2, 3};
     // Iterator of stride over forward view should have forward view concept.
-    auto rav = ForwardView(arr, arr + 3);
-    auto str = std::ranges::stride_view<ForwardView>(rav, 1);
+    auto rav = ForwardArrayView<int>(arr, arr + 3);
+    auto str = std::ranges::stride_view<ForwardArrayView<int>>(rav, 1);
     static_assert(std::forward_iterator<decltype(rav.begin())>);
     static_assert(std::forward_iterator<decltype(str.begin())>);
     static_assert(!std::bidirectional_iterator<decltype(rav.begin())>);
@@ -54,8 +54,8 @@ constexpr bool iterator_concept_test() {
   {
     int arr[] = {1, 2, 3};
     // Iterator of stride over input view should have input view concept.
-    auto rav = InputView(arr, arr + 3);
-    auto str = std::ranges::stride_view<InputView>(rav, 1);
+    auto rav = InputArrayView<int>(arr, arr + 3);
+    auto str = std::ranges::stride_view<InputArrayView<int>>(rav, 1);
     static_assert(std::input_iterator<decltype(rav.begin())>);
     static_assert(std::input_iterator<decltype(str.begin())>);
     static_assert(!std::forward_iterator<decltype(rav.begin())>);
