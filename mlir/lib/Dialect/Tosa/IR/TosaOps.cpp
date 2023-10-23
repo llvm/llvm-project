@@ -1155,6 +1155,46 @@ REDUCE_SHAPE_INFER(tosa::ReduceSumOp)
 COMPATIBLE_RETURN_TYPES(tosa::ConcatOp)
 #undef COMPATIBLE_RETURN_TYPES
 
+template <typename T> static LogicalResult verifyReduceOp(T op) {
+  // All TOSA reduce Ops have input, output and axis.
+  TensorType inputType = op.getInput().getType();
+  TensorType outputType = op.getOutput().getType();
+  int32_t reduceAxis = op.getAxis();
+
+  if (reduceAxis < 0) {
+    op.emitOpError("reduce axis must not be negative");
+    return failure();
+  }
+  if (inputType.hasRank() && reduceAxis >= inputType.getRank()) {
+    op.emitOpError("expect input tensor rank (")
+        << inputType.getRank() << ") to be larger than reduce axis ("
+        << reduceAxis << ")";
+    return failure();
+  }
+  if (outputType.hasRank()) {
+    if (reduceAxis >= outputType.getRank()) {
+      op.emitOpError("expect output tensor rank (")
+          << outputType.getRank() << ") to be larger than reduce axis ("
+          << reduceAxis << ")";
+      return failure();
+    }
+    auto outputShape = outputType.getShape();
+    if (!outputType.isDynamicDim(reduceAxis) && outputShape[reduceAxis] != 1) {
+      op.emitOpError("expect reduced dimension size to be 1, got ")
+          << outputShape[reduceAxis];
+      return failure();
+    }
+  }
+  return success();
+}
+
+LogicalResult tosa::ReduceAllOp::verify() { return verifyReduceOp(*this); }
+LogicalResult tosa::ReduceAnyOp::verify() { return verifyReduceOp(*this); }
+LogicalResult tosa::ReduceMaxOp::verify() { return verifyReduceOp(*this); }
+LogicalResult tosa::ReduceMinOp::verify() { return verifyReduceOp(*this); }
+LogicalResult tosa::ReduceProdOp::verify() { return verifyReduceOp(*this); }
+LogicalResult tosa::ReduceSumOp::verify() { return verifyReduceOp(*this); }
+
 static LogicalResult NAryInferReturnTypes(
     const ValueShapeRange &operands,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
