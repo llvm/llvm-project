@@ -605,7 +605,7 @@ FileID SourceManager::createFileIDImpl(ContentCache &File, StringRef Filename,
   unsigned FileSize = File.getSize();
   if (!(NextLocalOffset + FileSize + 1 > NextLocalOffset &&
         NextLocalOffset + FileSize + 1 <= CurrentLoadedOffset)) {
-    Diag.Report(IncludePos, diag::err_include_too_large);
+    Diag.Report(IncludePos, diag::err_sloc_space_too_large);
     noteSLocAddressSpaceUsage(Diag);
     return FileID();
   }
@@ -665,7 +665,7 @@ SourceManager::createExpansionLocImpl(const ExpansionInfo &Info,
   LocalSLocEntryTable.push_back(SLocEntry::get(NextLocalOffset, Info));
   if (NextLocalOffset + Length + 1 <= NextLocalOffset ||
       NextLocalOffset + Length + 1 > CurrentLoadedOffset) {
-    Diag.Report(Info.getSpellingLoc(), diag::err_expansions_too_large);
+    Diag.Report(SourceLocation(), diag::err_sloc_space_too_large);
     // FIXME: call `noteSLocAddressSpaceUsage` to report details to users.
     // Currently, the call runs indefinitely, so we would first need to fix it.
     // FIXME: return an error instead of crashing. Returning invalid source
