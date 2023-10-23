@@ -118,20 +118,8 @@ int32_t __kmpc_target_init(KernelEnvironmentTy &KernelEnvironment,
   // main thread's warp, so none of its threads can ever be active worker
   // threads.
   if (UseGenericStateMachine &&
-      mapping::getThreadIdInBlock() < mapping::getMaxTeamThreads(IsSPMD)) {
+      mapping::getThreadIdInBlock() < mapping::getMaxTeamThreads(IsSPMD))
     genericStateMachine(KernelEnvironment.Ident);
-  } else {
-    // Retrieve the work function just to ensure we always call
-    // __kmpc_kernel_parallel even if a custom state machine is used.
-    // TODO: this is not super pretty. The problem is we create the call to
-    // __kmpc_kernel_parallel in the openmp-opt pass but while we optimize it is
-    // not there yet. Thus, we assume we never reach it from
-    // __kmpc_target_deinit. That allows us to remove the store in there to
-    // ParallelRegionFn, which leads to bad results later on.
-    ParallelRegionFnTy WorkFn = nullptr;
-    __kmpc_kernel_parallel(&WorkFn);
-    ASSERT(WorkFn == nullptr, nullptr);
-  }
 
   return mapping::getThreadIdInBlock();
 }
@@ -148,13 +136,22 @@ void __kmpc_target_deinit() {
   if (IsSPMD)
     return;
 
-  // Signal the workers to exit the state machine and exit the kernel.
-  state::ParallelRegionFn = nullptr;
-
-  // make sure workers cannot continue before the initial thread
-  // has reset the Fn pointer for termination
-  synchronize::threads(atomic::seq_cst);
-  synchronize::threads(atomic::seq_cst);
+  if (mapping::isInitialThreadInLevel0(IsSPMD)) {
+    // Signal the workers to exit the state machine and exit the kernel.
+    state::ParallelRegionFn = nullptr;
+  } else if (!state::getKernelEnvironment()
+                  .Configuration.UseGenericStateMachine) {
+    // Retrieve the work function just to ensure we always call
+    // __kmpc_kernel_parallel even if a custom state machine is used.
+    // TODO: this is not super pretty. The problem is we create the call to
+    // __kmpc_kernel_parallel in the openmp-opt pass but while we optimize it
+    // is not there yet. Thus, we assume we never reach it from
+    // __kmpc_target_deinit. That allows us to remove the store in there to
+    // ParallelRegionFn, which leads to bad results later on.
+    ParallelRegionFnTy WorkFn = nullptr;
+    __kmpc_kernel_parallel(&WorkFn);
+    ASSERT(WorkFn == nullptr, nullptr);
+  }
 }
 
 #ifndef FORTRAN_NO_LONGER_NEEDS
