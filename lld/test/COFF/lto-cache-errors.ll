@@ -7,7 +7,7 @@
 ; RUN: rm -Rf %t.cache && mkdir %t.cache
 ; RUN: chmod 444 %t.cache
 
-;; Check emit warnings when we can't create the cache dir, note that this test will pass if there is a o: drive.
+;; Check emit warnings when we can't create the cache dir
 ; RUN: not --crash lld-link /lldltocache:%t.cache/cache /out:%t3 /entry:main %t2.o %t.o 2>&1 | FileCheck %s
 ; CHECK: LLVM ERROR: can't create cache directory
 
