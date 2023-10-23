@@ -248,7 +248,7 @@ public:
   }
 
   /// Emits the intrinsic declaration to the ostream.
-  void emitIntrinsic(raw_ostream &OS, ACLEKind Kind) const;
+  void emitIntrinsic(raw_ostream &OS, SVEEmitter &Emitter, ACLEKind Kind) const;
 
 private:
   std::string getMergeSuffix() const { return MergeSuffix; }
@@ -357,7 +357,7 @@ public:
   void createHeader(raw_ostream &o);
 
   // Emits core intrinsics in both arm_sme.h and arm_sve.h
-  void createCoreHeaderIntrinsics(raw_ostream &o, ACLEKind Kind);
+  void createCoreHeaderIntrinsics(raw_ostream &o, SVEEmitter &Emitter, ACLEKind Kind);
 
   /// Emit all the __builtin prototypes and code needed by Sema.
   void createBuiltins(raw_ostream &o);
@@ -1028,24 +1028,38 @@ std::string Intrinsic::mangleName(ClassKind LocalCK) const {
          getMergeSuffix();
 }
 
-void Intrinsic::emitIntrinsic(raw_ostream &OS, ACLEKind Kind) const {
+void Intrinsic::emitIntrinsic(raw_ostream &OS, SVEEmitter &Emitter,
+                              ACLEKind Kind) const {
   bool IsOverloaded = getClassKind() == ClassG && getProto().size() > 1;
 
   std::string FullName = mangleName(ClassS);
   std::string ProtoName = mangleName(getClassKind());
   std::string SMEAttrs = "";
 
+  if (Flags & Emitter.getEnumValueForFlag("IsStreaming"))
+    SMEAttrs += ", arm_streaming";
+  if (Flags & Emitter.getEnumValueForFlag("IsStreamingCompatible"))
+    SMEAttrs += ", arm_streaming_compatible";
+  if (Flags & Emitter.getEnumValueForFlag("IsSharedZA"))
+    SMEAttrs += ", arm_shared_za";
+  if (Flags & Emitter.getEnumValueForFlag("IsPreservesZA"))
+    SMEAttrs += ", arm_preserves_za";
+
   OS << (IsOverloaded ? "__aio " : "__ai ")
      << "__attribute__((__clang_arm_builtin_alias(";
 
   switch (Kind) {
   case ACLEKind::SME:
-    OS << "__builtin_sme_" << FullName << ")))\n";
+    OS << "__builtin_sme_" << FullName << ")";
     break;
   case ACLEKind::SVE:
-    OS << "__builtin_sve_" << FullName << ")))\n";
+    OS << "__builtin_sve_" << FullName << ")";
     break;
   }
+
+  if (!SMEAttrs.empty())
+    OS << SMEAttrs;
+  OS << "))\n";
 
   OS << getTypes()[0].str() << " " << ProtoName << "(";
   for (unsigned I = 0; I < getTypes().size() - 1; ++I) {
@@ -1180,7 +1194,9 @@ void SVEEmitter::createIntrinsic(
   }
 }
 
-void SVEEmitter::createCoreHeaderIntrinsics(raw_ostream &OS, ACLEKind Kind) {
+void SVEEmitter::createCoreHeaderIntrinsics(raw_ostream &OS,
+                                            SVEEmitter &Emitter,
+                                            ACLEKind Kind) {
   SmallVector<std::unique_ptr<Intrinsic>, 128> Defs;
   std::vector<Record *> RV = Records.getAllDerivedDefinitions("Inst");
   for (auto *R : RV)
@@ -1201,7 +1217,7 @@ void SVEEmitter::createCoreHeaderIntrinsics(raw_ostream &OS, ACLEKind Kind) {
 
   // Actually emit the intrinsic declarations.
   for (auto &I : Defs)
-    I->emitIntrinsic(OS, Kind);
+    I->emitIntrinsic(OS, Emitter, Kind);
 }
 
 void SVEEmitter::createHeader(raw_ostream &OS) {
@@ -1355,7 +1371,7 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
              << To.Suffix << "(__VA_ARGS__)\n";
       }
 
-  createCoreHeaderIntrinsics(OS, ACLEKind::SVE);
+  createCoreHeaderIntrinsics(OS, *this, ACLEKind::SVE);
 
   OS << "#define svcvtnt_bf16_x      svcvtnt_bf16_m\n";
   OS << "#define svcvtnt_bf16_f32_x  svcvtnt_bf16_f32_m\n";
@@ -1537,7 +1553,7 @@ void SVEEmitter::createSMEHeader(raw_ostream &OS) {
   OS << "extern \"C\" {\n";
   OS << "#endif\n\n";
 
-  createCoreHeaderIntrinsics(OS, ACLEKind::SME);
+  createCoreHeaderIntrinsics(OS, *this, ACLEKind::SME);
 
   OS << "#ifdef __cplusplus\n";
   OS << "} // extern \"C\"\n";
