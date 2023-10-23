@@ -25,17 +25,21 @@ func.func @entry() {
 
   %C_out = linalg.matmul ins(%A, %B: tensor<?x?xf32>, tensor<?x?xf32>) outs(%C_in: tensor<?x?xf32>) -> tensor<?x?xf32>
 
-  // There are at least 4 f32 elements in every SVE vector, i.e. 
-  //    * %vscale is >= 1. 
-  // For implementations with wider vectors, you should see more elements being
-  // printed.
-  // CHECK: {{\[}}[9.8596,   9.8596,   9.8596,   9.8596
+  // CHECK-LABEL: SVE: START OF TEST OUTPUT
+  vector.print str "SVE: START OF TEST OUTPUT"
+
+  // There are at least 4 x f32 elements in every SVE vector, i.e. 
+  //    * %vscale >= 1. 
+  // Hence, when checking the outupt there will always be at least 4 elements
+  // in every row. For implementations with wider vectors, you should see more
+  // elements being printed.
+  // CHECK: [9.8596,   9.8596,   9.8596,   9.8596
   // CHECK-NEXT: [9.8596,   9.8596,   9.8596,   9.8596
 
   %xf = tensor.cast %C_out : tensor<?x?xf32> to tensor<*xf32>
   call @printMemrefF32(%xf) : (tensor<*xf32>) -> ()
 
-  // CHECK: SVE: END OF TEST OUTPUT
+  // CHECK-NEXT: SVE: END OF TEST OUTPUT
   vector.print str "SVE: END OF TEST OUTPUT"
 
   return
