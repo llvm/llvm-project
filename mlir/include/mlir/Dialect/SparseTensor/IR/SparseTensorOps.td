@@ -521,8 +521,66 @@ def SparseTensor_SetStorageSpecifierOp : SparseTensor_Op<"storage_specifier.set"
 }
 
 //===----------------------------------------------------------------------===//
-// Sparse Tensor Coordinate Translation Operation.
+// Sparse Tensor Coordinate Operations.
 //===----------------------------------------------------------------------===//
+
+def SparseTensor_LvlOp : SparseTensor_Op<"lvl", [ConditionallySpeculatable, NoMemoryEffect]>,
+    Arguments<(ins AnySparseTensor:$source, Index:$index)>,
+    Results<(outs Index:$result)> {
+  let summary = "level index operation";
+  let description = [{
+    The `sparse_tensor.lvl` behaves similar to `tensor.dim` operation.
+    It takes a sparse tensor and a level operand of type `index` and returns
+    the size of the requested level of the given sparse tensor.
+    If the sparse tensor has an identity dimension to level mapping, it returns
+    the same result as `tensor.dim`.
+    If the level index is out of bounds, the behavior is undefined.
+
+    Example:
+
+    ```mlir
+    #BSR = #sparse_tensor.encoding<{
+      map = ( i, j ) ->
+        ( i floordiv 2 : dense,
+          j floordiv 3 : compressed,
+          i mod 2      : dense,
+          j mod 3      : dense
+        )
+    }>
+
+    // Always returns 2 (4 floordiv 2), can be constant folded:
+    %c0 = arith.constant 0 : index
+    %x = sparse_tensor.lvl %A, %c0 : tensor<4x?xf32, #BSR>
+
+    // Return the dynamic dimension of %A computed by %j mod 3.
+    %c1 = arith.constant 1 : index
+    %y = sparse_tensor.lvl %A, %c1 : tensor<4x?xf32, #BSR>
+
+    // Always return 3 (since j mod 3 < 3), can be constant fold
+    %c3 = arith.constant 3 : index
+    %y = sparse_tensor.lvl %A, %c3 : tensor<4x?xf32, #BSR>
+    ```
+  }];
+
+  let assemblyFormat = [{
+    attr-dict $source `,` $index `:` type($source)
+  }];
+
+  let builders = [
+    OpBuilder<(ins "Value":$source, "int64_t":$index)>
+  ];
+
+  let extraClassDeclaration = [{
+    /// Helper function to get the index as a simple integer if it is constant.
+    std::optional<uint64_t> getConstantLvlIndex();
+
+    /// Interface method for ConditionallySpeculatable.
+    Speculation::Speculatability getSpeculatability();
+  }];
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
+}
 
 def SparseTensor_CrdTranslateOp : SparseTensor_Op<"crd_translate", [Pure]>,
     Arguments<(ins Variadic<Index>:$in_crds,
