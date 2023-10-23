@@ -1675,6 +1675,8 @@ createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
 
   mlir::omp::MapInfoOp op =
       builder.create<mlir::omp::MapInfoOp>(loc, retTy, baseAddr);
+  op.setVarTypeAttr(mlir::TypeAttr::get(
+      llvm::dyn_cast<mlir::omp::PointerLikeType>(retTy).getElementType()));
   op.setNameAttr(builder.getStringAttr(name.str()));
   op.setImplicit(implicit);
   op.setMapType(mapType);

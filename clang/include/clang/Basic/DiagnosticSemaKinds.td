@@ -141,9 +141,9 @@ def ext_vla : Extension<"variable length arrays are a C99 feature">,
 // language modes, we warn as an extension but add the warning group to -Wall.
 def ext_vla_cxx : ExtWarn<
   "variable length arrays in C++ are a Clang extension">,
-  InGroup<VLAExtension>;
+  InGroup<VLACxxExtension>;
 def ext_vla_cxx_in_gnu_mode : Extension<ext_vla_cxx.Summary>,
-  InGroup<VLAExtension>;
+  InGroup<VLACxxExtension>;
 def ext_vla_cxx_static_assert : ExtWarn<
   "variable length arrays in C++ are a Clang extension; did you mean to use "
   "'static_assert'?">, InGroup<VLAUseStaticAssert>;
@@ -3165,6 +3165,9 @@ def err_invalid_branch_protection_spec : Error<
   "invalid or misplaced branch protection specification '%0'">;
 def warn_unsupported_branch_protection_spec : Warning<
   "unsupported branch protection specification '%0'">, InGroup<BranchProtection>;
+def warn_attribute_underlying_type_mismatch : Warning<
+  "underlying type %0 of enumeration %1 doesn't match bit-field type %2">,
+  InGroup<BitFieldType>;
 
 def warn_unsupported_target_attribute
     : Warning<"%select{unsupported|duplicate|unknown}0%select{| CPU|"
@@ -6191,9 +6194,6 @@ def warn_signed_bitfield_enum_conversion : Warning<
   "signed bit-field %0 needs an extra bit to represent the largest positive "
   "enumerators of %1">,
   InGroup<BitFieldEnumConversion>, DefaultIgnore;
-def warn_bitfield_too_small_for_integral_type : Warning<
-  "conversion from %2 (%3 bits) to bit-field %0 (%1 bits) may change value">,
-  InGroup<BitFieldConversion>, DefaultIgnore;
 def note_change_bitfield_sign : Note<
   "consider making the bitfield type %select{unsigned|signed}0">;
 

@@ -733,3 +733,15 @@ namespace ConstexprArrayInitLoopExprDestructors
       return f();
   }
 }
+
+namespace NonPrimitiveOpaqueValue
+{
+  struct X {
+    int x;
+    constexpr operator bool() const { return x != 0; }
+  };
+
+  constexpr int ternary() { return X(0) ?: X(0); }
+
+  static_assert(!ternary(), "");
+}

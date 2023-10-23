@@ -268,7 +268,7 @@ MemDepResult MemoryDependenceResults::getPointerDependencyFrom(
 MemDepResult MemoryDependenceResults::getPointerDependencyFrom(
     const MemoryLocation &MemLoc, bool isLoad, BasicBlock::iterator ScanIt,
     BasicBlock *BB, Instruction *QueryInst, unsigned *Limit) {
-  BatchAAResults BatchAA(AA);
+  BatchAAResults BatchAA(AA, &EII);
   return getPointerDependencyFrom(MemLoc, isLoad, ScanIt, BB, QueryInst, Limit,
                                   BatchAA);
 }
@@ -645,11 +645,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
         continue;
 
     // See if this instruction (e.g. a call or vaarg) mod/ref's the pointer.
-    ModRefInfo MR = BatchAA.getModRefInfo(Inst, MemLoc);
-    // If necessary, perform additional analysis.
-    if (isModAndRefSet(MR))
-      MR = BatchAA.callCapturesBefore(Inst, MemLoc, &DT);
-    switch (MR) {
+    switch (BatchAA.getModRefInfo(Inst, MemLoc)) {
     case ModRefInfo::NoModRef:
       // If the call has no effect on the queried pointer, just ignore it.
       continue;
@@ -1227,7 +1223,7 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
   bool GotWorklistLimit = false;
   LLVM_DEBUG(AssertSorted(*Cache));
 
-  BatchAAResults BatchAA(AA);
+  BatchAAResults BatchAA(AA, &EII);
   while (!Worklist.empty()) {
     BasicBlock *BB = Worklist.pop_back_val();
 
@@ -1539,6 +1535,8 @@ void MemoryDependenceResults::invalidateCachedPredecessors() {
 }
 
 void MemoryDependenceResults::removeInstruction(Instruction *RemInst) {
+  EII.removeInstruction(RemInst);
+
   // Walk through the Non-local dependencies, removing this one as the value
   // for any cached queries.
   NonLocalDepMapType::iterator NLDI = NonLocalDepsMap.find(RemInst);

@@ -26459,6 +26459,25 @@ TEST_F(FormatTest, AllowBreakBeforeNoexceptSpecifier) {
                Style);
 }
 
+TEST_F(FormatTest, PPBranchesInBracedInit) {
+  verifyFormat("A a_{kFlag1,\n"
+               "#if BUILD_FLAG\n"
+               "     kFlag2,\n"
+               "#else\n"
+               "     kFlag3,\n"
+               "#endif\n"
+               "     kFlag4};",
+               "A a_{\n"
+               "  kFlag1,\n"
+               "#if BUILD_FLAG\n"
+               "      kFlag2,\n"
+               "#else\n"
+               "      kFlag3,\n"
+               "#endif\n"
+               "      kFlag4\n"
+               "};");
+}
+
 } // namespace
 } // namespace test
 } // namespace format
