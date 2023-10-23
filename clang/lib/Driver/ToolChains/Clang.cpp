@@ -3633,12 +3633,20 @@ static void RenderHLSLOptions(const ArgList &Args, ArgStringList &CmdArgs,
     CmdArgs.push_back("-finclude-default-header");
 }
 
-static void RenderOpenACCOptions(const ArgList &Args, ArgStringList &CmdArgs,
-                                 types::ID InputType) {
+static void RenderOpenACCOptions(const Driver &D, const ArgList &Args,
+                                 ArgStringList &CmdArgs, types::ID InputType) {
   if (!Args.hasArg(options::OPT_fopenacc))
     return;
 
   CmdArgs.push_back("-fopenacc");
+
+  if (Arg *A = Args.getLastArg(options::OPT_openacc_macro_override)) {
+    StringRef Value = A->getValue();
+    if (llvm::find_if_not(Value, isdigit) == Value.end())
+      A->renderAsInput(Args, CmdArgs);
+    else
+      D.Diag(diag::err_drv_clang_unsupported) << Value;
+  }
 }
 
 static void RenderARCMigrateToolOptions(const Driver &D, const ArgList &Args,
@@ -6606,7 +6614,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   RenderHLSLOptions(Args, CmdArgs, InputType);
 
   // Forward OpenACC options to -cc1
-  RenderOpenACCOptions(Args, CmdArgs, InputType);
+  RenderOpenACCOptions(D, Args, CmdArgs, InputType);
 
   if (IsHIP) {
     if (Args.hasFlag(options::OPT_fhip_new_launch_api,

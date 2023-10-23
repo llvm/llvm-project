@@ -676,6 +676,10 @@ OpenACC Specific Changes
   of OpenACC pragmas. The ``-fopenacc`` flag was added to enable these new,
   albeit incomplete changes. The ``_OPENACC`` macro is currently defined to
   ``1``, as support is too incomplete to update to a standards-required value.
+- Added ``-fexperimental-openacc-macro-override``, a command line option to
+  permit overriding the ``_OPENACC`` macro to be any digit-only value specified
+  by the user, which permits testing the compiler against existing OpenACC
+  workloads in order to evaluate implementation progress.
 
 Target Specific Changes
 -----------------------
