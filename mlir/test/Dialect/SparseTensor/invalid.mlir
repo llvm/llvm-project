@@ -895,3 +895,21 @@ func.func @sparse_crd_translate(%arg0: index, %arg1: index, %arg2: index) -> (in
   %l0, %l1, %l2, %l3 = sparse_tensor.crd_translate dim_to_lvl [%arg0, %arg1, %arg2] as #BSR : index, index, index, index
   return  %l0, %l1, %l2, %l3 : index, index, index, index
 }
+
+// -----
+
+#BSR = #sparse_tensor.encoding<{
+  map = ( i, j ) ->
+  ( i floordiv 2 : dense,
+    j floordiv 3 : compressed,
+    i mod 2      : dense,
+    j mod 3      : dense
+  )
+}>
+
+func.func @sparse_lvl(%t : tensor<?x?xi32, #BSR>) -> index {
+  %lvl = arith.constant 5 : index
+  // expected-error@+1 {{Level index exceeds the rank of the input sparse tensor}}
+  %l0 = sparse_tensor.lvl %t, %lvl : tensor<?x?xi32, #BSR>
+  return  %l0 : index
+}

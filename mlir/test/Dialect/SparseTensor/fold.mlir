@@ -93,3 +93,21 @@ func.func @sparse_crd_translate(%arg0: index, %arg1: index) -> (index, index) {
   %d0, %d1 = sparse_tensor.crd_translate lvl_to_dim [%l0, %l1, %l2, %l3] as #BSR : index, index
   return  %d0, %d1 : index, index
 }
+
+// CHECK-LABEL:   func.func @sparse_lvl_0(
+// CHECK:           %[[C5:.*]] = arith.constant 5 : index
+// CHECK:           return %[[C5]] : index
+func.func @sparse_lvl_0(%t : tensor<10x?xi32, #BSR>) -> index {
+  %lvl = arith.constant 0 : index
+  %l0 = sparse_tensor.lvl %t, %lvl : tensor<10x?xi32, #BSR>
+  return  %l0 : index
+}
+
+// CHECK-LABEL:   func.func @sparse_lvl_3(
+// CHECK:           %[[C3:.*]] = arith.constant 3 : index
+// CHECK:           return %[[C3]] : index
+func.func @sparse_lvl_3(%t : tensor<?x?xi32, #BSR>) -> index {
+  %lvl = arith.constant 3 : index
+  %l0 = sparse_tensor.lvl %t, %lvl : tensor<?x?xi32, #BSR>
+  return  %l0 : index
+}
