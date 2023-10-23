@@ -4861,6 +4861,8 @@ FormatStyle getGNUStyle();
 /// https://docs.microsoft.com/en-us/visualstudio/ide/editorconfig-code-style-settings-reference?view=vs-2017
 FormatStyle getMicrosoftStyle(FormatStyle::LanguageKind Language);
 
+FormatStyle getClangFormatStyle();
+
 /// Returns style indicating formatting should be not applied at all.
 FormatStyle getNoStyle();
 
