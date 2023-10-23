@@ -364,6 +364,7 @@ Improvements to Clang's diagnostics
   following code
 
   .. code-block:: cpp
+
       struct Foo {
         operator int();
         operator const char*();
