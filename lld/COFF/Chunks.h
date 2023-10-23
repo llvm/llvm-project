@@ -386,16 +386,13 @@ private:
 inline size_t Chunk::getSize() const {
   if (isa<SectionChunk>(this))
     return static_cast<const SectionChunk *>(this)->getSize();
-  else
-    return static_cast<const NonSectionChunk *>(this)->getSize();
+  return static_cast<const NonSectionChunk *>(this)->getSize();
 }
 
 inline uint32_t Chunk::getOutputCharacteristics() const {
   if (isa<SectionChunk>(this))
     return static_cast<const SectionChunk *>(this)->getOutputCharacteristics();
-  else
-    return static_cast<const NonSectionChunk *>(this)
-        ->getOutputCharacteristics();
+  return static_cast<const NonSectionChunk *>(this)->getOutputCharacteristics();
 }
 
 inline void Chunk::writeTo(uint8_t *buf) const {
@@ -408,8 +405,7 @@ inline void Chunk::writeTo(uint8_t *buf) const {
 inline StringRef Chunk::getSectionName() const {
   if (isa<SectionChunk>(this))
     return static_cast<const SectionChunk *>(this)->getSectionName();
-  else
-    return static_cast<const NonSectionChunk *>(this)->getSectionName();
+  return static_cast<const NonSectionChunk *>(this)->getSectionName();
 }
 
 inline void Chunk::getBaserels(std::vector<Baserel> *res) {
@@ -422,15 +418,13 @@ inline void Chunk::getBaserels(std::vector<Baserel> *res) {
 inline StringRef Chunk::getDebugName() const {
   if (isa<SectionChunk>(this))
     return static_cast<const SectionChunk *>(this)->getDebugName();
-  else
-    return static_cast<const NonSectionChunk *>(this)->getDebugName();
+  return static_cast<const NonSectionChunk *>(this)->getDebugName();
 }
 
 inline MachineTypes Chunk::getMachine() const {
   if (isa<SectionChunk>(this))
     return static_cast<const SectionChunk *>(this)->getMachine();
-  else
-    return static_cast<const NonSectionChunk *>(this)->getMachine();
+  return static_cast<const NonSectionChunk *>(this)->getMachine();
 }
 
 inline chpe_range_type Chunk::getArm64ECRangeType() const {

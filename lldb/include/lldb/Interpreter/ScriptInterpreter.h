@@ -21,9 +21,10 @@
 #include "lldb/Core/ThreadedCommunication.h"
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/StreamFile.h"
+#include "lldb/Interpreter/Interfaces/ScriptedPlatformInterface.h"
+#include "lldb/Interpreter/Interfaces/ScriptedProcessInterface.h"
+#include "lldb/Interpreter/Interfaces/ScriptedThreadInterface.h"
 #include "lldb/Interpreter/ScriptObject.h"
-#include "lldb/Interpreter/ScriptedPlatformInterface.h"
-#include "lldb/Interpreter/ScriptedProcessInterface.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
@@ -586,6 +587,10 @@ public:
 
   virtual lldb::ScriptedProcessInterfaceUP CreateScriptedProcessInterface() {
     return std::make_unique<ScriptedProcessInterface>();
+  }
+
+  virtual lldb::ScriptedThreadInterfaceSP CreateScriptedThreadInterface() {
+    return std::make_shared<ScriptedThreadInterface>();
   }
 
   ScriptedPlatformInterface &GetScriptedPlatformInterface() {

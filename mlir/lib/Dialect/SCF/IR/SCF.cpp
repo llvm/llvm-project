@@ -1527,6 +1527,30 @@ InParallelOp ForallOp::getTerminator() {
   return cast<InParallelOp>(getBody()->getTerminator());
 }
 
+std::optional<Value> ForallOp::getSingleInductionVar() {
+  if (getRank() != 1)
+    return std::nullopt;
+  return getInductionVar(0);
+}
+
+std::optional<OpFoldResult> ForallOp::getSingleLowerBound() {
+  if (getRank() != 1)
+    return std::nullopt;
+  return getMixedLowerBound()[0];
+}
+
+std::optional<OpFoldResult> ForallOp::getSingleUpperBound() {
+  if (getRank() != 1)
+    return std::nullopt;
+  return getMixedUpperBound()[0];
+}
+
+std::optional<OpFoldResult> ForallOp::getSingleStep() {
+  if (getRank() != 1)
+    return std::nullopt;
+  return getMixedStep()[0];
+}
+
 ForallOp mlir::scf::getForallOpThreadIndexOwner(Value val) {
   auto tidxArg = llvm::dyn_cast<BlockArgument>(val);
   if (!tidxArg)
@@ -2911,6 +2935,30 @@ void ParallelOp::print(OpAsmPrinter &p) {
 }
 
 SmallVector<Region *> ParallelOp::getLoopRegions() { return {&getRegion()}; }
+
+std::optional<Value> ParallelOp::getSingleInductionVar() {
+  if (getNumLoops() != 1)
+    return std::nullopt;
+  return getBody()->getArgument(0);
+}
+
+std::optional<OpFoldResult> ParallelOp::getSingleLowerBound() {
+  if (getNumLoops() != 1)
+    return std::nullopt;
+  return getLowerBound()[0];
+}
+
+std::optional<OpFoldResult> ParallelOp::getSingleUpperBound() {
+  if (getNumLoops() != 1)
+    return std::nullopt;
+  return getUpperBound()[0];
+}
+
+std::optional<OpFoldResult> ParallelOp::getSingleStep() {
+  if (getNumLoops() != 1)
+    return std::nullopt;
+  return getStep()[0];
+}
 
 ParallelOp mlir::scf::getParallelForInductionVarOwner(Value val) {
   auto ivArg = llvm::dyn_cast<BlockArgument>(val);
