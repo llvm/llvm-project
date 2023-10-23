@@ -478,6 +478,7 @@ clang/lib/Frontend/InterfaceStubFunctionsConsumer.cpp
 clang/lib/Frontend/SerializedDiagnosticReader.cpp
 clang/lib/Headers/amxintrin.h
 clang/lib/Headers/arm_neon_sve_bridge.h
+clang/lib/Headers/arm_neon_types.h
 clang/lib/Headers/avx512fp16intrin.h
 clang/lib/Headers/avx512vlfp16intrin.h
 clang/lib/Headers/builtins.h

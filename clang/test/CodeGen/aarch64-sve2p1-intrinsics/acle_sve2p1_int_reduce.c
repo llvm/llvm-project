@@ -5,7 +5,6 @@
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2p1 -S -O1 -Werror -Wall -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2p1 -S -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve2p1 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
-#include <arm_neon.h>
 #include <arm_sve.h>
 
 #ifdef SVE_OVERLOADED_FORMS

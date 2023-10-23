@@ -468,8 +468,6 @@ std::string SVEType::str() const {
   else {
     if (isScalableVector() || isSvcount())
       S += "sv";
-    if (isFixedLengthVector())
-      S += "__sve_";
     if (!Signed && !isFloatingPoint())
       S += "u";
 
@@ -1234,26 +1232,7 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   OS << "typedef __SVBFloat16_t svbfloat16_t;\n";
 
   OS << "#include <arm_bf16.h>\n\n";
-
-  OS << "typedef __attribute__((vector_size (16))) int8_t __sve_int8x16_t;\n";
-  OS << "typedef __attribute__((vector_size (16))) int16_t __sve_int16x8_t;\n";
-  OS << "typedef __attribute__((vector_size (16))) int32_t __sve_int32x4_t;\n";
-  OS << "typedef __attribute__((vector_size (16))) int64_t __sve_int64x2_t;\n";
-  OS << "typedef __attribute__((vector_size (16))) uint8_t __sve_uint8x16_t;\n";
-  OS << "typedef __attribute__((vector_size (16))) uint16_t "
-        "__sve_uint16x8_t;\n";
-  OS << "typedef __attribute__((vector_size (16))) uint32_t "
-        "__sve_uint32x4_t;\n";
-  OS << "typedef __attribute__((vector_size (16))) uint64_t "
-        "__sve_uint64x2_t;\n";
-  OS << "typedef __attribute__((vector_size (16))) float16_t "
-        "__sve_float16x8_t;\n";
-  OS << "typedef __attribute__((vector_size (16))) float32_t "
-        "__sve_float32x4_t;\n";
-  OS << "typedef __attribute__((vector_size (16))) float64_t "
-        "__sve_float64x2_t;\n";
-  OS << "typedef __attribute__((vector_size (16))) bfloat16_t "
-        "__sve_bfloat16x8;\n";
+  OS << "#include <arm_neon_types.h>\n";
 
   OS << "typedef __SVFloat32_t svfloat32_t;\n";
   OS << "typedef __SVFloat64_t svfloat64_t;\n";

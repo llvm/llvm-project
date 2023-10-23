@@ -2233,34 +2233,18 @@ static void emitNeonTypeDefs(const std::string& types, raw_ostream &OS) {
   // Emit vector typedefs.
   bool InIfdef = false;
   for (auto &TS : TDTypeVec) {
-    bool IsA64 = false;
     Type T(TS, ".");
-    if (T.isDouble())
-      IsA64 = true;
 
-    if (InIfdef && !IsA64) {
-      OS << "#endif\n";
-      InIfdef = false;
-    }
-    if (!InIfdef && IsA64) {
-      OS << "#ifdef __aarch64__\n";
-      InIfdef = true;
-    }
+    if (!T.isPoly())
+      continue;
 
-    if (T.isPoly())
-      OS << "typedef __attribute__((neon_polyvector_type(";
-    else
-      OS << "typedef __attribute__((neon_vector_type(";
-
+    OS << "typedef __attribute__((neon_polyvector_type(";
     Type T2 = T;
     T2.makeScalar();
     OS << T.getNumElements() << "))) ";
     OS << T2.str();
     OS << " " << T.str() << ";\n";
   }
-  if (InIfdef)
-    OS << "#endif\n";
-  OS << "\n";
 
   // Emit struct typedefs.
   InIfdef = false;
@@ -2374,9 +2358,10 @@ void NeonEmitter::run(raw_ostream &OS) {
   OS << "typedef int16_t poly16_t;\n";
   OS << "typedef int64_t poly64_t;\n";
   OS << "#endif\n";
+  OS << "#include <arm_neon_types.h>\n";
 
-  emitNeonTypeDefs("cQcsQsiQilQlUcQUcUsQUsUiQUiUlQUlhQhfQfdQdPcQPcPsQPsPlQPl", OS);
-
+  emitNeonTypeDefs("csilUcUsUiUlhfdPcQPcPsQPsPlQPlQcQsQiQlQUcQUsQUiQUlQhQfQd",
+                   OS);
   emitNeonTypeDefs("bQb", OS);
 
   OS << "#define __ai static __inline__ __attribute__((__always_inline__, "
