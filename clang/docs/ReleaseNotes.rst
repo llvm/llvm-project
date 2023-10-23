@@ -37,27 +37,6 @@ These changes are ones which we think may surprise users when upgrading to
 Clang |release| because of the opportunity they pose for disruption to existing
 code bases.
 
-- Fix a bug in reversed argument for templated operators.
-  This breaks code in C++20 which was previously accepted in C++17. Eg:
-
-  .. code-block:: cpp
-
-    struct P {};
-    template<class S> bool operator==(const P&, const S&);
-
-    struct A : public P {};
-    struct B : public P {};
-
-    // This equality is now ambiguous in C++20.
-    bool ambiguous(A a, B b) { return a == b; }
-
-    template<class S> bool operator!=(const P&, const S&);
-    // Ok. Found a matching operator!=.
-    bool fine(A a, B b) { return a == b; }
-
-  To reduce such widespread breakages, as an extension, Clang accepts this code
-  with an existing warning ``-Wambiguous-reversed-operator`` warning.
-  Fixes `GH <https://github.com/llvm/llvm-project/issues/53954>`_.
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -290,9 +269,6 @@ New Compiler Flags
   the preprocessed text to the output. This can greatly reduce the size of the
   preprocessed output, which can be helpful when trying to reduce a test case.
 
-* ``-Wbitfield-conversion`` was added to detect assignments of integral
-  types to a bitfield that may change the value.
-
 Deprecated Compiler Flags
 -------------------------
 
@@ -329,6 +305,24 @@ Attribute Changes in Clang
   automatic diagnostic to use parameters of types that the format style
   supports but that are never the result of default argument promotion, such as
   ``float``. (`#59824: <https://github.com/llvm/llvm-project/issues/59824>`_)
+
+- Clang now supports ``[[clang::preferred_type(type-name)]]`` as an attribute
+  which can be applied to a bit-field. This attribute helps to map a bit-field
+  back to a particular type that may be better-suited to representing the bit-
+  field but cannot be used for other reasons and will impact the debug
+  information generated for the bit-field. This is most useful when mapping a
+  bit-field of basic integer type back to a ``bool`` or an enumeration type,
+  e.g.,
+
+  .. code-block:: c++
+
+      enum E { Apple, Orange, Pear };
+      struct S {
+        [[clang::preferred_type(E)]] unsigned FruitKind : 2;
+      };
+
+  When viewing ``S::FruitKind`` in a debugger, it will behave as if the member
+  was declared as type ``E`` rather than ``unsigned``.
 
 Improvements to Clang's diagnostics
 -----------------------------------

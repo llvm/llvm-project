@@ -1,4 +1,5 @@
 // REQUIRES: !system-darwin
+// REQUIRES: !system-solaris
 
 // The test cannot be run on Darwin because /Users will be treated as a MSVC option.
 
