@@ -121,6 +121,10 @@ C++ Specific Potentially Breaking Changes
   system headers and macros. It will be turned into a hard (non-downgradable)
   error in the next Clang release.
 
+- The flag `-fdelayed-template-parsing` won't be enabled by default with C++20
+  when targetting MSVC to match the behavior of MSVC. 
+  (`MSVC Docs <https://learn.microsoft.com/en-us/cpp/build/reference/permissive-standards-conformance?view=msvc-170>`_)
+
 ABI Changes in This Version
 ---------------------------
 - Following the SystemV ABI for x86-64, ``__int128`` arguments will no longer
