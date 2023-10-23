@@ -158,10 +158,8 @@ extern "C" void printMemrefC64(int64_t rank, void *ptr) {
   _mlir_ciface_printMemrefC64(&descriptor);
 }
 
+/// Deprecated. This should be unified with printString from CRunnerUtils.
 extern "C" void printCString(char *str) { fputs(str, stdout); }
-extern "C" void printString(char const *str) {
-  printCString(const_cast<char *>(str));
-}
 
 extern "C" void _mlir_ciface_printMemref0dF32(StridedMemRefType<float, 0> *M) {
   impl::printMemRef(*M);

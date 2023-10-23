@@ -10,7 +10,7 @@ func.func @main() {
   return
 }
 
-// CHECK: llvm.func @printString(!llvm.ptr)
+// CHECK: llvm.func @puts(!llvm.ptr)
 
 // CHECK-LABEL: @main
 // CHECK: llvm.cond_br %{{.*}}, ^{{.*}}, ^[[FALSE_BRANCH:[[:alnum:]]+]]
@@ -18,4 +18,4 @@ func.func @main() {
 // CHECK: ^[[FALSE_BRANCH]]:
 // CHECK: %[[ADDRESS_OF:.*]] = llvm.mlir.addressof @{{.*}} : !llvm.ptr{{$}}
 // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[ADDRESS_OF]][0] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<{{[0-9]+}} x i8>
-// CHECK: llvm.call @printString(%[[GEP]]) : (!llvm.ptr) -> ()
+// CHECK: llvm.call @puts(%[[GEP]]) : (!llvm.ptr) -> ()

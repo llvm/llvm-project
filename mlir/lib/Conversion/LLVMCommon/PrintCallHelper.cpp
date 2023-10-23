@@ -27,11 +27,10 @@ static std::string ensureSymbolNameIsUnique(ModuleOp moduleOp,
   return uniqueName;
 }
 
-void mlir::LLVM::createPrintStrCall(OpBuilder &builder, Location loc,
-                                    ModuleOp moduleOp, StringRef symbolName,
-                                    StringRef string,
-                                    const LLVMTypeConverter &typeConverter,
-                                    bool addNewline) {
+void mlir::LLVM::createPrintStrCall(
+    OpBuilder &builder, Location loc, ModuleOp moduleOp, StringRef symbolName,
+    StringRef string, const LLVMTypeConverter &typeConverter, bool addNewline,
+    std::optional<StringRef> runtimeFunctionName) {
   auto ip = builder.saveInsertionPoint();
   builder.setInsertionPointToStart(moduleOp.getBody());
   MLIRContext *ctx = builder.getContext();
@@ -61,7 +60,7 @@ void mlir::LLVM::createPrintStrCall(OpBuilder &builder, Location loc,
       loc, typeConverter.getPointerType(builder.getI8Type()), arrayTy, msgAddr,
       indices);
   Operation *printer = LLVM::lookupOrCreatePrintStringFn(
-      moduleOp, typeConverter.useOpaquePointers());
+      moduleOp, typeConverter.useOpaquePointers(), runtimeFunctionName);
   builder.create<LLVM::CallOp>(loc, TypeRange(), SymbolRefAttr::get(printer),
                                gep);
 }

@@ -107,9 +107,10 @@ static LLVM::LLVMPointerType getVoidPtr(MLIRContext *context,
   return getCharPtr(context, opaquePointers);
 }
 
-LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintStringFn(ModuleOp moduleOp,
-                                                         bool opaquePointers) {
-  return lookupOrCreateFn(moduleOp, kPrintString,
+LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintStringFn(
+    ModuleOp moduleOp, bool opaquePointers,
+    std::optional<StringRef> runtimeFunctionName) {
+  return lookupOrCreateFn(moduleOp, runtimeFunctionName.value_or(kPrintString),
                           getCharPtr(moduleOp->getContext(), opaquePointers),
                           LLVM::LLVMVoidType::get(moduleOp->getContext()));
 }
