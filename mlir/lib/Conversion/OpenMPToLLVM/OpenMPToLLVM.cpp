@@ -170,9 +170,9 @@ struct MapInfoOpConversion : public ConvertOpToLLVMPattern<omp::MapInfoOp> {
     // Copy attributes of the curOp except for the typeAttr which should
     // be converted
     SmallVector<NamedAttribute> newAttrs;
-    for (auto attr : curOp->getAttrs()) {
+    for (NamedAttribute attr : curOp->getAttrs()) {
       if (auto typeAttr = dyn_cast<TypeAttr>(attr.getValue())) {
-        auto newAttr = converter->convertType(typeAttr.getValue());
+        Type newAttr = converter->convertType(typeAttr.getValue());
         newAttrs.emplace_back(attr.getName(), TypeAttr::get(newAttr));
       } else {
         newAttrs.push_back(attr);
