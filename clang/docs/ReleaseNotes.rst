@@ -37,27 +37,6 @@ These changes are ones which we think may surprise users when upgrading to
 Clang |release| because of the opportunity they pose for disruption to existing
 code bases.
 
-- Fix a bug in reversed argument for templated operators.
-  This breaks code in C++20 which was previously accepted in C++17. Eg:
-
-  .. code-block:: cpp
-
-    struct P {};
-    template<class S> bool operator==(const P&, const S&);
-
-    struct A : public P {};
-    struct B : public P {};
-
-    // This equality is now ambiguous in C++20.
-    bool ambiguous(A a, B b) { return a == b; }
-
-    template<class S> bool operator!=(const P&, const S&);
-    // Ok. Found a matching operator!=.
-    bool fine(A a, B b) { return a == b; }
-
-  To reduce such widespread breakages, as an extension, Clang accepts this code
-  with an existing warning ``-Wambiguous-reversed-operator`` warning.
-  Fixes `GH <https://github.com/llvm/llvm-project/issues/53954>`_.
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -84,6 +63,10 @@ C/C++ Language Potentially Breaking Changes
     ``__has_cpp_attribute(gnu::warn_unused_result)``,   201907, 1
     ``__has_c_attribute(warn_unused_result)``,          202003, 0
     ``__has_c_attribute(gnu::warn_unused_result)``,     202003, 1
+
+- Fixed a bug in finding matching `operator!=` while adding reversed `operator==` as
+  outlined in "The Equality Operator You Are Looking For" (`P2468 <http://wg21.link/p2468r2>`_).
+  Fixes (`#68901: <https://github.com/llvm/llvm-project/issues/68901>`_).
 
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
@@ -120,6 +103,10 @@ C++ Specific Potentially Breaking Changes
 - The warning `-Wenum-constexpr-conversion` is now also enabled by default on
   system headers and macros. It will be turned into a hard (non-downgradable)
   error in the next Clang release.
+
+- The flag `-fdelayed-template-parsing` won't be enabled by default with C++20
+  when targetting MSVC to match the behavior of MSVC. 
+  (`MSVC Docs <https://learn.microsoft.com/en-us/cpp/build/reference/permissive-standards-conformance?view=msvc-170>`_)
 
 ABI Changes in This Version
 ---------------------------
@@ -223,9 +210,6 @@ New Compiler Flags
   preserving ``#include`` directives for "system" headers instead of copying
   the preprocessed text to the output. This can greatly reduce the size of the
   preprocessed output, which can be helpful when trying to reduce a test case.
-
-* ``-Wbitfield-conversion`` was added to detect assignments of integral
-  types to a bitfield that may change the value.
 
 Deprecated Compiler Flags
 -------------------------
@@ -352,6 +336,31 @@ Improvements to Clang's diagnostics
   nonportable construct that has different semantics from a constant-sized
   array. (`#62836 <https://github.com/llvm/llvm-project/issues/62836>`_)
 
+- Clang changed the order in which it displays candidate functions on overloading failures.
+  Previously, Clang used definition of ordering from the C++ Standard. The order defined in
+  the Standard is partial and is not suited for sorting. Instead, Clang now uses a strict
+  order that still attempts to push more relevant functions to the top by comparing their
+  corresponding conversions. In some cases, this results in better order. E.g., for the
+  following code
+
+  .. code-block:: cpp
+
+      struct Foo {
+        operator int();
+        operator const char*();
+      };
+
+      void test() { Foo() - Foo(); }
+
+  Clang now produces a list with two most relevant builtin operators at the top,
+  i.e. ``operator-(int, int)`` and ``operator-(const char*, const char*)``.
+  Previously ``operator-(const char*, const char*)`` was the first element,
+  but ``operator-(int, int)`` was only the 13th element in the output.
+  However, new implementation does not take into account some aspects of
+  C++ semantics, e.g. which function template is more specialized. This
+  can sometimes lead to worse ordering.
+
+
 Bug Fixes in This Version
 -------------------------
 - Fixed an issue where a class template specialization whose declaration is
@@ -438,6 +447,11 @@ Bug Fixes in This Version
 - Clang no longer permits using the `_BitInt` types as an underlying type for an
   enumeration as specified in the C23 Standard.
   Fixes (`#69619 <https://github.com/llvm/llvm-project/issues/69619>`_)
+- Clang now accepts anonymous members initialized with designated initializers
+  inside templates.
+  Fixes (`#65143 <https://github.com/llvm/llvm-project/issues/65143>`_)
+- Fix crash in formatting the real/imaginary part of a complex lvalue.
+  Fixes (`#69218 <https://github.com/llvm/llvm-project/issues/69218>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
