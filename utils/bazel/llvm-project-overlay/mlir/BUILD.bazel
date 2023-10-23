@@ -3705,6 +3705,7 @@ cc_library(
         ":GPUToSPIRV",
         ":GPUToVulkanTransforms",
         ":IndexToLLVM",
+        ":IndexToSPIRV",
         ":LinalgToStandard",
         ":MathToFuncs",
         ":MathToLLVM",
@@ -5988,7 +5989,6 @@ cc_library(
         ":Support",
     ],
 )
-
 
 cc_library(
     name = "NVVMToLLVM",
