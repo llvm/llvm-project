@@ -14152,9 +14152,9 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
       bool HasAGPRs = Info->mayNeedAGPRs();
       const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
       int16_t Src2Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2);
-      for (auto I : {AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0),
-                     AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1),
-                     Src2Idx}) {
+      for (auto I :
+           {AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0),
+            AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1), Src2Idx}) {
         if (I == -1)
           break;
         if ((I == Src2Idx) && (HasAGPRs))
