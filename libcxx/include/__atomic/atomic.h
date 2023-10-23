@@ -196,16 +196,16 @@ struct atomic<_Tp> : __atomic_base<_Tp> {
 
     template <class _This>
     _LIBCPP_HIDE_FROM_ABI static _Tp __fetch_add(_This&& __self, _Tp __operand, memory_order __m) {
-        auto __builtin_op = [](auto __a, auto __operand, auto __order) {
-          return std::__cxx_atomic_fetch_add(__a, __operand, __order);
+        auto __builtin_op = [](auto __a, auto __builtin_operand, auto __order) {
+          return std::__cxx_atomic_fetch_add(__a, __builtin_operand, __order);
         };
         return __rmw_op(std::forward<_This>(__self), __operand, __m, std::plus<>{}, __builtin_op);
     }
 
     template <class _This>
     _LIBCPP_HIDE_FROM_ABI static _Tp __fetch_sub(_This&& __self, _Tp __operand, memory_order __m) {
-        auto __builtin_op = [](auto __a, auto __operand, auto __order) {
-          return std::__cxx_atomic_fetch_sub(__a, __operand, __order);
+        auto __builtin_op = [](auto __a, auto __builtin_operand, auto __order) {
+          return std::__cxx_atomic_fetch_sub(__a, __builtin_operand, __order);
         };
         return __rmw_op(std::forward<_This>(__self), __operand, __m, std::minus<>{}, __builtin_op);
     }
