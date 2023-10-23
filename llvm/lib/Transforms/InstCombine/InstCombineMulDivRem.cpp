@@ -781,7 +781,7 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
   if (Value *V = SimplifySelectsFeedingBinaryOp(I, Op0, Op1))
     return replaceInstUsesWith(I, V);
 
-  if (I.hasAllowReassoc())
+  if (I.hasAllowReassoc() && I.hasAllowReassocOfAllOperand())
     if (Instruction *FoldedMul = foldFMulReassoc(I))
       return FoldedMul;
 

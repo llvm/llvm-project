@@ -321,6 +321,27 @@ void Instruction::setNonNeg(bool b) {
                          (b * PossiblyNonNegInst::NonNeg);
 }
 
+bool Instruction::hasAllowReassocOfAllOperand() const {
+  return all_of(operands(), [](Value *V) {
+    if (!isa<FPMathOperator>(V))
+      return true;
+
+    auto *FPOp = cast<FPMathOperator>(V);
+    switch (FPOp->getOpcode()) {
+    case Instruction::FNeg:
+    case Instruction::FAdd:
+    case Instruction::FSub:
+    case Instruction::FMul:
+    case Instruction::FDiv:
+    case Instruction::FRem:
+      return FPOp->hasAllowReassoc();
+
+    default:
+      return true;
+    }
+  });
+}
+
 bool Instruction::hasNoUnsignedWrap() const {
   return cast<OverflowingBinaryOperator>(this)->hasNoUnsignedWrap();
 }

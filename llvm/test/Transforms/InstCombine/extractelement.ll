@@ -912,7 +912,7 @@ define float @crash_4b8320(<2 x float> %i1, float %i12) {
 ; ANY-NEXT:    [[I29:%.*]] = fadd float [[TMP3]], 0.000000e+00
 ; ANY-NEXT:    ret float [[I29]]
 ;
-  %i5 = fmul <2 x float> zeroinitializer, %i1
+  %i5 = fmul reassoc <2 x float> zeroinitializer, %i1
   %i6 = fmul reassoc <2 x float> zeroinitializer, %i5
   %i147 = extractelement <2 x float> %i6, i64 0
   %i15 = extractelement <2 x float> %i6, i64 0

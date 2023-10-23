@@ -452,6 +452,9 @@ public:
   /// instruction.
   void setNonNeg(bool b = true);
 
+  /// Checks all of its operands have reassoc flag if they are instruction.
+  bool hasAllowReassocOfAllOperand() const LLVM_READONLY;
+
   /// Determine whether the no unsigned wrap flag is set.
   bool hasNoUnsignedWrap() const LLVM_READONLY;
 

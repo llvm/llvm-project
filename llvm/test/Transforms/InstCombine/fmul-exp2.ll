@@ -21,14 +21,14 @@ define double @exp2_a_exp2_b(double %a, double %b) {
 ; exp2(a) * exp2(b) reassoc, multiple uses
 define double @exp2_a_exp2_b_multiple_uses(double %a, double %b) {
 ; CHECK-LABEL: @exp2_a_exp2_b_multiple_uses(
-; CHECK-NEXT:    [[T1:%.*]] = call double @llvm.exp2.f64(double [[B:%.*]])
+; CHECK-NEXT:    [[T1:%.*]] = call reassoc double @llvm.exp2.f64(double [[B:%.*]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc double [[A:%.*]], [[B]]
 ; CHECK-NEXT:    [[MUL:%.*]] = call reassoc double @llvm.exp2.f64(double [[TMP1]])
 ; CHECK-NEXT:    call void @use(double [[T1]])
 ; CHECK-NEXT:    ret double [[MUL]]
 ;
-  %t = call double @llvm.exp2.f64(double %a)
-  %t1 = call double @llvm.exp2.f64(double %b)
+  %t = call reassoc double @llvm.exp2.f64(double %a)
+  %t1 = call reassoc double @llvm.exp2.f64(double %b)
   %mul = fmul reassoc double %t, %t1
   call void @use(double %t1)
   ret double %mul
@@ -40,7 +40,7 @@ define double @exp2_a_a(double %a) {
 ; CHECK-NEXT:    [[M:%.*]] = call reassoc double @llvm.exp2.f64(double [[TMP1]])
 ; CHECK-NEXT:    ret double [[M]]
 ;
-  %t = call double @llvm.exp2.f64(double %a)
+  %t = call reassoc double @llvm.exp2.f64(double %a)
   %m = fmul reassoc double %t, %t
   ret double %m
 }
@@ -70,8 +70,8 @@ define double @exp2_a_exp2_b_reassoc(double %a, double %b) {
 ; CHECK-NEXT:    [[MUL:%.*]] = call reassoc double @llvm.exp2.f64(double [[TMP1]])
 ; CHECK-NEXT:    ret double [[MUL]]
 ;
-  %t = call double @llvm.exp2.f64(double %a)
-  %t1 = call double @llvm.exp2.f64(double %b)
+  %t = call reassoc double @llvm.exp2.f64(double %a)
+  %t1 = call reassoc double @llvm.exp2.f64(double %b)
   %mul = fmul reassoc double %t, %t1
   ret double %mul
 }
@@ -85,12 +85,12 @@ define double @exp2_a_exp2_b_exp2_c_exp2_d(double %a, double %b, double %c, doub
 ; CHECK-NEXT:    [[MUL2:%.*]] = call reassoc double @llvm.exp2.f64(double [[TMP3]])
 ; CHECK-NEXT:    ret double [[MUL2]]
 ;
-  %t = call double @llvm.exp2.f64(double %a)
-  %t1 = call double @llvm.exp2.f64(double %b)
+  %t = call reassoc double @llvm.exp2.f64(double %a)
+  %t1 = call reassoc double @llvm.exp2.f64(double %b)
   %mul = fmul reassoc double %t, %t1
-  %t2 = call double @llvm.exp2.f64(double %c)
+  %t2 = call reassoc double @llvm.exp2.f64(double %c)
   %mul1 = fmul reassoc double %mul, %t2
-  %t3 = call double @llvm.exp2.f64(double %d)
+  %t3 = call reassoc double @llvm.exp2.f64(double %d)
   %mul2 = fmul reassoc double %mul1, %t3
   ret double %mul2
 }

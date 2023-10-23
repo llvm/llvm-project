@@ -45,8 +45,8 @@ define double @sqrt_a_sqrt_b_reassoc_nnan(double %a, double %b) {
 ; CHECK-NEXT:    [[MUL:%.*]] = call reassoc nnan double @llvm.sqrt.f64(double [[TMP1]])
 ; CHECK-NEXT:    ret double [[MUL]]
 ;
-  %1 = call double @llvm.sqrt.f64(double %a)
-  %2 = call double @llvm.sqrt.f64(double %b)
+  %1 = call reassoc double @llvm.sqrt.f64(double %a)
+  %2 = call reassoc double @llvm.sqrt.f64(double %b)
   %mul = fmul reassoc nnan double %1, %2
   ret double %mul
 }
@@ -78,10 +78,10 @@ define double @sqrt_a_sqrt_b_sqrt_c_sqrt_d_reassoc(double %a, double %b, double 
 ; CHECK-NEXT:    [[MUL2:%.*]] = call reassoc nnan ninf double @llvm.sqrt.f64(double [[TMP3]])
 ; CHECK-NEXT:    ret double [[MUL2]]
 ;
-  %1 = call double @llvm.sqrt.f64(double %a)
-  %2 = call double @llvm.sqrt.f64(double %b)
-  %3 = call double @llvm.sqrt.f64(double %c)
-  %4 = call double @llvm.sqrt.f64(double %d)
+  %1 = call reassoc double @llvm.sqrt.f64(double %a)
+  %2 = call reassoc double @llvm.sqrt.f64(double %b)
+  %3 = call reassoc double @llvm.sqrt.f64(double %c)
+  %4 = call reassoc double @llvm.sqrt.f64(double %d)
   %mul = fmul reassoc nnan arcp double %1, %2
   %mul1 = fmul reassoc nnan double %mul, %3
   %mul2 = fmul reassoc nnan ninf double %mul1, %4
@@ -102,13 +102,13 @@ define double @rsqrt_squared(double %x) {
 define double @rsqrt_x_reassociate_extra_use(double %x, ptr %p) {
 ; CHECK-LABEL: @rsqrt_x_reassociate_extra_use(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[X:%.*]])
-; CHECK-NEXT:    [[RSQRT:%.*]] = fdiv double 1.000000e+00, [[SQRT]]
+; CHECK-NEXT:    [[RSQRT:%.*]] = fdiv reassoc double 1.000000e+00, [[SQRT]]
 ; CHECK-NEXT:    [[RES:%.*]] = fdiv reassoc nsz double [[X]], [[SQRT]]
 ; CHECK-NEXT:    store double [[RSQRT]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %sqrt = call double @llvm.sqrt.f64(double %x)
-  %rsqrt = fdiv double 1.0, %sqrt
+  %rsqrt = fdiv reassoc double 1.0, %sqrt
   %res = fmul reassoc nsz double %rsqrt, %x
   store double %rsqrt, ptr %p
   ret double %res
@@ -138,7 +138,7 @@ define double @sqrt_divisor_squared(double %x, double %y) {
 ; CHECK-NEXT:    ret double [[SQUARED]]
 ;
   %sqrt = call double @llvm.sqrt.f64(double %x)
-  %div = fdiv double %y, %sqrt
+  %div = fdiv reassoc double %y, %sqrt
   %squared = fmul reassoc nnan nsz double %div, %div
   ret double %squared
 }
