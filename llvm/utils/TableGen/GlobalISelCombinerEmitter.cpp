@@ -291,7 +291,7 @@ CXXPredicateCode::CXXPredicateCodePool CXXPredicateCode::AllCXXApplyCode;
 
 //===- PatternType --------------------------------------------------------===//
 
-/// Simple wrapper around a Record* of a type.
+/// Represent the type of a Pattern Operand.
 ///
 /// Types have two form:
 ///   - LLTs, which are straightforward.
@@ -393,7 +393,6 @@ std::string PatternType::str() const {
 
   assert(isSpecial());
 
-  // TODO: Use an enum for these?
   if (isTypeOf())
     return (TypeOfClassName + "<$" + getTypeOfOpName() + ">").str();
 
