@@ -747,7 +747,7 @@ typedef __char32_t char32_t;
 #  endif
 
 #  define _LIBCPP_ODR_SIGNATURE                                                                                        \
-    _LIBCPP_CONCAT(_LIBCPP_CONCAT(_LIBCPP_CONCAT(v, _LIBCPP_VERSION), _LIBCPP_HARDENING_SIG), _LIBCPP_EXCEPTIONS_SIG)
+    _LIBCPP_CONCAT(_LIBCPP_CONCAT(_LIBCPP_HARDENING_SIG, _LIBCPP_EXCEPTIONS_SIG), _LIBCPP_VERSION)
 
 // This macro marks a symbol as being hidden from libc++'s ABI. This is achieved
 // on two levels:
