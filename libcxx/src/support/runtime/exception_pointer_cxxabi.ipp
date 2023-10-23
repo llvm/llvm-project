@@ -22,7 +22,7 @@ extern "C" {
 }
 #else
 extern "C" {
-    __attribute__((weak)) __cxa_exception *__cxa_init_primary_exception(void *, std::type_info *, void(_LIBCXXABI_DTOR_FUNC*)(void*)) throw();
+    __attribute__((weak)) __cxa_exception *__cxa_init_primary_exception(void *, std::type_info *, void(*)(void*)) throw();
 }
 #endif
 
@@ -54,7 +54,7 @@ exception_ptr& exception_ptr::operator=(const exception_ptr& other) noexcept
 #    if !defined(_LIBCPP_HAS_NO_RTTI)
 void *exception_ptr::__init_native_exception(size_t size, type_info *tinfo, void (*dest)(void *)) noexcept
 {
-    __cxa_exception *(*cxa_init_primary_exception_fn)(void *, std::type_info *, void(_LIBCXXABI_DTOR_FUNC*)(void*)) = __cxa_init_primary_exception;
+    __cxa_exception *(*cxa_init_primary_exception_fn)(void *, std::type_info *, void(*)(void*)) = __cxa_init_primary_exception;
     if (cxa_init_primary_exception_fn != nullptr) {
         void *__ex = __cxa_allocate_exception(size);
         (void)cxa_init_primary_exception_fn(__ex, tinfo, dest);
