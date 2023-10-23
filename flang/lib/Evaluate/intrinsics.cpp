@@ -1462,8 +1462,7 @@ static bool CheckMaxMinArgument(parser::CharBlock keyword,
         keyword, intrinsicName);
     return false;
   }
-  auto [_, wasInserted]{set.insert(keyword)};
-  if (!wasInserted) {
+  if (!set.insert(keyword).second) {
     messages.Say(keyword,
         "argument keyword '%s=' was repeated in call to '%s'"_err_en_US,
         keyword, intrinsicName);
