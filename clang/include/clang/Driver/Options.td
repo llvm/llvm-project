@@ -3341,6 +3341,14 @@ def fno_openmp_target_debug : Flag<["-"], "fno-openmp-target-debug">;
 } // let Flags = [NoArgumentUnused]
 
 //===----------------------------------------------------------------------===//
+// FlangOption + FC1 + ClangOption + CC1Option
+//===----------------------------------------------------------------------===//
+let Visibility = [FC1Option, FlangOption, CC1Option, ClangOption] in {
+def fopenacc : Flag<["-"], "fopenacc">, Group<f_Group>,
+  HelpText<"Enable OpenACC">;
+} // let Visibility = [FC1Option, FlangOption, CC1Option, ClangOption]
+
+//===----------------------------------------------------------------------===//
 // Optimisation remark options
 //===----------------------------------------------------------------------===//
 
@@ -6256,8 +6264,6 @@ file}]>;
 def ffixed_line_length_VALUE : Joined<["-"], "ffixed-line-length-">, Group<f_Group>, Alias<ffixed_line_length_EQ>;
 def fconvert_EQ : Joined<["-"], "fconvert=">, Group<f_Group>,
   HelpText<"Set endian conversion of data for unformatted files">;
-def fopenacc : Flag<["-"], "fopenacc">, Group<f_Group>,
-  HelpText<"Enable OpenACC">;
 def fdefault_double_8 : Flag<["-"],"fdefault-double-8">, Group<f_Group>,
   HelpText<"Set the default double precision kind to an 8 byte wide type">;
 def fdefault_integer_8 : Flag<["-"],"fdefault-integer-8">, Group<f_Group>,

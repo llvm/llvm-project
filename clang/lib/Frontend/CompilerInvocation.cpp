@@ -3532,6 +3532,9 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
   if (Opts.OpenMPCUDAMode)
     GenerateArg(Consumer, OPT_fopenmp_cuda_mode);
 
+  if (Opts.OpenACC)
+    GenerateArg(Consumer, OPT_fopenacc);
+
   // The arguments used to set Optimize, OptimizeSize and NoInlineDefine are
   // generated from CodeGenOptions.
 
@@ -4000,6 +4003,10 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   Opts.OpenMPCUDAMode = Opts.OpenMPIsTargetDevice &&
                         (T.isNVPTX() || T.isAMDGCN()) &&
                         Args.hasArg(options::OPT_fopenmp_cuda_mode);
+
+  // OpenACC Configuration.
+  if (Args.hasArg(options::OPT_fopenacc))
+    Opts.OpenACC = true;
 
   // FIXME: Eliminate this dependency.
   unsigned Opt = getOptimizationLevel(Args, IK, Diags),
