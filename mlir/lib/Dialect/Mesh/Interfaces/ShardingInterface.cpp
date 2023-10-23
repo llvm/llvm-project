@@ -106,10 +106,9 @@ checkOperandAffineExprRecursively(AffineExpr expr,
     AffineExpr lhs = binOpExpr.getLHS();
     AffineExpr rhs = binOpExpr.getRHS();
     AffineExpr dimExpr;
-    if (lhs.getKind() == AffineExprKind::DimId) {
+    if (lhs.getKind() == AffineExprKind::DimId &&
+        rhs.getKind() == AffineExprKind::Constant) {
       dimExpr = lhs;
-      if (rhs.getKind() != AffineExprKind::Constant)
-        return failure();
     } else if (rhs.getKind() == AffineExprKind::DimId &&
                lhs.getKind() == AffineExprKind::Constant) {
       dimExpr = rhs;
@@ -275,7 +274,8 @@ mesh::detail::defaultGetShardingOption(Operation *op) {
   // 1. Fill sharding option based on op results
   for (OpResult result : op->getResults()) {
     AffineMap map = maps[numOperands + result.getResultNumber()];
-    FailureOr<MeshShardingAttr> shardAttr = getMeshShardingAttr(result, true);
+    FailureOr<MeshShardingAttr> shardAttr =
+        getMeshShardingAttr(result, /*useOperandSharding*/ true);
     if (failed(shardAttr))
       continue;
     anyShardingInResultsOrOperands = true;
@@ -324,11 +324,11 @@ mesh::detail::defaultGetShardingOption(Operation *op) {
     AffineMap map = maps[opOperand.getOperandNumber()];
     unsigned numDims = map.getNumDims();
 
-    // Handle the split axes, and partial axes don't need to be handled because
-    // they only affect the defining op of the operand
+    // Handle the split axes. Partial axes don't need to be handled because they
+    // only affect the defining op of the operand.
     //
     // TODO: Change to process the operands with single loop index first and
-    // then the operands with multiple loop indices
+    // then the operands with multiple loop indices.
     for (auto it : llvm::zip(map.getResults(), shardAttr.getSplitAxes())) {
       AffineExpr expr = std::get<0>(it);
       ArrayRef<int32_t> axes = std::get<1>(it).asArrayRef();
@@ -411,7 +411,7 @@ static LogicalResult addShardOp(OpBuilder &b, OpResult result,
                                 const ShardingOption &shardingOption,
                                 AffineMap map,
                                 ArrayRef<IteratorType> loopTypes) {
-  if (succeeded(getMeshShardingAttr(result, false)))
+  if (succeeded(getMeshShardingAttr(result, /*useOperandSharding*/ false)))
     return success();
 
   auto resultType = result.getType().cast<RankedTensorType>();
@@ -421,6 +421,8 @@ static LogicalResult addShardOp(OpBuilder &b, OpResult result,
   // process the split axes
   for (auto it : llvm::enumerate(map.getResults())) {
     AffineExpr expr = it.value();
+    // `expr` must be an `AffineDimExpr` because `map` is verified by
+    // isProjectedPermutation
     auto dim = expr.cast<AffineDimExpr>();
     unsigned loopIdx = dim.getPosition();
     if (loopIdx < shardingOption.shardingArray.size())
