@@ -45,6 +45,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
 
+#include <set>
+
 using namespace llvm;
 extern bool YkStackMapAdditionalLocs;
 

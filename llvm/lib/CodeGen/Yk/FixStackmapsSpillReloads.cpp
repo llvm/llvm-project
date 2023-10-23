@@ -50,6 +50,8 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 
+#include <set>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "fix-stackmaps-spill-reloads"

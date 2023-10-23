@@ -6033,8 +6033,7 @@ defm inline_small_functions : BooleanFFlag<"inline-small-functions">,
 defm yk_noinline_funcs_with_loops : BoolOption<"f", "yk-noinline-funcs-with-loops",
   CodeGenOpts<"YkNoinlineFuncsWithLoops">, DefaultFalse,
   NegFlag<SetFalse, []>,
-  PosFlag<SetTrue, [], "Don't inline functions containing loops by default (used for the Yk JIT).">,
-  BothFlags<[CC1Option, CoreOption]>>;
+  PosFlag<SetTrue, [], [CC1Option, ClangOption], "Don't inline functions containing loops by default (used for the Yk JIT).">>;
 defm ipa_cp : BooleanFFlag<"ipa-cp">,
     Group<clang_ignored_gcc_optimization_f_Group>;
 defm ivopts : BooleanFFlag<"ivopts">, Group<clang_ignored_gcc_optimization_f_Group>;
