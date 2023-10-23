@@ -1951,7 +1951,7 @@ bool Lexer::LexNumericConstant(Token &Result, const char *CurPtr) {
     CurPtr = ConsumeChar(CurPtr, Size, Result);
     PrevCh = C;
     if (LangOpts.HLSL && C == '.' && (*CurPtr == 'x' || *CurPtr == 'r')) {
-      CurPtr--;
+      CurPtr -= Size;
       break;
     }
     C = getCharAndSize(CurPtr, Size);
