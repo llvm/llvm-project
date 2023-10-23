@@ -872,7 +872,7 @@ private:
           maybeDropCxxExplicitObjectParameters(ForwardedParamsStorage);
     } else {
       Params = maybeDropCxxExplicitObjectParameters(Callee.Loc.getParams());
-      ForwardedParamsStorage = {Params.begin(), Params.end()};
+      ForwardedParams = {Params.begin(), Params.end()};
     }
 
     NameVec ParameterNames = chooseParameterNames(ForwardedParams);
