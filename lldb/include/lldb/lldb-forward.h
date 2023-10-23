@@ -290,6 +290,7 @@ class Watchpoint;
 class WatchpointList;
 class WatchpointOptions;
 class WatchpointResource;
+class WatchpointResourceCollection;
 class WatchpointSetOptions;
 struct CompilerContext;
 struct LineEntry;

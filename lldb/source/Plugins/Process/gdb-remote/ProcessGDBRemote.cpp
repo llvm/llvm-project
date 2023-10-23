@@ -24,6 +24,7 @@
 #include <sys/types.h>
 
 #include "lldb/Breakpoint/Watchpoint.h"
+#include "lldb/Breakpoint/WatchpointResource.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -1798,27 +1799,41 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
           addr_t wp_hit_addr = desc_extractor.GetU64(LLDB_INVALID_ADDRESS);
           watch_id_t watch_id = LLDB_INVALID_WATCH_ID;
           bool silently_continue = false;
-          WatchpointSP wp_sp;
-          // LWP_TODO: We need to find the WatchpointResource that matches
-          // the address, and evaluate its Watchpoints.
+          WatchpointResourceSP wp_resource_sp;
+          if (wp_hw_index != LLDB_INVALID_WATCHPOINT_RESOURCE_ID) {
+            wp_resource_sp = m_watchpoint_resource_list.FindByID(wp_hw_index);
+            if (wp_resource_sp) {
+              // If we were given an access address, and the Resource we
+              // found by watchpoint register index does not contain that
+              // address, then the wp_resource_id's have not tracked the
+              // hardware watchpoint registers correctly, discard this
+              // Resource found by ID and look it up by access address.
+              if (wp_hit_addr != LLDB_INVALID_ADDRESS &&
+                  !wp_resource_sp->Contains(wp_hit_addr)) {
+                wp_resource_sp.reset();
+              }
+            }
+          }
           if (wp_hit_addr != LLDB_INVALID_ADDRESS) {
-            wp_sp = GetTarget().GetWatchpointList().FindByAddress(wp_hit_addr);
+            wp_resource_sp =
+                m_watchpoint_resource_list.FindByAddress(wp_hit_addr);
             // On MIPS, \a wp_hit_addr outside the range of a watched
             // region means we should silently continue, it is a false hit.
             ArchSpec::Core core = GetTarget().GetArchitecture().GetCore();
-            if (!wp_sp && core >= ArchSpec::kCore_mips_first &&
+            if (!wp_resource_sp && core >= ArchSpec::kCore_mips_first &&
                 core <= ArchSpec::kCore_mips_last)
               silently_continue = true;
           }
-          if (!wp_sp && wp_addr != LLDB_INVALID_ADDRESS)
-            wp_sp = GetTarget().GetWatchpointList().FindByAddress(wp_addr);
-          if (wp_sp) {
-            watch_id = wp_sp->GetID();
-          }
-          if (watch_id == LLDB_INVALID_WATCH_ID) {
+          if (!wp_resource_sp && wp_addr != LLDB_INVALID_ADDRESS)
+            wp_resource_sp = m_watchpoint_resource_list.FindByAddress(wp_addr);
+          if (!wp_resource_sp) {
             Log *log(GetLog(GDBRLog::Watchpoints));
             LLDB_LOGF(log, "failed to find watchpoint");
           }
+          // LWP_TODO: This is hardcoding a single Watchpoint in a
+          // Resource, need to add
+          // StopInfo::CreateStopReasonWithWatchpointResource
+          watch_id = wp_resource_sp->GetOwnerAtIndex(0)->GetID();
           thread_sp->SetStopInfo(StopInfo::CreateStopReasonWithWatchpointID(
               *thread_sp, watch_id, silently_continue));
           handled = true;
@@ -2241,8 +2256,12 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         lldb::addr_t wp_addr = LLDB_INVALID_ADDRESS;
         value.getAsInteger(16, wp_addr);
 
-        WatchpointSP wp_sp =
-            GetTarget().GetWatchpointList().FindByAddress(wp_addr);
+        WatchpointResourceSP wp_resource_sp =
+            m_watchpoint_resource_list.FindByAddress(wp_addr);
+        uint32_t wp_index = LLDB_INVALID_INDEX32;
+
+        if (wp_resource_sp)
+          wp_index = wp_resource_sp->GetID();
 
         // Rewrite gdb standard watch/rwatch/awatch to
         // "reason:watchpoint" + "description:ADDR",
@@ -3113,7 +3132,7 @@ static GDBStoppointType
 GetGDBStoppointType(const WatchpointResourceSP &wp_res_sp) {
   assert(wp_res_sp);
   bool read, write;
-  wp_res_sp->GetResourceType(read, write);
+  wp_res_sp->GetType(read, write);
 
   assert((read || write) && "read and write cannot both be false.");
   if (read && write)
@@ -3190,7 +3209,7 @@ Status ProcessGDBRemote::EnableWatchpoint(WatchpointSP wp_sp, bool notify) {
     for (const auto &wp_res_sp : resources) {
       addr_t addr;
       size_t size;
-      wp_res_sp->GetResourceMemoryRange(addr, size);
+      wp_res_sp->GetMemoryRange(addr, size);
       GDBStoppointType type = GetGDBStoppointType(wp_res_sp);
       if (!m_gdb_comm.SupportsGDBStoppointPacket(type) ||
           m_gdb_comm.SendGDBStoppointTypePacket(type, true, addr, size,
@@ -3206,8 +3225,8 @@ Status ProcessGDBRemote::EnableWatchpoint(WatchpointSP wp_sp, bool notify) {
       for (const auto &wp_res_sp : resources) {
         // LWP_TODO: If we expanded/reused an existing Resource,
         // it's already in the WatchpointResourceList.
-        wp_res_sp->RegisterWatchpoint(wp_sp);
-        m_watchpoint_resource_list.AddResource(wp_res_sp);
+        wp_res_sp->AddOwner(wp_sp);
+        m_watchpoint_resource_list.Add(wp_res_sp);
       }
       return error;
     } else {
@@ -3217,7 +3236,7 @@ Status ProcessGDBRemote::EnableWatchpoint(WatchpointSP wp_sp, bool notify) {
       for (const auto &wp_res_sp : succesfully_set_resources) {
         addr_t addr;
         size_t size;
-        wp_res_sp->GetResourceMemoryRange(addr, size);
+        wp_res_sp->GetMemoryRange(addr, size);
         GDBStoppointType type = GetGDBStoppointType(wp_res_sp);
         m_gdb_comm.SendGDBStoppointTypePacket(type, false, addr, size,
                                               GetInterruptTimeout());
@@ -3261,23 +3280,23 @@ Status ProcessGDBRemote::DisableWatchpoint(WatchpointSP wp_sp, bool notify) {
 
       std::vector<WatchpointResourceSP> unused_resouces;
       for (const auto &wp_res_sp : m_watchpoint_resource_list.Resources()) {
-        if (wp_res_sp->DependantWatchpointsContains(wp_sp)) {
+        if (wp_res_sp->OwnersContains(wp_sp)) {
           GDBStoppointType type = GetGDBStoppointType(wp_res_sp);
           addr_t addr;
           size_t size;
-          wp_res_sp->GetResourceMemoryRange(addr, size);
+          wp_res_sp->GetMemoryRange(addr, size);
           if (m_gdb_comm.SendGDBStoppointTypePacket(type, false, addr, size,
                                                     GetInterruptTimeout())) {
             disabled_all = false;
           } else {
-            wp_res_sp->DeregisterWatchpoint(wp_sp);
-            if (wp_res_sp->GetNumDependantWatchpoints() == 0)
+            wp_res_sp->RemoveOwner(wp_sp);
+            if (wp_res_sp->GetNumberOfOwners() == 0)
               unused_resouces.push_back(wp_res_sp);
           }
         }
       }
       for (auto &wp_res_sp : unused_resouces)
-        m_watchpoint_resource_list.RemoveWatchpointResource(wp_res_sp);
+        m_watchpoint_resource_list.Remove(wp_res_sp->GetID());
 
       wp_sp->SetEnabled(false, notify);
       if (!disabled_all)
@@ -5541,7 +5560,7 @@ void ProcessGDBRemote::DidForkSwitchHardwareTraps(bool enable) {
   for (const auto &wp_res_sp : m_watchpoint_resource_list.Resources()) {
     addr_t addr;
     size_t size;
-    wp_res_sp->GetResourceMemoryRange(addr, size);
+    wp_res_sp->GetMemoryRange(addr, size);
     GDBStoppointType type = GetGDBStoppointType(wp_res_sp);
     m_gdb_comm.SendGDBStoppointTypePacket(type, true, addr, size,
                                           GetInterruptTimeout());

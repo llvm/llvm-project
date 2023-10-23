@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "lldb/Breakpoint/BreakpointSiteList.h"
+#include "lldb/Breakpoint/WatchpointResourceList.h"
 #include "lldb/Core/LoadedModuleInfoList.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/SourceManager.h"
@@ -41,8 +42,6 @@
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Target/ThreadPlanStack.h"
 #include "lldb/Target/Trace.h"
-#include "lldb/Target/WatchpointResource.h"
-#include "lldb/Target/WatchpointResourceList.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/Event.h"
@@ -2185,6 +2184,10 @@ public:
 
   ThreadList &GetThreadList() { return m_thread_list; }
 
+  WatchpointResourceList &GetWatchpointResourceList() {
+    return m_watchpoint_resource_list;
+  }
+
   // When ExtendedBacktraces are requested, the HistoryThreads that are created
   // need an owner -- they're saved here in the Process.  The threads in this
   // list are not iterated over - driver programs need to request the extended
@@ -3101,9 +3104,6 @@ protected:
 
   std::unique_ptr<UtilityFunction> m_dlopen_utility_func_up;
   llvm::once_flag m_dlopen_utility_func_flag_once;
-
-  // Watchpoint hardware registers currently in use.
-  std::vector<lldb::WatchpointResourceSP> m_watchpoint_resources;
 
   /// Per process source file cache.
   SourceManager::SourceFileCache m_source_file_cache;

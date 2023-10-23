@@ -12,6 +12,7 @@
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Breakpoint/Watchpoint.h"
+#include "lldb/Breakpoint/WatchpointResource.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/UserExpression.h"

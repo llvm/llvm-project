@@ -188,6 +188,8 @@ public:
 
   const CompilerType &GetCompilerType() { return m_type; }
 
+  uint32_t GetHardwareIndex() const override;
+
 private:
   friend class Target;
   friend class WatchpointList;
