@@ -817,8 +817,8 @@ bool ByteCodeExprGen<Emitter>::VisitArrayInitLoopExpr(
   assert(Initializing);
   assert(!DiscardResult);
   // TODO: This compiles to quite a lot of bytecode if the array is larger.
-  //   Investigate compiling this to a loop, or at least try to use
-  //   the AILE's Common expr.
+  //   Investigate compiling this to a loop.
+
   const Expr *SubExpr = E->getSubExpr();
   size_t Size = E->getArraySize().getZExtValue();
   std::optional<PrimType> ElemT = classify(SubExpr->getType());
@@ -853,7 +853,33 @@ template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitOpaqueValueExpr(const OpaqueValueExpr *E) {
   if (Initializing)
     return this->visitInitializer(E->getSourceExpr());
-  return this->visit(E->getSourceExpr());
+
+  PrimType SubExprT = classify(E->getSourceExpr()).value_or(PT_Ptr);
+  if (auto It = OpaqueExprs.find(E); It != OpaqueExprs.end())
+    return this->emitGetLocal(SubExprT, It->getSecond(), E);
+
+  if (!this->visit(E->getSourceExpr()))
+    return false;
+
+  // At this point we either have the evaluated source expression or a pointer
+  // to an object on the stack. We want to create a local variable that stores
+  // this value.
+  std::optional<unsigned> LocalIndex =
+      allocateLocalPrimitive(E, SubExprT, /*IsConst=*/true);
+  if (!LocalIndex)
+    return false;
+  if (!this->emitSetLocal(SubExprT, *LocalIndex, E))
+    return false;
+
+  // Here the local variable is created but the value is removed from the stack,
+  // so we put it back, because the caller might need it.
+  if (!this->emitGetLocal(SubExprT, *LocalIndex, E))
+    return false;
+
+  // FIXME: Ideally the cached value should be cleaned up later.
+  OpaqueExprs.insert({E, *LocalIndex});
+
+  return true;
 }
 
 template <class Emitter>
