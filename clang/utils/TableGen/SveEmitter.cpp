@@ -91,6 +91,7 @@ public:
   bool isScalar() const { return NumVectors == 0; }
   bool isVector() const { return NumVectors > 0; }
   bool isScalableVector() const { return isVector() && IsScalable; }
+  bool isFixedLengthVector() const { return isVector() && !IsScalable; }
   bool isChar() const { return ElementBitwidth == 8; }
   bool isVoid() const { return Void & !Pointer; }
   bool isDefault() const { return DefaultType; }
@@ -449,7 +450,8 @@ std::string SVEType::builtin_str() const {
     return S;
   }
 
-  assert(isScalableVector() && "Unsupported type");
+  if (isFixedLengthVector())
+    return "V" + utostr(getNumElements() * NumVectors) + S;
   return "q" + utostr(getNumElements() * NumVectors) + S;
 }
 
@@ -466,6 +468,8 @@ std::string SVEType::str() const {
   else {
     if (isScalableVector() || isSvcount())
       S += "sv";
+    if (isFixedLengthVector())
+      S += "__sve_";
     if (!Signed && !isFloatingPoint())
       S += "u";
 
@@ -482,7 +486,7 @@ std::string SVEType::str() const {
 
     if (!isScalarPredicate() && !isPredicateVector() && !isSvcount())
       S += utostr(ElementBitwidth);
-    if (!isScalableVector() && isVector())
+    if (isFixedLengthVector())
       S += "x" + utostr(getNumElements());
     if (NumVectors > 1)
       S += "x" + utostr(NumVectors);
@@ -591,6 +595,11 @@ void SVEType::applyModifier(char Mod) {
     Svcount = false;
     Bitwidth = 16;
     ElementBitwidth = 1;
+    break;
+  case '{':
+    IsScalable = false;
+    Bitwidth = 128;
+    NumVectors = 1;
     break;
   case 's':
   case 'a':
@@ -1224,7 +1233,27 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
 
   OS << "typedef __SVBFloat16_t svbfloat16_t;\n";
 
-  OS << "#include <arm_bf16.h>\n";
+  OS << "#include <arm_bf16.h>\n\n";
+
+  OS << "typedef __attribute__((vector_size (16))) int8_t __sve_int8x16_t;\n";
+  OS << "typedef __attribute__((vector_size (16))) int16_t __sve_int16x8_t;\n";
+  OS << "typedef __attribute__((vector_size (16))) int32_t __sve_int32x4_t;\n";
+  OS << "typedef __attribute__((vector_size (16))) int64_t __sve_int64x2_t;\n";
+  OS << "typedef __attribute__((vector_size (16))) uint8_t __sve_uint8x16_t;\n";
+  OS << "typedef __attribute__((vector_size (16))) uint16_t "
+        "__sve_uint16x8_t;\n";
+  OS << "typedef __attribute__((vector_size (16))) uint32_t "
+        "__sve_uint32x4_t;\n";
+  OS << "typedef __attribute__((vector_size (16))) uint64_t "
+        "__sve_uint64x2_t;\n";
+  OS << "typedef __attribute__((vector_size (16))) float16_t "
+        "__sve_float16x8_t;\n";
+  OS << "typedef __attribute__((vector_size (16))) float32_t "
+        "__sve_float32x4_t;\n";
+  OS << "typedef __attribute__((vector_size (16))) float64_t "
+        "__sve_float64x2_t;\n";
+  OS << "typedef __attribute__((vector_size (16))) bfloat16_t "
+        "__sve_bfloat16x8;\n";
 
   OS << "typedef __SVFloat32_t svfloat32_t;\n";
   OS << "typedef __SVFloat64_t svfloat64_t;\n";

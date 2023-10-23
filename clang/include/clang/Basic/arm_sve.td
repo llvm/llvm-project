@@ -1859,6 +1859,23 @@ def SVBGRP   : SInst<"svbgrp[_{d}]",   "ddd", "UcUsUiUl", MergeNone, "aarch64_sv
 def SVBGRP_N : SInst<"svbgrp[_n_{d}]", "dda", "UcUsUiUl", MergeNone, "aarch64_sve_bgrp_x">;
 }
 
+// Standalone sve2.1 builtins
+let TargetGuard = "sve2p1" in {
+def SVORQV   : SInst<"svorqv[_{d}]", "{Pd", "csilUcUsUiUl", MergeNone, "aarch64_sve_orqv", [IsReductionQV]>;
+def SVEORQV  : SInst<"sveorqv[_{d}]", "{Pd", "csilUcUsUiUl", MergeNone, "aarch64_sve_eorqv", [IsReductionQV]>;
+def SVADDQV  : SInst<"svaddqv[_{d}]", "{Pd", "hfdcsilUcUsUiUl", MergeNone, "aarch64_sve_addqv", [IsReductionQV]>;
+def SVANDQV  : SInst<"svandqv[_{d}]", "{Pd", "csilUcUsUiUl", MergeNone, "aarch64_sve_andqv", [IsReductionQV]>;
+def SVSMAXQV : SInst<"svmaxqv[_{d}]", "{Pd", "csil", MergeNone, "aarch64_sve_smaxqv", [IsReductionQV]>;
+def SVUMAXQV : SInst<"svmaxqv[_{d}]", "{Pd", "UcUsUiUl", MergeNone, "aarch64_sve_umaxqv", [IsReductionQV]>;
+def SVSMINQV : SInst<"svminqv[_{d}]", "{Pd", "csil", MergeNone, "aarch64_sve_sminqv", [IsReductionQV]>;
+def SVUMINQV : SInst<"svminqv[_{d}]", "{Pd", "UcUsUiUl", MergeNone, "aarch64_sve_uminqv", [IsReductionQV]>;
+
+def SVFMAXNMQV: SInst<"svmaxnmqv[_{d}]", "{Pd", "hfd", MergeNone, "aarch64_sve_fmaxnmqv", [IsReductionQV]>;
+def SVFMINNMQV: SInst<"svminnmqv[_{d}]", "{Pd", "hfd", MergeNone, "aarch64_sve_fminnmqv", [IsReductionQV]>;
+def SVFMAXQV: SInst<"svmaxqv[_{d}]", "{Pd", "hfd", MergeNone, "aarch64_sve_fmaxqv", [IsReductionQV]>;
+def SVFMINQV: SInst<"svminqv[_{d}]", "{Pd", "hfd", MergeNone, "aarch64_sve_fminqv", [IsReductionQV]>;
+}
+
 let TargetGuard = "sve2p1" in {
 def SVFCLAMP   : SInst<"svclamp[_{d}]", "dddd", "hfd", MergeNone, "aarch64_sve_fclamp", [], []>;
 def SVPTRUE_COUNT  : SInst<"svptrue_{d}", "}v", "QcQsQiQl", MergeNone, "aarch64_sve_ptrue_{d}", [IsOverloadNone], []>;
