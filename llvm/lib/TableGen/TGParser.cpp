@@ -143,8 +143,8 @@ Init *TGVarScope::getVar(RecordKeeper &Records, MultiClass *ParsingMultiClass,
   if (It != Vars.end())
     return It->second;
 
-  std::function<Init *(Record *, StringInit *, bool)> FindValueInArgs =
-      [&](Record *Rec, StringInit *Name, bool IsMC) -> Init * {
+  auto FindValueInArgs = [&](Record *Rec, StringInit *Name,
+                             bool IsMC) -> Init * {
     if (!Rec)
       return nullptr;
     Init *ArgName = QualifyName(*Rec, Name, IsMC);
