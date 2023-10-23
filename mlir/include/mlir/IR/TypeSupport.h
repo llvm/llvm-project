@@ -149,7 +149,7 @@ private:
   /// The unique identifier of the derived Type class.
   const TypeID typeID;
 
-  /// The type name.
+  /// The unique name of this type.
   const StringRef name;
 };
 

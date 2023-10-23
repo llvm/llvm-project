@@ -264,6 +264,9 @@ class AttrDef<Dialect dialect, string name, list<Trait> traits = [],
   // Make it possible to use such attributes as parameters for other attributes.
   string cppType = dialect.cppNamespace # "::" # cppClassName;
 
+  // The unique attribute name.
+  string attrName = dialect.name # "." # mnemonic;
+
   // The call expression to convert from the storage type to the return
   // type. For example, an enum can be stored as an int but returned as an
   // enum class.
@@ -434,15 +437,15 @@ class AttributeSelfTypeParameter<string desc,
 /// This class defines an attribute that contains an array of elements. The
 /// elements can be any type, but if they are attributes, the nested elements
 /// are parsed and printed using the custom attribute syntax.
-class ArrayOfAttr<Dialect dialect, string attrName, string attrMnemonic,
+class ArrayOfAttr<Dialect dialect, string name, string attrMnemonic,
                   string eltName, list<Trait> traits = []>
-    : AttrDef<dialect, attrName, traits> {
+    : AttrDef<dialect, name, traits> {
   let parameters = (ins OptionalArrayRefParameter<eltName>:$value);
   let mnemonic = attrMnemonic;
   let assemblyFormat = "`[` (`]`) : ($value^ `]`)?";
 
   let returnType = "::llvm::ArrayRef<" # eltName # ">";
-  let constBuilderCall = "$_builder.getAttr<" # attrName # "Attr>($0)";
+  let constBuilderCall = "$_builder.getAttr<" # name # "Attr>($0)";
   let convertFromStorage = "$_self.getValue()";
 
   let extraClassDeclaration = [{

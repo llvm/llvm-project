@@ -187,6 +187,9 @@ public:
   /// Get the type name.
   StringRef getTypeName() const;
 
+  /// Get the attribute name.
+  StringRef getAttrName() const;
+
   /// Returns if the attribute or type has a custom assembly format implemented
   /// in C++. Corresponds to the `hasCustomAssemblyFormat` field.
   bool hasCustomAssemblyFormat() const;

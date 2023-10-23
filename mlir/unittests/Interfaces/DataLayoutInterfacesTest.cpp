@@ -56,6 +56,11 @@ struct CustomDataLayoutSpec
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(CustomDataLayoutSpec)
 
   using Base::Base;
+
+  static constexpr StringRef getAttrName() {
+    return "test.custom_data_layout_spec";
+  }
+
   static CustomDataLayoutSpec get(MLIRContext *ctx,
                                   ArrayRef<DataLayoutEntryInterface> entries) {
     return Base::get(ctx, entries);

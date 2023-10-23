@@ -64,6 +64,7 @@ def Builtin_AffineMapAttr : Builtin_Attr<"AffineMap", [
     AffineMap getAffineMap() const { return getValue(); }
   }];
   let skipDefaultBuilders = 1;
+  let attrName = "builtin.affine_map";
 }
 
 //===----------------------------------------------------------------------===//
@@ -134,6 +135,7 @@ def Builtin_ArrayAttr : Builtin_Attr<"Array"> {
       });
     }
   }];
+  let attrName = "builtin.array";
 }
 
 //===----------------------------------------------------------------------===//
@@ -211,6 +213,7 @@ def Builtin_DenseArray : Builtin_Attr<"DenseArray"> {
     /// Return true if there are no elements in the dense array.
     bool empty() const { return !size(); }
   }];
+  let attrName = "builtin.dense_array";
 }
 
 //===----------------------------------------------------------------------===//
@@ -352,6 +355,7 @@ def Builtin_DenseIntOrFPElementsAttr : Builtin_Attr<
   let genAccessors = 0;
   let genStorageClass = 0;
   let skipDefaultBuilders = 1;
+  let attrName = "builtin.dense_int_or_fp_elements";
 }
 
 //===----------------------------------------------------------------------===//
@@ -423,6 +427,7 @@ def Builtin_DenseStringElementsAttr : Builtin_Attr<
   let genAccessors = 0;
   let genStorageClass = 0;
   let skipDefaultBuilders = 1;
+  let attrName = "builtin.dense_string_elements";
 }
 
 //===----------------------------------------------------------------------===//
@@ -481,6 +486,7 @@ def Builtin_DenseResourceElementsAttr : Builtin_Attr<"DenseResourceElements", [
   ];
 
   let skipDefaultBuilders = 1;
+  let attrName = "builtin.dense_resource_elements";
 }
 
 //===----------------------------------------------------------------------===//
@@ -579,6 +585,7 @@ def Builtin_DictionaryAttr : Builtin_Attr<"Dictionary"> {
   public:
   }];
   let skipDefaultBuilders = 1;
+  let attrName = "builtin.dictionary";
 }
 
 //===----------------------------------------------------------------------===//
@@ -642,6 +649,7 @@ def Builtin_FloatAttr : Builtin_Attr<"Float", [TypedAttrInterface]> {
   }];
   let genVerifyDecl = 1;
   let skipDefaultBuilders = 1;
+  let attrName = "builtin.float";
 }
 
 //===----------------------------------------------------------------------===//
@@ -730,6 +738,7 @@ def Builtin_IntegerAttr : Builtin_Attr<"Integer", [TypedAttrInterface]> {
   }];
   let genVerifyDecl = 1;
   let skipDefaultBuilders = 1;
+  let attrName = "builtin.integer";
 }
 
 //===----------------------------------------------------------------------===//
@@ -759,6 +768,7 @@ def Builtin_IntegerSetAttr : Builtin_Attr<"IntegerSet"> {
   ];
   let extraClassDeclaration = "using ValueType = IntegerSet;";
   let skipDefaultBuilders = 1;
+  let attrName = "builtin.integer_set";
 }
 
 //===----------------------------------------------------------------------===//
@@ -796,6 +806,7 @@ def Builtin_OpaqueAttr : Builtin_Attr<"Opaque", [TypedAttrInterface]> {
   ];
   let genVerifyDecl = 1;
   let skipDefaultBuilders = 1;
+  let attrName = "builtin.opaque";
 }
 
 //===----------------------------------------------------------------------===//
@@ -952,6 +963,7 @@ def Builtin_SparseElementsAttr : Builtin_Attr<
   }];
   let genVerifyDecl = 1;
   let skipDefaultBuilders = 1;
+  let attrName = "builtin.sparse_elements";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1005,6 +1017,7 @@ def StridedLayoutAttr : Builtin_Attr<"StridedLayout",
     /// Print the attribute to the given output stream.
     void print(raw_ostream &os) const;
   }];
+  let attrName = "builtin.strided_elements";
 }
 
 
@@ -1087,6 +1100,7 @@ def Builtin_StringAttr : Builtin_Attr<"String", [TypedAttrInterface]> {
   }];
   let genStorageClass = 0;
   let skipDefaultBuilders = 1;
+  let attrName = "builtin.string";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1153,6 +1167,7 @@ def Builtin_SymbolRefAttr : Builtin_Attr<"SymbolRef"> {
     StringAttr getLeafReference() const;
   }];
   let skipDefaultBuilders = 1;
+  let attrName = "builtin.symbol_ref";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1186,6 +1201,7 @@ def Builtin_TypeAttr : Builtin_Attr<"Type"> {
   ];
   let extraClassDeclaration = "using ValueType = Type;";
   let skipDefaultBuilders = 1;
+  let attrName = "builtin.type";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1227,6 +1243,7 @@ def Builtin_UnitAttr : Builtin_Attr<"Unit"> {
   let extraClassDeclaration = [{
     static UnitAttr get(MLIRContext *context);
   }];
+  let attrName = "builtin.unit";
 }
 
 #endif // BUILTIN_ATTRIBUTES

@@ -183,8 +183,7 @@ DefGen::DefGen(const AttrOrTypeDef &def)
   if (storageCls)
     emitBuilders();
   // Emit the type name.
-  if (valueType == "Type")
-    emitName();
+  emitName();
   // Emit the verifier.
   if (storageCls && def.genVerifyDecl())
     emitVerifier();
@@ -271,8 +270,9 @@ void DefGen::emitTopLevelDeclarations() {
 
 void DefGen::emitName() {
   auto *mnemonic = defCls.addStaticMethod<Method::Constexpr>(
-      "::llvm::StringLiteral", "getTypeName");
-  mnemonic->body().indent() << strfmt("return \"{0}\";", def.getTypeName());
+      "::llvm::StringLiteral", "get" + defType + "Name");
+  StringRef name = defType == "Type" ? def.getTypeName() : def.getAttrName();
+  mnemonic->body().indent() << strfmt("return \"{0}\";", name);
 }
 
 void DefGen::emitBuilders() {

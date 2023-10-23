@@ -441,10 +441,14 @@ void ExtensibleDialect::registerDynamicAttr(
   assert(registered &&
          "Trying to create a new dynamic attribute with an existing name");
 
+  MLIRContext *ctx = getContext();
+  auto nameAttr =
+      StringAttr::get(ctx, getNamespace() + "." + attrPtr->getName());
+
   auto abstractAttr = AbstractAttribute::get(
       *dialect, DynamicAttr::getInterfaceMap(), DynamicAttr::getHasTraitFn(),
       DynamicAttr::getWalkImmediateSubElementsFn(),
-      DynamicAttr::getReplaceImmediateSubElementsFn(), typeID);
+      DynamicAttr::getReplaceImmediateSubElementsFn(), typeID, nameAttr);
 
   /// Add the type to the dialect and the type uniquer.
   addAttribute(typeID, std::move(abstractAttr));

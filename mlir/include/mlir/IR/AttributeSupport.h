@@ -45,7 +45,7 @@ public:
     return AbstractAttribute(dialect, T::getInterfaceMap(), T::getHasTraitFn(),
                              T::getWalkImmediateSubElementsFn(),
                              T::getReplaceImmediateSubElementsFn(),
-                             T::getTypeID());
+                             T::getTypeID(), T::getAttrName());
   }
 
   /// This method is used by Dialect objects to register attributes with
@@ -57,10 +57,10 @@ public:
       HasTraitFn &&hasTrait,
       WalkImmediateSubElementsFn walkImmediateSubElementsFn,
       ReplaceImmediateSubElementsFn replaceImmediateSubElementsFn,
-      TypeID typeID) {
+      TypeID typeID, StringRef name) {
     return AbstractAttribute(dialect, std::move(interfaceMap),
                              std::move(hasTrait), walkImmediateSubElementsFn,
-                             replaceImmediateSubElementsFn, typeID);
+                             replaceImmediateSubElementsFn, typeID, name);
   }
 
   /// Return the dialect this attribute was registered to.
@@ -102,17 +102,20 @@ public:
   /// Return the unique identifier representing the concrete attribute class.
   TypeID getTypeID() const { return typeID; }
 
+  /// Return the unique name representing the type.
+  StringRef getName() const { return name; }
+
 private:
   AbstractAttribute(Dialect &dialect, detail::InterfaceMap &&interfaceMap,
                     HasTraitFn &&hasTraitFn,
                     WalkImmediateSubElementsFn walkImmediateSubElementsFn,
                     ReplaceImmediateSubElementsFn replaceImmediateSubElementsFn,
-                    TypeID typeID)
+                    TypeID typeID, StringRef name)
       : dialect(dialect), interfaceMap(std::move(interfaceMap)),
         hasTraitFn(std::move(hasTraitFn)),
         walkImmediateSubElementsFn(walkImmediateSubElementsFn),
         replaceImmediateSubElementsFn(replaceImmediateSubElementsFn),
-        typeID(typeID) {}
+        typeID(typeID), name(name) {}
 
   /// Give StorageUserBase access to the mutable lookup.
   template <typename ConcreteT, typename BaseT, typename StorageT,
@@ -141,6 +144,9 @@ private:
 
   /// The unique identifier of the derived Attribute class.
   const TypeID typeID;
+
+  /// The unique name of this type.
+  const StringRef name;
 };
 
 //===----------------------------------------------------------------------===//
