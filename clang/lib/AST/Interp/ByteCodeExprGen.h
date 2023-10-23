@@ -360,6 +360,7 @@ public:
     if (!Idx)
       return;
     this->Ctx->emitDestroy(*Idx, SourceInfo{});
+    removeStoredOpaqueValues();
   }
 
   /// Overriden to support explicit destruction.
@@ -368,6 +369,7 @@ public:
       return;
     this->emitDestructors();
     this->Ctx->emitDestroy(*Idx, SourceInfo{});
+    removeStoredOpaqueValues();
     this->Idx = std::nullopt;
   }
 
@@ -389,8 +391,26 @@ public:
       if (!Local.Desc->isPrimitive() && !Local.Desc->isPrimitiveArray()) {
         this->Ctx->emitGetPtrLocal(Local.Offset, SourceInfo{});
         this->Ctx->emitRecordDestruction(Local.Desc);
+        removeIfStoredOpaqueValue(Local);
       }
     }
+  }
+
+  void removeStoredOpaqueValues() {
+    if (!Idx)
+      return;
+
+    for (Scope::Local &Local : this->Ctx->Descriptors[*Idx]) {
+      removeIfStoredOpaqueValue(Local);
+    }
+  }
+
+  void removeIfStoredOpaqueValue(const Scope::Local &Local) {
+    if (auto *OVE =
+            llvm::dyn_cast_or_null<OpaqueValueExpr>(Local.Desc->asExpr());
+        OVE && this->Ctx->OpaqueExprs.contains(OVE)) {
+      this->Ctx->OpaqueExprs.erase(OVE);
+    };
   }
 
   /// Index of the scope in the chain.

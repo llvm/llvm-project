@@ -887,7 +887,7 @@ bool ByteCodeExprGen<Emitter>::VisitOpaqueValueExpr(const OpaqueValueExpr *E) {
       return false;
   }
 
-  // FIXME: Ideally the cached value should be cleaned up later.
+  // This is cleaned up when the local variable is destroyed.
   OpaqueExprs.insert({E, *LocalIndex});
 
   return true;
