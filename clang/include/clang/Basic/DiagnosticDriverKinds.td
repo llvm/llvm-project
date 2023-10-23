@@ -532,6 +532,10 @@ def err_drv_module_output_with_multiple_arch : Error<
 
 def err_modules_no_lsv : Error<"standard C++ modules require "
   "the -fmodules-local-submodule-visibility -cc1 option">;
+  
+def warn_drv_delayed_template_parsing_after_cxx20 : Warning<
+  "-fdelayed-template-parsing is deprecated after C++20">,
+  InGroup<DiagGroup<"delayed-template-parsing-in-cxx20">>;
 
 def err_drv_extract_api_wrong_kind : Error<
   "header file '%0' input '%1' does not match the type of prior input "
