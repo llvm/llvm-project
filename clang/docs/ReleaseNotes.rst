@@ -474,6 +474,8 @@ Bug Fixes in This Version
 - Clang now accepts anonymous members initialized with designated initializers
   inside templates.
   Fixes (`#65143 <https://github.com/llvm/llvm-project/issues/65143>`_)
+- Fix crash in formatting the real/imaginary part of a complex lvalue.
+  Fixes (`#69218 <https://github.com/llvm/llvm-project/issues/69218>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
