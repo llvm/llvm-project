@@ -2264,8 +2264,8 @@ DefInit *VarDefInit::instantiate() {
   if (!Def) {
     RecordKeeper &Records = Class->getRecords();
     auto NewRecOwner = std::make_unique<Record>(Records.getNewAnonymousName(),
-                                           Class->getLoc(), Records,
-                                           /*IsAnonymous=*/true);
+                                                Class->getLoc(), Records,
+                                                /*Kind=*/Record::RK_Anonymous);
     Record *NewRec = NewRecOwner.get();
 
     // Copy values from class to instance
