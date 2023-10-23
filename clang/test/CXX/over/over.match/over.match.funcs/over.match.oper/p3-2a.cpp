@@ -426,17 +426,6 @@ bool i(X x) {
 } // namespace test2
 } // namespace function_scope_operator_eqeq
 
-namespace non_member_template_2 {
-struct P {};
-template<class S>
-bool operator==(const S&, const P&); // expected-note {{candidate}} \
-                                     // expected-note {{ambiguous candidate function with reversed arguments}}
-
-struct A : public P {};
-struct B : public P {};
-bool check(A a, B b) { return a == b; } // expected-warning {{use of overloaded operator '==' (with operand types 'A' and 'B') to be ambiguous}}
-}
-
 #else // NO_ERRORS
 
 namespace problem_cases {
