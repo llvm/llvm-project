@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_INTERPRETER_SCRIPTEDINTERFACE_H
-#define LLDB_INTERPRETER_SCRIPTEDINTERFACE_H
+#ifndef LLDB_INTERPRETER_INTERFACES_SCRIPTEDINTERFACE_H
+#define LLDB_INTERPRETER_INTERFACES_SCRIPTEDINTERFACE_H
 
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -74,4 +74,4 @@ protected:
   StructuredData::GenericSP m_object_instance_sp;
 };
 } // namespace lldb_private
-#endif // LLDB_INTERPRETER_SCRIPTEDINTERFACE_H
+#endif // LLDB_INTERPRETER_INTERFACES_SCRIPTEDINTERFACE_H

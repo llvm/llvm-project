@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTEDPYTHONINTERFACE_H
-#define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTEDPYTHONINTERFACE_H
+#ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPYTHONINTERFACE_H
+#define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPYTHONINTERFACE_H
 
 #if LLDB_ENABLE_PYTHON
 
@@ -18,12 +18,12 @@
 #include <utility>
 
 #include "lldb/Host/Config.h"
-#include "lldb/Interpreter/ScriptedInterface.h"
+#include "lldb/Interpreter/Interfaces/ScriptedInterface.h"
 #include "lldb/Utility/DataBufferHeap.h"
 
-#include "PythonDataObjects.h"
-#include "SWIGPythonBridge.h"
-#include "ScriptInterpreterPythonImpl.h"
+#include "../PythonDataObjects.h"
+#include "../SWIGPythonBridge.h"
+#include "../ScriptInterpreterPythonImpl.h"
 
 namespace lldb_private {
 class ScriptInterpreterPythonImpl;
@@ -146,7 +146,6 @@ protected:
     original_arg = ExtractValueFromPythonObject<T>(transformed_arg, error);
   }
 
-
   void ReverseTransform(bool &original_arg,
                         python::PythonObject transformed_arg, Status &error) {
     python::PythonBoolean boolean_arg = python::PythonBoolean(
@@ -254,4 +253,4 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<
 } // namespace lldb_private
 
 #endif // LLDB_ENABLE_PYTHON
-#endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTEDPYTHONINTERFACE_H
+#endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPYTHONINTERFACE_H

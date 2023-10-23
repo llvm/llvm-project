@@ -14,12 +14,13 @@
 // LLDB Python header must be included first
 #include "lldb-python.h"
 
+#include "Interfaces/ScriptedPlatformPythonInterface.h"
+#include "Interfaces/ScriptedProcessPythonInterface.h"
+#include "Interfaces/ScriptedThreadPythonInterface.h"
 #include "PythonDataObjects.h"
 #include "PythonReadline.h"
 #include "SWIGPythonBridge.h"
 #include "ScriptInterpreterPythonImpl.h"
-#include "ScriptedPlatformPythonInterface.h"
-#include "ScriptedProcessPythonInterface.h"
 
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBFrame.h"
@@ -1513,6 +1514,11 @@ lldb::ValueObjectListSP ScriptInterpreterPythonImpl::GetRecognizedArguments(
 ScriptedProcessInterfaceUP
 ScriptInterpreterPythonImpl::CreateScriptedProcessInterface() {
   return std::make_unique<ScriptedProcessPythonInterface>(*this);
+}
+
+ScriptedThreadInterfaceSP
+ScriptInterpreterPythonImpl::CreateScriptedThreadInterface() {
+  return std::make_shared<ScriptedThreadPythonInterface>(*this);
 }
 
 StructuredData::ObjectSP

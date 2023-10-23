@@ -13,10 +13,10 @@
 #if LLDB_ENABLE_PYTHON
 
 // LLDB Python header must be included first
-#include "lldb-python.h"
+#include "../lldb-python.h"
 
-#include "SWIGPythonBridge.h"
-#include "ScriptInterpreterPythonImpl.h"
+#include "../SWIGPythonBridge.h"
+#include "../ScriptInterpreterPythonImpl.h"
 #include "ScriptedThreadPythonInterface.h"
 #include <optional>
 

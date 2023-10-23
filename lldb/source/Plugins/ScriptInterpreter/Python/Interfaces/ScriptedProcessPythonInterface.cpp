@@ -9,7 +9,7 @@
 #include "lldb/Host/Config.h"
 #if LLDB_ENABLE_PYTHON
 // LLDB Python header must be included first
-#include "lldb-python.h"
+#include "../lldb-python.h"
 #endif
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Log.h"
@@ -18,8 +18,8 @@
 
 #if LLDB_ENABLE_PYTHON
 
-#include "SWIGPythonBridge.h"
-#include "ScriptInterpreterPythonImpl.h"
+#include "../SWIGPythonBridge.h"
+#include "../ScriptInterpreterPythonImpl.h"
 #include "ScriptedProcessPythonInterface.h"
 #include "ScriptedThreadPythonInterface.h"
 #include <optional>
@@ -199,7 +199,7 @@ ScriptedProcessPythonInterface::GetScriptedThreadPluginName() {
 
 lldb::ScriptedThreadInterfaceSP
 ScriptedProcessPythonInterface::CreateScriptedThreadInterface() {
-  return std::make_shared<ScriptedThreadPythonInterface>(m_interpreter);
+  return m_interpreter.CreateScriptedThreadInterface();
 }
 
 StructuredData::DictionarySP ScriptedProcessPythonInterface::GetMetadata() {

@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_INTERPRETER_SCRIPTEDPROCESSINTERFACE_H
-#define LLDB_INTERPRETER_SCRIPTEDPROCESSINTERFACE_H
+#ifndef LLDB_INTERPRETER_INTERFACES_SCRIPTEDPROCESSINTERFACE_H
+#define LLDB_INTERPRETER_INTERFACES_SCRIPTEDPROCESSINTERFACE_H
 
+#include "ScriptedInterface.h"
 #include "lldb/Core/StructuredDataImpl.h"
-#include "lldb/Interpreter/ScriptedInterface.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 
 #include "lldb/lldb-private.h"
@@ -80,36 +80,6 @@ protected:
     return {};
   }
 };
-
-class ScriptedThreadInterface : virtual public ScriptedInterface {
-public:
-  StructuredData::GenericSP
-  CreatePluginObject(llvm::StringRef class_name, ExecutionContext &exe_ctx,
-                     StructuredData::DictionarySP args_sp,
-                     StructuredData::Generic *script_obj = nullptr) override {
-    return {};
-  }
-
-  virtual lldb::tid_t GetThreadID() { return LLDB_INVALID_THREAD_ID; }
-
-  virtual std::optional<std::string> GetName() { return std::nullopt; }
-
-  virtual lldb::StateType GetState() { return lldb::eStateInvalid; }
-
-  virtual std::optional<std::string> GetQueue() { return std::nullopt; }
-
-  virtual StructuredData::DictionarySP GetStopReason() { return {}; }
-
-  virtual StructuredData::ArraySP GetStackFrames() { return {}; }
-
-  virtual StructuredData::DictionarySP GetRegisterInfo() { return {}; }
-
-  virtual std::optional<std::string> GetRegisterContext() {
-    return std::nullopt;
-  }
-
-  virtual StructuredData::ArraySP GetExtendedInfo() { return {}; }
-};
 } // namespace lldb_private
 
-#endif // LLDB_INTERPRETER_SCRIPTEDPROCESSINTERFACE_H
+#endif // LLDB_INTERPRETER_INTERFACES_SCRIPTEDPROCESSINTERFACE_H
