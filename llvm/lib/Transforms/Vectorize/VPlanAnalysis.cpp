@@ -172,40 +172,40 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
     case VPDef::VPFirstOrderRecurrencePHISC:
     case VPDef::VPReductionPHISC:
     case VPDef::VPWidenPointerInductionSC:
-    // Handle header phi recipes, except VPWienIntOrFpInduction which needs
-    // special handling due it being possibly truncated.
-    ResultTy = cast<VPHeaderPHIRecipe>(Def)
-                   ->getStartValue()
-                   ->getLiveInIRValue()
-                   ->getType();
-    break;
+      // Handle header phi recipes, except VPWienIntOrFpInduction which needs
+      // special handling due it being possibly truncated.
+      ResultTy = cast<VPHeaderPHIRecipe>(Def)
+                     ->getStartValue()
+                     ->getLiveInIRValue()
+                     ->getType();
+      break;
     case VPDef::VPWidenIntOrFpInductionSC:
-    ResultTy = cast<VPWidenIntOrFpInductionRecipe>(Def)->getScalarType();
-    break;
+      ResultTy = cast<VPWidenIntOrFpInductionRecipe>(Def)->getScalarType();
+      break;
     case VPDef::VPPredInstPHISC:
     case VPDef::VPScalarIVStepsSC:
     case VPDef::VPWidenPHISC:
-    ResultTy = inferScalarType(Def->getOperand(0));
-    break;
+      ResultTy = inferScalarType(Def->getOperand(0));
+      break;
     case VPDef::VPBlendSC:
-    ResultTy = inferScalarType(cast<VPBlendRecipe>(Def));
-    break;
+      ResultTy = inferScalarType(cast<VPBlendRecipe>(Def));
+      break;
     case VPDef::VPInstructionSC:
-    ResultTy = inferScalarType(cast<VPInstruction>(Def));
-    break;
+      ResultTy = inferScalarType(cast<VPInstruction>(Def));
+      break;
     case VPDef::VPInterleaveSC:
-    // TODO: Use info from interleave group.
-    ResultTy = V->getUnderlyingValue()->getType();
-    break;
+      // TODO: Use info from interleave group.
+      ResultTy = V->getUnderlyingValue()->getType();
+      break;
     case VPDef::VPReplicateSC:
-    ResultTy = inferScalarType(cast<VPReplicateRecipe>(Def));
-    break;
+      ResultTy = inferScalarType(cast<VPReplicateRecipe>(Def));
+      break;
     case VPDef::VPWidenSC:
-    ResultTy = inferScalarType(cast<VPWidenRecipe>(Def));
-    break;
+      ResultTy = inferScalarType(cast<VPWidenRecipe>(Def));
+      break;
     case VPDef::VPWidenCallSC:
-    ResultTy = inferScalarType(cast<VPWidenCallRecipe>(Def));
-    break;
+      ResultTy = inferScalarType(cast<VPWidenCallRecipe>(Def));
+      break;
     case VPDef::VPWidenCastSC:
       ResultTy = cast<VPWidenCastRecipe>(Def)->getResultType();
       break;
