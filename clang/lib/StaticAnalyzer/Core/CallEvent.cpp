@@ -715,10 +715,9 @@ void CXXInstanceCall::getExtraInvalidatedValues(
 SVal CXXInstanceCall::getCXXThisVal() const {
   const Expr *Base = getCXXThisExpr();
   // FIXME: This doesn't handle an overloaded ->* operator.
-  if (!Base)
+  SVal ThisVal = Base ? getSVal(Base) : UnknownVal();
+  if (isa<NonLoc>(ThisVal))
     return UnknownVal();
-
-  SVal ThisVal = getSVal(Base);
   assert(ThisVal.isUnknownOrUndef() || isa<Loc>(ThisVal));
   return ThisVal;
 }
