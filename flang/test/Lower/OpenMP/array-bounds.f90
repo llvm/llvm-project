@@ -16,12 +16,12 @@
 !HOST:  %[[C2:.*]] = arith.constant 1 : index
 !HOST:  %[[C3:.*]] = arith.constant 4 : index
 !HOST:  %[[BOUNDS0:.*]] = omp.bounds   lower_bound(%[[C2]] : index) upper_bound(%[[C3]] : index) stride(%[[C1]] : index) start_idx(%[[C1]] : index)
-!HOST:  %[[MAP0:.*]] = omp.map_info var_ptr(%[[READ_DECL]]#1 : !fir.ref<!fir.array<10xi32>>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS0]]) -> !fir.ref<!fir.array<10xi32>> {name = "sp_read(2:5)"}
+!HOST:  %[[MAP0:.*]] = omp.map_info var_ptr(%[[READ_DECL]]#1 : !fir.ref<!fir.array<10xi32>>, !fir.array<10xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS0]]) -> !fir.ref<!fir.array<10xi32>> {name = "sp_read(2:5)"}
 !HOST:  %[[C4:.*]] = arith.constant 1 : index
 !HOST:  %[[C5:.*]] = arith.constant 1 : index
 !HOST:  %[[C6:.*]] = arith.constant 4 : index
 !HOST:  %[[BOUNDS1:.*]] = omp.bounds   lower_bound(%[[C5]] : index) upper_bound(%[[C6]] : index) stride(%[[C4]] : index) start_idx(%[[C4]] : index)
-!HOST:  %[[MAP1:.*]] = omp.map_info var_ptr(%[[WRITE_DECL]]#1 : !fir.ref<!fir.array<10xi32>>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS1]]) -> !fir.ref<!fir.array<10xi32>> {name = "sp_write(2:5)"}
+!HOST:  %[[MAP1:.*]] = omp.map_info var_ptr(%[[WRITE_DECL]]#1 : !fir.ref<!fir.array<10xi32>>, !fir.array<10xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS1]]) -> !fir.ref<!fir.array<10xi32>> {name = "sp_write(2:5)"}
 !HOST:  omp.target   map_entries(%[[MAP0]], %[[MAP1]] : !fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>) {
 
 subroutine read_write_section()
@@ -49,7 +49,7 @@ module assumed_array_routines
 !HOST: %[[C4:.*]] = arith.constant 4 : index
 !HOST: %[[BOUNDS:.*]] = omp.bounds   lower_bound(%[[C3]] : index) upper_bound(%[[C4]] : index) stride(%[[C2]]#2 : index) start_idx(%[[C0]] : index) {stride_in_bytes = true}
 !HOST: %[[ADDROF:.*]] = fir.box_addr %[[ARG0_DECL]]#1 : (!fir.box<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
-!HOST: %[[MAP:.*]] = omp.map_info var_ptr(%[[ADDROF]] : !fir.ref<!fir.array<?xi32>>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<?xi32>> {name = "arr_read_write(2:5)"}
+!HOST: %[[MAP:.*]] = omp.map_info var_ptr(%[[ADDROF]] : !fir.ref<!fir.array<?xi32>>, !fir.array<?xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<?xi32>> {name = "arr_read_write(2:5)"}
 !HOST: omp.target   map_entries(%[[MAP]] : !fir.ref<!fir.array<?xi32>>) {
     subroutine assumed_shape_array(arr_read_write)
             integer, intent(inout) :: arr_read_write(:)
@@ -72,7 +72,7 @@ module assumed_array_routines
 !HOST: %[[C1:.*]] = arith.constant 1 : index
 !HOST: %[[C2:.*]] = arith.constant 4 : index
 !HOST: %[[BOUNDS:.*]]  = omp.bounds   lower_bound(%[[C1]] : index) upper_bound(%[[C2]] : index) stride(%[[C0]] : index) start_idx(%[[C0]] : index)
-!HOST: %[[MAP:.*]] = omp.map_info var_ptr(%[[ARG0_DECL]]#1 : !fir.ref<!fir.array<?xi32>>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<?xi32>> {name = "arr_read_write(2:5)"}
+!HOST: %[[MAP:.*]] = omp.map_info var_ptr(%[[ARG0_DECL]]#1 : !fir.ref<!fir.array<?xi32>>, !fir.array<?xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<?xi32>> {name = "arr_read_write(2:5)"}
 !HOST: omp.target   map_entries(%[[MAP]] : !fir.ref<!fir.array<?xi32>>) {
         subroutine assumed_size_array(arr_read_write)
             integer, intent(inout) :: arr_read_write(*)
