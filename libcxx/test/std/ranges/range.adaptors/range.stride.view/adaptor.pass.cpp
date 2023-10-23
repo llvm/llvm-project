@@ -33,10 +33,11 @@ constexpr bool test() {
     // view | stride
     {
       {
-        BidirView view(arr, arr + array_n);
+        BidirArrayView<int> view(arr, arr + array_n);
         //std::ranges::stride_view<BidirView> strided(view, 1);
-        std::same_as<std::ranges::stride_view<BidirView>> decltype(auto) strided = view | std::views::stride(1);
-        auto strided_iter                                                        = strided.begin();
+        std::same_as<std::ranges::stride_view<BidirArrayView<int>>> decltype(auto) strided =
+            view | std::views::stride(1);
+        auto strided_iter = strided.begin();
 
         // Check that the begin() iter views arr[0]
         assert(*strided_iter == arr[0]);
@@ -46,9 +47,10 @@ constexpr bool test() {
         assert(*strided_iter == arr[2]);
       }
       {
-        BidirView view(arr, arr + array_n);
-        std::same_as<std::ranges::stride_view<BidirView>> decltype(auto) strided = view | std::views::stride(2);
-        auto strided_iter                                                        = strided.begin();
+        BidirArrayView<int> view(arr, arr + array_n);
+        std::same_as<std::ranges::stride_view<BidirArrayView<int>>> decltype(auto) strided =
+            view | std::views::stride(2);
+        auto strided_iter = strided.begin();
 
         assert(*strided_iter == arr[0]);
 
@@ -65,7 +67,7 @@ constexpr bool test() {
     // Parallels the two tests from above.
     constexpr auto identity_lambda = [](int i) { return i * 2; };
     {
-      BidirView view(arr, arr + array_n);
+      BidirArrayView<int> view(arr, arr + array_n);
       const auto transform_stride_partial = std::views::transform(identity_lambda) | std::views::stride(1);
 
       const auto transform_stride_applied = transform_stride_partial(view);
@@ -76,7 +78,7 @@ constexpr bool test() {
     }
 
     {
-      BidirView view(arr, arr + array_n);
+      BidirArrayView<int> view(arr, arr + array_n);
       const auto transform_stride_partial = std::views::transform(identity_lambda) | std::views::stride(2);
 
       const auto transform_stride_applied = transform_stride_partial(view);
@@ -88,9 +90,9 @@ constexpr bool test() {
   }
 
   {
-    using ForwardStrideView      = std::ranges::stride_view<ForwardView>;
-    using BidirStrideView        = std::ranges::stride_view<BidirView>;
-    using RandomAccessStrideView = std::ranges::stride_view<RandomAccessView>;
+    using ForwardStrideView      = std::ranges::stride_view<ForwardArrayView<int>>;
+    using BidirStrideView        = std::ranges::stride_view<BidirArrayView<int>>;
+    using RandomAccessStrideView = std::ranges::stride_view<RandomAccessArrayView<int>>;
 
     static_assert(std::ranges::forward_range<ForwardStrideView>);
     static_assert(std::ranges::bidirectional_range<BidirStrideView>);
@@ -107,12 +109,15 @@ constexpr bool test() {
     // Not invocable because NotAViewableRange is, well, not a viewable range.
     static_assert(!std::is_invocable_v<decltype(std::views::reverse), NotAViewableRange>);
     // Is invocable because BidirView is a viewable range.
-    static_assert(std::is_invocable_v<decltype(std::views::reverse), BidirView>);
+    static_assert(std::is_invocable_v<decltype(std::views::reverse), BidirArrayView<int>>);
 
     // Make sure that pipe operations work!
-    static_assert(CanBePiped<BidirView, decltype(std::views::stride(std::ranges::range_difference_t<BidirView>{}))>);
-    static_assert(CanBePiped<BidirView&, decltype(std::views::stride(std::ranges::range_difference_t<BidirView>{}))>);
-    static_assert(!CanBePiped<NotARange, decltype(std::views::stride(std::ranges::range_difference_t<BidirView>{}))>);
+    static_assert(CanBePiped<BidirArrayView<int>,
+                             decltype(std::views::stride(std::ranges::range_difference_t<BidirArrayView<int>>{}))>);
+    static_assert(CanBePiped<BidirArrayView<int>&,
+                             decltype(std::views::stride(std::ranges::range_difference_t<BidirArrayView<int>>{}))>);
+    static_assert(
+        !CanBePiped<NotARange, decltype(std::views::stride(std::ranges::range_difference_t<BidirArrayView<int>>{}))>);
   }
   // A final sanity check.
   { static_assert(std::same_as<decltype(std::views::stride), decltype(std::ranges::views::stride)>); }
