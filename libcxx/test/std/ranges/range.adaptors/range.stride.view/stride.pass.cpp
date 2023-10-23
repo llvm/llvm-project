@@ -18,9 +18,9 @@
 #include <utility>
 
 constexpr bool test() {
-  static_assert(noexcept(std::declval<std::ranges::stride_view<BidirView>>().stride()));
-  static_assert(std::is_same_v<std::ranges::range_difference_t<BidirView>,
-                               decltype(std::declval<std::ranges::stride_view<BidirView>>().stride())>);
+  static_assert(noexcept(std::declval<std::ranges::stride_view<BidirArrayView<int>>>().stride()));
+  static_assert(std::is_same_v<std::ranges::range_difference_t<BidirArrayView<int>>,
+                               decltype(std::declval<std::ranges::stride_view<BidirArrayView<int>>>().stride())>);
   return true;
 }
 
