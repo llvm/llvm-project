@@ -26,10 +26,11 @@ using namespace llvm;
 
 namespace llvm {
 // Deprecated. Use -profile-correlate=debug-info.
-cl::opt<bool>
-    DebugInfoCorrelate("profile-correlate=debug-info",
-                       cl::desc("Use debug info to correlate profiles."),
-                       cl::init(false));
+cl::opt<bool> DebugInfoCorrelate(
+    "debug-info-correlate",
+    cl::desc("Use debug info to correlate profiles (Deprecated). Use "
+             "-profile-correlate=debug-info instead."),
+    cl::init(false));
 
 cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate(
     "profile-correlate",
@@ -64,10 +65,10 @@ const char *InstrProfCorrelator::NumCountersAttributeName = "Num Counters";
 llvm::Expected<std::unique_ptr<InstrProfCorrelator::Context>>
 InstrProfCorrelator::Context::get(std::unique_ptr<MemoryBuffer> Buffer,
                                   const object::ObjectFile &Obj) {
-  auto C = std::make_unique<Context>();
   auto CountersSection = getInstrProfSection(Obj, IPSK_cnts);
   if (auto Err = CountersSection.takeError())
     return std::move(Err);
+  auto C = std::make_unique<Context>();
   C->Buffer = std::move(Buffer);
   C->CountersSectionStart = CountersSection->getAddress();
   C->CountersSectionEnd = C->CountersSectionStart + CountersSection->getSize();
