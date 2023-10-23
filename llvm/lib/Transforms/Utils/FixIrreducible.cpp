@@ -314,8 +314,7 @@ static bool FixIrreducibleImpl(Function &F, LoopInfo &LI, DominatorTree &DT) {
   LLVM_DEBUG(dbgs() << "===== Fix irreducible control-flow in function: "
                     << F.getName() << "\n");
 
-  for (auto &BB : F)
-    assert(hasOnlySimpleTerminator(&BB));
+  assert(hasOnlySimpleTerminator(F) && "Unsupported block terminator.");
 
   bool Changed = false;
   SmallVector<Loop *, 8> WorkList;

@@ -191,8 +191,7 @@ BasicBlock *AMDGPUUnifyDivergentExitNodesImpl::unifyReturnBlockSet(
 bool AMDGPUUnifyDivergentExitNodesImpl::run(Function &F, DominatorTree *DT,
                                             const PostDominatorTree &PDT,
                                             const UniformityInfo &UA) {
-  for (auto &BB : F)
-    assert(hasOnlySimpleTerminator(&BB));
+  assert(hasOnlySimpleTerminator(F) && "Unsupported block terminator.");
 
   if (PDT.root_size() == 0 ||
       (PDT.root_size() == 1 &&

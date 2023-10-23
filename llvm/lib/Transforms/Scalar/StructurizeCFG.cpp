@@ -1172,8 +1172,7 @@ bool StructurizeCFG::run(Region *R, DominatorTree *DT) {
   this->DT = DT;
 
   Func = R->getEntry()->getParent();
-  for (auto &BB : *Func)
-    assert(hasOnlySimpleTerminator(&BB));
+  assert(hasOnlySimpleTerminator(*Func) && "Unsupported block terminator.");
 
   ParentRegion = R;
 
