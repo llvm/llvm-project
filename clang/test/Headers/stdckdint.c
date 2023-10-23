@@ -2,7 +2,6 @@
 // RUN: %clang_cc1 -triple=x86_64 -emit-llvm -verify -std=c99 %s -o - | FileCheck %s
 // RUN: %clang_cc1 -triple=x86_64 -emit-llvm -verify -std=c11 %s -o - | FileCheck %s
 // RUN: %clang_cc1 -triple=x86_64 -emit-llvm -verify -std=c17 %s -o - | FileCheck %s
-// RUN: %clang_cc1 -triple=x86_64 -emit-llvm -verify -std=c2x %s -o - | FileCheck %s
 // RUN: %clang_cc1 -triple=x86_64 -emit-llvm -verify -std=c23 %s -o - | FileCheck %s
 
 // expected-no-diagnostics
