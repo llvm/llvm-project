@@ -103,7 +103,7 @@ See the :doc:`LLDB Build Page <resources/build>` for build instructions.
 
 Discussions about LLDB should go to the `LLDB forum
 <https://discourse.llvm.org/c/subprojects/lldb>`__ or the ``lldb`` channel on
-the LLVM Discord server.
+the `LLVM Discord server <https://discord.gg/HexWwB5z>`__.
 
 For contributions follow the
 `LLVM contribution process <https://llvm.org/docs/Contributing.html>`__. Commit
