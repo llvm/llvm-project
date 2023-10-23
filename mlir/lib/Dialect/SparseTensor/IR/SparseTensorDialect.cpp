@@ -1245,7 +1245,7 @@ OpFoldResult LvlOp::fold(FoldAdaptor adaptor) {
     return {};
   }
 
-  // Helper lambda to build an IndexAttr;
+  // Helper lambda to build an IndexAttr.
   auto getIndexAttr = [this](int64_t lvlSz) {
     return IntegerAttr::get(IndexType::get(getContext()), APInt(64, lvlSz));
   };
