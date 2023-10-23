@@ -15234,6 +15234,29 @@ bool AArch64TargetLowering::lowerInterleavedLoad(
   return true;
 }
 
+template <typename Iter>
+bool hasNearbyPairedStore(Iter It, Iter End, Value *Ptr, const DataLayout &DL) {
+  int MaxLookupDist = 20;
+  unsigned IdxWidth = DL.getIndexSizeInBits(0);
+  APInt OffsetA(IdxWidth, 0), OffsetB(IdxWidth, 0);
+  const Value *PtrA1 =
+      Ptr->stripAndAccumulateInBoundsConstantOffsets(DL, OffsetA);
+
+  while (++It != End && !It->isDebugOrPseudoInst() && MaxLookupDist-- > 0) {
+    if (const auto *SI = dyn_cast<StoreInst>(&*It)) {
+      const Value *PtrB1 =
+          SI->getPointerOperand()->stripAndAccumulateInBoundsConstantOffsets(
+              DL, OffsetB);
+      if (PtrA1 == PtrB1 &&
+          (OffsetA.sextOrTrunc(IdxWidth) - OffsetB.sextOrTrunc(IdxWidth))
+                  .abs() == 16)
+        return true;
+    }
+  }
+
+  return false;
+}
+
 /// Lower an interleaved store into a stN intrinsic.
 ///
 /// E.g. Lower an interleaved store (Factor = 3):
@@ -15325,8 +15348,15 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
     return false;
   }
   // A 64bit st2 which does not start at element 0 will involved adding extra
-  // ext elements, making the st2 unprofitable.
-  if (Factor == 2 && SubVecTy->getPrimitiveSizeInBits() == 64 && Mask[0] != 0)
+  // ext elements making the st2 unprofitable, and if there is a nearby store
+  // that points to BaseAddr+16 or BaseAddr-16 then it can be better left as a
+  // zip;ldp pair which has higher throughput.
+  if (Factor == 2 && SubVecTy->getPrimitiveSizeInBits() == 64 &&
+      (Mask[0] != 0 ||
+       hasNearbyPairedStore(SI->getIterator(), SI->getParent()->end(), BaseAddr,
+                            DL) ||
+       hasNearbyPairedStore(SI->getReverseIterator(), SI->getParent()->rend(),
+                            BaseAddr, DL)))
     return false;
 
   Type *PtrTy = SI->getPointerOperandType();
