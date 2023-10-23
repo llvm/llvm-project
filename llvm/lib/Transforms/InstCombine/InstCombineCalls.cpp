@@ -3002,6 +3002,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     if (DstTy && VecTy) {
       auto DstEltCnt = DstTy->getElementCount();
+      auto VecEltCnt = VecTy->getElementCount();
       unsigned IdxN = cast<ConstantInt>(Idx)->getZExtValue();
 
       // Extracting the entirety of Vec is a nop.
@@ -3012,7 +3013,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
       // Only canonicalize to shufflevector if the destination vector and
       // Vec are fixed vectors.
-      if (dyn_cast<ScalableVectorType>(VecTy) || DstEltCnt.isScalable())
+      if (VecEltCnt.isScalable() || DstEltCnt.isScalable())
         break;
 
       SmallVector<int, 8> Mask;
