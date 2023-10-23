@@ -141,9 +141,9 @@ def ext_vla : Extension<"variable length arrays are a C99 feature">,
 // language modes, we warn as an extension but add the warning group to -Wall.
 def ext_vla_cxx : ExtWarn<
   "variable length arrays in C++ are a Clang extension">,
-  InGroup<VLAExtension>;
+  InGroup<VLACxxExtension>;
 def ext_vla_cxx_in_gnu_mode : Extension<ext_vla_cxx.Summary>,
-  InGroup<VLAExtension>;
+  InGroup<VLACxxExtension>;
 def ext_vla_cxx_static_assert : ExtWarn<
   "variable length arrays in C++ are a Clang extension; did you mean to use "
   "'static_assert'?">, InGroup<VLAUseStaticAssert>;
