@@ -303,7 +303,8 @@ void state::enterDataEnvironment(IdentTy *Ident) {
 #ifdef FIXME // breaks snap_red nested_par3 nest_call_par2
   uintptr_t *ThreadStatesBitsPtr = reinterpret_cast<uintptr_t *>(&ThreadStates);
   if (!atomic::load(ThreadStatesBitsPtr, atomic::seq_cst)) {
-    uint32_t Bytes = sizeof(ThreadStates[0]) * mapping::getMaxTeamThreads();
+    uint32_t Bytes =
+        sizeof(ThreadStates[0]) * mapping::getNumberOfThreadsInBlock();
     void *ThreadStatesPtr =
         memory::allocGlobal(Bytes, "Thread state array allocation");
     memset(ThreadStatesPtr, 0, Bytes);
