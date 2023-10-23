@@ -1246,17 +1246,6 @@ void DwarfDebug::finishSubprogramDefinitions() {
   }
 }
 
-/// Finalizes DWARF acceleration tables.
-/// Currently it converts DIE entries to offsets in .debu_names entry.
-static void
-finalizeDWARF5AccelerationTables(DWARF5AccelTable &AccelDebugNames) {
-  for (auto &Entry : AccelDebugNames.getEntries()) {
-    for (AccelTableData *Value : Entry.second.Values) {
-      static_cast<DWARF5AccelTableData *>(Value)->normalizeDIEToOffset();
-    }
-  }
-}
-
 void DwarfDebug::finalizeModuleInfo() {
   const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
 
@@ -1403,7 +1392,7 @@ void DwarfDebug::finalizeModuleInfo() {
 
   // Now that offsets are computed, can replace DIEs in debug_names Entry with
   // an actual offset.
-  finalizeDWARF5AccelerationTables(AccelDebugNames);
+  AccelDebugNames.convertDieToOffset();
 }
 
 // Emit all Dwarf sections that should come after the content.
@@ -3563,8 +3552,8 @@ void DwarfDebug::addAccelNameImpl(const DICompileUnit &CU,
     AppleAccel.addName(Ref, Die);
     break;
   case AccelTableKind::Dwarf: {
-    DwarfCompileUnit *CU = lookupCU(Die.getUnitDie());
-    AccelDebugNames.addName(Ref, Die, *CU);
+    DwarfCompileUnit *DCU = CUMap.lookup(&CU);
+    AccelDebugNames.addName(Ref, Die, *DCU);
     break;
   }
   case AccelTableKind::Default:

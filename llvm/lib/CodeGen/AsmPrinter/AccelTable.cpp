@@ -359,10 +359,7 @@ void AppleAccelTableWriter::emit() const {
 
 DWARF5AccelTableData::DWARF5AccelTableData(const DIE &Die,
                                            const DwarfCompileUnit &CU)
-    : OffsetVal(&Die) {
-  DieTag = Die.getTag();
-  UnitID = CU.getUniqueID();
-}
+    : OffsetVal(&Die), DieTag(Die.getTag()), UnitID(CU.getUniqueID()) {}
 
 template <typename DataT>
 void Dwarf5AccelTableWriter<DataT>::Header::emit(Dwarf5AccelTableWriter &Ctx) {

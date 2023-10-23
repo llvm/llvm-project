@@ -283,7 +283,15 @@ protected:
 
 class DWARF5AccelTable : public AccelTable<DWARF5AccelTableData> {
 public:
-  StringEntries &getEntries() { return Entries; }
+  /// Convert DIE entries to explicit offset.
+  /// Needs to be called after DIE offsets are computed.
+  void convertDieToOffset() {
+    for (auto &Entry : Entries) {
+      for (AccelTableData *Value : Entry.second.Values) {
+        static_cast<DWARF5AccelTableData *>(Value)->normalizeDIEToOffset();
+      }
+    }
+  }
 };
 
 void emitAppleAccelTableImpl(AsmPrinter *Asm, AccelTableBase &Contents,
