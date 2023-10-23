@@ -15,9 +15,9 @@
 #include <vector>
 
 #include "test_macros.h"
-#include "make_test_thread.h"
 
 #ifndef TEST_HAS_NO_THREADS
+#  include "make_test_thread.h"
 #  include <thread>
 #endif
 
