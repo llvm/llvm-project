@@ -2046,13 +2046,13 @@ createDeviceArgumentAccessor(llvm::Argument &arg, llvm::Value *input,
                                : llvm::Type::getInt64Ty(builder.getContext()),
                            ompBuilder.M.getDataLayout().getAllocaAddrSpace());
   llvm::Value *addrAscast =
-      builder.CreatePointerBitCastOrAddrSpaceCast(addr, input->getType());
+      arg.getType()->isPointerTy()
+          ? builder.CreatePointerBitCastOrAddrSpaceCast(addr, input->getType())
+          : addr;
+
   builder.CreateStore(&arg, addrAscast);
-
   builder.restoreIP(codeGenIP);
-
   retVal = builder.CreateLoad(arg.getType(), addrAscast);
-
   return builder.saveIP();
 }
 
