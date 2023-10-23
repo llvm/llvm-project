@@ -48,7 +48,7 @@ end subroutine read_write_section
 module assumed_array_routines
     contains
 !DEVICE-LABEL: func.func @_QMassumed_array_routinesPassumed_shape_array_omp_outline_0(
-!DEVICE-SAME: %[[ARG0:.*]]: !fir.ref<i32>, %[[ARG1:.*]]: !fir.box<!fir.array<?xi32>>) attributes {omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to)>, omp.outline_parent_name = "_QMassumed_array_routinesPassumed_shape_array"} {
+!DEVICE-SAME: %[[ARG0:.*]]: !fir.ref<i32>, %[[ARG1:.*]]: !fir.box<!fir.array<?xi32>>, %[[ARG2:.*]]: !fir.ref<!fir.array<?xi32>>) attributes {omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to)>, omp.outline_parent_name = "_QMassumed_array_routinesPassumed_shape_array"} {
 !DEVICE: %[[C0:.*]] = arith.constant 1 : index
 !DEVICE: %[[C1:.*]] = arith.constant 4 : index
 !DEVICE: %[[C2:.*]] = arith.constant 0 : index
