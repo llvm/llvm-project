@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTEDPROCESSPYTHONINTERFACE_H
-#define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTEDPROCESSPYTHONINTERFACE_H
+#ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPROCESSPYTHONINTERFACE_H
+#define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPROCESSPYTHONINTERFACE_H
 
 #include "lldb/Host/Config.h"
 
 #if LLDB_ENABLE_PYTHON
 
 #include "ScriptedPythonInterface.h"
-#include "lldb/Interpreter/ScriptedProcessInterface.h"
+#include "lldb/Interpreter/Interfaces/ScriptedProcessInterface.h"
 #include <optional>
 
 namespace lldb_private {
@@ -68,4 +68,4 @@ private:
 } // namespace lldb_private
 
 #endif // LLDB_ENABLE_PYTHON
-#endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTEDPROCESSPYTHONINTERFACE_H
+#endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPROCESSPYTHONINTERFACE_H

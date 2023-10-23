@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTEDPLATFORMPYTHONINTERFACE_H
-#define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTEDPLATFORMPYTHONINTERFACE_H
+#ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPLATFORMPYTHONINTERFACE_H
+#define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPLATFORMPYTHONINTERFACE_H
 
 #include "lldb/Host/Config.h"
 
 #if LLDB_ENABLE_PYTHON
 
 #include "ScriptedPythonInterface.h"
-#include "lldb/Interpreter/ScriptedPlatformInterface.h"
+#include "lldb/Interpreter/Interfaces/ScriptedPlatformInterface.h"
 
 namespace lldb_private {
 class ScriptedPlatformPythonInterface : public ScriptedPlatformInterface,
@@ -41,4 +41,4 @@ public:
 } // namespace lldb_private
 
 #endif // LLDB_ENABLE_PYTHON
-#endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTEDPLATFORMPYTHONINTERFACE_H
+#endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPLATFORMPYTHONINTERFACE_H
