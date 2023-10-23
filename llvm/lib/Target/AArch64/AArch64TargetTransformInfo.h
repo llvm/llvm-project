@@ -254,7 +254,8 @@ public:
       return false;
 
     // For fixed vectors, avoid scalarization if using SVE for them.
-    if (isa<FixedVectorType>(DataType) && !ST->useSVEForFixedLengthVectors())
+    if (isa<FixedVectorType>(DataType) && !ST->useSVEForFixedLengthVectors() &&
+        DataType->getPrimitiveSizeInBits() != 128)
       return false; // Fall back to scalarization of masked operations.
 
     return isElementTypeLegalForScalableVector(DataType->getScalarType());
