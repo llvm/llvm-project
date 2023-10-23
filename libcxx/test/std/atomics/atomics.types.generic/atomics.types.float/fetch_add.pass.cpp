@@ -16,14 +16,16 @@
 #include <atomic>
 #include <cassert>
 #include <concepts>
-#include <thread>
 #include <type_traits>
 #include <vector>
 
-#include "make_test_thread.h"
 #include "test_helper.h"
 #include "test_macros.h"
 
+#ifndef TEST_HAS_NO_THREADS
+#  include "make_test_thread.h"
+#  include <thread>
+#endif
 template <class T>
 concept HasVolatileFetchAdd = requires(volatile std::atomic<T>& a, T t) { a.fetch_add(t); };
 

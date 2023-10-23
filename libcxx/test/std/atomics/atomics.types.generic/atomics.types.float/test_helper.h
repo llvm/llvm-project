@@ -12,11 +12,14 @@
 #include <atomic>
 #include <cassert>
 #include <cmath>
-#include <thread>
 #include <vector>
 
 #include "test_macros.h"
 #include "make_test_thread.h"
+
+#ifndef TEST_HAS_NO_THREADS
+#  include <thread>
+#endif
 
 template <class T>
 bool approximately_equals(T x, T y) {

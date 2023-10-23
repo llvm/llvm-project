@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-
+// XFAIL: availability-synchronization_library-missing
 // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
 
 // void wait(T old, memory_order order = memory_order::seq_cst) const volatile noexcept;
@@ -15,12 +15,16 @@
 #include <atomic>
 #include <cassert>
 #include <concepts>
-#include <thread>
 #include <type_traits>
 #include <vector>
 
 #include "test_helper.h"
 #include "test_macros.h"
+
+#ifndef TEST_HAS_NO_THREADS
+#  include "make_test_thread.h"
+#  include <thread>
+#endif
 
 template <class T>
 concept HasVolatileWait = requires(volatile std::atomic<T>& a, T t) { a.wait(T()); };
