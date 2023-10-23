@@ -18,6 +18,12 @@
 #include "min_allocator.h"
 #include "asan_testing.h"
 
+struct HasNonConstCopyConstructor {
+    HasNonConstCopyConstructor() = default;
+    TEST_CONSTEXPR HasNonConstCopyConstructor(HasNonConstCopyConstructor const&) { }
+    HasNonConstCopyConstructor(HasNonConstCopyConstructor&) { assert(false); }
+};
+
 template <class C>
 TEST_CONSTEXPR_CXX20 void
 test(const C& x, const typename C::allocator_type& a)
@@ -55,6 +61,13 @@ TEST_CONSTEXPR_CXX20 bool tests() {
         assert(l2 == l);
         assert(l2.get_allocator() == other_allocator<int>(3));
         assert(l2.empty());
+    }
+    {
+        // Make sure we copy elements of the vector using the right copy constructor.
+        using Alloc = other_allocator<HasNonConstCopyConstructor>;
+        std::vector<HasNonConstCopyConstructor, Alloc> v(5);
+        std::vector<HasNonConstCopyConstructor, Alloc> v2(v, Alloc(42));
+        assert(v2.size() == 5);
     }
 #if TEST_STD_VER >= 11
     {
