@@ -403,7 +403,7 @@ dependencies are required:
 * Sphinx (for the website and the Python API reference)
 * Graphviz (for the 'dot' tool)
 * doxygen (if you wish to build the C++ API reference)
-* Swig (for generating Python bindings)
+* SWIG (for generating Python bindings)
 
 To install the system prerequisites for building the documentation (on Debian/Ubuntu)
 do:
