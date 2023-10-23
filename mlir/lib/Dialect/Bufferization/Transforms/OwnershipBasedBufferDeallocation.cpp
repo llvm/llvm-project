@@ -21,6 +21,7 @@
 #include "mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -856,13 +857,32 @@ FailureOr<Operation *> BufferDeallocation::handleInterface(CallOpInterface op) {
 FailureOr<Operation *>
 BufferDeallocation::handleInterface(MemoryEffectOpInterface op) {
   auto *block = op->getBlock();
-
-  for (auto operand : llvm::make_filter_range(op->getOperands(), isMemref))
-    if (op.getEffectOnValue<MemoryEffects::Free>(operand).has_value())
-      return op->emitError(
-          "memory free side-effect on MemRef value not supported!");
-
   OpBuilder builder = OpBuilder::atBlockBegin(block);
+
+  for (auto operand : llvm::make_filter_range(op->getOperands(), isMemref)) {
+    if (op.getEffectOnValue<MemoryEffects::Free>(operand).has_value()) {
+      if (!op->hasAttr(BufferizationDialect::kManualDeallocation))
+        return op->emitError(
+            "memory free side-effect on MemRef value not supported!");
+
+      // Buffers that were allocated under "manual deallocation" may be
+      // manually deallocated. We insert a runtime assertion to cover certain
+      // cases of invalid IR where an automatically managed buffer allocation
+      // is manually deallocated. This is not a bulletproof check!
+      OpBuilder::InsertionGuard g(builder);
+      builder.setInsertionPoint(op);
+      Ownership ownership = state.getOwnership(operand, block);
+      if (ownership.isUnique()) {
+        Value ownershipInverted = builder.create<arith::XOrIOp>(
+            op.getLoc(), ownership.getIndicator(),
+            buildBoolValue(builder, op.getLoc(), true));
+        builder.create<cf::AssertOp>(
+            op.getLoc(), ownershipInverted,
+            "expected that the block does not have ownership");
+      }
+    }
+  }
+
   for (auto res : llvm::make_filter_range(op->getResults(), isMemref)) {
     auto allocEffect = op.getEffectOnValue<MemoryEffects::Allocate>(res);
     if (allocEffect.has_value()) {
@@ -875,6 +895,15 @@ BufferDeallocation::handleInterface(MemoryEffectOpInterface op) {
         // `memref.alloc`. If we wouldn't set the ownership of the result here,
         // the default ownership population in `populateRemainingOwnerships`
         // would assume aliasing with the MemRef operand.
+        state.resetOwnerships(res, block);
+        state.updateOwnership(res, buildBoolValue(builder, op.getLoc(), false));
+        continue;
+      }
+
+      if (op->hasAttr(BufferizationDialect::kManualDeallocation)) {
+        // This allocation will be deallocated manually. Assign an ownership of
+        // "false", so that it will never be deallocated by the buffer
+        // deallocation pass.
         state.resetOwnerships(res, block);
         state.updateOwnership(res, buildBoolValue(builder, op.getLoc(), false));
         continue;
