@@ -527,7 +527,7 @@ def SparseTensor_SetStorageSpecifierOp : SparseTensor_Op<"storage_specifier.set"
 def SparseTensor_LvlOp : SparseTensor_Op<"lvl", [ConditionallySpeculatable, NoMemoryEffect]>,
     Arguments<(ins AnySparseTensor:$source, Index:$index)>,
     Results<(outs Index:$result)> {
-  let summary = "dimension index operation";
+  let summary = "level index operation";
   let description = [{
     The `sparse_tensor.lvl` behaves similar to `tensor.dim` operation.
     It takes a sparse tensor and a level operand of type `index` and returns
