@@ -9,11 +9,16 @@
 #ifndef TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_STRIDE_TYPES_H
 #define TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_STRIDE_TYPES_H
 
+#include "__concepts/equality_comparable.h"
 #include "__concepts/movable.h"
+#include "__concepts/semiregular.h"
 #include "__iterator/default_sentinel.h"
+#include "__ranges/access.h"
 #include "__ranges/concepts.h"
+#include "__ranges/enable_borrowed_range.h"
 #include "__ranges/enable_view.h"
 #include "__ranges/size.h"
+#include "__ranges/stride_view.h"
 #include "test_iterators.h"
 #include <iterator>
 #include <ranges>
@@ -115,12 +120,12 @@ struct InputIterBase {
   constexpr Derived& operator++() { return static_cast<Derived&>(*this); }
   constexpr Derived operator++(int) { return {}; }
 
-  friend constexpr bool operator==(const InputIterBase&, const InputIterBase&) { return true; }
-  friend constexpr bool operator==(const std::default_sentinel_t&, const InputIterBase&) { return true; }
-  friend constexpr bool operator==(const InputIterBase&, const std::default_sentinel_t&) { return true; }
+  friend constexpr bool operator==(const Derived&, const Derived&) { return true; }
+  friend constexpr bool operator==(const std::default_sentinel_t&, const Derived&) { return true; }
+  friend constexpr bool operator==(const Derived&, const std::default_sentinel_t&) { return true; }
 };
 
-struct NotSimpleViewIter : ForwardIterBase<NotSimpleViewIter> {
+struct NotSimpleViewIter : InputIterBase<NotSimpleViewIter> {
   constexpr NotSimpleViewIter()                                    = default;
   constexpr NotSimpleViewIter(const NotSimpleViewIter&)            = default;
   constexpr NotSimpleViewIter(NotSimpleViewIter&&)                 = default;
@@ -128,7 +133,7 @@ struct NotSimpleViewIter : ForwardIterBase<NotSimpleViewIter> {
   constexpr NotSimpleViewIter& operator=(const NotSimpleViewIter&) = default;
 };
 
-struct NotSimpleViewIterEnd : ForwardIterBase<NotSimpleViewIter> {
+struct NotSimpleViewIterEnd : InputIterBase<NotSimpleViewIterEnd> {
   constexpr NotSimpleViewIterEnd()                                       = default;
   constexpr NotSimpleViewIterEnd(const NotSimpleViewIterEnd&)            = default;
   constexpr NotSimpleViewIterEnd(NotSimpleViewIterEnd&&)                 = default;
@@ -136,60 +141,128 @@ struct NotSimpleViewIterEnd : ForwardIterBase<NotSimpleViewIter> {
   constexpr NotSimpleViewIterEnd& operator=(const NotSimpleViewIterEnd&) = default;
 };
 
-struct ConstNotSimpleViewIter : ForwardIterBase<ConstNotSimpleViewIter> {
-  constexpr ConstNotSimpleViewIter()                              = default;
-  constexpr ConstNotSimpleViewIter(const ConstNotSimpleViewIter&) = default;
-  constexpr ConstNotSimpleViewIter(const NotSimpleViewIter&) {}
-  constexpr ConstNotSimpleViewIter(ConstNotSimpleViewIter&&) = default;
+template <bool Convertible>
+struct NotSimpleViewConstIter : InputIterBase<NotSimpleViewConstIter<Convertible>> {
+  constexpr NotSimpleViewConstIter()                              = default;
+  constexpr NotSimpleViewConstIter(const NotSimpleViewConstIter&) = default;
+  constexpr NotSimpleViewConstIter(const NotSimpleViewIter&)
+    requires Convertible
+  {}
+  constexpr NotSimpleViewConstIter(NotSimpleViewConstIter&&) = default;
 
-  constexpr ConstNotSimpleViewIter(NotSimpleViewIter&&) {}
-  constexpr ConstNotSimpleViewIter(NotSimpleViewIterEnd&&) = delete;
+  constexpr NotSimpleViewConstIter(NotSimpleViewIterEnd&&) = delete;
 
-  constexpr ConstNotSimpleViewIter& operator=(ConstNotSimpleViewIter&&)      = default;
-  constexpr ConstNotSimpleViewIter& operator=(const ConstNotSimpleViewIter&) = default;
+  constexpr NotSimpleViewConstIter& operator=(NotSimpleViewConstIter&&)      = default;
+  constexpr NotSimpleViewConstIter& operator=(const NotSimpleViewConstIter&) = default;
 };
 
-struct NotSimpleView : std::ranges::view_base {
-  constexpr ConstNotSimpleViewIter begin() const { return {}; }
+template <bool Convertible>
+constexpr bool operator==(const NotSimpleViewConstIter<Convertible>&, const NotSimpleViewIterEnd&) {
+  return true;
+}
+template <bool Convertible>
+constexpr bool operator==(const NotSimpleViewIterEnd&, const NotSimpleViewConstIter<Convertible>&) {
+  return true;
+}
+
+constexpr bool operator==(const NotSimpleViewIter&, const NotSimpleViewIterEnd&) { return true; }
+constexpr bool operator==(const NotSimpleViewIterEnd&, const NotSimpleViewIter&) { return true; }
+
+template <bool Convertible = false>
+struct NotSimpleViewDifferentBegin : std::ranges::view_base {
+  constexpr NotSimpleViewConstIter<Convertible> begin() const { return {}; }
   constexpr NotSimpleViewIter begin() { return {}; }
-  constexpr ConstNotSimpleViewIter end() const { return {}; }
+  constexpr NotSimpleViewIterEnd end() const { return {}; }
   constexpr NotSimpleViewIterEnd end() { return {}; }
 };
 
-struct RandomAccessView : std::ranges::view_base {
-  int* begin_;
-  int* end_;
+template <>
+inline constexpr bool std::ranges::enable_borrowed_range<NotSimpleViewDifferentBegin<true>> = true;
+template <>
+inline constexpr bool std::ranges::enable_borrowed_range<NotSimpleViewDifferentBegin<false>> = true;
 
-  constexpr RandomAccessView(int* b, int* e) : begin_(b), end_(e) {}
+/*
+ * XXXArrayView classes for use throughout the stride view tests.
+ */
 
-  constexpr random_access_iterator<int*> begin() { return random_access_iterator<int*>{begin_}; }
-  //constexpr random_access_iterator<const int*> begin() const { return random_access_iterator<const int*>{begin_}; }
-  constexpr sentinel_wrapper<random_access_iterator<int*>> end() {
-    return sentinel_wrapper<random_access_iterator<int*>>{random_access_iterator<int*>{end_}};
+template <typename T>
+struct RandomAccessArrayView : std::ranges::view_base {
+  T* begin_;
+  T* end_;
+
+  constexpr RandomAccessArrayView(T* b, T* e) : begin_(b), end_(e) {}
+
+  constexpr random_access_iterator<T*> begin() { return random_access_iterator<T*>{begin_}; }
+  constexpr random_access_iterator<const T*> begin() const { return random_access_iterator<const T*>{begin_}; }
+  constexpr sentinel_wrapper<random_access_iterator<T*>> end() {
+    return sentinel_wrapper<random_access_iterator<T*>>{random_access_iterator<T*>{end_}};
   }
-  //constexpr sentinel_wrapper<random_access_iterator<const int*>> end() const { return sentinel_wrapper<random_access_iterator<const int*>>{random_access_iterator<const int*>{end_}}; }
+  constexpr sentinel_wrapper<random_access_iterator<const T*>> end() const {
+    return sentinel_wrapper<random_access_iterator<const T*>>{random_access_iterator<const T*>{end_}};
+  }
   constexpr std::size_t size() const { return end_ - begin_; }
 };
+static_assert(std::ranges::view<RandomAccessArrayView<int>>);
+static_assert(std::ranges::random_access_range<RandomAccessArrayView<int>>);
+static_assert(std::copyable<RandomAccessArrayView<int>>);
 
-static_assert(std::ranges::view<RandomAccessView>);
-static_assert(std::ranges::random_access_range<RandomAccessView>);
-static_assert(std::copyable<RandomAccessView>);
+template <typename T>
+struct BidirArrayView : std::ranges::view_base {
+  T* begin_;
+  T* end_;
 
-struct BidirView : std::ranges::view_base {
-  int* begin_;
-  int* end_;
+  constexpr BidirArrayView(T* b, T* e) : begin_(b), end_(e) {}
 
-  constexpr BidirView(int* b, int* e) : begin_(b), end_(e) {}
-
-  constexpr bidirectional_iterator<int*> begin() { return bidirectional_iterator<int*>{begin_}; }
-  constexpr bidirectional_iterator<const int*> begin() const { return bidirectional_iterator<const int*>{begin_}; }
-  constexpr sentinel_wrapper<bidirectional_iterator<int*>> end() {
-    return sentinel_wrapper<bidirectional_iterator<int*>>{bidirectional_iterator<int*>{end_}};
+  constexpr bidirectional_iterator<T*> begin() { return bidirectional_iterator<T*>{begin_}; }
+  constexpr bidirectional_iterator<const T*> begin() const { return bidirectional_iterator<const T*>{begin_}; }
+  constexpr sentinel_wrapper<bidirectional_iterator<T*>> end() {
+    return sentinel_wrapper<bidirectional_iterator<T*>>{bidirectional_iterator<T*>{end_}};
   }
-  constexpr sentinel_wrapper<bidirectional_iterator<const int*>> end() const {
-    return sentinel_wrapper<bidirectional_iterator<const int*>>{bidirectional_iterator<const int*>{end_}};
+  constexpr sentinel_wrapper<bidirectional_iterator<const T*>> end() const {
+    return sentinel_wrapper<bidirectional_iterator<const T*>>{bidirectional_iterator<const T*>{end_}};
   }
 };
+static_assert(std::ranges::view<BidirArrayView<int>>);
+static_assert(std::ranges::bidirectional_range<BidirArrayView<int>>);
+static_assert(std::copyable<BidirArrayView<int>>);
+
+template <typename T>
+struct ForwardArrayView : public std::ranges::view_base {
+  T* begin_;
+  T* end_;
+
+  constexpr ForwardArrayView(T* b, T* e) : begin_(b), end_(e) {}
+
+  constexpr forward_iterator<T*> begin() { return forward_iterator<T*>{begin_}; }
+  constexpr forward_iterator<const T*> begin() const { return forward_iterator<const T*>{begin_}; }
+  constexpr sentinel_wrapper<forward_iterator<T*>> end() {
+    return sentinel_wrapper<forward_iterator<T*>>{forward_iterator<T*>{end_}};
+  }
+  constexpr sentinel_wrapper<forward_iterator<const T*>> end() const {
+    return sentinel_wrapper<forward_iterator<const T*>>{forward_iterator<const T*>{end_}};
+  }
+};
+static_assert(std::ranges::view<ForwardArrayView<int>>);
+static_assert(std::ranges::forward_range<ForwardArrayView<int>>);
+static_assert(std::copyable<ForwardArrayView<int>>);
+
+template <typename T>
+struct InputArrayView : std::ranges::view_base {
+  T* begin_;
+  T* end_;
+
+  constexpr InputArrayView(T* b, T* e) : begin_(b), end_(e) {}
+
+  constexpr cpp20_input_iterator<T*> begin() { return cpp20_input_iterator<T*>{begin_}; }
+  constexpr random_access_iterator<const T*> begin() const { return random_access_iterator<const T*>{begin_}; }
+  constexpr sentinel_wrapper<cpp20_input_iterator<T*>> end() {
+    return sentinel_wrapper<cpp20_input_iterator<T*>>{cpp20_input_iterator<T*>{end_}};
+  }
+  constexpr std::size_t size() const { return end_ - begin_; }
+};
+static_assert(std::ranges::view<InputArrayView<int>>);
+static_assert(std::ranges::input_range<InputArrayView<int>>);
+static_assert(std::copyable<InputArrayView<int>>);
 
 struct ForwardTracedMoveIter : ForwardIterBase<ForwardTracedMoveIter> {
   bool moved = false;
@@ -205,48 +278,6 @@ struct ForwardTracedMoveView : std::ranges::view_base {
   constexpr ForwardTracedMoveIter begin() const { return {}; }
   constexpr ForwardTracedMoveIter end() const { return {}; }
 };
-
-static_assert(std::ranges::view<BidirView>);
-static_assert(std::ranges::bidirectional_range<BidirView>);
-static_assert(std::copyable<BidirView>);
-
-struct ForwardView : public std::ranges::view_base {
-  int* begin_;
-  int* end_;
-
-  constexpr ForwardView(int* b, int* e) : begin_(b), end_(e) {}
-
-  constexpr forward_iterator<int*> begin() { return forward_iterator<int*>{begin_}; }
-  constexpr forward_iterator<const int*> begin() const { return forward_iterator<const int*>{begin_}; }
-  constexpr sentinel_wrapper<forward_iterator<int*>> end() {
-    return sentinel_wrapper<forward_iterator<int*>>{forward_iterator<int*>{end_}};
-  }
-  constexpr sentinel_wrapper<forward_iterator<const int*>> end() const {
-    return sentinel_wrapper<forward_iterator<const int*>>{forward_iterator<const int*>{end_}};
-  }
-};
-
-static_assert(std::ranges::view<ForwardView>);
-static_assert(std::ranges::forward_range<ForwardView>);
-static_assert(std::copyable<ForwardView>);
-
-struct InputView : std::ranges::view_base {
-  int* begin_;
-  int* end_;
-
-  constexpr InputView(int* b, int* e) : begin_(b), end_(e) {}
-
-  constexpr cpp20_input_iterator<int*> begin() { return cpp20_input_iterator<int*>{begin_}; }
-  //constexpr random_access_iterator<const int*> begin() const { return random_access_iterator<const int*>{begin_}; }
-  constexpr sentinel_wrapper<cpp20_input_iterator<int*>> end() {
-    return sentinel_wrapper<cpp20_input_iterator<int*>>{cpp20_input_iterator<int*>{end_}};
-  }
-  constexpr std::size_t size() const { return end_ - begin_; }
-};
-
-static_assert(std::ranges::view<InputView>);
-static_assert(std::ranges::input_range<InputView>);
-static_assert(std::copyable<InputView>);
 
 struct UnsizedBasicRangeIterator : ForwardIterBase<UnsizedBasicRangeIterator> {};
 
