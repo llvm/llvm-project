@@ -666,8 +666,9 @@ SourceManager::createExpansionLocImpl(const ExpansionInfo &Info,
   if (NextLocalOffset + Length + 1 <= NextLocalOffset ||
       NextLocalOffset + Length + 1 > CurrentLoadedOffset) {
     Diag.Report(SourceLocation(), diag::err_sloc_space_too_large);
-    // FIXME: call `noteSLocAddressSpaceUsage` to report details to users.
-    // Currently, the call runs indefinitely, so we would first need to fix it.
+    // FIXME: call `noteSLocAddressSpaceUsage` to report details to users and
+    // use a source location from `Info` to point at an error.
+    // Currently, both cause Clang to run indefinitely, this needs to be fixed.
     // FIXME: return an error instead of crashing. Returning invalid source
     // locations causes compiler to run indefinitely.
     llvm::report_fatal_error("ran out of source locations");
