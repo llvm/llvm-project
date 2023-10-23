@@ -2886,11 +2886,15 @@ static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC,
           !match(Y, m_Specific(ZextHigh)) || !DT.dominates(U, &Or))
         continue;
 
-      // Make sure Low does not overlap with High and most significant bits of
-      // Low aren't shifted out and we can rotate shift LowHigh to HighLow.
-      if (ZextLowShlAmt->ult(HighSize) || ZextLowShlAmt->ugt(Width - LowSize) ||
-          *ZextLowShlAmt + *ZextHighShlAmt != Width)
+      // HighLow is good concat. If sum of two shifts amount equals to Width,
+      // LowHigh must also be a good concat.
+      if (*ZextLowShlAmt + *ZextHighShlAmt != Width)
         continue;
+
+      // Low must not overlap with High and most significant bits of Low must
+      // not be shifted out.
+      assert(ZextLowShlAmt->uge(HighSize) &&
+             ZextLowShlAmt->ule(Width - LowSize) && "Invalid concat");
 
       FShiftArgs = {U, U, ConstantInt::get(Or0->getType(), *ZextHighShlAmt)};
       break;
