@@ -541,6 +541,15 @@ TEST(STLExtrasTest, AppendRange) {
   EXPECT_THAT(Str, ElementsAre('a', 'b', 'c', '\0', 'd', 'e', 'f', '\0'));
 }
 
+TEST(STLExtrasTest, AppendRangeInitializerList) {
+  std::vector<int> V = {1, 2};
+  append_range(V, {3});
+  EXPECT_THAT(V, ElementsAre(1, 2, 3));
+
+  append_range(V, {4, 5});
+  EXPECT_THAT(V, ElementsAre(1, 2, 3, 4, 5));
+}
+
 TEST(STLExtrasTest, ADLTest) {
   some_namespace::some_struct s{{1, 2, 3, 4, 5}, ""};
   some_namespace::some_struct s2{{2, 4, 6, 8, 10}, ""};

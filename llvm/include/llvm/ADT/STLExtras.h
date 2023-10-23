@@ -2029,12 +2029,20 @@ void erase_value(Container &C, ValueType V) {
   C.erase(std::remove(C.begin(), C.end(), V), C.end());
 }
 
-/// Wrapper function to append a range to a container.
+/// Wrapper function to append range `R` to container `C`.
 ///
 /// C.insert(C.end(), R.begin(), R.end());
 template <typename Container, typename Range>
-inline void append_range(Container &C, Range &&R) {
+void append_range(Container &C, Range &&R) {
   C.insert(C.end(), adl_begin(R), adl_end(R));
+}
+
+/// Appends all elements in the initializer list `Values` to the container `C`.
+/// This can be used as a replacement for repeated calls to `.push_back(X)`.
+/// Note that all values passed in the initializer list are copied.
+template <typename Container, typename T>
+void append_range(Container &C, std::initializer_list<T> Values) {
+  append_range<Container, std::initializer_list<T>>(C, std::move(Values));
 }
 
 /// Given a sequence container Cont, replace the range [ContIt, ContEnd) with
