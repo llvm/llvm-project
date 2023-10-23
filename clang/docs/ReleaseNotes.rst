@@ -356,6 +356,30 @@ Improvements to Clang's diagnostics
   nonportable construct that has different semantics from a constant-sized
   array. (`#62836 <https://github.com/llvm/llvm-project/issues/62836>`_)
 
+- Clang changed the order in which it displays candidate functions on overloading failures.
+  Previously, Clang used definition of ordering from the C++ Standard. The order defined in
+  the Standard is partial and is not suited for sorting. Instead, Clang now uses a strict
+  order that still attempts to push more relevant functions to the top by comparing their
+  corresponding conversions. In some cases, this results in better order. E.g., for the
+  following code
+
+  .. code-block:: cpp
+      struct Foo {
+        operator int();
+        operator const char*();
+      };
+
+      void test() { Foo() - Foo(); }
+
+  Clang now produces a list with two most relevant builtin operators at the top,
+  i.e. ``operator-(int, int)`` and ``operator-(const char*, const char*)``.
+  Previously ``operator-(const char*, const char*)`` was the first element,
+  but ``operator-(int, int)`` was only the 13th element in the output.
+  However, new implementation does not take into account some aspects of
+  C++ semantics, e.g. which function template is more specialized. This
+  can sometimes lead to worse ordering.
+
+
 Bug Fixes in This Version
 -------------------------
 - Fixed an issue where a class template specialization whose declaration is
