@@ -745,7 +745,7 @@ void VPWidenRecipe::execute(VPTransformState &State) {
   // generated values.
   VPTypeAnalysis A(State.Builder.GetInsertBlock()->getContext());
   for (unsigned Part = 0; Part < State.UF; ++Part) {
-    assert(VectorType::get(A.inferType(getVPSingleValue()), State.VF) ==
+    assert(VectorType::get(A.inferScalarType(getVPSingleValue()), State.VF) ==
            State.get(this, Part)->getType());
   }
 #endif

@@ -2083,7 +2083,7 @@ public:
 
   /// Returns the scalar type of the induction.
   Type *getScalarType() const {
-    return getOperand(0)->getLiveInIRValue()->getType();
+    return getStartValue()->getLiveInIRValue()->getType();
   }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
@@ -2151,7 +2151,7 @@ public:
 #endif
 
   /// Returns the scalar type of the induction.
-  Type *getScalarType() const {
+  const Type *getScalarType() const {
     return cast<VPCanonicalIVPHIRecipe>(getOperand(0)->getDefiningRecipe())
         ->getScalarType();
   }

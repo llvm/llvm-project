@@ -29,26 +29,28 @@ class VPReplicateRecipe;
 class Type;
 
 /// An analysis for type-inference for VPValues.
+/// It infers the scalar type for a given VPValue by bottom-up traversing
+/// through defining recipes until root nodes with known types are reached (e.g.
+/// live-ins or memory recipes). The types are then propagated top down through
+/// operations.
 class VPTypeAnalysis {
   DenseMap<const VPValue *, Type *> CachedTypes;
   LLVMContext &Ctx;
 
-  Type *inferType(const VPBlendRecipe *R);
-  Type *inferType(const VPInstruction *R);
-  Type *inferType(const VPInterleaveRecipe *R);
-  Type *inferType(const VPWidenCallRecipe *R);
-  Type *inferType(const VPReductionPHIRecipe *R);
-  Type *inferType(const VPWidenRecipe *R);
-  Type *inferType(const VPWidenIntOrFpInductionRecipe *R);
-  Type *inferType(const VPWidenMemoryInstructionRecipe *R);
-  Type *inferType(const VPWidenSelectRecipe *R);
-  Type *inferType(const VPReplicateRecipe *R);
+  Type *inferScalarType(const VPBlendRecipe *R);
+  Type *inferScalarType(const VPInstruction *R);
+  Type *inferScalarType(const VPWidenCallRecipe *R);
+  Type *inferScalarType(const VPWidenRecipe *R);
+  Type *inferScalarType(const VPWidenIntOrFpInductionRecipe *R);
+  Type *inferScalarType(const VPWidenMemoryInstructionRecipe *R);
+  Type *inferScalarType(const VPWidenSelectRecipe *R);
+  Type *inferScalarType(const VPReplicateRecipe *R);
 
 public:
   VPTypeAnalysis(LLVMContext &Ctx) : Ctx(Ctx) {}
 
   /// Infer the type of \p V. Returns the scalar type of \p V.
-  Type *inferType(const VPValue *V);
+  Type *inferScalarType(const VPValue *V);
 };
 
 } // end namespace llvm
