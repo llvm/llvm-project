@@ -38,8 +38,10 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 #include <algorithm>
+#include <cstddef>
 #include <cstdlib>
 #include <optional>
 
@@ -960,18 +962,13 @@ static bool shouldAddReversedEqEq(Sema &S, SourceLocation OpLoc,
     return true;
   }
   // Otherwise the search scope is the namespace scope of which F is a member.
-  LookupResult NonMembers(S, NotEqOp, OpLoc,
-                          Sema::LookupNameKind::LookupOperatorName);
-  S.LookupName(NonMembers,
-               S.getScopeForContext(EqFD->getEnclosingNamespaceContext()));
-  NonMembers.suppressAccessDiagnostics();
-  for (NamedDecl *Op : NonMembers) {
-    auto *FD = Op->getAsFunction();
-    if(auto* UD = dyn_cast<UsingShadowDecl>(Op))
-      FD = UD->getUnderlyingDecl()->getAsFunction();
-    if (FunctionsCorrespond(S.Context, EqFD, FD) &&
-        declaresSameEntity(cast<Decl>(EqFD->getDeclContext()),
-                           cast<Decl>(Op->getDeclContext())))
+  for (NamedDecl *Op : EqFD->getEnclosingNamespaceContext()->lookup(NotEqOp)) {
+    auto *NotEqFD = Op->getAsFunction();
+    if (auto *UD = dyn_cast<UsingShadowDecl>(Op))
+      NotEqFD = UD->getUnderlyingDecl()->getAsFunction();
+    if (FunctionsCorrespond(S.Context, EqFD, NotEqFD) && S.isVisible(NotEqFD) &&
+        declaresSameEntity(cast<Decl>(EqFD->getEnclosingNamespaceContext()),
+                           cast<Decl>(Op->getLexicalDeclContext())))
       return false;
   }
   return true;
@@ -7688,7 +7685,7 @@ bool Sema::CheckNonDependentConversions(
     QualType ParamType = ParamTypes[I + Offset];
     if (!ParamType->isDependentType()) {
       unsigned ConvIdx = PO == OverloadCandidateParamOrder::Reversed
-                             ? Args.size() - 1 - (ThisConversions + I)
+                             ? 0
                              : (ThisConversions + I);
       Conversions[ConvIdx]
         = TryCopyInitialization(*this, Args[I], ParamType,
@@ -10085,19 +10082,11 @@ getImplicitObjectParamType(ASTContext &Context, const FunctionDecl *F) {
   return M->getFunctionObjectParameterReferenceType();
 }
 
-// As a Clang extension, allow ambiguity among F1 and F2 if they represent
-// represent the same entity.
-static bool allowAmbiguity(ASTContext &Context, const FunctionDecl *F1,
-                           const FunctionDecl *F2) {
+static bool haveSameParameterTypes(ASTContext &Context, const FunctionDecl *F1,
+                                   const FunctionDecl *F2) {
   if (declaresSameEntity(F1, F2))
     return true;
-  if (F1->isTemplateInstantiation() && F2->isTemplateInstantiation() &&
-      declaresSameEntity(F1->getPrimaryTemplate(), F2->getPrimaryTemplate())) {
-    return true;
-  }
-  // TODO: It is not clear whether comparing parameters is necessary (i.e.
-  // different functions with same params). Consider removing this (as no test
-  // fail w/o it).
+
   auto NextParam = [&](const FunctionDecl *F, unsigned &I, bool First) {
     if (First) {
       if (std::optional<QualType> T = getImplicitObjectParamType(Context, F))
@@ -10282,14 +10271,14 @@ bool clang::isBetterOverloadCandidate(
     case ImplicitConversionSequence::Worse:
       if (Cand1.Function && Cand2.Function &&
           Cand1.isReversed() != Cand2.isReversed() &&
-          allowAmbiguity(S.Context, Cand1.Function, Cand2.Function)) {
+          haveSameParameterTypes(S.Context, Cand1.Function, Cand2.Function)) {
         // Work around large-scale breakage caused by considering reversed
         // forms of operator== in C++20:
         //
-        // When comparing a function against a reversed function, if we have a
-        // better conversion for one argument and a worse conversion for the
-        // other, the implicit conversion sequences are treated as being equally
-        // good.
+        // When comparing a function against a reversed function with the same
+        // parameter types, if we have a better conversion for one argument and
+        // a worse conversion for the other, the implicit conversion sequences
+        // are treated as being equally good.
         //
         // This prevents a comparison function from being considered ambiguous
         // with a reversed form that is written in the same way.
@@ -12017,6 +12006,7 @@ static unsigned RankDeductionFailure(const DeductionFailureInfo &DFI) {
 }
 
 namespace {
+
 struct CompareOverloadCandidatesForDisplay {
   Sema &S;
   SourceLocation Loc;
@@ -12054,13 +12044,9 @@ struct CompareOverloadCandidatesForDisplay {
     if (L->Viable) {
       if (!R->Viable) return true;
 
-      // TODO: introduce a tri-valued comparison for overload
-      // candidates.  Would be more worthwhile if we had a sort
-      // that could exploit it.
-      if (isBetterOverloadCandidate(S, *L, *R, SourceLocation(), CSK))
-        return true;
-      if (isBetterOverloadCandidate(S, *R, *L, SourceLocation(), CSK))
-        return false;
+      if (int Ord = CompareConversions(*L, *R))
+        return Ord < 0;
+      // Use other tie breakers.
     } else if (R->Viable)
       return false;
 
@@ -12112,30 +12098,8 @@ struct CompareOverloadCandidatesForDisplay {
         }
 
         // If there's any ordering between the defined conversions...
-        // FIXME: this might not be transitive.
-        assert(L->Conversions.size() == R->Conversions.size());
-
-        int leftBetter = 0;
-        unsigned I = (L->IgnoreObjectArgument || R->IgnoreObjectArgument);
-        for (unsigned E = L->Conversions.size(); I != E; ++I) {
-          switch (CompareImplicitConversionSequences(S, Loc,
-                                                     L->Conversions[I],
-                                                     R->Conversions[I])) {
-          case ImplicitConversionSequence::Better:
-            leftBetter++;
-            break;
-
-          case ImplicitConversionSequence::Worse:
-            leftBetter--;
-            break;
-
-          case ImplicitConversionSequence::Indistinguishable:
-            break;
-          }
-        }
-        if (leftBetter > 0) return true;
-        if (leftBetter < 0) return false;
-
+        if (int Ord = CompareConversions(*L, *R))
+          return Ord < 0;
       } else if (RFailureKind == ovl_fail_bad_conversion)
         return false;
 
@@ -12157,10 +12121,66 @@ struct CompareOverloadCandidatesForDisplay {
     SourceLocation RLoc = GetLocationForCandidate(R);
 
     // Put candidates without locations (e.g. builtins) at the end.
-    if (LLoc.isInvalid()) return false;
-    if (RLoc.isInvalid()) return true;
+    if (LLoc.isValid() && RLoc.isValid())
+      return S.SourceMgr.isBeforeInTranslationUnit(LLoc, RLoc);
+    if (LLoc.isValid() && !RLoc.isValid())
+      return true;
+    if (RLoc.isValid() && !LLoc.isValid())
+      return false;
+    assert(!LLoc.isValid() && !RLoc.isValid());
+    // For builtins and other functions without locations, fallback to the order
+    // in which they were added into the candidate set.
+    return L < R;
+  }
 
-    return S.SourceMgr.isBeforeInTranslationUnit(LLoc, RLoc);
+private:
+  struct ConversionSignals {
+    unsigned KindRank = 0;
+    ImplicitConversionRank Rank = ICR_Exact_Match;
+
+    static ConversionSignals ForSequence(ImplicitConversionSequence &Seq) {
+      ConversionSignals Sig;
+      Sig.KindRank = Seq.getKindRank();
+      if (Seq.isStandard())
+        Sig.Rank = Seq.Standard.getRank();
+      else if (Seq.isUserDefined())
+        Sig.Rank = Seq.UserDefined.After.getRank();
+      // We intend StaticObjectArgumentConversion to compare the same as
+      // StandardConversion with ICR_ExactMatch rank.
+      return Sig;
+    }
+
+    static ConversionSignals ForObjectArgument() {
+      // We intend StaticObjectArgumentConversion to compare the same as
+      // StandardConversion with ICR_ExactMatch rank. Default give us that.
+      return {};
+    }
+  };
+
+  // Returns -1 if conversions in L are considered better.
+  //          0 if they are considered indistinguishable.
+  //          1 if conversions in R are better.
+  int CompareConversions(const OverloadCandidate &L,
+                         const OverloadCandidate &R) {
+    // We cannot use `isBetterOverloadCandidate` because it is defined
+    // according to the C++ standard and provides a partial order, but we need
+    // a total order as this function is used in sort.
+    assert(L.Conversions.size() == R.Conversions.size());
+    for (unsigned I = 0, N = L.Conversions.size(); I != N; ++I) {
+      auto LS = L.IgnoreObjectArgument && I == 0
+                    ? ConversionSignals::ForObjectArgument()
+                    : ConversionSignals::ForSequence(L.Conversions[I]);
+      auto RS = R.IgnoreObjectArgument
+                    ? ConversionSignals::ForObjectArgument()
+                    : ConversionSignals::ForSequence(R.Conversions[I]);
+      if (std::tie(LS.KindRank, LS.Rank) != std::tie(RS.KindRank, RS.Rank))
+        return std::tie(LS.KindRank, LS.Rank) < std::tie(RS.KindRank, RS.Rank)
+                   ? -1
+                   : 1;
+    }
+    // FIXME: find a way to compare templates for being more or less
+    // specialized that provides a strict weak ordering.
+    return 0;
   }
 };
 }
@@ -14429,7 +14449,7 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
           llvm::SmallVector<FunctionDecl*, 4> AmbiguousWith;
           for (OverloadCandidate &Cand : CandidateSet) {
             if (Cand.Viable && Cand.Function && Cand.isReversed() &&
-                allowAmbiguity(Context, Cand.Function, FnDecl)) {
+                haveSameParameterTypes(Context, Cand.Function, FnDecl)) {
               for (unsigned ArgIdx = 0; ArgIdx < 2; ++ArgIdx) {
                 if (CompareImplicitConversionSequences(
                         *this, OpLoc, Cand.Conversions[ArgIdx],

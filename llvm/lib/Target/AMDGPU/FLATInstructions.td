@@ -871,12 +871,8 @@ defm GLOBAL_ATOMIC_DEC_X2 : FLAT_Global_Atomic_Pseudo <"global_atomic_dec_x2",
                               VReg_64, i64>;
 
 let SubtargetPredicate = HasGFX10_BEncoding in {
-  defm GLOBAL_ATOMIC_CSUB : FLAT_Global_Atomic_Pseudo_RTN <"global_atomic_csub",
+  defm GLOBAL_ATOMIC_CSUB : FLAT_Global_Atomic_Pseudo <"global_atomic_csub",
                                 VGPR_32, i32>;
-
-  let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
-    defm GLOBAL_ATOMIC_CSUB : FLAT_Global_Atomic_Pseudo_NO_RTN <"global_atomic_csub",
-                                  VGPR_32, i32>;
 }
 
 defm GLOBAL_LOAD_LDS_UBYTE  : FLAT_Global_Load_LDS_Pseudo <"global_load_lds_ubyte">;
