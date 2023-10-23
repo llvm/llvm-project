@@ -493,41 +493,38 @@ define void @transpose_s16_8x8(ptr nocapture noundef %0, ptr nocapture noundef %
 define void @transpose_s16_8x8_(ptr nocapture noundef %0) {
 ; CHECK-LABEL: transpose_s16_8x8_:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ldp q2, q3, [x0, #32]
 ; CHECK-NEXT:    ldp q4, q5, [x0, #64]
-; CHECK-NEXT:    mov x9, x0
-; CHECK-NEXT:    ldr q0, [x8, #16]!
-; CHECK-NEXT:    mov x10, x0
-; CHECK-NEXT:    ldr q3, [x0]
 ; CHECK-NEXT:    ldp q6, q7, [x0, #96]
+; CHECK-NEXT:    trn1 v16.8h, v0.8h, v1.8h
+; CHECK-NEXT:    trn2 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    trn1 v1.8h, v2.8h, v3.8h
+; CHECK-NEXT:    trn2 v2.8h, v2.8h, v3.8h
 ; CHECK-NEXT:    trn1 v17.8h, v4.8h, v5.8h
-; CHECK-NEXT:    ldr q1, [x9, #32]!
-; CHECK-NEXT:    trn1 v16.8h, v3.8h, v0.8h
-; CHECK-NEXT:    ldr q2, [x10, #48]!
-; CHECK-NEXT:    trn2 v4.8h, v4.8h, v5.8h
-; CHECK-NEXT:    trn1 v19.8h, v6.8h, v7.8h
-; CHECK-NEXT:    trn2 v0.8h, v3.8h, v0.8h
-; CHECK-NEXT:    trn2 v3.8h, v6.8h, v7.8h
-; CHECK-NEXT:    trn1 v18.8h, v1.8h, v2.8h
-; CHECK-NEXT:    trn2 v1.8h, v1.8h, v2.8h
+; CHECK-NEXT:    trn2 v3.8h, v4.8h, v5.8h
+; CHECK-NEXT:    trn1 v18.8h, v6.8h, v7.8h
+; CHECK-NEXT:    trn2 v4.8h, v6.8h, v7.8h
 ; CHECK-NEXT:    trn1 v5.4s, v16.4s, v17.4s
+; CHECK-NEXT:    trn1 v7.4s, v0.4s, v3.4s
 ; CHECK-NEXT:    trn2 v16.4s, v16.4s, v17.4s
-; CHECK-NEXT:    trn1 v20.4s, v0.4s, v4.4s
-; CHECK-NEXT:    trn1 v6.4s, v18.4s, v19.4s
-; CHECK-NEXT:    trn2 v17.4s, v18.4s, v19.4s
-; CHECK-NEXT:    trn2 v18.4s, v0.4s, v4.4s
-; CHECK-NEXT:    trn1 v21.4s, v1.4s, v3.4s
-; CHECK-NEXT:    trn2 v19.4s, v1.4s, v3.4s
-; CHECK-NEXT:    zip2 v0.4s, v5.4s, v6.4s
-; CHECK-NEXT:    zip2 v2.4s, v16.4s, v17.4s
-; CHECK-NEXT:    st2 { v5.2s, v6.2s }, [x0]
-; CHECK-NEXT:    zip2 v1.4s, v20.4s, v21.4s
-; CHECK-NEXT:    zip2 v3.4s, v18.4s, v19.4s
-; CHECK-NEXT:    st2 { v20.2s, v21.2s }, [x8]
-; CHECK-NEXT:    st2 { v16.2s, v17.2s }, [x9]
-; CHECK-NEXT:    st2 { v18.2s, v19.2s }, [x10]
-; CHECK-NEXT:    stp q0, q1, [x0, #64]
-; CHECK-NEXT:    stp q2, q3, [x0, #96]
+; CHECK-NEXT:    trn1 v6.4s, v1.4s, v18.4s
+; CHECK-NEXT:    trn1 v19.4s, v2.4s, v4.4s
+; CHECK-NEXT:    trn2 v1.4s, v1.4s, v18.4s
+; CHECK-NEXT:    trn2 v0.4s, v0.4s, v3.4s
+; CHECK-NEXT:    trn2 v2.4s, v2.4s, v4.4s
+; CHECK-NEXT:    zip1 v3.4s, v5.4s, v6.4s
+; CHECK-NEXT:    zip1 v4.4s, v7.4s, v19.4s
+; CHECK-NEXT:    zip1 v17.4s, v16.4s, v1.4s
+; CHECK-NEXT:    zip1 v18.4s, v0.4s, v2.4s
+; CHECK-NEXT:    zip2 v5.4s, v5.4s, v6.4s
+; CHECK-NEXT:    zip2 v1.4s, v16.4s, v1.4s
+; CHECK-NEXT:    zip2 v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    stp q3, q4, [x0]
+; CHECK-NEXT:    zip2 v3.4s, v7.4s, v19.4s
+; CHECK-NEXT:    stp q17, q18, [x0, #32]
+; CHECK-NEXT:    stp q1, q0, [x0, #96]
+; CHECK-NEXT:    stp q5, q3, [x0, #64]
 ; CHECK-NEXT:    ret
   %2 = load <8 x i16>, ptr %0, align 16
   %3 = getelementptr inbounds <8 x i16>, ptr %0, i64 1
