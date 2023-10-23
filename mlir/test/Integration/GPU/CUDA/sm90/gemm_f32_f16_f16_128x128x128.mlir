@@ -3,6 +3,7 @@
 // RUN:  | mlir-cpu-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \
+// RUN:   --shared-libs=%mlir_c_runner_utils \
 // RUN:   --entry-point-result=void \
 // RUN:  | FileCheck %s
 
@@ -244,8 +245,7 @@ func.func @main() {
         %i32 = arith.index_cast %i : index to i32
         %j32 = arith.index_cast %j : index to i32
         %coord1 = vector.insert %i32, %coor[0] : i32 into vector<2xi32>
-        %coord2 = vector.insert %j32, %coord1[1] : i32 into vector<2xi32>
-        // vector.print %coord2 : vector<2xi32>
+        %coord2 = vector.insert %j32, %coord1[1] : i32 into vector<2xi32>        
         %ec3 = arith.addi %ec2, %ic1 : i32
         scf.yield %ec3, %cc2 : i32, i32
       } else {
