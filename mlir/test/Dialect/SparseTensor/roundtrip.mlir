@@ -669,3 +669,24 @@ func.func @sparse_crd_translate(%arg0: index, %arg1: index) -> (index, index, in
   %l0, %l1, %l2, %l3 = sparse_tensor.crd_translate dim_to_lvl [%arg0, %arg1] as #BSR : index, index, index, index
   return  %l0, %l1, %l2, %l3 : index, index, index, index
 }
+
+// -----
+
+#BSR = #sparse_tensor.encoding<{
+  map = ( i, j ) ->
+  ( i floordiv 2 : dense,
+    j floordiv 3 : compressed,
+    i mod 2      : dense,
+    j mod 3      : dense
+  )
+}>
+
+// CHECK-LABEL:   func.func @sparse_lvl(
+// CHECK-SAME:      %[[VAL_0:.*]]: index,
+// CHECK-SAME:      %[[VAL_1:.*]]: tensor
+// CHECK:           %[[VAL_2:.*]] = sparse_tensor.lvl %[[VAL_1]], %[[VAL_0]]
+// CHECK:           return %[[VAL_2]]
+func.func @sparse_lvl(%arg0: index, %t : tensor<?x?xi32, #BSR>) -> index {
+  %l0 = sparse_tensor.lvl %t, %arg0 : tensor<?x?xi32, #BSR>
+  return  %l0 : index
+}
