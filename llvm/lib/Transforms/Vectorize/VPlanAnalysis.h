@@ -28,7 +28,7 @@ struct VPWidenSelectRecipe;
 class VPReplicateRecipe;
 class Type;
 
-/// An analysis for type-inferrence for VPValues.
+/// An analysis for type-inference for VPValues.
 class VPTypeAnalysis {
   DenseMap<const VPValue *, Type *> CachedTypes;
   LLVMContext &Ctx;
