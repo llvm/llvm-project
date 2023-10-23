@@ -262,7 +262,8 @@ void state::enterDataEnvironment(IdentTy *Ident) {
       memory::allocGlobal(sizeof(ThreadStateTy), "ThreadStates alloc"));
   uintptr_t *ThreadStatesBitsPtr = reinterpret_cast<uintptr_t *>(&ThreadStates);
   if (!atomic::load(ThreadStatesBitsPtr, atomic::seq_cst)) {
-    uint32_t Bytes = sizeof(ThreadStates[0]) * mapping::getMaxTeamThreads();
+    uint32_t Bytes =
+        sizeof(ThreadStates[0]) * mapping::getNumberOfThreadsInBlock();
     void *ThreadStatesPtr =
         memory::allocGlobal(Bytes, "Thread state array allocation");
     memset(ThreadStatesPtr, 0, Bytes);
