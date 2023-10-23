@@ -816,9 +816,17 @@ bool ByteCodeExprGen<Emitter>::VisitArrayInitLoopExpr(
     const ArrayInitLoopExpr *E) {
   assert(Initializing);
   assert(!DiscardResult);
+
+  // Make sure the common expression is evaluated, and the result is cached in
+  // the current scope.
+  {
+    OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/true,
+                               /*NewInitializing=*/false);
+    this->VisitOpaqueValueExpr(E->getCommonExpr());
+  }
+
   // TODO: This compiles to quite a lot of bytecode if the array is larger.
   //   Investigate compiling this to a loop.
-
   const Expr *SubExpr = E->getSubExpr();
   size_t Size = E->getArraySize().getZExtValue();
   std::optional<PrimType> ElemT = classify(SubExpr->getType());
@@ -873,9 +881,11 @@ bool ByteCodeExprGen<Emitter>::VisitOpaqueValueExpr(const OpaqueValueExpr *E) {
     return false;
 
   // Here the local variable is created but the value is removed from the stack,
-  // so we put it back, because the caller might need it.
-  if (!this->emitGetLocal(SubExprT, *LocalIndex, E))
-    return false;
+  // so we put it back if the caller needs it.
+  if (!DiscardResult) {
+    if (!this->emitGetLocal(SubExprT, *LocalIndex, E))
+      return false;
+  }
 
   // FIXME: Ideally the cached value should be cleaned up later.
   OpaqueExprs.insert({E, *LocalIndex});
