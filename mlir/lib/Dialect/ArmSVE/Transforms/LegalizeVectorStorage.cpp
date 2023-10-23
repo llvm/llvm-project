@@ -82,15 +82,13 @@ struct RelaxScalableVectorAllocaAlignment
 
   LogicalResult matchAndRewrite(memref::AllocaOp allocaOp,
                                 PatternRewriter &rewriter) const override {
-    auto elementType = allocaOp.getType().getElementType();
-    auto vectorType = llvm::dyn_cast<VectorType>(elementType);
+    auto memrefElementType = allocaOp.getType().getElementType();
+    auto vectorType = llvm::dyn_cast<VectorType>(memrefElementType);
     if (!vectorType || !vectorType.isScalable() || allocaOp.getAlignment())
       return failure();
 
-    unsigned elementByteSize =
-        vectorType.getElementType().getIntOrFloatBitWidth() / 8;
-
-    unsigned aligment = std::max(1u, elementByteSize);
+    // Set alignment based on the defaults for SVE vectors and predicates.
+    unsigned aligment = vectorType.getElementType().isInteger(1) ? 2 : 16;
     allocaOp.setAlignment(aligment);
 
     return success();
