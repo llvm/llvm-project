@@ -152,22 +152,15 @@ define i1 @length2_eq_nobuiltin_attr(ptr %X, ptr %Y) nounwind {
 define i32 @length3(ptr %X, ptr %Y) nounwind {
 ; CHECK-LABEL: length3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    ldrh w9, [x1]
+; CHECK-NEXT:    ldrb w8, [x0, #2]
+; CHECK-NEXT:    ldrh w9, [x0]
+; CHECK-NEXT:    ldrb w10, [x1, #2]
+; CHECK-NEXT:    ldrh w11, [x1]
+; CHECK-NEXT:    orr w8, w9, w8, lsl #16
+; CHECK-NEXT:    orr w9, w11, w10, lsl #16
 ; CHECK-NEXT:    rev w8, w8
 ; CHECK-NEXT:    rev w9, w9
-; CHECK-NEXT:    lsr w8, w8, #16
-; CHECK-NEXT:    lsr w9, w9, #16
-; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    b.ne .LBB11_2
-; CHECK-NEXT:  // %bb.1: // %loadbb1
-; CHECK-NEXT:    ldrb w8, [x0, #2]
-; CHECK-NEXT:    ldrb w9, [x1, #2]
 ; CHECK-NEXT:    sub w0, w8, w9
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB11_2: // %res_block
-; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    cneg w0, w8, hs
 ; CHECK-NEXT:    ret
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 3) nounwind
   ret i32 %m
@@ -272,20 +265,18 @@ define i1 @length4_eq_const(ptr %X) nounwind {
 define i32 @length5(ptr %X, ptr %Y) nounwind {
 ; CHECK-LABEL: length5:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    ldr w9, [x1]
-; CHECK-NEXT:    rev w8, w8
-; CHECK-NEXT:    rev w9, w9
-; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    b.ne .LBB18_2
-; CHECK-NEXT:  // %bb.1: // %loadbb1
 ; CHECK-NEXT:    ldrb w8, [x0, #4]
-; CHECK-NEXT:    ldrb w9, [x1, #4]
+; CHECK-NEXT:    ldr w9, [x0]
+; CHECK-NEXT:    ldrb w10, [x1, #4]
+; CHECK-NEXT:    ldr w11, [x1]
+; CHECK-NEXT:    orr x8, x9, x8, lsl #32
+; CHECK-NEXT:    orr x9, x11, x10, lsl #32
+; CHECK-NEXT:    rev x8, x8
+; CHECK-NEXT:    rev x9, x9
+; CHECK-NEXT:    cmp x8, x9
+; CHECK-NEXT:    cset w8, hi
+; CHECK-NEXT:    cset w9, lo
 ; CHECK-NEXT:    sub w0, w8, w9
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB18_2: // %res_block
-; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    cneg w0, w8, hs
 ; CHECK-NEXT:    ret
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 5) nounwind
   ret i32 %m
@@ -310,21 +301,18 @@ define i1 @length5_eq(ptr %X, ptr %Y) nounwind {
 define i1 @length5_lt(ptr %X, ptr %Y) nounwind {
 ; CHECK-LABEL: length5_lt:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    ldr w9, [x1]
-; CHECK-NEXT:    rev w8, w8
-; CHECK-NEXT:    rev w9, w9
-; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    b.ne .LBB20_2
-; CHECK-NEXT:  // %bb.1: // %loadbb1
 ; CHECK-NEXT:    ldrb w8, [x0, #4]
-; CHECK-NEXT:    ldrb w9, [x1, #4]
+; CHECK-NEXT:    ldr w9, [x0]
+; CHECK-NEXT:    ldrb w10, [x1, #4]
+; CHECK-NEXT:    ldr w11, [x1]
+; CHECK-NEXT:    orr x8, x9, x8, lsl #32
+; CHECK-NEXT:    orr x9, x11, x10, lsl #32
+; CHECK-NEXT:    rev x8, x8
+; CHECK-NEXT:    rev x9, x9
+; CHECK-NEXT:    cmp x8, x9
+; CHECK-NEXT:    cset w8, hi
+; CHECK-NEXT:    cset w9, lo
 ; CHECK-NEXT:    sub w8, w8, w9
-; CHECK-NEXT:    lsr w0, w8, #31
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB20_2: // %res_block
-; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    cneg w8, w8, hs
 ; CHECK-NEXT:    lsr w0, w8, #31
 ; CHECK-NEXT:    ret
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 5) nounwind
@@ -335,28 +323,18 @@ define i1 @length5_lt(ptr %X, ptr %Y) nounwind {
 define i32 @length6(ptr %X, ptr %Y) nounwind {
 ; CHECK-LABEL: length6:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    ldr w9, [x1]
-; CHECK-NEXT:    rev w8, w8
-; CHECK-NEXT:    rev w9, w9
-; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    b.ne .LBB21_3
-; CHECK-NEXT:  // %bb.1: // %loadbb1
 ; CHECK-NEXT:    ldrh w8, [x0, #4]
-; CHECK-NEXT:    ldrh w9, [x1, #4]
-; CHECK-NEXT:    rev w8, w8
-; CHECK-NEXT:    rev w9, w9
-; CHECK-NEXT:    lsr w8, w8, #16
-; CHECK-NEXT:    lsr w9, w9, #16
-; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    b.ne .LBB21_3
-; CHECK-NEXT:  // %bb.2:
-; CHECK-NEXT:    mov w0, wzr
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB21_3: // %res_block
-; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    cneg w0, w8, hs
+; CHECK-NEXT:    ldr w9, [x0]
+; CHECK-NEXT:    ldrh w10, [x1, #4]
+; CHECK-NEXT:    ldr w11, [x1]
+; CHECK-NEXT:    orr x8, x9, x8, lsl #32
+; CHECK-NEXT:    orr x9, x11, x10, lsl #32
+; CHECK-NEXT:    rev x8, x8
+; CHECK-NEXT:    rev x9, x9
+; CHECK-NEXT:    cmp x8, x9
+; CHECK-NEXT:    cset w8, hi
+; CHECK-NEXT:    cset w9, lo
+; CHECK-NEXT:    sub w0, w8, w9
 ; CHECK-NEXT:    ret
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 6) nounwind
   ret i32 %m
