@@ -39,16 +39,13 @@ Type *Type::getPrimitiveType(LLVMContext &C, TypeID IDNumber) {
   case HalfTyID      : return getHalfTy(C);
   case BFloatTyID    : return getBFloatTy(C);
   case FloatTyID     : return getFloatTy(C);
-  case Decimal32TyID:
-    return getDecimal32Ty(C);
+  case Decimal32TyID:  return getDecimal32Ty(C);
   case DoubleTyID    : return getDoubleTy(C);
-  case Decimal64TyID:
-    return getDecimal64Ty(C);
+  case Decimal64TyID:  return getDecimal64Ty(C);
   case X86_FP80TyID  : return getX86_FP80Ty(C);
   case FP128TyID     : return getFP128Ty(C);
   case PPC_FP128TyID : return getPPC_FP128Ty(C);
-  case Decimal128TyID:
-    return getDecimal128Ty(C);
+  case Decimal128TyID: return getDecimal128Ty(C);
   case LabelTyID     : return getLabelTy(C);
   case MetadataTyID  : return getMetadataTy(C);
   case X86_MMXTyID   : return getX86_MMXTy(C);
@@ -216,16 +213,12 @@ int Type::getFPMantissaWidth() const {
   if (getTypeID() == HalfTyID) return 11;
   if (getTypeID() == BFloatTyID) return 8;
   if (getTypeID() == FloatTyID) return 24;
-  // TODO - Does this depend on the encoding format used (BID or DPD)?
-  if (getTypeID() == Decimal32TyID) return 20;
   if (getTypeID() == DoubleTyID) return 53;
-  // TODO - Does this depend on the encoding format used (BID or DPD)?
-  if (getTypeID() == Decimal64TyID) return 50;
   if (getTypeID() == X86_FP80TyID) return 64;
   if (getTypeID() == FP128TyID) return 113;
-  // TODO - Does this depend on the encoding format used (BID or DPD)?
-  if (getTypeID() == Decimal128TyID) return 110;
-  assert(getTypeID() == PPC_FP128TyID && "unknown fp type");
+  assert((getTypeID() == PPC_FP128TyID || getTypeID() == Decimal32TyID ||
+          getTypeID() == Decimal64TyID || getTypeID() == FP128TyID) &&
+         "unknown fp type");
   return -1;
 }
 

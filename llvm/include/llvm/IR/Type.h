@@ -55,8 +55,8 @@ public:
     // PrimitiveTypes
     HalfTyID = 0,  ///< 16-bit floating point type
     BFloatTyID,    ///< 16-bit floating point type (7-bit significand)
-    FloatTyID,     ///< 32-bit floating point type
     Decimal32TyID, ///< 32-bit decimal floating point type
+    FloatTyID,     ///< 32-bit floating point type
     DoubleTyID,    ///< 64-bit floating point type
     Decimal64TyID, ///< 64-bit decimal floating point type
     X86_FP80TyID,  ///< 80-bit floating point type (X87)

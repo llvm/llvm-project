@@ -987,12 +987,16 @@ lltok::Kind LLLexer::LexIdentifier() {
 ///    HexPPC128Constant 0xM[0-9A-Fa-f]+
 ///    HexHalfConstant   0xH[0-9A-Fa-f]+
 ///    HexBFloatConstant 0xR[0-9A-Fa-f]+
-///    HexDecimal32Constant 0xR[0-9A-Fa-f]+
-///    HexDecimal64Constant 0xR[0-9A-Fa-f]+
-///    HexDecimal128Constant 0xR[0-9A-Fa-f]+
+///    FIXME: I have temporarily added these prefixes temporarly to mimic
+///    the DFP attributes in C++. But this is just a placeholder for
+///    the real prefix.
+///    HexDecimal32Constant 0xSD[0-9A-Fa-f]+
+///    HexDecimal64Constant 0xDD[0-9A-Fa-f]+
+///    HexDecimal128Constant 0xTD[0-9A-Fa-f]+
 lltok::Kind LLLexer::Lex0x() {
   CurPtr = TokStart + 2;
 
+  // TODO: Handle the DFP type here.
   char Kind;
   if ((CurPtr[0] >= 'K' && CurPtr[0] <= 'M') || CurPtr[0] == 'H' ||
       CurPtr[0] == 'R') {
