@@ -1927,6 +1927,48 @@ LogicalResult transform::NamedSequenceOp::verify() {
   return verifyNamedSequenceOp(*this, /*emitWarnings=*/true).checkAndReport();
 }
 
+template <typename FnTy>
+static void buildSequenceBody(OpBuilder &builder, OperationState &state,
+                              Type bbArgType, TypeRange extraBindingTypes,
+                              FnTy bodyBuilder) {
+  SmallVector<Type> types;
+  types.reserve(1 + extraBindingTypes.size());
+  types.push_back(bbArgType);
+  llvm::append_range(types, extraBindingTypes);
+
+  OpBuilder::InsertionGuard guard(builder);
+  Region *region = state.regions.back().get();
+  Block *bodyBlock =
+      builder.createBlock(region, region->begin(), types,
+                          SmallVector<Location>(types.size(), state.location));
+
+  // Populate body.
+  builder.setInsertionPointToStart(bodyBlock);
+  if constexpr (llvm::function_traits<FnTy>::num_args == 3) {
+    bodyBuilder(builder, state.location, bodyBlock->getArgument(0));
+  } else {
+    bodyBuilder(builder, state.location, bodyBlock->getArgument(0),
+                bodyBlock->getArguments().drop_front());
+  }
+}
+
+void transform::NamedSequenceOp::build(OpBuilder &builder,
+                                       OperationState &state, StringRef symName,
+                                       Type rootType, TypeRange resultTypes,
+                                       SequenceBodyBuilderFn bodyBuilder,
+                                       ArrayRef<NamedAttribute> attrs,
+                                       ArrayRef<DictionaryAttr> argAttrs) {
+  state.addAttribute(SymbolTable::getSymbolAttrName(),
+                     builder.getStringAttr(symName));
+  state.addAttribute(getFunctionTypeAttrName(state.name),
+                     TypeAttr::get(FunctionType::get(builder.getContext(), rootType, resultTypes)));
+  state.attributes.append(attrs.begin(), attrs.end());
+  state.addRegion();
+
+  buildSequenceBody(builder, state, rootType,
+                    /*extraBindingTypes=*/TypeRange(), bodyBuilder);
+}
+
 //===----------------------------------------------------------------------===//
 // SelectOp
 //===----------------------------------------------------------------------===//
@@ -2262,31 +2304,6 @@ void transform::SequenceOp::getRegionInvocationBounds(
     ArrayRef<Attribute> operands, SmallVectorImpl<InvocationBounds> &bounds) {
   (void)operands;
   bounds.emplace_back(1, 1);
-}
-
-template <typename FnTy>
-static void buildSequenceBody(OpBuilder &builder, OperationState &state,
-                              Type bbArgType, TypeRange extraBindingTypes,
-                              FnTy bodyBuilder) {
-  SmallVector<Type> types;
-  types.reserve(1 + extraBindingTypes.size());
-  types.push_back(bbArgType);
-  llvm::append_range(types, extraBindingTypes);
-
-  OpBuilder::InsertionGuard guard(builder);
-  Region *region = state.regions.back().get();
-  Block *bodyBlock =
-      builder.createBlock(region, region->begin(), types,
-                          SmallVector<Location>(types.size(), state.location));
-
-  // Populate body.
-  builder.setInsertionPointToStart(bodyBlock);
-  if constexpr (llvm::function_traits<FnTy>::num_args == 3) {
-    bodyBuilder(builder, state.location, bodyBlock->getArgument(0));
-  } else {
-    bodyBuilder(builder, state.location, bodyBlock->getArgument(0),
-                bodyBlock->getArguments().drop_front());
-  }
 }
 
 void transform::SequenceOp::build(OpBuilder &builder, OperationState &state,
