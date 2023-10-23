@@ -17,10 +17,16 @@ class RegisterFlags {
 public:
   class Field {
   public:
+    /// Where start is the least significant bit and end is the most
+    /// significant bit. The start bit must be <= the end bit.
     Field(std::string name, unsigned start, unsigned end)
         : m_name(std::move(name)), m_start(start), m_end(end) {
       assert(m_start <= m_end && "Start bit must be <= end bit.");
     }
+
+    /// Construct a field that occupies a single bit.
+    Field(std::string name, unsigned bit_position)
+        : m_name(std::move(name)), m_start(bit_position), m_end(bit_position) {}
 
     /// Get size of the field in bits. Will always be at least 1.
     unsigned GetSizeInBits() const { return m_end - m_start + 1; }
