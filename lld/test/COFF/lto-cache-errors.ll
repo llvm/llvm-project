@@ -6,7 +6,7 @@
 ; RUN: chmod 444 %t.cache
 
 ;; Check emit warnings when we can't create the cache dir, note that this test will pass if there is a o: drive.
-; RUN: not lld-link /lldltocache:%t.cache/cache /out:%t3 /entry:main %t2.o %t.o 2>&1 | FileCheck %s
+; RUN: not --crash lld-link /lldltocache:%t.cache/cache /out:%t3 /entry:main %t2.o %t.o 2>&1 | FileCheck %s
 ; CHECK: LLVM ERROR: Can't create cache directory
 
 target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
