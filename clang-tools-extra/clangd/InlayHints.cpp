@@ -862,19 +862,20 @@ private:
         if (Ctor->isCopyOrMoveConstructor())
           return;
 
-    auto Params = maybeDropCxxExplicitObjectParameters(
-        Callee.Decl ? Callee.Decl->parameters() : Callee.Loc.getParams());
-
+    ArrayRef<const ParmVarDecl *> Params, ForwardedParams;
     // Resolve parameter packs to their forwarded parameter
-    SmallVector<const ParmVarDecl *> ForwardedParams;
-    if (Callee.Decl)
-      ForwardedParams = resolveForwardingParameters(Callee.Decl);
-    else
-      ForwardedParams = {Params.begin(), Params.end()};
+    SmallVector<const ParmVarDecl *> ForwardedParamsStorage;
+    if (Callee.Decl) {
+      Params = maybeDropCxxExplicitObjectParameters(Callee.Decl->parameters());
+      ForwardedParamsStorage = resolveForwardingParameters(Callee.Decl);
+      ForwardedParams =
+          maybeDropCxxExplicitObjectParameters(ForwardedParamsStorage);
+    } else {
+      Params = maybeDropCxxExplicitObjectParameters(Callee.Loc.getParams());
+      ForwardedParamsStorage = {Params.begin(), Params.end()};
+    }
 
-    auto ForwardedParamsRef =
-        maybeDropCxxExplicitObjectParameters(ForwardedParams);
-    NameVec ParameterNames = chooseParameterNames(ForwardedParamsRef);
+    NameVec ParameterNames = chooseParameterNames(ForwardedParams);
 
     // Exclude setters (i.e. functions with one argument whose name begins with
     // "set"), and builtins like std::move/forward/... as their parameter name
@@ -893,8 +894,7 @@ private:
 
       StringRef Name = ParameterNames[I];
       bool NameHint = shouldHintName(Args[I], Name);
-      bool ReferenceHint =
-          shouldHintReference(Params[I], ForwardedParamsRef[I]);
+      bool ReferenceHint = shouldHintReference(Params[I], ForwardedParams[I]);
 
       if (NameHint || ReferenceHint) {
         addInlayHint(Args[I]->getSourceRange(), HintSide::Left,
