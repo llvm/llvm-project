@@ -15,6 +15,7 @@
 #include "bolt/Core/MCPlusBuilder.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
@@ -489,6 +490,13 @@ public:
 
     assert(Second.getOpcode() == RISCV::JALR);
     return true;
+  }
+
+  uint16_t getMinFunctionAlignment() const override {
+    if (STI->hasFeature(RISCV::FeatureStdExtC) ||
+        STI->hasFeature(RISCV::FeatureStdExtZca))
+      return 2;
+    return 4;
   }
 };
 
