@@ -2037,12 +2037,12 @@ void append_range(Container &C, Range &&R) {
   C.insert(C.end(), adl_begin(R), adl_end(R));
 }
 
-/// Appends all elements in the initializer list `Values` to the container `C`.
-/// This can be used as a replacement for repeated calls to `.push_back(X)`.
-/// Note that all values passed in the initializer list are copied.
-template <typename Container, typename T>
-void append_range(Container &C, std::initializer_list<T> Values) {
-  append_range<Container, std::initializer_list<T>>(C, std::move(Values));
+/// Appends all `Values` to container `C`.
+template <typename Container, typename... Args>
+void append_values(Container &C, Args &&...Values) {
+  C.reserve(range_size(C) + sizeof...(Args));
+  // Append all values one by one.
+  ((void)C.insert(C.end(), std::forward<Args>(Values)), ...);
 }
 
 /// Given a sequence container Cont, replace the range [ContIt, ContEnd) with
