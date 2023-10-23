@@ -1409,37 +1409,36 @@ foldAndOrOfICmpsUsingDecomposedRanges(ICmpInst *ICmp1, ICmpInst *ICmp2,
   // Try to merge ranges into single range.
   // Since we may fail to merge ranges due to the order of merging, we cannot do
   // merge in order (counterexample: [0, 1), [2, 3), [1, 2)) or in sorted order
-  // (due to wrapped ranges). Instead, we try to merge ranges in O(N^2) until we
-  // succeed in merging into single range or we cannot merge anymore.
+  // (due to wrapped ranges). Instead, we try to merge ranges in O(N^2)
+  // (typically N == 3) until we succeed in merging into single range or we
+  // cannot merge anymore.
 
   // Ranges which cannot be merged with each other. We maintain this list to
   // avoid redundant checks.
   SmallVector<ConstantRange, 3> UnmergeableRanges;
-  while (true) {
+  while (!Ranges.empty()) {
     bool Merged = false;
 
-    if (!Ranges.empty()) {
-      auto &CR = Ranges.back();
-      for (unsigned I = 0; I < UnmergeableRanges.size(); ++I) {
-        if (auto NewCR = IsAnd ? CR.exactIntersectWith(UnmergeableRanges[I])
-                               : CR.exactUnionWith(UnmergeableRanges[I])) {
-          CR = *NewCR;
-          UnmergeableRanges.erase(UnmergeableRanges.begin() + I);
-          Merged = true;
-        }
-      }
-      if (!Merged) {
-        UnmergeableRanges.push_back(CR);
-        Ranges.pop_back();
+    auto &CR = Ranges.back();
+    for (unsigned I = 0; I < UnmergeableRanges.size(); ++I) {
+      if (auto NewCR = IsAnd ? CR.exactIntersectWith(UnmergeableRanges[I])
+                             : CR.exactUnionWith(UnmergeableRanges[I])) {
+        CR = *NewCR;
+        UnmergeableRanges.erase(UnmergeableRanges.begin() + I);
+        Merged = true;
       }
     }
-
-    if (Ranges.empty()) {
-      if (UnmergeableRanges.size() == 1)
-        break;
-      return nullptr;
+    if (!Merged) {
+      UnmergeableRanges.push_back(CR);
+      Ranges.pop_back();
     }
   }
+
+  assert(!UnmergeableRanges.empty() &&
+         "UnmergeableRanges should have at least one range");
+  // We failed to merge ranges into single range.
+  if (UnmergeableRanges.size() != 1)
+    return nullptr;
 
   ICmpInst::Predicate NewPred;
   APInt NewRHS, NewOffset;
