@@ -683,10 +683,8 @@ Error RawInstrProfReader<IntPtrT>::readRawCounts(
     } else {
       uint64_t CounterValue = swap(*reinterpret_cast<const uint64_t *>(Ptr));
       if (CounterValue > MaxCounterValue && MaybeWarnFn)
-        (*MaybeWarnFn)(make_error<InstrProfError>(
-            instrprof_error::malformed,
-            "excessively large counter value " + Twine(CounterValue) +
-                " suggests corrupted profile data"));
+        (*MaybeWarnFn)(make_error<InstrProfError>(instrprof_error::malformed,
+                                                  Twine(CounterValue)));
 
       Record.Counts.push_back(CounterValue);
     }
