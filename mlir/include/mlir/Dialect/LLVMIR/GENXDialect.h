@@ -25,6 +25,24 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
+
+namespace mlir {
+namespace GENX {
+
+/// GENX memory space identifiers.
+enum GENXMemorySpace {
+  kCrossWorkgroup = 0,
+  kGeneric = 1,
+  kWorkgroup = 3,
+  kUniformConstant = 4,
+  kPrivate = 5,
+  kFunction = 6,
+  kImage = 7
+};
+
+} // namespace GENX
+} // namespace mlir
+
 ///// Ops /////
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/LLVMIR/GENXOpsAttributes.h.inc"
