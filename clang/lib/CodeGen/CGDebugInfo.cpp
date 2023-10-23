@@ -1499,6 +1499,8 @@ CGDebugInfo::createBitFieldType(const FieldDecl *BitFieldDecl,
                                 llvm::DIScope *RecordTy, const RecordDecl *RD) {
   StringRef Name = BitFieldDecl->getName();
   QualType Ty = BitFieldDecl->getType();
+  if (BitFieldDecl->hasAttr<PreferredTypeAttr>())
+    Ty = BitFieldDecl->getAttr<PreferredTypeAttr>()->getType();
   SourceLocation Loc = BitFieldDecl->getLocation();
   llvm::DIFile *VUnit = getOrCreateFile(Loc);
   llvm::DIType *DebugType = getOrCreateType(Ty, VUnit);
