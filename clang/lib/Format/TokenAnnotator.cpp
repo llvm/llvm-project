@@ -3544,7 +3544,7 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
           }
         }
       }
-    } else if (Current->SpacesRequiredBefore == 0 &&
+    } else if (!Current->Finalized && Current->SpacesRequiredBefore == 0 &&
                spaceRequiredBefore(Line, *Current)) {
       Current->SpacesRequiredBefore = 1;
     }
