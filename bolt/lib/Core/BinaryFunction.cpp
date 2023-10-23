@@ -533,7 +533,7 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation) {
       if (BB->getCFIState() >= 0)
         OS << "  CFI State : " << BB->getCFIState() << '\n';
       if (opts::EnableBAT) {
-        OS << "  Input offset: " << Twine::utohexstr(BB->getInputOffset())
+        OS << "  Input offset: 0x" << Twine::utohexstr(BB->getInputOffset())
            << "\n";
       }
       if (!BB->pred_empty()) {
