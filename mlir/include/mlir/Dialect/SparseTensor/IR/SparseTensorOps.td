@@ -532,6 +532,8 @@ def SparseTensor_LvlOp : SparseTensor_Op<"lvl", [ConditionallySpeculatable, NoMe
     The `sparse_tensor.lvl` behaves similar to `tensor.dim` operation.
     It takes a sparse tensor and a level operand of type `index` and returns
     the size of the requested level of the given sparse tensor.
+    If the sparse tensor has an identity dimension to level mapping, it returns
+    the same result as `tensor.dim`.
     If the level index is out of bounds, the behavior is undefined.
 
     Example:
