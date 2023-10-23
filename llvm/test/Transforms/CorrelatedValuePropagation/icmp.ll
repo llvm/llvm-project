@@ -1252,7 +1252,7 @@ define i1 @pr69928(i64 noundef %arg, i64 noundef %arg1) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i64 [[ARG:%.*]], 64424509440
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[ARG1:%.*]], 4294967295
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i64 [[ARG]], [[AND]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[ARG]], [[AND]]
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 false
 ; CHECK-NEXT:    ret i1 [[SELECT]]
 ;
@@ -1268,7 +1268,7 @@ define i1 @test_select_flip(i64 noundef %arg) {
 ; CHECK-LABEL: @test_select_flip(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i64 [[ARG:%.*]], 1000
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i64 [[ARG]], 100
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[ARG]], 100
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 false
 ; CHECK-NEXT:    ret i1 [[SELECT]]
 ;
