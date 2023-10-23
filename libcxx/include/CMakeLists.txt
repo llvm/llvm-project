@@ -96,6 +96,7 @@ set(files
   __algorithm/pstl_merge.h
   __algorithm/pstl_move.h
   __algorithm/pstl_replace.h
+  __algorithm/pstl_rotate_copy.h
   __algorithm/pstl_sort.h
   __algorithm/pstl_stable_sort.h
   __algorithm/pstl_transform.h
