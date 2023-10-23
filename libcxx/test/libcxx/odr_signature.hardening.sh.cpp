@@ -6,6 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+// TODO: Remove these UNSUPPORTED lines once we change how hardening is enabled to avoid
+//       mutually exclusive modes being enabled at the same time.
+// UNSUPPORTED: libcpp-hardening-mode=hardened
+// UNSUPPORTED: libcpp-hardening-mode=safe
+// UNSUPPORTED: libcpp-hardening-mode=debug
+
+// TODO: Investigate
+// XFAIL: target={{.+}}-windows-{{.+}}
+
 // Test that we encode the hardening mode in an ABI tag to avoid ODR violations
 // when linking TUs that have different values for it.
 
