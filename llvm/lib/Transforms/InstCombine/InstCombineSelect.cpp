@@ -3391,28 +3391,6 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
                                           ConstantInt::getFalse(CondType), SQ,
                                           /* AllowRefinement */ true))
       return replaceOperand(SI, 2, S);
-
-    // Handle patterns involving sext/zext + not explicitly,
-    // as simplifyWithOpReplaced() only looks past one instruction.
-    Value *NotCond;
-
-    // select a, sext(!a), b -> select !a, b, 0
-    // select a, zext(!a), b -> select !a, b, 0
-    if (match(TrueVal, m_ZExtOrSExt(m_CombineAnd(m_Value(NotCond),
-                                                 m_Not(m_Specific(CondVal))))))
-      return SelectInst::Create(NotCond, FalseVal,
-                                Constant::getNullValue(SelType));
-
-    // select a, b, zext(!a) -> select !a, 1, b
-    if (match(FalseVal, m_ZExt(m_CombineAnd(m_Value(NotCond),
-                                            m_Not(m_Specific(CondVal))))))
-      return SelectInst::Create(NotCond, ConstantInt::get(SelType, 1), TrueVal);
-
-    // select a, b, sext(!a) -> select !a, -1, b
-    if (match(FalseVal, m_SExt(m_CombineAnd(m_Value(NotCond),
-                                            m_Not(m_Specific(CondVal))))))
-      return SelectInst::Create(NotCond, Constant::getAllOnesValue(SelType),
-                                TrueVal);
   }
 
   if (Instruction *R = foldSelectOfBools(SI))
