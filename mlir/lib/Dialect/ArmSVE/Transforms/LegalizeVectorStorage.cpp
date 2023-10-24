@@ -23,6 +23,8 @@ using namespace mlir::arm_sve;
 
 // A tag to mark unrealized_conversions produced by this pass. This is used to
 // detect IR this pass failed to completely legalize, and report an error.
+// If everything was successfully legalized, no tagged ops will remain after
+// this pass.
 constexpr StringLiteral kSVELegalizerTag("__arm_sve_legalize_vector_storage__");
 
 namespace {
@@ -205,7 +207,7 @@ struct LegalizeSVEMaskTypeCastConversion
 /// %svbool = arm_sve.convert_to_svbool %mask : vector<[8]xi1>
 /// memref.store %svbool, %widened[] : memref<vector<[16]xi1>>
 /// ```
-struct LegalizeMemrefStoreConversion
+struct LegalizeSVEMaskStoreConversion
     : public OpRewritePattern<memref::StoreOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -291,8 +293,9 @@ void mlir::arm_sve::populateLegalizeVectorStoragePatterns(
   patterns.add<RelaxScalableVectorAllocaAlignment,
                LegalizeSVEMaskAllocation<memref::AllocaOp>,
                LegalizeSVEMaskAllocation<memref::AllocOp>,
-               LegalizeSVEMaskTypeCastConversion, LegalizeMemrefStoreConversion,
-               LegalizeSVEMaskLoadConversion>(patterns.getContext());
+               LegalizeSVEMaskTypeCastConversion,
+               LegalizeSVEMaskStoreConversion, LegalizeSVEMaskLoadConversion>(
+      patterns.getContext());
 }
 
 namespace {
