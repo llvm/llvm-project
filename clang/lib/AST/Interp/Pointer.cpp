@@ -164,16 +164,13 @@ bool Pointer::isInitialized() const {
   if (Desc->isPrimitiveArray()) {
     if (isStatic() && Base == 0)
       return true;
-
-    InitMapPtr &IM = getInitMap();
-
-    if (!IM)
+    // Primitive array field are stored in a bitset.
+    InitMap *Map = getInitMap();
+    if (!Map)
       return false;
-
-    if (IM->first)
+    if (Map == (InitMap *)-1)
       return true;
-
-    return IM->second->isElementInitialized(getIndex());
+    return Map->isInitialized(getIndex());
   }
 
   // Field has its bit in an inline descriptor.
@@ -190,20 +187,15 @@ void Pointer::initialize() const {
     if (isStatic() && Base == 0)
       return;
 
-    InitMapPtr &IM = getInitMap();
-    if (!IM)
-      IM =
-          std::make_pair(false, std::make_shared<InitMap>(Desc->getNumElems()));
-
-    assert(IM);
-
-    // All initialized.
-    if (IM->first)
+    // Primitive array initializer.
+    InitMap *&Map = getInitMap();
+    if (Map == (InitMap *)-1)
       return;
-
-    if (IM->second->initializeElement(getIndex())) {
-      IM->first = true;
-      IM->second.reset();
+    if (Map == nullptr)
+      Map = InitMap::allocate(Desc->getNumElems());
+    if (Map->initialize(getIndex())) {
+      free(Map);
+      Map = (InitMap *)-1;
     }
     return;
   }
