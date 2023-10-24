@@ -529,6 +529,10 @@ LogicalResult TestOpWithVariadicResultsAndFolder::fold(
 }
 
 OpFoldResult TestOpInPlaceFold::fold(FoldAdaptor adaptor) {
+  // Excercise the fact that an operation created during createOrFold should be
+  // allowed to enable its block.
+  assert(getBlock() && "expected block to be assigned");
+
   if (adaptor.getOp() && !getProperties().attr) {
     // The folder adds "attr" if not present.
     getProperties().attr = dyn_cast_or_null<IntegerAttr>(adaptor.getOp());
