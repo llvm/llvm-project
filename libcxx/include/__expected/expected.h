@@ -88,14 +88,6 @@ _LIBCPP_HIDE_FROM_ABI void __throw_bad_expected_access(_Arg&& __arg) {
 #  endif
 }
 
-template <class _Union, class _OtherUnion>
-_LIBCPP_HIDE_FROM_ABI constexpr _Union __make_expected_union(bool __has_val, _OtherUnion&& __other) {
-  if (__has_val)
-    return _Union(in_place, std::forward<_OtherUnion>(__other).__val_);
-  else
-    return _Union(unexpect, std::forward<_OtherUnion>(__other).__unex_);
-}
-
 template <class _ValueType, class _ErrorType>
 union __expected_union_t {
   template <class... _Args>
@@ -191,8 +183,7 @@ struct __expected_repr {
 
   template <class _OtherUnion>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_repr(bool __has_val, _OtherUnion&& __other)
-      : __union_(__make_expected_union<__expected_union_t<_Tp, _Err>>(__has_val, std::forward<_OtherUnion>(__other))),
-        __has_val_(__has_val) {}
+      : __union_(__make_union(__has_val, std::forward<_OtherUnion>(__other))), __has_val_(__has_val) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr __expected_repr(const __expected_repr&) = delete;
   _LIBCPP_HIDE_FROM_ABI constexpr __expected_repr(const __expected_repr&)
@@ -256,6 +247,15 @@ private:
     }
   }
 
+  template <class _OtherUnion>
+  _LIBCPP_HIDE_FROM_ABI static constexpr __expected_union_t<_Tp, _Err>
+  __make_union(bool __has_val, _OtherUnion&& __other) {
+    if (__has_val)
+      return __expected_union_t<_Tp, _Err>(in_place, std::forward<_OtherUnion>(__other).__val_);
+    else
+      return __expected_union_t<_Tp, _Err>(unexpect, std::forward<_OtherUnion>(__other).__unex_);
+  }
+
   __expected_union_t<_Tp, _Err> __union_;
   _LIBCPP_NO_UNIQUE_ADDRESS bool __has_val_;
 };
@@ -281,11 +281,6 @@ struct __expected_repr<_Tp, _Err, true> {
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_repr(
       std::__expected_construct_unexpected_from_invoke_tag __tag, _Args&&... __args)
       : __union_(__tag, std::forward<_Args>(__args)...), __has_val_(false) {}
-
-  template <class _OtherUnion>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_repr(bool __has_val, _OtherUnion&& __other)
-      : __union_(__make_expected_union<__expected_union_t<_Tp, _Err>>(__has_val, std::forward<_OtherUnion>(__other))),
-        __has_val_(__has_val) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr __expected_repr(const __expected_repr&) = delete;
   _LIBCPP_HIDE_FROM_ABI constexpr __expected_repr(const __expected_repr&)
@@ -347,6 +342,10 @@ protected:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_base(_Args&&... __args)
       : __repr_(std::forward<_Args>(__args)...) {}
 
+  template <class _OtherUnion>
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_base(bool __has_val, _OtherUnion&& __other)
+      : __repr_(__make_repr(__has_val, std::forward<_OtherUnion>(__other))) {}
+
   _LIBCPP_HIDE_FROM_ABI constexpr void __destroy() { std::destroy_at(&__repr_); }
 
   template <class _Tag, class... _Args>
@@ -354,7 +353,19 @@ protected:
     std::construct_at(&__repr_, __tag, std::forward<_Args>(__args)...);
   }
 
-  __expected_repr<_Tp, _Err, true> __repr_;
+private:
+  using __repr = __expected_repr<_Tp, _Err, true>;
+
+  template <class _OtherUnion>
+  _LIBCPP_HIDE_FROM_ABI static constexpr __repr __make_repr(bool __has_val, _OtherUnion&& __other) {
+    if (__has_val)
+      return __repr(in_place, std::forward<_OtherUnion>(__other).__val_);
+    else
+      return __repr(unexpect, std::forward<_OtherUnion>(__other).__unex_);
+  }
+
+protected:
+  __repr __repr_;
 };
 
 template <class _Tp, class _Err>
@@ -1081,14 +1092,6 @@ public:
 
 struct __expected_empty_t {};
 
-template <class _Union, class _OtherUnion>
-_LIBCPP_HIDE_FROM_ABI constexpr _Union __make_expected_void_union(bool __has_val, _OtherUnion&& __other) {
-  if (__has_val)
-    return _Union(in_place);
-  else
-    return _Union(unexpect, std::forward<_OtherUnion>(__other).__unex_);
-}
-
 template <class _ErrorType>
 union __expected_void_union_t {
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_void_union_t(in_place_t) : __empty_() {}
@@ -1165,9 +1168,7 @@ struct __expected_void_repr {
 
   template <class _OtherUnion>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_void_repr(bool __has_val, _OtherUnion&& __other)
-      : __union_(
-            __make_expected_void_union<__expected_void_union_t<_Err>>(__has_val, std::forward<_OtherUnion>(__other))),
-        __has_val_(__has_val) {}
+      : __union_(__make_union(__has_val, std::forward<_OtherUnion>(__other))), __has_val_(__has_val) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr __expected_void_repr(const __expected_void_repr&) = delete;
   _LIBCPP_HIDE_FROM_ABI constexpr __expected_void_repr(const __expected_void_repr&)
@@ -1226,6 +1227,15 @@ private:
     }
   }
 
+  template <class _OtherUnion>
+  _LIBCPP_HIDE_FROM_ABI static constexpr __expected_void_union_t<_Err>
+  __make_union(bool __has_val, _OtherUnion&& __other) {
+    if (__has_val)
+      return __expected_void_union_t<_Err>(in_place);
+    else
+      return __expected_void_union_t<_Err>(unexpect, std::forward<_OtherUnion>(__other).__unex_);
+  }
+
   __expected_void_union_t<_Err> __union_;
   _LIBCPP_NO_UNIQUE_ADDRESS bool __has_val_;
 };
@@ -1244,12 +1254,6 @@ struct __expected_void_repr<_Err, true> {
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_void_repr(
       std::__expected_construct_unexpected_from_invoke_tag __tag, _Args&&... __args)
       : __union_(__tag, std::forward<_Args>(__args)...), __has_val_(false) {}
-
-  template <class _OtherUnion>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_void_repr(bool __has_val, _OtherUnion&& __other)
-      : __union_(
-            __make_expected_void_union<__expected_void_union_t<_Err>>(__has_val, std::forward<_OtherUnion>(__other))),
-        __has_val_(__has_val) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr __expected_void_repr(const __expected_void_repr&) = delete;
   _LIBCPP_HIDE_FROM_ABI constexpr __expected_void_repr(const __expected_void_repr&)
@@ -1307,6 +1311,10 @@ protected:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_void_base(_Args&&... __args)
       : __repr_(std::forward<_Args>(__args)...) {}
 
+  template <class _OtherUnion>
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_void_base(bool __has_val, _OtherUnion&& __other)
+      : __repr_(__make_repr(__has_val, std::forward<_OtherUnion>(__other))) {}
+
   _LIBCPP_HIDE_FROM_ABI constexpr void __destroy() { std::destroy_at(&__repr_); }
 
   template <class _Tag, class... _Args>
@@ -1314,7 +1322,19 @@ protected:
     std::construct_at(&__repr_, __tag, std::forward<_Args>(__args)...);
   }
 
-  __expected_void_repr<_Err, true> __repr_;
+private:
+  using __repr = __expected_void_repr<_Err, true>;
+
+  template <class _OtherUnion>
+  _LIBCPP_HIDE_FROM_ABI static constexpr __repr __make_repr(bool __has_val, _OtherUnion&& __other) {
+    if (__has_val)
+      return __repr(in_place);
+    else
+      return __repr(unexpect, std::forward<_OtherUnion>(__other).__unex_);
+  }
+
+protected:
+  __repr __repr_;
 };
 
 template <class _Tp, class _Err>
