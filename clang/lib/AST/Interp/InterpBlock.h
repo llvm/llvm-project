@@ -71,7 +71,6 @@ public:
   unsigned getSize() const { return Desc->getAllocSize(); }
   /// Returns the declaration ID.
   std::optional<unsigned> getDeclID() const { return DeclID; }
-  bool isInitialized() const { return IsInitialized; }
 
   /// Returns a pointer to the stored data.
   /// You are allowed to read Desc->getSize() bytes from this address.
@@ -105,14 +104,12 @@ public:
     if (Desc->CtorFn)
       Desc->CtorFn(this, data(), Desc->IsConst, Desc->IsMutable,
                    /*isActive=*/true, Desc);
-    IsInitialized = true;
   }
 
   /// Invokes the Destructor.
   void invokeDtor() {
     if (Desc->DtorFn)
       Desc->DtorFn(this, data(), Desc);
-    IsInitialized = false;
   }
 
 protected:
@@ -142,12 +139,8 @@ protected:
   bool IsStatic = false;
   /// Flag indicating if the block is an extern.
   bool IsExtern = false;
-  /// Flag indicating if the pointer is dead. This is only ever
-  /// set once, when converting the Block to a DeadBlock.
+  /// Flag indicating if the pointer is dead.
   bool IsDead = false;
-  /// Flag indicating if the block contents have been initialized
-  /// via invokeCtor.
-  bool IsInitialized = false;
   /// Pointer to the stack slot descriptor.
   Descriptor *Desc;
 };
