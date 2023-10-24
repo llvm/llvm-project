@@ -587,13 +587,6 @@ benchmarks)
     generate-cmake
     check-cxx-benchmarks
 ;;
-documentation)
-    clean
-    generate-cmake -DLLVM_ENABLE_SPHINX=ON
-
-    echo "+++ Generating documentation"
-    ${NINJA} -vC "${BUILD_DIR}" docs-libcxx-html
-;;
 aarch64)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/AArch64.cmake"
