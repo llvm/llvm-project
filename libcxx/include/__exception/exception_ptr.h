@@ -67,7 +67,7 @@ public:
 
 template <class _Ep>
 _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
-# if defined(_LIBCPP_EXCEPTION_PTR_DIRECT_INIT)
+#  if defined(_LIBCPP_EXCEPTION_PTR_DIRECT_INIT)
   using _Ep2 = __decay_t<_Ep>;
   void* __ex = exception_ptr::__init_native_exception(
       sizeof(_Ep), const_cast<std::type_info*>(&typeid(_Ep)), exception_ptr::__dest_thunk<_Ep2>);
@@ -88,8 +88,8 @@ _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
     exception_ptr::__free_native_exception(__ex);
     return current_exception();
   }
-# else
-#   ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  else
+#    ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   try {
     throw __e;
   } catch (...) {
