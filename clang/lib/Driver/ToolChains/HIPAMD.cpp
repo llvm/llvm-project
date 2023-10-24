@@ -243,13 +243,6 @@ HIPAMDToolChain::HIPAMDToolChain(const Driver &D, const llvm::Triple &Triple,
 void HIPAMDToolChain::addActionsFromClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
     const JobAction &JA, Compilation &C, const InputInfoList &Inputs) const {
-  StringRef GpuArch = DriverArgs.getLastArgValue(options::OPT_mcpu_EQ);
-  if (!DriverArgs.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
-                          false))
-    AddStaticDeviceLibsLinking(C, *getTool(JA.getKind()), JA, Inputs,
-                               DriverArgs, CC1Args, "amdgcn", GpuArch,
-                               /* bitcode SDL?*/ true,
-                               /* PostClang Link? */ false);
 }
 
 void HIPAMDToolChain::addClangTargetOptions(
