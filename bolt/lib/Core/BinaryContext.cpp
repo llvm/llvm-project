@@ -133,7 +133,7 @@ BinaryContext::createBinaryContext(const ObjectFile *File, bool IsPIC,
     Expected<SubtargetFeatures> Features = File->getFeatures();
 
     if (auto E = Features.takeError())
-      return E;
+      return std::move(E);
 
     // We rely on relaxation for some transformations (e.g., promoting all calls
     // to PseudoCALL and then making JITLink relax them). Since the relax
