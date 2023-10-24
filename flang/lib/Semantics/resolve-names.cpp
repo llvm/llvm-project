@@ -8323,6 +8323,11 @@ bool ResolveNamesVisitor::Pre(const parser::ProgramUnit &x) {
     // TODO: global directives
     return true;
   }
+  if (std::holds_alternative<
+          common::Indirection<parser::OpenACCRoutineConstruct>>(x.u)) {
+    ResolveAccParts(context(), x, &topScope_);
+    return false;
+  }
   auto root{ProgramTree::Build(x)};
   SetScope(topScope_);
   ResolveSpecificationParts(root);
@@ -8335,7 +8340,8 @@ bool ResolveNamesVisitor::Pre(const parser::ProgramUnit &x) {
 
 template <typename A> std::set<SourceName> GetUses(const A &x) {
   std::set<SourceName> uses;
-  if constexpr (!std::is_same_v<A, parser::CompilerDirective>) {
+  if constexpr (!std::is_same_v<A, parser::CompilerDirective> &&
+      !std::is_same_v<A, parser::OpenACCRoutineConstruct>) {
     const auto &spec{std::get<parser::SpecificationPart>(x.t)};
     const auto &unitUses{std::get<
         std::list<parser::Statement<common::Indirection<parser::UseStmt>>>>(
