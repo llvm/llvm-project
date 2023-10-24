@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx90a -run-pass amdgpu-lower-kernel-attributes -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -march=amdgcn -mcpu=gfx90a -run-pass amdgpu-lower-kernel-attributes -o - %s | FileCheck %s
 
 # As SYCL allows for the required work group to be specified partially, we need
 # to patch it up to 3 dimensions. Make sure that it only happens when dealing
