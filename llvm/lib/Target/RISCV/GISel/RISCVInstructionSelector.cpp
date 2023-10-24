@@ -493,7 +493,8 @@ bool RISCVInstructionSelector::selectGlobalValue(
     MachineInstr &MI, MachineIRBuilder &MIB, MachineRegisterInfo &MRI) const {
   assert(MI.getOpcode() == TargetOpcode::G_GLOBAL_VALUE &&
          "Expected G_GLOBAL_VALUE");
-  auto GV = MI.getOperand(1).getGlobal();
+
+  auto *GV = MI.getOperand(1).getGlobal();
   if (GV->isThreadLocal()) {
     // TODO: implement this case.
     return false;
@@ -506,21 +507,58 @@ bool RISCVInstructionSelector::selectGlobalValue(
     return false;
   }
   case CodeModel::Small: {
-    // Must lie within a single 2 GiB address range and must lie between
-    // absolute addresses -2 GiB and +2 GiB. This generates the pattern (addi
-    // (lui %hi(sym)) %lo(sym)).
-    Register AddrHiDest = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-    MachineInstr *AddrHi = MIB.buildInstr(RISCV::LUI)
-                               .addDef(AddrHiDest)
-                               .addGlobalAddress(GV, RISCVII::MO_HI);
-    if (!constrainSelectedInstRegOperands(*AddrHi, TII, TRI, RBI))
-      return false;
+    Register DefReg = MI.getOperand(0).getReg();
+    const LLT DefTy = MRI.getType(DefReg);
+    MachineInstr *Result = nullptr;
 
-    Register DstReg = MI.getOperand(0).getReg();
-    MachineInstr *Result = MIB.buildInstr(RISCV::ADDI)
-                               .addDef(DstReg)
-                               .addReg(AddrHiDest)
-                               .addGlobalAddress(GV, 0, RISCVII::MO_LO);
+    // When HWASAN is used and tagging of global variables is enabled
+    // they should be accessed via the GOT, since the tagged address of a global
+    // is incompatible with existing code models. This also applies to non-pic
+    // mode.
+    if (TM.isPositionIndependent() && GV->isDSOLocal() &&
+        !Subtarget->allowTaggedGlobals()) {
+      // Use PC-relative addressing to access the symbol. This generates the
+      // pattern (PseudoLLA sym), which expands to (addi (auipc %pcrel_hi(sym))
+      // %pcrel_lo(auipc)).
+      Result = MIB.buildInstr(RISCV::PseudoLLA)
+                   .addDef(DefReg)
+                   .addGlobalAddress(GV, 0);
+    } else if (Subtarget->allowTaggedGlobals() ||
+               (TM.isPositionIndependent() && !GV->isDSOLocal())) {
+      // Use PC-relative addressing to access the GOT for this symbol, then
+      // load the address from the GOT. This generates the pattern (PseudoLGA
+      // sym), which expands to (ld (addi (auipc %got_pcrel_hi(sym))
+      // %pcrel_lo(auipc))).
+      MachineFunction &MF = *MI.getParent()->getParent();
+      MachineMemOperand *MemOp =
+          MI.getParent()->getParent()->getMachineMemOperand(
+              MachinePointerInfo::getGOT(MF),
+              MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
+                  MachineMemOperand::MOInvariant,
+              DefTy, Align(DefTy.getSizeInBits() / 8));
+
+      Result = MIB.buildInstr(RISCV::PseudoLGA)
+                   .addDef(DefReg)
+                   .addGlobalAddress(GV, 0)
+                   .addMemOperand(MemOp);
+    } else {
+      // Must lie within a single 2 GiB address range and must lie between
+      // absolute addresses -2 GiB and +2 GiB. This generates the pattern (addi
+      // (lui %hi(sym)) %lo(sym)).
+      Register AddrHiDest = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+      MachineInstr *AddrHi = MIB.buildInstr(RISCV::LUI)
+                                 .addDef(AddrHiDest)
+                                 .addGlobalAddress(GV, RISCVII::MO_HI);
+
+      if (!constrainSelectedInstRegOperands(*AddrHi, TII, TRI, RBI))
+        return false;
+
+      Result = MIB.buildInstr(RISCV::ADDI)
+                   .addDef(DefReg)
+                   .addReg(AddrHiDest)
+                   .addGlobalAddress(GV, 0, RISCVII::MO_LO);
+    }
+
     if (!constrainSelectedInstRegOperands(*Result, TII, TRI, RBI))
       return false;
 
@@ -528,28 +566,38 @@ bool RISCVInstructionSelector::selectGlobalValue(
     return true;
   }
   case CodeModel::Medium: {
-    Register DstReg = MI.getOperand(0).getReg();
+    Register DefReg = MI.getOperand(0).getReg();
+    const LLT DefTy = MRI.getType(DefReg);
     MachineInstr *Result = nullptr;
 
     // Emit LGA/LLA instead of the sequence it expands to because the pcrel_lo
     // relocation needs to reference a label that points to the auipc
     // instruction itself, not the global. This cannot be done inside the
     // instruction selector.
-    if (GV->hasExternalWeakLinkage())
+    if (GV->hasExternalWeakLinkage()) {
       // An extern weak symbol may be undefined, i.e. have value 0, which may
       // not be within 2GiB of PC, so use GOT-indirect addressing to access the
       // symbol. This generates the pattern (PseudoLGA sym), which expands to
       // (ld (addi (auipc %got_pcrel_hi(sym)) %pcrel_lo(auipc))).
+      MachineFunction &MF = *MI.getParent()->getParent();
+      MachineMemOperand *MemOp = MF.getMachineMemOperand(
+        MachinePointerInfo::getGOT(MF),
+        MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
+            MachineMemOperand::MOInvariant,
+        DefTy, Align(DefTy.getSizeInBits() / 8));
+
       Result = MIB.buildInstr(RISCV::PseudoLGA)
-                   .addDef(DstReg)
-                   .addGlobalAddress(GV, 0);
-    else
+                   .addDef(DefReg)
+                   .addGlobalAddress(GV, 0)
+                   .addMemOperand(MemOp);
+    } else {
       // Generate a sequence for accessing addresses within any 2GiB range
       // within the address space. This generates the pattern (PseudoLLA sym),
       // which expands to (addi (auipc %pcrel_hi(sym)) %pcrel_lo(auipc)).
       Result = MIB.buildInstr(RISCV::PseudoLLA)
-                   .addDef(DstReg)
+                   .addDef(DefReg)
                    .addGlobalAddress(GV, 0);
+    }
 
     if (!constrainSelectedInstRegOperands(*Result, TII, TRI, RBI))
       return false;
