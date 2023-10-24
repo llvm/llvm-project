@@ -158,17 +158,18 @@ const llvm::fltSemantics &Context::getFloatSemantics(QualType T) const {
 }
 
 bool Context::Run(State &Parent, const Function *Func, APValue &Result) {
-  InterpState State(Parent, *P, Stk, *this);
-  State.Current = new InterpFrame(State, Func, /*Caller=*/nullptr, {});
-  if (Interpret(State, Result)) {
-    assert(Stk.empty());
-    return true;
-  }
 
-  // We explicitly delete our state here, so the Stk.clear() call
-  // below doesn't violently free values the destructor would
-  // otherwise access.
-  State.~InterpState();
+  {
+    InterpState State(Parent, *P, Stk, *this);
+    State.Current = new InterpFrame(State, Func, /*Caller=*/nullptr, {});
+    if (Interpret(State, Result)) {
+      assert(Stk.empty());
+      return true;
+    }
+
+    // State gets destroyed here, so the Stk.clear() below doesn't accidentally
+    // remove values the State's destructor might accedd.
+  }
 
   Stk.clear();
   return false;
