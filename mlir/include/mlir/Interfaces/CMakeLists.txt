@@ -1,3 +1,4 @@
+add_mlir_interface(AggregatedOpInterface)
 add_mlir_interface(CallInterfaces)
 add_mlir_interface(CastInterfaces)
 add_mlir_interface(ControlFlowInterfaces)
