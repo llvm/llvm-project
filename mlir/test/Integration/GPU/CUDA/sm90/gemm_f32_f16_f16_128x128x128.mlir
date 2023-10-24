@@ -157,7 +157,7 @@ func.func @main() {
     nvgpu.tma.prefetch.descriptor %descA : !lhsTensorMap
     nvgpu.tma.prefetch.descriptor %descB : !rhsTensorMap
 
-    // Step 4. [GPU] TMA Load Pipeline 1   
+    // Step 4.1 [GPU] TMA Load Pipeline 1   
     scf.if %cnd {
       %pipe = arith.constant 0 : index
       %lhsSlice = memref.subview %lhsShmem [0, 0, 0][1, 64, 128][1, 1, 1] : memref<7x128x64xf16,3> to memref<1x64x128xf16, strided<[8192, 64, 1]>, 3>
@@ -169,7 +169,7 @@ func.func @main() {
       nvgpu.tma.async.load %descB[%c0, %dim], %barrier[%pipe] to %rhsSlice : !rhsTensorMap, !barrierType -> memref<1x128x64xf16, strided<[8192, 128, 1], offset: 57344>, 3>
       nvgpu.tma.async.load %descB[%c64, %dim], %barrier[%pipe] to %rhsSlice2 : !rhsTensorMap, !barrierType -> memref<1x128x64xf16, strided<[8192, 128, 1], offset: 61440>, 3>
     }
-    // Step 4. [GPU] TMA Load Pipeline 2
+    // Step 4.2 [GPU] TMA Load Pipeline 2
     scf.if %cnd {
       %pipe = arith.constant 1 : index
       %lhsSlice = memref.subview %lhsShmem [1, 0, 0][1, 64, 128][1, 1, 1] : memref<7x128x64xf16,3> to memref<1x64x128xf16, strided<[8192, 64, 1], offset: 8192>, 3>
@@ -202,14 +202,15 @@ func.func @main() {
       scf.yield %md : !nvgpu.warpgroup.accumulator<fragmented = vector<128x128xf32>>
     }
     
-    // Step 10. Wait all to finish mma
+    // Step 7. Wait all to finish mma
     nvvm.wgmma.wait.group.sync.aligned 0
 
-    // Step 11. [GPU] Epilogue, store fragmented register to shared memory
+    // Step 8. [GPU] Epilogue, store fragmented register to shared memory
     %accShmem = memref.get_global @accShmem : memref<0xf32, 3>
     %accShmemPtr = memref.reinterpret_cast %accShmem to offset: [0], sizes: [128, 128], strides: [128, 1] : memref<0xf32, 3> to memref<128x128xf32, 3>
     nvgpu.warpgroup.mma.store %15, %accShmemPtr : <fragmented = vector<128x128xf32>> to memref<128x128xf32, 3>
     
+    // Step 9. [GPU] Epilogue, shared memory to global memory
     %17 = arith.divui %tidx, %c32 : index
     %18 = arith.remui %tidx, %c32 : index
     scf.for %arg12 = %17 to %c128 step %c4 {
@@ -220,14 +221,14 @@ func.func @main() {
     gpu.terminator
   }
 
-  // Step 13. Copy D2H
+  // Step 5. Copy D2H
   %5 = gpu.memcpy async [%token] %matrixDHost, %matrixD  : memref<128x128xf32>, memref<128x128xf32>
   gpu.wait [%token]
 
-  // Step 14. Compute on host
+  // Step 6. Compute on host
   linalg.matmul ins(%matrixAHost, %matrixBHost : memref<128x128xf16>, memref<128x128xf16>) outs(%matrixRefHost : memref<128x128xf32>)
   
-  // Step 15. Verify
+  // Step 7. Verify
   %ic1 = arith.constant 1 : i32
   %ic0 = arith.constant 0 : i32
   %tolerance = arith.constant 0.00000001 : f32
