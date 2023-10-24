@@ -16,6 +16,7 @@ namespace members {
     RefCountable& c = silenceWarningAboutInit;
 // expected-warning@-1{{Member variable 'c' in 'members::Foo' is a reference to ref-countable type 'RefCountable'}}
     Ref<RefCountable> d;
+    __attribute__((annotate("webkit_uncountedmember_exception"))) RefCountable* e;
   };
 
   template<class T>

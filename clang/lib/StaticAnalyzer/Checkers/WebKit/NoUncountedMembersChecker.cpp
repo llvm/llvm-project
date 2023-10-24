@@ -75,6 +75,13 @@ public:
       if (!MemberType)
         continue;
 
+      if (std::any_of(
+        Member->specific_attr_begin<AnnotateAttr>(),
+        Member->specific_attr_end<AnnotateAttr>(), [](const AnnotateAttr *Ann) {
+          return Ann->getAnnotation() == "webkit_uncountedmember_exception";
+        }))
+          continue;
+
       if (auto *MemberCXXRD = MemberType->getPointeeCXXRecordDecl()) {
         // If we don't see the definition we just don't know.
         if (MemberCXXRD->hasDefinition()) {
