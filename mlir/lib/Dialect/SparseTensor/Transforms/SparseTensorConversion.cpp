@@ -592,8 +592,12 @@ public:
     Value lvlCoords, vref;
     {
       OpBuilder::InsertionGuard guard(rewriter);
-      auto loop = op->getParentOfType<LoopLikeOpInterface>();
-      if (loop) {
+      Operation *loop = op;
+      // Finds the outermost loop.
+      while (auto l = loop->getParentOfType<LoopLikeOpInterface>())
+        loop = l;
+
+      if (llvm::isa<LoopLikeOpInterface>(loop)) {
         // Hoists alloca outside the loop to avoid stack overflow.
         rewriter.setInsertionPoint(loop);
       }
