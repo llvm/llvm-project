@@ -701,13 +701,12 @@ namespace ThreeWayCmp {
   static_assert(pa2 <=> pa1 == 1, "");
 }
 
-// FIXME: Interp should also be able to evaluate this snippet properly.
 namespace ConstexprArrayInitLoopExprDestructors
 {
   struct Highlander {
       int *p = 0;
       constexpr Highlander() {}
-      constexpr void set(int *p) { this->p = p; ++*p; if (*p != 1) throw "there can be only one"; } // expected-note {{not valid in a constant expression}}
+      constexpr void set(int *p) { this->p = p; ++*p; if (*p != 1) throw "there can be only one"; }
       constexpr ~Highlander() { --*p; }
   };
 
@@ -715,23 +714,18 @@ namespace ConstexprArrayInitLoopExprDestructors
       int *p;
       constexpr X(int *p) : p(p) {}
       constexpr X(const X &x, Highlander &&h = Highlander()) : p(x.p) {
-          h.set(p); // expected-note {{in call to '&Highlander()->set(&n)'}}
+          h.set(p);
       }
   };
 
   constexpr int f() {
       int n = 0;
       X x[3] = {&n, &n, &n};
-      auto [a, b, c] = x; // expected-note {{in call to 'X(x[0], Highlander())'}}
+      auto [a, b, c] = x;
       return n;
   }
 
-  static_assert(f() == 0); // expected-error {{not an integral constant expression}} \
-                           // expected-note {{in call to 'f()'}}
-
-  int main() {
-      return f();
-  }
+  static_assert(f() == 0);
 }
 
 namespace NonPrimitiveOpaqueValue
