@@ -30,7 +30,6 @@ add_llvm_tool(dsymutil
   MachODebugMapParser.cpp
   MachOUtils.cpp
   Reproducer.cpp
-  RelocationMap.cpp
   SymbolMap.cpp
 
   DEPENDS

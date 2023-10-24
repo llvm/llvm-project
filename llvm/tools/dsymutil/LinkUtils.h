@@ -93,12 +93,6 @@ struct LinkOptions {
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
       vfs::getRealFileSystem();
 
-  /// -build-variant-suffix.
-  std::string BuildVariantSuffix;
-
-  /// Paths where to search for the .dSYM files of merged libraries.
-  std::vector<std::string> DSYMSearchPaths;
-
   /// Fields used for linking and placing remarks into the .dSYM bundle.
   /// @{
 
