@@ -904,6 +904,11 @@ struct SparseTensorDimOpRewriter : public OpRewritePattern<tensor::DimOp> {
     }
 
     // Non-permutation dim2lvl/lvl2dim maps.
+    // Computes as following:
+    // affine.apply #map (l0 - 1, l1 - 1, ...) + 1
+    // Note that it is not the most efficient way (but a more general one) for
+    // the lvl to dim translation, e.g., for BSR, the dimension size for can be
+    // computed simply by lvl_size * block_size.
     Location loc = op.getLoc();
     SmallVector<Value> maxLvlCrds;
     for (Level l = 0; l < stt.getLvlRank(); l++) {
