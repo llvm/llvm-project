@@ -1039,7 +1039,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
     // EE mixes vector and scalar so is always conflict
     if (isa<ExtractElementInst>(I))
       return true;
-    // shuffle vector is always conflict as it creates new vector from existing
+    // Shuffle vector is always a conflict as it creates new vector from existing
     // ones.
     if (isa<ShuffleVectorInst>(I))
       return true;
