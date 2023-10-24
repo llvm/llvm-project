@@ -16,11 +16,33 @@
 #include <stddef.h> // size_t
 
 namespace LIBC_NAMESPACE {
+namespace x86 {
 
 static constexpr size_t kCachelineSize = 64;
 
+LIBC_INLINE_VAR constexpr bool kUseSoftwarePrefetching =
+    LLVM_LIBC_IS_DEFINED(LIBC_COPT_MEMSET_X86_USE_SOFTWARE_PREFETCHING);
+
+} // namespace x86
+
 // prefetch for write
 static inline void PrefetchW(CPtr dst) { __builtin_prefetch(dst, 1, 3); }
+
+[[maybe_unused]] LIBC_INLINE static void inline_memset_x86_sw_prefetching(Ptr dst, uint8_t value, size_t count) {
+  PrefetchW(dst + kCachelineSize);
+  if (count <= 128)
+    return generic::Memset<uint512_t>::head_tail(dst, value, count);
+  PrefetchW(dst + kCachelineSize * 2);
+  // Aligned loop
+  generic::Memset<uint256_t>::block(dst, value);
+  align_to_next_boundary<32>(dst, count);
+  if (count <= 192) {
+    return Memset<uint256_t>::loop_and_tail(dst, value, count);
+  }
+  else {
+    return Memset<uint256_t>::loop_and_tail_prefetch<320, 128>(dst, value, count);
+  }
+}
 
 [[maybe_unused]] LIBC_INLINE static void
 inline_memset_x86(Ptr dst, uint8_t value, size_t count) {
@@ -58,17 +80,17 @@ inline_memset_x86(Ptr dst, uint8_t value, size_t count) {
     return generic::Memset<uint128_t>::head_tail(dst, value, count);
   if (count <= 64)
     return generic::Memset<uint256_t>::head_tail(dst, value, count);
-  PrefetchW(dst + kCachelineSize);
+  if constexpr (x86::kUseSoftwarePrefetching) {
+    return inline_memset_x86_sw_prefetching(dst, value, count);
+  }
   if (count <= 128)
     return generic::Memset<uint512_t>::head_tail(dst, value, count);
-  PrefetchW(dst + kCachelineSize * 2);
   // Aligned loop
   generic::Memset<uint256_t>::block(dst, value);
   align_to_next_boundary<32>(dst, count);
-  if (count <= 192) {
-    return Memset<uint256_t>::loop_and_tail(dst, value, count);
+  else {
+    return Memset<uint256_t>::loop_and_tail(dst, value, count); 
   }
-  return Memset<uint256_t>::loop_and_tail_prefetch<320, 128>(dst, value, count);
 }
 } // namespace LIBC_NAMESPACE
 
