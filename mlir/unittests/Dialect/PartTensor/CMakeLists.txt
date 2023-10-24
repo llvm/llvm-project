@@ -5,4 +5,5 @@ target_link_libraries(MLIRPartTensorTests
   PRIVATE
   MLIRExecutionEngine
   MLIRSparseTensorUtils
+  mlir_c_runner_utils
 )

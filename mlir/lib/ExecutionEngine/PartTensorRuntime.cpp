@@ -50,6 +50,7 @@
 
 #ifdef MLIR_CRUNNERUTILS_DEFINE_FUNCTIONS
 
+#include "mlir/ExecutionEngine/CRunnerUtils.h"
 #include "mlir/ExecutionEngine/SparseTensor/ArithmeticUtils.h"
 #include "mlir/ExecutionEngine/SparseTensor/COO.h"
 #include "mlir/ExecutionEngine/SparseTensor/ErrorHandling.h"
@@ -243,32 +244,6 @@ fromMLIRSparseTensor(const SparseTensorStorage<uint64_t, uint64_t, V> *tensor,
 
 #define MEMREF_GET_PAYLOAD(MEMREF) ((MEMREF)->data + (MEMREF)->offset)
 
-/// Initializes the memref with the provided size and data pointer.  This
-/// is designed for functions which want to "return" a memref that aliases
-/// into memory owned by some other object (e.g., `SparseTensorStorage`),
-/// without doing any actual copying.  (The "return" is in scarequotes
-/// because the `_mlir_ciface_` calling convention migrates any returned
-/// memrefs into an out-parameter passed before all the other function
-/// parameters.)
-///
-/// We make this a function rather than a macro mainly for type safety
-/// reasons.  This function does not modify the data pointer, but it
-/// cannot be marked `const` because it is stored into the (necessarily)
-/// non-`const` memref.  This function is templated over the `DataSizeT`
-/// to work around signedness warnings due to many data types having
-/// varying signedness across different platforms.  The templating allows
-/// this function to ensure that it does the right thing and never
-/// introduces errors due to implicit conversions.
-template <typename DataSizeT, typename T>
-static inline void aliasIntoMemref(DataSizeT size, T *data,
-                                   StridedMemRefType<T, 1> &ref) {
-  ref.basePtr = ref.data = data;
-  ref.offset = 0;
-  using MemrefSizeT = typename std::remove_reference_t<decltype(ref.sizes[0])>;
-  ref.sizes[0] = detail::checkOverflowCast<MemrefSizeT>(size);
-  ref.strides[0] = 1;
-}
-
 } // anonymous namespace
 
 extern "C" {
@@ -285,8 +260,8 @@ extern "C" {
     switch (action) {                                                          \
     case Action::kFromCOO: {                                                   \
       assert(ptr && "Received nullptr for PartTensorCOO object");              \
-      auto &coo = *static_cast<SparseTensorCOO<V> *>(ptr);                     \
-      return PartTensorStorage<uint64_t, uint64_t, V>::newFromCOO(             \
+      auto coo = static_cast<SparseTensorCOO<V> *>(ptr);                       \
+      return (void *)PartTensorStorage<uint64_t, uint64_t, V>::newFromCOO(     \
           partRank, partSizes, dimRank, dimSizes, coo);                        \
     }                                                                          \
     default:                                                                   \

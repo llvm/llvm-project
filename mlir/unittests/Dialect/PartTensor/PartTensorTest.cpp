@@ -1,5 +1,8 @@
 #include "PartTensorTestBase.h"
+#include "mlir/Dialect/SparseTensor/IR/Enums.h"
+#include "mlir/ExecutionEngine/CRunnerUtils.h"
 #include "mlir/ExecutionEngine/PartTensor/Storage.h"
+#include "mlir/ExecutionEngine/PartTensorRuntime.h"
 using namespace mlir::sparse_tensor;
 
 using index_t = uint64_t;
@@ -35,10 +38,10 @@ TEST(PartTensor, NewPartTensor) {
                           [](auto v) { return v.value == 1.0; }));
   EXPECT_TRUE(std::size(elements) == rowSize);
   EXPECT_EQ(std::size(dims), stCoo->getRank());
-  auto pt = PartTensorStorage<index_t, index_t, float>::newFromCOO(
-      std::size(partitionPlan), partitionPlan.data(), 2, dims.data(),
-      stCoo.get());
   {
+    auto pt = PartTensorStorage<index_t, index_t, float>::newFromCOO(
+        std::size(partitionPlan), partitionPlan.data(), 2, dims.data(),
+        stCoo.get());
     auto &parts = pt->getParts();
     for (auto p : llvm::seq(0ul, std::size(parts))) {
       std::cout << "Part:\n";
@@ -48,6 +51,18 @@ TEST(PartTensor, NewPartTensor) {
       }
       std::cout << "----\n";
     }
+  }
+  {
+    using namespace mlir::sparse_tensor;
+    StridedMemRefType<index_t, 1> partSizesRef, dimSizesRef;
+    mlir::part_tensor::aliasIntoMemref<index_t, index_t>(
+        std::size(partitionPlan), partitionPlan.data(), partSizesRef);
+    mlir::part_tensor::aliasIntoMemref<index_t, index_t>(
+        std::size(dims), dims.data(), dimSizesRef);
+    auto *pt = _mlir_ciface_newPartTensor(&partSizesRef, &dimSizesRef,
+                                          PrimaryType::kF32, Action::kFromCOO,
+                                          stCoo.get());
+    (void)pt;
   }
 }
 } // namespace

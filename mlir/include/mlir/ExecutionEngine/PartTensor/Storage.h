@@ -90,7 +90,7 @@ public:
                     std::vector<unique_ptr<SparseTensorCOO<V>>> &&spCOO)
       : partSize(partSize, partSize + nParts), parts(std::move(spCOO)) {}
 
-  static std::unique_ptr<PartTensorStorage<P, I, V>>
+  static PartTensorStorage<P, I, V> *
   newFromCOO(uint64_t nParts, const uint64_t *partData, uint64_t dimRank,
              const uint64_t *dimShape, const SparseTensorCOO<V> *spCOO);
 
@@ -115,12 +115,9 @@ bool inRegion(T loPoint, T hiPoint, T point) {
 }
 
 template <typename P, typename I, typename V>
-std::unique_ptr<PartTensorStorage<P, I, V>>
-PartTensorStorage<P, I, V>::newFromCOO(uint64_t partDataLength,
-                                       const uint64_t *partData,
-                                       uint64_t dimRank,
-                                       const uint64_t *dimShape,
-                                       const SparseTensorCOO<V> *spCOO) {
+PartTensorStorage<P, I, V> *PartTensorStorage<P, I, V>::newFromCOO(
+    uint64_t partDataLength, const uint64_t *partData, uint64_t dimRank,
+    const uint64_t *dimShape, const SparseTensorCOO<V> *spCOO) {
   using namespace mlir::part_tensor;
   using llvm::ArrayRef;
   assert(partData && "Got nullptr for partition shape");
@@ -160,9 +157,8 @@ PartTensorStorage<P, I, V>::newFromCOO(uint64_t partDataLength,
       }
     });
   }
-  auto pt = std::make_unique<PartTensorStorage<P, I, V>>(
-      numPartitions, partData, std::move(parts));
-  return pt;
+  return new PartTensorStorage<P, I, V>(numPartitions, partData,
+                                        std::move(parts));
 }
 
 } // namespace part_tensor
