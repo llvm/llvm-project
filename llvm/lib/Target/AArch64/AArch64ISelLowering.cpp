@@ -21017,6 +21017,21 @@ static SDValue performMSTORECombine(SDNode *N,
     }
   }
 
+  if (MST->isTruncatingStore()) {
+    if (SDValue Rshrnb = trySimplifySrlAddToRshrnb(Value, DAG, Subtarget)) {
+      EVT ValueVT = Value->getValueType(0);
+      EVT MemVT = MST->getMemoryVT();
+      if ((ValueVT == MVT::nxv8i16 && MemVT == MVT::nxv8i8) ||
+          (ValueVT == MVT::nxv4i32 && MemVT == MVT::nxv4i16) ||
+          (ValueVT == MVT::nxv2i64 && MemVT == MVT::nxv2i32)) {
+        return DAG.getMaskedStore(
+            MST->getChain(), DL, Rshrnb, MST->getBasePtr(), MST->getOffset(),
+            MST->getMask(), MST->getMemoryVT(), MST->getMemOperand(),
+            MST->getAddressingMode(), true);
+      }
+    }
+  }
+
   return SDValue();
 }
 
