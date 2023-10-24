@@ -800,6 +800,8 @@ public:
 
   unsigned getMaxSupportedInterleaveFactor() const override { return 8; }
 
+  bool fallBackToDAGISel(const Instruction &Inst) const override;
+
   bool lowerInterleavedLoad(LoadInst *LI,
                             ArrayRef<ShuffleVectorInst *> Shuffles,
                             ArrayRef<unsigned> Indices,
