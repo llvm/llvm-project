@@ -15,9 +15,9 @@ define void @foo(ptr %this, ptr %p, i32 %add7) {
 ; CHECK-NEXT:    i32 2, label [[SW_BB]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
-; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i32> [[TMP1]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i32>, ptr [[THIS:%.*]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i32> [[TMP4]], [[TMP3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[THIS:%.*]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = xor <2 x i32> [[TMP1]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i32> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    br label [[SW_EPILOG]]
 ; CHECK:       sw.epilog:
 ; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x i32> [ undef, [[ENTRY:%.*]] ], [ [[TMP5]], [[SW_BB]] ]

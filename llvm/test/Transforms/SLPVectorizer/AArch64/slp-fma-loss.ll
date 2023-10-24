@@ -215,8 +215,8 @@ define float @slp_not_profitable_in_loop(float %x, ptr %A) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[RED:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[RED_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast <2 x float> [[TMP1]], [[TMP0]]
 ; CHECK-NEXT:    [[MUL12:%.*]] = fmul fast float 3.000000e+00, [[L_1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast <2 x float> [[TMP1]], [[TMP0]]
 ; CHECK-NEXT:    [[MUL16:%.*]] = fmul fast float 3.000000e+00, [[L_3]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 1
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd fast float [[MUL12]], [[TMP3]]

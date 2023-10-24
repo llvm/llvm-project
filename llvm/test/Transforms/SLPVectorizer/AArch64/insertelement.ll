@@ -40,8 +40,8 @@ declare float @llvm.fabs.f32(float)
 define <4 x float> @insertelement_poison_lanes(ptr %0) {
 ; CHECK-LABEL: @insertelement_poison_lanes(
 ; CHECK-NEXT:    [[INS_1:%.*]] = insertelement <4 x float> zeroinitializer, float poison, i64 0
-; CHECK-NEXT:    [[INS_2:%.*]] = insertelement <4 x float> [[INS_1]], float 0.000000e+00, i64 0
 ; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr double, ptr [[TMP0:%.*]], i64 1
+; CHECK-NEXT:    [[INS_2:%.*]] = insertelement <4 x float> [[INS_1]], float 0.000000e+00, i64 0
 ; CHECK-NEXT:    store <2 x double> <double 0.000000e+00, double 1.000000e+00>, ptr [[GEP_1]], align 8
 ; CHECK-NEXT:    ret <4 x float> [[INS_2]]
 ;

@@ -10,14 +10,14 @@ define i32 @foo(i32 %0, ptr %1, ptr %2)  {
 ; CHECK-NEXT:    [[T8:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[T4]], i64 0, i32 1
 ; CHECK-NEXT:    [[T9:%.*]] = getelementptr inbounds [3 x float], ptr [[T8]], i64 1, i64 0
 ; CHECK-NEXT:    [[T14:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[T4]], i64 0, i32 1, i64 0
-; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x float>, ptr [[T14]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, ptr [[T14]], align 4
 ; CHECK-NEXT:    br label [[T37:%.*]]
 ; CHECK:       t37:
-; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x float> [ [[TMP5]], [[TMP3:%.*]] ], [ [[T89:%.*]], [[T37]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = fdiv fast <2 x float> <float 1.000000e+00, float 1.000000e+00>, [[TMP6]]
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP7]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <2 x float> [ [[TMP4]], [[TMP3:%.*]] ], [ [[T89:%.*]], [[T37]] ]
 ; CHECK-NEXT:    [[T21:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[T4]], i64 0, i32 2, i64 0
-; CHECK-NEXT:    store <4 x float> [[SHUFFLE]], ptr [[T21]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = fdiv fast <2 x float> <float 1.000000e+00, float 1.000000e+00>, [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    store <4 x float> [[TMP7]], ptr [[T21]], align 4
 ; CHECK-NEXT:    [[T89]] = load <2 x float>, ptr [[T9]], align 4
 ; CHECK-NEXT:    br i1 undef, label [[T37]], label [[T55:%.*]]
 ; CHECK:       t55:

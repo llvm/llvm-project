@@ -35,14 +35,19 @@ define void @PR28330(i32 %n) {
 ;
 ; MAX-COST-LABEL: @PR28330(
 ; MAX-COST-NEXT:  entry:
-; MAX-COST-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr getelementptr inbounds ([80 x i8], ptr @a, i64 0, i64 1), align 1
-; MAX-COST-NEXT:    [[TMP1:%.*]] = icmp eq <8 x i8> [[TMP0]], zeroinitializer
+; MAX-COST-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr getelementptr inbounds ([80 x i8], ptr @a, i64 0, i64 1), align 1
+; MAX-COST-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i8> [[TMP0]], zeroinitializer
+; MAX-COST-NEXT:    [[TMP2:%.*]] = load <4 x i8>, ptr getelementptr inbounds ([80 x i8], ptr @a, i64 0, i64 5), align 1
+; MAX-COST-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i8> [[TMP2]], zeroinitializer
 ; MAX-COST-NEXT:    br label [[FOR_BODY:%.*]]
 ; MAX-COST:       for.body:
-; MAX-COST-NEXT:    [[P17:%.*]] = phi i32 [ [[OP_RDX:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
-; MAX-COST-NEXT:    [[TMP2:%.*]] = select <8 x i1> [[TMP1]], <8 x i32> <i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720>, <8 x i32> <i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80>
-; MAX-COST-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP2]])
-; MAX-COST-NEXT:    [[OP_RDX]] = add i32 [[TMP3]], [[P17]]
+; MAX-COST-NEXT:    [[P17:%.*]] = phi i32 [ [[OP_RDX1:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
+; MAX-COST-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> <i32 -720, i32 -720, i32 -720, i32 -720>, <4 x i32> <i32 -80, i32 -80, i32 -80, i32 -80>
+; MAX-COST-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP3]], <4 x i32> <i32 -720, i32 -720, i32 -720, i32 -720>, <4 x i32> <i32 -80, i32 -80, i32 -80, i32 -80>
+; MAX-COST-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP4]])
+; MAX-COST-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP5]])
+; MAX-COST-NEXT:    [[OP_RDX:%.*]] = add i32 [[TMP6]], [[TMP7]]
+; MAX-COST-NEXT:    [[OP_RDX1]] = add i32 [[OP_RDX]], [[P17]]
 ; MAX-COST-NEXT:    br label [[FOR_BODY]]
 ;
 entry:
@@ -112,14 +117,19 @@ define void @PR32038(i32 %n) {
 ;
 ; MAX-COST-LABEL: @PR32038(
 ; MAX-COST-NEXT:  entry:
-; MAX-COST-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr getelementptr inbounds ([80 x i8], ptr @a, i64 0, i64 1), align 1
-; MAX-COST-NEXT:    [[TMP1:%.*]] = icmp eq <8 x i8> [[TMP0]], zeroinitializer
+; MAX-COST-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr getelementptr inbounds ([80 x i8], ptr @a, i64 0, i64 1), align 1
+; MAX-COST-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i8> [[TMP0]], zeroinitializer
+; MAX-COST-NEXT:    [[TMP2:%.*]] = load <4 x i8>, ptr getelementptr inbounds ([80 x i8], ptr @a, i64 0, i64 5), align 1
+; MAX-COST-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i8> [[TMP2]], zeroinitializer
 ; MAX-COST-NEXT:    br label [[FOR_BODY:%.*]]
 ; MAX-COST:       for.body:
-; MAX-COST-NEXT:    [[P17:%.*]] = phi i32 [ [[OP_RDX:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
-; MAX-COST-NEXT:    [[TMP2:%.*]] = select <8 x i1> [[TMP1]], <8 x i32> <i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720>, <8 x i32> <i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80>
-; MAX-COST-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP2]])
-; MAX-COST-NEXT:    [[OP_RDX]] = add i32 [[TMP3]], -5
+; MAX-COST-NEXT:    [[P17:%.*]] = phi i32 [ [[OP_RDX1:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
+; MAX-COST-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> <i32 -720, i32 -720, i32 -720, i32 -720>, <4 x i32> <i32 -80, i32 -80, i32 -80, i32 -80>
+; MAX-COST-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP3]], <4 x i32> <i32 -720, i32 -720, i32 -720, i32 -720>, <4 x i32> <i32 -80, i32 -80, i32 -80, i32 -80>
+; MAX-COST-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP4]])
+; MAX-COST-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP5]])
+; MAX-COST-NEXT:    [[OP_RDX:%.*]] = add i32 [[TMP6]], [[TMP7]]
+; MAX-COST-NEXT:    [[OP_RDX1]] = add i32 [[OP_RDX]], -5
 ; MAX-COST-NEXT:    br label [[FOR_BODY]]
 ;
 entry:

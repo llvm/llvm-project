@@ -11,10 +11,10 @@ define void @test(double %add) {
 ; CHECK-NEXT:    br label [[COND_TRUE45:%.*]]
 ; CHECK:       cond.true45:
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> zeroinitializer, [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = fsub <2 x double> [[TMP5]], zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = fsub <2 x double> [[TMP6]], [[TMP4]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> zeroinitializer, [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fsub <2 x double> [[TMP4]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = fmul <2 x double> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = fsub <2 x double> [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    ret void
 ;
 entry:

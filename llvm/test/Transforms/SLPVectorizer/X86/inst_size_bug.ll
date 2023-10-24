@@ -5,13 +5,13 @@ define void @inst_size(ptr %a, <2 x i64> %b) {
 ; CHECK-LABEL: @inst_size(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL:%.*]] = extractelement <2 x i64> [[B:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    [[T41:%.*]] = icmp sgt i64 0, [[VAL]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <4 x i64> zeroinitializer, [[TMP1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i64> zeroinitializer, [[TMP0]]
 ; CHECK-NEXT:    br label [[BLOCK:%.*]]
 ; CHECK:       block:
 ; CHECK-NEXT:    [[PHI1:%.*]] = phi i1 [ [[T41]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = phi <4 x i1> [ [[TMP2]], [[ENTRY]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi <4 x i1> [ [[TMP1]], [[ENTRY]] ]
 ; CHECK-NEXT:    ret void
 ;
 entry:

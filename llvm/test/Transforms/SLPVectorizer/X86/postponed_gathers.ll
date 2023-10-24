@@ -11,19 +11,19 @@ define void @foo() {
 ; CHECK:       bci_252:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi <2 x i32> [ zeroinitializer, [[BCI_0:%.*]] ], [ [[TMP16:%.*]], [[BCI_252_1:%.*]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul <2 x i32> zeroinitializer, [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = or <2 x i32> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = or <2 x i32> [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = or <2 x i32> [[TMP6]], zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = or <2 x i32> [[TMP5]], [[TMP7]]
+; CHECK-NEXT:    [[TMP5:%.*]] = or <2 x i32> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = or <2 x i32> [[TMP5]], zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = or <2 x i32> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = or <2 x i32> [[TMP7]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = or <2 x i32> [[TMP8]], zeroinitializer
 ; CHECK-NEXT:    br i1 false, label [[NOT_ZERO70:%.*]], label [[BCI_252_1]]
 ; CHECK:       bci_252.1:
 ; CHECK-NEXT:    [[TMP10:%.*]] = or <2 x i32> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    [[TMP11:%.*]] = or <2 x i32> [[TMP9]], zeroinitializer
-; CHECK-NEXT:    [[TMP12:%.*]] = mul <2 x i32> [[TMP10]], zeroinitializer
-; CHECK-NEXT:    [[TMP13:%.*]] = or <2 x i32> [[TMP2]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or <2 x i32> [[TMP13]], zeroinitializer
-; CHECK-NEXT:    [[TMP15:%.*]] = or <2 x i32> [[TMP11]], [[TMP14]]
+; CHECK-NEXT:    [[TMP11:%.*]] = mul <2 x i32> [[TMP10]], zeroinitializer
+; CHECK-NEXT:    [[TMP12:%.*]] = or <2 x i32> [[TMP2]], [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = or <2 x i32> [[TMP12]], zeroinitializer
+; CHECK-NEXT:    [[TMP14:%.*]] = or <2 x i32> [[TMP9]], zeroinitializer
+; CHECK-NEXT:    [[TMP15:%.*]] = or <2 x i32> [[TMP14]], [[TMP13]]
 ; CHECK-NEXT:    [[TMP16]] = or <2 x i32> [[TMP15]], zeroinitializer
 ; CHECK-NEXT:    br label [[BCI_252]]
 ; CHECK:       not_zero70:

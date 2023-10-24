@@ -4,11 +4,11 @@
 define void @test() {
 ; CHECK-LABEL: define void @test() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i1> poison, i1 false, i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr getelementptr inbounds ([17 x i64], ptr null, i64 0, i64 9), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i1> [[TMP0]], i1 false, i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr getelementptr inbounds ([17 x i64], ptr null, i64 0, i64 9), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i1> poison, i1 false, i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i1> [[TMP1]], i1 false, i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <2 x i1> [[TMP2]] to <2 x i64>
-; CHECK-NEXT:    [[TMP4:%.*]] = or <2 x i64> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = or <2 x i64> [[TMP0]], [[TMP3]]
 ; CHECK-NEXT:    store <2 x i64> [[TMP4]], ptr getelementptr inbounds ([17 x i64], ptr null, i64 0, i64 9), align 8
 ; CHECK-NEXT:    ret void
 ;

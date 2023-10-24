@@ -16,10 +16,10 @@ define void @foo() {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load double, ptr undef, align 8
 ; CHECK-NEXT:    br i1 undef, label [[BB3]], label [[BB4:%.*]]
 ; CHECK:       bb4:
-; CHECK-NEXT:    [[TMP4:%.*]] = fpext <4 x float> [[TMP2]] to <4 x double>
 ; CHECK-NEXT:    [[CONV2:%.*]] = uitofp i16 undef to double
 ; CHECK-NEXT:    [[ADD1:%.*]] = fadd double [[TMP3]], [[CONV2]]
 ; CHECK-NEXT:    [[SUB1:%.*]] = fsub double undef, undef
+; CHECK-NEXT:    [[TMP4:%.*]] = fpext <4 x float> [[TMP2]] to <4 x double>
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x double> <double poison, double poison, double undef, double undef>, double [[SUB1]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x double> [[TMP5]], double [[ADD1]], i32 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = fcmp ogt <4 x double> [[TMP6]], [[TMP4]]
