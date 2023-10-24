@@ -367,11 +367,11 @@ define i32 @fshl_concat_i8_i24(i8 %x, i24 %y, ptr %addr) {
 ; CHECK-NEXT:    ret i32 [[YX]]
 ;
   %zext.x = zext i8 %x to i32
-  %slx = shl nuw i32 %zext.x, 24
+  %slx = shl i32 %zext.x, 24
   %zext.y = zext i24 %y to i32
   %xy = or i32 %zext.y, %slx
   store i32 %xy, ptr %addr, align 4
-  %sly = shl nuw i32 %zext.y, 8
+  %sly = shl i32 %zext.y, 8
   %yx = or i32 %zext.x, %sly
   ret i32 %yx
 }
@@ -387,11 +387,11 @@ define i32 @fshl_concat_i8_i8(i8 %x, i8 %y, ptr %addr) {
 ; CHECK-NEXT:    ret i32 [[YX]]
 ;
   %zext.x = zext i8 %x to i32
-  %slx = shl nuw i32 %zext.x, 13
+  %slx = shl i32 %zext.x, 13
   %zext.y = zext i8 %y to i32
   %xy = or i32 %zext.y, %slx
   store i32 %xy, ptr %addr, align 4
-  %sly = shl nuw i32 %zext.y, 19
+  %sly = shl i32 %zext.y, 19
   %yx = or i32 %zext.x, %sly
   ret i32 %yx
 }
@@ -399,7 +399,7 @@ define i32 @fshl_concat_i8_i8(i8 %x, i8 %y, ptr %addr) {
 define i32 @fshl_concat_i8_i8_overlap(i8 %x, i8 %y, ptr %addr) {
 ; CHECK-LABEL: @fshl_concat_i8_i8_overlap(
 ; CHECK-NEXT:    [[ZEXT_X:%.*]] = zext i8 [[X:%.*]] to i32
-; CHECK-NEXT:    [[SLX:%.*]] = shl nuw i32 [[ZEXT_X]], 25
+; CHECK-NEXT:    [[SLX:%.*]] = shl i32 [[ZEXT_X]], 25
 ; CHECK-NEXT:    [[ZEXT_Y:%.*]] = zext i8 [[Y:%.*]] to i32
 ; CHECK-NEXT:    [[XY:%.*]] = or i32 [[SLX]], [[ZEXT_Y]]
 ; CHECK-NEXT:    store i32 [[XY]], ptr [[ADDR:%.*]], align 4
@@ -409,11 +409,11 @@ define i32 @fshl_concat_i8_i8_overlap(i8 %x, i8 %y, ptr %addr) {
 ;
   ; Test sly overlap.
   %zext.x = zext i8 %x to i32
-  %slx = shl nuw i32 %zext.x, 25
+  %slx = shl i32 %zext.x, 25
   %zext.y = zext i8 %y to i32
   %xy = or i32 %zext.y, %slx
   store i32 %xy, ptr %addr, align 4
-  %sly = shl nuw i32 %zext.y, 7
+  %sly = shl i32 %zext.y, 7
   %yx = or i32 %zext.x, %sly
   ret i32 %yx
 }
@@ -425,17 +425,17 @@ define i32 @fshl_concat_i8_i8_drop(i8 %x, i8 %y, ptr %addr) {
 ; CHECK-NEXT:    [[ZEXT_Y:%.*]] = zext i8 [[Y:%.*]] to i32
 ; CHECK-NEXT:    [[XY:%.*]] = or i32 [[SLX]], [[ZEXT_Y]]
 ; CHECK-NEXT:    store i32 [[XY]], ptr [[ADDR:%.*]], align 4
-; CHECK-NEXT:    [[SLY:%.*]] = shl nuw i32 [[ZEXT_Y]], 25
+; CHECK-NEXT:    [[SLY:%.*]] = shl i32 [[ZEXT_Y]], 25
 ; CHECK-NEXT:    [[YX:%.*]] = or i32 [[SLY]], [[ZEXT_X]]
 ; CHECK-NEXT:    ret i32 [[YX]]
 ;
   ; Test sly drop.
   %zext.x = zext i8 %x to i32
-  %slx = shl nuw i32 %zext.x, 7
+  %slx = shl i32 %zext.x, 7
   %zext.y = zext i8 %y to i32
   %xy = or i32 %zext.y, %slx
   store i32 %xy, ptr %addr, align 4
-  %sly = shl nuw i32 %zext.y, 25
+  %sly = shl i32 %zext.y, 25
   %yx = or i32 %zext.x, %sly
   ret i32 %yx
 }
@@ -452,28 +452,28 @@ define i32 @fshl_concat_i8_i8_different_slot(i8 %x, i8 %y, ptr %addr) {
 ; CHECK-NEXT:    ret i32 [[YX]]
 ;
   %zext.x = zext i8 %x to i32
-  %slx = shl nuw i32 %zext.x, 9
+  %slx = shl i32 %zext.x, 9
   %zext.y = zext i8 %y to i32
   %xy = or i32 %zext.y, %slx
   store i32 %xy, ptr %addr, align 4
-  %sly = shl nuw i32 %zext.y, 22
+  %sly = shl i32 %zext.y, 22
   %yx = or i32 %zext.x, %sly
   ret i32 %yx
 }
 
 define i32 @fshl_concat_unknown_source(i32 %zext.x, i32 %zext.y, ptr %addr) {
 ; CHECK-LABEL: @fshl_concat_unknown_source(
-; CHECK-NEXT:    [[SLX:%.*]] = shl nuw i32 [[ZEXT_X:%.*]], 16
+; CHECK-NEXT:    [[SLX:%.*]] = shl i32 [[ZEXT_X:%.*]], 16
 ; CHECK-NEXT:    [[XY:%.*]] = or i32 [[SLX]], [[ZEXT_Y:%.*]]
 ; CHECK-NEXT:    store i32 [[XY]], ptr [[ADDR:%.*]], align 4
-; CHECK-NEXT:    [[SLY:%.*]] = shl nuw i32 [[ZEXT_Y]], 16
+; CHECK-NEXT:    [[SLY:%.*]] = shl i32 [[ZEXT_Y]], 16
 ; CHECK-NEXT:    [[YX:%.*]] = or i32 [[SLY]], [[ZEXT_X]]
 ; CHECK-NEXT:    ret i32 [[YX]]
 ;
-  %slx = shl nuw i32 %zext.x, 16
+  %slx = shl i32 %zext.x, 16
   %xy = or i32 %zext.y, %slx
   store i32 %xy, ptr %addr, align 4
-  %sly = shl nuw i32 %zext.y, 16
+  %sly = shl i32 %zext.y, 16
   %yx = or i32 %zext.x, %sly
   ret i32 %yx
 }
@@ -489,11 +489,11 @@ define <2 x i32> @fshl_concat_vector(<2 x i8> %x, <2 x i24> %y, ptr %addr) {
 ; CHECK-NEXT:    ret <2 x i32> [[YX]]
 ;
   %zext.x = zext <2 x i8> %x to <2 x i32>
-  %slx = shl nuw <2 x i32> %zext.x, <i32 24, i32 24>
+  %slx = shl <2 x i32> %zext.x, <i32 24, i32 24>
   %zext.y = zext <2 x i24> %y to <2 x i32>
   %xy = or <2 x i32> %slx, %zext.y
   store <2 x i32> %xy, ptr %addr, align 4
-  %sly = shl nuw <2 x i32> %zext.y, <i32 8, i32 8>
+  %sly = shl <2 x i32> %zext.y, <i32 8, i32 8>
   %yx = or <2 x i32> %sly, %zext.x
   ret <2 x i32> %yx
 }
