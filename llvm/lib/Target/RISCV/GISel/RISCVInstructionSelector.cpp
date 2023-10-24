@@ -500,6 +500,10 @@ bool RISCVInstructionSelector::selectGlobalValue(
     return false;
   }
 
+  Register DefReg = MI.getOperand(0).getReg();
+  const LLT DefTy = MRI.getType(DefReg);
+  MachineInstr *Result = nullptr;
+
   switch (TM.getCodeModel()) {
   default: {
     reportGISelFailure(const_cast<MachineFunction &>(*MF), *TPC, *MORE,
@@ -507,10 +511,6 @@ bool RISCVInstructionSelector::selectGlobalValue(
     return false;
   }
   case CodeModel::Small: {
-    Register DefReg = MI.getOperand(0).getReg();
-    const LLT DefTy = MRI.getType(DefReg);
-    MachineInstr *Result = nullptr;
-
     // When HWASAN is used and tagging of global variables is enabled
     // they should be accessed via the GOT, since the tagged address of a global
     // is incompatible with existing code models. This also applies to non-pic
@@ -566,10 +566,6 @@ bool RISCVInstructionSelector::selectGlobalValue(
     return true;
   }
   case CodeModel::Medium: {
-    Register DefReg = MI.getOperand(0).getReg();
-    const LLT DefTy = MRI.getType(DefReg);
-    MachineInstr *Result = nullptr;
-
     // Emit LGA/LLA instead of the sequence it expands to because the pcrel_lo
     // relocation needs to reference a label that points to the auipc
     // instruction itself, not the global. This cannot be done inside the
