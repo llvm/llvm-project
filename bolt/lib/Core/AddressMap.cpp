@@ -103,9 +103,11 @@ std::optional<AddressMap> AddressMap::parse(BinaryContext &BC) {
   if (LabelMapSection) {
     Parsed.Label2AddrMap.reserve(LabelMapSection->getOutputSize() / EntrySize);
     parseSection(*LabelMapSection, [&](uint64_t Input, uint64_t Output) {
-      assert(!Parsed.Label2AddrMap.count(reinterpret_cast<MCSymbol *>(Input)));
+      assert(!Parsed.Label2AddrMap.count(
+                 reinterpret_cast<const MCSymbol *>(Input)) &&
+             "Duplicate label entry detected.");
       Parsed.Label2AddrMap.insert(
-          {reinterpret_cast<MCSymbol *>(Input), Output});
+          {reinterpret_cast<const MCSymbol *>(Input), Output});
     });
   }
 
