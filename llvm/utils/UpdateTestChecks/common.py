@@ -902,6 +902,7 @@ class NamelessValue:
         is_number=False,
         replace_number_with_counter=False,
         match_literally=False,
+        interlaced_with_previous=False
     ):
         self.check_prefix = check_prefix
         self.check_key = check_key
@@ -914,6 +915,7 @@ class NamelessValue:
         # modifications to LLVM, replace those with an incrementing counter.
         self.replace_number_with_counter = replace_number_with_counter
         self.match_literally = match_literally
+        self.interlaced_with_previous = interlaced_with_previous
         self.variable_mapping = {}
 
     # Return true if this kind of IR value is "local", basically if it matches '%{{.*}}'.
@@ -1006,6 +1008,7 @@ ir_nameless_values = [
         r".+",
         is_before_functions=True,
         match_literally=True,
+        interlaced_with_previous=True,
     ),
     NamelessValue(r"DBG", "!", r"!dbg ", r"![0-9]+", None),
     NamelessValue(r"DIASSIGNID", "!", r"!DIAssignID ", r"![0-9]+", None),
@@ -1611,7 +1614,10 @@ def build_global_values_dictionary(glob_val_dict, raw_tool_output, prefixes):
         global_ir_value_re = re.compile(global_ir_value_re_str, flags=(re.M))
         lines = []
         for m in global_ir_value_re.finditer(raw_tool_output):
-            lines.append(m.group(0))
+            # Attach the substring's start index so that CHECK lines
+            # can be sorted properly even if they are matched by different nameless values.
+            # This is relevant for GLOB and GLOBNAMED since they may appear interlaced.
+            lines.append((m.start(), m.group(0)))
 
         for prefix in prefixes:
             if glob_val_dict[prefix] is None:
@@ -1628,12 +1634,12 @@ def build_global_values_dictionary(glob_val_dict, raw_tool_output, prefixes):
 
 
 def filter_globals_according_to_preference(
-    global_val_lines, global_vars_seen, nameless_value, global_check_setting
+    global_val_lines_w_index, global_vars_seen, nameless_value, global_check_setting
 ):
     if global_check_setting == "none":
         return []
     if global_check_setting == "all":
-        return global_val_lines
+        return global_val_lines_w_index
     assert global_check_setting == "smart"
 
     if nameless_value.check_key == "#":
@@ -1667,7 +1673,7 @@ def filter_globals_according_to_preference(
         for x in contains_refs_to[var]:
             add(x)
 
-    for line in global_val_lines:
+    for i, line in global_val_lines_w_index:
         (var, refs) = extract(line, nameless_value)
         contains_refs_to[var] = refs
     for var, check_key in global_vars_seen:
@@ -1675,8 +1681,8 @@ def filter_globals_according_to_preference(
             continue
         add(var)
     return [
-        line
-        for line in global_val_lines
+        (i, line)
+        for i, line in global_val_lines_w_index
         if extract(line, nameless_value)[0] in transitively_visible
     ]
 
@@ -1693,6 +1699,14 @@ def filter_unstable_metadata(line):
         line = f.sub(replacement, line)
     return line
 
+def flush_current_checks(output_lines, new_lines_w_index, comment_marker):
+    if not new_lines_w_index:
+        return
+    output_lines.append(comment_marker + SEPARATOR)
+    new_lines_w_index.sort()
+    for _, line in new_lines_w_index:
+        output_lines.append(line)
+    new_lines_w_index.clear()
 
 def add_global_checks(
     glob_val_dict,
@@ -1705,6 +1719,7 @@ def add_global_checks(
     global_check_setting,
 ):
     printed_prefixes = set()
+    output_lines_loc = {} # Allows GLOB and GLOBNAMED to be sorted correctly
     for nameless_value in global_nameless_values:
         if nameless_value.is_before_functions != is_before_functions:
             continue
@@ -1729,11 +1744,11 @@ def add_global_checks(
 
                 check_lines = []
                 global_vars_seen_before = [key for key in global_vars_seen.keys()]
-                lines = glob_val_dict[checkprefix][nameless_value.check_prefix]
-                lines = filter_globals_according_to_preference(
-                    lines, global_vars_seen_before, nameless_value, global_check_setting
+                lines_w_index = glob_val_dict[checkprefix][nameless_value.check_prefix]
+                lines_w_index = filter_globals_according_to_preference(
+                    lines_w_index, global_vars_seen_before, nameless_value, global_check_setting
                 )
-                for line in lines:
+                for i, line in lines_w_index:
                     if _global_value_regex:
                         matched = False
                         for regex in _global_value_regex:
@@ -1749,13 +1764,16 @@ def add_global_checks(
                     )
                     new_line = filter_unstable_metadata(new_line)
                     check_line = "%s %s: %s" % (comment_marker, checkprefix, new_line)
-                    check_lines.append(check_line)
+                    check_lines.append((i, check_line))
                 if not check_lines:
                     continue
 
-                output_lines.append(comment_marker + SEPARATOR)
+                if not checkprefix in output_lines_loc:
+                    output_lines_loc[checkprefix] = []
+                if not nameless_value.interlaced_with_previous:
+                    flush_current_checks(output_lines, output_lines_loc[checkprefix], comment_marker)
                 for check_line in check_lines:
-                    output_lines.append(check_line)
+                    output_lines_loc[checkprefix].append(check_line)
 
                 printed_prefixes.add((checkprefix, nameless_value.check_prefix))
 
@@ -1766,6 +1784,14 @@ def add_global_checks(
                 break
 
     if printed_prefixes:
+        for p in prefix_list:
+            if p[0] is None:
+                continue
+            for checkprefix in p[0]:
+                if checkprefix not in output_lines_loc:
+                    continue
+                flush_current_checks(output_lines, output_lines_loc[checkprefix], comment_marker)
+                break
         output_lines.append(comment_marker + SEPARATOR)
     return printed_prefixes
 

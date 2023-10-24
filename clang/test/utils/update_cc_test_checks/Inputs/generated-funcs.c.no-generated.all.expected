@@ -10,12 +10,11 @@ double A[size];
 void foo(void);
 
 //.
+// OMP: @A = global [33554432 x double] zeroinitializer, align 16
+// OMP: @size = constant i32 33554432, align 4
 // OMP: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
 // OMP: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 514, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
 // OMP: @[[GLOB2:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
-//.
-// OMP: @A = global [33554432 x double] zeroinitializer, align 16
-// OMP: @size = constant i32 33554432, align 4
 //.
 // NOOMP: @size = constant i32 33554432, align 4
 // NOOMP: @A = global [33554432 x double] zeroinitializer, align 16
