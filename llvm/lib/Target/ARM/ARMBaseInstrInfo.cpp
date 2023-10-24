@@ -6740,16 +6740,16 @@ void ARMBaseInstrInfo::buildClearRegister(Register DstReg,
                                           MachineBasicBlock::iterator Iter,
                                           DebugLoc &DL,
                                           bool AllowSideEffects) const {
-  assert(Register::isPhysicalRegister(DstReg) &&
-         "Can only clear physical registers");
+  assert(Register::isPhysicalRegister(DstReg) && "Not a physical register");
+
   const MachineFunction &MF = *MBB.getParent();
   const ARMSubtarget &STI = MF.getSubtarget<ARMSubtarget>();
   const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
 
   if (TRI.isGeneralPurposeRegister(MF, DstReg)) {
     unsigned Opc = STI.isThumb1Only()
-      ? ARM::tMOVi32imm
-      : (STI.isThumb2() ? ARM::t2MOVi32imm : ARM::MOVi32imm);
+                       ? ARM::tMOVi32imm
+                       : (STI.isThumb2() ? ARM::t2MOVi32imm : ARM::MOVi32imm);
     BuildMI(MBB, Iter, DL, get(Opc), DstReg).addImm(0);
   } else if (ARM::DPRRegClass.contains(DstReg)) {
     // f64, v8i8, v4i16, v2i32, v1i64, v2f32, v4f16, and v4bf16 registers.
