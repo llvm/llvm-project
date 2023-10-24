@@ -527,7 +527,9 @@ ParseResult ForOp::parse(OpAsmParser &parser, OperationState &result) {
 
 SmallVector<Region *> ForOp::getLoopRegions() { return {&getRegion()}; }
 
-OperandRange ForOp::getInits() { return getInitArgs(); }
+MutableArrayRef<OpOperand> ForOp::getInitsMutable() {
+  return getInitArgsMutable();
+}
 
 FailureOr<LoopLikeOpInterface>
 ForOp::replaceWithAdditionalYields(RewriterBase &rewriter,
@@ -1221,8 +1223,8 @@ std::optional<APInt> ForOp::getConstantStep() {
   return {};
 }
 
-ValueRange ForOp::getYieldedValues() {
-  return cast<scf::YieldOp>(getBody()->getTerminator()).getResults();
+MutableArrayRef<OpOperand> ForOp::getYieldedValuesMutable() {
+  return cast<scf::YieldOp>(getBody()->getTerminator()).getResultsMutable();
 }
 
 Speculation::Speculatability ForOp::getSpeculatability() {
@@ -3254,7 +3256,9 @@ YieldOp WhileOp::getYieldOp() {
   return cast<YieldOp>(getAfterBody()->getTerminator());
 }
 
-ValueRange WhileOp::getYieldedValues() { return getYieldOp().getResults(); }
+MutableArrayRef<OpOperand> WhileOp::getYieldedValuesMutable() {
+  return getYieldOp().getResultsMutable();
+}
 
 Block::BlockArgListType WhileOp::getBeforeArguments() {
   return getBeforeBody()->getArguments();
