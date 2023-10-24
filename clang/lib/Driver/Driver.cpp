@@ -1304,6 +1304,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
 
       A->claim();
 
+      // TODO: Specify Vulkan target environment somewhere in the triple.
       if (Args.hasArg(options::OPT_spirv)) {
         llvm::Triple T(TargetTriple);
         T.setArch(llvm::Triple::spirv);
