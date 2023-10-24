@@ -11353,12 +11353,14 @@ void Sema::CheckExplicitObjectMemberFunction(Declarator &D,
     Diag(ExplicitObjectParam->getBeginLoc(),
          diag::err_explicit_object_parameter_nonmember)
         << D.getSourceRange() << /*static=*/0 << IsLambda;
+    D.setInvalidType();
   }
 
   if (D.getDeclSpec().isVirtualSpecified()) {
     Diag(ExplicitObjectParam->getBeginLoc(),
          diag::err_explicit_object_parameter_nonmember)
         << D.getSourceRange() << /*virtual=*/1 << IsLambda;
+    D.setInvalidType();
   }
 
   if (IsLambda && FTI.hasMutableQualifier()) {
@@ -11374,16 +11376,19 @@ void Sema::CheckExplicitObjectMemberFunction(Declarator &D,
     Diag(ExplicitObjectParam->getLocation(),
          diag::err_explicit_object_parameter_nonmember)
         << D.getSourceRange() << /*non-member=*/2 << IsLambda;
+    D.setInvalidType();
     return;
   }
 
   // CWG2674: constructors and destructors cannot have explicit parameters.
   if (Name.getNameKind() == DeclarationName::CXXConstructorName ||
-      Name.getNameKind() == DeclarationName::CXXDestructorName)
+      Name.getNameKind() == DeclarationName::CXXDestructorName) {
     Diag(ExplicitObjectParam->getBeginLoc(),
          diag::err_explicit_object_parameter_constructor)
         << (Name.getNameKind() == DeclarationName::CXXDestructorName)
         << D.getSourceRange();
+    D.setInvalidType();
+  }
 }
 
 namespace {

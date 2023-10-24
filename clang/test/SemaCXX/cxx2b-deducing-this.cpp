@@ -542,3 +542,46 @@ void foo(C c) {
 }
 
 }
+
+
+namespace GH69838 {
+struct S {
+  S(this auto &self) {} // expected-error {{an explicit object parameter cannot appear in a constructor}}
+  virtual void f(this S self) {} // expected-error {{an explicit object parameter cannot appear in a virtual function}}
+  void g(this auto &self) const {} // expected-error {{explicit object member function cannot have 'const' qualifier}}
+  void h(this S self = S{}) {} // expected-error {{the explicit object parameter cannot have a default argument}}
+  void i(int i, this S self = S{}) {} // expected-error {{an explicit object parameter can only appear as the first parameter of the function}}
+  ~S(this S &&self); // expected-error {{an explicit object parameter cannot appear in a destructor}} \
+                     // expected-error {{destructor cannot have any parameters}}
+
+  static void j(this S s); // expected-error {{an explicit object parameter cannot appear in a static function}}
+};
+
+void nonmember(this S s); // expected-error {{an explicit object parameter cannot appear in a non-member function}}
+
+int test() {
+  S s;
+  s.f();
+  s.g();
+  s.h();
+  s.i(0);
+  s.j({});
+  nonmember(S{});
+}
+
+}
+
+namespace GH69962 {
+struct S {
+    S(const S&);
+};
+
+struct Thing {
+    template<typename Self, typename ... Args>
+    Thing(this Self&& self, Args&& ... args) { } // expected-error {{an explicit object parameter cannot appear in a constructor}}
+};
+
+class Server : public Thing {
+    S name_;
+};
+}
