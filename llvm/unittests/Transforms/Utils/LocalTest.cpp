@@ -1190,66 +1190,66 @@ TEST(Local, ExpressionForConstant) {
   IntegerType *Int1Ty = Type::getInt1Ty(Context);
   Expr = createExpression(ConstantInt::getTrue(Context), Int1Ty);
   EXPECT_NE(Expr, nullptr);
-  EXPECT_EQ(Expr->getElement(1), 18446744073709551615);
+  EXPECT_EQ(Expr->getElement(1), 18446744073709551615U);
 
   Expr = createExpression(ConstantInt::getFalse(Context), Int1Ty);
   EXPECT_NE(Expr, nullptr);
-  EXPECT_EQ(Expr->getElement(1), 0);
+  EXPECT_EQ(Expr->getElement(1), 0U);
 
   IntegerType *Int8Ty = Type::getInt8Ty(Context);
   Expr = createExpression(ConstantInt::get(Int8Ty, 100), Int8Ty);
   EXPECT_NE(Expr, nullptr);
-  EXPECT_EQ(Expr->getElement(1), 100);
+  EXPECT_EQ(Expr->getElement(1), 100U);
 
   IntegerType *Int16Ty = Type::getInt16Ty(Context);
   Expr = createExpression(ConstantInt::getSigned(Int16Ty, -50), Int16Ty);
   EXPECT_NE(Expr, nullptr);
-  EXPECT_EQ(Expr->getElement(1), -50);
+  EXPECT_EQ(Expr->getElement(1), -50U);
 
   IntegerType *Int32Ty = Type::getInt32Ty(Context);
   Expr = createExpression(ConstantInt::get(Int32Ty, 0x7FFFFFFF), Int32Ty);
   EXPECT_NE(Expr, nullptr);
-  EXPECT_EQ(Expr->getElement(1), 0x7FFFFFFF);
+  EXPECT_EQ(Expr->getElement(1), 0x7FFFFFFFU);
 
   IntegerType *Int64Ty = Type::getInt64Ty(Context);
   Expr =
       createExpression(ConstantInt::get(Int64Ty, 0x7FFFFFFFFFFFFFFF), Int64Ty);
   EXPECT_NE(Expr, nullptr);
-  EXPECT_EQ(Expr->getElement(1), 0x7FFFFFFFFFFFFFFF);
+  EXPECT_EQ(Expr->getElement(1), 0x7FFFFFFFFFFFFFFFU);
 
   IntegerType *Int128Ty = Type::getInt128Ty(Context);
   Expr = createExpression(ConstantInt::get(Int128Ty, 0x7FFFFFFFFFFFFFFF),
                           Int128Ty);
   EXPECT_NE(Expr, nullptr);
-  EXPECT_EQ(Expr->getElement(1), 0x7FFFFFFFFFFFFFFF);
+  EXPECT_EQ(Expr->getElement(1), 0x7FFFFFFFFFFFFFFFU);
 
   // Float.
   Type *FloatTy = Type::getFloatTy(Context);
   Expr = createExpression(ConstantFP::get(FloatTy, 5.55), FloatTy);
   EXPECT_NE(Expr, nullptr);
-  EXPECT_EQ(Expr->getElement(1), 1085381018);
+  EXPECT_EQ(Expr->getElement(1), 1085381018U);
 
   // Double.
   Type *DoubleTy = Type::getDoubleTy(Context);
   Expr = createExpression(ConstantFP::get(DoubleTy, -5.55), DoubleTy);
   EXPECT_NE(Expr, nullptr);
-  EXPECT_EQ(Expr->getElement(1), 13841306799765140275);
+  EXPECT_EQ(Expr->getElement(1), 13841306799765140275U);
 
   // Pointer.
   PointerType *PtrTy = PointerType::get(Context, 0);
   Expr = createExpression(ConstantPointerNull::get(PtrTy), PtrTy);
   EXPECT_NE(Expr, nullptr);
-  EXPECT_EQ(Expr->getElement(1), 0);
+  EXPECT_EQ(Expr->getElement(1), 0U);
 
   ConstantInt *K1 = ConstantInt::get(Type::getInt32Ty(Context), 1234);
   Expr = createExpression(ConstantExpr::getIntToPtr(K1, PtrTy), PtrTy);
   EXPECT_NE(Expr, nullptr);
-  EXPECT_EQ(Expr->getElement(1), 1234);
+  EXPECT_EQ(Expr->getElement(1), 1234U);
 
   ConstantInt *K2 = ConstantInt::get(Type::getInt64Ty(Context), 5678);
   Expr = createExpression(ConstantExpr::getIntToPtr(K2, PtrTy), PtrTy);
   EXPECT_NE(Expr, nullptr);
-  EXPECT_EQ(Expr->getElement(1), 5678);
+  EXPECT_EQ(Expr->getElement(1), 5678U);
 
   // Others.
   Type *HalfTy = Type::getHalfTy(Context);
