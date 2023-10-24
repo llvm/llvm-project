@@ -209,10 +209,11 @@ public:
   /// place.
   size_t clearLiveOperations();
 
-  /// Sets an operation invalid. This is useful for when some non-bindings
-  /// code destroys the operation and the bindings need to made aware. For
-  /// example, in the case when pass manager is run.
-  void setOperationInvalid(MlirOperation op);
+  /// Removes an operation from the live operations map and sets it invalid.
+  /// This is useful for when some non-bindings code destroys the operation and
+  /// the bindings need to made aware. For example, in the case when pass
+  /// manager is run.
+  void clearOperation(MlirOperation op);
 
   /// Gets the count of live modules associated with this context.
   /// Used for testing.

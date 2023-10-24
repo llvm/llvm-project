@@ -130,9 +130,8 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
                   [](MlirOperation op, void *userData) {
                     callBackData *data = static_cast<callBackData *>(userData);
                     if (LLVM_LIKELY(data->rootSeen))
-                      data->rootOp.getOperation()
-                          .getContext()
-                          ->setOperationInvalid(op);
+                      data->rootOp.getOperation().getContext()->clearOperation(
+                          op);
                     else
                       data->rootSeen = true;
                   };

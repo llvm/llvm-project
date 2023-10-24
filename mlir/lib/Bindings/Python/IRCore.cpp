@@ -635,9 +635,12 @@ size_t PyMlirContext::clearLiveOperations() {
   return numInvalidated;
 }
 
-void PyMlirContext::setOperationInvalid(MlirOperation op) {
-  if (liveOperations.contains(op.ptr))
-    liveOperations[op.ptr].second->setInvalid();
+void PyMlirContext::clearOperation(MlirOperation op) {
+  auto it = liveOperations.find(op.ptr);
+  if (it != liveOperations.end()) {
+    it->second.second->setInvalid();
+    liveOperations.erase(it);
+  }
 }
 
 size_t PyMlirContext::getLiveModuleCount() { return liveModules.size(); }
