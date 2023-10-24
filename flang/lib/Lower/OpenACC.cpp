@@ -37,6 +37,7 @@ static unsigned routineCounter = 0;
 static constexpr llvm::StringRef accRoutinePrefix = "acc_routine_";
 static constexpr llvm::StringRef accPrivateInitName = "acc.private.init";
 static constexpr llvm::StringRef accReductionInitName = "acc.reduction.init";
+static constexpr llvm::StringRef accFirDescriptorPostfix = "_desc";
 
 static mlir::Location
 genOperandLocation(Fortran::lower::AbstractConverter &converter,
@@ -138,27 +139,31 @@ static void createDeclareAllocFuncWithArg(mlir::OpBuilder &modBuilder,
   auto registerFuncOp = createDeclareFunc(
       modBuilder, builder, loc, registerFuncName.str(), {descTy}, {loc});
 
+  llvm::SmallVector<mlir::Value> bounds;
+  std::stringstream asFortranDesc;
+  asFortranDesc << asFortran.str() << accFirDescriptorPostfix.str();
+
+  // Updating descriptor must occur before the mapping of the data so that
+  // attached data pointer is not overwritten.
+  mlir::acc::UpdateDeviceOp updateDeviceOp =
+      createDataEntryOp<mlir::acc::UpdateDeviceOp>(
+          builder, loc, registerFuncOp.getArgument(0), asFortranDesc, bounds,
+          /*structured=*/false, /*implicit=*/true,
+          mlir::acc::DataClause::acc_update_device, descTy);
+  llvm::SmallVector<int32_t> operandSegments{0, 0, 0, 0, 0, 1};
+  llvm::SmallVector<mlir::Value> operands{updateDeviceOp.getResult()};
+  createSimpleOp<mlir::acc::UpdateOp>(builder, loc, operands, operandSegments);
+
   mlir::Value desc =
       builder.create<fir::LoadOp>(loc, registerFuncOp.getArgument(0));
   fir::BoxAddrOp boxAddrOp = builder.create<fir::BoxAddrOp>(loc, desc);
   addDeclareAttr(builder, boxAddrOp.getOperation(), clause);
-
-  llvm::SmallVector<mlir::Value> bounds;
   EntryOp entryOp = createDataEntryOp<EntryOp>(
       builder, loc, boxAddrOp.getResult(), asFortran, bounds,
       /*structured=*/false, /*implicit=*/false, clause, boxAddrOp.getType());
   builder.create<mlir::acc::DeclareEnterOp>(
       loc, mlir::ValueRange(entryOp.getAccPtr()));
 
-  asFortran << "_desc";
-  mlir::acc::UpdateDeviceOp updateDeviceOp =
-      createDataEntryOp<mlir::acc::UpdateDeviceOp>(
-          builder, loc, registerFuncOp.getArgument(0), asFortran, bounds,
-          /*structured=*/false, /*implicit=*/true,
-          mlir::acc::DataClause::acc_update_device, descTy);
-  llvm::SmallVector<int32_t> operandSegments{0, 0, 0, 0, 0, 1};
-  llvm::SmallVector<mlir::Value> operands{updateDeviceOp.getResult()};
-  createSimpleOp<mlir::acc::UpdateOp>(builder, loc, operands, operandSegments);
   modBuilder.setInsertionPointAfter(registerFuncOp);
   builder.restoreInsertionPoint(crtInsPt);
 }
@@ -208,7 +213,7 @@ static void createDeclareDeallocFuncWithArg(
   auto postDeallocOp = createDeclareFunc(
       modBuilder, builder, loc, postDeallocFuncName.str(), {descTy}, {loc});
   loadOp = builder.create<fir::LoadOp>(loc, postDeallocOp.getArgument(0));
-  asFortran << "_desc";
+  asFortran << accFirDescriptorPostfix.str();
   mlir::acc::UpdateDeviceOp updateDeviceOp =
       createDataEntryOp<mlir::acc::UpdateDeviceOp>(
           builder, loc, loadOp, asFortran, bounds,
@@ -2753,28 +2758,33 @@ static void createDeclareAllocFunc(mlir::OpBuilder &modBuilder,
 
   fir::AddrOfOp addrOp = builder.create<fir::AddrOfOp>(
       loc, fir::ReferenceType::get(globalOp.getType()), globalOp.getSymbol());
-  auto loadOp = builder.create<fir::LoadOp>(loc, addrOp.getResult());
-  fir::BoxAddrOp boxAddrOp = builder.create<fir::BoxAddrOp>(loc, loadOp);
-  addDeclareAttr(builder, boxAddrOp.getOperation(), clause);
 
   std::stringstream asFortran;
   asFortran << Fortran::lower::mangle::demangleName(globalOp.getSymName());
+  std::stringstream asFortranDesc;
+  asFortranDesc << asFortran.str() << accFirDescriptorPostfix.str();
   llvm::SmallVector<mlir::Value> bounds;
+
+  // Updating descriptor must occur before the mapping of the data so that
+  // attached data pointer is not overwritten.
+  mlir::acc::UpdateDeviceOp updateDeviceOp =
+      createDataEntryOp<mlir::acc::UpdateDeviceOp>(
+          builder, loc, addrOp, asFortranDesc, bounds,
+          /*structured=*/false, /*implicit=*/true,
+          mlir::acc::DataClause::acc_update_device, addrOp.getType());
+  llvm::SmallVector<int32_t> operandSegments{0, 0, 0, 0, 0, 1};
+  llvm::SmallVector<mlir::Value> operands{updateDeviceOp.getResult()};
+  createSimpleOp<mlir::acc::UpdateOp>(builder, loc, operands, operandSegments);
+
+  auto loadOp = builder.create<fir::LoadOp>(loc, addrOp.getResult());
+  fir::BoxAddrOp boxAddrOp = builder.create<fir::BoxAddrOp>(loc, loadOp);
+  addDeclareAttr(builder, boxAddrOp.getOperation(), clause);
   EntryOp entryOp = createDataEntryOp<EntryOp>(
       builder, loc, boxAddrOp.getResult(), asFortran, bounds,
       /*structured=*/false, /*implicit=*/false, clause, boxAddrOp.getType());
   builder.create<mlir::acc::DeclareEnterOp>(
       loc, mlir::ValueRange(entryOp.getAccPtr()));
 
-  asFortran << "_desc";
-  mlir::acc::UpdateDeviceOp updateDeviceOp =
-      createDataEntryOp<mlir::acc::UpdateDeviceOp>(
-          builder, loc, addrOp, asFortran, bounds,
-          /*structured=*/false, /*implicit=*/true,
-          mlir::acc::DataClause::acc_update_device, addrOp.getType());
-  llvm::SmallVector<int32_t> operandSegments{0, 0, 0, 0, 0, 1};
-  llvm::SmallVector<mlir::Value> operands{updateDeviceOp.getResult()};
-  createSimpleOp<mlir::acc::UpdateOp>(builder, loc, operands, operandSegments);
   modBuilder.setInsertionPointAfter(registerFuncOp);
 }
 
@@ -2832,7 +2842,7 @@ static void createDeclareDeallocFunc(mlir::OpBuilder &modBuilder,
 
   addrOp = builder.create<fir::AddrOfOp>(
       loc, fir::ReferenceType::get(globalOp.getType()), globalOp.getSymbol());
-  asFortran << "_desc";
+  asFortran << accFirDescriptorPostfix.str();
   mlir::acc::UpdateDeviceOp updateDeviceOp =
       createDataEntryOp<mlir::acc::UpdateDeviceOp>(
           builder, loc, addrOp, asFortran, bounds,
