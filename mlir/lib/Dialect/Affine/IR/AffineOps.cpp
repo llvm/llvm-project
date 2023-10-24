@@ -2215,6 +2215,10 @@ unsigned AffineForOp::getNumIterOperands() {
   return getNumOperands() - lbMap.getNumInputs() - ubMap.getNumInputs();
 }
 
+MutableArrayRef<OpOperand> AffineForOp::getYieldedValuesMutable() {
+  return cast<AffineYieldOp>(getBody()->getTerminator()).getOperandsMutable();
+}
+
 void AffineForOp::print(OpAsmPrinter &p) {
   p << ' ';
   p.printRegionArgument(getBody()->getArgument(0), /*argAttrs=*/{},

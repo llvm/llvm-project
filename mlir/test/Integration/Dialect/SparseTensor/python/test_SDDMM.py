@@ -108,7 +108,6 @@ def build_compile_and_run_SDDMMM(attr: st.EncodingAttr, compiler):
 
     # Invoke the kernel and get numpy output.
     # Built-in bufferization uses in-out buffers.
-    # TODO: replace with inplace comprehensive bufferization.
     engine.invoke("main", mem_out, mem_a, mem_b, mem_c)
 
     # Sanity check on computed result. Only a few elements
@@ -155,7 +154,7 @@ def main():
                     for iwidth in [32]:
                         for e in [True]:
                             attr = st.EncodingAttr.get(
-                                level, ordering, pwidth, iwidth
+                                level, ordering, None, pwidth, iwidth
                             )
                             opt = f"parallelization-strategy=none"
                             compiler = sparse_compiler.SparseCompiler(

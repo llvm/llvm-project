@@ -555,4 +555,64 @@ TEST(CodeExtractor, PartialAggregateArgs) {
   EXPECT_FALSE(verifyFunction(*Outlined));
   EXPECT_FALSE(verifyFunction(*Func));
 }
+
+TEST(CodeExtractor, OpenMPAggregateArgs) {
+  LLVMContext Ctx;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M(parseAssemblyString(R"ir(
+    target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8"
+    target triple = "amdgcn-amd-amdhsa"
+
+    define void @foo(ptr %0) {
+      %2= alloca ptr, align 8, addrspace(5)
+      %3 = addrspacecast ptr addrspace(5) %2 to ptr
+      store ptr %0, ptr %3, align 8
+      %4 = load ptr, ptr %3, align 8
+      br label %entry
+
+   entry:
+      br label %extract
+
+    extract:
+      store i64 10, ptr %4, align 4
+      br label %exit
+
+    exit:
+      ret void
+    }
+  )ir",
+                                                Err, Ctx));
+  Function *Func = M->getFunction("foo");
+  SmallVector<BasicBlock *, 1> Blocks{getBlockByName(Func, "extract")};
+
+  // Create the CodeExtractor with arguments aggregation enabled.
+  // Outlined function argument should be declared in 0 address space
+  // even if the default alloca address space is 5.
+  CodeExtractor CE(Blocks, /* DominatorTree */ nullptr,
+                   /* AggregateArgs */ true, /* BlockFrequencyInfo */ nullptr,
+                   /* BranchProbabilityInfo */ nullptr,
+                   /* AssumptionCache */ nullptr,
+                   /* AllowVarArgs */ true,
+                   /* AllowAlloca */ true,
+                   /* AllocaBlock*/ &Func->getEntryBlock(),
+                   /* Suffix */ ".outlined",
+                   /* ArgsInZeroAddressSpace */ true);
+
+  EXPECT_TRUE(CE.isEligible());
+
+  CodeExtractorAnalysisCache CEAC(*Func);
+  SetVector<Value *> Inputs, Outputs, SinkingCands, HoistingCands;
+  BasicBlock *CommonExit = nullptr;
+  CE.findAllocas(CEAC, SinkingCands, HoistingCands, CommonExit);
+  CE.findInputsOutputs(Inputs, Outputs, SinkingCands);
+
+  Function *Outlined = CE.extractCodeRegion(CEAC, Inputs, Outputs);
+  EXPECT_TRUE(Outlined);
+  EXPECT_EQ(Outlined->arg_size(), 1U);
+  // Check address space of outlined argument is ptr in address space 0
+  EXPECT_EQ(Outlined->getArg(0)->getType(),
+            PointerType::get(M->getContext(), 0));
+  EXPECT_FALSE(verifyFunction(*Outlined));
+  EXPECT_FALSE(verifyFunction(*Func));
+}
 } // end anonymous namespace

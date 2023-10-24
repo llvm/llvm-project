@@ -2683,6 +2683,7 @@ td_library(
     srcs = [
         "include/mlir/Dialect/SparseTensor/IR/SparseTensorAttrDefs.td",
         "include/mlir/Dialect/SparseTensor/IR/SparseTensorBase.td",
+        "include/mlir/Dialect/SparseTensor/IR/SparseTensorInterfaces.td",
         "include/mlir/Dialect/SparseTensor/IR/SparseTensorOps.td",
         "include/mlir/Dialect/SparseTensor/IR/SparseTensorTypes.td",
     ],
@@ -2692,6 +2693,15 @@ td_library(
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
     ],
+)
+
+td_library(
+    name = "SparseTensorInterfacesTdFiles",
+    srcs = [
+        "include/mlir/Dialect/SparseTensor/IR/SparseTensorInterfaces.td",
+    ],
+    includes = ["include"],
+    deps = [":OpBaseTdFiles"],
 )
 
 gentbl_cc_library(
@@ -2801,6 +2811,23 @@ gentbl_cc_library(
     deps = [":PassBaseTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "SparseTensorInterfacesIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir/Dialect/SparseTensor/IR/SparseTensorInterfaces.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/mlir/Dialect/SparseTensor/IR/SparseTensorInterfaces.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/SparseTensor/IR/SparseTensorInterfaces.td",
+    deps = [":SparseTensorInterfacesTdFiles"],
+)
+
 # This library is shared by both SparseTensorDialect and
 # SparseTensorRuntime, so it must not depend on any of the MLIR/LLVM
 # internals or else mlir_c_runner_utils will inherit that dependency.
@@ -2823,9 +2850,11 @@ cc_library(
         "lib/Dialect/SparseTensor/IR/Detail/Var.cpp",
         "lib/Dialect/SparseTensor/IR/Detail/Var.h",
         "lib/Dialect/SparseTensor/IR/SparseTensorDialect.cpp",
+        "lib/Dialect/SparseTensor/IR/SparseTensorInterfaces.cpp",
     ],
     hdrs = [
         "include/mlir/Dialect/SparseTensor/IR/SparseTensor.h",
+        "include/mlir/Dialect/SparseTensor/IR/SparseTensorInterfaces.h",
         "include/mlir/Dialect/SparseTensor/IR/SparseTensorStorageLayout.h",
         "include/mlir/Dialect/SparseTensor/IR/SparseTensorType.h",
     ],
@@ -2837,6 +2866,7 @@ cc_library(
         ":InferTypeOpInterface",
         ":SparseTensorAttrDefsIncGen",
         ":SparseTensorEnums",
+        ":SparseTensorInterfacesIncGen",
         ":SparseTensorOpsIncGen",
         ":SparseTensorTypesIncGen",
         "//llvm:Support",
@@ -3675,6 +3705,7 @@ cc_library(
         ":GPUToSPIRV",
         ":GPUToVulkanTransforms",
         ":IndexToLLVM",
+        ":IndexToSPIRV",
         ":LinalgToStandard",
         ":MathToFuncs",
         ":MathToLLVM",
@@ -4422,6 +4453,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":AffineDialect",
         ":ArithDialect",
         ":ArithUtils",
         ":ControlFlowInterfaces",
@@ -4436,6 +4468,7 @@ cc_library(
         ":SideEffectInterfaces",
         ":Support",
         ":TensorDialect",
+        ":ValueBoundsOpInterface",
         ":VectorAttributesIncGen",
         ":VectorDialectIncGen",
         ":VectorInterfaces",
@@ -5957,7 +5990,6 @@ cc_library(
     ],
 )
 
-
 cc_library(
     name = "NVVMToLLVM",
     srcs = glob(["lib/Conversion/NVVMToLLVM/NVVMToLLVM.cpp"]),
@@ -7394,6 +7426,7 @@ cc_library(
         ":FuncDialect",
         ":FuncToSPIRV",
         ":IR",
+        ":IndexToSPIRV",
         ":MemRefToSPIRV",
         ":Pass",
         ":SCFDialect",
@@ -8793,7 +8826,6 @@ cc_library(
     srcs = [
         "lib/ExecutionEngine/SparseTensor/File.cpp",
         "lib/ExecutionEngine/SparseTensor/MapRef.cpp",
-        "lib/ExecutionEngine/SparseTensor/NNZ.cpp",
         "lib/ExecutionEngine/SparseTensor/Storage.cpp",
     ],
     hdrs = [
@@ -9805,6 +9837,31 @@ cc_library(
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":Pass",
+        ":Support",
+        ":Transforms",
+        "//llvm:Core",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "IndexToSPIRV",
+    srcs = glob([
+        "lib/Conversion/IndexToSPIRV/*.cpp",
+        "lib/Conversion/IndexToSPIRV/*.h",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/IndexToSPIRV/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ConversionPassIncGen",
+        ":IR",
+        ":IndexDialect",
+        ":Pass",
+        ":SPIRVCommonConversion",
+        ":SPIRVConversion",
+        ":SPIRVDialect",
         ":Support",
         ":Transforms",
         "//llvm:Core",

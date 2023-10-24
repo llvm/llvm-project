@@ -801,10 +801,10 @@ class Base(unittest2.TestCase):
         else:
             self.libcxxPath = None
 
-        if "LLDBVSCODE_EXEC" in os.environ:
-            self.lldbVSCodeExec = os.environ["LLDBVSCODE_EXEC"]
+        if "LLDBDAP_EXEC" in os.environ:
+            self.lldbDAPExec = os.environ["LLDBDAP_EXEC"]
         else:
-            self.lldbVSCodeExec = None
+            self.lldbDAPExec = None
 
         self.lldbOption = " ".join("-o '" + s + "'" for s in self.setUpCommands())
 

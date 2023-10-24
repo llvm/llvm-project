@@ -17,10 +17,15 @@
 static __inline dst_t __floatXiYf__(src_t a) {
   if (a == 0)
     return 0.0;
-  const int dstMantDig = dstSigBits + 1;
-  const int srcBits = sizeof(src_t) * CHAR_BIT;
-  const int srcIsSigned = ((src_t)-1) < 0;
+
+  enum {
+    dstMantDig = dstSigBits + 1,
+    srcBits = sizeof(src_t) * CHAR_BIT,
+    srcIsSigned = ((src_t)-1) < 0,
+  };
+
   const src_t s = srcIsSigned ? a >> (srcBits - 1) : 0;
+
   a = (usrc_t)(a ^ s) - s;
   int sd = srcBits - clzSrcT(a);         // number of significant digits
   int e = sd - 1;                        // exponent
@@ -32,16 +37,14 @@ static __inline dst_t __floatXiYf__(src_t a) {
     //  P = bit dstMantDig-1 bits to the right of 1
     //  Q = bit dstMantDig bits to the right of 1
     //  R = "or" of all bits to the right of Q
-    switch (sd) {
-    case dstMantDig + 1:
+    if (sd == dstMantDig + 1) {
       a <<= 1;
-      break;
-    case dstMantDig + 2:
-      break;
-    default:
+    } else if (sd == dstMantDig + 2) {
+      // Do nothing.
+    } else {
       a = ((usrc_t)a >> (sd - (dstMantDig + 2))) |
           ((a & ((usrc_t)(-1) >> ((srcBits + dstMantDig + 2) - sd))) != 0);
-    };
+    }
     // finish:
     a |= (a & 4) != 0; // Or P into R
     ++a;               // round - this step may add a significant bit

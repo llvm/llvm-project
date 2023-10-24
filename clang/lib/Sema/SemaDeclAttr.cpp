@@ -5211,6 +5211,9 @@ static void handleCallConvAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   case ParsedAttr::AT_PreserveAll:
     D->addAttr(::new (S.Context) PreserveAllAttr(S.Context, AL));
     return;
+  case ParsedAttr::AT_M68kRTD:
+    D->addAttr(::new (S.Context) M68kRTDAttr(S.Context, AL));
+    return;
   default:
     llvm_unreachable("unexpected attribute kind");
   }
@@ -5407,6 +5410,9 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
     break;
   case ParsedAttr::AT_PreserveAll:
     CC = CC_PreserveAll;
+    break;
+  case ParsedAttr::AT_M68kRTD:
+    CC = CC_M68kRTD;
     break;
   default: llvm_unreachable("unexpected attribute kind");
   }
@@ -5908,6 +5914,43 @@ static void handleBuiltinAliasAttr(Sema &S, Decl *D,
   }
 
   D->addAttr(::new (S.Context) BuiltinAliasAttr(S.Context, AL, Ident));
+}
+
+static void handlePreferredTypeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (!AL.hasParsedType()) {
+    S.Diag(AL.getLoc(), diag::err_attribute_wrong_number_arguments) << AL << 1;
+    return;
+  }
+
+  TypeSourceInfo *ParmTSI = nullptr;
+  QualType QT = S.GetTypeFromParser(AL.getTypeArg(), &ParmTSI);
+  assert(ParmTSI && "no type source info for attribute argument");
+  S.RequireCompleteType(ParmTSI->getTypeLoc().getBeginLoc(), QT,
+                        diag::err_incomplete_type);
+
+  if (QT->isEnumeralType()) {
+    auto IsCorrespondingType = [&](QualType LHS, QualType RHS) {
+      assert(LHS != RHS);
+      if (LHS->isSignedIntegerType())
+        return LHS == S.getASTContext().getCorrespondingSignedType(RHS);
+      return LHS == S.getASTContext().getCorrespondingUnsignedType(RHS);
+    };
+    QualType BitfieldType =
+        cast<FieldDecl>(D)->getType()->getCanonicalTypeUnqualified();
+    QualType EnumUnderlyingType = QT->getAs<EnumType>()
+                                      ->getDecl()
+                                      ->getIntegerType()
+                                      ->getCanonicalTypeUnqualified();
+    if (EnumUnderlyingType != BitfieldType &&
+        !IsCorrespondingType(EnumUnderlyingType, BitfieldType)) {
+      S.Diag(ParmTSI->getTypeLoc().getBeginLoc(),
+             diag::warn_attribute_underlying_type_mismatch)
+          << EnumUnderlyingType << QT << BitfieldType;
+      return;
+    }
+  }
+
+  D->addAttr(::new (S.Context) PreferredTypeAttr(S.Context, AL, ParmTSI));
 }
 
 //===----------------------------------------------------------------------===//
@@ -9353,6 +9396,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_AArch64VectorPcs:
   case ParsedAttr::AT_AArch64SVEPcs:
   case ParsedAttr::AT_AMDGPUKernelCall:
+  case ParsedAttr::AT_M68kRTD:
     handleCallConvAttr(S, D, AL);
     break;
   case ParsedAttr::AT_Suppress:
@@ -9627,6 +9671,10 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
 
   case ParsedAttr::AT_BuiltinAlias:
     handleBuiltinAliasAttr(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_PreferredType:
+    handlePreferredTypeAttr(S, D, AL);
     break;
 
   case ParsedAttr::AT_UsingIfExists:

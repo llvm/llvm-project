@@ -63,6 +63,13 @@ TEST(ConfigParseTest, GetsPredefinedStyleByName) {
   EXPECT_TRUE(getPredefinedStyle("gnU", FormatStyle::LK_Cpp, &Styles[2]));
   EXPECT_ALL_STYLES_EQUAL(Styles);
 
+  Styles[0] = getClangFormatStyle();
+  EXPECT_TRUE(
+      getPredefinedStyle("clang-format", FormatStyle::LK_Cpp, &Styles[1]));
+  EXPECT_TRUE(
+      getPredefinedStyle("Clang-format", FormatStyle::LK_Cpp, &Styles[2]));
+  EXPECT_ALL_STYLES_EQUAL(Styles);
+
   EXPECT_FALSE(getPredefinedStyle("qwerty", FormatStyle::LK_Cpp, &Styles[0]));
 }
 
@@ -590,6 +597,24 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("SpaceBeforeParens: ControlStatementsExceptForEachMacros",
               SpaceBeforeParens,
               FormatStyle::SBPO_ControlStatementsExceptControlMacros);
+
+  Style.SpaceBeforeParens = FormatStyle::SBPO_Custom;
+  Style.SpaceBeforeParensOptions.AfterPlacementOperator =
+      FormatStyle::SpaceBeforeParensCustom::APO_Always;
+  CHECK_PARSE("SpaceBeforeParensOptions:\n"
+              "  AfterPlacementOperator: Never",
+              SpaceBeforeParensOptions.AfterPlacementOperator,
+              FormatStyle::SpaceBeforeParensCustom::APO_Never);
+
+  CHECK_PARSE("SpaceBeforeParensOptions:\n"
+              "  AfterPlacementOperator: Always",
+              SpaceBeforeParensOptions.AfterPlacementOperator,
+              FormatStyle::SpaceBeforeParensCustom::APO_Always);
+
+  CHECK_PARSE("SpaceBeforeParensOptions:\n"
+              "  AfterPlacementOperator: Leave",
+              SpaceBeforeParensOptions.AfterPlacementOperator,
+              FormatStyle::SpaceBeforeParensCustom::APO_Leave);
 
   // For backward compatibility:
   Style.SpacesInParens = FormatStyle::SIPO_Never;

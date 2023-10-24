@@ -12,6 +12,9 @@
 // XFAIL: msvc, target={{.+}}-windows-gnu
 // XFAIL: availability-fp_to_chars-missing
 
+// fmemopen is available starting in Android M (API 23)
+// XFAIL: target={{.+}}-android{{(eabi)?(21|22)}}
+
 // <print>
 
 // The FILE returned by fmemopen does not have file descriptor.

@@ -176,6 +176,16 @@ public:
       presburger::BoundType type, AffineMap map, ValueDimList mapOperands,
       StopConditionFn stopCondition = nullptr, bool closedUB = false);
 
+  /// Compute a constant delta between the given two values. Return "failure"
+  /// if a constant delta could not be determined.
+  ///
+  /// `dim1`/`dim2` must be `nullopt` if and only if `value1`/`value2` are
+  /// index-typed.
+  static FailureOr<int64_t>
+  computeConstantDelta(Value value1, Value value2,
+                       std::optional<int64_t> dim1 = std::nullopt,
+                       std::optional<int64_t> dim2 = std::nullopt);
+
   /// Compute whether the given values/dimensions are equal. Return "failure" if
   /// equality could not be determined.
   ///

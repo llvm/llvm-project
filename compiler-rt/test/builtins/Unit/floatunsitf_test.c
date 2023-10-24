@@ -13,7 +13,7 @@ COMPILER_RT_ABI long double __floatunsitf(su_int a);
 int test__floatunsitf(su_int a, uint64_t expectedHi, uint64_t expectedLo)
 {
     long double x = __floatunsitf(a);
-    int ret = compareResultLD(x, expectedHi, expectedLo);
+    int ret = compareResultF128(x, expectedHi, expectedLo);
 
     if (ret){
         printf("error in test__floatunsitf(%u) = %.20Lf, "
