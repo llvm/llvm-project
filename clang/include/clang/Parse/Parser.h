@@ -175,6 +175,7 @@ class Parser : public CodeCompletionHandler {
   std::unique_ptr<PragmaHandler> FPContractHandler;
   std::unique_ptr<PragmaHandler> OpenCLExtensionHandler;
   std::unique_ptr<PragmaHandler> OpenMPHandler;
+  std::unique_ptr<PragmaHandler> OpenACCHandler;
   std::unique_ptr<PragmaHandler> PCSectionHandler;
   std::unique_ptr<PragmaHandler> MSCommentHandler;
   std::unique_ptr<PragmaHandler> MSDetectMismatchHandler;
@@ -228,6 +229,9 @@ class Parser : public CodeCompletionHandler {
 
   /// Parsing OpenMP directive mode.
   bool OpenMPDirectiveParsing = false;
+
+  /// Parsing OpenACC directive mode.
+  bool OpenACCDirectiveParsing = false;
 
   /// When true, we are directly inside an Objective-C message
   /// send expression.
@@ -3523,6 +3527,15 @@ public:
   /// map([ [map-type-modifier[,] [map-type-modifier[,] ...] map-type : ] list)
   /// where, map-type-modifier ::= always | close | mapper(mapper-identifier)
   bool parseMapTypeModifiers(Sema::OpenMPVarListDataTy &Data);
+
+  //===--------------------------------------------------------------------===//
+  // OpenACC Parsing.
+
+  /// Placeholder for now, should just ignore the directives after emitting a
+  /// diagnostic. Eventually will be split into a few functions to parse
+  /// different situations.
+  DeclGroupPtrTy ParseOpenACCDirective();
+  StmtResult ParseOpenACCDirectiveStmt();
 
 private:
   //===--------------------------------------------------------------------===//
