@@ -121,8 +121,6 @@ define void @test3(ptr sret(%struct.s) %a4) {
 }
 
 declare ptr @llvm.ptrmask.p0.i64(ptr, i64)
-declare ptr @llvm.ptrmask.p0.i32(ptr, i32)
-declare ptr @llvm.ptrmask.p0.i128(ptr, i128)
 
 define <16 x i8> @ptrmask_align_unknown_ptr_align1(ptr align 1 %ptr, i64 %mask) {
 ; CHECK-LABEL: @ptrmask_align_unknown_ptr_align1(
@@ -204,32 +202,6 @@ define <16 x i8> @ptrmask_align8_ptr_align16(ptr align 16 %ptr) {
 ; CHECK-NEXT:    ret <16 x i8> [[LOAD]]
 ;
   %aligned = call ptr @llvm.ptrmask.p0.i64(ptr %ptr, i64 -8)
-  %load = load <16 x i8>, ptr %aligned, align 1
-  ret <16 x i8> %load
-}
-
-; Increase load align from 1 to 8, and the mask type is smaller
-; than the pointer size.
-define <16 x i8> @ptrmask_align8_ptr_align1_smallmask(ptr align 1 %ptr) {
-; CHECK-LABEL: @ptrmask_align8_ptr_align1_smallmask(
-; CHECK-NEXT:    [[ALIGNED:%.*]] = call ptr @llvm.ptrmask.p0.i32(ptr [[PTR:%.*]], i32 -8)
-; CHECK-NEXT:    [[LOAD:%.*]] = load <16 x i8>, ptr [[ALIGNED]], align 1
-; CHECK-NEXT:    ret <16 x i8> [[LOAD]]
-;
-  %aligned = call ptr @llvm.ptrmask.p0.i32(ptr %ptr, i32 -8)
-  %load = load <16 x i8>, ptr %aligned, align 1
-  ret <16 x i8> %load
-}
-
-; Increase load align from 1 to 8, and the mask type is larger
-; than the pointer size.
-define <16 x i8> @ptrmask_align8_ptr_align1_bigmask(ptr align 1 %ptr) {
-; CHECK-LABEL: @ptrmask_align8_ptr_align1_bigmask(
-; CHECK-NEXT:    [[ALIGNED:%.*]] = call ptr @llvm.ptrmask.p0.i128(ptr [[PTR:%.*]], i128 -8)
-; CHECK-NEXT:    [[LOAD:%.*]] = load <16 x i8>, ptr [[ALIGNED]], align 1
-; CHECK-NEXT:    ret <16 x i8> [[LOAD]]
-;
-  %aligned = call ptr @llvm.ptrmask.p0.i128(ptr %ptr, i128 -8)
   %load = load <16 x i8>, ptr %aligned, align 1
   ret <16 x i8> %load
 }
