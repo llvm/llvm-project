@@ -1,4 +1,4 @@
-// RUN: mlir-opt --test-transform-dialect-interpreter --split-input-file %s | FileCheck %s
+// RUN: mlir-opt --transform-interpreter --split-input-file %s | FileCheck %s
 
 // CHECK-DAG:  #[[$MAP:.+]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 // CHECK-DAG:  #[[$MAP1:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
@@ -243,11 +243,13 @@ func.func @softmax(%arg0: tensor<2x16x32xf32>, %dst: tensor<2x16x32xf32>) -> ten
 // CHECK:        } -> tensor<2x16x32xf32>
 // CHECK:        return %[[D7]] : tensor<2x16x32xf32>
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match interface{LinalgOp} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1 = transform.structured.decompose %0 : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match interface{LinalgOp} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.structured.decompose %0 : (!transform.any_op) -> !transform.any_op
 
-  %2 = transform.structured.match ops{["linalg.softmax"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %3 = transform.structured.decompose_interface %2 : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.match ops{["linalg.softmax"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %3 = transform.structured.decompose_interface %2 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
