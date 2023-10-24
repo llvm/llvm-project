@@ -1204,7 +1204,7 @@ TEST(Local, ExpressionForConstant) {
   IntegerType *Int16Ty = Type::getInt16Ty(Context);
   Expr = createExpression(ConstantInt::getSigned(Int16Ty, -50), Int16Ty);
   EXPECT_NE(Expr, nullptr);
-  EXPECT_EQ(Expr->getElement(1), -50U);
+  EXPECT_EQ(Expr->getElement(1), -50ULL);
 
   IntegerType *Int32Ty = Type::getInt32Ty(Context);
   Expr = createExpression(ConstantInt::get(Int32Ty, 0x7FFFFFFF), Int32Ty);
