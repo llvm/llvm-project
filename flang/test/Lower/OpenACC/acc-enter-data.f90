@@ -803,3 +803,17 @@ subroutine acc_enter_data_derived_type()
 !CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.ref<!fir.array<10xf32>>)
 
 end subroutine
+
+subroutine acc_enter_data_single_array_element()
+  type t1
+    real, allocatable :: a(:, :)
+  end type t1
+  type(t1), allocatable :: e(:)
+  allocate(e(10)%a(5,5))
+
+  !$acc enter data create(e(2)%a(1,2))
+
+!CHECK: %[[CREATE:.*]] = acc.create varPtr(%{{.*}} : !fir.ref<f32>) -> !fir.ref<f32> {name = "e(2_8)%a(1_8,2_8)", structured = false}
+!CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.ref<f32>)
+
+end subroutine
