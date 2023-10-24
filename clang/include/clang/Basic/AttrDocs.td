@@ -2421,7 +2421,7 @@ command line.
 The current set of options correspond to the existing "subtarget features" for
 the target with or without a "-mno-" in front corresponding to the absence
 of the feature, as well as ``arch="CPU"`` and ``cpu="CPU"`` which will change
-the default "CPU" for the function.
+the default processor for the function.
 
 For X86 and PowerPC, the attribute also allows ``tune="CPU"`` to optimize the
 generated code for the given CPU without changing the available instructions.
