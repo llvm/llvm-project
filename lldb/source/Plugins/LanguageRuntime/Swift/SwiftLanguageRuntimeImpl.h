@@ -27,6 +27,8 @@ class TypeRef;
 namespace lldb_private {
 class Process;
 class LLDBTypeInfoProvider;
+class ReflectionContextInterface;
+struct SuperClassType;
 
 /// A full LLDB language runtime backed by the Swift runtime library
 /// in the process.
@@ -193,112 +195,12 @@ public:
 
   void DumpTyperef(CompilerType type, TypeSystemSwiftTypeRef *module_holder,
                    Stream *s);
-  /// Returned by \ref ForEachSuperClassType. Not every user of \p
-  /// ForEachSuperClassType needs all of these. By returning this
-  /// object we call into the runtime only when needed.
-  /// Using function objects to avoid instantiating ReflectionContext in this header.
-  struct SuperClassType {
-    std::function<const swift::reflection::RecordTypeInfo *()> get_record_type_info;
-    std::function<const swift::reflection::TypeRef *()> get_typeref;
-  };
 
   Process &GetProcess() const;
 
-  /// An abstract interface to swift::reflection::ReflectionContext
-  /// objects of varying pointer sizes.  This class encapsulates all
-  /// traffic to ReflectionContext and abstracts the detail that
-  /// ReflectionContext is a template that needs to be specialized for
-  /// a specific pointer width.
-  class ReflectionContextInterface {
-  public:
-    /// Return a reflection context.
-    static std::unique_ptr<ReflectionContextInterface>
-    CreateReflectionContext(uint8_t pointer_size,
-        std::shared_ptr<swift::remote::MemoryReader> reader, bool objc_interop,
-        SwiftMetadataCache *swift_metadata_cache);
-
-    virtual ~ReflectionContextInterface();
-
-    virtual llvm::Optional<uint32_t> AddImage(
-        llvm::function_ref<std::pair<swift::remote::RemoteRef<void>, uint64_t>(
-            swift::ReflectionSectionKind)>
-            find_section,
-        llvm::SmallVector<llvm::StringRef, 1> likely_module_names = {}) = 0;
-    virtual llvm::Optional<uint32_t> AddImage(
-        swift::remote::RemoteAddress image_start,
-        llvm::SmallVector<llvm::StringRef, 1> likely_module_names = {}) = 0;
-    virtual llvm::Optional<uint32_t>
-    ReadELF(swift::remote::RemoteAddress ImageStart,
-            llvm::Optional<llvm::sys::MemoryBlock> FileBuffer,
-            llvm::SmallVector<llvm::StringRef, 1> likely_module_names = {}) = 0;
-    virtual const swift::reflection::TypeRef *
-    GetTypeRefOrNull(StringRef mangled_type_name) = 0;
-    virtual const swift::reflection::TypeRef *
-    GetTypeRefOrNull(swift::Demangle::Demangler &dem,
-                     swift::Demangle::NodePointer node) = 0;
-    virtual const swift::reflection::TypeInfo *
-    GetClassInstanceTypeInfo(const swift::reflection::TypeRef *type_ref,
-                             swift::remote::TypeInfoProvider *provider) = 0;
-    virtual const swift::reflection::TypeInfo *
-    GetTypeInfo(const swift::reflection::TypeRef *type_ref,
-                swift::remote::TypeInfoProvider *provider) = 0;
-    virtual const swift::reflection::TypeInfo *
-    GetTypeInfoFromInstance(lldb::addr_t instance,
-                            swift::remote::TypeInfoProvider *provider) = 0;
-    virtual swift::remote::MemoryReader &GetReader() = 0;
-    virtual const swift::reflection::TypeRef *
-    LookupSuperclass(const swift::reflection::TypeRef *tr) = 0;
-    virtual bool
-    ForEachSuperClassType(swift::remote::TypeInfoProvider *tip,
-                          lldb::addr_t pointer,
-                          std::function<bool(SuperClassType)> fn) = 0;
-    virtual llvm::Optional<std::pair<const swift::reflection::TypeRef *,
-                                     swift::remote::RemoteAddress>>
-    ProjectExistentialAndUnwrapClass(
-        swift::remote::RemoteAddress existential_addess,
-        const swift::reflection::TypeRef &existential_tr) = 0;
-    virtual llvm::Optional<int32_t>
-    ProjectEnumValue(swift::remote::RemoteAddress enum_addr,
-                     const swift::reflection::TypeRef *enum_type_ref,
-                     swift::remote::TypeInfoProvider *provider) = 0;
-    virtual const swift::reflection::TypeRef *
-    ReadTypeFromMetadata(lldb::addr_t metadata_address,
-                         bool skip_artificial_subclasses = false) = 0;
-    virtual const swift::reflection::TypeRef *
-    ReadTypeFromInstance(lldb::addr_t instance_address,
-                         bool skip_artificial_subclasses = false) = 0;
-    virtual llvm::Optional<bool> IsValueInlinedInExistentialContainer(
-        swift::remote::RemoteAddress existential_address) = 0;
-    virtual const swift::reflection::TypeRef *
-    ApplySubstitutions(const swift::reflection::TypeRef *type_ref,
-                       swift::reflection::GenericArgumentMap substitutions) = 0;
-    virtual swift::remote::RemoteAbsolutePointer
-    StripSignedPointer(swift::remote::RemoteAbsolutePointer pointer) = 0;
-  };
-
-  /// A wrapper around TargetReflectionContext, which holds a lock to ensure
-  /// exclusive access.
-  struct ThreadSafeReflectionContext {
-    ThreadSafeReflectionContext(ReflectionContextInterface *reflection_ctx,
-                             std::recursive_mutex &mutex)
-        : m_reflection_ctx(reflection_ctx), m_lock(mutex, std::adopt_lock) {}
-
-    ReflectionContextInterface *operator->() const {
-      return m_reflection_ctx;
-    }
-
-    operator bool() const {
-      return m_reflection_ctx != nullptr;
-    }
-
-  private:
-    ReflectionContextInterface *m_reflection_ctx;
-    // This lock operates on a recursive mutex because the initialization
-    // of ReflectionContext recursive calls itself (see
-    // SwiftLanguageRuntimeImpl::SetupReflection).
-    std::lock_guard<std::recursive_mutex> m_lock;
-  };
-
+  /// Lazily initialize the reflection context. Returns a
+  /// ThreadSafeReflectionContext with a \p nullptr on failure.
+  ThreadSafeReflectionContext GetReflectionContext();
 protected:
   static void
   ForEachGenericParameter(swift::Demangle::NodePointer node,
@@ -314,8 +216,9 @@ protected:
   /// RecordTypeInfo and pass it to the callback \p fn. Repeat the
   /// process with all superclasses. If \p fn returns \p true, early
   /// exit and return \p true. Otherwise return \p false.
-  bool ForEachSuperClassType(ValueObject &instance,
-                             std::function<bool(SuperClassType)> fn);
+  bool ForEachSuperClassType(
+      ValueObject &instance,
+      std::function<bool(SuperClassType)> fn);
 
   // Classes that inherit from SwiftLanguageRuntime can see and modify these
   Value::ValueType GetValueType(ValueObject &in_value,
@@ -460,10 +363,6 @@ private:
 
   /// Lazily initialize and return \p m_dynamic_exclusivity_flag_addr.
   llvm::Optional<lldb::addr_t> GetDynamicExclusivityFlagAddr();
-
-  /// Lazily initialize the reflection context. Returns a
-  /// ThreadSafeReflectionContext with a \p nullptr on failure.
-  ThreadSafeReflectionContext GetReflectionContext();
 
   // Add the modules in m_modules_to_add to the Reflection Context. The
   // ModulesDidLoad() callback appends to m_modules_to_add.
