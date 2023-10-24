@@ -129,7 +129,7 @@ const NoteTag *InvalidPtrChecker::createEnvInvalidationNote(
 
     // Mark all regions that were interesting before as NOT interesting now
     // to avoid extra notes coming from invalidation points higher up the
-    // bugpath. This ensures, that only the last invalidation point is marked
+    // bugpath. This ensures that only the last invalidation point is marked
     // with a note tag.
     llvm::SmallVector<std::string, 2> InvalidLocationNames;
     if (BR.isInteresting(MainRegion)) {
