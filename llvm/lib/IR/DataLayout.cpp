@@ -681,7 +681,7 @@ Align DataLayout::getIntegerAlignment(uint32_t BitWidth,
 namespace {
 
 class StructLayoutMap {
-  using LayoutInfoTy = DenseMap<const StructType*, StructLayout*>;
+  using LayoutInfoTy = DenseMap<const StructType *, StructLayout *>;
   LayoutInfoTy LayoutInfo;
 
 public:
@@ -694,9 +694,7 @@ public:
     }
   }
 
-  StructLayout *&operator[](const StructType *STy) {
-    return LayoutInfo[STy];
-  }
+  StructLayout *&operator[](const StructType *STy) { return LayoutInfo[STy]; }
 };
 
 } // end anonymous namespace
