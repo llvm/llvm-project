@@ -391,7 +391,7 @@ def should_add_line_to_output(
     m = CHECK_RE.match(input_line)
     if m and m.group(1) in prefix_set:
         if skip_global_checks:
-            global_ir_value_re = re.compile(r"\[\[", flags=(re.M))
+            global_ir_value_re = re.compile(r"(\[\[|@)", flags=(re.M))
             return not global_ir_value_re.search(input_line)
         return False
 
