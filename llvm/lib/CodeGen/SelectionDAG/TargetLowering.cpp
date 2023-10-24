@@ -1797,10 +1797,10 @@ bool TargetLowering::SimplifyDemandedBits(
         return true;
       assert(!Known.hasConflict() && "Bits known to be one AND zero?");
 
-      Known = KnownBits::shl(Known,
-                             KnownBits::makeConstant(APInt(BitWidth, ShAmt)),
-                             /* NUW */ Op->getFlags().hasNoUnsignedWrap(),
-                             /* NSW */ Op->getFlags().hasNoSignedWrap());
+      Known =
+          KnownBits::shl(Known, KnownBits::makeConstant(APInt(BitWidth, ShAmt)),
+                         /* NUW */ Op->getFlags().hasNoUnsignedWrap(),
+                         /* NSW */ Op->getFlags().hasNoSignedWrap());
 
       // Attempt to avoid multi-use ops if we don't need anything from them.
       if (!InDemandedMask.isAllOnes() || !DemandedElts.isAllOnes()) {
