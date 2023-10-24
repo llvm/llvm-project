@@ -100,7 +100,7 @@ bool BasicAAResult::invalidate(Function &Fn, const PreservedAnalyses &PA,
 // Useful predicates
 //===----------------------------------------------------------------------===//
 
-/// Returns the size of the object specified by V or UnknownSize if unknown.
+/// Returns the size of the object specified by V or nullopt if unknown.
 static std::optional<uint64_t> getObjectSize(const Value *V,
                                              const DataLayout &DL,
                                              const TargetLibraryInfo &TLI,
