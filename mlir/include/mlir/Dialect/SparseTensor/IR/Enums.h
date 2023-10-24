@@ -277,7 +277,7 @@ constexpr bool isCompressedDLT(DimLevelType dlt) {
          static_cast<uint8_t>(DimLevelType::Compressed);
 }
 
-/// Check if the `DimLevelType` is compressed (regardless of properties).
+/// Check if the `DimLevelType` is loose compressed (regardless of properties).
 constexpr bool isLooseCompressedDLT(DimLevelType dlt) {
   return (static_cast<uint8_t>(dlt) & ~3) ==
          static_cast<uint8_t>(DimLevelType::LooseCompressed);
@@ -287,6 +287,12 @@ constexpr bool isLooseCompressedDLT(DimLevelType dlt) {
 constexpr bool isSingletonDLT(DimLevelType dlt) {
   return (static_cast<uint8_t>(dlt) & ~3) ==
          static_cast<uint8_t>(DimLevelType::Singleton);
+}
+
+/// Check if the `DimLevelType` is 2OutOf4 (regardless of properties).
+constexpr bool is2OutOf4DLT(DimLevelType dlt) {
+  return (static_cast<uint8_t>(dlt) & ~3) ==
+         static_cast<uint8_t>(DimLevelType::TwoOutOfFour);
 }
 
 /// Check if the `DimLevelType` is ordered (regardless of storage format).
