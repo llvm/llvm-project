@@ -10506,7 +10506,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
   }
 
   if (E->State == TreeEntry::NeedToGather) {
-    if (E->getMainOp() && E->Idx == 0)
+    // Set insert point for non-reduction initial nodes.
+    if (E->getMainOp() && E->Idx == 0 && !UserIgnoreList)
       setInsertPointAfterBundle(E);
     Value *Vec = createBuildVector(E);
     E->VectorizedValue = Vec;
