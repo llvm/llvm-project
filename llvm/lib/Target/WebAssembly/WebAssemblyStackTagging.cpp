@@ -90,6 +90,7 @@ void WebAssemblyStackTagging::untagAlloca(AllocaInst *AI, Instruction *InsertBef
 bool WebAssemblyStackTagging::runOnFunction(Function & Fn) {
   if (!Fn.hasFnAttribute(Attribute::SanitizeMemTag))
     return false;
+
   auto F = &Fn;
   SSI = &getAnalysis<StackSafetyGlobalInfoWrapperPass>().getResult();
   memtag::StackInfoBuilder SIB(SSI);
