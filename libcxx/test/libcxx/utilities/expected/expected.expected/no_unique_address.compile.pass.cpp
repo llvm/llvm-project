@@ -13,6 +13,7 @@
 // test [[no_unique_address]] is applied to the union
 
 #include <expected>
+#include <optional>
 #include <memory>
 
 struct Empty {};
@@ -50,5 +51,22 @@ static_assert(sizeof(std::expected<Empty, BoolWithPadding>) ==
 
 // In this case, there should be tail padding in the `expected` because `A`
 // itself does _not_ have tail padding.
-// XXX
-// static_assert(sizeof(std::expected<A, A>) > std::__libcpp_datasizeof<std::expected<A, A>>::value);
+static_assert(sizeof(std::expected<A, A>) > std::__libcpp_datasizeof<std::expected<A, A>>::value);
+
+// Test with some real types.
+static_assert(sizeof(std::expected<std::optional<int>, int>) == 8);
+static_assert(std::__libcpp_datasizeof<std::expected<std::optional<int>, int>>::value == 8);
+
+static_assert(sizeof(std::expected<int, std::optional<int>>) == 8);
+static_assert(std::__libcpp_datasizeof<std::expected<int, std::optional<int>>>::value == 8);
+
+static_assert(sizeof(std::expected<int, int>) == 8);
+static_assert(std::__libcpp_datasizeof<std::expected<int, int>>::value == 5);
+
+// clang-format off
+static_assert(std::__libcpp_datasizeof<int>::value == 4);
+static_assert(std::__libcpp_datasizeof<std::expected<int, int>>::value == 5);
+static_assert(std::__libcpp_datasizeof<std::expected<std::expected<int, int>, int>>::value == 8);
+static_assert(std::__libcpp_datasizeof<std::expected<std::expected<std::expected<int, int>, int>, int>>::value == 9);
+static_assert(std::__libcpp_datasizeof<std::expected<std::expected<std::expected<std::expected<int, int>, int>, int>, int>>::value == 12);
+// clang-format on

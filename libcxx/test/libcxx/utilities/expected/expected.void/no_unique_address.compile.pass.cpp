@@ -13,6 +13,7 @@
 // test [[no_unique_address]] is applied to the union
 
 #include <expected>
+#include <optional>
 #include <memory>
 
 struct Empty {};
@@ -44,5 +45,19 @@ static_assert(sizeof(std::expected<void, BoolWithPadding>) ==
 
 // In this case, there should be tail padding in the `expected` because `A`
 // itself does _not_ have tail padding.
-// XXX
-// static_assert(sizeof(std::expected<void, A>) > std::__libcpp_datasizeof<std::expected<void, A>>::value);
+static_assert(sizeof(std::expected<void, A>) > std::__libcpp_datasizeof<std::expected<void, A>>::value);
+
+// Test with some real types.
+static_assert(sizeof(std::expected<void, std::optional<int>>) == 8);
+static_assert(std::__libcpp_datasizeof<std::expected<void, std::optional<int>>>::value == 8);
+
+static_assert(sizeof(std::expected<void, int>) == 8);
+static_assert(std::__libcpp_datasizeof<std::expected<void, int>>::value == 5);
+
+// clang-format off
+static_assert(std::__libcpp_datasizeof<int>::value == 4);
+static_assert(std::__libcpp_datasizeof<std::expected<void, int>>::value == 5);
+static_assert(std::__libcpp_datasizeof<std::expected<void, std::expected<void, int>>>::value == 8);
+static_assert(std::__libcpp_datasizeof<std::expected<void, std::expected<void, std::expected<void, int>>>>::value == 9);
+static_assert(std::__libcpp_datasizeof<std::expected<void, std::expected<void, std::expected<void, std::expected<void, int>>>>>::value == 12);
+// clang-format on
