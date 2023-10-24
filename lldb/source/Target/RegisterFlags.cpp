@@ -10,6 +10,8 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
+#include "llvm/ADT/StringExtras.h"
+
 #include <numeric>
 #include <optional>
 
@@ -204,7 +206,13 @@ void RegisterFlags::Field::ToXML(StreamString &strm) const {
   // Example XML:
   // <field name="correct" start="0" end="0"/>
   strm.Indent();
-  strm << "<field name=\"" << GetName() << "\" ";
+  strm << "<field name=\"";
+
+  std::string escaped_name;
+  llvm::raw_string_ostream escape_strm(escaped_name);
+  llvm::printHTMLEscaped(GetName(), escape_strm);
+  strm << escaped_name << "\" ";
+
   strm.Printf("start=\"%d\" end=\"%d\"", GetStart(), GetEnd());
   strm << "/>";
 }
