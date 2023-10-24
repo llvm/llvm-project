@@ -357,7 +357,7 @@ static bool isSafeToFoldImmIntoCopy(const MachineInstr *Copy,
     return false;
 
   // FIXME: Handle copies with sub-regs.
-  if (Copy->getOperand(0).getSubReg())
+  if (Copy->getOperand(1).getSubReg())
     return false;
 
   switch (MoveImm->getOpcode()) {
