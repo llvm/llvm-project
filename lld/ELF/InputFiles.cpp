@@ -1545,6 +1545,7 @@ template <class ELFT> void SharedFile::parse() {
       auto *s = symtab.addSymbol(
           SharedSymbol{*this, name, sym.getBinding(), sym.st_other,
                        sym.getType(), sym.st_value, sym.st_size, alignment});
+      s->setFlags(HAS_SHARED_DEF);
       if (s->file == this)
         s->verdefIndex = ver;
     }
@@ -1562,6 +1563,7 @@ template <class ELFT> void SharedFile::parse() {
     auto *s = symtab.addSymbol(
         SharedSymbol{*this, saver().save(name), sym.getBinding(), sym.st_other,
                      sym.getType(), sym.st_value, sym.st_size, alignment});
+    s->setFlags(HAS_SHARED_DEF);
     if (s->file == this)
       s->verdefIndex = idx;
   }
