@@ -17,12 +17,14 @@ on:
       - 'clang/docs/**'
       - 'clang-tools-extra/docs/**'
       - 'lldb/docs/**'
+      - 'libunwind/docs/**'
   pull_request:
     paths:
       - 'llvm/docs/**'
       - 'clang/docs/**'
       - 'clang-tools-extra/docs/**'
       - 'lldb/docs/**'
+      - 'libunwind/docs/**'
 
 jobs:
   check-docs-build:
@@ -58,6 +60,8 @@ jobs:
               - 'clang-tools-extra/docs/**'
             lldb:
               - 'lldb/docs/**'
+            libunwind:
+              - 'libunwind/docs/**'
       - name: Setup Python env
         uses: actions/setup-python@v4
         with:
@@ -91,4 +95,9 @@ jobs:
         run: |
           cmake -B lldb-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang;lldb" -DLLVM_ENABLE_SPHINX=ON ./llvm
           TZ=UTC ninja -C lldb-build docs-lldb-html docs-lldb-man
+      - name: Build libunwind docs
+        if: steps.docs-changed-subprojects.outputs.libunwind_any_changed == 'true'
+        run: |
+          cmake -B libunwind-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_RUNTIMES="libunwind" -DLLVM_ENABLE_SPHINX=ON ./runtimes
+          TZ=UTC ninja -C libunwind-build docs-libunwind-html
 
