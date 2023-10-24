@@ -9,10 +9,10 @@
 
 #include "fp_test.h"
 
-COMPILER_RT_ABI __float128 __extendxftf2(long double a);
+COMPILER_RT_ABI tf_float __extendxftf2(long double a);
 
 int test__extendxftf2(long double a, uint64_t expectedHi, uint64_t expectedLo) {
-  __float128 x = __extendxftf2(a);
+  tf_float x = __extendxftf2(a);
   int ret = compareResultF128(x, expectedHi, expectedLo);
 
   if (ret) {
