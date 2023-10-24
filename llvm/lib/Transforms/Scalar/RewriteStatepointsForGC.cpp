@@ -1016,7 +1016,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
   // pointers at this point, there are cases where the base is of an
   // incompatible type compared to the original instruction. We conservatively
   // mark those as conflicts to ensure that corresponding BDVs will be generated
-  // in the next steps
+  // in the next steps.
 
   // this is a rather explicit check for all cases where we should mark the
   // state as a conflict to force the latter stages of the algorithm to emit
