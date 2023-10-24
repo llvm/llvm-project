@@ -65,6 +65,18 @@ struct TestLowerToNVVMOptions
       *this, "opt-level",
       llvm::cl::desc("Optimization level for NVVM compilation"),
       llvm::cl::init(2)};
+  PassOptions::Option<bool> kernelUseBarePtrCallConv{
+      *this, "kernel-bare-ptr-calling-convention",
+      llvm::cl::desc(
+          "Whether to use the bareptr calling convention on the kernel "
+          "(warning this should be false until the GPU layering is fixed)"),
+      llvm::cl::init(false)};
+  PassOptions::Option<bool> hostUseBarePtrCallConv{
+      *this, "host-bare-ptr-calling-convention",
+      llvm::cl::desc(
+          "Whether to use the bareptr calling convention on the host (warning "
+          "this should be false until the GPU layering is fixed)"),
+      llvm::cl::init(false)};
 };
 
 //===----------------------------------------------------------------------===//
@@ -105,7 +117,10 @@ void buildCommonPassPipeline(OpPassManager &pm,
 void buildGpuPassPipeline(OpPassManager &pm,
                           const TestLowerToNVVMOptions &options) {
   pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());
-  pm.addNestedPass<gpu::GPUModuleOp>(createConvertGpuOpsToNVVMOps());
+  ConvertGpuOpsToNVVMOpsOptions opt;
+  opt.useBarePtrCallConv = options.kernelUseBarePtrCallConv;
+  opt.indexBitwidth = options.indexBitWidth;
+  pm.addNestedPass<gpu::GPUModuleOp>(createConvertGpuOpsToNVVMOps(opt));
   pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
   pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
   pm.addNestedPass<gpu::GPUModuleOp>(createReconcileUnrealizedCastsPass());
@@ -116,7 +131,10 @@ void buildGpuPassPipeline(OpPassManager &pm,
 //===----------------------------------------------------------------------===//
 void buildHostPostPipeline(OpPassManager &pm,
                            const TestLowerToNVVMOptions &options) {
-  pm.addPass(createGpuToLLVMConversionPass());
+  GpuToLLVMConversionPassOptions opt;
+  opt.hostBarePtrCallConv = options.hostUseBarePtrCallConv;
+  opt.kernelBarePtrCallConv = options.kernelUseBarePtrCallConv;
+  pm.addPass(createGpuToLLVMConversionPass(opt));
 
   GpuModuleToBinaryPassOptions gpuModuleToBinaryPassOptions;
   gpuModuleToBinaryPassOptions.compilationTarget = options.cubinFormat;
