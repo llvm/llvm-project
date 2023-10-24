@@ -111,10 +111,11 @@ static void checkConcrete(Record &R) {
 
 /// Return an Init with a qualifier prefix referring
 /// to CurRec's name.
-static Init *QualifyName(Record &CurRec, Init *Name, bool IsMC = false) {
+static Init *QualifyName(Record &CurRec, Init *Name) {
   RecordKeeper &RK = CurRec.getRecords();
   Init *NewName = BinOpInit::getStrConcat(
-      CurRec.getNameInit(), StringInit::get(RK, IsMC ? "::" : ":"));
+      CurRec.getNameInit(),
+      StringInit::get(RK, CurRec.isMultiClass() ? "::" : ":"));
   NewName = BinOpInit::getStrConcat(NewName, Name);
 
   if (BinOpInit *BinOp = dyn_cast<BinOpInit>(NewName))
@@ -123,16 +124,16 @@ static Init *QualifyName(Record &CurRec, Init *Name, bool IsMC = false) {
 }
 
 static Init *QualifyName(MultiClass *MC, Init *Name) {
-  return QualifyName(MC->Rec, Name, /*IsMC=*/true);
+  return QualifyName(MC->Rec, Name);
 }
 
 /// Return the qualified version of the implicit 'NAME' template argument.
-static Init *QualifiedNameOfImplicitName(Record &Rec, bool IsMC = false) {
-  return QualifyName(Rec, StringInit::get(Rec.getRecords(), "NAME"), IsMC);
+static Init *QualifiedNameOfImplicitName(Record &Rec) {
+  return QualifyName(Rec, StringInit::get(Rec.getRecords(), "NAME"));
 }
 
 static Init *QualifiedNameOfImplicitName(MultiClass *MC) {
-  return QualifiedNameOfImplicitName(MC->Rec, /*IsMC=*/true);
+  return QualifiedNameOfImplicitName(MC->Rec);
 }
 
 Init *TGVarScope::getVar(RecordKeeper &Records, MultiClass *ParsingMultiClass,
@@ -143,11 +144,10 @@ Init *TGVarScope::getVar(RecordKeeper &Records, MultiClass *ParsingMultiClass,
   if (It != Vars.end())
     return It->second;
 
-  auto FindValueInArgs = [&](Record *Rec, StringInit *Name,
-                             bool IsMC) -> Init * {
+  auto FindValueInArgs = [&](Record *Rec, StringInit *Name) -> Init * {
     if (!Rec)
       return nullptr;
-    Init *ArgName = QualifyName(*Rec, Name, IsMC);
+    Init *ArgName = QualifyName(*Rec, Name);
     if (Rec->isTemplateArg(ArgName)) {
       RecordVal *RV = Rec->getValue(ArgName);
       assert(RV && "Template arg doesn't exist??");
@@ -177,7 +177,7 @@ Init *TGVarScope::getVar(RecordKeeper &Records, MultiClass *ParsingMultiClass,
 
       // The variable is a class template argument?
       if (CurRec->isClass())
-        if (auto *V = FindValueInArgs(CurRec, Name, /*IsMC=*/false))
+        if (auto *V = FindValueInArgs(CurRec, Name))
           return V;
     }
     break;
@@ -194,7 +194,7 @@ Init *TGVarScope::getVar(RecordKeeper &Records, MultiClass *ParsingMultiClass,
   case SK_MultiClass: {
     // The variable is a multiclass template argument?
     if (CurMultiClass)
-      if (auto *V = FindValueInArgs(&CurMultiClass->Rec, Name, /*IsMC=*/true))
+      if (auto *V = FindValueInArgs(&CurMultiClass->Rec, Name))
         return V;
     break;
   }
@@ -772,8 +772,7 @@ ParseSubClassReference(Record *CurRec, bool isDefm) {
     return Result;
   }
 
-  if (ParseTemplateArgValueList(Result.TemplateArgs, CurRec, Result.Rec,
-                                isDefm)) {
+  if (ParseTemplateArgValueList(Result.TemplateArgs, CurRec, Result.Rec)) {
     Result.Rec = nullptr; // Error parsing value list.
     return Result;
   }
@@ -810,7 +809,7 @@ ParseSubMultiClassReference(MultiClass *CurMC) {
   }
 
   if (ParseTemplateArgValueList(Result.TemplateArgs, &CurMC->Rec,
-                                &Result.MC->Rec, true)) {
+                                &Result.MC->Rec)) {
     Result.MC = nullptr; // Error parsing value list.
     return Result;
   }
@@ -3160,8 +3159,7 @@ void TGParser::ParseValueList(SmallVectorImpl<Init *> &Result, Record *CurRec,
 //   PostionalArgValueList ::= [Value {',' Value}*]
 //   NamedArgValueList ::= [NameValue '=' Value {',' NameValue '=' Value}*]
 bool TGParser::ParseTemplateArgValueList(
-    SmallVectorImpl<ArgumentInit *> &Result, Record *CurRec, Record *ArgsRec,
-    bool IsDefm) {
+    SmallVectorImpl<ArgumentInit *> &Result, Record *CurRec, Record *ArgsRec) {
   assert(Result.empty() && "Result vector is not empty");
   ArrayRef<Init *> TArgs = ArgsRec->getTemplateArgs();
 
@@ -3192,7 +3190,7 @@ bool TGParser::ParseTemplateArgValueList(
                      "The name of named argument should be a valid identifier");
 
       auto *Name = cast<StringInit>(Value);
-      Init *QualifiedName = QualifyName(*ArgsRec, Name, /*IsMC=*/IsDefm);
+      Init *QualifiedName = QualifyName(*ArgsRec, Name);
       auto *NamedArg = ArgsRec->getValue(QualifiedName);
       if (!NamedArg)
         return Error(ValueLoc,
@@ -3610,9 +3608,8 @@ bool TGParser::ParseDef(MultiClass *CurMultiClass) {
     return true;
 
   if (isa<UnsetInit>(Name)) {
-    CurRec =
-        std::make_unique<Record>(Records.getNewAnonymousName(), DefLoc, Records,
-                                 /*Anonymous=*/true);
+    CurRec = std::make_unique<Record>(Records.getNewAnonymousName(), DefLoc,
+                                      Records, Record::RK_AnonymousDef);
   } else {
     CurRec = std::make_unique<Record>(Name, NameLoc, Records);
   }
@@ -3930,9 +3927,8 @@ bool TGParser::ParseClass() {
     CurRec->updateClassLoc(Lex.getLoc());
   } else {
     // If this is the first reference to this class, create and add it.
-    auto NewRec =
-        std::make_unique<Record>(Lex.getCurStrVal(), Lex.getLoc(), Records,
-                                  /*Class=*/true);
+    auto NewRec = std::make_unique<Record>(Lex.getCurStrVal(), Lex.getLoc(),
+                                           Records, Record::RK_Class);
     CurRec = NewRec.get();
     Records.addClass(std::move(NewRec));
   }

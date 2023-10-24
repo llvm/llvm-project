@@ -16,6 +16,7 @@
 
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/LLVM.h"
+#include <optional>
 
 namespace mlir {
 class Location;
@@ -38,8 +39,12 @@ LLVM::LLVMFuncOp lookupOrCreatePrintF16Fn(ModuleOp moduleOp);
 LLVM::LLVMFuncOp lookupOrCreatePrintBF16Fn(ModuleOp moduleOp);
 LLVM::LLVMFuncOp lookupOrCreatePrintF32Fn(ModuleOp moduleOp);
 LLVM::LLVMFuncOp lookupOrCreatePrintF64Fn(ModuleOp moduleOp);
-LLVM::LLVMFuncOp lookupOrCreatePrintStrFn(ModuleOp moduleOp,
-                                          bool opaquePointers);
+/// Declares a function to print a C-string.
+/// If a custom runtime function is defined via `runtimeFunctionName`, it must
+/// have the signature void(char const*). The default function is `printString`.
+LLVM::LLVMFuncOp
+lookupOrCreatePrintStringFn(ModuleOp moduleOp, bool opaquePointers,
+                            std::optional<StringRef> runtimeFunctionName = {});
 LLVM::LLVMFuncOp lookupOrCreatePrintOpenFn(ModuleOp moduleOp);
 LLVM::LLVMFuncOp lookupOrCreatePrintCloseFn(ModuleOp moduleOp);
 LLVM::LLVMFuncOp lookupOrCreatePrintCommaFn(ModuleOp moduleOp);

@@ -195,6 +195,12 @@ struct ParallelLoopTiling
   }
 
   void runOnOperation() override {
+    for (auto tileSize : tileSizes)
+      if (tileSize == 0) {
+        mlir::emitError(mlir::UnknownLoc::get(&Pass::getContext()),
+                        "tile size cannot be 0");
+        return signalPassFailure();
+      }
     auto *parentOp = getOperation();
     SmallVector<ParallelOp, 2> innermostPloops;
     getInnermostParallelLoops(parentOp, innermostPloops);
