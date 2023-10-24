@@ -63,8 +63,7 @@ public:
   ParseChildArrayInfo(const DWARFDIE &parent_die,
                       const lldb_private::ExecutionContext *exe_ctx = nullptr);
 
-  lldb_private::Type *
-  GetTypeForDIE(const lldb_private::plugin::dwarf::DWARFDIE &die);
+  lldb_private::Type *GetTypeForDIE(const DWARFDIE &die);
 
   static lldb::AccessType GetAccessTypeFromDWARF(uint32_t dwarf_accessibility);
 };
