@@ -4078,7 +4078,7 @@ void Parser::ParseDeclarationSpecifiers(
         Diag(Tok, diag::warn_c23_compat_keyword) << Tok.getName();
       // We map thread_local to _Thread_local in C23 mode so it retains the C
       // semantics rather than getting the C++ semantics.
-      // FIXME: diagnostics will now show _Thread_local when the user wrote
+      // FIXME: diagnostics will show _Thread_local when the user wrote
       // thread_local in source in C23 mode; we need some general way to
       // identify which way the user spelled the keyword in source.
       isInvalid = DS.SetStorageClassSpecThread(
