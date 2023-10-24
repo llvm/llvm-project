@@ -33,22 +33,6 @@ jobs:
     name: "Test documentation build"
     runs-on: ubuntu-latest
     steps:
-      # Fetch all the commits in a pull request + 1 so that the
-      # docs-changed-subprojects step won't pull them in itself in an extremely
-      # slow manner.
-      - name: Calculate number of commits to fetch (PR)
-        if: ${{ github.event_name == 'pull_request' }} 
-        run: echo "PR_FETCH_DEPTH=$(( ${{ github.event.pull_request.commits }} + 1 ))" >> "${GITHUB_ENV}"
-      - name: Fetch LLVM sources (PR)
-        if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: ${{ env.PR_FETCH_DEPTH }}
-      - name: Fetch LLVM sources (push)
-        if: ${{ github.event_name == 'push' }}
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
       - name: Get subprojects that have doc changes
         id: docs-changed-subprojects
         uses: tj-actions/changed-files@v39
@@ -66,6 +50,10 @@ jobs:
               - 'libunwind/docs/**'
             libcxx:
               - 'libcxx/docs/**'
+      - name: Fetch LLVM sources
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
       - name: Setup Python env
         uses: actions/setup-python@v4
         with:
