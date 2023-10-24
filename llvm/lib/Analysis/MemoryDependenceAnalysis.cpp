@@ -373,7 +373,10 @@ static bool canSkipClobberingStore(const StoreInst *SI,
     return false;
   if (MemoryLocation::get(SI).Size != MemLoc.Size)
     return false;
-  if (std::min(MemLocAlign, SI->getAlign()).value() < MemLoc.Size.getValue())
+  if (MemLoc.Size.isScalable())
+    return false;
+  if (std::min(MemLocAlign, SI->getAlign()).value() <
+      MemLoc.Size.getValue().getKnownMinValue())
     return false;
 
   auto *LI = dyn_cast<LoadInst>(SI->getValueOperand());
@@ -1099,7 +1102,8 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
         // be conservative.
         ThrowOutEverything =
             CacheInfo->Size.isPrecise() != Loc.Size.isPrecise() ||
-            CacheInfo->Size.getValue() < Loc.Size.getValue();
+            !TypeSize::isKnownGE(CacheInfo->Size.getValue(),
+                                 Loc.Size.getValue());
       } else {
         // For our purposes, unknown size > all others.
         ThrowOutEverything = !Loc.Size.hasValue();
