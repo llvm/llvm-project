@@ -67,6 +67,10 @@ public:
     return lldb_private::ConstString();
   }
 
+  static bool classof(const DWARFASTParser *Parser) {
+    return Parser->GetKind() == Kind::DWARFASTParserSwift;
+  }
+
 protected:
   lldb_private::TypeSystemSwiftTypeRef &m_swift_typesystem;
 };
