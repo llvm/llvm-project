@@ -216,10 +216,13 @@ int Type::getFPMantissaWidth() const {
   if (getTypeID() == DoubleTyID) return 53;
   if (getTypeID() == X86_FP80TyID) return 64;
   if (getTypeID() == FP128TyID) return 113;
-  assert((getTypeID() == PPC_FP128TyID || getTypeID() == Decimal32TyID ||
-          getTypeID() == Decimal64TyID || getTypeID() == FP128TyID) &&
-         "unknown fp type");
-  return -1;
+  // See comment in the declaration of Type::getFPMantissaWidth();
+  // it returns -1 if the FP type does not have a stable mantissa.
+  if (getTypeID() == Decimal32TyID) return -1;
+  if (getTypeID() == Decimal64TyID) return -1;
+  if (getTypeID() == FP128TyID) return -1;
+  if (getTypeID() == PPC_FP128TyID) return -1;
+  assert("unknown fp type");
 }
 
 bool Type::isSizedDerivedType(SmallPtrSetImpl<Type*> *Visited) const {

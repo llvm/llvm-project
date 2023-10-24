@@ -57,12 +57,12 @@ public:
     BFloatTyID,    ///< 16-bit floating point type (7-bit significand)
     Decimal32TyID, ///< 32-bit decimal floating point type
     FloatTyID,     ///< 32-bit floating point type
-    DoubleTyID,    ///< 64-bit floating point type
     Decimal64TyID, ///< 64-bit decimal floating point type
+    DoubleTyID,    ///< 64-bit floating point type
     X86_FP80TyID,  ///< 80-bit floating point type (X87)
+    Decimal128TyID, ///< 128-bit decimal floating point type
     FP128TyID,     ///< 128-bit floating point type (112-bit significand)
     PPC_FP128TyID, ///< 128-bit floating point type (two 64-bits, PowerPC)
-    Decimal128TyID,///< 128-bit decimal floating point type
     VoidTyID,      ///< type with no size
     LabelTyID,     ///< Labels
     MetadataTyID,  ///< Metadata
