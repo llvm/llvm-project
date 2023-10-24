@@ -105,7 +105,7 @@ C++ Specific Potentially Breaking Changes
   error in the next Clang release.
 
 - The flag `-fdelayed-template-parsing` won't be enabled by default with C++20
-  when targetting MSVC to match the behavior of MSVC. 
+  when targetting MSVC to match the behavior of MSVC.
   (`MSVC Docs <https://learn.microsoft.com/en-us/cpp/build/reference/permissive-standards-conformance?view=msvc-170>`_)
 
 ABI Changes in This Version
