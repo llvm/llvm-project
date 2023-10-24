@@ -22,6 +22,6 @@ void func(void) {
 // CHECK:      define dso_local void @func()
 // CHECK-NEXT: entry:
 // CHECK-NEXT: %[[K:.+]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @k)
-// CHECK-NEXT: %{{.+}} = load i32, ptr %[[K]], align 4
+// CHECK-NEXT: load i32, ptr %[[K]], align 4
 // CHECK-NEXT: %[[L:.+]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @l)
-// CHECK-NEXT: %{{.+}} = load i32, ptr %[[L]], align 4
+// CHECK-NEXT: load i32, ptr %[[L]], align 4
