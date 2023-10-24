@@ -929,14 +929,23 @@ class Selector {
     // correspond to the enumeration values of DeclarationName::StoredNameKind
     ZeroArg = 0x01,
     OneArg = 0x02,
+    // IMPORTANT NOTE: see comments in InfoPtr (below) about this enumerator value.
     MultiArg = 0x07,
   };
 
-  /// A pointer to the MultiKeywordSelector or IdentifierInfo. We use the low
-  /// three bits of InfoPtr to store an IdentifierInfoFlag, but the highest
-  /// of them is also a discriminator for pointer type. Note that in any
-  /// case IdentifierInfo and MultiKeywordSelector are already aligned to
-  /// 8 bytes even on 32 bits archs because of DeclarationName.
+  /// IMPORTANT NOTE: the order of the types in this PointerUnion are
+  /// important! The DeclarationName class has bidirectional conversion
+  /// to/from Selector through an opaque pointer (void *) which corresponds
+  /// to this PointerIntPair. The discriminator bit from the PointerUnion
+  /// corresponds to the high bit in the MultiArg enumerator. So while this
+  /// PointerIntPair only has two bits for the integer (and we mask off the
+  /// high bit in `MultiArg` when it is used), that discrimator bit is
+  /// still necessary for the opaque conversion. The discriminator bit
+  /// from the PointerUnion and the two integer bits from the
+  /// PointerIntPair are also exposed via the DeclarationName::StoredNameKind
+  /// enumeration; see the comments in DeclarationName.h for more details.
+  /// Do not reorder or add any arguments to this template
+  /// without thoroughly understanding how tightly coupled these classes are.
   llvm::PointerIntPair<
       llvm::PointerUnion<IdentifierInfo *, MultiKeywordSelector *>, 2>
       InfoPtr;
@@ -947,6 +956,9 @@ class Selector {
   }
 
   Selector(MultiKeywordSelector *SI) {
+    // IMPORTANT NOTE: we mask off the upper bit of this value because we only
+    // reserve two bits for the integer in the PointerIntPair. See the comments
+    // in `InfoPtr` for more details.
     InfoPtr.setPointerAndInt(SI, MultiArg & 0b11);
   }
 
@@ -960,6 +972,9 @@ class Selector {
 
   unsigned getIdentifierInfoFlag() const {
     unsigned new_flags = InfoPtr.getInt();
+    // IMPORTANT NOTE: We have to reconstitute this data rather than use the
+    // value directly from the PointerIntPair. See the comments in `InfoPtr`
+    // for more details.
     if (InfoPtr.getPointer().is<MultiKeywordSelector *>())
       new_flags |= MultiArg;
     return new_flags;
