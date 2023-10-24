@@ -110,7 +110,7 @@ struct ARMOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
   }
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
-                        CCValAssign VA) override {
+                        const CCValAssign &VA) override {
     assert(VA.isRegLoc() && "Value shouldn't be assigned to reg");
     assert(VA.getLocReg() == PhysReg && "Assigning to the wrong reg?");
 
@@ -136,14 +136,14 @@ struct ARMOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
                              std::function<void()> *Thunk) override {
     assert(Arg.Regs.size() == 1 && "Can't handle multple regs yet");
 
-    CCValAssign VA = VAs[0];
+    const CCValAssign &VA = VAs[0];
     assert(VA.needsCustom() && "Value doesn't need custom handling");
 
     // Custom lowering for other types, such as f16, is currently not supported
     if (VA.getValVT() != MVT::f64)
       return 0;
 
-    CCValAssign NextVA = VAs[1];
+    const CCValAssign &NextVA = VAs[1];
     assert(NextVA.needsCustom() && "Value doesn't need custom handling");
     assert(NextVA.getValVT() == MVT::f64 && "Unsupported type");
 
@@ -283,7 +283,7 @@ struct ARMIncomingValueHandler : public CallLowering::IncomingValueHandler {
   }
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
-                        CCValAssign VA) override {
+                        const CCValAssign &VA) override {
     assert(VA.isRegLoc() && "Value shouldn't be assigned to reg");
     assert(VA.getLocReg() == PhysReg && "Assigning to the wrong reg?");
 
@@ -312,14 +312,14 @@ struct ARMIncomingValueHandler : public CallLowering::IncomingValueHandler {
                              std::function<void()> *Thunk) override {
     assert(Arg.Regs.size() == 1 && "Can't handle multple regs yet");
 
-    CCValAssign VA = VAs[0];
+    const CCValAssign &VA = VAs[0];
     assert(VA.needsCustom() && "Value doesn't need custom handling");
 
     // Custom lowering for other types, such as f16, is currently not supported
     if (VA.getValVT() != MVT::f64)
       return 0;
 
-    CCValAssign NextVA = VAs[1];
+    const CCValAssign &NextVA = VAs[1];
     assert(NextVA.needsCustom() && "Value doesn't need custom handling");
     assert(NextVA.getValVT() == MVT::f64 && "Unsupported type");
 
