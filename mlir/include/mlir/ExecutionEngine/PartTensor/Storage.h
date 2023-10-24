@@ -40,6 +40,7 @@
 #include "mlir/ExecutionEngine/SparseTensor/Storage.h"
 #include "mlir/ExecutionEngine/SparseTensorRuntime.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include <cstdint>
 #include <utility>
@@ -140,11 +141,12 @@ PartTensorStorage<P, I, V> *PartTensorStorage<P, I, V>::newFromCOO(
     std::vector<I> partShape(dimRank);
     std::transform(std::begin(hiPoint), std::end(hiPoint), std::begin(loPoint),
                    std::begin(partShape), std::minus<I>());
-    for (auto i : partShape) {
-      assert(i > 0 && "Partition shape must be positive");
-      std::cout << i;
-    }
-    std::cout << "\n";
+    assert(llvm::all_of(partShape, [](auto i) { return i > 0; }) &&
+           "Patition shape must be positive");
+    // for (auto i : partShape) {
+    //   std::cout << i << ", ";
+    // }
+    // std::cout << "\n";
     parts.emplace_back(std::make_unique<SparseTensorCOO<V>>(partShape));
 
     llvm::for_each(spCOO->getElements(), [&](auto e) {

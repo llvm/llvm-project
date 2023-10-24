@@ -43,14 +43,15 @@ TEST(PartTensor, NewPartTensor) {
         std::size(partitionPlan), partitionPlan.data(), 2, dims.data(),
         stCoo.get());
     auto &parts = pt->getParts();
-    for (auto p : llvm::seq(0ul, std::size(parts))) {
-      std::cout << "Part:\n";
-      for (auto i : parts[p]->getElements()) {
-        std::cout << i.coords[0] << ", " << i.coords[1] << ", " << i.value
-                  << "\n";
-      }
-      std::cout << "----\n";
-    }
+    (void)parts;
+    // for (auto p : llvm::seq(0ul, std::size(parts))) {
+    //   std::cout << "Part:\n";
+    //   for (auto i : parts[p]->getElements()) {
+    //     std::cout << i.coords[0] << ", " << i.coords[1] << ", " << i.value
+    //               << "\n";
+    //   }
+    //   std::cout << "----\n";
+    // }
   }
   {
     using namespace mlir::sparse_tensor;
