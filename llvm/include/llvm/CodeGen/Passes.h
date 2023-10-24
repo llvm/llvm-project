@@ -584,9 +584,6 @@ namespace llvm {
   /// or split the data to two <128 x i32>.
   FunctionPass *createX86LowerAMXTypePass();
 
-  /// The pass insert tile config intrinsics for AMX fast register allocation.
-  FunctionPass *createX86PreAMXConfigPass();
-
   /// The pass transforms amx intrinsics to scalar operation if the function has
   /// optnone attribute or it is O0.
   FunctionPass *createX86LowerAMXIntrinsicsPass();

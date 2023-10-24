@@ -2589,8 +2589,11 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
       Diag(clang::diag::note_drv_t_option_is_global);
   }
 
+  // CUDA/HIP and their preprocessor expansions can be accepted by CL mode.
   // Warn -x after last input file has no effect
-  if (!IsCLMode()) {
+  auto LastXArg = Args.getLastArgValue(options::OPT_x);
+  const llvm::StringSet<> ValidXArgs = {"cuda", "hip", "cui", "hipi"};
+  if (!IsCLMode() || ValidXArgs.find(LastXArg) != ValidXArgs.end()) {
     Arg *LastXArg = Args.getLastArgNoClaim(options::OPT_x);
     Arg *LastInputArg = Args.getLastArgNoClaim(options::OPT_INPUT);
     if (LastXArg && LastInputArg &&

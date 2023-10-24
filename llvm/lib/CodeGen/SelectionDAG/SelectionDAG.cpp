@@ -5011,8 +5011,6 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
 
   unsigned Opcode = Op.getOpcode();
   switch (Opcode) {
-  case ISD::AssertSext:
-  case ISD::AssertZext:
   case ISD::FREEZE:
   case ISD::CONCAT_VECTORS:
   case ISD::INSERT_SUBVECTOR:
@@ -5135,6 +5133,8 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN, unsigned Depth) const 
   case ISD::FROUND:
   case ISD::FROUNDEVEN:
   case ISD::FRINT:
+  case ISD::LRINT:
+  case ISD::LLRINT:
   case ISD::FNEARBYINT:
   case ISD::FLDEXP: {
     if (SNaN)
@@ -9873,6 +9873,27 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
       SDValue ZeroOverFlow = getConstant(0, DL, VTList.VTs[1]);
       return getNode(ISD::MERGE_VALUES, DL, VTList, {N1, ZeroOverFlow}, Flags);
     }
+
+    if (VTList.VTs[0].isVector() &&
+        VTList.VTs[0].getVectorElementType() == MVT::i1 &&
+        VTList.VTs[1].getVectorElementType() == MVT::i1) {
+      SDValue F1 = getFreeze(N1);
+      SDValue F2 = getFreeze(N2);
+      // {vXi1,vXi1} (u/s)addo(vXi1 x, vXi1y) -> {xor(x,y),and(x,y)}
+      if (Opcode == ISD::UADDO || Opcode == ISD::SADDO)
+        return getNode(ISD::MERGE_VALUES, DL, VTList,
+                       {getNode(ISD::XOR, DL, VTList.VTs[0], F1, F2),
+                        getNode(ISD::AND, DL, VTList.VTs[1], F1, F2)},
+                       Flags);
+      // {vXi1,vXi1} (u/s)subo(vXi1 x, vXi1y) -> {xor(x,y),and(~x,y)}
+      if (Opcode == ISD::USUBO || Opcode == ISD::SSUBO) {
+        SDValue NotF1 = getNOT(DL, F1, VTList.VTs[0]);
+        return getNode(ISD::MERGE_VALUES, DL, VTList,
+                       {getNode(ISD::XOR, DL, VTList.VTs[0], F1, F2),
+                        getNode(ISD::AND, DL, VTList.VTs[1], NotF1, F2)},
+                       Flags);
+      }
+    }
     break;
   }
   case ISD::SMUL_LOHI:
@@ -9882,6 +9903,28 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
            VTList.VTs[0] == Ops[0].getValueType() &&
            VTList.VTs[0] == Ops[1].getValueType() &&
            "Binary operator types must match!");
+    // Constant fold.
+    ConstantSDNode *LHS = dyn_cast<ConstantSDNode>(Ops[0]);
+    ConstantSDNode *RHS = dyn_cast<ConstantSDNode>(Ops[1]);
+    if (LHS && RHS) {
+      unsigned Width = VTList.VTs[0].getScalarSizeInBits();
+      unsigned OutWidth = Width * 2;
+      APInt Val = LHS->getAPIntValue();
+      APInt Mul = RHS->getAPIntValue();
+      if (Opcode == ISD::SMUL_LOHI) {
+        Val = Val.sext(OutWidth);
+        Mul = Mul.sext(OutWidth);
+      } else {
+        Val = Val.zext(OutWidth);
+        Mul = Mul.zext(OutWidth);
+      }
+      Val *= Mul;
+
+      SDValue Hi =
+          getConstant(Val.extractBits(Width, Width), DL, VTList.VTs[0]);
+      SDValue Lo = getConstant(Val.trunc(Width), DL, VTList.VTs[0]);
+      return getNode(ISD::MERGE_VALUES, DL, VTList, {Lo, Hi}, Flags);
+    }
     break;
   }
   case ISD::FFREXP: {
