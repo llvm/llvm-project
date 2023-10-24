@@ -87,6 +87,7 @@ public:
   friend class DebugMapModule;
   friend class DWARFCompileUnit;
   friend class DWARFDIE;
+  friend class DWARFASTParser;
   friend class ::DWARFASTParserClang;
 #ifdef LLDB_ENABLE_SWIFT
   friend class ::DWARFASTParserSwift;
@@ -338,6 +339,7 @@ public:
     m_file_index = file_index;
   }
 
+protected:
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *, Type *> DIEToTypePtr;
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb::VariableSP>
       DIEToVariableSP;
