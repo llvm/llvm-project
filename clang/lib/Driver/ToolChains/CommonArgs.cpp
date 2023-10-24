@@ -698,7 +698,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   if (Arg *A = Args.getLastArg(options::OPT_fglobal_isel,
                                options::OPT_fno_global_isel)) {
     // Parsing -fno-global-isel explicitly gives architectures that enable GISel
-    // by default (e.g. AArch64) a chance to disable it.
+    // by default a chance to disable it.
     CmdArgs.push_back(Args.MakeArgString(
         Twine(PluginOptPrefix) + "-global-isel=" +
         (A->getOption().matches(options::OPT_fglobal_isel) ? "1" : "0")));
