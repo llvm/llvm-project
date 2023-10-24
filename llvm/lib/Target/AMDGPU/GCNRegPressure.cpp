@@ -498,54 +498,67 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
   const LiveIntervals &LIS = getAnalysis<LiveIntervals>();
   GCNUpwardRPTracker RPT(LIS);
 
   auto &OS = dbgs();
 
+// Leading spaces are important for YAML syntax.
+#define PFX "  "
+
   OS << "---\nname: " << MF.getName() << "\nbody:             |\n";
 
-  SmallVector<GCNRegPressure, 16> RPAtInstr;
-  SmallVector<GCNRegPressure, 16> RPAfterInstr;
+  auto printRP = [](const GCNRegPressure &RP) {
+    return Printable([&RP](raw_ostream &OS) {
+      OS << format(PFX "  %-5d", RP.getSGPRNum())
+         << format(" %-5d", RP.getVGPRNum(false));
+    });
+  };
+
+  // Register pressure before and at an instruction (in program order).
+  SmallVector<std::pair<GCNRegPressure, GCNRegPressure>, 16> RP;
 
   for (auto &MBB : MF) {
-    if (MBB.empty())
-      continue;
-
-    RPAtInstr.clear();
-    RPAfterInstr.clear();
-
-    RPAtInstr.reserve(MBB.size());
-    RPAfterInstr.reserve(MBB.size() + 1);
-
-    RPT.reset(MBB.instr_back());
-    RPAfterInstr.push_back(RPT.getPressure());
-    for (auto &MI : reverse(MBB)) {
-      RPT.recede(MI);
-      RPAtInstr.push_back(RPT.moveMaxPressure());
-      RPAfterInstr.push_back(RPT.getPressure());
-    }
-
-    auto printRP = [&](const GCNRegPressure &RP) {
-      // Leading spaces are important for YAML syntax here
-      OS << "    " << format("%-5d", RP.getSGPRNum()) << ' '
-         << format("%-5d", RP.getVGPRNum(false));
-    };
-
+    OS << PFX;
     MBB.printName(OS);
     OS << ":\n";
-    OS << "    SGPR   VGPR\n";
-    unsigned I = RPAfterInstr.size() - 1;
-    printRP(RPAfterInstr[I]);
-    OS << '\n';
-    for (auto &MI : MBB) {
-      printRP(RPAtInstr[--I]);
-      OS << "  ";
-      MI.print(OS);
-      printRP(RPAfterInstr[I]);
-      OS << '\n';
+
+    if (MBB.empty()) {
+      SlotIndex MBBSI = LIS.getSlotIndexes()->getMBBStartIdx(&MBB);
+      GCNRPTracker::LiveRegSet LRThrough = getLiveRegs(MBBSI, LIS, MRI);
+      GCNRegPressure RP = getRegPressure(MRI, LRThrough);
+      OS << PFX "  Live-through:" << llvm::print(LRThrough, MRI);
+      OS << PFX "  SGPR  VGPR\n" << printRP(RP) << '\n';
+      continue;
     }
+
+    RPT.reset(MBB.instr_back());
+    RPT.moveMaxPressure(); // Clear max pressure.
+
+    GCNRPTracker::LiveRegSet LRAtMBBEnd = RPT.getLiveRegs();
+    GCNRegPressure RPAtMBBEnd = RPT.getPressure();
+
+    RP.clear();
+    RP.reserve(MBB.size());
+    for (auto &MI : reverse(MBB)) {
+      RPT.recede(MI);
+      RP.emplace_back(RPT.getPressure(), RPT.moveMaxPressure());
+    }
+
+    OS << PFX "  Live-in:" << llvm::print(RPT.getLiveRegs(), MRI);
+    OS << PFX "  SGPR  VGPR\n";
+    auto I = RP.rbegin();
+    for (auto &MI : MBB) {
+      auto &[RPBeforeInstr, RPAtInstr] = *I++;
+      OS << printRP(RPBeforeInstr) << '\n' << printRP(RPAtInstr) << "  ";
+      MI.print(OS);
+    }
+    OS << printRP(RPAtMBBEnd) << '\n';
+    OS << PFX "  Live-out:" << llvm::print(LRAtMBBEnd, MRI);
   }
   OS << "...\n";
   return false;
+
+#undef PFX
 }

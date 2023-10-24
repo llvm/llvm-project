@@ -197,7 +197,6 @@ constants:
 body:             |
   bb.0.bb:
     liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr32, $sgpr101
-
     ; CHECK-LABEL: name: sched_dbg_value_crash
     ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr32, $sgpr101
     ; CHECK-NEXT: {{  $}}
@@ -338,7 +337,8 @@ body:             |
     ; CHECK-NEXT: S_ENDPGM 0
     ;
     ; RP-LABEL: name: sched_dbg_value_crash
-    ; RP: SGPR   VGPR
+    ; RP: Live-in:
+    ; RP-NEXT: SGPR  VGPR
     ; RP-NEXT: 0     0
     ; RP-NEXT: 2     0      %4:sgpr_64 = COPY $sgpr6_sgpr7
     ; RP-NEXT: 2     0
@@ -610,6 +610,7 @@ body:             |
     ; RP-NEXT: 0     0
     ; RP-NEXT: 0     0      S_ENDPGM 0
     ; RP-NEXT: 0     0
+    ; RP-NEXT: Live-out:
     %4:sgpr_64 = COPY $sgpr6_sgpr7
     %3:sgpr_64 = COPY $sgpr4_sgpr5
     %2:vgpr_32 = COPY $vgpr2
