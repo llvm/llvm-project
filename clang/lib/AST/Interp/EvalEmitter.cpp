@@ -25,6 +25,14 @@ EvalEmitter::EvalEmitter(Context &Ctx, Program &P, State &Parent,
       new InterpFrame(S, /*Func=*/nullptr, /*Caller=*/nullptr, CodePtr());
 }
 
+EvalEmitter::~EvalEmitter() {
+  for (auto &[K, V] : Locals) {
+    Block *B = reinterpret_cast<Block *>(V.get());
+    if (B->isInitialized())
+      B->invokeDtor();
+  }
+}
+
 llvm::Expected<bool> EvalEmitter::interpretExpr(const Expr *E) {
   if (this->visitExpr(E))
     return true;

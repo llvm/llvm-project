@@ -1143,7 +1143,7 @@ static ScalarizationResult canScalarizeAccess(VectorType *VecTy, Value *Idx,
                                               const DominatorTree &DT) {
   // We do checks for both fixed vector types and scalable vector types.
   // This is the number of elements of fixed vector types,
-  // or the minium number of elements of scalable vector types.
+  // or the minimum number of elements of scalable vector types.
   uint64_t NumElements = VecTy->getElementCount().getKnownMinValue();
 
   if (auto *C = dyn_cast<ConstantInt>(Idx)) {
@@ -1472,21 +1472,28 @@ bool VectorCombine::foldShuffleFromReductions(Instruction &I) {
       dyn_cast<FixedVectorType>(Shuffle->getOperand(0)->getType());
   if (!ShuffleInputType)
     return false;
-  int NumInputElts = ShuffleInputType->getNumElements();
+  unsigned NumInputElts = ShuffleInputType->getNumElements();
 
   // Find the mask from sorting the lanes into order. This is most likely to
   // become a identity or concat mask. Undef elements are pushed to the end.
   SmallVector<int> ConcatMask;
   Shuffle->getShuffleMask(ConcatMask);
   sort(ConcatMask, [](int X, int Y) { return (unsigned)X < (unsigned)Y; });
+  // In the case of a truncating shuffle it's possible for the mask
+  // to have an index greater than the size of the resulting vector.
+  // This requires special handling.
+  bool IsTruncatingShuffle = VecType->getNumElements() < NumInputElts;
   bool UsesSecondVec =
-      any_of(ConcatMask, [&](int M) { return M >= NumInputElts; });
+      any_of(ConcatMask, [&](int M) { return M >= (int)NumInputElts; });
+
+  FixedVectorType *VecTyForCost =
+      (UsesSecondVec && !IsTruncatingShuffle) ? VecType : ShuffleInputType;
   InstructionCost OldCost = TTI.getShuffleCost(
       UsesSecondVec ? TTI::SK_PermuteTwoSrc : TTI::SK_PermuteSingleSrc,
-      UsesSecondVec ? VecType : ShuffleInputType, Shuffle->getShuffleMask());
+      VecTyForCost, Shuffle->getShuffleMask());
   InstructionCost NewCost = TTI.getShuffleCost(
       UsesSecondVec ? TTI::SK_PermuteTwoSrc : TTI::SK_PermuteSingleSrc,
-      UsesSecondVec ? VecType : ShuffleInputType, ConcatMask);
+      VecTyForCost, ConcatMask);
 
   LLVM_DEBUG(dbgs() << "Found a reduction feeding from a shuffle: " << *Shuffle
                     << "\n");

@@ -38,9 +38,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y bash curl
 
 # Install various tools used by the build or the test suite
-#RUN apt-get update && apt-get install -y ninja-build python3 python3-sphinx python3-distutils python3-psutil git gdb ccache
+#RUN apt-get update && apt-get install -y ninja-build python3 python3-distutils python3-psutil git gdb ccache
 # TODO add ninja-build once 1.11 is available in Ubuntu, also remove the manual installation.
-RUN apt-get update && apt-get install -y python3 python3-sphinx python3-distutils python3-psutil git gdb ccache
+RUN apt-get update && apt-get install -y python3 python3-distutils python3-psutil git gdb ccache
 RUN apt-get update && apt-get install -y wget && \
   wget -qO /usr/local/bin/ninja.gz https://github.com/ninja-build/ninja/releases/latest/download/ninja-linux.zip && \
   gunzip /usr/local/bin/ninja.gz && \

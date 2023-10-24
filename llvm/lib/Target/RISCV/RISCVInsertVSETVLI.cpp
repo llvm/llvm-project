@@ -338,13 +338,12 @@ static bool areCompatibleVTYPEs(uint64_t CurVType, uint64_t NewVType,
 
 /// Return the fields and properties demanded by the provided instruction.
 DemandedFields getDemanded(const MachineInstr &MI,
-                           const MachineRegisterInfo *MRI) {
+                           const MachineRegisterInfo *MRI,
+                           const RISCVSubtarget *ST) {
   // Warning: This function has to work on both the lowered (i.e. post
   // emitVSETVLIs) and pre-lowering forms.  The main implication of this is
   // that it can't use the value of a SEW, VL, or Policy operand as they might
   // be stale after lowering.
-  bool HasVInstructionsF64 =
-      MI.getMF()->getSubtarget<RISCVSubtarget>().hasVInstructionsF64();
 
   // Most instructions don't use any of these subfeilds.
   DemandedFields Res;
@@ -403,7 +402,7 @@ DemandedFields getDemanded(const MachineInstr &MI,
     // tail lanes to either be the original value or -1.  We are writing
     // unknown bits to the lanes here.
     if (hasUndefinedMergeOp(MI, *MRI)) {
-      if (isFloatScalarMoveOrScalarSplatInstr(MI) && !HasVInstructionsF64)
+      if (isFloatScalarMoveOrScalarSplatInstr(MI) && !ST->hasVInstructionsF64())
         Res.SEW = DemandedFields::SEWGreaterThanOrEqualAndLessThan64;
       else
         Res.SEW = DemandedFields::SEWGreaterThanOrEqual;
@@ -720,6 +719,7 @@ struct BlockData {
 };
 
 class RISCVInsertVSETVLI : public MachineFunctionPass {
+  const RISCVSubtarget *ST;
   const TargetInstrInfo *TII;
   MachineRegisterInfo *MRI;
 
@@ -746,7 +746,6 @@ private:
                    const VSETVLIInfo &CurInfo) const;
   bool needVSETVLIPHI(const VSETVLIInfo &Require,
                       const MachineBasicBlock &MBB) const;
-  bool mayChangeVL(const VSETVLIInfo &Info, const VSETVLIInfo &PrevInfo) const;
   void insertVSETVLI(MachineBasicBlock &MBB, MachineInstr &MI,
                      const VSETVLIInfo &Info, const VSETVLIInfo &PrevInfo);
   void insertVSETVLI(MachineBasicBlock &MBB,
@@ -860,47 +859,41 @@ static VSETVLIInfo getInfoForVSETVLI(const MachineInstr &MI) {
   return NewInfo;
 }
 
-/// Return true if a vsetvli instruction to change from PrevInfo
-/// to Info might change the VL register.  If this returns false,
-/// the vsetvli can use the X0, X0 form.
-bool RISCVInsertVSETVLI::mayChangeVL(const VSETVLIInfo &Info,
-                                     const VSETVLIInfo &PrevInfo) const {
-  if (!PrevInfo.isValid() || PrevInfo.isUnknown())
-    return true;
-
-  // If the AVL is the same and the SEW+LMUL gives the same VLMAX, VL
-  // can not change.
-  if (Info.hasSameAVL(PrevInfo) && Info.hasSameVLMAX(PrevInfo))
-    return false;
-
-  // If our AVL is a virtual register, it might be defined by a VSET(I)VLI. If
-  // it has the same VLMAX we want and the last VL/VTYPE we observed is the
-  // same, then VL can not change.
-  if (Info.hasSameVLMAX(PrevInfo) && Info.hasAVLReg() &&
-      Info.getAVLReg().isVirtual()) {
-    if (MachineInstr *DefMI = MRI->getVRegDef(Info.getAVLReg());
-        DefMI && isVectorConfigInstr(*DefMI)) {
-      VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI);
-      if (DefInfo.hasSameAVL(PrevInfo) && DefInfo.hasSameVLMAX(PrevInfo))
-        return false;
-    }
-  }
-  return true;
-}
-
 void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
                      MachineBasicBlock::iterator InsertPt, DebugLoc DL,
                      const VSETVLIInfo &Info, const VSETVLIInfo &PrevInfo) {
 
-  // Use X0, X0 form if VL can't change.  Changing only VTYPE is generally
-  // cheaper than changing VL.
-  if (!mayChangeVL(Info, PrevInfo)) {
-    BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoVSETVLIX0))
-        .addReg(RISCV::X0, RegState::Define | RegState::Dead)
-        .addReg(RISCV::X0, RegState::Kill)
-        .addImm(Info.encodeVTYPE())
-        .addReg(RISCV::VL, RegState::Implicit);
-    return;
+  if (PrevInfo.isValid() && !PrevInfo.isUnknown()) {
+    // Use X0, X0 form if the AVL is the same and the SEW+LMUL gives the same
+    // VLMAX.
+    if (Info.hasSameAVL(PrevInfo) && Info.hasSameVLMAX(PrevInfo)) {
+      BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoVSETVLIX0))
+          .addReg(RISCV::X0, RegState::Define | RegState::Dead)
+          .addReg(RISCV::X0, RegState::Kill)
+          .addImm(Info.encodeVTYPE())
+          .addReg(RISCV::VL, RegState::Implicit);
+      return;
+    }
+
+    // If our AVL is a virtual register, it might be defined by a VSET(I)VLI. If
+    // it has the same VLMAX we want and the last VL/VTYPE we observed is the
+    // same, we can use the X0, X0 form.
+    if (Info.hasSameVLMAX(PrevInfo) && Info.hasAVLReg() &&
+        Info.getAVLReg().isVirtual()) {
+      if (MachineInstr *DefMI = MRI->getVRegDef(Info.getAVLReg())) {
+        if (isVectorConfigInstr(*DefMI)) {
+          VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI);
+          if (DefInfo.hasSameAVL(PrevInfo) && DefInfo.hasSameVLMAX(PrevInfo)) {
+            BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoVSETVLIX0))
+                .addReg(RISCV::X0, RegState::Define | RegState::Dead)
+                .addReg(RISCV::X0, RegState::Kill)
+                .addImm(Info.encodeVTYPE())
+                .addReg(RISCV::VL, RegState::Implicit);
+            return;
+          }
+        }
+      }
+    }
   }
 
   if (Info.hasAVLImm()) {
@@ -965,9 +958,7 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
   if (!CurInfo.isValid() || CurInfo.isUnknown() || CurInfo.hasSEWLMULRatioOnly())
     return true;
 
-  DemandedFields Used = getDemanded(MI, MRI);
-  bool HasVInstructionsF64 =
-      MI.getMF()->getSubtarget<RISCVSubtarget>().hasVInstructionsF64();
+  DemandedFields Used = getDemanded(MI, MRI, ST);
 
   // A slidedown/slideup with an *undefined* merge op can freely clobber
   // elements not copied from the source vector (e.g. masked off, tail, or
@@ -995,7 +986,7 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
     Used.LMUL = false;
     Used.SEWLMULRatio = false;
     Used.VLAny = false;
-    if (isFloatScalarMoveOrScalarSplatInstr(MI) && !HasVInstructionsF64)
+    if (isFloatScalarMoveOrScalarSplatInstr(MI) && !ST->hasVInstructionsF64())
       Used.SEW = DemandedFields::SEWGreaterThanOrEqualAndLessThan64;
     else
       Used.SEW = DemandedFields::SEWGreaterThanOrEqual;
@@ -1307,8 +1298,10 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
   }
 }
 
-/// Return true if the VL value configured must be equal to the requested one.
-static bool hasFixedResult(const VSETVLIInfo &Info, const RISCVSubtarget &ST) {
+/// Return true if the VL value configured by a vset(i)vli with the
+/// provided Info must be equal to the requested AVL.  That is, that
+/// AVL <= VLMAX.
+static bool willVLBeAVL(const VSETVLIInfo &Info, const RISCVSubtarget &ST) {
   if (!Info.hasAVLImm())
     // VLMAX is always the same value.
     // TODO: Could extend to other registers by looking at the associated vreg
@@ -1334,9 +1327,6 @@ static bool hasFixedResult(const VSETVLIInfo &Info, const RISCVSubtarget &ST) {
 /// this is geared to catch the common case of a fixed length vsetvl in a single
 /// block loop when it could execute once in the preheader instead.
 void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
-  const MachineFunction &MF = *MBB.getParent();
-  const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
-
   if (!BlockInfo[MBB.getNumber()].Pred.isUnknown())
     return;
 
@@ -1365,7 +1355,7 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
     return;
 
   // If VL can be less than AVL, then we can't reduce the frequency of exec.
-  if (!hasFixedResult(AvailableInfo, ST))
+  if (!willVLBeAVL(AvailableInfo, *ST))
     return;
 
   // Model the effect of changing the input state of the block MBB to
@@ -1481,7 +1471,7 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
   for (MachineInstr &MI : make_range(MBB.rbegin(), MBB.rend())) {
 
     if (!isVectorConfigInstr(MI)) {
-      doUnion(Used, getDemanded(MI, MRI));
+      doUnion(Used, getDemanded(MI, MRI, ST));
       continue;
     }
 
@@ -1511,7 +1501,7 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
       }
     }
     NextMI = &MI;
-    Used = getDemanded(MI, MRI);
+    Used = getDemanded(MI, MRI, ST);
   }
 
   for (auto *MI : ToDelete)
@@ -1534,13 +1524,13 @@ void RISCVInsertVSETVLI::insertReadVL(MachineBasicBlock &MBB) {
 
 bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
   // Skip if the vector extension is not enabled.
-  const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
-  if (!ST.hasVInstructions())
+  ST = &MF.getSubtarget<RISCVSubtarget>();
+  if (!ST->hasVInstructions())
     return false;
 
   LLVM_DEBUG(dbgs() << "Entering InsertVSETVLI for " << MF.getName() << "\n");
 
-  TII = ST.getInstrInfo();
+  TII = ST->getInstrInfo();
   MRI = &MF.getRegInfo();
 
   assert(BlockInfo.empty() && "Expect empty block infos");
