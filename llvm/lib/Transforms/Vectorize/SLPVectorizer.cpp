@@ -647,13 +647,16 @@ tryToGatherSingleRegisterExtractElements(MutableArrayRef<Value *> VL,
   // Restore unused scalars from mask, if some of the extractelements were not
   // selected for shuffle.
   for (int I = 0, E = GatheredExtracts.size(); I < E; ++I) {
+    if (Mask[I] == PoisonMaskElem && !isa<PoisonValue>(GatheredExtracts[I]) &&
+        isa<UndefValue>(GatheredExtracts[I])) {
+      std::swap(VL[I], GatheredExtracts[I]);
+      continue;
+    }
     auto *EI = dyn_cast<ExtractElementInst>(VL[I]);
     if (!EI || !isa<FixedVectorType>(EI->getVectorOperandType()) ||
         !isa<ConstantInt, UndefValue>(EI->getIndexOperand()) ||
         is_contained(UndefVectorExtracts, I))
       continue;
-    if (Mask[I] == PoisonMaskElem && !isa<PoisonValue>(GatheredExtracts[I]))
-      std::swap(VL[I], GatheredExtracts[I]);
   }
   return Res;
 }
@@ -10142,7 +10145,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
   inversePermutation(E->ReorderIndices, ReorderMask);
   if (!ReorderMask.empty())
     reorderScalars(GatheredScalars, ReorderMask);
-  auto FindReusedSplat = [&](MutableArrayRef<int> Mask) {
+  auto FindReusedSplat = [&](MutableArrayRef<int> Mask, unsigned InputVF) {
     if (!isSplat(E->Scalars) || none_of(E->Scalars, [](Value *V) {
           return isa<UndefValue>(V) && !isa<PoisonValue>(V);
         }))
@@ -10159,12 +10162,14 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
         });
     if (It == VectorizableTree.end())
       return false;
-    unsigned I =
-        *find_if_not(Mask, [](int Idx) { return Idx == PoisonMaskElem; });
-    if (ShuffleVectorInst::isIdentityMask(Mask, Mask.size()))
+    if (Mask.size() <= InputVF &&
+        ShuffleVectorInst::isIdentityMask(Mask, Mask.size())) {
       std::iota(Mask.begin(), Mask.end(), 0);
-    else
+    } else {
+      unsigned I =
+          *find_if_not(Mask, [](int Idx) { return Idx == PoisonMaskElem; });
       std::fill(Mask.begin(), Mask.end(), I);
+    }
     return true;
   };
   BVTy ShuffleBuilder(Params...);
@@ -10370,7 +10375,9 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
             isGuaranteedNotToBePoison(Vec1) && isGuaranteedNotToBePoison(Vec2);
         ShuffleBuilder.add(Vec1, Vec2, ExtractMask);
       } else if (Vec1) {
-        IsUsedInExpr = FindReusedSplat(ExtractMask);
+        IsUsedInExpr = FindReusedSplat(
+            ExtractMask,
+            cast<FixedVectorType>(Vec1->getType())->getNumElements());
         ShuffleBuilder.add(Vec1, ExtractMask);
         IsNonPoisoned &= isGuaranteedNotToBePoison(Vec1);
       } else {
@@ -10381,7 +10388,10 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
     }
     if (GatherShuffle) {
       if (Entries.size() == 1) {
-        IsUsedInExpr = FindReusedSplat(Mask);
+        IsUsedInExpr = FindReusedSplat(
+            Mask,
+            cast<FixedVectorType>(Entries.front()->VectorizedValue->getType())
+                ->getNumElements());
         ShuffleBuilder.add(Entries.front()->VectorizedValue, Mask);
         IsNonPoisoned &=
             isGuaranteedNotToBePoison(Entries.front()->VectorizedValue);
