@@ -1002,7 +1002,7 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
         auto ClearKill = [](MachineInstr &MI, MachineOperand &MOP,
                             const TargetRegisterInfo *TRI) {
           Register Reg = MOP.getReg();
-          if (MI.readsRegister(Reg, TRI) || MI.modifiesRegister(Reg, TRI))
+          if (MI.readsRegister(Reg, TRI))
             MOP.setIsKill(false);
         };
         ClearKill(*It, RegOp0, TRI);
