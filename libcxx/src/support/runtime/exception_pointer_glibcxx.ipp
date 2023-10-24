@@ -16,12 +16,15 @@
 // stable ABI), and its rethrow_exception(std::__exception_ptr::exception_ptr)
 // function.
 
+
+#  if defined(_LIBCPP_EXCEPTION_PTR_DIRECT_INIT)
 extern "C" {
     void* __cxa_allocate_exception(size_t) throw();
     void __cxa_free_exception(void*) throw();
 
-    void* __cxa_init_primary_exception(void*, std::type_info*, void(*)(void*)) throw();
+    _LIBCPP_WEAK void* __cxa_init_primary_exception(void*, std::type_info*, void(*)(void*)) throw();
 }
+#  endif
 
 namespace std {
 
@@ -61,13 +64,18 @@ exception_ptr& exception_ptr::operator=(const exception_ptr& other) noexcept
     return *this;
 }
 
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-#    if !defined(_LIBCPP_HAS_NO_RTTI)
+#  if defined(_LIBCPP_EXCEPTION_PTR_DIRECT_INIT)
 void *exception_ptr::__init_native_exception(size_t size, type_info *tinfo, void (*dest)(void *)) noexcept
 {
-    void *__ex = __cxa_allocate_exception(size);
-    (void)__cxa_init_primary_exception(__ex, tinfo, dest);
-    return __ex;
+    void *(*cxa_init_primary_exception_fn)(void *, std::type_info *, void(*)(void*)) = __cxa_init_primary_exception;
+    if (cxa_init_primary_exception_fn != nullptr) {
+        void *__ex = __cxa_allocate_exception(size);
+        (void)cxa_init_primary_exception_fn(__ex, tinfo, dest);
+        return __ex;
+    }
+    else {
+        return nullptr;
+    }
 }
 
 void exception_ptr::__free_native_exception(void *thrown_object) noexcept
@@ -81,7 +89,6 @@ exception_ptr exception_ptr::__from_native_exception_pointer(void *__e) noexcept
 
     return ptr;
 }
-#    endif
 #  endif
 
 nested_exception::nested_exception() noexcept

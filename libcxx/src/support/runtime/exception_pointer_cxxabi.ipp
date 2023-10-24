@@ -11,20 +11,22 @@
 #error this header may only be used with libc++abi or libcxxrt
 #endif
 
-#if defined(LIBCXXRT)
+#  if defined(_LIBCPP_EXCEPTION_PTR_DIRECT_INIT)
+#    if defined(LIBCXXRT)
 extern "C" {
     // Although libcxxrt defines these two (as an ABI-library should),
     // it doesn't declare them in some versions.
     void *__cxa_allocate_exception(size_t thrown_size);
     void __cxa_free_exception(void* thrown_exception);
 
-    __attribute__((weak)) __cxa_exception *__cxa_init_primary_exception(void *, std::type_info *, void(*)(void*));
+    _LIBCPP_WEAK __cxa_exception *__cxa_init_primary_exception(void *, std::type_info *, void(*)(void*));
 }
-#else
+#    else
 extern "C" {
-    __attribute__((weak)) __cxa_exception *__cxa_init_primary_exception(void *, std::type_info *, void(*)(void*)) throw();
+    _LIBCPP_WEAK __cxa_exception *__cxa_init_primary_exception(void *, std::type_info *, void(*)(void*)) throw();
 }
-#endif
+#    endif
+#  endif
 
 namespace std {
 
@@ -50,8 +52,7 @@ exception_ptr& exception_ptr::operator=(const exception_ptr& other) noexcept
     return *this;
 }
 
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-#    if !defined(_LIBCPP_HAS_NO_RTTI)
+#  if defined(_LIBCPP_EXCEPTION_PTR_DIRECT_INIT)
 void *exception_ptr::__init_native_exception(size_t size, type_info *tinfo, void (*dest)(void *)) noexcept
 {
     __cxa_exception *(*cxa_init_primary_exception_fn)(void *, std::type_info *, void(*)(void*)) = __cxa_init_primary_exception;
@@ -77,7 +78,6 @@ exception_ptr exception_ptr::__from_native_exception_pointer(void *__e) noexcept
 
     return ptr;
 }
-#    endif
 #  endif
 
 nested_exception::nested_exception() noexcept

@@ -29,8 +29,7 @@ namespace std { // purposefully not using versioning namespace
 class _LIBCPP_EXPORTED_FROM_ABI exception_ptr {
   void* __ptr_;
 
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-#    if !defined(_LIBCPP_HAS_NO_RTTI)
+#  if defined(_LIBCPP_EXCEPTION_PTR_DIRECT_INIT)
   template <class _Ep>
   _LIBCPP_HIDE_FROM_ABI static inline void __dest_thunk(void* __x) {
     static_cast<_Ep*>(__x)->~_Ep();
@@ -42,7 +41,6 @@ class _LIBCPP_EXPORTED_FROM_ABI exception_ptr {
 
   template <class _Ep>
   friend _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep) _NOEXCEPT;
-#    endif
 #  endif
 
 public:
@@ -69,8 +67,7 @@ public:
 
 template <class _Ep>
 _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-#    if !defined(_LIBCPP_HAS_NO_RTTI)
+# if defined(_LIBCPP_EXCEPTION_PTR_DIRECT_INIT)
   using _Ep2 = __decay_t<_Ep>;
   void* __ex = exception_ptr::__init_native_exception(
       sizeof(_Ep), const_cast<std::type_info*>(&typeid(_Ep)), exception_ptr::__dest_thunk<_Ep2>);
@@ -91,16 +88,17 @@ _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
     exception_ptr::__free_native_exception(__ex);
     return current_exception();
   }
-#    else
+# else
+#   ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   try {
     throw __e;
   } catch (...) {
     return current_exception();
   }
-#    endif
-#  else
+#    else
   ((void)__e);
   std::abort();
+#    endif
 #  endif
 }
 
