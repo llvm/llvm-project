@@ -3079,7 +3079,6 @@ void llvm::hoistAllInstructionsInto(BasicBlock *DomBlock, Instruction *InsertPt,
 
 DIExpression *llvm::getExpressionForConstant(DIBuilder &DIB, const Constant &C,
                                              Type &Ty) {
-
   // Create integer constant expression.
   auto createIntegerExpression = [&DIB](const Constant &CV) -> DIExpression * {
     const APInt &API = cast<ConstantInt>(&CV)->getValue();
@@ -3089,7 +3088,7 @@ DIExpression *llvm::getExpressionForConstant(DIBuilder &DIB, const Constant &C,
                       : nullptr;
   };
 
-  if (Ty.isIntegerTy())
+  if (isa<ConstantInt>(C))
     return createIntegerExpression(C);
 
   if (Ty.isFloatTy() || Ty.isDoubleTy()) {
