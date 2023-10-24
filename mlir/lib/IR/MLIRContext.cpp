@@ -706,7 +706,7 @@ void Dialect::addType(TypeID typeID, AbstractType &&typeInfo) {
     llvm::report_fatal_error("Dialect Type already registered.");
   if (!impl.nameToType.insert({newInfo->getName(), newInfo}).second)
     llvm::report_fatal_error("Dialect Type with name " + newInfo->getName() +
-                             " already registered.");
+                             " is already registered.");
 }
 
 void Dialect::addAttribute(TypeID typeID, AbstractAttribute &&attrInfo) {
@@ -719,6 +719,9 @@ void Dialect::addAttribute(TypeID typeID, AbstractAttribute &&attrInfo) {
           AbstractAttribute(std::move(attrInfo));
   if (!impl.registeredAttributes.insert({typeID, newInfo}).second)
     llvm::report_fatal_error("Dialect Attribute already registered.");
+  if (!impl.nameToAttribute.insert({newInfo->getName(), newInfo}).second)
+    llvm::report_fatal_error("Dialect Attribute with name " +
+                             newInfo->getName() + " is already registered.");
 }
 
 //===----------------------------------------------------------------------===//
