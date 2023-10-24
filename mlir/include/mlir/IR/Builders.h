@@ -513,7 +513,7 @@ public:
     if (block)
       block->getOperations().insert(insertPoint, op);
 
-    // Fold the operation. If successful destroy it, otherwise notify.
+    // Fold the operation. If successful erase it, otherwise notify.
     if (succeeded(tryFold(op, results)))
       op->erase();
     else if (listener)

@@ -529,9 +529,10 @@ LogicalResult TestOpWithVariadicResultsAndFolder::fold(
 }
 
 OpFoldResult TestOpInPlaceFold::fold(FoldAdaptor adaptor) {
-  // Excercise the fact that an operation created with createOrFold should be
-  // allowed to enable its block.
-  assert(getBlock() && "expected block to be assigned");
+  // Exercise the fact that an operation created with createOrFold should be
+  // allowed to access its parent block.
+  assert(getOperation()->getBlock() &&
+         "expected that operation is not unlinked");
 
   if (adaptor.getOp() && !getProperties().attr) {
     // The folder adds "attr" if not present.
