@@ -70,6 +70,12 @@ template <uint64_t num_dims, class indexTy = size_t,
           class PartPointTy = PartPoint<num_dims, indexTy>>
 using PartitionPlan = std::vector<PartSpec<num_dims, indexTy, PartPointTy>>;
 
+/// ABC so that c api can call into template specializations.
+class PartTensorStorageBase {
+public:
+  virtual ~PartTensorStorageBase() = default;
+};
+
 /// A memory-resident sparse tensor using a storage scheme based on
 /// per-dimension sparse/dense annotations.  This data structure provides
 /// a bufferized form of a sparse tensor type.  In contrast to generating
@@ -78,7 +84,7 @@ using PartitionPlan = std::vector<PartSpec<num_dims, indexTy, PartPointTy>>;
 /// takes an input tensor and annotations to implement all required setup
 /// in a general manner.
 template <typename P = uint64_t, typename I = uint64_t, typename V = float>
-class PartTensorStorage {
+class PartTensorStorage : public PartTensorStorageBase {
   template <typename T>
   using ArrayRef = llvm::ArrayRef<T>;
   template <typename T>
