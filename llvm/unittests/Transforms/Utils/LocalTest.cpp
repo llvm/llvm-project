@@ -1223,6 +1223,11 @@ TEST(Local, ExpressionForConstant) {
   EXPECT_NE(Expr, nullptr);
   EXPECT_EQ(Expr->getElement(1), 0x7FFFFFFFFFFFFFFFU);
 
+  GlobalVariable *String =
+      IRBuilder<>(Context).CreateGlobalString("hello", "hello", 0, &M);
+  Expr = createExpression(ConstantExpr::getPtrToInt(String, Int32Ty), Int32Ty);
+  EXPECT_EQ(Expr, nullptr);
+
   // Float.
   Type *FloatTy = Type::getFloatTy(Context);
   Expr = createExpression(ConstantFP::get(FloatTy, 5.55), FloatTy);
