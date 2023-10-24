@@ -502,6 +502,10 @@ MutableOperandRange::operator OperandRange() const {
   return owner->getOperands().slice(start, length);
 }
 
+MutableOperandRange::operator MutableArrayRef<OpOperand>() const {
+  return owner->getOpOperands().slice(start, length);
+}
+
 MutableOperandRangeRange
 MutableOperandRange::split(NamedAttribute segmentSizes) const {
   return MutableOperandRangeRange(*this, segmentSizes);
