@@ -175,8 +175,7 @@ public:
 
   const lldb_private::Declaration &GetDeclaration() const;
 
-  void GetDeclContext(
-      llvm::SmallVectorImpl<lldb_private::CompilerContext> &context) const;
+  std::vector<lldb_private::CompilerContext> GetDeclContext() const;
 
   // Get the clang type, and resolve definitions for any
   // class/struct/union/enum types completely.

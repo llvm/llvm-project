@@ -45,6 +45,11 @@ namespace llvm {
 class DWARFDebugAbbrev;
 } // namespace llvm
 
+namespace lldb_private {
+  class ClangASTImporter;
+  class SwiftASTContext;
+}
+
 namespace lldb_private::plugin {
 namespace dwarf {
 // Forward Declarations for this DWARF plugin
@@ -61,11 +66,6 @@ class DWARFTypeUnit;
 class SymbolFileDWARFDebugMap;
 class SymbolFileDWARFDwo;
 class SymbolFileDWARFDwp;
-
-namespace lldb_private {
-  class ClangASTImporter;
-  class SwiftASTContext;
-}
 
 #define DIE_IS_BEING_PARSED ((Type *)1)
 

@@ -16,13 +16,11 @@
 #include "DWARFASTParser.h"
 #include "DWARFDIE.h"
 
-class DWARFDebugInfoEntry;
-class DWARFDIECollection;
-
 namespace lldb_private { class TypeSystemSwiftTypeRef; }
 
-class DWARFASTParserSwift : public DWARFASTParser {
+class DWARFASTParserSwift : public lldb_private::plugin::dwarf::DWARFASTParser {
 public:
+  using DWARFDIE = lldb_private::plugin::dwarf::DWARFDIE;
   DWARFASTParserSwift(lldb_private::TypeSystemSwiftTypeRef &swift_typesystem);
 
   virtual ~DWARFASTParserSwift();

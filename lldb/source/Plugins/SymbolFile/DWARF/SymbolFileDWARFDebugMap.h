@@ -21,6 +21,7 @@
 #include "UniqueDWARFASTType.h"
 
 class DWARFASTParserClang;
+class DWARFASTParserSwift;
 
 namespace lldb_private::plugin {
 namespace dwarf {
