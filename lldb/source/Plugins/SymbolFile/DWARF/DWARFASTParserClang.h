@@ -180,8 +180,6 @@ protected:
                                      const DWARFDIE &die,
                                      ParsedDWARFTypeAttributes &attrs);
 
-  lldb_private::Type *GetTypeForDIE(const DWARFDIE &die);
-
   clang::Decl *GetClangDeclForDIE(const DWARFDIE &die);
 
   clang::DeclContext *GetClangDeclContextForDIE(const DWARFDIE &die);
