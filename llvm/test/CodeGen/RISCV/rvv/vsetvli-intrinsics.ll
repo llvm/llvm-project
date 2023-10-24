@@ -118,12 +118,9 @@ define <vscale x 4 x i32> @redundant_vsetvli(iXLen %avl, <vscale x 4 x i32>* %pt
 
 ; Check that we remove the repeated/redundant vsetvli when followed by another
 ; operation
-; FIXME: We don't catch the second vsetvli because it has a use of its output.
-; We could replace it with the output of the first vsetvli.
 define <vscale x 4 x i32> @repeated_vsetvli(iXLen %avl, <vscale x 4 x i32>* %ptr) nounwind {
 ; CHECK-LABEL: repeated_vsetvli:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e32, m2, ta, ma
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a1)
 ; CHECK-NEXT:    ret
@@ -155,4 +152,19 @@ define iXLen @test_vsetvli_eqvlmax_e8m8(iXLen %avl) nounwind {
 ; VLEN128-NEXT:    ret
   %vl = call iXLen @llvm.riscv.vsetvli.iXLen(iXLen 128, iXLen 0, iXLen 3)
   ret iXLen %vl
+}
+
+; Check that we remove the repeated/redundant vsetvli, even in the case when
+; their results may be used in subsequent vsetvli (but nowhere else)
+define <vscale x 4 x i32> @chained_vsetvli(iXLen %avl, <vscale x 4 x i32>* %ptr) nounwind {
+; CHECK-LABEL: chained_vsetvli:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; CHECK-NEXT:    vle32.v v8, (a1)
+; CHECK-NEXT:    ret
+  %vl0 = call iXLen @llvm.riscv.vsetvli.iXLen(iXLen %avl, iXLen 2, iXLen 1)
+  %vl1 = call iXLen @llvm.riscv.vsetvli.iXLen(iXLen %vl0, iXLen 2, iXLen 1)
+  %vl2 = call iXLen @llvm.riscv.vsetvli.iXLen(iXLen %vl1, iXLen 2, iXLen 1)
+  %x = call <vscale x 4 x i32> @llvm.riscv.vle.nxv4i32.iXLen(<vscale x 4 x i32> undef, <vscale x 4 x i32>* %ptr, iXLen %vl1)
+  ret <vscale x 4 x i32> %x
 }
