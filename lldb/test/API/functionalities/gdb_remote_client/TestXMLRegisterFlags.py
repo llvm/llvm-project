@@ -636,3 +636,21 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
                 "|  C   |  D  |"
             ],
         )
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    def test_flags_name_xml_reserved_characters(self):
+        """Check that lldb converts reserved character replacements like &amp;
+        when found in field names."""
+        self.setup_flags_test(
+            '<field name="E&amp;" start="0" end="0"/>'
+            '<field name="D&quot;" start="1" end="1"/>'
+            '<field name="C&apos;" start="2" end="2"/>'
+            '<field name="B&gt;" start="3" end="3"/>'
+            '<field name="A&lt;" start="4" end="4"/>'
+        )
+
+        self.expect(
+            "register info cpsr",
+            substrs=["| A< | B> | C' | D\" | E& |"],
+        )
