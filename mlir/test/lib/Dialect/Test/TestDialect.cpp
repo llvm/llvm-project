@@ -529,7 +529,7 @@ LogicalResult TestOpWithVariadicResultsAndFolder::fold(
 }
 
 OpFoldResult TestOpInPlaceFold::fold(FoldAdaptor adaptor) {
-  // Excercise the fact that an operation created during createOrFold should be
+  // Excercise the fact that an operation created with createOrFold should be
   // allowed to enable its block.
   assert(getBlock() && "expected block to be assigned");
 
