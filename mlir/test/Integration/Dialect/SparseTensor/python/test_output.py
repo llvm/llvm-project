@@ -67,9 +67,7 @@ def main():
     support_lib = os.getenv("SUPPORT_LIB")
     assert support_lib is not None, "SUPPORT_LIB is undefined"
     if not os.path.exists(support_lib):
-        raise FileNotFoundError(
-            errno.ENOENT, os.strerror(errno.ENOENT), support_lib
-        )
+        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), support_lib)
 
     # CHECK-LABEL: TEST: test_output
     print("\nTEST: test_output")
