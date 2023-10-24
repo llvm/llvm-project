@@ -1020,9 +1020,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
 
   // this is a rather explicit check for all cases where we should mark the
   // state as a conflict to force the latter stages of the algorithm to emit
-  // the BDVs. Note that the IE and EE instruction check is not fully subsumed
-  // by the vector<->scalar check at the end, this is due to the BDV algorithm
-  // being ignorant of BDV types at this junction
+  // the BDVs. 
   // TODO: in many cases the instructions emited for the conflicting states
   // will be identical to the I itself (if the I's operate on their BDVs
   // themselves). We should expoit this, but can't do it here since it would
@@ -1033,18 +1031,18 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
   // constant conflicts will be to BDVs themselves, they will be identical
   // instructions and will get optimized away (as in the above TODO)
   auto MarkConflict = [&](Instruction *I, Value *BaseValue) {
-    // II mixes vector & scalar so is always a conflict
-    if (isa<InsertElementInst>(I))
-      return true;
-    // EE mixes vector and scalar so is always conflict
-    if (isa<ExtractElementInst>(I))
+    // II and EE mixes vector & scalar so is always a conflict
+    if (isa<InsertElementInst>(I) || isa<ExtractElementInst>(I))
       return true;
     // Shuffle vector is always a conflict as it creates new vector from existing
     // ones.
     if (isa<ShuffleVectorInst>(I))
       return true;
-    // any other insns that change from vector to scalar are marked to be on
-    // safe side
+    // Any  instructions where the computed base type differs from the instruction type. An example is
+    // where an extract instruction is used by a select. Here the select's BDV is a vector (because of extract's 
+    // BDV), while the select itself is a scalar type. Note that the IE and EE instruction check is not fully subsumed
+    // by the vector<->scalar check at the end, this is due to the BDV algorithm
+    // being ignorant of BDV types at this junction
     if (!areBothVectorOrScalar(BaseValue, I))
       return true;
     return false;
