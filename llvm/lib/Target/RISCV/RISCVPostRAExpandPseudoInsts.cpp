@@ -8,8 +8,7 @@
 //
 // This file contains a pass that expands the pseudo instruction pseudolisimm32
 // into target instructions. This pass should be run during the post-regalloc
-// passes, before assembly emission. It is used when the TunePseudoLISimm32
-// subfeature is on.
+// passes, before post RA scheduling.
 //
 //===----------------------------------------------------------------------===//
 
