@@ -154,6 +154,9 @@ public:
 
   CompilerDeclContext GetDeclContextContainingUID(lldb::user_id_t uid) override;
 
+  std::vector<CompilerContext>
+  GetCompilerContextForUID(lldb::user_id_t uid) override;
+
   void ParseDeclsForContext(CompilerDeclContext decl_ctx) override;
 
   uint32_t ResolveSymbolContext(const Address &so_addr,
