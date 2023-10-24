@@ -555,8 +555,12 @@ bool CheckDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR) {
   const SourceInfo &E = S.Current->getSource(OpPC);
 
   if (isa<ParmVarDecl>(D)) {
-    S.FFDiag(E, diag::note_constexpr_function_param_value_unknown) << D;
-    S.Note(D->getLocation(), diag::note_declared_at) << D->getSourceRange();
+    if (S.getLangOpts().CPlusPlus11) {
+      S.FFDiag(E, diag::note_constexpr_function_param_value_unknown) << D;
+      S.Note(D->getLocation(), diag::note_declared_at) << D->getSourceRange();
+    } else {
+      S.FFDiag(E);
+    }
   } else if (const auto *VD = dyn_cast<VarDecl>(D)) {
     if (!VD->getType().isConstQualified()) {
       S.FFDiag(E,
