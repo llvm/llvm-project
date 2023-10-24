@@ -2263,13 +2263,16 @@ bool TargetLowering::SimplifyDemandedBits(
     break;
   }
   case ISD::CTPOP: {
-    // If only 1 bit is demanded, replace with PARITY as long as we're before
-    // op legalization.
+    // If only bit0 of 'active bits' is demanded, replace with PARITY as long as
+    // we're before op legalization.
     // FIXME: Limit to scalars for now.
-    if (DemandedBits.isOne() && !TLO.LegalOps && !VT.isVector())
-      return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::PARITY, dl, VT,
-                                               Op.getOperand(0)));
-
+    if (!TLO.LegalOps && !VT.isVector()) {
+      APInt NonZeroMask =
+          APInt::getLowBitsSet(BitWidth, llvm::bit_width(BitWidth));
+      if ((DemandedBits & NonZeroMask).isOne())
+        return TLO.CombineTo(
+            Op, TLO.DAG.getNode(ISD::PARITY, dl, VT, Op.getOperand(0)));
+    }
     Known = TLO.DAG.computeKnownBits(Op, DemandedElts, Depth);
     break;
   }
