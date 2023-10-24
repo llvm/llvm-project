@@ -43,6 +43,7 @@ public:
   static ProgramTree Build(const parser::Submodule &);
   static ProgramTree Build(const parser::BlockData &);
   static ProgramTree Build(const parser::CompilerDirective &);
+  static ProgramTree Build(const parser::OpenACCRoutineConstruct &);
 
   ENUM_CLASS(Kind, // kind of node
       Program, Function, Subroutine, MpSubprogram, Module, Submodule, BlockData)

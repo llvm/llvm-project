@@ -316,6 +316,7 @@ public:
                          globalOmpRequiresSymbol = b.symTab.symbol();
                      },
                      [&](Fortran::lower::pft::CompilerDirectiveUnit &d) {},
+                     [&](Fortran::lower::pft::OpenACCDirectiveUnit &d) {},
                  },
                  u);
     }
@@ -328,6 +329,14 @@ public:
               [&](Fortran::lower::pft::ModuleLikeUnit &m) { lowerMod(m); },
               [&](Fortran::lower::pft::BlockDataUnit &b) {},
               [&](Fortran::lower::pft::CompilerDirectiveUnit &d) {},
+              [&](Fortran::lower::pft::OpenACCDirectiveUnit &d) {
+                builder = new fir::FirOpBuilder(bridge.getModule(),
+                                                bridge.getKindMap());
+                Fortran::lower::genOpenACCRoutineConstruct(
+                    *this, bridge.getSemanticsContext(), bridge.getModule(),
+                    d.routine, accRoutineInfos);
+                builder = nullptr;
+              },
           },
           u);
     }
@@ -2360,6 +2369,10 @@ private:
                                    bridge.fctCtx(), accDecl, accRoutineInfos);
     for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations())
       genFIR(e);
+  }
+
+  void genFIR(const Fortran::parser::OpenACCRoutineConstruct &acc) {
+    // Handled by genFIR(const Fortran::parser::OpenACCDeclarativeConstruct &)
   }
 
   void genFIR(const Fortran::parser::OpenMPConstruct &omp) {

@@ -3153,29 +3153,26 @@ static void attachRoutineInfo(mlir::func::FuncOp func,
       mlir::acc::RoutineInfoAttr::get(func.getContext(), routines));
 }
 
-static void
-genACC(Fortran::lower::AbstractConverter &converter,
-       Fortran::semantics::SemanticsContext &semanticsContext,
-       const Fortran::parser::OpenACCRoutineConstruct &routineConstruct,
-       Fortran::lower::AccRoutineInfoMappingList &accRoutineInfos) {
+void Fortran::lower::genOpenACCRoutineConstruct(
+    Fortran::lower::AbstractConverter &converter,
+    Fortran::semantics::SemanticsContext &semanticsContext, mlir::ModuleOp &mod,
+    const Fortran::parser::OpenACCRoutineConstruct &routineConstruct,
+    Fortran::lower::AccRoutineInfoMappingList &accRoutineInfos) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Location loc = converter.genLocation(routineConstruct.source);
   std::optional<Fortran::parser::Name> name =
       std::get<std::optional<Fortran::parser::Name>>(routineConstruct.t);
   const auto &clauses =
       std::get<Fortran::parser::AccClauseList>(routineConstruct.t);
-
-  mlir::ModuleOp mod = builder.getModule();
   mlir::func::FuncOp funcOp;
   std::string funcName;
   if (name) {
     funcName = converter.mangleName(*name->symbol);
-    funcOp = builder.getNamedFunction(funcName);
+    funcOp = builder.getNamedFunction(mod, funcName);
   } else {
     funcOp = builder.getFunction();
     funcName = funcOp.getName();
   }
-
   bool hasSeq = false, hasGang = false, hasWorker = false, hasVector = false,
        hasNohost = false;
   std::optional<std::string> bindName = std::nullopt;
@@ -3391,8 +3388,11 @@ void Fortran::lower::genOpenACCDeclarativeConstruct(
           },
           [&](const Fortran::parser::OpenACCRoutineConstruct
                   &routineConstruct) {
-            genACC(converter, semanticsContext, routineConstruct,
-                   accRoutineInfos);
+            fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+            mlir::ModuleOp mod = builder.getModule();
+            Fortran::lower::genOpenACCRoutineConstruct(
+                converter, semanticsContext, mod, routineConstruct,
+                accRoutineInfos);
           },
       },
       accDeclConstruct.u);
