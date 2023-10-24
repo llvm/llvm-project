@@ -154,7 +154,7 @@ int main(int argc, char **argv) {
     OffloadArchs = getOffloadArchFromBinary(input_filename);
     if (OffloadArchs.empty())
       return 1;
-    for (auto OffloadArch : OffloadArchs)
+    for (auto& OffloadArch : OffloadArchs)
       printf("%s\n", OffloadArch.c_str());
     return 0;
   }
@@ -185,7 +185,7 @@ int main(int argc, char **argv) {
 
   int rc = 0;
   bool first_device_printed = false;
-  for (auto OffloadArch : OffloadArchs) {
+  for (auto& OffloadArch : OffloadArchs) {
     if (AOT_get_first_capable_device && first_device_printed)
       break;
 

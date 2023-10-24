@@ -19,7 +19,8 @@
 #include <string>
 #include <vector>
 
-std::string getNVPTXCapabilities(uint16_t vid, uint16_t devid, std::string oa) {
+std::string getNVPTXCapabilities(uint16_t vid, uint16_t devid,
+                                 const std::string &oa) {
   std::string nvidia_capabilities(oa);
 #if 0
   // This is how they could set requirements for specific version of nvidia driver

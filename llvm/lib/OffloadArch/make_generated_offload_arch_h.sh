@@ -152,9 +152,9 @@ function write_AMD_OFFLOADARCH_TO_CODENAME_TABLE()
   cat $AOT_CODENAME2OFFLOADARCH_AMD | sort -u -t" " -k2 > $aot_tmpfile
   while read -r line ; do
       echo $line
-       codename=`echo $line | cut  -d " " -f1`
-       offloadarch=`echo $line | cut -d " " -f2`
-       echo "{ \"${offloadarch}\", \"${codename}\" }," >>$AOT_DOTH_FILE
+      codename=`echo $line | cut  -d " " -f1`
+      offloadarch=`echo $line | cut -d " " -f2`
+      echo "{ \"${offloadarch}\", \"${codename}\" }," >>$AOT_DOTH_FILE
   done < $aot_tmpfile
   echo "};" >> $AOT_DOTH_FILE
   echo " " >> $AOT_DOTH_FILE

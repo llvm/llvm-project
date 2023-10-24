@@ -152,7 +152,7 @@ void *_aot_dynload_hsa_runtime() {
 }
 
 std::string getAMDGPUCapabilities(uint16_t vid, uint16_t devid,
-                                  std::string oa) {
+                                  const std::string &oa) {
   std::string amdgpu_capabilities;
   offload_arch_requested = oa;
 
@@ -219,7 +219,7 @@ std::string getAMDGPUCapabilities(uint16_t vid, uint16_t devid,
   return amdgpu_capabilities;
 }
 
-std::string getAMDGPUCapabilitiesForOffloadarch(std::string uuid) {
+std::string getAMDGPUCapabilitiesForOffloadarch(const std::string &uuid) {
   std::string amdgpu_capabilities;
 
   if (HSA_AGENTs.empty())
@@ -280,14 +280,14 @@ void BindHsaMethodsAndInitHSA() {
   if (first_call) {
     void *dlhandle = _aot_dynload_hsa_runtime();
     if (!dlhandle) {
-      fprintf(stderr, " HSAERROR - DIDN'T FOUND RUNTIME\n");
+      fprintf(stderr, " HSAERROR - DIDN'T FIND RUNTIME\n");
       abort();
     }
 
     assert(_dl_hsa_init != nullptr);
     hsa_status_t Status = _dl_hsa_init();
     if (Status != HSA_STATUS_SUCCESS) {
-      fprintf(stderr, " HSAERROR - INITIALIZATION");
+      fprintf(stderr, " HSAERROR - INITIALIZATION FAILED\n");
       abort();
     }
     first_call = false;
