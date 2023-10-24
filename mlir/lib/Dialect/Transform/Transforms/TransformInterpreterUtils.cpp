@@ -90,6 +90,12 @@ LogicalResult transform::detail::expandPathsToMLIRFiles(
 LogicalResult transform::detail::parseTransformModuleFromFile(
     MLIRContext *context, llvm::StringRef transformFileName,
     OwningOpRef<ModuleOp> &transformModule) {
+  if (transformFileName.empty()) {
+    LLVM_DEBUG(
+        DBGS() << "no transform file name specified, assuming the transform "
+                  "module is embedded in the IR next to the top-level\n");
+    return success();
+  }
   // Parse transformFileName content into a ModuleOp.
   std::string errorMessage;
   auto memoryBuffer = mlir::openInputFile(transformFileName, &errorMessage);
