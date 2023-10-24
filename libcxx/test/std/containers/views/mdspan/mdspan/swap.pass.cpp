@@ -24,7 +24,7 @@
 #include "test_macros.h"
 
 #include "../MinimalElementType.h"
-#include "CustomTestLayouts.h"
+#include "../CustomTestLayouts.h"
 
 template <class MDS>
 constexpr void test_swap(MDS a, MDS b) {

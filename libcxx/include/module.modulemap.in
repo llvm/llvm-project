@@ -1510,6 +1510,7 @@ module std_private_mdspan_extents          [system] {
 }
 module std_private_mdspan_layout_left      [system] { header "__mdspan/layout_left.h" }
 module std_private_mdspan_layout_right     [system] { header "__mdspan/layout_right.h" }
+module std_private_mdspan_layout_stride    [system] { header "__mdspan/layout_stride.h" }
 module std_private_mdspan_mdspan           [system] { header "__mdspan/mdspan.h" }
 module std_private_mdspan_mdspan_fwd       [system] { header "__fwd/mdspan.h" }
 

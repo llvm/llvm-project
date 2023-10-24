@@ -195,7 +195,7 @@ public:
   ArrayRef<SVEType> getTypes() const { return Types; }
   SVEType getParamType(unsigned I) const { return Types[I + 1]; }
   unsigned getNumParams() const {
-    return Proto.size() - (2 * std::count(Proto.begin(), Proto.end(), '.')) - 1;
+    return Proto.size() - (2 * llvm::count(Proto, '.')) - 1;
   }
 
   uint64_t getFlags() const { return Flags; }
@@ -851,6 +851,13 @@ void SVEType::applyModifier(char Mod) {
     ElementBitwidth = Bitwidth = 32;
     NumVectors = 0;
     Signed = false;
+    break;
+  case '$':
+    Predicate = false;
+    Svcount = false;
+    Float = false;
+    BFloat = true;
+    ElementBitwidth = 16;
     break;
   case '}':
     Predicate = false;

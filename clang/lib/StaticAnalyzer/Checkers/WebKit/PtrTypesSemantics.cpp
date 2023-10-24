@@ -186,8 +186,7 @@ bool isPtrConversion(const FunctionDecl *F) {
   // FIXME: check # of params == 1
   const auto FunctionName = safeGetName(F);
   if (FunctionName == "getPtr" || FunctionName == "WeakPtr" ||
-      FunctionName == "makeWeakPtr"
-
+      FunctionName == "dynamicDowncast"
       || FunctionName == "downcast" || FunctionName == "bitwise_cast")
     return true;
 

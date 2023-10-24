@@ -4257,6 +4257,11 @@ struct OpenACCLoopConstruct {
       t;
 };
 
+struct OpenACCEndConstruct {
+  WRAPPER_CLASS_BOILERPLATE(OpenACCEndConstruct, llvm::acc::Directive);
+  CharBlock source;
+};
+
 struct OpenACCStandaloneConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenACCStandaloneConstruct);
   CharBlock source;
@@ -4267,7 +4272,7 @@ struct OpenACCConstruct {
   UNION_CLASS_BOILERPLATE(OpenACCConstruct);
   std::variant<OpenACCBlockConstruct, OpenACCCombinedConstruct,
       OpenACCLoopConstruct, OpenACCStandaloneConstruct, OpenACCCacheConstruct,
-      OpenACCWaitConstruct, OpenACCAtomicConstruct>
+      OpenACCWaitConstruct, OpenACCAtomicConstruct, OpenACCEndConstruct>
       u;
 };
 

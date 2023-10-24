@@ -9,6 +9,7 @@ set(LLVM_LINK_COMPONENTS
 add_clang_unittest(ClangDriverTests
   DistroTest.cpp
   DXCModeTest.cpp
+  GCCVersionTest.cpp
   ToolChainTest.cpp
   ModuleCacheTest.cpp
   MultilibBuilderTest.cpp
