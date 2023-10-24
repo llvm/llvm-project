@@ -1040,7 +1040,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
     if (isa<ExtractElementInst>(I))
       return true;
     // shuffle vector is always conflict as it creates new vector from existing
-    // ones
+    // ones.
     if (isa<ShuffleVectorInst>(I))
       return true;
     // any other insns that change from vector to scalar are marked to be on
