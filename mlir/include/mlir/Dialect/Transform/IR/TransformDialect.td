@@ -79,9 +79,6 @@ def Transform_Dialect : Dialect {
         std::function<void(::mlir::Type, ::mlir::AsmPrinter &)>;
 
     /// Loads the given module into the transform symbol library module.
-    void initializeLibraryModule();
-
-    /// Loads the given module into the transform symbol library module.
     LogicalResult loadIntoLibraryModule(::mlir::OwningOpRef<::mlir::ModuleOp> &&
                                         library);
 
@@ -94,6 +91,10 @@ def Transform_Dialect : Dialect {
     }
 
   private:
+    /// Initializes the transform symbol library module. Must be called from
+    /// `TransformDialect::initialize` for the library module to work.
+    void initializeLibraryModule();
+
     /// Registers operations specified as template parameters with this
     /// dialect. Checks that they implement the required interfaces.
     template <typename... OpTys>

@@ -91,6 +91,11 @@ void transform::TransformDialect::printType(Type type,
   it->getSecond()(type, printer);
 }
 
+LogicalResult transform::TransformDialect::loadIntoLibraryModule(
+    ::mlir::OwningOpRef<::mlir::ModuleOp> &&library) {
+  return detail::mergeSymbolsInto(getLibraryModule(), std::move(library));
+}
+
 void transform::TransformDialect::initializeLibraryModule() {
   MLIRContext *context = getContext();
   auto loc =
@@ -98,11 +103,6 @@ void transform::TransformDialect::initializeLibraryModule() {
   libraryModule = ModuleOp::create(loc, "__transform_library");
   libraryModule.get()->setAttr(TransformDialect::kWithNamedSequenceAttrName,
                                UnitAttr::get(context));
-}
-
-LogicalResult transform::TransformDialect::loadIntoLibraryModule(
-    ::mlir::OwningOpRef<::mlir::ModuleOp> &&library) {
-  return detail::mergeSymbolsInto(getLibraryModule(), std::move(library));
 }
 
 void transform::TransformDialect::reportDuplicateTypeRegistration(
