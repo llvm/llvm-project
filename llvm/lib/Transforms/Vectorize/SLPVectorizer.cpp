@@ -1084,7 +1084,7 @@ static bool doesNotNeedToBeScheduled(Value *V) {
 /// in other basic blocks.
 static bool doesNotNeedToSchedule(ArrayRef<Value *> VL) {
   return !VL.empty() &&
-         (all_of(VL, isUsedOutsideBlock) || all_of(VL, areAllOperandsNonInsts));
+         (all_of(VL, doesNotNeedToBeScheduled));
 }
 
 namespace slpvectorizer {
