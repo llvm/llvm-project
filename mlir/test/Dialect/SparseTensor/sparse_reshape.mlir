@@ -103,7 +103,7 @@ func.func @sparse_collapse(%arg0: tensor<10x10xf64, #SparseMatrix>) -> tensor<10
 // CHECK-DAG:     %[[C10:.*]] = arith.constant 10 : index
 // CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
-// CHECK:         %[[SD:.*]] = tensor.dim %[[S]], %[[C0]]
+// CHECK:         %[[SD:.*]] = sparse_tensor.lvl %[[S]], %[[C0]]
 // CHECK:         %[[DD0:.*]] = arith.divui %[[SD]], %[[C10]] : index
 // CHECK:         %[[B:.*]] = bufferization.alloc_tensor(%[[DD0]])
 // CHECK:         %[[P0:.*]] = sparse_tensor.positions %[[S]] {level = 0 : index}
@@ -146,7 +146,7 @@ func.func @dynamic_sparse_expand(%arg0: tensor<?xf64, #SparseVector>) -> tensor<
 // CHECK-DAG:     %[[C10:.*]] = arith.constant 10 : index
 // CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
-// CHECK:         %[[SD1:.*]] = tensor.dim %[[S]], %[[C1]]
+// CHECK:         %[[SD1:.*]] = sparse_tensor.lvl %[[S]], %[[C1]]
 // CHECK:         %[[DD0:.*]] = arith.muli %[[SD1]], %[[C10]] : index
 // CHECK:         %[[B:.*]] = bufferization.alloc_tensor(%[[DD0]])
 // CHECK:         %[[P0:.*]] = sparse_tensor.positions %[[S]] {level = 0 : index}

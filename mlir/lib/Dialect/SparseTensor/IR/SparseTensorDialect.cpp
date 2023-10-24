@@ -915,7 +915,7 @@ Level mlir::sparse_tensor::toStoredDim(SparseTensorEncodingAttr enc,
 // properly handle non-permutations.
 Dimension mlir::sparse_tensor::toOrigDim(RankedTensorType type, Level l) {
   const auto enc = getSparseTensorEncoding(type);
-  assert(l < enc.getLvlRank());
+  assert(!enc || l < enc.getLvlRank());
   return toOrigDim(enc, l);
 }
 
@@ -1206,6 +1206,12 @@ LogicalResult CrdTranslateOp::fold(FoldAdaptor adaptor,
   // ==> l0
   results.append(def.getInCrds().begin(), def.getInCrds().end());
   return success();
+}
+
+void LvlOp::build(OpBuilder &builder, OperationState &state, Value source,
+                  int64_t index) {
+  Value val = builder.create<arith::ConstantIndexOp>(state.location, index);
+  return build(builder, state, source, val);
 }
 
 LogicalResult LvlOp::verify() {
