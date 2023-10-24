@@ -9,70 +9,68 @@ define void @issue63986(i64 %0, i64 %idxprom) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_lshlrev_b64 v[4:5], 6, v[2:3]
 ; CHECK-NEXT:    s_mov_b64 s[4:5], 0
-; CHECK-NEXT:  ; %bb.1: ; %loop-memcpy-expansion.preheader
-; CHECK-NEXT:    v_lshlrev_b64 v[6:7], 6, v[2:3]
 ; CHECK-NEXT:    s_mov_b64 s[6:7], 0
-; CHECK-NEXT:  .LBB0_2: ; %loop-memcpy-expansion
+; CHECK-NEXT:  .LBB0_1: ; %loop-memcpy-expansion
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    v_mov_b32_e32 v9, s7
-; CHECK-NEXT:    v_mov_b32_e32 v8, s6
-; CHECK-NEXT:    flat_load_ubyte v10, v[8:9] offset:5
-; CHECK-NEXT:    flat_load_ubyte v11, v[8:9] offset:6
-; CHECK-NEXT:    flat_load_ubyte v12, v[8:9] offset:7
-; CHECK-NEXT:    flat_load_ubyte v13, v[8:9] offset:3
-; CHECK-NEXT:    flat_load_ubyte v14, v[8:9] offset:2
-; CHECK-NEXT:    flat_load_ubyte v15, v[8:9] offset:1
-; CHECK-NEXT:    flat_load_ubyte v16, v[8:9]
-; CHECK-NEXT:    flat_load_ubyte v17, v[8:9] offset:4
-; CHECK-NEXT:    flat_load_ubyte v18, v[8:9] offset:13
-; CHECK-NEXT:    flat_load_ubyte v19, v[8:9] offset:14
-; CHECK-NEXT:    flat_load_ubyte v20, v[8:9] offset:15
-; CHECK-NEXT:    flat_load_ubyte v21, v[8:9] offset:11
-; CHECK-NEXT:    flat_load_ubyte v22, v[8:9] offset:10
-; CHECK-NEXT:    flat_load_ubyte v23, v[8:9] offset:9
-; CHECK-NEXT:    flat_load_ubyte v24, v[8:9] offset:8
-; CHECK-NEXT:    flat_load_ubyte v25, v[8:9] offset:12
+; CHECK-NEXT:    v_mov_b32_e32 v6, s6
+; CHECK-NEXT:    v_mov_b32_e32 v7, s7
+; CHECK-NEXT:    flat_load_ubyte v8, v[6:7] offset:5
+; CHECK-NEXT:    flat_load_ubyte v9, v[6:7] offset:6
+; CHECK-NEXT:    flat_load_ubyte v10, v[6:7] offset:7
+; CHECK-NEXT:    flat_load_ubyte v11, v[6:7] offset:3
+; CHECK-NEXT:    flat_load_ubyte v12, v[6:7] offset:2
+; CHECK-NEXT:    flat_load_ubyte v13, v[6:7] offset:1
+; CHECK-NEXT:    flat_load_ubyte v14, v[6:7]
+; CHECK-NEXT:    flat_load_ubyte v15, v[6:7] offset:4
+; CHECK-NEXT:    flat_load_ubyte v16, v[6:7] offset:13
+; CHECK-NEXT:    flat_load_ubyte v17, v[6:7] offset:14
+; CHECK-NEXT:    flat_load_ubyte v18, v[6:7] offset:15
+; CHECK-NEXT:    flat_load_ubyte v19, v[6:7] offset:11
+; CHECK-NEXT:    flat_load_ubyte v20, v[6:7] offset:10
+; CHECK-NEXT:    flat_load_ubyte v21, v[6:7] offset:9
+; CHECK-NEXT:    flat_load_ubyte v22, v[6:7] offset:8
+; CHECK-NEXT:    flat_load_ubyte v23, v[6:7] offset:12
 ; CHECK-NEXT:    s_add_u32 s4, s4, 1
 ; CHECK-NEXT:    s_addc_u32 s5, s5, 0
-; CHECK-NEXT:    v_add_co_u32_e32 v8, vcc, s6, v6
+; CHECK-NEXT:    v_add_co_u32_e32 v6, vcc, s6, v4
 ; CHECK-NEXT:    v_cmp_ge_u64_e64 s[8:9], s[4:5], 2
-; CHECK-NEXT:    v_addc_co_u32_e32 v9, vcc, v9, v7, vcc
+; CHECK-NEXT:    v_addc_co_u32_e32 v7, vcc, v7, v5, vcc
 ; CHECK-NEXT:    s_add_u32 s6, s6, 16
 ; CHECK-NEXT:    s_addc_u32 s7, s7, 0
 ; CHECK-NEXT:    s_and_b64 vcc, exec, s[8:9]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_store_byte v[8:9], v13 offset:3
-; CHECK-NEXT:    flat_store_byte v[8:9], v14 offset:2
-; CHECK-NEXT:    flat_store_byte v[8:9], v15 offset:1
-; CHECK-NEXT:    flat_store_byte v[8:9], v16
-; CHECK-NEXT:    flat_store_byte v[8:9], v12 offset:7
-; CHECK-NEXT:    flat_store_byte v[8:9], v11 offset:6
-; CHECK-NEXT:    flat_store_byte v[8:9], v10 offset:5
-; CHECK-NEXT:    flat_store_byte v[8:9], v17 offset:4
-; CHECK-NEXT:    flat_store_byte v[8:9], v21 offset:11
-; CHECK-NEXT:    flat_store_byte v[8:9], v22 offset:10
-; CHECK-NEXT:    flat_store_byte v[8:9], v23 offset:9
-; CHECK-NEXT:    flat_store_byte v[8:9], v24 offset:8
-; CHECK-NEXT:    flat_store_byte v[8:9], v20 offset:15
-; CHECK-NEXT:    flat_store_byte v[8:9], v19 offset:14
-; CHECK-NEXT:    flat_store_byte v[8:9], v18 offset:13
-; CHECK-NEXT:    flat_store_byte v[8:9], v25 offset:12
-; CHECK-NEXT:    s_cbranch_vccz .LBB0_2
-; CHECK-NEXT:  ; %bb.3: ; %loop-memcpy-residual-header
+; CHECK-NEXT:    flat_store_byte v[6:7], v11 offset:3
+; CHECK-NEXT:    flat_store_byte v[6:7], v12 offset:2
+; CHECK-NEXT:    flat_store_byte v[6:7], v13 offset:1
+; CHECK-NEXT:    flat_store_byte v[6:7], v14
+; CHECK-NEXT:    flat_store_byte v[6:7], v10 offset:7
+; CHECK-NEXT:    flat_store_byte v[6:7], v9 offset:6
+; CHECK-NEXT:    flat_store_byte v[6:7], v8 offset:5
+; CHECK-NEXT:    flat_store_byte v[6:7], v15 offset:4
+; CHECK-NEXT:    flat_store_byte v[6:7], v19 offset:11
+; CHECK-NEXT:    flat_store_byte v[6:7], v20 offset:10
+; CHECK-NEXT:    flat_store_byte v[6:7], v21 offset:9
+; CHECK-NEXT:    flat_store_byte v[6:7], v22 offset:8
+; CHECK-NEXT:    flat_store_byte v[6:7], v18 offset:15
+; CHECK-NEXT:    flat_store_byte v[6:7], v17 offset:14
+; CHECK-NEXT:    flat_store_byte v[6:7], v16 offset:13
+; CHECK-NEXT:    flat_store_byte v[6:7], v23 offset:12
+; CHECK-NEXT:    s_cbranch_vccz .LBB0_1
+; CHECK-NEXT:  ; %bb.2: ; %loop-memcpy-residual-header
 ; CHECK-NEXT:    s_and_b32 s4, 32, 15
 ; CHECK-NEXT:    s_mov_b32 s5, 0
-; CHECK-NEXT:    s_cbranch_scc0 .LBB0_5
-; CHECK-NEXT:  ; %bb.4:
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_4
+; CHECK-NEXT:  ; %bb.3:
 ; CHECK-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; CHECK-NEXT:    s_branch .LBB0_6
-; CHECK-NEXT:  .LBB0_5: ; %loop-memcpy-residual-header.post-loop-memcpy-expansion_crit_edge
+; CHECK-NEXT:    s_branch .LBB0_5
+; CHECK-NEXT:  .LBB0_4: ; %loop-memcpy-residual-header.post-loop-memcpy-expansion_crit_edge
 ; CHECK-NEXT:    v_lshlrev_b64 v[2:3], 6, v[2:3]
-; CHECK-NEXT:    s_cbranch_execnz .LBB0_9
-; CHECK-NEXT:  .LBB0_6: ; %loop-memcpy-residual.preheader
+; CHECK-NEXT:    s_cbranch_execnz .LBB0_8
+; CHECK-NEXT:  .LBB0_5: ; %loop-memcpy-residual.preheader
 ; CHECK-NEXT:    v_or_b32_e32 v2, 32, v4
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v5
 ; CHECK-NEXT:    s_mov_b64 s[6:7], 0
-; CHECK-NEXT:  .LBB0_7: ; %loop-memcpy-residual
+; CHECK-NEXT:  .LBB0_6: ; %loop-memcpy-residual
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_add_u32 s8, 32, s6
 ; CHECK-NEXT:    s_addc_u32 s9, 0, s7
@@ -85,15 +83,15 @@ define void @issue63986(i64 %0, i64 %idxprom) {
 ; CHECK-NEXT:    s_add_u32 s6, s6, 1
 ; CHECK-NEXT:    v_mov_b32_e32 v6, s4
 ; CHECK-NEXT:    v_addc_co_u32_e32 v9, vcc, v3, v9, vcc
-; CHECK-NEXT:    s_addc_u32 s7, s7, 0
+; CHECK-NEXT:    s_addc_u32 s7, 0, s7
 ; CHECK-NEXT:    v_cmp_lt_u64_e32 vcc, s[6:7], v[6:7]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    flat_store_byte v[8:9], v10
-; CHECK-NEXT:    s_cbranch_vccnz .LBB0_7
-; CHECK-NEXT:  ; %bb.8:
+; CHECK-NEXT:    s_cbranch_vccnz .LBB0_6
+; CHECK-NEXT:  ; %bb.7:
 ; CHECK-NEXT:    v_mov_b32_e32 v2, v4
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v5
-; CHECK-NEXT:  .LBB0_9: ; %post-loop-memcpy-expansion
+; CHECK-NEXT:  .LBB0_8: ; %post-loop-memcpy-expansion
 ; CHECK-NEXT:    v_lshrrev_b64 v[4:5], 4, v[0:1]
 ; CHECK-NEXT:    v_and_b32_e32 v6, 15, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v7, 0
@@ -102,28 +100,28 @@ define void @issue63986(i64 %0, i64 %idxprom) {
 ; CHECK-NEXT:    v_cmp_ne_u64_e64 s[6:7], 0, v[6:7]
 ; CHECK-NEXT:    v_add_co_u32_e32 v8, vcc, v2, v0
 ; CHECK-NEXT:    v_addc_co_u32_e32 v9, vcc, v3, v1, vcc
-; CHECK-NEXT:    s_branch .LBB0_12
-; CHECK-NEXT:  .LBB0_10: ; %Flow19
-; CHECK-NEXT:    ; in Loop: Header=BB0_12 Depth=1
+; CHECK-NEXT:    s_branch .LBB0_11
+; CHECK-NEXT:  .LBB0_9: ; %Flow19
+; CHECK-NEXT:    ; in Loop: Header=BB0_11 Depth=1
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[10:11]
 ; CHECK-NEXT:    s_mov_b64 s[8:9], 0
-; CHECK-NEXT:  .LBB0_11: ; %Flow21
-; CHECK-NEXT:    ; in Loop: Header=BB0_12 Depth=1
+; CHECK-NEXT:  .LBB0_10: ; %Flow21
+; CHECK-NEXT:    ; in Loop: Header=BB0_11 Depth=1
 ; CHECK-NEXT:    s_andn2_b64 vcc, exec, s[8:9]
-; CHECK-NEXT:    s_cbranch_vccz .LBB0_20
-; CHECK-NEXT:  .LBB0_12: ; %while.cond
+; CHECK-NEXT:    s_cbranch_vccz .LBB0_19
+; CHECK-NEXT:  .LBB0_11: ; %while.cond
 ; CHECK-NEXT:    ; =>This Loop Header: Depth=1
-; CHECK-NEXT:    ; Child Loop BB0_14 Depth 2
-; CHECK-NEXT:    ; Child Loop BB0_18 Depth 2
+; CHECK-NEXT:    ; Child Loop BB0_13 Depth 2
+; CHECK-NEXT:    ; Child Loop BB0_17 Depth 2
 ; CHECK-NEXT:    s_and_saveexec_b64 s[8:9], s[4:5]
-; CHECK-NEXT:    s_cbranch_execz .LBB0_15
-; CHECK-NEXT:  ; %bb.13: ; %loop-memcpy-expansion2.preheader
-; CHECK-NEXT:    ; in Loop: Header=BB0_12 Depth=1
+; CHECK-NEXT:    s_cbranch_execz .LBB0_14
+; CHECK-NEXT:  ; %bb.12: ; %loop-memcpy-expansion2.preheader
+; CHECK-NEXT:    ; in Loop: Header=BB0_11 Depth=1
 ; CHECK-NEXT:    s_mov_b64 s[10:11], 0
 ; CHECK-NEXT:    s_mov_b64 s[12:13], 0
 ; CHECK-NEXT:    s_mov_b64 s[14:15], 0
-; CHECK-NEXT:  .LBB0_14: ; %loop-memcpy-expansion2
-; CHECK-NEXT:    ; Parent Loop BB0_12 Depth=1
+; CHECK-NEXT:  .LBB0_13: ; %loop-memcpy-expansion2
+; CHECK-NEXT:    ; Parent Loop BB0_11 Depth=1
 ; CHECK-NEXT:    ; => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    v_mov_b32_e32 v10, s10
 ; CHECK-NEXT:    v_mov_b32_e32 v11, s11
@@ -169,23 +167,23 @@ define void @issue63986(i64 %0, i64 %idxprom) {
 ; CHECK-NEXT:    flat_store_byte v[10:11], v20 offset:13
 ; CHECK-NEXT:    flat_store_byte v[10:11], v27 offset:12
 ; CHECK-NEXT:    s_andn2_b64 exec, exec, s[12:13]
-; CHECK-NEXT:    s_cbranch_execnz .LBB0_14
-; CHECK-NEXT:  .LBB0_15: ; %Flow20
-; CHECK-NEXT:    ; in Loop: Header=BB0_12 Depth=1
+; CHECK-NEXT:    s_cbranch_execnz .LBB0_13
+; CHECK-NEXT:  .LBB0_14: ; %Flow20
+; CHECK-NEXT:    ; in Loop: Header=BB0_11 Depth=1
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; CHECK-NEXT:    s_mov_b64 s[8:9], -1
-; CHECK-NEXT:    s_cbranch_execz .LBB0_11
-; CHECK-NEXT:  ; %bb.16: ; %loop-memcpy-residual-header5
-; CHECK-NEXT:    ; in Loop: Header=BB0_12 Depth=1
+; CHECK-NEXT:    s_cbranch_execz .LBB0_10
+; CHECK-NEXT:  ; %bb.15: ; %loop-memcpy-residual-header5
+; CHECK-NEXT:    ; in Loop: Header=BB0_11 Depth=1
 ; CHECK-NEXT:    s_and_saveexec_b64 s[8:9], s[6:7]
 ; CHECK-NEXT:    s_xor_b64 s[10:11], exec, s[8:9]
-; CHECK-NEXT:    s_cbranch_execz .LBB0_10
-; CHECK-NEXT:  ; %bb.17: ; %loop-memcpy-residual4.preheader
-; CHECK-NEXT:    ; in Loop: Header=BB0_12 Depth=1
+; CHECK-NEXT:    s_cbranch_execz .LBB0_9
+; CHECK-NEXT:  ; %bb.16: ; %loop-memcpy-residual4.preheader
+; CHECK-NEXT:    ; in Loop: Header=BB0_11 Depth=1
 ; CHECK-NEXT:    s_mov_b64 s[12:13], 0
 ; CHECK-NEXT:    s_mov_b64 s[14:15], 0
-; CHECK-NEXT:  .LBB0_18: ; %loop-memcpy-residual4
-; CHECK-NEXT:    ; Parent Loop BB0_12 Depth=1
+; CHECK-NEXT:  .LBB0_17: ; %loop-memcpy-residual4
+; CHECK-NEXT:    ; Parent Loop BB0_11 Depth=1
 ; CHECK-NEXT:    ; => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    v_mov_b32_e32 v12, s15
 ; CHECK-NEXT:    v_add_co_u32_e32 v10, vcc, s14, v0
@@ -200,12 +198,12 @@ define void @issue63986(i64 %0, i64 %idxprom) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    flat_store_byte v[10:11], v13
 ; CHECK-NEXT:    s_andn2_b64 exec, exec, s[12:13]
-; CHECK-NEXT:    s_cbranch_execnz .LBB0_18
-; CHECK-NEXT:  ; %bb.19: ; %Flow
-; CHECK-NEXT:    ; in Loop: Header=BB0_12 Depth=1
+; CHECK-NEXT:    s_cbranch_execnz .LBB0_17
+; CHECK-NEXT:  ; %bb.18: ; %Flow
+; CHECK-NEXT:    ; in Loop: Header=BB0_11 Depth=1
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[12:13]
-; CHECK-NEXT:    s_branch .LBB0_10
-; CHECK-NEXT:  .LBB0_20: ; %DummyReturnBlock
+; CHECK-NEXT:    s_branch .LBB0_9
+; CHECK-NEXT:  .LBB0_19: ; %DummyReturnBlock
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:

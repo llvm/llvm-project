@@ -148,6 +148,14 @@ public:
     return Max;
   }
 
+  KnownBits clearLowBits(unsigned BitWidth) {
+    APInt NewZero = Zero;
+    APInt NewOne = One;
+    NewZero.clearLowBits(BitWidth);
+    NewOne.clearLowBits(BitWidth);
+    return KnownBits(NewZero, NewOne);
+  }
+
   /// Return known bits for a truncation of the value we're tracking.
   KnownBits trunc(unsigned BitWidth) const {
     return KnownBits(Zero.trunc(BitWidth), One.trunc(BitWidth));
