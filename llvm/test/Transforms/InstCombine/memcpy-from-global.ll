@@ -118,7 +118,7 @@ define void @test2_addrspacecast() {
 ; CHECK-LABEL: @test2_addrspacecast(
 ; CHECK-NEXT:    [[B:%.*]] = alloca [[T:%.*]], align 8
 ; CHECK-NEXT:    [[B_CAST:%.*]] = addrspacecast ptr [[B]] to ptr addrspace(1)
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) noundef align 4 dereferenceable(124) [[B_CAST]], ptr addrspace(1) noundef align 4 dereferenceable(124) addrspacecast (ptr @G to ptr addrspace(1)), i64 124, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) noundef align 8 dereferenceable(124) [[B_CAST]], ptr addrspace(1) noundef align 16 dereferenceable(124) addrspacecast (ptr @G to ptr addrspace(1)), i64 124, i1 false)
 ; CHECK-NEXT:    call void @bar_as1(ptr addrspace(1) [[B_CAST]])
 ; CHECK-NEXT:    ret void
 ;
@@ -234,7 +234,7 @@ define void @test8() {
 define void @test8_addrspacecast() {
 ; CHECK-LABEL: @test8_addrspacecast(
 ; CHECK-NEXT:    [[AL:%.*]] = alloca [[U:%.*]], align 16
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p1.i64(ptr noundef nonnull align 16 dereferenceable(20) [[AL]], ptr addrspace(1) noundef align 4 dereferenceable(20) addrspacecast (ptr getelementptr inbounds ([2 x %U], ptr @H, i64 0, i64 1) to ptr addrspace(1)), i64 20, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p1.i64(ptr noundef nonnull align 16 dereferenceable(20) [[AL]], ptr addrspace(1) noundef nonnull align 4 dereferenceable(20) addrspacecast (ptr getelementptr inbounds ([2 x %U], ptr @H, i64 0, i64 1) to ptr addrspace(1)), i64 20, i1 false)
 ; CHECK-NEXT:    call void @bar(ptr nonnull [[AL]]) #[[ATTR3]]
 ; CHECK-NEXT:    ret void
 ;
