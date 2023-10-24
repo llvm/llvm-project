@@ -22,7 +22,7 @@ constexpr ompt_scope_endpoint_t BEGIN = ompt_scope_begin;
 constexpr ompt_scope_endpoint_t END = ompt_scope_end;
 constexpr ompt_scope_endpoint_t BEGINEND = ompt_scope_beginend;
 
-/// Aliases for enum: ompt_scope_endpoint_t
+/// Aliases for enum: ompt_target_t
 constexpr ompt_target_t TARGET = ompt_target;
 constexpr ompt_target_t ENTER_DATA = ompt_target_enter_data;
 constexpr ompt_target_t EXIT_DATA = ompt_target_exit_data;

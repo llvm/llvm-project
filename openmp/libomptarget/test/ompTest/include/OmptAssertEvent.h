@@ -166,8 +166,6 @@ struct OmptAssertEvent {
 
   internal::EventTy getEventType() const;
 
-  // ToDo: Maybe look for another way to get access to or copy the underlying
-  // event. Note: This can easily result in slicing!
   internal::InternalEvent *getEvent() const;
 
   /// Make events comparable

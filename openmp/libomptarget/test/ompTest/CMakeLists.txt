@@ -6,6 +6,7 @@
 add_llvm_library(omptest
 SHARED
 
+./include/AssertMacros.h
 ./include/InternalEvent.h
 ./include/InternalEventCommon.h
 ./include/OmptAsserter.h

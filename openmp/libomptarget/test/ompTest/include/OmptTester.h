@@ -1,12 +1,14 @@
 #ifndef OPENMP_LIBOMPTARGET_TEST_OMPTEST_OMPTTESTER_H
 #define OPENMP_LIBOMPTARGET_TEST_OMPTEST_OMPTTESTER_H
 
+#include "AssertMacros.h"
 #include "OmptAliases.h"
 #include "OmptAssertEvent.h"
 #include "OmptAsserter.h"
 #include "OmptCallbackHandler.h"
 
 #include <cassert>
+#include <iomanip>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -15,10 +17,6 @@
 #include <vector>
 
 #include <omp-tools.h>
-
-#define XQUOTE(str) QUOTE(str)
-#define QUOTE(str) #str
-#define BAR_IT(Id) Id##_
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,9 +39,12 @@ struct Error {
 /// A pretty crude test case abstraction
 struct TestCase {
   TestCase(const std::string &name) : Name(name) {}
+  TestCase(const std::string &name, const omptest::AssertState &expected)
+      : Name(name), ExpectedState(expected) {}
   virtual ~TestCase() {}
   std::string Name;
-  omptest::AssertState AS;
+  omptest::AssertState ExpectedState{omptest::AssertState::pass};
+  omptest::AssertState ResultState{omptest::AssertState::pass};
   Error exec() {
     OmptCallbackHandler::get().subscribe(&SequenceAsserter);
     OmptCallbackHandler::get().subscribe(&SetAsserter);
@@ -56,8 +57,20 @@ struct TestCase {
     // We remove subscribers to not be notified of events after our test case
     // finished.
     OmptCallbackHandler::get().clearSubscribers();
-    if (SequenceAsserter.getState() == omptest::AssertState::fail)
+
+    bool AnyFail = SequenceAsserter.getState() == omptest::AssertState::fail ||
+                   SetAsserter.getState() == omptest::AssertState::fail;
+    bool AllPass = SequenceAsserter.getState() == omptest::AssertState::pass &&
+                   SetAsserter.getState() == omptest::AssertState::pass;
+
+    if (ExpectedState == omptest::AssertState::pass && AnyFail)
       E.Fail = true;
+    else if (ExpectedState == omptest::AssertState::fail && AllPass)
+      E.Fail = true;
+
+    if (AnyFail)
+      ResultState = omptest::AssertState::fail;
+
     return E;
   };
 
@@ -148,74 +161,34 @@ struct Runner {
       }
       TS.teardown();
     }
+
+    printSummary();
+
     return 0;
   }
 
   void reportError(const Error &Err) {}
   void abortOrKeepGoing() {}
 
+  // Print an execution summary of all testsuites and their corresponding
+  // testcases.
+  void printSummary() {
+    std::cout << "\n====== SUMMARY\n";
+    for (auto &TS : TestSuites) {
+      std::cout << "  - " << TS.Name;
+      for (auto &TC : TS) {
+        std::string Result =
+            (TC->ResultState == TC->ExpectedState)
+                ? (TC->ResultState == omptest::AssertState::pass) ? "PASS"
+                                                                  : "XFAIL"
+                : "FAIL";
+        std::cout << "\n      " << std::setw(5) << Result << " : " << TC->Name;
+      }
+      std::cout << std::endl;
+    }
+  }
+
   std::vector<TestSuite> TestSuites;
 };
-
-/// ASSERT MACROS TO BE USED BY THE USER
-
-// Not implemented yet
-#define OMPT_ASSERT_EVENT(Event, ...)
-#define OMPT_ASSERT_SEQUENCE_NOT(Event, ...)
-
-// Handle a minimum unordered set of events
-#define OMPT_ASSERT_SET_EVENT(Name, Group, EventTy, ...)                       \
-  this->SetAsserter.insert(OmptAssertEvent::EventTy(Name, Group, __VA_ARGS__));
-#define OMPT_ASSERT_SET(EventTy, ...)                                          \
-  OMPT_ASSERT_SET_EVENT("", "", EventTy, __VA_ARGS__)
-#define OMPT_ASSERT_SET_GROUP(Group, EventTy, ...)                             \
-  OMPT_ASSERT_SET_EVENT("", Group, EventTy, __VA_ARGS__)
-#define OMPT_ASSERT_SET_NAMED(Name, EventTy, ...)                              \
-  OMPT_ASSERT_SET_EVENT(Name, "", EventTy, __VA_ARGS__)
-
-// Handle an exact sequence of events
-#define OMPT_ASSERT_SEQUENCE_EVENT(Name, Group, EventTy, ...)                  \
-  this->SequenceAsserter.insert(                                               \
-      OmptAssertEvent::EventTy(Name, Group, __VA_ARGS__));
-#define OMPT_ASSERT_SEQUENCE(EventTy, ...)                                     \
-  OMPT_ASSERT_SEQUENCE_EVENT("", "", EventTy, __VA_ARGS__)
-#define OMPT_ASSERT_GROUPED_SEQUENCE(Group, EventTy, ...)                      \
-  OMPT_ASSERT_SEQUENCE_EVENT("", Group, EventTy, __VA_ARGS__)
-#define OMPT_ASSERT_NAMED_SEQUENCE(Name, EventTy, ...)                         \
-  OMPT_ASSERT_SEQUENCE_EVENT(Name, "", EventTy, __VA_ARGS__)
-
-// Enable / disable asserters entirley
-#define OMPT_ASSERTER_DISABLE(AsserterName) this->AsserterName.setActive(false);
-#define OMPT_ASSERTER_ENABLE(AsserterName) this->AsserterName.setActive(true);
-#define OMPT_ASSERT_SET_DISABLE() OMPT_ASSERTER_DISABLE(SetAsserter)
-#define OMPT_ASSERT_SET_ENABLE() OMPT_ASSERTER_ENABLE(SetAsserter)
-#define OMPT_REPORT_EVENT_DISABLE() OMPT_ASSERTER_DISABLE(EventReporter)
-#define OMPT_REPORT_EVENT_ENABLE() OMPT_ASSERTER_ENABLE(EventReporter)
-#define OMPT_ASSERT_SEQUENCE_DISABLE() OMPT_ASSERTER_DISABLE(SequenceAsserter)
-#define OMPT_ASSERT_SEQUENCE_ENABLE() OMPT_ASSERTER_ENABLE(SequenceAsserter)
-
-// Enable / disable certain event types for asserters
-#define OMPT_ASSERTER_PERMIT_EVENT(Asserter, EventTy)                          \
-  this->Asserter.permitEvent(EventTy);
-#define OMPT_ASSERTER_SUPPRESS_EVENT(Asserter, EventTy)                        \
-  this->Asserter.suppressEvent(EventTy);
-#define OMPT_PERMIT_EVENT(EventTy)                                             \
-  OMPT_ASSERTER_PERMIT_EVENT(SetAsserter, EventTy);                            \
-  OMPT_ASSERTER_PERMIT_EVENT(EventReporter, EventTy);                          \
-  OMPT_ASSERTER_PERMIT_EVENT(SequenceAsserter, EventTy);
-#define OMPT_SUPPRESS_EVENT(EventTy)                                           \
-  OMPT_ASSERTER_SUPPRESS_EVENT(SetAsserter, EventTy);                          \
-  OMPT_ASSERTER_SUPPRESS_EVENT(EventReporter, EventTy);                        \
-  OMPT_ASSERTER_SUPPRESS_EVENT(SequenceAsserter, EventTy);
-
-/// MACRO TO DEFINE A TESTSUITE + TESTCASE (like GoogleTest does)
-#define OMPTTESTCASE(SuiteName, CaseName)                                      \
-  struct SuiteName##_##CaseName : public TestCase {                            \
-    SuiteName##_##CaseName() : TestCase(XQUOTE(CaseName)) {}                   \
-    virtual void execImpl() override;                                          \
-  };                                                                           \
-  static Registerer R_##SuiteName##CaseName(new SuiteName##_##CaseName(),      \
-                                            #SuiteName);                       \
-  void SuiteName##_##CaseName::execImpl()
 
 #endif // include guard

@@ -9,13 +9,15 @@ TBD
 Testing macros
 ==============
 
-## OMPT_SEQ_ASSERT
+## OMPT_ASSERT_SEQUENCE
 TBD
 
-## OMPT_ASSERT_GROUPED_LIST
+## OMPT_ASSERT_NAMED_SEQUENCE
+This macro will act like `OMPT_ASSERT_SEQUENCE` but internally the provided name
+will be stored within the created event and may be printed in messages.
 
-## OMPT_ASSERT_GROUPED_LIST
-This macro will act like `OMPT_SEQ_ASSERT` with the addition of grouping.
+## OMPT_ASSERT_GROUPED_SEQUENCE
+This macro will act like `OMPT_ASSERT_SEQUENCE` with the addition of grouping.
 
 ### Grouping
 

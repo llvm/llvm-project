@@ -178,7 +178,8 @@ void OmptSequencedAsserter::notifyImpl(OmptAssertEvent &&AE) {
 
 AssertState OmptSequencedAsserter::getState() {
   // This is called after the testcase executed.
-  // Once, reached, no more events should be in the queue
+  // Once reached the number of successful notifications should be equal to the
+  // number of expected events.
   if (NextEvent < Events.size())
     State = AssertState::fail;
 
@@ -193,12 +194,27 @@ void OmptEventAsserter::notifyImpl(OmptAssertEvent &&AE) {
   if (Events.empty() || !isActive() || isSuppressedEventType(AE.getEventType()))
     return;
 
+  if (NumEvents == 0)
+    NumEvents = Events.size();
+
+  ++NumNotifications;
+
   for (size_t I = 0; I < Events.size(); ++I) {
     if (Events[I] == AE) {
       Events.erase(Events.begin() + I);
+      ++NumAssertSuccesses;
       return;
     }
   }
+}
+
+AssertState OmptEventAsserter::getState() {
+  // This is called after the testcase executed.
+  // Once reached no more events should be in the queue
+  if (!Events.empty())
+    State = AssertState::fail;
+
+  return State;
 }
 
 void OmptEventReporter::notify(OmptAssertEvent &&AE) {

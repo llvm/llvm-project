@@ -83,7 +83,7 @@ protected:
   std::map<std::string, omptest::AssertEventGroup> EventGroups{};
 };
 
-/// Class that can assert in a sequenced fashion, i.e., events hace to occur in
+/// Class that can assert in a sequenced fashion, i.e., events have to occur in
 /// the order they were registered
 struct OmptSequencedAsserter : public OmptAsserter {
   OmptSequencedAsserter() : NextEvent(0), Events() {}
@@ -109,6 +109,12 @@ struct OmptEventAsserter : public OmptAsserter {
 
   /// Implements the asserter's logic
   virtual void notifyImpl(omptest::OmptAssertEvent &&AE) override;
+
+  omptest::AssertState getState() override;
+
+  int NumAssertSuccesses{0};
+  int NumNotifications{0};
+  size_t NumEvents{0};
 
   /// For now use vector (but do set semantics)
   std::vector<omptest::OmptAssertEvent> Events; // TODO std::unordered_set?
