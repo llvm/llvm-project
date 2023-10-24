@@ -1938,6 +1938,9 @@ void PPCFrameLowering::createTailCallBranchInstr(MachineBasicBlock &MBB) const {
     else if (JumpTarget.isSymbol())
       BuildMI(MBB, MBBI, dl, TII.get(PPC::TAILB)).
         addExternalSymbol(JumpTarget.getSymbolName());
+    else if (JumpTarget.isMCSymbol())
+      BuildMI(MBB, MBBI, dl, TII.get(PPC::TAILB))
+          .addSym(JumpTarget.getMCSymbol());
     else
       llvm_unreachable("Expecting Global or External Symbol");
   } else if (RetOpcode == PPC::TCRETURNri) {
@@ -1957,6 +1960,9 @@ void PPCFrameLowering::createTailCallBranchInstr(MachineBasicBlock &MBB) const {
     else if (JumpTarget.isSymbol())
       BuildMI(MBB, MBBI, dl, TII.get(PPC::TAILB8)).
         addExternalSymbol(JumpTarget.getSymbolName());
+    else if (JumpTarget.isMCSymbol())
+      BuildMI(MBB, MBBI, dl, TII.get(PPC::TAILB8))
+          .addSym(JumpTarget.getMCSymbol());
     else
       llvm_unreachable("Expecting Global or External Symbol");
   } else if (RetOpcode == PPC::TCRETURNri8) {

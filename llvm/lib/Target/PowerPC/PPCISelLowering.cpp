@@ -5704,6 +5704,7 @@ SDValue PPCTargetLowering::FinishCall(
             Callee.getOpcode() == ISD::TargetExternalSymbol ||
             Callee.getOpcode() == ISD::TargetGlobalAddress ||
             isa<ConstantSDNode>(Callee) ||
+            (Subtarget.isAIXABI() && Callee.getOpcode() == ISD::MCSymbol) ||
             (CFlags.IsIndirect && Subtarget.isUsingPCRelativeCalls())) &&
            "Expecting a global address, external symbol, absolute value, "
            "register or an indirect tail call when PC Relative calls are "
@@ -7065,7 +7066,8 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
           CallConv == CallingConv::Fast) &&
          "Unexpected calling convention!");
 
-  if (getTargetMachine().Options.GuaranteedTailCallOpt)
+  if (getTargetMachine().Options.GuaranteedTailCallOpt &&
+      CallConv != CallingConv::Fast)
     report_fatal_error("Tail call support is unimplemented on AIX.");
 
   if (useSoftFloat())
@@ -7389,6 +7391,8 @@ SDValue PPCTargetLowering::LowerCall_AIX(
   // The LSA is 24 bytes (6x4) in PPC32 and 48 bytes (6x8) in PPC64.
   const unsigned LinkageSize = Subtarget.getFrameLowering()->getLinkageSize();
   const bool IsPPC64 = Subtarget.isPPC64();
+  bool IsSibCall =
+      CFlags.IsTailCall && !getTargetMachine().Options.GuaranteedTailCallOpt;
   const EVT PtrVT = getPointerTy(DAG.getDataLayout());
   const unsigned PtrByteSize = IsPPC64 ? 8 : 4;
   CCInfo.AllocateStack(LinkageSize, Align(PtrByteSize));
@@ -7404,13 +7408,19 @@ SDValue PPCTargetLowering::LowerCall_AIX(
   const unsigned NumBytes = std::max<unsigned>(
       LinkageSize + MinParameterSaveAreaSize, CCInfo.getStackSize());
 
+  int SPDiff =
+      IsSibCall ? 0 : CalculateTailCallSPDiff(DAG, CFlags.IsTailCall, NumBytes);
+
   // Adjust the stack pointer for the new arguments...
   // These operations are automatically eliminated by the prolog/epilog pass.
   Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, dl);
   SDValue CallSeqStart = Chain;
+  SDValue LROp, FPOp;
+  Chain = EmitTailCallLoadFPAndRetAddr(DAG, SPDiff, Chain, LROp, FPOp, dl);
 
   SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPass;
   SmallVector<SDValue, 8> MemOpChains;
+  SmallVector<TailCallArgumentInfo, 8> TailCallArguments;
 
   // Set up a copy of the stack pointer for loading and storing any
   // arguments that may not fit in the registers available for argument
@@ -7587,11 +7597,15 @@ SDValue PPCTargetLowering::LowerCall_AIX(
     }
 
     if (VA.isMemLoc()) {
-      SDValue PtrOff =
-          DAG.getConstant(VA.getLocMemOffset(), dl, StackPtr.getValueType());
-      PtrOff = DAG.getNode(ISD::ADD, dl, PtrVT, StackPtr, PtrOff);
-      MemOpChains.push_back(
-          DAG.getStore(Chain, dl, Arg, PtrOff, MachinePointerInfo()));
+      if (!CFlags.IsTailCall) {
+        SDValue PtrOff =
+            DAG.getConstant(VA.getLocMemOffset(), dl, StackPtr.getValueType());
+        PtrOff = DAG.getNode(ISD::ADD, dl, PtrVT, StackPtr, PtrOff);
+        MemOpChains.push_back(
+            DAG.getStore(Chain, dl, Arg, PtrOff, MachinePointerInfo()));
+      } else
+        CalculateTailCallArgDest(DAG, MF, false, Arg, SPDiff, VA.getLocMemOffset(),
+                                 TailCallArguments);
 
       continue;
     }
@@ -7674,7 +7688,10 @@ SDValue PPCTargetLowering::LowerCall_AIX(
     InGlue = Chain.getValue(1);
   }
 
-  const int SPDiff = 0;
+  if (CFlags.IsTailCall && !IsSibCall)
+    PrepareTailCall(DAG, InGlue, Chain, dl, SPDiff, NumBytes, LROp, FPOp,
+                    TailCallArguments);
+
   return FinishCall(CFlags, dl, DAG, RegsToPass, InGlue, Chain, CallSeqStart,
                     Callee, SPDiff, NumBytes, Ins, InVals, CB);
 }
