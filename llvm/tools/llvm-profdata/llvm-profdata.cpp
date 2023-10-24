@@ -319,7 +319,7 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
   // we have more non-fatal errors from InstrProfReader in the future. How
   // should this interact with different -failure-mode?
   std::optional<std::pair<Error, std::string>> ReaderWarning;
-  auto WarnFn = [&](Error E) {
+  auto Warn = [&](Error E) {
     if (ReaderWarning) {
       consumeError(std::move(E));
       return;
@@ -329,7 +329,7 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
     ReaderWarning = {make_error<InstrProfError>(ErrCode, Msg), Filename};
   };
   auto ReaderOrErr =
-      InstrProfReader::create(Input.Filename, *FS, Correlator, WarnFn);
+      InstrProfReader::create(Input.Filename, *FS, Correlator, Warn);
   if (Error E = ReaderOrErr.takeError()) {
     // Skip the empty profiles by returning silently.
     auto [ErrCode, Msg] = InstrProfError::take(std::move(E));
@@ -1226,12 +1226,12 @@ static int merge_main(int argc, const char *argv[]) {
                      "GCC encoding (only meaningful for -sample)")));
   cl::opt<FailureMode> FailureMode(
       "failure-mode", cl::init(failIfAnyAreInvalid), cl::desc("Failure mode:"),
-      cl::values(clEnumValN(warnOnly, "warn",
-                            "Do not fail and just print warnings."),
-                 clEnumValN(failIfAnyAreInvalid, "any",
-                            "Fail if any profile is invalid."),
-                 clEnumValN(failIfAllAreInvalid, "all",
-                            "Fail only if all profiles are invalid.")));
+      cl::values(
+          clEnumValN(warnOnly, "warn", "Do not fail and just print warnings."),
+          clEnumValN(failIfAnyAreInvalid, "any",
+                     "Fail if any profile is invalid."),
+          clEnumValN(failIfAllAreInvalid, "all",
+                     "Fail only if all profiles are invalid.")));
   cl::opt<bool> OutputSparse("sparse", cl::init(false),
       cl::desc("Generate a sparse profile (only meaningful for -instr)"));
   cl::opt<unsigned> NumThreads(

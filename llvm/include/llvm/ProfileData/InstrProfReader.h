@@ -203,12 +203,12 @@ public:
   static Expected<std::unique_ptr<InstrProfReader>>
   create(const Twine &Path, vfs::FileSystem &FS,
          const InstrProfCorrelator *Correlator = nullptr,
-         std::optional<std::function<void(Error)>> MaybeWarnFn = {});
+         std::function<void(Error)> Warn = nullptr);
 
   static Expected<std::unique_ptr<InstrProfReader>>
   create(std::unique_ptr<MemoryBuffer> Buffer,
          const InstrProfCorrelator *Correlator = nullptr,
-         std::optional<std::function<void(Error)>> MaybeWarnFn = {});
+         std::function<void(Error)> Warn = nullptr);
 
   /// \param Weight for raw profiles use this as the temporal profile trace
   ///               weight
@@ -343,7 +343,7 @@ private:
   /// Start address of binary id length and data pairs.
   const uint8_t *BinaryIdsStart;
 
-  std::optional<std::function<void(Error)>> MaybeWarnFn;
+  std::function<void(Error)> Warn;
 
   /// Maxium counter value 2^56.
   static const uint64_t MaxCounterValue = (1ULL << 56);
@@ -351,11 +351,11 @@ private:
 public:
   RawInstrProfReader(std::unique_ptr<MemoryBuffer> DataBuffer,
                      const InstrProfCorrelator *Correlator,
-                     std::optional<std::function<void(Error)>> MaybeWarnFn)
+                     std::function<void(Error)> Warn)
       : DataBuffer(std::move(DataBuffer)),
         Correlator(dyn_cast_or_null<const InstrProfCorrelatorImpl<IntPtrT>>(
             Correlator)),
-        MaybeWarnFn(MaybeWarnFn) {}
+        Warn(Warn) {}
   RawInstrProfReader(const RawInstrProfReader &) = delete;
   RawInstrProfReader &operator=(const RawInstrProfReader &) = delete;
 
