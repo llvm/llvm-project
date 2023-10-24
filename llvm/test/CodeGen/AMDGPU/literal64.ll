@@ -94,6 +94,7 @@ define void @v_mov_b64_double(ptr addrspace(1) %ptr) {
 ; GCN-NEXT:  .LBB6_1: ; %atomicrmw.start
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_wait_loadcnt 0x0
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GCN-NEXT:    v_add_f64_e32 v[2:3], 0x4063233333333333, v[4:5]
 ; GCN-NEXT:    global_atomic_cmpswap_b64 v[2:3], v[0:1], v[2:5], off th:TH_ATOMIC_RETURN
 ; GCN-NEXT:    s_wait_loadcnt 0x0
@@ -249,11 +250,13 @@ define amdgpu_ps <2 x float> @v_add_f64_200.0(double %a) {
 define amdgpu_ps <2 x float> @v_fma_f64(double %a, double %b) {
 ; GCN-SDAG-LABEL: v_fma_f64:
 ; GCN-SDAG:       ; %bb.0:
-; GCN-SDAG-NEXT:    v_fmaak_f64 v[2:3], v[0:1], v[2:3], 0x4063233333333333
-; GCN-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GCN-SDAG-NEXT:    v_fmaak_f64 v[4:5], v[0:1], v[2:3], 0x4069033333333333
-; GCN-SDAG-NEXT:    v_mov_b64_e32 v[0:1], 0x4069033333333333
-; GCN-SDAG-NEXT:    v_fmac_f64_e32 v[0:1], v[4:5], v[2:3]
+; GCN-SDAG-NEXT:    v_fmaak_f64 v[4:5], v[0:1], v[2:3], 0x4063233333333333
+; GCN-SDAG-NEXT:    v_mov_b64_e32 v[2:3], 0x4069033333333333
+; GCN-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GCN-SDAG-NEXT:    v_fmaak_f64 v[0:1], v[0:1], v[4:5], 0x4069033333333333
+; GCN-SDAG-NEXT:    v_fmac_f64_e32 v[2:3], v[0:1], v[4:5]
+; GCN-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GCN-SDAG-NEXT:    v_dual_mov_b32 v0, v2 :: v_dual_mov_b32 v1, v3
 ; GCN-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GCN-GISEL-LABEL: v_fma_f64:
