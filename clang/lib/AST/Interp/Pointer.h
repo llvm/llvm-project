@@ -108,7 +108,7 @@ public:
     if (getFieldDesc()->ElemDesc)
       Off += sizeof(InlineDescriptor);
     else
-      Off += sizeof(InitMapPtr);
+      Off += sizeof(InitMap *);
     return Pointer(Pointee, Base, Base + Off);
   }
 
@@ -147,7 +147,7 @@ public:
     if (inPrimitiveArray()) {
       if (Offset != Base)
         return *this;
-      return Pointer(Pointee, Base, Offset + sizeof(InitMapPtr));
+      return Pointer(Pointee, Base, Offset + sizeof(InitMap *));
     }
 
     // Pointer is to a field or array element - enter it.
@@ -168,7 +168,7 @@ public:
       // Revert to an outer one-past-end pointer.
       unsigned Adjust;
       if (inPrimitiveArray())
-        Adjust = sizeof(InitMapPtr);
+        Adjust = sizeof(InitMap *);
       else
         Adjust = sizeof(InlineDescriptor);
       return Pointer(Pointee, Base, Base + getSize() + Adjust);
@@ -257,7 +257,7 @@ public:
       if (getFieldDesc()->ElemDesc)
         Adjust = sizeof(InlineDescriptor);
       else
-        Adjust = sizeof(InitMapPtr);
+        Adjust = sizeof(InitMap *);
     }
     return Offset - Base - Adjust;
   }
@@ -359,7 +359,7 @@ public:
     assert(isLive() && "Invalid pointer");
     if (isArrayRoot())
       return *reinterpret_cast<T *>(Pointee->rawData() + Base +
-                                    sizeof(InitMapPtr));
+                                    sizeof(InitMap *));
 
     return *reinterpret_cast<T *>(Pointee->rawData() + Offset);
   }
@@ -367,7 +367,7 @@ public:
   /// Dereferences a primitive element.
   template <typename T> T &elem(unsigned I) const {
     assert(I < getNumElems());
-    return reinterpret_cast<T *>(Pointee->data() + sizeof(InitMapPtr))[I];
+    return reinterpret_cast<T *>(Pointee->data() + sizeof(InitMap *))[I];
   }
 
   /// Initializes a field.
@@ -418,7 +418,6 @@ public:
 private:
   friend class Block;
   friend class DeadBlock;
-  friend struct InitMap;
 
   Pointer(Block *Pointee, unsigned Base, unsigned Offset);
 
@@ -432,9 +431,9 @@ private:
            1;
   }
 
-  /// Returns a reference to the InitMapPtr which stores the initialization map.
-  InitMapPtr &getInitMap() const {
-    return *reinterpret_cast<InitMapPtr *>(Pointee->rawData() + Base);
+  /// Returns a reference to the pointer which stores the initialization map.
+  InitMap *&getInitMap() const {
+    return *reinterpret_cast<InitMap **>(Pointee->rawData() + Base);
   }
 
   /// The block the pointer is pointing to.
