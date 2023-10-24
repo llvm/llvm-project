@@ -2100,24 +2100,6 @@ Instruction *InstCombinerImpl::foldSelectExtConst(SelectInst &Sel) {
     return CastInst::Create(Instruction::CastOps(ExtOpcode), NewSel, SelType);
   }
 
-  // If one arm of the select is the extend of the condition, replace that arm
-  // with the extension of the appropriate known bool value.
-  if (Cond == X) {
-    if (ExtInst == Sel.getTrueValue()) {
-      // select X, (sext X), C --> select X, -1, C
-      // select X, (zext X), C --> select X,  1, C
-      Constant *One = ConstantInt::getTrue(SmallType);
-      Value *AllOnesOrOne =
-          Builder.CreateCast((Instruction::CastOps)ExtOpcode, One, SelType);
-      return SelectInst::Create(Cond, AllOnesOrOne, C, "", nullptr, &Sel);
-    } else {
-      // select X, C, (sext X) --> select X, C, 0
-      // select X, C, (zext X) --> select X, C, 0
-      Constant *Zero = ConstantInt::getNullValue(SelType);
-      return SelectInst::Create(Cond, C, Zero, "", nullptr, &Sel);
-    }
-  }
-
   return nullptr;
 }
 
