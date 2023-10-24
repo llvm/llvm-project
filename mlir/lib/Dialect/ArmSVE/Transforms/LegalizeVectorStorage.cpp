@@ -275,17 +275,24 @@ struct LegalizeMemrefLoadConversion : public OpRewritePattern<memref::LoadOp> {
   }
 };
 
+} // namespace
+
+void mlir::arm_sve::populateLegalizeVectorStoragePatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<RelaxScalableVectorAllocaAlignment,
+               LegalizeAllocLikeOpConversion<memref::AllocaOp>,
+               LegalizeAllocLikeOpConversion<memref::AllocOp>,
+               LegalizeVectorTypeCastConversion, LegalizeMemrefStoreConversion,
+               LegalizeMemrefLoadConversion>(patterns.getContext());
+}
+
+namespace {
 struct LegalizeVectorStorage
     : public arm_sve::impl::LegalizeVectorStorageBase<LegalizeVectorStorage> {
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
-    patterns.add<RelaxScalableVectorAllocaAlignment,
-                 LegalizeAllocLikeOpConversion<memref::AllocaOp>,
-                 LegalizeAllocLikeOpConversion<memref::AllocOp>,
-                 LegalizeVectorTypeCastConversion,
-                 LegalizeMemrefStoreConversion, LegalizeMemrefLoadConversion>(
-        patterns.getContext());
+    populateLegalizeVectorStoragePatterns(patterns);
     if (failed(applyPatternsAndFoldGreedily(getOperation(),
                                             std::move(patterns)))) {
       signalPassFailure();
