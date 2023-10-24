@@ -85,21 +85,18 @@ LogicalResult mergeSymbolsInto(Operation *target,
                                OwningOpRef<Operation *> other);
 } // namespace detail
 
-/// Standalone util to apply the named sequence `entryPoint` to the payload.
-/// This is done in 3 steps:
-///   1. lookup the `entryPoint` symbol in `{payload, sharedTransformModule}` by
-///   calling detail::findTransformEntryPoint.
-///   2. if the entry point is found and not nested under
-///   `sharedTransformModule`, call `detail::defineDeclaredSymbols` to "link" in
-///   the `sharedTransformModule`. Note: this may modify the transform IR
-///   embedded with the payload IR.
-///   3. apply the transform IR to the payload IR, relaxing the requirement that
-///   the transform IR is a top-level transform op. We are applying a named
-///   sequence anyway.
-LogicalResult applyTransformNamedSequence(
-    Operation *payload, ModuleOp transformModule,
-    const TransformOptions &options,
-    StringRef entryPoint = TransformDialect::kTransformEntryPointSymbolName);
+/// Standalone util to apply the named sequence `transformRoot` to `payload` IR.
+/// This is done in 2 steps:
+///   1. If `transformModule` is provided and is not nested under
+///      `transformRoot`, it will be "linked into" the IR containing
+///      `transformRoot` to resolve undefined named sequences.
+///   2. The transforms specified in `transformRoot` are applied to `payload`,
+///      assuming the named sequence has a single argument handle that will be
+///      associated with `payload` on run.
+LogicalResult applyTransformNamedSequence(Operation *payload,
+                                          Operation *transformRoot,
+                                          ModuleOp transformModule,
+                                          const TransformOptions &options);
 
 } // namespace transform
 } // namespace mlir

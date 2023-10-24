@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --test-transform-dialect-interpreter | FileCheck %s
+// RUN: mlir-opt %s --transform-interpreter | FileCheck %s
 
 /// This tests that shape casts of scalable vectors (with one trailing scalable dim)
 /// can be correctly lowered to vector.scalable.insert/extract.
@@ -203,12 +203,14 @@ func.func @cannot_shape_cast_more_than_one_scalable_dim(%arg0: vector<[4]x[4]xf3
   return %res: vector<2x[2]x[4]xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  %f = transform.structured.match ops{["func.func"]} in %module_op
-    : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %f = transform.structured.match ops{["func.func"]} in %module_op
+      : (!transform.any_op) -> !transform.any_op
 
-  transform.apply_patterns to %f {
-    transform.apply_patterns.vector.lower_shape_cast
-  } : !transform.any_op
+    transform.apply_patterns to %f {
+      transform.apply_patterns.vector.lower_shape_cast
+    } : !transform.any_op
+    transform.yield
+  }
 }

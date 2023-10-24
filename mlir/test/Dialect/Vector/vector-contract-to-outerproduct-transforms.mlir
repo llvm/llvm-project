@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --test-transform-dialect-interpreter --split-input-file | FileCheck %s
+// RUN: mlir-opt %s --transform-interpreter --split-input-file | FileCheck %s
 
 #matvec_accesses = [
   affine_map<(i, j) -> (i, j)>,
@@ -453,12 +453,14 @@ func.func @masked_tmatvec_k_km_m(%arg0: vector<2x4xf32>, %arg1: vector<2xf32>, %
 }
 
 
-transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  %f = transform.structured.match ops{["func.func"]} in %module_op 
-    : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %f = transform.structured.match ops{["func.func"]} in %module_op
+      : (!transform.any_op) -> !transform.any_op
 
-  transform.apply_patterns to %f {
-    transform.apply_patterns.vector.lower_contraction lowering_strategy = "outerproduct"
-  } : !transform.any_op
+    transform.apply_patterns to %f {
+      transform.apply_patterns.vector.lower_contraction lowering_strategy = "outerproduct"
+    } : !transform.any_op
+    transform.yield
+  }
 }

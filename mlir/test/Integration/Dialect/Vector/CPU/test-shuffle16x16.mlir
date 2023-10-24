@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s -convert-vector-to-scf -convert-scf-to-cf \
-// RUN:   -test-transform-dialect-interpreter \
+// RUN:   -transform-interpreter \
 // RUN:   -test-transform-dialect-erase-schedule \
 // RUN:   -convert-vector-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
@@ -29,10 +29,12 @@ func.func @entry() {
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%func_op: !transform.op<"func.func">):
-  transform.apply_patterns to %func_op {
-    transform.apply_patterns.vector.lower_transpose lowering_strategy = "shuffle_16x16"
-  } : !transform.op<"func.func">
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%func_op: !transform.op<"func.func"> {transform.readonly}) {
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.vector.lower_transpose lowering_strategy = "shuffle_16x16"
+    } : !transform.op<"func.func">
+    transform.yield
+  }
 }
 

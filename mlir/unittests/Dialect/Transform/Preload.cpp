@@ -74,19 +74,21 @@ TEST(Preload, ContextPreloadConstructedLibrary) {
   EXPECT_TRUE(retrievedTransformLibrary)
       << "failed to retrieve transform module";
 
+  OwningOpRef<Operation *> clonedTransformModule(
+      retrievedTransformLibrary->clone());
+
+  LogicalResult res = transform::detail::mergeSymbolsInto(
+      inputModule->getOperation(), std::move(clonedTransformModule));
+  EXPECT_TRUE(succeeded(res)) << "failed to define declared symbols";
+
   transform::TransformOpInterface entryPoint =
       transform::detail::findTransformEntryPoint(inputModule->getOperation(),
                                                  retrievedTransformLibrary);
   EXPECT_TRUE(entryPoint) << "failed to find entry point";
 
-  OwningOpRef<Operation *> clonedTransformModule(
-      retrievedTransformLibrary->clone());
-  LogicalResult res = transform::detail::mergeSymbolsInto(
-      inputModule->getOperation(), std::move(clonedTransformModule));
-  EXPECT_TRUE(succeeded(res)) << "failed to define declared symbols";
-
   transform::TransformOptions options;
   res = transform::applyTransformNamedSequence(
-      inputModule->getOperation(), retrievedTransformLibrary, options);
+      inputModule->getOperation(), entryPoint, retrievedTransformLibrary,
+      options);
   EXPECT_TRUE(succeeded(res)) << "failed to apply named sequence";
 }

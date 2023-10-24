@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s \
-// RUN:   -test-transform-dialect-interpreter \
+// RUN:   -transform-interpreter \
 // RUN:   -test-transform-dialect-erase-schedule \
 // RUN:   -lower-vector-mask \
 // RUN:   -one-shot-bufferize="bufferize-function-boundaries" \
@@ -109,10 +109,12 @@ func.func @entry() {
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.vectorize %0 vector_sizes [[4], [4]] : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [[4], [4]] : !transform.any_op
+    transform.yield
+  }
 }
 
 llvm.func @printCString(!llvm.ptr<i8>)
