@@ -45,7 +45,7 @@ using namespace llvm;
 // Support for StructLayout
 //===----------------------------------------------------------------------===//
 
-StructLayout::StructLayout(StructType *ST, const DataLayout &DL)
+StructLayout::StructLayout(const StructType *ST, const DataLayout &DL)
     : StructSize(TypeSize::Fixed(0)) {
   assert(!ST->isOpaque() && "Cannot get layout of opaque structs");
   IsPadded = false;
@@ -681,7 +681,7 @@ Align DataLayout::getIntegerAlignment(uint32_t BitWidth,
 namespace {
 
 class StructLayoutMap {
-  using LayoutInfoTy = DenseMap<StructType*, StructLayout*>;
+  using LayoutInfoTy = DenseMap<const StructType*, StructLayout*>;
   LayoutInfoTy LayoutInfo;
 
 public:
@@ -694,7 +694,7 @@ public:
     }
   }
 
-  StructLayout *&operator[](StructType *STy) {
+  StructLayout *&operator[](const StructType *STy) {
     return LayoutInfo[STy];
   }
 };
@@ -715,7 +715,7 @@ DataLayout::~DataLayout() {
   clear();
 }
 
-const StructLayout *DataLayout::getStructLayout(StructType *Ty) const {
+const StructLayout *DataLayout::getStructLayout(const StructType *Ty) const {
   if (!LayoutMap)
     LayoutMap = new StructLayoutMap();
 
@@ -758,7 +758,7 @@ unsigned DataLayout::getMaxIndexSize() const {
   return MaxIndexSize;
 }
 
-unsigned DataLayout::getPointerTypeSizeInBits(Type *Ty) const {
+unsigned DataLayout::getPointerTypeSizeInBits(const Type *Ty) const {
   assert(Ty->isPtrOrPtrVectorTy() &&
          "This should only be called with a pointer or pointer vector type");
   Ty = Ty->getScalarType();
@@ -769,7 +769,7 @@ unsigned DataLayout::getIndexSize(unsigned AS) const {
   return divideCeil(getPointerAlignElem(AS).IndexBitWidth, 8);
 }
 
-unsigned DataLayout::getIndexTypeSizeInBits(Type *Ty) const {
+unsigned DataLayout::getIndexTypeSizeInBits(const Type *Ty) const {
   assert(Ty->isPtrOrPtrVectorTy() &&
          "This should only be called with a pointer or pointer vector type");
   Ty = Ty->getScalarType();
@@ -784,7 +784,7 @@ unsigned DataLayout::getIndexTypeSizeInBits(Type *Ty) const {
   Get the ABI (\a abi_or_pref == true) or preferred alignment (\a abi_or_pref
   == false) for the requested type \a Ty.
  */
-Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
+Align DataLayout::getAlignment(const Type *Ty, bool abi_or_pref) const {
   assert(Ty->isSized() && "Cannot getTypeInfo() on a type that is unsized!");
   switch (Ty->getTypeID()) {
   // Early escape for the non-numeric types.
@@ -860,16 +860,16 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
   }
 }
 
-Align DataLayout::getABITypeAlign(Type *Ty) const {
+Align DataLayout::getABITypeAlign(const Type *Ty) const {
   return getAlignment(Ty, true);
 }
 
 /// TODO: Remove this function once the transition to Align is over.
-uint64_t DataLayout::getPrefTypeAlignment(Type *Ty) const {
+uint64_t DataLayout::getPrefTypeAlignment(const Type *Ty) const {
   return getPrefTypeAlign(Ty).value();
 }
 
-Align DataLayout::getPrefTypeAlign(Type *Ty) const {
+Align DataLayout::getPrefTypeAlign(const Type *Ty) const {
   return getAlignment(Ty, false);
 }
 
@@ -878,12 +878,12 @@ IntegerType *DataLayout::getIntPtrType(LLVMContext &C,
   return IntegerType::get(C, getPointerSizeInBits(AddressSpace));
 }
 
-Type *DataLayout::getIntPtrType(Type *Ty) const {
+Type *DataLayout::getIntPtrType(const Type *Ty) const {
   assert(Ty->isPtrOrPtrVectorTy() &&
          "Expected a pointer or pointer vector type.");
   unsigned NumBits = getPointerTypeSizeInBits(Ty);
   IntegerType *IntTy = IntegerType::get(Ty->getContext(), NumBits);
-  if (VectorType *VecTy = dyn_cast<VectorType>(Ty))
+  if (const VectorType *VecTy = dyn_cast<VectorType>(Ty))
     return VectorType::get(IntTy, VecTy);
   return IntTy;
 }
@@ -905,12 +905,12 @@ IntegerType *DataLayout::getIndexType(LLVMContext &C,
   return IntegerType::get(C, getIndexSizeInBits(AddressSpace));
 }
 
-Type *DataLayout::getIndexType(Type *Ty) const {
+Type *DataLayout::getIndexType(const Type *Ty) const {
   assert(Ty->isPtrOrPtrVectorTy() &&
          "Expected a pointer or pointer vector type.");
   unsigned NumBits = getIndexTypeSizeInBits(Ty);
   IntegerType *IntTy = IntegerType::get(Ty->getContext(), NumBits);
-  if (VectorType *VecTy = dyn_cast<VectorType>(Ty))
+  if (const VectorType *VecTy = dyn_cast<VectorType>(Ty))
     return VectorType::get(IntTy, VecTy);
   return IntTy;
 }

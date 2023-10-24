@@ -179,7 +179,7 @@ private:
   Align getIntegerAlignment(uint32_t BitWidth, bool abi_or_pref) const;
 
   /// Internal helper method that returns requested alignment for type.
-  Align getAlignment(Type *Ty, bool abi_or_pref) const;
+  Align getAlignment(const Type *Ty, bool abi_or_pref) const;
 
   /// Attempts to parse a target data specification string and reports an error
   /// if the string is malformed.
@@ -395,11 +395,11 @@ public:
     return is_contained(NonIntegralSpaces, AddrSpace);
   }
 
-  bool isNonIntegralPointerType(PointerType *PT) const {
+  bool isNonIntegralPointerType(const PointerType *PT) const {
     return isNonIntegralAddressSpace(PT->getAddressSpace());
   }
 
-  bool isNonIntegralPointerType(Type *Ty) const {
+  bool isNonIntegralPointerType(const Type *Ty) const {
     auto *PTy = dyn_cast<PointerType>(Ty);
     return PTy && isNonIntegralPointerType(PTy);
   }
@@ -426,13 +426,13 @@ public:
   /// If this function is called with a vector of pointers, then the type size
   /// of the pointer is returned.  This should only be called with a pointer or
   /// vector of pointers.
-  unsigned getPointerTypeSizeInBits(Type *) const;
+  unsigned getPointerTypeSizeInBits(const Type *) const;
 
   /// Layout size of the index used in GEP calculation.
   /// The function should be called with pointer or vector of pointers type.
-  unsigned getIndexTypeSizeInBits(Type *Ty) const;
+  unsigned getIndexTypeSizeInBits(const Type *Ty) const;
 
-  unsigned getPointerTypeSize(Type *Ty) const {
+  unsigned getPointerTypeSize(const Type *Ty) const {
     return getPointerTypeSizeInBits(Ty) / 8;
   }
 
@@ -460,7 +460,7 @@ public:
   ///
   /// For example, returns 36 for i36 and 80 for x86_fp80. The type passed must
   /// have a size (Type::isSized() must return true).
-  TypeSize getTypeSizeInBits(Type *Ty) const;
+  TypeSize getTypeSizeInBits(const Type *Ty) const;
 
   /// Returns the maximum number of bytes that may be overwritten by
   /// storing the specified type.
@@ -469,7 +469,7 @@ public:
   /// the runtime size will be a positive integer multiple of the base size.
   ///
   /// For example, returns 5 for i36 and 10 for x86_fp80.
-  TypeSize getTypeStoreSize(Type *Ty) const {
+  TypeSize getTypeStoreSize(const Type *Ty) const {
     TypeSize BaseSize = getTypeSizeInBits(Ty);
     return {divideCeil(BaseSize.getKnownMinValue(), 8), BaseSize.isScalable()};
   }
@@ -481,7 +481,7 @@ public:
   /// the runtime size will be a positive integer multiple of the base size.
   ///
   /// For example, returns 40 for i36 and 80 for x86_fp80.
-  TypeSize getTypeStoreSizeInBits(Type *Ty) const {
+  TypeSize getTypeStoreSizeInBits(const Type *Ty) const {
     return 8 * getTypeStoreSize(Ty);
   }
 
@@ -489,7 +489,7 @@ public:
   /// specified type.
   ///
   /// For example, returns false for i19 that has a 24-bit store size.
-  bool typeSizeEqualsStoreSize(Type *Ty) const {
+  bool typeSizeEqualsStoreSize(const Type *Ty) const {
     return getTypeSizeInBits(Ty) == getTypeStoreSizeInBits(Ty);
   }
 
@@ -501,7 +501,7 @@ public:
   ///
   /// This is the amount that alloca reserves for this type. For example,
   /// returns 12 or 16 for x86_fp80, depending on alignment.
-  TypeSize getTypeAllocSize(Type *Ty) const {
+  TypeSize getTypeAllocSize(const Type *Ty) const {
     // Round up to the next alignment boundary.
     return alignTo(getTypeStoreSize(Ty), getABITypeAlign(Ty).value());
   }
@@ -514,17 +514,17 @@ public:
   ///
   /// This is the amount that alloca reserves for this type. For example,
   /// returns 96 or 128 for x86_fp80, depending on alignment.
-  TypeSize getTypeAllocSizeInBits(Type *Ty) const {
+  TypeSize getTypeAllocSizeInBits(const Type *Ty) const {
     return 8 * getTypeAllocSize(Ty);
   }
 
   /// Returns the minimum ABI-required alignment for the specified type.
-  Align getABITypeAlign(Type *Ty) const;
+  Align getABITypeAlign(const Type *Ty) const;
 
   /// Helper function to return `Alignment` if it's set or the result of
   /// `getABITypeAlign(Ty)`, in any case the result is a valid alignment.
   inline Align getValueOrABITypeAlignment(MaybeAlign Alignment,
-                                          Type *Ty) const {
+                                          const Type *Ty) const {
     return Alignment ? *Alignment : getABITypeAlign(Ty);
   }
 
@@ -540,13 +540,13 @@ public:
   /// This is always at least as good as the ABI alignment.
   /// FIXME: Deprecate this function once migration to Align is over.
   LLVM_DEPRECATED("use getPrefTypeAlign instead", "getPrefTypeAlign")
-  uint64_t getPrefTypeAlignment(Type *Ty) const;
+  uint64_t getPrefTypeAlignment(const Type *Ty) const;
 
   /// Returns the preferred stack/global alignment for the specified
   /// type.
   ///
   /// This is always at least as good as the ABI alignment.
-  Align getPrefTypeAlign(Type *Ty) const;
+  Align getPrefTypeAlign(const Type *Ty) const;
 
   /// Returns an integer type with size at least as big as that of a
   /// pointer in the given address space.
@@ -554,7 +554,7 @@ public:
 
   /// Returns an integer (vector of integer) type with size at least as
   /// big as that of a pointer of the given pointer (vector of pointer) type.
-  Type *getIntPtrType(Type *) const;
+  Type *getIntPtrType(const Type *) const;
 
   /// Returns the smallest integer type with size at least as big as
   /// Width bits.
@@ -578,7 +578,7 @@ public:
   /// Returns the type of a GEP index.
   /// If it was not specified explicitly, it will be the integer type of the
   /// pointer width - IntPtrType.
-  Type *getIndexType(Type *PtrTy) const;
+  Type *getIndexType(const Type *PtrTy) const;
 
   /// Returns the offset from the beginning of the type for the specified
   /// indices.
@@ -601,7 +601,7 @@ public:
   /// struct, its size, and the offsets of its fields.
   ///
   /// Note that this information is lazily cached.
-  const StructLayout *getStructLayout(StructType *Ty) const;
+  const StructLayout *getStructLayout(const StructType *Ty) const;
 
   /// Returns the preferred alignment of the specified global.
   ///
@@ -660,7 +660,7 @@ public:
 private:
   friend class DataLayout; // Only DataLayout can create this class
 
-  StructLayout(StructType *ST, const DataLayout &DL);
+  StructLayout(const StructType *ST, const DataLayout &DL);
 
   size_t numTrailingObjects(OverloadToken<TypeSize>) const {
     return NumElements;
@@ -669,7 +669,7 @@ private:
 
 // The implementation of this method is provided inline as it is particularly
 // well suited to constant folding when called on a specific Type subclass.
-inline TypeSize DataLayout::getTypeSizeInBits(Type *Ty) const {
+inline TypeSize DataLayout::getTypeSizeInBits(const Type *Ty) const {
   assert(Ty->isSized() && "Cannot getTypeInfo() on a type that is unsized!");
   switch (Ty->getTypeID()) {
   case Type::LabelTyID:
@@ -677,7 +677,7 @@ inline TypeSize DataLayout::getTypeSizeInBits(Type *Ty) const {
   case Type::PointerTyID:
     return TypeSize::Fixed(getPointerSizeInBits(Ty->getPointerAddressSpace()));
   case Type::ArrayTyID: {
-    ArrayType *ATy = cast<ArrayType>(Ty);
+    const ArrayType *ATy = cast<ArrayType>(Ty);
     return ATy->getNumElements() *
            getTypeAllocSizeInBits(ATy->getElementType());
   }
@@ -705,7 +705,7 @@ inline TypeSize DataLayout::getTypeSizeInBits(Type *Ty) const {
     return TypeSize::Fixed(80);
   case Type::FixedVectorTyID:
   case Type::ScalableVectorTyID: {
-    VectorType *VTy = cast<VectorType>(Ty);
+    const VectorType *VTy = cast<VectorType>(Ty);
     auto EltCnt = VTy->getElementCount();
     uint64_t MinBits = EltCnt.getKnownMinValue() *
                        getTypeSizeInBits(VTy->getElementType()).getFixedValue();
