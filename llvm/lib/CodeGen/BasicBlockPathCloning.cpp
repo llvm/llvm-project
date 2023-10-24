@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// BasicBlockPathCloning implementation.
-//
-// The purpose of this pass is to clone basic block paths based on information
-// provided by the -fbasic-block-sections=list option.
-// Please refer to BasicBlockSectionsProfileReader.cpp to see a path cloning
-// example.
-//
-// ====================
+/// \file
+/// BasicBlockPathCloning implementation.
+///
+/// The purpose of this pass is to clone basic block paths based on information
+/// provided by the -fbasic-block-sections=list option.
+/// Please refer to BasicBlockSectionsProfileReader.cpp to see a path cloning
+/// example.
+//===----------------------------------------------------------------------===//
 // This pass clones the machine basic blocks alongs the given paths and sets up
 // the CFG. It assigns BBIDs to the cloned blocks so that the
 // `BasicBlockSections` pass can correctly map the cluster information to the
