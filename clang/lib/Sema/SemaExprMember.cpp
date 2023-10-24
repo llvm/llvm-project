@@ -1693,8 +1693,8 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
     QualType VectorTy = S.Context.getExtVectorType(BaseType, 1);
     BaseExpr = S.ImpCastExprToType(BaseExpr.get(), VectorTy, CK_VectorSplat,
                                    BaseExpr.get()->getValueKind());
-    return LookupMemberExpr(S, R, BaseExpr, IsArrow, OpLoc, SS,
-                                ObjCImpDecl, HasTemplateArgs, TemplateKWLoc);
+    return LookupMemberExpr(S, R, BaseExpr, IsArrow, OpLoc, SS, ObjCImpDecl,
+                            HasTemplateArgs, TemplateKWLoc);
   }
 
   S.Diag(OpLoc, diag::err_typecheck_member_reference_struct_union)
