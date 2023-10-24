@@ -50,6 +50,7 @@ namespace lldb_private {
   class ClangASTImporter;
   class SwiftASTContext;
 }
+
 namespace lldb_private::plugin {
 namespace dwarf {
 // Forward Declarations for this DWARF plugin

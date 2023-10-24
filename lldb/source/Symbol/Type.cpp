@@ -614,6 +614,10 @@ uint32_t Type::GetEncodingMask() {
   return encoding_mask;
 }
 
+std::vector<lldb_private::CompilerContext> Type::GetDeclContext() const {
+  return m_symbol_file->GetCompilerContextForUID(GetID());
+}
+
 CompilerType Type::GetFullCompilerType() {
   ResolveCompilerType(ResolveState::Full);
   return m_compiler_type;

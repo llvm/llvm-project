@@ -8045,7 +8045,7 @@ void SwiftASTContext::DumpTypeDescription(opaque_compiler_type_t type,
     s->Printf("<could not resolve type>");
 }
 
-DWARFASTParser *SwiftASTContext::GetDWARFParser() {
+plugin::dwarf::DWARFASTParser *SwiftASTContext::GetDWARFParser() {
   return GetTypeSystemSwiftTypeRef().GetDWARFParser();
 }
 

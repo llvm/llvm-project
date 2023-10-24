@@ -22,6 +22,7 @@
 #include "lldb/Utility/StructuredData.h"
 
 class DWARFASTParserClang;
+class DWARFASTParserSwift;
 
 namespace lldb_private::plugin {
 namespace dwarf {
