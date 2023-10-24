@@ -12,6 +12,7 @@
 
 // test [[no_unique_address]] is applied to the union
 
+#include <__type_traits/datasizeof.h>
 #include <expected>
 #include <optional>
 #include <memory>
