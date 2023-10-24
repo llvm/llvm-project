@@ -40,7 +40,8 @@ using namespace lldb_private::dwarf;
 
 DWARFASTParserSwift::DWARFASTParserSwift(
     TypeSystemSwiftTypeRef &swift_typesystem)
-    : m_swift_typesystem(swift_typesystem) {}
+    : DWARFASTParser(Kind::DWARFASTParserSwift),
+      m_swift_typesystem(swift_typesystem) {}
 
 DWARFASTParserSwift::~DWARFASTParserSwift() {}
 
