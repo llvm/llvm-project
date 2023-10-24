@@ -117,10 +117,10 @@ static llvm::Value *createAtomicCmpXchg(llvm::IRBuilderBase &builder,
 
   std::string fnName = "_Z12atom_cmpxchgPU";
   switch (addrSpace) {
-  case mlir::GENX::GENXDialect::kGlobalMemoryAddressSpace:
+  case mlir::GENX::GENXMemorySpace::kCrossWorkgroup:
     fnName += "8CLglobal";
     break;
-  case mlir::GENX::GENXDialect::kSharedMemoryAddressSpace:
+  case mlir::GENX::GENXMemorySpace::kWorkgroup:
     fnName += "7CLlocal";
     break;
   default:
@@ -179,10 +179,10 @@ static llvm::Value *createAtomicRMW(llvm::IRBuilderBase &builder,
   }
 
   switch (addrSpace) {
-  case mlir::GENX::GENXDialect::kGlobalMemoryAddressSpace:
+  case mlir::GENX::GENXMemorySpace::kCrossWorkgroup:
     fnName += "8CLglobal";
     break;
-  case mlir::GENX::GENXDialect::kSharedMemoryAddressSpace:
+  case mlir::GENX::GENXMemorySpace::kWorkgroup:
     fnName += "7CLlocal";
     break;
   default:
