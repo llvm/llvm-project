@@ -33,6 +33,15 @@ jobs:
     name: "Test documentation build"
     runs-on: ubuntu-latest
     steps:
+      # Don't fetch before checking for file changes to force the file changes
+      # action to use the Github API in pull requests. If it's a push to a
+      # branch we can't use the Github API to get the diff, so we need to have
+      # a local checkout beforehand.
+      - name: Fetch LLVM sources (Push)
+        if: ${{ github.event_name == 'push' }}
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
       - name: Get subprojects that have doc changes
         id: docs-changed-subprojects
         uses: tj-actions/changed-files@v39
@@ -50,7 +59,8 @@ jobs:
               - 'libunwind/docs/**'
             libcxx:
               - 'libcxx/docs/**'
-      - name: Fetch LLVM sources
+      - name: Fetch LLVM sources (PR)
+        if: ${{ github.event_name == 'pull_request' }}
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
