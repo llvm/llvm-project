@@ -1056,7 +1056,7 @@ static bool areAllOperandsNonInsts(Value *V) {
 /// require scheduling if this is not an instruction or it is an instruction
 /// that does not read/write memory and all users are phi nodes or instructions
 /// from the different blocks.
-static bool isUsedOutsideBlock(Value *V) {
+static bool isOnlyUsedOutsideBlock(Value *V) {
   auto *I = dyn_cast<Instruction>(V);
   if (!I)
     return true;
@@ -1075,7 +1075,7 @@ static bool isUsedOutsideBlock(Value *V) {
 /// require scheduling if all operands and all users do not need to be scheduled
 /// in the current basic block.
 static bool doesNotNeedToBeScheduled(Value *V) {
-  return areAllOperandsNonInsts(V) && isUsedOutsideBlock(V);
+  return areAllOperandsNonInsts(V) && isOnlyUsedOutsideBlock(V);
 }
 
 /// Checks if the specified array of instructions does not require scheduling.
@@ -9517,7 +9517,7 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
                   return !isa<GetElementPtrInst>(V) && isa<Instruction>(V);
                 })) ||
         all_of(E->Scalars, [](Value *V) {
-          return !isVectorLikeInstWithConstOps(V) && isUsedOutsideBlock(V);
+          return !isVectorLikeInstWithConstOps(V) && isOnlyUsedOutsideBlock(V);
         }))
       Res.second = FindLastInst();
     else
