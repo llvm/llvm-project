@@ -168,14 +168,6 @@ std::optional<StringRef> AttrOrTypeDef::getMnemonic() const {
   return def->getValueAsOptionalString("mnemonic");
 }
 
-StringRef AttrOrTypeDef::getAttrName() const {
-  return def->getValueAsString("attrName");
-}
-
-StringRef AttrOrTypeDef::getTypeName() const {
-  return def->getValueAsString("typeName");
-}
-
 bool AttrOrTypeDef::hasCustomAssemblyFormat() const {
   return def->getValueAsBit("hasCustomAssemblyFormat");
 }
@@ -226,6 +218,22 @@ std::optional<StringRef> AttrDef::getTypeBuilder() const {
 
 bool AttrDef::classof(const AttrOrTypeDef *def) {
   return def->getDef()->isSubClassOf("AttrDef");
+}
+
+StringRef AttrDef::getAttrName() const {
+  return def->getValueAsString("attrName");
+}
+
+//===----------------------------------------------------------------------===//
+// TypeDef
+//===----------------------------------------------------------------------===//
+
+bool TypeDef::classof(const AttrOrTypeDef *def) {
+  return def->getDef()->isSubClassOf("TypeDef");
+}
+
+StringRef TypeDef::getTypeName() const {
+  return def->getValueAsString("typeName");
 }
 
 //===----------------------------------------------------------------------===//

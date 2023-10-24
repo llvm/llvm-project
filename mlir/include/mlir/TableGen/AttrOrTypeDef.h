@@ -184,12 +184,6 @@ public:
   /// supposed to auto-generate them.
   std::optional<StringRef> getMnemonic() const;
 
-  /// Get the type name.
-  StringRef getTypeName() const;
-
-  /// Get the attribute name.
-  StringRef getAttrName() const;
-
   /// Returns if the attribute or type has a custom assembly format implemented
   /// in C++. Corresponds to the `hasCustomAssemblyFormat` field.
   bool hasCustomAssemblyFormat() const;
@@ -263,6 +257,9 @@ public:
   std::optional<StringRef> getTypeBuilder() const;
 
   static bool classof(const AttrOrTypeDef *def);
+
+  /// Get the unique attribute name "dialect.attrname".
+  StringRef getAttrName() const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -273,6 +270,11 @@ public:
 class TypeDef : public AttrOrTypeDef {
 public:
   using AttrOrTypeDef::AttrOrTypeDef;
+
+  static bool classof(const AttrOrTypeDef *def);
+
+  /// Get the unique type name "dialect.typename".
+  StringRef getTypeName() const;
 };
 
 } // namespace tblgen

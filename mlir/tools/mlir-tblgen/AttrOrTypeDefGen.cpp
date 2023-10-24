@@ -271,8 +271,14 @@ void DefGen::emitTopLevelDeclarations() {
 void DefGen::emitName() {
   auto *mnemonic = defCls.addStaticMethod<Method::Constexpr>(
       "::llvm::StringLiteral", "get" + defType + "Name");
-  StringRef name = defType == "Type" ? def.getTypeName() : def.getAttrName();
-  mnemonic->body().indent() << strfmt("return \"{0}\";", name);
+  if (auto *attrDef = dyn_cast<AttrDef>(&def)) {
+    mnemonic->body().indent()
+        << strfmt("return \"{0}\";", attrDef->getAttrName());
+    return;
+  }
+  auto *typeDef = cast<TypeDef>(&def);
+  mnemonic->body().indent()
+      << strfmt("return \"{0}\";", typeDef->getTypeName());
 }
 
 void DefGen::emitBuilders() {
