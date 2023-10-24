@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // TODO: Investigate
-// XFAIL: target={{.+}}-windows-{{.+}}
+// XFAIL: msvc
 
 // Test that we encode whether exceptions are supported in an ABI tag to avoid
 // ODR violations when linking TUs that have different values for it.
