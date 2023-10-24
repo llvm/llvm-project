@@ -24,7 +24,7 @@ Function::Function(Program &P, const FunctionDecl *F, unsigned ArgSize,
     : P(P), Loc(F->getBeginLoc()), F(F), ArgSize(ArgSize),
       ParamTypes(std::move(ParamTypes)), Params(std::move(Params)),
       ParamOffsets(std::move(ParamOffsets)), HasThisPointer(HasThisPointer),
-      HasRVO(HasRVO) {}
+      HasRVO(HasRVO), Variadic(F->isVariadic()) {}
 
 Function::ParamDescriptor Function::getParamDescriptor(unsigned Offset) const {
   auto It = Params.find(Offset);
