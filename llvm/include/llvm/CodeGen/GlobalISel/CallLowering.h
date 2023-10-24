@@ -274,16 +274,16 @@ public:
     /// location. Load or store it there, with appropriate extension
     /// if necessary.
     virtual void assignValueToAddress(Register ValVReg, Register Addr,
-                                      LLT MemTy, MachinePointerInfo &MPO,
-                                      CCValAssign &VA) = 0;
+                                      LLT MemTy, const MachinePointerInfo &MPO,
+                                      const CCValAssign &VA) = 0;
 
     /// An overload which takes an ArgInfo if additional information about the
     /// arg is needed. \p ValRegIndex is the index in \p Arg.Regs for the value
     /// to store.
     virtual void assignValueToAddress(const ArgInfo &Arg, unsigned ValRegIndex,
                                       Register Addr, LLT MemTy,
-                                      MachinePointerInfo &MPO,
-                                      CCValAssign &VA) {
+                                      const MachinePointerInfo &MPO,
+                                      const CCValAssign &VA) {
       assignValueToAddress(Arg.Regs[ValRegIndex], Addr, MemTy, MPO, VA);
     }
 
@@ -311,7 +311,7 @@ public:
 
     /// Extend a register to the location type given in VA, capped at extending
     /// to at most MaxSize bits. If MaxSizeBits is 0 then no maximum is set.
-    Register extendRegister(Register ValReg, CCValAssign &VA,
+    Register extendRegister(Register ValReg, const CCValAssign &VA,
                             unsigned MaxSizeBits = 0);
   };
 
