@@ -1650,7 +1650,7 @@ public:
     DumpInfo(SMLoc Loc, Init *Message) : Loc(Loc), Message(Message) {}
   };
 
-  enum RecordKind { RK_Normal, RK_Anonymous, RK_Class, RK_MultiClass };
+  enum RecordKind { RK_Def, RK_AnonymousDef, RK_Class, RK_MultiClass };
 
 private:
   Init *Name;
@@ -1685,14 +1685,14 @@ private:
 public:
   // Constructs a record.
   explicit Record(Init *N, ArrayRef<SMLoc> locs, RecordKeeper &records,
-                  RecordKind Kind = RK_Normal)
+                  RecordKind Kind = RK_Def)
       : Name(N), Locs(locs.begin(), locs.end()), TrackedRecords(records),
         ID(getNewUID(N->getRecordKeeper())), Kind(Kind) {
     checkName();
   }
 
   explicit Record(StringRef N, ArrayRef<SMLoc> locs, RecordKeeper &records,
-                  RecordKind Kind = RK_Normal)
+                  RecordKind Kind = RK_Def)
       : Record(StringInit::get(records, N), locs, records, Kind) {}
 
   // When copy-constructing a Record, we must still guarantee a globally unique
@@ -1746,7 +1746,7 @@ public:
 
   bool isMultiClass() const { return Kind == RK_MultiClass; }
 
-  bool isAnonymous() const { return Kind == RK_Anonymous; }
+  bool isAnonymous() const { return Kind == RK_AnonymousDef; }
 
   ArrayRef<Init *> getTemplateArgs() const {
     return TemplateArgs;

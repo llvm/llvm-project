@@ -85,7 +85,7 @@ struct MultiClass {
   void dump() const;
 
   MultiClass(StringRef Name, SMLoc Loc, RecordKeeper &Records)
-      : Rec(Name, Loc, Records, /*Kind=*/Record::RK_MultiClass) {}
+      : Rec(Name, Loc, Records, Record::RK_MultiClass) {}
 };
 
 class TGVarScope {

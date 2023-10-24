@@ -3608,9 +3608,8 @@ bool TGParser::ParseDef(MultiClass *CurMultiClass) {
     return true;
 
   if (isa<UnsetInit>(Name)) {
-    CurRec =
-        std::make_unique<Record>(Records.getNewAnonymousName(), DefLoc, Records,
-                                 /*Kind=*/Record::RK_Anonymous);
+    CurRec = std::make_unique<Record>(Records.getNewAnonymousName(), DefLoc,
+                                      Records, Record::RK_AnonymousDef);
   } else {
     CurRec = std::make_unique<Record>(Name, NameLoc, Records);
   }
@@ -3928,9 +3927,8 @@ bool TGParser::ParseClass() {
     CurRec->updateClassLoc(Lex.getLoc());
   } else {
     // If this is the first reference to this class, create and add it.
-    auto NewRec =
-        std::make_unique<Record>(Lex.getCurStrVal(), Lex.getLoc(), Records,
-                                 /*Kind=*/Record::RK_Class);
+    auto NewRec = std::make_unique<Record>(Lex.getCurStrVal(), Lex.getLoc(),
+                                           Records, Record::RK_Class);
     CurRec = NewRec.get();
     Records.addClass(std::move(NewRec));
   }
