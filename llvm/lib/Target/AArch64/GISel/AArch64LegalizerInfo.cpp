@@ -14,6 +14,7 @@
 #include "AArch64LegalizerInfo.h"
 #include "AArch64RegisterBankInfo.h"
 #include "AArch64Subtarget.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
@@ -65,6 +66,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                                                         /* End 128bit types */
                                                         /* Begin 64bit types */
                                                         v8s8, v4s16, v2s32};
+  std::initializer_list<LLT> ScalarAndPtrTypesList = {s8, s16, s32, s64, p0};
+  SmallVector<LLT, 8> PackedVectorAllTypesVec(PackedVectorAllTypeList);
+  SmallVector<LLT, 8> ScalarAndPtrTypesVec(ScalarAndPtrTypesList);
 
   const TargetMachine &TM = ST.getTargetLowering()->getTargetMachine();
 
@@ -412,6 +416,50 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .lowerIfMemSizeNotPow2()
       .customIf(IsPtrVecPred)
       .scalarizeIf(typeIs(0, v2s16), 0);
+
+  getActionDefinitionsBuilder(G_INDEXED_STORE)
+      // Idx 0 == Ptr, Idx 1 == Val
+      // TODO: we can implement legalizations but as of now these are
+      // generated in a very specific way.
+      .legalForTypesWithMemDesc({
+          {p0, s8, s8, 8},
+          {p0, s16, s16, 8},
+          {p0, s32, s8, 8},
+          {p0, s32, s16, 8},
+          {p0, s32, s32, 8},
+          {p0, s64, s64, 8},
+          {p0, p0, p0, 8},
+          {p0, v8s8, v8s8, 8},
+          {p0, v16s8, v16s8, 8},
+          {p0, v4s16, v4s16, 8},
+          {p0, v8s16, v8s16, 8},
+          {p0, v2s32, v2s32, 8},
+          {p0, v4s32, v4s32, 8},
+          {p0, v2s64, v2s64, 8},
+          {p0, v2p0, v2p0, 8},
+          {p0, s128, s128, 8},
+      })
+      .unsupported();
+
+  auto IndexedLoadBasicPred = [=](const LegalityQuery &Query) {
+    LLT LdTy = Query.Types[0];
+    LLT PtrTy = Query.Types[1];
+    if (llvm::find(PackedVectorAllTypesVec, LdTy) ==
+            PackedVectorAllTypesVec.end() &&
+        llvm::find(ScalarAndPtrTypesVec, LdTy) == ScalarAndPtrTypesVec.end() &&
+        LdTy != s128)
+      return false;
+    if (PtrTy != p0)
+      return false;
+    return true;
+  };
+  getActionDefinitionsBuilder(G_INDEXED_LOAD)
+      .unsupportedIf(
+          atomicOrderingAtLeastOrStrongerThan(0, AtomicOrdering::Unordered))
+      .legalIf(IndexedLoadBasicPred)
+      .unsupported();
+  getActionDefinitionsBuilder({G_INDEXED_SEXTLOAD, G_INDEXED_ZEXTLOAD})
+      .unsupported(); // TODO: implement
 
   // Constants
   getActionDefinitionsBuilder(G_CONSTANT)
