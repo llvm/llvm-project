@@ -1027,7 +1027,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
   // will be identical to the I itself (if the I's operate on their BDVs
   // themselves). We should expoit this, but can't do it here since it would
   // break the invariant about the BDVs not being known to be a base.
-  // TODO: the code also does not handle constants at all - the algithm relies
+  // TODO: the code also does not handle constants at all - the algorithm relies
   // on all constants having the same BDV and therefore constant-only insns
   // will never be in conflict, but this check is ignored here. If the
   // constant conflicts will be to BDVs themselves, they will be identical
