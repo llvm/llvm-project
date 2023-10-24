@@ -268,7 +268,7 @@ public:
     /// handle the appropriate COPY (either to or from) and mark any
     /// relevant uses/defines as needed.
     virtual void assignValueToReg(Register ValVReg, Register PhysReg,
-                                  CCValAssign VA) = 0;
+                                  const CCValAssign &VA) = 0;
 
     /// The specified value has been assigned to a stack
     /// location. Load or store it there, with appropriate extension
@@ -323,11 +323,12 @@ public:
 
     /// Insert G_ASSERT_ZEXT/G_ASSERT_SEXT or other hint instruction based on \p
     /// VA, returning the new register if a hint was inserted.
-    Register buildExtensionHint(CCValAssign &VA, Register SrcReg, LLT NarrowTy);
+    Register buildExtensionHint(const CCValAssign &VA, Register SrcReg,
+                                LLT NarrowTy);
 
     /// Provides a default implementation for argument handling.
     void assignValueToReg(Register ValVReg, Register PhysReg,
-                          CCValAssign VA) override;
+                          const CCValAssign &VA) override;
   };
 
   /// Base class for ValueHandlers used for arguments passed to a function call,
