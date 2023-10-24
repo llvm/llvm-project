@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Target/RegisterFlags.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
 #include <numeric>

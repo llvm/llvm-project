@@ -9,10 +9,15 @@
 #ifndef LLDB_TARGET_REGISTERFLAGS_H
 #define LLDB_TARGET_REGISTERFLAGS_H
 
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/StreamString.h"
+#include <cassert>
+#include <stdint.h>
+#include <string>
+#include <vector>
 
 namespace lldb_private {
+
+class StreamString;
+class Log;
 
 class RegisterFlags {
 public:
