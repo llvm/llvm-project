@@ -3119,9 +3119,8 @@ GDBRemoteCommunicationServerLLGS::BuildTargetXml() {
     if (!format.empty())
       response << "format=\"" << format << "\" ";
 
-    if (reg_info->flags_type) {
+    if (reg_info->flags_type)
       response << "type=\"" << reg_info->flags_type->GetID() << "\" ";
-    }
 
     const char *const register_set_name =
         reg_context.GetRegisterSetNameForRegisterAtIndex(reg_index);
