@@ -338,13 +338,12 @@ static bool areCompatibleVTYPEs(uint64_t CurVType, uint64_t NewVType,
 
 /// Return the fields and properties demanded by the provided instruction.
 DemandedFields getDemanded(const MachineInstr &MI,
-                           const MachineRegisterInfo *MRI) {
+                           const MachineRegisterInfo *MRI,
+                           const RISCVSubtarget *ST) {
   // Warning: This function has to work on both the lowered (i.e. post
   // emitVSETVLIs) and pre-lowering forms.  The main implication of this is
   // that it can't use the value of a SEW, VL, or Policy operand as they might
   // be stale after lowering.
-  bool HasVInstructionsF64 =
-      MI.getMF()->getSubtarget<RISCVSubtarget>().hasVInstructionsF64();
 
   // Most instructions don't use any of these subfeilds.
   DemandedFields Res;
@@ -403,7 +402,7 @@ DemandedFields getDemanded(const MachineInstr &MI,
     // tail lanes to either be the original value or -1.  We are writing
     // unknown bits to the lanes here.
     if (hasUndefinedMergeOp(MI, *MRI)) {
-      if (isFloatScalarMoveOrScalarSplatInstr(MI) && !HasVInstructionsF64)
+      if (isFloatScalarMoveOrScalarSplatInstr(MI) && !ST->hasVInstructionsF64())
         Res.SEW = DemandedFields::SEWGreaterThanOrEqualAndLessThan64;
       else
         Res.SEW = DemandedFields::SEWGreaterThanOrEqual;
@@ -720,6 +719,7 @@ struct BlockData {
 };
 
 class RISCVInsertVSETVLI : public MachineFunctionPass {
+  const RISCVSubtarget *ST;
   const TargetInstrInfo *TII;
   MachineRegisterInfo *MRI;
 
@@ -958,9 +958,7 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
   if (!CurInfo.isValid() || CurInfo.isUnknown() || CurInfo.hasSEWLMULRatioOnly())
     return true;
 
-  DemandedFields Used = getDemanded(MI, MRI);
-  bool HasVInstructionsF64 =
-      MI.getMF()->getSubtarget<RISCVSubtarget>().hasVInstructionsF64();
+  DemandedFields Used = getDemanded(MI, MRI, ST);
 
   // A slidedown/slideup with an *undefined* merge op can freely clobber
   // elements not copied from the source vector (e.g. masked off, tail, or
@@ -988,7 +986,7 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
     Used.LMUL = false;
     Used.SEWLMULRatio = false;
     Used.VLAny = false;
-    if (isFloatScalarMoveOrScalarSplatInstr(MI) && !HasVInstructionsF64)
+    if (isFloatScalarMoveOrScalarSplatInstr(MI) && !ST->hasVInstructionsF64())
       Used.SEW = DemandedFields::SEWGreaterThanOrEqualAndLessThan64;
     else
       Used.SEW = DemandedFields::SEWGreaterThanOrEqual;
@@ -1329,9 +1327,6 @@ static bool willVLBeAVL(const VSETVLIInfo &Info, const RISCVSubtarget &ST) {
 /// this is geared to catch the common case of a fixed length vsetvl in a single
 /// block loop when it could execute once in the preheader instead.
 void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
-  const MachineFunction &MF = *MBB.getParent();
-  const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
-
   if (!BlockInfo[MBB.getNumber()].Pred.isUnknown())
     return;
 
@@ -1360,7 +1355,7 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
     return;
 
   // If VL can be less than AVL, then we can't reduce the frequency of exec.
-  if (!willVLBeAVL(AvailableInfo, ST))
+  if (!willVLBeAVL(AvailableInfo, *ST))
     return;
 
   // Model the effect of changing the input state of the block MBB to
@@ -1476,7 +1471,7 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
   for (MachineInstr &MI : make_range(MBB.rbegin(), MBB.rend())) {
 
     if (!isVectorConfigInstr(MI)) {
-      doUnion(Used, getDemanded(MI, MRI));
+      doUnion(Used, getDemanded(MI, MRI, ST));
       continue;
     }
 
@@ -1506,7 +1501,7 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
       }
     }
     NextMI = &MI;
-    Used = getDemanded(MI, MRI);
+    Used = getDemanded(MI, MRI, ST);
   }
 
   for (auto *MI : ToDelete)
@@ -1529,13 +1524,13 @@ void RISCVInsertVSETVLI::insertReadVL(MachineBasicBlock &MBB) {
 
 bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
   // Skip if the vector extension is not enabled.
-  const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
-  if (!ST.hasVInstructions())
+  ST = &MF.getSubtarget<RISCVSubtarget>();
+  if (!ST->hasVInstructions())
     return false;
 
   LLVM_DEBUG(dbgs() << "Entering InsertVSETVLI for " << MF.getName() << "\n");
 
-  TII = ST.getInstrInfo();
+  TII = ST->getInstrInfo();
   MRI = &MF.getRegInfo();
 
   assert(BlockInfo.empty() && "Expect empty block infos");
