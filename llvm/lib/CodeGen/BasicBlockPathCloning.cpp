@@ -61,7 +61,7 @@ MachineBasicBlock *CloneMachineBasicBlock(MachineBasicBlock &OrigBB,
 
   // Copy the instructions.
   for (auto &I : OrigBB.instrs())
-    CloneBB->push_back(MF.CloneMachineInstr(&I));
+    TII->duplicate(*CloneBB, CloneBB->end(), I);
 
   // Add the successors of the original block as the new block's successors.
   // We set the predecessor after returning from this call.
@@ -94,12 +94,27 @@ bool IsValidCloning(const MachineFunction &MF,
       return false;
     }
 
-    if (PrevBB && !PrevBB->isSuccessor(PathBB)) {
-      WithColor::warning() << "block #" << BBID
-                           << " is not a successor of block #"
-                           << PrevBB->getBBID()->BaseID << " in function "
-                           << MF.getName() << "\n";
-      return false;
+    if (PrevBB) {
+      if (!PrevBB->isSuccessor(PathBB)) {
+        WithColor::warning()
+            << "block #" << BBID << " is not a successor of block #"
+            << PrevBB->getBBID()->BaseID << " in function " << MF.getName()
+            << "\n";
+        return false;
+      }
+
+      for (auto &MI : *PathBB) {
+        // Avoid cloning when the block contains non-duplicable instructions.
+        // CFI instructions are marked as non-duplicable only because of Darwin,
+        // so we exclude them from this check.
+        if (MI.isNotDuplicable() && !MI.isCFIInstruction()) {
+          WithColor::warning()
+              << "block #" << BBID
+              << " has non-duplicable instructions in function " << MF.getName()
+              << "\n";
+          return false;
+        }
+      }
     }
 
     if (I != ClonePath.size() - 1 && !PathBB->empty() &&
