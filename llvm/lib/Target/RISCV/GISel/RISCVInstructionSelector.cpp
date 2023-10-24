@@ -528,20 +528,29 @@ bool RISCVInstructionSelector::selectGlobalValue(
     return true;
   }
   case CodeModel::Medium: {
-    // Must lie within *any* 2GiB range. The generates (addi (auipc
-    // %pcrel_hi(sym)) %pcrel_lo(auipc)).
-    Register AddrHiDest = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-    MachineInstr *AddrHi = MIB.buildInstr(RISCV::AUIPC)
-                               .addDef(AddrHiDest)
-                               .addGlobalAddress(GV, RISCVII::MO_PCREL_HI);
-    if (!constrainSelectedInstRegOperands(*AddrHi, TII, TRI, RBI))
-      return false;
-
     Register DstReg = MI.getOperand(0).getReg();
-    MachineInstr *Result = MIB.buildInstr(RISCV::ADDI)
-                               .addDef(DstReg)
-                               .addReg(AddrHiDest)
-                               .addGlobalAddress(GV, 0, RISCVII::MO_PCREL_LO);
+    MachineInstr *Result = nullptr;
+
+    // Emit LGA/LLA instead of the sequence it expands to because the pcrel_lo
+    // relocation needs to reference a label that points to the auipc
+    // instruction itself, not the global. This cannot be done inside the
+    // instruction selector.
+    if (GV->hasExternalWeakLinkage())
+      // An extern weak symbol may be undefined, i.e. have value 0, which may
+      // not be within 2GiB of PC, so use GOT-indirect addressing to access the
+      // symbol. This generates the pattern (PseudoLGA sym), which expands to
+      // (ld (addi (auipc %got_pcrel_hi(sym)) %pcrel_lo(auipc))).
+      Result = MIB.buildInstr(RISCV::PseudoLGA)
+                   .addDef(DstReg)
+                   .addGlobalAddress(GV, 0);
+    else
+      // Generate a sequence for accessing addresses within any 2GiB range
+      // within the address space. This generates the pattern (PseudoLLA sym),
+      // which expands to (addi (auipc %pcrel_hi(sym)) %pcrel_lo(auipc)).
+      Result = MIB.buildInstr(RISCV::PseudoLLA)
+                   .addDef(DstReg)
+                   .addGlobalAddress(GV, 0);
+
     if (!constrainSelectedInstRegOperands(*Result, TII, TRI, RBI))
       return false;
 

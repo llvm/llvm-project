@@ -10,6 +10,11 @@
   entry:
     ret ptr @x
   }
+  @y = external global i32, align 4
+  define ptr @extern_global_addr() {
+  entry:
+    ret ptr @y
+  }
 ...
 ---
 name:            global_addr
@@ -27,11 +32,33 @@ body:             |
     ; RV64-SMALL-NEXT: PseudoRET implicit $x10
     ;
     ; RV64-MED-LABEL: name: global_addr
-    ; RV64-MED: [[AUIPC:%[0-9]+]]:gpr = AUIPC @x + 6
-    ; RV64-MED-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI [[AUIPC]], target-flags(riscv-pcrel-lo) @x
-    ; RV64-MED-NEXT: $x10 = COPY [[ADDI]]
+    ; RV64-MED: [[PseudoLLA:%[0-9]+]]:gpr = PseudoLLA @x
+    ; RV64-MED-NEXT: $x10 = COPY [[PseudoLLA]]
     ; RV64-MED-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = G_GLOBAL_VALUE @x
+    $x10 = COPY %0(p0)
+    PseudoRET implicit $x10
+...
+---
+name:            extern_global_addr
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gprb, preferred-register: '' }
+body:             |
+  bb.1.entry:
+    ; RV64-SMALL-LABEL: name: extern_global_addr
+    ; RV64-SMALL: [[LUI:%[0-9]+]]:gpr = LUI @y + 4
+    ; RV64-SMALL-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI [[LUI]], target-flags(riscv-lo) @y
+    ; RV64-SMALL-NEXT: $x10 = COPY [[ADDI]]
+    ; RV64-SMALL-NEXT: PseudoRET implicit $x10
+    ;
+    ; RV64-MED-LABEL: name: extern_global_addr
+    ; RV64-MED: [[PseudoLLA:%[0-9]+]]:gpr = PseudoLLA @y
+    ; RV64-MED-NEXT: $x10 = COPY [[PseudoLLA]]
+    ; RV64-MED-NEXT: PseudoRET implicit $x10
+    %0:gprb(p0) = G_GLOBAL_VALUE @y
     $x10 = COPY %0(p0)
     PseudoRET implicit $x10
 ...
