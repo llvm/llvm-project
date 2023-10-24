@@ -929,7 +929,8 @@ class Selector {
     // correspond to the enumeration values of DeclarationName::StoredNameKind
     ZeroArg = 0x01,
     OneArg = 0x02,
-    // IMPORTANT NOTE: see comments in InfoPtr (below) about this enumerator value.
+    // IMPORTANT NOTE: see comments in InfoPtr (below) about this enumerator
+    // value.
     MultiArg = 0x07,
   };
 
