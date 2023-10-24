@@ -632,7 +632,7 @@ public:
   }
 };
 
-/// Sparse codegen rule for dimension accesses.
+/// Sparse codegen rule for level accesses.
 class SparseLvlOpConverter : public OpConversionPattern<LvlOp> {
 public:
   using OpConversionPattern::OpConversionPattern;

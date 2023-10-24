@@ -293,7 +293,7 @@ public:
   }
 };
 
-/// Sparse conversion rule for accessing dimension-sizes.
+/// Sparse conversion rule for accessing level-sizes.
 class SparseTensorLvlOpConverter : public OpConversionPattern<LvlOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
