@@ -1332,6 +1332,30 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
 
     return true;
   }
+  case Intrinsic::aarch64_neon_smax:
+  case Intrinsic::aarch64_neon_smin:
+  case Intrinsic::aarch64_neon_umax:
+  case Intrinsic::aarch64_neon_umin:
+  case Intrinsic::aarch64_neon_fmax:
+  case Intrinsic::aarch64_neon_fmin: {
+    MachineIRBuilder MIB(MI);
+    if (IntrinsicID == Intrinsic::aarch64_neon_smax)
+      MIB.buildSMax(MI.getOperand(0), MI.getOperand(2), MI.getOperand(3));
+    else if (IntrinsicID == Intrinsic::aarch64_neon_smin)
+      MIB.buildSMin(MI.getOperand(0), MI.getOperand(2), MI.getOperand(3));
+    else if (IntrinsicID == Intrinsic::aarch64_neon_umax)
+      MIB.buildUMax(MI.getOperand(0), MI.getOperand(2), MI.getOperand(3));
+    else if (IntrinsicID == Intrinsic::aarch64_neon_umin)
+      MIB.buildUMin(MI.getOperand(0), MI.getOperand(2), MI.getOperand(3));
+    else if (IntrinsicID == Intrinsic::aarch64_neon_fmax)
+      MIB.buildInstr(TargetOpcode::G_FMAXIMUM, {MI.getOperand(0)},
+                     {MI.getOperand(2), MI.getOperand(3)});
+    else if (IntrinsicID == Intrinsic::aarch64_neon_fmin)
+      MIB.buildInstr(TargetOpcode::G_FMINIMUM, {MI.getOperand(0)},
+                     {MI.getOperand(2), MI.getOperand(3)});
+    MI.eraseFromParent();
+    return true;
+  }
   case Intrinsic::experimental_vector_reverse:
     // TODO: Add support for vector_reverse
     return false;
