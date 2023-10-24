@@ -820,14 +820,24 @@ bool ByteCodeExprGen<Emitter>::VisitArrayInitLoopExpr(
   //   Investigate compiling this to a loop.
 
   const Expr *SubExpr = E->getSubExpr();
+  const Expr *CommonExpr = E->getCommonExpr();
   size_t Size = E->getArraySize().getZExtValue();
   std::optional<PrimType> ElemT = classify(SubExpr->getType());
+
+  // If the common expression is an opaque expression, we visit it
+  // here once so we have its value cached.
+  // FIXME: This might be necessary (or useful) for all expressions.
+  if (isa<OpaqueValueExpr>(CommonExpr)) {
+    if (!this->discard(CommonExpr))
+      return false;
+  }
 
   // So, every iteration, we execute an assignment here
   // where the LHS is on the stack (the target array)
   // and the RHS is our SubExpr.
   for (size_t I = 0; I != Size; ++I) {
     ArrayIndexScope<Emitter> IndexScope(this, I);
+    BlockScope<Emitter> BS(this);
 
     if (ElemT) {
       if (!this->visit(SubExpr))
@@ -856,7 +866,7 @@ bool ByteCodeExprGen<Emitter>::VisitOpaqueValueExpr(const OpaqueValueExpr *E) {
 
   PrimType SubExprT = classify(E->getSourceExpr()).value_or(PT_Ptr);
   if (auto It = OpaqueExprs.find(E); It != OpaqueExprs.end())
-    return this->emitGetLocal(SubExprT, It->getSecond(), E);
+    return this->emitGetLocal(SubExprT, It->second, E);
 
   if (!this->visit(E->getSourceExpr()))
     return false;
@@ -873,8 +883,10 @@ bool ByteCodeExprGen<Emitter>::VisitOpaqueValueExpr(const OpaqueValueExpr *E) {
 
   // Here the local variable is created but the value is removed from the stack,
   // so we put it back, because the caller might need it.
-  if (!this->emitGetLocal(SubExprT, *LocalIndex, E))
-    return false;
+  if (!DiscardResult) {
+    if (!this->emitGetLocal(SubExprT, *LocalIndex, E))
+      return false;
+  }
 
   // FIXME: Ideally the cached value should be cleaned up later.
   OpaqueExprs.insert({E, *LocalIndex});
