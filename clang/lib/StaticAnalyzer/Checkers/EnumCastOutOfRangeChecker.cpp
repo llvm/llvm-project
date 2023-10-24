@@ -100,7 +100,7 @@ void EnumCastOutOfRangeChecker::reportWarning(CheckerContext &C,
 
     auto BR = std::make_unique<PathSensitiveBugReport>(*EnumValueCastOutOfRange,
                                                        Msg, N);
-    bugreporter::trackExpressionValue(N, CE, *BR);
+    bugreporter::trackExpressionValue(N, CE->getSubExpr(), *BR);
     BR->addNote("enum declared here",
                 PathDiagnosticLocation::create(E, C.getSourceManager()),
                 {E->getSourceRange()});
