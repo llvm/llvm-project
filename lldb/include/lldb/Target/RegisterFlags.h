@@ -58,7 +58,7 @@ public:
     unsigned PaddingDistance(const Field &other) const;
 
     /// Output XML that describes this field, to be inserted into a target XML
-    /// file. Reserved characters in field names like "<"" are replaced with
+    /// file. Reserved characters in field names like "<" are replaced with
     /// their XML safe equivalents like "&gt;".
     void ToXML(StreamString &strm) const;
 
