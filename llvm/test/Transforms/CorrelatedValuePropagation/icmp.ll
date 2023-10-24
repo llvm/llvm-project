@@ -1350,3 +1350,108 @@ declare <2 x i8> @llvm.umin.v2i8(<2 x i8>, <2 x i8>)
 declare <2 x i8> @llvm.umax.v2i8(<2 x i8>, <2 x i8>)
 
 attributes #4 = { noreturn }
+
+define i1 @pr69928(i64 noundef %arg, i64 noundef %arg1) {
+; CHECK-LABEL: @pr69928(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i64 [[ARG:%.*]], 64424509440
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[ARG1:%.*]], 4294967295
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[ARG]], [[AND]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 false
+; CHECK-NEXT:    ret i1 [[SELECT]]
+;
+entry:
+  %cmp1 = icmp ult i64 %arg, 64424509440
+  %and = and i64 %arg1, 4294967295
+  %cmp2 = icmp slt i64 %arg, %and
+  %select = select i1 %cmp1, i1 %cmp2, i1 false
+  ret i1 %select
+}
+
+define i1 @test_select_flip(i64 noundef %arg) {
+; CHECK-LABEL: @test_select_flip(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i64 [[ARG:%.*]], 1000
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[ARG]], 100
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 false
+; CHECK-NEXT:    ret i1 [[SELECT]]
+;
+entry:
+  %cmp1 = icmp ult i64 %arg, 1000
+  %cmp2 = icmp slt i64 %arg, 100
+  %select = select i1 %cmp1, i1 %cmp2, i1 false
+  ret i1 %select
+}
+
+define i1 @test_select_flip_fail1(i64 noundef %arg) {
+; CHECK-LABEL: @test_select_flip_fail1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i64 [[ARG:%.*]], 1000
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i64 [[ARG]], 100
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 false
+; CHECK-NEXT:    ret i1 [[SELECT]]
+;
+entry:
+  %cmp1 = icmp slt i64 %arg, 1000
+  %cmp2 = icmp slt i64 %arg, 100
+  %select = select i1 %cmp1, i1 %cmp2, i1 false
+  ret i1 %select
+}
+
+define i1 @test_select_flip_fail2(i64 noundef %arg) {
+; CHECK-LABEL: @test_select_flip_fail2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i64 [[ARG:%.*]], 1000
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i64 [[ARG]], 100
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP1]], i1 false, i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 [[SELECT]]
+;
+entry:
+  %cmp1 = icmp ult i64 %arg, 1000
+  %cmp2 = icmp slt i64 %arg, 100
+  %select = select i1 %cmp1, i1 false, i1 %cmp2
+  ret i1 %select
+}
+
+define i1 @test_select_flip_fail3(i64 noundef %arg, i64 noundef %arg1) {
+; CHECK-LABEL: @test_select_flip_fail3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i64 [[ARG1:%.*]], 1000
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i64 [[ARG:%.*]], 100
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 false
+; CHECK-NEXT:    ret i1 [[SELECT]]
+;
+entry:
+  %cmp1 = icmp ult i64 %arg1, 1000
+  %cmp2 = icmp slt i64 %arg, 100
+  %select = select i1 %cmp1, i1 %cmp2, i1 false
+  ret i1 %select
+}
+
+define i1 @test_select_flip_fail4(i64 noundef %arg) {
+; CHECK-LABEL: @test_select_flip_fail4(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i64 [[ARG:%.*]], 100
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 true, i1 [[CMP2]], i1 false
+; CHECK-NEXT:    ret i1 [[SELECT]]
+;
+entry:
+  %cmp2 = icmp slt i64 %arg, 100
+  %select = select i1 true, i1 %cmp2, i1 false
+  ret i1 %select
+}
+
+define i1 @test_select_flip_fail5(i64 noundef %arg, i64 noundef %arg1) {
+; CHECK-LABEL: @test_select_flip_fail5(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i64 [[ARG:%.*]], 1000
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i64 [[ARG]], [[ARG1:%.*]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 false
+; CHECK-NEXT:    ret i1 [[SELECT]]
+;
+entry:
+  %cmp1 = icmp ult i64 %arg, 1000
+  %cmp2 = icmp slt i64 %arg, %arg1
+  %select = select i1 %cmp1, i1 %cmp2, i1 false
+  ret i1 %select
+}
