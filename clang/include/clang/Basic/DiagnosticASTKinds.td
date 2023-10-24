@@ -317,7 +317,7 @@ def note_constexpr_memcpy_unsupported : Note<
   "source is not a contiguous array of at least %4 elements of type %3|"
   "destination is not a contiguous array of at least %4 elements of type %3}2">;
 def note_constexpr_bit_cast_unsupported_type : Note<
-  "constexpr bit_cast involving type %0 is not yet supported">;
+  "constexpr bit cast involving type %0 is not yet supported">;
 def note_constexpr_bit_cast_unsupported_bitfield : Note<
   "constexpr bit_cast involving bit-field is not yet supported">;
 def note_constexpr_bit_cast_invalid_type : Note<
