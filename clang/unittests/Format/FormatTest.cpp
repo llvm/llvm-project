@@ -26468,6 +26468,10 @@ TEST_F(FormatTest, PPBranchesInBracedInit) {
                "};");
 }
 
+TEST_F(FormatTest, StreamOutputOperator) {
+  verifyFormat("std::cout << \"foo\" << \"bar\" << baz;");
+}
+
 } // namespace
 } // namespace test
 } // namespace format
