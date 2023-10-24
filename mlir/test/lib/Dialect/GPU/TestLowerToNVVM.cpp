@@ -60,7 +60,7 @@ struct TestLowerToNVVMOptions
   PassOptions::Option<std::string> cubinFormat{
       *this, "cubin-format",
       llvm::cl::desc("Compilation format to use to serialize to cubin."),
-      llvm::cl::init("bin")};
+      llvm::cl::init("fatbin")};
   PassOptions::Option<int> optLevel{
       *this, "opt-level",
       llvm::cl::desc("Optimization level for NVVM compilation"),
