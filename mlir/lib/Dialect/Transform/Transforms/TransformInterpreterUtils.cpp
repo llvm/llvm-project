@@ -409,16 +409,8 @@ transform::detail::mergeSymbolsInto(Operation *target,
 }
 
 LogicalResult transform::applyTransformNamedSequence(
-    Operation *payload, ModuleOp transformModule,
-    const TransformOptions &options, StringRef entryPoint) {
-  Operation *transformRoot =
-      detail::findTransformEntryPoint(payload, transformModule, entryPoint);
-  if (!transformRoot) {
-    return payload->emitError()
-           << "could not find transform entry point: " << entryPoint
-           << " in either payload or transform module";
-  }
-
+    Operation *payload, Operation *transformRoot, ModuleOp transformModule,
+    const TransformOptions &options) {
   // `transformModule` may not be modified.
   if (transformModule && !transformModule->isAncestor(transformRoot)) {
     OwningOpRef<Operation *> clonedTransformModule(transformModule->clone());
