@@ -407,6 +407,8 @@ void ExtensibleDialect::registerDynamicType(
   assert(registered &&
          "Trying to create a new dynamic type with an existing name");
 
+  // The StringAttr allocates the type name StringRef for the duration of the
+  // MLIR context.
   MLIRContext *ctx = getContext();
   auto nameAttr =
       StringAttr::get(ctx, getNamespace() + "." + typePtr->getName());
@@ -441,6 +443,8 @@ void ExtensibleDialect::registerDynamicAttr(
   assert(registered &&
          "Trying to create a new dynamic attribute with an existing name");
 
+  // The StringAttr allocates the attribute name StringRef for the duration of
+  // the MLIR context.
   MLIRContext *ctx = getContext();
   auto nameAttr =
       StringAttr::get(ctx, getNamespace() + "." + attrPtr->getName());
