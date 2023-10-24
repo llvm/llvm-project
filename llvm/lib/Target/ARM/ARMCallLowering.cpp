@@ -123,7 +123,8 @@ struct ARMOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
   }
 
   void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
-                            MachinePointerInfo &MPO, CCValAssign &VA) override {
+                            const MachinePointerInfo &MPO,
+                            const CCValAssign &VA) override {
     Register ExtReg = extendRegister(ValVReg, VA);
     auto MMO = MIRBuilder.getMF().getMachineMemOperand(
         MPO, MachineMemOperand::MOStore, MemTy, Align(1));
@@ -255,7 +256,8 @@ struct ARMIncomingValueHandler : public CallLowering::IncomingValueHandler {
   }
 
   void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
-                            MachinePointerInfo &MPO, CCValAssign &VA) override {
+                            const MachinePointerInfo &MPO,
+                            const CCValAssign &VA) override {
     if (VA.getLocInfo() == CCValAssign::SExt ||
         VA.getLocInfo() == CCValAssign::ZExt) {
       // If the value is zero- or sign-extended, its size becomes 4 bytes, so
@@ -272,7 +274,7 @@ struct ARMIncomingValueHandler : public CallLowering::IncomingValueHandler {
   }
 
   MachineInstrBuilder buildLoad(const DstOp &Res, Register Addr, LLT MemTy,
-                                MachinePointerInfo &MPO) {
+                                const MachinePointerInfo &MPO) {
     MachineFunction &MF = MIRBuilder.getMF();
 
     auto MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOLoad, MemTy,

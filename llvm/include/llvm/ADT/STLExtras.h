@@ -2029,12 +2029,20 @@ void erase_value(Container &C, ValueType V) {
   C.erase(std::remove(C.begin(), C.end(), V), C.end());
 }
 
-/// Wrapper function to append a range to a container.
+/// Wrapper function to append range `R` to container `C`.
 ///
 /// C.insert(C.end(), R.begin(), R.end());
 template <typename Container, typename Range>
-inline void append_range(Container &C, Range &&R) {
+void append_range(Container &C, Range &&R) {
   C.insert(C.end(), adl_begin(R), adl_end(R));
+}
+
+/// Appends all `Values` to container `C`.
+template <typename Container, typename... Args>
+void append_values(Container &C, Args &&...Values) {
+  C.reserve(range_size(C) + sizeof...(Args));
+  // Append all values one by one.
+  ((void)C.insert(C.end(), std::forward<Args>(Values)), ...);
 }
 
 /// Given a sequence container Cont, replace the range [ContIt, ContEnd) with
