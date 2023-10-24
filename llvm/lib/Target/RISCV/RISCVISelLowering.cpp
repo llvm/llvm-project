@@ -2025,10 +2025,10 @@ bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
 
   // Building an integer and then converting requires a fmv at the end of
   // the integer sequence.
-  const unsigned Cost =
-    1 + RISCVMatInt::getIntMatCost(Imm.bitcastToAPInt(), Subtarget.getXLen(),
-                                   Subtarget.getFeatureBits());
-  return Cost <= Subtarget.getMaxBuildIntsCost();
+  int64_t Val = Imm.bitcastToAPInt().getSExtValue();
+  RISCVMatInt::InstSeq Seq =
+      RISCVMatInt::generateInstSeq(Val, Subtarget.getFeatureBits());
+  return Seq.size() + 1 <= Subtarget.getMaxBuildIntsCost();
 }
 
 // TODO: This is very conservative.
