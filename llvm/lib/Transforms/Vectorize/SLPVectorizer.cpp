@@ -1083,8 +1083,7 @@ static bool doesNotNeedToBeScheduled(Value *V) {
 /// scheduling or their users do not require scheduling since they are phis or
 /// in other basic blocks.
 static bool doesNotNeedToSchedule(ArrayRef<Value *> VL) {
-  return !VL.empty() &&
-         (all_of(VL, doesNotNeedToBeScheduled));
+  return !VL.empty() && (all_of(VL, doesNotNeedToBeScheduled));
 }
 
 namespace slpvectorizer {
