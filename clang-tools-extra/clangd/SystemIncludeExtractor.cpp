@@ -214,10 +214,11 @@ template <> struct DenseMapInfo<DriverArgs> {
         Val.Driver,
         Val.StandardIncludes,
         Val.StandardCXXIncludes,
-        Val.Stdlib,
         Val.Lang,
         Val.Sysroot,
         Val.ISysroot,
+        Val.Target,
+        Val.Stdlib,
     });
   }
   static bool isEqual(const DriverArgs &LHS, const DriverArgs &RHS) {
