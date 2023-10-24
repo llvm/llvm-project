@@ -19501,6 +19501,8 @@ RISCVTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
   EVT VT = N->getValueType(0);
   if (!(VT == MVT::i32 || (VT == MVT::i64 && Subtarget.is64Bit())))
     return SDValue();
+
+  // Ensure 2**k-1 < 2048 so that we can just emit a single addi/addiw.
   if (Divisor.sgt(2048) || Divisor.slt(-2048))
     return SDValue();
   return TargetLowering::buildSDIVPow2WithCMov(N, Divisor, DAG, Created);
