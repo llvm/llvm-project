@@ -19501,9 +19501,7 @@ RISCVTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
   EVT VT = N->getValueType(0);
   if (!(VT == MVT::i32 || (VT == MVT::i64 && Subtarget.is64Bit())))
     return SDValue();
-  unsigned Lg2 = Divisor.countr_zero();
-  // ensure 2**k-1 < 2048
-  if (Lg2 >= 11)
+  if (Divisor.sgt(2048) || Divisor.slt(-2048))
     return SDValue();
   return TargetLowering::buildSDIVPow2WithCMov(N, Divisor, DAG, Created);
 }
