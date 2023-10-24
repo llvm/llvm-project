@@ -3672,6 +3672,9 @@ Floating-Point Types
    * - ``ppc_fp128``
      - 128-bit floating-point value (two 64-bits)
 
+* - ``decimal32``
+     - 32-bit decimal floating-point value
+
 The binary format of half, float, double, and fp128 correspond to the
 IEEE-754-2008 specifications for binary16, binary32, binary64, and binary128
 respectively.
