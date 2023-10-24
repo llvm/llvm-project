@@ -577,10 +577,10 @@ bool RISCVInstructionSelector::selectGlobalValue(
       // (ld (addi (auipc %got_pcrel_hi(sym)) %pcrel_lo(auipc))).
       MachineFunction &MF = *MI.getParent()->getParent();
       MachineMemOperand *MemOp = MF.getMachineMemOperand(
-        MachinePointerInfo::getGOT(MF),
-        MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
-            MachineMemOperand::MOInvariant,
-        DefTy, Align(DefTy.getSizeInBits() / 8));
+          MachinePointerInfo::getGOT(MF),
+          MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
+              MachineMemOperand::MOInvariant,
+          DefTy, Align(DefTy.getSizeInBits() / 8));
 
       Result = MIB.buildInstr(RISCV::PseudoLGA)
                    .addDef(DefReg)
