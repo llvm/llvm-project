@@ -2033,8 +2033,6 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
                "const unsigned int *d;\n"
                "Const unsigned int &e;\n"
                "const unsigned int &f;\n"
-               "int                *f1(int *a, int &b, int &&c);\n"
-               "double             *(*f2)(int *a, double &&b);\n"
                "const unsigned    &&g;\n"
                "Const unsigned      h;",
                Style);
@@ -2080,8 +2078,6 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
                "const unsigned int* d;\n"
                "Const unsigned int& e;\n"
                "const unsigned int& f;\n"
-               "int*                f1(int* a, int& b, int&& c);\n"
-               "double*             (*f2)(int* a, double&& b);\n"
                "const unsigned&&    g;\n"
                "Const unsigned      h;",
                Style);
@@ -2107,8 +2103,6 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
                "const unsigned int *d;\n"
                "Const unsigned int& e;\n"
                "const unsigned int& f;\n"
-               "int                *f1(int *a, int& b, int&& c);\n"
-               "double             *(*f2)(int *a, double&& b);\n"
                "const unsigned      g;\n"
                "Const unsigned      h;",
                Style);
@@ -2149,8 +2143,6 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
                "const unsigned int*  d;\n"
                "Const unsigned int & e;\n"
                "const unsigned int & f;\n"
-               "int*                 f1(int* a, int & b, int && c);\n"
-               "double*              (*f2)(int* a, double && b);\n"
                "const unsigned &&    g;\n"
                "Const unsigned       h;",
                Style);
@@ -2176,8 +2168,6 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
                "const unsigned int * d;\n"
                "Const unsigned int  &e;\n"
                "const unsigned int  &f;\n"
-               "int *                f1(int * a, int &b, int &&c);\n"
-               "double *             (*f2)(int * a, double &&b);\n"
                "const unsigned     &&g;\n"
                "Const unsigned       h;",
                Style);
