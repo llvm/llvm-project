@@ -231,7 +231,7 @@ bool UnifyLoopExitsLegacyPass::runOnFunction(Function &F) {
   auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
 
-  assert(hasOnlySimpleTerminator(F && "Unsupported block terminator."));
+  assert(hasOnlySimpleTerminator(F) && "Unsupported block terminator.");
 
   return runImpl(LI, DT);
 }
