@@ -968,10 +968,12 @@ LogicalResult tosa::TransposeOp::inferReturnTypeComponents(
     ShapeAdaptor permShape = attr;
     // Constant permutation must be the same length as the input rank.
     if (inputShape.getRank() != permShape.getRank())
-      return failure();
+      return emitOptionalError(location,
+                               "Constant permutation must be the same length"
+                               " as the input rank");
 
     // Constant permutation values must be within the input rank.
-    for (int i = 0; i < inputShape.getRank(); i++) {
+    for (int i = 0, e = inputShape.getRank(); i < e; i++) {
       if (inputShape.getRank() <= permShape.getDimSize(i))
         return failure();
     }
