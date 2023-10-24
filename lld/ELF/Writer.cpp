@@ -2025,6 +2025,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       // to catch more cases. That is too much for us. Our approach resembles
       // the one used in ld.gold, achieves a good balance to be useful but not
       // too smart.
+      //
+      // If a DSO reference is resolved by a SharedSymbol, but the SharedSymbol
+      // is overridden by a hidden visibility Defined (which is later discarded
+      // due to GC), don't report the diagnostic. However, this may indicate an
+      // unintended SharedSymbol.
       for (SharedFile *file : ctx.sharedFiles) {
         bool allNeededIsKnown =
             llvm::all_of(file->dtNeeded, [&](StringRef needed) {
@@ -2033,6 +2038,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
         if (!allNeededIsKnown)
           continue;
         for (Symbol *sym : file->requiredSymbols) {
+          if (sym->dsoDefined)
+            continue;
           if (sym->isUndefined() && !sym->isWeak()) {
             diagnose("undefined reference due to --no-allow-shlib-undefined: " +
                      toString(*sym) + "\n>>> referenced by " + toString(file));
