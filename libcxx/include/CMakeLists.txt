@@ -94,7 +94,9 @@ set(files
   __algorithm/pstl_generate.h
   __algorithm/pstl_is_partitioned.h
   __algorithm/pstl_merge.h
+  __algorithm/pstl_move.h
   __algorithm/pstl_replace.h
+  __algorithm/pstl_rotate_copy.h
   __algorithm/pstl_sort.h
   __algorithm/pstl_stable_sort.h
   __algorithm/pstl_transform.h
@@ -508,6 +510,7 @@ set(files
   __mdspan/extents.h
   __mdspan/layout_left.h
   __mdspan/layout_right.h
+  __mdspan/layout_stride.h
   __mdspan/mdspan.h
   __memory/addressof.h
   __memory/align.h

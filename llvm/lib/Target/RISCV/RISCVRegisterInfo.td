@@ -351,7 +351,7 @@ class NFList<int lmul> {
 // Generate [start, end) SubRegIndex list.
 class SubRegSet<int nf, int lmul> {
   list<SubRegIndex> L = !foldl([]<SubRegIndex>,
-                               [0, 1, 2, 3, 4, 5, 6, 7],
+                               !range(0, 8),
                                AccList, i,
                                !listconcat(AccList,
                                  !if(!lt(i, nf),
@@ -379,15 +379,9 @@ class IndexSet<int tuple_index, int nf, int lmul, bit isV0 = false> {
     !foldl([]<int>,
               !if(isV0, [0],
                 !cond(
-                  !eq(lmul, 1):
-                  [8, 9, 10, 11, 12, 13, 14, 15,
-                   16, 17, 18, 19, 20, 21, 22, 23,
-                   24, 25, 26, 27, 28, 29, 30, 31,
-                   1, 2, 3, 4, 5, 6, 7],
-                  !eq(lmul, 2):
-                  [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 1, 2, 3],
-                  !eq(lmul, 4):
-                  [2, 3, 4, 5, 6, 7, 1])),
+                  !eq(lmul, 1): !listconcat(!range(8, 32), !range(1, 8)),
+                  !eq(lmul, 2): !listconcat(!range(4, 16), !range(1, 4)),
+                  !eq(lmul, 4): !listconcat(!range(2, 8), !range(1, 2)))),
               L, i,
               !listconcat(L,
                           !if(!le(!mul(!add(i, tuple_index), lmul),
@@ -417,12 +411,11 @@ class VRegList<list<dag> LIn, int start, int nf, int lmul, bit isV0> {
 }
 
 // Vector registers
-foreach Index = 0-31 in {
+foreach Index = !range(0, 32, 1) in {
   def V#Index : RISCVReg<Index, "v"#Index>, DwarfRegNum<[!add(Index, 96)]>;
 }
 
-foreach Index = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22,
-                 24, 26, 28, 30] in {
+foreach Index = !range(0, 32, 2) in {
   def V#Index#M2 : RISCVRegWithSubRegs<Index, "v"#Index,
                      [!cast<Register>("V"#Index),
                       !cast<Register>("V"#!add(Index, 1))]>,
@@ -431,7 +424,7 @@ foreach Index = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22,
   }
 }
 
-foreach Index = [0, 4, 8, 12, 16, 20, 24, 28] in {
+foreach Index = !range(0, 32, 4) in {
   def V#Index#M4 : RISCVRegWithSubRegs<Index, "v"#Index,
                      [!cast<Register>("V"#Index#"M2"),
                       !cast<Register>("V"#!add(Index, 2)#"M2")]>,
@@ -440,7 +433,7 @@ foreach Index = [0, 4, 8, 12, 16, 20, 24, 28] in {
   }
 }
 
-foreach Index = [0, 8, 16, 24] in {
+foreach Index = !range(0, 32, 8) in {
   def V#Index#M8 : RISCVRegWithSubRegs<Index, "v"#Index,
                      [!cast<Register>("V"#Index#"M4"),
                       !cast<Register>("V"#!add(Index, 4)#"M4")]>,

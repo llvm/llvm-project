@@ -39,6 +39,7 @@
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/PluginLoader.h"
@@ -351,7 +352,6 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "expandmemcmp",
       "loop-reduce",
       "lower-amx-type",
-      "pre-amx-config",
       "lower-amx-intrinsics",
       "polyhedral-info",
       "print-polyhedral-info",
@@ -441,11 +441,8 @@ int main(int argc, char **argv) {
   SmallVector<PassPlugin, 1> PluginList;
   PassPlugins.setCallback([&](const std::string &PluginPath) {
     auto Plugin = PassPlugin::Load(PluginPath);
-    if (!Plugin) {
-      errs() << "Failed to load passes from '" << PluginPath
-             << "'. Request ignored.\n";
-      return;
-    }
+    if (!Plugin)
+      report_fatal_error(Plugin.takeError(), /*gen_crash_diag=*/false);
     PluginList.emplace_back(Plugin.get());
   });
 

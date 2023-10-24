@@ -150,14 +150,14 @@ transform.sequence failures(propagate) {
 //       CHECK:   %[[RESULT:.*]] = scf.for %[[IV:.*]] = %[[C0]] to %[[C15]] step %[[C3]] iter_args(%[[INNER_OUT:.*]] =
 //       CHECK:     %[[R2:.*]] = scf.if
 //       CHECK:       %[[GEN:.*]] = tensor.generate
-//       CHECK:       %[[cast_0:.*]] = tensor.cast %[[GEN]] : tensor<14x3xf32> to tensor<?x?xf32>
-//       CHECK:       scf.yield %[[cast_0]] : tensor<?x?xf32>
+//       CHECK:       %[[cast_0:.*]] = tensor.cast %[[GEN]] : tensor<14x3xf32> to tensor<?x3xf32>
+//       CHECK:       scf.yield %[[cast_0]] : tensor<?x3xf32>
 //       CHECK:     else
 //       CHECK:       %[[SLICE:.*]] = tensor.extract_slice %arg0[0, %{{.*}}] [7, %{{.*}}] [1, 1] : tensor<7x9xf32> to tensor<7x?xf32>
 //       CHECK:       %[[PAD:.*]] = tensor.pad %[[SLICE]] low[0, 0] high[7, %{{.*}}]
-//       CHECK:       %[[cast_1:.*]] = tensor.cast %[[PAD]] : tensor<14x?xf32> to tensor<?x?xf32>
-//       CHECK:       scf.yield %[[cast_1]] : tensor<?x?xf32>
-//       CHECK:     %[[cast:.*]] = tensor.cast %[[R2]] : tensor<?x?xf32> to tensor<14x3xf32>
+//       CHECK:       %[[cast_1:.*]] = tensor.cast %[[PAD]] : tensor<14x?xf32> to tensor<?x3xf32>
+//       CHECK:       scf.yield %[[cast_1]] : tensor<?x3xf32>
+//       CHECK:     %[[cast:.*]] = tensor.cast %[[R2]] : tensor<?x3xf32> to tensor<14x3xf32>
 //       CHECK:     %[[R3:.*]] = tensor.insert_slice %[[cast]] into %[[INNER_OUT]][0, %[[IV]]] [14, 3] [1, 1] : tensor<14x3xf32> into tensor<14x15xf32>
 //       CHECK:     scf.yield %[[R3]] : tensor<14x15xf32>
 //       CHECK:   return %[[RESULT]] : tensor<14x15xf32>
