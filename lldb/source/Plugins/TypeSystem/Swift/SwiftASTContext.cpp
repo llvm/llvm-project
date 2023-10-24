@@ -34,7 +34,6 @@
 #include "swift/AST/Type.h"
 #include "swift/AST/Types.h"
 #include "swift/ASTSectionImporter/ASTSectionImporter.h"
-#include "swift/Basic/Dwarf.h"
 #include "swift/Basic/LLVM.h"
 #include "swift/Basic/LangOptions.h"
 #include "swift/Basic/Located.h"
@@ -979,7 +978,6 @@ SwiftASTContext::SwiftASTContext(std::string description,
       m_compiler_invocation_ap->getIRGenOptions();
   ir_gen_opts.OutputKind = swift::IRGenOutputKind::Module;
   ir_gen_opts.UseJIT = true;
-  ir_gen_opts.DWARFVersion = swift::DWARFVersion;
   // Allow deserializing @_implementationOnly dependencies
   // to avoid crashing due to module recovery issues.
   swift::LangOptions &lang_opts = m_compiler_invocation_ap->getLangOptions();
