@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Implements C wrappers around the sycl runtime library.
+// Implements wrappers around the sycl runtime library with C linkage
 //
 //===----------------------------------------------------------------------===//
 
 #include <algorithm>
 #include <array>
-#include <atomic>
 #include <cassert>
 #include <cfloat>
 #include <cstdint>
@@ -20,12 +19,9 @@
 #include <cstdlib>
 #include <stdexcept>
 #include <tuple>
-#include <vector>
 
 #include <CL/sycl.hpp>
 #include <level_zero/ze_api.h>
-#include <map>
-#include <mutex>
 #include <sycl/ext/oneapi/backend/level_zero.hpp>
 
 #ifdef _WIN32
