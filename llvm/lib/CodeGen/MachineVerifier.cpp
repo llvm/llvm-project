@@ -2163,9 +2163,9 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
 
     // Verify two-address constraints after the twoaddressinstruction pass.
     // Both twoaddressinstruction pass and phi-node-elimination pass call
-    // MRI->leaveSSA() to set MF as NoSSA, we should do the verification after
-    // twoaddressinstruction pass not after phi-node-elimination pass. So we
-    // shouldn't use the NoSSA as the condition, we should based on
+    // MRI->leaveSSA() to set MF as not IsSSA, we should do the verification
+    // after twoaddressinstruction pass not after phi-node-elimination pass. So
+    // we shouldn't use the IsSSA as the condition, we should based on
     // TiedOpsRewritten property to verify two-address constraints, this
     // property will be set in twoaddressinstruction pass.
     unsigned DefIdx;
