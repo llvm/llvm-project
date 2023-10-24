@@ -20,7 +20,7 @@
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.pmullt.pair.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]])
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z21test_svpmullt_pair_u8u11__SVUint8_tu11__SVUint8_t(
+// CPP-CHECK-LABEL: @_Z21test_svpmullt_pair_u8u11__SVUint8_tS_(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.pmullt.pair.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
@@ -35,7 +35,7 @@ svuint8_t test_svpmullt_pair_u8(svuint8_t op1, svuint8_t op2)
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.pmullt.pair.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]])
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z22test_svpmullt_pair_u32u12__SVUint32_tu12__SVUint32_t(
+// CPP-CHECK-LABEL: @_Z22test_svpmullt_pair_u32u12__SVUint32_tS_(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.pmullt.pair.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
@@ -89,7 +89,7 @@ svuint32_t test_svpmullt_pair_n_u32(svuint32_t op1, uint32_t op2)
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 16 x i8> [[TMP0]] to <vscale x 8 x i16>
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 //
-// CPP-CHECK-LABEL: @_Z17test_svpmullt_u16u11__SVUint8_tu11__SVUint8_t(
+// CPP-CHECK-LABEL: @_Z17test_svpmullt_u16u11__SVUint8_tS_(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.pmullt.pair.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]])
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 16 x i8> [[TMP0]] to <vscale x 8 x i16>
@@ -106,7 +106,7 @@ svuint16_t test_svpmullt_u16(svuint8_t op1, svuint8_t op2)
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 4 x i32> [[TMP0]] to <vscale x 2 x i64>
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
-// CPP-CHECK-LABEL: @_Z17test_svpmullt_u64u12__SVUint32_tu12__SVUint32_t(
+// CPP-CHECK-LABEL: @_Z17test_svpmullt_u64u12__SVUint32_tS_(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.pmullt.pair.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]])
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 4 x i32> [[TMP0]] to <vscale x 2 x i64>
