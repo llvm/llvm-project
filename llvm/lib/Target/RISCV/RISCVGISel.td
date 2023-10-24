@@ -121,8 +121,14 @@ def : Pat<(i32 (udiv GPR:$rs1, GPR:$rs2)), (DIVUW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(i32 (urem GPR:$rs1, GPR:$rs2)), (REMUW GPR:$rs1, GPR:$rs2)>;
 }
 
-let Predicates = [HasStdExtZba, IsRV64] in
+let Predicates = [HasStdExtZba, IsRV64] in {
+// This pattern is put here due to the fact that i32 is not a legal type
+// in SDISel for RV64, which is not the case in GISel.
+def : Pat<(shl (i64 (zext i32:$rs1)), uimm5:$shamt),
+          (SLLI_UW GPR:$rs1, uimm5:$shamt)>;
+
 def : Pat<(i64 (zext i32:$rs)), (ADD_UW GPR:$rs, (XLenVT X0))>;
+} // Predicates = [HasStdExtZba, IsRV64]
 
 let Predicates = [IsRV64, NotHasStdExtZba] in
 def: Pat<(i64 (zext i32:$rs)), (SRLI (SLLI GPR:$rs, 32), 32)>;
