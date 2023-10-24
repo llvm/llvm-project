@@ -58,13 +58,14 @@ static int countSymbols(Lang Language) {
   ArrayRef<const char*> Symbols;
 #define SYMBOL(Name, NS, Header) #NS #Name,
   switch (Language) {
-  case Lang::C:
+  case Lang::C: {
     static constexpr const char *CSymbols[] = {
 #include "CSymbolMap.inc"
     };
     Symbols = CSymbols;
     break;
-  case Lang::CXX:
+  }
+  case Lang::CXX: {
     static constexpr const char *CXXSymbols[] = {
 #include "StdSpecialSymbolMap.inc"
 #include "StdSymbolMap.inc"
@@ -72,6 +73,7 @@ static int countSymbols(Lang Language) {
     };
     Symbols = CXXSymbols;
     break;
+  }
   }
 #undef SYMBOL
   return llvm::DenseSet<StringRef>(Symbols.begin(), Symbols.end()).size();
@@ -141,14 +143,15 @@ static int initialize(Lang Language) {
   };
 #define SYMBOL(Name, NS, Header) {#NS #Name, StringRef(#NS).size(), #Header},
   switch (Language) {
-  case Lang::C:
+  case Lang::C: {
     static constexpr Symbol CSymbols[] = {
 #include "CSymbolMap.inc"
     };
     for (const Symbol &S : CSymbols)
       Add(S.QName, S.NSLen, S.HeaderName);
     break;
-  case Lang::CXX:
+  }
+  case Lang::CXX: {
     static constexpr Symbol CXXSymbols[] = {
 #include "StdSpecialSymbolMap.inc"
 #include "StdSymbolMap.inc"
@@ -157,6 +160,7 @@ static int initialize(Lang Language) {
     for (const Symbol &S : CXXSymbols)
       Add(S.QName, S.NSLen, S.HeaderName);
     break;
+  }
   }
 #undef SYMBOL
 
