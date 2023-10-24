@@ -21,14 +21,16 @@ namespace mlir::arm_sve {
 using namespace mlir;
 using namespace mlir::arm_sve;
 
-constexpr StringLiteral kPassLabel("__arm_sve_legalize_vector_storage__");
+// A tag to mark unrealized_conversions produced by this pass. This is used to
+// detect IR this pass failed to completely legalize, and report an error.
+constexpr StringLiteral kSVELegalizerTag("__arm_sve_legalize_vector_storage__");
 
 namespace {
 
 /// A (legal) SVE predicate mask that has a logical size, i.e. the number of
 /// bits match the number of lanes it masks (such as vector<[4]xi1>), but is too
 /// small to be stored to memory.
-bool isLogicalSVEPredicateType(VectorType type) {
+bool isLogicalSVEMaskType(VectorType type) {
   return type.getRank() > 0 && type.getElementType().isInteger(1) &&
          type.getScalableDims().back() && type.getShape().back() < 16 &&
          llvm::isPowerOf2_32(type.getShape().back()) &&
@@ -36,7 +38,7 @@ bool isLogicalSVEPredicateType(VectorType type) {
 }
 
 VectorType widenScalableMaskTypeToSvbool(VectorType type) {
-  assert(isLogicalSVEPredicateType(type));
+  assert(isLogicalSVEMaskType(type));
   return VectorType::Builder(type).setDim(type.getRank() - 1, 16);
 }
 
@@ -57,16 +59,16 @@ void replaceOpWithUnrealizedConversion(PatternRewriter &rewriter, TOp op,
     return rewriter.create<UnrealizedConversionCastOp>(
         op.getLoc(), TypeRange{op.getResult().getType()},
         ValueRange{callback(newOp)},
-        NamedAttribute(rewriter.getStringAttr(kPassLabel),
+        NamedAttribute(rewriter.getStringAttr(kSVELegalizerTag),
                        rewriter.getUnitAttr()));
   });
 }
 
-/// Extracts the legal memref value from the `unrealized_conversion_casts` added
-/// by this pass.
-static FailureOr<Value> getLegalMemRef(Value illegalMemref) {
+/// Extracts the legal SVE memref value from the `unrealized_conversion_casts`
+/// added by this pass.
+static FailureOr<Value> getSVELegalizedMemref(Value illegalMemref) {
   Operation *definingOp = illegalMemref.getDefiningOp();
-  if (!definingOp || !definingOp->hasAttr(kPassLabel))
+  if (!definingOp || !definingOp->hasAttr(kSVELegalizerTag))
     return failure();
   auto unrealizedConversion =
       llvm::cast<UnrealizedConversionCastOp>(definingOp);
@@ -95,8 +97,13 @@ struct RelaxScalableVectorAllocaAlignment
   }
 };
 
-/// Replaces allocations of SVE predicates smaller than an svbool with a wider
-/// allocation and a tagged unrealized conversion.
+/// Replaces allocations of SVE predicates smaller than an svbool_t (illegal)
+/// with a wider allocation of svbool_t (legal) followed by a tagged unrealized
+/// conversion to the original type.
+///
+/// svbool = vector<...x[16]xi1>, which maps to some multiple of full SVE
+/// predicate registers. A full predicate is the smallest quantity that can be
+/// loaded/stored.
 ///
 /// Example
 /// ```
@@ -110,7 +117,7 @@ struct RelaxScalableVectorAllocaAlignment
 ///     {__arm_sve_legalize_vector_storage__}
 /// ```
 template <typename AllocLikeOp>
-struct LegalizeAllocLikeOpConversion : public OpRewritePattern<AllocLikeOp> {
+struct LegalizeSVEMaskAllocation : public OpRewritePattern<AllocLikeOp> {
   using OpRewritePattern<AllocLikeOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(AllocLikeOp allocLikeOp,
@@ -118,7 +125,7 @@ struct LegalizeAllocLikeOpConversion : public OpRewritePattern<AllocLikeOp> {
     auto vectorType =
         llvm::dyn_cast<VectorType>(allocLikeOp.getType().getElementType());
 
-    if (!vectorType || !isLogicalSVEPredicateType(vectorType))
+    if (!vectorType || !isLogicalSVEMaskType(vectorType))
       return failure();
 
     // Replace this alloc-like op of an SVE mask with one of a (storable)
@@ -155,7 +162,7 @@ struct LegalizeAllocLikeOpConversion : public OpRewritePattern<AllocLikeOp> {
 ///   : memref<3xvector<[16]xi1>> to memref<3xvector<[8]xi1>>
 ///     {__arm_sve_legalize_vector_storage__}
 /// ```
-struct LegalizeVectorTypeCastConversion
+struct LegalizeSVEMaskTypeCastConversion
     : public OpRewritePattern<vector::TypeCastOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -164,10 +171,10 @@ struct LegalizeVectorTypeCastConversion
     auto resultType = typeCastOp.getResultMemRefType();
     auto vectorType = llvm::dyn_cast<VectorType>(resultType.getElementType());
 
-    if (!vectorType || !isLogicalSVEPredicateType(vectorType))
+    if (!vectorType || !isLogicalSVEMaskType(vectorType))
       return failure();
 
-    auto legalMemref = getLegalMemRef(typeCastOp.getMemref());
+    auto legalMemref = getSVELegalizedMemref(typeCastOp.getMemref());
     if (failed(legalMemref))
       return failure();
 
@@ -185,8 +192,9 @@ struct LegalizeVectorTypeCastConversion
   }
 };
 
-/// Replaces stores to unrealized conversions to illegal memref types with
-/// `arm_sve.convert_to_svbool`s followed by (legal) wider stores.
+/// Replaces stores to unrealized conversions to illegal SVE predicate memref
+/// (!= svbool_t) types with `arm_sve.convert_to_svbool`s followed by (legal)
+/// wider stores.
 ///
 /// Example:
 /// ```
@@ -208,10 +216,10 @@ struct LegalizeMemrefStoreConversion
     Value valueToStore = storeOp.getValueToStore();
     auto vectorType = llvm::dyn_cast<VectorType>(valueToStore.getType());
 
-    if (!vectorType || !isLogicalSVEPredicateType(vectorType))
+    if (!vectorType || !isLogicalSVEMaskType(vectorType))
       return failure();
 
-    auto legalMemref = getLegalMemRef(storeOp.getMemref());
+    auto legalMemref = getSVELegalizedMemref(storeOp.getMemref());
     if (failed(legalMemref))
       return failure();
 
@@ -232,8 +240,9 @@ struct LegalizeMemrefStoreConversion
   }
 };
 
-/// Replaces loads from unrealized conversions to illegal memref types with
-/// (legal) wider loads, followed by `arm_sve.convert_from_svbool`s.
+/// Replaces loads from unrealized conversions to illegal SVE predicate memref
+/// (!= svbool_t) types with (legal) wider loads, followed by
+/// `arm_sve.convert_from_svbool`s.
 ///
 /// Example:
 /// ```
@@ -244,7 +253,7 @@ struct LegalizeMemrefStoreConversion
 /// %svbool = memref.load %widened[] : memref<vector<[16]xi1>>
 /// %reload = arm_sve.convert_from_svbool %reload : vector<[4]xi1>
 /// ```
-struct LegalizeMemrefLoadConversion : public OpRewritePattern<memref::LoadOp> {
+struct LegalizeSVEMaskLoadConversion : public OpRewritePattern<memref::LoadOp> {
   using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(memref::LoadOp loadOp,
@@ -254,10 +263,10 @@ struct LegalizeMemrefLoadConversion : public OpRewritePattern<memref::LoadOp> {
     Value loadedMask = loadOp.getResult();
     auto vectorType = llvm::dyn_cast<VectorType>(loadedMask.getType());
 
-    if (!vectorType || !isLogicalSVEPredicateType(vectorType))
+    if (!vectorType || !isLogicalSVEMaskType(vectorType))
       return failure();
 
-    auto legalMemref = getLegalMemRef(loadOp.getMemref());
+    auto legalMemref = getSVELegalizedMemref(loadOp.getMemref());
     if (failed(legalMemref))
       return failure();
 
@@ -280,10 +289,10 @@ struct LegalizeMemrefLoadConversion : public OpRewritePattern<memref::LoadOp> {
 void mlir::arm_sve::populateLegalizeVectorStoragePatterns(
     RewritePatternSet &patterns) {
   patterns.add<RelaxScalableVectorAllocaAlignment,
-               LegalizeAllocLikeOpConversion<memref::AllocaOp>,
-               LegalizeAllocLikeOpConversion<memref::AllocOp>,
-               LegalizeVectorTypeCastConversion, LegalizeMemrefStoreConversion,
-               LegalizeMemrefLoadConversion>(patterns.getContext());
+               LegalizeSVEMaskAllocation<memref::AllocaOp>,
+               LegalizeSVEMaskAllocation<memref::AllocOp>,
+               LegalizeSVEMaskTypeCastConversion, LegalizeMemrefStoreConversion,
+               LegalizeSVEMaskLoadConversion>(patterns.getContext());
 }
 
 namespace {
@@ -300,7 +309,7 @@ struct LegalizeVectorStorage
     ConversionTarget target(getContext());
     target.addDynamicallyLegalOp<UnrealizedConversionCastOp>(
         [](UnrealizedConversionCastOp unrealizedConversion) {
-          return !unrealizedConversion->hasAttr(kPassLabel);
+          return !unrealizedConversion->hasAttr(kSVELegalizerTag);
         });
     // This detects if we failed to completely legalize the IR.
     if (failed(applyPartialConversion(getOperation(), target, {})))

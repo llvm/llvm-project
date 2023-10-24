@@ -95,6 +95,15 @@ func.func @store_2d_mask_and_reload_slice(%mask: vector<3x[8]xi1>) -> vector<[8]
 
 // CHECK-LABEL: @set_sve_alloca_alignment
 func.func @set_sve_alloca_alignment() {
+  /// This checks the alignment of alloca's of scalable vectors will be
+  /// something the backend can handle. Currently, the backend sets the
+  /// alignment of scalable vectors to their base size (i.e. their size at
+  /// vscale = 1). This works for hardware-sized types, which always get a
+  /// 16-byte alignment. The problem is larger types e.g. vector<[8]xf32> end up
+  /// with alignments larger than 16-bytes (e.g. 32-bytes here), which are
+  /// unsupported. This pass avoids this issue by explicitly setting the
+  /// alignment to 16-bytes for all scalable vectors.
+
   // CHECK-COUNT-6: alignment = 16
   %a1 = memref.alloca() : memref<vector<[32]xi8>>
   %a2 = memref.alloca() : memref<vector<[16]xi8>>

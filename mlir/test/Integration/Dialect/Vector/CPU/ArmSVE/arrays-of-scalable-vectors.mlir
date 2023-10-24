@@ -21,11 +21,11 @@ func.func @read_and_print_2d_vector(%memref: memref<3x?xf32>)  {
   %row1 = vector.extract %vector[1] : vector<[8]xf32> from vector<3x[8]xf32>
   %row2 = vector.extract %vector[2] : vector<[8]xf32> from vector<3x[8]xf32>
 
-  /// Print each of the vectors. This only checks the first eight elements (which
-  /// works for all vscale >= 1).
+  /// Print each of the vectors.
+  /// vscale is >= 1, so at least 8 elements will be printed.
 
-  // CHECK-LABEL: TEST 1
-  vector.print str "TEST 1 (print and read 2D arrays of scalable vectors)"
+  vector.print str "read_and_print_2d_vector()"
+  // CHECK-LABEL: read_and_print_2d_vector()
   // CHECK: ( 8, 8, 8, 8, 8, 8, 8, 8
   vector.print %row0 : vector<[8]xf32>
   // CHECK: ( 8, 8, 8, 8, 8, 8, 8, 8
@@ -56,10 +56,8 @@ func.func @add_arrays_of_scalable_vectors(%a: memref<1x2x?xf32>, %b: memref<1x2x
   %mask_a = vector.create_mask %c2, %c3, %dim_a : vector<1x2x[4]xi1>
   %mask_b = vector.create_mask %c2, %c3, %dim_b : vector<1x2x[4]xi1>
 
-  vector.print str "TEST 2 (reading and adding two 3D arrays of scalable vectors)"
-
-  /// Print each of the vectors. This only checks the first four elements (which
-  /// works for all vscale >= 1).
+  /// Print each of the vectors.
+  /// vscale is >= 1, so at least 4 elements will be printed.
 
   // CHECK-LABEL: Vector A
   // CHECK-NEXT: ( 5, 5, 5, 5
@@ -68,18 +66,18 @@ func.func @add_arrays_of_scalable_vectors(%a: memref<1x2x?xf32>, %b: memref<1x2x
   %vector_a = vector.transfer_read %a[%c0, %c0, %c0], %cst, %mask_a {in_bounds = [true, true, true]} : memref<1x2x?xf32>, vector<1x2x[4]xf32>
   func.call @print_1x2xVSCALExf32(%vector_a) : (vector<1x2x[4]xf32>) -> ()
 
-  vector.print str "\nVector B"
   // CHECK-LABEL: Vector B
   // CHECK-NEXT: ( 4, 4, 4, 4
   // CHECK-NEXT: ( 4, 4, 4, 4
+  vector.print str "\nVector B"
   %vector_b = vector.transfer_read %b[%c0, %c0, %c0], %cst, %mask_b {in_bounds = [true, true, true]} : memref<1x2x?xf32>, vector<1x2x[4]xf32>
   func.call @print_1x2xVSCALExf32(%vector_b) : (vector<1x2x[4]xf32>) -> ()
 
-  %sum = arith.addf %vector_a, %vector_b : vector<1x2x[4]xf32>
   // CHECK-LABEL: Sum
   // CHECK-NEXT: ( 9, 9, 9, 9
   // CHECK-NEXT: ( 9, 9, 9, 9
   vector.print str "\nSum"
+  %sum = arith.addf %vector_a, %vector_b : vector<1x2x[4]xf32>
   func.call @print_1x2xVSCALExf32(%sum) : (vector<1x2x[4]xf32>) -> ()
 
   return
@@ -94,13 +92,12 @@ func.func @entry() {
   %f32_5 = arith.constant 5.0 : f32
   %f32_4 = arith.constant 4.0 : f32
 
-  vector.print str "\n====================\n"
-
   %test_1_memref_size = arith.muli %vscale, %c8 : index
   %test_1_memref = memref.alloca(%test_1_memref_size) : memref<3x?xf32>
 
   linalg.fill ins(%f32_8 : f32) outs(%test_1_memref :memref<3x?xf32>)
 
+  vector.print str "=> Print and read 2D arrays of scalable vectors:"
   func.call @read_and_print_2d_vector(%test_1_memref) : (memref<3x?xf32>) -> ()
 
   vector.print str "\n====================\n"
@@ -112,10 +109,9 @@ func.func @entry() {
   linalg.fill ins(%f32_5 : f32) outs(%test_2_memref_a :memref<1x2x?xf32>)
   linalg.fill ins(%f32_4 : f32) outs(%test_2_memref_b :memref<1x2x?xf32>)
 
+  vector.print str "=> Reading and adding two 3D arrays of scalable vectors:"
   func.call @add_arrays_of_scalable_vectors(
     %test_2_memref_a, %test_2_memref_b) : (memref<1x2x?xf32>, memref<1x2x?xf32>) -> ()
-
-  vector.print str "\n====================\n"
 
   return
 }

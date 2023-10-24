@@ -28,7 +28,8 @@ def LegalizeVectorStorage
     predicate types (`vector<[1|2|4|8]xi1>`) must be converted to/from a full
     predicate type (referred to as a `svbool`) before and after storing and
     loading respectively. This pass does this by widening allocations and
-    inserting conversion intrinsics.
+    inserting conversion intrinsics. Note: Non-powers-of-two masks (e.g.
+    `vector<[7]xi1>`), which are not SVE predicates, are ignored.
 
     For example:
 
