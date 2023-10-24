@@ -4198,6 +4198,10 @@ bool Parser::parseMapTypeModifiers(Sema::OpenMPVarListDataTy &Data) {
         TypeModifier == OMPC_MAP_MODIFIER_ompx_hold) {
       Data.MapTypeModifiers.push_back(TypeModifier);
       Data.MapTypeModifiersLoc.push_back(Tok.getLocation());
+      if (PP.LookAhead(0).isNot(tok::comma) &&
+          PP.LookAhead(0).isNot(tok::colon) && getLangOpts().OpenMP >= 52)
+        Diag(Tok.getLocation(), diag::err_omp_missing_comma)
+            << "map type modifier";
       ConsumeToken();
     } else if (TypeModifier == OMPC_MAP_MODIFIER_mapper) {
       Data.MapTypeModifiers.push_back(TypeModifier);
@@ -4205,6 +4209,11 @@ bool Parser::parseMapTypeModifiers(Sema::OpenMPVarListDataTy &Data) {
       ConsumeToken();
       if (parseMapperModifier(Data))
         return true;
+      if (Tok.isNot(tok::comma) && Tok.isNot(tok::colon) &&
+          getLangOpts().OpenMP >= 52)
+        Diag(Data.MapTypeModifiersLoc.back(), diag::err_omp_missing_comma)
+            << "map type modifier";
+
     } else {
       // For the case of unknown map-type-modifier or a map-type.
       // Map-type is followed by a colon; the function returns when it
