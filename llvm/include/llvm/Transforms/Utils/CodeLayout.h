@@ -65,6 +65,8 @@ struct CDSortConfig {
   unsigned CacheEntries = 16;
   /// The size of a line in the cache.
   unsigned CacheSize = 2048;
+  /// The maximum size of a chain to create.
+  unsigned MaxChainSize = 128;
   /// The power exponent for the distance-based locality.
   double DistancePower = 0.25;
   /// The scale factor for the frequency-based locality.

@@ -20,21 +20,19 @@ using namespace clang::driver::toolchains;
 using namespace clang;
 using namespace llvm::opt;
 
-/// DragonFly Tools
-
-// For now, DragonFly Assemble does just about the same as for
-// FreeBSD, but this may change soon.
 void dragonfly::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
                                         const InputInfo &Output,
                                         const InputInfoList &Inputs,
                                         const ArgList &Args,
                                         const char *LinkingOutput) const {
-  claimNoWarnArgs(Args);
+  const auto &ToolChain = static_cast<const DragonFly &>(getToolChain());
   ArgStringList CmdArgs;
+
+  claimNoWarnArgs(Args);
 
   // When building 32-bit code on DragonFly/pc64, we have to explicitly
   // instruct as in the base system to assemble 32-bit code.
-  if (getToolChain().getArch() == llvm::Triple::x86)
+  if (ToolChain.getArch() == llvm::Triple::x86)
     CmdArgs.push_back("--32");
 
   Args.AddAllArgValues(CmdArgs, options::OPT_Wa_COMMA, options::OPT_Xassembler);
@@ -45,7 +43,7 @@ void dragonfly::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   for (const auto &II : Inputs)
     CmdArgs.push_back(II.getFilename());
 
-  const char *Exec = Args.MakeArgString(getToolChain().GetProgramPath("as"));
+  const char *Exec = Args.MakeArgString(ToolChain.GetProgramPath("as"));
   C.addCommand(std::make_unique<Command>(JA, *this,
                                          ResponseFileSupport::AtFileCurCP(),
                                          Exec, CmdArgs, Inputs, Output));
@@ -58,18 +56,23 @@ void dragonfly::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                      const char *LinkingOutput) const {
   const auto &ToolChain = static_cast<const DragonFly &>(getToolChain());
   const Driver &D = ToolChain.getDriver();
+  const llvm::Triple::ArchType Arch = ToolChain.getArch();
   ArgStringList CmdArgs;
+  bool Static = Args.hasArg(options::OPT_static);
+  bool Shared = Args.hasArg(options::OPT_shared);
+  bool Profiling = Args.hasArg(options::OPT_pg);
+  bool Pie = Args.hasArg(options::OPT_pie);
 
   if (!D.SysRoot.empty())
     CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
 
   CmdArgs.push_back("--eh-frame-hdr");
-  if (Args.hasArg(options::OPT_static)) {
+  if (Static) {
     CmdArgs.push_back("-Bstatic");
   } else {
     if (Args.hasArg(options::OPT_rdynamic))
       CmdArgs.push_back("-export-dynamic");
-    if (Args.hasArg(options::OPT_shared))
+    if (Shared)
       CmdArgs.push_back("-shared");
     else if (!Args.hasArg(options::OPT_r)) {
       CmdArgs.push_back("-dynamic-linker");
@@ -81,7 +84,7 @@ void dragonfly::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   // When building 32-bit code on DragonFly/pc64, we have to explicitly
   // instruct ld in the base system to link 32-bit code.
-  if (getToolChain().getArch() == llvm::Triple::x86) {
+  if (Arch == llvm::Triple::x86) {
     CmdArgs.push_back("-m");
     CmdArgs.push_back("elf_i386");
   }
@@ -94,67 +97,66 @@ void dragonfly::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
                    options::OPT_r)) {
-    if (!Args.hasArg(options::OPT_shared)) {
-      if (Args.hasArg(options::OPT_pg))
-        CmdArgs.push_back(
-            Args.MakeArgString(getToolChain().GetFilePath("gcrt1.o")));
+    const char *crt1 = nullptr;
+    const char *crtbegin = nullptr;
+    if (!Shared) {
+      if (Profiling)
+        crt1 = "gcrt1.o";
       else {
-        if (Args.hasArg(options::OPT_pie))
-          CmdArgs.push_back(
-              Args.MakeArgString(getToolChain().GetFilePath("Scrt1.o")));
+        if (Pie)
+          crt1 = "Scrt1.o";
         else
-          CmdArgs.push_back(
-              Args.MakeArgString(getToolChain().GetFilePath("crt1.o")));
+          crt1 = "crt1.o";
       }
     }
-    CmdArgs.push_back(Args.MakeArgString(getToolChain().GetFilePath("crti.o")));
-    if (Args.hasArg(options::OPT_shared) || Args.hasArg(options::OPT_pie))
-      CmdArgs.push_back(
-          Args.MakeArgString(getToolChain().GetFilePath("crtbeginS.o")));
+
+    if (Shared || Pie)
+      crtbegin = "crtbeginS.o";
     else
-      CmdArgs.push_back(
-          Args.MakeArgString(getToolChain().GetFilePath("crtbegin.o")));
+      crtbegin = "crtbegin.o";
+
+    if (crt1)
+      CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(crt1)));
+    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crti.o")));
+    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(crtbegin)));
   }
 
   Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
                             options::OPT_s, options::OPT_t, options::OPT_r});
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
-  AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
+  AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs,
                    options::OPT_r)) {
-    if (!Args.hasArg(options::OPT_static)) {
+    if (!Static) {
       CmdArgs.push_back("-rpath");
       CmdArgs.push_back("/usr/lib/gcc80");
     }
 
     // Use the static OpenMP runtime with -static-openmp
-    bool StaticOpenMP = Args.hasArg(options::OPT_static_openmp) &&
-                        !Args.hasArg(options::OPT_static);
+    bool StaticOpenMP = Args.hasArg(options::OPT_static_openmp) && !Static;
     addOpenMPRuntime(CmdArgs, ToolChain, Args, StaticOpenMP);
 
     if (D.CCCIsCXX()) {
-      if (getToolChain().ShouldLinkCXXStdlib(Args))
-        getToolChain().AddCXXStdlibLibArgs(Args, CmdArgs);
+      if (ToolChain.ShouldLinkCXXStdlib(Args))
+        ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
       CmdArgs.push_back("-lm");
     }
 
     if (Args.hasArg(options::OPT_pthread))
       CmdArgs.push_back("-lpthread");
 
-    if (!Args.hasArg(options::OPT_nolibc)) {
+    if (!Args.hasArg(options::OPT_nolibc))
       CmdArgs.push_back("-lc");
-    }
 
-    if (Args.hasArg(options::OPT_static) ||
-        Args.hasArg(options::OPT_static_libgcc)) {
+    if (Static || Args.hasArg(options::OPT_static_libgcc)) {
         CmdArgs.push_back("-lgcc");
         CmdArgs.push_back("-lgcc_eh");
     } else {
       if (Args.hasArg(options::OPT_shared_libgcc)) {
           CmdArgs.push_back("-lgcc_pic");
-          if (!Args.hasArg(options::OPT_shared))
+          if (!Shared)
             CmdArgs.push_back("-lgcc");
       } else {
           CmdArgs.push_back("-lgcc");
@@ -167,18 +169,19 @@ void dragonfly::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
                    options::OPT_r)) {
-    if (Args.hasArg(options::OPT_shared) || Args.hasArg(options::OPT_pie))
-      CmdArgs.push_back(
-          Args.MakeArgString(getToolChain().GetFilePath("crtendS.o")));
+    const char *crtend = nullptr;
+    if (Shared || Pie)
+      crtend ="crtendS.o";
     else
-      CmdArgs.push_back(
-          Args.MakeArgString(getToolChain().GetFilePath("crtend.o")));
-    CmdArgs.push_back(Args.MakeArgString(getToolChain().GetFilePath("crtn.o")));
+      crtend = "crtend.o";
+
+    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(crtend)));
+    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crtn.o")));
   }
 
-  getToolChain().addProfileRTLibs(Args, CmdArgs);
+  ToolChain.addProfileRTLibs(Args, CmdArgs);
 
-  const char *Exec = Args.MakeArgString(getToolChain().GetLinkerPath());
+  const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
   C.addCommand(std::make_unique<Command>(JA, *this,
                                          ResponseFileSupport::AtFileCurCP(),
                                          Exec, CmdArgs, Inputs, Output));

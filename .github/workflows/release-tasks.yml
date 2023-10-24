@@ -48,7 +48,7 @@ jobs:
           ./llvm/utils/release/github-upload-release.py --token ${{ github.token }} --release ${{ steps.validate-tag.outputs.release-version }} upload --files ./*doxygen*.tar.xz
 
       - name: Create Release Notes Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/upload-artifact@v3
         with:
           name: release-notes
           path: docs-build/html-export/

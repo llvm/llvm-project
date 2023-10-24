@@ -522,7 +522,7 @@ enum class IncDecOp {
 
 template <typename T, IncDecOp Op, PushVal DoPush>
 bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
-  T Value = Ptr.deref<T>();
+  const T &Value = Ptr.deref<T>();
   T Result;
 
   if constexpr (DoPush == PushVal::Yes)
@@ -1685,6 +1685,16 @@ bool CastPointerIntegral(InterpState &S, CodePtr OpPC) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Zero(InterpState &S, CodePtr OpPC) {
   S.Stk.push<T>(T::zero());
+  return true;
+}
+
+static inline bool ZeroIntAP(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
+  S.Stk.push<IntegralAP<false>>(IntegralAP<false>::zero(BitWidth));
+  return true;
+}
+
+static inline bool ZeroIntAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
+  S.Stk.push<IntegralAP<true>>(IntegralAP<true>::zero(BitWidth));
   return true;
 }
 
