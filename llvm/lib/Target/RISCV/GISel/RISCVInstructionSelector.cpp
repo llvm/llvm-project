@@ -500,8 +500,11 @@ bool RISCVInstructionSelector::selectGlobalValue(
   }
 
   switch (TM.getCodeModel()) {
-  default:
-    report_fatal_error("Unsupported code model for lowering");
+  default: {
+    reportGISelFailure(const_cast<MachineFunction &>(*MF), *TPC, *MORE,
+                       getName(), "Unsupported code model for lowering", MI);
+    return false;
+  }
   case CodeModel::Small: {
     // Must lie within a single 2 GiB address range and must lie between
     // absolute addresses -2 GiB and +2 GiB. This generates the pattern (addi
