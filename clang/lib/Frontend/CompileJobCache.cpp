@@ -684,7 +684,10 @@ std::optional<int> ObjectStoreCachingOutputs::replayCachedResult(
 Expected<std::optional<int>> ObjectStoreCachingOutputs::replayCachedResult(
     const llvm::cas::CASID &ResultCacheKey,
     clang::cas::CompileJobCacheResult &Result, bool JustComputedResult) {
-  if (JustComputedResult)
+  // FIXME: The correct fix for MCCAS replay is that you have an official CASID
+  // file output going all the way down into ObjectWriter, we can remove this
+  // callback and special case.
+  if (JustComputedResult && !ComputedJobNeedsReplay)
     return std::nullopt;
 
   llvm::cas::ObjectStore &CAS = Result.getCAS();
