@@ -7604,8 +7604,8 @@ SDValue PPCTargetLowering::LowerCall_AIX(
         MemOpChains.push_back(
             DAG.getStore(Chain, dl, Arg, PtrOff, MachinePointerInfo()));
       } else
-        CalculateTailCallArgDest(DAG, MF, false, Arg, SPDiff, VA.getLocMemOffset(),
-                                 TailCallArguments);
+        CalculateTailCallArgDest(DAG, MF, false, Arg, SPDiff,
+                                 VA.getLocMemOffset(), TailCallArguments);
 
       continue;
     }
