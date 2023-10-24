@@ -1785,14 +1785,22 @@ bool TargetLowering::SimplifyDemandedBits(
       }
 
       APInt InDemandedMask = DemandedBits.lshr(ShAmt);
+
+      // If the shift is NUW/NSW, then it does demand the high bits.
+      if (Op->getFlags().hasNoSignedWrap())
+        InDemandedMask.setHighBits(ShAmt + 1);
+      else if (Op->getFlags().hasNoUnsignedWrap())
+        InDemandedMask.setHighBits(ShAmt);
+
       if (SimplifyDemandedBits(Op0, InDemandedMask, DemandedElts, Known, TLO,
                                Depth + 1))
         return true;
       assert(!Known.hasConflict() && "Bits known to be one AND zero?");
-      Known.Zero <<= ShAmt;
-      Known.One <<= ShAmt;
-      // low bits known zero.
-      Known.Zero.setLowBits(ShAmt);
+
+      Known = KnownBits::shl(Known,
+                             KnownBits::makeConstant(APInt(BitWidth, ShAmt)),
+                             /* NUW */ Op->getFlags().hasNoUnsignedWrap(),
+                             /* NSW */ Op->getFlags().hasNoSignedWrap());
 
       // Attempt to avoid multi-use ops if we don't need anything from them.
       if (!InDemandedMask.isAllOnes() || !DemandedElts.isAllOnes()) {

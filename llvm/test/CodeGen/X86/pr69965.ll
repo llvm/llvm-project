@@ -7,26 +7,25 @@ define i16 @test(i8 %_in) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    notb %al
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    orb $-128, %cl
-; X86-NEXT:    movzbl %cl, %ecx
-; X86-NEXT:    shll $8, %ecx
-; X86-NEXT:    addb %al, %al
+; X86-NEXT:    andb $127, %al
+; X86-NEXT:    movzbl %al, %ecx
+; X86-NEXT:    orb $-128, %al
 ; X86-NEXT:    movzbl %al, %eax
-; X86-NEXT:    orl %ecx, %eax
+; X86-NEXT:    shll $8, %eax
+; X86-NEXT:    leal (%eax,%ecx,2), %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test:
 ; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    notb %dil
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    orb $-128, %al
-; X64-NEXT:    movzbl %al, %ecx
-; X64-NEXT:    shll $8, %ecx
-; X64-NEXT:    addb %dil, %dil
-; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    orl %ecx, %eax
+; X64-NEXT:    andb $127, %dil
+; X64-NEXT:    leal -128(%rdi), %eax
+; X64-NEXT:    movzbl %al, %eax
+; X64-NEXT:    shll $8, %eax
+; X64-NEXT:    movzbl %dil, %ecx
+; X64-NEXT:    leal (%rax,%rcx,2), %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
   %_1 = and i8 %_in, 127

@@ -1221,14 +1221,14 @@ define fp128 @TestPair128(i64 %a, i64 %b) nounwind {
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X32-NEXT:    addl $3, %ecx
-; X32-NEXT:    adcl $0, %edx
-; X32-NEXT:    adcl $0, %esi
+; X32-NEXT:    addl $3, %esi
 ; X32-NEXT:    adcl $0, %edi
-; X32-NEXT:    movl %esi, 8(%eax)
-; X32-NEXT:    movl %edx, 4(%eax)
-; X32-NEXT:    movl %ecx, (%eax)
-; X32-NEXT:    movl %edi, 12(%eax)
+; X32-NEXT:    adcl $0, %ecx
+; X32-NEXT:    adcl $0, %edx
+; X32-NEXT:    movl %ecx, 8(%eax)
+; X32-NEXT:    movl %edi, 4(%eax)
+; X32-NEXT:    movl %esi, (%eax)
+; X32-NEXT:    movl %edx, 12(%eax)
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %edi
 ; X32-NEXT:    retl $4

@@ -195,8 +195,9 @@ entry:
 define i32 @extendedLeftShiftshortTointBy16(i16 signext %a) nounwind readnone ssp {
 ; CHECK-LABEL: extendedLeftShiftshortTointBy16:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    lsl w8, w0, #16
-; CHECK-NEXT:    add w0, w8, #16, lsl #12 ; =65536
+; CHECK-NEXT:    add w8, w0, #1
+; CHECK-NEXT:    and w8, w8, #0xffff
+; CHECK-NEXT:    lsl w0, w8, #16
 ; CHECK-NEXT:    ret
 entry:
   %inc = add i16 %a, 1

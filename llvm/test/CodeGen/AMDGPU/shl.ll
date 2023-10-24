@@ -489,6 +489,7 @@ define amdgpu_kernel void @shl_i16_i_s(ptr addrspace(1) %out, i16 zeroext %a) {
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_and_b32 s4, s4, 15
 ; VI-NEXT:    s_lshl_b32 s4, s4, 12
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    buffer_store_short v0, off, s[0:3], 0

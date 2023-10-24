@@ -20,6 +20,7 @@ define i64 @complex_float_add(i64 %a.coerce, i64 %b.coerce) nounwind {
 ; CHECK-NEXT:    mv a0, s0
 ; CHECK-NEXT:    mv a1, s1
 ; CHECK-NEXT:    call __addsf3@plt
+; CHECK-NEXT:    andi a0, a0, -1
 ; CHECK-NEXT:    slli a0, a0, 32
 ; CHECK-NEXT:    slli s2, s2, 32
 ; CHECK-NEXT:    srli a1, s2, 32
