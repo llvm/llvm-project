@@ -1,29 +1,25 @@
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x c++ -emit-llvm -fcuda-is-device -debug-info-kind=limited -gheterogeneous-dwarf -o - %s | FileCheck %s
 //
 // first def for 'a'
-// CHECK: @_Z1fv()
+// CHECK-LABEL: @_Z1fv()
 // CHECK: call void @llvm.dbg.def
 //
 // one unammed def for the struct holding x1 y1, one def for x1 and one for y1
 // CHECK: call void @llvm.dbg.def(metadata ![[X1_LIFETIME:[0-9]+]]
 // CHECK: call void @llvm.dbg.def(metadata ![[Y1_LIFETIME:[0-9]+]]
-// CHECK: call void @llvm.dbg.def
 //
 // the same for x2 y2, x3 y3 and x4 y4
 // CHECK: call void @llvm.dbg.def(metadata ![[X2_LIFETIME:[0-9]+]]
 // CHECK: call void @llvm.dbg.def(metadata ![[Y2_LIFETIME:[0-9]+]]
-// CHECK: call void @llvm.dbg.def
 //
-// CHECK: @_Z1gv()
+// CHECK-LABEL: @_Z1gv()
 // CHECK: call void @llvm.dbg.def
 //
 // CHECK: call void @llvm.dbg.def(metadata ![[X3_LIFETIME:[0-9]+]]
 // CHECK: call void @llvm.dbg.def(metadata ![[Y3_LIFETIME:[0-9]+]]
-// CHECK: call void @llvm.dbg.def
 //
 // CHECK: call void @llvm.dbg.def(metadata ![[X4_LIFETIME:[0-9]+]]
 // CHECK: call void @llvm.dbg.def(metadata ![[Y4_LIFETIME:[0-9]+]]
-// CHECK: call void @llvm.dbg.def
 //
 // CHECK: ![[X1_LIFETIME]] = distinct !DILifetime(object: !{{[0-9]+}}, location: !DIExpr(DIOpReferrer(ptr addrspace(5)), DIOpDeref(%struct.A), DIOpConstant(i32 0), DIOpBitOffset(i32)))
 // CHECK: ![[Y1_LIFETIME]] = distinct !DILifetime(object: !{{[0-9]+}}, location: !DIExpr(DIOpReferrer(ptr addrspace(5)), DIOpDeref(%struct.A), DIOpConstant(i32 32), DIOpBitOffset(i32)))

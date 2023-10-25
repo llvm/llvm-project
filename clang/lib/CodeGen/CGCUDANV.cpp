@@ -19,6 +19,7 @@
 #include "clang/Basic/Cuda.h"
 #include "clang/CodeGen/CodeGenABITypes.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
+#include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -1129,33 +1130,32 @@ void CGNVCUDARuntime::transformManagedVars() {
 // registered. The linker will provide a pointer to this section so we can
 // register the symbols with the linked device image.
 void CGNVCUDARuntime::createOffloadingEntries() {
-  llvm::OpenMPIRBuilder OMPBuilder(CGM.getModule());
-  OMPBuilder.initialize();
-
   StringRef Section = CGM.getLangOpts().HIP ? "hip_offloading_entries"
                                             : "cuda_offloading_entries";
+  llvm::Module &M = CGM.getModule();
   for (KernelInfo &I : EmittedKernels)
-    OMPBuilder.emitOffloadingEntry(KernelHandles[I.Kernel->getName()],
-                                   getDeviceSideName(cast<NamedDecl>(I.D)), 0,
-                                   DeviceVarFlags::OffloadGlobalEntry, Section);
+    llvm::offloading::emitOffloadingEntry(
+        M, KernelHandles[I.Kernel->getName()],
+        getDeviceSideName(cast<NamedDecl>(I.D)), 0,
+        DeviceVarFlags::OffloadGlobalEntry, Section);
 
   for (VarInfo &I : DeviceVars) {
     uint64_t VarSize =
         CGM.getDataLayout().getTypeAllocSize(I.Var->getValueType());
     if (I.Flags.getKind() == DeviceVarFlags::Variable) {
-      OMPBuilder.emitOffloadingEntry(
-          I.Var, getDeviceSideName(I.D), VarSize,
+      llvm::offloading::emitOffloadingEntry(
+          M, I.Var, getDeviceSideName(I.D), VarSize,
           I.Flags.isManaged() ? DeviceVarFlags::OffloadGlobalManagedEntry
                               : DeviceVarFlags::OffloadGlobalEntry,
           Section);
     } else if (I.Flags.getKind() == DeviceVarFlags::Surface) {
-      OMPBuilder.emitOffloadingEntry(I.Var, getDeviceSideName(I.D), VarSize,
-                                     DeviceVarFlags::OffloadGlobalSurfaceEntry,
-                                     Section);
+      llvm::offloading::emitOffloadingEntry(
+          M, I.Var, getDeviceSideName(I.D), VarSize,
+          DeviceVarFlags::OffloadGlobalSurfaceEntry, Section);
     } else if (I.Flags.getKind() == DeviceVarFlags::Texture) {
-      OMPBuilder.emitOffloadingEntry(I.Var, getDeviceSideName(I.D), VarSize,
-                                     DeviceVarFlags::OffloadGlobalTextureEntry,
-                                     Section);
+      llvm::offloading::emitOffloadingEntry(
+          M, I.Var, getDeviceSideName(I.D), VarSize,
+          DeviceVarFlags::OffloadGlobalTextureEntry, Section);
     }
   }
 }

@@ -7,6 +7,3 @@ Revert "[OpenMP] Disable early vectorization of loads/stores in the runtime "
 
 Revert: waiting on pip install myst-parser 
  b6ff03206 "[Documentation] Replace recommonmark by myst-parser
-
-Revert: breaks hipCUB build 
- [AMDGPU] Accept arbitrary sized sources in CalculateByteProvider
