@@ -4184,6 +4184,233 @@ bool Sema::CheckLoongArchBuiltinFunctionCall(const TargetInfo &TI,
   case LoongArch::BI__builtin_lsx_vrepli_w:
   case LoongArch::BI__builtin_lsx_vrepli_d:
     return SemaBuiltinConstantArgRange(TheCall, 0, -512, 511);
+
+  // LASX intrinsics.
+  case LoongArch::BI__builtin_lasx_xvbitclri_b:
+  case LoongArch::BI__builtin_lasx_xvbitrevi_b:
+  case LoongArch::BI__builtin_lasx_xvbitseti_b:
+  case LoongArch::BI__builtin_lasx_xvsat_b:
+  case LoongArch::BI__builtin_lasx_xvsat_bu:
+  case LoongArch::BI__builtin_lasx_xvslli_b:
+  case LoongArch::BI__builtin_lasx_xvsrai_b:
+  case LoongArch::BI__builtin_lasx_xvsrari_b:
+  case LoongArch::BI__builtin_lasx_xvsrli_b:
+  case LoongArch::BI__builtin_lasx_xvsllwil_h_b:
+  case LoongArch::BI__builtin_lasx_xvsllwil_hu_bu:
+  case LoongArch::BI__builtin_lasx_xvrotri_b:
+  case LoongArch::BI__builtin_lasx_xvsrlri_b:
+    return SemaBuiltinConstantArgRange(TheCall, 1, 0, 7);
+  case LoongArch::BI__builtin_lasx_xvbitclri_h:
+  case LoongArch::BI__builtin_lasx_xvbitrevi_h:
+  case LoongArch::BI__builtin_lasx_xvbitseti_h:
+  case LoongArch::BI__builtin_lasx_xvsat_h:
+  case LoongArch::BI__builtin_lasx_xvsat_hu:
+  case LoongArch::BI__builtin_lasx_xvslli_h:
+  case LoongArch::BI__builtin_lasx_xvsrai_h:
+  case LoongArch::BI__builtin_lasx_xvsrari_h:
+  case LoongArch::BI__builtin_lasx_xvsrli_h:
+  case LoongArch::BI__builtin_lasx_xvsllwil_w_h:
+  case LoongArch::BI__builtin_lasx_xvsllwil_wu_hu:
+  case LoongArch::BI__builtin_lasx_xvrotri_h:
+  case LoongArch::BI__builtin_lasx_xvsrlri_h:
+    return SemaBuiltinConstantArgRange(TheCall, 1, 0, 15);
+  case LoongArch::BI__builtin_lasx_xvssrarni_b_h:
+  case LoongArch::BI__builtin_lasx_xvssrarni_bu_h:
+  case LoongArch::BI__builtin_lasx_xvssrani_b_h:
+  case LoongArch::BI__builtin_lasx_xvssrani_bu_h:
+  case LoongArch::BI__builtin_lasx_xvsrarni_b_h:
+  case LoongArch::BI__builtin_lasx_xvsrlni_b_h:
+  case LoongArch::BI__builtin_lasx_xvsrlrni_b_h:
+  case LoongArch::BI__builtin_lasx_xvssrlni_b_h:
+  case LoongArch::BI__builtin_lasx_xvssrlni_bu_h:
+  case LoongArch::BI__builtin_lasx_xvssrlrni_b_h:
+  case LoongArch::BI__builtin_lasx_xvssrlrni_bu_h:
+  case LoongArch::BI__builtin_lasx_xvsrani_b_h:
+    return SemaBuiltinConstantArgRange(TheCall, 2, 0, 15);
+  case LoongArch::BI__builtin_lasx_xvslei_bu:
+  case LoongArch::BI__builtin_lasx_xvslei_hu:
+  case LoongArch::BI__builtin_lasx_xvslei_wu:
+  case LoongArch::BI__builtin_lasx_xvslei_du:
+  case LoongArch::BI__builtin_lasx_xvslti_bu:
+  case LoongArch::BI__builtin_lasx_xvslti_hu:
+  case LoongArch::BI__builtin_lasx_xvslti_wu:
+  case LoongArch::BI__builtin_lasx_xvslti_du:
+  case LoongArch::BI__builtin_lasx_xvmaxi_bu:
+  case LoongArch::BI__builtin_lasx_xvmaxi_hu:
+  case LoongArch::BI__builtin_lasx_xvmaxi_wu:
+  case LoongArch::BI__builtin_lasx_xvmaxi_du:
+  case LoongArch::BI__builtin_lasx_xvmini_bu:
+  case LoongArch::BI__builtin_lasx_xvmini_hu:
+  case LoongArch::BI__builtin_lasx_xvmini_wu:
+  case LoongArch::BI__builtin_lasx_xvmini_du:
+  case LoongArch::BI__builtin_lasx_xvaddi_bu:
+  case LoongArch::BI__builtin_lasx_xvaddi_hu:
+  case LoongArch::BI__builtin_lasx_xvaddi_wu:
+  case LoongArch::BI__builtin_lasx_xvaddi_du:
+  case LoongArch::BI__builtin_lasx_xvbitclri_w:
+  case LoongArch::BI__builtin_lasx_xvbitrevi_w:
+  case LoongArch::BI__builtin_lasx_xvbitseti_w:
+  case LoongArch::BI__builtin_lasx_xvsat_w:
+  case LoongArch::BI__builtin_lasx_xvsat_wu:
+  case LoongArch::BI__builtin_lasx_xvslli_w:
+  case LoongArch::BI__builtin_lasx_xvsrai_w:
+  case LoongArch::BI__builtin_lasx_xvsrari_w:
+  case LoongArch::BI__builtin_lasx_xvsrli_w:
+  case LoongArch::BI__builtin_lasx_xvsllwil_d_w:
+  case LoongArch::BI__builtin_lasx_xvsllwil_du_wu:
+  case LoongArch::BI__builtin_lasx_xvsrlri_w:
+  case LoongArch::BI__builtin_lasx_xvrotri_w:
+  case LoongArch::BI__builtin_lasx_xvsubi_bu:
+  case LoongArch::BI__builtin_lasx_xvsubi_hu:
+  case LoongArch::BI__builtin_lasx_xvsubi_wu:
+  case LoongArch::BI__builtin_lasx_xvsubi_du:
+  case LoongArch::BI__builtin_lasx_xvbsrl_v:
+  case LoongArch::BI__builtin_lasx_xvbsll_v:
+    return SemaBuiltinConstantArgRange(TheCall, 1, 0, 31);
+  case LoongArch::BI__builtin_lasx_xvssrarni_h_w:
+  case LoongArch::BI__builtin_lasx_xvssrarni_hu_w:
+  case LoongArch::BI__builtin_lasx_xvssrani_h_w:
+  case LoongArch::BI__builtin_lasx_xvssrani_hu_w:
+  case LoongArch::BI__builtin_lasx_xvsrarni_h_w:
+  case LoongArch::BI__builtin_lasx_xvsrani_h_w:
+  case LoongArch::BI__builtin_lasx_xvfrstpi_b:
+  case LoongArch::BI__builtin_lasx_xvfrstpi_h:
+  case LoongArch::BI__builtin_lasx_xvsrlni_h_w:
+  case LoongArch::BI__builtin_lasx_xvsrlrni_h_w:
+  case LoongArch::BI__builtin_lasx_xvssrlni_h_w:
+  case LoongArch::BI__builtin_lasx_xvssrlni_hu_w:
+  case LoongArch::BI__builtin_lasx_xvssrlrni_h_w:
+  case LoongArch::BI__builtin_lasx_xvssrlrni_hu_w:
+    return SemaBuiltinConstantArgRange(TheCall, 2, 0, 31);
+  case LoongArch::BI__builtin_lasx_xvbitclri_d:
+  case LoongArch::BI__builtin_lasx_xvbitrevi_d:
+  case LoongArch::BI__builtin_lasx_xvbitseti_d:
+  case LoongArch::BI__builtin_lasx_xvsat_d:
+  case LoongArch::BI__builtin_lasx_xvsat_du:
+  case LoongArch::BI__builtin_lasx_xvslli_d:
+  case LoongArch::BI__builtin_lasx_xvsrai_d:
+  case LoongArch::BI__builtin_lasx_xvsrli_d:
+  case LoongArch::BI__builtin_lasx_xvsrari_d:
+  case LoongArch::BI__builtin_lasx_xvrotri_d:
+  case LoongArch::BI__builtin_lasx_xvsrlri_d:
+    return SemaBuiltinConstantArgRange(TheCall, 1, 0, 63);
+  case LoongArch::BI__builtin_lasx_xvssrarni_w_d:
+  case LoongArch::BI__builtin_lasx_xvssrarni_wu_d:
+  case LoongArch::BI__builtin_lasx_xvssrani_w_d:
+  case LoongArch::BI__builtin_lasx_xvssrani_wu_d:
+  case LoongArch::BI__builtin_lasx_xvsrarni_w_d:
+  case LoongArch::BI__builtin_lasx_xvsrlni_w_d:
+  case LoongArch::BI__builtin_lasx_xvsrlrni_w_d:
+  case LoongArch::BI__builtin_lasx_xvssrlni_w_d:
+  case LoongArch::BI__builtin_lasx_xvssrlni_wu_d:
+  case LoongArch::BI__builtin_lasx_xvssrlrni_w_d:
+  case LoongArch::BI__builtin_lasx_xvssrlrni_wu_d:
+  case LoongArch::BI__builtin_lasx_xvsrani_w_d:
+    return SemaBuiltinConstantArgRange(TheCall, 2, 0, 63);
+  case LoongArch::BI__builtin_lasx_xvssrarni_d_q:
+  case LoongArch::BI__builtin_lasx_xvssrarni_du_q:
+  case LoongArch::BI__builtin_lasx_xvssrani_d_q:
+  case LoongArch::BI__builtin_lasx_xvssrani_du_q:
+  case LoongArch::BI__builtin_lasx_xvsrarni_d_q:
+  case LoongArch::BI__builtin_lasx_xvssrlni_d_q:
+  case LoongArch::BI__builtin_lasx_xvssrlni_du_q:
+  case LoongArch::BI__builtin_lasx_xvssrlrni_d_q:
+  case LoongArch::BI__builtin_lasx_xvssrlrni_du_q:
+  case LoongArch::BI__builtin_lasx_xvsrani_d_q:
+  case LoongArch::BI__builtin_lasx_xvsrlni_d_q:
+  case LoongArch::BI__builtin_lasx_xvsrlrni_d_q:
+    return SemaBuiltinConstantArgRange(TheCall, 2, 0, 127);
+  case LoongArch::BI__builtin_lasx_xvseqi_b:
+  case LoongArch::BI__builtin_lasx_xvseqi_h:
+  case LoongArch::BI__builtin_lasx_xvseqi_w:
+  case LoongArch::BI__builtin_lasx_xvseqi_d:
+  case LoongArch::BI__builtin_lasx_xvslti_b:
+  case LoongArch::BI__builtin_lasx_xvslti_h:
+  case LoongArch::BI__builtin_lasx_xvslti_w:
+  case LoongArch::BI__builtin_lasx_xvslti_d:
+  case LoongArch::BI__builtin_lasx_xvslei_b:
+  case LoongArch::BI__builtin_lasx_xvslei_h:
+  case LoongArch::BI__builtin_lasx_xvslei_w:
+  case LoongArch::BI__builtin_lasx_xvslei_d:
+  case LoongArch::BI__builtin_lasx_xvmaxi_b:
+  case LoongArch::BI__builtin_lasx_xvmaxi_h:
+  case LoongArch::BI__builtin_lasx_xvmaxi_w:
+  case LoongArch::BI__builtin_lasx_xvmaxi_d:
+  case LoongArch::BI__builtin_lasx_xvmini_b:
+  case LoongArch::BI__builtin_lasx_xvmini_h:
+  case LoongArch::BI__builtin_lasx_xvmini_w:
+  case LoongArch::BI__builtin_lasx_xvmini_d:
+    return SemaBuiltinConstantArgRange(TheCall, 1, -16, 15);
+  case LoongArch::BI__builtin_lasx_xvandi_b:
+  case LoongArch::BI__builtin_lasx_xvnori_b:
+  case LoongArch::BI__builtin_lasx_xvori_b:
+  case LoongArch::BI__builtin_lasx_xvshuf4i_b:
+  case LoongArch::BI__builtin_lasx_xvshuf4i_h:
+  case LoongArch::BI__builtin_lasx_xvshuf4i_w:
+  case LoongArch::BI__builtin_lasx_xvxori_b:
+  case LoongArch::BI__builtin_lasx_xvpermi_d:
+    return SemaBuiltinConstantArgRange(TheCall, 1, 0, 255);
+  case LoongArch::BI__builtin_lasx_xvbitseli_b:
+  case LoongArch::BI__builtin_lasx_xvshuf4i_d:
+  case LoongArch::BI__builtin_lasx_xvextrins_b:
+  case LoongArch::BI__builtin_lasx_xvextrins_h:
+  case LoongArch::BI__builtin_lasx_xvextrins_w:
+  case LoongArch::BI__builtin_lasx_xvextrins_d:
+  case LoongArch::BI__builtin_lasx_xvpermi_q:
+  case LoongArch::BI__builtin_lasx_xvpermi_w:
+    return SemaBuiltinConstantArgRange(TheCall, 2, 0, 255);
+  case LoongArch::BI__builtin_lasx_xvrepl128vei_b:
+    return SemaBuiltinConstantArgRange(TheCall, 1, 0, 15);
+  case LoongArch::BI__builtin_lasx_xvrepl128vei_h:
+  case LoongArch::BI__builtin_lasx_xvpickve2gr_w:
+  case LoongArch::BI__builtin_lasx_xvpickve2gr_wu:
+  case LoongArch::BI__builtin_lasx_xvpickve_w_f:
+  case LoongArch::BI__builtin_lasx_xvpickve_w:
+    return SemaBuiltinConstantArgRange(TheCall, 1, 0, 7);
+  case LoongArch::BI__builtin_lasx_xvinsgr2vr_w:
+  case LoongArch::BI__builtin_lasx_xvinsve0_w:
+    return SemaBuiltinConstantArgRange(TheCall, 2, 0, 7);
+  case LoongArch::BI__builtin_lasx_xvrepl128vei_w:
+  case LoongArch::BI__builtin_lasx_xvpickve2gr_d:
+  case LoongArch::BI__builtin_lasx_xvpickve2gr_du:
+  case LoongArch::BI__builtin_lasx_xvpickve_d_f:
+  case LoongArch::BI__builtin_lasx_xvpickve_d:
+    return SemaBuiltinConstantArgRange(TheCall, 1, 0, 3);
+  case LoongArch::BI__builtin_lasx_xvinsve0_d:
+  case LoongArch::BI__builtin_lasx_xvinsgr2vr_d:
+    return SemaBuiltinConstantArgRange(TheCall, 2, 0, 3);
+  case LoongArch::BI__builtin_lasx_xvstelm_b:
+    return SemaBuiltinConstantArgRange(TheCall, 2, -128, 127) ||
+           SemaBuiltinConstantArgRange(TheCall, 3, 0, 31);
+  case LoongArch::BI__builtin_lasx_xvstelm_h:
+    return SemaBuiltinConstantArgRange(TheCall, 2, -256, 254) ||
+           SemaBuiltinConstantArgRange(TheCall, 3, 0, 15);
+  case LoongArch::BI__builtin_lasx_xvstelm_w:
+    return SemaBuiltinConstantArgRange(TheCall, 2, -512, 508) ||
+           SemaBuiltinConstantArgRange(TheCall, 3, 0, 7);
+  case LoongArch::BI__builtin_lasx_xvstelm_d:
+    return SemaBuiltinConstantArgRange(TheCall, 2, -1024, 1016) ||
+           SemaBuiltinConstantArgRange(TheCall, 3, 0, 3);
+  case LoongArch::BI__builtin_lasx_xvrepl128vei_d:
+    return SemaBuiltinConstantArgRange(TheCall, 1, 0, 1);
+  case LoongArch::BI__builtin_lasx_xvldrepl_b:
+  case LoongArch::BI__builtin_lasx_xvld:
+    return SemaBuiltinConstantArgRange(TheCall, 1, -2048, 2047);
+  case LoongArch::BI__builtin_lasx_xvldrepl_h:
+    return SemaBuiltinConstantArgRange(TheCall, 1, -2048, 2046);
+  case LoongArch::BI__builtin_lasx_xvldrepl_w:
+    return SemaBuiltinConstantArgRange(TheCall, 1, -2048, 2044);
+  case LoongArch::BI__builtin_lasx_xvldrepl_d:
+    return SemaBuiltinConstantArgRange(TheCall, 1, -2048, 2040);
+  case LoongArch::BI__builtin_lasx_xvst:
+    return SemaBuiltinConstantArgRange(TheCall, 2, -2048, 2047);
+  case LoongArch::BI__builtin_lasx_xvldi:
+    return SemaBuiltinConstantArgRange(TheCall, 0, -4096, 4095);
+  case LoongArch::BI__builtin_lasx_xvrepli_b:
+  case LoongArch::BI__builtin_lasx_xvrepli_h:
+  case LoongArch::BI__builtin_lasx_xvrepli_w:
+  case LoongArch::BI__builtin_lasx_xvrepli_d:
+    return SemaBuiltinConstantArgRange(TheCall, 0, -512, 511);
   }
   return false;
 }
