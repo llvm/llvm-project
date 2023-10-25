@@ -20921,6 +20921,12 @@ static SDValue combineBoolVectorAndTruncateStore(SelectionDAG &DAG,
                       Store->getMemOperand());
 }
 
+bool isHalvingTruncateOfLegalScalableType(EVT SrcVT, EVT DstVT) {
+  return (SrcVT == MVT::nxv8i16 && DstVT == MVT::nxv8i8) ||
+         (SrcVT == MVT::nxv4i32 && DstVT == MVT::nxv4i16) ||
+         (SrcVT == MVT::nxv2i64 && DstVT == MVT::nxv2i32);
+}
+
 static SDValue performSTORECombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    SelectionDAG &DAG,
@@ -20962,16 +20968,16 @@ static SDValue performSTORECombine(SDNode *N,
   if (SDValue Store = combineBoolVectorAndTruncateStore(DAG, ST))
     return Store;
 
-  if (ST->isTruncatingStore())
+  if (ST->isTruncatingStore()) {
+    EVT StoreVT = ST->getMemoryVT();
+    if (!isHalvingTruncateOfLegalScalableType(ValueVT, StoreVT))
+      return SDValue();
     if (SDValue Rshrnb =
             trySimplifySrlAddToRshrnb(ST->getOperand(1), DAG, Subtarget)) {
-      EVT StoreVT = ST->getMemoryVT();
-      if ((ValueVT == MVT::nxv8i16 && StoreVT == MVT::nxv8i8) ||
-          (ValueVT == MVT::nxv4i32 && StoreVT == MVT::nxv4i16) ||
-          (ValueVT == MVT::nxv2i64 && StoreVT == MVT::nxv2i32))
-        return DAG.getTruncStore(ST->getChain(), ST, Rshrnb, ST->getBasePtr(),
-                                 StoreVT, ST->getMemOperand());
+      return DAG.getTruncStore(ST->getChain(), ST, Rshrnb, ST->getBasePtr(),
+                               StoreVT, ST->getMemOperand());
     }
+  }
 
   return SDValue();
 }
@@ -21018,17 +21024,15 @@ static SDValue performMSTORECombine(SDNode *N,
   }
 
   if (MST->isTruncatingStore()) {
+    EVT ValueVT = Value->getValueType(0);
+    EVT MemVT = MST->getMemoryVT();
+    if (!isHalvingTruncateOfLegalScalableType(ValueVT, MemVT))
+      return SDValue();
     if (SDValue Rshrnb = trySimplifySrlAddToRshrnb(Value, DAG, Subtarget)) {
-      EVT ValueVT = Value->getValueType(0);
-      EVT MemVT = MST->getMemoryVT();
-      if ((ValueVT == MVT::nxv8i16 && MemVT == MVT::nxv8i8) ||
-          (ValueVT == MVT::nxv4i32 && MemVT == MVT::nxv4i16) ||
-          (ValueVT == MVT::nxv2i64 && MemVT == MVT::nxv2i32)) {
-        return DAG.getMaskedStore(
-            MST->getChain(), DL, Rshrnb, MST->getBasePtr(), MST->getOffset(),
-            MST->getMask(), MST->getMemoryVT(), MST->getMemOperand(),
-            MST->getAddressingMode(), true);
-      }
+      return DAG.getMaskedStore(MST->getChain(), DL, Rshrnb, MST->getBasePtr(),
+                                MST->getOffset(), MST->getMask(),
+                                MST->getMemoryVT(), MST->getMemOperand(),
+                                MST->getAddressingMode(), true);
     }
   }
 
