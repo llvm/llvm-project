@@ -286,8 +286,8 @@ static std::string getTaintMsg(std::string RegName) {
   return std::string(Buf);
 }
 
-void ArrayBoundCheckerV2::checkLocation(SVal location, bool isLoad,
-                                        const Stmt* LoadS,
+void ArrayBoundCheckerV2::checkLocation(SVal Location, bool IsLoad,
+                                        const Stmt *LoadS,
                                         CheckerContext &C) const {
 
   // NOTE: Instead of using ProgramState::assumeInBound(), we are prototyping
@@ -308,11 +308,11 @@ void ArrayBoundCheckerV2::checkLocation(SVal location, bool isLoad,
   if (isFromCtypeMacro(LoadS, C.getASTContext()))
     return;
 
-  ProgramStateRef state = C.getState();
-  SValBuilder &svalBuilder = C.getSValBuilder();
+  ProgramStateRef State = C.getState();
+  SValBuilder &SVB = C.getSValBuilder();
 
   const std::optional<std::pair<const SubRegion *, NonLoc>> &RawOffset =
-      computeOffset(state, svalBuilder, location);
+      computeOffset(State, SVB, Location);
 
   if (!RawOffset)
     return;
@@ -329,54 +329,50 @@ void ArrayBoundCheckerV2::checkLocation(SVal location, bool isLoad,
     // MallocChecker that call SValBuilder::getConjuredHeapSymbolVal()) and
     // non-symbolic regions (e.g. a field subregion of a symbolic region) in
     // unknown space.
-    auto [state_precedesLowerBound, state_withinLowerBound] =
-        compareValueToThreshold(state, ByteOffset,
-                                svalBuilder.makeZeroArrayIndex(), svalBuilder);
+    auto [PrecedesLowerBound, WithinLowerBound] = compareValueToThreshold(
+        State, ByteOffset, SVB.makeZeroArrayIndex(), SVB);
 
-    if (state_precedesLowerBound && !state_withinLowerBound) {
+    if (PrecedesLowerBound && !WithinLowerBound) {
       // We know that the index definitely precedes the lower bound.
       std::string RegName = getRegionName(Reg);
       std::string Msg = getPrecedesMsg(RegName, ByteOffset);
-      reportOOB(C, state_precedesLowerBound, OOB_Precedes, ByteOffset, RegName,
-                Msg);
+      reportOOB(C, PrecedesLowerBound, OOB_Precedes, ByteOffset, RegName, Msg);
       return;
     }
 
-    if (state_withinLowerBound)
-      state = state_withinLowerBound;
+    if (WithinLowerBound)
+      State = WithinLowerBound;
   }
 
   // CHECK UPPER BOUND
-  DefinedOrUnknownSVal Size = getDynamicExtent(state, Reg, svalBuilder);
+  DefinedOrUnknownSVal Size = getDynamicExtent(State, Reg, SVB);
   if (auto KnownSize = Size.getAs<NonLoc>()) {
-    auto [state_withinUpperBound, state_exceedsUpperBound] =
-        compareValueToThreshold(state, ByteOffset, *KnownSize, svalBuilder);
+    auto [WithinUpperBound, ExceedsUpperBound] =
+        compareValueToThreshold(State, ByteOffset, *KnownSize, SVB);
 
-    if (state_exceedsUpperBound) {
-      if (!state_withinUpperBound) {
+    if (ExceedsUpperBound) {
+      if (!WithinUpperBound) {
         // We know that the index definitely exceeds the upper bound.
         std::string RegName = getRegionName(Reg);
         std::string Msg = getExceedsMsg(C.getASTContext(), RegName, ByteOffset,
-                                        *KnownSize, location);
-        reportOOB(C, state_exceedsUpperBound, OOB_Exceeds, ByteOffset, RegName,
-                  Msg);
+                                        *KnownSize, Location);
+        reportOOB(C, ExceedsUpperBound, OOB_Exceeds, ByteOffset, RegName, Msg);
         return;
       }
-      if (isTainted(state, ByteOffset)) {
+      if (isTainted(State, ByteOffset)) {
         // Both cases are possible, but the index is tainted, so report.
         std::string RegName = getRegionName(Reg);
         std::string Msg = getTaintMsg(RegName);
-        reportOOB(C, state_exceedsUpperBound, OOB_Taint, ByteOffset, RegName,
-                  Msg);
+        reportOOB(C, ExceedsUpperBound, OOB_Taint, ByteOffset, RegName, Msg);
         return;
       }
     }
 
-    if (state_withinUpperBound)
-      state = state_withinUpperBound;
+    if (WithinUpperBound)
+      State = WithinUpperBound;
   }
 
-  C.addTransition(state);
+  C.addTransition(State);
 }
 
 void ArrayBoundCheckerV2::reportOOB(CheckerContext &C,
