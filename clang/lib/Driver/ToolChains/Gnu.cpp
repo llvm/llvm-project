@@ -2027,7 +2027,7 @@ Generic_GCC::GCCVersion Generic_GCC::GCCVersion::Parse(StringRef VersionText) {
   // is stored in PatchSuffix. The third segment is allowed to not contain
   // a number at all.
 
-  auto HandleLastNumber = [&](StringRef Segment, int &Number,
+  auto TryParseLastNumber = [&](StringRef Segment, int &Number,
                               std::string &OutStr) -> bool {
     // Look for a number prefix and parse that, and split out any trailing
     // string into GoodVersion.PatchSuffix.
@@ -2042,7 +2042,7 @@ Generic_GCC::GCCVersion Generic_GCC::GCCVersion::Parse(StringRef VersionText) {
     }
     return false;
   };
-  auto HandleNumber = [](StringRef Segment, int &Number) -> bool {
+  auto TryParseNumber = [](StringRef Segment, int &Number) -> bool {
     if (Segment.getAsInteger(10, Number) || Number < 0)
       return false;
     return true;
@@ -2050,28 +2050,28 @@ Generic_GCC::GCCVersion Generic_GCC::GCCVersion::Parse(StringRef VersionText) {
 
   if (MinorStr.empty()) {
     // If no minor string, major is the last segment
-    if (!HandleLastNumber(MajorStr, GoodVersion.Major, GoodVersion.MajorStr))
+    if (!TryParseLastNumber(MajorStr, GoodVersion.Major, GoodVersion.MajorStr))
       return BadVersion;
     return GoodVersion;
   } else {
-    if (!HandleNumber(MajorStr, GoodVersion.Major))
+    if (!TryParseNumber(MajorStr, GoodVersion.Major))
       return BadVersion;
     GoodVersion.MajorStr = MajorStr;
   }
   if (PatchStr.empty()) {
     // If no patch string, minor is the last segment
-    if (!HandleLastNumber(MinorStr, GoodVersion.Minor, GoodVersion.MinorStr))
+    if (!TryParseLastNumber(MinorStr, GoodVersion.Minor, GoodVersion.MinorStr))
       return BadVersion;
     return GoodVersion;
   } else {
-    if (!HandleNumber(MinorStr, GoodVersion.Minor))
+    if (!TryParseNumber(MinorStr, GoodVersion.Minor))
       return BadVersion;
     GoodVersion.MinorStr = MinorStr;
   }
 
   // For the last segment, tolerate a missing number.
   std::string DummyStr;
-  HandleLastNumber(PatchStr, GoodVersion.Patch, DummyStr);
+  TryParseLastNumber(PatchStr, GoodVersion.Patch, DummyStr);
   return GoodVersion;
 }
 
