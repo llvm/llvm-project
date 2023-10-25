@@ -980,6 +980,10 @@ the configuration (without a prefix: ``Auto``).
 **AlignTrailingComments** (``TrailingCommentsAlignmentStyle``) :versionbadge:`clang-format 3.7` :ref:`¶ <AlignTrailingComments>`
   Control of trailing comments.
 
+  The alignment stops at closing braces after a line break, and only
+  followed by other closing braces, a (``do-``) ``while``, a lambda call, or
+  a semicolon.
+
 
   .. note::
 

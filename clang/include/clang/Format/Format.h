@@ -539,6 +539,10 @@ struct FormatStyle {
 
   /// Control of trailing comments.
   ///
+  /// The alignment stops at closing braces after a line break, and only
+  /// followed by other closing braces, a (``do-``) ``while``, a lambda call, or
+  /// a semicolon.
+  ///
   /// \note
   ///  As of clang-format 16 this option is not a bool but can be set
   ///  to the options. Conventional bool options still can be parsed as before.
