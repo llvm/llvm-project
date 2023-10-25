@@ -60,7 +60,7 @@ static const int dstSigFracBits = 52;
 static const int dstExpBits = 11;
 
 #elif defined DST_80
-typedef long double dst_t;
+typedef xf_float dst_t;
 typedef __uint128_t dst_rep_t;
 #define DST_REP_C (__uint128_t)
 static const int dstBits = 80;
