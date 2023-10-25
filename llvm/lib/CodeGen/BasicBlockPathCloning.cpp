@@ -62,7 +62,8 @@ MachineBasicBlock *CloneMachineBasicBlock(MachineBasicBlock &OrigBB,
   // Copy the instructions.
   for (auto &I : OrigBB.instrs()) {
     // Bundled instructions are duplicated together.
-    if (I.isBundledWithPred()) continue;
+    if (I.isBundledWithPred())
+      continue;
     TII->duplicate(*CloneBB, CloneBB->end(), I);
   }
 
