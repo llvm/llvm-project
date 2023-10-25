@@ -184,7 +184,8 @@ SmallVector<StringRef> unifyTargetFeatures(ArrayRef<StringRef> Features);
 /// to.
 SmallString<128> getStatsFileName(const llvm::opt::ArgList &Args,
                                   const InputInfo &Output,
-                                  const InputInfo &Input, const Driver &D);
+                                  const InputInfo &Input, const Driver &D,
+                                  bool IsLTO = false);
 
 /// \p Flag must be a flag accepted by the driver.
 void addMultilibFlag(bool Enabled, const StringRef Flag,

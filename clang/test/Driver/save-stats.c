@@ -22,10 +22,11 @@
 // RUN: %clang -target x86_64-linux-unknown -save-stats -flto -o obj/dir/save-stats.exe %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-LTO
 // CHECK-LTO: "-stats-file=save-stats.stats"
 // CHECK-LTO: "-o" "obj/dir{{/|\\\\}}save-stats.exe"
-// CHECK-LTO: "-plugin-opt=stats-file=save-stats.stats"
+// CHECK-LTO: "-plugin-opt=stats-file=save-stats.ld.stats"
 
 // RUN: %clang -target x86_64-linux-unknown -save-stats=obj -flto -o obj/dir/save-stats.exe %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-LTO-OBJ
-// CHECK-LTO-OBJ: "-plugin-opt=stats-file=obj/dir{{/|\\\\}}save-stats.stats"
+// CHECK-LTO-OBJ: "-stats-file={{.*}}save-stats.stats"
+// CHECK-LTO-OBJ: "-plugin-opt=stats-file=obj/dir{{/|\\\\}}save-stats.ld.stats"
 
 // RUN: env CC_PRINT_INTERNAL_STAT=1 \
 // RUN: %clang -target x86_64-apple-darwin %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-ENV
