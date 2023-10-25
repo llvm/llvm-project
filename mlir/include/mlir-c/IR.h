@@ -705,12 +705,12 @@ typedef enum MlirWalkOrder {
 } MlirWalkOrder;
 
 /// Operation walker type. The handler is passed an (opaque) reference to an
-/// operation a pointer to a `userData`.
+/// operation and a pointer to a `userData`.
 typedef void (*MlirOperationWalkCallback)(MlirOperation, void *userData);
 
 /// Walks operation `op` in `walkOrder` and calls `callback` on that operation.
 /// `*userData` is passed to the callback as well and can be used to tunnel some
-/// some context or other data into the callback.
+/// context or other data into the callback.
 MLIR_CAPI_EXPORTED
 void mlirOperationWalk(MlirOperation op, MlirOperationWalkCallback callback,
                        void *userData, MlirWalkOrder walkOrder);
