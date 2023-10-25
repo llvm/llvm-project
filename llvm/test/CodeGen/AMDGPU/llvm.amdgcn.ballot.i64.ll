@@ -408,14 +408,14 @@ define amdgpu_cs i32 @branch_divergent_simulated_negated_ballot_ne_zero_and(i32 
 ; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc, 12, v0
 ; CHECK-NEXT:    v_cmp_lt_u32_e64 s[0:1], 34, v1
 ; CHECK-NEXT:    s_and_b64 vcc, vcc, s[0:1]
-; CHECK-NEXT:    s_cbranch_vccnz .LBB0_2
+; CHECK-NEXT:    s_cbranch_vccnz .LBB20_2
 ; CHECK-NEXT:  ; %bb.1: ; %true
 ; CHECK-NEXT:    s_mov_b32 s0, 42
-; CHECK-NEXT:    s_branch .LBB0_3
-; CHECK-NEXT:  .LBB0_2: ; %false
+; CHECK-NEXT:    s_branch .LBB20_3
+; CHECK-NEXT:  .LBB20_2: ; %false
 ; CHECK-NEXT:    s_mov_b32 s0, 33
-; CHECK-NEXT:    s_branch .LBB0_3
-; CHECK-NEXT:  .LBB0_3:
+; CHECK-NEXT:    s_branch .LBB20_3
+; CHECK-NEXT:  .LBB20_3:
   %v1c = icmp ult i32 %v1, 12
   %v2c = icmp ugt i32 %v2, 34
   %c = and i1 %v1c, %v2c
@@ -437,14 +437,14 @@ define amdgpu_cs i32 @branch_uniform_simulated_negated_ballot_ne_zero_and(i32 in
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; CHECK-NEXT:    s_and_b64 s[0:1], s[2:3], s[0:1]
 ; CHECK-NEXT:    s_and_b64 s[0:1], s[0:1], exec
-; CHECK-NEXT:    s_cbranch_scc1 .LBB1_2
+; CHECK-NEXT:    s_cbranch_scc1 .LBB21_2
 ; CHECK-NEXT:  ; %bb.1: ; %true
 ; CHECK-NEXT:    s_mov_b32 s0, 42
-; CHECK-NEXT:    s_branch .LBB1_3
-; CHECK-NEXT:  .LBB1_2: ; %false
+; CHECK-NEXT:    s_branch .LBB21_3
+; CHECK-NEXT:  .LBB21_2: ; %false
 ; CHECK-NEXT:    s_mov_b32 s0, 33
-; CHECK-NEXT:    s_branch .LBB1_3
-; CHECK-NEXT:  .LBB1_3:
+; CHECK-NEXT:    s_branch .LBB21_3
+; CHECK-NEXT:  .LBB21_3:
   %v1c = icmp ult i32 %v1, 12
   %v2c = icmp ugt i32 %v2, 34
   %c = and i1 %v1c, %v2c
@@ -463,14 +463,14 @@ define amdgpu_cs i32 @branch_divergent_simulated_negated_ballot_eq_zero_and(i32 
 ; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc, 12, v0
 ; CHECK-NEXT:    v_cmp_lt_u32_e64 s[0:1], 34, v1
 ; CHECK-NEXT:    s_and_b64 vcc, vcc, s[0:1]
-; CHECK-NEXT:    s_cbranch_vccnz .LBB2_2
+; CHECK-NEXT:    s_cbranch_vccnz .LBB22_2
 ; CHECK-NEXT:  ; %bb.1: ; %false
 ; CHECK-NEXT:    s_mov_b32 s0, 33
-; CHECK-NEXT:    s_branch .LBB2_3
-; CHECK-NEXT:  .LBB2_2: ; %true
+; CHECK-NEXT:    s_branch .LBB22_3
+; CHECK-NEXT:  .LBB22_2: ; %true
 ; CHECK-NEXT:    s_mov_b32 s0, 42
-; CHECK-NEXT:    s_branch .LBB2_3
-; CHECK-NEXT:  .LBB2_3:
+; CHECK-NEXT:    s_branch .LBB22_3
+; CHECK-NEXT:  .LBB22_3:
   %v1c = icmp ult i32 %v1, 12
   %v2c = icmp ugt i32 %v2, 34
   %c = and i1 %v1c, %v2c
@@ -492,14 +492,14 @@ define amdgpu_cs i32 @branch_uniform_simulated_negated_ballot_eq_zero_and(i32 in
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; CHECK-NEXT:    s_and_b64 s[0:1], s[2:3], s[0:1]
 ; CHECK-NEXT:    s_and_b64 s[0:1], s[0:1], exec
-; CHECK-NEXT:    s_cbranch_scc1 .LBB3_2
+; CHECK-NEXT:    s_cbranch_scc1 .LBB23_2
 ; CHECK-NEXT:  ; %bb.1: ; %false
 ; CHECK-NEXT:    s_mov_b32 s0, 33
-; CHECK-NEXT:    s_branch .LBB3_3
-; CHECK-NEXT:  .LBB3_2: ; %true
+; CHECK-NEXT:    s_branch .LBB23_3
+; CHECK-NEXT:  .LBB23_2: ; %true
 ; CHECK-NEXT:    s_mov_b32 s0, 42
-; CHECK-NEXT:    s_branch .LBB3_3
-; CHECK-NEXT:  .LBB3_3:
+; CHECK-NEXT:    s_branch .LBB23_3
+; CHECK-NEXT:  .LBB23_3:
   %v1c = icmp ult i32 %v1, 12
   %v2c = icmp ugt i32 %v2, 34
   %c = and i1 %v1c, %v2c
