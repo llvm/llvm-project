@@ -2168,7 +2168,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     const MachineOperand &SrcOp = MI.getOperand(1);
     assert(!SrcOp.isFPImm());
     APInt Imm(64, SrcOp.getImm());
-    if (Imm.isIntN(32) || isInlineConstant(Imm)) {
+    if (Imm.isIntN(32) || isInlineConstant(Imm) || ST.has64BitLiterals()) {
       MI.setDesc(get(AMDGPU::S_MOV_B64));
       break;
     }

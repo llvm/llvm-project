@@ -2625,7 +2625,8 @@ bool AMDGPUInstructionSelector::selectG_CONSTANT(MachineInstr &I) const {
     Opcode = STI.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
   } else {
     Opcode = Size == 64 && Subtarget->has64BitLiterals()
-                 ? IsSgpr ? AMDGPU::S_MOV_B64 : AMDGPU::V_MOV_B64_e32
+                 ? IsSgpr ? AMDGPU::S_MOV_B64_IMM_PSEUDO
+                          : AMDGPU::V_MOV_B64_PSEUDO
                  : IsSgpr ? AMDGPU::S_MOV_B32 : AMDGPU::V_MOV_B32_e32;
 
     // We should never produce s1 values on banks other than VCC. If the user of

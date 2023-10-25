@@ -357,7 +357,7 @@ static bool isSafeToFoldImmIntoCopy(const MachineInstr *Copy,
     return false;
 
   // FIXME: Handle copies with sub-regs.
-  if (Copy->getOperand(0).getSubReg())
+  if (Copy->getOperand(1).getSubReg())
     return false;
 
   switch (MoveImm->getOpcode()) {
@@ -367,7 +367,7 @@ static bool isSafeToFoldImmIntoCopy(const MachineInstr *Copy,
     SMovOp = AMDGPU::S_MOV_B32;
     break;
   case AMDGPU::V_MOV_B64_PSEUDO:
-    SMovOp = AMDGPU::S_MOV_B64;
+    SMovOp = AMDGPU::S_MOV_B64_IMM_PSEUDO;
     break;
   }
   Imm = ImmOp->getImm();

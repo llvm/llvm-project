@@ -473,7 +473,8 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
     }
     if (AllConst) {
       SDValue CV = CurDAG->getTargetConstant(C, DL, MVT::i64);
-      auto *Copy = CurDAG->getMachineNode(AMDGPU::S_MOV_B64, DL, VT, CV);
+      MachineSDNode *Copy = CurDAG->getMachineNode(AMDGPU::S_MOV_B64_IMM_PSEUDO,
+                                                   DL, VT, CV);
       CurDAG->SelectNodeTo(N, AMDGPU::COPY_TO_REGCLASS, VT, SDValue(Copy, 0),
                            RegClass);
       return;

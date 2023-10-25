@@ -1953,17 +1953,25 @@ def : GCNPat <
   (V_MOV_B32_e32 (f16 (bitcast_fpimm_to_i32 $imm)))
 >;
 
-let SubtargetPredicate = Has64BitLiterals in {
 def : GCNPat <
   (VGPRImm<(i64 imm)>:$imm),
-  (V_MOV_B64_e32 imm:$imm)
+  (V_MOV_B64_PSEUDO imm:$imm)
 >;
 
 def : GCNPat <
   (VGPRImm<(f64 fpimm)>:$imm),
-  (V_MOV_B64_e32 (f64 (bitcast_fpimm_to_i64 $imm)))
+  (V_MOV_B64_PSEUDO (f64 (bitcast_fpimm_to_i64 $imm)))
 >;
-}
+
+def : GCNPat <
+  (i64 imm:$imm),
+  (S_MOV_B64_IMM_PSEUDO imm:$imm)
+>;
+
+def : GCNPat <
+  (f64 fpimm:$imm),
+  (S_MOV_B64_IMM_PSEUDO (i64 (bitcast_fpimm_to_i64 fpimm:$imm)))
+>;
 
 def : GCNPat <
   (f32 fpimm:$imm),
