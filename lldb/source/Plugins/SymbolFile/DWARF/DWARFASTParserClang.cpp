@@ -834,9 +834,9 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
 
   CompilerType enumerator_clang_type;
   CompilerType clang_type;
-  clang_type =
-      CompilerType(m_ast.weak_from_this(),
-                   dwarf->GetForwardDeclDieToClangType().lookup(die.GetDIE()));
+  clang_type = CompilerType(
+      m_ast.weak_from_this(),
+      dwarf->GetForwardDeclDIEToCompilerType().lookup(die.GetDIE()));
   if (!clang_type) {
     if (attrs.type.IsValid()) {
       Type *enumerator_type =
@@ -1764,9 +1764,9 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   assert(tag_decl_kind != -1);
   (void)tag_decl_kind;
   bool clang_type_was_created = false;
-  clang_type =
-      CompilerType(m_ast.weak_from_this(),
-                   dwarf->GetForwardDeclDieToClangType().lookup(die.GetDIE()));
+  clang_type = CompilerType(
+      m_ast.weak_from_this(),
+      dwarf->GetForwardDeclDIEToCompilerType().lookup(die.GetDIE()));
   if (!clang_type) {
     clang::DeclContext *decl_ctx =
         GetClangDeclContextContainingDIE(die, nullptr);
@@ -1896,16 +1896,16 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
       // the SymbolFile virtual function
       // "SymbolFileDWARF::CompleteType(Type *)" When the definition
       // needs to be defined.
-      assert(!dwarf->GetForwardDeclClangTypeToDie().count(
+      assert(!dwarf->GetForwardDeclCompilerTypeToDIE().count(
                  ClangUtil::RemoveFastQualifiers(clang_type)
                      .GetOpaqueQualType()) &&
              "Type already in the forward declaration map!");
       // Can't assume m_ast.GetSymbolFile() is actually a
       // SymbolFileDWARF, it can be a SymbolFileDWARFDebugMap for Apple
       // binaries.
-      dwarf->GetForwardDeclDieToClangType()[die.GetDIE()] =
+      dwarf->GetForwardDeclDIEToCompilerType()[die.GetDIE()] =
           clang_type.GetOpaqueQualType();
-      dwarf->GetForwardDeclClangTypeToDie().try_emplace(
+      dwarf->GetForwardDeclCompilerTypeToDIE().try_emplace(
           ClangUtil::RemoveFastQualifiers(clang_type).GetOpaqueQualType(),
           *die.GetDIERef());
       m_ast.SetHasExternalStorage(clang_type.GetOpaqueQualType(), true);
