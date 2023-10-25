@@ -21,5 +21,8 @@
 // Definition of LSX builtins.
 #include "clang/Basic/BuiltinsLoongArchLSX.def"
 
+// Definition of LASX builtins.
+#include "clang/Basic/BuiltinsLoongArchLASX.def"
+
 #undef BUILTIN
 #undef TARGET_BUILTIN
