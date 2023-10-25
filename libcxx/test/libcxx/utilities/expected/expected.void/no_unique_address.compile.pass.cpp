@@ -38,7 +38,7 @@ private:
 
 static_assert(sizeof(std::expected<void, Empty>) == sizeof(bool));
 static_assert(sizeof(std::expected<void, A>) == 2 * sizeof(int) + alignof(std::expected<void, A>));
-static_assert(sizeof(std::expected<void, B>) == sizeof(B) + alignof(std::expected<void, B>));
+static_assert(sizeof(std::expected<void, B>) == sizeof(B));
 
 // Check that `expected`'s datasize is large enough for the parameter type(s).
 static_assert(sizeof(std::expected<void, BoolWithPadding>) ==
