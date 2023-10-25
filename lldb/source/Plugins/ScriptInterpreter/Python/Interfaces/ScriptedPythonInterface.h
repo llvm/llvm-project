@@ -32,6 +32,98 @@ public:
   ScriptedPythonInterface(ScriptInterpreterPythonImpl &interpreter);
   ~ScriptedPythonInterface() override = default;
 
+  template <typename... Args>
+  llvm::Expected<StructuredData::GenericSP>
+  CreatePluginObject(llvm::StringRef class_name,
+                     StructuredData::Generic *script_obj, Args... args) {
+    using namespace python;
+    using Locker = ScriptInterpreterPythonImpl::Locker;
+
+    bool has_class_name = !class_name.empty();
+    bool has_interpreter_dict =
+        !(llvm::StringRef(m_interpreter.GetDictionaryName()).empty());
+    if (!has_class_name && !has_interpreter_dict && !script_obj) {
+      if (!has_class_name)
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "Missing script class name.");
+      else if (!has_interpreter_dict)
+        return llvm::createStringError(
+            llvm::inconvertibleErrorCode(),
+            "Invalid script interpreter dictionary.");
+      else
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "Missing scripting object.");
+    }
+
+    Locker py_lock(&m_interpreter, Locker::AcquireLock | Locker::NoSTDIN,
+                   Locker::FreeLock);
+
+    PythonObject result = {};
+
+    if (script_obj) {
+      result = PythonObject(PyRefType::Borrowed,
+                            static_cast<PyObject *>(script_obj->GetValue()));
+    } else {
+      auto dict =
+          PythonModule::MainModule().ResolveName<python::PythonDictionary>(
+              m_interpreter.GetDictionaryName());
+      if (!dict.IsAllocated()) {
+        return llvm::createStringError(
+            llvm::inconvertibleErrorCode(),
+            "Could not find interpreter dictionary: %s",
+            m_interpreter.GetDictionaryName());
+      }
+
+      auto method =
+          PythonObject::ResolveNameWithDictionary<python::PythonCallable>(
+              class_name, dict);
+      if (!method.IsAllocated())
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "Could not find script class: %s",
+                                       class_name.data());
+
+      std::tuple<Args...> original_args = std::forward_as_tuple(args...);
+      auto transformed_args = TransformArgs(original_args);
+
+      std::string error_string;
+      llvm::Expected<PythonCallable::ArgInfo> arg_info = method.GetArgInfo();
+      if (!arg_info) {
+        llvm::handleAllErrors(
+            arg_info.takeError(),
+            [&](PythonException &E) { error_string.append(E.ReadBacktrace()); },
+            [&](const llvm::ErrorInfoBase &E) {
+              error_string.append(E.message());
+            });
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       error_string);
+      }
+
+      llvm::Expected<PythonObject> expected_return_object =
+          llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                  "Resulting object is not initialized.");
+
+      std::apply(
+          [&method, &expected_return_object](auto &&...args) {
+            llvm::consumeError(expected_return_object.takeError());
+            expected_return_object = method(args...);
+          },
+          transformed_args);
+
+      if (llvm::Error e = expected_return_object.takeError())
+        return e;
+      result = std::move(expected_return_object.get());
+    }
+
+    if (!result.IsValid())
+      return llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
+          "Resulting object is not a valid Python Object.");
+
+    m_object_instance_sp = StructuredData::GenericSP(
+        new StructuredPythonObject(std::move(result)));
+    return m_object_instance_sp;
+  }
+
 protected:
   template <typename T = StructuredData::ObjectSP>
   T ExtractValueFromPythonObject(python::PythonObject &p, Status &error) {
@@ -83,10 +175,6 @@ protected:
 
     PythonObject py_return = std::move(expected_return_object.get());
 
-    if (!py_return.IsAllocated())
-      return ErrorWithMessage<T>(caller_signature, "Returned object is null.",
-                                 error);
-
     // Now that we called the python method with the transformed arguments,
     // we need to interate again over both the original and transformed
     // parameter pack, and transform back the parameter that were passed in
@@ -97,6 +185,8 @@ protected:
             caller_signature,
             "Couldn't re-assign reference and pointer arguments.", error);
 
+    if (!py_return.IsAllocated())
+      return {};
     return ExtractValueFromPythonObject<T>(py_return, error);
   }
 
@@ -119,6 +209,14 @@ protected:
   }
 
   python::PythonObject Transform(Status arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
+  python::PythonObject Transform(const StructuredDataImpl &arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
+  python::PythonObject Transform(lldb::ExecutionContextRefSP arg) {
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
