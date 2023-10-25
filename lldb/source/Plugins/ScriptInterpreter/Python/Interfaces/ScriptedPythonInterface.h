@@ -110,7 +110,7 @@ public:
           transformed_args);
 
       if (llvm::Error e = expected_return_object.takeError())
-        return e;
+        return std::move(e);
       result = std::move(expected_return_object.get());
     }
 
