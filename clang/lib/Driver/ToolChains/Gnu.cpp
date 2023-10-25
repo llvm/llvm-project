@@ -2028,7 +2028,7 @@ Generic_GCC::GCCVersion Generic_GCC::GCCVersion::Parse(StringRef VersionText) {
   // a number at all.
 
   auto TryParseLastNumber = [&](StringRef Segment, int &Number,
-                              std::string &OutStr) -> bool {
+                                std::string &OutStr) -> bool {
     // Look for a number prefix and parse that, and split out any trailing
     // string into GoodVersion.PatchSuffix.
 
