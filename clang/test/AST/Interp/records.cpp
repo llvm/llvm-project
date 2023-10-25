@@ -1042,13 +1042,10 @@ namespace TemporaryObjectExpr {
       F f{12};
     };
     constexpr int foo(S x) {
-      return x.a; // expected-note {{read of uninitialized object}} \
-                  // ref-note {{read of uninitialized object}}
+      return x.a; // expected-note {{read of uninitialized object}}
     }
     static_assert(foo(S()) == 0, ""); // expected-error {{not an integral constant expression}} \
-                                      // expected-note {{in call to}} \
-                                      // ref-error {{not an integral constant expression}} \
-                                      // ref-note {{in call to}}
+                                      // expected-note {{in call to}}
   };
 #endif
 }
