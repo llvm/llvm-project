@@ -106,8 +106,8 @@ class AArch64ZATestCase(TestBase):
         self.expect("register read za", substrs=[self.make_za_value(vl, lambda row: 0)])
 
     def za_expr_test_impl(self, sve_mode, za_state, swap_start_vl):
-        if not self.isAArch64SME():
-            self.skipTest("SME must be present.")
+        if not self.isAArch64SMEFA64():
+            self.skipTest("SME and the smefa64 extension must be present.")
 
         supported_svg = self.get_supported_svg()
         if len(supported_svg) < 2:
