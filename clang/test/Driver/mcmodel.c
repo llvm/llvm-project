@@ -5,9 +5,10 @@
 // RUN: %clang --target=x86_64 -### -S -mcmodel=large %s 2>&1 | FileCheck --check-prefix=LARGE %s
 // RUN: %clang --target=powerpc-unknown-aix -### -S -mcmodel=medium %s 2> %t.log
 // RUN: FileCheck --check-prefix=AIX-MCMEDIUM-OVERRIDE %s < %t.log
-// RUN: not %clang -c -mcmodel=lager %s 2>&1 | FileCheck --check-prefix=INVALID %s
-// RUN: not %clang -c --target=aarch64 -mcmodel=medium %s 2>&1 | FileCheck --check-prefix=AARCH64-MEDIUM %s
-// RUN: not %clang -c --target=aarch64 -mcmodel=kernel %s 2>&1 | FileCheck --check-prefix=AARCH64-KERNEL %s
+// RUN: not %clang -### -c -mcmodel=lager %s 2>&1 | FileCheck --check-prefix=INVALID %s
+// RUN: %clang --target=aarch64 -### -S -mcmodel=large -fno-pic %s 2>&1 | FileCheck --check-prefix=LARGE %s
+// RUN: not %clang -### -c --target=aarch64 -mcmodel=medium %s 2>&1 | FileCheck --check-prefix=ERR-MEDIUM %s
+// RUN: not %clang -### -c --target=aarch64 -mcmodel=kernel %s 2>&1 | FileCheck --check-prefix=ERR-KERNEL %s
 
 // TINY: "-mcmodel=tiny"
 // SMALL: "-mcmodel=small"
@@ -18,5 +19,5 @@
 
 // INVALID: error: invalid argument 'lager' to -mcmodel=
 
-// AARCH64-MEDIUM: error: invalid argument 'medium' to -mcmodel=
-// AARCH64-KERNEL: error: invalid argument 'kernel' to -mcmodel=
+// ERR-MEDIUM: error: invalid argument 'medium' to -mcmodel=
+// ERR-KERNEL: error: invalid argument 'kernel' to -mcmodel=
