@@ -22,7 +22,7 @@ void foo(int device) {
 }
 
 int isGPU() { return 0; }
-#pragma omp declare variant(isGPU) match(device = {arch(gpu)})
+#pragma omp declare variant(isGPU) match(device = {kind(gpu)})
 int isGPUvariant() { return 1; }
 
 int defaultIsGPU() {
