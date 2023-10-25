@@ -920,8 +920,8 @@ ComplexPairTy ComplexExprEmitter::EmitRangeReductionDiv(llvm::Value *LHSr,
   // f = (b - ar)/tmp
   llvm::Value *DdC = Builder.CreateFDiv(RHSi, RHSr); // d/c
 
-  llvm::Value *RD = Builder.CreateFMul(DdC, RHSi);   // (d/c)d
-  llvm::Value *CpRD = Builder.CreateFAdd(RHSr, RD);  // c+((d/c)d)
+  llvm::Value *RD = Builder.CreateFMul(DdC, RHSi);  // (d/c)d
+  llvm::Value *CpRD = Builder.CreateFAdd(RHSr, RD); // c+((d/c)d)
 
   llvm::Value *T3 = Builder.CreateFMul(LHSi, DdC);   // b(d/c)
   llvm::Value *T4 = Builder.CreateFAdd(LHSr, T3);    // a+b(d/c)
@@ -938,17 +938,17 @@ ComplexPairTy ComplexExprEmitter::EmitRangeReductionDiv(llvm::Value *LHSr,
   // tmp = d + rc
   // e = (ar + b)/tmp
   // f = (br - a)/tmp
-  llvm::Value *CdD = Builder.CreateFDiv(RHSr, RHSi);  // c/d
+  llvm::Value *CdD = Builder.CreateFDiv(RHSr, RHSi); // c/d
 
-  llvm::Value *RC = Builder.CreateFMul(CdD, RHSr);    // (c/d)c
-  llvm::Value *DpRC = Builder.CreateFAdd(RHSi, RC);   // d+(c/d)c
+  llvm::Value *RC = Builder.CreateFMul(CdD, RHSr);  // (c/d)c
+  llvm::Value *DpRC = Builder.CreateFAdd(RHSi, RC); // d+(c/d)c
 
-  llvm::Value *T7 = Builder.CreateFAdd(CdD, RHSi);    // (c/d)+b
-  llvm::Value *T8 = Builder.CreateFMul(LHSr, T7);     // a((c/d)+b)
-  llvm::Value *DSTFr = Builder.CreateFDiv(T8, DpRC);  // (a((c/d)+b)/(d+(c/d)c))
+  llvm::Value *T7 = Builder.CreateFAdd(CdD, RHSi);   // (c/d)+b
+  llvm::Value *T8 = Builder.CreateFMul(LHSr, T7);    // a((c/d)+b)
+  llvm::Value *DSTFr = Builder.CreateFDiv(T8, DpRC); // (a((c/d)+b)/(d+(c/d)c))
 
-  llvm::Value *T9 = Builder.CreateFSub(CdD, LHSr);    // (c/d)-a
-  llvm::Value *T10 = Builder.CreateFMul(RHSi, T9);    // b((c/d)-a)
+  llvm::Value *T9 = Builder.CreateFSub(CdD, LHSr); // (c/d)-a
+  llvm::Value *T10 = Builder.CreateFMul(RHSi, T9); // b((c/d)-a)
   llvm::Value *DSTFi =
       Builder.CreateFDiv(T10, DpRC); // (b((c/d)-a))/(d+(c/d)c))
   Builder.CreateBr(ContBB);
@@ -977,7 +977,7 @@ ComplexPairTy ComplexExprEmitter::EmitBinDiv(const BinOpInfo &Op) {
         !Op.FPFeatures.getCxLimitedRange()) {
       return EmitRangeReductionDiv(LHSr, LHSi, RHSr, RHSi);
     } else if (RHSi && (Op.FPFeatures.getCxLimitedRange() ||
-                 CGF.getLangOpts().CxLimitedRange)) {
+                        CGF.getLangOpts().CxLimitedRange)) {
       if (!LHSi)
         LHSi = llvm::Constant::getNullValue(RHSi->getType());
       return EmitAlgebraicDiv(LHSr, LHSi, RHSr, RHSi);

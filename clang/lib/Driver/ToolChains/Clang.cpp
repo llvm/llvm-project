@@ -3296,11 +3296,11 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     CmdArgs.push_back("-fno-strict-float-cast-overflow");
 
    if (const Arg *A = Args.getLastArg(options::OPT_fcx_limited_range))
-        CmdArgs.push_back("-fcx-limited-range");
+    CmdArgs.push_back("-fcx-limited-range");
    if (const Arg *A = Args.getLastArg(options::OPT_fcx_fortran_rules))
      CmdArgs.push_back("-fcx-fortran-rules");
    if (const Arg *A = Args.getLastArg(options::OPT_fno_cx_limited_range))
-     CmdArgs.push_back("-fno-cx-limited-range");
+      CmdArgs.push_back("-fno-cx-limited-range");
    if (const Arg *A = Args.getLastArg(options::OPT_fno_cx_fortran_rules))
      CmdArgs.push_back("-fno-cx-fortran-rules");
 }
