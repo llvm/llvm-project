@@ -760,8 +760,10 @@ private:
           // Skip the merge if the ratio between the densities exceeds
           // MaxMergeDensityRatio. Smaller values of the option result in fewer
           // merges, and hence, more chains.
+          auto ChainPredDensity = ChainPred->density();
+          auto ChainSuccDensity = ChainSucc->density();
           auto [minDensity, maxDensity] =
-              std::minmax(ChainPred->density(), ChainSucc->density());
+              std::minmax(ChainPredDensity, ChainSuccDensity);
           assert(minDensity > 0.0 && maxDensity > 0.0 &&
                  "incorrectly computed chain densities");
           const double Ratio = maxDensity / minDensity;
