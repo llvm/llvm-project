@@ -134,8 +134,6 @@ static u32 xorshift(u32 state) {
 // Generate a (pseudo-)random tag.
 tag_t Thread::GenerateRandomTag(uptr num_bits) {
   DCHECK_GT(num_bits, 0);
-  if (tagging_disabled_)
-    return 0;
   tag_t tag;
   const uptr tag_mask = (1ULL << num_bits) - 1;
   if (flags()->random_tags) {

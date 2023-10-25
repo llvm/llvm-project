@@ -729,6 +729,8 @@ static const u8 kFallbackTag = 0xBB & kTagMask;
 u8 __hwasan_generate_tag() {
   Thread *t = GetCurrentThread();
   if (!t) return kFallbackTag;
+  if (t->TaggingDisabled())
+    return 0;
   u8 tag;
   do {
     tag = GetCurrentThread()->GenerateRandomTag();

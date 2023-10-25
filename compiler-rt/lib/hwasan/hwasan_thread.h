@@ -61,6 +61,7 @@ class Thread {
 
   void DisableTagging() { tagging_disabled_++; }
   void EnableTagging() { tagging_disabled_--; }
+  u32 TaggingDisabled() { return tagging_disabled_; }
 
   u32 unique_id() const { return unique_id_; }
   void Announce() {
