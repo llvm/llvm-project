@@ -1416,6 +1416,9 @@ bool SIFoldOperands::tryFoldUniformReadFirstLaneCndMask(
     return false;
 
   MachineInstr *RFLSrc = MRI->getVRegDef(MI.getOperand(1).getReg());
+  if(!RFLSrc)
+    return false;
+
   // We can also have the following pattern:
   //
   // %2:vreg_64 = REG_SEQUENCE %X:vgpr_32, sub0, %1:sreg_32, sub1
