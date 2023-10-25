@@ -72,6 +72,39 @@ func.func @store_and_reload_sve_predicate_nxv8i1(%mask: vector<[8]xi1>) -> vecto
 
 // -----
 
+// CHECK-LABEL: @store_and_reload_sve_predicate_nxv16i1(
+// CHECK-SAME:                                         %[[MASK:.*]]: vector<[16]xi1>)
+func.func @store_and_reload_sve_predicate_nxv16i1(%mask: vector<[16]xi1>) -> vector<[16]xi1> {
+  // CHECK-NEXT: %[[ALLOCA:.*]] = memref.alloca() {alignment = 2 : i64} : memref<vector<[16]xi1>>
+  %alloca = memref.alloca() : memref<vector<[16]xi1>>
+  // CHECK-NEXT: memref.store %[[MASK]], %[[ALLOCA]][] : memref<vector<[16]xi1>>
+  memref.store %mask, %alloca[] : memref<vector<[16]xi1>>
+  // CHECK-NEXT: %[[RELOAD:.*]] = memref.load %[[ALLOCA]][] : memref<vector<[16]xi1>>
+  %reload = memref.load %alloca[] : memref<vector<[16]xi1>>
+  // CHECK-NEXT: return %[[RELOAD]] : vector<[16]xi1>
+  return %reload : vector<[16]xi1>
+}
+
+// -----
+
+/// This is not a valid SVE mask type, so is ignored by the
+// `-arm-sve-legalize-vector-storage` pass.
+
+// CHECK-LABEL: @store_and_reload_unsupported_type(
+// CHECK-SAME:                                         %[[MASK:.*]]: vector<[7]xi1>)
+func.func @store_and_reload_unsupported_type(%mask: vector<[7]xi1>) -> vector<[7]xi1> {
+  // CHECK-NEXT: %[[ALLOCA:.*]] = memref.alloca() {alignment = 2 : i64} : memref<vector<[7]xi1>>
+  %alloca = memref.alloca() : memref<vector<[7]xi1>>
+  // CHECK-NEXT: memref.store %[[MASK]], %[[ALLOCA]][] : memref<vector<[7]xi1>>
+  memref.store %mask, %alloca[] : memref<vector<[7]xi1>>
+  // CHECK-NEXT: %[[RELOAD:.*]] = memref.load %[[ALLOCA]][] : memref<vector<[7]xi1>>
+  %reload = memref.load %alloca[] : memref<vector<[7]xi1>>
+  // CHECK-NEXT: return %[[RELOAD]] : vector<[7]xi1>
+  return %reload : vector<[7]xi1>
+}
+
+// -----
+
 // CHECK-LABEL: @store_2d_mask_and_reload_slice(
 // CHECK-SAME:                                  %[[MASK:.*]]: vector<3x[8]xi1>)
 func.func @store_2d_mask_and_reload_slice(%mask: vector<3x[8]xi1>) -> vector<[8]xi1> {
@@ -101,8 +134,9 @@ func.func @set_sve_alloca_alignment() {
   /// vscale = 1). This works for hardware-sized types, which always get a
   /// 16-byte alignment. The problem is larger types e.g. vector<[8]xf32> end up
   /// with alignments larger than 16-bytes (e.g. 32-bytes here), which are
-  /// unsupported. This pass avoids this issue by explicitly setting the
-  /// alignment to 16-bytes for all scalable vectors.
+  /// unsupported. The `-arm-sve-legalize-vector-storage` pass avoids this
+  /// issue by explicitly setting the alignment to 16-bytes for all scalable
+  /// vectors.
 
   // CHECK-COUNT-6: alignment = 16
   %a1 = memref.alloca() : memref<vector<[32]xi8>>

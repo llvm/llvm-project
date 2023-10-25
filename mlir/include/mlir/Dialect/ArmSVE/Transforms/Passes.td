@@ -19,7 +19,7 @@ def LegalizeVectorStorage
     will be legal in the LLVM backend. It does this at the memref level, so this
     pass must be applied before lowering all the way to LLVM.
 
-    This pass currently fixes two issues.
+    This pass currently addresses two issues.
 
     ## Loading and storing predicate types
 

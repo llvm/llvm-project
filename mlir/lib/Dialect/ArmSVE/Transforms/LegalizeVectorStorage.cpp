@@ -27,12 +27,21 @@ using namespace mlir::arm_sve;
 // this pass.
 constexpr StringLiteral kSVELegalizerTag("__arm_sve_legalize_vector_storage__");
 
+/// Definitions:
+///
+/// [1] svbool = vector<...x[16]xi1>, which maps to some multiple of full SVE
+/// predicate registers. A full predicate is the smallest quantity that can be
+/// loaded/stored.
+///
+/// [2] SVE mask = hardware-sized SVE predicate mask, i.e. its trailing
+/// dimension matches the size of a legal SVE vector size (such as
+/// vector<[4]xi1>), but is too small to be stored to memory (i.e smaller than
+/// a svbool_t).
+
 namespace {
 
-/// A (legal) SVE predicate mask that has a logical size, i.e. the number of
-/// bits match the number of lanes it masks (such as vector<[4]xi1>), but is too
-/// small to be stored to memory.
-bool isLogicalSVEMaskType(VectorType type) {
+/// Checks if a vector type is a SVE mask [2].
+bool isSVEMaskType(VectorType type) {
   return type.getRank() > 0 && type.getElementType().isInteger(1) &&
          type.getScalableDims().back() && type.getShape().back() < 16 &&
          llvm::isPowerOf2_32(type.getShape().back()) &&
@@ -40,10 +49,12 @@ bool isLogicalSVEMaskType(VectorType type) {
 }
 
 VectorType widenScalableMaskTypeToSvbool(VectorType type) {
-  assert(isLogicalSVEMaskType(type));
+  assert(isSVEMaskType(type));
   return VectorType::Builder(type).setDim(type.getRank() - 1, 16);
 }
 
+/// A helper for cloning an op and replacing it will a new version, updated by a
+/// callback.
 template <typename TOp, typename TLegalizerCallback>
 void replaceOpWithLegalizedOp(PatternRewriter &rewriter, TOp op,
                               TLegalizerCallback callback) {
@@ -53,6 +64,8 @@ void replaceOpWithLegalizedOp(PatternRewriter &rewriter, TOp op,
   rewriter.replaceOp(op, callback(newOp));
 }
 
+/// A helper for cloning an op and replacing it with a new version, updated by a
+/// callback, and an unrealized conversion back to the type of the replaced op.
 template <typename TOp, typename TLegalizerCallback>
 void replaceOpWithUnrealizedConversion(PatternRewriter &rewriter, TOp op,
                                        TLegalizerCallback callback) {
@@ -66,8 +79,8 @@ void replaceOpWithUnrealizedConversion(PatternRewriter &rewriter, TOp op,
   });
 }
 
-/// Extracts the legal SVE memref value from the `unrealized_conversion_casts`
-/// added by this pass.
+/// Extracts the widened SVE memref value (that's legal to store/load) from the
+/// `unrealized_conversion_cast`s added by this pass.
 static FailureOr<Value> getSVELegalizedMemref(Value illegalMemref) {
   Operation *definingOp = illegalMemref.getDefiningOp();
   if (!definingOp || !definingOp->hasAttr(kSVELegalizerTag))
@@ -77,8 +90,8 @@ static FailureOr<Value> getSVELegalizedMemref(Value illegalMemref) {
   return unrealizedConversion.getOperand(0);
 }
 
-/// The default alignment of an alloca may request overaligned sizes for SVE
-/// types, which will fail during stack frame allocation. This rewrite
+/// The default alignment of an alloca in LLVM may request overaligned sizes for
+/// SVE types, which will fail during stack frame allocation. This rewrite
 /// explicitly adds a reasonable alignment to allocas of scalable types.
 struct RelaxScalableVectorAllocaAlignment
     : public OpRewritePattern<memref::AllocaOp> {
@@ -99,13 +112,9 @@ struct RelaxScalableVectorAllocaAlignment
   }
 };
 
-/// Replaces allocations of SVE predicates smaller than an svbool_t (illegal)
-/// with a wider allocation of svbool_t (legal) followed by a tagged unrealized
-/// conversion to the original type.
-///
-/// svbool = vector<...x[16]xi1>, which maps to some multiple of full SVE
-/// predicate registers. A full predicate is the smallest quantity that can be
-/// loaded/stored.
+/// Replaces allocations of SVE predicates smaller than an svbool_t (_illegal_
+/// to load/store) with a wider allocation of svbool_t (_legal_ to load/store)
+/// followed by a tagged unrealized conversion to the original type [1].
 ///
 /// Example
 /// ```
@@ -127,7 +136,7 @@ struct LegalizeSVEMaskAllocation : public OpRewritePattern<AllocLikeOp> {
     auto vectorType =
         llvm::dyn_cast<VectorType>(allocLikeOp.getType().getElementType());
 
-    if (!vectorType || !isLogicalSVEMaskType(vectorType))
+    if (!vectorType || !isSVEMaskType(vectorType))
       return failure();
 
     // Replace this alloc-like op of an SVE mask with one of a (storable)
@@ -145,8 +154,10 @@ struct LegalizeSVEMaskAllocation : public OpRewritePattern<AllocLikeOp> {
   }
 };
 
-/// Replaces vector.type_casts of unrealized conversions to illegal memref types
-/// with legal type casts, followed by unrealized conversions.
+/// Replaces vector.type_casts of unrealized conversions to SVE predicate memref
+/// types that are _illegal_ to load/store from (!= svbool_t), with type casts
+/// of memref types that are _legal_ to load/store, followed by unrealized
+/// conversions [1][2].
 ///
 /// Example:
 /// ```
@@ -173,14 +184,14 @@ struct LegalizeSVEMaskTypeCastConversion
     auto resultType = typeCastOp.getResultMemRefType();
     auto vectorType = llvm::dyn_cast<VectorType>(resultType.getElementType());
 
-    if (!vectorType || !isLogicalSVEMaskType(vectorType))
+    if (!vectorType || !isSVEMaskType(vectorType))
       return failure();
 
     auto legalMemref = getSVELegalizedMemref(typeCastOp.getMemref());
     if (failed(legalMemref))
       return failure();
 
-    // Replace this vector.type_cast with one of a (storable) svbool_t mask.
+    // Replace this vector.type_cast with one of a (storable) svbool_t mask [1].
     replaceOpWithUnrealizedConversion(
         rewriter, typeCastOp, [&](vector::TypeCastOp newTypeCast) {
           newTypeCast.setOperand(*legalMemref);
@@ -194,9 +205,9 @@ struct LegalizeSVEMaskTypeCastConversion
   }
 };
 
-/// Replaces stores to unrealized conversions to illegal SVE predicate memref
-/// (!= svbool_t) types with `arm_sve.convert_to_svbool`s followed by (legal)
-/// wider stores.
+/// Replaces stores to unrealized conversions to SVE predicate memref types that
+/// are _illegal_ to load/store from (!= svbool_t), with
+/// `arm_sve.convert_to_svbool`s followed by (legal) wider stores [1][2].
 ///
 /// Example:
 /// ```
@@ -218,7 +229,7 @@ struct LegalizeSVEMaskStoreConversion
     Value valueToStore = storeOp.getValueToStore();
     auto vectorType = llvm::dyn_cast<VectorType>(valueToStore.getType());
 
-    if (!vectorType || !isLogicalSVEMaskType(vectorType))
+    if (!vectorType || !isSVEMaskType(vectorType))
       return failure();
 
     auto legalMemref = getSVELegalizedMemref(storeOp.getMemref());
@@ -230,7 +241,7 @@ struct LegalizeSVEMaskStoreConversion
     auto convertToSvbool = rewriter.create<arm_sve::ConvertToSvboolOp>(
         loc, legalMaskType, valueToStore);
     // Replace this store with a conversion to a storable svbool_t mask,
-    // followed by a wider store.
+    // followed by a wider store [1].
     replaceOpWithLegalizedOp(rewriter, storeOp,
                              [&](memref::StoreOp newStoreOp) {
                                newStoreOp.setOperand(0, convertToSvbool);
@@ -242,9 +253,9 @@ struct LegalizeSVEMaskStoreConversion
   }
 };
 
-/// Replaces loads from unrealized conversions to illegal SVE predicate memref
-/// (!= svbool_t) types with (legal) wider loads, followed by
-/// `arm_sve.convert_from_svbool`s.
+/// Replaces loads from unrealized conversions to SVE predicate memref types
+/// that are _illegal_ to load/store from (!= svbool_t), types with (legal)
+/// wider loads, followed by `arm_sve.convert_from_svbool`s [1][2].
 ///
 /// Example:
 /// ```
@@ -265,7 +276,7 @@ struct LegalizeSVEMaskLoadConversion : public OpRewritePattern<memref::LoadOp> {
     Value loadedMask = loadOp.getResult();
     auto vectorType = llvm::dyn_cast<VectorType>(loadedMask.getType());
 
-    if (!vectorType || !isLogicalSVEMaskType(vectorType))
+    if (!vectorType || !isSVEMaskType(vectorType))
       return failure();
 
     auto legalMemref = getSVELegalizedMemref(loadOp.getMemref());
