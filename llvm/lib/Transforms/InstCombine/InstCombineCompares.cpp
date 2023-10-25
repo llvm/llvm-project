@@ -7022,38 +7022,38 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     return Res;
 
   {
-    Value *A, *B;
-    // Transform (A & ~B) == 0 --> (A & B) != 0
-    // and       (A & ~B) != 0 --> (A & B) == 0
+    Value *X, *Y;
+    // Transform (X & ~Y) == 0 --> (X & Y) != 0
+    // and       (X & ~Y) != 0 --> (X & Y) == 0
     // if A is a power of 2.
-    if (match(Op0, m_And(m_Value(A), m_Not(m_Value(B)))) &&
-        match(Op1, m_Zero()) &&
-        isKnownToBeAPowerOfTwo(A, false, 0, &I) && I.isEquality())
-      return new ICmpInst(I.getInversePredicate(), Builder.CreateAnd(A, B),
+    if (match(Op0, m_And(m_Value(X), m_Not(m_Value(Y)))) &&
+        match(Op1, m_Zero()) && isKnownToBeAPowerOfTwo(X, false, 0, &I) &&
+        I.isEquality())
+      return new ICmpInst(I.getInversePredicate(), Builder.CreateAnd(X, Y),
                           Op1);
 
     // ~X < ~Y --> Y < X
     // ~X < C -->  X > ~C
-    if (match(Op0, m_Not(m_Value(A)))) {
-      if (match(Op1, m_Not(m_Value(B))))
-        return new ICmpInst(I.getPredicate(), B, A);
+    if (match(Op0, m_Not(m_Value(X)))) {
+      if (match(Op1, m_Not(m_Value(Y))))
+        return new ICmpInst(I.getPredicate(), Y, X);
 
       const APInt *C;
       if (match(Op1, m_APInt(C)))
-        return new ICmpInst(I.getSwappedPredicate(), A,
+        return new ICmpInst(I.getSwappedPredicate(), X,
                             ConstantInt::get(Op1->getType(), ~(*C)));
     }
 
     Instruction *AddI = nullptr;
-    if (match(&I, m_UAddWithOverflow(m_Value(A), m_Value(B),
+    if (match(&I, m_UAddWithOverflow(m_Value(X), m_Value(Y),
                                      m_Instruction(AddI))) &&
-        isa<IntegerType>(A->getType())) {
+        isa<IntegerType>(X->getType())) {
       Value *Result;
       Constant *Overflow;
       // m_UAddWithOverflow can match patterns that do not include  an explicit
       // "add" instruction, so check the opcode of the matched op.
       if (AddI->getOpcode() == Instruction::Add &&
-          OptimizeOverflowCheck(Instruction::Add, /*Signed*/ false, A, B, *AddI,
+          OptimizeOverflowCheck(Instruction::Add, /*Signed*/ false, X, Y, *AddI,
                                 Result, Overflow)) {
         replaceInstUsesWith(*AddI, Result);
         eraseInstFromFunction(*AddI);
@@ -7061,14 +7061,13 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
       }
     }
 
-    // (zext a) * (zext b)  --> llvm.umul.with.overflow.
-    if (match(Op0, m_NUWMul(m_ZExt(m_Value(A)), m_ZExt(m_Value(B)))) &&
+    // (zext X) * (zext Y)  --> llvm.umul.with.overflow.
+    if (match(Op0, m_NUWMul(m_ZExt(m_Value(X)), m_ZExt(m_Value(Y)))) &&
         match(Op1, m_APInt(C))) {
       if (Instruction *R = processUMulZExtIdiom(I, Op0, C, *this))
         return R;
     }
 
-    Value *X, *Y;
     // Signbit test folds
     // Fold (X u>> BitWidth - 1 Pred ZExt(i1))  -->  X s< 0 Pred i1
     // Fold (X s>> BitWidth - 1 Pred SExt(i1))  -->  X s< 0 Pred i1
