@@ -91,44 +91,38 @@ _LIBCPP_HIDE_FROM_ABI void __throw_bad_expected_access(_Arg&& __arg) {
 template <class _Tp>
 concept __expected_union_member_no_unique_address = is_nothrow_move_constructible_v<_Tp>;
 
-struct __expected_wrap_invoke_tag {};
-
-template <class _Tp>
-struct __expected_wrap_unique {
-  template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_wrap_unique(_Args&&... __args)
-      : __v(std::forward<_Args>(__args)...) {}
-
-  template <class _Func, class... _Args>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_wrap_unique(
-      __expected_wrap_invoke_tag, _Func&& __f, _Args&&... __args)
-      : __v(std::invoke(std::forward<_Func>(__f), std::forward<_Args>(__args)...)) {}
-
-  _Tp __v;
-};
-
-template <class _Tp>
-struct __expected_wrap_no_unique {
-  template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_wrap_no_unique(_Args&&... __args)
-      : __v(std::forward<_Args>(__args)...) {}
-
-  template <class _Func, class... _Args>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_wrap_no_unique(
-      __expected_wrap_invoke_tag, _Func&& __f, _Args&&... __args)
-      : __v(std::invoke(std::forward<_Func>(__f), std::forward<_Args>(__args)...)) {}
-
-  _LIBCPP_NO_UNIQUE_ADDRESS _Tp __v;
-};
+struct __expected_invoke_tag {};
 
 template <bool _NoUnique, class _Tp>
-struct __expected_conditional_no_unique_address {
-  using __type = std::conditional<_NoUnique, __expected_wrap_no_unique<_Tp>, __expected_wrap_unique<_Tp>>::type;
+class __expected_conditional_no_unique_address {
+  struct __unique {
+    template <class... _Args>
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __unique(_Args&&... __args) : __v(std::forward<_Args>(__args)...) {}
+
+    template <class _Func, class... _Args>
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __unique(__expected_invoke_tag, _Func&& __f, _Args&&... __args)
+        : __v(std::invoke(std::forward<_Func>(__f), std::forward<_Args>(__args)...)) {}
+
+    _Tp __v;
+  };
+
+  struct __no_unique {
+    template <class... _Args>
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __no_unique(_Args&&... __args) : __v(std::forward<_Args>(__args)...) {}
+
+    template <class _Func, class... _Args>
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __no_unique(__expected_invoke_tag, _Func&& __f, _Args&&... __args)
+        : __v(std::invoke(std::forward<_Func>(__f), std::forward<_Args>(__args)...)) {}
+
+    _LIBCPP_NO_UNIQUE_ADDRESS _Tp __v;
+  };
+
+public:
+  using __type = std::conditional<_NoUnique, __no_unique, __unique>::type;
 };
 
 template <class _Tp, class _Err>
-struct __expected_base {
-private:
+class __expected_base {
   // use named union because [[no_unique_address]] cannot be applied to an unnamed union,
   // also guaranteed elision into a potentially-overlapping subobject is unsettled (and
   // it's not clear that it's implementable, given that the function is allowed to clobber
@@ -149,12 +143,12 @@ private:
     template <class _Func, class... _Args>
     _LIBCPP_HIDE_FROM_ABI constexpr explicit __union_t(
         std::__expected_construct_in_place_from_invoke_tag, _Func&& __f, _Args&&... __args)
-        : __val_(__expected_wrap_invoke_tag{}, std::forward<_Func>(__f), std::forward<_Args>(__args)...) {}
+        : __val_(__expected_invoke_tag{}, std::forward<_Func>(__f), std::forward<_Args>(__args)...) {}
 
     template <class _Func, class... _Args>
     _LIBCPP_HIDE_FROM_ABI constexpr explicit __union_t(
         std::__expected_construct_unexpected_from_invoke_tag, _Func&& __f, _Args&&... __args)
-        : __unex_(__expected_wrap_invoke_tag{}, std::forward<_Func>(__f), std::forward<_Args>(__args)...) {}
+        : __unex_(__expected_invoke_tag{}, std::forward<_Func>(__f), std::forward<_Args>(__args)...) {}
 
     _LIBCPP_HIDE_FROM_ABI constexpr ~__union_t()
       requires(is_trivially_destructible_v<_Tp> && is_trivially_destructible_v<_Err>)
@@ -202,7 +196,7 @@ private:
     template <class _OtherUnion>
     _LIBCPP_HIDE_FROM_ABI constexpr explicit __repr(bool __has_val, _OtherUnion&& __other)
       requires(!__can_stuff_tail())
-        : __union_(__expected_wrap_invoke_tag{},
+        : __union_(__expected_invoke_tag{},
                    [&] { return __make_union(__has_val, std::forward<_OtherUnion>(__other)); }),
           __has_val_(__has_val) {}
 
@@ -286,6 +280,16 @@ private:
     _LIBCPP_NO_UNIQUE_ADDRESS bool __has_val_;
   };
 
+  template <class _OtherUnion>
+  _LIBCPP_HIDE_FROM_ABI static constexpr __repr __make_repr(bool __has_val, _OtherUnion&& __other)
+    requires(__can_stuff_tail())
+  {
+    if (__has_val)
+      return __repr(in_place, std::forward<_OtherUnion>(__other).__val_.__v);
+    else
+      return __repr(unexpect, std::forward<_OtherUnion>(__other).__unex_.__v);
+  }
+
 protected:
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_base(_Args&&... __args)
@@ -294,8 +298,7 @@ protected:
   template <class _OtherUnion>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_base(bool __has_val, _OtherUnion&& __other)
     requires(__can_stuff_tail())
-      : __repr_(__expected_wrap_invoke_tag{},
-                [&] { return __make_repr(__has_val, std::forward<_OtherUnion>(__other)); }) {}
+      : __repr_(__expected_invoke_tag{}, [&] { return __make_repr(__has_val, std::forward<_OtherUnion>(__other)); }) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr void __destroy() {
     if constexpr (__can_stuff_tail())
@@ -312,18 +315,6 @@ protected:
       __repr_.__v.__construct_union(__tag, std::forward<_Args>(__args)...);
   }
 
-private:
-  template <class _OtherUnion>
-  _LIBCPP_HIDE_FROM_ABI static constexpr __repr __make_repr(bool __has_val, _OtherUnion&& __other)
-    requires(__can_stuff_tail())
-  {
-    if (__has_val)
-      return __repr(in_place, std::forward<_OtherUnion>(__other).__val_.__v);
-    else
-      return __repr(unexpect, std::forward<_OtherUnion>(__other).__unex_.__v);
-  }
-
-protected:
   _LIBCPP_NO_UNIQUE_ADDRESS __expected_conditional_no_unique_address< !__can_stuff_tail(), __repr>::__type __repr_;
 };
 
