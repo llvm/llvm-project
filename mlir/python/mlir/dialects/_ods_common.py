@@ -7,7 +7,6 @@ from collections import defaultdict
 # with a relative import.
 from .._mlir_libs import _mlir as _cext
 from typing import (
-    Callable as _Callable,
     Sequence as _Sequence,
     Type as _Type,
     TypeVar as _TypeVar,
@@ -132,50 +131,7 @@ def get_op_result_or_op_results(
     )
 
 
-U = _TypeVar("U", bound=_cext.ir.Value)
-SubClassValueT = _Type[U]
-
-ValueCasterT = _Callable[
-    [_Union[_cext.ir.Value, _cext.ir.OpResult]], _Union[SubClassValueT, None]
-]
-
-_VALUE_CASTERS: defaultdict[
-    _cext.ir.TypeID,
-    _Sequence[ValueCasterT],
-] = defaultdict(list)
-
-
-def has_value_caster(typeid: _cext.ir.TypeID):
-    if not isinstance(typeid, _cext.ir.TypeID):
-        raise ValueError(f"{typeid=} is not a TypeID")
-    if typeid in _VALUE_CASTERS:
-        return True
-    return False
-
-
-def get_value_caster(typeid: _cext.ir.TypeID):
-    if not has_value_caster(typeid):
-        raise ValueError(f"no registered caster for {typeid=}")
-    return _VALUE_CASTERS[typeid]
-
-
-def maybe_cast(
-    val: _Union[
-        _cext.ir.Value,
-        _cext.ir.OpResult,
-        _Sequence[_cext.ir.Value],
-        _Sequence[_cext.ir.OpResult],
-        _cext.ir.Operation,
-    ]
-) -> _Union[SubClassValueT, _Sequence[SubClassValueT], _cext.ir.Operation]:
-    if isinstance(val, (tuple, list)):
-        return tuple(map(maybe_cast, val))
-
-    if not isinstance(val, _cext.ir.Value) and not isinstance(val, _cext.ir.OpResult):
-        return val
-
-    if has_value_caster(val.type.typeid):
-        for caster in get_value_caster(val.type.typeid):
-            if casted := caster(val):
-                return casted
-    return val
+# This is the standard way to indicate subclass/inheritance relationship
+# see the typing.Type doc string.
+_U = _TypeVar("_U", bound=_cext.ir.Value)
+SubClassValueT = _Type[_U]

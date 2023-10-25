@@ -1899,11 +1899,24 @@ bool PyTypeID::operator==(const PyTypeID &other) const {
 }
 
 //------------------------------------------------------------------------------
-// PyValue and subclases.
+// PyValue and subclasses.
 //------------------------------------------------------------------------------
 
 pybind11::object PyValue::getCapsule() {
   return py::reinterpret_steal<py::object>(mlirPythonValueToCapsule(get()));
+}
+
+pybind11::object PyValue::maybeDownCast() {
+  MlirType type = mlirValueGetType(get());
+  MlirTypeID mlirTypeID = mlirTypeGetTypeID(type);
+  assert(!mlirTypeIDIsNull(mlirTypeID) &&
+         "mlirTypeID was expected to be non-null.");
+  std::optional<pybind11::function> valueCaster =
+      PyGlobals::get().lookupValueCaster(mlirTypeID, mlirTypeGetDialect(type));
+  py::object this_ = py::cast(this, py::return_value_policy::move);
+  if (!valueCaster)
+    return this_;
+  return valueCaster.value()(this_);
 }
 
 PyValue PyValue::createFromCapsule(pybind11::object capsule) {
@@ -2121,6 +2134,8 @@ public:
           return DerivedTy::isaFunction(otherValue);
         },
         py::arg("other_value"));
+    cls.def(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR,
+            [](DerivedTy &self) { return self.maybeDownCast(); });
     DerivedTy::bindDerived(cls);
   }
 
@@ -2193,6 +2208,7 @@ class PyBlockArgumentList
     : public Sliceable<PyBlockArgumentList, PyBlockArgument> {
 public:
   static constexpr const char *pyClassName = "BlockArgumentList";
+  using SliceableT = Sliceable<PyBlockArgumentList, PyBlockArgument>;
 
   PyBlockArgumentList(PyOperationRef operation, MlirBlock block,
                       intptr_t startIndex = 0, intptr_t length = -1,
@@ -2201,6 +2217,13 @@ public:
                   length == -1 ? mlirBlockGetNumArguments(block) : length,
                   step),
         operation(std::move(operation)), block(block) {}
+
+  pybind11::object getItem(intptr_t index) override {
+    auto item = this->SliceableT::getItem(index);
+    if (item.ptr() != nullptr)
+      return item.attr(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR)();
+    return item;
+  }
 
   static void bindDerived(ClassTy &c) {
     c.def_property_readonly("types", [](PyBlockArgumentList &self) {
@@ -2241,6 +2264,7 @@ private:
 class PyOpOperandList : public Sliceable<PyOpOperandList, PyValue> {
 public:
   static constexpr const char *pyClassName = "OpOperandList";
+  using SliceableT = Sliceable<PyOpOperandList, PyValue>;
 
   PyOpOperandList(PyOperationRef operation, intptr_t startIndex = 0,
                   intptr_t length = -1, intptr_t step = 1)
@@ -2249,6 +2273,13 @@ public:
                                : length,
                   step),
         operation(operation) {}
+
+  pybind11::object getItem(intptr_t index) override {
+    auto item = this->SliceableT::getItem(index);
+    if (item.ptr() != nullptr)
+      return item.attr(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR)();
+    return item;
+  }
 
   void dunderSetItem(intptr_t index, PyValue value) {
     index = wrapIndex(index);
@@ -2296,6 +2327,7 @@ private:
 class PyOpResultList : public Sliceable<PyOpResultList, PyOpResult> {
 public:
   static constexpr const char *pyClassName = "OpResultList";
+  using SliceableT = Sliceable<PyOpResultList, PyOpResult>;
 
   PyOpResultList(PyOperationRef operation, intptr_t startIndex = 0,
                  intptr_t length = -1, intptr_t step = 1)
@@ -2303,7 +2335,14 @@ public:
                   length == -1 ? mlirOperationGetNumResults(operation->get())
                                : length,
                   step),
-        operation(operation) {}
+        operation(std::move(operation)) {}
+
+  pybind11::object getItem(intptr_t index) override {
+    auto item = this->SliceableT::getItem(index);
+    if (item.ptr() != nullptr)
+      return item.attr(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR)();
+    return item;
+  }
 
   static void bindDerived(ClassTy &c) {
     c.def_property_readonly("types", [](PyOpResultList &self) {
@@ -2891,8 +2930,9 @@ void mlir::python::populateIRCore(py::module &m) {
                    "single result)")
                       .str());
             }
-            return PyOpResult(operation.getRef(),
-                              mlirOperationGetResult(operation, 0));
+            PyOpResult result = PyOpResult(
+                operation.getRef(), mlirOperationGetResult(operation, 0));
+            return result.maybeDownCast();
           },
           "Shortcut to get an op result if it has only one (throws an error "
           "otherwise).")
@@ -3566,7 +3606,9 @@ void mlir::python::populateIRCore(py::module &m) {
           [](PyValue &self, PyValue &with) {
             mlirValueReplaceAllUsesOfWith(self.get(), with.get());
           },
-          kValueReplaceAllUsesWithDocstring);
+          kValueReplaceAllUsesWithDocstring)
+      .def(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR,
+           [](PyValue &self) { return self.maybeDownCast(); });
   PyBlockArgument::bind(m);
   PyOpResult::bind(m);
   PyOpOperand::bind(m);

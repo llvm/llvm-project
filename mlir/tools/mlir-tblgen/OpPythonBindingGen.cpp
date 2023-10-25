@@ -37,7 +37,6 @@ from ._ods_common import (
     get_op_result_or_op_results as _get_op_result_or_op_results,
     get_op_result_or_value as _get_op_result_or_value,
     get_op_results_or_values as _get_op_results_or_values,
-    maybe_cast as _maybe_cast,
     segmented_accessor as _ods_segmented_accessor,
 )
 _ods_ir = _ods_cext.ir
@@ -272,7 +271,7 @@ constexpr const char *regionAccessorTemplate = R"Py(
 
 constexpr const char *valueBuilderTemplate = R"Py(
 def {0}({2}) -> {4}:
-  return _maybe_cast(_get_op_result_or_op_results({1}({3})))
+  return _get_op_result_or_op_results({1}({3}))
 )Py";
 
 static llvm::cl::OptionCategory

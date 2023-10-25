@@ -4,21 +4,7 @@
 
 from ._mlir_libs._mlir.ir import *
 from ._mlir_libs._mlir.ir import _GlobalDebug
-from ._mlir_libs._mlir import register_type_caster
-from .dialects._ods_common import ValueCasterT, _VALUE_CASTERS
-
-
-def register_value_caster(typeid: TypeID, priority: int = None):
-    def wrapper(caster: ValueCasterT):
-        if not isinstance(typeid, TypeID):
-            raise ValueError(f"{typeid=} is not a TypeID")
-        if priority is None:
-            _VALUE_CASTERS[typeid].append(caster)
-        else:
-            _VALUE_CASTERS[typeid].insert(priority, caster)
-        return caster
-
-    return wrapper
+from ._mlir_libs._mlir import register_type_caster, register_value_caster
 
 
 # Convenience decorator for registering user-friendly Attribute builders.

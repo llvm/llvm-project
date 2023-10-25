@@ -88,6 +88,19 @@ void PyGlobals::registerTypeCaster(MlirTypeID mlirTypeID,
   found = std::move(typeCaster);
 }
 
+void PyGlobals::registerValueCaster(MlirTypeID mlirTypeID,
+                                    pybind11::function valueCaster,
+                                    bool replace) {
+  pybind11::object &found = valueCasterMap[mlirTypeID];
+  if (found && !found.is_none() && !replace)
+    throw std::runtime_error("Value caster is already registered");
+  found = std::move(valueCaster);
+  const auto foundIt = valueCasterMapCache.find(mlirTypeID);
+  if (foundIt != valueCasterMapCache.end() && !foundIt->second.is_none()) {
+    valueCasterMapCache[mlirTypeID] = found;
+  }
+}
+
 void PyGlobals::registerDialectImpl(const std::string &dialectNamespace,
                                     py::object pyClass) {
   py::object &found = dialectClassMap[dialectNamespace];
@@ -132,6 +145,39 @@ std::optional<py::function> PyGlobals::lookupTypeCaster(MlirTypeID mlirTypeID,
     return foundIt->second;
   }
   return std::nullopt;
+}
+
+std::optional<py::function> PyGlobals::lookupValueCaster(MlirTypeID mlirTypeID,
+                                                         MlirDialect dialect) {
+  {
+    // Fast match against the value caster map first (common case).
+    const auto foundIt = valueCasterMapCache.find(mlirTypeID);
+    if (foundIt != valueCasterMapCache.end()) {
+      if (foundIt->second.is_none())
+        return std::nullopt;
+      assert(foundIt->second && "py::function is defined");
+      return foundIt->second;
+    }
+  }
+
+  // Not found. Load the dialect namespace.
+  loadDialectModule(unwrap(mlirDialectGetNamespace(dialect)));
+
+  // Attempt to find from the canonical map and cache.
+  {
+    const auto foundIt = valueCasterMap.find(mlirTypeID);
+    if (foundIt != valueCasterMap.end()) {
+      if (foundIt->second.is_none())
+        return std::nullopt;
+      assert(foundIt->second && "py::object is defined");
+      // Positive cache.
+      valueCasterMapCache[mlirTypeID] = foundIt->second;
+      return foundIt->second;
+    }
+    // Negative cache.
+    valueCasterMap[mlirTypeID] = py::none();
+    return std::nullopt;
+  }
 }
 
 std::optional<py::object>

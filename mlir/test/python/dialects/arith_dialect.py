@@ -3,7 +3,7 @@ from functools import partialmethod
 
 from mlir.ir import *
 import mlir.dialects.arith as arith
-from mlir.dialects._ods_common import maybe_cast
+import mlir.dialects.func as func
 
 
 def run(f):
@@ -49,31 +49,22 @@ def testArithValue():
             raise NotImplementedError(f"Unsupported '{op}' operands: {lhs}, {rhs}")
 
         op = getattr(arith, f"{op}Op")
-        return maybe_cast(op(lhs, rhs).result)
+        return op(lhs, rhs).result
 
     @register_value_caster(F16Type.static_typeid)
     @register_value_caster(F32Type.static_typeid)
     @register_value_caster(F64Type.static_typeid)
     @register_value_caster(IntegerType.static_typeid)
     class ArithValue(Value):
+        def __init__(self, v):
+            super().__init__(v)
+
         __add__ = partialmethod(_binary_op, op="add")
         __sub__ = partialmethod(_binary_op, op="sub")
         __mul__ = partialmethod(_binary_op, op="mul")
 
         def __str__(self):
-            return super().__str__().replace("Value", "ArithValue")
-
-    @register_value_caster(IntegerType.static_typeid, priority=0)
-    class ArithValue1(Value):
-        __mul__ = partialmethod(_binary_op, op="mul")
-
-        def __str__(self):
-            return super().__str__().replace("Value", "ArithValue1")
-
-    @register_value_caster(IntegerType.static_typeid, priority=0)
-    def no_op_caster(val):
-        print("no_op_caster", val)
-        return None
+            return super().__str__().replace(Value.__name__, ArithValue.__name__)
 
     with Context() as ctx, Location.unknown():
         module = Module.create()
@@ -96,11 +87,4 @@ def testArithValue():
             a = arith.constant(value=FloatAttr.get(f64_t, 42.42))
             b = a * a
             # CHECK: ArithValue(%2 = arith.mulf %cst_1, %cst_1 : f64)
-            print(b)
-
-            # CHECK: no_op_caster Value(%c1_i32 = arith.constant 1 : i32)
-            a = arith.constant(value=IntegerAttr.get(i32, 1))
-            b = a * a
-            # CHECK: no_op_caster Value(%3 = arith.muli %c1_i32, %c1_i32 : i32)
-            # CHECK: ArithValue1(%3 = arith.muli %c1_i32, %c1_i32 : i32)
             print(b)
