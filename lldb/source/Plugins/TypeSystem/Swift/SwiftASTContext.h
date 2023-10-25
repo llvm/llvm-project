@@ -408,11 +408,14 @@ public:
   CompilerType GetCompilerType(ConstString mangled_name);
   /// Import compiler_type into this context and return the swift::Type.
   swift::Type GetSwiftType(CompilerType compiler_type);
+  /// Import compiler_type into this context and return the swift::CanType.
+  swift::CanType GetCanonicalSwiftType(CompilerType compiler_type);
 protected:
   swift::Type GetSwiftType(lldb::opaque_compiler_type_t opaque_type);
-public:
   swift::CanType
   GetCanonicalSwiftType(lldb::opaque_compiler_type_t opaque_type);
+
+public:
 
   /// Imports the type from the passed in type into this SwiftASTContext. The
   /// type must be a Swift type. If the type can be imported, returns the
@@ -583,7 +586,7 @@ public:
   static bool IsGenericType(const CompilerType &compiler_type);
 
   /// Whether this is the Swift error type.
-  bool IsErrorType(lldb::opaque_compiler_type_t type);
+  bool IsErrorType(lldb::opaque_compiler_type_t type) override;
 
   struct ProtocolInfo {
     uint32_t m_num_protocols;
@@ -606,8 +609,8 @@ public:
     uint32_t GetInstanceTypeIndex() const { return m_num_payload_words; }
   };
 
-  static bool GetProtocolTypeInfo(const CompilerType &type,
-                                  ProtocolInfo &protocol_info);
+  bool GetProtocolTypeInfo(const CompilerType &type,
+                           ProtocolInfo &protocol_info);
 
   static void ApplyWorkingDir(llvm::SmallVectorImpl<char> &clang_argument,
                               llvm::StringRef cur_working_dir);
@@ -718,7 +721,7 @@ public:
                                      size_t idx);
   CompilerType GetBoundGenericType(lldb::opaque_compiler_type_t type,
                                    size_t idx);
-  static CompilerType GetGenericArgumentType(CompilerType ct, size_t idx);
+  CompilerType GetGenericArgumentType(CompilerType ct, size_t idx);
   CompilerType GetGenericArgumentType(lldb::opaque_compiler_type_t type,
                                       size_t idx) override;
 
@@ -730,10 +733,9 @@ public:
   bool IsMeaninglessWithoutDynamicResolution(
       lldb::opaque_compiler_type_t type) override;
 
-  static bool GetSelectedEnumCase(const CompilerType &type,
-                                  const DataExtractor &data, ConstString *name,
-                                  bool *has_payload, CompilerType *payload,
-                                  bool *is_indirect);
+  bool GetSelectedEnumCase(const CompilerType &type, const DataExtractor &data,
+                           ConstString *name, bool *has_payload,
+                           CompilerType *payload, bool *is_indirect);
 
   // Dumping types
 #ifndef NDEBUG

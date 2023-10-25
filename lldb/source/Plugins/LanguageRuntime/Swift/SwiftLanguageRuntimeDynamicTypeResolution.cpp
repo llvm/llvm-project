@@ -42,18 +42,6 @@ using namespace lldb;
 using namespace lldb_private;
 
 namespace lldb_private {
-swift::Type GetSwiftType(CompilerType type) {
-  auto ts = type.GetTypeSystem();
-  if (auto tr = ts.dyn_cast_or_null<TypeSystemSwift>())
-    if (auto ast = tr->GetSwiftASTContext())
-      return ast->GetSwiftType(type);
-  return {};
-}
-
-swift::CanType GetCanonicalSwiftType(CompilerType type) {
-  swift::Type swift_type = GetSwiftType(type);
-  return swift_type ? swift_type->getCanonicalType() : swift::CanType();
-}
 
 static lldb::addr_t
 MaskMaybeBridgedPointer(Process &process, lldb::addr_t addr,
@@ -1597,10 +1585,10 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Class(
 
 bool SwiftLanguageRuntimeImpl::IsValidErrorValue(ValueObject &in_value) {
   CompilerType var_type = in_value.GetStaticValue()->GetCompilerType();
-  SwiftASTContext::ProtocolInfo protocol_info;
-  if (!SwiftASTContext::GetProtocolTypeInfo(var_type, protocol_info))
+  auto tss = var_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
+  if (!tss)
     return false;
-  if (!protocol_info.m_is_errortype)
+  if (!tss->IsErrorType(var_type.GetOpaqueQualType()))
     return false;
 
   unsigned index = SwiftASTContext::ProtocolInfo::error_instance_index;

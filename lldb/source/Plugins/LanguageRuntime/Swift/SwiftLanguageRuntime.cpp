@@ -1471,9 +1471,9 @@ void SwiftLanguageRuntime::RegisterGlobalError(Target &target, ConstString name,
     return;
   }
 
-  auto *ast_context = llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
+  auto *swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
       type_system_or_err->get());
-  if (ast_context && !ast_context->HasFatalErrors()) {
+  if (swift_ast_ctx && !swift_ast_ctx->HasFatalErrors()) {
     std::string module_name = "$__lldb_module_for_";
     module_name.append(&name.GetCString()[1]);
     SourceModule module_info;
@@ -1481,18 +1481,19 @@ void SwiftLanguageRuntime::RegisterGlobalError(Target &target, ConstString name,
 
     Status module_creation_error;
     swift::ModuleDecl *module_decl =
-        ast_context->CreateModule(module_info, module_creation_error,
-                                  /*importInfo*/ {});
+        swift_ast_ctx->CreateModule(module_info, module_creation_error,
+                                    /*importInfo*/ {});
 
     if (module_creation_error.Success() && module_decl) {
       const bool is_static = false;
       const auto introducer = swift::VarDecl::Introducer::Let;
 
-      swift::VarDecl *var_decl =
-          new (*ast_context->GetASTContext()) swift::VarDecl(
-              is_static, introducer, swift::SourceLoc(),
-              ast_context->GetIdentifier(name.GetCString()), module_decl);
-      var_decl->setInterfaceType(GetSwiftType(ast_context->GetErrorType()));
+      swift::VarDecl *var_decl = new (*swift_ast_ctx->GetASTContext())
+          swift::VarDecl(is_static, introducer, swift::SourceLoc(),
+                         swift_ast_ctx->GetIdentifier(name.GetCString()),
+                         module_decl);
+      var_decl->setInterfaceType(
+          swift_ast_ctx->GetSwiftType(swift_ast_ctx->GetErrorType()));
       var_decl->setDebuggerVar(true);
 
       SwiftPersistentExpressionState *persistent_state =
@@ -1502,7 +1503,7 @@ void SwiftLanguageRuntime::RegisterGlobalError(Target &target, ConstString name,
       if (!persistent_state)
         return;
 
-      persistent_state->RegisterSwiftPersistentDecl({ast_context, var_decl});
+      persistent_state->RegisterSwiftPersistentDecl({swift_ast_ctx, var_decl});
 
       ConstString mangled_name;
 
