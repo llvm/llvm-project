@@ -48,7 +48,7 @@ void ProTypeConstCastCheck::registerMatchers(MatchFinder *Finder) {
 void ProTypeConstCastCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedCast = Result.Nodes.getNodeAs<CXXConstCastExpr>("cast");
   diag(MatchedCast->getOperatorLoc(),
-       "do not use const_cast%select{ to cast away const|}0")
+       "do not use const_cast%select{ to remove const qualifier|}0")
       << StrictMode;
 }
 
