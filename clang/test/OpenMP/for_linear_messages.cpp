@@ -215,6 +215,8 @@ int main(int argc, char **argv) {
     int i;
     #pragma omp for linear(i)
     for (int k = 0; k < argc; ++k) ++k;
+    #pragma omp for linear(val(i)) // omp52-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}}
+    for (int k = 0; k < argc; ++k) ++k;
 #ifdef OMP52
     #pragma omp for linear(i : step(4))
 #else
