@@ -399,3 +399,115 @@ true:
 false:
   ret i32 33
 }
+
+declare i64 @llvm.amdgcn.icmp.i64(i1, i1, i32)
+
+define amdgpu_cs i32 @branch_divergent_simulated_negated_ballot_ne_zero_and(i32 %v1, i32 %v2) {
+; CHECK-LABEL: branch_divergent_simulated_negated_ballot_ne_zero_and:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc, 12, v0
+; CHECK-NEXT:    v_cmp_lt_u32_e64 s[0:1], 34, v1
+; CHECK-NEXT:    s_and_b64 vcc, vcc, s[0:1]
+; CHECK-NEXT:    s_cbranch_vccnz .LBB0_2
+; CHECK-NEXT:  ; %bb.1: ; %true
+; CHECK-NEXT:    s_mov_b32 s0, 42
+; CHECK-NEXT:    s_branch .LBB0_3
+; CHECK-NEXT:  .LBB0_2: ; %false
+; CHECK-NEXT:    s_mov_b32 s0, 33
+; CHECK-NEXT:    s_branch .LBB0_3
+; CHECK-NEXT:  .LBB0_3:
+  %v1c = icmp ult i32 %v1, 12
+  %v2c = icmp ugt i32 %v2, 34
+  %c = and i1 %v1c, %v2c
+  %ballot = call i64 @llvm.amdgcn.icmp.i64(i1 %c, i1 0, i32 32) ; ICMP_EQ == 32
+  %ballot_ne_zero = icmp ne i64 %ballot, 0
+  br i1 %ballot_ne_zero, label %true, label %false
+true:
+  ret i32 42
+false:
+  ret i32 33
+}
+
+define amdgpu_cs i32 @branch_uniform_simulated_negated_ballot_ne_zero_and(i32 inreg %v1, i32 inreg %v2) {
+; CHECK-LABEL: branch_uniform_simulated_negated_ballot_ne_zero_and:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_cmp_lt_u32 s0, 12
+; CHECK-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; CHECK-NEXT:    s_cmp_gt_u32 s1, 34
+; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; CHECK-NEXT:    s_and_b64 s[0:1], s[2:3], s[0:1]
+; CHECK-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; CHECK-NEXT:    s_cbranch_scc1 .LBB1_2
+; CHECK-NEXT:  ; %bb.1: ; %true
+; CHECK-NEXT:    s_mov_b32 s0, 42
+; CHECK-NEXT:    s_branch .LBB1_3
+; CHECK-NEXT:  .LBB1_2: ; %false
+; CHECK-NEXT:    s_mov_b32 s0, 33
+; CHECK-NEXT:    s_branch .LBB1_3
+; CHECK-NEXT:  .LBB1_3:
+  %v1c = icmp ult i32 %v1, 12
+  %v2c = icmp ugt i32 %v2, 34
+  %c = and i1 %v1c, %v2c
+  %ballot = call i64 @llvm.amdgcn.icmp.i64(i1 %c, i1 0, i32 32) ; ICMP_EQ == 32
+  %ballot_ne_zero = icmp ne i64 %ballot, 0
+  br i1 %ballot_ne_zero, label %true, label %false
+true:
+  ret i32 42
+false:
+  ret i32 33
+}
+
+define amdgpu_cs i32 @branch_divergent_simulated_negated_ballot_eq_zero_and(i32 %v1, i32 %v2) {
+; CHECK-LABEL: branch_divergent_simulated_negated_ballot_eq_zero_and:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc, 12, v0
+; CHECK-NEXT:    v_cmp_lt_u32_e64 s[0:1], 34, v1
+; CHECK-NEXT:    s_and_b64 vcc, vcc, s[0:1]
+; CHECK-NEXT:    s_cbranch_vccnz .LBB2_2
+; CHECK-NEXT:  ; %bb.1: ; %false
+; CHECK-NEXT:    s_mov_b32 s0, 33
+; CHECK-NEXT:    s_branch .LBB2_3
+; CHECK-NEXT:  .LBB2_2: ; %true
+; CHECK-NEXT:    s_mov_b32 s0, 42
+; CHECK-NEXT:    s_branch .LBB2_3
+; CHECK-NEXT:  .LBB2_3:
+  %v1c = icmp ult i32 %v1, 12
+  %v2c = icmp ugt i32 %v2, 34
+  %c = and i1 %v1c, %v2c
+  %ballot = call i64 @llvm.amdgcn.icmp.i64(i1 %c, i1 0, i32 32) ; ICMP_EQ == 32
+  %ballot_eq_zero = icmp eq i64 %ballot, 0
+  br i1 %ballot_eq_zero, label %true, label %false
+true:
+  ret i32 42
+false:
+  ret i32 33
+}
+
+define amdgpu_cs i32 @branch_uniform_simulated_negated_ballot_eq_zero_and(i32 inreg %v1, i32 inreg %v2) {
+; CHECK-LABEL: branch_uniform_simulated_negated_ballot_eq_zero_and:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_cmp_lt_u32 s0, 12
+; CHECK-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; CHECK-NEXT:    s_cmp_gt_u32 s1, 34
+; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; CHECK-NEXT:    s_and_b64 s[0:1], s[2:3], s[0:1]
+; CHECK-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; CHECK-NEXT:    s_cbranch_scc1 .LBB3_2
+; CHECK-NEXT:  ; %bb.1: ; %false
+; CHECK-NEXT:    s_mov_b32 s0, 33
+; CHECK-NEXT:    s_branch .LBB3_3
+; CHECK-NEXT:  .LBB3_2: ; %true
+; CHECK-NEXT:    s_mov_b32 s0, 42
+; CHECK-NEXT:    s_branch .LBB3_3
+; CHECK-NEXT:  .LBB3_3:
+  %v1c = icmp ult i32 %v1, 12
+  %v2c = icmp ugt i32 %v2, 34
+  %c = and i1 %v1c, %v2c
+  %ballot = call i64 @llvm.amdgcn.icmp.i64(i1 %c, i1 0, i32 32) ; ICMP_EQ == 32
+  %ballot_eq_zero = icmp eq i64 %ballot, 0
+  br i1 %ballot_eq_zero, label %true, label %false
+true:
+  ret i32 42
+false:
+  ret i32 33
+}

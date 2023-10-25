@@ -19,6 +19,7 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "MCTargetDesc/R600MCTargetDesc.h"
 #include "R600RegisterInfo.h"
+#include "SIISelLowering.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -2259,26 +2260,30 @@ bool AMDGPUDAGToDAGISel::isCBranchSCC(const SDNode *N) const {
   return false;
 }
 
-bool isBoolSGPR(SDValue V);
-
-static SDValue combineBallotPattern(SDValue VCMP) {
+static SDValue combineBallotPattern(SDValue VCMP, bool &Negate) {
   assert(VCMP->getOpcode() == AMDGPUISD::SETCC);
   // Special case for amdgcn.ballot:
   // %Cond = i1 (and/or combination of i1 ISD::SETCCs)
-  // %VCMP = i(WaveSize) AMDGPUISD::SETCC (ext %Cond), 0, setne ; lowered ballot
+  // %VCMP = i(WaveSize) AMDGPUISD::SETCC (ext %Cond), 0, setne/seteq
   // =>
   // Use i1 %Cond value instead of i(WaveSize) %VCMP.
   // This is possible because divergent ISD::SETCC is selected as V_CMP and
   // Cond becomes a i(WaveSize) full mask value.
+  // Note that ballot doesn't use SETEQ condition but its easy to support it
+  // here for completeness, so in this case Negate is set true on return.
   auto VCMP_CC = cast<CondCodeSDNode>(VCMP.getOperand(2))->get();
   auto *VCMP_CRHS = dyn_cast<ConstantSDNode>(VCMP.getOperand(1));
-  if (VCMP_CC == ISD::SETNE && VCMP_CRHS && VCMP_CRHS->isZero()) {
+  if ((VCMP_CC == ISD::SETEQ || VCMP_CC == ISD::SETNE) && VCMP_CRHS &&
+      VCMP_CRHS->isZero()) {
+
     auto Cond = VCMP.getOperand(0);
     if (ISD::isExtOpcode(Cond->getOpcode())) // Skip extension.
       Cond = Cond.getOperand(0);
 
-    if (isBoolSGPR(Cond))
+    if (isBoolSGPR(Cond)) {
+      Negate = VCMP_CC == ISD::SETEQ;
       return Cond;
+    }
   }
   return SDValue();
 }
@@ -2306,14 +2311,18 @@ void AMDGPUDAGToDAGISel::SelectBRCOND(SDNode *N) {
     if ((CC == ISD::SETEQ || CC == ISD::SETNE) && CRHS && CRHS->isZero()) {
       // %VCMP = i(WaveSize) AMDGPUISD::SETCC ...
       // %C = i1 ISD::SETCC %VCMP, 0, setne/seteq
+      // BRCOND i1 %C, %BB
       // =>
-      // Use "i(WaveSize) %VCMP value in VCC register ne/eq zero" as the branch
-      // condition.
+      // %VCMP = i(WaveSize) AMDGPUISD::SETCC ...
+      // VCC = COPY i(WaveSize) %VCMP
+      // S_CBRANCH_VCCNZ/VCCZ %BB
       Negate = CC == ISD::SETEQ;
       auto VCMP = Cond->getOperand(0);
-      if (auto BallotCond = combineBallotPattern(VCMP)) {
+      bool NegatedBallot = false;
+      if (auto BallotCond = combineBallotPattern(VCMP, NegatedBallot)) {
         Cond = BallotCond;
         UseSCCBr = !BallotCond->isDivergent();
+        Negate = Negate ^ NegatedBallot;
       } else {
         // TODO: don't use SCC here assuming that AMDGPUISD::SETCC is always
         // selected as V_CMP, but this may change for uniform condition.
