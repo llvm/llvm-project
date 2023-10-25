@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include <CL/sycl.hpp>
 #include <level_zero/ze_api.h>
 #include <sycl/ext/oneapi/backend/level_zero.hpp>
@@ -71,7 +70,7 @@ static sycl::device getDefaultDevice() {
 }
 
 static sycl::context getDefaultContext() {
-  static sycl::context syclContext {getDefaultDevice()};
+  static sycl::context syclContext{getDefaultDevice()};
   return syclContext;
 }
 
