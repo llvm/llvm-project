@@ -19,6 +19,7 @@
 #include "llvm/IR/Type.h"
 
 using namespace llvm;
+using namespace LegalityPredicates;
 
 RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
   const unsigned XLen = ST.getXLen();
