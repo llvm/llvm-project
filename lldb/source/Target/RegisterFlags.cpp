@@ -17,6 +17,11 @@
 
 using namespace lldb_private;
 
+RegisterFlags::Field::Field(std::string name, unsigned start, unsigned end)
+    : m_name(std::move(name)), m_start(start), m_end(end) {
+  assert(m_start <= m_end && "Start bit must be <= end bit.");
+}
+
 void RegisterFlags::Field::log(Log *log) const {
   LLDB_LOG(log, "  Name: \"{0}\" Start: {1} End: {2}", m_name.c_str(), m_start,
            m_end);

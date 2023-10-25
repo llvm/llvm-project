@@ -9,8 +9,6 @@
 #ifndef LLDB_TARGET_REGISTERFLAGS_H
 #define LLDB_TARGET_REGISTERFLAGS_H
 
-#include <cassert>
-#include <stdint.h>
 #include <string>
 #include <vector>
 
@@ -25,10 +23,7 @@ public:
   public:
     /// Where start is the least significant bit and end is the most
     /// significant bit. The start bit must be <= the end bit.
-    Field(std::string name, unsigned start, unsigned end)
-        : m_name(std::move(name)), m_start(start), m_end(end) {
-      assert(m_start <= m_end && "Start bit must be <= end bit.");
-    }
+    Field(std::string name, unsigned start, unsigned end);
 
     /// Construct a field that occupies a single bit.
     Field(std::string name, unsigned bit_position)
