@@ -382,9 +382,10 @@ llvm::json::Value DAP::CreateTopLevelScopes() {
 
 ExpressionContext DAP::DetectExpressionContext(lldb::SBFrame &frame,
                                                std::string &text) {
-  // Include ` as an escape hatch.
-  if (!text.empty() && text[0] == '`') {
-    text = text.substr(1);
+  // Include the escape hatch prefix.
+  if (!text.empty() &&
+      llvm::StringRef(text).starts_with(g_dap.command_escape_prefix)) {
+    text = text.substr(g_dap.command_escape_prefix.size());
     return ExpressionContext::Command;
   }
 
@@ -416,7 +417,9 @@ ExpressionContext DAP::DetectExpressionContext(lldb::SBFrame &frame,
         if (!auto_repl_mode_collision_warning) {
           llvm::errs() << "Variable expression '" << text
                        << "' is hiding an lldb command, prefix an expression "
-                          "with ` to ensure it runs as a lldb command.\n";
+                          "with '"
+                       << g_dap.command_escape_prefix
+                       << "' to ensure it runs as a lldb command.\n";
           auto_repl_mode_collision_warning = true;
         }
         return ExpressionContext::Variable;
