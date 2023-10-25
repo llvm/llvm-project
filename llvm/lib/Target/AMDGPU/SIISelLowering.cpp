@@ -11230,25 +11230,53 @@ static bool hasNon16BitAccesses(uint64_t PermMask, SDValue &Op,
 static SDValue getDWordFromOffset(SelectionDAG &DAG, SDLoc SL, SDValue Src,
                                   unsigned DWordOffset) {
   SDValue Ret;
-  if (Src.getValueSizeInBits() <= 32)
+
+  auto ValueSize = Src.getValueSizeInBits().getFixedValue();
+  // ByteProvider must be at least 8 bits
+  assert(!(ValueSize % 8));
+
+  if (ValueSize <= 32)
     return DAG.getBitcastedAnyExtOrTrunc(Src, SL, MVT::i32);
 
-  if (Src.getValueSizeInBits() >= 256) {
-    assert(!(Src.getValueSizeInBits() % 32));
-    Ret = DAG.getBitcast(
-        MVT::getVectorVT(MVT::i32, Src.getValueSizeInBits() / 32), Src);
-    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, Ret,
-                       DAG.getConstant(DWordOffset, SL, MVT::i32));
+  if (Src.getValueType().isVector()) {
+    auto BaseSize = Src.getScalarValueSizeInBits();
+    if (BaseSize == 32) {
+      return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, Src,
+                         DAG.getConstant(DWordOffset, SL, MVT::i32));
+    }
+    if (BaseSize > 32) {
+      Ret = DAG.getNode(
+          ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, Src,
+          DAG.getConstant(DWordOffset / (BaseSize / 32), SL, MVT::i32));
+      auto ShiftVal = 32 * DWordOffset % (BaseSize / 32);
+      if (ShiftVal)
+        Ret = DAG.getNode(ISD::SRL, SL, Ret.getValueType(), Ret,
+                          DAG.getConstant(ShiftVal, SL, MVT::i32));
+      return DAG.getBitcastedAnyExtOrTrunc(Ret, SL, MVT::i32);
+    }
+
+    auto NumElements = ValueSize / BaseSize;
+    auto Trunc32Elements = (BaseSize * NumElements) / 32;
+    auto NormalizedTrunc = Trunc32Elements * 32 / BaseSize;
+    auto NumElementsIn32 = 32 / BaseSize;
+    auto NumAvailElements = DWordOffset < Trunc32Elements
+                                ? NumElementsIn32
+                                : NumElements - NormalizedTrunc;
+
+    SmallVector<SDValue, 4> VecSrcs;
+    DAG.ExtractVectorElements(Src, VecSrcs, DWordOffset * NumElementsIn32,
+                              NumAvailElements);
+
+    Ret = DAG.getBuildVector(
+        MVT::getVectorVT(MVT::getIntegerVT(BaseSize), NumAvailElements), SL,
+        VecSrcs);
+    return Ret = DAG.getBitcastedAnyExtOrTrunc(Ret, SL, MVT::i32);
   }
 
-  Ret = DAG.getBitcastedAnyExtOrTrunc(
-      Src, SL, MVT::getIntegerVT(Src.getValueSizeInBits()));
-  if (DWordOffset) {
-    auto Shifted = DAG.getNode(ISD::SRL, SL, Ret.getValueType(), Ret,
-                               DAG.getConstant(DWordOffset * 32, SL, MVT::i32));
-    return DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, Shifted);
-  }
-
+  /// Scalar Type
+  auto ShiftVal = 32 * DWordOffset;
+  Ret = DAG.getNode(ISD::SRL, SL, Src.getValueType(), Src,
+                    DAG.getConstant(ShiftVal, SL, MVT::i32));
   return DAG.getBitcastedAnyExtOrTrunc(Ret, SL, MVT::i32);
 }
 
@@ -11320,10 +11348,10 @@ static SDValue matchPERM(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   SDValue OtherOp =
       SecondSrc.has_value() ? *PermNodes[SecondSrc->first].Src : Op;
 
-  if (SecondSrc)
+  if (SecondSrc) {
     OtherOp = getDWordFromOffset(DAG, DL, OtherOp, SecondSrc->second);
-
-  assert(Op.getValueSizeInBits() == 32);
+    assert(OtherOp.getValueSizeInBits() == 32);
+  }
 
   if (hasNon16BitAccesses(PermMask, Op, OtherOp)) {
 
