@@ -33,6 +33,9 @@ class Type;
 /// through defining recipes until root nodes with known types are reached (e.g.
 /// live-ins or memory recipes). The types are then propagated top down through
 /// operations.
+/// Note that the analysis caches the infered types. A new analysis object must
+/// be constructed once a VPlan has been modified in a way that invalidates any
+/// of the previously infered types.
 class VPTypeAnalysis {
   DenseMap<const VPValue *, Type *> CachedTypes;
   LLVMContext &Ctx;

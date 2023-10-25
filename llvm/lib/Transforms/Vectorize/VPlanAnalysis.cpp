@@ -21,7 +21,7 @@ Type *VPTypeAnalysis::inferScalarType(const VPBlendRecipe *R) {
            "different types inferred for different incoming values");
     CachedTypes[Inc] = ResTy;
   }
-  return inferScalarType(R->getIncomingValue(0));
+  return ResTy;
 }
 
 Type *VPTypeAnalysis::inferScalarType(const VPInstruction *R) {
@@ -37,8 +37,9 @@ Type *VPTypeAnalysis::inferScalarType(const VPInstruction *R) {
   case VPInstruction::FirstOrderRecurrenceSplice:
     return inferScalarType(R->getOperand(0));
   default:
-    llvm_unreachable("Unhandled instruction!");
+    break;
   }
+  llvm_unreachable("Unhandled opcode!");
 }
 
 Type *VPTypeAnalysis::inferScalarType(const VPWidenRecipe *R) {
@@ -133,7 +134,8 @@ Type *VPTypeAnalysis::inferScalarType(const VPReplicateRecipe *R) {
   case Instruction::ICmp:
   case Instruction::FCmp: {
     Type *ResTy = inferScalarType(R->getOperand(0));
-    assert(ResTy == inferScalarType(R->getOperand(1)));
+    assert(ResTy == inferScalarType(R->getOperand(1)) &&
+           "inferred types for operands of binary op don't match");
     CachedTypes[R->getOperand(1)] = ResTy;
     return ResTy;
   }
@@ -142,10 +144,8 @@ Type *VPTypeAnalysis::inferScalarType(const VPReplicateRecipe *R) {
   case Instruction::ZExt:
   case Instruction::FPExt:
   case Instruction::FPTrunc:
+  case Instruction::ExtractValue:
     return R->getUnderlyingInstr()->getType();
-  case Instruction::ExtractValue: {
-    return R->getUnderlyingInstr()->getType();
-  }
   case Instruction::Freeze:
   case Instruction::FNeg:
     return inferScalarType(R->getOperand(0));
@@ -166,60 +166,61 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
   if (V->isLiveIn())
     return V->getLiveInIRValue()->getType();
 
-    const VPRecipeBase *Def = V->getDefiningRecipe();
-    switch (Def->getVPDefID()) {
-    case VPDef::VPCanonicalIVPHISC:
-    case VPDef::VPFirstOrderRecurrencePHISC:
-    case VPDef::VPReductionPHISC:
-    case VPDef::VPWidenPointerInductionSC:
-      // Handle header phi recipes, except VPWienIntOrFpInduction which needs
-      // special handling due it being possibly truncated.
-      ResultTy = cast<VPHeaderPHIRecipe>(Def)
-                     ->getStartValue()
-                     ->getLiveInIRValue()
-                     ->getType();
-      break;
-    case VPDef::VPWidenIntOrFpInductionSC:
-      ResultTy = cast<VPWidenIntOrFpInductionRecipe>(Def)->getScalarType();
-      break;
-    case VPDef::VPPredInstPHISC:
-    case VPDef::VPScalarIVStepsSC:
-    case VPDef::VPWidenPHISC:
-      ResultTy = inferScalarType(Def->getOperand(0));
-      break;
-    case VPDef::VPBlendSC:
-      ResultTy = inferScalarType(cast<VPBlendRecipe>(Def));
-      break;
-    case VPDef::VPInstructionSC:
-      ResultTy = inferScalarType(cast<VPInstruction>(Def));
-      break;
-    case VPDef::VPInterleaveSC:
-      // TODO: Use info from interleave group.
-      ResultTy = V->getUnderlyingValue()->getType();
-      break;
-    case VPDef::VPReplicateSC:
-      ResultTy = inferScalarType(cast<VPReplicateRecipe>(Def));
-      break;
-    case VPDef::VPWidenSC:
-      ResultTy = inferScalarType(cast<VPWidenRecipe>(Def));
-      break;
-    case VPDef::VPWidenCallSC:
-      ResultTy = inferScalarType(cast<VPWidenCallRecipe>(Def));
-      break;
-    case VPDef::VPWidenCastSC:
-      ResultTy = cast<VPWidenCastRecipe>(Def)->getResultType();
-      break;
-    case VPDef::VPWidenGEPSC:
-      ResultTy = PointerType::get(Ctx, 0);
-      break;
-    case VPDef::VPWidenMemoryInstructionSC:
-      ResultTy = inferScalarType(cast<VPWidenMemoryInstructionRecipe>(Def));
-      break;
-    case VPDef::VPWidenSelectSC:
-      ResultTy = inferScalarType(cast<VPWidenSelectRecipe>(Def));
-      break;
-    }
-    assert(ResultTy && "could not infer type for the given VPValue");
-    CachedTypes[V] = ResultTy;
-    return ResultTy;
+  const VPRecipeBase *Def = V->getDefiningRecipe();
+
+  switch (Def->getVPDefID()) {
+  case VPDef::VPCanonicalIVPHISC:
+  case VPDef::VPFirstOrderRecurrencePHISC:
+  case VPDef::VPReductionPHISC:
+  case VPDef::VPWidenPointerInductionSC:
+    // Handle header phi recipes, except VPWienIntOrFpInduction which needs
+    // special handling due it being possibly truncated.
+    ResultTy = cast<VPHeaderPHIRecipe>(Def)
+                   ->getStartValue()
+                   ->getLiveInIRValue()
+                   ->getType();
+    break;
+  case VPDef::VPWidenIntOrFpInductionSC:
+    ResultTy = cast<VPWidenIntOrFpInductionRecipe>(Def)->getScalarType();
+    break;
+  case VPDef::VPPredInstPHISC:
+  case VPDef::VPScalarIVStepsSC:
+  case VPDef::VPWidenPHISC:
+    ResultTy = inferScalarType(Def->getOperand(0));
+    break;
+  case VPDef::VPBlendSC:
+    ResultTy = inferScalarType(cast<VPBlendRecipe>(Def));
+    break;
+  case VPDef::VPInstructionSC:
+    ResultTy = inferScalarType(cast<VPInstruction>(Def));
+    break;
+  case VPDef::VPInterleaveSC:
+    // TODO: Use info from interleave group.
+    ResultTy = V->getUnderlyingValue()->getType();
+    break;
+  case VPDef::VPReplicateSC:
+    ResultTy = inferScalarType(cast<VPReplicateRecipe>(Def));
+    break;
+  case VPDef::VPWidenSC:
+    ResultTy = inferScalarType(cast<VPWidenRecipe>(Def));
+    break;
+  case VPDef::VPWidenCallSC:
+    ResultTy = inferScalarType(cast<VPWidenCallRecipe>(Def));
+    break;
+  case VPDef::VPWidenCastSC:
+    ResultTy = cast<VPWidenCastRecipe>(Def)->getResultType();
+    break;
+  case VPDef::VPWidenGEPSC:
+    ResultTy = PointerType::get(Ctx, 0);
+    break;
+  case VPDef::VPWidenMemoryInstructionSC:
+    ResultTy = inferScalarType(cast<VPWidenMemoryInstructionRecipe>(Def));
+    break;
+  case VPDef::VPWidenSelectSC:
+    ResultTy = inferScalarType(cast<VPWidenSelectRecipe>(Def));
+    break;
+  }
+  assert(ResultTy && "could not infer type for the given VPValue");
+  CachedTypes[V] = ResultTy;
+  return ResultTy;
 }
