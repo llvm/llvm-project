@@ -183,12 +183,12 @@ define amdgpu_kernel void @store_value_constant_cast_lds_gv_gep_to_flat(ptr addr
 define amdgpu_kernel void @store_ptrtoint_value_constant_cast_lds_gv_gep_to_flat(ptr addrspace(1) %out) #1 {
 ; AKF_HSA-LABEL: define {{[^@]+}}@store_ptrtoint_value_constant_cast_lds_gv_gep_to_flat
 ; AKF_HSA-SAME: (ptr addrspace(1) [[OUT:%.*]]) #[[ATTR1]] {
-; AKF_HSA-NEXT:    store i64 ptrtoint (ptr addrspace(4) getelementptr ([256 x i32], ptr addrspace(4) addrspacecast (ptr addrspace(3) @lds.arr to ptr addrspace(4)), i64 0, i64 8) to i64), ptr addrspace(1) [[OUT]], align 4
+; AKF_HSA-NEXT:    store i64 ptrtoint (ptr addrspace(4) getelementptr ([256 x i32], ptr addrspace(4) addrspacecast (ptr addrspace(3) @lds.arr to ptr addrspace(4)), i64 0, i64 8) to i64), ptr addrspace(1) [[OUT]], align 8
 ; AKF_HSA-NEXT:    ret void
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@store_ptrtoint_value_constant_cast_lds_gv_gep_to_flat
 ; ATTRIBUTOR_HSA-SAME: (ptr addrspace(1) [[OUT:%.*]]) #[[ATTR2]] {
-; ATTRIBUTOR_HSA-NEXT:    store i64 ptrtoint (ptr addrspace(4) getelementptr ([256 x i32], ptr addrspace(4) addrspacecast (ptr addrspace(3) @lds.arr to ptr addrspace(4)), i64 0, i64 8) to i64), ptr addrspace(1) [[OUT]], align 4
+; ATTRIBUTOR_HSA-NEXT:    store i64 ptrtoint (ptr addrspace(4) getelementptr ([256 x i32], ptr addrspace(4) addrspacecast (ptr addrspace(3) @lds.arr to ptr addrspace(4)), i64 0, i64 8) to i64), ptr addrspace(1) [[OUT]], align 8
 ; ATTRIBUTOR_HSA-NEXT:    ret void
 ;
   store i64 ptrtoint (ptr addrspace(4) getelementptr ([256 x i32], ptr addrspace(4) addrspacecast (ptr addrspace(3) @lds.arr to ptr addrspace(4)), i64 0, i64 8) to i64), ptr addrspace(1) %out
