@@ -507,12 +507,12 @@ std::string VarLenCodeEmitterGen::getInstructionCaseForEncoding(
     SS.indent(I) << "Inst = " << PostEmitter << "(MI, Inst, STI);\n";
 
   // Resize the scratch buffer if it's to small.
-  std::string ScratchResizeStr = "";
+  std::string ScratchResizeStr;
   if (VLI.size() && !VLI.isFixedValueOnly()) {
     raw_string_ostream RS(ScratchResizeStr);
-    std::string High = utostr(HighScratchAccess);
-    RS.indent(I) << "if (Scratch.getBitWidth() < " + High + ") "
-                 << "{ Scratch = Scratch.zext(" + High + "); }\n";
+    RS.indent(I) << "if (Scratch.getBitWidth() < " << HighScratchAccess
+                 << ") { Scratch = Scratch.zext(" << HighScratchAccess
+                 << "); }\n";
   }
 
   return ScratchResizeStr + Case;
