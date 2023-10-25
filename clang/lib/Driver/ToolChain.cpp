@@ -1326,7 +1326,7 @@ SanitizerMask ToolChain::getSupportedSanitizers() const {
       getTriple().isAArch64(64) || getTriple().isRISCV())
     Res |= SanitizerKind::ShadowCallStack;
   if (getTriple().isAArch64(64) ||
-      getTriple().isWasm())
+      getTriple().getArch() == ::llvm::Triple::wasm64)
     Res |= SanitizerKind::MemTag;
   return Res;
 }
