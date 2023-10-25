@@ -221,13 +221,15 @@ public:
     DCHECK_EQ(BlocksInUse, BatchClassUsedInFreeLists);
   }
 
-  u16 popBlocks(CacheT *C, uptr ClassId, CompactPtrT *ToArray) {
+  u16 popBlocks(CacheT *C, uptr ClassId, CompactPtrT *ToArray,
+                const u16 MaxBlockCount) {
     TransferBatchT *B = popBatch(C, ClassId);
     if (!B)
       return 0;
 
     const u16 Count = B->getCount();
     DCHECK_GT(Count, 0U);
+    DCHECK_LE(Count, MaxBlockCount);
     B->moveToArray(ToArray);
 
     if (ClassId != SizeClassMap::BatchClassId)
