@@ -741,7 +741,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
       supportMemtagGlobals = true;
     }
 
-    if (supportMemtagGlobals)
+    if (!supportMemtagGlobals)
       OutContext.reportError(SMLoc(),
                              "tagged symbols (-fsanitize=memtag-globals) are "
                              "only supported on AArch64 Android or Wasm64");
