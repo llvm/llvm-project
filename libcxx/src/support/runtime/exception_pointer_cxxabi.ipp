@@ -13,17 +13,21 @@
 
 #  if defined(_LIBCPP_EXCEPTION_PTR_DIRECT_INIT)
 #    if defined(LIBCXXRT)
-extern "C" {
+extern "C"
+{
     // Although libcxxrt defines these two (as an ABI-library should),
     // it doesn't declare them in some versions.
-    void *__cxa_allocate_exception(size_t thrown_size);
-    void __cxa_free_exception(void* thrown_exception);
+    void *__cxa_allocate_exception(size_t);
+    void __cxa_free_exception(void*);
 
-    _LIBCPP_WEAK __cxa_exception *__cxa_init_primary_exception(void *, std::type_info *, void(*)(void*));
+    // In libcxxrt this function is not marked as noexcept
+    _LIBCPP_WEAK __cxa_exception *__cxa_init_primary_exception(void*, std::type_info*, void(*)(void*));
 }
 #    else
-extern "C" {
-    _LIBCPP_WEAK __cxa_exception *__cxa_init_primary_exception(void *, std::type_info *, void(*)(void*)) throw();
+extern "C"
+{
+    // In libcxxabi this function IS noexcept
+    _LIBCPP_WEAK __cxa_exception *__cxa_init_primary_exception(void*, std::type_info*, void(*)(void*)) throw();
 }
 #    endif
 #  endif
@@ -53,25 +57,28 @@ exception_ptr& exception_ptr::operator=(const exception_ptr& other) noexcept
 }
 
 #  if defined(_LIBCPP_EXCEPTION_PTR_DIRECT_INIT)
-void *exception_ptr::__init_native_exception(size_t size, type_info *tinfo, void (*dest)(void *)) noexcept
+void *exception_ptr::__init_native_exception(size_t size, type_info* tinfo, void (*dest)(void*)) noexcept
 {
-    __cxa_exception *(*cxa_init_primary_exception_fn)(void *, std::type_info *, void(*)(void*)) = __cxa_init_primary_exception;
-    if (cxa_init_primary_exception_fn != nullptr) {
-        void *__ex = __cxa_allocate_exception(size);
+    decltype(__cxa_init_primary_exception)* cxa_init_primary_exception_fn = __cxa_init_primary_exception;
+    if (cxa_init_primary_exception_fn != nullptr)
+    {
+        void* __ex = __cxa_allocate_exception(size);
         (void)cxa_init_primary_exception_fn(__ex, tinfo, dest);
         return __ex;
     }
-    else {
+    else
+    {
         return nullptr;
     }
 }
 
-void exception_ptr::__free_native_exception(void *thrown_object) noexcept
+void exception_ptr::__free_native_exception(void* thrown_object) noexcept
 {
     __cxa_free_exception(thrown_object);
 }
 
-exception_ptr exception_ptr::__from_native_exception_pointer(void *__e) noexcept {
+exception_ptr exception_ptr::__from_native_exception_pointer(void* __e) noexcept
+{
     exception_ptr ptr;
     ptr.__ptr_ = __e;
     __cxa_increment_exception_refcount(ptr.__ptr_);
