@@ -79,10 +79,8 @@ ModRefInfo ScopedNoAliasAAResult::getModRefInfo(const CallBase *Call,
     return ModRefInfo::ModRef;
 
   if (!mayAliasInScopes(Loc.AATags.Scope,
-                        Call->getMetadata(LLVMContext::MD_noalias)))
-    return ModRefInfo::NoModRef;
-
-  if (!mayAliasInScopes(Call->getMetadata(LLVMContext::MD_alias_scope),
+                        Call->getMetadata(LLVMContext::MD_noalias)) &&
+      !mayAliasInScopes(Call->getMetadata(LLVMContext::MD_alias_scope),
                         Loc.AATags.NoAlias))
     return ModRefInfo::NoModRef;
 
@@ -96,10 +94,8 @@ ModRefInfo ScopedNoAliasAAResult::getModRefInfo(const CallBase *Call1,
     return ModRefInfo::ModRef;
 
   if (!mayAliasInScopes(Call1->getMetadata(LLVMContext::MD_alias_scope),
-                        Call2->getMetadata(LLVMContext::MD_noalias)))
-    return ModRefInfo::NoModRef;
-
-  if (!mayAliasInScopes(Call2->getMetadata(LLVMContext::MD_alias_scope),
+                        Call2->getMetadata(LLVMContext::MD_noalias)) &&
+      !mayAliasInScopes(Call2->getMetadata(LLVMContext::MD_alias_scope),
                         Call1->getMetadata(LLVMContext::MD_noalias)))
     return ModRefInfo::NoModRef;
 

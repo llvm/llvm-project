@@ -11,7 +11,7 @@ define i64 @foo(ptr noalias nocapture noundef align 8 dereferenceable(24) %p) {
 ; CHECK-NEXT:    call void @use(i64 [[V1]])
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 8 dereferenceable(16) [[P2]], i8 0, i64 16, i1 false), !alias.scope !0
-; CHECK-NEXT:    ret i64 [[V1]]
+; CHECK-NEXT:    ret i64 0
 ;
   %p1 = getelementptr inbounds i8, ptr %p, i64 16
   %v1 = load i64, ptr %p1, align 8
