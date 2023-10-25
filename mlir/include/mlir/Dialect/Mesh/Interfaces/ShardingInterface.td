@@ -61,11 +61,14 @@ def ShardingInterface : OpInterface<"ShardingInterface"> {
         }],
         /*retTy=*/"FailureOr<ShardingOption>",
         /*methodName=*/"getShardingOption",
-        /*args=*/(ins),
+        /*args=*/(ins
+          "ArrayRef<MeshShardingAttr>": $operandShardings,
+          "ArrayRef<MeshShardingAttr>": $resultShardings
+        ),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           return detail::defaultGetShardingOption(
-            $_op.getOperation());
+            $_op.getOperation(), operandShardings, resultShardings);
         }]
       >,
       InterfaceMethod<

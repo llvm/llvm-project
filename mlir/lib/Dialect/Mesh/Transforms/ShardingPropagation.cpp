@@ -34,6 +34,48 @@ namespace {
 // Utilities
 //===----------------------------------------------------------------------===//
 
+// This method returns all possible sharding attributes. For example,
+// mustShardings = [shard0, None] and optionalShardings = [None, shard1], the
+// result will be [[shard0, shard1], [shard0, None]]
+static SmallVector<SmallVector<MeshShardingAttr>>
+getOrderedPossibleShardingAttrs(ArrayRef<MeshShardingAttr> mustShardings,
+                                ArrayRef<MeshShardingAttr> optionalShardings) {
+  SmallVector<SmallVector<MeshShardingAttr>> allShardingAttrs;
+  SmallVector<MeshShardingAttr> curShardingAttrs;
+
+  std::function<void(size_t)> dfsCreateShardingAttrs = [&](size_t i) {
+    if (i == mustShardings.size()) {
+      allShardingAttrs.push_back(
+          SmallVector<MeshShardingAttr>(curShardingAttrs));
+      return;
+    }
+
+    if (mustShardings[i]) {
+      curShardingAttrs.push_back(mustShardings[i]);
+      dfsCreateShardingAttrs(i + 1);
+      curShardingAttrs.pop_back();
+      return;
+    }
+
+    if (optionalShardings[i]) {
+      curShardingAttrs.push_back(optionalShardings[i]);
+      dfsCreateShardingAttrs(i + 1);
+      curShardingAttrs.pop_back();
+      curShardingAttrs.push_back(nullptr);
+      dfsCreateShardingAttrs(i + 1);
+      curShardingAttrs.pop_back();
+      return;
+    }
+
+    curShardingAttrs.push_back(nullptr);
+    dfsCreateShardingAttrs(i + 1);
+    curShardingAttrs.pop_back();
+  };
+
+  dfsCreateShardingAttrs(0);
+  return allShardingAttrs;
+}
+
 // For each operation that implements the ShardingInterface, infer the sharding
 // option of the operation from its operands and/or results using the
 // `getShardingOption` method. If the inferred sharding option is not empty, add
@@ -49,16 +91,63 @@ LogicalResult visitOp(Operation *op, OpBuilder &builder) {
     return failure();
   }
 
-  FailureOr<ShardingOption> shardingOption = shardingOp.getShardingOption();
-  if (failed(shardingOption)) {
-    op->emitOpError() << "fail to get sharding option from results.";
+  // collect MeshShardingAttr from results
+  SmallVector<MeshShardingAttr> resultShardings;
+  resultShardings.reserve(op->getNumResults());
+  for (OpResult result : op->getResults()) {
+    FailureOr<MeshShardingAttr> shardAttr =
+        getMeshShardingAttr(result, /*useOperandSharding*/ true);
+    if (succeeded(shardAttr))
+      resultShardings.push_back(*shardAttr);
+    else
+      resultShardings.push_back(nullptr);
+  }
+
+  // collect MeshShardingAttr from operands
+  SmallVector<MeshShardingAttr> allowConflictsOperandShardings;
+  allowConflictsOperandShardings.resize(op->getNumOperands());
+  SmallVector<MeshShardingAttr> operandMustShardings;
+  operandMustShardings.resize(op->getNumOperands());
+  for (OpOperand &opOperand : op->getOpOperands()) {
+    FailureOr<std::pair<bool, MeshShardingAttr>> maybeShardAttr =
+        getMeshShardingAttr(opOperand);
+    if (failed(maybeShardAttr))
+      continue;
+
+    bool annotateForUsers = maybeShardAttr->first;
+    if (annotateForUsers)
+      operandMustShardings[opOperand.getOperandNumber()] =
+          maybeShardAttr->second;
+    else
+      allowConflictsOperandShardings[opOperand.getOperandNumber()] =
+          maybeShardAttr->second;
+  }
+
+  // try to get the sharding option
+  SmallVector<SmallVector<MeshShardingAttr>> possibleOperandShardingAttrs =
+      getOrderedPossibleShardingAttrs(operandMustShardings,
+                                      allowConflictsOperandShardings);
+  FailureOr<ShardingOption> finalShardingOption = failure();
+  for (ArrayRef<MeshShardingAttr> operandShardings :
+       possibleOperandShardingAttrs) {
+    FailureOr<ShardingOption> shardingOption =
+        shardingOp.getShardingOption(operandShardings, resultShardings);
+    if (succeeded(shardingOption)) {
+      finalShardingOption = shardingOption;
+      break;
+    }
+  }
+
+  if (failed(finalShardingOption)) {
+    op->emitOpError() << "fail to get sharding option.";
     return failure();
   }
   // sharding info is empty, return immediately
-  if (shardingOption->empty)
+  if (finalShardingOption->empty)
     return success();
 
-  if (failed(shardingOp.addShardingAnnotations(builder, *shardingOption))) {
+  if (failed(
+          shardingOp.addShardingAnnotations(builder, *finalShardingOption))) {
     op->emitOpError() << "fail to set sharding annotations.";
     return failure();
   }
