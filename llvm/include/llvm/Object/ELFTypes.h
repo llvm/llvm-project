@@ -10,9 +10,12 @@
 #define LLVM_OBJECT_ELFTYPES_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/Error.h"
+#include "llvm/Support/BlockFrequency.h"
+#include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
@@ -805,6 +808,11 @@ struct BBAddrMap {
       bool HasIndirectBranch : 1; // If this block ends with an indirect branch
                                   // (branch via a register).
 
+      // Number of bits used when encoding Metadata, that way an extension
+      // can pack into the extra space if possible. This must be updated when
+      // new bits are added here.
+      static constexpr uint32_t NumberOfBits = 5;
+
       bool operator==(const Metadata &Other) const {
         return HasReturn == Other.HasReturn &&
                HasTailCall == Other.HasTailCall && IsEHPad == Other.IsEHPad &&
@@ -873,6 +881,106 @@ struct BBAddrMap {
 
   uint64_t Addr;                  // Function address
   std::vector<BBEntry> BBEntries; // Basic block entries for this function.
+};
+
+/// An extension of BBAddrMap that holds information relevant to PGO.
+struct PGOBBAddrMap {
+  /// Bitmask of optional features to include in the PGO extended map.
+  enum class Features {
+    None = 0,
+    FuncEntryCnt = (1 << 0),
+    BBFreq = (1 << 1),
+    BrProb = (1 << 2),
+    LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/BrProb),
+  };
+
+  /// Super-set of BBAddrMap::BBEntry with additional fields for block frequency
+  /// and branch probability.
+  struct BBEntry {
+    using BaseMetadata = BBAddrMap::BBEntry::Metadata;
+
+    /// Enum indicating the how many successors a block has. This enum must fit
+    /// into two bits.
+    enum class SuccessorsType {
+      /// None should be present if PGOBBAddrMap has disabled branch
+      /// probability.
+      None = 0,
+      /// Single successor blocks are not present in the successor entries.
+      One = 1,
+      /// Common case for conditional branches to avoid encoding size.
+      Two = 2,
+      /// Uncommon case which needs successor size to be encoded.
+      Multiple = 3,
+    };
+
+    /// Single successor of a given basic block that contains the tag and branch
+    /// probability associated with it.
+    struct SuccessorEntry {
+      /// Unique ID of this successor basic block.
+      uint32_t ID;
+      /// Branch Probability of the edge to this successor taken from MBPI
+      BranchProbability Prob;
+
+      bool operator==(const SuccessorEntry &Other) const {
+        return std::tie(ID, Prob) == std::tie(Other.ID, Other.Prob);
+      }
+    };
+
+    /// Reuse of the fields provided by regular BBAddrMap
+    BBAddrMap::BBEntry Base;
+    /// Block frequency taken from MBFI
+    BlockFrequency BlockFreq;
+    /// List of successors of the current block
+    llvm::SmallVector<SuccessorEntry, 2> Successors;
+
+    /// Converts number of successors into a SuccessorsType.
+    static SuccessorsType getSuccessorsType(unsigned SuccessorsCount) {
+      return SuccessorsCount == 0   ? SuccessorsType::None
+             : SuccessorsCount == 1 ? SuccessorsType::One
+             : SuccessorsCount == 2 ? SuccessorsType::Two
+                                    : SuccessorsType::Multiple;
+    }
+
+    /// Encodes extra information in the free bits of the base metadata
+    static uint32_t encodeMD(BaseMetadata MD, SuccessorsType SuccType) {
+      return MD.encode() | static_cast<uint32_t>(SuccType)
+                               << BaseMetadata::NumberOfBits;
+    }
+
+    /// Extracts successors type then defers all errors to the base metadata
+    static Expected<std::pair<BaseMetadata, SuccessorsType>>
+    decodeMD(uint32_t V) {
+      auto SuccType = SuccessorsType((V >> BaseMetadata::NumberOfBits) & 0b11);
+      V &= ~(0b11 << BaseMetadata::NumberOfBits); // Clear extra bits
+      BaseMetadata MD;
+      if (llvm::Error E = BaseMetadata::decode(V).moveInto(MD))
+        return std::move(E);
+      return std::make_pair(MD, SuccType);
+    }
+
+    bool operator==(const BBEntry &Other) const {
+      return std::tie(Base, BlockFreq, Successors) ==
+             std::tie(Other.Base, Other.BlockFreq, Other.Successors);
+    }
+  };
+  // This field is duplicated from BBAddrMap since this class needs a different
+  // type for the vector of entries.
+  uint64_t Addr;                  // Function address
+  std::vector<BBEntry> BBEntries; // Extended basic block entries
+  uint64_t FuncEntryCount;        // Prof count from IR function
+
+  // Flags to indicate if each PGO related info was enabled in this function
+  bool FuncEntryCountEnabled : 1;
+  bool BBFreqEnabled : 1;
+  bool BBSuccProbEnabled : 1;
+
+  bool operator==(const PGOBBAddrMap &Other) const {
+    return std::tie(Addr, FuncEntryCount, BBEntries, FuncEntryCountEnabled,
+                    BBFreqEnabled, BBSuccProbEnabled) ==
+           std::tie(Other.Addr, Other.FuncEntryCount, Other.BBEntries,
+                    Other.FuncEntryCountEnabled, Other.BBFreqEnabled,
+                    Other.BBSuccProbEnabled);
+  }
 };
 
 } // end namespace object.

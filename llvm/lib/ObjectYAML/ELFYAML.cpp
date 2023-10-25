@@ -683,6 +683,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_SHT>::enumeration(
   ECase(SHT_LLVM_PART_PHDR);
   ECase(SHT_LLVM_BB_ADDR_MAP_V0);
   ECase(SHT_LLVM_BB_ADDR_MAP);
+  ECase(SHT_LLVM_PGO_BB_ADDR_MAP);
   ECase(SHT_LLVM_OFFLOADING);
   ECase(SHT_LLVM_LTO);
   ECase(SHT_GNU_ATTRIBUTES);
@@ -1389,6 +1390,12 @@ static void sectionMapping(IO &IO, ELFYAML::BBAddrMapSection &Section) {
   IO.mapOptional("Entries", Section.Entries);
 }
 
+static void sectionMapping(IO &IO, ELFYAML::PGOBBAddrMapSection &Section) {
+  commonSectionMapping(IO, Section);
+  IO.mapOptional("Content", Section.Content);
+  IO.mapOptional("Entries", Section.Entries);
+}
+
 static void sectionMapping(IO &IO, ELFYAML::StackSizesSection &Section) {
   commonSectionMapping(IO, Section);
   IO.mapOptional("Entries", Section.Entries);
@@ -1682,6 +1689,11 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
       Section.reset(new ELFYAML::BBAddrMapSection());
     sectionMapping(IO, *cast<ELFYAML::BBAddrMapSection>(Section.get()));
     break;
+  case ELF::SHT_LLVM_PGO_BB_ADDR_MAP:
+    if (!IO.outputting())
+      Section.reset(new ELFYAML::PGOBBAddrMapSection());
+    sectionMapping(IO, *cast<ELFYAML::PGOBBAddrMapSection>(Section.get()));
+    break;
   default:
     if (!IO.outputting()) {
       StringRef Name;
@@ -1803,13 +1815,17 @@ void MappingTraits<ELFYAML::StackSizeEntry>::mapping(
   IO.mapRequired("Size", E.Size);
 }
 
-void MappingTraits<ELFYAML::BBAddrMapEntry>::mapping(
-    IO &IO, ELFYAML::BBAddrMapEntry &E) {
-  assert(IO.getContext() && "The IO context is not initialized");
+static void mapBBAddrMapCommonBase(IO &IO, ELFYAML::BBAddrMapCommonBase &E) {
   IO.mapRequired("Version", E.Version);
   IO.mapOptional("Feature", E.Feature, Hex8(0));
   IO.mapOptional("Address", E.Address, Hex64(0));
   IO.mapOptional("NumBlocks", E.NumBlocks);
+}
+
+void MappingTraits<ELFYAML::BBAddrMapEntry>::mapping(
+    IO &IO, ELFYAML::BBAddrMapEntry &E) {
+  assert(IO.getContext() && "The IO context is not initialized");
+  mapBBAddrMapCommonBase(IO, E.Common);
   IO.mapOptional("BBEntries", E.BBEntries);
 }
 
@@ -1820,6 +1836,29 @@ void MappingTraits<ELFYAML::BBAddrMapEntry::BBEntry>::mapping(
   IO.mapRequired("AddressOffset", E.AddressOffset);
   IO.mapRequired("Size", E.Size);
   IO.mapRequired("Metadata", E.Metadata);
+}
+
+void MappingTraits<ELFYAML::PGOBBAddrMapEntry>::mapping(
+    IO &IO, ELFYAML::PGOBBAddrMapEntry &E) {
+  assert(IO.getContext() && "The IO context is not initialized");
+  mapBBAddrMapCommonBase(IO, E.Common);
+  IO.mapOptional("FuncEntryCount", E.FuncEntryCount);
+  IO.mapOptional("BBEntries", E.BBEntries);
+}
+
+void MappingTraits<ELFYAML::PGOBBAddrMapEntry::BBEntry>::mapping(
+    IO &IO, ELFYAML::PGOBBAddrMapEntry::BBEntry &E) {
+  assert(IO.getContext() && "The IO context is not initialized");
+  MappingTraits<ELFYAML::BBAddrMapEntry::BBEntry>::mapping(IO, E.Base);
+  IO.mapOptional("BBFreq", E.BBFreq);
+  IO.mapOptional("Successors", E.Successors);
+}
+
+void MappingTraits<ELFYAML::PGOBBAddrMapEntry::BBEntry::SuccessorEntry>::
+    mapping(IO &IO, ELFYAML::PGOBBAddrMapEntry::BBEntry::SuccessorEntry &E) {
+  assert(IO.getContext() && "The IO context is not initialized");
+  IO.mapRequired("ID", E.ID);
+  IO.mapRequired("BrProb", E.BrProb);
 }
 
 void MappingTraits<ELFYAML::GnuHashHeader>::mapping(IO &IO,

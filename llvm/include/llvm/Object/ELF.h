@@ -416,6 +416,12 @@ public:
   Expected<std::vector<BBAddrMap>>
   decodeBBAddrMap(const Elf_Shdr &Sec, const Elf_Shdr *RelaSec = nullptr) const;
 
+  /// Decodes same as decodeBBAddrMap but also decodes extra information from
+  /// features which are enabled.
+  Expected<std::vector<PGOBBAddrMap>>
+  decodePGOBBAddrMap(const Elf_Shdr &Sec,
+                     const Elf_Shdr *RelaSec = nullptr) const;
+
   /// Returns a map from every section matching \p IsMatch to its relocation
   /// section, or \p nullptr if it has no relocation section. This function
   /// returns an error if any of the \p IsMatch calls fail or if it fails to

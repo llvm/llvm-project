@@ -312,6 +312,7 @@ StringRef llvm::object::getELFSectionTypeName(uint32_t Machine, unsigned Type) {
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_PART_PHDR);
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_BB_ADDR_MAP_V0);
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_BB_ADDR_MAP);
+    STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_PGO_BB_ADDR_MAP);
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_OFFLOADING);
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_LTO);
     STRINGIFY_ENUM_CASE(ELF, SHT_GNU_ATTRIBUTES);
@@ -645,11 +646,179 @@ ELFFile<ELFT>::toMappedAddr(uint64_t VAddr, WarningHandler WarnHandler) const {
   return base() + Offset;
 }
 
-template <class ELFT>
-Expected<std::vector<BBAddrMap>>
-ELFFile<ELFT>::decodeBBAddrMap(const Elf_Shdr &Sec,
-                               const Elf_Shdr *RelaSec) const {
-  bool IsRelocatable = getHeader().e_type == ELF::ET_REL;
+// Helper to extract and decode the next ULEB128 value as unsigned int.
+// Returns zero and sets ULEBSizeErr if the ULEB128 value exceeds the unsigned
+// int limit.
+// Also returns zero if ULEBSizeErr is already in an error state.
+// ULEBSizeErr is an out variable if an error occurs.
+template <typename IntTy>
+static IntTy readULEB128As(DataExtractor &Data, DataExtractor::Cursor &Cur,
+                           Error &ULEBSizeErr) {
+  static_assert(std::is_unsigned_v<IntTy> &&
+                    (std::numeric_limits<IntTy>::radix == 2),
+                "only use unsigned radix 2");
+  // Bail out and do not extract data if ULEBSizeErr is already set.
+  if (ULEBSizeErr)
+    return 0;
+  uint64_t Offset = Cur.tell();
+  uint64_t Value = Data.getULEB128(Cur);
+  if (Value > std::numeric_limits<IntTy>::max()) {
+    ULEBSizeErr = createError("ULEB128 value at offset 0x" +
+                              Twine::utohexstr(Offset) + " exceeds UINT" +
+                              Twine(std::numeric_limits<IntTy>::digits) +
+                              "_MAX (0x" + Twine::utohexstr(Value) + ")");
+    return 0;
+  }
+  return static_cast<IntTy>(Value);
+}
+
+namespace {
+struct BasicAddrMapBBEntry {
+  uint32_t ID;
+  uint32_t Offset;
+  uint32_t Size;
+  uint32_t MD;
+};
+
+template <typename ELFT, typename AddrMap> struct AddrMapDecodeTrait;
+
+template <typename ELFT> struct AddrMapDecodeTrait<ELFT, BBAddrMap> {
+  // Base addr map has no extra data
+  struct ExtraData {};
+
+  static constexpr unsigned SectionID = ELF::SHT_LLVM_BB_ADDR_MAP;
+
+  DataExtractor &Data;
+  DataExtractor::Cursor &Cur;
+  Error &ULEBSizeErr;
+  Error &MetadataDecodeErr;
+
+  uint32_t PrevBBEndOffset = 0;
+
+  AddrMapDecodeTrait(DataExtractor &Data, DataExtractor::Cursor &Cur,
+                     Error &ULEBSizeErr, Error &MetadataDecodeErr)
+      : Data(Data), Cur(Cur), ULEBSizeErr(ULEBSizeErr),
+        MetadataDecodeErr(MetadataDecodeErr) {}
+
+  ExtraData decodeExtraDataHeader(uint8_t, uint8_t) {
+    PrevBBEndOffset = 0;
+    return {};
+  }
+
+  // This helper method avoids decoding the metadata so other AddrMaps can use
+  BasicAddrMapBBEntry decodeBasicInfo(uint8_t Version, uint8_t Feature,
+                                      uint32_t BlockIndex) {
+    uint32_t ID = Version >= 2 ? readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr)
+                               : BlockIndex;
+    uint32_t Offset = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+    uint32_t Size = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+    uint32_t MD = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+    if (Version >= 1) {
+      // Offset is calculated relative to the end of the previous BB.
+      Offset += PrevBBEndOffset;
+      PrevBBEndOffset = Offset + Size;
+    }
+    return {ID, Offset, Size, MD};
+  }
+
+  BBAddrMap::BBEntry decodeBBEntry(uint8_t Version, uint8_t Feature,
+                                   uint32_t BlockIndex) {
+    auto [ID, Offset, Size, MD] = decodeBasicInfo(Version, Feature, BlockIndex);
+    auto MetadataOrErr = BBAddrMap::BBEntry::Metadata::decode(MD);
+    if (Error E = MetadataOrErr.takeError()) {
+      MetadataDecodeErr = std::move(E);
+      return {{}, {}, {}, {}};
+    }
+    return {ID, Offset, Size, *MetadataOrErr};
+  }
+
+  BBAddrMap makeAddrMap(ExtraData, uint8_t Feature, uint64_t Address,
+                        std::vector<BBAddrMap::BBEntry> BBEntries) {
+    return {Address, std::move(BBEntries)};
+  }
+};
+
+template <typename ELFT> struct AddrMapDecodeTrait<ELFT, PGOBBAddrMap> {
+  using Features = PGOBBAddrMap::Features;
+
+  struct ExtraData {
+    uint64_t FuncEntryCount;
+  };
+
+  static constexpr unsigned SectionID = ELF::SHT_LLVM_PGO_BB_ADDR_MAP;
+
+  AddrMapDecodeTrait<ELFT, BBAddrMap> Base;
+
+  AddrMapDecodeTrait(DataExtractor &Data, DataExtractor::Cursor &Cur,
+                     Error &ULEBSizeErr, Error &MetadataDecodeErr)
+      : Base(Data, Cur, ULEBSizeErr, MetadataDecodeErr) {}
+
+  ExtraData decodeExtraDataHeader(uint8_t Version, uint8_t Feature) {
+    Base.decodeExtraDataHeader(Version, Feature);
+    if (Version < 2) {
+      // hijack the metadata error if version is too low
+      Base.MetadataDecodeErr =
+          createError("unsupported SHT_LLVM_PGO_BB_ADDR_MAP version: " +
+                      Twine(static_cast<int>(Version)));
+      return {};
+    }
+    return {Feature & uint8_t(PGOBBAddrMap::Features::FuncEntryCnt)
+                ? readULEB128As<uint64_t>(Base.Data, Base.Cur, Base.ULEBSizeErr)
+                : 0};
+  }
+
+  PGOBBAddrMap::BBEntry decodeBBEntry(uint8_t Version, uint8_t Feature,
+                                      uint32_t BlockIndex) {
+    auto [ID, Offset, Size, MD] =
+        Base.decodeBasicInfo(Version, Feature, BlockIndex);
+    auto MetadataOrErr = PGOBBAddrMap::BBEntry::decodeMD(MD);
+    if (Error E = MetadataOrErr.takeError()) {
+      Base.MetadataDecodeErr = std::move(E);
+      return {{{}, {}, {}, {}}, {}, {}};
+    }
+    auto [MetaData, SuccsType] = *MetadataOrErr;
+
+    uint64_t BBF =
+        Feature & uint8_t(PGOBBAddrMap::Features::BBFreq)
+            ? readULEB128As<uint64_t>(Base.Data, Base.Cur, Base.ULEBSizeErr)
+            : 0;
+
+    llvm::SmallVector<PGOBBAddrMap::BBEntry::SuccessorEntry, 2> Successors;
+    if (Feature & uint8_t(PGOBBAddrMap::Features::BrProb)) {
+      auto SuccCount =
+          SuccsType == PGOBBAddrMap::BBEntry::SuccessorsType::Multiple
+              ? readULEB128As<uint64_t>(Base.Data, Base.Cur, Base.ULEBSizeErr)
+              : uint64_t(SuccsType);
+      for (uint64_t I = 0; I < SuccCount; ++I) {
+        uint32_t BBID =
+            readULEB128As<uint32_t>(Base.Data, Base.Cur, Base.ULEBSizeErr);
+        uint32_t BrProb =
+            readULEB128As<uint32_t>(Base.Data, Base.Cur, Base.ULEBSizeErr);
+        Successors.push_back({BBID, BranchProbability::getRaw(BrProb)});
+      }
+    }
+    return PGOBBAddrMap::BBEntry{
+        {ID, Offset, Size, MetaData}, BlockFrequency(BBF), Successors};
+  }
+
+  PGOBBAddrMap makeAddrMap(ExtraData ED, uint8_t Feature, uint64_t Address,
+                           std::vector<PGOBBAddrMap::BBEntry> BBEntries) {
+    return {Address,
+            std::move(BBEntries),
+            ED.FuncEntryCount,
+            bool(Feature & uint8_t(Features::FuncEntryCnt)),
+            bool(Feature & uint8_t(Features::BBFreq)),
+            bool(Feature & uint8_t(Features::BrProb))};
+  }
+};
+} // namespace
+
+template <typename AddrMap, typename ELFT>
+static Expected<std::vector<AddrMap>>
+decodeBBAddrMapCommonImpl(const ELFFile<ELFT> &EF,
+                          const typename ELFFile<ELFT>::Elf_Shdr &Sec,
+                          const typename ELFFile<ELFT>::Elf_Shdr *RelaSec) {
+  bool IsRelocatable = EF.getHeader().e_type == ELF::ET_REL;
 
   // This DenseMap maps the offset of each function (the location of the
   // reference to the function in the SHT_LLVM_BB_ADDR_MAP section) to the
@@ -659,57 +828,44 @@ ELFFile<ELFT>::decodeBBAddrMap(const Elf_Shdr &Sec,
     assert(RelaSec &&
            "Can't read a SHT_LLVM_BB_ADDR_MAP section in a relocatable "
            "object file without providing a relocation section.");
-    Expected<Elf_Rela_Range> Relas = this->relas(*RelaSec);
+    Expected<typename ELFFile<ELFT>::Elf_Rela_Range> Relas = EF.relas(*RelaSec);
     if (!Relas)
       return createError("unable to read relocations for section " +
-                         describe(*this, Sec) + ": " +
+                         describe(EF, Sec) + ": " +
                          toString(Relas.takeError()));
-    for (Elf_Rela Rela : *Relas)
+    for (typename ELFFile<ELFT>::Elf_Rela Rela : *Relas)
       FunctionOffsetTranslations[Rela.r_offset] = Rela.r_addend;
   }
-  Expected<ArrayRef<uint8_t>> ContentsOrErr = getSectionContents(Sec);
+  Expected<ArrayRef<uint8_t>> ContentsOrErr = EF.getSectionContents(Sec);
   if (!ContentsOrErr)
     return ContentsOrErr.takeError();
   ArrayRef<uint8_t> Content = *ContentsOrErr;
-  DataExtractor Data(Content, isLE(), ELFT::Is64Bits ? 8 : 4);
-  std::vector<BBAddrMap> FunctionEntries;
+  DataExtractor Data(Content, EF.isLE(), ELFT::Is64Bits ? 8 : 4);
+  std::vector<AddrMap> FunctionEntries;
 
   DataExtractor::Cursor Cur(0);
   Error ULEBSizeErr = Error::success();
   Error MetadataDecodeErr = Error::success();
-  // Helper to extract and decode the next ULEB128 value as uint32_t.
-  // Returns zero and sets ULEBSizeErr if the ULEB128 value exceeds the uint32_t
-  // limit.
-  // Also returns zero if ULEBSizeErr is already in an error state.
-  auto ReadULEB128AsUInt32 = [&Data, &Cur, &ULEBSizeErr]() -> uint32_t {
-    // Bail out and do not extract data if ULEBSizeErr is already set.
-    if (ULEBSizeErr)
-      return 0;
-    uint64_t Offset = Cur.tell();
-    uint64_t Value = Data.getULEB128(Cur);
-    if (Value > UINT32_MAX) {
-      ULEBSizeErr = createError(
-          "ULEB128 value at offset 0x" + Twine::utohexstr(Offset) +
-          " exceeds UINT32_MAX (0x" + Twine::utohexstr(Value) + ")");
-      return 0;
-    }
-    return static_cast<uint32_t>(Value);
-  };
+
+  using DecodeTrait = AddrMapDecodeTrait<ELFT, AddrMap>;
+  DecodeTrait DT(Data, Cur, ULEBSizeErr, MetadataDecodeErr);
 
   uint8_t Version = 0;
+  uint8_t Feature = 0;
   while (!ULEBSizeErr && !MetadataDecodeErr && Cur &&
          Cur.tell() < Content.size()) {
-    if (Sec.sh_type == ELF::SHT_LLVM_BB_ADDR_MAP) {
+    if (Sec.sh_type == DecodeTrait::SectionID) {
       Version = Data.getU8(Cur);
       if (!Cur)
         break;
       if (Version > 2)
         return createError("unsupported SHT_LLVM_BB_ADDR_MAP version: " +
                            Twine(static_cast<int>(Version)));
-      Data.getU8(Cur); // Feature byte
+      Feature = Data.getU8(Cur); // Feature byte
     }
     uint64_t SectionOffset = Cur.tell();
-    uintX_t Address = static_cast<uintX_t>(Data.getAddress(Cur));
+    auto Address =
+        static_cast<typename ELFFile<ELFT>::uintX_t>(Data.getAddress(Cur));
     if (!Cur)
       return Cur.takeError();
     if (IsRelocatable) {
@@ -718,34 +874,23 @@ ELFFile<ELFT>::decodeBBAddrMap(const Elf_Shdr &Sec,
       if (FOTIterator == FunctionOffsetTranslations.end()) {
         return createError("failed to get relocation data for offset: " +
                            Twine::utohexstr(SectionOffset) + " in section " +
-                           describe(*this, Sec));
+                           describe(EF, Sec));
       }
       Address = FOTIterator->second;
     }
-    uint32_t NumBlocks = ReadULEB128AsUInt32();
-    std::vector<BBAddrMap::BBEntry> BBEntries;
-    uint32_t PrevBBEndOffset = 0;
+    uint32_t NumBlocks = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+    auto ExtraData = DT.decodeExtraDataHeader(Version, Feature);
+    std::vector<typename AddrMap::BBEntry> BBEntries;
     for (uint32_t BlockIndex = 0;
          !MetadataDecodeErr && !ULEBSizeErr && Cur && (BlockIndex < NumBlocks);
          ++BlockIndex) {
-      uint32_t ID = Version >= 2 ? ReadULEB128AsUInt32() : BlockIndex;
-      uint32_t Offset = ReadULEB128AsUInt32();
-      uint32_t Size = ReadULEB128AsUInt32();
-      uint32_t MD = ReadULEB128AsUInt32();
-      if (Version >= 1) {
-        // Offset is calculated relative to the end of the previous BB.
-        Offset += PrevBBEndOffset;
-        PrevBBEndOffset = Offset + Size;
-      }
-      Expected<BBAddrMap::BBEntry::Metadata> MetadataOrErr =
-          BBAddrMap::BBEntry::Metadata::decode(MD);
-      if (!MetadataOrErr) {
-        MetadataDecodeErr = MetadataOrErr.takeError();
+      auto Entry = DT.decodeBBEntry(Version, Feature, BlockIndex);
+      if (MetadataDecodeErr)
         break;
-      }
-      BBEntries.push_back({ID, Offset, Size, *MetadataOrErr});
+      BBEntries.push_back(std::move(Entry));
     }
-    FunctionEntries.emplace_back(Address, std::move(BBEntries));
+    FunctionEntries.push_back(
+        DT.makeAddrMap(ExtraData, Feature, Address, std::move(BBEntries)));
   }
   // Either Cur is in the error state, or we have an error in ULEBSizeErr or
   // MetadataDecodeErr (but not both), but we join all errors here to be safe.
@@ -753,6 +898,20 @@ ELFFile<ELFT>::decodeBBAddrMap(const Elf_Shdr &Sec,
     return joinErrors(joinErrors(Cur.takeError(), std::move(ULEBSizeErr)),
                       std::move(MetadataDecodeErr));
   return FunctionEntries;
+}
+
+template <class ELFT>
+Expected<std::vector<BBAddrMap>>
+ELFFile<ELFT>::decodeBBAddrMap(const Elf_Shdr &Sec,
+                               const Elf_Shdr *RelaSec) const {
+  return decodeBBAddrMapCommonImpl<BBAddrMap>(*this, Sec, RelaSec);
+}
+
+template <class ELFT>
+Expected<std::vector<PGOBBAddrMap>>
+ELFFile<ELFT>::decodePGOBBAddrMap(const Elf_Shdr &Sec,
+                                  const Elf_Shdr *RelaSec) const {
+  return decodeBBAddrMapCommonImpl<PGOBBAddrMap>(*this, Sec, RelaSec);
 }
 
 template <class ELFT>

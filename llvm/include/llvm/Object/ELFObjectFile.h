@@ -113,6 +113,9 @@ public:
   // corresponding to the section with that index.
   Expected<std::vector<BBAddrMap>>
   readBBAddrMap(std::optional<unsigned> TextSectionIndex = std::nullopt) const;
+
+  Expected<std::vector<PGOBBAddrMap>> readPGOBBAddrMap(
+      std::optional<unsigned> TextSectionIndex = std::nullopt) const;
 };
 
 class ELFSectionRef : public SectionRef {

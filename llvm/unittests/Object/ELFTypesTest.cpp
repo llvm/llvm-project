@@ -73,8 +73,12 @@ TEST(ELFTypesTest, BBEntryMetadataEncodingTest) {
        {false, false, false, false, true},
        {true, true, true, true, true}}};
   const std::array<uint32_t, 7> Encoded = {{0, 1, 2, 4, 8, 16, 31}};
-  for (size_t i = 0; i < Decoded.size(); ++i)
+  for (size_t i = 0; i < Decoded.size(); ++i) {
     EXPECT_EQ(Decoded[i].encode(), Encoded[i]);
+    EXPECT_LT(Decoded[i].encode(),
+              uint32_t{1} << BBAddrMap::BBEntry::Metadata::NumberOfBits)
+        << "If a new bit was added, please update NumberOfBits.";
+  }
   for (size_t i = 0; i < Encoded.size(); ++i) {
     Expected<BBAddrMap::BBEntry::Metadata> MetadataOrError =
         BBAddrMap::BBEntry::Metadata::decode(Encoded[i]);
@@ -92,5 +96,52 @@ TEST(ELFTypesTest, BBEntryMetadataInvalidEncodingTest) {
     EXPECT_THAT_ERROR(
         BBAddrMap::BBEntry::Metadata::decode(Values[i]).takeError(),
         FailedWithMessage(Errors[i]));
+  }
+}
+
+static_assert(
+    std::is_same_v<decltype(PGOBBAddrMap::BBEntry::SuccessorEntry::ID),
+                   decltype(BBAddrMap::BBEntry::ID)>,
+    "PGOBBAddrMap should use the same type for basic block ID as BBAddrMap");
+static_assert(BBAddrMap::BBEntry::Metadata::NumberOfBits <
+                  (sizeof(uint32_t) * 8) - 2,
+              "currently PGOBBAddrMap relies on having two bits of space to "
+              "encode number of successors, to add more we need increase the "
+              "encoded size of Metadata");
+
+TEST(ELFTypesTest, PGOBBEntryMetadataEncodingTest) {
+  using ST = PGOBBAddrMap::BBEntry::SuccessorsType;
+  const std::array<std::pair<BBAddrMap::BBEntry::Metadata, ST>, 7> Decoded = {
+      {{{false, false, false, false, false}, ST::None},
+       {{true, false, false, false, false}, ST::One},
+       {{false, true, false, false, false}, ST::Two},
+       {{false, false, true, false, false}, ST::Multiple},
+       {{false, false, false, true, false}, ST::One},
+       {{false, false, false, false, true}, ST::Two},
+       {{true, true, true, true, true}, ST::Multiple}}};
+  const std::array<uint32_t, 7> Encoded = {{0b00'00000, 0b01'00001, 0b10'00010,
+                                            0b11'00100, 0b01'01000, 0b10'10000,
+                                            0b11'11111}};
+  for (auto [Enc, Dec] : llvm::zip(Encoded, Decoded)) {
+    auto [MD, SuccType] = Dec;
+    EXPECT_EQ(PGOBBAddrMap::BBEntry::encodeMD(MD, SuccType), Enc);
+  }
+  for (auto [Enc, Dec] : llvm::zip(Encoded, Decoded)) {
+    Expected<std::pair<BBAddrMap::BBEntry::Metadata, ST>> MetadataOrError =
+        PGOBBAddrMap::BBEntry::decodeMD(Enc);
+    ASSERT_THAT_EXPECTED(MetadataOrError, Succeeded());
+    EXPECT_EQ(*MetadataOrError, Dec);
+  }
+}
+
+TEST(ELFTypesTest, PGOBBEntryMetadataInvalidEncodingTest) {
+  const std::array<std::string, 3> Errors = {
+      "invalid encoding for BBEntry::Metadata: 0xff9f",
+      "invalid encoding for BBEntry::Metadata: 0x100001",
+      "invalid encoding for BBEntry::Metadata: 0x80"};
+  const std::array<uint32_t, 3> Values = {0xFFFF, 0x100001, 0x00c0};
+  for (auto [Val, Err] : llvm::zip(Values, Errors)) {
+    EXPECT_THAT_ERROR(PGOBBAddrMap::BBEntry::decodeMD(Val).takeError(),
+                      FailedWithMessage(Err));
   }
 }

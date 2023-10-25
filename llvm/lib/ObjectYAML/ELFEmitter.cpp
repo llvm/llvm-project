@@ -175,8 +175,9 @@ struct Fragment {
 /// TODO: This class still has a ways to go before it is truly a "single
 /// point of truth".
 template <class ELFT> class ELFState {
+public:
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
-
+private:
   enum class SymtabType { Static, Dynamic };
 
   /// The future symbol table string section.
@@ -282,6 +283,9 @@ template <class ELFT> class ELFState {
                            ContiguousBlobAccumulator &CBA);
   void writeSectionContent(Elf_Shdr &SHeader,
                            const ELFYAML::BBAddrMapSection &Section,
+                           ContiguousBlobAccumulator &CBA);
+  void writeSectionContent(Elf_Shdr &SHeader,
+                           const ELFYAML::PGOBBAddrMapSection &Section,
                            ContiguousBlobAccumulator &CBA);
   void writeSectionContent(Elf_Shdr &SHeader,
                            const ELFYAML::HashSection &Section,
@@ -894,6 +898,8 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
       writeSectionContent(SHeader, *S, CBA);
     } else if (auto S = dyn_cast<ELFYAML::BBAddrMapSection>(Sec)) {
       writeSectionContent(SHeader, *S, CBA);
+    } else if (auto S = dyn_cast<ELFYAML::PGOBBAddrMapSection>(Sec)) {
+      writeSectionContent(SHeader, *S, CBA);
     } else {
       llvm_unreachable("Unknown section type");
     }
@@ -1386,42 +1392,122 @@ void ELFState<ELFT>::writeSectionContent(
   }
 }
 
+namespace {
+template <typename ELFT, typename AddrMap> struct BBAddrMapWriteTrait;
+
+template <typename ELFT>
+struct BBAddrMapWriteTrait<ELFT, ELFYAML::BBAddrMapSection> {
+  typename ELFState<ELFT>::Elf_Shdr &SHeader;
+  const ELFYAML::Section &Section;
+  ContiguousBlobAccumulator &CBA;
+  const unsigned UpToDateSectionID;
+
+  BBAddrMapWriteTrait(typename ELFState<ELFT>::Elf_Shdr &SHeader,
+                      const ELFYAML::Section &Section,
+                      ContiguousBlobAccumulator &CBA,
+                      unsigned UpToDateSectionID = ELF::SHT_LLVM_BB_ADDR_MAP)
+      : SHeader(SHeader), Section(Section), CBA(CBA),
+        UpToDateSectionID(UpToDateSectionID) {}
+
+  template <typename EntryTy> void writeEntry(const EntryTy &E) {
+    using uintX_t = typename ELFState<ELFT>::uintX_t;
+    // Write version and feature values.
+    if (Section.Type == UpToDateSectionID) {
+      if (E.Common.Version > 2)
+        WithColor::warning() << "unsupported SHT_LLVM_BB_ADDR_MAP version: "
+                             << static_cast<int>(E.Common.Version)
+                             << "; encoding using the most recent version";
+      CBA.write(E.Common.Version);
+      CBA.write(E.Common.Feature);
+      SHeader.sh_size += 2;
+    }
+    // Write the address of the function.
+    CBA.write<uintX_t>(E.Common.Address, ELFT::TargetEndianness);
+    // Write number of BBEntries (number of basic blocks in the function). This
+    // is overridden by the 'NumBlocks' YAML field when specified.
+    uint64_t NumBlocks =
+        E.Common.NumBlocks.value_or(E.BBEntries ? E.BBEntries->size() : 0);
+    SHeader.sh_size += sizeof(uintX_t) + CBA.writeULEB128(NumBlocks);
+  }
+
+  void writeBBEntry(const ELFYAML::BBAddrMapEntry &E,
+                    const ELFYAML::BBAddrMapEntry::BBEntry &BBE) {
+    if (Section.Type == UpToDateSectionID && E.Common.Version > 1)
+      SHeader.sh_size += CBA.writeULEB128(BBE.ID);
+    SHeader.sh_size += CBA.writeULEB128(BBE.AddressOffset) +
+                       CBA.writeULEB128(BBE.Size) +
+                       CBA.writeULEB128(BBE.Metadata);
+  }
+};
+
+template <typename ELFT>
+struct BBAddrMapWriteTrait<ELFT, ELFYAML::PGOBBAddrMapSection> {
+  using Features = object::PGOBBAddrMap::Features;
+
+  BBAddrMapWriteTrait<ELFT, ELFYAML::BBAddrMapSection> Base;
+
+  BBAddrMapWriteTrait(typename ELFState<ELFT>::Elf_Shdr &SHeader,
+                      const ELFYAML::PGOBBAddrMapSection &Section,
+                      ContiguousBlobAccumulator &CBA)
+      : Base(SHeader, Section, CBA, ELF::SHT_LLVM_PGO_BB_ADDR_MAP) {}
+
+  void writeEntry(const ELFYAML::PGOBBAddrMapEntry &E) {
+    if (E.Common.Version < 2)
+      WithColor::warning() << "unsupported SHT_LLVM_PGO_BB_ADDR_MAP version: "
+                           << static_cast<int>(E.Common.Version)
+                           << "; must use version >= 2";
+    Base.writeEntry(E);
+    if (E.FuncEntryCount)
+      Base.SHeader.sh_size += Base.CBA.writeULEB128(*E.FuncEntryCount);
+  }
+
+  void writeBBEntry(const ELFYAML::PGOBBAddrMapEntry &E,
+                    const ELFYAML::PGOBBAddrMapEntry::BBEntry &BBE) {
+    Base.writeBBEntry(ELFYAML::BBAddrMapEntry{E.Common, {}}, BBE.Base);
+    if (BBE.BBFreq)
+      Base.SHeader.sh_size += Base.CBA.writeULEB128(*BBE.BBFreq);
+    if (BBE.Successors) {
+      if (BBE.Successors->size() > 2)
+        Base.SHeader.sh_size += Base.CBA.writeULEB128(BBE.Successors->size());
+      for (const auto &Succ : *BBE.Successors)
+        Base.SHeader.sh_size +=
+            Base.CBA.writeULEB128(Succ.ID) + Base.CBA.writeULEB128(Succ.BrProb);
+    }
+  }
+};
+} // namespace
+
+template <typename ELFT, typename SectionTy>
+static void writeAddrMapSectionContent(
+    ELFState<ELFT> &ES, typename ELFState<ELFT>::Elf_Shdr &SHeader,
+    const SectionTy &Section, ContiguousBlobAccumulator &CBA) {
+  if (!Section.Entries)
+    return;
+
+  BBAddrMapWriteTrait<ELFT, SectionTy> AddrTrait(SHeader, Section, CBA);
+  for (const auto &E : *Section.Entries) {
+    AddrTrait.writeEntry(E);
+    // Write all BBEntries.
+    if (!E.BBEntries)
+      continue;
+    for (const auto &BBE : *E.BBEntries) {
+      AddrTrait.writeBBEntry(E, BBE);
+    }
+  }
+}
+
 template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(
     Elf_Shdr &SHeader, const ELFYAML::BBAddrMapSection &Section,
     ContiguousBlobAccumulator &CBA) {
-  if (!Section.Entries)
-    return;
+  writeAddrMapSectionContent(*this, SHeader, Section, CBA);
+}
 
-  for (const ELFYAML::BBAddrMapEntry &E : *Section.Entries) {
-    // Write version and feature values.
-    if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP) {
-      if (E.Version > 2)
-        WithColor::warning() << "unsupported SHT_LLVM_BB_ADDR_MAP version: "
-                             << static_cast<int>(E.Version)
-                             << "; encoding using the most recent version";
-      CBA.write(E.Version);
-      CBA.write(E.Feature);
-      SHeader.sh_size += 2;
-    }
-    // Write the address of the function.
-    CBA.write<uintX_t>(E.Address, ELFT::TargetEndianness);
-    // Write number of BBEntries (number of basic blocks in the function). This
-    // is overridden by the 'NumBlocks' YAML field when specified.
-    uint64_t NumBlocks =
-        E.NumBlocks.value_or(E.BBEntries ? E.BBEntries->size() : 0);
-    SHeader.sh_size += sizeof(uintX_t) + CBA.writeULEB128(NumBlocks);
-    // Write all BBEntries.
-    if (!E.BBEntries)
-      continue;
-    for (const ELFYAML::BBAddrMapEntry::BBEntry &BBE : *E.BBEntries) {
-      if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP && E.Version > 1)
-        SHeader.sh_size += CBA.writeULEB128(BBE.ID);
-      SHeader.sh_size += CBA.writeULEB128(BBE.AddressOffset) +
-                         CBA.writeULEB128(BBE.Size) +
-                         CBA.writeULEB128(BBE.Metadata);
-    }
-  }
+template <class ELFT>
+void ELFState<ELFT>::writeSectionContent(
+    Elf_Shdr &SHeader, const ELFYAML::PGOBBAddrMapSection &Section,
+    ContiguousBlobAccumulator &CBA) {
+  writeAddrMapSectionContent(*this, SHeader, Section, CBA);
 }
 
 template <class ELFT>

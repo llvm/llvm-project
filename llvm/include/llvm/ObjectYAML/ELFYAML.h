@@ -156,6 +156,13 @@ struct DynamicEntry {
   llvm::yaml::Hex64 Val;
 };
 
+struct BBAddrMapCommonBase {
+  uint8_t Version;
+  llvm::yaml::Hex8 Feature;
+  llvm::yaml::Hex64 Address;
+  std::optional<uint64_t> NumBlocks;
+};
+
 struct BBAddrMapEntry {
   struct BBEntry {
     uint32_t ID;
@@ -163,10 +170,22 @@ struct BBAddrMapEntry {
     llvm::yaml::Hex64 Size;
     llvm::yaml::Hex64 Metadata;
   };
-  uint8_t Version;
-  llvm::yaml::Hex8 Feature;
-  llvm::yaml::Hex64 Address;
-  std::optional<uint64_t> NumBlocks;
+  BBAddrMapCommonBase Common;
+  std::optional<std::vector<BBEntry>> BBEntries;
+};
+
+struct PGOBBAddrMapEntry {
+  struct BBEntry {
+    struct SuccessorEntry {
+      uint32_t ID;
+      llvm::yaml::Hex32 BrProb;
+    };
+    BBAddrMapEntry::BBEntry Base;
+    std::optional<uint64_t> BBFreq;
+    std::optional<std::vector<SuccessorEntry>> Successors;
+  };
+  BBAddrMapCommonBase Common;
+  std::optional<uint64_t> FuncEntryCount;
   std::optional<std::vector<BBEntry>> BBEntries;
 };
 
@@ -204,6 +223,7 @@ struct Chunk {
     DependentLibraries,
     CallGraphProfile,
     BBAddrMap,
+    PGOBBAddrMap,
 
     // Special chunks.
     SpecialChunksStart,
@@ -326,6 +346,20 @@ struct BBAddrMapSection : Section {
 
   static bool classof(const Chunk *S) {
     return S->Kind == ChunkKind::BBAddrMap;
+  }
+};
+
+struct PGOBBAddrMapSection : Section {
+  std::optional<std::vector<PGOBBAddrMapEntry>> Entries;
+
+  PGOBBAddrMapSection() : Section(ChunkKind::PGOBBAddrMap) {}
+
+  std::vector<std::pair<StringRef, bool>> getEntries() const override {
+    return {{"Entries", Entries.has_value()}};
+  };
+
+  static bool classof(const Chunk *S) {
+    return S->Kind == ChunkKind::PGOBBAddrMap;
   }
 };
 
@@ -737,6 +771,10 @@ bool shouldAllocateFileSpace(ArrayRef<ProgramHeader> Phdrs,
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::StackSizeEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::BBAddrMapEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::BBAddrMapEntry::BBEntry)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::PGOBBAddrMapEntry)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::PGOBBAddrMapEntry::BBEntry)
+LLVM_YAML_IS_SEQUENCE_VECTOR(
+    llvm::ELFYAML::PGOBBAddrMapEntry::BBEntry::SuccessorEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::DynamicEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::LinkerOption)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::CallGraphEntryWeight)
@@ -903,6 +941,20 @@ template <> struct MappingTraits<ELFYAML::BBAddrMapEntry> {
 
 template <> struct MappingTraits<ELFYAML::BBAddrMapEntry::BBEntry> {
   static void mapping(IO &IO, ELFYAML::BBAddrMapEntry::BBEntry &Rel);
+};
+
+template <> struct MappingTraits<ELFYAML::PGOBBAddrMapEntry> {
+  static void mapping(IO &IO, ELFYAML::PGOBBAddrMapEntry &Rel);
+};
+
+template <> struct MappingTraits<ELFYAML::PGOBBAddrMapEntry::BBEntry> {
+  static void mapping(IO &IO, ELFYAML::PGOBBAddrMapEntry::BBEntry &Rel);
+};
+
+template <>
+struct MappingTraits<ELFYAML::PGOBBAddrMapEntry::BBEntry::SuccessorEntry> {
+  static void mapping(IO &IO,
+                      ELFYAML::PGOBBAddrMapEntry::BBEntry::SuccessorEntry &Rel);
 };
 
 template <> struct MappingTraits<ELFYAML::GnuHashHeader> {
