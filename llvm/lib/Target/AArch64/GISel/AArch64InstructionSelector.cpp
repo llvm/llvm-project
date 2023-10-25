@@ -5660,7 +5660,7 @@ bool AArch64InstructionSelector::selectIndexedLoad(MachineInstr &MI,
   Register Base = Ld.getBaseReg();
   Register Offset = Ld.getOffsetReg();
   LLT Ty = MRI.getType(Dst);
-  assert(Ty.getSizeInBits() <= 128);
+  assert(Ty.getSizeInBits() <= 128 && "Unexpected type for indexed load");
   unsigned MemSize = Ld.getMMO().getMemoryType().getSizeInBytes();
 
   unsigned Opc = 0;
@@ -5705,7 +5705,7 @@ bool AArch64InstructionSelector::selectIndexedStore(GIndexedStore &I,
   Register Base = I.getBaseReg();
   Register Offset = I.getOffsetReg();
   LLT ValTy = MRI.getType(Val);
-  assert(ValTy.getSizeInBits() <= 128);
+  assert(ValTy.getSizeInBits() <= 128 && "Unexpected type for indexed store");
 
   unsigned Opc = 0;
   if (I.isPre()) {
