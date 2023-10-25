@@ -11570,6 +11570,9 @@ calculateSrcByte(const SDValue Op, uint64_t DestByte, uint64_t SrcIndex = 0,
   if (Op.getValueSizeInBits() < 8)
     return std::nullopt;
 
+  if (Op.getValueType().isVector())
+    return ByteProvider<SDValue>::getSrc(Op, DestByte, SrcIndex);
+
   switch (Op->getOpcode()) {
   case ISD::TRUNCATE: {
     return calculateSrcByte(Op->getOperand(0), DestByte, SrcIndex, Depth + 1);
@@ -11636,8 +11639,12 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
   if (Index > BitWidth / 8 - 1)
     return std::nullopt;
 
+  bool IsVec = Op.getValueType().isVector();
   switch (Op.getOpcode()) {
   case ISD::OR: {
+    if (IsVec)
+      return std::nullopt;
+
     auto RHS = calculateByteProvider(Op.getOperand(1), Index, Depth + 1,
                                      StartingIndex);
     if (!RHS)
@@ -11658,6 +11665,9 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
   }
 
   case ISD::AND: {
+    if (IsVec)
+      return std::nullopt;
+
     auto BitMaskOp = dyn_cast<ConstantSDNode>(Op->getOperand(1));
     if (!BitMaskOp)
       return std::nullopt;
@@ -11678,6 +11688,9 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
   }
 
   case ISD::FSHR: {
+    if (IsVec)
+      return std::nullopt;
+
     // fshr(X,Y,Z): (X << (BW - (Z % BW))) | (Y >> (Z % BW))
     auto ShiftOp = dyn_cast<ConstantSDNode>(Op->getOperand(2));
     if (!ShiftOp || Op.getValueType().isVector())
@@ -11703,6 +11716,9 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
 
   case ISD::SRA:
   case ISD::SRL: {
+    if (IsVec)
+      return std::nullopt;
+
     auto ShiftOp = dyn_cast<ConstantSDNode>(Op->getOperand(1));
     if (!ShiftOp)
       return std::nullopt;
@@ -11728,6 +11744,9 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
   }
 
   case ISD::SHL: {
+    if (IsVec)
+      return std::nullopt;
+
     auto ShiftOp = dyn_cast<ConstantSDNode>(Op->getOperand(1));
     if (!ShiftOp)
       return std::nullopt;
@@ -11752,6 +11771,9 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
   case ISD::SIGN_EXTEND_INREG:
   case ISD::AssertZext:
   case ISD::AssertSext: {
+    if (IsVec)
+      return std::nullopt;
+
     SDValue NarrowOp = Op->getOperand(0);
     unsigned NarrowBitWidth = NarrowOp.getValueSizeInBits();
     if (Op->getOpcode() == ISD::SIGN_EXTEND_INREG ||
@@ -11773,6 +11795,9 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
   }
 
   case ISD::TRUNCATE: {
+    if (IsVec)
+      return std::nullopt;
+
     uint64_t NarrowByteWidth = BitWidth / 8;
 
     if (NarrowByteWidth >= Index) {
@@ -11815,9 +11840,13 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     return std::nullopt;
   }
 
-  case ISD::BSWAP:
+  case ISD::BSWAP: {
+    if (IsVec)
+      return std::nullopt;
+
     return calculateByteProvider(Op->getOperand(0), BitWidth / 8 - Index - 1,
                                  Depth + 1, StartingIndex);
+  }
 
   case ISD::EXTRACT_VECTOR_ELT: {
     auto IdxOp = dyn_cast<ConstantSDNode>(Op->getOperand(1));
@@ -11834,6 +11863,9 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
   }
 
   case AMDGPUISD::PERM: {
+    if (IsVec)
+      return std::nullopt;
+
     auto PermMask = dyn_cast<ConstantSDNode>(Op->getOperand(2));
     if (!PermMask)
       return std::nullopt;
@@ -11930,25 +11962,55 @@ static bool hasNon16BitAccesses(uint64_t PermMask, SDValue &Op,
 static SDValue getDWordFromOffset(SelectionDAG &DAG, SDLoc SL, SDValue Src,
                                   unsigned DWordOffset) {
   SDValue Ret;
-  if (Src.getValueSizeInBits() <= 32)
+
+  auto TypeSize = Src.getValueSizeInBits().getFixedValue();
+  // ByteProvider must be at least 8 bits
+  assert(Src.getValueSizeInBits().isKnownMultipleOf(8));
+
+  if (TypeSize <= 32)
     return DAG.getBitcastedAnyExtOrTrunc(Src, SL, MVT::i32);
 
-  if (Src.getValueSizeInBits() >= 256) {
-    assert(!(Src.getValueSizeInBits() % 32));
-    Ret = DAG.getBitcast(
-        MVT::getVectorVT(MVT::i32, Src.getValueSizeInBits() / 32), Src);
-    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, Ret,
-                       DAG.getConstant(DWordOffset, SL, MVT::i32));
+  if (Src.getValueType().isVector()) {
+    auto ScalarTySize = Src.getScalarValueSizeInBits();
+    auto ScalarTy = Src.getValueType().getScalarType();
+    if (ScalarTySize == 32) {
+      return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, Src,
+                         DAG.getConstant(DWordOffset, SL, MVT::i32));
+    }
+    if (ScalarTySize > 32) {
+      Ret = DAG.getNode(
+          ISD::EXTRACT_VECTOR_ELT, SL, ScalarTy, Src,
+          DAG.getConstant(DWordOffset / (ScalarTySize / 32), SL, MVT::i32));
+      auto ShiftVal = 32 * (DWordOffset % (ScalarTySize / 32));
+      if (ShiftVal)
+        Ret = DAG.getNode(ISD::SRL, SL, Ret.getValueType(), Ret,
+                          DAG.getConstant(ShiftVal, SL, MVT::i32));
+      return DAG.getBitcastedAnyExtOrTrunc(Ret, SL, MVT::i32);
+    }
+
+    assert(ScalarTySize < 32);
+    auto NumElements = TypeSize / ScalarTySize;
+    auto Trunc32Elements = (ScalarTySize * NumElements) / 32;
+    auto NormalizedTrunc = Trunc32Elements * 32 / ScalarTySize;
+    auto NumElementsIn32 = 32 / ScalarTySize;
+    auto NumAvailElements = DWordOffset < Trunc32Elements
+                                ? NumElementsIn32
+                                : NumElements - NormalizedTrunc;
+
+    SmallVector<SDValue, 4> VecSrcs;
+    DAG.ExtractVectorElements(Src, VecSrcs, DWordOffset * NumElementsIn32,
+                              NumAvailElements);
+
+    Ret = DAG.getBuildVector(
+        MVT::getVectorVT(MVT::getIntegerVT(ScalarTySize), NumAvailElements), SL,
+        VecSrcs);
+    return Ret = DAG.getBitcastedAnyExtOrTrunc(Ret, SL, MVT::i32);
   }
 
-  Ret = DAG.getBitcastedAnyExtOrTrunc(
-      Src, SL, MVT::getIntegerVT(Src.getValueSizeInBits()));
-  if (DWordOffset) {
-    auto Shifted = DAG.getNode(ISD::SRL, SL, Ret.getValueType(), Ret,
-                               DAG.getConstant(DWordOffset * 32, SL, MVT::i32));
-    return DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, Shifted);
-  }
-
+  /// Scalar Type
+  auto ShiftVal = 32 * DWordOffset;
+  Ret = DAG.getNode(ISD::SRL, SL, Src.getValueType(), Src,
+                    DAG.getConstant(ShiftVal, SL, MVT::i32));
   return DAG.getBitcastedAnyExtOrTrunc(Ret, SL, MVT::i32);
 }
 
@@ -12017,13 +12079,12 @@ static SDValue matchPERM(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
       return DAG.getBitcast(MVT::getIntegerVT(32), Op);
   }
 
-  SDValue OtherOp =
-      SecondSrc.has_value() ? *PermNodes[SecondSrc->first].Src : Op;
+  SDValue OtherOp = SecondSrc ? *PermNodes[SecondSrc->first].Src : Op;
 
-  if (SecondSrc)
+  if (SecondSrc) {
     OtherOp = getDWordFromOffset(DAG, DL, OtherOp, SecondSrc->second);
-
-  assert(Op.getValueSizeInBits() == 32);
+    assert(OtherOp.getValueSizeInBits() == 32);
+  }
 
   if (hasNon16BitAccesses(PermMask, Op, OtherOp)) {
 
