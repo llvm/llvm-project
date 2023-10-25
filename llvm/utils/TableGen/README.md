@@ -8,7 +8,7 @@ which are then processed by TableGen.
 
 ```
 class Hello <string _msg> {
-	string msg = !strconcat("Hello ", _msg);
+  string msg = !strconcat("Hello ", _msg);
 }
 
 def HelloWorld: Hello<"world!"> {}
@@ -52,3 +52,4 @@ TableGen in MLIR:
 Useful tools:
 * [TableGen Jupyter Kernel](jupyter/)
 * [TableGen LSP Language Server](https://mlir.llvm.org/docs/Tools/MLIRLSP/#tablegen-lsp-language-server--tblgen-lsp-server)
+
