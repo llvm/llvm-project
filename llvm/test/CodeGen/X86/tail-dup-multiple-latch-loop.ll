@@ -148,10 +148,6 @@ define i32 @interp_switch(ptr nocapture readonly %0, i32 %1) {
 ; CHECK-NEXT:    incl %eax
 ; CHECK-NEXT:    incq %rdi
 ; CHECK-NEXT:    jmp .LBB1_1
-; CHECK-NEXT:  .LBB1_4: # in Loop: Header=BB1_1 Depth=1
-; CHECK-NEXT:    decl %eax
-; CHECK-NEXT:    incq %rdi
-; CHECK-NEXT:    jmp .LBB1_1
 ; CHECK-NEXT:  .LBB1_5: # in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    addl %eax, %eax
 ; CHECK-NEXT:    incq %rdi
@@ -163,6 +159,10 @@ define i32 @interp_switch(ptr nocapture readonly %0, i32 %1) {
 ; CHECK-NEXT:    sarl %ecx
 ; CHECK-NEXT:    incq %rdi
 ; CHECK-NEXT:    movl %ecx, %eax
+; CHECK-NEXT:    jmp .LBB1_1
+; CHECK-NEXT:  .LBB1_4: # in Loop: Header=BB1_1 Depth=1
+; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    incq %rdi
 ; CHECK-NEXT:    jmp .LBB1_1
 ; CHECK-NEXT:  .LBB1_8: # in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    negl %eax

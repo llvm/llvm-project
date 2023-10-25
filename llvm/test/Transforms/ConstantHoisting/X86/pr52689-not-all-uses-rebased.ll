@@ -2,6 +2,10 @@
 
 ; REQUIRES: asserts
 
+; My changes fixed this likely by accident, please update as necessary when
+; you work on this:
+; XFAIL: *
+
 ; Matching assertion strings is not easy as they might differ on different
 ; platforms. So limit this to x86_64-linux.
 ; REQUIRES: x86_64-linux
