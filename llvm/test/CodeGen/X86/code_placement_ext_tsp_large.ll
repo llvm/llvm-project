@@ -6,7 +6,7 @@
 @yydebug = dso_local global i32 0, align 4
 
 define void @func_large() !prof !0 {
-; A largee CFG instance where chain splitting helps to
+; A large CFG instance where chain splitting helps to
 ; compute a better basic block ordering. The test verifies that with chain
 ; splitting, the resulting layout is improved (e.g., the score is increased).
 ;
