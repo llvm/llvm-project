@@ -9,9 +9,10 @@
 #ifndef LLDB_BREAKPOINT_WATCHPOINTRESOURCE_H
 #define LLDB_BREAKPOINT_WATCHPOINTRESOURCE_H
 
-#include "lldb/Breakpoint/WatchpointCollection.h"
+#include "lldb/Utility/Iterable.h"
 #include "lldb/lldb-public.h"
 
+#include <mutex>
 #include <set>
 
 namespace lldb_private {
@@ -25,15 +26,29 @@ public:
 
   ~WatchpointResource();
 
-  void GetMemoryRange(lldb::addr_t &addr, size_t &size) const;
-
   lldb::addr_t GetAddress() const;
 
   size_t GetByteSize() const;
 
-  void GetType(bool &read, bool &write) const;
+  bool WatchpointResourceRead() const;
+
+  bool WatchpointResourceWrite() const;
 
   void SetType(bool read, bool write);
+
+  typedef std::vector<lldb::WatchpointSP> WatchpointCollection;
+  typedef LockingAdaptedIterable<WatchpointCollection, lldb::WatchpointSP,
+                                 vector_adapter, std::recursive_mutex>
+      WatchpointIterable;
+
+  /// Iterate over the watchpoint owners for this resource
+  ///
+  /// \return
+  ///     An Iterable object which can be used to loop over the watchpoints
+  ///     that are owners of this resource.
+  WatchpointIterable Owners() {
+    return WatchpointIterable(m_owners, m_owners_mutex);
+  }
 
   /// The "Owners" are the watchpoints that share this resource.
   /// The method adds the \a owner to this resource's owner list.
