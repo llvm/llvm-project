@@ -613,11 +613,8 @@ bool PPCInstPrinter::showRegistersWithPercentPrefix(const char *RegName) const {
 
 /// getVerboseConditionalRegName - This method expands the condition register
 /// when requested explicitly or targetting Darwin.
-const char *PPCInstPrinter::getVerboseConditionRegName(unsigned RegNum,
-                                                       unsigned RegEncoding,
-                                                       const MCSubtargetInfo &STI)
-                                                       const {
-                                                         // __SP__
+const char *PPCInstPrinter::getVerboseConditionRegName(
+    unsigned RegNum, unsigned RegEncoding, const MCSubtargetInfo &STI) const {
   if (!FullRegNames && !STI.hasFeature(PPC::FeatureFullRegisterNames))
     return nullptr;
   if (RegNum < PPC::CR0EQ || RegNum > PPC::CR7UN)
