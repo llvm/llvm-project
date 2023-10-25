@@ -2477,7 +2477,6 @@ struct XArrayCoorOpConversion
     mlir::Type eleType = fir::unwrapSequenceType(objectTy);
     mlir::Type gepObjectType = convertType(eleType);
     llvm::SmallVector<mlir::LLVM::GEPArg> args;
-    ;
     if (coor.getSubcomponent().empty()) {
       // No subcomponent.
       if (!coor.getLenParams().empty()) {
