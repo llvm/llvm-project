@@ -719,6 +719,10 @@ Bug Fixes in This Version
   points (i.e., uses function descriptor objects instead).
 - Fixes a ``clang-17`` regression where ``LLVM_UNREACHABLE_OPTIMIZE=OFF``
   cannot be used with ``Release`` mode builds. (`#68237 <https://github.com/llvm/llvm-project/issues/68237>`_).
+- No longer use C++ ``thread_local`` semantics in C23 when using
+  ``thread_local`` instead of ``_Thread_local``.
+  Fixes (`#70068 <https://github.com/llvm/llvm-project/issues/70068>`_) and
+  (`#69167 <https://github.com/llvm/llvm-project/issues/69167>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
