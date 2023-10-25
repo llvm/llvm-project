@@ -1129,7 +1129,7 @@ void DWARFLinkerImpl::emitAppleAcceleratorSections(const Triple &TargetTriple) {
 }
 
 void DWARFLinkerImpl::emitDWARFv5DebugNamesSection(const Triple &TargetTriple) {
-  std::unique_ptr<AccelTable<DWARF5AccelTableStaticData>> DebugNames;
+  std::unique_ptr<DWARF5AccelTable> DebugNames;
 
   DebugNamesUnitsOffsets CompUnits;
   CompUnitIDToIdx CUidToIdx;
@@ -1144,7 +1144,7 @@ void DWARFLinkerImpl::emitDWARFv5DebugNamesSection(const Triple &TargetTriple) {
 
     CU->AcceleratorRecords.forEach([&](const DwarfUnit::AccelInfo &Info) {
       if (DebugNames.get() == nullptr)
-        DebugNames = std::make_unique<AccelTable<DWARF5AccelTableStaticData>>();
+        DebugNames = std::make_unique<DWARF5AccelTable>();
 
       switch (Info.Type) {
       case DwarfUnit::AccelType::Name:

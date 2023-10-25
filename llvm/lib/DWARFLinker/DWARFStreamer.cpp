@@ -291,8 +291,7 @@ void DwarfStreamer::emitLineStrings(const NonRelocatableStringpool &Pool) {
   }
 }
 
-void DwarfStreamer::emitDebugNames(
-    AccelTable<DWARF5AccelTableStaticData> &Table) {
+void DwarfStreamer::emitDebugNames(DWARF5AccelTable &Table) {
   if (EmittedUnits.empty())
     return;
 
@@ -307,11 +306,10 @@ void DwarfStreamer::emitDebugNames(
   }
 
   Asm->OutStreamer->switchSection(MOFI->getDwarfDebugNamesSection());
-  emitDWARF5AccelTable(
-      Asm.get(), Table, CompUnits,
-      [&UniqueIdToCuMap](const DWARF5AccelTableStaticData &Entry) {
-        return UniqueIdToCuMap[Entry.getCUIndex()];
-      });
+  emitDWARF5AccelTable(Asm.get(), Table, CompUnits,
+                       [&UniqueIdToCuMap](const DWARF5AccelTableData &Entry) {
+                         return UniqueIdToCuMap[Entry.getUnitID()];
+                       });
 }
 
 void DwarfStreamer::emitAppleNamespaces(
