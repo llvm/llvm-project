@@ -82,6 +82,7 @@ public:
   friend class DebugMapModule;
   friend class DWARFCompileUnit;
   friend class DWARFDIE;
+  friend class DWARFASTParser;
   friend class ::DWARFASTParserClang;
 
   // Static Functions
@@ -152,6 +153,9 @@ public:
   CompilerDeclContext GetDeclContextForUID(lldb::user_id_t uid) override;
 
   CompilerDeclContext GetDeclContextContainingUID(lldb::user_id_t uid) override;
+
+  std::vector<CompilerContext>
+  GetCompilerContextForUID(lldb::user_id_t uid) override;
 
   void ParseDeclsForContext(CompilerDeclContext decl_ctx) override;
 
@@ -321,6 +325,7 @@ public:
     m_file_index = file_index;
   }
 
+protected:
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *, Type *> DIEToTypePtr;
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb::VariableSP>
       DIEToVariableSP;

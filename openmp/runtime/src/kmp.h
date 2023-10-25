@@ -2456,12 +2456,22 @@ typedef struct kmp_depend_info {
   union {
     kmp_uint8 flag; // flag as an unsigned char
     struct { // flag as a set of 8 bits
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+      /* Same fields as in the #else branch, but in reverse order */
+      unsigned all : 1;
+      unsigned unused : 3;
+      unsigned set : 1;
+      unsigned mtx : 1;
+      unsigned out : 1;
+      unsigned in : 1;
+#else
       unsigned in : 1;
       unsigned out : 1;
       unsigned mtx : 1;
       unsigned set : 1;
       unsigned unused : 3;
       unsigned all : 1;
+#endif
     } flags;
   };
 } kmp_depend_info_t;
@@ -2611,6 +2621,33 @@ typedef struct kmp_task_stack {
 #endif // BUILD_TIED_TASK_STACK
 
 typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+  /* Same fields as in the #else branch, but in reverse order */
+#if OMPX_TASKGRAPH
+  unsigned reserved31 : 6;
+  unsigned onced : 1;
+#else
+  unsigned reserved31 : 7;
+#endif
+  unsigned native : 1;
+  unsigned freed : 1;
+  unsigned complete : 1;
+  unsigned executing : 1;
+  unsigned started : 1;
+  unsigned team_serial : 1;
+  unsigned tasking_ser : 1;
+  unsigned task_serial : 1;
+  unsigned tasktype : 1;
+  unsigned reserved : 8;
+  unsigned hidden_helper : 1;
+  unsigned detachable : 1;
+  unsigned priority_specified : 1;
+  unsigned proxy : 1;
+  unsigned destructors_thunk : 1;
+  unsigned merged_if0 : 1;
+  unsigned final : 1;
+  unsigned tiedness : 1;
+#else
   /* Compiler flags */ /* Total compiler flags must be 16 bits */
   unsigned tiedness : 1; /* task is either tied (1) or untied (0) */
   unsigned final : 1; /* task is final(1) so execute immediately */
@@ -2646,7 +2683,7 @@ typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
 #else
   unsigned reserved31 : 7; /* reserved for library use */
 #endif
-
+#endif
 } kmp_tasking_flags_t;
 
 typedef struct kmp_target_data {

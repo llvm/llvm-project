@@ -27274,10 +27274,7 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
     // zext (setcc n0, n1)
     if (LegalTypes) {
       SCC = DAG.getSetCC(DL, CmpResVT, N0, N1, CC);
-      if (VT.bitsLT(SCC.getValueType()))
-        Temp = DAG.getZeroExtendInReg(SCC, SDLoc(N2), VT);
-      else
-        Temp = DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N2), VT, SCC);
+      Temp = DAG.getZExtOrTrunc(SCC, SDLoc(N2), VT);
     } else {
       SCC = DAG.getSetCC(SDLoc(N0), MVT::i1, N0, N1, CC);
       Temp = DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N2), VT, SCC);
