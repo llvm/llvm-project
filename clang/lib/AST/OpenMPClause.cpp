@@ -583,15 +583,17 @@ void OMPLinearClause::setUsedExprs(ArrayRef<Expr *> UE) {
 OMPLinearClause *OMPLinearClause::Create(
     const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
     OpenMPLinearClauseKind Modifier, SourceLocation ModifierLoc,
-    SourceLocation ColonLoc, SourceLocation EndLoc, ArrayRef<Expr *> VL,
-    ArrayRef<Expr *> PL, ArrayRef<Expr *> IL, Expr *Step, Expr *CalcStep,
-    Stmt *PreInit, Expr *PostUpdate) {
+    SourceLocation ColonLoc, SourceLocation StepModifierLoc,
+    SourceLocation EndLoc, ArrayRef<Expr *> VL, ArrayRef<Expr *> PL,
+    ArrayRef<Expr *> IL, Expr *Step, Expr *CalcStep, Stmt *PreInit,
+    Expr *PostUpdate) {
   // Allocate space for 5 lists (Vars, Inits, Updates, Finals), 2 expressions
   // (Step and CalcStep), list of used expression + step.
   void *Mem =
       C.Allocate(totalSizeToAlloc<Expr *>(5 * VL.size() + 2 + VL.size() + 1));
-  OMPLinearClause *Clause = new (Mem) OMPLinearClause(
-      StartLoc, LParenLoc, Modifier, ModifierLoc, ColonLoc, EndLoc, VL.size());
+  OMPLinearClause *Clause =
+      new (Mem) OMPLinearClause(StartLoc, LParenLoc, Modifier, ModifierLoc,
+                                ColonLoc, StepModifierLoc, EndLoc, VL.size());
   Clause->setVarRefs(VL);
   Clause->setPrivates(PL);
   Clause->setInits(IL);
@@ -2207,16 +2209,20 @@ void OMPClausePrinter::VisitOMPInReductionClause(OMPInReductionClause *Node) {
 void OMPClausePrinter::VisitOMPLinearClause(OMPLinearClause *Node) {
   if (!Node->varlist_empty()) {
     OS << "linear";
-    if (Node->getModifierLoc().isValid()) {
-      OS << '('
-         << getOpenMPSimpleClauseTypeName(OMPC_linear, Node->getModifier());
-    }
     VisitOMPClauseList(Node, '(');
-    if (Node->getModifierLoc().isValid())
-      OS << ')';
-    if (Node->getStep() != nullptr) {
+    if (Node->getModifierLoc().isValid() || Node->getStep() != nullptr) {
       OS << ": ";
+    }
+    if (Node->getModifierLoc().isValid()) {
+      OS << getOpenMPSimpleClauseTypeName(OMPC_linear, Node->getModifier());
+    }
+    if (Node->getStep() != nullptr) {
+      if (Node->getModifierLoc().isValid()) {
+        OS << ", ";
+      }
+      OS << "step(";
       Node->getStep()->printPretty(OS, nullptr, Policy, 0);
+      OS << ")";
     }
     OS << ")";
   }

@@ -130,13 +130,12 @@ body: |
 
 ---
 
-name: need_skip_writelane_b32
+name: dont_skip_writelane_b32
 body: |
-  ; CHECK-LABEL: name: need_skip_writelane_b32
+  ; CHECK-LABEL: name: dont_skip_writelane_b32
   ; CHECK: bb.0:
-  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
@@ -160,13 +159,12 @@ body: |
 ...
 
 ---
-name: need_skip_readlane_b32
+name: dont_skip_readlane_b32
 body: |
-  ; CHECK-LABEL: name: need_skip_readlane_b32
+  ; CHECK-LABEL: name: dont_skip_readlane_b32
   ; CHECK: bb.0:
-  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
