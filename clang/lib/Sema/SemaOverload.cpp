@@ -14,6 +14,7 @@
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DependenceFlags.h"
 #include "clang/AST/Expr.h"
@@ -962,13 +963,16 @@ static bool shouldAddReversedEqEq(Sema &S, SourceLocation OpLoc,
     return true;
   }
   // Otherwise the search scope is the namespace scope of which F is a member.
-  for (NamedDecl *Op : EqFD->getEnclosingNamespaceContext()->lookup(NotEqOp)) {
+  DeclContext *EqDC = EqFD->getEnclosingNamespaceContext();
+  for (NamedDecl *Op : EqDC->lookup(NotEqOp)) {
     auto *NotEqFD = Op->getAsFunction();
+    DeclContext *NotEqDC = Op->getFriendObjectKind()
+                               ? NotEqFD->getEnclosingNamespaceContext()
+                               : Op->getLexicalDeclContext();
     if (auto *UD = dyn_cast<UsingShadowDecl>(Op))
       NotEqFD = UD->getUnderlyingDecl()->getAsFunction();
     if (FunctionsCorrespond(S.Context, EqFD, NotEqFD) && S.isVisible(NotEqFD) &&
-        declaresSameEntity(cast<Decl>(EqFD->getEnclosingNamespaceContext()),
-                           cast<Decl>(Op->getLexicalDeclContext())))
+        declaresSameEntity(cast<Decl>(EqDC), cast<Decl>(NotEqDC)))
       return false;
   }
   return true;
@@ -10086,7 +10090,6 @@ static bool haveSameParameterTypes(ASTContext &Context, const FunctionDecl *F1,
                                    const FunctionDecl *F2) {
   if (declaresSameEntity(F1, F2))
     return true;
-
   auto NextParam = [&](const FunctionDecl *F, unsigned &I, bool First) {
     if (First) {
       if (std::optional<QualType> T = getImplicitObjectParamType(Context, F))
