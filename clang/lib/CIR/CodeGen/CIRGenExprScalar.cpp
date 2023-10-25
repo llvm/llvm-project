@@ -1641,16 +1641,10 @@ mlir::Value ScalarExprEmitter::buildScalarCast(
     if (CGF.getBuilder().isInt(DstElementTy))
       return Builder.create<mlir::cir::CastOp>(
           Src.getLoc(), DstTy, mlir::cir::CastKind::integral, Src);
-    return Builder.create<mlir::cir::CastOp>(
-        Src.getLoc(), DstTy, mlir::cir::CastKind::int_to_float, Src);
-  }
-
-  if (SrcElementTy.isa<mlir::cir::IntType>()) {
-    if (DstElementTy.isa<mlir::cir::IntType>())
+    if (DstElementTy.isa<mlir::FloatType>())
       return Builder.create<mlir::cir::CastOp>(
-          Src.getLoc(), DstTy, mlir::cir::CastKind::integral, Src);
-    return Builder.create<mlir::cir::CastOp>(
-        Src.getLoc(), DstTy, mlir::cir::CastKind::floating, Src);
+          Src.getLoc(), DstTy, mlir::cir::CastKind::int_to_float, Src);
+    llvm_unreachable("Unknown type cast");
   }
 
   // Leaving mlir::IntegerType around incase any old user lingers
