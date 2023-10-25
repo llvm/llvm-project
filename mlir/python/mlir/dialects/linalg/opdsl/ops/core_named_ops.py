@@ -516,6 +516,7 @@ def batch_matvec(
         U, B[D.b, D.k]
     )
 
+
 @linalg_structured_op
 def batch_vecmat(
     A=TensorDef(T1, Batch, S.K),
