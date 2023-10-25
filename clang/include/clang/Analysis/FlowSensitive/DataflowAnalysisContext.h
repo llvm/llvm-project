@@ -131,8 +131,8 @@ public:
 
   /// Returns true if the constraints of the flow condition identified by
   /// `Token` imply that `F` is true.
-  /// Returns false the flow condition does not imply `F` or if the solver times
-  /// out.
+  /// Returns false if the flow condition does not imply `F` or if the solver
+  /// times out.
   bool flowConditionImplies(Atom Token, const Formula &F);
 
   /// Returns true if the constraints of the flow condition identified by
@@ -193,7 +193,7 @@ private:
                                         llvm::SetVector<const Formula *> &Out);
 
   /// Returns true if the solver is able to prove that there is a satisfying
-  /// assignment for `Constraints`
+  /// assignment for `Constraints`.
   bool isSatisfiable(llvm::SetVector<const Formula *> Constraints) {
     return querySolver(std::move(Constraints)).getStatus() ==
            Solver::Result::Status::Satisfiable;

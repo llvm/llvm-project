@@ -557,7 +557,7 @@ public:
   ///
   /// Note that there is an asymmetry between this function and `allows()` in
   /// that they both return false if the solver times out. The assumption is
-  /// that if `proves()` or `allows() ` returns true, this will result in a
+  /// that if `proves()` or `allows()` returns true, this will result in a
   /// diagnostic, and we want to bias towards false negatives in the case where
   /// the solver times out.
   bool proves(const Formula &) const;
