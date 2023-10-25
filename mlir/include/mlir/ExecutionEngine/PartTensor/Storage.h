@@ -158,7 +158,7 @@ PartTensorStorage<P, I, V> *PartTensorStorage<P, I, V>::newFromCOO(
     llvm::for_each(spCOO->getElements(), [&](auto e) {
       std::vector<I> newCoords(dimRank);
       std::transform((e.coords), (e.coords + dimRank), std::begin(loPoint),
-                     std::begin(newCoords), std::minus());
+                     std::begin(newCoords), std::minus<I>());
 
       if (inRegion(loPoint, hiPoint, ArrayRef(e.coords, dimRank))) {
         parts[i]->add(newCoords, e.value);
