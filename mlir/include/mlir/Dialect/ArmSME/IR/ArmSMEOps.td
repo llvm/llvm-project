@@ -89,7 +89,11 @@ def CombiningKind : I32EnumAttr<"CombiningKind", "Kind of combining function", [
 
 /// An attribute that specifies how to combine a newly produced value with the
 /// accumulator. This is similar to vector::CombiningKindAttr, but limited to
-/// the functions that are valid for SME outer products.
+/// the functions that are valid for SME outer products. Add corresponds to a
+/// MOPA and sub to a MOPS.
+/// E.g. For f32:
+/// FMOPA: https://developer.arm.com/documentation/ddi0602/2022-03/SME-Instructions/FMOPA--non-widening---Floating-point-outer-product-and-accumulate-
+/// FMOPS: https://developer.arm.com/documentation/ddi0602/2022-03/SME-Instructions/FMOPS--non-widening---Floating-point-outer-product-and-subtract-
 def ArmSME_CombiningKindAttr : EnumAttr<ArmSME_Dialect, CombiningKind,
                                           "kind"> {
   let assemblyFormat = "`<` $value `>`";
@@ -226,7 +230,7 @@ def ZeroOp : ArmSME_Op<"zero", [Pure]> {
   let results = (outs SMETile:$res);
   let description = [{
     Initialise ZA with 0. This operation is convenient wrapper for the SME
-    `zero` intrinsic and instruction. 
+    `zero` intrinsic and instruction.
 
     Example 1: Zero an 8-bit element ZA tile.
 
