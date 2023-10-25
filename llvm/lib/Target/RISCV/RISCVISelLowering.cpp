@@ -19304,6 +19304,23 @@ unsigned RISCVTargetLowering::getCustomCtpopCost(EVT VT,
   return isCtpopFast(VT) ? 0 : 1;
 }
 
+bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
+  // We don't support scalable vectors in GISel.
+  if (Inst.getType()->isScalableTy())
+    return true;
+
+  for (unsigned i = 0; i < Inst.getNumOperands(); ++i)
+    if (Inst.getOperand(i)->getType()->isScalableTy())
+      return true;
+
+  if (const AllocaInst *AI = dyn_cast<AllocaInst>(&Inst)) {
+    if (AI->getAllocatedType()->isScalableTy())
+      return true;
+  }
+
+  return false;
+}
+
 namespace llvm::RISCVVIntrinsicsTable {
 
 #define GET_RISCVVIntrinsicsTable_IMPL
