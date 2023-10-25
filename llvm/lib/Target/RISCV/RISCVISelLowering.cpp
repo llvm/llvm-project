@@ -5232,7 +5232,7 @@ static SDValue lowerFMAXIMUM_FMINIMUM(SDValue Op, SelectionDAG &DAG,
   return Res;
 }
 
-/// Get a RISCV target specified VL op for a given SDNode.
+/// Get a RISC-V target specified VL op for a given SDNode.
 static unsigned getRISCVVLOp(SDValue Op) {
 #define OP_CASE(NODE)                                                          \
   case ISD::NODE:                                                              \
@@ -6452,15 +6452,15 @@ SDValue RISCVTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
     // Use PC-relative addressing to access the GOT for this symbol, then load
     // the address from the GOT. This generates the pattern (PseudoLGA sym),
     // which expands to (ld (addi (auipc %got_pcrel_hi(sym)) %pcrel_lo(auipc))).
+    SDValue Load =
+        SDValue(DAG.getMachineNode(RISCV::PseudoLGA, DL, Ty, Addr), 0);
     MachineFunction &MF = DAG.getMachineFunction();
     MachineMemOperand *MemOp = MF.getMachineMemOperand(
         MachinePointerInfo::getGOT(MF),
         MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
             MachineMemOperand::MOInvariant,
         LLT(Ty.getSimpleVT()), Align(Ty.getFixedSizeInBits() / 8));
-    SDValue Load =
-        DAG.getMemIntrinsicNode(RISCVISD::LGA, DL, DAG.getVTList(Ty, MVT::Other),
-                                {DAG.getEntryNode(), Addr}, Ty, MemOp);
+    DAG.setNodeMemRefs(cast<MachineSDNode>(Load.getNode()), {MemOp});
     return Load;
   }
 
@@ -6482,16 +6482,15 @@ SDValue RISCVTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
       // not be within 2GiB of PC, so use GOT-indirect addressing to access the
       // symbol. This generates the pattern (PseudoLGA sym), which expands to
       // (ld (addi (auipc %got_pcrel_hi(sym)) %pcrel_lo(auipc))).
+      SDValue Load =
+          SDValue(DAG.getMachineNode(RISCV::PseudoLGA, DL, Ty, Addr), 0);
       MachineFunction &MF = DAG.getMachineFunction();
       MachineMemOperand *MemOp = MF.getMachineMemOperand(
           MachinePointerInfo::getGOT(MF),
           MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
               MachineMemOperand::MOInvariant,
           LLT(Ty.getSimpleVT()), Align(Ty.getFixedSizeInBits() / 8));
-      SDValue Load =
-          DAG.getMemIntrinsicNode(RISCVISD::LGA, DL,
-                                  DAG.getVTList(Ty, MVT::Other),
-                                  {DAG.getEntryNode(), Addr}, Ty, MemOp);
+      DAG.setNodeMemRefs(cast<MachineSDNode>(Load.getNode()), {MemOp});
       return Load;
     }
 
@@ -6546,15 +6545,15 @@ SDValue RISCVTargetLowering::getStaticTLSAddr(GlobalAddressSDNode *N,
     // the pattern (PseudoLA_TLS_IE sym), which expands to
     // (ld (auipc %tls_ie_pcrel_hi(sym)) %pcrel_lo(auipc)).
     SDValue Addr = DAG.getTargetGlobalAddress(GV, DL, Ty, 0, 0);
+    SDValue Load =
+        SDValue(DAG.getMachineNode(RISCV::PseudoLA_TLS_IE, DL, Ty, Addr), 0);
     MachineFunction &MF = DAG.getMachineFunction();
     MachineMemOperand *MemOp = MF.getMachineMemOperand(
         MachinePointerInfo::getGOT(MF),
         MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
             MachineMemOperand::MOInvariant,
         LLT(Ty.getSimpleVT()), Align(Ty.getFixedSizeInBits() / 8));
-    SDValue Load = DAG.getMemIntrinsicNode(
-        RISCVISD::LA_TLS_IE, DL, DAG.getVTList(Ty, MVT::Other),
-        {DAG.getEntryNode(), Addr}, Ty, MemOp);
+    DAG.setNodeMemRefs(cast<MachineSDNode>(Load.getNode()), {MemOp});
 
     // Add the thread pointer.
     SDValue TPReg = DAG.getRegister(RISCV::X4, XLenVT);
@@ -6590,7 +6589,8 @@ SDValue RISCVTargetLowering::getDynamicTLSAddr(GlobalAddressSDNode *N,
   // This generates the pattern (PseudoLA_TLS_GD sym), which expands to
   // (addi (auipc %tls_gd_pcrel_hi(sym)) %pcrel_lo(auipc)).
   SDValue Addr = DAG.getTargetGlobalAddress(GV, DL, Ty, 0, 0);
-  SDValue Load = DAG.getNode(RISCVISD::LA_TLS_GD, DL, Ty, Addr);
+  SDValue Load =
+      SDValue(DAG.getMachineNode(RISCV::PseudoLA_TLS_GD, DL, Ty, Addr), 0);
 
   // Prepare argument list to generate call.
   ArgListTy Args;
@@ -11379,16 +11379,20 @@ combineBinOpOfExtractToReduceTree(SDNode *N, SelectionDAG &DAG,
   const unsigned ReduceOpc = getVecReduceOpcode(Opc);
   assert(Opc == ISD::getVecReduceBaseOpcode(ReduceOpc) &&
          "Inconsistent mappings");
-  const SDValue LHS = N->getOperand(0);
-  const SDValue RHS = N->getOperand(1);
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
 
   if (!LHS.hasOneUse() || !RHS.hasOneUse())
     return SDValue();
+
+  if (RHS.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+    std::swap(LHS, RHS);
 
   if (RHS.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
       !isa<ConstantSDNode>(RHS.getOperand(1)))
     return SDValue();
 
+  uint64_t RHSIdx = cast<ConstantSDNode>(RHS.getOperand(1))->getLimitedValue();
   SDValue SrcVec = RHS.getOperand(0);
   EVT SrcVecVT = SrcVec.getValueType();
   assert(SrcVecVT.getVectorElementType() == VT);
@@ -11401,14 +11405,17 @@ combineBinOpOfExtractToReduceTree(SDNode *N, SelectionDAG &DAG,
   // match binop (extract_vector_elt V, 0), (extract_vector_elt V, 1) to
   // reduce_op (extract_subvector [2 x VT] from V).  This will form the
   // root of our reduction tree. TODO: We could extend this to any two
-  // adjacent constant indices if desired.
+  // adjacent aligned constant indices if desired.
   if (LHS.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
-      LHS.getOperand(0) == SrcVec && isNullConstant(LHS.getOperand(1)) &&
-      isOneConstant(RHS.getOperand(1))) {
-    EVT ReduceVT = EVT::getVectorVT(*DAG.getContext(), VT, 2);
-    SDValue Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ReduceVT, SrcVec,
-                              DAG.getVectorIdxConstant(0, DL));
-    return DAG.getNode(ReduceOpc, DL, VT, Vec, N->getFlags());
+      LHS.getOperand(0) == SrcVec && isa<ConstantSDNode>(LHS.getOperand(1))) {
+    uint64_t LHSIdx =
+      cast<ConstantSDNode>(LHS.getOperand(1))->getLimitedValue();
+    if (0 == std::min(LHSIdx, RHSIdx) && 1 == std::max(LHSIdx, RHSIdx)) {
+      EVT ReduceVT = EVT::getVectorVT(*DAG.getContext(), VT, 2);
+      SDValue Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ReduceVT, SrcVec,
+                                DAG.getVectorIdxConstant(0, DL));
+      return DAG.getNode(ReduceOpc, DL, VT, Vec, N->getFlags());
+    }
   }
 
   // Match (binop (reduce (extract_subvector V, 0),
@@ -11420,20 +11427,18 @@ combineBinOpOfExtractToReduceTree(SDNode *N, SelectionDAG &DAG,
   SDValue ReduceVec = LHS.getOperand(0);
   if (ReduceVec.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
       ReduceVec.hasOneUse() && ReduceVec.getOperand(0) == RHS.getOperand(0) &&
-      isNullConstant(ReduceVec.getOperand(1))) {
-    uint64_t Idx = cast<ConstantSDNode>(RHS.getOperand(1))->getLimitedValue();
-    if (ReduceVec.getValueType().getVectorNumElements() == Idx) {
-      // For illegal types (e.g. 3xi32), most will be combined again into a
-      // wider (hopefully legal) type.  If this is a terminal state, we are
-      // relying on type legalization here to produce something reasonable
-      // and this lowering quality could probably be improved. (TODO)
-      EVT ReduceVT = EVT::getVectorVT(*DAG.getContext(), VT, Idx + 1);
-      SDValue Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ReduceVT, SrcVec,
-                                DAG.getVectorIdxConstant(0, DL));
-      auto Flags = ReduceVec->getFlags();
-      Flags.intersectWith(N->getFlags());
-      return DAG.getNode(ReduceOpc, DL, VT, Vec, Flags);
-    }
+      isNullConstant(ReduceVec.getOperand(1)) &&
+      ReduceVec.getValueType().getVectorNumElements() == RHSIdx) {
+    // For illegal types (e.g. 3xi32), most will be combined again into a
+    // wider (hopefully legal) type.  If this is a terminal state, we are
+    // relying on type legalization here to produce something reasonable
+    // and this lowering quality could probably be improved. (TODO)
+    EVT ReduceVT = EVT::getVectorVT(*DAG.getContext(), VT, RHSIdx + 1);
+    SDValue Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ReduceVT, SrcVec,
+                              DAG.getVectorIdxConstant(0, DL));
+    auto Flags = ReduceVec->getFlags();
+    Flags.intersectWith(N->getFlags());
+    return DAG.getNode(ReduceOpc, DL, VT, Vec, Flags);
   }
 
   return SDValue();
@@ -14942,11 +14947,14 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
 
     // Use M1 or smaller to avoid over constraining register allocation
     const MVT M1VT = getLMUL1VT(VT);
-    if (M1VT.bitsLT(VT) && Passthru.isUndef()) {
+    if (M1VT.bitsLT(VT)) {
+      SDValue M1Passthru =
+          DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, M1VT, Passthru,
+                      DAG.getVectorIdxConstant(0, DL));
       SDValue Result =
-        DAG.getNode(N->getOpcode(), DL, M1VT, Passthru, Scalar, VL);
-      Result = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT),
-                           Result, DAG.getConstant(0, DL, XLenVT));
+          DAG.getNode(N->getOpcode(), DL, M1VT, M1Passthru, Scalar, VL);
+      Result = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, Passthru, Result,
+                           DAG.getConstant(0, DL, XLenVT));
       return Result;
     }
 
@@ -17779,10 +17787,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(ADD_LO)
   NODE_NAME_CASE(HI)
   NODE_NAME_CASE(LLA)
-  NODE_NAME_CASE(LGA)
   NODE_NAME_CASE(ADD_TPREL)
-  NODE_NAME_CASE(LA_TLS_IE)
-  NODE_NAME_CASE(LA_TLS_GD)
   NODE_NAME_CASE(MULHSU)
   NODE_NAME_CASE(SLLW)
   NODE_NAME_CASE(SRAW)
@@ -19294,6 +19299,23 @@ bool RISCVTargetLowering::isCtpopFast(EVT VT) const {
 unsigned RISCVTargetLowering::getCustomCtpopCost(EVT VT,
                                                  ISD::CondCode Cond) const {
   return isCtpopFast(VT) ? 0 : 1;
+}
+
+bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
+  // We don't support scalable vectors in GISel.
+  if (Inst.getType()->isScalableTy())
+    return true;
+
+  for (unsigned i = 0; i < Inst.getNumOperands(); ++i)
+    if (Inst.getOperand(i)->getType()->isScalableTy())
+      return true;
+
+  if (const AllocaInst *AI = dyn_cast<AllocaInst>(&Inst)) {
+    if (AI->getAllocatedType()->isScalableTy())
+      return true;
+  }
+
+  return false;
 }
 
 namespace llvm::RISCVVIntrinsicsTable {

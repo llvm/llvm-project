@@ -1193,42 +1193,11 @@ void mlir::affine::fullyComposeAffineMapAndOperands(
   }
 }
 
-/// Fold all attributes among the given operands into the affine map and return
-/// all remaining values. The affine map is modified in-place.
-static SmallVector<Value>
-foldAttributesIntoMap(Builder &b, AffineMap *map,
-                      ArrayRef<OpFoldResult> operands) {
-  SmallVector<AffineExpr> dimReplacements, symReplacements;
-  SmallVector<Value> valueOperands;
-  int64_t numDims = 0;
-  for (int64_t i = 0; i < map->getNumDims(); ++i) {
-    if (auto attr = operands[i].dyn_cast<Attribute>()) {
-      dimReplacements.push_back(
-          b.getAffineConstantExpr(attr.cast<IntegerAttr>().getInt()));
-    } else {
-      dimReplacements.push_back(b.getAffineDimExpr(numDims++));
-      valueOperands.push_back(operands[i].get<Value>());
-    }
-  }
-  int64_t numSymbols = 0;
-  for (int64_t i = 0; i < map->getNumSymbols(); ++i) {
-    if (auto attr = operands[i + map->getNumDims()].dyn_cast<Attribute>()) {
-      symReplacements.push_back(
-          b.getAffineConstantExpr(attr.cast<IntegerAttr>().getInt()));
-    } else {
-      symReplacements.push_back(b.getAffineSymbolExpr(numSymbols++));
-      valueOperands.push_back(operands[i + map->getNumDims()].get<Value>());
-    }
-  }
-  *map = map->replaceDimsAndSymbols(dimReplacements, symReplacements, numDims,
-                                    numSymbols);
-  return valueOperands;
-}
-
 AffineApplyOp
 mlir::affine::makeComposedAffineApply(OpBuilder &b, Location loc, AffineMap map,
                                       ArrayRef<OpFoldResult> operands) {
-  SmallVector<Value> valueOperands = foldAttributesIntoMap(b, &map, operands);
+  SmallVector<Value> valueOperands;
+  map = foldAttributesIntoMap(b, map, operands, valueOperands);
   composeAffineMapAndOperands(&map, &valueOperands);
   assert(map);
   return b.create<AffineApplyOp>(loc, map, valueOperands);
@@ -1331,7 +1300,8 @@ mlir::affine::makeComposedFoldedMultiResultAffineApply(
 template <typename OpTy>
 static OpTy makeComposedMinMax(OpBuilder &b, Location loc, AffineMap map,
                                ArrayRef<OpFoldResult> operands) {
-  SmallVector<Value> valueOperands = foldAttributesIntoMap(b, &map, operands);
+  SmallVector<Value> valueOperands;
+  map = foldAttributesIntoMap(b, map, operands, valueOperands);
   composeMultiResultAffineMap(map, valueOperands);
   return b.create<OpTy>(loc, b.getIndexType(), map, valueOperands);
 }
@@ -2215,8 +2185,8 @@ unsigned AffineForOp::getNumIterOperands() {
   return getNumOperands() - lbMap.getNumInputs() - ubMap.getNumInputs();
 }
 
-ValueRange AffineForOp::getYieldedValues() {
-  return cast<AffineYieldOp>(getBody()->getTerminator()).getOperands();
+MutableArrayRef<OpOperand> AffineForOp::getYieldedValuesMutable() {
+  return cast<AffineYieldOp>(getBody()->getTerminator()).getOperandsMutable();
 }
 
 void AffineForOp::print(OpAsmPrinter &p) {

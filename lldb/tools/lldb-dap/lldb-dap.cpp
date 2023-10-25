@@ -97,9 +97,9 @@ static constexpr llvm::opt::OptTable::Info InfoTable[] = {
 #include "Options.inc"
 #undef OPTION
 };
-class LLDBVSCodeOptTable : public llvm::opt::GenericOptTable {
+class LLDBDAPOptTable : public llvm::opt::GenericOptTable {
 public:
-  LLDBVSCodeOptTable() : llvm::opt::GenericOptTable(InfoTable, true) {}
+  LLDBDAPOptTable() : llvm::opt::GenericOptTable(InfoTable, true) {}
 };
 
 typedef void (*RequestCallback)(const llvm::json::Object &command);
@@ -651,6 +651,8 @@ void request_attach(const llvm::json::Object &request) {
       GetBoolean(arguments, "enableAutoVariableSummaries", false);
   g_dap.enable_synthetic_child_debugging =
       GetBoolean(arguments, "enableSyntheticChildDebugging", false);
+  g_dap.command_escape_prefix =
+      GetString(arguments, "commandEscapePrefix", "`");
 
   // This is a hack for loading DWARF in .o files on Mac where the .o files
   // in the debug map of the main executable have relative paths which require
@@ -1801,6 +1803,8 @@ void request_launch(const llvm::json::Object &request) {
       GetBoolean(arguments, "enableAutoVariableSummaries", false);
   g_dap.enable_synthetic_child_debugging =
       GetBoolean(arguments, "enableSyntheticChildDebugging", false);
+  g_dap.command_escape_prefix =
+      GetString(arguments, "commandEscapePrefix", "`");
 
   // This is a hack for loading DWARF in .o files on Mac where the .o files
   // in the debug map of the main executable have relative paths which require
@@ -3569,9 +3573,9 @@ void RegisterRequestCallbacks() {
 
 } // anonymous namespace
 
-static void printHelp(LLDBVSCodeOptTable &table, llvm::StringRef tool_name) {
+static void printHelp(LLDBDAPOptTable &table, llvm::StringRef tool_name) {
   std::string usage_str = tool_name.str() + " options";
-  table.printHelp(llvm::outs(), usage_str.c_str(), "LLDB VSCode", false);
+  table.printHelp(llvm::outs(), usage_str.c_str(), "LLDB DAP", false);
 
   std::string examples = R"___(
 EXAMPLES:
@@ -3706,7 +3710,7 @@ int main(int argc, char *argv[]) {
   llvm::sys::fs::make_absolute(program_path);
   g_dap.debug_adaptor_path = program_path.str().str();
 
-  LLDBVSCodeOptTable T;
+  LLDBDAPOptTable T;
   unsigned MAI, MAC;
   llvm::ArrayRef<const char *> ArgsArr = llvm::ArrayRef(argv + 1, argc);
   llvm::opt::InputArgList input_args = T.ParseArgs(ArgsArr, MAI, MAC);

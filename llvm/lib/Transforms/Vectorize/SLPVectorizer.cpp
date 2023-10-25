@@ -647,13 +647,16 @@ tryToGatherSingleRegisterExtractElements(MutableArrayRef<Value *> VL,
   // Restore unused scalars from mask, if some of the extractelements were not
   // selected for shuffle.
   for (int I = 0, E = GatheredExtracts.size(); I < E; ++I) {
+    if (Mask[I] == PoisonMaskElem && !isa<PoisonValue>(GatheredExtracts[I]) &&
+        isa<UndefValue>(GatheredExtracts[I])) {
+      std::swap(VL[I], GatheredExtracts[I]);
+      continue;
+    }
     auto *EI = dyn_cast<ExtractElementInst>(VL[I]);
     if (!EI || !isa<FixedVectorType>(EI->getVectorOperandType()) ||
         !isa<ConstantInt, UndefValue>(EI->getIndexOperand()) ||
         is_contained(UndefVectorExtracts, I))
       continue;
-    if (Mask[I] == PoisonMaskElem && !isa<PoisonValue>(GatheredExtracts[I]))
-      std::swap(VL[I], GatheredExtracts[I]);
   }
   return Res;
 }
@@ -5831,6 +5834,19 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   if (TreeEntry *E = getTreeEntry(S.OpValue)) {
     LLVM_DEBUG(dbgs() << "SLP: \tChecking bundle: " << *S.OpValue << ".\n");
     if (!E->isSame(VL)) {
+      auto It = MultiNodeScalars.find(S.OpValue);
+      if (It != MultiNodeScalars.end()) {
+        auto *TEIt = find_if(It->getSecond(),
+                             [&](TreeEntry *ME) { return ME->isSame(VL); });
+        if (TEIt != It->getSecond().end())
+          E = *TEIt;
+        else
+          E = nullptr;
+      } else {
+        E = nullptr;
+      }
+    }
+    if (!E) {
       if (!doesNotNeedToBeScheduled(S.OpValue)) {
         LLVM_DEBUG(dbgs() << "SLP: Gathering due to partial overlap.\n");
         if (TryToFindDuplicates(S))
@@ -7617,9 +7633,6 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     SmallVector<const TreeEntry *> Entries;
     // Check for gathered extracts.
     ExtractShuffle = tryToGatherSingleRegisterExtractElements(GatheredScalars, ExtractMask);
-    SmallVector<Value *> IgnoredVals;
-    if (UserIgnoreList)
-      IgnoredVals.assign(UserIgnoreList->begin(), UserIgnoreList->end());
 
     bool Resized = false;
     if (Value *VecBase = Estimator.adjustExtracts(
@@ -10131,7 +10144,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
   inversePermutation(E->ReorderIndices, ReorderMask);
   if (!ReorderMask.empty())
     reorderScalars(GatheredScalars, ReorderMask);
-  auto FindReusedSplat = [&](MutableArrayRef<int> Mask) {
+  auto FindReusedSplat = [&](MutableArrayRef<int> Mask, unsigned InputVF) {
     if (!isSplat(E->Scalars) || none_of(E->Scalars, [](Value *V) {
           return isa<UndefValue>(V) && !isa<PoisonValue>(V);
         }))
@@ -10148,12 +10161,14 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
         });
     if (It == VectorizableTree.end())
       return false;
-    unsigned I =
-        *find_if_not(Mask, [](int Idx) { return Idx == PoisonMaskElem; });
-    if (ShuffleVectorInst::isIdentityMask(Mask, Mask.size()))
+    if (Mask.size() <= InputVF &&
+        ShuffleVectorInst::isIdentityMask(Mask, Mask.size())) {
       std::iota(Mask.begin(), Mask.end(), 0);
-    else
+    } else {
+      unsigned I =
+          *find_if_not(Mask, [](int Idx) { return Idx == PoisonMaskElem; });
       std::fill(Mask.begin(), Mask.end(), I);
+    }
     return true;
   };
   BVTy ShuffleBuilder(Params...);
@@ -10168,9 +10183,6 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
     // Check for gathered extracts.
     ExtractShuffle =
         tryToGatherSingleRegisterExtractElements(GatheredScalars, ExtractMask);
-    SmallVector<Value *> IgnoredVals;
-    if (UserIgnoreList)
-      IgnoredVals.assign(UserIgnoreList->begin(), UserIgnoreList->end());
     bool Resized = false;
     if (Value *VecBase = ShuffleBuilder.adjustExtracts(E, ExtractMask))
       if (auto *VecBaseTy = dyn_cast<FixedVectorType>(VecBase->getType()))
@@ -10359,7 +10371,9 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
             isGuaranteedNotToBePoison(Vec1) && isGuaranteedNotToBePoison(Vec2);
         ShuffleBuilder.add(Vec1, Vec2, ExtractMask);
       } else if (Vec1) {
-        IsUsedInExpr = FindReusedSplat(ExtractMask);
+        IsUsedInExpr = FindReusedSplat(
+            ExtractMask,
+            cast<FixedVectorType>(Vec1->getType())->getNumElements());
         ShuffleBuilder.add(Vec1, ExtractMask);
         IsNonPoisoned &= isGuaranteedNotToBePoison(Vec1);
       } else {
@@ -10370,7 +10384,10 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
     }
     if (GatherShuffle) {
       if (Entries.size() == 1) {
-        IsUsedInExpr = FindReusedSplat(Mask);
+        IsUsedInExpr = FindReusedSplat(
+            Mask,
+            cast<FixedVectorType>(Entries.front()->VectorizedValue->getType())
+                ->getNumElements());
         ShuffleBuilder.add(Entries.front()->VectorizedValue, Mask);
         IsNonPoisoned &=
             isGuaranteedNotToBePoison(Entries.front()->VectorizedValue);
@@ -10485,7 +10502,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
   }
 
   if (E->State == TreeEntry::NeedToGather) {
-    if (E->getMainOp() && E->Idx == 0)
+    // Set insert point for non-reduction initial nodes.
+    if (E->getMainOp() && E->Idx == 0 && !UserIgnoreList)
       setInsertPointAfterBundle(E);
     Value *Vec = createBuildVector(E);
     E->VectorizedValue = Vec;
@@ -11228,7 +11246,18 @@ Value *BoUpSLP::vectorizeTree(
     TE->VectorizedValue = nullptr;
     auto *UserI =
         cast<Instruction>(TE->UserTreeIndices.front().UserTE->VectorizedValue);
-    Builder.SetInsertPoint(PrevVec);
+    // If user is a PHI node, its vector code have to be inserted right before
+    // block terminator. Since the node was delayed, there were some unresolved
+    // dependencies at the moment when stab instruction was emitted. In a case
+    // when any of these dependencies turn out an operand of another PHI, coming
+    // from this same block, position of a stab instruction will become invalid.
+    // The is because source vector that supposed to feed this gather node was
+    // inserted at the end of the block [after stab instruction]. So we need
+    // to adjust insertion point again to the end of block.
+    if (isa<PHINode>(UserI))
+      Builder.SetInsertPoint(PrevVec->getParent()->getTerminator());
+    else
+      Builder.SetInsertPoint(PrevVec);
     Builder.SetCurrentDebugLocation(UserI->getDebugLoc());
     Value *Vec = vectorizeTree(TE, /*PostponedPHIs=*/false);
     PrevVec->replaceAllUsesWith(Vec);
@@ -14685,8 +14714,8 @@ static bool findBuildAggregate(Instruction *LastInsertInst,
   InsertElts.resize(*AggregateSize);
 
   findBuildAggregate_rec(LastInsertInst, TTI, BuildVectorOpds, InsertElts, 0);
-  llvm::erase_value(BuildVectorOpds, nullptr);
-  llvm::erase_value(InsertElts, nullptr);
+  llvm::erase(BuildVectorOpds, nullptr);
+  llvm::erase(InsertElts, nullptr);
   if (BuildVectorOpds.size() >= 2)
     return true;
 

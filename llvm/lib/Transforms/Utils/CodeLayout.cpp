@@ -101,8 +101,8 @@ static cl::opt<unsigned> BackwardDistance(
 // The maximum size of a chain created by the algorithm. The size is bounded
 // so that the algorithm can efficiently process extremely large instances.
 static cl::opt<unsigned>
-    MaxChainSize("ext-tsp-max-chain-size", cl::ReallyHidden, cl::init(4096),
-                 cl::desc("The maximum size of a chain to create."));
+    MaxChainSize("ext-tsp-max-chain-size", cl::ReallyHidden, cl::init(512),
+                 cl::desc("The maximum size of a chain to create"));
 
 // The maximum size of a chain for splitting. Larger values of the threshold
 // may yield better quality at the cost of worsen run-time.
@@ -110,11 +110,10 @@ static cl::opt<unsigned> ChainSplitThreshold(
     "ext-tsp-chain-split-threshold", cl::ReallyHidden, cl::init(128),
     cl::desc("The maximum size of a chain to apply splitting"));
 
-// The option enables splitting (large) chains along in-coming and out-going
-// jumps. This typically results in a better quality.
-static cl::opt<bool> EnableChainSplitAlongJumps(
-    "ext-tsp-enable-chain-split-along-jumps", cl::ReallyHidden, cl::init(true),
-    cl::desc("The maximum size of a chain to apply splitting"));
+// The maximum ratio between densities of two chains for merging.
+static cl::opt<double> MaxMergeDensityRatio(
+    "ext-tsp-max-merge-density-ratio", cl::ReallyHidden, cl::init(100),
+    cl::desc("The maximum ratio between densities of two chains for merging"));
 
 // Algorithm-specific options for CDS.
 static cl::opt<unsigned> CacheEntries("cds-cache-entries", cl::ReallyHidden,
@@ -122,6 +121,10 @@ static cl::opt<unsigned> CacheEntries("cds-cache-entries", cl::ReallyHidden,
 
 static cl::opt<unsigned> CacheSize("cds-cache-size", cl::ReallyHidden,
                                    cl::desc("The size of a line in the cache"));
+
+static cl::opt<unsigned>
+    CDMaxChainSize("cdsort-max-chain-size", cl::ReallyHidden,
+                   cl::desc("The maximum size of a chain to create"));
 
 static cl::opt<double> DistancePower(
     "cds-distance-power", cl::ReallyHidden,
@@ -222,6 +225,9 @@ struct NodeT {
 
   bool isEntry() const { return Index == 0; }
 
+  // Check if Other is a successor of the node.
+  bool isSuccessor(const NodeT *Other) const;
+
   // The total execution count of outgoing jumps.
   uint64_t outCount() const;
 
@@ -285,7 +291,7 @@ struct ChainT {
 
   size_t numBlocks() const { return Nodes.size(); }
 
-  double density() const { return static_cast<double>(ExecutionCount) / Size; }
+  double density() const { return ExecutionCount / Size; }
 
   bool isEntry() const { return Nodes[0]->Index == 0; }
 
@@ -346,8 +352,9 @@ struct ChainT {
   uint64_t Id;
   // Cached ext-tsp score for the chain.
   double Score{0};
-  // The total execution count of the chain.
-  uint64_t ExecutionCount{0};
+  // The total execution count of the chain. Since the execution count of
+  // a basic block is uint64_t, using doubles here to avoid overflow.
+  double ExecutionCount{0};
   // The total size of the chain.
   uint64_t Size{0};
   // Nodes of the chain.
@@ -442,6 +449,13 @@ private:
   bool CacheValidBackward{false};
 };
 
+bool NodeT::isSuccessor(const NodeT *Other) const {
+  for (JumpT *Jump : OutJumps)
+    if (Jump->Target == Other)
+      return true;
+  return false;
+}
+
 uint64_t NodeT::outCount() const {
   uint64_t Count = 0;
   for (JumpT *Jump : OutJumps)
@@ -509,8 +523,6 @@ struct MergedNodesT {
   }
 
   const NodeT *getFirstNode() const { return *Begin1; }
-
-  bool empty() const { return Begin1 == End1; }
 
 private:
   NodeIter Begin1;
@@ -635,7 +647,8 @@ private:
       }
     }
     for (JumpT &Jump : AllJumps) {
-      assert(OutDegree[Jump.Source->Index] > 0);
+      assert(OutDegree[Jump.Source->Index] > 0 &&
+             "incorrectly computed out-degree of the block");
       Jump.IsConditional = OutDegree[Jump.Source->Index] > 1;
     }
 
@@ -737,11 +750,24 @@ private:
         // Get candidates for merging with the current chain.
         for (const auto &[ChainSucc, Edge] : ChainPred->Edges) {
           // Ignore loop edges.
-          if (ChainPred == ChainSucc)
+          if (Edge->isSelfEdge())
             continue;
-
-          // Stop early if the combined chain violates the maximum allowed size.
+          // Skip the merge if the combined chain violates the maximum specified
+          // size.
           if (ChainPred->numBlocks() + ChainSucc->numBlocks() >= MaxChainSize)
+            continue;
+          // Don't merge the chains if they have vastly different densities.
+          // Skip the merge if the ratio between the densities exceeds
+          // MaxMergeDensityRatio. Smaller values of the option result in fewer
+          // merges, and hence, more chains.
+          auto ChainPredDensity = ChainPred->density();
+          auto ChainSuccDensity = ChainSucc->density();
+          auto [minDensity, maxDensity] =
+              std::minmax(ChainPredDensity, ChainSuccDensity);
+          assert(minDensity > 0.0 && maxDensity > 0.0 &&
+                 "incorrectly computed chain densities");
+          const double Ratio = maxDensity / minDensity;
+          if (Ratio > MaxMergeDensityRatio)
             continue;
 
           // Compute the gain of merging the two chains.
@@ -854,36 +880,42 @@ private:
     Gain.updateIfLessThan(
         computeMergeGain(ChainPred, ChainSucc, Jumps, 0, MergeTypeT::X_Y));
 
-    if (EnableChainSplitAlongJumps) {
-      // Attach (a part of) ChainPred before the first node of ChainSucc.
-      for (JumpT *Jump : ChainSucc->Nodes.front()->InJumps) {
-        const NodeT *SrcBlock = Jump->Source;
-        if (SrcBlock->CurChain != ChainPred)
-          continue;
-        size_t Offset = SrcBlock->CurIndex + 1;
-        tryChainMerging(Offset, {MergeTypeT::X1_Y_X2, MergeTypeT::X2_X1_Y});
-      }
+    // Attach (a part of) ChainPred before the first node of ChainSucc.
+    for (JumpT *Jump : ChainSucc->Nodes.front()->InJumps) {
+      const NodeT *SrcBlock = Jump->Source;
+      if (SrcBlock->CurChain != ChainPred)
+        continue;
+      size_t Offset = SrcBlock->CurIndex + 1;
+      tryChainMerging(Offset, {MergeTypeT::X1_Y_X2, MergeTypeT::X2_X1_Y});
+    }
 
-      // Attach (a part of) ChainPred after the last node of ChainSucc.
-      for (JumpT *Jump : ChainSucc->Nodes.back()->OutJumps) {
-        const NodeT *DstBlock = Jump->Target;
-        if (DstBlock->CurChain != ChainPred)
-          continue;
-        size_t Offset = DstBlock->CurIndex;
-        tryChainMerging(Offset, {MergeTypeT::X1_Y_X2, MergeTypeT::Y_X2_X1});
-      }
+    // Attach (a part of) ChainPred after the last node of ChainSucc.
+    for (JumpT *Jump : ChainSucc->Nodes.back()->OutJumps) {
+      const NodeT *DstBlock = Jump->Target;
+      if (DstBlock->CurChain != ChainPred)
+        continue;
+      size_t Offset = DstBlock->CurIndex;
+      tryChainMerging(Offset, {MergeTypeT::X1_Y_X2, MergeTypeT::Y_X2_X1});
     }
 
     // Try to break ChainPred in various ways and concatenate with ChainSucc.
     if (ChainPred->Nodes.size() <= ChainSplitThreshold) {
       for (size_t Offset = 1; Offset < ChainPred->Nodes.size(); Offset++) {
-        // Try to split the chain in different ways. In practice, applying
-        // X2_Y_X1 merging is almost never provides benefits; thus, we exclude
-        // it from consideration to reduce the search space.
+        // Do not split the chain along a fall-through jump. One of the two
+        // loops above may still "break" such a jump whenever it results in a
+        // new fall-through.
+        const NodeT *BB = ChainPred->Nodes[Offset - 1];
+        const NodeT *BB2 = ChainPred->Nodes[Offset];
+        if (BB->isSuccessor(BB2))
+          continue;
+
+        // In practice, applying X2_Y_X1 merging almost never provides benefits;
+        // thus, we exclude it from consideration to reduce the search space.
         tryChainMerging(Offset, {MergeTypeT::X1_Y_X2, MergeTypeT::Y_X2_X1,
                                  MergeTypeT::X2_X1_Y});
       }
     }
+
     Edge->setCachedMergeGain(ChainPred, ChainSucc, Gain);
     return Gain;
   }
@@ -933,7 +965,7 @@ private:
     }
 
     // Remove the chain from the list of active chains.
-    llvm::erase_value(HotChains, From);
+    llvm::erase(HotChains, From);
 
     // Invalidate caches.
     for (auto EdgeIt : Into->Edges)
@@ -942,22 +974,11 @@ private:
 
   /// Concatenate all chains into the final order.
   std::vector<uint64_t> concatChains() {
-    // Collect chains and calculate density stats for their sorting.
+    // Collect non-empty chains.
     std::vector<const ChainT *> SortedChains;
-    DenseMap<const ChainT *, double> ChainDensity;
     for (ChainT &Chain : AllChains) {
-      if (!Chain.Nodes.empty()) {
+      if (!Chain.Nodes.empty())
         SortedChains.push_back(&Chain);
-        // Using doubles to avoid overflow of ExecutionCounts.
-        double Size = 0;
-        double ExecutionCount = 0;
-        for (NodeT *Node : Chain.Nodes) {
-          Size += static_cast<double>(Node->Size);
-          ExecutionCount += static_cast<double>(Node->ExecutionCount);
-        }
-        assert(Size > 0 && "a chain of zero size");
-        ChainDensity[&Chain] = ExecutionCount / Size;
-      }
     }
 
     // Sorting chains by density in the decreasing order.
@@ -967,11 +988,9 @@ private:
                 if (L->isEntry() != R->isEntry())
                   return L->isEntry();
 
-                const double DL = ChainDensity[L];
-                const double DR = ChainDensity[R];
                 // Compare by density and break ties by chain identifiers.
-                return std::make_tuple(-DL, L->Id) <
-                       std::make_tuple(-DR, R->Id);
+                return std::make_tuple(-L->density(), L->Id) <
+                       std::make_tuple(-R->density(), R->Id);
               });
 
     // Collect the nodes in the order specified by their chains.
@@ -1155,6 +1174,9 @@ private:
       for (const auto &[_, Edge] : BestSrcChain->Edges) {
         // Ignore loop edges.
         if (Edge->isSelfEdge())
+          continue;
+        if (Edge->srcChain()->numBlocks() + Edge->dstChain()->numBlocks() >
+            Config.MaxChainSize)
           continue;
 
         // Compute the gain of merging the two chains.
@@ -1452,6 +1474,8 @@ std::vector<uint64_t> codelayout::computeCacheDirectedLayout(
     Config.CacheEntries = CacheEntries;
   if (CacheSize.getNumOccurrences() > 0)
     Config.CacheSize = CacheSize;
+  if (CDMaxChainSize.getNumOccurrences() > 0)
+    Config.MaxChainSize = CDMaxChainSize;
   if (DistancePower.getNumOccurrences() > 0)
     Config.DistancePower = DistancePower;
   if (FrequencyScale.getNumOccurrences() > 0)

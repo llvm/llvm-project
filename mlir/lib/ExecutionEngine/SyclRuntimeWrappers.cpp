@@ -10,15 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <algorithm>
-#include <array>
-#include <cassert>
-#include <cfloat>
-#include <cstdint>
-#include <cstdio>
-#include <cstdlib>
-#include <stdexcept>
-#include <tuple>
 
 #include <CL/sycl.hpp>
 #include <level_zero/ze_api.h>
@@ -61,36 +52,37 @@ auto catchAll(F &&func) {
 
 static sycl::device getDefaultDevice() {
   static sycl::device syclDevice;
-  static bool isDeviceInitialised = false; 
-  if(!isDeviceInitialised) {
-  auto platformList = sycl::platform::get_platforms();
-  for (const auto &platform : platformList) {
-    auto platformName = platform.get_info<sycl::info::platform::name>();
-    bool isLevelZero = platformName.find("Level-Zero") != std::string::npos;
-    if (!isLevelZero)
-      continue;
+  static bool isDeviceInitialised = false;
+  if (!isDeviceInitialised) {
+    auto platformList = sycl::platform::get_platforms();
+    for (const auto &platform : platformList) {
+      auto platformName = platform.get_info<sycl::info::platform::name>();
+      bool isLevelZero = platformName.find("Level-Zero") != std::string::npos;
+      if (!isLevelZero)
+        continue;
 
-    syclDevice = platform.get_devices()[0];
-    isDeviceInitialised = true;
-    return syclDevice;
-  }
+      syclDevice = platform.get_devices()[0];
+      isDeviceInitialised = true;
+      return syclDevice;
+    }
     throw std::runtime_error("getDefaultDevice failed");
-  }
-  else
+  } else
     return syclDevice;
 }
 
 static sycl::context getDefaultContext() {
-  static sycl::context syclContext { getDefaultDevice() };
+  static sycl::context syclContext {getDefaultDevice()};
   return syclContext;
 }
 
 static void *allocDeviceMemory(sycl::queue *queue, size_t size, bool isShared) {
   void *memPtr = nullptr;
   if (isShared) {
-    memPtr = sycl::aligned_alloc_shared(64, size, getDefaultDevice(), getDefaultContext());
+    memPtr = sycl::aligned_alloc_shared(64, size, getDefaultDevice(),
+                                        getDefaultContext());
   } else {
-    memPtr = sycl::aligned_alloc_device(64, size, getDefaultDevice(), getDefaultContext());
+    memPtr = sycl::aligned_alloc_device(64, size, getDefaultDevice(),
+                                        getDefaultContext());
   }
   if (memPtr == nullptr) {
     throw std::runtime_error("mem allocation failed!");
@@ -112,10 +104,10 @@ static ze_module_handle_t loadModule(const void *data, size_t dataSize) {
                            (const uint8_t *)data,
                            nullptr,
                            nullptr};
-  auto zeDevice =
-      sycl::get_native<sycl::backend::ext_oneapi_level_zero>(getDefaultDevice());
-  auto zeContext =
-      sycl::get_native<sycl::backend::ext_oneapi_level_zero>(getDefaultContext());
+  auto zeDevice = sycl::get_native<sycl::backend::ext_oneapi_level_zero>(
+      getDefaultDevice());
+  auto zeContext = sycl::get_native<sycl::backend::ext_oneapi_level_zero>(
+      getDefaultContext());
   L0_SAFE_CALL(zeModuleCreate(zeContext, zeDevice, &desc, &zeModule, nullptr));
   return zeModule;
 }
@@ -130,8 +122,8 @@ static sycl::kernel *getKernel(ze_module_handle_t zeModule, const char *name) {
   L0_SAFE_CALL(zeKernelCreate(zeModule, &desc, &zeKernel));
   sycl::kernel_bundle<sycl::bundle_state::executable> kernelBundle =
       sycl::make_kernel_bundle<sycl::backend::ext_oneapi_level_zero,
-                               sycl::bundle_state::executable>({zeModule},
-                                                               getDefaultContext());
+                               sycl::bundle_state::executable>(
+          {zeModule}, getDefaultContext());
 
   auto kernel = sycl::make_kernel<sycl::backend::ext_oneapi_level_zero>(
       {kernelBundle, zeKernel}, getDefaultContext());

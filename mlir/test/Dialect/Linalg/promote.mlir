@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-transform-dialect-interpreter -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -transform-interpreter -split-input-file | FileCheck %s
 
 #map1 = affine_map<(d0) -> (d0 + 2)>
 #map2 = affine_map<(d0) -> (d0 + 4)>
@@ -66,10 +66,12 @@ func.func @matmul_f32(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
 //   CHECK-NOT:         memref.dealloc %[[tmpB]] : memref<48xi8>
 //   CHECK-NOT:         memref.dealloc %[[tmpC]] : memref<24xi8>
 
-transform.sequence failures(propagate) {
-^bb0(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1 = transform.structured.promote %0 { use_alloca } : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.structured.promote %0 { use_alloca } : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -136,10 +138,12 @@ func.func @matmul_f64(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
 //       CHECK:         memref.dealloc %[[tmpB_f64]] : memref<96xi8>
 //       CHECK:         memref.dealloc %[[tmpC_f64]] : memref<48xi8>
 
-transform.sequence failures(propagate) {
-^bb0(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1 = transform.structured.promote %0 : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.structured.promote %0 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -180,11 +184,13 @@ func.func @gemm_shared(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?
 // CHECK:         linalg.matmul ins(%[[shared_A]], %[[shared_B]]{{.*}} outs(%[[subview_C]]
 
 
-transform.sequence failures(propagate) {
-^bb0(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1, %loops:3 = transform.structured.tile_using_for %0 [16, 16, 16] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
-  %2 = transform.structured.promote %1 { operands_to_promote = [0, 1], mapping = [#gpu.memory_space<workgroup>] } : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %loops:3 = transform.structured.tile_using_for %0 [16, 16, 16] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+    %2 = transform.structured.promote %1 { operands_to_promote = [0, 1], mapping = [#gpu.memory_space<workgroup>] } : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 
@@ -222,11 +228,13 @@ func.func @gemm_private(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<
 // CHECK:         linalg.matmul ins(%[[private_A]], %[[private_B]]{{.*}} outs(%[[subview_C]]
 
 
-transform.sequence failures(propagate) {
-^bb0(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1, %loops:3 = transform.structured.tile_using_for %0 [16, 16, 16] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
-  %2 = transform.structured.promote %1 { operands_to_promote = [0, 1], mapping = [#gpu.memory_space<private>] } : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %loops:3 = transform.structured.tile_using_for %0 [16, 16, 16] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+    %2 = transform.structured.promote %1 { operands_to_promote = [0, 1], mapping = [#gpu.memory_space<private>] } : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 
@@ -270,10 +278,12 @@ func.func @promote_rank_reducing_subviews(%arg0:  memref<?x?x?x64xf32, strided<[
   return
 }
 
-transform.sequence failures(propagate) {
-^bb0(%arg1: !transform.any_op):
-  %0 = transform.structured.match interface{LinalgOp} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1 = transform.structured.promote %0 : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match interface{LinalgOp} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.structured.promote %0 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -377,8 +387,10 @@ func.func @linalg_generic_update_all_function_inputs_outputs(%arg0: memref<3x4xf
 }
 
 
-transform.sequence failures(propagate) {
-^bb0(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1 = transform.structured.promote %0 { memory_space = #gpu.address_space<workgroup> } : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.structured.promote %0 { memory_space = #gpu.address_space<workgroup> } : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }

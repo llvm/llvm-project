@@ -309,6 +309,40 @@ LogicalResult tosa::AvgPool2dOp::verify() {
   return emitOpError("input/output element types are incompatible.");
 }
 
+LogicalResult tosa::ClampOp::verify() {
+  mlir::Type inputETy =
+      llvm::cast<ShapedType>(getInput().getType()).getElementType();
+  if (auto quantType =
+          llvm::dyn_cast<mlir::quant::UniformQuantizedType>(inputETy)) {
+    inputETy = quantType.getStorageType();
+  }
+  mlir::Type maxFpType = getMaxFpAttr().getType();
+  mlir::Type minFpType = getMinFpAttr().getType();
+  mlir::Type outputETy =
+      llvm::cast<ShapedType>(getOutput().getType()).getElementType();
+  if (auto quantType =
+          llvm::dyn_cast<mlir::quant::UniformQuantizedType>(outputETy)) {
+    outputETy = quantType.getStorageType();
+  }
+  unsigned dataTypeBitWidth = inputETy.getIntOrFloatBitWidth();
+
+  if (inputETy != outputETy)
+    return emitOpError("input/output element types are incompatible.");
+
+  // if input datatype is float, check that the two min/max_fp attributes share
+  // the same type and that their type is either the same of the input's
+  // datatype, or a float type whose bitwidth > input datatype bitwidth
+  if (!inputETy.isInteger(dataTypeBitWidth)) {
+    if (((maxFpType != minFpType) ||
+         (maxFpType != inputETy && maxFpType.getIntOrFloatBitWidth() <=
+                                       inputETy.getIntOrFloatBitWidth())))
+      return emitOpError("min/max attributes types are incompatible with "
+                         "input/output element types.");
+  }
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // TOSA Operator Quantization Builders.
 //===----------------------------------------------------------------------===//
@@ -786,6 +820,22 @@ LogicalResult tosa::SliceOp::inferReturnTypeComponents(
   return success();
 }
 
+LogicalResult tosa::SliceOp::verify() {
+  auto inputType = llvm::dyn_cast<RankedTensorType>(getInput().getType());
+  if (!inputType)
+    return success();
+
+  if (static_cast<size_t>(inputType.getRank()) != getStart().size())
+    return emitOpError(
+        "length of start attribute is not equal rank of input shape");
+
+  if (static_cast<size_t>(inputType.getRank()) != getSize().size())
+    return emitOpError(
+        "length of size attribute is not equal rank of input shape");
+
+  return success();
+}
+
 LogicalResult tosa::TableOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
     TableOp::Adaptor adaptor,
@@ -1075,14 +1125,14 @@ LogicalResult tosa::ScatterOp::inferReturnTypeComponents(
 static LogicalResult ReduceInferReturnTypes(
     ShapeAdaptor operandShape, Type inputType, IntegerAttr axis,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
-  if (!operandShape.hasRank()) {
+  int64_t axisVal = axis.getValue().getSExtValue();
+  if (!operandShape.hasRank() || operandShape.getRank() <= axisVal) {
     inferredReturnShapes.push_back(ShapedTypeComponents(inputType));
     return success();
   }
 
   SmallVector<int64_t> outputShape;
   operandShape.getDims(outputShape);
-  int64_t axisVal = axis.getValue().getSExtValue();
   outputShape[axisVal] = 1;
   inferredReturnShapes.push_back(ShapedTypeComponents(outputShape, inputType));
   return success();
@@ -1120,6 +1170,63 @@ REDUCE_SHAPE_INFER(tosa::ReduceSumOp)
 #undef REDUCE_SHAPE_INFER
 COMPATIBLE_RETURN_TYPES(tosa::ConcatOp)
 #undef COMPATIBLE_RETURN_TYPES
+
+template <typename T>
+static LogicalResult verifyReduceOp(T op) {
+  // All TOSA reduce Ops have input, output and axis.
+  TensorType inputType = op.getInput().getType();
+  TensorType outputType = op.getOutput().getType();
+  int32_t reduceAxis = op.getAxis();
+
+  if (reduceAxis < 0) {
+    op.emitOpError("reduce axis must not be negative");
+    return failure();
+  }
+  if (inputType.hasRank()) {
+    int64_t inputRank = inputType.getRank();
+    // We allow for a special case where the input/output shape has rank 0 and
+    // axis is also 0.
+    if (reduceAxis >= inputRank && !(reduceAxis == 0 && inputRank == 0)) {
+      op.emitOpError("expect input tensor rank (")
+          << inputRank << ") to be larger than reduce axis (" << reduceAxis
+          << ")";
+      return failure();
+    }
+  }
+  if (outputType.hasRank()) {
+    int64_t outputRank = outputType.getRank();
+    if (inputType.hasRank() && outputRank != inputType.getRank()) {
+      op.emitOpError(
+          "expect output tensor rank to be equal to input tensor rank");
+      return failure();
+    }
+    if (reduceAxis >= outputRank && !(reduceAxis == 0 && outputRank == 0)) {
+      op.emitOpError("expect output tensor rank (")
+          << outputRank << ") to be larger than reduce axis (" << reduceAxis
+          << ")";
+      return failure();
+    }
+    // We can only verify the reduced dimension size to be 1 if this is not the
+    // special case of output rank == 0.
+    if (outputRank != 0) {
+      auto outputShape = outputType.getShape();
+      if (!outputType.isDynamicDim(reduceAxis) &&
+          outputShape[reduceAxis] != 1) {
+        op.emitOpError("expect reduced dimension size to be 1, got ")
+            << outputShape[reduceAxis];
+        return failure();
+      }
+    }
+  }
+  return success();
+}
+
+LogicalResult tosa::ReduceAllOp::verify() { return verifyReduceOp(*this); }
+LogicalResult tosa::ReduceAnyOp::verify() { return verifyReduceOp(*this); }
+LogicalResult tosa::ReduceMaxOp::verify() { return verifyReduceOp(*this); }
+LogicalResult tosa::ReduceMinOp::verify() { return verifyReduceOp(*this); }
+LogicalResult tosa::ReduceProdOp::verify() { return verifyReduceOp(*this); }
+LogicalResult tosa::ReduceSumOp::verify() { return verifyReduceOp(*this); }
 
 static LogicalResult NAryInferReturnTypes(
     const ValueShapeRange &operands,

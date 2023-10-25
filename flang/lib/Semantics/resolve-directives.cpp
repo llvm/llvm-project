@@ -61,6 +61,9 @@ protected:
         ? std::nullopt
         : std::make_optional<DirContext>(dirContext_.back());
   }
+  void PushContext(const parser::CharBlock &source, T dir, Scope &scope) {
+    dirContext_.emplace_back(source, dir, scope);
+  }
   void PushContext(const parser::CharBlock &source, T dir) {
     dirContext_.emplace_back(source, dir, context_.FindScope(source));
   }
@@ -115,8 +118,8 @@ protected:
 
 class AccAttributeVisitor : DirectiveAttributeVisitor<llvm::acc::Directive> {
 public:
-  explicit AccAttributeVisitor(SemanticsContext &context)
-      : DirectiveAttributeVisitor(context) {}
+  explicit AccAttributeVisitor(SemanticsContext &context, Scope *topScope)
+      : DirectiveAttributeVisitor(context), topScope_(topScope) {}
 
   template <typename A> void Walk(const A &x) { parser::Walk(x, *this); }
   template <typename A> bool Pre(const A &) { return true; }
@@ -281,6 +284,7 @@ private:
       const llvm::acc::Clause clause, const parser::AccObjectList &objectList);
   void AddRoutineInfoToSymbol(
       Symbol &, const parser::OpenACCRoutineConstruct &);
+  Scope *topScope_;
 };
 
 // Data-sharing and Data-mapping attributes for data-refs in OpenMP construct
@@ -802,10 +806,6 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCDeclarativeConstruct &x) {
     const auto &declDir{
         std::get<parser::AccDeclarativeDirective>(declConstruct->t)};
     PushContext(declDir.source, llvm::acc::Directive::ACCD_declare);
-  } else if (const auto *routineConstruct{
-                 std::get_if<parser::OpenACCRoutineConstruct>(&x.u)}) {
-    const auto &verbatim{std::get<parser::Verbatim>(routineConstruct->t)};
-    PushContext(verbatim.source, llvm::acc::Directive::ACCD_routine);
   }
   ClearDataSharingAttributeObjects();
   return true;
@@ -913,6 +913,10 @@ Symbol *AccAttributeVisitor::ResolveFctName(const parser::Name &name) {
   Symbol *prev{currScope().FindSymbol(name.source)};
   if (!prev || (prev && prev->IsFuncResult())) {
     prev = currScope().parent().FindSymbol(name.source);
+    if (!prev) {
+      prev = &context_.globalScope().MakeSymbol(
+          name.source, Attrs{}, ProcEntityDetails{});
+    }
   }
   if (prev != name.symbol) {
     name.symbol = prev;
@@ -965,7 +969,7 @@ void AccAttributeVisitor::AddRoutineInfoToSymbol(
                      std::get_if<Fortran::parser::AccClause::Bind>(&clause.u)) {
         if (const auto *name =
                 std::get_if<Fortran::parser::Name>(&bindClause->v.u)) {
-          if (Symbol *sym = ResolveName(*name, true)) {
+          if (Symbol *sym = ResolveFctName(*name)) {
             info.set_bindName(sym->name().ToString());
           } else {
             context_.Say((*name).source,
@@ -990,6 +994,13 @@ void AccAttributeVisitor::AddRoutineInfoToSymbol(
 }
 
 bool AccAttributeVisitor::Pre(const parser::OpenACCRoutineConstruct &x) {
+  const auto &verbatim{std::get<parser::Verbatim>(x.t)};
+  if (topScope_) {
+    PushContext(
+        verbatim.source, llvm::acc::Directive::ACCD_routine, *topScope_);
+  } else {
+    PushContext(verbatim.source, llvm::acc::Directive::ACCD_routine);
+  }
   const auto &optName{std::get<std::optional<parser::Name>>(x.t)};
   if (optName) {
     if (Symbol *sym = ResolveFctName(*optName)) {
@@ -1001,14 +1012,16 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCRoutineConstruct &x) {
           (*optName).source);
     }
   } else {
-    AddRoutineInfoToSymbol(*currScope().symbol(), x);
+    if (currScope().symbol()) {
+      AddRoutineInfoToSymbol(*currScope().symbol(), x);
+    }
   }
   return true;
 }
 
 bool AccAttributeVisitor::Pre(const parser::AccBindClause &x) {
   if (const auto *name{std::get_if<parser::Name>(&x.u)}) {
-    if (!ResolveName(*name, true)) {
+    if (!ResolveFctName(*name)) {
       context_.Say(name->source,
           "No function or subroutine declared for '%s'"_err_en_US,
           name->source);
@@ -2186,10 +2199,10 @@ void OmpAttributeVisitor::CheckMultipleAppearances(
   }
 }
 
-void ResolveAccParts(
-    SemanticsContext &context, const parser::ProgramUnit &node) {
+void ResolveAccParts(SemanticsContext &context, const parser::ProgramUnit &node,
+    Scope *topScope) {
   if (context.IsEnabled(common::LanguageFeature::OpenACC)) {
-    AccAttributeVisitor{context}.Walk(node);
+    AccAttributeVisitor{context, topScope}.Walk(node);
   }
 }
 

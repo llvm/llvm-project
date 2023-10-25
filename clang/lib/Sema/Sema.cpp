@@ -590,7 +590,11 @@ void Sema::diagnoseZeroToNullptrConversion(CastKind Kind, const Expr *E) {
 
   if (Kind != CK_NullToPointer && Kind != CK_NullToMemberPointer)
     return;
-  if (E->IgnoreParenImpCasts()->getType()->isNullPtrType())
+
+  const Expr *EStripped = E->IgnoreParenImpCasts();
+  if (EStripped->getType()->isNullPtrType())
+    return;
+  if (isa<GNUNullExpr>(EStripped))
     return;
 
   if (Diags.isIgnored(diag::warn_zero_as_null_pointer_constant,
@@ -612,6 +616,8 @@ void Sema::diagnoseZeroToNullptrConversion(CastKind Kind, const Expr *E) {
 
   // If it is a macro from system header, and if the macro name is not "NULL",
   // do not warn.
+  // Note that uses of "NULL" will be ignored above on systems that define it
+  // as __null.
   SourceLocation MaybeMacroLoc = E->getBeginLoc();
   if (Diags.getSuppressSystemWarnings() &&
       SourceMgr.isInSystemMacro(MaybeMacroLoc) &&
