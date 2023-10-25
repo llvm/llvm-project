@@ -50,7 +50,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
       .legalFor({{s32, s32}, {XLenLLT, XLenLLT}})
       .widenScalarToNextPow2(0)
       .clampScalar(1, s32, XLenLLT)
-      .clampScalar(0, s32, XLenLLT);
+      .clampScalar(0, s32, XLenLLT)
+      .minScalarSameAs(1, 0);
 
   if (ST.is64Bit()) {
     getActionDefinitionsBuilder({G_ZEXT, G_SEXT, G_ANYEXT})
