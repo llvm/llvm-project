@@ -1,4 +1,4 @@
-//===-- InstrumentationRuntimeASan.cpp ------------------------------------===//
+//===-- InstrumentationRuntimeASanLibsanitizers.cpp -----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "InstrumentationRuntimeASan.h"
+#include "InstrumentationRuntimeASanLibsanitizers.h"
 
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Module.h"
@@ -21,54 +21,60 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN_DEFINE(InstrumentationRuntimeASan)
+LLDB_PLUGIN_DEFINE(InstrumentationRuntimeASanLibsanitizers)
 
 lldb::InstrumentationRuntimeSP
-InstrumentationRuntimeASan::CreateInstance(const lldb::ProcessSP &process_sp) {
-  return InstrumentationRuntimeSP(new InstrumentationRuntimeASan(process_sp));
+InstrumentationRuntimeASanLibsanitizers::CreateInstance(
+    const lldb::ProcessSP &process_sp) {
+  return InstrumentationRuntimeSP(
+      new InstrumentationRuntimeASanLibsanitizers(process_sp));
 }
 
-void InstrumentationRuntimeASan::Initialize() {
+void InstrumentationRuntimeASanLibsanitizers::Initialize() {
   PluginManager::RegisterPlugin(
-      GetPluginNameStatic(), "AddressSanitizer instrumentation runtime plugin.",
+      GetPluginNameStatic(),
+      "AddressSanitizer instrumentation runtime plugin for Libsanitizers.",
       CreateInstance, GetTypeStatic);
 }
 
-void InstrumentationRuntimeASan::Terminate() {
+void InstrumentationRuntimeASanLibsanitizers::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb::InstrumentationRuntimeType InstrumentationRuntimeASan::GetTypeStatic() {
-  return eInstrumentationRuntimeTypeAddressSanitizer;
+lldb::InstrumentationRuntimeType
+InstrumentationRuntimeASanLibsanitizers::GetTypeStatic() {
+  return eInstrumentationRuntimeTypeLibsanitizersAsan;
 }
 
-InstrumentationRuntimeASan::~InstrumentationRuntimeASan() { Deactivate(); }
+InstrumentationRuntimeASanLibsanitizers::
+    ~InstrumentationRuntimeASanLibsanitizers() {
+  Deactivate();
+}
 
 const RegularExpression &
-InstrumentationRuntimeASan::GetPatternForRuntimeLibrary() {
-  // FIXME: This shouldn't include the "dylib" suffix.
+InstrumentationRuntimeASanLibsanitizers::GetPatternForRuntimeLibrary() {
   static RegularExpression regex(
-      llvm::StringRef("libclang_rt.asan_(.*)_dynamic\\.dylib"));
+      llvm::StringRef("libsystem_sanitizers\\.dylib"));
   return regex;
 }
 
-bool InstrumentationRuntimeASan::CheckIfRuntimeIsValid(
+bool InstrumentationRuntimeASanLibsanitizers::CheckIfRuntimeIsValid(
     const lldb::ModuleSP module_sp) {
   const Symbol *symbol = module_sp->FindFirstSymbolWithNameAndType(
-      ConstString("__asan_get_alloc_stack"), lldb::eSymbolTypeAny);
+      ConstString("__asan_abi_init"), lldb::eSymbolTypeAny);
 
   return symbol != nullptr;
 }
 
-bool InstrumentationRuntimeASan::NotifyBreakpointHit(
+bool InstrumentationRuntimeASanLibsanitizers::NotifyBreakpointHit(
     void *baton, StoppointCallbackContext *context, user_id_t break_id,
     user_id_t break_loc_id) {
   assert(baton && "null baton");
   if (!baton)
     return false;
 
-  InstrumentationRuntimeASan *const instance =
-      static_cast<InstrumentationRuntimeASan *>(baton);
+  InstrumentationRuntimeASanLibsanitizers *const instance =
+      static_cast<InstrumentationRuntimeASanLibsanitizers *>(baton);
 
   ProcessSP process_sp = instance->GetProcessSP();
 
@@ -76,7 +82,7 @@ bool InstrumentationRuntimeASan::NotifyBreakpointHit(
                                               break_loc_id);
 }
 
-void InstrumentationRuntimeASan::Activate() {
+void InstrumentationRuntimeASanLibsanitizers::Activate() {
   if (IsActive())
     return;
 
@@ -85,22 +91,23 @@ void InstrumentationRuntimeASan::Activate() {
     return;
 
   Breakpoint *breakpoint = ReportRetriever::SetupBreakpoint(
-      GetRuntimeModuleSP(), process_sp, ConstString("_ZN6__asanL7AsanDieEv"));
+      GetRuntimeModuleSP(), process_sp,
+      ConstString("_Z22raise_sanitizers_error23sanitizer_error_context"));
 
   if (!breakpoint)
     return;
 
   const bool sync = false;
 
-  breakpoint->SetCallback(InstrumentationRuntimeASan::NotifyBreakpointHit, this,
-                          sync);
+  breakpoint->SetCallback(
+      InstrumentationRuntimeASanLibsanitizers::NotifyBreakpointHit, this, sync);
   breakpoint->SetBreakpointKind("address-sanitizer-report");
   SetBreakpointID(breakpoint->GetID());
 
   SetActive(true);
 }
 
-void InstrumentationRuntimeASan::Deactivate() {
+void InstrumentationRuntimeASanLibsanitizers::Deactivate() {
   SetActive(false);
 
   if (GetBreakpointID() == LLDB_INVALID_BREAK_ID)
