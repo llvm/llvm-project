@@ -70,7 +70,7 @@ exception_ptr& exception_ptr::operator=(const exception_ptr& other) noexcept
 #  if defined(_LIBCPP_EXCEPTION_PTR_DIRECT_INIT)
 void *exception_ptr::__init_native_exception(size_t size, type_info* tinfo, void (*dest)(void*)) noexcept
 {
-    decltype(__cxa_init_primary_exception)* cxa_init_primary_exception_fn = __cxa_init_primary_exception;
+    void *(*cxa_init_primary_exception_fn)(void*, std::type_info*, void(*)(void*)) = __cxa_init_primary_exception;
     if (cxa_init_primary_exception_fn != nullptr)
     {
         void* __ex = __cxa_allocate_exception(size);
