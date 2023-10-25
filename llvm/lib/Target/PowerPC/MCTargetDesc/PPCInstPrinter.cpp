@@ -614,9 +614,11 @@ bool PPCInstPrinter::showRegistersWithPercentPrefix(const char *RegName) const {
 /// getVerboseConditionalRegName - This method expands the condition register
 /// when requested explicitly or targetting Darwin.
 const char *PPCInstPrinter::getVerboseConditionRegName(unsigned RegNum,
-                                                       unsigned RegEncoding)
+                                                       unsigned RegEncoding,
+                                                       const MCSubtargetInfo &STI)
                                                        const {
-  if (!FullRegNames)
+                                                         // __SP__
+  if (!FullRegNames && !STI.hasFeature(PPC::FeatureFullRegisterNames))
     return nullptr;
   if (RegNum < PPC::CR0EQ || RegNum > PPC::CR7UN)
     return nullptr;
@@ -635,8 +637,9 @@ const char *PPCInstPrinter::getVerboseConditionRegName(unsigned RegNum,
 
 // showRegistersWithPrefix - This method determines whether registers
 // should be number-only or include the prefix.
-bool PPCInstPrinter::showRegistersWithPrefix() const {
-  return FullRegNamesWithPercent || FullRegNames;
+bool PPCInstPrinter::showRegistersWithPrefix(const MCSubtargetInfo &STI) const {
+  return FullRegNamesWithPercent || FullRegNames ||
+         STI.hasFeature(PPC::FeatureFullRegisterNames);
 }
 
 void PPCInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
@@ -648,12 +651,12 @@ void PPCInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
       Reg = PPC::getRegNumForOperand(MII.get(MI->getOpcode()), Reg, OpNo);
 
     const char *RegName;
-    RegName = getVerboseConditionRegName(Reg, MRI.getEncodingValue(Reg));
+    RegName = getVerboseConditionRegName(Reg, MRI.getEncodingValue(Reg), STI);
     if (RegName == nullptr)
      RegName = getRegisterName(Reg);
     if (showRegistersWithPercentPrefix(RegName))
       O << "%";
-    if (!showRegistersWithPrefix())
+    if (!showRegistersWithPrefix(STI))
       RegName = PPC::stripRegisterPrefix(RegName);
 
     O << RegName;

@@ -4789,6 +4789,10 @@ def mrop_protect : Flag<["-"], "mrop-protect">,
     Group<m_ppc_Features_Group>;
 def mprivileged : Flag<["-"], "mprivileged">,
     Group<m_ppc_Features_Group>;
+def mregnames : Flag<["-"], "mregnames">, Group<m_ppc_Features_Group>,
+                Visibility<[ClangOption]>;
+def mno_regnames : Flag<["-"], "mno-regnames">, Group<m_ppc_Features_Group>,
+                   Visibility<[ClangOption]>;
 } // let Flags = [TargetSpecific]
 def maix_small_local_exec_tls : Flag<["-"], "maix-small-local-exec-tls">,
   Group<m_ppc_Features_Group>,

@@ -22,9 +22,10 @@ class PPCInstPrinter : public MCInstPrinter {
   Triple TT;
 private:
   bool showRegistersWithPercentPrefix(const char *RegName) const;
-  bool showRegistersWithPrefix() const;
+  bool showRegistersWithPrefix(const MCSubtargetInfo &STI) const;
   const char *getVerboseConditionRegName(unsigned RegNum,
-                                         unsigned RegEncoding) const;
+                                         unsigned RegEncoding,
+                                         const MCSubtargetInfo &STI) const;
 
 public:
   PPCInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
