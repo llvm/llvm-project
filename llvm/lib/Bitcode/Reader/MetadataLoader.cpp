@@ -1526,11 +1526,12 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     DINode::DIFlags Flags = (Record.size() > 6)
                                 ? static_cast<DINode::DIFlags>(Record[6])
                                 : DINode::FlagZero;
+    uint32_t NumExtraInhabitants = (Record.size() > 7) ? Record[7] : 0;
 
     MetadataList.assignValue(
         GET_OR_DISTINCT(DIBasicType,
                         (Context, Record[1], getMDString(Record[2]), Record[3],
-                         Record[4], Record[5], Record[7], Flags)), 
+                         Record[4], Record[5], NumExtraInhabitants, Flags)),
         NextMetadataNo);
     NextMetadataNo++;
     break;
@@ -1606,7 +1607,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       return error("Alignment value is too large");
     uint32_t AlignInBits = Record[8];
     uint64_t OffsetInBits = 0;
-    uint32_t NumExtraInhabitants = Record[22];
+    uint32_t NumExtraInhabitants = (Record.size() > 22) ? Record[22] : 0;
     DINode::DIFlags Flags = static_cast<DINode::DIFlags>(Record[10]);
     Metadata *Elements = nullptr;
     unsigned RuntimeLang = Record[12];
