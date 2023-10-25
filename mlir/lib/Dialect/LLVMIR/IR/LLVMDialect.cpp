@@ -665,7 +665,7 @@ static void printGEPIndices(OpAsmPrinter &printer, LLVM::GEPOp gepOp,
 }
 
 /// For the given `indices`, check if they comply with `baseGEPType`,
-// especially check against LLVMStructTypes nested within.
+/// especially check against LLVMStructTypes nested within.
 static LogicalResult
 verifyStructIndices(Type baseGEPType, unsigned indexPos,
                     GEPIndicesAdaptor<ValueRange> indices,
@@ -674,7 +674,7 @@ verifyStructIndices(Type baseGEPType, unsigned indexPos,
     // Stop searching
     return success();
 
-  return llvm::TypeSwitch<Type, LogicalResult>(baseGEPType)
+  return TypeSwitch<Type, LogicalResult>(baseGEPType)
       .Case<LLVMStructType>([&](LLVMStructType structType) -> LogicalResult {
         if (!indices[indexPos].is<IntegerAttr>())
           return emitOpError() << "expected index " << indexPos
