@@ -223,7 +223,7 @@ public:
   DWARFDIE
   GetDeclContextDIEContainingDIE(const DWARFDIE &die);
 
-  bool HasForwardDeclForClangType(const CompilerType &compiler_type);
+  bool HasForwardDeclForCompilerType(const CompilerType &compiler_type);
 
   CompileUnit *GetCompUnitForDWARFCompUnit(DWARFCompileUnit &dwarf_cu);
 
@@ -329,16 +329,17 @@ public:
 
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *,
                          lldb::opaque_compiler_type_t>
-      DIEToClangType;
+      DIEToCompilerType;
 
-  virtual DIEToClangType &GetForwardDeclDieToClangType() {
-    return m_forward_decl_die_to_clang_type;
+  virtual DIEToCompilerType &GetForwardDeclDIEToCompilerType() {
+    return m_forward_decl_die_to_compiler_type;
   }
 
-  typedef llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef> ClangTypeToDIE;
+  typedef llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef>
+      CompilerTypeToDIE;
 
-  virtual ClangTypeToDIE &GetForwardDeclClangTypeToDie() {
-    return m_forward_decl_clang_type_to_die;
+  virtual CompilerTypeToDIE &GetForwardDeclCompilerTypeToDIE() {
+    return m_forward_decl_compiler_type_to_die;
   }
 
   virtual UniqueDWARFASTTypeMap &GetUniqueDWARFASTTypeMap();
@@ -531,8 +532,8 @@ protected:
   UniqueDWARFASTTypeMap m_unique_ast_type_map;
   DIEToTypePtr m_die_to_type;
   DIEToVariableSP m_die_to_variable_sp;
-  DIEToClangType m_forward_decl_die_to_clang_type;
-  ClangTypeToDIE m_forward_decl_clang_type_to_die;
+  DIEToCompilerType m_forward_decl_die_to_compiler_type;
+  CompilerTypeToDIE m_forward_decl_compiler_type_to_die;
   llvm::DenseMap<dw_offset_t, FileSpecList> m_type_unit_support_files;
   std::vector<uint32_t> m_lldb_cu_to_dwarf_unit;
   /// DWARF does not provide a good way for traditional (concatenating) linkers
