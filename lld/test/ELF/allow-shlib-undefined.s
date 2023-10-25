@@ -41,6 +41,7 @@
 ## The definition def.so is ignored.
 # RUN: ld.lld -shared def.o -o def.so
 # RUN: ld.lld --gc-sections main.o a.so def.so def-hidden.o --fatal-warnings -o /dev/null
+# RUN: not ld.lld --gc-sections main.o a.so def.so def-hidden.o -o /dev/null --no-allow-non-exported-symbols-shared-with-dso 2>&1 | FileCheck %s --check-prefix=HIDDEN
 
 # CHECK-NOT:   error:
 # CHECK:       error: undefined reference due to --no-allow-shlib-undefined: x1{{$}}
@@ -60,6 +61,11 @@
 # NONEXPORTED-NOT: error:
 # NONEXPORTED:     error: non-exported symbol 'x1' in 'def-hidden.o' is referenced by DSO 'a.so'
 # NONEXPORTED-NOT: {{.}}
+
+# HIDDEN-NOT:  error:
+# HIDDEN:      error: non-exported symbol also defined by DSO: x1
+# HIDDEN-NEXT: >>> defined by def-hidden.o
+# HIDDEN-NOT:  {{.}}
 
 #--- main.s
 .globl _start

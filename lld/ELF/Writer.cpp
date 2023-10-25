@@ -272,8 +272,23 @@ static void demoteDefined(Defined &sym, DenseMap<SectionBase *, size_t> &map) {
 static void demoteSymbolsAndComputeIsPreemptible() {
   llvm::TimeTraceScope timeScope("Demote symbols");
   DenseMap<InputFile *, DenseMap<SectionBase *, size_t>> sectionIndexMap;
+  bool allowNonExportedSymbolsSharedWithDso =
+      config->allowNonExportedSymbolsSharedWithDso;
   for (Symbol *sym : symtab.getSymbols()) {
     if (auto *d = dyn_cast<Defined>(sym)) {
+      if (!allowNonExportedSymbolsSharedWithDso &&
+          d->visibility() != ELF::STV_DEFAULT &&
+          d->visibility() != ELF::STV_PROTECTED) {
+        auto flags = d->flags.load(std::memory_order_relaxed);
+        if (flags & HAS_SHARED_DEF) {
+          errorOrWarn("non-exported symbol also defined by DSO: " + toString(*sym) +
+                      "\n>>> defined by " + toString(d->file));
+        } else if (flags & HAS_SHARED_REF) {
+          errorOrWarn("non-exported symbol also referenced by DSO: " +
+                      toString(*sym) + "\n>>> defined by " + toString(d->file));
+        }
+      }
+
       if (d->section && !d->section->isLive())
         demoteDefined(*d, sectionIndexMap[d->file]);
     } else {

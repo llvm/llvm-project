@@ -1215,6 +1215,9 @@ static void readConfigs(opt::InputArgList &args) {
   errorHandler().vsDiagnostics =
       args.hasArg(OPT_visual_studio_diagnostics_format, false);
 
+  config->allowNonExportedSymbolsSharedWithDso =
+      args.hasFlag(OPT_allow_non_exported_symbols_shared_with_dso,
+                   OPT_no_allow_non_exported_symbols_shared_with_dso, true);
   config->allowMultipleDefinition =
       args.hasFlag(OPT_allow_multiple_definition,
                    OPT_no_allow_multiple_definition, false) ||

@@ -55,6 +55,7 @@ enum {
   NEEDS_GOT_DTPREL = 1 << 7,
   NEEDS_TLSIE = 1 << 8,
   HAS_SHARED_DEF = 1 << 9,
+  HAS_SHARED_REF = 1 << 10,
 };
 
 // Some index properties of a symbol are stored separately in this auxiliary

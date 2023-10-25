@@ -331,6 +331,7 @@ struct Config {
   StripPolicy strip;
   UnresolvedPolicy unresolvedSymbols;
   UnresolvedPolicy unresolvedSymbolsInShlib;
+  bool allowNonExportedSymbolsSharedWithDso = true;
   Target2Policy target2;
   bool power10Stubs;
   ARMVFPArgKind armVFPArgs = ARMVFPArgKind::Default;

@@ -105,6 +105,10 @@ defm Ttext: Eq<"Ttext", "Same as --section-start with .text as the sectionname">
 
 def Ttext_segment: Separate<["-", "--"], "Ttext-segment">;
 
+defm allow_non_exported_symbols_shared_with_dso: BB<"allow-non-exported-symbols-shared-with-dso",
+  "Allow non-exported symbols that are also defined or referenced by a DSO (default)",
+  "Do not allow non-exported symbols that are also defined or referenced by a DSO">;
+
 defm allow_multiple_definition: B<"allow-multiple-definition",
     "Allow multiple definitions",
     "Do not allow multiple definitions (default)">;
