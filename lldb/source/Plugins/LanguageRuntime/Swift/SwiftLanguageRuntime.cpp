@@ -31,6 +31,7 @@
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/Host/OptionParser.h"
+#include "lldb/Host/SafeMachO.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
