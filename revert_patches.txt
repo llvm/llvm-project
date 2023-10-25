@@ -5,5 +5,8 @@ Johannes: breakage
 Revert "[OpenMP] Disable early vectorization of loads/stores in the runtime " 
   asserts in  snap and MI-Teams
 
+Revert "[OpenMP] Basic BumpAllocator for (AMD)GPUs (#69806) "
+  breaks flang-272343 flang-272343-3 flang-305553
+
 Revert: waiting on pip install myst-parser 
  b6ff03206 "[Documentation] Replace recommonmark by myst-parser

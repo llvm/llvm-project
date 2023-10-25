@@ -660,10 +660,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// this behavior by overriding the shouldSetupDeviceEnvironment function.
   Error setupDeviceEnvironment(GenericPluginTy &Plugin, DeviceImageTy &Image);
 
-  /// Setup the global device memory pool, if the plugin requires one.
-  Error setupDeviceMemoryPool(GenericPluginTy &Plugin, DeviceImageTy &Image,
-                              uint64_t PoolSize);
-
   // Setup the RPC server for this device if needed. This may not run on some
   // plugins like the CPU targets. By default, it will not be executed so it is
   // up to the target to override this using the shouldSetupRPCServer function.
@@ -897,10 +893,6 @@ private:
   /// setupDeviceEnvironment() function.
   virtual bool shouldSetupDeviceEnvironment() const { return true; }
 
-  /// Indicate whether the device should setup the global device memory pool. If
-  /// false is return the value on the device will be uninitialized.
-  virtual bool shouldSetupDeviceMemoryPool() const { return true; }
-
   /// Indicate whether or not the device should setup the RPC server. This is
   /// only necessary for unhosted targets like the GPU.
   virtual bool shouldSetupRPCServer() const { return false; }
@@ -962,6 +954,10 @@ protected:
   RPCHandleTy *RPCHandle;
 
 private:
+  /// Return the kernel environment object for kernel \p Name.
+  Expected<KernelEnvironmentTy>
+  getKernelEnvironmentForKernel(StringRef Name, DeviceImageTy &Image);
+
 #ifdef OMPT_SUPPORT
   /// OMPT callback functions
 #define defineOmptCallback(Name, Type, Code) Name##_t Name##_fn = nullptr;
@@ -976,13 +972,6 @@ private:
   /// Internal representation for OMPT device (initialize & finalize)
   std::atomic<bool> OmptInitialized;
 #endif
-
-  /// Return the kernel environment object for kernel \p Name.
-  Expected<KernelEnvironmentTy>
-  getKernelEnvironmentForKernel(StringRef Name, DeviceImageTy &Image);
-
-  DeviceMemoryPoolTy DeviceMemoryPool = {nullptr, 0};
-  DeviceMemoryPoolTrackingTy DeviceMemoryPoolTracking = {0, 0, ~0U, 0};
 };
 
 /// Class implementing common functionalities of offload plugins. Each plugin

@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Allocator.h"
 #include "Debug.h"
 #include "Environment.h"
 #include "Interface.h"
@@ -33,8 +32,6 @@ static void inititializeRuntime(bool IsSPMD,
   state::init(IsSPMD, KernelEnvironment);
   if (__kmpc_get_hardware_thread_id_in_block() == 0)
     __init_ThreadDSTPtrPtr();
-
-  allocator::init(IsSPMD, KernelEnvironment);
 }
 
 /// Simple generic state machine for worker threads.

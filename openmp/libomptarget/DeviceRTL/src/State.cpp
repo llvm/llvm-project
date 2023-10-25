@@ -9,8 +9,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "State.h"
-#include "Allocator.h"
-#include "Configuration.h"
 #include "Debug.h"
 #include "Environment.h"
 #include "Interface.h"
@@ -33,15 +31,17 @@ void internal_free(void *Ptr);
 ///
 ///{
 
+/// Add worst-case padding so that future allocations are properly aligned.
+/// FIXME: The stack shouldn't require worst-case padding. Alignment needs to be
+/// passed in as an argument and the stack rewritten to support it.
+constexpr const uint32_t Alignment = 16;
+
 /// External symbol to access dynamic shared memory.
-[[gnu::aligned(
-    allocator::ALIGNMENT)]] extern unsigned char DynamicSharedBuffer[];
+[[gnu::aligned(Alignment)]] extern unsigned char DynamicSharedBuffer[];
 #pragma omp allocate(DynamicSharedBuffer) allocator(omp_pteam_mem_alloc)
 
 /// The kernel environment passed to the init method by the compiler.
 static KernelEnvironmentTy *SHARED(KernelEnvironmentPtr);
-
-///}
 
 namespace {
 
@@ -61,18 +61,8 @@ extern "C" size_t __ockl_get_local_size(uint32_t dim);
 extern "C" size_t __ockl_get_num_groups(uint32_t dim);
 
 extern "C" {
-#ifdef __AMDGPU__
-size_t external_get_local_size(uint32_t dim) { return __ockl_get_local_size(dim);}
-size_t external_get_num_groups(uint32_t dim) { return __ockl_get_num_groups(dim);}
-[[gnu::weak]] void *malloc(uint64_t Size) { return allocator::alloc(Size); }
-[[gnu::weak]] void free(void *Ptr) { allocator::free(Ptr); }
-
-#else
-
 [[gnu::weak, gnu::leaf]] void *malloc(uint64_t Size);
 [[gnu::weak, gnu::leaf]] void free(void *Ptr);
-
-#endif
 }
 
 #pragma omp begin declare variant match(device = {arch(amdgcn)})
@@ -86,6 +76,19 @@ void internal_free(void *Ptr) { __ockl_dm_dealloc((uint64_t)Ptr); }
 }
 #pragma omp end declare variant
 ///}
+
+extern "C" {
+#ifdef __AMDGCN__
+void *malloc(uint64_t Size) { return internal_malloc(Size); }
+void free(void *Ptr) { internal_free(Ptr); }
+size_t external_get_local_size(uint32_t dim) { return __ockl_get_local_size(dim);}
+size_t external_get_num_groups(uint32_t dim) { return __ockl_get_num_groups(dim);}
+#else
+__attribute__((leaf)) void *malloc(uint64_t Size);
+__attribute__((leaf)) void free(void *Ptr);
+#endif
+} // extern "C"
+
 /// NVPTX implementations of internal mallocs
 ///
 ///{
@@ -124,7 +127,7 @@ private:
   uint32_t computeThreadStorageTotal() {
     uint32_t NumLanesInBlock = mapping::getNumberOfThreadsInBlock();
     return utils::align_down((state::SharedScratchpadSize / NumLanesInBlock),
-                             allocator::ALIGNMENT);
+                             Alignment);
   }
 
   /// Return the top address of the warp data stack, that is the first address
@@ -134,10 +137,8 @@ private:
   }
 
   /// The actual storage, shared among all warps.
-  [[gnu::aligned(
-      allocator::ALIGNMENT)]] unsigned char Data[state::SharedScratchpadSize];
-  [[gnu::aligned(
-      allocator::ALIGNMENT)]] unsigned char Usage[mapping::MaxThreadsPerTeam];
+  [[gnu::aligned(Alignment)]] unsigned char Data[state::SharedScratchpadSize];
+  [[gnu::aligned(Alignment)]] unsigned char Usage[mapping::MaxThreadsPerTeam];
 };
 
 static_assert(state::SharedScratchpadSize / mapping::MaxThreadsPerTeam <= 256,
@@ -152,9 +153,7 @@ void SharedMemorySmartStackTy::init(bool IsSPMD) {
 
 void *SharedMemorySmartStackTy::push(uint64_t Bytes) {
   // First align the number of requested bytes.
-  /// FIXME: The stack shouldn't require worst-case padding. Alignment needs to
-  /// be passed in as an argument and the stack rewritten to support it.
-  uint64_t AlignedBytes = utils::align_up(Bytes, allocator::ALIGNMENT);
+  uint64_t AlignedBytes = utils::align_up(Bytes, Alignment);
 
   uint32_t StorageTotal = computeThreadStorageTotal();
 
@@ -182,7 +181,7 @@ void *SharedMemorySmartStackTy::push(uint64_t Bytes) {
 }
 
 void SharedMemorySmartStackTy::pop(void *Ptr, uint32_t Bytes) {
-  uint64_t AlignedBytes = utils::align_up(Bytes, allocator::ALIGNMENT);
+  uint64_t AlignedBytes = utils::align_up(Bytes, Alignment);
   if (utils::isSharedMemPtr(Ptr)) {
     int TId = mapping::getThreadIdInBlock();
     Usage[TId] -= AlignedBytes;
