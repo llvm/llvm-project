@@ -68,7 +68,6 @@ TEST(AArch32_ELF, EdgeKinds) {
   }
 }
 
-
 namespace llvm {
 namespace jitlink {
 namespace aarch32 {
