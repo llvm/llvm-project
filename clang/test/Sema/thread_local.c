@@ -14,3 +14,6 @@ void func(void) {
   extern thread_local int n;
 }
 
+// This would previously fail because the tls models were different.
+extern thread_local unsigned a;
+_Thread_local unsigned a = 0;
