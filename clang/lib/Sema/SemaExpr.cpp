@@ -18303,7 +18303,7 @@ void Sema::CheckUnusedVolatileAssignment(Expr *E) {
   if (auto *BO = dyn_cast<BinaryOperator>(E->IgnoreParenImpCasts())) {
     if (BO->getOpcode() == BO_Assign) {
       auto &LHSs = ExprEvalContexts.back().VolatileAssignmentLHSs;
-      llvm::erase_value(LHSs, BO->getLHS());
+      llvm::erase(LHSs, BO->getLHS());
     }
   }
 }

@@ -937,7 +937,7 @@ private:
     }
 
     // Remove the chain from the list of active chains.
-    llvm::erase_value(HotChains, From);
+    llvm::erase(HotChains, From);
 
     // Invalidate caches.
     for (auto EdgeIt : Into->Edges)

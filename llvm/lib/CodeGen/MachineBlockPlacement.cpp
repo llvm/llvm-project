@@ -3091,7 +3091,7 @@ bool MachineBlockPlacement::maybeTailDuplicateBlock(
           SmallVectorImpl<MachineBasicBlock *> &RemoveList = BlockWorkList;
           if (RemBB->isEHPad())
             RemoveList = EHPadWorkList;
-          llvm::erase_value(RemoveList, RemBB);
+          llvm::erase(RemoveList, RemBB);
         }
 
         // Handle the filter set

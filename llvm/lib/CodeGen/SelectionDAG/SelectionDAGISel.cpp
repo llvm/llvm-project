@@ -3692,7 +3692,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
           auto &Chain = ChainNodesMatched;
           assert((!E || !is_contained(Chain, N)) &&
                  "Chain node replaced during MorphNode");
-          llvm::erase_value(Chain, N);
+          llvm::erase(Chain, N);
         });
         Res = cast<MachineSDNode>(MorphNode(NodeToMatch, TargetOpc, VTList,
                                             Ops, EmitNodeInfo));

@@ -389,7 +389,7 @@ extractSystemIncludesAndTarget(const DriverArgs &InputArgs,
     auto Path = llvm::StringRef(*BuiltinHeaders).trim();
     if (!Path.empty() && llvm::sys::path::is_absolute(Path)) {
       auto Size = Info->SystemIncludes.size();
-      llvm::erase_value(Info->SystemIncludes, Path);
+      llvm::erase(Info->SystemIncludes, Path);
       vlog("System includes extractor: builtin headers {0} {1}", Path,
            (Info->SystemIncludes.size() != Size)
                ? "excluded"

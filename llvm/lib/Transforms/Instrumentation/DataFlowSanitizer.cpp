@@ -1553,7 +1553,7 @@ bool DataFlowSanitizer::runImpl(
       assert(isa<Function>(C) && "Personality routine is not a function!");
       Function *F = cast<Function>(C);
       if (!isInstrumented(F))
-        llvm::erase_value(FnsToInstrument, F);
+        llvm::erase(FnsToInstrument, F);
     }
   }
 

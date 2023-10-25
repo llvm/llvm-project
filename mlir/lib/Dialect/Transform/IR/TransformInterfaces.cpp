@@ -299,7 +299,7 @@ void dropMappingEntry(Mapping &mapping, Key key, Mapped mapped) {
   if (it == mapping.end())
     return;
 
-  llvm::erase_value(it->getSecond(), mapped);
+  llvm::erase(it->getSecond(), mapped);
   if (it->getSecond().empty())
     mapping.erase(it);
 }
@@ -808,7 +808,7 @@ void transform::TransformState::compactOpHandles() {
       // iterators.
       mappings.incrementTimestamp(handle);
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
-    llvm::erase_value(mappings.direct[handle], nullptr);
+    llvm::erase(mappings.direct[handle], nullptr);
   }
   opHandlesToCompact.clear();
 }
