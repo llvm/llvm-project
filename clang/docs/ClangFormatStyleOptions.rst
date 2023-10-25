@@ -1215,6 +1215,27 @@ the configuration (without a prefix: ``Auto``).
                                               return;
                                             }
 
+.. _AllowShortCompoundRequirementOnASingleLine:
+
+**AllowShortCompoundRequirementOnASingleLine** (``Boolean``) :versionbadge:`clang-format 16` :ref:`¶ <AllowShortCompoundRequirementOnASingleLine>`
+  Allow short compound requirement on a single line.
+
+  .. code-block:: c++
+
+    true:
+    template <typename T>
+    concept c = requires(T x) {
+      { x + 1 } -> std::same_as<int>;
+    };
+
+    false:
+    template <typename T>
+    concept c = requires(T x) {
+      {
+        x + 1
+      } -> std::same_as<int>;
+    };
+
 .. _AllowShortEnumsOnASingleLine:
 
 **AllowShortEnumsOnASingleLine** (``Boolean``) :versionbadge:`clang-format 11` :ref:`¶ <AllowShortEnumsOnASingleLine>`
