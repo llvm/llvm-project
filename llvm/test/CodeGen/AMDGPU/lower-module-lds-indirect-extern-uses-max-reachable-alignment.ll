@@ -16,7 +16,7 @@
 ; CHECK: @dynamic_kernel_only = external addrspace(3) global [0 x double]
 ; CHECK: @dynamic_shared8 = external addrspace(3) global [0 x i64], align 8
 ; CHECK: @llvm.amdgcn.module.lds = internal addrspace(3) global %llvm.amdgcn.module.lds.t poison, align 4, !absolute_symbol !0
-; CHECK: @llvm.compiler.used = appending global [1 x ptr] [ptr addrspacecast (ptr addrspace(3) @llvm.amdgcn.module.lds to ptr)], section "llvm.metadata"
+; CHECK: @llvm.compiler.used = appending addrspace(1) global [1 x ptr] [ptr addrspacecast (ptr addrspace(3) @llvm.amdgcn.module.lds to ptr)], section "llvm.metadata"
 
 ; Alignment of these must be the maximum of the alignment of the reachable symbols
 ; CHECK: @llvm.amdgcn.expect_align1.dynlds = external addrspace(3) global [0 x i8], align 1, !absolute_symbol !0
@@ -103,7 +103,7 @@ define void @use_shared8() #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[DYNAMIC_SHARED8]], align 4
 ; CHECK-NEXT:    [[DYNAMIC_SHARED81:%.*]] = inttoptr i32 [[TMP2]] to ptr addrspace(3)
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i64], ptr addrspace(3) [[DYNAMIC_SHARED81]], i32 0, i32 7
-; CHECK-NEXT:    store i64 3, ptr addrspace(3) [[ARRAYIDX]], align 4
+; CHECK-NEXT:    store i64 3, ptr addrspace(3) [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %arrayidx = getelementptr inbounds [0 x i64], ptr addrspace(3) @dynamic_shared8, i32 0, i32 7
@@ -149,7 +149,7 @@ define amdgpu_kernel void @expect_align8() {
 ; CHECK-LABEL: define amdgpu_kernel void @expect_align8() !llvm.amdgcn.lds.kernel.id !5 {
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.expect_align8.dynlds) ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i64], ptr addrspace(3) @dynamic_shared8, i32 0, i32 9
-; CHECK-NEXT:    store i64 3, ptr addrspace(3) [[ARRAYIDX]], align 4
+; CHECK-NEXT:    store i64 3, ptr addrspace(3) [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    call void @use_shared8()
 ; CHECK-NEXT:    ret void
 ;
@@ -188,8 +188,8 @@ attributes #0 = { noinline }
 ; CHECK: attributes #2 = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; CHECK: attributes #3 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 
-; CHECK: !0 = !{i64 0, i64 1}
-; CHECK: !1 = !{i64 4, i64 5}
+; CHECK: !0 = !{i32 0, i32 1}
+; CHECK: !1 = !{i32 4, i32 5}
 ; CHECK: !2 = !{i32 0}
 ; CHECK: !3 = !{i32 1}
 ; CHECK: !4 = !{i32 2}

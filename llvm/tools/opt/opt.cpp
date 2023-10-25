@@ -500,10 +500,36 @@ int main(int argc, char **argv) {
   std::unique_ptr<ToolOutputFile> RemarksFile = std::move(*RemarksFileOrErr);
 
   // Load the input module...
-  auto SetDataLayout = [](StringRef, StringRef) -> std::optional<std::string> {
-    if (ClDataLayout.empty())
+  auto SetDataLayout = [&](StringRef IRTriple,
+                           StringRef IRLayout) -> std::optional<std::string> {
+    // Data layout specified on the command line has the highest priority.
+    if (!ClDataLayout.empty())
+      return ClDataLayout;
+    // If an explicit data layout is already defined in the IR, don't infer.
+    if (!IRLayout.empty())
       return std::nullopt;
-    return ClDataLayout;
+
+    // If an explicit triple was specified (either in the IR or on the
+    // command line), use that to infer the default data layout. However, the
+    // command line target triple should override the IR file target triple.
+    std::string TripleStr =
+        TargetTriple.empty() ? IRTriple.str() : Triple::normalize(TargetTriple);
+    // If the triple string is still empty, we don't fall back to
+    // sys::getDefaultTargetTriple() since we do not want to have differing
+    // behaviour dependent on the configured default triple. Therefore, if the
+    // user did not pass -mtriple or define an explicit triple/datalayout in
+    // the IR, we should default to an empty (default) DataLayout.
+    if (TripleStr.empty())
+      return std::nullopt;
+    // Otherwise we infer the DataLayout from the target machine.
+    Expected<std::unique_ptr<TargetMachine>> ExpectedTM =
+        codegen::createTargetMachineForTriple(TripleStr, GetCodeGenOptLevel());
+    if (!ExpectedTM) {
+      errs() << argv[0] << ": warning: failed to infer data layout: "
+             << toString(ExpectedTM.takeError()) << "\n";
+      return std::nullopt;
+    }
+    return (*ExpectedTM)->createDataLayout().getStringRepresentation();
   };
   std::unique_ptr<Module> M;
   if (NoUpgradeDebugInfo)
@@ -531,7 +557,7 @@ int main(int argc, char **argv) {
     }
   }
 
-  // If we are supposed to override the target triple or data layout, do so now.
+  // If we are supposed to override the target triple, do so now.
   if (!TargetTriple.empty())
     M->setTargetTriple(Triple::normalize(TargetTriple));
 

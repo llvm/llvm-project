@@ -56,7 +56,7 @@ define void @a() {
 ; CHECK-NEXT:  b:
 ; CHECK-NEXT:    br label [[C:%.*]]
 ; CHECK:       c:
-; CHECK-NEXT:    store i64 undef, ptr null, align 4
+; CHECK-NEXT:    store i64 undef, ptr null, align 8
 ; CHECK-NEXT:    br label [[E:%.*]]
 ; CHECK:       e:
 ; CHECK-NEXT:    store ptr undef, ptr null, align 8
@@ -93,9 +93,9 @@ define void @widget(ptr %arg) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[TMP3]], 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[BB7]], label [[BB5:%.*]]
 ; CHECK:       bb5:
-; CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr null, align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr null, align 8
 ; CHECK-NEXT:    call void @quux()
-; CHECK-NEXT:    store i64 [[TMP6]], ptr undef, align 4
+; CHECK-NEXT:    store i64 [[TMP6]], ptr undef, align 8
 ; CHECK-NEXT:    br label [[BB7]]
 ; CHECK:       bb7:
 ; CHECK-NEXT:    [[TMP8]] = add i64 [[TMP3]], 1

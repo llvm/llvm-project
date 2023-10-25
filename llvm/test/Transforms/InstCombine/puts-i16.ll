@@ -14,7 +14,7 @@ declare i16 @puts(ptr)
 define void @xform_puts(i16 %c) {
 ; Transform puts("") to putchar("\n").
 ; AVR-LABEL: @xform_puts(
-; AVR-NEXT:    [[PUTCHAR:%.*]] = call i16 @putchar(i16 10)
+; AVR-NEXT:    [[PUTCHAR:%.*]] = call addrspace(1) i16 @putchar(i16 10)
 ; AVR-NEXT:    ret void
 ;
 ; MSP430-LABEL: @xform_puts(

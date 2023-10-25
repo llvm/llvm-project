@@ -12,17 +12,17 @@ declare void @sink(i16)
 
 define void @fold_isascii(i16 %c) {
 ; AVR-LABEL: @fold_isascii(
-; AVR-NEXT:    call void @sink(i16 1)
-; AVR-NEXT:    call void @sink(i16 1)
-; AVR-NEXT:    call void @sink(i16 1)
-; AVR-NEXT:    call void @sink(i16 0)
-; AVR-NEXT:    call void @sink(i16 0)
-; AVR-NEXT:    call void @sink(i16 0)
-; AVR-NEXT:    call void @sink(i16 0)
-; AVR-NEXT:    call void @sink(i16 0)
+; AVR-NEXT:    call addrspace(1) void @sink(i16 1)
+; AVR-NEXT:    call addrspace(1) void @sink(i16 1)
+; AVR-NEXT:    call addrspace(1) void @sink(i16 1)
+; AVR-NEXT:    call addrspace(1) void @sink(i16 0)
+; AVR-NEXT:    call addrspace(1) void @sink(i16 0)
+; AVR-NEXT:    call addrspace(1) void @sink(i16 0)
+; AVR-NEXT:    call addrspace(1) void @sink(i16 0)
+; AVR-NEXT:    call addrspace(1) void @sink(i16 0)
 ; AVR-NEXT:    [[ISASCII:%.*]] = icmp ult i16 [[C:%.*]], 128
 ; AVR-NEXT:    [[IC:%.*]] = zext i1 [[ISASCII]] to i16
-; AVR-NEXT:    call void @sink(i16 [[IC]])
+; AVR-NEXT:    call addrspace(1) void @sink(i16 [[IC]])
 ; AVR-NEXT:    ret void
 ;
 ; MSP430-LABEL: @fold_isascii(

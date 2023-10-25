@@ -329,7 +329,7 @@ define void @neg_loads() "kernel" {
 define void @pos_priv_mem() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@pos_priv_mem
 ; CHECK-SAME: () #[[ATTR4]] {
-; CHECK-NEXT:    [[ARG:%.*]] = load ptr addrspace(5), ptr @GPtr5, align 8
+; CHECK-NEXT:    [[ARG:%.*]] = load ptr addrspace(5), ptr @GPtr5, align 4
 ; CHECK-NEXT:    [[LOC:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[A:%.*]] = load i32, ptr @PG1, align 4
 ; CHECK-NEXT:    store i32 [[A]], ptr [[LOC]], align 4

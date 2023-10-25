@@ -33,16 +33,12 @@ define i1 @test_cmpxchg_seq_cst(ptr %addr, i128 %desire, i128 %new) {
 ; PWR7-NEXT:    [[TMP0:%.*]] = alloca i128, align 8
 ; PWR7-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr [[TMP0]])
 ; PWR7-NEXT:    store i128 [[DESIRE:%.*]], ptr [[TMP0]], align 8
-; PWR7-NEXT:    [[TMP1:%.*]] = alloca i128, align 8
-; PWR7-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr [[TMP1]])
-; PWR7-NEXT:    store i128 [[NEW:%.*]], ptr [[TMP1]], align 8
-; PWR7-NEXT:    [[TMP2:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 16, ptr [[ADDR:%.*]], ptr [[TMP0]], ptr [[TMP1]], i32 5, i32 5)
-; PWR7-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr [[TMP1]])
-; PWR7-NEXT:    [[TMP3:%.*]] = load i128, ptr [[TMP0]], align 8
+; PWR7-NEXT:    [[TMP1:%.*]] = call zeroext i1 @__atomic_compare_exchange_16(ptr [[ADDR:%.*]], ptr [[TMP0]], i128 [[NEW:%.*]], i32 5, i32 5)
+; PWR7-NEXT:    [[TMP2:%.*]] = load i128, ptr [[TMP0]], align 8
 ; PWR7-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr [[TMP0]])
-; PWR7-NEXT:    [[TMP4:%.*]] = insertvalue { i128, i1 } poison, i128 [[TMP3]], 0
-; PWR7-NEXT:    [[TMP5:%.*]] = insertvalue { i128, i1 } [[TMP4]], i1 [[TMP2]], 1
-; PWR7-NEXT:    [[SUCC:%.*]] = extractvalue { i128, i1 } [[TMP5]], 1
+; PWR7-NEXT:    [[TMP3:%.*]] = insertvalue { i128, i1 } poison, i128 [[TMP2]], 0
+; PWR7-NEXT:    [[TMP4:%.*]] = insertvalue { i128, i1 } [[TMP3]], i1 [[TMP1]], 1
+; PWR7-NEXT:    [[SUCC:%.*]] = extractvalue { i128, i1 } [[TMP4]], 1
 ; PWR7-NEXT:    ret i1 [[SUCC]]
 ;
 entry:
