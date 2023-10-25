@@ -2683,6 +2683,7 @@ MachineInstr *RISCVInstrInfo::convertToThreeAddress(MachineInstr &MI,
               .add(MI.getOperand(3))
               .add(MI.getOperand(4))
               .add(MI.getOperand(5));
+    break;
   }
   }
   MIB.copyImplicitOps(MI);
