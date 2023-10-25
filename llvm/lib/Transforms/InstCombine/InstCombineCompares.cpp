@@ -3952,14 +3952,6 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstantNotInt(ICmpInst &I) {
     return nullptr;
 
   switch (LHSI->getOpcode()) {
-  case Instruction::GetElementPtr:
-    // icmp pred GEP (P, int 0, int 0, int 0), null -> icmp pred P, null
-    if (RHSC->isNullValue() &&
-        cast<GetElementPtrInst>(LHSI)->hasAllZeroIndices())
-      return new ICmpInst(
-          I.getPredicate(), LHSI->getOperand(0),
-          Constant::getNullValue(LHSI->getOperand(0)->getType()));
-    break;
   case Instruction::PHI:
     if (Instruction *NV = foldOpIntoPhi(I, cast<PHINode>(LHSI)))
       return NV;
