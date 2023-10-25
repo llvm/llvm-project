@@ -469,9 +469,9 @@ def NVVM_ElectSyncOp : NVVM_Op<"elect.sync",
         "{                                  \n"
         ".reg .u32 rx;                      \n"
         ".reg .pred px;                     \n"
-        " mov.u32 %0, 0;                    \n"
+        " mov.pred %0, 0;                   \n"
         "    elect.sync rx | px, 0xFFFFFFFF;\n"
-        "@px mov.u32 %0, 1;                 \n"
+        "@px mov.pred %0, 1;                \n"
         "}\n"
       ); 
     }
