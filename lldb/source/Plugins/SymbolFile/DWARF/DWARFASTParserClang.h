@@ -199,9 +199,6 @@ protected:
                         const lldb_private::plugin::dwarf::DWARFDIE &die,
                         ParsedDWARFTypeAttributes &attrs);
 
-  lldb_private::Type *
-  GetTypeForDIE(const lldb_private::plugin::dwarf::DWARFDIE &die);
-
   clang::Decl *
   GetClangDeclForDIE(const lldb_private::plugin::dwarf::DWARFDIE &die);
 
