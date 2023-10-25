@@ -2521,8 +2521,10 @@ void genACCSetOp(Fortran::lower::AbstractConverter &converter,
 
   auto op = createSimpleOp<mlir::acc::SetOp>(builder, currentLocation, operands,
                                              operandSegments);
-  if (!deviceTypes.empty())
+  if (!deviceTypes.empty()) {
+    assert(deviceTypes.size() == 1 && "expect only one value for acc.set");
     op.setDeviceTypeAttr(mlir::cast<mlir::acc::DeviceTypeAttr>(deviceTypes[0]));
+  }
 }
 
 static void
