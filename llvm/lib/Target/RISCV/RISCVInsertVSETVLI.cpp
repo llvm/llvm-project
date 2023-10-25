@@ -1300,8 +1300,10 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
   }
 }
 
-/// Return true if the VL value configured must be equal to the requested one.
-static bool hasFixedResult(const VSETVLIInfo &Info, const RISCVSubtarget &ST) {
+/// Return true if the VL value configured by a vset(i)vli with the
+/// provided Info must be equal to the requested AVL.  That is, that
+/// AVL <= VLMAX.
+static bool willVLBeAVL(const VSETVLIInfo &Info, const RISCVSubtarget &ST) {
   if (!Info.hasAVLImm())
     // VLMAX is always the same value.
     // TODO: Could extend to other registers by looking at the associated vreg
@@ -1358,7 +1360,7 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
     return;
 
   // If VL can be less than AVL, then we can't reduce the frequency of exec.
-  if (!hasFixedResult(AvailableInfo, ST))
+  if (!willVLBeAVL(AvailableInfo, ST))
     return;
 
   // Model the effect of changing the input state of the block MBB to
