@@ -18,7 +18,8 @@
 
 
 #  if defined(_LIBCPP_EXCEPTION_PTR_DIRECT_INIT)
-extern "C" {
+extern "C"
+{
     void* __cxa_allocate_exception(size_t) throw();
     void __cxa_free_exception(void*) throw();
 
@@ -35,7 +36,9 @@ struct exception_ptr
 {
     void* __ptr_;
 
-    exception_ptr(void* obj) noexcept;
+#  if defined(_LIBCPP_EXCEPTION_PTR_DIRECT_INIT)
+    exception_ptr(void*) noexcept;
+#  endif
     exception_ptr(const exception_ptr&) noexcept;
     exception_ptr& operator=(const exception_ptr&) noexcept;
     ~exception_ptr() noexcept;
@@ -65,25 +68,28 @@ exception_ptr& exception_ptr::operator=(const exception_ptr& other) noexcept
 }
 
 #  if defined(_LIBCPP_EXCEPTION_PTR_DIRECT_INIT)
-void *exception_ptr::__init_native_exception(size_t size, type_info *tinfo, void (*dest)(void *)) noexcept
+void *exception_ptr::__init_native_exception(size_t size, type_info* tinfo, void (*dest)(void*)) noexcept
 {
-    void *(*cxa_init_primary_exception_fn)(void *, std::type_info *, void(*)(void*)) = __cxa_init_primary_exception;
-    if (cxa_init_primary_exception_fn != nullptr) {
-        void *__ex = __cxa_allocate_exception(size);
+    decltype(__cxa_init_primary_exception)* cxa_init_primary_exception_fn = __cxa_init_primary_exception;
+    if (cxa_init_primary_exception_fn != nullptr)
+    {
+        void* __ex = __cxa_allocate_exception(size);
         (void)cxa_init_primary_exception_fn(__ex, tinfo, dest);
         return __ex;
     }
-    else {
+    else
+    {
         return nullptr;
     }
 }
 
-void exception_ptr::__free_native_exception(void *thrown_object) noexcept
+void exception_ptr::__free_native_exception(void* thrown_object) noexcept
 {
     __cxa_free_exception(thrown_object);
 }
 
-exception_ptr exception_ptr::__from_native_exception_pointer(void *__e) noexcept {
+exception_ptr exception_ptr::__from_native_exception_pointer(void* __e) noexcept
+{
     exception_ptr ptr{};
     new (reinterpret_cast<void*>(&ptr)) __exception_ptr::exception_ptr(__e);
 
