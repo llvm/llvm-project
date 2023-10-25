@@ -81,8 +81,8 @@ end subroutine single_allocate
 ! CHECK:             %[[X_PVT_DECL:.*]]:2 = hlfir.declare %[[X_PVT]] {uniq_name = "_QFsingle_privatizationEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:             %[[Y_PVT:.*]] = fir.alloca f64 {bindc_name = "y", pinned, uniq_name = "_QFsingle_privatizationEy"}
 ! CHECK:             %[[Y_PVT_DECL:.*]]:2 = hlfir.declare %[[Y_PVT]] {uniq_name = "_QFsingle_privatizationEy"} : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
-! CHECK:             %[[Y_LOAD:.*]] = fir.load %[[Y_DECL]]#1 : !fir.ref<f64>
-! CHECK:             fir.store %[[Y_LOAD]] to %[[Y_PVT_DECL]]#1 : !fir.ref<f64>
+! CHECK:             %[[Y_LOAD:.*]] = fir.load %[[Y_DECL]]#0 : !fir.ref<f64>
+! CHECK:             hlfir.assign %[[Y_LOAD]] to %[[Y_PVT_DECL]]#0 temporary_lhs : f64, !fir.ref<f64>
 ! CHECK:             fir.call @_QPbar(%[[X_PVT_DECL]]#1, %[[Y_PVT_DECL]]#1) fastmath<contract> : (!fir.ref<f32>, !fir.ref<f64>) -> ()
 ! CHECK:           omp.terminator
 ! CHECK:         }
@@ -109,8 +109,8 @@ end subroutine
 ! CHECK:             %[[X_PVT_DECL:.*]]:2 = hlfir.declare %[[X_PVT]] {uniq_name = "_QFsingle_privatization2Ex"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:             %[[Y_PVT:.*]] = fir.alloca f64 {bindc_name = "y", pinned, uniq_name = "_QFsingle_privatization2Ey"}
 ! CHECK:             %[[Y_PVT_DECL:.*]]:2 = hlfir.declare %[[Y_PVT]] {uniq_name = "_QFsingle_privatization2Ey"} : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
-! CHECK:             %[[Y_LOAD:.*]] = fir.load %[[Y_DECL]]#1 : !fir.ref<f64>
-! CHECK:             fir.store %[[Y_LOAD]] to %[[Y_PVT_DECL]]#1 : !fir.ref<f64>
+! CHECK:             %[[Y_LOAD:.*]] = fir.load %[[Y_DECL]]#0 : !fir.ref<f64>
+! CHECK:             hlfir.assign %[[Y_LOAD]] to %[[Y_PVT_DECL]]#0 temporary_lhs : f64, !fir.ref<f64>
 ! CHECK:             fir.call @_QPbar(%[[X_PVT_DECL]]#1, %[[Y_PVT_DECL]]#1) fastmath<contract> : (!fir.ref<f32>, !fir.ref<f64>) -> ()
 ! CHECK:             omp.terminator
 ! CHECK:           }
