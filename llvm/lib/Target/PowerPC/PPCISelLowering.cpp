@@ -5023,7 +5023,13 @@ bool PPCTargetLowering::IsEligibleForTailCallOptimization(
     const GlobalValue *CalleeGV, CallingConv::ID CalleeCC,
     CallingConv::ID CallerCC, bool isVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins) const {
-  if (!getTargetMachine().Options.GuaranteedTailCallOpt)
+  bool TailCallOpt = getTargetMachine().Options.GuaranteedTailCallOpt;
+
+  // Enable SCO on AIX.
+  if (!TailCallOpt && !Subtarget.isAIXABI())
+    return false;
+
+  if (DisableSCO)
     return false;
 
   // Variable argument functions are not supported.
@@ -7411,9 +7417,15 @@ SDValue PPCTargetLowering::LowerCall_AIX(
   int SPDiff =
       IsSibCall ? 0 : CalculateTailCallSPDiff(DAG, CFlags.IsTailCall, NumBytes);
 
+  // To protect arguments on the stack from being clobbered in a tail call,
+  // force all the loads to happen before doing any other lowering.
+  if (CFlags.IsTailCall)
+    Chain = DAG.getStackArgumentTokenFactor(Chain);
+
   // Adjust the stack pointer for the new arguments...
   // These operations are automatically eliminated by the prolog/epilog pass.
-  Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, dl);
+  if (!IsSibCall)
+    Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, dl);
   SDValue CallSeqStart = Chain;
   SDValue LROp, FPOp;
   Chain = EmitTailCallLoadFPAndRetAddr(DAG, SPDiff, Chain, LROp, FPOp, dl);
