@@ -3997,7 +3997,7 @@ void Parser::ParseDeclarationSpecifiers(
       break;
     case tok::kw_thread_local:
       if (getLangOpts().C2x)
-        Diag(Tok, diag::warn_c23_compat_keyword) << Tok.getName();
+        Diag(Tok, diag::warn_c2x_compat_keyword) << Tok.getName();
       // We map thread_local to _Thread_local in C23 mode so it retains the C
       // semantics rather than getting the C++ semantics.
       // FIXME: diagnostics will show _Thread_local when the user wrote
