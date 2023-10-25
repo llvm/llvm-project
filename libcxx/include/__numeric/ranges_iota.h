@@ -14,6 +14,7 @@
 #include <__config>
 #include <__ranges/concepts.h>
 #include <__utility/as_const.h>
+#include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -26,10 +27,12 @@ namespace ranges {
 template <typename _Out, typename _Tp>
 using iota_result = ranges::out_value_result<_Out, _Tp>;
 
+namespace __ranges_iota {
 struct __iota_fn {
-  template <input_or_output_iterator _Out, sentinel_for<_Out> _Sent, weakly_incrementable _Tp>
-    requires indirectly_writable<_Out, const _Tp&>
-  constexpr iota_result<_Out, _Tp> operator()(_Out __first, _Sent __last, _Tp __value) const {
+private:
+  // Private helper function
+  template <class _Out, class _Sent, class _Tp>
+  _LIBCPP_HIDE_FROM_ABI static constexpr iota_result<_Out, _Tp> __iota_impl(_Out __first, _Sent __last, _Tp __value) {
     while (__first != __last) {
       *__first = std::as_const(__value);
       ++__first;
@@ -38,13 +41,24 @@ struct __iota_fn {
     return {std::move(__first), std::move(__value)};
   }
 
+public:
+  // Public facing interfaces
+  template <input_or_output_iterator _Out, sentinel_for<_Out> _Sent, weakly_incrementable _Tp>
+    requires indirectly_writable<_Out, const _Tp&>
+  constexpr iota_result<_Out, _Tp> operator()(_Out __first, _Sent __last, _Tp __value) const {
+    return __iota_impl(std::move(__first), std::move(__last), std::move(__value));
+  }
+
   template <weakly_incrementable _Tp, ranges::output_range<const _Tp&> _Range>
   constexpr iota_result<ranges::borrowed_iterator_t<_Range>, _Tp> operator()(_Range&& __r, _Tp __value) const {
-    return (*this)(ranges::begin(__r), ranges::end(__r), std::move(__value));
+    return __iota_impl(ranges::begin(__r), ranges::end(__r), std::move(__value));
   }
 };
+} // namespace __ranges_iota
 
-inline constexpr __iota_fn iota{};
+inline namespace __cpo {
+inline constexpr auto iota = __ranges_iota::__iota_fn{};
+} // namespace __cpo
 } // namespace ranges
 
 #endif // _LIBCPP_STD_VER >= 23
