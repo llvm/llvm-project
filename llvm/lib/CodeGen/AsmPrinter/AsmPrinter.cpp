@@ -730,10 +730,21 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   if (GV->isTagged()) {
     Triple T = TM.getTargetTriple();
 
-    if (T.getArch() != Triple::aarch64 || !T.isAndroid())
+    auto arch = T.getArch();
+
+    bool supportMemtagGlobals = false;
+    
+    if (arch == Triple::wasm64) {
+      supportMemtagGlobals = true;
+    }
+    else if (arch == Triple::aarch64 && T.isAndroid()) {
+      supportMemtagGlobals = true;
+    }
+
+    if (supportMemtagGlobals)
       OutContext.reportError(SMLoc(),
                              "tagged symbols (-fsanitize=memtag-globals) are "
-                             "only supported on AArch64 Android");
+                             "only supported on AArch64 Android or Wasm64");
     OutStreamer->emitSymbolAttribute(EmittedSym, MAI->getMemtagAttr());
   }
 
