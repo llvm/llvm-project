@@ -95,8 +95,6 @@ static bool TypeHasMayAlias(QualType QTy) {
 
 /// Check if the given type is a valid base type to be used in access tags.
 static bool isValidBaseType(QualType QTy) {
-  if (QTy->isReferenceType())
-    return false;
   if (const RecordType *TTy = QTy->getAs<RecordType>()) {
     const RecordDecl *RD = TTy->getDecl()->getDefinition();
     // Incomplete types are not valid base access types.
@@ -331,8 +329,20 @@ CodeGenTBAA::getTBAAStructInfo(QualType QTy) {
   return StructMetadataCache[Ty] = nullptr;
 }
 
-llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
-  if (auto *TTy = dyn_cast<RecordType>(Ty)) {
+llvm::MDNode *CodeGenTBAA::getBaseTypeInfo(QualType QTy) {
+  assert(isValidBaseType(QTy) && "Type is not a valid base type");
+
+  const RecordType *Ty =
+      cast<RecordType>(Context.getCanonicalType(QTy).getTypePtr());
+
+  // null is a valid value in the cache.
+  auto I = BaseTypeMetadataCache.find(Ty);
+  if (I != BaseTypeMetadataCache.end())
+    return I->second;
+
+  // This lambda can recursively call us, so may add new nodes to the cache, and
+  // hence invalidate previously obtained iterators.
+  auto ComputeBaseTypeInfo = [&](const RecordType *TTy) -> llvm::MDNode * {
     const RecordDecl *RD = TTy->getDecl()->getDefinition();
     const ASTRecordLayout &Layout = Context.getASTRecordLayout(RD);
     using TBAAStructField = llvm::MDBuilder::TBAAStructField;
@@ -342,7 +352,7 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
       // field. Virtual bases are more complex and omitted, but avoid an
       // incomplete view for NewStructPathTBAA.
       if (CodeGenOpts.NewStructPathTBAA && CXXRD->getNumVBases() != 0)
-        return BaseTypeMetadataCache[Ty] = nullptr;
+        return nullptr;
       for (const CXXBaseSpecifier &B : CXXRD->bases()) {
         if (B.isVirtual())
           continue;
@@ -354,7 +364,7 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
                                      ? getBaseTypeInfo(BaseQTy)
                                      : getTypeInfo(BaseQTy);
         if (!TypeNode)
-          return BaseTypeMetadataCache[Ty] = nullptr;
+          return nullptr;
         uint64_t Offset = Layout.getBaseClassOffset(BaseRD).getQuantity();
         uint64_t Size =
             Context.getASTRecordLayout(BaseRD).getDataSize().getQuantity();
@@ -363,9 +373,8 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
       }
       // The order in which base class subobjects are allocated is unspecified,
       // so may differ from declaration order. In particular, Itanium ABI will
-      // allocate a primary base first.
-      // Since we exclude empty subobjects, the objects are not overlapping and
-      // their offsets are unique.
+      // allocate a primary base first. Since we exclude empty subobjects, the
+      // objects are not overlapping and their offsets are unique.
       llvm::sort(Fields,
                  [](const TBAAStructField &A, const TBAAStructField &B) {
                    return A.Offset < B.Offset;
@@ -375,57 +384,57 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
       if (Field->isZeroSize(Context) || Field->isUnnamedBitfield())
         continue;
       QualType FieldQTy = Field->getType();
-      llvm::MDNode *TypeNode = isValidBaseType(FieldQTy) ?
-          getBaseTypeInfo(FieldQTy) : getTypeInfo(FieldQTy);
+      llvm::MDNode *TypeNode = isValidBaseType(FieldQTy)
+                                   ? getBaseTypeInfo(FieldQTy)
+                                   : getTypeInfo(FieldQTy);
       if (!TypeNode)
-        return BaseTypeMetadataCache[Ty] = nullptr;
+        return nullptr;
 
       uint64_t BitOffset = Layout.getFieldOffset(Field->getFieldIndex());
       uint64_t Offset = Context.toCharUnitsFromBits(BitOffset).getQuantity();
       uint64_t Size = Context.getTypeSizeInChars(FieldQTy).getQuantity();
-      Fields.push_back(llvm::MDBuilder::TBAAStructField(Offset, Size,
-                                                        TypeNode));
+      Fields.push_back(
+          llvm::MDBuilder::TBAAStructField(Offset, Size, TypeNode));
     }
 
     SmallString<256> OutName;
     if (Features.CPlusPlus) {
       // Don't use the mangler for C code.
       llvm::raw_svector_ostream Out(OutName);
-      MContext.mangleCanonicalTypeName(QualType(Ty, 0), Out);
+      MContext.mangleCanonicalTypeName(QualType(TTy, 0), Out);
     } else {
       OutName = RD->getName();
     }
 
     if (CodeGenOpts.NewStructPathTBAA) {
       llvm::MDNode *Parent = getChar();
-      uint64_t Size = Context.getTypeSizeInChars(Ty).getQuantity();
+      uint64_t Size = Context.getTypeSizeInChars(TTy).getQuantity();
       llvm::Metadata *Id = MDHelper.createString(OutName);
       return MDHelper.createTBAATypeNode(Parent, Size, Id, Fields);
     }
 
     // Create the struct type node with a vector of pairs (offset, type).
-    SmallVector<std::pair<llvm::MDNode*, uint64_t>, 4> OffsetsAndTypes;
+    SmallVector<std::pair<llvm::MDNode *, uint64_t>, 4> OffsetsAndTypes;
     for (const auto &Field : Fields)
-        OffsetsAndTypes.push_back(std::make_pair(Field.Type, Field.Offset));
+      OffsetsAndTypes.push_back(std::make_pair(Field.Type, Field.Offset));
     return MDHelper.createTBAAStructTypeNode(OutName, OffsetsAndTypes);
-  }
+  };
 
-  return nullptr;
+  // First calculate the metadata, before recomputing the insertion point, as
+  // the helper can recursively call us.
+  llvm::MDNode *TypeNode = ComputeBaseTypeInfo(Ty);
+  LLVM_ATTRIBUTE_UNUSED auto inserted =
+      BaseTypeMetadataCache.try_emplace(Ty, TypeNode);
+  assert(inserted.second && "BaseType metadata was already inserted");
+
+  return TypeNode;
 }
 
-llvm::MDNode *CodeGenTBAA::getBaseTypeInfo(QualType QTy) {
+llvm::MDNode *CodeGenTBAA::maybeGetBaseTypeInfo(QualType QTy) {
   if (!isValidBaseType(QTy))
     return nullptr;
 
-  const Type *Ty = Context.getCanonicalType(QTy).getTypePtr();
-  if (llvm::MDNode *N = BaseTypeMetadataCache[Ty])
-    return N;
-
-  // Note that the following helper call is allowed to add new nodes to the
-  // cache, which invalidates all its previously obtained iterators. So we
-  // first generate the node for the type and then add that node to the cache.
-  llvm::MDNode *TypeNode = getBaseTypeInfoHelper(Ty);
-  return BaseTypeMetadataCache[Ty] = TypeNode;
+  return getBaseTypeInfo(QTy);
 }
 
 llvm::MDNode *CodeGenTBAA::getAccessTagInfo(TBAAAccessInfo Info) {

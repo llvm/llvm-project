@@ -162,9 +162,9 @@ class CodeGenTBAA {
   /// to describe accesses to objects of the given type.
   llvm::MDNode *getTypeInfoHelper(const Type *Ty);
 
-  /// getBaseTypeInfoHelper - An internal helper function to generate metadata
-  /// used to describe accesses to objects of the given base type.
-  llvm::MDNode *getBaseTypeInfoHelper(const Type *Ty);
+  /// getBaseTypeInfo - Lazily compute metadata that describes the given base
+  /// access type. The type must be suitable.
+  llvm::MDNode *getBaseTypeInfo(QualType QTy);
 
 public:
   CodeGenTBAA(ASTContext &Ctx, llvm::Module &M, const CodeGenOptions &CGO,
@@ -187,9 +187,10 @@ public:
   /// the given type.
   llvm::MDNode *getTBAAStructInfo(QualType QTy);
 
-  /// getBaseTypeInfo - Get metadata that describes the given base access type.
-  /// Return null if the type is not suitable for use in TBAA access tags.
-  llvm::MDNode *getBaseTypeInfo(QualType QTy);
+  /// maybeGetBaseTypeInfo - Get metadata that describes the given base access
+  /// type. Return null if the type is not suitable for use in TBAA access
+  /// tags.
+  llvm::MDNode *maybeGetBaseTypeInfo(QualType QTy);
 
   /// getAccessTagInfo - Get TBAA tag for a given memory access.
   llvm::MDNode *getAccessTagInfo(TBAAAccessInfo Info);
