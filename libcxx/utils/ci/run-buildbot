@@ -137,7 +137,7 @@ function generate-cmake-base() {
           -DLIBUNWIND_ENABLE_WERROR=YES \
           -DLIBCXX_ENABLE_CLANG_TIDY=${ENABLE_CLANG_TIDY} \
           ${ENABLE_STD_MODULES} \
-          -DLLVM_LIT_ARGS="-v --show-unsupported --xunit-xml-output test-results.xml --timeout=1500 --time-tests" \
+          -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests" \
           "${@}"
 }
 
@@ -372,7 +372,7 @@ bootstrapping-build)
           -DLLVM_TARGETS_TO_BUILD="host" \
           -DRUNTIMES_BUILD_ALLOW_DARWIN=ON \
           -DLLVM_ENABLE_ASSERTIONS=ON \
-          -DLLVM_LIT_ARGS="-v --show-unsupported --xunit-xml-output test-results.xml --timeout=1500 --time-tests"
+          -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests"
 
     echo "+++ Running the libc++ and libc++abi tests"
     ${NINJA} -vC "${BUILD_DIR}" check-runtimes
