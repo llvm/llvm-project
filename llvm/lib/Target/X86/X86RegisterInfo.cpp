@@ -616,6 +616,32 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
+unsigned X86RegisterInfo::getNumSupportedRegs(const MachineFunction &MF) const {
+  const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
+  // All existing Intel CPUs that support AMX support AVX512 and all existing
+  // Intel CPUs that support APX support AMX. AVX512 implies AVX.
+  //
+  // We enumerate the registers in X86GenRegisterInfo.inc in this order:
+  //
+  // Registers before AVX512,
+  // AVX512 registers (X/YMM16-31, ZMM0-31, K registers)
+  // AMX registers (TMM)
+  // APX registers (R16-R31)
+  //
+  // and try to return the minimum number of registers supported by the target.
+
+  bool HasAVX = ST.hasAVX();
+  bool HasAVX512 = ST.hasAVX512();
+  bool HasAMX = ST.hasAMXTILE();
+  if (HasAMX)
+    return X86::TMM7 + 1;
+  if (HasAVX512)
+    return X86::K6_K7 + 1;
+  if (HasAVX)
+    return X86::YMM15 + 1;
+  return X86::YMM0;
+}
+
 bool X86RegisterInfo::isArgumentRegister(const MachineFunction &MF,
                                          MCRegister Reg) const {
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
