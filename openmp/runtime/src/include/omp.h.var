@@ -502,7 +502,7 @@
     extern int __KAI_KMPC_CONVENTION omp_in_explicit_task(void);
 
     /* LLVM Extensions */
-    extern void *llvm_omp_target_dynamic_shared_alloc();
+    extern void *llvm_omp_target_dynamic_shared_alloc(void);
 
 #   undef __KAI_KMPC_CONVENTION
 #   undef __KMP_IMP
