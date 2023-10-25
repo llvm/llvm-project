@@ -18,8 +18,6 @@
 #define DST_80
 #include "fp_trunc_impl.inc"
 
-COMPILER_RT_ABI long double __trunctfxf2(tf_float a) {
-  return __truncXfYf2__(a);
-}
+COMPILER_RT_ABI xf_float __trunctfxf2(tf_float a) { return __truncXfYf2__(a); }
 
 #endif

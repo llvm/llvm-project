@@ -50,7 +50,7 @@ static inline int src_rep_t_clz_impl(src_rep_t a) {
 #define src_rep_t_clz src_rep_t_clz_impl
 
 #elif defined SRC_80
-typedef long double src_t;
+typedef xf_float src_t;
 typedef __uint128_t src_rep_t;
 #define SRC_REP_C (__uint128_t)
 // sign bit, exponent and significand occupy the lower 80 bits.
