@@ -898,9 +898,17 @@ mlir::Value gatherDataOperandAddrAndBounds(
                       builder, operandLocation, converter, compExv, baseAddr);
                 }
               } else {
-                // Scalar or full array.
-                if (const auto *dataRef{
-                        std::get_if<Fortran::parser::DataRef>(&designator.u)}) {
+                if (Fortran::parser::Unwrap<Fortran::parser::ArrayElement>(
+                        designator)) {
+                  // Single array element.
+                  fir::ExtendedValue compExv =
+                      converter.genExprAddr(operandLocation, *expr, stmtCtx);
+                  baseAddr = fir::getBase(compExv);
+                  asFortran << (*expr).AsFortran();
+                } else if (const auto *dataRef{
+                               std::get_if<Fortran::parser::DataRef>(
+                                   &designator.u)}) {
+                  // Scalar or full array.
                   const Fortran::parser::Name &name =
                       Fortran::parser::GetLastName(*dataRef);
                   fir::ExtendedValue dataExv =

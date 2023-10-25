@@ -26964,7 +26964,8 @@ Arguments:
 """"""""""
 
 The first argument is a pointer or vector of pointers. The second argument is
-an integer or vector of integers.
+an integer or vector of integers with the same bit width as the index type
+size of the first argument.
 
 Overview:
 """"""""""
@@ -26977,13 +26978,24 @@ to facilitate alias analysis and underlying-object detection.
 Semantics:
 """"""""""
 
-The result of ``ptrmask(ptr, mask)`` is equivalent to
-``getelementptr ptr, (ptrtoint(ptr) & mask) - ptrtoint(ptr)``. Both the returned
-pointer(s) and the first argument are based on the same underlying object (for more
-information on the *based on* terminology see
-:ref:`the pointer aliasing rules <pointeraliasing>`). If the bitwidth of the
-mask argument does not match the pointer size of the target, the mask is
-zero-extended or truncated accordingly.
+The result of ``ptrmask(%ptr, %mask)`` is equivalent to the following expansion,
+where ``iPtrIdx`` is the index type size of the pointer::
+
+    %intptr = ptrtoint ptr %ptr to iPtrIdx ; this may truncate
+    %masked = and iPtrIdx %intptr, %mask
+    %diff = sub iPtrIdx %masked, %intptr
+    %result = getelementptr i8, ptr %ptr, iPtrIdx %diff
+
+If the pointer index type size is smaller than the pointer type size, this
+implies that pointer bits beyond the index size are not affected by this
+intrinsic. For integral pointers, it behaves as if the mask were extended with
+1 bits to the pointer type size.
+
+Both the returned pointer(s) and the first argument are based on the same
+underlying object (for more information on the *based on* terminology see
+:ref:`the pointer aliasing rules <pointeraliasing>`).
+
+The intrinsic only captures the pointer argument through the return value.
 
 .. _int_threadlocal_address:
 

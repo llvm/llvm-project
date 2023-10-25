@@ -18,6 +18,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Target/SPIRV/SPIRVBinaryUtils.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
@@ -443,13 +444,13 @@ LogicalResult Serializer::prepareBasicType(
     if (failed(processType(loc, imageType.getElementType(), sampledTypeID)))
       return failure();
 
-    operands.push_back(sampledTypeID);
-    operands.push_back(static_cast<uint32_t>(imageType.getDim()));
-    operands.push_back(static_cast<uint32_t>(imageType.getDepthInfo()));
-    operands.push_back(static_cast<uint32_t>(imageType.getArrayedInfo()));
-    operands.push_back(static_cast<uint32_t>(imageType.getSamplingInfo()));
-    operands.push_back(static_cast<uint32_t>(imageType.getSamplerUseInfo()));
-    operands.push_back(static_cast<uint32_t>(imageType.getImageFormat()));
+    llvm::append_values(operands, sampledTypeID,
+                        static_cast<uint32_t>(imageType.getDim()),
+                        static_cast<uint32_t>(imageType.getDepthInfo()),
+                        static_cast<uint32_t>(imageType.getArrayedInfo()),
+                        static_cast<uint32_t>(imageType.getSamplingInfo()),
+                        static_cast<uint32_t>(imageType.getSamplerUseInfo()),
+                        static_cast<uint32_t>(imageType.getImageFormat()));
     return success();
   }
 
@@ -605,12 +606,11 @@ LogicalResult Serializer::prepareBasicType(
       auto attr = IntegerAttr::get(IntegerType::get(type.getContext(), 32), id);
       return prepareConstantInt(loc, attr);
     };
-    operands.push_back(elementTypeID);
-    operands.push_back(
-        getConstantOp(static_cast<uint32_t>(cooperativeMatrixType.getScope())));
-    operands.push_back(getConstantOp(cooperativeMatrixType.getRows()));
-    operands.push_back(getConstantOp(cooperativeMatrixType.getColumns()));
-    operands.push_back(
+    llvm::append_values(
+        operands, elementTypeID,
+        getConstantOp(static_cast<uint32_t>(cooperativeMatrixType.getScope())),
+        getConstantOp(cooperativeMatrixType.getRows()),
+        getConstantOp(cooperativeMatrixType.getColumns()),
         getConstantOp(static_cast<uint32_t>(cooperativeMatrixType.getUse())));
     return success();
   }
@@ -627,11 +627,11 @@ LogicalResult Serializer::prepareBasicType(
       auto attr = IntegerAttr::get(IntegerType::get(type.getContext(), 32), id);
       return prepareConstantInt(loc, attr);
     };
-    operands.push_back(elementTypeID);
-    operands.push_back(
-        getConstantOp(static_cast<uint32_t>(cooperativeMatrixType.getScope())));
-    operands.push_back(getConstantOp(cooperativeMatrixType.getRows()));
-    operands.push_back(getConstantOp(cooperativeMatrixType.getColumns()));
+    llvm::append_values(
+        operands, elementTypeID,
+        getConstantOp(static_cast<uint32_t>(cooperativeMatrixType.getScope())),
+        getConstantOp(cooperativeMatrixType.getRows()),
+        getConstantOp(cooperativeMatrixType.getColumns()));
     return success();
   }
 
@@ -646,12 +646,10 @@ LogicalResult Serializer::prepareBasicType(
       auto attr = IntegerAttr::get(IntegerType::get(type.getContext(), 32), id);
       return prepareConstantInt(loc, attr);
     };
-    operands.push_back(elementTypeID);
-    operands.push_back(getConstantOp(jointMatrixType.getRows()));
-    operands.push_back(getConstantOp(jointMatrixType.getColumns()));
-    operands.push_back(getConstantOp(
-        static_cast<uint32_t>(jointMatrixType.getMatrixLayout())));
-    operands.push_back(
+    llvm::append_values(
+        operands, elementTypeID, getConstantOp(jointMatrixType.getRows()),
+        getConstantOp(jointMatrixType.getColumns()),
+        getConstantOp(static_cast<uint32_t>(jointMatrixType.getMatrixLayout())),
         getConstantOp(static_cast<uint32_t>(jointMatrixType.getScope())));
     return success();
   }
@@ -663,8 +661,7 @@ LogicalResult Serializer::prepareBasicType(
       return failure();
     }
     typeEnum = spirv::Opcode::OpTypeMatrix;
-    operands.push_back(elementTypeID);
-    operands.push_back(matrixType.getNumColumns());
+    llvm::append_values(operands, elementTypeID, matrixType.getNumColumns());
     return success();
   }
 
@@ -1261,11 +1258,11 @@ LogicalResult Serializer::emitDecoration(uint32_t target,
                                          spirv::Decoration decoration,
                                          ArrayRef<uint32_t> params) {
   uint32_t wordCount = 3 + params.size();
-  decorations.push_back(
-      spirv::getPrefixedOpcode(wordCount, spirv::Opcode::OpDecorate));
-  decorations.push_back(target);
-  decorations.push_back(static_cast<uint32_t>(decoration));
-  decorations.append(params.begin(), params.end());
+  llvm::append_values(
+      decorations,
+      spirv::getPrefixedOpcode(wordCount, spirv::Opcode::OpDecorate), target,
+      static_cast<uint32_t>(decoration));
+  llvm::append_range(decorations, params);
   return success();
 }
 

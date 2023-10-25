@@ -43,8 +43,8 @@ C/C++ Language Potentially Breaking Changes
 
 - The default extension name for PCH generation (``-c -xc-header`` and ``-c
   -xc++-header``) is now ``.pch`` instead of ``.gch``.
-- ``-include a.h`` probing ``a.h.gch`` is deprecated. Change the extension name
-  to ``.pch`` or use ``-include-pch a.h.gch``.
+- ``-include a.h`` probing ``a.h.gch`` will now ignore ``a.h.gch`` if it is not
+  a clang pch file or a directory containing any clang pch file.
 - Fixed a bug that caused ``__has_cpp_attribute`` and ``__has_c_attribute``
   return incorrect values for some C++-11-style attributes. Below is a complete
   list of behavior changes.
@@ -105,7 +105,7 @@ C++ Specific Potentially Breaking Changes
   error in the next Clang release.
 
 - The flag `-fdelayed-template-parsing` won't be enabled by default with C++20
-  when targetting MSVC to match the behavior of MSVC. 
+  when targetting MSVC to match the behavior of MSVC.
   (`MSVC Docs <https://learn.microsoft.com/en-us/cpp/build/reference/permissive-standards-conformance?view=msvc-170>`_)
 
 ABI Changes in This Version
@@ -379,6 +379,25 @@ Improvements to Clang's diagnostics
   can sometimes lead to worse ordering.
 
 
+- When describing a warning/error in a function-style type conversion Clang underlines only until
+  the end of the expression we convert from. Now Clang underlines until the closing parenthesis.
+
+  Before:
+
+  .. code-block:: text
+
+    warning: cast from 'long (*)(const int &)' to 'decltype(fun_ptr)' (aka 'long (*)(int &)') converts to incompatible function type [-Wcast-function-type-strict]
+    24 | return decltype(fun_ptr)( f_ptr /*comment*/);
+       |        ^~~~~~~~~~~~~~~~~~~~~~~~
+
+  After:
+
+  .. code-block:: text
+
+    warning: cast from 'long (*)(const int &)' to 'decltype(fun_ptr)' (aka 'long (*)(int &)') converts to incompatible function type [-Wcast-function-type-strict]
+    24 | return decltype(fun_ptr)( f_ptr /*comment*/);
+       |        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 Bug Fixes in This Version
 -------------------------
 - Fixed an issue where a class template specialization whose declaration is
@@ -455,6 +474,10 @@ Bug Fixes in This Version
   cannot be used with ``Release`` mode builds. (`#68237 <https://github.com/llvm/llvm-project/issues/68237>`_).
 - Fix crash in evaluating ``constexpr`` value for invalid template function.
   Fixes (`#68542 <https://github.com/llvm/llvm-project/issues/68542>`_)
+- Clang will correctly evaluate ``noexcept`` expression for template functions
+  of template classes. Fixes
+  (`#68543 <https://github.com/llvm/llvm-project/issues/68543>`_,
+  `#42496 <https://github.com/llvm/llvm-project/issues/42496>`_)
 - Fixed an issue when a shift count larger than ``__INT64_MAX__``, in a right
   shift operation, could result in missing warnings about
   ``shift count >= width of type`` or internal compiler error.
@@ -594,6 +617,11 @@ Bug Fixes to C++ Support
   declaration definition. Fixes:
   (`#61763 <https://github.com/llvm/llvm-project/issues/61763>`_)
 
+- Fix a bug where implicit deduction guides are not correctly generated for nested template
+  classes. Fixes:
+  (`#46200 <https://github.com/llvm/llvm-project/issues/46200>`_)
+  (`#57812 <https://github.com/llvm/llvm-project/issues/57812>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
@@ -642,6 +670,11 @@ X86 Support
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
+
+- C++ function name mangling has been changed to align with the specification
+  (https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst).
+  This affects C++ functions with SVE ACLE parameters. Clang will use the old
+  manglings if ``-fclang-abi-compat=17`` or lower is  specified.
 
 Android Support
 ^^^^^^^^^^^^^^^

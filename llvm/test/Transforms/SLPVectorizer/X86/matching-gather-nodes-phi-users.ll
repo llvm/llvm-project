@@ -8,7 +8,7 @@
 ; YAML: Function:        test
 ; YAML: Args:
 ; YAML:   - String:          'Stores SLP vectorized with cost '
-; YAML:   - Cost:            '-3'
+; YAML:   - Cost:            '-6'
 ; YAML:   - String:          ' and with tree size '
 ; YAML:   - TreeSize:        '14'
 ; YAML: ...

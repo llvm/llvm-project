@@ -2215,8 +2215,8 @@ unsigned AffineForOp::getNumIterOperands() {
   return getNumOperands() - lbMap.getNumInputs() - ubMap.getNumInputs();
 }
 
-ValueRange AffineForOp::getYieldedValues() {
-  return cast<AffineYieldOp>(getBody()->getTerminator()).getOperands();
+MutableArrayRef<OpOperand> AffineForOp::getYieldedValuesMutable() {
+  return cast<AffineYieldOp>(getBody()->getTerminator()).getOperandsMutable();
 }
 
 void AffineForOp::print(OpAsmPrinter &p) {

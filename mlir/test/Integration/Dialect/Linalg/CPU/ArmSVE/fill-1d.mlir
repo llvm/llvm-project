@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-transform-dialect-interpreter -test-transform-dialect-erase-schedule -lower-vector-mask -one-shot-bufferize -test-lower-to-llvm | \
+// RUN: mlir-opt %s -transform-interpreter -test-transform-dialect-erase-schedule -lower-vector-mask -one-shot-bufferize -test-lower-to-llvm | \
 // RUN: %mcr_aarch64_cmd -e=entry -entry-point-result=void --march=aarch64 --mattr="+sve" -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils | \
 // RUN: FileCheck %s
 
@@ -46,10 +46,12 @@ func.func @entry() {
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.vectorize %0 vector_sizes [[4]] : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [[4]] : !transform.any_op
+    transform.yield
+  }
 }
 
 llvm.func @printCString(!llvm.ptr<i8>)

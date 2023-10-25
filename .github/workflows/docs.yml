@@ -17,30 +17,29 @@ on:
       - 'clang/docs/**'
       - 'clang-tools-extra/docs/**'
       - 'lldb/docs/**'
+      - 'libunwind/docs/**'
+      - 'libcxx/docs/**'
+      - 'libc/docs/**'
   pull_request:
     paths:
       - 'llvm/docs/**'
       - 'clang/docs/**'
       - 'clang-tools-extra/docs/**'
       - 'lldb/docs/**'
+      - 'libunwind/docs/**'
+      - 'libcxx/docs/**'
+      - 'libc/docs/**'
 
 jobs:
   check-docs-build:
     name: "Test documentation build"
     runs-on: ubuntu-latest
     steps:
-      # Fetch all the commits in a pull request + 1 so that the
-      # docs-changed-subprojects step won't pull them in itself in an extremely
-      # slow manner.
-      - name: Calculate number of commits to fetch (PR)
-        if: ${{ github.event_name == 'pull_request' }} 
-        run: echo "PR_FETCH_DEPTH=$(( ${{ github.event.pull_request.commits }} + 1 ))" >> "${GITHUB_ENV}"
-      - name: Fetch LLVM sources (PR)
-        if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: ${{ env.PR_FETCH_DEPTH }}
-      - name: Fetch LLVM sources (push)
+      # Don't fetch before checking for file changes to force the file changes
+      # action to use the Github API in pull requests. If it's a push to a
+      # branch we can't use the Github API to get the diff, so we need to have
+      # a local checkout beforehand.
+      - name: Fetch LLVM sources (Push)
         if: ${{ github.event_name == 'push' }}
         uses: actions/checkout@v4
         with:
@@ -58,6 +57,17 @@ jobs:
               - 'clang-tools-extra/docs/**'
             lldb:
               - 'lldb/docs/**'
+            libunwind:
+              - 'libunwind/docs/**'
+            libcxx:
+              - 'libcxx/docs/**'
+            libc:
+              - 'libc/docs/**'
+      - name: Fetch LLVM sources (PR)
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
       - name: Setup Python env
         uses: actions/setup-python@v4
         with:
@@ -91,4 +101,19 @@ jobs:
         run: |
           cmake -B lldb-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang;lldb" -DLLVM_ENABLE_SPHINX=ON ./llvm
           TZ=UTC ninja -C lldb-build docs-lldb-html docs-lldb-man
+      - name: Build libunwind docs
+        if: steps.docs-changed-subprojects.outputs.libunwind_any_changed == 'true'
+        run: |
+          cmake -B libunwind-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_RUNTIMES="libunwind" -DLLVM_ENABLE_SPHINX=ON ./runtimes
+          TZ=UTC ninja -C libunwind-build docs-libunwind-html
+      - name: Build libcxx docs
+        if: steps.docs-changed-subprojects.outputs.libcxx_any_changed == 'true'
+        run: |
+          cmake -B libcxx-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_RUNTIMES="libcxxabi;libcxx" -DLLVM_ENABLE_SPHINX=ON ./runtimes
+          TZ=UTC ninja -C libcxx-build docs-libcxx-html
+      - name: Build libc docs
+        if: steps.docs-changed-subprojects.outputs.libc_any_changed == 'true'
+        run: |
+          cmake -B libc-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_RUNTIMES="libc" -DLLVM_ENABLE_SPHINX=ON ./runtimes
+          TZ=UTC ninja -C docs-libc-html
 
