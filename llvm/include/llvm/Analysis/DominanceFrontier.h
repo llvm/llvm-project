@@ -39,7 +39,9 @@ class raw_ostream;
 template <class BlockT, bool IsPostDom>
 class DominanceFrontierBase {
 public:
-  using DomSetType = SetVector<BlockT *>;               // Dom set for a bb
+  // Dom set for a bb. Use SetVector to make iterating dom frontiers of a bb
+  // deterministic.
+  using DomSetType = SetVector<BlockT *>;
   using DomSetMapType = std::map<BlockT *, DomSetType>; // Dom set map
 
 protected:
