@@ -39,17 +39,22 @@ TEST_F(EnvironmentTest, FlowCondition) {
   Environment Env(DAContext);
   auto &A = Env.arena();
 
-  EXPECT_TRUE(Env.flowConditionImplies(A.makeLiteral(true)));
-  EXPECT_FALSE(Env.flowConditionImplies(A.makeLiteral(false)));
+  EXPECT_TRUE(Env.proves(A.makeLiteral(true)));
+  EXPECT_TRUE(Env.allows(A.makeLiteral(true)));
+  EXPECT_FALSE(Env.proves(A.makeLiteral(false)));
+  EXPECT_FALSE(Env.allows(A.makeLiteral(false)));
 
   auto &X = A.makeAtomRef(A.makeAtom());
-  EXPECT_FALSE(Env.flowConditionImplies(X));
+  EXPECT_FALSE(Env.proves(X));
+  EXPECT_TRUE(Env.allows(X));
 
-  Env.addToFlowCondition(X);
-  EXPECT_TRUE(Env.flowConditionImplies(X));
+  Env.assume(X);
+  EXPECT_TRUE(Env.proves(X));
+  EXPECT_TRUE(Env.allows(X));
 
   auto &NotX = A.makeNot(X);
-  EXPECT_FALSE(Env.flowConditionImplies(NotX));
+  EXPECT_FALSE(Env.proves(NotX));
+  EXPECT_FALSE(Env.allows(NotX));
 }
 
 TEST_F(EnvironmentTest, CreateValueRecursiveType) {
