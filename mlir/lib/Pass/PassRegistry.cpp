@@ -6,18 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <optional>
-#include <utility>
+#include "mlir/Pass/PassRegistry.h"
 
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
-#include "mlir/Pass/PassRegistry.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
+
+#include <optional>
+#include <utility>
 
 using namespace mlir;
 using namespace detail;
