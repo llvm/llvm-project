@@ -873,9 +873,9 @@ void Parser::HandlePragmaCXLimitedRange() {
     IsEnabled = false;
     break;
   case tok::OOS_DEFAULT:
-      // According to ISO C99 standard chapter 7.3.4, the default value
-      // for the pragma is ``off'. In GCC, the option -fcx-limited-range
-      // controls the default setting of the pragma.
+    // According to ISO C99 standard chapter 7.3.4, the default value
+    // for the pragma is ``off'. In GCC, the option -fcx-limited-range
+    // controls the default setting of the pragma.
     IsEnabled = getLangOpts().CxLimitedRange ? true : false;
     break;
   }
