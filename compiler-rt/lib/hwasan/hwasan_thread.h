@@ -58,8 +58,6 @@ class Thread {
   StackAllocationsRingBuffer *stack_allocations() { return stack_allocations_; }
 
   tag_t GenerateRandomTag(uptr num_bits = kTagBits);
-  tag_t GenerateRandomNonCollidingTag(uptr prev_ptr, uptr foll_ptr,
-                                      uptr num_bits = kTagBits);
 
   void DisableTagging() { tagging_disabled_++; }
   void EnableTagging() { tagging_disabled_--; }

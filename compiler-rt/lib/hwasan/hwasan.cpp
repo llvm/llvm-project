@@ -729,7 +729,11 @@ static const u8 kFallbackTag = 0xBB & kTagMask;
 u8 __hwasan_generate_tag() {
   Thread *t = GetCurrentThread();
   if (!t) return kFallbackTag;
-  return t->GenerateRandomTag();
+  u8 tag;
+  do {
+    tag = GetCurrentThread()->GenerateRandomTag();
+  } while (tag == 0);
+  return tag;
 }
 
 void __hwasan_add_frame_record(u64 frame_record_info) {

@@ -152,8 +152,11 @@ void HwasanAllocatorInit() {
   allocator.InitLinkerInitialized(
       common_flags()->allocator_release_to_os_interval_ms,
       GetAliasRegionStart());
-  for (uptr i = 0; i < sizeof(tail_magic); i++)
-    tail_magic[i] = GetCurrentThread()->GenerateRandomTag();
+  for (uptr i = 0; i < sizeof(tail_magic); i++) {
+    do {
+      tail_magic[i] = GetCurrentThread()->GenerateRandomTag();
+    } while (tail_magic[i] == 0);
+  }
   if (common_flags()->max_allocation_size_mb) {
     max_malloc_size = common_flags()->max_allocation_size_mb << 20;
     max_malloc_size = Min(max_malloc_size, kMaxAllowedMallocSize);
@@ -237,9 +240,17 @@ static void *HwasanAllocate(StackTrace *stack, uptr orig_size, uptr alignment,
   if (InTaggableRegion(reinterpret_cast<uptr>(user_ptr)) &&
       atomic_load_relaxed(&hwasan_allocator_tagging_enabled) &&
       flags()->tag_in_malloc && malloc_bisect(stack, orig_size)) {
-    tag_t tag = t ? t->GenerateRandomNonCollidingTag((uptr)user_ptr - 1,
-                                                     (uptr)user_ptr + size)
-                  : kFallbackAllocTag;
+    tag_t tag;
+    if (t) {
+      tag_t previous_tag = *(tag_t *)(MemToShadow((uptr)(user_ptr)-1));
+      tag_t following_tag = *(tag_t *)(MemToShadow((uptr)(user_ptr) + size));
+      do {
+        tag = t->GenerateRandomTag();
+      } while (
+          UNLIKELY(tag == previous_tag || tag == following_tag || tag == 0));
+    } else {
+      tag = kFallbackAllocTag;
+    }
 
     uptr tag_size = orig_size ? orig_size : 1;
     uptr full_granule_size = RoundDownTo(tag_size, kShadowAlignment);
@@ -348,15 +359,17 @@ static void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
     // Always store full 8-bit tags on free to maximize UAF detection.
     tag_t tag;
     if (t) {
+      tag_t previous_tag = *(tag_t *)(MemToShadow((uptr)(aligned_ptr)-1));
+      tag_t following_tag =
+          *(tag_t *)(MemToShadow((uptr)(aligned_ptr) + TaggedSize(orig_size)));
       // Make sure we are not using a short granule tag as a poison tag. This
       // would make us attempt to read the memory on a UaF.
       // The tag can be zero if tagging is disabled on this thread.
       do {
-        tag = t->GenerateRandomNonCollidingTag(
-            (uptr)aligned_ptr - 1, (uptr)aligned_ptr + TaggedSize(orig_size),
-            /*num_bits=*/8);
-      } while (
-          UNLIKELY((tag < kShadowAlignment || tag == pointer_tag) && tag != 0));
+        tag = t->GenerateRandomTag(/*num_bits=*/8);
+      } while (UNLIKELY(tag < kShadowAlignment || tag == pointer_tag ||
+                        tag == previous_tag || tag == following_tag) &&
+               tag != 0);
     } else {
       static_assert(kFallbackFreeTag >= kShadowAlignment,
                     "fallback tag must not be a short granule tag.");
