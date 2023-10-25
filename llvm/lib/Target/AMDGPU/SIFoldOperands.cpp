@@ -104,6 +104,7 @@ public:
   bool foldInstOperand(MachineInstr &MI, MachineOperand &OpToFold) const;
   bool tryFoldFoldableCopy(MachineInstr &MI,
                            MachineOperand *&CurrentKnownM0Val) const;
+  bool tryFoldUniformReadFirstLaneCndMask(MachineInstr &MI) const;
 
   const MachineOperand *isClamp(const MachineInstr &MI) const;
   bool tryFoldClamp(MachineInstr &MI);
@@ -1400,6 +1401,88 @@ bool SIFoldOperands::tryFoldFoldableCopy(
   return Changed;
 }
 
+// Try to fold the following pattern:
+//    s_cselect s[2:3], K, 0          ; K has LSB set. Usually it's +-1.
+//    v_cndmask v0, 0, +-1, s[2:3]
+//    v_readfirstlane s0, v0
+//
+// into (for example)
+//
+//    s_cselect s[2:3], K, 0
+//    s_bfe_u64 s0, s[2:3], 0x10000
+bool SIFoldOperands::tryFoldUniformReadFirstLaneCndMask(
+    MachineInstr &MI) const {
+  if (MI.getOpcode() != AMDGPU::V_READFIRSTLANE_B32)
+    return false;
+
+  MachineInstr *RFLSrc = MRI->getVRegDef(MI.getOperand(1).getReg());
+  // We can also have the following pattern:
+  //
+  // %2:vreg_64 = REG_SEQUENCE %X:vgpr_32, sub0, %1:sreg_32, sub1
+  // %3:sgpr_32 = V_READFIRSTLANE_B32 %2.sub0:vreg_64
+  //
+  // In this case we dig into %X or %Y depending on which sub register
+  // the V_READFIRSTLANE accesses.
+  if (RFLSrc->isRegSequence()) {
+    unsigned RFLSubReg = MI.getOperand(1).getSubReg();
+    if (RFLSrc->getNumOperands() != 5)
+      return false;
+
+    if (RFLSrc->getOperand(2).getImm() == RFLSubReg)
+      RFLSrc = MRI->getVRegDef(RFLSrc->getOperand(1).getReg());
+    else if (RFLSrc->getOperand(4).getImm() == RFLSubReg)
+      RFLSrc = MRI->getVRegDef(RFLSrc->getOperand(3).getReg());
+    else
+      return false;
+  }
+
+  // Need e64 to have a SGPR regmask.
+  if (!RFLSrc || RFLSrc->getOpcode() != AMDGPU::V_CNDMASK_B32_e64)
+    return false;
+
+  MachineOperand *Src0 = TII->getNamedOperand(*RFLSrc, AMDGPU::OpName::src0);
+  MachineOperand *Src1 = TII->getNamedOperand(*RFLSrc, AMDGPU::OpName::src1);
+  Register Src2 = TII->getNamedOperand(*RFLSrc, AMDGPU::OpName::src2)->getReg();
+
+  if (!Src0->isImm() || Src0->getImm() != 0 || !Src1->isImm())
+    return false;
+
+  // This pattern usually comes from a ext. sext uses -1.
+  bool IsSigned = false;
+  if (Src1->getImm() == -1)
+    IsSigned = true;
+  else if (Src1->getImm() != 1)
+    return false;
+
+  MachineInstr *CSel = MRI->getVRegDef(Src2);
+  if (!CSel || (CSel->getOpcode() != AMDGPU::S_CSELECT_B32 &&
+                CSel->getOpcode() != AMDGPU::S_CSELECT_B64))
+    return false;
+
+  MachineOperand *CSelSrc0 = TII->getNamedOperand(*CSel, AMDGPU::OpName::src0);
+  MachineOperand *CSelSrc1 = TII->getNamedOperand(*CSel, AMDGPU::OpName::src1);
+  // Note: we could also allow any non-zero value for CSelSrc0, and adapt the
+  // BFE's mask depending on where the first set bit is.
+  if (!CSelSrc0->isImm() || (CSelSrc0->getImm() & 1) == 0 ||
+      !CSelSrc1->isImm() || CSelSrc1->getImm() != 0)
+    return false;
+
+  // Replace the V_CNDMASK with S_BFE.
+  unsigned BFEOpc = (IsSigned ? AMDGPU::S_BFE_I32 : AMDGPU::S_BFE_U32);
+
+  // If the CSELECT writes to a 64 bit SGPR, only pick the low bits.
+  unsigned SubReg = 0;
+  if (CSel->getOpcode() == AMDGPU::S_CSELECT_B64)
+    SubReg = AMDGPU::sub0;
+
+  BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(BFEOpc),
+          MI.getOperand(0).getReg())
+      .addReg(Src2, /*Flags*/ 0, SubReg)
+      .addImm(0x10000);
+  MI.eraseFromParent();
+  return true;
+}
+
 // Clamp patterns are canonically selected to v_max_* instructions, so only
 // handle them.
 const MachineOperand *SIFoldOperands::isClamp(const MachineInstr &MI) const {
@@ -2084,6 +2167,11 @@ bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
 
       if (TII->isFoldableCopy(MI)) {
         Changed |= tryFoldFoldableCopy(MI, CurrentKnownM0Val);
+        continue;
+      }
+
+      if (tryFoldUniformReadFirstLaneCndMask(MI)) {
+        Changed = true;
         continue;
       }
 

@@ -111,12 +111,11 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(ptr addrspace(1) %out, double %in)
 ; SI-NEXT:    s_or_b32 s4, s5, s6
 ; SI-NEXT:    s_cmp_lg_u32 s4, 0
 ; SI-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; SI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
-; SI-NEXT:    s_bfe_u32 s4, s7, 0xb0014
-; SI-NEXT:    v_readfirstlane_b32 s5, v0
-; SI-NEXT:    s_sub_i32 s6, 0x3f1, s4
-; SI-NEXT:    s_add_i32 s10, s4, 0xfffffc10
-; SI-NEXT:    s_or_b32 s11, s8, s5
+; SI-NEXT:    s_bfe_u32 s5, s7, 0xb0014
+; SI-NEXT:    s_bfe_u32 s4, s4, 0x10000
+; SI-NEXT:    s_sub_i32 s6, 0x3f1, s5
+; SI-NEXT:    s_add_i32 s10, s5, 0xfffffc10
+; SI-NEXT:    s_or_b32 s11, s8, s4
 ; SI-NEXT:    v_med3_i32 v0, s6, 0, 13
 ; SI-NEXT:    s_lshl_b32 s4, s10, 12
 ; SI-NEXT:    s_or_b32 s5, s11, 0x1000
@@ -171,8 +170,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(ptr addrspace(1) %out, double %in)
 ; VI-SAFE-SDAG-NEXT:    s_cmp_lg_u32 s4, 0
 ; VI-SAFE-SDAG-NEXT:    s_mov_b32 s1, s5
 ; VI-SAFE-SDAG-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; VI-SAFE-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
-; VI-SAFE-SDAG-NEXT:    v_readfirstlane_b32 s4, v0
+; VI-SAFE-SDAG-NEXT:    s_bfe_u32 s4, s4, 0x10000
 ; VI-SAFE-SDAG-NEXT:    s_bfe_u32 s5, s7, 0xb0014
 ; VI-SAFE-SDAG-NEXT:    s_or_b32 s6, s8, s4
 ; VI-SAFE-SDAG-NEXT:    s_sub_i32 s8, 0x3f1, s5
@@ -299,47 +297,46 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(ptr addrspace(1) %out, double %in)
 ; GFX10-SAFE-SDAG-NEXT:    s_and_b32 s4, s5, 0xffe
 ; GFX10-SAFE-SDAG-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX10-SAFE-SDAG-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX10-SAFE-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s2
-; GFX10-SAFE-SDAG-NEXT:    s_bfe_u32 s2, s3, 0xb0014
-; GFX10-SAFE-SDAG-NEXT:    s_sub_i32 s5, 0x3f1, s2
-; GFX10-SAFE-SDAG-NEXT:    s_addk_i32 s2, 0xfc10
-; GFX10-SAFE-SDAG-NEXT:    v_med3_i32 v1, s5, 0, 13
-; GFX10-SAFE-SDAG-NEXT:    v_readfirstlane_b32 s5, v0
-; GFX10-SAFE-SDAG-NEXT:    s_lshl_b32 s7, s2, 12
-; GFX10-SAFE-SDAG-NEXT:    v_readfirstlane_b32 s6, v1
-; GFX10-SAFE-SDAG-NEXT:    s_or_b32 s4, s4, s5
-; GFX10-SAFE-SDAG-NEXT:    s_or_b32 s5, s4, 0x1000
-; GFX10-SAFE-SDAG-NEXT:    s_or_b32 s7, s4, s7
-; GFX10-SAFE-SDAG-NEXT:    s_lshr_b32 s6, s5, s6
-; GFX10-SAFE-SDAG-NEXT:    v_lshlrev_b32_e64 v0, v1, s6
-; GFX10-SAFE-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc_lo, s5, v0
+; GFX10-SAFE-SDAG-NEXT:    s_bfe_u32 s5, s3, 0xb0014
+; GFX10-SAFE-SDAG-NEXT:    s_bfe_u32 s2, s2, 0x10000
+; GFX10-SAFE-SDAG-NEXT:    s_sub_i32 s6, 0x3f1, s5
+; GFX10-SAFE-SDAG-NEXT:    s_or_b32 s2, s4, s2
+; GFX10-SAFE-SDAG-NEXT:    v_med3_i32 v0, s6, 0, 13
+; GFX10-SAFE-SDAG-NEXT:    s_or_b32 s4, s2, 0x1000
+; GFX10-SAFE-SDAG-NEXT:    s_addk_i32 s5, 0xfc10
+; GFX10-SAFE-SDAG-NEXT:    s_lshl_b32 s7, s5, 12
+; GFX10-SAFE-SDAG-NEXT:    v_readfirstlane_b32 s6, v0
+; GFX10-SAFE-SDAG-NEXT:    s_or_b32 s7, s2, s7
+; GFX10-SAFE-SDAG-NEXT:    s_lshr_b32 s6, s4, s6
+; GFX10-SAFE-SDAG-NEXT:    v_lshlrev_b32_e64 v0, v0, s6
+; GFX10-SAFE-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc_lo, s4, v0
 ; GFX10-SAFE-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX10-SAFE-SDAG-NEXT:    v_readfirstlane_b32 s5, v0
-; GFX10-SAFE-SDAG-NEXT:    s_or_b32 s5, s6, s5
-; GFX10-SAFE-SDAG-NEXT:    s_cmp_lt_i32 s2, 1
-; GFX10-SAFE-SDAG-NEXT:    s_cselect_b32 s5, s5, s7
-; GFX10-SAFE-SDAG-NEXT:    s_and_b32 s6, s5, 7
+; GFX10-SAFE-SDAG-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-SAFE-SDAG-NEXT:    s_or_b32 s4, s6, s4
+; GFX10-SAFE-SDAG-NEXT:    s_cmp_lt_i32 s5, 1
+; GFX10-SAFE-SDAG-NEXT:    s_cselect_b32 s4, s4, s7
+; GFX10-SAFE-SDAG-NEXT:    s_and_b32 s6, s4, 7
 ; GFX10-SAFE-SDAG-NEXT:    s_cmp_gt_i32 s6, 5
 ; GFX10-SAFE-SDAG-NEXT:    s_cselect_b32 s7, -1, 0
 ; GFX10-SAFE-SDAG-NEXT:    s_cmp_eq_u32 s6, 3
 ; GFX10-SAFE-SDAG-NEXT:    s_cselect_b32 s6, -1, 0
-; GFX10-SAFE-SDAG-NEXT:    s_lshr_b32 s5, s5, 2
+; GFX10-SAFE-SDAG-NEXT:    s_lshr_b32 s4, s4, 2
 ; GFX10-SAFE-SDAG-NEXT:    s_or_b32 s6, s6, s7
 ; GFX10-SAFE-SDAG-NEXT:    s_cmp_lg_u32 s6, 0
-; GFX10-SAFE-SDAG-NEXT:    s_addc_u32 s5, s5, 0
-; GFX10-SAFE-SDAG-NEXT:    s_cmp_lt_i32 s2, 31
-; GFX10-SAFE-SDAG-NEXT:    s_cselect_b32 s5, s5, 0x7c00
-; GFX10-SAFE-SDAG-NEXT:    s_cmp_lg_u32 s4, 0
-; GFX10-SAFE-SDAG-NEXT:    s_cselect_b32 s4, -1, 0
-; GFX10-SAFE-SDAG-NEXT:    s_cmpk_eq_i32 s2, 0x40f
-; GFX10-SAFE-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
+; GFX10-SAFE-SDAG-NEXT:    s_addc_u32 s4, s4, 0
+; GFX10-SAFE-SDAG-NEXT:    s_cmp_lt_i32 s5, 31
+; GFX10-SAFE-SDAG-NEXT:    s_cselect_b32 s4, s4, 0x7c00
+; GFX10-SAFE-SDAG-NEXT:    s_cmp_lg_u32 s2, 0
+; GFX10-SAFE-SDAG-NEXT:    s_cselect_b32 s2, -1, 0
+; GFX10-SAFE-SDAG-NEXT:    s_cmpk_eq_i32 s5, 0x40f
+; GFX10-SAFE-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s2
 ; GFX10-SAFE-SDAG-NEXT:    s_cselect_b32 vcc_lo, -1, 0
 ; GFX10-SAFE-SDAG-NEXT:    s_lshr_b32 s2, s3, 16
 ; GFX10-SAFE-SDAG-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX10-SAFE-SDAG-NEXT:    s_and_b32 s2, s2, 0x8000
 ; GFX10-SAFE-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 9, v0
 ; GFX10-SAFE-SDAG-NEXT:    v_or_b32_e32 v0, 0x7c00, v0
-; GFX10-SAFE-SDAG-NEXT:    v_cndmask_b32_e32 v0, s5, v0, vcc_lo
+; GFX10-SAFE-SDAG-NEXT:    v_cndmask_b32_e32 v0, s4, v0, vcc_lo
 ; GFX10-SAFE-SDAG-NEXT:    v_or_b32_e32 v0, s2, v0
 ; GFX10-SAFE-SDAG-NEXT:    s_mov_b32 s2, -1
 ; GFX10-SAFE-SDAG-NEXT:    buffer_store_short v0, off, s[0:3], 0
@@ -428,47 +425,45 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(ptr addrspace(1) %out, double %in)
 ; GFX11-SAFE-SDAG-NEXT:    s_and_b32 s4, s5, 0xffe
 ; GFX11-SAFE-SDAG-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX11-SAFE-SDAG-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX11-SAFE-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX11-SAFE-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s2
-; GFX11-SAFE-SDAG-NEXT:    s_bfe_u32 s2, s3, 0xb0014
-; GFX11-SAFE-SDAG-NEXT:    s_sub_i32 s5, 0x3f1, s2
-; GFX11-SAFE-SDAG-NEXT:    s_addk_i32 s2, 0xfc10
-; GFX11-SAFE-SDAG-NEXT:    v_med3_i32 v1, s5, 0, 13
-; GFX11-SAFE-SDAG-NEXT:    v_readfirstlane_b32 s5, v0
-; GFX11-SAFE-SDAG-NEXT:    s_lshl_b32 s7, s2, 12
-; GFX11-SAFE-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-SAFE-SDAG-NEXT:    v_readfirstlane_b32 s6, v1
-; GFX11-SAFE-SDAG-NEXT:    s_or_b32 s4, s4, s5
-; GFX11-SAFE-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX11-SAFE-SDAG-NEXT:    s_or_b32 s5, s4, 0x1000
-; GFX11-SAFE-SDAG-NEXT:    s_or_b32 s7, s4, s7
-; GFX11-SAFE-SDAG-NEXT:    s_lshr_b32 s6, s5, s6
+; GFX11-SAFE-SDAG-NEXT:    s_bfe_u32 s5, s3, 0xb0014
+; GFX11-SAFE-SDAG-NEXT:    s_bfe_u32 s2, s2, 0x10000
+; GFX11-SAFE-SDAG-NEXT:    s_sub_i32 s6, 0x3f1, s5
+; GFX11-SAFE-SDAG-NEXT:    s_or_b32 s2, s4, s2
+; GFX11-SAFE-SDAG-NEXT:    v_med3_i32 v0, s6, 0, 13
+; GFX11-SAFE-SDAG-NEXT:    s_or_b32 s4, s2, 0x1000
+; GFX11-SAFE-SDAG-NEXT:    s_addk_i32 s5, 0xfc10
 ; GFX11-SAFE-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-SAFE-SDAG-NEXT:    v_lshlrev_b32_e64 v0, v1, s6
-; GFX11-SAFE-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc_lo, s5, v0
+; GFX11-SAFE-SDAG-NEXT:    s_lshl_b32 s7, s5, 12
+; GFX11-SAFE-SDAG-NEXT:    v_readfirstlane_b32 s6, v0
+; GFX11-SAFE-SDAG-NEXT:    s_or_b32 s7, s2, s7
+; GFX11-SAFE-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-SAFE-SDAG-NEXT:    s_lshr_b32 s6, s4, s6
+; GFX11-SAFE-SDAG-NEXT:    v_lshlrev_b32_e64 v0, v0, s6
+; GFX11-SAFE-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX11-SAFE-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc_lo, s4, v0
 ; GFX11-SAFE-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX11-SAFE-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-SAFE-SDAG-NEXT:    v_readfirstlane_b32 s5, v0
-; GFX11-SAFE-SDAG-NEXT:    s_or_b32 s5, s6, s5
-; GFX11-SAFE-SDAG-NEXT:    s_cmp_lt_i32 s2, 1
-; GFX11-SAFE-SDAG-NEXT:    s_cselect_b32 s5, s5, s7
-; GFX11-SAFE-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11-SAFE-SDAG-NEXT:    s_and_b32 s6, s5, 7
+; GFX11-SAFE-SDAG-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX11-SAFE-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; GFX11-SAFE-SDAG-NEXT:    s_or_b32 s4, s6, s4
+; GFX11-SAFE-SDAG-NEXT:    s_cmp_lt_i32 s5, 1
+; GFX11-SAFE-SDAG-NEXT:    s_cselect_b32 s4, s4, s7
+; GFX11-SAFE-SDAG-NEXT:    s_and_b32 s6, s4, 7
+; GFX11-SAFE-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-SAFE-SDAG-NEXT:    s_cmp_gt_i32 s6, 5
 ; GFX11-SAFE-SDAG-NEXT:    s_cselect_b32 s7, -1, 0
 ; GFX11-SAFE-SDAG-NEXT:    s_cmp_eq_u32 s6, 3
 ; GFX11-SAFE-SDAG-NEXT:    s_cselect_b32 s6, -1, 0
-; GFX11-SAFE-SDAG-NEXT:    s_lshr_b32 s5, s5, 2
+; GFX11-SAFE-SDAG-NEXT:    s_lshr_b32 s4, s4, 2
 ; GFX11-SAFE-SDAG-NEXT:    s_or_b32 s6, s6, s7
 ; GFX11-SAFE-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-SAFE-SDAG-NEXT:    s_cmp_lg_u32 s6, 0
-; GFX11-SAFE-SDAG-NEXT:    s_addc_u32 s5, s5, 0
-; GFX11-SAFE-SDAG-NEXT:    s_cmp_lt_i32 s2, 31
-; GFX11-SAFE-SDAG-NEXT:    s_cselect_b32 s5, s5, 0x7c00
-; GFX11-SAFE-SDAG-NEXT:    s_cmp_lg_u32 s4, 0
-; GFX11-SAFE-SDAG-NEXT:    s_cselect_b32 s4, -1, 0
-; GFX11-SAFE-SDAG-NEXT:    s_cmpk_eq_i32 s2, 0x40f
-; GFX11-SAFE-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
+; GFX11-SAFE-SDAG-NEXT:    s_addc_u32 s4, s4, 0
+; GFX11-SAFE-SDAG-NEXT:    s_cmp_lt_i32 s5, 31
+; GFX11-SAFE-SDAG-NEXT:    s_cselect_b32 s4, s4, 0x7c00
+; GFX11-SAFE-SDAG-NEXT:    s_cmp_lg_u32 s2, 0
+; GFX11-SAFE-SDAG-NEXT:    s_cselect_b32 s2, -1, 0
+; GFX11-SAFE-SDAG-NEXT:    s_cmpk_eq_i32 s5, 0x40f
+; GFX11-SAFE-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s2
 ; GFX11-SAFE-SDAG-NEXT:    s_cselect_b32 vcc_lo, -1, 0
 ; GFX11-SAFE-SDAG-NEXT:    s_lshr_b32 s2, s3, 16
 ; GFX11-SAFE-SDAG-NEXT:    s_mov_b32 s3, 0x31016000
@@ -476,7 +471,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(ptr addrspace(1) %out, double %in)
 ; GFX11-SAFE-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 9, v0
 ; GFX11-SAFE-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SAFE-SDAG-NEXT:    v_or_b32_e32 v0, 0x7c00, v0
-; GFX11-SAFE-SDAG-NEXT:    v_cndmask_b32_e32 v0, s5, v0, vcc_lo
+; GFX11-SAFE-SDAG-NEXT:    v_cndmask_b32_e32 v0, s4, v0, vcc_lo
 ; GFX11-SAFE-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SAFE-SDAG-NEXT:    v_or_b32_e32 v0, s2, v0
 ; GFX11-SAFE-SDAG-NEXT:    s_mov_b32 s2, -1
