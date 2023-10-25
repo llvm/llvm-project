@@ -325,7 +325,7 @@ bool x = X() == X(); // expected-warning {{ambiguous}}
 } // namespace P2468R2
 
 namespace friend_opNE_GH{
-namespace test1 {
+namespace opNENotFound {
 struct S {
     operator int();
     friend bool operator==(const S &, int); // expected-note {{reversed}}
@@ -333,9 +333,9 @@ struct S {
 struct A : S {};
 struct B : S {};
 bool x = A{} == B{}; // expected-warning {{ambiguous}}
-} // namespace test1
+} // namespace opNENotFound
 
-namespace test2 {
+namespace opNEFound {
 struct S {
     operator int();
     friend bool operator==(const S &, int);
@@ -343,8 +343,8 @@ struct S {
 };
 struct A : public P {};
 struct B : public P {};
-bool check(A a, B b) { return a == b; } // expected-warning {{use of overloaded operator '==' (with operand types 'A' and 'B') to be ambiguous}}
-} // namespace test2
+bool x = A{} == B{};
+} // namespace opNEFound
 } // namespace friend_opNE_GH
 
 namespace ADL_GH68901{
