@@ -15,16 +15,16 @@ module attributes {omp.is_target_device = true} {
   }
                                                             
   llvm.func @_QQmain() attributes {} {
-    %0 = llvm.mlir.addressof @_QMtest_0Esp : !llvm.ptr<i32>
+    %0 = llvm.mlir.addressof @_QMtest_0Esp : !llvm.ptr
   
   // CHECK-DAG:   omp.target:                                       ; preds = %user_code.entry
   // CHECK-DAG: %1 = load ptr, ptr @_QMtest_0Esp_decl_tgt_ref_ptr, align 8
   // CHECK-DAG: store i32 1, ptr %1, align 4
   // CHECK-DAG: br label %omp.region.cont
-    %map = omp.map_info var_ptr(%0 : !llvm.ptr<i32>)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr<i32> {name = ""}
-    omp.target   map_entries(%map : !llvm.ptr<i32>) {
+    %map = omp.map_info var_ptr(%0 : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.target   map_entries(%map : !llvm.ptr) {
       %1 = llvm.mlir.constant(1 : i32) : i32
-      llvm.store %1, %0 : !llvm.ptr<i32>
+      llvm.store %1, %0 : i32, !llvm.ptr
       omp.terminator
     }
 

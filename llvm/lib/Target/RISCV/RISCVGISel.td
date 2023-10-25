@@ -1,4 +1,4 @@
-//===-- RISCVGIsel.td - RISCV GlobalISel Patterns ----------*- tablegen -*-===//
+//===-- RISCVGIsel.td - RISC-V GlobalISel Patterns ---------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -57,6 +57,9 @@ def as_i64imm : SDNodeXForm<imm, [{
 def gi_as_i64imm : GICustomOperandRenderer<"renderImm">,
   GISDNodeXFormEquiv<as_i64imm>;
 
+def gi_trailing_zero : GICustomOperandRenderer<"renderTrailingZeros">,
+  GISDNodeXFormEquiv<TrailingZeros>;
+
 // FIXME: This is labelled as handling 's32', however the ComplexPattern it
 // refers to handles both i32 and i64 based on the HwMode. Currently this LLT
 // parameter appears to be ignored so this pattern works for both, however we
@@ -72,6 +75,13 @@ def gi_sh2add_op : GIComplexOperandMatcher<s32, "selectSHXADDOp<2>">,
                    GIComplexPatternEquiv<sh2add_op>;
 def gi_sh3add_op : GIComplexOperandMatcher<s32, "selectSHXADDOp<3>">,
                    GIComplexPatternEquiv<sh3add_op>;
+
+def gi_sh1add_uw_op : GIComplexOperandMatcher<s32, "selectSHXADD_UWOp<1>">,
+                      GIComplexPatternEquiv<sh1add_uw_op>;
+def gi_sh2add_uw_op : GIComplexOperandMatcher<s32, "selectSHXADD_UWOp<2>">,
+                      GIComplexPatternEquiv<sh2add_uw_op>;
+def gi_sh3add_uw_op : GIComplexOperandMatcher<s32, "selectSHXADD_UWOp<3>">,
+                      GIComplexPatternEquiv<sh3add_uw_op>;
 
 // FIXME: Canonicalize (sub X, C) -> (add X, -C) earlier.
 def : Pat<(XLenVT (sub GPR:$rs1, simm12Plus1:$imm)),
@@ -111,8 +121,14 @@ def : Pat<(i32 (udiv GPR:$rs1, GPR:$rs2)), (DIVUW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(i32 (urem GPR:$rs1, GPR:$rs2)), (REMUW GPR:$rs1, GPR:$rs2)>;
 }
 
-let Predicates = [HasStdExtZba, IsRV64] in
+let Predicates = [HasStdExtZba, IsRV64] in {
+// This pattern is put here due to the fact that i32 is not a legal type
+// in SDISel for RV64, which is not the case in GISel.
+def : Pat<(shl (i64 (zext i32:$rs1)), uimm5:$shamt),
+          (SLLI_UW GPR:$rs1, uimm5:$shamt)>;
+
 def : Pat<(i64 (zext i32:$rs)), (ADD_UW GPR:$rs, (XLenVT X0))>;
+} // Predicates = [HasStdExtZba, IsRV64]
 
 let Predicates = [IsRV64, NotHasStdExtZba] in
 def: Pat<(i64 (zext i32:$rs)), (SRLI (SLLI GPR:$rs, 32), 32)>;

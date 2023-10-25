@@ -195,7 +195,7 @@ public:
   ArrayRef<SVEType> getTypes() const { return Types; }
   SVEType getParamType(unsigned I) const { return Types[I + 1]; }
   unsigned getNumParams() const {
-    return Proto.size() - (2 * std::count(Proto.begin(), Proto.end(), '.')) - 1;
+    return Proto.size() - (2 * llvm::count(Proto, '.')) - 1;
   }
 
   uint64_t getFlags() const { return Flags; }
@@ -1222,7 +1222,7 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   OS << "typedef __SVUint64_t svuint64_t;\n";
   OS << "typedef __SVFloat16_t svfloat16_t;\n\n";
 
-  OS << "typedef __SVBFloat16_t svbfloat16_t;\n";
+  OS << "typedef __SVBfloat16_t svbfloat16_t;\n";
 
   OS << "#include <arm_bf16.h>\n";
 
