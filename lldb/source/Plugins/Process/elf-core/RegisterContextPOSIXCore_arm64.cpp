@@ -184,11 +184,9 @@ bool RegisterContextCorePOSIX_arm64::ReadRegister(const RegisterInfo *reg_info,
 
   offset = reg_info->byte_offset;
   if (offset + reg_info->byte_size <= GetGPRSize()) {
-    uint64_t v = m_gpr_data.GetMaxU64(&offset, reg_info->byte_size);
-    if (offset == reg_info->byte_offset + reg_info->byte_size) {
-      value = v;
-      return true;
-    }
+    value.SetFromMemoryData(*reg_info, m_gpr_data.GetDataStart() + offset,
+                            reg_info->byte_size, lldb::eByteOrderLittle, error);
+    return error.Success();
   }
 
   const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
