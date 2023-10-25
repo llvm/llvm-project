@@ -5,9 +5,6 @@ Johannes: breakage
 Revert "[OpenMP] Disable early vectorization of loads/stores in the runtime " 
   asserts in  snap and MI-Teams
 
-Nicole and Saiyed:
-Revert " [OpenMP][DeviceRTL][AMDGPU] Support code object version 5"
-
 Revert: waiting on pip install myst-parser 
  b6ff03206 "[Documentation] Replace recommonmark by myst-parser
 
