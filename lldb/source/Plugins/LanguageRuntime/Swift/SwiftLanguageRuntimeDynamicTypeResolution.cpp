@@ -312,10 +312,10 @@ public:
                     mangledName.str().c_str());
       return nullptr;
     }
-    
+
     return GetOrCreateTypeInfo(clang_type);
   }
-  
+
   const swift::reflection::TypeInfo *
   GetOrCreateTypeInfo(CompilerType clang_type) {
     if (auto ti = m_runtime.lookupClangTypeInfo(clang_type))
@@ -1239,7 +1239,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Pack(
   ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
   if (!reflection_ctx)
     return false;
-  
+
   // Return a tuple type, with one element per pack element and its
   // type has all DependentGenericParamType that appear in type packs
   // substituted.
@@ -1269,7 +1269,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Pack(
 
   Target &target = m_process.GetTarget();
   size_t ptr_size = m_process.GetAddressByteSize();
-  
+
   swift::Demangle::Demangler dem;
 
   auto expand_pack_type = [&](ConstString mangled_pack_type,
@@ -1535,7 +1535,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Class(
           if (auto *tr = sc.get_typeref()) {
             swift::Demangle::Demangler dem;
             swift::Demangle::NodePointer node = tr->getDemangling(dem);
-            // Skip private Foundation types since it's unlikely that would be 
+            // Skip private Foundation types since it's unlikely that would be
             // useful to users.
             if (IsPrivateNSClass(node))
               return false;
@@ -2067,7 +2067,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_IndirectEnumCase(
   lldb::addr_t box_location = m_process.ReadPointerFromMemory(box_addr, error);
   if (box_location == LLDB_INVALID_ADDRESS)
     return false;
- 
+
   box_location = MaskMaybeBridgedPointer(m_process, box_location);
   lldb::addr_t box_value = box_addr + in_value.GetByteOffset();
   Flags type_info(child_type.GetTypeInfo());
@@ -2539,7 +2539,7 @@ SwiftLanguageRuntimeImpl::GetTypeRef(CompilerType type,
       {"$s14CoreFoundation7CGFloatVD", "$s12CoreGraphics7CGFloatVD"}};
 
   auto it = known_types_with_redefined_modules.find(mangled_name);
-  if (it != known_types_with_redefined_modules.end()) 
+  if (it != known_types_with_redefined_modules.end())
     mangled_name = it->second;
 
   swift::Demangle::NodePointer node =

@@ -716,7 +716,7 @@ std::string SwiftLanguageRuntime::DemangleSymbolAsString(
     options.DisplayLocalNameContexts = false;
     options.DisplayDebuggerGeneratedModule = false;
     options.ShowFunctionArgumentTypes = true;
-    break;    
+    break;
   }
 
   if (sc) {
@@ -1315,7 +1315,7 @@ SwiftLanguageRuntime::GetGenericSignature(StringRef function_name,
 
   if (error)
     return {};
-  
+
   // Build the maps associating value and type packs with their count
   // arguments.
   unsigned next_count = 0;
