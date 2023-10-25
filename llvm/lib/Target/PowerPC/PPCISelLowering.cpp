@@ -7068,7 +7068,8 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
 
   if (getTargetMachine().Options.GuaranteedTailCallOpt &&
       CallConv != CallingConv::Fast)
-    report_fatal_error("Tail call support is unimplemented on AIX.");
+    report_fatal_error("Tail call support for non-fastcc calling convention is "
+                       "unimplemented on AIX.");
 
   if (useSoftFloat())
     report_fatal_error("Soft float support is unimplemented on AIX.");
@@ -7077,6 +7078,9 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
 
   const bool IsPPC64 = Subtarget.isPPC64();
   const unsigned PtrByteSize = IsPPC64 ? 8 : 4;
+  // Potential tail calls could cause overwriting of argument stack slots.
+  const bool IsImmutable = !(getTargetMachine().Options.GuaranteedTailCallOpt &&
+                             (CallConv == CallingConv::Fast));
 
   // Assign locations to all of the incoming arguments.
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -7116,10 +7120,6 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
       // Objects are right-justified because AIX is big-endian.
       if (LocSize > ValSize)
         CurArgOffset += LocSize - ValSize;
-      // Potential tail calls could cause overwriting of argument stack slots.
-      const bool IsImmutable =
-          !(getTargetMachine().Options.GuaranteedTailCallOpt &&
-            (CallConv == CallingConv::Fast));
       int FI = MFI.CreateFixedObject(ValSize, CurArgOffset, IsImmutable);
       SDValue FIN = DAG.getFrameIndex(FI, PtrVT);
       SDValue ArgValue =
