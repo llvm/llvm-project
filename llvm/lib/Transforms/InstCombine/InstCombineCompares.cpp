@@ -5906,29 +5906,6 @@ static Instruction *processUMulZExtIdiom(ICmpInst &I, Value *MulVal,
     }
     return nullptr;
 
-  case ICmpInst::ICMP_UGE:
-    // Recognize pattern:
-    //   mulval = mul(zext A, zext B)
-    //   cmp uge mulval, max+1
-    if (ConstantInt *CI = dyn_cast<ConstantInt>(OtherVal)) {
-      APInt MaxVal = APInt::getOneBitSet(CI->getBitWidth(), MulWidth);
-      if (MaxVal.eq(CI->getValue()))
-        break; // Recognized
-    }
-    return nullptr;
-
-  case ICmpInst::ICMP_ULE:
-    // Recognize pattern:
-    //   mulval = mul(zext A, zext B)
-    //   cmp ule mulval, max
-    if (ConstantInt *CI = dyn_cast<ConstantInt>(OtherVal)) {
-      APInt MaxVal = APInt::getMaxValue(MulWidth);
-      MaxVal = MaxVal.zext(CI->getBitWidth());
-      if (MaxVal.eq(CI->getValue()))
-        break; // Recognized
-    }
-    return nullptr;
-
   case ICmpInst::ICMP_ULT:
     // Recognize pattern:
     //   mulval = mul(zext A, zext B)
@@ -5998,13 +5975,11 @@ static Instruction *processUMulZExtIdiom(ICmpInst &I, Value *MulVal,
     Inverse = true;
     break;
   case ICmpInst::ICMP_UGT:
-  case ICmpInst::ICMP_UGE:
     if (I.getOperand(0) == MulVal)
       break;
     Inverse = true;
     break;
   case ICmpInst::ICMP_ULT:
-  case ICmpInst::ICMP_ULE:
     if (I.getOperand(1) == MulVal)
       break;
     Inverse = true;
