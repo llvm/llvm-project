@@ -1182,11 +1182,27 @@ namespace X86II {
     }
   }
 
+  inline bool isXMMReg(unsigned RegNo) {
+    return (RegNo >= X86::XMM0 && RegNo <= X86::XMM15) ||
+           (RegNo >= X86::XMM16 && RegNo <= X86::XMM31);
+  }
+
+  inline bool isYMMReg(unsigned RegNo) {
+    return (RegNo >= X86::YMM0 && RegNo <= X86::YMM15) ||
+           (RegNo >= X86::YMM16 && RegNo <= X86::YMM31);
+  }
+
+  inline bool isZMMReg(unsigned RegNo) {
+    return RegNo >= X86::ZMM0 && RegNo <= X86::ZMM31;
+  }
+
   /// \returns true if the MachineOperand is a x86-64 extended (r8 or
   /// higher) register,  e.g. r8, xmm8, xmm13, etc.
   inline bool isX86_64ExtendedReg(unsigned RegNo) {
-    if ((RegNo >= X86::XMM8 && RegNo <= X86::XMM31) ||
-        (RegNo >= X86::YMM8 && RegNo <= X86::YMM31) ||
+    if ((RegNo >= X86::XMM8 && RegNo <= X86::XMM15) ||
+        (RegNo >= X86::XMM16 && RegNo <= X86::XMM31) ||
+        (RegNo >= X86::YMM8 && RegNo <= X86::YMM15) ||
+        (RegNo >= X86::YMM16 && RegNo <= X86::YMM31) ||
         (RegNo >= X86::ZMM8 && RegNo <= X86::ZMM31))
       return true;
 

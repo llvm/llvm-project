@@ -604,8 +604,8 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     }
   }
   if (!Is64Bit || !MF.getSubtarget<X86Subtarget>().hasAVX512()) {
-    for (unsigned n = 16; n != 32; ++n) {
-      for (MCRegAliasIterator AI(X86::XMM0 + n, this, true); AI.isValid(); ++AI)
+    for (unsigned n = 0; n != 16; ++n) {
+      for (MCRegAliasIterator AI(X86::XMM16 + n, this, true); AI.isValid(); ++AI)
         Reserved.set(*AI);
     }
   }
