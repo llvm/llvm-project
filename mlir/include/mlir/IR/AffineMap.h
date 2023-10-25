@@ -15,6 +15,7 @@
 #define MLIR_IR_AFFINEMAP_H
 
 #include "mlir/IR/AffineExpr.h"
+#include "mlir/IR/Value.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMapInfo.h"
@@ -33,7 +34,9 @@ struct AffineMapStorage;
 } // namespace detail
 
 class Attribute;
+class Builder;
 struct LogicalResult;
+class OpFoldResult;
 class MLIRContext;
 
 /// A multi-dimensional affine map
@@ -446,6 +449,12 @@ AffineMap compressUnusedSymbols(AffineMap map);
 /// Asserts that all maps in `maps` are normalized to the same number of
 /// dims and symbols.
 SmallVector<AffineMap> compressUnusedSymbols(ArrayRef<AffineMap> maps);
+
+/// Fold all attributes among the given operands into the affine map. Return the
+/// folded affine map. Return all remaining values via `remainingValues`.
+AffineMap foldAttributesIntoMap(Builder &b, AffineMap map,
+                                ArrayRef<OpFoldResult> operands,
+                                SmallVector<Value> &remainingValues);
 
 /// Returns a map with the same dimension and symbol count as `map`, but whose
 /// results are the unique affine expressions of `map`.

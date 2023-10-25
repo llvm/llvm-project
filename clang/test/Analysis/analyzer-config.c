@@ -11,10 +11,9 @@
 // CHECK-NEXT: alpha.osx.cocoa.DirectIvarAssignment:AnnotatedFunctions = false
 // CHECK-NEXT: alpha.security.MmapWriteExec:MmapProtExec = 0x04
 // CHECK-NEXT: alpha.security.MmapWriteExec:MmapProtRead = 0x01
+// CHECK-NEXT: alpha.security.cert.env.InvalidPtr:InvalidatingGetEnv = false
 // CHECK-NEXT: alpha.security.taint.TaintPropagation:Config = ""
 // CHECK-NEXT: alpha.unix.Errno:AllowErrnoReadOutsideConditionExpressions = true
-// CHECK-NEXT: alpha.unix.StdCLibraryFunctions:DisplayLoadedSummaries = false
-// CHECK-NEXT: alpha.unix.StdCLibraryFunctions:ModelPOSIX = false
 // CHECK-NEXT: apply-fixits = false
 // CHECK-NEXT: assume-controlled-environment = false
 // CHECK-NEXT: avoid-suppressing-null-argument-paths = false
@@ -129,6 +128,8 @@
 // CHECK-NEXT: track-conditions-debug = false
 // CHECK-NEXT: unix.DynamicMemoryModeling:AddNoOwnershipChangeNotes = true
 // CHECK-NEXT: unix.DynamicMemoryModeling:Optimistic = false
+// CHECK-NEXT: unix.StdCLibraryFunctions:DisplayLoadedSummaries = false
+// CHECK-NEXT: unix.StdCLibraryFunctions:ModelPOSIX = false
 // CHECK-NEXT: unroll-loops = false
 // CHECK-NEXT: verbose-report-filename = false
 // CHECK-NEXT: widen-loops = false

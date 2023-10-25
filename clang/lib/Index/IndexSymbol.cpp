@@ -346,7 +346,6 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
       }
       break;
     case Decl::ClassTemplatePartialSpecialization:
-    case Decl::ClassScopeFunctionSpecialization:
     case Decl::ClassTemplateSpecialization:
     case Decl::CXXRecord:
     case Decl::Enum:

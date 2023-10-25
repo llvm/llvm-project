@@ -1695,11 +1695,11 @@ public:
     // TODO: Adjust the cost to make the vp intrinsic cheaper than its non-vp
     // counterpart when the vector length argument is smaller than the maximum
     // vector length.
+    // TODO: Support other kinds of VPIntrinsics
     if (VPIntrinsic::isVPIntrinsic(ICA.getID())) {
       std::optional<unsigned> FOp =
           VPIntrinsic::getFunctionalOpcodeForVP(ICA.getID());
       if (FOp) {
-        // TODO: Support other kinds of Intrinsics (i.e. reductions)
         if (ICA.getID() == Intrinsic::vp_load) {
           Align Alignment;
           if (auto *VPI = dyn_cast_or_null<VPIntrinsic>(ICA.getInst()))
@@ -1737,17 +1737,23 @@ public:
         assert(ICA.getArgs().size() >= 2 && ICA.getArgTypes().size() >= 2 &&
                "Expected VPIntrinsic to have Mask and Vector Length args and "
                "types");
-        ArrayRef<const Value *> NewArgs = ArrayRef(ICA.getArgs()).drop_back(2);
         ArrayRef<Type *> NewTys = ArrayRef(ICA.getArgTypes()).drop_back(2);
 
-        IntrinsicCostAttributes NewICA(*FID, ICA.getReturnType(), NewArgs,
-                                       NewTys, ICA.getFlags(), ICA.getInst(),
-                                       ICA.getScalarizationCost());
+        // VPReduction intrinsics have a start value argument that their non-vp
+        // counterparts do not have, except for the fadd and fmul non-vp
+        // counterpart.
+        if (VPReductionIntrinsic::isVPReduction(ICA.getID()) &&
+            *FID != Intrinsic::vector_reduce_fadd &&
+            *FID != Intrinsic::vector_reduce_fmul)
+          NewTys = NewTys.drop_front();
+
+        IntrinsicCostAttributes NewICA(*FID, ICA.getReturnType(), NewTys,
+                                       ICA.getFlags());
         return thisT()->getIntrinsicInstrCost(NewICA, CostKind);
       }
     }
 
-    // Assume that we need to scalarize this intrinsic.
+    // Assume that we need to scalarize this intrinsic.)
     // Compute the scalarization overhead based on Args for a vector
     // intrinsic.
     InstructionCost ScalarizationCost = InstructionCost::getInvalid();
@@ -1902,6 +1908,12 @@ public:
       break;
     case Intrinsic::rint:
       ISD = ISD::FRINT;
+      break;
+    case Intrinsic::lrint:
+      ISD = ISD::LRINT;
+      break;
+    case Intrinsic::llrint:
+      ISD = ISD::LLRINT;
       break;
     case Intrinsic::round:
       ISD = ISD::FROUND;

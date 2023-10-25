@@ -705,7 +705,7 @@ define i9 @rotateleft_9_neg_mask_wide_amount_commute(i9 %v, i33 %shamt) {
 ; CHECK-NEXT:    [[LSHAMT:%.*]] = and i33 [[SHAMT]], 8
 ; CHECK-NEXT:    [[RSHAMT:%.*]] = and i33 [[NEG]], 8
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i9 [[V:%.*]] to i33
-; CHECK-NEXT:    [[SHL:%.*]] = shl i33 [[CONV]], [[LSHAMT]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i33 [[CONV]], [[LSHAMT]]
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i33 [[CONV]], [[RSHAMT]]
 ; CHECK-NEXT:    [[OR:%.*]] = or i33 [[SHL]], [[SHR]]
 ; CHECK-NEXT:    [[RET:%.*]] = trunc i33 [[OR]] to i9

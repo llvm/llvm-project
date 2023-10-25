@@ -437,7 +437,7 @@ void SectionChunk::applyRelocation(uint8_t *off,
   // Compute the RVA of the relocation for relative relocations.
   uint64_t p = rva + rel.VirtualAddress;
   uint64_t imageBase = file->ctx.config.imageBase;
-  switch (file->ctx.config.machine) {
+  switch (getMachine()) {
   case AMD64:
     applyRelX64(off, rel.Type, os, s, p, imageBase);
     break;
@@ -551,7 +551,7 @@ static uint8_t getBaserelType(const coff_relocation &rel,
 // Only called when base relocation is enabled.
 void SectionChunk::getBaserels(std::vector<Baserel> *res) {
   for (const coff_relocation &rel : getRelocs()) {
-    uint8_t ty = getBaserelType(rel, file->ctx.config.machine);
+    uint8_t ty = getBaserelType(rel, getMachine());
     if (ty == IMAGE_REL_BASED_ABSOLUTE)
       continue;
     Symbol *target = file->getSymbol(rel.SymbolTableIndex);

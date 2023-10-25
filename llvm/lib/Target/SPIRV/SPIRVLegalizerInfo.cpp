@@ -229,11 +229,16 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   // Control-flow. In some cases (e.g. constants) s1 may be promoted to s32.
   getActionDefinitionsBuilder(G_BRCOND).legalFor({s1, s32});
 
+  // TODO: Review the target OpenCL and GLSL Extended Instruction Set specs to
+  // tighten these requirements. Many of these math functions are only legal on
+  // specific bitwidths, so they are not selectable for
+  // allFloatScalarsAndVectors.
   getActionDefinitionsBuilder({G_FPOW,
                                G_FEXP,
                                G_FEXP2,
                                G_FLOG,
                                G_FLOG2,
+                               G_FLOG10,
                                G_FABS,
                                G_FMINNUM,
                                G_FMAXNUM,
@@ -259,8 +264,6 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       allFloatScalarsAndVectors, allIntScalarsAndVectors);
 
   if (ST.canUseExtInstSet(SPIRV::InstructionSet::OpenCL_std)) {
-    getActionDefinitionsBuilder(G_FLOG10).legalFor(allFloatScalarsAndVectors);
-
     getActionDefinitionsBuilder(
         {G_CTTZ, G_CTTZ_ZERO_UNDEF, G_CTLZ, G_CTLZ_ZERO_UNDEF})
         .legalForCartesianProduct(allIntScalarsAndVectors,

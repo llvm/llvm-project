@@ -6,7 +6,6 @@ algorithm cstddef
 algorithm cstdint
 algorithm cstdlib
 algorithm cstring
-algorithm ctime
 algorithm cwchar
 algorithm execution
 algorithm initializer_list
@@ -15,7 +14,7 @@ algorithm iterator
 algorithm limits
 algorithm memory
 algorithm new
-algorithm ratio
+algorithm optional
 algorithm stdexcept
 algorithm type_traits
 algorithm utility
@@ -538,6 +537,7 @@ mdspan concepts
 mdspan cstddef
 mdspan limits
 mdspan span
+mdspan version
 memory atomic
 memory compare
 memory concepts
@@ -597,15 +597,12 @@ numeric cmath
 numeric concepts
 numeric cstddef
 numeric cstdint
-numeric cstring
-numeric ctime
 numeric execution
 numeric functional
-numeric initializer_list
 numeric iterator
 numeric limits
 numeric new
-numeric ratio
+numeric optional
 numeric type_traits
 numeric version
 optional atomic

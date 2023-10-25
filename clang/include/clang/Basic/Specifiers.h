@@ -288,6 +288,7 @@ namespace clang {
     CC_AArch64VectorCall, // __attribute__((aarch64_vector_pcs))
     CC_AArch64SVEPCS, // __attribute__((aarch64_sve_pcs))
     CC_AMDGPUKernelCall, // __attribute__((amdgpu_kernel))
+    CC_M68kRTD,       // __attribute__((m68k_rtd))
   };
 
   /// Checks whether the given calling convention supports variadic
@@ -304,6 +305,7 @@ namespace clang {
     case CC_OpenCLKernel:
     case CC_Swift:
     case CC_SwiftAsync:
+    case CC_M68kRTD:
       return false;
     default:
       return true;

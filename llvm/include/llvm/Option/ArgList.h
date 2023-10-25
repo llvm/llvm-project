@@ -329,12 +329,11 @@ public:
   /// and not matching any of the excluded ids.
   void AddAllArgsExcept(ArgStringList &Output, ArrayRef<OptSpecifier> Ids,
                         ArrayRef<OptSpecifier> ExcludeIds) const;
-  /// AddAllArgs - Render all arguments matching any of the given ids.
-  void AddAllArgs(ArgStringList &Output, ArrayRef<OptSpecifier> Ids) const;
+  /// Render all arguments matching any of the given ids.
+  void addAllArgs(ArgStringList &Output, ArrayRef<OptSpecifier> Ids) const;
 
   /// AddAllArgs - Render all arguments matching the given ids.
-  void AddAllArgs(ArgStringList &Output, OptSpecifier Id0,
-                  OptSpecifier Id1 = 0U, OptSpecifier Id2 = 0U) const;
+  void AddAllArgs(ArgStringList &Output, OptSpecifier Id0) const;
 
   /// AddAllArgValues - Render the argument values of all arguments
   /// matching the given ids.

@@ -21,6 +21,7 @@ include "mlir/IR/OpBase.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Dialect/OpenACC/OpenACCBase.td"
 include "mlir/Dialect/OpenACC/OpenACCOpsTypes.td"
+include "mlir/Dialect/OpenACC/OpenACCOpsInterfaces.td"
 include "mlir/Dialect/OpenACC/OpenACCTypeInterfaces.td"
 include "mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.td"
 
@@ -519,7 +520,7 @@ def OpenACC_UpdateHostOp : OpenACC_DataExitOp<"update_host",
 //===----------------------------------------------------------------------===//
 
 def OpenACC_PrivateRecipeOp : OpenACC_Op<"private.recipe",
-    [IsolatedFromAbove, Symbol]> {
+    [IsolatedFromAbove, Symbol, RecipeInterface]> {
   let summary = "privatization recipe";
 
   let description = [{
@@ -576,7 +577,7 @@ def OpenACC_PrivateRecipeOp : OpenACC_Op<"private.recipe",
 //===----------------------------------------------------------------------===//
 
 def OpenACC_FirstprivateRecipeOp : OpenACC_Op<"firstprivate.recipe",
-    [IsolatedFromAbove, Symbol]> {
+    [IsolatedFromAbove, Symbol, RecipeInterface]> {
   let summary = "privatization recipe";
 
   let description = [{
@@ -642,7 +643,7 @@ def OpenACC_FirstprivateRecipeOp : OpenACC_Op<"firstprivate.recipe",
 //===----------------------------------------------------------------------===//
 
 def OpenACC_ReductionRecipeOp : OpenACC_Op<"reduction.recipe",
-    [IsolatedFromAbove, Symbol]> {
+    [IsolatedFromAbove, Symbol, RecipeInterface]> {
   let summary = "reduction recipe";
 
   let description = [{

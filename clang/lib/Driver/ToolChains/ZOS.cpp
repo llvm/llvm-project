@@ -156,10 +156,9 @@ void zos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("/dev/null");
   }
 
-  Args.AddAllArgs(CmdArgs, options::OPT_u);
-
   // Add archive library search paths.
-  Args.AddAllArgs(CmdArgs, options::OPT_L);
+  Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_u});
+
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
   // Specify linker input file(s)

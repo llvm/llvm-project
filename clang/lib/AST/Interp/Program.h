@@ -82,8 +82,8 @@ public:
   std::optional<unsigned> getOrCreateGlobal(const ValueDecl *VD,
                                             const Expr *Init = nullptr);
 
-  /// Returns or creates a dummy value for parameters.
-  std::optional<unsigned> getOrCreateDummy(const ParmVarDecl *PD);
+  /// Returns or creates a dummy value for unknown declarations.
+  std::optional<unsigned> getOrCreateDummy(const ValueDecl *PD);
 
   /// Creates a global and returns its index.
   std::optional<unsigned> createGlobal(const ValueDecl *VD, const Expr *E);
@@ -208,7 +208,7 @@ private:
   llvm::DenseMap<const RecordDecl *, Record *> Records;
 
   /// Dummy parameter to generate pointers from.
-  llvm::DenseMap<const ParmVarDecl *, unsigned> DummyParams;
+  llvm::DenseMap<const ValueDecl *, unsigned> DummyParams;
 
   /// Creates a new descriptor.
   template <typename... Ts>

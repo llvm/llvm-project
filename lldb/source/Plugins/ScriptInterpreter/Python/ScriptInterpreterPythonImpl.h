@@ -140,6 +140,7 @@ public:
 
   StructuredData::DictionarySP
   OSPlugin_RegisterInfo(StructuredData::ObjectSP os_plugin_object_sp) override;
+  lldb::ScriptedThreadInterfaceSP CreateScriptedThreadInterface() override;
 
   StructuredData::ArraySP
   OSPlugin_ThreadsInfo(StructuredData::ObjectSP os_plugin_object_sp) override;

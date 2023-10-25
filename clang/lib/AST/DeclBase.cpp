@@ -470,8 +470,9 @@ bool Decl::isFlexibleArrayMemberLike(
       }
 
       if (auto CTL = TL.getAs<ConstantArrayTypeLoc>()) {
-        const Expr *SizeExpr = dyn_cast<IntegerLiteral>(CTL.getSizeExpr());
-        if (!SizeExpr || SizeExpr->getExprLoc().isMacroID())
+        if (const Expr *SizeExpr =
+                dyn_cast_if_present<IntegerLiteral>(CTL.getSizeExpr());
+            !SizeExpr || SizeExpr->getExprLoc().isMacroID())
           return false;
       }
 
@@ -936,7 +937,6 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case BuiltinTemplate:
     case ClassTemplateSpecialization:
     case ClassTemplatePartialSpecialization:
-    case ClassScopeFunctionSpecialization:
     case VarTemplateSpecialization:
     case VarTemplatePartialSpecialization:
     case ObjCImplementation:
@@ -1077,9 +1077,7 @@ bool Decl::AccessDeclContextCheck() const {
       isa<ParmVarDecl>(this) ||
       // FIXME: a ClassTemplateSpecialization or CXXRecordDecl can have
       // AS_none as access specifier.
-      isa<CXXRecordDecl>(this) ||
-      isa<ClassScopeFunctionSpecializationDecl>(this) ||
-      isa<LifetimeExtendedTemporaryDecl>(this))
+      isa<CXXRecordDecl>(this) || isa<LifetimeExtendedTemporaryDecl>(this))
     return true;
 
   assert(Access != AS_none &&

@@ -75,8 +75,9 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
 
   // This is to handle situations where the mantissa isn't an even number of hex
   // digits. This is primarily relevant for x86 80 bit long doubles, which have
-  // 63 bit mantissas.
-  if (mantissa_width % BITS_IN_HEX_DIGIT != 0) {
+  // 63 bit mantissas. In the case where the mantissa is 0, however, the
+  // exponent should stay as 0.
+  if (mantissa_width % BITS_IN_HEX_DIGIT != 0 && mantissa > 0) {
     exponent -= mantissa_width % BITS_IN_HEX_DIGIT;
   }
 

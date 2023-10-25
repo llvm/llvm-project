@@ -37,6 +37,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instructions.h"
@@ -101,6 +102,11 @@ private:
 
   // An early selection function that runs before the selectImpl() call.
   bool earlySelect(MachineInstr &I);
+
+  /// Save state that is shared between select calls, call select on \p I and
+  /// then restore the saved state. This can be used to recursively call select
+  /// within a select call.
+  bool selectAndRestoreState(MachineInstr &I);
 
   // Do some preprocessing of G_PHIs before we begin selection.
   void processPHIs(MachineFunction &MF);
@@ -223,6 +229,9 @@ private:
   bool selectReduction(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectMOPS(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectUSMovFromExtend(MachineInstr &I, MachineRegisterInfo &MRI);
+
+  bool selectIndexedLoad(MachineInstr &I, MachineRegisterInfo &MRI);
+  bool selectIndexedStore(GIndexedStore &I, MachineRegisterInfo &MRI);
 
   unsigned emitConstantPoolEntry(const Constant *CPVal,
                                  MachineFunction &MF) const;
@@ -3038,6 +3047,11 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     return constrainSelectedInstRegOperands(*LoadStore, TII, TRI, RBI);
   }
 
+  case TargetOpcode::G_INDEXED_LOAD:
+    return selectIndexedLoad(I, MRI);
+  case TargetOpcode::G_INDEXED_STORE:
+    return selectIndexedStore(cast<GIndexedStore>(I), MRI);
+
   case TargetOpcode::G_SMULH:
   case TargetOpcode::G_UMULH: {
     // Reject the various things we don't support yet.
@@ -3550,6 +3564,13 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   }
 
   return false;
+}
+
+bool AArch64InstructionSelector::selectAndRestoreState(MachineInstr &I) {
+  MachineIRBuilderState OldMIBState = MIB.getState();
+  bool Success = select(I);
+  MIB.setState(OldMIBState);
+  return Success;
 }
 
 bool AArch64InstructionSelector::selectReduction(MachineInstr &I,
@@ -4749,11 +4770,17 @@ MachineInstr *AArch64InstructionSelector::emitCarryIn(MachineInstr &I,
   // emit a carry generating instruction. E.g. for G_UADDE/G_USUBE sequences
   // generated during legalization of wide add/sub. This optimization depends on
   // these sequences not being interrupted by other instructions.
+  // We have to select the previous instruction before the carry-using
+  // instruction is deleted by the calling function, otherwise the previous
+  // instruction might become dead and would get deleted.
   MachineInstr *SrcMI = MRI->getVRegDef(CarryReg);
   if (SrcMI == I.getPrevNode()) {
     if (auto *CarrySrcMI = dyn_cast<GAddSubCarryOut>(SrcMI)) {
       bool ProducesNegatedCarry = CarrySrcMI->isSub();
-      if (NeedsNegatedCarry == ProducesNegatedCarry && CarrySrcMI->isUnsigned())
+      if (NeedsNegatedCarry == ProducesNegatedCarry &&
+          CarrySrcMI->isUnsigned() &&
+          CarrySrcMI->getCarryOutReg() == CarryReg &&
+          selectAndRestoreState(*SrcMI))
         return nullptr;
     }
   }
@@ -5619,6 +5646,82 @@ MachineInstr *AArch64InstructionSelector::tryAdvSIMDModImmFP(
   auto Mov = Builder.buildInstr(Op, {Dst}, {}).addImm(Val);
   constrainSelectedInstRegOperands(*Mov, TII, TRI, RBI);
   return &*Mov;
+}
+
+bool AArch64InstructionSelector::selectIndexedLoad(MachineInstr &MI,
+                                                   MachineRegisterInfo &MRI) {
+  // TODO: extending loads.
+  if (isa<GIndexedExtLoad>(MI))
+    return false;
+
+  auto &Ld = cast<GIndexedLoad>(MI);
+  Register Dst = Ld.getDstReg();
+  Register WriteBack = Ld.getWritebackReg();
+  Register Base = Ld.getBaseReg();
+  Register Offset = Ld.getOffsetReg();
+
+  if (Ld.isPre())
+    return false; // TODO: add pre-inc support
+
+  unsigned Opc = 0;
+  static constexpr unsigned GPROpcodes[] = {
+      AArch64::LDRBBpost, AArch64::LDRHHpost, AArch64::LDRWpost,
+      AArch64::LDRXpost};
+  static constexpr unsigned FPROpcodes[] = {
+      AArch64::LDRBpost, AArch64::LDRHpost, AArch64::LDRSpost,
+      AArch64::LDRDpost, AArch64::LDRQpost};
+
+  unsigned MemSize = Ld.getMMO().getMemoryType().getSizeInBytes();
+  if (RBI.getRegBank(Dst, MRI, TRI)->getID() == AArch64::FPRRegBankID)
+    Opc = FPROpcodes[Log2_32(MemSize)];
+  else
+    Opc = GPROpcodes[Log2_32(MemSize)];
+
+  auto Cst = getIConstantVRegVal(Offset, MRI);
+  if (!Cst)
+    return false; // Shouldn't happen, but just in case.
+  auto LdMI =
+      MIB.buildInstr(Opc, {WriteBack, Dst}, {Base}).addImm(Cst->getSExtValue());
+  LdMI.cloneMemRefs(Ld);
+  constrainSelectedInstRegOperands(*LdMI, TII, TRI, RBI);
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AArch64InstructionSelector::selectIndexedStore(GIndexedStore &I,
+                                                    MachineRegisterInfo &MRI) {
+  Register Dst = I.getWritebackReg();
+  Register Val = I.getValueReg();
+  Register Base = I.getBaseReg();
+  Register Offset = I.getOffsetReg();
+  LLT ValTy = MRI.getType(Val);
+
+  if (I.isPre())
+    return false; // TODO: add pre-inc support
+
+  unsigned Opc = 0;
+  static constexpr unsigned GPROpcodes[] = {
+      AArch64::STRBBpost, AArch64::STRHHpost, AArch64::STRWpost,
+      AArch64::STRXpost};
+  static constexpr unsigned FPROpcodes[] = {
+      AArch64::STRBpost, AArch64::STRHpost, AArch64::STRSpost,
+      AArch64::STRDpost, AArch64::STRQpost};
+
+  assert(ValTy.getSizeInBits() <= 128);
+  if (RBI.getRegBank(Val, MRI, TRI)->getID() == AArch64::FPRRegBankID)
+    Opc = FPROpcodes[Log2_32(ValTy.getSizeInBytes())];
+  else
+    Opc = GPROpcodes[Log2_32(ValTy.getSizeInBytes())];
+
+  auto Cst = getIConstantVRegVal(Offset, MRI);
+  if (!Cst)
+    return false; // Shouldn't happen, but just in case.
+  auto Str =
+      MIB.buildInstr(Opc, {Dst}, {Val, Base}).addImm(Cst->getSExtValue());
+  Str.cloneMemRefs(I);
+  constrainSelectedInstRegOperands(*Str, TII, TRI, RBI);
+  I.eraseFromParent();
+  return true;
 }
 
 MachineInstr *

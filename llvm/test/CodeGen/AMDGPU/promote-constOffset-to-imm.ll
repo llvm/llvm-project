@@ -573,8 +573,7 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX900-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX900-NEXT:    v_add_co_u32_e32 v1, vcc, s34, v1
 ; GFX900-NEXT:    v_addc_co_u32_e32 v2, vcc, v2, v3, vcc
-; GFX900-NEXT:    s_movk_i32 s0, 0x5000
-; GFX900-NEXT:    v_add_co_u32_e32 v1, vcc, s0, v1
+; GFX900-NEXT:    v_add_co_u32_e32 v1, vcc, 0x5000, v1
 ; GFX900-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX900-NEXT:    v_addc_co_u32_e32 v2, vcc, 0, v2, vcc
 ; GFX900-NEXT:    s_movk_i32 s2, 0x7f
@@ -805,8 +804,7 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX90A-NEXT:    v_mov_b32_e32 v2, s35
 ; GFX90A-NEXT:    v_add_co_u32_e32 v1, vcc, s34, v1
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v3, vcc, v3, v2, vcc
-; GFX90A-NEXT:    s_movk_i32 s0, 0x5000
-; GFX90A-NEXT:    v_add_co_u32_e32 v2, vcc, s0, v1
+; GFX90A-NEXT:    v_add_co_u32_e32 v2, vcc, 0x5000, v1
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX90A-NEXT:    s_movk_i32 s2, 0x7f
 ; GFX90A-NEXT:    v_pk_mov_b32 v[4:5], 0, 0
