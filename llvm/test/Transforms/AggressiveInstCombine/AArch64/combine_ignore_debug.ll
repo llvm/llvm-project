@@ -2,9 +2,8 @@
 ; RUN: opt -mtriple aarch64 -aggressive-instcombine-max-scan-instrs=1 -passes="aggressive-instcombine" -S < %s | FileCheck %s -check-prefix DBG
 ; RUN: opt -strip-debug -mtriple aarch64 -aggressive-instcombine-max-scan-instrs=1 -passes="aggressive-instcombine" -S < %s | FileCheck %s -check-prefix NODBG
 
-; FIXME: The DBG and NODBG cases should be the same. I.e. we should optimize the
-; DBG case too even if there is a dbg.value.
-; This is described in https://github.com/llvm/llvm-project/issues/69925
+; The DBG and NODBG cases should be the same. I.e. we should optimize the DBG
+; case too even if there is a dbg.value.
 
 target datalayout = "E"
 
@@ -16,14 +15,9 @@ target datalayout = "E"
 define void @test() {
 ; DBG-LABEL: define void @test() {
 ; DBG-NEXT:  entry:
-; DBG-NEXT:    [[L1:%.*]] = load i16, ptr @e, align 1
+; DBG-NEXT:    [[L1:%.*]] = load i32, ptr @e, align 1
 ; DBG-NEXT:    call void @llvm.dbg.value(metadata i32 undef, metadata [[META3:![0-9]+]], metadata !DIExpression()), !dbg [[DBG5:![0-9]+]]
-; DBG-NEXT:    [[L2:%.*]] = load i16, ptr getelementptr inbounds ([[S:%.*]], ptr @e, i16 0, i32 1), align 1
-; DBG-NEXT:    [[E2:%.*]] = zext i16 [[L2]] to i32
-; DBG-NEXT:    [[E1:%.*]] = zext i16 [[L1]] to i32
-; DBG-NEXT:    [[S1:%.*]] = shl nuw i32 [[E1]], 16
-; DBG-NEXT:    [[O1:%.*]] = or i32 [[S1]], [[E2]]
-; DBG-NEXT:    store i32 [[O1]], ptr @l, align 1
+; DBG-NEXT:    store i32 [[L1]], ptr @l, align 1
 ; DBG-NEXT:    ret void
 ;
 ; NODBG-LABEL: define void @test() {
