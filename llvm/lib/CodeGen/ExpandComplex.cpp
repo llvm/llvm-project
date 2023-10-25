@@ -123,7 +123,7 @@ bool expandComplexInstruction(IntrinsicInst *CI, const TargetLowering *TLI,
       // All we need to do is move the integer to a vector register, without any
       // other munging.
       uint64_t Width =
-        ComplexVectorTy->getPrimitiveSizeInBits().getFixedValue();
+          ComplexVectorTy->getPrimitiveSizeInBits().getFixedValue();
       Type *IntegerTy = Builder.getIntNTy(Width);
       FunctionCallee Func = CI->getModule()->getOrInsertFunction(
           Name, IntegerTy, FloatTy, FloatTy, FloatTy, FloatTy);

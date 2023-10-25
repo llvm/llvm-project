@@ -107,65 +107,40 @@ define <2 x x86_fp80> @intrinsic_f80(<2 x x86_fp80> %z, <2 x x86_fp80> %w) {
   ret <2 x x86_fp80> %mul
 }
 
-define <2 x fp128> @intrinsic_f128(<2 x fp128> %z, <2 x fp128> %w) {
+define <2 x fp128> @intrinsic_f128(<2 x fp128> %z, <2 x fp128> %w) nounwind {
 ; CHECK-LABEL: intrinsic_f128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    subl $40, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    .cfi_offset %esi, -8
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK-NEXT:    subl $12, %esp
-; CHECK-NEXT:    .cfi_adjust_cfa_offset 12
 ; CHECK-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    .cfi_adjust_cfa_offset 4
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    .cfi_adjust_cfa_offset 4
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    .cfi_adjust_cfa_offset 4
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    .cfi_adjust_cfa_offset 4
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    .cfi_adjust_cfa_offset 4
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    .cfi_adjust_cfa_offset 4
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    .cfi_adjust_cfa_offset 4
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    .cfi_adjust_cfa_offset 4
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    .cfi_adjust_cfa_offset 4
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    .cfi_adjust_cfa_offset 4
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    .cfi_adjust_cfa_offset 4
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    .cfi_adjust_cfa_offset 4
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    .cfi_adjust_cfa_offset 4
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    .cfi_adjust_cfa_offset 4
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    .cfi_adjust_cfa_offset 4
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    .cfi_adjust_cfa_offset 4
 ; CHECK-NEXT:    pushl %eax
-; CHECK-NEXT:    .cfi_adjust_cfa_offset 4
 ; CHECK-NEXT:    calll __multc3@PLT
-; CHECK-NEXT:    .cfi_adjust_cfa_offset -4
 ; CHECK-NEXT:    addl $76, %esp
-; CHECK-NEXT:    .cfi_adjust_cfa_offset -76
 ; CHECK-NEXT:    movaps (%esp), %xmm0
 ; CHECK-NEXT:    movaps {{[0-9]+}}(%esp), %xmm1
 ; CHECK-NEXT:    movaps %xmm1, 16(%esi)
 ; CHECK-NEXT:    movaps %xmm0, (%esi)
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    addl $40, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    popl %esi
-; CHECK-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-NEXT:    retl $4
   %mul = call <2 x fp128> @llvm.experimental.complex.fmul.v2f128(<2 x fp128> %z, <2 x fp128> %w)
   ret <2 x fp128> %mul

@@ -5972,7 +5972,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Type *ArgTy = Call.getArgOperand(0)->getType();
     FixedVectorType *VectorTy = dyn_cast<FixedVectorType>(ArgTy);
     Check(VectorTy && VectorTy->getNumElements() % 2 == 0 &&
-            VectorTy->getElementType()->isFloatingPointTy(),
+              VectorTy->getElementType()->isFloatingPointTy(),
           "complex intrinsic must use an even-length vector of floating-point "
           "types",
           &Call);

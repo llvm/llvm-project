@@ -2801,7 +2801,7 @@ public:
     case ISD::AVGCEILU:
     case ISD::ABDS:
     case ISD::ABDU:
-    case ISD::COMPLEX_MUL:
+    case ISD::COMPLEX_FMUL:
       return true;
     default: return false;
     }

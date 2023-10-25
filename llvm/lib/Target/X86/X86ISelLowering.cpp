@@ -2327,17 +2327,17 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   if (Subtarget.hasFP16()) {
     for (auto VT : {MVT::v2f16, MVT::v4f16, MVT::v8f16, MVT::v16f16}) {
       if (Subtarget.hasVLX())
-        setOperationAction(ISD::COMPLEX_MUL, VT, Custom);
-      setOperationAction(ISD::COMPLEX_MUL, MVT::v32f16, Custom);
+        setOperationAction(ISD::COMPLEX_FMUL, VT, Custom);
+      setOperationAction(ISD::COMPLEX_FMUL, MVT::v32f16, Custom);
     }
   }
   if (Subtarget.hasAnyFMA() || (Subtarget.hasAVX512() && Subtarget.hasVLX())) {
     for (auto VT : {MVT::v2f32, MVT::v4f32, MVT::v8f32, MVT::v2f64, MVT::v4f64})
-      setOperationAction(ISD::COMPLEX_MUL, VT, Custom);
+      setOperationAction(ISD::COMPLEX_FMUL, VT, Custom);
   }
   if (Subtarget.hasAVX512()) {
-    setOperationAction(ISD::COMPLEX_MUL, MVT::v8f64, Custom);
-    setOperationAction(ISD::COMPLEX_MUL, MVT::v16f32, Custom);
+    setOperationAction(ISD::COMPLEX_FMUL, MVT::v8f64, Custom);
+    setOperationAction(ISD::COMPLEX_FMUL, MVT::v16f32, Custom);
   }
 
   if (Subtarget.hasAMXTILE()) {
@@ -2555,35 +2555,32 @@ X86TargetLowering::getComplexReturnABI(Type *ScalarFloatTy) const {
   // 32 and 64-bit ABIs).
   if (Subtarget.isOSWindows()) {
     unsigned FloatSize =
-      ScalarFloatTy->getPrimitiveSizeInBits().getFixedValue();
-    if (FloatSize <= 32) {
+        ScalarFloatTy->getPrimitiveSizeInBits().getFixedValue();
+    if (FloatSize <= 32)
       return ComplexABI::Integer;
-    } else {
+    else
       return ComplexABI::Memory;
-    }
   }
   if (Subtarget.is32Bit()) {
-    if (ScalarFloatTy->isFloatTy()) {
+    if (ScalarFloatTy->isFloatTy())
       return ComplexABI::Integer;
-    } else if (ScalarFloatTy->isHalfTy()) {
+    else if (ScalarFloatTy->isHalfTy())
       return ComplexABI::Vector;
-    } else {
+    else
       return ComplexABI::Memory;
-    }
   } else {
     // The x86-64 ABI specifies that (save for x86-fp80), this is handled as a
     // regular C struct. This means that float and smaller get packed into a
     // single vector in xmm0; double and x86-fp80 (by special case) return two
     // values; and larger types than x86-fp80 (i.e., fp128) returns via memory.
     unsigned FloatSize =
-      ScalarFloatTy->getPrimitiveSizeInBits().getFixedValue();
-    if (FloatSize <= 32) {
+        ScalarFloatTy->getPrimitiveSizeInBits().getFixedValue();
+    if (FloatSize <= 32)
       return ComplexABI::Vector;
-    } else if (FloatSize <= 80) {
+    else if (FloatSize <= 80)
       return ComplexABI::Struct;
-    } else {
+    else
       return ComplexABI::Memory;
-    }
   }
 }
 
@@ -31807,7 +31804,7 @@ bool X86TargetLowering::isInlineAsmTargetBranch(
 }
 
 bool X86TargetLowering::CustomLowerComplexMultiply(Type *FloatTy) const {
-  auto VecTy = cast<FixedVectorType>(FloatTy);
+  auto *VecTy = cast<FixedVectorType>(FloatTy);
   unsigned VecSize = VecTy->getNumElements() * VecTy->getScalarSizeInBits();
   Type *ElementTy = VecTy->getElementType();
   if (ElementTy->isHalfTy()) {
@@ -32022,7 +32019,7 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ADDRSPACECAST:      return LowerADDRSPACECAST(Op, DAG);
   case X86ISD::CVTPS2PH:        return LowerCVTPS2PH(Op, DAG);
   case ISD::PREFETCH:           return LowerPREFETCH(Op, Subtarget, DAG);
-  case ISD::COMPLEX_MUL:        return LowerComplexMUL(Op, DAG, Subtarget);
+  case ISD::COMPLEX_FMUL:       return LowerComplexMUL(Op, DAG, Subtarget);
   }
 }
 
@@ -33124,13 +33121,13 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     // to move the scalar in two i32 pieces.
     Results.push_back(LowerBITREVERSE(SDValue(N, 0), Subtarget, DAG));
     return;
-  case ISD::COMPLEX_MUL:
+  case ISD::COMPLEX_FMUL:
     // Widen the vector size smaller than 128 to 128
     MVT VT = N->getSimpleValueType(0);
-    // FIXME: (COMPLEX_MUL v2f16, v2f16) should be lowered to VFMULCSH but we
+    // FIXME: (COMPLEX_FMUL v2f16, v2f16) should be lowered to VFMULCSH but we
     // mix the v2f16 and v4f16 here.
-    assert((VT == MVT::v2f32 || VT == MVT::v2f16 ||
-           VT == MVT::v4f16) && "Unexpected Value type of COMPLEX_MUL!");
+    assert((VT == MVT::v2f32 || VT == MVT::v2f16 || VT == MVT::v4f16) &&
+           "Unexpected Value type of COMPLEX_FMUL!");
     MVT WideVT =
         VT.getVectorElementType() == MVT::f16 ? MVT::v8f16 : MVT::v4f32;
     SmallVector<SDValue, 4> Ops(VT == MVT::v2f16 ? 4 : 2, DAG.getUNDEF(VT));

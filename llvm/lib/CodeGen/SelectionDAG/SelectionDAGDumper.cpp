@@ -513,7 +513,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     return "stackmap";
   case ISD::PATCHPOINT:
     return "patchpoint";
-  case ISD::COMPLEX_MUL:                return "complex_mul";
+  case ISD::COMPLEX_FMUL:               return "complex_fmul";
 
     // Vector Predication
 #define BEGIN_REGISTER_VP_SDNODE(SDID, LEGALARG, NAME, ...)                    \
