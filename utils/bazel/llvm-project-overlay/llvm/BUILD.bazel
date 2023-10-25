@@ -1436,6 +1436,7 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":Core",
+        ":Object",
         ":Support",
         ":TransformUtils",
     ],
