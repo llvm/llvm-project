@@ -7591,7 +7591,6 @@ static void visitLifetimeBoundArguments(IndirectLocalPath &Path, Expr *Call,
       // Only for demonstration: Get feedback and add a clang annotation as an
       // extension.
       if (attr->getAnnotation() == "coro_type") {
-        
         checkCoroCall = true;
         break;
       }
