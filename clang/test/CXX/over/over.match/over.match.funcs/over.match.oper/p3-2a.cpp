@@ -374,6 +374,28 @@ bool fine(A a, B b) { return a == b; } // Ok. Found a matching operator!=.
 }
 }
 
+namespace friend_opNE_GH{
+namespace test1 {
+struct S {
+    operator int();
+    friend bool operator==(const S &, int); // expected-note {{reversed}}
+};
+struct A : S {};
+struct B : S {};
+bool x = A{} == B{}; // expected-warning {{ambiguous}}
+}
+
+namespace test2 {
+struct S {
+    operator int();
+    friend bool operator==(const S &, int);
+    friend bool operator!=(const S &, int);
+};
+struct A : S {};
+struct B : S {};
+bool x = A{} == B{};
+}
+}
 
 namespace ADL_GH68901{
 namespace test1 {
