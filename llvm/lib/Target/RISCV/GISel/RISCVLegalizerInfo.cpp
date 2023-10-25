@@ -77,7 +77,6 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
   }
 
   getActionDefinitionsBuilder(G_BSWAP)
-    .widenScalarToNextPow2(0)
     .clampScalar(0, s16, XLenLLT)
     .lower();
 
