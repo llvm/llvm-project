@@ -9,9 +9,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssembly.h"
-#if 0
-#include "llvm/BinaryFormat/ELF.h"
-#endif
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalValue.h"
@@ -126,11 +123,9 @@ bool WebAssemblyGlobalsTagging::runOnModule(Module &M) {
       continue;
     GlobalsToTag.push_back(&G);
   }
-
   for (GlobalVariable *G : GlobalsToTag) {
     tagGlobalDefinition(M, G);
   }
-
   return true;
 }
 
