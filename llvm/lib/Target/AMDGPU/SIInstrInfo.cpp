@@ -3906,8 +3906,7 @@ bool SIInstrInfo::hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const 
   //
   // However, executing them with EXEC = 0 causes them to operate on undefined
   // data, which we avoid by returning true here.
-  if (Opcode == AMDGPU::V_READFIRSTLANE_B32 ||
-      Opcode == AMDGPU::V_READLANE_B32 || Opcode == AMDGPU::V_WRITELANE_B32)
+  if (Opcode == AMDGPU::V_READFIRSTLANE_B32)
     return true;
 
   return false;
