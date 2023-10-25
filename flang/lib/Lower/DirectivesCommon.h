@@ -202,11 +202,11 @@ static inline void genOmpAccAtomicUpdateStatement(
     [[maybe_unused]] const AtomicListT *leftHandClauseList,
     [[maybe_unused]] const AtomicListT *rightHandClauseList,
     mlir::Operation *atomicCaptureOp = nullptr) {
-  // Generate `omp.atomic.update` operation for atomic assignment statements
+  // Generate `atomic.update` operation for atomic assignment statements
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::Location currentLocation = converter.getCurrentLocation();
 
-  //  Create the omp.atomic.update Operation
+  //  Create the omp.atomic.update or acc.atmoic.update operation
   //
   //  func.func @_QPsb() {
   //    %0 = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFsbEa"}
