@@ -1995,8 +1995,10 @@ Error InMemoryCASDWARFObject::partitionCUData(ArrayRef<char> DebugInfoData,
   uint64_t OffsetPtr = 0;
   DWARFUnitHeader Header;
   DWARFSection Section = {toStringRef(DebugInfoData), 0 /*Address*/};
-  Header.extract(*Ctx, DWARFDataExtractor(*this, Section, isLittleEndian(), 8),
-                 &OffsetPtr, DWARFSectionKind::DW_SECT_INFO);
+  if (Error E = Header.extract(
+          *Ctx, DWARFDataExtractor(*this, Section, isLittleEndian(), 8),
+          &OffsetPtr, DWARFSectionKind::DW_SECT_INFO))
+    return E;
 
   DWARFUnitVector UV;
   DWARFCompileUnit DCU(*Ctx, Section, Header, &Abbrev, &getRangesSection(),
