@@ -504,27 +504,19 @@ bool RISCVInstructionSelector::selectGlobalValue(
   const LLT DefTy = MRI.getType(DefReg);
   MachineInstr *Result = nullptr;
 
-  switch (TM.getCodeModel()) {
-  default: {
-    reportGISelFailure(const_cast<MachineFunction &>(*MF), *TPC, *MORE,
-                       getName(), "Unsupported code model for lowering", MI);
-    return false;
-  }
-  case CodeModel::Small: {
-    // When HWASAN is used and tagging of global variables is enabled
-    // they should be accessed via the GOT, since the tagged address of a global
-    // is incompatible with existing code models. This also applies to non-pic
-    // mode.
-    if (TM.isPositionIndependent() && GV->isDSOLocal() &&
-        !Subtarget->allowTaggedGlobals()) {
+  // When HWASAN is used and tagging of global variables is enabled
+  // they should be accessed via the GOT, since the tagged address of a global
+  // is incompatible with existing code models. This also applies to non-pic
+  // mode.
+  if (TM.isPositionIndependent() || Subtarget->allowTaggedGlobals()) {
+    if (GV->isDSOLocal() && !Subtarget->allowTaggedGlobals()) {
       // Use PC-relative addressing to access the symbol. This generates the
       // pattern (PseudoLLA sym), which expands to (addi (auipc %pcrel_hi(sym))
       // %pcrel_lo(auipc)).
       Result = MIB.buildInstr(RISCV::PseudoLLA)
                    .addDef(DefReg)
                    .addGlobalAddress(GV, 0);
-    } else if (Subtarget->allowTaggedGlobals() ||
-               (TM.isPositionIndependent() && !GV->isDSOLocal())) {
+    } else {
       // Use PC-relative addressing to access the GOT for this symbol, then
       // load the address from the GOT. This generates the pattern (PseudoLGA
       // sym), which expands to (ld (addi (auipc %got_pcrel_hi(sym))
@@ -541,23 +533,37 @@ bool RISCVInstructionSelector::selectGlobalValue(
                    .addDef(DefReg)
                    .addGlobalAddress(GV, 0)
                    .addMemOperand(MemOp);
-    } else {
-      // Must lie within a single 2 GiB address range and must lie between
-      // absolute addresses -2 GiB and +2 GiB. This generates the pattern (addi
-      // (lui %hi(sym)) %lo(sym)).
-      Register AddrHiDest = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-      MachineInstr *AddrHi = MIB.buildInstr(RISCV::LUI)
-                                 .addDef(AddrHiDest)
-                                 .addGlobalAddress(GV, RISCVII::MO_HI);
-
-      if (!constrainSelectedInstRegOperands(*AddrHi, TII, TRI, RBI))
-        return false;
-
-      Result = MIB.buildInstr(RISCV::ADDI)
-                   .addDef(DefReg)
-                   .addReg(AddrHiDest)
-                   .addGlobalAddress(GV, 0, RISCVII::MO_LO);
     }
+
+    if (!constrainSelectedInstRegOperands(*Result, TII, TRI, RBI))
+      return false;
+
+    MI.eraseFromParent();
+    return true;
+  }
+
+  switch (TM.getCodeModel()) {
+  default: {
+    reportGISelFailure(const_cast<MachineFunction &>(*MF), *TPC, *MORE,
+                       getName(), "Unsupported code model for lowering", MI);
+    return false;
+  }
+  case CodeModel::Small: {
+    // Must lie within a single 2 GiB address range and must lie between
+    // absolute addresses -2 GiB and +2 GiB. This generates the pattern (addi
+    // (lui %hi(sym)) %lo(sym)).
+    Register AddrHiDest = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+    MachineInstr *AddrHi = MIB.buildInstr(RISCV::LUI)
+                               .addDef(AddrHiDest)
+                               .addGlobalAddress(GV, RISCVII::MO_HI);
+
+    if (!constrainSelectedInstRegOperands(*AddrHi, TII, TRI, RBI))
+      return false;
+
+    Result = MIB.buildInstr(RISCV::ADDI)
+                 .addDef(DefReg)
+                 .addReg(AddrHiDest)
+                 .addGlobalAddress(GV, 0, RISCVII::MO_LO);
 
     if (!constrainSelectedInstRegOperands(*Result, TII, TRI, RBI))
       return false;
