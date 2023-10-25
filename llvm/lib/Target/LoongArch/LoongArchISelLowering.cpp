@@ -243,11 +243,9 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::BITCAST, VT, Legal);
       setOperationAction(ISD::UNDEF, VT, Legal);
 
-      // FIXME: For BUILD_VECTOR, it is temporarily set to `Legal` here, and it
-      // will be `Custom` handled in the future.
-      setOperationAction(ISD::BUILD_VECTOR, VT, Legal);
       setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Legal);
+      setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
     }
     for (MVT VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64}) {
       setOperationAction({ISD::ADD, ISD::SUB}, VT, Legal);
@@ -274,10 +272,9 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::BITCAST, VT, Legal);
       setOperationAction(ISD::UNDEF, VT, Legal);
 
-      // FIXME: Same as above.
-      setOperationAction(ISD::BUILD_VECTOR, VT, Legal);
       setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Legal);
+      setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
     }
     for (MVT VT : {MVT::v4i64, MVT::v8i32, MVT::v16i16, MVT::v32i8}) {
       setOperationAction({ISD::ADD, ISD::SUB}, VT, Legal);
@@ -382,7 +379,102 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerWRITE_REGISTER(Op, DAG);
   case ISD::INSERT_VECTOR_ELT:
     return lowerINSERT_VECTOR_ELT(Op, DAG);
+  case ISD::BUILD_VECTOR:
+    return lowerBUILD_VECTOR(Op, DAG);
   }
+  return SDValue();
+}
+
+static bool isConstantOrUndef(const SDValue Op) {
+  if (Op->isUndef())
+    return true;
+  if (isa<ConstantSDNode>(Op))
+    return true;
+  if (isa<ConstantFPSDNode>(Op))
+    return true;
+  return false;
+}
+
+static bool isConstantOrUndefBUILD_VECTOR(const BuildVectorSDNode *Op) {
+  for (unsigned i = 0; i < Op->getNumOperands(); ++i)
+    if (isConstantOrUndef(Op->getOperand(i)))
+      return true;
+  return false;
+}
+
+SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
+                                                   SelectionDAG &DAG) const {
+  BuildVectorSDNode *Node = cast<BuildVectorSDNode>(Op);
+  EVT ResTy = Op->getValueType(0);
+  SDLoc DL(Op);
+  APInt SplatValue, SplatUndef;
+  unsigned SplatBitSize;
+  bool HasAnyUndefs;
+  bool Is128Vec = ResTy.is128BitVector();
+  bool Is256Vec = ResTy.is256BitVector();
+
+  if ((!Subtarget.hasExtLSX() || !Is128Vec) &&
+      (!Subtarget.hasExtLASX() || !Is256Vec))
+    return SDValue();
+
+  if (Node->isConstantSplat(SplatValue, SplatUndef, SplatBitSize, HasAnyUndefs,
+                            /*MinSplatBits=*/8) &&
+      SplatBitSize <= 64) {
+    // We can only cope with 8, 16, 32, or 64-bit elements.
+    if (SplatBitSize != 8 && SplatBitSize != 16 && SplatBitSize != 32 &&
+        SplatBitSize != 64)
+      return SDValue();
+
+    EVT ViaVecTy;
+
+    switch (SplatBitSize) {
+    default:
+      return SDValue();
+    case 8:
+      ViaVecTy = Is128Vec ? MVT::v16i8 : MVT::v32i8;
+      break;
+    case 16:
+      ViaVecTy = Is128Vec ? MVT::v8i16 : MVT::v16i16;
+      break;
+    case 32:
+      ViaVecTy = Is128Vec ? MVT::v4i32 : MVT::v8i32;
+      break;
+    case 64:
+      ViaVecTy = Is128Vec ? MVT::v2i64 : MVT::v4i64;
+      break;
+    }
+
+    // SelectionDAG::getConstant will promote SplatValue appropriately.
+    SDValue Result = DAG.getConstant(SplatValue, DL, ViaVecTy);
+
+    // Bitcast to the type we originally wanted.
+    if (ViaVecTy != ResTy)
+      Result = DAG.getNode(ISD::BITCAST, SDLoc(Node), ResTy, Result);
+
+    return Result;
+  }
+
+  if (DAG.isSplatValue(Op, /*AllowUndefs=*/false))
+    return Op;
+
+  if (!isConstantOrUndefBUILD_VECTOR(Node)) {
+    // Use INSERT_VECTOR_ELT operations rather than expand to stores.
+    // The resulting code is the same length as the expansion, but it doesn't
+    // use memory operations.
+    EVT ResTy = Node->getValueType(0);
+
+    assert(ResTy.isVector());
+
+    unsigned NumElts = ResTy.getVectorNumElements();
+    SDValue Vector = DAG.getUNDEF(ResTy);
+    for (unsigned i = 0; i < NumElts; ++i) {
+      Vector = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ResTy, Vector,
+                           Node->getOperand(i),
+                           DAG.getConstant(i, DL, Subtarget.getGRLenVT()));
+    }
+    return Vector;
+  }
+
   return SDValue();
 }
 
