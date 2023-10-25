@@ -701,7 +701,7 @@ struct FormatStyle {
   ///     } -> std::same_as<int>;
   ///   };
   /// \endcode
-  /// \version 16
+  /// \version 18
   bool AllowShortCompoundRequirementOnASingleLine;
 
   /// Allow short enums on a single line.
