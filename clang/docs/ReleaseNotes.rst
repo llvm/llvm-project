@@ -401,6 +401,10 @@ Improvements to Clang's diagnostics
     24 | return decltype(fun_ptr)( f_ptr /*comment*/);
        |        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+- ``-Wzero-as-null-pointer-constant`` diagnostic is no longer emitted when using ``__null``
+  (or, more commonly, ``NULL`` when the platform defines it as ``__null``) to be more consistent
+  with GCC.
+
 Bug Fixes in This Version
 -------------------------
 - Fixed an issue where a class template specialization whose declaration is
