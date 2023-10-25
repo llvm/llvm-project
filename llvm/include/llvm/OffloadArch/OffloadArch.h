@@ -10,9 +10,9 @@
 #define __LLVM_OFFLOAD_OFFLOADARCH_H__
 
 #include "llvm/ADT/StringRef.h"
+#include <cstdint>
 #include <string>
 #include <vector>
-#include <cstdint>
 
 #define MAXPATHSIZE 512
 
@@ -69,13 +69,8 @@ std::string getOffloadArch(uint16_t VendorID, uint16_t DeviceID);
 std::string getCodename(std::string offloadArch);
 
 /// get the compilation triple for offloadarch
-std::string getTriple(const std::string& offloadarch);
+std::string getTriple(const std::string &offloadarch);
 
 /// Utility to return contents of a file as a string
 std::string getFileContents(const std::string &fname);
-
-///  \return true if the system only has devices with architecture \in arch
-///  false otherwise
-[[deprecated]] bool isHomogeneousSystemOf(std::string arch);
-
 #endif

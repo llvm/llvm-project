@@ -1582,6 +1582,10 @@ bool __tgt_rtl_is_fine_grained_memory_enabled() {
   return Plugin::get().IsFineGrainedMemoryEnabled();
 }
 
+bool __tgt_rtl_is_system_supporting_managed_memory() {
+  return Plugin::get().IsSystemSupportingManagedMemory();
+}
+
 void __tgt_rtl_set_up_env() { Plugin::get().setUpEnv(); }
 
 int64_t __tgt_rtl_init_requires(int64_t RequiresFlags) {

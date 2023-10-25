@@ -1066,6 +1066,24 @@ struct CUDAPluginTy final : public GenericPluginTy {
     }
     return true;
   }
+  bool IsSystemSupportingManagedMemory() override final {
+    assert(getNumDevices());
+
+    CUdevice Device;
+    CUresult Res = cuDeviceGet(&Device, 0);
+
+    if (Res != CUDA_SUCCESS)
+      return false;
+
+    int HasManagedMemorySupport = false;
+    Res = cuDeviceGetAttribute(&HasManagedMemorySupport,
+                               CU_DEVICE_ATTRIBUTE_MANAGED_MEMORY, Device);
+
+    if (Res != CUDA_SUCCESS)
+      return false;
+
+    return HasManagedMemorySupport;
+  }
 };
 
 Error CUDADeviceTy::dataExchangeImpl(const void *SrcPtr,

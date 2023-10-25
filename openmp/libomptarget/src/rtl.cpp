@@ -299,6 +299,9 @@ bool RTLsTy::attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL) {
   *((void **)&RTL.is_fine_grained_memory_enabled) =
       DynLibrary->getAddressOfSymbol(
           "__tgt_rtl_is_fine_grained_memory_enabled");
+  *((void **)&RTL.is_system_supporting_managed_memory) =
+      DynLibrary->getAddressOfSymbol(
+          "__tgt_rtl_is_system_supporting_managed_memory");
   *((void **)&RTL.set_device_offset) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_set_device_offset");
 
@@ -672,13 +675,6 @@ void RTLsTy::unregisterLib(__tgt_bin_desc *Desc) {
   }
 
   DP("Done unregistering library!\n");
-}
-
-bool RTLsTy::SystemSupportManagedMemory() {
-  for (auto it : archsSupportingManagedMemory)
-    if (isHomogeneousSystemOf(it))
-      return true;
-  return false;
 }
 
 // HACK: These depricated device stubs still needs host versions for fallback

@@ -42,6 +42,7 @@ struct RTLInfoTy {
   typedef bool(requested_prepopulate_gpu_page_table_ty)();
   typedef bool(is_no_maps_check_ty)();
   typedef bool(is_fine_grained_memory_enabled_ty)();
+  typedef bool(is_system_supporting_managed_memory_ty)();
   typedef int32_t(init_device_ty)(int32_t);
   typedef int32_t(deinit_device_ty)(int32_t);
   typedef int32_t(number_of_team_procs_ty)(int32_t);
@@ -117,6 +118,8 @@ struct RTLInfoTy {
       *requested_prepopulate_gpu_page_table = nullptr;
   is_no_maps_check_ty *is_no_maps_check = nullptr;
   is_fine_grained_memory_enabled_ty *is_fine_grained_memory_enabled = nullptr;
+  is_system_supporting_managed_memory_ty *is_system_supporting_managed_memory =
+      nullptr;
   init_device_ty *init_device = nullptr;
   deinit_device_ty *deinit_device = nullptr;
   number_of_team_procs_ty *number_of_team_procs = nullptr;
@@ -200,12 +203,6 @@ struct RTLsTy {
 
   // not thread-safe, called from global constructor (i.e. once)
   void loadRTLs();
-
-  std::vector<std::string> archsSupportingManagedMemory = {
-      "gfx908", "gfx90a", "gfx940", "gfx941", "gfx942",
-      "sm_35",  "sm_50",  "sm_60",  "sm_70",  "sm_61"};
-  // Return whether the current system supports omp_get_target_memory_space
-  bool SystemSupportManagedMemory();
 
 private:
   static bool attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL);

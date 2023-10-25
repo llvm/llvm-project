@@ -285,27 +285,3 @@ getOffloadArchFromBinary(const std::string &input_filename) {
   }
   return results;
 }
-
-bool isHomogeneousSystemOf(std::string arch) {
-
-  std::vector<std::string> archPCI_IDs = lookupOffloadArch(arch);
-  std::vector<std::pair<std::string, std::string>> allPCI_IDs =
-      getAllPCIIds(false);
-
-  // arch PCI_IDs could be saved with letters in upper or lower case
-  // make comparison case insensitive
-  for (auto it : allPCI_IDs) {
-    auto find_it = std::find_if(
-        archPCI_IDs.begin(), archPCI_IDs.end(), [&](std::string &archID) {
-          if (archID.size() != it.second.size())
-            return false;
-          for (long unsigned int i = 0; i < archID.size(); i++)
-            if (std::toupper(archID[i]) != std::toupper((it.second.c_str())[i]))
-              return false;
-          return true;
-        });
-    if (find_it == archPCI_IDs.end()) // not found
-      return false;
-  }
-  return true;
-}

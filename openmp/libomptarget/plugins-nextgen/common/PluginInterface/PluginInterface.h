@@ -842,7 +842,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
     return std::move(MB);
   }
 
-
   /// Get the total amount of hardware parallelism supported by the target
   /// device. This is the total amount of warps or wavefronts that can be
   /// resident on the device simultaneously.
@@ -1019,6 +1018,8 @@ struct GenericPluginTy {
   virtual bool IsNoMapsCheck() { return false; }
 
   virtual bool IsFineGrainedMemoryEnabled() { return false; }
+
+  virtual bool IsSystemSupportingManagedMemory() { return false; }
 
   virtual void setUpEnv() {}
   virtual void

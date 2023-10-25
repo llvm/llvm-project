@@ -3718,6 +3718,17 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     return EnableFineGrainedMemory;
   }
 
+  bool IsSystemSupportingManagedMemory() override final {
+    bool HasManagedMemorySupport = false;
+    hsa_status_t Status = hsa_system_get_info(HSA_AMD_SYSTEM_INFO_SVM_SUPPORTED,
+                                              &HasManagedMemorySupport);
+
+    if (Status != HSA_STATUS_SUCCESS)
+      return false;
+
+    return HasManagedMemorySupport;
+  }
+
   void readEnvVars() {
     if (!Initialized)
       FATAL_MESSAGE(1, "%s", "parseEnvVars was called on uninitialized plugin");
