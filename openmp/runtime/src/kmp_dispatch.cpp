@@ -91,7 +91,8 @@ static inline int __kmp_get_monotonicity(ident_t *loc, enum sched_type schedule,
 }
 
 #if KMP_WEIGHTED_ITERATIONS_SUPPORTED
-static inline float __kmp_get_float_val(float num) {
+// Return floating point number rounded to two decimal points
+static inline float __kmp_round_2decimal_val(float num) {
   return (float)(static_cast<int>(num * 100 + 0.5)) / 100;
 }
 static inline int __kmp_get_round_val(float num) {
@@ -495,7 +496,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
           float p_multiplier = multiplier * e_multiplier;
           p_ntc = __kmp_get_round_val(ntc * p_ratio * p_multiplier);
           if ((int)p_ntc > (int)(ntc * p_ratio * p_multiplier))
-            e_ntc = (int)(__kmp_get_float_val(ntc * e_ratio * e_multiplier));
+            e_ntc = (int)(__kmp_round_2decimal_val(ntc * e_ratio * e_multiplier));
           else
             e_ntc = __kmp_get_round_val(ntc * e_ratio * e_multiplier);
           KMP_DEBUG_ASSERT(ntc == p_ntc + e_ntc);

@@ -1846,20 +1846,9 @@ typedef struct kmp_sched_flags {
   unsigned ordered : 1;
   unsigned nomerge : 1;
   unsigned contains_last : 1;
-#if KMP_USE_HIER_SCHED
-  unsigned use_hier : 1;
-#if KMP_AFFINITY_SUPPORTED && KMP_STATIC_STEAL_ENABLED
-  unsigned use_hybrid : 1;
+  unsigned use_hier : 1; // Used in KMP_USE_HIER_SCHED code
+  unsigned use_hybrid : 1; // Used in KMP_WEIGHTED_ITERATIONS_SUPPORTED code
   unsigned unused : 27;
-#else
-  unsigned unused : 28;
-#endif
-#elif KMP_AFFINITY_SUPPORTED && KMP_STATIC_STEAL_ENABLED
-  unsigned use_hybrid : 1;
-  unsigned unused : 28;
-#else
-  unsigned unused : 29;
-#endif
 } kmp_sched_flags_t;
 
 KMP_BUILD_ASSERT(sizeof(kmp_sched_flags_t) == 4);
