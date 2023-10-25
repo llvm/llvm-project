@@ -199,18 +199,6 @@ static Value processCountOrOffset(Location loc, Value value, Type srcType,
   return optionallyTruncateOrExtend(loc, broadcasted, dstType, rewriter);
 }
 
-static bool convertTypes(LLVMTypeConverter &converter,
-                         const spirv::StructType::ElementTypeRange &types,
-                         SmallVectorImpl<Type> &out) {
-  for (const auto &type : types) {
-    if (auto convertedType = converter.convertType(type))
-      out.push_back(convertedType);
-    else
-      return false;
-  }
-  return true;
-}
-
 /// Converts SPIR-V struct with a regular (according to `VulkanLayoutUtils`)
 /// offset to LLVM struct. Otherwise, the conversion is not supported.
 static std::optional<Type>
@@ -220,7 +208,7 @@ convertStructTypeWithOffset(spirv::StructType type,
     return std::nullopt;
 
   SmallVector<Type> elementsVector;
-  if (!convertTypes(converter, type.getElementTypes(), elementsVector))
+  if (converter.convertTypes(type.getElementTypes(), elementsVector).failed())
     return std::nullopt;
   return LLVM::LLVMStructType::getLiteral(type.getContext(), elementsVector,
                                           /*isPacked=*/false);
@@ -230,7 +218,7 @@ convertStructTypeWithOffset(spirv::StructType type,
 static std::optional<Type>
 convertStructTypePacked(spirv::StructType type, LLVMTypeConverter &converter) {
   SmallVector<Type> elementsVector;
-  if (!convertTypes(converter, type.getElementTypes(), elementsVector))
+  if (converter.convertTypes(type.getElementTypes(), elementsVector).failed())
     return std::nullopt;
   return LLVM::LLVMStructType::getLiteral(type.getContext(), elementsVector,
                                           /*isPacked=*/true);
