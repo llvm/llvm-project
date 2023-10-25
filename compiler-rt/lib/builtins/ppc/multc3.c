@@ -19,7 +19,8 @@
     }                                                                          \
   }
 
-xf_float _Complex __multc3(xf_float a, xf_float b, xf_float c, xf_float d) {
+long double _Complex __multc3(long double a, long double b, long double c,
+                              long double d) {
   long double ac = __gcc_qmul(a, c);
   long double bd = __gcc_qmul(b, d);
   long double ad = __gcc_qmul(a, d);
