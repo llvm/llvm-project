@@ -52,6 +52,7 @@ namespace format {
   TYPE(ConflictStart)                                                          \
   /* l_brace of if/for/while */                                                \
   TYPE(ControlStatementLBrace)                                                 \
+  TYPE(ControlStatementRBrace)                                                 \
   TYPE(CppCastLParen)                                                          \
   TYPE(CSharpGenericTypeConstraint)                                            \
   TYPE(CSharpGenericTypeConstraintColon)                                       \
@@ -66,7 +67,9 @@ namespace format {
   TYPE(DesignatedInitializerLSquare)                                           \
   TYPE(DesignatedInitializerPeriod)                                            \
   TYPE(DictLiteral)                                                            \
+  TYPE(DoWhile)                                                                \
   TYPE(ElseLBrace)                                                             \
+  TYPE(ElseRBrace)                                                             \
   TYPE(EnumLBrace)                                                             \
   TYPE(EnumRBrace)                                                             \
   TYPE(FatArrow)                                                               \

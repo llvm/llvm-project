@@ -979,12 +979,7 @@ public:
 
     auto __len = std::min<size_type>(__n, __str.size() - __pos);
     if (__alloc_traits::is_always_equal::value || __alloc == __str.__alloc()) {
-      __r_.first() = __str.__r_.first();
-      __str.__r_.first() = __rep();
-
-      _Traits::move(data(), data() + __pos, __len);
-      __set_size(__len);
-      _Traits::assign(data()[__len], value_type());
+      __move_assign(std::move(__str), __pos, __len);
     } else {
       // Perform a copy because the allocators are not compatible.
       __init(__str.data() + __pos, __len);
@@ -1328,6 +1323,20 @@ public:
     __self_view __sv = __t;
     return assign(__sv.data(), __sv.size());
   }
+
+#if _LIBCPP_STD_VER >= 20
+  _LIBCPP_HIDE_FROM_ABI constexpr
+  void __move_assign(basic_string&& __str, size_type __pos, size_type __len) {
+    // Pilfer the allocation from __str.
+    _LIBCPP_ASSERT_INTERNAL(__alloc() == __str.__alloc(), "__move_assign called with wrong allocator");
+    __r_.first() = __str.__r_.first();
+    __str.__r_.first() = __rep();
+
+    _Traits::move(data(), data() + __pos, __len);
+    __set_size(__len);
+    _Traits::assign(data()[__len], value_type());
+  }
+#endif
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     basic_string& assign(const basic_string& __str) { return *this = __str; }
@@ -1851,7 +1860,14 @@ private:
         _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
         size_type __align_it(size_type __s) _NOEXCEPT
             {return (__s + (__a-1)) & ~(__a-1);}
-    enum {__alignment = 16};
+    enum {
+      __alignment =
+#ifdef _LIBCPP_ABI_STRING_8_BYTE_ALIGNMENT
+      8
+#else
+      16
+#endif
+    };
     static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     size_type __recommend(size_type __s) _NOEXCEPT
     {

@@ -194,8 +194,7 @@ static llvm::BasicBlock *convertOmpOpRegions(
 
   // Convert blocks one by one in topological order to ensure
   // defs are converted before uses.
-  SetVector<Block *> blocks =
-      LLVM::detail::getTopologicallySortedBlocks(region);
+  SetVector<Block *> blocks = getTopologicallySortedBlocks(region);
   for (Block *bb : blocks) {
     llvm::BasicBlock *llvmBB = moduleTranslation.lookupBlock(bb);
     // Retarget the branch of the entry block to the entry block of the
@@ -667,11 +666,9 @@ convertOmpTeams(omp::TeamsOp op, llvm::IRBuilderBase &builder,
                 LLVM::ModuleTranslation &moduleTranslation) {
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
   LogicalResult bodyGenStatus = success();
-  if (op.getNumTeamsLower() || op.getNumTeamsUpper() || op.getIfExpr() ||
-      op.getThreadLimit() || !op.getAllocatorsVars().empty() ||
-      op.getReductions()) {
+  if (!op.getAllocatorsVars().empty() || op.getReductions())
     return op.emitError("unhandled clauses for translation to LLVM IR");
-  }
+
   auto bodyCB = [&](InsertPointTy allocaIP, InsertPointTy codegenIP) {
     LLVM::ModuleTranslation::SaveStack<OpenMPAllocaStackFrame> frame(
         moduleTranslation, allocaIP);
@@ -680,9 +677,25 @@ convertOmpTeams(omp::TeamsOp op, llvm::IRBuilderBase &builder,
                         moduleTranslation, bodyGenStatus);
   };
 
+  llvm::Value *numTeamsLower = nullptr;
+  if (Value numTeamsLowerVar = op.getNumTeamsLower())
+    numTeamsLower = moduleTranslation.lookupValue(numTeamsLowerVar);
+
+  llvm::Value *numTeamsUpper = nullptr;
+  if (Value numTeamsUpperVar = op.getNumTeamsUpper())
+    numTeamsUpper = moduleTranslation.lookupValue(numTeamsUpperVar);
+
+  llvm::Value *threadLimit = nullptr;
+  if (Value threadLimitVar = op.getThreadLimit())
+    threadLimit = moduleTranslation.lookupValue(threadLimitVar);
+
+  llvm::Value *ifExpr = nullptr;
+  if (Value ifExprVar = op.getIfExpr())
+    ifExpr = moduleTranslation.lookupValue(ifExprVar);
+
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
-  builder.restoreIP(
-      moduleTranslation.getOpenMPBuilder()->createTeams(ompLoc, bodyCB));
+  builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createTeams(
+      ompLoc, bodyCB, numTeamsLower, numTeamsUpper, threadLimit, ifExpr));
   return bodyGenStatus;
 }
 
@@ -1528,9 +1541,9 @@ convertOmpThreadprivate(Operation &opInst, llvm::IRBuilderBase &builder,
   return success();
 }
 
-int64_t getSizeInBytes(DataLayout &DL, const Type &type) {
+int64_t getSizeInBytes(DataLayout &DL, const Type &type, const Type &eleType) {
   if (isa<LLVM::LLVMPointerType>(type))
-    return DL.getTypeSize(cast<LLVM::LLVMPointerType>(type).getElementType());
+    return DL.getTypeSize(eleType);
 
   return 0;
 }
@@ -1697,8 +1710,8 @@ static void genMapInfos(llvm::IRBuilderBase &builder,
       mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM;
 
     combinedInfo.Types.emplace_back(mapFlag);
-    combinedInfo.Sizes.emplace_back(
-        builder.getInt64(getSizeInBytes(DL, mapInfoOp.getVarPtr().getType())));
+    combinedInfo.Sizes.emplace_back(builder.getInt64(getSizeInBytes(
+        DL, mapInfoOp.getVarPtr().getType(), mapInfoOp.getVarType())));
     index++;
   }
 
@@ -2033,13 +2046,13 @@ createDeviceArgumentAccessor(llvm::Argument &arg, llvm::Value *input,
                                : llvm::Type::getInt64Ty(builder.getContext()),
                            ompBuilder.M.getDataLayout().getAllocaAddrSpace());
   llvm::Value *addrAscast =
-      builder.CreatePointerBitCastOrAddrSpaceCast(addr, input->getType());
+      arg.getType()->isPointerTy()
+          ? builder.CreatePointerBitCastOrAddrSpaceCast(addr, input->getType())
+          : addr;
+
   builder.CreateStore(&arg, addrAscast);
-
   builder.restoreIP(codeGenIP);
-
   retVal = builder.CreateLoad(arg.getType(), addrAscast);
-
   return builder.saveIP();
 }
 

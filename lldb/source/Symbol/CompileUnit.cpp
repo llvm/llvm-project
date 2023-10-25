@@ -178,11 +178,7 @@ void CompileUnit::SetLineTable(LineTable *line_table) {
   m_line_table_up.reset(line_table);
 }
 
-void CompileUnit::SetSupportFiles(const FileSpecList &support_files) {
-  m_support_files = support_files;
-}
-
-void CompileUnit::SetSupportFiles(FileSpecList &&support_files) {
+void CompileUnit::SetSupportFiles(FileSpecList support_files) {
   m_support_files = std::move(support_files);
 }
 

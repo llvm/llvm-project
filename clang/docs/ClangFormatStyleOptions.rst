@@ -980,6 +980,10 @@ the configuration (without a prefix: ``Auto``).
 **AlignTrailingComments** (``TrailingCommentsAlignmentStyle``) :versionbadge:`clang-format 3.7` :ref:`¶ <AlignTrailingComments>`
   Control of trailing comments.
 
+  The alignment stops at closing braces after a line break, and only
+  followed by other closing braces, a (``do-``) ``while``, a lambda call, or
+  a semicolon.
+
 
   .. note::
 
@@ -5223,6 +5227,33 @@ the configuration (without a prefix: ``Auto``).
        true:                                  false:
        void operator++ (int a);        vs.    void operator++(int a);
        object.operator++ (10);                object.operator++(10);
+
+  * ``AfterPlacementOperatorStyle AfterPlacementOperator`` :versionbadge:`clang-format 18`
+
+    Defines in which cases to put a space between ``new/delete`` operators
+    and opening parentheses.
+
+    Possible values:
+
+    * ``APO_Never`` (in configuration: ``Never``)
+      Remove space after ``new/delete`` operators and before ``(``.
+
+      .. code-block:: c++
+
+         new(buf) T;
+         delete(buf) T;
+
+    * ``APO_Always`` (in configuration: ``Always``)
+      Always add space after ``new/delete`` operators and before ``(``.
+
+      .. code-block:: c++
+
+         new (buf) T;
+         delete (buf) T;
+
+    * ``APO_Leave`` (in configuration: ``Leave``)
+      Leave placement ``new/delete`` expressions as they are.
+
 
   * ``bool AfterRequiresInClause`` If ``true``, put space between requires keyword in a requires clause and
     opening parentheses, if there is one.

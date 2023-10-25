@@ -98,7 +98,7 @@ public:
   StorageLocation &createStorageLocation(QualType Type);
 
   /// Returns a stable storage location for `D`.
-  StorageLocation &getStableStorageLocation(const VarDecl &D);
+  StorageLocation &getStableStorageLocation(const ValueDecl &D);
 
   /// Returns a stable storage location for `E`.
   StorageLocation &getStableStorageLocation(const Expr &E);
@@ -132,10 +132,6 @@ public:
   /// Returns true if and only if the constraints of the flow condition
   /// identified by `Token` imply that `Val` is true.
   bool flowConditionImplies(Atom Token, const Formula &);
-
-  /// Returns true if and only if the constraints of the flow condition
-  /// identified by `Token` are always true.
-  bool flowConditionIsTautology(Atom Token);
 
   /// Returns true if `Val1` is equivalent to `Val2`.
   /// Note: This function doesn't take into account constraints on `Val1` and

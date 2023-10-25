@@ -1022,10 +1022,10 @@ template <class T>
 static T swapToHostOrder(const unsigned char *&D, llvm::endianness Orig) {
   using namespace support;
 
-  if (Orig == little)
-    return endian::readNext<T, little, unaligned>(D);
+  if (Orig == llvm::endianness::little)
+    return endian::readNext<T, llvm::endianness::little, unaligned>(D);
   else
-    return endian::readNext<T, big, unaligned>(D);
+    return endian::readNext<T, llvm::endianness::big, unaligned>(D);
 }
 
 static std::unique_ptr<ValueProfData> allocValueProfData(uint32_t TotalSize) {
@@ -1449,7 +1449,7 @@ static inline uint64_t read(const unsigned char *Buffer, size_t Offset) {
 
 uint64_t Header::formatVersion() const {
   using namespace support;
-  return endian::byte_swap<uint64_t, little>(Version);
+  return endian::byte_swap<uint64_t, llvm::endianness::little>(Version);
 }
 
 Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
@@ -1461,7 +1461,8 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
 
   H.Magic = read(Buffer, offsetOf(&Header::Magic));
   // Check the magic number.
-  uint64_t Magic = endian::byte_swap<uint64_t, little>(H.Magic);
+  uint64_t Magic =
+      endian::byte_swap<uint64_t, llvm::endianness::little>(H.Magic);
   if (Magic != IndexedInstrProf::Magic)
     return make_error<InstrProfError>(instrprof_error::bad_magic);
 

@@ -163,6 +163,7 @@ def XOPA      : Map<6>;
 def ThreeDNow : Map<7>;
 def T_MAP5    : Map<8>;
 def T_MAP6    : Map<9>;
+def T_MAP7    : Map<10>;
 
 // Class specifying the encoding
 class Encoding<bits<2> val> {
@@ -217,6 +218,9 @@ class T_MAP6PS : T_MAP6 { Prefix OpPrefix = PS; }
 class T_MAP6PD : T_MAP6 { Prefix OpPrefix = PD; }
 class T_MAP6XS : T_MAP6 { Prefix OpPrefix = XS; }
 class T_MAP6XD : T_MAP6 { Prefix OpPrefix = XD; }
+class T_MAP7     { Map OpMap = T_MAP7; }
+class T_MAP7XS : T_MAP7 { Prefix OpPrefix = XS; } // 0xF3
+class T_MAP7XD : T_MAP7 { Prefix OpPrefix = XD; } // 0xF2
 class OBXS   { Prefix OpPrefix = XS; }
 class PS   : TB { Prefix OpPrefix = PS; }
 class PD   : TB { Prefix OpPrefix = PD; }

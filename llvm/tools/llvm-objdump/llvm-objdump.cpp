@@ -685,8 +685,9 @@ public:
       // using the .long directive, or .byte directive if fewer than 4 bytes
       // remaining
       if (Bytes.size() >= 4) {
-        OS << format("\t.long 0x%08" PRIx32 " ",
-                     support::endian::read32<support::little>(Bytes.data()));
+        OS << format(
+            "\t.long 0x%08" PRIx32 " ",
+            support::endian::read32<llvm::endianness::little>(Bytes.data()));
         OS.indent(42);
       } else {
           OS << format("\t.byte 0x%02" PRIx8, Bytes[0]);
@@ -859,7 +860,7 @@ public:
   std::unique_ptr<const MCSubtargetInfo> SubtargetInfo;
   std::shared_ptr<MCContext> Context;
   std::unique_ptr<MCDisassembler> DisAsm;
-  std::shared_ptr<const MCInstrAnalysis> InstrAnalysis;
+  std::shared_ptr<MCInstrAnalysis> InstrAnalysis;
   std::shared_ptr<MCInstPrinter> InstPrinter;
   PrettyPrinter *Printer;
 
@@ -1168,7 +1169,7 @@ static uint64_t dumpARMELFData(uint64_t SectionAddr, uint64_t Index,
                                ArrayRef<MappingSymbolPair> MappingSymbols,
                                const MCSubtargetInfo &STI, raw_ostream &OS) {
   llvm::endianness Endian =
-      Obj.isLittleEndian() ? support::little : support::big;
+      Obj.isLittleEndian() ? llvm::endianness::little : llvm::endianness::big;
   size_t Start = OS.tell();
   OS << format("%8" PRIx64 ": ", SectionAddr + Index);
   if (Index + 4 <= End) {
@@ -1282,13 +1283,18 @@ collectBBAddrMapLabels(const std::unordered_map<uint64_t, BBAddrMap> &AddrToBBAd
   }
 }
 
-static void collectLocalBranchTargets(
-    ArrayRef<uint8_t> Bytes, const MCInstrAnalysis *MIA, MCDisassembler *DisAsm,
-    MCInstPrinter *IP, const MCSubtargetInfo *STI, uint64_t SectionAddr,
-    uint64_t Start, uint64_t End, std::unordered_map<uint64_t, std::string> &Labels) {
+static void
+collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
+                          MCDisassembler *DisAsm, MCInstPrinter *IP,
+                          const MCSubtargetInfo *STI, uint64_t SectionAddr,
+                          uint64_t Start, uint64_t End,
+                          std::unordered_map<uint64_t, std::string> &Labels) {
   // So far only supports PowerPC and X86.
   if (!STI->getTargetTriple().isPPC() && !STI->getTargetTriple().isX86())
     return;
+
+  if (MIA)
+    MIA->resetState();
 
   Labels.clear();
   unsigned LabelCount = 0;
@@ -1315,6 +1321,9 @@ static void collectLocalBranchTargets(
           !Labels.count(Target) &&
           !(STI->getTargetTriple().isPPC() && Target == Index))
         Labels[Target] = ("L" + Twine(LabelCount++)).str();
+      MIA->updateState(Inst, Index);
+    } else if (!Disassembled && MIA) {
+      MIA->resetState();
     }
     Index += Size;
   }
@@ -1966,6 +1975,9 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                                BBAddrMapLabels);
       }
 
+      if (DT->InstrAnalysis)
+        DT->InstrAnalysis->resetState();
+
       while (Index < End) {
         // ARM and AArch64 ELF binaries can interleave data and text in the
         // same section. We rely on the markers introduced to understand what
@@ -2182,6 +2194,10 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
               if (TargetOS == &CommentStream)
                 *TargetOS << "\n";
             }
+
+            DT->InstrAnalysis->updateState(Inst, SectionAddr + Index);
+          } else if (!Disassembled && DT->InstrAnalysis) {
+            DT->InstrAnalysis->resetState();
           }
         }
 

@@ -213,7 +213,9 @@ enum class TemplateSubstitutionKind : char {
              "substituted args outside retained args?");
       assert(getKind() == TemplateSubstitutionKind::Specialization);
       TemplateArgumentLists.push_back(
-          {{AssociatedDecl->getCanonicalDecl(), Final}, Args});
+          {{AssociatedDecl ? AssociatedDecl->getCanonicalDecl() : nullptr,
+            Final},
+           Args});
     }
 
     void addOuterTemplateArguments(ArgList Args) {

@@ -31,8 +31,8 @@ class LoongArchAsmBackend : public MCAsmBackend {
 public:
   LoongArchAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
                       const MCTargetOptions &Options)
-      : MCAsmBackend(support::little), STI(STI), OSABI(OSABI), Is64Bit(Is64Bit),
-        TargetOptions(Options) {}
+      : MCAsmBackend(llvm::endianness::little), STI(STI), OSABI(OSABI),
+        Is64Bit(Is64Bit), TargetOptions(Options) {}
   ~LoongArchAsmBackend() override {}
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,

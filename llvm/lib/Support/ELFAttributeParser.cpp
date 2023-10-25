@@ -191,7 +191,7 @@ Error ELFAttributeParser::parseSubsection(uint32_t length) {
 Error ELFAttributeParser::parse(ArrayRef<uint8_t> section,
                                 llvm::endianness endian) {
   unsigned sectionNumber = 0;
-  de = DataExtractor(section, endian == support::little, 0);
+  de = DataExtractor(section, endian == llvm::endianness::little, 0);
 
   // For early returns, we have more specific errors, consume the Error in
   // cursor.

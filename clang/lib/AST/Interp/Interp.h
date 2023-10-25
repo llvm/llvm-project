@@ -200,8 +200,7 @@ enum class ArithOp { Add, Sub };
 // Returning values
 //===----------------------------------------------------------------------===//
 
-/// Pop arguments of builtins defined as func-name(...).
-bool popBuiltinArgs(InterpState &S, CodePtr OpPC);
+void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC);
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
@@ -221,16 +220,8 @@ bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
 
   assert(S.Current);
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
-  if (!S.checkingPotentialConstantExpression() || S.Current->Caller) {
-    // Certain builtin functions are declared as func-name(...), so the
-    // parameters are checked in Sema and only available through the CallExpr.
-    // The interp::Function we create for them has 0 parameters, so we need to
-    // remove them from the stack by checking the CallExpr.
-    if (S.Current->getFunction()->needsRuntimeArgPop(S.getCtx()))
-      popBuiltinArgs(S, PC);
-    else
-      S.Current->popArgs();
-  }
+  if (!S.checkingPotentialConstantExpression() || S.Current->Caller)
+    cleanupAfterFunctionCall(S, PC);
 
   if (InterpFrame *Caller = S.Current->Caller) {
     PC = S.Current->getRetPC();
@@ -248,8 +239,9 @@ bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
 
 inline bool RetVoid(InterpState &S, CodePtr &PC, APValue &Result) {
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
+
   if (!S.checkingPotentialConstantExpression() || S.Current->Caller)
-    S.Current->popArgs();
+    cleanupAfterFunctionCall(S, PC);
 
   if (InterpFrame *Caller = S.Current->Caller) {
     PC = S.Current->getRetPC();
@@ -522,7 +514,7 @@ enum class IncDecOp {
 
 template <typename T, IncDecOp Op, PushVal DoPush>
 bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
-  T Value = Ptr.deref<T>();
+  const T &Value = Ptr.deref<T>();
   T Result;
 
   if constexpr (DoPush == PushVal::Yes)
@@ -1421,7 +1413,7 @@ bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
   // Get a version of the index comparable to the type.
   T Index = T::from(Ptr.getIndex(), Offset.bitWidth());
   // Compute the largest index into the array.
-  unsigned MaxIndex = Ptr.getNumElems();
+  T MaxIndex = T::from(Ptr.getNumElems(), Offset.bitWidth());
 
   // Helper to report an invalid offset, computed as APSInt.
   auto InvalidOffset = [&]() {
@@ -1437,7 +1429,7 @@ bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
     return false;
   };
 
-  unsigned MaxOffset = MaxIndex - Ptr.getIndex();
+  T MaxOffset = T::from(MaxIndex - Index, Offset.bitWidth());
   if constexpr (Op == ArithOp::Add) {
     // If the new offset would be negative, bail out.
     if (Offset.isNegative() && (Offset.isMin() || -Offset > Index))
@@ -1488,11 +1480,14 @@ static inline bool IncDecPtrHelper(InterpState &S, CodePtr OpPC,
                                    const Pointer &Ptr) {
   using OneT = Integral<8, false>;
 
+  const Pointer &P = Ptr.deref<Pointer>();
+  if (!CheckNull(S, OpPC, P, CSK_ArrayIndex))
+    return false;
+
   // Get the current value on the stack.
-  S.Stk.push<Pointer>(Ptr.deref<Pointer>());
+  S.Stk.push<Pointer>(P);
 
   // Now the current Ptr again and a constant 1.
-  Pointer P = Ptr.deref<Pointer>();
   OneT One = OneT::from(1);
   if (!OffsetHelper<OneT, Op>(S, OpPC, One, P))
     return false;
@@ -1682,6 +1677,16 @@ bool CastPointerIntegral(InterpState &S, CodePtr OpPC) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Zero(InterpState &S, CodePtr OpPC) {
   S.Stk.push<T>(T::zero());
+  return true;
+}
+
+static inline bool ZeroIntAP(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
+  S.Stk.push<IntegralAP<false>>(IntegralAP<false>::zero(BitWidth));
+  return true;
+}
+
+static inline bool ZeroIntAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
+  S.Stk.push<IntegralAP<true>>(IntegralAP<true>::zero(BitWidth));
   return true;
 }
 

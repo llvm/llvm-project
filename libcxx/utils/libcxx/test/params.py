@@ -77,9 +77,6 @@ _allStandards = ["c++03", "c++11", "c++14", "c++17", "c++20", "c++23", "c++26"]
 
 
 def getStdFlag(cfg, std):
-    # TODO(LLVM-17) Remove this clang-tidy-16 work-around
-    if std == "c++23":
-        std = "c++2b"
     if hasCompileFlag(cfg, "-std=" + std):
         return "-std=" + std
     # TODO(LLVM-19) Remove the fallbacks needed for Clang 16.
@@ -278,6 +275,14 @@ DEFAULT_PARAMETERS = [
         default=True,
         help="Whether to enable tests that take longer to run. This can be useful when running on a very slow device.",
         actions=lambda enabled: [] if not enabled else [AddFeature("long_tests")],
+    ),
+    Parameter(
+        name="large_tests",
+        choices=[True, False],
+        type=bool,
+        default=True,
+        help="Whether to enable tests that use a lot of memory. This can be useful when running on a device with limited amounts of memory.",
+        actions=lambda enabled: [] if not enabled else [AddFeature("large_tests")],
     ),
     Parameter(
         name="hardening_mode",

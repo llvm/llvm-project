@@ -694,6 +694,16 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) +
                                          ParallelismOpt + Parallelism));
 
+  // Pass down GlobalISel options.
+  if (Arg *A = Args.getLastArg(options::OPT_fglobal_isel,
+                               options::OPT_fno_global_isel)) {
+    // Parsing -fno-global-isel explicitly gives architectures that enable GISel
+    // by default a chance to disable it.
+    CmdArgs.push_back(Args.MakeArgString(
+        Twine(PluginOptPrefix) + "-global-isel=" +
+        (A->getOption().matches(options::OPT_fglobal_isel) ? "1" : "0")));
+  }
+
   // If an explicit debugger tuning argument appeared, pass it along.
   if (Arg *A =
           Args.getLastArg(options::OPT_gTune_Group, options::OPT_ggdbN_Group)) {
@@ -2144,7 +2154,6 @@ bool tools::GetSDLFromOffloadArchive(
       Lib = Lib.drop_front(2);
     for (auto LPath : LibraryPaths) {
       ArchiveOfBundles.clear();
-      SmallVector<std::string, 2> AOBFileNames;
       auto LibFile =
           (Lib.startswith(":") ? Lib.drop_front()
                                : IsMSVC ? Lib + Ext : "lib" + Lib + Ext)
@@ -2295,7 +2304,7 @@ void tools::AddStaticDeviceLibs(Compilation *C, const Tool *T,
   static const StringRef HostOnlyArchives[] = {
       "omp", "cudart", "m", "gcc", "gcc_s", "pthread", "hip_hcc"};
   for (auto SDLName : DriverArgs.getAllArgValues(options::OPT_l)) {
-    if (!HostOnlyArchives->contains(SDLName)) {
+    if (!llvm::is_contained(HostOnlyArchives, SDLName)) {
       SDLNames.insert(std::string("-l") + SDLName);
     }
   }

@@ -17,6 +17,7 @@ typedef enum {
   RPC_WRITE_TO_STREAM,
   RPC_WRITE_TO_STDOUT_NEWLINE,
   RPC_READ_FROM_STREAM,
+  RPC_READ_FGETS,
   RPC_OPEN_FILE,
   RPC_CLOSE_FILE,
   RPC_MALLOC,
@@ -29,6 +30,7 @@ typedef enum {
   RPC_FSEEK,
   RPC_FTELL,
   RPC_FFLUSH,
+  RPC_UNGETC,
   RPC_LAST = 0xFFFF,
 } rpc_opcode_t;
 

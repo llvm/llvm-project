@@ -14,14 +14,12 @@
 #include <string>
 
 #if __SIZE_WIDTH__ == 64
-#define LONGEST_STR "0123456789012345678901"
+#  define LONGEST_STR "0123456789012345678901"
 #elif __SIZE_WIDTH__ == 32
-#define LONGEST_STR "0123456789"
+#  define LONGEST_STR "0123456789"
 #else
 #  error "std::size_t has an unexpected size"
 #endif
 
 constinit std::string g_str = LONGEST_STR;
-void fn() {
-  constexpr std::string l_str = LONGEST_STR;
-}
+void fn() { constexpr std::string l_str = LONGEST_STR; }

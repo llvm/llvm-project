@@ -26,7 +26,9 @@ class __simd_reference {
   _Storage& __s_;
   size_t __idx_;
 
-  _LIBCPP_HIDE_FROM_ABI _Vp __get() const { return __s_.__get(__idx_); }
+  _LIBCPP_HIDE_FROM_ABI __simd_reference(_Storage& __s, size_t __idx) : __s_(__s), __idx_(__idx) {}
+
+  _LIBCPP_HIDE_FROM_ABI _Vp __get() const noexcept { return __s_.__get(__idx_); }
 
   _LIBCPP_HIDE_FROM_ABI void __set(_Vp __v) {
     if constexpr (is_same_v<_Vp, bool>)
@@ -40,6 +42,8 @@ public:
 
   __simd_reference()                        = delete;
   __simd_reference(const __simd_reference&) = delete;
+
+  _LIBCPP_HIDE_FROM_ABI operator value_type() const noexcept { return __get(); }
 };
 
 } // namespace parallelism_v2
