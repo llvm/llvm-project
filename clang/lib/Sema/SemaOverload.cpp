@@ -960,7 +960,7 @@ static bool shouldAddReversedEqEq(Sema &S, SourceLocation OpLoc,
       if (FunctionsCorrespond(S.Context, EqFD, Op->getAsFunction()))
         return false;
     return true;
-  } 
+  }
   // Otherwise the search scope is the namespace scope of which F is a member.
   DeclContext *EqDC = EqFD->getEnclosingNamespaceContext();
   for (NamedDecl *Op : EqDC->lookup(NotEqOp)) {
