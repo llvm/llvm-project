@@ -111,14 +111,15 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
       .clampScalar(0, s32, XLenLLT)
       .lower();
 
-  auto &ZExtLoadActions = getActionDefinitionsBuilder(G_ZEXTLOAD)
-      .legalForTypesWithMemDesc({{s32, p0, s8, 8},
-                                 {s32, p0, s16, 16},
-                                 {XLenLLT, p0, s8, 8},
-                                 {XLenLLT, p0, s16, 16}});
+  auto &ExtLoadActions =
+      getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD})
+          .legalForTypesWithMemDesc({{s32, p0, s8, 8},
+                                     {s32, p0, s16, 16},
+                                     {XLenLLT, p0, s8, 8},
+                                     {XLenLLT, p0, s16, 16}});
   if (XLen == 64)
-    ZExtLoadActions.legalForTypesWithMemDesc({{XLenLLT, p0, s32, 32}});
-  ZExtLoadActions.lower();
+    ExtLoadActions.legalForTypesWithMemDesc({{XLenLLT, p0, s32, 32}});
+  ExtLoadActions.lower();
 
   getActionDefinitionsBuilder(G_PTR_ADD)
       .legalFor({{p0, XLenLLT}});
