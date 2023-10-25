@@ -99,7 +99,10 @@ void mlir::registerPassPipeline(
   PassPipelineInfo pipelineInfo(arg, description, function,
                                 std::move(optHandler));
   bool inserted = passPipelineRegistry->try_emplace(arg, pipelineInfo).second;
-  assert(inserted && "Pass pipeline registered multiple times");
+#ifndef NDEBUG
+  if (!inserted)
+    report_fatal_error("Pass pipeline " + arg + " registered multiple times");
+#endif
   (void)inserted;
 }
 
