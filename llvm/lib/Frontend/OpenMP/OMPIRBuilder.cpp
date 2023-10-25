@@ -86,6 +86,19 @@ static bool isConflictIP(IRBuilder<>::InsertPoint IP1,
   return IP1.getBlock() == IP2.getBlock() && IP1.getPoint() == IP2.getPoint();
 }
 
+static const omp::GV &getGridValue(const Triple &T, Function *Kernel) {
+  if (T.isAMDGPU()) {
+    StringRef Features =
+        Kernel->getFnAttribute("target-features").getValueAsString();
+    if (Features.count("+wavefrontsize64"))
+      return omp::getAMDGPUGridValues<64>();
+    return omp::getAMDGPUGridValues<32>();
+  }
+  if (T.isNVPTX())
+    return omp::NVPTXGridValues;
+  llvm_unreachable("No grid value available for this architecture!");
+}
+
 static bool isValidWorkshareLoopScheduleType(OMPScheduleType SchedType) {
   // Valid ordered/unordered and base algorithm combinations.
   switch (SchedType & ~OMPScheduleType::MonotonicityMask) {
@@ -506,7 +519,6 @@ void OpenMPIRBuilder::getKernelArgsVector(TargetKernelArgs &KernelArgs,
 
 void OpenMPIRBuilder::addAttributes(omp::RuntimeFunction FnID, Function &Fn) {
   LLVMContext &Ctx = Fn.getContext();
-  Triple T(M.getTargetTriple());
 
   // Get the function's current attributes.
   auto Attrs = Fn.getAttributes();
@@ -4064,7 +4076,9 @@ CallInst *OpenMPIRBuilder::createCachedThreadPrivate(
 }
 
 OpenMPIRBuilder::InsertPointTy
-OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD) {
+OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD,
+                                  int32_t MinThreadsVal, int32_t MaxThreadsVal,
+                                  int32_t MinTeamsVal, int32_t MaxTeamsVal) {
   if (!updateToLocation(Loc))
     return Loc.IP;
 
@@ -4078,8 +4092,20 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD) {
   Constant *DebugIndentionLevelVal = ConstantInt::getSigned(Int16, 0);
 
   Function *Kernel = Builder.GetInsertBlock()->getParent();
-  auto [MinThreadsVal, MaxThreadsVal] = readThreadBoundsForKernel(*Kernel);
-  auto [MinTeamsVal, MaxTeamsVal] = readTeamBoundsForKernel(*Kernel);
+
+  /// Manifest the launch configuration in the metadata matching the kernel
+  /// environment.
+  if (MinTeamsVal > 1 || MaxTeamsVal > 0)
+    writeTeamsForKernel(T, *Kernel, MinTeamsVal, MaxTeamsVal);
+
+  // For max values, < 0 means unset, == 0 means set but unknown.
+  if (MaxThreadsVal < 0)
+    MaxThreadsVal = std::max(
+        int32_t(getGridValue(T, Kernel).GV_Default_WG_Size), MinThreadsVal);
+
+  if (MaxThreadsVal > 0)
+    writeThreadBoundsForKernel(T, *Kernel, MinThreadsVal, MaxThreadsVal);
+
   Constant *MinThreads = ConstantInt::getSigned(Int32, MinThreadsVal);
   Constant *MaxThreads = ConstantInt::getSigned(Int32, MaxThreadsVal);
   Constant *MinTeams = ConstantInt::getSigned(Int32, MinTeamsVal);
@@ -4183,20 +4209,6 @@ void OpenMPIRBuilder::createTargetDeinit(const LocationDescription &Loc) {
   Builder.CreateCall(Fn, {});
 }
 
-static const omp::GV &getGridValue(Function *Kernel) {
-  if (Kernel->getCallingConv() == CallingConv::AMDGPU_KERNEL) {
-    StringRef Features =
-        Kernel->getFnAttribute("target-features").getValueAsString();
-    if (Features.count("+wavefrontsize64"))
-      return omp::getAMDGPUGridValues<64>();
-    return omp::getAMDGPUGridValues<32>();
-  }
-  if (Triple(Kernel->getParent()->getTargetTriple()).isNVPTX())
-
-    return omp::NVPTXGridValues;
-  llvm_unreachable("No grid value available for this architecture!");
-}
-
 static MDNode *getNVPTXMDNode(Function &Kernel, StringRef Name) {
   Module &M = *Kernel.getParent();
   NamedMDNode *MD = M.getOrInsertNamedMetadata("nvvm.annotations");
@@ -4239,12 +4251,11 @@ static void updateNVPTXMetadata(Function &Kernel, StringRef Name, int32_t Value,
 }
 
 std::pair<int32_t, int32_t>
-OpenMPIRBuilder::readThreadBoundsForKernel(Function &Kernel) {
+OpenMPIRBuilder::readThreadBoundsForKernel(const Triple &T, Function &Kernel) {
   int32_t ThreadLimit =
       Kernel.getFnAttributeAsParsedInteger("omp_target_thread_limit");
 
-  bool IsAMDGPU = Kernel.getCallingConv() == CallingConv::AMDGPU_KERNEL;
-  if (IsAMDGPU) {
+  if (T.isAMDGPU()) {
     const auto &Attr = Kernel.getFnAttribute("amdgpu-flat-work-group-size");
     if (!Attr.isValid() || !Attr.isStringAttribute())
       return {0, ThreadLimit};
@@ -4266,12 +4277,12 @@ OpenMPIRBuilder::readThreadBoundsForKernel(Function &Kernel) {
   return {0, ThreadLimit};
 }
 
-void OpenMPIRBuilder::writeThreadBoundsForKernel(Function &Kernel, int32_t LB,
+void OpenMPIRBuilder::writeThreadBoundsForKernel(const Triple &T,
+                                                 Function &Kernel, int32_t LB,
                                                  int32_t UB) {
   Kernel.addFnAttr("omp_target_thread_limit", std::to_string(UB));
 
-  bool IsAMDGPU = Kernel.getCallingConv() == CallingConv::AMDGPU_KERNEL;
-  if (IsAMDGPU) {
+  if (T.isAMDGPU()) {
     Kernel.addFnAttr("amdgpu-flat-work-group-size",
                      llvm::utostr(LB) + "," + llvm::utostr(UB));
     return;
@@ -4281,40 +4292,31 @@ void OpenMPIRBuilder::writeThreadBoundsForKernel(Function &Kernel, int32_t LB,
 }
 
 std::pair<int32_t, int32_t>
-OpenMPIRBuilder::readTeamBoundsForKernel(Function &Kernel) {
+OpenMPIRBuilder::readTeamBoundsForKernel(const Triple &, Function &Kernel) {
   // TODO: Read from backend annotations if available.
   return {0, Kernel.getFnAttributeAsParsedInteger("omp_target_num_teams")};
 }
 
-void OpenMPIRBuilder::writeTeamsForKernel(Function &Kernel, int32_t LB,
-                                          int32_t UB) {
-  if (UB > 0)
-    updateNVPTXMetadata(Kernel, "maxclusterrank", UB, true);
-  updateNVPTXMetadata(Kernel, "minctasm", LB, false);
+void OpenMPIRBuilder::writeTeamsForKernel(const Triple &T, Function &Kernel,
+                                          int32_t LB, int32_t UB) {
+  if (T.isNVPTX()) {
+    if (UB > 0)
+      updateNVPTXMetadata(Kernel, "maxclusterrank", UB, true);
+    updateNVPTXMetadata(Kernel, "minctasm", LB, false);
+  }
   Kernel.addFnAttr("omp_target_num_teams", std::to_string(LB));
 }
 
 void OpenMPIRBuilder::setOutlinedTargetRegionFunctionAttributes(
-    Function *OutlinedFn, int32_t MinTeams, int32_t MaxTeams,
-    int32_t MinThreads, int32_t MaxThreads) {
+    Function *OutlinedFn) {
   if (Config.isTargetDevice()) {
     OutlinedFn->setLinkage(GlobalValue::WeakODRLinkage);
     // TODO: Determine if DSO local can be set to true.
     OutlinedFn->setDSOLocal(false);
     OutlinedFn->setVisibility(GlobalValue::ProtectedVisibility);
-    if (Triple(M.getTargetTriple()).isAMDGCN())
+    if (T.isAMDGCN())
       OutlinedFn->setCallingConv(CallingConv::AMDGPU_KERNEL);
   }
-
-  if (MinTeams > 1 || MaxTeams > 0)
-    writeTeamsForKernel(*OutlinedFn, MinTeams, MaxTeams);
-
-  if (MaxThreads == -1 && Config.isGPU())
-    MaxThreads = std::max(int32_t(getGridValue(OutlinedFn).GV_Default_WG_Size),
-                          MinThreads);
-
-  if (MaxThreads > 0)
-    writeThreadBoundsForKernel(*OutlinedFn, MinThreads, MaxThreads);
 }
 
 Constant *OpenMPIRBuilder::createOutlinedFunctionID(Function *OutlinedFn,
@@ -4343,9 +4345,8 @@ Constant *OpenMPIRBuilder::createTargetRegionEntryAddr(Function *OutlinedFn,
 
 void OpenMPIRBuilder::emitTargetRegionFunction(
     TargetRegionEntryInfo &EntryInfo,
-    FunctionGenCallback &GenerateFunctionCallback, int32_t MinTeams,
-    int32_t MaxTeams, int32_t MinThreads, int32_t MaxThreads,
-    bool IsOffloadEntry, Function *&OutlinedFn, Constant *&OutlinedFnID) {
+    FunctionGenCallback &GenerateFunctionCallback, bool IsOffloadEntry,
+    Function *&OutlinedFn, Constant *&OutlinedFnID) {
 
   SmallString<64> EntryFnName;
   OffloadInfoManager.getTargetRegionEntryFnName(EntryFnName, EntryInfo);
@@ -4365,18 +4366,15 @@ void OpenMPIRBuilder::emitTargetRegionFunction(
           ? std::string(EntryFnName)
           : createPlatformSpecificName({EntryFnName, "region_id"});
 
-  OutlinedFnID = registerTargetRegionFunction(
-      EntryInfo, OutlinedFn, EntryFnName, EntryFnIDName, MinTeams, MaxTeams,
-      MinThreads, MaxThreads);
+  OutlinedFnID = registerTargetRegionFunction(EntryInfo, OutlinedFn,
+                                              EntryFnName, EntryFnIDName);
 }
 
 Constant *OpenMPIRBuilder::registerTargetRegionFunction(
     TargetRegionEntryInfo &EntryInfo, Function *OutlinedFn,
-    StringRef EntryFnName, StringRef EntryFnIDName, int32_t MinTeams,
-    int32_t MaxTeams, int32_t MinThreads, int32_t MaxThreads) {
+    StringRef EntryFnName, StringRef EntryFnIDName) {
   if (OutlinedFn)
-    setOutlinedTargetRegionFunctionAttributes(OutlinedFn, MinTeams, MaxTeams,
-                                              MinThreads, MaxThreads);
+    setOutlinedTargetRegionFunctionAttributes(OutlinedFn);
   auto OutlinedFnID = createOutlinedFunctionID(OutlinedFn, EntryFnIDName);
   auto EntryAddr = createTargetRegionEntryAddr(OutlinedFn, EntryFnName);
   OffloadInfoManager.registerTargetRegionEntryInfo(
@@ -4654,8 +4652,7 @@ static Function *createOutlinedFunction(
 static void emitTargetOutlinedFunction(
     OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
     TargetRegionEntryInfo &EntryInfo, Function *&OutlinedFn,
-    Constant *&OutlinedFnID, int32_t NumTeams, int32_t NumThreads,
-    SmallVectorImpl<Value *> &Inputs,
+    Constant *&OutlinedFnID, SmallVectorImpl<Value *> &Inputs,
     OpenMPIRBuilder::TargetBodyGenCallbackTy &CBFunc,
     OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy &ArgAccessorFuncCB) {
 
@@ -4666,8 +4663,7 @@ static void emitTargetOutlinedFunction(
                                       CBFunc, ArgAccessorFuncCB);
       };
 
-  OMPBuilder.emitTargetRegionFunction(EntryInfo, GenerateOutlinedFunction,
-                                      NumTeams, NumTeams, 1, NumThreads, true,
+  OMPBuilder.emitTargetRegionFunction(EntryInfo, GenerateOutlinedFunction, true,
                                       OutlinedFn, OutlinedFnID);
 }
 
@@ -4738,8 +4734,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTarget(
   Function *OutlinedFn;
   Constant *OutlinedFnID;
   emitTargetOutlinedFunction(*this, Builder, EntryInfo, OutlinedFn,
-                             OutlinedFnID, NumTeams, NumThreads, Args, CBFunc,
-                             ArgAccessorFuncCB);
+                             OutlinedFnID, Args, CBFunc, ArgAccessorFuncCB);
   if (!Config.isTargetDevice())
     emitTargetCall(*this, Builder, AllocaIP, OutlinedFn, OutlinedFnID, NumTeams,
                    NumThreads, Args, GenMapInfoCB);
@@ -5985,7 +5980,7 @@ void OpenMPIRBuilder::createOffloadEntry(Constant *ID, Constant *Addr,
 
   // Add a function attribute for the kernel.
   Fn->addFnAttr(Attribute::get(Ctx, "kernel"));
-  if (Triple(M.getTargetTriple()).isAMDGCN())
+  if (T.isAMDGCN())
     Fn->addFnAttr("uniform-work-group-size", "true");
   Fn->addFnAttr(Attribute::MustProgress);
 }
