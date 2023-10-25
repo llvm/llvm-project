@@ -636,6 +636,10 @@ Bug Fixes to C++ Support
   (`#46200 <https://github.com/llvm/llvm-project/issues/46200>`_)
   (`#57812 <https://github.com/llvm/llvm-project/issues/57812>`_)
 
+- Fix bug where we were overriding zero-initialization of class members when
+  default initializing a base class in a constant expression context. Fixes:
+  (`#69890 <https://github.com/llvm/llvm-project/issues/69890>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
