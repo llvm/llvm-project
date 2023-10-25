@@ -31,25 +31,25 @@ program acc_atomic_update_test
 !CHECK: %{{.*}} = fir.convert %[[D_ADDR]] : (!fir.ref<i32>) -> !fir.ptr<i32>
 !CHECK: fir.store {{.*}} to %[[B_ADDR]] : !fir.ref<!fir.ptr<i32>>
 !CHECK: %[[LOADED_A:.*]] = fir.load %[[A_ADDR]] : !fir.ref<!fir.ptr<i32>>
+!CHECK: %[[LOADED_B:.*]] = fir.load %[[B_ADDR]] : !fir.ref<!fir.ptr<i32>>
+!CHECK: %{{.*}} = fir.load %[[LOADED_B]] : !fir.ptr<i32>
 !CHECK:  acc.atomic.update   %[[LOADED_A]] : !fir.ptr<i32> {
 !CHECK:  ^bb0(%[[ARG:.*]]: i32):
-!CHECK:    %[[LOADED_B:.*]] = fir.load %[[B_ADDR]] : !fir.ref<!fir.ptr<i32>>
-!CHECK:    %{{.*}} = fir.load %[[LOADED_B]] : !fir.ptr<i32>
 !CHECK:    %[[RESULT:.*]] = arith.addi %[[ARG]], %{{.*}} : i32
 !CHECK:    acc.yield %[[RESULT]] : i32
 !CHECK: }
     !$acc atomic update
         a = a + b 
 
+!CHECK: {{.*}} = arith.constant 1 : i32
 !CHECK: acc.atomic.update   %[[Y]] : !fir.ref<i32> {
 !CHECK:  ^bb0(%[[ARG:.*]]: i32):
-!CHECK:    {{.*}} = arith.constant 1 : i32
 !CHECK:    %[[RESULT:.*]] = arith.addi %[[ARG]], {{.*}} : i32
 !CHECK:    acc.yield %[[RESULT]] : i32
 !CHECK:  }
+!CHECK:  %[[LOADED_X:.*]] = fir.load %[[X]] : !fir.ref<i32>
 !CHECK:  acc.atomic.update   %[[Z]] : !fir.ref<i32> {
 !CHECK:  ^bb0(%[[ARG:.*]]: i32):
-!CHECK:    %[[LOADED_X:.*]] = fir.load %[[X]] : !fir.ref<i32>
 !CHECK:    %[[RESULT:.*]] = arith.muli %[[LOADED_X]], %[[ARG]] : i32
 !CHECK:    acc.yield %[[RESULT]] : i32
 !CHECK:  }
@@ -58,10 +58,10 @@ program acc_atomic_update_test
     !$acc atomic update
         z = x * z 
 
+!CHECK:  %[[C1_VAL:.*]] = arith.constant 1 : i32
 !CHECK:  acc.atomic.update   %[[I1]] : !fir.ref<i8> {
 !CHECK:  ^bb0(%[[VAL:.*]]: i8):
 !CHECK:    %[[CVT_VAL:.*]] = fir.convert %[[VAL]] : (i8) -> i32
-!CHECK:    %[[C1_VAL:.*]] = arith.constant 1 : i32
 !CHECK:    %[[ADD_VAL:.*]] = arith.addi %[[CVT_VAL]], %[[C1_VAL]] : i32
 !CHECK:    %[[UPDATED_VAL:.*]] = fir.convert %[[ADD_VAL]] : (i32) -> i8
 !CHECK:    acc.yield %[[UPDATED_VAL]] : i8
