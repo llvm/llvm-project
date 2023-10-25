@@ -624,11 +624,15 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
       break;
 
     uint64_t Imm;
-    if (ConstantFPSDNode *FP = dyn_cast<ConstantFPSDNode>(N))
+    if (ConstantFPSDNode *FP = dyn_cast<ConstantFPSDNode>(N)) {
       Imm = FP->getValueAPF().bitcastToAPInt().getZExtValue();
-    else {
+      if (AMDGPU::isValid32BitLiteral(Imm, true))
+        break;
+    } else {
       ConstantSDNode *C = cast<ConstantSDNode>(N);
       Imm = C->getZExtValue();
+      if (AMDGPU::isValid32BitLiteral(Imm, false))
+        break;
     }
 
     SDLoc DL(N);

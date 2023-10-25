@@ -4003,8 +4003,6 @@ bool SIInstrInfo::isInlineConstant(const MachineOperand &MO,
   case AMDGPU::OPERAND_REG_INLINE_AC_INT32:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP32:
   case AMDGPU::OPERAND_INLINE_SPLIT_BARRIER_INT32: {
-    if (!isInt<32>(Imm) && !isUInt<32>(Imm))
-      return false;
     int32_t Trunc = static_cast<int32_t>(Imm);
     return AMDGPU::isInlinableLiteral32(Trunc, ST.hasInv2PiInlineImm());
   }
@@ -5569,10 +5567,22 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
                      OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_INT64 ||
                      OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_V2INT32 ||
                      OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_V2FP32;
-    if (Is64BitOp && !AMDGPU::isValid32BitLiteral(Imm, Is64BitFPOp) &&
-        !AMDGPU::isInlinableLiteral64(Imm, ST.hasInv2PiInlineImm()) &&
-        (!ST.has64BitLiterals() || InstDesc.getSize() != 4))
-      return false;
+    if (Is64BitOp &&
+        !AMDGPU::isInlinableLiteral64(Imm, ST.hasInv2PiInlineImm())) {
+      if (!AMDGPU::isValid32BitLiteral(Imm, Is64BitFPOp) &&
+          (!ST.has64BitLiterals() || InstDesc.getSize() != 4))
+        return false;
+
+      // FIXME: We can use sign extended 64-bit literals, but only for signed
+      //        operands. At the moment we do not know if an operand is signed.
+      //        Such operand will be encoded as its low 32 bits and then either
+      //        correctly sign extended or incorrectly zero extended by HW.
+      //        If 64-bit literals are supported and the literal will be encoded
+      //        as full 64 bit we still can use it.
+      if (!Is64BitFPOp && (int32_t)Imm < 0 &&
+          (!ST.has64BitLiterals() || AMDGPU::isValid32BitLiteral(Imm, false)))
+        return false;
+    }
   }
 
   // Handle non-register types that are treated like immediates.

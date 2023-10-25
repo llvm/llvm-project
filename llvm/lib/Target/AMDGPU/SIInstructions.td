@@ -1953,6 +1953,9 @@ def : GCNPat <
   (V_MOV_B32_e32 (f16 (bitcast_fpimm_to_i32 $imm)))
 >;
 
+// V_MOV_B64_PSEUDO and S_MOV_B64_IMM_PSEUDO can be used with any 64-bit
+// immediate and wil be expanded as needed, but we will only use these patterns
+// for values which can be encoded.
 def : GCNPat <
   (VGPRImm<(i64 imm)>:$imm),
   (V_MOV_B64_PSEUDO imm:$imm)

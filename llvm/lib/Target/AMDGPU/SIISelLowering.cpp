@@ -774,10 +774,6 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::SMIN, ISD::UMIN, ISD::SMAX, ISD::UMAX}, MVT::i64,
                        Legal);
 
-  if (Subtarget->has64BitLiterals())
-    setOperationAction({ISD::Constant, ISD::ConstantFP}, {MVT::i64, MVT::f64},
-                       Legal);
-
   if (Subtarget->hasPrefetch())
     setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
 

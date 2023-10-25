@@ -123,9 +123,7 @@ entry:
 define amdgpu_ps void @prefetch_data_sgpr_too_large_offset(ptr addrspace(4) inreg %ptr) {
 ; GFX12-SDAG-LABEL: prefetch_data_sgpr_too_large_offset:
 ; GFX12-SDAG:       ; %bb.0: ; %entry
-; GFX12-SDAG-NEXT:    s_mov_b64 s[2:3], 0x800000
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
+; GFX12-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 0x800000
 ; GFX12-SDAG-NEXT:    s_prefetch_data s[0:1], 0x0, null, 0
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
@@ -184,9 +182,8 @@ define amdgpu_ps void @prefetch_data_pc_rel_too_large_offset() {
 ; GFX12-SDAG-LABEL: prefetch_data_pc_rel_too_large_offset:
 ; GFX12-SDAG:       ; %bb.0: ; %entry
 ; GFX12-SDAG-NEXT:    s_getpc_b64 s[0:1]
-; GFX12-SDAG-NEXT:    s_mov_b64 s[2:3], 0x800000
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
+; GFX12-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 0x800000
 ; GFX12-SDAG-NEXT:    s_prefetch_data s[0:1], 0x14, null, 0
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
@@ -410,9 +407,7 @@ entry:
 define amdgpu_ps void @prefetch_inst_sgpr_too_large_offset(ptr addrspace(4) inreg %ptr) {
 ; GFX12-SDAG-LABEL: prefetch_inst_sgpr_too_large_offset:
 ; GFX12-SDAG:       ; %bb.0: ; %entry
-; GFX12-SDAG-NEXT:    s_mov_b64 s[2:3], 0x800000
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
+; GFX12-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 0x800000
 ; GFX12-SDAG-NEXT:    s_prefetch_inst s[0:1], 0x0, null, 0
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
@@ -471,9 +466,8 @@ define amdgpu_ps void @prefetch_inst_pc_rel_too_large_offset() {
 ; GFX12-SDAG-LABEL: prefetch_inst_pc_rel_too_large_offset:
 ; GFX12-SDAG:       ; %bb.0: ; %entry
 ; GFX12-SDAG-NEXT:    s_getpc_b64 s[0:1]
-; GFX12-SDAG-NEXT:    s_mov_b64 s[2:3], 0x800000
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
+; GFX12-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 0x800000
 ; GFX12-SDAG-NEXT:    s_prefetch_inst s[0:1], 0x14, null, 0
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;

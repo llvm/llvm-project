@@ -502,18 +502,13 @@ define double @v_mul_f64_vop2_literal_32(double %x) {
 ; GFX10-LABEL: v_mul_f64_vop2_literal_32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x8c,0xbf]
-; GFX10-NEXT:    s_mov_b32 s4, 0 ; encoding: [0x80,0x03,0x84,0xbe]
-; GFX10-NEXT:    s_mov_b32 s5, 0x405ec000 ; encoding: [0xff,0x03,0x85,0xbe,0x00,0xc0,0x5e,0x40]
-; GFX10-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5] ; encoding: [0x00,0x00,0x65,0xd5,0x00,0x09,0x00,0x00]
+; GFX10-NEXT:    v_mul_f64 v[0:1], 0x405ec000, v[0:1] ; encoding: [0x00,0x00,0x65,0xd5,0xff,0x00,0x02,0x00,0x00,0xc0,0x5e,0x40]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x20,0x80,0xbe]
 ;
 ; GFX11-LABEL: v_mul_f64_vop2_literal_32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x89,0xbf]
-; GFX11-NEXT:    s_mov_b32 s0, 0 ; encoding: [0x80,0x00,0x80,0xbe]
-; GFX11-NEXT:    s_mov_b32 s1, 0x405ec000 ; encoding: [0xff,0x00,0x81,0xbe,0x00,0xc0,0x5e,0x40]
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) ; encoding: [0x09,0x00,0x87,0xbf]
-; GFX11-NEXT:    v_mul_f64 v[0:1], v[0:1], s[0:1] ; encoding: [0x00,0x00,0x28,0xd7,0x00,0x01,0x00,0x00]
+; GFX11-NEXT:    v_mul_f64 v[0:1], 0x405ec000, v[0:1] ; encoding: [0x00,0x00,0x28,0xd7,0xff,0x00,0x02,0x00,0x00,0xc0,0x5e,0x40]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x48,0x80,0xbe]
 ;
 ; GFX1210-LABEL: v_mul_f64_vop2_literal_32:
@@ -530,9 +525,9 @@ define double @v_mul_f64_vop2_literal_32(double %x) {
 }
 
 ; GFX9: codeLenInByte = 28
-; GFX10: codeLenInByte = 28
-; GFX1100: codeLenInByte = 32
-; GFX1150: codeLenInByte = 32
+; GFX10: codeLenInByte = 20
+; GFX1100: codeLenInByte = 20
+; GFX1150: codeLenInByte = 20
 ; GFX1210: codeLenInByte = 32
 
 define double @v_mul_f64_vop2_literal_64(double %x) {
