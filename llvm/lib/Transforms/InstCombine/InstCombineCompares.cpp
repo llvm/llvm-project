@@ -5689,13 +5689,8 @@ Instruction *InstCombinerImpl::foldICmpWithCastOp(ICmpInst &ICmp) {
     Value *NewOp1 = nullptr;
     if (auto *PtrToIntOp1 = dyn_cast<PtrToIntOperator>(ICmp.getOperand(1))) {
       Value *PtrSrc = PtrToIntOp1->getOperand(0);
-      if (PtrSrc->getType()->getPointerAddressSpace() ==
-          Op0Src->getType()->getPointerAddressSpace()) {
+      if (PtrSrc->getType() == Op0Src->getType())
         NewOp1 = PtrToIntOp1->getOperand(0);
-        // If the pointer types don't match, insert a bitcast.
-        if (Op0Src->getType() != NewOp1->getType())
-          NewOp1 = Builder.CreateBitCast(NewOp1, Op0Src->getType());
-      }
     } else if (auto *RHSC = dyn_cast<Constant>(ICmp.getOperand(1))) {
       NewOp1 = ConstantExpr::getIntToPtr(RHSC, SrcTy);
     }
