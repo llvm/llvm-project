@@ -850,8 +850,9 @@ transform::ForeachMatchOp::apply(transform::TransformRewriter &rewriter,
 
   for (Operation *root : state.getPayloadOps(getRoot())) {
     WalkResult walkResult = root->walk([&](Operation *op) {
-      // Skip over the root op itself so we don't invalidate it.
-      if (op == root)
+      // If getRestrictRoot is not present, skip over the root op itself so we
+      // don't invalidate it.
+      if (!getRestrictRoot() && op == root)
         return WalkResult::advance();
 
       DEBUG_MATCHER({
@@ -1556,10 +1557,10 @@ DiagnosedSilenceableFailure transform::MatchOperationEmptyOp::matchOperation(
     ::std::optional<::mlir::Operation *> maybeCurrent,
     transform::TransformResults &results, transform::TransformState &state) {
   if (!maybeCurrent.has_value()) {
-    DBGS_MATCHER() << "MatchOperationEmptyOp success\n";
+    DEBUG_MATCHER({ DBGS_MATCHER() << "MatchOperationEmptyOp success\n"; });
     return DiagnosedSilenceableFailure::success();
   }
-  DBGS_MATCHER() << "MatchOperationEmptyOp failure\n";
+  DEBUG_MATCHER({ DBGS_MATCHER() << "MatchOperationEmptyOp failure\n"; });
   return emitSilenceableError() << "operation is not empty";
 }
 
@@ -1961,7 +1962,8 @@ void transform::NamedSequenceOp::build(OpBuilder &builder,
   state.addAttribute(SymbolTable::getSymbolAttrName(),
                      builder.getStringAttr(symName));
   state.addAttribute(getFunctionTypeAttrName(state.name),
-                     TypeAttr::get(FunctionType::get(builder.getContext(), rootType, resultTypes)));
+                     TypeAttr::get(FunctionType::get(builder.getContext(),
+                                                     rootType, resultTypes)));
   state.attributes.append(attrs.begin(), attrs.end());
   state.addRegion();
 
