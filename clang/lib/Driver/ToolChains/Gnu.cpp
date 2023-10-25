@@ -2053,21 +2053,22 @@ Generic_GCC::GCCVersion Generic_GCC::GCCVersion::Parse(StringRef VersionText) {
     if (!TryParseLastNumber(MajorStr, GoodVersion.Major, GoodVersion.MajorStr))
       return BadVersion;
     return GoodVersion;
-  } else {
-    if (!TryParseNumber(MajorStr, GoodVersion.Major))
-      return BadVersion;
-    GoodVersion.MajorStr = MajorStr;
   }
+
+  if (!TryParseNumber(MajorStr, GoodVersion.Major))
+    return BadVersion;
+  GoodVersion.MajorStr = MajorStr;
+
   if (PatchStr.empty()) {
     // If no patch string, minor is the last segment
     if (!TryParseLastNumber(MinorStr, GoodVersion.Minor, GoodVersion.MinorStr))
       return BadVersion;
     return GoodVersion;
-  } else {
-    if (!TryParseNumber(MinorStr, GoodVersion.Minor))
-      return BadVersion;
-    GoodVersion.MinorStr = MinorStr;
   }
+
+  if (!TryParseNumber(MinorStr, GoodVersion.Minor))
+    return BadVersion;
+  GoodVersion.MinorStr = MinorStr;
 
   // For the last segment, tolerate a missing number.
   std::string DummyStr;
