@@ -314,7 +314,6 @@ AffineMap DimLvlMap::getDimToLvlMap(MLIRContext *context) const {
   for (const auto &lvlSpec : lvlSpecs)
     lvlAffines.push_back(lvlSpec.getExpr().getAffineExpr());
   auto map =  AffineMap::get(getDimRank(), getSymRank(), lvlAffines, context);
-  if (map.isIdentity()) return AffineMap();
   return map;
 }
 
@@ -328,7 +327,9 @@ AffineMap DimLvlMap::getLvlToDimMap(MLIRContext *context) const {
     }
   }
   auto map = AffineMap::get(getLvlRank(), getSymRank(), dimAffines, context);
-  if (dimAffines.empty() || map.isIdentity())
+  // If no lvlToDim map was passed in, returns a null AffineMap and infers it
+  // in SparseTensorEncodingAttr::parse.
+  if (dimAffines.empty())
     return AffineMap();
   return map;
 }
