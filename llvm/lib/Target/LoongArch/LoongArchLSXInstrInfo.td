@@ -141,9 +141,13 @@ def lsxsplati16 : PatFrag<(ops node:$e0),
 def lsxsplati32 : PatFrag<(ops node:$e0),
                           (v4i32 (build_vector node:$e0, node:$e0,
                                                node:$e0, node:$e0))>;
-
 def lsxsplati64 : PatFrag<(ops node:$e0),
                           (v2i64 (build_vector node:$e0, node:$e0))>;
+def lsxsplatf32 : PatFrag<(ops node:$e0),
+                          (v4f32 (build_vector node:$e0, node:$e0,
+                                               node:$e0, node:$e0))>;
+def lsxsplatf64 : PatFrag<(ops node:$e0),
+                          (v2f64 (build_vector node:$e0, node:$e0))>;
 
 def to_valid_timm : SDNodeXForm<timm, [{
   auto CN = cast<ConstantSDNode>(N);
@@ -1497,6 +1501,12 @@ def : Pat<(loongarch_vreplve v4i32:$vj, GRLenVT:$rk),
           (VREPLVE_W v4i32:$vj, GRLenVT:$rk)>;
 def : Pat<(loongarch_vreplve v2i64:$vj, GRLenVT:$rk),
           (VREPLVE_D v2i64:$vj, GRLenVT:$rk)>;
+
+// VREPLVEI_{W/D}
+def : Pat<(lsxsplatf32 FPR32:$fj),
+          (VREPLVEI_W (SUBREG_TO_REG (i64 0), FPR32:$fj, sub_32), 0)>;
+def : Pat<(lsxsplatf64 FPR64:$fj),
+          (VREPLVEI_D (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64), 0)>;
 
 // Loads/Stores
 foreach vt = [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64] in {
