@@ -854,7 +854,10 @@ bool AArch64CallLowering::areCalleeOutgoingArgsTailCallable(
 
   AArch64OutgoingValueAssigner CalleeAssigner(AssignFnFixed, AssignFnVarArg,
                                               Subtarget, /*IsReturn*/ false);
-  if (!determineAssignments(CalleeAssigner, OutArgs, OutInfo)) {
+  // determineAssignments() may modify argument flags, so make a copy.
+  SmallVector<ArgInfo, 8> OutArgsCopy;
+  append_range(OutArgsCopy, OutArgs);
+  if (!determineAssignments(CalleeAssigner, OutArgsCopy, OutInfo)) {
     LLVM_DEBUG(dbgs() << "... Could not analyze call operands.\n");
     return false;
   }
