@@ -143,8 +143,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,
   // If this type comes from a Clang module, recursively look in the
   // DWARF section of the .pcm file in the module cache. Clang
   // generates DWO skeleton units as breadcrumbs to find them.
-  llvm::SmallVector<CompilerContext, 4> decl_context;
-  die.GetDeclContext(decl_context);
+  std::vector<CompilerContext> decl_context = die.GetDeclContext();
   TypeMap pcm_types;
 
   // The type in the Clang module must have the same language as the current CU.
@@ -2287,7 +2286,7 @@ CompilerDecl DWARFASTParserClang::GetDeclForUIDFromDWARF(const DWARFDIE &die) {
   clang::Decl *clang_decl = GetClangDeclForDIE(die);
   if (clang_decl != nullptr)
     return m_ast.GetCompilerDecl(clang_decl);
-  return CompilerDecl();
+  return {};
 }
 
 CompilerDeclContext
@@ -2295,7 +2294,7 @@ DWARFASTParserClang::GetDeclContextForUIDFromDWARF(const DWARFDIE &die) {
   clang::DeclContext *clang_decl_ctx = GetClangDeclContextForDIE(die);
   if (clang_decl_ctx)
     return m_ast.CreateDeclContext(clang_decl_ctx);
-  return CompilerDeclContext();
+  return {};
 }
 
 CompilerDeclContext
@@ -2304,7 +2303,7 @@ DWARFASTParserClang::GetDeclContextContainingUIDFromDWARF(const DWARFDIE &die) {
       GetClangDeclContextContainingDIE(die, nullptr);
   if (clang_decl_ctx)
     return m_ast.CreateDeclContext(clang_decl_ctx);
-  return CompilerDeclContext();
+  return {};
 }
 
 size_t DWARFASTParserClang::ParseChildEnumerators(
