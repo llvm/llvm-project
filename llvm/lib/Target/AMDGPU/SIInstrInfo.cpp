@@ -106,20 +106,27 @@ static bool nodesHaveSameOperandValue(SDNode *N0, SDNode* N1, unsigned OpName) {
   return N0->getOperand(Op0Idx) == N1->getOperand(Op1Idx);
 }
 
+static bool canRemat(const MachineInstr &MI) {
+
+  if (SIInstrInfo::isVOP1(MI) || SIInstrInfo::isVOP2(MI) ||
+      SIInstrInfo::isVOP3(MI) || SIInstrInfo::isSDWA(MI) ||
+      SIInstrInfo::isSALU(MI))
+    return true;
+
+  if (SIInstrInfo::isSMRD(MI)) {
+    return !MI.memoperands_empty() &&
+           llvm::all_of(MI.memoperands(), [](const MachineMemOperand *MMO) {
+             return MMO->isLoad() && MMO->isInvariant();
+           });
+  }
+
+  return false;
+}
+
 bool SIInstrInfo::isReallyTriviallyReMaterializable(
     const MachineInstr &MI) const {
 
-  bool CanRemat = false;
-  if (isVOP1(MI) || isVOP2(MI) || isVOP3(MI) || isSDWA(MI) || isSALU(MI)) {
-    CanRemat = true;
-  } else if (isSMRD(MI)) {
-    CanRemat = !MI.memoperands_empty() &&
-               llvm::all_of(MI.memoperands(), [](const MachineMemOperand *MMO) {
-                 return MMO->isLoad() && MMO->isInvariant();
-               });
-  }
-
-  if (CanRemat) {
+  if (canRemat(MI)) {
     // Normally VALU use of exec would block the rematerialization, but that
     // is OK in this case to have an implicit exec read as all VALU do.
     // We really want all of the generic logic for this except for this.
