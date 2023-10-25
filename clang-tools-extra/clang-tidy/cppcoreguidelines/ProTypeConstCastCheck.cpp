@@ -22,9 +22,12 @@ static bool hasConstQualifier(QualType Type) {
   return Type.isConstQualified();
 }
 
-namespace {
-AST_MATCHER(QualType, hasConst) { return hasConstQualifier(Node); }
-} // namespace
+static bool hasVolatileQualifier(QualType Type) {
+  const QualType PtrType = Type->getPointeeType();
+  if (!PtrType.isNull())
+    return hasVolatileQualifier(PtrType);
+  return Type.isVolatileQualified();
+}
 
 ProTypeConstCastCheck::ProTypeConstCastCheck(StringRef Name,
                                              ClangTidyContext *Context)
@@ -36,20 +39,35 @@ void ProTypeConstCastCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void ProTypeConstCastCheck::registerMatchers(MatchFinder *Finder) {
-  if (StrictMode)
-    Finder->addMatcher(cxxConstCastExpr().bind("cast"), this);
-  else
-    Finder->addMatcher(cxxConstCastExpr(unless(hasDestinationType(
-                                            hasCanonicalType(hasConst()))))
-                           .bind("cast"),
-                       this);
+  Finder->addMatcher(cxxConstCastExpr().bind("cast"), this);
 }
 
 void ProTypeConstCastCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedCast = Result.Nodes.getNodeAs<CXXConstCastExpr>("cast");
+  if (StrictMode) {
+    diag(MatchedCast->getOperatorLoc(), "do not use const_cast");
+    return;
+  }
+
+  const QualType TargetType = MatchedCast->getType().getCanonicalType();
+  const QualType SourceType =
+      MatchedCast->getSubExpr()->getType().getCanonicalType();
+
+  const bool RemovingConst =
+      hasConstQualifier(SourceType) && !hasConstQualifier(TargetType);
+  const bool RemovingVolatile =
+      hasVolatileQualifier(SourceType) && !hasVolatileQualifier(TargetType);
+
+  if (!RemovingConst && !RemovingVolatile) {
+    // Cast is doing nothing.
+    return;
+  }
+
   diag(MatchedCast->getOperatorLoc(),
-       "do not use const_cast%select{ to remove const qualifier|}0")
-      << StrictMode;
+       "do not use const_cast to remove%select{| const}0%select{| "
+       "and}2%select{| volatile}1 qualifier")
+      << RemovingConst << RemovingVolatile
+      << (RemovingConst && RemovingVolatile);
 }
 
 } // namespace clang::tidy::cppcoreguidelines

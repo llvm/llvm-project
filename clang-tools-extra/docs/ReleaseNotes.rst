@@ -238,8 +238,8 @@ Changes in existing checks
 
 - Improved :doc:`cppcoreguidelines-pro-type-const-cast
   <clang-tidy/checks/cppcoreguidelines/pro-type-const-cast>` check to ignore
-  casts to ``const`` type (controlled by `StrictMode` option) and casts in
-  implicitly invoked code.
+  casts to ``const`` or ``volatile`` type (controlled by `StrictMode` option)
+  and casts in implicitly invoked code.
 
 - Improved :doc:`cppcoreguidelines-pro-type-member-init
   <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check to ignore
