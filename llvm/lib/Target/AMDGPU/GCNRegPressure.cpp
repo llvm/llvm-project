@@ -489,6 +489,11 @@ void GCNRegPressure::dump() const { dbgs() << print(*this); }
 
 #endif
 
+static cl::opt<bool> UseDownwardTracker(
+    "amdgpu-print-rp-downward",
+    cl::desc("Use GCNDownwardRPTracker for GCNRegPressurePrinter pass"),
+    cl::init(false), cl::Hidden);
+
 char llvm::GCNRegPressurePrinter::ID = 0;
 char &llvm::GCNRegPressurePrinterID = GCNRegPressurePrinter::ID;
 
@@ -500,8 +505,7 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
 
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   const LiveIntervals &LIS = getAnalysis<LiveIntervals>();
-  GCNUpwardRPTracker RPT(LIS);
-
+  
   auto &OS = dbgs();
 
 // Leading spaces are important for YAML syntax.
@@ -520,6 +524,9 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
   SmallVector<std::pair<GCNRegPressure, GCNRegPressure>, 16> RP;
 
   for (auto &MBB : MF) {
+    RP.clear();
+    RP.reserve(MBB.size());
+
     OS << PFX;
     MBB.printName(OS);
     OS << ":\n";
@@ -533,25 +540,52 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
       continue;
     }
 
-    RPT.reset(MBB.instr_back());
-    RPT.moveMaxPressure(); // Clear max pressure.
+    GCNRPTracker::LiveRegSet LRAtMBBBegin, LRAtMBBEnd;
+    GCNRegPressure RPAtMBBEnd;
+    
+    if (UseDownwardTracker) {
+      GCNDownwardRPTracker RPT(LIS);
+      RPT.reset(MBB.instr_front());
 
-    GCNRPTracker::LiveRegSet LRAtMBBEnd = RPT.getLiveRegs();
-    GCNRegPressure RPAtMBBEnd = RPT.getPressure();
+      LRAtMBBBegin = RPT.getLiveRegs();
 
-    RP.clear();
-    RP.reserve(MBB.size());
-    for (auto &MI : reverse(MBB)) {
-      RPT.recede(MI);
-      RP.emplace_back(RPT.getPressure(), RPT.moveMaxPressure());
+      while (!RPT.advanceBeforeNext()) {
+        GCNRegPressure RPBeforeMI = RPT.getPressure();
+        RPT.advanceToNext();
+        RP.emplace_back(RPBeforeMI, RPT.getPressure());
+      }
+
+      LRAtMBBEnd = RPT.getLiveRegs();
+      RPAtMBBEnd = RPT.getPressure();
+
+    } else {
+      GCNUpwardRPTracker RPT(LIS);
+      RPT.reset(MBB.instr_back());
+      RPT.moveMaxPressure(); // Clear max pressure.
+
+      LRAtMBBEnd = RPT.getLiveRegs();
+      RPAtMBBEnd = RPT.getPressure();
+      
+      for (auto &MI : reverse(MBB)) {
+        RPT.recede(MI);
+        if (!MI.isDebugInstr())
+          RP.emplace_back(RPT.getPressure(), RPT.moveMaxPressure());
+      }
+
+      LRAtMBBBegin = RPT.getLiveRegs();
     }
 
-    OS << PFX "  Live-in:" << llvm::print(RPT.getLiveRegs(), MRI);
+    OS << PFX "  Live-in:" << llvm::print(LRAtMBBBegin, MRI);
     OS << PFX "  SGPR  VGPR\n";
-    auto I = RP.rbegin();
+    int I = 0;
     for (auto &MI : MBB) {
-      auto &[RPBeforeInstr, RPAtInstr] = *I++;
-      OS << printRP(RPBeforeInstr) << '\n' << printRP(RPAtInstr) << "  ";
+      if (!MI.isDebugInstr()) {
+        auto &[RPBeforeInstr, RPAtInstr] =
+            RP[UseDownwardTracker ? I : (RP.size() - 1 - I)];
+        ++I;
+        OS << printRP(RPBeforeInstr) << '\n' << printRP(RPAtInstr) << "  ";
+      } else
+        OS << PFX "               ";
       MI.print(OS);
     }
     OS << printRP(RPAtMBBEnd) << '\n';
