@@ -331,7 +331,7 @@ static bool AddVariableInfo(
   }
 
   // Report a fatal error if self can't be reconstructed as a Swift AST type.
-  if (is_self && !GetSwiftType(target_type))
+  if (is_self && !ast_context.GetSwiftType(target_type))
     return false;
 
   auto ts = target_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
@@ -356,7 +356,7 @@ static bool AddVariableInfo(
   }
 
   if (log && is_self)
-    if (swift::Type swift_type = GetSwiftType(target_type)) {
+    if (swift::Type swift_type = ast_context.GetSwiftType(target_type)) {
       std::string s;
       llvm::raw_string_ostream ss(s);
       swift_type->dump(ss);
