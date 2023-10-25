@@ -1222,16 +1222,16 @@ void ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,
 #define ENUM_DIAGOPT(Name, Type, Bits, Default)                                \
   Record.push_back(static_cast<unsigned>(DiagOpts.get##Name()));
 #include "clang/Basic/DiagnosticOptions.def"
-  Record.push_back(DiagOpts.Warnings.size());
-  for (unsigned I = 0, N = DiagOpts.Warnings.size(); I != N; ++I)
-    AddString(DiagOpts.Warnings[I], Record);
-  Record.push_back(DiagOpts.Remarks.size());
-  for (unsigned I = 0, N = DiagOpts.Remarks.size(); I != N; ++I)
-    AddString(DiagOpts.Remarks[I], Record);
-  // Note: we don't serialize the log or serialization file names, because they
-  // are generally transient files and will almost always be overridden.
-  Stream.EmitRecord(DIAGNOSTIC_OPTIONS, Record);
-  Record.clear();
+    Record.push_back(DiagOpts.Warnings.size());
+    for (unsigned I = 0, N = DiagOpts.Warnings.size(); I != N; ++I)
+      AddString(DiagOpts.Warnings[I], Record);
+    Record.push_back(DiagOpts.Remarks.size());
+    for (unsigned I = 0, N = DiagOpts.Remarks.size(); I != N; ++I)
+      AddString(DiagOpts.Remarks[I], Record);
+    // Note: we don't serialize the log or serialization file names, because
+    // they are generally transient files and will almost always be overridden.
+    Stream.EmitRecord(DIAGNOSTIC_OPTIONS, Record);
+    Record.clear();
   }
 
   // Header search paths.
