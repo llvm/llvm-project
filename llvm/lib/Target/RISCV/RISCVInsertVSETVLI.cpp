@@ -301,18 +301,23 @@ inline raw_ostream &operator<<(raw_ostream &OS, const DemandedFields &DF) {
 /// of instructions) which use only the Used subfields and properties.
 static bool areCompatibleVTYPEs(uint64_t CurVType, uint64_t NewVType,
                                 const DemandedFields &Used) {
-  if (Used.SEW == DemandedFields::SEWEqual &&
-      RISCVVType::getSEW(CurVType) != RISCVVType::getSEW(NewVType))
-    return false;
-
-  if (Used.SEW == DemandedFields::SEWGreaterThanOrEqual &&
-      RISCVVType::getSEW(NewVType) < RISCVVType::getSEW(CurVType))
-    return false;
-
-  if (Used.SEW == DemandedFields::SEWGreaterThanOrEqualAndLessThan64 &&
-      (RISCVVType::getSEW(NewVType) < RISCVVType::getSEW(CurVType) ||
-       RISCVVType::getSEW(NewVType) >= 64))
-    return false;
+  switch (Used.SEW) {
+  case DemandedFields::SEWNone:
+    break;
+  case DemandedFields::SEWEqual:
+    if (RISCVVType::getSEW(CurVType) != RISCVVType::getSEW(NewVType))
+      return false;
+    break;
+  case DemandedFields::SEWGreaterThanOrEqual:
+    if (RISCVVType::getSEW(NewVType) < RISCVVType::getSEW(CurVType))
+      return false;
+    break;
+  case DemandedFields::SEWGreaterThanOrEqualAndLessThan64:
+    if (RISCVVType::getSEW(NewVType) < RISCVVType::getSEW(CurVType) ||
+        RISCVVType::getSEW(NewVType) >= 64)
+      return false;
+    break;
+  }
 
   if (Used.LMUL &&
       RISCVVType::getVLMUL(CurVType) != RISCVVType::getVLMUL(NewVType))
