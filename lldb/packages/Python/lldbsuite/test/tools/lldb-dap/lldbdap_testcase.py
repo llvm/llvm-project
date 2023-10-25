@@ -351,6 +351,7 @@ class DAPTestCaseBase(TestBase):
         postRunCommands=None,
         enableAutoVariableSummaries=False,
         enableSyntheticChildDebugging=False,
+        commandEscapePrefix="`",
     ):
         """Sending launch request to dap"""
 
@@ -389,6 +390,7 @@ class DAPTestCaseBase(TestBase):
             postRunCommands=postRunCommands,
             enableAutoVariableSummaries=enableAutoVariableSummaries,
             enableSyntheticChildDebugging=enableSyntheticChildDebugging,
+            commandEscapePrefix=commandEscapePrefix,
         )
 
         if expectFailure:
@@ -425,6 +427,7 @@ class DAPTestCaseBase(TestBase):
         lldbDAPEnv=None,
         enableAutoVariableSummaries=False,
         enableSyntheticChildDebugging=False,
+        commandEscapePrefix="`",
     ):
         """Build the default Makefile target, create the DAP debug adaptor,
         and launch the process.
@@ -455,4 +458,5 @@ class DAPTestCaseBase(TestBase):
             postRunCommands=postRunCommands,
             enableAutoVariableSummaries=enableAutoVariableSummaries,
             enableSyntheticChildDebugging=enableSyntheticChildDebugging,
+            commandEscapePrefix=commandEscapePrefix,
         )

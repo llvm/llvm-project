@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --sparse-tensor-codegen  --canonicalize -cse | FileCheck %s
+// RUN: mlir-opt %s --post-sparsification-rewrite --sparse-tensor-codegen  --canonicalize -cse | FileCheck %s
 
 #SV = #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>
 
