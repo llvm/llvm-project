@@ -1020,7 +1020,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
 
   // this is a rather explicit check for all cases where we should mark the
   // state as a conflict to force the latter stages of the algorithm to emit
-  // the BDVs. 
+  // the BDVs.
   // TODO: in many cases the instructions emited for the conflicting states
   // will be identical to the I itself (if the I's operate on their BDVs
   // themselves). We should expoit this, but can't do it here since it would
@@ -1038,11 +1038,13 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
     // ones.
     if (isa<ShuffleVectorInst>(I))
       return true;
-    // Any  instructions where the computed base type differs from the instruction type. An example is
-    // where an extract instruction is used by a select. Here the select's BDV is a vector (because of extract's 
-    // BDV), while the select itself is a scalar type. Note that the IE and EE instruction check is not fully subsumed
-    // by the vector<->scalar check at the end, this is due to the BDV algorithm
-    // being ignorant of BDV types at this junction
+    // Any  instructions where the computed base type differs from the
+    // instruction type. An example is where an extract instruction is used by a
+    // select. Here the select's BDV is a vector (because of extract's BDV),
+    // while the select itself is a scalar type. Note that the IE and EE
+    // instruction check is not fully subsumed by the vector<->scalar check at
+    // the end, this is due to the BDV algorithm being ignorant of BDV types at
+    // this junction
     if (!areBothVectorOrScalar(BaseValue, I))
       return true;
     return false;

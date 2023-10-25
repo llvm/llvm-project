@@ -270,7 +270,8 @@ entry:
   %val = extractelement <2 x ptr addrspace(1)> <ptr addrspace(1) inttoptr (i64 5 to ptr addrspace(1)),
                                                 ptr addrspace(1) inttoptr (i64 15 to ptr addrspace(1))>, i32 0
   ; CHECK: gc.statepoint
-  ; CHECK: call {{.*}}gc.relocate
   call void @foo() [ "deopt"() ]
+  ; CHECK-DAG: call {{.*}}gc.relocate{{.*}}(%val.base, %val.base)
+  ; CHECK-DAG: call {{.*}}gc.relocate{{.*}}(%val.base, %val)
   ret ptr addrspace(1) %val
 }

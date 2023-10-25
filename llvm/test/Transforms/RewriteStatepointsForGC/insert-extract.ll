@@ -27,6 +27,7 @@ bb:
 }
 
 
+; same as above, but ensures that transitive uses of insertelement emit proper code as well
 define void @bart() gc "statepoint-example" {
 ; CHECK-LABEL: define void @bart() gc "statepoint-example" {
 ; CHECK-NEXT:  always_continue:
