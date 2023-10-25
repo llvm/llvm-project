@@ -2,7 +2,7 @@
 ! Test for non-character non-SAVEd non-initialized scalars with or without
 ! allocatable or pointer attribute in main program.
 
-!RUN: %flang_fc1 -emit-fir -fopenmp %s -o - | FileCheck %s
+!RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
 
 program test
   integer :: x
@@ -12,52 +12,64 @@ program test
   integer, pointer :: a
   real, allocatable :: b
 
-!CHECK-DAG:  [[ADDR0:%.*]] = fir.address_of(@_QFEa) : !fir.ref<!fir.box<!fir.ptr<i32>>>
-!CHECK-DAG:  [[NEWADDR0:%.*]] = omp.threadprivate [[ADDR0]] : !fir.ref<!fir.box<!fir.ptr<i32>>> -> !fir.ref<!fir.box<!fir.ptr<i32>>>
-!CHECK-DAG:  [[ADDR1:%.*]] = fir.address_of(@_QFEb) : !fir.ref<!fir.box<!fir.heap<f32>>>
-!CHECK-DAG:  [[NEWADDR1:%.*]] = omp.threadprivate [[ADDR1]] : !fir.ref<!fir.box<!fir.heap<f32>>> -> !fir.ref<!fir.box<!fir.heap<f32>>>
-!CHECK-DAG:  [[ADDR2:%.*]] = fir.address_of(@_QFEw) : !fir.ref<!fir.complex<4>>
-!CHECK-DAG:  [[NEWADDR2:%.*]] = omp.threadprivate [[ADDR2]] : !fir.ref<!fir.complex<4>> -> !fir.ref<!fir.complex<4>>
-!CHECK-DAG:  [[ADDR3:%.*]] = fir.address_of(@_QFEx) : !fir.ref<i32>
-!CHECK-DAG:  [[NEWADDR3:%.*]] = omp.threadprivate [[ADDR3]] : !fir.ref<i32> -> !fir.ref<i32>
-!CHECK-DAG:  [[ADDR4:%.*]] = fir.address_of(@_QFEy) : !fir.ref<f32>
-!CHECK-DAG:  [[NEWADDR4:%.*]] = omp.threadprivate [[ADDR4]] : !fir.ref<f32> -> !fir.ref<f32>
-!CHECK-DAG:  [[ADDR5:%.*]] = fir.address_of(@_QFEz) : !fir.ref<!fir.logical<4>>
-!CHECK-DAG:  [[NEWADDR5:%.*]] = omp.threadprivate [[ADDR5]] : !fir.ref<!fir.logical<4>> -> !fir.ref<!fir.logical<4>>
+!CHECK-DAG:  %[[A:.*]] = fir.address_of(@_QFEa) : !fir.ref<!fir.box<!fir.ptr<i32>>>
+!CHECK-DAG:  %[[OMP_A:.*]] = omp.threadprivate %[[A]] : !fir.ref<!fir.box<!fir.ptr<i32>>> -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+!CHECK-DAG:  %[[OMP_A_DECL:.*]]:2 = hlfir.declare %[[OMP_A]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
+!CHECK-DAG:  %[[B:.*]] = fir.address_of(@_QFEb) : !fir.ref<!fir.box<!fir.heap<f32>>>
+!CHECK-DAG:  %[[OMP_B:.*]] = omp.threadprivate %[[B]] : !fir.ref<!fir.box<!fir.heap<f32>>> -> !fir.ref<!fir.box<!fir.heap<f32>>>
+!CHECK-DAG:  %[[OMP_B_DECL:.*]]:2 = hlfir.declare %[[OMP_B]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEb"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
+!CHECK-DAG:  %[[W:.*]] = fir.address_of(@_QFEw) : !fir.ref<!fir.complex<4>>
+!CHECK-DAG:  %[[OMP_W:.*]] = omp.threadprivate %[[W]] : !fir.ref<!fir.complex<4>> -> !fir.ref<!fir.complex<4>>
+!CHECK-DAG:  %[[OMP_W_DECL:.*]]:2 = hlfir.declare %[[OMP_W]] {uniq_name = "_QFEw"} : (!fir.ref<!fir.complex<4>>) -> (!fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>)
+!CHECK-DAG:  %[[X:.*]] = fir.address_of(@_QFEx) : !fir.ref<i32>
+!CHECK-DAG:  %[[OMP_X:.*]] = omp.threadprivate %[[X]] : !fir.ref<i32> -> !fir.ref<i32>
+!CHECK-DAG:  %[[OMP_X_DECL:.*]]:2 = hlfir.declare %[[OMP_X]] {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK-DAG:  %[[Y:.*]] = fir.address_of(@_QFEy) : !fir.ref<f32>
+!CHECK-DAG:  %[[OMP_Y:.*]] = omp.threadprivate %[[Y]] : !fir.ref<f32> -> !fir.ref<f32>
+!CHECK-DAG:  %[[OMP_Y_DECL:.*]]:2 = hlfir.declare %[[OMP_Y]] {uniq_name = "_QFEy"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+!CHECK-DAG:  %[[Z:.*]] = fir.address_of(@_QFEz) : !fir.ref<!fir.logical<4>>
+!CHECK-DAG:  %[[OMP_Z:.*]] = omp.threadprivate %[[Z]] : !fir.ref<!fir.logical<4>> -> !fir.ref<!fir.logical<4>>
+!CHECK-DAG:  %[[OMP_Z_DECL:.*]]:2 = hlfir.declare %[[OMP_Z]] {uniq_name = "_QFEz"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
   !$omp threadprivate(x, y, z, w, a, b)
 
   call sub(a, b)
 
-!CHECK-DAG:  %{{.*}} = fir.load [[NEWADDR3]] : !fir.ref<i32>
-!CHECK-DAG:  %{{.*}} = fir.load [[NEWADDR4]] : !fir.ref<f32>
-!CHECK-DAG:  %{{.*}} = fir.load [[NEWADDR5]] : !fir.ref<!fir.logical<4>>
-!CHECK-DAG:  %{{.*}} = fir.load [[NEWADDR2]] : !fir.ref<!fir.complex<4>>
-!CHECK-DAG:  %{{.*}} = fir.load [[NEWADDR0]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
-!CHECK-DAG:  %{{.*}} = fir.load [[NEWADDR1]] : !fir.ref<!fir.box<!fir.heap<f32>>>
+!CHECK-DAG:  %{{.*}} = fir.load %[[OMP_X_DECL]]#0 : !fir.ref<i32>
+!CHECK-DAG:  %{{.*}} = fir.load %[[OMP_Y_DECL]]#0 : !fir.ref<f32>
+!CHECK-DAG:  %{{.*}} = fir.load %[[OMP_Z_DECL]]#0 : !fir.ref<!fir.logical<4>>
+!CHECK-DAG:  %{{.*}} = fir.load %[[OMP_W_DECL]]#0 : !fir.ref<!fir.complex<4>>
+!CHECK-DAG:  %{{.*}} = fir.load %[[OMP_A_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+!CHECK-DAG:  %{{.*}} = fir.load %[[OMP_B_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
   print *, x, y, z, w, a, b
 
   !$omp parallel
-!CHECK-DAG:    [[ADDR68:%.*]] = omp.threadprivate [[ADDR0]] : !fir.ref<!fir.box<!fir.ptr<i32>>> -> !fir.ref<!fir.box<!fir.ptr<i32>>>
-!CHECK-DAG:    [[ADDR69:%.*]] = omp.threadprivate [[ADDR1]] : !fir.ref<!fir.box<!fir.heap<f32>>> -> !fir.ref<!fir.box<!fir.heap<f32>>>
-!CHECK-DAG:    [[ADDR70:%.*]] = omp.threadprivate [[ADDR2]] : !fir.ref<!fir.complex<4>> -> !fir.ref<!fir.complex<4>>
-!CHECK-DAG:    [[ADDR71:%.*]] = omp.threadprivate [[ADDR3]] : !fir.ref<i32> -> !fir.ref<i32>
-!CHECK-DAG:    [[ADDR72:%.*]] = omp.threadprivate [[ADDR4]] : !fir.ref<f32> -> !fir.ref<f32>
-!CHECK-DAG:    [[ADDR73:%.*]] = omp.threadprivate [[ADDR5]] : !fir.ref<!fir.logical<4>> -> !fir.ref<!fir.logical<4>>
-!CHECK-DAG:    %{{.*}} = fir.load [[ADDR71]] : !fir.ref<i32>
-!CHECK-DAG:    %{{.*}} = fir.load [[ADDR72]] : !fir.ref<f32>
-!CHECK-DAG:    %{{.*}} = fir.load [[ADDR73]] : !fir.ref<!fir.logical<4>>
-!CHECK-DAG:    %{{.*}} = fir.load [[ADDR70]] : !fir.ref<!fir.complex<4>>
-!CHECK-DAG:    %{{.*}} = fir.load [[ADDR68]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
-!CHECK-DAG:    %{{.*}} = fir.load [[ADDR69]] : !fir.ref<!fir.box<!fir.heap<f32>>>
-    print *, x, y, z, w, a, b
+!CHECK-DAG:  %[[X_PVT:.*]] = omp.threadprivate %[[X]] : !fir.ref<i32> -> !fir.ref<i32>
+!CHECK-DAG:  %[[X_PVT_DECL:.*]]:2 = hlfir.declare %[[X_PVT]] {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK-DAG:  %[[Y_PVT:.*]] = omp.threadprivate %[[Y]] : !fir.ref<f32> -> !fir.ref<f32>
+!CHECK-DAG:  %[[Y_PVT_DECL:.*]]:2 = hlfir.declare %[[Y_PVT]] {uniq_name = "_QFEy"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+!CHECK-DAG:  %[[Z_PVT:.*]] = omp.threadprivate %[[Z]] : !fir.ref<!fir.logical<4>> -> !fir.ref<!fir.logical<4>>
+!CHECK-DAG:  %[[Z_PVT_DECL:.*]]:2 = hlfir.declare %[[Z_PVT]] {uniq_name = "_QFEz"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+!CHECK-DAG:  %[[W_PVT:.*]] = omp.threadprivate %[[W]] : !fir.ref<!fir.complex<4>> -> !fir.ref<!fir.complex<4>>
+!CHECK-DAG:  %[[W_PVT_DECL:.*]]:2 = hlfir.declare %[[W_PVT]] {uniq_name = "_QFEw"} : (!fir.ref<!fir.complex<4>>) -> (!fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>)
+!CHECK-DAG:  %[[A_PVT:.*]] = omp.threadprivate %[[A]] : !fir.ref<!fir.box<!fir.ptr<i32>>> -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+!CHECK-DAG:  %[[A_PVT_DECL:.*]]:2 = hlfir.declare %[[A_PVT]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
+!CHECK-DAG:  %[[B_PVT:.*]] = omp.threadprivate %[[B]] : !fir.ref<!fir.box<!fir.heap<f32>>> -> !fir.ref<!fir.box<!fir.heap<f32>>>
+!CHECK-DAG:  %[[B_PVT_DECL:.*]]:2 = hlfir.declare %[[B_PVT]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEb"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
+!CHECK-DAG:  %{{.*}} = fir.load %[[X_PVT_DECL]]#0 : !fir.ref<i32>
+!CHECK-DAG:  %{{.*}} = fir.load %[[Y_PVT_DECL]]#0 : !fir.ref<f32>
+!CHECK-DAG:  %{{.*}} = fir.load %[[Z_PVT_DECL]]#0 : !fir.ref<!fir.logical<4>>
+!CHECK-DAG:  %{{.*}} = fir.load %[[W_PVT_DECL]]#0 : !fir.ref<!fir.complex<4>>
+!CHECK-DAG:  %{{.*}} = fir.load %[[A_PVT_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+!CHECK-DAG:  %{{.*}} = fir.load %[[B_PVT_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
+  print *, x, y, z, w, a, b
   !$omp end parallel
 
-!CHECK-DAG:  %{{.*}} = fir.load [[NEWADDR3]] : !fir.ref<i32>
-!CHECK-DAG:  %{{.*}} = fir.load [[NEWADDR4]] : !fir.ref<f32>
-!CHECK-DAG:  %{{.*}} = fir.load [[NEWADDR5]] : !fir.ref<!fir.logical<4>>
-!CHECK-DAG:  %{{.*}} = fir.load [[NEWADDR2]] : !fir.ref<!fir.complex<4>>
-!CHECK-DAG:  %{{.*}} = fir.load [[NEWADDR0]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
-!CHECK-DAG:  %{{.*}} = fir.load [[NEWADDR1]] : !fir.ref<!fir.box<!fir.heap<f32>>>
+!CHECK-DAG:  %{{.*}} = fir.load %[[OMP_X_DECL]]#0 : !fir.ref<i32>
+!CHECK-DAG:  %{{.*}} = fir.load %[[OMP_Y_DECL]]#0 : !fir.ref<f32>
+!CHECK-DAG:  %{{.*}} = fir.load %[[OMP_Z_DECL]]#0 : !fir.ref<!fir.logical<4>>
+!CHECK-DAG:  %{{.*}} = fir.load %[[OMP_W_DECL]]#0 : !fir.ref<!fir.complex<4>>
+!CHECK-DAG:  %{{.*}} = fir.load %[[OMP_A_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+!CHECK-DAG:  %{{.*}} = fir.load %[[OMP_B_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
   print *, x, y, z, w, a, b
 
 !CHECK:  return
