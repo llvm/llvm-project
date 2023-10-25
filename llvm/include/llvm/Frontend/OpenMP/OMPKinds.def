@@ -88,8 +88,6 @@ __OMP_ARRAY_TYPE(Int32Arr3, Int32, 3)
   OMP_STRUCT_TYPE(VarName, "struct." #Name, Packed, __VA_ARGS__)
 
 __OMP_STRUCT_TYPE(Ident, ident_t, false, Int32, Int32, Int32, Int32, Int8Ptr)
-__OMP_STRUCT_TYPE(OffloadEntry, __tgt_offload_entry, false, Int8Ptr, Int8Ptr, SizeTy,
-                  Int32, Int32)
 __OMP_STRUCT_TYPE(KernelArgs, __tgt_kernel_arguments, false, Int32, Int32, VoidPtrPtr,
 		  VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, VoidPtrPtr,
 		  Int64, Int64, Int32Arr3Ty, Int32Arr3Ty, Int32)

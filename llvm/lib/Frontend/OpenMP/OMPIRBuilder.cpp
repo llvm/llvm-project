@@ -23,6 +23,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
+#include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -956,44 +957,6 @@ OpenMPIRBuilder::createCancel(const LocationDescription &Loc,
   UI->eraseFromParent();
 
   return Builder.saveIP();
-}
-
-void OpenMPIRBuilder::emitOffloadingEntry(Constant *Addr, StringRef Name,
-                                          uint64_t Size, int32_t Flags,
-                                          StringRef SectionName) {
-  Type *Int8PtrTy = Type::getInt8PtrTy(M.getContext());
-  Type *Int32Ty = Type::getInt32Ty(M.getContext());
-  Type *SizeTy = M.getDataLayout().getIntPtrType(M.getContext());
-
-  Constant *AddrName = ConstantDataArray::getString(M.getContext(), Name);
-
-  // Create the constant string used to look up the symbol in the device.
-  auto *Str =
-      new llvm::GlobalVariable(M, AddrName->getType(), /*isConstant=*/true,
-                               llvm::GlobalValue::InternalLinkage, AddrName,
-                               ".omp_offloading.entry_name");
-  Str->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-
-  // Construct the offloading entry.
-  Constant *EntryData[] = {
-      ConstantExpr::getPointerBitCastOrAddrSpaceCast(Addr, Int8PtrTy),
-      ConstantExpr::getPointerBitCastOrAddrSpaceCast(Str, Int8PtrTy),
-      ConstantInt::get(SizeTy, Size),
-      ConstantInt::get(Int32Ty, Flags),
-      ConstantInt::get(Int32Ty, 0),
-  };
-  Constant *EntryInitializer =
-      ConstantStruct::get(OpenMPIRBuilder::OffloadEntry, EntryData);
-
-  auto *Entry = new GlobalVariable(
-      M, OpenMPIRBuilder::OffloadEntry,
-      /* isConstant = */ true, GlobalValue::WeakAnyLinkage, EntryInitializer,
-      ".omp_offloading.entry." + Name, nullptr, GlobalValue::NotThreadLocal,
-      M.getDataLayout().getDefaultGlobalsAddressSpace());
-
-  // The entry has to be created in the section the linker expects it to be.
-  Entry->setSection(SectionName);
-  Entry->setAlignment(Align(1));
 }
 
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitTargetKernel(
@@ -5928,7 +5891,9 @@ void OpenMPIRBuilder::createOffloadEntry(Constant *ID, Constant *Addr,
                                          GlobalValue::LinkageTypes,
                                          StringRef Name) {
   if (!Config.isGPU()) {
-    emitOffloadingEntry(ID, Name.empty() ? Addr->getName() : Name, Size, Flags);
+    llvm::offloading::emitOffloadingEntry(
+        M, ID, Name.empty() ? Addr->getName() : Name, Size, Flags,
+        "omp_offloading_entries");
     return;
   }
   // TODO: Add support for global variables on the device after declare target
