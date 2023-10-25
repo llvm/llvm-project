@@ -321,6 +321,13 @@ ABIArgInfo LoongArchABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
     return ABIArgInfo::getDirect();
   }
 
+  // Pass 128-bit/256-bit vector values via vector registers directly.
+  if (Ty->isVectorType() && (((getContext().getTypeSize(Ty) == 128) &&
+                              (getTarget().hasFeature("lsx"))) ||
+                             ((getContext().getTypeSize(Ty) == 256) &&
+                              getTarget().hasFeature("lasx"))))
+    return ABIArgInfo::getDirect();
+
   // Complex types for the *f or *d ABI must be passed directly rather than
   // using CoerceAndExpand.
   if (IsFixed && Ty->isComplexType() && FRLen && FARsLeft >= 2) {
