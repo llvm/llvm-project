@@ -19,6 +19,9 @@
 using namespace llvm;
 
 static bool checkRegisters(Register FirstDest, const MachineInstr &SecondMI) {
+  if (!SecondMI.getOperand(1).isReg())
+    return false;
+
   if (SecondMI.getOperand(1).getReg() != FirstDest)
     return false;
 
@@ -53,8 +56,16 @@ static bool isLDADD(const MachineInstr *FirstMI, const MachineInstr &SecondMI) {
   return checkRegisters(FirstMI->getOperand(0).getReg(), SecondMI);
 }
 
-// Fuse SLLI by 32 feeding into SRLI by 32 or less or
-// SLLI by exactly 48 feeding into SRLI by exactly 48.
+// Fuse these patterns:
+//
+// $rd = slli $rs0, 32
+// $rd = srli $rs1, x
+// where 0 <= x <= 32
+//
+// and
+//
+// $rd = slli $rs0, 48
+// $rd = srli $rs1, 48
 static bool isSLLISRLI(const MachineInstr *FirstMI,
                        const MachineInstr &SecondMI) {
   if (SecondMI.getOpcode() != RISCV::SRLI)
@@ -95,10 +106,6 @@ static bool isAUIPCADDI(const MachineInstr *FirstMI,
   if (FirstMI->getOpcode() != RISCV::AUIPC)
     return false;
 
-  // The first operand of ADDI might be a frame index.
-  if (!SecondMI.getOperand(1).isReg())
-    return false;
-
   return checkRegisters(FirstMI->getOperand(0).getReg(), SecondMI);
 }
 
@@ -116,10 +123,6 @@ static bool isLUIADDI(const MachineInstr *FirstMI,
     return true;
 
   if (FirstMI->getOpcode() != RISCV::LUI)
-    return false;
-
-  // The first operand of ADDI might be a frame index.
-  if (!SecondMI.getOperand(1).isReg())
     return false;
 
   return checkRegisters(FirstMI->getOperand(0).getReg(), SecondMI);
