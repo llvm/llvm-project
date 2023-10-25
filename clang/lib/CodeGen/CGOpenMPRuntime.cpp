@@ -6002,6 +6002,42 @@ void CGOpenMPRuntime::emitUsesAllocatorsFini(CodeGenFunction &CGF,
       {ThreadId, AllocatorVal});
 }
 
+void CGOpenMPRuntime::computeMinAndMaxThreadsAndTeams(
+    const OMPExecutableDirective &D, CodeGenFunction &CGF,
+    int32_t &MinThreadsVal, int32_t &MaxThreadsVal, int32_t &MinTeamsVal,
+    int32_t &MaxTeamsVal) {
+
+  getNumTeamsExprForTargetDirective(CGF, D, MinTeamsVal, MaxTeamsVal);
+  getNumThreadsExprForTargetDirective(CGF, D, MaxThreadsVal,
+                                      /*UpperBoundOnly=*/true);
+
+  for (auto *C : D.getClausesOfKind<OMPXAttributeClause>()) {
+    for (auto *A : C->getAttrs()) {
+      int32_t AttrMinThreadsVal = 1, AttrMaxThreadsVal = -1;
+      int32_t AttrMinBlocksVal = 1, AttrMaxBlocksVal = -1;
+      if (auto *Attr = dyn_cast<CUDALaunchBoundsAttr>(A))
+        CGM.handleCUDALaunchBoundsAttr(nullptr, Attr, &AttrMaxThreadsVal,
+                                       &AttrMinBlocksVal, &AttrMaxBlocksVal);
+      else if (auto *Attr = dyn_cast<AMDGPUFlatWorkGroupSizeAttr>(A))
+        CGM.handleAMDGPUFlatWorkGroupSizeAttr(
+            nullptr, Attr, /*ReqdWGS=*/nullptr, &AttrMinThreadsVal,
+            &AttrMaxThreadsVal);
+      else
+        continue;
+
+      MinThreadsVal = std::max(MinThreadsVal, AttrMinThreadsVal);
+      if (AttrMaxThreadsVal > 0)
+        MaxThreadsVal = MaxThreadsVal > 0
+                            ? std::min(MaxThreadsVal, AttrMaxThreadsVal)
+                            : AttrMaxThreadsVal;
+      MinTeamsVal = std::max(MinTeamsVal, AttrMinBlocksVal);
+      if (AttrMaxBlocksVal > 0)
+        MaxTeamsVal = MaxTeamsVal > 0 ? std::min(MaxTeamsVal, AttrMaxBlocksVal)
+                                      : AttrMaxBlocksVal;
+    }
+  }
+}
+
 void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
     const OMPExecutableDirective &D, StringRef ParentName,
     llvm::Function *&OutlinedFn, llvm::Constant *&OutlinedFnID,
@@ -6020,47 +6056,8 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
         return CGF.GenerateOpenMPCapturedStmtFunction(CS, D.getBeginLoc());
       };
 
-  // Get NumTeams and ThreadLimit attributes
-  int32_t DefaultValMinTeams = 1;
-  int32_t DefaultValMaxTeams = -1;
-  uint32_t DefaultValMinThreads = 1;
-  uint32_t DefaultValMaxThreads = UINT32_MAX;
-
-  getNumTeamsExprForTargetDirective(CGF, D, DefaultValMinTeams,
-                                    DefaultValMaxTeams);
-  getNumThreadsExprForTargetDirective(CGF, D, DefaultValMaxThreads,
-                                      /*UpperBoundOnly=*/true);
-
-  for (auto *C : D.getClausesOfKind<OMPXAttributeClause>()) {
-    for (auto *A : C->getAttrs()) {
-      int32_t MinThreadsVal = 1, MaxThreadsVal = 0;
-      int32_t MinBlocksVal = 1, MaxBlocksVal = -1;
-      if (auto *Attr = dyn_cast<CUDALaunchBoundsAttr>(A))
-        CGM.handleCUDALaunchBoundsAttr(nullptr, Attr, &MaxThreadsVal,
-                                       &MinBlocksVal, &MaxBlocksVal);
-      else if (auto *Attr = dyn_cast<AMDGPUFlatWorkGroupSizeAttr>(A))
-        CGM.handleAMDGPUFlatWorkGroupSizeAttr(
-            nullptr, Attr, /*ReqdWGS=*/nullptr, &MinThreadsVal, &MaxThreadsVal);
-      else
-        continue;
-
-      DefaultValMinThreads =
-          std::max(DefaultValMinThreads, uint32_t(MinThreadsVal));
-      DefaultValMaxThreads =
-          DefaultValMaxThreads
-              ? std::min(DefaultValMaxThreads, uint32_t(MaxThreadsVal))
-              : MaxThreadsVal;
-      DefaultValMinTeams = DefaultValMinTeams
-                               ? std::max(DefaultValMinTeams, MinBlocksVal)
-                               : MinBlocksVal;
-      DefaultValMaxTeams = std::min(DefaultValMaxTeams, MaxBlocksVal);
-    }
-  }
-
-  OMPBuilder.emitTargetRegionFunction(
-      EntryInfo, GenerateOutlinedFunction, DefaultValMinTeams,
-      DefaultValMaxTeams, DefaultValMinThreads, DefaultValMaxThreads,
-      IsOffloadEntry, OutlinedFn, OutlinedFnID);
+  OMPBuilder.emitTargetRegionFunction(EntryInfo, GenerateOutlinedFunction,
+                                      IsOffloadEntry, OutlinedFn, OutlinedFnID);
 
   if (!OutlinedFn)
     return;
@@ -6306,7 +6303,7 @@ llvm::Value *CGOpenMPRuntime::emitNumTeamsForTargetDirective(
 /// store the condition in \p CondVal. If \p E, and \p CondVal respectively, are
 /// nullptr, no expression evaluation is perfomed.
 static void getNumThreads(CodeGenFunction &CGF, const CapturedStmt *CS,
-                          const Expr **E, uint32_t &UpperBound,
+                          const Expr **E, int32_t &UpperBound,
                           bool UpperBoundOnly, llvm::Value **CondVal) {
   const Stmt *Child = CGOpenMPRuntime::getSingleCompoundChild(
       CGF.getContext(), CS->getCapturedStmt());
@@ -6368,10 +6365,10 @@ static void getNumThreads(CodeGenFunction &CGF, const CapturedStmt *CS,
               UpperBound
                   ? Constant->getZExtValue()
                   : std::min(UpperBound,
-                             static_cast<uint32_t>(Constant->getZExtValue()));
+                             static_cast<int32_t>(Constant->getZExtValue()));
       // If we haven't found a upper bound, remember we saw a thread limiting
       // clause.
-      if (UpperBound == UINT32_MAX)
+      if (UpperBound == -1)
         UpperBound = 0;
       if (!E)
         return;
@@ -6397,7 +6394,7 @@ static void getNumThreads(CodeGenFunction &CGF, const CapturedStmt *CS,
 }
 
 const Expr *CGOpenMPRuntime::getNumThreadsExprForTargetDirective(
-    CodeGenFunction &CGF, const OMPExecutableDirective &D, uint32_t &UpperBound,
+    CodeGenFunction &CGF, const OMPExecutableDirective &D, int32_t &UpperBound,
     bool UpperBoundOnly, llvm::Value **CondVal, const Expr **ThreadLimitExpr) {
   assert((!CGF.getLangOpts().OpenMPIsTargetDevice || UpperBoundOnly) &&
          "Clauses associated with the teams directive expected to be emitted "
@@ -6414,11 +6411,11 @@ const Expr *CGOpenMPRuntime::getNumThreadsExprForTargetDirective(
       if (auto Constant = E->getIntegerConstantExpr(CGF.getContext()))
         UpperBound = UpperBound ? Constant->getZExtValue()
                                 : std::min(UpperBound,
-                                           uint32_t(Constant->getZExtValue()));
+                                           int32_t(Constant->getZExtValue()));
     }
     // If we haven't found a upper bound, remember we saw a thread limiting
     // clause.
-    if (UpperBound == UINT32_MAX)
+    if (UpperBound == -1)
       UpperBound = 0;
     if (EPtr)
       *EPtr = E;
@@ -6562,7 +6559,7 @@ llvm::Value *CGOpenMPRuntime::emitNumThreadsForTargetDirective(
   llvm::Value *CondVal = nullptr;
   llvm::Value *ThreadLimitVal = nullptr;
   const Expr *ThreadLimitExpr = nullptr;
-  uint32_t UpperBound = -1;
+  int32_t UpperBound = -1;
 
   const Expr *NT = getNumThreadsExprForTargetDirective(
       CGF, D, UpperBound, /* UpperBoundOnly */ false, &CondVal,

@@ -60,8 +60,8 @@ private:
   void syncCTAThreads(CodeGenFunction &CGF);
 
   /// Helper for target directive initialization.
-  void emitKernelInit(CodeGenFunction &CGF, EntryFunctionState &EST,
-                      bool IsSPMD);
+  void emitKernelInit(const OMPExecutableDirective &D, CodeGenFunction &CGF,
+                      EntryFunctionState &EST, bool IsSPMD);
 
   /// Helper for target directive finalization.
   void emitKernelDeinit(CodeGenFunction &CGF, EntryFunctionState &EST,
