@@ -227,6 +227,7 @@ struct NodeT {
 
   // Check if Other is a successor of the node.
   bool isSuccessor(const NodeT *Other) const;
+
   // The total execution count of outgoing jumps.
   uint64_t outCount() const;
 
@@ -449,10 +450,9 @@ private:
 };
 
 bool NodeT::isSuccessor(const NodeT *Other) const {
-  for (JumpT *Jump : OutJumps) {
+  for (JumpT *Jump : OutJumps)
     if (Jump->Target == Other)
       return true;
-  }
   return false;
 }
 
