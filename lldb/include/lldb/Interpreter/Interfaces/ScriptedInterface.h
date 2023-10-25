@@ -25,11 +25,6 @@ public:
   ScriptedInterface() = default;
   virtual ~ScriptedInterface() = default;
 
-  virtual StructuredData::GenericSP
-  CreatePluginObject(llvm::StringRef class_name, ExecutionContext &exe_ctx,
-                     StructuredData::DictionarySP args_sp,
-                     StructuredData::Generic *script_obj = nullptr) = 0;
-
   StructuredData::GenericSP GetScriptObjectInstance() {
     return m_object_instance_sp;
   }
