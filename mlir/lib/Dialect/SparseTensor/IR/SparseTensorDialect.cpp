@@ -34,8 +34,13 @@
 using namespace mlir;
 using namespace mlir::sparse_tensor;
 
+#define RETURN_FAILURE_IF_FAILED(X)                                            \
+  if (failed(X)) {                                                             \
+    return failure();                                                          \
+  }
+
 //===----------------------------------------------------------------------===//
-// Additional convenience methods.
+// Local convenience methods.
 //===----------------------------------------------------------------------===//
 
 static constexpr bool acceptBitWidth(unsigned bitWidth) {
@@ -52,7 +57,7 @@ static constexpr bool acceptBitWidth(unsigned bitWidth) {
 }
 
 //===----------------------------------------------------------------------===//
-// StorageLayout
+// SparseTensorDialect StorageLayout.
 //===----------------------------------------------------------------------===//
 
 static constexpr Level kInvalidLevel = -1u;
@@ -183,7 +188,7 @@ StorageLayout::getFieldIndexAndStride(SparseTensorFieldKind kind,
 }
 
 //===----------------------------------------------------------------------===//
-// TensorDialect Attribute Methods.
+// SparseTensorDialect Attribute Methods.
 //===----------------------------------------------------------------------===//
 
 std::optional<uint64_t> SparseTensorDimSliceAttr::getStatic(int64_t v) {
@@ -658,11 +663,6 @@ SparseTensorEncodingAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   return success();
 }
 
-#define RETURN_FAILURE_IF_FAILED(X)                                            \
-  if (failed(X)) {                                                             \
-    return failure();                                                          \
-  }
-
 LogicalResult SparseTensorEncodingAttr::verifyEncoding(
     ArrayRef<DynSize> dimShape, Type elementType,
     function_ref<InFlightDiagnostic()> emitError) const {
@@ -685,7 +685,7 @@ LogicalResult SparseTensorEncodingAttr::verifyEncoding(
 }
 
 //===----------------------------------------------------------------------===//
-// Convenience Methods.
+// Convenience methods.
 //===----------------------------------------------------------------------===//
 
 SparseTensorEncodingAttr
@@ -1365,10 +1365,6 @@ LogicalResult SetStorageSpecifierOp::verify() {
   return success();
 }
 
-//===----------------------------------------------------------------------===//
-// TensorDialect Linalg.Generic Operations.
-//===----------------------------------------------------------------------===//
-
 template <class T>
 static LogicalResult verifyNumBlockArgs(T *op, Region &region,
                                         const char *regionName,
@@ -1445,6 +1441,18 @@ LogicalResult UnaryOp::verify() {
   if (!absent.empty()) {
     RETURN_FAILURE_IF_FAILED(
         verifyNumBlockArgs(this, absent, "absent", TypeRange{}, outputType))
+    // Absent branch can only yield invariant values.
+    Block *absentBlock = &absent.front();
+    Block *parent = getOperation()->getBlock();
+    Value absentVal = cast<YieldOp>(absentBlock->getTerminator()).getResult();
+    if (auto arg = dyn_cast<BlockArgument>(absentVal)) {
+      if (arg.getOwner() == parent)
+        return emitError("absent region cannot yield linalg argument");
+    } else if (Operation *def = absentVal.getDefiningOp()) {
+      if (!isa<arith::ConstantOp>(def) &&
+          (def->getBlock() == absentBlock || def->getBlock() == parent))
+        return emitError("absent region cannot yield locally computed value");
+    }
   }
   return success();
 }
@@ -1718,10 +1726,6 @@ LogicalResult YieldOp::verify() {
 }
 
 #undef RETURN_FAILURE_IF_FAILED
-
-//===----------------------------------------------------------------------===//
-// TensorDialect Methods.
-//===----------------------------------------------------------------------===//
 
 /// Materialize a single constant operation from a given attribute value with
 /// the desired resultant type.
