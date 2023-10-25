@@ -130,19 +130,6 @@ func.func private @sparse_slice(tensor<?x?xf64, #CSR_SLICE>)
 
 // -----
 
-// TODO: It is probably better to use [dense, dense, 2:4] (see NV_24 defined using new syntax
-// below) to encode a 2D matrix, but it would require dim2lvl mapping which is not ready yet.
-// So we take the simple path for now.
-#NV_24= #sparse_tensor.encoding<{
-  map = (d0, d1) -> (d0 : dense, d1 : block2_4)
-}>
-
-// CHECK-LABEL: func private @sparse_2_out_of_4(
-// CHECK-SAME: tensor<?x?xf64, #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : dense, d1 : block2_4) }>>
-func.func private @sparse_2_out_of_4(tensor<?x?xf64, #NV_24>)
-
-// -----
-
 #BSR = #sparse_tensor.encoding<{
   map = ( i, j ) ->
   ( i floordiv 2 : dense,
@@ -204,11 +191,12 @@ func.func private @BSR_explicit(%arg0: tensor<?x?xf64, #BSR_explicit>) {
   ( i            : dense,
     j floordiv 4 : dense,
     j mod 4      : block2_4
-  )
+  ),
+  crdWidth = 8  // we would even like just 2-bits
 }>
 
 // CHECK-LABEL: func private @NV_24(
-// CHECK-SAME: tensor<?x?xf64, #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : dense, d1 floordiv 4 : dense, d1 mod 4 : block2_4) }>>
+// CHECK-SAME: tensor<?x?xf64, #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : dense, d1 floordiv 4 : dense, d1 mod 4 : block2_4), crdWidth = 8 }>>
 func.func private @NV_24(%arg0: tensor<?x?xf64, #NV_24>) {
   return
 }
