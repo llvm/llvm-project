@@ -7220,7 +7220,7 @@ TEST_P(ImportAutoFunctions, ReturnWithAutoTemplateType) {
       auto foo() {
         return S<T>{};
       }
-      auto a = foo<int>(1);
+      auto a = foo<int>();
       )",
       Lang_CXX14, /*FindLast=*/true);
 }
