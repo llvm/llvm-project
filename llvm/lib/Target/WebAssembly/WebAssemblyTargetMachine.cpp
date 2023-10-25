@@ -91,6 +91,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyTarget() {
   initializeWebAssemblyLowerRefTypesIntPtrConvPass(PR);
   initializeWebAssemblyFixBrTableDefaultsPass(PR);
   initializeWebAssemblyDAGToDAGISelPass(PR);
+  initializeWebAssemblyGlobalsTaggingPass(PR);
 }
 
 //===----------------------------------------------------------------------===//
@@ -439,6 +440,7 @@ void WebAssemblyPassConfig::addIRPasses() {
   if (optlevel != CodeGenOptLevel::None)
     addPass(createWebAssemblyOptimizeReturned());
 
+  addPass(createWebAssemblyGlobalsTaggingPass());
   addPass(createWebAssemblyStackTaggingPass());
 
   basicCheckForEHAndSjLj(TM);
