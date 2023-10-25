@@ -65,7 +65,7 @@ public:
 
   /// getCurFields - Pointer to array of fields added to the currently parsed
   /// class.
-  FieldDecl **getCurFields() { return &*(Fields.end() - getCurNumFields()); }
+  FieldDecl **getCurFields() { return Fields.end() - getCurNumFields(); }
 
   /// FinishClass - Called by Sema::ActOnFinishCXXClassDef.
   void FinishClass() {
