@@ -291,6 +291,10 @@ Changes in existing checks
   <clang-tidy/checks/misc/redundant-expression>` check to ignore
   false-positives in unevaluated context (e.g., ``decltype``).
 
+- Improved :doc:`misc-unused-using-decls
+  <clang-tidy/checks/misc/unused-using-decls>` check to avoid false positive when
+  using in elaborated type.
+
 - Improved :doc:`modernize-avoid-bind
   <clang-tidy/checks/modernize/avoid-bind>` check to
   not emit a ``return`` for fixes when the function returns ``void``.
