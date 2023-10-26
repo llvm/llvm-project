@@ -453,11 +453,20 @@ SparseTensorEncodingAttr::tranlateShape(ArrayRef<int64_t> srcShape,
     // Do constant propagation on the affine map.
     AffineExpr evalExp =
         simplifyAffineExpr(exp.replaceDims(dimRep), srcShape.size(), 0);
-    if (auto c = evalExp.dyn_cast<AffineConstantExpr>())
+    if (auto c = evalExp.dyn_cast<AffineConstantExpr>()) {
       ret.push_back(c.getValue() + 1);
-    else
+    } else {
+      if (auto mod = evalExp.dyn_cast<AffineBinaryOpExpr>();
+          mod && mod.getKind() == AffineExprKind::Mod) {
+        if (auto bound = mod.getRHS().dyn_cast<AffineConstantExpr>()) {
+          ret.push_back(bound.getValue());
+          continue;
+        }
+      }
       ret.push_back(ShapedType::kDynamic);
+    }
   }
+  assert(ret.size() == rank);
   return ret;
 }
 
