@@ -36,7 +36,7 @@ constexpr StringLiteral kSVELegalizerTag("__arm_sve_legalize_vector_storage__");
 /// [2] SVE mask = hardware-sized SVE predicate mask, i.e. its trailing
 /// dimension matches the size of a legal SVE vector size (such as
 /// vector<[4]xi1>), but is too small to be stored to memory (i.e smaller than
-/// a svbool_t).
+/// a svbool).
 
 namespace {
 
@@ -112,9 +112,9 @@ struct RelaxScalableVectorAllocaAlignment
   }
 };
 
-/// Replaces allocations of SVE predicates smaller than an svbool_t (_illegal_
-/// to load/store) with a wider allocation of svbool_t (_legal_ to load/store)
-/// followed by a tagged unrealized conversion to the original type [1].
+/// Replaces allocations of SVE predicates smaller than an svbool [1] (_illegal_
+/// to load/store) with a wider allocation of svbool (_legal_ to load/store)
+/// followed by a tagged unrealized conversion to the original type.
 ///
 /// Example
 /// ```
@@ -139,9 +139,9 @@ struct LegalizeSVEMaskAllocation : public OpRewritePattern<AllocLikeOp> {
     if (!vectorType || !isSVEMaskType(vectorType))
       return failure();
 
-    // Replace this alloc-like op of an SVE mask with one of a (storable)
-    // svbool_t mask. A temporary unrealized_conversion_cast is added to the old
-    // type to allow local rewrites.
+    // Replace this alloc-like op of an SVE mask [2] with one of a (storable)
+    // svbool mask [1]. A temporary unrealized_conversion_cast is added to the
+    // old type to allow local rewrites.
     replaceOpWithUnrealizedConversion(
         rewriter, allocLikeOp, [&](AllocLikeOp newAllocLikeOp) {
           newAllocLikeOp.getResult().setType(
@@ -155,9 +155,9 @@ struct LegalizeSVEMaskAllocation : public OpRewritePattern<AllocLikeOp> {
 };
 
 /// Replaces vector.type_casts of unrealized conversions to SVE predicate memref
-/// types that are _illegal_ to load/store from (!= svbool_t), with type casts
+/// types that are _illegal_ to load/store from (!= svbool [1]), with type casts
 /// of memref types that are _legal_ to load/store, followed by unrealized
-/// conversions [1][2].
+/// conversions.
 ///
 /// Example:
 /// ```
@@ -191,7 +191,7 @@ struct LegalizeSVEMaskTypeCastConversion
     if (failed(legalMemref))
       return failure();
 
-    // Replace this vector.type_cast with one of a (storable) svbool_t mask [1].
+    // Replace this vector.type_cast with one of a (storable) svbool mask [1].
     replaceOpWithUnrealizedConversion(
         rewriter, typeCastOp, [&](vector::TypeCastOp newTypeCast) {
           newTypeCast.setOperand(*legalMemref);
@@ -206,8 +206,8 @@ struct LegalizeSVEMaskTypeCastConversion
 };
 
 /// Replaces stores to unrealized conversions to SVE predicate memref types that
-/// are _illegal_ to load/store from (!= svbool_t), with
-/// `arm_sve.convert_to_svbool`s followed by (legal) wider stores [1][2].
+/// are _illegal_ to load/store from (!= svbool [1]), with
+/// `arm_sve.convert_to_svbool`s followed by (legal) wider stores.
 ///
 /// Example:
 /// ```
@@ -240,8 +240,8 @@ struct LegalizeSVEMaskStoreConversion
         llvm::cast<VectorType>(valueToStore.getType()));
     auto convertToSvbool = rewriter.create<arm_sve::ConvertToSvboolOp>(
         loc, legalMaskType, valueToStore);
-    // Replace this store with a conversion to a storable svbool_t mask,
-    // followed by a wider store [1].
+    // Replace this store with a conversion to a storable svbool mask [1],
+    // followed by a wider store.
     replaceOpWithLegalizedOp(rewriter, storeOp,
                              [&](memref::StoreOp newStoreOp) {
                                newStoreOp.setOperand(0, convertToSvbool);
@@ -254,8 +254,8 @@ struct LegalizeSVEMaskStoreConversion
 };
 
 /// Replaces loads from unrealized conversions to SVE predicate memref types
-/// that are _illegal_ to load/store from (!= svbool_t), types with (legal)
-/// wider loads, followed by `arm_sve.convert_from_svbool`s [1][2].
+/// that are _illegal_ to load/store from (!= svbool [1]), types with (legal)
+/// wider loads, followed by `arm_sve.convert_from_svbool`s.
 ///
 /// Example:
 /// ```
@@ -284,7 +284,7 @@ struct LegalizeSVEMaskLoadConversion : public OpRewritePattern<memref::LoadOp> {
       return failure();
 
     auto legalMaskType = widenScalableMaskTypeToSvbool(vectorType);
-    // Replace this load with a legal load of an svbool_t type, followed by a
+    // Replace this load with a legal load of an svbool type, followed by a
     // conversion back to the original type.
     replaceOpWithLegalizedOp(rewriter, loadOp, [&](memref::LoadOp newLoadOp) {
       newLoadOp.setMemRef(*legalMemref);
