@@ -15,6 +15,7 @@
 #include "../bugprone/SignedCharMisuseCheck.h"
 #include "../bugprone/SpuriouslyWakeUpFunctionsCheck.h"
 #include "../bugprone/SuspiciousMemoryComparisonCheck.h"
+#include "../bugprone/SuspiciousPointerArithmeticsUsingSizeofCheck.h"
 #include "../bugprone/UnhandledSelfAssignmentCheck.h"
 #include "../bugprone/UnsafeFunctionsCheck.h"
 #include "../bugprone/UnusedReturnValueCheck.h"
@@ -278,6 +279,9 @@ public:
         "cert-oop58-cpp");
 
     // C checkers
+    // ARR
+    CheckFactories.registerCheck<bugprone::SuspiciousPointerArithmeticsUsingSizeofCheck>(
+        "cert-arr39-c");		    
     // CON
     CheckFactories.registerCheck<bugprone::SpuriouslyWakeUpFunctionsCheck>(
         "cert-con36-c");

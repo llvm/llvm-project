@@ -64,6 +64,7 @@ add_clang_library(clangTidyBugproneModule
   SuspiciousMemoryComparisonCheck.cpp
   SuspiciousMemsetUsageCheck.cpp
   SuspiciousMissingCommaCheck.cpp
+  SuspiciousPointerArithmeticsUsingSizeofCheck.cpp
   SuspiciousReallocUsageCheck.cpp
   SuspiciousSemicolonCheck.cpp
   SuspiciousStringCompareCheck.cpp
