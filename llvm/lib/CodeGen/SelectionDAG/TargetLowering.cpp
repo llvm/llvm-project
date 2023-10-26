@@ -5064,6 +5064,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
       }
     }
 
+    // setueq/setoeq X, (fabs Inf) -> is_fpclass X, fcInf
     if (isOperationLegalOrCustom(ISD::IS_FPCLASS, N0.getValueType()) &&
         !isFPImmLegal(CFP->getValueAPF(), CFP->getValueType(0))) {
       bool IsFabs = N0.getOpcode() == ISD::FABS;
