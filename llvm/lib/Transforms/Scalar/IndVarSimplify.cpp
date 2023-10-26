@@ -1932,30 +1932,6 @@ bool IndVarSimplify::run(Loop *L) {
     }
   }
 
-  // The loop exit values have been updated; insert the debug location
-  // for the induction variable with its final value.
-  if (PHINode *IndVar = L->getInductionVariable(*SE)) {
-    const SCEV *IndVarSCEV = SE->getSCEVAtScope(IndVar, L->getParentLoop());
-    if (IndVarSCEV->getSCEVType() == SCEVTypes::scConstant) {
-      Value *FinalIVValue = cast<SCEVConstant>(IndVarSCEV)->getValue();
-      SmallVector<DbgVariableIntrinsic *> DbgUsers;
-      SmallVector<DbgVariableIntrinsic *> DbgUsersCloned;
-      findDbgUsers(DbgUsers, IndVar);
-      for (auto &DebugUser : DbgUsers) {
-        auto *Cloned = cast<DbgVariableIntrinsic>(DebugUser->clone());
-        Cloned->replaceVariableLocationOp(static_cast<unsigned>(0),
-                                          FinalIVValue);
-        DbgUsersCloned.push_back(Cloned);
-      }
-
-      SmallVector<BasicBlock *> ExitBlocks;
-      L->getExitBlocks(ExitBlocks);
-      for (BasicBlock *Exit : ExitBlocks)
-        for (auto &DebugUser : DbgUsersCloned)
-          DebugUser->insertBefore(Exit->getFirstNonPHI());
-    }
-  }
-
   // Eliminate redundant IV cycles.
   NumElimIV += Rewriter.replaceCongruentIVs(L, DT, DeadInsts, TTI);
 

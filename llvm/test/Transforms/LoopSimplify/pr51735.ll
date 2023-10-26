@@ -27,13 +27,7 @@
 ; CHECK:   br i1 false, label %for.cond, label %for.end, {{.*}}
 ; CHECK: for.end: {{.*}}
 ; CHECK:   call void @llvm.dbg.value(metadata i32 777, metadata ![[DBG:[0-9]+]], {{.*}}
-; CHECK:   %call = tail call noundef i32 @_Z3nopv(), {{.*}}
 ; CHECK-DAG: ![[DBG]] = !DILocalVariable(name: "Index"{{.*}})
-
-define dso_local noundef i32 @_Z3nopv() local_unnamed_addr #0 !dbg !10 {
-entry:
-  ret i32 0, !dbg !14
-}
 
 define dso_local void @_Z3barv() local_unnamed_addr #1 !dbg !15 {
 entry:
@@ -51,14 +45,7 @@ for.cond:                                         ; preds = %for.cond, %entry
   br i1 %cmp, label %for.cond, label %for.end, !dbg !28, !llvm.loop !29
 
 for.end:                                          ; preds = %for.cond
-  %call = tail call noundef i32 @_Z3nopv(), !dbg !32
   ret void, !dbg !33
-}
-
-define dso_local noundef i32 @main() local_unnamed_addr #2 !dbg !34 {
-entry:
-  call void @_Z3barv(), !dbg !35
-  ret i32 0, !dbg !36
 }
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
@@ -67,7 +54,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !llvm.module.flags = !{!2, !3, !4, !5, !6, !7, !8}
 !llvm.ident = !{!9}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 18.0.0 (https://github.com/llvm/llvm-project.git 18c2eb2bf02bd7666523aa566e45d62053b7db80)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
 !1 = !DIFile(filename: "test.cpp", directory: "")
 !2 = !{i32 7, !"Dwarf Version", i32 5}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
@@ -77,11 +64,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !7 = !{i32 7, !"uwtable", i32 2}
 !8 = !{i32 7, !"frame-pointer", i32 2}
 !9 = !{!"clang version 18.0.0"}
-!10 = distinct !DISubprogram(name: "nop", linkageName: "_Z3nopv", scope: !1, file: !1, line: 1, type: !11, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0)
-!11 = !DISubroutineType(types: !12)
-!12 = !{!13}
 !13 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-!14 = !DILocation(line: 2, column: 3, scope: !10)
 !15 = distinct !DISubprogram(name: "bar", linkageName: "_Z3barv", scope: !1, file: !1, line: 5, type: !16, scopeLine: 5, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !18)
 !16 = !DISubroutineType(types: !17)
 !17 = !{null}
@@ -99,8 +82,4 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !29 = distinct !{!29, !28, !30, !31}
 !30 = !DILocation(line: 10, column: 5, scope: !26)
 !31 = !{!"llvm.loop.mustprogress"}
-!32 = !DILocation(line: 11, column: 3, scope: !15)
 !33 = !DILocation(line: 12, column: 1, scope: !15)
-!34 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 14, type: !11, scopeLine: 14, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0)
-!35 = !DILocation(line: 15, column: 3, scope: !34)
-!36 = !DILocation(line: 16, column: 1, scope: !34)
