@@ -496,7 +496,8 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
           float p_multiplier = multiplier * e_multiplier;
           p_ntc = __kmp_get_round_val(ntc * p_ratio * p_multiplier);
           if ((int)p_ntc > (int)(ntc * p_ratio * p_multiplier))
-            e_ntc = (int)(__kmp_round_2decimal_val(ntc * e_ratio * e_multiplier));
+            e_ntc =
+                (int)(__kmp_round_2decimal_val(ntc * e_ratio * e_multiplier));
           else
             e_ntc = __kmp_get_round_val(ntc * e_ratio * e_multiplier);
           KMP_DEBUG_ASSERT(ntc == p_ntc + e_ntc);
