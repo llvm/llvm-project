@@ -964,8 +964,8 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfInstBase *Inc) {
       DebugInfoCorrelate || ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO;
   // Use internal rather than private linkage so the counter variable shows up
   // in the symbol table when using debug info for correlation.
-  if (EnableDebugCorrelate &&
-      TT.isOSBinFormatMachO() && Linkage == GlobalValue::PrivateLinkage)
+  if (EnableDebugCorrelate && TT.isOSBinFormatMachO() &&
+      Linkage == GlobalValue::PrivateLinkage)
     Linkage = GlobalValue::InternalLinkage;
 
   // Due to the limitation of binder as of 2021/09/28, the duplicate weak
