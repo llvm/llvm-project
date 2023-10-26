@@ -7995,15 +7995,23 @@ enum SpecialRegisterAccessKind {
   Write,
 };
 
+// Generates the IR for __builtin_read_exec_*.
+// Lowers the builtin to amdgcn_ballot intrinsic.
 static Value *EmitAMDGCNBallotForExec(CodeGenFunction &CGF, const CallExpr *E,
                                       llvm::Type *RegisterType,
-                                      llvm::Type *ValueType) {
+                                      llvm::Type *ValueType, bool isExecHi) {
   CodeGen::CGBuilderTy &Builder = CGF.Builder;
   CodeGen::CodeGenModule &CGM = CGF.CGM;
 
-  llvm::Type *ResultType = CGF.ConvertType(E->getType());
-  Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_ballot, {ResultType});
+  Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_ballot, {RegisterType});
   llvm::Value *Call = Builder.CreateCall(F, {Builder.getInt1(true)});
+
+  if (isExecHi) {
+    Value *Rt2 = Builder.CreateLShr(Call, 32);
+    Rt2 = Builder.CreateTrunc(Rt2, CGF.Int32Ty);
+    return Rt2;
+  }
+
   return Call;
 }
 
@@ -17857,10 +17865,11 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F, {Addr, Val, ZeroI32, ZeroI32, ZeroI1});
   }
   case AMDGPU::BI__builtin_amdgcn_read_exec:
+    return EmitAMDGCNBallotForExec(*this, E, Int64Ty, Int64Ty, false);
   case AMDGPU::BI__builtin_amdgcn_read_exec_lo:
-  case AMDGPU::BI__builtin_amdgcn_read_exec_hi: {
-    return EmitAMDGCNBallotForExec(*this, E, Int64Ty, Int64Ty);
-  }
+    return EmitAMDGCNBallotForExec(*this, E, Int32Ty, Int32Ty, false);
+  case AMDGPU::BI__builtin_amdgcn_read_exec_hi:
+    return EmitAMDGCNBallotForExec(*this, E, Int64Ty, Int64Ty, true);
   case AMDGPU::BI__builtin_amdgcn_image_bvh_intersect_ray:
   case AMDGPU::BI__builtin_amdgcn_image_bvh_intersect_ray_h:
   case AMDGPU::BI__builtin_amdgcn_image_bvh_intersect_ray_l:
