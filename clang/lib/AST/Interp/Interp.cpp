@@ -215,6 +215,10 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return true;
 }
 
+bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  return !Ptr.isZero() && !Ptr.isDummy();
+}
+
 bool CheckNull(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                CheckSubobjectKind CSK) {
   if (!Ptr.isZero())
@@ -297,6 +301,8 @@ bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 }
 
 bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (!CheckDummy(S, OpPC, Ptr))
+    return false;
   if (!CheckLive(S, OpPC, Ptr, AK_Read))
     return false;
   if (!CheckExtern(S, OpPC, Ptr))
@@ -483,6 +489,8 @@ static bool CheckFieldsInitialized(InterpState &S, CodePtr OpPC,
 
     if (FieldType->isRecordType()) {
       Result &= CheckFieldsInitialized(S, OpPC, FieldPtr, FieldPtr.getRecord());
+    } else if (FieldType->isIncompleteArrayType()) {
+      // Nothing to do here.
     } else if (FieldType->isArrayType()) {
       const auto *CAT =
           cast<ConstantArrayType>(FieldType->getAsArrayTypeUnsafe());

@@ -8,3 +8,6 @@ Revert "[OpenMP] Basic BumpAllocator for (AMD)GPUs (#69806) "
 
 Revert: waiting on pip install myst-parser 
  b6ff03206 "[Documentation] Replace recommonmark by myst-parser
+
+
+Revert "[OpenMP] Patch for Support to loop bind clause : Checking Parent 
