@@ -243,7 +243,7 @@ sections with improvements to Clang's support for those languages.
 - Clang now supports ``N3007 Type inference for object definitions``.
 
 - Clang now supports ``<stdckdint.h>`` which defines several macros for performing
-  checked integer arithmetic.
+  checked integer arithmetic. It is also exposed in pre-C23 modes.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -458,6 +458,10 @@ Improvements to Clang's diagnostics
     warning: cast from 'long (*)(const int &)' to 'decltype(fun_ptr)' (aka 'long (*)(int &)') converts to incompatible function type [-Wcast-function-type-strict]
     24 | return decltype(fun_ptr)( f_ptr /*comment*/);
        |        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- ``-Wzero-as-null-pointer-constant`` diagnostic is no longer emitted when using ``__null``
+  (or, more commonly, ``NULL`` when the platform defines it as ``__null``) to be more consistent
+  with GCC.
 
 Bug Fixes in This Version
 -------------------------
@@ -689,6 +693,10 @@ Bug Fixes to C++ Support
   classes. Fixes:
   (`#46200 <https://github.com/llvm/llvm-project/issues/46200>`_)
   (`#57812 <https://github.com/llvm/llvm-project/issues/57812>`_)
+
+- Fix bug where we were overriding zero-initialization of class members when
+  default initializing a base class in a constant expression context. Fixes:
+  (`#69890 <https://github.com/llvm/llvm-project/issues/69890>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
