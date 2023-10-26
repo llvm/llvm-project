@@ -19,6 +19,7 @@
 #include <thread>
 #include <type_traits>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 template <class... Args>
@@ -46,7 +47,7 @@ int main(int, char**) {
   // Postconditions: get_id() != id() is true and ssource.stop_possible() is true
   // and *this represents the newly started thread.
   {
-    std::jthread jt{[] {}};
+    std::jthread jt = support::make_test_jthread([] {});
     assert(jt.get_stop_source().stop_possible());
     assert(jt.get_id() != std::jthread::id());
   }
@@ -56,12 +57,13 @@ int main(int, char**) {
   // if that expression is well-formed,
   {
     int result = 0;
-    std::jthread jt{[&result](std::stop_token st, int i) {
-                      assert(st.stop_possible());
-                      assert(!st.stop_requested());
-                      result += i;
-                    },
-                    5};
+    std::jthread jt = support::make_test_jthread(
+        [&result](std::stop_token st, int i) {
+          assert(st.stop_possible());
+          assert(!st.stop_requested());
+          result += i;
+        },
+        5);
     jt.join();
     assert(result == 5);
   }
@@ -70,7 +72,7 @@ int main(int, char**) {
   // invoke(auto(std::forward<F>(f)), auto(std::forward<Args>(args))...)
   {
     int result = 0;
-    std::jthread jt{[&result](int i) { result += i; }, 5};
+    std::jthread jt = support::make_test_jthread([&result](int i) { result += i; }, 5);
     jt.join();
     assert(result == 5);
   }
@@ -90,20 +92,22 @@ int main(int, char**) {
     auto mainThread = std::this_thread::get_id();
 
     TrackThread arg1;
-    std::jthread jt1{[mainThread](const TrackThread& arg) {
-                       assert(arg.threadId == mainThread);
-                       assert(arg.threadId != std::this_thread::get_id());
-                       assert(arg.copyConstructed);
-                     },
-                     arg1};
+    std::jthread jt1 = support::make_test_jthread(
+        [mainThread](const TrackThread& arg) {
+          assert(arg.threadId == mainThread);
+          assert(arg.threadId != std::this_thread::get_id());
+          assert(arg.copyConstructed);
+        },
+        arg1);
 
     TrackThread arg2;
-    std::jthread jt2{[mainThread](const TrackThread& arg) {
-                       assert(arg.threadId == mainThread);
-                       assert(arg.threadId != std::this_thread::get_id());
-                       assert(arg.moveConstructed);
-                     },
-                     std::move(arg2)};
+    std::jthread jt2 = support::make_test_jthread(
+        [mainThread](const TrackThread& arg) {
+          assert(arg.threadId == mainThread);
+          assert(arg.threadId != std::this_thread::get_id());
+          assert(arg.moveConstructed);
+        },
+        std::move(arg2));
   }
 
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
@@ -120,7 +124,7 @@ int main(int, char**) {
     };
     ThrowOnCopyFunc f1;
     try {
-      std::jthread jt{f1};
+      std::jthread jt = support::make_test_jthread(f1);
       assert(false);
     } catch (const Exception& e) {
       assert(e.threadId == std::this_thread::get_id());
@@ -140,7 +144,7 @@ int main(int, char**) {
     };
 
     Arg arg(flag);
-    std::jthread jt(
+    std::jthread jt = support::make_test_jthread(
         [&flag](const auto&) {
           assert(flag == 5); // happens-after the copy-construction of arg
         },
