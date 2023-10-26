@@ -42,9 +42,15 @@ static cl::opt<std::string>
     SizeDistributionName("size-distribution-name",
                          cl::desc("The name of the distribution to use"));
 
-static cl::opt<bool>
-    SweepMode("sweep-mode",
-              cl::desc("If set, benchmark all sizes from 0 to sweep-max-size"));
+static cl::opt<bool> SweepMode(
+    "sweep-mode",
+    cl::desc(
+        "If set, benchmark all sizes from sweep-min-size to sweep-max-size"));
+
+static cl::opt<uint32_t>
+    SweepMinSize("sweep-min-size",
+                 cl::desc("The minimum size to use in sweep-mode"),
+                 cl::init(0));
 
 static cl::opt<uint32_t>
     SweepMaxSize("sweep-max-size",
@@ -185,7 +191,7 @@ struct MemfunctionBenchmarkSweep final : public MemfunctionBenchmarkBase {
     BO.InitialIterations = 100;
     auto &Measurements = Study.Measurements;
     Measurements.reserve(NumTrials * SweepMaxSize);
-    for (size_t Size = 0; Size <= SweepMaxSize; ++Size) {
+    for (size_t Size = SweepMinSize; Size <= SweepMaxSize; ++Size) {
       CurrentSweepSize = Size;
       runTrials(BO, Measurements);
     }
