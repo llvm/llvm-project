@@ -458,6 +458,8 @@ SparseTensorEncodingAttr::tranlateShape(ArrayRef<int64_t> srcShape,
     } else {
       if (auto mod = evalExp.dyn_cast<AffineBinaryOpExpr>();
           mod && mod.getKind() == AffineExprKind::Mod) {
+        // We can still infer a static bound for expressions in form
+        // "d % constant" since d % constant \in [0, constant).
         if (auto bound = mod.getRHS().dyn_cast<AffineConstantExpr>()) {
           ret.push_back(bound.getValue());
           continue;
