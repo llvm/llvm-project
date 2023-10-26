@@ -665,9 +665,9 @@ NativeRegisterContextLinux_arm64::CacheAllRegisters(uint32_t &cached_size) {
     // We will only be restoring ZT data if ZA is active. As writing to an
     // inactive ZT enables ZA, which may not be desireable.
     if (
-      // If we have ZT0, or in other words, if we have SME2.
-      GetRegisterInfo().IsZTPresent() &&
-      // And ZA is active, which means that ZT0 is also active.
+        // If we have ZT0, or in other words, if we have SME2.
+        GetRegisterInfo().IsZTPresent() &&
+        // And ZA is active, which means that ZT0 is also active.
         m_za_header.size > sizeof(m_za_header)) {
       cached_size += sizeof(RegisterSetType) + GetZTBufferSize();
       // Unlike ZA where we have to fake data for an inactive ZA, the kernel
@@ -789,10 +789,10 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
   // If we leave ZA/ZT0 inactive and read ZT0, the kernel returns 0s. Therefore
   // there's nothing for us to restore if ZA was originally inactive.
   if (
-    // If we have SME2 and therefore ZT0.
-    GetRegisterInfo().IsZTPresent() &&
-    // And ZA is enabled.
-    m_za_header.size > sizeof(m_za_header))
+      // If we have SME2 and therefore ZT0.
+      GetRegisterInfo().IsZTPresent() &&
+      // And ZA is enabled.
+      m_za_header.size > sizeof(m_za_header))
     dst = AddSavedRegisters(dst, RegisterSetType::SME2, GetZTBuffer(),
                             GetZTBufferSize());
 
