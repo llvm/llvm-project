@@ -1295,7 +1295,7 @@ body:             |
 # CHECK:         - { id: 1, name: '', type: variable-sized, offset: -32, alignment: 1,
 # CHECK-NEXT:        stack-id: default
 
-# CHECK:      $x8 = ADDPL_XXI $fp, -20
+# CHECK:      $x8 = ADDPL_XXI $fp, -14
 # CHECK-NEXT: $z0 = LD1W_IMM killed renamable $p0, killed $x8, -8
 
 name:            fp_relative_that_is_not_a_multiple_of_VLx16
