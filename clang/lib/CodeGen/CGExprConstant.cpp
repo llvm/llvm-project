@@ -22,6 +22,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/Builtins.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
@@ -1358,6 +1359,8 @@ public:
   }
 
   llvm::Constant *VisitStringLiteral(StringLiteral *E, QualType T) {
+    if (!isa<ConstantArrayType>(T.getDesugaredType(CGM.getContext())))
+      return nullptr;
     // This is a string literal initializing an array in an initializer.
     return CGM.GetConstantArrayFromStringLiteral(E);
   }
