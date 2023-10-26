@@ -8,20 +8,20 @@ target triple = "x86_64-apple-macosx10.8.0"
 
 ; We don't unroll this loop because it has a small constant trip count.
 ;
-; CHECK-VECTOR-LABEL: @foo(
+; CHECK-VECTOR-LABEL: @foo_trip_count_8(
 ; CHECK-VECTOR: load <4 x i32>
 ; CHECK-VECTOR-NOT: load <4 x i32>
 ; CHECK-VECTOR: store <4 x i32>
 ; CHECK-VECTOR-NOT: store <4 x i32>
 ; CHECK-VECTOR: ret
 ;
-; CHECK-SCALAR-LABEL: @foo(
+; CHECK-SCALAR-LABEL: @foo_trip_count_8(
 ; CHECK-SCALAR: load i32, ptr
 ; CHECK-SCALAR-NOT: load i32, ptr
 ; CHECK-SCALAR: store i32
 ; CHECK-SCALAR-NOT: store i32
 ; CHECK-SCALAR: ret
-define i32 @foo(ptr nocapture %A) nounwind uwtable ssp {
+define i32 @foo_trip_count_8(ptr nocapture %A) nounwind uwtable ssp {
   br label %1
 
 ; <label>:1                                       ; preds = %1, %0
@@ -32,7 +32,193 @@ define i32 @foo(ptr nocapture %A) nounwind uwtable ssp {
   store i32 %4, ptr %2, align 4
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
-  %exitcond = icmp eq i32 %lftr.wideiv, 100
+  %exitcond = icmp eq i32 %lftr.wideiv, 8
+  br i1 %exitcond, label %5, label %1
+
+; <label>:5                                       ; preds = %1
+  ret i32 undef
+}
+
+; CHECK-VECTOR-LABEL: @foo_trip_count_16(
+; CHECK-VECTOR: load <4 x i32>
+; CHECK-VECTOR-NOT: load <4 x i32>
+; CHECK-VECTOR: store <4 x i32>
+; CHECK-VECTOR-NOT: store <4 x i32>
+; CHECK-VECTOR: ret
+;
+; CHECK-SCALAR-LABEL: @foo_trip_count_16(
+; CHECK-SCALAR: load i32, ptr
+; CHECK-SCALAR-NOT: load i32, ptr
+; CHECK-SCALAR: store i32
+; CHECK-SCALAR-NOT: store i32
+; CHECK-SCALAR: ret
+define i32 @foo_trip_count_16(ptr nocapture %A) nounwind uwtable ssp {
+  br label %1
+
+; <label>:1                                       ; preds = %1, %0
+  %indvars.iv = phi i64 [ 0, %0 ], [ %indvars.iv.next, %1 ]
+  %2 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %3 = load i32, ptr %2, align 4
+  %4 = add nsw i32 %3, 6
+  store i32 %4, ptr %2, align 4
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, 16
+  br i1 %exitcond, label %5, label %1
+
+; <label>:5                                       ; preds = %1
+  ret i32 undef
+}
+
+; CHECK-VECTOR-LABEL: @foo_trip_count_17(
+; CHECK-VECTOR: load <4 x i32>
+; CHECK-VECTOR-NOT: load <4 x i32>
+; CHECK-VECTOR: store <4 x i32>
+; CHECK-VECTOR-NOT: store <4 x i32>
+; CHECK-VECTOR: ret
+;
+; CHECK-SCALAR-LABEL: @foo_trip_count_17(
+; CHECK-SCALAR: load i32, ptr
+; CHECK-SCALAR-NOT: load i32, ptr
+; CHECK-SCALAR: store i32
+; CHECK-SCALAR-NOT: store i32
+; CHECK-SCALAR: ret
+define i32 @foo_trip_count_17(ptr nocapture %A) nounwind uwtable ssp {
+  br label %1
+
+; <label>:1                                       ; preds = %1, %0
+  %indvars.iv = phi i64 [ 0, %0 ], [ %indvars.iv.next, %1 ]
+  %2 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %3 = load i32, ptr %2, align 4
+  %4 = add nsw i32 %3, 6
+  store i32 %4, ptr %2, align 4
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, 17
+  br i1 %exitcond, label %5, label %1
+
+; <label>:5                                       ; preds = %1
+  ret i32 undef
+}
+
+; CHECK-VECTOR-LABEL: @foo_trip_count_24(
+; CHECK-VECTOR: load <4 x i32>
+; CHECK-VECTOR-NOT: load <4 x i32>
+; CHECK-VECTOR: store <4 x i32>
+; CHECK-VECTOR-NOT: store <4 x i32>
+; CHECK-VECTOR: ret
+;
+; CHECK-SCALAR-LABEL: @foo_trip_count_24(
+; CHECK-SCALAR: load i32, ptr
+; CHECK-SCALAR-NOT: load i32, ptr
+; CHECK-SCALAR: store i32
+; CHECK-SCALAR-NOT: store i32
+; CHECK-SCALAR: ret
+define i32 @foo_trip_count_24(ptr nocapture %A) nounwind uwtable ssp {
+  br label %1
+
+; <label>:1                                       ; preds = %1, %0
+  %indvars.iv = phi i64 [ 0, %0 ], [ %indvars.iv.next, %1 ]
+  %2 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %3 = load i32, ptr %2, align 4
+  %4 = add nsw i32 %3, 6
+  store i32 %4, ptr %2, align 4
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, 24
+  br i1 %exitcond, label %5, label %1
+
+; <label>:5                                       ; preds = %1
+  ret i32 undef
+}
+
+; CHECK-VECTOR-LABEL: @foo_trip_count_25(
+; CHECK-VECTOR: load <4 x i32>
+; CHECK-VECTOR-NOT: load <4 x i32>
+; CHECK-VECTOR: store <4 x i32>
+; CHECK-VECTOR-NOT: store <4 x i32>
+; CHECK-VECTOR: ret
+;
+; CHECK-SCALAR-LABEL: @foo_trip_count_25(
+; CHECK-SCALAR: load i32, ptr
+; CHECK-SCALAR-NOT: load i32, ptr
+; CHECK-SCALAR: store i32
+; CHECK-SCALAR-NOT: store i32
+; CHECK-SCALAR: ret
+define i32 @foo_trip_count_25(ptr nocapture %A) nounwind uwtable ssp {
+  br label %1
+
+; <label>:1                                       ; preds = %1, %0
+  %indvars.iv = phi i64 [ 0, %0 ], [ %indvars.iv.next, %1 ]
+  %2 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %3 = load i32, ptr %2, align 4
+  %4 = add nsw i32 %3, 6
+  store i32 %4, ptr %2, align 4
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, 25
+  br i1 %exitcond, label %5, label %1
+
+; <label>:5                                       ; preds = %1
+  ret i32 undef
+}
+
+; CHECK-VECTOR-LABEL: @foo_trip_count_33(
+; CHECK-VECTOR: load <4 x i32>
+; CHECK-VECTOR-NOT: load <4 x i32>
+; CHECK-VECTOR: store <4 x i32>
+; CHECK-VECTOR-NOT: store <4 x i32>
+; CHECK-VECTOR: ret
+;
+; CHECK-SCALAR-LABEL: @foo_trip_count_33(
+; CHECK-SCALAR: load i32, ptr
+; CHECK-SCALAR-NOT: load i32, ptr
+; CHECK-SCALAR: store i32
+; CHECK-SCALAR-NOT: store i32
+; CHECK-SCALAR: ret
+define i32 @foo_trip_count_33(ptr nocapture %A) nounwind uwtable ssp {
+  br label %1
+
+; <label>:1                                       ; preds = %1, %0
+  %indvars.iv = phi i64 [ 0, %0 ], [ %indvars.iv.next, %1 ]
+  %2 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %3 = load i32, ptr %2, align 4
+  %4 = add nsw i32 %3, 6
+  store i32 %4, ptr %2, align 4
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, 33
+  br i1 %exitcond, label %5, label %1
+
+; <label>:5                                       ; preds = %1
+  ret i32 undef
+}
+
+; CHECK-VECTOR-LABEL: @foo_trip_count_101(
+; CHECK-VECTOR: load <4 x i32>
+; CHECK-VECTOR-NOT: load <4 x i32>
+; CHECK-VECTOR: store <4 x i32>
+; CHECK-VECTOR-NOT: store <4 x i32>
+; CHECK-VECTOR: ret
+;
+; CHECK-SCALAR-LABEL: @foo_trip_count_101(
+; CHECK-SCALAR: load i32, ptr
+; CHECK-SCALAR-NOT: load i32, ptr
+; CHECK-SCALAR: store i32
+; CHECK-SCALAR-NOT: store i32
+; CHECK-SCALAR: ret
+define i32 @foo_trip_count_101(ptr nocapture %A) nounwind uwtable ssp {
+  br label %1
+
+; <label>:1                                       ; preds = %1, %0
+  %indvars.iv = phi i64 [ 0, %0 ], [ %indvars.iv.next, %1 ]
+  %2 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %3 = load i32, ptr %2, align 4
+  %4 = add nsw i32 %3, 6
+  store i32 %4, ptr %2, align 4
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, 101
   br i1 %exitcond, label %5, label %1
 
 ; <label>:5                                       ; preds = %1
