@@ -49,7 +49,7 @@ struct ExprDependenceScope {
 using ExprDependence = ExprDependenceScope::ExprDependence;
 
 struct TypeDependenceScope {
-  enum TypeDependence : uint8_t {
+  enum TypeDependence : unsigned {
     /// Whether this type contains an unexpanded parameter pack
     /// (for C++11 variadic templates)
     UnexpandedPack = 1,

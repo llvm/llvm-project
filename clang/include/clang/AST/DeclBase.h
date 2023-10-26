@@ -49,7 +49,7 @@ class ExternalSourceSymbolAttr;
 class FunctionDecl;
 class FunctionType;
 class IdentifierInfo;
-enum Linkage : unsigned char;
+enum Linkage : unsigned;
 class LinkageSpecDecl;
 class Module;
 class NamedDecl;
