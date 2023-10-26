@@ -2141,9 +2141,8 @@ define i16 @lshr_and_not_demanded(i8 %x) {
 
 define i16 @lshr_exact_and_not_demanded(i8 %x) {
 ; CHECK-LABEL: @lshr_exact_and_not_demanded(
-; CHECK-NEXT:    [[Y:%.*]] = and i8 [[X:%.*]], -2
-; CHECK-NEXT:    [[Y_EXT:%.*]] = sext i8 [[Y]] to i16
-; CHECK-NEXT:    [[SHR:%.*]] = lshr exact i16 [[Y_EXT]], 1
+; CHECK-NEXT:    [[Y_EXT:%.*]] = sext i8 [[X:%.*]] to i16
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i16 [[Y_EXT]], 1
 ; CHECK-NEXT:    ret i16 [[SHR]]
 ;
   %y = and i8 %x, -2
@@ -2177,8 +2176,7 @@ define i16 @ashr_umax_not_demanded(i16 %x) {
 
 define i16 @ashr_exact_umax_not_demanded(i16 %x) {
 ; CHECK-LABEL: @ashr_exact_umax_not_demanded(
-; CHECK-NEXT:    [[Y:%.*]] = call i16 @llvm.umax.i16(i16 [[X:%.*]], i16 1)
-; CHECK-NEXT:    [[SHR:%.*]] = ashr exact i16 [[Y]], 1
+; CHECK-NEXT:    [[SHR:%.*]] = ashr i16 [[X:%.*]], 1
 ; CHECK-NEXT:    ret i16 [[SHR]]
 ;
   %y = call i16 @llvm.umax.i16(i16 %x, i16 1)
