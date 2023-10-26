@@ -38,7 +38,7 @@ define amdgpu_kernel void @s_arg_zext_i1_to_i64(ptr addrspace(1) %out, i1 zeroex
 ; GCN-LABEL: {{^}}s_cmp_zext_i1_to_i64:
 ; GCN-DAG: s_mov_b32 s{{[0-9]+}}, 0
 ; GCN-DAG: s_cmp_eq_u32
-; GCN:     v_cndmask_b32
+; GCN:     s_cselect_b64 s[{{[0-9]+:[0-9]+}}], 1, 0
 define amdgpu_kernel void @s_cmp_zext_i1_to_i64(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
   %cmp = icmp eq i32 %a, %b
   %ext = zext i1 %cmp to i64
