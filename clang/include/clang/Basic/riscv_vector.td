@@ -2320,6 +2320,15 @@ let HasMasked = false, HasVL = false, IRName = "" in {
       }] in {
     def vundefined : RVVBuiltin<"v", "v", "csilxfd">;
     def vundefined_u : RVVBuiltin<"Uv", "Uv", "csil">;
+
+    foreach nf = NFList in {
+      let NF = nf in {
+        defvar T = "(Tuple:" # nf # ")";
+        def : RVVBuiltin<T # "v", T # "v", "csilxfd">;
+        def : RVVBuiltin<T # "Uv", T # "Uv", "csil">;
+      }
+    }
+
   }
 
   // LMUL truncation
