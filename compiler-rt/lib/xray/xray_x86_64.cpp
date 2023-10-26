@@ -170,7 +170,8 @@ bool patchFunctionEntry(const bool Enable, const uint32_t FuncId,
 }
 
 bool patchFunctionExit(const bool Enable, const uint32_t FuncId,
-                       const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
+                       const XRaySledEntry &Sled,
+                       void (*Trampoline)()) XRAY_NEVER_INSTRUMENT {
   // Here we do the dance of replacing the following sled:
   //
   // xray_sled_n:
@@ -192,11 +193,11 @@ bool patchFunctionExit(const bool Enable, const uint32_t FuncId,
   // Prerequisite is to compute the relative offset fo the
   // __xray_FunctionExit function's address.
   const uint64_t Address = Sled.address();
-  int64_t TrampolineOffset = reinterpret_cast<int64_t>(__xray_FunctionExit) -
+  int64_t TrampolineOffset = reinterpret_cast<int64_t>(Trampoline) -
                              (static_cast<int64_t>(Address) + 11);
   if (TrampolineOffset < MinOffset || TrampolineOffset > MaxOffset) {
     Report("XRay Exit trampoline (%p) too far from sled (%p)\n",
-           reinterpret_cast<void *>(__xray_FunctionExit),
+           reinterpret_cast<void *>(Trampoline),
            reinterpret_cast<void *>(Address));
     return false;
   }
@@ -217,16 +218,16 @@ bool patchFunctionExit(const bool Enable, const uint32_t FuncId,
 }
 
 bool patchFunctionTailExit(const bool Enable, const uint32_t FuncId,
-                           const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
+                           const XRaySledEntry &Sled,
+                           void (*Trampoline)()) XRAY_NEVER_INSTRUMENT {
   // Here we do the dance of replacing the tail call sled with a similar
   // sequence as the entry sled, but calls the tail exit sled instead.
   const uint64_t Address = Sled.address();
-  int64_t TrampolineOffset =
-      reinterpret_cast<int64_t>(__xray_FunctionTailExit) -
-      (static_cast<int64_t>(Address) + 11);
+  int64_t TrampolineOffset = reinterpret_cast<int64_t>(Trampoline) -
+                             (static_cast<int64_t>(Address) + 11);
   if (TrampolineOffset < MinOffset || TrampolineOffset > MaxOffset) {
     Report("XRay Tail Exit trampoline (%p) too far from sled (%p)\n",
-           reinterpret_cast<void *>(__xray_FunctionTailExit),
+           reinterpret_cast<void *>(Trampoline),
            reinterpret_cast<void *>(Address));
     return false;
   }
@@ -247,7 +248,8 @@ bool patchFunctionTailExit(const bool Enable, const uint32_t FuncId,
 }
 
 bool patchCustomEvent(const bool Enable, const uint32_t FuncId,
-                      const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
+                      const XRaySledEntry &Sled,
+                      void (*Trampoline)()) XRAY_NEVER_INSTRUMENT {
   // Here we do the dance of replacing the following sled:
   //
   // xray_sled_n:
@@ -275,7 +277,8 @@ bool patchCustomEvent(const bool Enable, const uint32_t FuncId,
 }
 
 bool patchTypedEvent(const bool Enable, const uint32_t FuncId,
-                      const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
+                     const XRaySledEntry &Sled,
+                     void (*Trampoline)()) XRAY_NEVER_INSTRUMENT {
   // Here we do the dance of replacing the following sled:
   //
   // xray_sled_n:
