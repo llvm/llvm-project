@@ -4298,10 +4298,6 @@ public:
   /// for struct of scalable vectors if a function returns struct.
   llvm::Value *FormSVEBuiltinResult(llvm::Value *Call);
 
-  void GetAArch64SVEProcessedOperands(unsigned BuiltinID, const CallExpr *E,
-                                      SmallVectorImpl<llvm::Value *> &Ops,
-                                      SVETypeFlags TypeFlags);
-
   llvm::Value *EmitAArch64SVEBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
 
   llvm::Value *EmitSMELd1St1(const SVETypeFlags &TypeFlags,
