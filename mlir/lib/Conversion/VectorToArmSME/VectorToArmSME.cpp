@@ -488,26 +488,13 @@ struct VectorOuterProductToArmSMELowering
     Operation *rootOp = outerProductOp;
     auto loc = outerProductOp.getLoc();
     if (outerProductOp.isMasked()) {
-      auto maskingOp = outerProductOp.getMaskingOp();
-      rewriter.setInsertionPoint(maskingOp);
-      rootOp = maskingOp;
-
-      // Attempt to extract masks from vector.create_mask.
-      // TODO: Add support for other mask sources.
-      auto mask = maskingOp.getMask();
-      auto createMaskOp = mask.getDefiningOp<vector::CreateMaskOp>();
-      if (!createMaskOp)
+      auto maskOp = outerProductOp.getMaskingOp();
+      rewriter.setInsertionPoint(maskOp);
+      rootOp = maskOp;
+      auto operandMasks = decomposeResultMask(loc, maskOp.getMask(), rewriter);
+      if (failed(operandMasks))
         return failure();
-
-      auto maskType = createMaskOp.getVectorType();
-      Value lhsMaskDim = createMaskOp.getOperand(0);
-      Value rhsMaskDim = createMaskOp.getOperand(1);
-
-      VectorType operandMaskType = VectorType::Builder(maskType).dropDim(0);
-      lhsMask = rewriter.create<vector::CreateMaskOp>(loc, operandMaskType,
-                                                      lhsMaskDim);
-      rhsMask = rewriter.create<vector::CreateMaskOp>(loc, operandMaskType,
-                                                      rhsMaskDim);
+      std::tie(lhsMask, rhsMask) = *operandMasks;
     }
 
     rewriter.replaceOpWithNewOp<arm_sme::OuterProductOp>(
@@ -515,6 +502,27 @@ struct VectorOuterProductToArmSMELowering
         outerProductOp.getRhs(), lhsMask, rhsMask, outerProductOp.getAcc());
 
     return success();
+  }
+
+  static FailureOr<std::pair<Value, Value>>
+  decomposeResultMask(Location loc, Value mask, PatternRewriter &rewriter) {
+    // Attempt to extract masks from vector.create_mask.
+    // TODO: Add support for other mask sources.
+    auto createMaskOp = mask.getDefiningOp<vector::CreateMaskOp>();
+    if (!createMaskOp)
+      return failure();
+
+    auto maskType = createMaskOp.getVectorType();
+    Value lhsMaskDim = createMaskOp.getOperand(0);
+    Value rhsMaskDim = createMaskOp.getOperand(1);
+
+    VectorType operandMaskType = VectorType::Builder(maskType).dropDim(0);
+    Value lhsMask =
+        rewriter.create<vector::CreateMaskOp>(loc, operandMaskType, lhsMaskDim);
+    Value rhsMask =
+        rewriter.create<vector::CreateMaskOp>(loc, operandMaskType, rhsMaskDim);
+
+    return std::make_pair(lhsMask, rhsMask);
   }
 };
 
