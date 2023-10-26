@@ -31,8 +31,5 @@ translating the following operations:
     *   `func.constant`
     *   `func.func`
     *   `func.return`
-*   'scf' Dialect
-    *   `scf.for`
-    *   `scf.yield`
 *   'arith' Dialect
     *   `arith.constant`
