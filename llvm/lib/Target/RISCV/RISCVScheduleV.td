@@ -68,36 +68,36 @@ multiclass LMULSEWWriteResMXSEW<string name, list<ProcResourceKind> resources,
 // Latency noPredLat and ReleaseAtCycles noPredCycles. The WorstCase SchedWrite
 // is created similiarly if IsWorstCase is true. The prefix is used to uniquely
 // define SchedWriteRes and Variant resources.
-multiclass LMULWriteResMXVariant<string name, SchedPredicate Pred,
+multiclass LMULWriteResMXVariant<string name, SchedPredicateBase Pred,
                                  list<ProcResourceKind> resources,
                                  int predLat, list<int> predCycles,
                                  int noPredLat, list<int> noPredCycles,
-                                 string mx, bit IsWorstCase, string prefix> {
-  defvar nameMX = prefix # name # "_" # mx;
+                                 string mx, bit IsWorstCase> {
+  defvar nameMX = name # "_" # mx;
 
   // Define the different behaviors
-  def nameMX # "_Pred" : SchedWriteRes<resources>
+  def NAME # nameMX # "_Pred" : SchedWriteRes<resources>
   { let Latency = predLat; let ReleaseAtCycles = predCycles; }
-  def nameMX # "_NoPred" : SchedWriteRes<resources>
+  def NAME # nameMX # "_NoPred" : SchedWriteRes<resources>
   { let Latency = noPredLat; let ReleaseAtCycles = noPredCycles; }
 
   // Tie behavior to predicate
-  def nameMX # "_Variant" : SchedWriteVariant<[
-    SchedVar<Pred, [!cast<SchedWriteRes>(nameMX # "_Pred")]>,
-    SchedVar<NoSchedPred, [!cast<SchedWriteRes>(nameMX # "_NoPred")]>
+  def NAME # nameMX # "_Variant" : SchedWriteVariant<[
+    SchedVar<Pred, [!cast<SchedWriteRes>(NAME # nameMX # "_Pred")]>,
+    SchedVar<NoSchedPred, [!cast<SchedWriteRes>(NAME # nameMX # "_NoPred")]>
   ]>;
   def : SchedAlias<
-    !cast<SchedReadWrite>(name # "_" # mx),
-    !cast<SchedReadWrite>(nameMX # "_Variant")>;
+    !cast<SchedReadWrite>(nameMX),
+    !cast<SchedReadWrite>(NAME # nameMX # "_Variant")>;
 
   if IsWorstCase then {
-    def prefix # name # "_WorstCase_Variant" : SchedWriteVariant<[
-      SchedVar<Pred, [!cast<SchedWriteRes>(nameMX # "_Pred")]>,
-      SchedVar<NoSchedPred, [!cast<SchedWriteRes>(nameMX # "_NoPred")]>
+    def NAME # name # "_WorstCase_Variant" : SchedWriteVariant<[
+      SchedVar<Pred, [!cast<SchedWriteRes>(NAME # nameMX # "_Pred")]>,
+      SchedVar<NoSchedPred, [!cast<SchedWriteRes>(NAME # nameMX # "_NoPred")]>
     ]>;
     def : SchedAlias<
       !cast<SchedReadWrite>(name # "_WorstCase"),
-      !cast<SchedReadWrite>(prefix # name # "_WorstCase_Variant")>;
+      !cast<SchedReadWrite>(NAME # name # "_WorstCase_Variant")>;
   }
 }
 
