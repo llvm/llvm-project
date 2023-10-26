@@ -19,7 +19,7 @@
 module {
   func.func @local_relu(%argx: tensor<?x?xf32, #SortedCOO>) -> tensor<?x?xf32, #SortedCOO> {
     %c = arith.constant 0.0 : f32
-    %0 = linalg.generic #scale
+    %0 = linalg.generic #relu_memory_access_map
       outs(%argx: tensor<?x?xf32, #SortedCOO>) {
         ^bb(%x: f32):
           %1 = arith.maxf %x, %c : f32
