@@ -631,6 +631,11 @@ unsigned X86RegisterInfo::getNumSupportedRegs(const MachineFunction &MF) const {
   //
   // and try to return the minimum number of registers supported by the target.
 
+  assert((X86::R15WH + 1 == X86 ::YMM0) && (X86::YMM15 + 1 == X86::K0) &&
+         (X86::K6_K7 + 1 == X86::TMMCFG) &&
+         (X86::TMM7 + 1 == X86::NUM_TARGET_REGS) &&
+         "Register number may be incorrect");
+
   bool HasAVX = ST.hasAVX();
   bool HasAVX512 = ST.hasAVX512();
   bool HasAMX = ST.hasAMXTILE();
