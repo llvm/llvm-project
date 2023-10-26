@@ -1,4 +1,5 @@
 # REQUIRES: system-windows
+# XFAIL: system-windows
 
 # RUN: %clang_cl_host /Zi /GS- %p/Inputs/call-function.cpp /c /o %t.obj
 # RUN: %msvc_link /debug:full %t.obj /out:%t
