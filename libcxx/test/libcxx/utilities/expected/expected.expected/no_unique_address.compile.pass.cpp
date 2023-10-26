@@ -26,6 +26,7 @@ struct A {
 
 struct B : public A {
   int z_;
+  short z2_;
   virtual ~B() = default;
 };
 
