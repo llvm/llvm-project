@@ -1076,11 +1076,11 @@ GlobalVariable *InstrProfiling::setupProfileSection(InstrProfInstBase *Inc,
   Function *Fn = Inc->getParent()->getParent();
   GlobalValue::LinkageTypes Linkage = NamePtr->getLinkage();
   GlobalValue::VisibilityTypes Visibility = NamePtr->getVisibility();
-
+  bool EnableDebugCorrelate =
+      DebugInfoCorrelate || ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO;
   // Use internal rather than private linkage so the counter variable shows up
   // in the symbol table when using debug info for correlation.
-  if ((DebugInfoCorrelate ||
-       ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO) &&
+  if (EnableDebugCorrelate &&
       TT.isOSBinFormatMachO() && Linkage == GlobalValue::PrivateLinkage)
     Linkage = GlobalValue::InternalLinkage;
 
@@ -1200,11 +1200,15 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
   // the corresponding profile section.
   auto *CounterPtr = setupProfileSection(Inc, IPSK_cnts);
   PD.RegionCounters = CounterPtr;
+<<<<<<< HEAD
 
   if (DebugInfoCorrelate ||
       ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO) {
     LLVMContext &Ctx = M->getContext();
     Function *Fn = Inc->getParent()->getParent();
+=======
+  if (EnableDebugCorrelate) {
+>>>>>>> 39cb3204ad4e (Move options to TargetLoweringObjectFileImpl.cpp)
     if (auto *SP = Fn->getSubprogram()) {
       DIBuilder DB(*M, true, SP->getUnit());
       Metadata *FunctionNameAnnotation[] = {
