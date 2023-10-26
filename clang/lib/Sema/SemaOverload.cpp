@@ -11092,6 +11092,14 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
       I--;
   }
 
+  bool isVariadic = false;
+  for (unsigned N = 0; N < Fn->getNumParams(); N++) {
+    if (Fn->getParamDecl(N)->isParameterPack()) {
+      isVariadic = true;
+      break;
+    }
+  }
+
   std::string FnDesc;
   std::pair<OverloadCandidateKind, OverloadCandidateSelect> FnKindPair =
       ClassifyOverloadCandidate(S, Cand->FoundDecl, Fn, Cand->getRewriteKind(),
@@ -11100,8 +11108,9 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
   Expr *FromExpr = Conv.Bad.FromExpr;
   QualType FromTy = Conv.Bad.getFromType();
   QualType ToTy = Conv.Bad.getToType();
-  SourceRange ToParamRange =
-      !isObjectArgument ? Fn->getParamDecl(I)->getSourceRange() : SourceRange();
+  SourceRange ToParamRange = !isObjectArgument && !isVariadic
+                                 ? Fn->getParamDecl(I)->getSourceRange()
+                                 : SourceRange();
 
   if (FromTy == S.Context.OverloadTy) {
     assert(FromExpr && "overload set argument came from implicit argument?");

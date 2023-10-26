@@ -1069,6 +1069,9 @@ Static Analyzer
   `#65888 <https://github.com/llvm/llvm-project/pull/65888>`_, and
   `#65887 <https://github.com/llvm/llvm-project/pull/65887>`_
 
+- Resolving Inconsistent Arguments Panic in Variadic Template Variables.
+  (`#70280: <https://github.com/llvm/llvm-project/pull/70280>`_).
+
 .. _release-notes-sanitizers:
 
 Sanitizers
