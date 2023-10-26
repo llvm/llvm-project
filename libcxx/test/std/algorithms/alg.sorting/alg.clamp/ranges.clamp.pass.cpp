@@ -78,23 +78,15 @@ constexpr bool test() {
   { // Check that a custom projection works.
     struct S {
       int i;
-
-      constexpr const int& lvalue_proj() const { return i; }
-      constexpr int prvalue_proj() const { return i; }
       constexpr bool operator==(S const& other) const { return i == other.i; }
-    };
-
-    struct Comp {
-      constexpr bool operator()(const int& lhs, const int& rhs) const { return lhs < rhs; }
-      constexpr bool operator()(int&& lhs, int&& rhs) const { return lhs > rhs; }
     };
 
     auto val = S{10};
     auto low = S{20};
     auto high = S{30};
-    // Check that the value category of the projection return type is preserved.
-    assert(std::ranges::clamp(val, low, high, Comp{}, &S::lvalue_proj) == low);
-    assert(std::ranges::clamp(val, high, low, Comp{}, &S::prvalue_proj) == low);
+    auto proj = [](S const& s) -> int const& { return s.i; };
+
+    assert(std::ranges::clamp(val, low, high, std::less{}, proj) == low);
   }
 
   { // Ensure that we respect the value category of the projection when calling the comparator.
