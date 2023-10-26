@@ -77,8 +77,7 @@ void netbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     break;
   }
 
-  case llvm::Triple::sparc:
-  case llvm::Triple::sparcel: {
+  case llvm::Triple::sparc: {
     CmdArgs.push_back("-32");
     std::string CPU = getCPUName(D, Args, Triple);
     CmdArgs.push_back(sparc::getSparcAsmModeForCPU(CPU, Triple));
