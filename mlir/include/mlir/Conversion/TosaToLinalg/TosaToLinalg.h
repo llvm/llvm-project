@@ -38,6 +38,10 @@ void addTosaToLinalgPasses(
     tosa::TosaValidationOptions const &validationOptions = {
         tosa::TosaProfileEnum::Undefined, false, tosa::TosaLevelEnum::None});
 
+/// Populates TOSA to linalg pipelines
+/// Currently, this includes only the "tosa-to-linalg-pipeline".
+void registerTosaToLinalgPipelines();
+
 /// Populates conversion passes from TOSA dialect to Linalg dialect.
 void populateTosaToLinalgConversionPatterns(RewritePatternSet *patterns);
 
