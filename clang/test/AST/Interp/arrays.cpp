@@ -406,3 +406,94 @@ namespace StringZeroFill {
   static_assert(b[4] == '\0', "");
   static_assert(b[5] == '\0', "");
 }
+
+namespace NoInitMapLeak {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdivision-by-zero"
+#pragma clang diagnostic ignored "-Wc++20-extensions"
+  constexpr int testLeak() { // expected-error {{never produces a constant expression}} \
+                             // ref-error {{never produces a constant expression}}
+    int a[2];
+    a[0] = 1;
+    // interrupts interpretation.
+    (void)(1 / 0); // expected-note 2{{division by zero}} \
+                   // ref-note 2{{division by zero}}
+
+
+    return 1;
+  }
+#pragma clang diagnostic pop
+  static_assert(testLeak() == 1, ""); // expected-error {{not an integral constant expression}} \
+                                      // expected-note {{in call to 'testLeak()'}} \
+                                      // ref-error {{not an integral constant expression}} \
+                                      // ref-note {{in call to 'testLeak()'}}
+
+
+  constexpr int a[] = {1,2,3,4/0,5}; // expected-error {{must be initialized by a constant expression}} \
+                                     // expected-note {{division by zero}} \
+                                     // ref-error {{must be initialized by a constant expression}} \
+                                     // ref-note {{division by zero}} \
+                                     // ref-note {{declared here}}
+
+  /// FIXME: This should fail in the new interpreter as well.
+  constexpr int b = a[0]; // ref-error {{must be initialized by a constant expression}} \
+                          // ref-note {{is not a constant expression}} \
+                          // ref-note {{declared here}}
+  static_assert(b == 1, ""); // ref-error {{not an integral constant expression}} \
+                             // ref-note {{not a constant expression}}
+
+  constexpr int f() { // expected-error {{never produces a constant expression}} \
+                      // ref-error {{never produces a constant expression}}
+    int a[] = {19,2,3/0,4}; // expected-note 2{{division by zero}} \
+                            // expected-warning {{is undefined}} \
+                            // ref-note 2{{division by zero}} \
+                            // ref-warning {{is undefined}}
+    return 1;
+  }
+  static_assert(f() == 1, ""); // expected-error {{not an integral constant expression}} \
+                               // expected-note {{in call to}} \
+                               // ref-error {{not an integral constant expression}} \
+                               // ref-note {{in call to}}
+}
+
+namespace Incomplete {
+  struct Foo {
+    char c;
+    int a[];
+  };
+
+  constexpr Foo F{};
+  constexpr const int *A = F.a; // ref-error {{must be initialized by a constant expression}} \
+                                // ref-note {{array-to-pointer decay of array member without known bound}} \
+                                // expected-error {{must be initialized by a constant expression}} \
+                                // expected-note {{array-to-pointer decay of array member without known bound}}
+
+  constexpr const int *B = F.a + 1; // ref-error {{must be initialized by a constant expression}} \
+                                    // ref-note {{array-to-pointer decay of array member without known bound}} \
+                                    // expected-error {{must be initialized by a constant expression}} \
+                                    // expected-note {{array-to-pointer decay of array member without known bound}}
+
+  constexpr int C = *F.a; // ref-error {{must be initialized by a constant expression}} \
+                          // ref-note {{array-to-pointer decay of array member without known bound}} \
+                          // expected-error {{must be initialized by a constant expression}} \
+                          // expected-note {{array-to-pointer decay of array member without known bound}}
+
+
+
+  /// These are from test/SemaCXX/constant-expression-cxx11.cpp
+  /// and are the only tests using the 'indexing of array without known bound' diagnostic.
+  /// We currently diagnose them differently.
+  extern int arr[]; // expected-note 3{{declared here}}
+  constexpr int *c = &arr[1]; // ref-error  {{must be initialized by a constant expression}} \
+                              // ref-note {{indexing of array without known bound}} \
+                              // expected-error {{must be initialized by a constant expression}} \
+                              // expected-note {{read of non-constexpr variable 'arr'}}
+  constexpr int *d = &arr[1]; // ref-error  {{must be initialized by a constant expression}} \
+                              // ref-note {{indexing of array without known bound}} \
+                              // expected-error {{must be initialized by a constant expression}} \
+                              // expected-note {{read of non-constexpr variable 'arr'}}
+  constexpr int *e = arr + 1; // ref-error  {{must be initialized by a constant expression}} \
+                              // ref-note {{indexing of array without known bound}} \
+                              // expected-error {{must be initialized by a constant expression}} \
+                              // expected-note {{read of non-constexpr variable 'arr'}}
+}

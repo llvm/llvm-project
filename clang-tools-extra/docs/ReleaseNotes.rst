@@ -207,6 +207,11 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`bugprone-dangling-handle
+  <clang-tidy/checks/bugprone/dangling-handle>` check to support functional
+  casting during type conversions at variable initialization, now with improved
+  compatibility for C++17 and later versions.
+
 - Improved :doc:`bugprone-lambda-function-name
   <clang-tidy/checks/bugprone/lambda-function-name>` check by adding option
   `IgnoreMacros` to ignore warnings in macros.
@@ -238,6 +243,11 @@ Changes in existing checks
   coroutine functions and increase issue detection for cases involving type
   aliases with references.
 
+- Improved :doc:`cppcoreguidelines-narrowing-conversions
+  <clang-tidy/checks/cppcoreguidelines/narrowing-conversions>` check by
+  extending the `IgnoreConversionFromTypes` option to include types without a
+  declaration, such as built-in types.
+
 - Improved :doc:`cppcoreguidelines-prefer-member-initializer
   <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>` check to
   ignore delegate constructors.
@@ -250,6 +260,11 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/pro-bounds-constant-array-index>` check
   to perform checks on derived classes of  ``std::array``.
 
+- Improved :doc:`cppcoreguidelines-pro-type-const-cast
+  <clang-tidy/checks/cppcoreguidelines/pro-type-const-cast>` check to ignore
+  casts to ``const`` or ``volatile`` type (controlled by `StrictMode` option)
+  and casts in implicitly invoked code.
+
 - Improved :doc:`cppcoreguidelines-pro-type-member-init
   <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check to ignore
   dependent delegate constructors.
@@ -260,7 +275,8 @@ Changes in existing checks
 
 - Improved :doc:`cppcoreguidelines-rvalue-reference-param-not-moved
   <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>` check
-  to ignore unused parameters when they are marked as unused.
+  to ignore unused parameters when they are marked as unused and parameters of
+  deleted functions and constructors.
 
 - Improved :doc:`llvm-namespace-comment
   <clang-tidy/checks/llvm/namespace-comment>` check to provide fixes for
@@ -289,6 +305,10 @@ Changes in existing checks
 - Improved :doc:`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` check to ignore
   false-positives in unevaluated context (e.g., ``decltype``).
+
+- Improved :doc:`misc-unused-using-decls
+  <clang-tidy/checks/misc/unused-using-decls>` check to avoid false positive when
+  using in elaborated type.
 
 - Improved :doc:`modernize-avoid-bind
   <clang-tidy/checks/modernize/avoid-bind>` check to

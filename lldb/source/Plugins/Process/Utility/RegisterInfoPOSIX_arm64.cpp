@@ -374,6 +374,17 @@ void RegisterInfoPOSIX_arm64::AddRegSetSME() {
       std::make_pair(sme_regnum, m_dynamic_reg_infos.size());
   m_dynamic_reg_sets.push_back(g_reg_set_sme_arm64);
   m_dynamic_reg_sets.back().registers = m_sme_regnum_collection.data();
+
+  // When vg is written during streaming mode, svg will also change, as vg and
+  // svg in this state are both showing the streaming vector length.
+  // We model this as vg invalidating svg. In non-streaming mode this doesn't
+  // happen but to keep things simple we will invalidate svg anyway.
+  //
+  // This must be added now, rather than when vg is defined because SME is a
+  // dynamic set that may or may not be present.
+  static uint32_t vg_invalidates[] = {sme_regnum + 1 /*svg*/,
+                                      LLDB_INVALID_REGNUM};
+  m_dynamic_reg_infos[GetRegNumSVEVG()].invalidate_regs = vg_invalidates;
 }
 
 uint32_t RegisterInfoPOSIX_arm64::ConfigureVectorLengthSVE(uint32_t sve_vq) {

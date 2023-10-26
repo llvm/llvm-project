@@ -316,6 +316,7 @@ public:
                          globalOmpRequiresSymbol = b.symTab.symbol();
                      },
                      [&](Fortran::lower::pft::CompilerDirectiveUnit &d) {},
+                     [&](Fortran::lower::pft::OpenACCDirectiveUnit &d) {},
                  },
                  u);
     }
@@ -328,6 +329,14 @@ public:
               [&](Fortran::lower::pft::ModuleLikeUnit &m) { lowerMod(m); },
               [&](Fortran::lower::pft::BlockDataUnit &b) {},
               [&](Fortran::lower::pft::CompilerDirectiveUnit &d) {},
+              [&](Fortran::lower::pft::OpenACCDirectiveUnit &d) {
+                builder = new fir::FirOpBuilder(bridge.getModule(),
+                                                bridge.getKindMap());
+                Fortran::lower::genOpenACCRoutineConstruct(
+                    *this, bridge.getSemanticsContext(), bridge.getModule(),
+                    d.routine, accRoutineInfos);
+                builder = nullptr;
+              },
           },
           u);
     }
@@ -502,6 +511,15 @@ public:
   void bindSymbol(Fortran::lower::SymbolRef sym,
                   const fir::ExtendedValue &exval) override final {
     addSymbol(sym, exval, /*forced=*/true);
+  }
+
+  void
+  overrideExprValues(const Fortran::lower::ExprToValueMap *map) override final {
+    exprValueOverrides = map;
+  }
+
+  const Fortran::lower::ExprToValueMap *getExprOverrides() override final {
+    return exprValueOverrides;
   }
 
   bool lookupLabelSet(Fortran::lower::SymbolRef sym,
@@ -2360,6 +2378,10 @@ private:
                                    bridge.fctCtx(), accDecl, accRoutineInfos);
     for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations())
       genFIR(e);
+  }
+
+  void genFIR(const Fortran::parser::OpenACCRoutineConstruct &acc) {
+    // Handled by genFIR(const Fortran::parser::OpenACCDeclarativeConstruct &)
   }
 
   void genFIR(const Fortran::parser::OpenMPConstruct &omp) {
@@ -4890,6 +4912,8 @@ private:
   /// Whether an OpenMP target region or declare target function/subroutine
   /// intended for device offloading has been detected
   bool ompDeviceCodeFound = false;
+
+  const Fortran::lower::ExprToValueMap *exprValueOverrides{nullptr};
 };
 
 } // namespace

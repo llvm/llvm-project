@@ -188,6 +188,7 @@ struct DAP {
   ReplModeRequestHandler repl_mode_request_handler;
   ReplMode repl_mode;
   bool auto_repl_mode_collision_warning;
+  std::string command_escape_prefix = "`";
 
   DAP();
   ~DAP();

@@ -200,8 +200,7 @@ enum class ArithOp { Add, Sub };
 // Returning values
 //===----------------------------------------------------------------------===//
 
-/// Pop arguments of builtins defined as func-name(...).
-bool popBuiltinArgs(InterpState &S, CodePtr OpPC);
+void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC);
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
@@ -221,16 +220,8 @@ bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
 
   assert(S.Current);
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
-  if (!S.checkingPotentialConstantExpression() || S.Current->Caller) {
-    // Certain builtin functions are declared as func-name(...), so the
-    // parameters are checked in Sema and only available through the CallExpr.
-    // The interp::Function we create for them has 0 parameters, so we need to
-    // remove them from the stack by checking the CallExpr.
-    if (S.Current->getFunction()->needsRuntimeArgPop(S.getCtx()))
-      popBuiltinArgs(S, PC);
-    else
-      S.Current->popArgs();
-  }
+  if (!S.checkingPotentialConstantExpression() || S.Current->Caller)
+    cleanupAfterFunctionCall(S, PC);
 
   if (InterpFrame *Caller = S.Current->Caller) {
     PC = S.Current->getRetPC();
@@ -248,8 +239,9 @@ bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
 
 inline bool RetVoid(InterpState &S, CodePtr &PC, APValue &Result) {
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
+
   if (!S.checkingPotentialConstantExpression() || S.Current->Caller)
-    S.Current->popArgs();
+    cleanupAfterFunctionCall(S, PC);
 
   if (InterpFrame *Caller = S.Current->Caller) {
     PC = S.Current->getRetPC();
@@ -1810,16 +1802,36 @@ inline bool ArrayElemPtr(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.peek<Pointer>();
 
+  if (!CheckArray(S, OpPC, Ptr))
+    return false;
+
   if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
     return false;
 
   return NarrowPtr(S, OpPC);
 }
 
+/// Just takes a pointer and checks if its' an incomplete
+/// array type.
+inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+
+  if (!Ptr.isUnknownSizeArray())
+    return true;
+
+  const SourceInfo &E = S.Current->getSource(OpPC);
+  S.FFDiag(E, diag::note_constexpr_unsupported_unsized_array);
+
+  return false;
+}
+
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  if (!CheckArray(S, OpPC, Ptr))
+    return false;
 
   if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
     return false;
