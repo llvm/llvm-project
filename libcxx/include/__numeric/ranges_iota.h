@@ -44,8 +44,8 @@ private:
 public:
   // Public facing interfaces
   template <input_or_output_iterator _Out, sentinel_for<_Out> _Sent, weakly_incrementable _Tp>
-  requires indirectly_writable<_Out, const _Tp&> _LIBCPP_HIDE_FROM_ABI static constexpr iota_result<_Out, _Tp>
-  operator()(_Out __first, _Sent __last, _Tp __value) {
+    requires indirectly_writable<_Out, const _Tp&>
+  _LIBCPP_HIDE_FROM_ABI static constexpr iota_result<_Out, _Tp> operator()(_Out __first, _Sent __last, _Tp __value) {
     return __iota_impl(std::move(__first), std::move(__last), std::move(__value));
   }
 
