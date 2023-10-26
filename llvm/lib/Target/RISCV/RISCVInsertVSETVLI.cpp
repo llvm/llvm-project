@@ -1045,8 +1045,7 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
   // places.
   DemandedFields Demanded = getDemanded(MI, MRI, ST);
   if (!Demanded.LMUL && !Demanded.SEWLMULRatio && Info.isValid() &&
-      PrevInfo.isValid() && !Info.isUnknown() && !PrevInfo.isUnknown() &&
-      !Info.hasSameVLMAX(PrevInfo)) {
+      PrevInfo.isValid() && !Info.isUnknown() && !PrevInfo.isUnknown()) {
     if (auto NewVLMul = RISCVVType::getSameRatioLMUL(
             PrevInfo.getSEW(), PrevInfo.getVLMUL(), Info.getSEW()))
       Info.setVLMul(*NewVLMul);
