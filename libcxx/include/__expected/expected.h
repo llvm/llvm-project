@@ -125,8 +125,8 @@ template <class _Union>
 _LIBCPP_HIDE_FROM_ABI constexpr bool __expected_can_stuff_tail() {
   struct __x {
   private:
-    _LIBCPP_NO_UNIQUE_ADDRESS _Union __union;
-    _LIBCPP_NO_UNIQUE_ADDRESS bool __has_val;
+    _LIBCPP_NO_UNIQUE_ADDRESS _Union __union_;
+    _LIBCPP_NO_UNIQUE_ADDRESS bool __has_val_;
   };
   return sizeof(__x) == sizeof(_Union);
 }
