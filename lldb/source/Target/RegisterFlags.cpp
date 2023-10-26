@@ -7,12 +7,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Target/RegisterFlags.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
+
+#include "llvm/ADT/StringExtras.h"
 
 #include <numeric>
 #include <optional>
 
 using namespace lldb_private;
+
+RegisterFlags::Field::Field(std::string name, unsigned start, unsigned end)
+    : m_name(std::move(name)), m_start(start), m_end(end) {
+  assert(m_start <= m_end && "Start bit must be <= end bit.");
+}
 
 void RegisterFlags::Field::log(Log *log) const {
   LLDB_LOG(log, "  Name: \"{0}\" Start: {1} End: {2}", m_name.c_str(), m_start,
@@ -174,4 +182,42 @@ std::string RegisterFlags::AsTable(uint32_t max_width) const {
     EmitTable(table, lines);
 
   return table;
+}
+
+void RegisterFlags::ToXML(StreamString &strm) const {
+  // Example XML:
+  // <flags id="cpsr_flags" size="4">
+  //   <field name="incorrect" start="0" end="0"/>
+  // </flags>
+  strm.Indent();
+  strm << "<flags id=\"" << GetID() << "\" ";
+  strm.Printf("size=\"%d\"", GetSize());
+  strm << ">";
+  for (const Field &field : m_fields) {
+    // Skip padding fields.
+    if (field.GetName().empty())
+      continue;
+
+    strm << "\n";
+    strm.IndentMore();
+    field.ToXML(strm);
+    strm.IndentLess();
+  }
+  strm.PutChar('\n');
+  strm.Indent("</flags>\n");
+}
+
+void RegisterFlags::Field::ToXML(StreamString &strm) const {
+  // Example XML:
+  // <field name="correct" start="0" end="0"/>
+  strm.Indent();
+  strm << "<field name=\"";
+
+  std::string escaped_name;
+  llvm::raw_string_ostream escape_strm(escaped_name);
+  llvm::printHTMLEscaped(GetName(), escape_strm);
+  strm << escaped_name << "\" ";
+
+  strm.Printf("start=\"%d\" end=\"%d\"", GetStart(), GetEnd());
+  strm << "/>";
 }
