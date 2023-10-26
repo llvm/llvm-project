@@ -32,6 +32,7 @@
 #include "llvm/Support/TargetSelect.h"
 
 #include <cstdlib>
+#include <cstring>
 
 using namespace mlir;
 using namespace mlir::spirv;
@@ -79,6 +80,10 @@ std::optional<SmallVector<char, 0>> SPIRVTargetAttrImpl::serializeToObject(
   }
   auto gpuMod = dyn_cast<gpu::GPUModuleOp>(module);
   auto spvMods = gpuMod.getOps<spirv::ModuleOp>();
+  // Empty spirv::ModuleOp
+  if (spvMods.empty()) {
+    return std::nullopt;
+  }
   auto spvMod = *spvMods.begin();
   llvm::SmallVector<uint32_t, 0> spvBinary;
 
@@ -89,11 +94,8 @@ std::optional<SmallVector<char, 0>> SPIRVTargetAttrImpl::serializeToObject(
     return std::nullopt;
   }
 
-  SmallVector<char, 0> spvData;
-  const char *data = reinterpret_cast<const char *>(spvBinary.data());
-  for (uint32_t i = 0; i < spvBinary.size() * sizeof(uint32_t); i++) {
-    spvData.push_back(*(data + i));
-  }
+  SmallVector<char, 0> spvData(spvBinary.size() * sizeof(uint32_t), 0);
+  std::memcpy(spvData.data(), spvBinary.data(), spvData.size());
 
   spvMod.erase();
   return spvData;
