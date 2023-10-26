@@ -60,16 +60,11 @@ int main() {
 #!/bin/bash
 export BINDIR=`dirname $2`
 export CCOMP=$BINDIR/clang
-echo "CCOMP: $CCOMP" > /home/psteinfeld/log
-echo "BINDIR: $BINDIR" >> /home/psteinfeld/log
 if [ -x $CCOMP ]
 then
   export LIBDIR=$BINDIR/../lib
   export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$LIBDIR
   $CCOMP -c $1/$4 -o $1/cfile.o
-  echo "1: $1" >> /home/psteinfeld/log
-  echo "2: $2" >> /home/psteinfeld/log
-  echo "3: $3" >> /home/psteinfeld/log
   $2 $1/$3 $1/cfile.o -o $1/ctofortran
   $1/ctofortran # should print "PASS"
 else
