@@ -10,3 +10,6 @@ Revert "[OpenMP] Basic BumpAllocator for (AMD)GPUs (#69806) "
 
 Revert: waiting on pip install myst-parser 
  b6ff03206 "[Documentation] Replace recommonmark by myst-parser
+
+Revert: breaks cmake  
+  "[CMake] Correctly handle LLVM_ENABLE_RUNTIMES in targets (#69869)"
