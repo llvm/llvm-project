@@ -1176,9 +1176,9 @@ CodeGenRegBank::CodeGenRegBank(RecordKeeper &Records,
     Idx.updateComponents(*this);
 
   // Read in the register and register tuple definitions.
-  std::vector<Record*> Regs = Records.getAllDerivedDefinitions("Register");
-  std::vector<Record*> Tups =
-    Records.getAllDerivedDefinitions("RegisterTuples");
+  std::vector<Record *> Regs = Records.getAllDerivedDefinitions("Register");
+  std::vector<Record *> Tups =
+      Records.getAllDerivedDefinitions("RegisterTuples");
   for (Record *R : Tups) {
     // Expand tuples and merge the vectors
     std::vector<Record *> TupRegs = *Sets.expand(R);
