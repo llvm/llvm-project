@@ -33,12 +33,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
 
   using namespace TargetOpcode;
 
-  getActionDefinitionsBuilder({G_AND, G_OR, G_XOR})
-      .legalFor({XLenLLT})
-      .widenScalarToNextPow2(0)
-      .clampScalar(0, XLenLLT, XLenLLT);
-
-  getActionDefinitionsBuilder({G_ADD, G_SUB})
+  getActionDefinitionsBuilder({G_ADD, G_SUB, G_AND, G_OR, G_XOR})
       .legalFor({s32, XLenLLT})
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, XLenLLT);
