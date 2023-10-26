@@ -76,7 +76,7 @@ PlatformType getPlatformFromName(StringRef Name) {
       .Case("osx", PLATFORM_MACOS)
 #define PLATFORM(platform, id, name, build_name, target, tapi_target,          \
                  marketing)                                                    \
-  .Case(#tapi_target, PLATFORM_##platform)
+  .Case(#target, PLATFORM_##platform)
 #include "llvm/BinaryFormat/MachO.def"
       .Default(PLATFORM_UNKNOWN);
 }

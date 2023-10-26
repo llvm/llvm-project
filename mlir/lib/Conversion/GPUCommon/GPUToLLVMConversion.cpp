@@ -836,7 +836,11 @@ LogicalResult ConvertAllocOpToGpuRuntimeCallPattern::matchAndRewrite(
   // Allocate the underlying buffer and store a pointer to it in the MemRef
   // descriptor.
   Type elementPtrType = this->getElementPtrType(memRefType);
-  auto stream = adaptor.getAsyncDependencies().front();
+
+  auto nullPtr = rewriter.create<mlir::LLVM::ZeroOp>(loc, llvmPointerType);
+  Value stream = adaptor.getAsyncDependencies().empty()
+                     ? nullPtr
+                     : adaptor.getAsyncDependencies().front();
 
   auto isHostShared = rewriter.create<mlir::LLVM::ConstantOp>(
       loc, llvmInt8Type, rewriter.getI8IntegerAttr(isShared));
@@ -855,7 +859,12 @@ LogicalResult ConvertAllocOpToGpuRuntimeCallPattern::matchAndRewrite(
   auto memRefDescriptor = this->createMemRefDescriptor(
       loc, memRefType, allocatedPtr, alignedPtr, shape, strides, rewriter);
 
-  rewriter.replaceOp(allocOp, {memRefDescriptor, stream});
+  if (allocOp.getAsyncToken()) {
+    // Async alloc: make dependent ops use the same stream.
+    rewriter.replaceOp(allocOp, {memRefDescriptor, stream});
+  } else {
+    rewriter.replaceOp(allocOp, {memRefDescriptor});
+  }
 
   return success();
 }

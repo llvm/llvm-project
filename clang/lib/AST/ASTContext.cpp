@@ -1081,7 +1081,7 @@ void ASTContext::deduplicateMergedDefinitonsFor(NamedDecl *ND) {
   for (Module *&M : Merged)
     if (!Found.insert(M).second)
       M = nullptr;
-  llvm::erase_value(Merged, nullptr);
+  llvm::erase(Merged, nullptr);
 }
 
 ArrayRef<Module *>

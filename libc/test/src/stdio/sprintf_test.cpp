@@ -572,7 +572,6 @@ TEST_F(LlvmLibcSPrintfTest, FloatHexExpConv) {
   ForceRoundingMode r(RoundingMode::Nearest);
   double inf = LIBC_NAMESPACE::fputil::FPBits<double>::inf().get_val();
   double nan = LIBC_NAMESPACE::fputil::FPBits<double>::build_nan(1);
-
   written = LIBC_NAMESPACE::sprintf(buff, "%a", 1.0);
   ASSERT_STREQ_LEN(written, buff, "0x1p+0");
 
@@ -937,6 +936,10 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
   ForceRoundingMode r(RoundingMode::Nearest);
   double inf = LIBC_NAMESPACE::fputil::FPBits<double>::inf().get_val();
   double nan = LIBC_NAMESPACE::fputil::FPBits<double>::build_nan(1);
+  long double ld_inf =
+      LIBC_NAMESPACE::fputil::FPBits<long double>::inf().get_val();
+  long double ld_nan =
+      LIBC_NAMESPACE::fputil::FPBits<long double>::build_nan(1);
 
   char big_buff[10000]; // Used for long doubles and other extremely wide
                         // numbers.
@@ -995,6 +998,22 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
 
   written = LIBC_NAMESPACE::sprintf(buff, "%F", -nan);
   ASSERT_STREQ_LEN(written, buff, "-NAN");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%Lf", ld_inf);
+  ASSERT_STREQ_LEN(written, buff, "inf");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%LF", -ld_inf);
+  ASSERT_STREQ_LEN(written, buff, "-INF");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%Lf", ld_nan);
+  ASSERT_STREQ_LEN(written, buff, "nan");
+
+// Some float128 systems (specifically the ones used for aarch64 buildbots)
+// don't respect signs for long double NaNs.
+#if defined(SPECIAL_X86_LONG_DOUBLE) || defined(LONG_DOUBLE_IS_DOUBLE)
+  written = LIBC_NAMESPACE::sprintf(buff, "%LF", -ld_nan);
+  ASSERT_STREQ_LEN(written, buff, "-NAN");
+#endif
 
   // Length Modifier Tests.
 
