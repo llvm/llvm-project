@@ -11307,7 +11307,6 @@ private:
   /// on the parameter of the bind clause. In the methods for the
   /// mapped directives, check the parameters of the lastprivate clause.
   bool checkLastPrivateForMappedDirectives(ArrayRef<OMPClause *> Clauses);
-
   /// Depending on the bind clause of OMPD_loop map the directive to new
   /// directives.
   ///    1) loop bind(parallel) --> OMPD_for
@@ -11317,12 +11316,9 @@ private:
   /// rigorous semantic checking in the new mapped directives.
   bool mapLoopConstruct(llvm::SmallVector<OMPClause *> &ClausesWithoutBind,
                         ArrayRef<OMPClause *> Clauses,
-                        OpenMPBindClauseKind &BindKind,
+                        OpenMPBindClauseKind BindKind,
                         OpenMPDirectiveKind &Kind,
-                        OpenMPDirectiveKind &PrevMappedDirective,
-                        SourceLocation StartLoc, SourceLocation EndLoc,
-                        const DeclarationNameInfo &DirName,
-                        OpenMPDirectiveKind CancelRegion);
+                        OpenMPDirectiveKind &PrevMappedDirective);
 
 public:
   /// The declarator \p D defines a function in the scope \p S which is nested
