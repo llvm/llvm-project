@@ -149,6 +149,7 @@ macro(opencl_bc_lib)
   add_custom_target("${name}" ALL
     DEPENDS "${OUTPUT_DIR}/${OUT_NAME}${FINAL_SUFFIX}"
     SOURCES ${OPENCL_BC_LIB_SOURCES})
+  add_dependencies(rocm-device-libs "${name}")
   set_target_properties(${name} PROPERTIES
     OUTPUT_NAME "${OUTPUT_DIR}/${OUT_NAME}${FINAL_SUFFIX}"
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
