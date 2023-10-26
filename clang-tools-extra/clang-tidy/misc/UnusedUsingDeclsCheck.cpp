@@ -8,6 +8,7 @@
 
 #include "UnusedUsingDeclsCheck.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Decl.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 
@@ -71,6 +72,10 @@ void UnusedUsingDeclsCheck::registerMatchers(MatchFinder *Finder) {
                          templateArgument().bind("used")))),
                      this);
   Finder->addMatcher(userDefinedLiteral().bind("used"), this);
+  Finder->addMatcher(
+      loc(elaboratedType(unless(hasQualifier(nestedNameSpecifier())),
+                         hasUnqualifiedDesugaredType(type().bind("usedType")))),
+      this);
   // Cases where we can identify the UsingShadowDecl directly, rather than
   // just its target.
   // FIXME: cover more cases in this way, as the AST supports it.
@@ -142,6 +147,12 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
   // marked after a corresponding using decl has been found.
   if (const auto *Used = Result.Nodes.getNodeAs<NamedDecl>("used")) {
     RemoveNamedDecl(Used);
+    return;
+  }
+
+  if (const auto *T = Result.Nodes.getNodeAs<Type>("usedType")) {
+    if (const auto *ND = T->getAsTagDecl())
+      RemoveNamedDecl(ND);
     return;
   }
 
