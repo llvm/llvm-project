@@ -446,7 +446,19 @@ struct TransposeOpToArmSMELowering
 ///    %maskA = vector.create_mask %dimA : vector<[4]xi1>
 ///    %maskB = vector.create_mask %dimB : vector<[4]xi1>
 ///    %result = arm_sme.outerproduct %vecA, %vecB masks(%maskA, %maskB)
-///                : vector<[4]xf32>, vector<[4]xf32>, vector<[4]x[4]xf32>
+///                : vector<[4]xf32>, vector<[4]xf32>
+///
+/// Unmasked outerproducts can be directly replaced with the arm_sme op.
+///
+/// Example:
+///
+///   %result = vector.outerproduct %vecA, %vecB
+///              : vector<[4]xf32>, vector<[4]xf32>
+///
+/// is converted to:
+///
+///   %result = arm_sme.outerproduct %vecA, %vecB
+///              : vector<[4]xf32>, vector<[4]xf32>
 ///
 struct VectorOuterProductToArmSMELowering
     : public OpRewritePattern<vector::OuterProductOp> {
@@ -455,13 +467,21 @@ struct VectorOuterProductToArmSMELowering
 
   LogicalResult matchAndRewrite(vector::OuterProductOp outerProductOp,
                                 PatternRewriter &rewriter) const override {
-    // AXPY operation not suited for SME.
+
+    // We don't yet support lowering AXPY operations to SME. These could be
+    // lowered by masking out all but the first element of the LHS.
     if (!isa<VectorType>(outerProductOp.getOperandTypeRHS()))
       return outerProductOp.emitError("AXPY operations not supported");
 
+    if (!arm_sme::isValidSMETileVectorType(
+            outerProductOp.getResultVectorType()))
+      return outerProductOp.emitError(
+          "outer product does not fit into SME tile");
+
     auto kind = outerProductOp.getKind();
     if (kind != vector::CombiningKind::ADD)
-      return outerProductOp.emitError("unsupported kind");
+      return outerProductOp.emitError(
+          "unsupported kind (lowering to SME only supports ADD at the moment)");
 
     Value lhsMask = {};
     Value rhsMask = {};
@@ -478,12 +498,8 @@ struct VectorOuterProductToArmSMELowering
       if (!createMaskOp)
         return failure();
 
-      auto maskType = createMaskOp.getVectorType();
-      if (maskType.getRank() != 2)
-        return failure();
-
       auto loc = outerProductOp.getLoc();
-
+      auto maskType = createMaskOp.getVectorType();
       Value lhsMaskDim = createMaskOp.getOperand(0);
       Value rhsMaskDim = createMaskOp.getOperand(1);
 
