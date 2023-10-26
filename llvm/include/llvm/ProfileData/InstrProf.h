@@ -220,8 +220,8 @@ StringRef getPGOFuncNameVarInitializer(GlobalVariable *NameVar);
 StringRef getFuncNameWithoutPrefix(StringRef PGOFuncName,
                                    StringRef FileName = "<unknown>");
 
-/// Given a vector of strings (names of global objects, like func PGO names,
-/// virtual tables, etc) \c NameStrs, the method generates a combined string \c
+/// Given a vector of strings (names of global objects like functions or,
+/// virtual tables) \c NameStrs, the method generates a combined string \c
 /// Result that is ready to be serialized.  The \c Result string is comprised of
 /// three fields: The first field is the length of the uncompressed strings, and
 /// the the second field is the length of the zlib-compressed string. Both
