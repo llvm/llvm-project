@@ -347,8 +347,9 @@ std::string getIRPGOFuncName(const Function &F, bool InLTO) {
 }
 
 // This is similar to `getIRPGOFuncName` except that this function calls
-// 'getIRPGOFuncName' to get a name and `getIRPGOFuncName` calls 'getIRPGOName'.
-// See the difference between two callees in the comments of `getIRPGOFuncName`.
+// 'getPGOFuncName' to get a name and `getIRPGOFuncName` calls
+// 'getIRPGONameForGlobalObject'. See the difference between two callees in the
+// comments of `getIRPGONameForGlobalObject`.
 std::string getPGOFuncName(const Function &F, bool InLTO, uint64_t Version) {
   if (!InLTO) {
     auto FileName = getStrippedSourceFileName(F);
