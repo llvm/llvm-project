@@ -78,7 +78,7 @@ def FSD : FPStore_r<0b011, "fsd", FPR64, WriteFST64>;
 } // Predicates = [HasStdExtD]
 
 foreach Ext = DExts in {
-  let SchedRW = [WriteFMA64, ReadFMA64, ReadFMA64, ReadFMA64] in {
+  let SchedRW = [WriteFMA64, ReadFMA64, ReadFMA64, ReadFMA64Addend] in {
     defm FMADD_D  : FPFMA_rrr_frm_m<OPC_MADD,  0b01, "fmadd.d",  Ext>;
     defm FMSUB_D  : FPFMA_rrr_frm_m<OPC_MSUB,  0b01, "fmsub.d",  Ext>;
     defm FNMSUB_D : FPFMA_rrr_frm_m<OPC_NMSUB, 0b01, "fnmsub.d", Ext>;
