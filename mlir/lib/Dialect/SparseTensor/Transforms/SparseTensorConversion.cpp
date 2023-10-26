@@ -336,6 +336,18 @@ public:
   }
 };
 
+class SparseReMapConverter : public OpConversionPattern<ReinterpretMapOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(ReinterpretMapOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Simply fold the operation.
+    rewriter.replaceOp(op, adaptor.getSource());
+    return success();
+  }
+};
+
 /// Sparse conversion rule for the new operator.
 class SparseTensorNewConverter : public OpConversionPattern<NewOp> {
 public:
@@ -770,7 +782,7 @@ void mlir::populateSparseTensorConversionPatterns(TypeConverter &typeConverter,
                                                   RewritePatternSet &patterns) {
   patterns
       .add<SparseReturnConverter, SparseTensorLvlOpConverter,
-           SparseCastConverter, SparseTensorNewConverter,
+           SparseCastConverter, SparseReMapConverter, SparseTensorNewConverter,
            SparseTensorAllocConverter, SparseTensorEmptyConverter,
            SparseTensorDeallocConverter, SparseTensorReorderCOOConverter,
            SparseTensorToPositionsConverter, SparseTensorToCoordinatesConverter,
