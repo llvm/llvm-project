@@ -1611,24 +1611,29 @@ private:
     template <class T> friend class TypePropertyCache;
 
     /// TypeClass bitfield - Enum that specifies what subclass this belongs to.
-    [[clang::preferred_type(TypeClass)]] unsigned TC : 8;
+    [[clang::preferred_type(TypeClass)]]
+    unsigned TC : 8;
 
     /// Store information on the type dependency.
-    [[clang::preferred_type(TypeDependence)]] unsigned Dependence
-        : llvm::BitWidth<TypeDependence>;
+    [[clang::preferred_type(TypeDependence)]]
+    unsigned Dependence : llvm::BitWidth<TypeDependence>;
 
     /// True if the cache (i.e. the bitfields here starting with
     /// 'Cache') is valid.
-    [[clang::preferred_type(bool)]] mutable unsigned CacheValid : 1;
+    [[clang::preferred_type(bool)]]
+    mutable unsigned CacheValid : 1;
 
     /// Linkage of this type.
-    [[clang::preferred_type(Linkage)]] mutable unsigned CachedLinkage : 3;
+    [[clang::preferred_type(Linkage)]]
+    mutable unsigned CachedLinkage : 3;
 
     /// Whether this type involves and local or unnamed types.
-    [[clang::preferred_type(bool)]] mutable unsigned CachedLocalOrUnnamed : 1;
+    [[clang::preferred_type(bool)]]
+    mutable unsigned CachedLocalOrUnnamed : 1;
 
     /// Whether this type comes from an AST file.
-    [[clang::preferred_type(bool)]] mutable unsigned FromAST : 1;
+    [[clang::preferred_type(bool)]]
+    mutable unsigned FromAST : 1;
 
     bool isCacheValid() const {
       return CacheValid;
@@ -1653,11 +1658,13 @@ protected:
   class ArrayTypeBitfields {
     friend class ArrayType;
 
-    [[clang::preferred_type(TypeBitfields)]] unsigned : NumTypeBits;
+    [[clang::preferred_type(TypeBitfields)]]
+    unsigned : NumTypeBits;
 
     /// CVR qualifiers from declarations like
     /// 'int X[static restrict 4]'. For function parameters only.
-    [[clang::preferred_type(Qualifiers)]] unsigned IndexTypeQuals : 3;
+    [[clang::preferred_type(Qualifiers)]]
+    unsigned IndexTypeQuals : 3;
 
     /// Storage class qualifiers from declarations like
     /// 'int X[static restrict 4]'. For function parameters only.
@@ -1672,13 +1679,15 @@ protected:
     unsigned : NumArrayTypeBits;
 
     /// Whether we have a stored size expression.
-    [[clang::preferred_type(bool)]] unsigned HasStoredSizeExpr : 1;
+    [[clang::preferred_type(bool)]]
+    unsigned HasStoredSizeExpr : 1;
   };
 
   class BuiltinTypeBitfields {
     friend class BuiltinType;
 
-    [[clang::preferred_type(TypeBitfields)]] unsigned : NumTypeBits;
+    [[clang::preferred_type(TypeBitfields)]]
+    unsigned : NumTypeBits;
 
     /// The kind (BuiltinType::Kind) of builtin type this is.
     static constexpr unsigned NumOfBuiltinTypeBits = 9;
@@ -1692,16 +1701,19 @@ protected:
     friend class FunctionProtoType;
     friend class FunctionType;
 
-    [[clang::preferred_type(TypeBitfields)]] unsigned : NumTypeBits;
+    [[clang::preferred_type(TypeBitfields)]]
+    unsigned : NumTypeBits;
 
     /// Extra information which affects how the function is called, like
     /// regparm and the calling convention.
-    [[clang::preferred_type(CallingConv)]] unsigned ExtInfo : 13;
+    [[clang::preferred_type(CallingConv)]]
+    unsigned ExtInfo : 13;
 
     /// The ref-qualifier associated with a \c FunctionProtoType.
     ///
     /// This is a value of type \c RefQualifierKind.
-    [[clang::preferred_type(RefQualifierKind)]] unsigned RefQualifier : 2;
+    [[clang::preferred_type(RefQualifierKind)]]
+    unsigned RefQualifier : 2;
 
     /// Used only by FunctionProtoType, put here to pack with the
     /// other bitfields.
@@ -1709,10 +1721,11 @@ protected:
     ///
     /// C++ 8.3.5p4: The return type, the parameter type list and the
     /// cv-qualifier-seq, [...], are part of the function type.
-    [[clang::preferred_type(Qualifiers)]] unsigned FastTypeQuals
-        : Qualifiers::FastWidth;
+    [[clang::preferred_type(Qualifiers)]]
+    unsigned FastTypeQuals : Qualifiers::FastWidth;
     /// Whether this function has extended Qualifiers.
-    [[clang::preferred_type(bool)]] unsigned HasExtQuals : 1;
+    [[clang::preferred_type(bool)]]
+    unsigned HasExtQuals : 1;
 
     /// The number of parameters this function has, not counting '...'.
     /// According to [implimits] 8 bits should be enough here but this is
@@ -1721,26 +1734,31 @@ protected:
     unsigned NumParams : 16;
 
     /// The type of exception specification this function has.
-    [[clang::preferred_type(
-        ExceptionSpecificationType)]] unsigned ExceptionSpecType : 4;
+    [[clang::preferred_type(ExceptionSpecificationType)]]
+    unsigned ExceptionSpecType : 4;
 
     /// Whether this function has extended parameter information.
-    [[clang::preferred_type(bool)]] unsigned HasExtParameterInfos : 1;
+    [[clang::preferred_type(bool)]]
+    unsigned HasExtParameterInfos : 1;
 
     /// Whether this function has extra bitfields for the prototype.
-    [[clang::preferred_type(bool)]] unsigned HasExtraBitfields : 1;
+    [[clang::preferred_type(bool)]]
+    unsigned HasExtraBitfields : 1;
 
     /// Whether the function is variadic.
-    [[clang::preferred_type(bool)]] unsigned Variadic : 1;
+    [[clang::preferred_type(bool)]]
+    unsigned Variadic : 1;
 
     /// Whether this function has a trailing return type.
-    [[clang::preferred_type(bool)]] unsigned HasTrailingReturn : 1;
+    [[clang::preferred_type(bool)]]
+    unsigned HasTrailingReturn : 1;
   };
 
   class ObjCObjectTypeBitfields {
     friend class ObjCObjectType;
 
-    [[clang::preferred_type(TypeBitfields)]] unsigned : NumTypeBits;
+    [[clang::preferred_type(TypeBitfields)]]
+    unsigned : NumTypeBits;
 
     /// The number of type arguments stored directly on this object type.
     unsigned NumTypeArgs : 7;
@@ -1749,13 +1767,15 @@ protected:
     unsigned NumProtocols : 6;
 
     /// Whether this is a "kindof" type.
-    [[clang::preferred_type(bool)]] unsigned IsKindOf : 1;
+    [[clang::preferred_type(bool)]]
+    unsigned IsKindOf : 1;
   };
 
   class ReferenceTypeBitfields {
     friend class ReferenceType;
 
-    [[clang::preferred_type(TypeBitfields)]] unsigned : NumTypeBits;
+    [[clang::preferred_type(TypeBitfields)]]
+    unsigned : NumTypeBits;
 
     /// True if the type was originally spelled with an lvalue sigil.
     /// This is never true of rvalue references but can also be false
@@ -1768,17 +1788,20 @@ protected:
     ///   ref &&a;             // lvalue, inner ref
     ///   rvref &a;            // lvalue, inner ref, spelled lvalue
     ///   rvref &&a;           // rvalue, inner ref
-    [[clang::preferred_type(bool)]] unsigned SpelledAsLValue : 1;
+    [[clang::preferred_type(bool)]]
+    unsigned SpelledAsLValue : 1;
 
     /// True if the inner type is a reference type.  This only happens
     /// in non-canonical forms.
-    [[clang::preferred_type(bool)]] unsigned InnerRef : 1;
+    [[clang::preferred_type(bool)]]
+    unsigned InnerRef : 1;
   };
 
   class TypeWithKeywordBitfields {
     friend class TypeWithKeyword;
 
-    [[clang::preferred_type(TypeBitfields)]] unsigned : NumTypeBits;
+    [[clang::preferred_type(TypeBitfields)]]
+    unsigned : NumTypeBits;
 
     /// An ElaboratedTypeKeyword.  8 bits for efficient access.
     unsigned Keyword : 8;
@@ -1789,18 +1812,20 @@ protected:
   class ElaboratedTypeBitfields {
     friend class ElaboratedType;
 
-    [[clang::preferred_type(TypeWithKeywordBitfields)]] unsigned
-        : NumTypeWithKeywordBits;
+    [[clang::preferred_type(TypeWithKeywordBitfields)]]
+    unsigned : NumTypeWithKeywordBits;
 
     /// Whether the ElaboratedType has a trailing OwnedTagDecl.
-    [[clang::preferred_type(bool)]] unsigned HasOwnedTagDecl : 1;
+    [[clang::preferred_type(bool)]]
+    unsigned HasOwnedTagDecl : 1;
   };
 
   class VectorTypeBitfields {
     friend class VectorType;
     friend class DependentVectorType;
 
-    [[clang::preferred_type(TypeBitfields)]] unsigned : NumTypeBits;
+    [[clang::preferred_type(TypeBitfields)]]
+    unsigned : NumTypeBits;
 
     /// The kind of vector, either a generic vector type or some
     /// target-specific vector type such as for AltiVec or Neon.
@@ -1812,7 +1837,8 @@ protected:
   class AttributedTypeBitfields {
     friend class AttributedType;
 
-    [[clang::preferred_type(TypeBitfields)]] unsigned : NumTypeBits;
+    [[clang::preferred_type(TypeBitfields)]]
+    unsigned : NumTypeBits;
 
     /// An AttributedType::Kind
     unsigned AttrKind : 32 - NumTypeBits;
@@ -1821,11 +1847,13 @@ protected:
   class AutoTypeBitfields {
     friend class AutoType;
 
-    [[clang::preferred_type(TypeBitfields)]] unsigned : NumTypeBits;
+    [[clang::preferred_type(TypeBitfields)]]
+    unsigned : NumTypeBits;
 
     /// Was this placeholder type spelled as 'auto', 'decltype(auto)',
     /// or '__auto_type'?  AutoTypeKeyword value.
-    [[clang::preferred_type(AutoTypeKeyword)]] unsigned Keyword : 2;
+    [[clang::preferred_type(AutoTypeKeyword)]]
+    unsigned Keyword : 2;
 
     /// The number of template arguments in the type-constraints, which is
     /// expected to be able to hold at least 1024 according to [implimits].
@@ -1841,9 +1869,10 @@ protected:
     friend class TypeOfType;
     friend class TypeOfExprType;
 
-    [[clang::preferred_type(TypeBitfields)]] unsigned : NumTypeBits;
-    [[clang::preferred_type(
-        bool)]] unsigned IsUnqual : 1; // If true: typeof_unqual, else: typeof
+    [[clang::preferred_type(TypeBitfields)]]
+    unsigned : NumTypeBits;
+    [[clang::preferred_type(bool)]]
+    unsigned IsUnqual : 1; // If true: typeof_unqual, else: typeof
   };
 
   class UsingBitfields {
@@ -1852,24 +1881,29 @@ protected:
     [[clang::preferred_type(TypeBitfields)]] unsigned : NumTypeBits;
 
     /// True if the underlying type is different from the declared one.
-    [[clang::preferred_type(bool)]] unsigned hasTypeDifferentFromDecl : 1;
+    [[clang::preferred_type(bool)]]
+    unsigned hasTypeDifferentFromDecl : 1;
   };
 
   class TypedefBitfields {
     friend class TypedefType;
 
-    [[clang::preferred_type(TypeBitfields)]] unsigned : NumTypeBits;
+    [[clang::preferred_type(TypeBitfields)]]
+    unsigned : NumTypeBits;
 
     /// True if the underlying type is different from the declared one.
-    [[clang::preferred_type(bool)]] unsigned hasTypeDifferentFromDecl : 1;
+    [[clang::preferred_type(bool)]]
+    unsigned hasTypeDifferentFromDecl : 1;
   };
 
   class SubstTemplateTypeParmTypeBitfields {
     friend class SubstTemplateTypeParmType;
 
-    [[clang::preferred_type(TypeBitfields)]] unsigned : NumTypeBits;
+    [[clang::preferred_type(TypeBitfields)]]
+    unsigned : NumTypeBits;
 
-    [[clang::preferred_type(bool)]] unsigned HasNonCanonicalUnderlyingType : 1;
+    [[clang::preferred_type(bool)]]
+    unsigned HasNonCanonicalUnderlyingType : 1;
 
     // The index of the template parameter this substitution represents.
     unsigned Index : 15;
@@ -1885,7 +1919,8 @@ protected:
   class SubstTemplateTypeParmPackTypeBitfields {
     friend class SubstTemplateTypeParmPackType;
 
-    [[clang::preferred_type(TypeBitfields)]] unsigned : NumTypeBits;
+    [[clang::preferred_type(TypeBitfields)]]
+    unsigned : NumTypeBits;
 
     // The index of the template parameter this substitution represents.
     unsigned Index : 16;
@@ -1900,10 +1935,12 @@ protected:
   class TemplateSpecializationTypeBitfields {
     friend class TemplateSpecializationType;
 
-    [[clang::preferred_type(TypeBitfields)]] unsigned : NumTypeBits;
+    [[clang::preferred_type(TypeBitfields)]]
+    unsigned : NumTypeBits;
 
     /// Whether this template specialization type is a substituted type alias.
-    [[clang::preferred_type(bool)]] unsigned TypeAlias : 1;
+    [[clang::preferred_type(bool)]]
+    unsigned TypeAlias : 1;
 
     /// The number of template arguments named in this class template
     /// specialization, which is expected to be able to hold at least 1024
@@ -1933,7 +1970,8 @@ protected:
   class PackExpansionTypeBitfields {
     friend class PackExpansionType;
 
-    [[clang::preferred_type(TypeBitfields)]] unsigned : NumTypeBits;
+    [[clang::preferred_type(TypeBitfields)]]
+    unsigned : NumTypeBits;
 
     /// The number of expansions that this pack expansion will
     /// generate when substituted (+1), which is expected to be able to
