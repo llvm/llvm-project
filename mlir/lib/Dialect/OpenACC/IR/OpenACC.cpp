@@ -131,7 +131,8 @@ LogicalResult acc::CopyinOp::verify() {
   // Test for all clauses this operation can be decomposed from:
   if (!getImplicit() && getDataClause() != acc::DataClause::acc_copyin &&
       getDataClause() != acc::DataClause::acc_copyin_readonly &&
-      getDataClause() != acc::DataClause::acc_copy)
+      getDataClause() != acc::DataClause::acc_copy &&
+      getDataClause() != acc::DataClause::acc_reduction)
     return emitError(
         "data clause associated with copyin operation must match its intent"
         " or specify original clause this operation was decomposed from");
@@ -212,7 +213,8 @@ LogicalResult acc::CopyoutOp::verify() {
   // Test for all clauses this operation can be decomposed from:
   if (getDataClause() != acc::DataClause::acc_copyout &&
       getDataClause() != acc::DataClause::acc_copyout_zero &&
-      getDataClause() != acc::DataClause::acc_copy)
+      getDataClause() != acc::DataClause::acc_copy &&
+      getDataClause() != acc::DataClause::acc_reduction)
     return emitError(
         "data clause associated with copyout operation must match its intent"
         " or specify original clause this operation was decomposed from");

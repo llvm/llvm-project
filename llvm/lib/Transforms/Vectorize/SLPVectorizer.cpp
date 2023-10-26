@@ -7633,9 +7633,6 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     SmallVector<const TreeEntry *> Entries;
     // Check for gathered extracts.
     ExtractShuffle = tryToGatherSingleRegisterExtractElements(GatheredScalars, ExtractMask);
-    SmallVector<Value *> IgnoredVals;
-    if (UserIgnoreList)
-      IgnoredVals.assign(UserIgnoreList->begin(), UserIgnoreList->end());
 
     bool Resized = false;
     if (Value *VecBase = Estimator.adjustExtracts(
@@ -9059,6 +9056,7 @@ BoUpSLP::isGatherShuffledEntry(const TreeEntry *TE, ArrayRef<Value *> VL,
   // blocks.
   if (auto *PHI = dyn_cast<PHINode>(TEUseEI.UserTE->getMainOp())) {
     TEInsertBlock = PHI->getIncomingBlock(TEUseEI.EdgeIdx);
+    TEInsertPt = TEInsertBlock->getTerminator();
   } else {
     TEInsertBlock = TEInsertPt->getParent();
   }
@@ -9122,9 +9120,10 @@ BoUpSLP::isGatherShuffledEntry(const TreeEntry *TE, ArrayRef<Value *> VL,
       const Instruction *InsertPt =
           UserPHI ? UserPHI->getIncomingBlock(UseEI.EdgeIdx)->getTerminator()
                   : &getLastInstructionInBundle(UseEI.UserTE);
-      if (!UserPHI && TEInsertPt == InsertPt) {
-        // If 2 gathers are operands of the same non-PHI entry,
-        // compare operands indices, use the earlier one as the base.
+      if (TEInsertPt == InsertPt) {
+        // If 2 gathers are operands of the same entry (regardless of wether
+        // user is PHI or else), compare operands indices, use the earlier one
+        // as the base.
         if (TEUseEI.UserTE == UseEI.UserTE && TEUseEI.EdgeIdx < UseEI.EdgeIdx)
           continue;
         // If the user instruction is used for some reason in different
@@ -10184,9 +10183,6 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
     // Check for gathered extracts.
     ExtractShuffle =
         tryToGatherSingleRegisterExtractElements(GatheredScalars, ExtractMask);
-    SmallVector<Value *> IgnoredVals;
-    if (UserIgnoreList)
-      IgnoredVals.assign(UserIgnoreList->begin(), UserIgnoreList->end());
     bool Resized = false;
     if (Value *VecBase = ShuffleBuilder.adjustExtracts(E, ExtractMask))
       if (auto *VecBaseTy = dyn_cast<FixedVectorType>(VecBase->getType()))
@@ -11250,7 +11246,18 @@ Value *BoUpSLP::vectorizeTree(
     TE->VectorizedValue = nullptr;
     auto *UserI =
         cast<Instruction>(TE->UserTreeIndices.front().UserTE->VectorizedValue);
-    Builder.SetInsertPoint(PrevVec);
+    // If user is a PHI node, its vector code have to be inserted right before
+    // block terminator. Since the node was delayed, there were some unresolved
+    // dependencies at the moment when stab instruction was emitted. In a case
+    // when any of these dependencies turn out an operand of another PHI, coming
+    // from this same block, position of a stab instruction will become invalid.
+    // The is because source vector that supposed to feed this gather node was
+    // inserted at the end of the block [after stab instruction]. So we need
+    // to adjust insertion point again to the end of block.
+    if (isa<PHINode>(UserI))
+      Builder.SetInsertPoint(PrevVec->getParent()->getTerminator());
+    else
+      Builder.SetInsertPoint(PrevVec);
     Builder.SetCurrentDebugLocation(UserI->getDebugLoc());
     Value *Vec = vectorizeTree(TE, /*PostponedPHIs=*/false);
     PrevVec->replaceAllUsesWith(Vec);
@@ -14707,8 +14714,8 @@ static bool findBuildAggregate(Instruction *LastInsertInst,
   InsertElts.resize(*AggregateSize);
 
   findBuildAggregate_rec(LastInsertInst, TTI, BuildVectorOpds, InsertElts, 0);
-  llvm::erase_value(BuildVectorOpds, nullptr);
-  llvm::erase_value(InsertElts, nullptr);
+  llvm::erase(BuildVectorOpds, nullptr);
+  llvm::erase(InsertElts, nullptr);
   if (BuildVectorOpds.size() >= 2)
     return true;
 
