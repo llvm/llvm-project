@@ -72,7 +72,7 @@ struct InlineDescriptor {
   /// Flag indicating if the field is mutable (if in a record).
   unsigned IsFieldMutable : 1;
 
-  Descriptor *Desc;
+  const Descriptor *Desc;
 };
 
 /// Describes a memory block created by an allocation site.
@@ -84,7 +84,7 @@ private:
   const unsigned ElemSize;
   /// Size of the storage, in host bytes.
   const unsigned Size;
-  // Size of the metadata.
+  /// Size of the metadata.
   const unsigned MDSize;
   /// Size of the allocation (storage + metadata), in host bytes.
   const unsigned AllocSize;
@@ -102,7 +102,7 @@ public:
   /// Pointer to the record, if block contains records.
   Record *const ElemRecord = nullptr;
   /// Descriptor of the array element.
-  Descriptor *const ElemDesc = nullptr;
+  const Descriptor *const ElemDesc = nullptr;
   /// Flag indicating if the block is mutable.
   const bool IsConst = false;
   /// Flag indicating if a field is mutable.
@@ -111,6 +111,8 @@ public:
   const bool IsTemporary = false;
   /// Flag indicating if the block is an array.
   const bool IsArray = false;
+  /// Flag indicating if this is a dummy descriptor.
+  const bool IsDummy = false;
 
   /// Storage management methods.
   const BlockCtorFn CtorFn = nullptr;
@@ -129,7 +131,7 @@ public:
   Descriptor(const DeclTy &D, PrimType Type, bool IsTemporary, UnknownSize);
 
   /// Allocates a descriptor for an array of composites.
-  Descriptor(const DeclTy &D, Descriptor *Elem, MetadataSize MD,
+  Descriptor(const DeclTy &D, const Descriptor *Elem, MetadataSize MD,
              unsigned NumElems, bool IsConst, bool IsTemporary, bool IsMutable);
 
   /// Allocates a descriptor for an array of composites of unknown size.
@@ -138,6 +140,8 @@ public:
   /// Allocates a descriptor for a record.
   Descriptor(const DeclTy &D, Record *R, MetadataSize MD, bool IsConst,
              bool IsTemporary, bool IsMutable);
+
+  Descriptor(const DeclTy &D, MetadataSize MD);
 
   QualType getType() const;
   QualType getElemQualType() const;
@@ -192,6 +196,8 @@ public:
   bool isArray() const { return IsArray; }
   /// Checks if the descriptor is of a record.
   bool isRecord() const { return !IsArray && ElemRecord; }
+  /// Checks if this is a dummy descriptor.
+  bool isDummy() const { return IsDummy; }
 };
 
 /// Bitfield tracking the initialisation status of elements of primitive arrays.

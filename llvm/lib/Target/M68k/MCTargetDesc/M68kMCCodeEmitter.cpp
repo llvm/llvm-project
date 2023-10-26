@@ -209,7 +209,7 @@ void M68kMCCodeEmitter::encodeInstruction(const MCInst &MI,
 
   // Try using the new method first.
   APInt EncodedInst(16, 0U);
-  APInt Scratch(16, 0U);
+  APInt Scratch(64, 0U); // One APInt word is enough.
   getBinaryCodeForInstr(MI, Fixups, EncodedInst, Scratch, STI);
 
   ArrayRef<uint64_t> Data(EncodedInst.getRawData(), EncodedInst.getNumWords());

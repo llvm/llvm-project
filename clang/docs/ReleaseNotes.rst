@@ -185,7 +185,7 @@ C23 Feature Support
 - Clang now supports ``N3007 Type inference for object definitions``.
 
 - Clang now supports ``<stdckdint.h>`` which defines several macros for performing
-  checked integer arithmetic.
+  checked integer arithmetic. It is also exposed in pre-C23 modes.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -638,6 +638,10 @@ Bug Fixes to C++ Support
   (`#46200 <https://github.com/llvm/llvm-project/issues/46200>`_)
   (`#57812 <https://github.com/llvm/llvm-project/issues/57812>`_)
 
+- Diagnose use of a variable-length array in a coroutine. The design of
+  coroutines is such that it is not possible to support VLA use. Fixes:
+  (`#65858 <https://github.com/llvm/llvm-project/issues/65858>`_)
+
 - Fix bug where we were overriding zero-initialization of class members when
   default initializing a base class in a constant expression context. Fixes:
   (`#69890 <https://github.com/llvm/llvm-project/issues/69890>`_)
@@ -652,6 +656,9 @@ Bug Fixes to AST Handling
   `Issue 64170 <https://github.com/llvm/llvm-project/issues/64170>`_
 - Fixed ``hasAnyBase`` not binding nodes in its submatcher.
   (`#65421 <https://github.com/llvm/llvm-project/issues/65421>`_)
+- Fixed a bug where RecursiveASTVisitor fails to visit the
+  initializer of a bitfield.
+  `Issue 64916 <https://github.com/llvm/llvm-project/issues/64916>`_
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
