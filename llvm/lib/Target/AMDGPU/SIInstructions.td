@@ -2278,17 +2278,24 @@ def : GCNPat <
   (REG_SEQUENCE SReg_64, $src, sub0, (i32 (IMPLICIT_DEF)), sub1)
 >;
 
-class ZExt_i64_i1_Pat <SDNode ext> : GCNPat <
-  (i64 (ext i1:$src)),
-    (REG_SEQUENCE VReg_64,
-      (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
-                         /*src1mod*/(i32 0), /*src1*/(i32 1), $src),
-      sub0, (S_MOV_B32 (i32 0)), sub1)
->;
+multiclass ZExt_i64_i1_Pat <SDNode ext> {
+  def: GCNPat <
+    (i64 (ext i1:$src)),
+      (REG_SEQUENCE VReg_64,
+        (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                           /*src1mod*/(i32 0), /*src1*/(i32 1), $src),
+        sub0, (S_MOV_B32 (i32 0)), sub1)
+  >;
+
+  def : GCNPat <
+    (i64 (UniformUnaryFrag<ext> SCC)),
+    (S_CSELECT_B64 (i64 1), (i64 0))
+  >;
+}
 
 
-def : ZExt_i64_i1_Pat<zext>;
-def : ZExt_i64_i1_Pat<anyext>;
+defm : ZExt_i64_i1_Pat<zext>;
+defm : ZExt_i64_i1_Pat<anyext>;
 
 // FIXME: We need to use COPY_TO_REGCLASS to work-around the fact that
 // REG_SEQUENCE patterns don't support instructions with multiple outputs.
