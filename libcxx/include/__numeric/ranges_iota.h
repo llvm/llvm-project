@@ -44,13 +44,14 @@ private:
 public:
   // Public facing interfaces
   template <input_or_output_iterator _Out, sentinel_for<_Out> _Sent, weakly_incrementable _Tp>
-    requires indirectly_writable<_Out, const _Tp&>
-  constexpr iota_result<_Out, _Tp> operator()(_Out __first, _Sent __last, _Tp __value) const {
+  requires indirectly_writable<_Out, const _Tp&> _LIBCPP_HIDE_FROM_ABI static constexpr iota_result<_Out, _Tp>
+  operator()(_Out __first, _Sent __last, _Tp __value) {
     return __iota_impl(std::move(__first), std::move(__last), std::move(__value));
   }
 
   template <weakly_incrementable _Tp, ranges::output_range<const _Tp&> _Range>
-  constexpr iota_result<ranges::borrowed_iterator_t<_Range>, _Tp> operator()(_Range&& __r, _Tp __value) const {
+  _LIBCPP_HIDE_FROM_ABI static constexpr iota_result<ranges::borrowed_iterator_t<_Range>, _Tp>
+  operator()(_Range&& __r, _Tp __value) {
     return __iota_impl(ranges::begin(__r), ranges::end(__r), std::move(__value));
   }
 };
