@@ -545,7 +545,7 @@ Error collectPGOFuncNameStrings(ArrayRef<GlobalVariable *> NameVars,
   for (auto *NameVar : NameVars) {
     NameStrs.push_back(std::string(getPGOFuncNameVarInitializer(NameVar)));
   }
-  return collectPGOFuncNameStrings(
+  return collectGlobalVariableNameStrings(
       NameStrs, compression::zlib::isAvailable() && doCompression, Result);
 }
 
