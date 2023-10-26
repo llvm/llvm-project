@@ -303,10 +303,13 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
 
   let builders = [
     AttrBuilder<(ins "ArrayRef<::mlir::sparse_tensor::DimLevelType>":$lvlTypes,
-                     "AffineMap":$dimToLvl,
-                     "AffineMap":$lvlToDim,
-                     "unsigned":$posWidth,
-                     "unsigned":$crdWidth), [{
+                     CArg<"AffineMap", "{}">:$dimToLvl,
+                     CArg<"AffineMap", "{}">:$lvlToDim,
+                     CArg<"unsigned", "0">:$posWidth,
+                     CArg<"unsigned", "0">:$crdWidth), [{
+      if (!dimToLvl) {
+        dimToLvl = ::mlir::AffineMap::getMultiDimIdentityMap(lvlTypes.size(), $_ctxt);
+      }
       if (!lvlToDim) {
         lvlToDim = ::mlir::sparse_tensor::inferLvlToDim(dimToLvl, $_ctxt);
       }
