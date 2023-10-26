@@ -73,8 +73,8 @@ void UnusedUsingDeclsCheck::registerMatchers(MatchFinder *Finder) {
                      this);
   Finder->addMatcher(userDefinedLiteral().bind("used"), this);
   Finder->addMatcher(
-      elaboratedType(unless(hasQualifier(nestedNameSpecifier())),
-                     hasUnqualifiedDesugaredType(type().bind("usedType"))),
+      loc(elaboratedType(unless(hasQualifier(nestedNameSpecifier())),
+                         hasUnqualifiedDesugaredType(type().bind("usedType")))),
       this);
   // Cases where we can identify the UsingShadowDecl directly, rather than
   // just its target.
