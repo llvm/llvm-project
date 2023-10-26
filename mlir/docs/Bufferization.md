@@ -184,9 +184,7 @@ to a no-op (in the absence of RaW conflicts such as a subsequent read of `%s`).
 
 RaW conflicts are detected with an analysis of SSA use-def chains (details
 later). One-Shot Bufferize works best if there is a single SSA use-def chain,
-where the result of a tensor op is the 
-operand of the next tensor
-ops, e.g.:
+where the result of a tensor op is the operand of the next tensor ops, e.g.:
 
 ```mlir
 %0 = "my_dialect.some_op"(%t) : (tensor<?xf32>) -> (tensor<?xf32>)
