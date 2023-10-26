@@ -1,7 +1,12 @@
 ; Check the basic block sections labels option
-; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-sections=labels | FileCheck %s --check-prefixes=CHECK,UNIQ
-; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=false -basic-block-sections=labels | FileCheck %s --check-prefixes=CHECK,NOUNIQ
-; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-sections=labels -split-machine-functions | FileCheck %s --check-prefixes=CHECK,UNIQ
+; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-sections=labels | FileCheck %s --check-prefixes=CHECK,UNIQ,BASIC
+; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=false -basic-block-sections=labels | FileCheck %s --check-prefixes=CHECK,NOUNIQ,BASIC
+; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-sections=labels -split-machine-functions | FileCheck %s --check-prefixes=CHECK,UNIQ,BASIC
+
+;; Also verify this holds for PGO extension
+; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-sections=labels -pgo-analysis-map=func-entry-count,bb-freq,br-prob | FileCheck %s --check-prefixes=CHECK,UNIQ,PGO
+; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=false -basic-block-sections=labels -pgo-analysis-map=func-entry-count,bb-freq,br-prob | FileCheck %s --check-prefixes=CHECK,NOUNIQ,PGO
+; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-sections=labels -split-machine-functions -pgo-analysis-map=func-entry-count,bb-freq,br-prob | FileCheck %s --check-prefixes=CHECK,UNIQ,PGO
 
 define void @_Z3bazb(i1 zeroext, i1 zeroext) personality ptr @__gxx_personality_v0 {
   br i1 %0, label %3, label %8
@@ -51,7 +56,8 @@ declare i32 @__gxx_personality_v0(...)
 ;; Verify that with -unique-section-names=false, the unique id of the text section gets assigned to the llvm_bb_addr_map section.
 ; NOUNIQ:		.section	.llvm_bb_addr_map,"o",@llvm_bb_addr_map,.text,unique,1
 ; CHECK-NEXT:   .byte   2		# version
-; CHECK-NEXT:   .byte   0		# feature
+; BASIC-NEXT:   .byte   0		# feature
+; PGO-NEXT:     .byte   7		# feature
 ; CHECK-NEXT:	.quad	.Lfunc_begin0	# function address
 ; CHECK-NEXT:	.byte	6		# number of basic blocks
 ; CHECK-NEXT:   .byte	0		# BB id
@@ -78,3 +84,34 @@ declare i32 @__gxx_personality_v0(...)
 ; CHECK-NEXT:	.uleb128 .LBB0_5-.LBB_END0_4
 ; CHECK-NEXT:	.uleb128 .LBB_END0_5-.LBB0_5
 ; CHECK-NEXT:	.byte	5
+
+;; PGO Analysis Map
+; PGO-NEXT:     .byte   0               # function entry count
+; PGO-NEXT:     .{{.*}} {{.*}}          # basic block frequency
+; PGO-NEXT:	.byte	2		# basic block successor count
+; PGO-NEXT:     .byte   1               # successor BB ID
+; PGO-NEXT:     .ascii  "\200\200\200\200\004"  # successor branch probability
+; PGO-NEXT:     .byte   3               # successor BB ID
+; PGO-NEXT:     .ascii  "\200\200\200\200\004"  # successor branch probability
+; PGO-NEXT:     .{{.*}} {{.*}}          # basic block frequency
+; PGO-NEXT:	.byte	2		# basic block successor count
+; PGO-NEXT:     .byte   3		# successor BB ID
+; PGO-NEXT:     .ascii  "\200\360\377\377\007"  # successor branch probability
+; PGO-NEXT:     .byte   2		# successor BB ID
+; PGO-NEXT:     .ascii  "\200\020"	# successor branch probability
+; PGO-NEXT:     .{{.*}} {{.*}}          # basic block frequency
+; PGO-NEXT:	.byte	2		# basic block successor count
+; PGO-NEXT:     .byte   5		# successor BB ID
+; PGO-NEXT:     .ascii  "\200\200\200 "	# successor branch probability
+; PGO-NEXT:     .byte   4		# successor BB ID
+; PGO-NEXT:     .ascii  "\200\200\200\340\007"	# successor branch probability
+; PGO-NEXT:     .{{.*}} {{.*}}          # basic block frequency
+; PGO-NEXT:	.byte	2		# basic block successor count
+; PGO-NEXT:     .byte   1		# successor BB ID
+; PGO-NEXT:     .ascii	"\200\200\200\340\007"	# successor branch probability
+; PGO-NEXT:     .byte   5		# successor BB ID
+; PGO-NEXT:     .ascii  "\200\200\200 "	# successor branch probability
+; PGO-NEXT:     .{{.*}} {{.*}}          # basic block frequency
+; PGO-NEXT:	.byte	0		# basic block successor count
+; PGO-NEXT:     .{{.*}} {{.*}}          # basic block frequency
+; PGO-NEXT:	.byte	0		# basic block successor count
