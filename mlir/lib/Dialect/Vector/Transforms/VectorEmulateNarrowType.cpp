@@ -135,35 +135,23 @@ struct ConvertVectorMaskedLoad final
     //
     //   %mask = vector.constant_mask [3] : vector<6xi1>
     //   %1 = vector.maskedload %0[%c0, %c0], %mask, %pass_thru :
-    //   memref<3x6xi4>, vector<6xi1>, vector<6xi4> into vector<6xi4>
+    //        memref<3x6xi4>, vector<6xi1>, vector<6xi4> into vector<6xi4>
     //
     // can be replaced with
     //
     //   %new_mask = vector.constant_mask [2] : vector<3xi1>
-    //   %new_pass_thru = vector.bitcast %pass_thru : vector<6xi4> to
-    //   vector<3xi8> %1 = vector.maskedload %0[%linear_index], %new_mask,
-    //   %new_pass_thru : memref<9xi8>, vector<3xi1>, vector<3xi8> into
-    //   vector<3xi8>
+    //   %new_pass_thru = vector.bitcast %pass_thru :
+    //        vector<6xi4> to vector<3xi8>
+    //   %1 = vector.maskedload %0[%linear_index], %new_mask, %new_pass_thru :
+    //        memref<9xi8>, vector<3xi1>, vector<3xi8> into vector<3xi8>
+    //   %2 = vector.bitcast %1 : vector<3xi8> to vector<6xi4>
     //
     // Since we are effectively loading 16 bits (2xi8) from the memref with the
     // new mask, while originally we only wanted to effectively load 12 bits
     // (3xi4) from the memref, we need to set the second half of the last i8
-    // that was effectively loaded (i.e. the second i8) to 0.
+    // that was effectively loaded (i.e. the second i8) to %pass_thru.
     //
-    //   %unset_mask = arith.extsi %mask : vector<6xi1> to vector<6xi4>
-    //   %2 = vector.bitcast %unset_mask : vector<6xi4> to vector<3xi8>
-    //   %3 = arith.andi %1, %2 : vector<3xi8>
-    //
-    // Then if the second half of the second i8 from %pass_thru is not all 0s,
-    // we need to write their values back to the result.
-    //
-    //   %cst_1 = arith.constant dense<-1> : vector<6xi4>
-    //   %set_mask = arith.xori %unset_mask, %cst_1 : vector<6xi4>
-    //   %4 = vector.bitcast %set_mask : vector<6xi4> to vector<3xi8>
-    //   %5 = arith.andi %new_pass_thru, %4 : vector<3xi8>
-    //
-    //   %6 = arith.ori %3, %5 : vector<3xi8>
-    //   %7 = vector.bitcast %6 : vector<3xi8> to vector<6xi4>
+    //   %3 = arith.select %mask, %2, %pass_thru : vector<6xi1>, vector<6xi4>
     //
     // Given these input values:
     //   %mask = [1, 1, 1, 0, 0, 0]
@@ -177,17 +165,8 @@ struct ConvertVectorMaskedLoad final
     //   %new_mask = [1, 1, 0]
     //   %new_pass_thru = [0x78, 0x9A, 0xBC]
     //   %1 = [0x12, 0x34, 0xBC]
-    //
-    //   %unset_mask = [0xF, 0xF, 0xF, 0, 0, 0]
-    //   %2 = [0xFF, 0xF0, 0]
-    //   %3 = [0x12, 0x30, 0]
-    //
-    //   %set_mask = [0, 0, 0, 0xF, 0xF, 0xF]
-    //   %4 = [0, 0x0F, 0xFF]
-    //   %5 = [0, 0x0A, 0xBC]
-    //
-    //   %6 = [0x12, 0x3A, 0xBC]
-    //   %7 = [0x1, 0x2, 0x3, 0xA, 0xB, 0xC]
+    //   %2 = [0x1, 0x2, 0x3, 0x4, 0xB, 0xC]
+    //   %3 = [0x1, 0x2, 0x3, 0xA, 0xB, 0xC]
     //
     // TODO: Currently, only the even number of elements loading is supported.
     // To deal with the odd number of elements, one has to extract the
@@ -280,32 +259,13 @@ struct ConvertVectorMaskedLoad final
         newMask->getResult(0), newPassThru);
 
     // Setting the part that originally was not effectively loaded from memory
-    // to 0.
-    auto andMask = rewriter.create<arith::ExtSIOp>(loc, origType, op.getMask());
-    auto bitCastedAndMask =
-        rewriter.create<vector::BitCastOp>(loc, newType, andMask);
-    auto loadedFromMem =
-        rewriter.create<arith::AndIOp>(loc, newLoad, bitCastedAndMask);
-
-    // Copying from pass through.
-    auto allOne = rewriter.create<arith::ConstantOp>(
-        loc, origType,
-        DenseIntElementsAttr::get(origType, {APInt::getAllOnes(srcBits)}));
-    auto passThruMask = rewriter.create<arith::XOrIOp>(loc, allOne.getResult(),
-                                                       andMask.getResult());
-    auto bitCastedPassThruMask =
-        rewriter.create<vector::BitCastOp>(loc, newType, passThruMask);
-    auto copiedFromPassThru =
-        rewriter.create<arith::AndIOp>(loc, newPassThru, bitCastedPassThruMask);
-
-    // Or-ing the first part loaded from memory and the second one copied from
-    // pass through to form the result.
-    auto result =
-        rewriter.create<arith::OrIOp>(loc, loadedFromMem, copiedFromPassThru);
+    // to pass through.
     auto bitCast =
-        rewriter.create<vector::BitCastOp>(loc, op.getType(), result);
+        rewriter.create<vector::BitCastOp>(loc, op.getType(), newLoad);
+    auto select = rewriter.create<arith::SelectOp>(loc, op.getMask(), bitCast,
+                                                   op.getPassThru());
+    rewriter.replaceOp(op, select->getResult(0));
 
-    rewriter.replaceOp(op, bitCast->getResult(0));
     return success();
   }
 };
