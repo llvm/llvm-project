@@ -5416,13 +5416,10 @@ void SIInstrInfo::legalizeOpWithMove(MachineInstr &MI, unsigned OpIdx) const {
   MO.ChangeToRegister(Reg, false);
 }
 
-unsigned SIInstrInfo::buildExtractSubReg(MachineBasicBlock::iterator MI,
-                                         MachineRegisterInfo &MRI,
-                                         MachineOperand &SuperReg,
-                                         const TargetRegisterClass *SuperRC,
-                                         unsigned SubIdx,
-                                         const TargetRegisterClass *SubRC)
-                                         const {
+unsigned SIInstrInfo::buildExtractSubReg(
+    MachineBasicBlock::iterator MI, MachineRegisterInfo &MRI,
+    const MachineOperand &SuperReg, const TargetRegisterClass *SuperRC,
+    unsigned SubIdx, const TargetRegisterClass *SubRC) const {
   MachineBasicBlock *MBB = MI->getParent();
   DebugLoc DL = MI->getDebugLoc();
   Register SubReg = MRI.createVirtualRegister(SubRC);
@@ -5449,12 +5446,9 @@ unsigned SIInstrInfo::buildExtractSubReg(MachineBasicBlock::iterator MI,
 }
 
 MachineOperand SIInstrInfo::buildExtractSubRegOrImm(
-  MachineBasicBlock::iterator MII,
-  MachineRegisterInfo &MRI,
-  MachineOperand &Op,
-  const TargetRegisterClass *SuperRC,
-  unsigned SubIdx,
-  const TargetRegisterClass *SubRC) const {
+    MachineBasicBlock::iterator MII, MachineRegisterInfo &MRI,
+    const MachineOperand &Op, const TargetRegisterClass *SuperRC,
+    unsigned SubIdx, const TargetRegisterClass *SubRC) const {
   if (Op.isImm()) {
     if (SubIdx == AMDGPU::sub0)
       return MachineOperand::CreateImm(static_cast<int32_t>(Op.getImm()));
