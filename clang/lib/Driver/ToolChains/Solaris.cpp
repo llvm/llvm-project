@@ -96,7 +96,8 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!LinkerIsGnuLd)
     CmdArgs.push_back("-C");
 
-  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_shared)) {
+  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_shared,
+                   options::OPT_r)) {
     CmdArgs.push_back("-e");
     CmdArgs.push_back("_start");
   }
@@ -114,10 +115,8 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-Bstatic");
     CmdArgs.push_back("-dn");
   } else {
-    CmdArgs.push_back("-Bdynamic");
-    if (Args.hasArg(options::OPT_shared)) {
+    if (!Args.hasArg(options::OPT_r) && Args.hasArg(options::OPT_shared))
       CmdArgs.push_back("-shared");
-    }
 
     // libpthread has been folded into libc since Solaris 10, no need to do
     // anything for pthreads. Claim argument to avoid warning.

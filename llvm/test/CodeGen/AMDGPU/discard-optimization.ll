@@ -1,6 +1,7 @@
 ; RUN: llc -amdgpu-conditional-discard-transformations=1 --march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,KILL %s
 ; RUN: llc -amdgpu-conditional-discard-transformations=1 -amdgpu-transform-discard-to-demote --march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,DEMOTE %s
-; RUN: llc -amdgpu-conditional-discard-transformations=1 --march=amdgcn -mcpu=gfx900 -stop-after=amdgpu-conditional-discard < %s | FileCheck -check-prefix=GCN-IR %s
+; RUN: llc -amdgpu-conditional-discard-transformations=1 --march=amdgcn -mcpu=gfx900 -stop-after=amdgpu-conditional-discard < %s | FileCheck -check-prefixes=GCN-IR,KILL-IR %s
+; RUN: llc -amdgpu-conditional-discard-transformations=1 -amdgpu-transform-discard-to-demote --march=amdgcn -mcpu=gfx900 -stop-after=amdgpu-conditional-discard < %s | FileCheck -check-prefixes=GCN-IR,DEMOTE-IR %s
 
 ; Check that the branch is removed by the discard opt.
 
@@ -311,6 +312,41 @@ then:
 endif:
   %val = phi i32 [ 0, %.entry ], [ 1, %then ]
   ret i32 %val
+}
+
+
+; Check that (only) demote can be propapgated to multiple predecessors.
+
+; GCN-LABEL: {{^}}kill_with_multiple_predecessors:
+; GCN-IR-LABEL: define amdgpu_ps float @kill_with_multiple_predecessors(float %arg)
+; KILL-IR: kill:
+; KILL-IR-NEXT: call void @llvm.amdgcn.kill
+; DEMOTE-IR: .entry:
+; DEMOTE-IR: call void @llvm.amdgcn.wqm.demote
+; DEMOTE-IR-NOT: call void @llvm.amdgcn.wqm.demote
+; DEMOTE-IR: other:
+; DEMOTE-IR: call void @llvm.amdgcn.wqm.demote
+; DEMOTE-IR-NOT: call void @llvm.amdgcn.wqm.demote
+; GCN-IR: end:
+; KILL-IR: %ret.val = phi float [ -1.000000e+00, %kill ], [ %ret, %other ]
+; DEMOTE-IR: %ret.val = phi float [ %ret, %other ]
+define amdgpu_ps float @kill_with_multiple_predecessors(float %arg) {
+.entry:
+  %cmp0 = fcmp uge float %arg, 0.0
+  br i1 %cmp0, label %other, label %kill
+
+other:
+  %cmp1 = fcmp uge float %arg, 1.0
+  %ret = fadd float %arg, 1.0
+  br i1 %cmp1, label %kill, label %end
+
+kill:
+  tail call void @llvm.amdgcn.kill(i1 false)
+  br label %end
+
+end:
+  %ret.val = phi float [ -1.0, %kill ], [ %ret, %other ]
+  ret float %ret.val
 }
 
 attributes #0 = { nounwind }
