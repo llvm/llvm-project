@@ -9540,11 +9540,12 @@ BoUpSLP::isGatherShuffledEntry(
     if (!SubRes)
       SubEntries.clear();
     Res.push_back(SubRes);
-    if (SubEntries.size() == 1 &&
-        SubRes.value_or(TTI::SK_PermuteTwoSrc) == TTI::SK_PermuteSingleSrc &&
+    if (SubEntries.size() == 1 && *SubRes == TTI::SK_PermuteSingleSrc &&
         SubEntries.front()->getVectorFactor() == VL.size() &&
         (SubEntries.front()->isSame(TE->Scalars) ||
          SubEntries.front()->isSame(VL))) {
+      SmallVector<const TreeEntry *> LocalSubEntries;
+      LocalSubEntries.swap(SubEntries);
       Entries.clear();
       Res.clear();
       std::iota(Mask.begin(), Mask.end(), 0);
@@ -9552,7 +9553,7 @@ BoUpSLP::isGatherShuffledEntry(
       for (int I = 0, Sz = VL.size(); I < Sz; ++I)
         if (isa<PoisonValue>(VL[I]))
           Mask[I] = PoisonMaskElem;
-      Entries.emplace_back(1, SubEntries.front());
+      Entries.emplace_back(1, LocalSubEntries.front());
       Res.push_back(TargetTransformInfo::SK_PermuteSingleSrc);
       return Res;
     }
