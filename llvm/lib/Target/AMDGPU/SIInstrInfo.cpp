@@ -106,9 +106,27 @@ static bool nodesHaveSameOperandValue(SDNode *N0, SDNode* N1, unsigned OpName) {
   return N0->getOperand(Op0Idx) == N1->getOperand(Op1Idx);
 }
 
+static bool canRemat(const MachineInstr &MI) {
+
+  if (SIInstrInfo::isVOP1(MI) || SIInstrInfo::isVOP2(MI) ||
+      SIInstrInfo::isVOP3(MI) || SIInstrInfo::isSDWA(MI) ||
+      SIInstrInfo::isSALU(MI))
+    return true;
+
+  if (SIInstrInfo::isSMRD(MI)) {
+    return !MI.memoperands_empty() &&
+           llvm::all_of(MI.memoperands(), [](const MachineMemOperand *MMO) {
+             return MMO->isLoad() && MMO->isInvariant();
+           });
+  }
+
+  return false;
+}
+
 bool SIInstrInfo::isReallyTriviallyReMaterializable(
     const MachineInstr &MI) const {
-  if (isVOP1(MI) || isVOP2(MI) || isVOP3(MI) || isSDWA(MI) || isSALU(MI)) {
+
+  if (canRemat(MI)) {
     // Normally VALU use of exec would block the rematerialization, but that
     // is OK in this case to have an implicit exec read as all VALU do.
     // We really want all of the generic logic for this except for this.
@@ -2432,6 +2450,92 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   }
   }
   return true;
+}
+
+void SIInstrInfo::reMaterialize(MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator I, Register DestReg,
+                                unsigned SubIdx, const MachineInstr &Orig,
+                                const TargetRegisterInfo &RI) const {
+
+  // Try shrinking the instruction to remat only the part needed for current
+  // context.
+  // TODO: Handle more cases.
+  unsigned Opcode = Orig.getOpcode();
+  switch (Opcode) {
+  case AMDGPU::S_LOAD_DWORDX16_IMM:
+  case AMDGPU::S_LOAD_DWORDX8_IMM: {
+    if (SubIdx != 0)
+      break;
+
+    if (I == MBB.end())
+      break;
+
+    if (I->isBundled())
+      break;
+
+    // Look for a single use of the register that is also a subreg.
+    Register RegToFind = Orig.getOperand(0).getReg();
+    MachineOperand *UseMO = nullptr;
+    for (auto &CandMO : I->operands()) {
+      if (!CandMO.isReg() || CandMO.getReg() != RegToFind || CandMO.isDef())
+        continue;
+      if (UseMO) {
+        UseMO = nullptr;
+        break;
+      }
+      UseMO = &CandMO;
+    }
+    if (!UseMO || UseMO->getSubReg() == AMDGPU::NoSubRegister)
+      break;
+
+    unsigned Offset = RI.getSubRegIdxOffset(UseMO->getSubReg());
+    unsigned SubregSize = RI.getSubRegIdxSize(UseMO->getSubReg());
+
+    MachineFunction *MF = MBB.getParent();
+    MachineRegisterInfo &MRI = MF->getRegInfo();
+    assert(MRI.use_nodbg_empty(DestReg) && "DestReg should have no users yet.");
+
+    unsigned NewOpcode = -1;
+    if (SubregSize == 256)
+      NewOpcode = AMDGPU::S_LOAD_DWORDX8_IMM;
+    else if (SubregSize == 128)
+      NewOpcode = AMDGPU::S_LOAD_DWORDX4_IMM;
+    else
+      break;
+
+    const MCInstrDesc &TID = get(NewOpcode);
+    const TargetRegisterClass *NewRC =
+        RI.getAllocatableClass(getRegClass(TID, 0, &RI, *MF));
+    MRI.setRegClass(DestReg, NewRC);
+
+    UseMO->setReg(DestReg);
+    UseMO->setSubReg(AMDGPU::NoSubRegister);
+
+    // Use a smaller load with the desired size, possibly with updated offset.
+    MachineInstr *MI = MF->CloneMachineInstr(&Orig);
+    MI->setDesc(TID);
+    MI->getOperand(0).setReg(DestReg);
+    MI->getOperand(0).setSubReg(AMDGPU::NoSubRegister);
+    if (Offset) {
+      MachineOperand *OffsetMO = getNamedOperand(*MI, AMDGPU::OpName::offset);
+      int64_t FinalOffset = OffsetMO->getImm() + Offset / 8;
+      OffsetMO->setImm(FinalOffset);
+    }
+    SmallVector<MachineMemOperand *> NewMMOs;
+    for (const MachineMemOperand *MemOp : Orig.memoperands())
+      NewMMOs.push_back(MF->getMachineMemOperand(MemOp, MemOp->getPointerInfo(),
+                                                 SubregSize / 8));
+    MI->setMemRefs(*MF, NewMMOs);
+
+    MBB.insert(I, MI);
+    return;
+  }
+
+  default:
+    break;
+  }
+
+  TargetInstrInfo::reMaterialize(MBB, I, DestReg, SubIdx, Orig, RI);
 }
 
 std::pair<MachineInstr*, MachineInstr*>
