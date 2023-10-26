@@ -18,8 +18,8 @@
 #include "X86InstrInfo.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"
+#include "llvm/CodeGen/ExpandPseudoInstsPass.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/Passes.h" // For IDs of passes that are preserved.
 #include "llvm/IR/EHPersonalities.h"
@@ -31,10 +31,10 @@ using namespace llvm;
 #define X86_EXPAND_PSEUDO_NAME "X86 pseudo instruction expansion pass"
 
 namespace {
-class X86ExpandPseudo : public MachineFunctionPass {
+class X86ExpandPseudo : public ExpandPseudoInstsPass {
 public:
   static char ID;
-  X86ExpandPseudo() : MachineFunctionPass(ID) {}
+  X86ExpandPseudo() : ExpandPseudoInstsPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -65,12 +65,12 @@ private:
                                MachineBasicBlock::iterator MBBI);
   void expandCALL_RVMARKER(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI);
-  bool ExpandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
-  bool ExpandMBB(MachineBasicBlock &MBB);
+  bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                MachineBasicBlock::iterator &NextMBBI) override;
 
   /// This function expands pseudos which affects control flow.
   /// It is done in separate pass to simplify blocks navigation in main
-  /// pass(calling ExpandMBB).
+  /// pass(calling expandMBB).
   bool ExpandPseudosWhichAffectControlFlow(MachineFunction &MF);
 
   /// Expand X86::VASTART_SAVE_XMM_REGS into set of xmm copying instructions,
@@ -259,8 +259,9 @@ void X86ExpandPseudo::expandCALL_RVMARKER(MachineBasicBlock &MBB,
 /// If \p MBBI is a pseudo instruction, this method expands
 /// it to the corresponding (sequence of) actual instruction(s).
 /// \returns true if \p MBBI has been expanded.
-bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
-                               MachineBasicBlock::iterator MBBI) {
+bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
+                               MachineBasicBlock::iterator MBBI,
+                               MachineBasicBlock::iterator &NextMBBI) {
   MachineInstr &MI = *MBBI;
   unsigned Opcode = MI.getOpcode();
   const DebugLoc &DL = MBBI->getDebugLoc();
@@ -707,22 +708,6 @@ void X86ExpandPseudo::ExpandVastartSaveXmmRegs(
   VAStartPseudoInstr->eraseFromParent();
 }
 
-/// Expand all pseudo instructions contained in \p MBB.
-/// \returns true if any expansion occurred for \p MBB.
-bool X86ExpandPseudo::ExpandMBB(MachineBasicBlock &MBB) {
-  bool Modified = false;
-
-  // MBBI may be invalidated by the expansion.
-  MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
-  while (MBBI != E) {
-    MachineBasicBlock::iterator NMBBI = std::next(MBBI);
-    Modified |= ExpandMI(MBB, MBBI);
-    MBBI = NMBBI;
-  }
-
-  return Modified;
-}
-
 bool X86ExpandPseudo::ExpandPseudosWhichAffectControlFlow(MachineFunction &MF) {
   // Currently pseudo which affects control flow is only
   // X86::VASTART_SAVE_XMM_REGS which is located in Entry block.
@@ -747,7 +732,7 @@ bool X86ExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
   bool Modified = ExpandPseudosWhichAffectControlFlow(MF);
 
   for (MachineBasicBlock &MBB : MF)
-    Modified |= ExpandMBB(MBB);
+    Modified |= expandMBB(MBB);
   return Modified;
 }
 

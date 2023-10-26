@@ -21,8 +21,8 @@
 #include "Mips.h"
 #include "MipsInstrInfo.h"
 #include "MipsSubtarget.h"
+#include "llvm/CodeGen/ExpandPseudoInstsPass.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 
 using namespace llvm;
@@ -30,10 +30,10 @@ using namespace llvm;
 #define DEBUG_TYPE "mips-pseudo"
 
 namespace {
-  class MipsExpandPseudo : public MachineFunctionPass {
+  class MipsExpandPseudo : public ExpandPseudoInstsPass {
   public:
     static char ID;
-    MipsExpandPseudo() : MachineFunctionPass(ID) {}
+    MipsExpandPseudo() : ExpandPseudoInstsPass(ID) {}
 
     const MipsInstrInfo *TII;
     const MipsSubtarget *STI;
@@ -65,8 +65,7 @@ namespace {
                                   MachineBasicBlock::iterator &NMBBI);
 
     bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                  MachineBasicBlock::iterator &NMBB);
-    bool expandMBB(MachineBasicBlock &MBB);
+                  MachineBasicBlock::iterator &NMBB) override;
    };
   char MipsExpandPseudo::ID = 0;
 }
@@ -876,19 +875,6 @@ bool MipsExpandPseudo::expandMI(MachineBasicBlock &MBB,
   default:
     return Modified;
   }
-}
-
-bool MipsExpandPseudo::expandMBB(MachineBasicBlock &MBB) {
-  bool Modified = false;
-
-  MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
-  while (MBBI != E) {
-    MachineBasicBlock::iterator NMBBI = std::next(MBBI);
-    Modified |= expandMI(MBB, MBBI, NMBBI);
-    MBBI = NMBBI;
-  }
-
-  return Modified;
 }
 
 bool MipsExpandPseudo::runOnMachineFunction(MachineFunction &MF) {

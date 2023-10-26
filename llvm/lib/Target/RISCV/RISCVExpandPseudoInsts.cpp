@@ -16,8 +16,8 @@
 #include "RISCVInstrInfo.h"
 #include "RISCVTargetMachine.h"
 
+#include "llvm/CodeGen/ExpandPseudoInstsPass.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/MC/MCContext.h"
 
@@ -28,13 +28,13 @@ using namespace llvm;
 
 namespace {
 
-class RISCVExpandPseudo : public MachineFunctionPass {
+class RISCVExpandPseudo : public ExpandPseudoInstsPass {
 public:
   const RISCVSubtarget *STI;
   const RISCVInstrInfo *TII;
   static char ID;
 
-  RISCVExpandPseudo() : MachineFunctionPass(ID) {
+  RISCVExpandPseudo() : ExpandPseudoInstsPass(ID) {
     initializeRISCVExpandPseudoPass(*PassRegistry::getPassRegistry());
   }
 
@@ -43,9 +43,8 @@ public:
   StringRef getPassName() const override { return RISCV_EXPAND_PSEUDO_NAME; }
 
 private:
-  bool expandMBB(MachineBasicBlock &MBB);
   bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                MachineBasicBlock::iterator &NextMBBI);
+                MachineBasicBlock::iterator &NextMBBI) override;
   bool expandCCOp(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                   MachineBasicBlock::iterator &NextMBBI);
   bool expandVSetVL(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
@@ -84,19 +83,6 @@ bool RISCVExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
   const unsigned NewSize = getInstSizeInBytes(MF);
   assert(OldSize >= NewSize);
 #endif
-  return Modified;
-}
-
-bool RISCVExpandPseudo::expandMBB(MachineBasicBlock &MBB) {
-  bool Modified = false;
-
-  MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
-  while (MBBI != E) {
-    MachineBasicBlock::iterator NMBBI = std::next(MBBI);
-    Modified |= expandMI(MBB, MBBI, NMBBI);
-    MBBI = NMBBI;
-  }
-
   return Modified;
 }
 
@@ -375,13 +361,13 @@ bool RISCVExpandPseudo::expandRV32ZdinxLoad(MachineBasicBlock &MBB,
   return true;
 }
 
-class RISCVPreRAExpandPseudo : public MachineFunctionPass {
+class RISCVPreRAExpandPseudo : public ExpandPseudoInstsPass {
 public:
   const RISCVSubtarget *STI;
   const RISCVInstrInfo *TII;
   static char ID;
 
-  RISCVPreRAExpandPseudo() : MachineFunctionPass(ID) {
+  RISCVPreRAExpandPseudo() : ExpandPseudoInstsPass(ID) {
     initializeRISCVPreRAExpandPseudoPass(*PassRegistry::getPassRegistry());
   }
 
@@ -396,9 +382,8 @@ public:
   }
 
 private:
-  bool expandMBB(MachineBasicBlock &MBB);
   bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                MachineBasicBlock::iterator &NextMBBI);
+                MachineBasicBlock::iterator &NextMBBI) override;
   bool expandAuipcInstPair(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI,
                            MachineBasicBlock::iterator &NextMBBI,
@@ -444,19 +429,6 @@ bool RISCVPreRAExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
   const unsigned NewSize = getInstSizeInBytes(MF);
   assert(OldSize >= NewSize);
 #endif
-  return Modified;
-}
-
-bool RISCVPreRAExpandPseudo::expandMBB(MachineBasicBlock &MBB) {
-  bool Modified = false;
-
-  MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
-  while (MBBI != E) {
-    MachineBasicBlock::iterator NMBBI = std::next(MBBI);
-    Modified |= expandMI(MBB, MBBI, NMBBI);
-    MBBI = NMBBI;
-  }
-
   return Modified;
 }
 

@@ -16,8 +16,8 @@
 #include "LoongArchTargetMachine.h"
 #include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
+#include "llvm/CodeGen/ExpandPseudoInstsPass.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/Register.h"
@@ -34,12 +34,12 @@ using namespace llvm;
 
 namespace {
 
-class LoongArchPreRAExpandPseudo : public MachineFunctionPass {
+class LoongArchPreRAExpandPseudo : public ExpandPseudoInstsPass {
 public:
   const LoongArchInstrInfo *TII;
   static char ID;
 
-  LoongArchPreRAExpandPseudo() : MachineFunctionPass(ID) {
+  LoongArchPreRAExpandPseudo() : ExpandPseudoInstsPass(ID) {
     initializeLoongArchPreRAExpandPseudoPass(*PassRegistry::getPassRegistry());
   }
 
@@ -54,9 +54,8 @@ public:
   }
 
 private:
-  bool expandMBB(MachineBasicBlock &MBB);
   bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                MachineBasicBlock::iterator &NextMBBI);
+                MachineBasicBlock::iterator &NextMBBI) override;
   bool expandPcalau12iInstPair(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MBBI,
                                MachineBasicBlock::iterator &NextMBBI,
@@ -109,19 +108,6 @@ bool LoongArchPreRAExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
   bool Modified = false;
   for (auto &MBB : MF)
     Modified |= expandMBB(MBB);
-  return Modified;
-}
-
-bool LoongArchPreRAExpandPseudo::expandMBB(MachineBasicBlock &MBB) {
-  bool Modified = false;
-
-  MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
-  while (MBBI != E) {
-    MachineBasicBlock::iterator NMBBI = std::next(MBBI);
-    Modified |= expandMI(MBB, MBBI, NMBBI);
-    MBBI = NMBBI;
-  }
-
   return Modified;
 }
 
@@ -515,12 +501,12 @@ bool LoongArchPreRAExpandPseudo::expandFunctionCALL(
   return true;
 }
 
-class LoongArchExpandPseudo : public MachineFunctionPass {
+class LoongArchExpandPseudo : public ExpandPseudoInstsPass {
 public:
   const LoongArchInstrInfo *TII;
   static char ID;
 
-  LoongArchExpandPseudo() : MachineFunctionPass(ID) {
+  LoongArchExpandPseudo() : ExpandPseudoInstsPass(ID) {
     initializeLoongArchExpandPseudoPass(*PassRegistry::getPassRegistry());
   }
 
@@ -531,9 +517,8 @@ public:
   }
 
 private:
-  bool expandMBB(MachineBasicBlock &MBB);
   bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                MachineBasicBlock::iterator &NextMBBI);
+                MachineBasicBlock::iterator &NextMBBI) override;
   bool expandCopyCFR(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                      MachineBasicBlock::iterator &NextMBBI);
 };
@@ -547,19 +532,6 @@ bool LoongArchExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
   bool Modified = false;
   for (auto &MBB : MF)
     Modified |= expandMBB(MBB);
-
-  return Modified;
-}
-
-bool LoongArchExpandPseudo::expandMBB(MachineBasicBlock &MBB) {
-  bool Modified = false;
-
-  MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
-  while (MBBI != E) {
-    MachineBasicBlock::iterator NMBBI = std::next(MBBI);
-    Modified |= expandMI(MBB, MBBI, NMBBI);
-    MBBI = NMBBI;
-  }
 
   return Modified;
 }

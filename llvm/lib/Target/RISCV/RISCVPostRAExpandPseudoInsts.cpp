@@ -16,7 +16,7 @@
 #include "RISCV.h"
 #include "RISCVInstrInfo.h"
 #include "RISCVTargetMachine.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/ExpandPseudoInstsPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 
 using namespace llvm;
@@ -26,12 +26,12 @@ using namespace llvm;
 
 namespace {
 
-class RISCVPostRAExpandPseudo : public MachineFunctionPass {
+class RISCVPostRAExpandPseudo : public ExpandPseudoInstsPass {
 public:
   const RISCVInstrInfo *TII;
   static char ID;
 
-  RISCVPostRAExpandPseudo() : MachineFunctionPass(ID) {
+  RISCVPostRAExpandPseudo() : ExpandPseudoInstsPass(ID) {
     initializeRISCVPostRAExpandPseudoPass(*PassRegistry::getPassRegistry());
   }
 
@@ -42,9 +42,8 @@ public:
   }
 
 private:
-  bool expandMBB(MachineBasicBlock &MBB);
   bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                MachineBasicBlock::iterator &NextMBBI);
+                MachineBasicBlock::iterator &NextMBBI) override;
   bool expandMovImm(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
 };
 
@@ -55,19 +54,6 @@ bool RISCVPostRAExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
   bool Modified = false;
   for (auto &MBB : MF)
     Modified |= expandMBB(MBB);
-  return Modified;
-}
-
-bool RISCVPostRAExpandPseudo::expandMBB(MachineBasicBlock &MBB) {
-  bool Modified = false;
-
-  MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
-  while (MBBI != E) {
-    MachineBasicBlock::iterator NMBBI = std::next(MBBI);
-    Modified |= expandMI(MBB, MBBI, NMBBI);
-    MBBI = NMBBI;
-  }
-
   return Modified;
 }
 

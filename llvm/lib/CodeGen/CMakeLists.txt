@@ -72,6 +72,7 @@ add_llvm_component_library(LLVMCodeGen
   ExpandLargeFpConvert.cpp
   ExpandMemCmp.cpp
   ExpandPostRAPseudos.cpp
+  ExpandPseudoInstsPass.cpp
   ExpandReductions.cpp
   ExpandVectorPredication.cpp
   FaultMaps.cpp

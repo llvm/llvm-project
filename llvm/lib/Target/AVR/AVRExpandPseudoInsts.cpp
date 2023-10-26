@@ -17,7 +17,7 @@
 #include "AVRTargetMachine.h"
 #include "MCTargetDesc/AVRMCTargetDesc.h"
 
-#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/ExpandPseudoInstsPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -30,11 +30,11 @@ namespace {
 
 /// Expands "placeholder" instructions marked as pseudo into
 /// actual AVR instructions.
-class AVRExpandPseudo : public MachineFunctionPass {
+class AVRExpandPseudo : public ExpandPseudoInstsPass {
 public:
   static char ID;
 
-  AVRExpandPseudo() : MachineFunctionPass(ID) {
+  AVRExpandPseudo() : ExpandPseudoInstsPass(ID) {
     initializeAVRExpandPseudoPass(*PassRegistry::getPassRegistry());
   }
 
@@ -49,8 +49,7 @@ private:
   const AVRRegisterInfo *TRI;
   const TargetInstrInfo *TII;
 
-  bool expandMBB(Block &MBB);
-  bool expandMI(Block &MBB, BlockIt MBBI);
+  bool expandMI(Block &MBB, BlockIt MBBI, BlockIt &NextMBBI) override;
   template <unsigned OP> bool expand(Block &MBB, BlockIt MBBI);
 
   MachineInstrBuilder buildMI(Block &MBB, BlockIt MBBI, unsigned Opcode) {
@@ -106,19 +105,6 @@ private:
 };
 
 char AVRExpandPseudo::ID = 0;
-
-bool AVRExpandPseudo::expandMBB(MachineBasicBlock &MBB) {
-  bool Modified = false;
-
-  BlockIt MBBI = MBB.begin(), E = MBB.end();
-  while (MBBI != E) {
-    BlockIt NMBBI = std::next(MBBI);
-    Modified |= expandMI(MBB, MBBI);
-    MBBI = NMBBI;
-  }
-
-  return Modified;
-}
 
 bool AVRExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
   bool Modified = false;
@@ -2559,7 +2545,7 @@ bool AVRExpandPseudo::expand<AVR::SPWRITE>(Block &MBB, BlockIt MBBI) {
   return true;
 }
 
-bool AVRExpandPseudo::expandMI(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudo::expandMI(Block &MBB, BlockIt MBBI, BlockIt &NextMBBI) {
   MachineInstr &MI = *MBBI;
   int Opcode = MBBI->getOpcode();
 

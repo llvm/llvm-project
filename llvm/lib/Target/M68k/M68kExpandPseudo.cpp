@@ -19,7 +19,7 @@
 #include "M68kMachineFunction.h"
 #include "M68kSubtarget.h"
 
-#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/ExpandPseudoInstsPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h" // For IDs of passes that are preserved.
@@ -32,10 +32,10 @@ using namespace llvm;
 #define PASS_NAME "M68k pseudo instruction expansion pass"
 
 namespace {
-class M68kExpandPseudo : public MachineFunctionPass {
+class M68kExpandPseudo : public ExpandPseudoInstsPass {
 public:
   static char ID;
-  M68kExpandPseudo() : MachineFunctionPass(ID) {}
+  M68kExpandPseudo() : ExpandPseudoInstsPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -58,8 +58,8 @@ public:
   }
 
 private:
-  bool ExpandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
-  bool ExpandMBB(MachineBasicBlock &MBB);
+  bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                MachineBasicBlock::iterator &NextMBBI) override;
 };
 char M68kExpandPseudo::ID = 0;
 } // End anonymous namespace.
@@ -69,8 +69,9 @@ INITIALIZE_PASS(M68kExpandPseudo, DEBUG_TYPE, PASS_NAME, false, false)
 /// If \p MBBI is a pseudo instruction, this method expands
 /// it to the corresponding (sequence of) actual instruction(s).
 /// \returns true if \p MBBI has been expanded.
-bool M68kExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
-                                MachineBasicBlock::iterator MBBI) {
+bool M68kExpandPseudo::expandMI(MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator MBBI,
+                                MachineBasicBlock::iterator &NextMBBI) {
   MachineInstr &MI = *MBBI;
   MachineInstrBuilder MIB(*MI.getParent()->getParent(), MI);
   unsigned Opcode = MI.getOpcode();
@@ -284,22 +285,6 @@ bool M68kExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
   llvm_unreachable("Previous switch has a fallthrough?");
 }
 
-/// Expand all pseudo instructions contained in \p MBB.
-/// \returns true if any expansion occurred for \p MBB.
-bool M68kExpandPseudo::ExpandMBB(MachineBasicBlock &MBB) {
-  bool Modified = false;
-
-  // MBBI may be invalidated by the expansion.
-  MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
-  while (MBBI != E) {
-    MachineBasicBlock::iterator NMBBI = std::next(MBBI);
-    Modified |= ExpandMI(MBB, MBBI);
-    MBBI = NMBBI;
-  }
-
-  return Modified;
-}
-
 bool M68kExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
   STI = &MF.getSubtarget<M68kSubtarget>();
   TII = STI->getInstrInfo();
@@ -309,7 +294,7 @@ bool M68kExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
 
   bool Modified = false;
   for (MachineBasicBlock &MBB : MF)
-    Modified |= ExpandMBB(MBB);
+    Modified |= expandMBB(MBB);
   return Modified;
 }
 

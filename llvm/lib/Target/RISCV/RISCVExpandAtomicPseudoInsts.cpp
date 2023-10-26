@@ -17,8 +17,8 @@
 #include "RISCVInstrInfo.h"
 #include "RISCVTargetMachine.h"
 
+#include "llvm/CodeGen/ExpandPseudoInstsPass.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 
 using namespace llvm;
@@ -28,13 +28,13 @@ using namespace llvm;
 
 namespace {
 
-class RISCVExpandAtomicPseudo : public MachineFunctionPass {
+class RISCVExpandAtomicPseudo : public ExpandPseudoInstsPass {
 public:
   const RISCVSubtarget *STI;
   const RISCVInstrInfo *TII;
   static char ID;
 
-  RISCVExpandAtomicPseudo() : MachineFunctionPass(ID) {
+  RISCVExpandAtomicPseudo() : ExpandPseudoInstsPass(ID) {
     initializeRISCVExpandAtomicPseudoPass(*PassRegistry::getPassRegistry());
   }
 
@@ -45,9 +45,8 @@ public:
   }
 
 private:
-  bool expandMBB(MachineBasicBlock &MBB);
   bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                MachineBasicBlock::iterator &NextMBBI);
+                MachineBasicBlock::iterator &NextMBBI) override;
   bool expandAtomicBinOp(MachineBasicBlock &MBB,
                          MachineBasicBlock::iterator MBBI, AtomicRMWInst::BinOp,
                          bool IsMasked, int Width,
@@ -88,19 +87,6 @@ bool RISCVExpandAtomicPseudo::runOnMachineFunction(MachineFunction &MF) {
   const unsigned NewSize = getInstSizeInBytes(MF);
   assert(OldSize >= NewSize);
 #endif
-  return Modified;
-}
-
-bool RISCVExpandAtomicPseudo::expandMBB(MachineBasicBlock &MBB) {
-  bool Modified = false;
-
-  MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
-  while (MBBI != E) {
-    MachineBasicBlock::iterator NMBBI = std::next(MBBI);
-    Modified |= expandMI(MBB, MBBI, NMBBI);
-    MBBI = NMBBI;
-  }
-
   return Modified;
 }
 

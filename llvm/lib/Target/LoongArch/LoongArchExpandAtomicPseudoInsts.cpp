@@ -17,8 +17,8 @@
 #include "LoongArchInstrInfo.h"
 #include "LoongArchTargetMachine.h"
 
+#include "llvm/CodeGen/ExpandPseudoInstsPass.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 
 using namespace llvm;
@@ -28,12 +28,12 @@ using namespace llvm;
 
 namespace {
 
-class LoongArchExpandAtomicPseudo : public MachineFunctionPass {
+class LoongArchExpandAtomicPseudo : public ExpandPseudoInstsPass {
 public:
   const LoongArchInstrInfo *TII;
   static char ID;
 
-  LoongArchExpandAtomicPseudo() : MachineFunctionPass(ID) {
+  LoongArchExpandAtomicPseudo() : ExpandPseudoInstsPass(ID) {
     initializeLoongArchExpandAtomicPseudoPass(*PassRegistry::getPassRegistry());
   }
 
@@ -44,9 +44,8 @@ public:
   }
 
 private:
-  bool expandMBB(MachineBasicBlock &MBB);
   bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                MachineBasicBlock::iterator &NextMBBI);
+                MachineBasicBlock::iterator &NextMBBI) override;
   bool expandAtomicBinOp(MachineBasicBlock &MBB,
                          MachineBasicBlock::iterator MBBI, AtomicRMWInst::BinOp,
                          bool IsMasked, int Width,
@@ -68,19 +67,6 @@ bool LoongArchExpandAtomicPseudo::runOnMachineFunction(MachineFunction &MF) {
   bool Modified = false;
   for (auto &MBB : MF)
     Modified |= expandMBB(MBB);
-  return Modified;
-}
-
-bool LoongArchExpandAtomicPseudo::expandMBB(MachineBasicBlock &MBB) {
-  bool Modified = false;
-
-  MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
-  while (MBBI != E) {
-    MachineBasicBlock::iterator NMBBI = std::next(MBBI);
-    Modified |= expandMI(MBB, MBBI, NMBBI);
-    MBBI = NMBBI;
-  }
-
   return Modified;
 }
 

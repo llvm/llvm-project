@@ -20,9 +20,9 @@
 #include "ARMMachineFunctionInfo.h"
 #include "ARMSubtarget.h"
 #include "MCTargetDesc/ARMAddressingModes.h"
+#include "llvm/CodeGen/ExpandPseudoInstsPass.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Support/Debug.h"
@@ -38,10 +38,10 @@ VerifyARMPseudo("verify-arm-pseudo-expand", cl::Hidden,
 #define ARM_EXPAND_PSEUDO_NAME "ARM pseudo instruction expansion pass"
 
 namespace {
-  class ARMExpandPseudo : public MachineFunctionPass {
+  class ARMExpandPseudo : public ExpandPseudoInstsPass {
   public:
     static char ID;
-    ARMExpandPseudo() : MachineFunctionPass(ID) {}
+    ARMExpandPseudo() : ExpandPseudoInstsPass(ID) {}
 
     const ARMBaseInstrInfo *TII;
     const TargetRegisterInfo *TRI;
@@ -60,10 +60,8 @@ namespace {
     }
 
   private:
-    bool ExpandMI(MachineBasicBlock &MBB,
-                  MachineBasicBlock::iterator MBBI,
-                  MachineBasicBlock::iterator &NextMBBI);
-    bool ExpandMBB(MachineBasicBlock &MBB);
+    bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                  MachineBasicBlock::iterator &NextMBBI) override;
     void ExpandVLD(MachineBasicBlock::iterator &MBBI);
     void ExpandVST(MachineBasicBlock::iterator &MBBI);
     void ExpandLaneOp(MachineBasicBlock::iterator &MBBI);
@@ -2113,7 +2111,7 @@ static void CMSEPopCalleeSaves(const TargetInstrInfo &TII,
   }
 }
 
-bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
+bool ARMExpandPseudo::expandMI(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MBBI,
                                MachineBasicBlock::iterator &NextMBBI) {
   MachineInstr &MI = *MBBI;
@@ -3224,19 +3222,6 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
   }
 }
 
-bool ARMExpandPseudo::ExpandMBB(MachineBasicBlock &MBB) {
-  bool Modified = false;
-
-  MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
-  while (MBBI != E) {
-    MachineBasicBlock::iterator NMBBI = std::next(MBBI);
-    Modified |= ExpandMI(MBB, MBBI, NMBBI);
-    MBBI = NMBBI;
-  }
-
-  return Modified;
-}
-
 bool ARMExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
   STI = &MF.getSubtarget<ARMSubtarget>();
   TII = STI->getInstrInfo();
@@ -3248,7 +3233,7 @@ bool ARMExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
 
   bool Modified = false;
   for (MachineBasicBlock &MBB : MF)
-    Modified |= ExpandMBB(MBB);
+    Modified |= expandMBB(MBB);
   if (VerifyARMPseudo)
     MF.verify(this, "After expanding ARM pseudo instructions.");
 
