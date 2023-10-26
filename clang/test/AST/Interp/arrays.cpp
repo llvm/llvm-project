@@ -455,3 +455,45 @@ namespace NoInitMapLeak {
                                // ref-error {{not an integral constant expression}} \
                                // ref-note {{in call to}}
 }
+
+namespace Incomplete {
+  struct Foo {
+    char c;
+    int a[];
+  };
+
+  constexpr Foo F{};
+  constexpr const int *A = F.a; // ref-error {{must be initialized by a constant expression}} \
+                                // ref-note {{array-to-pointer decay of array member without known bound}} \
+                                // expected-error {{must be initialized by a constant expression}} \
+                                // expected-note {{array-to-pointer decay of array member without known bound}}
+
+  constexpr const int *B = F.a + 1; // ref-error {{must be initialized by a constant expression}} \
+                                    // ref-note {{array-to-pointer decay of array member without known bound}} \
+                                    // expected-error {{must be initialized by a constant expression}} \
+                                    // expected-note {{array-to-pointer decay of array member without known bound}}
+
+  constexpr int C = *F.a; // ref-error {{must be initialized by a constant expression}} \
+                          // ref-note {{array-to-pointer decay of array member without known bound}} \
+                          // expected-error {{must be initialized by a constant expression}} \
+                          // expected-note {{array-to-pointer decay of array member without known bound}}
+
+
+
+  /// These are from test/SemaCXX/constant-expression-cxx11.cpp
+  /// and are the only tests using the 'indexing of array without known bound' diagnostic.
+  /// We currently diagnose them differently.
+  extern int arr[]; // expected-note 3{{declared here}}
+  constexpr int *c = &arr[1]; // ref-error  {{must be initialized by a constant expression}} \
+                              // ref-note {{indexing of array without known bound}} \
+                              // expected-error {{must be initialized by a constant expression}} \
+                              // expected-note {{read of non-constexpr variable 'arr'}}
+  constexpr int *d = &arr[1]; // ref-error  {{must be initialized by a constant expression}} \
+                              // ref-note {{indexing of array without known bound}} \
+                              // expected-error {{must be initialized by a constant expression}} \
+                              // expected-note {{read of non-constexpr variable 'arr'}}
+  constexpr int *e = arr + 1; // ref-error  {{must be initialized by a constant expression}} \
+                              // ref-note {{indexing of array without known bound}} \
+                              // expected-error {{must be initialized by a constant expression}} \
+                              // expected-note {{read of non-constexpr variable 'arr'}}
+}
