@@ -92,8 +92,8 @@ checkOperandAffineExpr(AffineExpr expr, unsigned numDims) {
 // mesh::getMeshShardingAttr
 //===----------------------------------------------------------------------===//
 
-FailureOr<MeshShardingAttr> mesh::getMeshShardingAttr(OpResult result,
-                                                      bool useOperandSharding) {
+FailureOr<std::pair<bool, MeshShardingAttr>>
+mesh::getMeshShardingAttr(OpResult result) {
   Value val = result.cast<Value>();
   bool anyShardedForDef = llvm::any_of(val.getUsers(), [](Operation *user) {
     auto shardOp = llvm::dyn_cast<mesh::ShardOp>(user);
@@ -108,32 +108,31 @@ FailureOr<MeshShardingAttr> mesh::getMeshShardingAttr(OpResult result,
     if (!val.hasOneUse())
       return failure();
     auto shardOp = llvm::cast<mesh::ShardOp>(*val.getUsers().begin());
-    return shardOp.getShard();
-  } else if (useOperandSharding) {
-    bool anyShardedForUsers = llvm::any_of(val.getUsers(), [](Operation *user) {
-      auto shardOp = llvm::dyn_cast<mesh::ShardOp>(user);
-      if (!shardOp)
-        return false;
-      return shardOp.getAnnotateForUsers();
-    });
-    if (anyShardedForUsers) {
-      SmallVector<ShardOp> shardOps;
-      for (Operation *user : val.getUsers()) {
-        ShardOp shardOp = llvm::dyn_cast<ShardOp>(user);
-        if (shardOp)
-          shardOps.push_back(shardOp);
-      }
-      MeshShardingAttr shardForDef = shardOps[0].getShard();
-      for (size_t i = 1; i < shardOps.size(); ++i) {
-        // TODO: Deduce a reasonable mesh sharding attr for def when they are
-        // different
-        assert(shardOps[i].getShard() == shardForDef &&
-               "only support all shard ops have the same mesh sharding attr");
-      }
-      return shardForDef;
-    }
+    return std::make_pair(false, shardOp.getShard());
   }
 
+  bool anyShardedForUsers = llvm::any_of(val.getUsers(), [](Operation *user) {
+    auto shardOp = llvm::dyn_cast<mesh::ShardOp>(user);
+    if (!shardOp)
+      return false;
+    return shardOp.getAnnotateForUsers();
+  });
+  if (anyShardedForUsers) {
+    SmallVector<ShardOp> shardOps;
+    for (Operation *user : val.getUsers()) {
+      ShardOp shardOp = llvm::dyn_cast<ShardOp>(user);
+      if (shardOp)
+        shardOps.push_back(shardOp);
+    }
+    MeshShardingAttr shardForDef = shardOps[0].getShard();
+    for (size_t i = 1; i < shardOps.size(); ++i) {
+      // TODO: Deduce a reasonable mesh sharding attr for def when they are
+      // different
+      assert(shardOps[i].getShard() == shardForDef &&
+             "only support all shard ops have the same mesh sharding attr");
+    }
+    return std::make_pair(true, shardForDef);
+  }
   return failure();
 }
 
@@ -403,7 +402,9 @@ static LogicalResult addShardOp(OpBuilder &b, OpResult result,
                                 const ShardingOption &shardingOption,
                                 AffineMap map,
                                 ArrayRef<IteratorType> loopTypes) {
-  if (succeeded(getMeshShardingAttr(result, /*useOperandSharding*/ false)))
+  FailureOr<std::pair<bool, MeshShardingAttr>> maybeSharding =
+      getMeshShardingAttr(result);
+  if (succeeded(maybeSharding) && !maybeSharding->first)
     return success();
 
   auto resultType = result.getType().cast<RankedTensorType>();

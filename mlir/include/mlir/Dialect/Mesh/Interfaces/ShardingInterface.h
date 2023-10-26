@@ -35,13 +35,13 @@ struct ShardingOption {
       : shardingArray(std::move(shardingArray)), cluster(cluster) {}
 };
 
-// This method aims to retrieve the mesh sharding attribute (MeshShardingAttr)
-// for a given operation result.
-FailureOr<MeshShardingAttr> getMeshShardingAttr(OpResult result,
-                                                bool useOperandSharding);
+// This method retrieves the 'MeshShardingAttr' attribute from a given operation
+// result and includes the 'annotate_for_users' information.
+FailureOr<std::pair<bool, MeshShardingAttr>>
+getMeshShardingAttr(OpResult result);
 
-// This method aims to retrieve the mesh sharding attribute (MeshShardingAttr)
-// for a given operation operand.
+// This method retrieves the 'MeshShardingAttr' attribute from a given operation
+// operand and includes the 'annotate_for_users' information.
 FailureOr<std::pair<bool, MeshShardingAttr>>
 getMeshShardingAttr(OpOperand &opOperand);
 

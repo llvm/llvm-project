@@ -34,9 +34,10 @@ namespace {
 // Utilities
 //===----------------------------------------------------------------------===//
 
-// This method returns all possible sharding attributes. For example,
-// mustShardings = [shard0, None] and optionalShardings = [None, shard1], the
-// result will be [[shard0, shard1], [shard0, None]]
+// This method retrieves all potential sharding attributes, prioritizing
+// specific shardings. For example, mustShardings = [shard0, None] and
+// optionalShardings = [None, shard1], the result will be [[shard0, shard1],
+// [shard0, None]]
 static SmallVector<SmallVector<MeshShardingAttr>>
 getOrderedPossibleShardingAttrs(ArrayRef<MeshShardingAttr> mustShardings,
                                 ArrayRef<MeshShardingAttr> optionalShardings) {
@@ -92,15 +93,20 @@ LogicalResult visitOp(Operation *op, OpBuilder &builder) {
   }
 
   // collect MeshShardingAttr from results
-  SmallVector<MeshShardingAttr> resultShardings;
-  resultShardings.reserve(op->getNumResults());
+  SmallVector<MeshShardingAttr> allowConflictsResultShardings;
+  allowConflictsResultShardings.resize(op->getNumResults());
+  SmallVector<MeshShardingAttr> resultMustShardings;
+  resultMustShardings.resize(op->getNumResults());
   for (OpResult result : op->getResults()) {
-    FailureOr<MeshShardingAttr> shardAttr =
-        getMeshShardingAttr(result, /*useOperandSharding*/ true);
-    if (succeeded(shardAttr))
-      resultShardings.push_back(*shardAttr);
+    FailureOr<std::pair<bool, MeshShardingAttr>> maybeShardAttr =
+        getMeshShardingAttr(result);
+    if (failed(maybeShardAttr))
+      continue;
+    if (!maybeShardAttr->first)
+      resultMustShardings[result.getResultNumber()] = maybeShardAttr->second;
     else
-      resultShardings.push_back(nullptr);
+      allowConflictsResultShardings[result.getResultNumber()] =
+          maybeShardAttr->second;
   }
 
   // collect MeshShardingAttr from operands
@@ -114,8 +120,7 @@ LogicalResult visitOp(Operation *op, OpBuilder &builder) {
     if (failed(maybeShardAttr))
       continue;
 
-    bool annotateForUsers = maybeShardAttr->first;
-    if (annotateForUsers)
+    if (maybeShardAttr->first)
       operandMustShardings[opOperand.getOperandNumber()] =
           maybeShardAttr->second;
     else
@@ -127,14 +132,22 @@ LogicalResult visitOp(Operation *op, OpBuilder &builder) {
   SmallVector<SmallVector<MeshShardingAttr>> possibleOperandShardingAttrs =
       getOrderedPossibleShardingAttrs(operandMustShardings,
                                       allowConflictsOperandShardings);
+  SmallVector<SmallVector<MeshShardingAttr>> possibleResultShardingAttrs =
+      getOrderedPossibleShardingAttrs(resultMustShardings,
+                                      allowConflictsResultShardings);
   FailureOr<ShardingOption> finalShardingOption = failure();
-  for (ArrayRef<MeshShardingAttr> operandShardings :
-       possibleOperandShardingAttrs) {
-    FailureOr<ShardingOption> shardingOption =
-        shardingOp.getShardingOption(operandShardings, resultShardings);
-    if (succeeded(shardingOption)) {
-      finalShardingOption = shardingOption;
+  for (ArrayRef<MeshShardingAttr> resultShardings :
+       possibleResultShardingAttrs) {
+    if (succeeded(finalShardingOption))
       break;
+    for (ArrayRef<MeshShardingAttr> operandShardings :
+         possibleOperandShardingAttrs) {
+      FailureOr<ShardingOption> shardingOption =
+          shardingOp.getShardingOption(operandShardings, resultShardings);
+      if (succeeded(shardingOption)) {
+        finalShardingOption = shardingOption;
+        break;
+      }
     }
   }
 
