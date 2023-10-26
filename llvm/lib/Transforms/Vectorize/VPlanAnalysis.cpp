@@ -128,24 +128,39 @@ Type *VPTypeAnalysis::inferScalarType(const VPReplicateRecipe *R) {
   case Instruction::AShr:
   case Instruction::And:
   case Instruction::Or:
-  case Instruction::Xor:
-  case Instruction::ICmp:
-  case Instruction::FCmp: {
+  case Instruction::Xor: {
     Type *ResTy = inferScalarType(R->getOperand(0));
     assert(ResTy == inferScalarType(R->getOperand(1)) &&
            "inferred types for operands of binary op don't match");
     CachedTypes[R->getOperand(1)] = ResTy;
     return ResTy;
   }
+  case Instruction::Select: {
+    Type *ResTy = inferScalarType(R->getOperand(1));
+    assert(ResTy == inferScalarType(R->getOperand(2)) &&
+           "inferred types for operands of select op don't match");
+    CachedTypes[R->getOperand(2)] = ResTy;
+    return ResTy;
+  }
+  case Instruction::ICmp:
+  case Instruction::FCmp:
+    return IntegerType::get(Ctx, 1);
+  case Instruction::Alloca:
+  case Instruction::BitCast:
   case Instruction::Trunc:
   case Instruction::SExt:
   case Instruction::ZExt:
   case Instruction::FPExt:
   case Instruction::FPTrunc:
   case Instruction::ExtractValue:
+  case Instruction::SIToFP:
+  case Instruction::UIToFP:
+  case Instruction::FPToSI:
+  case Instruction::FPToUI:
     return R->getUnderlyingInstr()->getType();
   case Instruction::Freeze:
   case Instruction::FNeg:
+  case Instruction::GetElementPtr:
     return inferScalarType(R->getOperand(0));
   case Instruction::Load:
     return cast<LoadInst>(R->getUnderlyingInstr())->getType();
@@ -178,12 +193,19 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
                    ->getLiveInIRValue()
                    ->getType();
     break;
+  case VPDef::VPDerivedIVSC: {
+    // VPDerivedIV may truncate the IV to a specified scalar type or use the
+    // type of the first operand (the step).
+    Type *T = cast<VPDerivedIVRecipe>(Def)->getScalarType();
+    ResultTy = T ? T : inferScalarType(Def->getOperand(0));
+    break;
+  }
   case VPDef::VPWidenIntOrFpInductionSC:
     ResultTy = cast<VPWidenIntOrFpInductionRecipe>(Def)->getScalarType();
     break;
   case VPDef::VPPredInstPHISC:
-  case VPDef::VPScalarIVStepsSC:
   case VPDef::VPWidenPHISC:
+  case VPDef::VPScalarIVStepsSC:
     ResultTy = inferScalarType(Def->getOperand(0));
     break;
   case VPDef::VPBlendSC:
