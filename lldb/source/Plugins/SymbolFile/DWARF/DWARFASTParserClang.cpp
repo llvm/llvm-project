@@ -63,7 +63,8 @@ using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
 
 DWARFASTParserClang::DWARFASTParserClang(TypeSystemClang &ast)
-    : m_ast(ast), m_die_to_decl_ctx(), m_decl_ctx_to_die() {}
+    : DWARFASTParser(Kind::DWARFASTParserClang), m_ast(ast),
+      m_die_to_decl_ctx(), m_decl_ctx_to_die() {}
 
 DWARFASTParserClang::~DWARFASTParserClang() = default;
 
@@ -142,8 +143,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,
   // If this type comes from a Clang module, recursively look in the
   // DWARF section of the .pcm file in the module cache. Clang
   // generates DWO skeleton units as breadcrumbs to find them.
-  llvm::SmallVector<CompilerContext, 4> decl_context;
-  die.GetDeclContext(decl_context);
+  std::vector<CompilerContext> decl_context = die.GetDeclContext();
   TypeMap pcm_types;
 
   // The type in the Clang module must have the same language as the current CU.
@@ -834,9 +834,9 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
 
   CompilerType enumerator_clang_type;
   CompilerType clang_type;
-  clang_type =
-      CompilerType(m_ast.weak_from_this(),
-                   dwarf->GetForwardDeclDieToClangType().lookup(die.GetDIE()));
+  clang_type = CompilerType(
+      m_ast.weak_from_this(),
+      dwarf->GetForwardDeclDIEToCompilerType().lookup(die.GetDIE()));
   if (!clang_type) {
     if (attrs.type.IsValid()) {
       Type *enumerator_type =
@@ -1764,9 +1764,9 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   assert(tag_decl_kind != -1);
   (void)tag_decl_kind;
   bool clang_type_was_created = false;
-  clang_type =
-      CompilerType(m_ast.weak_from_this(),
-                   dwarf->GetForwardDeclDieToClangType().lookup(die.GetDIE()));
+  clang_type = CompilerType(
+      m_ast.weak_from_this(),
+      dwarf->GetForwardDeclDIEToCompilerType().lookup(die.GetDIE()));
   if (!clang_type) {
     clang::DeclContext *decl_ctx =
         GetClangDeclContextContainingDIE(die, nullptr);
@@ -1896,16 +1896,16 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
       // the SymbolFile virtual function
       // "SymbolFileDWARF::CompleteType(Type *)" When the definition
       // needs to be defined.
-      assert(!dwarf->GetForwardDeclClangTypeToDie().count(
+      assert(!dwarf->GetForwardDeclCompilerTypeToDIE().count(
                  ClangUtil::RemoveFastQualifiers(clang_type)
                      .GetOpaqueQualType()) &&
              "Type already in the forward declaration map!");
       // Can't assume m_ast.GetSymbolFile() is actually a
       // SymbolFileDWARF, it can be a SymbolFileDWARFDebugMap for Apple
       // binaries.
-      dwarf->GetForwardDeclDieToClangType()[die.GetDIE()] =
+      dwarf->GetForwardDeclDIEToCompilerType()[die.GetDIE()] =
           clang_type.GetOpaqueQualType();
-      dwarf->GetForwardDeclClangTypeToDie().try_emplace(
+      dwarf->GetForwardDeclCompilerTypeToDIE().try_emplace(
           ClangUtil::RemoveFastQualifiers(clang_type).GetOpaqueQualType(),
           *die.GetDIERef());
       m_ast.SetHasExternalStorage(clang_type.GetOpaqueQualType(), true);
@@ -2286,7 +2286,7 @@ CompilerDecl DWARFASTParserClang::GetDeclForUIDFromDWARF(const DWARFDIE &die) {
   clang::Decl *clang_decl = GetClangDeclForDIE(die);
   if (clang_decl != nullptr)
     return m_ast.GetCompilerDecl(clang_decl);
-  return CompilerDecl();
+  return {};
 }
 
 CompilerDeclContext
@@ -2294,7 +2294,7 @@ DWARFASTParserClang::GetDeclContextForUIDFromDWARF(const DWARFDIE &die) {
   clang::DeclContext *clang_decl_ctx = GetClangDeclContextForDIE(die);
   if (clang_decl_ctx)
     return m_ast.CreateDeclContext(clang_decl_ctx);
-  return CompilerDeclContext();
+  return {};
 }
 
 CompilerDeclContext
@@ -2303,7 +2303,7 @@ DWARFASTParserClang::GetDeclContextContainingUIDFromDWARF(const DWARFDIE &die) {
       GetClangDeclContextContainingDIE(die, nullptr);
   if (clang_decl_ctx)
     return m_ast.CreateDeclContext(clang_decl_ctx);
-  return CompilerDeclContext();
+  return {};
 }
 
 size_t DWARFASTParserClang::ParseChildEnumerators(
@@ -3290,30 +3290,6 @@ size_t DWARFASTParserClang::ParseChildParameters(
     }
   }
   return arg_idx;
-}
-
-Type *DWARFASTParserClang::GetTypeForDIE(const DWARFDIE &die) {
-  if (!die)
-    return nullptr;
-
-  SymbolFileDWARF *dwarf = die.GetDWARF();
-  if (!dwarf)
-    return nullptr;
-
-  DWARFAttributes attributes = die.GetAttributes();
-  if (attributes.Size() == 0)
-    return nullptr;
-
-  DWARFFormValue type_die_form;
-  for (size_t i = 0; i < attributes.Size(); ++i) {
-    dw_attr_t attr = attributes.AttributeAtIndex(i);
-    DWARFFormValue form_value;
-
-    if (attr == DW_AT_type && attributes.ExtractFormValueAtIndex(i, form_value))
-      return dwarf->ResolveTypeUID(form_value.Reference(), true);
-  }
-
-  return nullptr;
 }
 
 clang::Decl *DWARFASTParserClang::GetClangDeclForDIE(const DWARFDIE &die) {

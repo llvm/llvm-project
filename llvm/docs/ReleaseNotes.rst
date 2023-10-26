@@ -208,6 +208,7 @@ Changes to LLDB
 * ``lldb-vscode`` was renamed to ``lldb-dap`` and and its installation
   instructions have been updated to reflect this. The underlying functionality
   remains unchanged.
+* The ``mte_ctrl`` register can now be read from AArch64 Linux core files.
 
 * LLDB now supports debugging the Scalable Matrix Extension (SME) on AArch64
   Linux for both running processes and core files. For details refer to the

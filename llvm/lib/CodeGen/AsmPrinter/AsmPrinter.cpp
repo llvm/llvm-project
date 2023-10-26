@@ -1469,9 +1469,10 @@ void AsmPrinter::emitStackUsage(const MachineFunction &MF) {
     }
   }
 
-  *StackUsageStream << MF.getFunction().getParent()->getName();
   if (const DISubprogram *DSP = MF.getFunction().getSubprogram())
-    *StackUsageStream << ':' << DSP->getLine();
+    *StackUsageStream << DSP->getFilename() << ':' << DSP->getLine();
+  else
+    *StackUsageStream << MF.getFunction().getParent()->getName();
 
   *StackUsageStream << ':' << MF.getName() << '\t' << StackSize << '\t';
   if (FrameInfo.hasVarSizedObjects())

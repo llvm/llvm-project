@@ -3544,7 +3544,7 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
           }
         }
       }
-    } else if (Current->SpacesRequiredBefore == 0 &&
+    } else if (!Current->Finalized && Current->SpacesRequiredBefore == 0 &&
                spaceRequiredBefore(Line, *Current)) {
       Current->SpacesRequiredBefore = 1;
     }
@@ -5117,10 +5117,6 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     return true;
   if (Left.IsUnterminatedLiteral)
     return true;
-  if (Right.is(tok::lessless) && Right.Next && Left.is(tok::string_literal) &&
-      Right.Next->is(tok::string_literal)) {
-    return true;
-  }
   if (Right.is(TT_RequiresClause)) {
     switch (Style.RequiresClausePosition) {
     case FormatStyle::RCPS_OwnLine:

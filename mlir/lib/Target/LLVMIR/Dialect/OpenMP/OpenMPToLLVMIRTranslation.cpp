@@ -1523,8 +1523,6 @@ convertOmpThreadprivate(Operation &opInst, llvm::IRBuilderBase &builder,
   LLVM::GlobalOp global =
       addressOfOp.getGlobal(moduleTranslation.symbolTable());
   llvm::GlobalValue *globalValue = moduleTranslation.lookupGlobal(global);
-  llvm::Value *data =
-      builder.CreateBitCast(globalValue, builder.getInt8PtrTy());
   llvm::Type *type = globalValue->getValueType();
   llvm::TypeSize typeSize =
       builder.GetInsertBlock()->getModule()->getDataLayout().getTypeStoreSize(
@@ -1532,18 +1530,16 @@ convertOmpThreadprivate(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::ConstantInt *size = builder.getInt64(typeSize.getFixedValue());
   llvm::StringRef suffix = llvm::StringRef(".cache", 6);
   std::string cacheName = (Twine(global.getSymName()).concat(suffix)).str();
-  // Emit runtime function and bitcast its type (i8*) to real data type.
   llvm::Value *callInst =
       moduleTranslation.getOpenMPBuilder()->createCachedThreadPrivate(
-          ompLoc, data, size, cacheName);
-  llvm::Value *result = builder.CreateBitCast(callInst, globalValue->getType());
-  moduleTranslation.mapValue(opInst.getResult(0), result);
+          ompLoc, globalValue, size, cacheName);
+  moduleTranslation.mapValue(opInst.getResult(0), callInst);
   return success();
 }
 
-int64_t getSizeInBytes(DataLayout &DL, const Type &type) {
+int64_t getSizeInBytes(DataLayout &DL, const Type &type, const Type &eleType) {
   if (isa<LLVM::LLVMPointerType>(type))
-    return DL.getTypeSize(cast<LLVM::LLVMPointerType>(type).getElementType());
+    return DL.getTypeSize(eleType);
 
   return 0;
 }
@@ -1710,8 +1706,8 @@ static void genMapInfos(llvm::IRBuilderBase &builder,
       mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM;
 
     combinedInfo.Types.emplace_back(mapFlag);
-    combinedInfo.Sizes.emplace_back(
-        builder.getInt64(getSizeInBytes(DL, mapInfoOp.getVarPtr().getType())));
+    combinedInfo.Sizes.emplace_back(builder.getInt64(getSizeInBytes(
+        DL, mapInfoOp.getVarPtr().getType(), mapInfoOp.getVarType())));
     index++;
   }
 

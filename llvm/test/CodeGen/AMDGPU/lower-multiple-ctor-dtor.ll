@@ -11,7 +11,7 @@
 ; CHECK: @__init_array_end = external addrspace(1) constant [0 x ptr addrspace(1)]
 ; CHECK: @__fini_array_start = external addrspace(1) constant [0 x ptr addrspace(1)]
 ; CHECK: @__fini_array_end = external addrspace(1) constant [0 x ptr addrspace(1)]
-; CHECK: @llvm.used = appending global [2 x ptr] [ptr @amdgcn.device.init, ptr @amdgcn.device.fini]
+; CHECK: @llvm.used = appending addrspace(1) global [2 x ptr] [ptr @amdgcn.device.init, ptr @amdgcn.device.fini]
 ; UTC_ARGS: --enable
 
 

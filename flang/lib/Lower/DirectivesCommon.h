@@ -200,62 +200,13 @@ static inline void genOmpAccAtomicUpdateStatement(
     mlir::Type varType, const Fortran::parser::Variable &assignmentStmtVariable,
     const Fortran::parser::Expr &assignmentStmtExpr,
     [[maybe_unused]] const AtomicListT *leftHandClauseList,
-    [[maybe_unused]] const AtomicListT *rightHandClauseList) {
-  // Generate `omp.atomic.update` operation for atomic assignment statements
+    [[maybe_unused]] const AtomicListT *rightHandClauseList,
+    mlir::Operation *atomicCaptureOp = nullptr) {
+  // Generate `atomic.update` operation for atomic assignment statements
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::Location currentLocation = converter.getCurrentLocation();
 
-  const auto *varDesignator =
-      std::get_if<Fortran::common::Indirection<Fortran::parser::Designator>>(
-          &assignmentStmtVariable.u);
-  assert(varDesignator && "Variable designator for atomic update assignment "
-                          "statement does not exist");
-  const Fortran::parser::Name *name =
-      Fortran::semantics::getDesignatorNameIfDataRef(varDesignator->value());
-  if (!name)
-    TODO(converter.getCurrentLocation(),
-         "Array references as atomic update variable");
-  assert(name && name->symbol &&
-         "No symbol attached to atomic update variable");
-  if (Fortran::semantics::IsAllocatableOrPointer(name->symbol->GetUltimate()))
-    converter.bindSymbol(*name->symbol, lhsAddr);
-
-  //  Lowering is in two steps :
-  //  subroutine sb
-  //    integer :: a, b
-  //    !$omp atomic update
-  //      a = a + b
-  //  end subroutine
-  //
-  //  1. Lower to scf.execute_region_op
-  //
-  //  func.func @_QPsb() {
-  //    %0 = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFsbEa"}
-  //    %1 = fir.alloca i32 {bindc_name = "b", uniq_name = "_QFsbEb"}
-  //    %2 = scf.execute_region -> i32 {
-  //      %3 = fir.load %0 : !fir.ref<i32>
-  //      %4 = fir.load %1 : !fir.ref<i32>
-  //      %5 = arith.addi %3, %4 : i32
-  //      scf.yield %5 : i32
-  //    }
-  //    return
-  //  }
-  auto tempOp =
-      firOpBuilder.create<mlir::scf::ExecuteRegionOp>(currentLocation, varType);
-  firOpBuilder.createBlock(&tempOp.getRegion());
-  mlir::Block &block = tempOp.getRegion().back();
-  firOpBuilder.setInsertionPointToEnd(&block);
-  Fortran::lower::StatementContext stmtCtx;
-  mlir::Value rhsExpr = fir::getBase(converter.genExprValue(
-      *Fortran::semantics::GetExpr(assignmentStmtExpr), stmtCtx));
-  mlir::Value convertResult =
-      firOpBuilder.createConvert(currentLocation, varType, rhsExpr);
-  // Insert the terminator: YieldOp.
-  firOpBuilder.create<mlir::scf::YieldOp>(currentLocation, convertResult);
-  firOpBuilder.setInsertionPointToStart(&block);
-
-  //  2. Create the omp.atomic.update Operation using the Operations in the
-  //     temporary scf.execute_region Operation.
+  //  Create the omp.atomic.update or acc.atmoic.update operation
   //
   //  func.func @_QPsb() {
   //    %0 = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFsbEa"}
@@ -269,11 +220,37 @@ static inline void genOmpAccAtomicUpdateStatement(
   //    }
   //    return
   //  }
-  mlir::Value updateVar = converter.getSymbolAddress(*name->symbol);
-  if (auto decl = updateVar.getDefiningOp<hlfir::DeclareOp>())
-    updateVar = decl.getBase();
 
-  firOpBuilder.setInsertionPointAfter(tempOp);
+  Fortran::lower::ExprToValueMap exprValueOverrides;
+  // Lower any non atomic sub-expression before the atomic operation, and
+  // map its lowered value to the semantic representation.
+  const Fortran::lower::SomeExpr *nonAtomicSubExpr{nullptr};
+  std::visit(
+      [&](const auto &op) -> void {
+        using T = std::decay_t<decltype(op)>;
+        if constexpr (std::is_base_of<Fortran::parser::Expr::IntrinsicBinary,
+                                      T>::value) {
+          const auto &exprLeft{std::get<0>(op.t)};
+          const auto &exprRight{std::get<1>(op.t)};
+          if (exprLeft.value().source == assignmentStmtVariable.GetSource())
+            nonAtomicSubExpr = Fortran::semantics::GetExpr(exprRight);
+          else
+            nonAtomicSubExpr = Fortran::semantics::GetExpr(exprLeft);
+        }
+      },
+      assignmentStmtExpr.u);
+  StatementContext nonAtomicStmtCtx;
+  if (nonAtomicSubExpr) {
+    // Generate non atomic part before all the atomic operations.
+    auto insertionPoint = firOpBuilder.saveInsertionPoint();
+    if (atomicCaptureOp)
+      firOpBuilder.setInsertionPoint(atomicCaptureOp);
+    mlir::Value nonAtomicVal = fir::getBase(converter.genExprValue(
+        currentLocation, *nonAtomicSubExpr, nonAtomicStmtCtx));
+    exprValueOverrides.try_emplace(nonAtomicSubExpr, nonAtomicVal);
+    if (atomicCaptureOp)
+      firOpBuilder.restoreInsertionPoint(insertionPoint);
+  }
 
   mlir::Operation *atomicUpdateOp = nullptr;
   if constexpr (std::is_same<AtomicListT,
@@ -289,10 +266,10 @@ static inline void genOmpAccAtomicUpdateStatement(
       genOmpAtomicHintAndMemoryOrderClauses(converter, *rightHandClauseList,
                                             hint, memoryOrder);
     atomicUpdateOp = firOpBuilder.create<mlir::omp::AtomicUpdateOp>(
-        currentLocation, updateVar, hint, memoryOrder);
+        currentLocation, lhsAddr, hint, memoryOrder);
   } else {
     atomicUpdateOp = firOpBuilder.create<mlir::acc::AtomicUpdateOp>(
-        currentLocation, updateVar);
+        currentLocation, lhsAddr);
   }
 
   llvm::SmallVector<mlir::Type> varTys = {varType};
@@ -301,38 +278,25 @@ static inline void genOmpAccAtomicUpdateStatement(
   mlir::Value val =
       fir::getBase(atomicUpdateOp->getRegion(0).front().getArgument(0));
 
-  llvm::SmallVector<mlir::Operation *> ops;
-  for (mlir::Operation &op : tempOp.getRegion().getOps())
-    ops.push_back(&op);
-
-  // SCF Yield is converted to OMP Yield. All other operations are copied
-  for (mlir::Operation *op : ops) {
-    if (auto y = mlir::dyn_cast<mlir::scf::YieldOp>(op)) {
-      firOpBuilder.setInsertionPointToEnd(
-          &atomicUpdateOp->getRegion(0).front());
-      if constexpr (std::is_same<AtomicListT,
-                                 Fortran::parser::OmpAtomicClauseList>()) {
-        firOpBuilder.create<mlir::omp::YieldOp>(currentLocation,
-                                                y.getResults());
-      } else {
-        firOpBuilder.create<mlir::acc::YieldOp>(currentLocation,
-                                                y.getResults());
-      }
-      op->erase();
+  exprValueOverrides.try_emplace(
+      Fortran::semantics::GetExpr(assignmentStmtVariable), val);
+  {
+    // statement context inside the atomic block.
+    converter.overrideExprValues(&exprValueOverrides);
+    Fortran::lower::StatementContext atomicStmtCtx;
+    mlir::Value rhsExpr = fir::getBase(converter.genExprValue(
+        *Fortran::semantics::GetExpr(assignmentStmtExpr), atomicStmtCtx));
+    mlir::Value convertResult =
+        firOpBuilder.createConvert(currentLocation, varType, rhsExpr);
+    if constexpr (std::is_same<AtomicListT,
+                               Fortran::parser::OmpAtomicClauseList>()) {
+      firOpBuilder.create<mlir::omp::YieldOp>(currentLocation, convertResult);
     } else {
-      op->remove();
-      atomicUpdateOp->getRegion(0).front().push_back(op);
+      firOpBuilder.create<mlir::acc::YieldOp>(currentLocation, convertResult);
     }
+    converter.resetExprOverrides();
   }
-
-  // Remove the load and replace all uses of load with the block argument
-  for (mlir::Operation &op : atomicUpdateOp->getRegion(0).getOps()) {
-    fir::LoadOp y = mlir::dyn_cast<fir::LoadOp>(&op);
-    if (y && y.getMemref() == updateVar)
-      y.getRes().replaceAllUsesWith(val);
-  }
-
-  tempOp.erase();
+  firOpBuilder.setInsertionPointAfter(atomicUpdateOp);
 }
 
 /// Processes an atomic construct with write clause.
@@ -423,11 +387,7 @@ void genOmpAccAtomicUpdate(Fortran::lower::AbstractConverter &converter,
   Fortran::lower::StatementContext stmtCtx;
   mlir::Value lhsAddr = fir::getBase(converter.genExprAddr(
       *Fortran::semantics::GetExpr(assignmentStmtVariable), stmtCtx));
-  mlir::Type varType =
-      fir::getBase(
-          converter.genExprValue(
-              *Fortran::semantics::GetExpr(assignmentStmtVariable), stmtCtx))
-          .getType();
+  mlir::Type varType = fir::unwrapRefType(lhsAddr.getType());
   genOmpAccAtomicUpdateStatement<AtomicListT>(
       converter, lhsAddr, varType, assignmentStmtVariable, assignmentStmtExpr,
       leftHandClauseList, rightHandClauseList);
@@ -450,11 +410,7 @@ void genOmpAtomic(Fortran::lower::AbstractConverter &converter,
   Fortran::lower::StatementContext stmtCtx;
   mlir::Value lhsAddr = fir::getBase(converter.genExprAddr(
       *Fortran::semantics::GetExpr(assignmentStmtVariable), stmtCtx));
-  mlir::Type varType =
-      fir::getBase(
-          converter.genExprValue(
-              *Fortran::semantics::GetExpr(assignmentStmtVariable), stmtCtx))
-          .getType();
+  mlir::Type varType = fir::unwrapRefType(lhsAddr.getType());
   // If atomic-clause is not present on the construct, the behaviour is as if
   // the update clause is specified (for both OpenMP and OpenACC).
   genOmpAccAtomicUpdateStatement<AtomicListT>(
@@ -551,7 +507,7 @@ void genOmpAccAtomicCapture(Fortran::lower::AbstractConverter &converter,
       genOmpAccAtomicUpdateStatement<AtomicListT>(
           converter, stmt1RHSArg, stmt2VarType, stmt2Var, stmt2Expr,
           /*leftHandClauseList=*/nullptr,
-          /*rightHandClauseList=*/nullptr);
+          /*rightHandClauseList=*/nullptr, atomicCaptureOp);
     } else {
       // Atomic capture construct is of the form [capture-stmt, write-stmt]
       const Fortran::semantics::SomeExpr &fromExpr =
@@ -580,7 +536,7 @@ void genOmpAccAtomicCapture(Fortran::lower::AbstractConverter &converter,
     genOmpAccAtomicUpdateStatement<AtomicListT>(
         converter, stmt1LHSArg, stmt1VarType, stmt1Var, stmt1Expr,
         /*leftHandClauseList=*/nullptr,
-        /*rightHandClauseList=*/nullptr);
+        /*rightHandClauseList=*/nullptr, atomicCaptureOp);
   }
   firOpBuilder.setInsertionPointToEnd(&block);
   if constexpr (std::is_same<AtomicListT,
@@ -898,9 +854,17 @@ mlir::Value gatherDataOperandAddrAndBounds(
                       builder, operandLocation, converter, compExv, baseAddr);
                 }
               } else {
-                // Scalar or full array.
-                if (const auto *dataRef{
-                        std::get_if<Fortran::parser::DataRef>(&designator.u)}) {
+                if (Fortran::parser::Unwrap<Fortran::parser::ArrayElement>(
+                        designator)) {
+                  // Single array element.
+                  fir::ExtendedValue compExv =
+                      converter.genExprAddr(operandLocation, *expr, stmtCtx);
+                  baseAddr = fir::getBase(compExv);
+                  asFortran << (*expr).AsFortran();
+                } else if (const auto *dataRef{
+                               std::get_if<Fortran::parser::DataRef>(
+                                   &designator.u)}) {
+                  // Scalar or full array.
                   const Fortran::parser::Name &name =
                       Fortran::parser::GetLastName(*dataRef);
                   fir::ExtendedValue dataExv =

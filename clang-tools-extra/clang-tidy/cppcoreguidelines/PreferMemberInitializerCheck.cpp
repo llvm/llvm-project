@@ -178,140 +178,140 @@ void PreferMemberInitializerCheck::check(
     const FieldDecl *Field = nullptr;
     const Expr *InitValue = nullptr;
     std::tie(Field, InitValue) = isAssignmentToMemberOf(Class, S, Ctor);
-    if (Field) {
-      if (IsUseDefaultMemberInitEnabled && getLangOpts().CPlusPlus11 &&
-          Ctor->isDefaultConstructor() &&
-          (getLangOpts().CPlusPlus20 || !Field->isBitField()) &&
-          !Field->hasInClassInitializer() &&
-          (!isa<RecordDecl>(Class->getDeclContext()) ||
-           !cast<RecordDecl>(Class->getDeclContext())->isUnion()) &&
-          shouldBeDefaultMemberInitializer(InitValue)) {
+    if (!Field)
+      continue;
+    const bool IsInDefaultMemberInitializer =
+        IsUseDefaultMemberInitEnabled && getLangOpts().CPlusPlus11 &&
+        Ctor->isDefaultConstructor() &&
+        (getLangOpts().CPlusPlus20 || !Field->isBitField()) &&
+        !Field->hasInClassInitializer() &&
+        (!isa<RecordDecl>(Class->getDeclContext()) ||
+         !cast<RecordDecl>(Class->getDeclContext())->isUnion()) &&
+        shouldBeDefaultMemberInitializer(InitValue);
+    if (IsInDefaultMemberInitializer) {
+      bool InvalidFix = false;
+      SourceLocation FieldEnd =
+          Lexer::getLocForEndOfToken(Field->getSourceRange().getEnd(), 0,
+                                     *Result.SourceManager, getLangOpts());
+      InvalidFix |= FieldEnd.isInvalid() || FieldEnd.isMacroID();
+      SourceLocation SemiColonEnd;
+      if (auto NextToken = Lexer::findNextToken(
+              S->getEndLoc(), *Result.SourceManager, getLangOpts()))
+        SemiColonEnd = NextToken->getEndLoc();
+      else
+        InvalidFix = true;
+      auto Diag =
+          diag(S->getBeginLoc(), "%0 should be initialized in an in-class"
+                                 " default member initializer")
+          << Field;
+      if (InvalidFix)
+        continue;
+      CharSourceRange StmtRange =
+          CharSourceRange::getCharRange(S->getBeginLoc(), SemiColonEnd);
 
-        bool InvalidFix = false;
-        SourceLocation FieldEnd =
-            Lexer::getLocForEndOfToken(Field->getSourceRange().getEnd(), 0,
-                                       *Result.SourceManager, getLangOpts());
-        InvalidFix |= FieldEnd.isInvalid() || FieldEnd.isMacroID();
-        SourceLocation SemiColonEnd;
-        if (auto NextToken = Lexer::findNextToken(
-                S->getEndLoc(), *Result.SourceManager, getLangOpts()))
-          SemiColonEnd = NextToken->getEndLoc();
-        else
-          InvalidFix = true;
-        auto Diag =
-            diag(S->getBeginLoc(), "%0 should be initialized in an in-class"
-                                   " default member initializer")
-            << Field;
-        if (InvalidFix)
+      SmallString<128> Insertion(
+          {UseAssignment ? " = " : "{",
+           Lexer::getSourceText(
+               CharSourceRange(InitValue->getSourceRange(), true),
+               *Result.SourceManager, getLangOpts()),
+           UseAssignment ? "" : "}"});
+
+      Diag << FixItHint::CreateInsertion(FieldEnd, Insertion)
+           << FixItHint::CreateRemoval(StmtRange);
+
+    } else {
+      StringRef InsertPrefix = "";
+      bool HasInitAlready = false;
+      SourceLocation InsertPos;
+      SourceRange ReplaceRange;
+      bool AddComma = false;
+      bool InvalidFix = false;
+      unsigned Index = Field->getFieldIndex();
+      const CXXCtorInitializer *LastInListInit = nullptr;
+      for (const CXXCtorInitializer *Init : Ctor->inits()) {
+        if (!Init->isWritten() || Init->isInClassMemberInitializer())
           continue;
-        CharSourceRange StmtRange =
-            CharSourceRange::getCharRange(S->getBeginLoc(), SemiColonEnd);
-
-        SmallString<128> Insertion(
-            {UseAssignment ? " = " : "{",
-             Lexer::getSourceText(
-                 CharSourceRange(InitValue->getSourceRange(), true),
-                 *Result.SourceManager, getLangOpts()),
-             UseAssignment ? "" : "}"});
-
-        Diag << FixItHint::CreateInsertion(FieldEnd, Insertion)
-             << FixItHint::CreateRemoval(StmtRange);
-
-      } else {
-        StringRef InsertPrefix = "";
-        bool HasInitAlready = false;
-        SourceLocation InsertPos;
-        SourceRange ReplaceRange;
-        bool AddComma = false;
-        bool InvalidFix = false;
-        unsigned Index = Field->getFieldIndex();
-        const CXXCtorInitializer *LastInListInit = nullptr;
-        for (const CXXCtorInitializer *Init : Ctor->inits()) {
-          if (!Init->isWritten() || Init->isInClassMemberInitializer())
-            continue;
-          if (Init->getMember() == Field) {
-            HasInitAlready = true;
-            if (isa<ImplicitValueInitExpr>(Init->getInit()))
-              InsertPos = Init->getRParenLoc();
-            else {
-              ReplaceRange = Init->getInit()->getSourceRange();
-            }
-            break;
+        if (Init->getMember() == Field) {
+          HasInitAlready = true;
+          if (isa<ImplicitValueInitExpr>(Init->getInit()))
+            InsertPos = Init->getRParenLoc();
+          else {
+            ReplaceRange = Init->getInit()->getSourceRange();
           }
-          if (Init->isMemberInitializer() &&
-              Index < Init->getMember()->getFieldIndex()) {
-            InsertPos = Init->getSourceLocation();
-            // There are initializers after the one we are inserting, so add a
-            // comma after this insertion in order to not break anything.
-            AddComma = true;
-            break;
-          }
-          LastInListInit = Init;
+          break;
         }
-        if (HasInitAlready) {
-          if (InsertPos.isValid())
-            InvalidFix |= InsertPos.isMacroID();
-          else
-            InvalidFix |= ReplaceRange.getBegin().isMacroID() ||
-                          ReplaceRange.getEnd().isMacroID();
-        } else {
-          if (InsertPos.isInvalid()) {
-            if (LastInListInit) {
-              InsertPos = Lexer::getLocForEndOfToken(
-                  LastInListInit->getRParenLoc(), 0, *Result.SourceManager,
-                  getLangOpts());
-              // Inserting after the last constructor initializer, so we need a
-              // comma.
-              InsertPrefix = ", ";
-            } else {
-              InsertPos = Lexer::getLocForEndOfToken(
-                  Ctor->getTypeSourceInfo()
-                      ->getTypeLoc()
-                      .getAs<clang::FunctionTypeLoc>()
-                      .getLocalRangeEnd(),
-                  0, *Result.SourceManager, getLangOpts());
-
-              // If this is first time in the loop, there are no initializers so
-              // `:` declares member initialization list. If this is a
-              // subsequent pass then we have already inserted a `:` so continue
-              // with a comma.
-              InsertPrefix = FirstToCtorInits ? " : " : ", ";
-            }
-          }
-          InvalidFix |= InsertPos.isMacroID();
+        if (Init->isMemberInitializer() &&
+            Index < Init->getMember()->getFieldIndex()) {
+          InsertPos = Init->getSourceLocation();
+          // There are initializers after the one we are inserting, so add a
+          // comma after this insertion in order to not break anything.
+          AddComma = true;
+          break;
         }
-
-        SourceLocation SemiColonEnd;
-        if (auto NextToken = Lexer::findNextToken(
-                S->getEndLoc(), *Result.SourceManager, getLangOpts()))
-          SemiColonEnd = NextToken->getEndLoc();
-        else
-          InvalidFix = true;
-
-        auto Diag =
-            diag(S->getBeginLoc(), "%0 should be initialized in a member"
-                                   " initializer of the constructor")
-            << Field;
-        if (InvalidFix)
-          continue;
-        StringRef NewInit = Lexer::getSourceText(
-            CharSourceRange(InitValue->getSourceRange(), true),
-            *Result.SourceManager, getLangOpts());
-        if (HasInitAlready) {
-          if (InsertPos.isValid())
-            Diag << FixItHint::CreateInsertion(InsertPos, NewInit);
-          else
-            Diag << FixItHint::CreateReplacement(ReplaceRange, NewInit);
-        } else {
-          SmallString<128> Insertion({InsertPrefix, Field->getName(), "(",
-                                      NewInit, AddComma ? "), " : ")"});
-          Diag << FixItHint::CreateInsertion(InsertPos, Insertion,
-                                             FirstToCtorInits);
-          FirstToCtorInits = areDiagsSelfContained();
-        }
-        Diag << FixItHint::CreateRemoval(
-            CharSourceRange::getCharRange(S->getBeginLoc(), SemiColonEnd));
+        LastInListInit = Init;
       }
+      if (HasInitAlready) {
+        if (InsertPos.isValid())
+          InvalidFix |= InsertPos.isMacroID();
+        else
+          InvalidFix |= ReplaceRange.getBegin().isMacroID() ||
+                        ReplaceRange.getEnd().isMacroID();
+      } else {
+        if (InsertPos.isInvalid()) {
+          if (LastInListInit) {
+            InsertPos = Lexer::getLocForEndOfToken(
+                LastInListInit->getRParenLoc(), 0, *Result.SourceManager,
+                getLangOpts());
+            // Inserting after the last constructor initializer, so we need a
+            // comma.
+            InsertPrefix = ", ";
+          } else {
+            InsertPos = Lexer::getLocForEndOfToken(
+                Ctor->getTypeSourceInfo()
+                    ->getTypeLoc()
+                    .getAs<clang::FunctionTypeLoc>()
+                    .getLocalRangeEnd(),
+                0, *Result.SourceManager, getLangOpts());
+
+            // If this is first time in the loop, there are no initializers so
+            // `:` declares member initialization list. If this is a
+            // subsequent pass then we have already inserted a `:` so continue
+            // with a comma.
+            InsertPrefix = FirstToCtorInits ? " : " : ", ";
+          }
+        }
+        InvalidFix |= InsertPos.isMacroID();
+      }
+
+      SourceLocation SemiColonEnd;
+      if (auto NextToken = Lexer::findNextToken(
+              S->getEndLoc(), *Result.SourceManager, getLangOpts()))
+        SemiColonEnd = NextToken->getEndLoc();
+      else
+        InvalidFix = true;
+
+      auto Diag = diag(S->getBeginLoc(), "%0 should be initialized in a member"
+                                         " initializer of the constructor")
+                  << Field;
+      if (InvalidFix)
+        continue;
+      StringRef NewInit = Lexer::getSourceText(
+          CharSourceRange(InitValue->getSourceRange(), true),
+          *Result.SourceManager, getLangOpts());
+      if (HasInitAlready) {
+        if (InsertPos.isValid())
+          Diag << FixItHint::CreateInsertion(InsertPos, NewInit);
+        else
+          Diag << FixItHint::CreateReplacement(ReplaceRange, NewInit);
+      } else {
+        SmallString<128> Insertion({InsertPrefix, Field->getName(), "(",
+                                    NewInit, AddComma ? "), " : ")"});
+        Diag << FixItHint::CreateInsertion(InsertPos, Insertion,
+                                           FirstToCtorInits);
+        FirstToCtorInits = areDiagsSelfContained();
+      }
+      Diag << FixItHint::CreateRemoval(
+          CharSourceRange::getCharRange(S->getBeginLoc(), SemiColonEnd));
     }
   }
 }
