@@ -9629,14 +9629,17 @@ Value *CodeGenFunction::EmitSVEStructLoad(const SVETypeFlags &TypeFlags,
   case Intrinsic::aarch64_sve_ld2_sret:
   case Intrinsic::aarch64_sve_ld1_pn_x2:
   case Intrinsic::aarch64_sve_ldnt1_pn_x2:
+  case Intrinsic::aarch64_sve_ld2q_sret:
     N = 2;
     break;
   case Intrinsic::aarch64_sve_ld3_sret:
+  case Intrinsic::aarch64_sve_ld3q_sret:
     N = 3;
     break;
   case Intrinsic::aarch64_sve_ld4_sret:
   case Intrinsic::aarch64_sve_ld1_pn_x4:
   case Intrinsic::aarch64_sve_ldnt1_pn_x4:
+  case Intrinsic::aarch64_sve_ld4q_sret:
     N = 4;
     break;
   default:
@@ -9674,14 +9677,17 @@ Value *CodeGenFunction::EmitSVEStructStore(const SVETypeFlags &TypeFlags,
   case Intrinsic::aarch64_sve_st2:
   case Intrinsic::aarch64_sve_st1_pn_x2:
   case Intrinsic::aarch64_sve_stnt1_pn_x2:
+  case Intrinsic::aarch64_sve_st2q:
     N = 2;
     break;
   case Intrinsic::aarch64_sve_st3:
+  case Intrinsic::aarch64_sve_st3q:
     N = 3;
     break;
   case Intrinsic::aarch64_sve_st4:
   case Intrinsic::aarch64_sve_st1_pn_x4:
   case Intrinsic::aarch64_sve_stnt1_pn_x4:
+  case Intrinsic::aarch64_sve_st4q:
     N = 4;
     break;
   default:
@@ -9757,7 +9763,7 @@ Value *CodeGenFunction::EmitSVEPrefetchLoad(const SVETypeFlags &TypeFlags,
 Value *CodeGenFunction::EmitSVEMaskedLoad(const CallExpr *E,
                                           llvm::Type *ReturnTy,
                                           SmallVectorImpl<Value *> &Ops,
-                                          unsigned BuiltinID,
+                                          unsigned IntrinsicID,
                                           bool IsZExtReturn) {
   QualType LangPTy = E->getArg(1)->getType();
   llvm::Type *MemEltTy = CGM.getTypes().ConvertType(
@@ -9766,28 +9772,47 @@ Value *CodeGenFunction::EmitSVEMaskedLoad(const CallExpr *E,
   // The vector type that is returned may be different from the
   // eventual type loaded from memory.
   auto VectorTy = cast<llvm::ScalableVectorType>(ReturnTy);
-  auto MemoryTy = llvm::ScalableVectorType::get(MemEltTy, VectorTy);
+  llvm::ScalableVectorType *MemoryTy = nullptr;
+  llvm::ScalableVectorType *PredTy = nullptr;
+  bool IsExtendingLoad = true;
+  switch (IntrinsicID) {
+  case Intrinsic::aarch64_sve_ld1uwq:
+  case Intrinsic::aarch64_sve_ld1udq:
+    MemoryTy = llvm::ScalableVectorType::get(MemEltTy, 1);
+    PredTy =
+        llvm::ScalableVectorType::get(IntegerType::get(getLLVMContext(), 1), 1);
+    IsExtendingLoad = false;
+    break;
+  default:
+    MemoryTy = llvm::ScalableVectorType::get(MemEltTy, VectorTy);
+    PredTy = MemoryTy;
+    break;
+  }
 
-  Value *Predicate = EmitSVEPredicateCast(Ops[0], MemoryTy);
+  Value *Predicate = EmitSVEPredicateCast(Ops[0], PredTy);
   Value *BasePtr = Ops[1];
 
   // Does the load have an offset?
   if (Ops.size() > 2)
     BasePtr = Builder.CreateGEP(MemoryTy, BasePtr, Ops[2]);
 
-  Function *F = CGM.getIntrinsic(BuiltinID, MemoryTy);
+  Function *F =
+      CGM.getIntrinsic(IntrinsicID, IsExtendingLoad ? MemoryTy : VectorTy);
   auto *Load =
       cast<llvm::Instruction>(Builder.CreateCall(F, {Predicate, BasePtr}));
   auto TBAAInfo = CGM.getTBAAAccessInfo(LangPTy->getPointeeType());
   CGM.DecorateInstructionWithTBAA(Load, TBAAInfo);
 
+  if (!IsExtendingLoad)
+    return Load;
+
   return IsZExtReturn ? Builder.CreateZExt(Load, VectorTy)
-                     : Builder.CreateSExt(Load, VectorTy);
+                      : Builder.CreateSExt(Load, VectorTy);
 }
 
 Value *CodeGenFunction::EmitSVEMaskedStore(const CallExpr *E,
                                            SmallVectorImpl<Value *> &Ops,
-                                           unsigned BuiltinID) {
+                                           unsigned IntrinsicID) {
   QualType LangPTy = E->getArg(1)->getType();
   llvm::Type *MemEltTy = CGM.getTypes().ConvertType(
       LangPTy->castAs<PointerType>()->getPointeeType());
@@ -9797,17 +9822,34 @@ Value *CodeGenFunction::EmitSVEMaskedStore(const CallExpr *E,
   auto VectorTy = cast<llvm::ScalableVectorType>(Ops.back()->getType());
   auto MemoryTy = llvm::ScalableVectorType::get(MemEltTy, VectorTy);
 
-  Value *Predicate = EmitSVEPredicateCast(Ops[0], MemoryTy);
+  auto PredTy = MemoryTy;
+  auto AddrMemoryTy = MemoryTy;
+  bool IsTruncatingStore = true;
+  ;
+  switch (IntrinsicID) {
+  case Intrinsic::aarch64_sve_st1uwq:
+  case Intrinsic::aarch64_sve_st1udq:
+    AddrMemoryTy = llvm::ScalableVectorType::get(MemEltTy, 1);
+    PredTy =
+        llvm::ScalableVectorType::get(IntegerType::get(getLLVMContext(), 1), 1);
+    IsTruncatingStore = false;
+    break;
+  default:
+    break;
+  }
+  Value *Predicate = EmitSVEPredicateCast(Ops[0], PredTy);
   Value *BasePtr = Ops[1];
 
   // Does the store have an offset?
   if (Ops.size() == 4)
-    BasePtr = Builder.CreateGEP(MemoryTy, BasePtr, Ops[2]);
+    BasePtr = Builder.CreateGEP(AddrMemoryTy, BasePtr, Ops[2]);
 
   // Last value is always the data
-  llvm::Value *Val = Builder.CreateTrunc(Ops.back(), MemoryTy);
+  Value *Val = IsTruncatingStore ? Builder.CreateTrunc(Ops.back(), MemoryTy)
+                                 : Ops.back();
 
-  Function *F = CGM.getIntrinsic(BuiltinID, MemoryTy);
+  Function *F =
+      CGM.getIntrinsic(IntrinsicID, IsTruncatingStore ? MemoryTy : VectorTy);
   auto *Store =
       cast<llvm::Instruction>(Builder.CreateCall(F, {Val, Predicate, BasePtr}));
   auto TBAAInfo = CGM.getTBAAAccessInfo(LangPTy->getPointeeType());
