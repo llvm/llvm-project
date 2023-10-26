@@ -168,20 +168,23 @@ mgpuLaunchKernel(CUfunction function, intptr_t gridX, intptr_t gridY,
                  intptr_t blockZ, int32_t smem, CUstream stream, void **params,
                  void **extra, size_t /*paramsCount*/) {
   ScopedContext scopedContext;
-  int32_t maxShmem = 0;
-  CUdevice device = getDefaultCuDevice();
-  CUDA_REPORT_IF_ERROR(cuDeviceGet(&device, /*ordinal=*/defaultDevice));
-  CUDA_REPORT_IF_ERROR(cuDeviceGetAttribute(
-      &maxShmem, CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK_OPTIN,
-      device));
-  if (maxShmem < smem) {
-    fprintf(stderr,
-            "Requested shared memory (%dkb) is larger than maximum allowed "
-            "shared memory (%dkb) for this device\n",
-            smem, maxShmem);
+  if (smem > 0) {
+    // Avoid checking driver as it's more expensive than if statement
+    int32_t maxShmem = 0;
+    CUdevice device = getDefaultCuDevice();
+    CUDA_REPORT_IF_ERROR(cuDeviceGet(&device, /*ordinal=*/defaultDevice));
+    CUDA_REPORT_IF_ERROR(cuDeviceGetAttribute(
+        &maxShmem, CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK_OPTIN,
+        device));
+    if (maxShmem < smem) {
+      fprintf(stderr,
+              "Requested shared memory (%dkb) is larger than maximum allowed "
+              "shared memory (%dkb) for this device\n",
+              smem, maxShmem);
+    }
+    CUDA_REPORT_IF_ERROR(cuFuncSetAttribute(
+        function, CU_FUNC_ATTRIBUTE_MAX_DYNAMIC_SHARED_SIZE_BYTES, smem));
   }
-  CUDA_REPORT_IF_ERROR(cuFuncSetAttribute(
-      function, CU_FUNC_ATTRIBUTE_MAX_DYNAMIC_SHARED_SIZE_BYTES, smem));
   debug_print("Launching kernel, grid=%ld,%ld,%ld, "
               "threads: %ld, %ld, %ld, "
               "smem: %dkb\n",
