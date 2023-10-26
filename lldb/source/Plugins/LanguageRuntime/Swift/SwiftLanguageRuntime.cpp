@@ -452,7 +452,7 @@ static bool HasReflectionInfo(ObjectFile *obj_file) {
   return hasReflectionSection;
 }
 
-ThreadSafeReflectionContext 
+ThreadSafeReflectionContext
 SwiftLanguageRuntimeImpl::GetReflectionContext() {
   m_reflection_ctx_mutex.lock();
   SetupReflection();
@@ -503,7 +503,7 @@ void SwiftLanguageRuntimeImpl::SetupReflection() {
   std::lock_guard<std::recursive_mutex> lock(m_reflection_ctx_mutex);
   if (m_initialized_reflection_ctx)
     return;
- 
+
   // The global ABI bit is read by the Swift runtime library.
   SetupABIBit();
 
@@ -930,7 +930,7 @@ void SwiftLanguageRuntimeImpl::ModulesDidLoad(const ModuleList &module_list) {
   m_modules_to_add.AppendIfNeeded(module_list);
 }
 
-std::string 
+std::string
 SwiftLanguageRuntimeImpl::GetObjectDescriptionExpr_Result(ValueObject &object) {
   Log *log(GetLog(LLDBLog::DataFormatters | LLDBLog::Expressions));
   std::string expr_string
@@ -942,12 +942,12 @@ SwiftLanguageRuntimeImpl::GetObjectDescriptionExpr_Result(ValueObject &object) {
   return expr_string;
 }
 
-std::string 
+std::string
 SwiftLanguageRuntimeImpl::GetObjectDescriptionExpr_Ref(ValueObject &object) {
   Log *log(GetLog(LLDBLog::DataFormatters | LLDBLog::Expressions));
 
   StreamString expr_string;
-  std::string expr_str 
+  std::string expr_str
       = llvm::formatv("Swift._DebuggerSupport.stringForPrintObject(Swift."
                       "unsafeBitCast({0:x}, to: AnyObject.self))",
                       object.GetValueAsUnsigned(0)).str();
@@ -964,7 +964,7 @@ static const ExecutionContextRef *GetSwiftExeCtx(ValueObject &valobj) {
              : nullptr;
 }
 
-std::string 
+std::string
 SwiftLanguageRuntimeImpl::GetObjectDescriptionExpr_Copy(ValueObject &object,
     lldb::addr_t &copy_location)
 {
@@ -982,7 +982,7 @@ SwiftLanguageRuntimeImpl::GetObjectDescriptionExpr_Copy(ValueObject &object,
   // printing, as IRGen requires a fully realized type to work on.
   StackFrameSP frame_sp = object.GetFrameSP();
   if (!frame_sp)
-      frame_sp 
+      frame_sp
           = m_process.GetThreadList().GetSelectedThread()
               ->GetSelectedFrame(DoNoSelectMostRelevantFrame);
 
@@ -1021,20 +1021,20 @@ SwiftLanguageRuntimeImpl::GetObjectDescriptionExpr_Copy(ValueObject &object,
     return {};
   }
 
-  std::string expr_string 
+  std::string expr_string
       = llvm::formatv("Swift._DebuggerSupport.stringForPrintObject(Swift."
                       "UnsafePointer<{0}>(bitPattern: {1:x})!.pointee)",
                       static_type.GetTypeName().GetCString(), copy_location).str();
   if (log)
     log->Printf("[GetObjectDescriptionExpr_Copy] expression: %s",
                 expr_string.c_str());
-                
+
   return expr_string;
 }
 
-bool 
-SwiftLanguageRuntimeImpl::RunObjectDescriptionExpr(ValueObject &object, 
-    std::string &expr_string, 
+bool
+SwiftLanguageRuntimeImpl::RunObjectDescriptionExpr(ValueObject &object,
+    std::string &expr_string,
     Stream &result)
 {
   Log *log(GetLog(LLDBLog::DataFormatters | LLDBLog::Expressions));
@@ -1044,10 +1044,10 @@ SwiftLanguageRuntimeImpl::RunObjectDescriptionExpr(ValueObject &object,
   eval_options.SetSuppressPersistentResult(true);
   eval_options.SetGenerateDebugInfo(true);
   eval_options.SetTimeout(m_process.GetUtilityExpressionTimeout());
-  
+
   StackFrameSP frame_sp = object.GetFrameSP();
   if (!frame_sp)
-    frame_sp 
+    frame_sp
         = m_process.GetThreadList().GetSelectedThread()
             ->GetSelectedFrame(DoNoSelectMostRelevantFrame);
   if (!frame_sp) {
@@ -1060,7 +1060,7 @@ SwiftLanguageRuntimeImpl::RunObjectDescriptionExpr(ValueObject &object,
       result_sp, eval_options);
 
   if (log) {
-    const char *eval_result_str 
+    const char *eval_result_str
         = m_process.ExecutionResultAsCString(eval_result);
     log->Printf("[RunObjectDescriptionExpr] %s", eval_result_str);
   }
@@ -1903,7 +1903,7 @@ void SwiftLanguageRuntimeImpl::WillStartExecutingUserExpression(
   if (!ts) {
     LLDB_LOG(log, "type system no longer live");
     return;
-  }    
+  }
   ConstString BoolName("bool");
   llvm::Optional<uint64_t> bool_size =
       ts->GetBuiltinTypeByName(BoolName).GetByteSize(nullptr);
@@ -1978,7 +1978,7 @@ void SwiftLanguageRuntimeImpl::DidFinishExecutingUserExpression(
   if (!ts) {
     LLDB_LOG(log, "type system no longer live");
     return;
-  }    
+  }
   ConstString BoolName("bool");
   llvm::Optional<uint64_t> bool_size =
       ts->GetBuiltinTypeByName(BoolName).GetByteSize(nullptr);
@@ -2582,7 +2582,7 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
                                            RegisterContext *regctx,
                                            bool &behaves_like_zeroth_frame) {
   LLDB_SCOPED_TIMER();
- 
+
   Target &target(process_sp->GetTarget());
   auto arch = target.GetArchitecture();
   llvm::Optional<AsyncUnwindRegisterNumbers> regnums =
@@ -2758,7 +2758,7 @@ static UnwindPlanSP
 GetFollowAsyncContextUnwindPlan(RegisterContext *regctx, ArchSpec &arch,
                                 bool &behaves_like_zeroth_frame) {
   LLDB_SCOPED_TIMER();
- 
+
   UnwindPlan::RowSP row(new UnwindPlan::Row);
   const int32_t ptr_size = 8;
   row->SetOffset(0);
