@@ -216,7 +216,7 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 }
 
 bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
-  return !Ptr.isDummy();
+  return !Ptr.isZero() && !Ptr.isDummy();
 }
 
 bool CheckNull(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
