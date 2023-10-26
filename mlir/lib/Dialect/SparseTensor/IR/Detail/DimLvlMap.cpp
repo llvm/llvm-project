@@ -313,7 +313,7 @@ AffineMap DimLvlMap::getDimToLvlMap(MLIRContext *context) const {
   lvlAffines.reserve(getLvlRank());
   for (const auto &lvlSpec : lvlSpecs)
     lvlAffines.push_back(lvlSpec.getExpr().getAffineExpr());
-  auto map =  AffineMap::get(getDimRank(), getSymRank(), lvlAffines, context);
+  auto map = AffineMap::get(getDimRank(), getSymRank(), lvlAffines, context);
   return map;
 }
 
