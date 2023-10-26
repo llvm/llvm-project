@@ -185,6 +185,12 @@ bool EvalEmitter::emitRetValue(const SourceInfo &Info) {
       }
       return Ok;
     }
+
+    if (Ty->isIncompleteArrayType()) {
+      R = APValue(APValue::UninitArray(), 0, 0);
+      return true;
+    }
+
     if (const auto *AT = Ty->getAsArrayTypeUnsafe()) {
       const size_t NumElems = Ptr.getNumElems();
       QualType ElemTy = AT->getElementType();

@@ -168,7 +168,16 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     return this->emitCastPointerIntegral(T, CE);
   }
 
-  case CK_ArrayToPointerDecay:
+  case CK_ArrayToPointerDecay: {
+    if (!this->visit(SubExpr))
+      return false;
+    if (!this->emitArrayDecay(CE))
+      return false;
+    if (DiscardResult)
+      return this->emitPopPtr(CE);
+    return true;
+  }
+
   case CK_AtomicToNonAtomic:
   case CK_ConstructorConversion:
   case CK_FunctionToPointerDecay:
@@ -504,6 +513,9 @@ bool ByteCodeExprGen<Emitter>::VisitImplicitValueInitExpr(const ImplicitValueIni
 
   if (QT->isRecordType())
     return false;
+
+  if (QT->isIncompleteArrayType())
+    return true;
 
   if (QT->isArrayType()) {
     const ArrayType *AT = QT->getAsArrayTypeUnsafe();
