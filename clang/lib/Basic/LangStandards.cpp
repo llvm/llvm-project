@@ -24,15 +24,15 @@ StringRef clang::languageToString(Language L) {
   case Language::C:
     return "C";
   case Language::CXX:
-    return "CXX";
+    return "C++";
   case Language::ObjC:
-    return "ObjC";
+    return "Objective-C";
   case Language::ObjCXX:
-    return "ObjCXX";
+    return "Objective-C++";
   case Language::OpenCL:
     return "OpenCL";
   case Language::OpenCLCXX:
-    return "OpenCLCXX";
+    return "OpenCLC++";
   case Language::CUDA:
     return "CUDA";
   case Language::RenderScript:
