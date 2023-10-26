@@ -367,10 +367,9 @@ public:
       auto *TSD = TSDRegistry.getTSDAndLock(&UnlockRequired);
       TSD->assertLocked(/*BypassCheck=*/!UnlockRequired);
       Block = TSD->getCache().allocate(ClassId);
-      // If the allocation failed, the most likely reason with a 32-bit primary
-      // is the region being full. In that event, retry in each successively
-      // larger class until it fits. If it fails to fit in the largest class,
-      // fallback to the Secondary.
+      // If the allocation failed, retry in each successively larger class until
+      // it fits. If it fails to fit in the largest class, fallback to the
+      // Secondary.
       if (UNLIKELY(!Block)) {
         while (ClassId < SizeClassMap::LargestClassId && !Block)
           Block = TSD->getCache().allocate(++ClassId);
@@ -388,6 +387,7 @@ public:
     if (UNLIKELY(!Block)) {
       if (Options.get(OptionBit::MayReturnNull))
         return nullptr;
+      printStats();
       reportOutOfMemory(NeededSize);
     }
 

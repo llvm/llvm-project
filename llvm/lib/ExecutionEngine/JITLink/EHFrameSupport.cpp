@@ -126,16 +126,23 @@ Error EHFrameEdgeFixer::processBlock(ParseContext &PC, Block &B) {
   }
 
   // Find the offsets of any existing edges from this block.
-  BlockEdgeMap BlockEdges;
+  BlockEdgesInfo BlockEdges;
   for (auto &E : B.edges())
     if (E.isRelocation()) {
-      if (BlockEdges.count(E.getOffset()))
-        return make_error<JITLinkError>(
-            "Multiple relocations at offset " +
-            formatv("{0:x16}", E.getOffset()) + " in " + EHFrameSectionName +
-            " block at address " + formatv("{0:x16}", B.getAddress()));
+      // Check if we already saw more than one relocation at this offset.
+      if (BlockEdges.Multiple.contains(E.getOffset()))
+        continue;
 
-      BlockEdges[E.getOffset()] = EdgeTarget(E);
+      // Otherwise check if we previously had exactly one relocation at this
+      // offset. If so, we now have a second one and move it from the TargetMap
+      // into the Multiple set.
+      auto It = BlockEdges.TargetMap.find(E.getOffset());
+      if (It != BlockEdges.TargetMap.end()) {
+        BlockEdges.TargetMap.erase(It);
+        BlockEdges.Multiple.insert(E.getOffset());
+      } else {
+        BlockEdges.TargetMap[E.getOffset()] = EdgeTarget(E);
+      }
     }
 
   BinaryStreamReader BlockReader(
@@ -172,7 +179,7 @@ Error EHFrameEdgeFixer::processBlock(ParseContext &PC, Block &B) {
 
 Error EHFrameEdgeFixer::processCIE(ParseContext &PC, Block &B,
                                    size_t CIEDeltaFieldOffset,
-                                   const BlockEdgeMap &BlockEdges) {
+                                   const BlockEdgesInfo &BlockEdges) {
 
   LLVM_DEBUG(dbgs() << "    Record is CIE\n");
 
@@ -285,7 +292,7 @@ Error EHFrameEdgeFixer::processCIE(ParseContext &PC, Block &B,
 Error EHFrameEdgeFixer::processFDE(ParseContext &PC, Block &B,
                                    size_t CIEDeltaFieldOffset,
                                    uint32_t CIEDelta,
-                                   const BlockEdgeMap &BlockEdges) {
+                                   const BlockEdgesInfo &BlockEdges) {
   LLVM_DEBUG(dbgs() << "    Record is FDE\n");
 
   orc::ExecutorAddr RecordAddress = B.getAddress();
@@ -303,25 +310,45 @@ Error EHFrameEdgeFixer::processFDE(ParseContext &PC, Block &B,
 
   {
     // Process the CIE pointer field.
-    auto CIEEdgeItr = BlockEdges.find(CIEDeltaFieldOffset);
-    if (CIEEdgeItr != BlockEdges.end())
+    if (BlockEdges.Multiple.contains(CIEDeltaFieldOffset))
       return make_error<JITLinkError>(
-          "CIE pointer field already has edge at " +
+          "CIE pointer field already has multiple edges at " +
           formatv("{0:x16}", RecordAddress + CIEDeltaFieldOffset));
+
+    auto CIEEdgeItr = BlockEdges.TargetMap.find(CIEDeltaFieldOffset);
 
     orc::ExecutorAddr CIEAddress =
         RecordAddress + orc::ExecutorAddrDiff(CIEDeltaFieldOffset) -
         orc::ExecutorAddrDiff(CIEDelta);
-    LLVM_DEBUG({
-      dbgs() << "      Adding edge at " << (RecordAddress + CIEDeltaFieldOffset)
-             << " to CIE at: " << CIEAddress << "\n";
-    });
-    if (auto CIEInfoOrErr = PC.findCIEInfo(CIEAddress))
-      CIEInfo = *CIEInfoOrErr;
-    else
-      return CIEInfoOrErr.takeError();
-    assert(CIEInfo->CIESymbol && "CIEInfo has no CIE symbol set");
-    B.addEdge(NegDelta32, CIEDeltaFieldOffset, *CIEInfo->CIESymbol, 0);
+    if (CIEEdgeItr == BlockEdges.TargetMap.end()) {
+      LLVM_DEBUG({
+        dbgs() << "        Adding edge at "
+               << (RecordAddress + CIEDeltaFieldOffset)
+               << " to CIE at: " << CIEAddress << "\n";
+      });
+      if (auto CIEInfoOrErr = PC.findCIEInfo(CIEAddress))
+        CIEInfo = *CIEInfoOrErr;
+      else
+        return CIEInfoOrErr.takeError();
+      assert(CIEInfo->CIESymbol && "CIEInfo has no CIE symbol set");
+      B.addEdge(NegDelta32, CIEDeltaFieldOffset, *CIEInfo->CIESymbol, 0);
+    } else {
+      LLVM_DEBUG({
+        dbgs() << "        Already has edge at "
+               << (RecordAddress + CIEDeltaFieldOffset) << " to CIE at "
+               << CIEAddress << "\n";
+      });
+      auto &EI = CIEEdgeItr->second;
+      if (EI.Addend)
+        return make_error<JITLinkError>(
+            "CIE edge at " +
+            formatv("{0:x16}", RecordAddress + CIEDeltaFieldOffset) +
+            " has non-zero addend");
+      if (auto CIEInfoOrErr = PC.findCIEInfo(EI.Target->getAddress()))
+        CIEInfo = *CIEInfoOrErr;
+      else
+        return CIEInfoOrErr.takeError();
+    }
   }
 
   // Process the PC-Begin field.
@@ -482,7 +509,7 @@ Error EHFrameEdgeFixer::skipEncodedPointer(uint8_t PointerEncoding,
 }
 
 Expected<Symbol *> EHFrameEdgeFixer::getOrCreateEncodedPointerEdge(
-    ParseContext &PC, const BlockEdgeMap &BlockEdges, uint8_t PointerEncoding,
+    ParseContext &PC, const BlockEdgesInfo &BlockEdges, uint8_t PointerEncoding,
     BinaryStreamReader &RecordReader, Block &BlockToFix,
     size_t PointerFieldOffset, const char *FieldName) {
   using namespace dwarf;
@@ -493,8 +520,8 @@ Expected<Symbol *> EHFrameEdgeFixer::getOrCreateEncodedPointerEdge(
   // If there's already an edge here then just skip the encoded pointer and
   // return the edge's target.
   {
-    auto EdgeI = BlockEdges.find(PointerFieldOffset);
-    if (EdgeI != BlockEdges.end()) {
+    auto EdgeI = BlockEdges.TargetMap.find(PointerFieldOffset);
+    if (EdgeI != BlockEdges.TargetMap.end()) {
       LLVM_DEBUG({
         dbgs() << "      Existing edge at "
                << (BlockToFix.getAddress() + PointerFieldOffset) << " to "
@@ -507,6 +534,10 @@ Expected<Symbol *> EHFrameEdgeFixer::getOrCreateEncodedPointerEdge(
         return std::move(Err);
       return EdgeI->second.Target;
     }
+
+    if (BlockEdges.Multiple.contains(PointerFieldOffset))
+      return make_error<JITLinkError>("Multiple relocations at offset " +
+                                      formatv("{0:x16}", PointerFieldOffset));
   }
 
   // Switch absptr to corresponding udata encoding.

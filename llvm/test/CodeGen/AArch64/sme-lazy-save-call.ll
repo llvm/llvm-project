@@ -16,10 +16,12 @@ define void @test_lazy_save_1_callee() nounwind "aarch64_pstate_za_shared" {
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    msub x9, x8, x8, x9
 ; CHECK-NEXT:    mov sp, x9
+; CHECK-NEXT:    sub x10, x29, #16
+; CHECK-NEXT:    stur wzr, [x29, #-4]
+; CHECK-NEXT:    sturh wzr, [x29, #-6]
 ; CHECK-NEXT:    stur x9, [x29, #-16]
-; CHECK-NEXT:    sub x9, x29, #16
 ; CHECK-NEXT:    sturh w8, [x29, #-8]
-; CHECK-NEXT:    msr TPIDR2_EL0, x9
+; CHECK-NEXT:    msr TPIDR2_EL0, x10
 ; CHECK-NEXT:    bl private_za_callee
 ; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    mrs x8, TPIDR2_EL0
@@ -49,6 +51,8 @@ define void @test_lazy_save_2_callees() nounwind "aarch64_pstate_za_shared" {
 ; CHECK-NEXT:    msub x8, x19, x19, x8
 ; CHECK-NEXT:    mov sp, x8
 ; CHECK-NEXT:    sub x20, x29, #16
+; CHECK-NEXT:    stur wzr, [x29, #-4]
+; CHECK-NEXT:    sturh wzr, [x29, #-6]
 ; CHECK-NEXT:    stur x8, [x29, #-16]
 ; CHECK-NEXT:    sturh w19, [x29, #-8]
 ; CHECK-NEXT:    msr TPIDR2_EL0, x20
@@ -92,10 +96,12 @@ define float @test_lazy_save_expanded_intrinsic(float %a) nounwind "aarch64_psta
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    msub x9, x8, x8, x9
 ; CHECK-NEXT:    mov sp, x9
+; CHECK-NEXT:    sub x10, x29, #16
+; CHECK-NEXT:    stur wzr, [x29, #-4]
+; CHECK-NEXT:    sturh wzr, [x29, #-6]
 ; CHECK-NEXT:    stur x9, [x29, #-16]
-; CHECK-NEXT:    sub x9, x29, #16
 ; CHECK-NEXT:    sturh w8, [x29, #-8]
-; CHECK-NEXT:    msr TPIDR2_EL0, x9
+; CHECK-NEXT:    msr TPIDR2_EL0, x10
 ; CHECK-NEXT:    bl cosf
 ; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    mrs x8, TPIDR2_EL0
@@ -128,18 +134,20 @@ define void @test_lazy_save_and_conditional_smstart() nounwind "aarch64_pstate_z
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    msub x9, x8, x8, x9
 ; CHECK-NEXT:    mov sp, x9
+; CHECK-NEXT:    sub x10, x29, #80
+; CHECK-NEXT:    stur wzr, [x29, #-68]
+; CHECK-NEXT:    sturh wzr, [x29, #-70]
 ; CHECK-NEXT:    stur x9, [x29, #-80]
-; CHECK-NEXT:    sub x9, x29, #80
 ; CHECK-NEXT:    sturh w8, [x29, #-72]
-; CHECK-NEXT:    msr TPIDR2_EL0, x9
+; CHECK-NEXT:    msr TPIDR2_EL0, x10
 ; CHECK-NEXT:    bl __arm_sme_state
 ; CHECK-NEXT:    and x19, x0, #0x1
-; CHECK-NEXT:    tbz x19, #0, .LBB3_2
+; CHECK-NEXT:    tbz w19, #0, .LBB3_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB3_2:
 ; CHECK-NEXT:    bl private_za_callee
-; CHECK-NEXT:    tbz x19, #0, .LBB3_4
+; CHECK-NEXT:    tbz w19, #0, .LBB3_4
 ; CHECK-NEXT:  // %bb.3:
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB3_4:
@@ -181,18 +189,17 @@ define void @za_shared_caller_za_preserved_callee() nounwind "aarch64_pstate_za_
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    msub x8, x8, x8, x9
 ; CHECK-NEXT:    mov sp, x8
-; CHECK-NEXT:    stur x8, [x29, #-80]
-; CHECK-NEXT:    sub x8, x29, #80
-; CHECK-NEXT:    sturh wzr, [x29, #-72]
-; CHECK-NEXT:    msr TPIDR2_EL0, x8
+; CHECK-NEXT:    sub x9, x29, #80
+; CHECK-NEXT:    stp x8, xzr, [x29, #-80]
+; CHECK-NEXT:    msr TPIDR2_EL0, x9
 ; CHECK-NEXT:    bl __arm_sme_state
 ; CHECK-NEXT:    and x19, x0, #0x1
-; CHECK-NEXT:    tbz x19, #0, .LBB4_2
+; CHECK-NEXT:    tbz w19, #0, .LBB4_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB4_2:
 ; CHECK-NEXT:    bl private_za_preserved_callee
-; CHECK-NEXT:    tbz x19, #0, .LBB4_4
+; CHECK-NEXT:    tbz w19, #0, .LBB4_4
 ; CHECK-NEXT:  // %bb.3:
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB4_4:

@@ -26,6 +26,13 @@
 
 using namespace clang;
 
+namespace clang {
+class SourceManagerTestHelper {
+public:
+  static FileID makeFileID(int ID) { return FileID::get(ID); }
+};
+} // namespace clang
+
 namespace {
 
 // The test fixture.
@@ -395,6 +402,53 @@ TEST_F(SourceManagerTest, getLineNumber) {
   SourceMgr.setMainFileID(mainFileID);
 
   ASSERT_NO_FATAL_FAILURE(SourceMgr.getLineNumber(mainFileID, 1, nullptr));
+}
+
+struct FakeExternalSLocEntrySource : ExternalSLocEntrySource {
+  bool ReadSLocEntry(int ID) override { return {}; }
+  int getSLocEntryID(SourceLocation::UIntTy SLocOffset) override { return 0; }
+  std::pair<SourceLocation, StringRef> getModuleImportLoc(int ID) override {
+    return {};
+  }
+};
+
+TEST_F(SourceManagerTest, loadedSLocEntryIsInTheSameTranslationUnit) {
+  auto InSameTU = [=](int LID, int RID) {
+    return SourceMgr.isInTheSameTranslationUnitImpl(
+        std::make_pair(SourceManagerTestHelper::makeFileID(LID), 0),
+        std::make_pair(SourceManagerTestHelper::makeFileID(RID), 0));
+  };
+
+  FakeExternalSLocEntrySource ExternalSource;
+  SourceMgr.setExternalSLocEntrySource(&ExternalSource);
+
+  unsigned ANumFileIDs = 10;
+  auto [AFirstID, X] = SourceMgr.AllocateLoadedSLocEntries(ANumFileIDs, 10);
+  int ALastID = AFirstID + ANumFileIDs - 1;
+  // FileID(-11)..FileID(-2)
+  ASSERT_EQ(AFirstID, -11);
+  ASSERT_EQ(ALastID, -2);
+
+  unsigned BNumFileIDs = 20;
+  auto [BFirstID, Y] = SourceMgr.AllocateLoadedSLocEntries(BNumFileIDs, 20);
+  int BLastID = BFirstID + BNumFileIDs - 1;
+  // FileID(-31)..FileID(-12)
+  ASSERT_EQ(BFirstID, -31);
+  ASSERT_EQ(BLastID, -12);
+
+  // Loaded vs local.
+  EXPECT_FALSE(InSameTU(-2, 1));
+
+  // Loaded in the same allocation A.
+  EXPECT_TRUE(InSameTU(-11, -2));
+  EXPECT_TRUE(InSameTU(-11, -6));
+
+  // Loaded in the same allocation B.
+  EXPECT_TRUE(InSameTU(-31, -12));
+  EXPECT_TRUE(InSameTU(-31, -16));
+
+  // Loaded from different allocations A and B.
+  EXPECT_FALSE(InSameTU(-12, -11));
 }
 
 #if defined(LLVM_ON_UNIX)

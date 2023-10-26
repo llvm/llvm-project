@@ -8,14 +8,14 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 
 class CppUnionStaticMembersTestCase(TestBase):
-    def test(self):
+    def test_print_union(self):
         """Tests that frame variable and expr work
-           for union static data members"""
+        for union with static data members"""
         self.build()
 
         (target, process, main_thread, _) = lldbutil.run_to_source_breakpoint(
             self, "return 0", lldb.SBFileSpec("main.cpp")
-        )                                                                     
+        )
 
         self.expect("frame variable foo", substrs=["val = 42"])
         self.expect("frame variable bar", substrs=["val = 137"])
@@ -27,6 +27,16 @@ class CppUnionStaticMembersTestCase(TestBase):
                 name="val", value="137"
             )])
 
+    @expectedFailureWindows
+    def test_expr_union_static_members(self):
+        """Tests that frame variable and expr work
+        for union static data members"""
+        self.build()
+
+        (target, process, main_thread, _) = lldbutil.run_to_source_breakpoint(
+            self, "return 0", lldb.SBFileSpec("main.cpp")
+        )
+
         self.expect_expr("Foo::sVal1", result_type="const int", result_value="-42")
         self.expect_expr("Foo::sVal2", result_type="Foo", result_children=[ValueCheck(
                 name="val", value="42"
@@ -37,6 +47,12 @@ class CppUnionStaticMembersTestCase(TestBase):
         """Tests that frame variable and expr work
            for union static data members in anonymous
            namespaces"""
+        self.build()
+
+        (target, process, main_thread, _) = lldbutil.run_to_source_breakpoint(
+            self, "return 0", lldb.SBFileSpec("main.cpp")
+        )
+
         self.expect_expr("Bar::sVal1", result_type="const int", result_value="-137")
         self.expect_expr("Bar::sVal2", result_type="Bar", result_children=[ValueCheck(
                 name="val", value="137"

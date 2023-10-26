@@ -50,10 +50,38 @@ static void test() {
   static_assert(std::is_same_v<decltype(tbuf.view()), std::basic_string_view<CharT, my_char_traits<CharT>>>);
 }
 
+struct StringBuf : std::stringbuf {
+  using basic_stringbuf::basic_stringbuf;
+  void public_setg(int a, int b, int c) {
+    char* p = eback();
+    this->setg(p + a, p + b, p + c);
+  }
+};
+
+static void test_altered_sequence_pointers() {
+  {
+    auto src = StringBuf("hello world", std::ios_base::in);
+    src.public_setg(4, 6, 9);
+    std::stringbuf dest;
+    dest = std::move(src);
+    assert(dest.view() == dest.str());
+    LIBCPP_ASSERT(dest.view() == "o wor");
+  }
+  {
+    auto src = StringBuf("hello world", std::ios_base::in);
+    src.public_setg(4, 6, 9);
+    std::stringbuf dest;
+    dest.swap(src);
+    assert(dest.view() == dest.str());
+    LIBCPP_ASSERT(dest.view() == "o wor");
+  }
+}
+
 int main(int, char**) {
   test<char>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test<wchar_t>();
 #endif
+  test_altered_sequence_pointers();
   return 0;
 }

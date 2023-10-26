@@ -22,8 +22,7 @@ class CCIfILP32<CCAction A> :
 // ARM AAPCS64 Calling Convention
 //===----------------------------------------------------------------------===//
 
-let Entry = 1 in
-def CC_AArch64_AAPCS : CallingConv<[
+defvar AArch64_Common = [
   CCIfType<[iPTR], CCBitConvertToType<i64>>,
   CCIfType<[v2f32], CCBitConvertToType<v2i32>>,
   CCIfType<[v2f64, v4f32], CCBitConvertToType<v2i64>>,
@@ -57,11 +56,6 @@ def CC_AArch64_AAPCS : CallingConv<[
   // Put ByVal arguments directly on the stack. Minimum size and alignment of a
   // slot is 64-bit.
   CCIfByVal<CCPassByVal<8, 8>>,
-
-  // The 'nest' parameter, if any, is passed in X18.
-  // Darwin uses X18 as the platform register and hence 'nest' isn't currently
-  // supported there.
-  CCIfNest<CCAssignToReg<[X18]>>,
 
   // Pass SwiftSelf in a callee saved register.
   CCIfSwiftSelf<CCIfType<[i64], CCAssignToReg<[X20]>>>,
@@ -115,7 +109,16 @@ def CC_AArch64_AAPCS : CallingConv<[
            CCAssignToStack<8, 8>>,
   CCIfType<[f128, v2i64, v4i32, v8i16, v16i8, v4f32, v2f64, v8f16, v8bf16],
            CCAssignToStack<16, 16>>
-]>;
+];
+
+let Entry = 1 in
+def CC_AArch64_AAPCS : CallingConv<!listconcat(
+  // The 'nest' parameter, if any, is passed in X18.
+  // Darwin and Windows use X18 as the platform register and hence 'nest' isn't
+  // currently supported there.
+  [CCIfNest<CCAssignToReg<[X18]>>],
+  AArch64_Common
+)>;
 
 let Entry = 1 in
 def RetCC_AArch64_AAPCS : CallingConv<[
@@ -153,13 +156,16 @@ def RetCC_AArch64_AAPCS : CallingConv<[
            CCAssignToReg<[P0, P1, P2, P3]>>
 ]>;
 
+let Entry = 1 in
+def CC_AArch64_Win64PCS : CallingConv<AArch64_Common>;
+
 // Vararg functions on windows pass floats in integer registers
 let Entry = 1 in
 def CC_AArch64_Win64_VarArg : CallingConv<[
   CCIfType<[f16, bf16], CCBitConvertToType<i16>>,
   CCIfType<[f32], CCBitConvertToType<i32>>,
   CCIfType<[f64], CCBitConvertToType<i64>>,
-  CCDelegateTo<CC_AArch64_AAPCS>
+  CCDelegateTo<CC_AArch64_Win64PCS>
 ]>;
 
 // Vararg functions on Arm64EC ABI use a different convention, using

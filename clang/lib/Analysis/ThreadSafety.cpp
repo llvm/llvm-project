@@ -2303,7 +2303,7 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
   PostOrderCFGView::CFGBlockSet VisitedBlocks(CFGraph);
 
   CFGBlockInfo &Initial = BlockInfo[CFGraph->getEntry().getBlockID()];
-  CFGBlockInfo &Final = BlockInfo[CFGraph->getExit().getBlockID()];
+  CFGBlockInfo &Final   = BlockInfo[CFGraph->getExit().getBlockID()];
 
   // Mark entry block as reachable
   Initial.Reachable = true;

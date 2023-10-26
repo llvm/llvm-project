@@ -3,13 +3,7 @@
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -mattr=+dotprod %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-DOT
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -global-isel -global-isel-abort=2 -mattr=+dotprod %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:        warning: Instruction selection used fallback path for add_v16i8_v16i16_zext
-; CHECK-GI-NEXT:   warning: Instruction selection used fallback path for add_v16i8_v16i16_sext
-; CHECK-GI-NEXT:   warning: Instruction selection used fallback path for add_v16i8_v16i16_acc_zext
-; CHECK-GI-NEXT:   warning: Instruction selection used fallback path for add_v16i8_v16i16_acc_sext
-; CHECK-GI-NEXT:   warning: Instruction selection used fallback path for add_pair_v16i8_v16i16_zext
-; CHECK-GI-NEXT:   warning: Instruction selection used fallback path for add_pair_v16i8_v16i16_sext
-; CHECK-GI-NEXT:   warning: Instruction selection used fallback path for full
+; CHECK-GI:        warning: Instruction selection used fallback path for full
 
 define i32 @addv_v2i32(<2 x i32> %a) {
 ; CHECK-LABEL: addv_v2i32:
@@ -610,12 +604,28 @@ entry:
 }
 
 define zeroext i16 @add_v16i8_v16i16_zext(<16 x i8> %x) {
-; CHECK-LABEL: add_v16i8_v16i16_zext:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uaddlp v0.8h, v0.16b
-; CHECK-NEXT:    addv h0, v0.8h
-; CHECK-NEXT:    fmov w0, s0
-; CHECK-NEXT:    ret
+; CHECK-BASE-LABEL: add_v16i8_v16i16_zext:
+; CHECK-BASE:       // %bb.0: // %entry
+; CHECK-BASE-NEXT:    uaddlp v0.8h, v0.16b
+; CHECK-BASE-NEXT:    addv h0, v0.8h
+; CHECK-BASE-NEXT:    fmov w0, s0
+; CHECK-BASE-NEXT:    ret
+;
+; CHECK-DOT-LABEL: add_v16i8_v16i16_zext:
+; CHECK-DOT:       // %bb.0: // %entry
+; CHECK-DOT-NEXT:    uaddlp v0.8h, v0.16b
+; CHECK-DOT-NEXT:    addv h0, v0.8h
+; CHECK-DOT-NEXT:    fmov w0, s0
+; CHECK-DOT-NEXT:    ret
+;
+; CHECK-GI-LABEL: add_v16i8_v16i16_zext:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ushll v1.8h, v0.8b, #0
+; CHECK-GI-NEXT:    uaddw2 v0.8h, v1.8h, v0.16b
+; CHECK-GI-NEXT:    addv h0, v0.8h
+; CHECK-GI-NEXT:    fmov w8, s0
+; CHECK-GI-NEXT:    uxth w0, w8
+; CHECK-GI-NEXT:    ret
 entry:
   %xx = zext <16 x i8> %x to <16 x i16>
   %z = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %xx)
@@ -623,12 +633,28 @@ entry:
 }
 
 define signext i16 @add_v16i8_v16i16_sext(<16 x i8> %x) {
-; CHECK-LABEL: add_v16i8_v16i16_sext:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    saddlp v0.8h, v0.16b
-; CHECK-NEXT:    addv h0, v0.8h
-; CHECK-NEXT:    smov w0, v0.h[0]
-; CHECK-NEXT:    ret
+; CHECK-BASE-LABEL: add_v16i8_v16i16_sext:
+; CHECK-BASE:       // %bb.0: // %entry
+; CHECK-BASE-NEXT:    saddlp v0.8h, v0.16b
+; CHECK-BASE-NEXT:    addv h0, v0.8h
+; CHECK-BASE-NEXT:    smov w0, v0.h[0]
+; CHECK-BASE-NEXT:    ret
+;
+; CHECK-DOT-LABEL: add_v16i8_v16i16_sext:
+; CHECK-DOT:       // %bb.0: // %entry
+; CHECK-DOT-NEXT:    saddlp v0.8h, v0.16b
+; CHECK-DOT-NEXT:    addv h0, v0.8h
+; CHECK-DOT-NEXT:    smov w0, v0.h[0]
+; CHECK-DOT-NEXT:    ret
+;
+; CHECK-GI-LABEL: add_v16i8_v16i16_sext:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    sshll v1.8h, v0.8b, #0
+; CHECK-GI-NEXT:    saddw2 v0.8h, v1.8h, v0.16b
+; CHECK-GI-NEXT:    addv h0, v0.8h
+; CHECK-GI-NEXT:    fmov w8, s0
+; CHECK-GI-NEXT:    sxth w0, w8
+; CHECK-GI-NEXT:    ret
 entry:
   %xx = sext <16 x i8> %x to <16 x i16>
   %z = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %xx)
@@ -1718,13 +1744,31 @@ entry:
 }
 
 define zeroext i16 @add_v16i8_v16i16_acc_zext(<16 x i8> %x, i16 %a) {
-; CHECK-LABEL: add_v16i8_v16i16_acc_zext:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uaddlv h0, v0.16b
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    add w8, w8, w0
-; CHECK-NEXT:    and w0, w8, #0xffff
-; CHECK-NEXT:    ret
+; CHECK-BASE-LABEL: add_v16i8_v16i16_acc_zext:
+; CHECK-BASE:       // %bb.0: // %entry
+; CHECK-BASE-NEXT:    uaddlv h0, v0.16b
+; CHECK-BASE-NEXT:    fmov w8, s0
+; CHECK-BASE-NEXT:    add w8, w8, w0
+; CHECK-BASE-NEXT:    and w0, w8, #0xffff
+; CHECK-BASE-NEXT:    ret
+;
+; CHECK-DOT-LABEL: add_v16i8_v16i16_acc_zext:
+; CHECK-DOT:       // %bb.0: // %entry
+; CHECK-DOT-NEXT:    uaddlv h0, v0.16b
+; CHECK-DOT-NEXT:    fmov w8, s0
+; CHECK-DOT-NEXT:    add w8, w8, w0
+; CHECK-DOT-NEXT:    and w0, w8, #0xffff
+; CHECK-DOT-NEXT:    ret
+;
+; CHECK-GI-LABEL: add_v16i8_v16i16_acc_zext:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ushll v1.8h, v0.8b, #0
+; CHECK-GI-NEXT:    uaddw2 v0.8h, v1.8h, v0.16b
+; CHECK-GI-NEXT:    addv h0, v0.8h
+; CHECK-GI-NEXT:    fmov w8, s0
+; CHECK-GI-NEXT:    add w8, w0, w8, uxth
+; CHECK-GI-NEXT:    and w0, w8, #0xffff
+; CHECK-GI-NEXT:    ret
 entry:
   %xx = zext <16 x i8> %x to <16 x i16>
   %z = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %xx)
@@ -1733,13 +1777,31 @@ entry:
 }
 
 define signext i16 @add_v16i8_v16i16_acc_sext(<16 x i8> %x, i16 %a) {
-; CHECK-LABEL: add_v16i8_v16i16_acc_sext:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    saddlv h0, v0.16b
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    add w8, w8, w0
-; CHECK-NEXT:    sxth w0, w8
-; CHECK-NEXT:    ret
+; CHECK-BASE-LABEL: add_v16i8_v16i16_acc_sext:
+; CHECK-BASE:       // %bb.0: // %entry
+; CHECK-BASE-NEXT:    saddlv h0, v0.16b
+; CHECK-BASE-NEXT:    fmov w8, s0
+; CHECK-BASE-NEXT:    add w8, w8, w0
+; CHECK-BASE-NEXT:    sxth w0, w8
+; CHECK-BASE-NEXT:    ret
+;
+; CHECK-DOT-LABEL: add_v16i8_v16i16_acc_sext:
+; CHECK-DOT:       // %bb.0: // %entry
+; CHECK-DOT-NEXT:    saddlv h0, v0.16b
+; CHECK-DOT-NEXT:    fmov w8, s0
+; CHECK-DOT-NEXT:    add w8, w8, w0
+; CHECK-DOT-NEXT:    sxth w0, w8
+; CHECK-DOT-NEXT:    ret
+;
+; CHECK-GI-LABEL: add_v16i8_v16i16_acc_sext:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    sshll v1.8h, v0.8b, #0
+; CHECK-GI-NEXT:    saddw2 v0.8h, v1.8h, v0.16b
+; CHECK-GI-NEXT:    addv h0, v0.8h
+; CHECK-GI-NEXT:    fmov w8, s0
+; CHECK-GI-NEXT:    add w8, w0, w8, uxth
+; CHECK-GI-NEXT:    sxth w0, w8
+; CHECK-GI-NEXT:    ret
 entry:
   %xx = sext <16 x i8> %x to <16 x i16>
   %z = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %xx)
@@ -3194,13 +3256,35 @@ entry:
 }
 
 define zeroext i16 @add_pair_v16i8_v16i16_zext(<16 x i8> %x, <16 x i8> %y) {
-; CHECK-LABEL: add_pair_v16i8_v16i16_zext:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uaddlp v1.8h, v1.16b
-; CHECK-NEXT:    uadalp v1.8h, v0.16b
-; CHECK-NEXT:    addv h0, v1.8h
-; CHECK-NEXT:    fmov w0, s0
-; CHECK-NEXT:    ret
+; CHECK-BASE-LABEL: add_pair_v16i8_v16i16_zext:
+; CHECK-BASE:       // %bb.0: // %entry
+; CHECK-BASE-NEXT:    uaddlp v1.8h, v1.16b
+; CHECK-BASE-NEXT:    uadalp v1.8h, v0.16b
+; CHECK-BASE-NEXT:    addv h0, v1.8h
+; CHECK-BASE-NEXT:    fmov w0, s0
+; CHECK-BASE-NEXT:    ret
+;
+; CHECK-DOT-LABEL: add_pair_v16i8_v16i16_zext:
+; CHECK-DOT:       // %bb.0: // %entry
+; CHECK-DOT-NEXT:    uaddlp v1.8h, v1.16b
+; CHECK-DOT-NEXT:    uadalp v1.8h, v0.16b
+; CHECK-DOT-NEXT:    addv h0, v1.8h
+; CHECK-DOT-NEXT:    fmov w0, s0
+; CHECK-DOT-NEXT:    ret
+;
+; CHECK-GI-LABEL: add_pair_v16i8_v16i16_zext:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ushll v2.8h, v0.8b, #0
+; CHECK-GI-NEXT:    ushll v3.8h, v1.8b, #0
+; CHECK-GI-NEXT:    uaddw2 v0.8h, v2.8h, v0.16b
+; CHECK-GI-NEXT:    uaddw2 v1.8h, v3.8h, v1.16b
+; CHECK-GI-NEXT:    addv h0, v0.8h
+; CHECK-GI-NEXT:    addv h1, v1.8h
+; CHECK-GI-NEXT:    fmov w8, s0
+; CHECK-GI-NEXT:    fmov w9, s1
+; CHECK-GI-NEXT:    add w8, w9, w8, uxth
+; CHECK-GI-NEXT:    and w0, w8, #0xffff
+; CHECK-GI-NEXT:    ret
 entry:
   %xx = zext <16 x i8> %x to <16 x i16>
   %z1 = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %xx)
@@ -3211,13 +3295,35 @@ entry:
 }
 
 define signext i16 @add_pair_v16i8_v16i16_sext(<16 x i8> %x, <16 x i8> %y) {
-; CHECK-LABEL: add_pair_v16i8_v16i16_sext:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    saddlp v1.8h, v1.16b
-; CHECK-NEXT:    sadalp v1.8h, v0.16b
-; CHECK-NEXT:    addv h0, v1.8h
-; CHECK-NEXT:    smov w0, v0.h[0]
-; CHECK-NEXT:    ret
+; CHECK-BASE-LABEL: add_pair_v16i8_v16i16_sext:
+; CHECK-BASE:       // %bb.0: // %entry
+; CHECK-BASE-NEXT:    saddlp v1.8h, v1.16b
+; CHECK-BASE-NEXT:    sadalp v1.8h, v0.16b
+; CHECK-BASE-NEXT:    addv h0, v1.8h
+; CHECK-BASE-NEXT:    smov w0, v0.h[0]
+; CHECK-BASE-NEXT:    ret
+;
+; CHECK-DOT-LABEL: add_pair_v16i8_v16i16_sext:
+; CHECK-DOT:       // %bb.0: // %entry
+; CHECK-DOT-NEXT:    saddlp v1.8h, v1.16b
+; CHECK-DOT-NEXT:    sadalp v1.8h, v0.16b
+; CHECK-DOT-NEXT:    addv h0, v1.8h
+; CHECK-DOT-NEXT:    smov w0, v0.h[0]
+; CHECK-DOT-NEXT:    ret
+;
+; CHECK-GI-LABEL: add_pair_v16i8_v16i16_sext:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    sshll v2.8h, v0.8b, #0
+; CHECK-GI-NEXT:    sshll v3.8h, v1.8b, #0
+; CHECK-GI-NEXT:    saddw2 v0.8h, v2.8h, v0.16b
+; CHECK-GI-NEXT:    saddw2 v1.8h, v3.8h, v1.16b
+; CHECK-GI-NEXT:    addv h0, v0.8h
+; CHECK-GI-NEXT:    addv h1, v1.8h
+; CHECK-GI-NEXT:    fmov w8, s0
+; CHECK-GI-NEXT:    fmov w9, s1
+; CHECK-GI-NEXT:    add w8, w9, w8, uxth
+; CHECK-GI-NEXT:    sxth w0, w8
+; CHECK-GI-NEXT:    ret
 entry:
   %xx = sext <16 x i8> %x to <16 x i16>
   %z1 = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %xx)

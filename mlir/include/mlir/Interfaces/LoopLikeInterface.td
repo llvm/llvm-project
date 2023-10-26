@@ -20,6 +20,19 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
     Contains helper functions to query properties and perform transformations
     of a loop. Operations that implement this interface will be considered by
     loop-invariant code motion.
+
+    Loop-carried variables can be exposed through this interface. There are
+    3 components to a loop-carried variable.
+    - The "region iter_arg" is the block argument of the entry block that
+      represents the loop-carried variable in each iteration.
+    - The "init value" is an operand of the loop op that serves as the initial
+      region iter_arg value for the first iteration (if any).
+    - The "yielded" value is the value that is forwarded from one iteration to
+      serve as the region iter_arg of the next iteration.
+
+    If one of the respective interface methods is implemented, so must the other
+    two. The interface verifier ensures that the number of types of the region
+    iter_args, init values and yielded values match.
   }];
   let cppNamespace = "::mlir";
 
@@ -117,15 +130,15 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       }]
     >,
     InterfaceMethod<[{
-        Return the "init" operands that are used as initialization values for
-        the region "iter_args" of this loop.
+        Return the mutable "init" operands that are used as initialization
+        values for the region "iter_args" of this loop.
       }],
-      /*retTy=*/"::mlir::OperandRange",
-      /*methodName=*/"getInits",
+      /*retTy=*/"::llvm::MutableArrayRef<::mlir::OpOperand>",
+      /*methodName=*/"getInitsMutable",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return ::mlir::OperandRange($_op->operand_end(), $_op->operand_end());
+        return {};
       }]
     >,
     InterfaceMethod<[{
@@ -139,6 +152,18 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return ::mlir::Block::BlockArgListType();
+      }]
+    >,
+    InterfaceMethod<[{
+        Return the mutable operand range of values that are yielded to the next
+        iteration by the loop terminator.
+      }],
+      /*retTy=*/"::llvm::MutableArrayRef<::mlir::OpOperand>",
+      /*methodName=*/"getYieldedValuesMutable",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return {};
       }]
     >,
     InterfaceMethod<[{
@@ -191,6 +216,35 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
             return SmallVector<Value>(newBBArgs);
           });
     }
+
+    /// Return the values that are yielded to the next iteration.
+    ::mlir::ValueRange getYieldedValues() {
+      auto mutableValues = $_op.getYieldedValuesMutable();
+      if (mutableValues.empty())
+        return {};
+      Operation *yieldOp = mutableValues.begin()->getOwner();
+      unsigned firstOperandIndex = mutableValues.begin()->getOperandNumber();
+      return OperandRange(
+          yieldOp->operand_begin() + firstOperandIndex,
+          yieldOp->operand_begin() + firstOperandIndex + mutableValues.size());
+    }
+
+    /// Return the "init" operands that are used as initialization values for
+    /// the region "iter_args" of this loop.
+    ::mlir::OperandRange getInits() {
+      auto initsMutable = $_op.getInitsMutable();
+      if (initsMutable.empty())
+        return ::mlir::OperandRange($_op->operand_end(), $_op->operand_end());
+      unsigned firstOperandIndex = initsMutable.begin()->getOperandNumber();
+      return OperandRange(
+          $_op->operand_begin() + firstOperandIndex,
+          $_op->operand_begin() + firstOperandIndex + initsMutable.size());    }
+  }];
+
+  let verifyWithRegions = 1;
+
+  let verify = [{
+    return detail::verifyLoopLikeOpInterface($_op);
   }];
 }
 

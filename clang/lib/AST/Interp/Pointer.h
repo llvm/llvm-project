@@ -78,6 +78,15 @@ public:
   void operator=(const Pointer &P);
   void operator=(Pointer &&P);
 
+  /// Equality operators are just for tests.
+  bool operator==(const Pointer &P) const {
+    return Pointee == P.Pointee && Base == P.Base && Offset == P.Offset;
+  }
+
+  bool operator!=(const Pointer &P) const {
+    return Pointee != P.Pointee || Base != P.Base || Offset != P.Offset;
+  }
+
   /// Converts the pointer to an APValue.
   APValue toAPValue() const;
 
@@ -99,7 +108,7 @@ public:
     if (getFieldDesc()->ElemDesc)
       Off += sizeof(InlineDescriptor);
     else
-      Off += sizeof(InitMap *);
+      Off += sizeof(InitMapPtr);
     return Pointer(Pointee, Base, Base + Off);
   }
 
@@ -138,7 +147,7 @@ public:
     if (inPrimitiveArray()) {
       if (Offset != Base)
         return *this;
-      return Pointer(Pointee, Base, Offset + sizeof(InitMap *));
+      return Pointer(Pointee, Base, Offset + sizeof(InitMapPtr));
     }
 
     // Pointer is to a field or array element - enter it.
@@ -159,7 +168,7 @@ public:
       // Revert to an outer one-past-end pointer.
       unsigned Adjust;
       if (inPrimitiveArray())
-        Adjust = sizeof(InitMap *);
+        Adjust = sizeof(InitMapPtr);
       else
         Adjust = sizeof(InlineDescriptor);
       return Pointer(Pointee, Base, Base + getSize() + Adjust);
@@ -175,7 +184,8 @@ public:
 
     // Step into the containing array, if inside one.
     unsigned Next = Base - getInlineDesc()->Offset;
-    Descriptor *Desc = Next == 0 ? getDeclDesc() : getDescriptor(Next)->Desc;
+    const Descriptor *Desc =
+        Next == 0 ? getDeclDesc() : getDescriptor(Next)->Desc;
     if (!Desc->IsArray)
       return *this;
     return Pointer(Pointee, Next, Offset);
@@ -189,7 +199,7 @@ public:
   bool isField() const { return Base != 0 && Base != RootPtrMark; }
 
   /// Accessor for information about the declaration site.
-  Descriptor *getDeclDesc() const { return Pointee->Desc; }
+  const Descriptor *getDeclDesc() const { return Pointee->Desc; }
   SourceLocation getDeclLoc() const { return getDeclDesc()->getLocation(); }
 
   /// Returns a pointer to the object of which this pointer is a field.
@@ -213,7 +223,7 @@ public:
   }
 
   /// Accessors for information about the innermost field.
-  Descriptor *getFieldDesc() const {
+  const Descriptor *getFieldDesc() const {
     if (Base == 0 || Base == RootPtrMark)
       return getDeclDesc();
     return getInlineDesc()->Desc;
@@ -248,7 +258,7 @@ public:
       if (getFieldDesc()->ElemDesc)
         Adjust = sizeof(InlineDescriptor);
       else
-        Adjust = sizeof(InitMap *);
+        Adjust = sizeof(InitMapPtr);
     }
     return Offset - Base - Adjust;
   }
@@ -276,7 +286,8 @@ public:
   const Record *getRecord() const { return getFieldDesc()->ElemRecord; }
   /// Returns the element record type, if this is a non-primive array.
   const Record *getElemRecord() const {
-    return getFieldDesc()->ElemDesc->ElemRecord;
+    const Descriptor *ElemDesc = getFieldDesc()->ElemDesc;
+    return ElemDesc ? ElemDesc->ElemRecord : nullptr;
   }
   /// Returns the field information.
   const FieldDecl *getField() const { return getFieldDesc()->asFieldDecl(); }
@@ -303,6 +314,8 @@ public:
   bool isActive() const { return Base == 0 || getInlineDesc()->IsActive; }
   /// Checks if a structure is a base class.
   bool isBaseClass() const { return isField() && getInlineDesc()->IsBase; }
+  /// Checks if the pointer pointers to a dummy value.
+  bool isDummy() const { return getDeclDesc()->isDummy(); }
 
   /// Checks if an object or a subfield is mutable.
   bool isConst() const {
@@ -326,6 +339,11 @@ public:
   int64_t getIndex() const {
     if (isElementPastEnd())
       return 1;
+
+    // narrow()ed element in a composite array.
+    if (Base > 0 && Base == Offset)
+      return 0;
+
     if (auto ElemSize = elemSize())
       return getOffset() / ElemSize;
     return 0;
@@ -344,7 +362,7 @@ public:
     assert(isLive() && "Invalid pointer");
     if (isArrayRoot())
       return *reinterpret_cast<T *>(Pointee->rawData() + Base +
-                                    sizeof(InitMap *));
+                                    sizeof(InitMapPtr));
 
     return *reinterpret_cast<T *>(Pointee->rawData() + Offset);
   }
@@ -352,7 +370,7 @@ public:
   /// Dereferences a primitive element.
   template <typename T> T &elem(unsigned I) const {
     assert(I < getNumElems());
-    return reinterpret_cast<T *>(Pointee->data() + sizeof(InitMap *))[I];
+    return reinterpret_cast<T *>(Pointee->data() + sizeof(InitMapPtr))[I];
   }
 
   /// Initializes a field.
@@ -403,6 +421,7 @@ public:
 private:
   friend class Block;
   friend class DeadBlock;
+  friend struct InitMap;
 
   Pointer(Block *Pointee, unsigned Base, unsigned Offset);
 
@@ -416,9 +435,9 @@ private:
            1;
   }
 
-  /// Returns a reference to the pointer which stores the initialization map.
-  InitMap *&getInitMap() const {
-    return *reinterpret_cast<InitMap **>(Pointee->rawData() + Base);
+  /// Returns a reference to the InitMapPtr which stores the initialization map.
+  InitMapPtr &getInitMap() const {
+    return *reinterpret_cast<InitMapPtr *>(Pointee->rawData() + Base);
   }
 
   /// The block the pointer is pointing to.

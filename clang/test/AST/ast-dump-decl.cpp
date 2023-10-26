@@ -645,11 +645,16 @@ class TestClassScopeFunctionSpecialization {
   template<class U> void foo(U a) { }
   template<> void foo<int>(int a) { }
 };
-// CHECK:      ClassScopeFunctionSpecializationDecl
-// CHECK-NEXT:   CXXMethod{{.*}} foo 'void (int)'
+// CHECK:      FunctionTemplateDecl{{.*}} foo
+// CHECK-NEXT:   TemplateTypeParmDecl{{.*}} referenced class depth 1 index 0 U
+// CHECK-NEXT:   CXXMethodDecl{{.*}} foo 'void (U)' implicit-inline
 // CHECK-NEXT:     ParmVarDecl
 // CHECK-NEXT:     CompoundStmt
+// CHECK-NEXT: CXXMethodDecl{{.*}} foo 'void (int)' explicit_specialization implicit-inline
 // CHECK-NEXT:   TemplateArgument{{.*}} 'int'
+// CHECK-NEXT:     BuiltinType{{.*}} 'int'
+// CHECK-NEXT:   ParmVarDecl
+// CHECK-NEXT:   CompoundStmt
 
 namespace TestTemplateTypeParmDecl {
   template<typename ... T, class U = int> void foo();

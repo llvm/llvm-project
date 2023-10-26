@@ -10,6 +10,7 @@
 #include "Boolean.h"
 #include "Floating.h"
 #include "Integral.h"
+#include "Pointer.h"
 #include <cassert>
 #include <cstdlib>
 
@@ -85,20 +86,25 @@ void InterpStack::shrink(size_t Size) {
 
 void InterpStack::dump() const {
 #ifndef NDEBUG
-  llvm::errs() << "Items: " << ItemTypes.size() << ". Size: " << size() << "\n";
+  llvm::errs() << "Items: " << ItemTypes.size() << ". Size: " << size() << '\n';
   if (ItemTypes.empty())
     return;
 
   size_t Index = 0;
-  size_t Offset = align(primSize(ItemTypes[0]));
-  for (PrimType Ty : ItemTypes) {
-    llvm::errs() << Index << "/" << Offset << ": ";
-    TYPE_SWITCH(Ty, {
+  size_t Offset = 0;
+
+  // The type of the item on the top of the stack is inserted to the back
+  // of the vector, so the iteration has to happen backwards.
+  for (auto TyIt = ItemTypes.rbegin(); TyIt != ItemTypes.rend(); ++TyIt) {
+    Offset += align(primSize(*TyIt));
+
+    llvm::errs() << Index << '/' << Offset << ": ";
+    TYPE_SWITCH(*TyIt, {
       const T &V = peek<T>(Offset);
       llvm::errs() << V;
     });
-    llvm::errs() << "\n";
-    Offset += align(primSize(Ty));
+    llvm::errs() << '\n';
+
     ++Index;
   }
 #endif

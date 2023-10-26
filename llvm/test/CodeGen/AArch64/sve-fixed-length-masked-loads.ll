@@ -50,7 +50,7 @@ define <2 x float> @masked_load_v2f32(ptr %ap, ptr %bp) vscale_range(2,0) #0 {
   ret <2 x float> %load
 }
 
-define <4 x float> @masked_load_v4f32(ptr %ap, ptr %bp) vscale_range(2,0) #0 {
+define <4 x float> @masked_load_v4f32(ptr %ap, ptr %bp) vscale_range(1,0) #0 {
 ; CHECK-LABEL: masked_load_v4f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl4

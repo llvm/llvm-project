@@ -89,35 +89,35 @@ define <8 x i32> @vector_interleave_v8i32_v4i32(<4 x i32> %a, <4 x i32> %b) {
 }
 
 define <4 x i64> @vector_interleave_v4i64_v2i64(<2 x i64> %a, <2 x i64> %b) {
-; RV32-LABEL: vector_interleave_v4i64_v2i64:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vmv1r.v v10, v9
-; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV32-NEXT:    vslideup.vi v8, v10, 2
-; RV32-NEXT:    lui a0, 12304
-; RV32-NEXT:    addi a0, a0, 512
-; RV32-NEXT:    vmv.s.x v10, a0
-; RV32-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; RV32-NEXT:    vsext.vf2 v12, v10
-; RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; RV32-NEXT:    vrgatherei16.vv v10, v8, v12
-; RV32-NEXT:    vmv.v.v v8, v10
-; RV32-NEXT:    ret
+; CHECK-LABEL: vector_interleave_v4i64_v2i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmv1r.v v10, v9
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v10, 2
+; CHECK-NEXT:    lui a0, 12304
+; CHECK-NEXT:    addi a0, a0, 512
+; CHECK-NEXT:    vmv.s.x v10, a0
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vsext.vf2 v12, v10
+; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vrgatherei16.vv v10, v8, v12
+; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    ret
 ;
-; RV64-LABEL: vector_interleave_v4i64_v2i64:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vmv1r.v v10, v9
-; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64-NEXT:    vslideup.vi v8, v10, 2
-; RV64-NEXT:    lui a0, 12304
-; RV64-NEXT:    addiw a0, a0, 512
-; RV64-NEXT:    vmv.s.x v10, a0
-; RV64-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; RV64-NEXT:    vsext.vf2 v12, v10
-; RV64-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; RV64-NEXT:    vrgatherei16.vv v10, v8, v12
-; RV64-NEXT:    vmv.v.v v8, v10
-; RV64-NEXT:    ret
+; ZVBB-LABEL: vector_interleave_v4i64_v2i64:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vmv1r.v v10, v9
+; ZVBB-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; ZVBB-NEXT:    vslideup.vi v8, v10, 2
+; ZVBB-NEXT:    lui a0, 12304
+; ZVBB-NEXT:    addi a0, a0, 512
+; ZVBB-NEXT:    vmv.s.x v10, a0
+; ZVBB-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; ZVBB-NEXT:    vsext.vf2 v12, v10
+; ZVBB-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; ZVBB-NEXT:    vrgatherei16.vv v10, v8, v12
+; ZVBB-NEXT:    vmv.v.v v8, v10
+; ZVBB-NEXT:    ret
 	   %res = call <4 x i64> @llvm.experimental.vector.interleave2.v4i64(<2 x i64> %a, <2 x i64> %b)
 	   ret <4 x i64> %res
 }
@@ -237,35 +237,35 @@ define <8 x float> @vector_interleave_v8f32_v4f32(<4 x float> %a, <4 x float> %b
 }
 
 define <4 x double> @vector_interleave_v4f64_v2f64(<2 x double> %a, <2 x double> %b) {
-; RV32-LABEL: vector_interleave_v4f64_v2f64:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vmv1r.v v10, v9
-; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV32-NEXT:    vslideup.vi v8, v10, 2
-; RV32-NEXT:    lui a0, 12304
-; RV32-NEXT:    addi a0, a0, 512
-; RV32-NEXT:    vmv.s.x v10, a0
-; RV32-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; RV32-NEXT:    vsext.vf2 v12, v10
-; RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; RV32-NEXT:    vrgatherei16.vv v10, v8, v12
-; RV32-NEXT:    vmv.v.v v8, v10
-; RV32-NEXT:    ret
+; CHECK-LABEL: vector_interleave_v4f64_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmv1r.v v10, v9
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v10, 2
+; CHECK-NEXT:    lui a0, 12304
+; CHECK-NEXT:    addi a0, a0, 512
+; CHECK-NEXT:    vmv.s.x v10, a0
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vsext.vf2 v12, v10
+; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vrgatherei16.vv v10, v8, v12
+; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    ret
 ;
-; RV64-LABEL: vector_interleave_v4f64_v2f64:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vmv1r.v v10, v9
-; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64-NEXT:    vslideup.vi v8, v10, 2
-; RV64-NEXT:    lui a0, 12304
-; RV64-NEXT:    addiw a0, a0, 512
-; RV64-NEXT:    vmv.s.x v10, a0
-; RV64-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; RV64-NEXT:    vsext.vf2 v12, v10
-; RV64-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; RV64-NEXT:    vrgatherei16.vv v10, v8, v12
-; RV64-NEXT:    vmv.v.v v8, v10
-; RV64-NEXT:    ret
+; ZVBB-LABEL: vector_interleave_v4f64_v2f64:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vmv1r.v v10, v9
+; ZVBB-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; ZVBB-NEXT:    vslideup.vi v8, v10, 2
+; ZVBB-NEXT:    lui a0, 12304
+; ZVBB-NEXT:    addi a0, a0, 512
+; ZVBB-NEXT:    vmv.s.x v10, a0
+; ZVBB-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; ZVBB-NEXT:    vsext.vf2 v12, v10
+; ZVBB-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; ZVBB-NEXT:    vrgatherei16.vv v10, v8, v12
+; ZVBB-NEXT:    vmv.v.v v8, v10
+; ZVBB-NEXT:    ret
 	   %res = call <4 x double> @llvm.experimental.vector.interleave2.v4f64(<2 x double> %a, <2 x double> %b)
 	   ret <4 x double> %res
 }
@@ -277,3 +277,6 @@ declare <4 x float> @llvm.experimental.vector.interleave2.v4f32(<2 x float>, <2 
 declare <16 x half> @llvm.experimental.vector.interleave2.v16f16(<8 x half>, <8 x half>)
 declare <8 x float> @llvm.experimental.vector.interleave2.v8f32(<4 x float>, <4 x float>)
 declare <4 x double> @llvm.experimental.vector.interleave2.v4f64(<2 x double>, <2 x double>)
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; RV32: {{.*}}
+; RV64: {{.*}}

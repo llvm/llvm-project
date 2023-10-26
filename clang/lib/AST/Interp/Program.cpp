@@ -138,23 +138,24 @@ std::optional<unsigned> Program::getOrCreateGlobal(const ValueDecl *VD,
   return std::nullopt;
 }
 
-std::optional<unsigned> Program::getOrCreateDummy(const ParmVarDecl *PD) {
-
+std::optional<unsigned> Program::getOrCreateDummy(const ValueDecl *PD) {
   // Dedup blocks since they are immutable and pointers cannot be compared.
   if (auto It = DummyParams.find(PD);
       It != DummyParams.end())
     return It->second;
 
-  auto &ASTCtx = Ctx.getASTContext();
-  // Create a pointer to an incomplete array of the specified elements.
-  QualType ElemTy = PD->getType()->castAs<PointerType>()->getPointeeType();
-  QualType Ty = ASTCtx.getIncompleteArrayType(ElemTy, ArrayType::Normal, 0);
+  // Create dummy descriptor.
+  Descriptor *Desc = allocateDescriptor(PD, std::nullopt);
+  // Allocate a block for storage.
+  unsigned I = Globals.size();
 
-  if (auto Idx = createGlobal(PD, Ty, /*isStatic=*/true, /*isExtern=*/true)) {
-    DummyParams[PD] = *Idx;
-    return Idx;
-  }
-  return std::nullopt;
+  auto *G = new (Allocator, Desc->getAllocSize())
+      Global(getCurrentDecl(), Desc, /*IsStatic=*/true, /*IsExtern=*/false);
+  G->block()->invokeCtor();
+
+  Globals.push_back(G);
+  DummyParams[PD] = I;
+  return I;
 }
 
 std::optional<unsigned> Program::createGlobal(const ValueDecl *VD,
