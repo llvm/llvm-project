@@ -5571,9 +5571,7 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
                      OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_V2FP32;
     if (Is64BitOp && !AMDGPU::isValid32BitLiteral(Imm, Is64BitFPOp) &&
         !AMDGPU::isInlinableLiteral64(Imm, ST.hasInv2PiInlineImm()) &&
-        (!ST.has64BitLiterals() ||
-         (InstDesc.getSize() != 4 &&
-          MI.getOpcode() != AMDGPU::V_MOV_B64_PSEUDO)))
+        (!ST.has64BitLiterals() || InstDesc.getSize() != 4))
       return false;
   }
 

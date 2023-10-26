@@ -132,7 +132,7 @@ def V_MOV_B64_PSEUDO : VPseudoInstSI <(outs VReg_64:$vdst),
   let isAsCheapAsAMove = 1;
   let isMoveImm = 1;
   let SchedRW = [Write64Bit];
-  let Size = 16; // Needs maximum 2 v_mov_b32 instructions 8 byte long each.
+  let Size = 4;
   let UseNamedOperandTable = 1;
 }
 
@@ -149,7 +149,7 @@ def S_MOV_B64_IMM_PSEUDO : SPseudoInstSI <(outs SReg_64:$sdst),
   let isAsCheapAsAMove = 1;
   let isMoveImm = 1;
   let SchedRW = [WriteSALU, Write64Bit];
-  let Size = 16; // Needs maximum 2 s_mov_b32 instructions 8 byte long each.
+  let Size = 4;
   let Uses = [];
   let UseNamedOperandTable = 1;
 }
