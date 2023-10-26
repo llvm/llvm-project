@@ -1735,7 +1735,7 @@ class DeclContext {
   };
 
   /// Number of inherited and non-inherited bits in CXXConstructorDeclBitfields.
-  enum { NumCXXConstructorDeclBits = 64 };
+  enum { NumCXXConstructorDeclBits = NumFunctionDeclBits + 20 };
 
   /// Stores the bits used by ObjCMethodDecl.
   /// If modified NumObjCMethodDeclBits and the accessor

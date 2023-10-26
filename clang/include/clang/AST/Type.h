@@ -1663,7 +1663,7 @@ protected:
     /// Actually an ArrayType::ArraySizeModifier.
     unsigned SizeModifier : 3;
   };
-  enum { NumArrayTypeBits = NumTypeBits + 3 + 3 };
+  enum { NumArrayTypeBits = NumTypeBits + 6 };
 
   class ConstantArrayTypeBitfields {
     friend class ConstantArrayType;
