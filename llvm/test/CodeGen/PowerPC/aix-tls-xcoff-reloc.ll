@@ -586,7 +586,6 @@ entry:
 ; DIS:      00000000 (idx: [[#NFA+7]]) .storesTIUninit:
 ; DIS-NEXT:                                      mflr 0
 ; DIS-NEXT:                                      stwu 1, -32(1)
-; DIS-NEXT:                                      stw 0, 40(1)
 ; DIS-NEXT:                                      mr 6, 3
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               lwz 3, 0(2)
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOC (idx: [[#NFA+25]]) _$TLSML[TC]

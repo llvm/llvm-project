@@ -731,8 +731,6 @@ static MCSymbol *getMCSymbolForTOCPseudoMO(const MachineOperand &MO,
     return AP.GetJTISymbol(MO.getIndex());
   case MachineOperand::MO_BlockAddress:
     return AP.GetBlockAddressSymbol(MO.getBlockAddress());
-  case MachineOperand::MO_ExternalSymbol:
-    return AP.OutContext.getOrCreateSymbol(MO.getSymbolName());
   default:
     llvm_unreachable("Unexpected operand type to get symbol.");
   }
@@ -766,17 +764,6 @@ getTOCEntryTypeForMO(const MachineOperand &MO) {
     llvm_unreachable("Unexpected operand type to get TOC type.");
   }
 }
-
-// FIXME: find alternative approach to get rid of this hack.
-// On AIX, TLS-local-dynamic requires that the symbol for the module handle must
-// have the name "_$TLSML". This symbol is used as one TOC symbol reference
-// itself with an ML relocation type, thus it has "[TC]" attached to its name.
-static inline bool isSpecialAIXSymbolTLSML(const MachineOperand &MO,
-                                           const bool IsAIX) {
-  return IsAIX && MO.isSymbol() &&
-         (std::strcmp(MO.getSymbolName(), "_$TLSML[TC]") == 0);
-}
-
 /// EmitInstruction -- Print out a single PowerPC MI in Darwin syntax to
 /// the current output stream.
 ///
@@ -871,13 +858,15 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     if (Flag == PPCII::MO_TLSGD_FLAG || Flag == PPCII::MO_GOT_TLSGD_PCREL_FLAG)
       return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGD;
     if (MO.getTargetFlags() & PPCII::MO_TLSLD_FLAG) {
-      if (isSpecialAIXSymbolTLSML(MO, IsAIX))
+      if (IsAIX && MO.isGlobal() &&
+          (MO.getGlobal()->getName().equals("_$TLSML")))
         // FIXME: Due to the size limit of MachineOperand::SubReg_TargetFlags,
         // hacked this flag which should have been named MO_TLSLDM_FLAG: on AIX
         // the ML relocation type is only valid for a reference to a TOC symbol
         // from the symbol itself, and right now its only user is the symbol
         // "_$TLSML". The symbol name is used to decide that R_TLSML is
         // expected.
+        // FIX this once #69695 committed.
         return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSML;
       if (IsAIX)
         return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLD;
@@ -1000,8 +989,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     TmpInst.setOpcode(PPC::LWZ);
 
     const MachineOperand &MO = MI->getOperand(1);
-    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress() ||
-            isSpecialAIXSymbolTLSML(MO, IsAIX)) &&
+    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress()) &&
            "Invalid operand for LWZtoc.");
 
     // Map the operand to its corresponding MCSymbol.
@@ -1090,8 +1078,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     TmpInst.setOpcode(PPC::LD);
 
     const MachineOperand &MO = MI->getOperand(1);
-    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress() ||
-            isSpecialAIXSymbolTLSML(MO, IsAIX)) &&
+    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress()) &&
            "Invalid operand!");
 
     // Map the operand to its corresponding MCSymbol.
@@ -1129,8 +1116,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     TmpInst.setOpcode(PPC::ADDIS);
 
     const MachineOperand &MO = MI->getOperand(2);
-    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress() ||
-            isSpecialAIXSymbolTLSML(MO, IsAIX)) &&
+    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress()) &&
            "Invalid operand for ADDIStocHA.");
 
     // Map the machine operand to its corresponding MCSymbol.
@@ -1163,8 +1149,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     TmpInst.setOpcode(PPC::LWZ);
 
     const MachineOperand &MO = MI->getOperand(1);
-    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress() ||
-            isSpecialAIXSymbolTLSML(MO, IsAIX)) &&
+    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress()) &&
            "Invalid operand for LWZtocL.");
 
     // Map the machine operand to its corresponding MCSymbol.
@@ -1196,8 +1181,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     TmpInst.setOpcode(PPC::ADDIS8);
 
     const MachineOperand &MO = MI->getOperand(2);
-    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress() ||
-            isSpecialAIXSymbolTLSML(MO, IsAIX)) &&
+    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress()) &&
            "Invalid operand for ADDIStocHA8!");
 
     const MCSymbol *MOSymbol = getMCSymbolForTOCPseudoMO(MO, *this);
@@ -1207,8 +1191,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     const bool GlobalToc =
         MO.isGlobal() && Subtarget->isGVIndirectSymbol(MO.getGlobal());
     if (GlobalToc || MO.isJTI() || MO.isBlockAddress() ||
-        (MO.isCPI() && TM.getCodeModel() == CodeModel::Large) ||
-        isSpecialAIXSymbolTLSML(MO, IsAIX))
+        (MO.isCPI() && TM.getCodeModel() == CodeModel::Large))
       MOSymbol = lookUpOrCreateTOCEntry(MOSymbol, getTOCEntryTypeForMO(MO), VK);
 
     VK = IsAIX ? MCSymbolRefExpr::VK_PPC_U : MCSymbolRefExpr::VK_PPC_TOC_HA;
@@ -1237,8 +1220,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     TmpInst.setOpcode(PPC::LD);
 
     const MachineOperand &MO = MI->getOperand(1);
-    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress() ||
-            isSpecialAIXSymbolTLSML(MO, IsAIX)) &&
+    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() ||
+            MO.isBlockAddress()) &&
            "Invalid operand for LDtocL!");
 
     LLVM_DEBUG(assert(
@@ -2215,6 +2198,10 @@ void PPCAIXAsmPrinter::emitLinkage(const GlobalValue *GV,
       break;
     }
   }
+
+  // Do not emit _$TLSML symbol.
+  if (GVSym->getName().equals(StringRef("_Renamed..5f24__TLSML[UA]")))
+    return;
 
   OutStreamer->emitXCOFFSymbolLinkageWithVisibility(GVSym, LinkageAttr,
                                                     VisibilityAttr);
