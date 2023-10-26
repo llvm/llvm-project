@@ -13,12 +13,38 @@
 // REDEFINE: %{entry} = matmul_f32
 // RUN: %{run} | FileCheck %s --check-prefix=F32
 
+// REDEFINE: %{entry} = dot_product_i32
+// RUN: %{run} | FileCheck %s --check-prefix=DP
+
+// REDEFINE: %{entry} = matvec_i32
+// RUN: %{run} | FileCheck %s --check-prefix=MV
+
 // NOTE: These tests are meant to complement the integration tests from:
 //    * ../test-contraction.mlir
 // (tests with fixed width vectors). Rather than duplicating those tests, this
 // file focuses on excercissing scalable vectors in a few most common cases.
 
-// TODO: Masks + matvec + dot product
+// TODO: Masks
+
+#dotp_accesses = [
+  affine_map<(i) -> (i)>,
+  affine_map<(i) -> (i)>,
+  affine_map<(i) -> ()>
+]
+#dotp_trait = {
+  indexing_maps = #dotp_accesses,
+  iterator_types = ["reduction"]
+}
+
+#matvec_accesses = [
+  affine_map<(i, j) -> (i, j)>,
+  affine_map<(i, j) -> (j)>,
+  affine_map<(i, j) -> (i)>
+]
+#matvec_trait = {
+  indexing_maps = #matvec_accesses,
+  iterator_types = ["parallel", "reduction"]
+}
 
 #matmat_accesses = [
   affine_map<(i, j, k) -> (i, k)>,
@@ -28,6 +54,60 @@
 #matmat_trait = {
   indexing_maps = #matmat_accesses,
   iterator_types = ["parallel", "parallel", "reduction"]
+}
+
+// Contraction: dot-product a x b.
+func.func @dot_product_i32() {
+  %acc = arith.constant 0: i32
+
+  %vector_a = arith.constant dense<123> : vector<[4]xi32>
+  %vector_b = arith.constant dense<314> : vector<[4]xi32>
+  %vector_c = arith.constant dense<0> : vector<[4]xi32>
+
+  // The result of this dot-product will depend
+  // on the vector length, so we are unable to verify it.
+  %dp1 = vector.contract #dotp_trait %vector_a, %vector_b, %acc
+    : vector<[4]xi32>, vector<[4]xi32> into i32
+  // DP: {{[0-9]*}}
+  vector.print %dp1 : i32
+
+  // The result of this dot-product should be 0.
+  %dp2 = vector.contract #dotp_trait %vector_a, %vector_c, %acc
+    : vector<[4]xi32>, vector<[4]xi32> into i32
+  // DP: 0
+  vector.print %dp2 : i32
+
+  // DP: SVE: END OF TEST OUTPUT
+  vector.print str "SVE: END OF TEST OUTPUT"
+
+  return
+}
+
+// Contraction: matrix-vector A x c
+func.func @matvec_i32() {
+  %acc = arith.constant dense<0>: vector<3xi32>
+
+  %vector_a = arith.constant dense<123> : vector<3x[4]xi32>
+  %vector_b = arith.constant dense<314> : vector<[4]xi32>
+  %vector_c = arith.constant dense<0> : vector<[4]xi32>
+
+  // The result of this matvec will depend on the vector length, so we are
+  // unable to verify it.
+  %dp1 = vector.contract #matvec_trait %vector_a, %vector_b, %acc
+    : vector<3x[4]xi32>, vector<[4]xi32> into vector<3xi32>
+  // MV: {{[0-9]*}}, {{[0-9]*}}, {{[0-9]*}}
+  vector.print %dp1 : vector<3xi32>
+
+  // The result of this matvc should be a vector of 0s.
+  %dp2 = vector.contract #matvec_trait %vector_a, %vector_c, %acc
+    : vector<3x[4]xi32>, vector<[4]xi32> into vector<3xi32>
+  // MV: 0, 0, 0
+  vector.print %dp2 : vector<3xi32>
+
+  // MV: SVE: END OF TEST OUTPUT
+  vector.print str "SVE: END OF TEST OUTPUT"
+
+  return
 }
 
 func.func @matmul_i32() {
