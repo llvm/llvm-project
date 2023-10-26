@@ -4190,8 +4190,106 @@ static const omp::GV &getGridValue(Function *Kernel) {
   llvm_unreachable("No grid value available for this architecture!");
 }
 
+static MDNode *getNVPTXMDNode(Function &Kernel, StringRef Name) {
+  Module &M = *Kernel.getParent();
+  NamedMDNode *MD = M.getOrInsertNamedMetadata("nvvm.annotations");
+  for (auto *Op : MD->operands()) {
+    if (Op->getNumOperands() != 3)
+      continue;
+    auto *KernelOp = dyn_cast<ConstantAsMetadata>(Op->getOperand(0));
+    if (!KernelOp || KernelOp->getValue() != &Kernel)
+      continue;
+    auto *Prop = dyn_cast<MDString>(Op->getOperand(1));
+    if (!Prop || Prop->getString() != Name)
+      continue;
+    return Op;
+  }
+  return nullptr;
+}
+
+static void updateNVPTXMetadata(Function &Kernel, StringRef Name, int32_t Value,
+                                bool Min) {
+  // Update the "maxntidx" metadata for NVIDIA, or add it.
+  MDNode *ExistingOp = getNVPTXMDNode(Kernel, Name);
+  if (ExistingOp) {
+    auto *OldVal = dyn_cast<ConstantAsMetadata>(ExistingOp->getOperand(2));
+    int32_t OldLimit = cast<ConstantInt>(OldVal->getValue())->getZExtValue();
+    ExistingOp->replaceOperandWith(
+        2, ConstantAsMetadata::get(ConstantInt::get(
+               OldVal->getValue()->getType(),
+               Min ? std::min(OldLimit, Value) : std::max(OldLimit, Value))));
+  } else {
+    LLVMContext &Ctx = Kernel.getContext();
+    Metadata *MDVals[] = {ConstantAsMetadata::get(&Kernel),
+                          MDString::get(Ctx, Name),
+                          ConstantAsMetadata::get(
+                              ConstantInt::get(Type::getInt32Ty(Ctx), Value))};
+    // Append metadata to nvvm.annotations
+    Module &M = *Kernel.getParent();
+    NamedMDNode *MD = M.getOrInsertNamedMetadata("nvvm.annotations");
+    MD->addOperand(MDNode::get(Ctx, MDVals));
+  }
+}
+
+std::pair<int32_t, int32_t>
+OpenMPIRBuilder::readThreadBoundsForKernel(Function &Kernel) {
+  int32_t ThreadLimit =
+      Kernel.getFnAttributeAsParsedInteger("omp_target_thread_limit");
+
+  bool IsAMDGPU = Kernel.getCallingConv() == CallingConv::AMDGPU_KERNEL;
+  if (IsAMDGPU) {
+    const auto &Attr = Kernel.getFnAttribute("amdgpu-flat-work-group-size");
+    if (!Attr.isValid() || !Attr.isStringAttribute())
+      return {0, ThreadLimit};
+    auto [LBStr, UBStr] = Attr.getValueAsString().split(',');
+    int32_t LB, UB;
+    if (!llvm::to_integer(UBStr, UB, 10))
+      return {0, ThreadLimit};
+    UB = ThreadLimit ? std::min(ThreadLimit, UB) : UB;
+    if (!llvm::to_integer(LBStr, LB, 10))
+      return {0, UB};
+    return {LB, UB};
+  }
+
+  if (MDNode *ExistingOp = getNVPTXMDNode(Kernel, "maxntidx")) {
+    auto *OldVal = dyn_cast<ConstantAsMetadata>(ExistingOp->getOperand(2));
+    int32_t UB = cast<ConstantInt>(OldVal->getValue())->getZExtValue();
+    return {0, ThreadLimit ? std::min(ThreadLimit, UB) : UB};
+  }
+  return {0, ThreadLimit};
+}
+
+void OpenMPIRBuilder::writeThreadBoundsForKernel(Function &Kernel, int32_t LB,
+                                                 int32_t UB) {
+  Kernel.addFnAttr("omp_target_thread_limit", std::to_string(UB));
+
+  bool IsAMDGPU = Kernel.getCallingConv() == CallingConv::AMDGPU_KERNEL;
+  if (IsAMDGPU) {
+    Kernel.addFnAttr("amdgpu-flat-work-group-size",
+                     llvm::utostr(LB) + "," + llvm::utostr(UB));
+    return;
+  }
+
+  updateNVPTXMetadata(Kernel, "maxntidx", UB, true);
+}
+
+std::pair<int32_t, int32_t>
+OpenMPIRBuilder::readTeamBoundsForKernel(Function &Kernel) {
+  // TODO: Read from backend annotations if available.
+  return {0, Kernel.getFnAttributeAsParsedInteger("omp_target_num_teams")};
+}
+
+void OpenMPIRBuilder::writeTeamsForKernel(Function &Kernel, int32_t LB,
+                                          int32_t UB) {
+  if (UB > 0)
+    updateNVPTXMetadata(Kernel, "maxclusterrank", UB, true);
+  updateNVPTXMetadata(Kernel, "minctasm", LB, false);
+  Kernel.addFnAttr("omp_target_num_teams", std::to_string(LB));
+}
+
 void OpenMPIRBuilder::setOutlinedTargetRegionFunctionAttributes(
-    Function *OutlinedFn, int32_t NumTeams, int32_t NumThreads) {
+    Function *OutlinedFn, int32_t MinTeams, int32_t MaxTeams,
+    int32_t MinThreads, int32_t MaxThreads) {
   if (Config.isTargetDevice()) {
     OutlinedFn->setLinkage(GlobalValue::WeakODRLinkage);
     // TODO: Determine if DSO local can be set to true.
@@ -4201,53 +4299,15 @@ void OpenMPIRBuilder::setOutlinedTargetRegionFunctionAttributes(
       OutlinedFn->setCallingConv(CallingConv::AMDGPU_KERNEL);
   }
 
-  if (NumTeams > 0)
-    OutlinedFn->addFnAttr("omp_target_num_teams", std::to_string(NumTeams));
+  if (MinTeams > 1 || MaxTeams > 0)
+    writeTeamsForKernel(*OutlinedFn, MinTeams, MaxTeams);
 
-  if (NumThreads == -1 && Config.isGPU())
-    NumThreads = getGridValue(OutlinedFn).GV_Default_WG_Size;
+  if (MaxThreads == -1 && Config.isGPU())
+    MaxThreads = std::max(int32_t(getGridValue(OutlinedFn).GV_Default_WG_Size),
+                          MinThreads);
 
-  if (NumThreads > 0) {
-    if (OutlinedFn->getCallingConv() == CallingConv::AMDGPU_KERNEL) {
-      OutlinedFn->addFnAttr("amdgpu-flat-work-group-size",
-                            "1," + llvm::utostr(NumThreads));
-    } else {
-      // Update the "maxntidx" metadata for NVIDIA, or add it.
-      NamedMDNode *MD = M.getOrInsertNamedMetadata("nvvm.annotations");
-      MDNode *ExistingOp = nullptr;
-      for (auto *Op : MD->operands()) {
-        if (Op->getNumOperands() != 3)
-          continue;
-        auto *Kernel = dyn_cast<ConstantAsMetadata>(Op->getOperand(0));
-        if (!Kernel || Kernel->getValue() != OutlinedFn)
-          continue;
-        auto *Prop = dyn_cast<MDString>(Op->getOperand(1));
-        if (!Prop || Prop->getString() != "maxntidx")
-          continue;
-        ExistingOp = Op;
-        break;
-      }
-      if (ExistingOp) {
-        auto *OldVal = dyn_cast<ConstantAsMetadata>(ExistingOp->getOperand(2));
-        int32_t OldLimit =
-            cast<ConstantInt>(OldVal->getValue())->getZExtValue();
-        ExistingOp->replaceOperandWith(
-            2, ConstantAsMetadata::get(
-                   ConstantInt::get(OldVal->getValue()->getType(),
-                                    std::min(OldLimit, NumThreads))));
-      } else {
-        LLVMContext &Ctx = M.getContext();
-        Metadata *MDVals[] = {ConstantAsMetadata::get(OutlinedFn),
-                              MDString::get(Ctx, "maxntidx"),
-                              ConstantAsMetadata::get(ConstantInt::get(
-                                  Type::getInt32Ty(Ctx), NumThreads))};
-        // Append metadata to nvvm.annotations
-        MD->addOperand(MDNode::get(Ctx, MDVals));
-      }
-    }
-    OutlinedFn->addFnAttr("omp_target_thread_limit",
-                          std::to_string(NumThreads));
-  }
+  if (MaxThreads > 0)
+    writeThreadBoundsForKernel(*OutlinedFn, MinThreads, MaxThreads);
 }
 
 Constant *OpenMPIRBuilder::createOutlinedFunctionID(Function *OutlinedFn,
@@ -4276,9 +4336,9 @@ Constant *OpenMPIRBuilder::createTargetRegionEntryAddr(Function *OutlinedFn,
 
 void OpenMPIRBuilder::emitTargetRegionFunction(
     TargetRegionEntryInfo &EntryInfo,
-    FunctionGenCallback &GenerateFunctionCallback, int32_t NumTeams,
-    int32_t NumThreads, bool IsOffloadEntry, Function *&OutlinedFn,
-    Constant *&OutlinedFnID) {
+    FunctionGenCallback &GenerateFunctionCallback, int32_t MinTeams,
+    int32_t MaxTeams, int32_t MinThreads, int32_t MaxThreads,
+    bool IsOffloadEntry, Function *&OutlinedFn, Constant *&OutlinedFnID) {
 
   SmallString<64> EntryFnName;
   OffloadInfoManager.getTargetRegionEntryFnName(EntryFnName, EntryInfo);
@@ -4299,15 +4359,17 @@ void OpenMPIRBuilder::emitTargetRegionFunction(
           : createPlatformSpecificName({EntryFnName, "region_id"});
 
   OutlinedFnID = registerTargetRegionFunction(
-      EntryInfo, OutlinedFn, EntryFnName, EntryFnIDName, NumTeams, NumThreads);
+      EntryInfo, OutlinedFn, EntryFnName, EntryFnIDName, MinTeams, MaxTeams,
+      MinThreads, MaxThreads);
 }
 
 Constant *OpenMPIRBuilder::registerTargetRegionFunction(
     TargetRegionEntryInfo &EntryInfo, Function *OutlinedFn,
-    StringRef EntryFnName, StringRef EntryFnIDName, int32_t NumTeams,
-    int32_t NumThreads) {
+    StringRef EntryFnName, StringRef EntryFnIDName, int32_t MinTeams,
+    int32_t MaxTeams, int32_t MinThreads, int32_t MaxThreads) {
   if (OutlinedFn)
-    setOutlinedTargetRegionFunctionAttributes(OutlinedFn, NumTeams, NumThreads);
+    setOutlinedTargetRegionFunctionAttributes(OutlinedFn, MinTeams, MaxTeams,
+                                              MinThreads, MaxThreads);
   auto OutlinedFnID = createOutlinedFunctionID(OutlinedFn, EntryFnIDName);
   auto EntryAddr = createTargetRegionEntryAddr(OutlinedFn, EntryFnName);
   OffloadInfoManager.registerTargetRegionEntryInfo(
@@ -4598,8 +4660,8 @@ static void emitTargetOutlinedFunction(
       };
 
   OMPBuilder.emitTargetRegionFunction(EntryInfo, GenerateOutlinedFunction,
-                                      NumTeams, NumThreads, true, OutlinedFn,
-                                      OutlinedFnID);
+                                      NumTeams, NumTeams, 1, NumThreads, true,
+                                      OutlinedFn, OutlinedFnID);
 }
 
 static void emitTargetCall(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,

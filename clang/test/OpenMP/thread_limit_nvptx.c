@@ -15,15 +15,15 @@ void foo(int N) {
 #pragma omp target teams distribute parallel for simd thread_limit(4)
   for (int i = 0; i < N; ++i)
     ;
-// TODO: We should not emit two maxntidx annotations.
-// CHECK: l21, !"maxntidx", i32 128}
+// CHECK-NOT: l21, !"maxntidx", i32 128}
 // CHECK: l21, !"maxntidx", i32 42}
+// CHECK-NOT: l21, !"maxntidx", i32 128}
 #pragma omp target teams distribute parallel for simd ompx_attribute(__attribute__((launch_bounds(42, 42))))
   for (int i = 0; i < N; ++i)
     ;
-// TODO: We should not emit two maxntidx annotations.
+// CHECK-NOT: l27, !"maxntidx", i32 42}
 // CHECK: l27, !"maxntidx", i32 22}
-// CHECK: l27, !"maxntidx", i32 42}
+// CHECK-NOT: l27, !"maxntidx", i32 42}
 #pragma omp target teams distribute parallel for simd ompx_attribute(__attribute__((launch_bounds(42, 42)))) num_threads(22)
   for (int i = 0; i < N; ++i)
     ;
