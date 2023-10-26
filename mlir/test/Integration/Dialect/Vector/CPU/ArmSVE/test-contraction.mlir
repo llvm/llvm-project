@@ -1,14 +1,24 @@
 // DEFINE: %{compile} = mlir-opt %s  -test-transform-dialect-interpreter -test-transform-dialect-erase-schedule\
 // DEFINE:    -cse -canonicalize -convert-vector-to-scf -arm-sve-legalize-vector-storage\
-// DEFINE:    -convert-vector-to-llvm="enable-arm-sve" -test-lower-to-llvm
+// DEFINE:    -convert-vector-to-llvm="enable-arm-sve" -test-lower-to-llvm -o %t
 // DEFINE: %{entry} =
-// DEFINE: %{run} = %mcr_aarch64_cmd -e=%{entry} -entry-point-result=void --march=aarch64 --mattr="+sve" -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext
+// DEFINE: %{run} = %mcr_aarch64_cmd %t -e=%{entry} -entry-point-result=void --march=aarch64 --mattr="+sve" -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext
 
-// REDEFINE: %{entry} = entry_i32
-// RUN: %{compile} | %{run} | FileCheck %s --check-prefix=I32
+// This check whether the files compiles and generates a temporary that will be executed further down.
+// RUN: %{compile}
 
-// REDEFINE: %{entry} = entry_f32
-// RUN: %{compile} | %{run} | FileCheck %s --check-prefix=F32
+// REDEFINE: %{entry} = matmul_i32
+// RUN: %{run} | FileCheck %s --check-prefix=I32
+
+// REDEFINE: %{entry} = matmul_f32
+// RUN: %{run} | FileCheck %s --check-prefix=F32
+
+// NOTE: These tests are meant to complement the integration tests from:
+//    * ../test-contraction.mlir
+// (tests with fixed width vectors). Rather than duplicating those tests, this
+// file focuses on excercissing scalable vectors in a few most common cases.
+
+// TODO: Masks + matvec + dot product
 
 #matmat_accesses = [
   affine_map<(i, j, k) -> (i, k)>,
@@ -20,30 +30,19 @@
   iterator_types = ["parallel", "parallel", "reduction"]
 }
 
-func.func @entry_i32() {
-  %vscale = vector.vscale
-
-  %c2 = arith.constant 2 : index
-  %c3 = arith.constant 3 : index
-  %c5 = arith.constant 5 : index
-  %n_rows = arith.muli %vscale, %c2 : index
-
-  %cst = arith.constant 0: i32
-
-  // Allocate and initialize matrix A
+func.func @matmul_i32() {
   // Setup vector A:
   %vector_a = arith.constant dense<123> : vector<3x5xi32>
 
-  // Allocate and initialize matrix B
+  // Setup vector B:
   %vector_b = arith.constant dense<123> : vector<5x[2]xi32>
 
-  // Allocate and initialize matrix C
+  // Setup vector C:
   %vector_c = arith.constant dense<314> : vector<3x[2]xi32>
 
   // Matmul
-  %m = vector.create_mask %c3, %n_rows, %c5 : vector<3x[2]x5xi1>
-  %0 = vector.mask %m { vector.contract #matmat_trait %vector_a, %vector_b, %vector_c
-    : vector<3x5xi32>, vector<5x[2]xi32> into vector<3x[2]xi32> } : vector<3x[2]x5xi1> -> vector<3x[2]xi32>
+  %0 = vector.contract #matmat_trait %vector_a, %vector_b, %vector_c
+    : vector<3x5xi32>, vector<5x[2]xi32> into vector<3x[2]xi32>
 
   // Print the output
   %slice1 = vector.extract %0[0] : vector<[2]xi32> from vector<3x[2]xi32>
@@ -62,31 +61,19 @@ func.func @entry_i32() {
   return
 }
 
-func.func @entry_f32() {
-  %vscale = vector.vscale
-
-  %c2 = arith.constant 2 : index
-  %c3 = arith.constant 3 : index
-  %c5 = arith.constant 5 : index
-  %n_rows = arith.muli %vscale, %c2 : index
-
-  %cst = arith.constant 0.0: f32
-  %f32_123 = arith.constant 1.23 : f32
-  %f32_314 = arith.constant 3.14 : f32
-
-  // Allocate and initialize matrix A
+func.func @matmul_f32() {
+  // Setup vector A:
   %vector_a = arith.constant dense<1.23> : vector<3x5xf32>
 
-  // Allocate and initialize matrix B
+  // Setup vector B:
   %vector_b = arith.constant dense<1.23> : vector<5x[2]xf32>
 
-  // Allocate and initialize matrix C
+  // Setup vector C:
   %vector_c = arith.constant dense<3.14> : vector<3x[2]xf32>
 
   // Matmul
-  %m = vector.create_mask %c3, %n_rows, %c5 : vector<3x[2]x5xi1>
-  %0 = vector.mask %m { vector.contract #matmat_trait %vector_a, %vector_b, %vector_c
-    : vector<3x5xf32>, vector<5x[2]xf32> into vector<3x[2]xf32> } : vector<3x[2]x5xi1> -> vector<3x[2]xf32>
+  %0 = vector.contract #matmat_trait %vector_a, %vector_b, %vector_c
+    : vector<3x5xf32>, vector<5x[2]xf32> into vector<3x[2]xf32>
 
   // Print the output
   %slice1 = vector.extract %0[0] : vector<[2]xf32> from vector<3x[2]xf32>
