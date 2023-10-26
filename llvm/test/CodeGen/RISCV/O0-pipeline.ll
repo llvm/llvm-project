@@ -53,6 +53,7 @@
 ; CHECK-NEXT:       Machine Optimization Remark Emitter
 ; CHECK-NEXT:       Prologue/Epilogue Insertion & Frame Finalization
 ; CHECK-NEXT:       Post-RA pseudo instruction expansion pass
+; CHECK-NEXT:       RISC-V post-regalloc pseudo instruction expansion pass
 ; CHECK-NEXT:       Insert KCFI indirect call checks
 ; CHECK-NEXT:       Analyze Machine Code For Garbage Collection
 ; CHECK-NEXT:       Insert fentry calls

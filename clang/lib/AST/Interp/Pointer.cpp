@@ -94,7 +94,7 @@ APValue Pointer::toAPValue() const {
     Offset = CharUnits::Zero();
   } else {
     // Build the lvalue base from the block.
-    Descriptor *Desc = getDeclDesc();
+    const Descriptor *Desc = getDeclDesc();
     if (auto *VD = Desc->asValueDecl())
       Base = VD;
     else if (auto *E = Desc->asExpr())

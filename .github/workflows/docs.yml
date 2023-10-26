@@ -20,6 +20,7 @@ on:
       - 'libunwind/docs/**'
       - 'libcxx/docs/**'
       - 'libc/docs/**'
+      - 'lld/docs/**'
   pull_request:
     paths:
       - 'llvm/docs/**'
@@ -29,6 +30,7 @@ on:
       - 'libunwind/docs/**'
       - 'libcxx/docs/**'
       - 'libc/docs/**'
+      - 'lld/docs/**'
 
 jobs:
   check-docs-build:
@@ -63,6 +65,8 @@ jobs:
               - 'libcxx/docs/**'
             libc:
               - 'libc/docs/**'
+            lld:
+              - 'lld/docs/**'
       - name: Fetch LLVM sources (PR)
         if: ${{ github.event_name == 'pull_request' }}
         uses: actions/checkout@v4
@@ -116,4 +120,9 @@ jobs:
         run: |
           cmake -B libc-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_RUNTIMES="libc" -DLLVM_ENABLE_SPHINX=ON ./runtimes
           TZ=UTC ninja -C docs-libc-html
+      - name: Build LLD docs
+        if: steps.docs-changed-subprojects.outputs.lld_any_changed == 'true'
+        run: |
+          cmake -B lld-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="lld" -DLLVM_ENABLE_SPHINX=ON ./llvm
+          TZ=UTC ninja -C lld-build docs-lld-html
 
