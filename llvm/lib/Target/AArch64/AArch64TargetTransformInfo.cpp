@@ -212,6 +212,30 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
   return (CallerBits & CalleeBits) == CalleeBits;
 }
 
+bool AArch64TTIImpl::areTypesABICompatible(
+    const Function *Caller, const Function *Callee,
+    const ArrayRef<Type *> &Types) const {
+  if (!BaseT::areTypesABICompatible(Caller, Callee, Types))
+    return false;
+
+  // We need to ensure that argument promotion does not attempt to promote
+  // pointers to fixed-length vector types larger than 128 bits like
+  // <8 x float> (and pointers to aggregate types which have such fixed-length
+  // vector type members) into the values of the pointees. Such vector types
+  // are used for SVE VLS but there is no ABI for SVE VLS arguments and the
+  // backend cannot lower such value arguments. The 128-bit fixed-length SVE
+  // types can be safely treated as 128-bit NEON types and they cannot be
+  // distinguished in IR.
+  if (ST->useSVEForFixedLengthVectors() && llvm::any_of(Types, [](Type *Ty) {
+        auto FVTy = dyn_cast<FixedVectorType>(Ty);
+        return FVTy &&
+               FVTy->getScalarSizeInBits() * FVTy->getNumElements() > 128;
+      }))
+    return false;
+
+  return true;
+}
+
 bool AArch64TTIImpl::shouldMaximizeVectorBandwidth(
     TargetTransformInfo::RegisterKind K) const {
   assert(K != TargetTransformInfo::RGK_Scalar);
