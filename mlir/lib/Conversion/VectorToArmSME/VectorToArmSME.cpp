@@ -486,6 +486,7 @@ struct VectorOuterProductToArmSMELowering
     Value lhsMask = {};
     Value rhsMask = {};
     Operation *rootOp = outerProductOp;
+    auto loc = outerProductOp.getLoc();
     if (outerProductOp.isMasked()) {
       auto maskingOp = outerProductOp.getMaskingOp();
       rewriter.setInsertionPoint(maskingOp);
@@ -498,7 +499,6 @@ struct VectorOuterProductToArmSMELowering
       if (!createMaskOp)
         return failure();
 
-      auto loc = outerProductOp.getLoc();
       auto maskType = createMaskOp.getVectorType();
       Value lhsMaskDim = createMaskOp.getOperand(0);
       Value rhsMaskDim = createMaskOp.getOperand(1);
