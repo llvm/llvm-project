@@ -115,17 +115,13 @@ processOperands(llvm::IRBuilderBase &builder,
     llvm::Value *ptrBaseGEP = builder.CreateInBoundsGEP(
         arrI8PtrTy, mapperAllocas.ArgsBase,
         {builder.getInt32(0), builder.getInt32(index)});
-    llvm::Value *ptrBaseCast = builder.CreateBitCast(
-        ptrBaseGEP, dataPtrBase->getType()->getPointerTo());
-    builder.CreateStore(dataPtrBase, ptrBaseCast);
+    builder.CreateStore(dataPtrBase, ptrBaseGEP);
 
     // Store pointer extracted from operand into the i-th position of args.
     llvm::Value *ptrGEP = builder.CreateInBoundsGEP(
         arrI8PtrTy, mapperAllocas.Args,
         {builder.getInt32(0), builder.getInt32(index)});
-    llvm::Value *ptrCast =
-        builder.CreateBitCast(ptrGEP, dataPtr->getType()->getPointerTo());
-    builder.CreateStore(dataPtr, ptrCast);
+    builder.CreateStore(dataPtr, ptrGEP);
 
     // Store size extracted from operand into the i-th position of argSizes.
     llvm::Value *sizeGEP = builder.CreateInBoundsGEP(
