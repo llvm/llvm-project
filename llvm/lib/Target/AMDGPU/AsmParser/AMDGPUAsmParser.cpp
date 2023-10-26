@@ -3063,19 +3063,6 @@ ParseStatus AMDGPUAsmParser::parseImm(OperandVector &Operands,
     }
   }
 
-  if (!HasLit) {
-    HasLit = trySkipId("lit");
-    if (HasLit) {
-      if (!skipToken(AsmToken::LParen, "expected left paren after lit"))
-        return ParseStatus::Failure;
-      ParseStatus S = parseImm(Operands, HasSP3AbsModifier, HasLit);
-      if (S.isSuccess() &&
-          !skipToken(AsmToken::RParen, "expected closing parentheses"))
-        return ParseStatus::Failure;
-      return S;
-    }
-  }
-
   const auto& Tok = getToken();
   const auto& NextTok = peekToken();
   bool IsReal = Tok.is(AsmToken::Real);

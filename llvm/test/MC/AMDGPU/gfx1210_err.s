@@ -128,7 +128,7 @@ v_fmaak_f64 v[4:5], lit64(lit64(0x7e8)), v[8:9], lit64(0x7e8)
 // GFX1210-ERR:                                ^
 
 v_fmaak_f64 v[4:5], lit64(lit(0x7e8)), v[8:9], lit64(0x7e8)
-// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 // GFX1210-ERR: v_fmaak_f64 v[4:5], lit64(lit(0x7e8)), v[8:9], lit64(0x7e8)
 // GFX1210-ERR:                              ^
 
