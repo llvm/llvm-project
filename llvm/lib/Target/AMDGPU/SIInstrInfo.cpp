@@ -5506,7 +5506,7 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
       //        operands. At the moment we do not know if an operand is signed.
       //        Such operand will be encoded as its low 32 bits and then either
       //        correctly sign extended or incorrectly zero extended by HW.
-      if (!Is64BitFPOp && isInt<32>(Imm) && (int32_t)Lo_32(Imm) < 0)
+      if (!Is64BitFPOp && (int32_t)Lo_32(Imm) < 0)
         return false;
     }
   }
