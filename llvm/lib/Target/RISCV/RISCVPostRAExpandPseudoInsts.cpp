@@ -92,48 +92,13 @@ bool RISCVPostRAExpandPseudo::expandMovImm(MachineBasicBlock &MBB,
       Val, MBB.getParent()->getSubtarget().getFeatureBits());
   assert(!Seq.empty());
 
-  Register SrcReg = RISCV::X0;
   Register DstReg = MBBI->getOperand(0).getReg();
   bool DstIsDead = MBBI->getOperand(0).isDead();
   bool Renamable = MBBI->getOperand(0).isRenamable();
-  bool SrcRenamable = false;
-  unsigned Num = 0;
 
-  for (RISCVMatInt::Inst &Inst : Seq) {
-    bool LastItem = ++Num == Seq.size();
-    unsigned DstRegState = getDeadRegState(DstIsDead && LastItem) |
-                           getRenamableRegState(Renamable);
-    unsigned SrcRegState = getKillRegState(SrcReg != RISCV::X0) |
-                           getRenamableRegState(SrcRenamable);
-    switch (Inst.getOpndKind()) {
-    case RISCVMatInt::Imm:
-      BuildMI(MBB, MBBI, DL, TII->get(Inst.getOpcode()))
-          .addReg(DstReg, RegState::Define | DstRegState)
-          .addImm(Inst.getImm());
-      break;
-    case RISCVMatInt::RegX0:
-      BuildMI(MBB, MBBI, DL, TII->get(Inst.getOpcode()))
-          .addReg(DstReg, RegState::Define | DstRegState)
-          .addReg(SrcReg, SrcRegState)
-          .addReg(RISCV::X0);
-      break;
-    case RISCVMatInt::RegReg:
-      BuildMI(MBB, MBBI, DL, TII->get(Inst.getOpcode()))
-          .addReg(DstReg, RegState::Define | DstRegState)
-          .addReg(SrcReg, SrcRegState)
-          .addReg(SrcReg, SrcRegState);
-      break;
-    case RISCVMatInt::RegImm:
-      BuildMI(MBB, MBBI, DL, TII->get(Inst.getOpcode()))
-          .addReg(DstReg, RegState::Define | DstRegState)
-          .addReg(SrcReg, SrcRegState)
-          .addImm(Inst.getImm());
-      break;
-    }
-    // Only the first instruction has X0 as its source.
-    SrcReg = DstReg;
-    SrcRenamable = Renamable;
-  }
+  TII->movImm(MBB, MBBI, DL, DstReg, Val, MachineInstr::NoFlags, Renamable,
+              DstIsDead);
+
   MBBI->eraseFromParent();
   return true;
 }
