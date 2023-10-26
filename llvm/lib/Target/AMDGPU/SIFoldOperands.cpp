@@ -1402,14 +1402,13 @@ bool SIFoldOperands::tryFoldFoldableCopy(
 }
 
 // Try to fold the following pattern:
-//    s_cselect s[2:3], K, 0          ; K has LSB set. Usually it's +-1.
+//    s_cselect s[2:3], -1, 0
 //    v_cndmask v0, 0, +-1, s[2:3]
 //    v_readfirstlane s0, v0
 //
-// into (for example)
+// into
 //
-//    s_cselect s[2:3], K, 0
-//    s_bfe_u64 s0, s[2:3], 0x10000
+//    s_cselect s0, +-1, 0
 bool SIFoldOperands::tryFoldUniformReadFirstLaneCndMask(
     MachineInstr &MI) const {
   if (MI.getOpcode() != AMDGPU::V_READFIRSTLANE_B32)
@@ -1450,11 +1449,8 @@ bool SIFoldOperands::tryFoldUniformReadFirstLaneCndMask(
   if (!Src0->isImm() || Src0->getImm() != 0 || !Src1->isImm())
     return false;
 
-  // This pattern usually comes from a ext. sext uses -1.
-  bool IsSigned = false;
-  if (Src1->getImm() == -1)
-    IsSigned = true;
-  else if (Src1->getImm() != 1)
+  bool IsSigned = (Src1->getImm() == -1);
+  if (Src1->getImm() != 1 && !IsSigned)
     return false;
 
   MachineInstr *CSel = MRI->getVRegDef(Src2);
@@ -1466,22 +1462,16 @@ bool SIFoldOperands::tryFoldUniformReadFirstLaneCndMask(
   MachineOperand *CSelSrc1 = TII->getNamedOperand(*CSel, AMDGPU::OpName::src1);
   // Note: we could also allow any non-zero value for CSelSrc0, and adapt the
   // BFE's mask depending on where the first set bit is.
-  if (!CSelSrc0->isImm() || (CSelSrc0->getImm() & 1) == 0 ||
-      !CSelSrc1->isImm() || CSelSrc1->getImm() != 0)
+  if (!CSelSrc0->isImm() || CSelSrc0->getImm() != -1 || !CSelSrc1->isImm() ||
+      CSelSrc1->getImm() != 0)
     return false;
 
-  // Replace the V_CNDMASK with S_BFE.
-  unsigned BFEOpc = (IsSigned ? AMDGPU::S_BFE_I32 : AMDGPU::S_BFE_U32);
-
-  // If the CSELECT writes to a 64 bit SGPR, only pick the low bits.
-  unsigned SubReg = 0;
-  if (CSel->getOpcode() == AMDGPU::S_CSELECT_B64)
-    SubReg = AMDGPU::sub0;
-
-  BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(BFEOpc),
-          MI.getOperand(0).getReg())
-      .addReg(Src2, /*Flags*/ 0, SubReg)
-      .addImm(0x10000);
+  // Build a S_CSELECT right before the old one so we're sure it uses the same
+  // SCC def.
+  BuildMI(*CSel->getParent(), *CSel, MI.getDebugLoc(),
+          TII->get(AMDGPU::S_CSELECT_B32), MI.getOperand(0).getReg())
+      .addImm(IsSigned ? -1 : 1)
+      .addImm(0);
   MI.eraseFromParent();
   return true;
 }

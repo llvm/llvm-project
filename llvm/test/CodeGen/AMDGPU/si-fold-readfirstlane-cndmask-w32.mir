@@ -2,54 +2,20 @@
 # RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -run-pass=si-fold-operands -verify-machineinstrs -o - %s | FileCheck --check-prefix=GCN %s
 
 ---
-name: unsigned_32bits_select1
+name: unsigned_32bits
 tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $scc
-    ; GCN-LABEL: name: unsigned_32bits_select1
+    ; GCN-LABEL: name: unsigned_32bits
     ; GCN: liveins: $scc
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 1, 0, implicit $scc
-    ; GCN-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, [[S_CSELECT_B32_]], implicit $exec
-    ; GCN-NEXT: [[S_BFE_U32_:%[0-9]+]]:sreg_32 = S_BFE_U32 [[S_CSELECT_B32_]], 65536, implicit-def $scc
-    %0:sreg_32_xm0_xexec = S_CSELECT_B32 1, 0, implicit $scc
-    %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
-    %2:sreg_32 = V_READFIRSTLANE_B32 %1, implicit $exec
-...
-
----
-name: unsigned_32bits_select_neg1
-tracksRegLiveness: true
-body: |
-  bb.0:
-    liveins: $scc
-    ; GCN-LABEL: name: unsigned_32bits_select_neg1
-    ; GCN: liveins: $scc
-    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: %dst:sreg_32 = S_CSELECT_B32 1, 0, implicit $scc
     ; GCN-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
     ; GCN-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, [[S_CSELECT_B32_]], implicit $exec
-    ; GCN-NEXT: [[S_BFE_U32_:%[0-9]+]]:sreg_32 = S_BFE_U32 [[S_CSELECT_B32_]], 65536, implicit-def $scc
     %0:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
     %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
-    %2:sreg_32 = V_READFIRSTLANE_B32 %1, implicit $exec
-...
-
----
-name: unsigned_32bits_select_neg_arbitrary
-tracksRegLiveness: true
-body: |
-  bb.0:
-    liveins: $scc
-    ; GCN-LABEL: name: unsigned_32bits_select_neg_arbitrary
-    ; GCN: liveins: $scc
-    ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 5, 0, implicit $scc
-    ; GCN-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, [[S_CSELECT_B32_]], implicit $exec
-    ; GCN-NEXT: [[S_BFE_U32_:%[0-9]+]]:sreg_32 = S_BFE_U32 [[S_CSELECT_B32_]], 65536, implicit-def $scc
-    %0:sreg_32_xm0_xexec = S_CSELECT_B32 5, 0, implicit $scc
-    %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
-    %2:sreg_32 = V_READFIRSTLANE_B32 %1, implicit $exec
+    %dst:sreg_32 = V_READFIRSTLANE_B32 %1, implicit $exec
 ...
 
 ---
@@ -61,12 +27,12 @@ body: |
     ; GCN-LABEL: name: signed_32bits
     ; GCN: liveins: $scc
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 1, 0, implicit $scc
+    ; GCN-NEXT: %dst:sreg_32 = S_CSELECT_B32 -1, 0, implicit $scc
+    ; GCN-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
     ; GCN-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, -1, [[S_CSELECT_B32_]], implicit $exec
-    ; GCN-NEXT: [[S_BFE_I32_:%[0-9]+]]:sreg_32 = S_BFE_I32 [[S_CSELECT_B32_]], 65536, implicit-def $scc
-    %0:sreg_32_xm0_xexec = S_CSELECT_B32 1, 0, implicit $scc
+    %0:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
     %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, -1, %0, implicit $exec
-    %2:sreg_32 = V_READFIRSTLANE_B32 %1, implicit $exec
+    %dst:sreg_32 = V_READFIRSTLANE_B32 %1, implicit $exec
 ...
 
 ---
@@ -78,16 +44,16 @@ body: |
     ; GCN-LABEL: name: unsigned_64bits
     ; GCN: liveins: $scc
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 1, 0, implicit $scc
+    ; GCN-NEXT: %dst:sreg_32 = S_CSELECT_B32 1, 0, implicit $scc
+    ; GCN-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
     ; GCN-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, [[S_CSELECT_B32_]], implicit $exec
     ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_CNDMASK_B32_e64_]], %subreg.sub0, [[V_MOV_B32_e32_]], %subreg.sub1
-    ; GCN-NEXT: [[S_BFE_U32_:%[0-9]+]]:sreg_32 = S_BFE_U32 [[S_CSELECT_B32_]], 65536, implicit-def $scc
-    %0:sreg_32_xm0_xexec = S_CSELECT_B32 1, 0, implicit $scc
+    %0:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
     %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
     %2:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %3:vreg_64 = REG_SEQUENCE %1, %subreg.sub0, %2, %subreg.sub1
-    %4:sreg_32 = V_READFIRSTLANE_B32 %3.sub0, implicit $exec
+    %dst:sreg_32 = V_READFIRSTLANE_B32 %3.sub0, implicit $exec
 ...
 
 ---
@@ -99,16 +65,16 @@ body: |
     ; GCN-LABEL: name: signed_64bits
     ; GCN: liveins: $scc
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 1, 0, implicit $scc
+    ; GCN-NEXT: %dst:sreg_32 = S_CSELECT_B32 -1, 0, implicit $scc
+    ; GCN-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
     ; GCN-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, -1, [[S_CSELECT_B32_]], implicit $exec
     ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_CNDMASK_B32_e64_]], %subreg.sub0, [[V_MOV_B32_e32_]], %subreg.sub1
-    ; GCN-NEXT: [[S_BFE_I32_:%[0-9]+]]:sreg_32 = S_BFE_I32 [[S_CSELECT_B32_]], 65536, implicit-def $scc
-    %0:sreg_32_xm0_xexec = S_CSELECT_B32 1, 0, implicit $scc
+    %0:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
     %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, -1, %0, implicit $exec
     %2:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %3:vreg_64 = REG_SEQUENCE %1, %subreg.sub0, %2, %subreg.sub1
-    %4:sreg_32 = V_READFIRSTLANE_B32 %3.sub0, implicit $exec
+    %dst:sreg_32 = V_READFIRSTLANE_B32 %3.sub0, implicit $exec
 ...
 
 ---
@@ -120,16 +86,16 @@ body: |
     ; GCN-LABEL: name: unsigned_64bits_double
     ; GCN: liveins: $scc
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 1, 0, implicit $scc
+    ; GCN-NEXT: %dst0:sreg_32 = S_CSELECT_B32 1, 0, implicit $scc
+    ; GCN-NEXT: %dst1:sreg_32 = S_CSELECT_B32 1, 0, implicit $scc
+    ; GCN-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
     ; GCN-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, [[S_CSELECT_B32_]], implicit $exec
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_CNDMASK_B32_e64_]], %subreg.sub0, [[V_CNDMASK_B32_e64_]], %subreg.sub1
-    ; GCN-NEXT: [[S_BFE_U32_:%[0-9]+]]:sreg_32 = S_BFE_U32 [[S_CSELECT_B32_]], 65536, implicit-def $scc
-    ; GCN-NEXT: [[S_BFE_U32_1:%[0-9]+]]:sreg_32 = S_BFE_U32 [[S_CSELECT_B32_]], 65536, implicit-def $scc
-    %0:sreg_32_xm0_xexec = S_CSELECT_B32 1, 0, implicit $scc
+    %0:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
     %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
     %2:vreg_64 = REG_SEQUENCE %1, %subreg.sub0, %1, %subreg.sub1
-    %3:sreg_32 = V_READFIRSTLANE_B32 %2.sub0, implicit $exec
-    %4:sreg_32 = V_READFIRSTLANE_B32 %2.sub1, implicit $exec
+    %dst0:sreg_32 = V_READFIRSTLANE_B32 %2.sub0, implicit $exec
+    %dst1:sreg_32 = V_READFIRSTLANE_B32 %2.sub1, implicit $exec
 ...
 
 ---
@@ -141,16 +107,16 @@ body: |
     ; GCN-LABEL: name: signed_64bits_double
     ; GCN: liveins: $scc
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 1, 0, implicit $scc
+    ; GCN-NEXT: %dst0:sreg_32 = S_CSELECT_B32 -1, 0, implicit $scc
+    ; GCN-NEXT: %dst1:sreg_32 = S_CSELECT_B32 -1, 0, implicit $scc
+    ; GCN-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
     ; GCN-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, -1, [[S_CSELECT_B32_]], implicit $exec
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_CNDMASK_B32_e64_]], %subreg.sub0, [[V_CNDMASK_B32_e64_]], %subreg.sub1
-    ; GCN-NEXT: [[S_BFE_I32_:%[0-9]+]]:sreg_32 = S_BFE_I32 [[S_CSELECT_B32_]], 65536, implicit-def $scc
-    ; GCN-NEXT: [[S_BFE_I32_1:%[0-9]+]]:sreg_32 = S_BFE_I32 [[S_CSELECT_B32_]], 65536, implicit-def $scc
-    %0:sreg_32_xm0_xexec = S_CSELECT_B32 1, 0, implicit $scc
+    %0:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
     %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, -1, %0, implicit $exec
     %2:vreg_64 = REG_SEQUENCE %1, %subreg.sub0, %1, %subreg.sub1
-    %3:sreg_32 = V_READFIRSTLANE_B32 %2.sub0, implicit $exec
-    %4:sreg_32 = V_READFIRSTLANE_B32 %2.sub1, implicit $exec
+    %dst0:sreg_32 = V_READFIRSTLANE_B32 %2.sub0, implicit $exec
+    %dst1:sreg_32 = V_READFIRSTLANE_B32 %2.sub1, implicit $exec
 ...
 
 ---
@@ -162,11 +128,11 @@ body: |
     ; GCN-LABEL: name: bad_subreg_64bits
     ; GCN: liveins: $scc
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 1, 0, implicit $scc
+    ; GCN-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
     ; GCN-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, -1, [[S_CSELECT_B32_]], implicit $exec
     ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_CNDMASK_B32_e64_]], %subreg.sub0, [[V_MOV_B32_e32_]], %subreg.sub1
-    %0:sreg_32_xm0_xexec = S_CSELECT_B32 1, 0, implicit $scc
+    %0:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
     %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, -1, %0, implicit $exec
     %2:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %3:vreg_64 = REG_SEQUENCE %1, %subreg.sub0, %2, %subreg.sub1
@@ -182,12 +148,12 @@ body: |
     ; GCN-LABEL: name: bad_select_imm
     ; GCN: liveins: $scc
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 1, 1, implicit $scc
+    ; GCN-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 1, implicit $scc
     ; GCN-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, [[S_CSELECT_B32_]], implicit $exec
-    ; GCN-NEXT: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[V_CNDMASK_B32_e64_]], implicit $exec
-    %0:sreg_32_xm0_xexec = S_CSELECT_B32 1, 1, implicit $scc
+    ; GCN-NEXT: %dst:sreg_32 = V_READFIRSTLANE_B32 [[V_CNDMASK_B32_e64_]], implicit $exec
+    %0:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 1, implicit $scc
     %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
-    %2:sreg_32 = V_READFIRSTLANE_B32 %1, implicit $exec
+    %dst:sreg_32 = V_READFIRSTLANE_B32 %1, implicit $exec
 ...
 
 ---
@@ -201,10 +167,10 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 0, 1, implicit $scc
     ; GCN-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, [[S_CSELECT_B32_]], implicit $exec
-    ; GCN-NEXT: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[V_CNDMASK_B32_e64_]], implicit $exec
+    ; GCN-NEXT: %dst:sreg_32 = V_READFIRSTLANE_B32 [[V_CNDMASK_B32_e64_]], implicit $exec
     %0:sreg_32_xm0_xexec = S_CSELECT_B32 0, 1, implicit $scc
     %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
-    %2:sreg_32 = V_READFIRSTLANE_B32 %1, implicit $exec
+    %dst:sreg_32 = V_READFIRSTLANE_B32 %1, implicit $exec
 ...
 
 ---
@@ -216,10 +182,10 @@ body: |
     ; GCN-LABEL: name: bad_cndmask_imm
     ; GCN: liveins: $scc
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 1, 0, implicit $scc
-    %0:sreg_32_xm0_xexec = S_CSELECT_B32 1, 0, implicit $scc
+    ; GCN-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
+    %0:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
     %1:vgpr_32 = V_CNDMASK_B32_e64 0, 1, 0, 1, %0, implicit $exec
-    %2:sreg_32 = V_READFIRSTLANE_B32 %1, implicit $exec
+    %dst:sreg_32 = V_READFIRSTLANE_B32 %1, implicit $exec
 ...
 
 
@@ -232,10 +198,10 @@ body: |
     ; GCN-LABEL: name: bad_cndmask_imm_2
     ; GCN: liveins: $scc
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 1, 0, implicit $scc
+    ; GCN-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
     ; GCN-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 1, 0, 0, [[S_CSELECT_B32_]], implicit $exec
-    ; GCN-NEXT: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[V_CNDMASK_B32_e64_]], implicit $exec
-    %0:sreg_32_xm0_xexec = S_CSELECT_B32 1, 0, implicit $scc
+    ; GCN-NEXT: %dst:sreg_32 = V_READFIRSTLANE_B32 [[V_CNDMASK_B32_e64_]], implicit $exec
+    %0:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
     %1:vgpr_32 = V_CNDMASK_B32_e64 0, 1, 0, 0, %0, implicit $exec
-    %2:sreg_32 = V_READFIRSTLANE_B32 %1, implicit $exec
+    %dst:sreg_32 = V_READFIRSTLANE_B32 %1, implicit $exec
 ...
