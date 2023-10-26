@@ -7762,8 +7762,7 @@ bool Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
       else {
         Diag(MD->getLocation(),
              diag::err_defaulted_special_member_explicit_object_mismatch)
-            << (CSM == CXXMoveAssignment) << RD
-            << MD->getSourceRange();
+            << (CSM == CXXMoveAssignment) << RD << MD->getSourceRange();
         HadError = true;
       }
     }
