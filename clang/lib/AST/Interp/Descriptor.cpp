@@ -262,7 +262,7 @@ Descriptor::Descriptor(const DeclTy &D, PrimType Type, bool IsTemporary,
 }
 
 /// Arrays of composite elements.
-Descriptor::Descriptor(const DeclTy &D, Descriptor *Elem, MetadataSize MD,
+Descriptor::Descriptor(const DeclTy &D, const Descriptor *Elem, MetadataSize MD,
                        unsigned NumElems, bool IsConst, bool IsTemporary,
                        bool IsMutable)
     : Source(D), ElemSize(Elem->getAllocSize() + sizeof(InlineDescriptor)),
@@ -293,6 +293,13 @@ Descriptor::Descriptor(const DeclTy &D, Record *R, MetadataSize MD,
       ElemRecord(R), IsConst(IsConst), IsMutable(IsMutable),
       IsTemporary(IsTemporary), CtorFn(ctorRecord), DtorFn(dtorRecord),
       MoveFn(moveRecord) {
+  assert(Source && "Missing source");
+}
+
+Descriptor::Descriptor(const DeclTy &D, MetadataSize MD)
+    : Source(D), ElemSize(1), Size(ElemSize), MDSize(MD.value_or(0)),
+      AllocSize(Size + MDSize), ElemRecord(nullptr), IsConst(true),
+      IsMutable(false), IsTemporary(false), IsDummy(true) {
   assert(Source && "Missing source");
 }
 

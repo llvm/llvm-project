@@ -803,7 +803,7 @@ bool SymbolFileDWARFDebugMap::CompleteType(CompilerType &compiler_type) {
   bool success = false;
   if (compiler_type) {
     ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
-      if (oso_dwarf->HasForwardDeclForClangType(compiler_type)) {
+      if (oso_dwarf->HasForwardDeclForCompilerType(compiler_type)) {
         oso_dwarf->CompleteType(compiler_type);
         success = true;
         return true;

@@ -514,6 +514,14 @@ TEST_F(SortImportsTestJS, ImportExportType) {
              "export {Y};\n");
 }
 
+TEST_F(SortImportsTestJS, TemplateKeyword) {
+  // Reproduces issue where importing "template" disables imports sorting.
+  verifySort("import {template} from './a';\n"
+             "import {b} from './b';\n",
+             "import {b} from './b';\n"
+             "import {template} from './a';");
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang

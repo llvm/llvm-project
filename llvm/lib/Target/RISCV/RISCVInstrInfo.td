@@ -1664,6 +1664,16 @@ def PseudoJump : Pseudo<(outs GPR:$rd), (ins pseudo_jump_symbol:$target), [],
                         "jump", "$target, $rd">,
                  Sched<[WriteIALU, WriteJalr, ReadJalr]>;
 
+// Pseudo for a rematerializable constant materialization sequence.
+// This is an experimental feature enabled by
+// -riscv-use-rematerializable-movimm in RISCVISelDAGToDAG.cpp
+// It will be expanded after register allocation.
+// FIXME: The scheduling information does not reflect the multiple instructions.
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8, isCodeGenOnly = 1,
+    isPseudo = 1, isReMaterializable = 1, IsSignExtendingOpW = 1 in
+def PseudoMovImm : Pseudo<(outs GPR:$dst), (ins i32imm:$imm), []>,
+                   Sched<[WriteIALU]>;
+
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8, isCodeGenOnly = 0,
     isAsmParserOnly = 1 in
 def PseudoLLA : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
