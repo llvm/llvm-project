@@ -4941,7 +4941,7 @@ TEST_P(ASTImporterOptionSpecificTestBase,
 | `-CXXDeductionGuideDecl 0x20515d8 <col:9, col:12> col:9 implicit used <deduction guide for A> 'auto (int) -> A<int>'
 |   |-TemplateArgument type 'int'
 |   | `-BuiltinType 0x20587e0 'int'
-|   `-ParmVarDecl 0x2051388 <col:11> col:12 'int':'int'
+|   `-ParmVarDecl 0x2051388 <col:11> col:12 'int'
 `-FunctionTemplateDecl 0x1fe5a78 <line:2:7, col:36> col:36 implicit <deduction guide for A>
   |-TemplateTypeParmDecl 0x1fe4eb0 <col:17, col:26> col:26 referenced typename depth 0 index 0 T
   `-CXXDeductionGuideDecl 0x1fe59c0 <col:36> col:36 implicit <deduction guide for A> 'auto (A<T>) -> A<T>'
