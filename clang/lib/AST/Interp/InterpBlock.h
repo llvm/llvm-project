@@ -49,7 +49,7 @@ enum PrimType : unsigned;
 class Block final {
 public:
   /// Creates a new block.
-  Block(const std::optional<unsigned> &DeclID, Descriptor *Desc,
+  Block(const std::optional<unsigned> &DeclID, const Descriptor *Desc,
         bool IsStatic = false, bool IsExtern = false)
       : DeclID(DeclID), IsStatic(IsStatic), IsExtern(IsExtern), Desc(Desc) {}
 
