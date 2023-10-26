@@ -130,6 +130,7 @@ int main(int, char**) {
   // Note: Properly testing the conditional noexcept-ness propagation in std::cbegin and std::cend
   //       requires using C-style arrays, because those are the only ones with a noexcept std::begin
   //       and std::end inside namespace std
+#if TEST_STD_VER >= 14
   {
     int a[]        = {1, 2, 3};
     auto const& ca = a;
@@ -142,7 +143,6 @@ int main(int, char**) {
   }
 
   // Make sure std::cbegin and std::cend are constexpr in C++14 too (see LWG2280).
-#if TEST_STD_VER >= 14
   {
     static constexpr int a[] = {1, 2, 3};
     constexpr auto b         = std::cbegin(a);
