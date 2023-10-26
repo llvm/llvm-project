@@ -86,7 +86,7 @@ body:             |
   ; CHECK-NEXT: bb.1.bci_19:
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   $x0 = COPY $xzr
-  ; CHECK-NEXT:   STATEPOINT 0, 0, 1, $xzr, killed $x0, 2, 0, 2, 0, 2, 33, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, [[COPY]], 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 1, 2, 0, 2, 0, 2, 1, 0, 0, csr_aarch64_aapcs, implicit-def $sp, implicit-def dead $x0, implicit-def dead early-clobber $lr
+  ; CHECK-NEXT:   STATEPOINT 0, 0, 1, $xzr, killed $x0, 2, 0, 2, 0, 2, 33, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, %7, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 1, 2, 0, 3, 2, 0, 2, 1, 0, 0, csr_aarch64_aapcs, implicit-def $sp, implicit-def dead $x0, implicit-def dead early-clobber $lr
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   $w0 = COPY $wzr
@@ -101,7 +101,7 @@ body:             |
   bb.1.bci_19:
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
     $x0 = COPY $xzr
-    STATEPOINT 0, 0, 1, $xzr, killed $x0, 2, 0, 2, 0, 2, 33, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, %1, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 1, 2, 0, 2, 0, 2, 1, 0, 0, csr_aarch64_aapcs, implicit-def $sp, implicit-def dead $x0, implicit-def dead early-clobber $lr
+    STATEPOINT 0, 0, 1, $xzr, killed $x0, 2, 0, 2, 0, 2, 33, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, %1, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 1, 2, 0, 3, 2, 0, 2, 1, 0, 0, csr_aarch64_aapcs, implicit-def $sp, implicit-def dead $x0, implicit-def dead early-clobber $lr
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
     $w0 = COPY $wzr

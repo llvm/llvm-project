@@ -62,6 +62,7 @@
 ; CHECK-NEXT:   .half   0
 ; CHECK-NEXT:   .half   4
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .half   8
@@ -69,6 +70,7 @@
 ; CHECK-NEXT:   .half   0
 ; CHECK-NEXT:   .word   65535
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .half   8
@@ -76,6 +78,7 @@
 ; CHECK-NEXT:   .half   0
 ; CHECK-NEXT:   .word   65536
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   5
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .half   8
@@ -83,6 +86,7 @@
 ; CHECK-NEXT:   .half   0
 ; CHECK-NEXT:   .word   0
 ; LargeConstant at index 0
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   5
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .half   8
@@ -103,11 +107,13 @@ entry:
 ; CHECK-NEXT:   .half   0
 ; CHECK-NEXT:   .half   2
 ; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .half   8
 ; CHECK-NEXT:   .half   {{[0-9]+}}
 ; CHECK-NEXT:   .half   0
 ; CHECK-NEXT:   .word   0
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .half   8
@@ -131,11 +137,13 @@ entry:
 ; CHECK-NEXT:   .half   0
 ; CHECK-NEXT:   .half   2
 ; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .half   8
 ; CHECK-NEXT:   .half   {{[0-9]+}}
 ; CHECK-NEXT:   .half   0
 ; CHECK-NEXT:   .word   0
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .half   8
@@ -160,11 +168,13 @@ ret:
 ; CHECK-NEXT:   .half   0
 ; CHECK-NEXT:   .half   2
 ; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .half   8
 ; CHECK-NEXT:   .half   {{[0-9]+}}
 ; CHECK-NEXT:   .half   0
 ; CHECK-NEXT:   .word   0
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .half   8
@@ -184,11 +194,13 @@ entry:
 ; CHECK-NEXT:   .half   0
 ; CHECK-NEXT:   .half   2
 ; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .half   8
 ; CHECK-NEXT:   .half   {{[0-9]+}}
 ; CHECK-NEXT:   .half   0
 ; CHECK-NEXT:   .word   0
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .half   8
@@ -210,11 +222,13 @@ entry:
 ; CHECK-NEXT:   .half   0
 ; CHECK-NEXT:   .half   2
 ; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .half   8
 ; CHECK-NEXT:   .half   {{[0-9]+}}
 ; CHECK-NEXT:   .half   0
 ; CHECK-NEXT:   .word   0
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .half   8
@@ -236,11 +250,13 @@ entry:
 ; CHECK-NEXT:   .half   0
 ; CHECK-NEXT:   .half   2
 ; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .half   8
 ; CHECK-NEXT:   .half   {{[0-9]+}}
 ; CHECK-NEXT:   .half   0
 ; CHECK-NEXT:   .word   0
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .half   8
@@ -262,6 +278,7 @@ entry:
 ; 1 location
 ; CHECK-NEXT:   .half   1
 ; Loc 0: SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .half   8
@@ -304,6 +321,7 @@ entry:
 ; 1 location
 ; CHECK-NEXT:   .half   1
 ; Loc 0: Direct RBP - ofs
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   2
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .half   8
@@ -317,6 +335,7 @@ entry:
 ; 2 locations
 ; CHECK-NEXT:   .half   2
 ; Loc 0: Direct RBP - ofs
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   2
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .half   8
@@ -324,6 +343,7 @@ entry:
 ; CHECK-NEXT:   .half   0
 ; CHECK-NEXT:   .word
 ; Loc 1: Direct RBP - ofs
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   2
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .half   8
