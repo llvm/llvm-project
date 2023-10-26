@@ -14661,7 +14661,7 @@ bool AArch64TargetLowering::shouldSinkOperands(
         Ops.push_back(&I->getOperandUse(0));
         Sink = true;
       }
-      
+
       if (shouldSinkVScale(I->getOperand(1), Ops)) {
         Ops.push_back(&I->getOperandUse(1));
         Sink = true;
