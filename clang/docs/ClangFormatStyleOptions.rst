@@ -1217,7 +1217,7 @@ the configuration (without a prefix: ``Auto``).
 
 .. _AllowShortCompoundRequirementOnASingleLine:
 
-**AllowShortCompoundRequirementOnASingleLine** (``Boolean``) :versionbadge:`clang-format 16` :ref:`¶ <AllowShortCompoundRequirementOnASingleLine>`
+**AllowShortCompoundRequirementOnASingleLine** (``Boolean``) :versionbadge:`clang-format 18` :ref:`¶ <AllowShortCompoundRequirementOnASingleLine>`
   Allow short compound requirement on a single line.
 
   .. code-block:: c++

@@ -245,10 +245,10 @@ private:
       {{{"fclose"}, 1},
        {&StreamChecker::preDefault, &StreamChecker::evalFclose, 0}},
       {{{"fread"}, 4},
-       {&StreamChecker::preFread,
+       {std::bind(&StreamChecker::preFreadFwrite, _1, _2, _3, _4, true),
         std::bind(&StreamChecker::evalFreadFwrite, _1, _2, _3, _4, true), 3}},
       {{{"fwrite"}, 4},
-       {&StreamChecker::preFwrite,
+       {std::bind(&StreamChecker::preFreadFwrite, _1, _2, _3, _4, false),
         std::bind(&StreamChecker::evalFreadFwrite, _1, _2, _3, _4, false), 3}},
       {{{"fseek"}, 3},
        {&StreamChecker::preFseek, &StreamChecker::evalFseek, 0}},
@@ -305,11 +305,8 @@ private:
   void evalFclose(const FnDescription *Desc, const CallEvent &Call,
                   CheckerContext &C) const;
 
-  void preFread(const FnDescription *Desc, const CallEvent &Call,
-                CheckerContext &C) const;
-
-  void preFwrite(const FnDescription *Desc, const CallEvent &Call,
-                 CheckerContext &C) const;
+  void preFreadFwrite(const FnDescription *Desc, const CallEvent &Call,
+                      CheckerContext &C, bool IsFread) const;
 
   void evalFreadFwrite(const FnDescription *Desc, const CallEvent &Call,
                        CheckerContext &C, bool IsFread) const;
@@ -637,8 +634,9 @@ void StreamChecker::evalFclose(const FnDescription *Desc, const CallEvent &Call,
   C.addTransition(StateFailure);
 }
 
-void StreamChecker::preFread(const FnDescription *Desc, const CallEvent &Call,
-                             CheckerContext &C) const {
+void StreamChecker::preFreadFwrite(const FnDescription *Desc,
+                                   const CallEvent &Call, CheckerContext &C,
+                                   bool IsFread) const {
   ProgramStateRef State = C.getState();
   SVal StreamVal = getStreamArg(Desc, Call);
   State = ensureStreamNonNull(StreamVal, Call.getArgExpr(Desc->StreamArgNo), C,
@@ -651,6 +649,11 @@ void StreamChecker::preFread(const FnDescription *Desc, const CallEvent &Call,
   State = ensureNoFilePositionIndeterminate(StreamVal, C, State);
   if (!State)
     return;
+
+  if (!IsFread) {
+    C.addTransition(State);
+    return;
+  }
 
   SymbolRef Sym = StreamVal.getAsSymbol();
   if (Sym && State->get<StreamMap>(Sym)) {
@@ -660,24 +663,6 @@ void StreamChecker::preFread(const FnDescription *Desc, const CallEvent &Call,
   } else {
     C.addTransition(State);
   }
-}
-
-void StreamChecker::preFwrite(const FnDescription *Desc, const CallEvent &Call,
-                              CheckerContext &C) const {
-  ProgramStateRef State = C.getState();
-  SVal StreamVal = getStreamArg(Desc, Call);
-  State = ensureStreamNonNull(StreamVal, Call.getArgExpr(Desc->StreamArgNo), C,
-                              State);
-  if (!State)
-    return;
-  State = ensureStreamOpened(StreamVal, C, State);
-  if (!State)
-    return;
-  State = ensureNoFilePositionIndeterminate(StreamVal, C, State);
-  if (!State)
-    return;
-
-  C.addTransition(State);
 }
 
 void StreamChecker::evalFreadFwrite(const FnDescription *Desc,
@@ -1222,7 +1207,7 @@ StreamChecker::reportLeaks(const SmallVector<SymbolRef, 2> &LeakedSyms,
 
     PathDiagnosticLocation LocUsedForUniqueing;
     if (const Stmt *StreamStmt = StreamOpenNode->getStmtForDiagnostics())
-       LocUsedForUniqueing = PathDiagnosticLocation::createBegin(
+      LocUsedForUniqueing = PathDiagnosticLocation::createBegin(
           StreamStmt, C.getSourceManager(),
           StreamOpenNode->getLocationContext());
 

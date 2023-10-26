@@ -2103,18 +2103,38 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "ArmSVEPassIncGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-pass-decls",
+                "-name=ArmSVE",
+            ],
+            "include/mlir/Dialect/ArmSVE/Transforms/Passes.h.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/ArmSVE/Transforms/Passes.td",
+    deps = [":PassBaseTdFiles"],
+)
+
 cc_library(
     name = "ArmSVETransforms",
     srcs = glob(["lib/Dialect/ArmSVE/Transforms/*.cpp"]),
-    hdrs = ["include/mlir/Dialect/ArmSVE/Transforms/Transforms.h"],
+    hdrs = glob(["include/mlir/Dialect/ArmSVE/Transforms/*.h"]),
     includes = ["include"],
     deps = [
         ":ArmSVEDialect",
+        ":ArmSVEPassIncGen",
         ":DialectUtils",
         ":FuncDialect",
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
+        ":MemRefDialect",
+        ":Pass",
+        ":TransformUtils",
         ":VectorDialect",
     ],
 )

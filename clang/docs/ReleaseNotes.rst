@@ -185,7 +185,7 @@ C23 Feature Support
 - Clang now supports ``N3007 Type inference for object definitions``.
 
 - Clang now supports ``<stdckdint.h>`` which defines several macros for performing
-  checked integer arithmetic.
+  checked integer arithmetic. It is also exposed in pre-C23 modes.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -348,6 +348,9 @@ Improvements to Clang's diagnostics
       |               ~~~~~~~~~^~~~~~~~
 - Clang now always diagnoses when using non-standard layout types in ``offsetof`` .
   (`#64619: <https://github.com/llvm/llvm-project/issues/64619>`_)
+- Clang now diagnoses redefined defaulted constructor when redefined
+  defaulted constructor with different exception specs.
+  (`#69094: <https://github.com/llvm/llvm-project/issues/69094>`_)
 - Clang now diagnoses use of variable-length arrays in C++ by default (and
   under ``-Wall`` in GNU++ mode). This is an extension supported by Clang and
   GCC, but is very easy to accidentally use without realizing it's a
@@ -397,6 +400,10 @@ Improvements to Clang's diagnostics
     warning: cast from 'long (*)(const int &)' to 'decltype(fun_ptr)' (aka 'long (*)(int &)') converts to incompatible function type [-Wcast-function-type-strict]
     24 | return decltype(fun_ptr)( f_ptr /*comment*/);
        |        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- ``-Wzero-as-null-pointer-constant`` diagnostic is no longer emitted when using ``__null``
+  (or, more commonly, ``NULL`` when the platform defines it as ``__null``) to be more consistent
+  with GCC.
 
 Bug Fixes in This Version
 -------------------------
@@ -633,6 +640,10 @@ Bug Fixes to C++ Support
   coroutines is such that it is not possible to support VLA use. Fixes:
   (`#65858 <https://github.com/llvm/llvm-project/issues/65858>`_)
 
+- Fix bug where we were overriding zero-initialization of class members when
+  default initializing a base class in a constant expression context. Fixes:
+  (`#69890 <https://github.com/llvm/llvm-project/issues/69890>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
@@ -643,6 +654,9 @@ Bug Fixes to AST Handling
   `Issue 64170 <https://github.com/llvm/llvm-project/issues/64170>`_
 - Fixed ``hasAnyBase`` not binding nodes in its submatcher.
   (`#65421 <https://github.com/llvm/llvm-project/issues/65421>`_)
+- Fixed a bug where RecursiveASTVisitor fails to visit the
+  initializer of a bitfield.
+  `Issue 64916 <https://github.com/llvm/llvm-project/issues/64916>`_
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -779,6 +793,7 @@ AST Matchers
 clang-format
 ------------
 - Add ``AllowBreakBeforeNoexceptSpecifier`` option.
+- Add ``AllowShortCompoundRequirementOnASingleLine`` option.
 
 libclang
 --------

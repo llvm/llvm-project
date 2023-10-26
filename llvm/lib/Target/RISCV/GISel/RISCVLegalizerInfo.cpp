@@ -19,6 +19,7 @@
 #include "llvm/IR/Type.h"
 
 using namespace llvm;
+using namespace LegalityPredicates;
 
 RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
   const unsigned XLen = ST.getXLen();
@@ -28,6 +29,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
   const LLT s8 = LLT::scalar(8);
   const LLT s16 = LLT::scalar(16);
   const LLT s32 = LLT::scalar(32);
+  const LLT s64 = LLT::scalar(64);
 
   using namespace TargetOpcode;
 
@@ -119,7 +121,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
                                      {XLenLLT, p0, s16, 16}});
   if (XLen == 64)
     ExtLoadActions.legalForTypesWithMemDesc({{XLenLLT, p0, s32, 32}});
-  ExtLoadActions.lower();
+  ExtLoadActions
+    .widenScalarToNextPow2(0)
+    .clampScalar(0, s32, XLenLLT)
+    .lower();
 
   getActionDefinitionsBuilder(G_PTR_ADD)
       .legalFor({{p0, XLenLLT}});
@@ -199,6 +204,14 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
   getActionDefinitionsBuilder({G_UMAX, G_UMIN, G_SMAX, G_SMIN}).lower();
 
   getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({p0});
+
+  // FP Operations
+
+  getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV})
+      .legalIf([=, &ST](const LegalityQuery &Query) -> bool {
+        return (ST.hasStdExtF() && typeIs(0, s32)(Query)) ||
+               (ST.hasStdExtD() && typeIs(0, s64)(Query));
+      });
 
   getLegacyLegalizerInfo().computeTables();
 }

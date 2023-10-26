@@ -12786,10 +12786,10 @@ static unsigned addPermMasks(unsigned First, unsigned Second) {
   unsigned FirstNoCs = First & ~0x0c0c0c0c;
   unsigned SecondNoCs = Second & ~0x0c0c0c0c;
 
-  assert(FirstCs & 0xFF | SecondCs & 0xFF);
-  assert(FirstCs & 0xFF00 | SecondCs & 0xFF00);
-  assert(FirstCs & 0xFF0000 | SecondCs & 0xFF0000);
-  assert(FirstCs & 0xFF000000 | SecondCs & 0xFF000000);
+  assert((FirstCs & 0xFF) | (SecondCs & 0xFF));
+  assert((FirstCs & 0xFF00) | (SecondCs & 0xFF00));
+  assert((FirstCs & 0xFF0000) | (SecondCs & 0xFF0000));
+  assert((FirstCs & 0xFF000000) | (SecondCs & 0xFF000000));
 
   return (FirstNoCs | SecondNoCs) | (FirstCs & SecondCs);
 }
