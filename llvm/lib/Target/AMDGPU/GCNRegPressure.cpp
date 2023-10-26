@@ -32,6 +32,17 @@ bool llvm::isEqual(const GCNRPTracker::LiveRegSet &S1,
   return true;
 }
 
+GCNRPTracker::LiveRegSet
+llvm::getIntersection(const GCNRPTracker::LiveRegSet &LR1,
+                      const GCNRPTracker::LiveRegSet &LR2) {
+  GCNRPTracker::LiveRegSet Intersection;
+  for (auto [Reg, Mask] : LR1) {
+    LaneBitmask MaskIntersection = Mask & LR2.lookup(Reg);
+    if (MaskIntersection.any())
+      Intersection[Reg] = MaskIntersection;
+  }
+  return Intersection;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // GCNRegPressure
@@ -270,6 +281,14 @@ void GCNUpwardRPTracker::reset(const MachineInstr &MI,
   GCNRPTracker::reset(MI, LiveRegsCopy, true);
 }
 
+void GCNUpwardRPTracker::reset(const MachineRegisterInfo &MRI_,
+                               const LiveRegSet &LiveRegs_) {
+  MRI = &MRI_;
+  LiveRegs = LiveRegs_;
+  MaxPressure = CurPressure = getRegPressure(MRI_, LiveRegs_);
+}
+
+
 void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
   assert(MRI && "call reset first");
 
@@ -423,15 +442,16 @@ bool GCNDownwardRPTracker::advance(MachineBasicBlock::const_iterator Begin,
 LLVM_DUMP_METHOD
 Printable llvm::reportMismatch(const GCNRPTracker::LiveRegSet &LISLR,
                                const GCNRPTracker::LiveRegSet &TrackedLR,
-                               const TargetRegisterInfo *TRI) {
-  return Printable([&LISLR, &TrackedLR, TRI](raw_ostream &OS) {
+                               const TargetRegisterInfo *TRI,
+                               StringRef Pfx) {
+  return Printable([&LISLR, &TrackedLR, TRI, Pfx](raw_ostream &OS) {
     for (auto const &P : TrackedLR) {
       auto I = LISLR.find(P.first);
       if (I == LISLR.end()) {
-        OS << "  " << printReg(P.first, TRI) << ":L" << PrintLaneMask(P.second)
+        OS << Pfx << printReg(P.first, TRI) << ":L" << PrintLaneMask(P.second)
            << " isn't found in LIS reported set\n";
       } else if (I->second != P.second) {
-        OS << "  " << printReg(P.first, TRI)
+        OS << Pfx << printReg(P.first, TRI)
            << " masks doesn't match: LIS reported " << PrintLaneMask(I->second)
            << ", tracked " << PrintLaneMask(P.second) << '\n';
       }
@@ -439,7 +459,7 @@ Printable llvm::reportMismatch(const GCNRPTracker::LiveRegSet &LISLR,
     for (auto const &P : LISLR) {
       auto I = TrackedLR.find(P.first);
       if (I == TrackedLR.end()) {
-        OS << "  " << printReg(P.first, TRI) << ":L" << PrintLaneMask(P.second)
+        OS << Pfx << printReg(P.first, TRI) << ":L" << PrintLaneMask(P.second)
            << " isn't found in tracked set\n";
       }
     }
@@ -500,12 +520,10 @@ char &llvm::GCNRegPressurePrinterID = GCNRegPressurePrinter::ID;
 INITIALIZE_PASS(GCNRegPressurePrinter, "amdgpu-print-rp", "", true, true)
 
 bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
-
   const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
   const LiveIntervals &LIS = getAnalysis<LiveIntervals>();
-  
+
   auto &OS = dbgs();
 
 // Leading spaces are important for YAML syntax.
@@ -520,6 +538,14 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
     });
   };
 
+  auto ReportLISMismatchIfAny = [&](const GCNRPTracker::LiveRegSet &TrackedLR,
+                                    const GCNRPTracker::LiveRegSet &LISLR) {
+    if (LISLR != TrackedLR) {
+      OS << PFX "  mis LIS: " << llvm::print(LISLR, MRI)
+          << reportMismatch(LISLR, TrackedLR, TRI, PFX "    ");
+    }
+  };  
+
   // Register pressure before and at an instruction (in program order).
   SmallVector<std::pair<GCNRegPressure, GCNRegPressure>, 16> RP;
 
@@ -531,41 +557,39 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
     MBB.printName(OS);
     OS << ":\n";
 
-    if (MBB.empty()) {
-      SlotIndex MBBSI = LIS.getSlotIndexes()->getMBBStartIdx(&MBB);
-      GCNRPTracker::LiveRegSet LRThrough = getLiveRegs(MBBSI, LIS, MRI);
-      GCNRegPressure RP = getRegPressure(MRI, LRThrough);
-      OS << PFX "  Live-through:" << llvm::print(LRThrough, MRI);
-      OS << PFX "  SGPR  VGPR\n" << printRP(RP) << '\n';
-      continue;
-    }
+    SlotIndex MBBStartSlot = LIS.getSlotIndexes()->getMBBStartIdx(&MBB);
+    SlotIndex MBBEndSlot = LIS.getSlotIndexes()->getMBBEndIdx(&MBB);
 
     GCNRPTracker::LiveRegSet LRAtMBBBegin, LRAtMBBEnd;
     GCNRegPressure RPAtMBBEnd;
-    
+
     if (UseDownwardTracker) {
-      GCNDownwardRPTracker RPT(LIS);
-      RPT.reset(MBB.instr_front());
+      if (MBB.empty()) {
+        LRAtMBBBegin = LRAtMBBEnd = getLiveRegs(MBBStartSlot, LIS, MRI);
+        RPAtMBBEnd = getRegPressure(MRI, LRAtMBBBegin);
+      } else {
+        GCNDownwardRPTracker RPT(LIS);
+        RPT.reset(MBB.front());
 
-      LRAtMBBBegin = RPT.getLiveRegs();
+        LRAtMBBBegin = RPT.getLiveRegs();
 
-      while (!RPT.advanceBeforeNext()) {
-        GCNRegPressure RPBeforeMI = RPT.getPressure();
-        RPT.advanceToNext();
-        RP.emplace_back(RPBeforeMI, RPT.getPressure());
+        while (!RPT.advanceBeforeNext()) {
+          GCNRegPressure RPBeforeMI = RPT.getPressure();
+          RPT.advanceToNext();
+          RP.emplace_back(RPBeforeMI, RPT.getPressure());
+        }
+
+        LRAtMBBEnd = RPT.getLiveRegs();
+        RPAtMBBEnd = RPT.getPressure();
       }
-
-      LRAtMBBEnd = RPT.getLiveRegs();
-      RPAtMBBEnd = RPT.getPressure();
-
     } else {
       GCNUpwardRPTracker RPT(LIS);
-      RPT.reset(MBB.instr_back());
+      RPT.reset(MRI, MBBEndSlot);
       RPT.moveMaxPressure(); // Clear max pressure.
 
       LRAtMBBEnd = RPT.getLiveRegs();
       RPAtMBBEnd = RPT.getPressure();
-      
+
       for (auto &MI : reverse(MBB)) {
         RPT.recede(MI);
         if (!MI.isDebugInstr())
@@ -575,7 +599,10 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
       LRAtMBBBegin = RPT.getLiveRegs();
     }
 
-    OS << PFX "  Live-in:" << llvm::print(LRAtMBBBegin, MRI);
+    OS << PFX "  Live-in: " << llvm::print(LRAtMBBBegin, MRI);
+    if (!UseDownwardTracker)
+      ReportLISMismatchIfAny(LRAtMBBBegin, getLiveRegs(MBBStartSlot, LIS, MRI));
+
     OS << PFX "  SGPR  VGPR\n";
     int I = 0;
     for (auto &MI : MBB) {
@@ -589,7 +616,13 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
       MI.print(OS);
     }
     OS << printRP(RPAtMBBEnd) << '\n';
+
     OS << PFX "  Live-out:" << llvm::print(LRAtMBBEnd, MRI);
+    if (UseDownwardTracker)
+      ReportLISMismatchIfAny(LRAtMBBEnd, getLiveRegs(MBBEndSlot, LIS, MRI));
+
+    GCNRPTracker::LiveRegSet LRThr = getIntersection(LRAtMBBBegin, LRAtMBBEnd);
+    OS << PFX "  Live-thr:" << llvm::print(LRThr, MRI);
   }
   OS << "...\n";
   return false;

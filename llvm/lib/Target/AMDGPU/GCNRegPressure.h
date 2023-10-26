@@ -142,6 +142,10 @@ public:
   }
 };
 
+GCNRPTracker::LiveRegSet getLiveRegs(SlotIndex SI,
+                                     const LiveIntervals &LIS,
+                                     const MachineRegisterInfo &MRI);
+
 class GCNUpwardRPTracker : public GCNRPTracker {
 public:
   GCNUpwardRPTracker(const LiveIntervals &LIS_) : GCNRPTracker(LIS_) {}
@@ -149,6 +153,14 @@ public:
   // reset tracker to the point just below MI
   // filling live regs upon this point using LIS
   void reset(const MachineInstr &MI, const LiveRegSet *LiveRegs = nullptr);
+
+  // reset tracker and set live register set to the specified value.
+  void reset(const MachineRegisterInfo &MRI_, const LiveRegSet &LiveRegs_);
+
+  // reset tracker at the specified slot index.
+  void reset(const MachineRegisterInfo &MRI_, SlotIndex SI) {
+    reset(MRI_, llvm::getLiveRegs(SI, LIS, MRI_));
+  }
 
   // move to the state just above the MI
   void recede(const MachineInstr &MI);
@@ -197,10 +209,6 @@ LaneBitmask getLiveLaneMask(unsigned Reg,
                             SlotIndex SI,
                             const LiveIntervals &LIS,
                             const MachineRegisterInfo &MRI);
-
-GCNRPTracker::LiveRegSet getLiveRegs(SlotIndex SI,
-                                     const LiveIntervals &LIS,
-                                     const MachineRegisterInfo &MRI);
 
 /// creates a map MachineInstr -> LiveRegSet
 /// R - range of iterators on instructions
@@ -270,6 +278,9 @@ GCNRegPressure getRegPressure(const MachineRegisterInfo &MRI,
 bool isEqual(const GCNRPTracker::LiveRegSet &S1,
              const GCNRPTracker::LiveRegSet &S2);
 
+GCNRPTracker::LiveRegSet getIntersection(const GCNRPTracker::LiveRegSet &LR1,
+                                         const GCNRPTracker::LiveRegSet &LR2);
+
 Printable print(const GCNRegPressure &RP, const GCNSubtarget *ST = nullptr);
 
 Printable print(const GCNRPTracker::LiveRegSet &LiveRegs,
@@ -277,7 +288,8 @@ Printable print(const GCNRPTracker::LiveRegSet &LiveRegs,
 
 Printable reportMismatch(const GCNRPTracker::LiveRegSet &LISLR,
                          const GCNRPTracker::LiveRegSet &TrackedL,
-                         const TargetRegisterInfo *TRI);
+                         const TargetRegisterInfo *TRI,
+                         StringRef Pfx = "  ");
 
 struct GCNRegPressurePrinter : public MachineFunctionPass {
   static char ID;
