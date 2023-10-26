@@ -191,7 +191,11 @@ public:
     return BlockSize > PageSize;
   }
 
-  u16 popBlocks(CacheT *C, uptr ClassId, CompactPtrT *ToArray) {
+  // Note that the `MaxBlockCount` will be used when we support arbitrary blocks
+  // count. Now it's the same as the number of blocks stored in the
+  // `TransferBatch`.
+  u16 popBlocks(CacheT *C, uptr ClassId, CompactPtrT *ToArray,
+                UNUSED const u16 MaxBlockCount) {
     TransferBatchT *B = popBatch(C, ClassId);
     if (!B)
       return 0;
