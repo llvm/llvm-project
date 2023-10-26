@@ -132,88 +132,111 @@ void AMDGPUConditionalDiscard::optimizeBlock(BasicBlock &BB, bool ConvertToDemot
     if (!isa<BranchInst>(BB.getTerminator()))
       return;
 
-    auto *PredBlock = BB.getSinglePredecessor();
-    if (!PredBlock)
-      return;
-
-    // Skip if the kill is in a loop.
-    if (LI->getLoopFor(PredBlock)) {
-      LLVM_DEBUG(dbgs() << "Cannot optimize " << BB.getName() << " due to loop\n");
+    if (!ConvertToDemote && !BB.hasNPredecessors(1)) {
+      LLVM_DEBUG(dbgs() << "Cannot optimize " << BB.getName()
+                        << " due to multiple predecessors\n");
       return;
     }
 
-    auto *PredTerminator = PredBlock->getTerminator();
-    auto *PredBranchInst = dyn_cast<BranchInst>(PredTerminator);
-
-    if (!PredBranchInst || !PredBranchInst->isConditional())
+    if (llvm::any_of(predecessors(&BB), [&](const BasicBlock *Pred) {
+          return !!LI->getLoopFor(Pred);
+        })) {
+      // Skip if the kill is in a loop.
+      LLVM_DEBUG(dbgs() << "Cannot optimize " << BB.getName()
+                        << " due to loop\n");
       return;
-
-    BasicBlock *LiveBlock = nullptr;
-    auto *Cond = PredBranchInst->getCondition();
-    if (PredBranchInst->getSuccessor(0) == &BB) {
-      // The old kill block could only be reached if
-      // the condition was true - negate the condition.
-      Cond = BinaryOperator::CreateNot(Cond, "", PredTerminator);
-      LiveBlock = PredBranchInst->getSuccessor(1);
-    } else {
-      LiveBlock = PredBranchInst->getSuccessor(0);
     }
 
-    auto *NewKill = cast<CallInst>(KillCand->clone());
+    if (llvm::any_of(predecessors(&BB), [](const BasicBlock *Pred) {
+          auto *PredBranch = dyn_cast<BranchInst>(Pred->getTerminator());
+          return !PredBranch || !PredBranch->isConditional();
+        })) {
+      LLVM_DEBUG(
+          dbgs() << "Cannot optimize " << BB.getName()
+                 << " due to lack of conditional branch in predecessor\n");
+      return;
+    }
 
-    NewKill->setArgOperand(0, Cond);
-    NewKill->insertBefore(PredTerminator);
+    bool FirstPred = true;
+    for (auto PredBlock : make_early_inc_range(predecessors(&BB))) {
+      auto *PredTerminator = PredBlock->getTerminator();
+      auto *PredBranchInst = cast<BranchInst>(PredTerminator);
 
-    if (ConvertToDemote) {
-      NewKill->setCalledFunction(Intrinsic::getDeclaration(
-          KillCand->getModule(), Intrinsic::amdgcn_wqm_demote));
+      BasicBlock *LiveBlock = nullptr;
+      auto *Cond = PredBranchInst->getCondition();
+      if (PredBranchInst->getSuccessor(0) == &BB) {
+        // The old kill block could only be reached if
+        // the condition was true - negate the condition.
+        Cond = BinaryOperator::CreateNot(Cond, "", PredTerminator);
+        LiveBlock = PredBranchInst->getSuccessor(1);
+      } else {
+        LiveBlock = PredBranchInst->getSuccessor(0);
+      }
 
-      KillBlocksToRemove.push_back(&BB);
+      auto *NewKill = cast<CallInst>(KillCand->clone());
 
-      // Change the branch to an unconditional one, targeting the live block.
-      auto *NewBranchInst = BranchInst::Create(LiveBlock, PredBranchInst);
-      NewBranchInst->copyMetadata(*PredBranchInst);
-      PredBranchInst->eraseFromParent();
-    } else {
-      KillCand->eraseFromParent();
+      NewKill->setArgOperand(0, Cond);
+      NewKill->insertBefore(PredTerminator);
 
-      // Try removing the old kill block.
-      if (BB.sizeWithoutDebug() == 1) {
-        auto *OldKillBlockBranchInst = dyn_cast<BranchInst>(BB.getTerminator());
+      if (ConvertToDemote) {
+        NewKill->setCalledFunction(Intrinsic::getDeclaration(
+            KillCand->getModule(), Intrinsic::amdgcn_wqm_demote));
 
-        if (!OldKillBlockBranchInst->isConditional()) {
-          auto *OldKillBlockSucc = OldKillBlockBranchInst->getSuccessor(0);
-
-          // Change the branch to point to the old kill block successor instead
-          // of old kill block. This is necessary to remove the old kill block.
-          if (PredBranchInst->getSuccessor(0) == &BB)
-            PredBranchInst->setSuccessor(0, OldKillBlockSucc);
-          else
-            PredBranchInst->setSuccessor(1, OldKillBlockSucc);
-
-          // It's possible that the branch became unconditional.
-          if (PredBranchInst->getSuccessor(0) ==
-              PredBranchInst->getSuccessor(1)) {
-            auto *NewBranchInst =
-              BranchInst::Create(OldKillBlockSucc, PredBranchInst);
-            NewBranchInst->copyMetadata(*PredBranchInst);
-            PredBranchInst->eraseFromParent();
-          }
-
-          // For OldKillBlockSucc's PHINode, the incoming block should be
-          // updated from BB to PredBlock.  If PredBlock is already part
-          // of the PHINode then BB can simply be removed.
-          for (PHINode &PN : OldKillBlockSucc->phis()) {
-            if (PN.getBasicBlockIndex(PredBlock) >= 0) {
-              PN.removeIncomingValue(&BB);
-            } else {
-              PN.replaceIncomingBlockWith(&BB, PredBlock);
-            }
-          }
-
+        // Only mark block for removal once
+        if (FirstPred)
           KillBlocksToRemove.push_back(&BB);
+
+        // Change the branch to an unconditional one, targeting the live block.
+        auto *NewBranchInst = BranchInst::Create(LiveBlock, PredBranchInst);
+        NewBranchInst->copyMetadata(*PredBranchInst);
+        PredBranchInst->eraseFromParent();
+      } else {
+        assert(FirstPred);
+
+        KillCand->eraseFromParent();
+
+        // Try removing the old kill block.
+        if (BB.sizeWithoutDebug() == 1) {
+          auto *OldKillBlockBranchInst =
+              dyn_cast<BranchInst>(BB.getTerminator());
+
+          if (!OldKillBlockBranchInst->isConditional()) {
+            auto *OldKillBlockSucc = OldKillBlockBranchInst->getSuccessor(0);
+
+            // Change the branch to point to the old kill block successor
+            // instead of old kill block. This is necessary to remove the old
+            // kill block.
+            if (PredBranchInst->getSuccessor(0) == &BB)
+              PredBranchInst->setSuccessor(0, OldKillBlockSucc);
+            else
+              PredBranchInst->setSuccessor(1, OldKillBlockSucc);
+
+            // It's possible that the branch became unconditional.
+            if (PredBranchInst->getSuccessor(0) ==
+                PredBranchInst->getSuccessor(1)) {
+              auto *NewBranchInst =
+                  BranchInst::Create(OldKillBlockSucc, PredBranchInst);
+              NewBranchInst->copyMetadata(*PredBranchInst);
+              PredBranchInst->eraseFromParent();
+            }
+
+            // For OldKillBlockSucc's PHINode, the incoming block should be
+            // updated from BB to PredBlock.  If PredBlock is already part
+            // of the PHINode then BB can simply be removed.
+            for (PHINode &PN : OldKillBlockSucc->phis()) {
+              if (PN.getBasicBlockIndex(PredBlock) >= 0) {
+                PN.removeIncomingValue(&BB);
+              } else {
+                PN.replaceIncomingBlockWith(&BB, PredBlock);
+              }
+            }
+
+            KillBlocksToRemove.push_back(&BB);
+          }
         }
       }
+
+      FirstPred = false;
     }
   }
 }
