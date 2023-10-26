@@ -16,6 +16,8 @@
 ; RUN: llc < %s -relocation-model=pic -filetype=obj -code-model=large -data-sections -o %t
 ; RUN: llvm-readelf -S %t | FileCheck %s --check-prefix=SMALL-DS
 
+; RUN: llc < %s -relocation-model=pic -filetype=asm -code-model=medium -large-data-threshold=79 -o - | FileCheck %s --check-prefix=LARGE-ASM
+
 ; SMALL: .data {{.*}} WA {{.*}}
 ; SMALL: foo {{.*}} WA {{.*}}
 ; SMALL: .bss {{.*}} WA {{.*}}
@@ -47,6 +49,8 @@
 ; LARGE-DS: .ldata.rel.ro.relro {{.*}} WAl {{.*}}
 ; LARGE-DS: .tbss.tbss {{.*}} WAT {{.*}}
 ; LARGE-DS: .tdata.tdata {{.*}} WAT {{.*}}
+
+; LARGE-ASM: .lrodata,"al"
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64--linux"
