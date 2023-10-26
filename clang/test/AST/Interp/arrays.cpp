@@ -372,9 +372,6 @@ namespace ZeroInit {
 }
 
 namespace ArrayInitLoop {
-  /// FIXME: The ArrayInitLoop for the decomposition initializer in g() has
-  /// f(n) as its CommonExpr. We need to evaluate that exactly once and not
-  /// N times as we do right now.
   struct X {
       int arr[3];
   };
@@ -386,8 +383,7 @@ namespace ArrayInitLoop {
       auto [a, b, c] = f(n).arr;
       return a + b + c;
   }
-  static_assert(g() == 6); // expected-error {{failed}} \
-                           // expected-note {{15 == 6}}
+  static_assert(g() == 6, "");
 }
 
 namespace StringZeroFill {
@@ -409,4 +405,53 @@ namespace StringZeroFill {
   static_assert(b[3] == '\0', "");
   static_assert(b[4] == '\0', "");
   static_assert(b[5] == '\0', "");
+}
+
+namespace NoInitMapLeak {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdivision-by-zero"
+#pragma clang diagnostic ignored "-Wc++20-extensions"
+  constexpr int testLeak() { // expected-error {{never produces a constant expression}} \
+                             // ref-error {{never produces a constant expression}}
+    int a[2];
+    a[0] = 1;
+    // interrupts interpretation.
+    (void)(1 / 0); // expected-note 2{{division by zero}} \
+                   // ref-note 2{{division by zero}}
+
+
+    return 1;
+  }
+#pragma clang diagnostic pop
+  static_assert(testLeak() == 1, ""); // expected-error {{not an integral constant expression}} \
+                                      // expected-note {{in call to 'testLeak()'}} \
+                                      // ref-error {{not an integral constant expression}} \
+                                      // ref-note {{in call to 'testLeak()'}}
+
+
+  constexpr int a[] = {1,2,3,4/0,5}; // expected-error {{must be initialized by a constant expression}} \
+                                     // expected-note {{division by zero}} \
+                                     // ref-error {{must be initialized by a constant expression}} \
+                                     // ref-note {{division by zero}} \
+                                     // ref-note {{declared here}}
+
+  /// FIXME: This should fail in the new interpreter as well.
+  constexpr int b = a[0]; // ref-error {{must be initialized by a constant expression}} \
+                          // ref-note {{is not a constant expression}} \
+                          // ref-note {{declared here}}
+  static_assert(b == 1, ""); // ref-error {{not an integral constant expression}} \
+                             // ref-note {{not a constant expression}}
+
+  constexpr int f() { // expected-error {{never produces a constant expression}} \
+                      // ref-error {{never produces a constant expression}}
+    int a[] = {19,2,3/0,4}; // expected-note 2{{division by zero}} \
+                            // expected-warning {{is undefined}} \
+                            // ref-note 2{{division by zero}} \
+                            // ref-warning {{is undefined}}
+    return 1;
+  }
+  static_assert(f() == 1, ""); // expected-error {{not an integral constant expression}} \
+                               // expected-note {{in call to}} \
+                               // ref-error {{not an integral constant expression}} \
+                               // ref-note {{in call to}}
 }

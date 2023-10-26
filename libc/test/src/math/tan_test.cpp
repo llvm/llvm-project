@@ -13,11 +13,11 @@
 
 #include <math.h>
 
+using LlvmLibcTanTest = LIBC_NAMESPACE::testing::FPTest<double>;
+
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-DECLARE_SPECIAL_CONSTANTS(double)
-
-TEST(LlvmLibctanTest, Range) {
+TEST_F(LlvmLibcTanTest, Range) {
   static constexpr double _2pi = 6.283185307179586;
   constexpr UIntType COUNT = 100'000;
   constexpr UIntType STEP = UIntType(-1) / COUNT;

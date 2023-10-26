@@ -13,6 +13,7 @@
 #include "CodegenUtils.h"
 #include "LoopEmitter.h"
 
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
@@ -865,6 +866,70 @@ struct TensorLike {
   Value val;
 };
 
+struct CrdTranslateRewriter : public OpRewritePattern<CrdTranslateOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(CrdTranslateOp op,
+                                PatternRewriter &rewriter) const override {
+    AffineMap map = op.getDirection() == CrdTransDirectionKind::dim2lvl
+                        ? op.getEncoder().getDimToLvl()
+                        : op.getEncoder().getLvlToDim();
+    SmallVector<Value> outCrds;
+    for (AffineExpr result : map.getResults()) {
+      // TODO: we should probably expand the affine map to IR using our own
+      // rules, since affine.apply assume signed value, while the cooridinates
+      // we provided must always be signless.
+      Value trans = rewriter.create<affine::AffineApplyOp>(
+          op.getLoc(), AffineMap::get(map.getNumDims(), 0, result),
+          op.getInCrds());
+      outCrds.push_back(trans);
+    }
+    rewriter.replaceOp(op, outCrds);
+    return success();
+  }
+};
+
+struct SparseTensorDimOpRewriter : public OpRewritePattern<tensor::DimOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(tensor::DimOp op,
+                                PatternRewriter &rewriter) const override {
+    std::optional<int64_t> dim = op.getConstantIndex();
+    auto stt = getSparseTensorType(op.getSource());
+    if (!dim || !stt.hasEncoding())
+      return failure();
+
+    if (stt.isPermutation()) {
+      rewriter.replaceOpWithNewOp<LvlOp>(op, op.getSource(),
+                                         toStoredDim(stt, *dim));
+      return success();
+    }
+
+    // Non-permutation dim2lvl/lvl2dim maps.
+    // Compute as follows:
+    // affine.apply #map (l0 - 1, l1 - 1, ...) + 1
+    // Note that it is not the most efficient way (but a more general one) for
+    // the lvl to dim translation, e.g., for BSR, the dimension size for can be
+    // computed simply by lvl_size * block_size.
+    Location loc = op.getLoc();
+    SmallVector<Value> maxLvlCrds;
+    for (Level l = 0; l < stt.getLvlRank(); l++) {
+      Value lvlSz = rewriter.create<LvlOp>(loc, op.getSource(), l);
+      Value maxLvlCrd = rewriter.create<arith::SubIOp>(
+          loc, lvlSz, constantOne(rewriter, loc, rewriter.getIndexType()));
+      maxLvlCrds.push_back(maxLvlCrd);
+    }
+
+    AffineExpr lvl2DimExp = stt.getLvlToDim().getResult(*dim);
+    Value maxDimCrd = rewriter.create<affine::AffineApplyOp>(
+        op.getLoc(), AffineMap::get(stt.getLvlRank(), 0, lvl2DimExp),
+        maxLvlCrds);
+
+    Value dimSz = rewriter.create<arith::AddIOp>(
+        loc, maxDimCrd, constantOne(rewriter, loc, rewriter.getIndexType()));
+    rewriter.replaceOp(op, dimSz);
+    return success();
+  }
+};
+
 struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(ConcatenateOp op,
@@ -999,13 +1064,9 @@ struct DirectConvertRewriter : public OpRewritePattern<ConvertOp> {
             ValueRange reduc) {
           // Enters the loop, update the SSA value for insertion chain.
           dstBuf.val = reduc.front();
-          const Dimension dimRank = dstStt.getDimRank();
-          const Level lvlRank = dstStt.getLvlRank();
-          SmallVector<Value> lcvs(lvlRank);
-          for (Dimension d = 0; d < dimRank; d++) {
-            // FIXME: `toStoredDim` is deprecated
-            lcvs[toStoredDim(dstStt.getEncoding(), d)] = dcvs[d];
-          }
+
+          ValueRange lcvs = dstStt.translateCrds(
+              builder, loc, dcvs, CrdTransDirectionKind::dim2lvl);
 
           if (!skipZeroCheck) {
             Value cond = genIsNonzero(builder, loc, v);
@@ -1050,7 +1111,6 @@ public:
     Value input = op.getTensor();
     SmallVector<Value> reduc = op.getInitArgs();
     const auto stt = getSparseTensorType(input);
-    const Dimension dimRank = stt.getDimRank();
     const Level lvlRank = stt.getLvlRank();
 
     // Special-case: for each over a sparse constant uses its own rewriting
@@ -1084,6 +1144,7 @@ public:
     SmallVector<Value> lcvs = loopEmitter.getLoopIVs();
     if (op.getOrder()) {
       // FIXME: There is some dim/lvl confusion here since `dimRank != lvlRank`
+      const Dimension dimRank = stt.getDimRank();
       SmallVector<Value> dcvs = lcvs; // keep a copy
       for (Dimension d = 0; d < dimRank; d++) {
         auto l = op.getOrder()->getDimPosition(d);
@@ -1101,12 +1162,9 @@ public:
     Block *srcBlock = op.getBody();
 
     // Remap coordinates.
-    SmallVector<Value> args;
-    for (Dimension d = 0; d < dimRank; d++) {
-      // FIXME: `toStoredDim` is deprecated
-      Value dimCrd = lcvs[toStoredDim(enc, d)];
-      args.push_back(dimCrd);
-    }
+    SmallVector<Value> args =
+        enc.translateCrds(rewriter, loc, lcvs, CrdTransDirectionKind::lvl2dim);
+
     // Remap value.
     args.push_back(val);
     // Remap reduction variables.
@@ -1127,7 +1185,7 @@ public:
                                  args);
     }
 
-    for (Dimension d = 0; d < dimRank; d++) {
+    for (Level l = 0; l < lvlRank; l++) {
       // Link the reduction chain. Note that loop emitter update the reducValue
       // in place.
       loopEmitter.exitCurrentLoop(rewriter, loc, reducValue);
@@ -1249,11 +1307,13 @@ void mlir::populatePostSparsificationRewriting(RewritePatternSet &patterns,
                                                bool enableRT,
                                                bool enableForeach,
                                                bool enableConvert) {
-  patterns.add<ConcatenateRewriter, ReshapeRewriter<tensor::ExpandShapeOp>,
+  patterns.add<ConcatenateRewriter, CrdTranslateRewriter,
+               ReshapeRewriter<tensor::ExpandShapeOp>,
                ReshapeRewriter<tensor::CollapseShapeOp>,
                Sparse2SparseReshapeRewriter<tensor::ExpandShapeOp>,
                Sparse2SparseReshapeRewriter<tensor::CollapseShapeOp>,
-               TensorReshapeRewriter>(patterns.getContext());
+               SparseTensorDimOpRewriter, TensorReshapeRewriter>(
+      patterns.getContext());
   if (enableForeach)
     patterns.add<ForeachRewriter>(patterns.getContext());
   if (enableConvert)

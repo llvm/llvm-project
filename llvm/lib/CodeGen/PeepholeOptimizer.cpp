@@ -202,8 +202,7 @@ namespace {
     bool isMoveImmediate(MachineInstr &MI, SmallSet<Register, 4> &ImmDefRegs,
                          DenseMap<Register, MachineInstr *> &ImmDefMIs);
     bool foldImmediate(MachineInstr &MI, SmallSet<Register, 4> &ImmDefRegs,
-                       DenseMap<Register, MachineInstr *> &ImmDefMIs,
-                       bool &Deleted);
+                       DenseMap<Register, MachineInstr *> &ImmDefMIs);
 
     /// Finds recurrence cycles, but only ones that formulated around
     /// a def operand and a use operand that are tied. If there is a use
@@ -218,11 +217,8 @@ namespace {
     /// set \p CopyMIs. If this virtual register was previously seen as a
     /// copy, replace the uses of this copy with the previously seen copy's
     /// destination register.
-    /// \p LocalMIs contains all previous seen instructions. An optimized away
-    /// instruction should be deleted from LocalMIs.
     bool foldRedundantCopy(MachineInstr &MI,
-                           DenseMap<RegSubRegPair, MachineInstr *> &CopyMIs,
-                           SmallPtrSetImpl<MachineInstr *> &LocalMIs);
+                           DenseMap<RegSubRegPair, MachineInstr *> &CopyMIs);
 
     /// Is the register \p Reg a non-allocatable physical register?
     bool isNAPhysCopy(Register Reg);
@@ -1355,19 +1351,18 @@ bool PeepholeOptimizer::isMoveImmediate(
     MachineInstr &MI, SmallSet<Register, 4> &ImmDefRegs,
     DenseMap<Register, MachineInstr *> &ImmDefMIs) {
   const MCInstrDesc &MCID = MI.getDesc();
-  if (MCID.getNumDefs() != 1 || !MI.getOperand(0).isReg())
+  if (!MI.isMoveImmediate())
+    return false;
+  if (MCID.getNumDefs() != 1)
     return false;
   Register Reg = MI.getOperand(0).getReg();
-  if (!Reg.isVirtual())
-    return false;
+  if (Reg.isVirtual()) {
+    ImmDefMIs.insert(std::make_pair(Reg, &MI));
+    ImmDefRegs.insert(Reg);
+    return true;
+  }
 
-  int64_t ImmVal;
-  if (!MI.isMoveImmediate() && !TII->getConstValDefinedInReg(MI, Reg, ImmVal))
-    return false;
-
-  ImmDefMIs.insert(std::make_pair(Reg, &MI));
-  ImmDefRegs.insert(Reg);
-  return true;
+  return false;
 }
 
 /// Try folding register operands that are defined by move immediate
@@ -1375,8 +1370,7 @@ bool PeepholeOptimizer::isMoveImmediate(
 /// and only if the def and use are in the same BB.
 bool PeepholeOptimizer::foldImmediate(
     MachineInstr &MI, SmallSet<Register, 4> &ImmDefRegs,
-    DenseMap<Register, MachineInstr *> &ImmDefMIs, bool &Deleted) {
-  Deleted = false;
+    DenseMap<Register, MachineInstr *> &ImmDefMIs) {
   for (unsigned i = 0, e = MI.getDesc().getNumOperands(); i != e; ++i) {
     MachineOperand &MO = MI.getOperand(i);
     if (!MO.isReg() || MO.isDef())
@@ -1390,19 +1384,6 @@ bool PeepholeOptimizer::foldImmediate(
     assert(II != ImmDefMIs.end() && "couldn't find immediate definition");
     if (TII->FoldImmediate(MI, *II->second, Reg, MRI)) {
       ++NumImmFold;
-      // FoldImmediate can delete ImmDefMI if MI was its only user. If ImmDefMI
-      // is not deleted, and we happened to get a same MI, we can delete MI and
-      // replace its users.
-      if (MRI->getVRegDef(Reg) &&
-          MI.isIdenticalTo(*II->second, MachineInstr::IgnoreVRegDefs)) {
-        Register DstReg = MI.getOperand(0).getReg();
-        if (DstReg.isVirtual() &&
-            MRI->getRegClass(DstReg) == MRI->getRegClass(Reg)) {
-          MRI->replaceRegWith(DstReg, Reg);
-          MI.eraseFromParent();
-          Deleted = true;
-        }
-      }
       return true;
     }
   }
@@ -1424,8 +1405,7 @@ bool PeepholeOptimizer::foldImmediate(
 //
 // Should replace %2 uses with %1:sub1
 bool PeepholeOptimizer::foldRedundantCopy(
-    MachineInstr &MI, DenseMap<RegSubRegPair, MachineInstr *> &CopyMIs,
-    SmallPtrSetImpl<MachineInstr *> &LocalMIs) {
+    MachineInstr &MI, DenseMap<RegSubRegPair, MachineInstr *> &CopyMIs) {
   assert(MI.isCopy() && "expected a COPY machine instruction");
 
   Register SrcReg = MI.getOperand(1).getReg();
@@ -1445,8 +1425,6 @@ bool PeepholeOptimizer::foldRedundantCopy(
   }
 
   MachineInstr *PrevCopy = CopyMIs.find(SrcPair)->second;
-  if (!LocalMIs.count(PrevCopy))
-    return false;
 
   assert(SrcSubReg == PrevCopy->getOperand(1).getSubReg() &&
          "Unexpected mismatching subreg!");
@@ -1754,7 +1732,7 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
         continue;
       }
 
-      if (MI->isCopy() && (foldRedundantCopy(*MI, CopySrcMIs, LocalMIs) ||
+      if (MI->isCopy() && (foldRedundantCopy(*MI, CopySrcMIs) ||
                            foldRedundantNAPhysCopy(*MI, NAPhysToVirtMIs))) {
         LocalMIs.erase(MI);
         LLVM_DEBUG(dbgs() << "Deleting redundant copy: " << *MI << "\n");
@@ -1772,14 +1750,8 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
         // next iteration sees the new instructions.
         MII = MI;
         ++MII;
-        if (SeenMoveImm) {
-          bool Deleted;
-          Changed |= foldImmediate(*MI, ImmDefRegs, ImmDefMIs, Deleted);
-          if (Deleted) {
-            LocalMIs.erase(MI);
-            continue;
-          }
-        }
+        if (SeenMoveImm)
+          Changed |= foldImmediate(*MI, ImmDefRegs, ImmDefMIs);
       }
 
       // Check whether MI is a load candidate for folding into a later

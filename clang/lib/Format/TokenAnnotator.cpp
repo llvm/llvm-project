@@ -3497,6 +3497,14 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
           Tok->setType(TT_TrailingReturnArrow);
           break;
         }
+        if (Tok->isNot(TT_TrailingAnnotation))
+          continue;
+        const auto *Next = Tok->Next;
+        if (!Next || Next->isNot(tok::l_paren))
+          continue;
+        Tok = Next->MatchingParen;
+        if (!Tok)
+          break;
       }
     }
   }
@@ -3536,7 +3544,7 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
           }
         }
       }
-    } else if (Current->SpacesRequiredBefore == 0 &&
+    } else if (!Current->Finalized && Current->SpacesRequiredBefore == 0 &&
                spaceRequiredBefore(Line, *Current)) {
       Current->SpacesRequiredBefore = 1;
     }
@@ -4189,8 +4197,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   if ((Left.is(tok::l_brace) && Left.isNot(BK_Block)) ||
       (Right.is(tok::r_brace) && Right.MatchingParen &&
        Right.MatchingParen->isNot(BK_Block))) {
-    return Style.Cpp11BracedListStyle ? Style.SpacesInParensOptions.Other
-                                      : true;
+    return !Style.Cpp11BracedListStyle || Style.SpacesInParensOptions.Other;
   }
   if (Left.is(TT_BlockComment)) {
     // No whitespace in x(/*foo=*/1), except for JavaScript.
@@ -4225,6 +4232,19 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     if (Left.is(TT_IfMacro)) {
       return Style.SpaceBeforeParensOptions.AfterIfMacros ||
              spaceRequiredBeforeParens(Right);
+    }
+    if (Style.SpaceBeforeParens == FormatStyle::SBPO_Custom &&
+        Left.isOneOf(tok::kw_new, tok::kw_delete) &&
+        Right.isNot(TT_OverloadedOperatorLParen) &&
+        !(Line.MightBeFunctionDecl && Left.is(TT_FunctionDeclarationName))) {
+      if (Style.SpaceBeforeParensOptions.AfterPlacementOperator ==
+              FormatStyle::SpaceBeforeParensCustom::APO_Always ||
+          (Style.SpaceBeforeParensOptions.AfterPlacementOperator ==
+               FormatStyle::SpaceBeforeParensCustom::APO_Leave &&
+           Right.hasWhitespaceBefore())) {
+        return true;
+      }
+      return false;
     }
     if (Line.Type == LT_ObjCDecl)
       return true;
@@ -5097,10 +5117,6 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     return true;
   if (Left.IsUnterminatedLiteral)
     return true;
-  if (Right.is(tok::lessless) && Right.Next && Left.is(tok::string_literal) &&
-      Right.Next->is(tok::string_literal)) {
-    return true;
-  }
   if (Right.is(TT_RequiresClause)) {
     switch (Style.RequiresClausePosition) {
     case FormatStyle::RCPS_OwnLine:

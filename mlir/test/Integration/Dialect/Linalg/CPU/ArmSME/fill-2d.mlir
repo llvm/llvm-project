@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s \
-// RUN:   -test-transform-dialect-interpreter \
+// RUN:   -transform-interpreter \
 // RUN:   -test-transform-dialect-erase-schedule \
 // RUN:   -lower-vector-mask \
 // RUN:   -one-shot-bufferize="bufferize-function-boundaries" \
@@ -12,15 +12,6 @@
 // RUN:   -march=aarch64 -mattr="+sve,+sme" \
 // RUN:   -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils | \
 // RUN: FileCheck %s
-
-func.func @printTestEnd() {
-  %0 = llvm.mlir.addressof @str_sme_end : !llvm.ptr<array<24 x i8>>
-  %1 = llvm.mlir.constant(0 : index) : i64
-  %2 = llvm.getelementptr %0[%1, %1]
-    : (!llvm.ptr<array<24 x i8>>, i64, i64) -> !llvm.ptr<i8>
-  llvm.call @printCString(%2) : (!llvm.ptr<i8>) -> ()
-  return
-}
 
 func.func @entry() {
   %c0 = arith.constant 0 : index
@@ -104,16 +95,15 @@ func.func @entry() {
   }
 
   // CHECK: SME: END OF TEST OUTPUT
-  func.call @printTestEnd() : () -> ()
+  vector.print str "SME: END OF TEST OUTPUT"
 
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.vectorize %0 vector_sizes [[4], [4]] : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [[4], [4]] : !transform.any_op
+    transform.yield
+  }
 }
-
-llvm.func @printCString(!llvm.ptr<i8>)
-llvm.mlir.global internal constant @str_sme_end("SME: END OF TEST OUTPUT\0A")

@@ -1872,6 +1872,8 @@ example:
     passes make choices that keep the code size of this function as small
     as possible and perform optimizations that may sacrifice runtime
     performance in order to minimize the size of the generated code.
+    This attribute is incompatible with the ``optdebug`` and ``optnone``
+    attributes.
 ``naked``
     This attribute disables prologue / epilogue emission for the
     function. This can have very system-specific consequences.
@@ -2024,6 +2026,12 @@ example:
    Note: Comparing address of a global variable to ``null`` may still
    evaluate to false because of a limitation in querying this attribute inside
    constant expressions.
+``optdebug``
+    This attribute suggests that optimization passes and code generator passes
+    should make choices that try to preserve debug info without significantly
+    degrading runtime performance.
+    This attribute is incompatible with the ``minsize``, ``optsize``, and
+    ``optnone`` attributes.
 ``optforfuzzing``
     This attribute indicates that this function should be optimized
     for maximum fuzzing signal.
@@ -2033,7 +2041,7 @@ example:
     Code generation defaults to the "fast" instruction selector.
     This attribute cannot be used together with the ``alwaysinline``
     attribute; this attribute is also incompatible
-    with the ``minsize`` attribute and the ``optsize`` attribute.
+    with the ``minsize``, ``optsize``, and ``optdebug`` attributes.
 
     This attribute requires the ``noinline`` attribute to be specified on
     the function as well, so the function is never inlined into any caller.
@@ -2044,6 +2052,8 @@ example:
     passes make choices that keep the code size of this function low,
     and otherwise do optimizations specifically to reduce code size as
     long as they do not significantly impact runtime performance.
+    This attribute is incompatible with the ``optdebug`` and ``optnone``
+    attributes.
 ``"patchable-function"``
     This attribute tells the code generator that the code
     generated for this function needs to follow certain conventions that
@@ -15750,7 +15760,8 @@ Syntax:
 """""""
 
 This is an overloaded intrinsic. You can use ``llvm.lrint`` on any
-floating-point type. Not all targets support all types however.
+floating-point type or vector of floating-point type. Not all targets
+support all types however.
 
 ::
 
@@ -15794,7 +15805,8 @@ Syntax:
 """""""
 
 This is an overloaded intrinsic. You can use ``llvm.llrint`` on any
-floating-point type. Not all targets support all types however.
+floating-point type or vector of floating-point type. Not all targets
+support all types however.
 
 ::
 
@@ -26952,7 +26964,8 @@ Arguments:
 """"""""""
 
 The first argument is a pointer or vector of pointers. The second argument is
-an integer or vector of integers.
+an integer or vector of integers with the same bit width as the index type
+size of the first argument.
 
 Overview:
 """"""""""
@@ -26965,13 +26978,24 @@ to facilitate alias analysis and underlying-object detection.
 Semantics:
 """"""""""
 
-The result of ``ptrmask(ptr, mask)`` is equivalent to
-``getelementptr ptr, (ptrtoint(ptr) & mask) - ptrtoint(ptr)``. Both the returned
-pointer(s) and the first argument are based on the same underlying object (for more
-information on the *based on* terminology see
-:ref:`the pointer aliasing rules <pointeraliasing>`). If the bitwidth of the
-mask argument does not match the pointer size of the target, the mask is
-zero-extended or truncated accordingly.
+The result of ``ptrmask(%ptr, %mask)`` is equivalent to the following expansion,
+where ``iPtrIdx`` is the index type size of the pointer::
+
+    %intptr = ptrtoint ptr %ptr to iPtrIdx ; this may truncate
+    %masked = and iPtrIdx %intptr, %mask
+    %diff = sub iPtrIdx %masked, %intptr
+    %result = getelementptr i8, ptr %ptr, iPtrIdx %diff
+
+If the pointer index type size is smaller than the pointer type size, this
+implies that pointer bits beyond the index size are not affected by this
+intrinsic. For integral pointers, it behaves as if the mask were extended with
+1 bits to the pointer type size.
+
+Both the returned pointer(s) and the first argument are based on the same
+underlying object (for more information on the *based on* terminology see
+:ref:`the pointer aliasing rules <pointeraliasing>`).
+
+The intrinsic only captures the pointer argument through the return value.
 
 .. _int_threadlocal_address:
 

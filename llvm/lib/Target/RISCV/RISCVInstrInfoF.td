@@ -302,7 +302,7 @@ def FSW : FPStore_r<0b010, "fsw", FPR32, WriteFST32>;
 } // Predicates = [HasStdExtF]
 
 foreach Ext = FExts in {
-  let SchedRW = [WriteFMA32, ReadFMA32, ReadFMA32, ReadFMA32] in {
+  let SchedRW = [WriteFMA32, ReadFMA32, ReadFMA32, ReadFMA32Addend] in {
     defm FMADD_S  : FPFMA_rrr_frm_m<OPC_MADD,  0b00, "fmadd.s",  Ext>;
     defm FMSUB_S  : FPFMA_rrr_frm_m<OPC_MSUB,  0b00, "fmsub.s",  Ext>;
     defm FNMSUB_S : FPFMA_rrr_frm_m<OPC_NMSUB, 0b00, "fnmsub.s", Ext>;

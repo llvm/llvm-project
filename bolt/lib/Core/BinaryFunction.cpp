@@ -2462,6 +2462,13 @@ private:
     case MCCFIInstruction::OpDefCfaRegister:
       CFAReg = Instr.getRegister();
       CFARule = UNKNOWN;
+
+      // This shouldn't happen according to the spec but GNU binutils on RISC-V
+      // emits a DW_CFA_def_cfa_register in CIE's which leaves the offset
+      // unspecified. Both readelf and llvm-dwarfdump interpret the offset as 0
+      // in this case so let's do the same.
+      if (CFAOffset == UNKNOWN)
+        CFAOffset = 0;
       break;
     case MCCFIInstruction::OpDefCfaOffset:
       CFAOffset = Instr.getOffset();
@@ -4158,15 +4165,20 @@ void BinaryFunction::updateOutputValues(const BOLTLinker &Linker) {
       // Injected functions likely will fail lookup, as they have no
       // input range. Just assign the BB the output address of the
       // function.
-      auto MaybeBBAddress =
-          BC.getIOAddressMap().lookup(BB->getInputOffset() + getAddress());
+      auto MaybeBBAddress = BC.getIOAddressMap().lookup(BB->getLabel());
       const uint64_t BBAddress = MaybeBBAddress  ? *MaybeBBAddress
                                  : BB->isSplit() ? FF.getAddress()
                                                  : getOutputAddress();
       BB->setOutputStartAddress(BBAddress);
 
-      if (PrevBB)
+      if (PrevBB) {
+        assert(PrevBB->getOutputAddressRange().first <= BBAddress &&
+               "Bad output address for basic block.");
+        assert((PrevBB->getOutputAddressRange().first != BBAddress ||
+                !hasInstructions() || PrevBB->empty()) &&
+               "Bad output address for basic block.");
         PrevBB->setOutputEndAddress(BBAddress);
+      }
       PrevBB = BB;
     }
 

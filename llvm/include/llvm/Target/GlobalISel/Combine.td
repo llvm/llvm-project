@@ -1248,7 +1248,7 @@ def constant_fold_binops : GICombineGroup<[constant_fold_binop,
 
 def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     extract_vec_elt_combines, combines_for_extload,
-    combine_indexed_load_store, undef_combines, identity_combines, phi_combines,
+    undef_combines, identity_combines, phi_combines,
     simplify_add_to_sub, hoist_logic_op_with_same_opcode_hands, shifts_too_big,
     reassocs, ptr_add_immed_chain,
     shl_ashr_to_sext_inreg, sext_inreg_of_load,

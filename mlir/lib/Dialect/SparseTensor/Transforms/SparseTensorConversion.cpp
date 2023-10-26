@@ -293,26 +293,28 @@ public:
   }
 };
 
-/// Sparse conversion rule for accessing dimension-sizes.
-class SparseTensorToDimSizeConverter
-    : public OpConversionPattern<tensor::DimOp> {
+/// Sparse conversion rule for accessing level-sizes.
+class SparseTensorLvlOpConverter : public OpConversionPattern<LvlOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(tensor::DimOp op, OpAdaptor adaptor,
+  matchAndRewrite(LvlOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     const auto stt = getSparseTensorType(op.getSource());
     // Only rewrite sparse DimOp.
     if (!stt.hasEncoding())
       return failure();
+
     // Only rewrite DimOp with constant index.
-    std::optional<int64_t> dim = op.getConstantIndex();
-    if (!dim)
+    std::optional<int64_t> lvl = op.getConstantLvlIndex();
+
+    if (!lvl)
       return failure();
-    // Generate the call.
+
+    // By now, if the level size is constant, the operation should have already
+    // been folded by LvlOp's folder, so we generate the call unconditionally.
     Value src = adaptor.getOperands()[0];
-    rewriter.replaceOp(
-        op, createOrFoldDimCall(rewriter, op->getLoc(), stt, src, *dim));
+    rewriter.replaceOp(op, genLvlSizeCall(rewriter, op.getLoc(), src, *lvl));
     return success();
   }
 };
@@ -589,8 +591,21 @@ public:
     const auto stt = getSparseTensorType(op.getTensor());
     const auto elemTp = stt.getElementType();
     const Level lvlRank = stt.getLvlRank();
-    auto lvlCoords = genAlloca(rewriter, loc, lvlRank, rewriter.getIndexType());
-    auto vref = genAllocaScalar(rewriter, loc, elemTp);
+    Value lvlCoords, vref;
+    {
+      OpBuilder::InsertionGuard guard(rewriter);
+      Operation *loop = op;
+      // Finds the outermost loop.
+      while (auto l = loop->getParentOfType<LoopLikeOpInterface>())
+        loop = l;
+
+      if (llvm::isa<LoopLikeOpInterface>(loop)) {
+        // Hoists alloca outside the loop to avoid stack overflow.
+        rewriter.setInsertionPoint(loop);
+      }
+      lvlCoords = genAlloca(rewriter, loc, lvlRank, rewriter.getIndexType());
+      vref = genAllocaScalar(rewriter, loc, elemTp);
+    }
     storeAll(rewriter, loc, lvlCoords, adaptor.getLvlCoords());
     rewriter.create<memref::StoreOp>(loc, adaptor.getValue(), vref);
     SmallString<12> name{"lexInsert", primaryTypeFunctionSuffix(elemTp)};
@@ -754,7 +769,7 @@ mlir::SparseTensorTypeToPtrConverter::SparseTensorTypeToPtrConverter() {
 void mlir::populateSparseTensorConversionPatterns(TypeConverter &typeConverter,
                                                   RewritePatternSet &patterns) {
   patterns
-      .add<SparseReturnConverter, SparseTensorToDimSizeConverter,
+      .add<SparseReturnConverter, SparseTensorLvlOpConverter,
            SparseCastConverter, SparseTensorNewConverter,
            SparseTensorAllocConverter, SparseTensorEmptyConverter,
            SparseTensorDeallocConverter, SparseTensorReorderCOOConverter,

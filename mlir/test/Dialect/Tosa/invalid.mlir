@@ -128,9 +128,64 @@ func.func @test_reduce_min_type_mismatch(%arg0 : tensor<2x3x4x5xf32>) -> () {
 // -----
 
 func.func @test_reduce_prod_type_mismatch(%arg0 : tensor<2x3x4x5xf32>) -> () {
-  // expected-error@+2 {{failed to infer returned types}}
-  // expected-error@+1 {{'tosa.reduce_prod' op inferred type(s) 'tensor<2x1x4x5xf32>' are incompatible with return type(s) of operation 'tensor<2x3x4x5xf32>'}}
+  // expected-error@+1 {{'tosa.reduce_prod' op expect reduced dimension size to be 1, got 3}}
   %0 = tosa.reduce_prod %arg0 {axis = 1 : i32} : (tensor<2x3x4x5xf32>) -> tensor<2x3x4x5xf32>
+  return
+}
+
+// -----
+
+func.func @test_reduce_all_invalid_axis(%arg0 : tensor<2x3x4xf32>) -> () {
+  // expected-error@+1 {{'tosa.reduce_all' op expect input tensor rank (3) to be larger than reduce axis (3)}}
+  %0 = tosa.reduce_all %arg0 {axis = 3 : i32} : (tensor<2x3x4xf32>) -> tensor<2x3x1xf32>
+  return
+}
+
+// -----
+
+func.func @test_reduce_any_invalid_axis(%arg0 : tensor<2x3x4xf32>) -> () {
+  // expected-error@+1 {{'tosa.reduce_any' op expect input tensor rank (3) to be larger than reduce axis (3)}}
+  %0 = tosa.reduce_any %arg0 {axis = 3 : i32} : (tensor<2x3x4xf32>) -> tensor<2x3x1xf32>
+  return
+}
+
+// -----
+
+func.func @test_reduce_max_invalid_axis(%arg0 : tensor<2x3x4xf32>) -> () {
+  // expected-error@+1 {{'tosa.reduce_max' op expect input tensor rank (3) to be larger than reduce axis (3)}}
+  %0 = tosa.reduce_max %arg0 {axis = 3 : i32} : (tensor<2x3x4xf32>) -> tensor<2x3x1xf32>
+  return
+}
+
+// -----
+
+func.func @test_reduce_min_invalid_axis(%arg0 : tensor<2x3x4xf32>) -> () {
+  // expected-error@+1 {{'tosa.reduce_min' op expect input tensor rank (3) to be larger than reduce axis (3)}}
+  %0 = tosa.reduce_min %arg0 {axis = 3 : i32} : (tensor<2x3x4xf32>) -> tensor<2x3x1xf32>
+  return
+}
+
+// -----
+
+func.func @test_reduce_prod_invalid_axis(%arg0 : tensor<2x3x4xf32>) -> () {
+  // expected-error@+1 {{'tosa.reduce_prod' op expect input tensor rank (3) to be larger than reduce axis (3)}}
+  %0 = tosa.reduce_prod %arg0 {axis = 3 : i32} : (tensor<2x3x4xf32>) -> tensor<2x3x1xf32>
+  return
+}
+
+// -----
+
+func.func @test_reduce_sum_invalid_axis(%arg0 : tensor<2x3x4xf32>) -> () {
+  // expected-error@+1 {{'tosa.reduce_sum' op expect input tensor rank (3) to be larger than reduce axis (3)}}
+  %0 = tosa.reduce_sum %arg0 {axis = 3 : i32} : (tensor<2x3x4xf32>) -> tensor<2x3x1xf32>
+  return
+}
+
+// -----
+
+func.func @test_reduce_min_invalid_output_rank(%arg0 : tensor<i32>) -> () {
+  // expected-error@+1 {{'tosa.reduce_min' op expect output tensor rank to be equal to input tensor rank}}
+  %0 = tosa.reduce_min %arg0 {axis = 0 : i32} : (tensor<i32>) -> tensor<1x10xi32>
   return
 }
 
@@ -246,5 +301,23 @@ func.func @test_variable_write_shape(%arg0: tensor<1x4x8xi32>) -> () {
   tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi32>
   // expected-error@+1 {{'tosa.variable.write' op operand type does not equal variable type}}
   tosa.variable.write @stored_var, %arg0 : tensor<1x4x8xi32>
+  return
+}
+
+// -----
+
+func.func @test_slice_invalid_start() {
+  %0 = tensor.empty() : tensor<4x31x31xf32>
+  // expected-error@+1 {{'tosa.slice' op length of start attribute is not equal rank of input shape}}
+  %1 = tosa.slice %0 {size = array<i64: 1, 1, 1>, start = array<i64: 1, 1>} : (tensor<4x31x31xf32>) -> tensor<*xf32>
+  return
+}
+
+// -----
+
+func.func @test_slice_invalid_size() {
+  %0 = tensor.empty() : tensor<4x31x31xf32>
+  // expected-error@+1 {{'tosa.slice' op length of size attribute is not equal rank of input shape}}
+  %1 = tosa.slice %0 {size = array<i64: 1>, start = array<i64: 1, 1, 1>} : (tensor<4x31x31xf32>) -> tensor<*xf32>
   return
 }

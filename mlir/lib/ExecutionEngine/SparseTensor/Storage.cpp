@@ -24,8 +24,8 @@ SparseTensorStorageBase::SparseTensorStorageBase( // NOLINT
     : dimSizes(dimSizes, dimSizes + dimRank),
       lvlSizes(lvlSizes, lvlSizes + lvlRank),
       lvlTypes(lvlTypes, lvlTypes + lvlRank),
-      dim2lvlVec(dim2lvl, dim2lvl + dimRank),
-      lvl2dimVec(lvl2dim, lvl2dim + lvlRank),
+      dim2lvlVec(dim2lvl, dim2lvl + lvlRank),
+      lvl2dimVec(lvl2dim, lvl2dim + dimRank),
       map(dimRank, lvlRank, dim2lvlVec.data(), lvl2dimVec.data()) {
   assert(dimSizes && lvlSizes && lvlTypes && dim2lvl && lvl2dim);
   // Validate dim-indexed parameters.
@@ -36,11 +36,8 @@ SparseTensorStorageBase::SparseTensorStorageBase( // NOLINT
   assert(lvlRank > 0 && "Trivial shape is unsupported");
   for (uint64_t l = 0; l < lvlRank; ++l) {
     assert(lvlSizes[l] > 0 && "Level size zero has trivial storage");
-    const auto dlt = lvlTypes[l];
-    if (!(isDenseDLT(dlt) || isCompressedDLT(dlt) || isSingletonDLT(dlt))) {
-      MLIR_SPARSETENSOR_FATAL("unsupported level type: %d\n",
-                              static_cast<uint8_t>(dlt));
-    }
+    assert(isDenseLvl(l) || isCompressedLvl(l) || isLooseCompressedLvl(l) ||
+           isSingletonLvl(l) || is2OutOf4Lvl(l));
   }
 }
 
