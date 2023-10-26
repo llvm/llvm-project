@@ -2593,7 +2593,7 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
   // Warn -x after last input file has no effect
   auto LastXArg = Args.getLastArgValue(options::OPT_x);
   const llvm::StringSet<> ValidXArgs = {"cuda", "hip", "cui", "hipi"};
-  if (!IsCLMode() || ValidXArgs.find(LastXArg) != ValidXArgs.end()) {
+  if (!IsCLMode() || ValidXArgs.contains(LastXArg)) {
     Arg *LastXArg = Args.getLastArgNoClaim(options::OPT_x);
     Arg *LastInputArg = Args.getLastArgNoClaim(options::OPT_INPUT);
     if (LastXArg && LastInputArg &&
