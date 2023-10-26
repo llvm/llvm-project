@@ -265,8 +265,8 @@ static StringRef stripDirPrefix(StringRef PathNameStr, uint32_t NumPrefix) {
   return PathNameStr.substr(LastPos);
 }
 
-static StringRef getStrippedSourceFileName(const Function &F) {
-  StringRef FileName(F.getParent()->getSourceFileName());
+static StringRef getStrippedSourceFileName(const GlobalObject &GO) {
+  StringRef FileName(GO.getParent()->getSourceFileName());
   uint32_t StripLevel = StaticFuncFullModulePrefix ? 0 : (uint32_t)-1;
   if (StripLevel < StaticFuncStripDirNamePrefix)
     StripLevel = StaticFuncStripDirNamePrefix;
@@ -289,15 +289,16 @@ static StringRef getStrippedSourceFileName(const Function &F) {
 // mangled, they cannot be passed to Mach-O linkers via -order_file. We still
 // need to compute this name to lookup functions from profiles built by older
 // compilers.
-static std::string getIRPGOFuncName(const Function &F,
-                                    GlobalValue::LinkageTypes Linkage,
-                                    StringRef FileName) {
+static std::string
+getIRPGONameForGlobalObject(const GlobalObject &GO,
+                            GlobalValue::LinkageTypes Linkage,
+                            StringRef FileName) {
   SmallString<64> Name;
   if (llvm::GlobalValue::isLocalLinkage(Linkage)) {
     Name.append(FileName.empty() ? "<unknown>" : FileName);
     Name.append(";");
   }
-  Mangler().getNameWithPrefix(Name, &F, /*CannotUsePrivateLabel=*/true);
+  Mangler().getNameWithPrefix(Name, &GO, /*CannotUsePrivateLabel=*/true);
   return Name.str().str();
 }
 
@@ -313,7 +314,7 @@ static std::optional<std::string> lookupPGOFuncName(const Function &F) {
 std::string getIRPGOFuncName(const Function &F, bool InLTO) {
   if (!InLTO) {
     auto FileName = getStrippedSourceFileName(F);
-    return getIRPGOFuncName(F, F.getLinkage(), FileName);
+    return getIRPGONameForGlobalObject(F, F.getLinkage(), FileName);
   }
 
   // In LTO mode (when InLTO is true), first check if there is a meta data.
@@ -323,7 +324,7 @@ std::string getIRPGOFuncName(const Function &F, bool InLTO) {
   // If there is no meta data, the function must be a global before the value
   // profile annotation pass. Its current linkage may be internal if it is
   // internalized in LTO mode.
-  return getIRPGOFuncName(F, GlobalValue::ExternalLinkage, "");
+  return getIRPGONameForGlobalObject(F, GlobalValue::ExternalLinkage, "");
 }
 
 // Return the PGOFuncName. This function has some special handling when called

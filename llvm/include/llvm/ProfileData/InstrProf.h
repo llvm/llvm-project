@@ -234,6 +234,9 @@ Error collectGlobalObjectNameStrings(ArrayRef<std::string> NameStrs,
 
 /// Produce \c Result string with the same format described above. The input
 /// is vector of PGO function name variables that are referenced.
+/// The global variable element in 'NameVars' is a string containing the pgo
+/// name of a function. See `createPGOFuncNameVar` that creates these global
+/// variables.
 Error collectPGOFuncNameStrings(ArrayRef<GlobalVariable *> NameVars,
                                 std::string &Result, bool doCompression = true);
 
