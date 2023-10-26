@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++20 -verify %s
 // RUN: %clang_cc1 -verify=ref %s
+// RUN: %clang_cc1 -verify=ref -std=c++20 %s
 
 constexpr int m = 3;
 constexpr const int *foo[][5] = {
@@ -372,9 +374,6 @@ namespace ZeroInit {
 }
 
 namespace ArrayInitLoop {
-  /// FIXME: The ArrayInitLoop for the decomposition initializer in g() has
-  /// f(n) as its CommonExpr. We need to evaluate that exactly once and not
-  /// N times as we do right now.
   struct X {
       int arr[3];
   };
@@ -386,8 +385,7 @@ namespace ArrayInitLoop {
       auto [a, b, c] = f(n).arr;
       return a + b + c;
   }
-  static_assert(g() == 6); // expected-error {{failed}} \
-                           // expected-note {{15 == 6}}
+  static_assert(g() == 6, "");
 }
 
 namespace StringZeroFill {
@@ -409,4 +407,150 @@ namespace StringZeroFill {
   static_assert(b[3] == '\0', "");
   static_assert(b[4] == '\0', "");
   static_assert(b[5] == '\0', "");
+}
+
+namespace NoInitMapLeak {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdivision-by-zero"
+#pragma clang diagnostic ignored "-Wc++20-extensions"
+  constexpr int testLeak() { // expected-error {{never produces a constant expression}} \
+                             // ref-error {{never produces a constant expression}}
+    int a[2];
+    a[0] = 1;
+    // interrupts interpretation.
+    (void)(1 / 0); // expected-note 2{{division by zero}} \
+                   // ref-note 2{{division by zero}}
+
+
+    return 1;
+  }
+#pragma clang diagnostic pop
+  static_assert(testLeak() == 1, ""); // expected-error {{not an integral constant expression}} \
+                                      // expected-note {{in call to 'testLeak()'}} \
+                                      // ref-error {{not an integral constant expression}} \
+                                      // ref-note {{in call to 'testLeak()'}}
+
+
+  constexpr int a[] = {1,2,3,4/0,5}; // expected-error {{must be initialized by a constant expression}} \
+                                     // expected-note {{division by zero}} \
+                                     // ref-error {{must be initialized by a constant expression}} \
+                                     // ref-note {{division by zero}} \
+                                     // ref-note {{declared here}}
+
+  /// FIXME: This should fail in the new interpreter as well.
+  constexpr int b = a[0]; // ref-error {{must be initialized by a constant expression}} \
+                          // ref-note {{is not a constant expression}} \
+                          // ref-note {{declared here}}
+  static_assert(b == 1, ""); // ref-error {{not an integral constant expression}} \
+                             // ref-note {{not a constant expression}}
+
+  constexpr int f() { // expected-error {{never produces a constant expression}} \
+                      // ref-error {{never produces a constant expression}}
+    int a[] = {19,2,3/0,4}; // expected-note 2{{division by zero}} \
+                            // expected-warning {{is undefined}} \
+                            // ref-note 2{{division by zero}} \
+                            // ref-warning {{is undefined}}
+    return 1;
+  }
+  static_assert(f() == 1, ""); // expected-error {{not an integral constant expression}} \
+                               // expected-note {{in call to}} \
+                               // ref-error {{not an integral constant expression}} \
+                               // ref-note {{in call to}}
+}
+
+namespace Incomplete {
+  struct Foo {
+    char c;
+    int a[];
+  };
+
+  constexpr Foo F{};
+  constexpr const int *A = F.a; // ref-error {{must be initialized by a constant expression}} \
+                                // ref-note {{array-to-pointer decay of array member without known bound}} \
+                                // expected-error {{must be initialized by a constant expression}} \
+                                // expected-note {{array-to-pointer decay of array member without known bound}}
+
+  constexpr const int *B = F.a + 1; // ref-error {{must be initialized by a constant expression}} \
+                                    // ref-note {{array-to-pointer decay of array member without known bound}} \
+                                    // expected-error {{must be initialized by a constant expression}} \
+                                    // expected-note {{array-to-pointer decay of array member without known bound}}
+
+  constexpr int C = *F.a; // ref-error {{must be initialized by a constant expression}} \
+                          // ref-note {{array-to-pointer decay of array member without known bound}} \
+                          // expected-error {{must be initialized by a constant expression}} \
+                          // expected-note {{array-to-pointer decay of array member without known bound}}
+
+
+
+  /// These are from test/SemaCXX/constant-expression-cxx11.cpp
+  /// and are the only tests using the 'indexing of array without known bound' diagnostic.
+  /// We currently diagnose them differently.
+  extern int arr[]; // expected-note 3{{declared here}}
+  constexpr int *c = &arr[1]; // ref-error  {{must be initialized by a constant expression}} \
+                              // ref-note {{indexing of array without known bound}} \
+                              // expected-error {{must be initialized by a constant expression}} \
+                              // expected-note {{read of non-constexpr variable 'arr'}}
+  constexpr int *d = &arr[1]; // ref-error  {{must be initialized by a constant expression}} \
+                              // ref-note {{indexing of array without known bound}} \
+                              // expected-error {{must be initialized by a constant expression}} \
+                              // expected-note {{read of non-constexpr variable 'arr'}}
+  constexpr int *e = arr + 1; // ref-error  {{must be initialized by a constant expression}} \
+                              // ref-note {{indexing of array without known bound}} \
+                              // expected-error {{must be initialized by a constant expression}} \
+                              // expected-note {{read of non-constexpr variable 'arr'}}
+}
+
+namespace GH69115 {
+  /// This used to crash because we were trying to emit destructors for the
+  /// array.
+  constexpr int foo() {
+    int arr[2][2] = {1, 2, 3, 4};
+    return 0;
+  }
+  static_assert(foo() == 0, "");
+
+  /// Test that we still emit the destructors for multi-dimensional
+  /// composite arrays.
+#if __cplusplus >= 202002L
+  constexpr void assert(bool C) {
+    if (C)
+      return;
+    // Invalid in constexpr.
+    (void)(1 / 0); // expected-warning {{undefined}} \
+                   // ref-warning {{undefined}}
+  }
+
+  class F {
+  public:
+    int a;
+    int *dtor;
+    int &idx;
+    constexpr F(int a, int *dtor, int &idx) : a(a), dtor(dtor), idx(idx) {}
+    constexpr ~F() noexcept(false){
+      dtor[idx] = a;
+      ++idx;
+    }
+  };
+  constexpr int foo2() {
+    int dtorIndices[] = {0, 0, 0, 0};
+    int idx = 0;
+
+    {
+      F arr[2][2] = {F(1, dtorIndices, idx),
+                     F(2, dtorIndices, idx),
+                     F(3, dtorIndices, idx),
+                     F(4, dtorIndices, idx)};
+    }
+
+    /// Reverse-reverse order.
+    assert(idx == 4);
+    assert(dtorIndices[0] == 4);
+    assert(dtorIndices[1] == 3);
+    assert(dtorIndices[2] == 2);
+    assert(dtorIndices[3] == 1);
+
+    return 0;
+  }
+  static_assert(foo2() == 0, "");
+#endif
 }

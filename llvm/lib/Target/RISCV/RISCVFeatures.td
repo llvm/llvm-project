@@ -813,6 +813,22 @@ def HasVendorXSfcie : Predicate<"Subtarget->hasVendorXSfcie()">,
                         AssemblerPredicate<(all_of FeatureVendorXSfcie),
                         "'XSfcie' (SiFive Custom Instruction Extension SCIE.)">;
 
+def FeatureVendorXSfvqmaccdod
+    : SubtargetFeature<"xsfvqmaccdod", "HasVendorXSfvqmaccdod", "true",
+                       "'XSfvqmaccdod' (SiFive Int8 Matrix Multiplication Instructions (2-by-8 and 8-by-2))",
+                       [FeatureStdExtZve32x]>;
+def HasVendorXSfvqmaccdod : Predicate<"Subtarget->hasVendorXSfvqmaccdod()">,
+                         AssemblerPredicate<(all_of FeatureVendorXSfvqmaccdod),
+                         "'XSfvqmaccdod' (SiFive Int8 Matrix Multiplication Instructions (2-by-8 and 8-by-2))">;
+
+def FeatureVendorXSfvqmaccqoq
+    : SubtargetFeature<"xsfvqmaccqoq", "HasVendorXSfvqmaccqoq", "true",
+                       "'XSfvqmaccqoq' (SiFive Int8 Matrix Multiplication Instructions (4-by-8 and 8-by-4))",
+                       [FeatureStdExtZve32x]>;
+def HasVendorXSfvqmaccqoq : Predicate<"Subtarget->hasVendorXSfvqmaccqoq()">,
+                         AssemblerPredicate<(all_of FeatureVendorXSfvqmaccqoq),
+                         "'XSfvqmaccqoq' (SiFive Int8 Matrix Multiplication Instructions (4-by-8 and 8-by-4))">;
+
 def FeatureVendorXCVbitmanip
     : SubtargetFeature<"xcvbitmanip", "HasVendorXCVbitmanip", "true",
                        "'XCVbitmanip' (CORE-V Bit Manipulation)">;

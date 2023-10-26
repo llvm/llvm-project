@@ -12786,10 +12786,10 @@ static unsigned addPermMasks(unsigned First, unsigned Second) {
   unsigned FirstNoCs = First & ~0x0c0c0c0c;
   unsigned SecondNoCs = Second & ~0x0c0c0c0c;
 
-  assert(FirstCs & 0xFF | SecondCs & 0xFF);
-  assert(FirstCs & 0xFF00 | SecondCs & 0xFF00);
-  assert(FirstCs & 0xFF0000 | SecondCs & 0xFF0000);
-  assert(FirstCs & 0xFF000000 | SecondCs & 0xFF000000);
+  assert((FirstCs & 0xFF) | (SecondCs & 0xFF));
+  assert((FirstCs & 0xFF00) | (SecondCs & 0xFF00));
+  assert((FirstCs & 0xFF0000) | (SecondCs & 0xFF0000));
+  assert((FirstCs & 0xFF000000) | (SecondCs & 0xFF000000));
 
   return (FirstNoCs | SecondNoCs) | (FirstCs & SecondCs);
 }
@@ -12831,7 +12831,7 @@ static void placeSources(ByteProvider<SDValue> &Src0,
         return IterElt.first == *BPP.first.Src;
       };
 
-      auto Match = std::find_if(Srcs.begin(), Srcs.end(), MatchesFirst);
+      auto Match = llvm::find_if(Srcs, MatchesFirst);
       if (Match != Srcs.end()) {
         Match->second = addPermMasks(FirstMask, Match->second);
         FirstGroup = I;
@@ -12844,7 +12844,7 @@ static void placeSources(ByteProvider<SDValue> &Src0,
       auto MatchesSecond = [&BPP](std::pair<SDValue, unsigned> IterElt) {
         return IterElt.first == *BPP.second.Src;
       };
-      auto Match = std::find_if(Srcs.begin(), Srcs.end(), MatchesSecond);
+      auto Match = llvm::find_if(Srcs, MatchesSecond);
       if (Match != Srcs.end()) {
         Match->second = addPermMasks(SecondMask, Match->second);
       } else
@@ -14136,7 +14136,9 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
                                                      SDNode *Node) const {
   const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
 
-  MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+  MachineFunction *MF = MI.getParent()->getParent();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  SIMachineFunctionInfo *Info = MF->getInfo<SIMachineFunctionInfo>();
 
   if (TII->isVOP3(MI.getOpcode())) {
     // Make sure constant bus requirements are respected.
@@ -14147,10 +14149,15 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
     // use between vgpr and agpr as agpr tuples tend to be big.
     if (!MI.getDesc().operands().empty()) {
       unsigned Opc = MI.getOpcode();
+      bool HasAGPRs = Info->mayNeedAGPRs();
       const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
-      for (auto I : { AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0),
-                      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1) }) {
+      int16_t Src2Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2);
+      for (auto I :
+           {AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0),
+            AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1), Src2Idx}) {
         if (I == -1)
+          break;
+        if ((I == Src2Idx) && (HasAGPRs))
           break;
         MachineOperand &Op = MI.getOperand(I);
         if (!Op.isReg() || !Op.getReg().isVirtual())
@@ -14168,6 +14175,9 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
         // so no use checks are needed.
         MRI.setRegClass(Op.getReg(), NewRC);
       }
+
+      if (!HasAGPRs)
+        return;
 
       // Resolve the rest of AV operands to AGPRs.
       if (auto *Src2 = TII->getNamedOperand(MI, AMDGPU::OpName::src2)) {

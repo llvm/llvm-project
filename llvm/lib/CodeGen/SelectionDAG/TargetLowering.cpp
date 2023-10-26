@@ -1786,8 +1786,17 @@ bool TargetLowering::SimplifyDemandedBits(
 
       APInt InDemandedMask = DemandedBits.lshr(ShAmt);
       if (SimplifyDemandedBits(Op0, InDemandedMask, DemandedElts, Known, TLO,
-                               Depth + 1))
+                               Depth + 1)) {
+        SDNodeFlags Flags = Op.getNode()->getFlags();
+        if (Flags.hasNoSignedWrap() || Flags.hasNoUnsignedWrap()) {
+          // Disable the nsw and nuw flags. We can no longer guarantee that we
+          // won't wrap after simplification.
+          Flags.setNoSignedWrap(false);
+          Flags.setNoUnsignedWrap(false);
+          Op->setFlags(Flags);
+        }
         return true;
+      }
       assert(!Known.hasConflict() && "Bits known to be one AND zero?");
       Known.Zero <<= ShAmt;
       Known.One <<= ShAmt;

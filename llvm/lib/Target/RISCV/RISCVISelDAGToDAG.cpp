@@ -29,6 +29,12 @@ using namespace llvm;
 #define DEBUG_TYPE "riscv-isel"
 #define PASS_NAME "RISC-V DAG->DAG Pattern Instruction Selection"
 
+static cl::opt<bool> UsePseudoMovImm(
+    "riscv-use-rematerializable-movimm", cl::Hidden,
+    cl::desc("Use a rematerializable pseudoinstruction for 2 instruction "
+             "constant materialization"),
+    cl::init(false));
+
 namespace llvm::RISCV {
 #define GET_RISCVVSSEGTable_IMPL
 #define GET_RISCVVLSEGTable_IMPL
@@ -194,6 +200,13 @@ static SDValue selectImm(SelectionDAG *CurDAG, const SDLoc &DL, const MVT VT,
                          int64_t Imm, const RISCVSubtarget &Subtarget) {
   RISCVMatInt::InstSeq Seq =
       RISCVMatInt::generateInstSeq(Imm, Subtarget.getFeatureBits());
+
+  // Use a rematerializable pseudo instruction for short sequences if enabled.
+  if (Seq.size() == 2 && UsePseudoMovImm)
+    return SDValue(
+        CurDAG->getMachineNode(RISCV::PseudoMovImm, DL, VT,
+                               CurDAG->getTargetConstant(Imm, DL, VT)),
+        0);
 
   // See if we can create this constant as (ADD (SLLI X, C), X) where X is at
   // worst an LUI+ADDIW. This will require an extra register, but avoids a
@@ -2229,7 +2242,8 @@ bool RISCVDAGToDAGISel::SelectFrameAddrRegImm(SDValue Addr, SDValue &Base,
 // Fold constant addresses.
 static bool selectConstantAddr(SelectionDAG *CurDAG, const SDLoc &DL,
                                const MVT VT, const RISCVSubtarget *Subtarget,
-                               SDValue Addr, SDValue &Base, SDValue &Offset) {
+                               SDValue Addr, SDValue &Base, SDValue &Offset,
+                               bool IsPrefetch = false) {
   if (!isa<ConstantSDNode>(Addr))
     return false;
 
@@ -2241,6 +2255,9 @@ static bool selectConstantAddr(SelectionDAG *CurDAG, const SDLoc &DL,
   int64_t Lo12 = SignExtend64<12>(CVal);
   int64_t Hi = (uint64_t)CVal - (uint64_t)Lo12;
   if (!Subtarget->is64Bit() || isInt<32>(Hi)) {
+    if (IsPrefetch && (Lo12 & 0b11111) != 0)
+      return false;
+
     if (Hi) {
       int64_t Hi20 = (Hi >> 12) & 0xfffff;
       Base = SDValue(
@@ -2263,6 +2280,8 @@ static bool selectConstantAddr(SelectionDAG *CurDAG, const SDLoc &DL,
   if (Seq.back().getOpcode() != RISCV::ADDI)
     return false;
   Lo12 = Seq.back().getImm();
+  if (IsPrefetch && (Lo12 & 0b11111) != 0)
+    return false;
 
   // Drop the last instruction.
   Seq.pop_back();
@@ -2436,6 +2455,72 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
   }
 
   if (selectConstantAddr(CurDAG, DL, VT, Subtarget, Addr, Base, Offset))
+    return true;
+
+  Base = Addr;
+  Offset = CurDAG->getTargetConstant(0, DL, VT);
+  return true;
+}
+
+/// Similar to SelectAddrRegImm, except that the least significant 5 bits of
+/// Offset shoule be all zeros.
+bool RISCVDAGToDAGISel::SelectAddrRegImmLsb00000(SDValue Addr, SDValue &Base,
+                                                 SDValue &Offset) {
+  if (SelectAddrFrameIndex(Addr, Base, Offset))
+    return true;
+
+  SDLoc DL(Addr);
+  MVT VT = Addr.getSimpleValueType();
+
+  if (CurDAG->isBaseWithConstantOffset(Addr)) {
+    int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
+    if (isInt<12>(CVal)) {
+      Base = Addr.getOperand(0);
+
+      // Early-out if not a valid offset.
+      if ((CVal & 0b11111) != 0) {
+        Base = Addr;
+        Offset = CurDAG->getTargetConstant(0, DL, VT);
+        return true;
+      }
+
+      if (auto *FIN = dyn_cast<FrameIndexSDNode>(Base))
+        Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), VT);
+      Offset = CurDAG->getTargetConstant(CVal, DL, VT);
+      return true;
+    }
+  }
+
+  // Handle ADD with large immediates.
+  if (Addr.getOpcode() == ISD::ADD && isa<ConstantSDNode>(Addr.getOperand(1))) {
+    int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
+    assert(!(isInt<12>(CVal) && isInt<12>(CVal)) &&
+           "simm12 not already handled?");
+
+    // Handle immediates in the range [-4096,-2049] or [2017, 4065]. We can save
+    // one instruction by folding adjustment (-2048 or 2016) into the address.
+    if ((-2049 >= CVal && CVal >= -4096) || (4065 >= CVal && CVal >= 2017)) {
+      int64_t Adj = CVal < 0 ? -2048 : 2016;
+      int64_t AdjustedOffset = CVal - Adj;
+      Base = SDValue(CurDAG->getMachineNode(
+                         RISCV::ADDI, DL, VT, Addr.getOperand(0),
+                         CurDAG->getTargetConstant(AdjustedOffset, DL, VT)),
+                     0);
+      Offset = CurDAG->getTargetConstant(Adj, DL, VT);
+      return true;
+    }
+
+    if (selectConstantAddr(CurDAG, DL, VT, Subtarget, Addr.getOperand(1), Base,
+                           Offset, true)) {
+      // Insert an ADD instruction with the materialized Hi52 bits.
+      Base = SDValue(
+          CurDAG->getMachineNode(RISCV::ADD, DL, VT, Addr.getOperand(0), Base),
+          0);
+      return true;
+    }
+  }
+
+  if (selectConstantAddr(CurDAG, DL, VT, Subtarget, Addr, Base, Offset, true))
     return true;
 
   Base = Addr;
@@ -2804,6 +2889,11 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
          "Unexpected opcode");
 
   if (Depth >= SelectionDAG::MaxRecursionDepth)
+    return false;
+
+  // The PatFrags that call this may run before RISCVGenDAGISel.inc has checked
+  // the VT. Ensure the type is scalar to avoid wasting time on vectors.
+  if (Depth == 0 && !Node->getValueType(0).isScalarInteger())
     return false;
 
   for (auto UI = Node->use_begin(), UE = Node->use_end(); UI != UE; ++UI) {
