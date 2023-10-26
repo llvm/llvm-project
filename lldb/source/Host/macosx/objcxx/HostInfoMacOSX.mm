@@ -394,7 +394,7 @@ xcrun(const std::string &sdk, llvm::ArrayRef<llvm::StringRef> arguments,
   if (log) {
     std::string cmdstr;
     args.GetCommandString(cmdstr);
-    log->Printf("GetXcodeSDK() running shell cmd '%s'", cmdstr.c_str());
+    LLDB_LOG(log, "GetXcodeSDK() running shell cmd '{0}'", cmdstr);
   }
 
   int status = 0;
@@ -410,13 +410,13 @@ xcrun(const std::string &sdk, llvm::ArrayRef<llvm::StringRef> arguments,
   // Check that xcrun returned something useful.
   if (error.Fail()) {
     // Catastrophic error.
-    LLDB_LOG(log, "xcrun failed to execute: %s", error.AsCString());
+    LLDB_LOG(log, "xcrun failed to execute: {0}", error);
     return error.ToError();
   }
   if (status != 0) {
     // xcrun didn't find a matching SDK. Not an error, we'll try
     // different spellings.
-    LLDB_LOG(log, "xcrun returned exit code %d", status);
+    LLDB_LOG(log, "xcrun returned exit code {0}", status);
     return "";
   }
   if (output_str.empty()) {
