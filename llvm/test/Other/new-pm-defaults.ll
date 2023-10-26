@@ -155,6 +155,8 @@
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-O23SZ-NEXT: Running pass: AggressiveInstCombinePass
 ; CHECK-O23SZ-NEXT: Running pass: ConstraintEliminationPass
+; CHECK-O23SZ-NEXT: Running analysis: LoopAnalysis
+; CHECK-O23SZ-NEXT: Running analysis: ScalarEvolutionAnalysis
 ; CHECK-O1-NEXT: Running pass: LibCallsShrinkWrapPass
 ; CHECK-O2-NEXT: Running pass: LibCallsShrinkWrapPass
 ; CHECK-O3-NEXT: Running pass: LibCallsShrinkWrapPass
@@ -162,9 +164,6 @@
 ; CHECK-O23SZ-NEXT: Running pass: TailCallElimPass
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: ReassociatePass
-; CHECK-O23SZ-NEXT: Running pass: ConstraintEliminationPass
-; CHECK-O23SZ-NEXT: Running analysis: LoopAnalysis
-; CHECK-O23SZ-NEXT: Running analysis: ScalarEvolutionAnalysis
 ; CHECK-O-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-O1-NEXT: Running analysis: LoopAnalysis
 ; CHECK-O-NEXT: Running pass: LCSSAPass
