@@ -113,6 +113,7 @@ ScriptedProcess::ScriptedProcess(lldb::TargetSP target_sp,
       m_scripted_metadata.GetArgsSP());
 
   if (!obj_or_err) {
+    llvm::consumeError(obj_or_err.takeError());
     error.SetErrorString("Failed to create script object.");
     return;
   }
