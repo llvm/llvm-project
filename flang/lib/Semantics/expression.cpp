@@ -1859,8 +1859,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::ArrayConstructor &array) {
 
 // Check if implicit conversion of expr to the symbol type is legal (if needed),
 // and make it explicit if requested.
-MaybeExpr implicitConvertTo(const semantics::Symbol &sym, Expr<SomeType> &&expr,
-    bool keepConvertImplicit) {
+static MaybeExpr implicitConvertTo(const semantics::Symbol &sym,
+    Expr<SomeType> &&expr, bool keepConvertImplicit) {
   if (!keepConvertImplicit) {
     return ConvertToType(sym, std::move(expr));
   } else {

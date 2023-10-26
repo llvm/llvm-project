@@ -3374,7 +3374,7 @@ private:
 
   /// Given converted LHS and RHS of the assignment, materialize any
   /// implicit conversion of the RHS to the LHS type. The front-end
-  /// usually already makes those explicit, except for none-standard
+  /// usually already makes those explicit, except for non-standard
   /// LOGICAL <-> INTEGER, or if the LHS is a whole allocatable
   /// (making the conversion explicit in the front-end would prevent
   /// propagation of the LHS lower bound in the reallocation).

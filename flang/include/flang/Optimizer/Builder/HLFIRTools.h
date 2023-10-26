@@ -439,7 +439,7 @@ hlfir::EntityWithAttributes convertCharacterKind(mlir::Location loc,
 /// only inserted in case of KIND mismatch (and not in case of length mismatch),
 /// and that the resulting entity length is the same as the one from \p source.
 /// It is valid to call this helper if \p source is an array. If a conversion is
-/// inserted for arrays, a clean-up will be returned. If not conversion is
+/// inserted for arrays, a clean-up will be returned. If no conversion is
 /// needed, the source is returned.
 /// Beware that the resulting entity mlir type may not be toType: it will be a
 /// Fortran entity with the same Fortran category and KIND.
