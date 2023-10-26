@@ -142,6 +142,9 @@ def InferShapedTypeOpInterface : OpInterface<"InferShapedTypeOpInterface"> {
       Unknown (e.g., unranked) shape and nullptrs for element type and attribute
       may be returned by this function while returning success. E.g., partial
       population of components is not error condition.
+
+      Be aware that this method is supposed to be called with valid arguments,
+      e.g., operands are verified, or it may result in an undefined behavior.
       }],
       /*retTy=*/"::mlir::LogicalResult",
       /*methodName=*/"inferReturnTypeComponents",
