@@ -667,9 +667,9 @@ void XCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
   auto getIndex = [this](const MCSymbol *Sym,
                          const MCSectionXCOFF *ContainingCsect) {
     // Fixup relocation flag for AIX TLS local-dynamic mode.
-    if (Sym->getName().equals("_Renamed..5f24__TLSML[UA]")) {
+    if (Sym->getName() == "_Renamed..5f24__TLSML[UA]") {
       for (auto Iter : SymbolIndexMap)
-        if (Iter.first->getName().equals("_Renamed..5f24__TLSML[TC]"))
+        if (Iter.first->getName() == "_Renamed..5f24__TLSML[TC]")
           return Iter.second;
       llvm_unreachable("For AIX TLS local-dynamic mode: "
                        "_Renamed..5f24__TLSML[TC] not found.");
@@ -1211,7 +1211,7 @@ void XCOFFObjectWriter::writeSymbolTable(MCAssembler &Asm,
 
   for (const auto &Csect : UndefinedCsects) {
     // AIX does not need to emit for the _$TLSML symbol.
-    if (Csect.getSymbolTableName().equals(StringRef("_$TLSML")))
+    if (Csect.getSymbolTableName() == "_$TLSML")
       continue;
     writeSymbolEntryForControlSection(Csect, XCOFF::ReservedSectionNum::N_UNDEF,
                                       Csect.MCSec->getStorageClass());
@@ -1432,7 +1432,7 @@ void XCOFFObjectWriter::assignAddressesAndIndices(MCAssembler &Asm,
   // Calculate indices for undefined symbols.
   for (auto &Csect : UndefinedCsects) {
     // AIX does not need to emit for the _$TLSML symbol.
-    if (Csect.getSymbolTableName().equals(StringRef("_$TLSML")))
+    if (Csect.getSymbolTableName() == "_$TLSML")
       continue;
     Csect.Size = 0;
     Csect.Address = 0;
