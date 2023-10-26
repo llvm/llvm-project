@@ -2732,19 +2732,28 @@ bool ByteCodeExprGen<Emitter>::emitRecordDestruction(const Descriptor *Desc) {
   // Arrays.
   if (Desc->isArray()) {
     const Descriptor *ElemDesc = Desc->ElemDesc;
-    const Record *ElemRecord = ElemDesc->ElemRecord;
-    assert(ElemRecord); // This is not a primitive array.
+    assert(ElemDesc);
 
-    if (const CXXDestructorDecl *Dtor = ElemRecord->getDestructor();
-        Dtor && !Dtor->isTrivial()) {
-      for (ssize_t I = Desc->getNumElems() - 1; I >= 0; --I) {
-        if (!this->emitConstUint64(I, SourceInfo{}))
-          return false;
-        if (!this->emitArrayElemPtrUint64(SourceInfo{}))
-          return false;
-        if (!this->emitRecordDestruction(Desc->ElemDesc))
-          return false;
-      }
+    // Don't need to do anything for these.
+    if (ElemDesc->isPrimitiveArray())
+      return this->emitPopPtr(SourceInfo{});
+
+    // If this is an array of record types, check if we need
+    // to call the element destructors at all. If not, try
+    // to save the work.
+    if (const Record *ElemRecord = ElemDesc->ElemRecord) {
+      if (const CXXDestructorDecl *Dtor = ElemRecord->getDestructor();
+          !Dtor || Dtor->isTrivial())
+        return this->emitPopPtr(SourceInfo{});
+    }
+
+    for (ssize_t I = Desc->getNumElems() - 1; I >= 0; --I) {
+      if (!this->emitConstUint64(I, SourceInfo{}))
+        return false;
+      if (!this->emitArrayElemPtrUint64(SourceInfo{}))
+        return false;
+      if (!this->emitRecordDestruction(ElemDesc))
+        return false;
     }
     return this->emitPopPtr(SourceInfo{});
   }
