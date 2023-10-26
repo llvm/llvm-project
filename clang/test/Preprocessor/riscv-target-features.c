@@ -1246,3 +1246,15 @@
 // RUN: -march=rv64i_zve32x_zvkt1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZVKT-EXT %s
 // CHECK-ZVKT-EXT: __riscv_zvkt 1000000{{$}}
+
+// RUN: %clang --target=riscv32-unknown-linux-gnu -march=rv32i -x c -E -dM %s \
+// RUN: -o - | FileCheck %s --check-prefix=CHECK-MISALIGNED-AVOID
+// RUN: %clang --target=riscv64-unknown-linux-gnu -march=rv64i -x c -E -dM %s \
+// RUN: -o - | FileCheck %s --check-prefix=CHECK-MISALIGNED-AVOID
+// CHECK-MISALIGNED-AVOID: __riscv_misaligned_avoid 1
+
+// RUN: %clang --target=riscv32-unknown-linux-gnu -march=rv32i -E -dM %s \
+// RUN:   -munaligned-access -o - | FileCheck %s --check-prefix=CHECK-MISALIGNED-FAST
+// RUN: %clang --target=riscv64-unknown-linux-gnu -march=rv64i -E -dM %s \
+// RUN:   -munaligned-access -o - | FileCheck %s --check-prefix=CHECK-MISALIGNED-FAST
+// CHECK-MISALIGNED-FAST: __riscv_misaligned_fast 1
