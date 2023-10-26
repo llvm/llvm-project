@@ -345,6 +345,54 @@ class VString<int nf, bit signed> {
                    !eq(nf, 8): !if(signed, "vvvvvvvv", "UvUvUvUvUvUvUvUv"));
 }
 
+
+class FixedVString<int fixed_lmul, int num, bit signed> {
+  string V = "(LFixedLog2LMUL:" # fixed_lmul # ")" # !if(signed, "v", "Uv");
+  string S = !cond(!eq(num, 1): V,
+                   !eq(num, 2): V # V,
+                   !eq(num, 4): V # V # V # V,
+                   !eq(num, 8): V # V # V # V # V # V # V # V,
+                   true: "");
+}
+
+// This function is used in RVVNonTupleVCreateBuiltin to determine how many
+// variable we need to assemble the bigger LMUL value.
+// X = 2^{pow_x - pow_y}, with value range of pow_x, pow_y = [0, 3], pow_x > pow_y
+class GetPowDiff<int pow_x, int pow_y> {
+  int X = !cond(!eq(pow_x, 1): 2,
+                !eq(pow_x, 2):
+                  !cond(!eq(pow_y, 0): 4,
+                        !eq(pow_y, 1): 2,
+                        true: 0),
+                !eq(pow_x, 3):
+                  !cond(!eq(pow_y, 0): 8,
+                        !eq(pow_y, 1): 4,
+                        !eq(pow_y, 2): 2,
+                        true: 0),
+                true: 0);
+}
+
+multiclass RVVNonTupleVCreateBuiltin<int dst_lmul, list<int> src_lmul_list> {
+  defvar dst_v = FixedVString<dst_lmul, 1, /*signed=*/true>.V;
+  defvar dst_uv = FixedVString<dst_lmul, 1, /*signed=*/false>.V;
+  foreach src_lmul = src_lmul_list in {
+    defvar num = GetPowDiff<dst_lmul, src_lmul>.X;
+
+    defvar src_v = FixedVString<src_lmul, num, /*signed=*/true>.V;
+    defvar src_s = FixedVString<src_lmul, num, /*signed=*/true>.S;
+
+    def vcreate # src_v # dst_v : RVVBuiltin<src_v # dst_v,
+                                              dst_v # src_s,
+                                              "csilxfd", dst_v>;
+
+    defvar src_uv = FixedVString<src_lmul, num, /*signed=*/false>.V;
+    defvar src_us = FixedVString<src_lmul, num, /*signed=*/false>.S;
+    def vcreate_u # src_uv # dst_uv : RVVBuiltin<src_uv # dst_uv,
+                                                  dst_uv # src_us,
+                                                  "csil", dst_uv>;
+  }
+}
+
 multiclass RVVPseudoUnaryBuiltin<string IR, string type_range> {
   let Name = NAME,
       IRName = IR,
@@ -2429,15 +2477,32 @@ let HasMasked = false, HasVL = false, IRName = "" in {
       SupportOverloading = false,
       ManualCodegen = [{
       {
-        assert(isa<StructType>(ResultType));
-        unsigned NF = cast<StructType>(ResultType)->getNumElements();
-        llvm::Value *ReturnTuple = llvm::PoisonValue::get(ResultType);
-        for (unsigned I = 0; I < NF; ++I) {
-          ReturnTuple = Builder.CreateInsertValue(ReturnTuple, Ops[I], {I});
+        if (isa<StructType>(ResultType)) {
+          unsigned NF = cast<StructType>(ResultType)->getNumElements();
+          llvm::Value *ReturnTuple = llvm::PoisonValue::get(ResultType);
+          for (unsigned I = 0; I < NF; ++I) {
+            ReturnTuple = Builder.CreateInsertValue(ReturnTuple, Ops[I], {I});
+          }
+          return ReturnTuple;
+        } else {
+          llvm::Value *ReturnVector = llvm::PoisonValue::get(ResultType);
+          auto *VecTy = cast<ScalableVectorType>(Ops[0]->getType());
+          for (unsigned I = 0, N = Ops.size(); I < N; ++I) {
+            llvm::Value *Idx =
+              ConstantInt::get(Builder.getInt64Ty(),
+                               VecTy->getMinNumElements() * I);
+            ReturnVector =
+              Builder.CreateInsertVector(ResultType, ReturnVector, Ops[I], Idx);
+          }
+          return ReturnVector;
         }
-        return ReturnTuple;
       }
       }] in {
+
+    defm : RVVNonTupleVCreateBuiltin<1, [0]>;
+    defm : RVVNonTupleVCreateBuiltin<2, [0, 1]>;
+    defm : RVVNonTupleVCreateBuiltin<3, [0, 1, 2]>;
+
     foreach nf = NFList in {
       let NF = nf in {
         defvar T = "(Tuple:" # nf # ")";
