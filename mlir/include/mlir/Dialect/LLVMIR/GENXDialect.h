@@ -29,15 +29,15 @@
 namespace mlir {
 namespace GENX {
 
-/// GENX memory space identifiers.
+/// GENX memory space identifiers following SPIRV storage class convention
+/// https://github.com/KhronosGroup/SPIRV-LLVM-Translator/blob/main/docs/SPIRVRepresentationInLLVM.rst#address-spaces
+///
 enum GENXMemorySpace {
-  kCrossWorkgroup = 0,
-  kGeneric = 1,
-  kWorkgroup = 3,
-  kUniformConstant = 4,
-  kPrivate = 5,
-  kFunction = 6,
-  kImage = 7
+  kFunction = 0,        // OpenCL workitem address space 
+  kCrossWorkgroup = 1,  // OpenCL Global memory
+  kUniformConstant = 2, // OpenCL Constant memory
+  kWorkgroup = 3,       // OpenCL Local memory
+  kGeneric = 4          // OpenCL Generic memory
 };
 
 } // namespace GENX

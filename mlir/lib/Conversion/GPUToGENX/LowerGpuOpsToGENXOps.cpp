@@ -98,11 +98,11 @@ struct LowerGpuOpsToGENXOpsPass
         converter, [](gpu::AddressSpace space) -> unsigned {
           switch (space) {
           case gpu::AddressSpace::Global:
-            return GENX::GENXDialect::kGlobalMemoryAddressSpace;
+            return GENX::GENXMemorySpace::kCrossWorkgroup;
           case gpu::AddressSpace::Workgroup:
-            return GENX::GENXDialect::kSharedMemoryAddressSpace;
+            return GENX::GENXMemorySpace::kWorkgroup;
           case gpu::AddressSpace::Private:
-            return GENX::GENXDialect::kPrivateMemoryAddressSpace;
+            return GENX::GENXMemorySpace::kFunction;
           }
           llvm_unreachable("unknown address space enum value");
           return 0;
@@ -163,8 +163,8 @@ void mlir::populateGpuToGENXConversionPatterns(LLVMTypeConverter &converter,
           converter);
   patterns.add<GPUFuncOpLowering>(
       converter,
-      /*allocaAddrSpace=*/GENX::GENXDialect::kPrivateMemoryAddressSpace,
-      /*workgroupAddrSpace=*/GENX::GENXDialect::kSharedMemoryAddressSpace,
+      /*allocaAddrSpace=*/GENX::GENXMemorySpace::kFunction,
+      /*workgroupAddrSpace=*/GENX::GENXMemorySpace::kWorkgroup,
       StringAttr::get(&converter.getContext(),
                       GENX::GENXDialect::getKernelFuncAttrName()));
 }
