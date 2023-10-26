@@ -1008,6 +1008,23 @@ defm offload_uniform_block : BoolFOption<"offload-uniform-block",
   NegFlag<SetFalse, [], [ClangOption, CC1Option], "Don't assume">,
   BothFlags<[], [ClangOption], " that kernels are launched with uniform block sizes (default true for CUDA/HIP and false otherwise)">>;
 
+def fcx_limited_range : Joined<["-"], "fcx-limited-range">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Basic algebraic expansions of complex arithmetic operations "
+           "involving are enabled.">,
+  MarshallingInfoFlag<LangOpts<"CxLimitedRange">>;
+def fno_cx_limited_range : Joined<["-"], "fno-cx-limited-range">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Basic algebraic expansions of complex arithmetic operations "
+           "involving are enabled.">;
+def fcx_fortran_rules : Joined<["-"], "fcx-fortran-rules">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Range reduction is enabled for complex arithmetic operations.">,
+  MarshallingInfoFlag<LangOpts<"CxFortranRules">>;
+def fno_cx_fortran_rules : Joined<["-"], "fno-cx-fortran-rules">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Range reduction is disabled for complex arithmetic operations.">;
+
 // OpenCL-only Options
 def cl_opt_disable : Flag<["-"], "cl-opt-disable">, Group<opencl_Group>,
   Visibility<[ClangOption, CC1Option]>,
