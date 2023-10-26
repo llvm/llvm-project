@@ -5,7 +5,7 @@
 ; RUN: opt -passes=instcombine -S < %s -mtriple=x86_64-apple-macosx10.8 | FileCheck %s --check-prefixes=CHECK-NO-SINCOS,CHECK-NO-SINCOS-DOUBLE-ALIGN8
 ; RUN: opt -passes=instcombine -S < %s -mtriple=arm-apple-ios6.0 | FileCheck %s --check-prefixes=CHECK-NO-SINCOS,CHECK-NO-SINCOS-DOUBLE-ALIGN4
 ; RUN: opt -passes=instcombine -S < %s -mtriple=x86_64-none-linux-gnu | FileCheck %s --check-prefixes=CHECK-NO-SINCOS,CHECK-NO-SINCOS-DOUBLE-ALIGN8
-
+; REQUIRES: arm-registered-target, x86-registered-target
 
 attributes #0 = { readnone nounwind }
 
