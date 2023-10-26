@@ -341,8 +341,8 @@ struct S {
     friend bool operator==(const S &, int);
     friend bool operator!=(const S &, int);
 };
-struct A : public P {};
-struct B : public P {};
+struct A : S {};
+struct B : S {};
 bool x = A{} == B{};
 } // namespace opNEFound
 } // namespace friend_opNE_GH
