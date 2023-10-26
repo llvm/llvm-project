@@ -101,36 +101,32 @@ bool RISCVPostRAExpandPseudo::expandMovImm(MachineBasicBlock &MBB,
 
   for (RISCVMatInt::Inst &Inst : Seq) {
     bool LastItem = ++Num == Seq.size();
+    unsigned DstRegState = getDeadRegState(DstIsDead && LastItem) |
+                           getRenamableRegState(Renamable);
+    unsigned SrcRegState = getKillRegState(SrcReg != RISCV::X0) |
+                           getRenamableRegState(SrcRenamable);
     switch (Inst.getOpndKind()) {
     case RISCVMatInt::Imm:
       BuildMI(MBB, MBBI, DL, TII->get(Inst.getOpcode()))
-          .addReg(DstReg, RegState::Define |
-                              getDeadRegState(DstIsDead && LastItem) |
-                              getRenamableRegState(Renamable))
+          .addReg(DstReg, RegState::Define | DstRegState)
           .addImm(Inst.getImm());
       break;
     case RISCVMatInt::RegX0:
       BuildMI(MBB, MBBI, DL, TII->get(Inst.getOpcode()))
-          .addReg(DstReg, RegState::Define |
-                              getDeadRegState(DstIsDead && LastItem) |
-                              getRenamableRegState(Renamable))
-          .addReg(SrcReg, RegState::Kill | getRenamableRegState(SrcRenamable))
+          .addReg(DstReg, RegState::Define | DstRegState)
+          .addReg(SrcReg, SrcRegState)
           .addReg(RISCV::X0);
       break;
     case RISCVMatInt::RegReg:
       BuildMI(MBB, MBBI, DL, TII->get(Inst.getOpcode()))
-          .addReg(DstReg, RegState::Define |
-                              getDeadRegState(DstIsDead && LastItem) |
-                              getRenamableRegState(Renamable))
-          .addReg(SrcReg, RegState::Kill | getRenamableRegState(SrcRenamable))
-          .addReg(SrcReg, RegState::Kill | getRenamableRegState(SrcRenamable));
+          .addReg(DstReg, RegState::Define | DstRegState)
+          .addReg(SrcReg, SrcRegState)
+          .addReg(SrcReg, SrcRegState);
       break;
     case RISCVMatInt::RegImm:
       BuildMI(MBB, MBBI, DL, TII->get(Inst.getOpcode()))
-          .addReg(DstReg, RegState::Define |
-                              getDeadRegState(DstIsDead && LastItem) |
-                              getRenamableRegState(Renamable))
-          .addReg(SrcReg, RegState::Kill | getRenamableRegState(SrcRenamable))
+          .addReg(DstReg, RegState::Define | DstRegState)
+          .addReg(SrcReg, SrcRegState)
           .addImm(Inst.getImm());
       break;
     }

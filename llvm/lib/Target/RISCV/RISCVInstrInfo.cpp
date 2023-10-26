@@ -787,6 +787,7 @@ void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
   assert(!Seq.empty());
 
   for (const RISCVMatInt::Inst &Inst : Seq) {
+    unsigned SrcRegState = getKillRegState(SrcReg != RISCV::X0);
     switch (Inst.getOpndKind()) {
     case RISCVMatInt::Imm:
       BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()), DstReg)
@@ -795,19 +796,19 @@ void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
       break;
     case RISCVMatInt::RegX0:
       BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()), DstReg)
-          .addReg(SrcReg, getKillRegState(SrcReg != RISCV::X0))
+          .addReg(SrcReg, SrcRegState)
           .addReg(RISCV::X0)
           .setMIFlag(Flag);
       break;
     case RISCVMatInt::RegReg:
       BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()), DstReg)
-          .addReg(SrcReg, getKillRegState(SrcReg != RISCV::X0))
-          .addReg(SrcReg, getKillRegState(SrcReg != RISCV::X0))
+          .addReg(SrcReg, SrcRegState)
+          .addReg(SrcReg, SrcRegState)
           .setMIFlag(Flag);
       break;
     case RISCVMatInt::RegImm:
       BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()), DstReg)
-          .addReg(SrcReg, getKillRegState(SrcReg != RISCV::X0))
+          .addReg(SrcReg, SrcRegState)
           .addImm(Inst.getImm())
           .setMIFlag(Flag);
       break;
