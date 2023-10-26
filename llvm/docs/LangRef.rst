@@ -2883,7 +2883,8 @@ as follows:
     This specifies the *size* of a pointer and its ``<abi>`` and
     ``<pref>``\erred alignments for address space ``n``. ``<pref>`` is optional
     and defaults to ``<abi>``. The fourth parameter ``<idx>`` is the size of the
-    index that used for address calculation. If not
+    index that used for address calculation, which must be less than or equal
+    to the pointer size. If not
     specified, the default index size is equal to the pointer size. All sizes
     are in bits. The address space, ``n``, is optional, and if not specified,
     denotes the default address space 0. The value of ``n`` must be
@@ -11030,6 +11031,24 @@ for the given testcase is equivalent to:
       ret ptr %t5
     }
 
+The indices are first converted to offsets in the pointer's index type. If the
+currently indexed type is a struct type, the struct offset corresponding to the
+index is sign-extended or truncated to the pointer index type. Otherwise, the
+index itself is sign-extended or truncated, and then multiplied by the type
+allocation size (that is, the size rounded up to the ABI alignment) of the
+currently indexed type.
+
+The offsets are then added to the low bits of the base address up to the index
+type width, with silently-wrapping two's complement arithmetic. If the pointer
+size is larger than the index size, this means that the bits outside the index
+type width will not be affected.
+
+The result value of the ``getelementptr`` may be outside the object pointed
+to by the base pointer. The result value may not necessarily be used to access
+memory though, even if it happens to point into allocated storage. See the
+:ref:`Pointer Aliasing Rules <pointeraliasing>` section for more
+information.
+
 If the ``inbounds`` keyword is present, the result value of a
 ``getelementptr`` with any non-zero indices is a
 :ref:`poison value <poisonvalues>` if one of the following rules is violated:
@@ -11060,16 +11079,6 @@ address space is the null pointer itself.
 These rules are based on the assumption that no allocated object may cross
 the unsigned address space boundary, and no allocated object may be larger
 than half the pointer index type space.
-
-If the ``inbounds`` keyword is not present, the offsets are added to the
-base address with silently-wrapping two's complement arithmetic. If the
-offsets have a different width from the pointer's index type, they are
-sign-extended or truncated to the width of the pointer's index type. The result
-value of the ``getelementptr`` may be outside the object pointed to by the base
-pointer. The result value may not necessarily be used to access memory
-though, even if it happens to point into allocated storage. See the
-:ref:`Pointer Aliasing Rules <pointeraliasing>` section for more
-information.
 
 If the ``inrange`` keyword is present before any index, loading from or
 storing to any pointer derived from the ``getelementptr`` has undefined
