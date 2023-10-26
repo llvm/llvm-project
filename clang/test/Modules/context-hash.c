@@ -4,24 +4,22 @@
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -fsyntax-only -internal-isystem \
 // RUN:   %S/Inputs/System/usr/include -fmodules -fimplicit-module-maps \
-// RUN:   -fbuiltin-headers-in-system-modules -fmodules-cache-path=%t %s \
-// RUN:   -Rmodule-build 2> %t1
+// RUN:   -fmodules-cache-path=%t %s -Rmodule-build 2> %t1
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -fsyntax-only -internal-isystem \
 // RUN:   %S/Inputs/System/usr/include -internal-isystem %S -fmodules \
-// RUN:   -fbuiltin-headers-in-system-modules -fimplicit-module-maps \
-// RUN:   -fmodules-cache-path=%t %s -Rmodule-build 2> %t2
+// RUN:   -fimplicit-module-maps -fmodules-cache-path=%t %s -Rmodule-build 2> \
+// RUN:   %t2
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -fsyntax-only -internal-isystem \
 // RUN:   %S/Inputs/System/usr/include -internal-isystem %S -fmodules \
-// RUN:   -fbuiltin-headers-in-system-modules -fimplicit-module-maps \
-// RUN:   -fmodules-cache-path=%t %s -fmodules-strict-context-hash \
-// RUN:   -Rmodule-build 2> %t3
+// RUN:   -fimplicit-module-maps -fmodules-cache-path=%t %s \
+// RUN:   -fmodules-strict-context-hash -Rmodule-build 2> %t3
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -fsyntax-only -Weverything -internal-isystem \
 // RUN:   %S/Inputs/System/usr/include -fmodules -fmodules-strict-context-hash \
-// RUN:   -fbuiltin-headers-in-system-modules -fimplicit-module-maps \
-// RUN:   -fmodules-cache-path=%t %s -Rmodule-build 2> %t4
+// RUN:   -fimplicit-module-maps -fmodules-cache-path=%t %s -Rmodule-build 2> \
+// RUN:   %t4
 // RUN: echo %t > %t.path
 // RUN: cat %t.path %t1 %t2 %t3 %t4 | FileCheck %s
 
@@ -31,17 +29,16 @@
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -fsyntax-only -internal-isystem \
 // RUN:   %S/Inputs/System/usr/include -fmodules -fimplicit-module-maps \
-// RUN:   -fbuiltin-headers-in-system-modules -fmodules-cache-path=%t \
-// RUN:   -x objective-c %s -Rmodule-build 2> %t1
+// RUN:   -fmodules-cache-path=%t -x objective-c %s -Rmodule-build 2> %t1
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -fsyntax-only -internal-isystem \
 // RUN:   %S/Inputs/System/usr/include -fmodules -fimplicit-module-maps \
-// RUN:   -fbuiltin-headers-in-system-modules -fobjc-runtime=macosx-1.0.0.0 \
+// RUN:   -fobjc-runtime=macosx-1.0.0.0 \
 // RUN:   -fmodules-cache-path=%t -x objective-c %s -Rmodule-build 2> %t2
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -fsyntax-only -internal-isystem \
 // RUN:   %S/Inputs/System/usr/include -fmodules -fimplicit-module-maps \
-// RUN:   -fbuiltin-headers-in-system-modules -fcomment-block-commands=lp,bj \
+// RUN:   -fcomment-block-commands=lp,bj \
 // RUN:   -fmodules-cache-path=%t -x objective-c %s -Rmodule-build 2> %t3
 // RUN: echo %t > %t.path
 // RUN: cat %t.path %t1 %t2 %t3 | FileCheck --check-prefix=LANGOPTS %s
