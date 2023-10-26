@@ -88,7 +88,7 @@ static bool isSLLISRLI(const MachineInstr *FirstMI,
     return false;
 
   unsigned SLLIImm = FirstMI->getOperand(2).getImm();
-  if (IsShiftBy48 ? (SLLIImm != 48) : (SLLIImm > 32))
+  if (IsShiftBy48 ? (SLLIImm != 48) : (SLLIImm != 32))
     return false;
 
   return checkRegisters(FirstMI->getOperand(0).getReg(), SecondMI);

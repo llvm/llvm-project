@@ -997,19 +997,12 @@ def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
                                    [TuneNoDefaultUnroll,
                                     TuneShortForwardBranchOpt]>;
 
-<<<<<<< HEAD
-def TuneVentanaVeyron : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
-                                         "Ventana-Veyron Series processors",
-                                         [TuneLUIADDIFusion]>;
-=======
 def TuneVeyronFusions : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
                                          "Ventana Veyron-Series processors",
                                          [TuneLUIADDIFusion,
                                           TuneAUIPCADDIFusion,
                                           TuneSLLISRLIFusion,
                                           TuneLDADDFusion]>;
-
->>>>>>> bbf0196a7d42 ([RISCV] Macro-fusion support for veyron-v1 CPU.)
 
 // Assume that lock-free native-width atomics are available, even if the target
 // and operating system combination would not usually provide them. The user
