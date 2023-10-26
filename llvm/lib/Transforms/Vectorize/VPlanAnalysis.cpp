@@ -8,6 +8,7 @@
 
 #include "VPlanAnalysis.h"
 #include "VPlan.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace llvm;
 
@@ -175,71 +176,43 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
   if (Type *CachedTy = CachedTypes.lookup(V))
     return CachedTy;
 
-  Type *ResultTy = nullptr;
   if (V->isLiveIn())
     return V->getLiveInIRValue()->getType();
 
-  const VPRecipeBase *Def = V->getDefiningRecipe();
-
-  switch (Def->getVPDefID()) {
-  case VPDef::VPCanonicalIVPHISC:
-  case VPDef::VPFirstOrderRecurrencePHISC:
-  case VPDef::VPReductionPHISC:
-  case VPDef::VPWidenPointerInductionSC:
-    // Handle header phi recipes, except VPWienIntOrFpInduction which needs
-    // special handling due it being possibly truncated.
-    ResultTy = cast<VPHeaderPHIRecipe>(Def)
-                   ->getStartValue()
-                   ->getLiveInIRValue()
-                   ->getType();
-    break;
-  case VPDef::VPDerivedIVSC: {
-    // VPDerivedIV may truncate the IV to a specified scalar type or use the
-    // type of the first operand (the step).
-    Type *T = cast<VPDerivedIVRecipe>(Def)->getScalarType();
-    ResultTy = T ? T : inferScalarType(Def->getOperand(0));
-    break;
-  }
-  case VPDef::VPWidenIntOrFpInductionSC:
-    ResultTy = cast<VPWidenIntOrFpInductionRecipe>(Def)->getScalarType();
-    break;
-  case VPDef::VPPredInstPHISC:
-  case VPDef::VPWidenPHISC:
-  case VPDef::VPScalarIVStepsSC:
-    ResultTy = inferScalarType(Def->getOperand(0));
-    break;
-  case VPDef::VPBlendSC:
-    ResultTy = inferScalarType(cast<VPBlendRecipe>(Def));
-    break;
-  case VPDef::VPInstructionSC:
-    ResultTy = inferScalarType(cast<VPInstruction>(Def));
-    break;
-  case VPDef::VPInterleaveSC:
-    // TODO: Use info from interleave group.
-    ResultTy = V->getUnderlyingValue()->getType();
-    break;
-  case VPDef::VPReplicateSC:
-    ResultTy = inferScalarType(cast<VPReplicateRecipe>(Def));
-    break;
-  case VPDef::VPWidenSC:
-    ResultTy = inferScalarType(cast<VPWidenRecipe>(Def));
-    break;
-  case VPDef::VPWidenCallSC:
-    ResultTy = inferScalarType(cast<VPWidenCallRecipe>(Def));
-    break;
-  case VPDef::VPWidenCastSC:
-    ResultTy = cast<VPWidenCastRecipe>(Def)->getResultType();
-    break;
-  case VPDef::VPWidenGEPSC:
-    ResultTy = PointerType::get(Ctx, 0);
-    break;
-  case VPDef::VPWidenMemoryInstructionSC:
-    ResultTy = inferScalarType(cast<VPWidenMemoryInstructionRecipe>(Def));
-    break;
-  case VPDef::VPWidenSelectSC:
-    ResultTy = inferScalarType(cast<VPWidenSelectRecipe>(Def));
-    break;
-  }
+  Type *ResultTy =
+      TypeSwitch<const VPRecipeBase *, Type *>(V->getDefiningRecipe())
+          .Case<VPCanonicalIVPHIRecipe, VPFirstOrderRecurrencePHIRecipe,
+                VPReductionPHIRecipe, VPWidenPointerInductionRecipe>(
+              [this](const auto *R) {
+                // Handle header phi recipes, except VPWienIntOrFpInduction
+                // which needs special handling due it being possibly truncated.
+                return inferScalarType(R->getStartValue());
+              })
+          .Case<VPWidenIntOrFpInductionRecipe>(
+              [](const VPWidenIntOrFpInductionRecipe *R) {
+                return R->getScalarType();
+              })
+          .Case<VPDerivedIVRecipe>([this](const VPDerivedIVRecipe *R) {
+            // VPDerivedIV may truncate the IV to a specified scalar type or use
+            // the
+            // type of the first operand (the step).
+            Type *T = R->getScalarType();
+            return T ? T : inferScalarType(R->getOperand(0));
+          })
+          .Case<VPPredInstPHIRecipe, VPWidenPHIRecipe, VPScalarIVStepsRecipe,
+                VPWidenGEPRecipe>([this](const VPRecipeBase *R) {
+            return inferScalarType(R->getOperand(0));
+          })
+          .Case<VPBlendRecipe, VPInstruction, VPWidenRecipe, VPReplicateRecipe,
+                VPWidenCallRecipe, VPWidenMemoryInstructionRecipe,
+                VPWidenSelectRecipe>(
+              [this](const auto *R) { return inferScalarType(R); })
+          .Case<VPInterleaveRecipe>([V](const VPInterleaveRecipe *R) {
+            // TODO: Use info from interleave group.
+            return V->getUnderlyingValue()->getType();
+          })
+          .Case<VPWidenCastRecipe>(
+              [](const VPWidenCastRecipe *R) { return R->getResultType(); });
   assert(ResultTy && "could not infer type for the given VPValue");
   CachedTypes[V] = ResultTy;
   return ResultTy;
