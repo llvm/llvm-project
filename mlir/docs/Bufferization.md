@@ -113,7 +113,7 @@ operand which provides the initial values to update (for example when the
 operation is doing a reduction). 
 
 This input is referred to as "destination" in the following (quotes are
-important are this operand isn't modified in place but copied) and come into
+important as this operand isn't modified in place but copied) and comes into
 place in the context of bufferization as a possible "anchor" for the
 bufferization algorithm. This allows the user to shape the input in a form that
 guarantees close to optimal bufferization result when carefully choosing the
