@@ -163,9 +163,9 @@ define void @storesTIUninit(i32 %Val) #0 {
 ; SMALL32:       # %bb.0: # %entry
 ; SMALL32-NEXT:    mflr 0
 ; SMALL32-NEXT:    stwu 1, -32(1)
-; SMALL32-NEXT:    stw 0, 40(1)
 ; SMALL32-NEXT:    mr 6, 3
 ; SMALL32-NEXT:    lwz 3, L..C4(2)
+; SMALL32-NEXT:    stw 0, 40(1)
 ; SMALL32-NEXT:    bla .__tls_get_mod[PR]
 ; SMALL32-NEXT:    lwz 4, L..C5(2)
 ; SMALL32-NEXT:    stwx 6, 3, 4
@@ -195,9 +195,9 @@ define void @storesTIUninit(i32 %Val) #0 {
 ; SMALL64:       # %bb.0: # %entry
 ; SMALL64-NEXT:    mflr 0
 ; SMALL64-NEXT:    stdu 1, -48(1)
-; SMALL64-NEXT:    std 0, 64(1)
 ; SMALL64-NEXT:    mr 6, 3
 ; SMALL64-NEXT:    ld 3, L..C4(2)
+; SMALL64-NEXT:    std 0, 64(1)
 ; SMALL64-NEXT:    bla .__tls_get_mod[PR]
 ; SMALL64-NEXT:    ld 4, L..C5(2)
 ; SMALL64-NEXT:    stwx 6, 3, 4
@@ -210,9 +210,9 @@ define void @storesTIUninit(i32 %Val) #0 {
 ; LARGE64:       # %bb.0: # %entry
 ; LARGE64-NEXT:    mflr 0
 ; LARGE64-NEXT:    stdu 1, -48(1)
-; LARGE64-NEXT:    std 0, 64(1)
 ; LARGE64-NEXT:    mr 6, 3
 ; LARGE64-NEXT:    addis 3, L..C4@u(2)
+; LARGE64-NEXT:    std 0, 64(1)
 ; LARGE64-NEXT:    addis 7, L..C5@u(2)
 ; LARGE64-NEXT:    ld 3, L..C4@l(3)
 ; LARGE64-NEXT:    bla .__tls_get_mod[PR]
@@ -467,13 +467,13 @@ define i32 @loadsTIUninit() #1 {
 ; SMALL32:       # %bb.0: # %entry
 ; SMALL32-NEXT:    mflr 0
 ; SMALL32-NEXT:    stwu 1, -32(1)
-; SMALL32-NEXT:    stw 0, 40(1)
 ; SMALL32-NEXT:    lwz 3, L..C4(2)
+; SMALL32-NEXT:    stw 0, 40(1)
 ; SMALL32-NEXT:    bla .__tls_get_mod[PR]
 ; SMALL32-NEXT:    lwz 4, L..C5(2)
-; SMALL32-NEXT:    lwz 5, L..C8(2)
 ; SMALL32-NEXT:    lwzx 3, 3, 4
-; SMALL32-NEXT:    lwz 4, 0(5)
+; SMALL32-NEXT:    lwz 4, L..C8(2)
+; SMALL32-NEXT:    lwz 4, 0(4)
 ; SMALL32-NEXT:    add 3, 4, 3
 ; SMALL32-NEXT:    addi 1, 1, 32
 ; SMALL32-NEXT:    lwz 0, 8(1)
@@ -504,13 +504,13 @@ define i32 @loadsTIUninit() #1 {
 ; SMALL64:       # %bb.0: # %entry
 ; SMALL64-NEXT:    mflr 0
 ; SMALL64-NEXT:    stdu 1, -48(1)
-; SMALL64-NEXT:    std 0, 64(1)
 ; SMALL64-NEXT:    ld 3, L..C4(2)
+; SMALL64-NEXT:    std 0, 64(1)
 ; SMALL64-NEXT:    bla .__tls_get_mod[PR]
 ; SMALL64-NEXT:    ld 4, L..C5(2)
-; SMALL64-NEXT:    ld 5, L..C8(2)
 ; SMALL64-NEXT:    lwzx 3, 3, 4
-; SMALL64-NEXT:    lwz 4, 0(5)
+; SMALL64-NEXT:    ld 4, L..C8(2)
+; SMALL64-NEXT:    lwz 4, 0(4)
 ; SMALL64-NEXT:    add 3, 4, 3
 ; SMALL64-NEXT:    addi 1, 1, 48
 ; SMALL64-NEXT:    ld 0, 16(1)
@@ -521,8 +521,8 @@ define i32 @loadsTIUninit() #1 {
 ; LARGE64:       # %bb.0: # %entry
 ; LARGE64-NEXT:    mflr 0
 ; LARGE64-NEXT:    stdu 1, -48(1)
-; LARGE64-NEXT:    std 0, 64(1)
 ; LARGE64-NEXT:    addis 3, L..C4@u(2)
+; LARGE64-NEXT:    std 0, 64(1)
 ; LARGE64-NEXT:    addis 6, L..C5@u(2)
 ; LARGE64-NEXT:    ld 3, L..C4@l(3)
 ; LARGE64-NEXT:    bla .__tls_get_mod[PR]

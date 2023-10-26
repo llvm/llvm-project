@@ -242,9 +242,11 @@ public:
           Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGDM ||
           Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSIE ||
           Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLE ||
-          Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLD ||
-          Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSML)
+          Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLD)
         OS << "\t.tc " << TCSym->getName() << "," << XSym->getName() << "@"
+           << MCSymbolRefExpr::getVariantKindName(Kind) << '\n';
+      else if (Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSML)
+        OS << "\t.tc " << TCSym->getName() << "," << TCSym->getName() << "@"
            << MCSymbolRefExpr::getVariantKindName(Kind) << '\n';
       else
         OS << "\t.tc " << TCSym->getName() << "," << XSym->getName() << '\n';

@@ -1602,9 +1602,9 @@ def TLSGDAIX8 :
                      "#TLSGDAIX8",
                      [(set i64:$rD,
                        (PPCTlsgdAIX i64:$offset, i64:$handle))]>;
-// This pseudo is expanded to load module-handle in X3, and the call to GETtlsMOD64AIX.
-def TLSLDAIX8 : PPCEmitTimePseudo<(outs g8rc:$rD), (ins),
-                     "#TLSLDAIX8", [(set i64:$rD, (PPCTlsldAIX))]>;
+// This pseudo is expanded to the call to GETtlsMOD64AIX.
+def TLSLDAIX8 : PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc:$handle),
+                     "#TLSLDAIX8", [(set i64:$rD, (PPCTlsldAIX i64:$handle))]>;
 // Combined op for ADDItlsldL and GETtlsADDR, late expanded.  X3 and LR8
 // are true defines, while the rest of the Defs are clobbers.
 let hasExtraSrcRegAllocReq = 1, hasExtraDefRegAllocReq = 1,

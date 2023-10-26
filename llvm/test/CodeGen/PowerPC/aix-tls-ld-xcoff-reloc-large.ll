@@ -38,14 +38,14 @@ entry:
 ; RELOC-NEXT: Arch: powerpc64
 ; RELOC-NEXT: AddressSize: 64bit
 ; RELOC-NEXT: Relocations [
-; RELOC:      Virtual Address: 0x12
+; RELOC:      Virtual Address: 0xE
 ; RELOC-NEXT:      Symbol: _$TLSML (19)
 ; RELOC-NEXT:      IsSigned: No
 ; RELOC-NEXT:      FixupBitValue: 0
 ; RELOC-NEXT:      Length: 16
 ; RELOC-NEXT:      Type: R_TOCU (0x30)
 ; RELOC-NEXT:    }
-; RELOC:      Virtual Address: 0x16
+; RELOC:      Virtual Address: 0x12
 ; RELOC-NEXT:      Symbol: IThreadLocalVarUninit (21)
 ; RELOC-NEXT:      IsSigned: No
 ; RELOC-NEXT:      FixupBitValue: 0
@@ -66,14 +66,14 @@ entry:
 ; RELOC-NEXT:      Length: 16
 ; RELOC-NEXT:      Type: R_TOCL (0x31)
 ; RELOC-NEXT:    }
-; RELOC:      Virtual Address: 0x4E
+; RELOC:      Virtual Address: 0x4A
 ; RELOC-NEXT:      Symbol: _$TLSML (19)
 ; RELOC-NEXT:      IsSigned: No
 ; RELOC-NEXT:      FixupBitValue: 0
 ; RELOC-NEXT:      Length: 16
 ; RELOC-NEXT:      Type: R_TOCU (0x30)
 ; RELOC-NEXT:    }
-; RELOC:      Virtual Address: 0x52
+; RELOC:      Virtual Address: 0x4E
 ; RELOC-NEXT:      Symbol: ThreadLocalVarInit (23)
 ; RELOC-NEXT:      IsSigned: No
 ; RELOC-NEXT:      FixupBitValue: 0
@@ -94,14 +94,14 @@ entry:
 ; RELOC-NEXT:      Length: 16
 ; RELOC-NEXT:      Type: R_TOCL (0x31)
 ; RELOC-NEXT:    }
-; RELOC:      Virtual Address: 0x8E
+; RELOC:      Virtual Address: 0x8A
 ; RELOC-NEXT:      Symbol: _$TLSML (19)
 ; RELOC-NEXT:      IsSigned: No
 ; RELOC-NEXT:      FixupBitValue: 0
 ; RELOC-NEXT:      Length: 16
 ; RELOC-NEXT:      Type: R_TOCU (0x30)
 ; RELOC-NEXT:    }
-; RELOC:      Virtual Address: 0x92
+; RELOC:      Virtual Address: 0x8E
 ; RELOC-NEXT:      Symbol: IThreadLocalVarUninit (21)
 ; RELOC-NEXT:      IsSigned: No
 ; RELOC-NEXT:      FixupBitValue: 0

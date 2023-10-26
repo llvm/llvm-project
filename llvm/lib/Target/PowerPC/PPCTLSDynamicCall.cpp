@@ -57,9 +57,6 @@ protected:
       bool IsPCREL = false;
       MachineFunction *MF = MBB.getParent();
       MachineRegisterInfo &RegInfo = MF->getRegInfo();
-      const TargetRegisterClass *GPRNoZero =
-          Is64Bit ? &PPC::G8RC_and_G8RC_NOX0RegClass
-                  : &PPC::GPRC_and_GPRC_NOR0RegClass;
 
       for (MachineBasicBlock::iterator I = MBB.begin(), IE = MBB.end();
            I != IE;) {
@@ -97,7 +94,7 @@ protected:
         Register InReg = PPC::NoRegister;
         Register GPR3 = Is64Bit ? PPC::X3 : PPC::R3;
         Register GPR4 = Is64Bit ? PPC::X4 : PPC::R4;
-        if (!IsPCREL && !IsTLSTPRelMI && !IsTLSLDAIXMI)
+        if (!IsPCREL && !IsTLSTPRelMI)
           InReg = MI.getOperand(1).getReg();
         DebugLoc DL = MI.getDebugLoc();
 
@@ -164,84 +161,74 @@ protected:
 
         if (IsAIX) {
           if (IsTLSLDAIXMI) {
-            // It is better to put TLSLDAIX node before LoadOffsetToc node,
-            // because LoadOffsetToc node can use clobbers r4/r5. Search for the
-            // first paired LoadOffsetToc node within the same BB.
+            // The relative order between the LoadOffset@toc node, and the
+            // ._tls_get_mod node is being tuned here. It is better to put the
+            // LoadOffset@toc node after the call, since the LoadOffset@toc node
+            // can use clobbers r4/r5. Search for the pattern of two Load@toc
+            // nodes, and then move the LoadOffset@toc node right before the
+            // node that uses the OutReg of the ._tls_get_mod node.
             unsigned LDTocOp =
                 Is64Bit ? (IsLargeModel ? PPC::LDtocL : PPC::LDtoc)
                         : (IsLargeModel ? PPC::LWZtocL : PPC::LWZtoc);
-            MachineBasicBlock::iterator Anchor = I;
             if (!RegInfo.use_empty(OutReg)) {
               std::set<MachineInstr *> Uses;
-              // Collect all instructions that use OutReg
-              for (MachineOperand &MO : RegInfo.use_operands(OutReg)) {
-                if (Uses.count(MO.getParent()))
-                  continue;
+              // Collect all instructions that use the OutReg.
+              for (MachineOperand &MO : RegInfo.use_operands(OutReg))
                 Uses.insert(MO.getParent());
-              }
-              // Find the first Add within current BB.
+              // Find the first user (e.g.: lwax/stfdx) within the current BB.
               MachineBasicBlock::iterator UseIter = MBB.begin();
-              for (MachineBasicBlock::iterator AE = MBB.end(); UseIter != AE;
+              for (MachineBasicBlock::iterator IE = MBB.end(); UseIter != IE;
                    ++UseIter)
                 if (Uses.count(&*UseIter))
                   break;
 
               if (UseIter != MBB.end()) {
-                // Get the instruction that defines the other used register
-                // operand of UseIter. The match pattern is that: UseIter has
-                // exactly one used-operand defined by LDTocOp
-                // (LDtocL/LDtoc/LWZtocL/LWZtoc).
-                MachineInstr *LoadOffsetToc = nullptr;
-                int MatchCount = 0;
-                for (MachineOperand &MO : UseIter->operands()) {
+                // Collect associated Load@toc nodes.
+                std::set<MachineInstr *> LoadFromTocs;
+                for (MachineOperand &MO : UseIter->operands())
                   if (MO.isReg() && MO.isUse()) {
-                    Register OffsetReg = MO.getReg();
-                    if (RegInfo.hasOneDef(OffsetReg)) {
-                      if (RegInfo.getOneDef(OffsetReg)
-                              ->getParent()
-                              ->getOpcode() == LDTocOp) {
-                        LoadOffsetToc =
-                            RegInfo.getOneDef(OffsetReg)->getParent();
-                        ++MatchCount;
-                      }
+                    if (RegInfo.hasOneDef(MO.getReg())) {
+                      MachineInstr *Temp =
+                          RegInfo.getOneDef(MO.getReg())->getParent();
+                      if (Temp == &MI && RegInfo.hasOneDef(InReg))
+                        Temp = RegInfo.getOneDef(InReg)->getParent();
+                      if (Temp->getOpcode() == LDTocOp)
+                        LoadFromTocs.insert(Temp);
                     } else {
                       // FIXME: analyze this scenario if there is one.
-                      MatchCount = 0;
+                      LoadFromTocs.clear();
                       break;
                     }
                   }
-                }
-                // Get the iterator.
-                if (MatchCount == 1 && LoadOffsetToc) {
-                  Anchor = MBB.begin();
-                  for (MachineBasicBlock::iterator AE = MBB.end(); Anchor != AE;
-                       ++Anchor)
-                    if (&*Anchor == LoadOffsetToc)
-                      break;
 
-                  if (Anchor == MBB.end())
-                    Anchor = I;
+                // Check the two Load@toc: one should be _$TLSML, and the other
+                // will be moved before the node that uses the OutReg of the
+                // ._tls_get_mod node.
+                if (LoadFromTocs.size() == 2) {
+                  MachineBasicBlock::iterator TLSMLIter = MBB.end();
+                  MachineBasicBlock::iterator OffsetIter = MBB.end();
+                  for (MachineBasicBlock::iterator I = MBB.begin(),
+                                                   IE = MBB.end();
+                       I != IE; ++I)
+                    if (LoadFromTocs.count(&*I)) {
+                      if (I->getOperand(1).isGlobal() &&
+                          I->getOperand(1).getGlobal()->getName().equals(
+                              "_$TLSML"))
+                        TLSMLIter = I;
+                      else
+                        OffsetIter = I;
+                    }
+                  if (TLSMLIter != MBB.end() && OffsetIter != MBB.end())
+                    OffsetIter->moveBefore(&*UseIter);
                 }
               }
             }
-
-            // Generate instructions to load module-handle.
-            Register ModuleHandleHReg;
-            if (IsLargeModel) {
-              ModuleHandleHReg = RegInfo.createVirtualRegister(GPRNoZero);
-              BuildMI(MBB, Anchor, DL,
-                      TII->get(Is64Bit ? PPC::ADDIStocHA8 : PPC::ADDIStocHA),
-                      ModuleHandleHReg)
-                  .addReg(Subtarget.getTOCPointerRegister())
-                  .addExternalSymbol("_$TLSML[TC]", PPCII::MO_TLSLD_FLAG);
-            }
-            BuildMI(MBB, Anchor, DL, TII->get(LDTocOp), GPR3)
-                .addExternalSymbol("_$TLSML[TC]", PPCII::MO_TLSLD_FLAG)
-                .addReg(IsLargeModel
-                            ? ModuleHandleHReg
-                            : Register(Subtarget.getTOCPointerRegister()));
+            // The module-handle is copied in r3. The copy is followed by
+            // GETtlsMOD32AIX/GETtlsMOD64AIX.
+            BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), GPR3)
+                .addReg(InReg);
             // The call to .__tls_get_mod.
-            BuildMI(MBB, Anchor, DL, TII->get(Opc2), GPR3).addReg(GPR3);
+            BuildMI(MBB, I, DL, TII->get(Opc2), GPR3).addReg(GPR3);
           } else if (!IsTLSTPRelMI) {
             // The variable offset and region handle are copied in r4 and r3.
             // The copies are followed by GETtlsADDR32AIX/GETtlsADDR64AIX.

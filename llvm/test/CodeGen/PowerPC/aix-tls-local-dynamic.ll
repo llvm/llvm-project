@@ -327,7 +327,7 @@ define i32 @DedupTlsGetMod() #0 {
 ; WITHDUP-NEXT:   ld [[OffsetXR:[0-9]+]], [[X:L..C[0-9]+]](2)
 ; WITHDUP:        ld [[ModuleHandleR:3]], [[ModuleHandleL:L..C[0-9]+]](2)
 ; WITHDUP-NEXT:   bla .__tls_get_mod[PR]
-; WITHDUP-NEXT:   ld [[OffsetYR:[0-9]+]], [[Y:L..C[0-9]+]](2)
+; WITHDUP:        ld [[OffsetYR:[0-9]+]], [[Y:L..C[0-9]+]](2)
 ; WITHDUP-LABEL:  L..DedupTlsGetMod0:
 ;
 ; NODUP-LABEL:  DedupTlsGetMod:
