@@ -84,11 +84,14 @@ entry:
   ret i64 %res
 }
 
+; TODO: Handle vector cases?
 define <4 x i16> @select_v4i16_eq0_abs_t(<4 x i16> %a) {
 ; CHECK-LABEL: @select_v4i16_eq0_abs_t(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ABS:%.*]] = tail call <4 x i16> @llvm.abs.v4i16(<4 x i16> [[A:%.*]], i1 true)
-; CHECK-NEXT:    ret <4 x i16> [[ABS]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq <4 x i16> [[A:%.*]], zeroinitializer
+; CHECK-NEXT:    [[ABS:%.*]] = tail call <4 x i16> @llvm.abs.v4i16(<4 x i16> [[A]], i1 true)
+; CHECK-NEXT:    [[RES:%.*]] = select <4 x i1> [[COND]], <4 x i16> zeroinitializer, <4 x i16> [[ABS]]
+; CHECK-NEXT:    ret <4 x i16> [[RES]]
 ;
 entry:
   %cond = icmp eq <4 x i16> %a, <i16 0, i16 0, i16 0, i16 0>
@@ -100,8 +103,10 @@ entry:
 define <4 x i16> @select_v4i16_ne0_abs_t(<4 x i16> %a) {
 ; CHECK-LABEL: @select_v4i16_ne0_abs_t(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ABS:%.*]] = tail call <4 x i16> @llvm.abs.v4i16(<4 x i16> [[A:%.*]], i1 true)
-; CHECK-NEXT:    ret <4 x i16> [[ABS]]
+; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp eq <4 x i16> [[A:%.*]], zeroinitializer
+; CHECK-NEXT:    [[ABS:%.*]] = tail call <4 x i16> @llvm.abs.v4i16(<4 x i16> [[A]], i1 true)
+; CHECK-NEXT:    [[RES:%.*]] = select <4 x i1> [[COND_NOT]], <4 x i16> zeroinitializer, <4 x i16> [[ABS]]
+; CHECK-NEXT:    ret <4 x i16> [[RES]]
 ;
 entry:
   %cond = icmp ne <4 x i16> %a, <i16 0, i16 0, i16 0, i16 0>
@@ -113,8 +118,10 @@ entry:
 define <4 x i16> @select_v4i16_ne0_abs_t_with_undef(<4 x i16> %a) {
 ; CHECK-LABEL: @select_v4i16_ne0_abs_t_with_undef(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ABS:%.*]] = tail call <4 x i16> @llvm.abs.v4i16(<4 x i16> [[A:%.*]], i1 true)
-; CHECK-NEXT:    ret <4 x i16> [[ABS]]
+; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp eq <4 x i16> [[A:%.*]], zeroinitializer
+; CHECK-NEXT:    [[ABS:%.*]] = tail call <4 x i16> @llvm.abs.v4i16(<4 x i16> [[A]], i1 true)
+; CHECK-NEXT:    [[RES:%.*]] = select <4 x i1> [[COND_NOT]], <4 x i16> <i16 undef, i16 0, i16 0, i16 0>, <4 x i16> [[ABS]]
+; CHECK-NEXT:    ret <4 x i16> [[RES]]
 ;
 entry:
   %cond = icmp ne <4 x i16> %a, <i16 0, i16 0, i16 0, i16 0>
