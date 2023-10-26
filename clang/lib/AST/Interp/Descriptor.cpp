@@ -262,7 +262,7 @@ Descriptor::Descriptor(const DeclTy &D, PrimType Type, bool IsTemporary,
 }
 
 /// Arrays of composite elements.
-Descriptor::Descriptor(const DeclTy &D, Descriptor *Elem, MetadataSize MD,
+Descriptor::Descriptor(const DeclTy &D, const Descriptor *Elem, MetadataSize MD,
                        unsigned NumElems, bool IsConst, bool IsTemporary,
                        bool IsMutable)
     : Source(D), ElemSize(Elem->getAllocSize() + sizeof(InlineDescriptor)),

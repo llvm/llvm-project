@@ -184,7 +184,8 @@ public:
 
     // Step into the containing array, if inside one.
     unsigned Next = Base - getInlineDesc()->Offset;
-    Descriptor *Desc = Next == 0 ? getDeclDesc() : getDescriptor(Next)->Desc;
+    const Descriptor *Desc =
+        Next == 0 ? getDeclDesc() : getDescriptor(Next)->Desc;
     if (!Desc->IsArray)
       return *this;
     return Pointer(Pointee, Next, Offset);
@@ -198,7 +199,7 @@ public:
   bool isField() const { return Base != 0 && Base != RootPtrMark; }
 
   /// Accessor for information about the declaration site.
-  Descriptor *getDeclDesc() const { return Pointee->Desc; }
+  const Descriptor *getDeclDesc() const { return Pointee->Desc; }
   SourceLocation getDeclLoc() const { return getDeclDesc()->getLocation(); }
 
   /// Returns a pointer to the object of which this pointer is a field.
@@ -222,7 +223,7 @@ public:
   }
 
   /// Accessors for information about the innermost field.
-  Descriptor *getFieldDesc() const {
+  const Descriptor *getFieldDesc() const {
     if (Base == 0 || Base == RootPtrMark)
       return getDeclDesc();
     return getInlineDesc()->Desc;
