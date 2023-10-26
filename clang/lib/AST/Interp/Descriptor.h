@@ -84,7 +84,7 @@ private:
   const unsigned ElemSize;
   /// Size of the storage, in host bytes.
   const unsigned Size;
-  // Size of the metadata.
+  /// Size of the metadata.
   const unsigned MDSize;
   /// Size of the allocation (storage + metadata), in host bytes.
   const unsigned AllocSize;
