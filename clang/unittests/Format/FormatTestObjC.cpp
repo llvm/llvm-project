@@ -1527,7 +1527,10 @@ TEST_F(FormatTestObjC, IfNotUnlikely) {
                "  [obj func:arg2];");
 }
 
-TEST_F(FormatTestObjC, Attributes) {
+TEST_F(FormatTestObjC, AttributesOnObjCDecl) {
+  Style.AttributeMacros.push_back("ATTRIBUTE_MACRO");
+
+  // Check '__attribute__' macro directly.
   verifyFormat("__attribute__((objc_subclassing_restricted))\n"
                "@interface Foo\n"
                "@end");
@@ -1537,6 +1540,215 @@ TEST_F(FormatTestObjC, Attributes) {
   verifyFormat("__attribute__((objc_subclassing_restricted))\n"
                "@implementation Foo\n"
                "@end");
+
+  // Check AttributeMacro gets treated the same, with or without parentheses.
+  verifyFormat("ATTRIBUTE_MACRO\n"
+               "@interface Foo\n"
+               "@end");
+  verifyFormat("ATTRIBUTE_MACRO(X)\n"
+               "@interface Foo\n"
+               "@end");
+
+  // Indenter also needs to understand multiple attribute macros.
+  // Try each of the three kinds paired with each of the other kind.
+
+  // Column limit, but no reflow.
+  verifyFormat("ATTRIBUTE_MACRO(X) ATTRIBUTE_MACRO\n"
+               "@interface Foo\n"
+               "@end");
+  verifyFormat("ATTRIBUTE_MACRO ATTRIBUTE_MACRO(X)\n"
+               "@interface Foo\n"
+               "@end");
+  verifyFormat("__attribute__((X)) ATTRIBUTE_MACRO\n"
+               "@interface Foo\n"
+               "@end");
+  verifyFormat("ATTRIBUTE_MACRO __attribute__((X))\n"
+               "@interface Foo\n"
+               "@end");
+  verifyFormat("__attribute__((X)) ATTRIBUTE_MACRO(X)\n"
+               "@interface Foo\n"
+               "@end");
+  verifyFormat("ATTRIBUTE_MACRO(X) __attribute__((X))\n"
+               "@interface Foo\n"
+               "@end");
+
+  // Column limit that requires reflow.
+  Style.ColumnLimit = 30;
+  verifyFormat("ATTRIBUTE_MACRO(X)\n"
+               "ATTRIBUTE_MACRO\n"
+               "@interface Foo\n"
+               "@end");
+  verifyFormat("ATTRIBUTE_MACRO\n"
+               "ATTRIBUTE_MACRO(X)\n"
+               "@interface Foo\n"
+               "@end");
+  verifyFormat("__attribute__((X))\n"
+               "ATTRIBUTE_MACRO\n"
+               "@interface Foo\n"
+               "@end");
+  verifyFormat("ATTRIBUTE_MACRO\n"
+               "__attribute__((X))\n"
+               "@interface Foo\n"
+               "@end");
+  verifyFormat("__attribute__((X))\n"
+               "ATTRIBUTE_MACRO(X)\n"
+               "@interface Foo\n"
+               "@end");
+  verifyFormat("ATTRIBUTE_MACRO(X)\n"
+               "__attribute__((X))\n"
+               "@interface Foo\n"
+               "@end");
+
+  // No column limit
+  Style.ColumnLimit = 0;
+  verifyFormat("ATTRIBUTE_MACRO(X) ATTRIBUTE_MACRO\n"
+               "@interface Foo\n"
+               "@end");
+  verifyFormat("ATTRIBUTE_MACRO ATTRIBUTE_MACRO(X)\n"
+               "@interface Foo\n"
+               "@end");
+  verifyFormat("__attribute__((X)) ATTRIBUTE_MACRO\n"
+               "@interface Foo\n"
+               "@end");
+  verifyFormat("ATTRIBUTE_MACRO __attribute__((X))\n"
+               "@interface Foo\n"
+               "@end");
+  verifyFormat("__attribute__((X)) ATTRIBUTE_MACRO(X)\n"
+               "@interface Foo\n"
+               "@end");
+  verifyFormat("ATTRIBUTE_MACRO(X) __attribute__((X))\n"
+               "@interface Foo\n"
+               "@end");
+}
+
+TEST_F(FormatTestObjC, AttributesOnObjCMethodDecl) {
+  Style.AttributeMacros.push_back("ATTRIBUTE_MACRO");
+
+  // Check '__attribute__' macro directly.
+  verifyFormat("- (id)init __attribute__((objc_designated_initializer));");
+
+  // Check AttributeMacro gets treated the same, with or without parentheses.
+  verifyFormat("- (id)init ATTRIBUTE_MACRO;");
+  verifyFormat("- (id)init ATTRIBUTE_MACRO(X);");
+
+  // Indenter also needs to understand multiple attribute macros.
+
+  // Column limit (default), but no reflow.
+  verifyFormat("- (id)init ATTRIBUTE_MACRO(X) ATTRIBUTE_MACRO;");
+  verifyFormat("- (id)init ATTRIBUTE_MACRO ATTRIBUTE_MACRO(X);");
+  verifyFormat("- (id)init __attribute__((X)) ATTRIBUTE_MACRO;");
+  verifyFormat("- (id)init ATTRIBUTE_MACRO __attribute__((X));");
+  verifyFormat("- (id)init __attribute__((X)) ATTRIBUTE_MACRO(X);");
+  verifyFormat("- (id)init ATTRIBUTE_MACRO(X) __attribute__((X));");
+
+  // Column limit that requires reflow.
+  Style.ColumnLimit = 30;
+
+  // Reflow after method name.
+  verifyFormat("- (id)initWithReallyLongName\n"
+               "    __attribute__((X))\n"
+               "    ATTRIBUTE_MACRO;");
+  verifyFormat("- (id)initWithReallyLongName\n"
+               "    ATTRIBUTE_MACRO(X)\n"
+               "    ATTRIBUTE_MACRO;");
+  verifyFormat("- (id)initWithReallyLongName\n"
+               "    ATTRIBUTE_MACRO\n"
+               "    ATTRIBUTE_MACRO;");
+  // Reflow after first macro.
+  // FIXME: these should indent but don't.
+#if 0
+  verifyFormat("- (id)init ATTRIBUTE_MACRO(X)\n"
+               "    ATTRIBUTE_MACRO;");
+  verifyFormat("- (id)init ATTRIBUTE_MACRO\n"
+               "    ATTRIBUTE_MACRO(X);");
+  verifyFormat("- (id)init __attribute__((X))\n"
+               "    ATTRIBUTE_MACRO;");
+  verifyFormat("- (id)init ATTRIBUTE_MACRO\n"
+               "    __attribute__((X));");
+  verifyFormat("- (id)init __attribute__((X))\n"
+               "    ATTRIBUTE_MACRO(X);");
+  verifyFormat("- (id)init ATTRIBUTE_MACRO(X)\n"
+               "    __attribute__((X));");
+#endif
+
+  // No column limit.
+  Style.ColumnLimit = 0;
+  verifyFormat("- (id)init ATTRIBUTE_MACRO(X) ATTRIBUTE_MACRO;");
+  verifyFormat("- (id)init ATTRIBUTE_MACRO ATTRIBUTE_MACRO(X);");
+  verifyFormat("- (id)init __attribute__((X)) ATTRIBUTE_MACRO;");
+  verifyFormat("- (id)init ATTRIBUTE_MACRO __attribute__((X));");
+  verifyFormat("- (id)init __attribute__((X)) ATTRIBUTE_MACRO(X);");
+  verifyFormat("- (id)init ATTRIBUTE_MACRO(X) __attribute__((X));");
+}
+
+TEST_F(FormatTestObjC, AttributesOnObjCProperty) {
+  Style.AttributeMacros.push_back("ATTRIBUTE_MACRO");
+
+  // Check '__attribute__' macro directly.
+  verifyFormat("@property(weak) id delegate "
+               "__attribute__((objc_designated_initializer));");
+
+  // Check AttributeMacro gets treated the same, with or without parentheses.
+  verifyFormat("@property(weak) id delegate ATTRIBUTE_MACRO;");
+  verifyFormat("@property(weak) id delegate ATTRIBUTE_MACRO(X);");
+
+  // Indenter also needs to understand multiple attribute macros.
+
+  // Column limit (default), but no reflow.
+  verifyFormat(
+      "@property(weak) id delegate ATTRIBUTE_MACRO(X) ATTRIBUTE_MACRO;");
+  verifyFormat(
+      "@property(weak) id delegate ATTRIBUTE_MACRO ATTRIBUTE_MACRO(X);");
+  verifyFormat(
+      "@property(weak) id delegate __attribute__((X)) ATTRIBUTE_MACRO;");
+  verifyFormat(
+      "@property(weak) id delegate ATTRIBUTE_MACRO __attribute__((X));");
+  verifyFormat(
+      "@property(weak) id delegate __attribute__((X)) ATTRIBUTE_MACRO(X);");
+  verifyFormat(
+      "@property(weak) id delegate ATTRIBUTE_MACRO(X) __attribute__((X));");
+
+  // Column limit that requires reflow.
+  Style.ColumnLimit = 50;
+
+  // Reflow after method name.
+  verifyFormat("@property(weak) id delegateWithLongName\n"
+               "    __attribute__((X)) ATTRIBUTE_MACRO;");
+  verifyFormat("@property(weak) id delegateWithLongName\n"
+               "    ATTRIBUTE_MACRO(X) ATTRIBUTE_MACRO;");
+  verifyFormat("@property(weak) id delegateWithLongName\n"
+               "    ATTRIBUTE_MACRO ATTRIBUTE_MACRO;");
+  // Reflow after first macro.
+  // FIXME: these should indent but don't.
+#if 0
+  verifyFormat("@property(weak) id delegate ATTRIBUTE_MACRO(X)\n"
+               "    ATTRIBUTE_MACRO;");
+  verifyFormat("@property(weak) id delegate ATTRIBUTE_MACRO\n"
+               "    ATTRIBUTE_MACRO(X);");
+  verifyFormat("@property(weak) id delegate __attribute__((X))\n"
+               "    ATTRIBUTE_MACRO;");
+  verifyFormat("@property(weak) id delegate ATTRIBUTE_MACRO\n"
+               "    __attribute__((X));");
+  verifyFormat("@property(weak) id delegate __attribute__((X))\n"
+               "    ATTRIBUTE_MACRO(X);");
+  verifyFormat("@property(weak) id delegate ATTRIBUTE_MACRO(X)\n"
+               "    __attribute__((X));");
+#endif
+
+  // No column limit.
+  Style.ColumnLimit = 0;
+  verifyFormat(
+      "@property(weak) id delegate ATTRIBUTE_MACRO(X) ATTRIBUTE_MACRO;");
+  verifyFormat(
+      "@property(weak) id delegate ATTRIBUTE_MACRO ATTRIBUTE_MACRO(X);");
+  verifyFormat(
+      "@property(weak) id delegate __attribute__((X)) ATTRIBUTE_MACRO;");
+  verifyFormat(
+      "@property(weak) id delegate ATTRIBUTE_MACRO __attribute__((X));");
+  verifyFormat(
+      "@property(weak) id delegate __attribute__((X)) ATTRIBUTE_MACRO(X);");
+  verifyFormat(
+      "@property(weak) id delegate ATTRIBUTE_MACRO(X) __attribute__((X));");
 }
 
 } // end namespace

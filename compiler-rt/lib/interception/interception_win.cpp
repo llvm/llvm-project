@@ -624,7 +624,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
                       //   mov rax, QWORD PTR [rip + XXXXXXXX]
     case 0x25ff48:    // 48 ff 25 XX XX XX XX :
                       //   rex.W jmp QWORD PTR [rip + XXXXXXXX]
-
+    case 0x158D4C:    // 4c 8d 15 XX XX XX XX : lea r10, [rip + XX]
       // Instructions having offset relative to 'rip' need offset adjustment.
       if (rel_offset)
         *rel_offset = 3;
@@ -726,16 +726,22 @@ static bool CopyInstructions(uptr to, uptr from, size_t size) {
     size_t instruction_size = GetInstructionSize(from + cursor, &rel_offset);
     if (!instruction_size)
       return false;
-    _memcpy((void*)(to + cursor), (void*)(from + cursor),
+    _memcpy((void *)(to + cursor), (void *)(from + cursor),
             (size_t)instruction_size);
     if (rel_offset) {
-      uptr delta = to - from;
-      uptr relocated_offset = *(u32*)(to + cursor + rel_offset) - delta;
-#if SANITIZER_WINDOWS64
-      if (relocated_offset + 0x80000000U >= 0xFFFFFFFFU)
+#  if SANITIZER_WINDOWS64
+      // we want to make sure that the new relative offset still fits in 32-bits
+      // this will be untrue if relocated_offset \notin [-2**31, 2**31)
+      s64 delta = to - from;
+      s64 relocated_offset = *(s32 *)(to + cursor + rel_offset) - delta;
+      if (-0x8000'0000ll > relocated_offset || relocated_offset > 0x7FFF'FFFFll)
         return false;
-#endif
-      *(u32*)(to + cursor + rel_offset) = relocated_offset;
+#  else
+      // on 32-bit, the relative offset will always be correct
+      s32 delta = to - from;
+      s32 relocated_offset = *(s32 *)(to + cursor + rel_offset) - delta;
+#  endif
+      *(s32 *)(to + cursor + rel_offset) = relocated_offset;
     }
     cursor += instruction_size;
   }

@@ -302,7 +302,7 @@ def FSW : FPStore_r<0b010, "fsw", FPR32, WriteFST32>;
 } // Predicates = [HasStdExtF]
 
 foreach Ext = FExts in {
-  let SchedRW = [WriteFMA32, ReadFMA32, ReadFMA32, ReadFMA32] in {
+  let SchedRW = [WriteFMA32, ReadFMA32, ReadFMA32, ReadFMA32Addend] in {
     defm FMADD_S  : FPFMA_rrr_frm_m<OPC_MADD,  0b00, "fmadd.s",  Ext>;
     defm FMSUB_S  : FPFMA_rrr_frm_m<OPC_MSUB,  0b00, "fmsub.s",  Ext>;
     defm FNMSUB_S : FPFMA_rrr_frm_m<OPC_NMSUB, 0b00, "fnmsub.s", Ext>;
@@ -481,10 +481,10 @@ class PatSetCC<DAGOperand Ty, SDPatternOperator OpNode, CondCode Cond,
                RVInst Inst, ValueType vt>
     : Pat<(XLenVT (OpNode (vt Ty:$rs1), Ty:$rs2, Cond)), (Inst $rs1, $rs2)>;
 multiclass PatSetCC_m<SDPatternOperator OpNode, CondCode Cond,
-                      RVInst Inst, ExtInfo Ext, ValueType vt> {
+                      RVInst Inst, ExtInfo Ext> {
   let Predicates = Ext.Predicates in
   def Ext.Suffix : PatSetCC<Ext.PrimaryTy, OpNode, Cond,
-                            !cast<RVInst>(Inst#Ext.Suffix), vt>;
+                            !cast<RVInst>(Inst#Ext.Suffix), Ext.PrimaryVT>;
 }
 
 class PatFprFpr<SDPatternOperator OpNode, RVInstR Inst,
@@ -606,12 +606,12 @@ foreach Ext = FExts in {
 
 // Match non-signaling FEQ_S
 foreach Ext = FExts in {
-  defm : PatSetCC_m<any_fsetcc,    SETEQ,  FEQ_S,            Ext, f32>;
-  defm : PatSetCC_m<any_fsetcc,    SETOEQ, FEQ_S,            Ext, f32>;
-  defm : PatSetCC_m<strict_fsetcc, SETLT,  PseudoQuietFLT_S, Ext, f32>;
-  defm : PatSetCC_m<strict_fsetcc, SETOLT, PseudoQuietFLT_S, Ext, f32>;
-  defm : PatSetCC_m<strict_fsetcc, SETLE,  PseudoQuietFLE_S, Ext, f32>;
-  defm : PatSetCC_m<strict_fsetcc, SETOLE, PseudoQuietFLE_S, Ext, f32>;
+  defm : PatSetCC_m<any_fsetcc,    SETEQ,  FEQ_S,            Ext>;
+  defm : PatSetCC_m<any_fsetcc,    SETOEQ, FEQ_S,            Ext>;
+  defm : PatSetCC_m<strict_fsetcc, SETLT,  PseudoQuietFLT_S, Ext>;
+  defm : PatSetCC_m<strict_fsetcc, SETOLT, PseudoQuietFLT_S, Ext>;
+  defm : PatSetCC_m<strict_fsetcc, SETLE,  PseudoQuietFLE_S, Ext>;
+  defm : PatSetCC_m<strict_fsetcc, SETOLE, PseudoQuietFLE_S, Ext>;
 }
 
 let Predicates = [HasStdExtF] in {
@@ -645,10 +645,10 @@ def : Pat<(XLenVT (strict_fsetccs FPR32INX:$rs1, FPR32INX:$rs1, SETOEQ)),
 } // Predicates = [HasStdExtZfinx]
 
 foreach Ext = FExts in {
-  defm : PatSetCC_m<any_fsetccs, SETLT,  FLT_S, Ext, f32>;
-  defm : PatSetCC_m<any_fsetccs, SETOLT, FLT_S, Ext, f32>;
-  defm : PatSetCC_m<any_fsetccs, SETLE,  FLE_S, Ext, f32>;
-  defm : PatSetCC_m<any_fsetccs, SETOLE, FLE_S, Ext, f32>;
+  defm : PatSetCC_m<any_fsetccs, SETLT,  FLT_S, Ext>;
+  defm : PatSetCC_m<any_fsetccs, SETOLT, FLT_S, Ext>;
+  defm : PatSetCC_m<any_fsetccs, SETLE,  FLE_S, Ext>;
+  defm : PatSetCC_m<any_fsetccs, SETOLE, FLE_S, Ext>;
 }
 
 let Predicates = [HasStdExtF] in {

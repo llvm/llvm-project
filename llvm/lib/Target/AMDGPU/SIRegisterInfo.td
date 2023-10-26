@@ -125,9 +125,15 @@ class SIRegisterTuples<list<SubRegIndex> Indices, RegisterClass RC,
 class SIReg <string n, bits<8> regIdx = 0, bit isAGPROrVGPR = 0,
              bit isHi = 0> : Register<n> {
   let Namespace = "AMDGPU";
+
+  // These are generic helper values we use to form actual register
+  // codes. They should not be assumed to match any particular register
+  // encodings on any particular subtargets.
   let HWEncoding{7-0} = regIdx;
   let HWEncoding{8} = isAGPROrVGPR;
   let HWEncoding{9} = isHi;
+
+  int Index = !cast<int>(regIdx);
 }
 
 // For register classes that use TSFlags.
@@ -164,6 +170,8 @@ multiclass SIRegLoHi16 <string n, bits<8> regIdx, bit ArtificialHigh = 1,
     let CoveredBySubRegs = !not(ArtificialHigh);
     let HWEncoding{7-0} = regIdx;
     let HWEncoding{8} = isAGPROrVGPR;
+
+    int Index = !cast<int>(regIdx);
   }
 }
 
@@ -1263,7 +1271,9 @@ def VSrc_f32 : RegOrF32 <"VS_32", "OPERAND_REG_IMM">;
 def VSrc_v2b16 : RegOrV2B16 <"VS_32", "OPERAND_REG_IMM">;
 def VSrc_v2f16 : RegOrV2F16 <"VS_32", "OPERAND_REG_IMM">;
 def VSrc_b64 : RegOrB64 <"VS_64", "OPERAND_REG_IMM">;
-def VSrc_f64 : RegOrF64 <"VS_64", "OPERAND_REG_IMM">;
+def VSrc_f64 : RegOrF64 <"VS_64", "OPERAND_REG_IMM"> {
+  let DecoderMethod = "decodeOperand_VSrc_f64";
+}
 def VSrc_v2b32 : RegOrV2B32 <"VS_64", "OPERAND_REG_IMM">;
 def VSrc_v2f32 : RegOrV2F32 <"VS_64", "OPERAND_REG_IMM">;
 

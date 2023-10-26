@@ -11,22 +11,22 @@ declare void @sink(i16)
 
 define void @fold_isdigit(i16 %c) {
 ; AVR-LABEL: @fold_isdigit(
-; AVR-NEXT:    call void @sink(i16 0)
-; AVR-NEXT:    call void @sink(i16 0)
-; AVR-NEXT:    call void @sink(i16 0)
-; AVR-NEXT:    call void @sink(i16 1)
-; AVR-NEXT:    call void @sink(i16 1)
-; AVR-NEXT:    call void @sink(i16 1)
-; AVR-NEXT:    call void @sink(i16 0)
-; AVR-NEXT:    call void @sink(i16 0)
-; AVR-NEXT:    call void @sink(i16 0)
-; AVR-NEXT:    call void @sink(i16 0)
-; AVR-NEXT:    call void @sink(i16 0)
-; AVR-NEXT:    call void @sink(i16 0)
+; AVR-NEXT:    call addrspace(1) void @sink(i16 0)
+; AVR-NEXT:    call addrspace(1) void @sink(i16 0)
+; AVR-NEXT:    call addrspace(1) void @sink(i16 0)
+; AVR-NEXT:    call addrspace(1) void @sink(i16 1)
+; AVR-NEXT:    call addrspace(1) void @sink(i16 1)
+; AVR-NEXT:    call addrspace(1) void @sink(i16 1)
+; AVR-NEXT:    call addrspace(1) void @sink(i16 0)
+; AVR-NEXT:    call addrspace(1) void @sink(i16 0)
+; AVR-NEXT:    call addrspace(1) void @sink(i16 0)
+; AVR-NEXT:    call addrspace(1) void @sink(i16 0)
+; AVR-NEXT:    call addrspace(1) void @sink(i16 0)
+; AVR-NEXT:    call addrspace(1) void @sink(i16 0)
 ; AVR-NEXT:    [[ISDIGITTMP:%.*]] = add i16 [[C:%.*]], -48
 ; AVR-NEXT:    [[ISDIGIT:%.*]] = icmp ult i16 [[ISDIGITTMP]], 10
 ; AVR-NEXT:    [[IC:%.*]] = zext i1 [[ISDIGIT]] to i16
-; AVR-NEXT:    call void @sink(i16 [[IC]])
+; AVR-NEXT:    call addrspace(1) void @sink(i16 [[IC]])
 ; AVR-NEXT:    ret void
 ;
 ; MSP430-LABEL: @fold_isdigit(

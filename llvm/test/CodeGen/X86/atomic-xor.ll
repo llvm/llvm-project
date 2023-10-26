@@ -24,7 +24,7 @@ define i128 @xor128_signbit_used(ptr %p) nounwind {
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    andl $-8, %esp
+; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    movl 8(%ebp), %esi
 ; X86-NEXT:    movl %esp, %eax

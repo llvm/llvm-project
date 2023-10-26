@@ -60,16 +60,6 @@ std::optional<int64_t> DimLvlExpr::dyn_castConstantValue() const {
   return k ? std::make_optional(k.getValue()) : std::nullopt;
 }
 
-// This helper method is akin to `AffineExpr::operator==(int64_t)`
-// except it uses a different implementation, namely the implementation
-// used within `AsmPrinter::Impl::printAffineExprInternal`.
-//
-// wrengr guesses that `AsmPrinter::Impl::printAffineExprInternal` uses
-// this implementation because it avoids constructing the intermediate
-// `AffineConstantExpr(val)` and thus should in theory be a bit faster.
-// However, if it is indeed faster, then the `AffineExpr::operator==`
-// method should be updated to do this instead.  And if it isn't any
-// faster, then we should be using `AffineExpr::operator==` instead.
 bool DimLvlExpr::hasConstantValue(int64_t val) const {
   const auto k = expr.dyn_cast_or_null<AffineConstantExpr>();
   return k && k.getValue() == val;
@@ -216,12 +206,6 @@ bool DimSpec::isValid(Ranks const &ranks) const {
   return ranks.isValid(var) && (!expr || ranks.isValid(expr));
 }
 
-bool DimSpec::isFunctionOf(VarSet const &vars) const {
-  return vars.occursIn(expr);
-}
-
-void DimSpec::getFreeVars(VarSet &vars) const { vars.add(expr); }
-
 void DimSpec::dump() const {
   print(llvm::errs(), /*wantElision=*/false);
   llvm::errs() << "\n";
@@ -262,12 +246,6 @@ bool LvlSpec::isValid(Ranks const &ranks) const {
   return ranks.isValid(var) && ranks.isValid(expr);
 }
 
-bool LvlSpec::isFunctionOf(VarSet const &vars) const {
-  return vars.occursIn(expr);
-}
-
-void LvlSpec::getFreeVars(VarSet &vars) const { vars.add(expr); }
-
 void LvlSpec::dump() const {
   print(llvm::errs(), /*wantElision=*/false);
   llvm::errs() << "\n";
@@ -301,19 +279,6 @@ DimLvlMap::DimLvlMap(unsigned symRank, ArrayRef<DimSpec> dimSpecs,
   // below cannot cause OOB errors.
   assert(isWF());
 
-  // TODO: Second, we need to infer/validate the `lvlToDim` mapping.
-  // Along the way we should set every `DimSpec::elideExpr` according
-  // to whether the given expression is inferable or not.  Notably, this
-  // needs to happen before the code for setting every `LvlSpec::elideVar`,
-  // since if the LvlVar is only used in elided DimExpr, then the
-  // LvlVar should also be elided.
-  // NOTE: Be sure to use `DimLvlMap::setDimExpr` for setting the new exprs,
-  // to ensure that we maintain the invariant established by `isWF` above.
-
-  // Third, we set every `LvlSpec::elideVar` according to whether that
-  // LvlVar occurs in a non-elided DimExpr (TODO: or CountingExpr).
-  // NOTE: The invariant established by `isWF` ensures that the following
-  // calls to `VarSet::add` cannot raise OOB errors.
   VarSet usedVars(getRanks());
   for (const auto &dimSpec : dimSpecs)
     if (!dimSpec.canElideExpr())
@@ -356,10 +321,15 @@ AffineMap DimLvlMap::getDimToLvlMap(MLIRContext *context) const {
 AffineMap DimLvlMap::getLvlToDimMap(MLIRContext *context) const {
   SmallVector<AffineExpr> dimAffines;
   dimAffines.reserve(getDimRank());
-  for (const auto &dimSpec : dimSpecs)
-    dimAffines.push_back(dimSpec.getExpr().getAffineExpr());
+  for (const auto &dimSpec : dimSpecs) {
+    auto expr = dimSpec.getExpr().getAffineExpr();
+    if (expr) {
+      dimAffines.push_back(expr);
+    }
+  }
   auto map = AffineMap::get(getLvlRank(), getSymRank(), dimAffines, context);
-  if (map.isIdentity()) return AffineMap();
+  if (dimAffines.empty() || map.isIdentity())
+    return AffineMap();
   return map;
 }
 

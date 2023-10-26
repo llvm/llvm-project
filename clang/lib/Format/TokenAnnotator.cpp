@@ -1414,10 +1414,6 @@ private:
         Tok->setType(TT_TrailingReturnArrow);
       }
       break;
-    case tok::eof:
-      if (Style.InsertNewlineAtEOF && Tok->NewlinesBefore == 0)
-        Tok->NewlinesBefore = 1;
-      break;
     default:
       break;
     }
@@ -3244,8 +3240,14 @@ void TokenAnnotator::annotate(AnnotatedLine &Line) {
   else if (Line.startsWith(TT_ObjCProperty))
     Line.Type = LT_ObjCProperty;
 
-  Line.First->SpacesRequiredBefore = 1;
-  Line.First->CanBreakBefore = Line.First->MustBreakBefore;
+  auto *First = Line.First;
+  First->SpacesRequiredBefore = 1;
+  First->CanBreakBefore = First->MustBreakBefore;
+
+  if (First->is(tok::eof) && First->NewlinesBefore == 0 &&
+      Style.InsertNewlineAtEOF) {
+    First->NewlinesBefore = 1;
+  }
 }
 
 // This function heuristically determines whether 'Current' starts the name of a
@@ -3495,6 +3497,14 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
           Tok->setType(TT_TrailingReturnArrow);
           break;
         }
+        if (Tok->isNot(TT_TrailingAnnotation))
+          continue;
+        const auto *Next = Tok->Next;
+        if (!Next || Next->isNot(tok::l_paren))
+          continue;
+        Tok = Next->MatchingParen;
+        if (!Tok)
+          break;
       }
     }
   }
@@ -3534,7 +3544,7 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
           }
         }
       }
-    } else if (Current->SpacesRequiredBefore == 0 &&
+    } else if (!Current->Finalized && Current->SpacesRequiredBefore == 0 &&
                spaceRequiredBefore(Line, *Current)) {
       Current->SpacesRequiredBefore = 1;
     }
@@ -4187,8 +4197,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   if ((Left.is(tok::l_brace) && Left.isNot(BK_Block)) ||
       (Right.is(tok::r_brace) && Right.MatchingParen &&
        Right.MatchingParen->isNot(BK_Block))) {
-    return Style.Cpp11BracedListStyle ? Style.SpacesInParensOptions.Other
-                                      : true;
+    return !Style.Cpp11BracedListStyle || Style.SpacesInParensOptions.Other;
   }
   if (Left.is(TT_BlockComment)) {
     // No whitespace in x(/*foo=*/1), except for JavaScript.
@@ -4223,6 +4232,19 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     if (Left.is(TT_IfMacro)) {
       return Style.SpaceBeforeParensOptions.AfterIfMacros ||
              spaceRequiredBeforeParens(Right);
+    }
+    if (Style.SpaceBeforeParens == FormatStyle::SBPO_Custom &&
+        Left.isOneOf(tok::kw_new, tok::kw_delete) &&
+        Right.isNot(TT_OverloadedOperatorLParen) &&
+        !(Line.MightBeFunctionDecl && Left.is(TT_FunctionDeclarationName))) {
+      if (Style.SpaceBeforeParensOptions.AfterPlacementOperator ==
+              FormatStyle::SpaceBeforeParensCustom::APO_Always ||
+          (Style.SpaceBeforeParensOptions.AfterPlacementOperator ==
+               FormatStyle::SpaceBeforeParensCustom::APO_Leave &&
+           Right.hasWhitespaceBefore())) {
+        return true;
+      }
+      return false;
     }
     if (Line.Type == LT_ObjCDecl)
       return true;
@@ -4391,8 +4413,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
       return false;
     }
     // Space in __attribute__((attr)) ::type.
-    if (Left.is(TT_AttributeRParen) && Right.is(tok::coloncolon))
+    if (Left.isOneOf(TT_AttributeRParen, TT_AttributeMacro) &&
+        Right.is(tok::coloncolon)) {
       return true;
+    }
 
     if (Left.is(tok::kw_operator))
       return Right.is(tok::coloncolon);
@@ -4707,7 +4731,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   if (Line.Type == LT_ObjCMethodDecl) {
     if (Left.is(TT_ObjCMethodSpecifier))
       return true;
-    if (Left.is(tok::r_paren) && canBeObjCSelectorComponent(Right)) {
+    if (Left.is(tok::r_paren) && Left.isNot(TT_AttributeRParen) &&
+        canBeObjCSelectorComponent(Right)) {
       // Don't space between ')' and <id> or ')' and 'new'. 'new' is not a
       // keyword in Objective-C, and '+ (instancetype)new;' is a standard class
       // method declaration.
@@ -5092,10 +5117,6 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     return true;
   if (Left.IsUnterminatedLiteral)
     return true;
-  if (Right.is(tok::lessless) && Right.Next && Left.is(tok::string_literal) &&
-      Right.Next->is(tok::string_literal)) {
-    return true;
-  }
   if (Right.is(TT_RequiresClause)) {
     switch (Style.RequiresClausePosition) {
     case FormatStyle::RCPS_OwnLine:
@@ -5220,8 +5241,10 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
   }
 
   // Ensure wrapping after __attribute__((XX)) and @interface etc.
-  if (Left.is(TT_AttributeRParen) && Right.is(TT_ObjCDecl))
+  if (Left.isOneOf(TT_AttributeRParen, TT_AttributeMacro) &&
+      Right.is(TT_ObjCDecl)) {
     return true;
+  }
 
   if (Left.is(TT_LambdaLBrace)) {
     if (IsFunctionArgument(Left) &&

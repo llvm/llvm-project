@@ -15,7 +15,6 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/Object/ObjectFile.h"
-#include "llvm/Support/Endian.h"
 #include <memory>
 #include <vector>
 
@@ -133,10 +132,22 @@ public:
     return std::nullopt;
   }
 
+  std::optional<StringRef> getLibraryInstallName() override {
+    return std::nullopt;
+  }
+
   bool applyValidRelocs(MutableArrayRef<char>, uint64_t, bool) override {
     // no need to apply relocations to the linked binary.
     return false;
   }
+
+  bool needToSaveValidRelocs() override { return false; }
+
+  void updateAndSaveValidRelocs(bool, uint64_t, int64_t, uint64_t,
+                                uint64_t) override {}
+
+  void updateRelocationsWithUnitOffset(uint64_t OriginalUnitOffset,
+                                       uint64_t OutputUnitOffset) override {}
 
   void clear() override {}
 

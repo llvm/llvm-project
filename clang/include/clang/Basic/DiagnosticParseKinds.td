@@ -1348,6 +1348,10 @@ def warn_pragma_omp_ignored : Warning<
 def warn_omp_extra_tokens_at_eol : Warning<
   "extra tokens at the end of '#pragma omp %0' are ignored">,
   InGroup<ExtraTokens>;
+def err_omp_multiple_step_or_linear_modifier : Error<
+  "multiple %select{'step size'|'linear modifier'}0 found in linear clause">;
+def err_omp_deprecate_old_syntax: Error<
+  "old syntax '%0' on '%1' clause was deprecated, use new syntax '%2'">;
 def warn_pragma_expected_colon_r_paren : Warning<
   "missing ':' or ')' after %0 - ignoring">, InGroup<IgnoredPragmas>;
 def err_omp_unknown_directive : Error<
@@ -1534,6 +1538,7 @@ def warn_omp51_compat_attributes : Warning<
   "standards before OpenMP 5.1">,
   InGroup<OpenMPPre51Compat>, DefaultIgnore;
 def err_omp_expected_colon : Error<"missing ':' in %0">;
+def err_omp_missing_comma : Error< "missing ',' after %0">;
 def err_omp_expected_context_selector
     : Error<"expected valid context selector in %0">;
 def err_omp_requires_out_inout_depend_type : Error<

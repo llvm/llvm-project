@@ -75,10 +75,10 @@ std::unique_ptr<Pass> mlir::tosa::createTosaToLinalg() {
 }
 
 void mlir::tosa::addTosaToLinalgPasses(
-    OpPassManager &pm, bool disableTosaDecompositions,
-    tosa::ValidationOptions const &validationOptions) {
+    OpPassManager &pm, const TosaToLinalgOptions &options,
+    tosa::TosaValidationOptions const &validationOptions) {
   // Optional decompositions are designed to benefit linalg.
-  if (!disableTosaDecompositions)
+  if (!options.disableTosaDecompositions)
     pm.addNestedPass<func::FuncOp>(tosa::createTosaOptionalDecompositions());
   pm.addNestedPass<func::FuncOp>(createCanonicalizerPass());
 
@@ -87,9 +87,29 @@ void mlir::tosa::addTosaToLinalgPasses(
   pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalgNamed());
   pm.addNestedPass<func::FuncOp>(createCanonicalizerPass());
   // TODO: Remove pass that operates on const tensor and enable optionality
-  pm.addNestedPass<func::FuncOp>(tosa::createTosaLayerwiseConstantFoldPass());
+  pm.addNestedPass<func::FuncOp>(tosa::createTosaLayerwiseConstantFoldPass(
+      {options.aggressiveReduceConstant}));
   pm.addNestedPass<func::FuncOp>(tosa::createTosaMakeBroadcastablePass());
-  pm.addNestedPass<func::FuncOp>(
-      tosa::createTosaValidationPass(validationOptions));
+  pm.addPass(tosa::createTosaValidation(validationOptions));
   pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());
+}
+
+//===----------------------------------------------------------------------===//
+// Pipeline registration.
+//===----------------------------------------------------------------------===//
+
+void mlir::tosa::registerTosaToLinalgPipelines() {
+  PassPipelineRegistration<>(
+      "tosa-to-linalg-pipeline",
+      "The default pipeline for converting TOSA operators to the equivalent "
+      "operations using the tensor operations in LinAlg as well as LinAlg "
+      "named operations.",
+      [](OpPassManager &pm) {
+        TosaToLinalgOptions tosaToLinalgOptions;
+        tosa::addTosaToLinalgPasses(pm, tosaToLinalgOptions,
+                                    /* validationOptions = */
+                                    {tosa::TosaProfileEnum::BaseInference,
+                                     /* StrictOperationSpecAlignment = */ true,
+                                     tosa::TosaLevelEnum::EightK});
+      });
 }

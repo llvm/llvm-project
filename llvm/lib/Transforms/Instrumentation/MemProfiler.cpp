@@ -628,7 +628,7 @@ static void addCallsiteMetadata(Instruction &I,
 
 static uint64_t computeStackId(GlobalValue::GUID Function, uint32_t LineOffset,
                                uint32_t Column) {
-  llvm::HashBuilder<llvm::TruncatedBLAKE3<8>, llvm::support::endianness::little>
+  llvm::HashBuilder<llvm::TruncatedBLAKE3<8>, llvm::endianness::little>
       HashBuilder;
   HashBuilder.add(Function, LineOffset, Column);
   llvm::BLAKE3Result<8> Hash = HashBuilder.final();

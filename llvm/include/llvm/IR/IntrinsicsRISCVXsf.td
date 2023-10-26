@@ -128,8 +128,28 @@ let TargetPrefix = "riscv" in {
     }
   }
 
+  class RISCVSFCustomVMACC
+      : DefaultAttrsIntrinsic< [llvm_anyvector_ty],
+                   [LLVMMatchType<0>, llvm_anyvector_ty, llvm_anyvector_ty,
+                    llvm_anyint_ty, LLVMMatchType<3>],
+                   [ImmArg<ArgIndex<4>>, IntrNoMem] >, RISCVVIntrinsic {
+    let VLOperand = 3;
+  }
+
   defm "" : RISCVSFCustomVC_X<["x", "i"]>;
   defm "" : RISCVSFCustomVC_XV<["x", "i", "v", "f"]>;
   defm "" : RISCVSFCustomVC_XVV<["x", "i", "v", "f"]>;
   defm "" : RISCVSFCustomVC_XVW<["x", "i", "v", "f"]>;
+
+  // XSfvqmaccdod
+  def int_riscv_sf_vqmaccu_2x8x2  : RISCVSFCustomVMACC;
+  def int_riscv_sf_vqmacc_2x8x2   : RISCVSFCustomVMACC;
+  def int_riscv_sf_vqmaccus_2x8x2 : RISCVSFCustomVMACC;
+  def int_riscv_sf_vqmaccsu_2x8x2 : RISCVSFCustomVMACC;
+
+  // XSfvqmaccqoq
+  def int_riscv_sf_vqmaccu_4x8x4  : RISCVSFCustomVMACC;
+  def int_riscv_sf_vqmacc_4x8x4   : RISCVSFCustomVMACC;
+  def int_riscv_sf_vqmaccus_4x8x4 : RISCVSFCustomVMACC;
+  def int_riscv_sf_vqmaccsu_4x8x4 : RISCVSFCustomVMACC;
 } // TargetPrefix = "riscv"

@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineTraceMetrics.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/CodeGen/StackMaps.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -688,8 +689,7 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
   if (MF.getDataLayout().isBigEndian())
     return nullptr;
 
-  // Fold load from stack followed by sext.w into lw.
-  // TODO: Fold with sext.b, sext.h, zext.b, zext.h, zext.w?
+  // Fold load from stack followed by sext.b/sext.h/sext.w/zext.b/zext.h/zext.w.
   if (Ops.size() != 1 || Ops[0] != 1)
    return nullptr;
 
@@ -1301,7 +1301,20 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     if (isCompressibleInst(MI, STI))
       return 2;
   }
-  return get(Opcode).getSize();
+
+  switch (Opcode) {
+  case TargetOpcode::STACKMAP:
+    // The upper bound for a stackmap intrinsic is the full length of its shadow
+    return StackMapOpers(&MI).getNumPatchBytes();
+  case TargetOpcode::PATCHPOINT:
+    // The size of the patchpoint intrinsic is the number of bytes requested
+    return PatchPointOpers(&MI).getNumPatchBytes();
+  case TargetOpcode::STATEPOINT:
+    // The size of the statepoint intrinsic is the number of bytes requested
+    return StatepointOpers(&MI).getNumPatchBytes();
+  default:
+    return get(Opcode).getSize();
+  }
 }
 
 unsigned RISCVInstrInfo::getInstBundleLength(const MachineInstr &MI) const {
@@ -2670,6 +2683,7 @@ MachineInstr *RISCVInstrInfo::convertToThreeAddress(MachineInstr &MI,
               .add(MI.getOperand(3))
               .add(MI.getOperand(4))
               .add(MI.getOperand(5));
+    break;
   }
   }
   MIB.copyImplicitOps(MI);

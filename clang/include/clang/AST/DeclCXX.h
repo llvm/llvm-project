@@ -1052,6 +1052,12 @@ public:
     return static_cast<LambdaCaptureDefault>(getLambdaData().CaptureDefault);
   }
 
+  bool isCapturelessLambda() const {
+    if (!isLambda())
+      return false;
+    return getLambdaCaptureDefault() == LCD_None && capture_size() == 0;
+  }
+
   /// Set the captures for this lambda closure type.
   void setCaptures(ASTContext &Context, ArrayRef<LambdaCapture> Captures);
 

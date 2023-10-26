@@ -10,7 +10,7 @@ define i32 @test(i32 %input, i32 %n, i32 %a) {
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_2: // %bb.0
 ; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    mov w0, #100
+; CHECK-NEXT:    mov w0, #100 // =0x64
 ; CHECK-NEXT:    cmp w8, #4
 ; CHECK-NEXT:    b.hi .LBB0_5
 ; CHECK-NEXT:  // %bb.3: // %bb.0
@@ -25,19 +25,19 @@ define i32 @test(i32 %input, i32 %n, i32 %a) {
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_5: // %bb.0
 ; CHECK-NEXT:    cmp w8, #200
-; CHECK-NEXT:    b.ne .LBB0_10
+; CHECK-NEXT:    b.ne .LBB0_9
 ; CHECK-NEXT:  // %bb.6: // %sw.bb7
 ; CHECK-NEXT:    add w0, w2, #7
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB0_7: // %sw.bb1
-; CHECK-NEXT:    add w0, w2, #3
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB0_8: // %sw.bb3
+; CHECK-NEXT:  .LBB0_7: // %sw.bb3
 ; CHECK-NEXT:    add w0, w2, #4
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB0_9: // %sw.bb5
+; CHECK-NEXT:  .LBB0_8: // %sw.bb5
 ; CHECK-NEXT:    add w0, w2, #5
-; CHECK-NEXT:  .LBB0_10: // %return
+; CHECK-NEXT:  .LBB0_9: // %return
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB0_10: // %sw.bb1
+; CHECK-NEXT:    add w0, w2, #3
 ; CHECK-NEXT:    ret
 entry:
   %b = add nsw i32 %input, %n

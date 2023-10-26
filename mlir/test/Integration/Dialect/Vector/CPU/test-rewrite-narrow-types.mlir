@@ -5,7 +5,7 @@
 // RUN: FileCheck %s
 
 /// Run once with the pattern and compare.
-// RUN: mlir-opt %s -test-transform-dialect-interpreter -test-transform-dialect-erase-schedule -test-lower-to-llvm | \
+// RUN: mlir-opt %s -transform-interpreter -test-transform-dialect-erase-schedule -test-lower-to-llvm | \
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
 // RUN:   -shared-libs=%mlir_c_runner_utils | \
 // RUN: FileCheck %s
@@ -25,7 +25,7 @@ func.func @print_as_i1_10xi8(%v : vector<10xi8>) {
 func.func @f(%v: vector<16xi16>) {
   %trunc = arith.trunci %v : vector<16xi16> to vector<16xi5>
   func.call @print_as_i1_16xi5(%trunc) : (vector<16xi5>) -> ()
-  //      CHECK: ( 
+  //      CHECK: (
   // CHECK-SAME: 1, 1, 1, 1, 1,
   // CHECK-SAME: 0, 1, 1, 1, 1,
   // CHECK-SAME: 1, 0, 1, 1, 1,
@@ -45,7 +45,7 @@ func.func @f(%v: vector<16xi16>) {
 
   %bitcast = vector.bitcast %trunc : vector<16xi5> to vector<10xi8>
   func.call @print_as_i1_10xi8(%bitcast) : (vector<10xi8>) -> ()
-  //      CHECK: ( 
+  //      CHECK: (
   // CHECK-SAME: 1, 1, 1, 1, 1, 0, 1, 1,
   // CHECK-SAME: 1, 1, 1, 0, 1, 1, 1, 0,
   // CHECK-SAME: 0, 1, 1, 1, 1, 1, 0, 1,
@@ -190,12 +190,14 @@ func.func @entry() {
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  %f = transform.structured.match ops{["func.func"]} in %module_op
-      : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %f = transform.structured.match ops{["func.func"]} in %module_op
+        : (!transform.any_op) -> !transform.any_op
 
-  transform.apply_patterns to %f {
-    transform.apply_patterns.vector.rewrite_narrow_types
-  } : !transform.any_op
+    transform.apply_patterns to %f {
+      transform.apply_patterns.vector.rewrite_narrow_types
+    } : !transform.any_op
+    transform.yield
+  }
 }

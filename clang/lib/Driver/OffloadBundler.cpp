@@ -324,7 +324,7 @@ static uint64_t Read8byteIntegerFromBuffer(StringRef Buffer, size_t pos) {
 
 /// Write 8-byte integers to a buffer in little-endian format.
 static void Write8byteIntegerToBuffer(raw_ostream &OS, uint64_t Val) {
-  llvm::support::endian::write(OS, Val, llvm::support::little);
+  llvm::support::endian::write(OS, Val, llvm::endianness::little);
 }
 
 class BinaryFileHandler final : public FileHandler {
