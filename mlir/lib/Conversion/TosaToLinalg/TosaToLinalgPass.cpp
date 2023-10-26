@@ -90,7 +90,26 @@ void mlir::tosa::addTosaToLinalgPasses(
   pm.addNestedPass<func::FuncOp>(tosa::createTosaLayerwiseConstantFoldPass(
       {options.aggressiveReduceConstant}));
   pm.addNestedPass<func::FuncOp>(tosa::createTosaMakeBroadcastablePass());
-  pm.addNestedPass<mlir::ModuleOp>(
-      tosa::createTosaValidation(validationOptions));
+  pm.addPass(tosa::createTosaValidation(validationOptions));
   pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());
+}
+
+//===----------------------------------------------------------------------===//
+// Pipeline registration.
+//===----------------------------------------------------------------------===//
+
+void mlir::tosa::registerTosaToLinalgPipelines() {
+  PassPipelineRegistration<>(
+      "tosa-to-linalg-pipeline",
+      "The default pipeline for converting TOSA operators to the equivalent "
+      "operations using the tensor operations in LinAlg as well as LinAlg "
+      "named operations.",
+      [](OpPassManager &pm) {
+        TosaToLinalgOptions tosaToLinalgOptions;
+        tosa::addTosaToLinalgPasses(pm, tosaToLinalgOptions,
+                                    /* validationOptions = */
+                                    {tosa::TosaProfileEnum::BaseInference,
+                                     /* StrictOperationSpecAlignment = */ true,
+                                     tosa::TosaLevelEnum::EightK});
+      });
 }
