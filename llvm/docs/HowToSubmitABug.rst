@@ -169,12 +169,10 @@ in addition to your existing compilation options:
 These flags enable LTO and save temporary files generated during compilation
 for later analysis.
 
-On Windows, you should use lld-link as the linker. Adjust your compilation 
+On Windows, you should be using lld-link as the linker. Adjust your compilation 
 flags as follows:
-
-.. code-block:: bash
-
-   export CFLAGS="-flto -fuse-ld=lld-link" CXXFLAGS="-flto -fuse-ld=lld-link" LDFLAGS="-Wl,-plugin-opt=save-temps"
+* Add `/lldsavetemps` to the linker flags.
+* When linking from the compiler driver, add `/link /lldsavetemps` in order to forward that flag to the linker.
 
 Using the specified flags will generate four intermediate bytecode files:
 
