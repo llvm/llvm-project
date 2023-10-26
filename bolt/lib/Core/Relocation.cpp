@@ -20,6 +20,13 @@
 using namespace llvm;
 using namespace bolt;
 
+namespace ELFReserved {
+enum {
+  R_RISCV_TPREL_I = 49,
+  R_RISCV_TPREL_S = 50,
+};
+} // namespace ELFReserved
+
 Triple::ArchType Relocation::Arch;
 
 static bool isSupportedX86(uint64_t Type) {
@@ -35,6 +42,7 @@ static bool isSupportedX86(uint64_t Type) {
   case ELF::R_X86_64_PC32:
   case ELF::R_X86_64_PC64:
   case ELF::R_X86_64_PLT32:
+  case ELF::R_X86_64_GOTPC64:
   case ELF::R_X86_64_GOTPCREL:
   case ELF::R_X86_64_GOTTPOFF:
   case ELF::R_X86_64_TPOFF32:
@@ -110,6 +118,13 @@ static bool isSupportedRISCV(uint64_t Type) {
   case ELF::R_RISCV_LO12_I:
   case ELF::R_RISCV_LO12_S:
   case ELF::R_RISCV_64:
+  case ELF::R_RISCV_TLS_GOT_HI20:
+  case ELF::R_RISCV_TPREL_HI20:
+  case ELF::R_RISCV_TPREL_ADD:
+  case ELF::R_RISCV_TPREL_LO12_I:
+  case ELF::R_RISCV_TPREL_LO12_S:
+  case ELFReserved::R_RISCV_TPREL_I:
+  case ELFReserved::R_RISCV_TPREL_S:
     return true;
   }
 }
@@ -136,6 +151,7 @@ static size_t getSizeForTypeX86(uint64_t Type) {
     return 4;
   case ELF::R_X86_64_PC64:
   case ELF::R_X86_64_64:
+  case ELF::R_X86_64_GOTPC64:
     return 8;
   }
 }
@@ -212,6 +228,7 @@ static size_t getSizeForTypeRISCV(uint64_t Type) {
     return 4;
   case ELF::R_RISCV_64:
   case ELF::R_RISCV_GOT_HI20:
+  case ELF::R_RISCV_TLS_GOT_HI20:
     // See extractValueRISCV for why this is necessary.
     return 8;
   }
@@ -530,6 +547,7 @@ static uint64_t extractValueRISCV(uint64_t Type, uint64_t Contents,
   case ELF::R_RISCV_BRANCH:
     return extractBImmRISCV(Contents);
   case ELF::R_RISCV_GOT_HI20:
+  case ELF::R_RISCV_TLS_GOT_HI20:
     // We need to know the exact address of the GOT entry so we extract the
     // value from both the AUIPC and L[D|W]. We cannot rely on the symbol in the
     // relocation for this since it simply refers to the object that is stored
@@ -598,6 +616,7 @@ static bool isGOTRISCV(uint64_t Type) {
   default:
     return false;
   case ELF::R_RISCV_GOT_HI20:
+  case ELF::R_RISCV_TLS_GOT_HI20:
     return true;
   }
 }
@@ -634,6 +653,14 @@ static bool isTLSRISCV(uint64_t Type) {
   switch (Type) {
   default:
     return false;
+  case ELF::R_RISCV_TLS_GOT_HI20:
+  case ELF::R_RISCV_TPREL_HI20:
+  case ELF::R_RISCV_TPREL_ADD:
+  case ELF::R_RISCV_TPREL_LO12_I:
+  case ELF::R_RISCV_TPREL_LO12_S:
+  case ELFReserved::R_RISCV_TPREL_I:
+  case ELFReserved::R_RISCV_TPREL_S:
+    return true;
   }
 }
 
@@ -655,6 +682,7 @@ static bool isPCRelativeX86(uint64_t Type) {
   case ELF::R_X86_64_PLT32:
   case ELF::R_X86_64_GOTOFF64:
   case ELF::R_X86_64_GOTPC32:
+  case ELF::R_X86_64_GOTPC64:
   case ELF::R_X86_64_GOTTPOFF:
   case ELF::R_X86_64_GOTPCRELX:
   case ELF::R_X86_64_REX_GOTPCRELX:
@@ -730,6 +758,7 @@ static bool isPCRelativeRISCV(uint64_t Type) {
   case ELF::R_RISCV_RVC_JUMP:
   case ELF::R_RISCV_RVC_BRANCH:
   case ELF::R_RISCV_32_PCREL:
+  case ELF::R_RISCV_TLS_GOT_HI20:
     return true;
   }
 }
@@ -797,6 +826,12 @@ bool Relocation::isX86GOTPCRELX(uint64_t Type) {
   return Type == ELF::R_X86_64_GOTPCRELX || Type == ELF::R_X86_64_REX_GOTPCRELX;
 }
 
+bool Relocation::isX86GOTPC64(uint64_t Type) {
+  if (Arch != Triple::x86_64)
+    return false;
+  return Type == ELF::R_X86_64_GOTPC64;
+}
+
 bool Relocation::isNone(uint64_t Type) { return Type == getNone(); }
 
 bool Relocation::isRelative(uint64_t Type) {
@@ -821,6 +856,19 @@ bool Relocation::isTLS(uint64_t Type) {
   if (Arch == Triple::riscv64)
     return isTLSRISCV(Type);
   return isTLSX86(Type);
+}
+
+bool Relocation::isInstructionReference(uint64_t Type) {
+  if (Arch != Triple::riscv64)
+    return false;
+
+  switch (Type) {
+  default:
+    return false;
+  case ELF::R_RISCV_PCREL_LO12_I:
+  case ELF::R_RISCV_PCREL_LO12_S:
+    return true;
+  }
 }
 
 uint64_t Relocation::getNone() {

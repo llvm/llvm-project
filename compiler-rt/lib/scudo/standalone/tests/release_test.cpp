@@ -637,18 +637,18 @@ TEST(ScudoReleaseTest, BufferPool) {
       scudo::BufferPool<StaticBufferCount, StaticBufferNumElements>;
   std::unique_ptr<BufferPool> Pool(new BufferPool());
 
-  std::vector<std::pair<scudo::uptr *, scudo::uptr>> Buffers;
+  std::vector<BufferPool::Buffer> Buffers;
   for (scudo::uptr I = 0; I < StaticBufferCount; ++I) {
-    scudo::uptr *P = Pool->getBuffer(StaticBufferNumElements);
-    EXPECT_TRUE(Pool->isStaticBufferTestOnly(P, StaticBufferNumElements));
-    Buffers.emplace_back(P, StaticBufferNumElements);
+    BufferPool::Buffer Buffer = Pool->getBuffer(StaticBufferNumElements);
+    EXPECT_TRUE(Pool->isStaticBufferTestOnly(Buffer));
+    Buffers.push_back(Buffer);
   }
 
   // The static buffer is supposed to be used up.
-  scudo::uptr *P = Pool->getBuffer(StaticBufferNumElements);
-  EXPECT_FALSE(Pool->isStaticBufferTestOnly(P, StaticBufferNumElements));
+  BufferPool::Buffer Buffer = Pool->getBuffer(StaticBufferNumElements);
+  EXPECT_FALSE(Pool->isStaticBufferTestOnly(Buffer));
 
-  Pool->releaseBuffer(P, StaticBufferNumElements);
+  Pool->releaseBuffer(Buffer);
   for (auto &Buffer : Buffers)
-    Pool->releaseBuffer(Buffer.first, Buffer.second);
+    Pool->releaseBuffer(Buffer);
 }

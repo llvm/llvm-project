@@ -25,6 +25,7 @@
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
 #include "mlir/IR/Verifier.h"
+#include "mlir/IR/Visitors.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Parser/Parser.h"
 
@@ -637,6 +638,11 @@ bool mlirOperationRemoveDiscardableAttributeByName(MlirOperation op,
   return !!unwrap(op)->removeDiscardableAttr(unwrap(name));
 }
 
+void mlirOperationSetSuccessor(MlirOperation op, intptr_t pos,
+                               MlirBlock block) {
+  unwrap(op)->setSuccessor(unwrap(block), static_cast<unsigned>(pos));
+}
+
 intptr_t mlirOperationGetNumAttributes(MlirOperation op) {
   return static_cast<intptr_t>(unwrap(op)->getAttrs().size());
 }
@@ -698,6 +704,20 @@ void mlirOperationMoveAfter(MlirOperation op, MlirOperation other) {
 
 void mlirOperationMoveBefore(MlirOperation op, MlirOperation other) {
   return unwrap(op)->moveBefore(unwrap(other));
+}
+
+void mlirOperationWalk(MlirOperation op, MlirOperationWalkCallback callback,
+                       void *userData, MlirWalkOrder walkOrder) {
+  switch (walkOrder) {
+
+  case MlirWalkPreOrder:
+    unwrap(op)->walk<mlir::WalkOrder::PreOrder>(
+        [callback, userData](Operation *op) { callback(wrap(op), userData); });
+    break;
+  case MlirWalkPostOrder:
+    unwrap(op)->walk<mlir::WalkOrder::PostOrder>(
+        [callback, userData](Operation *op) { callback(wrap(op), userData); });
+  }
 }
 
 //===----------------------------------------------------------------------===//

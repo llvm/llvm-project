@@ -11,6 +11,7 @@
 #define _LIBCPP_EXPERIMENTAL___SIMD_VEC_EXT_H
 
 #include <__bit/bit_ceil.h>
+#include <__utility/forward.h>
 #include <cstddef>
 #include <experimental/__simd/internal_declaration.h>
 #include <experimental/__simd/utility.h>
@@ -30,11 +31,11 @@ template <class _Tp, int _Np>
 struct __simd_storage<_Tp, simd_abi::__vec_ext<_Np>> {
   _Tp __data __attribute__((__vector_size__(std::__bit_ceil((sizeof(_Tp) * _Np)))));
 
-  _Tp __get(size_t __idx) const noexcept {
+  _LIBCPP_HIDE_FROM_ABI _Tp __get(size_t __idx) const noexcept {
     _LIBCPP_ASSERT_UNCATEGORIZED(__idx >= 0 && __idx < _Np, "Index is out of bounds");
     return __data[__idx];
   }
-  void __set(size_t __idx, _Tp __v) noexcept {
+  _LIBCPP_HIDE_FROM_ABI void __set(size_t __idx, _Tp __v) noexcept {
     _LIBCPP_ASSERT_UNCATEGORIZED(__idx >= 0 && __idx < _Np, "Index is out of bounds");
     __data[__idx] = __v;
   }
@@ -49,12 +50,22 @@ struct __simd_operations<_Tp, simd_abi::__vec_ext<_Np>> {
   using _SimdStorage = __simd_storage<_Tp, simd_abi::__vec_ext<_Np>>;
   using _MaskStorage = __mask_storage<_Tp, simd_abi::__vec_ext<_Np>>;
 
-  static _SimdStorage __broadcast(_Tp __v) noexcept {
+  static _LIBCPP_HIDE_FROM_ABI _SimdStorage __broadcast(_Tp __v) noexcept {
     _SimdStorage __result;
     for (int __i = 0; __i < _Np; ++__i) {
       __result.__set(__i, __v);
     }
     return __result;
+  }
+
+  template <class _Generator, size_t... _Is>
+  static _LIBCPP_HIDE_FROM_ABI _SimdStorage __generate_init(_Generator&& __g, std::index_sequence<_Is...>) {
+    return _SimdStorage{{__g(std::integral_constant<size_t, _Is>())...}};
+  }
+
+  template <class _Generator>
+  static _LIBCPP_HIDE_FROM_ABI _SimdStorage __generate(_Generator&& __g) noexcept {
+    return __generate_init(std::forward<_Generator>(__g), std::make_index_sequence<_Np>());
   }
 };
 
@@ -62,7 +73,7 @@ template <class _Tp, int _Np>
 struct __mask_operations<_Tp, simd_abi::__vec_ext<_Np>> {
   using _MaskStorage = __mask_storage<_Tp, simd_abi::__vec_ext<_Np>>;
 
-  static _MaskStorage __broadcast(bool __v) noexcept {
+  static _LIBCPP_HIDE_FROM_ABI _MaskStorage __broadcast(bool __v) noexcept {
     _MaskStorage __result;
     auto __all_bits_v = experimental::__set_all_bits<_Tp>(__v);
     for (int __i = 0; __i < _Np; ++__i) {

@@ -60,6 +60,8 @@ using SomeExpr = Fortran::evaluate::Expr<Fortran::evaluate::SomeType>;
 using SymbolRef = Fortran::common::Reference<const Fortran::semantics::Symbol>;
 class StatementContext;
 
+using ExprToValueMap = llvm::DenseMap<const SomeExpr *, mlir::Value>;
+
 //===----------------------------------------------------------------------===//
 // AbstractConverter interface
 //===----------------------------------------------------------------------===//
@@ -89,6 +91,14 @@ public:
   /// Binds the symbol to an fir extended value. The symbol binding will be
   /// added or replaced at the inner-most level of the local symbol map.
   virtual void bindSymbol(SymbolRef sym, const fir::ExtendedValue &exval) = 0;
+
+  /// Override lowering of expression with pre-lowered values.
+  /// Associate mlir::Value to evaluate::Expr. All subsequent call to
+  /// genExprXXX() will replace any occurrence of an overridden
+  /// expression in the expression tree by the pre-lowered values.
+  virtual void overrideExprValues(const ExprToValueMap *) = 0;
+  void resetExprOverrides() { overrideExprValues(nullptr); }
+  virtual const ExprToValueMap *getExprOverrides() = 0;
 
   /// Get the label set associated with a symbol.
   virtual bool lookupLabelSet(SymbolRef sym, pft::LabelSet &labelSet) = 0;
@@ -212,12 +222,10 @@ public:
 
   /// Register a runtime derived type information object symbol to ensure its
   /// object will be generated as a global.
-  virtual void registerRuntimeTypeInfo(mlir::Location loc,
-                                       SymbolRef typeInfoSym) = 0;
-
-  virtual void registerDispatchTableInfo(
-      mlir::Location loc,
-      const Fortran::semantics::DerivedTypeSpec *typeSpec) = 0;
+  virtual void
+  registerTypeInfo(mlir::Location loc, SymbolRef typeInfoSym,
+                   const Fortran::semantics::DerivedTypeSpec &typeSpec,
+                   fir::RecordType type) = 0;
 
   //===--------------------------------------------------------------------===//
   // Locations

@@ -550,6 +550,18 @@ define void @llvm_stack_builtins(i32 %alloc) noredzone {
  ret void
 }
 
+; Use of stacksave requires local SP definition even without dymamic alloca.
+; CHECK-LABEL: llvm_stacksave_noalloca:
+define void @llvm_stacksave_noalloca() noredzone {
+ ; CHECK: global.get $push[[L11:.+]]=, __stack_pointer{{$}}
+ %stack = call i8* @llvm.stacksave()
+
+ ; CHECK-NEXT: call use_i8_star, $pop[[L11:.+]]
+ call void @use_i8_star(i8* %stack)
+
+ ret void
+}
+
 ; Not actually using the alloca'd variables exposed an issue with register
 ; stackification, where copying the stack pointer into the frame pointer was
 ; moved after the stack pointer was updated for the dynamic alloca.
@@ -617,7 +629,7 @@ define void @copytoreg_fi(i1 %cond, ptr %b) {
 ; CHECK-32-NEXT:    i32.const $push4=, 1
 ; CHECK-32-NEXT:    i32.and $push7=, $pop8, $pop4
 ; CHECK-32-NEXT:    local.set 0, $pop7
-; CHECK-32-NEXT:  .LBB10_1: # %body
+; CHECK-32-NEXT:  # %body
 ; CHECK-32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-32-NEXT:    loop # label0:
 ; CHECK-32-NEXT:    local.get $push9=, 2
@@ -645,7 +657,7 @@ define void @copytoreg_fi(i1 %cond, ptr %b) {
 ; CHECK-64-NEXT:    i32.const $push4=, 1
 ; CHECK-64-NEXT:    i32.and $push7=, $pop8, $pop4
 ; CHECK-64-NEXT:    local.set 0, $pop7
-; CHECK-64-NEXT:  .LBB10_1: # %body
+; CHECK-64-NEXT:  # %body
 ; CHECK-64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-64-NEXT:    loop # label0:
 ; CHECK-64-NEXT:    local.get $push9=, 2

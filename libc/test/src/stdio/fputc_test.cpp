@@ -22,7 +22,7 @@ TEST(LlvmLibcPutcTest, PrintOut) {
   }
 
   constexpr char more[] = "A simple string written to stderr\n";
-  for (const char &c : simple) {
+  for (const char &c : more) {
     result = LIBC_NAMESPACE::fputc(
         c, reinterpret_cast<FILE *>(LIBC_NAMESPACE::stderr));
   }

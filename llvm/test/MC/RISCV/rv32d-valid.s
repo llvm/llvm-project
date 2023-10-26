@@ -96,6 +96,9 @@ fcvt.s.d fs5, fs6, dyn
 # CHECK-ASM-AND-OBJ: fcvt.d.s fs7, fs8
 # CHECK-ASM: encoding: [0xd3,0x0b,0x0c,0x42]
 fcvt.d.s fs7, fs8
+# CHECK-ASM-AND-OBJ: fcvt.d.s fs7, fs8, rup
+# CHECK-ASM: encoding: [0xd3,0x3b,0x0c,0x42]
+fcvt.d.s fs7, fs8, rup
 # CHECK-ASM-AND-OBJ: feq.d a1, fs8, fs9
 # CHECK-ASM: encoding: [0xd3,0x25,0x9c,0xa3]
 feq.d a1, fs8, fs9
@@ -115,9 +118,15 @@ fcvt.w.d a4, ft11, dyn
 # CHECK-ASM-AND-OBJ: fcvt.d.w ft0, a5
 # CHECK-ASM: encoding: [0x53,0x80,0x07,0xd2]
 fcvt.d.w ft0, a5
+# CHECK-ASM-AND-OBJ: fcvt.d.w ft0, a5, rup
+# CHECK-ASM: encoding: [0x53,0xb0,0x07,0xd2]
+fcvt.d.w ft0, a5, rup
 # CHECK-ASM-AND-OBJ: fcvt.d.wu ft1, a6
 # CHECK-ASM: encoding: [0xd3,0x00,0x18,0xd2]
 fcvt.d.wu ft1, a6
+# CHECK-ASM-AND-OBJ: fcvt.d.wu ft1, a6, rup
+# CHECK-ASM: encoding: [0xd3,0x30,0x18,0xd2]
+fcvt.d.wu ft1, a6, rup
 
 # Rounding modes
 

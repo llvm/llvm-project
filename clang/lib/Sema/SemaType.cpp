@@ -16,6 +16,7 @@
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/ASTStructuralEquivalence.h"
 #include "clang/AST/CXXInheritance.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
@@ -40,6 +41,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <bitset>
 #include <optional>
@@ -134,7 +136,8 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_Pcs:                                                     \
   case ParsedAttr::AT_IntelOclBicc:                                            \
   case ParsedAttr::AT_PreserveMost:                                            \
-  case ParsedAttr::AT_PreserveAll
+  case ParsedAttr::AT_PreserveAll:                                             \
+  case ParsedAttr::AT_M68kRTD
 
 // Function type attributes.
 #define FUNCTION_TYPE_ATTRS_CASELIST                                           \
@@ -2579,6 +2582,27 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
     return QualType();
   }
 
+  auto IsStaticAssertLike = [](const Expr *ArraySize, ASTContext &Context) {
+    if (!ArraySize)
+      return false;
+
+    // If the array size expression is a conditional expression whose branches
+    // are both integer constant expressions, one negative and one positive,
+    // then it's assumed to be like an old-style static assertion. e.g.,
+    //   int old_style_assert[expr ? 1 : -1];
+    // We will accept any integer constant expressions instead of assuming the
+    // values 1 and -1 are always used.
+    if (const auto *CondExpr = dyn_cast_if_present<ConditionalOperator>(
+            ArraySize->IgnoreParenImpCasts())) {
+      std::optional<llvm::APSInt> LHS =
+          CondExpr->getLHS()->getIntegerConstantExpr(Context);
+      std::optional<llvm::APSInt> RHS =
+          CondExpr->getRHS()->getIntegerConstantExpr(Context);
+      return LHS && RHS && LHS->isNegative() != RHS->isNegative();
+    }
+    return false;
+  };
+
   // VLAs always produce at least a -Wvla diagnostic, sometimes an error.
   unsigned VLADiag;
   bool VLAIsError;
@@ -2595,6 +2619,15 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
   } else if (getLangOpts().OpenMP && isInOpenMPTaskUntiedContext()) {
     VLADiag = diag::err_openmp_vla_in_task_untied;
     VLAIsError = true;
+  } else if (getLangOpts().CPlusPlus) {
+    if (getLangOpts().CPlusPlus11 && IsStaticAssertLike(ArraySize, Context))
+      VLADiag = getLangOpts().GNUMode
+                    ? diag::ext_vla_cxx_in_gnu_mode_static_assert
+                    : diag::ext_vla_cxx_static_assert;
+    else
+      VLADiag = getLangOpts().GNUMode ? diag::ext_vla_cxx_in_gnu_mode
+                                      : diag::ext_vla_cxx;
+    VLAIsError = false;
   } else {
     VLADiag = diag::ext_vla;
     VLAIsError = false;
@@ -3122,7 +3155,7 @@ QualType Sema::BuildMemberPointerType(QualType T, QualType Class,
       (Entity.getNameKind() == DeclarationName::CXXConstructorName) ||
       (Entity.getNameKind() == DeclarationName::CXXDestructorName);
   if (T->isFunctionType())
-    adjustMemberFunctionCC(T, /*IsStatic=*/false, IsCtorOrDtor, Loc);
+    adjustMemberFunctionCC(T, /*HasThisPointer=*/true, IsCtorOrDtor, Loc);
 
   return Context.getMemberPointerType(T, Class.getTypePtr());
 }
@@ -5801,7 +5834,12 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     //
     // Core issue 547 also allows cv-qualifiers on function types that are
     // top-level template type arguments.
-    enum { NonMember, Member, DeductionGuide } Kind = NonMember;
+    enum {
+      NonMember,
+      Member,
+      ExplicitObjectMember,
+      DeductionGuide
+    } Kind = NonMember;
     if (D.getName().getKind() == UnqualifiedIdKind::IK_DeductionGuideName)
       Kind = DeductionGuide;
     else if (!D.getCXXScopeSpec().isSet()) {
@@ -5813,6 +5851,18 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       DeclContext *DC = S.computeDeclContext(D.getCXXScopeSpec());
       if (!DC || DC->isRecord())
         Kind = Member;
+    }
+
+    if (Kind == Member) {
+      unsigned I;
+      if (D.isFunctionDeclarator(I)) {
+        const DeclaratorChunk &Chunk = D.getTypeObject(I);
+        if (Chunk.Fun.NumParams) {
+          auto *P = dyn_cast_or_null<ParmVarDecl>(Chunk.Fun.Params->Param);
+          if (P && P->isExplicitObjectParameter())
+            Kind = ExplicitObjectMember;
+        }
+      }
     }
 
     // C++11 [dcl.fct]p6 (w/DR1417):
@@ -5832,7 +5882,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     //
     // ... for instance.
     if (IsQualifiedFunction &&
-        !(Kind == Member &&
+        !(Kind == Member && !D.isExplicitObjectMemberFunction() &&
           D.getDeclSpec().getStorageClassSpec() != DeclSpec::SCS_static) &&
         !IsTypedefName && D.getContext() != DeclaratorContext::TemplateArg &&
         D.getContext() != DeclaratorContext::TemplateTypeArg) {
@@ -6664,8 +6714,8 @@ ParsedType Sema::CreateParsedType(QualType T, TypeSourceInfo *TInfo) {
   // FIXME: LocInfoTypes are "transient", only needed for passing to/from Parser
   // and Sema during declaration parsing. Try deallocating/caching them when
   // it's appropriate, instead of allocating them and keeping them around.
-  LocInfoType *LocT = (LocInfoType*)BumpAlloc.Allocate(sizeof(LocInfoType),
-                                                       TypeAlignment);
+  LocInfoType *LocT = (LocInfoType *)BumpAlloc.Allocate(sizeof(LocInfoType),
+                                                        alignof(LocInfoType));
   new (LocT) LocInfoType(T, TInfo);
   assert(LocT->getTypeClass() != T->getTypeClass() &&
          "LocInfoType's TypeClass conflicts with an existing Type class");
@@ -7783,6 +7833,8 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
     return createSimpleAttr<PreserveMostAttr>(Ctx, Attr);
   case ParsedAttr::AT_PreserveAll:
     return createSimpleAttr<PreserveAllAttr>(Ctx, Attr);
+  case ParsedAttr::AT_M68kRTD:
+    return createSimpleAttr<M68kRTDAttr>(Ctx, Attr);
   }
   llvm_unreachable("unexpected attribute kind!");
 }
@@ -8123,14 +8175,15 @@ bool Sema::hasExplicitCallingConv(QualType T) {
   return false;
 }
 
-void Sema::adjustMemberFunctionCC(QualType &T, bool IsStatic, bool IsCtorOrDtor,
-                                  SourceLocation Loc) {
+void Sema::adjustMemberFunctionCC(QualType &T, bool HasThisPointer,
+                                  bool IsCtorOrDtor, SourceLocation Loc) {
   FunctionTypeUnwrapper Unwrapped(*this, T);
   const FunctionType *FT = Unwrapped.get();
   bool IsVariadic = (isa<FunctionProtoType>(FT) &&
                      cast<FunctionProtoType>(FT)->isVariadic());
   CallingConv CurCC = FT->getCallConv();
-  CallingConv ToCC = Context.getDefaultCallingConvention(IsVariadic, !IsStatic);
+  CallingConv ToCC =
+      Context.getDefaultCallingConvention(IsVariadic, HasThisPointer);
 
   if (CurCC == ToCC)
     return;
@@ -8150,7 +8203,7 @@ void Sema::adjustMemberFunctionCC(QualType &T, bool IsStatic, bool IsCtorOrDtor,
     // we should adjust a __cdecl type to __thiscall for instance methods, and a
     // __thiscall type to __cdecl for static methods.
     CallingConv DefaultCC =
-        Context.getDefaultCallingConvention(IsVariadic, IsStatic);
+        Context.getDefaultCallingConvention(IsVariadic, !HasThisPointer);
 
     if (CurCC != DefaultCC)
       return;
@@ -9860,11 +9913,14 @@ QualType Sema::BuildAtomicType(QualType T, SourceLocation Loc) {
       DisallowedKind = 5;
     else if (T->isSizelessType())
       DisallowedKind = 6;
-    else if (!T.isTriviallyCopyableType(Context))
+    else if (!T.isTriviallyCopyableType(Context) && getLangOpts().CPlusPlus)
       // Some other non-trivially-copyable type (probably a C++ class)
       DisallowedKind = 7;
     else if (T->isBitIntType())
       DisallowedKind = 8;
+    else if (getLangOpts().C23 && T->isUndeducedAutoType())
+      // _Atomic auto is prohibited in C23
+      DisallowedKind = 9;
 
     if (DisallowedKind != -1) {
       Diag(Loc, diag::err_atomic_specifier_bad_type) << DisallowedKind << T;

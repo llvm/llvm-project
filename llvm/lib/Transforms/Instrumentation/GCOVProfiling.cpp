@@ -148,7 +148,7 @@ private:
   std::string mangleName(const DICompileUnit *CU, GCovFileType FileType);
 
   GCOVOptions Options;
-  support::endianness Endian;
+  llvm::endianness Endian;
   raw_ostream *os;
 
   // Checksum, produced by hash of EdgeDestinations
@@ -788,8 +788,8 @@ bool GCOVProfiler::emitProfileNotes(
     std::vector<uint8_t> EdgeDestinations;
     SmallVector<std::pair<GlobalVariable *, MDNode *>, 8> CountersBySP;
 
-    Endian = M->getDataLayout().isLittleEndian() ? support::endianness::little
-                                                 : support::endianness::big;
+    Endian = M->getDataLayout().isLittleEndian() ? llvm::endianness::little
+                                                 : llvm::endianness::big;
     unsigned FunctionIdent = 0;
     for (auto &F : M->functions()) {
       DISubprogram *SP = F.getSubprogram();
@@ -957,7 +957,7 @@ bool GCOVProfiler::emitProfileNotes(
         continue;
       }
       os = &out;
-      if (Endian == support::endianness::big) {
+      if (Endian == llvm::endianness::big) {
         out.write("gcno", 4);
         out.write(Options.Version, 4);
       } else {

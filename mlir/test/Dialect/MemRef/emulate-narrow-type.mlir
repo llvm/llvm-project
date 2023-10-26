@@ -155,3 +155,22 @@ func.func @rank_zero_memref() -> i4 {
 //       CHECK32:   %[[LOAD:.+]] = memref.load %[[ALLOC]][] : memref<i32>
 //       CHECK32:   %[[TRUNC:.+]] = arith.trunci %[[LOAD]] : i32 to i4
 //       CHECK32:   return %[[TRUNC]]
+
+// -----
+
+func.func @memref_strided_i4(%idx : index) -> i4 {
+  %arr = memref.alloc() : memref<128xi4>
+  %subview = memref.subview %arr[32] [32] [1] : memref<128xi4> to memref<32xi4, strided<[1], offset:32>>
+  %1 = memref.load %subview[%idx] : memref<32xi4, strided<[1], offset:32>>
+  return %1 : i4
+}
+
+// CHECK-LABEL: func @memref_strided_i4
+//       CHECK:   %[[ALLOC:.+]] = memref.alloc() : memref<64xi8>
+//       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ALLOC]][16] [16] [1] : memref<64xi8> to memref<16xi8, strided<[1], offset: 16>>
+//       CHECK:   %[[LOAD:.+]] = memref.load %[[SUBVIEW]]
+
+// CHECK32-LABEL: func @memref_strided_i4
+//       CHECK32:   %[[ALLOC:.+]] = memref.alloc() : memref<16xi32>
+//       CHECK32:   %[[SUBVIEW:.+]] = memref.subview %[[ALLOC]][4] [4] [1] : memref<16xi32> to memref<4xi32, strided<[1], offset: 4>>
+//       CHECK32:   %[[LOAD:.+]] = memref.load %[[SUBVIEW]]

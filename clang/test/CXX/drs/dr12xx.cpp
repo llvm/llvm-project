@@ -32,7 +32,7 @@ namespace dr1213 { // dr1213: 7
 }
 
 #if __cplusplus >= 201103L
-namespace dr1223 { // dr1227: yes open
+namespace dr1223 { // dr1223: 17 drafting
 struct M;
 template <typename T>
 struct V;

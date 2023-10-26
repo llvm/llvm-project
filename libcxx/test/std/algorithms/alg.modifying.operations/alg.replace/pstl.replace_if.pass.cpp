@@ -78,25 +78,8 @@ struct Test {
   }
 };
 
-struct ThrowOnCompare {};
-
-#ifndef TEST_HAS_NO_EXCEPTIONS
-bool operator==(ThrowOnCompare, ThrowOnCompare) { throw int{}; }
-#endif
-
 int main(int, char**) {
   types::for_each(types::forward_iterator_list<int*>{}, TestIteratorWithPolicies<Test>{});
-
-#ifndef TEST_HAS_NO_EXCEPTIONS
-  std::set_terminate(terminate_successful);
-  ThrowOnCompare a[2];
-  try {
-    (void)std::replace_if(
-        std::execution::par, std::begin(a), std::end(a), [](ThrowOnCompare&) { return false; }, ThrowOnCompare{});
-  } catch (int) {
-    assert(false);
-  }
-#endif
 
   return 0;
 }

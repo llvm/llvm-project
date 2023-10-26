@@ -116,6 +116,8 @@ public:
 
   void emitFunctionBodyEnd() override;
 
+  void emitImplicitDef(const MachineInstr *MI) const override;
+
   void emitFunctionEntryLabel() override;
 
   void emitBasicBlockStart(const MachineBasicBlock &MBB) override;

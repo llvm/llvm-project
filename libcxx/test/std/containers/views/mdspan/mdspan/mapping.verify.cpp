@@ -18,6 +18,6 @@
 #include <mdspan>
 
 void not_layout_policy() {
-  // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed {{.*}}mdspan: LayoutPolicy template parameter is invalid. A common mistake is to pass a layout mapping instead of a layout policy}}
+  // expected-error-re@*:* {{static assertion failed {{.*}}mdspan: LayoutPolicy template parameter is invalid. A common mistake is to pass a layout mapping instead of a layout policy}}
   [[maybe_unused]] std::mdspan<int, std::extents<int>, std::layout_left::template mapping<std::extents<int>>> m;
 }

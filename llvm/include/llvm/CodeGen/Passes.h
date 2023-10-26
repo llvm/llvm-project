@@ -446,9 +446,6 @@ namespace llvm {
   /// LiveDebugValues pass
   extern char &LiveDebugValuesID;
 
-  /// createJumpInstrTables - This pass creates jump-instruction tables.
-  ModulePass *createJumpInstrTablesPass();
-
   /// InterleavedAccess Pass - This pass identifies and matches interleaved
   /// memory accesses to target specific intrinsics.
   ///
@@ -586,9 +583,6 @@ namespace llvm {
   /// The pass transforms load/store <256 x i32> to AMX load/store intrinsics
   /// or split the data to two <128 x i32>.
   FunctionPass *createX86LowerAMXTypePass();
-
-  /// The pass insert tile config intrinsics for AMX fast register allocation.
-  FunctionPass *createX86PreAMXConfigPass();
 
   /// The pass transforms amx intrinsics to scalar operation if the function has
   /// optnone attribute or it is O0.

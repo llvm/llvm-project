@@ -21,4 +21,4 @@
 #include <utility>
 
 typedef std::make_integer_sequence<int, -3> MakeSeqT;
-MakeSeqT i; // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed{{.*}}std::make_integer_sequence must have a non-negative sequence length}}
+MakeSeqT i; // expected-error-re@*:* {{static assertion failed{{.*}}std::make_integer_sequence must have a non-negative sequence length}}

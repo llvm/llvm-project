@@ -163,7 +163,8 @@ define void @derived_type() !dbg !3 {
 ; CHECK-DAG: #[[COMP2:.+]] = #llvm.di_composite_type<{{.*}}, file = #[[FILE]], scope = #[[FILE]], baseType = #[[INT]]>
 ; CHECK-DAG: #[[COMP3:.+]] = #llvm.di_composite_type<{{.*}}, flags = Vector, elements = #llvm.di_subrange<count = 4 : i64>>
 ; CHECK-DAG: #[[COMP4:.+]] = #llvm.di_composite_type<{{.*}}, flags = Vector, elements = #llvm.di_subrange<lowerBound = 0 : i64, upperBound = 4 : i64, stride = 1 : i64>>
-; CHECK-DAG: #llvm.di_subroutine_type<types = #[[COMP1]], #[[COMP2]], #[[COMP3]], #[[COMP4]]>
+; CHECK-DAG: #[[COMP5:.+]] = #llvm.di_composite_type<{{.*}}, flags = Vector>
+; CHECK-DAG: #llvm.di_subroutine_type<types = #[[COMP1]], #[[COMP2]], #[[COMP3]], #[[COMP4]], #[[COMP5]]>
 
 define void @composite_type() !dbg !3 {
   ret void
@@ -176,7 +177,7 @@ define void @composite_type() !dbg !3 {
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
 !3 = distinct !DISubprogram(name: "composite_type", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !4)
 !4 = !DISubroutineType(types: !5)
-!5 = !{!7, !8, !9, !10}
+!5 = !{!7, !8, !9, !10, !18}
 !6 = !DIBasicType(name: "int")
 !7 = !DICompositeType(tag: DW_TAG_array_type, name: "array1", line: 10, size: 128, align: 32)
 !8 = !DICompositeType(tag: DW_TAG_array_type, name: "array2", file: !2, scope: !2, baseType: !6)
@@ -186,6 +187,12 @@ define void @composite_type() !dbg !3 {
 !12 = !DISubrange(lowerBound: 0, upperBound: 4, stride: 1)
 !13 = !{!11}
 !14 = !{!12}
+
+; Verifies that unsupported subrange nodes are skipped.
+!15 = !DISubrange(count: !16)
+!16 = !DILocalVariable(scope: !3, name: "size")
+!17 = !{!15}
+!18 = !DICompositeType(tag: DW_TAG_array_type, name: "unsupported_elements", flags: DIFlagVector, elements: !17)
 
 ; // -----
 
@@ -215,15 +222,18 @@ define void @subprogram() !dbg !3 {
 define void @func_loc() !dbg !3 {
   ret void
 }
-; CHECK: #[[SP:.+]] =  #llvm.di_subprogram<compileUnit = #{{.*}}, scope = #{{.*}}, name = "func_loc", file = #{{.*}}, subprogramFlags = Definition>
-; CHECK: loc(fused<#[[SP]]>[
+; CHECK-DAG: #[[NAME_LOC:.+]] = loc("func_loc")
+; CHECK-DAG: #[[FILE_LOC:.+]] = loc("debug-info.ll":42:0)
+; CHECK-DAG: #[[SP:.+]] =  #llvm.di_subprogram<compileUnit = #{{.*}}, scope = #{{.*}}, name = "func_loc", file = #{{.*}}, line = 42, subprogramFlags = Definition>
+
+; CHECK: loc(fused<#[[SP]]>[#[[NAME_LOC]], #[[FILE_LOC]]]
 
 !llvm.dbg.cu = !{!1}
 !llvm.module.flags = !{!0}
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
-!3 = distinct !DISubprogram(name: "func_loc", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+!3 = distinct !DISubprogram(name: "func_loc", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, line: 42)
 
 ; // -----
 
@@ -531,7 +541,7 @@ define void @noname_subprogram(ptr %arg) !dbg !8 {
 ; // -----
 
 ; CHECK:      #[[MODULE:.+]] = #llvm.di_module<
-; CHECK-SAME: file = #{{.*}}, scope = #{{.*}}, name = "module", 
+; CHECK-SAME: file = #{{.*}}, scope = #{{.*}}, name = "module",
 ; CHECK-SAME: configMacros = "bar", includePath = "/",
 ; CHECK-SAME: apinotes = "/", line = 42, isDecl = true
 ; CHECK-SAME: >

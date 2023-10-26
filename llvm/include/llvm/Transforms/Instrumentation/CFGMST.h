@@ -28,8 +28,6 @@
 
 #define DEBUG_TYPE "cfgmst"
 
-using namespace llvm;
-
 namespace llvm {
 
 /// An union-find based Minimum Spanning Tree for CFG
@@ -101,7 +99,8 @@ public:
     LLVM_DEBUG(dbgs() << "Build Edge on " << F.getName() << "\n");
 
     BasicBlock *Entry = &(F.getEntryBlock());
-    uint64_t EntryWeight = (BFI != nullptr ? BFI->getEntryFreq() : 2);
+    uint64_t EntryWeight =
+        (BFI != nullptr ? BFI->getEntryFreq().getFrequency() : 2);
     // If we want to instrument the entry count, lower the weight to 0.
     if (InstrumentFuncEntry)
       EntryWeight = 0;

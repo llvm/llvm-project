@@ -21,7 +21,7 @@ append_rtti_flag(OFF INTERCEPTION_CFLAGS)
 
 # Silence warnings in system headers with MSVC.
 if(NOT CLANG_CL)
-  append_list_if(COMPILER_RT_HAS_EXTERNAL_FLAG "/experimental:external /external:W0 /external:anglebrackets" INTERCEPTION_CFLAGS)
+  append_list_if(COMPILER_RT_HAS_EXTERNAL_FLAG "/experimental:external;/external:W0;/external:anglebrackets" INTERCEPTION_CFLAGS)
 endif()
 
 add_compiler_rt_object_libraries(RTInterception

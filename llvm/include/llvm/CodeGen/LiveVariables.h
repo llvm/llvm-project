@@ -118,11 +118,6 @@ private:
   ///
   IndexedMap<VarInfo, VirtReg2IndexFunctor> VirtRegInfo;
 
-  /// PHIJoins - list of virtual registers that are PHI joins. These registers
-  /// may have multiple definitions, and they require special handling when
-  /// building live intervals.
-  SparseBitVector<> PHIJoins;
-
 private:   // Intermediate data structures
   MachineFunction *MF = nullptr;
 
@@ -181,10 +176,6 @@ private:   // Intermediate data structures
 public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
-
-  /// RegisterDefIsDead - Return true if the specified instruction defines the
-  /// specified register, but that definition is dead.
-  bool RegisterDefIsDead(MachineInstr &MI, Register Reg) const;
 
   //===--------------------------------------------------------------------===//
   //  API to update live variable information
@@ -306,12 +297,6 @@ public:
                    MachineBasicBlock *DomBB,
                    MachineBasicBlock *SuccBB,
                    std::vector<SparseBitVector<>> &LiveInSets);
-
-  /// isPHIJoin - Return true if Reg is a phi join register.
-  bool isPHIJoin(Register Reg) { return PHIJoins.test(Reg.id()); }
-
-  /// setPHIJoin - Mark Reg as a phi join register.
-  void setPHIJoin(Register Reg) { PHIJoins.set(Reg.id()); }
 };
 
 } // End llvm namespace

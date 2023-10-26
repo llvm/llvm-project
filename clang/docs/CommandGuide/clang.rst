@@ -684,6 +684,21 @@ Preprocessor Options
 
   Do not search clang's builtin directory for include files.
 
+.. option:: -fkeep-system-includes
+
+  Usable only with :option:`-E`. Do not copy the preprocessed content of
+  "system" headers to the output; instead, preserve the #include directive.
+  This can greatly reduce the volume of text produced by :option:`-E` which
+  can be helpful when trying to produce a "small" reproduceable test case.
+
+  This option does not guarantee reproduceability, however. If the including
+  source defines preprocessor symbols that influence the behavior of system
+  headers (for example, ``_XOPEN_SOURCE``) the operation of :option:`-E` will
+  remove that definition and thus can change the semantics of the included
+  header. Also, using a different version of the system headers (especially a
+  different version of the STL) may result in different behavior. Always verify
+  the preprocessed file by compiling it separately.
+
 
 ENVIRONMENT
 -----------

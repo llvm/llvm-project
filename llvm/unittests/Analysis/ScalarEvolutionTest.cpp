@@ -352,7 +352,7 @@ TEST_F(ScalarEvolutionsTest, CompareSCEVComplexity) {
 
 TEST_F(ScalarEvolutionsTest, CompareValueComplexity) {
   IntegerType *IntPtrTy = M.getDataLayout().getIntPtrType(Context);
-  PointerType *IntPtrPtrTy = IntPtrTy->getPointerTo();
+  PointerType *IntPtrPtrTy = PointerType::getUnqual(Context);
 
   FunctionType *FTy =
       FunctionType::get(Type::getVoidTy(Context), {IntPtrTy, IntPtrTy}, false);

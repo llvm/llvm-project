@@ -847,7 +847,8 @@ void CallLowering::insertSRetLoads(MachineIRBuilder &MIRBuilder, Type *RetTy,
 
   unsigned NumValues = SplitVTs.size();
   Align BaseAlign = DL.getPrefTypeAlign(RetTy);
-  Type *RetPtrTy = RetTy->getPointerTo(DL.getAllocaAddrSpace());
+  Type *RetPtrTy =
+      PointerType::get(RetTy->getContext(), DL.getAllocaAddrSpace());
   LLT OffsetLLTy = getLLTForType(*DL.getIndexType(RetPtrTy), DL);
 
   MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(MF, FI);
@@ -1134,7 +1135,7 @@ void CallLowering::ValueHandler::copyArgumentMemory(
 }
 
 Register CallLowering::ValueHandler::extendRegister(Register ValReg,
-                                                    CCValAssign &VA,
+                                                    const CCValAssign &VA,
                                                     unsigned MaxSizeBits) {
   LLT LocTy{VA.getLocVT()};
   LLT ValTy{VA.getValVT()};
@@ -1183,9 +1184,8 @@ Register CallLowering::ValueHandler::extendRegister(Register ValReg,
 
 void CallLowering::ValueAssigner::anchor() {}
 
-Register CallLowering::IncomingValueHandler::buildExtensionHint(CCValAssign &VA,
-                                                                Register SrcReg,
-                                                                LLT NarrowTy) {
+Register CallLowering::IncomingValueHandler::buildExtensionHint(
+    const CCValAssign &VA, Register SrcReg, LLT NarrowTy) {
   switch (VA.getLocInfo()) {
   case CCValAssign::LocInfo::ZExt: {
     return MIRBuilder
@@ -1225,9 +1225,8 @@ static bool isCopyCompatibleType(LLT SrcTy, LLT DstTy) {
          (DstTy.isPointer() && SrcTy.isScalar());
 }
 
-void CallLowering::IncomingValueHandler::assignValueToReg(Register ValVReg,
-                                                          Register PhysReg,
-                                                          CCValAssign VA) {
+void CallLowering::IncomingValueHandler::assignValueToReg(
+    Register ValVReg, Register PhysReg, const CCValAssign &VA) {
   const MVT LocVT = VA.getLocVT();
   const LLT LocTy(LocVT);
   const LLT RegTy = MRI.getType(ValVReg);

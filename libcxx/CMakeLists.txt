@@ -48,6 +48,10 @@ include(CMakeDependentOption)
 include(HandleCompilerRT)
 
 # Basic options ---------------------------------------------------------------
+option(LIBCXX_ENABLE_ASSERTIONS
+  "Enable assertions inside the compiled library, and at the same time make it the
+   default when compiling user code. Note that assertions can be enabled or disabled
+   by users in their own code regardless of this option." OFF)
 option(LIBCXX_ENABLE_SHARED "Build libc++ as a shared library." ON)
 option(LIBCXX_ENABLE_STATIC "Build libc++ as a static library." ON)
 option(LIBCXX_ENABLE_FILESYSTEM
@@ -638,18 +642,8 @@ get_sanitizer_flags(SANITIZER_FLAGS "${LLVM_USE_SANITIZER}")
 
 # Link system libraries =======================================================
 function(cxx_link_system_libraries target)
-
-# In order to remove just libc++ from the link step
-# we need to use -nostdlib++ whenever it is supported.
-# Unfortunately this cannot be used universally because for example g++ supports
-# only -nodefaultlibs in which case all libraries will be removed and
-# all libraries but c++ have to be added in manually.
-  if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
-    target_add_link_flags_if_supported(${target} PRIVATE "-nostdlib++")
-  else()
-    target_add_link_flags_if_supported(${target} PRIVATE "-nodefaultlibs")
-    target_add_compile_flags_if_supported(${target} PRIVATE "/Zl")
-    target_add_link_flags_if_supported(${target} PRIVATE "/nodefaultlib")
+  if (NOT MSVC)
+    target_link_libraries(${target} PRIVATE "-nostdlib++")
   endif()
 
   if (CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG AND LIBCXXABI_USE_LLVM_UNWINDER)
@@ -657,24 +651,6 @@ function(cxx_link_system_libraries target)
     # in the same invocation, don't try to link in the toolchain's
     # default libunwind (which may be missing still).
     target_add_link_flags_if_supported(${target} PRIVATE "--unwindlib=none")
-  endif()
-
-  if (NOT APPLE) # On Apple platforms, we always use -nostdlib++ so we don't need to re-add other libraries
-    if (LIBCXX_HAS_PTHREAD_LIB)
-      target_link_libraries(${target} PRIVATE pthread)
-    endif()
-
-    if (LIBCXX_HAS_C_LIB)
-      target_link_libraries(${target} PRIVATE c)
-    endif()
-
-    if (LIBCXX_HAS_M_LIB)
-      target_link_libraries(${target} PRIVATE m)
-    endif()
-
-    if (LIBCXX_HAS_RT_LIB)
-      target_link_libraries(${target} PRIVATE rt)
-    endif()
   endif()
 
   if (LIBCXX_USE_COMPILER_RT)
@@ -773,6 +749,11 @@ config_define_if_not(LIBCXX_ENABLE_WIDE_CHARACTERS _LIBCPP_HAS_NO_WIDE_CHARACTER
 config_define_if_not(LIBCXX_ENABLE_STD_MODULES _LIBCPP_HAS_NO_STD_MODULES)
 config_define_if_not(LIBCXX_ENABLE_TIME_ZONE_DATABASE _LIBCPP_HAS_NO_TIME_ZONE_DATABASE)
 config_define_if_not(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS _LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS)
+
+# TODO(LLVM 19): Produce a deprecation warning.
+if (LIBCXX_ENABLE_ASSERTIONS)
+  set(LIBCXX_HARDENING_MODE "safe")
+endif()
 if (LIBCXX_HARDENING_MODE STREQUAL "hardened")
   config_define(1 _LIBCPP_ENABLE_HARDENED_MODE_DEFAULT)
   config_define(0 _LIBCPP_ENABLE_SAFE_MODE_DEFAULT)
@@ -789,11 +770,6 @@ elseif (LIBCXX_HARDENING_MODE STREQUAL "unchecked")
   config_define(0 _LIBCPP_ENABLE_HARDENED_MODE_DEFAULT)
   config_define(0 _LIBCPP_ENABLE_SAFE_MODE_DEFAULT)
   config_define(0 _LIBCPP_ENABLE_DEBUG_MODE_DEFAULT)
-endif()
-# TODO(LLVM 19): Remove this after branching for LLVM 18, this is a simple
-# courtesy for vendors to be notified about this change.
-if (LIBCXX_ENABLE_ASSERTIONS)
-  message(FATAL_ERROR "LIBCXX_ENABLE_ASSERTIONS has been replaced by LIBCXX_HARDENING_MODE=safe")
 endif()
 
 if (LIBCXX_PSTL_CPU_BACKEND STREQUAL "serial")

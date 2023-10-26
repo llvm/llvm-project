@@ -40,5 +40,4 @@ void caller() {
 }
 
 // GNU:  ![[FUNCSAN]] = !{i32 -1056584962, i32 905068220}
-// FIXME: Wrong hash
-// MSVC: ![[FUNCSAN]] = !{i32 -1056584962, i32 165986058}
+// MSVC: ![[FUNCSAN]] = !{i32 -1056584962, i32 -1600339357}

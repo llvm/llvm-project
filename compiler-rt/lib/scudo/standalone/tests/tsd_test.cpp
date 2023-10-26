@@ -101,6 +101,7 @@ template <class AllocatorT> static void testRegistry() {
 
   bool UnlockRequired;
   auto TSD = Registry->getTSDAndLock(&UnlockRequired);
+  TSD->assertLocked(/*BypassCheck=*/!UnlockRequired);
   EXPECT_NE(TSD, nullptr);
   EXPECT_EQ(TSD->getCache().Canary, 0U);
   if (UnlockRequired)
@@ -108,6 +109,7 @@ template <class AllocatorT> static void testRegistry() {
 
   Registry->initThreadMaybe(Allocator.get(), /*MinimalInit=*/false);
   TSD = Registry->getTSDAndLock(&UnlockRequired);
+  TSD->assertLocked(/*BypassCheck=*/!UnlockRequired);
   EXPECT_NE(TSD, nullptr);
   EXPECT_EQ(TSD->getCache().Canary, 0U);
   memset(&TSD->getCache(), 0x42, sizeof(TSD->getCache()));
@@ -137,6 +139,7 @@ template <typename AllocatorT> static void stressCache(AllocatorT *Allocator) {
   Registry->initThreadMaybe(Allocator, /*MinimalInit=*/false);
   bool UnlockRequired;
   auto TSD = Registry->getTSDAndLock(&UnlockRequired);
+  TSD->assertLocked(/*BypassCheck=*/!UnlockRequired);
   EXPECT_NE(TSD, nullptr);
   // For an exclusive TSD, the cache should be empty. We cannot guarantee the
   // same for a shared TSD.
@@ -195,6 +198,7 @@ static void stressSharedRegistry(MockAllocator<SharedCaches> *Allocator) {
   bool UnlockRequired;
   for (scudo::uptr I = 0; I < 4096U; I++) {
     auto TSD = Registry->getTSDAndLock(&UnlockRequired);
+    TSD->assertLocked(/*BypassCheck=*/!UnlockRequired);
     EXPECT_NE(TSD, nullptr);
     Set.insert(reinterpret_cast<void *>(TSD));
     if (UnlockRequired)

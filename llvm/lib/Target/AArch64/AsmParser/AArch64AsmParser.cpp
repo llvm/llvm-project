@@ -3638,6 +3638,7 @@ static const struct Extension {
     {"sb", {AArch64::FeatureSB}},
     {"ssbs", {AArch64::FeatureSSBS}},
     {"tme", {AArch64::FeatureTME}},
+    {"fpmr", {AArch64::FeatureFPMR}},
 };
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
@@ -4537,6 +4538,8 @@ ParseStatus AArch64AsmParser::tryParseZTOperand(OperandVector &Operands) {
 
   // Check if register is followed by an index
   if (parseOptionalToken(AsmToken::LBrac)) {
+    Operands.push_back(
+        AArch64Operand::CreateToken("[", getLoc(), getContext()));
     const MCExpr *ImmVal;
     if (getParser().parseExpression(ImmVal))
       return ParseStatus::NoMatch;
@@ -4549,6 +4552,8 @@ ParseStatus AArch64AsmParser::tryParseZTOperand(OperandVector &Operands) {
     Operands.push_back(AArch64Operand::CreateImm(
         MCConstantExpr::create(MCE->getValue(), getContext()), StartLoc,
         getLoc(), getContext()));
+    Operands.push_back(
+        AArch64Operand::CreateToken("]", getLoc(), getContext()));
   }
 
   return ParseStatus::Success;
@@ -7484,7 +7489,7 @@ bool AArch64AsmParser::parseAuthExpr(const MCExpr *&Res, SMLoc &EndLoc) {
   // Look for '_sym@AUTH' ...
   if (Tok.is(AsmToken::Identifier) && Tok.getIdentifier().endswith("@AUTH")) {
     StringRef SymName = Tok.getIdentifier().drop_back(strlen("@AUTH"));
-    if (SymName.find('@') != StringRef::npos)
+    if (SymName.contains('@'))
       return TokError(
           "combination of @AUTH with other modifiers not supported");
     Res = MCSymbolRefExpr::create(Ctx.getOrCreateSymbol(SymName), Ctx);

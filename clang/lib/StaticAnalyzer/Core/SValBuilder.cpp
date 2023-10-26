@@ -275,7 +275,7 @@ DefinedSVal SValBuilder::getMemberPointer(const NamedDecl *ND) {
     // We don't need to play a similar trick for static member fields
     // because these are represented as plain VarDecls and not FieldDecls
     // in the AST.
-    if (MD->isStatic())
+    if (!MD->isImplicitObjectMemberFunction())
       return getFunctionPointer(MD);
   }
 

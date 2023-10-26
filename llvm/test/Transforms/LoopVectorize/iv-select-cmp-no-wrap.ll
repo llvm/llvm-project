@@ -1,6 +1,6 @@
 ; RUN: opt -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -S < %s | FileCheck %s --check-prefix=CHECK
 
-define i64 @select_icmp_nuw_nsw(ptr nocapture readonly %a, ptr nocapture readonly %b, i64 %ii, i64 %n) {
+define i64 @select_icmp_nuw_nsw(ptr %a, ptr %b, i64 %ii, i64 %n) {
 ; CHECK-LABEL: define i64 @select_icmp_nuw_nsw
 ; CHECK-NOT:   vector.body:
 ;
@@ -24,7 +24,7 @@ exit:                                             ; preds = %for.body
   ret i64 %cond
 }
 
-define i64 @select_icmp_nsw(ptr nocapture readonly %a, ptr nocapture readonly %b, i64 %ii, i64 %n) {
+define i64 @select_icmp_nsw(ptr %a, ptr %b, i64 %ii, i64 %n) {
 ; CHECK-LABEL: define i64 @select_icmp_nsw
 ; CHECK-NOT:   vector.body:
 ;
@@ -48,7 +48,7 @@ exit:                                             ; preds = %for.body
   ret i64 %cond
 }
 
-define i64 @select_icmp_nuw(ptr nocapture readonly %a, ptr nocapture readonly %b, i64 %ii, i64 %n) {
+define i64 @select_icmp_nuw(ptr %a, ptr %b, i64 %ii, i64 %n) {
 ; CHECK-LABEL: define i64 @select_icmp_nuw
 ; CHECK-NOT:   vector.body:
 ;
@@ -72,7 +72,7 @@ exit:                                             ; preds = %for.body
   ret i64 %cond
 }
 
-define i64 @select_icmp_noflag(ptr nocapture readonly %a, ptr nocapture readonly %b, i64 %ii, i64 %n) {
+define i64 @select_icmp_noflag(ptr %a, ptr %b, i64 %ii, i64 %n) {
 ; CHECK-LABEL: define i64 @select_icmp_noflag
 ; CHECK-NOT:   vector.body:
 ;

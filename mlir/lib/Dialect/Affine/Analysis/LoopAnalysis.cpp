@@ -39,7 +39,7 @@ void mlir::affine::getTripCountMapAndOperands(
     AffineForOp forOp, AffineMap *tripCountMap,
     SmallVectorImpl<Value> *tripCountOperands) {
   MLIRContext *context = forOp.getContext();
-  int64_t step = forOp.getStep();
+  int64_t step = forOp.getStepAsInt();
   int64_t loopSpan;
   if (forOp.hasConstantBounds()) {
     int64_t lb = forOp.getConstantLowerBound();

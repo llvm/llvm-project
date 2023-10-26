@@ -25,7 +25,7 @@
 
 _Static_assert(sizeof(clock_t) == sizeof(long), "ABI mismatch!");
 
-#include <llvm-libc-decls/ctype.h>
+#include <llvm-libc-decls/time.h>
 
 #pragma omp end declare target
 

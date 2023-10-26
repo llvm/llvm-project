@@ -12,7 +12,6 @@
 
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/ADT/EquivalenceClasses.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/DemandedBits.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
@@ -1451,22 +1450,6 @@ void InterleaveGroup<Instruction>::addMetadata(Instruction *NewInst) const {
                  [](std::pair<int, Instruction *> p) { return p.second; });
   propagateMetadata(NewInst, VL);
 }
-}
-
-std::string VFABI::mangleTLIVectorName(StringRef VectorName,
-                                       StringRef ScalarName, unsigned numArgs,
-                                       ElementCount VF, bool Masked) {
-  SmallString<256> Buffer;
-  llvm::raw_svector_ostream Out(Buffer);
-  Out << "_ZGV" << VFABI::_LLVM_ << (Masked ? "M" : "N");
-  if (VF.isScalable())
-    Out << 'x';
-  else
-    Out << VF.getFixedValue();
-  for (unsigned I = 0; I < numArgs; ++I)
-    Out << "v";
-  Out << "_" << ScalarName << "(" << VectorName << ")";
-  return std::string(Out.str());
 }
 
 void VFABI::getVectorVariantNames(

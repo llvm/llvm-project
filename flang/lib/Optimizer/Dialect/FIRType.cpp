@@ -311,6 +311,25 @@ bool isAssumedType(mlir::Type ty) {
   return false;
 }
 
+bool isAssumedShape(mlir::Type ty) {
+  if (auto boxTy = mlir::dyn_cast<fir::BoxType>(ty))
+    if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(boxTy.getEleTy()))
+      return seqTy.hasDynamicExtents();
+  return false;
+}
+
+bool isAllocatableOrPointerArray(mlir::Type ty) {
+  if (auto refTy = fir::dyn_cast_ptrEleTy(ty))
+    ty = refTy;
+  if (auto boxTy = mlir::dyn_cast<fir::BoxType>(ty)) {
+    if (auto heapTy = mlir::dyn_cast<fir::HeapType>(boxTy.getEleTy()))
+      return mlir::isa<fir::SequenceType>(heapTy.getEleTy());
+    if (auto ptrTy = mlir::dyn_cast<fir::PointerType>(boxTy.getEleTy()))
+      return mlir::isa<fir::SequenceType>(ptrTy.getEleTy());
+  }
+  return false;
+}
+
 bool isPolymorphicType(mlir::Type ty) {
   if (auto refTy = fir::dyn_cast_ptrEleTy(ty))
     ty = refTy;
@@ -355,6 +374,18 @@ bool isRecordWithAllocatableMember(mlir::Type ty) {
       // A record type cannot recursively include itself as a direct member.
       // There must be an intervening `ptr` type, so recursion is safe here.
       if (memTy.isa<fir::RecordType>() && isRecordWithAllocatableMember(memTy))
+        return true;
+    }
+  return false;
+}
+
+bool isRecordWithDescriptorMember(mlir::Type ty) {
+  ty = unwrapSequenceType(ty);
+  if (auto recTy = ty.dyn_cast<fir::RecordType>())
+    for (auto [field, memTy] : recTy.getTypeList()) {
+      if (mlir::isa<fir::BaseBoxType>(memTy))
+        return true;
+      if (memTy.isa<fir::RecordType>() && isRecordWithDescriptorMember(memTy))
         return true;
     }
   return false;
@@ -520,7 +551,7 @@ std::string getTypeAsString(mlir::Type ty, const fir::KindMapping &kindMap,
     } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(ty)) {
       for (auto extent : seqTy.getShape()) {
         if (extent == fir::SequenceType::getUnknownExtent())
-          name << "?x";
+          name << "Ux";
         else
           name << extent << 'x';
       }

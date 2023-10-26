@@ -284,7 +284,8 @@ struct _LIBCPP_TEMPLATE_VIS pair
     }
 
     template <__pair_like _PairLike>
-      requires(is_constructible_v<first_type, decltype(std::get<0>(std::declval<_PairLike&&>()))> &&
+      requires(!__is_specialization_of_subrange<remove_cvref_t<_PairLike>>::value &&
+               is_constructible_v<first_type, decltype(std::get<0>(std::declval<_PairLike&&>()))> &&
                is_constructible_v<second_type, decltype(std::get<1>(std::declval<_PairLike&&>()))>)
     _LIBCPP_HIDE_FROM_ABI constexpr explicit(__pair_like_explicit_wknd<_PairLike>())
         pair(_PairLike&& __p)

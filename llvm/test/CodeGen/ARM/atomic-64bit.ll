@@ -71,10 +71,10 @@ define i64 @test3(ptr %ptr, i64 %val) {
 ; CHECK-LABEL: test3:
 ; CHECK: dmb {{ish$}}
 ; CHECK: ldrexd [[REG1:(r[0-9]?[02468])]], [[REG2:(r[0-9]?[13579])]]
-; CHECK-LE-DAG: and [[REG3:(r[0-9]?[02468])]], [[REG1]]
-; CHECK-LE-DAG: and [[REG4:(r[0-9]?[13579])]], [[REG2]]
-; CHECK-BE-DAG: and [[REG4:(r[0-9]?[13579])]], [[REG2]]
-; CHECK-BE-DAG: and [[REG3:(r[0-9]?[02468])]], [[REG1]]
+; CHECK-LE-DAG: and [[REG3:(r[0-9]?[02468])]], [[REG1]],
+; CHECK-LE-DAG: and [[REG4:(r[0-9]?[13579])]], [[REG2]],
+; CHECK-BE-DAG: and [[REG4:(r[0-9]?[13579])]], [[REG2]],
+; CHECK-BE-DAG: and [[REG3:(r[0-9]?[02468])]], [[REG1]],
 ; CHECK: strexd {{[a-z0-9]+}}, [[REG3]], [[REG4]]
 ; CHECK: cmp
 ; CHECK: bne
@@ -83,10 +83,10 @@ define i64 @test3(ptr %ptr, i64 %val) {
 ; CHECK-THUMB-LABEL: test3:
 ; CHECK-THUMB: dmb {{ish$}}
 ; CHECK-THUMB: ldrexd [[REG1:[a-z0-9]+]], [[REG2:[a-z0-9]+]]
-; CHECK-THUMB-LE-DAG: and.w [[REG3:[a-z0-9]+]], [[REG1]]
-; CHECK-THUMB-LE-DAG: and.w [[REG4:[a-z0-9]+]], [[REG2]]
-; CHECK-THUMB-BE-DAG: and.w [[REG4:[a-z0-9]+]], [[REG2]]
-; CHECK-THUMB-BE-DAG: and.w [[REG3:[a-z0-9]+]], [[REG1]]
+; CHECK-THUMB-LE-DAG: and.w [[REG3:[a-z0-9]+]], [[REG1]],
+; CHECK-THUMB-LE-DAG: and.w [[REG4:[a-z0-9]+]], [[REG2]],
+; CHECK-THUMB-BE-DAG: and.w [[REG4:[a-z0-9]+]], [[REG2]],
+; CHECK-THUMB-BE-DAG: and.w [[REG3:[a-z0-9]+]], [[REG1]],
 ; CHECK-THUMB: strexd {{[a-z0-9]+}}, [[REG3]], [[REG4]]
 ; CHECK-THUMB: cmp
 ; CHECK-THUMB: bne
@@ -102,10 +102,10 @@ define i64 @test4(ptr %ptr, i64 %val) {
 ; CHECK-LABEL: test4:
 ; CHECK: dmb {{ish$}}
 ; CHECK: ldrexd [[REG1:(r[0-9]?[02468])]], [[REG2:(r[0-9]?[13579])]]
-; CHECK-LE-DAG: orr [[REG3:(r[0-9]?[02468])]], [[REG1]]
-; CHECK-LE-DAG: orr [[REG4:(r[0-9]?[13579])]], [[REG2]]
-; CHECK-BE-DAG: orr [[REG4:(r[0-9]?[13579])]], [[REG2]]
-; CHECK-BE-DAG: orr [[REG3:(r[0-9]?[02468])]], [[REG1]]
+; CHECK-LE-DAG: orr [[REG3:(r[0-9]?[02468])]], [[REG1]],
+; CHECK-LE-DAG: orr [[REG4:(r[0-9]?[13579])]], [[REG2]],
+; CHECK-BE-DAG: orr [[REG4:(r[0-9]?[13579])]], [[REG2]],
+; CHECK-BE-DAG: orr [[REG3:(r[0-9]?[02468])]], [[REG1]],
 ; CHECK: strexd {{[a-z0-9]+}}, [[REG3]], [[REG4]]
 ; CHECK: cmp
 ; CHECK: bne
@@ -114,10 +114,10 @@ define i64 @test4(ptr %ptr, i64 %val) {
 ; CHECK-THUMB-LABEL: test4:
 ; CHECK-THUMB: dmb {{ish$}}
 ; CHECK-THUMB: ldrexd [[REG1:[a-z0-9]+]], [[REG2:[a-z0-9]+]]
-; CHECK-THUMB-LE-DAG: orr.w [[REG3:[a-z0-9]+]], [[REG1]]
-; CHECK-THUMB-LE-DAG: orr.w [[REG4:[a-z0-9]+]], [[REG2]]
-; CHECK-THUMB-BE-DAG: orr.w [[REG4:[a-z0-9]+]], [[REG2]]
-; CHECK-THUMB-BE-DAG: orr.w [[REG3:[a-z0-9]+]], [[REG1]]
+; CHECK-THUMB-LE-DAG: orr.w [[REG3:[a-z0-9]+]], [[REG1]],
+; CHECK-THUMB-LE-DAG: orr.w [[REG4:[a-z0-9]+]], [[REG2]],
+; CHECK-THUMB-BE-DAG: orr.w [[REG4:[a-z0-9]+]], [[REG2]],
+; CHECK-THUMB-BE-DAG: orr.w [[REG3:[a-z0-9]+]], [[REG1]],
 ; CHECK-THUMB: strexd {{[a-z0-9]+}}, [[REG3]], [[REG4]]
 ; CHECK-THUMB: cmp
 ; CHECK-THUMB: bne
@@ -133,10 +133,10 @@ define i64 @test5(ptr %ptr, i64 %val) {
 ; CHECK-LABEL: test5:
 ; CHECK: dmb {{ish$}}
 ; CHECK: ldrexd [[REG1:(r[0-9]?[02468])]], [[REG2:(r[0-9]?[13579])]]
-; CHECK-LE-DAG: eor [[REG3:(r[0-9]?[02468])]], [[REG1]]
-; CHECK-LE-DAG: eor [[REG4:(r[0-9]?[13579])]], [[REG2]]
-; CHECK-BE-DAG: eor [[REG4:(r[0-9]?[13579])]], [[REG2]]
-; CHECK-BE-DAG: eor [[REG3:(r[0-9]?[02468])]], [[REG1]]
+; CHECK-LE-DAG: eor [[REG3:(r[0-9]?[02468])]], [[REG1]],
+; CHECK-LE-DAG: eor [[REG4:(r[0-9]?[13579])]], [[REG2]],
+; CHECK-BE-DAG: eor [[REG4:(r[0-9]?[13579])]], [[REG2]],
+; CHECK-BE-DAG: eor [[REG3:(r[0-9]?[02468])]], [[REG1]],
 ; CHECK: strexd {{[a-z0-9]+}}, [[REG3]], [[REG4]]
 ; CHECK: cmp
 ; CHECK: bne
@@ -145,10 +145,10 @@ define i64 @test5(ptr %ptr, i64 %val) {
 ; CHECK-THUMB-LABEL: test5:
 ; CHECK-THUMB: dmb {{ish$}}
 ; CHECK-THUMB: ldrexd [[REG1:[a-z0-9]+]], [[REG2:[a-z0-9]+]]
-; CHECK-THUMB-LE-DAG: eor.w [[REG3:[a-z0-9]+]], [[REG1]]
-; CHECK-THUMB-LE-DAG: eor.w [[REG4:[a-z0-9]+]], [[REG2]]
-; CHECK-THUMB-BE-DAG: eor.w [[REG4:[a-z0-9]+]], [[REG2]]
-; CHECK-THUMB-BE-DAG: eor.w [[REG3:[a-z0-9]+]], [[REG1]]
+; CHECK-THUMB-LE-DAG: eor.w [[REG3:[a-z0-9]+]], [[REG1]],
+; CHECK-THUMB-LE-DAG: eor.w [[REG4:[a-z0-9]+]], [[REG2]],
+; CHECK-THUMB-BE-DAG: eor.w [[REG4:[a-z0-9]+]], [[REG2]],
+; CHECK-THUMB-BE-DAG: eor.w [[REG3:[a-z0-9]+]], [[REG1]],
 ; CHECK-THUMB: strexd {{[a-z0-9]+}}, [[REG3]], [[REG4]]
 ; CHECK-THUMB: cmp
 ; CHECK-THUMB: bne

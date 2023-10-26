@@ -2913,8 +2913,8 @@ void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {
       for (auto I = CGM.getContext().getSourceManager().fileinfo_begin(),
                 E = CGM.getContext().getSourceManager().fileinfo_end();
            I != E; ++I) {
-        if (I->getFirst()->getUniqueID().getDevice() == EntryInfo.DeviceID &&
-            I->getFirst()->getUniqueID().getFile() == EntryInfo.FileID) {
+        if (I->getFirst().getUniqueID().getDevice() == EntryInfo.DeviceID &&
+            I->getFirst().getUniqueID().getFile() == EntryInfo.FileID) {
           Loc = CGM.getContext().getSourceManager().translateFileLineCol(
               I->getFirst(), EntryInfo.Line, 1);
           break;
@@ -7734,30 +7734,6 @@ private:
            OpenMPOffloadMappingFlags::OMP_MAP_FROM;
   }
 
-  static OpenMPOffloadMappingFlags getMemberOfFlag(unsigned Position) {
-    // Rotate by getFlagMemberOffset() bits.
-    return static_cast<OpenMPOffloadMappingFlags>(((uint64_t)Position + 1)
-                                                  << getFlagMemberOffset());
-  }
-
-  static void setCorrectMemberOfFlag(OpenMPOffloadMappingFlags &Flags,
-                                     OpenMPOffloadMappingFlags MemberOfFlag) {
-    // If the entry is PTR_AND_OBJ but has not been marked with the special
-    // placeholder value 0xFFFF in the MEMBER_OF field, then it should not be
-    // marked as MEMBER_OF.
-    if (static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
-            Flags & OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ) &&
-        static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
-            (Flags & OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF) !=
-            OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF))
-      return;
-
-    // Reset the placeholder value to prepare the flag for the assignment of the
-    // proper MEMBER_OF value.
-    Flags &= ~OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF;
-    Flags |= MemberOfFlag;
-  }
-
   void getPlainLayout(const CXXRecordDecl *RD,
                       llvm::SmallVectorImpl<const FieldDecl *> &Layout,
                       bool AsBase) const {
@@ -7825,6 +7801,7 @@ private:
   /// the device pointers info array.
   void generateAllInfoForClauses(
       ArrayRef<const OMPClause *> Clauses, MapCombinedInfoTy &CombinedInfo,
+      llvm::OpenMPIRBuilder &OMPBuilder,
       const llvm::DenseSet<CanonicalDeclPtr<const Decl>> &SkipVarSet =
           llvm::DenseSet<CanonicalDeclPtr<const Decl>>()) const {
     // We have to process the component lists that relate with the same
@@ -8159,7 +8136,7 @@ private:
       if (PartialStruct.Base.isValid()) {
         CurInfo.NonContigInfo.Dims.push_back(0);
         emitCombinedEntry(CombinedInfo, CurInfo.Types, PartialStruct,
-                          /*IsMapThis*/ !VD, VD);
+                          /*IsMapThis*/ !VD, OMPBuilder, VD);
       }
 
       // We need to append the results of this capture to what we already
@@ -8226,6 +8203,7 @@ public:
   void emitCombinedEntry(MapCombinedInfoTy &CombinedInfo,
                          MapFlagsArrayTy &CurTypes,
                          const StructRangeInfoTy &PartialStruct, bool IsMapThis,
+                         llvm::OpenMPIRBuilder &OMPBuilder,
                          const ValueDecl *VD = nullptr,
                          bool NotTargetParams = true) const {
     if (CurTypes.size() == 1 &&
@@ -8260,7 +8238,7 @@ public:
       // of tofrom.
       // Emit this[:1]
       CombinedInfo.Pointers.push_back(PartialStruct.Base.getPointer());
-      QualType Ty = MD->getThisObjectType();
+      QualType Ty = MD->getFunctionObjectParameterType();
       llvm::Value *Size =
           CGF.Builder.CreateIntCast(CGF.getTypeSize(Ty), CGF.Int64Ty,
                                     /*isSigned=*/true);
@@ -8313,9 +8291,9 @@ public:
     // (except for PTR_AND_OBJ entries which do not have a placeholder value
     // 0xFFFF in the MEMBER_OF field).
     OpenMPOffloadMappingFlags MemberOfFlag =
-        getMemberOfFlag(CombinedInfo.BasePointers.size() - 1);
+        OMPBuilder.getMemberOfFlag(CombinedInfo.BasePointers.size() - 1);
     for (auto &M : CurTypes)
-      setCorrectMemberOfFlag(M, MemberOfFlag);
+      OMPBuilder.setCorrectMemberOfFlag(M, MemberOfFlag);
   }
 
   /// Generate all the base pointers, section pointers, sizes, map types, and
@@ -8324,23 +8302,26 @@ public:
   /// pair of the relevant declaration and index where it occurs is appended to
   /// the device pointers info array.
   void generateAllInfo(
-      MapCombinedInfoTy &CombinedInfo,
+      MapCombinedInfoTy &CombinedInfo, llvm::OpenMPIRBuilder &OMPBuilder,
       const llvm::DenseSet<CanonicalDeclPtr<const Decl>> &SkipVarSet =
           llvm::DenseSet<CanonicalDeclPtr<const Decl>>()) const {
     assert(CurDir.is<const OMPExecutableDirective *>() &&
            "Expect a executable directive");
     const auto *CurExecDir = CurDir.get<const OMPExecutableDirective *>();
-    generateAllInfoForClauses(CurExecDir->clauses(), CombinedInfo, SkipVarSet);
+    generateAllInfoForClauses(CurExecDir->clauses(), CombinedInfo, OMPBuilder,
+                              SkipVarSet);
   }
 
   /// Generate all the base pointers, section pointers, sizes, map types, and
   /// mappers for the extracted map clauses of user-defined mapper (all included
   /// in \a CombinedInfo).
-  void generateAllInfoForMapper(MapCombinedInfoTy &CombinedInfo) const {
+  void generateAllInfoForMapper(MapCombinedInfoTy &CombinedInfo,
+                                llvm::OpenMPIRBuilder &OMPBuilder) const {
     assert(CurDir.is<const OMPDeclareMapperDecl *>() &&
            "Expect a declare mapper directive");
     const auto *CurMapperDir = CurDir.get<const OMPDeclareMapperDecl *>();
-    generateAllInfoForClauses(CurMapperDir->clauses(), CombinedInfo);
+    generateAllInfoForClauses(CurMapperDir->clauses(), CombinedInfo,
+                              OMPBuilder);
   }
 
   /// Emit capture info for lambdas for variables captured by reference.
@@ -8422,6 +8403,7 @@ public:
 
   /// Set correct indices for lambdas captures.
   void adjustMemberOfForLambdaCaptures(
+      llvm::OpenMPIRBuilder &OMPBuilder,
       const llvm::DenseMap<llvm::Value *, llvm::Value *> &LambdaPointers,
       MapBaseValuesArrayTy &BasePointers, MapValuesArrayTy &Pointers,
       MapFlagsArrayTy &Types) const {
@@ -8446,8 +8428,9 @@ public:
       // All other current entries will be MEMBER_OF the combined entry
       // (except for PTR_AND_OBJ entries which do not have a placeholder value
       // 0xFFFF in the MEMBER_OF field).
-      OpenMPOffloadMappingFlags MemberOfFlag = getMemberOfFlag(TgtIdx);
-      setCorrectMemberOfFlag(Types[I], MemberOfFlag);
+      OpenMPOffloadMappingFlags MemberOfFlag =
+          OMPBuilder.getMemberOfFlag(TgtIdx);
+      OMPBuilder.setCorrectMemberOfFlag(Types[I], MemberOfFlag);
     }
   }
 
@@ -9069,7 +9052,7 @@ void CGOpenMPRuntime::emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
   llvm::FunctionType *FnTy = CGM.getTypes().GetFunctionType(FnInfo);
   SmallString<64> TyStr;
   llvm::raw_svector_ostream Out(TyStr);
-  CGM.getCXXABI().getMangleContext().mangleTypeName(Ty, Out);
+  CGM.getCXXABI().getMangleContext().mangleCanonicalTypeName(Ty, Out);
   std::string Name = getName({"omp_mapper", TyStr, D->getName()});
   auto *Fn = llvm::Function::Create(FnTy, llvm::GlobalValue::InternalLinkage,
                                     Name, &CGM.getModule());
@@ -9141,7 +9124,7 @@ void CGOpenMPRuntime::emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
   // Get map clause information. Fill up the arrays with all mapped variables.
   MappableExprsHandler::MapCombinedInfoTy Info;
   MappableExprsHandler MEHandler(*D, MapperCGF);
-  MEHandler.generateAllInfoForMapper(Info);
+  MEHandler.generateAllInfoForMapper(Info, OMPBuilder);
 
   // Call the runtime API __tgt_mapper_num_components to get the number of
   // pre-existing components.
@@ -9525,7 +9508,8 @@ static void emitTargetCallKernelLaunch(
       CombinedInfo.append(PartialStruct.PreliminaryMapData);
       MEHandler.emitCombinedEntry(
           CombinedInfo, CurInfo.Types, PartialStruct, CI->capturesThis(),
-          nullptr, !PartialStruct.PreliminaryMapData.BasePointers.empty());
+          OMPBuilder, nullptr,
+          !PartialStruct.PreliminaryMapData.BasePointers.empty());
     }
 
     // We need to append the results of this capture to what we already have.
@@ -9533,11 +9517,11 @@ static void emitTargetCallKernelLaunch(
   }
   // Adjust MEMBER_OF flags for the lambdas captures.
   MEHandler.adjustMemberOfForLambdaCaptures(
-      LambdaPointers, CombinedInfo.BasePointers, CombinedInfo.Pointers,
-      CombinedInfo.Types);
+      OMPBuilder, LambdaPointers, CombinedInfo.BasePointers,
+      CombinedInfo.Pointers, CombinedInfo.Types);
   // Map any list items in a map clause that were not captures because they
   // weren't referenced within the construct.
-  MEHandler.generateAllInfo(CombinedInfo, MappedVarSet);
+  MEHandler.generateAllInfo(CombinedInfo, OMPBuilder, MappedVarSet);
 
   CGOpenMPRuntime::TargetDataInfo Info;
   // Fill up the arrays and create the arguments.
@@ -10272,7 +10256,7 @@ void CGOpenMPRuntime::emitTargetDataCalls(
     CGF.Builder.restoreIP(CodeGenIP);
     // Get map clause information.
     MappableExprsHandler MEHandler(D, CGF);
-    MEHandler.generateAllInfo(CombinedInfo);
+    MEHandler.generateAllInfo(CombinedInfo, OMPBuilder);
 
     auto FillInfoMap = [&](MappableExprsHandler::MappingExprInfo &MapExpr) {
       return emitMappingInformation(CGF, OMPBuilder, MapExpr);
@@ -10478,7 +10462,7 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
 
     // Get map clause information.
     MappableExprsHandler MEHandler(D, CGF);
-    MEHandler.generateAllInfo(CombinedInfo);
+    MEHandler.generateAllInfo(CombinedInfo, OMPBuilder);
 
     CGOpenMPRuntime::TargetDataInfo Info;
     // Fill up the arrays and create the arguments.

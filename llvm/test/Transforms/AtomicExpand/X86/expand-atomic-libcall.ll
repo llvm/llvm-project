@@ -4,12 +4,12 @@
 
 define i256 @atomic_load256_libcall(ptr %ptr) nounwind {
 ; CHECK-LABEL: @atomic_load256_libcall(
-; CHECK-NEXT:    [[TMP2:%.*]] = alloca i256, align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr [[TMP2]])
-; CHECK-NEXT:    call void @__atomic_load(i64 32, ptr [[PTR:%.*]], ptr [[TMP2]], i32 0)
-; CHECK-NEXT:    [[TMP4:%.*]] = load i256, ptr [[TMP2]], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr [[TMP2]])
-; CHECK-NEXT:    ret i256 [[TMP4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = alloca i256, align 8
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr [[TMP1]])
+; CHECK-NEXT:    call void @__atomic_load(i64 32, ptr [[PTR:%.*]], ptr [[TMP1]], i32 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = load i256, ptr [[TMP1]], align 8
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr [[TMP1]])
+; CHECK-NEXT:    ret i256 [[TMP2]]
 ;
   %result = load atomic i256, ptr %ptr unordered, align 16
   ret i256 %result
@@ -17,13 +17,13 @@ define i256 @atomic_load256_libcall(ptr %ptr) nounwind {
 
 define i256 @atomic_load256_libcall_as1(ptr addrspace(1) %ptr) nounwind {
 ; CHECK-LABEL: @atomic_load256_libcall_as1(
-; CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr addrspace(1) [[PTR:%.*]] to ptr
-; CHECK-NEXT:    [[TMP3:%.*]] = alloca i256, align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr [[TMP3]])
-; CHECK-NEXT:    call void @__atomic_load(i64 32, ptr [[TMP2]], ptr [[TMP3]], i32 0)
-; CHECK-NEXT:    [[TMP5:%.*]] = load i256, ptr [[TMP3]], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr [[TMP3]])
-; CHECK-NEXT:    ret i256 [[TMP5]]
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(1) [[PTR:%.*]] to ptr
+; CHECK-NEXT:    [[TMP2:%.*]] = alloca i256, align 8
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr [[TMP2]])
+; CHECK-NEXT:    call void @__atomic_load(i64 32, ptr [[TMP1]], ptr [[TMP2]], i32 0)
+; CHECK-NEXT:    [[TMP3:%.*]] = load i256, ptr [[TMP2]], align 8
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr [[TMP2]])
+; CHECK-NEXT:    ret i256 [[TMP3]]
 ;
   %result = load atomic i256, ptr addrspace(1) %ptr unordered, align 16
   ret i256 %result

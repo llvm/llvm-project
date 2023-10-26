@@ -10,6 +10,7 @@
 #include "Boolean.h"
 #include "Floating.h"
 #include "FunctionPointer.h"
+#include "IntegralAP.h"
 #include "Pointer.h"
 
 using namespace clang;

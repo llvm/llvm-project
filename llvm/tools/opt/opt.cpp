@@ -39,6 +39,7 @@
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/PluginLoader.h"
@@ -286,24 +287,6 @@ static CodeGenOptLevel GetCodeGenOptLevel() {
   return static_cast<CodeGenOptLevel>(unsigned(CodeGenOptLevelCL));
 }
 
-// Returns the TargetMachine instance or zero if no triple is provided.
-static TargetMachine* GetTargetMachine(Triple TheTriple, StringRef CPUStr,
-                                       StringRef FeaturesStr,
-                                       const TargetOptions &Options) {
-  std::string Error;
-  const Target *TheTarget =
-      TargetRegistry::lookupTarget(codegen::getMArch(), TheTriple, Error);
-  // Some modules don't specify a triple, and this is okay.
-  if (!TheTarget) {
-    return nullptr;
-  }
-
-  return TheTarget->createTargetMachine(
-      TheTriple.getTriple(), codegen::getCPUStr(), codegen::getFeaturesStr(),
-      Options, codegen::getExplicitRelocModel(),
-      codegen::getExplicitCodeModel(), GetCodeGenOptLevel());
-}
-
 struct TimeTracerRAII {
   TimeTracerRAII(StringRef ProgramName) {
     if (TimeTrace)
@@ -369,7 +352,6 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "expandmemcmp",
       "loop-reduce",
       "lower-amx-type",
-      "pre-amx-config",
       "lower-amx-intrinsics",
       "polyhedral-info",
       "print-polyhedral-info",
@@ -459,11 +441,8 @@ int main(int argc, char **argv) {
   SmallVector<PassPlugin, 1> PluginList;
   PassPlugins.setCallback([&](const std::string &PluginPath) {
     auto Plugin = PassPlugin::Load(PluginPath);
-    if (!Plugin) {
-      errs() << "Failed to load passes from '" << PluginPath
-             << "'. Request ignored.\n";
-      return;
-    }
+    if (!Plugin)
+      report_fatal_error(Plugin.takeError(), /*gen_crash_diag=*/false);
     PluginList.emplace_back(Plugin.get());
   });
 
@@ -611,22 +590,25 @@ int main(int argc, char **argv) {
 
   Triple ModuleTriple(M->getTargetTriple());
   std::string CPUStr, FeaturesStr;
-  TargetMachine *Machine = nullptr;
-  const TargetOptions Options =
-      codegen::InitTargetOptionsFromCodeGenFlags(ModuleTriple);
-
+  std::unique_ptr<TargetMachine> TM;
   if (ModuleTriple.getArch()) {
     CPUStr = codegen::getCPUStr();
     FeaturesStr = codegen::getFeaturesStr();
-    Machine = GetTargetMachine(ModuleTriple, CPUStr, FeaturesStr, Options);
+    Expected<std::unique_ptr<TargetMachine>> ExpectedTM =
+        codegen::createTargetMachineForTriple(ModuleTriple.str(),
+                                              GetCodeGenOptLevel());
+    if (auto E = ExpectedTM.takeError()) {
+      errs() << argv[0] << ": WARNING: failed to create target machine for '"
+             << ModuleTriple.str() << "': " << toString(std::move(E)) << "\n";
+    } else {
+      TM = std::move(*ExpectedTM);
+    }
   } else if (ModuleTriple.getArchName() != "unknown" &&
              ModuleTriple.getArchName() != "") {
     errs() << argv[0] << ": unrecognized architecture '"
            << ModuleTriple.getArchName() << "' provided.\n";
     return 1;
   }
-
-  std::unique_ptr<TargetMachine> TM(Machine);
 
   // Override function attributes based on CPUStr, FeaturesStr, and command line
   // flags.

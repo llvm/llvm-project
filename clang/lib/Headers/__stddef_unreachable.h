@@ -7,7 +7,6 @@
  *===-----------------------------------------------------------------------===
  */
 
-#if !defined(unreachable) || __has_feature(modules)
-/* Always define unreachable when modules are available. */
+#ifndef unreachable
 #define unreachable() __builtin_unreachable()
 #endif

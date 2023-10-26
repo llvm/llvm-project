@@ -363,7 +363,7 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
 
     CmdArgs.push_back(
         Args.MakeArgString(StringRef("-L") + D.SysRoot + "/usr/lib"));
-    Args.AddAllArgs(CmdArgs, {options::OPT_T_Group, options::OPT_s,
+    Args.addAllArgs(CmdArgs, {options::OPT_T_Group, options::OPT_s,
                               options::OPT_t, options::OPT_u_Group});
     AddLinkerInputs(HTC, Inputs, Args, CmdArgs, JA);
 
@@ -377,7 +377,8 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
         linkXRayRuntimeDeps(HTC, Args, CmdArgs);
 
       CmdArgs.push_back("-lclang_rt.builtins-hexagon");
-      CmdArgs.push_back("-lc");
+      if (!Args.hasArg(options::OPT_nolibc))
+        CmdArgs.push_back("-lc");
     }
     if (D.CCCIsCXX()) {
       if (HTC.ShouldLinkCXXStdlib(Args))
@@ -450,7 +451,7 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   //----------------------------------------------------------------------------
   //
   //----------------------------------------------------------------------------
-  Args.AddAllArgs(CmdArgs, {options::OPT_T_Group, options::OPT_s,
+  Args.addAllArgs(CmdArgs, {options::OPT_T_Group, options::OPT_s,
                             options::OPT_t, options::OPT_u_Group});
 
   AddLinkerInputs(HTC, Inputs, Args, CmdArgs, JA);
@@ -470,7 +471,8 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
     if (!IsShared) {
       for (StringRef Lib : OsLibs)
         CmdArgs.push_back(Args.MakeArgString("-l" + Lib));
-      CmdArgs.push_back("-lc");
+      if (!Args.hasArg(options::OPT_nolibc))
+        CmdArgs.push_back("-lc");
     }
     CmdArgs.push_back("-lgcc");
 

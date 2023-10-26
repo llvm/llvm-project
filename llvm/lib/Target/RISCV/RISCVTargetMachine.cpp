@@ -78,6 +78,11 @@ static cl::opt<bool> EnableRISCVDeadRegisterElimination(
              " them with stores to x0"),
     cl::init(true));
 
+static cl::opt<bool>
+    EnableSinkFold("riscv-enable-sink-fold",
+                   cl::desc("Enable sinking and folding of instruction copies"),
+                   cl::init(false), cl::Hidden);
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> X(getTheRISCV32Target());
   RegisterTargetMachine<RISCVTargetMachine> Y(getTheRISCV64Target());
@@ -91,6 +96,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVMakeCompressibleOptPass(*PR);
   initializeRISCVGatherScatterLoweringPass(*PR);
   initializeRISCVCodeGenPreparePass(*PR);
+  initializeRISCVPostRAExpandPseudoPass(*PR);
   initializeRISCVMergeBaseOffsetOptPass(*PR);
   initializeRISCVOptWInstrsPass(*PR);
   initializeRISCVPreRAExpandPseudoPass(*PR);
@@ -242,7 +248,11 @@ namespace {
 class RISCVPassConfig : public TargetPassConfig {
 public:
   RISCVPassConfig(RISCVTargetMachine &TM, PassManagerBase &PM)
-      : TargetPassConfig(TM, PM) {}
+      : TargetPassConfig(TM, PM) {
+    if (TM.getOptLevel() != CodeGenOptLevel::None)
+      substitutePass(&PostRASchedulerID, &PostMachineSchedulerID);
+    setEnableSinkAndFold(EnableSinkFold);
+  }
 
   RISCVTargetMachine &getRISCVTargetMachine() const {
     return getTM<RISCVTargetMachine>();
@@ -363,6 +373,8 @@ bool RISCVPassConfig::addGlobalInstructionSelect() {
 }
 
 void RISCVPassConfig::addPreSched2() {
+  addPass(createRISCVPostRAExpandPseudoPass());
+
   // Emit KCFI checks for indirect calls.
   addPass(createKCFIPass());
 }

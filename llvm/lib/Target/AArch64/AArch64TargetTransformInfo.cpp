@@ -212,6 +212,30 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
   return (CallerBits & CalleeBits) == CalleeBits;
 }
 
+bool AArch64TTIImpl::areTypesABICompatible(
+    const Function *Caller, const Function *Callee,
+    const ArrayRef<Type *> &Types) const {
+  if (!BaseT::areTypesABICompatible(Caller, Callee, Types))
+    return false;
+
+  // We need to ensure that argument promotion does not attempt to promote
+  // pointers to fixed-length vector types larger than 128 bits like
+  // <8 x float> (and pointers to aggregate types which have such fixed-length
+  // vector type members) into the values of the pointees. Such vector types
+  // are used for SVE VLS but there is no ABI for SVE VLS arguments and the
+  // backend cannot lower such value arguments. The 128-bit fixed-length SVE
+  // types can be safely treated as 128-bit NEON types and they cannot be
+  // distinguished in IR.
+  if (ST->useSVEForFixedLengthVectors() && llvm::any_of(Types, [](Type *Ty) {
+        auto FVTy = dyn_cast<FixedVectorType>(Ty);
+        return FVTy &&
+               FVTy->getScalarSizeInBits() * FVTy->getNumElements() > 128;
+      }))
+    return false;
+
+  return true;
+}
+
 bool AArch64TTIImpl::shouldMaximizeVectorBandwidth(
     TargetTransformInfo::RegisterKind K) const {
   assert(K != TargetTransformInfo::RGK_Scalar);
@@ -798,10 +822,31 @@ instCombineConvertFromSVBool(InstCombiner &IC, IntrinsicInst &II) {
   return IC.replaceInstUsesWith(II, EarliestReplacement);
 }
 
+static bool isAllActivePredicate(Value *Pred) {
+  // Look through convert.from.svbool(convert.to.svbool(...) chain.
+  Value *UncastedPred;
+  if (match(Pred, m_Intrinsic<Intrinsic::aarch64_sve_convert_from_svbool>(
+                      m_Intrinsic<Intrinsic::aarch64_sve_convert_to_svbool>(
+                          m_Value(UncastedPred)))))
+    // If the predicate has the same or less lanes than the uncasted
+    // predicate then we know the casting has no effect.
+    if (cast<ScalableVectorType>(Pred->getType())->getMinNumElements() <=
+        cast<ScalableVectorType>(UncastedPred->getType())->getMinNumElements())
+      Pred = UncastedPred;
+
+  return match(Pred, m_Intrinsic<Intrinsic::aarch64_sve_ptrue>(
+                         m_ConstantInt<AArch64SVEPredPattern::all>()));
+}
+
 static std::optional<Instruction *> instCombineSVESel(InstCombiner &IC,
                                                       IntrinsicInst &II) {
-  auto Select = IC.Builder.CreateSelect(II.getOperand(0), II.getOperand(1),
-                                        II.getOperand(2));
+  // svsel(ptrue, x, y) => x
+  auto *OpPredicate = II.getOperand(0);
+  if (isAllActivePredicate(OpPredicate))
+    return IC.replaceInstUsesWith(II, II.getOperand(1));
+
+  auto Select =
+      IC.Builder.CreateSelect(OpPredicate, II.getOperand(1), II.getOperand(2));
   return IC.replaceInstUsesWith(II, Select);
 }
 
@@ -1198,22 +1243,6 @@ instCombineSVEVectorFuseMulAddSub(InstCombiner &IC, IntrinsicInst &II,
                                      {P, MulOp0, MulOp1, AddendOp}, FMFSource);
 
   return IC.replaceInstUsesWith(II, Res);
-}
-
-static bool isAllActivePredicate(Value *Pred) {
-  // Look through convert.from.svbool(convert.to.svbool(...) chain.
-  Value *UncastedPred;
-  if (match(Pred, m_Intrinsic<Intrinsic::aarch64_sve_convert_from_svbool>(
-                      m_Intrinsic<Intrinsic::aarch64_sve_convert_to_svbool>(
-                          m_Value(UncastedPred)))))
-    // If the predicate has the same or less lanes than the uncasted
-    // predicate then we know the casting has no effect.
-    if (cast<ScalableVectorType>(Pred->getType())->getMinNumElements() <=
-        cast<ScalableVectorType>(UncastedPred->getType())->getMinNumElements())
-      Pred = UncastedPred;
-
-  return match(Pred, m_Intrinsic<Intrinsic::aarch64_sve_ptrue>(
-                         m_ConstantInt<AArch64SVEPredPattern::all>()));
 }
 
 static std::optional<Instruction *>
@@ -2461,6 +2490,25 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
             FP16Tbl, ISD, DstTy.getSimpleVT(), SrcTy.getSimpleVT()))
       return AdjustCost(Entry->Cost);
 
+  if ((ISD == ISD::ZERO_EXTEND || ISD == ISD::SIGN_EXTEND) &&
+      CCH == TTI::CastContextHint::Masked && ST->hasSVEorSME() &&
+      TLI->getTypeAction(Src->getContext(), SrcTy) ==
+          TargetLowering::TypePromoteInteger &&
+      TLI->getTypeAction(Dst->getContext(), DstTy) ==
+          TargetLowering::TypeSplitVector) {
+    // The standard behaviour in the backend for these cases is to split the
+    // extend up into two parts:
+    //  1. Perform an extending load or masked load up to the legal type.
+    //  2. Extend the loaded data to the final type.
+    std::pair<InstructionCost, MVT> SrcLT = getTypeLegalizationCost(Src);
+    Type *LegalTy = EVT(SrcLT.second).getTypeForEVT(Src->getContext());
+    InstructionCost Part1 = AArch64TTIImpl::getCastInstrCost(
+        Opcode, LegalTy, Src, CCH, CostKind, I);
+    InstructionCost Part2 = AArch64TTIImpl::getCastInstrCost(
+        Opcode, Dst, LegalTy, TTI::CastContextHint::None, CostKind, I);
+    return Part1 + Part2;
+  }
+
   // The BasicTTIImpl version only deals with CCH==TTI::CastContextHint::Normal,
   // but we also want to include the TTI::CastContextHint::Masked case too.
   if ((ISD == ISD::ZERO_EXTEND || ISD == ISD::SIGN_EXTEND) &&
@@ -3558,11 +3606,8 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   // into smaller vectors and sum the cost of each shuffle.
   if (!Mask.empty() && isa<FixedVectorType>(Tp) && LT.second.isVector() &&
       Tp->getScalarSizeInBits() == LT.second.getScalarSizeInBits() &&
-      cast<FixedVectorType>(Tp)->getNumElements() >
-          LT.second.getVectorNumElements() &&
-      !Index && !SubTp) {
-    unsigned TpNumElts = cast<FixedVectorType>(Tp)->getNumElements();
-    assert(Mask.size() == TpNumElts && "Expected Mask and Tp size to match!");
+      Mask.size() > LT.second.getVectorNumElements() && !Index && !SubTp) {
+    unsigned TpNumElts = Mask.size();
     unsigned LTNumElts = LT.second.getVectorNumElements();
     unsigned NumVecs = (TpNumElts + LTNumElts - 1) / LTNumElts;
     VectorType *NTp =

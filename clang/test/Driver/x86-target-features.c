@@ -374,6 +374,31 @@
 // EVEX512: "-target-feature" "+evex512"
 // NO-EVEX512: "-target-feature" "-evex512"
 
+// RUN: %clang --target=i386 -mavx10.1 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10_1_256 %s
+// RUN: %clang --target=i386 -mavx10.1-256 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10_1_256 %s
+// RUN: %clang --target=i386 -mavx10.1-512 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10_1_512 %s
+// RUN: %clang --target=i386 -mavx10.1-256 -mavx10.1-512 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10_1_512 %s
+// RUN: %clang --target=i386 -mavx10.1-512 -mavx10.1-256 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10_1_256 %s
+// RUN: not %clang --target=i386 -march=i386 -mavx10.1-128 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=BAD-AVX10 %s
+// RUN: not %clang --target=i386 -march=i386 -mavx10.a-256 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=BAD-AVX10 %s
+// RUN: not %clang --target=i386 -march=i386 -mavx10.1024-512 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=BAD-AVX10 %s
+// RUN: %clang --target=i386 -march=i386 -mavx10.1 -mavx512f %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10-AVX512 %s
+// RUN: %clang --target=i386 -march=i386 -mavx10.1 -mno-avx512f %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10-AVX512 %s
+// RUN: %clang --target=i386 -march=i386 -mavx10.1 -mevex512 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10-EVEX512 %s
+// RUN: %clang --target=i386 -march=i386 -mavx10.1 -mno-evex512 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10-EVEX512 %s
+// AVX10_1_256: "-target-feature" "+avx10.1-256"
+// AVX10_1_512: "-target-feature" "+avx10.1-512"
+// BAD-AVX10: error: unknown argument{{:?}} '-mavx10.{{.*}}'
+// AVX10-AVX512: warning: argument unused during compilation: '{{.*}}avx512f'
+// AVX10-AVX512-NOT: "avx512f"
+// AVX10-EVEX512: warning: argument unused during compilation: '{{.*}}evex512'
+// AVX10-EVEX512-NOT: "evex512"
+
+// RUN: %clang --target=i386 -musermsr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=USERMSR %s
+// RUN: %clang --target=i386 -mno-usermsr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-USERMSR %s
+// USERMSR: "-target-feature" "+usermsr"
+// NO-USERMSR: "-target-feature" "-usermsr"
+
 // RUN: %clang --target=i386 -march=i386 -mcrc32 %s -### 2>&1 | FileCheck -check-prefix=CRC32 %s
 // RUN: %clang --target=i386 -march=i386 -mno-crc32 %s -### 2>&1 | FileCheck -check-prefix=NO-CRC32 %s
 // CRC32: "-target-feature" "+crc32"

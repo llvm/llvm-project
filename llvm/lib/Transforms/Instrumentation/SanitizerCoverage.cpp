@@ -823,10 +823,9 @@ void ModuleSanitizerCoverage::InjectTraceForSwitch(
           Int64Ty->getScalarSizeInBits())
         Cond = IRB.CreateIntCast(Cond, Int64Ty, false);
       for (auto It : SI->cases()) {
-        Constant *C = It.getCaseValue();
-        if (C->getType()->getScalarSizeInBits() <
-            Int64Ty->getScalarSizeInBits())
-          C = ConstantExpr::getCast(CastInst::ZExt, It.getCaseValue(), Int64Ty);
+        ConstantInt *C = It.getCaseValue();
+        if (C->getType()->getScalarSizeInBits() < 64)
+          C = ConstantInt::get(C->getContext(), C->getValue().zext(64));
         Initializers.push_back(C);
       }
       llvm::sort(drop_begin(Initializers, 2),

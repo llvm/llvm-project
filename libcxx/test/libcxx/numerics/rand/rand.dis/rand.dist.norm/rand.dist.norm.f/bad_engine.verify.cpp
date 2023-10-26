@@ -26,6 +26,6 @@ void test(std::fisher_f_distribution<double> dist)
   G<int> badg;
   G<unsigned> okg;
 
-  dist(badg); //expected-error-re@*:* 4 {{{{(static_assert|static assertion)}} failed}} //expected-note {{in instantiation}}
+  dist(badg); //expected-error@*:* 4 {{static assertion failed}} //expected-note {{in instantiation}}
   dist(okg);
 }
