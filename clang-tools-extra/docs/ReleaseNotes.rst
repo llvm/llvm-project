@@ -250,7 +250,8 @@ Changes in existing checks
 
 - Improved :doc:`cppcoreguidelines-prefer-member-initializer
   <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>` check to
-  ignore delegate constructors.
+  ignore delegate constructors and ignore re-assignment for reference or after
+  unsafety assignment.
 
 - Improved :doc:`cppcoreguidelines-pro-bounds-array-to-pointer-decay
   <clang-tidy/checks/cppcoreguidelines/pro-bounds-array-to-pointer-decay>` check

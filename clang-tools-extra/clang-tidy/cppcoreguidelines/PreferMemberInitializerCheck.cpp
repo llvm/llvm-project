@@ -8,8 +8,10 @@
 
 #include "PreferMemberInitializerCheck.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Decl.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
+#include <map>
 
 using namespace clang::ast_matchers;
 
@@ -54,9 +56,13 @@ static bool shouldBeDefaultMemberInitializer(const Expr *Value) {
 }
 
 namespace {
+
 AST_MATCHER_P(FieldDecl, indexNotLessThan, unsigned, Index) {
   return Node.getFieldIndex() >= Index;
 }
+
+enum class AssignedLevel { None, Assigned, UnsafetyAssigned };
+
 } // namespace
 
 // Checks if Field is initialised using a field that will be initialised after
@@ -64,13 +70,19 @@ AST_MATCHER_P(FieldDecl, indexNotLessThan, unsigned, Index) {
 // TODO: Probably should guard against function calls that could have side
 // effects or if they do reference another field that's initialized before this
 // field, but is modified before the assignment.
-static bool isSafeAssignment(const FieldDecl *Field, const Expr *Init,
-                             const CXXConstructorDecl *Context) {
+static AssignedLevel isSafeAssignment(const FieldDecl *Field, const Expr *Init,
+                                      const CXXConstructorDecl *Context,
+                                      AssignedLevel HistoryLevel) {
+  if (HistoryLevel == AssignedLevel::UnsafetyAssigned)
+    return AssignedLevel::UnsafetyAssigned;
+  if (Field->getType()->isReferenceType() &&
+      HistoryLevel == AssignedLevel::Assigned)
+    // assign to reference type twice cannot be simplified to once.
+    return AssignedLevel::UnsafetyAssigned;
 
   auto MemberMatcher =
       memberExpr(hasObjectExpression(cxxThisExpr()),
                  member(fieldDecl(indexNotLessThan(Field->getFieldIndex()))));
-
   auto DeclMatcher = declRefExpr(
       to(varDecl(unless(parmVarDecl()), hasDeclContext(equalsNode(Context)))));
 
@@ -78,7 +90,9 @@ static bool isSafeAssignment(const FieldDecl *Field, const Expr *Init,
                           hasDescendant(MemberMatcher),
                           hasDescendant(DeclMatcher))),
                *Init, Field->getASTContext())
-      .empty();
+                 .empty()
+             ? AssignedLevel::Assigned
+             : AssignedLevel::UnsafetyAssigned;
 }
 
 static std::pair<const FieldDecl *, const Expr *>
@@ -99,9 +113,9 @@ isAssignmentToMemberOf(const CXXRecordDecl *Rec, const Stmt *S,
     if (!isa<CXXThisExpr>(ME->getBase()))
       return std::make_pair(nullptr, nullptr);
     const Expr *Init = BO->getRHS()->IgnoreParenImpCasts();
-    if (isSafeAssignment(Field, Init, Ctor))
-      return std::make_pair(Field, Init);
-  } else if (const auto *COCE = dyn_cast<CXXOperatorCallExpr>(S)) {
+    return std::make_pair(Field, Init);
+  }
+  if (const auto *COCE = dyn_cast<CXXOperatorCallExpr>(S)) {
     if (COCE->getOperator() != OO_Equal)
       return std::make_pair(nullptr, nullptr);
 
@@ -117,10 +131,8 @@ isAssignmentToMemberOf(const CXXRecordDecl *Rec, const Stmt *S,
     if (!isa<CXXThisExpr>(ME->getBase()))
       return std::make_pair(nullptr, nullptr);
     const Expr *Init = COCE->getArg(1)->IgnoreParenImpCasts();
-    if (isSafeAssignment(Field, Init, Ctor))
-      return std::make_pair(Field, Init);
+    return std::make_pair(Field, Init);
   }
-
   return std::make_pair(nullptr, nullptr);
 }
 
@@ -156,6 +168,12 @@ void PreferMemberInitializerCheck::check(
   const CXXRecordDecl *Class = Ctor->getParent();
   bool FirstToCtorInits = true;
 
+  std::map<const FieldDecl *, AssignedLevel> AssignedFields{};
+
+  for (const CXXCtorInitializer *Init : Ctor->inits())
+    if (FieldDecl *Field = Init->getMember())
+      AssignedFields.insert({Field, AssignedLevel::Assigned});
+
   for (const Stmt *S : Body->body()) {
     if (S->getBeginLoc().isMacroID()) {
       StringRef MacroName = Lexer::getImmediateMacroName(
@@ -179,6 +197,14 @@ void PreferMemberInitializerCheck::check(
     const Expr *InitValue = nullptr;
     std::tie(Field, InitValue) = isAssignmentToMemberOf(Class, S, Ctor);
     if (!Field)
+      continue;
+    const auto It = AssignedFields.find(Field);
+    AssignedLevel Level = AssignedLevel::None;
+    if (It != AssignedFields.end())
+      Level = It->second;
+    Level = isSafeAssignment(Field, InitValue, Ctor, Level);
+    AssignedFields.insert_or_assign(Field, Level);
+    if (Level == AssignedLevel::UnsafetyAssigned)
       continue;
     const bool IsInDefaultMemberInitializer =
         IsUseDefaultMemberInitEnabled && getLangOpts().CPlusPlus11 &&
