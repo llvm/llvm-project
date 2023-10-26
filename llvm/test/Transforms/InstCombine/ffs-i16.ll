@@ -5,6 +5,8 @@
 ;
 ; RUN: opt < %s -mtriple=avr-linux -passes=instcombine -S | FileCheck %s --check-prefix=AVR
 ; RUN: opt < %s -mtriple=msp430-linux -passes=instcombine -S | FileCheck %s --check-prefix=MSP430
+; REQUIRES: avr-registered-target,msp430-registered-target
+
 
 declare i16 @ffs(i16)
 
