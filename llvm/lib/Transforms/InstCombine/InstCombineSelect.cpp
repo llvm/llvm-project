@@ -1062,6 +1062,31 @@ static Value *foldAbsDiff(ICmpInst *Cmp, Value *TVal, Value *FVal,
   return nullptr;
 }
 
+/// Fold
+///   (a == 0) ? 0 : abs(a)
+///   (a != 0) ? abs(a) : 0
+/// into:
+///   abs(a)
+static Value *foldSelectZeroAbs(ICmpInst *Cmp, Value *TVal, Value *FVal,
+                                InstCombiner::BuilderTy &Builder) {
+  Value *A = nullptr;
+  CmpInst::Predicate Pred;
+  if (!match(Cmp, m_ICmp(Pred, m_Value(A), m_Zero())))
+    return nullptr;
+
+  if (Pred == CmpInst::ICMP_EQ) {
+    if (match(TVal, m_Zero()) &&
+        match(FVal, m_Intrinsic<Intrinsic::abs>(m_Specific(A))))
+      return FVal;
+  } else if (Pred == CmpInst::ICMP_NE) {
+    if (match(TVal, m_Intrinsic<Intrinsic::abs>(m_Specific(A))) &&
+        match(FVal, m_Zero()))
+      return TVal;
+  }
+
+  return nullptr;
+}
+
 /// Fold the following code sequence:
 /// \code
 ///   int a = ctlz(x & -x);
@@ -1807,6 +1832,9 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
     return replaceInstUsesWith(SI, V);
 
   if (Value *V = foldAbsDiff(ICI, TrueVal, FalseVal, Builder))
+    return replaceInstUsesWith(SI, V);
+
+  if (Value *V = foldSelectZeroAbs(ICI, TrueVal, FalseVal, Builder))
     return replaceInstUsesWith(SI, V);
 
   return Changed ? &SI : nullptr;
