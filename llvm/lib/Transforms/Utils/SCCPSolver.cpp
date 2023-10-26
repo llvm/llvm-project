@@ -1225,10 +1225,12 @@ void SCCPInstVisitor::visitCastInst(CastInst &I) {
 
   if (Constant *OpC = getConstant(OpSt, I.getOperand(0)->getType())) {
     // Fold the constant as we build.
-    Constant *C = ConstantFoldCastOperand(I.getOpcode(), OpC, I.getType(), DL);
-    markConstant(&I, C);
-  } else if (I.getDestTy()->isIntegerTy() &&
-             I.getSrcTy()->isIntOrIntVectorTy()) {
+    if (Constant *C =
+            ConstantFoldCastOperand(I.getOpcode(), OpC, I.getType(), DL))
+      return (void)markConstant(&I, C);
+  }
+
+  if (I.getDestTy()->isIntegerTy() && I.getSrcTy()->isIntOrIntVectorTy()) {
     auto &LV = getValueState(&I);
     ConstantRange OpRange = getConstantRange(OpSt, I.getSrcTy());
 

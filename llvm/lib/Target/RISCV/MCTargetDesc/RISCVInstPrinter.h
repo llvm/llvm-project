@@ -40,6 +40,8 @@ public:
                      const MCSubtargetInfo &STI, raw_ostream &O);
   void printFRMArg(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                    raw_ostream &O);
+  void printFRMArgLegacy(const MCInst *MI, unsigned OpNo,
+                         const MCSubtargetInfo &STI, raw_ostream &O);
   void printFPImmOperand(const MCInst *MI, unsigned OpNo,
                          const MCSubtargetInfo &STI, raw_ostream &O);
   void printZeroOffsetMemOp(const MCInst *MI, unsigned OpNo,

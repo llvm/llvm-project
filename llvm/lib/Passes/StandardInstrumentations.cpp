@@ -14,11 +14,11 @@
 
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/ADT/Any.h"
+#include "llvm/ADT/StableHashing.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/CodeGen/StableHashing.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
@@ -295,7 +295,8 @@ void unwrapAndPrint(raw_ostream &OS, Any IR) {
 bool isIgnored(StringRef PassID) {
   return isSpecialPass(PassID,
                        {"PassManager", "PassAdaptor", "AnalysisManagerProxy",
-                        "DevirtSCCRepeatedPass", "ModuleInlinerWrapperPass"});
+                        "DevirtSCCRepeatedPass", "ModuleInlinerWrapperPass",
+                        "VerifierPass", "PrintModulePass"});
 }
 
 std::string makeHTMLReady(StringRef SR) {
@@ -701,19 +702,19 @@ static SmallString<32> getIRFileDisplayName(Any IR) {
   stable_hash NameHash = stable_hash_combine_string(M->getName());
   unsigned int MaxHashWidth = sizeof(stable_hash) * 8 / 4;
   write_hex(ResultStream, NameHash, HexPrintStyle::Lower, MaxHashWidth);
-  if (any_cast<const Module *>(&IR)) {
+  if (llvm::any_cast<const Module *>(&IR)) {
     ResultStream << "-module";
-  } else if (const Function **F = any_cast<const Function *>(&IR)) {
+  } else if (const Function **F = llvm::any_cast<const Function *>(&IR)) {
     ResultStream << "-function-";
     stable_hash FunctionNameHash = stable_hash_combine_string((*F)->getName());
     write_hex(ResultStream, FunctionNameHash, HexPrintStyle::Lower,
               MaxHashWidth);
   } else if (const LazyCallGraph::SCC **C =
-                 any_cast<const LazyCallGraph::SCC *>(&IR)) {
+                 llvm::any_cast<const LazyCallGraph::SCC *>(&IR)) {
     ResultStream << "-scc-";
     stable_hash SCCNameHash = stable_hash_combine_string((*C)->getName());
     write_hex(ResultStream, SCCNameHash, HexPrintStyle::Lower, MaxHashWidth);
-  } else if (const Loop **L = any_cast<const Loop *>(&IR)) {
+  } else if (const Loop **L = llvm::any_cast<const Loop *>(&IR)) {
     ResultStream << "-loop-";
     stable_hash LoopNameHash = stable_hash_combine_string((*L)->getName());
     write_hex(ResultStream, LoopNameHash, HexPrintStyle::Lower, MaxHashWidth);
@@ -811,7 +812,8 @@ void PrintIRInstrumentation::printBeforePass(StringRef PassID, Any IR) {
   ++CurrentPassNumber;
 
   if (shouldPrintPassNumbers())
-    dbgs() << " Running pass " << CurrentPassNumber << " " << PassID << "\n";   
+    dbgs() << " Running pass " << CurrentPassNumber << " " << PassID
+           << " on " << getIRName(IR) << "\n";
 
   if (!shouldPrintBeforePass(PassID))
     return;

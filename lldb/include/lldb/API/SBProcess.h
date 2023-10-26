@@ -449,6 +449,7 @@ protected:
   friend class SBExecutionContext;
   friend class SBFunction;
   friend class SBModule;
+  friend class SBPlatform;
   friend class SBTarget;
   friend class SBThread;
   friend class SBValue;

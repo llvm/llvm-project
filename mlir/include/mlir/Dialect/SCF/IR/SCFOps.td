@@ -121,9 +121,9 @@ def ExecuteRegionOp : SCF_Op<"execute_region", [
 
 def ForOp : SCF_Op<"for",
       [AutomaticAllocationScope, DeclareOpInterfaceMethods<LoopLikeOpInterface,
-       ["getInits", "getSingleInductionVar", "getSingleLowerBound",
-        "getSingleStep", "getSingleUpperBound", "promoteIfSingleIteration",
-        "replaceWithAdditionalYields"]>,
+       ["getInitsMutable", "getSingleInductionVar", "getSingleLowerBound",
+        "getSingleStep", "getSingleUpperBound", "getYieldedValuesMutable",
+        "promoteIfSingleIteration", "replaceWithAdditionalYields"]>,
        AllTypesMatch<["lowerBound", "upperBound", "step"]>,
        ConditionallySpeculatable,
        DeclareOpInterfaceMethods<RegionBranchOpInterface,
@@ -243,9 +243,11 @@ def ForOp : SCF_Op<"for",
         function_ref<void(OpBuilder &, Location, Value, ValueRange)>;
 
     Value getInductionVar() { return getBody()->getArgument(0); }
+
     Block::BlockArgListType getRegionIterArgs() {
       return getBody()->getArguments().drop_front(getNumInductionVars());
     }
+
     /// Return the `index`-th region iteration argument.
     BlockArgument getRegionIterArg(unsigned index) {
       assert(index < getNumRegionIterArgs() &&
@@ -331,7 +333,8 @@ def ForallOp : SCF_Op<"forall", [
        AttrSizedOperandSegments,
        AutomaticAllocationScope,
        DeclareOpInterfaceMethods<LoopLikeOpInterface,
-          ["promoteIfSingleIteration"]>,
+          ["promoteIfSingleIteration", "getSingleInductionVar",
+          "getSingleLowerBound", "getSingleUpperBound", "getSingleStep"]>,
        RecursiveMemoryEffects,
        SingleBlockImplicitTerminator<"scf::InParallelOp">,
        DeclareOpInterfaceMethods<RegionBranchOpInterface>,
@@ -408,17 +411,19 @@ def ForallOp : SCF_Op<"forall", [
         tensor<?x?xT> to tensor<?x?xT>
       %sC = tensor.extract_slice %o1[h((%thread_id_1, %thread_id_2))]:
         tensor<?x?xT> to tensor<?x?xT>
-      %sD = matmul ins(%sA, %sB) outs(%sC)
+      %sD = linalg.matmul
+        ins(%sA, %sB : tensor<?x?xT>, tensor<?x?xT>)
+        outs(%sC : tensor<?x?xT>)
 
       %spointwise = subtensor %o2[i((%thread_id_1, %thread_id_2))]:
         tensor<?xT> to tensor<?xT>
-      %sE = add ins(%spointwise) outs(%sD)
+      %sE = linalg.add ins(%spointwise : tensor<?xT>) outs(%sD : tensor<?xT>)
 
       scf.forall.in_parallel {
-        scf.forall.parallel_insert_slice %sD into %o1[h((%thread_id_1, %thread_id_2))]:
+        tensor.parallel_insert_slice %sD into %o1[h((%thread_id_1, %thread_id_2))]:
           tensor<?x?xT> into tensor<?x?xT>
 
-        scf.forall.parallel_insert_slice %spointwise into %o2[i((%thread_id_1, %thread_id_2))]:
+        tensor.parallel_insert_slice %spointwise into %o2[i((%thread_id_1, %thread_id_2))]:
           tensor<?xT> into tensor<?xT>
       }
     }
@@ -446,10 +451,12 @@ def ForallOp : SCF_Op<"forall", [
       %sC = tensor.extract_slice %o[%i, %j][%tileSize1, %tileSize2][1, 1]
         : tensor<?x?xT> to tensor<?x?xT>
 
-      %add = map {"arith.addf"} ins(%sA, %sB) outs(%sC)
+      %add = linalg.map {"arith.addf"}
+        ins(%sA, %sB : tensor<?x?xT>, tensor<?x?xT>)
+        outs(%sC : tensor<?x?xT>)
 
       scf.forall.in_parallel {
-        scf.forall.parallel_insert_slice %add into
+        tensor.parallel_insert_slice %add into
           %o[%i, %j][%tileSize1, %tileSize2][1, 1]
           : tensor<?x?xT> into tensor<?x?xT>
       }
@@ -788,7 +795,8 @@ def IfOp : SCF_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
 def ParallelOp : SCF_Op<"parallel",
     [AutomaticAllocationScope,
      AttrSizedOperandSegments,
-     DeclareOpInterfaceMethods<LoopLikeOpInterface>,
+     DeclareOpInterfaceMethods<LoopLikeOpInterface, ["getSingleInductionVar",
+          "getSingleLowerBound", "getSingleUpperBound", "getSingleStep"]>,
      RecursiveMemoryEffects,
      DeclareOpInterfaceMethods<RegionBranchOpInterface>,
      SingleBlockImplicitTerminator<"scf::YieldOp">]> {
@@ -954,7 +962,8 @@ def ReduceReturnOp :
 def WhileOp : SCF_Op<"while",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface,
         ["getEntrySuccessorOperands"]>,
-     DeclareOpInterfaceMethods<LoopLikeOpInterface, ["getRegionIterArgs"]>,
+     DeclareOpInterfaceMethods<LoopLikeOpInterface,
+        ["getRegionIterArgs", "getYieldedValuesMutable"]>,
      RecursiveMemoryEffects, SingleBlock]> {
   let summary = "a generic 'while' loop";
   let description = [{
@@ -1086,6 +1095,7 @@ def WhileOp : SCF_Op<"while",
 
     ConditionOp getConditionOp();
     YieldOp getYieldOp();
+
     Block::BlockArgListType getBeforeArguments();
     Block::BlockArgListType getAfterArguments();
     Block *getBeforeBody() { return &getBefore().front(); }

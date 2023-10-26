@@ -440,7 +440,7 @@ protected:
   public:
     /// Create a MappingCost assuming that most of the instructions
     /// will occur in a basic block with \p LocalFreq frequency.
-    MappingCost(const BlockFrequency &LocalFreq);
+    MappingCost(BlockFrequency LocalFreq);
 
     /// Add \p Cost to the local cost.
     /// \return true if this cost is saturated, false otherwise.

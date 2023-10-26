@@ -158,6 +158,19 @@ void RISCVInstPrinter::printFRMArg(const MCInst *MI, unsigned OpNo,
   O << ", " << RISCVFPRndMode::roundingModeToString(FRMArg);
 }
 
+void RISCVInstPrinter::printFRMArgLegacy(const MCInst *MI, unsigned OpNo,
+                                         const MCSubtargetInfo &STI,
+                                         raw_ostream &O) {
+  auto FRMArg =
+      static_cast<RISCVFPRndMode::RoundingMode>(MI->getOperand(OpNo).getImm());
+  // Never print rounding mode if it's the default 'rne'. This ensures the
+  // output can still be parsed by older tools that erroneously failed to
+  // accept a rounding mode.
+  if (FRMArg == RISCVFPRndMode::RoundingMode::RNE)
+    return;
+  O << ", " << RISCVFPRndMode::roundingModeToString(FRMArg);
+}
+
 void RISCVInstPrinter::printFPImmOperand(const MCInst *MI, unsigned OpNo,
                                          const MCSubtargetInfo &STI,
                                          raw_ostream &O) {

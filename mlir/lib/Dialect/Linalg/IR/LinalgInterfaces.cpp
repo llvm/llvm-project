@@ -227,9 +227,6 @@ mlir::linalg::inferContractionDims(LinalgOp linalgOp) {
       linalgOp, linalgOp.getDpsInputOperand(1), red);
   llvm::set_intersect(ra, rb);
 
-  if (ac.empty() || bc.empty() || ra.empty())
-    return failure();
-
   // Return each set in sorted order.
   ContractionDimensions dimensions{
       SmallVector<unsigned, 2>(batches.begin(), batches.end()),

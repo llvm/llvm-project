@@ -19,6 +19,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/SparseTensor/IR/Enums.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
+#include "mlir/Dialect/SparseTensor/IR/SparseTensorType.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/IR/Builders.h"
 
@@ -220,34 +221,6 @@ Value allocDenseTensor(OpBuilder &builder, Location loc,
 /// Generates code to deallocate a dense buffer.
 void deallocDenseTensor(OpBuilder &builder, Location loc, Value buffer);
 
-/// Generates code to read the value from `tensor[ivs]`. The generated code
-/// looks like the following and the insertion point after this routine is
-/// inside the then-branch.
-///    if (tensor[ivs] != 0)
-///      insert_point
-Value genValueForDense(OpBuilder &builder, Location loc, Value tensor,
-                       ValueRange ivs);
-
-/// Generates the loop structure to iterate over a dense tensor or a sparse
-/// tensor constant to support the lowering of dense-to-sparse convert operator.
-//
-// The loop to iterate a dense tensor:
-//   for i1 in dim1
-//    ..
-//     for ik in dimk
-//       val = a[i1,..,ik]
-//       if val != 0
-//         loop-body
-//
-// The loop to iterate a sparse tensor constant:
-//   for i in range(NNZ)
-//     val = values[i]
-//     [i1,..,ik] = coordinates[i]
-//     loop-body
-void genDenseTensorOrSparseConstantIterLoop(
-    OpBuilder &builder, Location loc, Value src, unsigned rank,
-    function_ref<void(OpBuilder &, Location, Value, ValueRange)> bodyBuilder);
-
 /// Populates given sizes array from dense tensor or sparse tensor constant.
 void sizesFromSrc(OpBuilder &builder, SmallVectorImpl<Value> &sizes,
                   Location loc, Value src);
@@ -308,17 +281,63 @@ Value reshapeValuesToLevels(OpBuilder &builder, Location loc,
                             SparseTensorEncodingAttr enc, ValueRange dimSizes,
                             Value valuesBuffer, Value lvlCoords);
 
+// Generates code to cast a tensor to a memref.
+TypedValue<BaseMemRefType> genToMemref(OpBuilder &builder, Location loc,
+                                       Value tensor);
+
+/// Infers the result type and generates `ToPositionsOp`.
+Value genToPositions(OpBuilder &builder, Location loc, Value tensor, Level lvl);
+
+/// Infers the result type and generates `ToCoordinatesOp`.  If the
+/// level is within a COO region, the result type is a memref with unknown
+/// stride and offset.  Otherwise, the result type is a memref without
+/// any specified layout.
+Value genToCoordinates(OpBuilder &builder, Location loc, Value tensor,
+                       Level lvl, Level cooStart);
+
+/// Infers the result type and generates `ToCoordinatesBufferOp`.
+Value genToCoordinatesBuffer(OpBuilder &builder, Location loc, Value tensor);
+
+/// Infers the result type and generates `ToValuesOp`.
+Value genToValues(OpBuilder &builder, Location loc, Value tensor);
+
+/// Generates code to retrieve the values size for the sparse tensor.
+Value genValMemSize(OpBuilder &builder, Location loc, Value tensor);
+
+/// Generates code to retrieve the slice offset for the sparse tensor slice,
+/// return a constant if the offset is statically known.
+Value createOrFoldSliceOffsetOp(OpBuilder &builder, Location loc, Value tensor,
+                                Dimension dim);
+
+/// Generates code to retrieve the slice slice for the sparse tensor slice,
+/// return a constant if the offset is statically known.
+Value createOrFoldSliceStrideOp(OpBuilder &builder, Location loc, Value tensor,
+                                Dimension dim);
+
+/// Populates the array with the dimension-shape of the given
+/// `SparseTensorType`, where dynamic sizes are represented by zero.
+void fillDimShape(OpBuilder &builder, Location loc, SparseTensorType stt,
+                  SmallVectorImpl<Value> &out);
+
+/// Generates code that opens a reader and sets the dimension sizes.
+Value genReader(OpBuilder &builder, Location loc, SparseTensorType stt,
+                Value tensor,
+                /*out*/ SmallVectorImpl<Value> &dimShapeValues,
+                /*out*/ Value &dimSizesBuffer);
+
+/// Generates code to set up the buffer parameters for a map.
+Value genMapBuffers(OpBuilder &builder, Location loc, SparseTensorType stt,
+                    ArrayRef<Value> dimShapeValues, Value dimSizesBuffer,
+                    /*out*/ Value &dim2lvlBuffer,
+                    /*out*/ Value &lvl2dimBuffer);
+
 //===----------------------------------------------------------------------===//
 // Inlined constant generators.
 //
 // All these functions are just wrappers to improve code legibility;
 // therefore, we mark them as `inline` to avoid introducing any additional
-// overhead due to the legibility.
+// overhead due to the legibility. Ideally these should move upstream.
 //
-// TODO: Ideally these should move upstream, so that we don't
-// develop a design island.  However, doing so will involve
-// substantial design work.  For related prior discussion, see
-// <https://llvm.discourse.group/t/evolving-builder-apis-based-on-lessons-learned-from-edsc/879>
 //===----------------------------------------------------------------------===//
 
 /// Generates a 0-valued constant of the given type.  In addition to
@@ -420,38 +439,6 @@ inline bool isZeroRankedTensorOrScalar(Type type) {
   return !rtp || rtp.getRank() == 0;
 }
 
-// Generates code to cast a tensor to a memref.
-TypedValue<BaseMemRefType> genToMemref(OpBuilder &builder, Location loc,
-                                       Value tensor);
-
-/// Infers the result type and generates `ToPositionsOp`.
-Value genToPositions(OpBuilder &builder, Location loc, Value tensor, Level lvl);
-
-/// Infers the result type and generates `ToCoordinatesOp`.  If the
-/// level is within a COO region, the result type is a memref with unknown
-/// stride and offset.  Otherwise, the result type is a memref without
-/// any specified layout.
-Value genToCoordinates(OpBuilder &builder, Location loc, Value tensor,
-                       Level lvl, Level cooStart);
-
-/// Infers the result type and generates `ToCoordinatesBufferOp`.
-Value genToCoordinatesBuffer(OpBuilder &builder, Location loc, Value tensor);
-
-/// Infers the result type and generates `ToValuesOp`.
-Value genToValues(OpBuilder &builder, Location loc, Value tensor);
-
-/// Generates code to retrieve the values size for the sparse tensor.
-Value genValMemSize(OpBuilder &builder, Location loc, Value tensor);
-
-/// Generates code to retrieve the slice offset for the sparse tensor slice,
-/// return a constant if the offset is statically known.
-Value createOrFoldSliceOffsetOp(OpBuilder &builder, Location loc, Value tensor,
-                                Dimension dim);
-
-/// Generates code to retrieve the slice slice for the sparse tensor slice,
-/// return a constant if the offset is statically known.
-Value createOrFoldSliceStrideOp(OpBuilder &builder, Location loc, Value tensor,
-                                Dimension dim);
 } // namespace sparse_tensor
 } // namespace mlir
 

@@ -931,8 +931,8 @@ void ObjCMethodDecl::setParamsAndSelLocs(ASTContext &C,
   unsigned Size = sizeof(ParmVarDecl *) * NumParams +
                   sizeof(SourceLocation) * SelLocs.size();
   ParamsAndSelLocs = C.Allocate(Size);
-  std::copy(Params.begin(), Params.end(), getParams());
-  std::copy(SelLocs.begin(), SelLocs.end(), getStoredSelLocs());
+  std::uninitialized_copy(Params.begin(), Params.end(), getParams());
+  std::uninitialized_copy(SelLocs.begin(), SelLocs.end(), getStoredSelLocs());
 }
 
 void ObjCMethodDecl::getSelectorLocs(

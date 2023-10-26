@@ -55,6 +55,7 @@ extern void __assert_fail(__const char *__assertion, __const char *__file,
 @property(readonly, nullable) void (^propReturnsNullableBlock)(void);
 @property(readonly, nullable) int *propReturnsNullable;
 @property(readonly) int *propReturnsUnspecified;
++ (nullable TestObject *)getNullableObject;
 @end
 
 TestObject * getUnspecifiedTestObject();
@@ -255,6 +256,12 @@ void testObjCPropertyReadNullability() {
     break;
   case 8:
     [o takesNonnullBlock:o.propReturnsNullableBlock]; // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
+    break;
+  case 9:
+    [o takesNonnull:getNullableTestObject().propReturnsNonnull]; // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
+    break;
+  case 10:
+    [o takesNonnull:[TestObject getNullableObject].propReturnsNonnull]; // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
     break;
   }
 }

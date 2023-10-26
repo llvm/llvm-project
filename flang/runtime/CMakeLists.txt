@@ -150,10 +150,16 @@ option(FLANG_EXPERIMENTAL_CUDA_RUNTIME
 
 # List of files that are buildable for all devices.
 set(supported_files
+  ISO_Fortran_binding.cpp
+  assign.cpp
+  derived.cpp
   descriptor.cpp
+  stat.cpp
   terminator.cpp
+  tools.cpp
   transformational.cpp
   type-code.cpp
+  type-info.cpp
   )
 
 if (FLANG_EXPERIMENTAL_CUDA_RUNTIME)

@@ -484,6 +484,10 @@ ExprDependence clang::computeDependence(DeclRefExpr *E, const ASTContext &Ctx) {
 
   //    - an identifier associated by name lookup with one or more declarations
   //      declared with a dependent type
+  //    - an identifier associated by name lookup with an entity captured by
+  //    copy ([expr.prim.lambda.capture])
+  //      in a lambda-expression that has an explicit object parameter whose
+  //      type is dependent ([dcl.fct]),
   //
   // [The "or more" case is not modeled as a DeclRefExpr. There are a bunch
   // more bullets here that we handle by treating the declaration as having a
@@ -492,6 +496,11 @@ ExprDependence clang::computeDependence(DeclRefExpr *E, const ASTContext &Ctx) {
     Deps |= ExprDependence::TypeValueInstantiation;
   else if (Type->isInstantiationDependentType())
     Deps |= ExprDependence::Instantiation;
+
+  //    - an identifier associated by name lookup with an entity captured by
+  //    copy ([expr.prim.lambda.capture])
+  if (E->isCapturedByCopyInLambdaWithExplicitObjectParameter())
+    Deps |= ExprDependence::Type;
 
   //    - a conversion-function-id that specifies a dependent type
   if (Decl->getDeclName().getNameKind() ==

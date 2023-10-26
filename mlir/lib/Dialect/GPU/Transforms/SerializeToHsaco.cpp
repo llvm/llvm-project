@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
-#include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
 
@@ -43,6 +42,7 @@
 #include "llvm/MC/TargetRegistry.h"
 
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -402,9 +402,8 @@ SerializeToHsacoPass::createHsaco(const SmallVectorImpl<char> &isaBinary) {
   tempIsaBinaryOs.close();
 
   // Create a temp file for HSA code object.
-  int tempHsacoFD = -1;
   SmallString<128> tempHsacoFilename;
-  if (llvm::sys::fs::createTemporaryFile("kernel", "hsaco", tempHsacoFD,
+  if (llvm::sys::fs::createTemporaryFile("kernel", "hsaco",
                                          tempHsacoFilename)) {
     emitError(loc, "temporary file for HSA code object creation error");
     return {};
@@ -423,13 +422,14 @@ SerializeToHsacoPass::createHsaco(const SmallVectorImpl<char> &isaBinary) {
   }
 
   // Load the HSA code object.
-  auto hsacoFile = openInputFile(tempHsacoFilename);
+  auto hsacoFile =
+      llvm::MemoryBuffer::getFile(tempHsacoFilename, /*IsText=*/false);
   if (!hsacoFile) {
     emitError(loc, "read HSA code object from temp file error");
     return {};
   }
 
-  StringRef buffer = hsacoFile->getBuffer();
+  StringRef buffer = (*hsacoFile)->getBuffer();
   return std::make_unique<std::vector<char>>(buffer.begin(), buffer.end());
 }
 

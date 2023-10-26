@@ -2033,8 +2033,6 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
                "const unsigned int *d;\n"
                "Const unsigned int &e;\n"
                "const unsigned int &f;\n"
-               "int                *f1(int *a, int &b, int &&c);\n"
-               "double             *(*f2)(int *a, double &&b);\n"
                "const unsigned    &&g;\n"
                "Const unsigned      h;",
                Style);
@@ -2080,8 +2078,6 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
                "const unsigned int* d;\n"
                "Const unsigned int& e;\n"
                "const unsigned int& f;\n"
-               "int*                f1(int* a, int& b, int&& c);\n"
-               "double*             (*f2)(int* a, double&& b);\n"
                "const unsigned&&    g;\n"
                "Const unsigned      h;",
                Style);
@@ -2107,8 +2103,6 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
                "const unsigned int *d;\n"
                "Const unsigned int& e;\n"
                "const unsigned int& f;\n"
-               "int                *f1(int *a, int& b, int&& c);\n"
-               "double             *(*f2)(int *a, double&& b);\n"
                "const unsigned      g;\n"
                "Const unsigned      h;",
                Style);
@@ -2149,8 +2143,6 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
                "const unsigned int*  d;\n"
                "Const unsigned int & e;\n"
                "const unsigned int & f;\n"
-               "int*                 f1(int* a, int & b, int && c);\n"
-               "double*              (*f2)(int* a, double && b);\n"
                "const unsigned &&    g;\n"
                "Const unsigned       h;",
                Style);
@@ -2176,8 +2168,6 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
                "const unsigned int * d;\n"
                "Const unsigned int  &e;\n"
                "const unsigned int  &f;\n"
-               "int *                f1(int * a, int &b, int &&c);\n"
-               "double *             (*f2)(int * a, double &&b);\n"
                "const unsigned     &&g;\n"
                "Const unsigned       h;",
                Style);
@@ -2774,6 +2764,40 @@ TEST_F(FormatTest, ShortEnums) {
                "  B,\n"
                "  C\n"
                "} ShortEnum1, ShortEnum2;",
+               Style);
+}
+
+TEST_F(FormatTest, ShortCompoundRequirement) {
+  FormatStyle Style = getLLVMStyle();
+  EXPECT_TRUE(Style.AllowShortCompoundRequirementOnASingleLine);
+  verifyFormat("template <typename T>\n"
+               "concept c = requires(T x) {\n"
+               "  { x + 1 } -> std::same_as<int>;\n"
+               "};",
+               Style);
+  verifyFormat("template <typename T>\n"
+               "concept c = requires(T x) {\n"
+               "  { x + 1 } -> std::same_as<int>;\n"
+               "  { x + 2 } -> std::same_as<int>;\n"
+               "};",
+               Style);
+  Style.AllowShortCompoundRequirementOnASingleLine = false;
+  verifyFormat("template <typename T>\n"
+               "concept c = requires(T x) {\n"
+               "  {\n"
+               "    x + 1\n"
+               "  } -> std::same_as<int>;\n"
+               "};",
+               Style);
+  verifyFormat("template <typename T>\n"
+               "concept c = requires(T x) {\n"
+               "  {\n"
+               "    x + 1\n"
+               "  } -> std::same_as<int>;\n"
+               "  {\n"
+               "    x + 2\n"
+               "  } -> std::same_as<int>;\n"
+               "};",
                Style);
 }
 
@@ -10622,6 +10646,12 @@ TEST_F(FormatTest, WrapsAtNestedNameSpecifiers) {
   verifyFormat("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa::\n"
                "    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
                "        .aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa();");
+
+  verifyFormat(
+      "LongClassNameToShowTheIssue::AndAnotherLongClassNameToShowTheIssue::\n"
+      "    AndAnotherLongClassNameToShowTheIssue() {}\n"
+      "LongClassNameToShowTheIssue::AndAnotherLongClassNameToShowTheIssue::\n"
+      "    ~AndAnotherLongClassNameToShowTheIssue() {}");
 }
 
 TEST_F(FormatTest, UnderstandsTemplateParameters) {
@@ -11183,6 +11213,42 @@ TEST_F(FormatTest, UnderstandsNewAndDelete) {
                "void delete(link p);",
                "void new (link p);\n"
                "void delete (link p);");
+
+  FormatStyle AfterPlacementOperator = getLLVMStyle();
+  AfterPlacementOperator.SpaceBeforeParens = FormatStyle::SBPO_Custom;
+  EXPECT_EQ(
+      AfterPlacementOperator.SpaceBeforeParensOptions.AfterPlacementOperator,
+      FormatStyle::SpaceBeforeParensCustom::APO_Leave);
+  verifyFormat("new (buf) int;", AfterPlacementOperator);
+  verifyFormat("new(buf) int;", AfterPlacementOperator);
+
+  AfterPlacementOperator.SpaceBeforeParensOptions.AfterPlacementOperator =
+      FormatStyle::SpaceBeforeParensCustom::APO_Never;
+  verifyFormat("struct A {\n"
+               "  int *a;\n"
+               "  A(int *p) : a(new(p) int) {\n"
+               "    new(p) int;\n"
+               "    int *b = new(p) int;\n"
+               "    int *c = new(p) int(3);\n"
+               "    delete(b);\n"
+               "  }\n"
+               "};",
+               AfterPlacementOperator);
+  verifyFormat("void operator new(void *foo) ATTRIB;", AfterPlacementOperator);
+
+  AfterPlacementOperator.SpaceBeforeParensOptions.AfterPlacementOperator =
+      FormatStyle::SpaceBeforeParensCustom::APO_Always;
+  verifyFormat("struct A {\n"
+               "  int *a;\n"
+               "  A(int *p) : a(new (p) int) {\n"
+               "    new (p) int;\n"
+               "    int *b = new (p) int;\n"
+               "    int *c = new (p) int(3);\n"
+               "    delete (b);\n"
+               "  }\n"
+               "};",
+               AfterPlacementOperator);
+  verifyFormat("void operator new(void *foo) ATTRIB;", AfterPlacementOperator);
 }
 
 TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
@@ -11668,6 +11734,9 @@ TEST_F(FormatTest, UnderstandsAttributes) {
   verifyFormat("vector<SomeType __attr1 *const> v;", CustomAttrs);
   verifyFormat("vector<SomeType __attr1 *__attr2> v;", CustomAttrs);
   verifyFormat("vector<SomeType __attr1 *no_underscore_attr> v;", CustomAttrs);
+  verifyFormat("__attr1 ::qualified_type f();", CustomAttrs);
+  verifyFormat("__attr1() ::qualified_type f();", CustomAttrs);
+  verifyFormat("__attr1(nodebug) ::qualified_type f();", CustomAttrs);
 
   // Check that these are not parsed as function declarations:
   CustomAttrs.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_None;
@@ -16339,7 +16408,7 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
 
   verifyFormat("int f();", SpaceFuncDef);
   verifyFormat("void f (int a, T b) {}", SpaceFuncDef);
-  verifyFormat("A::A () : a(1) {}", SpaceFuncDef);
+  verifyFormat("A::A() : a(1) {}", SpaceFuncDef);
   verifyFormat("void f() __attribute__((asdf));", SpaceFuncDef);
   verifyFormat("#define A(x) x", SpaceFuncDef);
   verifyFormat("#define A (x) x", SpaceFuncDef);
@@ -16364,7 +16433,7 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
   // verifyFormat("T A::operator() () {}", SpaceFuncDef);
   verifyFormat("auto lambda = [] () { return 0; };", SpaceFuncDef);
   verifyFormat("int x = int(y);", SpaceFuncDef);
-  verifyFormat("M (std::size_t R, std::size_t C) : C(C), data(R) {}",
+  verifyFormat("M(std::size_t R, std::size_t C) : C(C), data(R) {}",
                SpaceFuncDef);
 
   FormatStyle SpaceIfMacros = getLLVMStyle();
@@ -18525,11 +18594,16 @@ TEST_F(FormatTest, AlignConsecutiveAssignments) {
                "                     a_longer_name_for_wrap}};",
                Alignment);
 
-  Alignment.ColumnLimit = 60;
+  Alignment = getLLVMStyleWithColumns(60);
+  Alignment.AlignConsecutiveAssignments.Enabled = true;
   verifyFormat("using II = typename TI<T, std::tuple<Types...>>::I;\n"
                "using I  = std::conditional_t<II::value >= 0,\n"
                "                              std::ic<int, II::value + 1>,\n"
                "                              std::ic<int, -1>>;",
+               Alignment);
+  verifyFormat("SomeName = Foo;\n"
+               "X        = func<Type, Type>(looooooooooooooooooooooooong,\n"
+               "                            arrrrrrrrrrg);",
                Alignment);
 }
 
@@ -26305,6 +26379,56 @@ TEST_F(FormatTest, RemoveParentheses) {
   verifyFormat("co_return 0;", "co_return ((0));", Style);
   verifyFormat("return 0;", "return (((0)));", Style);
   verifyFormat("return ({ 0; });", "return ((({ 0; })));", Style);
+  verifyFormat("inline decltype(auto) f() {\n"
+               "  if (a) {\n"
+               "    return (a);\n"
+               "  }\n"
+               "  return (b);\n"
+               "}",
+               "inline decltype(auto) f() {\n"
+               "  if (a) {\n"
+               "    return ((a));\n"
+               "  }\n"
+               "  return ((b));\n"
+               "}",
+               Style);
+  verifyFormat("auto g() {\n"
+               "  decltype(auto) x = [] {\n"
+               "    auto y = [] {\n"
+               "      if (a) {\n"
+               "        return a;\n"
+               "      }\n"
+               "      return b;\n"
+               "    };\n"
+               "    if (c) {\n"
+               "      return (c);\n"
+               "    }\n"
+               "    return (d);\n"
+               "  };\n"
+               "  if (e) {\n"
+               "    return e;\n"
+               "  }\n"
+               "  return f;\n"
+               "}",
+               "auto g() {\n"
+               "  decltype(auto) x = [] {\n"
+               "    auto y = [] {\n"
+               "      if (a) {\n"
+               "        return ((a));\n"
+               "      }\n"
+               "      return ((b));\n"
+               "    };\n"
+               "    if (c) {\n"
+               "      return ((c));\n"
+               "    }\n"
+               "    return ((d));\n"
+               "  };\n"
+               "  if (e) {\n"
+               "    return ((e));\n"
+               "  }\n"
+               "  return ((f));\n"
+               "}",
+               Style);
 
   Style.ColumnLimit = 25;
   verifyFormat("return (a + b) - (c + d);",
@@ -26357,6 +26481,29 @@ TEST_F(FormatTest, AllowBreakBeforeNoexceptSpecifier) {
 
   verifyFormat("void aVeryLongFunctionNameWithoutAnyArguments() noexcept;",
                Style);
+}
+
+TEST_F(FormatTest, PPBranchesInBracedInit) {
+  verifyFormat("A a_{kFlag1,\n"
+               "#if BUILD_FLAG\n"
+               "     kFlag2,\n"
+               "#else\n"
+               "     kFlag3,\n"
+               "#endif\n"
+               "     kFlag4};",
+               "A a_{\n"
+               "  kFlag1,\n"
+               "#if BUILD_FLAG\n"
+               "      kFlag2,\n"
+               "#else\n"
+               "      kFlag3,\n"
+               "#endif\n"
+               "      kFlag4\n"
+               "};");
+}
+
+TEST_F(FormatTest, StreamOutputOperator) {
+  verifyFormat("std::cout << \"foo\" << \"bar\" << baz;");
 }
 
 } // namespace

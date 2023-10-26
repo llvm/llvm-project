@@ -14,12 +14,12 @@
 #define LLVM_CLANG_AST_INTERP_SOURCE_H
 
 #include "PrimType.h"
+#include "clang/AST/DeclBase.h"
+#include "clang/AST/Stmt.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/Support/Endian.h"
 
 namespace clang {
-class Stmt;
-class Decl;
 class Expr;
 class SourceLocation;
 class SourceRange;
@@ -55,7 +55,7 @@ public:
   template <typename T> std::enable_if_t<!std::is_pointer<T>::value, T> read() {
     assert(aligned(Ptr));
     using namespace llvm::support;
-    T Value = endian::read<T, endianness::native, 1>(Ptr);
+    T Value = endian::read<T, llvm::endianness::native>(Ptr);
     Ptr += align(sizeof(T));
     return Value;
   }

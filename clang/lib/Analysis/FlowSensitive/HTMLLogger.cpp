@@ -150,6 +150,7 @@ class HTMLLogger : public Logger {
     const CFGBlock *Block;
     unsigned Iter;
     bool PostVisit;
+    bool Converged;
   };
 
   StreamFactory Streams;
@@ -159,8 +160,8 @@ class HTMLLogger : public Logger {
   const ControlFlowContext *CFG;
   // Timeline of iterations of CFG block visitation.
   std::vector<Iteration> Iters;
-  // Number of times each CFG block has been seen.
-  llvm::DenseMap<const CFGBlock *, llvm::SmallVector<Iteration>> BlockIters;
+  // Indexes  in `Iters` of the iterations for each block.
+  llvm::DenseMap<const CFGBlock *, llvm::SmallVector<size_t>> BlockIters;
   // The messages logged in the current context but not yet written.
   std::string ContextLogs;
   // The number of elements we have visited within the current CFG block.
@@ -207,6 +208,7 @@ public:
           JOS->attribute("block", blockID(E.Block->getBlockID()));
           JOS->attribute("iter", E.Iter);
           JOS->attribute("post_visit", E.PostVisit);
+          JOS->attribute("converged", E.Converged);
         });
       }
     });
@@ -222,10 +224,10 @@ public:
   }
 
   void enterBlock(const CFGBlock &B, bool PostVisit) override {
-    llvm::SmallVector<Iteration> &BIter = BlockIters[&B];
+    llvm::SmallVector<size_t> &BIter = BlockIters[&B];
     unsigned IterNum = BIter.size() + 1;
-    BIter.push_back({&B, IterNum, PostVisit});
-    Iters.push_back({&B, IterNum, PostVisit});
+    BIter.push_back(Iters.size());
+    Iters.push_back({&B, IterNum, PostVisit, /*Converged=*/false});
     ElementIndex = 0;
   }
   void enterElement(const CFGElement &E) override {
@@ -290,7 +292,7 @@ public:
       }
     });
   }
-  void blockConverged() override { logText("Block converged"); }
+  void blockConverged() override { Iters.back().Converged = true; }
 
   void logText(llvm::StringRef S) override {
     ContextLogs.append(S.begin(), S.end());
@@ -301,13 +303,15 @@ private:
   // Write the CFG block details.
   // Currently this is just the list of elements in execution order.
   // FIXME: an AST dump would be a useful view, too.
-  void writeBlock(const CFGBlock &B, llvm::ArrayRef<Iteration> ItersForB) {
+  void writeBlock(const CFGBlock &B, llvm::ArrayRef<size_t> ItersForB) {
     JOS->attributeObject(blockID(B.getBlockID()), [&] {
       JOS->attributeArray("iters", [&] {
-        for (const auto &Iter : ItersForB) {
+        for (size_t IterIdx : ItersForB) {
+          const Iteration &Iter = Iters[IterIdx];
           JOS->object([&] {
             JOS->attribute("iter", Iter.Iter);
             JOS->attribute("post_visit", Iter.PostVisit);
+            JOS->attribute("converged", Iter.Converged);
           });
         }
       });

@@ -51,12 +51,18 @@ fmv.h.x ft1, a6
 # CHECK-ASM-AND-OBJ: fcvt.s.h fa0, ft0
 # CHECK-ASM: encoding: [0x53,0x05,0x20,0x40]
 fcvt.s.h fa0, ft0
+# CHECK-ASM-AND-OBJ: fcvt.s.h fa0, ft0, rup
+# CHECK-ASM: encoding: [0x53,0x35,0x20,0x40]
+fcvt.s.h fa0, ft0, rup
 # CHECK-ASM-AND-OBJ: fcvt.h.s ft2, fa2
 # CHECK-ASM: encoding: [0x53,0x71,0x06,0x44]
 fcvt.h.s ft2, fa2
 # CHECK-ASM-AND-OBJ: fcvt.d.h fa0, ft0
 # CHECK-ASM: encoding: [0x53,0x05,0x20,0x42]
 fcvt.d.h fa0, ft0
+# CHECK-ASM-AND-OBJ: fcvt.d.h fa0, ft0, rup
+# CHECK-ASM: encoding: [0x53,0x35,0x20,0x42]
+fcvt.d.h fa0, ft0, rup
 # CHECK-ASM-AND-OBJ: fcvt.h.d ft2, fa2
 # CHECK-ASM: encoding: [0x53,0x71,0x16,0x44]
 fcvt.h.d ft2, fa2

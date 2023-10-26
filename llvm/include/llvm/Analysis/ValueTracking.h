@@ -16,6 +16,8 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/Analysis/SimplifyQuery.h"
+#include "llvm/Analysis/WithCache.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/FMF.h"
@@ -39,7 +41,6 @@ struct KnownBits;
 class Loop;
 class LoopInfo;
 class MDNode;
-struct SimplifyQuery;
 class StringRef;
 class TargetLibraryInfo;
 class Value;
@@ -90,6 +91,12 @@ KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
                            const DominatorTree *DT = nullptr,
                            bool UseInstrInfo = true);
 
+KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
+                           unsigned Depth, const SimplifyQuery &Q);
+
+KnownBits computeKnownBits(const Value *V, unsigned Depth,
+                           const SimplifyQuery &Q);
+
 /// Compute known bits from the range metadata.
 /// \p KnownZero the set of bits that are known to be zero
 /// \p KnownOne the set of bits that are known to be one
@@ -107,11 +114,9 @@ KnownBits analyzeKnownBitsFromAndXorOr(
     bool UseInstrInfo = true);
 
 /// Return true if LHS and RHS have no common bits set.
-bool haveNoCommonBitsSet(const Value *LHS, const Value *RHS,
-                         const DataLayout &DL, AssumptionCache *AC = nullptr,
-                         const Instruction *CxtI = nullptr,
-                         const DominatorTree *DT = nullptr,
-                         bool UseInstrInfo = true);
+bool haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
+                         const WithCache<const Value *> &RHSCache,
+                         const SimplifyQuery &SQ);
 
 /// Return true if the given value is known to have exactly one bit set when
 /// defined. For vectors return true if every element is known to be a power
@@ -847,44 +852,23 @@ enum class OverflowResult {
 };
 
 OverflowResult computeOverflowForUnsignedMul(const Value *LHS, const Value *RHS,
-                                             const DataLayout &DL,
-                                             AssumptionCache *AC,
-                                             const Instruction *CxtI,
-                                             const DominatorTree *DT,
-                                             bool UseInstrInfo = true);
+                                             const SimplifyQuery &SQ);
 OverflowResult computeOverflowForSignedMul(const Value *LHS, const Value *RHS,
-                                           const DataLayout &DL,
-                                           AssumptionCache *AC,
-                                           const Instruction *CxtI,
-                                           const DominatorTree *DT,
-                                           bool UseInstrInfo = true);
-OverflowResult computeOverflowForUnsignedAdd(const Value *LHS, const Value *RHS,
-                                             const DataLayout &DL,
-                                             AssumptionCache *AC,
-                                             const Instruction *CxtI,
-                                             const DominatorTree *DT,
-                                             bool UseInstrInfo = true);
-OverflowResult computeOverflowForSignedAdd(const Value *LHS, const Value *RHS,
-                                           const DataLayout &DL,
-                                           AssumptionCache *AC = nullptr,
-                                           const Instruction *CxtI = nullptr,
-                                           const DominatorTree *DT = nullptr);
+                                           const SimplifyQuery &SQ);
+OverflowResult
+computeOverflowForUnsignedAdd(const WithCache<const Value *> &LHS,
+                              const WithCache<const Value *> &RHS,
+                              const SimplifyQuery &SQ);
+OverflowResult computeOverflowForSignedAdd(const WithCache<const Value *> &LHS,
+                                           const WithCache<const Value *> &RHS,
+                                           const SimplifyQuery &SQ);
 /// This version also leverages the sign bit of Add if known.
 OverflowResult computeOverflowForSignedAdd(const AddOperator *Add,
-                                           const DataLayout &DL,
-                                           AssumptionCache *AC = nullptr,
-                                           const Instruction *CxtI = nullptr,
-                                           const DominatorTree *DT = nullptr);
+                                           const SimplifyQuery &SQ);
 OverflowResult computeOverflowForUnsignedSub(const Value *LHS, const Value *RHS,
-                                             const DataLayout &DL,
-                                             AssumptionCache *AC,
-                                             const Instruction *CxtI,
-                                             const DominatorTree *DT);
+                                             const SimplifyQuery &SQ);
 OverflowResult computeOverflowForSignedSub(const Value *LHS, const Value *RHS,
-                                           const DataLayout &DL,
-                                           AssumptionCache *AC,
-                                           const Instruction *CxtI,
-                                           const DominatorTree *DT);
+                                           const SimplifyQuery &SQ);
 
 /// Returns true if the arithmetic part of the \p WO 's result is
 /// used only along the paths control dependent on the computation

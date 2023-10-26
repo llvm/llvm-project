@@ -119,8 +119,7 @@ public:
   virtual void emitLineStrings(const NonRelocatableStringpool &Pool) = 0;
 
   /// Emit DWARF debug names.
-  virtual void
-  emitDebugNames(AccelTable<DWARF5AccelTableStaticData> &Table) = 0;
+  virtual void emitDebugNames(DWARF5AccelTable &Table) = 0;
 
   /// Emit Apple namespaces accelerator table.
   virtual void
@@ -269,9 +268,10 @@ class DWARFFile {
 public:
   using UnloadCallbackTy = std::function<void(StringRef FileName)>;
   DWARFFile(StringRef Name, std::unique_ptr<DWARFContext> Dwarf,
-            std::unique_ptr<AddressesMap> Addresses, UnloadCallbackTy = nullptr)
+            std::unique_ptr<AddressesMap> Addresses,
+            UnloadCallbackTy UnloadFunc = nullptr)
       : FileName(Name), Dwarf(std::move(Dwarf)),
-        Addresses(std::move(Addresses)) {}
+        Addresses(std::move(Addresses)), UnloadFunc(UnloadFunc) {}
 
   /// The object file name.
   StringRef FileName;
@@ -281,6 +281,18 @@ public:
 
   /// Helpful address information(list of valid address ranges, relocations).
   std::unique_ptr<AddressesMap> Addresses;
+
+  /// Callback to the module keeping object file to unload.
+  UnloadCallbackTy UnloadFunc;
+
+  /// Unloads object file and corresponding AddressesMap and Dwarf Context.
+  void unload() {
+    Addresses.reset();
+    Dwarf.reset();
+
+    if (UnloadFunc)
+      UnloadFunc(FileName);
+  }
 };
 
 typedef std::map<std::string, std::string> swiftInterfacesMap;
@@ -529,7 +541,8 @@ private:
     /// the debug object.
     void clear() {
       CompileUnits.clear();
-      File.Addresses->clear();
+      ModuleUnits.clear();
+      File.unload();
     }
   };
 
@@ -866,7 +879,7 @@ private:
   uint32_t LastCIEOffset = 0;
 
   /// Apple accelerator tables.
-  AccelTable<DWARF5AccelTableStaticData> DebugNames;
+  DWARF5AccelTable DebugNames;
   AccelTable<AppleAccelTableStaticOffsetData> AppleNames;
   AccelTable<AppleAccelTableStaticOffsetData> AppleNamespaces;
   AccelTable<AppleAccelTableStaticOffsetData> AppleObjc;

@@ -603,3 +603,15 @@ namespace PR47792 {
   template void bar<>();    // expected-note {{previous explicit instantiation is here}}
   template void bar<foo>(); // expected-error {{duplicate explicit instantiation of 'bar<&PR47792::foo>'}}
 }
+
+namespace GH68024 {
+template<auto>
+struct s {};
+
+struct {
+  void operator()(int);
+} f;
+
+template<typename T>
+using a = s<f(T::x)>;
+}

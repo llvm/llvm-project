@@ -259,8 +259,7 @@ LogicalResult DeadCodeAnalysis::visit(ProgramPoint point) {
   if (isRegionOrCallableReturn(op)) {
     if (auto branch = dyn_cast<RegionBranchOpInterface>(op->getParentOp())) {
       // Visit the exiting terminator of a region.
-      visitRegionTerminator(cast<RegionBranchTerminatorOpInterface>(op),
-                            branch);
+      visitRegionTerminator(op, branch);
     } else if (auto callable =
                    dyn_cast<CallableOpInterface>(op->getParentOp())) {
       // Visit the exiting terminator of a callable.
@@ -379,14 +378,17 @@ void DeadCodeAnalysis::visitRegionBranchOperation(
   }
 }
 
-void DeadCodeAnalysis::visitRegionTerminator(
-    RegionBranchTerminatorOpInterface op, RegionBranchOpInterface branch) {
+void DeadCodeAnalysis::visitRegionTerminator(Operation *op,
+                                             RegionBranchOpInterface branch) {
   std::optional<SmallVector<Attribute>> operands = getOperandValues(op);
   if (!operands)
     return;
 
   SmallVector<RegionSuccessor> successors;
-  op.getSuccessorRegions(*operands, successors);
+  if (auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(op))
+    terminator.getSuccessorRegions(*operands, successors);
+  else
+    branch.getSuccessorRegions(op->getParentRegion(), successors);
 
   // Mark successor region entry blocks as executable and add this op to the
   // list of predecessors.
@@ -407,10 +409,6 @@ void DeadCodeAnalysis::visitRegionTerminator(
 
 void DeadCodeAnalysis::visitCallableTerminator(Operation *op,
                                                CallableOpInterface callable) {
-  // If there are no exiting values, we have nothing to do.
-  if (op->getNumOperands() == 0)
-    return;
-
   // Add as predecessors to all callsites this return op.
   auto *callsites = getOrCreateFor<PredecessorState>(op, callable);
   bool canResolve = op->hasTrait<OpTrait::ReturnLike>();

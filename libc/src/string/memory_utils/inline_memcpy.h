@@ -28,9 +28,12 @@
 #elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
 #include "src/string/memory_utils/riscv/inline_memcpy.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMCPY inline_memcpy_riscv
-#elif defined(LIBC_TARGET_ARCH_IS_ARM) || defined(LIBC_TARGET_ARCH_IS_GPU)
+#elif defined(LIBC_TARGET_ARCH_IS_ARM)
 #include "src/string/memory_utils/generic/byte_per_byte.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMCPY inline_memcpy_byte_per_byte
+#elif defined(LIBC_TARGET_ARCH_IS_GPU)
+#include "src/string/memory_utils/generic/builtin.h"
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMCPY inline_memcpy_builtin
 #else
 #error "Unsupported architecture"
 #endif

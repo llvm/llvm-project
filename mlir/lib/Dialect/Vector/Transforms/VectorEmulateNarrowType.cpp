@@ -67,7 +67,7 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
     //
     // can be replaced with
     //
-    // %1 = vector.load %0[%linear_index] : memref<12xi8>, vector<2xi8>
+    // %1 = vector.load %0[%linear_index] : memref<6xi8>, vector<2xi8>
     // %2 = vector.bitcast %1 : vector<2xi8> to vector<4xi4>
     //
     // TODO: Currently, only the even number of elements loading is supported.

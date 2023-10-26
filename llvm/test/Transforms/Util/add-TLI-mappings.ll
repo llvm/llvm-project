@@ -86,14 +86,14 @@ attributes #0 = { nounwind readnone }
 
 ; SLEEFGNUABI:      attributes #[[SIN]] = { "vector-function-abi-variant"=
 ; SLEEFGNUABI-SAME:   "_ZGV_LLVM_N2v_sin(_ZGVnN2v_sin),
-; SLEEFGNUABI-SAME:   _ZGV_LLVM_Mxv_sin(_ZGVsMxv_sin)" }
+; SLEEFGNUABI-SAME:   _ZGVsMxv_sin(_ZGVsMxv_sin)" }
 ; SLEEFGNUABI:      attributes #[[LOG10]] = { "vector-function-abi-variant"=
 ; SLEEFGNUABI-SAME:   "_ZGV_LLVM_N4v_llvm.log10.f32(_ZGVnN4v_log10f),
-; SLEEFGNUABI-SAME:   _ZGV_LLVM_Mxv_llvm.log10.f32(_ZGVsMxv_log10f)" }
+; SLEEFGNUABI-SAME:   _ZGVsMxv_llvm.log10.f32(_ZGVsMxv_log10f)" }
 
 ; ARMPL:      attributes #[[SIN]] = { "vector-function-abi-variant"=
 ; ARMPL-SAME:    "_ZGV_LLVM_N2v_sin(armpl_vsinq_f64),
-; ARMPL-SAME     _ZGV_LLVM_Mxv_sin(armpl_svsin_f64_x)" }
+; ARMPL-SAME     _ZGVsMxv_sin(armpl_svsin_f64_x)" }
 ; ARMPL:      attributes #[[LOG10]] = { "vector-function-abi-variant"=
 ; ARMPL-SAME:    "_ZGV_LLVM_N4v_llvm.log10.f32(armpl_vlog10q_f32),
-; ARMPL-SAME     _ZGV_LLVM_Mxv_llvm.log10.f32(armpl_svlog10_f32_x)" }
+; ARMPL-SAME     _ZGVsMxv_llvm.log10.f32(armpl_svlog10_f32_x)" }

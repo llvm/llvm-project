@@ -14,7 +14,8 @@
 #  CHECK-TEST1-NEXT: # | THIS WAS
 #  CHECK-TEST1-NEXT: # `---{{-*}}
 #  CHECK-TEST1-NEXT: # preamble command line
-#  CHECK-TEST1-NEXT: echo "INJECTED"
+#  CHECK-TEST1-NEXT: echo
+#  CHECK-TEST1-NEXT: "INJECTED"
 #  CHECK-TEST1-NEXT: # executed command: echo INJECTED
 #  CHECK-TEST1-NEXT: # .---command stdout{{-*}}
 #  CHECK-TEST1-NEXT: # | INJECTED

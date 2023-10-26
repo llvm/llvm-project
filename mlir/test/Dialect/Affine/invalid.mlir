@@ -5,7 +5,7 @@
 func.func @affine_apply_operand_non_index(%arg0 : i32) {
   // Custom parser automatically assigns all arguments the `index` so we must
   // use the generic syntax here to exercise the verifier.
-  // expected-error@+1 {{op operand #0 must be index, but got 'i32'}}
+  // expected-error@+1 {{op operand #0 must be variadic of index, but got 'i32'}}
   %0 = "affine.apply"(%arg0) {map = affine_map<(d0) -> (d0)>} : (i32) -> (index)
   return
 }
@@ -290,6 +290,18 @@ func.func @affine_parallel(%arg0 : index, %arg1 : index, %arg2 : index) {
   %1 = affine.parallel (%i, %j) = (0, 0) to (100, 100) step (10, 10) reduce ("minimumf") -> (f32) {
     %2 = affine.load %0[%i, %j] : memref<100x100xi32>
     //  expected-error@+1 {{types mismatch between yield op and its parent}}
+    affine.yield %2 : i32
+  }
+  return
+}
+
+// -----
+
+func.func @affine_parallel(%arg0 : index, %arg1 : index, %arg2 : index) {
+  %0 = memref.alloc() : memref<100x100xi32>
+  //  expected-error@+1 {{result type cannot match reduction attribute}}
+  %1 = affine.parallel (%i, %j) = (0, 0) to (100, 100) step (10, 10) reduce ("minimumf") -> (i32) {
+    %2 = affine.load %0[%i, %j] : memref<100x100xi32>
     affine.yield %2 : i32
   }
   return

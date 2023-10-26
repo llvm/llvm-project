@@ -847,6 +847,8 @@ public:
   /// is known.
   bool AfterParameterList = true;
 
+  ParmVarDecl *ExplicitObjectParameter = nullptr;
+
   /// Source range covering the lambda introducer [...].
   SourceRange IntroducerRange;
 
@@ -1025,7 +1027,7 @@ public:
     return NonODRUsedCapturingExprs.count(CapturingVarExpr);
   }
   void removePotentialCapture(Expr *E) {
-    llvm::erase_value(PotentiallyCapturingExprs, E);
+    llvm::erase(PotentiallyCapturingExprs, E);
   }
   void clearPotentialCaptures() {
     PotentiallyCapturingExprs.clear();
@@ -1042,6 +1044,8 @@ public:
 
   void visitPotentialCaptures(
       llvm::function_ref<void(ValueDecl *, Expr *)> Callback) const;
+
+  bool lambdaCaptureShouldBeConst() const;
 };
 
 FunctionScopeInfo::WeakObjectProfileTy::WeakObjectProfileTy()

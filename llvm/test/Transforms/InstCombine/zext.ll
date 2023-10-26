@@ -748,3 +748,17 @@ define i64 @zext_icmp_ne_bool_1(ptr %ptr) {
   %len = zext i1 %cmp to i64
   ret i64 %len
 }
+
+; https://alive2.llvm.org/ce/z/k7qosS
+define i32  @zext_icmp_eq0_no_shift(ptr %ptr ) {
+; CHECK-LABEL: @zext_icmp_eq0_no_shift(
+; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[PTR:%.*]], align 1, !range [[RNG1:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X]], 1
+; CHECK-NEXT:    [[RES:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %X = load i8, ptr %ptr,align 1, !range !{i8 0, i8 2} ; range [0, 2)
+  %cmp = icmp eq i8 %X, 0
+  %res = zext i1 %cmp to i32
+  ret i32 %res
+}

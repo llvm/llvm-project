@@ -1398,16 +1398,17 @@ bool ModuleMap::resolveExports(Module *Mod, bool Complain) {
 }
 
 bool ModuleMap::resolveUses(Module *Mod, bool Complain) {
-  auto Unresolved = std::move(Mod->UnresolvedDirectUses);
-  Mod->UnresolvedDirectUses.clear();
+  auto *Top = Mod->getTopLevelModule();
+  auto Unresolved = std::move(Top->UnresolvedDirectUses);
+  Top->UnresolvedDirectUses.clear();
   for (auto &UDU : Unresolved) {
-    Module *DirectUse = resolveModuleId(UDU, Mod, Complain);
+    Module *DirectUse = resolveModuleId(UDU, Top, Complain);
     if (DirectUse)
-      Mod->DirectUses.push_back(DirectUse);
+      Top->DirectUses.push_back(DirectUse);
     else
-      Mod->UnresolvedDirectUses.push_back(UDU);
+      Top->UnresolvedDirectUses.push_back(UDU);
   }
-  return !Mod->UnresolvedDirectUses.empty();
+  return !Top->UnresolvedDirectUses.empty();
 }
 
 bool ModuleMap::resolveConflicts(Module *Mod, bool Complain) {
@@ -1550,8 +1551,6 @@ namespace clang {
     /// Skip tokens until we reach the a token with the given kind
     /// (or the end of the file).
     void skipUntil(MMToken::TokenKind K);
-
-    using ModuleId = SmallVector<std::pair<std::string, SourceLocation>, 2>;
 
     bool parseModuleId(ModuleId &Id);
     void parseModuleDecl();
@@ -2428,7 +2427,8 @@ void ModuleMapParser::parseHeaderDecl(MMToken::TokenKind LeadingToken,
   Header.Kind = Map.headerRoleToKind(Role);
 
   // Check whether we already have an umbrella.
-  if (Header.IsUmbrella && ActiveModule->Umbrella) {
+  if (Header.IsUmbrella &&
+      !std::holds_alternative<std::monostate>(ActiveModule->Umbrella)) {
     Diags.Report(Header.FileNameLoc, diag::err_mmap_umbrella_clash)
       << ActiveModule->getFullModuleName();
     HadError = true;
@@ -2525,7 +2525,7 @@ void ModuleMapParser::parseUmbrellaDirDecl(SourceLocation UmbrellaLoc) {
   SourceLocation DirNameLoc = consumeToken();
 
   // Check whether we already have an umbrella.
-  if (ActiveModule->Umbrella) {
+  if (!std::holds_alternative<std::monostate>(ActiveModule->Umbrella)) {
     Diags.Report(DirNameLoc, diag::err_mmap_umbrella_clash)
       << ActiveModule->getFullModuleName();
     HadError = true;

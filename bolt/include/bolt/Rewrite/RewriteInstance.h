@@ -584,7 +584,8 @@ private:
 MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
                                    const MCInstrAnalysis *Analysis,
                                    const MCInstrInfo *Info,
-                                   const MCRegisterInfo *RegInfo);
+                                   const MCRegisterInfo *RegInfo,
+                                   const MCSubtargetInfo *STI);
 
 } // namespace bolt
 } // namespace llvm

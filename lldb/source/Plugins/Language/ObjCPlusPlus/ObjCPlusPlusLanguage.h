@@ -27,6 +27,8 @@ public:
     return lldb::eLanguageTypeObjC_plus_plus;
   }
 
+  llvm::StringRef GetUserEntryPointName() const override { return "main"; }
+
   llvm::StringRef GetNilReferenceSummaryString() override { return "nil"; }
 
   bool IsSourceFile(llvm::StringRef file_path) const override;

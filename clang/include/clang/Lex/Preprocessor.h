@@ -1722,6 +1722,9 @@ public:
   /// Lex the next token for this preprocessor.
   void Lex(Token &Result);
 
+  /// Lex all tokens for this preprocessor until (and excluding) end of file.
+  void LexTokensUntilEOF(std::vector<Token> *Tokens = nullptr);
+
   /// Lex a token, forming a header-name token if possible.
   bool LexHeaderName(Token &Result, bool AllowMacroExpansion = true);
 
@@ -1935,8 +1938,8 @@ public:
   /// (1-based).
   ///
   /// \returns true if an error occurred, false otherwise.
-  bool SetCodeCompletionPoint(const FileEntry *File,
-                              unsigned Line, unsigned Column);
+  bool SetCodeCompletionPoint(FileEntryRef File, unsigned Line,
+                              unsigned Column);
 
   /// Determine if we are performing code completion.
   bool isCodeCompletionEnabled() const { return CodeCompletionFile != nullptr; }
@@ -2697,7 +2700,7 @@ public:
   ///         \c false if the module appears to be usable.
   static bool checkModuleIsAvailable(const LangOptions &LangOpts,
                                      const TargetInfo &TargetInfo,
-                                     DiagnosticsEngine &Diags, Module *M);
+                                     const Module &M, DiagnosticsEngine &Diags);
 
   // Module inclusion testing.
   /// Find the module that owns the source or header file that

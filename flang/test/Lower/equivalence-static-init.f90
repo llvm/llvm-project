@@ -8,7 +8,7 @@ module module_without_init
   equivalence(i(1), x)
 end module
 ! CHECK-LABEL: fir.global @_QMmodule_without_initEi : !fir.array<8xi8> {
-  ! CHECK: %0 = fir.undefined !fir.array<8xi8>
+  ! CHECK: %0 = fir.zero_bits !fir.array<8xi8>
   ! CHECK: fir.has_value %0 : !fir.array<8xi8>
 ! CHECK}
 

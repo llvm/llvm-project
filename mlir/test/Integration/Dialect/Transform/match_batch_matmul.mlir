@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --test-transform-dialect-interpreter='transform-library-file-name=%p/match_matmul_common.mlir' --verify-diagnostics
+// RUN: mlir-opt %s --transform-preload-library='transform-library-paths=%p/match_matmul_common.mlir' --transform-interpreter --verify-diagnostics
 
 module attributes { transform.with_named_sequence } {
   transform.named_sequence @_match_matmul_like(
@@ -42,11 +42,11 @@ module attributes { transform.with_named_sequence } {
     transform.yield
   }
 
-  transform.sequence failures(propagate) {
-  ^bb(%root: !transform.any_op):
-    foreach_match in %root
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.consumed}) {
+    transform.foreach_match in %root
       @match_bmm -> @print_bmm
       : (!transform.any_op) -> !transform.any_op
+    transform.yield
   }
 }
 

@@ -44,7 +44,7 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   // InterpStack when calling the function.
   bool HasThisPointer = false;
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl)) {
-    if (MD->isInstance()) {
+    if (MD->isImplicitObjectMemberFunction()) {
       HasThisPointer = true;
       ParamTypes.push_back(PT_Ptr);
       ParamOffsets.push_back(ParamOffset);
@@ -64,8 +64,8 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
         this->LambdaCaptures[Cap.first] = {
             Offset, Cap.second->getType()->isReferenceType()};
       }
-      // FIXME: LambdaThisCapture
-      (void)LTC;
+      if (LTC)
+        this->LambdaThisCapture = R->getField(LTC)->Offset;
     }
   }
 
@@ -149,7 +149,7 @@ void ByteCodeEmitter::emitLabel(LabelTy Label) {
       void *Location = Code.data() + Reloc - align(sizeof(int32_t));
       assert(aligned(Location));
       const int32_t Offset = Target - static_cast<int64_t>(Reloc);
-      endian::write<int32_t, endianness::native, 1>(Location, Offset);
+      endian::write<int32_t, llvm::endianness::native>(Location, Offset);
     }
     LabelRelocs.erase(It);
   }

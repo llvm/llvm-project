@@ -308,12 +308,13 @@ static bool requiresAMDGPUProtectedVisibility(const Decl *D,
   if (GV->getVisibility() != llvm::GlobalValue::HiddenVisibility)
     return false;
 
-  return D->hasAttr<OpenCLKernelAttr>() ||
-         (isa<FunctionDecl>(D) && D->hasAttr<CUDAGlobalAttr>()) ||
-         (isa<VarDecl>(D) &&
-          (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>() ||
-           cast<VarDecl>(D)->getType()->isCUDADeviceBuiltinSurfaceType() ||
-           cast<VarDecl>(D)->getType()->isCUDADeviceBuiltinTextureType()));
+  return !D->hasAttr<OMPDeclareTargetDeclAttr>() &&
+         (D->hasAttr<OpenCLKernelAttr>() ||
+          (isa<FunctionDecl>(D) && D->hasAttr<CUDAGlobalAttr>()) ||
+          (isa<VarDecl>(D) &&
+           (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>() ||
+            cast<VarDecl>(D)->getType()->isCUDADeviceBuiltinSurfaceType() ||
+            cast<VarDecl>(D)->getType()->isCUDADeviceBuiltinTextureType())));
 }
 
 void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(

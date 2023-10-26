@@ -42,7 +42,7 @@
   crdWidth = 32
 }>
 
-// TODO: "compressed_hi" is not supported by libgen path.
+// TODO: "loose_compressed" is not supported by libgen path.
 // #BCOO = #sparse_tensor.encoding<{
 //   map = (d0, d1, d2) -> (d0 : dense, d1 : compressed(nonunique, high), d2 : singleton)
 //}>

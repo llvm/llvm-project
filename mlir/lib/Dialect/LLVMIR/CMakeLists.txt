@@ -42,6 +42,7 @@ add_mlir_dialect_library(MLIRLLVMDialect
 
 add_mlir_dialect_library(MLIRNVVMDialect
   IR/NVVMDialect.cpp
+  IR/BasicPtxBuilderInterface.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
@@ -50,6 +51,7 @@ add_mlir_dialect_library(MLIRNVVMDialect
   MLIRGPUCompilationAttrInterfacesIncGen
   MLIRNVVMOpsIncGen
   MLIRNVVMConversionsIncGen
+  MLIRBasicPtxBuilderInterfaceIncGen
   intrinsics_gen
 
   LINK_COMPONENTS

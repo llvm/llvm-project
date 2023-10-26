@@ -160,6 +160,8 @@ def HasSME2          : Predicate<"Subtarget->hasSME2()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSME2), "sme2">;
 def HasSME2p1        : Predicate<"Subtarget->hasSME2p1()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSME2p1), "sme2p1">;
+def HasFPMR          : Predicate<"Subtarget->hasFPMR()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureFPMR), "fpmr">;
 
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
@@ -1206,7 +1208,7 @@ defm USDOTlane : SIMDThreeSameVectorDotIndex<0, 1, 0b10, "usdot", int_aarch64_ne
 class BaseSIMDSUDOTIndex<bit Q, string dst_kind, string lhs_kind,
                          string rhs_kind, RegisterOperand RegType,
                          ValueType AccumType, ValueType InputType>
-      : BaseSIMDThreeSameVectorDotIndex<Q, 0, 1, 0b00, "sudot", dst_kind,
+      : BaseSIMDThreeSameVectorIndexS<Q, 0, 0b00, 0b1111, "sudot", dst_kind,
                                         lhs_kind, rhs_kind, RegType, AccumType,
                                         InputType, null_frag> {
   let Pattern = [(set (AccumType RegType:$dst),
@@ -1482,12 +1484,14 @@ def : InstAlias<"xpaclri", (XPACLRI), 0>;
 
 // Pseudos
 
+let Uses = [LR, SP], Defs = [LR] in {
 // Insertion point of LR signing code.
 def PAUTH_PROLOGUE : Pseudo<(outs), (ins), []>, Sched<[]>;
 // Insertion point of LR authentication code.
 // The RET terminator of the containing machine basic block may be replaced
 // with a combined RETA(A|B) instruction when rewriting this Pseudo.
 def PAUTH_EPILOGUE : Pseudo<(outs), (ins), []>, Sched<[]>;
+}
 
 // These pointer authentication instructions require armv8.3a
 let Predicates = [HasPAuth] in {

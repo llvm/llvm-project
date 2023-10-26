@@ -11,7 +11,6 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Chrono.h"

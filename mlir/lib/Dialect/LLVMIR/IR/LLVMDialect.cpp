@@ -664,90 +664,51 @@ static void printGEPIndices(OpAsmPrinter &printer, LLVM::GEPOp gepOp,
       });
 }
 
-namespace {
-/// Base class for llvm::Error related to GEP index.
-class GEPIndexError : public llvm::ErrorInfo<GEPIndexError> {
-protected:
-  unsigned indexPos;
-
-public:
-  static char ID;
-
-  std::error_code convertToErrorCode() const override {
-    return llvm::inconvertibleErrorCode();
-  }
-
-  explicit GEPIndexError(unsigned pos) : indexPos(pos) {}
-};
-
-/// llvm::Error for out-of-bound GEP index.
-struct GEPIndexOutOfBoundError
-    : public llvm::ErrorInfo<GEPIndexOutOfBoundError, GEPIndexError> {
-  static char ID;
-
-  using ErrorInfo::ErrorInfo;
-
-  void log(llvm::raw_ostream &os) const override {
-    os << "index " << indexPos << " indexing a struct is out of bounds";
-  }
-};
-
-/// llvm::Error for non-static GEP index indexing a struct.
-struct GEPStaticIndexError
-    : public llvm::ErrorInfo<GEPStaticIndexError, GEPIndexError> {
-  static char ID;
-
-  using ErrorInfo::ErrorInfo;
-
-  void log(llvm::raw_ostream &os) const override {
-    os << "expected index " << indexPos << " indexing a struct "
-       << "to be constant";
-  }
-};
-} // end anonymous namespace
-
-char GEPIndexError::ID = 0;
-char GEPIndexOutOfBoundError::ID = 0;
-char GEPStaticIndexError::ID = 0;
-
-/// For the given `structIndices` and `indices`, check if they're complied
-/// with `baseGEPType`, especially check against LLVMStructTypes nested within.
-static llvm::Error verifyStructIndices(Type baseGEPType, unsigned indexPos,
-                                       GEPIndicesAdaptor<ValueRange> indices) {
+/// For the given `indices`, check if they comply with `baseGEPType`,
+/// especially check against LLVMStructTypes nested within.
+static LogicalResult
+verifyStructIndices(Type baseGEPType, unsigned indexPos,
+                    GEPIndicesAdaptor<ValueRange> indices,
+                    function_ref<InFlightDiagnostic()> emitOpError) {
   if (indexPos >= indices.size())
     // Stop searching
-    return llvm::Error::success();
+    return success();
 
-  return llvm::TypeSwitch<Type, llvm::Error>(baseGEPType)
-      .Case<LLVMStructType>([&](LLVMStructType structType) -> llvm::Error {
+  return TypeSwitch<Type, LogicalResult>(baseGEPType)
+      .Case<LLVMStructType>([&](LLVMStructType structType) -> LogicalResult {
         if (!indices[indexPos].is<IntegerAttr>())
-          return llvm::make_error<GEPStaticIndexError>(indexPos);
+          return emitOpError() << "expected index " << indexPos
+                               << " indexing a struct to be constant";
 
         int32_t gepIndex = indices[indexPos].get<IntegerAttr>().getInt();
         ArrayRef<Type> elementTypes = structType.getBody();
         if (gepIndex < 0 ||
             static_cast<size_t>(gepIndex) >= elementTypes.size())
-          return llvm::make_error<GEPIndexOutOfBoundError>(indexPos);
+          return emitOpError() << "index " << indexPos
+                               << " indexing a struct is out of bounds";
 
         // Instead of recursively going into every children types, we only
         // dive into the one indexed by gepIndex.
         return verifyStructIndices(elementTypes[gepIndex], indexPos + 1,
-                                   indices);
+                                   indices, emitOpError);
       })
       .Case<VectorType, LLVMScalableVectorType, LLVMFixedVectorType,
-            LLVMArrayType>([&](auto containerType) -> llvm::Error {
+            LLVMArrayType>([&](auto containerType) -> LogicalResult {
         return verifyStructIndices(containerType.getElementType(), indexPos + 1,
-                                   indices);
+                                   indices, emitOpError);
       })
-      .Default(
-          [](auto otherType) -> llvm::Error { return llvm::Error::success(); });
+      .Default([&](auto otherType) -> LogicalResult {
+        return emitOpError()
+               << "type " << otherType << " cannot be indexed (index #"
+               << indexPos << ")";
+      });
 }
 
-/// Driver function around `recordStructIndices`. Note that we always check
-/// from the second GEP index since the first one is always dynamic.
-static llvm::Error verifyStructIndices(Type baseGEPType,
-                                       GEPIndicesAdaptor<ValueRange> indices) {
-  return verifyStructIndices(baseGEPType, /*indexPos=*/1, indices);
+/// Driver function around `verifyStructIndices`.
+static LogicalResult
+verifyStructIndices(Type baseGEPType, GEPIndicesAdaptor<ValueRange> indices,
+                    function_ref<InFlightDiagnostic()> emitOpError) {
+  return verifyStructIndices(baseGEPType, /*indexPos=*/1, indices, emitOpError);
 }
 
 LogicalResult LLVM::GEPOp::verify() {
@@ -763,11 +724,8 @@ LogicalResult LLVM::GEPOp::verify() {
     return emitOpError("expected as many dynamic indices as specified in '")
            << getRawConstantIndicesAttrName().getValue() << "'";
 
-  if (llvm::Error err =
-          verifyStructIndices(getSourceElementType(), getIndices()))
-    return emitOpError() << llvm::toString(std::move(err));
-
-  return success();
+  return verifyStructIndices(getSourceElementType(), getIndices(),
+                             [&] { return emitOpError(); });
 }
 
 Type LLVM::GEPOp::getSourceElementType() {
@@ -1053,9 +1011,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
                    FlatSymbolRefAttr callee, ValueRange args) {
   build(builder, state, results,
         TypeAttr::get(getLLVMFuncType(builder.getContext(), results, args)),
-        callee, args,
-        /*fastmathFlags=*/nullptr,
-        /*branch_weights=*/nullptr,
+        callee, args, /*fastmathFlags=*/nullptr, /*branch_weights=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
@@ -1077,18 +1033,15 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
                    ValueRange args) {
   build(builder, state, getCallOpResultTypes(calleeType),
         TypeAttr::get(calleeType), callee, args, /*fastmathFlags=*/nullptr,
-        /*branch_weights=*/nullptr,
-        /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
-        /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
+        /*branch_weights=*/nullptr, /*access_groups=*/nullptr,
+        /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
 
 void CallOp::build(OpBuilder &builder, OperationState &state,
                    LLVMFunctionType calleeType, ValueRange args) {
   build(builder, state, getCallOpResultTypes(calleeType),
-        TypeAttr::get(calleeType),
-        /*callee=*/nullptr, args,
-        /*fastmathFlags=*/nullptr,
-        /*branch_weights=*/nullptr,
+        TypeAttr::get(calleeType), /*callee=*/nullptr, args,
+        /*fastmathFlags=*/nullptr, /*branch_weights=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
@@ -1098,10 +1051,24 @@ void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
   auto calleeType = func.getFunctionType();
   build(builder, state, getCallOpResultTypes(calleeType),
         TypeAttr::get(calleeType), SymbolRefAttr::get(func), args,
-        /*fastmathFlags=*/nullptr,
-        /*branch_weights=*/nullptr,
+        /*fastmathFlags=*/nullptr, /*branch_weights=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
+}
+
+void CallOp::build(OpBuilder &builder, OperationState &state, Value callee,
+                   ValueRange args) {
+  auto calleeType = cast<LLVMFunctionType>(
+      cast<LLVMPointerType>(callee.getType()).getElementType());
+  SmallVector<Value> operands;
+  operands.reserve(1 + args.size());
+  operands.push_back(callee);
+  llvm::append_range(operands, args);
+  return build(builder, state, getCallOpResultTypes(calleeType),
+               TypeAttr::get(calleeType), FlatSymbolRefAttr(), operands,
+               /*fastmathFlags=*/nullptr, /*branch_weights=*/nullptr,
+               /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
+               /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
 
 CallInterfaceCallable CallOp::getCallableForCallee() {

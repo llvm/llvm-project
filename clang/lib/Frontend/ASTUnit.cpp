@@ -2341,12 +2341,9 @@ bool ASTUnit::Save(StringRef File) {
   return false;
 }
 
-static bool serializeUnit(ASTWriter &Writer,
-                          SmallVectorImpl<char> &Buffer,
-                          Sema &S,
-                          bool hasErrors,
-                          raw_ostream &OS) {
-  Writer.WriteAST(S, std::string(), nullptr, "", hasErrors);
+static bool serializeUnit(ASTWriter &Writer, SmallVectorImpl<char> &Buffer,
+                          Sema &S, raw_ostream &OS) {
+  Writer.WriteAST(S, std::string(), nullptr, "");
 
   // Write the generated bitstream to "Out".
   if (!Buffer.empty())
@@ -2356,18 +2353,14 @@ static bool serializeUnit(ASTWriter &Writer,
 }
 
 bool ASTUnit::serialize(raw_ostream &OS) {
-  // For serialization we are lenient if the errors were only warn-as-error kind.
-  bool hasErrors = getDiagnostics().hasUncompilableErrorOccurred();
-
   if (WriterData)
-    return serializeUnit(WriterData->Writer, WriterData->Buffer,
-                         getSema(), hasErrors, OS);
+    return serializeUnit(WriterData->Writer, WriterData->Buffer, getSema(), OS);
 
   SmallString<128> Buffer;
   llvm::BitstreamWriter Stream(Buffer);
   InMemoryModuleCache ModuleCache;
   ASTWriter Writer(Stream, Buffer, ModuleCache, {});
-  return serializeUnit(Writer, Buffer, getSema(), hasErrors, OS);
+  return serializeUnit(Writer, Buffer, getSema(), OS);
 }
 
 using SLocRemap = ContinuousRangeMap<unsigned, int, 2>;

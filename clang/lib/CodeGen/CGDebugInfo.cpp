@@ -1445,6 +1445,8 @@ static unsigned getDwarfCC(CallingConv CC) {
     return llvm::dwarf::DW_CC_LLVM_PreserveAll;
   case CC_X86RegCall:
     return llvm::dwarf::DW_CC_LLVM_X86RegCall;
+  case CC_M68kRTD:
+    return llvm::dwarf::DW_CC_LLVM_M68kRTD;
   }
   return 0;
 }
@@ -1497,6 +1499,8 @@ CGDebugInfo::createBitFieldType(const FieldDecl *BitFieldDecl,
                                 llvm::DIScope *RecordTy, const RecordDecl *RD) {
   StringRef Name = BitFieldDecl->getName();
   QualType Ty = BitFieldDecl->getType();
+  if (BitFieldDecl->hasAttr<PreferredTypeAttr>())
+    Ty = BitFieldDecl->getAttr<PreferredTypeAttr>()->getType();
   SourceLocation Loc = BitFieldDecl->getLocation();
   llvm::DIFile *VUnit = getOrCreateFile(Loc);
   llvm::DIType *DebugType = getOrCreateType(Ty, VUnit);
@@ -2130,14 +2134,14 @@ CGDebugInfo::CollectTemplateParams(std::optional<TemplateArgs> OArgs,
       // attribute, i.e. that value is not available at the host side.
       if (!CGM.getLangOpts().CUDA || CGM.getLangOpts().CUDAIsDevice ||
           !D->hasAttr<CUDADeviceAttr>()) {
-        const CXXMethodDecl *MD;
         // Variable pointer template parameters have a value that is the address
         // of the variable.
         if (const auto *VD = dyn_cast<VarDecl>(D))
           V = CGM.GetAddrOfGlobalVar(VD);
         // Member function pointers have special support for building them,
         // though this is currently unsupported in LLVM CodeGen.
-        else if ((MD = dyn_cast<CXXMethodDecl>(D)) && MD->isInstance())
+        else if (const auto *MD = dyn_cast<CXXMethodDecl>(D);
+                 MD && MD->isImplicitObjectMemberFunction())
           V = CGM.getCXXABI().EmitMemberFunctionPointer(MD);
         else if (const auto *FD = dyn_cast<FunctionDecl>(D))
           V = CGM.GetAddrOfFunction(FD);
@@ -4877,11 +4881,15 @@ CGDebugInfo::EmitDeclareOfAutoVariable(const VarDecl *VD, llvm::Value *Storage,
                                        const bool UsePointerValue) {
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
 
-  if (auto *DD = dyn_cast<DecompositionDecl>(VD))
+  if (auto *DD = dyn_cast<DecompositionDecl>(VD)) {
     for (auto *B : DD->bindings()) {
       EmitDeclare(B, Storage, std::nullopt, Builder,
                   VD->getType()->isReferenceType());
     }
+    // Don't emit an llvm.dbg.declare for the composite storage as it doesn't
+    // correspond to a user variable.
+    return nullptr;
+  }
 
   return EmitDeclare(VD, Storage, std::nullopt, Builder, UsePointerValue);
 }

@@ -1980,6 +1980,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::NoSanitizeCoverage;
   case bitc::ATTR_KIND_NULL_POINTER_IS_VALID:
     return Attribute::NullPointerIsValid;
+  case bitc::ATTR_KIND_OPTIMIZE_FOR_DEBUGGING:
+    return Attribute::OptimizeForDebugging;
   case bitc::ATTR_KIND_OPT_FOR_FUZZING:
     return Attribute::OptForFuzzing;
   case bitc::ATTR_KIND_OPTIMIZE_FOR_SIZE:
@@ -2644,7 +2646,7 @@ Expected<Value *> BitcodeReader::recordValue(SmallVectorImpl<uint64_t> &Record,
   Value *V = ValueList[ValueID];
 
   StringRef NameStr(ValueName.data(), ValueName.size());
-  if (NameStr.find_first_of(0) != StringRef::npos)
+  if (NameStr.contains(0))
     return error("Invalid value name");
   V->setName(NameStr);
   auto *GO = dyn_cast<GlobalObject>(V);
@@ -4683,7 +4685,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       case bitc::METADATA_BLOCK_ID:
         assert(DeferredMetadataInfo.empty() &&
                "Must read all module-level metadata before function-level");
-        if (Error Err = MDLoader->parseFunctionMetadata(CurBB))
+        if (Error Err = MDLoader->parseFunctionMetadata())
           return Err;
         break;
       case bitc::USELIST_BLOCK_ID:

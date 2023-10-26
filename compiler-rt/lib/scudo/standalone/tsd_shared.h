@@ -120,6 +120,11 @@ struct TSDRegistrySharedT {
                 TSDsArraySize);
     for (uptr I = 0; I < NumberOfTSDs; ++I) {
       TSDs[I].lock();
+      // Theoretically, we want to mark TSD::lock()/TSD::unlock() with proper
+      // thread annotations. However, given the TSD is only locked on shared
+      // path, do the assertion in a separate path to avoid confusing the
+      // analyzer.
+      TSDs[I].assertLocked(/*BypassCheck=*/true);
       Str->append("  Shared TSD[%zu]:\n", I);
       TSDs[I].getCache().getStats(Str);
       TSDs[I].unlock();

@@ -875,7 +875,7 @@ Value *CoroCloner::deriveNewFramePointer() {
   case coro::ABI::Retcon:
   case coro::ABI::RetconOnce: {
     Argument *NewStorage = &*NewF->arg_begin();
-    auto FramePtrTy = Shape.FrameTy->getPointerTo();
+    auto FramePtrTy = PointerType::getUnqual(Shape.FrameTy->getContext());
 
     // If the storage is inline, just bitcast to the storage to the frame type.
     if (Shape.RetconLowering.IsFrameInlineInStorage)

@@ -67,6 +67,112 @@ func.func @create_mask_transpose_to_transposed_create_mask(
 
 // -----
 
+// CHECK-LABEL: extract_from_create_mask
+//  CHECK-SAME: %[[DIM0:.*]]: index, %[[DIM1:.*]]: index
+func.func @extract_from_create_mask(%dim0: index, %dim1: index) -> vector<[4]x[4]xi1> {
+  %c2 = arith.constant 2 : index
+  %mask = vector.create_mask %c2, %dim0, %dim1 : vector<4x[4]x[4]xi1>
+  // CHECK: vector.create_mask %[[DIM0]], %[[DIM1]] : vector<[4]x[4]xi1>
+  // CHECK-NOT: vector.extract
+  %extract = vector.extract %mask[1] : vector<[4]x[4]xi1> from vector<4x[4]x[4]xi1>
+  return %extract : vector<[4]x[4]xi1>
+}
+
+// -----
+
+// CHECK-LABEL: extract_from_create_mask_all_false
+func.func @extract_from_create_mask_all_false(%dim0: index, %dim1: index) -> vector<[4]x[4]xi1> {
+  %c2 = arith.constant 2 : index
+  %mask = vector.create_mask %c2, %dim0, %dim1 : vector<4x[4]x[4]xi1>
+  // CHECK: arith.constant dense<false> : vector<[4]x[4]xi1>
+  // CHECK-NOT: vector.extract
+  %extract = vector.extract %mask[2] : vector<[4]x[4]xi1> from vector<4x[4]x[4]xi1>
+  return %extract : vector<[4]x[4]xi1>
+}
+
+// -----
+
+// CHECK-LABEL: extract_from_create_mask_leading_scalable
+//  CHECK-SAME: %[[DIM0:.*]]: index
+func.func @extract_from_create_mask_leading_scalable(%dim0: index) -> vector<8xi1> {
+  %c3 = arith.constant 3 : index
+  %mask = vector.create_mask %c3, %dim0 : vector<[4]x8xi1>
+  // CHECK: vector.create_mask %[[DIM0]] : vector<8xi1>
+  // CHECK-NOT: vector.extract
+  %extract = vector.extract %mask[1] : vector<8xi1> from vector<[4]x8xi1>
+  return %extract : vector<8xi1>
+}
+
+// -----
+
+// CHECK-LABEL: extract_from_create_mask_dynamic_position
+//  CHECK-SAME: %[[DIM0:.*]]: index, %[[INDEX:.*]]: index
+func.func @extract_from_create_mask_dynamic_position(%dim0: index, %index: index) -> vector<6xi1> {
+  %c4 = arith.constant 4 : index
+  %c3 = arith.constant 3 : index
+  %mask = vector.create_mask %c3, %c4, %dim0 : vector<4x4x6xi1>
+  // CHECK: vector.create_mask %[[DIM0]] : vector<6xi1>
+  // CHECK-NOT: vector.extract
+  %extract = vector.extract %mask[2, %index] : vector<6xi1> from vector<4x4x6xi1>
+  return %extract : vector<6xi1>
+}
+
+// -----
+
+// CHECK-LABEL: extract_from_create_mask_dynamic_position_all_false
+//  CHECK-SAME: %[[DIM0:.*]]: index, %[[INDEX:.*]]: index
+func.func @extract_from_create_mask_dynamic_position_all_false(%dim0: index, %index: index) -> vector<6xi1> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %mask = vector.create_mask %c1, %c0, %dim0 : vector<1x4x6xi1>
+  // CHECK: arith.constant dense<false> : vector<6xi1>
+  // CHECK-NOT: vector.extract
+  %extract = vector.extract %mask[0, %index] : vector<6xi1> from vector<1x4x6xi1>
+  return %extract : vector<6xi1>
+}
+
+// -----
+
+// CHECK-LABEL: extract_from_create_mask_dynamic_position_unknown
+//  CHECK-SAME: %[[DIM0:.*]]: index, %[[INDEX:.*]]: index
+func.func @extract_from_create_mask_dynamic_position_unknown(%dim0: index, %index: index) -> vector<6xi1> {
+  %c2 = arith.constant 2 : index
+  %mask = vector.create_mask %c2, %dim0 : vector<4x6xi1>
+  // CHECK: %[[C2:.*]] = arith.constant 2 : index
+  // CHECK-NEXT: %[[MASK:.*]] = vector.create_mask %[[C2]], %[[DIM0]] : vector<4x6xi1>
+  // CHECK-NEXT: vector.extract %[[MASK]][%[[INDEX]]] : vector<6xi1> from vector<4x6xi1>
+  %extract = vector.extract %mask[%index] : vector<6xi1> from vector<4x6xi1>
+  return %extract : vector<6xi1>
+}
+
+// -----
+
+// CHECK-LABEL: extract_from_create_mask_mixed_position_unknown
+//  CHECK-SAME: %[[DIM0:.*]]: index, %[[INDEX:.*]]: index
+func.func @extract_from_create_mask_mixed_position_unknown(%dim0: index, %index0: index) -> vector<4xi1> {
+  %c2 = arith.constant 2 : index
+  %mask = vector.create_mask %c2, %c2, %dim0 : vector<2x4x4xi1>
+  // CHECK: %[[C2:.*]] = arith.constant 2 : index
+  // CHECK-NEXT: %[[MASK:.*]] = vector.create_mask %[[C2]], %[[C2]], %[[DIM0]] : vector<2x4x4xi1>
+  // CHECK-NEXT: vector.extract %[[MASK]][1, %[[INDEX]]] : vector<4xi1> from vector<2x4x4xi1>
+  %extract = vector.extract %mask[1, %index0] : vector<4xi1> from vector<2x4x4xi1>
+  return %extract : vector<4xi1>
+}
+
+// -----
+
+// CHECK-LABEL: extract_from_non_constant_create_mask
+//  CHECK-SAME: %[[DIM0:.*]]: index
+func.func @extract_from_non_constant_create_mask(%dim0: index) -> vector<[2]xi1> {
+  %mask = vector.create_mask %dim0, %dim0 : vector<[2]x[2]xi1>
+  // CHECK: %[[MASK:.*]] = vector.create_mask %[[DIM0]], %[[DIM0]] : vector<[2]x[2]xi1>
+  // CHECK-NEXT: vector.extract %[[MASK]][0] : vector<[2]xi1> from vector<[2]x[2]xi1>
+  %extract = vector.extract %mask[0] : vector<[2]xi1> from vector<[2]x[2]xi1>
+  return %extract : vector<[2]xi1>
+}
+
+// -----
+
 // CHECK-LABEL: constant_mask_transpose_to_transposed_constant_mask
 func.func @constant_mask_transpose_to_transposed_constant_mask() -> (vector<2x3x4xi1>, vector<4x2x3xi1>) {
   //     CHECK: vector.constant_mask [1, 2, 3] : vector<2x3x4xi1>
@@ -1689,6 +1795,18 @@ func.func @extract_insert_chain(%a: vector<2x16xf32>, %b: vector<12x8x16xf32>, %
     : vector<2x16xf32> into vector<12x8x16xf32>
   %2 = vector.extract %1[4, 2] : vector<16xf32> from vector<12x8x16xf32>
   return %2 : vector<16xf32>
+}
+
+// -----
+
+// CHECK-LABEL: extract_from_extract_chain_should_not_fold_dynamic_extracts
+//  CHECK-SAME: (%[[VEC:.*]]: vector<2x4xf32>, %[[IDX:.*]]: index)
+//       CHECK: %[[A:.*]] = vector.extract %[[VEC]][%[[IDX]]] : vector<4xf32> from vector<2x4xf32>
+//       CHECK: %[[B:.*]] = vector.extract %[[A]][1] : f32 from vector<4xf32>
+func.func @extract_from_extract_chain_should_not_fold_dynamic_extracts(%v: vector<2x4xf32>, %index: index) -> f32 {
+  %0 = vector.extract %v[%index] : vector<4xf32> from vector<2x4xf32>
+  %1 = vector.extract %0[1] : f32 from vector<4xf32>
+  return %1 : f32
 }
 
 // -----

@@ -15,10 +15,27 @@ def MatchOpInterface
 }
 
 // Trait for "matcher" transform operations that apply to an operation handle
+// associated with at most one payload operation. Checks that it is indeed
+// the case and produces a definite failure when it is not. The matching logic
+// is implemented in the `matchOperation` function instead of `apply`. The op
+// with this trait must provide a `Value getOperandHandle()` function that
+// returns the handle to be used for matching.
+def AtMostOneOpMatcher : NativeOpTrait<"AtMostOneOpMatcherOpTrait"> {
+  let cppNamespace = "::mlir::transform";
+
+  string extraDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure matchOperation(
+          ::std::optional<::mlir::Operation *> maybeCurrent,
+          ::mlir::transform::TransformResults &results,
+          ::mlir::transform::TransformState &state);
+  }];
+}
+
+// Trait for "matcher" transform operations that apply to an operation handle
 // associated with exactly one payload operation. Checks that it is indeed
 // the case and produces a definite failure when it is not. The matching logic
 // is implemented in the `matchOperation` function instead of `apply`. The op
-// with this trait must provide a `Value getOperandHandle()` function that 
+// with this trait must provide a `Value getOperandHandle()` function that
 // returns the handle to be used for matching.
 def SingleOpMatcher : NativeOpTrait<"SingleOpMatcherOpTrait"> {
   let cppNamespace = "::mlir::transform";
@@ -35,7 +52,7 @@ def SingleOpMatcher : NativeOpTrait<"SingleOpMatcherOpTrait"> {
 // associated with exactly one payload value. Checks that it is indeed
 // the case and produces a definite failure when it is not. The matching logic
 // is implemented in the `matchValue` function instead of `apply`. The op
-// with this trait must provide a `Value getOperandHandle()` function that 
+// with this trait must provide a `Value getOperandHandle()` function that
 // returns the handle to be used for matching.
 def SingleValueMatcher : NativeOpTrait<"SingleValueMatcherOpTrait"> {
   let cppNamespace = "::mlir::transform";

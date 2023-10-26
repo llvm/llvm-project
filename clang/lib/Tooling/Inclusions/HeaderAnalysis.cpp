@@ -57,7 +57,7 @@ bool isImportLine(llvm::StringRef Line) {
   return Line.startswith("import");
 }
 
-llvm::StringRef getFileContents(const FileEntry *FE, const SourceManager &SM) {
+llvm::StringRef getFileContents(FileEntryRef FE, const SourceManager &SM) {
   return const_cast<SourceManager &>(SM)
       .getMemoryBufferForFileOrNone(FE)
       .value_or(llvm::MemoryBufferRef())

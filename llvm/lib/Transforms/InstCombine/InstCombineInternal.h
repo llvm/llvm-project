@@ -295,13 +295,15 @@ private:
 
   Instruction *transformSExtICmp(ICmpInst *Cmp, SExtInst &Sext);
 
-  bool willNotOverflowSignedAdd(const Value *LHS, const Value *RHS,
+  bool willNotOverflowSignedAdd(const WithCache<const Value *> &LHS,
+                                const WithCache<const Value *> &RHS,
                                 const Instruction &CxtI) const {
     return computeOverflowForSignedAdd(LHS, RHS, &CxtI) ==
            OverflowResult::NeverOverflows;
   }
 
-  bool willNotOverflowUnsignedAdd(const Value *LHS, const Value *RHS,
+  bool willNotOverflowUnsignedAdd(const WithCache<const Value *> &LHS,
+                                  const WithCache<const Value *> &RHS,
                                   const Instruction &CxtI) const {
     return computeOverflowForUnsignedAdd(LHS, RHS, &CxtI) ==
            OverflowResult::NeverOverflows;
@@ -734,16 +736,13 @@ class Negator final {
   using BuilderTy = IRBuilder<TargetFolder, IRBuilderCallbackInserter>;
   BuilderTy Builder;
 
-  const DataLayout &DL;
-  AssumptionCache &AC;
-  const DominatorTree &DT;
+  const SimplifyQuery &SQ;
 
   const bool IsTrulyNegation;
 
   SmallDenseMap<Value *, Value *> NegationsCache;
 
-  Negator(LLVMContext &C, const DataLayout &DL, AssumptionCache &AC,
-          const DominatorTree &DT, bool IsTrulyNegation);
+  Negator(LLVMContext &C, const SimplifyQuery &SQ, bool IsTrulyNegation);
 
 #if LLVM_ENABLE_STATS
   unsigned NumValuesVisitedInThisNegator = 0;

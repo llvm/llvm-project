@@ -11,7 +11,7 @@ define void @form_memcmp(ptr dereferenceable(16) %a, ptr dereferenceable(16) %b)
 ; CHECK-NEXT:    br label %"bb1+bb2"
 ; CHECK:       "bb1+bb2":
 ; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr [[A]], ptr [[B]], i64 16)
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[MEMCMP]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret void

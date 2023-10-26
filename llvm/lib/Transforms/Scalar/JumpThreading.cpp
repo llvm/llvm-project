@@ -1977,11 +1977,9 @@ void JumpThreadingPass::updateSSA(
 
     // Find debug values outside of the block
     findDbgValues(DbgValues, &I);
-    DbgValues.erase(remove_if(DbgValues,
-                              [&](const DbgValueInst *DbgVal) {
-                                return DbgVal->getParent() == BB;
-                              }),
-                    DbgValues.end());
+    llvm::erase_if(DbgValues, [&](const DbgValueInst *DbgVal) {
+      return DbgVal->getParent() == BB;
+    });
 
     // If there are no uses outside the block, we're done with this instruction.
     if (UsesToRename.empty() && DbgValues.empty())
@@ -2251,7 +2249,7 @@ void JumpThreadingPass::threadThroughTwoBasicBlocks(BasicBlock *PredPredBB,
     assert(BPI && "It's expected BPI to exist along with BFI");
     auto NewBBFreq = BFI->getBlockFreq(PredPredBB) *
                      BPI->getEdgeProbability(PredPredBB, PredBB);
-    BFI->setBlockFreq(NewBB, NewBBFreq.getFrequency());
+    BFI->setBlockFreq(NewBB, NewBBFreq);
   }
 
   // We are going to have to map operands from the original BB block to the new
@@ -2377,7 +2375,7 @@ void JumpThreadingPass::threadEdge(BasicBlock *BB,
     assert(BPI && "It's expected BPI to exist along with BFI");
     auto NewBBFreq =
         BFI->getBlockFreq(PredBB) * BPI->getEdgeProbability(PredBB, BB);
-    BFI->setBlockFreq(NewBB, NewBBFreq.getFrequency());
+    BFI->setBlockFreq(NewBB, NewBBFreq);
   }
 
   // Copy all the instructions from BB to NewBB except the terminator.
@@ -2462,7 +2460,7 @@ BasicBlock *JumpThreadingPass::splitBlockPreds(BasicBlock *BB,
         NewBBFreq += FreqMap.lookup(Pred);
     }
     if (BFI) // Apply the summed frequency to NewBB.
-      BFI->setBlockFreq(NewBB, NewBBFreq.getFrequency());
+      BFI->setBlockFreq(NewBB, NewBBFreq);
   }
 
   DTU->applyUpdatesPermissive(Updates);
@@ -2502,7 +2500,7 @@ void JumpThreadingPass::updateBlockFreqAndEdgeWeight(BasicBlock *PredBB,
   auto NewBBFreq = BFI->getBlockFreq(NewBB);
   auto BB2SuccBBFreq = BBOrigFreq * BPI->getEdgeProbability(BB, SuccBB);
   auto BBNewFreq = BBOrigFreq - NewBBFreq;
-  BFI->setBlockFreq(BB, BBNewFreq.getFrequency());
+  BFI->setBlockFreq(BB, BBNewFreq);
 
   // Collect updated outgoing edges' frequencies from BB and use them to update
   // edge probabilities.
@@ -2760,7 +2758,7 @@ void JumpThreadingPass::unfoldSelectInstr(BasicBlock *Pred, BasicBlock *BB,
     BranchProbability PredToNewBBProb = BranchProbability::getBranchProbability(
         TrueWeight, TrueWeight + FalseWeight);
     auto NewBBFreq = BFI->getBlockFreq(Pred) * PredToNewBBProb;
-    BFI->setBlockFreq(NewBB, NewBBFreq.getFrequency());
+    BFI->setBlockFreq(NewBB, NewBBFreq);
   }
 
   // The select is now dead.

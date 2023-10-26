@@ -644,7 +644,6 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
        (uint64_t)'p' << 40 | (uint64_t)'r' << 32 | (uint64_t)'o' << 24 |  \
         (uint64_t)'f' << 16 | (uint64_t)'R' << 8 | (uint64_t)129
 
-/* FIXME: Please remedy the fixme in the header before bumping the version. */
 /* Raw profile format version (start from 1). */
 #define INSTR_PROF_RAW_VERSION 8
 /* Indexed profile format version (start from 1). */
@@ -652,9 +651,9 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 /* Coverage mapping format version (start from 0). */
 #define INSTR_PROF_COVMAP_VERSION 5
 
-/* Profile version is always of type uint64_t. Reserve the upper 8 bits in the
- * version for other variants of profile. We set the lowest bit of the upper 8
- * bits (i.e. bit 56) to 1 to indicate if this is an IR-level instrumentation
+/* Profile version is always of type uint64_t. Reserve the upper 32 bits in the
+ * version for other variants of profile. We set the 8th most significant bit 
+ * (i.e. bit 56) to 1 to indicate if this is an IR-level instrumentation
  * generated profile, and 0 if this is a Clang FE generated profile.
  * 1 in bit 57 indicates there are context-sensitive records in the profile.
  * The 59th bit indicates whether to use debug info to correlate profiles.
@@ -663,7 +662,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
  * The 62nd bit indicates whether memory profile information is present.
  * The 63rd bit indicates if this is a temporal profile.
  */
-#define VARIANT_MASKS_ALL 0xff00000000000000ULL
+#define VARIANT_MASKS_ALL 0xffffffff00000000ULL
 #define GET_VERSION(V) ((V) & ~VARIANT_MASKS_ALL)
 #define VARIANT_MASK_IR_PROF (0x1ULL << 56)
 #define VARIANT_MASK_CSIR_PROF (0x1ULL << 57)

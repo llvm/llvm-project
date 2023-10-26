@@ -10,11 +10,14 @@ program openacc_init_validity
   integer :: i, j
   integer, parameter :: N = 256
   logical :: ifCondition = .TRUE.
+  integer :: ifInt
+  real :: ifReal
   real(8), dimension(N) :: a
 
   !$acc init
   !$acc init if(.TRUE.)
   !$acc init if(ifCondition)
+  !$acc init if(ifInt)
   !$acc init device_num(1)
   !$acc init device_num(i)
   !$acc init device_type(i)
@@ -92,5 +95,8 @@ program openacc_init_validity
 
   !ERROR: At most one DEVICE_TYPE clause can appear on the INIT directive
   !$acc init device_type(2) device_type(i, j)
+
+  !ERROR: Must have LOGICAL or INTEGER type
+  !$acc init if(ifReal)
 
 end program openacc_init_validity
