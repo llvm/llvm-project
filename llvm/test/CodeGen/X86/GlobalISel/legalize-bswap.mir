@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=i386-linux-gnu -run-pass=legalizer %s -o - | FileCheck %s --check-prefix=X86-32
 # RUN: llc -mtriple=x86_64-linux-gnu -run-pass=legalizer %s -o - | FileCheck %s --check-prefix=X86-64
 
-# test bswap for s16, s17, s32, and s64
+# test bswap for s16, s32, and s64
 
 ---
 name:            test_bswap64
