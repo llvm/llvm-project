@@ -327,6 +327,36 @@ void genOmpAccAtomicWrite(Fortran::lower::AbstractConverter &converter,
                                 rightHandClauseList);
 }
 
+template <typename PtrLikeTy>
+mlir::Value convertRhs(fir::FirOpBuilder &builder, mlir::Location loc,
+                       PtrLikeTy ptrLikeType, mlir::Value rhs,
+                       mlir::Operation *captureOp) {
+  if (ptrLikeType.getElementType() != rhs.getType()) {
+    auto crtPos = builder.saveInsertionPoint();
+    builder.setInsertionPoint(captureOp);
+    mlir::Value convertedRhs =
+        builder.create<fir::ConvertOp>(loc, ptrLikeType.getElementType(), rhs);
+    builder.restoreInsertionPoint(crtPos);
+    return convertedRhs;
+  }
+  return rhs;
+}
+
+static mlir::Value addConversionIfNeeded(fir::FirOpBuilder &builder,
+                                         mlir::Location loc, mlir::Value lhs,
+                                         mlir::Value rhs,
+                                         mlir::Operation *captureOp = nullptr) {
+  if (auto ptrLikeType =
+          mlir::dyn_cast_or_null<mlir::acc::PointerLikeType>(lhs.getType()))
+    return convertRhs<mlir::acc::PointerLikeType>(builder, loc, ptrLikeType,
+                                                  rhs, captureOp);
+  if (auto ptrLikeType =
+          mlir::dyn_cast_or_null<mlir::omp::PointerLikeType>(lhs.getType()))
+    return convertRhs<mlir::omp::PointerLikeType>(builder, loc, ptrLikeType,
+                                                  rhs, captureOp);
+  return rhs;
+}
+
 /// Processes an atomic construct with read clause.
 template <typename AtomicT, typename AtomicListT>
 void genOmpAccAtomicRead(Fortran::lower::AbstractConverter &converter,
@@ -357,6 +387,13 @@ void genOmpAccAtomicRead(Fortran::lower::AbstractConverter &converter,
       fir::getBase(converter.genExprAddr(fromExpr, stmtCtx));
   mlir::Value toAddress = fir::getBase(converter.genExprAddr(
       *Fortran::semantics::GetExpr(assignmentStmtVariable), stmtCtx));
+
+  mlir::Location loc = converter.getCurrentLocation();
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+
+  if (fromAddress.getType() != toAddress.getType())
+    fromAddress =
+        builder.create<fir::ConvertOp>(loc, toAddress.getType(), fromAddress);
   genOmpAccAtomicCaptureStatement(converter, fromAddress, toAddress,
                                   leftHandClauseList, rightHandClauseList,
                                   elementType);
@@ -517,6 +554,9 @@ void genOmpAccAtomicCapture(Fortran::lower::AbstractConverter &converter,
           converter, stmt1RHSArg, stmt1LHSArg,
           /*leftHandClauseList=*/nullptr,
           /*rightHandClauseList=*/nullptr, elementType);
+      stmt2RHSArg =
+          addConversionIfNeeded(firOpBuilder, currentLocation, stmt1RHSArg,
+                                stmt2RHSArg, atomicCaptureOp);
       genOmpAccAtomicWriteStatement<AtomicListT>(
           converter, stmt1RHSArg, stmt2RHSArg,
           /*leftHandClauseList=*/nullptr,
