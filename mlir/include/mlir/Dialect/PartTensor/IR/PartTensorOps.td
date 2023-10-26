@@ -41,7 +41,7 @@ class PartTensor_Op<string mnemonic, list<Trait> traits = []>
 def PartTensor_GetPartitionOp : PartTensor_Op<"get_partitions">,
                                 Arguments<(ins AnyTensor
                                            : $primary)>,
-                                Results<(outs AnyTensor
+                                Results<(outs TensorOf<[AnySignlessIntegerOrIndex]> 
                                          : $tuples)> {
   let summary = "get all the partition specs";
   let description = [{
@@ -58,5 +58,26 @@ def PartTensor_GetPartitionOp : PartTensor_Op<"get_partitions">,
   let assemblyFormat =
       "$primary attr-dict `:` type($primary) `->` type($tuples)";
 }
+ def PartTensor_GetSliceOp : PartTensor_Op<"get_slice">,
+ 	Arguments<(ins AnyTensor:$Parts, TensorOf<[AnySignlessIntegerOrIndex]>:$tupleList)>,
+	Results<(outs AnyTensor:$result)> {
+		let summary = "get slice";
+		let description = [{
+			This operation will take tuples and output one tensor
+			}];
+		//%slice = partition.get_slice(%total_iteration_space,%partition) -> tensor<2xindex>
+		let assemblyFormat = " $Parts `,` $tupleList attr-dict `:` type($Parts) `,` type($tupleList) `->` type($result)";
+		}
+
+def PartTensor_NumPartitionOp : PartTensor_Op<"get_num_partitions">,
+	Arguments<(ins AnyTensor:$tensor)>,
+	Results<(outs AnySignlessIntegerOrIndex:$res)> {
+		let summary = "get the size of partition";
+		let description = [{
+			This operation will represent the dimention
+			}];
+		// %partitions_num = partition.num_partitions %A: tensor<?x?xf32> -> index
+		let assemblyFormat = " $tensor  attr-dict `:` type($tensor) `->` type($res)";
+		}
 
 #endif // PARTTENSOR_OPS
