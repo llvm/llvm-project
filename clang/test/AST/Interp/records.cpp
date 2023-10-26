@@ -1064,6 +1064,22 @@ namespace ParenInit {
   };
 
   constexpr B b(A(1),2);
+
+
+  struct O {
+    int &&j;
+  };
+
+  /// Not constexpr!
+  O o1(0);
+  constinit O o2(0); // ref-error {{variable does not have a constant initializer}} \
+                     // ref-note {{required by 'constinit' specifier}} \
+                     // ref-note {{reference to temporary is not a constant expression}} \
+                     // ref-note {{temporary created here}} \
+                     // expected-error {{variable does not have a constant initializer}} \
+                     // expected-note {{required by 'constinit' specifier}} \
+                     // expected-note {{reference to temporary is not a constant expression}} \
+                     // expected-note {{temporary created here}}
 }
 #endif
 

@@ -41,7 +41,7 @@ PYBIND11_MODULE(_mlir, m) {
            "dialect_namespace"_a, "dialect_class"_a,
            "Testing hook for directly registering a dialect")
       .def("_register_operation_impl", &PyGlobals::registerOperationImpl,
-           "operation_name"_a, "operation_class"_a,
+           "operation_name"_a, "operation_class"_a, "replace"_a = false,
            "Testing hook for directly registering an operation");
 
   // Aside from making the globals accessible to python, having python manage
@@ -63,12 +63,13 @@ PYBIND11_MODULE(_mlir, m) {
       "Class decorator for registering a custom Dialect wrapper");
   m.def(
       "register_operation",
-      [](const py::object &dialectClass) -> py::cpp_function {
+      [](const py::object &dialectClass, bool replace) -> py::cpp_function {
         return py::cpp_function(
-            [dialectClass](py::object opClass) -> py::object {
+            [dialectClass, replace](py::object opClass) -> py::object {
               std::string operationName =
                   opClass.attr("OPERATION_NAME").cast<std::string>();
-              PyGlobals::get().registerOperationImpl(operationName, opClass);
+              PyGlobals::get().registerOperationImpl(operationName, opClass,
+                                                     replace);
 
               // Dict-stuff the new opClass by name onto the dialect class.
               py::object opClassName = opClass.attr("__name__");
@@ -76,7 +77,7 @@ PYBIND11_MODULE(_mlir, m) {
               return opClass;
             });
       },
-      "dialect_class"_a,
+      "dialect_class"_a, "replace"_a = false,
       "Produce a class decorator for registering an Operation class as part of "
       "a dialect");
   m.def(

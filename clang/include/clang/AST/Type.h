@@ -2060,6 +2060,9 @@ public:
   bool isSizelessType() const;
   bool isSizelessBuiltinType() const;
 
+  /// Returns true for all scalable vector types.
+  bool isSizelessVectorType() const;
+
   /// Returns true for SVE scalable vector types.
   bool isSVESizelessBuiltinType() const;
 

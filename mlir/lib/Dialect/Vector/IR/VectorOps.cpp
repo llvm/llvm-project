@@ -100,6 +100,20 @@ static MaskFormat getMaskFormat(Value mask) {
       return MaskFormat::AllTrue;
     if (allFalse)
       return MaskFormat::AllFalse;
+  } else if (auto m = mask.getDefiningOp<CreateMaskOp>()) {
+    // Finds all-false create_masks. An all-true create_mask requires all
+    // dims to be constants, so that'll be folded to a constant_mask, then
+    // detected in the constant_mask case.
+    auto maskOperands = m.getOperands();
+    for (Value operand : maskOperands) {
+      if (auto constantOp = operand.getDefiningOp<arith::ConstantOp>()) {
+        int64_t dimSize =
+            llvm::cast<IntegerAttr>(constantOp.getValue()).getInt();
+        if (dimSize <= 0)
+          return MaskFormat::AllFalse;
+      }
+    }
+    return MaskFormat::Unknown;
   }
   return MaskFormat::Unknown;
 }
@@ -522,47 +536,6 @@ LogicalResult ReductionOp::verify() {
            << "'";
 
   return success();
-}
-
-ParseResult ReductionOp::parse(OpAsmParser &parser, OperationState &result) {
-  SmallVector<OpAsmParser::UnresolvedOperand, 2> operandsInfo;
-  Type redType;
-  Type resType;
-  CombiningKindAttr kindAttr;
-  arith::FastMathFlagsAttr fastMathAttr;
-  if (parser.parseCustomAttributeWithFallback(kindAttr, Type{}, "kind",
-                                              result.attributes) ||
-      parser.parseComma() || parser.parseOperandList(operandsInfo) ||
-      (succeeded(parser.parseOptionalKeyword("fastmath")) &&
-       parser.parseCustomAttributeWithFallback(fastMathAttr, Type{}, "fastmath",
-                                               result.attributes)) ||
-      parser.parseColonType(redType) ||
-      parser.parseKeywordType("into", resType) ||
-      (!operandsInfo.empty() &&
-       parser.resolveOperand(operandsInfo[0], redType, result.operands)) ||
-      (operandsInfo.size() > 1 &&
-       parser.resolveOperand(operandsInfo[1], resType, result.operands)) ||
-      parser.addTypeToList(resType, result.types))
-    return failure();
-  if (operandsInfo.empty() || operandsInfo.size() > 2)
-    return parser.emitError(parser.getNameLoc(),
-                            "unsupported number of operands");
-  return success();
-}
-
-void ReductionOp::print(OpAsmPrinter &p) {
-  p << " ";
-  getKindAttr().print(p);
-  p << ", " << getVector();
-  if (getAcc())
-    p << ", " << getAcc();
-
-  if (getFastmathAttr() &&
-      getFastmathAttr().getValue() != arith::FastMathFlags::none) {
-    p << ' ' << getFastmathAttrName().getValue();
-    p.printStrippedAttrOrType(getFastmathAttr());
-  }
-  p << " : " << getVector().getType() << " into " << getDest().getType();
 }
 
 // MaskableOpInterface methods.
@@ -1983,6 +1956,71 @@ public:
   }
 };
 
+// Pattern to rewrite a ExtractOp(CreateMask) -> CreateMask.
+class ExtractOpFromCreateMask final : public OpRewritePattern<ExtractOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ExtractOp extractOp,
+                                PatternRewriter &rewriter) const override {
+    auto createMaskOp =
+        extractOp.getVector().getDefiningOp<vector::CreateMaskOp>();
+    if (!createMaskOp)
+      return failure();
+
+    VectorType extractedMaskType =
+        llvm::dyn_cast<VectorType>(extractOp.getResult().getType());
+
+    if (!extractedMaskType)
+      return failure();
+
+    auto maskOperands = createMaskOp.getOperands();
+    ArrayRef<int64_t> extractOpPos = extractOp.getStaticPosition();
+    VectorType maskType = createMaskOp.getVectorType();
+
+    bool containsUnknownDims = false;
+    bool allFalse = getMaskFormat(createMaskOp) == MaskFormat::AllFalse;
+
+    for (size_t dimIdx = 0; !allFalse && dimIdx < extractOpPos.size();
+         dimIdx++) {
+      int64_t pos = extractOpPos[dimIdx];
+      Value operand = maskOperands[dimIdx];
+      auto constantOp = operand.getDefiningOp<arith::ConstantOp>();
+      if (!constantOp) {
+        // Bounds of this dim unknown.
+        containsUnknownDims = true;
+        continue;
+      }
+
+      int64_t createMaskBound =
+          llvm::cast<IntegerAttr>(constantOp.getValue()).getInt();
+
+      if (pos != ShapedType::kDynamic) {
+        // If any position is outside the range from the `create_mask`, then the
+        // extracted mask will be all-false.
+        allFalse |= pos >= createMaskBound;
+      } else if (createMaskBound < maskType.getDimSize(dimIdx)) {
+        // This dim is not all-true and since this is a dynamic index we don't
+        // know if the extraction is within the true or false region.
+        // Note: Zero dims have already handled via getMaskFormat().
+        containsUnknownDims = true;
+      }
+    }
+
+    if (allFalse) {
+      rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+          extractOp, DenseElementsAttr::get(extractedMaskType, false));
+    } else if (!containsUnknownDims) {
+      rewriter.replaceOpWithNewOp<vector::CreateMaskOp>(
+          extractOp, extractedMaskType,
+          maskOperands.drop_front(extractOpPos.size()));
+    } else {
+      return failure();
+    }
+    return success();
+  }
+};
+
 // Folds extract(shape_cast(..)) into shape_cast when the total element count
 // does not change.
 LogicalResult foldExtractFromShapeCastToShapeCast(ExtractOp extractOp,
@@ -2009,7 +2047,7 @@ LogicalResult foldExtractFromShapeCastToShapeCast(ExtractOp extractOp,
 void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
   results.add<ExtractOpSplatConstantFolder, ExtractOpNonSplatConstantFolder,
-              ExtractOpFromBroadcast>(context);
+              ExtractOpFromBroadcast, ExtractOpFromCreateMask>(context);
   results.add(foldExtractFromShapeCastToShapeCast);
 }
 

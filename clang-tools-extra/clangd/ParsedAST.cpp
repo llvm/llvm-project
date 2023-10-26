@@ -381,6 +381,20 @@ std::vector<Diag> getIncludeCleanerDiags(ParsedAST &AST, llvm::StringRef Code) {
                                         Cfg.Diagnostics.Includes.IgnoreHeader);
 }
 
+tidy::ClangTidyCheckFactories
+filterFastTidyChecks(const tidy::ClangTidyCheckFactories &All,
+                     Config::FastCheckPolicy Policy) {
+  if (Policy == Config::FastCheckPolicy::None)
+    return All;
+  bool AllowUnknown = Policy == Config::FastCheckPolicy::Loose;
+  tidy::ClangTidyCheckFactories Fast;
+  for (const auto &Factory : All) {
+    if (isFastTidyCheck(Factory.getKey()).value_or(AllowUnknown))
+      Fast.registerCheckFactory(Factory.first(), Factory.second);
+  }
+  return Fast;
+}
+
 } // namespace
 
 std::optional<ParsedAST>
@@ -390,6 +404,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
                  std::shared_ptr<const PreambleData> Preamble) {
   trace::Span Tracer("BuildAST");
   SPAN_ATTACH(Tracer, "File", Filename);
+  const Config &Cfg = Config::current();
 
   auto VFS = Inputs.TFS->view(Inputs.CompileCommand.Directory);
   if (Preamble && Preamble->StatCache)
@@ -520,19 +535,21 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   // diagnostics.
   {
     trace::Span Tracer("ClangTidyInit");
-    static const auto *CTFactories = [] {
+    static const auto *AllCTFactories = [] {
       auto *CTFactories = new tidy::ClangTidyCheckFactories;
       for (const auto &E : tidy::ClangTidyModuleRegistry::entries())
         E.instantiate()->addCheckFactories(*CTFactories);
       return CTFactories;
     }();
+    tidy::ClangTidyCheckFactories FastFactories = filterFastTidyChecks(
+        *AllCTFactories, Cfg.Diagnostics.ClangTidy.FastCheckFilter);
     CTContext.emplace(std::make_unique<tidy::DefaultOptionsProvider>(
         tidy::ClangTidyGlobalOptions(), ClangTidyOpts));
     CTContext->setDiagnosticsEngine(&Clang->getDiagnostics());
     CTContext->setASTContext(&Clang->getASTContext());
     CTContext->setCurrentFile(Filename);
     CTContext->setSelfContainedDiags(true);
-    CTChecks = CTFactories->createChecksForLanguage(&*CTContext);
+    CTChecks = FastFactories.createChecksForLanguage(&*CTContext);
     Preprocessor *PP = &Clang->getPreprocessor();
     for (const auto &Check : CTChecks) {
       Check->registerPPCallbacks(Clang->getSourceManager(), PP, PP);
@@ -554,7 +571,6 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
                                           SourceLocation());
     }
 
-    const Config &Cfg = Config::current();
     ASTDiags.setLevelAdjuster([&](DiagnosticsEngine::Level DiagLevel,
                                   const clang::Diagnostic &Info) {
       if (Cfg.Diagnostics.SuppressAll ||
