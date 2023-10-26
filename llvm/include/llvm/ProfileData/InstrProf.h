@@ -220,20 +220,23 @@ StringRef getPGOFuncNameVarInitializer(GlobalVariable *NameVar);
 StringRef getFuncNameWithoutPrefix(StringRef PGOFuncName,
                                    StringRef FileName = "<unknown>");
 
-/// Given a vector of strings (function PGO names) \c NameStrs, the
-/// method generates a combined string \c Result that is ready to be
-/// serialized.  The \c Result string is comprised of three fields:
-/// The first field is the length of the uncompressed strings, and the
-/// the second field is the length of the zlib-compressed string.
-/// Both fields are encoded in ULEB128.  If \c doCompress is false, the
+/// Given a vector of strings (names of global objects like functions or,
+/// virtual tables) \c NameStrs, the method generates a combined string \c
+/// Result that is ready to be serialized.  The \c Result string is comprised of
+/// three fields: The first field is the length of the uncompressed strings, and
+/// the the second field is the length of the zlib-compressed string. Both
+/// fields are encoded in ULEB128.  If \c doCompress is false, the
 ///  third field is the uncompressed strings; otherwise it is the
 /// compressed string. When the string compression is off, the
 /// second field will have value zero.
-Error collectPGOFuncNameStrings(ArrayRef<std::string> NameStrs,
-                                bool doCompression, std::string &Result);
+Error collectGlobalObjectNameStrings(ArrayRef<std::string> NameStrs,
+                                     bool doCompression, std::string &Result);
 
 /// Produce \c Result string with the same format described above. The input
 /// is vector of PGO function name variables that are referenced.
+/// The global variable element in 'NameVars' is a string containing the pgo
+/// name of a function. See `createPGOFuncNameVar` that creates these global
+/// variables.
 Error collectPGOFuncNameStrings(ArrayRef<GlobalVariable *> NameVars,
                                 std::string &Result, bool doCompression = true);
 

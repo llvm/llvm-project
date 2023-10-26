@@ -1543,15 +1543,23 @@ public:
   void moveLazyEmissionStates(CodeGenModule *NewBuilder);
 
   /// Emit the IR encoding to attach the CUDA launch bounds attribute to \p F.
+  /// If \p MaxThreadsVal is not nullptr, the max threads value is stored in it,
+  /// if a valid one was found.
   void handleCUDALaunchBoundsAttr(llvm::Function *F,
-                                  const CUDALaunchBoundsAttr *A);
+                                  const CUDALaunchBoundsAttr *A,
+                                  int32_t *MaxThreadsVal = nullptr,
+                                  int32_t *MinBlocksVal = nullptr,
+                                  int32_t *MaxClusterRankVal = nullptr);
 
   /// Emit the IR encoding to attach the AMD GPU flat-work-group-size attribute
   /// to \p F. Alternatively, the work group size can be taken from a \p
-  /// ReqdWGS.
+  /// ReqdWGS. If \p MinThreadsVal is not nullptr, the min threads value is
+  /// stored in it, if a valid one was found. If \p MaxThreadsVal is not
+  /// nullptr, the max threads value is stored in it, if a valid one was found.
   void handleAMDGPUFlatWorkGroupSizeAttr(
       llvm::Function *F, const AMDGPUFlatWorkGroupSizeAttr *A,
-      const ReqdWorkGroupSizeAttr *ReqdWGS = nullptr);
+      const ReqdWorkGroupSizeAttr *ReqdWGS = nullptr,
+      int32_t *MinThreadsVal = nullptr, int32_t *MaxThreadsVal = nullptr);
 
   /// Emit the IR encoding to attach the AMD GPU waves-per-eu attribute to \p F.
   void handleAMDGPUWavesPerEUAttr(llvm::Function *F,
