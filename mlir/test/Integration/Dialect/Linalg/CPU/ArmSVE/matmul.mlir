@@ -33,7 +33,8 @@ func.func @entry() {
   // Hence, when checking the outupt there will always be at least 4 elements
   // in every row. For implementations with wider vectors, you should see more
   // elements being printed.
-  // CHECK: [9.8596,   9.8596,   9.8596,   9.8596
+  // CHECK-NEXT: Unranked Memref {{.*}} rank = 2 offset = 0 sizes = [2, 16] strides = [16, 1] data =
+  // CHECK-NEXT: [9.8596,   9.8596,   9.8596,   9.8596
   // CHECK-NEXT: [9.8596,   9.8596,   9.8596,   9.8596
 
   %xf = tensor.cast %C_out : tensor<?x?xf32> to tensor<*xf32>
