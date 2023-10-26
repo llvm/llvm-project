@@ -68,6 +68,16 @@ def PartTensor_GetPartitionOp : PartTensor_Op<"get_partitions">,
 		//%slice = partition.get_slice(%total_iteration_space,%partition) -> tensor<2xindex>
 		let assemblyFormat = " $Parts `,` $tupleList attr-dict `:` type($Parts) `,` type($tupleList) `->` type($result)";
 		}
+ def PartTensor_SetSliceOp : PartTensor_Op<"set_slice">,
+     Arguments<(ins AnyTensor:$Parts, AnyTensor:$partT, TensorOf<[AnySignlessIntegerOrIndex]>:$tupleList)>,
+     Results<(outs)> {
+         let summary = "get slice";
+         let description = [{
+             This operation will take tuples and output one tensor
+             }]; 
+         //%slice = partition.get_slice(%total_iteration_space,%partition) -> tensor<2xindex>
+         let assemblyFormat = " $Parts `,` $partT `,` $tupleList attr-dict `:` type($Parts) `,` type($partT) `,` type($tupleList)";
+         }
 
 def PartTensor_NumPartitionOp : PartTensor_Op<"get_num_partitions">,
 	Arguments<(ins AnyTensor:$tensor)>,
