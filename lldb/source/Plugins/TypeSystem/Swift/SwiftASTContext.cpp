@@ -1714,7 +1714,16 @@ static std::string GetSDKPath(std::string m_description, XcodeSDK sdk) {
   }
 
   std::string sdk_path = sdk_path_or_err->str();
-  LOG_PRINTF(GetLog(LLDBLog::Types), "Host SDK path: `%s` (XcodeSDK: %s)",
+  // GetSDKRoot reports no SDK as an empty string.
+  if (sdk_path.empty()) {
+    std::string sdk_spec = sdk.GetString().str();
+    Debugger::ReportError("LLDB couldn't find an SDK for \"" + sdk_spec + "\".");
+    HEALTH_LOG_PRINTF("Could not find an SDK for \"%s\". Try to verify that "
+                      "\"xcrun --show-sdk-path --sdk %s\" works.",
+                      sdk_spec.c_str(), sdk_spec.c_str());
+    return {};
+  }
+  LOG_PRINTF(GetLog(LLDBLog::Types), "Host SDK path: \"%s\" (XcodeSDK: %s)",
              sdk_path.c_str(), sdk.GetString().str().c_str());
   return sdk_path;
 }
