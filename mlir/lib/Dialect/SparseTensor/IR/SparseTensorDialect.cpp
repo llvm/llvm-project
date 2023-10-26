@@ -418,9 +418,8 @@ SparseTensorEncodingAttr::getStaticLvlSliceStride(Level lvl) const {
 SmallVector<int64_t>
 SparseTensorEncodingAttr::tranlateShape(ArrayRef<int64_t> srcShape,
                                         CrdTransDirectionKind dir) const {
-  if (isIdentity()) {
+  if (isIdentity())
     return SmallVector<int64_t>(srcShape);
-  }
 
   SmallVector<int64_t> ret;
   unsigned rank =
@@ -1340,6 +1339,17 @@ OpFoldResult LvlOp::fold(FoldAdaptor adaptor) {
     return getIndexAttr(shape[dim]);
 
   return {};
+}
+
+void ReinterpretMapOp::build(OpBuilder &odsBuilder, OperationState &odsState,
+                             SparseTensorEncodingAttr dstEnc, Value source) {
+  auto srcStt = getSparseTensorType(source);
+  SmallVector<int64_t> srcLvlShape = srcStt.getLvlShape();
+  SmallVector<int64_t> dstDimShape =
+      dstEnc.tranlateShape(srcLvlShape, CrdTransDirectionKind::lvl2dim);
+  auto dstTp =
+      RankedTensorType::get(dstDimShape, srcStt.getElementType(), dstEnc);
+  return build(odsBuilder, odsState, dstTp, source);
 }
 
 LogicalResult ReinterpretMapOp::verify() {

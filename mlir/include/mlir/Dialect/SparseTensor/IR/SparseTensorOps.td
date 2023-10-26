@@ -248,6 +248,10 @@ def SparseTensor_ReinterpretMapOp : SparseTensor_Op<"reinterpret_map", [NoMemory
     ```
     }];
 
+  let builders = [
+    OpBuilder<(ins "SparseTensorEncodingAttr":$dstEnc, "Value":$source)>
+  ];
+
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
   let hasFolder = 1;
   let hasVerifier = 1;
