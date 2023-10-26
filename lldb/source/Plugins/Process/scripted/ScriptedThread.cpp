@@ -60,9 +60,11 @@ ScriptedThread::Create(ScriptedProcess &process,
       thread_class_name, exe_ctx, process.m_scripted_metadata.GetArgsSP(),
       script_object);
 
-  if (!obj_or_err)
+  if (!obj_or_err) {
+    llvm::consumeError(obj_or_err.takeError());
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "Failed to create script object.");
+  }
 
   StructuredData::GenericSP owned_script_object_sp = *obj_or_err;
 
