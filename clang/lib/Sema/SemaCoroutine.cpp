@@ -1198,6 +1198,11 @@ void Sema::CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body) {
   if (FD->hasAttr<AlwaysInlineAttr>())
     Diag(FD->getLocation(), diag::warn_always_inline_coroutine);
 
+  // The design of coroutines means we cannot allow use of VLAs within one, so
+  // diagnose if we've seen a VLA in the body of this function.
+  if (Fn->FirstVLALoc.isValid())
+    Diag(Fn->FirstVLALoc, diag::err_vla_in_coroutine_unsupported);
+
   // [stmt.return.coroutine]p1:
   //   A coroutine shall not enclose a return statement ([stmt.return]).
   if (Fn->FirstReturnLoc.isValid()) {
