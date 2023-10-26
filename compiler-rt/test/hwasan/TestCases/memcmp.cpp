@@ -8,6 +8,11 @@
 #include <string.h>
 #include <unistd.h>
 
+__attribute__((no_sanitize("hwaddress")))
+int ForceCalInterceptor(void *p, const void *a, size_t size) {
+  return memcmp(p, a, size);
+}
+
 int main(int argc, char **argv) {
   __hwasan_enable_allocator_tagging();
   char a[] = {static_cast<char>(argc), 2, 3, 4};
@@ -15,7 +20,7 @@ int main(int argc, char **argv) {
   char *p = (char *)malloc(size);
   memcpy(p, a, size);
   free(p);
-  return memcmp(p, a, size);
+  return ForceCalInterceptor(p, a, size);
   // CHECK: HWAddressSanitizer: tag-mismatch on address
   // CHECK: READ of size 4
   // CHECK: #{{[[:digit:]]+}} 0x{{[[:xdigit:]]+}} in main {{.*}}memcmp.cpp:[[@LINE-3]]

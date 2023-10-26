@@ -2,7 +2,6 @@
 // RUN: %clangxx_hwasan -O1 %s -o %t && not %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_hwasan -O2 %s -o %t && not %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_hwasan -O3 %s -o %t && not %run %t 2>&1 | FileCheck %s
-// REQUIRES: !android
 
 #include <sanitizer/hwasan_interface.h>
 #include <stdlib.h>
@@ -10,24 +9,24 @@
 #include <unistd.h>
 
 __attribute__((no_sanitize("hwaddress")))
-int ForceCallInterceptor(void *p, const void *a, size_t size) {
-  return bcmp(p, a, size);
+int ForceCallInterceptor(void *p, int c, size_t size) {
+  return memset(p, c, size) == nullptr;
 }
 
 int main(int argc, char **argv) {
   __hwasan_enable_allocator_tagging();
   char a[] = {static_cast<char>(argc), 2, 3, 4};
   int size = sizeof(a);
-  char *p = (char *)malloc(size);
-  memcpy(p, a, size);
+  char *volatile p = (char *)malloc(size);
   free(p);
-  return ForceCallInterceptor(p, a, size);
+  return ForceCallInterceptor(p, 0, size);
   // CHECK: HWAddressSanitizer: tag-mismatch on address
-  // CHECK: READ of size 4
-  // CHECK: #{{[[:digit:]]+}} 0x{{[[:xdigit:]]+}} in main {{.*}}bcmp.cpp:[[@LINE-3]]
+  // CHECK: WRITE of size 4
+  // CHECK: #{{[[:digit:]]+}} 0x{{[[:xdigit:]]+}} in main {{.*}}memset.cpp:[[@LINE-3]]
   // CHECK: Cause: use-after-free
   // CHECK: freed by thread
-  // CHECK: #{{[[:digit:]]+}} 0x{{[[:xdigit:]]+}} in main {{.*}}bcmp.cpp:[[@LINE-7]]
+  // CHECK: #{{[[:digit:]]+}} 0x{{[[:xdigit:]]+}} in main {{.*}}memset.cpp:[[@LINE-7]]
   // CHECK: previously allocated by thread
-  // CHECK: #{{[[:digit:]]+}} 0x{{[[:xdigit:]]+}} in main {{.*}}bcmp.cpp:[[@LINE-11]]
+  // CHECK: #{{[[:digit:]]+}} 0x{{[[:xdigit:]]+}} in main {{.*}}memset.cpp:[[@LINE-10]]
 }
+
