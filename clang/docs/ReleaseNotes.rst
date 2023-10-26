@@ -650,7 +650,7 @@ Bug Fixes to AST Handling
   `Issue 64170 <https://github.com/llvm/llvm-project/issues/64170>`_
 - Fixed ``hasAnyBase`` not binding nodes in its submatcher.
   (`#65421 <https://github.com/llvm/llvm-project/issues/65421>`_)
-- Fixed a bug where RecursiveASTVisitor (RAV) fails to visit the
+- Fixed a bug where RecursiveASTVisitor fails to visit the
   initializer of a bitfield.
   `Issue 64916 <https://github.com/llvm/llvm-project/issues/64916>`_
 
