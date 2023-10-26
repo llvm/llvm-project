@@ -483,6 +483,8 @@ static bool CheckFieldsInitialized(InterpState &S, CodePtr OpPC,
 
     if (FieldType->isRecordType()) {
       Result &= CheckFieldsInitialized(S, OpPC, FieldPtr, FieldPtr.getRecord());
+    } else if (FieldType->isIncompleteArrayType()) {
+      // Nothing to do here.
     } else if (FieldType->isArrayType()) {
       const auto *CAT =
           cast<ConstantArrayType>(FieldType->getAsArrayTypeUnsafe());
