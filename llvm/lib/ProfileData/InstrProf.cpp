@@ -494,8 +494,8 @@ void InstrProfSymtab::dumpNames(raw_ostream &OS) const {
     OS << S << '\n';
 }
 
-Error collectPGOFuncNameStrings(ArrayRef<std::string> NameStrs,
-                                bool doCompression, std::string &Result) {
+Error collectGlobalObjectNameStrings(ArrayRef<std::string> NameStrs,
+                                     bool doCompression, std::string &Result) {
   assert(!NameStrs.empty() && "No name data to emit");
 
   uint8_t Header[20], *P = Header;
@@ -545,7 +545,7 @@ Error collectPGOFuncNameStrings(ArrayRef<GlobalVariable *> NameVars,
   for (auto *NameVar : NameVars) {
     NameStrs.push_back(std::string(getPGOFuncNameVarInitializer(NameVar)));
   }
-  return collectGlobalVariableNameStrings(
+  return collectGlobalObjectNameStrings(
       NameStrs, compression::zlib::isAvailable() && doCompression, Result);
 }
 
