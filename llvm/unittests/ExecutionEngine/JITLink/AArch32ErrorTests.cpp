@@ -8,7 +8,6 @@
 
 #include <llvm/ExecutionEngine/JITLink/aarch32.h>
 
-
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
@@ -37,34 +36,42 @@ TEST(AArch32_ELF, readAddendErrors) {
 
   EXPECT_THAT_EXPECTED(
       readAddend(*G, B, InvalidEdge, ArmCfg),
-      FailedWithMessage(testing::HasSubstr("can not read implicit addend for aarch32 edge kind Keep-Alive")));
+      FailedWithMessage(testing::HasSubstr(
+          "can not read implicit addend for aarch32 edge kind Keep-Alive")));
 
-  std::string ReadAddendError = "can not read implicit addend for aarch32 edge kind <Unrecognized edge kind>";
+  std::string ReadAddendError = "can not read implicit addend for aarch32 edge "
+                                "kind <Unrecognized edge kind>";
 
   for (Edge::Kind K = FirstDataRelocation; K < LastDataRelocation; K += 1) {
     Edge E(K, 0, TargetSymbol, 0);
     EXPECT_THAT_EXPECTED(readAddendData(*G, B, E), Succeeded());
-    EXPECT_THAT_EXPECTED(readAddendArm(*G, B, E),
-                         FailedWithMessage(testing::HasSubstr(ReadAddendError)));
-    EXPECT_THAT_EXPECTED(readAddendThumb(*G, B, E, ArmCfg),
-                         FailedWithMessage(testing::HasSubstr(ReadAddendError)));
+    EXPECT_THAT_EXPECTED(
+        readAddendArm(*G, B, E),
+        FailedWithMessage(testing::HasSubstr(ReadAddendError)));
+    EXPECT_THAT_EXPECTED(
+        readAddendThumb(*G, B, E, ArmCfg),
+        FailedWithMessage(testing::HasSubstr(ReadAddendError)));
   }
   for (Edge::Kind K = FirstArmRelocation; K < LastArmRelocation; K += 1) {
     Edge E(K, 0, TargetSymbol, 0);
-    EXPECT_THAT_EXPECTED(readAddendData(*G, B, E),
-                         FailedWithMessage(testing::HasSubstr(ReadAddendError)));
+    EXPECT_THAT_EXPECTED(
+        readAddendData(*G, B, E),
+        FailedWithMessage(testing::HasSubstr(ReadAddendError)));
     EXPECT_THAT_EXPECTED(
         readAddendArm(*G, B, E),
         FailedWithMessage(testing::StartsWith("Invalid opcode")));
-    EXPECT_THAT_EXPECTED(readAddendThumb(*G, B, E, ArmCfg),
-                         FailedWithMessage(testing::HasSubstr(ReadAddendError)));
+    EXPECT_THAT_EXPECTED(
+        readAddendThumb(*G, B, E, ArmCfg),
+        FailedWithMessage(testing::HasSubstr(ReadAddendError)));
   }
   for (Edge::Kind K = FirstThumbRelocation; K < LastThumbRelocation; K += 1) {
     Edge E(K, 0, TargetSymbol, 0);
-    EXPECT_THAT_EXPECTED(readAddendData(*G, B, E),
-                         FailedWithMessage(testing::HasSubstr(ReadAddendError)));
-    EXPECT_THAT_EXPECTED(readAddendArm(*G, B, E),
-                         FailedWithMessage(testing::HasSubstr(ReadAddendError)));
+    EXPECT_THAT_EXPECTED(
+        readAddendData(*G, B, E),
+        FailedWithMessage(testing::HasSubstr(ReadAddendError)));
+    EXPECT_THAT_EXPECTED(
+        readAddendArm(*G, B, E),
+        FailedWithMessage(testing::HasSubstr(ReadAddendError)));
     EXPECT_THAT_EXPECTED(
         readAddendThumb(*G, B, E, ArmCfg),
         FailedWithMessage(testing::StartsWith("Invalid opcode")));
