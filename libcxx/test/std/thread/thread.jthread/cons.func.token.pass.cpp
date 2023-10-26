@@ -56,7 +56,7 @@ int main(int, char**) {
   // invoke(auto(std::forward<F>(f)), get_stop_token(), auto(std::forward<Args>(args))...)
   // if that expression is well-formed,
   {
-    int result = 0;
+    int result      = 0;
     std::jthread jt = support::make_test_jthread(
         [&result](std::stop_token st, int i) {
           assert(st.stop_possible());
@@ -71,7 +71,7 @@ int main(int, char**) {
   // otherwise
   // invoke(auto(std::forward<F>(f)), auto(std::forward<Args>(args))...)
   {
-    int result = 0;
+    int result      = 0;
     std::jthread jt = support::make_test_jthread([&result](int i) { result += i; }, 5);
     jt.join();
     assert(result == 5);
