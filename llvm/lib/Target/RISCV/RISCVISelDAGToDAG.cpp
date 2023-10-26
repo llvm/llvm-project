@@ -29,6 +29,12 @@ using namespace llvm;
 #define DEBUG_TYPE "riscv-isel"
 #define PASS_NAME "RISC-V DAG->DAG Pattern Instruction Selection"
 
+static cl::opt<bool> UsePseudoMovImm(
+    "riscv-use-rematerializable-movimm", cl::Hidden,
+    cl::desc("Use a rematerializable pseudoinstruction for 2 instruction "
+             "constant materialization"),
+    cl::init(false));
+
 namespace llvm::RISCV {
 #define GET_RISCVVSSEGTable_IMPL
 #define GET_RISCVVLSEGTable_IMPL
@@ -194,6 +200,13 @@ static SDValue selectImm(SelectionDAG *CurDAG, const SDLoc &DL, const MVT VT,
                          int64_t Imm, const RISCVSubtarget &Subtarget) {
   RISCVMatInt::InstSeq Seq =
       RISCVMatInt::generateInstSeq(Imm, Subtarget.getFeatureBits());
+
+  // Use a rematerializable pseudo instruction for short sequences if enabled.
+  if (Seq.size() == 2 && UsePseudoMovImm)
+    return SDValue(
+        CurDAG->getMachineNode(RISCV::PseudoMovImm, DL, VT,
+                               CurDAG->getTargetConstant(Imm, DL, VT)),
+        0);
 
   // See if we can create this constant as (ADD (SLLI X, C), X) where X is at
   // worst an LUI+ADDIW. This will require an extra register, but avoids a
