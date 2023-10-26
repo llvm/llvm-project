@@ -215,6 +215,10 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return true;
 }
 
+bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  return !Ptr.isDummy();
+}
+
 bool CheckNull(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                CheckSubobjectKind CSK) {
   if (!Ptr.isZero())
@@ -297,6 +301,8 @@ bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 }
 
 bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (!CheckDummy(S, OpPC, Ptr))
+    return false;
   if (!CheckLive(S, OpPC, Ptr, AK_Read))
     return false;
   if (!CheckExtern(S, OpPC, Ptr))
