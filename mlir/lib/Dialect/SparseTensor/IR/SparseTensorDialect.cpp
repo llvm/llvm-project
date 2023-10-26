@@ -436,7 +436,7 @@ SparseTensorEncodingAttr::tranlateShape(ArrayRef<int64_t> srcShape,
     return ret;
   }
 
-  // Non-permutation
+  // Handle non-permutation maps.
   AffineMap transMap =
       dir == CrdTransDirectionKind::dim2lvl ? getDimToLvl() : getLvlToDim();
 
@@ -444,7 +444,7 @@ SparseTensorEncodingAttr::tranlateShape(ArrayRef<int64_t> srcShape,
   dimRep.reserve(srcShape.size());
   for (int64_t sz : srcShape) {
     if (!ShapedType::isDynamic(sz)) {
-      // Push back the max coordinate for the given dimension/level size
+      // Push back the max coordinate for the given dimension/level size.
       dimRep.push_back(getAffineConstantExpr(sz - 1, getContext()));
     } else {
       // A dynamic size, use a AffineDimExpr to symbolize the value.
