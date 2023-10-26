@@ -87,3 +87,25 @@ body: |
     $q0 = COPY %dst
     RET_ReallyLR implicit $x0, implicit $q0
 ...
+---
+name:            pre_store_s64
+body: |
+  bb.0:
+    liveins: $x0, $x1
+
+    ; CHECK-LABEL: name: pre_store_s64
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
+    ; CHECK-NEXT: %val:_(s64) = COPY $x1
+    ; CHECK-NEXT: %offset:_(s64) = G_CONSTANT i64 8
+    ; CHECK-NEXT: %writeback:_(p0) = G_INDEXED_STORE %val(s64), %ptr, %offset(s64), 1 :: (store (s64))
+    ; CHECK-NEXT: $x0 = COPY %writeback(p0)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %ptr:_(p0) = COPY $x0
+    %val:_(s64) = COPY $x1
+    %offset:_(s64) = G_CONSTANT i64 8
+    %writeback:_(p0) = G_INDEXED_STORE %val, %ptr, %offset, 1 :: (store (s64), align 8)
+    $x0 = COPY %writeback
+    RET_ReallyLR implicit $x0
+...
