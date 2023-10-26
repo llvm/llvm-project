@@ -1092,3 +1092,102 @@ hlfir::createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
 
   return {hlfir::Entity{declareOp.getBase()}, isHeapAlloc};
 }
+
+hlfir::EntityWithAttributes
+hlfir::convertCharacterKind(mlir::Location loc, fir::FirOpBuilder &builder,
+                            hlfir::Entity scalarChar, int toKind) {
+  auto src = hlfir::convertToAddress(loc, builder, scalarChar,
+                                     scalarChar.getFortranElementType());
+  assert(src.first.getCharBox() && "must be scalar character");
+  fir::CharBoxValue res = fir::factory::convertCharacterKind(
+      builder, loc, *src.first.getCharBox(), toKind);
+  if (src.second.has_value())
+    src.second.value()();
+
+  return hlfir::EntityWithAttributes{builder.create<hlfir::DeclareOp>(
+      loc, res.getAddr(), ".temp.kindconvert", /*shape=*/nullptr,
+      /*typeparams=*/mlir::ValueRange{res.getLen()},
+      fir::FortranVariableFlagsAttr{})};
+}
+
+std::pair<hlfir::Entity, std::optional<hlfir::CleanupFunction>>
+hlfir::genTypeAndKindConvert(mlir::Location loc, fir::FirOpBuilder &builder,
+                             hlfir::Entity source, mlir::Type toType,
+                             bool preserveLowerBounds) {
+  mlir::Type fromType = source.getFortranElementType();
+  toType = hlfir::getFortranElementType(toType);
+  if (!toType || fromType == toType ||
+      !(fir::isa_trivial(toType) || mlir::isa<fir::CharacterType>(toType)))
+    return {source, std::nullopt};
+
+  std::optional<int> toKindCharConvert;
+  if (auto toCharTy = mlir::dyn_cast<fir::CharacterType>(toType)) {
+    if (auto fromCharTy = mlir::dyn_cast<fir::CharacterType>(fromType))
+      if (toCharTy.getFKind() != fromCharTy.getFKind())
+        toKindCharConvert = toCharTy.getFKind();
+    // Do not convert in case of character length mismatch only, hlfir.assign
+    // deals with it.
+    if (!toKindCharConvert)
+      return {source, std::nullopt};
+  }
+
+  if (source.getRank() == 0) {
+    mlir::Value cast = toKindCharConvert
+                           ? mlir::Value{hlfir::convertCharacterKind(
+                                 loc, builder, source, *toKindCharConvert)}
+                           : builder.convertWithSemantics(loc, toType, source);
+    return {hlfir::Entity{cast}, std::nullopt};
+  }
+
+  mlir::Value shape = hlfir::genShape(loc, builder, source);
+  auto genKernel = [source, toType, toKindCharConvert](
+                       mlir::Location loc, fir::FirOpBuilder &builder,
+                       mlir::ValueRange oneBasedIndices) -> hlfir::Entity {
+    auto elementPtr =
+        hlfir::getElementAt(loc, builder, source, oneBasedIndices);
+    auto val = hlfir::loadTrivialScalar(loc, builder, elementPtr);
+    if (toKindCharConvert)
+      return hlfir::convertCharacterKind(loc, builder, val, *toKindCharConvert);
+    return hlfir::EntityWithAttributes{
+        builder.convertWithSemantics(loc, toType, val)};
+  };
+  llvm::SmallVector<mlir::Value, 1> lenParams;
+  hlfir::genLengthParameters(loc, builder, source, lenParams);
+  mlir::Value convertedRhs =
+      hlfir::genElementalOp(loc, builder, toType, shape, lenParams, genKernel,
+                            /*isUnordered=*/true);
+
+  if (preserveLowerBounds && source.hasNonDefaultLowerBounds()) {
+    hlfir::AssociateOp associate =
+        genAssociateExpr(loc, builder, hlfir::Entity{convertedRhs},
+                         convertedRhs.getType(), ".tmp.keeplbounds");
+    fir::ShapeOp shapeOp = associate.getShape().getDefiningOp<fir::ShapeOp>();
+    assert(shapeOp && "associate shape must be a fir.shape");
+    const unsigned rank = shapeOp.getExtents().size();
+    llvm::SmallVector<mlir::Value> lbAndExtents;
+    for (unsigned dim = 0; dim < rank; ++dim) {
+      lbAndExtents.push_back(hlfir::genLBound(loc, builder, source, dim));
+      lbAndExtents.push_back(shapeOp.getExtents()[dim]);
+    }
+    auto shapeShiftType = fir::ShapeShiftType::get(builder.getContext(), rank);
+    mlir::Value shapeShift =
+        builder.create<fir::ShapeShiftOp>(loc, shapeShiftType, lbAndExtents);
+    auto declareOp = builder.create<hlfir::DeclareOp>(
+        loc, associate.getFirBase(), associate.getUniqName(), shapeShift,
+        associate.getTypeparams(), /*flags=*/fir::FortranVariableFlagsAttr{});
+    hlfir::Entity castWithLbounds =
+        mlir::cast<fir::FortranVariableOpInterface>(declareOp.getOperation());
+    fir::FirOpBuilder *bldr = &builder;
+    auto cleanup = [loc, bldr, convertedRhs, associate]() {
+      bldr->create<hlfir::EndAssociateOp>(loc, associate);
+      bldr->create<hlfir::DestroyOp>(loc, convertedRhs);
+    };
+    return {castWithLbounds, cleanup};
+  }
+
+  fir::FirOpBuilder *bldr = &builder;
+  auto cleanup = [loc, bldr, convertedRhs]() {
+    bldr->create<hlfir::DestroyOp>(loc, convertedRhs);
+  };
+  return {hlfir::Entity{convertedRhs}, cleanup};
+}
