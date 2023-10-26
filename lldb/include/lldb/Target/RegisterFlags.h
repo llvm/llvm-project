@@ -9,6 +9,7 @@
 #ifndef LLDB_TARGET_REGISTERFLAGS_H
 #define LLDB_TARGET_REGISTERFLAGS_H
 
+#include <stdint.h>
 #include <string>
 #include <vector>
 

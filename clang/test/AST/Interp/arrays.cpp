@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++20 -verify %s
 // RUN: %clang_cc1 -verify=ref %s
+// RUN: %clang_cc1 -verify=ref -std=c++20 %s
 
 constexpr int m = 3;
 constexpr const int *foo[][5] = {
@@ -496,4 +498,59 @@ namespace Incomplete {
                               // ref-note {{indexing of array without known bound}} \
                               // expected-error {{must be initialized by a constant expression}} \
                               // expected-note {{read of non-constexpr variable 'arr'}}
+}
+
+namespace GH69115 {
+  /// This used to crash because we were trying to emit destructors for the
+  /// array.
+  constexpr int foo() {
+    int arr[2][2] = {1, 2, 3, 4};
+    return 0;
+  }
+  static_assert(foo() == 0, "");
+
+  /// Test that we still emit the destructors for multi-dimensional
+  /// composite arrays.
+#if __cplusplus >= 202002L
+  constexpr void assert(bool C) {
+    if (C)
+      return;
+    // Invalid in constexpr.
+    (void)(1 / 0); // expected-warning {{undefined}} \
+                   // ref-warning {{undefined}}
+  }
+
+  class F {
+  public:
+    int a;
+    int *dtor;
+    int &idx;
+    constexpr F(int a, int *dtor, int &idx) : a(a), dtor(dtor), idx(idx) {}
+    constexpr ~F() noexcept(false){
+      dtor[idx] = a;
+      ++idx;
+    }
+  };
+  constexpr int foo2() {
+    int dtorIndices[] = {0, 0, 0, 0};
+    int idx = 0;
+
+    {
+      F arr[2][2] = {F(1, dtorIndices, idx),
+                     F(2, dtorIndices, idx),
+                     F(3, dtorIndices, idx),
+                     F(4, dtorIndices, idx)};
+    }
+
+    /// Reverse-reverse order.
+    assert(idx == 4);
+    assert(dtorIndices[0] == 4);
+    assert(dtorIndices[1] == 3);
+    assert(dtorIndices[2] == 2);
+    assert(dtorIndices[3] == 1);
+
+    return 0;
+  }
+  static_assert(foo2() == 0, "");
+#endif
 }

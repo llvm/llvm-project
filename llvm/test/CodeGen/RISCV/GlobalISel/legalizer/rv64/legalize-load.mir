@@ -220,10 +220,9 @@ body:             |
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s8) from unknown-address + 1)
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
     ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[LOAD]], [[C1]](s32)
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[SHL]](s32)
-    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[ZEXTLOAD]](s32)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[ANYEXT]], [[ANYEXT1]]
-    ; CHECK-NEXT: $x10 = COPY [[OR]](s64)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[ZEXTLOAD]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[OR]](s32)
+    ; CHECK-NEXT: $x10 = COPY [[ANYEXT]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(p0) = COPY $x10
     %1:_(s16) = G_LOAD %0(p0) :: (load (s16), align 1)
@@ -259,9 +258,7 @@ body:             |
     ; CHECK-NEXT: [[ZEXTLOAD1:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[PTR_ADD]](p0) :: (load (s8) from unknown-address + 1)
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
     ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXTLOAD1]], [[C1]](s32)
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[SHL]](s32)
-    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[ZEXTLOAD]](s32)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[ANYEXT]], [[ANYEXT1]]
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[ZEXTLOAD]]
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
     ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s64)
     ; CHECK-NEXT: [[ZEXTLOAD2:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[PTR_ADD1]](p0) :: (load (s8) from unknown-address + 2)
@@ -270,15 +267,12 @@ body:             |
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD2]](p0) :: (load (s8) from unknown-address + 3)
     ; CHECK-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
     ; CHECK-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[LOAD]], [[C4]](s32)
-    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(s64) = G_ANYEXT [[SHL1]](s32)
-    ; CHECK-NEXT: [[ANYEXT3:%[0-9]+]]:_(s64) = G_ANYEXT [[ZEXTLOAD2]](s32)
-    ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(s64) = G_OR [[ANYEXT2]], [[ANYEXT3]]
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[OR1]](s64)
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[SHL1]], [[ZEXTLOAD2]]
     ; CHECK-NEXT: [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK-NEXT: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[TRUNC]], [[C5]](s32)
-    ; CHECK-NEXT: [[ANYEXT4:%[0-9]+]]:_(s64) = G_ANYEXT [[SHL2]](s32)
-    ; CHECK-NEXT: [[OR2:%[0-9]+]]:_(s64) = G_OR [[ANYEXT4]], [[OR]]
-    ; CHECK-NEXT: $x10 = COPY [[OR2]](s64)
+    ; CHECK-NEXT: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[OR1]], [[C5]](s32)
+    ; CHECK-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[SHL2]], [[OR]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[OR2]](s32)
+    ; CHECK-NEXT: $x10 = COPY [[ANYEXT]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(p0) = COPY $x10
     %1:_(s32) = G_LOAD %0(p0) :: (load (s32), align 1)
@@ -314,10 +308,9 @@ body:             |
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s16) from unknown-address + 2)
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[LOAD]], [[C1]](s32)
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[SHL]](s32)
-    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[ZEXTLOAD]](s32)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[ANYEXT]], [[ANYEXT1]]
-    ; CHECK-NEXT: $x10 = COPY [[OR]](s64)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[ZEXTLOAD]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[OR]](s32)
+    ; CHECK-NEXT: $x10 = COPY [[ANYEXT]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(p0) = COPY $x10
     %1:_(s32) = G_LOAD %0(p0) :: (load (s32), align 2)

@@ -15295,7 +15295,11 @@ bool hasNearbyPairedStore(Iter It, Iter End, Value *Ptr, const DataLayout &DL) {
   const Value *PtrA1 =
       Ptr->stripAndAccumulateInBoundsConstantOffsets(DL, OffsetA);
 
-  while (++It != End && !It->isDebugOrPseudoInst() && MaxLookupDist-- > 0) {
+  while (++It != End) {
+    if (It->isDebugOrPseudoInst())
+      continue;
+    if (MaxLookupDist-- == 0)
+      break;
     if (const auto *SI = dyn_cast<StoreInst>(&*It)) {
       const Value *PtrB1 =
           SI->getPointerOperand()->stripAndAccumulateInBoundsConstantOffsets(
@@ -23718,10 +23722,6 @@ bool AArch64TargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
 bool AArch64TargetLowering::isIndexingLegal(MachineInstr &MI, Register Base,
                                             Register Offset, bool IsPre,
                                             MachineRegisterInfo &MRI) const {
-  // HACK
-  if (IsPre)
-    return false; // Until we implement.
-
   auto CstOffset = getIConstantVRegVal(Offset, MRI);
   if (!CstOffset || CstOffset->isZero())
     return false;

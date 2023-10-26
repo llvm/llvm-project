@@ -2030,11 +2030,30 @@ public:
 
   ///}
 
+  /// Helpers to read/write kernel annotations from the IR.
+  ///
+  ///{
+
+  /// Read/write a bounds on threads for \p Kernel. Read will return 0 if none
+  /// is set.
+  static std::pair<int32_t, int32_t>
+  readThreadBoundsForKernel(Function &Kernel);
+  static void writeThreadBoundsForKernel(Function &Kernel, int32_t LB,
+                                         int32_t UB);
+
+  /// Read/write a bounds on teams for \p Kernel. Read will return 0 if none
+  /// is set.
+  static std::pair<int32_t, int32_t> readTeamBoundsForKernel(Function &Kernel);
+  static void writeTeamsForKernel(Function &Kernel, int32_t LB, int32_t UB);
+  ///}
+
 private:
   // Sets the function attributes expected for the outlined function
   void setOutlinedTargetRegionFunctionAttributes(Function *OutlinedFn,
-                                                 int32_t NumTeams,
-                                                 int32_t NumThreads);
+                                                 int32_t MinTeams,
+                                                 int32_t MaxTeams,
+                                                 int32_t MinThreads,
+                                                 int32_t MaxThreads);
 
   // Creates the function ID/Address for the given outlined function.
   // In the case of an embedded device function the address of the function is
@@ -2079,13 +2098,16 @@ public:
   /// \param InfoManager The info manager keeping track of the offload entries
   /// \param EntryInfo The entry information about the function
   /// \param GenerateFunctionCallback The callback function to generate the code
-  /// \param NumTeams Number default teams
-  /// \param NumThreads Number default threads
+  /// \param MinTeams Minimal number of teams
+  /// \param MaxTeams Maximal number of teams
+  /// \param MinThreads Minimal number of threads
+  /// \param MaxThreads Maximal number of threads
   /// \param OutlinedFunction Pointer to the outlined function
   /// \param EntryFnIDName Name of the ID o be created
   void emitTargetRegionFunction(TargetRegionEntryInfo &EntryInfo,
                                 FunctionGenCallback &GenerateFunctionCallback,
-                                int32_t NumTeams, int32_t NumThreads,
+                                int32_t MinTeams, int32_t MaxTeams,
+                                int32_t MinThreads, int32_t MaxThreads,
                                 bool IsOffloadEntry, Function *&OutlinedFn,
                                 Constant *&OutlinedFnID);
 
@@ -2097,13 +2119,15 @@ public:
   /// \param OutlinedFunction Pointer to the outlined function
   /// \param EntryFnName Name of the outlined function
   /// \param EntryFnIDName Name of the ID o be created
-  /// \param NumTeams Number default teams
-  /// \param NumThreads Number default threads
-  Constant *registerTargetRegionFunction(TargetRegionEntryInfo &EntryInfo,
-                                         Function *OutlinedFunction,
-                                         StringRef EntryFnName,
-                                         StringRef EntryFnIDName,
-                                         int32_t NumTeams, int32_t NumThreads);
+  /// \param MinTeams Minimal number of teams
+  /// \param MaxTeams Maximal number of teams
+  /// \param MinThreads Minimal number of threads
+  /// \param MaxThreads Maximal number of threads
+  Constant *registerTargetRegionFunction(
+      TargetRegionEntryInfo &EntryInfo, Function *OutlinedFunction,
+      StringRef EntryFnName, StringRef EntryFnIDName, int32_t MinTeams,
+      int32_t MaxTeams, int32_t MinThreads, int32_t MaxThreads);
+
   /// Type of BodyGen to use for region codegen
   ///
   /// Priv: If device pointer privatization is required, emit the body of the
