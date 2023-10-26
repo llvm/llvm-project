@@ -37,6 +37,8 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -1641,6 +1643,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   }
 
   setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
+
+  if (Subtarget->hasSVE()) {
+    setOperationAction(ISD::FLDEXP, MVT::f64, Custom);
+    setOperationAction(ISD::FLDEXP, MVT::f32, Custom);
+    setOperationAction(ISD::FLDEXP, MVT::f16, Custom);
+  }
 
   PredictableSelectIsExpensive = Subtarget->predictableSelectIsExpensive();
 
@@ -5895,6 +5903,49 @@ static SDValue LowerFunnelShift(SDValue Op, SelectionDAG &DAG) {
   return SDValue();
 }
 
+static SDValue LowerFLDEXP(SDValue Op, SelectionDAG &DAG) {
+  SDValue X = Op.getOperand(0);
+  EVT XScalarTy = X.getValueType();
+  SDValue Exp = Op.getOperand(1);
+
+  SDLoc DL(Op);
+  EVT XVT, ExpVT;
+  switch (Op.getSimpleValueType().SimpleTy) {
+  default:
+    return SDValue();
+  case MVT::f16:
+    X = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, X);
+    [[fallthrough]];
+  case MVT::f32:
+    XVT = MVT::nxv4f32;
+    ExpVT = MVT::nxv4i32;
+    break;
+  case MVT::f64:
+    XVT = MVT::nxv2f64;
+    ExpVT = MVT::nxv2i64;
+    Exp = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Exp);
+    break;
+  }
+
+  SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
+  SDValue VX =
+      DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, XVT, DAG.getUNDEF(XVT), X, Zero);
+  SDValue VExp = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ExpVT,
+                             DAG.getUNDEF(ExpVT), Exp, Zero);
+  SDValue VPg = getPTrue(DAG, DL, XVT.changeVectorElementType(MVT::i1),
+                         AArch64SVEPredPattern::all);
+  SDValue FScale =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, XVT,
+                  DAG.getConstant(Intrinsic::aarch64_sve_fscale, DL, MVT::i64),
+                  VPg, VX, VExp);
+  SDValue Final =
+      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, X.getValueType(), FScale, Zero);
+  if (X.getValueType() != XScalarTy)
+    Final = DAG.getNode(ISD::FP_ROUND, DL, XScalarTy, Final,
+                        DAG.getIntPtrConstant(1, SDLoc(Op)));
+  return Final;
+}
+
 SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
                                               SelectionDAG &DAG) const {
   LLVM_DEBUG(dbgs() << "Custom lowering: ");
@@ -6215,6 +6266,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::FSHL:
   case ISD::FSHR:
     return LowerFunnelShift(Op, DAG);
+  case ISD::FLDEXP:
+    return LowerFLDEXP(Op, DAG);
   }
 }
 
@@ -20949,6 +21002,12 @@ static SDValue combineBoolVectorAndTruncateStore(SelectionDAG &DAG,
                       Store->getMemOperand());
 }
 
+bool isHalvingTruncateOfLegalScalableType(EVT SrcVT, EVT DstVT) {
+  return (SrcVT == MVT::nxv8i16 && DstVT == MVT::nxv8i8) ||
+         (SrcVT == MVT::nxv4i32 && DstVT == MVT::nxv4i16) ||
+         (SrcVT == MVT::nxv2i64 && DstVT == MVT::nxv2i32);
+}
+
 static SDValue performSTORECombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    SelectionDAG &DAG,
@@ -20990,16 +21049,16 @@ static SDValue performSTORECombine(SDNode *N,
   if (SDValue Store = combineBoolVectorAndTruncateStore(DAG, ST))
     return Store;
 
-  if (ST->isTruncatingStore())
+  if (ST->isTruncatingStore()) {
+    EVT StoreVT = ST->getMemoryVT();
+    if (!isHalvingTruncateOfLegalScalableType(ValueVT, StoreVT))
+      return SDValue();
     if (SDValue Rshrnb =
             trySimplifySrlAddToRshrnb(ST->getOperand(1), DAG, Subtarget)) {
-      EVT StoreVT = ST->getMemoryVT();
-      if ((ValueVT == MVT::nxv8i16 && StoreVT == MVT::nxv8i8) ||
-          (ValueVT == MVT::nxv4i32 && StoreVT == MVT::nxv4i16) ||
-          (ValueVT == MVT::nxv2i64 && StoreVT == MVT::nxv2i32))
-        return DAG.getTruncStore(ST->getChain(), ST, Rshrnb, ST->getBasePtr(),
-                                 StoreVT, ST->getMemOperand());
+      return DAG.getTruncStore(ST->getChain(), ST, Rshrnb, ST->getBasePtr(),
+                               StoreVT, ST->getMemOperand());
     }
+  }
 
   return SDValue();
 }
@@ -21042,6 +21101,19 @@ static SDValue performMSTORECombine(SDNode *N,
                                     /*IsTruncating=*/true);
         }
       }
+    }
+  }
+
+  if (MST->isTruncatingStore()) {
+    EVT ValueVT = Value->getValueType(0);
+    EVT MemVT = MST->getMemoryVT();
+    if (!isHalvingTruncateOfLegalScalableType(ValueVT, MemVT))
+      return SDValue();
+    if (SDValue Rshrnb = trySimplifySrlAddToRshrnb(Value, DAG, Subtarget)) {
+      return DAG.getMaskedStore(MST->getChain(), DL, Rshrnb, MST->getBasePtr(),
+                                MST->getOffset(), MST->getMask(),
+                                MST->getMemoryVT(), MST->getMemOperand(),
+                                MST->getAddressingMode(), true);
     }
   }
 
@@ -23641,6 +23713,23 @@ bool AArch64TargetLowering::isUsedByReturnOnly(SDNode *N,
 // instruction.
 bool AArch64TargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
   return CI->isTailCall();
+}
+
+bool AArch64TargetLowering::isIndexingLegal(MachineInstr &MI, Register Base,
+                                            Register Offset, bool IsPre,
+                                            MachineRegisterInfo &MRI) const {
+  // HACK
+  if (IsPre)
+    return false; // Until we implement.
+
+  auto CstOffset = getIConstantVRegVal(Offset, MRI);
+  if (!CstOffset || CstOffset->isZero())
+    return false;
+
+  // All of the indexed addressing mode instructions take a signed 9 bit
+  // immediate offset. Our CstOffset is a G_PTR_ADD offset so it already
+  // encodes the sign/indexing direction.
+  return isInt<9>(CstOffset->getSExtValue());
 }
 
 bool AArch64TargetLowering::getIndexedAddressParts(SDNode *N, SDNode *Op,

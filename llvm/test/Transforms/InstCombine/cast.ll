@@ -1318,7 +1318,7 @@ define i64 @test83(i16 %a, i64 %k) {
 define i8 @test84(i32 %a) {
 ; ALL-LABEL: @test84(
 ; ALL-NEXT:    [[ADD:%.*]] = add i32 [[A:%.*]], 2130706432
-; ALL-NEXT:    [[SHR:%.*]] = lshr exact i32 [[ADD]], 23
+; ALL-NEXT:    [[SHR:%.*]] = lshr i32 [[ADD]], 23
 ; ALL-NEXT:    [[TRUNC:%.*]] = trunc i32 [[SHR]] to i8
 ; ALL-NEXT:    ret i8 [[TRUNC]]
 ;
@@ -1331,7 +1331,7 @@ define i8 @test84(i32 %a) {
 define i8 @test85(i32 %a) {
 ; ALL-LABEL: @test85(
 ; ALL-NEXT:    [[ADD:%.*]] = add i32 [[A:%.*]], 2130706432
-; ALL-NEXT:    [[SHR:%.*]] = lshr exact i32 [[ADD]], 23
+; ALL-NEXT:    [[SHR:%.*]] = lshr i32 [[ADD]], 23
 ; ALL-NEXT:    [[TRUNC:%.*]] = trunc i32 [[SHR]] to i8
 ; ALL-NEXT:    ret i8 [[TRUNC]]
 ;

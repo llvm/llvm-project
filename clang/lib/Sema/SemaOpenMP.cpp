@@ -5062,6 +5062,18 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
         CurrentRegion != OMPD_cancellation_point &&
         CurrentRegion != OMPD_cancel && CurrentRegion != OMPD_scan)
       return false;
+    // Checks needed for mapping "loop" construct. Please check mapLoopConstruct
+    // for a detailed explanation
+    if (SemaRef.LangOpts.OpenMP >= 50 && CurrentRegion == OMPD_loop &&
+        ((BindKind == OMPC_BIND_parallel) || (BindKind == OMPC_BIND_teams)) &&
+        (isOpenMPWorksharingDirective(ParentRegion) ||
+         ParentRegion == OMPD_loop)) {
+      int ErrorMsgNumber = (BindKind == OMPC_BIND_parallel) ? 1 : 4;
+      SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region)
+          << true << getOpenMPDirectiveName(ParentRegion) << ErrorMsgNumber
+          << getOpenMPDirectiveName(CurrentRegion);
+      return true;
+    }
     if (CurrentRegion == OMPD_cancellation_point ||
         CurrentRegion == OMPD_cancel) {
       // OpenMP [2.16, Nesting of Regions]
@@ -6114,35 +6126,40 @@ processImplicitMapsWithDefaultMappers(Sema &S, DSAStackTy *Stack,
 
 bool Sema::mapLoopConstruct(llvm::SmallVector<OMPClause *> &ClausesWithoutBind,
                             ArrayRef<OMPClause *> Clauses,
-                            OpenMPBindClauseKind BindKind,
+                            OpenMPBindClauseKind &BindKind,
                             OpenMPDirectiveKind &Kind,
-                            OpenMPDirectiveKind &PrevMappedDirective) {
+                            OpenMPDirectiveKind &PrevMappedDirective,
+                            SourceLocation StartLoc, SourceLocation EndLoc,
+                            const DeclarationNameInfo &DirName,
+                            OpenMPDirectiveKind CancelRegion) {
 
   bool UseClausesWithoutBind = false;
 
   // Restricting to "#pragma omp loop bind"
   if (getLangOpts().OpenMP >= 50 && Kind == OMPD_loop) {
+
+    const OpenMPDirectiveKind ParentDirective = DSAStack->getParentDirective();
+
     if (BindKind == OMPC_BIND_unknown) {
       // Setting the enclosing teams or parallel construct for the loop
       // directive without bind clause.
       BindKind = OMPC_BIND_thread; // Default bind(thread) if binding is unknown
 
-      const OpenMPDirectiveKind ParentDirective =
-          DSAStack->getParentDirective();
       if (ParentDirective == OMPD_unknown) {
         Diag(DSAStack->getDefaultDSALocation(),
              diag::err_omp_bind_required_on_loop);
-      } else if (ParentDirective == OMPD_parallel ||
-                 ParentDirective == OMPD_target_parallel) {
+      } else if (isOpenMPParallelDirective(ParentDirective) &&
+                 !isOpenMPTeamsDirective(ParentDirective)) {
         BindKind = OMPC_BIND_parallel;
-      } else if (ParentDirective == OMPD_teams ||
-                 ParentDirective == OMPD_target_teams) {
+      } else if (isOpenMPNestingTeamsDirective(ParentDirective) ||
+                 (ParentDirective == OMPD_target_teams)) {
         BindKind = OMPC_BIND_teams;
       }
     } else {
-      // bind clause is present, so we should set flag indicating to only
-      // use the clauses that aren't the bind clause for the new directive that
-      // loop is lowered to.
+      // bind clause is present in loop directive. When the loop directive is
+      // changed to a new directive the bind clause is not used. So, we should
+      // set flag indicating to only use the clauses that aren't the
+      // bind clause.
       UseClausesWithoutBind = true;
     }
 
@@ -6203,25 +6220,34 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
     OpenMPDirectiveKind PrevMappedDirective) {
   StmtResult Res = StmtError();
   OpenMPBindClauseKind BindKind = OMPC_BIND_unknown;
+  llvm::SmallVector<OMPClause *> ClausesWithoutBind;
+  bool UseClausesWithoutBind = false;
+
   if (const OMPBindClause *BC =
           OMPExecutableDirective::getSingleClause<OMPBindClause>(Clauses))
     BindKind = BC->getBindKind();
+
+  // Variable used to note down the DirectiveKind because mapLoopConstruct may
+  // change "Kind" variable, due to mapping of "omp loop" to other directives.
+  OpenMPDirectiveKind DK = Kind;
+  if ((Kind == OMPD_loop) || (PrevMappedDirective == OMPD_loop)) {
+    UseClausesWithoutBind = mapLoopConstruct(
+        ClausesWithoutBind, Clauses, BindKind, Kind, PrevMappedDirective,
+        StartLoc, EndLoc, DirName, CancelRegion);
+    DK = OMPD_loop;
+  }
+
   // First check CancelRegion which is then used in checkNestingOfRegions.
   if (checkCancelRegion(*this, Kind, CancelRegion, StartLoc) ||
-      checkNestingOfRegions(*this, DSAStack, Kind, DirName, CancelRegion,
-                            BindKind, StartLoc))
+      checkNestingOfRegions(*this, DSAStack, DK, DirName, CancelRegion,
+                            BindKind, StartLoc)) {
     return StmtError();
+  }
 
   // Report affected OpenMP target offloading behavior when in HIP lang-mode.
   if (getLangOpts().HIP && (isOpenMPTargetExecutionDirective(Kind) ||
                             isOpenMPTargetDataManagementDirective(Kind)))
     Diag(StartLoc, diag::warn_hip_omp_target_directives);
-
-  llvm::SmallVector<OMPClause *> ClausesWithoutBind;
-  bool UseClausesWithoutBind = false;
-
-  UseClausesWithoutBind = mapLoopConstruct(ClausesWithoutBind, Clauses,
-                                           BindKind, Kind, PrevMappedDirective);
 
   llvm::SmallVector<OMPClause *, 8> ClausesWithImplicit;
   VarsWithInheritedDSAType VarsWithInheritedDSA;
@@ -18049,7 +18075,7 @@ OMPClause *Sema::ActOnOpenMPVarListClause(OpenMPClauseKind Kind,
     Res = ActOnOpenMPLinearClause(
         VarList, Data.DepModOrTailExpr, StartLoc, LParenLoc,
         static_cast<OpenMPLinearClauseKind>(ExtraModifier), ExtraModifierLoc,
-        ColonLoc, EndLoc);
+        ColonLoc, Data.StepModifierLoc, EndLoc);
     break;
   case OMPC_aligned:
     Res = ActOnOpenMPAlignedClause(VarList, Data.DepModOrTailExpr, StartLoc,
@@ -20134,7 +20160,7 @@ OMPClause *Sema::ActOnOpenMPInReductionClause(
 bool Sema::CheckOpenMPLinearModifier(OpenMPLinearClauseKind LinKind,
                                      SourceLocation LinLoc) {
   if ((!LangOpts.CPlusPlus && LinKind != OMPC_LINEAR_val) ||
-      LinKind == OMPC_LINEAR_unknown) {
+      LinKind == OMPC_LINEAR_unknown || LinKind == OMPC_LINEAR_step) {
     Diag(LinLoc, diag::err_omp_wrong_linear_modifier) << LangOpts.CPlusPlus;
     return true;
   }
@@ -20186,12 +20212,19 @@ bool Sema::CheckOpenMPLinearDecl(const ValueDecl *D, SourceLocation ELoc,
 OMPClause *Sema::ActOnOpenMPLinearClause(
     ArrayRef<Expr *> VarList, Expr *Step, SourceLocation StartLoc,
     SourceLocation LParenLoc, OpenMPLinearClauseKind LinKind,
-    SourceLocation LinLoc, SourceLocation ColonLoc, SourceLocation EndLoc) {
+    SourceLocation LinLoc, SourceLocation ColonLoc,
+    SourceLocation StepModifierLoc, SourceLocation EndLoc) {
   SmallVector<Expr *, 8> Vars;
   SmallVector<Expr *, 8> Privates;
   SmallVector<Expr *, 8> Inits;
   SmallVector<Decl *, 4> ExprCaptures;
   SmallVector<Expr *, 4> ExprPostUpdates;
+  // OpenMP 5.2 [Section 5.4.6, linear clause]
+  // step-simple-modifier is exclusive, can't be used with 'val', 'uval', or
+  // 'ref'
+  if (LinLoc.isValid() && StepModifierLoc.isInvalid() && Step &&
+      getLangOpts().OpenMP >= 52)
+    Diag(Step->getBeginLoc(), diag::err_omp_step_simple_modifier_exclusive);
   if (CheckOpenMPLinearModifier(LinKind, LinLoc))
     LinKind = OMPC_LINEAR_val;
   for (Expr *RefExpr : VarList) {
@@ -20311,8 +20344,8 @@ OMPClause *Sema::ActOnOpenMPLinearClause(
   }
 
   return OMPLinearClause::Create(Context, StartLoc, LParenLoc, LinKind, LinLoc,
-                                 ColonLoc, EndLoc, Vars, Privates, Inits,
-                                 StepExpr, CalcStepExpr,
+                                 ColonLoc, StepModifierLoc, EndLoc, Vars,
+                                 Privates, Inits, StepExpr, CalcStepExpr,
                                  buildPreInits(Context, ExprCaptures),
                                  buildPostUpdate(*this, ExprPostUpdates));
 }

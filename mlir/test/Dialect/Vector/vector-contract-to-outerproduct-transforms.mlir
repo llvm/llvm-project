@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --test-transform-dialect-interpreter --split-input-file | FileCheck %s
+// RUN: mlir-opt %s --transform-interpreter --split-input-file | FileCheck %s
 
 #matvec_accesses = [
   affine_map<(i, j) -> (i, j)>,
@@ -284,87 +284,6 @@ func.func @matmul_4(%arg0: vector<2x1xf32>, %arg1: vector<1x3xf32>, %arg2: vecto
   return %0 : vector<3x2xf32>
 }
 
-#matmat_accesses_5 = [
-  affine_map<(m, n, k) -> (m, k)>,
-  affine_map<(m, n, k) -> (k, n)>,
-  affine_map<(m, n, k) -> (n, m)>
-]
-#matmat_trait_5 = {
-  indexing_maps = #matmat_accesses_5,
-  iterator_types = ["parallel", "parallel", "reduction"]
-}
-
-// CHECK-LABEL: func @matmul_5
-// CHECK-SAME: %[[A:[a-zA-Z0-9]*]]: vector<2x1xf32>,
-// CHECK-SAME: %[[B:[a-zA-Z0-9]*]]: vector<1x3xf32>,
-// CHECK-SAME: %[[C:[a-zA-Z0-9]*]]: vector<3x2xf32>
-//      CHECK: %[[At:.*]] = vector.transpose %[[A]], [1, 0]
-//      CHECK-DAG: %[[a0:.*]] = vector.extract %[[At]][0] : vector<2xf32> from vector<1x2xf32>
-//      CHECK-DAG: %[[b0:.*]] = vector.extract %[[B]][0] : vector<3xf32> from vector<1x3xf32>
-//      CHECK: %[[c0:.*]] = vector.outerproduct %[[b0]], %[[a0]], %[[C]]
-//      CHECK: return %[[c0]] : vector<3x2xf32>
-func.func @matmul_5(%arg0: vector<2x1xf32>, %arg1: vector<1x3xf32>, %arg2: vector<3x2xf32>)
--> vector<3x2xf32>
-{
-  %0 = vector.contract #matmat_trait_5 %arg0, %arg1, %arg2
-    : vector<2x1xf32>, vector<1x3xf32> into vector<3x2xf32>
-  return %0 : vector<3x2xf32>
-}
-
-#matmat_accesses_6 = [
-  affine_map<(m, n, k) -> (m, k)>,
-  affine_map<(m, n, k) -> (k, n)>,
-  affine_map<(m, n, k) -> (n, m)>
-]
-#matmat_trait_6 = {
-  indexing_maps = #matmat_accesses_6,
-  iterator_types = ["parallel", "parallel", "reduction"]
-}
-
-// CHECK-LABEL: func @matmul_6
-// CHECK-SAME: %[[A:[a-zA-Z0-9]*]]: vector<2x1xf32>,
-// CHECK-SAME: %[[B:[a-zA-Z0-9]*]]: vector<1x3xf32>,
-// CHECK-SAME: %[[C:[a-zA-Z0-9]*]]: vector<3x2xf32>
-//      CHECK: %[[At:.*]] = vector.transpose %[[A]], [1, 0]
-//      CHECK-DAG: %[[a0:.*]] = vector.extract %[[At]][0] : vector<2xf32> from vector<1x2xf32>
-//      CHECK-DAG: %[[b0:.*]] = vector.extract %[[B]][0] : vector<3xf32> from vector<1x3xf32>
-//      CHECK: %[[c0:.*]] = vector.outerproduct %[[b0]], %[[a0]], %[[C]]
-//      CHECK: return %[[c0]] : vector<3x2xf32>
-func.func @matmul_6(%arg0: vector<2x1xf32>, %arg1: vector<1x3xf32>, %arg2: vector<3x2xf32>)
--> vector<3x2xf32>
-{
-  %0 = vector.contract #matmat_trait_6 %arg0, %arg1, %arg2
-    : vector<2x1xf32>, vector<1x3xf32> into vector<3x2xf32>
-  return %0 : vector<3x2xf32>
-}
-
-#matmat_accesses_7 = [
-  affine_map<(m, n, k) -> (m, k)>,
-  affine_map<(m, n, k) -> (k, n)>,
-  affine_map<(m, n, k) -> (n, m)>
-]
-#matmat_trait_7 = {
-  indexing_maps = #matmat_accesses_7,
-  iterator_types = ["parallel", "parallel", "reduction"]
-}
-
-// CHECK-LABEL: func @matmul_7
-// CHECK-SAME: %[[A:[a-zA-Z0-9]*]]: vector<2x1xf32>,
-// CHECK-SAME: %[[B:[a-zA-Z0-9]*]]: vector<1x3xf32>,
-// CHECK-SAME: %[[C:[a-zA-Z0-9]*]]: vector<3x2xf32>
-//      CHECK: %[[At:.*]] = vector.transpose %[[A]], [1, 0]
-//      CHECK-DAG: %[[a0:.*]] = vector.extract %[[At]][0] : vector<2xf32> from vector<1x2xf32>
-//      CHECK-DAG: %[[b0:.*]] = vector.extract %[[B]][0] : vector<3xf32> from vector<1x3xf32>
-//      CHECK: %[[c0:.*]] = vector.outerproduct %[[b0]], %[[a0]], %[[C]]
-//      CHECK: return %[[c0]] : vector<3x2xf32>
-func.func @matmul_7(%arg0: vector<2x1xf32>, %arg1: vector<1x3xf32>, %arg2: vector<3x2xf32>)
--> vector<3x2xf32>
-{
-  %0 = vector.contract #matmat_trait_7 %arg0, %arg1, %arg2
-    : vector<2x1xf32>, vector<1x3xf32> into vector<3x2xf32>
-  return %0 : vector<3x2xf32>
-}
-
 // CHECK-LABEL: @masked_matvec_mk_k_m
 // CHECK-SAME:  %[[MAT:.+]]: vector<4x2xf32>
 // CHECK-SAME:  %[[VEC:.+]]: vector<2xf32>
@@ -534,12 +453,14 @@ func.func @masked_tmatvec_k_km_m(%arg0: vector<2x4xf32>, %arg1: vector<2xf32>, %
 }
 
 
-transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  %f = transform.structured.match ops{["func.func"]} in %module_op 
-    : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %f = transform.structured.match ops{["func.func"]} in %module_op
+      : (!transform.any_op) -> !transform.any_op
 
-  transform.apply_patterns to %f {
-    transform.apply_patterns.vector.lower_contraction lowering_strategy = "outerproduct"
-  } : !transform.any_op
+    transform.apply_patterns to %f {
+      transform.apply_patterns.vector.lower_contraction lowering_strategy = "outerproduct"
+    } : !transform.any_op
+    transform.yield
+  }
 }

@@ -222,3 +222,14 @@ body:             |
     %4:sreg_32 = COPY %3:vgpr_32
     %5:sreg_32 = nofpexcept S_FMAC_F32 killed %4:sreg_32, %1:sreg_32, %2:sreg_32, implicit $mode
 ...
+
+---
+# GCN-LABEL: name: moveimm_subreg_input
+# GCN: %0:vreg_64 = V_MOV_B64_PSEUDO 0, implicit $exec
+# GCN: :vgpr_32 = COPY %0.sub0
+name:            moveimm_subreg_input
+body:             |
+  bb.0:
+    %0:vreg_64 = V_MOV_B64_PSEUDO 0, implicit $exec
+    %1:sreg_32 = COPY %0.sub0
+...

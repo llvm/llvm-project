@@ -173,7 +173,7 @@ svfloat64_t test_svset_neonq_f64(svfloat64_t s, float64x2_t n) {
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.insert.nxv8bf16.v8bf16(<vscale x 8 x bfloat> [[S:%.*]], <8 x bfloat> [[N:%.*]], i64 0)
 // CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z21test_svset_neonq_bf16u14__SVBFloat16_t14__Bfloat16x8_t(
+// CPP-CHECK-LABEL: @_Z21test_svset_neonq_bf16u14__SVBfloat16_t14__Bfloat16x8_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.insert.nxv8bf16.v8bf16(<vscale x 8 x bfloat> [[S:%.*]], <8 x bfloat> [[N:%.*]], i64 0)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
