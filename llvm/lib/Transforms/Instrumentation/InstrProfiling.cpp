@@ -960,11 +960,11 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfInstBase *Inc) {
   Function *Fn = Inc->getParent()->getParent();
   GlobalValue::LinkageTypes Linkage = NamePtr->getLinkage();
   GlobalValue::VisibilityTypes Visibility = NamePtr->getVisibility();
-
+  bool EnableDebugCorrelate =
+      DebugInfoCorrelate || ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO;
   // Use internal rather than private linkage so the counter variable shows up
   // in the symbol table when using debug info for correlation.
-  if ((DebugInfoCorrelate ||
-       ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO) &&
+  if (EnableDebugCorrelate &&
       TT.isOSBinFormatMachO() && Linkage == GlobalValue::PrivateLinkage)
     Linkage = GlobalValue::InternalLinkage;
 
@@ -1029,8 +1029,7 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfInstBase *Inc) {
   CounterPtr->setLinkage(Linkage);
   MaybeSetComdat(CounterPtr);
   PD.RegionCounters = CounterPtr;
-  if (DebugInfoCorrelate ||
-      ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO) {
+  if (EnableDebugCorrelate) {
     if (auto *SP = Fn->getSubprogram()) {
       DIBuilder DB(*M, true, SP->getUnit());
       Metadata *FunctionNameAnnotation[] = {
@@ -1083,8 +1082,7 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfInstBase *Inc) {
         ConstantExpr::getBitCast(ValuesVar, Type::getInt8PtrTy(Ctx));
   }
 
-  if (DebugInfoCorrelate ||
-      ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO) {
+  if (EnableDebugCorrelate) {
     // Mark the counter variable as used so that it isn't optimized out.
     CompilerUsedVars.push_back(PD.RegionCounters);
     return PD.RegionCounters;
