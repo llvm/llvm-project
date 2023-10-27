@@ -126,7 +126,8 @@ static bool emitDialectIRDLDefs(const RecordKeeper &recordKeeper,
   OpBuilder builder(&ctx);
 
   // Create a module op and set it as the insertion point.
-  OwningOpRef<ModuleOp> module = builder.create<ModuleOp>(UnknownLoc::get(&ctx));
+  OwningOpRef<ModuleOp> module =
+      builder.create<ModuleOp>(UnknownLoc::get(&ctx));
   builder = builder.atBlockBegin(module->getBody());
   // Create the dialect and insert it.
   irdl::DialectOp dialect = createIRDLDialect(builder);
