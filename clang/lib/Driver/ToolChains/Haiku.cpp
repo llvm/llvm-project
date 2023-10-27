@@ -23,8 +23,7 @@ void haiku::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                    const InputInfoList &Inputs,
                                    const ArgList &Args,
                                    const char *LinkingOutput) const {
-  const toolchains::Haiku &ToolChain =
-      static_cast<const toolchains::Haiku &>(getToolChain());
+  const auto &ToolChain = static_cast<const Haiku &>(getToolChain());
   const Driver &D = ToolChain.getDriver();
   const llvm::Triple::ArchType Arch = ToolChain.getArch();
   const bool Static = Args.hasArg(options::OPT_static);
