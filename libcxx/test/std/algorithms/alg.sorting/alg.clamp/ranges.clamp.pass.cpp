@@ -19,6 +19,7 @@
 #include <cassert>
 #include <concepts>
 #include <functional>
+#include <iterator>
 #include <utility>
 
 template <class T, class Comp = std::ranges::less, class Proj = std::identity>
