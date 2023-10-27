@@ -8,6 +8,7 @@
 
 #include "UseStdNumbersCheck.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
@@ -57,36 +58,30 @@ auto matchSqrt(const Matcher<clang::Expr> ArgumentMatcher) {
   return matchMathCall("sqrt", ArgumentMatcher);
 }
 
-// 'MatchDeclRefExprOrMacro' is used to differentiate matching expressions where
-// the value of anything used is near 'Val' and matching expressions where we
-// only care about the actual literal.
-// We don't want top-level matches to match a simple DeclRefExpr/macro that was
-// initialized with this value because projects might declare their own
-// constants (e.g. namespaced constants or macros) to be used. We don't want to
-// flag the use of these variables/constants, but modify the definition of the
-// variable or macro.
+// Used for top-level matchers (i.e. the match that replaces Val with its
+// constant).
 //
-// example:
-//   const auto e = 2.71828182; // std::numbers::e
-//                  ^^^^^^^^^^
-//                  match here
+// E.g. The matcher of `std::numbers::pi` uses this matcher to look to
+// floatLiterals that have the value of pi.
 //
-//   auto use = e / 2;
-//              ^
-//   don't match this as a top-level match, this would create noise
+// We only care about the literal if the match is for a top-level match
+auto matchFloatLiteralNear(const double Val) {
+  return expr(ignoringImplicit(floatLiteral(near(Val))));
+}
+
+// Used for non-top-level matchers (i.e. matchers that are used as inner
+// matchers for top-level matchers).
 //
-//   auto use2 = log2(e); // std::numbers::log2e
-//               ^^^^^^^
-//               match here, matcher needs to check the initialization
-//               of e to match log2e
+// E.g.: The matcher of `std::numbers::log2e` uses this matcher to check if `e`
+// of `log2(e)` is declared constant and initialized with the value for eulers
+// number.
 //
-// Therefore, all top-level matcher set MatchDeclRefExprOrMacro to false
-auto matchFloatValueNear(const double Val,
-                         const bool MatchDeclRefExprOrMacro = true) {
+// Here, we do care about literals and about DeclRefExprs to variable
+// declarations that are constant and initialized with `Val`. This allows
+// top-level matchers to see through declared constants for their inner matches
+// like the `std::numbers::log2e` matcher.
+auto matchFloatValueNear(const double Val) {
   const auto Float = floatLiteral(near(Val));
-  if (!MatchDeclRefExprOrMacro) {
-    return expr(unless(isMacro()), ignoringImplicit(Float));
-  }
 
   const auto Dref = declRefExpr(to(varDecl(
       anyOf(isConstexpr(), varDecl(hasType(qualType(isConstQualified())))),
@@ -113,57 +108,57 @@ auto matchEuler() {
                     matchMathCall("exp", matchValue(1))));
 }
 auto matchEulerTopLevel() {
-  return expr(anyOf(matchFloatValueNear(llvm::numbers::e, false),
+  return expr(anyOf(matchFloatLiteralNear(llvm::numbers::e),
                     matchMathCall("exp", matchValue(1))));
 }
 
 auto matchLog2Euler() {
-  return expr(anyOf(matchFloatValueNear(llvm::numbers::log2e, false),
+  return expr(anyOf(matchFloatLiteralNear(llvm::numbers::log2e),
                     matchMathCall("log2", matchEuler())));
 }
 
 auto matchLog10Euler() {
-  return expr(anyOf(matchFloatValueNear(llvm::numbers::log10e, false),
+  return expr(anyOf(matchFloatLiteralNear(llvm::numbers::log10e),
                     matchMathCall("log10", matchEuler())));
 }
 
 auto matchPi() { return matchFloatValueNear(llvm::numbers::pi); }
-auto matchPiTopLevel() { return matchFloatValueNear(llvm::numbers::pi, false); }
+auto matchPiTopLevel() { return matchFloatLiteralNear(llvm::numbers::pi); }
 
-auto matchEgamma() { return matchFloatValueNear(llvm::numbers::egamma, false); }
+auto matchEgamma() { return matchFloatLiteralNear(llvm::numbers::egamma); }
 
 auto matchInvPi() {
-  return expr(anyOf(matchFloatValueNear(llvm::numbers::inv_pi, false),
+  return expr(anyOf(matchFloatLiteralNear(llvm::numbers::inv_pi),
                     match1Div(matchPi())));
 }
 
 auto matchInvSqrtPi() {
-  return expr(anyOf(matchFloatValueNear(llvm::numbers::inv_sqrtpi, false),
+  return expr(anyOf(matchFloatLiteralNear(llvm::numbers::inv_sqrtpi),
                     match1Div(matchSqrt(matchPi()))));
 }
 
 auto matchLn2() {
-  return expr(anyOf(matchFloatValueNear(llvm::numbers::ln2, false),
+  return expr(anyOf(matchFloatLiteralNear(llvm::numbers::ln2),
                     matchMathCall("log", ignoringImplicit(matchValue(2)))));
 }
 
 auto machterLn10() {
-  return expr(anyOf(matchFloatValueNear(llvm::numbers::ln10, false),
+  return expr(anyOf(matchFloatLiteralNear(llvm::numbers::ln10),
                     matchMathCall("log", ignoringImplicit(matchValue(10)))));
 }
 
 auto matchSqrt2() {
-  return expr(anyOf(matchFloatValueNear(llvm::numbers::sqrt2, false),
+  return expr(anyOf(matchFloatLiteralNear(llvm::numbers::sqrt2),
                     matchSqrt(matchValue(2))));
 }
 
 auto matchSqrt3() {
-  return expr(anyOf(matchFloatValueNear(llvm::numbers::sqrt3, false),
+  return expr(anyOf(matchFloatLiteralNear(llvm::numbers::sqrt3),
                     matchSqrt(matchValue(3))));
 }
 
 auto matchInvSqrt3() {
-  return expr(anyOf(matchFloatValueNear(llvm::numbers::inv_sqrt3, false),
+  return expr(anyOf(matchFloatLiteralNear(llvm::numbers::inv_sqrt3),
                     match1Div(matchSqrt(matchValue(3)))));
 }
 
@@ -174,8 +169,7 @@ auto matchPhi() {
           hasOperatorName("+"), hasEitherOperand(matchValue(1)),
           hasEitherOperand(matchMathCall("sqrt", matchValue(5))))))),
       hasRHS(matchValue(2)));
-  return expr(
-      anyOf(PhiFormula, matchFloatValueNear(llvm::numbers::phi, false)));
+  return expr(anyOf(PhiFormula, matchFloatLiteralNear(llvm::numbers::phi)));
 }
 
 EditGenerator
