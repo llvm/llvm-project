@@ -7,13 +7,13 @@ declare void @effect(i32 zeroext)
 ; RUN: echo 'f bar' >> %t1
 ; RUN: echo 'p 0 1 2' >> %t1
 ; RUN: echo 'c 0 1.1 2.1 1' >> %t1
-; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -enable-basic-block-path-cloning -basic-block-sections=%t1 2> %t1.err | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -basic-block-sections=%t1 2> %t1.err | FileCheck %s
 ; RUN: FileCheck %s --check-prefix=WARN < %t1.err
 ; RUN: echo 'v1' > %t2
 ; RUN: echo 'f bar' >> %t2
 ; RUN: echo 'p 1 2' >> %t2
 ; RUN: echo 'c 0 1 2.1' >> %t2
-; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -enable-basic-block-path-cloning -basic-block-sections=%t2 2> %t2.err | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -basic-block-sections=%t2 2> %t2.err | FileCheck %s
 ; RUN: FileCheck %s --check-prefix=WARN < %t2.err
 
 

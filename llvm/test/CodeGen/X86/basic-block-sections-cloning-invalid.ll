@@ -7,7 +7,7 @@ declare void @effect(i32 zeroext)
 ; RUN: echo 'f foo' >> %t1
 ; RUN: echo 'p 0 2 3' >> %t1
 ; RUN: echo 'c 0 2.1 3.1 1' >> %t1
-; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -enable-basic-block-path-cloning -basic-block-sections=%t1 2> %t1.err | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -basic-block-sections=%t1 2> %t1.err | FileCheck %s
 ; RUN: FileCheck %s --check-prefixes=WARN1 < %t1.err
 ;; Test that valid clonings are applied correctly, even if invalid clonings exist.
 ; RUN: echo 'v1' > %t2
@@ -15,13 +15,13 @@ declare void @effect(i32 zeroext)
 ; RUN: echo 'p 0 2 3' >> %t2
 ; RUN: echo 'p 0 1 3' >> %t2
 ; RUN: echo 'c 0 1.1 3.2 2.1 3.1 1' >> %t2
-; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -enable-basic-block-path-cloning -basic-block-sections=%t2 2> %t2.err | FileCheck %s --check-prefixes=PATH2
+; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -basic-block-sections=%t2 2> %t2.err | FileCheck %s --check-prefixes=PATH2
 ; RUN: FileCheck %s --check-prefixes=WARN1 < %t2.err
 ; RUN: echo 'v1' > %t3
 ; RUN: echo 'f foo' >> %t3
 ; RUN: echo 'p 0 100' >> %t3
 ; RUN: echo 'c 0 100.1 1' >> %t3
-; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -enable-basic-block-path-cloning -basic-block-sections=%t3 2> %t3.err | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -basic-block-sections=%t3 2> %t3.err | FileCheck %s
 ; RUN: FileCheck %s --check-prefixes=WARN2 < %t3.err
 
 define void @foo(i1 %a, i1 %b, i1 %c, i1 %d) {

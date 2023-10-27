@@ -7,16 +7,16 @@ declare void @effect(i32 zeroext)
 ; RUN: echo 'f foo' >> %t1
 ; RUN: echo 'p 0 3 5' >> %t1
 ; RUN: echo 'c 0 3.1 5.1 1 2 3 4 5' >> %t1
-; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -enable-basic-block-path-cloning -basic-block-sections=%t1 | FileCheck %s --check-prefixes=PATH1
-; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -enable-basic-block-path-cloning -basic-block-sections=%t1 -stop-after=bb-path-cloning | FileCheck %s --check-prefix=PATH1MIR
+; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -basic-block-sections=%t1 | FileCheck %s --check-prefixes=PATH1
+; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -basic-block-sections=%t1 -stop-after=bb-path-cloning | FileCheck %s --check-prefix=PATH1MIR
 ; RUN: echo 'v1' > %t2
 ; RUN: echo 'f foo' >> %t2
 ; RUN: echo 'p 0 3 5' >> %t2
 ; RUN: echo 'p 1 3 4 5' >> %t2
 ; RUN: echo 'c 0 3.1 5.1' >> %t2
 ; RUN: echo 'c 1 3.2 4.1 5.2 2 3 4 5' >> %t2
-; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -enable-basic-block-path-cloning -basic-block-sections=%t2 | FileCheck %s --check-prefixes=PATH2
-; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -enable-basic-block-path-cloning -basic-block-sections=%t2 -stop-after=bb-path-cloning | FileCheck %s --check-prefix=PATH2MIR
+; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -basic-block-sections=%t2 | FileCheck %s --check-prefixes=PATH2
+; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -basic-block-sections=%t2 -stop-after=bb-path-cloning | FileCheck %s --check-prefix=PATH2MIR
 
 define void @foo(i1 %a, i1 %b, i1 %c, i1 %d) {
 b0:

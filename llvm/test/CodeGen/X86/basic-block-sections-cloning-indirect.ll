@@ -7,7 +7,7 @@ declare void @effect(i32 zeroext)
 ; RUN: echo 'f bar' >> %t
 ; RUN: echo 'p 0 1' >> %t
 ; RUN: echo 'c 0 1.1 2 1' >> %t
-; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -enable-basic-block-path-cloning -basic-block-sections=%t | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -basic-block-sections=%t | FileCheck %s
 
 define void @bar(i1 %a, i1 %b) {
 b0:
