@@ -82,7 +82,7 @@ define ptr @ptrmask_combine_add_nonnull(ptr %p) {
 ; CHECK-SAME: (ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[PM0:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P]], i64 -64)
 ; CHECK-NEXT:    [[PGEP:%.*]] = getelementptr i8, ptr [[PM0]], i64 33
-; CHECK-NEXT:    [[R:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[PGEP]], i64 -16)
+; CHECK-NEXT:    [[R:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[PGEP]], i64 -32)
 ; CHECK-NEXT:    ret ptr [[R]]
 ;
   %pm0 = call ptr @llvm.ptrmask.p0.i64(ptr %p, i64 -64)
@@ -230,7 +230,7 @@ define <2 x i32> @ptrtoint_of_ptrmask_vec_fail(<2 x ptr addrspace(1) > %p, <2 x 
 define ptr addrspace(1) @ptrmask_is_null(ptr addrspace(1) align 32 %p) {
 ; CHECK-LABEL: define ptr addrspace(1) @ptrmask_is_null
 ; CHECK-SAME: (ptr addrspace(1) align 32 [[P:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) [[P]], i32 31)
+; CHECK-NEXT:    [[R:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) [[P]], i32 0)
 ; CHECK-NEXT:    ret ptr addrspace(1) [[R]]
 ;
   %r = call ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) %p, i32 31)
@@ -250,7 +250,7 @@ define <2 x ptr addrspace(1) > @ptrmask_is_null_vec(<2 x ptr addrspace(1) > alig
 define ptr addrspace(1) @ptrmask_is_null_fail(ptr addrspace(1) align 16 %p) {
 ; CHECK-LABEL: define ptr addrspace(1) @ptrmask_is_null_fail
 ; CHECK-SAME: (ptr addrspace(1) align 16 [[P:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) [[P]], i32 31)
+; CHECK-NEXT:    [[R:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) [[P]], i32 16)
 ; CHECK-NEXT:    ret ptr addrspace(1) [[R]]
 ;
   %r = call ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) %p, i32 31)
@@ -290,10 +290,9 @@ define ptr addrspace(1) @ptrmask_maintain_provenance_i32(ptr addrspace(1) %p0) {
 define ptr @ptrmask_is_useless0(i64 %i, i64 %m) {
 ; CHECK-LABEL: define ptr @ptrmask_is_useless0
 ; CHECK-SAME: (i64 [[I:%.*]], i64 [[M:%.*]]) {
-; CHECK-NEXT:    [[M0:%.*]] = and i64 [[M]], -4
 ; CHECK-NEXT:    [[I0:%.*]] = and i64 [[I]], -4
 ; CHECK-NEXT:    [[P0:%.*]] = inttoptr i64 [[I0]] to ptr
-; CHECK-NEXT:    [[R:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P0]], i64 [[M0]])
+; CHECK-NEXT:    [[R:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P0]], i64 [[M]])
 ; CHECK-NEXT:    ret ptr [[R]]
 ;
   %m0 = and i64 %m, -4
@@ -306,10 +305,9 @@ define ptr @ptrmask_is_useless0(i64 %i, i64 %m) {
 define ptr @ptrmask_is_useless1(i64 %i, i64 %m) {
 ; CHECK-LABEL: define ptr @ptrmask_is_useless1
 ; CHECK-SAME: (i64 [[I:%.*]], i64 [[M:%.*]]) {
-; CHECK-NEXT:    [[M0:%.*]] = and i64 [[M]], -4
 ; CHECK-NEXT:    [[I0:%.*]] = and i64 [[I]], -8
 ; CHECK-NEXT:    [[P0:%.*]] = inttoptr i64 [[I0]] to ptr
-; CHECK-NEXT:    [[R:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P0]], i64 [[M0]])
+; CHECK-NEXT:    [[R:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P0]], i64 [[M]])
 ; CHECK-NEXT:    ret ptr [[R]]
 ;
   %m0 = and i64 %m, -4
@@ -322,10 +320,9 @@ define ptr @ptrmask_is_useless1(i64 %i, i64 %m) {
 define ptr @ptrmask_is_useless2(i64 %i, i64 %m) {
 ; CHECK-LABEL: define ptr @ptrmask_is_useless2
 ; CHECK-SAME: (i64 [[I:%.*]], i64 [[M:%.*]]) {
-; CHECK-NEXT:    [[M0:%.*]] = and i64 [[M]], 127
 ; CHECK-NEXT:    [[I0:%.*]] = and i64 [[I]], 31
 ; CHECK-NEXT:    [[P0:%.*]] = inttoptr i64 [[I0]] to ptr
-; CHECK-NEXT:    [[R:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P0]], i64 [[M0]])
+; CHECK-NEXT:    [[R:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P0]], i64 [[M]])
 ; CHECK-NEXT:    ret ptr [[R]]
 ;
   %m0 = and i64 %m, 127
@@ -338,10 +335,9 @@ define ptr @ptrmask_is_useless2(i64 %i, i64 %m) {
 define ptr @ptrmask_is_useless3(i64 %i, i64 %m) {
 ; CHECK-LABEL: define ptr @ptrmask_is_useless3
 ; CHECK-SAME: (i64 [[I:%.*]], i64 [[M:%.*]]) {
-; CHECK-NEXT:    [[M0:%.*]] = and i64 [[M]], 127
 ; CHECK-NEXT:    [[I0:%.*]] = and i64 [[I]], 127
 ; CHECK-NEXT:    [[P0:%.*]] = inttoptr i64 [[I0]] to ptr
-; CHECK-NEXT:    [[R:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P0]], i64 [[M0]])
+; CHECK-NEXT:    [[R:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P0]], i64 [[M]])
 ; CHECK-NEXT:    ret ptr [[R]]
 ;
   %m0 = and i64 %m, 127
@@ -354,11 +350,9 @@ define ptr @ptrmask_is_useless3(i64 %i, i64 %m) {
 define ptr @ptrmask_is_useless4(i64 %i, i64 %m) {
 ; CHECK-LABEL: define ptr @ptrmask_is_useless4
 ; CHECK-SAME: (i64 [[I:%.*]], i64 [[M:%.*]]) {
-; CHECK-NEXT:    [[M0:%.*]] = or i64 [[M]], -4
 ; CHECK-NEXT:    [[I0:%.*]] = and i64 [[I]], -4
 ; CHECK-NEXT:    [[P0:%.*]] = inttoptr i64 [[I0]] to ptr
-; CHECK-NEXT:    [[R:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P0]], i64 [[M0]])
-; CHECK-NEXT:    ret ptr [[R]]
+; CHECK-NEXT:    ret ptr [[P0]]
 ;
   %m0 = or i64 %m, -4
   %i0 = and i64 %i, -4
@@ -370,10 +364,9 @@ define ptr @ptrmask_is_useless4(i64 %i, i64 %m) {
 define <2 x ptr> @ptrmask_is_useless_vec(<2 x i64> %i, <2 x i64> %m) {
 ; CHECK-LABEL: define <2 x ptr> @ptrmask_is_useless_vec
 ; CHECK-SAME: (<2 x i64> [[I:%.*]], <2 x i64> [[M:%.*]]) {
-; CHECK-NEXT:    [[M0:%.*]] = and <2 x i64> [[M]], <i64 127, i64 127>
 ; CHECK-NEXT:    [[I0:%.*]] = and <2 x i64> [[I]], <i64 31, i64 31>
 ; CHECK-NEXT:    [[P0:%.*]] = inttoptr <2 x i64> [[I0]] to <2 x ptr>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P0]], <2 x i64> [[M0]])
+; CHECK-NEXT:    [[R:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P0]], <2 x i64> [[M]])
 ; CHECK-NEXT:    ret <2 x ptr> [[R]]
 ;
   %m0 = and <2 x i64> %m, <i64 127, i64 127>
@@ -386,10 +379,9 @@ define <2 x ptr> @ptrmask_is_useless_vec(<2 x i64> %i, <2 x i64> %m) {
 define <2 x ptr> @ptrmask_is_useless_vec_todo(<2 x i64> %i, <2 x i64> %m) {
 ; CHECK-LABEL: define <2 x ptr> @ptrmask_is_useless_vec_todo
 ; CHECK-SAME: (<2 x i64> [[I:%.*]], <2 x i64> [[M:%.*]]) {
-; CHECK-NEXT:    [[M0:%.*]] = and <2 x i64> [[M]], <i64 127, i64 127>
 ; CHECK-NEXT:    [[I0:%.*]] = and <2 x i64> [[I]], <i64 31, i64 127>
 ; CHECK-NEXT:    [[P0:%.*]] = inttoptr <2 x i64> [[I0]] to <2 x ptr>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P0]], <2 x i64> [[M0]])
+; CHECK-NEXT:    [[R:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P0]], <2 x i64> [[M]])
 ; CHECK-NEXT:    ret <2 x ptr> [[R]]
 ;
   %m0 = and <2 x i64> %m, <i64 127, i64 127>
