@@ -35,7 +35,6 @@ b3:
   ret void
 }
 
-
 ; CHECK:   .section    .text.bar,"ax",@progbits
 ; CHECK:   bar:
 ; CHECK: # %bb.0:        # %b0

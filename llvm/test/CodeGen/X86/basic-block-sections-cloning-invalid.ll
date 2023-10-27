@@ -15,7 +15,7 @@ declare void @effect(i32 zeroext)
 ; RUN: echo 'p 0 2 3' >> %t2
 ; RUN: echo 'p 0 1 3' >> %t2
 ; RUN: echo 'c 0 1.1 3.2 2.1 3.1 1' >> %t2
-; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -basic-block-sections=%t2 2> %t2.err | FileCheck %s --check-prefixes=PATH2
+; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -basic-block-sections=%t2 2> %t2.err | FileCheck %s --check-prefixes=PATH
 ; RUN: FileCheck %s --check-prefixes=WARN1 < %t2.err
 ; RUN: echo 'v1' > %t3
 ; RUN: echo 'f foo' >> %t3
@@ -58,14 +58,15 @@ cold:
 ; CHECK: # %bb.0:        # %b0
 
 ; CHECK:   je .LBB0_3
-; PATH2: # %bb.7:      # %b1
-; PATH2: # %bb.8:      # %b3
-; PATH2:   jne .LBB0_4
+; PATH:  # %bb.7:      # %b1
+; PATH:  # %bb.8:      # %b3
+; PATH:    jne .LBB0_4
 ; CHECK: # %bb.1:      # %b1
 ; CHECK:   jne foo.cold
 
 ; CHECK: foo.cold:      # %b2
 
+;; Check the warnings
 ; WARN1: warning: block #2 is not a successor of block #0 in function foo
 ; WARN2: warning: no block with id 100 in function foo
 

@@ -1,8 +1,8 @@
-;; Tests for path cloning with -basic-block-sections involving indirect branches.
+;; Test for cloning a path ending with indirect branch with -basic-block-sections.
 
 declare void @effect(i32 zeroext)
 
-;; Test valid application of cloning for paths with indirect branches.
+;; Test valid application of cloning for a path with indirect branch.
 ; RUN: echo 'v1' > %t
 ; RUN: echo 'f bar' >> %t
 ; RUN: echo 'p 0 1' >> %t
