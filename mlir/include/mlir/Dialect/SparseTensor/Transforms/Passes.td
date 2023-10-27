@@ -14,12 +14,13 @@ include "mlir/Pass/PassBase.td"
 def SparseReinterpretMap : Pass<"sparse-reinterpret-map", "ModuleOp"> {
   let summary = "Reinterprets sparse tensor type mappings";
   let description = [{
-    A pass that reinterprets the mappings in all sparse tensor types in a way that
-    enables subsequent sparification. This involves expressing all `linalg.generic`
-    operations in terms of level coordinates (rather than the dimension coordinates
-    of the input tensors) to align the iteration space with the potentially remapped
-    level space as well as resolving cycles in the resulting iteration graphs with
-    explicit sparse tensor conversions where needed.
+    A pass that reinterprets the mappings in all sparse tensor types in a
+    way that enables subsequent sparsification. This involves expressing all
+    `linalg.generic` operations in terms of level coordinates (rather than
+    the dimension coordinates of the input tensors) to align the iteration
+    space with the potentially remapped level space as well as resolving cycles
+    in the resulting iteration graphs with explicit sparse tensor conversions
+    where needed.
   }];
   let constructor = "mlir::createSparseReinterpretMapPass()";
   let dependentDialects = [
