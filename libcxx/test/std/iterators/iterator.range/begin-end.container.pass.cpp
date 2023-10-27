@@ -15,8 +15,8 @@
 // template <class C> constexpr auto end(C& c) -> decltype(c.end());                       // constexpr since C++17
 // template <class C> constexpr auto end(const C& c) -> decltype(c.end());                 // constexpr since C++17
 //
-// template <class C> constexpr auto cbegin(const C& c) -> decltype(std::begin(c));        // C++14
-// template <class C> constexpr auto cend(const C& c) -> decltype(std::end(c));            // C++14
+// template <class C> constexpr auto cbegin(const C& c) noexcept(see-below) -> decltype(std::begin(c)); // C++14
+// template <class C> constexpr auto cend(const C& c) noexcept(see-below) -> decltype(std::end(c));     // C++14
 // template <class C> constexpr auto rbegin(C& c) -> decltype(c.rbegin());                 // C++14, constexpr since C++17
 // template <class C> constexpr auto rbegin(const C& c) -> decltype(c.rbegin());           // C++14, constexpr since C++17
 // template <class C> constexpr auto rend(C& c) -> decltype(c.rend());                     // C++14, constexpr since C++17
@@ -125,6 +125,31 @@ int main(int, char**) {
 
 #if TEST_STD_VER >= 17
   static_assert(test<std::array<int, 3>>());
+#endif
+
+  // Note: Properly testing the conditional noexcept-ness propagation in std::cbegin and std::cend
+  //       requires using C-style arrays, because those are the only ones with a noexcept std::begin
+  //       and std::end inside namespace std
+#if TEST_STD_VER >= 14
+  {
+    int a[]        = {1, 2, 3};
+    auto const& ca = a;
+    ASSERT_NOEXCEPT(std::cbegin(ca));
+    ASSERT_NOEXCEPT(std::cend(ca));
+
+    // kind of overkill, but whatever
+    ASSERT_NOEXCEPT(std::cbegin(a));
+    ASSERT_NOEXCEPT(std::cend(a));
+  }
+
+  // Make sure std::cbegin and std::cend are constexpr in C++14 too (see LWG2280).
+  {
+    static constexpr int a[] = {1, 2, 3};
+    constexpr auto b         = std::cbegin(a);
+    assert(b == a);
+    constexpr auto e = std::cend(a);
+    assert(e == a + 3);
+  }
 #endif
 
   return 0;
