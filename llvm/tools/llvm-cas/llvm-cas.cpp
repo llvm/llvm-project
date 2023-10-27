@@ -519,7 +519,7 @@ static Expected<ObjectProxy> ingestFileSystemImpl(ObjectStore &CAS,
   llvm::DenseSet<llvm::sys::fs::UniqueID> SeenDirectories;
   for (auto &Path : Paths)
     if (Error E = recursiveAccess(**FS, Path, SeenDirectories))
-      return E;
+      return std::move(E);
 
   return (*FS)->createTreeFromNewAccesses(
       [&](const llvm::vfs::CachedDirectoryEntry &Entry,

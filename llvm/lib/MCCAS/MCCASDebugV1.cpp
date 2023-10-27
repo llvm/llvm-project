@@ -291,7 +291,7 @@ Expected<dwarf::Attribute> AbbrevEntryReader::readAttr() {
 static Expected<int64_t> handleImplicitConst(BinaryStreamReader &Reader) {
   int64_t ImplicitVal;
   if (auto E = Reader.readSLEB128(ImplicitVal))
-    return E;
+    return std::move(E);
   return ImplicitVal;
 }
 
