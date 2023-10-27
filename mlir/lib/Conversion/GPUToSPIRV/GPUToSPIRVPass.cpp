@@ -76,14 +76,15 @@ void GPUToSPIRVPass::runOnOperation() {
     // This works fine for Vulkan shader that has a dedicated runner.
     // But OpenCL kernel needs SPIRV module placed inside original GPU module as
     // OpenCL uses GPU compilation pipeline.
-    const mlir::spirv::TargetEnv& targetEnv = getTargetEnvFromGPUModuleOp(moduleOp);
+    const mlir::spirv::TargetEnv &targetEnv =
+        getTargetEnvFromGPUModuleOp(moduleOp);
     FailureOr<spirv::MemoryModel> memoryModel =
         spirv::getMemoryModel(targetEnv);
     if (failed(memoryModel))
       return signalPassFailure();
     if (memoryModel == spirv::MemoryModel::OpenCL) {
       builder.setInsertionPoint(moduleOp.getBody(),
-                                    moduleOp.getBody()->begin());
+                                moduleOp.getBody()->begin());
     } else {
       builder.setInsertionPoint(moduleOp.getOperation());
     }
@@ -93,7 +94,8 @@ void GPUToSPIRVPass::runOnOperation() {
   // Run conversion for each module independently as they can have different
   // TargetEnv attributes.
   for (Operation *gpuModule : gpuModules) {
-    mlir::spirv::TargetEnvAttr targetAttr = spirv::lookupTargetEnvOrDefault(gpuModule);
+    mlir::spirv::TargetEnvAttr targetAttr =
+        spirv::lookupTargetEnvOrDefault(gpuModule);
     std::unique_ptr<ConversionTarget> target =
         SPIRVConversionTarget::get(targetAttr);
 
@@ -150,7 +152,8 @@ void GPUToSPIRVPass::runOnOperation() {
   // an empty func.func with same arguments as gpu.func. And it also needs
   // gpu.kernel attribute set.
   module.walk([&](gpu::GPUModuleOp moduleOp) {
-    const mlir::spirv::TargetEnv& targetEnv = getTargetEnvFromGPUModuleOp(moduleOp);
+    const mlir::spirv::TargetEnv &targetEnv =
+        getTargetEnvFromGPUModuleOp(moduleOp);
     FailureOr<spirv::MemoryModel> memoryModel =
         spirv::getMemoryModel(targetEnv);
     if (failed(memoryModel))
