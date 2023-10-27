@@ -2111,6 +2111,14 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.setDesc(get(AMDGPU::S_AND_SAVEEXEC_B32));
     break;
 
+  case AMDGPU::SI_SPILL_S32_TO_VGPR:
+    MI.setDesc(get(AMDGPU::V_WRITELANE_B32));
+    break;
+
+  case AMDGPU::SI_RESTORE_S32_FROM_VGPR:
+    MI.setDesc(get(AMDGPU::V_READLANE_B32));
+    break;
+
   case AMDGPU::V_MOV_B64_PSEUDO: {
     Register Dst = MI.getOperand(0).getReg();
     Register DstLo = RI.getSubReg(Dst, AMDGPU::sub0);
@@ -4014,7 +4022,9 @@ bool SIInstrInfo::hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const 
   // However, executing them with EXEC = 0 causes them to operate on undefined
   // data, which we avoid by returning true here.
   if (Opcode == AMDGPU::V_READFIRSTLANE_B32 ||
-      Opcode == AMDGPU::V_READLANE_B32 || Opcode == AMDGPU::V_WRITELANE_B32)
+      Opcode == AMDGPU::V_READLANE_B32 || Opcode == AMDGPU::V_WRITELANE_B32 ||
+      Opcode == AMDGPU::SI_RESTORE_S32_FROM_VGPR ||
+      Opcode == AMDGPU::SI_SPILL_S32_TO_VGPR)
     return true;
 
   return false;
@@ -4408,7 +4418,9 @@ static bool shouldReadExec(const MachineInstr &MI) {
   if (SIInstrInfo::isVALU(MI)) {
     switch (MI.getOpcode()) {
     case AMDGPU::V_READLANE_B32:
+    case AMDGPU::SI_RESTORE_S32_FROM_VGPR:
     case AMDGPU::V_WRITELANE_B32:
+    case AMDGPU::SI_SPILL_S32_TO_VGPR:
       return false;
     }
 
@@ -9071,7 +9083,9 @@ SIInstrInfo::getInstructionUniformity(const MachineInstr &MI) const {
     return InstructionUniformity::NeverUniform;
 
   unsigned opcode = MI.getOpcode();
-  if (opcode == AMDGPU::V_READLANE_B32 || opcode == AMDGPU::V_READFIRSTLANE_B32)
+  if (opcode == AMDGPU::V_READLANE_B32 ||
+      opcode == AMDGPU::V_READFIRSTLANE_B32 ||
+      opcode == AMDGPU::SI_RESTORE_S32_FROM_VGPR)
     return InstructionUniformity::AlwaysUniform;
 
   if (isCopyInstr(MI)) {
