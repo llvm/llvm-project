@@ -1359,8 +1359,6 @@ public:
   }
 
   llvm::Constant *VisitStringLiteral(StringLiteral *E, QualType T) {
-    if (!isa<ConstantArrayType>(T.getDesugaredType(CGM.getContext())))
-      return nullptr;
     // This is a string literal initializing an array in an initializer.
     return CGM.GetConstantArrayFromStringLiteral(E);
   }
@@ -1778,9 +1776,10 @@ llvm::Constant *ConstantEmitter::tryEmitPrivate(const Expr *E,
                                                 QualType destType) {
   assert(!destType->isVoidType() && "can't emit a void constant");
 
-  if (llvm::Constant *C =
-          ConstExprEmitter(*this).Visit(const_cast<Expr *>(E), destType))
-    return C;
+  if (!destType->isReferenceType())
+    if (llvm::Constant *C =
+            ConstExprEmitter(*this).Visit(const_cast<Expr *>(E), destType))
+      return C;
 
   Expr::EvalResult Result;
 
