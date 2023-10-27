@@ -35,7 +35,8 @@ def expected(id_map):
     output appears as dimension coordinates but lexicographically
     sorted by level coordinates.
     """
-    return f"""# extended FROSTT format
+    return (
+        f"""# extended FROSTT format
 2 5
 10 10
 1 1 1
@@ -43,7 +44,9 @@ def expected(id_map):
 2 2 2
 5 5 5
 10 1 4
-""" if id_map else f"""# extended FROSTT format
+"""
+        if id_map
+        else f"""# extended FROSTT format
 2 5
 10 10
 1 1 1
@@ -52,6 +55,7 @@ def expected(id_map):
 5 5 5
 1 10 3
 """
+    )
 
 
 def build_compile_and_run_output(attr: st.EncodingAttr, compiler, expected):
@@ -97,7 +101,7 @@ def main():
             options="", opt_level=2, shared_libs=[support_lib]
         )
         for level in levels:
-            for (ordering, id_map) in orderings:
+            for ordering, id_map in orderings:
                 for bwidth in bitwidths:
                     attr = st.EncodingAttr.get(
                         level, ordering, ordering, bwidth, bwidth
