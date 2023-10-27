@@ -6,6 +6,7 @@
 
 #include "lldb/Core/DataFileCache.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Host/SafeMachO.h"
 
 #include "llvm/Support/DJB.h"
 #include "llvm/Support/OnDiskHashTable.h"

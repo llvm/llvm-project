@@ -19,6 +19,7 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "Plugins/TypeSystem/Swift/SwiftDemangle.h"
 #include "lldb/Core/ValueObjectMemory.h"
+#include "lldb/Host/SafeMachO.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ProcessStructReader.h"
