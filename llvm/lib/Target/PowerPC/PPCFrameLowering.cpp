@@ -1966,6 +1966,8 @@ void PPCFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                             BitVector &SavedRegs,
                                             RegScavenger *RS) const {
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+  if (Subtarget.isAIXABI())
+    updateCalleeSaves(MF, SavedRegs);
 
   const PPCRegisterInfo *RegInfo = Subtarget.getRegisterInfo();
 
@@ -2723,6 +2725,66 @@ bool PPCFrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
   if (MF.getInfo<PPCFunctionInfo>()->shrinkWrapDisabled())
     return false;
   return !MF.getSubtarget<PPCSubtarget>().is32BitELFABI();
+}
+
+static bool isGPR(MCPhysReg Reg) { return Reg >= PPC::R0 && Reg <= PPC::R31; }
+static bool isG8R(MCPhysReg Reg) { return Reg >= PPC::X0 && Reg <= PPC::X31; }
+static bool isFPR(MCPhysReg Reg) { return Reg >= PPC::F0 && Reg <= PPC::F31; }
+static bool isVR(MCPhysReg Reg) { return Reg >= PPC::V0 && Reg <= PPC::V31; }
+
+void PPCFrameLowering::updateCalleeSaves(const MachineFunction &MF,
+                                         BitVector &SavedRegs) const {
+  // The AIX ABI uses traceback tables for EH which require that if callee-saved
+  // register N is used, all registers N-31 must be saved/restored.
+  // NOTE: The check for AIX is not actually what is relevant. Traceback tables
+  // on Linux have the same requirements. It is just that AIX is the only ABI
+  // for which we actually use traceback tables. If another ABI needs to be
+  // supported that also uses them, we can add a check such as
+  // Subtarget.usesTraceBackTables().
+  assert(Subtarget.isAIXABI() && "function only called for AIX");
+
+  // If there are no callee saves then there is nothing to do.
+  if (SavedRegs.none())
+    return;
+
+  const PPCRegisterInfo *RegInfo = Subtarget.getRegisterInfo();
+  const MCPhysReg *CSRegs = RegInfo->getCalleeSavedRegs(&MF);
+  MCPhysReg LowestGPR = PPC::R31;
+  MCPhysReg LowestG8R = PPC::X31;
+  MCPhysReg LowestFPR = PPC::F31;
+  MCPhysReg LowestVR = PPC::V31;
+
+  // Traverse the CSR's twice so as not to rely on ascending ordering of
+  // registers in the array. The first pass finds the lowest numbered
+  // register and the second pass marks all higher numbered registers
+  // for spilling.
+  for (int i = 0; CSRegs[i]; i++) {
+    // Get the lowest numbered register for each class that actually needs
+    // to be saved.
+    MCPhysReg Cand = CSRegs[i];
+    if (!SavedRegs.test(Cand))
+      continue;
+    if (isGPR(Cand) && Cand < LowestGPR)
+      LowestGPR = Cand;
+    else if (isG8R(Cand) && Cand < LowestG8R)
+      LowestG8R = Cand;
+    else if (isFPR(Cand) && Cand < LowestFPR)
+      LowestFPR = Cand;
+    else if (isVR(Cand) && Cand < LowestVR)
+      LowestVR = Cand;
+  }
+
+  for (int i = 0; CSRegs[i]; i++) {
+    MCPhysReg Cand = CSRegs[i];
+    if (isGPR(Cand) && Cand > LowestGPR)
+      SavedRegs.set(Cand);
+    else if (isG8R(Cand) && Cand > LowestG8R)
+      SavedRegs.set(Cand);
+    else if (isFPR(Cand) && Cand > LowestFPR)
+      SavedRegs.set(Cand);
+    else if (isVR(Cand) && Cand > LowestVR)
+      SavedRegs.set(Cand);
+  }
 }
 
 uint64_t PPCFrameLowering::getStackThreshold() const {
