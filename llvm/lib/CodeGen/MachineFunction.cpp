@@ -178,6 +178,12 @@ void MachineFunction::handleRemoval(MachineInstr &MI) {
     TheDelegate->MF_HandleRemoval(MI);
 }
 
+void MachineFunction::handleChangeDesc(MachineInstr &MI,
+                                       const MCInstrDesc &TID) {
+  if (TheDelegate)
+    TheDelegate->MF_HandleChangeDesc(MI, TID);
+}
+
 void MachineFunction::init() {
   // Assume the function starts in SSA form with correct liveness.
   Properties.set(MachineFunctionProperties::Property::IsSSA);

@@ -145,8 +145,8 @@ define dso_local i64 @test_ebp(i64 %in) local_unnamed_addr nounwind {
 ; CHECK-LABEL: test_ebp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %ebp
-; CHECK-NEXT:    movl $19088743, %esp # imm = 0x1234567
 ; CHECK-NEXT:    movl $-1985229329, %ebp # imm = 0x89ABCDEF
+; CHECK-NEXT:    movl $19088743, %esp # imm = 0x1234567
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    movl %ebp, %eax
 ; CHECK-NEXT:    #NO_APP
