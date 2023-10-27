@@ -8,6 +8,14 @@ OmptAssertEvent::OmptAssertEvent(const std::string &Name,
                                  internal::InternalEvent *IE)
     : Name(Name), Group(Group), ExpectedState(Expected), TheEvent(IE) {}
 
+OmptAssertEvent OmptAssertEvent::Asserter(const std::string &Name,
+                                          const std::string &Group,
+                                          const ObserveState &Expected) {
+  auto EName = getName(Name);
+  auto EGroup = getGroup(Group);
+  return OmptAssertEvent(EName, EGroup, Expected, new internal::Asserter());
+}
+
 OmptAssertEvent OmptAssertEvent::ThreadBegin(const std::string &Name,
                                              const std::string &Group,
                                              const ObserveState &Expected,

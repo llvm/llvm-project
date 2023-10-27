@@ -9,6 +9,7 @@ namespace omptest {
 
 namespace internal {
 // clang-format off
+event_class_stub(Asserter)
 event_class_w_custom_body(ThreadBegin,                                         \
   ThreadBegin(ompt_thread_t ThreadType)                                        \
     : InternalEvent(EventTy::ThreadBegin), ThreadType(ThreadType) {}           \

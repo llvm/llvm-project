@@ -9,6 +9,7 @@ namespace omptest {
 
 namespace internal {
 // clang-format off
+event_class_operator_stub(Asserter)
 event_class_operator_stub(ThreadBegin)
 event_class_operator_stub(ThreadEnd)
 event_class_operator_w_body(ParallelBegin,                                     \
@@ -50,6 +51,7 @@ event_class_operator_w_body(TargetDataOp,                                      \
 )
 event_class_operator_w_body(TargetDataOpEmi,                                   \
   bool isSameOpType = (Expected.OpType == Observed.OpType);                    \
+  bool isSameEndpoint = (Expected.Endpoint == Observed.Endpoint);              \
   bool isSameSize = (Expected.Bytes == Observed.Bytes);                        \
   bool isSameSrcAddr = (Expected.SrcAddr == expectedDefault(void *)) ?         \
                           true : (Expected.SrcAddr == Observed.SrcAddr);       \
@@ -61,8 +63,8 @@ event_class_operator_w_body(TargetDataOpEmi,                                   \
   bool isSameDstDeviceNum =                                                    \
     (Expected.DstDeviceNum == expectedDefault(int)) ?                          \
        true : (Expected.DstDeviceNum == Observed.DstDeviceNum);                \
-  return isSameOpType && isSameSize && isSameSrcAddr && isSameDstAddr &&       \
-         isSameSrcDeviceNum && isSameDstDeviceNum;                             \
+  return isSameOpType && isSameEndpoint && isSameSize && isSameSrcAddr &&      \
+         isSameDstAddr && isSameSrcDeviceNum && isSameDstDeviceNum;            \
 )
 event_class_operator_w_body(TargetSubmit,                                      \
   bool isSameReqNumTeams =                                                     \
@@ -99,6 +101,7 @@ event_class_operator_stub(BufferRequest)
 event_class_operator_stub(BufferComplete)
 event_class_operator_stub(BufferRecord)
 
+define_cast_func(Asserter)
 define_cast_func(ThreadBegin)
 define_cast_func(ThreadEnd)
 define_cast_func(ParallelBegin)
@@ -121,6 +124,7 @@ define_cast_func(BufferRequest)
 define_cast_func(BufferComplete)
 define_cast_func(BufferRecord)
 
+class_equals_op(Asserter)
 class_equals_op(ThreadBegin)
 class_equals_op(ThreadEnd)
 class_equals_op(ParallelBegin)

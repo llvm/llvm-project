@@ -157,6 +157,10 @@ void OmptSequencedAsserter::notifyImpl(OmptAssertEvent &&AE) {
   ++NumNotifications;
 
   if (NextEvent >= Events.size()) {
+    // If we are not expecting any more events and passively asserting: return
+    if (!ActiveMode)
+      return;
+
     reportError(AE, "[OmptSequencedAsserter] Too many events to check (" +
                         std::to_string(NumNotifications) + "). Asserted " +
                         std::to_string(NumAssertSuccesses) + "/" +
@@ -166,16 +170,37 @@ void OmptSequencedAsserter::notifyImpl(OmptAssertEvent &&AE) {
     return;
   }
 
-  auto &E = Events[NextEvent++];
+  // If the event is meant for the Asserter itself -- enter 'passive' assertion.
+  // Since we may encounter multiple successive Asserter events, loop until we
+  // hit the next non-Asserter event.
+  while (Events[NextEvent].getEventType() == EventTy::Asserter) {
+    ActiveMode = false;
+    ++NumAssertSuccesses;
+    // We just hit the very last event: return
+    if (++NextEvent >= Events.size())
+      return;
+  }
+
+  // If we are actively asserting, increment the event counter.
+  // Otherwise: If passively asserting, we will keep waiting for a match.
+  auto &E = ActiveMode ? Events[NextEvent++] : Events[NextEvent];
   if (E == AE && verifyEventGroups(E, AE)) {
-    if (E.getEventExpectedState() == omptest::ObserveState::always) {
+    if (E.getEventExpectedState() == ObserveState::always) {
       ++NumAssertSuccesses;
-    } else if (E.getEventExpectedState() == omptest::ObserveState::never) {
+    } else if (E.getEventExpectedState() == ObserveState::never) {
       reportError(E, AE, "[OmptSequencedAsserter] Encountered forbidden event");
       State = AssertState::fail;
     }
+    // Return to active assertion
+    if (!ActiveMode) {
+      ActiveMode = true;
+      ++NextEvent;
+    }
     return;
   }
+
+  if (!ActiveMode)
+    return;
 
   reportError(E, AE, "[OmptSequencedAsserter] The events are not equal");
   State = AssertState::fail;
@@ -184,9 +209,16 @@ void OmptSequencedAsserter::notifyImpl(OmptAssertEvent &&AE) {
 AssertState OmptSequencedAsserter::getState() {
   // This is called after the testcase executed.
   // Once reached the number of successful notifications should be equal to the
-  // number of expected events.
-  if (NextEvent < Events.size())
-    State = AssertState::fail;
+  // number of expected events. However, there may still be excluded as well as
+  // special asserter events remaining in the sequence.
+  for (size_t i = NextEvent; i < Events.size(); ++i) {
+    auto &E = Events[i];
+    if (E.getEventExpectedState() == ObserveState::always &&
+        E.getEventType() != EventTy::Asserter) {
+      State = AssertState::fail;
+      break;
+    }
+  }
 
   return State;
 }
@@ -207,10 +239,10 @@ void OmptEventAsserter::notifyImpl(OmptAssertEvent &&AE) {
   for (size_t I = 0; I < Events.size(); ++I) {
     auto &E = Events[I];
     if (E == AE) {
-      if (E.getEventExpectedState() == omptest::ObserveState::always) {
+      if (E.getEventExpectedState() == ObserveState::always) {
         Events.erase(Events.begin() + I);
         ++NumAssertSuccesses;
-      } else if (E.getEventExpectedState() == omptest::ObserveState::never) {
+      } else if (E.getEventExpectedState() == ObserveState::never) {
         reportError(E, AE, "[OmptEventAsserter] Encountered forbidden event");
         State = AssertState::fail;
       }
@@ -225,7 +257,7 @@ AssertState OmptEventAsserter::getState() {
   if (!Events.empty())
     for (const auto &E : Events) {
       // Check if any of the remaining events were expected to be observed
-      if (E.getEventExpectedState() == omptest::ObserveState::always) {
+      if (E.getEventExpectedState() == ObserveState::always) {
         State = AssertState::fail;
         break;
       }

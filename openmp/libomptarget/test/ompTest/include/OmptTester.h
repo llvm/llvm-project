@@ -58,10 +58,13 @@ struct TestCase {
     // finished.
     OmptCallbackHandler::get().clearSubscribers();
 
-    bool AnyFail = SequenceAsserter.getState() == omptest::AssertState::fail ||
-                   SetAsserter.getState() == omptest::AssertState::fail;
-    bool AllPass = SequenceAsserter.getState() == omptest::AssertState::pass &&
-                   SetAsserter.getState() == omptest::AssertState::pass;
+    omptest::AssertState SequenceResultState = SequenceAsserter.getState();
+    omptest::AssertState SetResultState = SetAsserter.getState();
+
+    bool AnyFail = SequenceResultState == omptest::AssertState::fail ||
+                   SetResultState == omptest::AssertState::fail;
+    bool AllPass = SequenceResultState == omptest::AssertState::pass &&
+                   SetResultState == omptest::AssertState::pass;
 
     if (ExpectedState == omptest::AssertState::pass && AnyFail)
       E.Fail = true;

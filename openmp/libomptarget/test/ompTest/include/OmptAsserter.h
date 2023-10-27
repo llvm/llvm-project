@@ -97,6 +97,7 @@ struct OmptSequencedAsserter : public OmptAsserter {
 
   omptest::AssertState getState() override;
 
+  bool ActiveMode{true};
   int NumAssertSuccesses{0};
   int NumNotifications{0};
   size_t NextEvent{0};

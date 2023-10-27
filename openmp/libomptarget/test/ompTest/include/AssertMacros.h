@@ -4,8 +4,8 @@
 #define XQUOTE(str) QUOTE(str)
 #define QUOTE(str) #str
 
-#define OMPTEST_STATE_FAIL omptest::ObserveState::never
-#define OMPTEST_STATE_PASS omptest::ObserveState::always
+#define OMPTEST_EXCLUDE_EVENT omptest::ObserveState::never
+#define OMPTEST_REQUIRE_EVENT omptest::ObserveState::always
 
 /// ASSERT MACROS TO BE USED BY THE USER
 
@@ -13,20 +13,20 @@
 #define OMPT_ASSERT_EVENT(Event, ...)
 
 // Handle a minimum unordered set of events
-// Allowed events
+// Required events
 #define OMPT_ASSERT_SET_EVENT(Name, Group, EventTy, ...)                       \
-  this->SetAsserter.insert(                                                    \
-      OmptAssertEvent::EventTy(Name, Group, OMPTEST_STATE_PASS, __VA_ARGS__));
+  this->SetAsserter.insert(OmptAssertEvent::EventTy(                           \
+      Name, Group, OMPTEST_REQUIRE_EVENT, __VA_ARGS__));
 #define OMPT_ASSERT_SET(EventTy, ...)                                          \
   OMPT_ASSERT_SET_EVENT("", "", EventTy, __VA_ARGS__)
 #define OMPT_ASSERT_SET_GROUP(Group, EventTy, ...)                             \
   OMPT_ASSERT_SET_EVENT("", Group, EventTy, __VA_ARGS__)
 #define OMPT_ASSERT_SET_NAMED(Name, EventTy, ...)                              \
   OMPT_ASSERT_SET_EVENT(Name, "", EventTy, __VA_ARGS__)
-// Banned ("NOT") events
+// Excluded ("NOT") events
 #define OMPT_ASSERT_SET_EVENT_NOT(Name, Group, EventTy, ...)                   \
-  this->SetAsserter.insert(                                                    \
-      OmptAssertEvent::EventTy(Name, Group, OMPTEST_STATE_FAIL, __VA_ARGS__));
+  this->SetAsserter.insert(OmptAssertEvent::EventTy(                           \
+      Name, Group, OMPTEST_EXCLUDE_EVENT, __VA_ARGS__));
 #define OMPT_ASSERT_SET_NOT(EventTy, ...)                                      \
   OMPT_ASSERT_SET_EVENT_NOT("", "", EventTy, __VA_ARGS__)
 #define OMPT_ASSERT_SET_GROUP_NOT(Group, EventTy, ...)                         \
@@ -35,26 +35,42 @@
   OMPT_ASSERT_SET_EVENT_NOT(Name, "", EventTy, __VA_ARGS__)
 
 // Handle an exact sequence of events
-// Allowed events
+// Required events
 #define OMPT_ASSERT_SEQUENCE_EVENT(Name, Group, EventTy, ...)                  \
-  this->SequenceAsserter.insert(                                               \
-      OmptAssertEvent::EventTy(Name, Group, OMPTEST_STATE_PASS, __VA_ARGS__));
+  this->SequenceAsserter.insert(OmptAssertEvent::EventTy(                      \
+      Name, Group, OMPTEST_REQUIRE_EVENT, __VA_ARGS__));
 #define OMPT_ASSERT_SEQUENCE(EventTy, ...)                                     \
   OMPT_ASSERT_SEQUENCE_EVENT("", "", EventTy, __VA_ARGS__)
 #define OMPT_ASSERT_GROUPED_SEQUENCE(Group, EventTy, ...)                      \
   OMPT_ASSERT_SEQUENCE_EVENT("", Group, EventTy, __VA_ARGS__)
 #define OMPT_ASSERT_NAMED_SEQUENCE(Name, EventTy, ...)                         \
   OMPT_ASSERT_SEQUENCE_EVENT(Name, "", EventTy, __VA_ARGS__)
-// Banned ("NOT") events
+// Excluded ("NOT") events
 #define OMPT_ASSERT_SEQUENCE_EVENT_NOT(Name, Group, EventTy, ...)              \
-  this->SequenceAsserter.insert(                                               \
-      OmptAssertEvent::EventTy(Name, Group, OMPTEST_STATE_FAIL, __VA_ARGS__));
+  this->SequenceAsserter.insert(OmptAssertEvent::EventTy(                      \
+      Name, Group, OMPTEST_EXCLUDE_EVENT, __VA_ARGS__));
 #define OMPT_ASSERT_SEQUENCE_NOT(EventTy, ...)                                 \
   OMPT_ASSERT_SEQUENCE_EVENT_NOT("", "", EventTy, __VA_ARGS__)
 #define OMPT_ASSERT_GROUPED_SEQUENCE_NOT(Group, EventTy, ...)                  \
   OMPT_ASSERT_SEQUENCE_EVENT_NOT("", Group, EventTy, __VA_ARGS__)
 #define OMPT_ASSERT_NAMED_SEQUENCE_NOT(Name, EventTy, ...)                     \
   OMPT_ASSERT_SEQUENCE_EVENT_NOT(Name, "", EventTy, __VA_ARGS__)
+// Special command: suspend active assertion
+#define OMPT_ASSERT_SEQUENCE_SUSPEND()                                         \
+  this->SequenceAsserter.insert(                                               \
+      OmptAssertEvent::Asserter("", "", OMPTEST_REQUIRE_EVENT));
+#define OMPT_ASSERT_SEQUENCE_ONLY(EventTy, ...)                                \
+  OMPT_ASSERT_SEQUENCE_SUSPEND()                                               \
+  OMPT_ASSERT_SEQUENCE_EVENT("", "", EventTy, __VA_ARGS__)                     \
+  OMPT_ASSERT_SEQUENCE_SUSPEND()
+#define OMPT_ASSERT_GROUPED_SEQUENCE_ONLY(Group, EventTy, ...)                 \
+  OMPT_ASSERT_SEQUENCE_SUSPEND()                                               \
+  OMPT_ASSERT_SEQUENCE_EVENT("", Group, EventTy, __VA_ARGS__)                  \
+  OMPT_ASSERT_SEQUENCE_SUSPEND()
+#define OMPT_ASSERT_NAMED_SEQUENCE_ONLY(Name, EventTy, ...)                    \
+  OMPT_ASSERT_SEQUENCE_SUSPEND()                                               \
+  OMPT_ASSERT_SEQUENCE_EVENT(Name, "", EventTy, __VA_ARGS__)                   \
+  OMPT_ASSERT_SEQUENCE_SUSPEND()
 
 // Enable / disable asserters entirely
 #define OMPT_ASSERTER_DISABLE(AsserterName) this->AsserterName.setActive(false);

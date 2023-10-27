@@ -15,6 +15,11 @@ enum class AssertState { pass, fail };
 enum class ObserveState { generated, always, never };
 
 struct OmptAssertEvent {
+
+  static OmptAssertEvent Asserter(const std::string &Name,
+                                  const std::string &Group,
+                                  const ObserveState &Expected);
+
   static OmptAssertEvent ThreadBegin(const std::string &Name,
                                      const std::string &Group,
                                      const ObserveState &Expected,

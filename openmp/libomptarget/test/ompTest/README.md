@@ -10,7 +10,14 @@ Testing macros
 ==============
 
 ## OMPT_ASSERT_SEQUENCE
-TBD
+This macro will check for the occurrence of the provided event, which also
+entails the exact sequence of events. When only using this assertion macro one
+has to provide every single event in the exact order of occurrence.
+
+## OMPT_ASSERT_SEQUENCE_ONLY
+This macro will act like `OMPT_ASSERT_SEQUENCE`, while being preceded
+-AND- succeeded by commands to suspend sequenced assertion until the next match.
+As a result, one may omit all other "unneccessary" events from the sequence.
 
 ## OMPT_ASSERT_NAMED_SEQUENCE
 This macro will act like `OMPT_ASSERT_SEQUENCE` but internally the provided name
@@ -19,7 +26,10 @@ will be stored within the created event and may be printed in messages.
 ## OMPT_ASSERT_GROUPED_SEQUENCE
 This macro will act like `OMPT_ASSERT_SEQUENCE` with the addition of grouping.
 
-### Grouping
+## OMPT_ASSERT_GROUPED_SEQUENCE_ONLY
+This macro will act like `OMPT_ASSERT_SEQUENCE_ONLY`, plus grouping.
+
+### Grouping Asserts
 
 This allows to generate and verify data during runtime of a test.
 Currently, we only use target region information which manifests into groups.
@@ -34,6 +44,20 @@ the corresponding group. (Note: This will make the groupname available again.)
 Other asserted callbacks which may occur within target regions, will query their
 groupname: retrieving and verifying the value of the group vs. the observed
 event's own value.
+
+### Suspending Sequenced Asserts
+
+When a sequence of events is not of interest while testing, these additional
+events may be ignored by suspending the assertion until the next match. This
+can be done by using `OMPT_ASSERT_SEQUENCE_SUSPEND` manually or the `_ONLY`
+macro variants, like `OMPT_ASSERT_GROUPED_SEQUENCE_ONLY`.
+
+The former will add a special event to the queue of expected events and signal
+that any non-matching event should be ignored rather than failing the test.
+`_ONLY` macros will embed their corresponding macro between two calls to
+`OMPT_ASSERT_SEQUENCE_SUSPEND`. As a consequence, we will enter passive
+assertion until a match occurs, then enter passive assertion again. This enables
+us to "only" assert a ceratin, single event in arbitrary circumstances.
 
 ## Shorthands
 To allow for easier writing of tests and enhanced readability, the following set

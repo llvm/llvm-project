@@ -12,7 +12,8 @@ namespace internal {
 /// Enum values are used for comparison of observed and asserted events
 /// List is based on OpenMP 5.2 specification, table 19.2 (page 447)
 enum class EventTy {
-  None, // not part of OpenMP spec, used for implementation
+  None,     // not part of OpenMP spec, used for implementation
+  Asserter, // not part of OpenMP spec, used for implementation
   ThreadBegin,
   ThreadEnd,
   ParallelBegin,
