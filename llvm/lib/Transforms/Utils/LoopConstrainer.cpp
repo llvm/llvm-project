@@ -2,6 +2,9 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/IR/Dominators.h"
+#include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 
@@ -420,3 +423,482 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
   return Result;
 }
 
+// Add metadata to the loop L to disable loop optimizations. Callers need to
+// confirm that optimizing loop L is not beneficial.
+static void DisableAllLoopOptsOnLoop(Loop &L) {
+  // We do not care about any existing loopID related metadata for L, since we
+  // are setting all loop metadata to false.
+  LLVMContext &Context = L.getHeader()->getContext();
+  // Reserve first location for self reference to the LoopID metadata node.
+  MDNode *Dummy = MDNode::get(Context, {});
+  MDNode *DisableUnroll = MDNode::get(
+      Context, {MDString::get(Context, "llvm.loop.unroll.disable")});
+  Metadata *FalseVal =
+      ConstantAsMetadata::get(ConstantInt::get(Type::getInt1Ty(Context), 0));
+  MDNode *DisableVectorize = MDNode::get(
+      Context,
+      {MDString::get(Context, "llvm.loop.vectorize.enable"), FalseVal});
+  MDNode *DisableLICMVersioning = MDNode::get(
+      Context, {MDString::get(Context, "llvm.loop.licm_versioning.disable")});
+  MDNode *DisableDistribution = MDNode::get(
+      Context,
+      {MDString::get(Context, "llvm.loop.distribute.enable"), FalseVal});
+  MDNode *NewLoopID =
+      MDNode::get(Context, {Dummy, DisableUnroll, DisableVectorize,
+                            DisableLICMVersioning, DisableDistribution});
+  // Set operand 0 to refer to the loop id itself.
+  NewLoopID->replaceOperandWith(0, NewLoopID);
+  L.setLoopID(NewLoopID);
+}
+
+LoopConstrainer::LoopConstrainer(Loop &L, LoopInfo &LI,
+                                 function_ref<void(Loop *, bool)> LPMAddNewLoop,
+                                 const LoopStructure &LS, ScalarEvolution &SE,
+                                 DominatorTree &DT, Type *T, SubRanges SR)
+    : F(*L.getHeader()->getParent()), Ctx(L.getHeader()->getContext()), SE(SE),
+      DT(DT), LI(LI), LPMAddNewLoop(LPMAddNewLoop), OriginalLoop(L), RangeTy(T),
+      MainLoopStructure(LS), SR(SR) {}
+
+void LoopConstrainer::cloneLoop(LoopConstrainer::ClonedLoop &Result,
+                                const char *Tag) const {
+  for (BasicBlock *BB : OriginalLoop.getBlocks()) {
+    BasicBlock *Clone = CloneBasicBlock(BB, Result.Map, Twine(".") + Tag, &F);
+    Result.Blocks.push_back(Clone);
+    Result.Map[BB] = Clone;
+  }
+
+  auto GetClonedValue = [&Result](Value *V) {
+    assert(V && "null values not in domain!");
+    auto It = Result.Map.find(V);
+    if (It == Result.Map.end())
+      return V;
+    return static_cast<Value *>(It->second);
+  };
+
+  auto *ClonedLatch =
+      cast<BasicBlock>(GetClonedValue(OriginalLoop.getLoopLatch()));
+  ClonedLatch->getTerminator()->setMetadata(ClonedLoopTag,
+                                            MDNode::get(Ctx, {}));
+
+  Result.Structure = MainLoopStructure.map(GetClonedValue);
+  Result.Structure.Tag = Tag;
+
+  for (unsigned i = 0, e = Result.Blocks.size(); i != e; ++i) {
+    BasicBlock *ClonedBB = Result.Blocks[i];
+    BasicBlock *OriginalBB = OriginalLoop.getBlocks()[i];
+
+    assert(Result.Map[OriginalBB] == ClonedBB && "invariant!");
+
+    for (Instruction &I : *ClonedBB)
+      RemapInstruction(&I, Result.Map,
+                       RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+
+    // Exit blocks will now have one more predecessor and their PHI nodes need
+    // to be edited to reflect that.  No phi nodes need to be introduced because
+    // the loop is in LCSSA.
+
+    for (auto *SBB : successors(OriginalBB)) {
+      if (OriginalLoop.contains(SBB))
+        continue; // not an exit block
+
+      for (PHINode &PN : SBB->phis()) {
+        Value *OldIncoming = PN.getIncomingValueForBlock(OriginalBB);
+        PN.addIncoming(GetClonedValue(OldIncoming), ClonedBB);
+        SE.forgetValue(&PN);
+      }
+    }
+  }
+}
+
+LoopConstrainer::RewrittenRangeInfo LoopConstrainer::changeIterationSpaceEnd(
+    const LoopStructure &LS, BasicBlock *Preheader, Value *ExitSubloopAt,
+    BasicBlock *ContinuationBlock) const {
+  // We start with a loop with a single latch:
+  //
+  //    +--------------------+
+  //    |                    |
+  //    |     preheader      |
+  //    |                    |
+  //    +--------+-----------+
+  //             |      ----------------\
+  //             |     /                |
+  //    +--------v----v------+          |
+  //    |                    |          |
+  //    |      header        |          |
+  //    |                    |          |
+  //    +--------------------+          |
+  //                                    |
+  //            .....                   |
+  //                                    |
+  //    +--------------------+          |
+  //    |                    |          |
+  //    |       latch        >----------/
+  //    |                    |
+  //    +-------v------------+
+  //            |
+  //            |
+  //            |   +--------------------+
+  //            |   |                    |
+  //            +--->   original exit    |
+  //                |                    |
+  //                +--------------------+
+  //
+  // We change the control flow to look like
+  //
+  //
+  //    +--------------------+
+  //    |                    |
+  //    |     preheader      >-------------------------+
+  //    |                    |                         |
+  //    +--------v-----------+                         |
+  //             |    /-------------+                  |
+  //             |   /              |                  |
+  //    +--------v--v--------+      |                  |
+  //    |                    |      |                  |
+  //    |      header        |      |   +--------+     |
+  //    |                    |      |   |        |     |
+  //    +--------------------+      |   |  +-----v-----v-----------+
+  //                                |   |  |                       |
+  //                                |   |  |     .pseudo.exit      |
+  //                                |   |  |                       |
+  //                                |   |  +-----------v-----------+
+  //                                |   |              |
+  //            .....               |   |              |
+  //                                |   |     +--------v-------------+
+  //    +--------------------+      |   |     |                      |
+  //    |                    |      |   |     |   ContinuationBlock  |
+  //    |       latch        >------+   |     |                      |
+  //    |                    |          |     +----------------------+
+  //    +---------v----------+          |
+  //              |                     |
+  //              |                     |
+  //              |     +---------------^-----+
+  //              |     |                     |
+  //              +----->    .exit.selector   |
+  //                    |                     |
+  //                    +----------v----------+
+  //                               |
+  //     +--------------------+    |
+  //     |                    |    |
+  //     |   original exit    <----+
+  //     |                    |
+  //     +--------------------+
+
+  RewrittenRangeInfo RRI;
+
+  BasicBlock *BBInsertLocation = LS.Latch->getNextNode();
+  RRI.ExitSelector = BasicBlock::Create(Ctx, Twine(LS.Tag) + ".exit.selector",
+                                        &F, BBInsertLocation);
+  RRI.PseudoExit = BasicBlock::Create(Ctx, Twine(LS.Tag) + ".pseudo.exit", &F,
+                                      BBInsertLocation);
+
+  BranchInst *PreheaderJump = cast<BranchInst>(Preheader->getTerminator());
+  bool Increasing = LS.IndVarIncreasing;
+  bool IsSignedPredicate = LS.IsSignedPredicate;
+
+  IRBuilder<> B(PreheaderJump);
+  auto NoopOrExt = [&](Value *V) {
+    if (V->getType() == RangeTy)
+      return V;
+    return IsSignedPredicate ? B.CreateSExt(V, RangeTy, "wide." + V->getName())
+                             : B.CreateZExt(V, RangeTy, "wide." + V->getName());
+  };
+
+  // EnterLoopCond - is it okay to start executing this `LS'?
+  Value *EnterLoopCond = nullptr;
+  auto Pred =
+      Increasing
+          ? (IsSignedPredicate ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT)
+          : (IsSignedPredicate ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT);
+  Value *IndVarStart = NoopOrExt(LS.IndVarStart);
+  EnterLoopCond = B.CreateICmp(Pred, IndVarStart, ExitSubloopAt);
+
+  B.CreateCondBr(EnterLoopCond, LS.Header, RRI.PseudoExit);
+  PreheaderJump->eraseFromParent();
+
+  LS.LatchBr->setSuccessor(LS.LatchBrExitIdx, RRI.ExitSelector);
+  B.SetInsertPoint(LS.LatchBr);
+  Value *IndVarBase = NoopOrExt(LS.IndVarBase);
+  Value *TakeBackedgeLoopCond = B.CreateICmp(Pred, IndVarBase, ExitSubloopAt);
+
+  Value *CondForBranch = LS.LatchBrExitIdx == 1
+                             ? TakeBackedgeLoopCond
+                             : B.CreateNot(TakeBackedgeLoopCond);
+
+  LS.LatchBr->setCondition(CondForBranch);
+
+  B.SetInsertPoint(RRI.ExitSelector);
+
+  // IterationsLeft - are there any more iterations left, given the original
+  // upper bound on the induction variable?  If not, we branch to the "real"
+  // exit.
+  Value *LoopExitAt = NoopOrExt(LS.LoopExitAt);
+  Value *IterationsLeft = B.CreateICmp(Pred, IndVarBase, LoopExitAt);
+  B.CreateCondBr(IterationsLeft, RRI.PseudoExit, LS.LatchExit);
+
+  BranchInst *BranchToContinuation =
+      BranchInst::Create(ContinuationBlock, RRI.PseudoExit);
+
+  // We emit PHI nodes into `RRI.PseudoExit' that compute the "latest" value of
+  // each of the PHI nodes in the loop header.  This feeds into the initial
+  // value of the same PHI nodes if/when we continue execution.
+  for (PHINode &PN : LS.Header->phis()) {
+    PHINode *NewPHI = PHINode::Create(PN.getType(), 2, PN.getName() + ".copy",
+                                      BranchToContinuation);
+
+    NewPHI->addIncoming(PN.getIncomingValueForBlock(Preheader), Preheader);
+    NewPHI->addIncoming(PN.getIncomingValueForBlock(LS.Latch),
+                        RRI.ExitSelector);
+    RRI.PHIValuesAtPseudoExit.push_back(NewPHI);
+  }
+
+  RRI.IndVarEnd = PHINode::Create(IndVarBase->getType(), 2, "indvar.end",
+                                  BranchToContinuation);
+  RRI.IndVarEnd->addIncoming(IndVarStart, Preheader);
+  RRI.IndVarEnd->addIncoming(IndVarBase, RRI.ExitSelector);
+
+  // The latch exit now has a branch from `RRI.ExitSelector' instead of
+  // `LS.Latch'.  The PHI nodes need to be updated to reflect that.
+  LS.LatchExit->replacePhiUsesWith(LS.Latch, RRI.ExitSelector);
+
+  return RRI;
+}
+
+void LoopConstrainer::rewriteIncomingValuesForPHIs(
+    LoopStructure &LS, BasicBlock *ContinuationBlock,
+    const LoopConstrainer::RewrittenRangeInfo &RRI) const {
+  unsigned PHIIndex = 0;
+  for (PHINode &PN : LS.Header->phis())
+    PN.setIncomingValueForBlock(ContinuationBlock,
+                                RRI.PHIValuesAtPseudoExit[PHIIndex++]);
+
+  LS.IndVarStart = RRI.IndVarEnd;
+}
+
+BasicBlock *LoopConstrainer::createPreheader(const LoopStructure &LS,
+                                             BasicBlock *OldPreheader,
+                                             const char *Tag) const {
+  BasicBlock *Preheader = BasicBlock::Create(Ctx, Tag, &F, LS.Header);
+  BranchInst::Create(LS.Header, Preheader);
+
+  LS.Header->replacePhiUsesWith(OldPreheader, Preheader);
+
+  return Preheader;
+}
+
+void LoopConstrainer::addToParentLoopIfNeeded(ArrayRef<BasicBlock *> BBs) {
+  Loop *ParentLoop = OriginalLoop.getParentLoop();
+  if (!ParentLoop)
+    return;
+
+  for (BasicBlock *BB : BBs)
+    ParentLoop->addBasicBlockToLoop(BB, LI);
+}
+
+Loop *LoopConstrainer::createClonedLoopStructure(Loop *Original, Loop *Parent,
+                                                 ValueToValueMapTy &VM,
+                                                 bool IsSubloop) {
+  Loop &New = *LI.AllocateLoop();
+  if (Parent)
+    Parent->addChildLoop(&New);
+  else
+    LI.addTopLevelLoop(&New);
+  LPMAddNewLoop(&New, IsSubloop);
+
+  // Add all of the blocks in Original to the new loop.
+  for (auto *BB : Original->blocks())
+    if (LI.getLoopFor(BB) == Original)
+      New.addBasicBlockToLoop(cast<BasicBlock>(VM[BB]), LI);
+
+  // Add all of the subloops to the new loop.
+  for (Loop *SubLoop : *Original)
+    createClonedLoopStructure(SubLoop, &New, VM, /* IsSubloop */ true);
+
+  return &New;
+}
+
+bool LoopConstrainer::run() {
+  BasicBlock *Preheader = OriginalLoop.getLoopPreheader();
+  assert(Preheader != nullptr && "precondition!");
+
+  OriginalPreheader = Preheader;
+  MainLoopPreheader = Preheader;
+  bool IsSignedPredicate = MainLoopStructure.IsSignedPredicate;
+  bool Increasing = MainLoopStructure.IndVarIncreasing;
+  IntegerType *IVTy = cast<IntegerType>(RangeTy);
+
+  SCEVExpander Expander(SE, F.getParent()->getDataLayout(), "loop-constrainer");
+  Instruction *InsertPt = OriginalPreheader->getTerminator();
+
+  // It would have been better to make `PreLoop' and `PostLoop'
+  // `std::optional<ClonedLoop>'s, but `ValueToValueMapTy' does not have a copy
+  // constructor.
+  ClonedLoop PreLoop, PostLoop;
+  bool NeedsPreLoop =
+      Increasing ? SR.LowLimit.has_value() : SR.HighLimit.has_value();
+  bool NeedsPostLoop =
+      Increasing ? SR.HighLimit.has_value() : SR.LowLimit.has_value();
+
+  Value *ExitPreLoopAt = nullptr;
+  Value *ExitMainLoopAt = nullptr;
+  const SCEVConstant *MinusOneS =
+      cast<SCEVConstant>(SE.getConstant(IVTy, -1, true /* isSigned */));
+
+  if (NeedsPreLoop) {
+    const SCEV *ExitPreLoopAtSCEV = nullptr;
+
+    if (Increasing)
+      ExitPreLoopAtSCEV = *SR.LowLimit;
+    else if (cannotBeMinInLoop(*SR.HighLimit, &OriginalLoop, SE,
+                               IsSignedPredicate))
+      ExitPreLoopAtSCEV = SE.getAddExpr(*SR.HighLimit, MinusOneS);
+    else {
+      LLVM_DEBUG(dbgs() << "could not prove no-overflow when computing "
+                        << "preloop exit limit.  HighLimit = "
+                        << *(*SR.HighLimit) << "\n");
+      return false;
+    }
+
+    if (!Expander.isSafeToExpandAt(ExitPreLoopAtSCEV, InsertPt)) {
+      LLVM_DEBUG(dbgs() << "could not prove that it is safe to expand the"
+                        << " preloop exit limit " << *ExitPreLoopAtSCEV
+                        << " at block " << InsertPt->getParent()->getName()
+                        << "\n");
+      return false;
+    }
+
+    ExitPreLoopAt = Expander.expandCodeFor(ExitPreLoopAtSCEV, IVTy, InsertPt);
+    ExitPreLoopAt->setName("exit.preloop.at");
+  }
+
+  if (NeedsPostLoop) {
+    const SCEV *ExitMainLoopAtSCEV = nullptr;
+
+    if (Increasing)
+      ExitMainLoopAtSCEV = *SR.HighLimit;
+    else if (cannotBeMinInLoop(*SR.LowLimit, &OriginalLoop, SE,
+                               IsSignedPredicate))
+      ExitMainLoopAtSCEV = SE.getAddExpr(*SR.LowLimit, MinusOneS);
+    else {
+      LLVM_DEBUG(dbgs() << "could not prove no-overflow when computing "
+                        << "mainloop exit limit.  LowLimit = "
+                        << *(*SR.LowLimit) << "\n");
+      return false;
+    }
+
+    if (!Expander.isSafeToExpandAt(ExitMainLoopAtSCEV, InsertPt)) {
+      LLVM_DEBUG(dbgs() << "could not prove that it is safe to expand the"
+                        << " main loop exit limit " << *ExitMainLoopAtSCEV
+                        << " at block " << InsertPt->getParent()->getName()
+                        << "\n");
+      return false;
+    }
+
+    ExitMainLoopAt = Expander.expandCodeFor(ExitMainLoopAtSCEV, IVTy, InsertPt);
+    ExitMainLoopAt->setName("exit.mainloop.at");
+  }
+
+  // We clone these ahead of time so that we don't have to deal with changing
+  // and temporarily invalid IR as we transform the loops.
+  if (NeedsPreLoop)
+    cloneLoop(PreLoop, "preloop");
+  if (NeedsPostLoop)
+    cloneLoop(PostLoop, "postloop");
+
+  RewrittenRangeInfo PreLoopRRI;
+
+  if (NeedsPreLoop) {
+    Preheader->getTerminator()->replaceUsesOfWith(MainLoopStructure.Header,
+                                                  PreLoop.Structure.Header);
+
+    MainLoopPreheader =
+        createPreheader(MainLoopStructure, Preheader, "mainloop");
+    PreLoopRRI = changeIterationSpaceEnd(PreLoop.Structure, Preheader,
+                                         ExitPreLoopAt, MainLoopPreheader);
+    rewriteIncomingValuesForPHIs(MainLoopStructure, MainLoopPreheader,
+                                 PreLoopRRI);
+  }
+
+  BasicBlock *PostLoopPreheader = nullptr;
+  RewrittenRangeInfo PostLoopRRI;
+
+  if (NeedsPostLoop) {
+    PostLoopPreheader =
+        createPreheader(PostLoop.Structure, Preheader, "postloop");
+    PostLoopRRI = changeIterationSpaceEnd(MainLoopStructure, MainLoopPreheader,
+                                          ExitMainLoopAt, PostLoopPreheader);
+    rewriteIncomingValuesForPHIs(PostLoop.Structure, PostLoopPreheader,
+                                 PostLoopRRI);
+  }
+
+  BasicBlock *NewMainLoopPreheader =
+      MainLoopPreheader != Preheader ? MainLoopPreheader : nullptr;
+  BasicBlock *NewBlocks[] = {PostLoopPreheader,        PreLoopRRI.PseudoExit,
+                             PreLoopRRI.ExitSelector,  PostLoopRRI.PseudoExit,
+                             PostLoopRRI.ExitSelector, NewMainLoopPreheader};
+
+  // Some of the above may be nullptr, filter them out before passing to
+  // addToParentLoopIfNeeded.
+  auto NewBlocksEnd =
+      std::remove(std::begin(NewBlocks), std::end(NewBlocks), nullptr);
+
+  addToParentLoopIfNeeded(ArrayRef(std::begin(NewBlocks), NewBlocksEnd));
+
+  DT.recalculate(F);
+
+  // We need to first add all the pre and post loop blocks into the loop
+  // structures (as part of createClonedLoopStructure), and then update the
+  // LCSSA form and LoopSimplifyForm. This is necessary for correctly updating
+  // LI when LoopSimplifyForm is generated.
+  Loop *PreL = nullptr, *PostL = nullptr;
+  if (!PreLoop.Blocks.empty()) {
+    PreL = createClonedLoopStructure(&OriginalLoop,
+                                     OriginalLoop.getParentLoop(), PreLoop.Map,
+                                     /* IsSubLoop */ false);
+  }
+
+  if (!PostLoop.Blocks.empty()) {
+    PostL =
+        createClonedLoopStructure(&OriginalLoop, OriginalLoop.getParentLoop(),
+                                  PostLoop.Map, /* IsSubLoop */ false);
+  }
+
+  // This function canonicalizes the loop into Loop-Simplify and LCSSA forms.
+  auto CanonicalizeLoop = [&](Loop *L, bool IsOriginalLoop) {
+    formLCSSARecursively(*L, DT, &LI, &SE);
+    simplifyLoop(L, &DT, &LI, &SE, nullptr, nullptr, true);
+    // Pre/post loops are slow paths, we do not need to perform any loop
+    // optimizations on them.
+    if (!IsOriginalLoop)
+      DisableAllLoopOptsOnLoop(*L);
+  };
+  if (PreL)
+    CanonicalizeLoop(PreL, false);
+  if (PostL)
+    CanonicalizeLoop(PostL, false);
+  CanonicalizeLoop(&OriginalLoop, true);
+
+  /// At this point:
+  /// - We've broken a "main loop" out of the loop in a way that the "main loop"
+  /// runs with the induction variable in a subset of [Begin, End).
+  /// - There is no overflow when computing "main loop" exit limit.
+  /// - Max latch taken count of the loop is limited.
+  /// It guarantees that induction variable will not overflow iterating in the
+  /// "main loop".
+  if (isa<OverflowingBinaryOperator>(MainLoopStructure.IndVarBase))
+    if (IsSignedPredicate)
+      cast<BinaryOperator>(MainLoopStructure.IndVarBase)
+          ->setHasNoSignedWrap(true);
+  /// TODO: support unsigned predicate.
+  /// To add NUW flag we need to prove that both operands of BO are
+  /// non-negative. E.g:
+  /// ...
+  /// %iv.next = add nsw i32 %iv, -1
+  /// %cmp = icmp ult i32 %iv.next, %n
+  /// br i1 %cmp, label %loopexit, label %loop
+  ///
+  /// -1 is MAX_UINT in terms of unsigned int. Adding anything but zero will
+  /// overflow, therefore NUW flag is not legal here.
+
+  return true;
+}
