@@ -1202,7 +1202,7 @@ void XCOFFObjectWriter::writeSymbolTable(MCAssembler &Asm,
                      /*NumberOfAuxEntries=*/0);
 
   for (const auto &Csect : UndefinedCsects) {
-    // AIX does not need to emit for the _$TLSML symbol.
+    // AIX does not need to emit the _$TLSML symbol.
     if (Csect.getSymbolTableName() == "_$TLSML")
       continue;
     writeSymbolEntryForControlSection(Csect, XCOFF::ReservedSectionNum::N_UNDEF,
@@ -1423,7 +1423,7 @@ void XCOFFObjectWriter::assignAddressesAndIndices(MCAssembler &Asm,
 
   // Calculate indices for undefined symbols.
   for (auto &Csect : UndefinedCsects) {
-    // AIX does not need to emit for the _$TLSML symbol.
+    // AIX does not need to emit the _$TLSML symbol.
     if (Csect.getSymbolTableName() == "_$TLSML")
       continue;
     Csect.Size = 0;
