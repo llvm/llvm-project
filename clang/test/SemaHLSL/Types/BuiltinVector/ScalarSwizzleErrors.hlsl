@@ -26,6 +26,6 @@ int64_t4 HooBoy() {
   return 4l.xxxx;
 }
 
-float3 err() {
+float3 AllRighty() {
   return 1..rrr;
 }

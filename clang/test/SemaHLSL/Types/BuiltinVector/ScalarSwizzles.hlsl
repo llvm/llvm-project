@@ -15,7 +15,7 @@ int2 ToTwoInts(int V){
 // CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'V' 'float'
 
 
-float4 ToThreeFloats(float V){
+float4 ToFourFloats(float V){
   return V.rrrr;
 }
 
@@ -68,6 +68,10 @@ float4 FillTwoPointFiveFloat(){
   return 2.5f.rrrr;
 }
 
+// Because a signle-element accessor returns the element type rather than a
+// truncated vector, this AST formulation has an initialization list to
+// initialze the returned vector.
+
 // CHECK: InitListExpr {{.*}} 'vector<float, 1>':'float __attribute__((ext_vector_type(1)))'
 // CHECK-NEXT: ExtVectorElementExpr {{.*}} 'float' r
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float __attribute__((ext_vector_type(1)))' <VectorSplat>
@@ -75,4 +79,56 @@ float4 FillTwoPointFiveFloat(){
 
 vector<float, 1> FillOneHalfFloat(){
   return .5f.r;
+}
+
+// CHECK: ExtVectorElementExpr {{.*}} 'float __attribute__((ext_vector_type(2)))' rr
+// CHECK-NEXT: ExtVectorElementExpr {{.*}} 'float __attribute__((ext_vector_type(2)))' rr
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float __attribute__((ext_vector_type(1)))' lvalue <VectorSplat>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'V' 'float'
+
+float2 HowManyFloats(float V) {
+  return V.rr.rr;
+}
+
+// CHECK: ExtVectorElementExpr {{.*}} 'long __attribute__((ext_vector_type(4)))' xxxx
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'long __attribute__((ext_vector_type(1)))' <VectorSplat>
+// CHECK-NEXT: IntegerLiteral {{.*}} 'long' 4
+
+int64_t4 HooBoy() {
+  return 4l.xxxx;
+}
+
+// This one gets a pretty wierd AST because in addition to the vector splat it
+// is a double->float conversion, which results in generating an initializtion
+// list with float truncation casts.
+
+
+// CHECK: InitListExpr {{.*}} 'float3':'float __attribute__((ext_vector_type(3)))'
+
+// Vector element 0:
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float':'float' <FloatingCast>
+// CHECK-NEXT: ArraySubscriptExpr {{.*}} 'double'
+// CHECK-NEXT: ExtVectorElementExpr {{.*}} 'double __attribute__((ext_vector_type(3)))' rrr
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'double __attribute__((ext_vector_type(1)))' <VectorSplat>
+// CHECK-NEXT: FloatingLiteral {{.*}} 'double' 1.000000e+00
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 0
+
+// Vector element 1:
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float':'float' <FloatingCast>
+// CHECK-NEXT: ArraySubscriptExpr {{.*}} 'double'
+// CHECK-NEXT: ExtVectorElementExpr {{.*}} 'double __attribute__((ext_vector_type(3)))' rrr
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'double __attribute__((ext_vector_type(1)))' <VectorSplat>
+// CHECK-NEXT: FloatingLiteral {{.*}} 'double' 1.000000e+00
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 1
+
+// Vector element 2:
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float':'float' <FloatingCast>
+// CHECK-NEXT: ArraySubscriptExpr {{.*}} 'double'
+// CHECK-NEXT: ExtVectorElementExpr {{.*}} 'double __attribute__((ext_vector_type(3)))' rrr
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'double __attribute__((ext_vector_type(1)))' <VectorSplat>
+// CHECK-NEXT: FloatingLiteral {{.*}} 'double' 1.000000e+00
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 2
+
+float3 AllRighty() {
+  return 1..rrr;
 }
