@@ -73,10 +73,10 @@ class counted_iterator
   , public __counted_iterator_category<_Iter>
   , public __counted_iterator_value_type<_Iter>
 {
-public:
   _LIBCPP_NO_UNIQUE_ADDRESS _Iter __current_ = _Iter();
   iter_difference_t<_Iter> __count_ = 0;
 
+public:
   using iterator_type = _Iter;
   using difference_type = iter_difference_t<_Iter>;
 
