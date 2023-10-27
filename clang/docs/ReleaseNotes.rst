@@ -775,6 +775,7 @@ AST Matchers
 clang-format
 ------------
 - Add ``AllowBreakBeforeNoexceptSpecifier`` option.
+- Add ``AllowShortCompoundRequirementOnASingleLine`` option.
 
 libclang
 --------
