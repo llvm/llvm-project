@@ -2343,7 +2343,12 @@ void SwiftLanguageRuntime::Terminate() {
 
 ThreadSafeReflectionContext
 SwiftLanguageRuntime::GetReflectionContext() {
-  FORWARD(GetReflectionContext);
+  // Hand written because the ternary operator prevents RVO when compiling with
+  // MSVC.
+  assert(m_impl || m_stub);
+  if (m_impl)
+    return m_impl->GetReflectionContext();
+  return m_stub->GetReflectionContext();
 }
 
 bool SwiftLanguageRuntime::GetDynamicTypeAndAddress(
