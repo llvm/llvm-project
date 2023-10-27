@@ -39,7 +39,7 @@ using llvm::StringRef;
 constexpr auto DiffThreshold = 0.001;
 
 AST_MATCHER_P(clang::FloatingLiteral, near, double, Value) {
-  return std::abs(Node.getValue().convertToDouble() - Value) < DiffThreshold;
+  return std::abs(Node.getValueAsApproximateDouble() - Value) < DiffThreshold;
 }
 
 AST_MATCHER_P(clang::QualType, hasCanonicalTypeUnqualified,
