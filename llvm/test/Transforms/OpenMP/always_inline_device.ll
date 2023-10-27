@@ -3,23 +3,19 @@
 
 %struct.ident_t = type { i32, i32, i32, i32, ptr }
 %struct.KernelEnvironmentTy = type { %struct.ConfigurationEnvironmentTy, ptr, ptr }
-%struct.ConfigurationEnvironmentTy = type { i8, i8, i8 }
+%struct.ConfigurationEnvironmentTy = type { i8, i8, i8, i32, i32, i32, i32 }
 @0 = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00", align 1
 @1 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @0 }, align 8
-@__omp_offloading_fd02_c0934fc2_foo_l4_exec_mode = weak constant i8 1
-@llvm.compiler.used = appending global [1 x ptr] [ptr @__omp_offloading_fd02_c0934fc2_foo_l4_exec_mode], section "llvm.metadata"
 @G = external global i8
 
-@kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1 }, ptr @1, ptr null }
+@kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
 
 ; Function Attrs: convergent norecurse nounwind
 ;.
 ; CHECK: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
 ; CHECK: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
-; CHECK: @[[__OMP_OFFLOADING_FD02_C0934FC2_FOO_L4_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 3
-; CHECK: @[[LLVM_COMPILER_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [1 x ptr] [ptr @__omp_offloading_fd02_c0934fc2_foo_l4_exec_mode], section "llvm.metadata"
 ; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external global i8
-; CHECK: @[[KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 0, i8 3 }, ptr @[[GLOB1]], ptr null }
+; CHECK: @[[KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 0, i8 3, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
 ;.
 define weak void @__omp_offloading_fd02_c0934fc2_foo_l4() #0 {
 ; CHECK: Function Attrs: norecurse nounwind

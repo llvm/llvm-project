@@ -3,24 +3,19 @@
 target triple = "nvptx64"
 
 %struct.KernelEnvironmentTy = type { %struct.ConfigurationEnvironmentTy, ptr, ptr }
-%struct.ConfigurationEnvironmentTy = type { i8, i8, i8 }
-
-@kernel0_exec_mode = weak constant i8 1
+%struct.ConfigurationEnvironmentTy = type { i8, i8, i8, i32, i32, i32, i32 }
 
 @G = external global i32
 
-@kernel0_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1 }, ptr null, ptr null }
-@kernel1_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1 }, ptr null, ptr null }
-@kernel2_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1 }, ptr null, ptr null }
+@kernel0_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr null, ptr null }
+@kernel1_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr null, ptr null }
+@kernel2_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr null, ptr null }
 
 ;.
-; CHECK: @[[KERNEL0_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 3
 ; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external global i32
-; CHECK: @[[KERNEL0_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 3 }, ptr null, ptr null }
-; CHECK: @[[KERNEL1_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 3 }, ptr null, ptr null }
-; CHECK: @[[KERNEL2_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 3 }, ptr null, ptr null }
-; CHECK: @[[KERNEL1_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 3
-; CHECK: @[[KERNEL2_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 3
+; CHECK: @[[KERNEL0_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 3, i32 0, i32 666, i32 0, i32 777 }, ptr null, ptr null }
+; CHECK: @[[KERNEL1_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 3, i32 0, i32 666, i32 0, i32 777 }, ptr null, ptr null }
+; CHECK: @[[KERNEL2_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 3, i32 0, i32 666, i32 0, i32 777 }, ptr null, ptr null }
 ; CHECK: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
 ; CHECK: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
 ;.
@@ -48,8 +43,6 @@ define weak void @kernel0() "kernel" #0 {
   ret void
 }
 
-@kernel1_exec_mode = weak constant i8 1
-
 define weak void @kernel1() "kernel" #0 {
 ; CHECK-LABEL: define {{[^@]+}}@kernel1
 ; CHECK-SAME: () #[[ATTR0]] {
@@ -69,8 +62,6 @@ define weak void @kernel1() "kernel" #0 {
   call void @__kmpc_target_deinit()
   ret void
 }
-
-@kernel2_exec_mode = weak constant i8 1
 
 define weak void @kernel2() "kernel" #0 {
 ; CHECK-LABEL: define {{[^@]+}}@kernel2

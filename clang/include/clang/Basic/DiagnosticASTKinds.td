@@ -69,7 +69,7 @@ def note_consteval_address_accessible : Note<
   "%select{pointer|reference}0 to a consteval declaration "
   "is not a constant expression">;
 def note_constexpr_uninitialized : Note<
-  "subobject %0 is not initialized">;
+  "subobject %select{of type |}0%1 is not initialized">;
 def note_constexpr_uninitialized_base : Note<
   "constructor of base class %0 is not called">;
 def note_constexpr_static_local : Note<
