@@ -14,7 +14,7 @@
 #include <__random/is_valid.h>
 #include <iosfwd>
 #include <limits>
-#include <type_traits>
+#include<__type_traits/is_floating_point.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
