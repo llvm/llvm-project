@@ -17,6 +17,7 @@
 #include <__concepts/derived_from.h>
 #include <__concepts/equality_comparable.h>
 #include <__functional/bind_back.h>
+#include <__iterator/advance.h>
 #include <__iterator/concepts.h>
 #include <__iterator/default_sentinel.h>
 #include <__iterator/distance.h>
