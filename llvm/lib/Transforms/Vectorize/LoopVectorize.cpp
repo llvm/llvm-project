@@ -2709,8 +2709,7 @@ void InnerLoopVectorizer::scalarizeInstruction(const Instruction *Instr,
     // Verify that VPlan type inference results agree with the type of the
     // generated values.
     VPTypeAnalysis A(State.Builder.GetInsertBlock()->getContext());
-    assert(A.inferScalarType(RepRecipe->getVPSingleValue()) ==
-               Cloned->getType() &&
+    assert(A.inferScalarType(RepRecipe) == Cloned->getType() &&
            "inferred type and type from generated instructions do not match");
 #endif
   }

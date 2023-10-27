@@ -2194,7 +2194,10 @@ public:
              VPSlotTracker &SlotTracker) const override;
 #endif
 
-  Type *getScalarType() const { return TruncResultTy; }
+  Type *getScalarType() const {
+    return TruncResultTy ? TruncResultTy
+                         : getStartValue()->getLiveInIRValue()->getType();
+  }
 
   VPValue *getStartValue() const { return getOperand(0); }
   VPValue *getCanonicalIV() const { return getOperand(1); }

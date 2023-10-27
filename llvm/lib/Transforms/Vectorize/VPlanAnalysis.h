@@ -40,14 +40,14 @@ class VPTypeAnalysis {
   DenseMap<const VPValue *, Type *> CachedTypes;
   LLVMContext &Ctx;
 
-  Type *inferScalarType(const VPBlendRecipe *R);
-  Type *inferScalarType(const VPInstruction *R);
-  Type *inferScalarType(const VPWidenCallRecipe *R);
-  Type *inferScalarType(const VPWidenRecipe *R);
-  Type *inferScalarType(const VPWidenIntOrFpInductionRecipe *R);
-  Type *inferScalarType(const VPWidenMemoryInstructionRecipe *R);
-  Type *inferScalarType(const VPWidenSelectRecipe *R);
-  Type *inferScalarType(const VPReplicateRecipe *R);
+  Type *inferScalarTypeForRecipe(const VPBlendRecipe *R);
+  Type *inferScalarTypeForRecipe(const VPInstruction *R);
+  Type *inferScalarTypeForRecipe(const VPWidenCallRecipe *R);
+  Type *inferScalarTypeForRecipe(const VPWidenRecipe *R);
+  Type *inferScalarTypeForRecipe(const VPWidenIntOrFpInductionRecipe *R);
+  Type *inferScalarTypeForRecipe(const VPWidenMemoryInstructionRecipe *R);
+  Type *inferScalarTypeForRecipe(const VPWidenSelectRecipe *R);
+  Type *inferScalarTypeForRecipe(const VPReplicateRecipe *R);
 
 public:
   VPTypeAnalysis(LLVMContext &Ctx) : Ctx(Ctx) {}
