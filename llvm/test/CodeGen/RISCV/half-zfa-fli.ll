@@ -216,7 +216,8 @@ define half @loadfpimm14() {
 define half @loadfpimm15() {
 ; CHECK-LABEL: loadfpimm15:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fli.h fa0, min
+; CHECK-NEXT:    lui a0, %hi(.LCPI14_0)
+; CHECK-NEXT:    flh fa0, %lo(.LCPI14_0)(a0)
 ; CHECK-NEXT:    ret
 ;
 ; ZFHMIN-LABEL: loadfpimm15:
