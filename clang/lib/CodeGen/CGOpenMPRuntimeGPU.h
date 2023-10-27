@@ -71,11 +71,10 @@ private:
                         llvm::Function *&OutlinedFn, bool isSPMD);
 
   /// Helper for generic variables globalization prolog.
-  void emitGenericVarsProlog(CodeGenFunction &CGF, SourceLocation Loc,
-                             bool WithSPMDCheck = false);
+  void emitGenericVarsProlog(CodeGenFunction &CGF, SourceLocation Loc);
 
   /// Helper for generic variables globalization epilog.
-  void emitGenericVarsEpilog(CodeGenFunction &CGF, bool WithSPMDCheck = false);
+  void emitGenericVarsEpilog(CodeGenFunction &CGF);
 
   //
   // Base class overrides.
