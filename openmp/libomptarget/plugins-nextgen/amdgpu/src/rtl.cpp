@@ -81,6 +81,7 @@
 #include "OmptDeviceTracing.h"
 
 using namespace llvm::omp::target;
+using namespace llvm::omp::xteam_red;
 
 extern void ompt::setOmptTimestamp(uint64_t Start, uint64_t End);
 extern void ompt::setOmptHostToDeviceRate(double Slope, double Offset);
@@ -787,6 +788,7 @@ private:
   uint64_t getNumBlocks(GenericDeviceTy &GenericDevice,
                         uint32_t NumTeamsClause[3], uint64_t LoopTripCount,
                         uint32_t &NumThreads) const override {
+
     assert(NumTeamsClause[1] == 0 && NumTeamsClause[2] == 0 &&
            "Multi dimensional launch not supported yet.");
 
@@ -833,20 +835,50 @@ private:
     }
 
     if (isXTeamReductionsMode()) {
-      // The number of teams must not exceed the number of CUs since the
-      // compiler will allocate that many slots for the metadata.
+      // Note: The plugin does not know whether XteamReduction is running in
+      // fast mode. If fast mode, metadata is not used and the following
+      // restrictions are not required. But since the plugin does not know, it
+      // will assume that it is running in the default mode with constrained
+      // metadata.
+
+      // The number of teams must not exceed the upper limit determined during
+      // code generation. This upper limit is not currently communicated from
+      // codegen to the plugin. So compute it here again, note that this must
+      // be kept in sync with codegen.
+
+      // This is the block size that CodeGen used.
+      uint32_t XteamRedBlockSize = ConstWGSize;
+
+      int32_t CUMultiplier =
+          XteamRedBlockSize > 0
+              ? llvm::omp::xteam_red::MaxThreadsPerCU / XteamRedBlockSize
+              : llvm::omp::xteam_red::MaxCUMultiplier;
+
+      // Here's the default we use
       uint64_t NumGroups = DeviceNumCUs;
+
+      // The number of teams must not exceed this upper limit.
+      uint64_t MaxNumGroups = DeviceNumCUs * CUMultiplier;
+      if (MaxNumGroups > llvm::omp::xteam_red::MaxTeams)
+        MaxNumGroups = llvm::omp::xteam_red::MaxTeams;
+
       // Honor OMP_NUM_TEAMS environment variable for XteamReduction kernel
       // type, if possible.
       int32_t NumTeamsEnvVar = GenericDevice.getOMPNumTeams();
-      if (NumTeamsEnvVar > 0 &&
-          NumTeamsEnvVar <= GenericDevice.getBlockLimit() &&
-          NumTeamsEnvVar < NumGroups)
-        NumGroups = NumTeamsEnvVar;
-      else if (NumTeamsClause[0] > 0 &&
-               NumTeamsClause[0] <= GenericDevice.getBlockLimit() &&
-               NumTeamsClause[0] < NumGroups) {
-        NumGroups = NumTeamsClause[0];
+
+      // Prefer num_teams clause over environment variable. There is a corner
+      // case where inspite of the presence of a num_teams clause, CodeGen
+      // may fail to extract it, instead using the alternative computation of
+      // the number of teams. But the runtime here will still see the value
+      // of the clause, so we need to check against the upper limit.
+      if (NumTeamsClause[0] > 0 &&
+          NumTeamsClause[0] <= GenericDevice.getBlockLimit()) {
+        NumGroups =
+            std::min(static_cast<uint64_t>(NumTeamsClause[0]), MaxNumGroups);
+      } else if (NumTeamsEnvVar > 0 &&
+                 NumTeamsEnvVar <= GenericDevice.getBlockLimit()) {
+        NumGroups =
+            std::min(static_cast<uint64_t>(NumTeamsEnvVar), MaxNumGroups);
       } else {
         // Ensure we don't have a large number of teams running if the tripcount
         // is low

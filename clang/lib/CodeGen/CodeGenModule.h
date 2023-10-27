@@ -1805,10 +1805,15 @@ public:
 
   /// Given a ForStmt for which Xteam codegen will be done, return the
   /// intermediate statements for a split directive.
-
   const OptKernelNestDirectives &getXteamRedNestDirs(const Stmt *S) {
     assert(isXteamRedKernel(S));
     return XteamRedKernels.find(S)->second.XteamNestDirs;
+  }
+  const OptKernelNestDirectives &
+  getXteamRedNestDirs(const OMPExecutableDirective &D) {
+    assert(isXteamRedKernel(D) && "Expected an Xteam reduction kernel");
+    const ForStmt *FStmt = getSingleForStmt(getOptKernelKey(D));
+    return getXteamRedNestDirs(FStmt);
   }
 
   /// Given a ForStmt for which Xteam codegen will be done, return the
@@ -1828,10 +1833,20 @@ public:
     return XteamRedKernels.find(S)->second.ThreadStartIndex;
   }
 
+  /// Used during kernel codegen to retrieve the cached NumTeams.
   llvm::Value *getXteamRedNumTeams(const Stmt *S) {
     assert(isXteamRedKernel(S));
     return XteamRedKernels.find(S)->second.NumTeams;
   }
+
+  /// Used during host codegen to compute the number of teams from num_teams
+  /// clause.
+  int64_t getXteamRedNumTeamsFromClause(const OMPExecutableDirective &D);
+
+  /// Used during host codegen for traversing nested directives, looking for
+  /// num_teams clause.
+  int64_t
+  getXteamRedNumTeamsFromClause(const OptKernelNestDirectives &NestDirs);
 
   bool isXteamRedFast(const Stmt *S) {
     assert(isXteamRedKernel(S));

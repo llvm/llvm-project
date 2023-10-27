@@ -277,6 +277,25 @@ enum class RTLDependenceKindTy {
   DepOmpAllMem = 0x80,
 };
 
+namespace xteam_red {
+// Maximum number of teams allowed.
+constexpr int16_t MaxTeams = 512;
+
+// Upper limit on CU multiplier for computing number of teams.
+constexpr int16_t MaxCUMultiplier = 4;
+
+// Maximum number of threads allowed per CU.
+constexpr int16_t MaxThreadsPerCU = 2048;
+
+// Default block size, currently different from other kernel types.
+constexpr int16_t DefaultBlockSize = 1024;
+
+// Max block size, same as other kernel types, but maintaining it here
+// so that it is accessible for all targets.
+constexpr int16_t MaxBlockSize = 1024;
+
+} // end namespace xteam_red
+
 } // end namespace omp
 
 } // end namespace llvm

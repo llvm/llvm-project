@@ -48,6 +48,7 @@
 using namespace clang;
 using namespace CodeGen;
 using namespace llvm::omp;
+using namespace llvm::omp::xteam_red;
 
 namespace {
 /// Base class for handling code generation inside OpenMP regions.
@@ -9623,10 +9624,11 @@ static void emitTargetCallKernelLaunch(
     assert((CapturedVars.size() == CapturedCount + 2 * XteamRVM.size()) &&
            "Unexpected number of captured vars");
 
-    // Always needed for processing the xteam reduction var pairs:
-    llvm::Type *Int32Ty = llvm::Type::getInt32Ty(CGF.CGM.getLLVMContext());
-    llvm::Value *Int32Zero = llvm::ConstantInt::get(Int32Ty, 0);
+    // Needed for processing the xteam reduction var pairs:
+    llvm::Value *Int32Zero = llvm::ConstantInt::get(CGF.Int32Ty, 0);
 
+    llvm::Value *XteamRedNumTeamsFromClauseVal = nullptr;
+    llvm::Value *XteamRedNumTeamsFromOccupancy = nullptr;
     bool IsXteamRedFast = CGF.CGM.isXteamRedFast(FStmt);
     // We don't need to allocate/initialize metadata in the fast version.
     if (!IsXteamRedFast) {
@@ -9636,11 +9638,38 @@ static void emitTargetCallKernelLaunch(
                                                 OMPRTL_omp_get_default_device),
           "default_dev");
 
-      // team_procs = ompx_get_team_procs(devid)
-      TeamProcsInst = CGF.EmitRuntimeCall(
-          OmpBuilder.getOrCreateRuntimeFunction(CGF.CGM.getModule(),
-                                                OMPRTL_ompx_get_team_procs),
-          DevIdVal, "team_procs");
+      // If num_teams clause is found, compute NumTeamsFromClause
+      int64_t XteamRedNumTeamsFromClause =
+          CGF.CGM.getXteamRedNumTeamsFromClause(D);
+      if (XteamRedNumTeamsFromClause > 0) {
+        if (XteamRedNumTeamsFromClause > llvm::omp::xteam_red::MaxTeams)
+          XteamRedNumTeamsFromClause = llvm::omp::xteam_red::MaxTeams;
+        XteamRedNumTeamsFromClauseVal =
+            llvm::ConstantInt::get(CGF.Int64Ty, XteamRedNumTeamsFromClause);
+      }
+      if (XteamRedNumTeamsFromClauseVal == nullptr) {
+        // team_procs = ompx_get_team_procs(devid)
+        TeamProcsInst = CGF.EmitRuntimeCall(
+            OmpBuilder.getOrCreateRuntimeFunction(CGF.CGM.getModule(),
+                                                  OMPRTL_ompx_get_team_procs),
+            DevIdVal, "team_procs");
+
+        // Compute CUMultiplier = (Max threads per CU) / (Block size)
+        int64_t XteamRedBlockSize = CGF.CGM.getXteamRedBlockSize(D);
+        int64_t CUMultiplier =
+            XteamRedBlockSize > 0
+                ? llvm::omp::xteam_red::MaxThreadsPerCU / XteamRedBlockSize
+                : llvm::omp::xteam_red::MaxCUMultiplier;
+        if (CUMultiplier > llvm::omp::xteam_red::MaxCUMultiplier)
+          CUMultiplier = llvm::omp::xteam_red::MaxCUMultiplier;
+
+        llvm::Value *Int64CUMultiplier =
+            llvm::ConstantInt::get(CGF.Int64Ty, CUMultiplier);
+        // NumTeamsFromOccupancy = CUMultiplier * NumCUs
+        XteamRedNumTeamsFromOccupancy = CGF.Builder.CreateMul(
+            Int64CUMultiplier,
+            CGF.Builder.CreateIntCast(TeamProcsInst, CGF.Int64Ty, false));
+      }
 
       // initial_devid = omp_get_initial_device()
       InitialDevInst = CGF.EmitRuntimeCall(
@@ -9673,8 +9702,6 @@ static void emitTargetCallKernelLaunch(
       llvm::Type *RedVarType = CGF.ConvertTypeForMem(RedVarQualType);
 
       const ASTContext &Context = CGM.getContext();
-      llvm::Type *Int32Ty = llvm::Type::getInt32Ty(CGM.getLLVMContext());
-      llvm::Type *Int64Ty = llvm::Type::getInt64Ty(CGM.getLLVMContext());
       if (IsXteamRedFast) {
         // Placeholder for d_team_vals initialized to nullptr
         DTeamValsInst =
@@ -9685,12 +9712,18 @@ static void emitTargetCallKernelLaunch(
             llvm::ConstantPointerNull::get(RedVarType->getPointerTo());
         CGF.Builder.CreateStore(NullPtrDTeamVals, DTeamValsAddr);
       } else {
-        // dteam_vals = omp_target_alloc(sizeof(red-type) * team_procs, devid)
+        // dteam_vals = omp_target_alloc(sizeof(red-type) * num_teams, devid)
         llvm::Value *RedVarTySz = llvm::ConstantInt::get(
-            Int64Ty, CGF.CGM.getDataLayout().getTypeSizeInBits(RedVarType) / 8);
+            CGF.Int64Ty,
+            CGF.CGM.getDataLayout().getTypeSizeInBits(RedVarType) / 8);
+        assert((XteamRedNumTeamsFromClauseVal != nullptr ||
+                XteamRedNumTeamsFromOccupancy != nullptr) &&
+               "Number of teams cannot be null");
         llvm::Value *DTeamValsSz = CGF.Builder.CreateMul(
             RedVarTySz,
-            CGF.Builder.CreateIntCast(TeamProcsInst, Int64Ty, false));
+            XteamRedNumTeamsFromClauseVal ? XteamRedNumTeamsFromClauseVal
+                                          : XteamRedNumTeamsFromOccupancy,
+            "d_team_vals_sz");
         llvm::Value *TgtAllocArgs[] = {DTeamValsSz, DevIdVal};
         DTeamValsInst = CGF.EmitRuntimeCall(
             OmpBuilder.getOrCreateRuntimeFunction(CGF.CGM.getModule(),
@@ -9707,24 +9740,22 @@ static void emitTargetCallKernelLaunch(
       if (IsXteamRedFast) {
         // Placeholder for d_teams_done_ptr initialized to nullptr
         DTeamsDonePtrInst =
-            CGF.Builder.CreateAlloca(Int32Ty, nullptr, "d_teams_done_ptr");
+            CGF.Builder.CreateAlloca(CGF.Int32Ty, nullptr, "d_teams_done_ptr");
         Address DTeamsDoneAddr(
-            DTeamsDonePtrInst, Int32Ty,
+            DTeamsDonePtrInst, CGF.Int32Ty,
             Context.getTypeAlignInChars(Context.UnsignedIntTy));
         llvm::Value *NullPtrDTeamsDone =
-            llvm::ConstantPointerNull::get(Int32Ty->getPointerTo());
+            llvm::ConstantPointerNull::get(CGF.Int32Ty->getPointerTo());
         CGF.Builder.CreateStore(NullPtrDTeamsDone, DTeamsDoneAddr);
       } else {
         // uint32 teams_done = 0
-        // llvm::AllocaInst *TeamsDoneInst =
-        //     CGF.Builder.CreateAlloca(Int32Ty, nullptr, "teams_done");
         Address TeamsDoneAddr(
-            CapturedVars[CapturedCount + ArgPos], Int32Ty,
+            CapturedVars[CapturedCount + ArgPos], CGF.Int32Ty,
             CGF.getContext().getTypeAlignInChars(CGF.getContext().IntTy));
         CGF.Builder.CreateStore(Int32Zero, TeamsDoneAddr);
 
         // d_teams_done_ptr = omp_target_alloc(4, devid)
-        llvm::Value *IntTySz = llvm::ConstantInt::get(Int64Ty, 4);
+        llvm::Value *IntTySz = llvm::ConstantInt::get(CGF.Int64Ty, 4);
         llvm::Value *DTeamsDonePtrArgs[] = {IntTySz, DevIdVal};
         DTeamsDonePtrInst = CGF.EmitRuntimeCall(
             OmpBuilder.getOrCreateRuntimeFunction(CGF.CGM.getModule(),
@@ -9736,9 +9767,9 @@ static void emitTargetCallKernelLaunch(
         llvm::Value *DTeamsDoneMemcpyArgs[] = {
             DTeamsDonePtrInst,
             TeamsDoneAddr.getPointer(),
-            /*sizeof(uint32_t)=*/llvm::ConstantInt::get(Int64Ty, 4),
-            /*dst_offset=*/llvm::ConstantInt::get(Int64Ty, 0),
-            /*src_offset=*/llvm::ConstantInt::get(Int64Ty, 0),
+            /*sizeof(uint32_t)=*/llvm::ConstantInt::get(CGF.Int64Ty, 4),
+            /*dst_offset=*/llvm::ConstantInt::get(CGF.Int64Ty, 0),
+            /*src_offset=*/llvm::ConstantInt::get(CGF.Int64Ty, 0),
             DevIdVal,
             InitialDevInst};
         CGF.EmitRuntimeCall(OmpBuilder.getOrCreateRuntimeFunction(

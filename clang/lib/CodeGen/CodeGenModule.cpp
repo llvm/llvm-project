@@ -77,6 +77,7 @@
 
 using namespace clang;
 using namespace CodeGen;
+using namespace llvm::omp::xteam_red;
 
 static llvm::cl::opt<bool> LimitedCoverage(
     "limited-coverage-experimental", llvm::cl::Hidden,
@@ -8089,6 +8090,26 @@ CodeGenModule::getNoLoopForStmtStatus(const OMPExecutableDirective &D,
   return std::make_pair(NxSuccess, HasNestedGenericCall);
 }
 
+int64_t CodeGenModule::getXteamRedNumTeamsFromClause(
+    const OptKernelNestDirectives &NestDirs) {
+  for (const auto &D : NestDirs) {
+    if (D->hasClausesOfKind<OMPNumTeamsClause>()) {
+      const Expr *NumTeams =
+          D->getSingleClause<OMPNumTeamsClause>()->getNumTeams();
+      if (NumTeams->isIntegerConstantExpr(getContext()))
+        if (auto Constant = NumTeams->getIntegerConstantExpr(getContext()))
+          return Constant->getExtValue();
+    }
+  }
+  return 0; // num_teams not found
+}
+
+int64_t
+CodeGenModule::getXteamRedNumTeamsFromClause(const OMPExecutableDirective &D) {
+  assert(isXteamRedKernel(D) && "Expected an Xteam reduction kernel");
+  return getXteamRedNumTeamsFromClause(getXteamRedNestDirs(D));
+}
+
 int CodeGenModule::getWorkGroupSizeSPMDHelper(const OMPExecutableDirective &D) {
   // Honor block-size provided by command-line option. This logic must be kept
   // in sync with metadata generation. If this option is not specified on the
@@ -8096,12 +8117,14 @@ int CodeGenModule::getWorkGroupSizeSPMDHelper(const OMPExecutableDirective &D) {
   int WorkGroupSz = getLangOpts().OpenMPGPUThreadsPerTeam;
 
   // Cross team reduction blocksize default may be specified separately.
-  if (isXteamRedKernel(D))
+  bool isXteamRed = isXteamRedKernel(D);
+  if (isXteamRed)
     WorkGroupSz = getLangOpts().OpenMPTargetXteamReductionBlockSize;
 
   // Check block-size provided by thread_limit clause. We start with the
   // maximum thread limit and lower it if user requests a lower thread limit.
-  int ThreadLimit = getTarget().getGridValue().GV_Max_WG_Size;
+  int ThreadLimit = isXteamRed ? llvm::omp::xteam_red::MaxBlockSize
+                               : getTarget().getGridValue().GV_Max_WG_Size;
   const auto *ThreadLimitClause = D.getSingleClause<OMPThreadLimitClause>();
   if (ThreadLimitClause) {
     Expr *ThreadLimitExpr = ThreadLimitClause->getThreadLimit();
@@ -8122,7 +8145,8 @@ int CodeGenModule::getWorkGroupSizeSPMDHelper(const OMPExecutableDirective &D) {
   // Set the actual number of threads if the user requests a value different
   // then the default. If the value is greater than the currently computed
   // thread limit then cap the number of threads to the thread limit.
-  int NumThreads = getTarget().getGridValue().GV_Default_WG_Size;
+  int NumThreads = isXteamRed ? llvm::omp::xteam_red::DefaultBlockSize
+                              : getTarget().getGridValue().GV_Default_WG_Size;
   const auto *NumThreadsClause = D.getSingleClause<OMPNumThreadsClause>();
   if (NumThreadsClause) {
     Expr *NumThreadsExpr = NumThreadsClause->getNumThreads();
@@ -8140,15 +8164,17 @@ int CodeGenModule::getWorkGroupSizeSPMDHelper(const OMPExecutableDirective &D) {
   // Sanitize the workgroup size received from the command line. Its default
   // value is GV_Default_WG_Size.
   if (WorkGroupSz < 1 || WorkGroupSz > ThreadLimit)
-    WorkGroupSz = getTarget().getGridValue().GV_Default_WG_Size;
+    WorkGroupSz = isXteamRed ? llvm::omp::xteam_red::DefaultBlockSize
+                             : getTarget().getGridValue().GV_Default_WG_Size;
 
   return WorkGroupSz;
 }
 
 int CodeGenModule::getOptKernelWorkGroupSize(
     const OptKernelNestDirectives &NestDirs, bool isXteamRed) {
-  int WGSizeDefault =
-      isXteamRed ? 1024 : getTarget().getGridValue().GV_Default_WG_Size;
+  int WGSizeDefault = isXteamRed
+                          ? llvm::omp::xteam_red::DefaultBlockSize
+                          : getTarget().getGridValue().GV_Default_WG_Size;
 
   // Allow command-line option override clauses on the OpenMP construct.
   // Exception: If the command line value is the same as the default, the clause
@@ -8162,7 +8188,8 @@ int CodeGenModule::getOptKernelWorkGroupSize(
   // The blocksize used by optimized kernels is the minimum of the
   // max_wg_size and any thread_limit or num_threads specified on any OpenMP
   // clauses.
-  int WGSize = getTarget().getGridValue().GV_Max_WG_Size;
+  int WGSize = isXteamRed ? llvm::omp::xteam_red::MaxBlockSize
+                          : getTarget().getGridValue().GV_Max_WG_Size;
   for (const auto &Dir : NestDirs)
     WGSize = std::min(WGSize, getWorkGroupSizeSPMDHelper(*Dir));
   return WGSize;
@@ -8616,10 +8643,7 @@ CodeGenModule::checkAndSetXteamRedKernel(const OMPExecutableDirective &D) {
     // The blocksize has to be computed after adding this kernel to the metadata
     // above, since the computation below depends on that metadata. Compute
     // block size during device compilation only.
-    int BlockSize =
-        getLangOpts().OpenMPIsTargetDevice
-            ? computeOptKernelBlockSize(NestDirs, /*isXteamRed=*/true)
-            : 0;
+    int BlockSize = computeOptKernelBlockSize(NestDirs, /*isXteamRed=*/true);
     if (BlockSize > 0)
       updateXteamRedKernel(FStmt, BlockSize);
     return NxSuccess;
